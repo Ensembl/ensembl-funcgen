@@ -1,0 +1,18 @@
+
+#add alias efg='. ~/src/ensembl-efg/.efg' to your .bashrc
+
+# ENV VARS
+export EFG_SRC=~/src/ensembl-functgenomics
+export EFG_DATA=~/data/efg
+export PATH=$PATH:$EFG_SRC/scripts
+export PERL5LIB=$EFG_SRC/modules:$PERL5LIB
+
+#could add PERL5LIB here too, this could be extended to include all config for shipping to users?  in bashrc for now
+
+echo "Sourcing .efg" #and cd'ing to $EFG_SRC" 
+
+# ALIASES
+alias efg='cd $EFG_SRC'
+alias efgd='cd $EFG_DATA'
+alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
+#efg 
