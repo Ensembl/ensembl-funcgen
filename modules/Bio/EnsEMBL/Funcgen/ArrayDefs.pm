@@ -467,7 +467,6 @@ sub read_probe_data{
 		#would be messy to handle in the code, but would have to somewhere(in the retrieval code)
 		
 		$probe_string .= "\t${psid}\t".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'MATCH_INDEX'}]."\t${class}\n";
-		$pid++;
 		push @{$self->{'_probe_map'}{$data[$hpos{'PROBE_ID'}]}}, $pid;
 		
 		
