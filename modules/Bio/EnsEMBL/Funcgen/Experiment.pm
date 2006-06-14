@@ -77,13 +77,14 @@ sub new{
     # objects private data and default values
     %attrdata = (
 				 #User defined/built 
-				 _instance   => undef,
-				 _format     => undef,
-				 _vendor     => undef,
-				 _group      => undef,
-				 _recover    => 0,
-				 _data_dir   => $ENV{'EFG_DATA'},#?
-				 _dump_fasta => 0,
+				 _instance    => undef,
+				 _format      => undef,
+				 _vendor      => undef,
+				 _group       => undef,
+				 _recover     => 0,
+				 _data_dir    => $ENV{'EFG_DATA'},#?
+				 _dump_fasta  => 0,
+				 _norm_method => "vsn_norm",
 
 
 				 #DBDefs, have ability to override here, or restrict to DBDefs.pm?
@@ -97,6 +98,7 @@ sub new{
 				 _input_dir  => undef,#Can pass this to over-ride ArrayDefs default?
 				 _array_defs => undef,
 				 _import_dir => undef,#parsed native data for import
+				 _norm_dir   => undef,
 								 
 
 				 #Data defined
@@ -124,11 +126,12 @@ sub new{
     # set each class attribute using passed value or default value
     foreach $attrname (keys %attrdata){
         ($argname = $attrname) =~ s/^_//; # remove leading underscore
-        $self->{$attrname} = (exists $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
+        $self->{$attrname} = (exists $args{$argname} && defined $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
     }
 
 	
 	#Not all of these are required if using ArrayDefs?
+	#Not required if just fetching the data
 
 	foreach my $tmp("instance", "vendor", "format", "group", "data_dir"){
 		$self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{"_${tmp}"});
@@ -164,8 +167,6 @@ sub init_import{
 		$self->throw("Need to implement recovery properly, clean/alter all data associated with this experiment dbid (experiment/experimental_chip/channel/variable/result/design_type/target) and validate array_chip/probe/probe_set/probe_feature to ensure that all were imported correctly");
 	}
 
-   
-
 
 	#Should we separate path on group here too, so we can have a dev/test group?
 
@@ -178,9 +179,7 @@ sub init_import{
 		mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
 	}
   
-	$self->{'_import_dir'} = $self->get_dir("output")."/import" if(! defined $self->{'_import_dir'});
-	mkdir $self->get_dir("import") if(! -d $self->get_dir("import"));
-
+	$self->create_output_dirs("import", "norm");
 
 	#remove and add specific report, this is catchig some Root stuff
 	$self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
@@ -189,6 +188,17 @@ sub init_import{
 	return;
 }
 
+
+sub create_output_dirs{
+	my ($self, @dirnames) = @_;
+	
+	foreach my $name(@dirnames){
+		$self->{"_${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"_${name}_dir"});
+		mkdir $self->get_dir($name) if(! -d $self->get_dir($name));
+	}
+
+	return;
+}
 
 ### GENERIC ACCESSOR METHODS ###
 
@@ -262,12 +272,19 @@ sub get_dir{
 	return $self->get_data("${dirname}_dir");
 }
 
+sub norm_method{
+	my $self = shift;
+	return $self->{'_norm_method'};
+}
 
 
 sub register_experiment{
 	my ($self) = shift;
 
 	#These should be vendor independent, only the read methods should need specific order?
+	#Need to totally separate parse/read from import, so we can just do one method if required, i.e. normalise
+	#Also need to move id generation to import methods, which would check that a previous import has been done, or check the DB for the relevant info?
+
 	$self->init_import();
 	$self->read_data("array");#rename this or next?
 	$self->import_array();#Should only work if not present or if full recovery.  (Shouldn't really want to recover array, so separate into different script which checks all Experiment associated with array before removing from DB)
@@ -275,7 +292,14 @@ sub register_experiment{
 	$self->read_data("probe");
 	$self->read_data("results");
 	$self->import_probe_data();
-	$self->import_results();
+	$self->import_results("import");
+
+	#Need to be able to run this separately, so we can normalise previously imported sets with different methods
+	#should be able t do this without raw data files e.g. retrieve info from DB
+	my $norm_method = $self->norm_method();
+	$self->$norm_method;
+	$self->import_results("norm");
+
 	return;
 }
 
@@ -312,9 +336,9 @@ sub import_probe_data{
 }
 
 sub import_results{
-	my $self = shift;
+	my ($self, $source_dir) = @_;
 
-	$self->db_adaptor->load_table_data("result",  $self->get_dir("import")."/result.txt");
+	$self->db_adaptor->load_table_data("result",  $self->get_dir($source_dir)."/result.txt");
 	return;
 }
 
@@ -500,6 +524,93 @@ sub get_channel_dbid{
 	return $self->channel_data($chan_uid, 'dbid');
 }
 
+
+
+sub vsn_norm{
+	my $self = shift;
+	#This currently normalises a single two colour array at a time
+	
+	#HACK!
+	my $metric_id = 2;#for glog tranformed data
+
+	my @dbids;
+	my $R_file = $self->get_dir("norm")."/norm.R";
+	my $outfile = $self->get_dir("norm")."/result.txt";
+	my $r_cmd = "R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+
+	unlink($outfile);#Need to do this as we're appending in the loop
+
+	#setup qurey
+	#scipen is to prevent probe_ids being converted to exponents
+	my $query = "options(scipen=20);library(vsn);library(RMySQL);".
+		  "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"efg_test\", user=\"ensadmin\", pass=\"ensembl\")\n";
+	#currently having separate session fo
+
+	foreach my $chip_id(keys %{$self->get_data("echips")}){		
+		@dbids = ();
+
+		foreach my $chan_id(keys %{$self->echip_data($chip_id, "channels")}){
+			push @dbids, $self->get_channel_dbid($chan_id);
+		}
+
+		#should do some of this with maps?
+		#HARDCODED metric ID for raw data as one
+		$query .= "c1<-dbGetQuery(con, \"select probe_id, score as ${dbids[0]}_score from result where channel_id=${dbids[0]} and metric_id=1\")\n";
+		$query .= "c2<-dbGetQuery(con, \"select probe_id, score as ${dbids[1]}_score from result where channel_id=${dbids[1]} and metric_id=1\")\n";
+
+		#should do some sorting here?  Probes are in same order anyway
+		#does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
+		$query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";
+		
+		#glog tranform(vsn)
+		$query .= "glog_df<-vsn(raw_df)\n";
+		
+		#should do someplot's of raw and glog and save here
+		
+		#set log func and params
+		#$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
+		#plot
+		#$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
+		#  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
+		#FAILS ON RAW PLOT!!
+		
+		
+		#par(mfrow = c(1, 2)) 
+		#> meanSdPlot(nkid, ranks = TRUE) 
+		#> meanSdPlot(nkid, ranks = FALSE) 
+		
+		#reform dataframe/matrix for each channel
+		#3 sig dec places on scores
+		$query .= "c1r<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], format(exprs(glog_df[,1]), nsmall=3), rep(${metric_id}, length(c1[\"probe_id\"])), rep(${dbids[0]}, length(c1[\"probe_id\"])))\n";
+		$query .= "c2r<-cbind(rep(\"\", length(c2[\"probe_id\"])), c2[\"probe_id\"], format(exprs(glog_df[,2]), nsmall=3), rep(${metric_id}, length(c2[\"probe_id\"])), rep(${dbids[1]}, length(c2[\"probe_id\"])))\n";
+		
+		#load back into DB
+		#c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
+		#may want to use safe.write here
+		#dbWriteTable(con, "result", c3results, append=TRUE)
+		#dbWriteTable returns true but does not load any data into table!!!
+
+		$query .= "write.table(c1r, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		$query .= "write.table(c2r, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		#tidy up here?? 
+	}
+
+
+	#or here, specified no save so no data will be dumped
+	$query .= "q();";
+
+
+	#This is giving duplicates for probe_ids 2 & 3 for metric_id =2 i.e. vsn'd data.
+	#duplicates are not present in import file!!!!!!!!!!!!!!!!!!!!
+
+	open(RFILE, ">$R_file") || die("Cannot open $R_file for writing");
+	print RFILE $query;
+	close(RFILE);
+	
+	system($r_cmd);
+
+	return;
+}
 
 1;
 

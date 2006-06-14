@@ -35,14 +35,14 @@ sub set_defs{
 									#data paths here?
 									
 									#This input dir is being recast as _input_dit
-									input_dir      => $self->get_dir("data")."/native/".$self->vendor()."/".$self->instance(),
+									input_dir      => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->instance(),
 									#but this is vendor specific and remains an array_def
-									design_dir     => $self->get_dir("data")."/native/".$self->vendor()."/".$self->instance()."/DesignFiles",
+									design_dir     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->instance()."/DesignFiles",
 
-									chip_file        => $self->get_dir("data")."/native/".$self->vendor()."/".$self->instance()."/SampleKey.txt",
-									array_file       => $self->get_dir("data")."/native/".$self->vendor()."/".$self->instance()."/DesignNotes.txt",
+									chip_file        => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->instance()."/SampleKey.txt",
+									array_file       => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->instance()."/DesignNotes.txt",
 									#feature_map_file => $self->get_dir("import")."/feature_map.tmp",
-									results_file     => $self->get_dir("data")."/native/".$self->vendor()."/".$self->instance()."/PairData/All_Pair.txt",
+									results_file     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->instance()."/PairData/All_Pair.txt",
 
 									dye_freqs => {(
 												   Cy5 => 635,
@@ -165,7 +165,7 @@ sub read_array_chip_data{
 										dye => $dye,
 										sample_label => $sample_label,
 										species => $species,#on channel/sample to enable multi-species chip/experiment
-										type => $sample_type,
+										type => uc($sample_type),
 									   ));#do we need to inset {}?
 
 
@@ -367,22 +367,22 @@ sub read_probe_data{
 	my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.txt");
 	my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.txt");
 	my $f_out = open_file(">", $self->get_dir("import")."/probe.fasta")	if($self->{'_dump_fasta'});
-   	my ($loc, $probe_string, $ps_string, $pf_string, $class, $length, %probe_set, %probe_map);
-	my $size = 0;#needed for first set
+   	my ($loc, $probe_string, $ps_string, $pf_string, $f_string, $class, $length, %probe_set, %probe_map);
+	my $size = 1;#needed for first set
 
 	#If this chip has been pre-registered then get the the very first probe_feature_id and build the featuremap from that.
 	#May change as changing link to probe rather than probe_feature table
 
 	my $psid = $self->db_adaptor->get_last_table_id("probe_set");
-	my $fid = $self->db_adaptor->get_last_table_id("probe");
-	my $pid = $self->db_adaptor->get_last_table_id("probe_feature");
+	my $pid = $self->db_adaptor->get_last_table_id("probe");
+	my $fid = $self->db_adaptor->get_last_table_id("probe_feature");
 	
    	##HARDCODED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	my $strand = 0;
 	my $anal_id = 1;#testing how are we going to define analysis methods?
 	my $cig_line = "50M";
 	
-  	$probe_string = $ps_string = $pf_string = "";
+  	$probe_string = $ps_string = $pf_string = $f_string = "";
 	#$self->Timer()->mark("Starting probe loop");
 	
 	while($line = <$fh>){
@@ -408,6 +408,7 @@ sub read_probe_data{
 		
 		#THis probe_set business is a little backward as we need to count size before printing
 		if($. == 2){#Capture first set
+			$psid++;
 			%probe_set = (
 						  name    => $data[$hpos{'FEATURE_ID'}],
 						  size    => $size,
@@ -495,7 +496,8 @@ sub read_probe_data{
 		if($class eq "EXPERIMENTAL"){
 			$length = length($data[$hpos{'PROBE_SEQUENCE'}]);
 			
-			if(exists $regions{$data[$hpos{'SEQ_ID'}]}){			
+			if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
+				$fid++;
 				$pf_string .= "\t".$regions{$data[$hpos{'SEQ_ID'}]}{'chrom'}."\t".$data[$hpos{'POSITION'}]."\t".
 				  ($data[$hpos{'POSITION'}] + $length)."\t${strand}\t".$data[$hpos{'MISMATCH'}]."\t${pid}\t".
 					$regions{$data[$hpos{'SEQ_ID'}]}{'build'}."\t${anal_id}\t${cig_line}\n";
@@ -508,12 +510,11 @@ sub read_probe_data{
 					" with family ".$data[$hpos{'CONTAINER'}]);
 			  }
 		}
-	
-	
+		
 		if($self->{'_dump_fasta'}){			
 			#filter controls/randoms?  Or would it be sensible to see where they map
 			#wrap seq here?
-			print $f_out ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'SEQ_ID'}]."\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
+			$f_string .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'SEQ_ID'}]."\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
 		}
 		
 		
@@ -534,7 +535,7 @@ sub read_probe_data{
 	
 	#Need to print last probe_set here only if current and last probeset_id match
 	if($probe_set{'name'} eq $data[$hpos{'FEATURE_ID'}]){
-		print $ps_out "\t".$probe_set{'name'}."\t".$probe_set{'size'}."\t".$self->get_array_dbid()."\t".
+		$ps_string .= "\t".$probe_set{'name'}."\t".$probe_set{'size'}."\t".$self->get_array_dbid()."\t".
 		  $probe_set{'family'}."\t".$probe_set{'xref_id'}."\n";
 	}
 
@@ -542,6 +543,7 @@ sub read_probe_data{
 	print $p_out $probe_string;
 	print $ps_out $ps_string;
 	print $pf_out $pf_string;
+	print $f_out $f_string if($self->{'_dump_fasta'});
 	#$self->Timer()->mark("End of probe loop");
 
 	close($fh);
@@ -596,8 +598,10 @@ sub read_results_data{
 	$self->log("Parsing results(".localtime().")...");
 	
 	my $fh = open_file("<", $self->get_def("results_file"));
-	my $r_out = open_file(">", $self->get_dir("import")."/result.txt");
+
 	my ($i, $line, $probe_elem, $first_result, @header, @data);
+	my $r_string = "";
+
 	#Hack var!
 	my $metric_id = 1;
 	
@@ -626,11 +630,14 @@ sub read_results_data{
 			
 			#multiple mappings
 			foreach my $pid(@{${$self->get_probe_map()}{$data[$probe_elem]}}){
-				print $r_out "\t${pid}\t".$data[$i]."\t$metric_id\t".$self->get_channel_dbid($header[$i])."\n";
+				#removed print to speed up io
+				#print $r_out "\t${pid}\t".$data[$i]."\t$metric_id\t".$self->get_channel_dbid($header[$i])."\n";
+				$r_string .= "\t${pid}\t".$data[$i]."\t$metric_id\t".$self->get_channel_dbid($header[$i])."\n";
 			}
 		}
 	}
-
+	my $r_out = open_file(">", $self->get_dir("import")."/result.txt");
+	print $r_out $r_string;
 	close($r_out);
 	
 	$self->log("Finished parsing and results");
