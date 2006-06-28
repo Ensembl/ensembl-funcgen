@@ -203,10 +203,13 @@ sub get_last_table_id{
 	#can't use multiline query :(
 	#my $sql = "insert into $table (${table}_id) values (\"\"); select LAST_INSERT_ID()";
 	
-	my $sql = "insert into $table (${table}_id) values (\"\")";
-	$self->dbc->do($sql);
+	#my $sql = "insert into $table (${table}_id) values (\"\")";
+	#$self->dbc->do($sql);
 	#Don't need to check if if any higher as insert using autoincrement will select highest unused id
-	return $self->dbc->db_handle->last_insert_id(undef, undef, undef, undef);	
+	#return $self->dbc->db_handle->last_insert_id(undef, undef, undef, undef);	
+
+	my $sql = "select ${table}_id from $table order by ${table}_id desc limit 1";
+	return $self->dbc->db_handle->selectrow_array($sql);
 }
 
 sub load_table_data{

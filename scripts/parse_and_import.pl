@@ -20,6 +20,8 @@ Optional
   -pass|p          The password for the target DB, if not defined in GroupDefs.pm
   -data_root       The root data dir
   -fasta           Fasta dump flag
+  -norm|n          Normalisation method (default=vsn)
+  -species|s       Species name(latin e.g. "Homo sapiens" or "Mus musculus")
   -debug|d         Debug level (1-3)
   -log_file|l      Defines the log file
   -help            Brief help message
@@ -54,6 +56,14 @@ The root data dir containing native data and pipeline data, default = $ENV{'EFG_
 =item B<-fasta>
 
 Flag to turn on dumping of all probe_features in fasta format for the remapping pipeline
+
+=item B<-norm|n>
+
+Normalisation method, deafult is the Bioconductor vsn package which performs generalised log ratio transformations
+
+=item B<-species|s>
+
+Species name for the array.
 
 =item B<-debug>
 
@@ -111,7 +121,8 @@ use strict;
 
 
 
-my ($input_name, $instance, $output_dir, $group, $pass, $help, $man);
+my ($input_name, $instance, $output_dir, $group, $pass, $help, $man, $species, $nmethod);
+
 
 #to be removed
 my ($input_dir, $import_dir);
@@ -139,10 +150,12 @@ GetOptions (
 			"vendor|v=s"   => \$vendor,
 			"pass|p=s"     => \$pass,
 			"group|g=s"    => \$group,#Need user here too? Use group defs to avoid typos?
+			"species|s=s"  => \$species,
 			"debug|d=i"    => \$main::_debug_level,
 			"data_root=s"  => \$data_dir,
 			"fasta"        => \$fasta,
 			"recover|r"    => \$recover,
+			"norm|n=s"     => \$nmethod,
 			"log_file|l=s" => \$main::_log_file,
 			"debug_file=s" => \$main::_debug_file,
 			#should have MAGE flag here? or would this be format?
@@ -165,19 +178,20 @@ $main::_debug_file = $output_dir."/${instance}.dbg" if(! defined $main::_debug_f
 #And trim down Experiment?
 
 my $Exp = Bio::EnsEMBL::Funcgen::Experiment->new(
-												 instance   => $instance,
-												 format     => $format,
-												 vendor     => $vendor,
-												 group      => $group,
-												 pass       => $pass,
-												 data_root  => $data_dir,
-												 output_dir => $output_dir,
-												 recover    => $recover,
-												 dump_fasta => $fasta,
+												 instance    => $instance,
+												 format      => $format,
+												 vendor      => $vendor,
+												 group       => $group,
+												 pass        => $pass,
+												 data_root   => $data_dir,
+												 output_dir  => $output_dir,
+												 recover     => $recover,
+												 dump_fasta  => $fasta,
+												 norm_method => $nmethod,
+												 species     => $species,
 												 #Exp does not build input dir, but could
-												 #This allows input dir to be somewhere other than efg dir structure
-												 
-												 #Need to add array_species!!!!
+												 #This allows input dir to be somewhere 
+												 #other than efg dir structure
 												);
 
 

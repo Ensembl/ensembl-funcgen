@@ -39,7 +39,10 @@ use vars qw(@ISA);
 
 use Bio::EnsEMBL::Funcgen::ArrayDefs;#rename FormatDefs?
 use Bio::EnsEMBL::Funcgen::Helper;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;#eventually add this to register
+use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Utils::ConfigRegistry;
+my $reg = "Bio::EnsEMBL::Registry";
 
 #should also hold location of files aswell as methods
 
@@ -73,7 +76,6 @@ sub new{
 	#Create object from parent class
 	$self = $class->SUPER::new(%args);
 
-	#change this to re-arrange?
     # objects private data and default values
     %attrdata = (
 				 #User defined/built 
@@ -111,8 +113,11 @@ sub new{
 
 				 #Other
 				 _db_adaptor    => undef,
+				 #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
+				 _reg_config    => (-f "~/.ensembl_init") ? "~/.ensembl_init" : undef,
 				 _achip_reg     => {},
-
+				 _core_db       => undef,
+				 _slice_adaptor => undef,
 
 				 #HARDCODED
 				 #Need to handle a lot more user defined info here which may not be caught by the data files
@@ -136,9 +141,25 @@ sub new{
 	foreach my $tmp("instance", "vendor", "format", "group", "data_dir"){
 		$self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{"_${tmp}"});
 	}
-	
 
+	#Set vendor specific vars/methods
 	$self->set_defs();
+
+
+	#load registry
+	if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
+		#current ensembl DBs
+		$reg->load_all_from_db(
+							   -host => "ensembldb.ensembl.org",
+							   -user => "anonymous",
+							   #-verbose => 1,#not working at present
+							  );
+	}else{#from config
+		$reg->load_all($self->{'_reg_config'}, 1);
+	}
+
+	#add EFG DB to reg here!!
+
 
 	$self->debug(2,"Experiment class instance created.");
 	$self->debug_hash(3, \$self);
@@ -580,7 +601,7 @@ sub vsn_norm{
 		#> meanSdPlot(nkid, ranks = FALSE) 
 		
 		#reform dataframe/matrix for each channel
-		#3 sig dec places on scores
+		#3 sig dec places on scores(doesn't work?!)
 		$query .= "c1r<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], format(exprs(glog_df[,1]), nsmall=3), rep(${metric_id}, length(c1[\"probe_id\"])), rep(${dbids[0]}, length(c1[\"probe_id\"])))\n";
 		$query .= "c2r<-cbind(rep(\"\", length(c2[\"probe_id\"])), c2[\"probe_id\"], format(exprs(glog_df[,2]), nsmall=3), rep(${metric_id}, length(c2[\"probe_id\"])), rep(${dbids[1]}, length(c2[\"probe_id\"])))\n";
 		
@@ -610,6 +631,49 @@ sub vsn_norm{
 	system($r_cmd);
 
 	return;
+}
+
+
+#Need to look at how core EnsEMBL objects store these internally and copy
+sub core_db{
+	my $self = shift;
+
+	if(! defined $self->{'_core_db'}){
+		#get core dbadaptor from registry
+		$self->{'_core_db'} = $reg->get_DBAdaptor($self->species, "core");
+	}
+
+	return $self->{'_core_db'};
+}
+
+
+sub slice_adaptor{
+	my $self = shift;
+
+	if(! defined $self->{'_slice_adaptor'}){
+		#get core dbadaptor from registry
+		$self->{'_slice_adaptor'} = $self->db_adaptor->get_adaptor("Slice");
+	}
+
+	return $self->{'_slice_adaptor'};
+}
+
+#could we use the seq region cache instead?
+#this seems like a lot of overhead for getting the id
+sub get_chr_seq_region_id{
+	my ($self, $chr, $start, $end) = @_;
+	#what about strand info?
+
+	#use start and stop to prevent problems with scaffodl assemblies, i.e. >1 seq_region_id
+	my $slice = $self->slice_adadptor->fetch_by_region("chromosome", $chr, $start, $end);
+	#we could pass the slice back to the slice adaptor for this, to avoid dbid problems betwen DBs
+
+	my @seq_region_ids = @{$slice->get_seq_region_id()};
+
+	#this is suppose to return int or undef, not a list!!!!!
+
+	return $slice->get_
+
 }
 
 1;

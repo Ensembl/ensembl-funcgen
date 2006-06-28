@@ -6,6 +6,7 @@ export EFG_SRC=~/src/ensembl-functgenomics
 export EFG_DATA=~/data/efg
 export PATH=$PATH:$EFG_SRC/scripts
 export PERL5LIB=$EFG_SRC/modules:$PERL5LIB
+export PS1='efg@$PS1HOST>'
 
 #could add PERL5LIB here too, this could be extended to include all config for shipping to users?  in bashrc for now
 
@@ -15,4 +16,5 @@ echo "Sourcing .efg" #and cd'ing to $EFG_SRC"
 alias efg='cd $EFG_SRC'
 alias efgd='cd $EFG_DATA'
 alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
+alias mysqle='mysql -hia64g -uensadmin -pensembl efg_test'
 #efg 

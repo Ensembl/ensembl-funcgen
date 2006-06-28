@@ -315,12 +315,17 @@ sub read_probe_data{
 		if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
 			croak("Duplicate regions\n");
 		}else{
-			$data[$hpos{'CHROMOSOME'}] = species_chr_num($self->species(), 	$data[$hpos{'CHROMOSOME'}]);
+			#$data[$hpos{'CHROMOSOME'}] = species_chr_num($self->species(), 	$data[$hpos{'CHROMOSOME'}]);
+
 			#Set region hash for SEQ_ID
+			#Need to look up seq_region id here for given build
+			#Build should be manually specified as we can't guarantee it will be in the correct format
+			#or present at all
+
 			$regions{$data[$hpos{'SEQ_ID'}]} = {
 												start => $start,
 												stop  => $stop,
-												chrom => $data[$hpos{'CHROMOSOME'}] ,
+												seq_region_id => $self->get_chr_seq_region_id($data[$hpos{'CHROMOSOME'}], $start, $stop),
 												build => $data[$hpos{'BUILD'}],
 											   };
 		}
@@ -498,11 +503,11 @@ sub read_probe_data{
 			
 			if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
 				$fid++;
-				$pf_string .= "\t".$regions{$data[$hpos{'SEQ_ID'}]}{'chrom'}."\t".$data[$hpos{'POSITION'}]."\t".
+				$pf_string .= "\t".$regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}."\t".$data[$hpos{'POSITION'}]."\t".
 				  ($data[$hpos{'POSITION'}] + $length)."\t${strand}\t".$data[$hpos{'MISMATCH'}]."\t${pid}\t".
 					$regions{$data[$hpos{'SEQ_ID'}]}{'build'}."\t${anal_id}\t${cig_line}\n";
 				
-				$loc .= $regions{$data[$hpos{'SEQ_ID'}]}{'chrom'}.":".$data[$hpos{'POSITION'}].
+				$loc .= $regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}.":".$data[$hpos{'POSITION'}].
 				  "-".($data[$hpos{'POSITION'}] + $length).";" if ($self->{'_dump_fasta'});
 			}
 			else{ 
