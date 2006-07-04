@@ -34,11 +34,11 @@ use strict;
 
 use vars qw(@ISA);
 
-@ISA = qw(Bio::EnsEMBL::Funcgen::Helper);# Bio::EnsEMBL::GroupDefs);
+@ISA = qw(Bio::EnsEMBL::DBSQL::DBAdaptor);# Bio::EnsEMBL::Funcgen::Helper);
 
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
-#use Bio::EnsEMBL::GroupDefs;#Here on pass from Experiment?
-use Bio::EnsEMBL::Funcgen::Helper;
+#use Bio::EnsEMBL::Funcgen::Helper;
 
 
 ################################################################################
@@ -62,107 +62,91 @@ use Bio::EnsEMBL::Funcgen::Helper;
 
 ################################################################################
 
-sub new{
-    my ($caller, %args) = @_;
+#need to set group here somewhere
+#only required when added to Registry/ConfigRegistry?
 
-    my ($self, %attrdata, $attrname, $argname);
-    my $class = ref($caller) || $caller;
 
-	#Create object from parent class
-	$self = $class->SUPER::new(%args);
+#sub new{
+#    my ($caller, %args) = @_;
 
-	#change this to re-arrange?
+#    my ($self, %attrdata, $attrname, $argname);
+#    my $class = ref($caller) || $caller;
+
+
+    #define defaults here before call to DBAdaptor
+    #change this to re-arrange?
     # objects private data and default values
-    %attrdata = (
-				 _dbname => "efg_test",
-				 _host   => "localhost",
-				 _port   => undef,#default handled in dbc
-				 _user   => "ensadmin",
-				 _pass   => undef,
-				 _dbc    => undef,#Pass existing connection to avoid multiple connections?
-				);
+    #none of these are set here, all passed to DBAdaptor
+#    %attrdata = (
+#		 _-dbname => "efg_test",
+#		 #_-host   => "localhost",
+#		 #_-port   => undef,#default handled in dbc
+#		 _-user   => "ensadmin",
+#		 _-pass   => undef,
+#		 #_-dbc    => undef,#Pass existing connection to avoid multiple connections?
+#		 _-group  => 'funcgen',#?
+#		 _-species => 'Multi',#??????????????????
+#		 #_-dnadb =>#?????????		 
+#		);
 
-    # set each class attribute using passed value or default value
-    foreach $attrname (keys %attrdata){
-        ($argname = $attrname) =~ s/^_//; # remove leading underscore
-        $self->{$attrname} = (exists $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
-    }
+
+#    # set each class attribute using passed value or default value
+#    foreach $attrname (keys %attrdata){
+#        ($argname = $attrname) =~ s/^_//; # remove leading underscore
+#	$args{$argname} = (exists $args{$argname}  && defined $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
+#    }
+
+
+ #   #Create object from parent class
+ #   $self = $class->SUPER::new(%args);
+
 
 	
-	#Do we need these? Yes!, but make all above undef(port?) and use GroupDefs to define
-
-	foreach my $tmp("dbname", "user", "host"){
-		$self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{"_${tmp}"});
-	}
-	
-	if(! $self->dbc()){
-		$self->dbc(new Bio::EnsEMBL::DBSQL::DBConnection(
-														 -user   => $self->user(),
-														 -host   => $self->host(),
-														 -dbname => $self->dbname(),
-														 -host   => $self->host(),
-														 -pass   => $self->pass(),
-														));
-	}
-
-
-
-	$self->debug(2,"DBAdaptor class instance created.");
-	$self->debug_hash(3, \$self);
-
-    return ($self);
-}
-
-
-sub dbc{
-	my ($self, $dbc) = @_;
-
-	if(defined $dbc){
-
-		if(! $dbc->isa('Bio::EnsEMBL::DBSQL::DBConnection')){
-			$self->throw("$dbc is no a DBConnection\n");
-		}
-	
-		$self->{'_dbc'} = $dbc;
-	}
-
-	return 	$self->{'_dbc'};
-}
+    #Do we need these? Yes!, but make all above undef(port?) and use GroupDefs to define
+    
+    #foreach my $tmp("dbname", "user", "host"){
+    #	$self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{"_${tmp}"});
+    #}
+    
+    #if(! $self->dbc()){
+    #	$self->dbc(new Bio::EnsEMBL::DBSQL::DBConnection(
+    #-user   => $self->user(),
+    #													 -host   => $self->host(),
+    #													 -dbname => $self->dbname(),
+    #													 -host   => $self->host(),
+    #													 -pass   => $self->pass(),
+    #													));
+    #}
+    
+    
+    
+    
+#    $self->debug(2,"DBAdaptor class instance created.");
+#    $self->debug_hash(3, \$self);
+    
+#    return ($self);
+#  }
 
 
-#genericise?
-sub user{
-	my ($self, $user) = @_;
-	$self->{'_user'} = $user if($user);
-	return 	$self->{'_user'};
-}
+#sub dbc{
+#	my ($self, $dbc) = @_;
 
-sub pass{
-	my ($self, $pass) = @_;
-	$self->{'_pass'} = $pass if($pass);
-	return 	$self->{'_pass'};
-}
-
-
-sub dbname{
-	my ($self, $dbname) = @_;
-	$self->{'_dbname'} = $dbname if($dbname);
-	return 	$self->{'_dbname'};
-}
-
-sub port{
-	my ($self, $port) = @_;
-	$self->{'_port'} = $port if($port);
-	return 	$self->{'_port'};
-}
-
-sub host{
-	my ($self, $host) = @_;
-	$self->{'_host'} = $host if($host);
-	return 	$self->{'_host'};
-}
+#	if(defined $dbc){
+#
+#		if(! $dbc->isa('Bio::EnsEMBL::DBSQL::DBConnection')){
+#			$self->throw("$dbc is no a DBConnection\n");
+#		}
+#	
+#		$self->{'_dbc'} = $dbc;
+#	}
+#
+#	return 	$self->{'_dbc'};
+#}
 
 
+
+#these should be removed if overlap with core DBAdaptor or moved to ImportAdaptor?
+# or use store methods on each object
 
 sub fetch_dbid_by_table_field{
 	my ($self, $table, $name, $field) = @_;
@@ -253,5 +237,20 @@ sub register_entry{
 	return $valid;#return value to allow caller to throw
 }
 
+
+#Used by ConfigRegistry to make adaptor available
+
+sub get_available_adaptors{
+  my %pairs = (
+	       'OligoArray' => 'Bio::EnsEMBL::Variation::DBSQL::OligoArrayAdaptor',
+	       'OligoProbeSet' => 'Bio::EnsEMBL::Variation::DBSQL::OligoProbeSetAdaptor',
+	       'OligoProbe' => 'Bio::EnsEMBL::Variation::DBSQL::OligoProbeAdaptor',
+	       'OligoFeature' => 'Bio::EnsEMBL::Variation::DBSQL::OligoFeatureAdaptor',
+	       'Experiment' => 'Bio::EnsEMBL::Variation::DBSQL::ExperimentAdaptor',
+	       'ResultSet' => 'Bio::EnsEMBL::Variation::DBSQL::ResultSetAdaptor',
+	      );
+
+  return (\%pairs);
+}	       
 1;
 
