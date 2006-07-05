@@ -13,10 +13,16 @@ use Bio::EnsEMBL::Funcgen::OligoArray;
 
 my $array = Bio::EnsEMBL::Funcgen::OligoArray->new(
 	-NAME        => 'Array-1',
-	-INCLUDED_IN => $another_array,
-	-SETSIZE     => 1,
-	-TYPE        => 'OLIGO',
+        -FORMAT      => 'Tiled',
+        -SIZE        => '1',
+        -SPECIES     => 'Mus_musculus',
+	-VENDOR      => 'Nimblegen',
+        -DESCRIPTION => $desc,
 );
+
+my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
+my $array_adaptor = $db_adaptor->get_ArrayAdaptor();
+my $array = $array_adaptor->fetch_by_name($array_name)
 
 =head1 DESCRIPTION
 
@@ -44,41 +50,39 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::OligoArray;
+package Bio::EnsEMBL::Funcgen::OligoArray;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Storable;
 
-use vars qw(@ISA %VALID_TYPE);
+use vars qw(@ISA);# %VALID_TYPE);
 @ISA = qw(Bio::EnsEMBL::Storable);
 
 
 # Possible types for OligoArray objects
-%VALID_TYPE = (
-	'AFFY'  => 1,
-	'OLIGO' => 1,
-);
+#%VALID_TYPE = (
+#	'AFFY'  => 1,
+#	'OLIGO' => 1,
+#);
 
 
 =head2 new
 
   Arg [-NAME]:
         string - the name of this array
-  Arg [-INCLUDED_IN]:
-        (optional) Bio::EnsEMBL::OligoArray - a possible superset array
-  Arg [-SETSIZE]: 
-        int - the number of probes in a probe set (usually 1 unless Affy)
-  Arg [-TYPE]: 
+  Arg [-TYPE]:
         string - the type of this array (AFFY or OLIGO)
-  Example    : my $array = Bio::EnsEMBL::OligoArray->new(
-                   -NAME        => 'Array-1',
-				   -INCLUDED_IN => $another_array,
-				   -SETSIZE     => 1,
-				   -TYPE        => 'OLIGO',
-               );
-  Description: Creates a new Bio::EnsEMBL::OligoArray object.
-  Returntype : Bio::EnsEMBL::OligoArray
+  Example    : my $array = Bio::EnsEMBL::Funcgen::OligoArray->new(
+								  -NAME        => 'Array-1',
+								  -FORMAT      => 'Tiled',
+								  -SIZE        => '1',
+								  -SPECIES     => 'Mus_musculus',
+								  -VENDOR      => 'Nimblegen',
+								  -DESCRIPTION => $desc,
+								 );
+  Description: Creates a new Bio::EnsEMBL::Funcgen::OligoArray object.
+  Returntype : Bio::EnsEMBL::Funcgen::OligoArray
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -92,13 +96,16 @@ sub new {
 
 	my $self = $class->SUPER::new(@_);
 
-	my ($name, $superset, $setsize, $type)
-		= rearrange( ['NAME', 'INCLUDED_IN', 'SETSIZE', 'TYPE'], @_ );
+	#can we lc these?
+	my ($name, $format, $size, $species, $vendor, $desc)
+		= rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'DESCRIPTION'], @_ );
 	
 	$self->name($name)         if defined $name;
-	$self->superset($superset) if defined $superset;
-	$self->setsize($setsize)   if defined $setsize;
-	$self->type($type)         if defined $type;
+	$self->format($format)     if defined $format;
+	$self->size($size)         if defined $size;
+	$self->species($species)   if defined $species;
+	$self->vendor($vendor)     if defined $vendor;
+	$self->description($desc)  if defined $desc;
 
 	return $self;
 }
@@ -108,7 +115,7 @@ sub new {
   Args       : None
   Example    : my $probes = $array->get_all_Probes();
   Description: Returns all probes on an array. Needs a database connection.
-  Returntype : Listref of Bio::EnsEMBL::OligoProbe objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoProbe objects
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -150,44 +157,41 @@ sub name {
 	return $self->{'name'};
 }
 
-=head2 superset
+=head2 format
 
-  Arg [1]    : (optional) Bio::EnsEMBL::OligoArray - a superset array
-  Example    : my $parent_array = $array->superset();
-  Description: Getter, setter and lazy loader of superset attribute for
-               OligoArray objects. A superset is another OligoArray that
-               contains all the probes of this OligoArray. This is bordering
-               on superfluous.
-  Returntype : Bio::EnsEMBL::OligoArray
-  Exceptions : Throws if argument isn't a Bio::EnsEMBL::OligoArray object
+  Arg [1]    : (optional) string - the format of the array
+  Example    : my $format = $array->format();
+  Description: Getter, setter and lazy loader of format attribute for
+               OligoArray objects e.g. Tiled, Targetted etc...
+  Returntype : string
+  Exceptions : None
   Caller     : General
   Status     : Medium Risk
 
 =cut
 
-sub superset {
+sub format {
 	my $self = shift;
-	my $superset = shift;
-	if ($superset) {
-		if (!ref $superset || !$superset->isa('Bio::EnsEMBL::OligoArray')) {
-			throw('Superset must be a Bio::EnsEMBL::OligoArray');
-		}
-		$self->{'superset'} = $superset;
-	}
-	if ( !exists $self->{'superset'} && $self->dbID() && $self->adaptor() ) {
+
+	$self->{'format'} = shift if @_;
+	if ( !exists $self->{'format'} && $self->dbID() && $self->adaptor() ) {
 		$self->adaptor->fetch_attributes($self);
 	}
-	return $self->{'superset'};
+	return $self->{'format'};
 }
 
-=head2 setsize
+#is this going to be, # of array_chips, probe_sets or probes?
+#currently number of array_chips...maybe change to probe_sets?
+#Is array.size going to be used for validating array imports?
+#Does it matter if we have an incomplete import from an experiment?
+#No but we then need some way of checking further array imports to see what is missing
 
-  Arg [1]    : (optional) int - the number of probes in a probe set
-  Example    : my $setsize = $array->setsize();
-  Description: Getter, setter and lazy loader of setsize attribute for
-               OligoArray objects. The setsize is the number of probes in a
-               probeset for this array. This is likely to be 1 for non-Affy
-               arrays.
+=head2 size
+
+  Arg [1]    : (optional) int - the number of ? in the array
+  Example    : my $size = $array->size();
+  Description: Getter, setter and lazy loader of size attribute for
+               OligoArray objects. The size is the number of ? in this array. 
   Returntype : int
   Exceptions : None
   Caller     : General
@@ -195,44 +199,88 @@ sub superset {
 
 =cut
 
-sub setsize {
+sub size {
 	my $self = shift;
-	$self->{'setsize'} = shift if @_;
-	if ( !exists $self->{'setsize'} && $self->dbID() && $self->adaptor() ) {
+	$self->{'size'} = shift if @_;
+	if ( !exists $self->{'size'} && $self->dbID() && $self->adaptor() ) {
 		$self->adaptor->fetch_attributes($self);
 	}
-	return $self->{'setsize'};
+	return $self->{'size'};
 }
 
-=head2 type
+=head2 species
 
-  Arg [1]    : (optional) string - the type (currently either AFFY or OLIGO)
-               for this array
-  Example    : my $type = $array->type();
-  Description: Getter, setter and lazy loader of type attribute for OligoArray
-               objects. Currently the type can be either AFFY or OLIGO
+  Arg [1]    : (optional) string - the species of the array (e.g. Mus_musculus)
+  Example    : my $species = $array->species();
+  Description: Getter, setter and lazy loader of species attribute for OligoArray
+               objects.
   Returntype : string
-  Exceptions : Throws if argument isn't a valid type (currently AFFY or OLIGO)
+  Exceptions : Throws if argument cannot be mapped to a valid registry species alias
   Caller     : General
   Status     : Medium Risk
 
 =cut
 
-sub type {
+sub species {
+  my $self = shift;
+  my $species = shift;
+  
+  if ($species) {
+    warn("Registry species alias lookup not yet implemented");
+    $self->{'species'} = $species;
+  }
+
+  if ( !exists $self->{'species'} && $self->dbID() && $self->adaptor() ) {
+    $self->adaptor->fetch_attributes($self);
+  }
+  return $self->{'species'};
+}
+
+=head2 vendor
+
+  Arg [1]    : (optional) string - the name of the array vendor
+  Example    : my $vendor = $array->vendor();
+  Description: Getter, setter and lazy loader of vendor attribute for
+               OligoArray objects.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub vendor {
 	my $self = shift;
-	my $type = shift;
-	if ($type) {
-		if ($VALID_TYPE{$type}) {
-			$self->{'type'} = $type;
-		} else {
-			throw("$type is not a valid type for a Bio::EnsEMBL::OligoArray");
-		}
-	}
-	if ( !exists $self->{'type'} && $self->dbID() && $self->adaptor() ) {
+	$self->{'vendor'} = shift if @_;
+	if ( !exists $self->{'vendor'} && $self->dbID() && $self->adaptor() ) {
 		$self->adaptor->fetch_attributes($self);
 	}
-	return $self->{'type'};
+	return $self->{'vendor'};
 }
+
+=head2 description
+
+  Arg [1]    : (optional) string - the description of the array
+  Example    : my $size = $array->description();
+  Description: Getter, setter and lazy loader of description attribute for
+               OligoArray objects. 
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub description {
+	my $self = shift;
+	$self->{'description'} = shift if @_;
+	if ( !exists $self->{'description'} && $self->dbID() && $self->adaptor() ) {
+		$self->adaptor->fetch_attributes($self);
+	}
+	return $self->{'description'};
+}
+
+
 
 1;
 

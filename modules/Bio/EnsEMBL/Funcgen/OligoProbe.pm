@@ -1,19 +1,23 @@
 #
-# Ensembl module for Bio::EnsEMBL::OligoProbe
+# Ensembl module for Bio::EnsEMBL::Funcgen::OligoProbe
 #
 # You may distribute this module under the same terms as Perl itself
 
 =head1 NAME
 
-Bio::EnsEMBL::OligoProbe - A module to represent an oligonucleotide probe.
+Bio::EnsEMBL::Funcgen::OligoProbe - A module to represent an oligonucleotide probe.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::OligoProbe;
+use Bio::EnsEMBL::Funcgen::OligoProbe;
 
-my $probe = Bio::EnsEMBL::OligoProbe->new(
-	-PROBENAME => 'Probe-1',
-	-ARRAY     => $array,
+#
+
+my $probe = Bio::EnsEMBL::Funcgen::OligoProbe->new(
+        -PROBESET_ID => $ps_id,
+	-PROBENAME   => 'Probe-1',
+        #-PAIR_INDEX  => remove?
+	-CLASS       => "EXPERIMENTAL",
 );
 
 =head1 DESCRIPTION
