@@ -39,12 +39,12 @@ use vars qw(@ISA);
 
 use Bio::EnsEMBL::Funcgen::ArrayDefs;#rename FormatDefs?
 use Bio::EnsEMBL::Funcgen::Helper;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;#eventually add this to register
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;#eventually add this to Registry
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::ConfigRegistry;
 my $reg = "Bio::EnsEMBL::Registry";
 
-#should also hold location of files aswell as methods
+
 
 ################################################################################
 
@@ -75,6 +75,8 @@ sub new{
 
 	#Create object from parent class
 	$self = $class->SUPER::new(%args);
+
+	$self->warn("Experiment.pm needs splitting into a classic EnsEMBL style object, with a new Importer doing all the parsing work to populate object which are then loaded through their respective adaptors");
 
     # objects private data and default values
     %attrdata = (
@@ -114,7 +116,7 @@ sub new{
 				 #Other
 				 _db_adaptor    => undef,
 				 #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
-				 _reg_config    => (-f "~/.ensembl_init") ? "~/.ensembl_init" : undef,
+				 _reg_config    => (-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef,
 				 _achip_reg     => {},
 				 _core_db       => undef,
 				 _slice_adaptor => undef,
@@ -122,7 +124,9 @@ sub new{
 				 #HARDCODED
 				 #Need to handle a lot more user defined info here which may not be caught by the data files
 				 _design_type  => "binding_site_identification",#Hard coded MGED type term for now, should have option to enable other array techs?
-				 _species      => "Homo sapiens",
+
+				 #Need to add all aliases in Importer?Just check get_alias and reset to Registry defined standard
+				 _species      => "Human",
 	#description
 	#Associated design types (separate table) timecourse etc?
 	#epi_feature_name (separate table)
@@ -149,16 +153,17 @@ sub new{
 	#load registry
 	if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
 		#current ensembl DBs
-		$reg->load_all_from_db(
+		$reg->load_registry_from_db(
 							   -host => "ensembldb.ensembl.org",
 							   -user => "anonymous",
-							   #-verbose => 1,#not working at present
+							   #-verbose => 1,
 							  );
 	}else{#from config
 		$reg->load_all($self->{'_reg_config'}, 1);
 	}
 
-	#add EFG DB to reg here!!
+	#add EFG DB to reg here!! Will be done automatically when incoporated into Regsitry
+	#Merely calling the DBAdaptor configures the registry
 
 
 	$self->debug(2,"Experiment class instance created.");
@@ -260,10 +265,17 @@ sub db_adaptor{
 
 	
 	if(! defined $self->{'_db_adaptor'}){
-		$self->{'_db_adaptor'} = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-																	   #have Group/DBDefs.pm override?
-																	   pass => $self->pass(),
-																	  );
+		$self->{'_db_adaptor'} = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+		  (
+		   #have Group/DBDefs.pm override?
+		   -host   => "localhost",
+		   -dbname => "efg_test",
+		   -pass => $self->pass(),
+		   -species => "Multi",#or set this to species of interest and generate dbna_db in new
+		   -user => "ensadmin",
+		   -pass => "ensembl",
+		   -group => 'funcgen',
+		  );
 	}
 
 	return $self->{'_db_adaptor'};
@@ -635,8 +647,12 @@ sub vsn_norm{
 
 
 #Need to look at how core EnsEMBL objects store these internally and copy
+#These shouldn't be in here?"
+
 sub core_db{
 	my $self = shift;
+
+	$self->warn("Using core_db, do not remove");
 
 	if(! defined $self->{'_core_db'}){
 		#get core dbadaptor from registry
@@ -651,8 +667,7 @@ sub slice_adaptor{
 	my $self = shift;
 
 	if(! defined $self->{'_slice_adaptor'}){
-		#get core dbadaptor from registry
-		$self->{'_slice_adaptor'} = $self->db_adaptor->get_adaptor("Slice");
+		$self->{'_slice_adaptor'} = $reg->get_adaptor($self->species, "core", "slice");
 	}
 
 	return $self->{'_slice_adaptor'};
@@ -665,14 +680,10 @@ sub get_chr_seq_region_id{
 	#what about strand info?
 
 	#use start and stop to prevent problems with scaffodl assemblies, i.e. >1 seq_region_id
-	my $slice = $self->slice_adadptor->fetch_by_region("chromosome", $chr, $start, $end);
+	#my $slice = $self->slice_adaptor->fetch_by_region("chromosome", $chr, $start, $end);
 	#we could pass the slice back to the slice adaptor for this, to avoid dbid problems betwen DBs
 
-	my @seq_region_ids = @{$slice->get_seq_region_id()};
-
-	#this is suppose to return int or undef, not a list!!!!!
-
-	return $slice->get_
+	return $self->slice_adaptor->fetch_by_region("chromosome", $chr, $start, $end)->get_seq_region_id();
 
 }
 

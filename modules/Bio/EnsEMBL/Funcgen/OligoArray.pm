@@ -50,7 +50,9 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 use strict;
 use warnings;
 
+
 package Bio::EnsEMBL::Funcgen::OligoArray;
+
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
@@ -134,6 +136,35 @@ sub get_all_Probes {
 		return [];
 	}
 }
+
+
+#Nath new
+
+=head2 get_all_ProbeSets
+
+  Args       : None
+  Example    : my $probesets = $array->get_all_ProbeSets();
+  Description: Returns all probesets on an array. Needs a database connection.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoProbeSets objects
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub get_all_ProbeSets {
+	my $self = shift;
+
+	if ( $self->dbID() && $self->adaptor() ) {
+		my $opsa = $self->adaptor()->db()->get_OligoProbeSetAdaptor();
+		my $probesets = $opsa->fetch_all_by_Array($self);
+		return $probesets;
+	} else {
+		warning('Need database connection to retrieve ProbeSets');
+		return [];
+	}
+}
+
 
 =head2 name
 

@@ -199,10 +199,10 @@ sub get_last_table_id{
 sub load_table_data{
 	my ($self, $table, $file) = @_;
 
-	$self->log("Loading $table data from $file");
+	#$self->log("Loading $table data from $file");
 	my $sql = "load data infile \"$file\" into table $table";
 	$self->dbc->do($sql);
-	$self->log("Finished loading $table data");
+	#$self->log("Finished loading $table data");
 	return;
 }
 
@@ -219,8 +219,9 @@ sub register_entry{
 	if(! defined $dbid){
 		$self->insert_table_row($table, @data);
 	}else{
-		$self->log("$table $dbid already registered, validating");
+		#$self->log("$table $dbid already registered, validating");
 		$sql = "select * from $table where ${table}_id = \"$dbid\"";
+
 		@db_entry = $self->dbc->db_handle->selectrow_array($sql);
 		shift @db_entry;
 
@@ -229,7 +230,7 @@ sub register_entry{
 			if($db_entry[$i] ne $data[$i]){
 				$valid = 0;
 				#should really get field names here too, and store if doing repeat validations to reduce no. of queries
-				$self->warn("Validating $table entry $dbid found the following mismatch:\nData\t$data[$i]\nDB\t$db_entry[$i]");
+				warn("Validating $table entry $dbid found the following mismatch:\nData\t$data[$i]\nDB\t$db_entry[$i]");
 			}
 		}
 	}
@@ -242,12 +243,12 @@ sub register_entry{
 
 sub get_available_adaptors{
   my %pairs = (
-	       'OligoArray' => 'Bio::EnsEMBL::Variation::DBSQL::OligoArrayAdaptor',
-	       'OligoProbeSet' => 'Bio::EnsEMBL::Variation::DBSQL::OligoProbeSetAdaptor',
-	       'OligoProbe' => 'Bio::EnsEMBL::Variation::DBSQL::OligoProbeAdaptor',
-	       'OligoFeature' => 'Bio::EnsEMBL::Variation::DBSQL::OligoFeatureAdaptor',
-	       'Experiment' => 'Bio::EnsEMBL::Variation::DBSQL::ExperimentAdaptor',
-	       'ResultSet' => 'Bio::EnsEMBL::Variation::DBSQL::ResultSetAdaptor',
+	       'OligoArray' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoArrayAdaptor',
+	       'OligoProbeSet' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor',
+	       'OligoProbe' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeAdaptor',
+	       'OligoFeature' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor',
+	       'Experiment' => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+	       'ResultSet' => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
 	      );
 
   return (\%pairs);

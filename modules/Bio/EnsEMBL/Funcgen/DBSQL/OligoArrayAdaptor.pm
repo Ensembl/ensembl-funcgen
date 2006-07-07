@@ -50,6 +50,35 @@ use vars qw(@ISA);
 #May need to our this?
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
+=head2 fetch_by_array_chip_dbID
+
+  Arg [1]    : int - dbID of array_chip
+  Example    : my $array = $oaa->fetch_by_array_chip_dbID($ac_dbid);
+  Description: Retrieves a named OligoArray object from the database.
+  Returntype : Bio::EnsEMBL::Funcgen::OligoArray
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub fetch_by_array_chip_dbID {
+    my $self = shift;
+    my $ac_dbid = shift;
+ 
+	my $sth = $self->prepare("
+		SELECT array_id
+		FROM array a, array_chip ac,
+		WHERE a.array_id = ac.array_id
+		AND ac.array_chip_id = $ac_db_id
+	");
+
+	my ($array_id) = $sth->fetchrow();
+
+	return $self->fetch_by_dbID($array_id);
+}
+
+
 
 =head2 fetch_by_name
 
@@ -162,7 +191,7 @@ sub _columns {
 	
 	#Nath, remove species?
 
-	return qw( a.array_id a.array_id a.name a.format a.size a.species a.vendor a.description);
+	return qw( a.array_id a.name a.format a.size a.species a.vendor a.description);
 }
 
 =head2 _objs_from_sth
@@ -197,7 +226,7 @@ sub _objs_from_sth {
 														   -size        => $size,
 														   -species     => $species,
 														   -vendor      => $vendor,
-														   -description => $desciption,
+														   -description => $description,
 														  );
 
 		push @result, $array;
@@ -255,7 +284,7 @@ sub store {
 		$sth->bind_param(3, $array->size(), SQL_INTEGER);
 		$sth->bind_param(4, $array->species(),    SQL_VARCHAR);
 		$sth->bind_param(5, $array->vendor(),    SQL_VARCHAR);
-		$sth->bind_param(6, $array->descrition(),    SQL_VARCHAR);
+		$sth->bind_param(6, $array->description(),    SQL_VARCHAR);
 
 		#if (defined $superset) {
 		#	$sth->bind_param(4, $superset->dbID(), SQL_INTEGER);
