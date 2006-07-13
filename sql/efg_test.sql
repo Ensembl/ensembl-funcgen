@@ -30,7 +30,7 @@ CREATE TABLE `egroup` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-
+insert into egroup values("", "efg", "Hinxton", "njohnson@ebi.ac.uk");
 
 --- group is reserved by MySQL.
 ---Others? head? description? egroup_member(table?) probably overkill.
@@ -73,8 +73,7 @@ CREATE TABLE `array_chip` (
    `design_id` int(11) unsigned NOT NULL default '0',
    `array_id` int(11) unsigned NOT NULL default '0',
    `name` varchar(40) default NULL,
-   `description` varchar(255) default NULL,
-   PRIMARY KEY  (`array_chip_id`),
+    PRIMARY KEY  (`array_chip_id`),
    KEY `design_idx` (`design_id`),
    KEY `array_idx` (`array_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -82,31 +81,35 @@ CREATE TABLE `array_chip` (
 
 
 --- name = design_name, or is this the chip name?
+--- removed  `description` varchar(255) default NULL,
 
 
 
 
 --
--- Table structure for table `probe_feature`
+-- Table structure for table `oligo_feature`
 --
 
-DROP TABLE IF EXISTS `probe_feature`;
-CREATE TABLE `probe_feature` (
-   `probe_feature_id` int(11) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `oligo_feature`;
+CREATE TABLE `oligo_feature` (
+   `oligo_feature_id` int(11) unsigned NOT NULL auto_increment,
    `seq_region_id` int(11) unsigned NOT NULL default '0',
-   `local_start` int(11) NOT NULL default '0',
-   `local_end` int(11) NOT NULL default '0',
+   `seq_region_start` int(11) NOT NULL default '0',
+   `seq_region_end` int(11) NOT NULL default '0',
    `seq_region_strand` tinyint(4) NOT NULL default '0', 
+   `oligo_probe_id` int(11) unsigned NOT NULL default '0',
+   `analysis_id` int(11) unsigned NOT NULL default '0',	
    `mismatches` tinyint(4) NOT NULL default '0',
-   `probe_id` int(11) unsigned NOT NULL default '0',
    `build_id` smallint(6) unsigned NOT NULL default '0',
-   `analysis_id` int(11) unsigned NOT NULL default '0',
    `cigar_line` text,
-   PRIMARY KEY  (`probe_feature_id`),
-   KEY `start_idx` (`local_start`),
-   KEY `probe_idx` (`probe_id`)
+   PRIMARY KEY  (`oligo_feature_id`),
+   KEY `start_idx` (`seq_region_start`),
+   KEY `oligo_probe_idx` (`oligo_probe_id`),
+   KEY `seq_region_idx` (`seq_region_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+
+--- Do jointindex on seq region local start?
 --- Currently use chr data in here rather than true seq_regions, Need to map all probe global values to seq_regions.
 --- build_id currently set to freeze date, can go when we incorporate build mapping into the import API
 --- Would not capture true probe seq if there were any mismatches in mapping.
@@ -117,41 +120,45 @@ CREATE TABLE `probe_feature` (
 
 
 --
--- Table structure for table `probe_set`
+-- Table structure for table `oligo_probe_set`
 -- 
 
-DROP TABLE IF EXISTS `probe_set`;
-CREATE TABLE `probe_set` (
-   `probe_set_id` int(11) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `oligo_probe_set`;
+CREATE TABLE `oligo_probe_set` (
+   `oligo_probe_set_id` int(11) unsigned NOT NULL auto_increment,
    `name` varchar(20) NOT NULL default '',
    `size` smallint(6) unsigned NOT NULL default '0',
-   `array_chip_id` int(11) unsigned NOT NULL default '0',
    `family` varchar(20) default NULL,
-   `xref_id` int(10) unsigned NOT NULL default '0',
-   PRIMARY KEY  (`probe_set_id`),
-   KEY `array_chip_idx` (`array_chip_id`)
+   PRIMARY KEY  (`oligo_probe_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+--- Now ancillary/optional table
 --- joint key on probe_set_id and array_id?
 --- aka feature for nimblegen(optional, therefore some probes = their featureset/probeset)
 --- Can we omit probe_sets for sets of size == 1?
 --- family= ENCODE REGIONS, RANDOM etc, generic descriptor for probes, can have multiple families on one chip
---- xref_id = encode region name
--- Table structure for table `probe`
+--- xref_id = encode region name, removed!!!!  Generate real xref entries.
+
+
+---
+-- Table structure for table `oligo_probe`
 --
 
-DROP TABLE IF EXISTS `probe`;
-CREATE TABLE `probe` (
-   `probe_id` int(11) unsigned NOT NULL auto_increment,
-   `probe_set_id` int(11) unsigned NOT NULL default '0',
-   `name` varchar(20) default NULL,
-   `pair_index` int(11) unsigned NOT NULL default '0',
+DROP TABLE IF EXISTS `oligo_probe`;
+CREATE TABLE `oligo_probe` (
+   `oligo_probe_id` int(11) unsigned NOT NULL auto_increment,
+   `oligo_probe_set_id` int(11) unsigned default NULL,
+   `name` varchar(20) NOT NULL default '',
+   `length` smallint(6) unsigned NOT NULL default '0',
+   `array_chip_id` int(11) unsigned NOT NULL default '0',
    `class` varchar(20) default NULL,
-    PRIMARY KEY  (`probe_id`),
-    KEY `probe_set_idx` (`probe_set_id`)
+    PRIMARY KEY  (`oligo_probe_id`),
+    KEY `probe_set_idx` (`oligo_probe_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+
 --- remove array_id and link through probe_set, can't if we're not populating probe_set for sets of 1.
+--- name (for Affy) at least is array_chip to probe relationship, probeset is optional for some formats 
 --- remove? class = control, experimental etc... naming clash with array.class, different class types.
 --- pair_index aka nimblegen match_index, id to connect paired probes (same as id/name for single probes).
 --- 
@@ -163,6 +170,13 @@ CREATE TABLE `probe` (
 
 
 --- Xref issue:  How are we going to consolidate vendor defined xrefs vs. ensembl core xrefs (e.g. affy) to ensure updating of xref table in core DB?
+
+
+
+--- pair_index table   `pair_index` int(11) unsigned NOT NULL default '0',
+--- joint index on oligo_probe_ids
+
+
 
 
 --- Other fields:
@@ -247,12 +261,12 @@ CREATE TABLE `target` (
 DROP TABLE IF EXISTS `result`;
 CREATE TABLE `result` (
    `result_id` int(11) unsigned NOT NULL auto_increment,
-   `probe_id` int(11) unsigned default NULL,
+   `oligo_probe_id` int(11) unsigned default NULL,
    `score` double default NULL,
    `metric_id` int(11) unsigned default NULL,
    `channel_id` int(11) unsigned default NULL,
    PRIMARY KEY  (`result_id`),
-   KEY `probe_idx` (`probe_id`),
+   KEY `oligo_probe_idx` (`oligo_probe_id`),
    KEY `channel_idx` (`channel_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 

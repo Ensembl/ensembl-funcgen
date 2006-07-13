@@ -12,11 +12,11 @@ Bio::EnsEMBL::Funcgen::OligoArray - A module to represent an oligonucleotide mic
 use Bio::EnsEMBL::Funcgen::OligoArray;
 
 my $array = Bio::EnsEMBL::Funcgen::OligoArray->new(
-	-NAME        => 'Array-1',
+	    -NAME        => 'Array-1',
         -FORMAT      => 'Tiled',
         -SIZE        => '1',
         -SPECIES     => 'Mus_musculus',
-	-VENDOR      => 'Nimblegen',
+	    -VENDOR      => 'Nimblegen',
         -DESCRIPTION => $desc,
 );
 
@@ -63,6 +63,7 @@ use vars qw(@ISA);# %VALID_TYPE);
 
 
 # Possible types for OligoArray objects
+#This should match the vendor enum values?
 #%VALID_TYPE = (
 #	'AFFY'  => 1,
 #	'OLIGO' => 1,
@@ -75,12 +76,17 @@ use vars qw(@ISA);# %VALID_TYPE);
         string - the name of this array
   Arg [-TYPE]:
         string - the type of this array (AFFY or OLIGO)
+
+
+#array_chips is array of hashes or design_id and name, dbID will be populated on store, this should be a simple object!
+
   Example    : my $array = Bio::EnsEMBL::Funcgen::OligoArray->new(
 								  -NAME        => 'Array-1',
 								  -FORMAT      => 'Tiled',
 								  -SIZE        => '1',
 								  -SPECIES     => 'Mus_musculus',
 								  -VENDOR      => 'Nimblegen',
+                                  -ARRAY_CHIPS => \@array_chips,
 								  -DESCRIPTION => $desc,
 								 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::OligoArray object.
@@ -99,15 +105,18 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 
 	#can we lc these?
-	my ($name, $format, $size, $species, $vendor, $desc)
-		= rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'DESCRIPTION'], @_ );
+	my ($name, $format, $size, $species, $vendor, $ac_ref, $desc)
+		= rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'ARRAY_CHIPS', 'DESCRIPTION'], @_ );
 	
-	$self->name($name)         if defined $name;
-	$self->format($format)     if defined $format;
-	$self->size($size)         if defined $size;
-	$self->species($species)   if defined $species;
-	$self->vendor($vendor)     if defined $vendor;
-	$self->description($desc)  if defined $desc;
+	$self->name($name)          if defined $name;
+	$self->format($format)      if defined $format;
+	$self->size($size)          if defined $size;
+	$self->species($species)    if defined $species;
+	$self->vendor($vendor)      if defined $vendor;
+	$self->array_chips($ac_ref) if defined $ac_ref;
+	$self->description($desc)   if defined $desc;
+
+	warn("Need to add support for array_chips here, or create new object?");
 
 	return $self;
 }
@@ -138,7 +147,7 @@ sub get_all_Probes {
 }
 
 
-#Nath new
+#Nath new get methods
 
 =head2 get_all_ProbeSets
 
@@ -164,6 +173,36 @@ sub get_all_ProbeSets {
 		return [];
 	}
 }
+
+=head2 get_array_chip_ids
+
+  Args       : None
+  Example    : my @ac_ids = $array->get_array_chip_ids();
+  Description: Returns all probesets on an array. Needs a database connection.
+  Returntype : Listref of array_chip ids
+  Exceptions : Throws if none retrieved
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub get_array_chip_ids {
+	my $self = shift;
+
+	my @ac_ids;
+
+	foreach my $ac_hash(@{$self->array_chips()}){
+		push @ac_ids, $$ac_hash{'array_chip_id'};
+	}
+
+	if(! @ac_ids){
+		throw("No array_chip_ids available")
+	}
+
+	return \@ac_ids;
+
+}
+
 
 
 =head2 name
@@ -311,6 +350,50 @@ sub description {
 	return $self->{'description'};
 }
 
+=head2 array_chips
+
+  Arg [1]    : (optional) arrayref of hashes - array_chips hashes (keys == dbid, design_id & name)
+  Example    : $array->array_chips(\@array_chips);
+  Description: Getter, setter and lazy loader of array_chip hashes
+  Returntype : List of hashes
+  Exceptions : Throws exception if none found for array_id
+  Caller     : General
+  Status     : High Risk
+
+=cut
+
+sub array_chips {
+	my $self = shift;
+
+	#Need to warn if already defined?
+	#@{$self->{'array_chips'}} = (@{$_[0]}) if (@_);
+	#this flattens the structure
+
+	if(@_){
+		$self->{'array_chips'} = ();
+
+		foreach my $hash(@{$_[0]}){
+			push @{$self->{'array_chips'}}, ($hash);
+	    }
+	}
+	
+	
+	if ( ! exists $self->{'array_chips'}){
+		if( $self->dbID() && $self->adaptor() ) {
+			#$self->adaptor->fetch_attributes($self);
+			#need to do this differently as we're accessing a different table
+			$self->{'array_chips'} = $self->adaptor->db->get_OligoArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID());
+		}
+		else{
+			warn("Need array dbID and DB connection to retrieve array_chips");
+		}
+
+
+	}
+
+	#throw here?	
+	return $self->{'array_chips'};
+}
 
 
 1;

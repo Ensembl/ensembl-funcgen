@@ -67,12 +67,14 @@ sub fetch_by_array_chip_dbID {
     my $ac_dbid = shift;
  
 	my $sth = $self->prepare("
-		SELECT array_id
-		FROM array a, array_chip ac,
+		SELECT a.array_id
+		FROM array a, array_chip ac
 		WHERE a.array_id = ac.array_id
-		AND ac.array_chip_id = $ac_db_id
+		AND ac.array_chip_id = $ac_dbid
 	");
 
+
+	$sth->execute();
 	my ($array_id) = $sth->fetchrow();
 
 	return $self->fetch_by_dbID($array_id);
@@ -101,6 +103,11 @@ sub fetch_by_name {
     if (scalar @$result > 1) {
 		warning("Array $name is not unique in the database, but only one result has been returned");
     } 
+
+
+	#should have fetch by name vendor, to provide uniqueness?
+	#should check for this on import!
+
 
     return $result->[0];
 }
@@ -242,6 +249,46 @@ sub _objs_from_sth {
 	return \@result;
 }
 
+
+=head2 _fetch_array_chips_by_array_dbID
+
+  Arg [1]    : int - dbID or array
+  Example    : None
+  Description: Retrieves
+  Returntype : Listref of array_chip hashes
+  Exceptions : Throws if no array dbID specified
+  Caller     : Internal
+  Status     : Medium Risk
+
+=cut
+
+sub _fetch_array_chips_by_array_dbID {
+	my ($self, $array_dbID) = @_;
+
+	throw("Must specifiy an array_id to retrieve array_chips") if (! $array_dbID);
+	my (@result, $array_chip_id, $design_id, $name, %ac_tmp);
+
+	my $sth = $self->prepare("select array_chip_id, design_id, name from array_chip where array_id = $array_dbID");	
+	$sth->execute();
+
+	$sth->bind_columns(\$array_chip_id, \$design_id, \$name);
+	
+	while ( $sth->fetch() ) {
+		%ac_tmp = (
+				   array_chip_id => $array_chip_id,
+				   design_id => $design_id,
+				   name => $name,
+				  );
+
+		push @result, {%ac_tmp};
+	}
+	return \@result;
+}
+
+
+
+
+
 =head2 store
 
   Args       : List of Bio::EnsEMBL::Funcgen::OligoArray objects
@@ -260,12 +307,22 @@ sub store {
     my $self = shift;
     my @args = @_;
 
+	my $ac_sth = $self->prepare("INSERT INTO array_chip
+                                 (design_id, array_id, name)
+                                 VALUES (?, ?, ?)");
+
+
     foreach my $array (@args) {
 		if ( !$array->isa('Bio::EnsEMBL::Funcgen::OligoArray') ) {
-			warning('Can only store OligoArray objects');
+			warning('Can only store OligoArray objects, skipping $array');
 			next;
 		}
-		
+
+		if( ! exists $array->{'array_chips'}){
+			warning("Need to implement array_chip inserts, should we create OligoArrayChip.pm? Skipping");
+			next;
+		}		
+
 		# Has array already been stored?
 		next if ( $array->dbID() && $array->adaptor() == $self );
 
@@ -274,28 +331,37 @@ sub store {
 		#	$self->store($superset);
 		#}
 
+		#can we prepare these statement once,and then bind in the loop, to prevent preparing multiple times?
 		my $sth = $self->prepare("
 			INSERT INTO array
 			(name, format, size, species, vendor, description)
 			VALUES (?, ?, ?, ?, ?, ?)
 		");
-		$sth->bind_param(1, $array->name(),    SQL_VARCHAR);
-		$sth->bind_param(2, $array->format(),    SQL_VARCHAR);
-		$sth->bind_param(3, $array->size(), SQL_INTEGER);
-		$sth->bind_param(4, $array->species(),    SQL_VARCHAR);
-		$sth->bind_param(5, $array->vendor(),    SQL_VARCHAR);
-		$sth->bind_param(6, $array->description(),    SQL_VARCHAR);
-
-		#if (defined $superset) {
-		#	$sth->bind_param(4, $superset->dbID(), SQL_INTEGER);
-		#} else {
-		#	$sth->bind_param(4, undef);
-		#}
+		$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
+		$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
+		$sth->bind_param(3, $array->size(),         SQL_INTEGER);
+		$sth->bind_param(4, $array->species(),      SQL_VARCHAR);
+		$sth->bind_param(5, $array->vendor(),       SQL_VARCHAR);
+		$sth->bind_param(6, $array->description(),  SQL_VARCHAR);
 
 		$sth->execute();
 		my $dbID = $sth->{'mysql_insertid'};
 		$array->dbID($dbID);
 		$array->adaptor($self);
+
+		foreach my $array_chip(@{$array->array_chips()}){
+			#validate keys here..or write object?!
+			warn("Need to validate array_chip keys here or write obj");
+
+
+			$ac_sth->bind_param(1, $array_chip->{'design_id'}, SQL_INTEGER);
+			$ac_sth->bind_param(2, $dbID,                      SQL_INTEGER);
+			$ac_sth->bind_param(3, $array_chip->{'name'},      SQL_VARCHAR);
+
+			$ac_sth->execute();
+			$$array_chip{'array_chip_id'} = $ac_sth->{'mysql_insertid'};
+
+		}
 	}
 }
 

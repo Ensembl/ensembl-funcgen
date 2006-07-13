@@ -1,5 +1,5 @@
 #
-# Ensembl module for Bio::EnsEMBL::OligoFeature
+# Ensembl module for Bio::EnsEMBL::Funcgen::OligoFeature
 #
 # You may distribute this module under the same terms as Perl itself
 
@@ -10,9 +10,9 @@ genomic mapping.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::OligoFeature;
+use Bio::EnsEMBL::Funcgen::OligoFeature;
 
-my $feature = Bio::EnsEMBL::OligoFeature->new(
+my $feature = Bio::EnsEMBL::Funcgen::OligoFeature->new(
 	-PROBE         => $probe,
 	-MISMATCHCOUNT => 0,
 	-SLICE         => $chr_1_slice,
@@ -21,6 +21,10 @@ my $feature = Bio::EnsEMBL::OligoFeature->new(
 	-STRAND        => -1,
 ); 
 
+#build_id/version, seq_region_id, seq_region_strand -  from slice?
+#cigar_line?
+
+
 =head1 DESCRIPTION
 
 An OligoFeature object represents the genomic placement of an OligoProbe
@@ -28,8 +32,8 @@ object. The data are stored in the oligo_feature table.
 
 =head1 AUTHOR
 
-This module was created by Ian Sealy, but is almost entirely based on the
-AffyFeature module written by Arne Stabenau.
+This module was created by Nathan Johnson, but is almost entirely based on the
+AffyFeature module written by Ian Sealy and Arne Stabenau.
 
 This module is part of the Ensembl project: http://www.ensembl.org/
 
@@ -44,7 +48,7 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::OligoFeature;
+package Bio::EnsEMBL::Funcgen::OligoFeature;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
@@ -56,7 +60,7 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-PROBE]        : Bio::EnsEMBL::OligoProbe - probe
+  Arg [-PROBE]        : Bio::EnsEMBL::Funcgen::OligoProbe - probe
         An OligoFeature must have a probe. This probe must already be stored if
 		you plan to store the feature.
   Arg [-MISMATCHCOUNT]: int
@@ -84,7 +88,7 @@ use vars qw(@ISA);
 				   -STRAND        => -1,
 			   ); 
   Description: Constructor for OligoFeature objects.
-  Returntype : Bio::EnsEMBL::OligoFeature
+  Returntype : Bio::EnsEMBL::Funcgen::OligoFeature
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -113,7 +117,7 @@ sub new {
   Example    : none
   Description: Quick and dirty version of new. Only works if the code is very
                disciplined.
-  Returntype : Bio::EnsEMBL::OligoFeature
+  Returntype : Bio::EnsEMBL::Funcgen::OligoFeature
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -122,6 +126,8 @@ sub new {
 
 sub new_fast {
    my ($class, $hashref)  = @_;
+
+   throw("Not implemented");
 
    return bless ($hashref, $class);
 }
@@ -198,13 +204,13 @@ sub probelength {
 
 =head2 probe
 
-  Arg [1]    : Bio::EnsEMBL::AffyProbe - probe
+  Arg [1]    : Bio::EnsEMBL::Funcgen::OligoProbe - probe
   Example    : my $probe = $feature->probe();
   Description: Getter, setter and lazy loader of probe attribute for
                OligoFeature objects. Features are retrieved from the database
 			   without attached probes, so retrieving probe information for a
 			   feature will involve another query.
-  Returntype : Bio::EnsEMBL::OligoProbe
+  Returntype : Bio::EnsEMBL::Funcgen::OligoProbe
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -215,8 +221,8 @@ sub probe {
     my $self = shift;
 	my $probe = shift;
     if ($probe) {
-		if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::OligoProbe') ) {
-			throw('Probe must be a Bio::EnsEMBL::OligoProbe object');
+		if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::OligoProbe') ) {
+			throw('Probe must be a Bio::EnsEMBL::Funcgen::OligoProbe object');
 		}
 		$self->{'probe'} = $probe;
     }

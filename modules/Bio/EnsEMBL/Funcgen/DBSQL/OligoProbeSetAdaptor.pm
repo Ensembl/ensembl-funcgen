@@ -1,5 +1,5 @@
 #
-# Ensembl module for Bio::EnsEMBL::DBSQL::OligoProbeSetAdaptor
+# Ensembl module for Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor
 #
 # You may distribute this module under the same terms as Perl itself
 
@@ -17,7 +17,7 @@ my $probeset = $opa->fetch_by_array_probeset_name('Array-1', 'ProbeSet-1');
 =head1 DESCRIPTION
 
 The OligoProbeSetAdaptor is a database adaptor for storing and retrieving
-OligoProbeSet objects.
+OOligoProbeSet objects.
 
 =head1 AUTHOR
 
@@ -37,10 +37,10 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::DBSQL::OligoProbeSetAdaptor;
+package Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::OligoProbe;
+use Bio::EnsEMBL::Funcgen::OligoProbe;#?
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
@@ -70,11 +70,11 @@ sub fetch_by_array_probeset_name {
 	my $probeset_name = shift;
 	
 	my $sth = $self->prepare("
-		SELECT probe_set_id
-		FROM probe_set ps, array a, array_chip ac
+		SELECT oligo_probe_set_id
+		FROM oligo_probe_set ops, array a, array_chip ac
 		WHERE a.array_id = ac.array_id
 		AND a.name = ?
-		AND ps.name = ?
+		AND ops.name = ?
 	");
 	
 	$sth->bind_param(1, $array_name,    SQL_VARCHAR);
@@ -95,7 +95,7 @@ sub fetch_by_array_probeset_name {
 
 =head2 fetch_all_by_Array
 
-  Arg [1]    : Bio::EnsEMBL::OligoArray
+  Arg [1]    : Bio::EnsEMBL::Array
   Example    : my @probesets = @{$opsa->fetch_all_by_Array($array)};
   Description: Fetch all probes on a particular array.
   Returntype : Listref of Bio::EnsEMBL::OligoProbeSet objects.
@@ -109,16 +109,18 @@ sub fetch_all_by_Array {
 	my $self  = shift;
 	my $array = shift;
 
+	throw("Not yet implemented");
+
 	my ($probeset_id, @probesets);
 	
-	if ( !ref($array) || !$array->isa('Bio::EnsEMBL::OligoArray') ) {
-		warning('fetch_all_by_Array requires a Bio::EnsEMBL::OligoArray object');
+	if ( !ref($array) || !$array->isa('Bio::EnsEMBL::Array') ) {
+		warning('fetch_all_by_Array requires a Bio::EnsEMBL::Array object');
 		return [];
 	}
 	
 	my $array_id = $array->dbID();
 	if (!defined $array_id) {
-		warning('fetch_all_by_Array requires a stored Bio::EnsEMBL::OligoArray object');
+		warning('fetch_all_by_Array requires a stored Bio::EnsEMBL::Array object');
 		return [];
 	}
 
@@ -130,10 +132,10 @@ sub fetch_all_by_Array {
 
 	
 	my $sth = $self->prepare("
-		SELECT probe_set_id
-		FROM probe_set ps, array a, array_chip ac
+		SELECT oligo_probe_set_id
+		FROM oligo_probe_set ops, array a, array_chip ac
 		WHERE a.array_id = ac.array_id
-        AND ac.array_chip_id = ps.array_chip_id
+        AND ac.array_chip_id = ops.array_chip_id
 		AND a.name = $array_id
 	");
 	
@@ -147,28 +149,28 @@ sub fetch_all_by_Array {
 	return \@probesets;
 }
 
-=head2 fetch_by_OligoFeature
+=head2 fetch_by_ProbeFeature
 
-  Arg [1]    : Bio::EnsEMBL::OligoFeature
-  Example    : my $probeset = $opsa->fetch_by_OligoFeature($feature);
+  Arg [1]    : Bio::EnsEMBL::ProbeFeature
+  Example    : my $probeset = $opsa->fetch_by_ProbeFeature($feature);
   Description: Returns the probeset that created a particular feature.
   Returntype : Bio::EnsEMBL::OligoProbeSet
-  Exceptions : Throws if argument is not a Bio::EnsEMBL::OligoFeature object
+  Exceptions : Throws if argument is not a Bio::EnsEMBL::ProbeFeature object
   Caller     : General
   Status     : Medium Risk
 
 =cut
 
-sub fetch_by_OligoFeature {
+sub fetch_by_ProbeFeature {
 	my $self    = shift;
 	my $feature = shift;
 	
 	if (
 		!ref($feature)
-		|| !$feature->isa('Bio::EnsEMBL::Funcgen::OligoFeature')
+		|| !$feature->isa('Bio::EnsEMBL::Funcgen::OligoProbeFeature')
 		|| !$feature->{'_probe_id'}
 	) {
-		throw('fetch_by_OligoFeature requires a stored Bio::EnsEMBL::OligoFeature object');
+		throw('fetch_by_ProbeFeature requires a stored Bio::EnsEMBL::Funcgen::ProbeFeature object');
 	}
 	
 	my $sth = $self->prepare("
@@ -179,7 +181,8 @@ sub fetch_by_OligoFeature {
 		AND pf.probe_feature_id = ?
 	");
 
-	$sth->bind_param(1, $feature->{'_probe_id'}),    SQL_VARCHAR);
+	$sth->bind_param(1, $feature->{'_probe_id'},    SQL_VARCHAR);
+	$sth->execute();
 
 	my ($probeset_id) = $sth->fetchrow();
 
@@ -202,7 +205,7 @@ sub fetch_by_OligoFeature {
 sub _tables {
 	my $self = shift;
 
-  	return [ 'probe_set', 'ps' ];
+  	return [ 'oligo_probe_set', 'ops' ];
 }
 
 =head2 _columns
@@ -222,7 +225,7 @@ sub _columns {
   my $self = shift;
 
   #remove xref_id and use xref tables
-  return qw( ps.probe_set_id ps.name ps.size ps.array_chip_id ps.family);
+  return qw( ops.oligo_probe_set_id ops.name ops.size ops.family);
 
 }
 
@@ -231,7 +234,7 @@ sub _columns {
   Arg [1]    : DBI statement handle object
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
-               Creates OligoProbe objects from an executed DBI statement
+               Creates OligoProbeSet objects from an executed DBI statement
 			   handle.
   Returntype : Listref of Bio::EnsEMBL::OligoProbeSet objects
   Exceptions : None
@@ -243,10 +246,10 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $current_dbid, $probeset_id, $name, $size, $arraychip_id, $family);
+	my (@result, $current_dbid, $probeset_id, $name, $size, $family);
 	my ($array, %array_cache);
 	
-	$sth->bind_columns( \$probeset_id,  \$name, \$size, \$arraychip_id, \$family);
+	$sth->bind_columns( \$probeset_id,  \$name, \$size, \$family);
 	
 
 	#do not have array_chip adaptor
@@ -258,7 +261,7 @@ sub _objs_from_sth {
 		#$array = $array_cache{$array_id} || $self->db->get_OligoArrayAdaptor()->fetch_by_dbID($array_id);
 
 		#This is nesting array object in probeset!
-		$array = $array_cache{$arraychip_id} || $self->db->get_OligoArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
+		#$array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
 
 		#Is this required? or should we lazy load this?
 		#Should we also do the same for probe i.e. nest or lazy load probeset
@@ -276,6 +279,8 @@ sub _objs_from_sth {
 		#would slightly slow down processing, and would slightly increase memory as cache(small as non-redundant)
 		#and map hashes would persist
 
+		#Do we even need this????
+
 		warn("Can we lazy load the arrays from a global cache, which is itself lazy loaded and non-redundant?\n");
 
 		
@@ -283,14 +288,13 @@ sub _objs_from_sth {
 		#if (!$current_dbid || $current_dbid != $probeset_id) {
 		  
 		  # New probeset
-		  $probeset = Bio::EnsEMBL::OligoProbeSet->new
+		  $probeset = Bio::EnsEMBL::Funcgen::OligoProbeSet->new
 			(
-			 -probe_set_id => $probeset_id,									  
+			 -dbID         => $probeset_id,
 			 -name         => $name,
 			 -size         => $size,
-			 -array        => $array,
-			 -family       => $description,
-			 -dbID        => $probeset_id,
+			 #			 -array        => $array,
+			 -family       => $family,
 			 -adaptor     => $self,
 			);
 		push @result, $probeset;
@@ -306,87 +310,92 @@ sub _objs_from_sth {
 
 =head2 store
 
-  Arg [1]    : List of Bio::EnsEMBL::OligoProbe objects
-  Example    : $opa->store($probe1, $probe2, $probe3);
-  Description: Stores given OligoProbe objects in the database. Should only be
-               called once per probe because no checks are made for duplicates.
+  Arg [1]    : List of Bio::EnsEMBL::Funcgen::OligoProbeSet objects
+  Example    : $opa->store($probeset1, $probeset2, $probeset3);
+  Description: Stores given OligoProbeSet objects in the database. Should only be
+               called once per probe because no checks are made for duplicates.??? It certainly looks like there is :/
 			   Sets dbID and adaptor on the objects that it stores.
   Returntype : None
-  Exceptions : Throws if arguments aren't OligoProbe objects
+  Exceptions : Throws if arguments aren't Probe objects
   Caller     : General
   Status     : Medium Risk
 
 =cut
 
 sub store {
-	my ($self, @probes) = @_;
+	my ($self, @probesets) = @_;
 
-	if (scalar @probes == 0) {
-		throw('Must call store with a list of OligoProbe objects');
+	my ($sth, $array);
+
+	if (scalar @probesets == 0) {
+		throw('Must call store with a list of Probe objects');
 	}
 
 	my $db = $self->db();
 
-	PROBE: foreach my $probe (@probes) {
+	PROBESET: foreach my $probeset (@probesets) {
 
-		if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::OligoProbe') ) {
-			throw('Probe must be an OligoProbe object');
+		if ( !ref $probeset || !$probeset->isa('Bio::EnsEMBL::Funcgen::OligoProbeSet') ) {
+			throw('OligoProbeSet must be an OligoProbeSet object');
 		}
 
-		if ( $probe->is_stored($db) ) {
-			warning('OligoProbe [' . $probe->dbID() . '] is already stored in the database');
-			next PROBE;
+		if ( $probeset->is_stored($db) ) {
+			warning('OligoProbeSet [' . $probeset->dbID() . '] is already stored in the database');
+			next PROBESET;
 		}
 		
 		# Get all the arrays this probe is on and check they're all in the database
-		my $arrays = $probe->get_all_Arrays();
-		my @stored_arrays;
-		for my $array (@$arrays) {
-			if ( defined $array->dbID() ) {
-				push @stored_arrays, $array;
-			}
-		}
-		if ( !@stored_arrays ) {
-			warning('Probes need attached arrays to be stored in the database');
-			next PROBE;
-		}
+		#my $arrays = $probeset->get_all_Arrays();
+		#my @stored_arrays;
+		#for $array (@$arrays) {
+		#	if ( defined $array->dbID() ) {
+		#		push @stored_arrays, $array;
+		#	}
+		#}
+		#if ( !@stored_arrays ) {
+		#	warning('OligoProbeSets need attached arrays to be stored in the database');
+		#	next PROBESET;
+		#}
 
-		# Insert separate entry (with same oligo_probe_id) in oligo_probe
+		# Insert separate entry (with same probe_set_id) in probe_set
 		# for each array the probe is on
-		my $dbID;
-		for my $array (@stored_arrays) {
-			if (defined $dbID) {
-				# Probe we've seen already
-				my $sth = $self->prepare("
-					INSERT INTO oligo_probe
-					(oligo_probe_id, oligo_array_id, name, probeset, description, length)
-					VALUES (?, ?, ?, ?, ?, ?)
+		#my $dbID;
+		#for $array (@stored_arrays) {
+		#		
+
+		#	if (defined $dbID) {
+		#		$sth = $self->prepare("
+		#			INSERT INTO probe_set
+		#			(probe_set_id, name, size, array_chip_id, family)
+		#			VALUES (?, ?, ?, ?, ?, ?)
+		#		");
+		#
+
+		#		# Probesets we've seen already
+		#		$sth->bind_param(1, $dbID,                                 SQL_INTEGER);
+		#		$sth->bind_param(2, $probeset->name(),                     SQL_VARCHAR);
+		#		$sth->bind_param(3, $probeset->size(),                     SQL_INTEGER);
+		#		$sth->bind_param(4, $probeset->array_chip_id(),            SQL_INTEGER);
+		#		$sth->bind_param(5, $probeset->family(),                   SQL_VARCHAR);
+		#		$sth->execute();
+		#	} else {
+			
+		# New probeset
+		$sth = $self->prepare("
+					INSERT INTO oligo_probe_set
+					(name, size, family)
+					VALUES (?, ?, ?)
 				");
-				$sth->bind_param(1, $dbID,                                 SQL_INTEGER);
-				$sth->bind_param(2, $array->dbID(),                        SQL_INTEGER);
-				$sth->bind_param(3, $probe->get_probename($array->name()), SQL_VARCHAR);
-				$sth->bind_param(4, $probe->probeset(),                    SQL_VARCHAR);
-				$sth->bind_param(5, $probe->description(),                 SQL_VARCHAR);
-				$sth->bind_param(6, $probe->probelength(),                 SQL_INTEGER);
-				$sth->execute();
-			} else {
-				# New probe
-				my $sth = $self->prepare("
-					INSERT INTO oligo_probe
-					(oligo_array_id, name, probeset, description, length)
-					VALUES (?, ?, ?, ?, ?)
-				");
-				$sth->bind_param(1, $array->dbID,                          SQL_INTEGER);
-				$sth->bind_param(2, $probe->get_probename($array->name()), SQL_VARCHAR);
-				$sth->bind_param(3, $probe->probeset(),                    SQL_VARCHAR);
-				$sth->bind_param(4, $probe->description(),                 SQL_VARCHAR);
-				$sth->bind_param(5, $probe->probelength(),                 SQL_INTEGER);
-				$sth->execute();
-				$dbID = $sth->{'mysql_insertid'};
-				$probe->dbID($dbID);
-				$probe->adaptor($self);
-			}
-		}
+		$sth->bind_param(1, $probeset->name(),                     SQL_VARCHAR);
+		$sth->bind_param(2, $probeset->size(),                     SQL_INTEGER);
+		$sth->bind_param(3, $probeset->family(),                   SQL_VARCHAR);
+		
+		$sth->execute();
+		my $dbID = $sth->{'mysql_insertid'};
+		$probeset->dbID($dbID);
+		$probeset->adaptor($self);
+		#}
+		#}
 	}
 }
 
@@ -406,7 +415,7 @@ sub store {
 sub list_dbIDs {
 	my ($self) = @_;
 
-	return $self->_list_dbIDs('probe_set');
+	return $self->_list_dbIDs('oligo_probe_set');
 }
 
 1;

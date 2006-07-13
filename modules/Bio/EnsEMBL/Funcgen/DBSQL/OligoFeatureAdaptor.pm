@@ -1,11 +1,11 @@
 #
-# Ensembl module for Bio::EnsEMBL::DBSQL::OligoFeatureAdaptor
+# Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::OligoFeatureAdaptor
 #
 # You may distribute this module under the same terms as Perl itself
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::OligoFeatureAdaptor - A database adaptor for fetching and
+Bio::EnsEMBL::DBSQL::Funcgen::OligoFeatureAdaptor - A database adaptor for fetching and
 storing OligoFeature objects.
 
 =head1 SYNOPSIS
@@ -38,10 +38,10 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::DBSQL::OligoFeatureAdaptor;
+package Bio::EnsEMBL::DBSQL::Funcgen::OligoFeatureAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::OligoFeature;
+use Bio::EnsEMBL::Funcgen::OligoFeature;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 
 use vars qw(@ISA);
@@ -50,7 +50,7 @@ use vars qw(@ISA);
 
 =head2 fetch_all_by_Probe
 
-  Arg [1]    : Bio::EnsEMBL::OligoProbe
+  Arg [1]    : Bio::EnsEMBL::Funcgen::OligoProbe
   Example    : my $features = $ofa->fetch_all_by_Probe($probe);
   Description: Fetchs all features that a given probe creates.
   Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
@@ -64,11 +64,11 @@ sub fetch_all_by_Probe {
 	my $self  = shift;
 	my $probe = shift;
 	
-	if ( !ref($probe) && !$probe->isa('Bio::EnsEMBL::OligoProbe') ) {
-		throw('fetch_all_by_Probe requires a Bio::EnsEMBL::OligoProbe object');
+	if ( !ref($probe) && !$probe->isa('Bio::EnsEMBL::Funcgen::OligoProbe') ) {
+		throw('fetch_all_by_Probe requires a Bio::EnsEMBL::Funcgen::OligoProbe object');
 	}
 	if ( !defined $probe->dbID() ) {
-		throw('fetch_all_by_Probe requires a stored Bio::EnsEMBL::OligoProbe object');
+		throw('fetch_all_by_Probe requires a stored Bio::EnsEMBL::Funcgen::OligoProbe object');
 	}
 	
 	return $self->generic_fetch( 'of.oligo_probe_id = ' . $probe->dbID() );
@@ -90,12 +90,22 @@ sub fetch_all_by_probeset {
 	my $self     = shift;
 	my $probeset = shift;
 	
+	throw("Not implmeneted\n");
+
 	if (!$probeset) {
 		throw('fetch_all_by_probeset requires a probeset argument');
 	}
 	
+	
+
 	return $self->generic_fetch( "op.probeset = '$probeset'" );
 }
+
+
+#Need to add:
+#fetch_all_by_Slice_Experiment
+#fetch_all_by_Slice_experimentname ? name not unique enough?
+
 
 =head2 fetch_all_by_Slice_arrayname
 
@@ -105,7 +115,7 @@ sub fetch_all_by_probeset {
                my $features = $ofa->fetch_by_Slice_arrayname($slice, '');
   Description: Retrieves a list of features on a given slice that are created
                by probes from the specified arrays.
-  Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoFeature objects
   Exceptions : Throws if no array name is provided
   Caller     : Slice->get_all_OligoFeatures()
   Status     : Medium Risk
@@ -119,10 +129,14 @@ sub fetch_all_by_Slice_arrayname {
 	
 	my $constraint;
 	if (scalar @arraynames == 1) {
-		$constraint = qq( oa.name = '$arraynames[0]' );
+		#Will this work
+		#will this pick up the array_chip_id link from array_chip to oligo_probe?
+		$constraint = qq( a.name = '$arraynames[0]' AND a.array_id = ac.array_id );
+		#$constraint = qq( a.name = '$arraynames[0]' );
 	} else {
+		throw("Not implemented for multple arrays");
 		$constraint = join q(','), @arraynames;
-		$constraint = qq( oa.name IN ('$constraint') );
+		$constraint = qq( a.name IN ('$constraint') );
 	}
 	
 	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
@@ -146,14 +160,16 @@ sub fetch_all_by_Slice_arrayname {
 
 sub fetch_all_by_Slice_type {
 	my ($self, $slice, $type, $logic_name) = @_;
+
+	throw("Not implemented yet\n");
 	
 	throw('Need type as parameter') if !$type;
 	
-	my $constraint = qq( oa.type = '$type' );
+	my $constraint = qq( a.type = '$type' );
 	
 	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
-
+ 
 =head2 _tables
 
   Args       : None
@@ -171,10 +187,11 @@ sub _tables {
 	my $self = shift;
 	
 	return (
-		[ 'oligo_feature', 'of' ], 
-		[ 'oligo_probe',   'op' ], 
-		[ 'oligo_array',   'oa' ]
-	);
+			[ 'oligo_feature', 'of' ], 
+			[ 'oligo_probe',   'op' ], 
+			[ 'array_chip',   'ac' ],
+			[ 'array',   'a' ]
+		   );
 }
 
 =head2 _columns
@@ -198,7 +215,7 @@ sub _columns {
 		of.seq_region_start  of.seq_region_end
 		of.seq_region_strand of.mismatches
 		of.oligo_probe_id    of.analysis_id
-		oa.name              op.probeset
+		a.name              op.probeset
 		op.name
 	);
 }
@@ -219,7 +236,7 @@ sub _columns {
 sub _default_where_clause {
 	my $self = shift;
 	
-	return 'of.oligo_probe_id = op.oligo_probe_id AND op.oligo_array_id = oa.oligo_array_id';
+	return 'of.oligo_probe_id = op.oligo_probe_id AND op.array_chip_id = ac.array_chip_id';
 }
 
 =head2 _final_clause
@@ -400,7 +417,7 @@ sub _objs_from_sth {
   Args       : Hashref to be passed to OligoFeature->new_fast()
   Example    : None
   Description: Construct an OligoFeature object using quick and dirty new_fast.
-  Returntype : Bio::EnsEMBL::OligoFeature
+  Returntype : Bio::EnsEMBL::Funcgen::OligoFeature
   Exceptions : None
   Caller     : _objs_from_sth
   Status     : Medium Risk
@@ -411,12 +428,12 @@ sub _new_fast {
 	my $self = shift;
 	
 	my $hash_ref = shift;
-	return Bio::EnsEMBL::OligoFeature->new_fast($hash_ref);
+	return Bio::EnsEMBL::Funcgen::OligoFeature->new_fast($hash_ref);
 }
 
 =head2 store
 
-  Args       : List of Bio::EnsEMBL::OligoFeature objects
+  Args       : List of Bio::EnsEMBL::Funcgen::OligoFeature objects
   Example    : $ofa->store(@features);
   Description: Stores given OligoFeature objects in the database. Should only
                be called once per feature because no checks are made for
@@ -450,7 +467,7 @@ sub store{
 
 	FEATURE: foreach my $of (@ofs) {
 
-		if( !ref $of || !$of->isa('Bio::EnsEMBL::OligoFeature') ) {
+		if( !ref $of || !$of->isa('Bio::EnsEMBL::Funcgen::OligoFeature') ) {
 			throw('Feature must be an OligoFeature object');
 		}
 

@@ -5,7 +5,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::OligoProbe - A module to represent an oligonucleotide probe.
+Bio::EnsEMBL::Funcgen::OligoProbe - A module to represent an probe.
 
 =head1 SYNOPSIS
 
@@ -14,19 +14,18 @@ use Bio::EnsEMBL::Funcgen::OligoProbe;
 #
 
 my $probe = Bio::EnsEMBL::Funcgen::OligoProbe->new(
-        -PROBESET_ID => $ps_id,
-	-PROBENAME   => 'Probe-1',
-        #-PAIR_INDEX  => remove?
-	-CLASS       => "EXPERIMENTAL",
+        -PROBE_SET     => $probe_set,
+	    -NAME          => 'Probe-1',
+        -ARRAY         => $array,
+        -ARRAY_CHIP_ID => $ac_dbid,
+	    -CLASS         => "EXPERIMENTAL",
 );
 
 =head1 DESCRIPTION
 
-An OligoProbe object represents an oligonucleotide probe on a microarray. The
-data (currently the name, array, length, probeset and description) are stored
-in the oligo_probe table. Probeset is only really relevant for Affy probes.
-The complete name of a probe is the concatenation of the array name, the
-probeset (if relevant) and the probe name.
+An OligoProbe object represents an probe on a microarray. The data (currently the 
+name, probe_set_id, length, pair_index and class) are stored
+in the oligo_probe table. 
 
 For Affy arrays, a probe can be part of more than one array, but only part of
 one probeset. On each Affy array the probe has a slightly different name. For
@@ -54,7 +53,7 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::OligoProbe;
+package Bio::EnsEMBL::Funcgen::OligoProbe;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
@@ -66,33 +65,37 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-PROBENAME]  : string - probe name
-        Used when the probe is on one array. Can also use -NAME.
-  Arg [-PROBENAMES] : Listref of strings - probe names
-        Used when the probe is on multiple arrays. Can also use -NAMES.
-  Arg [-ARRAY]      : Bio::EnsEMBL::OligoArray
-   or [-ARRAYNAME]  : string - array name
-        Used when the probe is on one array. Either -ARRAY or -ARRAYNAME can be
-		used. The latter is a convenience and -ARRAY must be used if the probe
-		is to be stored.
-  Arg [-ARRAYS]     : Listref of Bio::EnsEMBL::OligoArray objects
-   or [-ARRAYNAMES] : Listref of strings - array names
-        Used when the probe is on multiple arrays. Either -ARRAYS or
-		-ARRAYNAMES can be used. The latter is a convenience and -ARRAYS must
-		be used if the probes are to be stored.
-  Arg [-PROBESET]   : string - probeset name
-        Probably only needed for arrays of type AFFY. Each probe is part of one
-		(and only one) probeset.
-  Arg [-PROBELENGTH]: int - probe length
-        Like probesets, will obviously be the same for all probes if same probe
+  Arg [-NAME]          : string - probe name
+        Used when the probe is on one array.
+  Arg [-NAMES]         : Listref of strings - probe names
+        Used when the probe is on multiple arrays.
+  Arg [-ARRAY]          : Bio::EnsEMBL::Funcgen::Array
+        Used when the probe is on one array.
+  Arg [-ARRAYS]         : Listref of Bio::EnsEMBL::Funcgen::Array
+        Used when the probe is on multiple arrays.
+  Arg [-ARRAY_CHIP_ID]  : int - array_chip db ID
+        Used when the probe is on one array.
+  Arg [-NAMES]          : Listref of ints - arary_chip db IDs
+        Used when the probe is on multiple arrays.
+  Arg [-PROBE_SET]      : Bio::EnsEMBL::OligoProbeSet
+        Each probe is part of one(and only one) probeset, if not probe set
+        then probeset = probe i.e. probe_set size = 1
+  Arg [-LENGTH]         : int - probe length
+        Will obviously be the same for all probes if same probe
 		is on multiple arrays.
-  Arg [-DESCRIPTION]: string - probe description
-        Like probesets, will be the same for all probes if same probe is on
+  Arg [-CLASS]          : string - probe class e.g. CONTROL, EXPERIMENTAL
+        Will be the same for all probes if same probe is on
 		multiple arrays.
+
+
   Example    : my $probe = Bio::EnsEMBL::OligoProbe->new(
-                   -PROBENAME   => 'Probe-1',
-				   -ARRAY       => $array,
-				   -PROBELENGTH => 65,
+                   -NAME          => 'Probe-1',
+				   -PROBE_SET     => $probe_set,
+                   -ARRAY         => $array,
+                   -ARRAY_CHIP_ID => $array_chip_id,
+				   -LENGTH        => 25,
+                   -CLASS         => 'EXPERIMENTAL',
+      
                );
   Description: Creates a new Bio::EnsEMBL::OligoProbe object.
   Returntype : Bio::EnsEMBL::OligoProbe
@@ -110,75 +113,71 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 	
 	my (
-		$arrays,      $array,
-		$arraynames,  $arrayname,
-		$probenames,  $probename,
-		$names,       $name,
-		$probeset,    $description,
-		$probelength,
+		$names,          $name,
+		$array_chip_ids, $array_chip_id,
+		$arrays,         $array,
+		$probeset,       $aclass,
+		$length
 	) = rearrange([
-		'ARRAYS',     'ARRAY',
-		'ARRAYNAMES', 'ARRAYNAME',
-		'PROBENAMES', 'PROBENAME',
-		'NAMES',      'NAME',
-		'PROBESET',   'DESCRIPTION',
-		'PROBELENGTH',
+				   'NAMES',          'NAME',
+				   'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
+				   'ARRAYS',         'ARRAY',
+				   'PROBE_SET',      'CLASS',
+				   'LENGTH'
 	], @_);
+
 	
-	# Originally arguments were inconsistent: NAME and PROBENAMES
-	# Now can be NAME and NAMES or PROBENAME and PROBENAMES
-	$probename  ||= $name;
-	$probenames ||= $names;
+	@$names = ($name) if(ref($names) ne "ARRAY");
+	@$array_chip_ids = ($array_chip_id) if (ref($array_chip_ids) ne "ARRAY");
+	@$arrays = ($array) if (ref($arrays) ne "ARRAY");
+
+	#We need to record duplicates for each probe_set i.e. each array.
+	#the relationship is really array_chip to name, as everything else stays the same
+	#can't have same probe_set_id as this wouldn't maintain relationship
+	#need unique ps id's or array_chip_id in probe table?
+	#Then we can miss probeset id's out totally if required
+	#or should we just duplicate everything with unique db IDs
+
 	
-	if ($probenames && ref($probenames) eq 'ARRAY') {
-		# Multiple probes (all from the same probeset) have been specified
-		my $probecount = scalar @$probenames;
-		if ($arrays && ref($arrays) eq 'ARRAY') {
-			if (scalar @$arrays != $probecount) {
-				throw('Need a probename for each array');
-			}
-			# Array objects
-			for (my $i = 0; $i < scalar @$probenames; $i++) {
-				$self->add_Array_probename($arrays->[$i], $probenames->[$i]);
-			}
-		} elsif ($arraynames && ref($arraynames) eq 'ARRAY') {
-			if (scalar @$arraynames != $probecount) {
-				throw('Need a probename for each array');
-			}
-			# Named arrays
-			for (my $i = 0; $i < scalar @$probenames; $i++) {
-				$self->add_arrayname_probename($arraynames->[$i], $probenames->[$i]);
-			}
-		} else {
-			throw('No arrays or arraynames have been supplied for this OligoProbe');
+	if (defined $$names[0]) {
+
+		if(scalar(@$names) != scalar(@$array_chip_ids)){
+			throw("You have not specified valid name:array_chip_id pairs\nYou need a probe name for each Array");
 		}
-	} elsif (defined $probename) {
-		# Single probe specified
-		if (defined $arrayname) {
-			# Named array
-			$self->add_arrayname_probename($arrayname, $probename);
-		} elsif(defined $array) {
-			# Array object
-			$self->add_Array_probename($array, $probename);
-		} else {
-			throw('No array or arrayname has been supplied for this OligoProbe');
+
+		if(defined $$arrays[0]){ 
+			if(scalar(@$names) != scalar(@$arrays)){
+				throw("You have not specified valid name:Array pairs\nYou need a probe name for each Array\n");
+			}
+		}
+		else{
+			warn("You have not specified and Array objects, this will result in multiple/redundant queries based on the array_chip_id\nYou should pass Array objects to speed up this process");
+		}
+
+		# Probe(s) have been specified
+		# Different names reflect different array
+
+		for my $i(0..$#{$names}){
+			$self->add_array_chip_probename($$array_chip_ids[$i], $$names[$i], $$arrays[$i]);
 		}
 	} else {
 		throw('You need to provide a probe name (or names) to create an OligoProbe');
 	}
 		
-	$self->probeset($probeset)       if defined $probeset;
-	$self->description($description) if defined $description;
-	$self->probelength($probelength) if defined $probelength;
+	$self->probeset($probeset) if defined $probeset;
+	$self->class($aclass)      if defined $aclass;
+	$self->length($length)     if defined $length;
+	
 	
 	return $self;
 }
 
-=head2 add_Array_probename
+=head2 add_array_chip_probename
 
-  Arg [1]    : Bio::EnsEMBL::AffyArray - array
+  Arg [1]    : int - db ID of array_chip
   Arg [2]    : string - probe name
-  Example    : $probe->add_Array_probename($array, $probename);
+  Arg [3]    : Bio::EnsEMBL::Funcgen::Array - optional, will get obj from DBAdaptor if not passed
+  Example    : $probe->add_array_chip_probename($ac_dbid, $probename);
   Description: Adds a probe name / array pair to a probe, allowing incremental
                generation of a probe.
   Returntype : None
@@ -191,33 +190,24 @@ sub new {
 
 =cut
 
-sub add_Array_probename {
+sub add_array_chip_probename {
     my $self = shift;
-    my ($array, $probename) = @_;
+    my ($ac_dbid, $probename, $array) = @_;
     $self->{ 'arrays'     } ||= {};
-    $self->{ 'arrays'     }->{$array->name()} = $array;
+	$self->{ 'probenames' } ||= {};
+
+	#mass redundancy here, possibility of fetching same array over and over!!!!!!!!!!!!!!
+	if(! defined $array){
+		$array = $self->adaptor()->db()->get_OligoArrayAdaptor()->fetch_by_array_chip_id($ac_dbid);
+	}
+
+	#mapping between probename and ac_dbid is conserved through array name between hashes
+	#only easily linked from arrays to probenames,as would have to do foreach on array name
+
+    $self->{ 'arrays'     }->{$ac_dbid} = $array;
     $self->{ 'probenames' }->{$array->name()} = $probename;
 }
 
-=head2 add_arrayname_probename
-
-  Arg [1]    : string - array name
-  Arg [2]    : string - probe name
-  Example    : $probe->add_arrayname_probename($arrayname, $probename);
-  Description: Adds a probe name / array pair to a probe. Such probes cannot be
-               stored, so it's better to use add_Array_probename(). 
-  Returntype : None
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub add_arrayname_probename {
-    my $self = shift;
-    my ($arrayname, $probename) = @_;
-    $self->{'probenames'}->{$arrayname} = $probename;
-}
 
 =head2 get_all_OligoFeatures
 
@@ -225,7 +215,7 @@ sub add_arrayname_probename {
   Example    : my $features = $probe->get_all_OligoFeatures();
   Description: Get all features produced by this probe. The probe needs to be
                database persistent.
-  Returntype : Listref of Bio::EnsEMBL:OligoFeature objects
+  Returntype : Listref of Bio::EnsEMBL:Funcgen::OligoFeature objects
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -249,7 +239,7 @@ sub get_all_OligoFeatures {
   Description: Returns all arrays that this probe is part of. Only works if the
                probe was retrieved from the database or created using
 			   add_Array_probename (rather than add_arrayname_probename).
-  Returntype : Listref of Bio::EnsEMBL::OligoArray objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoArray objects
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -304,7 +294,9 @@ sub get_all_probenames {
 
 sub get_probename {
     my $self = shift;
-    my $arrayname = shift;
+    my $arrayname = shift if @_;
+
+	warn("Need to implement access to only probename if not AFFY and only one array");
 	
     my $probename = $self->{'probenames'}->{$arrayname};
     if (!defined $probename) {
@@ -333,12 +325,20 @@ sub get_all_complete_names {
 	
     my @result = ();
 	
-	my $probeset = $self->probeset();
+	my $probeset = $self->probeset()->name();
 	$probeset .= ':' if $probeset;
 	
-    while ( my ($arrayname, $probename) = each %{$self->{'probenames'}} ) {
-		push @result, "$arrayname:$probeset$probename";
-    }
+    #while ( my ($arrayname, $probename) = each %{$self->{'probenames'}} ) {
+	while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
+		#would have to put test in here for $self->arrays()->vendor()
+		#if($array->vendor() eq "AFFY"){
+			
+		push @result, $array->name().":$probeset".$self->{'probenames'}{$array->name()};
+		#}
+		#else{
+		#	push @result, $self->{'probenames'}{$array->name()};
+		#}
+	}
 	
     return \@result;
 }
@@ -364,17 +364,20 @@ sub get_complete_name {
 		throw('Unknown array name');
     }
 	
-	my $probeset = $self->probeset();
+	my $probeset = $self->probeset()->name();
 	$probeset .= ':' if $probeset;
+
+	
+
 	
     return "$arrayname:$probeset$probename";
 }
 
 =head2 probeset
 
-  Arg [1]    : (optional) string - probeset
-  Example    : my $probeset = $probe->probeset();
-  Description: Getter and setter of probeset attribute for OligoProbe objects.
+  Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::ProbeSet
+  Example    : my $probe_set = $probe->probeset();
+  Description: Getter and setter of probe_set attribute for OligoProbe objects.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -384,16 +387,20 @@ sub get_complete_name {
 
 sub probeset {
     my $self = shift;
-    $self->{'probeset'} = shift if @_;
-    return $self->{'probeset'};
+
+	#This is nesting a parent object in a child object....circular reference?
+	#Need to make sure we code around this when generating ProbeSets
+
+    $self->{'probe_set'} = shift if @_;
+    return $self->{'probe_set'};
 }
 
-=head2 description
+=head2 class
 
-  Arg [1]    : (optional) string - description
-  Example    : my $description = $probe->description();
-  Description: Getter and setter of description attribute for OligoProbe
-               objects.
+  Arg [1]    : (optional) string - class
+  Example    : my $class = $probe->class();
+  Description: Getter and setter of class attribute for OligoProbe
+               objects e.g. CONTROL, EXPERIMENTAL
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -401,17 +408,17 @@ sub probeset {
 
 =cut
 
-sub description {
+sub class {
     my $self = shift;
-    $self->{'description'} = shift if @_;
-    return $self->{'description'};
+    $self->{'class'} = shift if @_;
+    return $self->{'class'};
 }
 
-=head2 probelength
+=head2 length
 
   Arg [1]    : (optional) int - probe length
-  Example    : my $probelength = $probe->probelength();
-  Description: Getter and setter of probelength attribute for OligoProbe
+  Example    : my $probelength = $probe->length();
+  Description: Getter and setter of length attribute for OligoProbe
                objects.
   Returntype : int
   Exceptions : None
@@ -420,10 +427,10 @@ sub description {
 
 =cut
 
-sub probelength {
+sub length {
     my $self = shift;
-    $self->{'probelength'} = shift if @_;
-    return $self->{'probelength'};
+    $self->{'length'} = shift if @_;
+    return $self->{'length'};
 }
 
 1;
