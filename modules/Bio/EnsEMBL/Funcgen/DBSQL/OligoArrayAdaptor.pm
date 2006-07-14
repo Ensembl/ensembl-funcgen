@@ -65,7 +65,6 @@ use vars qw(@ISA);
 sub fetch_by_array_chip_dbID {
     my $self = shift;
     my $ac_dbid = shift;
- 
 	my $sth = $self->prepare("
 		SELECT a.array_id
 		FROM array a, array_chip ac
@@ -196,9 +195,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	#Nath, remove species?
-
-	return qw( a.array_id a.name a.format a.size a.species a.vendor a.description);
+	return qw( a.array_id a.name a.format a.size a.vendor a.description);
 }
 
 =head2 _objs_from_sth
@@ -218,11 +215,9 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-		#Nath, remove species?
-
-	my (@result, $array_id, $name, $format, $size, $species, $vendor, $description);
+	my (@result, $array_id, $name, $format, $size, $vendor, $description);
 	
-	$sth->bind_columns(\$array_id, \$name, \$format, \$size, \$species, \$vendor, \$description);
+	$sth->bind_columns(\$array_id, \$name, \$format, \$size, \$vendor, \$description);
 	
 	while ( $sth->fetch() ) {
 		my $array = Bio::EnsEMBL::Funcgen::OligoArray->new(
@@ -231,7 +226,6 @@ sub _objs_from_sth {
 														   -name        => $name,
 														   -format      => $format,
 														   -size        => $size,
-														   -species     => $species,
 														   -vendor      => $vendor,
 														   -description => $description,
 														  );
@@ -334,15 +328,14 @@ sub store {
 		#can we prepare these statement once,and then bind in the loop, to prevent preparing multiple times?
 		my $sth = $self->prepare("
 			INSERT INTO array
-			(name, format, size, species, vendor, description)
-			VALUES (?, ?, ?, ?, ?, ?)
+			(name, format, size, vendor, description)
+			VALUES (?, ?, ?, ?, ?)
 		");
 		$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
 		$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
 		$sth->bind_param(3, $array->size(),         SQL_INTEGER);
-		$sth->bind_param(4, $array->species(),      SQL_VARCHAR);
-		$sth->bind_param(5, $array->vendor(),       SQL_VARCHAR);
-		$sth->bind_param(6, $array->description(),  SQL_VARCHAR);
+		$sth->bind_param(4, $array->vendor(),       SQL_VARCHAR);
+		$sth->bind_param(5, $array->description(),  SQL_VARCHAR);
 
 		$sth->execute();
 		my $dbID = $sth->{'mysql_insertid'};

@@ -128,23 +128,6 @@ use Bio::EnsEMBL::DBSQL::DBConnection;
 #  }
 
 
-#sub dbc{
-#	my ($self, $dbc) = @_;
-
-#	if(defined $dbc){
-#
-#		if(! $dbc->isa('Bio::EnsEMBL::DBSQL::DBConnection')){
-#			$self->throw("$dbc is no a DBConnection\n");
-#		}
-#	
-#		$self->{'_dbc'} = $dbc;
-#	}
-#
-#	return 	$self->{'_dbc'};
-#}
-
-
-
 #these should be removed if overlap with core DBAdaptor or moved to ImportAdaptor?
 # or use store methods on each object
 
@@ -239,19 +222,28 @@ sub register_entry{
 }
 
 
-#Used by ConfigRegistry to make adaptor available
+#Used by ConfigRegistry to make adaptors available
+#will adding SliceAdaptor here use the dna DB? i.e. the core DB rather than the efg DB?
 
 sub get_available_adaptors{
-  my %pairs = (
-	       'OligoArray' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoArrayAdaptor',
-	       'OligoProbeSet' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor',
-	       'OligoProbe' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeAdaptor',
-	       'OligoFeature' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor',
-	       'Experiment' => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-	       'ResultSet' => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
-	      );
+	my ($self) = shift;
 
-  return (\%pairs);
+	my %pairs = (
+				 'OligoArray'    => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoArrayAdaptor',
+				 'OligoProbeSet' => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor',
+				 'OligoProbe'    => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeAdaptor',
+				 'OligoFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor',
+				 'Experiment'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+				 'ResultSet'     => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+
+				 #add required EnsEMBL(core) adaptors here
+				 #Should write/retrieve from efg not dna db
+				 'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
+				 'MetaCoordContainer' => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
+				 'CoordSystem'        => 'Bio::EnsEMBL::DBSQL::CoordSystemAdaptor',
+				);
+	
+	return (\%pairs);
 }	       
 1;
 

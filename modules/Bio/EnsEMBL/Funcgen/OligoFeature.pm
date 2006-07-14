@@ -79,13 +79,14 @@ use vars qw(@ISA);
         Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor
         Database adaptor.
-  Example    : my $feature = Bio::EnsEMBL::OligoFeature->new(
+  Example    : my $feature = Bio::EnsEMBL::Funcgen::OligoFeature->new(
 				   -PROBE         => $probe,
 				   -MISMATCHCOUNT => 0,
 				   -SLICE         => $chr_1_slice,
 				   -START         => 1_000_000,
 				   -END           => 1_000_024,
 				   -STRAND        => -1,
+#-ANALYSIS?
 			   ); 
   Description: Constructor for OligoFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::OligoFeature
@@ -184,7 +185,7 @@ sub mismatchcount {
   Args       : None 
   Example    : my $probelength = $feature->probelength();
   Description: Getter for the length of the probe. Shortcut for
-               $feature->probe->probelength(), which should be used instead.
+               $feature->probe->length(), which should be used instead.
 			   Originally, this method returned the length of the feature,
 			   which was often, but not always, the same as the length of the
 			   probe.
@@ -192,14 +193,14 @@ sub mismatchcount {
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
-             : Use $feature->probe->probelength() because this may be removed
+             : Use $feature->probe->length() because this may be removed
 
 =cut
 
 sub probelength {
     my $self = shift;
 	
-    return $self->probe->probelength();
+    return $self->probe->length();
 }
 
 =head2 probe
