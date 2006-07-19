@@ -43,6 +43,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::OligoFeature;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Funcgen::CoordSystem;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
@@ -457,9 +458,10 @@ sub store{
 		INSERT INTO oligo_feature (
 			seq_region_id,  seq_region_start,
 			seq_region_end, seq_region_strand,
+            coord_system_id,
 			oligo_probe_id,  analysis_id,
 			mismatches
-		) VALUES (?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
 	my $db = $self->db();
@@ -493,9 +495,10 @@ sub store{
 		$sth->bind_param(2, $of->start(),          SQL_INTEGER);
 		$sth->bind_param(3, $of->end(),            SQL_INTEGER);
 		$sth->bind_param(4, $of->strand(),         SQL_TINYINT);
-		$sth->bind_param(5, $of->probe->dbID(),    SQL_INTEGER);
-		$sth->bind_param(6, $of->analysis->dbID(), SQL_INTEGER);
-		$sth->bind_param(7, $of->mismatchcount(),  SQL_TINYINT);
+		$sth->bind_param(5, $of->coord_system_id(),SQL_INTEGER);
+		$sth->bind_param(6, $of->probe->dbID(),    SQL_INTEGER);
+		$sth->bind_param(7, $of->analysis->dbID(), SQL_INTEGER);
+		$sth->bind_param(8, $of->mismatchcount(),  SQL_TINYINT);
 
 		$sth->execute();
 
@@ -525,160 +528,25 @@ sub list_dbIDs {
 
 
 
-####Redefined for Funcgen to trust the slice the feature is generated on
-####and store on a non-core/dna i.e. slice enabled DB
-####Also handles multiple coord systems, generating new coord_system_ids as appropriate
-####Need to think about retrieval, i.e. mapping coord_system_id back to the core/dnadb
-####version may not mean same seq_region_ids?  So need to use name somehow, name may not be unique!!
-####Using the schema version may guarantee stability of seq_region_ids
-
-#
-# Helper function containing some common feature storing functionality
-#
-# Given a Feature this will return a copy (or the same feature if no changes 
-# to the feature are needed) of the feature which is relative to the start
-# of the seq_region it is on. The seq_region_id of the seq_region it is on
-# is also returned.
-#
-# This method will also ensure that the database knows which coordinate
-# systems that this feature is stored in.
-#
-
-sub _pre_store {
-  my $self    = shift;
-  my $feature = shift;
-
-  if(!ref($feature) || !$feature->isa('Bio::EnsEMBL::Feature')) {
-    throw('Expected Feature argument.');
-  }
-
-  $self->_check_start_end_strand($feature->start(),$feature->end(),
-                                 $feature->strand());
-
-
-  my $db = $self->db();
-
-  #my $slice_adaptor = $db->get_SliceAdaptor();
-  my $slice = $feature->slice();
-
-  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
-    throw('Feature must be attached to Slice to be stored.');
-  }
-
-  # make sure feature coords are relative to start of entire seq_region
-  if($slice->start != 1 || $slice->strand != 1) {
-
-  throw("You must generate your feature on a slice starting at 1 with strand 1");
-
-    #move feature onto a slice of the entire seq_region
-    #$slice = $slice_adaptor->fetch_by_region($slice->coord_system->name(),
-    #                                         $slice->seq_region_name(),
-    #                                         undef, #start
-    #                                         undef, #end
-    #                                         undef, #strand
-    #                                         $slice->coord_system->version());
-
-    #$feature = $feature->transfer($slice);
-
-    #if(!$feature) {
-    #  throw('Could not transfer Feature to slice of ' .
-    #        'entire seq_region prior to storing');
-    #}
-  }
-
-  # Ensure this type of feature is known to be stored in this coord system.
-  my $cs = $slice->coord_system;#from core/dnadb
-
-
-  #Need to add to Funcgen coord_system here
-  #check if name and version are present and reset coord_system_id to that one, else get last ID and create a new one
-  #coord_system_ids will not match those in core DBs, so we need ot be mindful about this.
-  #can't use is_stored as this simply checks the dbID
-  #seq_region_ids may change between shemas with the same assembly version
-  #Need to store schema_version somewhere to maintain the seq_region_id mapping
-  #extend the coord_system table to have schema version, link to feature tables via coord_system_id
-  #how are we going to retrieve, we have species and schema version, so will have to do some jiggery pokery
-  #There is a possibility that the same schema may be used for two different gene builds
-  #thus having the same name version schema triplets, but different seq_region_ids
-  #can't really code around this...unless we stored the schema and the build instead of just the schema
-  #this would make it easier to generate the dnadb as we could simply concat $species."_core_".$schema_build
-  #can not get this from the meta table, so we'll have to fudge it from the db_name
-  
-  #Do we need to check the the dnadb and the slice db match?
-  #Do we have to have specified a dnadb at this point?  No.
-  #But need to put checks in place for dnadb methods i.e. seq/slice retrieval
-
-  #Build object cache here to prevent multiple(possible 1000's of calls to the coord tables;
-  $self->{'_ofa_coord_cache'}  ||= {};
-  #a bit hack this, can we not make dnadb mandatory and set in new?!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  #would still have to do tests to check we're not passing a slice from a db which isn't the dnadb :(
-
-  #This will get called for each feature!!
-  #No guarantee that each feature will be built from the same db (could set once in store otherwise)
-  #my $schema_build = ${$slice->adaptor->db->db_handle->selectrow_array("SELECT meta_value value from meta where mate_key = \"data.version\"")}[0];  #do we need to check whether there is only one?
-  my $schema_build = $slice->adaptor->db->db_name();
-  $schema_build =~ s/[a-zA-Z_]//;
-  print "schema_build id $schema_build\n";
-
-  if(! exists $self->{'_ofa_coord_cache'}{$schema_build.":".$cs->version().":".$cs->name()}){
-	  #This should now only be called for the number of unique name version schema triplets
-	  #In reality this will only be unique names for the given version we are creating the feature on
-	  #e.g. all the chromosomes
-	  my $csa = $self->db->get_CoordSystemAdaptor();
+sub fetch_feature_results{
+	my ($self, $probe_id, $channel_id, $analysis) = @_;
 	
-	  #store coordsystem with schema_version
-	  #This will enable automatic dnadb DBAdaptor generation
-	  #otherwise would have to list all DBs in registry and select the one which matched the schema version
-	  #This will also enable validation if a non-standard dnadb is passed for retrieval
-	  #can check meta table for schema.version (data.version? genebuild.name?)
+	if(! defined $probe_id || ! defined $channel_id) {
+		throw("Need to define a valid probe and channel dbID");
+	}
+		
 
-	  #Generate Funcgen::CoordSystem
-	  $cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
-													-NAME    => $cs->name(),
-                                                    -VERSION => $cs->version(),
-                                                    -RANK    => $cs->rank(),
-                                                    #-ADAPTOR => $adaptor,
-                                                    -DEFAULT => $cs->default(),
-                                                    -SEQUENCE_LEVEL => $cs->is_sequence_level(),
-													-SCHEMA_BUILD => $schema_build
-												   );
+	my $analysis_clause = "";
+	if($analysis){
+		$analysis_clause = "AND a.logic_name = \"$analysis\"";
+	}
 
-	  $csa->store($cs);
+	my $query = "SELECT r.score, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.analysis_id = a.analysis_id $analysis_clause";
+						 
 
-  }
-
-
-  #retrieve correpsonding Funcgen coord_system
-  $cs = $csa->fetch_by_name_version_schema_build($cs->name(), $cs->version(), $schema_build);
-
-  #Funcgen::CoordSystemAdaptor
-  #fetch_by_name_version_schema_build
-  #remove all other fetch's and innapropriate methods?
-  
-  #Funcgen::CoordSystem
-  #add methods to retrieve data from dnadb/core coord_system tables
-  
-
-  my ($tab) = $self->_tables();
-  my $tabname = $tab->[0];
-
-
-  #Need to do this for Funcgen DB
-  my $mcc = $db->get_MetaCoordContainer();
-  $mcc->add_feature_type($cs, $tabname, $feature->length);
-
- # my $seq_region_id = $slice_adaptor->get_seq_region_id($slice);
-  my $seq_region_id = $slice->get_seq_region_id();
-
-  #would never get called as we're not validating against a different core DB
-  #if(!$seq_region_id) {
-  #  throw('Feature is associated with seq_region which is not in this dnadb.');
-  #}
-
-  return ($feature, $seq_region_id);
+	return $self->dbc->db_handle->selectall_arrayref($query);
+		
 }
-
-
 
 1;
 

@@ -1,32 +1,32 @@
 #
-# EnsEMBL module for Bio::EnsEMBL::CoordSystem
+# EnsEMBL module for Bio::EnsEMBL::Funcgen::CoordSystem
 #
 
 =head1 NAME
 
-Bio::EnsEMBL::CoordSystem
+Bio::EnsEMBL::Funcgen::CoordSystem
 
 =head1 SYNOPSIS
 
-  my $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
+  my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
 
   my $csa = $db->get_CoordSystemAdaptor();
 
   #
-  # Get all coord systems in the database:
+  # Get default chromosome coord system for the 39_36a DB:
   #
-  foreach my $cs (@{$csa->fetch_all()}) {
-    my $str = join ':', $cs->name(),$cs->version(),$cs->dbID();
-    print "$str\n";
-  }
+  my $cs = $csa->fetch_by_name_schema_build_version('chromosome', '39_36a');
+  my $str = join ':', $cs->name(),$cs->version(),$cs->dbID();
+  print "$str\n";
+
 
 =head1 DESCRIPTION
 
 This is a simple object which contains a few coordinate system attributes:
-name, internal identifier, version.  A coordinate system is uniquely defined
-by its name and version.  A version of a coordinate system applies to all
-sequences within a coordinate system.  This should not be confused with
-individual sequence versions.
+name, internal identifier, version and schema_build.  A coordinate system is 
+uniquely defined by its name and version and which DB it came from i.e. schema_build.  
+A version of a coordinate system applies to all sequences within a coordinate system.  
+This should not be confused with individual sequence versions.
 
 Take for example the Human assembly.  The version 'NCBI33' applies to
 to all chromosomes in the NCBI33 assembly (that is the entire 'chromosome'
@@ -37,7 +37,10 @@ versions, there is no version which applies to the entire set of clones.
 Coordinate system objects are immutable. Their name and version, and other
 attributes may not be altered after they are created.
 
-=head1 AUTHOR - Graham McVicker
+=head1 AUTHOR
+
+This module was written by Nathan Johnson, but was based heavily on the core module
+authored by Graham McVicker.
 
 =head1 CONTACT
 
@@ -51,7 +54,7 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::CoordSystem;
+package Bio::EnsEMBL::Funcgen::CoordSystem;
 
 use Bio::EnsEMBL::Storable;
 
@@ -77,29 +80,32 @@ use vars qw(@ISA);
                             a high level coordinate system is 'chromosome' an
                             example of a lower level coordinate system is
                             'clone'.
+               -SCHEMA_BUILD - The schema and data build version of the DB of
+                               origin.
                -TOP_LEVEL - (optional) Sets whether this is a top-level coord
                             system. Default = 0. This should only be set to
                             true if you are creating an artificial toplevel
                             coordsystem by the name of 'toplevel'
                -SEQUENCE_LEVEL - (optional) Sets whether this is a sequence
-                            level coordinate system. Default = 0
-               -DEFAULT   - (optional)
-                            Whether this is the default version of the 
-                            coordinate systems of this name. Default = 0
-               -DBID      - (optional) The internal identifier of this
-                             coordinate system
-               -ADAPTOR   - (optional) The adaptor which provides database
-                            interaction for this object
+                                 level coordinate system. Default = 0
+               -DEFAULT      - (optional)
+                               Whether this is the default version of the 
+                               coordinate systems of this name. Default = 0
+               -DBID         - (optional) The internal identifier of this
+                                coordinate system
+               -ADAPTOR      - (optional) The adaptor which provides database
+                               interaction for this object
   Example    : $cs = Bio::EnsEMBL::CoordSystem->new(-NAME    => 'chromosome',
                                                     -VERSION => 'NCBI33',
                                                     -RANK    => 1,
                                                     -DBID    => 1,
+                                                    -SCHEMA_BUILD => '39_36a',
                                                     -ADAPTOR => adaptor,
                                                     -DEFAULT => 1,
                                                     -SEQUENCE_LEVEL => 0);
   Description: Creates a new CoordSystem object representing a coordinate
                system.
-  Returntype : Bio::EnsEMBL::CoordSystem
+  Returntype : Bio::EnsEMBL::Funcgen::CoordSystem
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -112,11 +118,12 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  my ($name,$version, $top_level, $sequence_level, $default, $rank) =
-    rearrange(['NAME','VERSION','TOP_LEVEL', 'SEQUENCE_LEVEL',
+  my ($name, $version, $sbuild, $top_level, $sequence_level, $default, $rank) =
+    rearrange(['NAME','VERSION', 'SCHEMA_BUILD','TOP_LEVEL', 'SEQUENCE_LEVEL',
                'DEFAULT', 'RANK'], @_);
 
-  throw('The NAME argument is required') if(!$name);
+  throw('A name and schema_build argument are required') if(!$name || ! $sbuild);
+  
 
   $version = '' if(!defined($version));
 
@@ -159,6 +166,7 @@ sub new {
 
   $self->{'version'} = $version;
   $self->{'name'} = $name;
+  $self->{'schema_build'} = $sbuild;
   $self->{'top_level'} = $top_level;
   $self->{'sequence_level'} = $sequence_level;
   $self->{'default'} = $default;
@@ -183,6 +191,23 @@ sub new {
 sub name {
   my $self = shift;
   return $self->{'name'};
+}
+
+
+=head2 schema_build
+
+  Example    : print $coord_system->schema_build();
+  Description: Getter for the schema_build of this coordinate system
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub schema_build {
+  my $self = shift;
+  return $self->{'schema_build'};
 }
 
 
@@ -211,7 +236,7 @@ sub version {
 
 =head2 equals
 
-  Arg [1]    : Bio::EnsEMBL::CoordSystem $cs
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CoordSystem $cs
                The coord system to compare to for equality.
   Example    : if($coord_sys->equals($other_coord_sys)) { ... }
   Description: Compares 2 coordinate systems and returns true if they are
@@ -228,8 +253,8 @@ sub equals {
   my $self = shift;
   my $cs = shift;
 
-  if(!$cs || !ref($cs) || !$cs->isa('Bio::EnsEMBL::CoordSystem')) {
-    throw('Argument must be a Bio::EnsEMBL::CoordSystem');
+  if(!$cs || !ref($cs) || !$cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')) {
+    throw('Argument must be a Bio::EnsEMBL::Funcgen::CoordSystem');
   }
 
   if($self->{'version'} eq $cs->version() && $self->{'name'} eq $cs->name()) {

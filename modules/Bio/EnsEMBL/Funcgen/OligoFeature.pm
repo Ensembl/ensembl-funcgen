@@ -103,11 +103,12 @@ sub new {
 	
 	my $self = $class->SUPER::new(@_);
 	
-	my ($probe, $mismatchcount )
-		= rearrange(['PROBE', 'MISMATCHCOUNT'], @_);
+	my ($probe, $mismatchcount, $coord_sys_id )
+		= rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID'], @_);
 	
 	$self->probe($probe);
 	$self->mismatchcount($mismatchcount);
+	$self->coord_system_id($coord_sys_id);
 	
 	return $self;
 }
@@ -180,6 +181,29 @@ sub mismatchcount {
     return $self->{'mismatchcount'};
 }
 
+
+=head2 coord_system_id
+
+  Arg [1]    : int - dbID of corresponding coord_system for DB of origin
+  Example    : $feature->coord_system_id($cs_id);
+  Description: Getter and setter for the coord system id for this feature.
+  Returntype : int
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub coord_system_id {
+    my $self = shift;
+	
+    $self->{'coord_system_id'} = shift if @_;
+	
+    return $self->{'coord_system_id'};
+}
+
+
+
 =head2 probelength
 
   Args       : None 
@@ -232,6 +256,46 @@ sub probe {
 	}
     return $self->{'probe'};
 }
+
+=head2 results
+
+  Arg [1]    : int - channel_id (mandatory)
+  Arg [2]    : string - Analysis name e.g. RawValue, VSN (optional)
+  Example    : my @results = $feature->results();
+  Description: Getter, setter and lazy loader of results attribute for
+               OligoFeature objects.
+  Returntype : List ref to arrays containing ('score', 'Analysis logic_name');
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub results {
+    my $self = shift;
+	my $channel_id = shift;
+	my $anal_name = shift;
+
+	$self->{'results'} ||= {};
+	$self->{'results_complete'} ||= 0;
+	
+	if(! $self->{'results'} || ($anal_name && ! exists $self->{'results'}{$anal_name})){
+		#fetch all, set complete set flag
+		$self->{'results_complete'} ||= 1 	if(! $anal_name);
+
+		foreach my $results_ref(@{$self->adaptor->fetch_by_probe_channel_analysis($self->probe->dbID(), 
+																				  $channel_id, $anal_name)}){
+			$self->{'results'}{$$results_ref[1]} = $$results_ref[0];
+		}
+	}
+
+		
+    return $self->{'results'}
+}
+
+
+#Will this be too slow, can we not do one query across all tables
+
 
 1;
 

@@ -1,17 +1,30 @@
 #
-# EnsEMBL module for Bio::EnsEMBL::DBSQL::CoordSystemAdaptor
+# EnsEMBL module for Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor
 #
 #
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::CoordSystemAdaptor
+Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor
 
 =head1 SYNOPSIS
 
-  my $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(...);
+  my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
 
   my $csa = $db->get_CoordSystemAdaptor();
+
+  #
+  # Fetch by name, schema_build and version(opt).
+  #
+
+  $cs = $csa->fetch_by_name_schema_build_version('chromosome', '39_36a', 'NCBI36');
+
+  #As this is a multi-assembly DB, we have to accomodate the idea of schema versions, which will
+  #enable a mapping from the feature table back to assembly/core DB of origin.
+
+
+  #Old core methods, some may not work as they assume that there will onl be one default version
+  #where are there maybe multiple default versions, one for each assembly/schema_build
 
   #
   # Get all coord systems in the database:
@@ -71,6 +84,12 @@ Bio::EnsEMBL::DBSQL::CoordSystemAdaptor
 
 =head1 DESCRIPTION
 
+The Funcgen CoordSystemAdaptor works slighty different to the core version. As
+the Funcgen DB stores features mapped to multiple core/dna DBs the schema and 
+data versions(i.e. last token of DB name) have to be stored. This maintains
+a link between the seq_region_id stored in the Funcgen DB and the seq_region and assembly
+tables stored in the core DB on which the features were originally built.
+
 This adaptor allows the querying of information from the coordinate system
 adaptor.
 
@@ -81,7 +100,12 @@ assembly version) but the clonal coordinate system does not (despite having
 individual sequence versions).  In the case where a coordinate system does
 not have a version an empty string ('') is used instead.
 
-=head1 AUTHOR - Graham McVicker
+
+
+=head1 AUTHOR
+
+This module was writte by Nathan Johnson, but based heavily on the core CoordSystemAdaptor
+written by Graham McVicker.
 
 =head1 CONTACT
 
@@ -94,11 +118,11 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::DBSQL::CoordSystemAdaptor;
+package Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::CoordSystem;
+use Bio::EnsEMBL::Funcgen::CoordSystem;
 
 use vars qw(@ISA);
 
@@ -112,7 +136,7 @@ use vars qw(@ISA);
   Example    : $cs = $db->get_CoordSystemAdaptor(); #better than new()
   Description: Creates a new CoordSystem adaptor and caches the contents
                of the coord_system table in memory.
-  Returntype : Bio::EnsEMBL::DBSQL::CoordSystemAdaptor
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor
   Exceptions : none
   Caller     :
   Status     : Stable
@@ -131,26 +155,29 @@ sub new {
   # by dbID and name
   #
 
+  #Funcgen specific
+  #Added extra key on schema_build for all
+
   #keyed on name, list of coord_system value
-  $self->{'_name_cache'} = {};
+  $self->{'_sb_name_cache'} = {};
 
   #keyed on id, coord_system value
-  $self->{'_dbID_cache'} = {};
+  $self->{'_sb_dbID_cache'} = {};
 
   #keyed on rank
-  $self->{'_rank_cache'} = {};
+  $self->{'_sb_rank_cache'} = {};
 
   #keyed on id, 1/undef values
   $self->{'_is_sequence_level'} = {};
   $self->{'_is_default_version'} = {};
 
   my $sth = $self->prepare(
-    'SELECT coord_system_id, name, rank, version, attrib ' .
+    'SELECT coord_system_id, name, rank, version, attrib, schema_build  ' .
     'FROM coord_system');
   $sth->execute();
 
-  my ($dbID, $name, $rank, $version, $attrib);
-  $sth->bind_columns(\$dbID, \$name, \$rank, \$version, \$attrib);
+  my ($dbID, $name, $rank, $version, $attrib, $sbuild);
+  $sth->bind_columns(\$dbID, \$name, \$rank, \$version, \$attrib, \$sbuild);
 
   while($sth->fetch()) {
     my $seq_lvl = 0;
@@ -166,24 +193,29 @@ sub new {
       }
     }
 
-    my $cs = Bio::EnsEMBL::CoordSystem->new
+    my $cs = Bio::EnsEMBL::Funcgen::CoordSystem->new
       (-DBID           => $dbID,
        -ADAPTOR        => $self,
        -NAME           => $name,
        -VERSION        => $version,
        -RANK           => $rank,
        -SEQUENCE_LEVEL => $seq_lvl,
-       -DEFAULT        => $default);
+       -DEFAULT        => $default,
+	   -SCHEMA_BUILD   => $sbuild,
+	  );
 
-    $self->{'_dbID_cache'}->{$dbID} = $cs;
 
-    $self->{'_name_cache'}->{lc($name)} ||= [];
-    $self->{'_rank_cache'}->{$rank} = $cs;
-    push @{$self->{'_name_cache'}->{lc($name)}}, $cs;
+	$self->{'_sb_name_cache'}->{$sbuild.":".lc($name)} ||= [];
+    $self->{'_sb_dbID_cache'}->{$sbuild.":".$dbID} = $cs;
+    $self->{'_sb_rank_cache'}->{$sbuild.":".$rank} = $cs;
+    push @{$self->{'_sb_name_cache'}->{$sbuild.":".lc($name)}}, $cs;
   }
   $sth->finish();
 
 
+
+  #Get rid?  Let core handle this
+  #No mapping paths present in meta table!
 
   #
   # Retrieve a list of available mappings from the meta table.
@@ -193,6 +225,7 @@ sub new {
 
   my %mapping_paths;
   my $mc = $self->db()->get_MetaContainer();
+
 
  MAP_PATH:
   foreach my $map_path (@{$mc->list_value_by_key('assembly.mapping')}) {
@@ -245,15 +278,97 @@ sub new {
   # Create the pseudo coord system 'toplevel' and cache it so that
   # only one of these is created for each db...
   #
-  my $toplevel = Bio::EnsEMBL::CoordSystem->new(-TOP_LEVEL => 1,
-                                                -NAME      => 'toplevel',
-                                                -ADAPTOR   => $self);
-  $self->{'_top_level'} = $toplevel;
+  #my $toplevel = Bio::EnsEMBL::Funcgen::CoordSystem->new(-TOP_LEVEL => 1,
+#														 -NAME      => 'toplevel',
+#														 -ADAPTOR   => $self);
+ # $self->{'_top_level'} = $toplevel;
 
-  $self->{'_mapping_paths'} = \%mapping_paths;
+  #$self->{'_mapping_paths'} = \%mapping_paths;
 
   return $self;
 }
+
+=head2 fetch_by_name_schema_build_version
+
+  Arg [1]    : string $name
+               The name of the coordinate system to retrieve.  Alternatively
+               this may be an alias for a real coordinate system.  Valid
+               aliases are 'toplevel' and 'seqlevel'.
+  Arg [2]    : string $schema_build
+               The schema and data build used to specify and identify the DB
+               and data build which a feature was originally built on. e.g. 39_36a
+  Arg [3]    : string $version (optional)
+               The version of the coordinate system to retrieve.  If not
+               specified the default version will be used.
+  Example    : $coord_sys = $csa->fetch_by_name('chromosome', '39_36a', 'NCBI36');
+               # toplevel is an pseudo coord system representing the highest
+               # coord system in a given region
+               # such as the chromosome coordinate system
+               $coord_sys = $csa->fetch_by_name('toplevel');
+               #seqlevel is an alias for the sequence level coordinate system
+               #such as the clone or contig coordinate system
+               $coord_sys = $csa->fetch_by_name('seqlevel');
+  Description: Retrieves a coordinate system by its name
+  Returntype : Bio::EnsEMBL::Funcgen::CoordSystem
+  Exceptions : throw if no name argument provided
+               warning if no version provided and default does not exist
+  Caller     : general
+  Status     : Medium risk
+
+=cut
+
+sub fetch_by_name_schema_build_version {
+  my $self = shift;
+  my $name = lc(shift); #case insensitve matching
+  my $sbuild = shift;
+  my $version = shift;
+
+  throw('Name and schema_build arguments are required.') if(! $name || ! $sbuild);
+
+  $version = lc($version) if($version);
+
+
+  if($name eq 'seqlevel') {
+    return $self->fetch_sequence_level_by_schema_build();
+  } elsif($name eq 'toplevel') {
+    return $self->fetch_top_level_by_schema_build($version);
+  }
+
+  if(!exists($self->{'_sb_name_cache'}->{$sbuild.":".$name})) {
+    if($name =~ /top/) {
+      warning("Did you mean 'toplevel' coord system instead of '$name'?");
+    } elsif($name =~ /seq/) {
+      warning("Did you mean 'seqlevel' coord system instead of '$name'?");
+    }
+    return undef;
+  }
+
+
+  my @coord_systems = @{$self->{'_sb_name_cache'}->{$sbuild.":".$name}};
+
+  foreach my $cs (@coord_systems) {
+    if($version) {
+      return $cs if(lc($cs->version()) eq $version);
+    } elsif($self->{'_is_default_version'}->{$cs->dbID()}) {
+      return $cs;
+    }
+  }
+
+  if($version) {
+	  warning("No coord system found for verion '$version'");
+	  return undef;
+  }
+
+  #didn't find a default, just take first one
+  my $cs =  shift @coord_systems;
+  warning("No default version for coord_system [$name] exists. " .
+      "Using version [".$cs->version()."] arbitrarily");
+
+  return $cs;
+}
+
+
+
 
 
 
@@ -476,6 +591,8 @@ sub fetch_by_dbID {
 sub fetch_top_level {
   my $self = shift;
 
+  throw("Not yet implemented with schema_build");
+
   return $self->{'_top_level'};
 }
 
@@ -496,6 +613,8 @@ sub fetch_top_level {
 
 sub fetch_sequence_level {
   my $self = shift;
+
+  throw("Not yet implemented with schema_build");
 
   my @dbIDs = keys %{$self->{'_is_sequence_level'}};
 
@@ -718,7 +837,7 @@ sub _fetch_all_by_attrib {
 
 =head2 store
 
-  Arg [1]    : Bio::EnsEMBL::CoordSystem
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CoordSystem
   Example    : $csa->store($coord_system);
   Description: Stores a CoordSystem object in the database.
   Returntype : none
@@ -732,7 +851,7 @@ sub store {
   my $self = shift;
   my $cs = shift;
 
-  if(!$cs || !ref($cs) || !$cs->isa('Bio::EnsEMBL::CoordSystem')) {
+  if(!$cs || !ref($cs) || !$cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')) {
     throw('CoordSystem argument expected.');
   }
 
@@ -740,6 +859,7 @@ sub store {
   my $name = $cs->name();
   my $version = $cs->version();
   my $rank    = $cs->rank();
+  my $sbuild = $cs->schema_build();
 
   my $seqlevel = $cs->is_sequence_level();
   my $default  = $cs->is_default();
@@ -755,8 +875,9 @@ sub store {
   #
 
   if($cs->is_stored($db)) {
-    warning("CoordSystem $name $version is already in db.\n");
-    return;
+	  #Doesn't this only check on dbID?
+	  warning("CoordSystem $name $version is already in db.\n");
+	  return;
   }
 
   if($name eq 'toplevel' || $name eq 'seqlevel' || !$name) {
@@ -767,8 +888,8 @@ sub store {
     throw("There can only be one sequence level CoordSystem.");
   }
 
-  if(exists $self->{'_name_cache'}->{lc($name)}) {
-    my @coord_systems = @{$self->{'_name_cache'}->{lc($name)}};
+  if(exists $self->{'_sb_name_cache'}->{$sbuild.":".lc($name)}) {
+    my @coord_systems = @{$self->{'_sb_name_cache'}->{$sbuild.":".lc($name)}};
     foreach my $c (@coord_systems) {
       if(lc($c->version()) eq lc($version)) {
         warning("CoordSystem $name $version is already in db.\n");
@@ -803,15 +924,18 @@ sub store {
   #
 
   my $sth = $db->dbc->prepare('INSERT INTO coord_system ' .
-                         'SET name    = ?, ' .
-                             'version = ?, ' .
-                             'attrib  = ?,' .
-                             'rank    = ?');
+							  'SET name    = ?, ' .
+							  'version = ?, ' .
+							  'attrib  = ?,' .
+							  'rank    = ?,' .
+							  'schema_build = ?'
+							 );
 
   $sth->bind_param(1,$name,SQL_VARCHAR);
   $sth->bind_param(2,$version,SQL_VARCHAR);
   $sth->bind_param(3,$attrib_str,SQL_VARCHAR);
   $sth->bind_param(4,$rank,SQL_INTEGER);
+  $sth->bind_param(5,$sbuild,SQL_VARCHAR);
   $sth->execute();
   my $dbID = $sth->{'mysql_insertid'};
   $sth->finish();
@@ -829,11 +953,11 @@ sub store {
   $self->{'_is_default_version'}->{$dbID} = 1 if($default);
   $self->{'_is_sequence_level'}->{$dbID} = 1 if($seqlevel);
 
-  $self->{'_name_cache'}->{lc($name)} ||= [];
-  push @{$self->{'_name_cache'}->{lc($name)}}, $cs;
+  $self->{'_sb_name_cache'}->{$sbuild.":".lc($name)} ||= [];
+  push @{$self->{'_sb_name_cache'}->{$sbuild.":".lc($name)}}, $cs;
 
-  $self->{'_dbID_cache'}->{$dbID} = $cs;
-  $self->{'_rank_cache'}->{$rank} = $cs;
+  $self->{'_sb_dbID_cache'}->{$sbuild.":".$dbID} = $cs;
+  $self->{'_sb_rank_cache'}->{$sbuild.":".$rank} = $cs;
 
   return $cs;
 }

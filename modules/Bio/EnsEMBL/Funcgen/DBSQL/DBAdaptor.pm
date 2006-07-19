@@ -235,12 +235,15 @@ sub get_available_adaptors{
 				 'OligoFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor',
 				 'Experiment'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
 				 'ResultSet'     => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+				 'FGCoordSystem'   => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
+				 #why doesn't this work as above?
+				 'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
+
 
 				 #add required EnsEMBL(core) adaptors here
 				 #Should write/retrieve from efg not dna db
 				 'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
-				 'MetaCoordContainer' => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
-				 'CoordSystem'        => 'Bio::EnsEMBL::DBSQL::CoordSystemAdaptor',
+				 "MetaContainer"      => "Bio::EnsEMBL::DBSQL::MetaContainer",
 				);
 	
 	return (\%pairs);
