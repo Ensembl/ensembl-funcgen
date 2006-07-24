@@ -48,8 +48,7 @@ CREATE TABLE `array` (
    `array_id` int(11) unsigned NOT NULL auto_increment,
    `name` varchar(40) default NULL,
    `format` varchar(20) default NULL,
-   `size` int(11) unsigned NOT NULL default '0',
-   `species` varchar(20) default NULL,
+   `size` tinyint(4) unsigned NOT NULL default '0',
    `vendor` varchar(40) default NULL,
    `description` varchar(255) default NULL,
    PRIMARY KEY  (`array_id`)
@@ -97,10 +96,10 @@ CREATE TABLE `oligo_feature` (
    `seq_region_start` int(11) NOT NULL default '0',
    `seq_region_end` int(11) NOT NULL default '0',
    `seq_region_strand` tinyint(4) NOT NULL default '0', 
+   `coord_system_id` int(10) unsigned NOT NULL default '0',
    `oligo_probe_id` int(11) unsigned NOT NULL default '0',
    `analysis_id` int(11) unsigned NOT NULL default '0',	
    `mismatches` tinyint(4) NOT NULL default '0',
-   `build_id` smallint(6) unsigned NOT NULL default '0',
    `cigar_line` text,
    PRIMARY KEY  (`oligo_feature_id`),
    KEY `start_idx` (`seq_region_start`),
@@ -263,7 +262,7 @@ CREATE TABLE `result` (
    `result_id` int(11) unsigned NOT NULL auto_increment,
    `oligo_probe_id` int(11) unsigned default NULL,
    `score` double default NULL,
-   `metric_id` int(11) unsigned default NULL,
+   `analysis_id` int(11) unsigned default NULL,
    `channel_id` int(11) unsigned default NULL,
    PRIMARY KEY  (`result_id`),
    KEY `oligo_probe_idx` (`oligo_probe_id`),
@@ -276,20 +275,37 @@ CREATE TABLE `result` (
 --- metric default would be id for "RAW"..no, need to test has been specifically set, so NULL
 
 
-
-
-
 --
--- Table structure for table `metric`
+-- Table structure for table `predicted_feature`
 --
 
-DROP TABLE IF EXISTS `metric`;
-CREATE TABLE `metric` (
-   `metric_id` int(11) unsigned NOT NULL auto_increment,
-   `metric_name` varchar(20) default NULL,
-   `description`  varchar(255) default NULL,
-   PRIMARY KEY  (`metric_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+DROP TABLE IF EXISTS `predicted_feature`;
+CREATE TABLE `predicted_feature` (
+  `predicted_feature_id` int(10) unsigned NOT NULL auto_increment,
+  `seq_region_id` int(10) unsigned NOT NULL default '0',
+  `seq_region_start` int(10) unsigned NOT NULL default '0',
+  `seq_region_end` int(10) unsigned NOT NULL default '0',
+  `seq_region_strand` tinyint(1) NOT NULL default '0',
+  `coord_system_id` int(10) unsigned NOT NULL default '0',
+  `display_label` varchar(40) NOT NULL default '',
+  `analysis_id` int(10) unsigned NOT NULL default '0',
+  `score` double default NULL,
+  PRIMARY KEY  (`predicted_feature_id`),
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
+  KEY `analysis_idx` (`analysis_id`),
+  KEY `hit_idx` (`display_label`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+
+
+--- Need to be able to have this table running completely from the persistent table
+--- i.e. We want to be able to remove the experiment table data and still have access to all relevant data
+--- e.g. primary design type, target_name/description 
+--- Either make experiment->target 1:1 and have mixed persistent data in target(rm experiment_id and add target_id to experment)
+--- Or add target_id to predicted_feature, may be redundant for non-tiling arrays?  How are we going to capture primary_design_type?
+
+
+
+
 
 --- Allows storage of none raw values
 ---Also needs to accommodate different normalisations 
@@ -363,27 +379,93 @@ CREATE TABLE `experimental_variable` (
 --- can this handle experimental management such that slides can be reused and classed as such
 --- Or classed as failures etc.
 --- Do we also need an extra table to hold experiment level meta data along side design type, and rename this channel variable
-
-
-
-
 --
 -- Table structure for table `analysis`
 --
 
 DROP TABLE IF EXISTS `analysis`;
 CREATE TABLE `analysis` (
-   `analysis_id` int(11) unsigned NOT NULL auto_increment,
-   `analysis_name` varchar(20) default NULL,
-   `description` varchar(120) default NULL,
-   PRIMARY KEY  (`analysis_id`)
+  `analysis_id` int(10) unsigned NOT NULL auto_increment,
+  `created` datetime NOT NULL default '0000-00-00 00:00:00',
+  `logic_name` varchar(40) NOT NULL default '',
+  `db` varchar(120) default NULL,
+  `db_version` varchar(40) default NULL,
+  `db_file` varchar(120) default NULL,
+  `program` varchar(80) default NULL,
+  `program_version` varchar(40) default NULL,
+  `program_file` varchar(80) default NULL,
+  `parameters` varchar(255) default NULL,
+  `module` varchar(80) default NULL,
+  `module_version` varchar(40) default NULL,
+  `gff_source` varchar(40) default NULL,
+  `gff_feature` varchar(40) default NULL,
+  PRIMARY KEY  (`analysis_id`),
+  UNIQUE KEY `logic_name` (`logic_name`),
+  KEY `logic_name_idx` (`logic_name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+--
+-- Table structure for table `analysis_description`
+--
+
+DROP TABLE IF EXISTS `analysis_description`;
+CREATE TABLE `analysis_description` (
+  `analysis_id` int(10) unsigned NOT NULL default '0',
+  `description` text,
+  `display_label` varchar(255) default NULL,
+  KEY `analysis_idx` (`analysis_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
----Other fields as core.analysis?
+--
+-- Table structure for table `meta`
+--
+
+DROP TABLE IF EXISTS `meta`;
+CREATE TABLE `meta` (
+  `meta_id` int(11) NOT NULL auto_increment,
+  `meta_key` varchar(40) NOT NULL default '',
+  `meta_value` varchar(255) NOT NULL default '',
+  PRIMARY KEY  (`meta_id`),
+  KEY `meta_key_index` (`meta_key`),
+  KEY `meta_value_index` (`meta_value`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
+--
+-- Table structure for table `meta_coord`
+--
 
+DROP TABLE IF EXISTS `meta_coord`;
+CREATE TABLE `meta_coord` (
+  `table_name` varchar(40) NOT NULL default '',
+  `coord_system_id` int(11) NOT NULL default '0',
+  `max_length` int(11) default NULL,
+  UNIQUE KEY `table_name` (`table_name`,`coord_system_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+---should only ever be predicted_feature, but with all the coord_sys_ids
+---This is slightly redundant, but required for core API modules to work
+
+
+--
+-- Table structure for table `coord_system`
+--
+
+DROP TABLE IF EXISTS `coord_system`;
+CREATE TABLE `coord_system` (
+  `coord_system_id` int(11) NOT NULL auto_increment,
+  `name` varchar(40) NOT NULL default '',
+  `version` varchar(40) default NULL,
+  `rank` int(11) NOT NULL default '0',
+  `attrib` set('default_version','sequence_level') default NULL,
+  `schema_build` varchar(6) default NULL,
+  PRIMARY KEY  (`coord_system_id`),
+  UNIQUE KEY `rank` (`rank`, `schema_build`),
+  UNIQUE KEY `name` (`name`,`version`, `schema_build`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+---Should only ever be chromosome?
 
 --- Further thoughts:
 
