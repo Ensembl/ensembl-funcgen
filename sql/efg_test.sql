@@ -12,9 +12,7 @@
 --- Use MGED terms for design_types & experimental_variables where possible.
 --- Use Brno nomelcature for target features
 
-DROP DATABASE IF EXISTS `homo_sapiens_funcgen_25_34e`;
-CREATE DATABASE `homo_sapiens_funcgen_25_34e`;
-USE `homo_sapiens_funcgen_25_34e`;
+
 
 --
 -- Table structure for table `egroup`
