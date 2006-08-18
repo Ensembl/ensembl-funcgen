@@ -52,6 +52,7 @@ package Bio::EnsEMBL::Funcgen::PredictedFeature;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Funcgen::FeatureType;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Feature);
@@ -110,13 +111,13 @@ sub new {
 	
 	my $self = $class->SUPER::new(@_);
 	
-	my ($anal_id, $display_label, $coord_sys_id, $score)
-		= rearrange(['ANALYSIS_ID', 'DISPLAY_LABEL', 'COORD_SYSTEM_ID', 'SCORE'], @_);
+	my ($anal_id, $display_label, $coord_sys_id, $score, $ft_id)
+		= rearrange(['ANALYSIS_ID', 'DISPLAY_LABEL', 'COORD_SYSTEM_ID', 'SCORE', 'FEATURE_TYPE_ID'], @_);
 	
 	$self->score($score);
 	$self->display_label($display_label);
 	$self->analysis_id($anal_id);
-
+	$self->feature_type_id($ft_id);
 
 	#do we need to validate this against the db?  Grab from slice and create new if not present? 
 	#Will this be from the dnadb? Or will this work differently for PredictedFeatures?
@@ -229,11 +230,11 @@ sub analysis_id {
     return $self->{'analysis_id'};
 }
 
-=head2 target_id
+=head2 feature_type_id
 
-  Args       : int - target id
-  Example    : my $target_id = $feature->target_id();
-  Description: Getter/Setter for the target_id attribute for this feature.
+  Args       : int - feature_type id
+  Example    : my $target_id = $feature->feature_type_id();
+  Description: Getter/Setter for the feature_type_id attribute for this feature.
   Returntype : int
   Exceptions : None
   Caller     : General
@@ -241,16 +242,55 @@ sub analysis_id {
              
 =cut
 
-sub target_id {
+sub feature_type_id {
     my $self = shift;
 
-	$self->{'target_id'} = shift if @_;
+	$self->{'feature_type_id'} = shift if @_;
 	
-    return $self->{'target_id'};
+    return $self->{'feature_type_id'};
+}
+
+#Hacky placeholder mehtod as I haven't written FeatureType or FeatureTypeAdaptor yet
+
+=head2 type
+
+  Args       : Bio::EnsEMBL::Funcgen::FeatureType
+  Example    : my $type_name = $feature->type()->name();
+  Description: Getter/Setter for the type attribute for this feature.
+  Returntype : int
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+             
+=cut
+
+sub type {
+    my $self = shift;
+
+    #$self->{'type'} = shift if @_;
+	
+
+    if( ! $self->{'type'}){
+      my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
+						       -NAME => 'H3k9Me3',
+						       -DESCRIPTION => 'Histone 3 Tri-methylated Lysine 9'
+						      ); 
+
+      $self->{'type'} = $ft;
+    }
+    
+
+    
+
+
+    return $self->{'type'};
 }
 
 
+
+
 #other methods
+#type!! Add to BaseFeature?  Hard code val in oligo_feature
 #analysis? Use AnalsisAdapter here, or leave to caller?
 #sources/experiments
 #target, tar

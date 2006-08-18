@@ -283,6 +283,7 @@ sub _slice_fetch {
 			}
 			
   
+	       
 			my $fs = $self->generic_fetch($constraint,undef,$slice);
 						
 			# features may still have to have coordinates made relative to slice
@@ -424,7 +425,7 @@ sub _pre_store {
   #retrieve corresponding Funcgen coord_system and set id in feature
   my $csa = $self->db->get_FGCoordSystemAdaptor();#had to call it FG as we were getting the core adaptor
   my $fg_cs = $csa->validate_coord_system($cs);
-  $fg_cs = $csa->fetch_by_name_schema_build_version($cs->name(), $schema_build, $cs->version());
+  $fg_cs = $csa->fetch_by_name_schema_build_version($cs->name(), $self->db->_get_schema_build($slice->adaptor()), $cs->version());
   $feature->coord_system_id($fg_cs->dbID());
 
   my ($tab) = $self->_tables();
@@ -488,10 +489,16 @@ sub _remap {
   my ($features, $mapper, $slice) = @_;
 
   #check if any remapping is actually needed
+
+ 
   if(@$features && (!$features->[0]->isa('Bio::EnsEMBL::Funcgen::Feature') ||
                     $features->[0]->slice == $slice)) {
+
+
     return $features;
   }
+
+      
 
 
   throw("Not yet fully implemented _remap for EFG");

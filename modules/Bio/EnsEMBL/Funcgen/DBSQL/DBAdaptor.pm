@@ -163,29 +163,30 @@ sub register_entry{
 #will adding SliceAdaptor here use the dna DB? i.e. the core DB rather than the efg DB?
 
 sub get_available_adaptors{
-	my ($self) = shift;
-
-	my %pairs = (
-				 'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
-				 'Experimental'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-				 'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
-				 'OligoArray'         => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoArrayAdaptor',
-				 'OligoProbeSet'      => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor',
-				 'OligoProbe'         => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeAdaptor',
-				 'OligoFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor',
-				 'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-				 'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
-				 'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
-				 'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
-
-
-				 #add required EnsEMBL(core) adaptors here
-				 #Should write/retrieve from efg not dna db
-				 'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
-				 "MetaContainer"      => "Bio::EnsEMBL::DBSQL::MetaContainer",
-				);
-	
-	return (\%pairs);
+  my ($self) = shift;
+  
+  my %pairs = (
+	       'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
+	       'Experimental'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+	       'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
+	       'OligoArray'         => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoArrayAdaptor',
+	       'OligoProbeSet'      => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor',
+	       'OligoProbe'         => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeAdaptor',
+	       'OligoFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor',
+	       'PredictedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::PredictedFeatureAdaptor',
+	       'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+	       'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+	       'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
+	       'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
+	       
+	       
+	       #add required EnsEMBL(core) adaptors here
+	       #Should write/retrieve from efg not dna db
+	       'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
+	       "MetaContainer"      => "Bio::EnsEMBL::DBSQL::MetaContainer",
+	      );
+  
+  return (\%pairs);
 }
 
 
@@ -206,7 +207,9 @@ sub _get_schema_build{
 #Funcgen specific, get's Adaptor from dnadb, or validates/autogenerates from coord_system_id
 #Only imlpmented in _obj_from_sth, rely on feature_slice elsewhere
 
-sub get_DNADBSliceAdaptor{
+#Not in registry as get_adaptor will not take $cs_id arg
+
+sub get_SliceAdaptor{
 	my ($self, $cs_id) = @_;
 
 	if(! $cs_id && ! $self->dnadb()){
@@ -230,6 +233,9 @@ sub get_DNADBSliceAdaptor{
 
 			#Need to get latin name for DB species from somewhere, meta?
 			my $species = "homo_sapiens";
+
+
+			warn("This needs to handle querying local or ensembl DB");
 
 			my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 			  (						

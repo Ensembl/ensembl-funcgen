@@ -364,7 +364,7 @@ sub _objs_from_sth {
 
 		  #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
 
-		  $sa ||= $self->db->get_DNADBSliceAdaptor($cs_id);
+		  $sa ||= $self->db->get_SliceAdaptor($cs_id);
 
 
 
