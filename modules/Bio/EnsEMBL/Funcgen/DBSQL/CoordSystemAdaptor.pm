@@ -162,7 +162,7 @@ sub new {
   $self->{'_sb_name_cache'} = {};
 
   #keyed on id, coord_system value
-  $self->{'_sb_dbID_cache'} = {};
+  $self->{'_dbID_cache'} = {};
 
   #keyed on rank
   $self->{'_sb_rank_cache'} = {};
@@ -206,7 +206,7 @@ sub new {
 
 
 	$self->{'_sb_name_cache'}->{$sbuild.":".lc($name)} ||= [];
-    $self->{'_sb_dbID_cache'}->{$sbuild.":".$dbID} = $cs;
+    $self->{'_dbID_cache'}->{$dbID} = $cs;
     $self->{'_sb_rank_cache'}->{$sbuild.":".$rank} = $cs;
     push @{$self->{'_sb_name_cache'}->{$sbuild.":".lc($name)}}, $cs;
   }
@@ -956,10 +956,78 @@ sub store {
   $self->{'_sb_name_cache'}->{$sbuild.":".lc($name)} ||= [];
   push @{$self->{'_sb_name_cache'}->{$sbuild.":".lc($name)}}, $cs;
 
-  $self->{'_sb_dbID_cache'}->{$sbuild.":".$dbID} = $cs;
+  $self->{'_dbID_cache'}->{$dbID} = $cs;
   $self->{'_sb_rank_cache'}->{$sbuild.":".$rank} = $cs;
 
   return $cs;
+}
+
+
+
+#currently get cs from slice, and need to validate for dnadb too
+#let's not hard code for chrom?
+#can take FGCoordSystem or CoordSystem
+ 
+sub validate_coord_system{
+	my ($self, $cs) = @_;
+
+	#check for (FG)CoordSystem here
+
+
+ #Need to add to Funcgen coord_system here
+  #check if name and version are present and reset coord_system_id to that one, else get last ID and create a new one
+  #coord_system_ids will not match those in core DBs, so we need ot be mindful about this.
+  #can't use is_stored as this simply checks the dbID
+  #seq_region_ids may change between shemas with the same assembly version
+  #Need to store schema_version somewhere to maintain the seq_region_id mapping
+  #extend the coord_system table to have schema version, link to feature tables via coord_system_id
+  #how are we going to retrieve, we have species and schema version, so will have to do some jiggery pokery
+  #There is a possibility that the same schema may be used for two different gene builds
+  #thus having the same name version schema triplets, but different seq_region_ids
+  #can't really code around this...unless we stored the schema and the build instead of just the schema
+  #this would make it easier to generate the dnadb as we could simply concat $species."_core_".$schema_build
+  #can not get this from the meta table, so we'll have to fudge it from the db_name
+  
+  #Do we need to check the the dnadb and the slice db match?
+  #Do we have to have specified a dnadb at this point?  No.
+  #But need to put checks in place for dnadb methods i.e. seq/slice retrieval
+
+
+
+
+ #This will get called for each feature!!
+  #No guarantee that each feature will be built from the same db (could set once in store otherwise)
+  #my $schema_build = ${$slice->adaptor->db->db_handle->selectrow_array("SELECT meta_value value from meta where mate_key = \"data.version\"")}[0];  #do we need to check whether there is only one?
+	my $schema_build = $self->db->_get_schema_build($cs->adaptor());
+	my $fg_cs = $self->fetch_by_name_schema_build_version($cs->name(), $schema_build, $cs->version());
+
+	#don't need this cache as the Adaptor caches everything from the new method??
+	if(! $fg_cs){
+		#This should now only be called for the number of unique name version schema triplets
+		#In reality this will only be unique names for the given version we are creating the feature on
+		#e.g. all the chromosomes
+		#my $csa = $self->db->get_CoordSystemAdaptor();
+		
+		#store coordsystem with schema_version
+		#This will enable automatic dnadb DBAdaptor generation
+		#otherwise would have to list all DBs in registry and select the one which matched the schema version
+		#This will also enable validation if a non-standard dnadb is passed for retrieval
+		#can check meta table for schema.version (data.version? genebuild.name?)
+		print "Storing default coord sys for dnadb\n";
+		
+		#Generate Funcgen::CoordSystem
+		$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
+														 -NAME    => $cs->name(),
+														 -VERSION => $cs->version(),
+														 -RANK    => $cs->rank(),
+														 -DEFAULT => $cs->is_default(),
+														 -SEQUENCE_LEVEL => $cs->is_sequence_level(),
+														 -SCHEMA_BUILD => $schema_build
+														);
+		$self->store($fg_cs);
+	}
+
+	return $fg_cs;
 }
 
 

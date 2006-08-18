@@ -22,8 +22,7 @@ OligoFeature objects.
 
 =head1 AUTHOR
 
-This module was created by Ian Sealy, but is almost entirely based on the
-OligoFeatureAdaptor module written by Arne Stabenau.
+This module was created by Nathan Johnson.
 
 This module is part of the Ensembl project: http://www.ensembl.org/
 
@@ -42,11 +41,11 @@ package Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::OligoFeature;
-use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
-use Bio::EnsEMBL::Funcgen::CoordSystem;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
+#use Bio::EnsEMBL::Funcgen::CoordSystem;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
 
 
 =head2 fetch_all_by_Probe
@@ -64,6 +63,8 @@ use vars qw(@ISA);
 sub fetch_all_by_Probe {
 	my $self  = shift;
 	my $probe = shift;
+
+	throw("Not yet implemented");
 	
 	if ( !ref($probe) && !$probe->isa('Bio::EnsEMBL::Funcgen::OligoProbe') ) {
 		throw('fetch_all_by_Probe requires a Bio::EnsEMBL::Funcgen::OligoProbe object');
@@ -125,6 +126,8 @@ sub fetch_all_by_probeset {
 
 sub fetch_all_by_Slice_arrayname {
 	my ($self, $slice, @arraynames) = @_;
+
+	throw("This should return data from all experiments, but will break if arrays are mapped to different coord_systems");
 	
 	throw('Need array name as parameter') if !@arraynames;
 	
@@ -190,7 +193,7 @@ sub _tables {
 	return (
 			[ 'oligo_feature', 'of' ], 
 			[ 'oligo_probe',   'op' ], 
-			[ 'array_chip',   'ac' ],
+			[ 'array_chip',   'ac' ],#?
 			[ 'array',   'a' ]
 		   );
 }
@@ -210,15 +213,20 @@ sub _tables {
 
 sub _columns {
 	my $self = shift;
+
+
+	#do we need array_name?
 	
 	return qw(
-		of.oligo_feature_id  of.seq_region_id
-		of.seq_region_start  of.seq_region_end
-		of.seq_region_strand of.mismatches
-		of.oligo_probe_id    of.analysis_id
-		a.name              op.probeset
-		op.name
-	);
+			  of.oligo_feature_id  of.seq_region_id
+			  of.seq_region_start  of.seq_region_end
+			  of.seq_region_strand of.coord_system_id
+			  of.mismatches        of.oligo_probe_id    
+			  of.analysis_id	   op.name
+			 );
+
+	#removed probeset and array name
+	
 }
 
 =head2 _default_where_clause
@@ -277,31 +285,39 @@ sub _final_clause {
 
 sub _objs_from_sth {
 	my ($self, $sth, $mapper, $dest_slice) = @_;
+
+	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
+	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
+
+
 	
 	# This code is ugly because caching is used to improve speed
 
-	my $sa = $self->db->get_SliceAdaptor();
-	my $aa = $self->db->get_AnalysisAdaptor();
-
-	my @features;
+	#my $sa = $self->db->get_SliceAdaptor();
 	
+	my ($sa, $old_cs_id);
+	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
+
+	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
+	#Hence it should always be on the same coord system
+
+	my $aa = $self->db->get_AnalysisAdaptor();
+	my @features;
 	my (%analysis_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
 		$oligo_feature_id,  $seq_region_id,
 		$seq_region_start,  $seq_region_end,
-		$seq_region_strand, $mismatches,
-		$oligo_probe_id,    $analysis_id,
-		$array_name,        $probeset,
-		$oligo_probe_name,
+		$seq_region_strand, $cs_id,
+		$mismatches,        $oligo_probe_id,    
+		$analysis_id,       $oligo_probe_name,
 	);
 	$sth->bind_columns(
-		\$oligo_feature_id,  \$seq_region_id,
-		\$seq_region_start,  \$seq_region_end,
-		\$seq_region_strand, \$mismatches,
-		\$oligo_probe_id,    \$analysis_id,
-		\$array_name,        \$probeset,
-		\$oligo_probe_name,
+					   \$oligo_feature_id,  \$seq_region_id,
+					   \$seq_region_start,  \$seq_region_end,
+					   \$seq_region_strand, \$cs_id,
+					   \$mismatches,        \$oligo_probe_id,
+					   \$analysis_id,		\$oligo_probe_name,
 	);
 
 	my $asm_cs;
@@ -334,6 +350,23 @@ sub _objs_from_sth {
 
 	my $last_feature_id = -1;
 	FEATURE: while ( $sth->fetch() ) {
+		  #Need to build a slice adaptor cache here?
+		  #Would only ever want to do this if we enable mapping between assemblies??
+		  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
+		  
+	  
+		  if($old_cs_id && ($old_cs_id != $cs_id)){
+			  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
+		  }
+		  
+		  $old_cs_id = $cs_id;
+
+
+		  #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
+
+		  $sa ||= $self->db->get_DNADBSliceAdaptor($cs_id);
+
+
 
 		# This assumes that features come out sorted by ID
 		next if ($last_feature_id == $oligo_feature_id);
@@ -357,6 +390,9 @@ sub _objs_from_sth {
 
 		# Remap the feature coordinates to another coord system if a mapper was provided
 		if ($mapper) {
+
+			throw("Not yet implmented mapper, check equals are Funcgen calls too!");
+
 			($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
 				= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
 
@@ -405,7 +441,7 @@ sub _objs_from_sth {
 			'dbID'          => $oligo_feature_id,
 			'mismatchcount' => $mismatches,
 			'_probe_id'     => $oligo_probe_id,
-			'probeset'      => $probeset,
+			#'probeset'      => $probeset,#???do we need this?
 			'_probe_name'   => $oligo_probe_name
 		} );
 	}
@@ -528,7 +564,11 @@ sub list_dbIDs {
 
 
 
-sub fetch_feature_results{
+
+
+
+
+sub fetch_results_by_channel_analysis{
 	my ($self, $probe_id, $channel_id, $analysis) = @_;
 	
 	if(! defined $probe_id || ! defined $channel_id) {
@@ -542,11 +582,14 @@ sub fetch_feature_results{
 	}
 
 	my $query = "SELECT r.score, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.analysis_id = a.analysis_id $analysis_clause";
-						 
-
+	
 	return $self->dbc->db_handle->selectall_arrayref($query);
-		
 }
+
+
+
+
+
 
 1;
 

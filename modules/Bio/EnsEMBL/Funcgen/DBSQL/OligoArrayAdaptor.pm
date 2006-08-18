@@ -195,7 +195,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( a.array_id a.name a.format a.size a.vendor a.description);
+	return qw( a.array_id a.name a.format a.vendor a.description);
 }
 
 =head2 _objs_from_sth
@@ -215,9 +215,9 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $array_id, $name, $format, $size, $vendor, $description);
+	my (@result, $array_id, $name, $format, $vendor, $description);
 	
-	$sth->bind_columns(\$array_id, \$name, \$format, \$size, \$vendor, \$description);
+	$sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description);
 	
 	while ( $sth->fetch() ) {
 		my $array = Bio::EnsEMBL::Funcgen::OligoArray->new(
@@ -225,7 +225,6 @@ sub _objs_from_sth {
 														   -adaptor     => $self,
 														   -name        => $name,
 														   -format      => $format,
-														   -size        => $size,
 														   -vendor      => $vendor,
 														   -description => $description,
 														  );
@@ -260,7 +259,7 @@ sub _fetch_array_chips_by_array_dbID {
 	my ($self, $array_dbID) = @_;
 
 	throw("Must specifiy an array_id to retrieve array_chips") if (! $array_dbID);
-	my (@result, $array_chip_id, $design_id, $name, %ac_tmp);
+	my ($array_chip_id, $design_id, $name, %ac_tmp);
 
 	my $sth = $self->prepare("select array_chip_id, design_id, name from array_chip where array_id = $array_dbID");	
 	$sth->execute();
@@ -268,15 +267,13 @@ sub _fetch_array_chips_by_array_dbID {
 	$sth->bind_columns(\$array_chip_id, \$design_id, \$name);
 	
 	while ( $sth->fetch() ) {
-		%ac_tmp = (
-				   array_chip_id => $array_chip_id,
-				   design_id => $design_id,
-				   name => $name,
-				  );
-
-		push @result, {%ac_tmp};
+		$ac_tmp{$design_id} = {(
+								array_chip_id => $array_chip_id,
+								name => $name,
+							   )};
 	}
-	return \@result;
+
+	return \%ac_tmp;
 }
 
 
@@ -287,23 +284,34 @@ sub _fetch_array_chips_by_array_dbID {
 
   Args       : List of Bio::EnsEMBL::Funcgen::OligoArray objects
   Example    : $oaa->store($array1, $array2, $array3);
-  Description: Stores given OligoArray objects in the database. Should only be
-               called once per array because no checks are made for duplicates.
-			   Sets dbID and adaptor on the objects that it stores.
-  Returntype : None
+  Description: Stores given OligoArray objects in the database. This
+               method checks for arrays previously stored and updates 
+               and new array_chips accordingly.
+  Returntype : Listref of stored OligoArray objects
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
 
 =cut
 
+
+#This works slightly differently as arary_chip are not stored as objects, 
+#yet we need to retrieve a dbID for the array before we know about all the array_chips
+
 sub store {
     my $self = shift;
     my @args = @_;
+	#my $array = shift;
 
-	my $ac_sth = $self->prepare("INSERT INTO array_chip
-                                 (design_id, array_id, name)
-                                 VALUES (?, ?, ?)");
+	
+
+	my ($sarray);
+
+	my $sth = $self->prepare("
+			INSERT INTO array
+			(name, format, vendor, description)
+			VALUES (?, ?, ?, ?)");
+
 
 
     foreach my $array (@args) {
@@ -311,52 +319,111 @@ sub store {
 			warning('Can only store OligoArray objects, skipping $array');
 			next;
 		}
-
-		if( ! exists $array->{'array_chips'}){
-			warning("Need to implement array_chip inserts, should we create OligoArrayChip.pm? Skipping");
-			next;
-		}		
-
+		
 		# Has array already been stored?
-		next if ( $array->dbID() && $array->adaptor() == $self );
+		# What about array_chips? Still need to check they've been imported
+		if (!( $array->dbID() && $array->adaptor() == $self )){
 
-		#my $superset = $array->superset();
-		#if ( defined $superset && !$superset->dbID() ) {
-		#	$self->store($superset);
-		#}
+			#try and fetch array here and set to array if valid
+			$sarray = $self->fetch_by_name($array->name());#this should be name_vendor?
 
-		#can we prepare these statement once,and then bind in the loop, to prevent preparing multiple times?
-		my $sth = $self->prepare("
-			INSERT INTO array
-			(name, format, size, vendor, description)
-			VALUES (?, ?, ?, ?, ?)
-		");
-		$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
-		$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
-		$sth->bind_param(3, $array->size(),         SQL_INTEGER);
-		$sth->bind_param(4, $array->vendor(),       SQL_VARCHAR);
-		$sth->bind_param(5, $array->description(),  SQL_VARCHAR);
-
-		$sth->execute();
-		my $dbID = $sth->{'mysql_insertid'};
-		$array->dbID($dbID);
-		$array->adaptor($self);
-
-		foreach my $array_chip(@{$array->array_chips()}){
-			#validate keys here..or write object?!
-			warn("Need to validate array_chip keys here or write obj");
-
-
-			$ac_sth->bind_param(1, $array_chip->{'design_id'}, SQL_INTEGER);
-			$ac_sth->bind_param(2, $dbID,                      SQL_INTEGER);
-			$ac_sth->bind_param(3, $array_chip->{'name'},      SQL_VARCHAR);
-
-			$ac_sth->execute();
-			$$array_chip{'array_chip_id'} = $ac_sth->{'mysql_insertid'};
-
+			if( ! $sarray){
+				$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
+				$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
+				#$sth->bind_param(3, scalar(keys %{$self->array_chips()}),         SQL_INTEGER);
+				$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
+				$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
+				
+				$sth->execute();
+				my $dbID = $sth->{'mysql_insertid'};
+				$array->dbID($dbID);
+				$array->adaptor($self);
+			}
+			else{
+				warn("Array already stored, validating array_chips");
+			}
 		}
+
+		$array = $self->store_array_chips($array, $sarray);
+
+		#need to make sure we have the full object here, so query again or can we use array or sarray?
+		#there may be problems with repopulating array with full achip complement if experiment only uses some of the achips?
+		#but we're reging the achips in the importer, so this shouldn't matter?
+
 	}
+
+
+	#will this be the original or the stored objects?
+
+	return \@args;
+	#return $array;
 }
+
+
+#This method takes an array, and optinally a stored sarray else it retrieves one
+#Missing array_chips in sarray are stored and set in array
+#then the array size is updated if the array_chips hash is larger the the size attribute
+#do we need this size attribute?  Can we not remove it and do a dynamic keys on the array_chips hash?
+
+
+sub store_array_chips{
+	my ($self, $array, $sarray) = @_;
+
+
+	#need to check for array here?
+
+	my $ac_sth = $self->prepare("INSERT INTO array_chip
+                                 (design_id, array_id, name)
+                                 VALUES (?, ?, ?)");
+
+	$sarray  = $self->fetch_by_name($array->name()) if(! $sarray);
+
+
+
+	
+	foreach my $design_id(keys %{$array->array_chips()}){
+		my $sdesign_id = 0;
+		
+		if($sarray){
+
+			if($sarray->array_chips()){
+				$sdesign_id = grep($design_id, (keys %{$sarray->array_chips}));
+			}
+		}
+		
+		
+		#do we need to set some flag here and in _obj_from_sth
+		#registered flag, true for retrieved, false for just stored achips, 
+		#this will be used by importer to run probe import etc
+		#Use status?
+		
+		if(! $sdesign_id){
+			#This will always be te case, as Arrays are stored before storing their array_chips
+			#warn("Adding array_chip $design_id to previously stored array") if ($sarray);
+			
+			print "Importing array chip with name ".$array->array_chips->{$design_id}{'design_name'}."\n";
+			
+			$ac_sth->bind_param(1, $design_id,                                       SQL_INTEGER);
+			$ac_sth->bind_param(2, $array->dbID(),                                   SQL_INTEGER);
+			$ac_sth->bind_param(3, $array->array_chips->{$design_id}{'design_name'}, SQL_VARCHAR);
+			$ac_sth->execute();
+			$array->array_chips->{$design_id}{'dbID'} = $ac_sth->{'mysql_insertid'};
+			
+			#Now populate sarray with this stored achip if $sarray
+			$sarray->add_array_chip($design_id, $array->array_chips->{$design_id}) if ($sarray);
+			
+		}
+		
+	}
+	
+	#Set new achips and update size
+	if($sarray){
+		$array->array_chips($sarray->array_chips()) if ($sarray);
+	}
+
+	return $array;
+}
+
 
 =head2 list_dbIDs
 

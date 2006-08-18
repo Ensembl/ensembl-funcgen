@@ -49,7 +49,7 @@ sub new {
                in a particular table are stored.  It is used internally by
                the API to perform queries to these tables and to ensure that
                features are only stored in appropriate coordinate systems.
-  Returntype : listref of Bio::EnsEMBL::CoordSystem objects
+  Returntype : listref of Bio::EnsEMBL::Funcgen::CoordSystem objects
   Exceptions : throw if name argument not provided
   Caller     : BaseFeatureAdaptor
   Status     : Stable
@@ -69,7 +69,7 @@ sub fetch_all_CoordSystems_by_feature_type {
   my @cs_ids = @{$self->{'_feature_cache'}->{$table}};
   my @coord_systems;
 
-  my $csa = $self->db->get_CoordSystemAdaptor();
+  my $csa = $self->db->get_FGCoordSystemAdaptor();
 
   foreach my $cs_id (@cs_ids) {
     my $cs = $csa->fetch_by_dbID($cs_id);
@@ -88,7 +88,7 @@ sub fetch_all_CoordSystems_by_feature_type {
 
 =head2 fetch_max_length_by_CoordSystem_feature_type
 
-  Arg [1]    : Bio::EnsEMBL::CoordSystem $cs
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CoordSystem $cs
   Arg [2]    : string $table
   Example    : $max_len = 
                 $mcc->fetch_max_length_by_CoordSystem_feature_type($cs,'gene');
@@ -107,7 +107,7 @@ sub fetch_max_length_by_CoordSystem_feature_type {
   my $cs = shift;
   my $table = shift;
 
-  if(!ref($cs) || !$cs->isa('Bio::EnsEMBL::CoordSystem')) {
+  if(!ref($cs) || !$cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')) {
     throw('Bio::EnsEMBL::CoordSystem argument expected');
   }
 
@@ -120,7 +120,7 @@ sub fetch_max_length_by_CoordSystem_feature_type {
 
 =head2 add_feature_type
 
-  Arg [1]    : Bio::EnsEMBL::CoordSystem $cs
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CoordSystem $cs
                The coordinate system to associate with a feature table
   Arg [2]    : string $table - the name of the table in which features of
                a given coordinate system will be stored in

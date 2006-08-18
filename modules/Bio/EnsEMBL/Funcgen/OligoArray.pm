@@ -104,8 +104,7 @@ sub new {
 
 	my $self = $class->SUPER::new(@_);
 
-	#can we lc these?
-	my ($name, $format, $size, $species, $vendor, $ac_ref, $desc)
+	my ($name, $format, $size, $species, $vendor, $ac_hash, $desc)
 		= rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'ARRAY_CHIPS', 'DESCRIPTION'], @_ );
 	
 	$self->name($name)          if defined $name;
@@ -113,10 +112,8 @@ sub new {
 	$self->size($size)          if defined $size;
 	$self->species($species)    if defined $species;
 	$self->vendor($vendor)      if defined $vendor;
-	$self->array_chips($ac_ref) if defined $ac_ref;
+	$self->array_chips($ac_hash) if defined $ac_hash;
 	$self->description($desc)   if defined $desc;
-
-	warn("Need to add support for array_chips here, or create new object?");
 
 	return $self;
 }
@@ -271,11 +268,13 @@ sub format {
 
 sub size {
 	my $self = shift;
-	$self->{'size'} = shift if @_;
-	if ( !exists $self->{'size'} && $self->dbID() && $self->adaptor() ) {
-		$self->adaptor->fetch_attributes($self);
-	}
-	return $self->{'size'};
+	#$self->{'size'} = shift if @_;
+	#if ( !exists $self->{'size'} && $self->dbID() && $self->adaptor() ) {
+	#	$self->adaptor->fetch_attributes($self);
+	#}
+
+
+	return scalar(keys %{$self->array_chips()});
 }
 
 =head2 species
@@ -353,9 +352,9 @@ sub description {
 =head2 array_chips
 
   Arg [1]    : (optional) arrayref of hashes - array_chips hashes (keys == dbid, design_id & name)
-  Example    : $array->array_chips(\@array_chips);
+  Example    : $array->array_chips(%array_chips);
   Description: Getter, setter and lazy loader of array_chip hashes
-  Returntype : List of hashes
+  Returntype : Hashe of design_id keys and values of name and array_chip
   Exceptions : Throws exception if none found for array_id
   Caller     : General
   Status     : High Risk
@@ -364,25 +363,21 @@ sub description {
 
 sub array_chips {
 	my $self = shift;
+	my $achips = shift;
 
-	#Need to warn if already defined?
-	#@{$self->{'array_chips'}} = (@{$_[0]}) if (@_);
-	#this flattens the structure
-
-	if(@_){
-		$self->{'array_chips'} = ();
-
-		foreach my $hash(@{$_[0]}){
-			push @{$self->{'array_chips'}}, ($hash);
-	    }
+	if($achips){
+		%{$self->{'array_chips'}} = %{$achips};
 	}
 	
-	
+
+	#lazy loaded as we won't want this for light DB
+	#should do meta check and want here
+
 	if ( ! exists $self->{'array_chips'}){
 		if( $self->dbID() && $self->adaptor() ) {
 			#$self->adaptor->fetch_attributes($self);
 			#need to do this differently as we're accessing a different table
-			$self->{'array_chips'} = $self->adaptor->db->get_OligoArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID());
+			$self->{'array_chips'} = %{$self->adaptor->db->get_OligoArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID())};
 		}
 		else{
 			warn("Need array dbID and DB connection to retrieve array_chips");
@@ -393,6 +388,52 @@ sub array_chips {
 
 	#throw here?	
 	return $self->{'array_chips'};
+}
+
+#Need add_array_chip here
+#this needs to to check whether present first
+
+sub add_array_chip{
+	my ($self, $design_id, $ac_ref) = @_;
+
+	#throw if ! $ac_ref?
+
+	$self->{'array_chips'} = {} if (! $self->{'array_chips'});
+
+	throw("You must supply a valid design_id and array_chip hash") if(! defined $design_id && ! defined $ac_ref);
+
+	%{$self->{'array_chips'}{$design_id}} = %{$ac_ref};#will this work?
+
+	return;
+}
+
+
+sub get_achip_status{
+	my ($self, $design_id, $state) = @_;
+
+
+	throw("Need to supply a design_id for the array_chip") if ! $design_id;
+
+
+
+	if(exists $self->{'array_chips'}{"$design_id"}){
+
+
+		#should we do a test for ac dbid here?
+
+		if(! exists $self->{'array_chips'}{"$design_id"}{'status'}){
+
+			my $ac_dbid = 	$self->{'array_chips'}{"$design_id"}{'dbID'};
+
+			$self->{'array_chips'}{"$design_id"}{'status'} = $self->adaptor->db->fetch_status_by_name('array_chip', $ac_dbid, $state);
+		}
+
+	}else{
+		#should be warn?
+		throw("The design_id you have specified is not associated with this array ".$self->name());
+	}
+
+	return $self->{'array_chips'}{"$design_id"}{'status'};
 }
 
 

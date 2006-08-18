@@ -108,6 +108,9 @@ sub new {
 	
 	$self->probe($probe);
 	$self->mismatchcount($mismatchcount);
+
+	#do we need to validate this against the db?  Grab from slice and create new if not present?  Will this be from the dnadb?
+	
 	$self->coord_system_id($coord_sys_id);
 	
 	return $self;
@@ -129,7 +132,6 @@ sub new {
 sub new_fast {
    my ($class, $hashref)  = @_;
 
-   throw("Not implemented");
 
    return bless ($hashref, $class);
 }
@@ -257,7 +259,7 @@ sub probe {
     return $self->{'probe'};
 }
 
-=head2 results
+=head2 get_results_by_channel
 
   Arg [1]    : int - channel_id (mandatory)
   Arg [2]    : string - Analysis name e.g. RawValue, VSN (optional)
@@ -271,25 +273,27 @@ sub probe {
 
 =cut
 
-sub results {
+sub get_results_by_channel {
     my $self = shift;
 	my $channel_id = shift;
 	my $anal_name = shift;
 
-	$self->{'results'} ||= {};
+	#$self->{'results'} ||= {};
 	$self->{'results_complete'} ||= 0;
 	
 	if(! $self->{'results'} || ($anal_name && ! exists $self->{'results'}{$anal_name})){
 		#fetch all, set complete set flag
 		$self->{'results_complete'} ||= 1 	if(! $anal_name);
 
-		foreach my $results_ref(@{$self->adaptor->fetch_by_probe_channel_analysis($self->probe->dbID(), 
+		foreach my $results_ref(@{$self->adaptor->fetch_results_by_channel_analysis($self->probe->dbID(), 
 																				  $channel_id, $anal_name)}){
+
 			$self->{'results'}{$$results_ref[1]} = $$results_ref[0];
 		}
 	}
 
-		
+
+	
     return $self->{'results'}
 }
 

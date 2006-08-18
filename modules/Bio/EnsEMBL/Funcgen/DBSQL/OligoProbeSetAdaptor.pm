@@ -174,11 +174,11 @@ sub fetch_by_ProbeFeature {
 	}
 	
 	my $sth = $self->prepare("
-		SELECT probe_set_id
-		FROM probe_set ps, probe f, probe_feature pf
-		WHERE pf.probe_id = p.probe_id
-        AND ps.probe_set_id = p.probe_set_id
-		AND pf.probe_feature_id = ?
+		SELECT oligo_probe_set_id
+		FROM oligo_probe_set ps, oligo_probe p, oligo_feature of
+		WHERE of.oligo_probe_id = p.oligo_probe_id
+        AND ps.oligo_probe_set_id = p.oligo_probe_set_id
+		AND of.oligo_feature_id = ?
 	");
 
 	$sth->bind_param(1, $feature->{'_probe_id'},    SQL_VARCHAR);

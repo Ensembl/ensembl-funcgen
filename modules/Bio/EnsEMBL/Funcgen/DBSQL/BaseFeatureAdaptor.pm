@@ -49,7 +49,9 @@ our $MAX_SPLIT_QUERY_SEQ_REGIONS = 3;
 
 
 
-#just need to add extra contraint on coord_system_id here as all other fetch methods use this
+
+
+#Added schema_build to feature cache key
 
 =head2 fetch_all_by_Slice_constraint
 
@@ -88,7 +90,10 @@ sub fetch_all_by_Slice_constraint {
   return [] if(!defined($constraint));
 
   #check the cache and return if we have already done this query
-  my $key = uc(join(':', $slice->name, $constraint));
+
+  #Added schema_build to feature cache for EFG
+  my $key = uc(join(':', $slice->name, $constraint, $self->db->_get_schema_build($slice->adaptor())));
+
 
   if(exists($self->{'_slice_feature_cache'}->{$key})) {
     return $self->{'_slice_feature_cache'}->{$key};
@@ -187,6 +192,10 @@ sub fetch_all_by_Slice_constraint {
 
 sub fetch_all_by_logic_name {
   my $self = shift;
+
+
+  throw("Not implemented, is this relevant?");
+
   my $logic_name = shift || throw( "Need a logic_name" );
   my $constraint = $self->_logic_name_to_constraint( '',$logic_name );
   return $self->fetch_all( $constraint )
@@ -199,133 +208,158 @@ sub fetch_all_by_logic_name {
 #or maybe this is the one to change?
 
 sub _slice_fetch {
-  my $self = shift;
-  my $slice = shift;
-  my $orig_constraint = shift;
+	my $self = shift;
+	my $slice = shift;
+	my $orig_constraint = shift;
+	
+	my $slice_start  = $slice->start();
+	my $slice_end    = $slice->end();
+	my $slice_strand = $slice->strand();
+	my $slice_cs     = $slice->coord_system();
+	my $slice_seq_region = $slice->seq_region_name();
+	
+	#Need to get schema/data.version here from meta
+	
+	
+	
+	#get the synonym and name of the primary_table
+	my @tabs = $self->_tables;
+	my ($tab_name, $tab_syn) = @{$tabs[0]};
+	
+	#find out what coordinate systems the features are in
+	my $mcc = $self->db->get_MetaCoordContainer();
+	
+	#reimplement and restrict to schema_build????????????????????????????????
+	#This will select for all schema_builds
+	#Should really restrict here, do below to avoid copying another module
+	#or should we really do it in the MCC to enable other usage?
+	my @feat_css = @{$mcc->fetch_all_CoordSystems_by_feature_type($tab_name)};
+	
+	my $asma = $self->db->get_AssemblyMapperAdaptor();
+	my @features;
+	#warn "jere are $self, @feat_css\n";
 
-  my $slice_start  = $slice->start();
-  my $slice_end    = $slice->end();
-  my $slice_strand = $slice->strand();
-  my $slice_cs     = $slice->coord_system();
-  my $slice_seq_region = $slice->seq_region_name();
+	# fetch the features from each coordinate system they are stored in
+  COORD_SYSTEM: foreach my $feat_cs (@feat_css) {
+		my $mapper;
+		my @coords;
+		my @ids;
+		
+		if($feat_cs->equals($slice_cs)) {#this now checks schema_build
+			# no mapping is required if this is the same coord system
+			
+			my $max_len = $self->_max_feature_length() ||
+			  $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
+			#should need to change this as we should have identified the correct EFG cs
+		
+			my $constraint = $orig_constraint;
+			
+			my $sr_id;
+			if( $slice->adaptor() ) {
+				$sr_id = $slice->adaptor()->get_seq_region_id($slice);
+			} else {
+				$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+			}
+	
 
-  #get the synonym and name of the primary_table
-  my @tabs = $self->_tables;
-  my ($tab_name, $tab_syn) = @{$tabs[0]};
+			
 
-  #find out what coordinate systems the features are in
-  my $mcc = $self->db->get_MetaCoordContainer();
-  my @feat_css = @{$mcc->fetch_all_CoordSystems_by_feature_type($tab_name)};
+		
+			$constraint .= " AND " if($constraint);
+			$constraint .=
+			  "${tab_syn}.seq_region_id = $sr_id AND " .
+				"${tab_syn}.seq_region_start <= $slice_end AND " .
+				  "${tab_syn}.seq_region_end >= $slice_start";
+			
 
-  my $asma = $self->db->get_AssemblyMapperAdaptor();
-  my @features;
-#warn "jere are $self, @feat_css\n";
-  # fetch the features from each coordinate system they are stored in
- COORD_SYSTEM: foreach my $feat_cs (@feat_css) {
-    my $mapper;
-    my @coords;
-    my @ids;
+			#ensure correct coord_sys mapped to schema_build in $feat_cs->equals above
+			$constraint .= " AND ${tab_syn}.coord_system_id = ".$feat_cs->dbID();
 
-    if($feat_cs->equals($slice_cs)) {
-      # no mapping is required if this is the same coord system
 
-      my $max_len = $self->_max_feature_length() ||
-        $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
+			if($max_len) {
+				my $min_start = $slice_start - $max_len;
+				$constraint .=
+				  " AND ${tab_syn}.seq_region_start >= $min_start";
+			}
+			
+  
+			my $fs = $self->generic_fetch($constraint,undef,$slice);
+						
+			# features may still have to have coordinates made relative to slice
+			# start
+			$fs = _remap($fs, $mapper, $slice);
+			
+			push @features, @$fs;
+		} else {
+			
+			warn("Not yet implemented mapper for core to EFG DB");
+			next;
+			
+			$mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
+			
+			next unless defined $mapper;
+			
+			# Get list of coordinates and corresponding internal ids for
+			# regions the slice spans
+			@coords = $mapper->map($slice_seq_region, $slice_start, $slice_end,
+								   $slice_strand, $slice_cs);
+			
+			@coords = grep {!$_->isa('Bio::EnsEMBL::Mapper::Gap')} @coords;
+			
+			next COORD_SYSTEM if(!@coords);
+			
+			@ids = map {$_->id()} @coords;
+			@ids = @{$asma->seq_regions_to_ids($feat_cs, \@ids)};
+			
+			# When regions are large and only partially spanned by slice
+			# it is faster to to limit the query with start and end constraints.
+			# Take simple approach: use regional constraints if there are less
+			# than a specific number of regions covered.
+			
+			if(@coords > $MAX_SPLIT_QUERY_SEQ_REGIONS) {
+				my $constraint = $orig_constraint;
+				my $id_str = join(',', @ids);
+				$constraint .= " AND " if($constraint);
+				$constraint .= "${tab_syn}.seq_region_id IN ($id_str)";
+				
+				my $fs = $self->generic_fetch($constraint, $mapper, $slice);
+			
+				$fs = _remap($fs, $mapper, $slice);
+			
+				push @features, @$fs;
 
-      my $constraint = $orig_constraint;
+			} else {
+				# do multiple split queries using start / end constraints
+				
+				my $max_len = $self->_max_feature_length() ||
+				  $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,
+																	 $tab_name);
+				my $len = @coords;
+				for(my $i = 0; $i < $len; $i++) {
+					my $constraint = $orig_constraint;
+					$constraint .= " AND " if($constraint);
+					$constraint .=
+					  "${tab_syn}.seq_region_id = "     . $ids[$i] . " AND " .
+						"${tab_syn}.seq_region_start <= " . $coords[$i]->end() . " AND ".
+						  "${tab_syn}.seq_region_end >= "   . $coords[$i]->start();
+					
+					if($max_len) {
+						my $min_start = $coords[$i]->start() - $max_len;
+						$constraint .=
+						  " AND ${tab_syn}.seq_region_start >= $min_start";
+					}
+					
+					my $fs = $self->generic_fetch($constraint,$mapper,$slice);
+				
+					$fs = _remap($fs, $mapper, $slice);
+				
+					push @features, @$fs;
+				}
+			}
+		}
+	} #COORD system loop
 
-      my $sr_id;
-      if( $slice->adaptor() ) {
-	$sr_id = $slice->adaptor()->get_seq_region_id($slice);
-      } else {
-	$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
-      }
-
-      $constraint .= " AND " if($constraint);
-      $constraint .=
-          "${tab_syn}.seq_region_id = $sr_id AND " .
-          "${tab_syn}.seq_region_start <= $slice_end AND " .
-          "${tab_syn}.seq_region_end >= $slice_start";
-
-      if($max_len) {
-        my $min_start = $slice_start - $max_len;
-        $constraint .=
-          " AND ${tab_syn}.seq_region_start >= $min_start";
-      }
-
-      my $fs = $self->generic_fetch($constraint,undef,$slice);
-
-      # features may still have to have coordinates made relative to slice
-      # start
-      $fs = _remap($fs, $mapper, $slice);
-
-      push @features, @$fs;
-    } else {
-      $mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
-
-      next unless defined $mapper;
-
-      # Get list of coordinates and corresponding internal ids for
-      # regions the slice spans
-      @coords = $mapper->map($slice_seq_region, $slice_start, $slice_end,
-                             $slice_strand, $slice_cs);
-
-      @coords = grep {!$_->isa('Bio::EnsEMBL::Mapper::Gap')} @coords;
-
-      next COORD_SYSTEM if(!@coords);
-
-      @ids = map {$_->id()} @coords;
-      @ids = @{$asma->seq_regions_to_ids($feat_cs, \@ids)};
-
-      # When regions are large and only partially spanned by slice
-      # it is faster to to limit the query with start and end constraints.
-      # Take simple approach: use regional constraints if there are less
-      # than a specific number of regions covered.
-
-      if(@coords > $MAX_SPLIT_QUERY_SEQ_REGIONS) {
-        my $constraint = $orig_constraint;
-        my $id_str = join(',', @ids);
-        $constraint .= " AND " if($constraint);
-        $constraint .= "${tab_syn}.seq_region_id IN ($id_str)";
-
-        my $fs = $self->generic_fetch($constraint, $mapper, $slice);
-
-        $fs = _remap($fs, $mapper, $slice);
-
-        push @features, @$fs;
-
-      } else {
-        # do multiple split queries using start / end constraints
-
-        my $max_len = $self->_max_feature_length() ||
-          $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,
-                                                             $tab_name);
-        my $len = @coords;
-        for(my $i = 0; $i < $len; $i++) {
-          my $constraint = $orig_constraint;
-          $constraint .= " AND " if($constraint);
-          $constraint .=
-              "${tab_syn}.seq_region_id = "     . $ids[$i] . " AND " .
-              "${tab_syn}.seq_region_start <= " . $coords[$i]->end() . " AND ".
-              "${tab_syn}.seq_region_end >= "   . $coords[$i]->start();
-
-          if($max_len) {
-            my $min_start = $coords[$i]->start() - $max_len;
-            $constraint .=
-              " AND ${tab_syn}.seq_region_start >= $min_start";
-          }
-
-          my $fs = $self->generic_fetch($constraint,$mapper,$slice);
-
-          $fs = _remap($fs, $mapper, $slice);
-
-          push @features, @$fs;
-        }
-      }
-    }
-  } #COORD system loop
-
-  return \@features;
+	return \@features;
 }
 
 
@@ -361,8 +395,6 @@ sub _pre_store {
 
 
   my $db = $self->db();
-
-  #my $slice_adaptor = $db->get_SliceAdaptor();
   my $slice = $feature->slice();
 
   if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
@@ -371,95 +403,29 @@ sub _pre_store {
 
   # make sure feature coords are relative to start of entire seq_region
   if($slice->start != 1 || $slice->strand != 1) {
-
-  throw("You must generate your feature on a slice starting at 1 with strand 1");
-
-    #move feature onto a slice of the entire seq_region
-    #$slice = $slice_adaptor->fetch_by_region($slice->coord_system->name(),
-    #                                         $slice->seq_region_name(),
-    #                                         undef, #start
-    #                                         undef, #end
-    #                                         undef, #strand
-    #                                         $slice->coord_system->version());
-
-    #$feature = $feature->transfer($slice);
-
-    #if(!$feature) {
-    #  throw('Could not transfer Feature to slice of ' .
-    #        'entire seq_region prior to storing');
-    #}
+	  throw("You must generate your feature on a slice starting at 1 with strand 1");
+	  #move feature onto a slice of the entire seq_region
+	  #$slice = $slice_adaptor->fetch_by_region($slice->coord_system->name(),
+	  #                                         $slice->seq_region_name(),
+	  #                                         undef, #start
+	  #                                         undef, #end
+	  #                                         undef, #strand
+	  #                                         $slice->coord_system->version());
+	  #$feature = $feature->transfer($slice);
+	  #if(!$feature) {
+	  #  throw('Could not transfer Feature to slice of ' .
+	  #        'entire seq_region prior to storing');
+	  #}
   }
-
+  
   # Ensure this type of feature is known to be stored in this coord system.
   my $cs = $slice->coord_system;#from core/dnadb
-
-
-  #Need to add to Funcgen coord_system here
-  #check if name and version are present and reset coord_system_id to that one, else get last ID and create a new one
-  #coord_system_ids will not match those in core DBs, so we need ot be mindful about this.
-  #can't use is_stored as this simply checks the dbID
-  #seq_region_ids may change between shemas with the same assembly version
-  #Need to store schema_version somewhere to maintain the seq_region_id mapping
-  #extend the coord_system table to have schema version, link to feature tables via coord_system_id
-  #how are we going to retrieve, we have species and schema version, so will have to do some jiggery pokery
-  #There is a possibility that the same schema may be used for two different gene builds
-  #thus having the same name version schema triplets, but different seq_region_ids
-  #can't really code around this...unless we stored the schema and the build instead of just the schema
-  #this would make it easier to generate the dnadb as we could simply concat $species."_core_".$schema_build
-  #can not get this from the meta table, so we'll have to fudge it from the db_name
-  
-  #Do we need to check the the dnadb and the slice db match?
-  #Do we have to have specified a dnadb at this point?  No.
-  #But need to put checks in place for dnadb methods i.e. seq/slice retrieval
-
-
-  #This will get called for each feature!!
-  #No guarantee that each feature will be built from the same db (could set once in store otherwise)
-  #my $schema_build = ${$slice->adaptor->db->db_handle->selectrow_array("SELECT meta_value value from meta where mate_key = \"data.version\"")}[0];  #do we need to check whether there is only one?
-  my $schema_build = $slice->adaptor->db->dbc->dbname();
-  $schema_build =~ s/[a-zA-Z_]*//;
-
-
-  my $csa = $self->db->get_FGCoordSystemAdaptor();#had to call it FG as we were getting the core adaptor
-  my $fg_cs = $csa->fetch_by_name_schema_build_version($cs->name(), $schema_build, $cs->version());
-
-  #don't need this cache as the Adaptor caches everything from the new method
-  if(! $fg_cs){
-	  #This should now only be called for the number of unique name version schema triplets
-	  #In reality this will only be unique names for the given version we are creating the feature on
-	  #e.g. all the chromosomes
-	  #my $csa = $self->db->get_CoordSystemAdaptor();
-	
-	  #store coordsystem with schema_version
-	  #This will enable automatic dnadb DBAdaptor generation
-	  #otherwise would have to list all DBs in registry and select the one which matched the schema version
-	  #This will also enable validation if a non-standard dnadb is passed for retrieval
-	  #can check meta table for schema.version (data.version? genebuild.name?)
-
-	  #Generate Funcgen::CoordSystem
-	  $fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
-													   -NAME    => $cs->name(),
-													   -VERSION => $cs->version(),
-													   -RANK    => $cs->rank(),
-													   -DEFAULT => $cs->is_default(),
-													   -SEQUENCE_LEVEL => $cs->is_sequence_level(),
-													   -SCHEMA_BUILD => $schema_build
-												   );
-	  $csa->store($fg_cs);
-  }
-
-
+ 
   #retrieve corresponding Funcgen coord_system and set id in feature
+  my $csa = $self->db->get_FGCoordSystemAdaptor();#had to call it FG as we were getting the core adaptor
+  my $fg_cs = $csa->validate_coord_system($cs);
   $fg_cs = $csa->fetch_by_name_schema_build_version($cs->name(), $schema_build, $cs->version());
   $feature->coord_system_id($fg_cs->dbID());
-
-  #Funcgen::CoordSystemAdaptor
-  #fetch_by_name_version_schema_build
-  #remove all other fetch's and innapropriate methods?
-  
-  #Funcgen::CoordSystem
-  #add methods to retrieve data from dnadb/core coord_system tables
-  
 
   my ($tab) = $self->_tables();
   my $tabname = $tab->[0];
@@ -522,10 +488,13 @@ sub _remap {
   my ($features, $mapper, $slice) = @_;
 
   #check if any remapping is actually needed
-  if(@$features && (!$features->[0]->isa('Bio::EnsEMBL::Feature') ||
+  if(@$features && (!$features->[0]->isa('Bio::EnsEMBL::Funcgen::Feature') ||
                     $features->[0]->slice == $slice)) {
     return $features;
   }
+
+
+  throw("Not yet fully implemented _remap for EFG");
 
   #remapping has not been done, we have to do our own conversion from
   #to slice coords
@@ -550,6 +519,8 @@ sub _remap {
     my $fseq_region = $fslice->seq_region_name();
     my $fcs = $fslice->coord_system();
 
+	#This should never be the case for efg??
+	#Note:  Using non EFG equals sub here, so no schema_build check
     if(!$slice_cs->equals($fcs)) {
       #slice of feature in different coord system, mapping required
 
@@ -678,6 +649,8 @@ sub store{
 sub remove {
   my ($self, $feature) = @_;
 
+  throw("Not yet implemented for efg");
+
   if(!$feature || !ref($feature) || !$feature->isa('Bio::EnsEMBL::Feature')) {
     throw('Feature argument is required');
   }
@@ -725,6 +698,9 @@ sub remove_by_Slice {
     throw("Slice argument is required");
   }
 
+  throw("Not yet implemented for efg");
+
+
   my @tabs = $self->_tables;
   my ($table_name) = @{$tabs[0]};
 
@@ -762,58 +738,6 @@ sub _max_feature_length {
 
 
 
-=head1 DEPRECATED METHODS
-
-=cut
-
-
-=head2 fetch_all_by_RawContig_constraint
-
-  Description: DEPRECATED use fetch_all_by_RawContig_constraint instead
-
-=cut
-
-sub fetch_all_by_RawContig_constraint {
-  my $self = shift;
-  deprecate('Use fetch_all_by_Slice_constraint() instead.');
-  return $self->fetch_all_by_slice_constraint(@_);
-}
-
-=head2 fetch_all_by_RawContig
-
-  Description: DEPRECATED use fetch_all_by_Slice instead
-
-=cut
-
-sub fetch_all_by_RawContig {
-  my $self = shift;
-  deprecate('Use fetch_all_by_Slice() instead.');
-  return $self->fetch_all_by_Slice(@_);
-}
-
-=head2 fetch_all_by_RawContig_and_score
-
-  Description: DEPRECATED use fetch_all_by_Slice_and_score instead
-
-=cut
-
-sub fetch_all_by_RawContig_and_score{
-  my $self = shift;
-  deprecate('Use fetch_all_by_Slice_and_score() instead.');
-  return $self->fetch_all_by_Slice_and_score(@_);
-}
-
-=head2 remove_by_RawContig
-
-  Description: DEPRECATED use remove_by_Slice instead
-
-=cut
-
-sub remove_by_RawContig {
-  my $self = shift;
-  deprecate("Use remove_by_Slice instead");
-  return $self->remove_by_Slice(@_);
-}
 
 
 1;

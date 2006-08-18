@@ -130,7 +130,7 @@ sub fetch_all_by_probeset {
 	#use Oligo_ProbeSet adaptor?
 	#my $probe_set_id = $self->db->db_handle->selectrow_array("select oligo_probe_set_id from oligo_probe_set);
 	my $probe_set_id = $self->db->get_OligoProbeSetAdaptor->fetch_by_name($probeset)->probe_set_id();
-	return $self->generic_fetch("op.probe_setid = '$probe_set_id'");
+	return $self->generic_fetch("op.oligo_probe_set_id = '$probe_set_id'");
 }
 
 =head2 fetch_all_by_Array
@@ -189,7 +189,7 @@ sub fetch_by_OligoFeature {
 		throw('fetch_by_OligoFeature requires a stored Bio::EnsEMBL::Funcgen::OligoFeature object');
 	}
 	
-	return $self->fetch_by_dbID($feature->{'_oligo_probe_id'});
+	return $self->fetch_by_dbID($feature->{'_probe_id'});
 }
 
 =head2 _tables

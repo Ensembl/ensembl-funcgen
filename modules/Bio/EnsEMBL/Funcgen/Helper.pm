@@ -442,12 +442,12 @@ sub get_data{#should be in Helper?
 	
 
 	if(defined $data_name){
-		$self->throw("Defs data name $data_name for type $data_type does not exist\n") if (! exists $self->{"_${data_type}"}{$data_name});
+		$self->throw("Defs data name $data_name for type $data_type does not exist\n") if (! exists $self->{"${data_type}"}{$data_name});
 	}else{
-		$self->throw("Defs data type $data_type does not exist\n") if (! exists $self->{"_${data_type}"});
+		$self->throw("Defs data type $data_type does not exist\n") if (! exists $self->{"${data_type}"});
 	}
 
-	return (defined $data_name) ? $self->{"_${data_type}"}{$data_name} : $self->{"_${data_type}"};
+	return (defined $data_name) ? $self->{"${data_type}"}{$data_name} : $self->{"${data_type}"};
 }
 
 sub Timer{
@@ -468,11 +468,6 @@ sub set_header_hash{
 	for my $x(0..$#{$header_ref}){
 		$hpos{${$header_ref}[$x]} = $x;
 	}
-
-	#foreach my $key(keys %hpos){
-	#	print "$key is at position ".$hpos{$key}."\n";
-	#}
-
 
 	return \%hpos;
 }
