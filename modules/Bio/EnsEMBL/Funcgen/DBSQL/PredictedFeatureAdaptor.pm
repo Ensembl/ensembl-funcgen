@@ -72,7 +72,8 @@ sub fetch_all_by_Slice_FeatureType {
   my ($self, $slice, $type, $logic_name) = @_;
 	
   throw('Need type as parameter') if ! $type->isa("Bio::EnsEMBL::FeatureType");
-  my $constraint = qq( ft.name = '$type' );
+  my $ft_id = $type->dbID();
+  my $constraint = qq( pf.feature_type_id = '$ft_id' );
   
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
