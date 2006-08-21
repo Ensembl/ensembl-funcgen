@@ -10,4 +10,4 @@ $EFG_SRC/scripts/parse_and_import.pl \
 	-species homo_sapiens\
 	-fasta\
     -group efg\
-	-pass ensembl
+	-pass $1
