@@ -12,6 +12,8 @@ use strict;
 #vendor specific paths etc
 #method arrays for parse
 
+#Need to use VendorDefs for vendor specific methods?
+
 
 sub set_defs{
 	my ($self) = @_;

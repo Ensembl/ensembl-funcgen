@@ -72,7 +72,9 @@ my $reg = "Bio::EnsEMBL::Registry";
 sub new{
     my ($caller, %args) = @_;
 
-    my ($self, %attrdata, $attrname, $argname);
+    my ($self, %attrdata, $attrname, $argname, $db);
+	my $reg = "Bio::EnsEMBL::Registry";
+
     my $class = ref($caller) || $caller;
 
 	#Create object from parent class
@@ -85,6 +87,8 @@ sub new{
 				 format      => 'Tiled',
 				 vendor      => undef,
 				 group       => undef,
+				 species     => undef,
+				 data_version => undef,
 				 recover     => 0,
 				 location    => undef,
 				 contact     => undef,
@@ -94,6 +98,10 @@ sub new{
 				 description => undef,
 				 #DBDefs, have ability to override here, or restrict to DBDefs.pm?
 				 pass       => undef,
+				 host       => undef,
+				 user       => undef,
+				 port       => undef,
+				 
 
 				 #Need to separate pipeline vars/methods from true Experiment methods?
 				 #Separate Pipeline object(or just control scripts? Handing step/dir validation?
@@ -123,14 +131,6 @@ sub new{
 				 #HARDCODED
 				 #Need to handle a lot more user defined info here which may not be caught by the data files
 				 design_type  => "binding_site_identification",#Hard coded MGED type term for now, should have option to enable other array techs?
-
-				 #Need to add all aliases in Importer?Just check get_alias and reset to Registry defined standard
-				 #This is used to retrieve the efg and dnadb adaptors
-				 #Need to validate this somehow?
-				 species      => "Human",
-				 #description
-				 #Associated design types (separate table) timecourse etc?
-				 #epi_feature_name (separate table)
 				);
 
     # set each class attribute using passed value or default value
@@ -140,38 +140,71 @@ sub new{
     }
 
 
-	#Set vars and defaults
-	#$self->
-
-
-
 	
-	#Not all of these are required if using ArrayDefs?
-	#Not required if just fetching the data
+	#Can some of these be set in ArrayDefs or "Vendor"Defs?
+	#pass?
 
-	foreach my $tmp("name", "vendor", "format", "group", "data_dir"){
+	foreach my $tmp("name", "vendor", "format", "group", "data_dir", "data_version", "species", "host", "user"){
 		$self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
 	}
 
 	#Set vendor specific vars/methods
 	$self->set_defs();
 
-
-	#load registry
+	
+	### LOAD AND RE-CONFIG REGISTRY ###
 	if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
+	
 		#current ensembl DBs
 		$reg->load_registry_from_db(
 							   -host => "ensembldb.ensembl.org",
 							   -user => "anonymous",
-							   #-verbose => 1,
+							   -verbose => $self->verbose(),
 							  );
+
+
+		#Get standard FGDB
+		$self->db($reg->get_DBAdaptor($species, 'funcgen'));
+
+		#reset species to standard alias to allow dbname generation
+		$self->species($reg->get_alias($species));
+
+		#configure dnadb
+		#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+		if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build())){
+			$db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+													  -host => 'ensembldb.ensembl.org',
+													  -user => 'anonymous',
+													  -dbname => $self->species()."_core_".$self->data_version(),
+													  -species => $self->species(),
+													 );
+		}else{
+			$db = $self->db->dnadb();
+		}
+
+		#generate and register DB with local connection settings
+		$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+														   -user => $self->user(),
+														   -host => $self->host(),
+														   -port => $self->port(),
+														   -pass => $self->pass(),
+														   -dbname => $self->species()."_funcgen_".$self->data_version(),
+														   -dnadb  => $db,
+														   -species => $self->species(),
+														  );
+
+
+		#Redefine Fungen DB in registry
+		#dnadb already added to reg via SUPER::dnadb method		
+		$reg->add_DBAdaptor($self->species(), 'funcgen', $db);
+		$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
+		
+		throw("Unable to connect to local Funcgen DB\nPlease check the DB connect parameters and make sure the db is appropriately named") if( ! $self->db());
+
 	}else{#from config
 		$reg->load_all($self->{'_reg_config'}, 1);
 	}
-
-	#add EFG DB to reg here!! Will be done automatically when incoporated into Regsitry
-	#Merely calling the DBAdaptor configures the registry
-
 
 	$self->debug(2, "Importer class instance created.");
 	$self->debug_hash(3, \$self);
@@ -314,11 +347,38 @@ sub name{
 	my ($self) = shift;	
 
 	if(@_){
-		$self->{'vendor'} = shift;
+		$self->{'name'} = shift;
 	}
 
 	return $self->{'name'};
 }
+
+sub verbose{
+	my ($self) = shift;	
+
+	if(@_){
+		$self->{'verbose'} = shift;
+	}
+
+	return $self->{'verbose'};
+}
+
+sub data_version{
+	my ($self) = shift;	
+
+	if(@_){
+		$self->{'data_version'} = shift;
+		#have reset_dnadb here?
+		#Can only do this if we set data_version directly in new
+		#rather than calling this method
+		#as reset_dnadb assumes db is set
+	}
+
+	return $self->{'data_version'};
+}
+
+
+
 
 sub group{
 	my ($self) = shift;	
@@ -392,19 +452,38 @@ sub db{
 sub pass{
 	my $self = shift;
 
-	if(@_){
-		$self->{'pass'} = shift;
-	}
-
+	$self->{'pass'} = shift if(@_);
 	return $self->{'pass'};
 }
+
+sub host{
+	my $self = shift;
+
+	$self->{'host'} = shift if(@_);
+	return $self->{'host'};
+}
+
+sub port{
+	my $self = shift;
+
+	$self->{'port'} = shift if(@_);
+	return $self->{'port'};
+}
+
+sub user{
+	my $self = shift;
+
+	$self->{'user'} = shift if(@_);
+	return $self->{'user'};
+}
+
+
+
 
 sub dump_fasta{
 	my $self = shift;
 
-	if(@_){
-		$self->{'dump_fasta'} = shift;
-	}
+	$self->{'dump_fasta'} = shift if(@_);
 
 	return $self->{'dump_fasta'};
 }
@@ -422,10 +501,8 @@ sub get_id{
 sub species{
 	my $self = shift;
 
-	if(@_){
-		$self->{'species'} = shift;
-	}
-
+	$self->{'species'} = shift if(@_);
+	
 	return $self->{'species'};
 }
 
@@ -450,13 +527,18 @@ sub register_experiment{
 	my ($self) = shift;
 
 	#Need to check for dnadb passed with adaptor to contructor
-	if( ! @_ || ! $_[0]->isa("Bio::EnsEMBL::DBSQL::DBAdaptor")){
-		throw("You need to pass a valid dnadb adaptor to register the experiment");
-	}
-	else{
+	if(@_){ 
+		if( ! $_[0]->isa("Bio::EnsEMBL::DBSQL::DBAdaptor")){
+			throw("You need to pass a valid dnadb adaptor to register the experiment");
+		}
 		$self->db->dnadb($_[0]);
 	}
-		
+	elsif( ! $self->db()){
+		throw("You need to pass/set a DBAdaptor with a DNADB attached of the relevant data version");
+	}
+
+	#This could still be the default core db for the current version
+	#warn here if not passed DB?
 
 
 

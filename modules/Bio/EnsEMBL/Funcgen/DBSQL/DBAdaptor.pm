@@ -65,6 +65,10 @@ my $reg = "Bio::EnsEMBL::Registry";
 
 
 
+#Should we have a new method which adds itself to reg if host is not default reg host.??
+#would need to do test for reg?
+
+
 #these should be removed if overlap with core DBAdaptor or moved to ImportAdaptor?
 # or use store methods on each object
 
@@ -209,6 +213,16 @@ sub _get_schema_build{
 
 #Not in registry as get_adaptor will not take $cs_id arg
 
+#Move all this dnadb specif stuff to dnadb, to ensure all dnadb derived object are from correct DB
+#All dnadb centric methods should then either use the default or pass a new coordsysid to redefine the dnadb
+#Should we make this mandatory to ensure dnadb is redefined, this would avoid getting data from wrong db, but maybe a pain in the butt
+#also, changing dnadb would work, which isn't pretty
+
+#Are all dnadb(feature) data retrievals mediated by a Slice?
+#OligoFeatureADaptor has by probe/probeset queries which would retrieve for all DBs/coord systems,
+#any further dnadb derived methods on the objects would have to resolve coord system issue and use correct dnadb
+#or should we only retrieve for current dnadb?
+
 sub get_SliceAdaptor{
 	my ($self, $cs_id) = @_;
 
@@ -216,37 +230,36 @@ sub get_SliceAdaptor{
 		throw("Need to set a valid dnadb or pass a Funcgen coord_system_id");
 	}
 
+
+
+	#Need to add check if current cs_id refers to current dnadb
+
 	if($cs_id){
 		my $csa = $self->get_FGCoordSystemAdaptor();
 		my $fg_cs = $csa->fetch_by_dbID($cs_id);
 		my $schema_build = $fg_cs->schema_build();
+		#Get species here too
 		
-		if($self->dnadb()){#validity check here, but let next block return
-			if($schema_build ne $self->_get_schema_build($self->dnadb())){
-				throw("Supplied coord_system_id does not map to schema_build of dnadb");
-			}
-		}
-		else{#get from cs_id
+
+		if(( ! $self->dnadb()) || ($schema_build eq $self->_get_schema_build($self->dnadb()))){
+			#get from cs_id
 			#can we return direct from registry for older versions?
 			#best to generate directl as we may have only loaded the current DBs
 			#set dnadb here and return after block
-
-			#Need to get latin name for DB species from somewhere, meta?
-			my $species = "homo_sapiens";
-
-
-			warn("This needs to handle querying local or ensembl DB");
 
 			my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 			  (						
 			   -host => "ensembldb.ensembl.org",
 			   -user => "anonymous",
-			   -dbname => "${species}_core_${schema_build}",
+			   -dbname => $self->db->species()."_core_${schema_build}",
 			  );
 
 			$self->dnadb($dnadb);
 
 		}
+	}
+	else{
+		warn("No FGCoordSystem id passed. Getting SliceAdaptor from default dnadb\n");#stack trace this?
 	}
 
 	return $self->dnadb->get_SliceAdaptor();

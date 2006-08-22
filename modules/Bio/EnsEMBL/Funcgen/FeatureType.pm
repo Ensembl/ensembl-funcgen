@@ -115,5 +115,12 @@ sub description {
     return $self->{'description'};
 }
 
+
+sub class{
+	my $self = shift;
+    $self->{'class'} = shift if @_;
+    return $self->{'class'};
+
+}
 1;
 

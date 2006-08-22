@@ -271,10 +271,12 @@ sub type {
 	
 
     if( ! $self->{'type'}){
-      my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
-						       -NAME => 'H3k9Me3',
-						       -DESCRIPTION => 'Histone 3 Tri-methylated Lysine 9'
-						      ); 
+      my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
+		(
+		 -NAME => 'H3k9Me3',
+		 -DESCRIPTION => 'Histone 3 Tri-methylated Lysine 9',
+		 -CLASS => 'Histone' 
+		); 
 
       $self->{'type'} = $ft;
     }
