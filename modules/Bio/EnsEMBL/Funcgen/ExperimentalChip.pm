@@ -104,10 +104,10 @@ sub new {
 	return $self;
 }
 
-=head2 get_all_Channels
+=head2 get_Channels
 
   Args       : None
-  Example    : my $channels = $array->get_all_Channels();
+  Example    : my $channels = $array->get_Channels();
   Description: Returns all channels on a ExperimentalChip. Needs a database connection.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Channel objects
   Exceptions : None
@@ -116,26 +116,18 @@ sub new {
 
 =cut
 
-sub get_all_Channels {
+sub get_Channels {
 	my $self = shift;
-	my $channels = [];
 	
-	#should we not set this as a has and return a list of the values?
-	#This will facilitate getting channel data by chan_uid
-
-	throw("Not yet implmented");
-
 	if ( $self->dbID() && $self->adaptor() ) {
-		#foreach my $channel (@{$self->adaptor->db->get_ChannelAdaptor->fetch_all_by_ExperimentalChip($self)}){
-		#	$self->{'channels'}{$channel->
-		
-
-
+		foreach my $channel (@{$self->adaptor->db->get_ChannelAdaptor->fetch_all_by_ExperimentalChip($self)}){
+			$self->{'channels'}{$channel->dbID()} = $channel;
+		}	
 	} else {
 		warning('Need database connection to retrieve Channels');
 	}
 
-	return values %{$self->{'channels'}};
+	return [values %{$self->{'channels'}}];
 }
 
 

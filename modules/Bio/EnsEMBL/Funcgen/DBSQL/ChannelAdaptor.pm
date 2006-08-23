@@ -178,16 +178,17 @@ sub fetch_all_by_experimental_chip_dbID {
 	return \@results;
 }
 
-=head2 fetch_all_by_Experiment
+=head2 fetch_all_by_ExperimentalChip
 
 
 
 =cut
 
-sub fetch_all_by_Experiment{
+sub fetch_all_by_ExperimentalChip{
     my ($self, $exp) = @_;
+
    
-	throw("Must provide an Experiment object") if(! $exp->isa('Bio::EnseMBL::Funcgen::Experiment'));
+	throw("Must provide an ExperimentChip object") if(! $exp->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip'));
 
 	return $self->fetch_all_by_experimental_chip_dbID($exp->dbID());
 }

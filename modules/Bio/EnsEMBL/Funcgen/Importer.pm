@@ -120,7 +120,7 @@ sub new{
 				 echips          => {},
 				 arrays          => [],
 				 achips          => undef,
-				 channels        => {},
+				 channels        => {},#?
 
 				 #Other
 				 db    => undef,#this should really be an ExperimentAdaptor, ut it is the db at the moment
@@ -164,10 +164,10 @@ sub new{
 
 
 		#Get standard FGDB
-		$self->db($reg->get_DBAdaptor($species, 'funcgen'));
+		$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
 
 		#reset species to standard alias to allow dbname generation
-		$self->species($reg->get_alias($species));
+		$self->species($reg->get_alias($self->species()));
 
 		#configure dnadb
 		#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -215,6 +215,10 @@ sub new{
 
 #Kept separate from new as it is not necessary to have native format raw data
 #change name as need dir struc for processing aswell as import, may have imported in a different way
+#Need to separate this further as we need still need to set the Experiment object if we're doing a re-normalise/analyse
+#Move exeriment/probe/raw result import tests to register experiment?
+#Make all other register methods private, so we don't bypass the previously imported exp check
+
 sub init_import{
 	my ($self) = shift;
 
@@ -241,7 +245,8 @@ sub init_import{
 		throw("No previously stored experiment defined with recovery mode, Need to implement recovery mode"); 
 	}
 	elsif((! $self->recovery()) && $exp){
-		throw("Your experiment name is already registered in the database, please choose a different \"name\", this will require renaming you input directory, or specify -recover if you are working with a failed import. Or specify recovery?");	
+		throw("Your experiment name is already registered in the database, please choose a different \"name\", this will require renaming you input directory, or specify -recover if you are working with a failed import. Or specify recovery?");
+		#can we skip this and store, and then check in register experiment if it is already stored then throw if not recovery
 	}
 	else{
 		$exp = Bio::EnsEMBL::Funcgen::Experiment->new(
@@ -253,7 +258,7 @@ sub init_import{
 													  -ADAPTOR => $self->db->get_ExperimentAdaptor(),
 													 );
 
-		($exp) =  @{$exp_adaptor->store($exp)};		
+		($exp) =  @{$exp_adaptor->store($exp)};	#skip this bit?	
 	}
 
 
@@ -440,10 +445,10 @@ sub db{
 
 	my $db_adaptor = "Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor";
 
-	if(@_ && $_[0]->isa($db_adaptor)){
+	if(defined $_[0] && $_[0]->isa($db_adaptor)){
 		$self->{'db'} = shift;
-	}else{
-		throw("Need to pass a valid $db_adaptor") if(! $_[0]->isa($db_adaptor));
+	}elsif(defined $_[0]){
+		throw("Need to pass a valid $db_adaptor");
 	}
 
 	return $self->{'db'};
@@ -548,8 +553,15 @@ sub register_experiment{
 	#Also need to move id generation to import methods, which would check that a previous import has been done, or check the DB for the relevant info?
 
 	$self->init_import();
+
+	#check here is exp already stored?  Will this work properly?
+	#then throw if not recovery
+	#else do following, but change to _private type methods
+	#as bypassing this register_experiment method and calling directly will cause problems with duplication of data
+	#we need to make this more stringent, maybe we can do a caller in each method to make sure it is register experiment calling each method
+
 	$self->read_data("array");#rename this or next?
-	$self->import_experiment();#imports experiment and chip data
+	#$self->import_experiment();#imports experiment and chip data
 	$self->read_data("probe");
 	$self->read_data("results");
 	$self->import_probe_data();
@@ -632,56 +644,7 @@ sub design_type{
 	return $self->{'design_type'};
 }
 
-#imports experiment and chip info
-sub import_experiment{
-	my ($self) = shift;
 
-	#This is all now done in read methods
-
-	return;
-
-	###CHIPS
-	my ($alter, $chip_uid, $chan_uid);
-	
-	foreach $chip_uid(keys %{$self->get_data('echips')}){
-		$alter = 0;
-		
-		#Get array_chip_id for given design_id
-		#print $chipf "\t".$chip_uid."\t".$self->get_experiment_dbid()."\t".$self->get_achip_dbid($self->echip_data($chip_uid, 'design_id'))."\n";
-		#Should we check for unique chip_unique_id here? We may have duplications between vendors
-
-		
-		foreach $chan_uid(keys %{$self->get_channels($chip_uid)}){
-			$alter = 0;
-		
-			#Validate/Alter/Delete channels and results
-			if($self->get_channel_dbid($chan_uid)){
-				
-				if($self->recovery()){
-					#set alter/overwrite flag here for register_entry
-					#delete/validate associated results
-					$alter = 1;
-					
-					#should we set a flag to validate last result vs. last result in new results?
-					#$self->db_adaptor->delete_results_by_channel($self->get_channel_dbid($chan_uid));
-				}else{
-					#Do we need this as we should have thrown already in int with the experiment_dbid
-					#admin may have delete an experiment and not it's associated chips/results etc
-				}
-			}
-
-			$self->db->register_entry("channel", $self->get_channel_dbid($chan_uid), $alter, $self->get_echip($chip_uid)->dbid(), 
-											  $self->channel_data($chan_uid, 'sample_label'), $self->channel_data($chan_uid, 'dye'), 
-											  $self->channel_data($chan_uid, 'type'));
-
-			#Would do other experimental_variants here, inc sample species
-			#how are we going to do this from text files?
-			#manually define and write script to update chips, this could be predefined and warn if no extra exp_vars defined
-			#This would be failry hefty manual work for large arrays :(	
-		}
-	}
-	return;
-}
 
 
 
@@ -727,9 +690,116 @@ sub get_chr_seq_region_id{
 	#my $slice = $self->slice_adaptor->fetch_by_region("chromosome", $chr, $start, $end);
 	#we could pass the slice back to the slice adaptor for this, to avoid dbid problems betwen DBs
 
-	return $self->db->get_DNADBSliceAdaptor->fetch_by_region("chromosome", $chr, $start, $end)->get_seq_region_id();
-
+	return $self->db->get_SliceAdaptor->fetch_by_region("chromosome", $chr, $start, $end)->get_seq_region_id();
 }
+
+
+#We need to enable Importer for previous imports
+#currently dies if experiment name already registered
+#This will enable re-imports of raw data via different analyses/normalisations
+#Have Norm class or contain methods in importer?
+#Need to have analysis set up script for all standard analyses.
+
+sub vsn_norm{
+	my $self = shift;
+	#This currently normalises a single two colour array at a time
+	
+	my @dbids;
+	my $aa = $self->db->get_AnalysisAdaptor();
+	my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
+	my $va_id = $aa->fetch_by_logic_name("VSN")->dbID();
+	my $R_file = $self->get_dir("norm")."/norm.R";
+	my $outfile = $self->get_dir("norm")."/result.txt";
+	my $r_cmd = "R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+
+	unlink($outfile);#Need to do this as we're appending in the loop
+
+	#setup qurey
+	#scipen is to prevent probe_ids being converted to exponents
+	my $query = "options(scipen=20);library(vsn);library(RMySQL);".
+		  "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"efg_test\", user=\"ensadmin\", pass=\"ensembl\")\n";
+	#currently having separate session fo
+
+
+
+	#This is now retrieving a ExperimentalChip obj
+
+	foreach my $echip(values %{$self->get_data("echips")}){	
+		@dbids = ();
+
+		foreach my $chan(@{$echip->get_Channels}){
+			push @dbids, $chan->dbID();
+		}
+
+
+		throw("vsn_norm does not accomodate more than 2 channels") if scalar(@dbids > 2);
+
+		#should do some of this with maps?
+		#HARDCODED metric ID for raw data as one
+		$query .= "c1<-dbGetQuery(con, \"select oligo_probe_id, score as ${dbids[0]}_score from result where channel_id=${dbids[0]} and analysis_id=${ra_id}\")\n";
+		$query .= "c2<-dbGetQuery(con, \"select oligo_probe_id, score as ${dbids[1]}_score from result where channel_id=${dbids[1]} and analysis_id=${ra_id}\")\n";
+
+		#should do some sorting here?  Probes are in same order anyway
+		#does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
+		$query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";
+		
+		#glog tranform(vsn)
+		$query .= "glog_df<-vsn(raw_df)\n";
+		
+		#should do someplot's of raw and glog and save here
+		
+		#set log func and params
+		#$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
+		#plot
+		#$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
+		#  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
+		#FAILS ON RAW PLOT!!
+		
+		
+		#par(mfrow = c(1, 2)) 
+		#> meanSdPlot(nkid, ranks = TRUE) 
+		#> meanSdPlot(nkid, ranks = FALSE) 
+		
+		#reform dataframe/matrix for each channel
+		#3 sig dec places on scores(doesn't work?!)
+		$query .= "c1r<-cbind(rep(\"\", length(c1[\"oligo_probe_id\"])), c1[\"oligo_probe_id\"], format(exprs(glog_df[,1]), nsmall=3), rep(${va_id}, length(c1[\"oligo_probe_id\"])), rep(${dbids[0]}, length(c1[\"oligo_probe_id\"])))\n";
+		$query .= "c2r<-cbind(rep(\"\", length(c2[\"oligo_probe_id\"])), c2[\"oligo_probe_id\"], format(exprs(glog_df[,2]), nsmall=3), rep(${va_id}, length(c2[\"oligo_probe_id\"])), rep(${dbids[1]}, length(c2[\"oligo_probe_id\"])))\n";
+		
+		#load back into DB
+		#c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
+		#may want to use safe.write here
+		#dbWriteTable(con, "result", c3results, append=TRUE)
+		#dbWriteTable returns true but does not load any data into table!!!
+
+		$query .= "write.table(c1r, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		$query .= "write.table(c2r, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		#tidy up here?? 
+	}
+
+
+	#or here, specified no save so no data will be dumped
+	$query .= "q();";
+
+
+	#This is giving duplicates for probe_ids 2 & 3 for metric_id =2 i.e. vsn'd data.
+	#duplicates are not present in import file!!!!!!!!!!!!!!!!!!!!
+
+	open(RFILE, ">$R_file") || die("Cannot open $R_file for writing");
+	print RFILE $query;
+	close(RFILE);
+	
+	system($r_cmd);
+
+	print "Need to catch error after R system call\n";
+
+	return;
+}
+
+
+
+
+
+
 
 1;
 

@@ -13,6 +13,9 @@ use strict;
 #method arrays for parse
 
 #Need to use VendorDefs for vendor specific methods?
+#We would need to reset them for each Import
+#Create internal object and pass ref to Importer
+#So importer calls generic methods on Defs object which then uses set ref to access
 
 
 sub set_defs{
@@ -297,6 +300,18 @@ sub achip_data{
 	}
 }
 
+sub echip_data{
+	my ($self, $design_id, $data_type, $value) = @_;
+
+	$self->throw("Need to specify a design_id  and a data_type") if (! defined $data_type || ! defined $design_id);
+
+	if(defined $value){
+		${$self->get_data('echips', $design_id)}{$data_type} = $value;
+	}
+	else{
+		return ${$self->get_data('echips', $design_id)}{$data_type};#will this cause undefs?
+	}
+}
 
 
 sub get_echip{

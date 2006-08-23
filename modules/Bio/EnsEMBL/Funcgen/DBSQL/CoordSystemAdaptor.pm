@@ -965,7 +965,6 @@ sub store {
 
 
 #currently get cs from slice, and need to validate for dnadb too
-#let's not hard code for chrom?
 #can take FGCoordSystem or CoordSystem
  
 sub validate_coord_system{

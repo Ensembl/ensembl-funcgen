@@ -238,6 +238,7 @@ DROP TABLE IF EXISTS `feature_type`;
 CREATE TABLE `feature_type` (
    `feature_type_id` int(11) unsigned NOT NULL auto_increment,
    `name` varchar(40) default NULL,
+   `class` varchar(40) default NULL,
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`feature_type_id`),
    KEY `feature_type_name_idx` (`name`)
@@ -245,7 +246,7 @@ CREATE TABLE `feature_type` (
 
 
 --- Table to contain Brno nomenclature (modification ontology?) etc.
-
+--- enum on class?
 
 
 -- Table structure for table `experiment_feature_type`
@@ -350,6 +351,7 @@ CREATE TABLE `experimental_chip` (
    KEY `chip_idx` (`unique_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+-- composite unique key onchi/exp/arra_chip ids?
 --Should handle re-usage of physical chip
 --Rename slide? or have array_chip, and experimental_chip
 

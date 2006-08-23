@@ -223,16 +223,22 @@ sub _get_schema_build{
 #any further dnadb derived methods on the objects would have to resolve coord system issue and use correct dnadb
 #or should we only retrieve for current dnadb?
 
+#rename this DNADB|FGSliceAdaptor?
+#as this works differently to normal method
+#the problem arises when we get features from the DB by none Slice methods, these may not refer to the current dnadb
+#so we have to implement checks in non slice based feature calls to make sure we nest the correct dnadb adaptor
+
 sub get_SliceAdaptor{
 	my ($self, $cs_id) = @_;
 
-	if(! $cs_id && ! $self->dnadb()){
-		throw("Need to set a valid dnadb or pass a Funcgen coord_system_id");
-	}
-
-
 
 	#Need to add check if current cs_id refers to current dnadb
+
+	#extract this to a "validate_dnadb" method
+	#This will be called for each noon Slice based fetch method for each feature returned
+	#or should we group the fetch statements by coord system id and try and do it more efficiently
+
+	#is this validate coordsystem?
 
 	if($cs_id){
 		my $csa = $self->get_FGCoordSystemAdaptor();
@@ -286,11 +292,12 @@ sub dnadb {
 	my $self = shift; 
 
 	if(@_) { 
+		my $cs_name = $_[1] || 'chromosome';
 
 		$reg->add_DNAAdaptor($self->species(),$self->group(),$_[0]->species(),$_[0]->group()); 
 
-		#set default coordsystem here
-		my $cs = $_[0]->get_CoordSystemAdaptor->fetch_by_name('chromosome');
+		#set default coordsystem here, do we need to handle non-chromosome here
+		my $cs = $_[0]->get_CoordSystemAdaptor->fetch_by_name($cs_name);
 		#this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
 		#or shall we fetch/add all by name?
 
