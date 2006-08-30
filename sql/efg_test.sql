@@ -285,13 +285,15 @@ CREATE TABLE `result` (
    `oligo_probe_id` int(11) unsigned default NULL,
    `score` double default NULL,
    `analysis_id` int(11) unsigned default NULL,
-   `channel_id` int(11) unsigned default NULL,
+   `table_id` int(11) unsigned default NULL,
+   `table_name` varchar(20) default NULL,
    PRIMARY KEY  (`result_id`),
    KEY `oligo_probe_idx` (`oligo_probe_id`),
-   KEY `channel_idx` (`channel_id`)
+   KEY `table_name_id_idx` (`table_name`, `table_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
+--- joint index on all but result_id and maybe analysis_id?
 --- REMOVEd experimental_id?   `experimental_chip_id` int(11) unsigned default NULL,
 --- joint primary key with probe_feature_id?
 --- metric default would be id for "RAW"..no, need to test has been specifically set, so NULL
@@ -310,7 +312,7 @@ CREATE TABLE `predicted_feature` (
   `seq_region_end` int(10) unsigned NOT NULL default '0',
   `seq_region_strand` tinyint(1) NOT NULL default '0',
   `coord_system_id` int(10) unsigned NOT NULL default '0',
-  `target_id` int(10) unsigned NOT NULL default '0',	
+  `feature_type_id` int(10) unsigned NOT NULL default '0',	
   `display_label` varchar(40) NOT NULL default '',
   `analysis_id` int(10) unsigned NOT NULL default '0',
   `score` double default NULL,
