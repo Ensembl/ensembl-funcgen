@@ -707,7 +707,7 @@ sub vsn_norm{
 	my @dbids;
 	my $aa = $self->db->get_AnalysisAdaptor();
 	my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
-	my $va_id = $aa->fetch_by_logic_name("VSN")->dbID();
+	my $va_id = $aa->fetch_by_logic_name("VSN_GLOG")->dbID();
 	my $R_file = $self->get_dir("norm")."/norm.R";
 	my $outfile = $self->get_dir("norm")."/result.txt";
 	my $r_cmd = "R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
@@ -717,7 +717,9 @@ sub vsn_norm{
 	#setup qurey
 	#scipen is to prevent probe_ids being converted to exponents
 	my $query = "options(scipen=20);library(vsn);library(RMySQL);".
-		  "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"efg_test\", user=\"ensadmin\", pass=\"ensembl\")\n";
+		  "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
+	$query .= (defined $self->pass()) ? ", pass=\"".$self->pass()."\")\n" : ")\n";
+
 	#currently having separate session fo
 
 
@@ -727,8 +729,13 @@ sub vsn_norm{
 	foreach my $echip(values %{$self->get_data("echips")}){	
 		@dbids = ();
 
-		foreach my $chan(@{$echip->get_Channels}){
-			push @dbids, $chan->dbID();
+		foreach my $chan(@{$echip->get_Channels()}){
+
+			if($chan->type() eq "EXPERIMENTAL"){
+				push @dbids, $chan->dbID();
+			}else{
+				unshift @dbids, $chan->dbID();
+			}
 		}
 
 
@@ -736,34 +743,38 @@ sub vsn_norm{
 
 		#should do some of this with maps?
 		#HARDCODED metric ID for raw data as one
-		$query .= "c1<-dbGetQuery(con, \"select oligo_probe_id, score as ${dbids[0]}_score from result where channel_id=${dbids[0]} and analysis_id=${ra_id}\")\n";
-		$query .= "c2<-dbGetQuery(con, \"select oligo_probe_id, score as ${dbids[1]}_score from result where channel_id=${dbids[1]} and analysis_id=${ra_id}\")\n";
+
+		#Need to get total and experimental here and set db_id accordingly
+		
+
+		$query .= "c1<-dbGetQuery(con, 'select oligo_probe_id, score as ${dbids[0]}_score from result where table_name=\"channel\" and table_id=${dbids[0]} and analysis_id=${ra_id}')\n";
+		$query .= "c2<-dbGetQuery(con, 'select oligo_probe_id, score as ${dbids[1]}_score from result where table_name=\"channel\" and table_id=${dbids[1]} and analysis_id=${ra_id}')\n";
 
 		#should do some sorting here?  Probes are in same order anyway
 		#does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
-		$query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";
+		$query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";		
+		#variance stabilise
+		$query .= "vsn_df<-vsn(raw_df)\n";
 		
-		#glog tranform(vsn)
-		$query .= "glog_df<-vsn(raw_df)\n";
-		
-		#should do someplot's of raw and glog and save here
-		
+	
+		#do some more calcs here and print report?
+		#fold change exponentiate? See VSN docs
+		#should do someplot's of raw and glog and save here?
 		#set log func and params
 		#$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
 		#plot
 		#$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
 		#  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
 		#FAILS ON RAW PLOT!!
-		
-		
 		#par(mfrow = c(1, 2)) 
 		#> meanSdPlot(nkid, ranks = TRUE) 
 		#> meanSdPlot(nkid, ranks = FALSE) 
 		
-		#reform dataframe/matrix for each channel
+
+		#Now create table structure with glog values(diffs)
 		#3 sig dec places on scores(doesn't work?!)
-		$query .= "c1r<-cbind(rep(\"\", length(c1[\"oligo_probe_id\"])), c1[\"oligo_probe_id\"], format(exprs(glog_df[,1]), nsmall=3), rep(${va_id}, length(c1[\"oligo_probe_id\"])), rep(${dbids[0]}, length(c1[\"oligo_probe_id\"])))\n";
-		$query .= "c2r<-cbind(rep(\"\", length(c2[\"oligo_probe_id\"])), c2[\"oligo_probe_id\"], format(exprs(glog_df[,2]), nsmall=3), rep(${va_id}, length(c2[\"oligo_probe_id\"])), rep(${dbids[1]}, length(c2[\"oligo_probe_id\"])))\n";
+		$query .= "glog_df<-cbind(rep(\"\", length(c1[\"oligo_probe_id\"])), c1[\"oligo_probe_id\"], format(exprs(vsn_df[,2]) - exprs(vsn_df[,1]), nsmall=3), rep(\"${va_id}\", length(c1[\"oligo_probe_id\"])), rep(\"".$echip->dbID()."\", length(c1[\"oligo_probe_id\"])),   rep(\"experimental_chip\", length(c1[\"oligo_probe_id\"])))\n";
+		
 		
 		#load back into DB
 		#c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
@@ -771,8 +782,10 @@ sub vsn_norm{
 		#dbWriteTable(con, "result", c3results, append=TRUE)
 		#dbWriteTable returns true but does not load any data into table!!!
 
-		$query .= "write.table(c1r, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
-		$query .= "write.table(c2r, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		$query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+
+		warn("Need to implement R DB import\n");
+
 		#tidy up here?? 
 	}
 
@@ -788,9 +801,7 @@ sub vsn_norm{
 	print RFILE $query;
 	close(RFILE);
 	
-	system($r_cmd);
-
-	print "Need to catch error after R system call\n";
+	system($r_cmd) == 0 or throw("R normalisation failed with error code $? ($R_file)");
 
 	return;
 }

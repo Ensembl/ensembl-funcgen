@@ -259,7 +259,7 @@ sub probe {
     return $self->{'probe'};
 }
 
-=head2 get_results_by_channel
+=head2 get_results_by_channel_id
 
   Arg [1]    : int - channel_id (mandatory)
   Arg [2]    : string - Analysis name e.g. RawValue, VSN (optional)
@@ -273,7 +273,7 @@ sub probe {
 
 =cut
 
-sub get_results_by_channel {
+sub get_results_by_channel_id {
     my $self = shift;
 	my $channel_id = shift;
 	my $anal_name = shift;
@@ -295,6 +295,122 @@ sub get_results_by_channel {
 
 	
     return $self->{'results'}
+}
+
+
+#The experiment/al chip specificity has already been done by the ofa->fetch_all_by_Slice_Experiment
+#This may be called with no preceding Experiment specificity
+#this would return results for all experiments
+#do we need to set a default Experiment?
+
+
+#THis should return both Chip and Channel based results
+#just Chip for now
+#maybe retrieve and hash all if not Analysis object passed?  Then return what?  
+
+
+=head2 get_result_by_Analysis
+
+  Arg [1]    : Bio::EnsEMBL::Analysis
+  Example    : my @results = $feature->results();
+  Description: Getter, setter and lazy loader of results attribute for
+               OligoFeature objects.
+  Returntype : 
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+
+#make ExperimentalChips optional?
+
+#or have ResultSetAdaptor?  Do we need a ResultSet?
+#may not have ExperimentalChip, so would need to return ec dbID aswell
+
+
+######This will break/return anomalous if
+#ECs are passed from different experiments
+#ECs are passed from different Arrays
+
+
+sub get_result_by_Analysis_ExperimentalChips{
+    my ($self, $anal, $exp_chips) = @_;
+
+
+	my (%query_ids, %all_ids);
+	my $anal_name = $anal->logic_name();
+	#my ($array_id);
+
+	#throw("Does not yet fully implement mulitple ExperimentalChip fetch\n") if(scalar(@$ec_ref) >1);
+
+	throw("Need to pass a valid Bio::EnsEMBL::Analysis") if ! $anal->isa("Bio::EnsEMBL::Analysis");
+
+
+	foreach my $ec(@$exp_chips){
+				
+		throw("Need to pass a listref of Bio::EnsEMBL::Funcgen::ExperimenalChip objects") 
+		  if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
+
+		#my $tmp_id = $self->adaptor->db->get_OligoArrayAdaptor->fetch_by_array_chip_dbID($ec->array_chip_id())->dbID();
+
+		#$array_id ||= $tmp_id;
+
+		#throw("You have passed ExperimentalChips from different if($array_id != $tmp_id)
+
+		if(exists  $all_ids{$ec->array_chip_id()}){
+			throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
+		}
+
+		$all_ids{$ec->array_chip_id()} = 1;
+		$query_ids{$ec->array_chip_id()} = 1 if(! exists $self->{'results'}{$anal_name}{$ec->dbID()});
+
+	}
+
+
+	my @ec_ids = keys %query_ids;
+	my @all_ids = keys %all_ids;
+	#$self->{'results'} ||= {};
+	#$self->{'results_complete'} ||= 0;#do we need this now?
+	
+	if((scalar(@all_ids) - scalar(@ec_ids))> 1){
+		throw("DATA ERROR - There is more than one result stored for the following ExperimentalChip ids: @all_ids");
+	}		
+	elsif(! $self->{'results'} || (($anal_name && scalar(@ec_ids) > 0) && scalar(@all_ids) == scalar(@ec_ids))){
+		#fetch all, set complete set flag
+		#$self->{'results_complete'} ||= 1 	if(! $anal_name);
+
+		#would need to look up chip and channel analyses here and call relevant fetch
+		#or pass the chip and then build the query as = or IN dependent on context of logic name
+
+		#if there are multiple results, last one will overwrite others
+		my @result_refs = @{$self->adaptor->fetch_results_by_probe_experimental_chips_analysis($self->probe->dbID(), \@ec_ids, $anal_name)};
+	
+		#could do foreach here to deal with retrieving all i.e. no logic name
+		throw("Fetched more than one result for this OligoFeature, Analysis and ExperimentalChips") if (scalar(@result_refs) >1);
+		#Can supply mutliple chips, but probe ids "should" be unique(in the DB at least) amongst contiguous array_chips
+		#build the cache based on logic name and table_id
+		#cahce key??  should we cat the ec_ids together?
+		$self->{'results'}{$anal_name}{":".join(":", @ec_ids).":"} = $result_refs[0]->[0];
+	}
+
+	#do we return the ec ids here to, or do we trust that the user will know to only pass contiguous rather than duplicate chips
+
+	#how are we going to retrieve the result for one of many possible ec id keys?
+	#options, cat ec dbids as key, and grep them to find full key, then return result
+	#this may hide the duplicate chip problem
+	#If a query has already been made and cached,another query with one differing ID(duplicate result) may never be queried as we already have a cahced result
+	#We shoulld pick up duplicates before this happens
+	#If we try and mix ExperimentalChips from different experiments, then this would also cause multiple results, and hence hide some data
+	
+	my @keys;
+	foreach my $id(@all_ids){
+		push @keys, grep(":${id}:", keys %{$self->{'results'}{$anal_name}});
+	}
+
+	throw("Got more than one key for the results cache") if scalar(@keys) > 1;
+
+    return $self->{'results'}{$anal_name}{$keys[0]};
 }
 
 

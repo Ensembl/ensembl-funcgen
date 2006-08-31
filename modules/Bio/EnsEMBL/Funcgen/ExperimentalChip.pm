@@ -118,6 +118,7 @@ sub new {
 
 sub get_Channels {
 	my $self = shift;
+
 	
 	if ( $self->dbID() && $self->adaptor() ) {
 		foreach my $channel (@{$self->adaptor->db->get_ChannelAdaptor->fetch_all_by_ExperimentalChip($self)}){
@@ -149,9 +150,9 @@ sub unique_id {
 	my $self = shift;
 	$self->{'unique_id'} = shift if @_;
 
-	if ( ! exists $self->{'unique_id'} && $self->dbID() && $self->adaptor() ) {
-		$self->adaptor->fetch_attributes($self);
-	}
+	#if ( ! exists $self->{'unique_id'} && $self->dbID() && $self->adaptor() ) {
+	#	$self->adaptor->fetch_attributes($self);
+	#}
 
 	return $self->{'unique_id'};
 }
@@ -172,9 +173,9 @@ sub experiment_id {
 	my $self = shift;
 
 	$self->{'experiment_id'} = shift if @_;
-	if ( !exists $self->{'experiment_id'} && $self->dbID() && $self->adaptor() ) {
-		$self->adaptor->fetch_attributes($self);
-	}
+	#if ( !exists $self->{'experiment_id'} && $self->dbID() && $self->adaptor() ) {
+	#	$self->adaptor->fetch_attributes($self);
+	#}
 	return $self->{'experiment_id'};
 }
 
@@ -195,9 +196,9 @@ sub array_chip_id {
 
   $self->{'array_chip_id'} = shift if @_; 
 
-  if ( !exists $self->{'array_chip_id'} && $self->dbID() && $self->adaptor() ) {
-    $self->adaptor->fetch_attributes($self);
-  }
+  #if ( !exists $self->{'array_chip_id'} && $self->dbID() && $self->adaptor() ) {
+  #  $self->adaptor->fetch_attributes($self);
+  #}
   return $self->{'array_chip_id'};
 }
 
@@ -217,9 +218,10 @@ sub array_chip_id {
 sub description {
 	my $self = shift;
 	$self->{'description'} = shift if @_;
-	if ( !exists $self->{'description'} && $self->dbID() && $self->adaptor() ) {
-		$self->adaptor->fetch_attributes($self);
-	}
+
+	#if ( !exists $self->{'description'} && $self->dbID() && $self->adaptor() ) {
+	#	$self->adaptor->fetch_attributes($self);
+	#}
 	return $self->{'description'};
 }
 

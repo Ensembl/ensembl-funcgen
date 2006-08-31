@@ -146,6 +146,52 @@ sub fetch_all_by_Slice_arrayname {
 	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
+
+#should this take >1 EC? What if we can't fit a all mappings onto one chip
+#Would possibly miss some from the slice
+
+=head2 fetch_all_by_Slice_ExperimentalChips
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2...] : listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_by_Slice_arrayname($slice, $exp);
+  Description: Retrieves a list of features on a given slice that are created
+               by probes from the given ExperimentalChip.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoFeature objects
+  Exceptions : Throws if no array name is provided
+  Caller     : 
+  Status     : Medium Risk
+
+=cut
+
+sub fetch_all_by_Slice_ExperimentalChips {
+	my ($self, $slice, $exp_chips) = @_;
+
+	my (%nr);
+
+
+	foreach my $ec(@$exp_chips){
+				
+		throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimenalChip objects") 
+		  if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
+	
+		$nr{$ec->array_chip_id()} = 1;
+	}
+
+	#get array_chip_ids from all ExperimentalChips and do a
+	#where op.array_chip_id IN (".(join ", ", @ac_ids)
+
+	#my @echips = @{$self->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($exp->dbID())};
+	#map $nr{$_->array_chip_id()} = 1, @echips;
+	my $constraint = " op.array_chip_id IN (".join(", ", keys %nr).") AND op.oligo_probe_id = of.oligo_probe_id ";
+	
+	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+}
+
+
+
+
 =head2 fetch_all_by_Slice_type
 
   Arg [1]    : Bio::EnsEMBL::Slice
@@ -569,24 +615,68 @@ sub list_dbIDs {
 
 
 sub fetch_results_by_channel_analysis{
-	my ($self, $probe_id, $channel_id, $analysis) = @_;
+	my ($self, $probe_id, $channel_id, $logic_name) = @_;
 	
+	my %channel_metrics = (
+						   RawValue => 1,
+						  );
+
+
 	if(! defined $probe_id || ! defined $channel_id) {
 		throw("Need to define a valid probe and channel dbID");
 	}
 		
 
 	my $analysis_clause = "";
-	if($analysis){
-		$analysis_clause = "AND a.logic_name = \"$analysis\"";
+
+	if($logic_name){
+		if(exists $channel_metrics{$logic_name}){
+			$analysis_clause = "AND a.logic_name = \"$logic_name\"";
+		}else{
+			warn("$logic_name is not a channel spcific metric\nNo results returned\n");
+			return;
+		}
 	}
 
-	my $query = "SELECT r.score, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.analysis_id = a.analysis_id $analysis_clause";
+	my $query = "SELECT r.score, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"channel\" AND r.table_id=\"$channel_id\" AND r.analysis_id = a.analysis_id $analysis_clause";
 	
 	return $self->dbc->db_handle->selectall_arrayref($query);
 }
 
 
+sub fetch_results_by_probe_experimental_chips_analysis{
+	my ($self, $probe_id, $chip_ids, $logic_name) = @_;
+	
+	my %chip_metrics = (
+						   VSN_GLOG => 1,
+						  );
+
+
+	if(! defined $probe_id || ! @$chip_ids) {
+		throw("Need to define a valid probe and pass a listref of experimental chip dbIDs");
+	}
+		
+
+	my $analysis_clause = "";
+
+	if($logic_name){
+		if(exists $chip_metrics{$logic_name}){
+			$analysis_clause = "AND a.logic_name = \"$logic_name\"";
+		}else{
+			warn("$logic_name is not a chip spcific metric\nNo results returned\n");
+			return;
+		}
+	}
+
+
+
+	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"experimental_chip\" AND r.table_id IN (".join(", ", @$chip_ids).") AND r.analysis_id = a.analysis_id $analysis_clause";
+
+
+	print "query is $query\n";
+	
+	return $self->dbc->db_handle->selectall_arrayref($query);
+}
 
 
 

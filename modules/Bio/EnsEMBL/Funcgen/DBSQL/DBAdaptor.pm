@@ -238,7 +238,10 @@ sub get_SliceAdaptor{
 	#This will be called for each noon Slice based fetch method for each feature returned
 	#or should we group the fetch statements by coord system id and try and do it more efficiently
 
-	#is this validate coordsystem?
+	#is this "validate_coordsystem"?
+
+	#Can we cache the DNA DBAdaptors against the FG csis rather than doing this everytime?
+	#will this be too much memory overhead? Registry is already a cache, can we just reference the registry?
 
 	if($cs_id){
 		my $csa = $self->get_FGCoordSystemAdaptor();
@@ -268,7 +271,7 @@ sub get_SliceAdaptor{
 		warn("No FGCoordSystem id passed. Getting SliceAdaptor from default dnadb\n");#stack trace this?
 	}
 
-	return $self->dnadb->get_SliceAdaptor();
+	return $self->dnadb->get_SliceAdaptor();#this causes circular reference if dnadb not set i.e if this is generated from scratch without a dnadb rather than from the reg?????
 }
 
 
@@ -303,6 +306,9 @@ sub dnadb {
 
 		$self->get_FGCoordSystemAdaptor->validate_coord_system($cs);
 	}
+
+
+	warn("Need to test if dnadb is not set, else will get circular ref on SliceAdaptor call as default dnadb is self");
 
 	return $self->SUPER::dnadb(@_);
 } 

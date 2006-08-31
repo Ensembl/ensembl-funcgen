@@ -1,6 +1,8 @@
 package Bio::EnsEMBL::Funcgen::ArrayDefs;
 
 use Bio::EnsEMBL::Funcgen::OligoArray;
+use Bio::EnsEMBL::Funcgen::OligoProbeSet;
+use Bio::EnsEMBL::Funcgen::OligoProbe;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::Channel;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
@@ -111,7 +113,8 @@ sub read_array_chip_data{
 
 	$self->log("Reading chip data");
 
-	my ($line, $chip_uid, $dye, $design_name, $design_id, $sample_label,  $sample_desc, $species, $sample_type, %tmp);
+	my ($line, $chip_uid, $dye, $design_name, $design_id, $sample_label,  $sample_desc);
+	my ($array, $species, $sample_type, $channel, %tmp);
 	my $tmp_uid = "FIRST";
 	#Need some way of capturing other experimental variables?
 
@@ -132,7 +135,7 @@ sub read_array_chip_data{
 		#Need to map sample_label to dye and description?
 		#Some duplicate sample labels do not have the same description > different channels
 		
-		(undef, $chip_uid, $dye, $design_name, $design_id, $sample_label, 
+		(undef, $chip_uid, $dye, $design_name, $design_id, $sample_label,
 		 $species, $sample_desc, undef, $sample_type) = split/\t/o, $line;
 		#Need to standardise species here, nimblegen has different names and typos
 		
@@ -175,7 +178,7 @@ sub read_array_chip_data{
 
 
 			#store now checks whether already stored and updates achips accordingly
-			my $array = Bio::EnsEMBL::Funcgen::OligoArray->new
+			$array = Bio::EnsEMBL::Funcgen::OligoArray->new
 			  (
 			   -NAME        => $design_name,
 			   -FORMAT      => $self->format(),
@@ -209,17 +212,13 @@ sub read_array_chip_data{
 		if ($tmp_uid eq "FIRST" || $chip_uid != $tmp_uid){
 			$tmp_uid = $chip_uid;
 
-			#only works as the is only one key!
-			($ac_id) = keys %tmp;
-
 			$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
 			  (
 			   -DESIGN_ID      => $design_id,
 			   -EXPERIMENT_ID  => $self->experiment->dbID(),
 			   -DESCRIPTION    => $sample_desc,
-			   -ARRAY_CHIP_ID  => $ac_id,
+			   -ARRAY_CHIP_ID  => $array->get_array_chip_id_by_design_id($design_id),
 			   -UNIQUE_ID      => $chip_uid,
-			   #channels now populated dynamically from db
 			  );
 
 			($echip) = @{$ec_adaptor->store($echip)};
@@ -229,12 +228,7 @@ sub read_array_chip_data{
 
 		
 		#Handles single/mutli
-
-		#Only doing this method once at mo, but may need for other formats
-		#Move to ExperimentalChip, or are we having a Channel obj
-
-
-		my $channel =  Bio::EnsEMBL::Funcgen::Channel->new
+		$channel =  Bio::EnsEMBL::Funcgen::Channel->new
 		  (
 		   -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
 		   -DYE                  => $dye,
@@ -243,23 +237,10 @@ sub read_array_chip_data{
 		   -TYPE                 => uc($sample_type),
 		  );
 
-
-#		$self->set_channel($chip_uid, (
-#										dbid => undef,
-#										dye => $dye,
-#										sample_label => $sample_label,
-#										species => $species,#on channel/sample to enable multi-species chip/experiment
-#										type => uc($sample_type),
-#									   ));#do we need to inset {}?
-
-
+		
 		$self->set_channel($chip_uid, @{$chan_adapt->store($channel)});#do we need o set this anymore? or rename reg_channel?
 
 	}
-
-
-	#Here we must cycle thro'
-
 
 	close($fh);
 	return;
@@ -350,6 +331,10 @@ sub get_channel{
 #defs issue, should this remain in the importer?
 
 
+#do we need this now, can we not do this dynamically?
+#or maybe just store the channel ids, rather than the channel
+#then retrieve the relevant channels from the echip channel hash
+
 sub set_channel{
 	my ($self, $chip_uid, $channel) = @_;
 	
@@ -406,28 +391,26 @@ sub read_probe_data{
 	#Handle with API!!
 
 	#READ REGION POSITIONS
-
-	foreach my $array(@{$self->arrays()}){
-
-		#THIS BLOCK DOES NOT ACCOUNT FOR MUSLTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
-		#all out files are generic, but are we converting to adaptor store?
-
-
-		my $fh = open_file("<", $self->get_def("design_dir")."/".$array->name().".ngd");
-
-		my ($line, $start, $stop, @data, %hpos, %regions, %probe_pos);
+	my $op_a = $self->db->get_OligoProbeAdaptor();
+	my $ops_a = $self->db->get_OligoProbeSetAdaptor();
+	#we need to register a coord_system here, 
+	#hardcode for chr for now
+	#is this ever reset can this not be outside the loop?
+	#do we need to handle multiple arrays which may be mapped to different builds?
+	my $cs = $self->db->get_FGCoordSystemAdaptor()->fetch_by_name_schema_build_version('chromosome', $self->db->_get_schema_build($self->db->dnadb()));
 	
-		#we need to register a coord_system here, 
-		#hardcode for chr for now
-		my $cs = $self->db->get_FGCoordSystemAdaptor()->fetch_by_name_schema_build_version('chromosome', $self->db->_get_schema_build($self->db->dnadb()));
-		
-		#should really test and store here if not valid, but this will be handled by adaptor store methods
-		
-		my $cs_id = $cs->dbID();
-		
-		
+	#should really test and store here if not valid, but this will be handled by adaptor store methods
+	
+	foreach my $array(@{$self->arrays()}){
+		#THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
+		#all out files are generic, but are we converting to adaptor store?
+		my $fh = open_file("<", $self->get_def("design_dir")."/".$array->name().".ngd");
+		my ($line, $start, $stop, @data, %hpos, %regions, %probe_pos);
+			
+		#May not have both ngd and pos file?
+
 		while ($line = <$fh>){
-			$line =~ s/\r*\n//;
+			$line =~ s/\r*\n//;#chump
 			@data =  split/\||\t/o, $line;
 			
 			
@@ -453,12 +436,13 @@ sub read_probe_data{
 				#Build should be manually specified as we can't guarantee it will be in the correct format
 				#or present at all
 				
-				$regions{$data[$hpos{'SEQ_ID'}]} = {
-													start => $start,
-													stop  => $stop,
-													seq_region_id => $self->get_chr_seq_region_id($data[$hpos{'CHROMOSOME'}], $start, $stop),
-													coord_system_id => $cs_id,
-												   };
+				$regions{$data[$hpos{'SEQ_ID'}]} = 
+				  {
+				   start => $start,
+				   stop  => $stop,
+				   seq_region_id => $self->get_chr_seq_region_id($data[$hpos{'CHROMOSOME'}], $start, $stop),
+				   coord_system_id => $cs->dbID(),
+				  };
 			}
 			
 		}
@@ -470,7 +454,7 @@ sub read_probe_data{
 		#SLURP PROBE POSITIONS
 		$fh = open_file("<", $self->get_def("design_dir")."/".$array->name().".pos");
 		
-		#don't % = map ! Takes a lot longer than a while?!
+		#don't % = map ! Takes a lot longer than a while ;)
 		while($line = <$fh>){
 			#$line =~ s/\r*\n//;#Not using last element
 			@data =  split/\t/o, $line;
@@ -495,7 +479,7 @@ sub read_probe_data{
 		close($fh);
 		
 		
-	#OPEN PROBE IN/OUT FILES
+		#OPEN PROBE IN/OUT FILES
 		$fh = open_file("<", $self->get_def("design_dir")."/".$array->name().".ndf");
 
 		#Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
@@ -532,8 +516,7 @@ sub read_probe_data{
 				next;
 			}
 			
-			#These header fields should be stored in the nimblgen defs
-			#overkill for now as this is nimblgen specific
+			#These header fields should be stored in the NimblgenDefs, hashed on array format/product format
 			
 			$loc = "";
 			$pid ++;
@@ -544,6 +527,8 @@ sub read_probe_data{
 			#	 $probeset_id, $y, $x, undef, $probe_id, $lstart) = split/\t/o, $line;
 			
 			#THis probe_set business is a little backward as we need to count size before printing
+			#We should only build a probe/feature set if the probe_name is different to the feature_set name
+
 			if($. == 2){#Capture first set
 				$psid++;
 				%probe_set = (
@@ -765,7 +750,7 @@ sub read_results_data{
 			
 			#multiple mappings
 			foreach my $pid(@{${$self->get_probe_map()}{$data[$probe_elem]}}){
-				$r_string .= "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($header[$i])->dbID()."\n";
+				$r_string .= "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($header[$i])->dbID()."\tchannel\n";
 			}
 		}
 	}

@@ -188,8 +188,10 @@ sub get_array_chip_ids {
 
 	my @ac_ids;
 
+
+	#can we not just return a ref the values?
 	foreach my $ac_hash(@{$self->array_chips()}){
-		push @ac_ids, $$ac_hash{'array_chip_id'};
+		push @ac_ids, $$ac_hash{'dbID'};
 	}
 
 	if(! @ac_ids){
@@ -201,6 +203,13 @@ sub get_array_chip_ids {
 }
 
 
+sub get_array_chip_id_by_design_id{
+	my ($self, $design_id) = @_;
+
+	throw("Must supply a valid array chip design_id") if (! defined $design_id);
+
+	return ${$self->{'array_chips'}}{$design_id}->{'dbID'};
+}
 
 =head2 name
 
@@ -295,8 +304,9 @@ sub species {
   my $species = shift;
   
   if ($species) {
-    warn("Registry species alias lookup not yet implemented");
-    $self->{'species'} = $species;
+	  #check for registry_register here?
+	  #$species = $reg->get_alias($self->species()));
+	  $self->{'species'} = $species;
   }
 
   if ( !exists $self->{'species'} && $self->dbID() && $self->adaptor() ) {
