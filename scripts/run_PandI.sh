@@ -10,6 +10,6 @@ $EFG_SRC/scripts/parse_and_import.pl \
 	-species homo_sapiens\
 	-fasta\
     -group efg\
-	-data_version 25_34e\
+	-data_version 40_36b\
 	-verbose 2\
 	-pass $1

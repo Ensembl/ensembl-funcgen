@@ -124,7 +124,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use strict;
 
 
-
+$| = 1;#autoflush
 my ($input_name, $name, $output_dir, $loc, $contact, $group, $pass);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb);
 my $reg = "Bio::EnsEMBL::Registry";
@@ -266,7 +266,7 @@ my $raw_anal = Bio::EnsEMBL::Analysis->new(
 										  );
 
 my $vsn_anal = Bio::EnsEMBL::Analysis->new(
-										   -logic_name      => 'VSN',
+										   -logic_name      => 'VSN_GLOG',
 										   -db              => 'NULL',
 										   -db_version      => 'NULL',
 										   -db_file         => 'NULL',
@@ -279,8 +279,8 @@ my $vsn_anal = Bio::EnsEMBL::Analysis->new(
 										   -module_version  => 'NULL',
 										   -parameters      => 'NULL',
 										   -created         => 'NULL',
-										   -description    => 'Generalised log transformation',
-										   -display_label   => 'VSN',
+										   -description    => 'Generalised log transformation based on VSN variance stabilised scores',
+										   -display_label   => 'VSN_GLOG',
 										  );
 
 
