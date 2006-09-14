@@ -173,7 +173,7 @@ sub fetch_all_by_Slice_ExperimentalChips {
 
 	foreach my $ec(@$exp_chips){
 				
-		throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimenalChip objects") 
+		throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
 		  if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
 	
 		$nr{$ec->array_chip_id()} = 1;
@@ -185,6 +185,8 @@ sub fetch_all_by_Slice_ExperimentalChips {
 	#my @echips = @{$self->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($exp->dbID())};
 	#map $nr{$_->array_chip_id()} = 1, @echips;
 	my $constraint = " op.array_chip_id IN (".join(", ", keys %nr).") AND op.oligo_probe_id = of.oligo_probe_id ";
+
+
 	
 	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
@@ -264,12 +266,13 @@ sub _columns {
 	#do we need array_name?
 	
 	return qw(
-			  of.oligo_feature_id  of.seq_region_id
-			  of.seq_region_start  of.seq_region_end
-			  of.seq_region_strand of.coord_system_id
-			  of.mismatches        of.oligo_probe_id    
-			  of.analysis_id	   op.name
-			 );
+		  of.oligo_feature_id  of.seq_region_id
+		  of.seq_region_start  of.seq_region_end
+		  of.seq_region_strand of.coord_system_id
+		  of.oligo_probe_id    of.analysis_id
+		  of.mismatches        of.cigar_line
+		  op.name
+		 );
 
 	#removed probeset and array name
 	
@@ -352,18 +355,20 @@ sub _objs_from_sth {
 	my (%analysis_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
-		$oligo_feature_id,  $seq_region_id,
-		$seq_region_start,  $seq_region_end,
-		$seq_region_strand, $cs_id,
-		$mismatches,        $oligo_probe_id,    
-		$analysis_id,       $oligo_probe_name,
+	    $oligo_feature_id,  $seq_region_id,
+	    $seq_region_start,  $seq_region_end,
+	    $seq_region_strand, $cs_id,
+	    $mismatches,        $oligo_probe_id,    
+	    $analysis_id,       $oligo_probe_name,
+	    $cigar_line,
 	);
 	$sth->bind_columns(
-					   \$oligo_feature_id,  \$seq_region_id,
-					   \$seq_region_start,  \$seq_region_end,
-					   \$seq_region_strand, \$cs_id,
-					   \$mismatches,        \$oligo_probe_id,
-					   \$analysis_id,		\$oligo_probe_name,
+			   \$oligo_feature_id,  \$seq_region_id,
+			   \$seq_region_start,  \$seq_region_end,
+			   \$seq_region_strand, \$cs_id,
+			   \$oligo_probe_id,    \$analysis_id, 
+			   \$mismatches,        \$cigar_line,
+			   \$oligo_probe_name
 	);
 
 	my $asm_cs;
@@ -478,18 +483,19 @@ sub _objs_from_sth {
 		}
 
 		push @features, $self->_new_fast( {
-			'start'         => $seq_region_start,
-			'end'           => $seq_region_end,
-			'strand'        => $seq_region_strand,
-			'slice'         => $slice,
-			'analysis'      => $analysis,
-			'adaptor'       => $self,
-			'dbID'          => $oligo_feature_id,
-			'mismatchcount' => $mismatches,
-			'_probe_id'     => $oligo_probe_id,
-			#'probeset'      => $probeset,#???do we need this?
-			'_probe_name'   => $oligo_probe_name
-		} );
+						   'start'         => $seq_region_start,
+						   'end'           => $seq_region_end,
+						   'strand'        => $seq_region_strand,
+						   'slice'         => $slice,
+						   'analysis'      => $analysis,
+						   'adaptor'       => $self,
+						   'dbID'          => $oligo_feature_id,
+						   'mismatchcount' => $mismatches,
+						   'cigar_line'    => $cigar_line,
+						   '_probe_id'     => $oligo_probe_id,
+						   #'probeset'      => $probeset,#???do we need this?
+						   '_probe_name'   => $oligo_probe_name
+						  } );
 	}
 
 	return \@features;
@@ -542,8 +548,8 @@ sub store{
 			seq_region_end, seq_region_strand,
             coord_system_id,
 			oligo_probe_id,  analysis_id,
-			mismatches
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			mismatches, cigar_line
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
 	my $db = $self->db();
@@ -581,12 +587,15 @@ sub store{
 		$sth->bind_param(6, $of->probe->dbID(),    SQL_INTEGER);
 		$sth->bind_param(7, $of->analysis->dbID(), SQL_INTEGER);
 		$sth->bind_param(8, $of->mismatchcount(),  SQL_TINYINT);
+		$sth->bind_param(9, $of->cigar_line(),     SQL_VARCHAR);
 
 		$sth->execute();
 
 		$original->dbID( $sth->{'mysql_insertid'} );
 		$original->adaptor($self);
 	}
+
+	return \@ofs
 }
 
 =head2 list_dbIDs

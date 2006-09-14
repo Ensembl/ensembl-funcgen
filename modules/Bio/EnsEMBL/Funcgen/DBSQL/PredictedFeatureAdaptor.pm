@@ -205,7 +205,12 @@ sub _objs_from_sth {
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
 	#Hence it should always be on the same coord system
 
+	print "Getting aa\n";
+
 	my $aa = $self->db->get_AnalysisAdaptor();
+
+	print "aa is $aa\n";
+
 	my @features;
 	my (%analysis_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
 

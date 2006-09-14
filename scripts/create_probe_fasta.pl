@@ -1,4 +1,6 @@
-#!/opt/local/bin/perl -w
+#!/usr/local/ensembl/bin/perl -w
+
+###!/opt/local/bin/perl -w
 
 
 =head1 NAME
@@ -92,13 +94,15 @@ BEGIN{
 my ($input_dir, $design_name, $output_dir) = @ARGV;
 
 if(! defined $input_dir || ! defined $design_name || ! defined $output_dir){
-	die("You must supply the following args input_dir design_name(file_name) output_dir\n";
+  die("You must supply the following args input_dir design_name(file_name) output_dir\n");
 }
 
 print "Input Dir:\t$input_dir\nDesign Name:\t$design_name\nOutput Dir:\t$output_dir\n";
 
 
 #check vars here
+
+=pod
 
 #SLURP PROBE POSITIONS
 my $file = $input_dir."/DesignFiles/${design_name}.pos";
@@ -150,7 +154,12 @@ while ($line = <IN>){
 
 close(IN);
 
-$file = $input_dir."/DesignFiles/${design_name}.ndf";#Helper would do handle opening and warning
+
+=cut
+
+#$file = $input_dir."/DesignFiles/${design_name}.ndf";#Helper would do handle opening and warning
+$file = $input_dir."/${design_name}.ndf";#He
+
 open(IN, $file) || die ("Cannot open file:\t$file");
 $file = $output_dir."/probe.fasta";
 open(FASTA, ">$file") || die ("Cannot open file:\t$file");
@@ -165,37 +174,43 @@ while($line = <IN>){
 	
 	#PROBE_DESIGN_ID	CONTAINER	DESIGN_NOTE	SELECTION_CRITERIA	SEQ_ID	PROBE_SEQUENCE	MISMATCH	MATCH_INDEX	FEATURE_ID	ROW_NUM	COL_NUM	PROBE_CLASS	PROBE_ID	POSITION	DESIGN_ID	X	Y
 	#Shall we use x and y here to creete a temp cel file for checking in R?
-	(undef, undef, undef, undef, $xref_id, $seq, undef, undef, 
-	 undef, undef, undef, undef, $probe_id) = split/\t/, $line;
+	#(undef, undef, undef, undef, $xref_id, $seq, undef, undef, 
+	# undef, undef, undef, undef, $probe_id) = split/\t/, $line;
 	
+	my @tmp = split/\t/, $line;
+
+	#print "@tmp\n";
+
+	next if $tmp[11] ne "experimental";
+	#5 & 12
 
 	###PROBE FEATURES
 	#Put checks in here for build?
 	#grep for features, need to handle more than one mapping
 
-	@features = grep (/\s+$probe_id\s+/, @probe_pos);
+#	@features = grep (/\s+$probe_id\s+/, @probe_pos);
 
-	croak("Multiple probe_features: feature code needs altering") if (scalar(@features > 1));
+#	croak("Multiple probe_features: feature code needs altering") if (scalar(@features > 1));
 
 	#Need to handle controls/randoms here
 	#won't have features but will have results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	#The format of the pos file looks like it should have all the data required, but 
 	# chromsome is missing, first undef :(
 
-	if(@features){
+#	if(@features){
 		
-		foreach $feature(@features){
-			#$feature =~ s/\r*\n//;
-			
-			#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
-			($seq_id, undef, undef, $start, undef) = split/\t/, $feature;
-
-			if(exists $regions{$seq_id}){			
-				$loc .= $regions{$seq_id}{'chrom'}.":${start}-".($start + $length).";";
-			}
-			else{ croak("No regions defined for $seq_id"); }
-		}
-	}
+#		foreach $feature(@features){
+#			#$feature =~ s/\r*\n//;
+#			
+#			#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
+#			($seq_id, undef, undef, $start, undef) = split/\t/, $feature;
+#
+#			if(exists $regions{$seq_id}){			
+#				$loc .= $regions{$seq_id}{'chrom'}.":${start}-".($start + $length).";";
+#			}
+#			else{ croak("No regions defined for $seq_id"); }
+#		}
+#	}
 
 	#else{#CONTROL/RANDOM
 	#	#Enter placeholder features to enable result entries
@@ -203,10 +218,17 @@ while($line = <IN>){
 	##	push @{$feature_map{$probe_id}}, $fid;	
 	#	$fid++;
 	#}
-		
+	
+
+	
+
+	
 	#filter controls/randoms?  Or would it be sensible to see where they map
 	#Do we need to wrap seq here?
-	print FASTA ">${probe_id}\t$xref_id\t$loc\n$seq\n";
+	#print FASTA ">${probe_id}\t$xref_id\t$loc\n$seq\n";
+
+	print FASTA ">probe:${design_name}:$tmp[12]\n$tmp[5]\n";
+
 	$loc = "";
 }
 

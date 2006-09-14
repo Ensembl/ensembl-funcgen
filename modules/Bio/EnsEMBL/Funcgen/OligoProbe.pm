@@ -33,7 +33,7 @@ example, two different complete names for the same probe might be
 DrosGenome1:AFFX-LysX-5_at:535:35; and Drosophila_2:AFFX-LysX-5_at:460:51;. In
 the database, these two probes will have the same oligo_probe_id. Thus the same
 Affy probe can have a number of different names and complete names depending on
-which array it's on.
+which array it is on.
 
 =head1 AUTHOR
 
@@ -292,11 +292,31 @@ sub get_all_probenames {
 
 =cut
 
+
+#we can have dulplicate probes on same array for Nimblegen
+#what defines and unique probe?
+#If we have a duplicate on the same array or even on the same array_chip, then we can still return the same name
+#Needs more work
+
 sub get_probename {
     my $self = shift;
     my $arrayname = shift if @_;
 
-	warn("Need to implement access to only probename if not AFFY and only one array");
+    
+    if (! $arrayname){
+      
+      #Sanity check that there is only one non-AFFY array
+      my @ac_ids = keys %{$self->{'arrays'}};
+
+      if((scalar @ac_ids == 1) && ($self->get_all_Arrays()->[0]->vendor() eq "NIMBLEGEN")){
+	$arrayname = $self->get_all_Arrays()->[0]->name();
+      }
+      else{
+	throw("Cannot retrieve probename without arrayname if more than 1 array chip(@ac_ids) and not NIMBELGEN(".$self->get_all_Arrays()->[0]->vendor().")\n");
+      }
+    }
+
+
 	
     my $probename = $self->{'probenames'}->{$arrayname};
     if (!defined $probename) {
@@ -342,6 +362,13 @@ sub get_all_complete_names {
 	
     return \@result;
 }
+
+
+
+#For affy this matters as name will be different, but not for Nimblegen
+#Need to consolidate this
+#have get name method which throws if there is more than one array
+#detects array vendor and does appropriate method
 
 =head2 get_complete_name
 
@@ -432,6 +459,9 @@ sub length {
     $self->{'length'} = shift if @_;
     return $self->{'length'};
 }
+
+
+
 
 1;
 

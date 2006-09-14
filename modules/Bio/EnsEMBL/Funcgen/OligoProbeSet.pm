@@ -36,7 +36,7 @@ example, two different complete names for the same probe might be
 DrosGenome1:AFFX-LysX-5_at:535:35; and Drosophila_2:AFFX-LysX-5_at:460:51;. In
 the database, these two probes will have the same probe_id. Thus the same
 Affy probe can have a number of different names and complete names depending on
-which array it's on.
+which array it is on.
 
 =head1 AUTHOR
 

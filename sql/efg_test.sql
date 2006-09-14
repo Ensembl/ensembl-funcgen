@@ -189,7 +189,7 @@ CREATE TABLE `oligo_probe` (
 DROP TABLE IF EXISTS `experiment`;
 CREATE TABLE `experiment` (
    `experiment_id` int(11) unsigned NOT NULL auto_increment,
-   `name` varchar(20) default NULL,
+   `name` varchar(30) default NULL,
    `egroup_id` smallint(6) unsigned default NULL,
    `date` date NOT NULL default '0000-00-00',
    `primary_design_type` varchar(30) default NULL, 
@@ -319,6 +319,7 @@ CREATE TABLE `predicted_feature` (
   PRIMARY KEY  (`predicted_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `analysis_idx` (`analysis_id`),
+  KEY `type_idx` (`feature_type_id`),	  
   KEY `hit_idx` (`display_label`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
@@ -492,6 +493,11 @@ CREATE TABLE `meta_coord` (
 ---should only ever be predicted_feature, but with all the coord_sys_ids
 ---This is slightly redundant, but required for core API modules to work
 
+--- Set up default meta coord entries...this should be done in import
+-- Change max lenght of oligo?
+
+insert into meta_coord values("predicted_feature", 1, 147);
+insert into meta_coord values("oligo_feature", 1, 50);
 
 --
 -- Table structure for table `coord_system`

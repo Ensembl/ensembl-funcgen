@@ -347,8 +347,11 @@ sub fetch_all_states{
 	throw("Need to specifiy a table and an id to retrieve status") if (! $table || ! $id);
 
 
-	my $sql = "SELECT state FROM status WHERE table=\"$table\" AND table_id=\"$id\"";
-	return $self->dbc->db_handle->selectall_arrayref($sql);
+	my $sql = "SELECT state FROM status WHERE table_name=\"$table\" AND table_id=\"$id\"";
+
+	my @states = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
+
+	return \@states;
 }
 
 

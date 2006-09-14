@@ -39,7 +39,7 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( warning );
+use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::Channel;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
@@ -65,7 +65,7 @@ use vars qw(@ISA);
 sub fetch_by_type_experimental_chip_dbID {
     my ($self, $type, $ec_dbid) = @_;
 
-	throw("Must specify a valid experiemntal dbID and type") if(! $ec_dbid || ! $type);
+	throw("Must specify a valid experiemntal dbID($ec_dbid) and type($type)") if(! $ec_dbid || ! $type);
 
 
 	my $sth = $self->prepare("
@@ -291,49 +291,53 @@ sub store {
     my $self = shift;
     my @args = @_;
 
-	my ($sarray);
+    my ($sarray);
 
-	my $sth = $self->prepare("
+    my $sth = $self->prepare("
 			INSERT INTO channel
 			(experimental_chip_id, sample_id, dye, type, description)
 			VALUES (?, ?, ?, ?, ?)");
-
-
-
+    
+    
+    
     foreach my $chan (@args) {
-		if ( ! $chan->isa('Bio::EnsEMBL::Funcgen::Channel') ) {
-			warning('Can only store Channel objects, skipping $chan');
-			next;
-		}
-
-		if (!( $chan->dbID() && $chan->adaptor() == $self )){
-
-
-			my $s_chan = $self->fetch_by_type_experimental_chip_dbID($chan->type(), $chan->experimental_chip_id());
-
-
-			if(! $s_chan){
-				$sth->bind_param(1, $chan->experimental_chip_id(),  SQL_INTEGER);
-				$sth->bind_param(2, $chan->sample_id(),             SQL_VARCHAR);
-				$sth->bind_param(3, $chan->dye() ,                  SQL_VARCHAR);
-				$sth->bind_param(4, $chan->type(),                  SQL_VARCHAR);
-				$sth->bind_param(5, $chan->description(),           SQL_VARCHAR);
-			
-				$sth->execute();
-				my $dbID = $sth->{'mysql_insertid'};
-				$chan->dbID($dbID);
-				$chan->adaptor($self);
-			}
-			else{
-				#do some status checks here, check IMPORTED
-				#Need to account for recover in Importer?
-
-				throw("Channel already stored");
-			}
-		}
+      if ( ! $chan->isa('Bio::EnsEMBL::Funcgen::Channel') ) {
+	warning('Can only store Channel objects, skipping $chan');
+	next;
+      }
+      
+      if (!( $chan->dbID() && $chan->adaptor() == $self )){
+	
+	
+	my $s_chan = $self->fetch_by_type_experimental_chip_dbID($chan->type(), $chan->experimental_chip_id());
+	
+	
+	if(! $s_chan){
+	  $sth->bind_param(1, $chan->experimental_chip_id(),  SQL_INTEGER);
+	  $sth->bind_param(2, $chan->sample_id(),             SQL_VARCHAR);
+	  $sth->bind_param(3, $chan->dye() ,                  SQL_VARCHAR);
+	  $sth->bind_param(4, $chan->type(),                  SQL_VARCHAR);
+	  $sth->bind_param(5, $chan->description(),           SQL_VARCHAR);
+	  
+	  $sth->execute();
+	  my $dbID = $sth->{'mysql_insertid'};
+	  $chan->dbID($dbID);
+	  $chan->adaptor($self);
 	}
+	else{
+	  #do some status checks here, check IMPORTED
+	  #Need to account for recover in Importer?
+	  $chan = $s_chan;
 
-	return \@args;
+	  my @states = @{$self->db->fetch_all_states('channel', $chan->dbID())};
+
+	  #need better id than dbID?
+	  warn("Using previously stored Channel (".$chan->experimental_chip_id().":".$chan->type().") with states\t@states\n"); 
+	}
+      }
+    }
+
+    return \@args;
 
 }
 

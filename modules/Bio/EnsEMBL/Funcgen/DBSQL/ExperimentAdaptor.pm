@@ -225,18 +225,18 @@ sub _objs_from_sth {
 	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, \$description);
 	
 	while ( $sth->fetch() ) {
-		my $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
-														 -DBID                => $exp_id,
-														 -ADAPTOR             => $self,
-														 -NAME                => $name,
-														 -GROUP_ID            => $group_id,
-														 -DATE                => $date,
-														 -PRIMARY_DESIGN_TYPE => $p_design_type,
-														 -DESCRIPTION         => $description,
-														  );
-
-		push @result, $exp;
-
+	  my $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
+							   -DBID                => $exp_id,
+							   -ADAPTOR             => $self,
+							   -NAME                => $name,
+							   -GROUP_ID            => $group_id,
+							   -DATE                => $date,
+							   -PRIMARY_DESIGN_TYPE => $p_design_type,
+							   -DESCRIPTION         => $description,
+							  );
+	  
+	  push @result, $exp;
+	  
 	}
 	return \@result;
 }
@@ -268,43 +268,45 @@ sub store {
 	
 
     foreach my $exp (@args) {
-		if ( ! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') ) {
-			warning('Can only store Experiment objects, skipping $exp');
-			next;
-		}
+      if ( ! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') ) {
+	warning('Can only store Experiment objects, skipping $exp');
+	next;
+      }
+      
+      my ($g_dbid) = $self->db->fetch_group_details($exp->group());
+      throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
+      
+      print 
+	
+	# Has array already been stored?
+	next if ( $exp->dbID() && $exp->adaptor() == $self );
+      
+      $s_exp = $self->fetch_by_name($exp->name());#validate on group too!
+      
+      if(! $s_exp){
+	
+	print "Storing exp with name ".$exp->name()."\n";
 
-		my ($g_dbid) = $self->db->fetch_group_details($exp->group());
-		throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
-
-		print 
-
-		# Has array already been stored?
-		next if ( $exp->dbID() && $exp->adaptor() == $self );
-
-		$s_exp = $self->fetch_by_name($exp->name());#validate on group too!
-
-		if(! $s_exp){
-
-			$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
-			$sth->bind_param(2, $g_dbid,                    SQL_INTEGER);
-			$sth->bind_param(3, $exp->date(),                SQL_VARCHAR);#date?
-			$sth->bind_param(4, $exp->primary_design_type(), SQL_VARCHAR);
-			$sth->bind_param(5, $exp->description(),         SQL_VARCHAR);
-
-			$sth->execute();
-			$exp->dbID($sth->{'mysql_insertid'});
-			$exp->adaptor($self);
-			
-
-			#do we need to set egroup, target, design_type, experimentall_variable here?
-		}
-		else{
-			warn("Experiment already exists in DB, using previously stored Experiment");
-			$exp = $s_exp;
-		}
-	}
-
-	return \@args;
+	$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
+	$sth->bind_param(2, $g_dbid,                    SQL_INTEGER);
+	$sth->bind_param(3, $exp->date(),                SQL_VARCHAR);#date?
+	$sth->bind_param(4, $exp->primary_design_type(), SQL_VARCHAR);
+	$sth->bind_param(5, $exp->description(),         SQL_VARCHAR);
+	
+	$sth->execute();
+	$exp->dbID($sth->{'mysql_insertid'});
+	$exp->adaptor($self);
+	
+	
+	#do we need to set egroup, target, design_type, experimentall_variable here?
+      }
+      else{
+	warn("Experiment already exists in DB, using previously stored Experiment");
+	$exp = $s_exp;
+      }
+    }
+    
+    return \@args;
 
 }
 

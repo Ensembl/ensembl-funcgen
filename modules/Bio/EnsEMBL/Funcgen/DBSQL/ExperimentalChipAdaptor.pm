@@ -39,7 +39,7 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( warning );
+use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
@@ -90,6 +90,31 @@ sub fetch_all_by_experiment_dbID {
 	}
 
 	return \@results;
+}
+
+
+#contiguous/subsets/tracksets?  i.e. want to display on same track
+sub fetch_contigsets_by_experiment_dbID {
+    my $self = shift;
+    my $e_dbid = shift;
+
+    my @tracksets;
+
+
+    #what are we going to return? arrayref to list of arrays of echips?
+    #where do we get set name from?
+    #first element should be set name
+    #hashref to key = set name values = array of echips
+
+    #differentiating purely on chip uid at present
+    
+
+    foreach my $echip (@{$self->fetch_all_by_experiment_dbID($e_dbid)}){
+      my @tmp = ($echip->unique_id(), $echip);
+      push @tracksets, \@tmp;
+    }
+
+    return \@tracksets;
 }
 
 =head2 fetch_by_unique_and_experiment_id
@@ -219,52 +244,52 @@ sub _objs_from_sth {
 =cut
 
 sub store {
-    my $self = shift;
-    my @args = @_;
-
-	my ($sarray);
-
-	my $sth = $self->prepare("
+  my $self = shift;
+  my @args = @_;
+  
+  my ($sarray);
+  
+  my $sth = $self->prepare("
 			INSERT INTO experimental_chip
 			(unique_id, experiment_id, array_chip_id, description)
 			VALUES (?, ?, ?, ?)");
+  
+    
+  
+  foreach my $ec (@args) {
+    if ( ! $ec->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') ) {
+      warning('Can only store ExperimentalChip objects, skipping $ec');
+	next;
+    }
+    
+    if (!( $ec->dbID() && $ec->adaptor() == $self )){
+      
+      
+      my $s_ec = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
+	
+      
+      if(! $s_ec){
+	$sth->bind_param(1, $ec->unique_id(), SQL_VARCHAR);
+	$sth->bind_param(2, $ec->experiment_id(),  SQL_VARCHAR);
+	$sth->bind_param(3, $ec->array_chip_id(),  SQL_VARCHAR);
+	$sth->bind_param(4, $ec->description(),    SQL_VARCHAR);
+	
+	$sth->execute();
+	my $dbID = $sth->{'mysql_insertid'};
+	$ec->dbID($dbID);
+	$ec->adaptor($self);
+	#$self->db->set_status('experimental_chip', $ec->dbID(), 'STORED');#not really necessary?
+      }
+      else{
+	$ec = $s_ec;
 
-
-
-    foreach my $ec (@args) {
-		if ( ! $ec->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') ) {
-			warning('Can only store ExperimentalChip objects, skipping $ec');
-			next;
-		}
-
-		if (!( $ec->dbID() && $ec->adaptor() == $self )){
-
-
-			my $s_ec = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
-
-
-			if(! $s_ec){
-				$sth->bind_param(1, $ec->unique_id(), SQL_VARCHAR);
-				$sth->bind_param(2, $ec->experiment_id(),  SQL_VARCHAR);
-				$sth->bind_param(3, $ec->array_chip_id(),  SQL_VARCHAR);
-				$sth->bind_param(4, $ec->description(),    SQL_VARCHAR);
-			
-				$sth->execute();
-				my $dbID = $sth->{'mysql_insertid'};
-				$ec->dbID($dbID);
-				$ec->adaptor($self);
-			}
-			else{
-				#do some status checks here, check IMPORTED
-				#Need to account for recover in Importer?
-
-				throw("ExperimentalChip already stored");
-			}
-		}
-	}
-
-	return \@args;
-
+	my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};
+	warn("Using previously stored ExperimentalChip (".$ec->unique_id().") with states\t@states\n");
+      }
+    }
+  }
+  
+  return \@args;
 }
 
 

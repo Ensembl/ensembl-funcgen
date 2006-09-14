@@ -203,13 +203,14 @@ sub get_array_chip_ids {
 }
 
 
-sub get_array_chip_id_by_design_id{
-	my ($self, $design_id) = @_;
 
-	throw("Must supply a valid array chip design_id") if (! defined $design_id);
-
-	return ${$self->{'array_chips'}}{$design_id}->{'dbID'};
+sub get_design_ids{
+  my ($self) = @_;
+	
+  return [keys %{$self->{'array_chips'}}];
 }
+
+
 
 =head2 name
 
@@ -385,9 +386,10 @@ sub array_chips {
 
 	if ( ! exists $self->{'array_chips'}){
 		if( $self->dbID() && $self->adaptor() ) {
-			#$self->adaptor->fetch_attributes($self);
-			#need to do this differently as we're accessing a different table
-			$self->{'array_chips'} = %{$self->adaptor->db->get_OligoArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID())};
+		  #$self->adaptor->fetch_attributes($self);
+		  #need to do this differently as we're accessing a different table
+		  $self->{'array_chips'} = {};
+		  %{$self->{'array_chips'}} = %{$self->adaptor->db->get_OligoArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID())};
 		}
 		else{
 			warn("Need array dbID and DB connection to retrieve array_chips");
@@ -400,21 +402,33 @@ sub array_chips {
 	return $self->{'array_chips'};
 }
 
-#Need add_array_chip here
-#this needs to to check whether present first
+
+sub get_array_chip_by_design_id{
+  my ($self, $design_id) = @_;
+
+  throw("Must supply a valid array chip design_id") if (! defined $design_id);
+
+  return (defined $self->{'array_chips'}{$design_id}) ? $self->{'array_chips'}{$design_id} : undef;
+  
+}
+
+
+
 
 sub add_array_chip{
-	my ($self, $design_id, $ac_ref) = @_;
+  my ($self, $design_id, $ac_ref) = @_;
 
-	#throw if ! $ac_ref?
+  $self->{'array_chips'} = {} if (! $self->{'array_chips'});
 
-	$self->{'array_chips'} = {} if (! $self->{'array_chips'});
+  throw("You must supply a valid design_id and array_chip hash") if(! defined $design_id && ! defined $ac_ref);
+  
+  if(exists $self->{'array_chips'}{$design_id}){
+    warn("Array chip for $design_id already exists, using previous stored array chip\n");
+  }else{
+    %{$self->{'array_chips'}{$design_id}} = %{$ac_ref};#will this work?
+  }
 
-	throw("You must supply a valid design_id and array_chip hash") if(! defined $design_id && ! defined $ac_ref);
-
-	%{$self->{'array_chips'}{$design_id}} = %{$ac_ref};#will this work?
-
-	return;
+  return;
 }
 
 

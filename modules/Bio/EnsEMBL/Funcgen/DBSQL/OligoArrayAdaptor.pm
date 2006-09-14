@@ -268,9 +268,10 @@ sub _fetch_array_chips_by_array_dbID {
 	
 	while ( $sth->fetch() ) {
 		$ac_tmp{$design_id} = {(
-								array_chip_id => $array_chip_id,
-								name => $name,
-							   )};
+					array_id => $array_dbID,
+					dbID => $array_chip_id,
+					name => $name,
+				       )};
 	}
 
 	return \%ac_tmp;
@@ -299,64 +300,61 @@ sub _fetch_array_chips_by_array_dbID {
 #yet we need to retrieve a dbID for the array before we know about all the array_chips
 
 sub store {
-    my $self = shift;
-    my @args = @_;
-	#my $array = shift;
-
-	
-
-	my ($sarray);
-
-	my $sth = $self->prepare("
+  my $self = shift;
+  my @args = @_;
+  
+  my ($sarray);
+  
+  my $sth = $self->prepare("
 			INSERT INTO array
 			(name, format, vendor, description)
 			VALUES (?, ?, ?, ?)");
-
-
-
-    foreach my $array (@args) {
-		if ( !$array->isa('Bio::EnsEMBL::Funcgen::OligoArray') ) {
-			warning('Can only store OligoArray objects, skipping $array');
-			next;
-		}
-		
-		# Has array already been stored?
-		# What about array_chips? Still need to check they've been imported
-		if (!( $array->dbID() && $array->adaptor() == $self )){
-
-			#try and fetch array here and set to array if valid
-			$sarray = $self->fetch_by_name($array->name());#this should be name_vendor?
-
-			if( ! $sarray){
-				$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
-				$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
-				#$sth->bind_param(3, scalar(keys %{$self->array_chips()}),         SQL_INTEGER);
-				$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
-				$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
-				
-				$sth->execute();
-				my $dbID = $sth->{'mysql_insertid'};
-				$array->dbID($dbID);
-				$array->adaptor($self);
-			}
-			else{
-				warn("Array already stored, validating array_chips");
-			}
-		}
-
-		$array = $self->store_array_chips($array, $sarray);
-
-		#need to make sure we have the full object here, so query again or can we use array or sarray?
-		#there may be problems with repopulating array with full achip complement if experiment only uses some of the achips?
-		#but we're reging the achips in the importer, so this shouldn't matter?
-
-	}
-
-
-	#will this be the original or the stored objects?
-
-	return \@args;
-	#return $array;
+  
+    
+  foreach my $array (@args) {
+    if ( !$array->isa('Bio::EnsEMBL::Funcgen::OligoArray') ) {
+      warning('Can only store OligoArray objects, skipping $array');
+      next;
+    }
+    
+    # Has array already been stored?
+    # What about array_chips? Still need to check they've been imported
+    if (!( $array->dbID() && $array->adaptor() == $self )){
+      #try and fetch array here and set to array if valid
+      $sarray = $self->fetch_by_name($array->name());#this should be name_vendor?
+      
+      if( ! $sarray){
+	warn("Storing array\n");
+	
+	$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
+	$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
+	#$sth->bind_param(3, scalar(keys %{$self->array_chips()}),         SQL_INTEGER);
+	$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
+	$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
+	
+	$sth->execute();
+	my $dbID = $sth->{'mysql_insertid'};
+	$array->dbID($dbID);
+	$array->adaptor($self);
+      }
+      else{
+	warn("Array already stored, validating array_chips\n");
+      }
+    }
+    
+    $array = $self->store_array_chips($array, $sarray);
+    
+    #need to make sure we have the full object here, so query again or can we use array or sarray?
+    #there may be problems with repopulating array with full achip complement if experiment only uses some of the achips?
+    #but we're reging the achips in the importer, so this shouldn't matter?
+    
+  }
+  
+  
+  #will this be the original or the stored objects?
+  
+  return \@args;
+  #return $array;
 }
 
 
@@ -367,61 +365,60 @@ sub store {
 
 
 sub store_array_chips{
-	my ($self, $array, $sarray) = @_;
-
-
-	#need to check for array here?
-
-	my $ac_sth = $self->prepare("INSERT INTO array_chip
+  my ($self, $array, $sarray) = @_;
+  
+  
+  #need to check for array here?
+  
+  my $ac_sth = $self->prepare("INSERT INTO array_chip
                                  (design_id, array_id, name)
                                  VALUES (?, ?, ?)");
+  
+  $sarray  = $self->fetch_by_name($array->name()) if(! $sarray);
+  
+  foreach my $design_id(keys %{$array->array_chips()}){
+    my $sdesign_id = 0;
+    
+    if($sarray && $sarray->array_chips()){
+      ($sdesign_id) = grep(/$design_id/, keys %{$sarray->array_chips});
+    }
+    
+    
+    #do we need to set some flag here and in _obj_from_sth
+    #registered flag, true for retrieved, false for just stored achips, 
+    #this will be used by importer to run probe import etc
+    #Use status?
+    
+    if(! $sdesign_id){
+      #This will always be te case, as Arrays are stored before storing their array_chips
+      #warn("Adding array_chip $design_id to previously stored array") if ($sarray);
+      
+      warn("Storing array chip:\t".$array->array_chips->{$design_id}{'name'}."\n");
+      
+      $ac_sth->bind_param(1, $design_id,                                       SQL_INTEGER);
+      $ac_sth->bind_param(2, $array->dbID(),                                   SQL_INTEGER);
+      $ac_sth->bind_param(3, $array->array_chips->{$design_id}{'name'}, SQL_VARCHAR);
+      $ac_sth->execute();
+   
+      $array->array_chips->{$design_id}{'dbID'} = $ac_sth->{'mysql_insertid'};
+      #$self->db->set_status('array_chip', $array->array_chips->{$design_id}{'dbID'}, 'STORED');
+      $sarray->add_array_chip($design_id, $array->array_chips->{$design_id}) if ($sarray);
+    }else{
+      warn("Array chip already stored:\t".$array->array_chips->{$design_id}{'name'}."\n");
 
-	$sarray  = $self->fetch_by_name($array->name()) if(! $sarray);
+    }
+    
+  }
+  
+  #Set new achips
+  #if($sarray){
+  #  $array->array_chips($sarray->array_chips()) if ($sarray);#Can we not just set array to sarray?
+  #}
 
 
 
-	
-	foreach my $design_id(keys %{$array->array_chips()}){
-		my $sdesign_id = 0;
-		
-		if($sarray){
-
-			if($sarray->array_chips()){
-				$sdesign_id = grep($design_id, (keys %{$sarray->array_chips}));
-			}
-		}
-		
-		
-		#do we need to set some flag here and in _obj_from_sth
-		#registered flag, true for retrieved, false for just stored achips, 
-		#this will be used by importer to run probe import etc
-		#Use status?
-		
-		if(! $sdesign_id){
-			#This will always be te case, as Arrays are stored before storing their array_chips
-			#warn("Adding array_chip $design_id to previously stored array") if ($sarray);
-			
-			print "Importing array chip with name ".$array->array_chips->{$design_id}{'design_name'}."\n";
-			
-			$ac_sth->bind_param(1, $design_id,                                       SQL_INTEGER);
-			$ac_sth->bind_param(2, $array->dbID(),                                   SQL_INTEGER);
-			$ac_sth->bind_param(3, $array->array_chips->{$design_id}{'design_name'}, SQL_VARCHAR);
-			$ac_sth->execute();
-			$array->array_chips->{$design_id}{'dbID'} = $ac_sth->{'mysql_insertid'};
-			
-			#Now populate sarray with this stored achip if $sarray
-			$sarray->add_array_chip($design_id, $array->array_chips->{$design_id}) if ($sarray);
-			
-		}
-		
-	}
-	
-	#Set new achips and update size
-	if($sarray){
-		$array->array_chips($sarray->array_chips()) if ($sarray);
-	}
-
-	return $array;
+  
+  return $sarray || $array;
 }
 
 

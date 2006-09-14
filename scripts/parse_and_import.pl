@@ -1,4 +1,7 @@
-#!/opt/local/bin/perl -w
+#!/usr/local/ensembl/bin/perl -w
+
+
+###!/opt/local/bin/perl -w
 
 
 =head1 NAME
@@ -19,6 +22,9 @@ Mandatory
 Optional
   -pass|p          The password for the target DB, if not defined in GroupDefs.pm
   -data_root       The root data dir
+  -dbname          Defines the eFG dbname if it is not standard
+  -array_set       Flag to treat all chip designs as part of same array
+  -array_name      Name of the set of array chips
   -fasta           Fasta dump flag
   -norm|n          Normalisation method (default=vsn)
   -species|s       Species name any standard e! species alias(will be reset to dbname/latin name e.g. "homo_sapiens")
@@ -125,8 +131,8 @@ use strict;
 
 
 $| = 1;#autoflush
-my ($input_name, $name, $output_dir, $loc, $contact, $group, $pass);
-my ($data_version, $help, $man, $species, $nmethod, $dnadb);
+my ($input_name, $name, $output_dir, $loc, $contact, $group, $pass, $dbname);
+my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -154,31 +160,34 @@ my @steps = ("s1_init_exp");#do we need steps?
 #ArrayDefs would also contain paths to data and vendor specific parse methods?
 
 GetOptions (
-			"name|n=s"     => \$name,
-			"format|f=s"   => \$format,
-			"vendor|v=s"   => \$vendor,
-			"pass|p=s"     => \$pass,
-			"port|l=s"     => \$port,
-			"host|h=s"     => \$host,
-			"user|u=s"     => \$user,
-			"group|g=s"    => \$group,#Need user here too? Use group defs to avoid typos?
-			"species|s=s"  => \$species,
-			"data_version|d=s" => \$data_version,
-			"debug=i"    => \$main::_debug_level,
-			"data_root=s"  => \$data_dir,
-			"fasta"        => \$fasta,
-			"recover|r"    => \$recover,
-			"norm=s"       => \$nmethod,
-			"location=s"   => \$loc,
-			"contact=s"    => \$contact,
-			"log_file=s"   => \$main::_log_file,
-			"debug_file=s" => \$main::_debug_file,
-			#should have MAGE flag here? or would this be format?
-			"interactive"  => \$interactive,
-			"help|?"       => \$help,
-			"man|m"        => \$man,
-			"verbose=s"    => \$verbose,
-		   );
+	    "name|n=s"     => \$name,
+	    "format|f=s"   => \$format,
+	    "vendor|v=s"   => \$vendor,
+	    "pass|p=s"     => \$pass,
+	    "port|l=s"     => \$port,
+	    "host|h=s"     => \$host,
+	    "user|u=s"     => \$user,
+	    "dbname=s"     => \$dbname,
+	    "group|g=s"    => \$group,#Need user here too? Use group defs to avoid typos?
+	    "species|s=s"  => \$species,
+	    "data_version|d=s" => \$data_version,
+	    "array_set"    => \$array_set,
+	    "array_name=s" => \$array_name,
+	    "debug=i"    => \$main::_debug_level,
+	    "data_root=s"  => \$data_dir,
+	    "fasta"        => \$fasta,
+	    "recover|r"    => \$recover,
+	    "norm=s"       => \$nmethod,
+	    "location=s"   => \$loc,
+	    "contact=s"    => \$contact,
+	    "log_file=s"   => \$main::_log_file,
+	    "debug_file=s" => \$main::_debug_file,
+	    #should have MAGE flag here? or would this be format?
+	    "interactive"  => \$interactive,
+	    "help|?"       => \$help,
+	    "man|m"        => \$man,
+	    "verbose=s"    => \$verbose,
+	   );
 
 
 #Need to add (primary) design_type and description, or add to defs file?
@@ -198,30 +207,31 @@ $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file)
 ### SET UP IMPORTER (FUNCGENDB/DNADB/EXPERIMENT) ###
 
 my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
-											   name        => $name,
-											   format      => $format,
-											   vendor      => $vendor,
-											   group       => $group,
-											   pass        => $pass,
-											   host        => $host,
-											   user        => $user,
-											   port        => $port,
-
-											   
-											   data_version => $data_version,
-											   data_root   => $data_dir,
-											   output_dir  => $output_dir,
-											   recover     => $recover,
-											   dump_fasta  => $fasta,
-											   norm_method => $nmethod,
-											   species     => $species,
-											   location    => $loc,
-											   contact     => $contact,
-											   verbose     => $verbose,
-											   #Exp does not build input dir, but could
-											   #This allows input dir to be somewhere 
-											   #other than efg dir structure
-											  );
+					       name        => $name,
+					       format      => $format,
+					       vendor      => $vendor,
+					       group       => $group,
+					       pass        => $pass,
+					       host        => $host,
+					       user        => $user,
+					       port        => $port,
+					       dbname      => $dbname,
+					       array_set   => $array_set,
+					       array_name => $array_name,						       
+					       data_version => $data_version,
+					       data_root   => $data_dir,
+					       output_dir  => $output_dir,
+					       recover     => $recover,
+					       dump_fasta  => $fasta,
+					       norm_method => $nmethod,
+					       species     => $species,
+					       location    => $loc,
+					       contact     => $contact,
+					       verbose     => $verbose,
+					       #Exp does not build input dir, but could
+					       #This allows input dir to be somewhere 
+					       #other than efg dir structure
+					      );
 
 
 

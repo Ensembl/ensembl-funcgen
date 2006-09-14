@@ -330,93 +330,87 @@ sub _objs_from_sth {
                called once per probe because no checks are made for duplicates
 			   Sets dbID and adaptor on the objects that it stores.
   Returntype : None
-  Exceptions : Throws if arguments aren't OligoProbe objects
+  Exceptions : Throws if arguments are not OligoProbe objects
   Caller     : General
   Status     : Medium Risk
 
 =cut
 
 sub store {
-	my ($self, @probes) = @_;
+  my ($self, @probes) = @_;
+  
+  my ($ac_id, $sth, $dbID);
+  my $db = $self->db();
+  throw('Must call store with a list of OligoProbe objects') if (scalar @probes == 0);
 
-	my ($ac_id, $sth);
 
-	if (scalar @probes == 0) {
-		throw('Must call store with a list of OligoProbe objects');
-	}
+ PROBE: foreach my $probe (@probes) {
+    
+     if ( !ref $probe || ! $probe->isa('Bio::EnsEMBL::Funcgen::OligoProbe') ) {
+      throw("Probe must be an OligoProbe object ($probe)");
+    }
+    
+    if ( $probe->is_stored($db) ) {
+      warning('OligoProbe [' . $probe->dbID() . '] is already stored in the database');
+      next PROBE;
+    }
+    
+    # Get all the arrays this probe is on and check they're all in the database
+    my %array_hashes;
+    
+    foreach $ac_id (keys %{$probe->{'arrays'}}) {
+            
+      if (defined ${$probe->{'arrays'}}{$ac_id}->dbID()) {
+      #Will this ever work as generally we're creating from scratch and direct access to keys above by passes DB fetch
+        $array_hashes{$ac_id} = $probe->{'arrays'}{$ac_id};
+      }
+    }
 
-	my $db = $self->db();
-
-	PROBE: foreach my $probe (@probes) {
-
-		if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::OligoProbe') ) {
-			throw('Probe must be an OligoProbe object');
-		}
-
-		if ( $probe->is_stored($db) ) {
-			warning('OligoProbe [' . $probe->dbID() . '] is already stored in the database');
-			next PROBE;
-		}
-		
-		# Get all the arrays this probe is on and check they're all in the database
-		my %array_hashes;
-
-		foreach $ac_id (keys %{$probe->{'arrays'}}) {
-
-			if (defined ${$probe->{'arrays'}}{$ac_id}->dbID()) {
-				$array_hashes{$ac_id} = $probe->{'arrays'}{$ac_id};
-			}
-		}
-
-		if ( ! %array_hashes ) {
-			warning('Probes need attached arrays to be stored in the database');
-			next PROBE;
-		}
-
-		# Insert separate entry (with same oligo_probe_id) in oligo_probe
-		# for each array/array_chip the probe is on
-		my $dbID;
-
-		foreach $ac_id (keys %array_hashes) {			
-			my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
-
-			if (defined $dbID) {
-				# Probe we've seen already
-				$sth = $self->prepare("
-					INSERT INTO oligo_probe
-					( oligo_probe_id, oligo_probe_set_id, name, length, array_chip_id, class )
-					VALUES (?, ?, ?, ?, ?, ?)
-				");
-				
-				$sth->bind_param(1, $dbID,                                                     SQL_INTEGER);
-				$sth->bind_param(2, $ps_id,                                                    SQL_INTEGER);
-				$sth->bind_param(3, $probe->get_probename($array_hashes{$ac_id}->name()),    SQL_VARCHAR);
-				$sth->bind_param(4, $probe->length(),                                          SQL_INTEGER);
-				$sth->bind_param(5, $ac_id,                                                    SQL_INTEGER);
-				$sth->bind_param(6, $probe->class(),                                           SQL_VARCHAR);
-				$sth->execute();
-			} else {
-				# New probe
-				$sth = $self->prepare("
+    throw('Probes need attached arrays to be stored in the database') if ( ! %array_hashes );
+	
+    # Insert separate entry (with same oligo_probe_id) in oligo_probe
+    # for each array/array_chip the probe is on
+    foreach $ac_id (keys %array_hashes) {			
+      my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
+      
+      if (defined $dbID) {
+	# Probe we've seen already
+	$sth = $self->prepare("INSERT INTO oligo_probe
+                             ( oligo_probe_id, oligo_probe_set_id, name, length, array_chip_id, class )
+			     VALUES (?, ?, ?, ?, ?, ?)
+			    ");
+	
+	$sth->bind_param(1, $dbID,                                                     SQL_INTEGER);
+	$sth->bind_param(2, $ps_id,                                                    SQL_INTEGER);
+	$sth->bind_param(3, $probe->get_probename($array_hashes{$ac_id}->name()),    SQL_VARCHAR);
+	$sth->bind_param(4, $probe->length(),                                          SQL_INTEGER);
+	$sth->bind_param(5, $ac_id,                                                    SQL_INTEGER);
+	$sth->bind_param(6, $probe->class(),                                           SQL_VARCHAR);
+	$sth->execute();
+      } else {
+	# New probe
+	$sth = $self->prepare("
 					INSERT INTO oligo_probe
 					( oligo_probe_set_id, name, length, array_chip_id, class )
 					VALUES (?, ?, ?, ?, ?)
 				");
+	
+	$sth->bind_param(1, $ps_id,                                                    SQL_INTEGER);
+	$sth->bind_param(2, $probe->get_probename($array_hashes{$ac_id}->name()),    SQL_VARCHAR);
+	$sth->bind_param(3, $probe->length(),                                          SQL_INTEGER);
+	$sth->bind_param(4, $ac_id,                                                    SQL_INTEGER);
+	$sth->bind_param(5, $probe->class(),                                           SQL_VARCHAR);
+	
+	$sth->execute();
+	$dbID = $sth->{'mysql_insertid'};
+	$probe->dbID($dbID);
+	$probe->adaptor($self);
+      }
+    }
+  }
 
-				$sth->bind_param(1, $ps_id,                                                    SQL_INTEGER);
-				$sth->bind_param(2, $probe->get_probename($array_hashes{$ac_id}->name()),    SQL_VARCHAR);
-				$sth->bind_param(3, $probe->length(),                                          SQL_INTEGER);
-				$sth->bind_param(4, $ac_id,                                                    SQL_INTEGER);
-				$sth->bind_param(5, $probe->class(),                                           SQL_VARCHAR);
+  return \@probes;
 
-			
-				$sth->execute();
-				$dbID = $sth->{'mysql_insertid'};
-				$probe->dbID($dbID);
-				$probe->adaptor($self);
-			}
-		}
-	}
 }
 
 =head2 list_dbIDs

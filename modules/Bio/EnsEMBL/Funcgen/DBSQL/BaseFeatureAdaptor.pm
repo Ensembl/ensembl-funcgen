@@ -35,7 +35,6 @@ use strict;
 
 
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
-#use Bio::EnsEMBL::DBSQL::BaseAdaptor;#?
 use Bio::EnsEMBL::Utils::Cache;
 use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
@@ -105,6 +104,7 @@ sub fetch_all_by_Slice_constraint {
   # Hap/PAR support: retrieve normalized 'non-symlinked' slices
   my @proj = @{$sa->fetch_normalized_slice_projection($slice)};
 
+
   if(@proj == 0) {
     throw('Could not retrieve normalized Slices. Database contains ' .
           'incorrect assembly_exception information.');
@@ -118,7 +118,12 @@ sub fetch_all_by_Slice_constraint {
 
   my $sr_id = $slice->get_seq_region_id();
 
+
+
   @proj = grep { $_->to_Slice->get_seq_region_id() != $sr_id } @proj;
+
+
+
 
   my $segment = bless([1,$slice->length(),$slice ],
                       'Bio::EnsEMBL::ProjectionSegment');
@@ -135,11 +140,12 @@ sub fetch_all_by_Slice_constraint {
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
 
+  print "Fetch by Slice con for projs @proj\n";
+
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
     my $offset = $seg->from_start();
     my $seg_slice  = $seg->to_Slice();
-
     my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS
 
     # if this was a symlinked slice offset the feature coordinates as needed
@@ -262,8 +268,171 @@ sub _pre_store {
 }
 
 
+#This is causing problems with remapping
+
+=pod
+
+sub _slice_fetch {
+	my $self = shift;
+	my $slice = shift;
+	my $orig_constraint = shift;
+	
+	my $slice_start  = $slice->start();
+	my $slice_end    = $slice->end();
+	my $slice_strand = $slice->strand();
+	my $slice_cs     = $slice->coord_system();
+	my $slice_seq_region = $slice->seq_region_name();
+	
+	#Need to get schema/data.version here from meta
+	
+	
+	
+	#get the synonym and name of the primary_table
+	my @tabs = $self->_tables;
+	my ($tab_name, $tab_syn) = @{$tabs[0]};
+	
+	#find out what coordinate systems the features are in
+	my $mcc = $self->db->get_MetaCoordContainer();
+	
+	#reimplement and restrict to schema_build????????????????????????????????
+	#This will select for all schema_builds
+	#Should really restrict here, do below to avoid copying another module
+	#or should we really do it in the MCC to enable other usage?
+	my @feat_css = @{$mcc->fetch_all_CoordSystems_by_feature_type($tab_name)};
+
+print "Doing fetch for type $tab_name using cs's @feat_css\n";
+
+	
+	my $asma = $self->db->get_AssemblyMapperAdaptor();
+	my @features;
+	#warn "jere are $self, @feat_css\n";
+
+	# fetch the features from each coordinate system they are stored in
+  COORD_SYSTEM: foreach my $feat_cs (@feat_css) {
+		my $mapper;
+		my @coords;
+		my @ids;
+		
+		
 
 
+		if($feat_cs->equals($slice_cs)) {#this now checks schema_build
+			# no mapping is required if this is the same coord system
+			
+			my $max_len = $self->_max_feature_length() ||
+			  $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
+			#should need to change this as we should have identified the correct EFG cs
+		
+			my $constraint = $orig_constraint;
+			
+			my $sr_id;
+			if( $slice->adaptor() ) {
+				$sr_id = $slice->adaptor()->get_seq_region_id($slice);
+			} else {
+				$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+			}
+	
+
+			
+
+		
+			$constraint .= " AND " if($constraint);
+			$constraint .=
+			  "${tab_syn}.seq_region_id = $sr_id AND " .
+				"${tab_syn}.seq_region_start <= $slice_end AND " .
+				  "${tab_syn}.seq_region_end >= $slice_start";
+			
+
+			#ensure correct coord_sys mapped to schema_build in $feat_cs->equals above
+			$constraint .= " AND ${tab_syn}.coord_system_id = ".$feat_cs->dbID();
+
+
+			if($max_len) {
+				my $min_start = $slice_start - $max_len;
+				$constraint .=
+				  " AND ${tab_syn}.seq_region_start >= $min_start";
+			}
+			
+  
+			my $fs = $self->generic_fetch($constraint,undef,$slice);
+						
+			# features may still have to have coordinates made relative to slice
+			# start
+			$fs = _remap($fs, $mapper, $slice);
+			
+			push @features, @$fs;
+		} else {
+			
+			warn("Not yet implemented mapper for core to EFG DB");
+			next;
+			
+			$mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
+			
+			next unless defined $mapper;
+			
+			# Get list of coordinates and corresponding internal ids for
+			# regions the slice spans
+			@coords = $mapper->map($slice_seq_region, $slice_start, $slice_end,
+								   $slice_strand, $slice_cs);
+			
+			@coords = grep {!$_->isa('Bio::EnsEMBL::Mapper::Gap')} @coords;
+			
+			next COORD_SYSTEM if(!@coords);
+			
+			@ids = map {$_->id()} @coords;
+			@ids = @{$asma->seq_regions_to_ids($feat_cs, \@ids)};
+			
+			# When regions are large and only partially spanned by slice
+			# it is faster to to limit the query with start and end constraints.
+			# Take simple approach: use regional constraints if there are less
+			# than a specific number of regions covered.
+			
+			if(@coords > $MAX_SPLIT_QUERY_SEQ_REGIONS) {
+				my $constraint = $orig_constraint;
+				my $id_str = join(',', @ids);
+				$constraint .= " AND " if($constraint);
+				$constraint .= "${tab_syn}.seq_region_id IN ($id_str)";
+				
+				my $fs = $self->generic_fetch($constraint, $mapper, $slice);
+			
+				$fs = _remap($fs, $mapper, $slice);
+			
+				push @features, @$fs;
+
+			} else {
+				# do multiple split queries using start / end constraints
+				
+				my $max_len = $self->_max_feature_length() ||
+				  $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,
+																	 $tab_name);
+				my $len = @coords;
+				for(my $i = 0; $i < $len; $i++) {
+					my $constraint = $orig_constraint;
+					$constraint .= " AND " if($constraint);
+					$constraint .=
+					  "${tab_syn}.seq_region_id = "     . $ids[$i] . " AND " .
+						"${tab_syn}.seq_region_start <= " . $coords[$i]->end() . " AND ".
+						  "${tab_syn}.seq_region_end >= "   . $coords[$i]->start();
+					
+					if($max_len) {
+						my $min_start = $coords[$i]->start() - $max_len;
+						$constraint .=
+						  " AND ${tab_syn}.seq_region_start >= $min_start";
+					}
+					
+					my $fs = $self->generic_fetch($constraint,$mapper,$slice);
+				
+					$fs = _remap($fs, $mapper, $slice);
+				
+					push @features, @$fs;
+				}
+			}
+		}
+	} #COORD system loop
+
+	return \@features;
+}
+=cut
 
 1;
 

@@ -5,7 +5,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::OligoFeature - A module to represent an oligonucleotide probe's
+Bio::EnsEMBL::OligoFeature - A module to represent an oligonucleotide probe
 genomic mapping.
 
 =head1 SYNOPSIS
@@ -81,12 +81,12 @@ use vars qw(@ISA);
         Database adaptor.
   Example    : my $feature = Bio::EnsEMBL::Funcgen::OligoFeature->new(
 				   -PROBE         => $probe,
-				   -MISMATCHCOUNT => 0,
+				   -MISMATCHCOUNT => 0,#remove?
 				   -SLICE         => $chr_1_slice,
 				   -START         => 1_000_000,
 				   -END           => 1_000_024,
 				   -STRAND        => -1,
-#-ANALYSIS?
+#-ANALYSIS?CIGARLINE
 			   ); 
   Description: Constructor for OligoFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::OligoFeature
@@ -171,17 +171,44 @@ sub probeset {
   Returntype : int
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : High Risk
 
 =cut
 
 sub mismatchcount {
     my $self = shift;
 	
+
+    #replace with dynamic check of cigarline?
+
     $self->{'mismatchcount'} = shift if @_;
 	
     return $self->{'mismatchcount'};
 }
+
+
+=head2 cigar_line
+
+  Arg [1]    : str - Cigar line alignment annotation
+  Example    : my $cg = $feature->cigar_line();
+  Description: Getter and setter for number of the cigar line attribute for this feature.
+  Returntype : str
+  Exceptions : None
+  Caller     : General
+  Status     : High Risk
+
+=cut
+
+sub cigar_line {
+  my $self = shift;
+  
+  $self->{'cigar_line'} = shift if @_;
+	
+  return $self->{'cigar_line'};
+}
+
+
+
 
 
 =head2 coord_system_id

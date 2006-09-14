@@ -73,7 +73,7 @@ sub new{
     my ($caller, %args) = @_;
 
     my ($self, %attrdata, $attrname, $argname, $db);
-	my $reg = "Bio::EnsEMBL::Registry";
+    my $reg = "Bio::EnsEMBL::Registry";
 
     my $class = ref($caller) || $caller;
 
@@ -101,6 +101,12 @@ sub new{
 				 host       => undef,
 				 user       => undef,
 				 port       => undef,
+
+
+		 #vars to handle array chip sets
+		 #no methods for these as we're replacing with a meta file or something
+		 array_set => 0,
+		 array_name => undef,
 				 
 
 				 #Need to separate pipeline vars/methods from true Experiment methods?
@@ -122,8 +128,9 @@ sub new{
 				 achips          => undef,
 				 channels        => {},#?
 
-				 #Other
-				 db    => undef,#this should really be an ExperimentAdaptor, ut it is the db at the moment
+		 #Other
+		 db    => undef,#this should really be an ExperimentAdaptor, but it is the db at the moment?
+		 dbname => undef,#to over-ride autogeneration of eFG dbname
 				 #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
 				 reg_config    => (-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef,
 			
@@ -171,28 +178,32 @@ sub new{
 
 		#configure dnadb
 		#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+	
 		if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build())){
-			$db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-													  -host => 'ensembldb.ensembl.org',
-													  -user => 'anonymous',
-													  -dbname => $self->species()."_core_".$self->data_version(),
-													  -species => $self->species(),
-													 );
+		  $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+							    -host => 'ensembldb.ensembl.org',
+							    -user => 'anonymous',
+							    -dbname => $self->species()."_core_".$self->data_version(),
+							    -species => $self->species(),
+							   );
 		}else{
-			$db = $self->db->dnadb();
+		  $db = $self->db->dnadb();
 		}
+
+
+		$self->{'dbname'} ||= $self->species()."_core_".$self->data_version();
 
 		#generate and register DB with local connection settings
 		$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-														   -user => $self->user(),
-														   -host => $self->host(),
-														   -port => $self->port(),
-														   -pass => $self->pass(),
-														   -dbname => $self->species()."_funcgen_".$self->data_version(),
-														   -dnadb  => $db,
-														   -species => $self->species(),
-														  );
+								   -user => $self->user(),
+								   -host => $self->host(),
+								   -port => $self->port(),
+								   -pass => $self->pass(),
+								   #we need to pass dbname else we can use non-standard dbs
+								   -dbname => $self->dbname(),
+								   -dnadb  => $db,
+								   -species => $self->species(),
+								  );
 
 
 		#Redefine Fungen DB in registry
@@ -220,68 +231,70 @@ sub new{
 #Make all other register methods private, so we don't bypass the previously imported exp check
 
 sub init_import{
-	my ($self) = shift;
+  my ($self) = shift;
 
-
-	#Need to import to egroup here if not present and name, location & contact specified
-	$self->validate_group();
-
-
-
-	
-	#fetch experiment
-	#if recovery and ! experiment throw 
-	#else if ! experiment new and store
-
-	#rename instance to name? Do we need this composite fetch?
-	my $exp_adaptor = $self->db->get_ExperimentAdaptor();
-	my $exp = $exp_adaptor->fetch_by_name($self->name());#, $self->group());
-
-	#should we not just do store here, as this will return the experiment if it has already been stored?
-
-
-
-	if ($self->recovery() && (! $exp)){
-		throw("No previously stored experiment defined with recovery mode, Need to implement recovery mode"); 
-	}
-	elsif((! $self->recovery()) && $exp){
-		throw("Your experiment name is already registered in the database, please choose a different \"name\", this will require renaming you input directory, or specify -recover if you are working with a failed import. Or specify recovery?");
-		#can we skip this and store, and then check in register experiment if it is already stored then throw if not recovery
-	}
-	else{
-		$exp = Bio::EnsEMBL::Funcgen::Experiment->new(
-													  -GROUP => $self->group(),
-													  -NAME  => $self->name(),
-													  -DATE  => &get_date("date", $self->get_def("chip_file")),
-													  -PRIMARY_DESIGN_TYPE => $self->design_type(),
-													  -DESCRIPTION => $self->description(),
-													  -ADAPTOR => $self->db->get_ExperimentAdaptor(),
-													 );
-
-		($exp) =  @{$exp_adaptor->store($exp)};	#skip this bit?	
-	}
-
-
-	$self->experiment($exp);
-
-	#Should we separate path on group here too, so we can have a dev/test group?
-
-	#Set and validate input dir
-	$self->{'input_dir'} = $self->get_def('input_dir') if(! defined $self->get_dir("input"));
-	$self->throw("input_dir is not defined or does not exist") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
-
-	if(! defined $self->get_dir("output")){
-		$self->{'output_dir'} = $self->get_dir("data")."/".$self->vendor()."/".$self->name();
-		mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
-	}
   
-	$self->create_output_dirs("import", "norm");
+  #Need to import to egroup here if not present and name, location & contact specified
+  $self->validate_group();
 
-	#remove and add specific report, this is catchig some Root stuff
-	$self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
+
+
 	
+  #fetch experiment
+  #if recovery and ! experiment throw 
+  #else if ! experiment new and store
+  
+  #rename instance to name? Do we need this composite fetch?
+  my $exp_adaptor = $self->db->get_ExperimentAdaptor();
+  
+  #print "XXXXXXXXXX featching by name ".$self->name()."\n";
 
-	return;
+  my $exp = $exp_adaptor->fetch_by_name($self->name());#, $self->group());
+  #should we not just do store here, as this will return the experiment if it has already been stored?
+
+  if ($self->recovery() && (! $exp)){
+    warn("No previously stored experiment defined with recovery mode, Importing as normal"); 
+  }
+
+  if((! $self->recovery()) && $exp){
+    throw("Your experiment name is already registered in the database, please choose a different \"name\", this will require renaming you input directory, or specify -recover if you are working with a failed import. Or specify recovery?");
+    #can we skip this and store, and then check in register experiment if it is already stored then throw if not recovery
+  }
+  else{#niether or both?? or recover and exp
+ 
+    
+    $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
+						  -GROUP => $self->group(),
+						  -NAME  => $self->name(),
+						  -DATE  => &get_date("date", $self->get_def("chip_file")),
+						  -PRIMARY_DESIGN_TYPE => $self->design_type(),
+						  -DESCRIPTION => $self->description(),
+						  -ADAPTOR => $self->db->get_ExperimentAdaptor(),
+						 );
+    
+    ($exp) =  @{$exp_adaptor->store($exp)};	#skip this bit?	
+  }
+
+  
+  $self->experiment($exp);
+  
+  #Should we separate path on group here too, so we can have a dev/test group?
+  
+  #Set and validate input dir
+  $self->{'input_dir'} = $self->get_def('input_dir') if(! defined $self->get_dir("input"));
+  $self->throw("input_dir is not defined or does not exist") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
+  
+  if(! defined $self->get_dir("output")){
+    $self->{'output_dir'} = $self->get_dir("data")."/".$self->vendor()."/".$self->name();
+    mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
+  }
+  
+  $self->create_output_dirs("import", "norm");
+  
+  #remove and add specific report, this is catchig some Root stuff
+  $self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
+  
+  return;
 }
 
 
@@ -393,6 +406,16 @@ sub group{
 	}
 
 	return $self->{'group'};
+}
+
+sub dbname{
+  my ($self) = shift;	
+  
+  if(@_){
+    $self->{'dbname'} = shift;
+  }
+  
+  return $self->{'dbname'};
 }
 
 sub recovery{
@@ -561,10 +584,11 @@ sub register_experiment{
 	#we need to make this more stringent, maybe we can do a caller in each method to make sure it is register experiment calling each method
 
 	$self->read_data("array");#rename this or next?
+
 	#$self->import_experiment();#imports experiment and chip data
 	$self->read_data("probe");
 	$self->read_data("results");
-	$self->import_probe_data();
+	#$self->import_probe_data();
 	$self->import_results("import");
 
 	#Need to be able to run this separately, so we can normalise previously imported sets with different methods
@@ -585,47 +609,52 @@ sub register_experiment{
 #native data format may not map to these methods directly, so may need to call previous method if required data not defined
 
 sub import_probe_data{
-	my $self = shift;
-
-	#This has been genericised for multiple chips, currently only one/data set with Nimblegen
-	#would need to write different files for each chip and store the file names
-
-	#Need to cycle through array chip getting status of achip e.g. REGISTERED, IMPORTED?
-	#This is a array:array_chip i.e. 1 to 1 relationship at the moment
-	#Cannot use array->array_chips, as this may bring back more than is valid for this experiment
-	
-	
-
-
-	foreach my $achip_id(keys %{$self->get_data('achips')}){
-		#would need to get chip specific paths here e.g. probe_set.chip_design_id.txt
-		#how are we going to validate the probe information?
-		#Currently assuming data is correct and complete if we have a pre-registered array_chip
-
-		
-
-		if(! $self->arrays()->[0]->get_achip_status($achip_id, "IMPORTED")){
-			$self->db->load_table_data("oligo_probe_set",  $self->get_dir("import")."/probe_set.txt");
-			$self->db->load_table_data("oligo_probe",  $self->get_dir("import")."/probe.txt");
-			$self->db->load_table_data("oligo_feature",  $self->get_dir("import")."/probe_feature.txt");
-
-			#error catch here!! DO not want to set imported if we've not imported properly
-			$self->db->set_status('array_chip', $self->achip_data($achip_id, 'dbID'), "IMPORTED");
-			
-			
-		}else{
-			$self->log("Probe(set & feature) data for array_chip already IMPORTED");
-		}
-	}
-
-	return;
+  my $self = shift;
+  
+  #This has been genericised for multiple chips, currently only one/data set with Nimblegen
+  #would need to write different files for each chip and store the file names
+  
+  #Need to cycle through array chip getting status of achip e.g. REGISTERED, IMPORTED?
+  #This is a array:array_chip i.e. 1 to 1 relationship at the moment
+  #Cannot use array->array_chips, as this may bring back more than is valid for this experiment
+  
+  
+  
+  #foreach my $achip_id(keys %{$self->get_data('achips')}){
+  foreach my $design_id(@{$self->arrays->[0]->get_design_ids()}){
+    
+    #would need to get chip specific paths here e.g. probe_set.chip_design_id.txt
+    #how are we going to validate the probe information?
+    #Currently assuming data is correct and complete if we have a pre-registered array_chip
+    
+    if(! $self->arrays()->[0]->get_achip_status($design_id, "IMPORTED")){
+      $self->db->load_table_data("oligo_probe_set",  $self->get_dir("import")."/probe_set.txt");
+      $self->db->load_table_data("oligo_probe",  $self->get_dir("import")."/probe.txt");
+      $self->db->load_table_data("oligo_feature",  $self->get_dir("import")."/probe_feature.txt");
+      
+      #error catch here!! DO not want to set imported if we've not imported properly
+      $self->db->set_status('array_chip', $self->achip_data($design_id, 'dbID'), "IMPORTED");
+    }else{
+      $self->log("Probe(set & feature) data for array_chip already IMPORTED");
+    }
+  }
+  
+  return;
 }
 
 sub import_results{
-	my ($self, $source_dir) = @_;
+  my ($self, $source_dir) = @_;
+  
+  foreach my $array(@{$self->arrays()}){
 
-	$self->db->load_table_data("result",  $self->get_dir($source_dir)."/result.txt");
-	return;
+    foreach my $design_id(@{$array->get_design_ids()}){
+      my %ac = %{$array->get_array_chip_by_design_id($design_id)};
+      print "Loading reults for ".$ac{'name'}."\n";
+      $self->db->load_table_data("result",  $self->get_dir($source_dir)."/result.".$ac{'name'}.".txt");
+    }
+  }
+
+  return;
 }
 
 sub read_data{
@@ -701,109 +730,110 @@ sub get_chr_seq_region_id{
 #Need to have analysis set up script for all standard analyses.
 
 sub vsn_norm{
-	my $self = shift;
-	#This currently normalises a single two colour array at a time
+  my $self = shift;
+  #This currently normalises a single two colour array at a time
 	
-	my @dbids;
-	my $aa = $self->db->get_AnalysisAdaptor();
-	my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
-	my $va_id = $aa->fetch_by_logic_name("VSN_GLOG")->dbID();
-	my $R_file = $self->get_dir("norm")."/norm.R";
-	my $outfile = $self->get_dir("norm")."/result.txt";
-	my $r_cmd = "R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+  my @dbids;
+  my $aa = $self->db->get_AnalysisAdaptor();
+  my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
+  my $va_id = $aa->fetch_by_logic_name("VSN_GLOG")->dbID();
+  my $R_file = $self->get_dir("norm")."/norm.R";
+  my $outfile = $self->get_dir("norm")."/result.txt";
+  my $r_cmd = "R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+  
+  unlink($outfile);#Need to do this as we're appending in the loop
+  
+  #setup qurey
+  #scipen is to prevent probe_ids being converted to exponents
+  my $query = "options(scipen=20);library(vsn);library(RMySQL);".
+    "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
+  $query .= (defined $self->pass()) ? ", pass=\"".$self->pass()."\")\n" : ")\n";
+  
+  #currently having separate session fo
+  
+  
+  
+  #This is now retrieving a ExperimentalChip obj
+  
+  foreach my $echip(values %{$self->get_data("echips")}){
+    print "Performing VSN for ".$echip->unique_id()."\n";
+    @dbids = ();
 
-	unlink($outfile);#Need to do this as we're appending in the loop
-
-	#setup qurey
-	#scipen is to prevent probe_ids being converted to exponents
-	my $query = "options(scipen=20);library(vsn);library(RMySQL);".
-		  "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
-	$query .= (defined $self->pass()) ? ", pass=\"".$self->pass()."\")\n" : ")\n";
-
-	#currently having separate session fo
-
-
-
-	#This is now retrieving a ExperimentalChip obj
-
-	foreach my $echip(values %{$self->get_data("echips")}){	
-		@dbids = ();
-
-		foreach my $chan(@{$echip->get_Channels()}){
-
-			if($chan->type() eq "EXPERIMENTAL"){
-				push @dbids, $chan->dbID();
-			}else{
-				unshift @dbids, $chan->dbID();
-			}
-		}
-
-
-		throw("vsn_norm does not accomodate more than 2 channels") if scalar(@dbids > 2);
-
-		#should do some of this with maps?
-		#HARDCODED metric ID for raw data as one
-
-		#Need to get total and experimental here and set db_id accordingly
-		
-
-		$query .= "c1<-dbGetQuery(con, 'select oligo_probe_id, score as ${dbids[0]}_score from result where table_name=\"channel\" and table_id=${dbids[0]} and analysis_id=${ra_id}')\n";
-		$query .= "c2<-dbGetQuery(con, 'select oligo_probe_id, score as ${dbids[1]}_score from result where table_name=\"channel\" and table_id=${dbids[1]} and analysis_id=${ra_id}')\n";
-
-		#should do some sorting here?  Probes are in same order anyway
-		#does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
-		$query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";		
-		#variance stabilise
-		$query .= "vsn_df<-vsn(raw_df)\n";
-		
-	
-		#do some more calcs here and print report?
-		#fold change exponentiate? See VSN docs
-		#should do someplot's of raw and glog and save here?
-		#set log func and params
-		#$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
-		#plot
-		#$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
-		#  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
-		#FAILS ON RAW PLOT!!
-		#par(mfrow = c(1, 2)) 
-		#> meanSdPlot(nkid, ranks = TRUE) 
-		#> meanSdPlot(nkid, ranks = FALSE) 
-		
-
-		#Now create table structure with glog values(diffs)
-		#3 sig dec places on scores(doesn't work?!)
-		$query .= "glog_df<-cbind(rep(\"\", length(c1[\"oligo_probe_id\"])), c1[\"oligo_probe_id\"], format(exprs(vsn_df[,2]) - exprs(vsn_df[,1]), nsmall=3), rep(\"${va_id}\", length(c1[\"oligo_probe_id\"])), rep(\"".$echip->dbID()."\", length(c1[\"oligo_probe_id\"])),   rep(\"experimental_chip\", length(c1[\"oligo_probe_id\"])))\n";
-		
-		
-		#load back into DB
-		#c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
-		#may want to use safe.write here
-		#dbWriteTable(con, "result", c3results, append=TRUE)
-		#dbWriteTable returns true but does not load any data into table!!!
-
-		$query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
-
-		warn("Need to implement R DB import\n");
-
-		#tidy up here?? 
-	}
-
-
-	#or here, specified no save so no data will be dumped
-	$query .= "q();";
-
-
-	#This is giving duplicates for probe_ids 2 & 3 for metric_id =2 i.e. vsn'd data.
-	#duplicates are not present in import file!!!!!!!!!!!!!!!!!!!!
-
-	open(RFILE, ">$R_file") || die("Cannot open $R_file for writing");
-	print RFILE $query;
-	close(RFILE);
-	
-	system($r_cmd) == 0 or throw("R normalisation failed with error code $? ($R_file)");
-
-	return;
+    foreach my $chan(@{$echip->get_Channels()}){
+      
+      if($chan->type() eq "EXPERIMENTAL"){
+	push @dbids, $chan->dbID();
+      }else{
+	unshift @dbids, $chan->dbID();
+      }
+    }
+    
+    
+    throw("vsn_norm does not accomodate more than 2 channels") if scalar(@dbids > 2);
+    
+    #should do some of this with maps?
+    #HARDCODED metric ID for raw data as one
+    
+    #Need to get total and experimental here and set db_id accordingly
+    
+    
+    $query .= "c1<-dbGetQuery(con, 'select oligo_probe_id, score as ${dbids[0]}_score from result where table_name=\"channel\" and table_id=${dbids[0]} and analysis_id=${ra_id}')\n";
+    $query .= "c2<-dbGetQuery(con, 'select oligo_probe_id, score as ${dbids[1]}_score from result where table_name=\"channel\" and table_id=${dbids[1]} and analysis_id=${ra_id}')\n";
+    
+    #should do some sorting here?  Probes are in same order anyway
+    #does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
+    $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";		
+    #variance stabilise
+    $query .= "vsn_df<-vsn(raw_df)\n";
+    
+    
+    #do some more calcs here and print report?
+    #fold change exponentiate? See VSN docs
+    #should do someplot's of raw and glog and save here?
+    #set log func and params
+    #$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
+    #plot
+    #$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
+    #  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
+    #FAILS ON RAW PLOT!!
+    #par(mfrow = c(1, 2)) 
+    #> meanSdPlot(nkid, ranks = TRUE) 
+    #> meanSdPlot(nkid, ranks = FALSE) 
+    
+    
+    #Now create table structure with glog values(diffs)
+    #3 sig dec places on scores(doesn't work?!)
+    $query .= "glog_df<-cbind(rep(\"\", length(c1[\"oligo_probe_id\"])), c1[\"oligo_probe_id\"], format(exprs(vsn_df[,2]) - exprs(vsn_df[,1]), nsmall=3), rep(\"${va_id}\", length(c1[\"oligo_probe_id\"])), rep(\"".$echip->dbID()."\", length(c1[\"oligo_probe_id\"])),   rep(\"experimental_chip\", length(c1[\"oligo_probe_id\"])))\n";
+    
+    
+    #load back into DB
+    #c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
+    #may want to use safe.write here
+    #dbWriteTable(con, "result", c3results, append=TRUE)
+    #dbWriteTable returns true but does not load any data into table!!!
+    
+    $query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+    
+    warn("Need to implement R DB import\n");
+    
+    #tidy up here?? 
+  }
+  
+  
+  #or here, specified no save so no data will be dumped
+  $query .= "q();";
+  
+  
+  #This is giving duplicates for probe_ids 2 & 3 for metric_id =2 i.e. vsn'd data.
+  #duplicates are not present in import file!!!!!!!!!!!!!!!!!!!!
+  
+  open(RFILE, ">$R_file") || die("Cannot open $R_file for writing");
+  print RFILE $query;
+  close(RFILE);
+  
+  system($r_cmd) == 0 or throw("R normalisation failed with error code $? ($R_file)");
+  
+  return;
 }
 
 
