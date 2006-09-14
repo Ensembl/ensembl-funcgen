@@ -847,7 +847,7 @@ sub read_results_data{
   $self->log("Parsing results(".localtime().")...");
   
    
-  my ($i, $fh, $line, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
+  my ($i, $fh, $tmp, $line, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
   my $r_string = "";
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
   #should check here if defined
@@ -890,7 +890,7 @@ sub read_results_data{
 	  foreach my $pid(@{$self->get_probe_ids_by_name($data[$probe_elem])}){
 
 	    #Need to change this get_channel call?
-	    my $tmp =~ s/$header[$i]_//;
+	    ($tmp = $header[$i]) =~ s/1h_//;
 
 	    $r_string .= "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
 	  }

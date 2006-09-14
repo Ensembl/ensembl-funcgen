@@ -161,7 +161,7 @@ close(IN);
 $file = $input_dir."/${design_name}.ndf";#He
 
 open(IN, $file) || die ("Cannot open file:\t$file");
-$file = $output_dir."/probe.fasta";
+$file = $output_dir."/${design_name}_probe.fasta";
 open(FASTA, ">$file") || die ("Cannot open file:\t$file");
 
 my ($xref_id, $seq, $probe_id, @features);
@@ -181,7 +181,8 @@ while($line = <IN>){
 
 	#print "@tmp\n";
 
-	next if $tmp[11] ne "experimental";
+	#next if $tmp[11] ne "experimental";
+	next if $tmp[1] !~ /BLOCK1/;
 	#5 & 12
 
 	###PROBE FEATURES

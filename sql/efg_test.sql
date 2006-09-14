@@ -459,6 +459,7 @@ CREATE TABLE `analysis_description` (
   `analysis_id` int(10) unsigned NOT NULL default '0',
   `description` text,
   `display_label` varchar(255) default NULL,
+  `displayable` tinyint(1) NOT NULL default '1',
   KEY `analysis_idx` (`analysis_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
