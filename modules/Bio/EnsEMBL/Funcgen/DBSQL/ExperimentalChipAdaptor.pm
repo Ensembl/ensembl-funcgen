@@ -99,7 +99,9 @@ sub fetch_contigsets_by_experiment_dbID {
     my $e_dbid = shift;
 
     my @tracksets;
-
+    my @hack1 = ("H3kgac-1");
+    my @hack2 = ("H3kgac-2");
+    #46092 + 46078; 46082 + 46075
 
     #what are we going to return? arrayref to list of arrays of echips?
     #where do we get set name from?
@@ -108,10 +110,30 @@ sub fetch_contigsets_by_experiment_dbID {
 
     #differentiating purely on chip uid at present
     
+    #This is currently a hack!!
+    #Need ti implement contig_set_id in experimental_chip
 
+    print "\nfetching echips for experiment $e_dbid for ".$self->db->species()."  xxx\n";
+    
     foreach my $echip (@{$self->fetch_all_by_experiment_dbID($e_dbid)}){
-      my @tmp = ($echip->unique_id(), $echip);
-      push @tracksets, \@tmp;
+         
+      if($self->db->species() eq "homo_sapiens"){
+
+	#($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078") ? push @hack1, $echip : push @hack2, $echip; 
+
+	if($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078"){
+	  push @hack1, $echip;
+	}else{
+	  push @hack2, $echip;
+	}
+      }else{
+	my @tmp = ($echip->unique_id(), $echip);
+	push @tracksets, \@tmp;
+      }
+    }
+
+    if($self->db->species() eq "homo_sapiens"){
+      @tracksets = (\@hack1, \@hack2);
     }
 
     return \@tracksets;

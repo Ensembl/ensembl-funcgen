@@ -410,6 +410,7 @@ sub read_probe_data{
 	next;
       }
 
+   
 
       #THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
       #all out files are generic, but are we converting to adaptor store?
@@ -816,23 +817,26 @@ sub store_set_probes_features{
 sub get_probe_ids_by_name{
   my ($self, $name) = @_;
 
-  my (@op_ids);
+  #my (@op_ids);
 
   #Should only ever be one pid per probe per array per n array_chips
   #i.e. duplicate records per array chip with same pid
 
-  if(defined $self->{'_probe_map'}){
-    @op_ids = @{$self->{'_probe_map'}->{$name}};
-  }
-  else{#get from db
-    my $op= $self->db->get_OligoProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
-    
-    print "Got probe $op with dbid ".$op->dbID()."\n";
-    push @op_ids, $op->dbID();
+#  if((defined $self->{'_probe_map'}) && (defined $self->{'_probe_map'}->{$name})){
+#    #@op_ids = @{$self->{'_probe_map'}->{$name}};
+#  }
+#  else{#get from db
 
+  if((! defined $self->{'_probe_map'}) || (! defined $self->{'_probe_map'}->{$name})){ 
+    my $op = $self->db->get_OligoProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
+    #print "Got probe $op with dbid ".$op->dbID()."\n";
+    #push @op_ids, $op->dbID();
+    push @{$self->{'_probe_map'}{$name}}, $op->dbID();
   }
 
-  return \@op_ids;
+  #return \@op_ids;
+  return \@{$self->{'_probe_map'}->{$name}};
+  
 }
 
 sub read_results_data{
@@ -847,19 +851,29 @@ sub read_results_data{
   $self->log("Parsing results(".localtime().")...");
   
    
-  my ($i, $fh, $tmp, $line, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
-  my $r_string = "";
+  my ($i, $fh, $tmp, $line, $r_string, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
   #should check here if defined
   
   my $anal_id = $anal->dbID();
   
+
+  #as we're importing all echip result in parallel, there is no point in checking for IMPORTED?
+  #Or do we need to set flag for experiment or each chip and check somehow?
+  my $cnt = 0;
+
   foreach my $array(@{$self->arrays()}){
 
     @design_ids = @{$array->get_design_ids()};
    
     foreach my $design_id(@design_ids){
+     
       my %ac = %{$array->get_array_chip_by_design_id($design_id)};
+      $r_string = "";
+      warn("Reading/Importing results for $design_id\n");
+      my $r_out = open_file(">", $self->get_dir("import")."/result.".$ac{'name'}.".txt");
+
+
       $file_name = (scalar(@design_ids) > 1) ? $ac{'name'} : "All";  
       $fh = open_file("<", $self->get_def("results_dir")."/".$file_name."_pair.txt");
 
@@ -889,15 +903,36 @@ sub read_results_data{
 	  #multiple mappings????????????????????????????????????SHOULD ONLY HAVE ONE PID PER UNIQUE PROBE!!!!!
 	  foreach my $pid(@{$self->get_probe_ids_by_name($data[$probe_elem])}){
 
+	    $cnt ++;
+
 	    #Need to change this get_channel call?
 	    ($tmp = $header[$i]) =~ s/1h_//;
+
+	    #import directly here?
+	    #print $r_out "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
+
+	    #$self->db->insert_table_row("result", $pid, $data[$i], $anal_id, $self->get_channel($tmp)->dbID(), "channel");
+	    #Build multiple instert sql statement rather than executing once for each result?
+
 
 	    $r_string .= "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
 	  }
 	}
+
+
+	
+	if($cnt > 100000){
+	  $cnt = 0;
+	  print $r_out $r_string;
+	  $r_string ="";
+	  #could we fork here and import in the background?
+
+	}
+
+
       }
       
-      my $r_out = open_file(">", $self->get_dir("import")."/result.".$ac{'name'}.".txt");
+      #my $r_out = open_file(">", $self->get_dir("import")."/result.".$ac{'name'}.".txt");
       print $r_out $r_string;
       close($r_out);
     }

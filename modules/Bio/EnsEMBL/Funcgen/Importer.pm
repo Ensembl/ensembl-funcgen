@@ -292,7 +292,7 @@ sub init_import{
   $self->create_output_dirs("import", "norm");
   
   #remove and add specific report, this is catchig some Root stuff
-  $self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
+  #$self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
   
   return;
 }

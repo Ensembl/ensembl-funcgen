@@ -256,7 +256,7 @@ sub _objs_from_sth {
 	my $probe;
 	while ( $sth->fetch() ) {
 
-		warn("Need to sort array cacheing, have redundant cache!!");
+		#warn("Need to sort array cacheing, have redundant cache!!");
 		#This is nesting array and probeset objects in probe!
 		
 

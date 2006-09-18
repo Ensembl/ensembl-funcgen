@@ -11,7 +11,7 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-fasta\
 	-port 3362\
 	-host ecs2\
-	-dbname test_homo_sapiens_funcgen_40_36b\
+	-dbname test_homo_sapiens_funcgen_41_36b\
 	-array_set\
 	-array_name "2005-05-10_HG17Tiling_Set"\
 	-group efg\
