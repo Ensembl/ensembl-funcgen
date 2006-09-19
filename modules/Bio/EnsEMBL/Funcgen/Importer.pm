@@ -587,14 +587,13 @@ sub register_experiment{
 
 	#$self->import_experiment();#imports experiment and chip data
 	$self->read_data("probe");
-	$self->read_data("results");
-	#$self->import_probe_data();
-	$self->import_results("import");
+	#$self->read_data("results");
+	#$self->import_results("import");
 
 	#Need to be able to run this separately, so we can normalise previously imported sets with different methods
 	#should be able t do this without raw data files e.g. retrieve info from DB
 	my $norm_method = $self->norm_method();
-	$self->$norm_method;
+	#$self->$norm_method;
 	$self->import_results("norm");
 
 	return;
@@ -645,15 +644,20 @@ sub import_probe_data{
 sub import_results{
   my ($self, $source_dir) = @_;
   
-  foreach my $array(@{$self->arrays()}){
 
-    foreach my $design_id(@{$array->get_design_ids()}){
-      my %ac = %{$array->get_array_chip_by_design_id($design_id)};
-      print "Loading reults for ".$ac{'name'}."\n";
-      $self->db->load_table_data("result",  $self->get_dir($source_dir)."/result.".$ac{'name'}.".txt");
+  if($source_dir ne "norm"){
+    foreach my $array(@{$self->arrays()}){
+      
+      foreach my $design_id(@{$array->get_design_ids()}){
+	my %ac = %{$array->get_array_chip_by_design_id($design_id)};
+	print "Loading results for ".$ac{'name'}."\n";
+	$self->db->load_table_data("result",  $self->get_dir($source_dir)."/result.".$ac{'name'}.".txt");
+      }
     }
+  }else{
+    $self->db->load_table_data("result",  $self->get_dir($source_dir)."/result.txt");
   }
-
+  
   return;
 }
 
