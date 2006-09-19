@@ -140,7 +140,7 @@ sub fetch_all_by_Slice_constraint {
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
 
-  print "Fetch by Slice con for projs @proj\n";
+  #print "Fetch by Slice con for projs @proj\n";
 
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
@@ -300,8 +300,6 @@ sub _slice_fetch {
 	#or should we really do it in the MCC to enable other usage?
 	my @feat_css = @{$mcc->fetch_all_CoordSystems_by_feature_type($tab_name)};
 
-print "Doing fetch for type $tab_name using cs's @feat_css\n";
-
 	
 	my $asma = $self->db->get_AssemblyMapperAdaptor();
 	my @features;
@@ -313,12 +311,11 @@ print "Doing fetch for type $tab_name using cs's @feat_css\n";
 		my @coords;
 		my @ids;
 		
-		
-
 
 		if($feat_cs->equals($slice_cs)) {#this now checks schema_build
 			# no mapping is required if this is the same coord system
-			
+
+				
 			my $max_len = $self->_max_feature_length() ||
 			  $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
 			#should need to change this as we should have identified the correct EFG cs

@@ -232,7 +232,7 @@ sub analysis_id {
 
 =head2 feature_type_id
 
-  Args       : int - feature_type id
+  Args       : int - feature type id
   Example    : my $target_id = $feature->feature_type_id();
   Description: Getter/Setter for the feature_type_id attribute for this feature.
   Returntype : int

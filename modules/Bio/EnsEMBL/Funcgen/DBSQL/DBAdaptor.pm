@@ -229,49 +229,49 @@ sub _get_schema_build{
 #so we have to implement checks in non slice based feature calls to make sure we nest the correct dnadb adaptor
 
 sub get_SliceAdaptor{
-	my ($self, $cs_id) = @_;
+  my ($self, $cs_id) = @_;
 
 
-	#Need to add check if current cs_id refers to current dnadb
-
-	#extract this to a "validate_dnadb" method
-	#This will be called for each noon Slice based fetch method for each feature returned
-	#or should we group the fetch statements by coord system id and try and do it more efficiently
-
-	#is this "validate_coordsystem"?
-
-	#Can we cache the DNA DBAdaptors against the FG csis rather than doing this everytime?
-	#will this be too much memory overhead? Registry is already a cache, can we just reference the registry?
-
-	if($cs_id){
-		my $csa = $self->get_FGCoordSystemAdaptor();
-		my $fg_cs = $csa->fetch_by_dbID($cs_id);
-		my $schema_build = $fg_cs->schema_build();
-		#Get species here too
-		
-
-		if(( ! $self->dnadb()) || ($schema_build eq $self->_get_schema_build($self->dnadb()))){
-			#get from cs_id
-			#can we return direct from registry for older versions?
-			#best to generate directl as we may have only loaded the current DBs
-			#set dnadb here and return after block
-
-			my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-			  (						
-			   -host => "ensembldb.ensembl.org",
-			   -user => "anonymous",
-			   -dbname => $self->db->species()."_core_${schema_build}",
-			  );
-
-			$self->dnadb($dnadb);
-
-		}
-	}
-	else{
-		warn("No FGCoordSystem id passed. Getting SliceAdaptor from default dnadb\n");#stack trace this?
-	}
-
-	return $self->dnadb->get_SliceAdaptor();#this causes circular reference if dnadb not set i.e if this is generated from scratch without a dnadb rather than from the reg?????
+  #Need to add check if current cs_id refers to current dnadb
+  
+  #extract this to a "validate_dnadb" method
+  #This will be called for each noon Slice based fetch method for each feature returned
+  #or should we group the fetch statements by coord system id and try and do it more efficiently
+  
+  #is this "validate_coordsystem"?
+  
+  #Can we cache the DNA DBAdaptors against the FG csis rather than doing this everytime?
+  #will this be too much memory overhead? Registry is already a cache, can we just reference the registry?
+  
+  if($cs_id){
+    my $csa = $self->get_FGCoordSystemAdaptor();
+    my $fg_cs = $csa->fetch_by_dbID($cs_id);
+    my $schema_build = $fg_cs->schema_build();
+    #Get species here too
+    
+    
+    if(( ! $self->dnadb()) || ($schema_build eq $self->_get_schema_build($self->dnadb()))){
+      #get from cs_id
+      #can we return direct from registry for older versions?
+      #best to generate directl as we may have only loaded the current DBs
+      #set dnadb here and return after block
+      
+      my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+	(						
+	 -host => "ensembldb.ensembl.org",
+	 -user => "anonymous",
+	 -dbname => $self->db->species()."_core_${schema_build}",
+	);
+      
+      $self->dnadb($dnadb);
+      
+    }
+  }
+  else{
+    #warn("No FGCoordSystem id passed. Getting SliceAdaptor from default dnadb\n");#stack trace this?
+  }
+  
+  return $self->dnadb->get_SliceAdaptor();#this causes circular reference if dnadb not set i.e if this is generated from scratch without a dnadb rather than from the reg?????
 }
 
 
@@ -292,25 +292,26 @@ sub get_SliceAdaptor{
 
 
 sub dnadb { 
-	my $self = shift; 
+  my $self = shift; 
 
-	if(@_) { 
-		my $cs_name = $_[1] || 'chromosome';
+  if(@_) { 
+    my $cs_name = $_[1] || 'chromosome';
+	  
+    #print "adding $_[0]\n";
 
-		$reg->add_DNAAdaptor($self->species(),$self->group(),$_[0]->species(),$_[0]->group()); 
-
-		#set default coordsystem here, do we need to handle non-chromosome here
-		my $cs = $_[0]->get_CoordSystemAdaptor->fetch_by_name($cs_name);
-		#this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
-		#or shall we fetch/add all by name?
-
-		$self->get_FGCoordSystemAdaptor->validate_coord_system($cs);
-	}
-
-
-	warn("Need to test if dnadb is not set, else will get circular ref on SliceAdaptor call as default dnadb is self");
-
-	return $self->SUPER::dnadb(@_);
+    
+    $reg->add_DNAAdaptor($self->species(),$self->group(),$_[0]->species(),$_[0]->group()); 
+    
+    #set default coordsystem here, do we need to handle non-chromosome here
+    my $cs = $_[0]->get_CoordSystemAdaptor->fetch_by_name($cs_name);
+    #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
+    #or shall we fetch/add all by name?
+    
+    $self->get_FGCoordSystemAdaptor->validate_coord_system($cs);
+  }
+    
+  throw("dnadb needs to be set to a core db") if $self->SUPER::dnadb(@_)->group() ne "core";
+  return $self->SUPER::dnadb(@_);
 } 
 
 

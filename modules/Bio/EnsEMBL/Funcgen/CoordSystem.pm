@@ -261,10 +261,12 @@ sub equals {
   
   #need to add check on schema_build here
 
+  #print $self->{'version'}." eq ".$cs->version()." && ".$self->{'name'}." eq ".$cs->name()." && ".$self->adaptor->db->_get_schema_build($cs->adaptor())." eq ".$self->schema_build()."\n"; 
+
  
   
   if($self->{'version'} eq $cs->version() && $self->{'name'} eq $cs->name() && $self->adaptor->db->_get_schema_build($cs->adaptor()) eq $self->schema_build()) {
-	  return 1;
+    return 1;
   }
 
   return 0;

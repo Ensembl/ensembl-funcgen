@@ -99,14 +99,13 @@ CREATE TABLE `oligo_feature` (
    `mismatches` tinyint(4) NOT NULL default '0',
    `cigar_line` text,
    PRIMARY KEY  (`oligo_feature_id`),
-   KEY `start_idx` (`seq_region_start`),
    KEY `oligo_probe_idx` (`oligo_probe_id`),
-   KEY `seq_region_idx` (`seq_region_id`)
+   KEY `seq_region_idx` (`seq_region_id`, `seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 -- remove mismatches?
---- Do jointindex on seq region local start?
+--- Do jointindex on seq region local start? ADD COORD_SYSTEM to joint index?
 --- Currently use chr data in here rather than true seq_regions, Need to map all probe global values to seq_regions.
 --- build_id currently set to freeze date, can go when we incorporate build mapping into the import API
 --- Would not capture true probe seq if there were any mismatches in mapping.

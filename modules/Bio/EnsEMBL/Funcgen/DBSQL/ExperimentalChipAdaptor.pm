@@ -127,6 +127,12 @@ sub fetch_contigsets_by_experiment_dbID {
 	  push @hack2, $echip;
 	}
       }else{
+	
+	next if ($echip->unique_id() != "48316" && $echip->unique_id() != "48317" &&
+		 $echip->unique_id() != "48320" && $echip->unique_id() != "65797");				    
+
+	print "pushing ".$echip->unique_id()."\n";
+
 	my @tmp = ($echip->unique_id(), $echip);
 	push @tracksets, \@tmp;
       }

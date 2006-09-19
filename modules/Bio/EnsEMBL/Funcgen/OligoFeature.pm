@@ -389,14 +389,20 @@ sub get_result_by_Analysis_ExperimentalChips{
 			throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
 		}
 
-		$all_ids{$ec->array_chip_id()} = 1;
-		$query_ids{$ec->array_chip_id()} = 1 if(! exists $self->{'results'}{$anal_name}{$ec->dbID()});
+		#was us array_chip ids for some reason??
+		$all_ids{$ec->dbID()} = 1;
+		$query_ids{$ec->dbID()} = 1 if(! exists $self->{'results'}{$anal_name}{$ec->dbID()});
 
 	}
 
 
 	my @ec_ids = keys %query_ids;
 	my @all_ids = keys %all_ids;
+
+
+    print "ec ids @ec_ids\n";
+    print "all ids @all_ids\n";
+
 	#$self->{'results'} ||= {};
 	#$self->{'results_complete'} ||= 0;#do we need this now?
 	
@@ -432,7 +438,16 @@ sub get_result_by_Analysis_ExperimentalChips{
 	
 	my @keys;
 	foreach my $id(@all_ids){
-		push @keys, grep(":${id}:", keys %{$self->{'results'}{$anal_name}});
+	  my @tmp = grep(":${id}:", keys %{$self->{'results'}{$anal_name}});
+
+	  #Hacky needs sorting, quick fix for release!!
+
+	  if(@tmp){
+	    push @keys, grep(":${id}:", keys %{$self->{'results'}{$anal_name}});
+
+	    last;
+	  }
+
 	}
 
 	throw("Got more than one key for the results cache") if scalar(@keys) > 1;
