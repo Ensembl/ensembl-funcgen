@@ -786,18 +786,17 @@ sub store_set_probes_features{
     $probe->probeset($ops) if $ops;
     ($probe) = @{$self->db->get_OligoProbeAdaptor->store($probe)};
 
+      
+
+    #Can't use get_all_Arrays here as we can't guarantee this will only ever be the array we've generated
+    #Might dynamically load array if non-present
+    #This is allowing multiple dbIDs per probe???  Is this wrong?
+    $self->cache_name_id($probe->get_probename(), $probe->dbID());
+
         
     foreach my $feature(@{$pf_hash->{$probe_id}->{'features'}}){
       $feature->probe($probe);
       ($feature) = @{$self->db->get_OligoFeatureAdaptor->store($feature)};
-      
-      
-      #or can we keep probes?  Too much memmory?
-      #do we need to key 
-      #Can't use get_all_Arrays here as we can't guarantee this will only ever be the array we've generated
-      #Might dynamically load array if non-present
-      #This is allowing multiple dbIDs per probe???  Is this wrong?
-      push @{$self->{'_probe_map'}{$probe->get_probename()}}, $probe->dbID();
     }
   }
 
@@ -810,11 +809,22 @@ sub store_set_probes_features{
   return;
 }
 
+sub cache_name_id{
+  my ($self, $pname, $pid) = @_;
 
+  throw("Must provide a probe anem and id") if (! defined $pname || defined $pid);
+
+  if(defined $self->{'_probe_map'}->{$pname} && ($self->{'_probe_map'}->{$pname} != $pid)){
+    throw("Found two differing dbIDs for $pname");
+  }
+
+  $self->{'_probe_map'}->{$pname} = $pid;
+
+}
 
 
 #Remove array element to this?
-sub get_probe_ids_by_name{
+sub get_probe_id_by_name{
   my ($self, $name) = @_;
 
   #my (@op_ids);
@@ -831,11 +841,11 @@ sub get_probe_ids_by_name{
     my $op = $self->db->get_OligoProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
     #print "Got probe $op with dbid ".$op->dbID()."\n";
     #push @op_ids, $op->dbID();
-    push @{$self->{'_probe_map'}{$name}}, $op->dbID();
+    $self->{'_probe_map'}{$name} = $op->dbID();
   }
-
+  
   #return \@op_ids;
-  return \@{$self->{'_probe_map'}->{$name}};
+  return $self->{'_probe_map'}->{$name};
   
 }
 
@@ -899,29 +909,26 @@ sub read_results_data{
 	
 	#could validate here against reulsts vs. number of channels
 	for $i($first_result..$#data){
-	  
 	  #multiple mappings????????????????????????????????????SHOULD ONLY HAVE ONE PID PER UNIQUE PROBE!!!!!
-	  foreach my $pid(@{$self->get_probe_ids_by_name($data[$probe_elem])}){
+	  #foreach my $pid(@{$self->get_probe_ids_by_name($data[$probe_elem])}){
+	  #import directly here?
+	  #print $r_out "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";	  
+	  #$self->db->insert_table_row("result", $pid, $data[$i], $anal_id, $self->get_channel($tmp)->dbID(), "channel");
+	  #Build multiple instert sql statement rather than executing once for each result?
+	  
 
-	    $cnt ++;
+	  $cnt ++;
+	  
+	  #Need to change this get_channel call?
+	  ($tmp = $header[$i]) =~ s/1h_//;
 
-	    #Need to change this get_channel call?
-	    ($tmp = $header[$i]) =~ s/1h_//;
-
-	    #import directly here?
-	    #print $r_out "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
-
-	    #$self->db->insert_table_row("result", $pid, $data[$i], $anal_id, $self->get_channel($tmp)->dbID(), "channel");
-	    #Build multiple instert sql statement rather than executing once for each result?
-
-
-	    $r_string .= "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
-	  }
+	  $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
+	  #}
 	}
 
 
 	
-	if($cnt > 100000){
+	if($cnt > 10000){
 	  $cnt = 0;
 	  print $r_out $r_string;
 	  $r_string ="";

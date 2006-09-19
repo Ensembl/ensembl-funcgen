@@ -97,6 +97,7 @@ package Bio::EnsEMBL::Funcgen::Helper;
 #put in Utils?
 use Bio::Root::Root;
 use Data::Dumper;
+#use Devel::Timer;
 use Carp;#? Can't use unless we can get it to redirect
 use File::Basename;
 

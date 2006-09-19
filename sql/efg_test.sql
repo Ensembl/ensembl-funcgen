@@ -150,6 +150,7 @@ CREATE TABLE `oligo_probe` (
    `array_chip_id` int(11) unsigned NOT NULL default '0',
    `class` varchar(20) default NULL,
     PRIMARY KEY  (`oligo_probe_id`),
+    KEY `name_idx` (`name`),
     KEY `probe_set_idx` (`oligo_probe_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
