@@ -111,6 +111,18 @@ sub fetch_by_name {
     return $result->[0];
 }
 
+
+sub get_all_experiment_names{
+  my ($self, $displayable) = @_;
+
+  my $sql = "SELECT e.name FROM experiment e";
+
+  my @names = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+
+  return \@names;
+
+}
+
 #fetch_by_name_group
 
 
