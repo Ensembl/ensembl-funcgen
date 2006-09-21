@@ -680,9 +680,6 @@ sub fetch_results_by_probe_experimental_chips_analysis{
 
 
 	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"experimental_chip\" AND r.table_id IN (".join(", ", @$chip_ids).") AND r.analysis_id = a.analysis_id $analysis_clause";
-
-
-	#print "query is $query\n";
 	
 	return $self->dbc->db_handle->selectall_arrayref($query);
 }

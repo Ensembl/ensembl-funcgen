@@ -271,11 +271,25 @@ sub type {
 	
 
     if( ! $self->{'type'}){
+
+      my ($name, $desc, $class);
+
+      if(self->db->species() =~ /homo/i){
+	$desc = "Generalised Histone 3 Lysine acetylation";
+	$name = "H3kgac";
+	$class = "HISTONE";
+      }else{
+	$desc = "MEFf";
+	$name = "MEFf";
+	$class = "HISTONE";
+      }
+
+
       my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
 		(
-		 -NAME => 'H3k9Me3',
-		 -DESCRIPTION => 'Histone 3 Tri-methylated Lysine 9',
-		 -CLASS => 'Histone' 
+		 -NAME => $name,
+		 -DESCRIPTION => $desc,
+		 -CLASS => $class, 
 		); 
 
       $self->{'type'} = $ft;

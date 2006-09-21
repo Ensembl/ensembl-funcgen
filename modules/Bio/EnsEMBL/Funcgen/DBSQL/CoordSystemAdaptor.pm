@@ -1012,7 +1012,7 @@ sub validate_coord_system{
 		#otherwise would have to list all DBs in registry and select the one which matched the schema version
 		#This will also enable validation if a non-standard dnadb is passed for retrieval
 		#can check meta table for schema.version (data.version? genebuild.name?)
-		print "Storing default coord sys for dnadb\n";
+		warn "Storing default coord sys for dnadb\n";
 		
 		#Generate Funcgen::CoordSystem
 		$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(

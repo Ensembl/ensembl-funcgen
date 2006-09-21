@@ -276,16 +276,14 @@ sub store {
       my ($g_dbid) = $self->db->fetch_group_details($exp->group());
       throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
       
-      print 
-	
-	# Has array already been stored?
-	next if ( $exp->dbID() && $exp->adaptor() == $self );
+      # Has array already been stored?
+      next if ( $exp->dbID() && $exp->adaptor() == $self );
       
       $s_exp = $self->fetch_by_name($exp->name());#validate on group too!
       
       if(! $s_exp){
 	
-	print "Storing exp with name ".$exp->name()."\n";
+	warn "Storing exp with name ".$exp->name()."\n";
 
 	$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
 	$sth->bind_param(2, $g_dbid,                    SQL_INTEGER);
