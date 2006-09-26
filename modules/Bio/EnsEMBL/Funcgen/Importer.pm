@@ -5,17 +5,19 @@ Bio::EnsEMBL::Funcgen::Importer
   
 =head1 SYNOPSIS
 
-
-
+my $imp = Bio::EnsEMBL::Funcgen::Importer->new(%params);
+$imp->register_experiment();
 
 
 =head1 DESCRIPTION
 
-B<This program> take several options, including an definitions file to parse and import array data into the ensembl-efg DB
+B<This program> is the main class coordinating import of OligoArrays and experimental data.
+It utilises several underlying definitions classes specific to array vendor, array class and
+experimental group.  
 
-=cut
+=head1 CONTACT
 
-=head1 NOTES
+Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 
 
 =head1 AUTHOR(S)
@@ -30,7 +32,7 @@ Nathan Johnson, njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Importer;
 
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date);
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 use strict;
 
@@ -38,12 +40,12 @@ use vars qw(@ISA);
 
 @ISA = qw(Bio::EnsEMBL::Funcgen::Helper Bio::EnsEMBL::Funcgen::ArrayDefs);
 
-use Bio::EnsEMBL::Funcgen::Experiment;#
-use Bio::EnsEMBL::Funcgen::ArrayDefs;#rename FormatDefs?
+use Bio::EnsEMBL::Funcgen::Experiment;
+use Bio::EnsEMBL::Funcgen::ArrayDefs;#will inherit or set Vendor/GroupDefs?
 use Bio::EnsEMBL::Funcgen::Helper;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;#eventually add this to Registry
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;#eventually add this to Registry?
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Utils::ConfigRegistry;
+#use Bio::EnsEMBL::Utils::ConfigRegistry;
 my $reg = "Bio::EnsEMBL::Registry";
 
 
@@ -52,18 +54,40 @@ my $reg = "Bio::EnsEMBL::Registry";
 
 =head2 new
 
- Description : 
-               
-
- Arg  [1]    : hash containing optional attributes :-
-               
- ReturnType  : Experiment
-
- Example     : my $Exp = Bio::EnsEMBL::Importer->new(
-                                                      
-                                                     );
-
- Exceptions  : 
+ Description : Constructor method
+ Arg  [1]    : hash containing optional attributes:
+                    -name     Name of Experiment(dir) 
+                    -format   of array e.g. Tiled(default)
+                    -vendor   name of array vendor
+                    -description of the experiment
+                    -pass DB password
+		    -host DB host
+		    -user  DB user
+		    -port  DB port
+                    -ssh  Flag to set connection over ssh via forwarded port to localhost (default = 0);
+                    -group    name of experimental/research group
+                    -location of experimental/research group
+                    -contact  e/mail address of primary contact for experimental group
+                    -species 
+                    -data_version  schema_build of the corresponding dnadb (change name to mirror meta_entry)
+                    -recover Recovery flag (default = 0)
+                    -data_dir  Root data directory (default = $ENV{'EFG_DATA'})
+                    -output_dir review these dirs ???????
+                    -input_dir  ?????????
+                    -import_dir  ???????
+                    -norm_dir    ??????
+                    -dump_fasta Fast dump flag (default =0)
+                    -array_set Flag to treat all chip designs as part of same array (default = 0)
+                    -array_name Name for array set
+                    -norm_method  Normalisation method (default = vsn_norm, put defaults in Defs?)
+                    -dbname Override for dnadb/core dbaname
+                    -reg_config path to local registry config file (default = ~/ensembl.init || undef)
+                    -design_type MGED term (default = binding_site_identification) get from meta/MAGE?
+ ReturnType  : Bio::EnsEMBL::Funcgen::Importer
+ Example     : my $Exp = Bio::EnsEMBL::Importer->new(%params);
+ Exceptions  : throws if mandatory params are not set or DB connect fails
+ Caller      : General
+ Status      : Medium - potential for %params names to change, remove %attrdata?
 
 =cut
 
@@ -74,11 +98,9 @@ sub new{
 
     my ($self, %attrdata, $attrname, $argname, $db);
     my $reg = "Bio::EnsEMBL::Registry";
-
     my $class = ref($caller) || $caller;
-
-	#Create object from parent class
-	$self = $class->SUPER::new(%args);
+    #Create object from parent class
+    $self = $class->SUPER::new(%args);
 
     # objects private data and default values
     %attrdata = (
@@ -95,12 +117,13 @@ sub new{
 				 data_dir    => $ENV{'EFG_DATA'},#?
 				 dump_fasta  => 0,
 				 norm_method => "vsn_norm",
-				 description => undef,
-				 #DBDefs, have ability to override here, or restrict to DBDefs.pm?
-				 pass       => undef,
-				 host       => undef,
-				 user       => undef,
-				 port       => undef,
+		 description => undef,
+		 #DBDefs, have ability to override here, or restrict to DBDefs.pm?
+		 pass       => undef,
+		 host       => undef,
+		 user       => undef,
+		 port       => undef,
+		 ssh        => 0; 
 
 
 		 #vars to handle array chip sets
@@ -140,6 +163,7 @@ sub new{
 				 design_type  => "binding_site_identification",#Hard coded MGED type term for now, should have option to enable other array techs?
 				);
 
+
     # set each class attribute using passed value or default value
     foreach $attrname (keys %attrdata){
         ($argname = $attrname) =~ s/^_//; # remove leading underscore
@@ -158,8 +182,7 @@ sub new{
 	#Set vendor specific vars/methods
 	$self->set_defs();
 
-	
-	### LOAD AND RE-CONFIG REGISTRY ###
+    ### LOAD AND RE-CONFIG REGISTRY ###
 	if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
 	
 		#current ensembl DBs
@@ -180,6 +203,13 @@ sub new{
 		#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	
 		if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build())){
+
+		  
+		  if($self->{'ssh'} && ($self->host() ne 'localhost'){
+		    warn "Overriding host ".$self->host()." for ssh connection via localhost(127.0.0.1)";
+		  }
+
+
 		  $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 							    -host => 'ensembldb.ensembl.org',
 							    -user => 'anonymous',
@@ -196,7 +226,7 @@ sub new{
 		#generate and register DB with local connection settings
 		$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 								   -user => $self->user(),
-								   -host => $self->host(),
+								   -host => ($self->{'ssh'}) ? '127.0.0.1' : $self->host(),
 								   -port => $self->port(),
 								   -pass => $self->pass(),
 								   #we need to pass dbname else we can use non-standard dbs

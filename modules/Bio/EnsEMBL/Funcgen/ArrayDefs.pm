@@ -15,8 +15,8 @@ Bio::EnsEMBL::Funcgen::ArrayDefs
 
 =head1 DESCRIPTION
 
-This is a definitions object which should not be instatiated directly, but it 
-normally inherited in the Importer.  ArrayDefs contains meta data and methods specific 
+This is a definitions class which should not be instatiated directly, it 
+normally inherited from the Importer.  ArrayDefs contains meta data and methods specific 
 to NimbleGen arrays to aid parsing and importing of experimental data.
 
 This module is currently NimbleGen specific but is likely to be genericised even more, 
@@ -484,12 +484,12 @@ else{
   Returntype : none
   Exceptions : none
   Caller     : Importer
-  Status     : At risk
+  Status     : Medium - Move parts to "Vendor"Defs.pm, should function the same
 
 =cut
 
 
-#Assumes no chip_design per experimental set.
+#Assumes one chip_design per experimental set.
 sub read_probe_data{
   my ($self) = shift;
 
@@ -873,6 +873,24 @@ sub read_probe_data{
 }
 
 
+=head2 store_set_probes_features
+
+  Arg [1]    : mandatory - array chip id
+  Arg [2]    : optional - Bio::EnsEMBL::Funcgen::OligoProbeSet
+  Arg [3]    : mandatory - hashref of keys probe id, values are 
+               hash of probe/features with values 
+               Bio::EnsEMBL::Funcgen::OligoProbe/Features for a given 
+               probe set if defined.
+  Example    : $self->store_set_probes_features($ac->dbID(), $ops, \%pfs);
+  Description: Stores probe set, probes and probe features 
+  Returntype : none
+  Exceptions : none
+  Caller     : self
+  Status     : Medium
+
+=cut
+
+
 sub store_set_probes_features{
   #my ($self, $ac_id, $ops, $probes, $features) = @_;
 
@@ -938,6 +956,20 @@ sub store_set_probes_features{
   return;
 }
 
+=head2 cache_name_id
+
+  Arg [1]    : mandatory - probe name
+  Arg [2]    : mandatory - probe dbID
+  Example    : $self->cache_name_id("Probe1", $probe->dbID());
+  Description: Setter for probe cache values
+  Returntype : none
+  Exceptions : throws is cache conflict encountered
+  Caller     : self
+  Status     : At risk - merge with following?
+
+=cut
+
+
 sub cache_name_id{
   my ($self, $pname, $pid) = @_;
 
@@ -948,8 +980,20 @@ sub cache_name_id{
   }
 
   $self->{'_probe_map'}->{$pname} = $pid;
-
+  return;
 }
+
+=head2 cache_name_id
+
+  Arg [1]    : mandatory - probe name
+  Example    : $pid = $self->get_probe_id_by_name($pname);
+  Description: Getter for probe cache values
+  Returntype : int
+  Exceptions : none
+  Caller     : self
+  Status     : At risk - merge with previous
+
+=cut
 
 
 #Remove array element to this?
@@ -977,6 +1021,18 @@ sub get_probe_id_by_name{
   return $self->{'_probe_map'}->{$name};
   
 }
+
+=head2 read_results_data
+
+  Example    : $imp->read_results_data();
+  Description: Parses and import raw results
+  Returntype : none
+  Exceptions : none
+  Caller     : Importer
+  Status     : Medium - move parts to VendorDefs, should still function as normal
+
+=cut
+
 
 sub read_results_data{
   my $self = shift;
