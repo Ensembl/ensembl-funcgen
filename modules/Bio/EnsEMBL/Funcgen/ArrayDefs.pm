@@ -1,3 +1,40 @@
+#
+# EnsEMBL module for Bio::EnsEMBL::Funcgen::ArrayDefs
+#
+
+=head1 NAME
+
+Bio::EnsEMBL::Funcgen::ArrayDefs
+
+=head1 SYNOPSIS
+
+  my $imp = Bio::EnsEMBL::Funcgen::Importer->new(%params);
+
+  $imp->set_defs();
+
+
+=head1 DESCRIPTION
+
+This is a definitions object which should not be instatiated directly, but it 
+normally inherited in the Importer.  ArrayDefs contains meta data and methods specific 
+to NimbleGen arrays to aid parsing and importing of experimental data.
+
+This module is currently NimbleGen specific but is likely to be genericised even more, 
+extracting vendor specific data and methods to a separate VendorDefs module e.g. NimbleGenDefs.
+
+
+=head1 AUTHOR
+
+This module was written by Nathan Johnson.
+
+=head1 CONTACT
+
+Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
+
+=head1 METHODS
+
+=cut
+
 package Bio::EnsEMBL::Funcgen::ArrayDefs;
 
 use Bio::EnsEMBL::Funcgen::OligoArray;
@@ -6,100 +43,108 @@ use Bio::EnsEMBL::Funcgen::OligoProbe;
 use Bio::EnsEMBL::Funcgen::OligoFeature;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::Channel;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
 use strict;
 
 
 my $reg = "Bio::EnsEMBL::Registry";
 
-#define Array defs hashes here
-#vendor specific paths etc
-#method arrays for parse
 
-#Need to use VendorDefs for vendor specific methods?
-#We would need to reset them for each Import
 #Create internal object and pass ref to Importer
 #So importer calls generic methods on Defs object which then uses set ref to access
+#Do we need to "set" this or can we just have all of this in $self?
 
+=head2 set_defs
+
+  Example    : $imp->set_defs();
+  Description: Sets a definitions hash for the vendor.
+  Returntype : none
+  Exceptions : Throws if not called by Importer
+  Caller     : Importer
+  Status     : At risk - likely to be replaced/moved with/to VendorDefs
+
+=cut
 
 sub set_defs{
 	my ($self) = @_;
 
-	#Is this only valid unless somethign inherits from from Experiment ?
-	throw("This is a skeleton class for Bio::EnsEMBL::Experiment, should not be used directly") if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
-
-
-
-	#Can we do some funky check on $self to see if it is Experiment
-	#Abstract these to ${vendor}Defs.pm modules
-	#we can't use methods to build vars :(
+	throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
 	
-	#could tidy up below but would disable over-ride for inpur_dir option
-	#$self->{'_input_dir'} = $self->get_dir("data")."/native/".$self->vendor()."/".$self->instance();
-
 	my %array_defs = (
-					  nimblegen => {
-									#order of these data arrays is important!
-									array_data   => ["array_chip"],
-									probe_data   => ["probe"],
-									results_data => ["results"],
-									#import_methods  => [],
-									#data paths here?
-									
-									#This input dir is being recast as _input_dit
-									input_dir      => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name(),
-									#but this is vendor specific and remains an array_def
-									design_dir     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/DesignFiles",
-
-									chip_file        => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/SampleKey.txt",
-									array_file       => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/DesignNotes.txt",
-									#feature_map_file => $self->get_dir("import")."/feature_map.tmp",
-									results_file     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/PairData/All_Pair.txt",
-
-							results_dir     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/PairData",
-
-									dye_freqs => {(
-												   Cy5 => 635,
-												   Cy3 => 532,
-												  )},
-
-									#PROBE_DESIGN_ID	CONTAINER	DESIGN_NOTE	SELECTION_CRITERIA	SEQ_ID	PROBE_SEQUENCE	MISMATCH	MATCH_INDEX	FEATURE_ID	ROW_NUM	COL_NUM	PROBE_CLASS	PROBE_ID	POSITION	DESIGN_ID	X	Y
-									#header_fields => [
-
-
-									#this won't work as design_name is undef at this point
-									#need to make this a ref so it will update the values?
-									#gene_description_file => $self->get_array_def("design_dir")."/".$self->array_data("design_name").".ngd",
-								   },
-					 );
-
-	#print "Setting ".$self->vendor()." defs to ".$array_defs{$self->vendor()}." ".Data::Dumper::Dumper($array_defs{$self->vendor()})."\n";
-
+			  nimblegen => {
+					#order of these data arrays is important!
+					array_data   => ["array_chip"],
+					probe_data   => ["probe"],
+					results_data => ["results"],
+					#import_methods  => [],
+					#data paths here?
+					
+					#is this disabling -input_dir override option?
+					input_dir      => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name(),
+					#but this is vendor specific and remains an array_def
+					design_dir     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/DesignFiles",
+					
+					chip_file        => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/SampleKey.txt",
+					array_file       => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/DesignNotes.txt",
+					#feature_map_file => $self->get_dir("import")."/feature_map.tmp",
+					results_file     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/PairData/All_Pair.txt",
+					
+					results_dir     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/PairData",
+					
+					dye_freqs => {(
+						       Cy5 => 635,
+						       Cy3 => 532,
+						      )},
+					
+					#PROBE_DESIGN_ID	CONTAINER	DESIGN_NOTE	SELECTION_CRITERIA	SEQ_ID	PROBE_SEQUENCE	MISMATCH	MATCH_INDEX	FEATURE_ID	ROW_NUM	COL_NUM	PROBE_CLASS	PROBE_ID	POSITION	DESIGN_ID	X	Y
+					#header_fields => [
+					
+					
+					#this won't work as design_name is undef at this point
+					#need to make this a ref so it will update the values?
+					#gene_description_file => $self->get_array_def("design_dir")."/".$self->array_data("design_name").".ngd",
+				       },
+			 );
+	
+	#warn "Setting ".$self->vendor()." defs to ".$array_defs{$self->vendor()}." ".Data::Dumper::Dumper($array_defs{$self->vendor()});
+	
 	$self->{'array_defs'} = $array_defs{$self->vendor()};
 	
 	#Set mandatory defs here?
-
-
-
 	return;
-
 }
 
+=head2 get_def
+
+  Arg [1]    : mandatory - name of the data element to retrieve from the defs hash
+  Example    : %dye_freqs = %{$imp->get_def('dye_freqs')};
+  Description: returns data from the definitions hash
+  Returntype : various
+  Exceptions : none
+  Caller     : Importer
+  Status     : Medium - throw if no data_name?
+
+=cut
 
 
 sub get_def{
-	my ($self, $data_name) = @_;
-	return $self->get_data('array_defs', $data_name);#will this cause undefs?
+  my ($self, $data_name) = @_;
+  return $self->get_data('array_defs', $data_name);#will this cause undefs?
 }
 
 
 
+=head2 read_array_chip_data
 
+  Example    : $imp->read_array_chip_data();
+  Description: Parses and imports array & experimental chip meta data/objects
+  Returntype : none
+  Exceptions : throws if more than one array/design found and not an "array set"
+  Caller     : Importer
+  Status     : At risk - likely to be replaced/moved with/to VendorDefs
 
-#How are we going to use different formats here?
-#This is hardcoded for nimblegen at present
-#Nimblgen data does not contain array data as such!
+=cut
 
 sub read_array_chip_data{
   my ($self) = shift;
@@ -258,108 +303,192 @@ sub read_array_chip_data{
 }
 
 
+=head2 arrays
+
+  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::OligoArray
+  Example    : $self->arrays($array);
+  Description: Getter/Setter for array element
+  Returntype : list ref to Bio::EnsEMBL::Funcgen::OligoArray objects
+  Exceptions : throws if passed non OligoArray or if more than one OligoArray set
+  Caller     : Importer
+  Status     : Medium - Remove/Implement multiple arrays?
+
+=cut
+
 sub arrays{
-	my ($self) = shift;
+  my ($self) = shift;
 
-	my $module = 'Bio::EnsEMBL::Funcgen::OligoArray';
-
-	if(@_ && ! $_[0]->isa($module)){
-		throw("Must supply a $module");
-	}
-	
-	if(@_){
-		push @{$self->{'arrays'}}, @_;
-	}
-
-
-	throw("Does not yet support multiple array imports") if(scalar (@{$self->{'arrays'}}) > 1);
-	#need to alter read_probe data at the very least
-
-	return $self->{'arrays'};
-		
+  if(@_ && ! $_[0]->isa('Bio::EnsEMBL::Funcgen::OligoArray')){
+    throw("Must supply a Bio::EnsEMBL::Funcgen::OligoArray");
+  }elsif(@_){
+    push @{$self->{'arrays'}}, @_;
+  }
+   
+  throw("Does not yet support multiple array imports") if(scalar (@{$self->{'arrays'}}) > 1);
+  #need to alter read_probe data at the very least
+  
+  return $self->{'arrays'};
 }
+
+
+=head2 echip_data
+
+  Arg [1]    : mandatory - ExperimentalChip design_id
+  Arg [2]    : mandatory - data type/name
+  Arg [3]    : optional - value
+  Example    : $self->echip_data($design_id, $data_type, $value));
+  Description: Getter/Setter for ExperimentalChip data from cache
+  Returntype : various
+  Exceptions : throws if no design id or data type defined
+  Caller     : Importer
+  Status     : Deprecated
+
+=cut
+
 
 sub echip_data{
-	my ($self, $design_id, $data_type, $value) = @_;
+  my ($self, $design_id, $data_type, $value) = @_;
 
-	throw("Need to specify a design_id  and a data_type") if (! defined $data_type || ! defined $design_id);
+  deprecate("Use ExperimentalChip methods directly");
 
-	if(defined $value){
-		${$self->get_data('echips', $design_id)}{$data_type} = $value;
-	}
-	else{
-		return ${$self->get_data('echips', $design_id)}{$data_type};#will this cause undefs?
-	}
+  throw("Need to specify a design_id  and a data_type") if (! defined $data_type || ! defined $design_id);
+  
+  if(defined $value){
+    ${$self->get_data('echips', $design_id)}{$data_type} = $value;#can we deref with -> instead to set value?
+}
+else{
+  return ${$self->get_data('echips', $design_id)}{$data_type};#will this cause undefs?
+}
 }
 
+=head2 get_echip
+
+  Arg [1]    : mandatory - ExperimentalChip unique_id
+  Example    : $chip = $self->get_echip($chip_uid);
+  Description: Getter for ExperimentalChip from cache
+  Returntype : various
+  Exceptions : throws if no chip unique id defined
+  Caller     : Importer
+  Status     : Stable
+
+=cut
 
 sub get_echip{
-	my ($self, $chip_uid) = @_;
-
-	throw("Need to specify unique_id") if (! defined $chip_uid);
-
-	return $self->{'echips'}{$chip_uid};
+  my ($self, $chip_uid) = @_;
+  throw("Need to specify a chip unique_id") if (! defined $chip_uid);
+  return $self->{'echips'}{$chip_uid};
 }
 
+=head2 get_channels
 
+  Arg [1]    : mandatory - ExperimentalChip unique_id
+  Example    : $chip = $self->get_echip($chip_uid);
+  Description: Getter for Channel hash from cache
+  Returntype : Hashref
+  Exceptions : throws if no chip unique id defined
+  Caller     : Importer
+  Status     : At risk - use ExperimentalChip to cache
+
+=cut
 
 
 sub get_channels{
-	my ($self, $chip_uid) = @_;
-		
-	return $self->get_echip($chip_uid)->{'channels'};
+  my ($self, $chip_uid) = @_;
+  throw("Need to specify a chip unique_id") if (! defined $chip_uid);
+  return $self->get_echip($chip_uid)->{'channels'};
 }
+
+=head2 get_channel
+
+  Arg [1]    : mandatory - channel "unique_id", ${chip_uid}_${dye_freq}
+  Example    : $channel = $self->get_echip($chan_uid);
+  Description: Getter for Channel hash from cache
+  Returntype : Hashref
+  Exceptions : throws if no channel unique id defined
+  Caller     : Importer
+  Status     : At risk - use ExperimentalChip to cache
+
+=cut
 
 
 sub get_channel{
-	my ($self, $chan_uid) = @_;
-	
-	#This may be different for other vendors!!		
-	#my ($chip_uid);
-	#($chip_uid = $chan_uid) =~ s/_[0-9]*//o;
-
-	return $self->{'channels'}{$chan_uid};
+  my ($self, $chan_uid) = @_;
+  throw('Need to specify a chan unique_id (${chip_uid}_${dye_freq})') if (! defined $chan_uid);	
+  return $self->{'channels'}{$chan_uid};
 }
 
-#Nest the channels as a hash with key = dye?
+
+=head2 set_channel
+
+  Arg [1]    : mandatory - ExperimentalChip unique_id
+  Arg [2]    : mandatory - Bio::EnsEMBL::Funcgen::Channel 
+  Example    : $self->set_channel($chip_uid, $channel);
+  Description: Setter for Channel cache
+  Returntype : none
+  Exceptions : throws if no chip unique id or channel defined
+  Caller     : Importer
+  Status     : At risk - Move to ExperimentalChip, hash on dye freq
+
+=cut
 
 
-
-#This should be in ExperimentalChip, get_all_Channels?
 #defs issue, should this remain in the importer?
-
-
 #do we need this now, can we not do this dynamically?
 #or maybe just store the channel ids, rather than the channel
 #then retrieve the relevant channels from the echip channel hash
 
 sub set_channel{
-	my ($self, $chip_uid, $channel) = @_;
+  my ($self, $chip_uid, $channel) = @_;
 	
-	throw("Need to pass a chip_uid and a Channel object") if(! defined $chip_uid || ! $channel->isa('Bio::EnsEMBL::Funcgen::Channel'));
-	$self->{'channels'}{"${chip_uid}_".${$self->get_def("dye_freqs")}{$channel->dye()}} = $channel;
+  throw("Need to pass a chip_uid and a Channel object") if(! defined $chip_uid || ! $channel->isa('Bio::EnsEMBL::Funcgen::Channel'));
+  $self->{'channels'}{"${chip_uid}_".${$self->get_def("dye_freqs")}{$channel->dye()}} = $channel;
 
-	return;
+return;
 }
+
+=head2 channel_data
+
+  Arg [1]    : mandatory - channel "unique_id", ${chip_uid}_${dye_freq}
+  Arg [2]    : mandatory - data type/name
+  Arg [3]    : optional - value
+  Example    : $self->set_channel($chip_uid, $channel);
+  Description: Setter for Channel cache
+  Returntype : none
+  Exceptions : throws if no chan unique id or data type defined
+  Caller     : Importer
+  Status     : Deprecated
+
+=cut
+
 
 sub channel_data{
-	my ($self, $chan_uid, $data_type, $value) = @_;
+  my ($self, $chan_uid, $data_type, $value) = @_;
 	
+  deprecate("Use Channel methods directly via echip cache");
 
-	throw("Need to provide a channel uid and a data_type") if (! defined $chan_uid || ! defined $data_type);
+  throw("Need to provide a channel uid and a data_type") if (! defined $chan_uid || ! defined $data_type);
 
-	if(defined $value){
-		throw("choudl now use Channel methods \n");
-		${$self->get_channel($chan_uid)}{$data_type} = $value;
-	}
-	else{
-		return ${$self->get_channel($chan_uid)}{$data_type};
-	}
+  if(defined $value){
+    throw("should now use Channel methods \n");
+    ${$self->get_channel($chan_uid)}{$data_type} = $value;
+}
+else{
+  return ${$self->get_channel($chan_uid)}{$data_type};
+}
 }
 
+=head2 read_probe_data
+
+  Example    : $imp->read_probe_data();
+  Description: Parses and imports probes, probe sets and features of a given array
+  Returntype : none
+  Exceptions : none
+  Caller     : Importer
+  Status     : At risk
+
+=cut
 
 
-#this handle probe_set, probe, probe_feature
 #Assumes no chip_design per experimental set.
 sub read_probe_data{
   my ($self) = shift;

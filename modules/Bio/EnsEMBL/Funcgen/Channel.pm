@@ -12,22 +12,22 @@ Bio::EnsEMBL::Funcgen::Channel - A module to represent a single channel of an Ex
 use Bio::EnsEMBL::Funcgen::Channel;
 
 my $array = Bio::EnsEMBL::Funcgen::Channel->new(
- 										       -EXPERIMENTAL_CHIP_ID => $ec_id,
- 											   -SAMPLE_ID            => $sample_id,
-											   -TYPE                 => $type,
-											   -DYE                  => $dye,
-											   -DESCRIPTION          => $desc,
-											    );
+                   			        -EXPERIMENTAL_CHIP_ID => $ec_id,
+			        	        -SAMPLE_ID            => $sample_id,
+					        -TYPE                 => $type,
+						-DYE                  => $dye,
+						-DESCRIPTION          => $desc,
+						);
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
 my $chan_a = $db_adaptor->get_ChannelAdaptor();
-my $chan = $chan_a->fetch_by_type_ExperiemntalChip($type, $ExpChip);
+my $chan = $chan_a->fetch_by_type_ExperimentalChip($type, $ExpChip);
 
 =head1 DESCRIPTION
 
 A Channel object represents a single channel on an ExperimentalChip. The data
 are stored in the channel table, and associated expermental variables are
-stored in the experiemntal_variable table.
+stored in the experimental_variable table.
 
 
 

@@ -673,8 +673,8 @@ sub read_data{
 
 
 sub design_type{
-	my $self = shift;
-	return $self->{'design_type'};
+  my $self = shift;
+  return $self->{'design_type'};
 }
 
 
@@ -694,9 +694,7 @@ sub get_channel_dbid{
 
 	my ($chip_uid);
 
-	#chan_uid is ${chip_uid}_${dye_freq}
-	#This is not stored in the DB, so has to be retrieved 
-	#This only works if each channel on a chip uses a different dye
+	warn "Replace this with direct calls to Channel via ExperimentalChip::get_channel";
 
 	if( ! $self->channel_data($chan_uid, 'dbID')){
 		($chip_uid = $chan_uid) =~ s/_.*//;
@@ -735,12 +733,22 @@ sub get_chr_seq_region_id{
 
 sub vsn_norm{
   my $self = shift;
+  return $self->R_norm("VSN_GLOG");
+}
+
+sub R_norm{
+  my ($self, @logic_names) = @_;
   #This currently normalises a single two colour array at a time
+
+  my %r_libs = (
+		"VSN_GLOG"      => ['vsn'],
+		"TukeyBiweight" => ['affy'],
+	       );
 	
   my @dbids;
   my $aa = $self->db->get_AnalysisAdaptor();
   my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
-  my $va_id = $aa->fetch_by_logic_name("VSN_GLOG")->dbID();
+  my $va_id = $aa->fetch_by_logic_name($logic_name)->dbID();
   my $R_file = $self->get_dir("norm")."/norm.R";
   my $outfile = $self->get_dir("norm")."/result.txt";
   my $r_cmd = "R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
@@ -749,18 +757,27 @@ sub vsn_norm{
   
   #setup qurey
   #scipen is to prevent probe_ids being converted to exponents
-  my $query = "options(scipen=20);library(vsn);library(RMySQL);".
-    "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
+
+  warn "Need to add host and port here";
+
+  #Set up DB, defaults and libs for each logic name
+  my $query = "options(scipen=20);library(RMySQL);";
+
+  foreach my $ln(@logic_names){
+    
+    foreach my $lib(@{$r_libs{$ln}}){
+      $query .= "library($lib);";
+    }
+  }
+
+  $query .= "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
   $query .= (defined $self->pass()) ? ", pass=\"".$self->pass()."\")\n" : ")\n";
-  
-  #currently having separate session fo
-  
   
   
   #This is now retrieving a ExperimentalChip obj
   
   foreach my $echip(values %{$self->get_data("echips")}){
-    print "Performing VSN for ".$echip->unique_id()."\n";
+    warn "Build $logic_name R cmd for ".$echip->unique_id()."  log this?\n";
     @dbids = ();
 
     foreach my $chan(@{$echip->get_Channels()}){
@@ -773,7 +790,7 @@ sub vsn_norm{
     }
     
     
-    throw("vsn_norm does not accomodate more than 2 channels") if scalar(@dbids > 2);
+    throw("vsn does not accomodate more than 2 channels") if (scalar(@dbids > 2) && $logic_name eq "VSN_GLOG"));
     
     #should do some of this with maps?
     #HARDCODED metric ID for raw data as one
