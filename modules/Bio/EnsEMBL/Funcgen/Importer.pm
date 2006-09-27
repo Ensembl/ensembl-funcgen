@@ -817,6 +817,10 @@ sub R_norm{
   my ($self, @logic_names) = @_;
   #This currently normalises a single two colour array at a time
 
+  #hack, need to implement multiple analyses
+  my $logic_name = $logic_names[0];
+
+
   my %r_libs = (
 		"VSN_GLOG"      => ['vsn'],
 		"TukeyBiweight" => ['affy'],
@@ -867,7 +871,7 @@ sub R_norm{
     }
     
     
-    throw("vsn does not accomodate more than 2 channels") if (scalar(@dbids > 2) && $logic_name eq "VSN_GLOG"));
+    throw("vsn does not accomodate more than 2 channels") if (scalar(@dbids > 2) && $logic_name eq "VSN_GLOG");
     
     #should do some of this with maps?
     #HARDCODED metric ID for raw data as one
