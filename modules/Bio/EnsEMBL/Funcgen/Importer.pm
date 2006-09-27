@@ -80,9 +80,10 @@ my $reg = "Bio::EnsEMBL::Registry";
                     -array_set Flag to treat all chip designs as part of same array (default = 0)
                     -array_name Name for array set
                     -norm_method  Normalisation method (default = vsn_norm, put defaults in Defs?)
-                    -dbname Override for dnadb/core dbaname
+                    -dbname Override for autogeneration of funcgen dbaname
                     -reg_config path to local registry config file (default = ~/ensembl.init || undef)
                     -design_type MGED term (default = binding_site_identification) get from meta/MAGE?
+                    -verbose
  ReturnType  : Bio::EnsEMBL::Funcgen::Importer
  Example     : my $Exp = Bio::EnsEMBL::Importer->new(%params);
  Exceptions  : throws if mandatory params are not set or DB connect fails
@@ -231,7 +232,7 @@ sub new{
 		}
 
 
-		$self->{'dbname'} ||= $self->species()."_core_".$self->data_version();
+		$self->{'dbname'} ||= $self->species()."_funcgen_".$self->data_version();
 
 		#generate and register DB with local connection settings
 		$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
@@ -404,86 +405,161 @@ sub create_output_dirs{
   return;
 }
 
-### GENERIC ACCESSOR METHODS ###
+### GENERIC GET/SET METHODS ###
+
+=head2 vendor
+  
+  Example    : $imp->vendor("NimbleGen");
+  Description: Getter/Setter for array vendor
+  Arg [1]    : optional - vendor name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub vendor{
-	my ($self) = shift;
-
-	if(@_){
-		$self->{'vendor'} = shift;
-	}
-	
-	return $self->{'vendor'};
+  my ($self) = shift;
+  $self->{'vendor'} = shift if(@_);
+  return $self->{'vendor'};
 }
+
+
+=head2 location
+  
+  Example    : $imp->vendor("Hinxton");
+  Description: Getter/Setter for group location
+  Arg [1]    : optional - location
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 
 sub location{
-	my ($self) = shift;
-
-	if(@_){
-		$self->{'location'} = shift;
-	}
-	
-	return $self->{'location'};
+  my ($self) = shift;
+  $self->{'location'} = shift if(@_);
+  return $self->{'location'};
 }
+
+
+=head2 contact
+  
+  Example    : my $contact = $imp->contact();
+  Description: Getter/Setter for the group contact
+  Arg [1]    : optional - contact name/email/address
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub contact{
-	my ($self) = shift;
-
-	if(@_){
-		$self->{'contact'} = shift;
-	}
-	
-	return $self->{'contact'};
+  my ($self) = shift;
+  $self->{'contact'} = shift if(@_);
+  return $self->{'contact'};
 }
 
+=head2 name
+  
+  Example    : $imp->name('Experiment1');
+  Description: Getter/Setter for the experiment name
+  Arg [1]    : optional - experiment name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 
 sub name{
-	my ($self) = shift;	
-
-	if(@_){
-		$self->{'name'} = shift;
-	}
-
-	return $self->{'name'};
+  my ($self) = shift;	
+  $self->{'name'} = shift if(@_);
+  return $self->{'name'};
 }
+
+
+=head2 verbose
+  
+  Example    : $imp->verbose(1);
+  Description: Getter/Setter for the verbose flag
+  Arg [1]    : optional - 0 or 1
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 
 sub verbose{
-	my ($self) = shift;	
-
-	if(@_){
-		$self->{'verbose'} = shift;
-	}
-
-	return $self->{'verbose'};
+  my ($self) = shift;	
+  $self->{'verbose'} = shift if(@_);
+  return $self->{'verbose'};
 }
+
+=head2 data_version
+  
+  Example    : my $schema_build = $imp->data_version();
+  Description: Getter/Setter for the data version
+  Arg [1]    : optional - schema and build version e.g. 41_36c
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At risk - rename to mirror MetaConatiner method implement reset_dbnadb?
+
+=cut
+
+
 
 sub data_version{
-	my ($self) = shift;	
+  my ($self) = shift;	
 
-	if(@_){
-		$self->{'data_version'} = shift;
-		#have reset_dnadb here?
-		#Can only do this if we set data_version directly in new
-		#rather than calling this method
-		#as reset_dnadb assumes db is set
-	}
+  if(@_){
+    $self->{'data_version'} = shift;
+    #have reset_dnadb here?
+    #Can only do this if we set data_version directly in new
+    #rather than calling this method
+    #as reset_dnadb assumes db is set
+  }
 
-	return $self->{'data_version'};
+  return $self->{'data_version'};
 }
 
+=head2 group
+  
+  Example    : my $exp_group = $imp->group();
+  Description: Getter/Setter for the group name
+  Arg [1]    : optional - group name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
 
-
+=cut
 
 sub group{
-	my ($self) = shift;	
-
-	if(@_){
-		$self->{'group'} = shift;
-	}
-
-	return $self->{'group'};
+  my ($self) = shift;	
+  $self->{'group'} = shift if(@_);
+  return $self->{'group'};
 }
+
+=head2 dbname
+  
+  Example    : my $exp_group = $imp->group();
+  Description: Getter/Setter for the group name
+  Arg [1]    : optional - group name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub dbname{
   my ($self) = shift;	
@@ -495,16 +571,35 @@ sub dbname{
   return $self->{'dbname'};
 }
 
+=head2 recovery
+  
+  Example    : if($imp->recovery()){ ....do recovery code...}
+  Description: Getter/Setter for the recovery flag
+  Arg [1]    : optional - 0 or 1
+  Returntype : boolean
+  Exceptions : none
+  Caller     : self
+  Status     : Medium - Most recovery now dynamic using status table
+
+=cut
+
 sub recovery{
-	my $self = shift;
-
-	if(@_){
-		$self->{'recover'} = shift;
-	}
-
-	return $self->{'recover'};
+  my $self = shift;
+  $self->{'recover'} = shift if(@_);
+  return $self->{'recover'};
 }
 
+=head2 description
+  
+  Example    : $imp->description("Human chrX H3 Lys 9 methlyation");
+  Description: Getter/Setter for the experiment element
+  Arg [1]    : optional - experiment description
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub description{
 	my $self = shift;
@@ -516,116 +611,244 @@ sub description{
 	return $self->{'description'};
 }
 
+=head2 format
+  
+  Example    : $imp->format("Tiled");
+  Description: Getter/Setter for the array format
+  Arg [1]    : optional - array format
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub format{
-	my ($self) = shift;	
-
-	if(@_){
-		$self->{'format'} = shift;
-	}
-
-	return $self->{'format'};
+  my ($self) = shift;	
+  $self->{'format'} = shift if(@_);
+  return $self->{'format'};
 }
 
+=head2 experiment
+  
+  Example    : my $exp = $imp->experiment();
+  Description: Getter/Setter for the Experiment element
+  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::Experiment
+  Returntype : Bio::EnsEMBL::Funcgen::Experiment
+  Exceptions : throws if arg is not an Experiment
+  Caller     : general
+  Status     : Stable
 
+=cut
 
 sub experiment{
-	my ($self) = shift;	
+  my ($self) = shift;	
 
-	if(@_){
-		$self->{'experiment'} = shift;
-	}
+  if(@_){
+	
+    if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Experiment')){
+      throw("Must pass a Bio::ENsEMBL::Funcgen::Experiment object");
+    }
 
-	return $self->{'experiment'};
+    $self->{'experiment'} = shift;
+  }
+
+  return $self->{'experiment'};
 }
 
+=head2 db
+  
+  Example    : $imp->db($funcgen_db);
+  Description: Getter/Setter for the db element
+  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Exceptions : throws if arg is not an DBAdaptor
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub db{
-	my $self = shift;
+  my $self = shift;
 
-	my $db_adaptor = "Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor";
-
-	if(defined $_[0] && $_[0]->isa($db_adaptor)){
-		$self->{'db'} = shift;
-	}elsif(defined $_[0]){
-		throw("Need to pass a valid $db_adaptor");
-	}
-
-	return $self->{'db'};
+  if(defined $_[0] && $_[0]->isa("Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor")){
+    $self->{'db'} = shift;
+  }elsif(defined $_[0]){
+    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor");
+  }
+  
+  return $self->{'db'};
 }
+
+=head2 pass
+  
+  Example    : $imp->pass("password");
+  Description: Getter/Setter for the db password
+  Arg [1]    : optional - db password
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
 
 sub pass{
-	my $self = shift;
-
-	$self->{'pass'} = shift if(@_);
-	return $self->{'pass'};
+  my $self = shift;
+  $self->{'pass'} = shift if(@_);
+  return $self->{'pass'};
 }
+
+=head2 pass
+  
+  Example    : $imp->host("hoastname");
+  Description: Getter/Setter for the db hostname
+  Arg [1]    : optional - db hostname
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub host{
-	my $self = shift;
-
-	$self->{'host'} = shift if(@_);
-	return $self->{'host'};
+  my $self = shift;
+  $self->{'host'} = shift if(@_);
+  return $self->{'host'};
 }
+
+=head2 port
+  
+  Example    : $imp->port(3306);
+  Description: Getter/Setter for the db port number
+  Arg [1]    : optional - db port number
+  Returntype : int
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub port{
-	my $self = shift;
-
-	$self->{'port'} = shift if(@_);
-	return $self->{'port'};
+  my $self = shift;
+  $self->{'port'} = shift if(@_);
+  return $self->{'port'};
 }
+
+=head2 user
+  
+  Example    : $imp->user("user_name");
+  Description: Getter/Setter for the db user name
+  Arg [1]    : optional - db user name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub user{
-	my $self = shift;
-
-	$self->{'user'} = shift if(@_);
-	return $self->{'user'};
+  my $self = shift;
+  $self->{'user'} = shift if(@_);
+  return $self->{'user'};
 }
 
+=head2 dump_fasta
+  
+  Example    : if($self->dump_fasta()){...do fasta dump...}
+  Description: Getter/Setter for the dump_fasta flag
+  Arg [1]    : optional - 0 or 1
+  Returntype : boolean
+  Exceptions : none
+  Caller     : self
+  Status     : Stable
 
+=cut
 
 
 sub dump_fasta{
-	my $self = shift;
-
-	$self->{'dump_fasta'} = shift if(@_);
-
-	return $self->{'dump_fasta'};
+  my $self = shift;
+  $self->{'dump_fasta'} = shift if(@_);
+  return $self->{'dump_fasta'};
 }
 
 
-#convinience wrapper methods, put in helper?
+
 sub get_id{
-	my ($self, $id_name) = @_;
-
-	return $self->get_data("${id_name}_id");
+  my ($self, $id_name) = @_;
+  deprecate("get_id is deprecated, move to Helper?");
+  return $self->get_data("${id_name}_id");
 }
 
+=head2 species
+  
+  Example    : $imp->species("homo_sapiens");
+  Description: Getter/Setter for species
+  Arg [1]    : optional - species name(alias?)
+  Returntype : string
+  Exceptions : none ? throw if no alias found?
+  Caller     : general
+  Status     : Medium - may move reg alias look up to this method
 
-#used for generating dbadaptors
+=cut
+
 sub species{
-	my $self = shift;
+  my $self = shift;
 
-	$self->{'species'} = shift if(@_);
+  #should we do reg alias look up here?
+
+  $self->{'species'} = shift if(@_);
 	
-	return $self->{'species'};
+  return $self->{'species'};
 }
+
+=head2 get_dir
+  
+  Example    : $imp->get_dir("import");
+  Description: Retrieves full path for given directory
+  Arg [1]    : mandatory - dir name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Medium - move to Helper?
+
+=cut
 
 sub get_dir{
-	my ($self, $dirname) = @_;
-
-	return $self->get_data("${dirname}_dir");
+  my ($self, $dirname) = @_;
+  return $self->get_data("${dirname}_dir");
 }
+
+=head2 norm_method
+  
+  Example    : my $norm_method = $imp->norm_method()
+  Description: Getter/Setter for normalisation method
+  Arg [1]    : mandatory - method name
+  Returntype : string
+  Exceptions : none ? throw if no analysis with logic name
+  Caller     : general
+  Status     : At risk - restrict to logic_name and validate against DB, allow multiple
+
+=cut
+
 
 sub norm_method{
-	my $self = shift;
-
-	if(@_){
-		$self->{'norm_method'} = shift;
-	}
-
-	return $self->{'norm_method'};
+  my $self = shift;
+  $self->{'norm_method'} = shift if(@_);
+  return $self->{'norm_method'};
 }
+
+=head2 register_experiment
+  
+  Example    : $imp->register_experiment()
+  Description: General control method, performs all data import and normalisations
+  Arg [1]    : optional - dnadb DBAdaptor
+  Returntype : none
+  Exceptions : throws if arg is not Bio::EnsEMBL::DBSQL::DBAdaptor
+  Caller     : general
+  Status     : Medium
+
+=cut
 
 
 sub register_experiment{
@@ -664,13 +887,13 @@ sub register_experiment{
 
 	#$self->import_experiment();#imports experiment and chip data
 	$self->read_data("probe");
-	#$self->read_data("results");
-	#$self->import_results("import");
+	$self->read_data("results");
+	$self->import_results("import");
 
 	#Need to be able to run this separately, so we can normalise previously imported sets with different methods
 	#should be able t do this without raw data files e.g. retrieve info from DB
 	my $norm_method = $self->norm_method();
-	#$self->$norm_method;
+	$self->$norm_method;
 	$self->import_results("norm");
 
 	return;
@@ -686,6 +909,8 @@ sub register_experiment{
 
 sub import_probe_data{
   my $self = shift;
+
+  deprecate("probe import now performed by read_probe_data");
   
   #This has been genericised for multiple chips, currently only one/data set with Nimblegen
   #would need to write different files for each chip and store the file names
@@ -718,8 +943,20 @@ sub import_probe_data{
   return;
 }
 
+=head2 import_results
+  
+  Example    : $self->import_results()
+  Description: Imports results into DB from file
+  Arg [1]    : mandatory - results dir
+  Returntype : none
+  Exceptions : throws if R
+  Caller     : general
+  Status     : Medium
+
+=cut
+
 sub import_results{
-  my ($self, $source_dir) = @_;
+  my ($self, $results_dir) = @_;
   
 
   if($source_dir ne "norm"){
@@ -727,25 +964,47 @@ sub import_results{
       
       foreach my $design_id(@{$array->get_design_ids()}){
 	my %ac = %{$array->get_array_chip_by_design_id($design_id)};
-	print "Loading results for ".$ac{'name'}."\n";
-	$self->db->load_table_data("result",  $self->get_dir($source_dir)."/result.".$ac{'name'}.".txt");
+	warn "Log this! -  Loading results for ".$ac{'name'};
+	$self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$ac{'name'}.".txt");
       }
     }
   }else{
-    $self->db->load_table_data("result",  $self->get_dir($source_dir)."/result.txt");
+    warn "Log this! -  Loading raw results from ".$self->get_dir($results_dir)."/result.txt";
+    $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
   }
   
   return;
 }
 
-sub read_data{
-	my($self, $data_type) = @_;
-	
-	map {my $method = "read_${_}_data"; $self->$method()} @{$self->get_def("${data_type}_data")};
+=head2 read_data
+  
+  Example    : $self->read_data("probe")
+  Description: Calls each method in data_type array from defs hash
+  Arg [1]    : mandatory - data type
+  Returntype : none
+  Exceptions : none
+  Caller     : self
+  Status     : At risk
 
-	return;
+=cut
+
+sub read_data{
+  my($self, $data_type) = @_;
+  map {my $method = "read_${_}_data"; $self->$method()} @{$self->get_def("${data_type}_data")};
+  return;
 }
 
+=head2 design_type
+  
+  Example    : $self->design_type("binding_site_identification")
+  Description: Getter/Setter for experimental design type
+  Arg [1]    : optional - design type
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
 
 
 
@@ -756,55 +1015,79 @@ sub design_type{
 
 
 
+=head2 read_data
+  
+  Example    : $self->read_data("probe")
+  Description: Calls each method in data_type array from defs hash
+  Arg [1]    : mandatory - data type
+  Returntype : none
+  Exceptions : none
+  Caller     : self
+  Status     : At risk
 
-
-#These are direct references to table names, which should be separated buried in the DBAdaptor, via DBDefs.pm?
-#Some of these may also be different for different vendors > ArrayDefs?
-#All dbids should be retrieved this way, as they are lazy loaded
-
-
+=cut
 
 
 #nimblegen specific!
 sub get_channel_dbid{
-	my ($self, $chan_uid) = @_;
+  my ($self, $chan_uid) = @_;
+  my ($chip_uid);
 
-	my ($chip_uid);
+  warn "Replace this with direct calls to Channel via ExperimentalChip::get_channel";
 
-	warn "Replace this with direct calls to Channel via ExperimentalChip::get_channel";
+  if( ! $self->channel_data($chan_uid, 'dbID')){
+    ($chip_uid = $chan_uid) =~ s/_.*//;
+    $self->channel_data($chan_uid, 'dbid', $self->db->fetch_channel_dbid_by_echip_dye($self->get_echip($chip_uid)->dbID(),
+										      $self->get_channel($chan_uid)->{'dye'}));
+  }
 
-	if( ! $self->channel_data($chan_uid, 'dbID')){
-		($chip_uid = $chan_uid) =~ s/_.*//;
-		$self->channel_data($chan_uid, 'dbid', $self->db->fetch_channel_dbid_by_echip_dye($self->get_echip($chip_uid)->dbID(),
-																								  ${$self->get_channel($chan_uid)}{'dye'}));
-	}
-	
-	return $self->channel_data($chan_uid, 'dbid');
+  return $self->channel_data($chan_uid, 'dbid');
 }
 
 
 
 
+=head2 get_chr_seq_region_id
+  
+  Example    : $seq_region_id = $self->get_seq_region_id('X');
+  Description: Calls each method in data_type array from defs hash
+  Arg [1]    : mandatory - chromosome name
+  Arg [2]    : optional - start value
+  Arg [3]    : optional - end value
+  Returntype : int
+  Exceptions : none
+  Caller     : self
+  Status     : At risk
 
+=cut
 
-
+#convinience wrapper method
 #could we use the seq region cache instead?
 #this seems like a lot of overhead for getting the id
 sub get_chr_seq_region_id{
-	my ($self, $chr, $start, $end) = @_;
-	#what about strand info?
+  my ($self, $chr, $start, $end) = @_;
+  #what about strand info?
 
-	#use start and stop to prevent problems with scaffodl assemblies, i.e. >1 seq_region_id
-	#my $slice = $self->slice_adaptor->fetch_by_region("chromosome", $chr, $start, $end);
-	#we could pass the slice back to the slice adaptor for this, to avoid dbid problems betwen DBs
+  #do we need the start and stop?
 
-	return $self->db->get_SliceAdaptor->fetch_by_region("chromosome", $chr, $start, $end)->get_seq_region_id();
+  #use start and stop to prevent problems with scaffodl assemblies, i.e. >1 seq_region_id
+  #my $slice = $self->slice_adaptor->fetch_by_region("chromosome", $chr, $start, $end);
+  #we could pass the slice back to the slice adaptor for this, to avoid dbid problems betwen DBs
+  
+  return $self->db->get_SliceAdaptor->fetch_by_region("chromosome", $chr, $start, $end)->get_seq_region_id();
 }
 
+=head2 vsn_norm
+  
+  Example    : $self->vsn_norm();
+  Description: Convinience/Wrapper method for vsn R normalisation
+  Returntype : none
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
 
-#We need to enable Importer for previous imports
-#currently dies if experiment name already registered
-#This will enable re-imports of raw data via different analyses/normalisations
+=cut
+
 #Have Norm class or contain methods in importer?
 #Need to have analysis set up script for all standard analyses.
 
@@ -812,6 +1095,17 @@ sub vsn_norm{
   my $self = shift;
   return $self->R_norm("VSN_GLOG");
 }
+
+=head2 R_norm
+  
+  Example    : $self->R_norm(@logic_names);
+  Description: Performs R normalisations for given logic names
+  Returntype : none
+  Exceptions : Throws if R exits with error code or if data not not valid for analysis
+  Caller     : general
+  Status     : At risk
+
+=cut
 
 sub R_norm{
   my ($self, @logic_names) = @_;
