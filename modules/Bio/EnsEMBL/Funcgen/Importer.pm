@@ -64,7 +64,7 @@ my $reg = "Bio::EnsEMBL::Registry";
 		    -host DB host
 		    -user  DB user
 		    -port  DB port
-                    -ssh  Flag to set connection over ssh via forwarded port to localhost (default = 0);
+                    -ssh  Flag to set connection over ssh via forwarded port to localhost (default = 0); remove?
                     -group    name of experimental/research group
                     -location of experimental/research group
                     -contact  e/mail address of primary contact for experimental group
@@ -123,7 +123,7 @@ sub new{
 		 host       => undef,
 		 user       => undef,
 		 port       => undef,
-		 ssh        => 0; 
+		 ssh        => 0,
 
 
 		 #vars to handle array chip sets
@@ -205,8 +205,18 @@ sub new{
 		if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build())){
 
 		  
-		  if($self->{'ssh'} && ($self->host() ne 'localhost'){
-		    warn "Overriding host ".$self->host()." for ssh connection via localhost(127.0.0.1)";
+		  if($self->{'ssh'}){
+
+		    my $host = `host localhost`;#mac specific? nslookup localhost wont work on server/non-PC 
+		    #will this always be the same?
+		    warn "Need to get localhost IP from env, hardcoded for 127.0.0.1, $host";
+
+		    if ($self->host() ne 'localhost'){
+		      warn "Overriding host ".$self->host()." for ssh connection via localhost(127.0.0.1)";
+		    }
+		    
+
+
 		  }
 
 
@@ -259,6 +269,19 @@ sub new{
 #Need to separate this further as we need still need to set the Experiment object if we're doing a re-normalise/analyse
 #Move exeriment/probe/raw result import tests to register experiment?
 #Make all other register methods private, so we don't bypass the previously imported exp check
+
+=head2 init_import
+
+  Example    : $self->init_import();
+  Description: Initialises import by creating working directories 
+               and by storing the Experiemnt
+  Returntype : none
+  Exceptions : warns and throws depending on recover and Experiment status 
+  Caller     : general
+  Status     : Medium
+
+=cut
+
 
 sub init_import{
   my ($self) = shift;
@@ -328,33 +351,57 @@ sub init_import{
 }
 
 
+=head2 validate_group
 
+  Example    : $self->validate_group();
+  Description: Validates groups details
+  Returntype : none
+  Exceptions : throws if insufficient info defined to store new Group and is not already present
+  Caller     : general
+  Status     : Medium - check location and contact i.e. group name clash?
+
+=cut
 
 sub validate_group{
-	my ($self) = shift;
+  my ($self) = shift;
 
-	my $group_ref = $self->db->fetch_group_details($self->group());
+  my $group_ref = $self->db->fetch_group_details($self->group());
 
-	if (! $group_ref){
-		if($self->location() && $self->contact()){
-			$self->db->import_group($self->group(), $self->location, $self->contact());
-		}else{
-			throw("Group ".$self->group()." does not exist, please specify a location and contact to register the group");
-		}
-	}
-
-	return;
+  if (! $group_ref){
+    if($self->location() && $self->contact()){
+      $self->db->import_group($self->group(), $self->location, $self->contact());
+    }else{
+      throw("Group ".$self->group()." does not exist, please specify a location and contact to register the group");
+    }
+  }
+  
+  return;
 }
 
-sub create_output_dirs{
-	my ($self, @dirnames) = @_;
-	
-	foreach my $name(@dirnames){
-		$self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
-		mkdir $self->get_dir($name) if(! -d $self->get_dir($name));
-	}
+=head2 create_output_dirs
 
-	return;
+  Example    : $self->create_output_dirs();
+  Description: Does what it says on the tin, creates dirs in 
+               the root output dir foreach @dirnames, also set paths in self
+  Arg [1]    : mandatory - list of dir names
+  Returntype : none
+  Exceptions : none
+  Caller     : general
+  Status     : Medium - add throw?
+
+=cut
+
+sub create_output_dirs{
+  my ($self, @dirnames) = @_;
+	
+  #throw here
+
+  foreach my $name(@dirnames){
+    $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
+    mkdir $self->get_dir($name) if(! -d $self->get_dir($name));
+  }
+  
+  return;
 }
 
 ### GENERIC ACCESSOR METHODS ###
