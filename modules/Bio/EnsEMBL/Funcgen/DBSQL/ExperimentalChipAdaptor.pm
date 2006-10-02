@@ -113,11 +113,11 @@ sub fetch_contigsets_by_experiment_dbID {
     #This is currently a hack!!
     #Need ti implement contig_set_id in experimental_chip
 
-    print "\nfetching echips for experiment $e_dbid for ".$self->db->species()."  xxx\n";
+    #warn "\nfetching echips for experiment $e_dbid for ".$self->db->species()."  xxx";
     
     foreach my $echip (@{$self->fetch_all_by_experiment_dbID($e_dbid)}){
          
-      if($self->db->species() eq "homo_sapiens"){
+      if($self->db->species() =~ /homo/i){
 
 	#($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078") ? push @hack1, $echip : push @hack2, $echip; 
 
