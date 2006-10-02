@@ -959,7 +959,7 @@ sub import_results{
   my ($self, $results_dir) = @_;
   
 
-  if($source_dir ne "norm"){
+  if($results_dir ne "norm"){
     foreach my $array(@{$self->arrays()}){
       
       foreach my $design_id(@{$array->get_design_ids()}){
