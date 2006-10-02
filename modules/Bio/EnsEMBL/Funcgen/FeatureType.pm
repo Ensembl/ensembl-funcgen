@@ -49,16 +49,19 @@ use vars qw(@ISA);
 =cut
 
 sub new {
-  my $class = shift;
+  my $caller = shift;
 
-  my $self = bless {},$class;
+  my $class = ref($caller) || $caller;
+
+  my $self = $class->SUPER::new(@_);
   
   
   my (
       $name,
       $desc,
+      $cclass,
      ) = rearrange([
-		    'NAME', 'DESCRIPTION'
+		    'NAME', 'DESCRIPTION', 'CLASS',
 		   ], @_);
   
   
@@ -68,6 +71,7 @@ sub new {
     throw("Must supply a FeatureType name\n");
   }
 
+  $self->class($cclass) if $cclass;
   $self->description($desc) if $desc;
 
 

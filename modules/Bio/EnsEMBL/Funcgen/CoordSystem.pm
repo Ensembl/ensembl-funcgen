@@ -245,7 +245,7 @@ sub version {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : At risk
 
 =cut
 

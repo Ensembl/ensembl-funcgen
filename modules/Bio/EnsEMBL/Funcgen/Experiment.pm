@@ -8,12 +8,12 @@ Bio::EnsEMBL::Funcgen::Experiment
 use Bio::EnsEMBL::Funcgen::OligoArray;
 
 my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
-												   -ADAPTOR             => $self,
-												   -NAME                => $name,
-												   -GROUP               => $group,
-												   -DATE                => $date,
-												   -PRIMARY_DESIGN_TYPE => $p_design_type,
-												   -DESCRIPTION         => $description,
+						   -ADAPTOR             => $self,
+						   -NAME                => $name,
+					           -GROUP               => $group,
+						   -DATE                => $date,
+						   -PRIMARY_DESIGN_TYPE => $p_design_type,
+						   -DESCRIPTION         => $description,
                                                    );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
@@ -66,17 +66,12 @@ use vars qw(@ISA);
   Arg [-]: string - the type of thi
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
-												                  -NAME                => $name,
-												                  -GROUP               => $group,
-												                  -DATE                => $date,
-												                  -PRIMARY_DESIGN_TYPE => $p_design_type,
-												                  -DESCRIPTION         => $description,
-                                                 				 );
-
-#experimental_variables?
-#design_type
-#target(s)?
-
+								  -NAME                => $name,
+								  -GROUP               => $group,
+								  -DATE                => $date,
+								  -PRIMARY_DESIGN_TYPE => $p_design_type,
+								  -DESCRIPTION         => $description,
+                                                 		 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Experiment object.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
   Exceptions : None
@@ -84,6 +79,10 @@ use vars qw(@ISA);
   Status     : Medium Risk
 
 =cut
+
+#experimental_variables?
+#design_type
+#target(s)?
 
 sub new {
 	my $caller = shift;

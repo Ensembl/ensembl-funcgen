@@ -274,7 +274,7 @@ sub type {
 
       my ($name, $desc, $class);
 
-      if(self->db->species() =~ /homo/i){
+      if($self->adaptor->db->species() =~ /homo/i){
 	$desc = "Generalised Histone 3 Lysine acetylation";
 	$name = "H3kgac";
 	$class = "HISTONE";
