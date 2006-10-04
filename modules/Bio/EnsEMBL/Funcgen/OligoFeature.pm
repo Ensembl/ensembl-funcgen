@@ -371,12 +371,12 @@ sub get_result_by_Analysis_ExperimentalChips{
     throw("Need to pass listref of ExperiemntalChips") if(scalar(@$exp_chips) == 0);
     throw("Need to pass a valid Bio::EnsEMBL::Analysis") if ! $anal->isa("Bio::EnsEMBL::Analysis");
 
-    my (%query_ids, %all_ids);
+    my (%query_ids, %all_ids, %ac_ids);
     my $anal_name = $anal->logic_name();
     
     foreach my $ec(@$exp_chips){
 				
-      throw("Need to pass a listref of Bio::EnsEMBL::Funcgen::ExperimenalChip objects") 
+      throw("Need to pass a listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
 	if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
 
 		#my $tmp_id = $self->adaptor->db->get_OligoArrayAdaptor->fetch_by_array_chip_dbID($ec->array_chip_id())->dbID();
@@ -385,11 +385,11 @@ sub get_result_by_Analysis_ExperimentalChips{
       
       #throw("You have passed ExperimentalChips from different if($array_id != $tmp_id)
       
-      if(exists  $all_ids{$ec->array_chip_id()}){
+      if(exists  $ac_ids{$ec->array_chip_id()}){
 	throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
       }
       
-
+      $ac_ids{$ec->array_chip_id()} = 1;
       $all_ids{$ec->dbID()} = 1;
       $query_ids{$ec->dbID()} = 1 if(! exists $self->{'results'}{$anal_name}{$ec->dbID()});
       
