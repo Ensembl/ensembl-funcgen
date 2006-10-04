@@ -33,7 +33,7 @@ object. The data are stored in the oligo_feature table.
 =head1 AUTHOR
 
 This module was created by Nathan Johnson, but is almost entirely based on the
-AffyFeature module written by Ian Sealy and Arne Stabenau.
+core OligoFeature module written by Ian Sealy.
 
 This module is part of the Ensembl project: http://www.ensembl.org/
 
@@ -86,34 +86,38 @@ use vars qw(@ISA);
 				   -START         => 1_000_000,
 				   -END           => 1_000_024,
 				   -STRAND        => -1,
-#-ANALYSIS?CIGARLINE
+								      #-ANALYSIS?CIGARLINE!!!!!!!!!!
 			   ); 
   Description: Constructor for OligoFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::OligoFeature
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At risk
 
 =cut
 
 sub new {
-	my $caller = shift;
+  my $caller = shift;
 	
-	my $class = ref($caller) || $caller;
+  my $class = ref($caller) || $caller;
 	
-	my $self = $class->SUPER::new(@_);
+  my $self = $class->SUPER::new(@_);
 	
-	my ($probe, $mismatchcount, $coord_sys_id )
-		= rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID'], @_);
-	
-	$self->probe($probe);
-	$self->mismatchcount($mismatchcount);
+  my ($probe, $mismatchcount, $coord_sys_id )
+    = rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID'], @_);
 
-	#do we need to validate this against the db?  Grab from slice and create new if not present?  Will this be from the dnadb?
+  #Need to add analysis/cigar_line(remove mismatch?)
+
 	
-	$self->coord_system_id($coord_sys_id);
-	
-	return $self;
+  $self->probe($probe);
+  $self->mismatchcount($mismatchcount);
+  
+  #do we need to validate this against the db?  Grab from slice and create new if not present?  Will this be from the dnadb?
+  
+  #do we need this coordsys id if we're passing a slice?  We should have the method but not in here?
+
+  $self->coord_system_id($coord_sys_id);
+  return $self;
 }
 
 =head2 new_fast
@@ -302,25 +306,25 @@ sub probe {
 
 sub get_results_by_channel_id {
     my $self = shift;
-	my $channel_id = shift;
-	my $anal_name = shift;
+    my $channel_id = shift;
+    my $anal_name = shift;
 
-	#$self->{'results'} ||= {};
-	$self->{'results_complete'} ||= 0;
+    warn "This method not fully implemented, remove/deprecate?";
+
+    #$self->{'results'} ||= {};
+    $self->{'results_complete'} ||= 0;
 	
-	if(! $self->{'results'} || ($anal_name && ! exists $self->{'results'}{$anal_name})){
-		#fetch all, set complete set flag
-		$self->{'results_complete'} ||= 1 	if(! $anal_name);
-
-		foreach my $results_ref(@{$self->adaptor->fetch_results_by_channel_analysis($self->probe->dbID(), 
-																				  $channel_id, $anal_name)}){
-
-			$self->{'results'}{$$results_ref[1]} = $$results_ref[0];
-		}
-	}
-
-
+    if(! $self->{'results'} || ($anal_name && ! exists $self->{'results'}{$anal_name})){
+      #fetch all, set complete set flag
+      $self->{'results_complete'} ||= 1 	if(! $anal_name);
+      
+      foreach my $results_ref(@{$self->adaptor->fetch_results_by_channel_analysis($self->probe->dbID(), 
+										  $channel_id, $anal_name)}){
 	
+	$self->{'results'}{$$results_ref[1]} = $$results_ref[0];
+      }
+    }
+    
     return $self->{'results'}
 }
 
@@ -336,16 +340,16 @@ sub get_results_by_channel_id {
 #maybe retrieve and hash all if not Analysis object passed?  Then return what?  
 
 
-=head2 get_result_by_Analysis
+=head2 get_result_by_Analysis_ExperimentalChips
 
   Arg [1]    : Bio::EnsEMBL::Analysis
-  Example    : my @results = $feature->results();
-  Description: Getter, setter and lazy loader of results attribute for
-               OligoFeature objects.
-  Returntype : 
-  Exceptions : None
+  Arg [2]    : listref - Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Example    : my $result = $feature->get_result_by_Analysis_ExperimentalChips($anal, \@echips);
+  Description: Getter of results attribute for a given Analysis and set of ExperimentalChips
+  Returntype : float
+  Exceptions : Throws is no Analysis or ExperimentalChips are not passed?
   Caller     : General
-  Status     : Medium Risk
+  Status     : High Risk
 
 =cut
 
@@ -364,49 +368,45 @@ sub get_results_by_channel_id {
 sub get_result_by_Analysis_ExperimentalChips{
     my ($self, $anal, $exp_chips) = @_;
 
+    throw("Need to pass listref of ExperiemntalChips") if(scalar(@$exp_chips) == 0);
+    throw("Need to pass a valid Bio::EnsEMBL::Analysis") if ! $anal->isa("Bio::EnsEMBL::Analysis");
 
-	my (%query_ids, %all_ids);
-	my $anal_name = $anal->logic_name();
-	#my ($array_id);
-
-	#throw("Does not yet fully implement mulitple ExperimentalChip fetch\n") if(scalar(@$ec_ref) >1);
-
-	throw("Need to pass a valid Bio::EnsEMBL::Analysis") if ! $anal->isa("Bio::EnsEMBL::Analysis");
-
-
-	foreach my $ec(@$exp_chips){
+    my (%query_ids, %all_ids);
+    my $anal_name = $anal->logic_name();
+    
+    foreach my $ec(@$exp_chips){
 				
-		throw("Need to pass a listref of Bio::EnsEMBL::Funcgen::ExperimenalChip objects") 
-		  if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
+      throw("Need to pass a listref of Bio::EnsEMBL::Funcgen::ExperimenalChip objects") 
+	if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
 
 		#my $tmp_id = $self->adaptor->db->get_OligoArrayAdaptor->fetch_by_array_chip_dbID($ec->array_chip_id())->dbID();
-
+      
 		#$array_id ||= $tmp_id;
+      
+      #throw("You have passed ExperimentalChips from different if($array_id != $tmp_id)
+      
+      if(exists  $all_ids{$ec->array_chip_id()}){
+	throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
+      }
+      
 
-		#throw("You have passed ExperimentalChips from different if($array_id != $tmp_id)
-
-		if(exists  $all_ids{$ec->array_chip_id()}){
-			throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
-		}
-
-		#was us array_chip ids for some reason??
-		$all_ids{$ec->dbID()} = 1;
-		$query_ids{$ec->dbID()} = 1 if(! exists $self->{'results'}{$anal_name}{$ec->dbID()});
-
-	}
-
-
-	my @ec_ids = keys %query_ids;
-	my @all_ids = keys %all_ids;
-
-
-    print "ec ids @ec_ids\n";
-    print "all ids @all_ids\n";
-
-	#$self->{'results'} ||= {};
-	#$self->{'results_complete'} ||= 0;#do we need this now?
-	
-	if((scalar(@all_ids) - scalar(@ec_ids))> 1){
+      $all_ids{$ec->dbID()} = 1;
+      $query_ids{$ec->dbID()} = 1 if(! exists $self->{'results'}{$anal_name}{$ec->dbID()});
+      
+    }
+    
+    
+    my @ec_ids = keys %query_ids;
+    my @all_ids = keys %all_ids;
+    
+    
+    #warn "ec ids @ec_ids\n";
+    #warn "all ids @all_ids\n";
+    
+    #$self->{'results'} ||= {};
+    #$self->{'results_complete'} ||= 0;#do we need this now?
+    
+    if((scalar(@all_ids) - scalar(@ec_ids))> 1){
 		throw("DATA ERROR - There is more than one result stored for the following ExperimentalChip ids: @all_ids");
 	}		
 	elsif(! $self->{'results'} || (($anal_name && scalar(@ec_ids) > 0) && scalar(@all_ids) == scalar(@ec_ids))){
@@ -438,12 +438,11 @@ sub get_result_by_Analysis_ExperimentalChips{
 	
 	my @keys;
 	foreach my $id(@all_ids){
-	  my @tmp = grep(":${id}:", keys %{$self->{'results'}{$anal_name}});
-
+	  my @tmp = grep(/:${id}:/, keys %{$self->{'results'}{$anal_name}});
 	  #Hacky needs sorting, quick fix for release!!
 
 	  if(@tmp){
-	    push @keys, grep(":${id}:", keys %{$self->{'results'}{$anal_name}});
+	    push @keys, grep(/:${id}:/, keys %{$self->{'results'}{$anal_name}});
 
 	    last;
 	  }

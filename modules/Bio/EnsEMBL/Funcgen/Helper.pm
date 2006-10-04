@@ -77,7 +77,7 @@ Prints the manual page and exits.
 
 =head1 DESCRIPTION
 
-B<This program> performs several extending debugging and logging functions, aswell as providing a wrapper to give inheritable EFGUtils methods
+B<This program> performs several debugging and logging functions, aswell as providing several inheritable EFGUtils methods.
 
 =cut
 

@@ -22,6 +22,9 @@ Bio::EnsEMBL::Funcgen::CoordSystem
 
 =head1 DESCRIPTION
 
+This has been adapted from the core CoordSystem object to accomodate the multi-assembly
+aspects of the eFG schema, namely hadnling the schema_build of the referenced core DB.
+
 This is a simple object which contains a few coordinate system attributes:
 name, internal identifier, version and schema_build.  A coordinate system is 
 uniquely defined by its name and version and which DB it came from i.e. schema_build.  
@@ -118,6 +121,11 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
+
+  #Can we just hadnle schema_build here and call super->new for the rest.
+  #We will also have to handle the top/default levels issues with multiple DBs
+
+
   my ($name, $version, $sbuild, $top_level, $sequence_level, $default, $rank) =
     rearrange(['NAME','VERSION', 'SCHEMA_BUILD','TOP_LEVEL', 'SEQUENCE_LEVEL',
                'DEFAULT', 'RANK'], @_);
@@ -175,6 +183,9 @@ sub new {
   return $self;
 }
 
+
+#remove all but schema_buil and equals?
+#depends on how we handle levels
 
 =head2 name
 

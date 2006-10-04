@@ -250,7 +250,10 @@ sub get_SliceAdaptor{
     #Get species here too
     
     
-    if(( ! $self->dnadb()) || ($schema_build eq $self->_get_schema_build($self->dnadb()))){
+    if(( ! $self->dnadb()) || ($schema_build ne $self->_get_schema_build($self->dnadb()))){
+
+      #warn "Generating dnadb schema_build is $schema_build and dnadb is ".$self->_get_schema_build($self->dnadb())."\n";
+
       #get from cs_id
       #can we return direct from registry for older versions?
       #best to generate directl as we may have only loaded the current DBs
@@ -260,7 +263,7 @@ sub get_SliceAdaptor{
 	(						
 	 -host => "ensembldb.ensembl.org",
 	 -user => "anonymous",
-	 -dbname => $self->db->species()."_core_${schema_build}",
+	 -dbname => lc($self->species())."_core_${schema_build}",
 	);
       
       $self->dnadb($dnadb);

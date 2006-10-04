@@ -60,40 +60,29 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-PROBE]        : Bio::EnsEMBL::Funcgen::OligoProbe - probe
-        An OligoFeature must have a probe. This probe must already be stored if
-		you plan to store the feature.
-  Arg [-SCORE]: (optional) int
-        Score assigned by analysis pipeline
-  Arg [-ANALSIS_ID]         : int
-        Analysis database ID.
-  Arg [-SLICE]        : Bio::EnsEMBL::Slice
-        The slice on which this feature is.
-  Arg [-START]        : int
-        The start coordinate of this feature relative to the start of the slice
-		it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-END]          : int
-        The end coordinate of this feature relative to the start of the slice
-		it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-DISPLAY_LABEL]: string
-        Display label for this feature
-  Arg [-STRAND]       : int
-        The orientation of this feature. Valid values are 1, -1 and 0.
-  Arg [-dbID]         : (optional) int
-        Internal database ID.
-  Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor
-        Database adaptor.
+  Arg [-PROBE] : Bio::EnsEMBL::Funcgen::OligoProbe - An OligoFeature must have a probe. 
+                 This probe must already be stored if you plan to store the feature.
+  Arg [-SCORE]: (optional) int - Score assigned by analysis pipeline
+  Arg [-ANALYSIS_ID] : int - Analysis database ID.
+  Arg [-SLICE] : Bio::EnsEMBL::Slice - The slice on which this feature is.
+  Arg [-START] : int - The start coordinate of this feature relative to the start of the slice
+		 it is sitting on. Coordinates start at 1 and are inclusive.
+  Arg [-END] : int -The end coordinate of this feature relative to the start of the slice
+	       it is sitting on. Coordinates start at 1 and are inclusive.
+  Arg [-DISPLAY_LABEL]: string - Display label for this feature
+  Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
+  Arg [-dbID]         : (optional) int - Internal database ID.
+  Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
   Example    : my $feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
-	-PROBE         => $probe,
-	-SLICE         => $chr_1_slice,
-	-START         => 1_000_000,
-	-END           => 1_000_024,
-	-STRAND        => -1,
-    -DISPLAY_LABEL => $text,
-    -ANALYSIS_ID   => $anal_id,
-    -SCORE         => $score,
-    ); 
-
+									  -PROBE         => $probe,
+									  -SLICE         => $chr_1_slice,
+									  -START         => 1_000_000,
+									  -END           => 1_000_024,
+									  -STRAND        => -1,
+									  -DISPLAY_LABEL => $text,
+									  -ANALYSIS_ID   => $anal_id,
+									  -SCORE         => $score,
+									 ); 
 
 
   Description: Constructor for PredictedFeature objects.
@@ -196,7 +185,7 @@ sub display_label {
   Returntype : int
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Medium
 
 =cut
 
@@ -218,7 +207,7 @@ sub coord_system_id {
   Returntype : int
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Stable
              
 =cut
 
@@ -238,16 +227,14 @@ sub analysis_id {
   Returntype : int
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Medium
              
 =cut
 
 sub feature_type_id {
-    my $self = shift;
-
-	$self->{'feature_type_id'} = shift if @_;
-	
-    return $self->{'feature_type_id'};
+  my $self = shift;
+  $self->{'feature_type_id'} = shift if @_;
+  return $self->{'feature_type_id'};
 }
 
 #Hacky placeholder mehtod as I haven't written FeatureType or FeatureTypeAdaptor yet
@@ -260,46 +247,41 @@ sub feature_type_id {
   Returntype : int
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At risk
              
 =cut
 
 sub type {
-    my $self = shift;
+  my $self = shift;
 
-    #$self->{'type'} = shift if @_;
+  #$self->{'type'} = shift if @_;
 	
 
-    if( ! $self->{'type'}){
-
-      my ($name, $desc, $class);
-
-      if($self->adaptor->db->species() =~ /homo/i){
-	$desc = "Generalised Histone 3 Lysine acetylation";
-	$name = "H3kgac";
-	$class = "HISTONE";
-      }else{
-	$desc = "MEFf";
-	$name = "MEFf";
-	$class = "HISTONE";
-      }
-
-
-      my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
-		(
-		 -NAME => $name,
-		 -DESCRIPTION => $desc,
-		 -CLASS => $class, 
-		); 
-
-      $self->{'type'} = $ft;
+  if( ! $self->{'type'}){
+    
+    my ($name, $desc, $class);
+    
+    if($self->adaptor->db->species() =~ /homo/i){
+      $desc = "Generalised Histone 3 Lysine acetylation";
+      $name = "H3kgac";
+      $class = "HISTONE";
+    }else{
+      $desc = "MEFf";
+      $name = "MEFf";
+      $class = "HISTONE";
     }
+        
+    my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
+      (
+       -NAME => $name,
+       -DESCRIPTION => $desc,
+       -CLASS => $class, 
+      ); 
     
-
-    
-
-
-    return $self->{'type'};
+    $self->{'type'} = $ft;
+    }
+  
+  return $self->{'type'};
 }
 
 

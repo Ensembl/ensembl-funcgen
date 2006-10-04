@@ -5,7 +5,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::FeatureType - A module to represent a FeatureType.
+Bio::EnsEMBL::Funcgen::FeatureType - A module to represent a FeatureType. i.e. the target of an experiment.
 
 =head1 SYNOPSIS
 
@@ -15,12 +15,12 @@ use Bio::EnsEMBL::Funcgen::FeatureType;
 
 =head1 DESCRIPTION
 
+This is a simple class to represent information about a FeatureType, containing the name i.e Brno nomenclature or other controlled/validated name relevant to the class (HISTONE, PROMOTER etc), and description. This module is part of the Ensembl project: http://www.ensembl.org/
+
 
 =head1 AUTHOR
 
-
-
-This module is part of the Ensembl project: http://www.ensembl.org/
+This module was written by Nathan Johnson.
 
 =head1 CONTACT
 
@@ -45,6 +45,19 @@ use vars qw(@ISA);
 
 =head2 new
 
+  Arg [-name]: string - name of FeatureType
+  Arg [-class]: string - class of FeatureType
+  Arg [-description]: string - descriptiom of FeatureType
+  Example    : my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
+                                                               -name  => "H3K9Me",
+                                                               -class => "HISTONE",
+                                                               -description => "Generalised methylation of Histone 3 Lysine 9",
+                                                                );
+  Description: Constructor method for FeatureType class
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : Throws if name not defined ? and class
+  Caller     : General
+  Status     : Medium risk
 
 =cut
 
@@ -71,11 +84,11 @@ sub new {
     throw("Must supply a FeatureType name\n");
   }
 
+
+  #add test for class and enum? Validate names against Brno etc?
   $self->class($cclass) if $cclass;
   $self->description($desc) if $desc;
 
-
-  
   return $self;
 }
 
@@ -103,7 +116,7 @@ sub name {
 =head2 description
 
   Arg [1]    : (optional) string - description
-  Example    : my $desc = $probe->description();
+  Example    : my $desc = $ft->description();
   Description: Getter and setter of description attribute for FeatureType
                objects.
   Returntype : string
@@ -120,11 +133,23 @@ sub description {
 }
 
 
-sub class{
-	my $self = shift;
-    $self->{'class'} = shift if @_;
-    return $self->{'class'};
+=head2 class
 
+  Arg [1]    : (optional) string - class
+  Example    : $ft->class('HISTONE');
+  Description: Getter and setter of description attribute for FeatureType
+               objects.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Low Risk
+
+=cut
+
+sub class{
+  my $self = shift;
+  $self->{'class'} = shift if @_;
+  return $self->{'class'};
 }
 1;
 

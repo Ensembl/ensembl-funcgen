@@ -21,10 +21,10 @@ my $probe = Bio::EnsEMBL::Funcgen::ProbeSet->new(
 
 =head1 DESCRIPTION
 
-An ProbeSet object represents a probe on a microarray. The
-data (currently the name, size, array_chip_id and family) are stored
-in the probe_set table. ProbeSets are only really relevant for Affy probes, 
-or when avaliable these will be analagous to Nimblegen feature sets.
+A ProbeSet object represents a set of probes on a microarray. The
+data (currently the name, size, and family) are stored in the probe_set 
+table. ProbeSets are only really relevant for Affy probes, or when 
+avaliable these will be analagous to Nimblegen feature sets.
 
 For Affy arrays, a probeset can be part of more than one array, containing unique
 probes. 

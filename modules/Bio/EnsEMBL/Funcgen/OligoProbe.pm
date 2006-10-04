@@ -37,8 +37,8 @@ which array it is on.
 
 =head1 AUTHOR
 
-This module was created by Ian Sealy, but is almost entirely based on the
-AffyProbe module written by Arne Stabenau.
+This module was created by Nathan Johnson, but is almost entirely based on the
+Affy/OligoProbe module written by Arne Stabenau and Ian Sealy.
 
 This module is part of the Ensembl project: http://www.ensembl.org/
 
