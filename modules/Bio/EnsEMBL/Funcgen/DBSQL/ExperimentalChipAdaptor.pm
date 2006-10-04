@@ -113,13 +113,13 @@ sub fetch_contigsets_by_experiment_dbID {
     #This is currently a hack!!
     #Need ti implement contig_set_id in experimental_chip
 
-    #warn "\nfetching echips for experiment $e_dbid for ".$self->db->species()."  xxx";
     
     foreach my $echip (@{$self->fetch_all_by_experiment_dbID($e_dbid)}){
          
       if($self->db->species() =~ /homo/i){
 
 	#($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078") ? push @hack1, $echip : push @hack2, $echip; 
+	
 
 	if($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078"){
 	  push @hack1, $echip;
@@ -130,9 +130,6 @@ sub fetch_contigsets_by_experiment_dbID {
 	
 	next if ($echip->unique_id() != "48316" && $echip->unique_id() != "48317" &&
 		 $echip->unique_id() != "48320" && $echip->unique_id() != "65797");				    
-
-	#warn "pushing ".$echip->unique_id()."\n";
-
 	my @tmp = ($echip->unique_id(), $echip);
 	push @tracksets, \@tmp;
       }
@@ -141,9 +138,10 @@ sub fetch_contigsets_by_experiment_dbID {
       }
     }
 
-    if($self->db->species() eq "homo_sapiens"){
+    if($self->db->species() =~ /homo/i){
       @tracksets = (\@hack1, \@hack2);
     }
+
 
     return \@tracksets;
 }

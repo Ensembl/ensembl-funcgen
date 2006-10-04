@@ -106,70 +106,70 @@ use vars qw(@ISA);
 =cut
 
 sub new {
-	my $caller = shift;
+  my $caller = shift;
+  
+  my $class = ref($caller) || $caller;
 	
-	my $class = ref($caller) || $caller;
+  my $self = $class->SUPER::new(@_);
+  
+  my (
+      $names,          $name,
+      $array_chip_ids, $array_chip_id,
+      $arrays,         $array,
+      $probeset,       $aclass,
+      $length
+     ) = rearrange([
+		    'NAMES',          'NAME',
+		    'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
+		    'ARRAYS',         'ARRAY',
+		    'PROBE_SET',      'CLASS',
+		    'LENGTH'
+		   ], @_);
+  
 	
-	my $self = $class->SUPER::new(@_);
-	
-	my (
-		$names,          $name,
-		$array_chip_ids, $array_chip_id,
-		$arrays,         $array,
-		$probeset,       $aclass,
-		$length
-	) = rearrange([
-				   'NAMES',          'NAME',
-				   'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
-				   'ARRAYS',         'ARRAY',
-				   'PROBE_SET',      'CLASS',
-				   'LENGTH'
-	], @_);
-
-	
-	@$names = ($name) if(ref($names) ne "ARRAY");
-	@$array_chip_ids = ($array_chip_id) if (ref($array_chip_ids) ne "ARRAY");
-	@$arrays = ($array) if (ref($arrays) ne "ARRAY");
-
-	#We need to record duplicates for each probe_set i.e. each array.
-	#the relationship is really array_chip to name, as everything else stays the same
-	#can't have same probe_set_id as this wouldn't maintain relationship
-	#need unique ps id's or array_chip_id in probe table?
-	#Then we can miss probeset id's out totally if required
-	#or should we just duplicate everything with unique db IDs
-
-	
-	if (defined $$names[0]) {
-
-		if(scalar(@$names) != scalar(@$array_chip_ids)){
-			throw("You have not specified valid name:array_chip_id pairs\nYou need a probe name for each Array");
-		}
-
-		if(defined $$arrays[0]){ 
-			if(scalar(@$names) != scalar(@$arrays)){
-				throw("You have not specified valid name:Array pairs\nYou need a probe name for each Array\n");
-			}
-		}
-		else{
-			warn("You have not specified and Array objects, this will result in multiple/redundant queries based on the array_chip_id\nYou should pass Array objects to speed up this process");
-		}
-
-		# Probe(s) have been specified
-		# Different names reflect different array
-
-		for my $i(0..$#{$names}){
-			$self->add_array_chip_probename($$array_chip_ids[$i], $$names[$i], $$arrays[$i]);
-		}
-	} else {
-		throw('You need to provide a probe name (or names) to create an OligoProbe');
-	}
-		
-	$self->probeset($probeset) if defined $probeset;
-	$self->class($aclass)      if defined $aclass;
-	$self->length($length)     if defined $length;
-	
-	
-	return $self;
+  @$names = ($name) if(ref($names) ne "ARRAY");
+  @$array_chip_ids = ($array_chip_id) if (ref($array_chip_ids) ne "ARRAY");
+  @$arrays = ($array) if (ref($arrays) ne "ARRAY");
+  
+  #We need to record duplicates for each probe_set i.e. each array.
+  #the relationship is really array_chip to name, as everything else stays the same
+  #can't have same probe_set_id as this wouldn't maintain relationship
+  #need unique ps id's or array_chip_id in probe table?
+  #Then we can miss probeset id's out totally if required
+  #or should we just duplicate everything with unique db IDs
+  
+  
+  if (defined $$names[0]) {
+    
+    if(scalar(@$names) != scalar(@$array_chip_ids)){
+      throw("You have not specified valid name:array_chip_id pairs\nYou need a probe name for each Array");
+    }
+    
+    if(defined $$arrays[0]){ 
+      if(scalar(@$names) != scalar(@$arrays)){
+	throw("You have not specified valid name:Array pairs\nYou need a probe name for each Array\n");
+      }
+    }
+    else{
+      warn("You have not specified and Array objects, this will result in multiple/redundant queries based on the array_chip_id\nYou should pass Array objects to speed up this process");
+    }
+    
+    # Probe(s) have been specified
+    # Different names reflect different array
+    
+    for my $i(0..$#{$names}){
+      $self->add_array_chip_probename($$array_chip_ids[$i], $$names[$i], $$arrays[$i]);
+    }
+  } else {
+    throw('You need to provide a probe name (or names) to create an OligoProbe');
+  }
+  
+  $self->probeset($probeset) if defined $probeset;
+  $self->class($aclass)      if defined $aclass;
+  $self->length($length)     if defined $length;
+  
+  
+  return $self;
 }
 
 =head2 add_array_chip_probename
@@ -277,7 +277,7 @@ sub get_all_Arrays {
 
 sub get_all_probenames {
     my $self = shift;
-    return [ values %{$self->{'probenames'}} ]
+    return [ values %{$self->{'probenames'}} ];
 }
 
 =head2 get_probename
