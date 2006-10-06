@@ -53,20 +53,20 @@ use vars qw(@ISA);
   Arg [1]    : int - dbID of array_chip
   Example    : my $array = $oaa->fetch_by_array_chip_dbID($ac_dbid);
   Description: Retrieves a named OligoArray object from the database.
-  Returntype : Bio::EnsEMBL::Funcgen::OligoArray
+  Returntype : listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At risk
 
 =cut
 
 sub fetch_all_by_group {
     my $self = shift;
 
-	throw("Not yet implemented");
+    throw("Not yet implemented");
 
     my $ac_dbid = shift;
-	my $sth = $self->prepare("
+    my $sth = $self->prepare("
 		SELECT a.array_id
 		FROM array a, array_chip ac
 		WHERE a.array_id = ac.array_id
@@ -74,10 +74,10 @@ sub fetch_all_by_group {
 	");
 
 
-	$sth->execute();
-	my ($array_id) = $sth->fetchrow();
-
-	return $self->fetch_by_dbID($array_id);
+    $sth->execute();
+    my ($array_id) = $sth->fetchrow();
+    
+    return $self->fetch_by_dbID($array_id);
 }
 
 
@@ -88,39 +88,47 @@ sub fetch_all_by_group {
   Example    : my $exp = $exp_a->fetch_by_name('Exp-1');
   Description: Retrieves a named Experiment object from the database.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
-  Exceptions : None
+  Exceptions : Throws if no name defined or if more than one returned
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk -replace with fetch_all_by_name and fetch_by_name_group
 
 =cut
 
 sub fetch_by_name {
-    my $self = shift;
-    my $name = shift;
-    
-    my $result = $self->generic_fetch("e.name = '$name'");
-	
-    if (scalar @$result > 1) {
-		warning("Experiment $name is not unique in the database, but only one result has been returned");
-    } 
+  my $self = shift;
+  my $name = shift;
+  
+  throw("Need to specify and experiment name argument") if (! defined $name);
 
-
-	#should have fetch by name group, to provide uniqueness?
-
-
-    return $result->[0];
+  my $result = $self->generic_fetch("e.name = '$name'");
+  
+  if (scalar @$result > 1) {
+    throw("Experiment $name is not unique in the database, but only one result has been returned");
+    #should have unique key of group_id and experiment_name
+  } 
+  return $result->[0];
 }
 
+=head2 get_all_experiment_names
+
+  Arg [1]    : (optional) boolean - flag to denote whether experiment is flagged for web display
+  Example    : my @names = $exp_a->get_all_experiment_names();
+  Description: Retrieves names of all experiments.
+  Returntype : ARRAYREF
+  Exceptions : none
+  Caller     : General
+  Status     : At Risk -rename fetch?
+
+=cut
 
 sub get_all_experiment_names{
   my ($self, $displayable) = @_;
 
   my $sql = "SELECT e.name FROM experiment e";
-
   my @names = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
+  #can we do return [map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)}];
   return \@names;
-
 }
 
 #fetch_by_name_group
@@ -184,7 +192,7 @@ sub fetch_attributes {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At risk
 
 =cut
 
@@ -205,7 +213,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -225,7 +233,7 @@ sub _columns {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -261,10 +269,10 @@ sub _objs_from_sth {
   Args       : List of Bio::EnsEMBL::Funcgen::Experiment objects
   Example    : $oaa->store($exp1, $exp2, $exp3);
   Description: Stores given Experiment objects in the database. 
-  Returntype : None
-  Exceptions : None
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Experiment objects
+  Exceptions : Throws is group not present in DB
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 

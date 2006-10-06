@@ -11,8 +11,8 @@ use Bio::EnsEMBL::Utils::Exception;
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-
-
+#Can remove this whole class from the API and use the core class if we can resolve problems below
+#remove new and inherit from Bio::EnsEMBL::DBSQL::MetaCoordContainer?
 
 sub new {
   my $class = shift;
@@ -52,9 +52,11 @@ sub new {
   Returntype : listref of Bio::EnsEMBL::Funcgen::CoordSystem objects
   Exceptions : throw if name argument not provided
   Caller     : BaseFeatureAdaptor
-  Status     : Stable
+  Status     : At risk
 
 =cut
+
+# can remove this if we can get get_CoordSystemAdaptor to return Funcgen rather than core
 
 sub fetch_all_CoordSystems_by_feature_type {
   my $self = shift;
@@ -97,10 +99,11 @@ sub fetch_all_CoordSystems_by_feature_type {
   Returntype : int or undef
   Exceptions : throw on incorrect argument
   Caller     : BaseFeatureAdaptor
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
+#can remove this if we can get Funcgen::Coordsystem to inherit from core CoordSystem
 
 sub fetch_max_length_by_CoordSystem_feature_type {
   my $self = shift;
@@ -135,10 +138,12 @@ sub fetch_max_length_by_CoordSystem_feature_type {
   Returntype : none
   Exceptions : none
   Caller     : BaseFeatureAdaptor
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
+
+#Can also be removed if inheritance/get_CoordSystemAdaptor issues resolved
 
 sub add_feature_type {
   my $self = shift;

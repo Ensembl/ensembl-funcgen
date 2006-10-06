@@ -40,7 +40,7 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::OligoArrayAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( warning );
+use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::OligoArray;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
@@ -58,7 +58,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Funcgen::OligoArray
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -89,7 +89,7 @@ sub fetch_by_array_chip_dbID {
   Returntype : Bio::EnsEMBL::Funcgen::OligoArray
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -104,10 +104,8 @@ sub fetch_by_name {
     } 
 
 
-	#should have fetch by name vendor, to provide uniqueness?
-	#should check for this on import!
-
-
+    #should have fetch by name vendor, to provide uniqueness?
+    #should check for this on import!
     return $result->[0];
 }
 
@@ -169,7 +167,7 @@ sub fetch_attributes {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -188,7 +186,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -208,7 +206,7 @@ sub _columns {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoArray objects
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -247,11 +245,11 @@ sub _objs_from_sth {
 
   Arg [1]    : int - dbID or array
   Example    : None
-  Description: Retrieves
+  Description: Retrieves array_chip hashes guven an array id
   Returntype : Listref of array_chip hashes
   Exceptions : Throws if no array dbID specified
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At risk - rplace with ArrayChipAdaptor
 
 =cut
 
@@ -291,7 +289,7 @@ sub _fetch_array_chips_by_array_dbID {
   Returntype : Listref of stored OligoArray objects
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -357,6 +355,18 @@ sub store {
   #return $array;
 }
 
+=head2 list_dbIDs
+
+  Arg [1]    : Bio:EnsEMBL::Funcgen::OligoArray
+  Example    : (optional) Bio:EnsEMBL::Funcgen::OligoArray which has previously been stored/retrieved
+  Description: array_chips not previously stored are stored.  An Array is returned containing all possible
+               array_chips
+  Returntype : Bio::EnsEMBL::Funcgen::OligoArray
+  Exceptions : warns when storing or skipping and array_chip
+  Caller     : self
+  Status     : At Risk - Move to ArrayChipAdaptor
+
+=cut
 
 #This method takes an array, and optinally a stored sarray else it retrieves one
 #Missing array_chips in sarray are stored and set in array
@@ -389,6 +399,8 @@ sub store_array_chips{
     #this will be used by importer to run probe import etc
     #Use status?
     
+    #Change these warns to logs?
+
     if(! $sdesign_id){
       #This will always be te case, as Arrays are stored before storing their array_chips
       #warn("Adding array_chip $design_id to previously stored array") if ($sarray);

@@ -64,7 +64,7 @@ use vars qw(@ISA);
   Returntype : Listref of Bio::EnsEMBL::PredictedFeature objects
   Exceptions : Throws if no Target object provided
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -87,7 +87,7 @@ sub fetch_all_by_Slice_FeatureType {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -112,7 +112,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -142,7 +142,7 @@ sub _columns {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -165,7 +165,7 @@ sub _default_where_clause {
   Returntype : String
   Exceptions : None
   Caller     : generic_fetch
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -185,7 +185,7 @@ sub _final_clause {
   Returntype : Listref of Bio::EnsEMBL::PredictedFeature objects
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -365,7 +365,7 @@ sub _objs_from_sth {
   Returntype : Bio::EnsEMBL::Funcgen::PredictedFeature
   Exceptions : None
   Caller     : _objs_from_sth
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -387,7 +387,7 @@ sub _new_fast {
   Exceptions : Throws if a list of PredictedFeature objects is not provided or if
                an analysis is not attached to any of the objects
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 

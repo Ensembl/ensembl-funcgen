@@ -58,7 +58,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Funcgen::Channel object
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At risk
 
 =cut
 
@@ -96,24 +96,26 @@ sub fetch_by_type_experimental_chip_dbID {
   Example    : my $chan = $chan_a->fetch_by_type_experimental_chip_dbID('Cy5', $ec_dbid);
   Description: Does what it says on the tin
   Returntype : Bio::EnsEMBL::Funcgen::Channel object
-  Exceptions : None
+  Exceptions : Throws is experiment dbID or dye not passed
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
 sub fetch_by_dye_experimental_chip_dbID {
     my $self = shift;
+    my $dye = shift;
     my $ec_dbid = shift;
 
-	throw("not yet impemented");
+    throw("not yet impemented");
 
-	my ($chan_id, @results);
+    my ($chan_id, @results);
 
-	throw("Must specify an experiemntal dbID") if(! $ec_dbid);
+    throw("Must specify an experiemntal dbID") if(! $ec_dbid);
+    #Need to validate dye against VendorDefs?  Or leave and just return whatever is in DB e.g. nothing if dye name is wrong.
 
 
-	my $sth = $self->prepare("
+    my $sth = $self->prepare("
 		SELECT c.channel_id
 		FROM experimental_chip ec, channel c
 		WHERE c.experimental_chip_id = ec.experimental_chip_id
@@ -144,7 +146,7 @@ sub fetch_by_dye_experimental_chip_dbID {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Channel object
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -180,17 +182,20 @@ sub fetch_all_by_experimental_chip_dbID {
 
 =head2 fetch_all_by_ExperimentalChip
 
-
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Example    : my @chans = @{$ec_a->fetch_all_by_ExperimentalChip($echip);
+  Description: Returns all channels associated with a given ExperimentalChip
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Channel objects
+  Exceptions : Throws if no ExperimentalChip defined
+  Caller     : General
+  Status     : At Risk
 
 =cut
 
 sub fetch_all_by_ExperimentalChip{
-    my ($self, $exp) = @_;
-
-   
-	throw("Must provide an ExperimentChip object") if(! $exp->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip'));
-
-	return $self->fetch_all_by_experimental_chip_dbID($exp->dbID());
+  my ($self, $exp) = @_;
+  throw("Must provide an ExperimentChip object") if(! $exp->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip'));
+  return $self->fetch_all_by_experimental_chip_dbID($exp->dbID());
 }
 
 
@@ -204,7 +209,7 @@ sub fetch_all_by_ExperimentalChip{
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -223,7 +228,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -243,7 +248,7 @@ sub _columns {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Channel objects
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -255,18 +260,18 @@ sub _objs_from_sth {
 	$sth->bind_columns(\$chan_id, \$ec_id, \$sample_id, \$dye, \$type, \$desc);
 	
 	while ( $sth->fetch() ) {
-		my $chan = Bio::EnsEMBL::Funcgen::Channel->new(
-													   -dbID                 => $chan_id,
-													   -EXPERIMENTAL_CHIP_ID => $ec_id,
-													   -SAMPLE_ID            => $sample_id,
-													   -TYPE                 => $type,
-													   -DYE                  => $dye,
-													   -DESCRIPTION          => $desc,
-													   -ADAPTOR              => $self,
-													   );
-
-		push @result, $chan;
-
+	  my $chan = Bio::EnsEMBL::Funcgen::Channel->new(
+							 -dbID                 => $chan_id,
+							 -EXPERIMENTAL_CHIP_ID => $ec_id,
+							 -SAMPLE_ID            => $sample_id,
+							 -TYPE                 => $type,
+							 -DYE                  => $dye,
+							 -DESCRIPTION          => $desc,
+							 -ADAPTOR              => $self,
+							);
+	  
+	  push @result, $chan;
+	  
 	}
 	return \@result;
 }
@@ -283,33 +288,33 @@ sub _objs_from_sth {
   Returntype : None
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
 sub store {
-    my $self = shift;
-    my @args = @_;
-
-    my ($sarray);
-
-    my $sth = $self->prepare("
+  my $self = shift;
+  my @args = @_;
+  
+  my ($sarray);
+  
+  my $sth = $self->prepare("
 			INSERT INTO channel
 			(experimental_chip_id, sample_id, dye, type, description)
 			VALUES (?, ?, ?, ?, ?)");
     
+  
+  
+  foreach my $chan (@args) {
+    if ( ! $chan->isa('Bio::EnsEMBL::Funcgen::Channel') ) {
+      warning('Can only store Channel objects, skipping $chan');
+      next;
+    }
     
-    
-    foreach my $chan (@args) {
-      if ( ! $chan->isa('Bio::EnsEMBL::Funcgen::Channel') ) {
-	warning('Can only store Channel objects, skipping $chan');
-	next;
-      }
+    if (!( $chan->dbID() && $chan->adaptor() == $self )){
       
-      if (!( $chan->dbID() && $chan->adaptor() == $self )){
-	
-	
-	my $s_chan = $self->fetch_by_type_experimental_chip_dbID($chan->type(), $chan->experimental_chip_id());
+      
+      my $s_chan = $self->fetch_by_type_experimental_chip_dbID($chan->type(), $chan->experimental_chip_id());
 	
 	
 	if(! $s_chan){
@@ -351,7 +356,7 @@ sub store {
   Returntype : List of ints
   Exceptions : None
   Caller     : ?
-  Status     : Medium Risk
+  Status     : At risk
 
 =cut
 

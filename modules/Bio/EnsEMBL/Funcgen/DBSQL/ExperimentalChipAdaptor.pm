@@ -92,6 +92,20 @@ sub fetch_all_by_experiment_dbID {
 	return \@results;
 }
 
+=head2 fetch_contigsets_by_experiment_dbID
+
+  Arg [1]    : int - dbID of Experiment
+  Example    : my @track_sets = @{$ec_a->fetch_contigsets_experiment_dbID($ac_dbid);
+  Description: returns a list of track sets which are each an arrayref containing 
+               the track name as the first element, with the rest of the array being
+	       the contiguous chip making up the trackset i.e. chips to be displayed on
+	       the same track
+  Returntype : Listref of mixed types
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk - hardcoded for v41 release
+
+=cut
 
 #contiguous/subsets/tracksets?  i.e. want to display on same track
 sub fetch_contigsets_by_experiment_dbID {
@@ -99,8 +113,8 @@ sub fetch_contigsets_by_experiment_dbID {
     my $e_dbid = shift;
 
     my @tracksets;
-    my @hack1 = ("H3kgac-1");
-    my @hack2 = ("H3kgac-2");
+    my @hack1 = ("H3kgac");
+    #my @hack2 = ("H3kgac-2");
     #46092 + 46078; 46082 + 46075
 
     #what are we going to return? arrayref to list of arrays of echips?
@@ -123,9 +137,9 @@ sub fetch_contigsets_by_experiment_dbID {
 
 	if($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078"){
 	  push @hack1, $echip;
-	}else{
-	  push @hack2, $echip;
-	}
+	}#else{
+	 # push @hack2, $echip;
+	#}
       }elsif($self->db->species() =~ /mus/i){
 	
 	next if ($echip->unique_id() != "48316" && $echip->unique_id() != "48317" &&
@@ -139,7 +153,7 @@ sub fetch_contigsets_by_experiment_dbID {
     }
 
     if($self->db->species() =~ /homo/i){
-      @tracksets = (\@hack1, \@hack2);
+      @tracksets = (\@hack1);#, \@hack2);
     }
 
 
@@ -148,7 +162,7 @@ sub fetch_contigsets_by_experiment_dbID {
 
 =head2 fetch_by_unique_and_experiment_id
 
-  Arg [2]    : int - ynique_id
+  Arg [2]    : int - unique_id
   Arg [1]    : int - dbID of Experiment
   Example    : my $ec = ec_a->fetch_by_unique_and_experiment_id($c_uid, $exp_dbid);
   Description: Does what it says on the tin
@@ -229,7 +243,7 @@ sub _columns {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -265,8 +279,8 @@ sub _objs_from_sth {
   Description: Stores given ExperimentalChip objects in the database. Should only be
                called once per array because no checks are made for duplicates.
 			   Sets dbID and adaptor on the objects that it stores.
-  Returntype : None
-  Exceptions : None
+  Returntype : ARRAYREF
+  Exceptions : warns if passed non-ExperimentalChip arg, or if ExperimentalChip already stored
   Caller     : General
   Status     : Medium Risk
 
@@ -336,8 +350,7 @@ sub store {
 =cut
 
 sub list_dbIDs {
-    my ($self) = @_;
-	
+    my ($self) = @_;	
     return $self->_list_dbIDs('experimental_chip');
 }
 

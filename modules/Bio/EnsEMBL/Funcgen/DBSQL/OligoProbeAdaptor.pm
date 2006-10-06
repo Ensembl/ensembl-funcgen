@@ -59,7 +59,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Funcgen::OligoProbe
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -119,7 +119,7 @@ sub fetch_by_array_probe_probeset_name {
   Returntype : Listref of Bio::EnsEMBL::OligoProbe objects
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -141,7 +141,7 @@ sub fetch_all_by_probeset {
   Returntype : Listref of Bio::EnsEMBL::OligoProbe objects.
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -173,7 +173,7 @@ sub fetch_all_by_Array {
   Returntype : Bio::EnsEMBL::OligoProbe
   Exceptions : Throws if argument is not a Bio::EnsEMBL::Funcgen::OligoFeature object
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -201,7 +201,7 @@ sub fetch_by_OligoFeature {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -220,7 +220,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -241,7 +241,7 @@ sub _columns {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoProbe objects
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -329,10 +329,10 @@ sub _objs_from_sth {
   Description: Stores given OligoProbe objects in the database. Should only be
                called once per probe because no checks are made for duplicates
 			   Sets dbID and adaptor on the objects that it stores.
-  Returntype : None
+  Returntype : ARRAYREF
   Exceptions : Throws if arguments are not OligoProbe objects
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -422,7 +422,7 @@ sub store {
   Returntype : List of ints
   Exceptions : None
   Caller     : ?
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 

@@ -42,9 +42,10 @@ package Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::OligoFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
-#use Bio::EnsEMBL::Funcgen::CoordSystem;
-
 use vars qw(@ISA);
+use strict;
+use warnings;
+
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
 
 
@@ -56,7 +57,7 @@ use vars qw(@ISA);
   Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
   Exceptions : Throws if argument is not a stored OligoProbe object
   Caller     : OligoProbe->get_all_OligoFeatures()
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -84,7 +85,7 @@ sub fetch_all_by_Probe {
   Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
   Exceptions : Throws if no probeset argument
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -120,7 +121,7 @@ sub fetch_all_by_probeset {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoFeature objects
   Exceptions : Throws if no array name is provided
   Caller     : Slice->get_all_OligoFeatures()
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -161,7 +162,7 @@ sub fetch_all_by_Slice_arrayname {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoFeature objects
   Exceptions : Throws if no array name is provided
   Caller     : 
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -206,7 +207,7 @@ sub fetch_all_by_Slice_ExperimentalChips {
   Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
   Exceptions : Throws if no array type is provided
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -231,7 +232,7 @@ sub fetch_all_by_Slice_type {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -255,7 +256,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -288,7 +289,7 @@ sub _columns {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 sub _default_where_clause {
@@ -308,7 +309,7 @@ sub _default_where_clause {
   Returntype : String
   Exceptions : None
   Caller     : generic_fetch
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -328,7 +329,7 @@ sub _final_clause {
   Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -531,7 +532,7 @@ sub _new_fast {
   Exceptions : Throws if a list of OligoFeature objects is not provided or if
                an analysis is not attached to any of the objects
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -617,15 +618,29 @@ sub list_dbIDs {
 	return $self->_list_dbIDs('oligo_feature');
 }
 
+# All the results methods may be moved to a ResultAdaptor
 
+=head2 fetch_results_by_channel_analysis
 
+  Arg [1]    : int - OligoProbe dbID
+  Arg [2]    : int - Channel dbID
+  Arg [1]    : string - Logic name of analysis
+  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($op_id, $channel_id, 'RAW_VALUE')};
+  Description: Gets all analysis results for probe on given channel
+  Returntype : ARRAYREF
+  Exceptions : warns if analysis is not valid in Channel context
+  Caller     : OligoFeature
+  Status     : At Risk - rename fetch_results_by_probe_channel_analysis
 
+=cut
 
 
 
 sub fetch_results_by_channel_analysis{
 	my ($self, $probe_id, $channel_id, $logic_name) = @_;
 	
+	#Will this always be RAW_VALUE?
+
 	my %channel_metrics = (
 						   RawValue => 1,
 						  );
@@ -642,7 +657,7 @@ sub fetch_results_by_channel_analysis{
 		if(exists $channel_metrics{$logic_name}){
 			$analysis_clause = "AND a.logic_name = \"$logic_name\"";
 		}else{
-			warn("$logic_name is not a channel spcific metric\nNo results returned\n");
+			warn("$logic_name is not a channel specific metric\nNo results returned\n");
 			return;
 		}
 	}
@@ -652,6 +667,19 @@ sub fetch_results_by_channel_analysis{
 	return $self->dbc->db_handle->selectall_arrayref($query);
 }
 
+=head2 fetch_results_by_probe_experimental_chips_analysis
+
+  Arg [1]    : int - OligoProbe dbID
+  Arg [2]    : ARRAYREF - ExperimentalChip dbIDs
+  Arg [1]    : string - Logic name of analysis
+  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($op_id, \@chip_ids, 'VSN_GLOG')};
+  Description: Gets all analysis results for probe within a set of ExperimentalChips
+  Returntype : ARRAYREF
+  Exceptions : warns if analysis is not valid in ExperimentalChip context
+  Caller     : OligoFeature
+  Status     : At Risk 
+
+=cut
 
 sub fetch_results_by_probe_experimental_chips_analysis{
 	my ($self, $probe_id, $chip_ids, $logic_name) = @_;

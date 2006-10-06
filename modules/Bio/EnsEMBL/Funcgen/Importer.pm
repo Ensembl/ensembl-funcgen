@@ -907,42 +907,6 @@ sub register_experiment{
 #probe reads probe_set, probes, which should definitely be in array, probe_feature? and results
 #native data format may not map to these methods directly, so may need to call previous method if required data not defined
 
-sub import_probe_data{
-  my $self = shift;
-
-  deprecate("probe import now performed by read_probe_data");
-  
-  #This has been genericised for multiple chips, currently only one/data set with Nimblegen
-  #would need to write different files for each chip and store the file names
-  
-  #Need to cycle through array chip getting status of achip e.g. REGISTERED, IMPORTED?
-  #This is a array:array_chip i.e. 1 to 1 relationship at the moment
-  #Cannot use array->array_chips, as this may bring back more than is valid for this experiment
-  
-  
-  
-  #foreach my $achip_id(keys %{$self->get_data('achips')}){
-  foreach my $design_id(@{$self->arrays->[0]->get_design_ids()}){
-    
-    #would need to get chip specific paths here e.g. probe_set.chip_design_id.txt
-    #how are we going to validate the probe information?
-    #Currently assuming data is correct and complete if we have a pre-registered array_chip
-    
-    if(! $self->arrays()->[0]->get_achip_status($design_id, "IMPORTED")){
-      $self->db->load_table_data("oligo_probe_set",  $self->get_dir("import")."/probe_set.txt");
-      $self->db->load_table_data("oligo_probe",  $self->get_dir("import")."/probe.txt");
-      $self->db->load_table_data("oligo_feature",  $self->get_dir("import")."/probe_feature.txt");
-      
-      #error catch here!! DO not want to set imported if we've not imported properly
-      $self->db->set_status('array_chip', $self->achip_data($design_id, 'dbID'), "IMPORTED");
-    }else{
-      $self->log("Probe(set & feature) data for array_chip already IMPORTED");
-    }
-  }
-  
-  return;
-}
-
 =head2 import_results
   
   Example    : $self->import_results()

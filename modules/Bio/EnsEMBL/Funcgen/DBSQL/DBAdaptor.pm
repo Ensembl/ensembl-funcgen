@@ -5,19 +5,33 @@ Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
   
 =head1 SYNOPSIS
 
+my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+  (
+   -host => "ensembldb.ensembl.org",
+   -dbname => "mus_musculus_funcgen_41_36b",
+   -species => "Mus_musculus",
+   -user => "anonymous",
+   -dnadb => $mouse_core_db,
+   -port => '3307',
+  );
 
-
+my $experiment_adaptor = $db->get_ExperimentAdaptor();
 
 =back
 
 =head1 DESCRIPTION
 
-B<This program> 
+This is a wrapper method for Bio::EnsEMBL::DBAdaptor, providing Funcgen
+specific methods.
 
-=cut
+=head1 CONTACT
 
-=head1 NOTES
+Post questions to the EnsEMBL development list <ensembl-dev@ebi.ac.uk>
 
+=head1 METHODS
+
+The rest of the documentation details each of the object methods. Internal
+methods are usually preceded with a _
 
 =head1 AUTHOR(S)
 
@@ -42,47 +56,26 @@ use Bio::EnsEMBL::DBSQL::DBConnection;
 #use Bio::EnsEMBL::Funcgen::Helper;
 my $reg = "Bio::EnsEMBL::Registry";
 
-################################################################################
-
-=head2 new
-
- Description : 
-               
-
- Arg  [1]    : hash containing optional attributes :-
-               
- ReturnType  : Experiment
-
- Example     : my $Exp = Bio::EnsEMBL::Funcgen::DBAdaptor->new(
-                                                      
-                                                     );
-
- Exceptions  : 
-
-=cut
-
-################################################################################
-
 
 
 #Should we have a new method which adds itself to reg if host is not default reg host.??
 #would need to do test for reg?
 
 
-#these should be removed if overlap with core DBAdaptor or moved to ImportAdaptor?
-# or use store methods on each object
 
-sub fetch_dbid_by_table_field{
-	my ($self, $table, $name, $field) = @_;
 
-	$field ||= "name";
+=head2 fetch_channel_dbid_by_echip_dye
 
-	my $sql = "select ${table}_id from $table where $field =\"$name\"";
+  Arg [1]    : int - ExpeimentalChip dbID
+  Arg [1]    : string - channel dye
+  Example    : my $chan_id = $db->fetch_channel_dbid_by_echip_dye('1', 'Cy5');
+  DESCRIPTION: 
+  Returntype : none
+  Exceptions : none
+  Caller     : general
+  Status     : At risk - replace with ExperimentalChip::get_channel methods?
 
-	#print "sql is $sql\n";
-
-	return $self->dbc->db_handle->selectrow_array($sql);
-}	
+=cut
 
 sub fetch_channel_dbid_by_echip_dye{
 	my ($self, $chip_dbid, $dye) = @_;
@@ -93,41 +86,28 @@ sub fetch_channel_dbid_by_echip_dye{
 }	
 
 
-sub insert_table_row{
-	my ($self, $table, @values) = @_;
 
-	#This assumes first field is an auto increment dbid field
-	my $sql = "insert into $table values (\"\", \"". join("\", \"", @values)."\")";
+=head2 load_table_method
 
-	#print "sql is $sql\n";
-	#we need to catch this and stack trace?
-	return $self->dbc->do($sql);#do we really want to return? Or capture fail here and warn
-}
+  Arg [1]    : string - table name
+  Arg [1]    : string - file path for file to load
+  Example    : $db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
+  DESCRIPTION: Generic method to load a file into a specified table
+  Returntype : none
+  Exceptions : Throws if argument not supplied
+  Caller     : general
+  Status     : At risk - only used by for results at present, to be removed
 
-
-sub get_last_table_id{
-	my ($self, $table) = @_;
-	
-	#can't use multiline query :(
-	#my $sql = "insert into $table (${table}_id) values (\"\"); select LAST_INSERT_ID()";
-	
-	#my $sql = "insert into $table (${table}_id) values (\"\")";
-	#$self->dbc->do($sql);
-	#Don't need to check if if any higher as insert using autoincrement will select highest unused id
-	#return $self->dbc->db_handle->last_insert_id(undef, undef, undef, undef);	
-
-	my $sql = "select ${table}_id from $table order by ${table}_id desc limit 1";
-	return $self->dbc->db_handle->selectrow_array($sql);
-}
+=cut
 
 sub load_table_data{
-	my ($self, $table, $file) = @_;
+  my ($self, $table, $file) = @_;
 
-	#$self->log("Loading $table data from $file");
-	my $sql = "load data infile \"$file\" into table $table";
-	$self->dbc->do($sql);
-	#$self->log("Finished loading $table data");
-	return;
+  #$self->log("Loading $table data from $file");
+  my $sql = "load data infile \"$file\" into table $table";
+  $self->dbc->do($sql);
+  #$self->log("Finished loading $table data");
+  return;
 }
 
 #Only validates if already present
@@ -135,6 +115,8 @@ sub load_table_data{
 #This could be heavily utilised in the recovery method to avoid having to delete entries for incomplete imports
 sub register_entry{
 	my ($self, $table, $dbid, $alter, @data) = @_;
+
+	$self->deprecate("Regiter_entry no longer used, change to generic update/validate method here and implment in adaptors?");
 
 	my ($sql, @db_entry);
 	my $valid = 1;#just throw here instead? or warn as may be able
@@ -162,8 +144,18 @@ sub register_entry{
 	return $valid;#return value to allow caller to throw
 }
 
+=head2 get_available_adaptors
 
-#Used by ConfigRegistry to make adaptors available
+  Example    : my %pairs = %{$dba->get_available_adaptors()};
+  Description: gets a hash of the available adaptors
+  ReturnType : reference to a hash
+  Exceptions : none
+  Caller     : Bio::EnsEMBL::Utils::ConfigRegistry
+  Status     : Stable
+
+=cut
+
+
 #will adding SliceAdaptor here use the dna DB? i.e. the core DB rather than the efg DB?
 
 sub get_available_adaptors{
@@ -193,20 +185,45 @@ sub get_available_adaptors{
   return (\%pairs);
 }
 
+=head2 _get_schema_build
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor or Bio::EnsEMBL::DBSQL::DBAdaptor
+  Example    : my $shema_build = $db->_get_schema_build($slice->adaptor->db());
+  DESCRIPTION: 
+  Returntype : string
+  Exceptions : Throws if argument not supplied
+  Caller     : general
+  Status     : At risk - replace with MetaContainer method
+
+=cut
+
 
 #Hacky convinience method to get the data/schema.version/build from a feature slice
 
 sub _get_schema_build{
-	my ($self, $adaptor) = @_;
+  my ($self, $db) = @_;
 
-
-	throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $adaptor);
+  
+  throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $db);
 	
-	my $schema_build = $adaptor->dbc->dbname();
-	$schema_build =~ s/[a-zA-Z_]*//;
-
-	return $schema_build;
+  my $schema_build = $db->dbc->dbname();
+  $schema_build =~ s/[a-zA-Z_]*//;
+  
+  return $schema_build;
 }
+
+=head2 get_SliceAdaptor
+
+  Arg [1]    : (optional) int - coord_system_id
+  Example    : my $slice_adaptor = $db->get_SliceAdaptor($cs->dbID());
+  DESCRIPTION: Retrieves a slice adaptor from the dnadb corresponding 
+               to the coord_system_id, or retrieves from the default dnadb
+  Returntype : Bio::EnsEMBL::DBSQL::SLiceAdaptor
+  Exceptions : Throws if arguments not supplied
+  Caller     : general
+  Status     : At risk
+
+=cut
 
 #Funcgen specific, get's Adaptor from dnadb, or validates/autogenerates from coord_system_id
 #Only imlpmented in _obj_from_sth, rely on feature_slice elsewhere
@@ -284,13 +301,10 @@ sub get_SliceAdaptor{
 
   Title :   dnadb 
   Usage :   my $dnadb = $db->dnadb(); 
-  Function: returns the database adaptor where the dna lives Useful if you only want 
-            to keep one copy of the dna on disk but have other databases with genes and 
-            features in Returns : dna database adaptor 
+  Description: returns the database adaptor where the dna lives i.e. the core db fot a given species
   Args :    Bio::EnsEMBL::DBSQL::BaseAdaptor
-  Status : Medium Risk. 
-         : Use the Registry method add_DNAAdaptor/get_DNAAdaptor instead??  Not for eFG
-
+  Status : At risk.
+         
 =cut
 
 
@@ -317,8 +331,20 @@ sub dnadb {
   return $self->SUPER::dnadb(@_);
 } 
 
+#Group methods, as not adaptor/class for Group(used in ExperimentAdaptor at present)
+#will disppear when Group and GroupAdaptor written
 
-#Group methods, as not adaptor/class for Group(Incorporated in Experiment)
+=head2 fetch_group_details
+
+  Args       : string - group name
+  Example    : my $group =  $db->fetch_group_details('EBI');
+  Description: Gets group information for a given name
+  Returntype : ARRAYREF
+  Exceptions : Throws if no group name defined
+  Caller     : general
+  Status     : At risk - Move to GroupAdaptor
+
+=cut
 
 sub fetch_group_details{
 	my ($self, $gname) = @_;
@@ -328,7 +354,19 @@ sub fetch_group_details{
 	return $self->dbc->db_handle->selectrow_array($sql);
 }
 
+=head2 import_group
 
+  Arg [1]    : string - group name
+  Arg [2]    : string - group location
+  Arg [3]    : string - group contact (email or address)
+  Example    : $db->import_group('EBI', 'Hinxton', 'njohnson@ebi.ac.uk');
+  Description: Imports group information to the database
+  Returntype : none
+  Exceptions : Throws if arguments not supplied
+  Caller     : general
+  Status     : At risk - Move to GroupAdaptor
+
+=cut
 
 sub import_group{
 	my ($self, $gname, $loc, $contact) = @_;
@@ -345,6 +383,22 @@ sub import_group{
 }
 
 
+#General Status methods
+#will Move to Bio::EnsEMBL::Funcgen::DBSQL::Status
+
+=head2 fetch_all_states
+
+  Arg [1]    : string - table name
+  Arg [2]    : int - table id
+  Example    : my @states = @{$db->fetch_all_states('channel', 1)};
+  Description: Retrieves all states associated with the given table record
+  Returntype : ARRAYREF
+  Exceptions : Throws if arguments not supplied
+  Caller     : general
+  Status     : At risk - Move to Status
+
+=cut
+
 sub fetch_all_states{
 	my ($self, $table, $id) = @_;
 
@@ -359,15 +413,48 @@ sub fetch_all_states{
 }
 
 
+=head2 fetch_status_by_name
+
+  Arg [1]    : string - table name
+  Arg [2]    : int - table id
+  Arg [3]    : string - status
+  Example    : if($db->fetch_status_by_name('channel', 1, 'IMPORTED'){ ... };
+  Description: Retrieves given state associated with the table record
+  Returntype : ARRAYREF
+  Exceptions : Throws if arguments not supplied
+  Caller     : general
+  Status     : At risk - Move to Stasus
+
+=cut
+
+
+
 sub fetch_status_by_name{
 	my ($self, $table, $id, $state) = @_;
 
 	throw("Need to specifiy a table and an id to retrieve status") if (! $table || ! $id || ! $state);
 
+	#should we enum the state?
+
 
 	my $sql = "SELECT state FROM status WHERE table_name=\"$table\" AND table_id=\"$id\" AND state=\"$state\"";
 	return $self->dbc->db_handle->selectrow_array($sql);
 }
+
+
+=head2 set_status
+
+  Arg [1]    : string - table name
+  Arg [2]    : int - table id
+  Arg [3]    : string - status
+  Example    : $db->set_status('channel', 1, 'IMPORTED');
+  DESCRIPTION: RETRIEVES GIVEN STATE ASSOCIATED WITH THE table record
+  Returntype : ARRAYREF
+  Exceptions : Throws if arguments not supplied
+  Caller     : general
+  Status     : At risk - Move to Status
+
+=cut
 
 
 sub set_status{

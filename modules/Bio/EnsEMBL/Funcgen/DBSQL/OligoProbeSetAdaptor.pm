@@ -60,7 +60,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::OligoProbeSet
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -101,7 +101,7 @@ sub fetch_by_array_probeset_name {
   Returntype : Listref of Bio::EnsEMBL::OligoProbeSet objects.
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -157,7 +157,7 @@ sub fetch_all_by_Array {
   Returntype : Bio::EnsEMBL::OligoProbeSet
   Exceptions : Throws if argument is not a Bio::EnsEMBL::ProbeFeature object
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -198,7 +198,7 @@ sub fetch_by_ProbeFeature {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -217,7 +217,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -239,7 +239,7 @@ sub _columns {
   Returntype : Listref of Bio::EnsEMBL::OligoProbeSet objects
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -316,9 +316,9 @@ sub _objs_from_sth {
                called once per probe because no checks are made for duplicates.??? It certainly looks like there is :/
 			   Sets dbID and adaptor on the objects that it stores.
   Returntype : None
-  Exceptions : Throws if arguments aren't Probe objects
+  Exceptions : Throws if arguments are not Probe objects
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 

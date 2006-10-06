@@ -23,7 +23,7 @@ Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor
   #enable a mapping from the feature table back to assembly/core DB of origin.
 
 
-  #Old core methods, some may not work as they assume that there will onl be one default version
+  #Old core methods, some may not work as they assume that there will only be one default version
   #where are there maybe multiple default versions, one for each assembly/schema_build
 
   #
@@ -86,9 +86,11 @@ Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor
 
 The Funcgen CoordSystemAdaptor works slighty different to the core version. As
 the Funcgen DB stores features mapped to multiple core/dna DBs the schema and 
-data versions(i.e. last token of DB name) have to be stored. This maintains
+data versions(i.e. the last bit of the DB name) have to be stored. This maintains
 a link between the seq_region_id stored in the Funcgen DB and the seq_region and assembly
 tables stored in the core DB on which the features were originally built.
+
+Default versions or ranking has not yet been tested.
 
 This adaptor allows the querying of information from the coordinate system
 adaptor.
@@ -139,7 +141,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor
   Exceptions : none
   Caller     :
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
@@ -313,7 +315,7 @@ sub new {
   Exceptions : throw if no name argument provided
                warning if no version provided and default does not exist
   Caller     : general
-  Status     : Medium risk
+  Status     : At risk
 
 =cut
 
@@ -382,10 +384,10 @@ sub fetch_by_name_schema_build_version {
                These will be returned in ascending order of rank. I.e.
                The highest coordinate system with rank=1 would be first in the
                array.
-  Returntype : listref of Bio::EnsEMBL::CoordSystems
+  Returntype : listref of Bio::EnsEMBL::Funcgen::CoordSystems
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : Medium
 
 =cut
 
@@ -412,10 +414,10 @@ sub fetch_all {
                rank reserved for the pseudo coordinate system 'toplevel'.
                undef is returned if no coordinate system of the specified rank
                exists.
-  Returntype : Bio::EnsEMBL::CoordSystem
+  Returntype : Bio::EnsEMBL::Funcgen::CoordSystem
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
@@ -453,11 +455,11 @@ sub fetch_by_rank {
                #such as the clone or contig coordinate system
                $coord_sys = $csa->fetch_by_name('seqlevel');
   Description: Retrieves a coordinate system by its name
-  Returntype : Bio::EnsEMBL::CoordSystem
+  Returntype : Bio::EnsEMBL::Funcgen::CoordSystem
   Exceptions : throw if no name argument provided
                warning if no version provided and default does not exist
   Caller     : general
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
@@ -521,10 +523,10 @@ sub fetch_by_name {
                  print $cs->name(), ' ', $cs->version();
                }
   Description: Retrieves all coordinate systems of a particular name
-  Returntype : listref of Bio::EnsEMBL::CoordSystem objects
+  Returntype : listref of Bio::EnsEMBL::Funcgen::CoordSystem objects
   Exceptions : throw if no name argument provided
   Caller     : general
-  Status     : Stable
+  Status     : Medium
 
 =cut
 
@@ -554,7 +556,7 @@ sub fetch_all_by_name {
   Description: Retrieves a coord_system via its internal
                identifier, or undef if no coordinate system with the provided
                id exists.
-  Returntype : Bio::EnsEMBL::CoordSystem or undef
+  Returntype : Bio::EnsEMBL::Funcgen::CoordSystem or undef
   Exceptions : thrown if no coord_system exists for specified dbID
   Caller     : general
   Status     : Stable
@@ -581,10 +583,10 @@ sub fetch_by_dbID {
   Arg [1]    : none
   Example    : $cs = $csa->fetch_top_level();
   Description: Retrieves the toplevel pseudo coordinate system.
-  Returntype : a Bio::EnsEMBL::CoordSystem object
+  Returntype : a Bio::EnsEMBL::Funcgen::CoordSystem object
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
@@ -603,11 +605,11 @@ sub fetch_top_level {
   Example    : ($id, $name, $version) = $csa->fetch_sequence_level();
   Description: Retrieves the coordinate system at which sequence
                is stored at.
-  Returntype : Bio::EnsEMBL::CoordSystem
+  Returntype : Bio::EnsEMBL::Funcgen::CoordSystem
   Exceptions : throw if no sequence_level coord system exists at all
                throw if multiple sequence_level coord systems exists
   Caller     : general
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
@@ -683,9 +685,12 @@ sub fetch_sequence_level {
 
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : At risk
 
 =cut
+
+
+#Need to be redirected to the core/dnadb of interest
 
 sub get_mapping_path {
   my $self = shift;
@@ -785,6 +790,17 @@ sub get_mapping_path {
   return $path || [];
 }
 
+=head2 _fetch_by_attribute
+
+  Arg [1]    : 
+  Example    : 
+  Description: 
+  Returntype : 
+  Exceptions : 
+  Caller     : 
+  Status     : At risk
+
+=cut
 
 sub _fetch_by_attrib {
   my $self = shift;
@@ -821,6 +837,17 @@ sub _fetch_by_attrib {
   return $cs;
 }
 
+=head2 _fetch_all_by_attribute
+
+  Arg [1]    : 
+  Example    : 
+  Description: 
+  Returntype : 
+  Exceptions : 
+  Caller     : 
+  Status     : At risk
+
+=cut
 
 sub _fetch_all_by_attrib {
   my $self = shift;
@@ -843,7 +870,7 @@ sub _fetch_all_by_attrib {
   Returntype : none
   Exceptions : Warning if CoordSystem is already stored in this database.
   Caller     : none
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
@@ -963,6 +990,17 @@ sub store {
 }
 
 
+=head2 validate_coord_system
+
+  Arg [1]    : Bio::EnsEMBL::CoordSystem (could also be Funcgen::CoordSystem)
+  Example    : my $funcgen_cs = $csa->validate_coord_system($core_cs);
+  Description: Given a CoordSystem retrieves the corresponding Funcgen CoordSystem or generates new
+  Returntype : Bio::EnsEMBL::Funcgen::CoordSystem
+  Exceptions : ? Should throw if not a CoordSystem
+  Caller     : general
+  Status     : At risk
+
+=cut
 
 #currently get cs from slice, and need to validate for dnadb too
 #can take FGCoordSystem or CoordSystem
@@ -1016,14 +1054,14 @@ sub validate_coord_system{
 		
 		#Generate Funcgen::CoordSystem
 		$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
-														 -NAME    => $cs->name(),
-														 -VERSION => $cs->version(),
-														 -RANK    => $cs->rank(),
-														 -DEFAULT => $cs->is_default(),
-														 -SEQUENCE_LEVEL => $cs->is_sequence_level(),
-														 -SCHEMA_BUILD => $schema_build
-														);
-		$self->store($fg_cs);
+								 -NAME    => $cs->name(),
+								 -VERSION => $cs->version(),
+								 -RANK    => $cs->rank(),
+								 -DEFAULT => $cs->is_default(),
+								 -SEQUENCE_LEVEL => $cs->is_sequence_level(),
+								 -SCHEMA_BUILD => $schema_build,
+								);
+		$fg_cs = $self->store($fg_cs);
 	}
 
 	return $fg_cs;
