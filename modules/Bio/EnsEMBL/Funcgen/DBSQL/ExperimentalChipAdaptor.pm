@@ -113,7 +113,7 @@ sub fetch_contigsets_by_experiment_dbID {
     my $e_dbid = shift;
 
     my @tracksets;
-    my @hack1 = ("H3kgac");
+    my @hack1 = ("H3Kac");
     #my @hack2 = ("H3kgac-2");
     #46092 + 46078; 46082 + 46075
 
@@ -142,9 +142,10 @@ sub fetch_contigsets_by_experiment_dbID {
 	#}
       }elsif($self->db->species() =~ /mus/i){
 	
-	next if ($echip->unique_id() != "48316" && $echip->unique_id() != "48317" &&
-		 $echip->unique_id() != "48320" && $echip->unique_id() != "65797");				    
-	my @tmp = ($echip->unique_id(), $echip);
+	next if ($echip->unique_id() != "48317");
+	#&& $echip->unique_id() != "48316" &&
+	#  $echip->unique_id() != "48320" && $echip->unique_id() != "65797");				    
+	my @tmp = ("Mouse embyronic fibroblast: H3K4me3", $echip);
 	push @tracksets, \@tmp;
       }
       else{

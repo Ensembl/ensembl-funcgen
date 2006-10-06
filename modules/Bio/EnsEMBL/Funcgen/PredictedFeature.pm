@@ -262,12 +262,12 @@ sub type {
     my ($name, $desc, $class);
     
     if($self->adaptor->db->species() =~ /homo/i){
-      $desc = "Generalised Histone 3 Lysine acetylation";
-      $name = "H3kgac";
+      $desc = "Generalised Histone 3 Lysine Acetylation";
+      $name = "H3Kac";
       $class = "HISTONE";
     }else{
-      $desc = "MEFf";
-      $name = "MEFf";
+      $desc = "Histone 3 Lysine 9 Tri-methlyation";
+      $name = "H3K4Me3";
       $class = "HISTONE";
     }
         
