@@ -40,7 +40,7 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::OligoProbe;
+use Bio::EnsEMBL::Funcgen::OligoProbe;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
