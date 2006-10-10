@@ -263,11 +263,11 @@ sub type {
     
     if($self->adaptor->db->species() =~ /homo/i){
       $desc = "Histone 3 Lysine 9 Acetylation";
-      $name = "H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)";
+      $name = "H3K9ac - U2OS Enriched Sites";
       $class = "HISTONE";
     }else{
       $desc = "Histone 3 Lysine 9 Tri-methlyation";
-      $name = "H3K4Me3 - Mouse embyronic fibroblast (MEFf)";
+      $name = "H3K4Me3 - MEFf Enriched Sites";
       $class = "HISTONE";
     }
         
