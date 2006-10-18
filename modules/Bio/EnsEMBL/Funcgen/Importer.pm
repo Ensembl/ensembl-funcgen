@@ -203,7 +203,7 @@ sub new{
 		#configure dnadb
 		#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	
-		if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build())){
+		if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))){
 
 		  
 		  if($self->{'ssh'}){
