@@ -203,7 +203,7 @@ sub get_available_adaptors{
 sub _get_schema_build{
   my ($self, $db) = @_;
 
-  
+  #Have to explicitly pass self->db to this method if required, this highlights which db is being tested 
   throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $db);
 	
   my $schema_build = $db->dbc->dbname();

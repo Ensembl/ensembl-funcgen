@@ -973,7 +973,7 @@ sub store_set_probes_features{
 sub cache_name_id{
   my ($self, $pname, $pid) = @_;
 
-  throw("Must provide a probe anem and id") if (! defined $pname || defined $pid);
+  throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
 
   if(defined $self->{'_probe_map'}->{$pname} && ($self->{'_probe_map'}->{$pname} != $pid)){
     throw("Found two differing dbIDs for $pname");

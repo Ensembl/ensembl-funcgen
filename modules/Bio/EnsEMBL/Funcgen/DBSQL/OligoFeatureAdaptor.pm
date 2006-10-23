@@ -713,6 +713,56 @@ sub fetch_results_by_probe_experimental_chips_analysis{
 }
 
 
+#This checks each locus to ensure identically mapped probes only return a median/mean
+#can we just return array triplets?, start, end, score?
+
+sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
+  my ($self, $slice, $analysis, $exp_chips) = @_;
+
+  warn("Put in ResultAdaptor");
+
+  my (@ofs, @results, $result, $mpos);
+
+
+  foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
+
+    if((! @ofs) ||
+       ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
+      push @ofs, $of;
+    }else{#Found new location, deal with previous
+
+      if(scalar(@ofs) == 2){#mean
+
+	$result = ($ofs[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) + 
+		   $ofs[1]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2;
+
+	push @results, [$ofs[0]->start(), $ofs[0]->end(), $result];
+
+      }elsif(scalar(@ofs) > 2){#median or mean of median flanks
+	$mpos = (scalar(@ofs))/2;
+	
+	if($mpos =~ /\./){#true median
+	  $mpos =~ s/\..*//;
+	  $mpos ++;
+	  $result = $ofs[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
+	}else{
+	  $result = ($ofs[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) +
+		      $ofs[($mpos+1)]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2 ;
+	}
+
+	push @results, [$ofs[0]->start(), $ofs[0]->end(), $result];
+
+      }else{
+	#push start, end, score onto results
+	push @results, [$ofs[0]->start(), $ofs[0]->end(), $ofs[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips)];
+      }
+      @ofs = ($of);
+    }
+  }
+
+  return \@results;
+
+}
 
 
 1;

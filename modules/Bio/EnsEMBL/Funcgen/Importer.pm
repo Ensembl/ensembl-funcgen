@@ -287,6 +287,21 @@ sub new{
 sub init_import{
   my ($self) = shift;
 
+
+  #Should we separate path on group here too, so we can have a dev/test group?
+  
+  #Set and validate input dir
+  $self->{'input_dir'} = $self->get_def('input_dir') if(! defined $self->get_dir("input"));
+  $self->throw("input_dir is not defined or does not exist") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
+  
+  if(! defined $self->get_dir("output")){
+    $self->{'output_dir'} = $self->get_dir("data")."/".$self->vendor()."/".$self->name();
+    mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
+  }
+  
+  $self->create_output_dirs("import", "norm");
+
+
   
   #Need to import to egroup here if not present and name, location & contact specified
   $self->validate_group();
@@ -332,18 +347,7 @@ sub init_import{
   
   $self->experiment($exp);
   
-  #Should we separate path on group here too, so we can have a dev/test group?
-  
-  #Set and validate input dir
-  $self->{'input_dir'} = $self->get_def('input_dir') if(! defined $self->get_dir("input"));
-  $self->throw("input_dir is not defined or does not exist") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
-  
-  if(! defined $self->get_dir("output")){
-    $self->{'output_dir'} = $self->get_dir("data")."/".$self->vendor()."/".$self->name();
-    mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
-  }
-  
-  $self->create_output_dirs("import", "norm");
+
   
   #remove and add specific report, this is catchig some Root stuff
   #$self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
@@ -1090,7 +1094,9 @@ sub R_norm{
   my $va_id = $aa->fetch_by_logic_name($logic_name)->dbID();
   my $R_file = $self->get_dir("norm")."/norm.R";
   my $outfile = $self->get_dir("norm")."/result.txt";
-  my $r_cmd = "R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+  my $r_cmd = "/nfs/farm/R/bin/R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+  my $bsub = "bsub -R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -o ".
+    $self->get_dir("norm")."/R.out /nfs/farm/R/bin/R-dev CMD BATCH ".$self->get_dir("norm")."/norm.R";
   
   unlink($outfile);#Need to do this as we're appending in the loop
   
@@ -1109,7 +1115,7 @@ sub R_norm{
     }
   }
 
-  $query .= "con<-dbConnect(dbDriver(\"MySQL\"), dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
+  $query .= "con<-dbConnect(dbDriver(\"MySQL\"), host=\"".$self->host()."\", port=\"".$self->port()."\", dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
   $query .= (defined $self->pass()) ? ", pass=\"".$self->pass()."\")\n" : ")\n";
   
   
@@ -1191,8 +1197,14 @@ sub R_norm{
   print RFILE $query;
   close(RFILE);
   
-  system($r_cmd) == 0 or throw("R normalisation failed with error code $? ($R_file)");
-  
+
+  #We should really open a pipe to bsub here and execute the R directly using /nfs/farm/R/bin/R-dev
+  #shoudl really directly import from R
+  #but presently checking for non 0 R exit code ? dumping and running mysqlimport
+
+  #system($r_cmd) == 0 or throw("R normalisation failed with error code $? ($R_file)");
+  system($bsub) == 0 or throw("R normalisation failed with error code $? ($R_file)");
+
   return;
 }
 

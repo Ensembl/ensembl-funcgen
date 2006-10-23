@@ -51,6 +51,9 @@ sub get_date{
 
 	my ($time, $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);	
 
+
+	warn("need to add file -e test here");
+
 	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = (defined $file) ? 
 	  localtime((stat($file))[9]) : localtime();
 
