@@ -290,7 +290,7 @@ CREATE TABLE `result` (
    PRIMARY KEY  (`result_id`),
    KEY `oligo_probe_idx` (`oligo_probe_id`),
    KEY `table_name_id_idx` (`table_name`, `table_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000  AVG_ROW_LENGTH=40;
 
 
 --- joint index on all but result_id and maybe analysis_id?
@@ -299,6 +299,24 @@ CREATE TABLE `result` (
 --- metric default would be id for "RAW"..no, need to test has been specifically set, so NULL
 --- Allows storage of none raw values
 ---Also needs to accommodate different normalisations 
+
+
+--- Table structure for `table_analysis`
+
+DROP TABLE IF EXISTS `table_analysis`;
+CREATE TABLE `table_analysis` (
+   `table_analysis_id` int(11) unsigned NOT NULL auto_increment,
+   `analysis_id` int(11) unsigned default NULL,
+   `table_id` int(11) unsigned default NULL,
+   `table_name` varchar(20) default NULL,
+   PRIMARY KEY  (`table_analysis_id`),
+   KEY `table_name_id_idx` (`table_name`, `table_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+--- Need to implement this
+
+
+
 
 --
 -- Table structure for table `predicted_feature`
