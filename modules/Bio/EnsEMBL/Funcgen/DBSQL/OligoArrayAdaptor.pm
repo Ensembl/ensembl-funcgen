@@ -402,13 +402,12 @@ sub store_array_chips{
     #Change these warns to logs?
 
     if(! $sdesign_id){
-      #This will always be te case, as Arrays are stored before storing their array_chips
-      #warn("Adding array_chip $design_id to previously stored array") if ($sarray);
-      
       warn("Storing array chip:\t".$array->array_chips->{$design_id}{'name'}."\n");
       
-      $ac_sth->bind_param(1, $design_id,                                       SQL_INTEGER);
-      $ac_sth->bind_param(2, $array->dbID(),                                   SQL_INTEGER);
+      #if this is throwing because of no dbID, this is because you've deleted the array_chips and not the array
+
+      $ac_sth->bind_param(1, $design_id,                                SQL_VARCHAR);
+      $ac_sth->bind_param(2, $array->dbID(),                            SQL_INTEGER);
       $ac_sth->bind_param(3, $array->array_chips->{$design_id}{'name'}, SQL_VARCHAR);
       $ac_sth->execute();
    
@@ -426,9 +425,6 @@ sub store_array_chips{
   #if($sarray){
   #  $array->array_chips($sarray->array_chips()) if ($sarray);#Can we not just set array to sarray?
   #}
-
-
-
   
   return $sarray || $array;
 }

@@ -16,5 +16,6 @@ echo "Sourcing .efg" #and cd'ing to $EFG_SRC"
 alias efg='cd $EFG_SRC'
 alias efgd='cd $EFG_DATA'
 alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
-alias mysqle='mysql -hia64g -uensadmin -pensembl efg_test'
+alias mysqlw='mysql -hens-genomics1 -uensadmin -pensembl'
+alias mysqlro='mysql -hens-genomics1 -uensro'
 #efg 

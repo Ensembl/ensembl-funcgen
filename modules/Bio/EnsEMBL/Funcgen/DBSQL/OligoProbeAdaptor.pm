@@ -87,7 +87,8 @@ sub fetch_by_array_probe_probeset_name {
 	#need to do a look up of all ac_ids and do a joined OR statement
 	my $array_ref = $self->dbc->db_handle->selectall_arrayref("select ac.array_chip_id from array_chip ac, array a where a.array_id = ac.array_id and a.name = \"$array_name\"");
 	map $_ = "@{$_}", @$array_ref;#only works for one element arrays, as we're really turning it into a space separated string.
-	my $ac_clause = "(op.array_chip_id = ".join(" OR op.array_chip_id = ", @$array_ref).")";
+
+	my $ac_clause = "op.array_chip_id IN (".join(", ", @$array_ref).")";
 
 	my $sth = $self->prepare("
 		SELECT op.oligo_probe_id
@@ -97,8 +98,9 @@ sub fetch_by_array_probe_probeset_name {
 		AND op.name = ?
 	");
 	
+
 	#$sth->bind_param(1, $array_name,    SQL_VARCHAR);
-	#$sth->bind_param(1, $probeset_name, SQL_VARCHAR);
+	#$sth->bind_param(1, $probeset,      SQL_VARCHAR);
 	$sth->bind_param(1, $probe_name,    SQL_VARCHAR);
 	$sth->execute();
 	

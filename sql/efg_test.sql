@@ -66,7 +66,7 @@ CREATE TABLE `array` (
 DROP TABLE IF EXISTS `array_chip`;
 CREATE TABLE `array_chip` (
    `array_chip_id` int(11) unsigned NOT NULL auto_increment,
-   `design_id` int(11) unsigned NOT NULL default '0',
+   `design_id` varchar(20) default NULL,
    `array_id` int(11) unsigned NOT NULL default '0',
    `name` varchar(40) default NULL,
     PRIMARY KEY  (`array_chip_id`),
@@ -144,7 +144,7 @@ DROP TABLE IF EXISTS `oligo_probe`;
 CREATE TABLE `oligo_probe` (
    `oligo_probe_id` int(11) unsigned NOT NULL auto_increment,
    `oligo_probe_set_id` int(11) unsigned default NULL,
-   `name` varchar(20) NOT NULL default '',
+   `name` varchar(40) NOT NULL default '',
    `length` smallint(6) unsigned NOT NULL default '0',
    `array_chip_id` int(11) unsigned NOT NULL default '0',
    `class` varchar(20) default NULL,

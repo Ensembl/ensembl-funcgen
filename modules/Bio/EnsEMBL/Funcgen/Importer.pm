@@ -116,8 +116,10 @@ sub new{
 				 location    => undef,
 				 contact     => undef,
 				 data_dir    => $ENV{'EFG_DATA'},#?
+		 exp_date => undef,
+		 
 				 dump_fasta  => 0,
-				 norm_method => "vsn_norm",
+				 #norm_method => undef,
 		 description => undef,
 		 #DBDefs, have ability to override here, or restrict to DBDefs.pm?
 		 pass       => undef,
@@ -140,14 +142,14 @@ sub new{
 				 #ArrayDefs defined
 				 input_dir  => undef,#Can pass this to over-ride ArrayDefs default?
 				 array_defs => undef,
-				 import_dir => undef,#parsed native data for import
+				 #import_dir => undef,#parsed native data for import
 				 norm_dir   => undef,
 								 
 
 				 #Data defined
 				 #_group_dbid      => undef,
 				 #_experiment_id   => undef,
-				 echips          => {},
+				 #echips          => {},
 				 arrays          => [],
 				 achips          => undef,
 				 channels        => {},#?
@@ -292,14 +294,14 @@ sub init_import{
   
   #Set and validate input dir
   $self->{'input_dir'} = $self->get_def('input_dir') if(! defined $self->get_dir("input"));
-  $self->throw("input_dir is not defined or does not exist") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
+  $self->throw("input_dir is not defined or does not exist (".$self->get_dir("input").")") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
   
   if(! defined $self->get_dir("output")){
     $self->{'output_dir'} = $self->get_dir("data")."/".$self->vendor()."/".$self->name();
     mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
   }
   
-  $self->create_output_dirs("import", "norm");
+  $self->create_output_dirs("raw", "norm");
 
 
   
@@ -335,7 +337,7 @@ sub init_import{
     $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
 						  -GROUP => $self->group(),
 						  -NAME  => $self->name(),
-						  -DATE  => &get_date("date", $self->get_def("chip_file")),
+						  -DATE  => $self->exp_date(),
 						  -PRIMARY_DESIGN_TYPE => $self->design_type(),
 						  -DESCRIPTION => $self->description(),
 						  -ADAPTOR => $self->db->get_ExperimentAdaptor(),
@@ -426,7 +428,50 @@ sub create_output_dirs{
 sub vendor{
   my ($self) = shift;
   $self->{'vendor'} = shift if(@_);
+  $self->{'vendor'} = uc($self->{'vendor'});
   return $self->{'vendor'};
+}
+
+=head2 data_dir
+  
+  Example    : $imp->data_dir($ENV{'EFG_DATA'});
+  Description: Getter/Setter for root data directory
+  Arg [1]    : optional - default $ENV{'EFG_DATA'}
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+
+sub data_dir{
+  my ($self) = shift;
+  $self->{'data_dir'} = shift if(@_);
+  return $self->{'date_dir'} || $ENV{'EFG_DATA'};
+}
+
+=head2 input_dir
+  
+  Example    : $imp->input_dir($dir);
+  Description: Getter/Setter for input directory for an experiment
+  Arg [1]    : optional - inut directory path
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+
+sub input_dir{
+  my ($self) = shift;
+  $self->{'input_dir'} = shift if(@_);
+
+
+  #not implemented, need to convert all get_dir calls to check if method exists or use VendorDefs
+
+  return $self->{'input_dir'};
 }
 
 
@@ -534,6 +579,37 @@ sub data_version{
 
   return $self->{'data_version'};
 }
+
+
+=head2 exp_date
+  
+  Example    : $imp->exp_date('2006-11-02');
+  Description: Getter/Setter for the experiment date
+  Arg [1]    : optional - date string in yyyy-mm-dd
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At risk 
+
+=cut
+
+
+
+sub exp_date{
+  my ($self) = shift;	
+
+  if(@_){
+    $self->{'exp_date'} = shift;
+  }elsif($self->vendor() eq "nimblegen" && ! defined $self->{'exp_date'}){
+    $self->{'exp_date'} = &get_date("date", $self->get_def("chip_file")),
+  }
+
+  #warn "returning date". $self->{'exp_date'};
+
+  return $self->{'exp_date'};
+}
+
+
 
 =head2 group
   
@@ -651,7 +727,7 @@ sub experiment{
   if(@_){
 	
     if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Experiment')){
-      throw("Must pass a Bio::ENsEMBL::Funcgen::Experiment object");
+      throw("Must pass a Bio::EnsEMBL::Funcgen::Experiment object");
     }
 
     $self->{'experiment'} = shift;
@@ -838,7 +914,13 @@ sub get_dir{
 
 sub norm_method{
   my $self = shift;
-  $self->{'norm_method'} = shift if(@_);
+
+  if(@_){
+    $self->{'norm_method'} = shift;
+  }elsif(! defined  $self->{'norm_method'}){
+    $self->{'norm_method'}= $self->get_def('norm_method');
+  }
+
   return $self->{'norm_method'};
 }
 
@@ -892,13 +974,16 @@ sub register_experiment{
 	#$self->import_experiment();#imports experiment and chip data
 	$self->read_data("probe");
 	$self->read_data("results");
-	$self->import_results("import");
+	$self->import_results("raw");
 
 	#Need to be able to run this separately, so we can normalise previously imported sets with different methods
 	#should be able t do this without raw data files e.g. retrieve info from DB
 	my $norm_method = $self->norm_method();
-	$self->$norm_method;
+
+	$self->$norm_method if( $norm_method );
+
 	$self->import_results("norm");
+
 
 	return;
 }
@@ -927,18 +1012,45 @@ sub import_results{
   my ($self, $results_dir) = @_;
   
 
+
+  #should check status of results import for each chip here, warning if nor new data imported
+
   if($results_dir ne "norm"){
+
     foreach my $array(@{$self->arrays()}){
       
-      foreach my $design_id(@{$array->get_design_ids()}){
-	my %ac = %{$array->get_array_chip_by_design_id($design_id)};
-	warn "Log this! -  Loading results for ".$ac{'name'};
-	$self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$ac{'name'}.".txt");
+
+      #this should use the chip uids for an experiment not all the ac ids for an array!!
+      #Need to make these into objects
+      if($self->vendor() eq "NIMBLEGEN"){
+
+	foreach my $design_id(@{$array->get_design_ids()}){
+	  my %ac = %{$array->get_array_chip_by_design_id($design_id)};
+	  warn "Log this! -  Loading results for ".$ac{'name'};
+	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$ac{'name'}.".txt");
+	}
       }
     }
   }else{
-    warn "Log this! -  Loading raw results from ".$self->get_dir($results_dir)."/result.txt";
-    $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
+    #why is this one file rather than for each echip?
+
+    if($self->vendor() eq "SANGER"){
+
+      foreach my $uid(@{$self->experiment->get_experimental_chip_unique_ids()}){
+	#Need to check wether results have been imported first for given norm
+	#need to tag files with norm method
+
+	  warn "Log this! -  Loading results for ".$uid;
+	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$uid.".txt");
+
+	  #need to catch error here before marking as imported
+
+	}
+    }
+    else{
+      warn "Log this! -  Loading raw results from ".$self->get_dir($results_dir)."/result.txt";
+      $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
+    }
   }
   
   return;
@@ -1005,8 +1117,10 @@ sub get_channel_dbid{
 
   if( ! $self->channel_data($chan_uid, 'dbID')){
     ($chip_uid = $chan_uid) =~ s/_.*//;
-    $self->channel_data($chan_uid, 'dbid', $self->db->fetch_channel_dbid_by_echip_dye($self->get_echip($chip_uid)->dbID(),
-										      $self->get_channel($chan_uid)->{'dye'}));
+    $self->channel_data($chan_uid, 'dbid', 
+			$self->db->fetch_channel_dbid_by_echip_dye(
+								   $self->experiment->get_experimental_chip_by_unique_id($chip_uid)->dbID(),
+								   $self->get_channel($chan_uid)->{'dye'}));
   }
 
   return $self->channel_data($chan_uid, 'dbid');
@@ -1121,7 +1235,7 @@ sub R_norm{
   
   #This is now retrieving a ExperimentalChip obj
   
-  foreach my $echip(values %{$self->get_data("echips")}){
+  foreach my $echip(@{$self->experiment->get_experimental_chips()}){
     warn "Build $logic_name R cmd for ".$echip->unique_id()."  log this?\n";
     @dbids = ();
 

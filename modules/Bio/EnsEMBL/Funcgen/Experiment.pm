@@ -248,6 +248,121 @@ sub primary_design_type{
 }
 
 
+
+#These convenience methods are to provide a registry for the experimental chips of the experiment
+
+=head2 get_experimental_chips
+
+  Example: my $exp_chips = @{$exp->get_experimental_chips()}
+  Description: Retrieves all ExperiemntalChips
+  Returntype : Listref of ExperimentalChips
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub get_experimental_chips{
+  my ($self) = shift;
+	
+  #should this also store echips?
+
+  #Need to retrieve all from DB if not defined, then check whether already present and add and store if not
+  #what about immediate access to dbID
+  #should we separate and have add_experimental_chip?
+
+  if(! exists $self->{'experimental_chips'}){
+     $self->{'experimental_chips'} = {};
+  
+
+     #need to warn about DBAdaptor here?
+  
+    foreach my $echip(@{$self->adaptor->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($self->dbID())}){
+      $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
+    }
+  }
+
+  #is this returning a list or a listref?
+  return [values %{$self->{'experimental_chips'}}];
+}
+
+=head2 add_experimental_chip
+
+  Example: $exp_chip = $exp->add_experimental_chip($exp_chip)
+  Description: Adds and stores an ExperiemntalChip for this Experiment
+  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub add_experimental_chip{
+  my ($self, $echip) = @_;
+  
+  my $s_echip = $self->get_experimental_chip_by_unique_id($echip->unique_id());
+
+  if(! $s_echip){
+    ($echip) = @{$self->adaptor->db->get_ExperimentalChipAdaptor->store($echip)};
+    $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
+  }
+
+  return $s_echip || $echip;
+}
+
+=head2 get_experimental_chip_by_unique_id
+
+  Example: $exp_chip = $exp->add_experimental_chip($exp_chip)
+  Description: Adds and stores an ExperiemntalChip for this Experiment
+  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Exceptions : Throws if no uid supplied
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub get_experimental_chip_by_unique_id{
+  my ($self, $uid) = @_;
+  
+  my ($echip);
+
+  throw("Must supply a ExperimentalChip unque_id") if(! defined $uid);
+  
+  $self->{'experimental_chips'} || $self->get_experimental_chips();
+
+  if(exists $self->{'experimental_chips'}->{$uid}){
+    $echip = $self->{'experimental_chips'}->{$uid};
+  }
+  #should we warn here if not exists?
+
+  return $echip;
+}
+
+
+=head2 get_experimental_chip_unique_ids
+
+  Example:     foreach my $uid(@{$self->experiment->get_experimental_chip_unique_ids()}){ ... }
+  Description: retrieves all ExperimentalChip unique_ids
+  Returntype : ListRef
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub get_experimental_chip_unique_ids{
+  my $self = shift;
+  
+  $self->{'experimental_chips'} || $self->get_experimental_chips();
+
+  return [keys %{ $self->{'experimental_chips'}}];
+}
+
+
+
+#should we add a methods to return just the 
+
+
 #methods?
 #lazy load design_types and exp_variables
 #target?  Is this a one to one?

@@ -23,6 +23,7 @@ Optional
   -pass|p          The password for the target DB, if not defined in GroupDefs.pm
   -data_root       The root data dir
   -dbname          Defines the eFG dbname if it is not standard
+  -ssh             Forces use of tcp protocol for using ssh forwarded ports from remote machine(remove and just specify 127.0.0.1 as host?)
   -array_set       Flag to treat all chip designs as part of same array
   -array_name      Name of the set of array chips
   -fasta           Fasta dump flag
@@ -131,12 +132,12 @@ use strict;
 
 
 $| = 1;#autoflush
-my ($input_name, $name, $output_dir, $loc, $contact, $group, $pass, $dbname);
-my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name);
+my ($input_name, $input_dir, $name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
+my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $exp_date);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
-my ($input_dir, $import_dir);
+my ($import_dir);
 
 my $data_dir = $ENV{'EFG_DATA'};
 my $interactive = 1;
@@ -167,6 +168,7 @@ GetOptions (
 	    "port|l=s"     => \$port,
 	    "host|h=s"     => \$host,
 	    "user|u=s"     => \$user,
+	    "ssh"          => \$ssh,
 	    "dbname=s"     => \$dbname,
 	    "group|g=s"    => \$group,#Need user here too? Use group defs to avoid typos?
 	    "species|s=s"  => \$species,
@@ -175,6 +177,8 @@ GetOptions (
 	    "array_name=s" => \$array_name,
 	    "debug=i"    => \$main::_debug_level,
 	    "data_root=s"  => \$data_dir,
+	    "input_dir=s"  => \$input_dir,
+	    "exp_date=s"   => \$exp_date,
 	    "fasta"        => \$fasta,
 	    "recover|r"    => \$recover,
 	    "norm=s"       => \$nmethod,
@@ -197,7 +201,7 @@ pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 #Build and validate all these in Experiment::new? We only need these for importing/analysing???
-$output_dir  = $data_dir."/".$vendor."/".$name;
+$output_dir  = $data_dir."/".uc($vendor)."/".$name;
 mkdir $output_dir;#log/debug files fail in Helper without this
 $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
 $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file);
@@ -215,6 +219,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       host        => $host,
 					       user        => $user,
 					       port        => $port,
+					       ssh         =>  $ssh,
 					       dbname      => $dbname,
 					       array_set   => $array_set,
 					       array_name => $array_name,						       
@@ -228,6 +233,8 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       location    => $loc,
 					       contact     => $contact,
 					       verbose     => $verbose,
+					       input_dir   => $input_dir,
+					       exp_date    => $exp_date,
 					       #Exp does not build input dir, but could
 					       #This allows input dir to be somewhere 
 					       #other than efg dir structure
@@ -237,24 +244,49 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 
 #Can be moved to set up script?
 
+#print "exp is ".$Imp->db->get_ExperimentAdaptor->fetch_by_dbID(1)->name()."\n";
+
+#exit;
+
 my $anal_a = $Imp->db->get_AnalysisAdaptor();
 my $anal = Bio::EnsEMBL::Analysis->new(
-									   -logic_name      => 'VendorMap',
-									   -db              => 'NULL',
-									   -db_version      => 'NULL',
-									   -db_file         => 'NULL',
-									   -program         => 'NULL',
-									   -program_version => 'NULL',
-									   -program_file    => 'NULL',
-									   -gff_source      => 'NULL',
-									   -gff_feature     => 'NULL',
-									   -module          => 'NULL',
-									   -module_version  => 'NULL',
-									   -parameters      => 'NULL',
-									   -created         => 'NULL',
-									   -description    => 'Original mapping provided by Array Vendor',
-									   -display_label   => 'Vendor mapping',
-									  );
+				       -logic_name      => 'VendorMap',
+				       -db              => 'NULL',
+				       -db_version      => 'NULL',
+				       -db_file         => 'NULL',
+				       -program         => 'NULL',
+				       -program_version => 'NULL',
+				       -program_file    => 'NULL',
+				       -gff_source      => 'NULL',
+				       -gff_feature     => 'NULL',
+				       -module          => 'NULL',
+				       -module_version  => 'NULL',
+				       -parameters      => 'NULL',
+				       -created         => 'NULL',
+				       -description    => 'Original mapping provided by Array Vendor',
+				       -display_label   => 'Vendor mapping',
+				       -displayable     => 1,
+				      );
+
+
+my $sanger_anal = Bio::EnsEMBL::Analysis->new(
+					      -logic_name      => 'SangerPCR',
+					      -db              => 'NULL',
+					      -db_version      => 'NULL',
+					      -db_file         => 'NULL',
+					      -program         => 'NULL',
+					      -program_version => 'NULL',
+					      -program_file    => 'NULL',
+					      -gff_source      => 'NULL',
+					      -gff_feature     => 'NULL',
+					      -module          => 'NULL',
+					      -module_version  => 'NULL',
+					      -parameters      => 'NULL',
+					      -created         => 'NULL',
+					      -description    => 'Ratio generated by standard Sanger PCR array processing',
+					      -display_label   => 'SangerPCR',
+					      -displayable     => 1,
+					     );
 
 
 my $raw_anal = Bio::EnsEMBL::Analysis->new(
@@ -273,6 +305,7 @@ my $raw_anal = Bio::EnsEMBL::Analysis->new(
 										   -created         => 'NULL',
 										   -description    => 'Raw value',
 										   -display_label   => 'Raw value',
+					     -displayable     => 1,
 										  );
 
 my $vsn_anal = Bio::EnsEMBL::Analysis->new(
@@ -291,11 +324,12 @@ my $vsn_anal = Bio::EnsEMBL::Analysis->new(
 										   -created         => 'NULL',
 										   -description    => 'Generalised log transformation based on VSN variance stabilised scores',
 										   -display_label   => 'VSN_GLOG',
+					   -displayable     => 1,
 										  );
 
 
 my $t_anal = Bio::EnsEMBL::Analysis->new(
-									   -logic_name      => 'TilingHMM',
+									   -logic_name      => 'Nessie',
 									   -db              => 'NULL',
 									   -db_version      => 'NULL',
 									   -db_file         => 'NULL',
@@ -308,8 +342,9 @@ my $t_anal = Bio::EnsEMBL::Analysis->new(
 									   -module_version  => 'NULL',
 									   -parameters      => 'NULL',
 									   -created         => 'NULL',
-									   -description    => 'HMM based predictions based on tiling data',
-									   -display_label   => 'TilingHMM',
+									   -description    => 'Hidden Markov Model based predictions based on tiling array data',
+									   -display_label   => 'Nessie (TilingHMM)',
+					 -displayable     => 1,
 									  );
 
 
@@ -318,6 +353,7 @@ $anal_a->store($anal);
 $anal_a->store($raw_anal);
 $anal_a->store($vsn_anal);
 $anal_a->store($t_anal);
+$anal_a->store($sanger_anal);
 
 
 #Validate, parse and import all experiment data

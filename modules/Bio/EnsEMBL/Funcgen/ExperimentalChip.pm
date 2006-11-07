@@ -104,7 +104,7 @@ sub new {
 =head2 get_Channels
 
   Args       : None
-  Example    : my $channels = $array->get_Channels();
+  Example    : my $channels = $exp_chip->get_Channels();
   Description: Returns all channels on a ExperimentalChip. Needs a database connection.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Channel objects
   Exceptions : None
@@ -117,6 +117,7 @@ sub get_Channels {
   my $self = shift;
 
   
+  #do we need to do this everytime?  Check if they are defined first?
   if ( $self->dbID() && $self->adaptor() ) {
     foreach my $channel (@{$self->adaptor->db->get_ChannelAdaptor->fetch_all_by_ExperimentalChip($self)}){
       $self->{'channels'}{$channel->dbID()} = $channel;
@@ -128,8 +129,25 @@ sub get_Channels {
   return [values %{$self->{'channels'}}];
 }
 
+=head2 get_channel_ids
 
+  Args       : None
+  Example    : my @channel_ids = @{$array->get_channel_ids()};
+  Description: Returns all channel ids for an ExperimentalChip. Needs a database connection.
+  Returntype : List of ints
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
 
+=cut
+
+sub get_channel_ids{
+  my $self = shift;
+
+  $self->get_Channels();
+
+  return [keys %{$self->{'channels'}}];
+}
 
 =head2 unique_id
 

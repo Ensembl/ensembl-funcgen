@@ -72,7 +72,7 @@ sub set_defs{
 	throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
 	
 	my %array_defs = (
-			  nimblegen => {
+			  NIMBLEGEN => {
 					#order of these data arrays is important!
 					array_data   => ["array_chip"],
 					probe_data   => ["probe"],
@@ -81,17 +81,16 @@ sub set_defs{
 					#data paths here?
 					
 					#is this disabling -input_dir override option?
-					input_dir      => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name(),
+					input_dir      => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name(),
+					
 					#but this is vendor specific and remains an array_def
-					design_dir     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/DesignFiles",
+					design_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignFiles",
+					chip_file        => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/SampleKey.txt",
+					array_file       => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignNotes.txt",
+					results_file     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData/All_Pair.txt",
 					
-					chip_file        => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/SampleKey.txt",
-					array_file       => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/DesignNotes.txt",
-					#feature_map_file => $self->get_dir("import")."/feature_map.tmp",
-					results_file     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/PairData/All_Pair.txt",
-					
-					results_dir     => $self->get_dir("data")."/raw/".$self->vendor()."/".$self->name()."/PairData",
-					
+					results_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData",
+					norm_method => 'vsn_norm',
 					dye_freqs => {(
 						       Cy5 => 635,
 						       Cy3 => 532,
@@ -105,11 +104,39 @@ sub set_defs{
 					#need to make this a ref so it will update the values?
 					#gene_description_file => $self->get_array_def("design_dir")."/".$self->array_data("design_name").".ngd",
 				       },
+
+
+			  SANGER => {
+	#order of these data arrays is important!
+				     array_data   => [],#["array_chip"],
+				     probe_data   => ["sanger_probe"],
+				     results_data => [],
+				     #import_methods  => [],
+				     #data paths here?
+				     norm_method => undef,
+				     
+				     #is this disabling -input_dir override option?
+				     input_dir      => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name(),
+				     
+				     #but this is vendor specific and remains an array_def
+				     #design_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignFiles",
+				     #chip_file        => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/SampleKey.txt",
+				     #array_file       => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignNotes.txt",
+				     #results_file     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData/All_Pair.txt",
+				     
+				     #results_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData",
+				     
+
+				    },
+
+
 			 );
 	
 	#warn "Setting ".$self->vendor()." defs to ".$array_defs{$self->vendor()}." ".Data::Dumper::Dumper($array_defs{$self->vendor()});
 	
 	$self->{'array_defs'} = $array_defs{$self->vendor()};
+
+	warn "Input dir is ".$self->input_dir()."\n";
 	
 	#Set mandatory defs here?
 	return;
@@ -164,7 +191,8 @@ sub read_array_chip_data{
   $fh = open_file("<", $self->get_def("chip_file"));
   
   $self->log("Reading chip data");
-  
+  warn ("Reading chip data");
+
   my ($line, $chip_uid, $dye, $design_name, $design_id, $sample_label,  $sample_desc);
   my ($array, $species, $sample_type, $channel, %tmp, %hpos, @data);
   my $tmp_uid = "FIRST";
@@ -263,18 +291,18 @@ sub read_array_chip_data{
      
       $echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
 	(
-	 -DESIGN_ID      => $data[$hpos{'DESIGN_ID'}],
+	 #-DESIGN_ID      => $data[$hpos{'DESIGN_ID'}],
 	 -EXPERIMENT_ID  => $self->experiment->dbID(),
 	 -DESCRIPTION    => $data[$hpos{$sample_desc}],
 	 -ARRAY_CHIP_ID  => $array->get_array_chip_by_design_id($data[$hpos{'DESIGN_ID'}])->{'dbID'},
 	 -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
 	);
       
-      ($echip) = @{$ec_adaptor->store($echip)};
+      $echip = $self->experiment->add_experimental_chip($echip);
 
       #should we nest these in the Experiment and 
       #don't need to add them to store, just have method which always retrieves all echips from db
-      $self->{'echips'}{$data[$hpos{'CHIP_ID'}]} = $echip;#do we still need this?
+      #$self->{'echips'}{$data[$hpos{'CHIP_ID'}]} = $echip;#do we still need this?
       
     }
     
@@ -361,23 +389,6 @@ else{
 }
 }
 
-=head2 get_echip
-
-  Arg [1]    : mandatory - ExperimentalChip unique_id
-  Example    : $chip = $self->get_echip($chip_uid);
-  Description: Getter for ExperimentalChip from cache
-  Returntype : various
-  Exceptions : throws if no chip unique id defined
-  Caller     : Importer
-  Status     : Stable
-
-=cut
-
-sub get_echip{
-  my ($self, $chip_uid) = @_;
-  throw("Need to specify a chip unique_id") if (! defined $chip_uid);
-  return $self->{'echips'}{$chip_uid};
-}
 
 =head2 get_channels
 
@@ -395,7 +406,10 @@ sub get_echip{
 sub get_channels{
   my ($self, $chip_uid) = @_;
   throw("Need to specify a chip unique_id") if (! defined $chip_uid);
-  return $self->get_echip($chip_uid)->{'channels'};
+
+  #rename and move to Experiment?
+
+  return $self->experiment->get_experimental_chip_by_unique_id($chip_uid)->{'channels'};
 }
 
 =head2 get_channel
@@ -413,6 +427,9 @@ sub get_channels{
 
 sub get_channel{
   my ($self, $chan_uid) = @_;
+
+  #rename and move to Experiment?
+
   throw('Need to specify a chan unique_id (${chip_uid}_${dye_freq})') if (! defined $chan_uid);	
   return $self->{'channels'}{$chan_uid};
 }
@@ -465,16 +482,184 @@ sub channel_data{
   my ($self, $chan_uid, $data_type, $value) = @_;
 	
   deprecate("Use Channel methods directly via echip cache");
-
+  
   throw("Need to provide a channel uid and a data_type") if (! defined $chan_uid || ! defined $data_type);
 
   if(defined $value){
     throw("should now use Channel methods \n");
     ${$self->get_channel($chan_uid)}{$data_type} = $value;
+  }
+  else{
+    return ${$self->get_channel($chan_uid)}{$data_type};
+  }
 }
-else{
-  return ${$self->get_channel($chan_uid)}{$data_type};
-}
+
+=head2 read_sanger_probe_data
+
+  Example    : $imp->read_sanger_probe_data();
+  Description: Parses and imports probes, features and result for the sanger PCR array platform
+  Returntype : none
+  Exceptions : none
+  Caller     : Importer
+  Status     : At risk - Move parts to "Vendor"Defs.pm, should function the same
+
+=cut
+
+sub read_sanger_probe_data{
+  my $self = shift;
+
+  my ($file, $chip_uid, $line, $array, $echip, $fh, $r_string, $rfile);
+  my ($op, $of, $chr, $start, $end, $ratio, $pid, $imported, %tmp, %slices, %pid_cache);
+  my $oa_adaptor = $self->db->get_OligoArrayAdaptor();
+  my $op_adaptor = $self->db->get_OligoProbeAdaptor();
+  my $of_adaptor = $self->db->get_OligoFeatureAdaptor();
+  my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
+  my $slice_adaptor = $self->db->get_SliceAdaptor();
+  my $anal_id = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
+  my $vanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("VendorMap");
+  			       
+
+  %tmp = (
+	  array_id    => undef,
+	  dbID        => undef,
+	  name => $self->{'array_name'},
+	 );
+         
+  #This is treating each array chip as a separate array, unless arrayset is defined
+  #AT present we have no way of differentiating between different array_chips on same array???!!!
+  #Need to add functionality afterwards to collate array_chips into single array
+  
+  
+  #store now checks whether already stored and updates array chips accordingly
+  $array = Bio::EnsEMBL::Funcgen::OligoArray->new
+    (
+     -NAME        => $self->{'array_name'},
+     -FORMAT      => uc($self->format()),
+     -VENDOR      => uc($self->vendor()),
+     -DESCRIPTION => "Sanger ENCODE PCR array 3.1.1",
+    );
+  $array->add_array_chip($self->{'array_name'}, \%tmp);
+  ($array) = @{$oa_adaptor->store($array)};
+  $self->arrays($array);
+  my $ac_id = $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'};
+
+
+  if($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED')){
+    $imported = 1;
+    warn("Skipping array chip import (".$self->{'array_name'}.") already fully imported\n");
+  }
+
+
+
+
+  $self->log("Parsing ".$self->vendor()." probe data (".localtime().")");
+  warn("Parsing ".$self->vendor()." probe data (".localtime().")");
+  
+  my $list = "ls ".$self->input_dir()."/*all*";
+  
+  foreach $file(`$list`){
+
+    warn($file);
+
+    ($chip_uid = $file) =~ s/.*\///;
+    $chip_uid =~ s/\.all.*\n//;
+    
+    $echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
+      (
+       -EXPERIMENT_ID  => $self->experiment->dbID(),
+       -DESCRIPTION    => "",
+       -ARRAY_CHIP_ID  => $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
+       -UNIQUE_ID      => $chip_uid,
+      );
+      
+    $echip = $self->experiment->add_experimental_chip($echip);
+
+    #should we nest these in the Experiment and 
+    #don't need to add them to store, just have method which always retrieves all echips from db
+   
+
+
+    $fh = open_file("<", $file);
+    $rfile = open_file(">", $self->get_dir("norm")."/result.".$echip->unique_id().".txt");
+    $r_string = "";
+  
+    while($line = <$fh>){
+      $line =~ s/\r*\n//;
+
+      ($chr, $start, $end, $ratio, $pid) = split/\t/, $line;
+
+      if(! $imported){
+     
+	$op = Bio::EnsEMBL::Funcgen::OligoProbe->new(
+						     -NAME          => $pid,
+						     -LENGTH        => ($start - $end),
+						     -ARRAY         => $array,
+						     -ARRAY_CHIP_ID => $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
+						     -CLASS         => 'EXPERIMENTAL',
+						    );
+	($op) = @{$op_adaptor->store($op)};
+	$pid_cache{$pid} = $op->dbID();
+	
+	#we need to cache the oligo_probes here to speed up import
+	#this will reduce op generation for each successive echip
+
+ 
+	#build slice hash here
+	$chr  =~ s/chr//;
+		
+	if(! exists $slices{$chr}){
+	  $slices{$chr} = $slice_adaptor->fetch_by_region('chromosome', $chr);
+	}
+	
+	#Hack!!!!!!
+	if(!  $slices{$chr}){
+	  warn("Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
+	  #pop @probes;
+	  next;
+	}
+	
+	
+	
+	$of = Bio::EnsEMBL::Funcgen::OligoFeature->new(
+						       -START         => $start,
+						       -END           => $end,
+						       -STRAND        => 0,
+						       -SLICE         => $slices{$chr},
+						       -ANALYSIS      => $vanal,
+						       -MISMATCHCOUNT => 0,
+						       -PROBE         => $op,#Need to update this in the store method
+						      );
+	
+	$of_adaptor->store($of);
+      }
+    
+      
+      if(! exists $pid_cache{$pid}){
+	#if this fails it may be due to the probe name being > 40 characters long
+	$pid_cache{$pid} = $self->db->get_OligoProbeAdaptor->fetch_by_array_probe_probeset_name($self->{'array_name'}, $pid)->dbID();
+      }
+
+      #NA ratio imports as 0
+      $r_string .= "\t".$pid_cache{$pid}."\t${ratio}\t${anal_id}\t".$echip->dbID()."\texperimental_chip\n";
+
+      
+    }
+
+    print $rfile $r_string;
+    close($rfile);
+    
+    if(! $imported){
+      $self->db->set_status('array_chip', $ac_id, "IMPORTED");
+      $imported = 1;
+    }
+  }
+
+
+  $self->log("Finished parsing ".$self->vendor()." probe data (".localtime().")");
+  warn("Finished parsing ".$self->vendor()." probe data (".localtime().")");
+  
+  return;
+
 }
 
 =head2 read_probe_data
@@ -494,8 +679,8 @@ sub read_probe_data{
   my ($self) = shift;
 
   my ($fh, $line, @data, %hpos);
-  $self->log("Parsing probe data (".localtime().")...can we do a reduced parse if we know the array chips are already imported?");
-
+  $self->log("Parsing probe data (".localtime().")");
+  warn("Parsing probe data (".localtime().")...can we do a reduced parse if we know the array chips are already imported");
   ### Read in
   #ndf file: probe_set, probe and probe_feature(.err contains multiple mappings)
   #pos file: probe locations(counts)
@@ -544,7 +729,7 @@ sub read_probe_data{
       #THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
       #all out files are generic, but are we converting to adaptor store?
 
-=pod
+=pod;
 
       $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".ngd");
       my ($start, $stop, %regions, %probe_pos);
@@ -620,18 +805,18 @@ sub read_probe_data{
       
       close($fh);
       
-=cut
+=cut;
       
   #OPEN PROBE IN/OUT FILES
   
 
   
-  $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'name'}.".ndf");
+   $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'name'}.".ndf");
       #Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
       #my $p_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'design_name'}."txt");
       #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
       #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
-      my $f_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'name'}."fasta")	if($self->{'_dump_fasta'});
+      my $f_out = open_file(">", $self->get_dir("output")."/probe.".$ac{'name'}."fasta")	if($self->{'_dump_fasta'});
       my ($length);
       my ($ops, $op, $of, $chr, @probes, @features, %slices, %pfs);
       my $anal = $self->db->get_AnalysisAdaptor()->fetch_by_logic_name("VendorMap");
@@ -1044,7 +1229,7 @@ sub read_results_data{
   #i.e. select the last entry based on the expected table id.
   
   $self->log("Parsing results(".localtime().")...");
-  
+  warn("Parsing results(".localtime().")...");
    
   my ($i, $fh, $tmp, $line, $r_string, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
@@ -1066,7 +1251,7 @@ sub read_results_data{
       my %ac = %{$array->get_array_chip_by_design_id($design_id)};
       $r_string = "";
       warn("Reading/Importing results for $design_id\n");
-      my $r_out = open_file(">", $self->get_dir("import")."/result.".$ac{'name'}.".txt");
+      my $r_out = open_file(">", $self->get_dir("raw")."/result.".$ac{'name'}.".txt");
 
 
       $file_name = (scalar(@design_ids) > 1) ? $ac{'name'} : "All";  
@@ -1131,6 +1316,8 @@ sub read_results_data{
   }
 
   $self->log("Finished parsing and results");
+  warn("Finished parsing and results");
+
   return;
 }
 
