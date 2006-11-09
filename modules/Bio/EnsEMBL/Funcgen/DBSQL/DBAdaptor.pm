@@ -103,7 +103,10 @@ sub fetch_channel_dbid_by_echip_dye{
 sub load_table_data{
   my ($self, $table, $file) = @_;
 
-  #$self->log("Loading $table data from $file");
+
+  chmod 0775, $file;
+
+#  warn("Loading $table data from $file");
   my $sql = "load data infile \"$file\" into table $table";
   $self->dbc->do($sql);
   #$self->log("Finished loading $table data");

@@ -203,6 +203,7 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 #Build and validate all these in Experiment::new? We only need these for importing/analysing???
 $output_dir  = $data_dir."/".uc($vendor)."/".$name;
 mkdir $output_dir;#log/debug files fail in Helper without this
+chmod 0755, $output_dir;
 $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
 $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file);
 
@@ -346,10 +347,29 @@ my $t_anal = Bio::EnsEMBL::Analysis->new(
 									   -display_label   => 'Nessie (TilingHMM)',
 					 -displayable     => 1,
 									  );
+my $lanal = Bio::EnsEMBL::Analysis->new(
+				       -logic_name      => 'LiftOver',
+				       -db              => 'NULL',
+				       -db_version      => 'NULL',
+				       -db_file         => 'NULL',
+				       -program         => 'NULL',
+				       -program_version => 'NULL',
+				       -program_file    => 'NULL',
+				       -gff_source      => 'NULL',
+				       -gff_feature     => 'NULL',
+				       -module          => 'NULL',
+				       -module_version  => 'NULL',
+				       -parameters      => 'NULL',
+				       -created         => 'NULL',
+				       -description    => 'Remapping to new assembly performed by LiftOver',
+				       -display_label   => 'LiftOver',
+				       -displayable     => 1,
+				      );
 
 
 #this checks if already stored
 $anal_a->store($anal);
+$anal_a->store($lanal);
 $anal_a->store($raw_anal);
 $anal_a->store($vsn_anal);
 $anal_a->store($t_anal);

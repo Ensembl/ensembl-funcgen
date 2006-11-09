@@ -71,6 +71,10 @@ sub set_defs{
 
 	throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
 	
+
+	#Need to separate this into vendor defs and experiment defs?
+	
+	#these cause undefs if we're just setting sanger defs without exp context
 	my %array_defs = (
 			  NIMBLEGEN => {
 					#order of these data arrays is important!
@@ -79,10 +83,7 @@ sub set_defs{
 					results_data => ["results"],
 					#import_methods  => [],
 					#data paths here?
-					
-					#is this disabling -input_dir override option?
-					input_dir      => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name(),
-					
+													
 					#but this is vendor specific and remains an array_def
 					design_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignFiles",
 					chip_file        => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/SampleKey.txt",
@@ -109,24 +110,12 @@ sub set_defs{
 			  SANGER => {
 	#order of these data arrays is important!
 				     array_data   => [],#["array_chip"],
-				     probe_data   => ["sanger_probe"],
-				     results_data => [],
+				     probe_data   => ["sanger_array_probe"],
+				     results_data => ["sanger_result"],
 				     #import_methods  => [],
 				     #data paths here?
 				     norm_method => undef,
-				     
 				     #is this disabling -input_dir override option?
-				     input_dir      => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name(),
-				     
-				     #but this is vendor specific and remains an array_def
-				     #design_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignFiles",
-				     #chip_file        => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/SampleKey.txt",
-				     #array_file       => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignNotes.txt",
-				     #results_file     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData/All_Pair.txt",
-				     
-				     #results_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData",
-				     
-
 				    },
 
 
@@ -136,7 +125,7 @@ sub set_defs{
 	
 	$self->{'array_defs'} = $array_defs{$self->vendor()};
 
-	warn "Input dir is ".$self->input_dir()."\n";
+	#warn "Input dir is ".$self->input_dir()."\n";
 	
 	#Set mandatory defs here?
 	return;
@@ -374,20 +363,20 @@ sub arrays{
 =cut
 
 
-sub echip_data{
-  my ($self, $design_id, $data_type, $value) = @_;
+#sub echip_data{
+ # my ($self, $design_id, $data_type, $value) = @_;
 
-  deprecate("Use ExperimentalChip methods directly");
+#  deprecate("Use ExperimentalChip methods directly");
 
-  throw("Need to specify a design_id  and a data_type") if (! defined $data_type || ! defined $design_id);
+#  throw("Need to specify a design_id  and a data_type") if (! defined $data_type || ! defined $design_id);
   
-  if(defined $value){
-    ${$self->get_data('echips', $design_id)}{$data_type} = $value;#can we deref with -> instead to set value?
-}
-else{
-  return ${$self->get_data('echips', $design_id)}{$data_type};#will this cause undefs?
-}
-}
+#  if(defined $value){
+#    ${$self->get_data('echips', $design_id)}{$data_type} = $value;#can we deref with -> instead to set value?
+#}
+#else{
+#  return ${$self->get_data('echips', $design_id)}{$data_type};#will this cause undefs?
+#}
+#}
 
 
 =head2 get_channels
@@ -494,29 +483,21 @@ sub channel_data{
   }
 }
 
-=head2 read_sanger_probe_data
 
-  Example    : $imp->read_sanger_probe_data();
-  Description: Parses and imports probes, features and result for the sanger PCR array platform
-  Returntype : none
-  Exceptions : none
-  Caller     : Importer
-  Status     : At risk - Move parts to "Vendor"Defs.pm, should function the same
+sub read_sanger_array_probe_data{
+  my ($self, $array_file) = @_;
 
-=cut
-
-sub read_sanger_probe_data{
-  my $self = shift;
-
-  my ($file, $chip_uid, $line, $array, $echip, $fh, $r_string, $rfile);
-  my ($op, $of, $chr, $start, $end, $ratio, $pid, $imported, %tmp, %slices, %pid_cache);
+  $array_file||= $self->array_file();
+  my ($line, $array, $fh, @list, $array_file_format, $cmd);
+  my ($op, $of, $imported, $fimported, %tmp, %slices);
   my $oa_adaptor = $self->db->get_OligoArrayAdaptor();
   my $op_adaptor = $self->db->get_OligoProbeAdaptor();
   my $of_adaptor = $self->db->get_OligoFeatureAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $slice_adaptor = $self->db->get_SliceAdaptor();
   my $anal_id = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
-  my $vanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("VendorMap");
+  #have LiftOver? Could then use liftover in  pipeline to redo mappings
+
   			       
 
   %tmp = (
@@ -544,12 +525,186 @@ sub read_sanger_probe_data{
   my $ac_id = $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'};
 
 
-  if($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED')){
+  #we also need to test wether the array as been imported as well as the mappings
+  #THis needs to use coord_sys-id not schema_build!!  Duplcaite entries for different schema_builds 
+  #with same assembly
+
+  my $dnadb_cs = $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome');
+  my $fg_cs = $self->db->get_FGCoordSystemAdaptor->validate_coord_system($dnadb_cs);
+
+  if($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID())){
+    $fimported = 1;
+    $imported=1;
+    warn("Skipping array chip feature import (".$self->{'array_name'}.") already fully imported for ".$self->data_version()."\n");
+  }
+  elsif($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED')){
     $imported = 1;
-    warn("Skipping array chip import (".$self->{'array_name'}.") already fully imported\n");
+    warn("Skipping array chip probe import (".$self->{'array_name'}.") already fully imported\n");
   }
 
+  #need to check whether already imported on specified schema_build
+  #check for appropriate file given format in input dir or take path
 
+  if(! $fimported){
+
+    if(! $array_file){
+
+      throw("No input_dir defined, if you are running in a non Experiment context please use -array_file") if(! defined $self->get_dir('input'));
+      
+      #hacky ..do better?
+      for my $suffix("gff", "adf"){
+	$cmd = $self->get_dir('input')."/".$self->{'array_name'}."*".$suffix;
+	@list = `ls $cmd`;
+      
+	if((scalar(@list) == 1) && 
+	   ($list[0] !~ /No such file or directory/o)){###this is only printed to STDERR?
+	  
+	  if(! defined $array_file){
+	    $array_file = $list[0];
+	  }else{
+	    throw("Found more than one array file : $array_file\t$list[0]\nSpecify one with -array_file");
+	  }
+	}
+      }
+
+      throw("Cannot find array file. Specify one with -array_file") if (! defined $array_file);
+    }
+    
+
+    if($array_file =~ /gff/io){
+      $array_file_format = "GFF";
+    }elsif($array_file =~ /adf/io){
+      $array_file_format = "ADF";
+    }else{
+      throw("Could not determine array file format: $array_file");
+    }
+
+    my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name(($array_file_format eq "ADF") ? "VendorMap" : "LiftOver");
+   
+    $self->log("Parsing ".$self->vendor()." array data (".localtime().")");
+    warn("Parsing ".$self->vendor()." array data (".localtime().")");
+    
+    $fh = open_file("<", $array_file);
+    
+
+    warn("Hardcoded for GFF file format");
+
+    my ($chr, $start, $end, $strand, $pid);
+
+    while($line = <$fh>){
+      $line =~ s/\r*\n//;
+      
+      #($chr, $start, $end, $ratio, $pid) = split/\t/o, $line;
+      ($chr, undef, undef, $start, $end, undef, $strand, undef, $pid) = split/\t|\;/o, $line;
+      $pid =~ s/reporter_id=//o;
+
+      #warn ("($chr, undef, undef, $start, $end, undef, $strand, undef, $pid)");
+ 
+
+      #need to parse dependant on file format 
+      #also need to account for duplicate probes on grid
+      
+      if(! $imported){
+	#when we utilise array coords, we need to look up probe cache and store again with new coords
+	#we're currently storing duplicates i.e. different ids with for same probe
+	#when we should be storing two records for the same probe/id
+	#the criteria for this will be different for each vendor, may have to check container etc for NimbleGen
+
+	if(! $self->get_probe_id_by_name($pid)){
+
+	  $op = Bio::EnsEMBL::Funcgen::OligoProbe->new(
+						       -NAME          => $pid,
+						       -LENGTH        => ($start - $end),
+						       -ARRAY         => $array,
+						       -ARRAY_CHIP_ID => $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
+						       -CLASS         => 'EXPERIMENTAL',
+						      );
+	  ($op) = @{$op_adaptor->store($op)};
+	  $self->cache_name_id($op->get_probename(), $op->dbID);
+
+       	  #build slice hash cache
+	  $chr  =~ s/chr//;
+	  $strand = ($strand eq "+") ? 0 : 1;
+	  if(! exists $slices{$chr}){
+	    $slices{$chr} = $slice_adaptor->fetch_by_region('chromosome', $chr);
+	  }
+	  
+	  #Hack!!!!!!
+	  if(!  $slices{$chr}){
+	    warn("Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
+	    #pop @probes;
+	    next;
+	  }
+	  
+	
+	  $of = Bio::EnsEMBL::Funcgen::OligoFeature->new(
+							 -START         => $start,
+							 -END           => $end,
+							 -STRAND        => $strand,
+							 -SLICE         => $slices{$chr},
+							 -ANALYSIS      => $fanal,
+							 -MISMATCHCOUNT => 0,
+							 -_PROBE_ID     => $self->get_probe_id_by_name($pid),#work around to avoid cacheing probes
+							);
+
+	  $of_adaptor->store($of);
+
+	}else{
+	  #warn "Need to accomdate duplicate probes here";¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡!!!!!!!
+	}
+      }
+    }
+    warn"setting ac cs status";
+
+    $self->db->set_status('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID());
+  }
+
+  
+
+  if(! $imported){
+    warn"setting ac imp  status";
+    $self->db->set_status('array_chip', $ac_id, 'IMPORTED');
+    $imported = 1;
+  }
+  
+  $self->log("Finished parsing ".$self->vendor()." array/probe data (".localtime().")");
+  warn("Finished parsing ".$self->vendor()." array/probe data (".localtime().")");
+  
+  return;
+}
+
+=head2 read_sanger_probe_data
+
+  Example    : $imp->read_sanger_probe_data();
+  Description: Parses and imports probes, features and result for the sanger PCR array platform
+  Returntype : none
+  Exceptions : none
+  Caller     : Importer
+  Status     : At risk - Move parts to "Vendor"Defs.pm, should function the same
+
+=cut
+
+sub read_sanger_result_data{
+  my $self = shift;
+
+
+  warn("This should never import array/probes/feature.  Force adf/gff import and use this simply to import results");
+  #shoudl also check wether experimental_chips have been previously imported
+  
+
+  my ($file, $chip_uid, $line, $echip, $fh, $r_string, $rfile);
+  my ($ratio, $pid, $imported, %tmp);
+  my $of_adaptor = $self->db->get_OligoFeatureAdaptor();
+  my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
+  my $anal_id = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
+    			       
+
+         
+  #This is treating each array chip as a separate array, unless arrayset is defined
+  #AT present we have no way of differentiating between different array_chips on same array???!!!
+  #Need to add functionality afterwards to collate array_chips into single array
+  
+ 
 
 
   $self->log("Parsing ".$self->vendor()." probe data (".localtime().")");
@@ -568,89 +723,57 @@ sub read_sanger_probe_data{
       (
        -EXPERIMENT_ID  => $self->experiment->dbID(),
        -DESCRIPTION    => "",
-       -ARRAY_CHIP_ID  => $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
+       -ARRAY_CHIP_ID  => $self->arrays->[0]->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
        -UNIQUE_ID      => $chip_uid,
       );
       
     $echip = $self->experiment->add_experimental_chip($echip);
 
+    if($self->db->fetch_status_by_name('experimental_chip', $echip->dbID(), 'IMPORTED')){
+      $imported = 1;
+      warn("Skipping experimental chip import (".$echip->unique_id().") already fully imported\n");
+    }
+
+    #Need to check fo rpartial import here
+
+
+
     #should we nest these in the Experiment and 
     #don't need to add them to store, just have method which always retrieves all echips from db
    
-
-
-    $fh = open_file("<", $file);
-    $rfile = open_file(">", $self->get_dir("norm")."/result.".$echip->unique_id().".txt");
-    $r_string = "";
-  
-    while($line = <$fh>){
-      $line =~ s/\r*\n//;
-
-      ($chr, $start, $end, $ratio, $pid) = split/\t/, $line;
-
-      if(! $imported){
-     
-	$op = Bio::EnsEMBL::Funcgen::OligoProbe->new(
-						     -NAME          => $pid,
-						     -LENGTH        => ($start - $end),
-						     -ARRAY         => $array,
-						     -ARRAY_CHIP_ID => $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
-						     -CLASS         => 'EXPERIMENTAL',
-						    );
-	($op) = @{$op_adaptor->store($op)};
-	$pid_cache{$pid} = $op->dbID();
-	
-	#we need to cache the oligo_probes here to speed up import
-	#this will reduce op generation for each successive echip
-
- 
-	#build slice hash here
-	$chr  =~ s/chr//;
-		
-	if(! exists $slices{$chr}){
-	  $slices{$chr} = $slice_adaptor->fetch_by_region('chromosome', $chr);
-	}
-	
-	#Hack!!!!!!
-	if(!  $slices{$chr}){
-	  warn("Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
-	  #pop @probes;
-	  next;
-	}
-	
-	
-	
-	$of = Bio::EnsEMBL::Funcgen::OligoFeature->new(
-						       -START         => $start,
-						       -END           => $end,
-						       -STRAND        => 0,
-						       -SLICE         => $slices{$chr},
-						       -ANALYSIS      => $vanal,
-						       -MISMATCHCOUNT => 0,
-						       -PROBE         => $op,#Need to update this in the store method
-						      );
-	
-	$of_adaptor->store($of);
-      }
-    
-      
-      if(! exists $pid_cache{$pid}){
-	#if this fails it may be due to the probe name being > 40 characters long
-	$pid_cache{$pid} = $self->db->get_OligoProbeAdaptor->fetch_by_array_probe_probeset_name($self->{'array_name'}, $pid)->dbID();
-      }
-
-      #NA ratio imports as 0
-      $r_string .= "\t".$pid_cache{$pid}."\t${ratio}\t${anal_id}\t".$echip->dbID()."\texperimental_chip\n";
-
-      
-    }
-
-    print $rfile $r_string;
-    close($rfile);
     
     if(! $imported){
-      $self->db->set_status('array_chip', $ac_id, "IMPORTED");
-      $imported = 1;
+
+      $fh = open_file("<", $file);
+      $rfile = open_file(">", $self->get_dir("norm")."/result.".$echip->unique_id().".txt");
+      $r_string = "";
+      
+      while($line = <$fh>){
+	$line =~ s/\r*\n//o;
+	
+	($ratio, $pid) = (split/\t/, $line)[3..4];
+
+
+	$pid =~ s/.*://o;
+	#warn"($ratio, $pid)";
+	#this is throwing away the encode region which could be used for the probeset/family?
+	
+	#NA ratio imports as 0
+	$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${anal_id}\t".$echip->dbID()."\texperimental_chip\n";
+	
+      
+      }
+
+      print $rfile $r_string;
+      close($rfile);
+    
+      #should import drectly here?
+    
+      #need to do this for experimental_chip after results imported with logic name
+      #if(! $imported){
+      #  $self->db->set_status('_chip', $ac_id, "IMPORTED");
+      #  $imported = 1;
+      #}
     }
   }
 
@@ -1161,14 +1284,14 @@ sub cache_name_id{
   throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
 
   if(defined $self->{'_probe_map'}->{$pname} && ($self->{'_probe_map'}->{$pname} != $pid)){
-    throw("Found two differing dbIDs for $pname");
+    throw("Found two differing dbIDs for $pname, need to sort out redundant oligo_probe entries");
   }
 
   $self->{'_probe_map'}->{$pname} = $pid;
   return;
 }
 
-=head2 cache_name_id
+=head2 get_probe_id_by_name
 
   Arg [1]    : mandatory - probe name
   Example    : $pid = $self->get_probe_id_by_name($pname);
@@ -1184,9 +1307,7 @@ sub cache_name_id{
 #Remove array element to this?
 sub get_probe_id_by_name{
   my ($self, $name) = @_;
-
-  #my (@op_ids);
-
+  
   #Should only ever be one pid per probe per array per n array_chips
   #i.e. duplicate records per array chip with same pid
 
@@ -1199,11 +1320,14 @@ sub get_probe_id_by_name{
     my $op = $self->db->get_OligoProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
     #print "Got probe $op with dbid ".$op->dbID()."\n";
     #push @op_ids, $op->dbID();
-    $self->{'_probe_map'}{$name} = $op->dbID();
+    $self->{'_probe_map'}{$name} = $op->dbID() if $op;
   }
   
   #return \@op_ids;
-  return $self->{'_probe_map'}->{$name};
+
+ # warn "testing for pid $name";
+
+  return (exists $self->{'_probe_map'}->{$name}) ? $self->{'_probe_map'}->{$name} : undef;
   
 }
 

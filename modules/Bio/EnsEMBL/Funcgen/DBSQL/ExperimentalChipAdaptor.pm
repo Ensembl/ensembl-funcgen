@@ -182,7 +182,7 @@ sub fetch_by_unique_and_experiment_id {
 	my $sth = $self->prepare("
 		SELECT ec.experimental_chip_id
 		FROM experimental_chip ec
-		WHERE ec.unique_id = $c_uid
+		WHERE ec.unique_id ='$c_uid'
         AND ec.experiment_id = $e_dbid
 	");
 

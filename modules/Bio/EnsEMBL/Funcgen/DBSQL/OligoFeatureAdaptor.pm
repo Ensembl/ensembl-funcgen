@@ -585,7 +585,7 @@ sub store{
 		$sth->bind_param(3, $of->end(),            SQL_INTEGER);
 		$sth->bind_param(4, $of->strand(),         SQL_TINYINT);
 		$sth->bind_param(5, $of->coord_system_id(),SQL_INTEGER);
-		$sth->bind_param(6, $of->probe->dbID(),    SQL_INTEGER);
+		$sth->bind_param(6, $of->_probe_id(),      SQL_INTEGER);
 		$sth->bind_param(7, $of->analysis->dbID(), SQL_INTEGER);
 		$sth->bind_param(8, $of->mismatchcount(),  SQL_TINYINT);
 		$sth->bind_param(9, $of->cigar_line(),     SQL_VARCHAR);

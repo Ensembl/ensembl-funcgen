@@ -79,6 +79,7 @@ my $reg = "Bio::EnsEMBL::Registry";
                     -dump_fasta Fast dump flag (default =0)
                     -array_set Flag to treat all chip designs as part of same array (default = 0)
                     -array_name Name for array set
+                    -array_file Path of array file to import for sanger ENCODE array
                     -norm_method  Normalisation method (default = vsn_norm, put defaults in Defs?)
                     -dbname Override for autogeneration of funcgen dbaname
                     -reg_config path to local registry config file (default = ~/ensembl.init || undef)
@@ -133,6 +134,7 @@ sub new{
 		 #no methods for these as we're replacing with a meta file or something
 		 array_set => 0,
 		 array_name => undef,
+		 array_file => undef,
 				 
 
 				 #Need to separate pipeline vars/methods from true Experiment methods?
@@ -178,12 +180,13 @@ sub new{
 	#Can some of these be set in ArrayDefs or "Vendor"Defs?
 	#pass?
 
-	foreach my $tmp("name", "vendor", "format", "group", "data_dir", "data_version", "species", "host", "user"){
-		$self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
-	}
+  
+    foreach my $tmp("vendor", "format", "data_version", "species", "host", "user"){
+      $self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
+    }
 
-	#Set vendor specific vars/methods
-	$self->set_defs();
+    #Set vendor specific vars/methods
+    $self->set_defs();
 
     ### LOAD AND RE-CONFIG REGISTRY ###
 	if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
@@ -289,16 +292,21 @@ sub new{
 sub init_import{
   my ($self) = shift;
 
-
+  foreach my $tmp("name", "group", "data_dir"){
+    $self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
+  }
   #Should we separate path on group here too, so we can have a dev/test group?
   
   #Set and validate input dir
-  $self->{'input_dir'} = $self->get_def('input_dir') if(! defined $self->get_dir("input"));
+  $self->{'input_dir'} ||= $self->get_dir("data")."/input/".$self->vendor()."/".$self->name();
   $self->throw("input_dir is not defined or does not exist (".$self->get_dir("input").")") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
   
+
+  #this is now done in control script as the log file is created before the dir is :?
   if(! defined $self->get_dir("output")){
     $self->{'output_dir'} = $self->get_dir("data")."/".$self->vendor()."/".$self->name();
     mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
+    chmod 0755, $self->get_dir("output");
   }
   
   $self->create_output_dirs("raw", "norm");
@@ -406,6 +414,7 @@ sub create_output_dirs{
   foreach my $name(@dirnames){
     $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
     mkdir $self->get_dir($name) if(! -d $self->get_dir($name));
+    chmod 0755, $self->get_dir($name);
   }
   
   return;
@@ -430,6 +439,25 @@ sub vendor{
   $self->{'vendor'} = shift if(@_);
   $self->{'vendor'} = uc($self->{'vendor'});
   return $self->{'vendor'};
+}
+
+
+=head2 array_file
+  
+  Example    : my $array_file = $imp->array_file();
+  Description: Getter/Setter for sanger array file
+  Arg [1]    : optional - path to adf or gff array definition/mapping file
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub array_file{
+  my ($self) = shift;
+  $self->{'array_file'} = shift if(@_);
+  return $self->{'array_file'};
 }
 
 =head2 data_dir

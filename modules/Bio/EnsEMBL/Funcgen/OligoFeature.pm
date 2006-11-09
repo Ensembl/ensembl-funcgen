@@ -103,15 +103,16 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($probe, $mismatchcount, $coord_sys_id )
-    = rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID'], @_);
+  my ($probe, $mismatchcount, $coord_sys_id, $pid)
+    = rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID', '_PROBE_ID'], @_);
 
   #Need to add analysis/cigar_line(remove mismatch?)
 
-	
+  $self->{'_probe_id'} = $pid;
   $self->probe($probe);
-  $self->mismatchcount($mismatchcount);
   
+  $self->mismatchcount($mismatchcount);
+   
   #do we need to validate this against the db?  Grab from slice and create new if not present?  Will this be from the dnadb?
   
   #do we need this coordsys id if we're passing a slice?  We should have the method but not in here?
@@ -277,17 +278,27 @@ sub probelength {
 
 sub probe {
     my $self = shift;
-	my $probe = shift;
+    my $probe = shift;
+
+    #can we not use _probe_id here?
+
+
     if ($probe) {
-		if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::OligoProbe') ) {
-			throw('Probe must be a Bio::EnsEMBL::Funcgen::OligoProbe object');
-		}
-		$self->{'probe'} = $probe;
+      if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::OligoProbe') ) {
+	throw('Probe must be a Bio::EnsEMBL::Funcgen::OligoProbe object');
+      }
+      $self->{'probe'} = $probe;
     }
-	if ( !defined $self->{'probe'} && $self->dbID() && $self->adaptor() ) {
-	    $self->{'probe'} = $self->adaptor()->db()->get_OligoProbeAdaptor()->fetch_by_OligoFeature($self);
-	}
+    if ( !defined $self->{'probe'} && $self->dbID() && $self->adaptor() ) {
+      $self->{'probe'} = $self->adaptor()->db()->get_OligoProbeAdaptor()->fetch_by_OligoFeature($self);
+    }
     return $self->{'probe'};
+  }
+
+sub _probe_id{
+  my $self = shift;
+
+  return $self->{'_probe_id'} || $self->probe->dbID();
 }
 
 =head2 get_results_by_channel_id

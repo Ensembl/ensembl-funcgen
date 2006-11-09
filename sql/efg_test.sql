@@ -438,7 +438,7 @@ CREATE TABLE `status` (
    `table_id` int(11) unsigned default NULL,
    `table_name` varchar(20) default NULL,	
    `state` varchar(40) default NULL,
-   PRIMARY KEY  (`table_id`, `table_name`)
+   PRIMARY KEY  (`table_id`, `table_name`, `state`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 

@@ -308,7 +308,7 @@ sub get_probename {
       #Sanity check that there is only one non-AFFY array
       my @ac_ids = keys %{$self->{'arrays'}};
 
-      if((scalar @ac_ids == 1) && ($self->get_all_Arrays()->[0]->vendor() eq "NIMBLEGEN")){
+      if((scalar @ac_ids == 1) && ($self->get_all_Arrays()->[0]->vendor() ne "AFFY")){
 	$arrayname = $self->get_all_Arrays()->[0]->name();
       }
       else{
