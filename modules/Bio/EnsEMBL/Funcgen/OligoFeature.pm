@@ -396,9 +396,9 @@ sub get_result_by_Analysis_ExperimentalChips{
       
       #throw("You have passed ExperimentalChips from different if($array_id != $tmp_id)
       
-      if(exists  $ac_ids{$ec->array_chip_id()}){
-	throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
-      }
+      #if(exists  $ac_ids{$ec->array_chip_id()}){
+#	throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
+ #     }
       
       $ac_ids{$ec->array_chip_id()} = 1;
       $all_ids{$ec->dbID()} = 1;
@@ -418,25 +418,55 @@ sub get_result_by_Analysis_ExperimentalChips{
     #$self->{'results_complete'} ||= 0;#do we need this now?
     
     if((scalar(@all_ids) - scalar(@ec_ids))> 1){
-		throw("DATA ERROR - There is more than one result stored for the following ExperimentalChip ids: @all_ids");
-	}		
-	elsif(! $self->{'results'} || (($anal_name && scalar(@ec_ids) > 0) && scalar(@all_ids) == scalar(@ec_ids))){
-		#fetch all, set complete set flag
-		#$self->{'results_complete'} ||= 1 	if(! $anal_name);
+      throw("DATA ERROR - There is more than one result stored for the following ExperimentalChip ids: @all_ids");
+    }		
+    elsif(! $self->{'results'} || (($anal_name && scalar(@ec_ids) > 0) && scalar(@all_ids) == scalar(@ec_ids))){
+      #fetch all, set complete set flag
+      #$self->{'results_complete'} ||= 1 	if(! $anal_name);
+      #would need to look up chip and channel analyses here and call relevant fetch
+      #or pass the chip and then build the query as = or IN dependent on context of logic name
+      #if there are multiple results, last one will overwrite others
+      #could do foreach here to deal with retrieving all i.e. no logic name
+      #Can supply mutliple chips, but probe ids "should" be unique(in the DB at least) amongst contiguous array_chips
+      #build the cache based on logic name and table_id
+      #cahce key??  should we cat the ec_ids together?
 
-		#would need to look up chip and channel analyses here and call relevant fetch
-		#or pass the chip and then build the query as = or IN dependent on context of logic name
+      my @result_refs = @{$self->adaptor->fetch_results_by_probe_experimental_chips_analysis($self->probe->dbID(), 
+											     \@ec_ids, 
+											     $anal_name)};
 
-		#if there are multiple results, last one will overwrite others
-		my @result_refs = @{$self->adaptor->fetch_results_by_probe_experimental_chips_analysis($self->probe->dbID(), \@ec_ids, $anal_name)};
-	
-		#could do foreach here to deal with retrieving all i.e. no logic name
-		throw("Fetched more than one result for this OligoFeature, Analysis and ExperimentalChips") if (scalar(@result_refs) >1);
-		#Can supply mutliple chips, but probe ids "should" be unique(in the DB at least) amongst contiguous array_chips
-		#build the cache based on logic name and table_id
-		#cahce key??  should we cat the ec_ids together?
-		$self->{'results'}{$anal_name}{":".join(":", @ec_ids).":"} = $result_refs[0]->[0];
+      #Remove lines with no result
+      while(@result_refs && (! $result_refs[0]->[0])){
+	shift @result_refs;
+      }
+
+      my $num_results = scalar(@result_refs);
+      my ($result, $mpos);
+      #throw("Fetched more than one result for this OligoFeature, Analysis and ExperimentalChips") if (scalar(@result_refs) >1);
+
+      #No sort needed as we sort in the query
+
+      if($num_results == 1){
+	$result = $result_refs[0]->[0];
+      }
+      elsif($num_results == 2){#mean
+	$result = ($result_refs[0]->[0] + $result_refs[1]->[0])/2;
+    
+      }
+      elsif($num_results > 2){#median or mean of median flanks
+	$mpos = $num_results/2;
+    
+	if($mpos =~ /\./){#true median
+	  $mpos =~ s/\..*//;
+	  $mpos ++;
+	  $result =  $result_refs[$mpos]->[0];
+	}else{
+	  $result = ($result_refs[$mpos]->[0] + $result_refs[($mpos+1)]->[0])/2 ;
 	}
+      }
+      
+      $self->{'results'}{$anal_name}{":".join(":", @ec_ids).":"} = $result;
+    }
 
 	#do we return the ec ids here to, or do we trust that the user will know to only pass contiguous rather than duplicate chips
 
@@ -460,7 +490,7 @@ sub get_result_by_Analysis_ExperimentalChips{
 
 	}
 
-	throw("Got more than one key for the results cache") if scalar(@keys) > 1;
+    throw("Got more than one key for the results cache") if scalar(@keys) > 1;
 
     return $self->{'results'}{$anal_name}{$keys[0]};
 }

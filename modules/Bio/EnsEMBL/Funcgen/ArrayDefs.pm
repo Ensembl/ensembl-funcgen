@@ -611,10 +611,12 @@ sub read_sanger_array_probe_data{
 	#the criteria for this will be different for each vendor, may have to check container etc for NimbleGen
 
 	if(! $self->get_probe_id_by_name($pid)){
+	  #$length = $start - $end;
+	  #warn "length is $length";
 
 	  $op = Bio::EnsEMBL::Funcgen::OligoProbe->new(
 						       -NAME          => $pid,
-						       -LENGTH        => ($start - $end),
+						       -LENGTH        => ($end - $start),
 						       -ARRAY         => $array,
 						       -ARRAY_CHIP_ID => $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
 						       -CLASS         => 'EXPERIMENTAL',

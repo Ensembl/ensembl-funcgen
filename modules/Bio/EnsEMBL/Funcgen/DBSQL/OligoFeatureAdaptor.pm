@@ -683,12 +683,17 @@ sub fetch_results_by_channel_analysis{
 
 sub fetch_results_by_probe_experimental_chips_analysis{
 	my ($self, $probe_id, $chip_ids, $logic_name) = @_;
+
+	my @cs = @$chip_ids;
+
+	#warn "Fetching result for $probe_id, @cs, $logic_name";
 	
 	my $table_ids;
 	my $table_name = "experimental_chip";
 
 	my %chip_metrics = (
 			    VSN_GLOG => 1,
+			    SangerPCR =>1,
 			   );
 
 	#else no logic name or not a chip metric, then return channel and metric=?
@@ -715,7 +720,7 @@ sub fetch_results_by_probe_experimental_chips_analysis{
 	}
 
 
-	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause";
+	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause order by r.score";
 	
 	return $self->dbc->db_handle->selectall_arrayref($query);
 }
@@ -731,7 +736,10 @@ sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
 
   my (@ofs, @results, $result);
 
-  
+ 
+
+  #can we add sort by contraint here?
+ 
   foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
     
     if((! @ofs) || ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
@@ -748,31 +756,41 @@ sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
 
 }
 
+
 sub _get_best_result{
   my ($self, $ofs, $analysis, $exp_chips) = @_;
 
   my ($result, $mpos);
+  my $num_features = scalar(@$ofs);
 
-  if(scalar(@$ofs) == 2){#mean
-    $result = ($ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) + 
-	       $ofs->[1]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2;
+  if($num_features > 1){
+    my @results = map $_->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips), @$ofs;
+    @results = sort @results;
+
+
+    #need to account for features/probes without results.  How would this happen?  Not all probes present in result file or score = NA?!
+    #while(! $results[0]){
+    #shift @results;
+    #}
+
+
+
+    if($num_features == 2){#mean
+      $result = ($results[0] + $results[1])/2;
+    }
+    elsif($num_features > 2){#median or mean of median flanks
+      $mpos = (scalar(@$ofs))/2;
     
-  }
-  elsif(scalar(@$ofs) > 2){#median or mean of median flanks
-    $mpos = (scalar(@$ofs))/2;
-    
-    if($mpos =~ /\./){#true median
-      $mpos =~ s/\..*//;
-      $mpos ++;
-      $result = $ofs->[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
-    }else{
-      $result = ($ofs->[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) +
-		 $ofs->[($mpos+1)]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2 ;
+      if($mpos =~ /\./){#true median
+	$mpos =~ s/\..*//;
+	$mpos ++;
+	$result = $results[$mpos];
+      }else{
+	$result = ($results[$mpos] + $results[($mpos+1)])/2;
+      }
     }
   }else{
-    #push start, end, score onto results
     $result =  $ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
-
   }
 
   return $result;
@@ -795,6 +813,7 @@ sub fetch_result_set_by_Slice_Analysis_ExperimentalChips{
 
   my %chip_metrics = (
 		      VSN_GLOG => 1,
+		      SangerPCR => 1,
 		     );
 
 

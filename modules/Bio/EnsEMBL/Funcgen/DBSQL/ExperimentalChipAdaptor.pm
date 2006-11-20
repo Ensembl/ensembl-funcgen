@@ -111,11 +111,14 @@ sub fetch_all_by_experiment_dbID {
 sub fetch_contigsets_by_experiment_dbID {
     my $self = shift;
     my $e_dbid = shift;
+    
 
-    my @tracksets;
-    my @hack1 = ("H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)");
+    my (@tracksets, @hack1);
+    #my @hack1 = ("H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)");
     #my @hack2 = ("H3kgac-2");
     #46092 + 46078; 46082 + 46075
+    my $HeLa = "Human Epithelial Carcinoma Cells (HeLa)";
+    my $GM06990 = "Human B-Lymphocyte Cells (GM06990)";
 
     #what are we going to return? arrayref to list of arrays of echips?
     #where do we get set name from?
@@ -128,18 +131,58 @@ sub fetch_contigsets_by_experiment_dbID {
     #Need ti implement contig_set_id in experimental_chip
 
     
+    #HACKY HACKY!! NEED TO IMPLEMENT CONTIG SET IN DB AND API
+
     foreach my $echip (@{$self->fetch_all_by_experiment_dbID($e_dbid)}){
          
       if($self->db->species() =~ /homo/i){
 
-	#($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078") ? push @hack1, $echip : push @hack2, $echip; 
+	
+	#Hacky set control needs handling in EC adaptor using the status tables
+	#Also need to build/return name(Tissue/feature type name/desc) & FeatureType class > how to render
 	
 
 	if($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078"){
+	  push @hack1, "H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)" if (scalar(@hack1) == 0);
 	  push @hack1, $echip;
-	}#else{
-	 # push @hack2, $echip;
-	#}
+	}
+	elsif($e_dbid == 7){
+	  push @hack1, "H3K4me1 - $GM06990" if (scalar(@hack1) == 0);
+	  push @hack1, $echip;
+	}
+	elsif($e_dbid == 6){
+	  push @hack1, "H3K4me1 - $HeLa" if (scalar(@hack1) == 0); 
+	  push @hack1, $echip;
+	}
+	elsif($e_dbid == 8){
+	  push @hack1, "H3K4me2 - $GM06990" if  (scalar(@hack1) == 0); 
+	  push @hack1, $echip;
+	}
+	elsif($e_dbid == 5){
+	   push @hack1, "H3K4me2 - $HeLa" if  (scalar(@hack1) == 0); 
+	   push @hack1, $echip;
+	}
+	elsif($e_dbid == 4){
+	  push @hack1, "H3K4me3 - $HeLa" if  (scalar(@hack1) == 0); 
+	  push @hack1, $echip;
+	}
+	elsif($e_dbid == 9){
+	  push @hack1, "H3ac - $GM06990" if  (scalar(@hack1) == 0); 
+	  push @hack1, $echip;
+	}
+	elsif($e_dbid == 3){
+	  push @hack1, "H3ac - $HeLa"  if  (scalar(@hack1) == 0); 
+	  push @hack1, $echip;
+       	}
+	elsif($e_dbid == 10){
+	  push @hack1, "H4ac - $GM06990"  if  (scalar(@hack1) == 0); 
+	  push @hack1, $echip;
+	}
+	elsif($e_dbid == 2){
+	  push @hack1, "H4ac - $HeLa" if  (scalar(@hack1) == 0); 
+	  push @hack1, $echip;
+	}
+
       }elsif($self->db->species() =~ /mus/i){
 	
 	next if ($echip->unique_id() != "48317");
@@ -175,23 +218,23 @@ sub fetch_contigsets_by_experiment_dbID {
 =cut
 
 sub fetch_by_unique_and_experiment_id {
-    my ($self, $c_uid, $e_dbid) = @_;
+  my ($self, $c_uid, $e_dbid) = @_;
+    
+  throw("Must provide and unique_id and and experiment_id") if(! $c_uid || ! $e_dbid);
 
-	throw("Must provide and unique_id and and experiment_id") if(! $c_uid || ! $e_dbid);
-
-	my $sth = $self->prepare("
+  my $sth = $self->prepare("
 		SELECT ec.experimental_chip_id
 		FROM experimental_chip ec
 		WHERE ec.unique_id ='$c_uid'
         AND ec.experiment_id = $e_dbid
 	");
+  
 
-
-	$sth->execute();
-	my ($ec_id) = $sth->fetchrow();
-
+  $sth->execute();
+  my ($ec_id) = $sth->fetchrow();
+  
 	
-	return $self->fetch_by_dbID($ec_id) if $ec_id;
+  return $self->fetch_by_dbID($ec_id) if $ec_id;
 }
 
 
