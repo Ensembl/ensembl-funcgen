@@ -283,23 +283,53 @@ sub type {
 
   if( ! $self->{'type'}){
     
-    my ($name, $desc, $class);
-    
+    my ($name, $desc);
+     
+
+    my %desc_hack  = (
+		      1  => "Histone 3 Lysine 9 Acetylation",
+		      2  => "Histone 4 Acetylation",
+		      3  => "Histone 3 Acetylation",
+		      4  => "Histone 3 Lysine 4 Tri-Methylation",
+		      5  => "Histone 3 Lysine 4 Di-Methylation",
+		      6  => "Histone 3 Lysine 4 Mono-Methylation",
+		      7  => "Histone 3 Lysine 4 Mono-Methylation",
+		      8  => "Histone 3 Lysine 4 Di-Methylation",
+		      9  => "Histone 3 Acetylation",
+		      10 => "Histone 4 Acetylation",
+		      11 => "Histone 3 Lysine 4 Tri-Methylation",
+		     );
+
+    my %name_hack = (
+		     1  => "H3K9ac - U2OS Enriched Sites",
+		     2  => "H4ac - HeLa Enriched Sites",
+		     3  => "H3ac - HeLa Enriched Sites",
+		     4  => "H3K4me3 - HeLa Enriched Sites",
+		     5  => "H3K4me2 - HeLa Enriched Sites",
+		     6  => "H3K4me1 - HeLa Enriched Sites",
+		     7  => "H3K4me1 - GM06990 Enriched Sites",
+		     8  => "H3K4me2 - GM06990 Enriched Sites",
+		     9  => "H3ac - GM06990 Enriched Sites",
+		     10 => "H4ac - GM06990 Enriched Sites",
+		     11 => "H3K4me3 - GM06990 Enriched Sites",
+		    );
+
+
+      
     if($self->adaptor->db->species() =~ /homo/i){
-      $desc = "Histone 3 Lysine 9 Acetylation";
-      $name = "H3K9ac - U2OS Enriched Sites";
-      $class = "HISTONE";
+      my $exp_id = shift @{$self->experiment_ids()};
+      $desc = $desc_hack{$exp_id};
+      $name = $name_hack{$exp_id};
     }else{
       $desc = "Histone 3 Lysine 9 Tri-methlyation";
       $name = "H3K4Me3 - MEFf Enriched Sites";
-      $class = "HISTONE";
     }
         
     my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
       (
        -NAME => $name,
        -DESCRIPTION => $desc,
-       -CLASS => $class, 
+       -CLASS => "HISTONE", 
       ); 
     
     $self->{'type'} = $ft;

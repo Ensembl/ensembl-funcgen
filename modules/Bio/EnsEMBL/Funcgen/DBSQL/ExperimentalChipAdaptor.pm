@@ -182,6 +182,10 @@ sub fetch_contigsets_by_experiment_dbID {
 	  push @hack1, "H4ac - $HeLa" if  (scalar(@hack1) == 0); 
 	  push @hack1, $echip;
 	}
+	elsif($e_dbid == 11){
+	  push @hack1, "H3K4me3 - $GM06990" if  (scalar(@hack1) == 0); 
+	  push @hack1, $echip;
+	}
 
       }elsif($self->db->species() =~ /mus/i){
 	
