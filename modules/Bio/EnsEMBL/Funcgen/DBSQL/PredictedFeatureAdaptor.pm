@@ -59,10 +59,10 @@ use vars qw(@ISA);
   Arg [2]    : Bio::EnsEMBL::FeatureType
   Arg [3]    : (optional) string - logic name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_Target($slice, $target);
-  Description: Retrieves a list of features on a given slice, specific for a given target.
+               my $features = $ofa->fetch_by_Slice_FeatureType($slice, $ft);
+  Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
   Returntype : Listref of Bio::EnsEMBL::PredictedFeature objects
-  Exceptions : Throws if no Target object provided
+  Exceptions : Throws if no FeatureType object provided
   Caller     : General
   Status     : At Risk
 
@@ -78,6 +78,31 @@ sub fetch_all_by_Slice_FeatureType {
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
  
+=head2 fetch_all_by_Slice_experiment_id
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : int - Experiment dbID
+  Arg [3]    : (optional) string - logic name
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_by_Slice_experiment_id($slice, "1");
+  Description: Retrieves a list of features on a given slice, specific for a given experiment.
+  Returntype : Listref of Bio::EnsEMBL::PredictedFeature objects
+  Exceptions : Throws if no Target object provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Slice_experiment_id {
+  my ($self, $slice, $exp_id, $logic_name) = @_;
+	
+  throw('Need to pass an experiment_id') if(! defined $exp_id);
+  my $constraint = qq( pf.predicted_feature_id = ep.predicted_feature_id AND ep.experiment_id=$exp_id );
+  
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+}
+
+
 =head2 _tables
 
   Args       : None
@@ -221,6 +246,12 @@ sub _objs_from_sth {
 			   \$analysis_id,		\$score,
 	);
 
+
+	#This needs doing properly!!
+	my $epsth = $self->prepare("SELECT experiment_id 
+                                    FROM experiment_prediction 
+                                    WHERE predicted_feature_id = ?");
+
 	my $asm_cs;
 	my $cmp_cs;
 	my $asm_cs_name;
@@ -337,6 +368,10 @@ sub _objs_from_sth {
 	    }
 	    
 
+	    #my @exp_ids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
+	    $epsth->bind_param(1, $predicted_feature_id,    SQL_INTEGER);
+	    $epsth->execute();
+	    my @exp_ids = map $_ = "@$_", @{$epsth->fetchall_arrayref()};
 	
 	    push @features, $self->_new_fast( {
 					       'start'         => $seq_region_start,
@@ -348,7 +383,8 @@ sub _objs_from_sth {
 					       'dbID'          => $predicted_feature_id,
 					       'score'         => $score,
 					       'display_label' => $display_label,
-					       'feature_type_id'   => $ft_id
+					       'feature_type_id'   => $ft_id,
+					       'experiment_ids' => \@exp_ids,
 					      } );
 	  }
 	
