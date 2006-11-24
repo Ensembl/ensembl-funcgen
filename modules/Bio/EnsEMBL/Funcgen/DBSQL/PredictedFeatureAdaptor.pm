@@ -92,15 +92,13 @@ sub fetch_all_by_Slice_FeatureType {
 =cut
 
 sub _tables {
-	my $self = shift;
+  my $self = shift;
 	
-	return (
-			[ 'predicted_feature', 'pf' ],
-	       );
-			#[ 'experiment_prediction', 'ep'],
-			
+  return (
+	  [ 'predicted_feature', 'pf' ],
+	  [ 'experiment_prediction', 'ep'],
+	 );
 			#target?
-		#   );
 }
 
 =head2 _columns
@@ -408,6 +406,10 @@ sub store{
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
+  my $epsth = $self->prepare("INSERT INTO experiment_prediction (
+                              experiment_id, predicted_feature_id)
+                              VALUES (?, ?)");
+
   my $db = $self->db();
   my $analysis_adaptor = $db->get_AnalysisAdaptor();
   
@@ -430,7 +432,7 @@ sub store{
     $analysis_adaptor->store( $pf->analysis()) if ( !$pf->analysis->is_stored($db) );
     #add ft here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    my $original = $pf;
+    my $original = $pf;#can we not do this directly on pf?
     my $seq_region_id;
     ($pf, $seq_region_id) = $self->_pre_store($pf);
     
@@ -446,8 +448,18 @@ sub store{
     
     $sth->execute();
 
+
     $original->dbID( $sth->{'mysql_insertid'} );
+
+    foreach my $exp_id(@{$pf->experiment_ids()}){
+      $epsth->bind_param(1, $exp_id);
+      $epsth->bind_param(2, $original->dbID());
+      $epsth->execute();
+    }
+
     $original->adaptor($self);
+    $pf = $original;
+    
   }
 
   return;

@@ -338,6 +338,7 @@ sub arrays{
   if(@_ && ! $_[0]->isa('Bio::EnsEMBL::Funcgen::OligoArray')){
     throw("Must supply a Bio::EnsEMBL::Funcgen::OligoArray");
   }elsif(@_){
+    warn "this is adding an array, not resetting";
     push @{$self->{'arrays'}}, @_;
   }
    
@@ -532,9 +533,12 @@ sub read_sanger_array_probe_data{
   my $dnadb_cs = $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome');
   my $fg_cs = $self->db->get_FGCoordSystemAdaptor->validate_coord_system($dnadb_cs);
 
+
+  #This fails if we're pointing to an old DB during the release cycle.  Will be fine if we manage to cs mapping dynamically
+
   if($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID())){
     $fimported = 1;
-    $imported=1;
+    $imported = 1;
     warn("Skipping array chip feature import (".$self->{'array_name'}.") already fully imported for ".$self->data_version()."\n");
   }
   elsif($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED')){

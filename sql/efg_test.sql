@@ -270,8 +270,7 @@ DROP TABLE IF EXISTS `experiment_prediction`;
 CREATE TABLE `experiment_prediction` (
    `experiment_id` int(11) unsigned default NULL,
    `predicted_feature_id` int(11) unsigned default NULL,
-   PRIMARY KEY  (`experiment_id`),
-   KEY `predicted_feature_idx` (`predicted_feature_id`)	
+   PRIMARY KEY  (`experiment_id`, `predicted_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Provides link between predicted_features and contributing experiments

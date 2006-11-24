@@ -82,6 +82,7 @@ use vars qw(@ISA);
 									  -DISPLAY_LABEL => $text,
 									  -ANALYSIS_ID   => $anal_id,
 									  -SCORE         => $score,
+                                                                          -EXPERIMENT_IDS=> \@exp_ids,
 									 ); 
 
 
@@ -94,19 +95,21 @@ use vars qw(@ISA);
 =cut
 
 sub new {
-	my $caller = shift;
+  my $caller = shift;
 	
-	my $class = ref($caller) || $caller;
-	
-	my $self = $class->SUPER::new(@_);
-	
-	my ($anal_id, $display_label, $coord_sys_id, $score, $ft_id)
-		= rearrange(['ANALYSIS_ID', 'DISPLAY_LABEL', 'COORD_SYSTEM_ID', 'SCORE', 'FEATURE_TYPE_ID'], @_);
-	
-	$self->score($score);
-	$self->display_label($display_label);
-	$self->analysis_id($anal_id);
-	$self->feature_type_id($ft_id);
+  my $class = ref($caller) || $caller;
+  
+  my $self = $class->SUPER::new(@_);
+  
+  my ($anal_id, $display_label, $coord_sys_id, $score, $ft_id, $exp_ids)
+    = rearrange(['ANALYSIS_ID', 'DISPLAY_LABEL', 'COORD_SYSTEM_ID', 'SCORE', 'FEATURE_TYPE_ID', 'EXPERIMENT_IDS'], @_);
+  
+  $self->score($score);
+  $self->display_label($display_label);
+  $self->analysis_id($anal_id);
+  $self->feature_type_id($ft_id);
+  $self->experiment_ids(@$exp_ids);
+
 
 	#do we need to validate this against the db?  Grab from slice and create new if not present? 
 	#Will this be from the dnadb? Or will this work differently for PredictedFeatures?
@@ -236,6 +239,27 @@ sub feature_type_id {
   $self->{'feature_type_id'} = shift if @_;
   return $self->{'feature_type_id'};
 }
+
+=head2 experiment_ids
+
+  Args       : array - experiment ids
+  Example    : $feature->experiment_ids(@ids);
+  Description: Getter/Setter for the experiment_id attribute for this feature.
+  Returntype : listref
+  Exceptions : None
+  Caller     : General
+  Status     : Medium
+             
+=cut
+
+sub experiment_ids {
+  my ($self, @ids) = @_;
+
+  $self->{'experiment_ids'} = \@ids if @ids;
+
+  return $self->{'experiment_ids'};
+}
+
 
 #Hacky placeholder mehtod as I haven't written FeatureType or FeatureTypeAdaptor yet
 
