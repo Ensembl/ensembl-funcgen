@@ -26,13 +26,13 @@ alias efgd='cd $EFG_DATA'
 alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
 alias efgmacs='xemacs $EFG_SRC/modules/Bio/EnsEMBL/Funcgen &'
 
-alias mysqlw="mysql $MYSQL_ARGS $WRITE_NAME -p${PASS}"
+alias mysqlw="mysql $MYSQL_ARGS $WRITE_NAME"
 alias mysqlro="mysql $MYSQL_ARGS $READ_NAME"
 
 
 CreateDB(){
     DBNAME=$1
-    export PASS=$2
+    PASS=$2
 	
     #check vars here
 
@@ -43,8 +43,8 @@ CreateDB(){
 	echo "DB $DBNAME already exists, please check and drop DB before continuing"
     else
 	echo "Creating $DBNAME"
-	echo "create database $DBNAME" | mysqlw $PASS
-	mysqlw $PASS $DBNAME < $EFG_SQL/efg.sql
+	echo "create database $DBNAME" | mysqlw -p${PASS}
+	mysqlw -p${PASS} $DBNAME < $EFG_SQL/efg.sql
     fi
 
 	
