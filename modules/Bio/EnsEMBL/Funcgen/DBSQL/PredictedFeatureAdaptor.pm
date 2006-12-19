@@ -170,11 +170,11 @@ sub _columns {
 =cut
 
 sub _default_where_clause {
-	my $self = shift;
+  my $self = shift;
 	
-	#return 'pf.predicted_feature_id = ep.predicted_feature_id';
+  #return 'pf.predicted_feature_id = ep.predicted_feature_id';
 
-	return;
+  return;
 }
 
 =head2 _final_clause
@@ -194,7 +194,7 @@ sub _default_where_clause {
 
 
 sub _final_clause {
-	return ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.predicted_feature_id';
+  return ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.predicted_feature_id';
 }
 
 

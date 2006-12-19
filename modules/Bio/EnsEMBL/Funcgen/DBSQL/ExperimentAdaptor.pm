@@ -124,8 +124,15 @@ sub fetch_by_name {
 sub get_all_experiment_names{
   my ($self, $displayable) = @_;
 
+
+  my ($constraint);
+
   my $sql = "SELECT e.name FROM experiment e";
   my @names = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+
+  $sql .= ", status s WHERE e.experiment_id =\"s.table_id\" AND s.table_name=\"experiment\" AND s.state=\"DISPLAYABLE\"" if($displayable);
+  
+
 
   #can we do return [map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)}];
   return \@names;

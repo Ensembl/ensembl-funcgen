@@ -84,7 +84,6 @@ use vars qw(@ISA);# %VALID_TYPE);
 								  -SIZE        => '1',
 								  -SPECIES     => 'Mus_musculus',
 								  -VENDOR      => 'Nimblegen',
-                                  -ARRAY_CHIPS => \@array_chips,
 								  -DESCRIPTION => $desc,
 								 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::OligoArray object.
@@ -103,7 +102,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
   
   my ($name, $format, $size, $species, $vendor, $ac_hash, $desc)
-    = rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'ARRAY_CHIPS', 'DESCRIPTION'], @_ );
+    = rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'DESCRIPTION'], @_ );
   
   #mandatory params?
   #name, format, vendor
@@ -115,7 +114,7 @@ sub new {
   $self->size($size)          if defined $size;
   $self->species($species)    if defined $species;
   $self->vendor($vendor)      if defined $vendor;
-  $self->array_chips($ac_hash) if defined $ac_hash;
+  #$self->array_chips($ac_hash) if defined $ac_hash;
   $self->description($desc)   if defined $desc;
   
   return $self;
@@ -194,8 +193,8 @@ sub get_array_chip_ids {
   my @ac_ids;
 
   #can we not just return the values?
-  foreach my $ac_hash(@{$self->array_chips()}){
-    push @ac_ids, $$ac_hash{'dbID'};
+  foreach my $achip(values %{$self->get_ArrayChips()}){
+    push @ac_ids, $achip->dbID();
   }
 
   if(! @ac_ids){
@@ -220,7 +219,7 @@ sub get_array_chip_ids {
 
 sub get_design_ids{
   my ($self) = @_;
-  return [keys %{$self->{'array_chips'}}];
+  return [keys %{$self->get_ArrayChips()}];
 }
 
 
@@ -301,7 +300,7 @@ sub size {
   #array_chips does not update from DB if passed an arg!!
   
 
-  return scalar(keys %{$self->array_chips()});
+  return scalar(keys %{$self->get_ArrayChips()});
 }
 
 =head2 species
@@ -385,10 +384,9 @@ sub description {
   return $self->{'description'};
 }
 
-=head2 array_chips
+=head2 get_ArrayChips
 
-  Arg [1]    : (optional) arrayref of hashes - array_chips hashes (keys == dbid, design_id & name)
-  Example    : $array->array_chips(%array_chips);
+  Example    : my %achips = %{$array->get_ArrayChips()};
   Description: Getter, setter and lazy loader of array_chip hashes
   Returntype : Hashe of design_id keys and values of name and array_chip
   Exceptions : Throws exception if none found for array_id
@@ -397,83 +395,95 @@ sub description {
 
 =cut
 
-sub array_chips {
+sub get_ArrayChips {
   my $self = shift;
-  my $achips = shift;
+  #my $achips = shift;
   
-  if($achips){
-    %{$self->{'array_chips'}} = %{$achips};
-  }
+  #if($achips){
+  #  %{$self->{'array_chips'}} = %{$achips};
+  #}
 	
 
   #lazy loaded as we won't want this for light DB
   #should do meta check and want here
 
   if ( ! exists $self->{'array_chips'}){
+
     if( $self->dbID() && $self->adaptor() ) {
       #$self->adaptor->fetch_attributes($self);
       #need to do this differently as we're accessing a different table
       $self->{'array_chips'} = {};
-      %{$self->{'array_chips'}} = %{$self->adaptor->db->get_OligoArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID())};
+
+      foreach my $achip(@{$self->adaptor->db->get_ArrayChipAdaptor->fetch_all_by_array_id($self->dbID())}){
+	$self->{'array_chips'}{$achip->design_id} = $achip;
+	#%{$self->{'array_chips'}} = %{$self->adaptor->db->get_OligoArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID())};
+      }
     }
     else{
-      warn("Need array dbID and DB connection to retrieve array_chips");
+      throw("Need array dbID and DB connection to retrieve array_chips");
     }
-    
-    
   }
 
-  #throw here?	
   return $self->{'array_chips'};
 }
 
-=head2 get_array_chip_by_design_id
+=head2 get_ArrayChip_by_design_id
 
   Arg [1]    : (mandatory) int - design_id
-  Example    : my %ac = %{$array->get_array_chip_by_design_id('1234')};
+  Example    : my %ac = %{$array->get_ArrayChip_by_design_id('1234')};
   Description: Getter for array_chip hashes
   Returntype : Hashref
-  Exceptions : Throws exception if no design_id defined
+  Exceptions : Throws exception if no design_id defined, warns if not part of array
   Caller     : General
-  Status     : High Risk - migrate to ArrayChip.pm
+  Status     : At risk
 
 =cut
 
-sub get_array_chip_by_design_id{
+sub get_ArrayChip_by_design_id{
   my ($self, $design_id) = @_;
 
+  my ($achip);
   throw("Must supply a valid array chip design_id") if (! defined $design_id);
 
-  return (defined $self->{'array_chips'}{$design_id}) ? $self->{'array_chips'}{$design_id} : undef;
-  
+  if(defined $self->{'array_chips'}{$design_id}){
+    $achip = $self->{'array_chips'}{$design_id};
+  }else{
+    warn("Array does not contain ArrayChip:$design_id\n"); 
+  }
+
+  return $achip;
 }
 
-=head2 add_array_chip
+=head2 add_ArrayChip
 
-  Arg [1]    : (mandatory) int - design_id
-  Arg [2]    : (mandatory) hashref - array chip hash
-  Example    : $array->add_array_chip('1234', \%ac_hash);
-  Description: Setter for array chips
+  Arg [1]    : mandatory - Bio::EnsEMBL::Funcgen::ArrayChip
+  Example    : $array->add_array_chip($array_chip);
+  Description: Setter/storer for array chips
   Returntype : None
-  Exceptions : Throws exception if no design_id or array chip hashref defined
-               Warns if already exists
+  Exceptions : Throws if arg not a Bio::EnsEMBL::Funcgen::ArrayChip, or Array not stored
   Caller     : General
-  Status     : High Risk - migrate to ArrayChip.pm
+  Status     : Ar risk
 
 =cut
 
 
-sub add_array_chip{
-  my ($self, $design_id, $ac_ref) = @_;
+sub add_ArrayChip{
+  my ($self, $array_chip) = @_;
 
-  $self->{'array_chips'} = {} if (! $self->{'array_chips'});
-
-  throw("You must supply a valid design_id and array_chip hash") if(! defined $design_id && ! defined $ac_ref);
+  throw("You must supply a Bio::EnsEMBL::Funcgen::ArrayChip") if(! $array_chip->isa("Bio::EnsEMBL::Funcgen::ArrayChip"));
   
-  if(exists $self->{'array_chips'}{$design_id}){
-    warn("Array chip for $design_id already exists, using previous stored array chip\n");
+  if ($self->dbID() && $self->adaptor()){
+    $self->get_ArrayChips() if (! $self->{'array_chips'});
+
+    if(exists $self->{'array_chips'}{$array_chip->design_id}){
+      warn("Array chip for ".$array_chip->design_id()." already exists, using previous stored array chip\n");
+    }else{
+      $array_chip->array_id($self->dbID());
+      $self->adaptor->db->get_ArrayChipAdaptor->store($array_chip);
+      $self->{'array_chips'}{$array_chip->design_id} = $array_chip;
+    }
   }else{
-    %{$self->{'array_chips'}{$design_id}} = %{$ac_ref};#will this work?
+    throw("Array must be stored before adding an array_chip");
   }
 
   return;
@@ -492,28 +502,28 @@ sub add_array_chip{
 
 =cut
 
-sub get_achip_status{
-  my ($self, $design_id, $state) = @_;
+#sub get_achip_status{
+#  my ($self, $design_id, $state) = @_;
 	
-  throw("Need to supply a design_id for the array_chip") if ! $design_id;
+#  throw("Need to supply a design_id for the array_chip") if ! $design_id;
 
   #Need to accomodate multiple states!!
 
-  if(exists $self->{'array_chips'}{"$design_id"}){
+#  if(exists $self->{'array_chips'}{$design_id}){
     #should we do a test for ac dbid here?
 
-    if(! exists $self->{'array_chips'}{"$design_id"}{'status'}){
-      my $ac_dbid = $self->{'array_chips'}{"$design_id"}{'dbID'};
-      $self->{'array_chips'}{"$design_id"}{'status'} = $self->adaptor->db->fetch_status_by_name('array_chip', $ac_dbid, $state);
-    }
+#    if(! exists $self->{'array_chips'}{$design_id}{'status'}){
+#      my $ac_dbid = $self->{'array_chips'}{"$design_id"}{'dbID'};
+#      $self->{'array_chips'}{"$design_id"}{'status'} = $self->adaptor->db->fetch_status_by_name('array_chip', $ac_dbid, $state);
+#    }
 
-  }else{
-    #should be warn?
-    throw("The design_id you have specified is not associated with this array ".$self->name());
-  }
+#  }else{
+#    #should be warn?
+#    throw("The design_id you have specified is not associated with this array ".$self->name());
+#  }
 
-  return $self->{'array_chips'}{"$design_id"}{'status'};
-}
+#  return $self->{'array_chips'}{"$design_id"}{'status'};
+#}
 
 
 1;

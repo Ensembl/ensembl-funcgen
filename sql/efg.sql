@@ -67,7 +67,7 @@ DROP TABLE IF EXISTS `array_chip`;
 CREATE TABLE `array_chip` (
    `array_chip_id` int(11) unsigned NOT NULL auto_increment,
    `design_id` varchar(20) default NULL,
-   `array_id` int(11) unsigned NOT NULL default '0',
+   `array_id` int(11) unsigned NOT NULL,
    `name` varchar(40) default NULL,
     PRIMARY KEY  (`array_chip_id`),
    KEY `design_idx` (`design_id`),
@@ -148,8 +148,7 @@ CREATE TABLE `oligo_probe` (
    `length` smallint(6) unsigned NOT NULL default '0',
    `array_chip_id` int(11) unsigned NOT NULL default '0',
    `class` varchar(20) default NULL,
-    PRIMARY KEY  (`oligo_probe_id`),
-    KEY `name_idx` (`name`),
+    PRIMARY KEY  (`oligo_probe_id`, `name`),
     KEY `probe_set_idx` (`oligo_probe_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -201,6 +200,7 @@ CREATE TABLE `experiment` (
 
 
 -- joint key on egroup and array?
+-- remove primary design_type
 --- design_type  = CHIP2 etc... (is also design type in ontology i.e. binding_site_identification)
 --- Secondary design type may be redundant, so have associated_design_types table, containing MGED ontology types?  Or have ontology_types table to control input and have linker table with just IDs?  Too normalised?
 --- epi_feature would also be redundant for non-CHIP2 experiments...have associated_target table?  Or just have target field, with "Experssion" for standard Xn chips?
@@ -214,21 +214,38 @@ CREATE TABLE `experiment` (
 
 
 --
+-- Table structure for table `experimental_design`
+--
+
+DROP TABLE IF EXISTS `experimental_design`;
+CREATE TABLE `design_type` (
+   `design_type_id` int(11) unsigned NOT NULL auto_increment,
+   `table_name` varchar(40) default NULL,
+   `table_id` int(11) unsigned default NULL,	
+   PRIMARY KEY  (`design_type_id`, `table_name`, `table_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+
+-- Do we need a key just on table_id and name?
+
+-- Handles design_types other than the primary experimental.primary_design_type
+
+--
 -- Table structure for table `design_type`
 --
 
 DROP TABLE IF EXISTS `design_type`;
 CREATE TABLE `design_type` (
    `design_type_id` int(11) unsigned NOT NULL auto_increment,
-   `experiment_id` int(11) unsigned default NULL,	
-   `name` varchar(40) default NULL,
+   `name` varchar(255) default NULL,
    PRIMARY KEY  (`design_type_id`),
-   KEY `channel_idx` (`experiment_id`)
+   KEY `design_name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- Handles design_types other than the primary experimental.primary_design_type
--- Do we need to duplicate primary_design_type in here?
 
+-- add description here?
+-- Handles design_types other than the primary experimental.primary_design_type
 
 
 
@@ -241,38 +258,55 @@ CREATE TABLE `feature_type` (
    `class` varchar(40) default NULL,
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`feature_type_id`),
-   KEY `feature_type_name_idx` (`name`)
+   KEY `feature_type_name_class_idx` (`name`, `class`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 --- Table to contain Brno nomenclature (modification ontology?) etc.
---- enum on class?
+--- enum on class? HISTONE, PROMOTER
+--- Have ontology name in field?
+--- Have load ontology tool script?
 
 
--- Table structure for table `experiment_feature_type`
+-- Table structure for table `result_feature`
 
-DROP TABLE IF EXISTS `experiment_feature_type`;
-CREATE TABLE `experiment_feature_type` (
-   `experiment_id` int(11) unsigned default NULL,
-   `feature_type_id` int(11) unsigned default NULL,
-   PRIMARY KEY  (`experiment_id`),
-   KEY `feature_type_idx` (`feature_type_id`)	
+DROP TABLE IF EXISTS `result_feature`;
+CREATE TABLE `result_feature` (
+   `result_set_id` int(11) unsigned NOT NULL,
+   `feature_set_id` int(11) unsigned NOT NULL,
+   PRIMARY KEY  (`result_set_id`, `feature_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- Link table to provide many to one relationship, target < experiment
--- and separate experiment association from target
--- and hence predicted_feature, this is handled by experiment_prediction
+-- Link table to provide many to one relationships:
+--	target/feature < experiment (via experimental_chip_id)
+--	prediction < experiment (via feature_set.feature_set_id)
+-- Having this keyed experimental_chip also allows us to have a feature spanning two chips from the same exxperiment, aswell a delineating between potentially differentially formated chips from the same experiment.  Don't really need this level of info, just experiment_id will suffice.
+-- Can we just use the index and drop the table?  Not that big so doesn't matter
+-- Omitting experimental_feature_type_id from feature_set also allows us to drop this table for lite?
+
+
+--THis was originally also the record of the experiment feature_type, but this is now NR in this table.
+-- We could move it to the result_set table, is more focused on the experimental_chips
+-- But would potentially also be NR there too.  
+-- Is still NR in result_set as we can have several analyses on the same chip/channels
+-- Feature type is also known before results are imported on an exp/ec level, but would always import results anyway
+-- So it's logically a little removed from where it should be, but more practical from a result set handling point of view.
+-- could have in:
+---- result_feature, but would not necessarily have feature_set_id
+---- result_set
+---- experimental_chip
 
 
 -- Table structure for table `experiment_prediction`
 
-DROP TABLE IF EXISTS `experiment_prediction`;
-CREATE TABLE `experiment_prediction` (
-   `experiment_id` int(11) unsigned default NULL,
-   `predicted_feature_id` int(11) unsigned default NULL,
-   PRIMARY KEY  (`experiment_id`, `predicted_feature_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+--DROP TABLE IF EXISTS `experiment_prediction`;
+--CREATE TABLE `experiment_prediction` (
+--  `experiment_id` int(11) unsigned default NULL,
+--   `predicted_feature_id` int(11) unsigned default NULL,
+--   PRIMARY KEY  (`experiment_id`, `predicted_feature_id`)
+--) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+-- Superceded by feature_set
 -- Provides link between predicted_features and contributing experiments
 -- Which may be a subset of those in experiment_target
 
@@ -300,16 +334,18 @@ CREATE TABLE `result` (
 ---Also needs to accommodate different normalisations 
 
 
---- Table structure for `table_analysis`
+--- Table structure for `result_set`
 
-DROP TABLE IF EXISTS `table_analysis`;
-CREATE TABLE `table_analysis` (
-   `table_analysis_id` int(11) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `result_set`;
+CREATE TABLE `result_set` (
+   `result_set_id` int(11) unsigned NOT NULL auto_increment,
    `analysis_id` int(11) unsigned default NULL,
    `table_id` int(11) unsigned default NULL,
    `table_name` varchar(20) default NULL,
-   PRIMARY KEY  (`table_analysis_id`),
-   KEY `table_name_id_idx` (`table_name`, `table_id`)
+   `chip_set_id` smallint(6) unsigned default NULL,
+   PRIMARY KEY  (`result_set_id`),
+   KEY `table_name_id_idx` (`table_name`, `table_id`),
+   KEY `chip_set_idx` (`chip_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --- Need to implement this
@@ -323,15 +359,16 @@ CREATE TABLE `table_analysis` (
 
 DROP TABLE IF EXISTS `predicted_feature`;
 CREATE TABLE `predicted_feature` (
-  `predicted_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `seq_region_id` int(10) unsigned NOT NULL default '0',
-  `seq_region_start` int(10) unsigned NOT NULL default '0',
-  `seq_region_end` int(10) unsigned NOT NULL default '0',
+  `predicted_feature_id` int(11) unsigned NOT NULL auto_increment,
+  `seq_region_id` int(11) unsigned NOT NULL default '0',
+  `seq_region_start` int(11) unsigned NOT NULL default '0',
+  `seq_region_end` int(11) unsigned NOT NULL default '0',
   `seq_region_strand` tinyint(1) NOT NULL default '0',
-  `coord_system_id` int(10) unsigned NOT NULL default '0',
-  `feature_type_id` int(10) unsigned NOT NULL default '0',	
-  `display_label` varchar(40) NOT NULL default '',
-  `analysis_id` int(10) unsigned NOT NULL default '0',
+  `coord_system_id` int(11) unsigned NOT NULL default '0',
+  `feature_type_id` int(11) unsigned NOT NULL default '0',
+  `feature_set_id` int(11) unsigned NOT NULL default '0',	
+  `display_label` varchar(60) NOT NULL default '',
+  `analysis_id` int(11) unsigned NOT NULL default '0',
   `score` double default NULL,
   PRIMARY KEY  (`predicted_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
@@ -348,15 +385,29 @@ CREATE TABLE `predicted_feature` (
 --- Or add target_id to predicted_feature, may be redundant for non-tiling arrays?  How are we going to capture primary_design_type?
 
 
+--- Table structure for `feature_set`
+
+DROP TABLE IF EXISTS `feature_set`;
+CREATE TABLE `feature_set` (
+   `feature_set_id` int(11) unsigned NOT NULL auto_increment,
+   `feature_type_id` int(11) unsigned NOT NULL,
+   `analysis_id`  int(11) unsigned default NULL,
+   `cell_type_id` int(11) unsigned default NULL,
+   PRIMARY KEY  (`feature_set_id`),
+   KEY `feature_type_idx` (`feature_type_id`)	
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---- Table structure for table `experiment_prediction`
-
+-- remove displayable
+--- Need to implement this
+-- remove displayable index?
+-- change default NOT/NULLs?
+-- feature_type_id is NR between this and pf, but need it here for ft type ResultSet queries 
 
 
 
 --
--- Table structure for table `chip`
+-- Table structure for table `experimental_chip`
 --
 
 DROP TABLE IF EXISTS `experimental_chip`;
@@ -365,12 +416,17 @@ CREATE TABLE `experimental_chip` (
    `unique_id` varchar(20) NOT NULL default '0',
    `experiment_id` int(11) unsigned default NULL,
    `array_chip_id` int(11) unsigned default NULL,
+   `feature_type_id` int(11) unsigned default NULL,
+   `cell_type_id` int(11) unsigned default NULL,
    `description` varchar(255) default NULL,
    PRIMARY KEY  (`experimental_chip_id`),
    KEY `experiment_idx` (`experiment_id`),
+   KEY `feature_type_idx` (`feature_type_id`),
    KEY `chip_idx` (`unique_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+
+-- add cell line key?
 -- composite unique key onchi/exp/arra_chip ids?
 --Should handle re-usage of physical chip
 --Rename slide? or have array_chip, and experimental_chip
@@ -386,13 +442,25 @@ CREATE TABLE `channel` (
    `sample_id` varchar(20) default NULL,
    `dye`  varchar(20) default NULL,
    `type` varchar(20) default NULL,
-	`description` varchar(255) default NULL,
+   `description` varchar(255) default NULL,
    PRIMARY KEY  (`channel_id`),
    KEY `experimental_chip_idx` (`experimental_chip_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- type should be restricted to EXPERIMENTAL & CONTROL?
 -- all other variables should be in experimental_variable table
+
+--
+-- Table structure for table `cell_type`
+--
+
+DROP TABLE IF EXISTS `cell_type`;
+CREATE TABLE `cell_type` (
+   `cell_type_id` int(11) unsigned NOT NULL auto_increment,
+   `name`  varchar(120) default NULL,
+   `display_label` varchar(20) default NULL,
+   PRIMARY KEY  (`cell_type_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
@@ -417,7 +485,7 @@ CREATE TABLE `experimental_variable` (
 -- status for chip?
 -- Some of these are chip rather than channels specific
 -- `tissue` varchar(40) NOT NULL default '',
--- `cell_line` varchar(40) NOT NULL default '',
+-- `cell_type` varchar(40) NOT NULL default '',
 -- `dev_stage` varchar(40) NOT NULL default '',
 -- `antibody` varchar(40) NOT NULL default '',
 -- `time_point` time NOT NULL default '000:00:00',
@@ -509,6 +577,7 @@ CREATE TABLE `meta_coord` (
   UNIQUE KEY `table_name` (`table_name`,`coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+--- change to primary key?
 ---should only ever be predicted_feature, but with all the coord_sys_ids
 ---This is slightly redundant, but required for core API modules to work
 

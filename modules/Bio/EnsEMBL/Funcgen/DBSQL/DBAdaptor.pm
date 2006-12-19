@@ -77,13 +77,13 @@ my $reg = "Bio::EnsEMBL::Registry";
 
 =cut
 
-sub fetch_channel_dbid_by_echip_dye{
-	my ($self, $chip_dbid, $dye) = @_;
+#sub fetch_channel_dbid_by_echip_dye{
+#	my ($self, $chip_dbid, $dye) = @_;
 
-	my $sql = "select channel_id from channel where experimental_chip_id =\"$chip_dbid\" and dye = \"$dye\"";
+#	my $sql = "select channel_id from channel where experimental_chip_id =\"$chip_dbid\" and dye = \"$dye\"";
 
-	return $self->dbc->db_handle->selectrow_array($sql);
-}	
+#	return $self->dbc->db_handle->selectrow_array($sql);
+#}	
 
 
 
@@ -166,8 +166,8 @@ sub get_available_adaptors{
   
   my %pairs = (
 	       'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
-	       'Experimental'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
 	       'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
+	       'ArrayChip'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
 	       'OligoArray'         => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoArrayAdaptor',
 	       'OligoProbeSet'      => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor',
 	       'OligoProbe'         => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeAdaptor',
@@ -175,6 +175,8 @@ sub get_available_adaptors{
 	       'PredictedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::PredictedFeatureAdaptor',
 	       'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
 	       'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+	       'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
+	       'Status'             => 'Bio::EnsEMBL::Funcgen::DBSQL::StatusAdaptor',
 	       'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
 	       'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
 	       
@@ -302,23 +304,23 @@ sub get_SliceAdaptor{
 
 =head2 dnadb
 
-  Title :   dnadb 
-  Usage :   my $dnadb = $db->dnadb(); 
+  Title :      dnadb 
+  Usage :      my $dnadb = $db->dnadb(); 
   Description: returns the database adaptor where the dna lives i.e. the core db fot a given species
-  Args :    Bio::EnsEMBL::DBSQL::BaseAdaptor
-  Status : At risk.
-         
+  Args :       Bio::EnsEMBL::DBSQL::BaseAdaptor
+  Status :     At risk.
+
 =cut
 
 
 sub dnadb { 
   my $self = shift; 
 
-  if(@_) { 
+  if(@_){ 
     my $cs_name = $_[1] || 'chromosome';
-	  
+    
     #print "adding $_[0]\n";
-
+    
     
     $reg->add_DNAAdaptor($self->species(),$self->group(),$_[0]->species(),$_[0]->group()); 
     
@@ -395,7 +397,7 @@ sub import_group{
   Arg [2]    : int - table id
   Example    : my @states = @{$db->fetch_all_states('channel', 1)};
   Description: Retrieves all states associated with the given table record
-  Returntype : ARRAYREF
+  Returntype : Listref
   Exceptions : Throws if arguments not supplied
   Caller     : general
   Status     : At risk - Move to Status

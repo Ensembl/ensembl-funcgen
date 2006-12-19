@@ -837,6 +837,10 @@ sub fetch_result_set_by_Slice_Analysis_ExperimentalChips{
 
   #need to then sort out which channel is which in caller.
   #we need channel type (id?), exp_chip id(:channel type), probe_id, score, chr, start, end
+
+
+  #this needs to be a join so we don't include oligos with no results?
+
   my $query = "SELECT r.score, of.seq_region_start, of.seq_region_end, $id_type, r.oligo_probe_id from result r, oligo_feature of $channel_alias WHERE r.table_name=\"${table_name}\" ".
     "AND r.table_id IN (".join(", ", @ids).") ".
       "AND r.oligo_probe_id=of.oligo_probe_id ".

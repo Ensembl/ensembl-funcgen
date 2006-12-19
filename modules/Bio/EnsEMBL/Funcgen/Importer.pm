@@ -420,6 +420,31 @@ sub create_output_dirs{
   return;
 }
 
+=head2 status_adaptor
+
+  Example    : $self->status_adaptor->set_state('IMPORTED', $echip)
+  Description: Convinience accessor method to status adaptor
+  Returntype : Bio::EnsEMBL::Funcgen::StatusAdaptor
+  Exceptions : None
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub status_adaptor{
+  my ($self) = shift;
+
+  if (! $self->{'status_adaptor'} || ! $self->status_adaptor->isa("Bio::EnsEMBL::Funcgen::StatusAdaptor")){
+    $self->{'status_adaptor'} = $self->db->get_StatusAdaptor();
+  }
+  
+  return $self->{'status_adaptor'};
+}
+
+
+
+
+
 ### GENERIC GET/SET METHODS ###
 
 =head2 vendor
@@ -1053,9 +1078,9 @@ sub import_results{
       if($self->vendor() eq "NIMBLEGEN"){
 
 	foreach my $design_id(@{$array->get_design_ids()}){
-	  my %ac = %{$array->get_array_chip_by_design_id($design_id)};
-	  warn "Log this! -  Loading results for ".$ac{'name'};
-	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$ac{'name'}.".txt");
+	  my $achip = $array->get_ArrayChip_by_design_id($design_id);
+	  warn "Log this! -  Loading results for ".$achip->name();
+	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
 	}
       }
     }
@@ -1137,22 +1162,22 @@ sub design_type{
 
 
 #nimblegen specific!
-sub get_channel_dbid{
-  my ($self, $chan_uid) = @_;
-  my ($chip_uid);
+#sub get_channel_dbid{
+#  my ($self, $chan_uid) = @_;
+#  my ($chip_uid);
 
-  warn "Replace this with direct calls to Channel via ExperimentalChip::get_channel";
+#  warn "Replace this with direct calls to Channel via ExperimentalChip::get_channel";
 
-  if( ! $self->channel_data($chan_uid, 'dbID')){
-    ($chip_uid = $chan_uid) =~ s/_.*//;
-    $self->channel_data($chan_uid, 'dbid', 
-			$self->db->fetch_channel_dbid_by_echip_dye(
-								   $self->experiment->get_experimental_chip_by_unique_id($chip_uid)->dbID(),
-								   $self->get_channel($chan_uid)->{'dye'}));
-  }
+#  if( ! $self->channel_data($chan_uid, 'dbID')){
+#    ($chip_uid = $chan_uid) =~ s/_.*//;
+#    $self->channel_data($chan_uid, 'dbid', 
+#			$self->db->fetch_channel_dbid_by_echip_dye(
+#								   $self->experiment->get_experimental_chip_by_unique_id($chip_uid)->dbID(),
+#								   $self->get_channel($chan_uid)->{'dye'}));
+#  }
 
-  return $self->channel_data($chan_uid, 'dbid');
-}
+#  return $self->channel_data($chan_uid, 'dbid');
+#}
 
 
 

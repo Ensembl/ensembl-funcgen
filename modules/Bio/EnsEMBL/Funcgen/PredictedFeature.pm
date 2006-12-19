@@ -171,10 +171,26 @@ sub score {
 
 =cut
 
+#Can This be mirrored in PredictedFeatureSet?
+#this will over ride individual display_label for predicted features.
+#set label could be used as track name and feature label used in zmenu?
+#These should therefore be called track_label and display_label
+
+
 sub display_label {
     my $self = shift;
 	
     $self->{'display_label'} = shift if @_;
+
+
+    #auto generate here if not set in table
+    #need to go with one or other, or can we have both, split into diplay_name and display_label?
+    
+    if(! $self->{'display_label'}  && $self->adaptor()){
+      $self->{'display_label'} = $self->type->name()." -";
+      $self->{'display_label'} .= " ".$self->cell_line->display_name() if $self->cell_line->display_name();
+      $self->{'display_label'} .= " Enriched Sites";
+    }
 	
     return $self->{'display_label'};
 }
@@ -200,7 +216,8 @@ sub coord_system_id {
     return $self->{'coord_system_id'};
 }
 
-
+#All the following can be moved/mirrored in FeatureSet
+#data will be in feature set table
 
 =head2 analysis_id
 
@@ -275,62 +292,72 @@ sub experiment_ids {
              
 =cut
 
+
+#can be moved/mirrored to/in feature set?
+
 sub type {
   my $self = shift;
 
   #$self->{'type'} = shift if @_;
-	
+  my ($name, $desc, $ft);	
 
   if( ! $self->{'type'}){
-    
-    my ($name, $desc);
-     
 
-    my %desc_hack  = (
-		      1  => "Histone 3 Lysine 9 Acetylation",
-		      2  => "Histone 4 Acetylation",
-		      3  => "Histone 3 Acetylation",
-		      4  => "Histone 3 Lysine 4 Tri-Methylation",
-		      5  => "Histone 3 Lysine 4 Di-Methylation",
-		      6  => "Histone 3 Lysine 4 Mono-Methylation",
-		      7  => "Histone 3 Lysine 4 Mono-Methylation",
-		      8  => "Histone 3 Lysine 4 Di-Methylation",
-		      9  => "Histone 3 Acetylation",
-		      10 => "Histone 4 Acetylation",
-		      11 => "Histone 3 Lysine 4 Tri-Methylation",
-		     );
+    if($self->{'feature_type_id'} && $self->adaptor()){
 
-    my %name_hack = (
-		     1  => "H3K9ac - U2OS Enriched Sites",
-		     2  => "H4ac - HeLa Enriched Sites",
-		     3  => "H3ac - HeLa Enriched Sites",
-		     4  => "H3K4me3 - HeLa Enriched Sites",
-		     5  => "H3K4me2 - HeLa Enriched Sites",
-		     6  => "H3K4me1 - HeLa Enriched Sites",
-		     7  => "H3K4me1 - GM06990 Enriched Sites",
-		     8  => "H3K4me2 - GM06990 Enriched Sites",
-		     9  => "H3ac - GM06990 Enriched Sites",
-		     10 => "H4ac - GM06990 Enriched Sites",
-		     11 => "H3K4me3 - GM06990 Enriched Sites",
-		    );
+      $self->{'type'} = $self->adaptor->db->get_FeatureTypeAdaptor->fetch_by_dbID($self->{'feature_type_id'});
 
 
+    }else{#hacky interim solution, need to implement cell line look up and display name method in pft? clashes will display_label?
+
+
+   
+      my %desc_hack  = (
+			1  => "Histone 3 Lysine 9 Acetylation",
+			2  => "Histone 4 Acetylation",
+			3  => "Histone 3 Acetylation",
+			4  => "Histone 3 Lysine 4 Tri-Methylation",
+			5  => "Histone 3 Lysine 4 Di-Methylation",
+			6  => "Histone 3 Lysine 4 Mono-Methylation",
+			7  => "Histone 3 Lysine 4 Mono-Methylation",
+			8  => "Histone 3 Lysine 4 Di-Methylation",
+			9  => "Histone 3 Acetylation",
+			10 => "Histone 4 Acetylation",
+			11 => "Histone 3 Lysine 4 Tri-Methylation",
+		       );
       
-    if($self->adaptor->db->species() =~ /homo/i){
-      my $exp_id = shift @{$self->experiment_ids()};
-      $desc = $desc_hack{$exp_id};
-      $name = $name_hack{$exp_id};
-    }else{
-      $desc = "Histone 3 Lysine 9 Tri-methlyation";
-      $name = "H3K4Me3 - MEFf Enriched Sites";
+      my %name_hack = (
+		       1  => "H3K9ac - U2OS Enriched Sites",
+		       2  => "H4ac - HeLa Enriched Sites",
+		       3  => "H3ac - HeLa Enriched Sites",
+		       4  => "H3K4me3 - HeLa Enriched Sites",
+		       5  => "H3K4me2 - HeLa Enriched Sites",
+		       6  => "H3K4me1 - HeLa Enriched Sites",
+		       7  => "H3K4me1 - GM06990 Enriched Sites",
+		       8  => "H3K4me2 - GM06990 Enriched Sites",
+		       9  => "H3ac - GM06990 Enriched Sites",
+		       10 => "H4ac - GM06990 Enriched Sites",
+		       11 => "H3K4me3 - GM06990 Enriched Sites",
+		      );
+      
+      
+      
+      if($self->adaptor->db->species() =~ /homo/i){
+	my $exp_id = shift @{$self->experiment_ids()};
+	$desc = $desc_hack{$exp_id};
+	$name = $name_hack{$exp_id};
+      }else{
+	$desc = "Histone 3 Lysine 9 Tri-methlyation";
+	$name = "H3K4Me3 - MEFf Enriched Sites";
+      }
+      
+      $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
+	(
+	 -NAME => $name,
+	 -DESCRIPTION => $desc,
+	 -CLASS => "HISTONE", 
+	); 
     }
-        
-    my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
-      (
-       -NAME => $name,
-       -DESCRIPTION => $desc,
-       -CLASS => "HISTONE", 
-      ); 
     
     $self->{'type'} = $ft;
     }

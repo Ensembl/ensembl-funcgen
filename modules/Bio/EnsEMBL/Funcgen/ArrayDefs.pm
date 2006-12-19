@@ -42,6 +42,7 @@ use Bio::EnsEMBL::Funcgen::OligoProbeSet;
 use Bio::EnsEMBL::Funcgen::OligoProbe;
 use Bio::EnsEMBL::Funcgen::OligoFeature;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
+use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Channel;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
@@ -183,7 +184,7 @@ sub read_array_chip_data{
   warn ("Reading chip data");
 
   my ($line, $chip_uid, $dye, $design_name, $design_id, $sample_label,  $sample_desc);
-  my ($array, $species, $sample_type, $channel, %tmp, %hpos, @data);
+  my ($array, $species, $sample_type, $channel, $array_chip, %hpos, @data);
   my $tmp_uid = "FIRST";
   #Need some way of capturing other experimental variables?
   
@@ -231,11 +232,11 @@ sub read_array_chip_data{
 
       #Then we can update the array chips as we go along
 
-      %tmp = (
-	      array_id    => undef,
-	      dbID        => undef,
-	      name => $data[$hpos{'DESIGN_NAME'}],
-	     );
+      #%tmp = (
+      #       array_id    => undef,
+      #	      dbID        => undef,
+      #	      name => $data[$hpos{'DESIGN_NAME'}],
+      #	     );
          
       #This is treating each array chip as a separate array, unless arrayset is defined
       #AT present we have no way of differentiating between different array_chips on same array???!!!
@@ -250,27 +251,38 @@ sub read_array_chip_data{
 	 -VENDOR      => uc($self->vendor()),
 	 -DESCRIPTION => $design_desc,
 	);
-      $array->add_array_chip($data[$hpos{'DESIGN_ID'}], \%tmp);
+
       ($array) = @{$oa_adaptor->store($array)};
+      
+
+      $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							  -NAME      => $data[$hpos{'DESIGN_NAME'}],
+							  -DESIGN_ID => $data[$hpos{'DESIGN_ID'}],
+							 );
+
+
+      $array->addArrayChip($array_chip);
+      #($array) = @{$oa_adaptor->store($array)};
 
         
       #Need to reg array chip here (to differentiate from what is already in DB, handles subset of arrays)
       #This is a registry of array chips which have previously been stored for validation purpose
       #To avoid importing probes twice
 
-    }elsif((! $array->get_array_chip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
+    }elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
 
-      print "generating new ac for same array ".$data[$hpos{'DESIGN_ID'}]."\n";
+      warn "generating new ac for same array ".$data[$hpos{'DESIGN_ID'}]."\n";
 
-      %tmp = (
-	      array_id    => undef,
-	      dbID        => undef,
-	      name => $data[$hpos{'DESIGN_NAME'}],
-	     );
-      $array->add_array_chip($data[$hpos{'DESIGN_ID'}], \%tmp);
-      ($array) = @{$oa_adaptor->store($array)};
+      $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							  -NAME        => $data[$hpos{'DESIGN_NAME'}],
+							  -DESIGN_ID => $data[$hpos{'DESIGN_ID'}],
+							 );
+
+   
+      $array->add_ArrayChip($array_chip);
+   
       
-    }elsif(! $array->get_array_chip_by_design_id($data[$hpos{'DESIGN_ID'}])){
+    }elsif(! $array->get_ArrayAhip_by_design_id($data[$hpos{'DESIGN_ID'}])){
       throw("Found experiment with more than one design");
     }
     
@@ -283,7 +295,7 @@ sub read_array_chip_data{
 	 #-DESIGN_ID      => $data[$hpos{'DESIGN_ID'}],
 	 -EXPERIMENT_ID  => $self->experiment->dbID(),
 	 -DESCRIPTION    => $data[$hpos{$sample_desc}],
-	 -ARRAY_CHIP_ID  => $array->get_array_chip_by_design_id($data[$hpos{'DESIGN_ID'}])->{'dbID'},
+	 -ARRAY_CHIP_ID  => $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])->dbID(),
 	 -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
 	);
       
@@ -489,8 +501,8 @@ sub read_sanger_array_probe_data{
   my ($self, $array_file) = @_;
 
   $array_file||= $self->array_file();
-  my ($line, $array, $fh, @list, $array_file_format, $cmd);
-  my ($op, $of, $imported, $fimported, %tmp, %slices);
+  my ($line, $fh, @list, $array_file_format, $cmd);
+  my ($op, $of, $imported, $fimported, %slices);
   my $oa_adaptor = $self->db->get_OligoArrayAdaptor();
   my $op_adaptor = $self->db->get_OligoProbeAdaptor();
   my $of_adaptor = $self->db->get_OligoFeatureAdaptor();
@@ -499,31 +511,28 @@ sub read_sanger_array_probe_data{
   my $anal_id = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
   #have LiftOver? Could then use liftover in  pipeline to redo mappings
 
-  			       
-
-  %tmp = (
-	  array_id    => undef,
-	  dbID        => undef,
-	  name => $self->{'array_name'},
-	 );
-         
-  #This is treating each array chip as a separate array, unless arrayset is defined
-  #AT present we have no way of differentiating between different array_chips on same array???!!!
-  #Need to add functionality afterwards to collate array_chips into single array
-  
-  
-  #store now checks whether already stored and updates array chips accordingly
-  $array = Bio::EnsEMBL::Funcgen::OligoArray->new
+ #store now checks whether already stored and updates array chips accordingly
+  my $array = Bio::EnsEMBL::Funcgen::OligoArray->new
     (
      -NAME        => $self->{'array_name'},
      -FORMAT      => uc($self->format()),
      -VENDOR      => uc($self->vendor()),
      -DESCRIPTION => "Sanger ENCODE PCR array 3.1.1",
     );
-  $array->add_array_chip($self->{'array_name'}, \%tmp);
+
   ($array) = @{$oa_adaptor->store($array)};
+         
+  #This is treating each array chip as a separate array, unless arrayset is defined
+  #AT present we have no way of differentiating between different array_chips on same array???!!!
+  #Need to add functionality afterwards to collate array_chips into single array
+  my $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							 -NAME      => $array->name(),
+							 -DESIGN_ID => $array->name(),
+							);
+  $array->add_ArrayChip($array_chip);
+ 
   $self->arrays($array);
-  my $ac_id = $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'};
+  my $ac_id = $array->get_ArrayChip_by_design_id($array->name())->dbID();
 
 
   #we also need to test wether the array as been imported as well as the mappings
@@ -536,14 +545,16 @@ sub read_sanger_array_probe_data{
 
   #This fails if we're pointing to an old DB during the release cycle.  Will be fine if we manage to cs mapping dynamically
 
-  if($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID())){
+  #if($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID())){
+  if($self->status_adaptor->has_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip)){
+
     $fimported = 1;
     $imported = 1;
-    warn("Skipping array chip feature import (".$self->{'array_name'}.") already fully imported for ".$self->data_version()."\n");
+    warn("Skipping array chip feature import (".$array->name().") already fully imported for ".$self->data_version()."\n");
   }
-  elsif($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED')){
+  elsif($self->status_adaptor->has_status('IMPORTED', $array_chip)){
     $imported = 1;
-    warn("Skipping array chip probe import (".$self->{'array_name'}.") already fully imported\n");
+    warn("Skipping array chip probe import (".$array->name().") already fully imported\n");
   }
 
   #need to check whether already imported on specified schema_build
@@ -622,7 +633,7 @@ sub read_sanger_array_probe_data{
 						       -NAME          => $pid,
 						       -LENGTH        => ($end - $start),
 						       -ARRAY         => $array,
-						       -ARRAY_CHIP_ID => $array->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
+						       -ARRAY_CHIP_ID => $array->get_ArrayChip_by_design_id($array->name())->dbID(),
 						       -CLASS         => 'EXPERIMENTAL',
 						      );
 	  ($op) = @{$op_adaptor->store($op)};
@@ -662,14 +673,17 @@ sub read_sanger_array_probe_data{
     }
     warn"setting ac cs status";
 
-    $self->db->set_status('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID());
+    #$self->db->set_status('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID());
+    $self->status_adaptor->set_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip);
   }
 
   
 
   if(! $imported){
     warn"setting ac imp  status";
-    $self->db->set_status('array_chip', $ac_id, 'IMPORTED');
+    #$self->db->set_status('array_chip', $ac_id, 'IMPORTED');
+    $self->status_adaptor->set_status('IMPORTED', $array_chip);
+
     $imported = 1;
   }
   
@@ -711,6 +725,8 @@ sub read_sanger_result_data{
   #Need to add functionality afterwards to collate array_chips into single array
   
  
+  #this is done to avoid having to self->array_name in loop, will make multiple array loop easier 
+  my $array = ${$self->arrays()}[0];
 
 
   $self->log("Parsing ".$self->vendor()." probe data (".localtime().")");
@@ -729,13 +745,13 @@ sub read_sanger_result_data{
       (
        -EXPERIMENT_ID  => $self->experiment->dbID(),
        -DESCRIPTION    => "",
-       -ARRAY_CHIP_ID  => $self->arrays->[0]->get_array_chip_by_design_id($self->{'array_name'})->{'dbID'},
+       -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($array->name())->dbID(),
        -UNIQUE_ID      => $chip_uid,
       );
       
     $echip = $self->experiment->add_experimental_chip($echip);
 
-    if($self->db->fetch_status_by_name('experimental_chip', $echip->dbID(), 'IMPORTED')){
+    if($self->status_adaptor->has_status('IMPORTED', $echip)){
       $imported = 1;
       warn("Skipping experimental chip import (".$echip->unique_id().") already fully imported\n");
     }
@@ -844,11 +860,12 @@ sub read_probe_data{
   foreach my $array(@{$self->arrays()}){
 
     foreach my $design_id(@{$array->get_design_ids()}){
-      my %ac = %{$array->get_array_chip_by_design_id($design_id)};
+      my $achip = $array->get_ArrayChip_by_design_id($design_id);
 
    
       #check status of array chip here
-      if($self->db->fetch_status_by_name('array_chip', $ac{'dbID'}, 'IMPORTED')){
+      #if($self->db->fetch_status_by_name('array_chip', $achip->dbID(), 'IMPORTED')){
+      if($self->status_adaptor->has_status('IMPORTED', $achip)){
 	warn("Skipping array chip ($design_id) already fully imported\n");
 	next;
       }
@@ -858,7 +875,7 @@ sub read_probe_data{
       #THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
       #all out files are generic, but are we converting to adaptor store?
 
-=pod;
+=pod
 
       $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".ngd");
       my ($start, $stop, %regions, %probe_pos);
@@ -934,18 +951,18 @@ sub read_probe_data{
       
       close($fh);
       
-=cut;
+=cut
       
   #OPEN PROBE IN/OUT FILES
   
 
   
-   $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'name'}.".ndf");
+   $fh = open_file("<", $self->get_def("design_dir")."/".$achip->name().".ndf");
       #Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
       #my $p_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'design_name'}."txt");
       #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
       #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
-      my $f_out = open_file(">", $self->get_dir("output")."/probe.".$ac{'name'}."fasta")	if($self->{'_dump_fasta'});
+      my $f_out = open_file(">", $self->get_dir("output")."/probe.".$achip->name()."fasta")	if($self->{'_dump_fasta'});
       my ($length);
       my ($ops, $op, $of, $chr, @probes, @features, %slices, %pfs);
       my $anal = $self->db->get_AnalysisAdaptor()->fetch_by_logic_name("VendorMap");
@@ -995,8 +1012,8 @@ sub read_probe_data{
 	    #THis is where we chose to update/validate
 	    #Do we need to pass probes if they're already stored..may aswell to reduce mysql load?
 	    #No point as we have to query anyway
-	    #$self->store_set_probes_features($ac{'dbID'}, $ops, \@probes, \@features);
-	    $self->store_set_probes_features($ac{'dbID'}, $ops, \%pfs);
+	    #$self->store_set_probes_features($achip->dbID(), $ops, \@probes, \@features);
+	    $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
 	    throw("ops still defined in caller") if defined $ops;
 	  }
 
@@ -1018,7 +1035,7 @@ sub read_probe_data{
 	#elsif($ops){#Got ops, but new probe does not have ops, need to store old ops
 	elsif($. > 2){#may have previous ops set, but next has no ops, or maybe just no ops's at all
 	  #$self->store_set_probes_features($ac{'dbID'}, $ops, \@probes, \@features);
-	  $self->store_set_probes_features($ac{'dbID'}, $ops, \%pfs);
+	  $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
 
 	  throw("ops still defined in caller") if defined $ops;
 					   
@@ -1039,7 +1056,7 @@ sub read_probe_data{
 						     -NAME          => $data[$hpos{'PROBE_ID'}],
 						     -LENGTH        => $length,
 						     -ARRAY         => $array,
-						     -ARRAY_CHIP_ID => $ac{'dbID'},
+						     -ARRAY_CHIP_ID => $achip->dbID(),
 						     -CLASS         => $class,
 						    );
       
@@ -1134,8 +1151,8 @@ sub read_probe_data{
     
     #need to store last data here
       #$self->store_set_probes_features($ac{'dbID'}, $ops, \@probes, \@features);
-      $self->store_set_probes_features($ac{'dbID'}, $ops, \%pfs);
-    $self->db->set_status('array_chip', $ac{'dbID'}, "IMPORTED");
+      $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
+    $self->db->set_status('array_chip', $achip->dbID(), "IMPORTED");
     
     if ($self->{'_dump_fasta'}){
       print $f_out $f_string if($self->{'_dump_fasta'});
@@ -1378,13 +1395,13 @@ sub read_results_data{
    
     foreach my $design_id(@design_ids){
      
-      my %ac = %{$array->get_array_chip_by_design_id($design_id)};
+      my $achip = $array->get_ArrayChip_by_design_id($design_id);
       $r_string = "";
       warn("Reading/Importing results for $design_id\n");
-      my $r_out = open_file(">", $self->get_dir("raw")."/result.".$ac{'name'}.".txt");
+      my $r_out = open_file(">", $self->get_dir("raw")."/result.".$achip->name().".txt");
 
 
-      $file_name = (scalar(@design_ids) > 1) ? $ac{'name'} : "All";  
+      $file_name = (scalar(@design_ids) > 1) ? $achip->name() : "All";  
       $fh = open_file("<", $self->get_def("results_dir")."/".$file_name."_pair.txt");
 
       while($line = <$fh>){

@@ -374,7 +374,8 @@ sub store {
       else{
 	$ec = $s_ec;
 
-	my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};
+	#my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};
+	my @states = @{$self->db->get_StatusAdaptor->fetch_all_states($ec)};
 	warn("Using previously stored ExperimentalChip (".$ec->unique_id().") with states\t@states\n");
       }
     }
