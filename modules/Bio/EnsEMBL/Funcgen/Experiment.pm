@@ -5,7 +5,7 @@ Bio::EnsEMBL::Funcgen::Experiment
   
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::OligoArray;
+use Bio::EnsEMBL::Funcgen::Experiment;
 
 my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
 						   -ADAPTOR             => $self,

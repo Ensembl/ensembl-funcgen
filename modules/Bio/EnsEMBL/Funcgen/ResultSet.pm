@@ -5,7 +5,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::ResultSet - A module to represent ResultSet object.
+Bio::EnsEMBL::ResultSet - A module to represent ResultSet.
  
 
 =head1 SYNOPSIS
@@ -13,23 +13,17 @@ Bio::EnsEMBL::ResultSet - A module to represent ResultSet object.
 use Bio::EnsEMBL::Funcgen::ResultSet;
 
 my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
-	-EXPERIMENT_ID         => $exp_id,
-        -SLICE                 => $slice,
+
 ); 
 
 
 
 =head1 DESCRIPTION
 
-A ResultSet object provides access to either or both raw results and PredictedFeatures
-for a given experiment within a Slice, associated with set wide experimental meta data.
-This was aimed primarily at easing access to data via the web API by creating
-a wrapper class with convenience methods.  The focus of this class is to contain raw and
-associated processed/analysed data to be displayed as a set within the browser i.e. an 
-experiment may have different cell lines, features or time points, these would require different ResultSets.
-#However a ResultSet may contain mixed data types i.e. promoter & histone???? No give separate sets?
-May have duplicates for raw data but only one predicted features track??
-The data in this class is kept as lightweight as possible with data being loaded dynamically.
+A ResultSet object provides access to a set raw results from an Experiment. A set will be one or more 
+contiguous chips to be treated as one set, with the same analysis. Duplicate sets will form a separate
+result set, as will the same raw data analysed or normalised in a different manner.
+
 
 =head1 AUTHOR
 
@@ -51,11 +45,11 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::ResultSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Utils::Exception qw( throw warn );
+#use Bio::EnsEMBL::Feature;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Storable);###only need this if we're going to use this to load results?
+@ISA = qw(Bio::EnsEMBL::Storable);
 
 
 =head2 new
@@ -67,9 +61,10 @@ use vars qw(@ISA);
 
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::ResultSet->new(
-                                                                   -EXPERIMENT_ID => $exp_id,
-                                                                   -SLICE         => $slice,
-                                                                   -FEATURE_TYPE  => 'HISTONE',
+                                                                   -dbid        => $dbid,
+                                                                   -analysis_id => $anal_id,
+                                                                   -table_name  => 'experimental_chip',
+                                                                   -table_id    => $ec_id,
 			                                          ); 
   Description: Constructor for ResultSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
@@ -86,37 +81,36 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($exp_id, $exp_ids, $feature_set_id, $slice, $ft_id, $cell_type_id)
-    = rearrange(['EXPERIMENT_ID', 'SLICE', 'FEATURE_TYPE_ID', 'CELL_TYPE_ID'], @_);
+  my ($anal_id, $table_name, $table_id)
+    = rearrange(['ANALYSIS_ID', 'TABLE_NAME', 'TABLE_ID'], @_);
 
  
-  #Can have more than one experiment_id for a combined feature set. But shouldn't query like that.
-  #therefore we need to be able to track back from feature to ec's rather than exps.
-  #as there may be mixed data in an exp which didn't necessarily contribute to the combined feature
-  #We also need a way of pulling back GOLDEN/combined resultssets based on feature_set_id
-  #Set status as GOLDEN, then pull back displayable or GOLDEN raw results
+  if (! ( $anal_id && $table_name && $table_id)){
+    throw("Need to pass the following args:\tanalysis_id\ttable_name\ttable_id");
+  }
 
-  #Could link experiment_feature_type to ec or result_set table?
-  #latter would mean we don't have to specifiy which ec, just part of set.
-  #This will make it easier for populating pfs but will mean that we can't easily track back to a particular ec without doing some probe/slice look up via the array chip.
-  #Not really a requirement, so let's take this hit.
-
-  #Could then maybe use ResultSet to store pfs, otherwise we'd have to pass the rset or at the very least the result_set_id.
+ 
+  
+  #do we need some control of creating new objects with dbID and adding result_groups/feature_sets and them storing/updating them
+  #potential for someone to create one from new using a duplicate dbID and then linking incorrect data to a pre-existing ResultGroup
+  #we need to verify that each table_name/id in the set is from the same experiment
 
 
-  #throw("Need to pass an Experiment dbID") if ! $exp_id;
-  throw("Need to pass an FeatureType dbID") if ! $ft_id;
-  throw("Need to pass a Slice argument") if ! $slice;
-  throw("Need to pass a CellType dbID") if ! $cell_type_id;
+  if($self->dbID() && ! $caller->isa("Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor")){
+    warn("You may be adding ${table_name}:${table_id} to a previously existing ResultSet");
+    #This is only true if the dbID passed has been used before
+  }
+
+
+  $self->analysis_id($anal_id);
+  $self->table_name($table_name);
+  $self->add_table_id($table_id);
+
+
+  #$self->experiment_id($exp_id) if $exp_id;#should have this method but only as a getter
+  #$self->slice($slice) if $slice;#should always pass slice as arg as we'll only ever do it once?
   
 
-  $self->experiment_id($exp_id) if $exp_id;
-  #make these mutually exclusive?
-  $self->experiment_ids($exp_ids) if $exp_ids;
-  $self->feature_type_id($ft_id);
-  $self->cell_type_id($cell_type_id);
-  $self->slice($slice);
-  
   return $self;
 }
 
@@ -185,164 +179,66 @@ sub new_fast {
 
 =cut
 
+
 sub experiment_id {
     my $self = shift;
 	
-    $self->{'experiment_id'} = shift if @_;
+
+    throw("Not yet implemented");
+
+    #if(! defined $self->{'experiment_id'}){
+      
+
+    #$self->{'experiment_id'} = $self->adaptor->db->get_ExperimentalChipAdaptor->fetch_by_dbID(;
 		
     return $self->{'experiment_id'};
 }
 
 
-=head2 experiment_ids
 
-  Arg [1]    : (optional) array ref - Experiment dbIDs
-  Example    : $result_set->experiment_ids(\@exp_ids);
-  Description: Getter and setter for the experiment_ids for this ResultSet.
-               Only used if the predicted features are a composite of different experiments
-  Returntype : LIST
-  Exceptions : None
+
+=head2 add_table_id
+
+  Example    : $result_set->add_table_id($ec_id);
+  Description: Appends a table_id to the ResultSet.
+  Returntype : None
+  Exceptions : Throws if no table_id defined
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub experiment_ids {
-    my $self = shift;
-	
-    if(@_){
-      $self->{'experiment_ids'} = @$_[0];
-    }
-		
-    #will this work?
-    return $self->{'experiment_ids'} || [ $self->{'experiment_id'} ];
-}
+sub add_table_id {
+  my ($self, $table_id) = @_;
 
-
-#add experiment method?
-
-
-=head2 feature_type_id
-
-  Arg [1]    : (optional) int - FeatureType dbID
-  Example    : $result_set->feature_type_id($ft_id);
-  Description: Getter and setter for the feature_type_id for this ResultSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub feature_type_id {
-    my $self = shift;
-	
-    $self->{'feature_type_id'} = shift if @_;
-		
-    return $self->{'feature_type_id'};
-}
-
-
-=head2 feature_type
-
-  Example    : $display_label = $rset->feature_type()->class().':'.$rset->name();
-  Description: Getter and setter for the feature_type_id for this ResultSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub feature_type {
-    my $self = shift;
-	
-    if(! $self->{'feature_type'}){
-
-      if($self->adaptor()){
-	$self->{'feature_type'} = $self->adaptor->db->get_FeatureTypeAdaptor->fetch_by_dbID($self->feature_type_id());
-      }else{
-	throw("You need to set and adaptor to retrieve the FeatureType");
-      }
-    }
-		
-    return $self->{'feature_type'};
-}
-
-
-=head2 cell_type_id
-
-  Arg [1]    : (optional) int - CellLine dbID
-  Example    : $result_set->cell_type_id($cell_type_id);
-  Description: Getter and setter for the cell_type_id for this ResultSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub cell_type_id {
-    my $self = shift;
-	
-    $self->{'cell_type_id'} = shift if @_;
-    
-    return $self->{'cell_type_id'};
-}
-
-
-=head2 cell_type
-
-  Example    : 
-  Description: Getter and setter for the feature_type_id for this ResultSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub cell_type {
-  my $self = shift;
-	
-  if(! $self->{'cell_type'}){
-
-    if($self->adaptor()){
-      $self->{'cell_type'} = $self->adaptor->db->get_CellTypeAdaptor->fetch_by_dbID($self->cell_type_id());
-    }else{
-      throw("You need to set and adaptor to retrieve the CellType");
-    }
+  if (! defined $table_id){	
+    throw("Need to pass a table_id");
+  }else{
+    $self->{'table_ids'} ||= [];
+    push @{$self->{'table_ids'}}, $table_id;
   }
-		
-  return $self->{'cell_type'};
+
+  return;
 }
 
 
-=head2 slice
+=head2 table_ids
 
-  Arg [1]    : (optional) - Bio::EnsEMBL::Slice
-  Example    : my $rset_slice = $rset->slice();
-  Description: Getter and setter for the Slice of this ResultSet.
-  Returntype : Bio::EnsEMBL::Slice
-  Exceptions : Throws if arg is not a Slice
+  Example    : $result_set->feature_group_id($fg_id);
+  Description: Getter and setter for the feature_group_id for this ResultSet.
+  Returntype : int
+  Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub slice {
-    my $self = shift;
-	
-
-    if(@_ && (! $_[0]->isa("Bio::EnsEMBL::Slice"))){
-      throw("Arg must be a Bio::EnsEMBL::Slice");
-    }
-
-
-    $self->{'slice'} = shift if @_;
-	
-    return $self->{'slice'};
+sub table_ids {
+  my $self = shift;
+			
+  return $self->{'table_ids'};
 }
+
 
 
 =head2 display_label
@@ -371,7 +267,7 @@ sub display_label {
 }
 
 
-=head2 get_all_displayable_results
+=head2 get_displayable_ResultFeatures_by_Slice
 
   Example    : my @results = @{$ResultSet->get_all_displayable_results()};
   Description: wrapper to get_all_results with displayable flag passed
@@ -383,12 +279,12 @@ sub display_label {
 =cut
 
 
-sub get_all_displayable_results{
-  my $self = shift;
-  return $self->get_all_results(1);
+sub get_displayable_ResultFeatures_by_Slice{
+  my ($self, $slice) = @_;
+  return $self->get_ResultFeatures_by_Slice($slice, 1);
 }
 
-=head2 get_all_results
+=head2 get_ResultFeatures_by_Slice
 
   Example    : my @results = @{$ResultSet->get_all_displayable_results()};
   Description: Getter and lazy loader of results attribute for
@@ -400,17 +296,21 @@ sub get_all_displayable_results{
 
 =cut
 
-sub get_all_results{
-  my ($self, $displayable) = @_;
+sub get_ResultFeatures_by_Sliceblaart{
+  my ($self, $slice, $displayable) = @_;
 
   #do we need to restrict to Analysis? Maintain web displayable focus for now
   #what about type of display?  Wiggle vs. heatbar?
   #can we return this info, or should this be part of the query?
 
+  #Does this also need to accomodate channel level data?
+  #No! Normalisation is never done in a slice context, rather a chip context.
 
-  if(! $self->{'results'}){
 
-    $self->{'results'} = [];
+
+  if(! $self->{'result_features'}){
+
+    $self->{'result_features'} = [];
 
     if($self->adaptor()){
 
@@ -447,7 +347,15 @@ sub get_all_results{
 	  $display_label .= ':'. $anal_names{$eca_set->[1]};
 	}
 
-	push @{$self->{'results'}},  [ $display_label, $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($self->slice(), $eca_set) ];
+
+	#should do a _new_fast on ResultFeature here
+	#No need for a ResultFeatureAdaptor as they are transient i.e. not storable and only access through a result set
+	#this needs totally changing to be focused on one resultset
+
+
+
+	#push @{$self->{'results'}},  [ $display_label, $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($self->slice(), $eca_set) ];
+	@{$self->{'result_features'}} = $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($slice(), $self->analysis_id, $eca_set) ];
 	
 
     }else{
@@ -460,205 +368,66 @@ sub get_all_results{
 
 
 
+#Is it possible to to have one chip displayable and another not within the same set.
+#one may fail validation, but would just omit from result_set?
+#Or maybe we only want certain chips displayed, locational context is not split evenly over chips so not that useful :?
+#If we handle this here then all we have to do is filter table_ids first before passing them to the fetch.
+
+sub get_ResultFeatures_by_Slice{
+  my ($self, $slice, $displayable) = @_;
 
 
-=head2 get_results_by_channel_id
+  my (@ofs, @results, $result);
 
-  Arg [1]    : int - channel_id (mandatory)
-  Arg [2]    : string - Analysis name e.g. RawValue, VSN (optional)
-  Example    : my @results = $feature->results();
-  Description: Getter, setter and lazy loader of results attribute for
-               OligoFeature objects.
-  Returntype : List ref to arrays containing ('score', 'Analysis logic_name');
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub get_results_by_channel_id {
-    my $self = shift;
-    my $channel_id = shift;
-    my $anal_name = shift;
-
-    warn "This method not fully implemented, remove/deprecate?";
-
-    #$self->{'results'} ||= {};
-    $self->{'results_complete'} ||= 0;
-	
-    if(! $self->{'results'} || ($anal_name && ! exists $self->{'results'}{$anal_name})){
-      #fetch all, set complete set flag
-      $self->{'results_complete'} ||= 1 	if(! $anal_name);
-      
-      foreach my $results_ref(@{$self->adaptor->fetch_results_by_channel_analysis($self->probe->dbID(), 
-										  $channel_id, $anal_name)}){
-	
-	$self->{'results'}{$$results_ref[1]} = $$results_ref[0];
-      }
-    }
+  
+  foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
     
-    return $self->{'results'}
+    if((! @ofs) || ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
+      push @ofs, $of;
+    }else{#Found new location, deal with previous
+      push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
+      @ofs = ($of);
+    }
+  }
+
+  push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
+
+  return \@results;
+
+}
+
+sub _get_best_result{
+  my ($self, $ofs, $analysis, $exp_chips) = @_;
+
+  my ($result, $mpos);
+
+  if(scalar(@$ofs) == 2){#mean
+    $result = ($ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) + 
+	       $ofs->[1]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2;
+    
+  }
+  elsif(scalar(@$ofs) > 2){#median or mean of median flanks
+    $mpos = (scalar(@$ofs))/2;
+    
+    if($mpos =~ /\./){#true median
+      $mpos =~ s/\..*//;
+      $mpos ++;
+      $result = $ofs->[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
+    }else{
+      $result = ($ofs->[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) +
+		 $ofs->[($mpos+1)]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2 ;
+    }
+  }else{
+    #push start, end, score onto results
+    $result =  $ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
+
+  }
+
+  return $result;
 }
 
 
-#The experiment/al chip specificity has already been done by the ofa->fetch_all_by_Slice_Experiment
-#This may be called with no preceding Experiment specificity
-#this would return results for all experiments
-#do we need to set a default Experiment?
 
-
-#THis should return both Chip and Channel based results
-#just Chip for now
-#maybe retrieve and hash all if not Analysis object passed?  Then return what?  
-
-
-=head2 get_result_by_Analysis_ExperimentalChips
-
-  Arg [1]    : Bio::EnsEMBL::Analysis
-  Arg [2]    : listref - Bio::EnsEMBL::Funcgen::ExperimentalChip
-  Example    : my $result = $feature->get_result_by_Analysis_ExperimentalChips($anal, \@echips);
-  Description: Getter of results attribute for a given Analysis and set of ExperimentalChips
-  Returntype : float
-  Exceptions : Throws is no Analysis or ExperimentalChips are not passed?
-  Caller     : General
-  Status     : High Risk
-
-=cut
-
-
-#make ExperimentalChips optional?
-
-#or have ResultSetAdaptor?  Do we need a ResultSet?
-#may not have ExperimentalChip, so would need to return ec dbID aswell
-
-
-######This will break/return anomalous if
-#ECs are passed from different experiments
-#ECs are passed from different Arrays
-
-
-sub get_result_by_Analysis_ExperimentalChips{
-    my ($self, $anal, $exp_chips) = @_;
-
-    throw("Need to pass listref of ExperiemntalChips") if(scalar(@$exp_chips) == 0);
-    throw("Need to pass a valid Bio::EnsEMBL::Analysis") if ! $anal->isa("Bio::EnsEMBL::Analysis");
-
-    my (%query_ids, %all_ids, %ac_ids);
-    my $anal_name = $anal->logic_name();
-    
-    foreach my $ec(@$exp_chips){
-				
-      throw("Need to pass a listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
-	if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
-
-		#my $tmp_id = $self->adaptor->db->get_OligoArrayAdaptor->fetch_by_array_chip_dbID($ec->array_chip_id())->dbID();
-      
-		#$array_id ||= $tmp_id;
-      
-      #throw("You have passed ExperimentalChips from different if($array_id != $tmp_id)
-      
-      #if(exists  $ac_ids{$ec->array_chip_id()}){
-#	throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
- #     }
-      
-      $ac_ids{$ec->array_chip_id()} = 1;
-      $all_ids{$ec->dbID()} = 1;
-      $query_ids{$ec->dbID()} = 1 if(! exists $self->{'results'}{$anal_name}{$ec->dbID()});
-      
-    }
-    
-    
-    my @ec_ids = keys %query_ids;
-    my @all_ids = keys %all_ids;
-    
-    
-    #warn "ec ids @ec_ids\n";
-    #warn "all ids @all_ids\n";
-    
-    #$self->{'results'} ||= {};
-    #$self->{'results_complete'} ||= 0;#do we need this now?
-    
-    if((scalar(@all_ids) - scalar(@ec_ids))> 1){
-      throw("DATA ERROR - There is more than one result stored for the following ExperimentalChip ids: @all_ids");
-    }		
-    elsif(! $self->{'results'} || (($anal_name && scalar(@ec_ids) > 0) && scalar(@all_ids) == scalar(@ec_ids))){
-      #fetch all, set complete set flag
-      #$self->{'results_complete'} ||= 1 	if(! $anal_name);
-      #would need to look up chip and channel analyses here and call relevant fetch
-      #or pass the chip and then build the query as = or IN dependent on context of logic name
-      #if there are multiple results, last one will overwrite others
-      #could do foreach here to deal with retrieving all i.e. no logic name
-      #Can supply mutliple chips, but probe ids "should" be unique(in the DB at least) amongst contiguous array_chips
-      #build the cache based on logic name and table_id
-      #cahce key??  should we cat the ec_ids together?
-
-      my @result_refs = @{$self->adaptor->fetch_results_by_probe_experimental_chips_analysis($self->probe->dbID(), 
-											     \@ec_ids, 
-											     $anal_name)};
-
-      #Remove lines with no result
-      while(@result_refs && (! $result_refs[0]->[0])){
-	shift @result_refs;
-      }
-
-      my $num_results = scalar(@result_refs);
-      my ($result, $mpos);
-      #throw("Fetched more than one result for this OligoFeature, Analysis and ExperimentalChips") if (scalar(@result_refs) >1);
-
-      #No sort needed as we sort in the query
-
-      if($num_results == 1){
-	$result = $result_refs[0]->[0];
-      }
-      elsif($num_results == 2){#mean
-	$result = ($result_refs[0]->[0] + $result_refs[1]->[0])/2;
-    
-      }
-      elsif($num_results > 2){#median or mean of median flanks
-	$mpos = $num_results/2;
-    
-	if($mpos =~ /\./){#true median
-	  $mpos =~ s/\..*//;
-	  $mpos ++;
-	  $result =  $result_refs[$mpos]->[0];
-	}else{
-	  $result = ($result_refs[$mpos]->[0] + $result_refs[($mpos+1)]->[0])/2 ;
-	}
-      }
-      
-      $self->{'results'}{$anal_name}{":".join(":", @ec_ids).":"} = $result;
-    }
-
-	#do we return the ec ids here to, or do we trust that the user will know to only pass contiguous rather than duplicate chips
-
-	#how are we going to retrieve the result for one of many possible ec id keys?
-	#options, cat ec dbids as key, and grep them to find full key, then return result
-	#this may hide the duplicate chip problem
-	#If a query has already been made and cached,another query with one differing ID(duplicate result) may never be queried as we already have a cahced result
-	#We shoulld pick up duplicates before this happens
-	#If we try and mix ExperimentalChips from different experiments, then this would also cause multiple results, and hence hide some data
-	
-	my @keys;
-	foreach my $id(@all_ids){
-	  my @tmp = grep(/:${id}:/, keys %{$self->{'results'}{$anal_name}});
-	  #Hacky needs sorting, quick fix for release!!
-
-	  if(@tmp){
-	    push @keys, grep(/:${id}:/, keys %{$self->{'results'}{$anal_name}});
-
-	    last;
-	  }
-
-	}
-
-    throw("Got more than one key for the results cache") if scalar(@keys) > 1;
-
-    return $self->{'results'}{$anal_name}{$keys[0]};
-}
-
-
-#Will this be too slow, can we not do one query across all tables
 
 
 1;
-

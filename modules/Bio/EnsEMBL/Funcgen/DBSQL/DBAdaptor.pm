@@ -168,13 +168,13 @@ sub get_available_adaptors{
 	       'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
 	       'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
 	       'ArrayChip'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
-	       'OligoArray'         => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoArrayAdaptor',
-	       'OligoProbeSet'      => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeSetAdaptor',
-	       'OligoProbe'         => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoProbeAdaptor',
-	       'OligoFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::OligoFeatureAdaptor',
+	       'Array'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
+	       'ProbeSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
+	       'Probe'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
+	       'ProbeFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
 	       'PredictedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::PredictedFeatureAdaptor',
 	       'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-	       'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+	       'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
 	       'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
 	       'Status'             => 'Bio::EnsEMBL::Funcgen::DBSQL::StatusAdaptor',
 	       'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
@@ -241,7 +241,7 @@ sub _get_schema_build{
 #also, changing dnadb would work, which isn't pretty
 
 #Are all dnadb(feature) data retrievals mediated by a Slice?
-#OligoFeatureADaptor has by probe/probeset queries which would retrieve for all DBs/coord systems,
+#ProbeFeatureADaptor has by probe/probeset queries which would retrieve for all DBs/coord systems,
 #any further dnadb derived methods on the objects would have to resolve coord system issue and use correct dnadb
 #or should we only retrieve for current dnadb?
 

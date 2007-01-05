@@ -52,7 +52,7 @@ use vars qw(@ISA);
 
   Arg [1]    : int - dbID of array_chip
   Example    : my $array = $oaa->fetch_by_array_chip_dbID($ac_dbid);
-  Description: Retrieves a named OligoArray object from the database.
+  Description: Retrieves a named Array object from the database.
   Returntype : listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
   Caller     : General
@@ -146,7 +146,7 @@ sub get_all_experiment_names{
 #  Arg [1]    : List of strings - type(s) (e.g. AFFY or OLIGO)
 #  Example    : my @arrays = @{$oaa->fetch_all_by_type('OLIGO')};
 #  Description: Fetch all arrays of a particular type.
-#  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoArray objects
+#  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
 #  Exceptions : Throws if no type is provided
 #  Caller     : General
 #  Status     : Medium Risk
@@ -235,7 +235,7 @@ sub _columns {
   Arg [1]    : DBI statement handle object
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
-               Creates OligoArray objects from an executed DBI statement
+               Creates Array objects from an executed DBI statement
 			   handle.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None

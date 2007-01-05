@@ -11,7 +11,7 @@ $imp->register_experiment();
 
 =head1 DESCRIPTION
 
-B<This program> is the main class coordinating import of OligoArrays and experimental data.
+B<This program> is the main class coordinating import of Arrays and experimental data.
 It utilises several underlying definitions classes specific to array vendor, array class and
 experimental group.  
 
@@ -1310,8 +1310,8 @@ sub R_norm{
     #Need to get total and experimental here and set db_id accordingly
     
     
-    $query .= "c1<-dbGetQuery(con, 'select oligo_probe_id, score as ${dbids[0]}_score from result where table_name=\"channel\" and table_id=${dbids[0]} and analysis_id=${ra_id}')\n";
-    $query .= "c2<-dbGetQuery(con, 'select oligo_probe_id, score as ${dbids[1]}_score from result where table_name=\"channel\" and table_id=${dbids[1]} and analysis_id=${ra_id}')\n";
+    $query .= "c1<-dbGetQuery(con, 'select probe_id, score as ${dbids[0]}_score from result where table_name=\"channel\" and table_id=${dbids[0]} and analysis_id=${ra_id}')\n";
+    $query .= "c2<-dbGetQuery(con, 'select probe_id, score as ${dbids[1]}_score from result where table_name=\"channel\" and table_id=${dbids[1]} and analysis_id=${ra_id}')\n";
     
     #should do some sorting here?  Probes are in same order anyway
     #does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
@@ -1336,7 +1336,7 @@ sub R_norm{
     
     #Now create table structure with glog values(diffs)
     #3 sig dec places on scores(doesn't work?!)
-    $query .= "glog_df<-cbind(rep(\"\", length(c1[\"oligo_probe_id\"])), c1[\"oligo_probe_id\"], format(exprs(vsn_df[,2]) - exprs(vsn_df[,1]), nsmall=3), rep(\"${va_id}\", length(c1[\"oligo_probe_id\"])), rep(\"".$echip->dbID()."\", length(c1[\"oligo_probe_id\"])),   rep(\"experimental_chip\", length(c1[\"oligo_probe_id\"])))\n";
+    $query .= "glog_df<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], format(exprs(vsn_df[,2]) - exprs(vsn_df[,1]), nsmall=3), rep(\"${va_id}\", length(c1[\"probe_id\"])), rep(\"".$echip->dbID()."\", length(c1[\"probe_id\"])),   rep(\"experimental_chip\", length(c1[\"probe_id\"])))\n";
     
     
     #load back into DB

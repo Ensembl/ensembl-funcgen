@@ -60,8 +60,7 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-PROBE] : Bio::EnsEMBL::Funcgen::OligoProbe - An OligoFeature must have a probe. 
-                 This probe must already be stored if you plan to store the feature.
+ 
   Arg [-SCORE]: (optional) int - Score assigned by analysis pipeline
   Arg [-ANALYSIS_ID] : int - Analysis database ID.
   Arg [-SLICE] : Bio::EnsEMBL::Slice - The slice on which this feature is.
@@ -74,7 +73,7 @@ use vars qw(@ISA);
   Arg [-dbID]         : (optional) int - Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
   Example    : my $feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
-									  -PROBE         => $probe,
+	
 									  -SLICE         => $chr_1_slice,
 									  -START         => 1_000_000,
 									  -END           => 1_000_024,

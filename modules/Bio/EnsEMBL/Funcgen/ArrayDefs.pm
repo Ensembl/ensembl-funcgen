@@ -37,10 +37,10 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 
 package Bio::EnsEMBL::Funcgen::ArrayDefs;
 
-use Bio::EnsEMBL::Funcgen::OligoArray;
-use Bio::EnsEMBL::Funcgen::OligoProbeSet;
-use Bio::EnsEMBL::Funcgen::OligoProbe;
-use Bio::EnsEMBL::Funcgen::OligoFeature;
+use Bio::EnsEMBL::Funcgen::Array;
+use Bio::EnsEMBL::Funcgen::ProbeSet;
+use Bio::EnsEMBL::Funcgen::Probe;
+use Bio::EnsEMBL::Funcgen::Feature;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Channel;
@@ -190,7 +190,7 @@ sub read_array_chip_data{
   
   
   my ($echip, $ac_id);
-  my $oa_adaptor = $self->db->get_OligoArrayAdaptor();
+  my $oa_adaptor = $self->db->get_ArrayAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $chan_adapt = $self->db->get_ChannelAdaptor();
 
@@ -244,11 +244,12 @@ sub read_array_chip_data{
       
       
       #store now checks whether already stored and updates array chips accordingly
-      $array = Bio::EnsEMBL::Funcgen::OligoArray->new
+      $array = Bio::EnsEMBL::Funcgen::Array->new
 	(
 	 -NAME        => $self->{'array_name'} || $data[$hpos{'DESIGN_NAME'}],
 	 -FORMAT      => uc($self->format()),
 	 -VENDOR      => uc($self->vendor()),
+	 -TYPE        => 'OLIGO',
 	 -DESCRIPTION => $design_desc,
 	);
 
@@ -334,11 +335,11 @@ sub read_array_chip_data{
 
 =head2 arrays
 
-  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::OligoArray
+  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::Array
   Example    : $self->arrays($array);
   Description: Getter/Setter for array element
-  Returntype : list ref to Bio::EnsEMBL::Funcgen::OligoArray objects
-  Exceptions : throws if passed non OligoArray or if more than one OligoArray set
+  Returntype : list ref to Bio::EnsEMBL::Funcgen::Array objects
+  Exceptions : throws if passed non Array or if more than one Array set
   Caller     : Importer
   Status     : Medium - Remove/Implement multiple arrays?
 
@@ -347,8 +348,8 @@ sub read_array_chip_data{
 sub arrays{
   my ($self) = shift;
 
-  if(@_ && ! $_[0]->isa('Bio::EnsEMBL::Funcgen::OligoArray')){
-    throw("Must supply a Bio::EnsEMBL::Funcgen::OligoArray");
+  if(@_ && ! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')){
+    throw("Must supply a Bio::EnsEMBL::Funcgen::Array");
   }elsif(@_){
     warn "this is adding an array, not resetting";
     push @{$self->{'arrays'}}, @_;
@@ -503,20 +504,21 @@ sub read_sanger_array_probe_data{
   $array_file||= $self->array_file();
   my ($line, $fh, @list, $array_file_format, $cmd);
   my ($op, $of, $imported, $fimported, %slices);
-  my $oa_adaptor = $self->db->get_OligoArrayAdaptor();
-  my $op_adaptor = $self->db->get_OligoProbeAdaptor();
-  my $of_adaptor = $self->db->get_OligoFeatureAdaptor();
+  my $oa_adaptor = $self->db->get_ArrayAdaptor();
+  my $op_adaptor = $self->db->get_ProbeAdaptor();
+  my $of_adaptor = $self->db->get_ProbeFeatureAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $slice_adaptor = $self->db->get_SliceAdaptor();
   my $anal_id = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
   #have LiftOver? Could then use liftover in  pipeline to redo mappings
 
  #store now checks whether already stored and updates array chips accordingly
-  my $array = Bio::EnsEMBL::Funcgen::OligoArray->new
+  my $array = Bio::EnsEMBL::Funcgen::Array->new
     (
      -NAME        => $self->{'array_name'},
      -FORMAT      => uc($self->format()),
      -VENDOR      => uc($self->vendor()),
+     -TYPE        => 'PCR',
      -DESCRIPTION => "Sanger ENCODE PCR array 3.1.1",
     );
 
@@ -629,7 +631,7 @@ sub read_sanger_array_probe_data{
 	  #$length = $start - $end;
 	  #warn "length is $length";
 
-	  $op = Bio::EnsEMBL::Funcgen::OligoProbe->new(
+	  $op = Bio::EnsEMBL::Funcgen::Probe->new(
 						       -NAME          => $pid,
 						       -LENGTH        => ($end - $start),
 						       -ARRAY         => $array,
@@ -654,7 +656,7 @@ sub read_sanger_array_probe_data{
 	  }
 	  
 	
-	  $of = Bio::EnsEMBL::Funcgen::OligoFeature->new(
+	  $of = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
 							 -START         => $start,
 							 -END           => $end,
 							 -STRAND        => $strand,
@@ -712,11 +714,12 @@ sub read_sanger_result_data{
   #shoudl also check wether experimental_chips have been previously imported
   
 
-  my ($file, $chip_uid, $line, $echip, $fh, $r_string, $rfile);
+  my ($file, $result_set, $chip_uid, $line, $echip, $fh, $r_string, $rfile);
   my ($ratio, $pid, $imported, %tmp);
-  my $of_adaptor = $self->db->get_OligoFeatureAdaptor();
+  my $of_adaptor = $self->db->get_ProbeFeatureAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $anal_id = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
+  my $result_adaptor = $self->db->get_ResultSetAdaptor();
     			       
 
          
@@ -759,6 +762,10 @@ sub read_sanger_result_data{
     #Need to check fo rpartial import here
 
 
+    
+    
+
+
 
     #should we nest these in the Experiment and 
     #don't need to add them to store, just have method which always retrieves all echips from db
@@ -770,6 +777,19 @@ sub read_sanger_result_data{
       $rfile = open_file(">", $self->get_dir("norm")."/result.".$echip->unique_id().".txt");
       $r_string = "";
       
+      #as we don't know contig chips before hand set everything to the same result_set, then alter after wards
+      if(! defined $result_set){
+
+	$result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
+	  (
+	   -analysis_id => $anal_id,
+	   -table_name  => 'experimental_chip',
+	   -table_id    => $echip->dbID(),
+	  );
+      }else{
+	$result_set->add_table_id($echip->dbID());
+      }
+   
       while($line = <$fh>){
 	$line =~ s/\r*\n//o;
 	
@@ -781,7 +801,8 @@ sub read_sanger_result_data{
 	#this is throwing away the encode region which could be used for the probeset/family?
 	
 	#NA ratio imports as 0
-	$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${anal_id}\t".$echip->dbID()."\texperimental_chip\n";
+	#$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${anal_id}\t".$echip->dbID()."\texperimental_chip\n";
+	$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\n";
 	
       
       }
@@ -798,6 +819,8 @@ sub read_sanger_result_data{
       #}
     }
   }
+
+  $result_adaptor->store($result_set);
 
 
   $self->log("Finished parsing ".$self->vendor()." probe data (".localtime().")");
@@ -1017,7 +1040,7 @@ sub read_probe_data{
 	    throw("ops still defined in caller") if defined $ops;
 	  }
 
-       	  $ops = Bio::EnsEMBL::Funcgen::OligoProbeSet->new(
+       	  $ops = Bio::EnsEMBL::Funcgen::ProbeSet->new(
 							   -NAME => $data[$hpos{'FEATURE_ID'}],
 							   -SIZE => undef,
 							   -FAMILY  => $data[$hpos{'CONTAINER'}],
@@ -1052,7 +1075,7 @@ sub read_probe_data{
 	#$probe_string .= "\t${psid}\t".$data[$hpos{'PROBE_ID'}]."\t${length}\t$ac_id\t${class}\n";
 	#print "Generating new probe with $array ".$array->dbID()." and ac id ".$ac{'dbID'}."\n";
       
-	$op = Bio::EnsEMBL::Funcgen::OligoProbe->new(
+	$op = Bio::EnsEMBL::Funcgen::Probe->new(
 						     -NAME          => $data[$hpos{'PROBE_ID'}],
 						     -LENGTH        => $length,
 						     -ARRAY         => $array,
@@ -1121,7 +1144,7 @@ sub read_probe_data{
 	
 	
 	
-	$of = Bio::EnsEMBL::Funcgen::OligoFeature->new(
+	$of = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
 						       -START         => $data[$hpos{'POSITION'}],
 						       -END           =>($data[$hpos{'POSITION'}] + $length),
 						       -STRAND        => $strand,
@@ -1207,10 +1230,10 @@ sub read_probe_data{
 =head2 store_set_probes_features
 
   Arg [1]    : mandatory - array chip id
-  Arg [2]    : optional - Bio::EnsEMBL::Funcgen::OligoProbeSet
+  Arg [2]    : optional - Bio::EnsEMBL::Funcgen::ProbeSet
   Arg [3]    : mandatory - hashref of keys probe id, values are 
                hash of probe/features with values 
-               Bio::EnsEMBL::Funcgen::OligoProbe/Features for a given 
+               Bio::EnsEMBL::Funcgen::Probe/Features for a given 
                probe set if defined.
   Example    : $self->store_set_probes_features($ac->dbID(), $ops, \%pfs);
   Description: Stores probe set, probes and probe features 
@@ -1229,8 +1252,8 @@ sub store_set_probes_features{
   
 
   #just call these directly rather than setting each time?
-  #my $op_a = $self->db->get_OligoProbeAdaptor();
-  #my $opf_a = $self->db->get_OligoProbeFeatureAdaptor();
+  #my $op_a = $self->db->get_ProbeAdaptor();
+  #my $opf_a = $self->db->get_ProbeFeatureAdaptor();
 
 
   #if(scalar(@$probes) != scalar(@$features)){
@@ -1243,7 +1266,7 @@ sub store_set_probes_features{
 
   if($ops){
     $ops->size(scalar(keys %$pf_hash));
-    ($ops) = $self->db->get_OligoProbeSetAdaptor->store($ops);
+    ($ops) = $self->db->get_ProbeSetAdaptor->store($ops);
   }
 
 
@@ -1262,7 +1285,7 @@ sub store_set_probes_features{
     #the process corresponding feature
     my $probe = $pf_hash->{$probe_id}->{'probe'};
     $probe->probeset($ops) if $ops;
-    ($probe) = @{$self->db->get_OligoProbeAdaptor->store($probe)};
+    ($probe) = @{$self->db->get_ProbeAdaptor->store($probe)};
 
       
 
@@ -1274,7 +1297,7 @@ sub store_set_probes_features{
         
     foreach my $feature(@{$pf_hash->{$probe_id}->{'features'}}){
       $feature->probe($probe);
-      ($feature) = @{$self->db->get_OligoFeatureAdaptor->store($feature)};
+      ($feature) = @{$self->db->get_ProbeFeatureAdaptor->store($feature)};
     }
   }
 
@@ -1340,7 +1363,7 @@ sub get_probe_id_by_name{
 #  else{#get from db
 
   if((! defined $self->{'_probe_map'}) || (! defined $self->{'_probe_map'}->{$name})){ 
-    my $op = $self->db->get_OligoProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
+    my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
     #print "Got probe $op with dbid ".$op->dbID()."\n";
     #push @op_ids, $op->dbID();
     $self->{'_probe_map'}{$name} = $op->dbID() if $op;

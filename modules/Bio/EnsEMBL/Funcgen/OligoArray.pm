@@ -1,23 +1,24 @@
 #
-# Ensembl module for Bio::EnsEMBL::Funcgen::OligoArray
+# Ensembl module for Bio::EnsEMBL::Funcgen::Array
 #
 # You may distribute this module under the same terms as Perl itself
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::OligoArray - A module to represent an oligonucleotide microarray.
+Bio::EnsEMBL::Funcgen::Array - A module to represent a nucleotide microarray.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::OligoArray;
+use Bio::EnsEMBL::Funcgen::Array;
 
-my $array = Bio::EnsEMBL::Funcgen::OligoArray->new(
+my $array = Bio::EnsEMBL::Funcgen::Array->new(
 	    -NAME        => 'Array-1',
         -FORMAT      => 'Tiled',
         -SIZE        => '1',
         -SPECIES     => 'Mus_musculus',
 	    -VENDOR      => 'Nimblegen',
         -DESCRIPTION => $desc,
+        -TYPE        => 'OLIGO',
 );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
@@ -26,7 +27,7 @@ my $array = $array_adaptor->fetch_by_name($array_name)
 
 =head1 DESCRIPTION
 
-An OligoArray object represents an oligonucleotide microarray. The data
+An Array object represents a nucleotide (OLIGO, PCR etc.) microarray. The data
 (currently the name, format, size, species, vendor and description) are stored
 in the array table.
 
@@ -51,7 +52,7 @@ use strict;
 use warnings;
 
 
-package Bio::EnsEMBL::Funcgen::OligoArray;
+package Bio::EnsEMBL::Funcgen::Array;
 
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
@@ -78,16 +79,17 @@ use vars qw(@ISA);# %VALID_TYPE);
 
 #array_chips is array of hashes or design_id and name, dbID will be populated on store, this should be a simple object!
 
-  Example    : my $array = Bio::EnsEMBL::Funcgen::OligoArray->new(
+  Example    : my $array = Bio::EnsEMBL::Funcgen::Array->new(
 								  -NAME        => 'Array-1',
 								  -FORMAT      => 'Tiled',
 								  -SIZE        => '1',
 								  -SPECIES     => 'Mus_musculus',
 								  -VENDOR      => 'Nimblegen',
+                                                                  -TYPE        => 'OLIGO',
 								  -DESCRIPTION => $desc,
 								 );
-  Description: Creates a new Bio::EnsEMBL::Funcgen::OligoArray object.
-  Returntype : Bio::EnsEMBL::Funcgen::OligoArray
+  Description: Creates a new Bio::EnsEMBL::Funcgen::Array object.
+  Returntype : Bio::EnsEMBL::Funcgen::Array
   Exceptions : None ? should throw if mandatort params not set/valid
   Caller     : General
   Status     : At risk
@@ -101,12 +103,16 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
   
-  my ($name, $format, $size, $species, $vendor, $ac_hash, $desc)
-    = rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'DESCRIPTION'], @_ );
+  my ($name, $format, $size, $species, $vendor, $type, $desc)
+    = rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'TYPE', 'DESCRIPTION'], @_ );
   
   #mandatory params?
   #name, format, vendor
   #enum on format?
+
+  if($self->dbID() && ! $caller->isa("Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor")){
+    throw("You must use the ArrayAdaptor to generate Arrays with a dbID i.e. from the DB, as this module accomodates updating which may cause incorrect data if the object is not generated form the DB");
+  } 
 
   
   $self->name($name)          if defined $name;
@@ -114,7 +120,7 @@ sub new {
   $self->size($size)          if defined $size;
   $self->species($species)    if defined $species;
   $self->vendor($vendor)      if defined $vendor;
-  #$self->array_chips($ac_hash) if defined $ac_hash;
+  $self->type($type)          if defined $type;
   $self->description($desc)   if defined $desc;
   
   return $self;
@@ -125,7 +131,7 @@ sub new {
   Args       : None
   Example    : my $probes = $array->get_all_Probes();
   Description: Returns all probes on an array. Needs a database connection.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoProbe objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Probe objects
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -136,7 +142,7 @@ sub get_all_Probes {
 	my $self = shift;
 
 	if ( $self->dbID() && $self->adaptor() ) {
-		my $opa = $self->adaptor()->db()->get_OligoProbeAdaptor();
+		my $opa = $self->adaptor()->db()->get_ProbeAdaptor();
 		my $probes = $opa->fetch_all_by_Array($self);
 		return $probes;
 	} else {
@@ -153,7 +159,7 @@ sub get_all_Probes {
   Args       : None
   Example    : my $probesets = $array->get_all_ProbeSets();
   Description: Returns all probesets on an array. Needs a database connection.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoProbeSets objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeSets objects
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -164,7 +170,7 @@ sub get_all_ProbeSets {
 	my $self = shift;
 
 	if ( $self->dbID() && $self->adaptor() ) {
-		my $opsa = $self->adaptor()->db()->get_OligoProbeSetAdaptor();
+		my $opsa = $self->adaptor()->db()->get_ProbeSetAdaptor();
 		my $probesets = $opsa->fetch_all_by_Array($self);
 		return $probesets;
 	} else {
@@ -228,7 +234,7 @@ sub get_design_ids{
 
   Arg [1]    : (optional) string - the name of this array
   Example    : my $name = $array->name();
-  Description: Getter, setter of the name attribute for OligoArray
+  Description: Getter, setter of the name attribute for Array
                objects.
   Returntype : string
   Exceptions : None
@@ -249,12 +255,40 @@ sub name {
   return $self->{'name'};
 }
 
+
+=head2 type
+
+  Arg [1]    : (optional) string - the type of this array e.g. OLIGO, PCR etc
+  Example    : my $type = $array->type();
+  Description: Getter, setter of the type attribute for Array
+               objects.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub type{
+  my $self = shift;
+  $self->{'type'} = shift if @_;
+
+  #do we need this?
+  #if ( !exists $self->{'name'} && $self->dbID() && $self->adaptor() ) {
+  #  $self->adaptor->fetch_attributes($self);
+  #}
+
+  return $self->{'type'};
+}
+
+
+
 =head2 format
 
   Arg [1]    : (optional) string - the format of the array
   Example    : my $format = $array->format();
   Description: Getter, setter of format attribute for
-               OligoArray objects e.g. Tiled, Targetted etc...
+               Array objects e.g. Tiled, Targetted etc...
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -281,7 +315,7 @@ sub format {
   Arg [1]    : (optional) int - the number of ? in the array
   Example    : my $size = $array->size();
   Description: Getter, setter and lazy loader of size attribute for
-               OligoArray objects. The size is the number of ? in this array. 
+               Array objects. The size is the number of ? in this array. 
   Returntype : int
   Exceptions : None
   Caller     : General
@@ -307,7 +341,7 @@ sub size {
 
   Arg [1]    : (optional) string - the species of the array (e.g. Mus_musculus)
   Example    : my $species = $array->species();
-  Description: Getter, setter of species attribute for OligoArray
+  Description: Getter, setter of species attribute for Array
                objects.
   Returntype : string
   Exceptions : Throws if argument cannot be mapped to a valid registry species alias
@@ -339,7 +373,7 @@ sub species {
   Arg [1]    : (optional) string - the name of the array vendor
   Example    : my $vendor = $array->vendor();
   Description: Getter, setter of vendor attribute for
-               OligoArray objects.
+               Array objects.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -364,7 +398,7 @@ sub vendor {
   Arg [1]    : (optional) string - the description of the array
   Example    : my $size = $array->description();
   Description: Getter, setter of description attribute for
-               OligoArray objects. 
+               Array objects. 
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -416,7 +450,7 @@ sub get_ArrayChips {
 
       foreach my $achip(@{$self->adaptor->db->get_ArrayChipAdaptor->fetch_all_by_array_id($self->dbID())}){
 	$self->{'array_chips'}{$achip->design_id} = $achip;
-	#%{$self->{'array_chips'}} = %{$self->adaptor->db->get_OligoArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID())};
+	#%{$self->{'array_chips'}} = %{$self->adaptor->db->get_ArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID())};
       }
     }
     else{

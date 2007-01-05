@@ -286,7 +286,7 @@ sub _columns {
   Arg [1]    : DBI statement handle object
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
-               Creates OligoArray objects from an executed DBI statement
+               Creates Array objects from an executed DBI statement
 			   handle.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
   Exceptions : None

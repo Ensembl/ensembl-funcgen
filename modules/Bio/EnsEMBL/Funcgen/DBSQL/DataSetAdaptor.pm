@@ -1,24 +1,24 @@
 #
-# Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::ResultSetAdaptor
+# Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::DataSetAdaptor
 #
 # You may distribute this module under the same terms as Perl itself
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::Funcgen::ResultSetAdaptor - A database adaptor for fetching and
-storing ResultSet objects.  
+Bio::EnsEMBL::DBSQL::Funcgen::DataSetAdaptor - A database adaptor for fetching and
+storing DataSet objects.  
 
 =head1 SYNOPSIS
 
-my $rset_adaptor = $db->get_ResultSetAdaptor();
+my $rset_adaptor = $db->get_DataSetAdaptor();
 
 my $rset = $rset_adaptor->fetch_by_Experiment_Slice($exp, $slice);
 my @displayable_rsets = $rset_adaptor->fetch_all_displayable_by_Slice($slice);
 
 =head1 DESCRIPTION
 
-The ResultSetAdaptor is a database adaptor for storing and retrieving
-ResultSet objects.
+The DataSetAdaptor is a database adaptor for storing and retrieving
+DataSet objects.
 
 =head1 AUTHOR
 
@@ -37,27 +37,27 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
+package Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Funcgen::ResultSet;
+use Bio::EnsEMBL::Funcgen::DataSet;
 
 use vars qw(@ISA);
 use strict;
 use warnings;
 
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);#do we need this?
+#we can't pass the slice through the BaseAdaptor
+#So we either don't use it, or use the slice on all the DataSet calls?
 
-#Generates ResultSet contains info about ResultSet content
-#and actual results for channel or for chips in contig set?
-#omit channel handling for now as we prolly won't ever display them
-#but we might use it for running analyses and recording in result_set...change to result_group or result_analyses
-#data_set!!  Then we can keep other tables names and retain ResultFeature
-#and change result_feature to result_set, this makes focus of result set more accurate and ResultFeatures are lightweight result objects.
+
+
+#Generates DataSet contains info about DataSet content
 #do we need to accomodate different classes of data or multiple feature types in one set?  i.e. A combi experiment (Promot + Histone mod)?
 #schema can handle this...API? ignore for now but be mindful. 
-#This is subtley different to handling different experiments with different features in the same ResultSet.  
+#This is subtley different to handling different experiments with different features in the same DataSet.  
 #Combi will have same sample.
+#See DataSet for definitions of set types
 
 
 #This needs one call to return all displayable sets, grouped by cell_line and ordered by FeatureType
@@ -204,9 +204,9 @@ sub _tables {
   my $self = shift;
 	
   return (
-	  [ 'result_set',    'rs' ], 
-	  [ 'result_group',  'rg' ], 
-	  [ 'feature_group', 'fg' ],
+	  [ 'data_set',    'ds' ], 
+	  [ 'result_set',  'rs' ], 
+	  [ 'feature_set', 'fs' ],
 	 );
 }
 
@@ -224,21 +224,20 @@ sub _tables {
 =cut
 
 sub _columns {
-	my $self = shift;
+  my $self = shift;
 
-	#will this work? May have multiple record/result_set_id
-
-	
-	return qw(
-		  of.oligo_feature_id  of.seq_region_id
-		  of.seq_region_start  of.seq_region_end
-		  of.seq_region_strand of.coord_system_id
-		  of.oligo_probe_id    of.analysis_id
-		  of.mismatches        of.cigar_line
-		  op.name
-		 );
-
-	#removed probeset and array name
+  #will this work? May have multiple record/result_set_id
+  
+  
+  return qw(
+	    ds.data_set_id     ds.result_set_id
+	    ds.feature_set_id  rs.analysis_id
+	    rs.table_id        rs.table_name
+	    fs.feature_type_id fs.analysis_id
+	    fs.cell_type_id
+	   );
+  
+  #what others do we need?
 	
 }
 
@@ -255,11 +254,12 @@ sub _columns {
   Status     : At Risk
 
 =cut
-#sub _default_where_clause {
-#	my $self = shift;
+
+sub _default_where_clause {
+  my $self = shift;
 	
-#	return 'of.oligo_probe_id = op.oligo_probe_id AND op.array_chip_id = ac.array_chip_id';
-#}
+  return 'ds.result_set_id = rs.result_set_id AND ds.feature_set_id = fs.feature_set_id';
+}
 
 =head2 _final_clause
 
@@ -278,7 +278,7 @@ sub _columns {
 
 
 #sub _final_clause {
-#	return ' ORDER BY of.seq_region_id, of.seq_region_start, of.oligo_feature_id';
+#	return ' ORDER BY ds.data_set_id, fs.feature_type_id, fs.cell_type_id'; #group on cell_type_id
 #}
 
 
@@ -287,9 +287,9 @@ sub _columns {
   Arg [1]    : DBI statement handle object
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
-               Creates OligoFeature objects from an executed DBI statement
+               Creates Array objects from an executed DBI statement
 			   handle.
-  Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
@@ -297,180 +297,105 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth, $mapper, $dest_slice) = @_;
+  my ($self, $sth) = @_;
+  
+  my (@datasets, $data_set, $data_set_id, $result_set_id, $feature_set_id, $r_anal_id, $rtable_id, $rtable_name, $ft_id, $f_anal_id, $cell_id);
+  
+  $sth->bind_columns(\$data_set_id, \$result_set_id, \$feature_set_id, \$r_anal_id, \$p_design_type, \$description);
+  
+  while ( $sth->fetch() ) {
 
-	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
-	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
+
+    #This needs to be quite clever here and create a new DataSet when we encounter a new data_set_id
+    #otherwise we populate the current DataSet with more result/feature sets and set them according to there analysis id?
+    #feature_type?
+	  #ds.data_set_id     ds.result_set_id
+	#	  ds.feature_set_id  rs.analysis_id
+	#	  rs.table_id        rs.table_name
+	#	  fs.feature_type_id fs.analysis_id
+	#	  fs.cell_type_id
+    #do we need to check that the feature_set.sell_type_id is the same as the experimental_chip.cell_line_id
 
 
-	
-	# This code is ugly because caching is used to improve speed
 
-	#my $sa = $self->db->get_SliceAdaptor();
-	
-	my ($sa, $old_cs_id);
-	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 
-	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
-	#Hence it should always be on the same coord system
 
-	my $aa = $self->db->get_AnalysisAdaptor();
-	my @features;
-	my (%analysis_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
 
-	my (
-	    $oligo_feature_id,  $seq_region_id,
-	    $seq_region_start,  $seq_region_end,
-	    $seq_region_strand, $cs_id,
-	    $mismatches,        $oligo_probe_id,    
-	    $analysis_id,       $oligo_probe_name,
-	    $cigar_line,
-	);
-	$sth->bind_columns(
-			   \$oligo_feature_id,  \$seq_region_id,
-			   \$seq_region_start,  \$seq_region_end,
-			   \$seq_region_strand, \$cs_id,
-			   \$oligo_probe_id,    \$analysis_id, 
-			   \$mismatches,        \$cigar_line,
-			   \$oligo_probe_name
-	);
 
-	my $asm_cs;
-	my $cmp_cs;
-	my $asm_cs_name;
-	my $asm_cs_vers;
-	my $cmp_cs_name;
-	my $cmp_cs_vers;
-	if ($mapper) {
-		$asm_cs      = $mapper->assembled_CoordSystem();
-		$cmp_cs      = $mapper->component_CoordSystem();
-		$asm_cs_name = $asm_cs->name();
-		$asm_cs_vers = $asm_cs->version();
-		$cmp_cs_name = $cmp_cs->name();
-		$cmp_cs_vers = $cmp_cs->version();
-	}
+    if(! $data_set || ($data_set->dbID() != $data_set_id)){
 
-	my $dest_slice_start;
-	my $dest_slice_end;
-	my $dest_slice_strand;
-	my $dest_slice_length;
-	my $dest_slice_sr_name;
-	if ($dest_slice) {
-		$dest_slice_start   = $dest_slice->start();
-		$dest_slice_end     = $dest_slice->end();
-		$dest_slice_strand  = $dest_slice->strand();
-		$dest_slice_length  = $dest_slice->length();
-		$dest_slice_sr_name = $dest_slice->seq_region_name();
-	}
 
-	my $last_feature_id = -1;
-	FEATURE: while ( $sth->fetch() ) {
-		  #Need to build a slice adaptor cache here?
-		  #Would only ever want to do this if we enable mapping between assemblies??
-		  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
-		  
+      #we're just dealing with the basic one feature, one cell type set here.
+      #Maybe we need data groups to handle anything more complex?
+      
+
+      $data_set = $self->_new_fast( {
+				     'dbid'                => $data_set_id,
+				     #'result_set_id'       => $result_set_id,
+				     'feature_set_id'      => $feature_set_id,
+				     #'result_analysis_id'  => $r_anal_id,
+				     'feature_analysis_id' => $f_anal_id,
+				     'cell_type_id'        => $cell_id,
+				     'feature_type_id'     => $ft_id,
+				     #do all the rest dynamically?
+				    } );
+
+      #make new add_result_set if all args passed, but keep _new_fast lean?
+      #Is there any point in having _new_fast?
+
+
+      $data_set->add_result_set($result_set_id, $rtable_name, $rtable_id, $r_anal_id);
+
+    }else{
+      #Add more result/feature sets to the dataset
+      
+      #Need DataSet->contains_feature_set_id($id) method
+      #don't need contains_result_set_id as key will confer uniqueness on import?
+      #we're likely to encounter NR feature_set_ids
+      #These should be used to key which result_sets are displayed
+
+      #As we're not constraining how DataSets are associated
+      #it's valid to have a combined exp, i.e. Promoter plus Histone features and results?
+      #It can be valid to have several feature_types in the same set?
+      #This is entirely dependent on sensible experimental design and how we want to view the data.
+      #We could then have multiple cell types too? Getting too many dimensions to display sensibly within e!
+
+
+      #Logically we need one constant to key on, cell_type, feature_type, but also allow support combined info 
+      #i.e. all Histone mods for one cell_type, but also have promoter data too?
+      #This is getting close to a 'regulon', as we're incorporating all sorts of supporting data
+      #There should be an order of display for and within each feature class 
+      #(or if we have same feature across several cell types then we order alphabetically?)
+      #Other possible variables to order on:  
+      #analysis_id, this would also separate the features as we can't base a feature on mutliple analyses of the same data
+      
+
+
+      #So we either accomodate everything, where the only contraint is that we have one constant in the set
+      #Or we restrict the Set to handle just one feature_set and it's supporting result_sets
+
+
+      #Start simple, let's just take the one feature/data set problem first
+
+      if($feature_set_id == $data_set->feature_set_id()){
+	$data_set->add_result_set($result_set_id, $rtable_name, $rtable_id, $r_anal_id);
+      }else{
+	throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
+
+      }
+
+    }
 	  
-		  if($old_cs_id && ($old_cs_id != $cs_id)){
-			  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
-		  }
-		  
-		  $old_cs_id = $cs_id;
-
-
-		  #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
-
-		  $sa ||= $self->db->get_SliceAdaptor($cs_id);
-
-
-
-		# This assumes that features come out sorted by ID
-		next if ($last_feature_id == $oligo_feature_id);
-		$last_feature_id = $oligo_feature_id;
-
-		# Get the analysis object
-		my $analysis = $analysis_hash{$analysis_id} ||= $aa->fetch_by_dbID($analysis_id);
-
-		# Get the slice object
-		my $slice = $slice_hash{'ID:'.$seq_region_id};
-
-		if (!$slice) {
-			$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
-			$slice_hash{'ID:'.$seq_region_id} = $slice;
-			$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
-			$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
-		}
-
-		my $sr_name = $sr_name_hash{$seq_region_id};
-		my $sr_cs   = $sr_cs_hash{$seq_region_id};
-
-		# Remap the feature coordinates to another coord system if a mapper was provided
-		if ($mapper) {
-
-			throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-
-			($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-				= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-
-			# Skip features that map to gaps or coord system boundaries
-			next FEATURE if !defined $sr_name;
-
-			# Get a slice in the coord system we just mapped to
-			if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
-				$slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
-					||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
-			} else {
-				$slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
-					||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
-			}
-		}
-
-		# If a destination slice was provided convert the coords
-		# If the destination slice starts at 1 and is forward strand, nothing needs doing
-		if ($dest_slice) {
-			unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-				if ($dest_slice_strand == 1) {
-					$seq_region_start = $seq_region_start - $dest_slice_start + 1;
-					$seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
-				} else {
-					my $tmp_seq_region_start = $seq_region_start;
-					$seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-					$seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-					$seq_region_strand      *= -1;
-				}
-			}
-
-			# Throw away features off the end of the requested slice
-			next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
-				|| ( $dest_slice_sr_name ne $sr_name );
-
-			$slice = $dest_slice;
-		}
-
-		push @features, $self->_new_fast( {
-						   'start'         => $seq_region_start,
-						   'end'           => $seq_region_end,
-						   'strand'        => $seq_region_strand,
-						   'slice'         => $slice,
-						   'analysis'      => $analysis,
-						   'adaptor'       => $self,
-						   'dbID'          => $oligo_feature_id,
-						   'mismatchcount' => $mismatches,
-						   'cigar_line'    => $cigar_line,
-						   '_probe_id'     => $oligo_probe_id,
-						   #'probeset'      => $probeset,#???do we need this?
-						   '_probe_name'   => $oligo_probe_name
-						  } );
-	}
-
-	return \@features;
+  }
+  return \@result;
 }
 
 =head2 _new_fast
 
-  Args       : Hashref to be passed to OligoFeature->new_fast()
+  Args       : Hashref to be passed to DataSet->new_fast()
   Example    : None
-  Description: Construct an OligoFeature object using quick and dirty new_fast.
-  Returntype : Bio::EnsEMBL::Funcgen::OligoFeature
+  Description: Construct an DataSet object using quick and dirty new_fast.
+  Returntype : Bio::EnsEMBL::Funcgen::DataSet
   Exceptions : None
   Caller     : _objs_from_sth
   Status     : Medium Risk
@@ -481,7 +406,7 @@ sub _new_fast {
 	my $self = shift;
 	
 	my $hash_ref = shift;
-	return Bio::EnsEMBL::Funcgen::OligoFeature->new_fast($hash_ref);
+	return Bio::EnsEMBL::Funcgen::DataSet->new_fast($hash_ref);
 }
 
 =head2 store
@@ -498,6 +423,12 @@ sub _new_fast {
   Status     : At Risk
 
 =cut
+
+
+#We need to control what can be stored, so we need to check cell_line_ids?
+#Or is this level of control to be implicit?  Would there be a use for a multi-celled DataSet
+#Yes!  So we let the DB take anything, and make the obj_from_sth method handle all
+
 
 sub store{
 	my ($self, @ofs) = @_;
