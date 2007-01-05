@@ -62,7 +62,7 @@ use vars qw(@ISA);
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::ResultSet->new(
                                                                    -dbid        => $dbid,
-                                                                   -analysis_id => $anal_id,
+                                                                   -analysis    => $analysis,
                                                                    -table_name  => 'experimental_chip',
                                                                    -table_id    => $ec_id,
 			                                          ); 
@@ -82,11 +82,11 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   my ($anal_id, $table_name, $table_id)
-    = rearrange(['ANALYSIS_ID', 'TABLE_NAME', 'TABLE_ID'], @_);
+    = rearrange(['ANALYSIS', 'TABLE_NAME', 'TABLE_ID'], @_);
 
- 
-  if (! ( $anal_id && $table_name && $table_id)){
-    throw("Need to pass the following args:\tanalysis_id\ttable_name\ttable_id");
+  #maybe don't need tha analysis args as mandatory as we're testing in the adaptor store method
+  if (! ( $table_name && $table_id)){
+    throw("Need to pass the following args:\ttable_name\ttable_id");
   }
 
  
@@ -101,8 +101,7 @@ sub new {
     #This is only true if the dbID passed has been used before
   }
 
-
-  $self->analysis_id($anal_id);
+  $self->analysis($analysis) if $analysis;
   $self->table_name($table_name);
   $self->add_table_id($table_id);
 
@@ -194,6 +193,27 @@ sub experiment_id {
     return $self->{'experiment_id'};
 }
 
+=head2 analysis
+
+  Arg [1]    : (optional) - Bio::EnsEMBL::Analysis
+  Example    : $anal_id = $rset->analysis->dbID();
+  Description: Getter and setter for the analysis attribute for this ResultSet.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub analysis {
+  my $self = shift;
+	
+  $self->{'analysis'} = shift if(@_);
+  #checking for Analysis done in store
+		
+  return $self->{'analysis'};
+}
 
 
 

@@ -12,8 +12,12 @@ storing ResultSet objects.
 
 my $rset_adaptor = $db->get_ResultSetAdaptor();
 
-my $rset = $rset_adaptor->fetch_by_Experiment_Slice($exp, $slice);
-my @displayable_rsets = $rset_adaptor->fetch_all_displayable_by_Slice($slice);
+my @rsets = @{$rset_adaptor->fetch_all_ResultSets_by_Experiment()};
+my @displayable_rsets = @{$rset_adaptor->fetch_all_displayable_ResultSets()};
+
+#Other methods?
+#by FeatureType, CellType all with displayable flag?
+
 
 =head1 DESCRIPTION
 
@@ -72,14 +76,11 @@ use warnings;
 
 
 
-#what other methods do we need? all with displayable option
-#fetch by Experiment_Slice?
-#fetch by FeatureType_Slice?
-#fetch by CellType_Slice?
-#set_chips (duplicates)?  We are now using result_set_id as the chip_set key, so if we didn't know the sets previosuly, then we would have to alter the result_set_id retrospectively i.e. change the result_set_id.  This would also require a check on result_feature to see if any feature_sets had been associated, and cleaning up of duplicate result_feature entries if the same feature were attached to both of  the previously separate result sets.
-#this may require an on duplicate key call....delete one.
 
-#wouldn't it be better to associate the chip set info with the ec's rather than the result set?
+#Result_set_id is analagous to the chip_set key, altho' we may have NR instances of the same chip set with different analysis
+#if we didn't know the sets previosuly, then we would have to alter the result_set_id retrospectively i.e. change the result_set_id.#All chips in exp to be in same set until we know sets, or all in separate set?
+#Do not populate data_set until we know sets as this would cause hacky updating in data_set too.
+
 
 #how are we going to accomodate a combi exp?  Promot + Histone mods?
 #These would lose their exp set association, i.e. same exp & sample different exp method
@@ -204,9 +205,7 @@ sub _tables {
   my $self = shift;
 	
   return (
-	  [ 'result_set',    'rs' ], 
-	  [ 'result_group',  'rg' ], 
-	  [ 'feature_group', 'fg' ],
+	  [ 'result_set',    'rs' ]
 	 );
 }
 
@@ -226,19 +225,11 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 
-	#will this work? May have multiple record/result_set_id
-
-	
 	return qw(
-		  of.oligo_feature_id  of.seq_region_id
-		  of.seq_region_start  of.seq_region_end
-		  of.seq_region_strand of.coord_system_id
-		  of.oligo_probe_id    of.analysis_id
-		  of.mismatches        of.cigar_line
-		  op.name
+		  rs.result_set_id  rs.analysis_id
+		  rs.table_id       rs.table_id
 		 );
 
-	#removed probeset and array name
 	
 }
 
@@ -277,19 +268,20 @@ sub _columns {
 =cut
 
 
-#sub _final_clause {
-#	return ' ORDER BY of.seq_region_id, of.seq_region_start, of.oligo_feature_id';
-#}
+#do we need this?
 
+#sub _final_clause {
+#	return ' ORDER BY rs.result_set_id,';
+#}
 
 =head2 _objs_from_sth
 
   Arg [1]    : DBI statement handle object
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
-               Creates OligoFeature objects from an executed DBI statement
+               Creates Array objects from an executed DBI statement
 			   handle.
-  Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
@@ -297,177 +289,43 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth, $mapper, $dest_slice) = @_;
-
-	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
-	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
-
-
-	
-	# This code is ugly because caching is used to improve speed
-
-	#my $sa = $self->db->get_SliceAdaptor();
-	
-	my ($sa, $old_cs_id);
-	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
-
-	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
-	#Hence it should always be on the same coord system
-
-	my $aa = $self->db->get_AnalysisAdaptor();
-	my @features;
-	my (%analysis_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
-
-	my (
-	    $oligo_feature_id,  $seq_region_id,
-	    $seq_region_start,  $seq_region_end,
-	    $seq_region_strand, $cs_id,
-	    $mismatches,        $oligo_probe_id,    
-	    $analysis_id,       $oligo_probe_name,
-	    $cigar_line,
-	);
-	$sth->bind_columns(
-			   \$oligo_feature_id,  \$seq_region_id,
-			   \$seq_region_start,  \$seq_region_end,
-			   \$seq_region_strand, \$cs_id,
-			   \$oligo_probe_id,    \$analysis_id, 
-			   \$mismatches,        \$cigar_line,
-			   \$oligo_probe_name
-	);
-
-	my $asm_cs;
-	my $cmp_cs;
-	my $asm_cs_name;
-	my $asm_cs_vers;
-	my $cmp_cs_name;
-	my $cmp_cs_vers;
-	if ($mapper) {
-		$asm_cs      = $mapper->assembled_CoordSystem();
-		$cmp_cs      = $mapper->component_CoordSystem();
-		$asm_cs_name = $asm_cs->name();
-		$asm_cs_vers = $asm_cs->version();
-		$cmp_cs_name = $cmp_cs->name();
-		$cmp_cs_vers = $cmp_cs->version();
-	}
-
-	my $dest_slice_start;
-	my $dest_slice_end;
-	my $dest_slice_strand;
-	my $dest_slice_length;
-	my $dest_slice_sr_name;
-	if ($dest_slice) {
-		$dest_slice_start   = $dest_slice->start();
-		$dest_slice_end     = $dest_slice->end();
-		$dest_slice_strand  = $dest_slice->strand();
-		$dest_slice_length  = $dest_slice->length();
-		$dest_slice_sr_name = $dest_slice->seq_region_name();
-	}
-
-	my $last_feature_id = -1;
-	FEATURE: while ( $sth->fetch() ) {
-		  #Need to build a slice adaptor cache here?
-		  #Would only ever want to do this if we enable mapping between assemblies??
-		  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
-		  
-	  
-		  if($old_cs_id && ($old_cs_id != $cs_id)){
-			  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
-		  }
-		  
-		  $old_cs_id = $cs_id;
+  my ($self, $sth) = @_;
+  
+  my (@rsets, $rset, $dbid, $anal_id, $table_id, $table_name);
+  
+  $sth->bind_columns(\$dbid, \$anal_id, \$table_id, \$table_name);
+  
+  while ( $sth->fetch() ) {
 
 
-		  #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
+ 
+    if(! $rset || ($rset->dbID() != $dbid)){
 
-		  $sa ||= $self->db->get_SliceAdaptor($cs_id);
+      push @rsets, $rset if $rset;
 
+      $rset = $self->_new_fast( {
+				 'dbid'         => $dbid,
+				 'analysis_id'  => $anal_id,
+				 'table_name'   => $table_name,
+				 #'table_id'     => $table_id,
+				 #do all the rest dynamically?
+				} );
 
+      $rset->add_table_id($table_id);
 
-		# This assumes that features come out sorted by ID
-		next if ($last_feature_id == $oligo_feature_id);
-		$last_feature_id = $oligo_feature_id;
+    }else{
+      #This assumes logical association, confer in store method?
+      $rset->add_table_id($table_id);
+    }
+  }
 
-		# Get the analysis object
-		my $analysis = $analysis_hash{$analysis_id} ||= $aa->fetch_by_dbID($analysis_id);
-
-		# Get the slice object
-		my $slice = $slice_hash{'ID:'.$seq_region_id};
-
-		if (!$slice) {
-			$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
-			$slice_hash{'ID:'.$seq_region_id} = $slice;
-			$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
-			$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
-		}
-
-		my $sr_name = $sr_name_hash{$seq_region_id};
-		my $sr_cs   = $sr_cs_hash{$seq_region_id};
-
-		# Remap the feature coordinates to another coord system if a mapper was provided
-		if ($mapper) {
-
-			throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-
-			($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-				= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-
-			# Skip features that map to gaps or coord system boundaries
-			next FEATURE if !defined $sr_name;
-
-			# Get a slice in the coord system we just mapped to
-			if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
-				$slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
-					||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
-			} else {
-				$slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
-					||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
-			}
-		}
-
-		# If a destination slice was provided convert the coords
-		# If the destination slice starts at 1 and is forward strand, nothing needs doing
-		if ($dest_slice) {
-			unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-				if ($dest_slice_strand == 1) {
-					$seq_region_start = $seq_region_start - $dest_slice_start + 1;
-					$seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
-				} else {
-					my $tmp_seq_region_start = $seq_region_start;
-					$seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-					$seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-					$seq_region_strand      *= -1;
-				}
-			}
-
-			# Throw away features off the end of the requested slice
-			next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
-				|| ( $dest_slice_sr_name ne $sr_name );
-
-			$slice = $dest_slice;
-		}
-
-		push @features, $self->_new_fast( {
-						   'start'         => $seq_region_start,
-						   'end'           => $seq_region_end,
-						   'strand'        => $seq_region_strand,
-						   'slice'         => $slice,
-						   'analysis'      => $analysis,
-						   'adaptor'       => $self,
-						   'dbID'          => $oligo_feature_id,
-						   'mismatchcount' => $mismatches,
-						   'cigar_line'    => $cigar_line,
-						   '_probe_id'     => $oligo_probe_id,
-						   #'probeset'      => $probeset,#???do we need this?
-						   '_probe_name'   => $oligo_probe_name
-						  } );
-	}
-
-	return \@features;
+  return \@rsets;
 }
+
 
 =head2 _new_fast
 
-  Args       : Hashref to be passed to OligoFeature->new_fast()
+  Args       : Hashref to be passed to ResultSet->new_fast()
   Example    : None
   Description: Construct an OligoFeature object using quick and dirty new_fast.
   Returntype : Bio::EnsEMBL::Funcgen::OligoFeature
@@ -478,21 +336,19 @@ sub _objs_from_sth {
 =cut
 
 sub _new_fast {
-	my $self = shift;
+  my $self = shift;
 	
-	my $hash_ref = shift;
-	return Bio::EnsEMBL::Funcgen::OligoFeature->new_fast($hash_ref);
+  my $hash_ref = shift;
+  return Bio::EnsEMBL::Funcgen::ResultSet->new_fast($hash_ref);
 }
 
 =head2 store
 
-  Args       : List of Bio::EnsEMBL::Funcgen::OligoFeature objects
-  Example    : $ofa->store(@features);
-  Description: Stores given OligoFeature objects in the database. Should only
-               be called once per feature because no checks are made for
-			   duplicates. Sets dbID and adaptor on the objects that it stores.
+  Args       : List of Bio::EnsEMBL::Funcgen::ResultSet objects
+  Example    : $rsa->store(@rsets);
+  Description: Stores or updates previously stored ResultSet objects in the database. 
   Returntype : None
-  Exceptions : Throws if a list of OligoFeature objects is not provided or if
+  Exceptions : Throws if a List of ResultSet objects is not provided or if
                an analysis is not attached to any of the objects
   Caller     : General
   Status     : At Risk
@@ -500,72 +356,70 @@ sub _new_fast {
 =cut
 
 sub store{
-	my ($self, @ofs) = @_;
+  my ($self, @rsets) = @_;
 
-	if (scalar(@ofs) == 0) {
-		throw('Must call store with a list of OligoFeature objects');
-	}
+  throw("Must provide a list of ResultSet objects") if(scalar(@rsets == 0));
 
-	my $sth = $self->prepare("
-		INSERT INTO oligo_feature (
-			seq_region_id,  seq_region_start,
-			seq_region_end, seq_region_strand,
-            coord_system_id,
-			oligo_probe_id,  analysis_id,
-			mismatches, cigar_line
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+
+  my (%analysis_hash);
+  
+
+ 
+  my $sth = $self->prepare("
+		INSERT INTO result_set (
+			analysis_id,  table_id, table_name
+		) VALUES (?, ?, ?)
 	");
+  
+  my $db = $self->db();
+  my $analysis_adaptor = $db->get_AnalysisAdaptor();
 
-	my $db = $self->db();
-	my $analysis_adaptor = $db->get_AnalysisAdaptor();
+ FEATURE: foreach my $rset (@rsets) {
+    
+    if( ! ref $rset || ! $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet') ) {
+      throw('Must be an ResultSet object to store');
+    }
+    
 
-	FEATURE: foreach my $of (@ofs) {
 
-		if( !ref $of || !$of->isa('Bio::EnsEMBL::Funcgen::OligoFeature') ) {
-			throw('Feature must be an OligoFeature object');
-		}
+    if ( $rset->is_stored($db) ) {
+      throw('ResultSet [' . $rset->dbID() . '] is already stored in the database\nResultSetAdaptor does not yet accomodate updating ResultSets');
+      #would need to retrive stored result set and update table_ids
+    }
+    
+    if ( ! defined $rset->analysis() ) {
+      throw('An analysis must be attached to the ResultSet objects to be stored.');
+    }
 
-		if ( $of->is_stored($db) ) {
-			warning('OligoFeature [' . $of->dbID() . '] is already stored in the database');
-			next FEATURE;
-		}
+    # Store the analysis if it has not been stored yet
+    if ( ! $rset->analysis->is_stored($db) ) {
+      warn("Will this not keep storing the same analysis if we keep passing the same unstored analysis?");
+      $analysis_adaptor->store( $rset->analysis() );
+    }
 
-		if ( !defined $of->analysis() ) {
-			throw('An analysis must be attached to the OligoFeature objects to be stored.');
-		}
 
-		# Store the analysis if it has not been stored yet
-		if ( !$of->analysis->is_stored($db) ) {
-			$analysis_adaptor->store( $of->analysis() );
-		}
+   
+    foreach my $table_id(@{$rset->table_ids()}){
+	
+      $sth->bind_param(1, $rset->analysis->dbID(),        SQL_INTEGER);
+      $sth->bind_param(2, $table_id,                      SQL_INTEGER);
+      $sth->bind_param(3, $rset->table_name(),            SQL_VARCHAR);
+          
+      $sth->execute();
+    }
 
-		my $original = $of;
-		my $seq_region_id;
-		($of, $seq_region_id) = $self->_pre_store($of);
+    $rset->dbID( $sth->{'mysql_insertid'} );
+    $rset->adaptor($self);
 
-		$sth->bind_param(1, $seq_region_id,        SQL_INTEGER);
-		$sth->bind_param(2, $of->start(),          SQL_INTEGER);
-		$sth->bind_param(3, $of->end(),            SQL_INTEGER);
-		$sth->bind_param(4, $of->strand(),         SQL_TINYINT);
-		$sth->bind_param(5, $of->coord_system_id(),SQL_INTEGER);
-		$sth->bind_param(6, $of->probe->dbID(),    SQL_INTEGER);
-		$sth->bind_param(7, $of->analysis->dbID(), SQL_INTEGER);
-		$sth->bind_param(8, $of->mismatchcount(),  SQL_TINYINT);
-		$sth->bind_param(9, $of->cigar_line(),     SQL_VARCHAR);
+  }
 
-		$sth->execute();
-
-		$original->dbID( $sth->{'mysql_insertid'} );
-		$original->adaptor($self);
-	}
-
-	return \@ofs
+  return \@rsets
 }
 
 =head2 list_dbIDs
 
   Args       : None
-  Example    : my @feature_ids = @{$ofa->list_dbIDs()};
+  Example    : my @rsets_ids = @{$rsa->list_dbIDs()};
   Description: Gets an array of internal IDs for all OligoFeature objects in
                the current database.
   Returntype : List of ints
@@ -578,7 +432,7 @@ sub store{
 sub list_dbIDs {
 	my $self = shift;
 	
-	return $self->_list_dbIDs('oligo_feature');
+	return $self->_list_dbIDs('result_set');
 }
 
 # All the results methods may be moved to a ResultAdaptor

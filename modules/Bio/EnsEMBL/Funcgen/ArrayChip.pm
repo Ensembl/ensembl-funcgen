@@ -1,0 +1,159 @@
+#
+# Ensembl module for Bio::EnsEMBL::Funcgen::ArrayChip
+#
+# You may distribute this module under the same terms as Perl itself
+
+=head1 NAME
+
+Bio::EnsEMBL::Funcgen::ArrayChip - A simple module to represent the concept/template of 
+a chip/slide within an array,  of which the physical manifestation is an ExperimentalChip.
+
+=head1 SYNOPSIS
+
+use Bio::EnsEMBL::Funcgen::ArrayChip;
+
+my $ec = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							 -ARRAY_ID  => $array->dbID(),
+							 -NAME      => $desc,
+                                                         -DESIGN_ID => $design_id,
+							 );
+
+#add more methods here?
+
+
+=head1 DESCRIPTION
+
+An ArrayChip object represent the concept of an array chip/slide withing a given array/chipset.
+The data for ArrayChips is stored in the array_chip table.
+
+
+
+=head1 AUTHOR
+
+This module was created by Nathan Johnson.
+
+This module is part of the Ensembl project: http://www.ensembl.org/
+
+=head1 CONTACT
+
+Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+
+=head1 METHODS
+
+=cut
+
+use strict;
+use warnings;
+
+
+package Bio::EnsEMBL::Funcgen::ArrayChip;
+
+
+use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Storable;
+
+use vars qw(@ISA);
+@ISA = qw(Bio::EnsEMBL::Storable);
+
+
+=head2 new
+
+  Arg [-ARRAY_ID]  : int - the dbID of the parent array
+  Arg [-DESIGN_ID] : string - the unqiue deisng ID defined by the array vendor
+  Arg [-NAME]      : string - the name of the array chip
+
+
+  Example    : my $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							 -ARRAY_ID  => $array->dbID(),
+							 -NAME      => $desc,
+                                                         -DESIGN_ID => $design_id,
+							 );								       );
+  Description: Creates a new Bio::EnsEMBL::Funcgen::ArrayChip object.
+  Returntype : Bio::EnsEMBL::Funcgen::ArrayChip
+  Exceptions : None ? should throw if mandaotry params not set
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub new {
+  my $caller = shift;
+
+  my $class = ref($caller) || $caller;
+  my $self = $class->SUPER::new(@_);
+
+  my ($array_id, $name, $design_id)
+    = rearrange( ['ARRAY_ID', 'NAME', 'DESIGN_ID'], @_ );
+  
+  throw("Must define a name($name) and design_id($design_id)") if(! $name || ! $design_id);
+
+
+  #mandatory params all but design_id?
+
+  $self->array_id($array_id)  if defined $array_id;
+  $self->name($name);
+  $self->design_id($design_id);
+
+  return $self;
+}
+
+
+=head2 array_id
+
+  Arg [1]    : (optional) int - the parent array dbID
+  Example    : my $array_id = $array_chip->array_id();
+  Description: Getter, setter array_id attribute.
+  Returntype : int
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub array_id {
+  my $self = shift;
+  $self->{'array_id'} = shift if @_;
+  return $self->{'array_id'};
+}
+
+=head2 name
+
+  Arg [1]    : (optional) string - the array chip name
+  Example    : my $ac_name = $array_chip->name();
+  Description: Getter, setter for the name attribute
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub name {
+  my $self = shift;
+  $self->{'name'} = shift if @_;
+  return $self->{'name'};
+}
+
+=head2 design_id
+
+  Arg [1]    : (optional) string - the array_chip unique design id as deinfed by the array vendor
+  Example    : my $design_id = $array_chip->design_id();
+  Description: Getter, setter for the design_id attribute
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub design_id {
+  my $self = shift;
+  $self->{'design_id'} = shift if @_; 
+  return $self->{'design_id'};
+}
+
+
+
+1;
+

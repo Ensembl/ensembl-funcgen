@@ -1,0 +1,314 @@
+#
+# Ensembl module for Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor
+#
+# You may distribute this module under the same terms as Perl itself
+
+=head1 NAME
+
+Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor - A database adaptor for fetching and
+storing Funcgen FeatureType objects.
+
+=head1 SYNOPSIS
+
+my $ft_adaptor = $db->get_FeatureTypeAdaptor();
+
+my $feature_type = $ft_adaptor->fetch_by_name("H3K4me3");
+
+
+=head1 DESCRIPTION
+
+The FeatureTypeAdaptor is a database adaptor for storing and retrieving
+Funcgen FeatureType objects.
+
+=head1 AUTHOR
+
+This module was created by Nathan Johnson.
+
+This module is part of the Ensembl project: http://www.ensembl.org/
+
+=head1 CONTACT
+
+Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+
+=head1 METHODS
+
+=cut
+
+use strict;
+use warnings;
+
+package Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor;
+
+use Bio::EnsEMBL::Utils::Exception qw( warning throw );
+use Bio::EnsEMBL::Funcgen::FeatureType;
+use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+
+use vars qw(@ISA);
+
+
+#May need to our this?
+@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+
+=head2 fetch_by_name
+
+  Arg [1]    : string - name of FeatureType
+  Arg [1]    : optional string - class of FeatureType
+  Example    : my $ft = $ft_adaptor->fetch_by_name('H3K4me2');
+  Description: Does what it says on the tin
+  Returntype : Bio::EnsEMBL::Funcgen::Channel object
+  Exceptions : Throws if more than one FeatureType for a given name found
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_by_name{
+  my ($self, $name, $class) = @_;
+
+  throw("Must specify a FeatureType name") if(! $name);
+
+
+  my $sql = "SELECT feature_type_id
+	     FROM feature_type
+	     WHERE name = ?";
+
+  $sql .= " AND class = ?" if $class;
+
+  my $sth = $self->prepare($sql);
+  $sth->bind_param(1, $name,   SQL_VARCHAR);
+  $sth->bind_param(2, $class,  SQL_VARCHAR) if $class;
+
+  #can we do a generic fetch here?
+
+  $sth->execute();
+  my @ft_ids = map $_ = "@$_", @{$sth->fetchall_arrayref()};
+
+  if(scalar @ft_ids >1){
+    $class ||= "";
+    throw("Found more than one FeatureType:$class $name");
+  }
+
+
+  return ($ft_ids[0]) ? $self->fetch_by_dbID($ft_ids[0]) : undef;
+}
+
+
+
+
+=head2 fetch_by_ExperimentalChip
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Example    : my $ft = $ft_adaptor->fetch_by_ExperimentalChip($echip);
+  Description: Returns FeatureType associated with a given ExperimentalChip
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : Throws if no ExperimentalChip passed (or if more than one FeatureType returned?)
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_by_ExperimentalChip{
+  my ($self, $ec) = @_;
+
+  
+  throw("Must provide an ExperimentChip object") if(! $ec->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip'));
+
+  my $constraint = "eft.experimental_chip_id ='".$ec->dbID()."' AND eft.feature_type_id=ft.feature_type_id";
+  warn "Do we need tho throw here if we get more than one returned?\n";
+
+  return $self->generic_fetch($constraint);
+}
+
+=head2 fetch_all_by_Experiment
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
+  Example    : my @chans = @{$ec_a->fetch_all_by_Experimental($exp);
+  Description: Returns all channels associated with a given Experiment
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureType objects
+  Exceptions : Throws if no Experiment defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Experiment{
+  my ($self, $exp) = @_;
+
+  throw("Must provide an Experiment object") if(! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'));
+
+  my (%feature_types);
+
+  foreach my $ec(@{$exp->get_experimental_chips()}){
+    #this will arbitrarily take the first, should only ever be one for an ExperimentalChip
+    my ($ft) = @{$self->fetch_by_ExperimentalChip($ec)};
+
+
+    throw("No FeatureType defined for $ec ".$ec->dbID());
+
+    $feature_types{$ft->dbID()} = $ft;
+  }
+
+
+  return [ values %feature_types ];
+}
+
+=head2 _tables
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns the names and aliases of the tables to use for queries.
+  Returntype : List of listrefs of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _tables {
+  my $self = shift;
+	
+  return (
+	  ['feature_type', 'ft'],
+	  ['experimental_feature_type', 'eft']
+	 );
+}
+
+=head2 _columns
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns a list of columns to use for queries.
+  Returntype : List of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _columns {
+  my $self = shift;
+	
+  return qw( ft.feature_type_id ft.name ft.class ft.description);
+}
+
+=head2 _objs_from_sth
+
+  Arg [1]    : DBI statement handle object
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Creates Channel objects from an executed DBI statement
+			   handle.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureType objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _objs_from_sth {
+	my ($self, $sth) = @_;
+	
+	my (@result, $ft_id, $name, $class, $desc);
+	
+	$sth->bind_columns(\$ft_id, \$name, \$class, \$desc);
+	
+	while ( $sth->fetch() ) {
+	  my $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(
+							     -dbID        => $ft_id,
+							     -NAME        => $name,
+							     -CLASS       => $class,
+							     -DESCRIPTION => $desc,
+							     -ADAPTOR     => $self,
+							    );
+	  
+	  push @result, $ftype;
+	  
+	}
+	return \@result;
+}
+
+
+
+=head2 store
+
+  Args       : List of Bio::EnsEMBL::Funcgen::FeatureType objects
+  Example    : $chan_a->store($c1, $c2, $c3);
+  Description: Stores given Channel objects in the database. Should only be
+               called once per array because no checks are made for duplicates.
+			   Sets dbID and adaptor on the objects that it stores.
+  Returntype : None
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub store {
+  my $self = shift;
+  my @args = @_;
+  
+  
+  my $sth = $self->prepare("
+			INSERT INTO feature_type
+			(name, class, description)
+			VALUES (?, ?, ?)");
+    
+  
+  
+  foreach my $ft (@args) {
+    if ( ! $ft->isa('Bio::EnsEMBL::Funcgen::FeatureType') ) {
+      warning('Can only store FeatureType objects, skipping $ft');
+      next;
+    }
+    
+    if (!( $ft->dbID() && $ft->adaptor() == $self )){
+      
+      #Check for previously stored FeatureType
+      my $s_ft = $self->fetch_by_name($ft->name(), $ft->class());
+	
+      if(! $s_ft){
+	$sth->bind_param(1, $ft->name(),           SQL_VARCHAR);
+	$sth->bind_param(2, $ft->class(),          SQL_VARCHAR);
+	$sth->bind_param(3, $ft->description(),    SQL_VARCHAR);
+	
+	$sth->execute();
+	my $dbID = $sth->{'mysql_insertid'};
+	$ft->dbID($dbID);
+	$ft->adaptor($self);
+      }
+      else{
+	$ft = $s_ft;
+	warn("Using previously stored FeatureType (".$ft->class().":".$ft->name()."\n"); 
+      }
+    }
+  }
+
+  return \@args;
+}
+
+
+=head2 list_dbIDs
+
+  Args       : None
+  Example    : my @array_ids = @{$ec_a->list_dbIDs()};
+  Description: Gets an array of internal IDs for all ExperimentalChip objects in the
+               current database.
+  Returntype : List of ints
+  Exceptions : None
+  Caller     : ?
+  Status     : At risk
+
+=cut
+
+sub list_dbIDs {
+    my ($self) = @_;
+	
+    return $self->_list_dbIDs('feature_type');
+}
+
+
+
+1;
+
