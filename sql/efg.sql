@@ -83,23 +83,23 @@ CREATE TABLE `array_chip` (
 
 
 --
--- Table structure for table `oligo_feature`
+-- Table structure for table `probe_feature`
 --
 
-DROP TABLE IF EXISTS `oligo_feature`;
-CREATE TABLE `oligo_feature` (
-   `oligo_feature_id` int(11) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `probe_feature`;
+CREATE TABLE `probe_feature` (
+   `probe_feature_id` int(11) unsigned NOT NULL auto_increment,
    `seq_region_id` int(11) unsigned NOT NULL default '0',
    `seq_region_start` int(11) NOT NULL default '0',
    `seq_region_end` int(11) NOT NULL default '0',
    `seq_region_strand` tinyint(4) NOT NULL default '0', 
    `coord_system_id` int(10) unsigned NOT NULL default '0',
-   `oligo_probe_id` int(11) unsigned NOT NULL default '0',
+   `probe_id` int(11) unsigned NOT NULL default '0',
    `analysis_id` int(11) unsigned NOT NULL default '0',	
    `mismatches` tinyint(4) NOT NULL default '0',
    `cigar_line` text,
-   PRIMARY KEY  (`oligo_feature_id`),
-   KEY `oligo_probe_idx` (`oligo_probe_id`),
+   PRIMARY KEY  (`probe_feature_id`),
+   KEY `probe_idx` (`probe_id`),
    KEY `seq_region_idx` (`seq_region_id`, `seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -116,16 +116,16 @@ CREATE TABLE `oligo_feature` (
 
 
 --
--- Table structure for table `oligo_probe_set`
+-- Table structure for table `probe_set`
 -- 
 
-DROP TABLE IF EXISTS `oligo_probe_set`;
-CREATE TABLE `oligo_probe_set` (
-   `oligo_probe_set_id` int(11) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `probe_set`;
+CREATE TABLE `probe_set` (
+   `probe_set_id` int(11) unsigned NOT NULL auto_increment,
    `name` varchar(20) NOT NULL default '',
    `size` smallint(6) unsigned NOT NULL default '0',
    `family` varchar(20) default NULL,
-   PRIMARY KEY  (`oligo_probe_set_id`)
+   PRIMARY KEY  (`probe_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --- Now ancillary/optional table
@@ -137,19 +137,19 @@ CREATE TABLE `oligo_probe_set` (
 
 
 ---
--- Table structure for table `oligo_probe`
+-- Table structure for table `probe`
 --
 
-DROP TABLE IF EXISTS `oligo_probe`;
-CREATE TABLE `oligo_probe` (
-   `oligo_probe_id` int(11) unsigned NOT NULL auto_increment,
-   `oligo_probe_set_id` int(11) unsigned default NULL,
+DROP TABLE IF EXISTS `probe`;
+CREATE TABLE `probe` (
+   `probe_id` int(11) unsigned NOT NULL auto_increment,
+   `probe_set_id` int(11) unsigned default NULL,
    `name` varchar(40) NOT NULL default '',
    `length` smallint(6) unsigned NOT NULL default '0',
    `array_chip_id` int(11) unsigned NOT NULL default '0',
    `class` varchar(20) default NULL,
-    PRIMARY KEY  (`oligo_probe_id`, `name`),
-    KEY `probe_set_idx` (`oligo_probe_set_id`)
+    PRIMARY KEY  (`probe_id`, `name`),
+    KEY `probe_set_idx` (`probe_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -170,7 +170,7 @@ CREATE TABLE `oligo_probe` (
 
 
 --- pair_index table   `pair_index` int(11) unsigned NOT NULL default '0',
---- joint index on oligo_probe_ids
+--- joint index on probe_ids
 
 
 
@@ -268,14 +268,21 @@ CREATE TABLE `feature_type` (
 --- Have load ontology tool script?
 
 
--- Table structure for table `result_feature`
+-- Table structure for table `data_set`
 
-DROP TABLE IF EXISTS `result_feature`;
-CREATE TABLE `result_feature` (
+DROP TABLE IF EXISTS `data_set`;
+CREATE TABLE `data_set` (
+   `data_set_id` int(11) unsigned NOT NULL,
    `result_set_id` int(11) unsigned NOT NULL,
    `feature_set_id` int(11) unsigned NOT NULL,
-   PRIMARY KEY  (`result_set_id`, `feature_set_id`)
+   PRIMARY KEY  (`data_set_id`, `result_set_id`, `feature_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+-- PRIMARY KEY is just to impose uniqueness
+-- any more keys?  Primary access would be through result_set_id to test if it appears as displayable in status, but this will just be a straight list of all
+-- so maybe we can put that at the end of the index and the most used for query at the start?
+
 
 -- Link table to provide many to one relationships:
 --	target/feature < experiment (via experimental_chip_id)
@@ -315,13 +322,13 @@ CREATE TABLE `result_feature` (
 DROP TABLE IF EXISTS `result`;
 CREATE TABLE `result` (
    `result_id` int(11) unsigned NOT NULL auto_increment,
-   `oligo_probe_id` int(11) unsigned default NULL,
+   `probe_id` int(11) unsigned default NULL,
    `score` double default NULL,
    `analysis_id` int(11) unsigned default NULL,
    `table_id` int(11) unsigned default NULL,
    `table_name` varchar(20) default NULL,
    PRIMARY KEY  (`result_id`),
-   KEY `oligo_probe_idx` (`oligo_probe_id`),
+   KEY `probe_idx` (`probe_id`),
    KEY `table_name_id_idx` (`table_name`, `table_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000  AVG_ROW_LENGTH=40;
 
@@ -342,15 +349,19 @@ CREATE TABLE `result_set` (
    `analysis_id` int(11) unsigned default NULL,
    `table_id` int(11) unsigned default NULL,
    `table_name` varchar(20) default NULL,
-   `chip_set_id` smallint(6) unsigned default NULL,
-   PRIMARY KEY  (`result_set_id`),
-   KEY `table_name_id_idx` (`table_name`, `table_id`),
-   KEY `chip_set_idx` (`chip_set_id`)
+   PRIMARY KEY  (`result_set_id`, `table_name`, `table_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---- Need to implement this
+--- THe problem is only link features to chip sets, not individual chips, therefore result_group_id needs to be NR with respect to ec's within same set. Analysis_id delineates result_groups of the chip_set(tablename/id)
+--- More keys?  Above key only defines uniqueness and linking from result_set, do we need exp > result_group query?
 
+--- > 1 chip set i.e. duplicates are linked to one(or many) result sets(feature_sets)
+--- but each can have a displayable status set, but only in it's own context i.e. you can have it displayed in one set and not in another.
 
+--- Now we have problem of channel result sets:
+---	chip set values still valid
+---     would be nice to be able to extract chip_set to it's own table/experimental_chip
+---     move chip_set_id to experimental_chip? result_group_id effectively denotes chip set, but needs to use ec.chip_set_id as reference
 
 
 --
@@ -366,7 +377,7 @@ CREATE TABLE `predicted_feature` (
   `seq_region_strand` tinyint(1) NOT NULL default '0',
   `coord_system_id` int(11) unsigned NOT NULL default '0',
   `feature_type_id` int(11) unsigned NOT NULL default '0',
-  `feature_set_id` int(11) unsigned NOT NULL default '0',	
+  `feature_group_id` int(11) unsigned NOT NULL default '0',	
   `display_label` varchar(60) NOT NULL default '',
   `analysis_id` int(11) unsigned NOT NULL default '0',
   `score` double default NULL,
@@ -418,7 +429,7 @@ CREATE TABLE `experimental_chip` (
    `array_chip_id` int(11) unsigned default NULL,
    `feature_type_id` int(11) unsigned default NULL,
    `cell_type_id` int(11) unsigned default NULL,
-   `description` varchar(255) default NULL,
+   `chip_set_id` int(11) unsigned default '0',
    PRIMARY KEY  (`experimental_chip_id`),
    KEY `experiment_idx` (`experiment_id`),
    KEY `feature_type_idx` (`feature_type_id`),
@@ -426,7 +437,8 @@ CREATE TABLE `experimental_chip` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- add cell line key?
+
+-- add cell type key?
 -- composite unique key onchi/exp/arra_chip ids?
 --Should handle re-usage of physical chip
 --Rename slide? or have array_chip, and experimental_chip
@@ -585,7 +597,7 @@ CREATE TABLE `meta_coord` (
 -- Change max lenght of oligo?
 
 insert into meta_coord values("predicted_feature", 1, 147);
-insert into meta_coord values("oligo_feature", 1, 50);
+insert into meta_coord values("probe_feature", 1, 50);
 
 --
 -- Table structure for table `coord_system`
