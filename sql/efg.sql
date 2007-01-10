@@ -258,7 +258,7 @@ CREATE TABLE `feature_type` (
    `class` varchar(40) default NULL,
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`feature_type_id`),
-   KEY `feature_type_name_class_idx` (`name`, `class`)
+   UNIQUE KEY `name__class_idx` (`name`, `class`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -471,10 +471,12 @@ CREATE TABLE `cell_type` (
    `cell_type_id` int(11) unsigned NOT NULL auto_increment,
    `name`  varchar(120) default NULL,
    `display_label` varchar(20) default NULL,
-   PRIMARY KEY  (`cell_type_id`)
+   PRIMARY KEY  (`cell_type_id`),
+   UNIQUE KEY (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
+-- type? enum Tissue? Line?
+-- xref to coriell?
 
 --
 -- Table structure for table `experimental_variable`

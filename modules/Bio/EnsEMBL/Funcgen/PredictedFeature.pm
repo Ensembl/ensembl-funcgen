@@ -73,16 +73,14 @@ use vars qw(@ISA);
   Arg [-dbID]         : (optional) int - Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
   Example    : my $feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
-	
-									  -SLICE         => $chr_1_slice,
-									  -START         => 1_000_000,
-									  -END           => 1_000_024,
-									  -STRAND        => -1,
-									  -DISPLAY_LABEL => $text,
-									  -ANALYSIS_ID   => $anal_id,
-									  -SCORE         => $score,
-                                                                          -EXPERIMENT_IDS=> \@exp_ids,
-									 ); 
+										                                  -SLICE         => $chr_1_slice,
+									                                      -START         => 1_000_000,
+									                                      -END           => 1_000_024,
+									                                      -STRAND        => -1,
+									                                      -DISPLAY_LABEL => $text,
+									                                      -SCORE         => $score,
+                                                                          -FEATURE_SET   => $fset,
+                                                                         );
 
 
   Description: Constructor for PredictedFeature objects.
@@ -100,22 +98,27 @@ sub new {
   
   my $self = $class->SUPER::new(@_);
   
-  my ($anal_id, $display_label, $coord_sys_id, $score, $ft_id, $exp_ids)
-    = rearrange(['ANALYSIS_ID', 'DISPLAY_LABEL', 'COORD_SYSTEM_ID', 'SCORE', 'FEATURE_TYPE_ID', 'EXPERIMENT_IDS'], @_);
+  my ($display_label, $coord_sys_id, $score, $fset)
+    = rearrange(['DISPLAY_LABEL', 'COORD_SYSTEM_ID', 'SCORE', 'FEATURE_SET'], @_);
   
+  #check mandatory params here
+
+  if(! ($feature_set && $feature_set->isa("Bio::EnsEMBL::Funcgen::FeatureSet")){
+	  throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
+  }
+
   $self->score($score);
   $self->display_label($display_label);
-  $self->analysis_id($anal_id);
-  $self->feature_type_id($ft_id);
-  $self->experiment_ids(@$exp_ids);
+  $self->feature_set($fset);
+  #$self->experiment_ids(@$exp_ids);
 
 
-	#do we need to validate this against the db?  Grab from slice and create new if not present? 
-	#Will this be from the dnadb? Or will this work differently for PredictedFeatures?
+  #do we need to validate this against the db?  Grab from slice and create new if not present? 
+  #Will this be from the dnadb? Or will this work differently for PredictedFeatures?
 	
-	$self->coord_system_id($coord_sys_id);
+  $self->coord_system_id($coord_sys_id);
 	
-	return $self;
+  return $self;
 }
 
 =head2 new_fast
@@ -186,8 +189,8 @@ sub display_label {
     #need to go with one or other, or can we have both, split into diplay_name and display_label?
     
     if(! $self->{'display_label'}  && $self->adaptor()){
-      $self->{'display_label'} = $self->type->name()." -";
-      $self->{'display_label'} .= " ".$self->cell_line->display_name() if $self->cell_line->display_name();
+      $self->{'display_label'} = $self->feature_type->name()." -";
+      $self->{'display_label'} .= " ".$self->cell_type->display_name() if $self->cell_type->display_name();
       $self->{'display_label'} .= " Enriched Sites";
     }
 	
@@ -218,43 +221,6 @@ sub coord_system_id {
 #All the following can be moved/mirrored in FeatureSet
 #data will be in feature set table
 
-=head2 analysis_id
-
-  Args       : int - analysis id 
-  Example    : my $anal_id = $feature->analysis_id();
-  Description: Getter/Setter for the analysis_id attribute for this feature.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-             
-=cut
-
-sub analysis_id {
-    my $self = shift;
-
-	$self->{'analysis_id'} = shift if @_;
-	
-    return $self->{'analysis_id'};
-}
-
-=head2 feature_type_id
-
-  Args       : int - feature type id
-  Example    : my $target_id = $feature->feature_type_id();
-  Description: Getter/Setter for the feature_type_id attribute for this feature.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : Medium
-             
-=cut
-
-sub feature_type_id {
-  my $self = shift;
-  $self->{'feature_type_id'} = shift if @_;
-  return $self->{'feature_type_id'};
-}
 
 =head2 experiment_ids
 
@@ -268,28 +234,50 @@ sub feature_type_id {
              
 =cut
 
-sub experiment_ids {
-  my ($self, @ids) = @_;
+#sub experiment_ids {
+#  my ($self, @ids) = @_;
 
-  $self->{'experiment_ids'} = \@ids if @ids;
+#  $self->{'experiment_ids'} = \@ids if @ids;
 
-  return $self->{'experiment_ids'};
-}
+#  return $self->{'experiment_ids'};
+#}
 
 
-#Hacky placeholder mehtod as I haven't written FeatureType or FeatureTypeAdaptor yet
+=head2 cell_type
 
-=head2 type
-
-  Args       : Bio::EnsEMBL::Funcgen::FeatureType
-  Example    : my $type_name = $feature->type()->name();
-  Description: Getter/Setter for the type attribute for this feature.
-  Returntype : int
+  Example    : my $cell_name = $pfeature->cell_type()->name();
+  Description: Getter for the cell_type attribute for this feature.
+  Returntype : Bio::EnsEMBL::Funcgen:CellType
   Exceptions : None
   Caller     : General
   Status     : At risk
-             
+
 =cut
+
+sub cell_type{
+	my $self = shift;
+
+	return $self->feature_set->cell_type();
+}
+
+
+=head2 feature_type
+
+  Example    : my $type_name = $pfeature->feature_type()->name();
+  Description: Getter for the type attribute for this feature.
+  Returntype : Bio:EnsEMBL::Funcgen::FeatureType
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub feature_type{
+	my $self = shift;
+
+	return $self->feature_set->feature_type();
+
+}
 
 
 #can be moved/mirrored to/in feature set?

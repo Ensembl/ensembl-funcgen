@@ -1,7 +1,8 @@
-#!/usr/local/ensembl/bin/perl -w
+#!/opt/local/bin/perl -w
+
+###!/usr/local/ensembl/bin/perl -w
 
 
-###!/opt/local/bin/perl -w
 
 
 =head1 NAME

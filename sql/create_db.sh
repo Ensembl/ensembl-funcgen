@@ -5,6 +5,7 @@
 
 #MYSQL_ARGS=${MYSQL_ARGS:="-uensadmin"}" -p$2"
 
+
 MYSQL_ARGS="-hens-genomics1 -uensadmin -P3306 -p${2}"
 
 echo "Connecting using $MYSQL_ARGS"

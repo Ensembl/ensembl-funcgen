@@ -209,8 +209,10 @@ sub experiment_id {
 sub analysis {
   my $self = shift;
 	
-  $self->{'analysis'} = shift if(@_);
-  #checking for Analysis done in store
+  if(@_){
+	  throw("Must pass a valid Bio::EnsEMBL::Analysis object") if (! $_[0]->isa("Bio::EnsEMBL::Analysis"));
+	  $self->{'analysis'} = shift;
+  }
 		
   return $self->{'analysis'};
 }

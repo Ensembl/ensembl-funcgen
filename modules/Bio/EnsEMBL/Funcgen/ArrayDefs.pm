@@ -1047,7 +1047,7 @@ sub read_probe_data{
 							   #xref_id => $data[$hpos{'SEQ_ID'}],#Need to populate xref table
 						       );
 
-	  #should we store straight away or beuilf a probeset/probe/feature set, and then store and validate in turn?
+	  #should we store straight away or build a probeset/probe/feature set, and then store and validate in turn?
 	  #Store directly have separate method to validate and update?
 	  #would need to check if one exists before storing anyway, else we could potentially duplicate the same probe/probeset from a different array
 	  #remember for affy we need duplicate probe records with identical probe ids, probeset records unique across all arrays
@@ -1362,11 +1362,15 @@ sub get_probe_id_by_name{
 #  }
 #  else{#get from db
 
+
   if((! defined $self->{'_probe_map'}) || (! defined $self->{'_probe_map'}->{$name})){ 
-    my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
-    #print "Got probe $op with dbid ".$op->dbID()."\n";
-    #push @op_ids, $op->dbID();
-    $self->{'_probe_map'}{$name} = $op->dbID() if $op;
+	  my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
+
+	  #print "Got probe $op with dbid ".$op->dbID()."\n";
+	  #push @op_ids, $op->dbID();
+
+	  $self->{'_probe_map'}{$name} = $op->dbID() if $op;
+	  
   }
   
   #return \@op_ids;
@@ -1427,56 +1431,66 @@ sub read_results_data{
       $file_name = (scalar(@design_ids) > 1) ? $achip->name() : "All";  
       $fh = open_file("<", $self->get_def("results_dir")."/".$file_name."_pair.txt");
 
-      while($line = <$fh>){
-	$line =~ s/\r*\n//;
-    
-	if ($. == 1){
-	  #GENE_EXPR_OPTION	SEQ_ID	PROBE_ID	POSITION	43827_532	43827_635	43837_532	43837_635	46411_532	46411_635	46420_532	46420_635	47505_532	47505_635	47525_532	47525_635
-	  @header = split/\t/o, $line;
-	  
-	  for $i(0..$#header){
-	    $probe_elem = $i if($header[$i] eq "PROBE_ID");
-	    
-	    if($header[$i] =~ /[0-9]+_[0-9]+/){
-	      $first_result = $i;
-	      last;#assume all fields after first result, are result feilds
-	    }
-	  }
-	  next;
-	}
-	
-	@data = split/\t/o, $line;
-	
-	#could validate here against reulsts vs. number of channels
-	for $i($first_result..$#data){
-	  #multiple mappings????????????????????????????????????SHOULD ONLY HAVE ONE PID PER UNIQUE PROBE!!!!!
-	  #foreach my $pid(@{$self->get_probe_ids_by_name($data[$probe_elem])}){
-	  #import directly here?
-	  #print $r_out "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";	  
-	  #$self->db->insert_table_row("result", $pid, $data[$i], $anal_id, $self->get_channel($tmp)->dbID(), "channel");
-	  #Build multiple instert sql statement rather than executing once for each result?
-	  
 
-	  $cnt ++;
-	  
-	  #Need to change this get_channel call?
-	  ($tmp = $header[$i]) =~ s/1h_//;
+	  my @lines = <$fh>;
+	  close($fh);
 
-	  $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
-	  #}
-	}
+      #while($line = <$fh>){
+	  foreach $line(@lines){
+		  $line =~ s/\r*\n//;
+		  
+	#	  if ($. == 1){
+		  if ($line =~ /PROBE_ID/){#header
+			  
+			  #GENE_EXPR_OPTION	SEQ_ID	PROBE_ID	POSITION	43827_532	43827_635	43837_532	43837_635	46411_532	46411_635	46420_532	46420_635	47505_532	47505_635	47525_532	47525_635
+			  @header = split/\t/o, $line;
+			  
+			  for $i(0..$#header){
+				  $probe_elem = $i if($header[$i] eq "PROBE_ID");
+				  
+				  if($header[$i] =~ /[0-9]+_[0-9]+/){
+					  $first_result = $i;
+					  last;#assume all fields after first result, are result feilds
+				  }
+			  }
+			  next;
+		  }
+		  
+		  @data = split/\t/o, $line;
+		  
+		  #could validate here against reulsts vs. number of channels
+		  for $i($first_result..$#data){
+			  
+			  #multiple mappings????????????????????????????????????SHOULD ONLY HAVE ONE PID PER UNIQUE PROBE!!!!!
+			  #foreach my $pid(@{$self->get_probe_ids_by_name($data[$probe_elem])}){
+			  #print "Got $pid for ".$data[$probe_elem]."\n";
+			  
+			  $cnt ++;
+			  
+			  #Need to change this get_channel call?
+			  ($tmp = $header[$i]) =~ s/1h_//;
+			  
+			  #import directly here?
+			  #print $r_out "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
+			  
+			  #$self->db->insert_table_row("result", $pid, $data[$i], $anal_id, $self->get_channel($tmp)->dbID(), "channel");
+			  #Build multiple instert sql statement rather than executing once for each result?
+			  
+			  
+			  $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
+			  #}
+		  }
+		  
 
-
-	
-	if($cnt > 10000){
-	  $cnt = 0;
-	  print $r_out $r_string;
-	  $r_string ="";
-	  #could we fork here and import in the background?
-
-	}
-
-
+		  if($cnt > 10000){
+			  
+			  $cnt = 0;
+			  print $r_out $r_string;
+			  $r_string ="";
+			  #could we fork here and import in the background?
+		  }
+		  
+		  
       }
       
       #my $r_out = open_file(">", $self->get_dir("import")."/result.".$ac{'name'}.".txt");

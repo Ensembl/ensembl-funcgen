@@ -57,7 +57,7 @@ use vars qw(@ISA);
 
   Arg [1]    : Bio::EnsEMBL::Slice
   Arg [2]    : Bio::EnsEMBL::FeatureType
-  Arg [3]    : (optional) string - logic name
+  Arg [3]    : (optional) string - analysis logic name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $ofa->fetch_by_Slice_FeatureType($slice, $ft);
   Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
@@ -71,34 +71,104 @@ use vars qw(@ISA);
 sub fetch_all_by_Slice_FeatureType {
   my ($self, $slice, $type, $logic_name) = @_;
 	
-  throw('Need type as parameter') if ! $type->isa("Bio::EnsEMBL::FeatureType");
+
+  throw('Need type as parameter') if ! $type->isa("Bio::EnsEMBL::Funcgen::FeatureType");
   my $ft_id = $type->dbID();
-  my $constraint = qq( pf.feature_type_id = '$ft_id' );
   
+  my $constraint = qq( pf.feature_set_id = fs.feature_set_id AND fs.feature_type_id = '$ft_id');
+
+  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
+
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
- 
-=head2 fetch_all_by_Slice_experiment_id
+
+# Redefine BaseFeatureAdaptor method as analysis now abstracted to feature_set
+# Given a logic name and an existing constraint this will
+# add an analysis table constraint to the feature.  Note that if no
+# analysis_id exists in the columns of the primary table then no
+# constraint is added at all
+# DO WE HAVE TO CALL THIS EXPLICITLY in this adaptor, or will BaseAdaptor use redefined method?
+
+
+sub _logic_name_to_constraint {
+  my $self = shift;
+  my $constraint = shift;
+  my $logic_name = shift;
+
+  
+
+  return $constraint if (!$logic_name);
+
+
+  #make sure that an analysis_id exists in the primary table
+  #my ($prim_tab) = $self->_tables();
+  #my $prim_synonym = $prim_tab->[1];
+
+  #my $found_analysis=0;
+  #foreach my $col ($self->_columns) {
+  #  my ($syn,$col_name) = split(/\./,$col);
+  #  next if($syn ne $prim_synonym);
+  #  if($col_name eq 'analysis_id') {
+  #    $found_analysis = 1;
+  #    last;
+  #  }
+  #}
+
+  #if(!$found_analysis) {
+  #  warning("This feature is not associated with an analysis.\n" .
+  #          "Ignoring logic_name argument = [$logic_name].\n");
+  #  return $constraint;
+  #}
+
+  my $aa = $self->db->get_AnalysisAdaptor();
+  my $an = $aa->fetch_by_logic_name($logic_name);
+
+  if(! $an) {
+	  #warn or throw?
+	  warn("No analysis associated with logic_name $logic_name");
+	  return undef;
+  }
+
+  my $an_id = $an->dbID();
+
+  $constraint .= ' AND' if($constraint);
+  $constraint .= " feature_set.analysis_id = $an_id";
+  return $constraint;
+}
+
+
+
+=head2 fetch_all_by_Slice_Experiment
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : int - Experiment dbID
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Experiment
   Arg [3]    : (optional) string - logic name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_experiment_id($slice, "1");
+               my $features = $ofa->fetch_by_Slice_experiment_id($slice, $exp);
   Description: Retrieves a list of features on a given slice, specific for a given experiment.
   Returntype : Listref of Bio::EnsEMBL::PredictedFeature objects
-  Exceptions : Throws if no Target object provided
+  Exceptions : Throws if no Experiment object defined
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub fetch_all_by_Slice_experiment_id {
-  my ($self, $slice, $exp_id, $logic_name) = @_;
+sub fetch_all_by_Slice_Experiment {
+  my ($self, $slice, $exp, $logic_name) = @_;
 	
-  throw('Need to pass an experiment_id') if(! defined $exp_id);
-  my $constraint = qq( pf.predicted_feature_id = ep.predicted_feature_id AND ep.experiment_id=$exp_id );
+
+  if (! ($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment")){
+	  throw("Need to pass a valid Bio::EnsEMBL::Funcgen::Experiment");
+  }
+
+
+  throw("Need to write DatSet and ResultSet to track back to experiment");
+
+
+  my $constraint = qq( pf.feature_set_id = fs.feature_set_id AND ep.experiment_id=$exp_id );
   
+  $constraint = $self->_logic_name_to_constraint($contraint, $logic_name);
+
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
 
@@ -120,9 +190,9 @@ sub _tables {
   my $self = shift;
 	
   return (
-	  [ 'predicted_feature', 'pf' ],
-	  [ 'experiment_prediction', 'ep'],
-	 );
+		  [ 'predicted_feature', 'pf' ],
+		  [ 'feature_set', 'fs'],
+		 );
 			#target?
 }
 
@@ -143,11 +213,11 @@ sub _columns {
   my $self = shift;
   
   return qw(
-	    pf.predicted_feature_id  pf.seq_region_id
-	    pf.seq_region_start      pf.seq_region_end
-	    pf.seq_region_strand     pf.coord_system_id
-	    pf.feature_type_id       pf.display_label
-	    pf.analysis_id	     pf.score
+			pf.predicted_feature_id  pf.seq_region_id
+			pf.seq_region_start      pf.seq_region_end
+			pf.seq_region_strand     pf.coord_system_id
+			pf.feature_set_id        pf.display_label
+			pf.score
 	   );
 }
 
@@ -172,7 +242,7 @@ sub _columns {
 sub _default_where_clause {
   my $self = shift;
 	
-  #return 'pf.predicted_feature_id = ep.predicted_feature_id';
+  #return 'pf.feature_set_id = fs.feature_set_id';
 
   return;
 }
@@ -227,30 +297,35 @@ sub _objs_from_sth {
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
 	#Hence it should always be on the same coord system
-	my $aa = $self->db->get_AnalysisAdaptor();
+	#my $aa = $self->db->get_AnalysisAdaptor();
+	#my $ct_adaptor = $self->db->get_CellTypeAdaptor();
+	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
 	my @features;
-	my (%analysis_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
+	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
 	    $predicted_feature_id,  $seq_region_id,
-	    $seq_region_start,  $seq_region_end,
-	    $seq_region_strand, $cs_id,
-	    $ft_id,        $display_label,    
-	    $analysis_id,       $score,
+	    $seq_region_start,      $seq_region_end,
+	    $seq_region_strand,     $cs_id,
+	    $fset_id,               $display_label,
+	    $score,                 $analysis_id,
+		$ftype_id,              $cell_type_id
 	);
+
 	$sth->bind_columns(
-			   \$predicted_feature_id,  \$seq_region_id,
-			   \$seq_region_start,  \$seq_region_end,
-			   \$seq_region_strand, \$cs_id,
-			   \$ft_id,        \$display_label,
-			   \$analysis_id,		\$score,
-	);
+					   \$predicted_feature_id,  \$seq_region_id,
+					   \$seq_region_start,  \$seq_region_end,
+					   \$seq_region_strand, \$cs_id,
+					   \$fset_id,        \$display_label,
+					   \$score,          \$analysis_id,
+					   \$ftype_id,       \$cell_type_id
+					  );
 
 
 	#This needs doing properly!!
-	my $epsth = $self->prepare("SELECT experiment_id 
-                                    FROM experiment_prediction 
-                                    WHERE predicted_feature_id = ?");
+	#my $epsth = $self->prepare("SELECT experiment_id 
+    #                                FROM experiment_prediction 
+    #                                WHERE predicted_feature_id = ?");
 
 	my $asm_cs;
 	my $cmp_cs;
@@ -309,13 +384,18 @@ sub _objs_from_sth {
 	    $last_feature_id = $predicted_feature_id;
 	    
 	    # Get the analysis object
-	    my $analysis = $analysis_hash{$analysis_id} ||= $aa->fetch_by_dbID($analysis_id);
-	    
+		#$analysis_hash{$analysis_id} = $aa->fetch_by_dbID($analysis_id) if(! exists $analysis_hash{$analysis_id});
+		
+		#possiblity of circular reference here?
+		#Get the FeatureSet object
+		$fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
+
+   
 	    # Get the slice object
 	    my $slice = $slice_hash{'ID:'.$seq_region_id};
 	    
 	    if (!$slice) {
-	      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
+	      $slice                              = $sa->fetch_by_seq_region_id($seq_region_id);
 	      $slice_hash{'ID:'.$seq_region_id} = $slice;
 	      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
 	      $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
@@ -330,7 +410,7 @@ sub _objs_from_sth {
 	      throw("Not yet implmented mapper, check equals are Funcgen calls too!");
 	      
 	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-		= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
+			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
 	      
 	      # Skip features that map to gaps or coord system boundaries
 	      next FEATURE if !defined $sr_name;
@@ -369,27 +449,27 @@ sub _objs_from_sth {
 	    
 
 	    #my @exp_ids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
-	    $epsth->bind_param(1, $predicted_feature_id,    SQL_INTEGER);
-	    $epsth->execute();
-	    my @exp_ids = map $_ = "@$_", @{$epsth->fetchall_arrayref()};
+	    #$epsth->bind_param(1, $predicted_feature_id,    SQL_INTEGER);
+	    #$epsth->execute();
+	    #my @exp_ids = map $_ = "@$_", @{$epsth->fetchall_arrayref()};
 	
 	    push @features, $self->_new_fast( {
-					       'start'         => $seq_region_start,
-					       'end'           => $seq_region_end,
-					       'strand'        => $seq_region_strand,
-					       'slice'         => $slice,
-					       'analysis'      => $analysis,
-					       'adaptor'       => $self,
-					       'dbID'          => $predicted_feature_id,
-					       'score'         => $score,
-					       'display_label' => $display_label,
-					       'feature_type_id'   => $ft_id,
-					       'experiment_ids' => \@exp_ids,
-					      } );
-	  }
+										   'start'          => $seq_region_start,
+										   'end'            => $seq_region_end,
+										   'strand'         => $seq_region_strand,
+										   'slice'          => $slice,
+										   'analysis'       => $fset_hash{$fset_id}->analysis(),
+										   'adaptor'        => $self,
+										   'dbID'           => $predicted_feature_id,
+										   'score'          => $score,
+										   'display_label'  => $display_label,
+										   'feature_set'    => $fset_hash{$fset_id},
+										   #'experiment_ids' => \@exp_ids, #Now to be performed via Data/ResultSetAdaptor
+										  } );
+	}
 	
 	return \@features;
-      }
+}
 
 =head2 _new_fast
 
@@ -417,88 +497,101 @@ sub _new_fast {
   Description: Stores given PredictedFeature objects in the database. Should only
                be called once per feature because no checks are made for
 			   duplicates. Sets dbID and adaptor on the objects that it stores.
-  Returntype : None
+  Returntype : Listref of stored PredictedFeatures
   Exceptions : Throws if a list of PredictedFeature objects is not provided or if
-               an analysis is not attached to any of the objects
+               the Analysis, CellType and FeatureType objects are not attached or stored
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub store{
-  my ($self, @pfs) = @_;
-  
-  if (scalar(@pfs) == 0) {
-    throw('Must call store with a list of PredictedFeature objects');
-  }
-
-  my $sth = $self->prepare("
+	my ($self, @pfs) = @_;
+	
+	if (scalar(@pfs) == 0) {
+		throw('Must call store with a list of PredictedFeature objects');
+	}
+	
+	my $sth = $self->prepare("
 		INSERT INTO predicted_feature (
-			seq_region_id,  seq_region_start,
-			seq_region_end, seq_region_strand,
-                        coord_system_id, feature_type_id,
-			display_label,  analysis_id,
-			score
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			seq_region_id,   seq_region_start,
+			seq_region_end,  seq_region_strand,
+            coord_system_id, feature_set_id,
+			display_label,   score
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
+	
+	#my $epsth = $self->prepare("INSERT INTO experiment_prediction (
+	#experiment_id, predicted_feature_id)
+    #                          VALUES (?, ?)");
+	
+	my $db = $self->db();
+	#my $analysis_adaptor = $db->get_AnalysisAdaptor();
+	
+  FEATURE: foreach my $pf (@pfs) {
+		
+		if( !ref $pf || !$pf->isa('Bio::EnsEMBL::Funcgen::PredictedFeature') ) {
+			throw('Feature must be an PredictedFeature object');
+		}
+		
+		if ( $pf->is_stored($db) ) {
+			#does not accomodate adding Feature to >1 feature_set
+			warning('PredictedFeature [' . $pf->dbID() . '] is already stored in the database');
+			next FEATURE;
+		}
+		
+		
+		
+		#Have to do this for Analysis separately due to inheritance, removed defined as constrained in Feature->new
+		#Redundancy with Analysis in FeatureSet
+		if ( ! $pf->analysis->is_stored($db)) {
+			throw('A stored Bio::EnsEMBL::Analysis must be attached to the PredictedFeature objects to be stored.');
+		}
+		
+		if ( ! $pf->feature_set->is_stored($db)) {
+			throw('A stored Bio::EnsEMBL::Funcgen::FeatureSet must be attached to the PredictedFeature objects to be stored.');
+		}
 
-  my $epsth = $self->prepare("INSERT INTO experiment_prediction (
-                              experiment_id, predicted_feature_id)
-                              VALUES (?, ?)");
+		#sanity check analysis matches feature_set analysis
+		if($pf->analysis->dbID() != $pf->feature_set->analysis->dbID()){
+			throw("PredictedFeature analysis(".$pf->analysis->logic_name().") does not match FeatureSet analysis(".$pf->feature_set->analysis->logic_name().")\n".
+				  "Cannot store mixed analysis sets");
+		}
+		#Complex analysis to be stored as one in analysis table, or have feature_set_prediciton link table?
+		#Or only have single analysis feature which can contribute to multi analysis "regulons"
+		#Or can we have multiple entries in feature_set with the same id but different analyses?
+		#This would still not be specific for each feature, nor would the predicted_feature analysis_id
+		#reflect all the combined analyses.  Maybe just the one which contributed most?
 
-  my $db = $self->db();
-  my $analysis_adaptor = $db->get_AnalysisAdaptor();
-  
- FEATURE: foreach my $pf (@pfs) {
-    
-    if( !ref $pf || !$pf->isa('Bio::EnsEMBL::Funcgen::PredictedFeature') ) {
-      throw('Feature must be an PredictedFeature object');
-    }
-    
-    if ( $pf->is_stored($db) ) {
-      warning('PredictedFeature [' . $pf->dbID() . '] is already stored in the database');
-      next FEATURE;
-    }
+		# Store the analysis if it has not been stored yet
+		#$analysis_adaptor->store( $pf->analysis()) if ( !$pf->analysis->is_stored($db) );
+		#could this potentially store the same on multiple times?
 
-    if ( !defined $pf->analysis() ) {
-      throw('An analysis must be attached to the PredictedFeature objects to be stored.');
-    }
+		my $seq_region_id;
+		($pf, $seq_region_id) = $self->_pre_store($pf);
+		
+		$sth->bind_param(1, $seq_region_id,         SQL_INTEGER);
+		$sth->bind_param(2, $pf->start(),           SQL_INTEGER);
+		$sth->bind_param(3, $pf->end(),             SQL_INTEGER);
+		$sth->bind_param(4, $pf->strand(),          SQL_TINYINT);
+		$sth->bind_param(5, $pf->coord_system_id(), SQL_INTEGER);
+		$sth->bind_param(6, $pf->feature_set_id(),  SQL_INTEGER);
+		$sth->bind_param(7, $pf->display_label(),   SQL_VARCHAR);
+		$sth->bind_param(8, $pf->score(),            SQL_DOUBLE);
+		
+		$sth->execute();
+		$pf->dbID( $sth->{'mysql_insertid'} );
 
-    # Store the analysis if it has not been stored yet
-    $analysis_adaptor->store( $pf->analysis()) if ( !$pf->analysis->is_stored($db) );
-    #add ft here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		#foreach my $exp_id(@{$pf->experiment_ids()}){
+		#  $epsth->bind_param(1, $exp_id);
+		#  $epsth->bind_param(2, $original->dbID());
+		#  $epsth->execute();
+		#}
+		
+		$pf->adaptor($self);
+	}
 
-    my $original = $pf;#can we not do this directly on pf?
-    my $seq_region_id;
-    ($pf, $seq_region_id) = $self->_pre_store($pf);
-    
-    $sth->bind_param(1, $seq_region_id,         SQL_INTEGER);
-    $sth->bind_param(2, $pf->start(),           SQL_INTEGER);
-    $sth->bind_param(3, $pf->end(),             SQL_INTEGER);
-    $sth->bind_param(4, $pf->strand(),          SQL_TINYINT);
-    $sth->bind_param(5, $pf->coord_system_id(), SQL_INTEGER);
-    $sth->bind_param(6, $pf->feature_type_id(), SQL_INTEGER);
-    $sth->bind_param(7, $pf->display_label(),   SQL_VARCHAR);
-    $sth->bind_param(8, $pf->analysis->dbID(),  SQL_INTEGER);
-    $sth->bind_param(9, $pf->score(),            SQL_DOUBLE);
-    
-    $sth->execute();
-
-
-    $original->dbID( $sth->{'mysql_insertid'} );
-
-    foreach my $exp_id(@{$pf->experiment_ids()}){
-      $epsth->bind_param(1, $exp_id);
-      $epsth->bind_param(2, $original->dbID());
-      $epsth->execute();
-    }
-
-    $original->adaptor($self);
-    $pf = $original;
-    
-  }
-
-  return;
+  return \@pfs;
 }
 
 =head2 list_dbIDs

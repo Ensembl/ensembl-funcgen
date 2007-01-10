@@ -54,6 +54,40 @@ use warnings;
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
+=head2 displayable_to_constraint
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor"
+  Arg [2]    : string (opt) - Constraint
+  Arg [3]    : boolean - displayable
+  Example    : $sql = $self->db->get_StatusAdaptor->displayable_to_constraint($self, $constraint, $displayable);
+  Description: Appends the appropriate displayable constraint dependant on which adaptor is passed. 
+  Returntype : string - constraint
+  Exceptions : Throws if argument is not a Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor"
+  Caller     : Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor" fetch methods
+  Status     : At risk
+
+=cut
+
+sub displayable_to_constraint{
+	my ($self, $adaptor, $constraint, $displayable) = @_;
+
+	return $constraint if(! $displayable);
+
+	if(! $adaptor || (ref($adaptor) !~ /Bio::EnsEMBL::Funcgen::DBSQL/)){
+		throw("Need to specifiy a Bio::EnsEMBL::Funcgen::DBSQL::\"Adaptor\"");
+	}
+
+	my $table = $adaptor->_tables->[0];
+	my $syn   = $adaptor->_tables->[1];
+	
+	my $sql = " AND ${syn}.${table}_id = status.table_id AND status.table_name='${table}' AND status.state='DISPLAYABLE'";
+
+	return $sql;
+}
+
+
+
+
 
 =head2 _test_funcgen_table
 
@@ -67,6 +101,8 @@ use warnings;
   Status     : At risk
 
 =cut
+
+
 
 sub _test_funcgen_table{
   my ($self, $obj) = @_;
