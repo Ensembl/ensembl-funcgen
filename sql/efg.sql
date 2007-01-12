@@ -327,7 +327,7 @@ CREATE TABLE `result` (
    `chip_channel_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`result_id`),
    KEY `probe_idx` (`probe_id`),
-   KEY `table_name_id_idx` (`table_name`, `table_id`)
+   KEY `chip_channel_idx` (`chip_channel_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000  AVG_ROW_LENGTH=40;
 
 
