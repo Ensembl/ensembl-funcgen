@@ -84,6 +84,9 @@ sub new {
   my ($anal_id, $table_name, $table_id)
     = rearrange(['ANALYSIS', 'TABLE_NAME', 'TABLE_ID'], @_);
 
+
+  $self->{'table_id_hash'} = {};
+
   #maybe don't need tha analysis args as mandatory as we're testing in the adaptor store method
   if (! ( $table_name && $table_id)){
     throw("Need to pass the following args:\ttable_name\ttable_id");
@@ -112,27 +115,6 @@ sub new {
 
   return $self;
 }
-
-=head2 new_fast
-
-  Args       : Hashref with all internal attributes set
-  Example    : none
-  Description: Quick and dirty version of new. Only works if the code is very
-               disciplined.
-  Returntype : Bio::EnsEMBL::Funcgen::ResultSet
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub new_fast {
-   my ($class, $hashref)  = @_;
-
-   return bless ($hashref, $class);
-}
-
-
 
 
 
@@ -221,8 +203,12 @@ sub analysis {
 
 =head2 add_table_id
 
-  Example    : $result_set->add_table_id($ec_id);
-  Description: Appends a table_id to the ResultSet.
+  Example    : $result_set->add_table_id($ec_id, $cc_id);
+  Description: Caches table_id chip_channel_id to the ResultSet.
+               The unique chip_channel_id is used to key into the result table,
+               it also reduces redundancy and enable mapping of results to chips
+               rather than just the ResultSet.  This enables result retrieval
+               based on chips in the same set which  have a differing status.
   Returntype : None
   Exceptions : Throws if no table_id defined
   Caller     : General
@@ -231,13 +217,19 @@ sub analysis {
 =cut
 
 sub add_table_id {
-  my ($self, $table_id) = @_;
+  my ($self, $table_id, $cc_id) = @_;
 
   if (! defined $table_id){	
     throw("Need to pass a table_id");
   }else{
-    $self->{'table_ids'} ||= [];
-    push @{$self->{'table_ids'}}, $table_id;
+	
+	  if((exists $self->{'table_id_hash'}->{$table_id}) && (defined $self->{'table_id_hash'}->{$table_id})){
+		  throw("You are attempting to redefine a chip_channel_id which is already defined");
+	  }
+
+	  $self->{'table_id_hash'}->{$table_id} = $cc_id;
+
+	  }
   }
 
   return;
@@ -257,10 +249,31 @@ sub add_table_id {
 
 sub table_ids {
   my $self = shift;
-			
-  return $self->{'table_ids'};
+		
+  return [ keys %{$self->{'table_ids'}} ];
 }
 
+
+=head2 get_chip_channel_id
+
+  Example    : $result_set->add_table_id($ec_id, $cc_id);
+  Description: Caches table_id chip_channel_id to the ResultSet.
+               The unique chip_channel_id is used to key into the result table,
+               it also reduces redundancy and enable mapping of results to chips
+               rather than just the ResultSet.  This enables result retrieval
+               based on chips in the same set which  have a differing status.
+  Returntype : int
+  Exceptions : none
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_chip_channel_id{
+	my ($self, $table_id) = @_;
+
+	return (exists $self->{'table_id_hash'}->{$table_id}) ?  $self->{'table_id_hash'}->{$table_id}) : undef;
+}
 
 
 =head2 display_label
@@ -280,9 +293,12 @@ sub display_label {
   my $self = shift;
   
   if(! $self->{'display_label'}){
-    $self->{'display_label'} = $self->feature_type->name()." -";
-    $self->{'display_label'} .= " ".$self->cell_type->display_name() if $self->cell_type()->display_name();
-    $self->{'display_label'} .= " Enriched Sites";
+
+	  #This should display some info about the chip set/duplicte set if there is more than one set of data for a feature_set!!!!!!!!!!!!!!!
+	  
+	  $self->{'display_label'} = $self->feature_type->name()." -";
+	  $self->{'display_label'} .= ($self->cell_type()->display_label()) ? " ".$self->cell_type->display_label() : $self->cell_type->name();
+	  $self->{'display_label'} .= " Enriched Sites";
   }
 	
   return $self->{'display_label'};
@@ -399,56 +415,14 @@ sub get_ResultFeatures_by_Slice{
   my ($self, $slice, $displayable) = @_;
 
 
-  my (@ofs, @results, $result);
+  #this does not store the ResultFeatures anywhere so we need to be mindful that calling this will always result in a DB query
+  #Can we generate a slice hash for this?
+  #This would eat more memory but may be faster for web display if we can support some sort of dynamic querying with respect to expanded/shifted slice and cached ResultFeatures.
+  #would have to cater for 49 bp overhang which may result in duplicate ResultFeatures which overlap ends of adjacent/overlapping slices
+  #49bp ? should be altered to cope with overlap properly.
 
-  
-  foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
-    
-    if((! @ofs) || ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
-      push @ofs, $of;
-    }else{#Found new location, deal with previous
-      push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-      @ofs = ($of);
-    }
-  }
-
-  push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-
-  return \@results;
-
+  return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, $displayable);
 }
-
-sub _get_best_result{
-  my ($self, $ofs, $analysis, $exp_chips) = @_;
-
-  my ($result, $mpos);
-
-  if(scalar(@$ofs) == 2){#mean
-    $result = ($ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) + 
-	       $ofs->[1]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2;
-    
-  }
-  elsif(scalar(@$ofs) > 2){#median or mean of median flanks
-    $mpos = (scalar(@$ofs))/2;
-    
-    if($mpos =~ /\./){#true median
-      $mpos =~ s/\..*//;
-      $mpos ++;
-      $result = $ofs->[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
-    }else{
-      $result = ($ofs->[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) +
-		 $ofs->[($mpos+1)]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2 ;
-    }
-  }else{
-    #push start, end, score onto results
-    $result =  $ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
-
-  }
-
-  return $result;
-}
-
-
 
 
 

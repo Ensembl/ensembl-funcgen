@@ -113,7 +113,7 @@ sub _tables {
 sub _columns {
   my $self = shift;
 	
-  return qw( ct.cell_type_id ct.name ct.display_label);#ct.type/class
+  return qw( ct.cell_type_id ct.name ct.display_label ct.description);#ct.type/class
 }
 
 =head2 _objs_from_sth
@@ -133,16 +133,17 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $ct_id, $name, $dlabel);
+	my (@result, $ct_id, $name, $dlabel, $desc);
 	
-	$sth->bind_columns(\$ct_id, \$name, \$dlabel);
+	$sth->bind_columns(\$ct_id, \$name, \$dlabel, \$desc);
 	
 	while ( $sth->fetch() ) {
 		my $ctype = Bio::EnsEMBL::Funcgen::CellType->new(
 														 -dbID          => $ct_id,
 														 -NAME          => $name,
 														 -DISPLAY_LABEL => $dlabel,
-														 -ADAPTOR     => $self,
+														 -DESCRIPTION    => $desc,
+														 -ADAPTOR       => $self,
 														);
 	  
 		push @result, $ctype;
@@ -172,7 +173,7 @@ sub store {
   
   my $sth = $self->prepare("
 			INSERT INTO cell_type
-			(name, deisplay_label)
+			(name, display_label, description)
 			VALUES (?, ?)");
     
   
@@ -191,6 +192,7 @@ sub store {
 	  
 	  $sth->bind_param(1, $ct->name(),           SQL_VARCHAR);
 	  $sth->bind_param(2, $ct->display_label(),  SQL_VARCHAR);
+	  $sth->bind_param(3, $ct->description(),    SQL_VARCHAR);
 	  
 	  $sth->execute();
 	  $ct->dbID($sth->{'mysql_insertid'});

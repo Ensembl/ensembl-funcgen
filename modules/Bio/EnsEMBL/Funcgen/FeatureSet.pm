@@ -213,7 +213,7 @@ sub feature_type {
 =head2 cell_type
 
   Arg [1]    : (optional) - Bio::EnsEMBL::Funcgen::CellType
-  Example    : $cell_display_name = $fset->cell_type->display_name();
+  Example    : $cell_display_label = $fset->cell_type->display_label();
   Description: Getter and setter for the analysis attribute for this FeatureSet.
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : Throws if arg is not a valid Bio::EnsEMBL::Funcgen::CellType
@@ -253,9 +253,7 @@ sub display_label {
   my $self = shift;
   
   if(! $self->{'display_label'}){
-    $self->{'display_label'} = $self->feature_type->name()." -";
-    $self->{'display_label'} .= " ".$self->cell_type->display_name() if $self->cell_type()->display_name();
-    $self->{'display_label'} .= " Enriched Sites";
+    $self->{'display_label'} = $self->feature_type->name()." - ".$self->cell_type->name()." Enriched Sites";
   }
 	
   return $self->{'display_label'};

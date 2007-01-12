@@ -51,9 +51,11 @@ use vars qw(@ISA);
   #Arg [-type]          : string - type of cell i.e.  ???? or Tissue, LINE?? enum?
   ?? xref to coriell ??
   Example              : my $ct = Bio::EnsEMBL::Funcgen::CellType->new(
-                                                               -name  => "U2OS",
-                                                               #-type  => "TISSUE",
-                                                               -display_label => "Human Bone Osteosarcoma Epithelial Cells (U2OS)",
+                                                               -name          => "U2OS",
+                                                               -display_label => "",#?
+                                                               -description   => "Human Bone Osteosarcoma Epithelial Cells",
+                                                               #-type/class => "TISSUE", enum?
+                                                               #xref/coriell id?
                                                                 );
   Description: Constructor method for CellType class
   Returntype : Bio::EnsEMBL::Funcgen::CellType
@@ -74,8 +76,9 @@ sub new {
   my (
       $name,
       $dlabel,
+	  $desc,
      ) = rearrange([
-		    'NAME', 'DISPLAY_LABEL',
+		    'NAME', 'DISPLAY_LABEL', 'DESCRIPTION',
 		   ], @_);
   
   
@@ -84,6 +87,7 @@ sub new {
 
   $self->name($name);
   $self->display_label($dlabel) if $dlabel;
+  $self->display_label($desc) if $desc;
 
   return $self;
 }
@@ -93,7 +97,7 @@ sub new {
 =head2 name
 
   Arg [1]    : string - name
-  Example    : my $name = $ft->name();
+  Example    : my $name = $ct->name();
   Description: Getter and setter of name attribute for CellType
                objects
   Returntype : string
@@ -108,6 +112,26 @@ sub name {
     $self->{'name'} = shift if @_;
     return $self->{'name'};
 }
+
+=head2 description
+
+  Arg [1]    : string - description
+  Example    : my $desc = $ct->description();
+  Description: Getter and setter of description attribute for CellType
+               objects
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Low Risk
+
+=cut
+
+sub name {
+    my $self = shift;
+    $self->{'name'} = shift if @_;
+    return $self->{'name'};
+}
+
 
 =head2 display_label
 
@@ -125,6 +149,13 @@ sub name {
 sub display_label {
     my $self = shift;
     $self->{'display_label'} = shift if @_;
+
+
+	#This may result in very long dispay_labels
+	#if(! defined $self->{'display_label'}){
+	#	$self->{'display_label'} = (defined $self->{'desciption'}) ? $self->description()." (".$self->name().")" : $self->name();
+	#}
+
     return $self->{'display_label'};
 }
 
