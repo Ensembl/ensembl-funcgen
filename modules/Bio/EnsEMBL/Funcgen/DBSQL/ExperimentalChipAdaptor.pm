@@ -278,7 +278,10 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( ec.experimental_chip_id ec.unique_id ec.experiment_id ec.array_chip_id ec.description);
+	return qw( ec.experimental_chip_id  ec.unique_id 
+		   ec.experiment_id         ec.array_chip_id 
+		   ec.feature_type_id       ec.cell_type_id
+		   ec.set );
 }
 
 =head2 _objs_from_sth
@@ -296,26 +299,33 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth) = @_;
+  my ($self, $sth) = @_;
 	
-	my (@result, $ec_id, $c_uid, $exp_id, $ac_id, $desc);
-	
-	$sth->bind_columns(\$ec_id, \$c_uid, \$exp_id, \$ac_id, \$desc);
-	
-	while ( $sth->fetch() ) {
-		my $array = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
-																 -dbID           => $ec_id,
-																 -unique_id => $c_uid,
-																 -experiment_id  => $exp_id,
-																 -array_chip_id  => $ac_id,
-																 -description    => $desc,
-																 -adaptor        => $self,
-																);
+  my (@result, $ec_id, $c_uid, $exp_id, $ac_id, $ftype_id, $ctype_id, $set);
 
-		push @result, $array;
-
-	}
-	return \@result;
+  my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
+  my $ct_adaptor = $self->db->get_CellTypeAdaptor();
+  
+  
+  $sth->bind_columns(\$ec_id, \$c_uid, \$exp_id, \$ac_id, \$ftype_id, \$ctype_id, \$set);
+  
+  while ( $sth->fetch() ) {
+    
+    my $array = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
+							     -dbID           => $ec_id,
+							     -unique_id      => $c_uid,
+							     -experiment_id  => $exp_id,
+							     -array_chip_id  => $ac_id,
+							     -feature_type   => $ft_adaptor->fetch_by_dbID($ftype_id),
+							     -cell_type      => $ct_adaptor->fetch_by_dbID($ctype_id),
+							     -set            => $set,
+							     -adaptor        => $self,
+							    );
+	  
+    push @result, $array;
+    
+  }
+  return \@result;
 }
 
 
@@ -342,8 +352,8 @@ sub store {
   
   my $sth = $self->prepare("
 			INSERT INTO experimental_chip
-			(unique_id, experiment_id, array_chip_id, description)
-			VALUES (?, ?, ?, ?)");
+			(unique_id, experiment_id, array_chip_id, feature_type_id, cell_type_id, set)
+			VALUES (?, ?, ?, ?, ?, ?)");
   
     
   
@@ -360,10 +370,15 @@ sub store {
 	
       
       if(! $s_ec){
-	$sth->bind_param(1, $ec->unique_id(), SQL_VARCHAR);
+	my $ftype_id = (defined $ec->feature_type()) ? $ec->feature_type->dbID() : undef;
+	my $ctype_id = (defined $ec->cell_type()) ? $ec->cell_type->dbID() : undef;
+
+	$sth->bind_param(1, $ec->unique_id(),      SQL_VARCHAR);
 	$sth->bind_param(2, $ec->experiment_id(),  SQL_VARCHAR);
 	$sth->bind_param(3, $ec->array_chip_id(),  SQL_VARCHAR);
-	$sth->bind_param(4, $ec->description(),    SQL_VARCHAR);
+	$sth->bind_param(4, $ftype_id,             SQL_INTEGER);
+	$sth->bind_param(4, $ctype_id,             SQL_INTEGER);
+	$sth->bind_param(4, $ec->set(),            SQL_VARCHAR);
 	
 	$sth->execute();
 	my $dbID = $sth->{'mysql_insertid'};

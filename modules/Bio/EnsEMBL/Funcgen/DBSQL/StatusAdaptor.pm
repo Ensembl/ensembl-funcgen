@@ -113,6 +113,8 @@ sub _test_funcgen_table{
     throw("Need to specifiy a Bio::EnsEMBL::Funcgen::\"OBJECT\"");
   }
 
+  throw("Cannot test state of unstored object: $obj") if (! $obj->is_stored($self->db()));
+
   my $table = ${$obj->adaptor->_tables()}[0];
 
   return $table || $self->throw("Cannot identify table name from $obj adaptor");
@@ -164,7 +166,7 @@ sub fetch_all_states{
 
 
 sub has_status{
-  my ($self, $obj, $state) = @_;
+  my ($self, $state, $obj) = @_;
 
   my $table = $self->_test_funcgen_table($obj);
   my $sql = "SELECT state FROM status WHERE table_name=\"$table\" AND table_id=\"".$obj->dbID()."\" AND state=\"$state\"";

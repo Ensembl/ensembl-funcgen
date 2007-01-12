@@ -434,7 +434,7 @@ sub create_output_dirs{
 sub status_adaptor{
   my ($self) = shift;
 
-  if (! $self->{'status_adaptor'} || ! $self->status_adaptor->isa("Bio::EnsEMBL::Funcgen::StatusAdaptor")){
+  if (! $self->{'status_adaptor'} || ! $self->{'status_adaptor'}->isa("Bio::EnsEMBL::Funcgen::StatusAdaptor")){
     $self->{'status_adaptor'} = $self->db->get_StatusAdaptor();
   }
   

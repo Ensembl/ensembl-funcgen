@@ -45,7 +45,7 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::ResultSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warn );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 #use Bio::EnsEMBL::Feature;
 
 use vars qw(@ISA);
@@ -81,7 +81,7 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($anal_id, $table_name, $table_id)
+  my ($analysis, $table_name, $table_id)
     = rearrange(['ANALYSIS', 'TABLE_NAME', 'TABLE_ID'], @_);
 
 
@@ -218,18 +218,17 @@ sub analysis {
 
 sub add_table_id {
   my ($self, $table_id, $cc_id) = @_;
-
+  
   if (! defined $table_id){	
     throw("Need to pass a table_id");
   }else{
-	
-	  if((exists $self->{'table_id_hash'}->{$table_id}) && (defined $self->{'table_id_hash'}->{$table_id})){
-		  throw("You are attempting to redefine a chip_channel_id which is already defined");
-	  }
-
-	  $self->{'table_id_hash'}->{$table_id} = $cc_id;
-
-	  }
+    
+    if((exists $self->{'table_id_hash'}->{$table_id}) && (defined $self->{'table_id_hash'}->{$table_id})){
+      throw("You are attempting to redefine a chip_channel_id which is already defined");
+    }
+    
+    $self->{'table_id_hash'}->{$table_id} = $cc_id;
+    
   }
 
   return;
@@ -256,12 +255,9 @@ sub table_ids {
 
 =head2 get_chip_channel_id
 
-  Example    : $result_set->add_table_id($ec_id, $cc_id);
-  Description: Caches table_id chip_channel_id to the ResultSet.
-               The unique chip_channel_id is used to key into the result table,
-               it also reduces redundancy and enable mapping of results to chips
-               rather than just the ResultSet.  This enables result retrieval
-               based on chips in the same set which  have a differing status.
+  Arg [1]    : int - ExperimentalChip dbID
+  Example    : $result_set->get_chip_channel_id($ec_id);
+  Description: Retrieves a chip_channel_id from the cahce given an ExperimentalChip dbID
   Returntype : int
   Exceptions : none
   Caller     : General
@@ -270,9 +266,9 @@ sub table_ids {
 =cut
 
 sub get_chip_channel_id{
-	my ($self, $table_id) = @_;
+  my ($self, $table_id) = @_;
 
-	return (exists $self->{'table_id_hash'}->{$table_id}) ?  $self->{'table_id_hash'}->{$table_id}) : undef;
+  return (exists $self->{'table_id_hash'}->{$table_id}) ?  $self->{'table_id_hash'}->{$table_id} : undef;
 }
 
 
@@ -334,75 +330,75 @@ sub get_displayable_ResultFeatures_by_Slice{
 
 =cut
 
-sub get_ResultFeatures_by_Sliceblaart{
-  my ($self, $slice, $displayable) = @_;
-
-  #do we need to restrict to Analysis? Maintain web displayable focus for now
-  #what about type of display?  Wiggle vs. heatbar?
-  #can we return this info, or should this be part of the query?
-
-  #Does this also need to accomodate channel level data?
-  #No! Normalisation is never done in a slice context, rather a chip context.
-
-
-
-  if(! $self->{'result_features'}){
-
-    $self->{'result_features'} = [];
-
-    if($self->adaptor()){
-
-      # we need to get all sets with ecs from the same exp with same feature_type and cell_type id
-      # separate on chip_set_id and analysis?
-      
-
-      #this should really be in the EC adaptor even tho the data is in the result_set table
-      #but we ideally want to update this result_set table after an import using the ResultSet adaptor?
-      #load is v.different to fetch as we're only retrieving start, stop and score for speed purposes.
-
-
-      # if we have more than one dispalyable analysis we really only want it in the display label.
-      my @eca_sets = @{$self->adaptor->get_experimental_chip_sets_analysis($self->experiment_ids(), $displayable)};
-      my %anal_names;
-      #do some funky map to hash thing here and check the scalar keys == 1 else set append_anal flag
-
-      #also need to check for more than one set with the same analysis here, as these will be duplicates.
-      #append display label with ec uids?
-
-      #There is also the potential to get two identical track names from different experiments
-      #this is currently only controlled by the displayable function
-
-
-      foreach my $eca_set(@eca_sets){
-	#my $display_label = "H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)";
-	my $diplay_label = $self->feature_type->name().' - '.$self->cell_type->description().' ('.$self->cell_type->display_name().')';
-
-	if($append_anal){
-	  if(! exists $anal_names{$eca_set->[1]}){
-	    $anal_names{$eca_set->[1]} = $self->adaptor->db->get_AnalysisAdaptor->fetch_by_dbID($eca_set->[1])->logic_name();
-	  }
-
-	  $display_label .= ':'. $anal_names{$eca_set->[1]};
-	}
-
-
-	#should do a _new_fast on ResultFeature here
-	#No need for a ResultFeatureAdaptor as they are transient i.e. not storable and only access through a result set
-	#this needs totally changing to be focused on one resultset
-
-
-
-	#push @{$self->{'results'}},  [ $display_label, $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($self->slice(), $eca_set) ];
-	@{$self->{'result_features'}} = $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($slice(), $self->analysis_id, $eca_set) ];
-	
-
-    }else{
-      throw("Need to set an adaptor to retrieve Results");
-    }
-  }
-
-  return $self->{'results'};
-}
+#sub get_ResultFeatures_by_Sliceblaart{
+#  my ($self, $slice, $displayable) = @_;
+#
+#  #do we need to restrict to Analysis? Maintain web displayable focus for now
+#  #what about type of display?  Wiggle vs. heatbar?
+#  #can we return this info, or should this be part of the query?
+#
+#  #Does this also need to accomodate channel level data?
+#  #No! Normalisation is never done in a slice context, rather a chip context.
+#
+#
+#
+#  if(! $self->{'result_features'}){
+#
+#    $self->{'result_features'} = [];
+#
+#    if($self->adaptor()){
+#
+#      # we need to get all sets with ecs from the same exp with same feature_type and cell_type id
+#      # separate on chip_set_id and analysis?
+#      
+#
+#      #this should really be in the EC adaptor even tho the data is in the result_set table
+#      #but we ideally want to update this result_set table after an import using the ResultSet adaptor?
+#      #load is v.different to fetch as we're only retrieving start, stop and score for speed purposes.
+#
+#
+#      # if we have more than one dispalyable analysis we really only want it in the display label.
+#      my @eca_sets = @{$self->adaptor->get_experimental_chip_sets_analysis($self->experiment_ids(), $displayable)};
+#      my %anal_names;
+#      #do some funky map to hash thing here and check the scalar keys == 1 else set append_anal flag
+#
+#      #also need to check for more than one set with the same analysis here, as these will be duplicates.
+#      #append display label with ec uids?
+#
+#      #There is also the potential to get two identical track names from different experiments
+#      #this is currently only controlled by the displayable function
+#
+#
+#      foreach my $eca_set(@eca_sets){
+#	#my $display_label = "H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)";
+#	my $diplay_label = $self->feature_type->name().' - '.$self->cell_type->description().' ('.$self->cell_type->display_name().')';
+#
+#	if($append_anal){
+#	  if(! exists $anal_names{$eca_set->[1]}){
+#	    $anal_names{$eca_set->[1]} = $self->adaptor->db->get_AnalysisAdaptor->fetch_by_dbID($eca_set->[1])->logic_name();
+#	  }
+#	  
+#	  $display_label .= ':'. $anal_names{$eca_set->[1]};
+#	}
+#
+#
+#	#should do a _new_fast on ResultFeature here
+#	#No need for a ResultFeatureAdaptor as they are transient i.e. not storable and only access through a result set
+#	#this needs totally changing to be focused on one resultset
+#
+#
+#
+#	#push @{$self->{'results'}},  [ $display_label, $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($self->slice(), $eca_set) ];
+#	@{$self->{'result_features'}} = $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($slice(), $self->analysis_id, $eca_set) ];
+#	
+#
+#    }else{
+#      throw("Need to set an adaptor to retrieve Results");
+#    }
+#  }
+#
+#  return $self->{'results'};
+#}
 
 
 

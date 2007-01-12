@@ -85,7 +85,7 @@ sub new_fast {
   Example    : my $score = $rf->score();
   Description: Getter of the score attribute for ResultFeature
                objects
-  Returntype : string
+  Returntype : string/float/double?
   Exceptions : None
   Caller     : General
   Status     : At Risk

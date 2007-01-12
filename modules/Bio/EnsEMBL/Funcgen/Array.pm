@@ -109,8 +109,10 @@ sub new {
   #name, format, vendor
   #enum on format?
 
-  if($self->dbID() && ! $caller->isa("Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor")){
-    throw("You must use the ArrayAdaptor to generate Arrays with a dbID i.e. from the DB, as this module accomodates updating which may cause incorrect data if the object is not generated form the DB");
+  my @stack = caller();
+
+  if($self->dbID() && $stack[0] ne "Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor"){
+    throw("You must use the ArrayAdaptor($stack[0]) to generate Arrays with a dbID i.e. from the DB, as this module accomodates updating which may cause incorrect data if the object is not generated form the DB");
   } 
 
   
@@ -471,6 +473,7 @@ sub get_ArrayChip_by_design_id{
 
 =cut
 
+#this is storing array_chip here, but we should hide it like this, we should make ArrayChipAdaptor check and return previously stored ArrayChip if possible.
 
 sub add_ArrayChip{
   my ($self, $array_chip) = @_;
@@ -481,17 +484,18 @@ sub add_ArrayChip{
     $self->get_ArrayChips() if (! $self->{'array_chips'});
 
     if(exists $self->{'array_chips'}{$array_chip->design_id}){
+      $array_chip = $self->{'array_chips'}{$array_chip->design_id};
       warn("Array chip for ".$array_chip->design_id()." already exists, using previous stored array chip\n");
     }else{
       $array_chip->array_id($self->dbID());
-      $self->adaptor->db->get_ArrayChipAdaptor->store($array_chip);
+      ($array_chip) = @{$self->adaptor->db->get_ArrayChipAdaptor->store($array_chip)};
       $self->{'array_chips'}{$array_chip->design_id} = $array_chip;
     }
   }else{
     throw("Array must be stored before adding an array_chip");
   }
 
-  return;
+  return $array_chip;
 }
 
 =head2 get_achip_status

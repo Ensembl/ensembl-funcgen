@@ -179,7 +179,9 @@ sub get_available_adaptors{
 	       'Status'             => 'Bio::EnsEMBL::Funcgen::DBSQL::StatusAdaptor',
 	       'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
 	       'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
-	       
+	       'FeatureSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
+	       'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+	       'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
 	       
 	       #add required EnsEMBL(core) adaptors here
 	       #Should write/retrieve from efg not dna db

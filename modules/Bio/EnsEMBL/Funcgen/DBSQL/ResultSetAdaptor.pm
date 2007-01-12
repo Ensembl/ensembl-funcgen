@@ -45,12 +45,12 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
+use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
-use strict;
-use warnings;
 
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+
+@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 #Generates ResultSet contains info about ResultSet content
 #and actual results for channel or for chips in contig set?
@@ -131,33 +131,33 @@ use warnings;
 #Would possibly miss some from the slice
 
 
-sub fetch_all_by_Experiment{
-	my ($self, $exp, $analysis) = @_;
+#sub fetch_all_by_Experiment{
+#	my ($self, $exp, $analysis) = @_;
 
-	throw("Not yet implemented");
+#	throw("Not yet implemented");
 
-	my (%nr);
+#	my (%nr);
 
 
-	foreach my $ec(@$exp_chips){
-				
-	  throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
-	    if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
+#	foreach my $ec(@$exp_chips){
+#				
+#	  throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
+#	    if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
 	  
-	  $nr{$ec->array_chip_id()} = 1;
-	}
+#	  $nr{$ec->array_chip_id()} = 1;
+#	}
 
 	#get array_chip_ids from all ExperimentalChips and do a
 	#where op.array_chip_id IN (".(join ", ", @ac_ids)
 
 	#my @echips = @{$self->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($exp->dbID())};
 	#map $nr{$_->array_chip_id()} = 1, @echips;
-	my $constraint = " op.array_chip_id IN (".join(", ", keys %nr).") AND op.oligo_probe_id = of.oligo_probe_id ";
+#	my $constraint = " op.array_chip_id IN (".join(", ", keys %nr).") AND op.oligo_probe_id = of.oligo_probe_id ";
 
 
 	
-	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-}
+#	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+#}
 
 
 
@@ -184,11 +184,11 @@ sub fetch_all_by_FeatureType {
 
 	throw("Not implemented yet\n");
 	
-	throw('Need type as parameter') if !$type;
+	throw('Need type as parameter') if ! $ftype;
 	
-	my $constraint = qq( a.type = '$type' );
+	my $constraint = qq( a.type = '$ftype' );
 	
-	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+	#return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
  
 =head2 _tables
@@ -346,61 +346,54 @@ sub store{
   my ($self, @rsets) = @_;
 
   throw("Must provide a list of ResultSet objects") if(scalar(@rsets == 0));
-
-
+  
   my (%analysis_hash);
   
-
- 
   my $sth = $self->prepare("
 		INSERT INTO result_set (
-			analysis_id,  table_id, table_name
-		) VALUES (?, ?, ?)
+			analysis_id,  table_name
+		) VALUES (?, ?)
 	");
-
+  
   my $db = $self->db();
   my $analysis_adaptor = $db->get_AnalysisAdaptor();
-
- FEATURE: foreach my $rset (@rsets) {
-	  
-	  if( ! ref $rset || ! $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet') ) {
-		  throw('Must be an ResultSet object to store');
-    }
-	  
-
-	  
-	  if ( $rset->is_stored($db) ) {
-		  throw('ResultSet [' . $rset->dbID() . '] is already stored in the database\nResultSetAdaptor does not yet accomodate updating ResultSets');
-      #would need to retrive stored result set and update table_ids
-	  }
-	  
-	  if ( ! defined $rset->analysis() ) {
-		  throw('An analysis must be attached to the ResultSet objects to be stored.');
-	  }
-	  
-	  # Store the analysis if it has not been stored yet
-	  if ( ! $rset->analysis->is_stored($db) ) {
-		  warn("Will this not keep storing the same analysis if we keep passing the same unstored analysis?");
-		  $analysis_adaptor->store( $rset->analysis() );
-	  }
-	  
-	  $sth->bind_param(1, $rset->analysis->dbID(), SQL_INTEGER);
-	  $sth->bind_param(2, $table_id,               SQL_INTEGER);
-	  $sth->bind_param(3, $rset->table_name(),     SQL_VARCHAR);
-			  
-	  $sth->execute();
-
-	  $rset->dbID( $sth->{'mysql_insertid'} );
-	  $rset->adaptor($self);
-
-	  $self->store_chip_channels($rset);
-		  
-	  }
   
+ FEATURE: foreach my $rset (@rsets) {
+    
+    if( ! ref $rset || ! $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet') ) {
+      throw('Must be an ResultSet object to store');
+    }
+    
+        
+    if ( $rset->is_stored($db) ) {
+      throw('ResultSet [' . $rset->dbID() . '] is already stored in the database\nResultSetAdaptor does not yet accomodate updating ResultSets');
+      #would need to retrive stored result set and update table_ids
+    }
+    
+    if ( ! defined $rset->analysis() ) {
+      throw('An analysis must be attached to the ResultSet objects to be stored.');
+    }
+    
+    # Store the analysis if it has not been stored yet
+    if ( ! $rset->analysis->is_stored($db) ) {
+      warn("Will this not keep storing the same analysis if we keep passing the same unstored analysis?");
+      $analysis_adaptor->store( $rset->analysis() );
+    }
+   
 
+    $sth->bind_param(1, $rset->analysis->dbID(), SQL_INTEGER);
+    $sth->bind_param(2, $rset->table_name(),     SQL_VARCHAR);
+    
+    $sth->execute();
+    
+    $rset->dbID( $sth->{'mysql_insertid'} );
+    $rset->adaptor($self);
+    
+    $self->store_chip_channels($rset);
+    
   }
-
-  return \@rsets
+  
+  return \@rsets;
 }
 
 
@@ -421,35 +414,35 @@ sub store{
 
 
 sub store_chip_channels{
-	my ($self, $rset) = @_;
-
-	if(! ($rset && $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet"))){
-		throw("You must pasas a valid Bio::EnsEMBL::Funcgen::ResultSet");
-	}
-	
-	if ( ! $rset->is_stored($db) ) {
-		throw('ResultSet must be stored in the database before storing chip_channel entries');
-	}
-	
-	my $sth = $self->prepare("
+  my ($self, $rset) = @_;
+  
+  if(! ($rset && $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet"))){
+    throw("You must pasas a valid Bio::EnsEMBL::Funcgen::ResultSet");
+  }
+  
+  if ( ! $rset->is_stored($self->db()) ) {
+    throw('ResultSet must be stored in the database before storing chip_channel entries');
+  }
+  
+  my $sth = $self->prepare("
 		INSERT INTO chip_channel (
 			result_set_id, table_id
 		) VALUES (?, ?)
 	");
-	
-	#Store and set all previously unstored table_ids
-	foreach my $table_id(@{$rset->table_ids()}){
-
-		if(! defined $rset->get_chip_channel_id($table_id)){
-			$sth->bind_param(1, $rset->dbID(),       SQL_INTEGER);
-			$sth->bind_param(2, $table_id,           SQL_INTEGER);
-
-			$sth->execute();
-
-			$rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
-		}
-	}
-	return $rset;
+  
+  #Store and set all previously unstored table_ids
+  foreach my $table_id(@{$rset->table_ids()}){
+    
+    if(! defined $rset->get_chip_channel_id($table_id)){
+      $sth->bind_param(1, $rset->dbID(),       SQL_INTEGER);
+      $sth->bind_param(2, $table_id,           SQL_INTEGER);
+      
+      $sth->execute();
+      
+      $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
+    }
+  }
+  return $rset;
 }
 
 =head2 list_dbIDs
@@ -577,50 +570,51 @@ sub fetch_results_by_probe_experimental_chips_analysis{
 #This checks each locus to ensure identically mapped probes only return a median/mean
 #can we just return array triplets?, start, end, score?
 
-sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
-  my ($self, $slice, $analysis, $exp_chips) = @_;
+#sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
+#  my ($self, $slice, $analysis, $exp_chips) = @_;
 
   #warn("Put in ResultAdaptor");
 
-  my (@ofs);
+#  my (@ofs);
 
   
-  foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
+#  foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
     
-    if((! @ofs) || ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
-      push @ofs, $of;
-    }else{#Found new location, deal with previous
-      push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-      @ofs = ($of);
-    }
-  }
+#    if((! @ofs) || ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
+#      push @ofs, $of;
+#    }else{#Found new location, deal with previous
+#      push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
+#      @ofs = ($of);
+#    }
+#  }
 
-  push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
+#  push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
 
-  return \@results;
+#  return \@results;
 
-}
+#}
 
 
 sub fetch_ResultFeatures_by_Slice_ResultSet{
-	my ($self, $slice, $rset, $displayable) = @_;
+  my ($self, $slice, $rset, $displayable) = @_;
 
-	#Slice needs to be genrated from eFG not core DB?
-	#we need to make sure seq_region_id for slice corresponds to db
-	
-	my (@rfeatures, @rfs, $score, $start, $end);
-	
-	#Need to join this?
-	#or do a separate filter displayable call to Status adaptor
-	#for now just assume all ec's from a displayable ResultSet are themselves displayable? 
-	#No, Now have chip_channel table which allows result to chip rather than resultset mapping
-	
-	my @ids = $self->db->get_StatusAdaptor->displayable_filter('experimental_chip', @{$rset->table_ids()});
-	
-	#we don't need to account for strnadedness here as we're dealign with a double stranded feature
-	#need to be mindful if we ever consider expression
-	
-	my $sql = "SELECT r.score, of.seq_region_start, of.seq_region_end FROM result r, oligo_feature of, chip_channel cc
+  #Slice needs to be genrated from eFG not core DB?
+  #we need to make sure seq_region_id for slice corresponds to db
+  
+  my (@rfeatures, @scores, $score, $start, $end, $old_start, $old_end);
+  
+  
+  #Need to join this?
+  #or do a separate filter displayable call to Status adaptor
+  #for now just assume all ec's from a displayable ResultSet are themselves displayable? 
+  #No, Now have chip_channel table which allows result to chip rather than resultset mapping
+  
+  my @ids = $self->db->get_StatusAdaptor->displayable_filter('experimental_chip', @{$rset->table_ids()});
+  
+  #we don't need to account for strnadedness here as we're dealign with a double stranded feature
+  #need to be mindful if we ever consider expression
+  
+  my $sql = "SELECT r.score, of.seq_region_start, of.seq_region_end FROM result r, oligo_feature of, chip_channel cc
              WHERE cc.result_set_id = ".$rset->dbID()."
              AND cc.table_id IN (".join(' ,', @ids).")
              AND cc.chip_channel_id = r.table_id
@@ -630,30 +624,36 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
              AND of.seq_region_start<='".$slice->end()."'
              ORDER by of.seq_region_start";
 
-	$sth->prepare();
+	my $sth = $self->prepare($sql);
 	$sth->execute();
 	$sth->bind_columns(\$score, \$start, \$end);
 	
 	while ( $sth->fetch() ) {
 		#we need to get best result here if start and end the same
+
+	  $old_start ||= $start;
+	  $old_end   ||= $end; 
 		
-		if((! @scores) || ($start == $rfs[0]->start() && $end == $rfs[0]->end())){
-			push @scores, $score;
-		}else{#Found new location, deal with previous
-			push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-			  (	{
-				 score => (scalar(@scores) == 0) ? $scores->[0] : $self->_get_best_result(\@scores),
-				 start => $start,
-				 end   => $end,
-				});
-			
-			@score = ($score);
-		}
+	  if((! @scores) || (($start == $old_start) && ($end == $old_end))){
+	    push @scores, $score;
+	  }else{#Found new location, deal with previous
+	    $old_start = $start;
+	    $old_end = $end;
+
+	    push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+	      (	{
+		 score => (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores),
+		 start => $start,
+		 end   => $end,
+		});
+	    
+	    @scores = ($score);
+	  }
 	}
 	
 	push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 	  ({
-		score => (scalar(@scores) == 0) ? $scores->[0] : $self->_get_best_result(\@scores),
+		score => (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores),
 		start => $start,
 		end   => $end,
 	   });

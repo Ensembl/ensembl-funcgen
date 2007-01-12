@@ -13,10 +13,12 @@ use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 
 my $ec = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
 							 -dbID           => $ec_id,
-							 -unique_id => $c_uid,
+							 -unique_id      => $c_uid,
 						         -experiment_id  => $exp_id,
 	                                                 -array_chip_id  => $ac_id,
-							 -description    => $desc,
+							 -feature_type   => $ftpye,
+                                                         -cell_type      => $ctype,
+                                                         -chip_set_id    => 1,
 							 );
 
 
@@ -59,18 +61,21 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-unique_id]: int - the unique id of this individual experimental chip
-  Arg [-experiment_id]:  int - the experiment dbID
-  Arg [-array_chip_id]:  int - the dbID or the array_chip
-  Arg [-description]:  strin - the description of this experimental chip
-
+  Arg [-unique_id]     : int - the unique id of this individual experimental chip
+  Arg [-experiment_id] : int - the experiment dbID
+  Arg [-array_chip_id] : int - the dbID or the array_chip
+  Arg [-feature_type ] : Bio::EnsEMBL::Funcgen::FeatureType
+  Arg [-cell_type ]    : Bio::EnsEMBL::Funcgen::CellType
+  Arg [-set ]          : int - the number to define the chips within the same set i.e. duplicate sets
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
-									-dbID           => $ec_id,
-									-unique_id => $c_uid,
-									-experiment_id  => $exp_id,
-									-array_chip_id  => $ac_id,
-									-description    => $desc,
+									-dbID          => $ec_id,
+									-unique_id     => $c_uid,
+									-experiment_id => $exp_id,
+									-array_chip_id => $ac_id,
+									-feature_type  => $ftype,
+              	                                                        -cell_type     => $ftype,
+	                                                                -set           => 1,
 								       );
   Description: Creates a new Bio::EnsEMBL::Funcgen::ExperimentalChip object.
   Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
@@ -86,17 +91,18 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
-
+  
   #can we lc these?
-  my ($c_uid, $exp_dbid, $ac_id, $desc)
-    = rearrange( ['UNIQUE_ID', 'EXPERIMENT_ID', 'ARRAY_CHIP_ID', 'DESCRIPTION'], @_ );
+  my ($c_uid, $exp_dbid, $ac_id, $ftype, $ctype, $set)
+    = rearrange( ['UNIQUE_ID', 'EXPERIMENT_ID', 'ARRAY_CHIP_ID', 'FEATURE_TYPE', 'CELL_TYPE', 'SET'], @_ );
   
   
-  #mandatory params all but description
   $self->unique_id($c_uid)          if defined $c_uid;
   $self->experiment_id($exp_dbid)          if defined $exp_dbid;
   $self->array_chip_id($ac_id)    if defined $ac_id;
-  $self->description($desc)   if defined $desc;
+  $self->feature_type($ftype)   if defined $ftype;
+  $self->cell_type($ctype)   if defined $ctype;
+  $self->set($set)   if defined $set;
 
   return $self;
 }
@@ -157,7 +163,7 @@ sub get_channel_ids{
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : at Risk
 
 =cut
 
@@ -166,6 +172,74 @@ sub unique_id {
   $self->{'unique_id'} = shift if @_;
   return $self->{'unique_id'};
 }
+
+=head2 feature_type
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::FeatureType
+  Example    : $ec->feature_type($ftype);
+  Description: Getter/Setter thefeature_type attribute.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : Throws if arg is not a Bio::EnsEMBL::FeatureType
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub feature_type {
+  my $self = shift;
+
+  if(@_){
+    throw("Must pass a valid Bio::EnsEMBL::Funcgen::FeatureType object") if (! $_[0]->isa("Bio::EnsEMBL::FeatureType"));
+    $self->{'feature_type'} = shift;
+  }
+
+  return $self->{'feature_type'};
+}
+
+
+=head2 cell_type
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::CellType
+  Example    : $ec->cell_type($ctype);
+  Description: Getter/Setter the cell_type attribute.
+  Returntype : Bio::EnsEMBL::Funcgen::CellType
+  Exceptions : Throws if arg is not a Bio::EnsEMBL::CellType
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub cell_type {
+  my $self = shift;
+
+  if(@_){
+    throw("Must pass a valid Bio::EnsEMBL::Funcgen::CellType object") if (! $_[0]->isa("Bio::EnsEMBL::CellType"));
+    $self->{'cell_type'} = shift;
+  }
+
+  return $self->{'cell_type'};
+}
+
+
+
+=head2 set
+
+  Arg [1]    : (optional) string - the name or number of the chip/duplicate set
+  Example    : $ec->set('Duplicate set 1'); or simply  $ec->set(1) 
+  Description: Getter, setter for the set attribute.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub set {
+  my $self = shift;
+  $self->{'set'} = shift if @_;
+  return $self->{'set'};
+}
+
 
 =head2 experiment_id
 
@@ -202,26 +276,6 @@ sub array_chip_id {
   $self->{'array_chip_id'} = shift if @_; 
   return $self->{'array_chip_id'};
 }
-
-
-=head2 description
-
-  Arg [1]    : (optional) string - the description of the ExperimentalChip
-  Example    : my $desc = $ec->description();
-  Description: Getter, setter of description attribute
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub description {
-  my $self = shift;
-  $self->{'description'} = shift if @_;
-  return $self->{'description'};
-}
-
 
 1;
 

@@ -40,7 +40,7 @@ package Bio::EnsEMBL::Funcgen::ArrayDefs;
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::Probe;
-use Bio::EnsEMBL::Funcgen::Feature;
+#use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Channel;
@@ -509,7 +509,7 @@ sub read_sanger_array_probe_data{
   my $of_adaptor = $self->db->get_ProbeFeatureAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $slice_adaptor = $self->db->get_SliceAdaptor();
-  my $anal_id = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
+  my $analysis = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
   #have LiftOver? Could then use liftover in  pipeline to redo mappings
 
  #store now checks whether already stored and updates array chips accordingly
@@ -531,7 +531,11 @@ sub read_sanger_array_probe_data{
 							 -NAME      => $array->name(),
 							 -DESIGN_ID => $array->name(),
 							);
-  $array->add_ArrayChip($array_chip);
+
+
+  #need to store here!  This method hides the store function, need to separate?
+
+  $array_chip = $array->add_ArrayChip($array_chip);
  
   $self->arrays($array);
   my $ac_id = $array->get_ArrayChip_by_design_id($array->name())->dbID();
@@ -695,10 +699,10 @@ sub read_sanger_array_probe_data{
   return;
 }
 
-=head2 read_sanger_probe_data
+=head2 read_sanger_result_data
 
-  Example    : $imp->read_sanger_probe_data();
-  Description: Parses and imports probes, features and result for the sanger PCR array platform
+  Example    : $imp->read_sanger_result_data();
+  Description: Parses and imports result for the sanger PCR array platform
   Returntype : none
   Exceptions : none
   Caller     : Importer
@@ -710,7 +714,7 @@ sub read_sanger_result_data{
   my $self = shift;
 
 
-  warn("This should never import array/probes/feature.  Force adf/gff import and use this simply to import results");
+  #warn("This should never import array/probes/feature.  Force adf/gff import and use this simply to import results");
   #shoudl also check wether experimental_chips have been previously imported
   
 
@@ -718,7 +722,7 @@ sub read_sanger_result_data{
   my ($ratio, $pid, $imported, %tmp);
   my $of_adaptor = $self->db->get_ProbeFeatureAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
-  my $anal_id = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR")->dbID();
+  my $analysis = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR");
   my $result_adaptor = $self->db->get_ResultSetAdaptor();
     			       
 
@@ -782,13 +786,18 @@ sub read_sanger_result_data{
 
 	$result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
 	  (
-	   -analysis_id => $anal_id,
-	   -table_name  => 'experimental_chip',
-	   -table_id    => $echip->dbID(),
+	   -analysis   => $analysis,
+	   -table_name => 'experimental_chip',
 	  );
-      }else{
-	$result_set->add_table_id($echip->dbID());
+
+	$result_adaptor->store($result_set);
+
       }
+
+      $result_set->add_table_id($echip->dbID());
+      $result_adaptor->store_chip_channels($result_set);
+      my $cc_id = $result_set->get_chip_channel_id($echip->dbID());
+
    
       while($line = <$fh>){
 	$line =~ s/\r*\n//o;
@@ -802,7 +811,7 @@ sub read_sanger_result_data{
 	
 	#NA ratio imports as 0
 	#$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${anal_id}\t".$echip->dbID()."\texperimental_chip\n";
-	$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\n";
+	$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${cc_id}\n";
 	
       
       }
@@ -820,9 +829,7 @@ sub read_sanger_result_data{
     }
   }
 
-  $result_adaptor->store($result_set);
-
-
+ 
   $self->log("Finished parsing ".$self->vendor()." probe data (".localtime().")");
   warn("Finished parsing ".$self->vendor()." probe data (".localtime().")");
   

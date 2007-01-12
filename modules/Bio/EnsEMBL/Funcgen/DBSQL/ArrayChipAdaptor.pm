@@ -202,7 +202,7 @@ sub store {
     if (!( $ac->dbID() && $ac->adaptor() == $self )){
       #my $s_ec = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
       #if(! $s_ec){
-      
+    
       $sth->bind_param(1, $ac->design_id(), SQL_VARCHAR);
       $sth->bind_param(2, $ac->array_id(),  SQL_INTEGER);
       $sth->bind_param(3, $ac->name(),      SQL_VARCHAR);
