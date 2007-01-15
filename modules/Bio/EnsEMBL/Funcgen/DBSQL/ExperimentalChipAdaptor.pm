@@ -65,7 +65,7 @@ sub fetch_all_by_experiment_dbID {
     my $self = shift;
     my $e_dbid = shift;
 
-	my ($array_id, @results);
+	my ($ec_id, @results);
 
 	throw("Must specify an experiemntal dbID") if(! $e_dbid);
 
@@ -85,8 +85,9 @@ sub fetch_all_by_experiment_dbID {
 	$sth->execute();
 
 
-	while ($array_id = $sth->fetchrow()){
-		push @results, $self->fetch_by_dbID($array_id);
+	while ($ec_id = $sth->fetchrow()){
+	  #warn("got ec id $ec_id\n");
+	  push @results, $self->fetch_by_dbID($ec_id);
 	}
 
 	return \@results;
@@ -281,7 +282,7 @@ sub _columns {
 	return qw( ec.experimental_chip_id  ec.unique_id 
 		   ec.experiment_id         ec.array_chip_id 
 		   ec.feature_type_id       ec.cell_type_id
-		   ec.set );
+		   ec.replicate );
 }
 
 =head2 _objs_from_sth
@@ -301,24 +302,27 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
 	
-  my (@result, $ec_id, $c_uid, $exp_id, $ac_id, $ftype_id, $ctype_id, $set);
+  my (@result, $ec_id, $c_uid, $exp_id, $ac_id, $ftype_id, $ctype_id, $rep, $ftype, $ctype);
 
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
   
   
-  $sth->bind_columns(\$ec_id, \$c_uid, \$exp_id, \$ac_id, \$ftype_id, \$ctype_id, \$set);
+  $sth->bind_columns(\$ec_id, \$c_uid, \$exp_id, \$ac_id, \$ftype_id, \$ctype_id, \$rep);
   
   while ( $sth->fetch() ) {
+
+    $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
+    $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
     
     my $array = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
 							     -dbID           => $ec_id,
 							     -unique_id      => $c_uid,
 							     -experiment_id  => $exp_id,
 							     -array_chip_id  => $ac_id,
-							     -feature_type   => $ft_adaptor->fetch_by_dbID($ftype_id),
-							     -cell_type      => $ct_adaptor->fetch_by_dbID($ctype_id),
-							     -set            => $set,
+							     -feature_type   => $ftype,
+							     -cell_type      => $ctype,
+							     -replicate      => $rep,
 							     -adaptor        => $self,
 							    );
 	  
@@ -352,7 +356,7 @@ sub store {
   
   my $sth = $self->prepare("
 			INSERT INTO experimental_chip
-			(unique_id, experiment_id, array_chip_id, feature_type_id, cell_type_id, set)
+			(unique_id, experiment_id, array_chip_id, feature_type_id, cell_type_id, replicate)
 			VALUES (?, ?, ?, ?, ?, ?)");
   
     
@@ -378,7 +382,7 @@ sub store {
 	$sth->bind_param(3, $ec->array_chip_id(),  SQL_VARCHAR);
 	$sth->bind_param(4, $ftype_id,             SQL_INTEGER);
 	$sth->bind_param(4, $ctype_id,             SQL_INTEGER);
-	$sth->bind_param(4, $ec->set(),            SQL_VARCHAR);
+	$sth->bind_param(4, $ec->replicate(),      SQL_VARCHAR);
 	
 	$sth->execute();
 	my $dbID = $sth->{'mysql_insertid'};

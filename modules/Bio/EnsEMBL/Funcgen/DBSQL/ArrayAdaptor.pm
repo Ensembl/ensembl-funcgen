@@ -335,7 +335,7 @@ sub store {
 	$array->adaptor($self);
       }
       else{
-	warn("Array already stored, using previously stored array");# validating array_chips\n");
+	warn("Array already stored, using previously stored array\n");# validating array_chips\n");
 	$array = $sarray;
       }
     }

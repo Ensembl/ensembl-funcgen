@@ -795,10 +795,9 @@ sub read_sanger_result_data{
       }
 
       $result_set->add_table_id($echip->dbID());
-      $result_adaptor->store_chip_channels($result_set);
+      $result_set = $result_adaptor->store_chip_channels($result_set);
       my $cc_id = $result_set->get_chip_channel_id($echip->dbID());
 
-   
       while($line = <$fh>){
 	$line =~ s/\r*\n//o;
 	

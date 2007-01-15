@@ -179,13 +179,13 @@ sub store {
   
   
   foreach my $ct (@args) {
-	  if ( ! $ft->isa('Bio::EnsEMBL::Funcgen::CellType') ) {
+	  if ( ! $ct->isa('Bio::EnsEMBL::Funcgen::CellType') ) {
 		  warning('Can only store CellType objects, skipping $ct');
 		  next;
 	  }
 	  
 	  if ( $ct->dbID() && $ct->adaptor() == $self ){
-		  warn("Skipping previously stored CellType dbID:".$ct->dbID()")");
+		  warn("Skipping previously stored CellType dbID:".$ct->dbID().")");
 		  next;
 	  }
 	  

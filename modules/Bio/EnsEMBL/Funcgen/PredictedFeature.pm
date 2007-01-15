@@ -103,8 +103,8 @@ sub new {
   
   #check mandatory params here
 
-  if(! ($feature_set && $feature_set->isa("Bio::EnsEMBL::Funcgen::FeatureSet")){
-	  throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
+  if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
+    throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
   }
 
   $self->score($score);

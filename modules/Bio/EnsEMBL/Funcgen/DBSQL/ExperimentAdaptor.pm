@@ -326,7 +326,7 @@ sub store {
 	#do we need to set egroup, target, design_type, experimentall_variable here?
       }
       else{
-	warn("Experiment already exists in DB, using previously stored Experiment");
+	warn("Experiment already exists in DB, using previously stored Experiment\n");
 	$exp = $s_exp;
       }
     }

@@ -81,15 +81,15 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($analysis, $table_name, $table_id)
-    = rearrange(['ANALYSIS', 'TABLE_NAME', 'TABLE_ID'], @_);
+  my ($analysis, $table_name, $table_id, $ftype, $ctype)
+    = rearrange(['ANALYSIS', 'TABLE_NAME', 'TABLE_ID', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
 
 
   $self->{'table_id_hash'} = {};
 
   #maybe don't need tha analysis args as mandatory as we're testing in the adaptor store method
-  if (! ( $table_name && $table_id)){
-    throw("Need to pass the following args:\ttable_name\ttable_id");
+  if (! $table_name){
+    throw("Need to pass the following arg:\t-table_name");
   }
 
  
@@ -99,19 +99,16 @@ sub new {
   #we need to verify that each table_name/id in the set is from the same experiment
 
 
-  if($self->dbID() && ! $caller->isa("Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor")){
-    warn("You may be adding ${table_name}:${table_id} to a previously existing ResultSet");
-    #This is only true if the dbID passed has been used before
-  }
+  #if($self->dbID() && ! $caller->isa("Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor")){
+  #  warn("You may be adding ${table_name}:${table_id} to a previously existing ResultSet");
+  #  #This is only true if the dbID passed has been used before
+  #}
 
   $self->analysis($analysis) if $analysis;
   $self->table_name($table_name);
-  $self->add_table_id($table_id);
-
-
-  #$self->experiment_id($exp_id) if $exp_id;#should have this method but only as a getter
-  #$self->slice($slice) if $slice;#should always pass slice as arg as we'll only ever do it once?
-  
+  $self->add_table_id($table_id) if $table_id;
+  $self->feature_type($ftype) if $ftype;
+  $self->cell_type($ctype) if $ctype;
 
   return $self;
 }
@@ -175,6 +172,30 @@ sub experiment_id {
     return $self->{'experiment_id'};
 }
 
+
+=head2 table_name
+
+  Arg [1]    : (optional) string - table_name (experimental_chip or channel)
+  Example    : $result_set->experiment_id($exp_id);
+  Description: Getter and setter for the table_name for this ResultSet.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub table_name{
+    my $self = shift;
+	
+    $self->{'table_name'} = shift if @_;
+
+    return $self->{'table_name'};
+}
+
+
+
 =head2 analysis
 
   Arg [1]    : (optional) - Bio::EnsEMBL::Analysis
@@ -198,6 +219,58 @@ sub analysis {
 		
   return $self->{'analysis'};
 }
+
+
+=head2 feature_type
+
+  Arg [1]    : (optional) - Bio::EnsEMBL::Funcgen::FeatureType
+  Example    : $fname = $rset->feature_type->name();
+  Description: Getter and setter for the feature_type attribute for this ResultSet.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : Throws if arg is not a valid Bio::EnsEMBL::Funcgen::FeatureType
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub feature_type {
+  my $self = shift;
+	
+  if(@_){
+    throw("Must pass a valid Bio::EnsEMBL::Funcgen::FeatureType object") if (! $_[0]->isa("Bio::EnsEMBL::Funcgen::FeatureType"));
+    $self->{'feature_type'} = shift;
+  }
+		
+  return $self->{'feature_type'};
+}
+
+
+
+=head2 cell_type
+
+  Arg [1]    : (optional) - Bio::EnsEMBL::Funcgen::CellType
+  Example    : $cname = $rset->cell_type->name();
+  Description: Getter and setter for the cell_type attribute for this ResultSet.
+  Returntype : Bio::EnsEMBL::Funcgen::CellType
+  Exceptions : Throws if arg is not a valid Bio::EnsEMBL::Funcgen::CellType
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub cell_type {
+  my $self = shift;
+	
+  if(@_){
+    throw("Must pass a valid Bio::EnsEMBL::Funcgen::CellType object") if (! $_[0]->isa("Bio::EnsEMBL::Funcgen::CellType"));
+    $self->{'cell_type'} = shift;
+  }
+		
+  return $self->{'cell_type'};
+}
+
 
 
 
@@ -227,7 +300,7 @@ sub add_table_id {
       throw("You are attempting to redefine a chip_channel_id which is already defined");
     }
     
-    $self->{'table_id_hash'}->{$table_id} = $cc_id;
+    $self->{'table_id_hash'}->{$table_id} = $cc_id;    
     
   }
 
@@ -248,8 +321,8 @@ sub add_table_id {
 
 sub table_ids {
   my $self = shift;
-		
-  return [ keys %{$self->{'table_ids'}} ];
+  
+  return [ keys %{$self->{'table_id_hash'}} ];
 }
 
 
@@ -267,7 +340,7 @@ sub table_ids {
 
 sub get_chip_channel_id{
   my ($self, $table_id) = @_;
-
+  
   return (exists $self->{'table_id_hash'}->{$table_id}) ?  $self->{'table_id_hash'}->{$table_id} : undef;
 }
 
@@ -289,14 +362,27 @@ sub display_label {
   my $self = shift;
   
   if(! $self->{'display_label'}){
+    
+    #This should display some info about the chip set/duplicte set if there is more than one set of data for a feature_set!!!!!!!!!!!!!!!
+    
+    #Some tomfoolery here to accomdate sets which we do not know the feature or cell type for.
+    #should we make cell_type and feature_type mandatory?
 
-	  #This should display some info about the chip set/duplicte set if there is more than one set of data for a feature_set!!!!!!!!!!!!!!!
-	  
-	  $self->{'display_label'} = $self->feature_type->name()." -";
-	  $self->{'display_label'} .= ($self->cell_type()->display_label()) ? " ".$self->cell_type->display_label() : $self->cell_type->name();
-	  $self->{'display_label'} .= " Enriched Sites";
+    if(defined $self->feature_type()){
+      $self->{'display_label'} = $self->feature_type->name()." - ";
+    }else{
+       $self->{'display_label'} = "FEATURE TYPE NOT KNOWN - ";
+    }
+
+    if(defined $self->cell_type()){
+      $self->{'display_label'} .= ($self->cell_type()->display_label()) ? $self->cell_type->display_label() : $self->cell_type->name();
+    }else{
+      $self->{'display_label'} .= "CELL TYPE NOT KNOWN";
+    }
+
+    $self->{'display_label'} .= " Enriched Sites";
   }
-	
+  
   return $self->{'display_label'};
 }
 

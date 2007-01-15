@@ -45,6 +45,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
+use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
@@ -209,8 +210,8 @@ sub _tables {
 	
   return (
 	  [ 'result_set',        'rs' ],
-      [ 'chip_channel',      'cc' ],
-      [ 'experimental_chip', 'ec' ],
+	  [ 'chip_channel',      'cc' ],
+	  [ 'experimental_chip', 'ec' ],
 	 );
 }
 
@@ -233,7 +234,8 @@ sub _columns {
 	return qw(
 		  rs.result_set_id  rs.analysis_id
 		  rs.table_name     cc.chip_channel_id
-          cc.table_id
+                  cc.table_id       ec.feature_type_id
+                  ec.cell_type_id
 		 );
 
 	
@@ -256,7 +258,7 @@ sub _columns {
 sub _default_where_clause {
 	my $self = shift;
 	
-	return 'cc.table_id = ec.experimental_chip_id';
+	return 'rs.result_set_id = cc.result_set_id AND cc.table_id = ec.experimental_chip_id';
 }
 
 =head2 _final_clause
@@ -278,7 +280,7 @@ sub _default_where_clause {
 #do we need this?
 
 sub _final_clause {
-	return ' ORDER BY ec.feature_type_id GROUP BY ec.cell_type_id';
+	return ' ORDER BY ec.cell_type_id, ec.feature_type_id';
 }
 
 =head2 _objs_from_sth
@@ -298,31 +300,43 @@ sub _final_clause {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@rsets, $rset, $dbid, $anal_id, $table_id, $table_name, $cc_id);
+  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id, $table_name, $cc_id, $ftype_id, $ctype_id);
+  my $a_adaptor = $self->db->get_AnalysisAdaptor();
+  my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
+  my $ct_adaptor = $self->db->get_CellTypeAdaptor();
   
-  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, $table_id, $cc_id);
+  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$table_id, \$cc_id, \$ftype_id, \$ctype_id);
   
   while ( $sth->fetch() ) {
-
-	  throw("ResultSet/Adaptor does not yet accomodate channel level results") if ($table_name eq "channel");
-	  #shall we do exactly the same and then handle the channel in ResultFeature or Result?
-	  #Prolly not needed at all as we handle this once in a tab format with R and load from file
- 
-	  if(! $rset || ($rset->dbID() != $dbid)){
-		  
-		  push @rsets, $rset if $rset;
-		  
-		  $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
-														-DBID       => $dbid,
-														-ANALYSIS   => $anal_id,
-														-TABLE_NAME => $table_name,
-														-TABLE_ID   => $table_id,
-													   );
-	  }else{
-		  #This assumes logical association, confer in store method?
-		  $rset->add_table_id($table_id, $cc_id);
-	  }
+    
+    throw("ResultSet/Adaptor does not yet accomodate channel level results") if ($table_name eq "channel");
+    #shall we do exactly the same and then handle the channel in ResultFeature or Result?
+    #Prolly not needed at all as we handle this once in a tab format with R and load from file
+    
+    if(! $rset || ($rset->dbID() != $dbid)){
+      
+      push @rsets, $rset if $rset;
+      
+      $anal = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
+      $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
+      $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
+      
+      $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
+						    -DBID         => $dbid,
+						    -ANALYSIS     => $anal,
+						    -TABLE_NAME   => $table_name,
+						    -FEATURE_TYPE => $ftype,
+						    -CELL_TYPE    => $ctype,
+						    -ADAPTOR      => $self,
+						   );
+    }
+    
+    #This assumes logical association between chip from the same exp, confer in store method?????????????????
+    $rset->add_table_id($table_id, $cc_id);
+  
   }
+
+  push @rsets, $rset if $rset;
   
   return \@rsets;
 }
@@ -369,6 +383,11 @@ sub store{
       throw('ResultSet [' . $rset->dbID() . '] is already stored in the database\nResultSetAdaptor does not yet accomodate updating ResultSets');
       #would need to retrive stored result set and update table_ids
     }
+
+    #above does not check if it has been generated from scratch but is identical i.e. recovery.
+    #Need to check table_id and analysis and that it has the correct status
+
+
     
     if ( ! defined $rset->analysis() ) {
       throw('An analysis must be attached to the ResultSet objects to be stored.');
@@ -430,6 +449,7 @@ sub store_chip_channels{
 		) VALUES (?, ?)
 	");
   
+
   #Store and set all previously unstored table_ids
   foreach my $table_id(@{$rset->table_ids()}){
     
@@ -438,7 +458,6 @@ sub store_chip_channels{
       $sth->bind_param(2, $table_id,           SQL_INTEGER);
       
       $sth->execute();
-      
       $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
     }
   }
@@ -601,64 +620,72 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #Slice needs to be genrated from eFG not core DB?
   #we need to make sure seq_region_id for slice corresponds to db
   
-  my (@rfeatures, @scores, $score, $start, $end, $old_start, $old_end);
+  my (@rfeatures, @scores, $score, $start, $end, $old_start, $old_end, $median);
   
   
   #Need to join this?
   #or do a separate filter displayable call to Status adaptor
   #for now just assume all ec's from a displayable ResultSet are themselves displayable? 
   #No, Now have chip_channel table which allows result to chip rather than resultset mapping
+
+  my @ids = @{$rset->table_ids()};
   
-  my @ids = $self->db->get_StatusAdaptor->displayable_filter('experimental_chip', @{$rset->table_ids()});
+  @ids = @{$self->db->get_StatusAdaptor->displayable_filter('experimental_chip', @ids)} if $displayable;
   
   #we don't need to account for strnadedness here as we're dealign with a double stranded feature
   #need to be mindful if we ever consider expression
   
-  my $sql = "SELECT r.score, of.seq_region_start, of.seq_region_end FROM result r, oligo_feature of, chip_channel cc
+  my $sql = "SELECT r.score, pf.seq_region_start, pf.seq_region_end FROM result r, probe_feature pf, chip_channel cc
              WHERE cc.result_set_id = ".$rset->dbID()."
              AND cc.table_id IN (".join(' ,', @ids).")
-             AND cc.chip_channel_id = r.table_id
-			 AND r.oligo_probe_id=of.oligo_probe_id
-             AND of.seq_region_id='".$slice->get_seq_region_id()."'
-             AND of.seq_region_end>='".$slice->start()."'
-             AND of.seq_region_start<='".$slice->end()."'
-             ORDER by of.seq_region_start";
+             AND cc.chip_channel_id = r.chip_channel_id
+	     AND r.probe_id=pf.probe_id
+             AND pf.seq_region_id='".$slice->get_seq_region_id()."'
+             AND pf.seq_region_end>='".$slice->start()."'
+             AND pf.seq_region_start<='".$slice->end()."'
+             ORDER by pf.seq_region_start";
 
-	my $sth = $self->prepare($sql);
-	$sth->execute();
-	$sth->bind_columns(\$score, \$start, \$end);
-	
-	while ( $sth->fetch() ) {
-		#we need to get best result here if start and end the same
+  
+  my $sth = $self->prepare($sql);
+  $sth->execute();
+  $sth->bind_columns(\$score, \$start, \$end);
+  
+  while ( $sth->fetch() ) {
+    #we need to get best result here if start and end the same
+    
+    #set start end for first result
+    $old_start ||= $start;
+    $old_end   ||= $end; 
+    
+    if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature
+      push @scores, $score;
+    }else{#Found new location
+   
+      #store previous feature with best result from @scores
+      push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+	({
+	  score => (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores),
+	  start => $old_start,
+	  end   => $old_end,
+	 });
 
-	  $old_start ||= $start;
-	  $old_end   ||= $end; 
-		
-	  if((! @scores) || (($start == $old_start) && ($end == $old_end))){
-	    push @scores, $score;
-	  }else{#Found new location, deal with previous
-	    $old_start = $start;
-	    $old_end = $end;
-
-	    push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-	      (	{
-		 score => (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores),
-		 start => $start,
-		 end   => $end,
-		});
-	    
-	    @scores = ($score);
-	  }
-	}
-	
-	push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-	  ({
-		score => (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores),
-		start => $start,
-		end   => $end,
-	   });
- 	
-	return \@rfeatures;
+      $old_start = $start;
+      $old_end = $end;
+    
+      #record new score
+      @scores = ($score);
+    }
+  }
+  
+  #store last feature  
+  push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+    ({
+      score => (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores),
+      start => $start,
+      end   => $end,
+     });
+  
+  return \@rfeatures;
 }
 
 sub _get_best_result{

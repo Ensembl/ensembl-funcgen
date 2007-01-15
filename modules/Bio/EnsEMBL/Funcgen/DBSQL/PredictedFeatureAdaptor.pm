@@ -157,18 +157,18 @@ sub fetch_all_by_Slice_Experiment {
   my ($self, $slice, $exp, $logic_name) = @_;
 	
 
-  if (! ($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment")){
-	  throw("Need to pass a valid Bio::EnsEMBL::Funcgen::Experiment");
+  if (! ($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment"))){
+    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::Experiment");
   }
-
-
-  throw("Need to write DatSet and ResultSet to track back to experiment");
-
-
-  my $constraint = qq( pf.feature_set_id = fs.feature_set_id AND ep.experiment_id=$exp_id );
   
-  $constraint = $self->_logic_name_to_constraint($contraint, $logic_name);
 
+  throw("Need to write DataSet and ResultSet to track back to experiment");
+  
+  
+  my $constraint = qq( pf.feature_set_id = fs.feature_set_id AND ep.experiment_id='$exp->dbID()' );
+  
+  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
+  
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
 

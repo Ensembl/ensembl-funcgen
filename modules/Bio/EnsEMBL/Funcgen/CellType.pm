@@ -126,10 +126,10 @@ sub name {
 
 =cut
 
-sub name {
+sub description {
     my $self = shift;
-    $self->{'name'} = shift if @_;
-    return $self->{'name'};
+    $self->{'description'} = shift if @_;
+    return $self->{'description'};
 }
 
 

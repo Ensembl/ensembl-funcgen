@@ -66,7 +66,7 @@ use vars qw(@ISA);
   Arg [-array_chip_id] : int - the dbID or the array_chip
   Arg [-feature_type ] : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [-cell_type ]    : Bio::EnsEMBL::Funcgen::CellType
-  Arg [-set ]          : int - the number to define the chips within the same set i.e. duplicate sets
+  Arg [-replicate ]    : string - the number or name to define the chips within the same set i.e. duplicate sets
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
 									-dbID          => $ec_id,
@@ -75,7 +75,7 @@ use vars qw(@ISA);
 									-array_chip_id => $ac_id,
 									-feature_type  => $ftype,
               	                                                        -cell_type     => $ftype,
-	                                                                -set           => 1,
+	                                                                -replicate     => 1,
 								       );
   Description: Creates a new Bio::EnsEMBL::Funcgen::ExperimentalChip object.
   Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
@@ -93,8 +93,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
   
   #can we lc these?
-  my ($c_uid, $exp_dbid, $ac_id, $ftype, $ctype, $set)
-    = rearrange( ['UNIQUE_ID', 'EXPERIMENT_ID', 'ARRAY_CHIP_ID', 'FEATURE_TYPE', 'CELL_TYPE', 'SET'], @_ );
+  my ($c_uid, $exp_dbid, $ac_id, $ftype, $ctype, $rep)
+    = rearrange( ['UNIQUE_ID', 'EXPERIMENT_ID', 'ARRAY_CHIP_ID', 'FEATURE_TYPE', 'CELL_TYPE', 'REPLICATE'], @_ );
   
   
   $self->unique_id($c_uid)          if defined $c_uid;
@@ -102,7 +102,7 @@ sub new {
   $self->array_chip_id($ac_id)    if defined $ac_id;
   $self->feature_type($ftype)   if defined $ftype;
   $self->cell_type($ctype)   if defined $ctype;
-  $self->set($set)   if defined $set;
+  $self->replicate($rep)   if defined $rep;
 
   return $self;
 }
@@ -222,11 +222,11 @@ sub cell_type {
 
 
 
-=head2 set
+=head2 replicate
 
   Arg [1]    : (optional) string - the name or number of the chip/duplicate set
-  Example    : $ec->set('Duplicate set 1'); or simply  $ec->set(1) 
-  Description: Getter, setter for the set attribute.
+  Example    : $ec->replicate('Duplicate set 1'); or simply  $ec->replicate(1) 
+  Description: Getter, setter for the replicate attribute.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -234,10 +234,10 @@ sub cell_type {
 
 =cut
 
-sub set {
+sub replicate {
   my $self = shift;
-  $self->{'set'} = shift if @_;
-  return $self->{'set'};
+  $self->{'replicate'} = shift if @_;
+  return $self->{'replicate'};
 }
 
 

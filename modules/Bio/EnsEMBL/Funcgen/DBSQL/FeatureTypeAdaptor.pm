@@ -95,63 +95,6 @@ sub fetch_by_name{
 
 
 
-=head2 fetch_by_ExperimentalChip
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::ExperimentalChip
-  Example    : my $ft = $ft_adaptor->fetch_by_ExperimentalChip($echip);
-  Description: Returns FeatureType associated with a given ExperimentalChip
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : Throws if no ExperimentalChip passed (or if more than one FeatureType returned?)
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_by_ExperimentalChip{
-  my ($self, $ec) = @_;
-
-  
-  throw("Must provide an ExperimentChip object") if(! $ec->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip'));
-
-  my $constraint = "eft.experimental_chip_id ='".$ec->dbID()."' AND eft.feature_type_id=ft.feature_type_id";
-  warn "Do we need tho throw here if we get more than one returned?\n";
-
-  return $self->generic_fetch($constraint);
-}
-
-=head2 fetch_all_by_Experiment
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
-  Example    : my @chans = @{$ec_a->fetch_all_by_Experimental($exp);
-  Description: Returns all channels associated with a given Experiment
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureType objects
-  Exceptions : Throws if no Experiment defined
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Experiment{
-  my ($self, $exp) = @_;
-
-  throw("Must provide an Experiment object") if(! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'));
-
-  my (%feature_types);
-
-  foreach my $ec(@{$exp->get_experimental_chips()}){
-    #this will arbitrarily take the first, should only ever be one for an ExperimentalChip
-    my ($ft) = @{$self->fetch_by_ExperimentalChip($ec)};
-
-
-    throw("No FeatureType defined for $ec ".$ec->dbID());
-
-    $feature_types{$ft->dbID()} = $ft;
-  }
-
-
-  return [ values %feature_types ];
-}
-
 =head2 _tables
 
   Args       : None
@@ -170,7 +113,6 @@ sub _tables {
 	
   return (
 	  ['feature_type', 'ft'],
-	  ['experimental_feature_type', 'eft']
 	 );
 }
 

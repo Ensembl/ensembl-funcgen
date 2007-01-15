@@ -491,7 +491,7 @@ CREATE TABLE `experimental_chip` (
    `array_chip_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
-   `set` varchar(20) not NULL default 'UNKNOWN',
+   `replicate` varchar(20) default 'UNKNOWN',
    PRIMARY KEY  (`experimental_chip_id`),
    KEY `experiment_idx` (`experiment_id`),
    KEY `feature_type_idx` (`feature_type_id`),
@@ -661,8 +661,8 @@ CREATE TABLE `meta_coord` (
 --- Set up default meta coord entries...this should be done in import
 -- Change max lenght of oligo?
 
-insert into meta_coord values("predicted_feature", 1, 147);
-insert into meta_coord values("probe_feature", 1, 50);
+insert into meta_coord values("predicted_feature", 1, 5000);
+insert into meta_coord values("probe_feature", 1, 2000);
 
 --
 -- Table structure for table `coord_system`
