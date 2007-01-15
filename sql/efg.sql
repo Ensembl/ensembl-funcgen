@@ -369,7 +369,6 @@ CREATE TABLE `result_set` (
 -- we want one id in the result table to denote the chip/channel, analysis.
 
 
--- rename analysis_set?
 
 
 DROP TABLE IF EXISTS `chip_channel`;

@@ -207,7 +207,7 @@ sub set_status{
 
 #quick method for ResultSetAdaptor->fetch_Resultfeatures_by_Slice
 
-sub displayable_ids{
+sub displayable_filter{
 	my ($self, $table_name, @table_ids) = @_;
 
 	throw("Must provide a table_name and table_ids to filter non-displayable ids") if(! ($table_name && @table_ids));
