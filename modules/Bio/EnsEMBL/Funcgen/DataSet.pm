@@ -48,7 +48,7 @@ Both SIMPLE and COMPOUND also assume all other variables are the same e.g. cell_
 
 This class does not accomodate the following:
 
-COMPLEX/COMPOSITE - Multiple feature_types, feature classes, cell_types etc... Where the only assumtion
+COMPLEX - Multiple feature_types, feature classes, cell_types etc... Where the only assumtion
 is that their is one constant variable which can be keyed on.  This could potentially capture any experiment design.
 
 e.g. A combined promoter and histone tiling experiment which has features and results for promoter and all modifications,
@@ -99,10 +99,19 @@ use vars qw(@ISA);
 
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::DataSet->new(
-                                                                   -EXPERIMENT_ID => $exp_id,
-                                                                   -SLICE         => $slice,
-                                                                   -FEATURE_TYPE  => 'HISTONE',
-			                                          ); 
+                                                               -RESULT_SETS    => \@rsets,
+                                                               -FEATURE_SET    => $fset,
+                                                               -DISPLAYABLE    => 1,
+                                                               -UPDATE_SUBSETS => 1,
+			                                        );
+
+#for COMPLEX DataSet could use this, where 1 and 2 are the positions they are to be returned in
+#Would also need to record what the display type would be for each set, so the webcode can do it dynamically.
+#This would allow any config of display based on what is defined in the DB.
+
+
+  #-DATA_GROUPS    => \([1, $fset1, @rsets1], [2, $fset2, @rsets2]),
+
   Description: Constructor for DataSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
   Exceptions : Throws if no experiment_id defined

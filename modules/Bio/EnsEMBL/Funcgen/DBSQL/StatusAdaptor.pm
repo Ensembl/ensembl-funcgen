@@ -208,16 +208,16 @@ sub set_status{
 #quick method for ResultSetAdaptor->fetch_Resultfeatures_by_Slice
 
 sub displayable_filter{
-	my ($self, $table_name, @table_ids) = @_;
+  my ($self, $table_name, @table_ids) = @_;
 
-	throw("Must provide a table_name and table_ids to filter non-displayable ids") if(! ($table_name && @table_ids));
+  throw("Must provide a table_name and table_ids to filter non-displayable ids") if(! ($table_name && @table_ids));
+  
+  my $sql = "SELECT table_id from status where table_name='$table_name' and table_id in (".join(", ", @table_ids).") and status.state='DISPLAYABLE'";
+  
+  
+  my @displayable_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
-	my $sql = "SELECT table_id from status where table_name='$table_name' and table_id in (".join(", ", @table_ids).") and status.state='DISPLAYABLE'";
-
-	
-	my @displayable_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-
-	return \@displayable_ids;
+  return \@displayable_ids;
 	
 }
 

@@ -10,10 +10,10 @@ storing DataSet objects.
 
 =head1 SYNOPSIS
 
-my $rset_adaptor = $db->get_DataSetAdaptor();
+my $dset_adaptor = $db->get_DataSetAdaptor();
 
-my $rset = $rset_adaptor->fetch_by_Experiment_Slice($exp, $slice);
-my @displayable_rsets = $rset_adaptor->fetch_all_displayable_by_Slice($slice);
+my $dset = $dset_adaptor->fetch_by_dbID(1);
+my @displayable_dsets = $dset_adaptor->fetch_all_displayable_DataSets();
 
 =head1 DESCRIPTION
 
@@ -232,7 +232,6 @@ sub _columns {
   return qw(
 	    ds.data_set_id     ds.result_set_id
 	    ds.feature_set_id  rs.analysis_id
-	    rs.table_id        rs.table_name
 	    fs.feature_type_id fs.analysis_id
 	    fs.cell_type_id
 	   );
@@ -327,6 +326,12 @@ sub _objs_from_sth {
 
       #we're just dealing with the basic one feature, one cell type set here.
       #Maybe we need data groups to handle anything more complex?
+
+
+      #RIGHT THEN!!!
+      #We need to account for non-existent feature_sets as we may only have raw data?
+      
+
       
 
       $data_set = $self->_new_fast( {
