@@ -231,9 +231,7 @@ sub _columns {
   
   return qw(
 	    ds.data_set_id     ds.result_set_id
-	    ds.feature_set_id  rs.analysis_id
-	    fs.feature_type_id fs.analysis_id
-	    fs.cell_type_id
+	    ds.feature_set_id
 	   );
   
   #what others do we need?
@@ -298,30 +296,29 @@ sub _default_where_clause {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@datasets, $data_set, $data_set_id, $result_set_id, $feature_set_id, $r_anal_id, $rtable_id, $rtable_name, $ft_id, $f_anal_id, $cell_id);
+  my (@datasets, $data_set, $dbID, $rset_id, $fset_id, $fset);
+
+  #analysis/ctype/ftype hashed
+  #my (%ft_cache, %ct_chace, %anal_cache);
+
+  my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
+  #my $ct_adaptor = $self->db->get_CellTypeAdaptor();
+  #my $anal_adaptor = $self->db->get_AnalysisAdaptor();
+
+  #How should we store ResultSets for access? result_sets hash keyed on analysis/analysis_id?
+  #We are allowing different analyses, but not CellType
   
-  $sth->bind_columns(\$data_set_id, \$result_set_id, \$feature_set_id, \$r_anal_id, \$p_design_type, \$description);
+  $sth->bind_columns(\$dbID, \$rset_id, \$fset_id);
   
   while ( $sth->fetch() ) {
-
-
     #This needs to be quite clever here and create a new DataSet when we encounter a new data_set_id
     #otherwise we populate the current DataSet with more result/feature sets and set them according to there analysis id?
     #feature_type?
-	  #ds.data_set_id     ds.result_set_id
-	#	  ds.feature_set_id  rs.analysis_id
-	#	  rs.table_id        rs.table_name
-	#	  fs.feature_type_id fs.analysis_id
-	#	  fs.cell_type_id
+
     #do we need to check that the feature_set.sell_type_id is the same as the experimental_chip.cell_line_id
 
 
-
-
-
-
-
-    if(! $data_set || ($data_set->dbID() != $data_set_id)){
+    if(! $data_set || ($data_set->dbID() == $data_set_id)){
 
 
       #we're just dealing with the basic one feature, one cell type set here.
@@ -330,28 +327,16 @@ sub _objs_from_sth {
 
       #RIGHT THEN!!!
       #We need to account for non-existent feature_sets as we may only have raw data?
-      
+      $fset = (defined $fset_id) ? $fset_adaptor->fetch_by_dbID($fset_id);
 
       
 
-      $data_set = $self->_new_fast( {
-				     'dbid'                => $data_set_id,
-				     #'result_set_id'       => $result_set_id,
-				     'feature_set_id'      => $feature_set_id,
-				     #'result_analysis_id'  => $r_anal_id,
-				     'feature_analysis_id' => $f_anal_id,
-				     'cell_type_id'        => $cell_id,
-				     'feature_type_id'     => $ft_id,
-				     #do all the rest dynamically?
-				    } );
-
-      #make new add_result_set if all args passed, but keep _new_fast lean?
-      #Is there any point in having _new_fast?
-
-
-      $data_set->add_result_set($result_set_id, $rtable_name, $rtable_id, $r_anal_id);
-
-    }else{
+      $data_set = Bio::EnsEMBL::Funcgen::DataSet->new_fast( 
+							   -DBID        => $dbID,
+							   -FEATURE_SET => $fset,
+							   #do all the rest dynamically?
+							  );
+    }
       #Add more result/feature sets to the dataset
       
       #Need DataSet->contains_feature_set_id($id) method
@@ -380,39 +365,17 @@ sub _objs_from_sth {
       #Or we restrict the Set to handle just one feature_set and it's supporting result_sets
 
 
-      #Start simple, let's just take the one feature/data set problem first
+    #Start simple, let's just take the one feature/data set problem first
 
-      if($feature_set_id == $data_set->feature_set_id()){
-	$data_set->add_result_set($result_set_id, $rtable_name, $rtable_id, $r_anal_id);
-      }else{
-	throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
-
-      }
-
+    if($fset_id == $data_set->feature_set->dbID()){
+      $data_set->add_ResultSet($rset_adaptor->fetch_by_dbID($rset_id));
+    }else{
+      throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
     }
-	  
   }
   return \@result;
 }
 
-=head2 _new_fast
-
-  Args       : Hashref to be passed to DataSet->new_fast()
-  Example    : None
-  Description: Construct an DataSet object using quick and dirty new_fast.
-  Returntype : Bio::EnsEMBL::Funcgen::DataSet
-  Exceptions : None
-  Caller     : _objs_from_sth
-  Status     : Medium Risk
-
-=cut
-
-sub _new_fast {
-	my $self = shift;
-	
-	my $hash_ref = shift;
-	return Bio::EnsEMBL::Funcgen::DataSet->new_fast($hash_ref);
-}
 
 =head2 store
 
@@ -497,6 +460,9 @@ sub store{
 
 	return \@ofs
 }
+
+
+#store_updated_sets
 
 =head2 list_dbIDs
 

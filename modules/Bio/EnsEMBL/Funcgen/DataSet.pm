@@ -87,7 +87,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warn );
 #use Bio::EnsEMBL::Feature;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Storable);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new
@@ -111,6 +111,7 @@ use vars qw(@ISA);
 
 
   #-DATA_GROUPS    => \([1, $fset1, @rsets1], [2, $fset2, @rsets2]),
+  #add_ResultSet($rset, $display_priority)?
 
   Description: Constructor for DataSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
@@ -128,8 +129,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($ds_id, $fs_id, $rs_id,  $ft_id, $f_anal_id, $r_anal_id, $r_table_name, $r_table_id, $cell_id)
-    = rearrange(['dbID', 'FEATURE_SET_ID', 'RESULT_SET_ID', 'FEATURE_TYPE_ID', 'FEATURE_ANALYSIS_ID', 'RESULT_ANALYSIS_ID', 'RESULT_TABLE_NAME', 'RESULT_TABLE_ID', 'CELL_TYPE_ID'], @_);
+  my ($ds_id, $fset, $rset)
+    = rearrange(['DBID', 'FEATURE_SET', 'RESULT_SET', 'UPDATE_SUBSETS', 'DISPLAYABLE'], @_);
 
  
 
@@ -150,14 +151,7 @@ sub new {
   #This will make it easier for populating pfs but will mean that we can't easily track back to a particular ec without doing some probe/slice look up via the array chip.
   #Not really a requirement, so let's take this hit.
 
-  #Could then maybe use DataSet to store pfs, otherwise we'd have to pass the rset or at the very least the result_set_id.
-
-
-  #throw("Need to pass an Experiment dbID") if ! $exp_id;
-  throw("Need to pass an FeatureType dbID") if ! $ft_id;
-  warn("You are defining a global context DataSet") if ! $slice;
-  throw("Need to pass a CellType dbID") if ! $cell_type_id;
-  
+  #Could then maybe use DataSet to store pfs, otherwise we'd have to pass the rset or at the very least the result_set_id.  
   #do we need some control of creating new objects with dbID and adding result_groups/feature_sets and them storing/updating them
   #potential for someone to create one from new using a duplicate dbID and then linking incorrect data to a pre-existing ResultGroup
   #can we check wether caller is DataSetAdaptor if we have dbID?
@@ -168,34 +162,11 @@ sub new {
 
 
 
-  warn("Need to handle single or multiple experiment and feature_group ids");
+  #warn("Need to handle single or multiple experiment and feature_group ids");
 
 
-  #$self->experiment_id($exp_id) if $exp_id;
-  #make these mutually exclusive?
-  #$self->experiment_ids($exp_ids) if $exp_ids;
-
-  #feature vars are not mandatory as we may just want to display raw data
-  $self->feature_set_id($fg_id) if $fg_id;
-  $self->feature_analysis_id($f_anal_id) if $f_anal_id;
-  $self->feature_type_id($ft_id) if $ft_id,;
-  $self->cell_type_id($cell_id) if $cell_id;
-
-
-  if($r_anal_id || $r_table_name || $r_table_id){
-    $self->add_result_set($rs_id, $r_anal_id, $r_table_name, $r_table_id);
-    #This need to warn if last 3 are not defined
-    #having rs_id not defined means we are storing a fresh DataSet or updating a previously stored DataSet
-    #Unique combined key should prevent duplication, or should we split key and force check in adaptor? 
-  }
-
-
-
-
-  $self->slice($slice) if $slice;
-  
-  
-
+  $self->add_ResultSet($rset) if $rset;
+  $self->feature_set($fset) if $fset;
 
 
   return $self;
@@ -256,28 +227,6 @@ sub new_fast {
 
 
 
-
-=head2 experiment_id
-
-  Arg [1]    : (optional) int - Experiment dbID
-  Example    : $result_set->experiment_id($exp_id);
-  Description: Getter and setter for the experiment_id for this DataSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub experiment_id {
-    my $self = shift;
-	
-    $self->{'experiment_id'} = shift if @_;
-		
-    return $self->{'experiment_id'};
-}
-
-
 =head2 experiment_ids
 
   Arg [1]    : (optional) array ref - Experiment dbIDs
@@ -294,19 +243,15 @@ sub experiment_id {
 sub experiment_ids {
     my $self = shift;
 	
-    if(@_){
-      $self->{'experiment_ids'} = @$_[0];
-    }
+    throw("Not yet implemented");
+    #need to look up through ResultSets
 		
     #will this work?
-    return $self->{'experiment_ids'} || [ $self->{'experiment_id'} ];
+    return $self->{'experiment_ids'};
 }
 
 
-#add experiment method?
-
-
-=head2 add_result_set
+=head2 add_ResultSet
 
   Arg [1]    : (optional) int - result_group dbID
   Example    : $result_set->result_group_id($rg_id);
@@ -318,35 +263,38 @@ sub experiment_ids {
 
 =cut
 
-sub add_result_set {
-    my ($self, $result_set) = @_;
+sub add_ResultSet {
+  my ($self, $rset, $displayable) = @_;
 	
-    if (! $result_set->isa("Bio::Ensembl::Funcgen::ResultSet"){
-      throw("Need to pass a valid Bio::EnsEMBL::Funcgen::ResultSet");
-    }elsif(! $result_set->dbID()){
-      throw("add_result_set does not yet accomodate unstored result_sets");
-    }
 
-    #we can't key on the rs_id unless we store it first
-    #this is wierd, we can have an unstored data_set with stored result_sets.
-    #writing classes for ResultSet will not overcome this, but we could force a ResultSet to bestored before we add it.
+  #should we handle displayable here, and propogate to the ResultSet if update_status is set
+  #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
+  #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
 
-    #should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
-    #DataSetAdaptor to perform the ordering according to feature/celltype
-    #This will still not resolve the complex data sets which can be accomodated by the DB.
-    #Maybe we can keep the data sets as simple as there are and confer the association by tracking back to the experiment?
-    #Would there only ever be one experiment for a complex data_set?
+  if (! $result_set->isa("Bio::Ensembl::Funcgen::ResultSet")){
+    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::ResultSet");
+  }elsif(! $result_set->is_stored()){
+    throw("add_result_set does not accomodate unstored result_sets");
+  }
+  
+  #should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
+  #DataSetAdaptor to perform the ordering according to feature/celltype
+  #This will still not resolve the complex data sets which can be accomodated by the DB.
+  #Maybe we can keep the data sets as simple as there are and confer the association by tracking back to the experiment?
+  #Would there only ever be one experiment for a complex data_set?
+  
+  
+  #Can have more than one experiment for a compound feature set, would we ever want to display raw data?
+  #This is actually an easier problem unless we are displaying two feature types(i.e. complex and compound)
 
-    
-    #Can have more than one experiment for a compound feature set, would we ever want to display raw data?
-    #This is actually an easier problem unless we are displaying two feature types(i.e. complex and compound)
-
-
-    $self->{'result_sets'} ||= {};
-    $self->{'result_sets'}->{$result_set->dbID()} = $result_set;
+  #could we have >1 rset with the same analysis?
+  
+  $self->{'result_sets'} ||= {};
+  
+  $self->{'result_sets'}->{$result_set->dbID()} = $result_set;
 
 		
-    return;
+  return;
 }
 
 
@@ -370,102 +318,11 @@ sub result_set_ids {
 
 
 
-=head2 feature_type_id
-
-  Arg [1]    : (optional) int - FeatureType dbID
-  Example    : $result_set->feature_type_id($ft_id);
-  Description: Getter and setter for the feature_type_id for this DataSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub feature_type_id {
-    my $self = shift;
-	
-    $self->{'feature_type_id'} = shift if @_;
-		
-    return $self->{'feature_type_id'};
-}
-
-
-=head2 feature_type
-
-  Example    : $display_label = $rset->feature_type()->class().':'.$rset->name();
-  Description: Getter and setter for the feature_type_id for this DataSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub feature_type {
-    my $self = shift;
-	
-    if(! $self->{'feature_type'}){
-
-      if($self->adaptor()){
-	$self->{'feature_type'} = $self->adaptor->db->get_FeatureTypeAdaptor->fetch_by_dbID($self->feature_type_id());
-      }else{
-	throw("You need to set and adaptor to retrieve the FeatureType");
-      }
-    }
-		
-    return $self->{'feature_type'};
-}
-
-
-=head2 feature_set_id
-
-  Arg [1]    : (optional) int - feature_set dbID
-  Example    : $data_set->feature_set_id($fs_id);
-  Description: Getter and setter for the feature_group_id for this DataSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub feature_group_id {
-  my $self = shift;
-	
-  $self->{'feature_group_id'} = shift if @_;
-		
-  return $self->{'feature_group_id'};
-}
-
-
-
-=head2 cell_type_id
-
-  Arg [1]    : (optional) int - CellLine dbID
-  Example    : $data_set->cell_type_id($cell_type_id);
-  Description: Getter and setter for the cell_type_id for this DataSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub cell_type_id {
-    my $self = shift;
-	
-    $self->{'cell_type_id'} = shift if @_;
-    
-    return $self->{'cell_type_id'};
-}
-
-
 =head2 cell_type
 
-  Example    : 
-  Description: Getter and setter for the feature_type_id for this DataSet.
-  Returntype : int
+  Example    : my $dset_ctype_name = $dset->cell_type->name();
+  Description: Getter for the cell_type for this DataSet.
+  Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -474,45 +331,36 @@ sub cell_type_id {
 
 sub cell_type {
   my $self = shift;
-	
-  if(! $self->{'cell_type'}){
+  
+  return $self->{'feature_set'}->cell_type() if (defined $self->{'feature_set'});
 
-    if($self->adaptor()){
-      $self->{'cell_type'} = $self->adaptor->db->get_CellTypeAdaptor->fetch_by_dbID($self->cell_type_id());
-    }else{
-      throw("You need to set and adaptor to retrieve the CellType");
-    }
-  }
-		
-  return $self->{'cell_type'};
+  throw("Not yet implemented CellType retrieval from ResultSet only DataSets");
+   		
+  return;
 }
 
+=head2 feature_type
 
-=head2 slice
-
-  Arg [1]    : (optional) - Bio::EnsEMBL::Slice
-  Example    : my $rset_slice = $rset->slice();
-  Description: Getter and setter for the Slice of this DataSet.
-  Returntype : Bio::EnsEMBL::Slice
-  Exceptions : Throws if arg is not a Slice
+  Example    : my $dset_ftype_name = $dset->feature_type->name();
+  Description: Getter for the feature_type for this DataSet.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub slice {
-    my $self = shift;
-	
+sub feature_type {
+  my $self = shift;
+  
+  return $self->{'feature_set'}->feature_type() if (defined $self->{'feature_set'});
 
-    if(@_ && (! $_[0]->isa("Bio::EnsEMBL::Slice"))){
-      throw("Arg must be a Bio::EnsEMBL::Slice");
-    }
-
-
-    $self->{'slice'} = shift if @_;
-	
-    return $self->{'slice'};
+  throw("Not yet implemented FeatureType retrieval from ResultSet only DataSets");
+   		
+  return;
 }
+
+
 
 
 =head2 display_label
@@ -539,6 +387,9 @@ sub display_label {
 	
   return $self->{'display_label'};
 }
+
+
+#get_ResultSets
 
 
 =head2 get_all_displayable_results
