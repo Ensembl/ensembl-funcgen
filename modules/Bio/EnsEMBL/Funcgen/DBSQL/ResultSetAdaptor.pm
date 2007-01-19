@@ -662,12 +662,9 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     }else{#Found new location
    
       #store previous feature with best result from @scores
+		#Do not change arg order, this is an array object!!
       push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-	({
-	  score => (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores),
-	  start => $old_start,
-	  end   => $old_end,
-	 });
+		([$old_start, $old_end,(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
 
       $old_start = $start;
       $old_end = $end;
@@ -678,12 +675,9 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   }
   
   #store last feature  
+  #Do not change arg order, this is an array object!!
   push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-    ({
-      score => (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores),
-      start => $start,
-      end   => $end,
-     });
+    ([$old_start, $old_end,(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   
   return \@rfeatures;
 }

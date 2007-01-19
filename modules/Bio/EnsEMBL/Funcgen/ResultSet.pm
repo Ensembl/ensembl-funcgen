@@ -46,10 +46,10 @@ package Bio::EnsEMBL::Funcgen::ResultSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-#use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Storable);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new

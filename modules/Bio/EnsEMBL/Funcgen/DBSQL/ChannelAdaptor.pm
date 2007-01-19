@@ -41,13 +41,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::Channel;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 
 
 #May need to our this?
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =head2 fetch_by_type_experimental_chip_id
 
@@ -287,65 +287,68 @@ sub _objs_from_sth {
                called once per array because no checks are made for duplicates.
 			   Sets dbID and adaptor on the objects that it stores.
   Returntype : None
-  Exceptions : None
+  Exceptions : Throws if object is not a Bio::EnsEMBL::Funcgen::Channel
+               Throws if object is already present in the DB but has no dbID
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub store {
-  my $self = shift;
-  my @args = @_;
-  
-  my ($sarray);
-  
-  my $sth = $self->prepare("
+	my $self = shift;
+	my @args = @_;
+	
+	my ($sarray);
+	
+	my $sth = $self->prepare("
 			INSERT INTO channel
 			(experimental_chip_id, sample_id, cell_line_id, dye, type, description)
 			VALUES (?, ?, ?, ?, ?, ?)");
     
-  
-  
-  foreach my $chan (@args) {
-    if ( ! $chan->isa('Bio::EnsEMBL::Funcgen::Channel') ) {
-      warning('Can only store Channel objects, skipping $chan');
-      next;
-    }
-    
-    if (!( $chan->dbID() && $chan->adaptor() == $self )){
-      
-      
-      my $s_chan = $self->fetch_by_type_experimental_chip_dbID($chan->type(), $chan->experimental_chip_id());
 	
 	
-	if(! $s_chan){
-	  $sth->bind_param(1, $chan->experimental_chip_id(),  SQL_INTEGER);
-	  $sth->bind_param(2, $chan->sample_id(),             SQL_VARCHAR);
-	  $sth->bind_param(3, $chan->cell_line_id(),          SQL_INTEGER);
-	  $sth->bind_param(4, $chan->dye() ,                  SQL_VARCHAR);
-	  $sth->bind_param(5, $chan->type(),                  SQL_VARCHAR);
-	  $sth->bind_param(6, $chan->description(),           SQL_VARCHAR);
-	  
-	  $sth->execute();
-	  my $dbID = $sth->{'mysql_insertid'};
-	  $chan->dbID($dbID);
-	  $chan->adaptor($self);
+	foreach my $chan (@args) {
+		throw('Can only store Channel objects') if ( ! $chan->isa('Bio::EnsEMBL::Funcgen::Channel'));
+		
+		if (!( $chan->dbID() && $chan->adaptor() == $self )){#use is_stored?
+			
+			
+			my $s_chan = $self->fetch_by_type_experimental_chip_dbID($chan->type(), $chan->experimental_chip_id());
+			throw("Channel already exists in the database with dbID:".$s_chan->dbID().
+				  "\nTo reuse/update this Channel you must retrieve it using the ChannelAdaptor".
+				  "\nMaybe you want to use the -recover option?") if $s_chan;
+			
+			#if(! $s_chan){
+			$sth->bind_param(1, $chan->experimental_chip_id(),  SQL_INTEGER);
+			$sth->bind_param(2, $chan->sample_id(),             SQL_VARCHAR);
+			$sth->bind_param(3, $chan->cell_line_id(),          SQL_INTEGER);
+			$sth->bind_param(4, $chan->dye() ,                  SQL_VARCHAR);
+			$sth->bind_param(5, $chan->type(),                  SQL_VARCHAR);
+			$sth->bind_param(6, $chan->description(),           SQL_VARCHAR);
+			
+			$sth->execute();
+			my $dbID = $sth->{'mysql_insertid'};
+			$chan->dbID($dbID);
+			$chan->adaptor($self);
+			#}
+			#else{
+			#  #do some status checks here, check IMPORTED
+			#  #Need to account for recover in Importer?
+			#  $chan = $s_chan;
+			
+			#  my @states = @{$self->db->fetch_all_states('channel', $chan->dbID())};
+		
+			#  #need better id than dbID?
+			#  warn("Using previously stored Channel (".$chan->experimental_chip_id().":".$chan->type().") with states\t@states\n"); 
+			#}
+		}else{
+			#assume we want to update the states
+			warn('You may want to use $chan->adaptor->store_states($chan)');
+			$self->store_states($chan);
+		}
 	}
-	else{
-	  #do some status checks here, check IMPORTED
-	  #Need to account for recover in Importer?
-	  $chan = $s_chan;
-
-	  my @states = @{$self->db->fetch_all_states('channel', $chan->dbID())};
-
-	  #need better id than dbID?
-	  warn("Using previously stored Channel (".$chan->experimental_chip_id().":".$chan->type().") with states\t@states\n"); 
-	}
-      }
-    }
-
+	
     return \@args;
-
 }
 
 

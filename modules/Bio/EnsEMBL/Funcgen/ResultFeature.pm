@@ -51,21 +51,17 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 use strict;
 use warnings;
 
+#Could set global named vars here for element names. Would take more memory
+
 package Bio::EnsEMBL::Funcgen::ResultFeature;
 
-use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-
-#use vars qw(@ISA);
-#@ISA = qw(Bio::EnsEMBL::Storable);???????????????????????????????????????????
 
 
 =head2 new_fast
 
-  Args       : Hashref with all internal attributes set
+  Args       : Arrayref with attributes start, end, score as the element of the array IN THAT ORDER.
   Example    : none
-  Description: Quick and dirty version of new. Only works if the code is very
-               disciplined.
+  Description: Fast and list version of new. Only works if the code is very disciplined.
   Returntype : Bio::EnsEMBL::Funcgen::ResultFeature
   Exceptions : None
   Caller     : ResultSetAdaptor
@@ -74,28 +70,12 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 =cut
 
 sub new_fast {
-   my ($class, $hashref)  = @_;
-   return bless ($hashref, $class);
+   my ($class, $arrayref)  = @_;
+   return bless ($arrayref, $class);
 }
 
 
 
-=head2 score
-
-  Example    : my $score = $rf->score();
-  Description: Getter of the score attribute for ResultFeature
-               objects
-  Returntype : string/float/double?
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub score {
-    my $self = shift;
-    return $self->{'score'};
-}
 
 =head2 start
 
@@ -111,7 +91,7 @@ sub score {
 
 sub start {
     my $self = shift;
-	return $self->{'start'};
+	return $self->[0];
 }
 
 
@@ -129,8 +109,28 @@ sub start {
 
 sub end {
     my $self = shift;
-	return $self->{'end'};
+	return $self->[1];
 }
+
+=head2 score
+
+  Example    : my $score = $rf->score();
+  Description: Getter of the score attribute for ResultFeature
+               objects
+  Returntype : string/float/double?
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub score {
+    my $self = shift;
+    return $self->[2];
+}
+
+
+
 
 1;
 

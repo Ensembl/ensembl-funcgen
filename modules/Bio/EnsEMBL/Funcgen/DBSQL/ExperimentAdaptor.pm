@@ -40,13 +40,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( warning );
 use Bio::EnsEMBL::Funcgen::Experiment;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 
 
 #May need to our this?
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =head2 fetch_all_by_group
 
@@ -278,6 +278,8 @@ sub _objs_from_sth {
   Description: Stores given Experiment objects in the database. 
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : Throws is group not present in DB
+               Throws if object is not a Bio::EnsEMBL::Funcgen::Experiment
+               Throws if object is already present in the DB but has no dbID
   Caller     : General
   Status     : At Risk
 
@@ -286,53 +288,55 @@ sub _objs_from_sth {
 sub store {
     my $self = shift;
     my @args = @_;
-
+	
 	my ($s_exp);
    	
 	my $sth = $self->prepare("INSERT INTO experiment
                                  (name, egroup_id, date, primary_design_type, description)
                                  VALUES (?, ?, ?, ?, ?)");
-	
-
+		
     foreach my $exp (@args) {
-      if ( ! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') ) {
-	warning('Can only store Experiment objects, skipping $exp');
-	next;
-      }
-      
-      my ($g_dbid) = $self->db->fetch_group_details($exp->group());
-      throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
-      
-      # Has array already been stored?
-      next if ( $exp->dbID() && $exp->adaptor() == $self );
-      
-      $s_exp = $self->fetch_by_name($exp->name());#validate on group too!
-      
-      if(! $s_exp){
-	
-	warn "Storing exp with name ".$exp->name()."\n";
+		throw('Can only store Experiment objects') 	if ( ! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'));
+		
+		if (!( $exp->dbID() && $exp->adaptor() == $self )){
 
-	$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
-	$sth->bind_param(2, $g_dbid,                    SQL_INTEGER);
-	$sth->bind_param(3, $exp->date(),                SQL_VARCHAR);#date?
-	$sth->bind_param(4, $exp->primary_design_type(), SQL_VARCHAR);
-	$sth->bind_param(5, $exp->description(),         SQL_VARCHAR);
-	
-	$sth->execute();
-	$exp->dbID($sth->{'mysql_insertid'});
-	$exp->adaptor($self);
-	
-	
-	#do we need to set egroup, target, design_type, experimentall_variable here?
-      }
-      else{
-	warn("Experiment already exists in DB, using previously stored Experiment\n");
-	$exp = $s_exp;
-      }
-    }
-    
+			my ($g_dbid) = $self->db->fetch_group_details($exp->group());
+			throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
+			
+			$s_exp = $self->fetch_by_name($exp->name());#validate on group too!
+			throw("Experimental already exists in the database with dbID:".$s_ec->dbID().
+				  "\nTo reuse/update this Experimental you must retrieve it using the ExperimentalAdaptor".
+				  "\nMaybe you want to use the -recover option?") if $s_exp;
+		
+			#if(! $s_exp){
+			
+			warn "log this Storing exp with name ".$exp->name()."\n";
+			
+			$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
+			$sth->bind_param(2, $g_dbid,                    SQL_INTEGER);
+			$sth->bind_param(3, $exp->date(),                SQL_VARCHAR);#date?
+			$sth->bind_param(4, $exp->primary_design_type(), SQL_VARCHAR);
+			$sth->bind_param(5, $exp->description(),         SQL_VARCHAR);
+			
+			$sth->execute();
+			$exp->dbID($sth->{'mysql_insertid'});
+			$exp->adaptor($self);
+			
+			
+			#do we need to set egroup, target, design_type, experimentall_variable here?
+			#}
+			#else{
+			#	warn("Experiment already exists in DB, using previously stored Experiment\n");
+			#	$exp = $s_exp;
+			#}
+		}else{
+			#assume we want to update the states
+			warn('You may want to use $exp->adaptor->store_states($exp)');
+			$self->store_states($exp);
+		}
+	}
+		
     return \@args;
-
 }
 
 =head2 list_dbIDs

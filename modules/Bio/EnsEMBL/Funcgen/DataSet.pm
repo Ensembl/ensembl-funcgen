@@ -84,7 +84,7 @@ package Bio::EnsEMBL::Funcgen::DataSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warn );
-#use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Storable);

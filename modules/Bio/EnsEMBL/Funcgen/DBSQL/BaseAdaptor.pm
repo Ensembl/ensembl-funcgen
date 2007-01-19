@@ -28,6 +28,7 @@ use vars qw(@ISA);
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw);
+use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
@@ -65,7 +66,7 @@ sub store_states{
 
 }
 
-=head2 _displayable_to_constraint
+=head2 displayable_to_constraint
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor"
   Arg [2]    : string (opt) - Constraint
@@ -79,14 +80,10 @@ sub store_states{
 
 =cut
 
-sub _displayable_to_constraint{
+sub displayable_to_constraint{
   my ($self, $constraint, $displayable) = @_;
 
   return $constraint if(! $displayable);
-
-  #if(! $adaptor || (ref($adaptor) !~ /Bio::EnsEMBL::Funcgen::DBSQL/)){
-  #  throw("Need to specifiy a Bio::EnsEMBL::Funcgen::DBSQL::\"Adaptor\"");
-  #}
 
   my $table = $self->_tables->[0];
   my $syn   = $self->_tables->[1];
@@ -209,7 +206,7 @@ sub has_stored_status{
 sub set_status{
   my ($self, $state, $obj) = @_;
 
-  if($self->has_status($state, $obj)){
+  if($obj->has_status($state)){
     warning("$obj with dbID ".$obj->dbID()." already has state $state set\n");
   }else{
     my $table = $self->_test_funcgen_table($obj);

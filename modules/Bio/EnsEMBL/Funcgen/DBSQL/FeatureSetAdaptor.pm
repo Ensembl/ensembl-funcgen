@@ -41,13 +41,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( warning );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 
 
 #May need to our this?
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
 
@@ -231,7 +231,7 @@ sub _objs_from_sth {
   Description: Stores FeatureSet objects in the database.
   Returntype : Listref of stored FeatureSet objects
   Exceptions : Throws if FeatureSet does not have a stored FeatureType
-               Warns if FeatureSet already stored, or no or invalid FeatureSets passed
+               Throws if invalid FeatureSet passed
   Caller     : General
   Status     : At Risk
 
@@ -249,29 +249,35 @@ sub store {
 
 
     foreach my $fset (@fsets) {
-		if ( ! $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet') ) {
-			warning('Can only store FeatureSet objects, skipping $fset');
-			next;
-		}
+		throw('Can only store FeatureSet objects, skipping $fset')	if ( ! $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet'));
 
-		# Has FeatureSet already been stored?
-		if ( $fset->is_stored($self->db())){
-			warn("Skipping previously stored FeatureSet ($fset dbID:".$fset->dbID().")");
-		}
-			 
-		throw("FeatureSet must have a stored FeatureType") if (! $fset->feature_type->is_stored($self->db()));
-			 
-		my $ctype_id = (defined $fset->cell_type()) ? $fset->cell_type->dbID() : undef;
+		if (!( $fset->dbID() && $fset->adaptor() == $self )){#use is_stored?
 
-		$sth->bind_param(1, $fset->feature_type->dbID(), SQL_INTEGER);
-		$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);
-		$sth->bind_param(3, $ctype_id),                  SQL_INTEGER);
+			
+			#my $s_fset = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
+			#throw("ExperimentalChip already exists in the database with dbID:".$s_ec->dbID().
+			#	  "\nTo reuse/update this ExperimentalChip you must retrieve it using the ExperimentalChipAdaptor".
+			#	  "\nMaybe you want to use the -recover option?") if $s_ec;
 		
-		$sth->execute();
-		$fset->dbID($sth->{'mysql_insertid'});
-		$fset->adaptor($self);
-	}
 
+			 
+			throw("FeatureSet must have a stored FeatureType") if (! $fset->feature_type->is_stored($self->db()));
+			 
+			my $ctype_id = (defined $fset->cell_type()) ? $fset->cell_type->dbID() : undef;
+
+			$sth->bind_param(1, $fset->feature_type->dbID(), SQL_INTEGER);
+			$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);
+			$sth->bind_param(3, $ctype_id,                   SQL_INTEGER);
+		
+			$sth->execute();
+			$fset->dbID($sth->{'mysql_insertid'});
+			$fset->adaptor($self);
+		}else{
+			#assume we want to update the states
+			warn('You may want to use $fset->adaptor->store_states($fset)');
+			$self->store_states($fset);
+		}
+	}
 	return \@fsets;
 }
 

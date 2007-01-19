@@ -83,28 +83,6 @@ sub new {
 }
 
 
-=head2 _status_adaptor
-
-  Example    : if($self->_status_adaptor->has_state($self, $status){ ... }
-  Description: Internal convenience accessor to StatusAdaptor
-  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::StatusAdaptor
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::Storable
-  Status     : At risk
-
-=cut
-
-
-
-sub _status_adaptor{
-   my ($self) = @_;
-
-   $self->{'_status_adaptor'} ||= $self->adaptor->db->get_StatusAdaptor();
-   
-   return $self->{'_status_adaptor'};
-}
-
-
 =head2 has_status
 
   Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
@@ -124,11 +102,29 @@ sub has_status{
 
    throw("Must provide a status to check") if ! $status;
 
-   my @state = grep(/$status/, @{$self->{'states'}});
+   my @state = grep(/$status/, @{$self->get_all_states()});
    my $boolean = scalar(@state);#will be 0 or 1 due to table contraints
 
    return $boolean;
 }
+
+
+
+#There is a potential to create an obj from scratch which may already exist in the db
+#If we add a state to this (obj has not dbID so will not retrieve stored states) 
+# and then try and store it, this will result in adding the state to the previously stored obj.
+#The behaviour is silent and could cause problems.
+
+#To resolve this the adaptor implementations must throw if we find a matching object
+#We must force the user to generate the obj from the db(use recover) rather than from scratch
+#to make them aware of the situation.  This is useful to protect objects where we do not want to overwrite previous data
+#e.g. experiment, experimental_chip, channel
+#For objects which are routinely resued, we must make sure we always try the db first(not just when recover is set)
+#Then warn/throw if there are differing attributes
+
+#This is not possible for set objects, but is not a problem as it will just create another set entry rather than overwriting
+#All update/store_states methods should be okay so long as we have a dbID first.
+
 
 
 
@@ -150,10 +146,16 @@ sub get_all_states{
 
    my %states;
 
-   #overwriting the cache is prevented by add_states getting states from db if already stored
+   #This could miss states in the DB for storables which have been created and had states added
+   #but already exist with states in the DB
+   #The way to get around this is to throw if we try and store an object without a dbID which matches 
+   #something in the DB.
+   #Remove func in adaptors(ec and channel only?) to automatically use prestored objects, throw instead if no dbID and matches.
+   #force use of recover to retrieve object from DB and then skip to relevant step based on states.
+   #Have states => next method hash in Importer/ArrayDefs?
 
    if($self->is_stored() && ! $self->{'states'}){
-     $self->{'states'} = @{$self->_status_adaptor->fetch_all_states($self)};
+     $self->{'states'} = @{$self->adaptor->fetch_all_states($self)};
    }
 
    return $self->{'states'};
@@ -198,8 +200,6 @@ sub is_displayable{
   return $self->has_status('DISPLAYABLE');
 }
 
-#Need to update adaptor store methods for ExperimentalChip, FeatureSet, ResultSet and Channel?
-#Add store_states, do we have a Funcgen::BaseFeatureAdaptor
 
 
 1;

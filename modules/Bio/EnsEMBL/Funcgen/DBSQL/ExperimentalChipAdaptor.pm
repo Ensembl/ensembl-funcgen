@@ -41,13 +41,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 
 
 #May need to our this?
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =head2 fetch_all_by_experiment_dbID
 
@@ -342,7 +342,7 @@ sub _objs_from_sth {
                called once per array because no checks are made for duplicates.
 			   Sets dbID and adaptor on the objects that it stores.
   Returntype : ARRAYREF
-  Exceptions : warns if passed non-ExperimentalChip arg, or if ExperimentalChip already stored
+  Exceptions : Throws if passed non-ExperimentalChip arg or if ExperimentalChip already stored but arg has no dbID
   Caller     : General
   Status     : Medium Risk
 
@@ -362,42 +362,46 @@ sub store {
     
   
   foreach my $ec (@args) {
-    if ( ! $ec->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') ) {
-      warning('Can only store ExperimentalChip objects, skipping $ec');
-	next;
-    }
-    
-    if (!( $ec->dbID() && $ec->adaptor() == $self )){
-      
-      
-      my $s_ec = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
-	
-      
-      if(! $s_ec){
-	my $ftype_id = (defined $ec->feature_type()) ? $ec->feature_type->dbID() : undef;
-	my $ctype_id = (defined $ec->cell_type()) ? $ec->cell_type->dbID() : undef;
+	  throw('Can only store ExperimentalChip objects') if ( ! $ec->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') );
 
-	$sth->bind_param(1, $ec->unique_id(),      SQL_VARCHAR);
-	$sth->bind_param(2, $ec->experiment_id(),  SQL_VARCHAR);
-	$sth->bind_param(3, $ec->array_chip_id(),  SQL_VARCHAR);
-	$sth->bind_param(4, $ftype_id,             SQL_INTEGER);
-	$sth->bind_param(4, $ctype_id,             SQL_INTEGER);
-	$sth->bind_param(4, $ec->replicate(),      SQL_VARCHAR);
-	
-	$sth->execute();
-	my $dbID = $sth->{'mysql_insertid'};
-	$ec->dbID($dbID);
-	$ec->adaptor($self);
-	#$self->db->set_status('experimental_chip', $ec->dbID(), 'STORED');#not really necessary?
-      }
-      else{
-	$ec = $s_ec;
-
-	#my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};
-	my @states = @{$self->db->get_StatusAdaptor->fetch_all_states($ec)};
-	warn("Using previously stored ExperimentalChip (".$ec->unique_id().") with states\t@states\n");
-      }
-    }
+	  
+	  if (!( $ec->dbID() && $ec->adaptor() == $self )){
+		  
+		  
+		  my $s_ec = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
+		  throw("ExperimentalChip already exists in the database with dbID:".$s_ec->dbID().
+				"\nTo reuse/update this ExperimentalChip you must retrieve it using the ExperimentalChipAdaptor".
+				"\nMaybe you want to use the -recover option?") if $s_ec;
+		  
+		  #if(! $s_ec){
+		  my $ftype_id = (defined $ec->feature_type()) ? $ec->feature_type->dbID() : undef;
+		  my $ctype_id = (defined $ec->cell_type()) ? $ec->cell_type->dbID() : undef;
+		  
+		  $sth->bind_param(1, $ec->unique_id(),      SQL_VARCHAR);
+		  $sth->bind_param(2, $ec->experiment_id(),  SQL_VARCHAR);
+		  $sth->bind_param(3, $ec->array_chip_id(),  SQL_VARCHAR);
+		  $sth->bind_param(4, $ftype_id,             SQL_INTEGER);
+		  $sth->bind_param(4, $ctype_id,             SQL_INTEGER);
+		  $sth->bind_param(4, $ec->replicate(),      SQL_VARCHAR);
+		  
+		  $sth->execute();
+		  my $dbID = $sth->{'mysql_insertid'};
+		  $ec->dbID($dbID);
+		  $ec->adaptor($self);
+		  
+		  #}
+		  #else{
+		  #	  $ec = $s_ec;
+		  
+		  #my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};
+		  #	  my @states = @{$self->db->get_StatusAdaptor->fetch_all_states($ec)};
+		  #	  warn("Using previously stored ExperimentalChip (".$ec->unique_id().") with states\t@states\n");
+		  #  }
+	  }else{
+		  #assume we want to update the states
+		  warn('You may want to use $exp_chip->adaptor->store_states($exp_chip)');
+		  $self->store_states($ec);
+	  }
   }
   
   return \@args;
