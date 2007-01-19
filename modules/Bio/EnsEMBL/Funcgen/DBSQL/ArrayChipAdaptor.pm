@@ -41,13 +41,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::ArrayChip;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 
 
 #May need to our this?
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =head2 fetch_all_by_array_id
 

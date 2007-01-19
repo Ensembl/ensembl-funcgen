@@ -164,7 +164,7 @@ sub new {
 
   #warn("Need to handle single or multiple experiment and feature_group ids");
 
-
+  $self->{'result_sets'} ||= {};
   $self->add_ResultSet($rset) if $rset;
   $self->feature_set($fset) if $fset;
 
@@ -172,27 +172,7 @@ sub new {
   return $self;
 }
 
-=head2 new_fast
 
-  Args       : Hashref with all internal attributes set
-  Example    : none
-  Description: Quick and dirty version of new. Only works if the code is very
-               disciplined.
-  Returntype : Bio::EnsEMBL::Funcgen::DataSet
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-#This will fail if we do a new_fast with result_set vars
-
-sub new_fast {
-   my ($class, $hashref)  = @_;
-
-   return bless ($hashref, $class);
-}
 
 
 
@@ -289,9 +269,8 @@ sub add_ResultSet {
 
   #could we have >1 rset with the same analysis?
   
-  $self->{'result_sets'} ||= {};
-  
-  $self->{'result_sets'}->{$result_set->dbID()} = $result_set;
+  $self->{'result_sets'}->{$result_set->analysis->dbID()} ||= ();
+  push @{$self->{'result_sets'}->{$result_set->dbID()}}, $result_set;
 
 		
   return;

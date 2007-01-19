@@ -41,12 +41,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::DataSet;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 use strict;
 use warnings;
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);#do we need this?
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);#do we need this?
 #we can't pass the slice through the BaseAdaptor
 #So we either don't use it, or use the slice on all the DataSet calls?
 
@@ -232,10 +233,7 @@ sub _columns {
   return qw(
 	    ds.data_set_id     ds.result_set_id
 	    ds.feature_set_id
-	   );
-  
-  #what others do we need?
-	
+	   );	
 }
 
 =head2 _default_where_clause
@@ -302,11 +300,10 @@ sub _objs_from_sth {
   #my (%ft_cache, %ct_chace, %anal_cache);
 
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-  #my $ct_adaptor = $self->db->get_CellTypeAdaptor();
+  my $rset_adaptor = $self->db->get_ResultSetAdaptor();
   #my $anal_adaptor = $self->db->get_AnalysisAdaptor();
 
-  #How should we store ResultSets for access? result_sets hash keyed on analysis/analysis_id?
-  #We are allowing different analyses, but not CellType
+  #How should we store ResultSets for access? result_sets hash keyed on analysis/analysis_id?, with arrays of results sets as elements
   
   $sth->bind_columns(\$dbID, \$rset_id, \$fset_id);
   
@@ -334,6 +331,7 @@ sub _objs_from_sth {
       $data_set = Bio::EnsEMBL::Funcgen::DataSet->new_fast( 
 							   -DBID        => $dbID,
 							   -FEATURE_SET => $fset,
+							   -ADAPTOR     => $self,
 							   #do all the rest dynamically?
 							  );
     }
@@ -399,7 +397,7 @@ sub _objs_from_sth {
 
 
 sub store{
-	my ($self, @ofs) = @_;
+  my ($self, @dsets) = @_;
 
 	if (scalar(@ofs) == 0) {
 		throw('Must call store with a list of OligoFeature objects');
@@ -480,8 +478,11 @@ sub store{
 sub list_dbIDs {
 	my $self = shift;
 	
-	return $self->_list_dbIDs('oligo_feature');
+	return $self->_list_dbIDs('data_set');
 }
+
+
+# method by analysis and experiment/al_chip
 
 # All the results methods may be moved to a ResultAdaptor
 
@@ -500,212 +501,6 @@ sub list_dbIDs {
 =cut
 
 
-
-sub fetch_results_by_channel_analysis{
-	my ($self, $probe_id, $channel_id, $logic_name) = @_;
-	
-	#Will this always be RAW_VALUE?
-
-	my %channel_metrics = (
-						   RawValue => 1,
-						  );
-
-
-	if(! defined $probe_id || ! defined $channel_id) {
-		throw("Need to define a valid probe and channel dbID");
-	}
-		
-
-	my $analysis_clause = "";
-
-	if($logic_name){
-		if(exists $channel_metrics{$logic_name}){
-			$analysis_clause = "AND a.logic_name = \"$logic_name\"";
-		}else{
-			warn("$logic_name is not a channel specific metric\nNo results returned\n");
-			return;
-		}
-	}
-
-	my $query = "SELECT r.score, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"channel\" AND r.table_id=\"$channel_id\" AND r.analysis_id = a.analysis_id $analysis_clause";
-	
-	return $self->dbc->db_handle->selectall_arrayref($query);
-}
-
-=head2 fetch_results_by_probe_experimental_chips_analysis
-
-  Arg [1]    : int - OligoProbe dbID
-  Arg [2]    : ARRAYREF - ExperimentalChip dbIDs
-  Arg [1]    : string - Logic name of analysis
-  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($op_id, \@chip_ids, 'VSN_GLOG')};
-  Description: Gets all analysis results for probe within a set of ExperimentalChips
-  Returntype : ARRAYREF
-  Exceptions : warns if analysis is not valid in ExperimentalChip context
-  Caller     : OligoFeature
-  Status     : At Risk 
-
-=cut
-
-sub fetch_results_by_probe_experimental_chips_analysis{
-	my ($self, $probe_id, $chip_ids, $logic_name) = @_;
-	
-	my $table_ids;
-	my $table_name = "experimental_chip";
-
-	my %chip_metrics = (
-			    VSN_GLOG => 1,
-			   );
-
-	#else no logic name or not a chip metric, then return channel and metric=?
-
-
-	if(! defined $probe_id || ! @$chip_ids) {
-		throw("Need to define a valid probe and pass a listref of experimental chip dbIDs");
-	}
-		
-
-	my $analysis_clause = ($logic_name) ? "AND a.logic_name = \"$logic_name\"" : "";
-
-	if(! exists $chip_metrics{$logic_name}){
-	  $table_name = "channel";
-	  warn("Logic name($logic_name) is not a chip specific metric\nNo results returned\n");
-	  
-	  #build table ids from exp chip channel ids
-	  #need to then sort out which channel is which in caller.
-
-	  #need to enable raw data retrieval!!
-	  return;
-	}else{
-	  $table_ids = join(", ", @$chip_ids);
-	}
-
-
-	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause";
-	
-	return $self->dbc->db_handle->selectall_arrayref($query);
-}
-
-
-#This checks each locus to ensure identically mapped probes only return a median/mean
-#can we just return array triplets?, start, end, score?
-
-sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
-  my ($self, $slice, $analysis, $exp_chips) = @_;
-
-  #warn("Put in ResultAdaptor");
-
-  my (@ofs, @results, $result);
-
-  
-  foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
-    
-    if((! @ofs) || ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
-      push @ofs, $of;
-    }else{#Found new location, deal with previous
-      push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-      @ofs = ($of);
-    }
-  }
-
-  push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-
-  return \@results;
-
-}
-
-sub _get_best_result{
-  my ($self, $ofs, $analysis, $exp_chips) = @_;
-
-  my ($result, $mpos);
-
-  if(scalar(@$ofs) == 2){#mean
-    $result = ($ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) + 
-	       $ofs->[1]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2;
-    
-  }
-  elsif(scalar(@$ofs) > 2){#median or mean of median flanks
-    $mpos = (scalar(@$ofs))/2;
-    
-    if($mpos =~ /\./){#true median
-      $mpos =~ s/\..*//;
-      $mpos ++;
-      $result = $ofs->[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
-    }else{
-      $result = ($ofs->[$mpos]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips) +
-		 $ofs->[($mpos+1)]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips))/2 ;
-    }
-  }else{
-    #push start, end, score onto results
-    $result =  $ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
-
-  }
-
-  return $result;
-}
-
-sub fetch_result_set_by_Slice_Analysis_ExperimentalChips{
-  my ($self, $slice, $anal, $exp_chips) = @_;
-
-  #Slice needs to be genrated from eFG not core DB?
-  #we need to make sure seq_region_id for slice corresponds to db
-  
-
-
-  #do an equals check here
-  my (@ids);
-  my $id_type = "r.table_id";
-  my $channel_clause = "";
-  my $channel_alias = "";
-  my $table_name = 'experimental_chip';
-
-  my %chip_metrics = (
-		      VSN_GLOG => 1,
-		     );
-
-
-  if(! exists $chip_metrics{$anal->logic_name()}){
-    $table_name = "channel";
-    $id_type = "concat(r.table_id, ':', c.type)";
-    $channel_clause = "AND c.channel_id=r.table_id";
-    $channel_alias = ", channel c ";
-
-    foreach my $ec(@$exp_chips){
-      push @ids, @{$ec->get_channel_ids()};
-    }
-
-  }else{
-    foreach my $ec(@$exp_chips){#map?
-      push @ids, $ec->dbID;
-    }
-  }
-
-    #join(", ", @ids);
-
-  #need to then sort out which channel is which in caller.
-  #we need channel type (id?), exp_chip id(:channel type), probe_id, score, chr, start, end
-  my $query = "SELECT r.score, of.seq_region_start, of.seq_region_end, $id_type, r.oligo_probe_id from result r, oligo_feature of $channel_alias WHERE r.table_name=\"${table_name}\" ".
-    "AND r.table_id IN (".join(", ", @ids).") ".
-      "AND r.oligo_probe_id=of.oligo_probe_id ".
-	"AND  of.seq_region_id=".$slice->get_seq_region_id()." AND of.seq_region_start>=".($slice->start() - 49).
-	  " AND of.seq_region_end<=".($slice->end() + 49). 
-	    " AND r.analysis_id=".$anal->dbID()." $channel_clause order by of.seq_region_start";
-
-
-  #warn "query is $query\n";
-
-
-  #this does not handle features over lapping ends...maybe we should just add the max probe length -1 for the given array.
-  #need to handle strand too!
-
-  #Is this what a result should look like?
-  #create array of objects from each line
-  #score, exp_chip_id(:channeltype), chr?, start(relative to slice?), end(relative to slice?), probe_id
-
-
-  #should be ordered by start (and seq_region_id?)
-	
-  return $self->dbc->db_handle->selectall_arrayref($query);
-}
 
 1;
 

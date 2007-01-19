@@ -315,10 +315,11 @@ sub read_array_chip_data{
        -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
        -DYE                  => $data[$hpos{'DYE'}],
        -SAMPLE_LABEL         => $data[$hpos{'SAMPLE_LABEL'}],
-       -SPECIES              => $self->species(),#on channel/sample to enable multi-species chip/experiment
        -TYPE                 => uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]),
       );
     
+    #-SPECIES              => $self->species(),#on channel/sample to enable multi-species chip/experiment
+    #would never happen on one chip?  May happen between chips in one experiment
         
     $self->set_channel($data[$hpos{'CHIP_ID'}], @{$chan_adapt->store($channel)});#do we need o set this anymore? or rename reg_channel?
     
@@ -596,6 +597,7 @@ sub read_sanger_array_probe_data{
       $array_file_format = "GFF";
     }elsif($array_file =~ /adf/io){
       $array_file_format = "ADF";
+      throw("Does not yet accomodate Sanger adf format");
     }else{
       throw("Could not determine array file format: $array_file");
     }
@@ -604,11 +606,8 @@ sub read_sanger_array_probe_data{
    
     $self->log("Parsing ".$self->vendor()." array data (".localtime().")");
     warn("Parsing ".$self->vendor()." array data (".localtime().")");
-    
     $fh = open_file("<", $array_file);
     
-
-    warn("Hardcoded for GFF file format");
 
     my ($chr, $start, $end, $strand, $pid);
 
@@ -904,89 +903,88 @@ sub read_probe_data{
       #THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
       #all out files are generic, but are we converting to adaptor store?
 
-=pod
 
-      $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".ngd");
-      my ($start, $stop, %regions, %probe_pos);
-	  
-      #May not have both ngd and pos file?
+#
+#      $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".ngd");
+#      my ($start, $stop, %regions, %probe_pos);
+#	  
+#      #May not have both ngd and pos file?
+#
+#      while ($line = <$fh>){
+#	$line =~ s/\r*\n//;#chump
+#	@data =  split/\||\t/o, $line;
+#	
+#	
+#	#SEQ_ID	SEQ_UNIQUE|BUILD|CHROMOSOME|LOCATION|DESCRIPTION|DATE_ENTERED|SOURCE_DB
+#	if ($. == 1){
+#	  %hpos = %{$self->set_header_hash(\@data)};
+#	  next;
+#	}
+#	
+#	#What about strand!!!!!!!!!!!
+#	$data[$hpos{'CHROMOSOME'}] =~ s/chr//;
+#	($start, $stop) = split/-/o, $data[$hpos{'LOCATION'}];
+#	
+#	#Do we need seq_id check here for validity?
+#	#overkill?
+#	if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
+#	  croak("Duplicate regions\n");
+#	}else{
+#	  #$data[$hpos{'CHROMOSOME'}] = species_chr_num($self->species(), 	$data[$hpos{'CHROMOSOME'}]);
+#	  
+#	  #Set region hash for SEQ_ID
+#	  #Need to look up seq_region id here for given build
+#	  #Build should be manually specified as we can't guarantee it will be in the correct format
+#	  #or present at all
+#	  
+#	  $regions{$data[$hpos{'SEQ_ID'}]} = 
+#	    {
+#	     start => $start,
+#	     stop  => $stop,
+#	     seq_region_id => $self->get_chr_seq_region_id($data[$hpos{'CHROMOSOME'}], $start, $stop),
+#	     coord_system_id => $cs->dbID(),
+#	    };
+#	}
+#	
+#      }
+#      
+#      close($fh);
+#      
+#      
+#      #ONLY USE THIS FOR VALIDATION OF EXPERIMENTAL PROBES!!!! CAN REMOVE IF PROBE_CLASS POPULATED
+#      #SLURP PROBE POSITIONS
+#      $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".pos");
+#      
+#      #don't % = map ! Takes a lot longer than a while ;)
+#      while($line = <$fh>){
+#	#$line =~ s/\r*\n//;#Not using last element
+#	@data =  split/\t/o, $line;
+#	
+#	#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
+#	if ($. == 1){
+#	  %hpos = %{$self->set_header_hash(\@data)};
+#	  next;
+#	}
+#	#($seq_id, undef, $probe_id, $lstart) = split/\t/o, $line;
+#	
+#	#can we remove this?
+#	throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]) if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]});
+#	
+#	$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
+#						 seq_id => $data[$hpos{'SEQ_ID'}],
+#						 lstart => $data[$hpos{'POSITION'}],
+#						)};
+#	
+#      }
+#      
+#      close($fh);
 
-      while ($line = <$fh>){
-	$line =~ s/\r*\n//;#chump
-	@data =  split/\||\t/o, $line;
-	
-	
-	#SEQ_ID	SEQ_UNIQUE|BUILD|CHROMOSOME|LOCATION|DESCRIPTION|DATE_ENTERED|SOURCE_DB
-	if ($. == 1){
-	  %hpos = %{$self->set_header_hash(\@data)};
-	  next;
-	}
-	
-	#What about strand!!!!!!!!!!!
-	$data[$hpos{'CHROMOSOME'}] =~ s/chr//;
-	($start, $stop) = split/-/o, $data[$hpos{'LOCATION'}];
-	
-	#Do we need seq_id check here for validity?
-	#overkill?
-	if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
-	  croak("Duplicate regions\n");
-	}else{
-	  #$data[$hpos{'CHROMOSOME'}] = species_chr_num($self->species(), 	$data[$hpos{'CHROMOSOME'}]);
-	  
-	  #Set region hash for SEQ_ID
-	  #Need to look up seq_region id here for given build
-	  #Build should be manually specified as we can't guarantee it will be in the correct format
-	  #or present at all
-	  
-	  $regions{$data[$hpos{'SEQ_ID'}]} = 
-	    {
-	     start => $start,
-	     stop  => $stop,
-	     seq_region_id => $self->get_chr_seq_region_id($data[$hpos{'CHROMOSOME'}], $start, $stop),
-	     coord_system_id => $cs->dbID(),
-	    };
-	}
-	
-      }
       
-      close($fh);
-      
-      
-      #ONLY USE THIS FOR VALIDATION OF EXPERIMENTAL PROBES!!!! CAN REMOVE IF PROBE_CLASS POPULATED
-      #SLURP PROBE POSITIONS
-      $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".pos");
-      
-      #don't % = map ! Takes a lot longer than a while ;)
-      while($line = <$fh>){
-	#$line =~ s/\r*\n//;#Not using last element
-	@data =  split/\t/o, $line;
-	
-	#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
-	if ($. == 1){
-	  %hpos = %{$self->set_header_hash(\@data)};
-	  next;
-	}
-	#($seq_id, undef, $probe_id, $lstart) = split/\t/o, $line;
-	
-	#can we remove this?
-	throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]) if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]});
-	
-	$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
-						 seq_id => $data[$hpos{'SEQ_ID'}],
-						 lstart => $data[$hpos{'POSITION'}],
-						)};
-	
-      }
-      
-      close($fh);
-      
-=cut
-      
-  #OPEN PROBE IN/OUT FILES
+      #OPEN PROBE IN/OUT FILES
   
 
-  
-   $fh = open_file("<", $self->get_def("design_dir")."/".$achip->name().".ndf");
+      
+      $fh = open_file("<", $self->get_def("design_dir")."/".$achip->name().".ndf");
       #Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
       #my $p_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'design_name'}."txt");
       #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");

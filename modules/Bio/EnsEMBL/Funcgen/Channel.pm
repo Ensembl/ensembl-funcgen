@@ -16,8 +16,9 @@ my $array = Bio::EnsEMBL::Funcgen::Channel->new(
 			        	        -SAMPLE_ID            => $sample_id,
 					        -TYPE                 => $type,
 						-DYE                  => $dye,
-						-DESCRIPTION          => $desc,
-						);
+					       );
+
+#-replace TYPE with DENOMINATOR?
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
 my $chan_a = $db_adaptor->get_ChannelAdaptor();
@@ -67,12 +68,11 @@ use vars qw(@ISA);
 
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::Channel->new(
-														       -EXPERIMENTAL_CHIP_ID => $ec_id,
- 											                   -SAMPLE_ID            => $sample_id,
-											                   -TYPE                 => $type,
-											                   -DYE                  => $dye,
-											                   -DESCRIPTION          => $desc,
-														 	  );
+	                   			       -EXPERIMENTAL_CHIP_ID => $ec_id,
+                                   	               -SAMPLE_ID            => $sample_id,
+					               -TYPE                 => $type,
+					               -DYE                  => $dye,
+					                     );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Channel object.
   Returntype : Bio::EnsEMBL::Funcgen::Channel
   Exceptions : None
@@ -89,16 +89,14 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 
 	#can we lc these?
-	my ($ec_id, $sample_id, $type, $dye, $desc, $cell_line, $cell_line_id)
-		= rearrange( ['EXPERIMENTAL_CHIP_ID', 'SAMPLE_ID', 'TYPE', 'DYE', 'DESCRIPTION', 'CELL_LINE', 'CELL_LINE_ID'], @_ );
+	my ($ec_id, $sample_id, $type, $dye)
+		= rearrange( ['EXPERIMENTAL_CHIP_ID', 'SAMPLE_ID', 'TYPE', 'DYE'], @_ );
 	
 	$self->sample_id($sample_id)          if defined $sample_id;
 	$self->experimental_chip_id($ec_id)          if defined $ec_id;
 	$self->type($type)    if defined $type;
 	$self->dye($dye)    if defined $dye;
-	$self->description($desc)   if defined $desc;
-	$self->cell_line($cell_line) if defined $cell_line;
-	$self->cell_line_id($cell_line_id) if defined $cell_line_id;
+
 
 	return $self;
 }
@@ -125,60 +123,6 @@ sub sample_id {
 
 	return $self->{'sample_id'};
 }
-
-=head2 cell_line
-
-  Arg [1]    : (optional) Bio::EnsemBL::Funcgen::CellLine
-  Example    : my $cell_line_id = $chan->cell_line->dbID();
-  Description: Getter, setter and lazy loader of the cell line attribute.
-  Returntype : string
-  Exceptions : Throws if arg not Bio::EnsEMBL::Funcgen::CellLine
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub cell_line {
-  my $self = shift;
-
-  if(@_){
-    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::CellLine object") if (! $_[0]->isa("Bio::EnsEMBL::Funcgen::CellLine"));
-  }else{
-    $self->{'cell_line'} = shift;
-  }
-
-  #this need to create an object from the id
-  if ( ! exists $self->{'cell_line'} && $self->cell_line_id() && $self->adaptor() ) {
-    $self->{'cell_line'} = $self->adaptor->db->get_CellLineAdaptor->fetch_by_dbID($self->cell_line_id());
-  }
-
-  return $self->{'cell_line'};
-}
-
-=head2 cell_line_id
-
-  Arg [1]    : (optional) int - cell_line_id
-  Example    : $chan->cell_line_id("1");
-  Description: Getter, setter and lazy loader of the cell line id attribute.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub cell_line_id{
-  my $self = shift;
-  $self->{'cell_line_id'} = shift if @_;
-
-  if ( ! exists $self->{'cell_line_id'} && $self->dbID() && $self->adaptor() ) {
-    $self->adaptor->fetch_attributes($self);
-  }
-
-  return $self->{'cell_line_id'};
-}
-
-
 
 
 
@@ -248,28 +192,6 @@ sub dye {
     $self->adaptor->fetch_attributes($self);
   }
   return $self->{'dye'};
-}
-
-
-=head2 description
-
-  Arg [1]    : (optional) string - the description of the Channel
-  Example    : my $desc = $chan->description();
-  Description: Getter, setter and lazy loader of description attribute
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub description {
-	my $self = shift;
-	$self->{'description'} = shift if @_;
-	if ( !exists $self->{'description'} && $self->dbID() && $self->adaptor() ) {
-		$self->adaptor->fetch_attributes($self);
-	}
-	return $self->{'description'};
 }
 
 

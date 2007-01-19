@@ -46,12 +46,12 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 #Generates ResultSet contains info about ResultSet content
 #and actual results for channel or for chips in contig set?
@@ -630,7 +630,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   my @ids = @{$rset->table_ids()};
   
-  @ids = @{$self->db->get_StatusAdaptor->displayable_filter('experimental_chip', @ids)} if $displayable;
+  @ids = @{$self->displayable_filter('experimental_chip', @ids)} if $displayable;
   
   #we don't need to account for strnadedness here as we're dealign with a double stranded feature
   #need to be mindful if we ever consider expression

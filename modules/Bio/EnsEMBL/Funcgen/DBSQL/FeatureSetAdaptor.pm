@@ -73,7 +73,7 @@ sub fetch_all_by_FeatureType {
 	}
 	
 	my $sql = "fs.feature_type_id = '".$ftype->dbID()."'";
-	$sql = $self->db->get_StatusAdaptor->displayable_to_constraint($self, $constraint, $displayable) if $displayable;
+	$sql = $self->displayable_to_constraint($self, $constraint, $displayable) if $displayable;
 	   
 
     return $self->generic_fetch("fs.feature_type_id = '".$ftype->dbID()."'");
@@ -100,7 +100,7 @@ sub fetch_all_by_CellType {
 	throw("Must provide a valid Bio::EnsEMBL::Funcgen::CellType") if (! ($ctype && $ctype->isa("Bio::EnsEMBL::Funcgen::CellType")));
 	
 	my $constraint = "fs.cell_type_id='".$ctype->dbID()."'";
-	$constraint = $self->db->get_StatusAdaptor->displayable_to_constraint($self, $constraint, $displayable) if $displayable;
+	$constraint = $self->displayable_to_constraint($self, $constraint, $displayable) if $displayable;
 	
 	return $self->generic_fetch($constraint);
 }
@@ -207,12 +207,12 @@ sub _objs_from_sth {
 
 
 		$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-													   -dbID         => $feature_set_id,
-													   -adaptor      => $self,
-													   -feature_type => $ftype_hash{$ftype_id},
-													   -analysis     => $analysis_hash{$analysis_id},
-													   -cell_type    => $ctype_hash{$ctype_id},
-													  );
+							       -dbID         => $feature_set_id,
+							       -adaptor      => $self,
+							       -feature_type => $ftype_hash{$ftype_id},
+							       -analysis     => $analysis_hash{$analysis_id},
+							       -cell_type    => $ctype_hash{$ctype_id},
+							      );
 
 		push @fsets, $fset;
 

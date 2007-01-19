@@ -24,13 +24,17 @@ Post questions to the EnsEMBL developer mailing list: <ensembl-dev@ebi.ac.uk>
 =cut
 
 package Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
-use vars qw(@ISA);
+require Exporter;
+use vars qw(@ISA @EXPORT);
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use DBI qw(:sql_types);
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
+
 
 
 
@@ -55,7 +59,7 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 sub store_states{
   my ($self, $storable) = @_;
 
-  throw('Must call store with a list of OligoFeature objects') if(! $storabable->isa("Bio::EnsEMBL::Funcgen::Storable"));
+  throw('Must call store with a list of OligoFeature objects') if(! $storable->isa("Bio::EnsEMBL::Funcgen::Storable"));
   
   foreach my $state(@{$storable->get_all_states()}){
 
@@ -71,7 +75,7 @@ sub store_states{
   Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor"
   Arg [2]    : string (opt) - Constraint
   Arg [3]    : boolean - displayable
-  Example    : $sql = $self->db->get_StatusAdaptor->displayable_to_constraint($self, $constraint, $displayable);
+  Example    : $sql = $self->displayable_to_constraint($self, $constraint, $displayable);
   Description: Appends the appropriate displayable constraint dependant on which adaptor is passed. 
   Returntype : string - constraint
   Exceptions : Throws if argument is not a Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor"

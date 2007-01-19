@@ -516,7 +516,6 @@ CREATE TABLE `channel` (
    `sample_id` varchar(20) default NULL,
    `dye`  varchar(20) default NULL,
    `type` varchar(20) default NULL,
-   `description` varchar(255) default NULL,
    PRIMARY KEY  (`channel_id`),
    KEY `experimental_chip_idx` (`experimental_chip_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
