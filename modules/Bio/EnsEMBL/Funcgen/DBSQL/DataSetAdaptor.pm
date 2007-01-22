@@ -328,12 +328,12 @@ sub _objs_from_sth {
 
       
 
-      $data_set = Bio::EnsEMBL::Funcgen::DataSet->new_fast( 
-							   -DBID        => $dbID,
-							   -FEATURE_SET => $fset,
-							   -ADAPTOR     => $self,
-							   #do all the rest dynamically?
-							  );
+      $data_set = Bio::EnsEMBL::Funcgen::DataSet->new( 
+													  -DBID        => $dbID,
+													  -FEATURE_SET => $fset,
+													  -ADAPTOR     => $self,
+													  #do all the rest dynamically?
+													 );
     }
       #Add more result/feature sets to the dataset
       

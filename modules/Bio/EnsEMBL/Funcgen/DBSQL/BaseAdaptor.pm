@@ -70,29 +70,30 @@ sub store_states{
 
 }
 
-=head2 displayable_to_constraint
+=head2 status_to_constraint
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor"
-  Arg [2]    : string (opt) - Constraint
-  Arg [3]    : boolean - displayable
-  Example    : $sql = $self->displayable_to_constraint($self, $constraint, $displayable);
-  Description: Appends the appropriate displayable constraint dependant on which adaptor is passed. 
+  Arg [1]    : string - Constraint
+  Arg [2]    : string - status e.g. 'DISPLAYABLE'
+  Example    : $sql = $self->status_to_constraint($self, $constraint, $status);
+  Description: Appends the appropriate status constraint dependant on the BaseAdaptor sub class.
   Returntype : string - constraint
   Exceptions : Throws if argument is not a Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor"
-  Caller     : Bio::EnsEMBL::Funcgen::DBSQL::"Adaptors"
+  Caller     : Bio::EnsEMBL::Funcgen::DBSQL::"BaseAdaptors"
   Status     : At risk
 
 =cut
 
-sub displayable_to_constraint{
-  my ($self, $constraint, $displayable) = @_;
+sub status_to_constraint{
+  my ($self, $constraint, $status) = @_;
 
-  return $constraint if(! $displayable);
+  return $constraint if(! $status);
+
+  my $status_id = $self->get_status_id($status);
 
   my $table = $self->_tables->[0];
   my $syn   = $self->_tables->[1];
 	
-  my $sql = " AND ${syn}.${table}_id = status.table_id AND status.table_name='${table}' AND status.state='DISPLAYABLE'";
+  my $sql = " AND ${syn}.${table}_id = status.table_id AND status.table_name='${table}' AND status.status_name_id='$status_id'";
 
   return $sql;
 }
@@ -152,7 +153,7 @@ sub fetch_all_states{
 
   my $table = $self->_test_funcgen_table($obj);
 
-  my $sql = "SELECT state FROM status WHERE table_name=\"$table\" AND table_id=\"".$obj->dbID()."\"";
+  my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' AND s.table_id='".$obj->dbID()."' and s.status_name_id=s.status_name_id";
 
   my @states = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
@@ -180,7 +181,7 @@ sub fetch_all_states{
 sub has_stored_status{
   my ($self, $state, $obj) = @_;
 
-  warn("To be deprecated, use Bio::EnsEMBL::Funcgen::Storable->has_status()");
+  #Only used for set_status, merge with set_status?
 
   throw("cannot check state of an unstored object") if (! $obj->dbID());
 
@@ -211,11 +212,12 @@ sub set_status{
   my ($self, $state, $obj) = @_;
 
   if($obj->has_status($state)){
-    warning("$obj with dbID ".$obj->dbID()." already has state $state set\n");
+	  warning("$obj with dbID ".$obj->dbID()." already has state $state set\n");
   }else{
-    my $table = $self->_test_funcgen_table($obj);
-    my $sql = "INSERT INTO status(table_id, table_name, state) VALUES(\"".$obj->dbID()."\", \"$table\", \"$state\")";
-    $self->db->dbc->do($sql);
+	  my $status_id = $self->get_status_id($status);
+	  my $table = $self->_test_funcgen_table($obj);
+	  my $sql = "INSERT INTO status(table_id, table_name, status_name_id) VALUES(\"".$obj->dbID()."\", \"$table\", \"$status_id\")";
+	  $self->db->dbc->do($sql);
   }
 
   return;
@@ -223,18 +225,34 @@ sub set_status{
 
 #quick method for ResultSetAdaptor->fetch_Resultfeatures_by_Slice
 
-sub displayable_filter{
-  my ($self, $table_name, @table_ids) = @_;
+sub status_filter{
+  my ($self, $status, $table_name, @table_ids) = @_;
+
+  my $status_id = $self->get_status_id($status);
 
   throw("Must provide a table_name and table_ids to filter non-displayable ids") if(! ($table_name && @table_ids));
   
-  my $sql = "SELECT table_id from status where table_name='$table_name' and table_id in (".join(", ", @table_ids).") and status.state='DISPLAYABLE'";
+  my $sql = "SELECT table_id from status where table_name='$table_name' and table_id in (".join(", ", @table_ids).") and status.status_name_id='$status_id'";
   
   
-  my @displayable_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+  my @status_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
-  return \@displayable_ids;
+  return \@status_ids;
 	
+}
+
+sub get_status_id{
+	my ($self, $status) =@_;
+
+	throw("Must provide a status name to retrieve id") if ! $status;
+
+	my $sql = "SELECT status_name_id from status_name where name='$status'";
+
+	my ($status_id) = @{$self->selectrow_arrayref($sql)};
+
+	throw("Status '$status' is not stored in the database") if ! $status_id;
+
+	return $status_id;
 }
 
 1;
