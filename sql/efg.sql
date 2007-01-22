@@ -580,9 +580,29 @@ DROP TABLE IF EXISTS `status`;
 CREATE TABLE `status` (
    `table_id` int(10) unsigned default NULL,
    `table_name` varchar(20) default NULL,	
-   `state` varchar(40) default NULL,
-   PRIMARY KEY  (`table_id`, `table_name`, `state`)
+   `status_name_id` int(10) NOT NULL,
+   PRIMARY KEY  (`table_id`, `table_name`, `status_name_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `status`
+--
+
+DROP TABLE IF EXISTS `status_name`;
+CREATE TABLE `status` (
+   `status_name_id` int(10) unsigned NOT NULL auto_increment,
+   `name` varchar(20) default NULL,	
+   PRIMARY KEY  (`status_name_id`),
+   UNIQUE KEY `status_name_idx` (`name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+INSERT into table status_name("", 'DISPLAYABLE');
+INSERT into table status_name("", 'IMPORTED');
+--INSERT into table status("", 'DISPLAYABLE');
+-- need to add more states, probably need to validate/insert required states in Importer
+-- would need to get CoordSys objects and set IMPORTED_CS_"cs_id" for relevant data_version
 
 
 
