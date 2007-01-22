@@ -13,8 +13,9 @@ Bio::EnsEMBL::DataSet - A module to represent DataSet object.
 use Bio::EnsEMBL::Funcgen::DataSet;
 
 my $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
-	-EXPERIMENT_ID         => $exp_id,
-        -SLICE                 => $slice,
+	                           -DBID        => $dbID,
+							   -FEATURE_SET => $fset,
+							   -ADAPTOR     => $self,
 ); 
 
 
@@ -92,14 +93,10 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-EXPERIMENT_ID]     : Experiment dbID
-  #or
-  #Arg [-EXPERIMENT]       : Bio::EnsEMBL::Funcgen::Experiment
-  Arg [-SLICE]             : Bio::EnsEMBL::Slice
 
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::DataSet->new(
-                                                               -RESULT_SETS    => \@rsets,
+                                                               -RESULT_SET     => $rset,
                                                                -FEATURE_SET    => $fset,
                                                                -DISPLAYABLE    => 1,
                                                                -UPDATE_SUBSETS => 1,
@@ -165,9 +162,30 @@ sub new {
   #warn("Need to handle single or multiple experiment and feature_group ids");
 
   $self->{'result_sets'} ||= {};
-  $self->add_ResultSet($rset) if $rset;
-  $self->feature_set($fset) if $fset;
 
+  if($rset){
+	  $self->add_ResultSet($rset);
+	  $self->feature_type($rset->feature_type());
+  }
+
+  if($fset){
+
+	  if($rset){
+
+		if($rset->feature_type() != $fset->feature_type()){
+			throw("DataSet does not yet support multiple feature type");
+		}else{
+			$self->feature_type($fset->feature_type());
+		}
+		
+		$self->feature_set($fset);
+	}
+  }
+
+  #need to make at least one set mandatory, so the feature_type check/set is not missed
+  if((! $rest) && (! $fset)){
+	  throw("Must specify at least one Result/FeatureSet");
+  }
 
   return $self;
 }
@@ -230,6 +248,42 @@ sub experiment_ids {
     return $self->{'experiment_ids'};
 }
 
+=head2 feature_set
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::FeatureSet
+  Example    : $data_set->feature_set($fset);
+  Description: Getter and setter for the feature_set attribute for this DataSet.
+  Returntype : Bio::EnsEMBL::Funcgne::FeatureSet
+  Exceptions : Throws if does not match DataSet feature_type or if not a valid stored FeatureSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub feature_set {
+  my ($self, $fset) = @_;
+	
+  #should we handle displayable here, and propogate to the FeatureSet if update_status is set
+  #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
+  #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
+
+  if($fset){
+	
+	  if (! $fset->isa("Bio::Ensembl::Funcgen::FeatureSet")){
+		  throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet");
+	  }elsif(! $result_set->is_stored()){
+		  throw("add_result_set does not accomodate unstored result_sets");
+	  }elsif($fset->feature_type() != $self->feature_type()){
+		  throw("FeatureSet feature_type does not match DataSet feature_type");
+	  }
+	  $self->{'feature_set'} = $fset;
+  }
+		
+  return $self->{'feature_set'};
+}
+
+
+
 
 =head2 add_ResultSet
 
@@ -254,8 +308,63 @@ sub add_ResultSet {
   if (! $result_set->isa("Bio::Ensembl::Funcgen::ResultSet")){
     throw("Need to pass a valid Bio::EnsEMBL::Funcgen::ResultSet");
   }elsif(! $result_set->is_stored()){
-    throw("add_result_set does not accomodate unstored result_sets");
+	  throw("add_result_set does not accomodate unstored result_sets");
+  }elsif($rset->feature_type() != $self->feature_type()){
+	  throw("ResultSet feature_type does not match DataSet feature_type");
   }
+  
+  #should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
+  #DataSetAdaptor to perform the ordering according to feature/celltype
+  #This will still not resolve the complex data sets which can be accomodated by the DB.
+  #Maybe we can keep the data sets as simple as there are and confer the association by tracking back to the experiment?
+  #Would there only ever be one experiment for a complex data_set?
+  
+  
+  #Can have more than one experiment for a compound feature set, would we ever want to display raw data?
+  #This is actually an easier problem unless we are displaying two feature types(i.e. complex and compound)
+  
+  $self->{'result_sets'}->{$result_set->analysis->dbID()} ||= ();
+  push @{$self->{'result_sets'}->{$result_set->analysis->dbID()}}, $result_set;
+
+		
+  return;
+}
+
+
+=head2 get_ResultSets_by_Analysis
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen:Analysis
+  Arg [2]    : (optional) status - e.g 'DISPLAYABLE'
+  Example    : my $anal_sets = @{$result_set->get_ResultSets_by_Analysis($analysis)};
+  Description: Getter for the ResultSet of given Analysis for this DataSet.
+  Returntype : Arrayref
+  Exceptions : Throws if arg is not a valid stored Bio::EnsEMBL::Anaylsis
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_ResultSets_by_Analysis {
+  my ($self, $analysis, $status) = @_;
+
+  my @rset;
+	
+
+  #should we handle displayable here, and propogate to the ResultSet if update_status is set
+  #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
+  #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
+
+  
+  if (! ($analysis->isa("Bio::EnsEMBL::Analysis") && $analysis->dbID())){
+	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ResultSet");
+  }
+
+  #will have to generate new array of object here if we want to filter displayable
+  #This may result in returning a ref to the stored ResultSets for no status
+  #And a ref to the abstracted/filtered i.e. non-stored ResultSets if we have a status
+  #This could cause problems if people want to edit the real ResultSets via the refs
+  #If we edit the ResultSets like this, we would still store via their adaptor
+  #so would need to refresh DataSet anyway.  
   
   #should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
   #DataSetAdaptor to perform the ordering according to feature/celltype
@@ -269,11 +378,37 @@ sub add_ResultSet {
 
   #could we have >1 rset with the same analysis?
   
-  $self->{'result_sets'}->{$result_set->analysis->dbID()} ||= ();
-  push @{$self->{'result_sets'}->{$result_set->dbID()}}, $result_set;
-
+  foreach my $anal_rset(@{$self->{$analysis->dbID()}}){
+	  
+	  if(! defined $status){
+		  push @rsets, $anal_set;
+	  }
+	  elsif($rset->has_status($status)){
+		  push @rsets, $anal_set;
+	  }
+  }
 		
-  return;
+  return \@rsets;
+}
+
+
+=head2 result_sets
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen:Analysis
+  Arg [2]    : (optional) status - e.g 'DISPLAYABLE'
+  Example    : my $anal_sets = @{$result_set->get_ResultSets_by_Analysis($analysis)};
+  Description: Getter for the ResultSet of given Analysis for this DataSet.
+  Returntype : Arrayref
+  Exceptions : Throws if arg is not a valid stored Bio::EnsEMBL::Anaylsis
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_results_sets{
+	my ($self, $displayable)  = @_;
+
+
 }
 
 
@@ -291,7 +426,7 @@ sub add_ResultSet {
 sub result_set_ids {
     my $self = shift;
 	
-    return [keys %{$self->{'result_sets'}}];
+    #return [keys %{$self->{'result_sets'}}];
 }
 
 

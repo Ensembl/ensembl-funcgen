@@ -232,10 +232,10 @@ sub _columns {
 	my $self = shift;
 
 	return qw(
-		  rs.result_set_id  rs.analysis_id
-		  rs.table_name     cc.chip_channel_id
-                  cc.table_id       ec.feature_type_id
-                  ec.cell_type_id
+			  rs.result_set_id  rs.analysis_id
+			  rs.table_name     cc.chip_channel_id
+			  cc.table_id       ec.feature_type_id
+			  ec.cell_type_id
 		 );
 
 	
@@ -332,6 +332,9 @@ sub _objs_from_sth {
     }
     
     #This assumes logical association between chip from the same exp, confer in store method?????????????????
+
+	waarn("Need to add feature_type check here, maybe cell_type check too?");
+	#add just the ids here, as we're aiming at quick web display.
     $rset->add_table_id($table_id, $cc_id);
   
   }
@@ -615,7 +618,7 @@ sub fetch_results_by_probe_experimental_chips_analysis{
 
 
 sub fetch_ResultFeatures_by_Slice_ResultSet{
-  my ($self, $slice, $rset, $displayable) = @_;
+  my ($self, $slice, $rset, $ec_status) = @_;
 
   #Slice needs to be genrated from eFG not core DB?
   #we need to make sure seq_region_id for slice corresponds to db
@@ -630,7 +633,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   my @ids = @{$rset->table_ids()};
   
-  @ids = @{$self->displayable_filter('experimental_chip', @ids)} if $displayable;
+  @ids = @{$self->status_filter($ec_status, 'experimental_chip', @ids)} if $ec_status;
   
   #we don't need to account for strnadedness here as we're dealign with a double stranded feature
   #need to be mindful if we ever consider expression

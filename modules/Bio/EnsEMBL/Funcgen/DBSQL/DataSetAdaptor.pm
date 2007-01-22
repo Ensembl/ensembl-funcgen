@@ -328,7 +328,7 @@ sub _objs_from_sth {
 
       
 
-      $data_set = Bio::EnsEMBL::Funcgen::DataSet->new( 
+      $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
 													  -DBID        => $dbID,
 													  -FEATURE_SET => $fset,
 													  -ADAPTOR     => $self,

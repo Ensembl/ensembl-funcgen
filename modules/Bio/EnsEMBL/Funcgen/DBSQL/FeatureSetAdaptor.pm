@@ -54,6 +54,7 @@ use vars qw(@ISA);
 =head2 fetch_all_by_FeatureType
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_FeatureType($type);
   Description: Retrieves FeatureSet objects from the database based on feature_type id.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
@@ -66,14 +67,14 @@ use vars qw(@ISA);
 sub fetch_all_by_FeatureType {
     my $self = shift;
     my $ftype = shift;
-	my $displayable = shift;
+	my $status = shift;
     
 	if(! ($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType"))){
 		throw("Must provide a valid Bio::EnsEMBL::Funcgen::FeatureType object");
 	}
 	
 	my $sql = "fs.feature_type_id = '".$ftype->dbID()."'";
-	$sql = $self->displayable_to_constraint($self, $constraint, $displayable) if $displayable;
+	$sql = $self->status_to_constraint($self, $constraint, $status) if $status;
 	   
 
     return $self->generic_fetch("fs.feature_type_id = '".$ftype->dbID()."'");
@@ -84,23 +85,24 @@ sub fetch_all_by_FeatureType {
 
 =head2 fetch_all_by_CellType
 
-  Arg [1]    : List of strings - type(s) (e.g. AFFY or OLIGO)
-  Example    : my @arrays = @{$oaa->fetch_all_by_type('OLIGO')};
-  Description: Fetch all arrays of a particular type.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoArray objects
-  Exceptions : Throws if no type is provided
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CelLType
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Example    : my @displayable_fsets = @{$fset_adaptor->fetch_all_by_CellType($ctype, 'DISPLAYABLE')};
+  Description: Fetch all FeatureSet with a given CellType.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : Throws if no valid CellType passed
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
 sub fetch_all_by_CellType {
-	my ($self, $ctype, $displayable) = @_;
+	my ($self, $ctype, $status) = @_;
 	
 	throw("Must provide a valid Bio::EnsEMBL::Funcgen::CellType") if (! ($ctype && $ctype->isa("Bio::EnsEMBL::Funcgen::CellType")));
 	
 	my $constraint = "fs.cell_type_id='".$ctype->dbID()."'";
-	$constraint = $self->displayable_to_constraint($self, $constraint, $displayable) if $displayable;
+	$constraint = $self->status_to_constraint($self, $constraint, $status) if $status;
 	
 	return $self->generic_fetch($constraint);
 }
