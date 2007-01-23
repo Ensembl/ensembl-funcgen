@@ -333,8 +333,15 @@ sub _objs_from_sth {
     
     #This assumes logical association between chip from the same exp, confer in store method?????????????????
 
-	waarn("Need to add feature_type check here, maybe cell_type check too?");
-	#add just the ids here, as we're aiming at quick web display.
+
+    
+    throw("ResultSet does not accomodate multiple FeatureTypes") if ($ftype_id != $rset->feature_type->dbID());
+    throw("ResultSet does not accomodate multiple CellTypes") if ($ctype_id != $rset->cell_type->dbID());								     
+    #we're not controlling ctype and ftype during creating new ResultSets to store.
+    #we should change add_table_id to add_ExperimentalChip and check in that method
+    
+
+    #add just the ids here, as we're aiming at quick web display.
     $rset->add_table_id($table_id, $cc_id);
   
   }
@@ -633,7 +640,16 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   my @ids = @{$rset->table_ids()};
   
-  @ids = @{$self->status_filter($ec_status, 'experimental_chip', @ids)} if $ec_status;
+  if($ec_status){
+    @ids = @{$self->status_filter($ec_status, 'experimental_chip', @ids)};
+
+    if(! @ids){
+
+      warn("No ExperimentalChips have the $ec_status status, No ResultFeatures retrieved");
+      return \@rfeatures;
+    }
+  }
+
   
   #we don't need to account for strnadedness here as we're dealign with a double stranded feature
   #need to be mindful if we ever consider expression

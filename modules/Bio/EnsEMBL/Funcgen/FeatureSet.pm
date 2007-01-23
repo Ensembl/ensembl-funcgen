@@ -45,7 +45,7 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::FeatureSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warn );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
@@ -95,11 +95,6 @@ sub new {
 #  }
 
 
-
-  if($self->dbID() && ! $caller->isa("Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor")){
-    warn("You may be adding ${table_name}:${table_id} to a previously existing FeatureSet");
-    #This is only true if the dbID passed has been used before
-  }
 
   $self->analysis($analysis) if $analysis;
   $self->feature_type($feature_type);

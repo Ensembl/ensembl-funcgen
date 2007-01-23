@@ -63,7 +63,7 @@ sub store_states{
   
   foreach my $state(@{$storable->get_all_states()}){
 
-    $self->set_state($state, $storable) if (! $self->has_stored_state($state, $storable));
+    $self->set_status($state, $storable) if (! $self->has_stored_status($state, $storable));
   }
 
   return;
@@ -72,28 +72,29 @@ sub store_states{
 
 =head2 status_to_constraint
 
-  Arg [1]    : string - Constraint
-  Arg [2]    : string - status e.g. 'DISPLAYABLE'
+  Arg [1]    : string - status e.g. 'DISPLAYABLE'
+  Arg [2]    : string - Constraint
   Example    : $sql = $self->status_to_constraint($self, $constraint, $status);
   Description: Appends the appropriate status constraint dependant on the BaseAdaptor sub class.
   Returntype : string - constraint
-  Exceptions : Throws if argument is not a Bio::EnsEMBL::Funcgen::DBSQL::"Adaptor"
+  Exceptions : None
   Caller     : Bio::EnsEMBL::Funcgen::DBSQL::"BaseAdaptors"
   Status     : At risk
 
 =cut
 
 sub status_to_constraint{
-  my ($self, $constraint, $status) = @_;
-
-  return $constraint if(! $status);
+  my ($self, $status, $constraint) = @_;
 
   my $status_id = $self->get_status_id($status);
 
-  my $table = $self->_tables->[0];
-  my $syn   = $self->_tables->[1];
-	
-  my $sql = " AND ${syn}.${table}_id = status.table_id AND status.table_name='${table}' AND status.status_name_id='$status_id'";
+  return $constraint if (! $status_id);
+
+  my @tables = $self->_tables;
+
+  my ($table, $syn) = @{$tables[0]};
+
+  my $sql = " ${syn}.${table}_id = s.table_id AND s.table_name='${table}' AND s.status_name_id='$status_id'";
 
   return $sql;
 }
@@ -128,7 +129,11 @@ sub _test_funcgen_table{
 
   throw("Cannot test state of unstored object: $obj") if (! $obj->is_stored($self->db()));
 
-  my $table = ${$obj->adaptor->_tables()}[0];
+  my @tables = $self->_tables;
+
+  my ($table) = @{$tables[0]};
+
+  #my $table = ${$obj->adaptor->_tables()}[0];
 
   return $table || $self->throw("Cannot identify table name from $obj adaptor");
 }
@@ -170,7 +175,7 @@ sub fetch_all_states{
   Example    : if($status_a->has_stored_status('IMPORTED', $array){ ... skip import ... };
   Description: Tests wether a given object has a given state
   Returntype : BOOLEAN
-  Exceptions : Throws if Storable not stored
+  Exceptions : Throws if Storable not passed or stored
   Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
   Status     : At risk
 
@@ -181,15 +186,25 @@ sub fetch_all_states{
 sub has_stored_status{
   my ($self, $state, $obj) = @_;
 
-  #Only used for set_status, merge with set_status?
+  my (@row);
 
-  throw("cannot check state of an unstored object") if (! $obj->dbID());
+  #Only used for set_status, merge with set_status?
+  my $status_id = $self->get_status_id($state);
+
+  throw("Must pass a stored Bio::EnsEMBL::Funcgen::Storable") if (! ($obj->isa("Bio::EnsEMBL::Funcgen::Storable") && $obj->dbID()));
 
   my $table = $self->_test_funcgen_table($obj);
-  my $sql = "SELECT state FROM status WHERE table_name=\"$table\" AND table_id=\"".$obj->dbID()."\" AND state=\"$state\"";
 
-  #could just return the call directly?
-  my @row = $self->db->dbc->db_handle->selectrow_array($sql);
+
+  if($status_id){
+    my $sql = "SELECT status_name_id FROM status WHERE table_name=\"$table\" AND table_id=\"".$obj->dbID()."\" AND status_name_id=\"$status_id\"";
+
+
+    warn("Checking stored status with $sql");
+
+    #could just return the call directly?
+    @row = $self->db->dbc->db_handle->selectrow_array($sql);
+  }
 
   return (@row) ? 1 : 0;
 }
@@ -211,13 +226,30 @@ sub has_stored_status{
 sub set_status{
   my ($self, $state, $obj) = @_;
 
-  if($obj->has_status($state)){
-	  warning("$obj with dbID ".$obj->dbID()." already has state $state set\n");
+  my $sql;
+
+  #Do some regex validation on states here?
+
+  warn("setting $state for $obj\n");
+
+  if($self->has_stored_status($state, $obj)){
+    warn("$obj with dbID ".$obj->dbID()." already has status $state set\n");
   }else{
-	  my $status_id = $self->get_status_id($status);
-	  my $table = $self->_test_funcgen_table($obj);
-	  my $sql = "INSERT INTO status(table_id, table_name, status_name_id) VALUES(\"".$obj->dbID()."\", \"$table\", \"$status_id\")";
-	  $self->db->dbc->do($sql);
+    my $status_id = $self->get_status_id($state);
+
+    if(! $status_id){
+      warn("Creating NEW status_name entry for $state.  Is this a valid state?");
+      $sql = "INSERT into status_name ('', $state)";
+      $self->db->dbc->do($sql);
+      $status_id = $self->get_status_id($state);
+    }
+
+    my $table = $self->_test_funcgen_table($obj);
+
+       $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES(\"".$obj->dbID()."\", \"$table\", \"$status_id\")";
+    warn("Setting status with $sql\n");
+									    
+									    $self->db->dbc->do($sql);
   }
 
   return;
@@ -228,31 +260,60 @@ sub set_status{
 sub status_filter{
   my ($self, $status, $table_name, @table_ids) = @_;
 
+
+  my @status_ids;
+
   my $status_id = $self->get_status_id($status);
+
+
+  return \@status_ids if(! $status_id);
 
   throw("Must provide a table_name and table_ids to filter non-displayable ids") if(! ($table_name && @table_ids));
   
   my $sql = "SELECT table_id from status where table_name='$table_name' and table_id in (".join(", ", @table_ids).") and status.status_name_id='$status_id'";
   
   
-  my @status_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+  @status_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
   return \@status_ids;
 	
 }
 
 sub get_status_id{
-	my ($self, $status) =@_;
+  my ($self, $status) = @_;
 
-	throw("Must provide a status name to retrieve id") if ! $status;
+  $self->_validate_status($status);
 
-	my $sql = "SELECT status_name_id from status_name where name='$status'";
+  my $sql = "SELECT status_name_id from status_name where name='$status'";
 
-	my ($status_id) = @{$self->selectrow_arrayref($sql)};
+  my $ref = $self->db->dbc->db_handle->selectrow_arrayref($sql);
+  my ($status_id) = @$ref if $ref;
+  
+  warn("Status '$status' is not stored in the database") if ! $status_id;
 
-	throw("Status '$status' is not stored in the database") if ! $status_id;
+  return $status_id;
+}
 
-	return $status_id;
+
+sub _validate_status{
+  my ($self, $status) = @_;
+
+  throw("Must pass a status to validate") if ! $status;
+
+  my $valid = 0;
+
+  #We could do some look up on the table here, but this may compund problems if someone has hacked the table
+
+  my @state_regexs = ('IMPORTED', 'IMPORTED_CS_', 'DISPLAYABLE');
+
+
+  foreach my $regex(@state_regexs){
+    $valid = 1 if ($status =~ /$regex/);
+  }
+
+  throw("Not a valid status: $status") if(! $valid);
+  
+  return;
 }
 
 1;

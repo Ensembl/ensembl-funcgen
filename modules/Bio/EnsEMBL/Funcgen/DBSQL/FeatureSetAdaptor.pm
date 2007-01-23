@@ -67,17 +67,17 @@ use vars qw(@ISA);
 sub fetch_all_by_FeatureType {
     my $self = shift;
     my $ftype = shift;
-	my $status = shift;
+    my $status = shift;
     
-	if(! ($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType"))){
-		throw("Must provide a valid Bio::EnsEMBL::Funcgen::FeatureType object");
-	}
+    if(! ($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType"))){
+      throw("Must provide a valid Bio::EnsEMBL::Funcgen::FeatureType object");
+    }
 	
-	my $sql = "fs.feature_type_id = '".$ftype->dbID()."'";
-	$sql = $self->status_to_constraint($self, $constraint, $status) if $status;
+    my $sql = "fs.feature_type_id = '".$ftype->dbID()."'";
+    $sql = $self->status_to_constraint($self, $sql, $status) if $status;
 	   
 
-    return $self->generic_fetch("fs.feature_type_id = '".$ftype->dbID()."'");
+    return $self->generic_fetch($sql);
 	
 }
 
@@ -163,7 +163,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( fs.feature_set_id fs.feature_type_id ft.analysis_id ft.feature_type_id);
+	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id);
 }
 
 =head2 _objs_from_sth
@@ -184,16 +184,16 @@ sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
 	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type);
-	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, %ftype_hash);
+	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, %ftype_hash, %ctype_hash);
 	
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my $anal_adaptor = $self->db->get_AnalysisAdaptor();
 	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	$ctype_hash{'NULL'} = undef;
 
-	$sth->bind_columns();
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id);
 	
-	while ( $sth->fetch($feature_set_id, $ftype_id, $analysis_id, $ctype_id)) {
+	while ( $sth->fetch()) {
 
 		$ctype_id ||= 'NULL';
 		

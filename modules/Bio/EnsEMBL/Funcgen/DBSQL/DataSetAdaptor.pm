@@ -111,82 +111,8 @@ use warnings;
 #could have attach_result to feature method?
 #force association when loading features
 
-=head2 fetch_all_by_Slice_ExperimentalChips
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2...] : listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_arrayname($slice, $exp);
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the given ExperimentalChip.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoFeature objects
-  Exceptions : Throws if no array name is provided
-  Caller     : 
-  Status     : At Risk
-
-=cut
-
-#This is no longer appropriate
-#should this take >1 EC? What if we can't fit a all mappings onto one chip
-#Would possibly miss some from the slice
 
 
-sub fetch_all_by_Slice_ExperimentalChips {
-	my ($self, $slice, $exp_chips) = @_;
-
-	my (%nr);
-
-
-	foreach my $ec(@$exp_chips){
-				
-	  throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
-	    if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
-	  
-	  $nr{$ec->array_chip_id()} = 1;
-	}
-
-	#get array_chip_ids from all ExperimentalChips and do a
-	#where op.array_chip_id IN (".(join ", ", @ac_ids)
-
-	#my @echips = @{$self->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($exp->dbID())};
-	#map $nr{$_->array_chip_id()} = 1, @echips;
-	my $constraint = " op.array_chip_id IN (".join(", ", keys %nr).") AND op.oligo_probe_id = of.oligo_probe_id ";
-
-
-	
-	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-}
-
-
-
-
-=head2 fetch_all_by_Slice_type
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : string - type of array (e.g. AFFY or OLIGO)
-  Arg [3]    : (optional) string - logic name
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_type($slice, 'OLIGO');
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the specified type of array.
-  Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
-  Exceptions : Throws if no array type is provided
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Slice_type {
-	my ($self, $slice, $type, $logic_name) = @_;
-
-	throw("Not implemented yet\n");
-	
-	throw('Need type as parameter') if !$type;
-	
-	my $constraint = qq( a.type = '$type' );
-	
-	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
-}
  
 =head2 _tables
 
@@ -205,9 +131,8 @@ sub _tables {
   my $self = shift;
 	
   return (
-	  [ 'data_set',    'ds' ], 
-	  [ 'result_set',  'rs' ], 
-	  [ 'feature_set', 'fs' ],
+	  [ 'data_set',    'ds' ],
+          [ 'status',      's'  ],
 	 );
 }
 
@@ -250,11 +175,13 @@ sub _columns {
 
 =cut
 
-sub _default_where_clause {
-  my $self = shift;
+#sub _default_where_clause {
+#  my $self = shift;
+
+  #Will sthis cause problems if ds or fs is absent?
 	
-  return 'ds.result_set_id = rs.result_set_id AND ds.feature_set_id = fs.feature_set_id';
-}
+  #return 'ds.result_set_id = rs.result_set_id AND ds.feature_set_id = fs.feature_set_id';
+#}
 
 =head2 _final_clause
 
@@ -294,84 +221,72 @@ sub _default_where_clause {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@datasets, $data_set, $dbID, $rset_id, $fset_id, $fset);
-
-  #analysis/ctype/ftype hashed
-  #my (%ft_cache, %ct_chace, %anal_cache);
+  my (@data_sets, $data_set, $dbID, $rset_id, $fset_id, $fset);
 
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
   my $rset_adaptor = $self->db->get_ResultSetAdaptor();
-  #my $anal_adaptor = $self->db->get_AnalysisAdaptor();
-
-  #How should we store ResultSets for access? result_sets hash keyed on analysis/analysis_id?, with arrays of results sets as elements
-  
   $sth->bind_columns(\$dbID, \$rset_id, \$fset_id);
+
+  warn "In obj from sth\n";
   
   while ( $sth->fetch() ) {
-    #This needs to be quite clever here and create a new DataSet when we encounter a new data_set_id
-    #otherwise we populate the current DataSet with more result/feature sets and set them according to there analysis id?
-    #feature_type?
 
-    #do we need to check that the feature_set.sell_type_id is the same as the experimental_chip.cell_line_id
+    warn("Got dbid $dbID, rset $rset_id, fset $fset_id");
 
-
-    if(! $data_set || ($data_set->dbID() == $data_set_id)){
+    if($data_set && ($data_set->dbID() == $dbID)){
 
 
-      #we're just dealing with the basic one feature, one cell type set here.
-      #Maybe we need data groups to handle anything more complex?
-
-
-      #RIGHT THEN!!!
-      #We need to account for non-existent feature_sets as we may only have raw data?
-      $fset = (defined $fset_id) ? $fset_adaptor->fetch_by_dbID($fset_id);
-
-      
-
-      $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
-													  -DBID        => $dbID,
-													  -FEATURE_SET => $fset,
-													  -ADAPTOR     => $self,
-													  #do all the rest dynamically?
-													 );
-    }
-      #Add more result/feature sets to the dataset
-      
-      #Need DataSet->contains_feature_set_id($id) method
-      #don't need contains_result_set_id as key will confer uniqueness on import?
-      #we're likely to encounter NR feature_set_ids
-      #These should be used to key which result_sets are displayed
-
-      #As we're not constraining how DataSets are associated
-      #it's valid to have a combined exp, i.e. Promoter plus Histone features and results?
-      #It can be valid to have several feature_types in the same set?
-      #This is entirely dependent on sensible experimental design and how we want to view the data.
-      #We could then have multiple cell types too? Getting too many dimensions to display sensibly within e!
-
-
-      #Logically we need one constant to key on, cell_type, feature_type, but also allow support combined info 
-      #i.e. all Histone mods for one cell_type, but also have promoter data too?
-      #This is getting close to a 'regulon', as we're incorporating all sorts of supporting data
-      #There should be an order of display for and within each feature class 
-      #(or if we have same feature across several cell types then we order alphabetically?)
-      #Other possible variables to order on:  
-      #analysis_id, this would also separate the features as we can't base a feature on mutliple analyses of the same data
-      
-
-
-      #So we either accomodate everything, where the only contraint is that we have one constant in the set
-      #Or we restrict the Set to handle just one feature_set and it's supporting result_sets
-
-
-    #Start simple, let's just take the one feature/data set problem first
-
-    if($fset_id == $data_set->feature_set->dbID()){
-      $data_set->add_ResultSet($rset_adaptor->fetch_by_dbID($rset_id));
+      if((defined $data_set->feature_set() && ($fset_id == $data_set->feature_set->dbID())) ||
+	 (($fset_id == 0) && (! defined $data_set->feature_set()))){
+	   $data_set->add_ResultSet($rset_adaptor->fetch_by_dbID($rset_id));
+      }else{
+	throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
+      }
     }else{
-      throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
+      push @data_sets, $data_set if($data_set);
+
+      $fset = (defined $fset_id && $fset_id != 0) ? $fset_adaptor->fetch_by_dbID($fset_id) : undef;
+      
+      $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
+						      -DBID        => $dbID,
+						      -FEATURE_SET => $fset,
+						      -RESULT_SET  => $rset_adaptor->fetch_by_dbID($rset_id),
+						      -ADAPTOR     => $self,
+						     );
     }
   }
-  return \@result;
+
+
+  #we could do the sort on cell and types here
+  #we can't do a default sort as some may have feature_set or result_sets absent
+
+  push @data_sets, $data_set if($data_set);
+
+
+  #As we're not (quite) constraining how DataSets are associated
+  #it's valid to have a combined exp, i.e. Promoter plus Histone features and results?
+  #It can be valid to have several feature_types in the same set?
+  #This is entirely dependent on sensible experimental design and how we want to view the data.
+  #We could then have multiple cell types too? Getting too many dimensions to display sensibly within e!
+  
+  
+  #Logically we need one constant to key on, cell_type, feature_type, but also allow support combined info 
+  #i.e. all Histone mods for one cell_type, but also have promoter data too?
+  #This is getting close to a 'regulon', as we're incorporating all sorts of supporting data
+  #There should be an order of display for and within each feature class 
+  #(or if we have same feature across several cell types then we order alphabetically?)
+  #Other possible variables to order on:  
+  #analysis_id, this would also separate the features as we can't base a feature on mutliple analyses of the same data
+  
+  
+  
+  #So we either accomodate everything, where the only contraint is that we have one constant in the set
+  #Or we restrict the Set to handle just one feature_set and it's supporting result_sets
+  
+
+    #Start simple, let's just take the one feature/data set problem first
+  
+  return \@data_sets;
 }
 
 
@@ -382,7 +297,7 @@ sub _objs_from_sth {
   Description: Stores given OligoFeature objects in the database. Should only
                be called once per feature because no checks are made for
 			   duplicates. Sets dbID and adaptor on the objects that it stores.
-  Returntype : None
+  Returntype : Listref of stored DataSet objects
   Exceptions : Throws if a list of OligoFeature objects is not provided or if
                an analysis is not attached to any of the objects
   Caller     : General
@@ -399,64 +314,53 @@ sub _objs_from_sth {
 sub store{
   my ($self, @dsets) = @_;
 
-	if (scalar(@ofs) == 0) {
-		throw('Must call store with a list of OligoFeature objects');
-	}
+  my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, result_set_id) 
+                            VALUES (?, ?)");
+  my $sth2 = $self->prepare("INSERT INTO data_set (dbid, feature_set_id, result_set_id) 
+                            VALUES (?, ?, ?)");
 
-	my $sth = $self->prepare("
-		INSERT INTO oligo_feature (
-			seq_region_id,  seq_region_start,
-			seq_region_end, seq_region_strand,
-            coord_system_id,
-			oligo_probe_id,  analysis_id,
-			mismatches, cigar_line
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	");
+  my $db = $self->db();
 
-	my $db = $self->db();
-	my $analysis_adaptor = $db->get_AnalysisAdaptor();
 
-	FEATURE: foreach my $of (@ofs) {
+ FEATURE: foreach my $dset (@dsets) {
 
-		if( !ref $of || !$of->isa('Bio::EnsEMBL::Funcgen::OligoFeature') ) {
-			throw('Feature must be an OligoFeature object');
-		}
+    if( ! ref $dset || ! $dset->isa('Bio::EnsEMBL::Funcgen::DataSet') ) {
+      throw('Must pass a DataSet object to store');
+    }
 
-		if ( $of->is_stored($db) ) {
-			warning('OligoFeature [' . $of->dbID() . '] is already stored in the database');
-			next FEATURE;
-		}
+    if ( $dset->is_stored($db) ) {
+      throw('DataSet [' . $dset->dbID() . '] is already stored in the database, use update_sets method to store new Result/FeatureSets in this DataSet');
+    }
 
-		if ( !defined $of->analysis() ) {
-			throw('An analysis must be attached to the OligoFeature objects to be stored.');
-		}
+   
+    my $fset_id = (defined $dset->feature_set()) ? $dset->feature_set->dbID() : 0;
+    
+    foreach my $rset (@{$dset->get_ResultSets()}){
 
-		# Store the analysis if it has not been stored yet
-		if ( !$of->analysis->is_stored($db) ) {
-			$analysis_adaptor->store( $of->analysis() );
-		}
-
-		my $original = $of;
-		my $seq_region_id;
-		($of, $seq_region_id) = $self->_pre_store($of);
-
-		$sth->bind_param(1, $seq_region_id,        SQL_INTEGER);
-		$sth->bind_param(2, $of->start(),          SQL_INTEGER);
-		$sth->bind_param(3, $of->end(),            SQL_INTEGER);
-		$sth->bind_param(4, $of->strand(),         SQL_TINYINT);
-		$sth->bind_param(5, $of->coord_system_id(),SQL_INTEGER);
-		$sth->bind_param(6, $of->probe->dbID(),    SQL_INTEGER);
-		$sth->bind_param(7, $of->analysis->dbID(), SQL_INTEGER);
-		$sth->bind_param(8, $of->mismatchcount(),  SQL_TINYINT);
-		$sth->bind_param(9, $of->cigar_line(),     SQL_VARCHAR);
-
-		$sth->execute();
-
-		$original->dbID( $sth->{'mysql_insertid'} );
-		$original->adaptor($self);
-	}
-
-	return \@ofs
+      if(! ($rset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $rset->is_stored($db))){
+	throw("All FeatureSets must be stored previously") if(! $dset->feature_set->is_stored($db));
+      }
+      
+      if(! defined $dset->dbID()){
+	
+	
+	$sth->bind_param(1, $fset_id,         SQL_INTEGER);
+	$sth->bind_param(2, $rset->dbID(),    SQL_INTEGER);
+	
+	$sth->execute();
+	
+	$dset->dbID( $sth->{'mysql_insertid'} );
+	$dset->adaptor($self);
+	
+      }else{
+	$sth2->bind_param(1, $dset->dbID(),   SQL_INTEGER);
+	$sth2->bind_param(3, $fset_id,        SQL_INTEGER);
+	$sth2->bind_param(4, $rset->dbID(),   SQL_INTEGER);  
+      }
+    }
+  }
+      
+  return \@dsets
 }
 
 
@@ -484,22 +388,44 @@ sub list_dbIDs {
 
 # method by analysis and experiment/al_chip
 
-# All the results methods may be moved to a ResultAdaptor
+=head2 fetch_all_diplayable
 
-=head2 fetch_results_by_channel_analysis
-
-  Arg [1]    : int - OligoProbe dbID
-  Arg [2]    : int - Channel dbID
-  Arg [1]    : string - Logic name of analysis
-  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($op_id, $channel_id, 'RAW_VALUE')};
-  Description: Gets all analysis results for probe on given channel
+  Example    : my @displayable_dset = @{$dsa->fetch_all_displayable()};
+  Description: Gets all displayable DataSets
   Returntype : ARRAYREF
-  Exceptions : warns if analysis is not valid in Channel context
-  Caller     : OligoFeature
-  Status     : At Risk - rename fetch_results_by_probe_channel_analysis
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
 
 =cut
 
+sub fetch_all_displayable{
+  my $self = shift;
+
+  return $self->fetch_all_by_status('DISPLAYABLE');
+}
+
+=head2 fetch_all_by_status
+
+  Arg [1]    : string - status e.g. 'DISPLAYABLE'
+  Example    : my @displayable_dset = @{$dsa->fetch_all_by_status('DISPLAYABLE')};
+  Description: Gets all DataSets with given status
+  Returntype : ARRAYREF
+  Exceptions : Throws is no status defined
+               Warns if
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_status{
+  my ($self, $status) = @_;
+
+
+  my $constraint = $self->status_to_constraint('DISPLAYABLE');
+
+  return $self->generic_fetch($constraint);
+}
 
 
 1;

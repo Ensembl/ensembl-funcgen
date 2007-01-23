@@ -99,11 +99,6 @@ sub new {
   #we need to verify that each table_name/id in the set is from the same experiment
 
 
-  #if($self->dbID() && ! $caller->isa("Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor")){
-  #  warn("You may be adding ${table_name}:${table_id} to a previously existing ResultSet");
-  #  #This is only true if the dbID passed has been used before
-  #}
-
   $self->analysis($analysis) if $analysis;
   $self->table_name($table_name);
   $self->add_table_id($table_id) if $table_id;
@@ -401,91 +396,8 @@ sub display_label {
 
 sub get_displayable_ResultFeatures_by_Slice{
   my ($self, $slice) = @_;
-  return $self->get_ResultFeatures_by_Slice($slice, 1);
+  return $self->get_ResultFeatures_by_Slice($slice, 'DISPLAYABLE');
 }
-
-=head2 get_ResultFeatures_by_Slice
-
-  Example    : my @results = @{$ResultSet->get_all_displayable_results()};
-  Description: Getter and lazy loader of results attribute for
-               the ResultSet
-  Returntype : List ref to array refs containing ($display_label, @result_features);
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-#sub get_ResultFeatures_by_Sliceblaart{
-#  my ($self, $slice, $displayable) = @_;
-#
-#  #do we need to restrict to Analysis? Maintain web displayable focus for now
-#  #what about type of display?  Wiggle vs. heatbar?
-#  #can we return this info, or should this be part of the query?
-#
-#  #Does this also need to accomodate channel level data?
-#  #No! Normalisation is never done in a slice context, rather a chip context.
-#
-#
-#
-#  if(! $self->{'result_features'}){
-#
-#    $self->{'result_features'} = [];
-#
-#    if($self->adaptor()){
-#
-#      # we need to get all sets with ecs from the same exp with same feature_type and cell_type id
-#      # separate on chip_set_id and analysis?
-#      
-#
-#      #this should really be in the EC adaptor even tho the data is in the result_set table
-#      #but we ideally want to update this result_set table after an import using the ResultSet adaptor?
-#      #load is v.different to fetch as we're only retrieving start, stop and score for speed purposes.
-#
-#
-#      # if we have more than one dispalyable analysis we really only want it in the display label.
-#      my @eca_sets = @{$self->adaptor->get_experimental_chip_sets_analysis($self->experiment_ids(), $displayable)};
-#      my %anal_names;
-#      #do some funky map to hash thing here and check the scalar keys == 1 else set append_anal flag
-#
-#      #also need to check for more than one set with the same analysis here, as these will be duplicates.
-#      #append display label with ec uids?
-#
-#      #There is also the potential to get two identical track names from different experiments
-#      #this is currently only controlled by the displayable function
-#
-#
-#      foreach my $eca_set(@eca_sets){
-#	#my $display_label = "H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)";
-#	my $diplay_label = $self->feature_type->name().' - '.$self->cell_type->description().' ('.$self->cell_type->display_name().')';
-#
-#	if($append_anal){
-#	  if(! exists $anal_names{$eca_set->[1]}){
-#	    $anal_names{$eca_set->[1]} = $self->adaptor->db->get_AnalysisAdaptor->fetch_by_dbID($eca_set->[1])->logic_name();
-#	  }
-#	  
-#	  $display_label .= ':'. $anal_names{$eca_set->[1]};
-#	}
-#
-#
-#	#should do a _new_fast on ResultFeature here
-#	#No need for a ResultFeatureAdaptor as they are transient i.e. not storable and only access through a result set
-#	#this needs totally changing to be focused on one resultset
-#
-#
-#
-#	#push @{$self->{'results'}},  [ $display_label, $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($self->slice(), $eca_set) ];
-#	@{$self->{'result_features'}} = $self->adaptor->fetch_all_results_by_Slice_analysis_experimental_chips($slice(), $self->analysis_id, $eca_set) ];
-#	
-#
-#    }else{
-#      throw("Need to set an adaptor to retrieve Results");
-#    }
-#  }
-#
-#  return $self->{'results'};
-#}
-
 
 
 #Is it possible to to have one chip displayable and another not within the same set.
@@ -494,7 +406,7 @@ sub get_displayable_ResultFeatures_by_Slice{
 #If we handle this here then all we have to do is filter table_ids first before passing them to the fetch.
 
 sub get_ResultFeatures_by_Slice{
-  my ($self, $slice, $displayable) = @_;
+  my ($self, $slice, $status) = @_;
 
 
   #this does not store the ResultFeatures anywhere so we need to be mindful that calling this will always result in a DB query
@@ -503,7 +415,7 @@ sub get_ResultFeatures_by_Slice{
   #would have to cater for 49 bp overhang which may result in duplicate ResultFeatures which overlap ends of adjacent/overlapping slices
   #49bp ? should be altered to cope with overlap properly.
 
-  return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, $displayable);
+  return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, $status);
 }
 
 

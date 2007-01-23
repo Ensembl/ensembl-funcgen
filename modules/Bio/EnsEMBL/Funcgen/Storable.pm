@@ -46,7 +46,7 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-ADAPTOR] : Bio::EnsEMBL::DBSQL::BaseAdaptor
+  Arg [-STATES]  : Arrayref of states
   Arg [-dbID]    : database internal id
   Example        : none 
   Caller         : internal calls
@@ -75,7 +75,7 @@ sub new {
   #THerefore ResultFeature, Probe and ProbeFeature should not be Funcgen::Storables
 
 
-  $self->{'states'} = ();
+  $self->{'states'} = [];
   $self->{'states'} = @$states if $states;
 
 
@@ -154,7 +154,7 @@ sub get_all_states{
    #force use of recover to retrieve object from DB and then skip to relevant step based on states.
    #Have states => next method hash in Importer/ArrayDefs?
 
-   if($self->is_stored() && ! $self->{'states'}){
+   if($self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
      $self->{'states'} = @{$self->adaptor->fetch_all_states($self)};
    }
 
@@ -185,7 +185,7 @@ sub add_status{
    #this does not resolve the problem!!???
    #can add a status to an unstored object which 
 
-   if($self->is_stored() && ! $self->{'states'}){
+   if($self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
      $self->{'states'} = @{$self->adaptor->fetch_all_states($self)};
    }
 
