@@ -32,13 +32,13 @@ my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 (
-	-host => "ecs3",
-	-dbname => "homo_sapiens_funcgen_42_36d",
+	-host => "ens-genomics1",
+	-dbname => "homo_sapiens_funcgen_43",
 	-species => "homo_sapiens",
 	-user => "ensadmin",
 	-pass => "ensembl",
 	-dnadb => $cdb,
-	-port => '3307',
+	-port => '3306',
 );
 
 print "Getting adaptors\n";
