@@ -258,7 +258,7 @@ CREATE TABLE `feature_type` (
    `class` varchar(40) default NULL,
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`feature_type_id`),
-   UNIQUE KEY `name__class_idx` (`name`, `class`)
+   UNIQUE KEY `name_class_idx` (`name`, `class`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -272,9 +272,9 @@ CREATE TABLE `feature_type` (
 
 DROP TABLE IF EXISTS `data_set`;
 CREATE TABLE `data_set` (
-   `data_set_id` int(10) unsigned NOT NULL,
-   `result_set_id` int(10) unsigned NOT NULL,
-   `feature_set_id` int(10) unsigned NOT NULL,
+   `data_set_id` int(10) unsigned NOT NULL auto_increment,
+   `result_set_id` int(10) unsigned default NULL,
+   `feature_set_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`data_set_id`, `result_set_id`, `feature_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 

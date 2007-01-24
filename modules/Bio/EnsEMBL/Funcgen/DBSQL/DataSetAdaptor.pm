@@ -227,11 +227,13 @@ sub _objs_from_sth {
   my $rset_adaptor = $self->db->get_ResultSetAdaptor();
   $sth->bind_columns(\$dbID, \$rset_id, \$fset_id);
 
-  warn "In obj from sth\n";
+  #warn "In obj from sth\n";
   
   while ( $sth->fetch() ) {
 
-    warn("Got dbid $dbID, rset $rset_id, fset $fset_id");
+    #THIS LOOPS 10 TIMES FOR fetch_by_dbID  but only once for all_displayable ?????????????
+    #Both return 1 record
+    #warn("Got dbid $dbID, rset $rset_id, fset $fset_id");
 
     if($data_set && ($data_set->dbID() == $dbID)){
 

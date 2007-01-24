@@ -199,9 +199,6 @@ sub has_stored_status{
   if($status_id){
     my $sql = "SELECT status_name_id FROM status WHERE table_name=\"$table\" AND table_id=\"".$obj->dbID()."\" AND status_name_id=\"$status_id\"";
 
-
-    warn("Checking stored status with $sql");
-
     #could just return the call directly?
     @row = $self->db->dbc->db_handle->selectrow_array($sql);
   }
@@ -228,10 +225,6 @@ sub set_status{
 
   my $sql;
 
-  #Do some regex validation on states here?
-
-  warn("setting $state for $obj\n");
-
   if($self->has_stored_status($state, $obj)){
     warn("$obj with dbID ".$obj->dbID()." already has status $state set\n");
   }else{
@@ -245,11 +238,10 @@ sub set_status{
     }
 
     my $table = $self->_test_funcgen_table($obj);
-
-       $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES(\"".$obj->dbID()."\", \"$table\", \"$status_id\")";
-    warn("Setting status with $sql\n");
-									    
-									    $self->db->dbc->do($sql);
+    
+    $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES(\"".$obj->dbID()."\", \"$table\", \"$status_id\")";
+    
+    $self->db->dbc->do($sql);
   }
 
   return;
@@ -289,8 +281,6 @@ sub get_status_id{
   my $ref = $self->db->dbc->db_handle->selectrow_arrayref($sql);
   my ($status_id) = @$ref if $ref;
   
-  warn("Status '$status' is not stored in the database") if ! $status_id;
-
   return $status_id;
 }
 
@@ -302,7 +292,7 @@ sub _validate_status{
 
   my $valid = 0;
 
-  #We could do some look up on the table here, but this may compund problems if someone has hacked the table
+  #We could do some look up on the table here, but this may compound problems if someone has hacked the table
 
   my @state_regexs = ('IMPORTED', 'IMPORTED_CS_', 'DISPLAYABLE');
 
