@@ -62,7 +62,7 @@ use vars qw(@ISA);
 
  
   Arg [-SCORE]: (optional) int - Score assigned by analysis pipeline
-  Arg [-ANALYSIS_ID] : int - Analysis database ID.
+  Arg [-ANALYSIS] : Bio::EnsEMBL::Analysis 
   Arg [-SLICE] : Bio::EnsEMBL::Slice - The slice on which this feature is.
   Arg [-START] : int - The start coordinate of this feature relative to the start of the slice
 		 it is sitting on. Coordinates start at 1 and are inclusive.
@@ -98,17 +98,17 @@ sub new {
   
   my $self = $class->SUPER::new(@_);
   
-  my ($display_label, $coord_sys_id, $score, $fset)
-    = rearrange(['DISPLAY_LABEL', 'COORD_SYSTEM_ID', 'SCORE', 'FEATURE_SET'], @_);
+  my ($display_label, $score, $fset)
+    = rearrange(['DISPLAY_LABEL', 'SCORE', 'FEATURE_SET'], @_);
   
   #check mandatory params here
 
-  if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
-    throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
-  }
+  warn ("got analysis".$self->analysis());
 
-  $self->score($score);
-  $self->display_label($display_label);
+ 
+  $self->score($score) if $score;
+  $self->display_label($display_label) if $display_label;
+  throw("Must provide a FeatureSet") if ! $fset;
   $self->feature_set($fset);
   #$self->experiment_ids(@$exp_ids);
 
@@ -116,7 +116,7 @@ sub new {
   #do we need to validate this against the db?  Grab from slice and create new if not present? 
   #Will this be from the dnadb? Or will this work differently for PredictedFeatures?
 	
-  $self->coord_system_id($coord_sys_id);
+  #$self->coord_system_id($coord_sys_id);
 	
   return $self;
 }
@@ -159,6 +159,34 @@ sub score {
     $self->{'score'} = shift if @_;
 		
     return $self->{'score'};
+}
+
+
+=head2 feature_set
+
+  Arg [1]    : (optional) Bio::EnsEMBL::FeatureSet 
+  Example    : $pfeature->feature_set($fset);
+  Description: Getter and setter for the feature_set attribute for this feature. 
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
+  Exceptions : Throws is arg is not a valid Bio::EnsEMBL::Funcgen::FeatureSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub feature_set {
+    my $self = shift;
+
+    if(@_){
+      my $fset = shift;
+      if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
+	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
+      }
+
+      $self->{'feature_set'} = $fset;
+    }
+
+    return $self->{'feature_set'};
 }
 
 =head2 display_label

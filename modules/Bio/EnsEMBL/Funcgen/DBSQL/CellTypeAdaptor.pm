@@ -70,7 +70,10 @@ sub fetch_by_name{
 
   my $constraint = "ct.name ='$name'";
 
-  return $self->generic_fetch($constraint);
+  my @ctype = @{$self->generic_fetch($constraint)};
+  #name is unique so we should only have one
+
+  return $ctype[0];
 }
 
 
