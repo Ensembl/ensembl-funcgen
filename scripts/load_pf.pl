@@ -67,7 +67,7 @@ my $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
 
 print "Got feature set $fset\n";
 
-my ($fset) = @{$fset_adaptor->store($fset)};
+($fset) = @{$fset_adaptor->store($fset)};
 
 print "Got stored feature set $fset\n";
 
@@ -102,7 +102,7 @@ while (my $line = <FILE>){
 	   -SCORE         => $score,
 	   -FEATURE_SET   => $fset,
 	   #-EXPERIMENT_IDS => \@exp_id, 
-	   -FEATURE_TYPE_ID => $ftype_id,
+#	   -FEATURE_TYPE => $ftype,
 	);
 
 	push @p_features, $pfeature;
