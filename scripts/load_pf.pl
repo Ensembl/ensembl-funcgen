@@ -3,9 +3,20 @@ use warnings;
 use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::FeatureSet;
+
+$| =1;
 
 my $file = shift;
+my $ftype_name = shift;
+my $ctype_name = shift;
 my @exp_id = @ARGV;
+
+
+
+#we need to add functionality for feature set import
+#do it by dbID? Should we change this to import DataSets too based on ResultSets?
+#may need to manually hack this for this release
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 (
@@ -30,9 +41,36 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 	-port => '3307',
 );
 
+print "Getting adaptors\n";
+
 my $anal_a = $db->get_AnalysisAdaptor();
 my $anal = $anal_a->fetch_by_logic_name("TilingHMM");
+my $ftype = $db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
+my $ctype = $db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
+
+
+die 'No valid cell or feature type name' if ! $ftype || ! $ctype; 
+
+print "Got feature adn cell types $ftype $ctype\n";
+
 my $pfa = $db->get_PredictedFeatureAdaptor();
+
+my $fset_adaptor = $db->get_FeatureSetAdaptor();
+
+my $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
+  (
+   -CELL_TYPE => $ctype,
+   -FEATURE_TYPE => $ftype,
+   -ANALYSIS => $anal,
+  );
+
+
+print "Got feature set $fset\n";
+
+my ($fset) = @{$fset_adaptor->store($fset)};
+
+print "Got stored feature set $fset\n";
+
 my @p_features;
 
 open (FILE, $file) || die "No file\n";
@@ -53,16 +91,18 @@ while (my $line = <FILE>){
 
 	my $slice = $cdb->get_SliceAdaptor()->fetch_by_region('chromosome', $chr);
 
-	my $pfeature = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
-		-SLICE         => $slice,
-		-START         => $start,
-		-END           => $end,
-		-STRAND        => 1,
-		-DISPLAY_LABEL => $text,
-		-ANALYSIS      => $anal,
-		-SCORE         => $score,
-		-EXPERIMENT_IDS => \@exp_id, 
-		-FEATURE_TYPE_ID => 1
+	my $pfeature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+	  (
+	   -SLICE         => $slice,
+	   -START         => $start,
+	   -END           => $end,
+	   -STRAND        => 1,
+	   -DISPLAY_LABEL => $text,
+	   -ANALYSIS      => $anal,
+	   -SCORE         => $score,
+	   -FEATURE_SET   => $fset,
+	   #-EXPERIMENT_IDS => \@exp_id, 
+	   -FEATURE_TYPE_ID => $ftype_id,
 	);
 
 	push @p_features, $pfeature;
