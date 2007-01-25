@@ -440,11 +440,9 @@ CREATE TABLE `predicted_feature` (
   `coord_system_id` int(10) unsigned NOT NULL default '0',
   `feature_set_id` int(10) unsigned NOT NULL default '0',	
   `display_label` varchar(60) NOT NULL default '',
-  `analysis_id` int(10) unsigned NOT NULL default '0',
   `score` double default NULL,
   PRIMARY KEY  (`predicted_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
-  KEY `analysis_idx` (`analysis_id`),
   KEY `feature_set_idx` (`feature_set_id`)	  
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
