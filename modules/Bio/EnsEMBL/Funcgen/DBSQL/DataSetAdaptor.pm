@@ -248,7 +248,7 @@ sub _objs_from_sth {
       push @data_sets, $data_set if($data_set);
 
       $fset = (defined $fset_id && $fset_id != 0) ? $fset_adaptor->fetch_by_dbID($fset_id) : undef;
-      
+
       $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
 						      -DBID        => $dbID,
 						      -FEATURE_SET => $fset,

@@ -274,7 +274,7 @@ sub equals {
 
   #print $self->{'version'}." eq ".$cs->version()." && ".$self->{'name'}." eq ".$cs->name()." && ".$self->adaptor->db->_get_schema_build($cs->adaptor())." eq ".$self->schema_build()."\n"; 
 
- 
+ #this fails if we are using two different versions with the same cs's
   
   if($self->{'version'} eq $cs->version() && $self->{'name'} eq $cs->name() && $self->adaptor->db->_get_schema_build($cs->adaptor()) eq $self->schema_build()) {
     return 1;

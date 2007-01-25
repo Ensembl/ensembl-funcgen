@@ -438,7 +438,6 @@ CREATE TABLE `predicted_feature` (
   `seq_region_end` int(11) unsigned NOT NULL default '0',
   `seq_region_strand` tinyint(1) NOT NULL default '0',
   `coord_system_id` int(10) unsigned NOT NULL default '0',
-  `feature_type_id` int(10) unsigned NOT NULL default '0',
   `feature_set_id` int(10) unsigned NOT NULL default '0',	
   `display_label` varchar(60) NOT NULL default '',
   `analysis_id` int(10) unsigned NOT NULL default '0',
@@ -446,8 +445,7 @@ CREATE TABLE `predicted_feature` (
   PRIMARY KEY  (`predicted_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `analysis_idx` (`analysis_id`),
-  KEY `type_idx` (`feature_type_id`),	  
-  KEY `hit_idx` (`display_label`)
+  KEY `feature_set_idx` (`feature_set_id`)	  
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 --- Need to be able to maintain link between prediction and source data i.e. experiment/s

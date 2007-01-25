@@ -44,7 +44,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 print "Getting adaptors\n";
 
 my $anal_a = $db->get_AnalysisAdaptor();
-my $anal = $anal_a->fetch_by_logic_name("TilingHMM");
+my $anal = $anal_a->fetch_by_logic_name("Nessie");
 my $ftype = $db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
 my $ctype = $db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
 
@@ -52,6 +52,7 @@ my $ctype = $db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
 die 'No valid cell or feature type name' if ! $ftype || ! $ctype; 
 
 print "Got feature adn cell types $ftype $ctype\n";
+print "Got analyssis $anal\n";
 
 my $pfa = $db->get_PredictedFeatureAdaptor();
 
@@ -88,7 +89,7 @@ while (my $line = <FILE>){
 
 #	print STDERR "$cdb->get_SliceAdaptor()->fetch_by_region(\'chromosome\', $chr);\n";
 
-
+	#cache this
 	my $slice = $cdb->get_SliceAdaptor()->fetch_by_region('chromosome', $chr);
 
 	my $pfeature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
@@ -98,11 +99,11 @@ while (my $line = <FILE>){
 	   -END           => $end,
 	   -STRAND        => 1,
 	   -DISPLAY_LABEL => $text,
-	   -ANALYSIS      => $anal,
+	   #-ANALYSIS      => $anal,
 	   -SCORE         => $score,
 	   -FEATURE_SET   => $fset,
 	   #-EXPERIMENT_IDS => \@exp_id, 
-#	   -FEATURE_TYPE => $ftype,
+	   #-FEATURE_TYPE => $ftype,
 	);
 
 	push @p_features, $pfeature;

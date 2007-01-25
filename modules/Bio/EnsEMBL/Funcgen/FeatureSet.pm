@@ -85,8 +85,8 @@ sub new {
     = rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
 
   #Analysis already checked in BaseFeatureAdaptor
-  if (! $feature_type){
-    throw("Need to pass a feature_type argument");
+  if (! $feature_type || ! $analysis){
+    throw("Need to pass a feature_type and an analysis argument");
   }
 
   #mandatory?
@@ -96,7 +96,7 @@ sub new {
 
 
 
-  $self->analysis($analysis) if $analysis;
+  $self->analysis($analysis);
   $self->feature_type($feature_type);
   $self->cell_type($cell_type) if $cell_type;
 
@@ -224,7 +224,7 @@ sub cell_type {
 	
 	if(@_){
 		throw("Must pass a valid Bio::EnsEMBL::Funcgen::CellType object") if (! $_[0]->isa("Bio::EnsEMBL::Funcgen::CellType"));
-		$self->{'analysis'} = shift;
+		$self->{'cell_type'} = shift;
 	}
 	
 	return $self->{'cell_type'};

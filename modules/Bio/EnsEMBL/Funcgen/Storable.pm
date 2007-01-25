@@ -75,8 +75,8 @@ sub new {
   #THerefore ResultFeature, Probe and ProbeFeature should not be Funcgen::Storables
 
 
-  $self->{'states'} = [];
-  $self->{'states'} = @$states if $states;
+  #$self->{'states'} = [];
+  @{$self->{'states'}} = @$states if $states;
 
 
   return $self;
@@ -155,7 +155,7 @@ sub get_all_states{
    #Have states => next method hash in Importer/ArrayDefs?
 
    if($self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
-     $self->{'states'} = @{$self->adaptor->fetch_all_states($self)};
+     @{$self->{'states'}} = @{$self->adaptor->fetch_all_states($self)};
    }
 
    return $self->{'states'};

@@ -79,8 +79,41 @@ sub fetch_all_by_Slice_FeatureType {
 
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
+
+
+=head2 fetch_all_by_Slice_FeatureSet
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : Bio::EnsEMBL::FeatureType
+  Arg [3]    : (optional) string - analysis logic name
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_by_Slice_FeatureType($slice, $ft);
+  Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
+  Returntype : Listref of Bio::EnsEMBL::PredictedFeature objects
+  Exceptions : Throws if no FeatureType object provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Slice_FeatureSet {
+  my ($self, $slice, $fset) = @_;
+	
+
+  throw('Need type as parameter') if ! $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet");
+  my $fs_id = $fset->dbID();
+  
+  my $constraint = qq( pf.feature_set_id = fs.feature_set_id );
+
+  #could have individual logic_names for each predicted feature here?
+  #$constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
+
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+}
+
+
 
 # Redefine BaseFeatureAdaptor method as analysis now abstracted to feature_set
 # Given a logic name and an existing constraint this will
@@ -88,6 +121,9 @@ sub fetch_all_by_Slice_FeatureType {
 # analysis_id exists in the columns of the primary table then no
 # constraint is added at all
 # DO WE HAVE TO CALL THIS EXPLICITLY in this adaptor, or will BaseAdaptor use redefined method?
+
+
+
 
 
 sub _logic_name_to_constraint {
@@ -191,7 +227,7 @@ sub _tables {
 	
   return (
 		  [ 'predicted_feature', 'pf' ],
-		  [ 'feature_set', 'fs'],
+		  [ 'feature_set', 'fs'],#this is required for fetching on analysis or cell_type or feature_type
 		 );
 			#target?
 }
@@ -308,8 +344,7 @@ sub _objs_from_sth {
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $cs_id,
 	    $fset_id,               $display_label,
-	    $score,                 $analysis_id,
-		$ftype_id,              $cell_type_id
+	    $score
 	);
 
 	$sth->bind_columns(
@@ -317,8 +352,7 @@ sub _objs_from_sth {
 					   \$seq_region_start,  \$seq_region_end,
 					   \$seq_region_strand, \$cs_id,
 					   \$fset_id,        \$display_label,
-					   \$score,          \$analysis_id,
-					   \$ftype_id,       \$cell_type_id
+					   \$score
 					  );
 
 
@@ -516,7 +550,7 @@ sub store{
 		INSERT INTO predicted_feature (
 			seq_region_id,   seq_region_start,
 			seq_region_end,  seq_region_strand,
-            coord_system_id, feature_set_id,
+                        coord_system_id, feature_set_id,
 			display_label,   score
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
@@ -570,14 +604,14 @@ sub store{
 		my $seq_region_id;
 		($pf, $seq_region_id) = $self->_pre_store($pf);
 		
-		$sth->bind_param(1, $seq_region_id,         SQL_INTEGER);
-		$sth->bind_param(2, $pf->start(),           SQL_INTEGER);
-		$sth->bind_param(3, $pf->end(),             SQL_INTEGER);
-		$sth->bind_param(4, $pf->strand(),          SQL_TINYINT);
-		$sth->bind_param(5, $pf->coord_system_id(), SQL_INTEGER);
-		$sth->bind_param(6, $pf->feature_set_id(),  SQL_INTEGER);
-		$sth->bind_param(7, $pf->display_label(),   SQL_VARCHAR);
-		$sth->bind_param(8, $pf->score(),            SQL_DOUBLE);
+		$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
+		$sth->bind_param(2, $pf->start(),               SQL_INTEGER);
+		$sth->bind_param(3, $pf->end(),                 SQL_INTEGER);
+		$sth->bind_param(4, $pf->strand(),              SQL_TINYINT);
+		$sth->bind_param(5, $pf->coord_system_id(),     SQL_INTEGER);
+		$sth->bind_param(6, $pf->feature_set->dbID(),   SQL_INTEGER);
+		$sth->bind_param(7, $pf->display_label(),       SQL_VARCHAR);
+		$sth->bind_param(8, $pf->score(),                SQL_DOUBLE);
 		
 		$sth->execute();
 		$pf->dbID( $sth->{'mysql_insertid'} );

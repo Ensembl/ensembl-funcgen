@@ -162,37 +162,21 @@ sub new {
 
   $self->{'result_sets'} ||= {};
 
-  if($rset){
-    $self->{'feature_type'} = $rset->feature_type();
-    $self->{'cell_type'} = $rset->cell_type();
-    $self->add_ResultSet($rset);
-  }
 
-  if($fset){
+  #change this to add_FeatureSet and add_ResultSet
+  #both need to check whether feature or cell predefined.
+  #then check names
+  #add_featureSet must thro if already defined.
 
-	  if($rset){
+  throw("Must specify at least one Result/FeatureSet") if((! $rset) && (! $fset));
 
-		if($rset->feature_type() != $fset->feature_type()){
-			throw("DataSet does not yet support multiple FeatureTypes");
-		}else{
-			$self->{'feature_type'} = $fset->feature_type();
-		}
+  $self->add_ResultSet($rset) if $rset;
+  $self->feature_set($fset)   if $fset;	  
+  
 
-		if($rset->cell_type() != $fset->cell_type()){
-		  throw("DataSet does not yet support multiple CellTypes");
-		}else{
-		  $self->{'cell_type'} = $fset->cell_type();
-		}
+  #Now we need a store_sets method in DataSet Adaptor
 
-		
-		$self->feature_set($fset);
-	}
-  }
 
-  #need to make at least one set mandatory, so the feature_type check/set is not missed
-  if((! $rset) && (! $fset)){
-    throw("Must specify at least one Result/FeatureSet");
-  }
 
   return $self;
 }
@@ -276,16 +260,33 @@ sub feature_set {
 
   if($fset){
 	
-	  if (! $fset->isa("Bio::Ensembl::Funcgen::FeatureSet")){
-	    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet");
-	  }elsif($fset->feature_type() != $self->feature_type()){
-	    throw("FeatureSet feature_type does not match DataSet feature_type");
-	  }elsif($fset->cell_type() != $self->cell_type()){
-	    throw("FeatureSet cell_type does not match DataSet cell_type");
-	  }
-	  
+    if(defined $self->{'feature_set'}){
+      throw("DataSet does not yet aqccomodate multiple FeatureSets");
 
-	  $self->{'feature_set'} = $fset;
+    }else{
+
+      throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet") if (! $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"));
+
+      if(defined $self->{'feature_type'}){
+
+	if($fset->feature_type->name() ne $self->feature_type->name()){
+	  throw("FeatureSet feature_type does not match DataSet feature_type");
+	}
+      }else{
+	$self->{'feature_type'} = $fset->feature_type();
+      }
+
+      if(defined $self->{'cell_type'}){
+      
+	if($fset->cell_type->name() ne $self->cell_type->name()){
+	  throw("FeatureSet cell_type does not match DataSet cell_type");
+	}
+      }else{
+	$self->{'feature_type'} = $fset->feature_type();
+      }
+    }
+
+    $self->{'feature_set'} = $fset;
   }
 		
   return $self->{'feature_set'};
@@ -317,11 +318,26 @@ sub add_ResultSet {
 
   if (! $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet")){
     throw("Need to pass a valid Bio::EnsEMBL::Funcgen::ResultSet");
-  }elsif($rset->feature_type()->name() ne $self->feature_type()->name()){
-    throw("ResultSet feature_type(".$rset->feature_type->name().
-	  ") does not match DataSet feature_type(".$self->feature_type->name().")");
-  }elsif($rset->cell_type()->name ne $self->cell_type()->name){
-    throw("ResultSet cell_type does not match DataSet cell_type");
+  }
+
+  if(defined $self->{'feature_type'}){
+
+    if($rset->feature_type()->name() ne $self->feature_type()->name()){
+      throw("ResultSet feature_type(".$rset->feature_type->name().
+	    ") does not match DataSet feature_type(".$self->feature_type->name().")");
+    }
+  }else{
+    $self->{'feature_type'} = $rset->feature_type();
+  }
+  
+
+  if(defined $self->{'cell_type'}){
+  
+    if($rset->cell_type()->name ne $self->cell_type()->name){
+      throw("ResultSet cell_type does not match DataSet cell_type");
+    }
+  }else{
+    $self->{'cell_type'} = $rset->cell_type();
   }
   
   
@@ -450,7 +466,33 @@ sub get_ResultSets{
 
 sub get_displayable_ResultSets{
   my $self = shift;
-  return $self->get_results_set('DISPLAYABLE');
+  return $self->get_ResultSets('DISPLAYABLE');
+}
+
+
+=head2 get_displayable_FeatureSets
+
+  Example    : my @displayable_fsets = @{$result_set->get_displayable_FeatureSets()};
+  Description: Convenience method for web display
+  Returntype : Arrayref
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_displayable_FeatureSets{
+  my $self = shift;
+
+  #need to write get_feature_sets, only when we accomodate multiple feature_sets
+  #this is just a place holder method to reduce change in teh AI with repsect to the web API
+
+  my @fsets = ();
+  
+  push @fsets, $self->feature_set() if $self->feature_set->has_status('DISPLAYABLE');
+
+
+  return \@fsets;
 }
 
 

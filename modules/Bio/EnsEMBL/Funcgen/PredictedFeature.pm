@@ -17,9 +17,9 @@ my $feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
 	-START         => 1_000_000,
 	-END           => 1_000_024,
 	-STRAND        => -1,
-    -DISPLAY_LABEL => $text,
-    -ANALYSIS_ID   => $anal_id,
-    -SCORE         => $score,
+        -DISPLAY_LABEL => $text,
+        -SCORE         => $score,
+        -FEATURE_SET   => $fset,
 ); 
 
 
@@ -102,14 +102,12 @@ sub new {
     = rearrange(['DISPLAY_LABEL', 'SCORE', 'FEATURE_SET'], @_);
   
   #check mandatory params here
-
-  warn ("got analysis".$self->analysis());
-
  
   $self->score($score) if $score;
   $self->display_label($display_label) if $display_label;
   throw("Must provide a FeatureSet") if ! $fset;
   $self->feature_set($fset);
+
   #$self->experiment_ids(@$exp_ids);
 
 
@@ -226,6 +224,12 @@ sub display_label {
 }
 
 
+
+
+#retrieved and set from slice in _pre_store
+#can we move the to Funcgen::Feature?
+#will this be used by probe_feature?
+
 =head2 coord_system_id
 
   Arg [1]    : int - dbID of corresponding coord_system for DB of origin
@@ -288,12 +292,11 @@ sub cell_type{
 	return $self->feature_set->cell_type();
 }
 
-
 =head2 feature_type
 
-  Example    : my $type_name = $pfeature->feature_type()->name();
-  Description: Getter for the type attribute for this feature.
-  Returntype : Bio:EnsEMBL::Funcgen::FeatureType
+  Example    : my $ft_name = $pfeature->feature_type()->name();
+  Description: Getter for the feature_type attribute for this feature.
+  Returntype : Bio::EnsEMBL::Funcgen:FeatureType
   Exceptions : None
   Caller     : General
   Status     : At risk
@@ -301,84 +304,115 @@ sub cell_type{
 =cut
 
 sub feature_type{
-	my $self = shift;
+  my $self = shift;
+  
+  return $self->feature_set->feature_type();
+}
 
-	return $self->feature_set->feature_type();
 
+#redefined from Feature to use FeatureSet, unless specifically set
+
+=head2 analysis
+
+  Example    : my $analysis = $pfeature->feature_type()->name();
+  Description: Getter for the type attribute for this feature.
+  Returntype : Bio:EnsEMBL::Funcgen::FeatureType
+  Exceptions : Throws if analysis passed is not a valid Bio::EnsEMBL::Analysis
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub analysis{
+  my $self = shift;
+
+
+  #this is to allow multi analysis sets, but the adaptor currently  throws if they are not the same on store
+  if(@_){
+
+    if($_[0]->isa("Bio::EnsEMBL::Analysis")){
+      $self->{'analysis'} = $_[0];
+    }else{
+      throw("Must pass a valid Bio::EnsEMBL::Analysis");
+    }
+    
+  }
+
+  return (defined $self->{'analysis'}) ? $self->{'analysis'} : $self->feature_set->analysis();
 }
 
 
 #can be moved/mirrored to/in feature set?
 
-sub type {
-  my $self = shift;
-
-  #$self->{'type'} = shift if @_;
-  my ($name, $desc, $ft);	
-
-  if( ! $self->{'type'}){
-
-    if($self->{'feature_type_id'} && $self->adaptor()){
-
-      $self->{'type'} = $self->adaptor->db->get_FeatureTypeAdaptor->fetch_by_dbID($self->{'feature_type_id'});
-
-
-    }else{#hacky interim solution, need to implement cell line look up and display name method in pft? clashes will display_label?
-
-
-   
-      my %desc_hack  = (
-			1  => "Histone 3 Lysine 9 Acetylation",
-			2  => "Histone 4 Acetylation",
-			3  => "Histone 3 Acetylation",
-			4  => "Histone 3 Lysine 4 Tri-Methylation",
-			5  => "Histone 3 Lysine 4 Di-Methylation",
-			6  => "Histone 3 Lysine 4 Mono-Methylation",
-			7  => "Histone 3 Lysine 4 Mono-Methylation",
-			8  => "Histone 3 Lysine 4 Di-Methylation",
-			9  => "Histone 3 Acetylation",
-			10 => "Histone 4 Acetylation",
-			11 => "Histone 3 Lysine 4 Tri-Methylation",
-		       );
-      
-      my %name_hack = (
-		       1  => "H3K9ac - U2OS Enriched Sites",
-		       2  => "H4ac - HeLa Enriched Sites",
-		       3  => "H3ac - HeLa Enriched Sites",
-		       4  => "H3K4me3 - HeLa Enriched Sites",
-		       5  => "H3K4me2 - HeLa Enriched Sites",
-		       6  => "H3K4me1 - HeLa Enriched Sites",
-		       7  => "H3K4me1 - GM06990 Enriched Sites",
-		       8  => "H3K4me2 - GM06990 Enriched Sites",
-		       9  => "H3ac - GM06990 Enriched Sites",
-		       10 => "H4ac - GM06990 Enriched Sites",
-		       11 => "H3K4me3 - GM06990 Enriched Sites",
-		      );
-      
-      
-      
-      if($self->adaptor->db->species() =~ /homo/i){
-	my $exp_id = shift @{$self->experiment_ids()};
-	$desc = $desc_hack{$exp_id};
-	$name = $name_hack{$exp_id};
-      }else{
-	$desc = "Histone 3 Lysine 9 Tri-methlyation";
-	$name = "H3K4Me3 - MEFf Enriched Sites";
-      }
-      
-      $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
-	(
-	 -NAME => $name,
-	 -DESCRIPTION => $desc,
-	 -CLASS => "HISTONE", 
-	); 
-    }
-    
-    $self->{'type'} = $ft;
-    }
-  
-  return $self->{'type'};
-}
+#sub type {
+#  my $self = shift;
+#
+#  #$self->{'type'} = shift if @_;
+#  my ($name, $desc, $ft);	
+#
+#  if( ! $self->{'type'}){
+#
+#    if($self->{'feature_type_id'} && $self->adaptor()){
+#
+#      $self->{'type'} = $self->adaptor->db->get_FeatureTypeAdaptor->fetch_by_dbID($self->{'feature_type_id'});
+#
+#
+#    }else{#hacky interim solution, need to implement cell line look up and display name method in pft? clashes will display_label?
+#
+#
+#   
+#      my %desc_hack  = (
+#			1  => "Histone 3 Lysine 9 Acetylation",
+#			2  => "Histone 4 Acetylation",
+#			3  => "Histone 3 Acetylation",
+#			4  => "Histone 3 Lysine 4 Tri-Methylation",
+#			5  => "Histone 3 Lysine 4 Di-Methylation",
+#			6  => "Histone 3 Lysine 4 Mono-Methylation",
+#			7  => "Histone 3 Lysine 4 Mono-Methylation",
+#			8  => "Histone 3 Lysine 4 Di-Methylation",
+#			9  => "Histone 3 Acetylation",
+#			10 => "Histone 4 Acetylation",
+#			11 => "Histone 3 Lysine 4 Tri-Methylation",
+#		       );
+#      
+#      my %name_hack = (
+#		       1  => "H3K9ac - U2OS Enriched Sites",
+#		       2  => "H4ac - HeLa Enriched Sites",
+#		       3  => "H3ac - HeLa Enriched Sites",
+#		       4  => "H3K4me3 - HeLa Enriched Sites",
+#		       5  => "H3K4me2 - HeLa Enriched Sites",
+#		       6  => "H3K4me1 - HeLa Enriched Sites",
+#		       7  => "H3K4me1 - GM06990 Enriched Sites",
+#		       8  => "H3K4me2 - GM06990 Enriched Sites",
+#		       9  => "H3ac - GM06990 Enriched Sites",
+#		       10 => "H4ac - GM06990 Enriched Sites",
+#		       11 => "H3K4me3 - GM06990 Enriched Sites",
+#		      );
+#      
+#      
+#      
+#      if($self->adaptor->db->species() =~ /homo/i){
+#	my $exp_id = shift @{$self->experiment_ids()};
+#	$desc = $desc_hack{$exp_id};
+#	$name = $name_hack{$exp_id};
+#      }else{
+#	$desc = "Histone 3 Lysine 9 Tri-methlyation";
+#	$name = "H3K4Me3 - MEFf Enriched Sites";
+#      }
+#      
+#      $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
+#	(
+#	 -NAME => $name,
+#	 -DESCRIPTION => $desc,
+#	 -CLASS => "HISTONE", 
+#	); 
+#    }
+#    
+#    $self->{'type'} = $ft;
+#    }
+#  
+#  return $self->{'type'};
+#}
 
 
 

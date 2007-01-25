@@ -196,17 +196,15 @@ sub _objs_from_sth {
 	while ( $sth->fetch()) {
 
 		$ctype_id ||= 'NULL';
-		
+
 		# Get the analysis object
 		$analysis_hash{$analysis_id} = $anal_adaptor->fetch_by_dbID($analysis_id) if(! exists $analysis_hash{$analysis_id});
 
 		# Get the feature type object
-		$ftype_hash{$ftype_id} = $anal_adaptor->fetch_by_dbID($analysis_id) if(! exists $analysis_hash{$analysis_id});
+		$ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
 		
 		# Get the cell_type object
-		$ctype_hash{$ctype_id} = $anal_adaptor->fetch_by_dbID($analysis_id) if(! exists $analysis_hash{$analysis_id});
-
-
+		$ctype_hash{$ctype_id} = $ct_adaptor->fetch_by_dbID($ctype_id) if(! exists $ctype_hash{$ctype_id});
 
 		$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
 							       -dbID         => $feature_set_id,

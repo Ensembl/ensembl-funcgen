@@ -140,12 +140,18 @@ sub fetch_all_by_Slice_constraint {
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
 
-  #print "Fetch by Slice con for projs @proj\n";
+  #warn "Fetch by Slice con for projs @proj";
 
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
     my $offset = $seg->from_start();
     my $seg_slice  = $seg->to_Slice();
+
+
+    my $test = $seg_slice->coord_system();
+
+    #warn("_slice_fetchign with $seg_slice and contraint $constraint and coordsys $test");
+
     my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS
 
     # if this was a symlinked slice offset the feature coordinates as needed
