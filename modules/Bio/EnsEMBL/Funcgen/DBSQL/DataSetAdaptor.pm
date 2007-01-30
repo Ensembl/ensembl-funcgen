@@ -132,7 +132,6 @@ sub _tables {
 	
   return (
 	  [ 'data_set',    'ds' ],
-          [ 'status',      's'  ],
 	 );
 }
 
@@ -180,7 +179,9 @@ sub _columns {
 
   #Will sthis cause problems if ds or fs is absent?
 	
-  #return 'ds.result_set_id = rs.result_set_id AND ds.feature_set_id = fs.feature_set_id';
+#  return 'ds.data_set_id = s.table_id and s.table_name="data_set"';
+  #unnecessary join, need to reimplment StatusAdaptor
+  #This sitll returns duplicate records matching the number of records in status
 #}
 
 =head2 _final_clause
@@ -227,20 +228,20 @@ sub _objs_from_sth {
   my $rset_adaptor = $self->db->get_ResultSetAdaptor();
   $sth->bind_columns(\$dbID, \$rset_id, \$fset_id);
 
-  #warn "In obj from sth\n";
   
   while ( $sth->fetch() ) {
 
     #THIS LOOPS 10 TIMES FOR fetch_by_dbID  but only once for all_displayable ?????????????
     #Both return 1 record
-    #warn("Got dbid $dbID, rset $rset_id, fset $fset_id");
 
     if($data_set && ($data_set->dbID() == $dbID)){
 
 
       if((defined $data_set->feature_set() && ($fset_id == $data_set->feature_set->dbID())) ||
 	 (($fset_id == 0) && (! defined $data_set->feature_set()))){
+
 	   $data_set->add_ResultSet($rset_adaptor->fetch_by_dbID($rset_id));
+
       }else{
 	throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
       }
@@ -389,45 +390,6 @@ sub list_dbIDs {
 
 
 # method by analysis and experiment/al_chip
-
-=head2 fetch_all_diplayable
-
-  Example    : my @displayable_dset = @{$dsa->fetch_all_displayable()};
-  Description: Gets all displayable DataSets
-  Returntype : ARRAYREF
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_displayable{
-  my $self = shift;
-
-  return $self->fetch_all_by_status('DISPLAYABLE');
-}
-
-=head2 fetch_all_by_status
-
-  Arg [1]    : string - status e.g. 'DISPLAYABLE'
-  Example    : my @displayable_dset = @{$dsa->fetch_all_by_status('DISPLAYABLE')};
-  Description: Gets all DataSets with given status
-  Returntype : ARRAYREF
-  Exceptions : Throws is no status defined
-               Warns if
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_status{
-  my ($self, $status) = @_;
-
-
-  my $constraint = $self->status_to_constraint('DISPLAYABLE');
-
-  return $self->generic_fetch($constraint);
-}
 
 
 1;

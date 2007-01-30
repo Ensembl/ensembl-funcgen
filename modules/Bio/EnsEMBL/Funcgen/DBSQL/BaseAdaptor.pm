@@ -70,6 +70,43 @@ sub store_states{
 
 }
 
+
+=head2 fetch_all_diplayable
+
+  Example    : my @displayable_dset = @{$dsa->fetch_all_displayable()};
+  Description: Gets all displayable DataSets
+  Returntype : ARRAYREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_displayable{
+  my $self = shift;
+  return $self->fetch_all_by_status('DISPLAYABLE');
+}
+
+=head2 fetch_all_by_status
+
+  Arg [1]    : string - status e.g. 'DISPLAYABLE'
+  Example    : my @displayable_dset = @{$dsa->fetch_all_by_status('DISPLAYABLE')};
+  Description: Gets all DataSets with given status
+  Returntype : ARRAYREF
+  Exceptions : Throws is no status defined
+               Warns if  
+  Caller     : General
+  Status     : At Risk
+
+=cut
+sub fetch_all_by_status{ 
+  my ($self, $status) = @_; 
+  my $constraint = $self->status_to_constraint('DISPLAYABLE');
+
+  return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
+}
+
+
 =head2 status_to_constraint
 
   Arg [1]    : string - status e.g. 'DISPLAYABLE'
@@ -84,22 +121,38 @@ sub store_states{
 =cut
 
 sub status_to_constraint{
-  my ($self, $status, $constraint) = @_;
+  my ($self, $status) = @_;
+  
+  my $constraint;
 
+  #This will throw if status not valid, but still may be absent
   my $status_id = $self->get_status_id($status);
 
-  return $constraint if (! $status_id);
+  
 
+
+  #NO we need to handle this better
+  #can't just return as we'd then simply ignore the contraint
+  #can't throw??
+  
+
+  return if (! $status_id);
+  
   my @tables = $self->_tables;
+  my ($table_name, $syn) = @{$tables[0]};
 
-  my ($table, $syn) = @{$tables[0]};
+  my @status_ids;
 
-  my $sql = " ${syn}.${table}_id = s.table_id AND s.table_name='${table}' AND s.status_name_id='$status_id'";
+  my $sql = "SELECT table_id from status where table_name='$table_name' and status_name_id='$status_id'";
+  
+  
+  @status_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+  $constraint = " $syn.${table_name}_id IN (".join(',', @status_ids).")" if @status_ids;
+  
 
-  return $sql;
+  return $constraint;
+
 }
-
-
 
 
 
@@ -158,7 +211,8 @@ sub fetch_all_states{
 
   my $table = $self->_test_funcgen_table($obj);
 
-  my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' AND s.table_id='".$obj->dbID()."' and s.status_name_id=s.status_name_id";
+  my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' AND s.table_id='".$obj->dbID()."' and s.status_name_id=sn.status_name_id";
+
 
   my @states = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 

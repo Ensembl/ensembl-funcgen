@@ -438,6 +438,9 @@ sub get_ResultSets{
   my @rsets;
 
   foreach my $anal_id(keys %{$self->{'result_sets'}}){
+
+    
+
     
     foreach my $rset(@{$self->{'result_sets'}->{$anal_id}}){
 
@@ -466,6 +469,7 @@ sub get_ResultSets{
 
 sub get_displayable_ResultSets{
   my $self = shift;
+
   return $self->get_ResultSets('DISPLAYABLE');
 }
 

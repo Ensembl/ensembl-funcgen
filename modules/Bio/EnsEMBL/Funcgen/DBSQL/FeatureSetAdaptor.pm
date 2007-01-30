@@ -74,11 +74,13 @@ sub fetch_all_by_FeatureType {
     }
 	
     my $sql = "fs.feature_type_id = '".$ftype->dbID()."'";
-    $sql = $self->status_to_constraint($self, $sql, $status) if $status;
-	   
 
-    return $self->generic_fetch($sql);
-	
+    if($status){
+      my $constraint = $self->status_to_constraint($status) if $status;
+      $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+    }
+
+    return (defined $sql) ? $self->generic_fetch($sql) : undef;	
 }
 
 
@@ -97,14 +99,18 @@ sub fetch_all_by_FeatureType {
 =cut
 
 sub fetch_all_by_CellType {
-	my ($self, $ctype, $status) = @_;
-	
-	throw("Must provide a valid Bio::EnsEMBL::Funcgen::CellType") if (! ($ctype && $ctype->isa("Bio::EnsEMBL::Funcgen::CellType")));
-	
-	my $constraint = "fs.cell_type_id='".$ctype->dbID()."'";
-	$constraint = $self->status_to_constraint($self, $constraint, $status) if $status;
-	
-	return $self->generic_fetch($constraint);
+  my ($self, $ctype, $status) = @_;
+  
+  throw("Must provide a valid Bio::EnsEMBL::Funcgen::CellType") if (! ($ctype && $ctype->isa("Bio::EnsEMBL::Funcgen::CellType")));
+  
+  my $sql = "fs.cell_type_id='".$ctype->dbID()."'";
+  
+  if($status){
+    my $constraint = $self->status_to_constraint($status) if $status;
+    $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+  }
+  
+  return (defined $sql) ? $self->generic_fetch($sql) : undef;	
 }
 
 =head2 fetch_attributes

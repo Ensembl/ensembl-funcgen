@@ -182,6 +182,7 @@ sub get_available_adaptors{
 	       'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
 	       'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
 	       'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
+	       #'Status'             => 'Bio::EnsEMBL::Funcgen::DBSQL::StatusAdaptor',
 	       
 	       #add required EnsEMBL(core) adaptors here
 	       #Should write/retrieve from efg not dna db

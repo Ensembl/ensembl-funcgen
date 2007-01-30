@@ -154,10 +154,12 @@ sub get_all_states{
    #force use of recover to retrieve object from DB and then skip to relevant step based on states.
    #Have states => next method hash in Importer/ArrayDefs?
 
+  
+
    if($self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
      @{$self->{'states'}} = @{$self->adaptor->fetch_all_states($self)};
    }
-
+   
    return $self->{'states'};
 }
 

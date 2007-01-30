@@ -232,10 +232,10 @@ sub _columns {
 	my $self = shift;
 
 	return qw(
-			  rs.result_set_id  rs.analysis_id
-			  rs.table_name     cc.chip_channel_id
-			  cc.table_id       ec.feature_type_id
-			  ec.cell_type_id
+		  rs.result_set_id    rs.analysis_id
+		  cc.chip_channel_id  cc.table_id         
+		  cc.table_name       ec.feature_type_id  
+		  ec.cell_type_id
 		 );
 
 	
@@ -317,10 +317,11 @@ sub _objs_from_sth {
       
       push @rsets, $rset if $rset;
       
+    
       $anal = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-      
+            
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
 						    -DBID         => $dbid,
 						    -ANALYSIS     => $anal,
@@ -375,8 +376,8 @@ sub store{
   
   my $sth = $self->prepare("
 		INSERT INTO result_set (
-			analysis_id,  table_name
-		) VALUES (?, ?)
+			analysis_id
+		) VALUES (?)
 	");
   
   my $db = $self->db();
@@ -411,7 +412,7 @@ sub store{
    
 
     $sth->bind_param(1, $rset->analysis->dbID(), SQL_INTEGER);
-    $sth->bind_param(2, $rset->table_name(),     SQL_VARCHAR);
+    #$sth->bind_param(2, $rset->table_name(),     SQL_VARCHAR);
     
     $sth->execute();
     
@@ -455,8 +456,8 @@ sub store_chip_channels{
   
   my $sth = $self->prepare("
 		INSERT INTO chip_channel (
-			result_set_id, table_id
-		) VALUES (?, ?)
+			result_set_id, table_id, table_name
+		) VALUES (?, ?, ?)
 	");
   
 
@@ -466,6 +467,7 @@ sub store_chip_channels{
     if(! defined $rset->get_chip_channel_id($table_id)){
       $sth->bind_param(1, $rset->dbID(),       SQL_INTEGER);
       $sth->bind_param(2, $table_id,           SQL_INTEGER);
+      $sth->bind_param(3, 'experimental_chip', SQL_VARCHAR);
       
       $sth->execute();
       $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
@@ -707,7 +709,8 @@ sub _get_best_result{
   my ($score, $mpos);
 
   #deal with one score fastest
-  return  $scores->[0] if (scalar(@$scores) == 0);
+  return  $scores->[0] if (scalar(@$scores) == 1);
+
 
   if(scalar(@$scores) == 2){#mean
 	  $score = ($scores->[0] + $scores->[1])/2;
