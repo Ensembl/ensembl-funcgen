@@ -673,6 +673,8 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   
   while ( $sth->fetch() ) {
     #we need to get best result here if start and end the same
+
+    warn "Found $score, $start, $end";
     
     #set start end for first result
     $old_start ||= $start;
@@ -697,8 +699,11 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   
   #store last feature  
   #Do not change arg order, this is an array object!!
-  push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-    ([$old_start, $old_end,(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
+  #only if found previosu results
+  if($old_start){
+    push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+      ([$old_start, $old_end,(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
+  }
   
   return \@rfeatures;
 }
