@@ -13,8 +13,8 @@ export EFG_DATA=~/data/efg
 export PATH=$PATH:$EFG_SRC/scripts
 export PERL5LIB=$EFG_SRC/modules:$PERL5LIB
 export PS1='efg@$PS1HOST>'
-export WRITE_NAME="-uensadmin"
-export READ_NAME="-uensro"
+export WRITE_USER="-uensadmin"
+export READ_USER="-uensro"
 export MYSQL_ARGS="-hens-genomics1 -P3306"
 
 #could add PERL5LIB here too, this could be extended to include all config for shipping to users?  in bashrc for now
@@ -26,26 +26,55 @@ alias efgd='cd $EFG_DATA'
 alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
 alias efgmacs='xemacs $EFG_SRC/modules/Bio/EnsEMBL/Funcgen &'
 
-alias mysqlw="mysql $MYSQL_ARGS $WRITE_NAME"
-alias mysqlro="mysql $MYSQL_ARGS $READ_NAME"
+alias mysqlw="mysql $MYSQL_ARGS $WRITE_USER"
+alias mysqlro="mysql $MYSQL_ARGS $READ_USER"
 
 
 CreateDB(){
-    DBNAME=$1
-    PASS=$2
-	
-    #check vars here
 
-    PRESENT=$(QueryVal show databases like \"$DBNAME\")
-
-    if [[ $PRESENT ]]
+    if [[ ! $2 ]]
     then
-	echo "DB $DBNAME already exists, please check and drop DB before continuing"
+	echo "Need to define dbname and password arguments"
+	echo "e.g. create_db.sh homo_sapiens_funcgen_44_36f 'password'"
     else
-	echo "Creating $DBNAME"
-	echo "create database $DBNAME" | mysqlw -p${PASS}
-	mysqlw -p${PASS} $DBNAME < $EFG_SQL/efg.sql
+    
+    dbname=$1
+    pass=$2
+
+    if [[ $3 ]]
+    then 
+    
+        if [[ $3 != drop ]]
+        then 
+            echo "Unrecognised argument, did you mean to specify 'drop' as the 3rd argument?"
+            return
+        else
+            drop=$3
+        fi
     fi
+
+    
+    present=$(QueryVal show databases like \"$DBNAME\")
+    
+ 
+    if [[ $present ]]
+    then
+
+        if [[ $drop ]]
+        then
+            echo "Dropping DB $dbname"
+            echo "DROP DATABASE IF EXISTS \`$1\`;" |  mysqlw -p${pass}
+        else
+            echo "DB $dbname already exists, please drop the database manually or using the 3rd argument 'drop'"
+            echo "e.g. e.g. create_db.sh homo_sapiens_funcgen_44_36f 'password' drop"
+            return
+        fi
+    fi
+
+    echo "Creating DB $dbname"
+    echo "CREATE database $DBNAME" | mysqlw -p${pass}
+    mysqlw -p${pass} $DBNAME < $EFG_SQL/efg.sql
+
 
 	
 }
