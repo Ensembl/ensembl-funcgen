@@ -1209,8 +1209,23 @@ sub get_chr_seq_region_id{
   #my $slice = $self->slice_adaptor->fetch_by_region("chromosome", $chr, $start, $end);
   #we could pass the slice back to the slice adaptor for this, to avoid dbid problems betwen DBs
   
-  return $self->db->get_SliceAdaptor->fetch_by_region("chromosome", $chr, $start, $end)->get_seq_region_id();
+  ###would need to implement other cs's here
+
+  return $self->slice_adaptor->fetch_by_region("chromosome", $chr, $start, $end)->get_seq_region_id();
 }
+
+#convinience method
+
+sub slice_adaptor{
+	my $self = shift;
+
+	if(! defined $self->{'slice_adaptor'}){
+		$self->{'slice_adaptor'} =  $self->db->get_SliceAdaptor();
+	}
+
+	return $self->{'slice_adaptor'};
+}
+
 
 =head2 vsn_norm
   

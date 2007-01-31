@@ -578,11 +578,11 @@ sub store{
 		
 		#Have to do this for Analysis separately due to inheritance, removed defined as constrained in Feature->new
 		#Redundancy with Analysis in FeatureSet
-		if ( ! $pf->analysis->is_stored($db)) {
+		$if ( ! $pf->analysis->is_stored($db)) {
 			throw('A stored Bio::EnsEMBL::Analysis must be attached to the PredictedFeature objects to be stored.');
 		}
 		
-		if ( ! $pf->feature_set->is_stored($db)) {
+		if (! $pf->feature_set->is_stored($db)) {
 			throw('A stored Bio::EnsEMBL::Funcgen::FeatureSet must be attached to the PredictedFeature objects to be stored.');
 		}
 
