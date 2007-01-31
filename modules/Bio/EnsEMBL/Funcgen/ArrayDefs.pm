@@ -40,7 +40,7 @@ package Bio::EnsEMBL::Funcgen::ArrayDefs;
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::Probe;
-#use Bio::EnsEMBL::Funcgen::FeatureType;
+use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Channel;
@@ -652,7 +652,7 @@ sub read_sanger_array_probe_data{
 
 	  
 	  #Hack!!!!!!  This is still maintaining the probe entry (and result?)
-	  if(!  $self->get_cached_slice{$chr}){
+	  if(!  $self->get_cached_slice($chr)){
 	    warn("Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
 	    next;
 	  }
@@ -850,7 +850,7 @@ sub read_sanger_result_data{
 sub read_probe_data{
 	my ($self) = shift;
 
-	my ($fh, $line, @data, %hpos);
+	my ($fh, $line, @data, %hpos, %probe_pos);
 	$self->log("Parsing probe data (".localtime().")");
 	warn("Parsing probe data (".localtime().")...can we do a reduced parse if we know the array chips are already imported");
 	### Read in
@@ -941,7 +941,7 @@ sub read_probe_data{
 			#pos file also gives a key to which probes should be considered 'EXPERIMENTAL'
 			
 			#SLURP PROBE POSITIONS
-			$fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".pos");
+			$fh = open_file("<", $self->get_def("design_dir")."/".$achip->name().".pos");
 			
 			#don't % = map ! Takes a lot longer than a while ;)
 			while($line = <$fh>){
@@ -961,9 +961,9 @@ sub read_probe_data{
 				$self->cache_slice($data[$hpos{'SEQ_ID'}]);
 				
 				$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
-														 seq_id => $data[$hpos{'SEQ_ID'}],
-														 start => $data[$hpos{'POSITION'}],
-														)};
+									 seq_id => $data[$hpos{'SEQ_ID'}],
+									 start => $data[$hpos{'POSITION'}],
+									)};
 				
 			}
       
@@ -977,7 +977,7 @@ sub read_probe_data{
 			#my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
 			#my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
 			my $f_out = open_file(">", $self->get_dir("output")."/probe.".$achip->name()."fasta")	if($self->{'_dump_fasta'});
-			my ($lentgh, $ops, $op, $of, @probes, @features, %pfs);
+			my ($length, $ops, $op, $of, @probes, @features, %pfs);
 
 			#should define mapping_method arg to allows this to be set to LiftOver/EnsemblMap
 			my $anal = $self->db->get_AnalysisAdaptor()->fetch_by_logic_name("VendorMap");
@@ -1124,7 +1124,7 @@ sub read_probe_data{
 				}
 				
 				#Hack!!!!!! Still importing probe (and result?)
-				if(!  $self->get_cached_slice($chr)){
+				if(!  $self->get_cached_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'})){
 					#warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
 					next;
 				}
