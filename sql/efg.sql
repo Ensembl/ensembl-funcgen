@@ -218,7 +218,7 @@ CREATE TABLE `experiment` (
 --
 
 DROP TABLE IF EXISTS `experimental_design`;
-CREATE TABLE `design_type` (
+CREATE TABLE `experimental_design` (
    `design_type_id` int(10) unsigned NOT NULL auto_increment,
    `table_name` varchar(40) default NULL,
    `table_id` int(10) unsigned default NULL,	
@@ -324,7 +324,7 @@ CREATE TABLE `result` (
    `result_id` int(10) unsigned NOT NULL auto_increment,
    `probe_id` int(10) unsigned default NULL,
    `score` double default NULL,
-   `chip_channel_id` int(10) unsigned default NULL,
+   `chip_channel_id` int(10) unsigned NOT NULL,
    PRIMARY KEY  (`result_id`),
    KEY `probe_idx` (`probe_id`),
    KEY `chip_channel_idx` (`chip_channel_id`)
@@ -346,7 +346,6 @@ DROP TABLE IF EXISTS `result_set`;
 CREATE TABLE `result_set` (
    `result_set_id` int(10) unsigned NOT NULL auto_increment,
    `analysis_id` int(10) unsigned default NULL,
-   `table_name` varchar(20) default NULL,
    PRIMARY KEY  (`result_set_id`),
    KEY  `analysis_idx` (`analysis_id`) 
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -374,11 +373,17 @@ CREATE TABLE `result_set` (
 DROP TABLE IF EXISTS `chip_channel`;
 CREATE TABLE `chip_channel` (
    `chip_channel_id` int(10) unsigned NOT NULL auto_increment,
-   `result_set_id` int(10) unsigned default NULL,
-   `table_id` int(10) unsigned default NULL,
+   `result_set_id` int(10) unsigned default '0',
+   `table_id` int(10) unsigned NOT NULL,
+   `table_name` varchar(20) NOT NULL,
    PRIMARY KEY  (`chip_channel_id`),
-   UNIQUE KEY `rset_table_id_idx` (`result_set_id`, `table_id`)
+   UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- unique key is required? can we make the api check this to reduce size
+-- unqiue key does not provide access from table_id/name side
+-- should we just have table_name here, as it's more to do with the chip_channel than the result set
+-- would introduce some redundancy, but low volume table so not a problem.
 
 -- Do we need to remove result_set_id too, so we can have an expermental_set in it's own right iwthout the associated results?
 -- We could then defined channel level relationship from these sets rather than storing these too
@@ -437,10 +442,10 @@ CREATE TABLE `predicted_feature` (
   `seq_region_start` int(11) unsigned NOT NULL default '0',
   `seq_region_end` int(11) unsigned NOT NULL default '0',
   `seq_region_strand` tinyint(1) NOT NULL default '0',
-  `coord_system_id` int(10) unsigned NOT NULL default '0',
-  `feature_set_id` int(10) unsigned NOT NULL default '0',	
+  `coord_system_id` int(10) unsigned NOT NULL default '0',	
   `display_label` varchar(60) NOT NULL default '',
   `score` double default NULL,
+  `feature_set_id` int(10) unsigned NOT NULL default '0',
   PRIMARY KEY  (`predicted_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `feature_set_idx` (`feature_set_id`)	  
@@ -467,9 +472,7 @@ CREATE TABLE `feature_set` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- remove displayable
---- Need to implement this
--- remove displayable index?
+-- make analysis NOT NULL
 -- change default NOT/NULLs?
 -- feature_type_id is NR between this and pf, but need it here for ft type ResultSet queries 
 
@@ -586,7 +589,7 @@ CREATE TABLE `status` (
 --
 
 DROP TABLE IF EXISTS `status_name`;
-CREATE TABLE `status` (
+CREATE TABLE `status_name` (
    `status_name_id` int(10) unsigned NOT NULL auto_increment,
    `name` varchar(20) default NULL,	
    PRIMARY KEY  (`status_name_id`),
@@ -594,8 +597,9 @@ CREATE TABLE `status` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-INSERT into table status_name("", 'DISPLAYABLE');
-INSERT into table status_name("", 'IMPORTED');
+INSERT into status_name values ('', 'DISPLAYABLE');
+INSERT into status_name values ('', 'IMPORTED');
+
 --INSERT into table status("", 'DISPLAYABLE');
 -- need to add more states, probably need to validate/insert required states in Importer
 -- would need to get CoordSys objects and set IMPORTED_CS_"cs_id" for relevant data_version
