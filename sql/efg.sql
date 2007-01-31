@@ -190,7 +190,7 @@ CREATE TABLE `experiment` (
    `experiment_id` int(10) unsigned NOT NULL auto_increment,
    `name` varchar(30) default NULL,
    `egroup_id` smallint(6) unsigned default NULL,
-   `date` date NOT NULL default '0000-00-00',
+   `date` date default '0000-00-00',
    `primary_design_type` varchar(30) default NULL, 
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`experiment_id`),

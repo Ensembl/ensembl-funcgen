@@ -182,7 +182,7 @@ sub new{
 		$main::_log_file = $self->{_log_file};
 		
 		open(LOGFILE,">>".$self->{_log_file})
-		  or $self->throw("Failed to open log file : $!");
+		  or $self->throw("Failed to open log file : ".$self->{_log_file}."\tError: $!");
 	}
 	else{
 		open(LOGFILE,">&STDOUT");

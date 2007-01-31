@@ -304,16 +304,17 @@ sub store {
 			throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
 			
 			$s_exp = $self->fetch_by_name($exp->name());#validate on group too!
-			throw("Experimental already exists in the database with dbID:".$s_ec->dbID().
+			throw("Experimental already exists in the database with dbID:".$s_exp->dbID().
 				  "\nTo reuse/update this Experimental you must retrieve it using the ExperimentalAdaptor".
 				  "\nMaybe you want to use the -recover option?") if $s_exp;
 		
 			#if(! $s_exp){
 			
-			warn "log this Storing exp with name ".$exp->name()."\n";
+
+			#warn "Storing exp with name ".$exp->name()."\n";
 			
 			$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
-			$sth->bind_param(2, $g_dbid,                    SQL_INTEGER);
+			$sth->bind_param(2, $g_dbid,                     SQL_INTEGER);
 			$sth->bind_param(3, $exp->date(),                SQL_VARCHAR);#date?
 			$sth->bind_param(4, $exp->primary_design_type(), SQL_VARCHAR);
 			$sth->bind_param(5, $exp->description(),         SQL_VARCHAR);

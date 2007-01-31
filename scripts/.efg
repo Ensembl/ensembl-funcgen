@@ -36,7 +36,8 @@ CreateDB(){
     then
 	echo "Need to define dbname and password arguments"
 	echo "e.g. create_db.sh homo_sapiens_funcgen_44_36f 'password'"
-    else
+	return
+    fi
     
     dbname=$1
     pass=$2
@@ -74,8 +75,6 @@ CreateDB(){
     echo "Creating DB $dbname"
     echo "CREATE database $DBNAME" | mysqlw -p${pass}
     mysqlw -p${pass} $DBNAME < $EFG_SQL/efg.sql
-
-
 	
 }
 
