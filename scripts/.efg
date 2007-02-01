@@ -55,7 +55,7 @@ CreateDB(){
     fi
 
     
-    present=$(QueryVal show databases like \"$DBNAME\")
+    present=$(QueryVal show databases like \"$dbname\")
     
  
     if [[ $present ]]
@@ -73,8 +73,8 @@ CreateDB(){
     fi
 
     echo "Creating DB $dbname"
-    echo "CREATE database $DBNAME" | mysqlw -p${pass}
-    mysqlw -p${pass} $DBNAME < $EFG_SQL/efg.sql
+    echo "CREATE database $dbname" | mysqlw -p${pass}
+    mysqlw -p${pass} $dbname < $EFG_SQL/efg.sql
 	
 }
 

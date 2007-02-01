@@ -48,7 +48,7 @@ use vars qw(@ISA);
 
 
 #May need to our this?
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =head2 fetch_by_array_chip_dbID
 

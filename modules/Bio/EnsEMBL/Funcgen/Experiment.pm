@@ -251,9 +251,9 @@ sub primary_design_type{
 
 #These convenience methods are to provide a registry for the experimental chips of the experiment
 
-=head2 get_experimental_chips
+=head2 get_ExperimentalChips
 
-  Example: my $exp_chips = @{$exp->get_experimental_chips()}
+  Example: my $exp_chips = @{$exp->get_ExperimentalChips()}
   Description: Retrieves all ExperiemntalChips
   Returntype : Listref of ExperimentalChips
   Exceptions : None
@@ -262,14 +262,14 @@ sub primary_design_type{
 
 =cut
 
-sub get_experimental_chips{
+sub get_ExperimentalChips{
   my ($self) = shift;
 	
   #should this also store echips?
 
   #Need to retrieve all from DB if not defined, then check whether already present and add and store if not
   #what about immediate access to dbID
-  #should we separate and have add_experimental_chip?
+  #should we separate and have add_ExperimentalChip?
 
   if(! exists $self->{'experimental_chips'}){
      $self->{'experimental_chips'} = {};
@@ -286,33 +286,33 @@ sub get_experimental_chips{
   return [values %{$self->{'experimental_chips'}}];
 }
 
-=head2 add_experimental_chip
+=head2 add_ExperimentalChip
 
-  Example: $exp_chip = $exp->add_experimental_chip($exp_chip)
-  Description: Adds and stores an ExperiemntalChip for this Experiment
-  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
+  Example     : $exp_chip = $exp->add_ExperimentalChip($exp_chip)
+  Description : Adds and stores an ExperiemntalChip for this Experiment
+  Returntype  : Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Exceptions  : Throws is not passed a valid stored Bio::EnsENBML::Funcgen::ExperimentalChip
+  Caller      : General
+  Status      : At risk
 
 =cut
 
-sub add_experimental_chip{
+sub add_ExperimentalChip{
   my ($self, $echip) = @_;
   
-  my $s_echip = $self->get_experimental_chip_by_unique_id($echip->unique_id());
 
-  if(! $s_echip){
-    ($echip) = @{$self->adaptor->db->get_ExperimentalChipAdaptor->store($echip)};
-    $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
-  }
+  #this should throw if not stored
+  throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object") 
+    if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
 
-  return $s_echip || $echip;
+  $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
+  
+  return;
 }
 
-=head2 get_experimental_chip_by_unique_id
+=head2 get_ExperimentalChip_by_unique_id
 
-  Example: $exp_chip = $exp->add_experimental_chip($exp_chip)
+  Example: $exp_chip = $exp->add_ExperimentalChip($exp_chip)
   Description: Adds and stores an ExperiemntalChip for this Experiment
   Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
   Exceptions : Throws if no uid supplied
@@ -321,14 +321,14 @@ sub add_experimental_chip{
 
 =cut
 
-sub get_experimental_chip_by_unique_id{
+sub get_ExperimentalChip_by_unique_id{
   my ($self, $uid) = @_;
   
   my ($echip);
 
   throw("Must supply a ExperimentalChip unque_id") if(! defined $uid);
   
-  $self->{'experimental_chips'} || $self->get_experimental_chips();
+  $self->{'experimental_chips'} || $self->get_ExperimentalChips();
 
   if(exists $self->{'experimental_chips'}->{$uid}){
     $echip = $self->{'experimental_chips'}->{$uid};
@@ -339,9 +339,9 @@ sub get_experimental_chip_by_unique_id{
 }
 
 
-=head2 get_experimental_chip_unique_ids
+=head2 get_ExperimentalChip_unique_ids
 
-  Example:     foreach my $uid(@{$self->experiment->get_experimental_chip_unique_ids()}){ ... }
+  Example:     foreach my $uid(@{$self->experiment->get_ExperimentalChip_unique_ids()}){ ... }
   Description: retrieves all ExperimentalChip unique_ids
   Returntype : ListRef
   Exceptions : None
@@ -350,10 +350,10 @@ sub get_experimental_chip_by_unique_id{
 
 =cut
 
-sub get_experimental_chip_unique_ids{
+sub get_ExperimentalChip_unique_ids{
   my $self = shift;
   
-  $self->{'experimental_chips'} || $self->get_experimental_chips();
+  $self->{'experimental_chips'} || $self->get_ExperimentalChips();
 
   return [keys %{ $self->{'experimental_chips'}}];
 }

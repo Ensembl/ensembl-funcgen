@@ -40,6 +40,7 @@ package Bio::EnsEMBL::Funcgen::ArrayDefs;
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::Probe;
+use Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::ArrayChip;
@@ -192,7 +193,7 @@ sub read_array_chip_data{
   my ($echip, $ac_id);
   my $oa_adaptor = $self->db->get_ArrayAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
-  my $chan_adapt = $self->db->get_ChannelAdaptor();
+  my $chan_adaptor = $self->db->get_ChannelAdaptor();
 
   warn("Harcoded for one array per experiment\n");
 
@@ -226,17 +227,14 @@ sub read_array_chip_data{
     #registry may not be loaded for local installation
     
     if(! defined $array){
+
       warn("We need to accomodate arrays which have only been partially imported here");
       #Retrieve the array by the array_name, defined by the user or use the design_name
       #$array = $oa_adaptor->fetch_by_name_vendor($design_name, $self->vendor());
 
       #Then we can update the array chips as we go along
 
-      #%tmp = (
-      #       array_id    => undef,
-      #	      dbID        => undef,
-      #	      name => $data[$hpos{'DESIGN_NAME'}],
-      #	     );
+    
          
       #This is treating each array chip as a separate array, unless arrayset is defined
       #AT present we have no way of differentiating between different array_chips on same array???!!!
@@ -262,17 +260,15 @@ sub read_array_chip_data{
 							 );
 
 
-      $array->addArrayChip($array_chip);
-      #($array) = @{$oa_adaptor->store($array)};
-
-        
+      $array->add_ArrayChip($array_chip);
+              
       #Need to reg array chip here (to differentiate from what is already in DB, handles subset of arrays)
       #This is a registry of array chips which have previously been stored for validation purpose
       #To avoid importing probes twice
 
     }elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
 
-      warn "generating new ac for same array ".$data[$hpos{'DESIGN_ID'}]."\n";
+      $self->log("Generating new ac for same array ".$data[$hpos{'DESIGN_ID'}]."\n");
 
       $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
 							  -NAME        => $data[$hpos{'DESIGN_NAME'}],
@@ -283,45 +279,61 @@ sub read_array_chip_data{
       $array->add_ArrayChip($array_chip);
    
       
-    }elsif(! $array->get_ArrayAhip_by_design_id($data[$hpos{'DESIGN_ID'}])){
+    }elsif(! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])){
       throw("Found experiment with more than one design");
     }
     
     #Parse and Populate ExperimentalChip/Channels
     if ($tmp_uid eq "FIRST" || $data[$hpos{'CHIP_ID'}] != $tmp_uid){
       $tmp_uid = $data[$hpos{'CHIP_ID'}];
-     
-      $echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
-	(
-	 #-DESIGN_ID      => $data[$hpos{'DESIGN_ID'}],
-	 -EXPERIMENT_ID  => $self->experiment->dbID(),
-	 -DESCRIPTION    => $data[$hpos{$sample_desc}],
-	 -ARRAY_CHIP_ID  => $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])->dbID(),
-	 -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
-	);
-      
-      $echip = $self->experiment->add_experimental_chip($echip);
 
-      #should we nest these in the Experiment and 
-      #don't need to add them to store, just have method which always retrieves all echips from db
-      #$self->{'echips'}{$data[$hpos{'CHIP_ID'}]} = $echip;#do we still need this?
+
+      if($self->recovery()){
+	$echip = $self->experiment->get_experimental_chip_by_unique_id($data[$hpos{'CHIP_ID'}]);
+      }
+
+      if(! $self->recovery() || ! $echip){
+
+	$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
+	  (
+	   -EXPERIMENT_ID  => $self->experiment->dbID(),
+	   -DESCRIPTION    => $data[$hpos{$sample_desc}],
+	   -ARRAY_CHIP_ID  => $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])->dbID(),
+	   -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
+	  );
+      
+	($echip) = @{$ec_adaptor->store($echip)};	
+      }
+
+      $self->experiment->add_ExperimentalChip($echip);
       
     }
     
     
-    #Handles single/mutli
-    $channel =  Bio::EnsEMBL::Funcgen::Channel->new
-      (
-       -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
-       -DYE                  => $data[$hpos{'DYE'}],
-       -SAMPLE_LABEL         => $data[$hpos{'SAMPLE_LABEL'}],
-       -TYPE                 => uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]),
+
+    if($self->recovery()){
+      $channel = $chan_adaptor->fetch_by_type_experimental_chip_dbID(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
+    }
+
+    if(! $self->recovery || ! $channel){
+      #Handles single/mutli
+      $channel =  Bio::EnsEMBL::Funcgen::Channel->new
+	(
+	 -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
+	 -DYE                  => $data[$hpos{'DYE'}],
+	 -SAMPLE_LABEL         => $data[$hpos{'SAMPLE_LABEL'}],
+	 -TYPE                 => uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]),
       );
     
-    #-SPECIES              => $self->species(),#on channel/sample to enable multi-species chip/experiment
-    #would never happen on one chip?  May happen between chips in one experiment
-        
-    $self->set_channel($data[$hpos{'CHIP_ID'}], @{$chan_adapt->store($channel)});#do we need o set this anymore? or rename reg_channel?
+      #-SPECIES              => $self->species(),#on channel/sample to enable multi-species chip/experiment
+      #would never happen on one chip?  May happen between chips in one experiment
+
+      ($channel) = @{$chan_adaptor->store($channel)};
+    }
+
+
+    #do we still need this if we can retrieve the channels frm the echips?
+    $self->set_channel($data[$hpos{'CHIP_ID'}], $channel);
     
   }
   
@@ -553,13 +565,13 @@ sub read_sanger_array_probe_data{
   #This fails if we're pointing to an old DB during the release cycle.  Will be fine if we manage to cs mapping dynamically
 
   #if($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID())){
-  if($self->status_adaptor->has_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip)){
+  if($array_chip->has_status('IMPORTED_CS_'.$fg_cs->dbID())){
 
     $fimported = 1;
     $imported = 1;
     warn("Skipping array chip feature import (".$array->name().") already fully imported for ".$self->data_version()."\n");
   }
-  elsif($self->status_adaptor->has_status('IMPORTED', $array_chip)){
+  elsif($array_chip->has_status('IMPORTED')){
     $imported = 1;
     warn("Skipping array chip probe import (".$array->name().") already fully imported\n");
   }
@@ -652,7 +664,7 @@ sub read_sanger_array_probe_data{
 
 	  
 	  #Hack!!!!!!  This is still maintaining the probe entry (and result?)
-	  if(!  $self->get_cached_slice($chr)){
+	  if(!  $self->cache_slice($chr)){
 	    warn("Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
 	    next;
 	  }
@@ -662,7 +674,7 @@ sub read_sanger_array_probe_data{
 							 -START         => $start,
 							 -END           => $end,
 							 -STRAND        => $strand,
-							 -SLICE         => $self->get_cached_slice($chr),
+							 -SLICE         => $self->cache_slice($chr),
 							 -ANALYSIS      => $fanal,
 							 -MISMATCHCOUNT => 0,
 							 -_PROBE_ID     => $self->get_probe_id_by_name($pid),#work around to avoid cacheing probes
@@ -675,24 +687,20 @@ sub read_sanger_array_probe_data{
 	}
       }
     }
-    warn"setting ac cs status";
-
-    #$self->db->set_status('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID());
-    $self->status_adaptor->set_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip);
+    $array_chip->adaptor->set_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip);
+    $self->log("ArrayChip:\t".$array_chip->deisng_id()." has been IMPORTED_CS_".$fg_cs->dbID());
   }
 
   
 
   if(! $imported){
-    warn"setting ac imp  status";
-    #$self->db->set_status('array_chip', $ac_id, 'IMPORTED');
-    $self->status_adaptor->set_status('IMPORTED', $array_chip);
-
+    $array_chip->adaptor->set_status('IMPORTED', $array_chip);
+    $self->log("ArrayChip:\t".$array_chip->deisng_id()." has been IMPORTED");
     $imported = 1;
   }
   
   $self->log("Finished parsing ".$self->vendor()." array/probe data (".localtime().")");
-  warn("Finished parsing ".$self->vendor()." array/probe data (".localtime().")");
+  #warn("Finished parsing ".$self->vendor()." array/probe data (".localtime().")");
   
   return;
 }
@@ -745,33 +753,37 @@ sub read_sanger_result_data{
 
     ($chip_uid = $file) =~ s/.*\///;
     $chip_uid =~ s/\.all.*\n//;
-    
-    $echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
-      (
-       -EXPERIMENT_ID  => $self->experiment->dbID(),
-       -DESCRIPTION    => "",
-       -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($array->name())->dbID(),
-       -UNIQUE_ID      => $chip_uid,
-      );
-      
-    $echip = $self->experiment->add_experimental_chip($echip);
 
-    if($self->status_adaptor->has_status('IMPORTED', $echip)){
-      $imported = 1;
-      warn("Skipping experimental chip import (".$echip->unique_id().") already fully imported\n");
+    if($self->recovery()){
+      $echip = $self->experiment->get_experimental_chip_by_unique_id($chip_uid);
     }
 
-    #Need to check fo rpartial import here
+      if(! $self->recovery() || ! $echip){
 
-
+	$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
+	  (
+	   -EXPERIMENT_ID  => $self->experiment->dbID(),
+	   #-DESCRIPTION    => "",
+	   -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($array->name())->dbID(),
+	   -UNIQUE_ID      => $chip_uid,
+	  );
+	
+	($echip) = @{$ec_adaptor->store($echip)};	
+      }
     
-    
+       
+    $self->experiment->add_ExperimentalChip($echip);
 
+    if($echip->has_status('IMPORTED', $echip)){
+      $imported = 1;
+      $self->log("Skipping experimental chip import (".$echip->unique_id().") already fully imported\n");
+    }else{
 
+      warn("Need to check for partial import and clean here");
+    }
 
     #should we nest these in the Experiment and 
     #don't need to add them to store, just have method which always retrieves all echips from db
-   
     
     if(! $imported){
 
@@ -800,38 +812,21 @@ sub read_sanger_result_data{
 	$line =~ s/\r*\n//o;
 	
 	($ratio, $pid) = (split/\t/, $line)[3..4];
-
-
 	$pid =~ s/.*://o;
-	#warn"($ratio, $pid)";
-	#this is throwing away the encode region which could be used for the probeset/family?
-	
+
+	#this is throwing away the encode region which could be used for the probeset/family?	
 	#NA ratio imports as 0
-	#$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${anal_id}\t".$echip->dbID()."\texperimental_chip\n";
 	$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${cc_id}\n";
-	
-      
       }
 
       print $rfile $r_string;
       close($rfile);
-    
-      #should import drectly here?
-    
-      #need to do this for experimental_chip after results imported with logic name
-      #if(! $imported){
-      #  $self->db->set_status('_chip', $ac_id, "IMPORTED");
-      #  $imported = 1;
-      #}
+      system("chmod 644 $file");
     }
   }
-
  
   $self->log("Finished parsing ".$self->vendor()." probe data (".localtime().")");
-  warn("Finished parsing ".$self->vendor()." probe data (".localtime().")");
-  
   return;
-
 }
 
 =head2 read_probe_data
@@ -848,360 +843,383 @@ sub read_sanger_result_data{
 
 #Assumes one chip_design per experimental set.
 sub read_probe_data{
-	my ($self) = shift;
+  my ($self) = shift;
+  
+  my ($fh, $line, @data, %hpos, %probe_pos);#, %duplicate_probes);
+  $self->log("Parsing probe data (".localtime().")");
+  #can we do a reduced parse if we know the array chips are already imported");
+  
 
-	my ($fh, $line, @data, %hpos, %probe_pos);
-	$self->log("Parsing probe data (".localtime().")");
-	warn("Parsing probe data (".localtime().")...can we do a reduced parse if we know the array chips are already imported");
-	### Read in
-	#ndf file: probe_set, probe and probe_feature(.err contains multiple mappings)
-	#pos file: probe chromosome locations
-	#ndf file: build, chr, start stop,
-	
-	#Need to test whether array exists and is validated before importing probe data.
-	#If already present, then can skip and just import results using probe_name to get probe_id and link to probe_feature.
-	#just needs to create a mapping between probe_feature_ids and results
-	#What if an array has been imported with only a few chips present?
-	#Need check on size in import_array
-	#e.g. someone has done an experiment with only a few chips from an array?
-	#This would mean absent probes
-	
-	#also need to change how probe_names are generated for nimblegen?
-	#native probe_ids may not be unique, but should be when combined with the seq_id which is currently being used as the xref_id
-	#Handle with API!!
-	
-	#READ REGION POSITIONS
-	#We need to handle different coord systems and possibly different assmemblies
-	my $slice_a = $self->db->get_SliceAdaptor();
-	my $cs = $self->db->get_FGCoordSystemAdaptor()->fetch_by_name_schema_build_version('chromosome', $self->db->_get_schema_build($self->db->dnadb()));
-	#should really test and store here if not valid, but this will be handled by adaptor store methods
-	
-	foreach my $array(@{$self->arrays()}){
-		
-		foreach my $design_id(@{$array->get_design_ids()}){
-			my $achip = $array->get_ArrayChip_by_design_id($design_id);
-			
-			if($self->status_adaptor->has_status('IMPORTED', $achip)){
-				warn("Skipping array chip ($design_id) already fully imported\n");
-				next;
-			}
-			
-   
-			#mgd files are for a different product?
-			#THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
-			#all out files are generic, but are we converting to adaptor store?
-			#      $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".ngd");
-			#      my ($start, $stop, %regions, %probe_pos);
-			#	  
-			#      #May not have both ngd and pos file?
+  ### Read in
+  #ndf file: probe_set, probe and probe_feature(.err contains multiple mappings)
+  #pos file: probe chromosome locations
+  #ndf file: build, chr, start stop,
+  
+  #Need to test whether array exists and is validated before importing probe data.
+  #If already present, then can skip and just import results using probe_name to get probe_id and link to probe_feature.
+  #just needs to create a mapping between probe_feature_ids and results
+  #What if an array has been imported with only a few chips present?
+  #Need check on size in import_array
+  #e.g. someone has done an experiment with only a few chips from an array?
+  #This would mean absent probes
+  
+  #also need to change how probe_names are generated for nimblegen?
+  #native probe_ids may not be unique, but should be when combined with the seq_id which is currently being used as the xref_id
+  #Handle with API!!
+  
+  #READ REGION POSITIONS
+  #We need to handle different coord systems and possibly different assmemblies
+  my $slice_a = $self->db->get_SliceAdaptor();
+  my $cs = $self->db->get_FGCoordSystemAdaptor()->fetch_by_name_schema_build_version(
+										     'chromosome', 
+										     $self->db->_get_schema_build($self->db->dnadb())
+										    );
+
+  #should really test and store here if not valid, but this will be handled by adaptor store methods
+  
+  foreach my $array(@{$self->arrays()}){
+    
+    foreach my $design_id(@{$array->get_design_ids()}){
+      my $achip = $array->get_ArrayChip_by_design_id($design_id);
+      my (@log);
+
+      if($achip->has_status('IMPORTED')){
+	$self->log("Skipping array chip ($design_id) already fully imported\n");
+	next;
+      }else{
+	warn("Need to clean all probe/feature/feature_set from db");
+      }
+      
+      
+      #mgd files are for a different product?
+      #THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
+      #all out files are generic, but are we converting to adaptor store?
+      #      $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".ngd");
+      #      my ($start, $stop, %regions, %probe_pos);
+      #	  
+      #      #May not have both ngd and pos file?
 			#
-			#      while ($line = <$fh>){
-			#	$line =~ s/\r*\n//;#chump
-			#	@data =  split/\||\t/o, $line;
-			#	
-			#	
-			#	#SEQ_ID	SEQ_UNIQUE|BUILD|CHROMOSOME|LOCATION|DESCRIPTION|DATE_ENTERED|SOURCE_DB
-			#	if ($. == 1){
-			#	  %hpos = %{$self->set_header_hash(\@data)};
-			#	  next;
-			#	}
-			#	
-			#	#What about strand!!!!!!!!!!!
-			#	$data[$hpos{'CHROMOSOME'}] =~ s/chr//;
-			#	($start, $stop) = split/-/o, $data[$hpos{'LOCATION'}];
-			#	
-			#	#Do we need seq_id check here for validity?
-			#	#overkill?
+      #      while ($line = <$fh>){
+      #	$line =~ s/\r*\n//;#chump
+      #	@data =  split/\||\t/o, $line;
+      #	
+      #	
+      #	#SEQ_ID	SEQ_UNIQUE|BUILD|CHROMOSOME|LOCATION|DESCRIPTION|DATE_ENTERED|SOURCE_DB
+      #	if ($. == 1){
+      #	  %hpos = %{$self->set_header_hash(\@data)};
+      #	  next;
+      #	}
+      #	
+      #	#What about strand!!!!!!!!!!!
+      #	$data[$hpos{'CHROMOSOME'}] =~ s/chr//;
+      #	($start, $stop) = split/-/o, $data[$hpos{'LOCATION'}];
+      #	
+      #	#Do we need seq_id check here for validity?
+      #	#overkill?
 			#	if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
-			#	  croak("Duplicate regions\n");
-			#	}else{
-			#	  #$data[$hpos{'CHROMOSOME'}] = species_chr_num($self->species(), 	$data[$hpos{'CHROMOSOME'}]);
-			#	  
-			#	  #Set region hash for SEQ_ID
-			#	  #Need to look up seq_region id here for given build
-			#	  #Build should be manually specified as we can't guarantee it will be in the correct format
-			#	  #or present at all
-			#	  
-			#	  $regions{$data[$hpos{'SEQ_ID'}]} = 
-			#	    {
-			#	     start => $start,
-			#	     stop  => $stop,
-			#	     seq_region_id => $self->get_chr_seq_region_id($data[$hpos{'CHROMOSOME'}], $start, $stop),
-			#	     coord_system_id => $cs->dbID(),
-			#	    };
-			#	}
-			#	
-			#      }
-			#      
-			#      close($fh);
-	
-	
-			
-			#Always use pos file, ndf file cannot be guranteed to contain all location info
-			#pos file also gives a key to which probes should be considered 'EXPERIMENTAL'
-			
-			#SLURP PROBE POSITIONS
-			$fh = open_file("<", $self->get_def("design_dir")."/".$achip->name().".pos");
-			
-			#don't % = map ! Takes a lot longer than a while ;)
-			while($line = <$fh>){
-				#$line =~ s/\r*\n//;#Not using last element
-				@data =  split/\t/o, $line;
-				
-				#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
-				if ($. == 1){
-					%hpos = %{$self->set_header_hash(\@data)};
-					next;
-				}
-		  
-				#Skip probe if there is a duplicate
-				warn("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]) if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]});		  
-				next;
-
-				$self->cache_slice($data[$hpos{'SEQ_ID'}]);
-				
-				$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
-									 seq_id => $data[$hpos{'SEQ_ID'}],
-									 start => $data[$hpos{'POSITION'}],
-									)};
-				
-			}
+      #	  croak("Duplicate regions\n");
+      #	}else{
+      #	  #$data[$hpos{'CHROMOSOME'}] = species_chr_num($self->species(), 	$data[$hpos{'CHROMOSOME'}]);
+      #	  
+      #	  #Set region hash for SEQ_ID
+      #	  #Need to look up seq_region id here for given build
+      #	  #Build should be manually specified as we can't guarantee it will be in the correct format
+      #	  #or present at all
+      #	  
+      #	  $regions{$data[$hpos{'SEQ_ID'}]} = 
+      #	    {
+      #	     start => $start,
+      #	     stop  => $stop,
+      #	     seq_region_id => $self->get_chr_seq_region_id($data[$hpos{'CHROMOSOME'}], $start, $stop),
+      #	     coord_system_id => $cs->dbID(),
+      #	    };
+      #	}
+      #	
+      #      }
+      #      
+      #      close($fh);
       
-			close($fh);
+	
+      
+      #Always use pos file, ndf file cannot be guranteed to contain all location info
+      #pos file also gives a key to which probes should be considered 'EXPERIMENTAL'
+      
+      #SLURP PROBE POSITIONS
+      $fh = open_file("<", $self->get_def("design_dir")."/".$achip->name().".pos");
+      
+      #don't % = map ! Takes a lot longer than a while ;)
+      while($line = <$fh>){
+	#$line =~ s/\r*\n//;#Not using last element
+	@data =  split/\t/o, $line;
+	
+	#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
+	if ($. == 1){
+	  %hpos = %{$self->set_header_hash(\@data)};
+	  next;
+	}
+	
+	#Skip probe if there is a duplicate
+	
+	if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
+	  throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]." implement duplicate logging/cleaning");
+	  #need to build duplicate hash to clean elements from hash
+	  # $duplicate_probes{$data[$hpos{'PROBE_ID'}]} = 1;
+	  next;
+	}
+	
+	#
+	if(! $self->cache_slice($data[$hpos{'SEQ_ID'}])){
+	  push @log, "Skipping probe ".$data[$hpos{'PROBE_ID'}]." with non-standard region ".$data[$hpos{'SEQ_ID'}];
+	}
+	
+	$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
+						 seq_id => $data[$hpos{'SEQ_ID'}],
+						 start => $data[$hpos{'POSITION'}],
+						)};
+	
+      }
+      
+      
+      #Remove duplicate probes 
 
-		  
-			#OPEN PROBE IN/OUT FILES
-			$fh = open_file("<", $self->get_def("design_dir")."/".$achip->name().".ndf");
-			#Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
-			#my $p_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'design_name'}."txt");
-			#my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
-			#my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
-			my $f_out = open_file(">", $self->get_dir("output")."/probe.".$achip->name()."fasta")	if($self->{'_dump_fasta'});
-			my ($length, $ops, $op, $of, @probes, @features, %pfs);
+      
+      close($fh);
+      
+      
+      #OPEN PROBE IN/OUT FILES
+      $fh = open_file("<", $self->get_def("design_dir")."/".$achip->name().".ndf");
+      #Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
+      #my $p_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'design_name'}."txt");
+      #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
+      #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
+      my $f_out = open_file(">", $self->get_dir("output")."/probe.".$achip->name()."fasta")	if($self->{'_dump_fasta'});
+      my ($length, $ops, $op, $of, @probes, @features, %pfs);
 
-			#should define mapping_method arg to allows this to be set to LiftOver/EnsemblMap
-			my $anal = $self->db->get_AnalysisAdaptor()->fetch_by_logic_name("VendorMap");
+      #should define mapping_method arg to allows this to be set to LiftOver/EnsemblMap
+      my $anal = $self->db->get_AnalysisAdaptor()->fetch_by_logic_name("VendorMap");
 			
 		
-			my $strand = 0;	#default for nimblegen, should be defs hash?
-			my $cig_line = "50M";	#default for nimblegen, should be defs hash?
-			my $fasta = "";
+      my $strand = 0;	#default for nimblegen, should be defs hash?
+      my $cig_line = "50M";	#default for nimblegen, should be defs hash?
+      my $fasta = "";
       
-			#$self->Timer()->mark("Starting probe loop");
+      #$self->Timer()->mark("Starting probe loop");
       
-			while($line = <$fh>){
-				$line =~ s/\r*\n//;
-				@data =  split/\t/o, $line;
-				my $loc = "";
-				my $class = "EXPERIMENTAL";
+      while($line = <$fh>){
+	$line =~ s/\r*\n//;
+	@data =  split/\t/o, $line;
+	my $loc = "";
+	my $class = "EXPERIMENTAL";
 	
-				#PROBE_DESIGN_ID	CONTAINER	DESIGN_NOTE	SELECTION_CRITERIA	SEQ_ID	PROBE_SEQUENCE	MISMATCH	MATCH_INDEX	FEATURE_ID	ROW_NUM	COL_NUM	PROBE_CLASS	PROBE_ID	POSITION	DESIGN_ID	X	Y
+	#PROBE_DESIGN_ID	CONTAINER	DESIGN_NOTE	SELECTION_CRITERIA	SEQ_ID	PROBE_SEQUENCE	MISMATCH	MATCH_INDEX	FEATURE_ID	ROW_NUM	COL_NUM	PROBE_CLASS	PROBE_ID	POSITION	DESIGN_ID	X	Y
 				#2067_0025_0001  BLOCK1          0       chrX    TTAGTTTAAAATAAACAAAAAGATACTCTCTGGTTATTAAATCAATTTCT      0       52822449        52822449        1       25      experimental    chrXP10404896   10404896        2067    25      1
 				
-				if ($. == 1){	
-					%hpos = %{$self->set_header_hash(\@data)};
-					next;
-				}
+	if ($. == 1){	
+	  %hpos = %{$self->set_header_hash(\@data)};
+	  next;
+	}
 		  
-
-				if (! exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
-					warn "Log this: Skipping non-experimental probe:\t".$data[$hpos{'PROBE_ID'}];
-					next;
-				}
-
-				#Which non-experimental probes might we want to store?
+	
+	if (! exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
+	  push @log, "Skipping non-experimental probe:\t".$data[$hpos{'PROBE_ID'}];
+	  next;
+	}
+	
+	#Which non-experimental probes might we want to store?
 				#if($data[$hpos{'CONTAINER'}] =~ /control/io){
-				#	$class = "CONTROL";
-				#}
-				#elsif($data[$hpos{'CONTAINER'}] =~ /random/io){
-				#	$class = "RANDOM";
-				#}
-				#elsif($data[$hpos{'PROBE_CLASS'}] !~ /experimental/io){
-				#	$class = "OTHER";
-				#}
-				#elsif(! exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){	#HACKY HACKY HACK HACK!! Needed for valid region retrival
-				#  $class = "OTHER";
-				#}
-				#SPIKE INS?
-		  
+	#	$class = "CONTROL";
+	#}
+	#elsif($data[$hpos{'CONTAINER'}] =~ /random/io){
+	#	$class = "RANDOM";
+	#}
+	#elsif($data[$hpos{'PROBE_CLASS'}] !~ /experimental/io){
+	#	$class = "OTHER";
+	#}
+	#elsif(! exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){	#HACKY HACKY HACK HACK!! Needed for valid region retrival
+	#  $class = "OTHER";
+	#}
+	#SPIKE INS?
+	
+	
 
+	#This assumes all probes in feature/probeset are next to each other!!!!!!!!!!
 
-				#This assumes all probes in feature/probeset are next to each other!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-				
-				if($data[$hpos{'FEATURE_ID'}] != $data[$hpos{'MATCH_INDEX'}]){#Probe set data
-					#print "Generating new probeset:\tFeature id:\t".$data[$hpos{'FEATURE_ID'}]."\tmatchindex:\t".$data[$hpos{'MATCH_INDEX'}]."\n";
-					
-					if($ops && ($data[$hpos{'FEATURE_ID'}] ne $ops->name())){
-						#THis is where we chose to update/validate
-						#Do we need to pass probes if they're already stored..may aswell to reduce mysql load?
-						#No point as we have to query anyway
-						#$self->store_set_probes_features($achip->dbID(), $ops, \@probes, \@features);
-						$self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
-						throw("ops still defined in caller") if defined $ops;
-					}
-			  
-					$ops = Bio::EnsEMBL::Funcgen::ProbeSet->new(
-																-NAME => $data[$hpos{'FEATURE_ID'}],
-																-SIZE => undef,
-																-FAMILY  => $data[$hpos{'CONTAINER'}],
-																#xref_id => $data[$hpos{'SEQ_ID'}],#Need to populate xref table
+	
+	if($data[$hpos{'FEATURE_ID'}] != $data[$hpos{'MATCH_INDEX'}]){#Probe set data
+	  #print "Generating new probeset:\tFeature id:\t".$data[$hpos{'FEATURE_ID'}]."\tmatchindex:\t".$data[$hpos{'MATCH_INDEX'}]."\n";
+	  
+	  if($ops && ($data[$hpos{'FEATURE_ID'}] ne $ops->name())){
+	    #THis is where we chose to update/validate
+	    #Do we need to pass probes if they're already stored..may aswell to reduce mysql load?
+	    #No point as we have to query anyway
+	    #$self->store_set_probes_features($achip->dbID(), $ops, \@probes, \@features);
+	    $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
+	    throw("ops still defined in caller") if defined $ops;
+	  }
+	  
+	  $ops = Bio::EnsEMBL::Funcgen::ProbeSet->new(
+						      -NAME => $data[$hpos{'FEATURE_ID'}],
+						      -SIZE => undef,
+						      -FAMILY  => $data[$hpos{'CONTAINER'}],
+						      #xref_id => $data[$hpos{'SEQ_ID'}],#Need to populate xref table
 															   );
 					
-					#should we store straight away or build a probeset/probe/feature set, and then store and validate in turn?
-					#Store directly have separate method to validate and update?
-					#would need to check if one exists before storing anyway, else we could potentially duplicate the same probe/probeset from a different array
-					#remember for affy we need duplicate probe records with identical probe ids, probeset records unique across all arrays
-					
-					undef %pfs
-				}
-				#elsif($ops){#Got ops, but new probe does not have ops, need to store old ops
-				elsif($. > 2){#may have previous ops set, but next has no ops, or maybe just no ops's at all
-					$self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
-					throw("ops still defined in caller") if defined $ops;
-				}
-				
-				
-				###PROBES
-				#should we cat $xref_id to $probe_id here to generate unique id?
-				#would be messy to handle in the code, but would have to somewhere(in the retrieval code)
-				
-				$length = length($data[$hpos{'PROBE_SEQUENCE'}]);	
-				#$probe_string .= "\t${psid}\t".$data[$hpos{'PROBE_ID'}]."\t${length}\t$ac_id\t${class}\n";
-				#print "Generating new probe with $array ".$array->dbID()." and ac id ".$ac{'dbID'}."\n";
-				
-				$op = Bio::EnsEMBL::Funcgen::Probe->new(
-														-NAME          => $data[$hpos{'PROBE_ID'}],
-														-LENGTH        => $length,
-														-ARRAY         => $array,
-														-ARRAY_CHIP_ID => $achip->dbID(),
-														-CLASS         => $class,
-													   );
-				
-				
-				%{$pfs{$data[$hpos{'PROBE_ID'}]}} = (
-													 probe => $op,
-													 features => [],
-													);
-		  
-				
-				###PROBE FEATURES
-				#How can we be certain that we have the same mapping in the DB?
-				#Put checks in here for build?
-				#Need to handle controls/randoms here
-				#won't have features but will have results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				#The format of the pos file looks like it should have all the data required, but 
-				# chromsome is missing, first undef :(
-				#Need to use $pos here instead of .pos file
-				#However have problems defining probe class, as not populated in test set
-				#derive from container! :(
-				#Ignore controls/random as they won't have a region
-				#Also need to handle multiple mappings? 
-				#As results reference probes, no features, can have multiple features on different builds
-				
-				#if($class eq "EXPERIMENTAL"){
-				
-				#if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
-				#  $fid++;
-				#  $pf_string .= "\t".$regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}."\t".$data[$hpos{'POSITION'}]."\t".
-				#    ($data[$hpos{'POSITION'}] + $length)."\t${strand}\t".$regions{$data[$hpos{'SEQ_ID'}]}{'coord_system_id'}.
-				#	"\t${pid}\t${anal_id}\t".$data[$hpos{'MISMATCH'}]."\t${cig_line}\n";
-				#$loc .= $regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}.":".$data[$hpos{'POSITION'}].
-				#  "-".($data[$hpos{'POSITION'}] + $length).";" if ($self->{'_dump_fasta'});
-				# }
-				# else{ 
-				#   die("No regions defined for ".$data[$hpos{'SEQ_ID'}]." ".$data[$hpos{'PROBE_ID'}].
-				#" with family ".$data[$hpos{'CONTAINER'}]);
-				#  }
-				
-				
-				
-				
-				if ($self->{'_dump_fasta'}){
-					(my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'}) =~ s/chr//;
-					$loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
-					  ($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
-				}
-				
-				#Hack!!!!!! Still importing probe (and result?)
-				if(!  $self->get_cached_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'})){
-					#warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
-					next;
-				}
-				
-				
-				
-				$of = Bio::EnsEMBL::Funcgen::ProbeFeature->new
-				  (
-				   -START         => $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'},
-				   -END           =>($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}  + $length),
-				   -STRAND        => $strand,
-				   -SLICE         => $self->get_cached_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'}),
-				   -ANALYSIS      => $anal,
-				   -MISMATCHCOUNT => $data[$hpos{'MISMATCH'}],
-				   -PROBE         => undef,#Need to update this in the store method
-				  );
-				
-				
-				push @{$pfs{$data[$hpos{'PROBE_ID'}]}{'features'}}, $of;
-				
-				if($self->{'_dump_fasta'}){			
-					#filter controls/randoms?  Or would it be sensible to see where they map
-					#wrap seq here?
-					$fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'SEQ_ID'}].
-					  "\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
-				}
-			}
-    
-			#need to store last data here
-			$self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
-			$self->db->set_status('array_chip', $achip->dbID(), "IMPORTED");
-			
-			if ($self->{'_dump_fasta'}){
-				print $f_out $fasta if($self->{'_dump_fasta'});
-				close($f_out);
-			}
-		}
-  
+	  #should we store straight away or build a probeset/probe/feature set, and then store and validate in turn?
+	  #Store directly have separate method to validate and update?
+	  #would need to check if one exists before storing anyway, else we could potentially duplicate the same probe/probeset from a different array
+	  #remember for affy we need duplicate probe records with identical probe ids, probeset records unique across all arrays
+	  
+	  undef %pfs
+	}
+	elsif($. > 2){#may have previous ops set, but next has no ops, or maybe just no ops's at all
+	  $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
+	  throw("ops still defined in caller") if defined $ops;
+	}
 	
-		#Should we build hash of probe_names:probe_feature_ids here for results import
-		#Should we dump this as a lookup file for easier recoverability
-		#This is the biggest step in the import
-		#Building the hash would be fastest but least recoverable
-		#Would have to write recover statments for each step i.e. build the most recent data structure required for the next import step
-		#Individual queries for each result would take ages
-		#This is all assuming there are no random records in the table i.e. ID series is linear with no gaps.
-		
-		
-		#Could throw a random validation check in every X entries?
-		#This would only work for non-parallel imports
-		#periodic import when hit new probe_set, but no new data printed
-		
+				
+	###PROBES
+	#should we cat $xref_id to $probe_id here to generate unique id?
+	#would be messy to handle in the code, but would have to somewhere(in the retrieval code)
+	
+	$length = length($data[$hpos{'PROBE_SEQUENCE'}]);	
+	#$probe_string .= "\t${psid}\t".$data[$hpos{'PROBE_ID'}]."\t${length}\t$ac_id\t${class}\n";
+	#print "Generating new probe with $array ".$array->dbID()." and ac id ".$ac{'dbID'}."\n";
+	
+	$op = Bio::EnsEMBL::Funcgen::Probe->new(
+						-NAME          => $data[$hpos{'PROBE_ID'}],
+						-LENGTH        => $length,
+						-ARRAY         => $array,
+						-ARRAY_CHIP_ID => $achip->dbID(),
+						-CLASS         => $class,
+					       );
+	
+	
+	%{$pfs{$data[$hpos{'PROBE_ID'}]}} = (
+					     probe => $op,
+					     features => [],
+					    );
+	
+				
+	###PROBE FEATURES
+	#How can we be certain that we have the same mapping in the DB?
+	#Put checks in here for build?
+	#Need to handle controls/randoms here
+	#won't have features but will have results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	#The format of the pos file looks like it should have all the data required, but 
+	# chromsome is missing, first undef :(
+	#Need to use $pos here instead of .pos file
+	#However have problems defining probe class, as not populated in test set
+	#derive from container! :(
+	#Ignore controls/random as they won't have a region
+	#Also need to handle multiple mappings? 
+	#As results reference probes, no features, can have multiple features on different builds
+	
+	#if($class eq "EXPERIMENTAL"){
+	
+	#if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
+	#  $fid++;
+	#  $pf_string .= "\t".$regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}."\t".$data[$hpos{'POSITION'}]."\t".
+	#    ($data[$hpos{'POSITION'}] + $length)."\t${strand}\t".$regions{$data[$hpos{'SEQ_ID'}]}{'coord_system_id'}.
+	#	"\t${pid}\t${anal_id}\t".$data[$hpos{'MISMATCH'}]."\t${cig_line}\n";
+	#$loc .= $regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}.":".$data[$hpos{'POSITION'}].
+	#  "-".($data[$hpos{'POSITION'}] + $length).";" if ($self->{'_dump_fasta'});
+	# }
+	# else{ 
+	#   die("No regions defined for ".$data[$hpos{'SEQ_ID'}]." ".$data[$hpos{'PROBE_ID'}].
+	#" with family ".$data[$hpos{'CONTAINER'}]);
+	#  }
+	
+	
+				
+	
+	if ($self->{'_dump_fasta'}){
+	  (my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'}) =~ s/chr//;
+	  $loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
+	    ($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
+	}
+	
+	#Hack!!!!!! Still importing probe (and result?)
+	if(!  $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'})){
+	  #warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
+	  next;
+	}
+	
+				
+	
+	$of = Bio::EnsEMBL::Funcgen::ProbeFeature->new
+	  (
+	   -START         => $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'},
+	   -END           =>($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}  + $length),
+	   -STRAND        => $strand,
+	   -SLICE         => $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'}),
+	   -ANALYSIS      => $anal,
+	   -MISMATCHCOUNT => $data[$hpos{'MISMATCH'}],
+	   -PROBE         => undef,#Need to update this in the store method
+	  );
+				
+	
+	push @{$pfs{$data[$hpos{'PROBE_ID'}]}{'features'}}, $of;
+	
+	if($self->{'_dump_fasta'}){			
+	  #filter controls/randoms?  Or would it be sensible to see where they map
+	  #wrap seq here?
+	  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'SEQ_ID'}].
+	    "\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
+	}
+      }
+      
+      #need to store last data here
+      $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
+      $self->log(join("\n", @log));
+      $achip->adaptor->set_status("IMPORTED", $achip);
+      $self->log("ArrayChip:\t".$achip->design_id()." has been IMPORTED");
+      
+      if ($self->{'_dump_fasta'}){
+	print $f_out $fasta if($self->{'_dump_fasta'});
+	close($f_out);
+      }
     }
     
-    #    #Need to print last probe_set here only if current and last probeset_id match
-    #  if($probe_set{'name'} eq $data[$hpos{'FEATURE_ID'}]){
-    #	$ps_string .= "\t".$probe_set{'name'}."\t".$probe_set{'size'}."\t".$probe_set{'family'}."\n";
-    #      }
+	
+    #Should we build hash of probe_names:probe_feature_ids here for results import
+    #Should we dump this as a lookup file for easier recoverability
+    #This is the biggest step in the import
+    #Building the hash would be fastest but least recoverable
+    #Would have to write recover statments for each step i.e. build the most recent data structure required for the next import step
+    #Individual queries for each result would take ages
+    #This is all assuming there are no random records in the table i.e. ID series is linear with no gaps.
     
     
-    #     print $p_out $probe_string;
-    #     print $ps_out $ps_string;
-    #     print $pf_out $pf_string;
-    #     print $f_out $f_string if($self->{'_dump_fasta'});
-    #$self->Timer()->mark("End of probe loop");
-    
-    #    close($fh);
-    #    close($ps_out);
-    #    close($p_out);
-    #    close($pf_out);
-    #close($f_out) if ($self->{'_dump_fasta'});
-
-    
+    #Could throw a random validation check in every X entries?
+    #This would only work for non-parallel imports
+    #periodic import when hit new probe_set, but no new data printed
+		
+  }
+  
+  #    #Need to print last probe_set here only if current and last probeset_id match
+  #  if($probe_set{'name'} eq $data[$hpos{'FEATURE_ID'}]){
+  #	$ps_string .= "\t".$probe_set{'name'}."\t".$probe_set{'size'}."\t".$probe_set{'family'}."\n";
+  #      }
   
   
-	#$self->log("Finished parsing probe data\nTotal probe_sets:\t$psid\n".
-	#	       "Total probes:\t$pid\nTotal probe_features:\t$fid");
+  #     print $p_out $probe_string;
+  #     print $ps_out $ps_string;
+  #     print $pf_out $pf_string;
+  #     print $f_out $f_string if($self->{'_dump_fasta'});
+  #$self->Timer()->mark("End of probe loop");
+  
+  #    close($fh);
+  #    close($ps_out);
+  #    close($p_out);
+  #    close($pf_out);
+  #close($f_out) if ($self->{'_dump_fasta'});
+  
+  
+  
+  
+  $self->log("Finished parsing probe data");
+  #Total probe_sets:\t$psid\n".
+  #	       "Total probes:\t$pid\nTotal probe_features:\t$fid");
   
   return;
 }
@@ -1295,33 +1313,26 @@ sub store_set_probes_features{
 }
 
 sub cache_slice{
-	my ($self, $region_name, $cs_name) = @_;
+  my ($self, $region_name, $cs_name) = @_;
 
-	throw("Need to define a region_name to cache a slice from") if ! $region_name;
+  throw("Need to define a region_name to cache a slice from") if ! $region_name;
 
-	$cs_name ||= 'chromosome';
-	$self->{'slice_cache'} ||= {};
-	$region_name =~ s/chr//;
-	
-	if(! exists $self->{'slice_cache'}->{$region_name}){
-		$self->{'slice_cache'}->{$region_name} = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
-		warn("Could not generate a slice for ${cs_name}:$region_name") if ! defined $self-{'slice_cache'}->{$region_name};
-	}
-	
-	return;
+  $cs_name ||= 'chromosome';
+  $self->{'slice_cache'} ||= {};
+  $region_name =~ s/chr//;
+  $region_name = "MT" if $region_name eq "M";
+  
+  #can we handle UN/random chromosomes here?
+  
+  
+  if(! exists $self->{'slice_cache'}->{$region_name}){
+    $self->{'slice_cache'}->{$region_name} = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
+    warn("Could not generate a slice for ${cs_name}:$region_name") if ! defined $self->{'slice_cache'}->{$region_name};
+  }
+  
+  return $self->{'slice_cache'}->{$region_name};
 }
 
-
-sub get_cached_slice{
-	my ($self, $region_name) = @_;
-
-	throw("Need to define a region name to retrieve a slice from the cache");
-
-	$region_name =~ s/chr//;
-	throw("The region name $region_name is not present in the cache") if(! exists $self->{'slice_cache'}->{$region_name});
-	
-	return $self->{'slice_cache'}->{$region_name};
-}
 
 =head2 cache_name_id
 
@@ -1409,6 +1420,8 @@ sub get_probe_id_by_name{
 sub read_results_data{
   my $self = shift;
   
+  my (%channel_index, %tmp);
+
   #TO DO
   #Recovery ? read feature_map.tmp into , query DB for last imported result(remove for safety?), restart from that point in file?
   #slurp here may require too much memory?
@@ -1416,9 +1429,9 @@ sub read_results_data{
   #i.e. select the last entry based on the expected table id.
   
   $self->log("Parsing results(".localtime().")...");
-  warn("Parsing results(".localtime().")...");
+  #warn("Parsing results(".localtime().")...");
    
-  my ($i, $fh, $tmp, $line, $r_string, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
+  my ($fh, $tmp, $line, $r_string, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
   #should check here if defined
   
@@ -1429,92 +1442,136 @@ sub read_results_data{
   #Or do we need to set flag for experiment or each chip and check somehow?
   my $cnt = 0;
 
-  foreach my $array(@{$self->arrays()}){
+
+  #Build channel idx for directly accessing only those results which haven't be stored
+  foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+    
+    if( ! $echip->has_status('IMPORTED')){
+
+      #this should use dye
+      foreach my $freq (values %{$self->get_def('dye_freqs')}){
+	$channel_index{$echip->unique_id()."_${freq}"} = undef;
+      }
+    }else{
+
+      #check for results here
+      #clean if recovery else throw
+
+      warn "Need to clean old result here";
+    }
+  }
+
+  
+  if(%channel_index){
+
+    foreach my $array(@{$self->arrays()}){
+
+
+
+      #This should be accessing echips for this experiment, not design_ids.
+    #we may have only a subset of designs/chips form the whole array
+    #and we only want to import the ones we have in the context of this experiment
+
 
     @design_ids = @{$array->get_design_ids()};
    
     foreach my $design_id(@design_ids){
-     
+
+      my (%tmp);
       my $achip = $array->get_ArrayChip_by_design_id($design_id);
       $r_string = "";
-      warn("Reading/Importing results for $design_id\n");
-      my $r_out = open_file(">", $self->get_dir("raw")."/result.".$achip->name().".txt");
+      $self->log("Reading/Importing results for $design_id\n");
+      my $file = $self->get_dir("raw")."/result.".$achip->name().".txt";
 
+      #This may cause empty file backups
+      $self->backup_file($file);
+
+      my $r_out = open_file(">", $file);
+
+
+      #need to imlpement this in result load too.
 
       $file_name = (scalar(@design_ids) > 1) ? $achip->name() : "All";  
       $fh = open_file("<", $self->get_def("results_dir")."/".$file_name."_pair.txt");
 
 
-	  my @lines = <$fh>;
-	  close($fh);
+      my @lines = <$fh>;
+      close($fh);
 
-      #while($line = <$fh>){
-	  foreach $line(@lines){
-		  $line =~ s/\r*\n//;
-		  
-	#	  if ($. == 1){
-		  if ($line =~ /PROBE_ID/){#header
-			  
-			  #GENE_EXPR_OPTION	SEQ_ID	PROBE_ID	POSITION	43827_532	43827_635	43837_532	43837_635	46411_532	46411_635	46420_532	46420_635	47505_532	47505_635	47525_532	47525_635
-			  @header = split/\t/o, $line;
-			  
-			  for $i(0..$#header){
-				  $probe_elem = $i if($header[$i] eq "PROBE_ID");
-				  
-				  if($header[$i] =~ /[0-9]+_[0-9]+/){
-					  $first_result = $i;
-					  last;#assume all fields after first result, are result feilds
-				  }
-			  }
-			  next;
-		  }
-		  
-		  @data = split/\t/o, $line;
-		  
-		  #could validate here against reulsts vs. number of channels
-		  for $i($first_result..$#data){
-			  
-			  #multiple mappings????????????????????????????????????SHOULD ONLY HAVE ONE PID PER UNIQUE PROBE!!!!!
-			  #foreach my $pid(@{$self->get_probe_ids_by_name($data[$probe_elem])}){
-			  #print "Got $pid for ".$data[$probe_elem]."\n";
-			  
-			  $cnt ++;
-			  
-			  #Need to change this get_channel call?
-			  ($tmp = $header[$i]) =~ s/1h_//;
-			  
-			  #import directly here?
-			  #print $r_out "\t${pid}\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
-			  
-			  #$self->db->insert_table_row("result", $pid, $data[$i], $anal_id, $self->get_channel($tmp)->dbID(), "channel");
-			  #Build multiple instert sql statement rather than executing once for each result?
-			  
-			  
-			  $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".$data[$i]."\t$anal_id\t".$self->get_channel($tmp)->dbID()."\tchannel\n";
-			  #}
-		  }
-		  
+      foreach $line(@lines){
 
-		  if($cnt > 10000){
-			  
-			  $cnt = 0;
-			  print $r_out $r_string;
-			  $r_string ="";
-			  #could we fork here and import in the background?
-		  }
+	$line =~ s/\r*\n//o;
 		  
-		  
-      }
-      
-      #my $r_out = open_file(">", $self->get_dir("import")."/result.".$ac{'name'}.".txt");
-      print $r_out $r_string;
-      close($r_out);
+	if ($line =~ /PROBE_ID/o){#header
+	  
+	  #GENE_EXPR_OPTION	SEQ_ID	PROBE_ID	POSITION	43827_532	43827_635	43837_532	43837_635	46411_532	46411_635	46420_532	46420_635	47505_532	47505_635	47525_532	47525_635
+	  @header = split/\t/o, $line;
+	  
+	  for my $i(0..$#header){
+
+	    if($header[$i] eq "PROBE_ID"){
+	      $probe_elem = $i;
+	      next;
+	    }	    
+	  
+	    #Populate channel idx for directly accessing unstored channel results
+	    foreach my $field(keys %channel_idx){
+	      $header[$i] =~  s/1h_//;
+	      
+	      if($header[$i] eq $field){
+		$channel_idx{$field} = $i;
+	      }
+	    }
+	  }
+
+	  #make tmp hash with remaining(other achip) channel fields
+	  foreach my $field(keys %channel_idx){
+	    
+	    if(! defined $channel_ids{$field}){
+	      #warn here.
+	      $tmp{$field} = undef;
+	      delete $channel_idx{$field};
+	    }
+	  }
+	  
+	  next;
+	}
+	
+	@data = split/\t/o, $line;
+	
+
+	foreach my $field(keys %channel_idx){
+	  $cnt ++;
+	  $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".
+	    $data[$channel_idx{$field}]."\t$anal_id\t".$self->get_channel($field)->dbID()."\tchannel\n";
+	}
+	
+	
+	if($cnt > 10000){
+	  
+	  $cnt = 0;
+	  print $r_out $r_string;
+	  $r_string ="";
+	  #could we fork here and import in the background?
+	}
+
+      %channel_idx = %tmp;
+
     }
+    
+    print $r_out $r_string;
+    close($r_out);
+    system("chmod 644 $file");
+    
+    if(%tmp){
+	throw("Not all the Experiment Channel result fields were found\nAbsent channels:\t".(keys %tmp));
+    }
+
+  }else{
+    $self->log("All ExperimentalChip result have been previously imported\nSkipping results parse");
   }
 
-  $self->log("Finished parsing and results");
-  warn("Finished parsing and results");
-
+  $self->log("Finished parsing results");
   return;
 }
 

@@ -371,7 +371,6 @@ sub store {
 	    "\nTo reuse/update this ExperimentalChip you must retrieve it using the ExperimentalChipAdaptor".
 	    "\nMaybe you want to use the -recover option?") if $s_ec;
       
-      #if(! $s_ec){
       my $ftype_id = (defined $ec->feature_type()) ? $ec->feature_type->dbID() : undef;
       my $ctype_id = (defined $ec->cell_type()) ? $ec->cell_type->dbID() : undef;
       

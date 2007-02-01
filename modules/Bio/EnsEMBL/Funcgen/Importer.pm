@@ -331,15 +331,14 @@ sub init_import{
   my $exp = $exp_adaptor->fetch_by_name($self->name());#, $self->group());
   #should we not just do store here, as this will return the experiment if it has already been stored?
 
-  if ($self->recovery() && (! $exp)){
-    warn("No previously stored experiment defined with recovery mode, Importing as normal"); 
+  if ($self->recovery() && ($exp)){
+    $self->log("Using previously stored Experiment:\t".$exp->name);
   }
-
-  if((! $self->recovery()) && $exp){
+  elsif((! $self->recovery()) && $exp){
     throw("Your experiment name is already registered in the database, please choose a different \"name\", this will require renaming you input directory, or specify -recover if you are working with a failed import. Or specify recovery?");
     #can we skip this and store, and then check in register experiment if it is already stored then throw if not recovery
   }
-  else{#niether or both?? or recover and exp
+  else{# (recover && exp) || (recover  && ! exp) 
  
     
     $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
@@ -351,13 +350,11 @@ sub init_import{
 						  -ADAPTOR => $self->db->get_ExperimentAdaptor(),
 						 );
     
-    ($exp) =  @{$exp_adaptor->store($exp)};	#skip this bit?	
+    ($exp) =  @{$exp_adaptor->store($exp)};
   }
 
   
   $self->experiment($exp);
-  
-
   
   #remove and add specific report, this is catchig some Root stuff
   #$self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
@@ -420,32 +417,9 @@ sub create_output_dirs{
   return;
 }
 
-=head2 status_adaptor
-
-  Example    : $self->status_adaptor->set_state('IMPORTED', $echip)
-  Description: Convinience accessor method to status adaptor
-  Returntype : Bio::EnsEMBL::Funcgen::StatusAdaptor
-  Exceptions : None
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub status_adaptor{
-  my ($self) = shift;
-
-  if (! $self->{'status_adaptor'} || ! $self->{'status_adaptor'}->isa("Bio::EnsEMBL::Funcgen::StatusAdaptor")){
-    $self->{'status_adaptor'} = $self->db->get_StatusAdaptor();
-  }
-  
-  return $self->{'status_adaptor'};
-}
 
 
-
-
-
-### GENERIC GET/SET METHODS ###
+### GENERIC GET/SET METHODS
 
 =head2 vendor
   
@@ -1068,28 +1042,46 @@ sub import_results{
 
   #should check status of results import for each chip here, warning if nor new data imported
 
-  if($results_dir ne "norm"){
+  if($results_dir ne "norm"){#raw data, why not eq raw? as sanger is treated has no raw change this in the methods!
 
     foreach my $array(@{$self->arrays()}){
-      
 
-      #this should use the chip uids for an experiment not all the ac ids for an array!!
-      #Need to make these into objects
       if($self->vendor() eq "NIMBLEGEN"){
 
-	foreach my $design_id(@{$array->get_design_ids()}){
-	  my $achip = $array->get_ArrayChip_by_design_id($design_id);
-	  warn "Log this! -  Loading results for ".$achip->name();
-	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
+	#we don't need to check here as only the right results will have been written.
+	#we do however want to make sure that they haven't already been imported and we're reimporting the same data
+      
+	foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+    
+	  if( ! $echip->has_status('IMPORTED')){#must have some results!
+
+	    #load all results
+	    #all achip results file will be current or empty if no unimported results present
+	    #this may result in importing an empty file
+
+	    foreach my $design_id(@{$array->get_design_ids()}){
+	      my $achip = $array->get_ArrayChip_by_design_id($design_id);
+
+	      warn("Check ec import status here & skip?");
+	      #don't need to check recovery as it will have already throw by now
+	      
+	      $self->log("Loading results for ".$achip->name());
+	      $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
+	    }
+	  }
+
+	  last; #No need to check other chips or load anymore data
 	}
-      }
     }
   }else{
     #why is this one file rather than for each echip?
 
     if($self->vendor() eq "SANGER"){
 
-      foreach my $uid(@{$self->experiment->get_experimental_chip_unique_ids()}){
+      foreach my $uid(@{$self->experiment->get_ExperimentalChip_unique_ids()}){
+
+	warn("Check ec import status here & skip?");
+
 	#Need to check wether results have been imported first for given norm
 	#need to tag files with norm method
 
@@ -1101,11 +1093,18 @@ sub import_results{
 	}
     }
     else{
-      warn "Log this! -  Loading raw results from ".$self->get_dir($results_dir)."/result.txt";
+
+ 
+
+
+
+      $self->log("Loading raw results from ".$self->get_dir($results_dir)."/result.txt");
       $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
     }
   }
   
+  
+  $self->log("Finished Loading raw results");
   return;
 }
 
@@ -1303,7 +1302,7 @@ sub R_norm{
   
   #This is now retrieving a ExperimentalChip obj
   
-  foreach my $echip(@{$self->experiment->get_experimental_chips()}){
+  foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
     warn "Build $logic_name R cmd for ".$echip->unique_id()."  log this?\n";
     @dbids = ();
 
@@ -1392,7 +1391,18 @@ sub R_norm{
 
 
 
+sub backup_file{
+  my ($self, $file_path) = @_;
 
+  throw("Must define a file path to backup") if(! $file_path);
+
+  if(-f $file_path){
+    system ("mv ${file_path} ${file_path}.".'date \'+%T\'');
+  }
+
+  return;
+
+}
 
 
 

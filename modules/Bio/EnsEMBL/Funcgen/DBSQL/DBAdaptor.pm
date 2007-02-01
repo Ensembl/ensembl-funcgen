@@ -413,6 +413,10 @@ sub import_group{
 sub fetch_all_states{
 	my ($self, $table, $id) = @_;
 
+
+	throw("DBAdaptor::fetch_all_states is deprecated");
+
+
 	throw("Need to specifiy a table and an id to retrieve status") if (! $table || ! $id);
 
 
@@ -443,6 +447,8 @@ sub fetch_all_states{
 sub fetch_status_by_name{
 	my ($self, $table, $id, $state) = @_;
 
+	throw("DBAdaptor::fetch_status_by_name is deprecated");
+
 	throw("Need to specifiy a table and an id to retrieve status") if (! $table || ! $id || ! $state);
 
 	#should we enum the state?
@@ -470,6 +476,8 @@ sub fetch_status_by_name{
 
 sub set_status{
 	my ($self, $table, $id, $state) = @_;
+
+	throw("DBAdaptor::set_status is deprecated");
 
 	throw("Need to supply a table, dbid and a valid status") if (!($table && $id && $state));
 

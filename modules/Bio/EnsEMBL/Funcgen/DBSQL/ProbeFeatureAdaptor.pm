@@ -46,7 +46,7 @@ use vars qw(@ISA);
 use strict;
 use warnings;
 
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor));
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
 =head2 fetch_all_by_Probe

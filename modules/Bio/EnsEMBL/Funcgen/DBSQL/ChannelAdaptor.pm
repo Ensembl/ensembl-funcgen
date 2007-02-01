@@ -316,11 +316,9 @@ sub store {
       #if(! $s_chan){
       $sth->bind_param(1, $chan->experimental_chip_id(),  SQL_INTEGER);
       $sth->bind_param(2, $chan->sample_id(),             SQL_VARCHAR);
-      $sth->bind_param(3, $chan->cell_line_id(),          SQL_INTEGER);
-      $sth->bind_param(4, $chan->dye() ,                  SQL_VARCHAR);
-      $sth->bind_param(5, $chan->type(),                  SQL_VARCHAR);
-      $sth->bind_param(6, $chan->description(),           SQL_VARCHAR);
-      
+      $sth->bind_param(3, $chan->dye() ,                  SQL_VARCHAR);
+      $sth->bind_param(4, $chan->type(),                  SQL_VARCHAR);
+         
       $sth->execute();
       my $dbID = $sth->{'mysql_insertid'};
       $chan->dbID($dbID);

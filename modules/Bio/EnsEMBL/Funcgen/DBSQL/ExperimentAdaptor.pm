@@ -38,7 +38,7 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
@@ -312,6 +312,7 @@ sub store {
 			
 
 			#warn "Storing exp with name ".$exp->name()."\n";
+			
 			
 			$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
 			$sth->bind_param(2, $g_dbid,                     SQL_INTEGER);
