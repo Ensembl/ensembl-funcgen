@@ -200,7 +200,7 @@ sub get_array_chip_ids {
   my @ac_ids;
 
   #can we not just return the values?
-  foreach my $achip(values %{$self->get_ArrayChips()}){
+  foreach my $achip(values %{$self->{'array_chips'}}){
     push @ac_ids, $achip->dbID();
   }
 
@@ -225,10 +225,10 @@ sub get_array_chip_ids {
 
 
 sub get_design_ids{
-  my ($self) = @_;
-  return [keys %{$self->get_ArrayChips()}];
+  my $self = shift;
+  return [keys %{$self->{'array_chips'}}];
 }
-
+    
 
 
 =head2 name
@@ -244,15 +244,16 @@ sub get_design_ids{
 
 =cut
 
-sub name {
+sub name{
   my $self = shift;
+  
   $self->{'name'} = shift if @_;
-
+  
   #do we need this?
   #if ( !exists $self->{'name'} && $self->dbID() && $self->adaptor() ) {
   #  $self->adaptor->fetch_attributes($self);
   #}
-
+  
   return $self->{'name'};
 }
 
@@ -278,7 +279,7 @@ sub format {
   #if ( !exists $self->{'format'} && $self->dbID() && $self->adaptor() ) {
   #  $self->adaptor->fetch_attributes($self);
   #}
-
+  
   return $self->{'format'};
 }
 
@@ -307,7 +308,7 @@ sub size {
   #array_chips does not update from DB if passed an arg!!
   
 
-  return scalar(keys %{$self->get_ArrayChips()});
+  return scalar(keys %{$self->{'array_chips'}});
 }
 
 =head2 species

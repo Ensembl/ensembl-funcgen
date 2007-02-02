@@ -1548,7 +1548,7 @@ sub read_results_data{
 	#PRINT/CLOSE ArrayChip FILE
 	print $r_out $r_string;
 	close($r_out);
-	#system("chmod 644 $file");
+	system("chmod 644 $file");
 	
       }
 
