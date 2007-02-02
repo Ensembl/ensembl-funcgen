@@ -103,13 +103,15 @@ my $reg = "Bio::EnsEMBL::Registry";
 sub load_table_data{
   my ($self, $table, $file) = @_;
 
+  chmod 644, $file;
 
-  chmod 0775, $file;
-
-#  warn("Loading $table data from $file");
+  warn("Loading $table data from $file");
   my $sql = "load data infile \"$file\" into table $table";
   $self->dbc->do($sql);
-  #$self->log("Finished loading $table data");
+
+  
+
+  $self->log("Finished loading $table data with shebang $!");
   return;
 }
 

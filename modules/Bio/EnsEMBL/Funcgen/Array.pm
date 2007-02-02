@@ -431,7 +431,7 @@ sub get_ArrayChips {
     }
   }
 
-  return $self->{'array_chips'};
+  return [ values %{$self->{'array_chips'}} ];
 }
 
 =head2 get_ArrayChip_by_design_id
@@ -455,7 +455,8 @@ sub get_ArrayChip_by_design_id{
   if(defined $self->{'array_chips'}{$design_id}){
     $achip = $self->{'array_chips'}{$design_id};
   }else{
-    warn("Array does not contain ArrayChip:$design_id\n"); 
+    #No we use this to check whether it has been stored with the array
+    #warn("should this throw? Array does not contain ArrayChip:$design_id\n"); 
   }
 
   return $achip;
@@ -464,8 +465,8 @@ sub get_ArrayChip_by_design_id{
 =head2 add_ArrayChip
 
   Arg [1]    : mandatory - Bio::EnsEMBL::Funcgen::ArrayChip
-  Example    : $array->add_array_chip($array_chip);
-  Description: Setter/storer for array chips
+  Example    : $array->add_ArrayChip($array_chip);
+  Description: Setter for array chips
   Returntype : None
   Exceptions : Throws if arg not a Bio::EnsEMBL::Funcgen::ArrayChip, or Array not stored
   Caller     : General
@@ -473,29 +474,30 @@ sub get_ArrayChip_by_design_id{
 
 =cut
 
-#this is storing array_chip here, but we should hide it like this, we should make ArrayChipAdaptor check and return previously stored ArrayChip if possible.
+#This uses previosuly stored array_chips withotu warning
+#Need to implement fetch_store method?
 
 sub add_ArrayChip{
   my ($self, $array_chip) = @_;
 
-  throw("You must supply a Bio::EnsEMBL::Funcgen::ArrayChip") if(! $array_chip->isa("Bio::EnsEMBL::Funcgen::ArrayChip"));
+  throw("You must supply a stored Bio::EnsEMBL::Funcgen::ArrayChip") if(! $array_chip->isa("Bio::EnsEMBL::Funcgen::ArrayChip") && 
+								 $array_chip->dbID());
   
   if ($self->dbID() && $self->adaptor()){
     $self->get_ArrayChips() if (! $self->{'array_chips'});
 
     if(exists $self->{'array_chips'}{$array_chip->design_id}){
       $array_chip = $self->{'array_chips'}{$array_chip->design_id};
-      warn("Array chip for ".$array_chip->design_id()." already exists, using previous stored array chip\n");
+      #warn("Array chip for ".$array_chip->design_id()." already exists, using previous stored array chip\n");
     }else{
-      $array_chip->array_id($self->dbID());
-      ($array_chip) = @{$self->adaptor->db->get_ArrayChipAdaptor->store($array_chip)};
       $self->{'array_chips'}{$array_chip->design_id} = $array_chip;
     }
+
   }else{
     throw("Array must be stored before adding an array_chip");
   }
 
-  return $array_chip;
+  return; #$array_chip;
 }
 
 =head2 get_achip_status

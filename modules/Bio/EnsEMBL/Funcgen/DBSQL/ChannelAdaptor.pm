@@ -52,41 +52,38 @@ use vars qw(@ISA);
 =head2 fetch_by_type_experimental_chip_id
 
   Arg [1]    : string - type
-  Arg [1]    : int - dbID of Experiment
+  Arg [2]    : Bio::EnsEMBL::Funcgen::ExperimentalChip
   Example    : my $chan = $chan_a->fetch_by_type_experimental_chip_dbID('EXPERIMENTAL', $ec_dbid);
   Description: Does what it says on the tin
   Returntype : Bio::EnsEMBL::Funcgen::Channel object
-  Exceptions : None
+  Exceptions : Throws if args not met
   Caller     : General
   Status     : At risk
 
 =cut
 
-sub fetch_by_type_experimental_chip_dbID {
-    my ($self, $type, $ec_dbid) = @_;
+sub fetch_by_type_experimental_chip_id {
+    my ($self, $type, $ec_id) = @_;
 
-	throw("Must specify a valid experiemntal dbID($ec_dbid) and type($type)") if(! $ec_dbid || ! $type);
+    throw("Must specify a channel type e.g. EXPERIMENTAL, TOTAL and an ExperimentalChip id") if(! ($type && $ec_id));
 
 
-	my $sth = $self->prepare("
+    my $sth = $self->prepare("
 		SELECT c.channel_id
 		FROM channel c
 		WHERE c.experimental_chip_id = ?
         AND c.type = ?
 	");
 
-	$sth->bind_param(1, $ec_dbid,   SQL_INTEGER);
-	$sth->bind_param(2, $type,      SQL_VARCHAR);
+    $sth->bind_param(1, $ec_id,     SQL_INTEGER);
+    $sth->bind_param(2, $type,      SQL_VARCHAR);
 
-	#can we do a generic fetch here?
-
-
-	$sth->execute();
-	my ($chan_id) = $sth->fetchrow();
-
-
-	return $self->fetch_by_dbID($chan_id) if $chan_id;
-}
+    $sth->execute();
+    my ($chan_id) = $sth->fetchrow();
+    
+    
+    return $self->fetch_by_dbID($chan_id) if $chan_id;
+  }
 
 
 =head2 fetch_by_dye_experimental_chip_id
@@ -308,7 +305,7 @@ sub store {
     if (!( $chan->dbID() && $chan->adaptor() == $self )){#use is_stored?
       
       
-      my $s_chan = $self->fetch_by_type_experimental_chip_dbID($chan->type(), $chan->experimental_chip_id());
+      my $s_chan = $self->fetch_by_type_experimental_chip_id($chan->type(), $chan->experimental_chip_id());
       throw("Channel already exists in the database with dbID:".$s_chan->dbID().
 	    "\nTo reuse/update this Channel you must retrieve it using the ChannelAdaptor".
 	    "\nMaybe you want to use the -recover option?") if $s_chan;

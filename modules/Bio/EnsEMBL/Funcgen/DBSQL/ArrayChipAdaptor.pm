@@ -51,10 +51,10 @@ use vars qw(@ISA);
 
 =head2 fetch_all_by_array_id
 
-  Arg [1]    : int - dbID of Experiment
-  Example    : my @ecs = @{$ec_a->fetch_all_by_experiment_dbID($ac_dbid);
+  Arg [1]    : int - dbID of Array
+  Example    : my @ccs = @{$ec_a->fetch_all_by_array_dbID($array->dbID());
   Description: Does what it says on the tin
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ArrayChip
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -71,6 +71,35 @@ sub fetch_all_by_array_id {
 
     return $self->generic_fetch($constraint);
 }
+
+
+
+=head2 fetch_by_array_design_ids
+
+  Arg [1]    : int - dbID of Array
+  Example    : my @ecs = @{$ec_a->fetch_all_by_experiment_dbID($ac_dbid);
+  Description: Does what it says on the tin
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ArrayChip
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub fetch_by_array_design_ids{
+    my ($self, $array_id, $design_id) = @_;
+
+    throw("Must specify an array dbID and a design id") if(! $array_id);
+
+    my $constraint = "ac.array_id='$array_id' and ac.design_id='$design_id'";
+
+    my ($ac) = @{$self->generic_fetch($constraint)};
+    #unique key means this always has just one element
+
+    return $ac;
+}
+
+
 
 
 
@@ -200,28 +229,27 @@ sub store {
     
     
     if (!( $ac->dbID() && $ac->adaptor() == $self )){
-      #my $s_ec = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
-      #if(! $s_ec){
-    
-      $sth->bind_param(1, $ac->design_id(), SQL_VARCHAR);
-      $sth->bind_param(2, $ac->array_id(),  SQL_INTEGER);
-      $sth->bind_param(3, $ac->name(),      SQL_VARCHAR);
-      
-      $sth->execute();
-      my $dbID = $sth->{'mysql_insertid'};
-      $ac->dbID($dbID);
-      $ac->adaptor($self);
-      
-      #$self->db->set_status('experimental_chip', $ec->dbID(), 'STORED');#not really necessary?
-      #}
-      #else{
-      #	$ec = $s_ec;
-      #	my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};
-      #	warn("Using previously stored ExperimentalChip (".$ec->unique_id().") with states\t@states\n");
-      #}
+
+      my $s_ac = $self->fetch_by_array_design_ids($ac->array_id(), $ac->design_id());
+
+      if(! $s_ac){
+	
+	$sth->bind_param(1, $ac->design_id(), SQL_VARCHAR);
+	$sth->bind_param(2, $ac->array_id(),  SQL_INTEGER);
+	$sth->bind_param(3, $ac->name(),      SQL_VARCHAR);	
+	$sth->execute();
+
+	my $dbID = $sth->{'mysql_insertid'};
+	$ac->dbID($dbID);
+	$ac->adaptor($self);	
+	
+      }else{
+	  $ac = $s_ac;
+	  #	my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};
+	  #	warn("Using previously stored ExperimentalChip (".$ec->unique_id().") with states\t@states\n");
+	}
     }
   }
-  
   return \@args;
 }
 

@@ -431,9 +431,9 @@ sub get_result_by_Analysis_ExperimentalChips{
       #build the cache based on logic name and table_id
       #cahce key??  should we cat the ec_ids together?
 
-      my @result_refs = @{$self->adaptor->fetch_results_by_probe_experimental_chips_analysis($self->probe->dbID(), 
-											     \@ec_ids, 
-											     $anal_name)};
+      my @result_refs = @{$self->adaptor->fetch_results_by_Probe_Analysis_experimental_chip_ids($self->probe(), 
+												$anal,
+												\@ec_ids)};
 
       #Remove lines with no result
       while(@result_refs && (! $result_refs[0]->[0])){

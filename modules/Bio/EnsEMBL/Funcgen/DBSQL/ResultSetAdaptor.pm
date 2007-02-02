@@ -544,22 +544,13 @@ sub fetch_results_by_channel_analysis{
 	return $self->dbc->db_handle->selectall_arrayref($query);
 }
 
-=head2 fetch_results_by_probe_experimental_chips_analysis
-
-  Arg [1]    : int - OligoProbe dbID
-  Arg [2]    : ARRAYREF - ExperimentalChip dbIDs
-  Arg [1]    : string - Logic name of analysis
-  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($op_id, \@chip_ids, 'VSN_GLOG')};
-  Description: Gets all analysis results for probe within a set of ExperimentalChips
-  Returntype : ARRAYREF
-  Exceptions : warns if analysis is not valid in ExperimentalChip context
-  Caller     : OligoFeature
-  Status     : At Risk 
-
-=cut
 
 sub fetch_results_by_probe_experimental_chips_analysis{
 	my ($self, $probe_id, $chip_ids, $logic_name) = @_;
+
+
+	$self->depracted("This needs updating to mirro the function of the ProbeFeature method");
+
 	
 	my ($table_ids, $result);
 	my $table_name = "experimental_chip";

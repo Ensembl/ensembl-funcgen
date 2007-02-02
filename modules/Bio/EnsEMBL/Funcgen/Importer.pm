@@ -55,6 +55,7 @@ my $reg = "Bio::EnsEMBL::Registry";
 =head2 new
 
  Description : Constructor method
+
  Arg  [1]    : hash containing optional attributes:
                     -name     Name of Experiment(dir) 
                     -format   of array e.g. Tiled(default)
@@ -327,10 +328,10 @@ sub init_import{
   my $exp_adaptor = $self->db->get_ExperimentAdaptor();
   
   #print "XXXXXXXXXX featching by name ".$self->name()."\n";
-
+  
   my $exp = $exp_adaptor->fetch_by_name($self->name());#, $self->group());
   #should we not just do store here, as this will return the experiment if it has already been stored?
-
+  
   if ($self->recovery() && ($exp)){
     $self->log("Using previously stored Experiment:\t".$exp->name);
   }
@@ -352,7 +353,7 @@ sub init_import{
     
     ($exp) =  @{$exp_adaptor->store($exp)};
   }
-
+  
   
   $self->experiment($exp);
   
@@ -419,7 +420,7 @@ sub create_output_dirs{
 
 
 
-### GENERIC GET/SET METHODS
+## GENERIC GET/SET METHODS
 
 =head2 vendor
   
@@ -965,54 +966,51 @@ sub norm_method{
 
 
 sub register_experiment{
-	my ($self) = shift;
+  my ($self) = shift;
+  
+  #Need to check for dnadb passed with adaptor to contructor
+  if(@_){ 
 
-	#Need to check for dnadb passed with adaptor to contructor
-	if(@_){ 
-		if( ! $_[0]->isa("Bio::EnsEMBL::DBSQL::DBAdaptor")){
-			throw("You need to pass a valid dnadb adaptor to register the experiment");
-		}
-		$self->db->dnadb($_[0]);
-	}
-	elsif( ! $self->db()){
-		throw("You need to pass/set a DBAdaptor with a DNADB attached of the relevant data version");
-	}
+    if( ! $_[0]->isa("Bio::EnsEMBL::DBSQL::DBAdaptor")){
+      throw("You need to pass a valid dnadb adaptor to register the experiment");
+    }
+    $self->db->dnadb($_[0]);
+  }
+  elsif( ! $self->db()){
+    throw("You need to pass/set a DBAdaptor with a DNADB attached of the relevant data version");
+  }
+  
+  #This could still be the default core db for the current version
+  #warn here if not passed DB?
+  #These should be vendor independent, only the read methods should need specific order?
+  #Need to totally separate parse/read from import, so we can just do one method if required, i.e. normalise
+  #Also need to move id generation to import methods, which would check that a previous import has been done, or check the DB for the relevant info?
+  
+  $self->init_import();
 
-	#This could still be the default core db for the current version
-	#warn here if not passed DB?
-
-
-
-
-	#These should be vendor independent, only the read methods should need specific order?
-	#Need to totally separate parse/read from import, so we can just do one method if required, i.e. normalise
-	#Also need to move id generation to import methods, which would check that a previous import has been done, or check the DB for the relevant info?
-
-	$self->init_import();
-
-	#check here is exp already stored?  Will this work properly?
-	#then throw if not recovery
-	#else do following, but change to _private type methods
-	#as bypassing this register_experiment method and calling directly will cause problems with duplication of data
-	#we need to make this more stringent, maybe we can do a caller in each method to make sure it is register experiment calling each method
-
-	$self->read_data("array");#rename this or next?
-
-	#$self->import_experiment();#imports experiment and chip data
-	$self->read_data("probe");
-	$self->read_data("results");
-	$self->import_results("raw");
-
-	#Need to be able to run this separately, so we can normalise previously imported sets with different methods
-	#should be able t do this without raw data files e.g. retrieve info from DB
-	my $norm_method = $self->norm_method();
-
-	$self->$norm_method if( $norm_method );
-
-	$self->import_results("norm");
-
-
-	return;
+  #check here is exp already stored?  Will this work properly?
+  #then throw if not recovery
+  #else do following, but change to _private type methods
+  #as bypassing this register_experiment method and calling directly will cause problems with duplication of data
+  #we need to make this more stringent, maybe we can do a caller in each method to make sure it is register experiment calling each method
+  
+  $self->read_data("array");
+  $self->read_data("probe");
+  $self->read_data("results");
+  $self->import_results("raw");
+  
+  #Need to be able to run this separately, so we can normalise previously imported sets with different methods
+  #should be able t do this without raw data files e.g. retrieve info from DB
+  
+  my $norm_method = $self->norm_method();
+  
+  if(defined $norm_method){
+    $self->$norm_method;
+    $self->import_results("norm");
+  }
+  
+  
+  return;
 }
 
 
@@ -1037,70 +1035,67 @@ sub register_experiment{
 
 sub import_results{
   my ($self, $results_dir) = @_;
+
+  my $loaded;
+
+  #should we split this into vendor specific load methods?
+
+
   
-
-
-  #should check status of results import for each chip here, warning if nor new data imported
-
   if($results_dir ne "norm"){#raw data, why not eq raw? as sanger is treated has no raw change this in the methods!
 
-    foreach my $array(@{$self->arrays()}){
+    #This loop behaves wierdly due to the naming/array design of each platform
+    #Nimblegen loads all experimental chips from an arraychip(can be All_pair if only one Achip)
+    #Sanger has individual Echip files
 
-      if($self->vendor() eq "NIMBLEGEN"){
-
-	#we don't need to check here as only the right results will have been written.
-	#we do however want to make sure that they haven't already been imported and we're reimporting the same data
+    foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
       
-	foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
-    
-	  if( ! $echip->has_status('IMPORTED')){#must have some results!
+      if( ! $echip->has_status('IMPORTED')){#must have some results	
+	
+	if($self->recovery()){
+	  warn("Need to clean results here if recovery");
+	}
 
-	    #load all results
-	    #all achip results file will be current or empty if no unimported results present
-	    #this may result in importing an empty file
+	if($self->vendor() eq "NIMBLEGEN"){
 
-	    foreach my $design_id(@{$array->get_design_ids()}){
-	      my $achip = $array->get_ArrayChip_by_design_id($design_id);
+	  if(! $loaded){  #Loads all Echip data from ArrayChip file/s
 
-	      warn("Check ec import status here & skip?");
-	      #don't need to check recovery as it will have already throw by now
-	      
-	      $self->log("Loading results for ".$achip->name());
-	      $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
+	    foreach my $array(@{$self->arrays()}){
+	    
+	      foreach my $design_id(@{$array->get_design_ids()}){
+		my $achip = $array->get_ArrayChip_by_design_id($design_id);
+		$self->log("Loading results for ".$achip->name());
+		$self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
+	      }
 	    }
+	    
+	    $loaded = 1;
 	  }
-
-	  last; #No need to check other chips or load anymore data
+	}elsif($self->vendor() eq "SANGER"){#this is norm data, but we're importing norm, rather than processing.
+		
+	  #IMPORTED is not correct status for these Echips, well, should have
+	  #IMPORTED?  and IMPORTED_NORM_METHOD
+	  
+	  
+	  $self->log("Loading results for ExperimentalChip:\t".$echip->unique_id());
+	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$echip->unique_id().".txt");
 	}
+
+	warn("Need to catch load error here before marking as imported");
+	$echip->adaptor->set_status('IMPORTED', $echip);
+      }
     }
-  }else{
-    #why is this one file rather than for each echip?
-
-    if($self->vendor() eq "SANGER"){
-
-      foreach my $uid(@{$self->experiment->get_ExperimentalChip_unique_ids()}){
-
-	warn("Check ec import status here & skip?");
-
-	#Need to check wether results have been imported first for given norm
-	#need to tag files with norm method
-
-	  warn "Log this! -  Loading results for ".$uid;
-	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$uid.".txt");
-
-	  #need to catch error here before marking as imported
-
-	}
-    }
-    else{
-
- 
-
-
-
-      $self->log("Loading raw results from ".$self->get_dir($results_dir)."/result.txt");
-      $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
-    }
+  }
+  else{#norm data
+    $self->log("Loading raw results from ".$self->get_dir($results_dir)."/result.txt");
+    $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
+    
+    
+    #How do we know which Echips have been normalised?
+    #just loop through echips checking for the status
+    
+    #      warn("Need to catch load error here before marking as imported_analysis");
+    #    }
   }
   
   
@@ -1171,7 +1166,7 @@ sub design_type{
 #    ($chip_uid = $chan_uid) =~ s/_.*//;
 #    $self->channel_data($chan_uid, 'dbid', 
 #			$self->db->fetch_channel_dbid_by_echip_dye(
-#								   $self->experiment->get_experimental_chip_by_unique_id($chip_uid)->dbID(),
+#								   $self->experiment->get_ExperimentalChip_by_unique_id($chip_uid)->dbID(),
 #								   $self->get_channel($chan_uid)->{'dye'}));
 #  }
 
@@ -1397,7 +1392,8 @@ sub backup_file{
   throw("Must define a file path to backup") if(! $file_path);
 
   if(-f $file_path){
-    system ("mv ${file_path} ${file_path}.".'date \'+%T\'');
+    $self->log("Backing up:\t$file_path");
+    system ("mv ${file_path} ${file_path}.".`date '+%T'`);
   }
 
   return;

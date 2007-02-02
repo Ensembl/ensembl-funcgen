@@ -48,8 +48,11 @@ CREATE TABLE `array` (
    `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
    `description` varchar(255) default NULL,
-   PRIMARY KEY  (`array_id`)
+   PRIMARY KEY  (`array_id`),
+   UNIQUE KEY   (`vendor`, `name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
 
 -- removed `size` tinyint(4) unsigned NOT NULL default '0', now dynamically generated from key array_chips
 --- Size -> Chips?  Need some level of validation for chip sets to avoid incomplete chip sets
@@ -70,10 +73,8 @@ CREATE TABLE `array_chip` (
    `array_id` int(10) unsigned NOT NULL,
    `name` varchar(40) default NULL,
     PRIMARY KEY  (`array_chip_id`),
-   KEY `design_idx` (`design_id`),
-   KEY `array_idx` (`array_id`)
+   UNIQUE KEY `array_design_idx` (`array_id`, `design_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
 
 
 --- name = design_name, or is this the chip name?

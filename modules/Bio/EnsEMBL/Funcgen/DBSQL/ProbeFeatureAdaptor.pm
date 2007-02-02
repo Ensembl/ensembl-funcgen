@@ -667,12 +667,12 @@ sub fetch_results_by_channel_analysis{
 	return $self->dbc->db_handle->selectall_arrayref($query);
 }
 
-=head2 fetch_results_by_probe_experimental_chips_analysis
+=head2 fetch_results_by_Probe_Analysis_experimental_chip_ids
 
-  Arg [1]    : int - Probe dbID
-  Arg [2]    : ARRAYREF - ExperimentalChip dbIDs
-  Arg [1]    : string - Logic name of analysis
-  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($op_id, \@chip_ids, 'VSN_GLOG')};
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Probe
+  Arg [2]    : Bio:EnsEMBL::Analysis
+  Arg [2]    : ARRAYREF - Bio::EnsEMBLExperimentalChip dbIDs
+  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($probe, $analysis, \@ec_ids)};
   Description: Gets all analysis results for probe within a set of ExperimentalChips
   Returntype : ARRAYREF
   Exceptions : warns if analysis is not valid in ExperimentalChip context
@@ -681,9 +681,11 @@ sub fetch_results_by_channel_analysis{
 
 =cut
 
-sub fetch_results_by_probe_experimental_chips_analysis{
-	my ($self, $probe_id, $chip_ids, $logic_name) = @_;
+sub fetch_results_by_Probe_Analysis_experimental_chip_ids{
+	my ($self, $probe, $anal, $chip_ids) = @_;
 
+
+	my $logic_name = $anal->logic_name();
 	my @cs = @$chip_ids;
 
 	#warn "Fetching result for $probe_id, @cs, $logic_name";
@@ -699,7 +701,7 @@ sub fetch_results_by_probe_experimental_chips_analysis{
 	#else no logic name or not a chip metric, then return channel and metric=?
 
 
-	if(! defined $probe_id || ! @$chip_ids) {
+	if(! defined $probe->dbID() || ! @$chip_ids) {
 		throw("Need to define a valid probe and pass a listref of experimental chip dbIDs");
 	}
 		
@@ -720,7 +722,8 @@ sub fetch_results_by_probe_experimental_chips_analysis{
 	}
 
 
-	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.probe_id =\"$probe_id\" AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause order by r.score";
+	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.probe_id ='".$probe-dbID().
+	  "' AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause order by r.score";
 	
 	return $self->dbc->db_handle->selectall_arrayref($query);
 }

@@ -190,7 +190,7 @@ sub new{
 
 	select LOGFILE; $| = 1;  # make log file unbuffered
 
-	$self->log("Logging started at ".localtime()."...");
+	$self->log("\n\nLogging started at ".localtime()."...");
 
 	# RESET STDOUT TO DEFAULT
     select STDOUT; $| = 1; 

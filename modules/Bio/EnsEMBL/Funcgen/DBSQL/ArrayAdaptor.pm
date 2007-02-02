@@ -96,6 +96,9 @@ sub fetch_by_array_chip_dbID {
 sub fetch_by_name {
     my $self = shift;
     my $name = shift;
+
+
+    throw("This method is deprecated, use fetch_by_name_vendor");
     
     my $result = $self->generic_fetch("a.name = '$name'");
 	
@@ -108,6 +111,34 @@ sub fetch_by_name {
     #should check for this on import!
     return $result->[0];
 }
+
+
+
+=head2 fetch_by_name_vendor
+
+  Arg [1]    : string - name of an array
+  Arg [2]    : string - name of vendor e.g. NIMBLEGEN
+  Example    : my $array = $oaa->fetch_by_name('Array-1');
+  Description: Retrieves a named Array object from the database.
+  Returntype : Bio::EnsEMBL::Funcgen::Array
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_by_name_vendor {
+    my ($self, $name, $vendor) = @_;
+    
+    throw("Must provide and array and vendor name") if (! ($name && $vendor));
+
+    #unique key means this only returns one element
+    my ($result) = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};
+	
+    return $result;
+}
+
+
 
 #=head2 fetch_all_by_type
 #
@@ -319,11 +350,9 @@ sub store {
     # What about array_chips? Still need to check they've been imported
     if (!( $array->dbID() && $array->adaptor() == $self )){
       #try and fetch array here and set to array if valid
-      $sarray = $self->fetch_by_name($array->name());#this should be name_vendor?
+      $sarray = $self->fetch_by_name_vendor($array->name(), $array->vendor());#this should be name_vendor?
       
       if( ! $sarray){
-	warn("Storing array\n");
-	
 	$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
 	$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
 	$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
@@ -335,13 +364,12 @@ sub store {
 	$array->adaptor($self);
       }
       else{
-	warn("Array already stored, using previously stored array\n");# validating array_chips\n");
+	#warn("Array already stored, using previously stored array\n");# validating array_chips\n");
 	$array = $sarray;
       }
     }
     
-    #$array = $self->store_array_chips($array, $sarray);
-    
+     
     #need to make sure we have the full object here, so query again or can we use array or sarray?
     #there may be problems with repopulating array with full achip complement if experiment only uses some of the achips?
     #but we're reging the achips in the importer, so this shouldn't matter?
@@ -356,67 +384,6 @@ sub store {
 }
 
 
-
-#This method takes an array, and optinally a stored sarray else it retrieves one
-#Missing array_chips in sarray are stored and set in array
-#then the array size is updated if the array_chips hash is larger the the size attribute
-#do we need this size attribute?  Can we not remove it and do a dynamic keys on the array_chips hash?
-
-
-#sub store_array_chip{
-#  my ($self, $array) = @_; #, $sarray) = @_;
-#  
-#  
-#  #need to check for array here?
-#  
-#  my $ac_sth = $self->prepare("INSERT INTO array_chip
-#                                 (design_id, array_id, name)
-#                                 VALUES (?, ?, ?)");
-#  
-#  #$sarray  = $self->fetch_by_name($array->name()) if(! $sarray);
-#  
-#  foreach my $design_id(keys %{$array->array_chips()}){
-#    my $sdesign_id = 0;
-#    
-#    if($sarray && $sarray->array_chips()){
-#      ($sdesign_id) = grep(/$design_id/, keys %{$sarray->array_chips});
-#    }
-#    
-#    
-#    #do we need to set some flag here and in _obj_from_sth
-#    #registered flag, true for retrieved, false for just stored achips, 
-#    #this will be used by importer to run probe import etc
-#    #Use status?
-#    
-#    #Change these warns to logs?
-#
-#    if(! $sdesign_id){
-#      warn("Storing array chip:\t".$array->array_chips->{$design_id}{'name'}."\n");
-#      
-#      #if this is throwing because of no dbID, this is because you've deleted the array_chips and not the array
-#
-#      $ac_sth->bind_param(1, $design_id,                                SQL_VARCHAR);
-#      $ac_sth->bind_param(2, $array->dbID(),                            SQL_INTEGER);
-#      $ac_sth->bind_param(3, $array->array_chips->{$design_id}{'name'}, SQL_VARCHAR);
-#      $ac_sth->execute();
-#   
-#      $array->array_chips->{$design_id}{'dbID'} = $ac_sth->{'mysql_insertid'};
-#      #$self->db->set_status('array_chip', $array->array_chips->{$design_id}{'dbID'}, 'STORED');
-#      $sarray->add_array_chip($design_id, $array->array_chips->{$design_id}) if ($sarray);
-#    }else{
-#      warn("Array chip already stored:\t".$array->array_chips->{$design_id}{'name'}."\n");
-#
-#    }
-#    
-#  }
-#  
-#  #Set new achips
-#  #if($sarray){
-#  #  $array->array_chips($sarray->array_chips()) if ($sarray);#Can we not just set array to sarray?
-#  #}
-#  
-#  return $sarray || $array;
-#}
 
 
 =head2 list_dbIDs

@@ -165,12 +165,17 @@ sub get_def{
 =cut
 
 sub read_array_chip_data{
-  my ($self) = shift;
+  my $self = shift;
 
-  my ($design_desc);
-  my $fh = open_file("<", $self->get_def("array_file"));
+  my ($design_desc, $line, $tmp_uid, $array, $channel, $array_chip, $echip);
+  my ($sample_desc, %hpos, @data);
+  my $oa_adaptor = $self->db->get_ArrayAdaptor();
+  my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
+  my $chan_adaptor = $self->db->get_ChannelAdaptor();
+  my $ac_adaptor = $self->db->get_ArrayChipAdaptor();
 
   #Slurp file to string, sets local delimtter to null and subs new lines
+  my $fh = open_file("<", $self->get_def("array_file"));
   ($design_desc = do { local ($/); <$fh>;}) =~ s/\r*\n$//;
   close($fh);
   
@@ -179,30 +184,17 @@ sub read_array_chip_data{
   #Register each design as an array and an array_chip
   #May want to group array_chips into array/chip sets by association though the API
   
+ 
+  warn("Harcoded for one array(can have multiple chips from the same array) per experiment\n");
   $fh = open_file("<", $self->get_def("chip_file"));
-  
   $self->log("Reading chip data");
-  warn ("Reading chip data");
-
-  my ($line, $chip_uid, $dye, $design_name, $design_id, $sample_label,  $sample_desc);
-  my ($array, $species, $sample_type, $channel, $array_chip, %hpos, @data);
-  my $tmp_uid = "FIRST";
-  #Need some way of capturing other experimental variables?
-  
-  
-  my ($echip, $ac_id);
-  my $oa_adaptor = $self->db->get_ArrayAdaptor();
-  my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
-  my $chan_adaptor = $self->db->get_ChannelAdaptor();
-
-  warn("Harcoded for one array per experiment\n");
 
   while ($line = <$fh>){
     $line =~ s/\r*\n//;#chump
     @data =  split/\t/o, $line;
 
     #ORD_ID  CHIP_ID DYE     DESIGN_NAME     DESIGN_ID       SAMPLE_LABEL    SAMPLE_SPECIES  SAMPLE_DESCRIPTION      TISSUE_TREATMENT        PROMOT_SAMPLE_TYPE
-    #ORD_ID  CHIP_ID DYE     DESIGN_NAME     DESIGN_ID       SAMPLE_LABEL    SAMPLE_SPECIES  SAMPLE_DESCRIPTION-1    PROMOT_SAMPLE_TYPE
+
     if ($. == 1){
       %hpos = %{$self->set_header_hash(\@data)};
 
@@ -213,35 +205,17 @@ sub read_array_chip_data{
       next;
     }
     
-    
     #Need to handle array class here i.e. two channel arrays will have two lines
-    #ignore tissue treatment, too wordy with typos.
-    #Need to map sample_label to dye and description?
-    #Some duplicate sample labels do not have the same description > different channels
-    
-    #(undef, $chip_uid, $dye, $design_name, $design_id, $sample_label,
-    # $species, $sample_desc, undef, $sample_type) = split/\t/o, $line;
-
     #validate species here
     #look up alias from registry and match to self->species
     #registry may not be loaded for local installation
     
     if(! defined $array){
-
-      warn("We need to accomodate arrays which have only been partially imported here");
-      #Retrieve the array by the array_name, defined by the user or use the design_name
-      #$array = $oa_adaptor->fetch_by_name_vendor($design_name, $self->vendor());
-
-      #Then we can update the array chips as we go along
-
-    
-         
       #This is treating each array chip as a separate array, unless arrayset is defined
       #AT present we have no way of differentiating between different array_chips on same array???!!!
       #Need to add functionality afterwards to collate array_chips into single array
-      
-      
-      #store now checks whether already stored and updates array chips accordingly
+           
+      #This will use a stored array if present
       $array = Bio::EnsEMBL::Funcgen::Array->new
 		(
 		 -NAME        => $self->{'array_name'} || $data[$hpos{'DESIGN_NAME'}],
@@ -253,43 +227,42 @@ sub read_array_chip_data{
 
       ($array) = @{$oa_adaptor->store($array)};
       
-
       $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							  -ARRAY_ID  => $array->dbID(),
 							  -NAME      => $data[$hpos{'DESIGN_NAME'}],
 							  -DESIGN_ID => $data[$hpos{'DESIGN_ID'}],
 							 );
 
-
+      #This will use a stored array_chip if present
+      ($array_chip) = @{$ac_adaptor->store($array_chip)};
       $array->add_ArrayChip($array_chip);
-              
-      #Need to reg array chip here (to differentiate from what is already in DB, handles subset of arrays)
-      #This is a registry of array chips which have previously been stored for validation purpose
-      #To avoid importing probes twice
-
-    }elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
+        
+    }
+    elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
 
       $self->log("Generating new ac for same array ".$data[$hpos{'DESIGN_ID'}]."\n");
 
       $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							  -ARRAY_ID  => $array->dbID(),
 							  -NAME        => $data[$hpos{'DESIGN_NAME'}],
 							  -DESIGN_ID => $data[$hpos{'DESIGN_ID'}],
 							 );
-
    
+      ($array_chip) = @{$ac_adaptor->store($array_chip)};
       $array->add_ArrayChip($array_chip);
-   
       
-    }elsif(! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])){
+    }
+    elsif(! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])){
       throw("Found experiment with more than one design");
     }
     
     #Parse and Populate ExperimentalChip/Channels
-    if ($tmp_uid eq "FIRST" || $data[$hpos{'CHIP_ID'}] != $tmp_uid){
+    if ((! $tmp_uid) || $data[$hpos{'CHIP_ID'}] != $tmp_uid){
       $tmp_uid = $data[$hpos{'CHIP_ID'}];
 
 
       if($self->recovery()){
-	$echip = $self->experiment->get_experimental_chip_by_unique_id($data[$hpos{'CHIP_ID'}]);
+	$echip = $self->experiment->get_ExperimentalChip_by_unique_id($data[$hpos{'CHIP_ID'}]);
       }
 
       if(! $self->recovery() || ! $echip){
@@ -309,10 +282,10 @@ sub read_array_chip_data{
       
     }
     
-    
+  
 
     if($self->recovery()){
-      $channel = $chan_adaptor->fetch_by_type_experimental_chip_dbID(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
+      $channel = $chan_adaptor->fetch_by_type_experimental_chip_id(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
     }
 
     if(! $self->recovery || ! $channel){
@@ -337,42 +310,50 @@ sub read_array_chip_data{
     
   }
   
-  
   #Set the array now we have stored all details
-  $self->arrays($array);
-  
+  $self->add_array($array);
+
   close($fh);
+
   return;
 }
 
 
-=head2 arrays
+=head2 add_array
 
-  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::Array
-  Example    : $self->arrays($array);
-  Description: Getter/Setter for array element
-  Returntype : list ref to Bio::EnsEMBL::Funcgen::Array objects
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Array
+  Example    : $self->add_array($array);
+  Description: Setter for array elements
+  Returntype : none
   Exceptions : throws if passed non Array or if more than one Array set
   Caller     : Importer
   Status     : Medium - Remove/Implement multiple arrays?
 
 =cut
 
-sub arrays{
-  my ($self) = shift;
+sub add_array{
+  my $self = shift;
 
-  if(@_ && ! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')){
+
+  #do we need to check if stored?
+  if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')){
     throw("Must supply a Bio::EnsEMBL::Funcgen::Array");
   }elsif(@_){
-    warn "this is adding an array, not resetting";
     push @{$self->{'arrays'}}, @_;
   }
    
   throw("Does not yet support multiple array imports") if(scalar (@{$self->{'arrays'}}) > 1);
   #need to alter read_probe data at the very least
   
+  return;
+}
+
+
+sub arrays{
+  my $self = shift;
   return $self->{'arrays'};
 }
+
 
 
 =head2 echip_data
@@ -425,7 +406,7 @@ sub get_channels{
 
   #rename and move to Experiment?
 
-  return $self->experiment->get_experimental_chip_by_unique_id($chip_uid)->{'channels'};
+  return $self->experiment->get_ExperimentalChip_by_unique_id($chip_uid)->{'channels'};
 }
 
 =head2 get_channel
@@ -546,12 +527,8 @@ sub read_sanger_array_probe_data{
 							);
 
 
-  #need to store here!  This method hides the store function, need to separate?
-
   $array_chip = $array->add_ArrayChip($array_chip);
- 
-  $self->arrays($array);
-  my $ac_id = $array->get_ArrayChip_by_design_id($array->name())->dbID();
+  $self->add_array($array);
 
 
   #we also need to test wether the array as been imported as well as the mappings
@@ -755,7 +732,7 @@ sub read_sanger_result_data{
     $chip_uid =~ s/\.all.*\n//;
 
     if($self->recovery()){
-      $echip = $self->experiment->get_experimental_chip_by_unique_id($chip_uid);
+      $echip = $self->experiment->get_ExperimentalChip_by_unique_id($chip_uid);
     }
 
       if(! $self->recovery() || ! $echip){
@@ -780,13 +757,9 @@ sub read_sanger_result_data{
     }else{
 
       warn("Need to check for partial import and clean here");
-    }
-
-    #should we nest these in the Experiment and 
-    #don't need to add them to store, just have method which always retrieves all echips from db
+      #should we nest these in the Experiment and 
+      #don't need to add them to store, just have method which always retrieves all echips from db
     
-    if(! $imported){
-
       $fh = open_file("<", $file);
       $rfile = open_file(">", $self->get_dir("norm")."/result.".$echip->unique_id().".txt");
       $r_string = "";
@@ -846,6 +819,7 @@ sub read_probe_data{
   my ($self) = shift;
   
   my ($fh, $line, @data, %hpos, %probe_pos);#, %duplicate_probes);
+
   $self->log("Parsing probe data (".localtime().")");
   #can we do a reduced parse if we know the array chips are already imported");
   
@@ -876,21 +850,29 @@ sub read_probe_data{
 										    );
 
   #should really test and store here if not valid, but this will be handled by adaptor store methods
+  #This should really focus on the experiemental chips, 
+  #altho' this amounts to the same thing if the chip has already been imported as
+
+
+
+
+  
+
   
   foreach my $array(@{$self->arrays()}){
     
-    foreach my $design_id(@{$array->get_design_ids()}){
-      my $achip = $array->get_ArrayChip_by_design_id($design_id);
+    foreach my $achip(@{$array->get_ArrayChips()}){
+
       my (@log);
 
       if($achip->has_status('IMPORTED')){
-	$self->log("Skipping array chip ($design_id) already fully imported\n");
+	$self->log("Skipping array chip (".$achip->design_id().") already fully imported\n");
 	next;
-      }else{
+      }elsif($self->recovery()){
 	warn("Need to clean all probe/feature/feature_set from db");
       }
       
-      
+      $self->log("Importing ArrayChip:".$achip->design_id());
       #mgd files are for a different product?
       #THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
       #all out files are generic, but are we converting to adaptor store?
@@ -973,7 +955,7 @@ sub read_probe_data{
 	}
 	
 	$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
-						 seq_id => $data[$hpos{'SEQ_ID'}],
+						 chr => $data[$hpos{'CHROMOSOME'}],
 						 start => $data[$hpos{'POSITION'}],
 						)};
 	
@@ -1133,13 +1115,13 @@ sub read_probe_data{
 				
 	
 	if ($self->{'_dump_fasta'}){
-	  (my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'}) =~ s/chr//;
+	  (my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}) =~ s/chr//;
 	  $loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
 	    ($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
 	}
 	
 	#Hack!!!!!! Still importing probe (and result?)
-	if(!  $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'})){
+	if(!  $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'})){
 	  #warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
 	  next;
 	}
@@ -1151,7 +1133,7 @@ sub read_probe_data{
 	   -START         => $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'},
 	   -END           =>($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}  + $length),
 	   -STRAND        => $strand,
-	   -SLICE         => $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'seq_id'}),
+	   -SLICE         => $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}),
 	   -ANALYSIS      => $anal,
 	   -MISMATCHCOUNT => $data[$hpos{'MISMATCH'}],
 	   -PROBE         => undef,#Need to update this in the store method
@@ -1374,35 +1356,18 @@ sub cache_name_id{
 =cut
 
 
-#Remove array element to this?
 sub get_probe_id_by_name{
   my ($self, $name) = @_;
   
   #Should only ever be one pid per probe per array per n array_chips
   #i.e. duplicate records per array chip with same pid
 
-#  if((defined $self->{'_probe_map'}) && (defined $self->{'_probe_map'}->{$name})){
-#    #@op_ids = @{$self->{'_probe_map'}->{$name}};
-#  }
-#  else{#get from db
-
-
   if((! defined $self->{'_probe_map'}) || (! defined $self->{'_probe_map'}->{$name})){ 
-	  my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
-
-	  #print "Got probe $op with dbid ".$op->dbID()."\n";
-	  #push @op_ids, $op->dbID();
-
-	  $self->{'_probe_map'}{$name} = $op->dbID() if $op;
-	  
+    my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
+    $self->{'_probe_map'}{$name} = $op->dbID() if $op;
   }
   
-  #return \@op_ids;
-
- # warn "testing for pid $name";
-
   return (exists $self->{'_probe_map'}->{$name}) ? $self->{'_probe_map'}->{$name} : undef;
-  
 }
 
 =head2 read_results_data
@@ -1420,7 +1385,8 @@ sub get_probe_id_by_name{
 sub read_results_data{
   my $self = shift;
   
-  my (%channel_index, %tmp);
+  my (%channel_idx, %tmp, %cc_id, $result_set);
+  my $result_adaptor = $self->db->get_ResultSetAdaptor();
 
   #TO DO
   #Recovery ? read feature_map.tmp into , query DB for last imported result(remove for safety?), restart from that point in file?
@@ -1433,9 +1399,6 @@ sub read_results_data{
    
   my ($fh, $tmp, $line, $r_string, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
-  #should check here if defined
-  
-  my $anal_id = $anal->dbID();
   
 
   #as we're importing all echip result in parallel, there is no point in checking for IMPORTED?
@@ -1448,21 +1411,41 @@ sub read_results_data{
     
     if( ! $echip->has_status('IMPORTED')){
 
-      #this should use dye
       foreach my $freq (values %{$self->get_def('dye_freqs')}){
-	$channel_index{$echip->unique_id()."_${freq}"} = undef;
+	$channel_idx{$echip->unique_id()."_${freq}"} = undef;
       }
-    }else{
-
-      #check for results here
-      #clean if recovery else throw
-
-      warn "Need to clean old result here";
     }
+
+    if( ! $result_set){
+
+      if($self->recovery()){
+	throw "Need to clean old result here and retrieve old result set";
+      }else{
+
+	$result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
+	  (
+	   -analysis   => $anal,
+	   -table_name => 'channel',
+	  );
+	
+	$result_adaptor->store($result_set);
+      }
+    }
+
+    $result_set->add_table_id($echip->dbID());
+  }
+
+  $result_adaptor->store_chip_channels($result_set);
+  
+  
+
+  #build chip_channel_id hash
+  foreach my $field(keys %channel_idx){
+    $cc_id{$field} = $result_set->get_chip_channel_id($self->get_channel($field)->dbID());
   }
 
   
-  if(%channel_index){
+  if(%channel_idx){
 
     foreach my $array(@{$self->arrays()}){
 
@@ -1473,100 +1456,106 @@ sub read_results_data{
     #and we only want to import the ones we have in the context of this experiment
 
 
-    @design_ids = @{$array->get_design_ids()};
+      @design_ids = @{$array->get_design_ids()};
    
-    foreach my $design_id(@design_ids){
+      foreach my $design_id(@design_ids){
 
-      my (%tmp);
-      my $achip = $array->get_ArrayChip_by_design_id($design_id);
-      $r_string = "";
-      $self->log("Reading/Importing results for $design_id\n");
-      my $file = $self->get_dir("raw")."/result.".$achip->name().".txt";
-
-      #This may cause empty file backups
-      $self->backup_file($file);
-
-      my $r_out = open_file(">", $file);
+	$self->log("Reading/Importing results for $design_id\n");
+	my (%tmp);
+	my $achip = $array->get_ArrayChip_by_design_id($design_id);
+	$r_string = "";
 
 
-      #need to imlpement this in result load too.
+	#open/backup output
+	my $file = $self->get_dir("raw")."/result.".$achip->name().".txt";	
+	$self->backup_file($file);	#This may cause empty file backups
+	my $r_out = open_file(">", $file);
+	
+	
+	#open input
+	$file_name = (scalar(@design_ids) > 1) ? $achip->name() : "All";  
+	$fh = open_file("<", $self->get_def("results_dir")."/".$file_name."_pair.txt");	
+	my @lines = <$fh>;
+	close($fh);
+	
+	foreach $line(@lines){
 
-      $file_name = (scalar(@design_ids) > 1) ? $achip->name() : "All";  
-      $fh = open_file("<", $self->get_def("results_dir")."/".$file_name."_pair.txt");
-
-
-      my @lines = <$fh>;
-      close($fh);
-
-      foreach $line(@lines){
-
-	$line =~ s/\r*\n//o;
-		  
-	if ($line =~ /PROBE_ID/o){#header
+	  $line =~ s/\r*\n//o;
 	  
-	  #GENE_EXPR_OPTION	SEQ_ID	PROBE_ID	POSITION	43827_532	43827_635	43837_532	43837_635	46411_532	46411_635	46420_532	46420_635	47505_532	47505_635	47525_532	47525_635
-	  @header = split/\t/o, $line;
-	  
-	  for my $i(0..$#header){
 
-	    if($header[$i] eq "PROBE_ID"){
-	      $probe_elem = $i;
-	      next;
-	    }	    
+	  ###PROCESS HEADER
+	  if ($line =~ /PROBE_ID/o){
+	    
+	    #GENE_EXPR_OPTION	SEQ_ID	PROBE_ID	POSITION	43827_532	43827_635	43837_532	43837_635	46411_532	46411_635	46420_532	46420_635	47505_532	47505_635	47525_532	47525_635
+	    @header = split/\t/o, $line;
+	    
+	    
+	    #find probe column
+	    for my $i(0..$#header){
+
+	      if($header[$i] eq "PROBE_ID"){
+		$probe_elem = $i;
+		next;
+	      }	    
 	  
-	    #Populate channel idx for directly accessing unstored channel results
-	    foreach my $field(keys %channel_idx){
-	      $header[$i] =~  s/1h_//;
-	      
-	      if($header[$i] eq $field){
-		$channel_idx{$field} = $i;
+	      #Populate channel idx for directly accessing unstored channel results
+	      foreach my $field(keys %channel_idx){
+		$header[$i] =~  s/1h_//;
+		
+		if($header[$i] eq $field){
+		  $channel_idx{$field} = $i;
+		}
 	      }
 	    }
-	  }
-
-	  #make tmp hash with remaining(other achip) channel fields
-	  foreach my $field(keys %channel_idx){
 	    
-	    if(! defined $channel_ids{$field}){
-	      #warn here.
-	      $tmp{$field} = undef;
-	      delete $channel_idx{$field};
+	    #make tmp hash with remaining(other achip) channel fields
+	    foreach my $field(keys %channel_idx){
+	      
+	      if(! defined $channel_idx{$field}){
+		#warn here.
+		$tmp{$field} = undef;
+		delete $channel_idx{$field};
+	      }
 	    }
+	    
+	    next;
 	  }
 	  
-	  next;
-	}
-	
-	@data = split/\t/o, $line;
-	
 
-	foreach my $field(keys %channel_idx){
-	  $cnt ++;
-	  $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".
-	    $data[$channel_idx{$field}]."\t$anal_id\t".$self->get_channel($field)->dbID()."\tchannel\n";
-	}
+	  ###PROCESS DATA
+	  @data = split/\t/o, $line;
+	
+	  foreach my $field(keys %channel_idx){
+	    $cnt ++;
+	    $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".
+	      $data[$channel_idx{$field}]."\t".$cc_id{$field}."\n";
+	  }
 	
 	
-	if($cnt > 10000){
+	  ###PRINT SOME RESULTS
+	  if($cnt > 10000){
 	  
-	  $cnt = 0;
-	  print $r_out $r_string;
-	  $r_string ="";
-	  #could we fork here and import in the background?
+	    $cnt = 0;
+	    print $r_out $r_string;
+	    $r_string ="";
+	    #could we fork here and import in the background?
+	  }
 	}
 
-      %channel_idx = %tmp;
+	#SET REMANING CHANNELS
+	%channel_idx = %tmp;
 
-    }
-    
-    print $r_out $r_string;
-    close($r_out);
-    system("chmod 644 $file");
-    
-    if(%tmp){
+	#PRINT/CLOSE ArrayChip FILE
+	print $r_out $r_string;
+	close($r_out);
+	#system("chmod 644 $file");
+	
+      }
+
+      if(%tmp){
 	throw("Not all the Experiment Channel result fields were found\nAbsent channels:\t".(keys %tmp));
+      }
     }
-
   }else{
     $self->log("All ExperimentalChip result have been previously imported\nSkipping results parse");
   }

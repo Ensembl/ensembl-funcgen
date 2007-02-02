@@ -183,8 +183,15 @@ sub experiment_id {
 
 sub table_name{
     my $self = shift;
+
+    if (@_){
+      
+      if($self->{'table_name'} && ($self->{'table_name'} ne $_[0])){
+	throw("Cannot mix  table name/types of a ResultSet");
+      }
 	
-    $self->{'table_name'} = shift if @_;
+      $self->{'table_name'} = $_[0];
+    }
 
     return $self->{'table_name'};
 }
