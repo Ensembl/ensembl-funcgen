@@ -1431,8 +1431,13 @@ sub read_results_data{
 	$result_adaptor->store($result_set);
       }
     }
+    #$self->get_channel($field)->dbID();
+    $result_set->add_table_id($echip->dbID());#this is the problem, need to add channel here instead of echip id
 
-    $result_set->add_table_id($echip->dbID());
+
+    #adding table id
+    #but trying to recall using channel dbID
+
   }
 
   $result_adaptor->store_chip_channels($result_set);
@@ -1441,10 +1446,13 @@ sub read_results_data{
 
   #build chip_channel_id hash
   foreach my $field(keys %channel_idx){
+
+    warn "populating ccid for $field with ".$result_set->get_chip_channel_id($self->get_channel($field)->dbID());
+
     $cc_id{$field} = $result_set->get_chip_channel_id($self->get_channel($field)->dbID());
   }
 
-  
+  exit;
   if(%channel_idx){
 
     foreach my $array(@{$self->arrays()}){
@@ -1527,8 +1535,19 @@ sub read_results_data{
 	
 	  foreach my $field(keys %channel_idx){
 	    $cnt ++;
+
+	    my $tmp= $self->get_probe_id_by_name($data[$probe_elem]);
+	    
+
+	    warn "getting probe id for name ".$data[$probe_elem]." at element $probe_elem ".$self->get_probe_id_by_name($data[$probe_elem]);
+
+	    
+
 	    $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".
 	      $data[$channel_idx{$field}]."\t".$cc_id{$field}."\n";
+	  
+	    warn "rstring is $r_string";
+	    exit;
 	  }
 	
 	
