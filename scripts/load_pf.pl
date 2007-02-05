@@ -1,114 +1,159 @@
 #!/usr/local/ensembl/bin/perl
+
 use warnings;
 use strict;
+use Getopt::Long;
+use Pod::Usage;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 $| =1;
 
-my $file = shift;
-my $ftype_name = shift;
-my $ctype_name = shift;
-my @exp_id = @ARGV;
+my ($file, $ftype_name, $ctype_name, $pass, $line, $fset_id, %slice_cache);
+my ($fset, $dbhost, $dbname, $cdbname, $help, $man, @p_features);
+my $port = 3306;
+my $anal_name = 'Nessie';
 
 
+GetOptions (
+	    "feature_type=s"   => \$ftype_name,
+	    "file|f=s"         => \$file,
+	    "cell_type=s"      => \$ctype_name,
+	    "feature_set_id=i" => \$fset_id,
+	    "pass=s"           => \$pass,
+	    "port=s"           => \$port,
+            "dbname=s"         => \$dbname,
+	    "dbhost=s"         => \$dbhost,
+            "cdbname=s"        => \$cdbname,
+	    "analysis_name=s"  => \$anal_name,
+	    "help|?"           => \$help,
+	    "man|m"            => \$man,
+	   );
 
-#we need to add functionality for feature set import
-#do it by dbID? Should we change this to import DataSets too based on ResultSets?
-#may need to manually hack this for this release
-
-my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-(
-	-host => "ens-livemirror",
-	-dbname => "homo_sapiens_core_42_36d",
-	-species => "homo_sapiens",
-	-user => "ensro",
-	-pass => "",
-#	-group => 'funcgen',
-	-port => '3306',
-);
-
-
-my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-(
-	-host => "ens-genomics1",
-	-dbname => "homo_sapiens_funcgen_43",
-	-species => "homo_sapiens",
-	-user => "ensadmin",
-	-pass => "ensembl",
-	-dnadb => $cdb,
-	-port => '3306',
-);
-
-print "Getting adaptors\n";
-
-my $anal_a = $db->get_AnalysisAdaptor();
-my $anal = $anal_a->fetch_by_logic_name("Nessie");
-my $ftype = $db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
-my $ctype = $db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
+pod2usage(1) if $help;
+pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 
-die 'No valid cell or feature type name' if ! $ftype || ! $ctype; 
+### Set up adaptors and FeatureSet 
 
-print "Got feature adn cell types $ftype $ctype\n";
-print "Got analyssis $anal\n";
+if(! $cdbname  || ! $dbname ){
+  throw("You must provide a funcgen(-dbname) and a core(-cdbname) dbname");
+}
+throw("Must define your funcgen dbhost -dbhost") if ! $dbhost;
+throw("Must supply an input file with -file") if ! $file;
+throw("Must supply a password for your fungen db") if ! $pass;
+
+
+my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+					      -host => "ens-livemirror",
+					      -dbname => $cdbname,
+					      #-species => "homo_sapiens",
+					      -user => "ensro",
+					      -pass => "",
+					      #	-group => 'funcgen',
+					      -port => '3306',
+					     );
+
+my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+						      -host => $dbhost,
+						      -dbname => $dbname,
+						      #-species => "homo_sapiens",
+						      -user => "ensadmin",
+						      -pass => $pass,
+						      -dnadb => $cdb,
+						      -port => '3306',
+						     );
 
 my $pfa = $db->get_PredictedFeatureAdaptor();
-
 my $fset_adaptor = $db->get_FeatureSetAdaptor();
 
-my $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
-  (
-   -CELL_TYPE => $ctype,
-   -FEATURE_TYPE => $ftype,
-   -ANALYSIS => $anal,
-  );
+if($fset_id){
+  $fset = $fset_adaptor->fetch_by_dbID($fset_id);
 
 
-print "Got feature set $fset\n";
+  throw("Could not retrieve FeatureSet with dbID $fset_id") if ! $fset;
 
-($fset) = @{$fset_adaptor->store($fset)};
+  warn("You are loading PredictedFeature using a previously stored FeatureSet:\n".
+       "\tCellType:\t".$fset->cell_type->name()."\n".
+       "\tFeatureType:\t".$fset->feature_type->name()."\n");
 
-print "Got stored feature set $fset\n";
 
-my @p_features;
+  #should add more on which experiment/s this is associated with and feature_set/dat_set_name when we have implemented it.
+  #also ask continute question or use force_import flag
+  #we could also do a count on the PFs in the set to make sure we're know we're adding to a populated set.
+  #hard to repair if we do load ontop of another feature set
 
-open (FILE, $file) || die "No file\n";
-while (my $line = <FILE>){
 
-	chomp $line;
-	my @tmp = split /\s+/, $line;
-	my $start = $tmp[1];
-	my $end = $tmp[2];
-	my $score = $tmp[4];
-	my $text = "enriched_site";
-	my $chr = $tmp[0];
+}elsif(! ($ftype_name && $ctype_name)){
+  throw("Must provide a FeatureType and a CellType name to load your PredictedFeatures");
+}else{
+  my $anal =  $db->get_AnalysisAdaptor->fetch_by_logic_name($anal_name);
+  my $ftype = $db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
+  my $ctype = $db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
 
-	$chr =~ s/chr//;
 
-#	print STDERR "$cdb->get_SliceAdaptor()->fetch_by_region(\'chromosome\', $chr);\n";
+  throw("No valid CellType available for $ctype_name") if ! $ctype; 
+  throw("No valid FeatureType available for $ftype_name") if ! $ftype;
+  throw("No valid Analysis available for $anal_name") if ! $anal;
+  
+  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
+    (
+     -CELL_TYPE => $ctype,
+     -FEATURE_TYPE => $ftype,
+     -ANALYSIS => $anal,
+    );
 
-	#cache this
-	my $slice = $cdb->get_SliceAdaptor()->fetch_by_region('chromosome', $chr);
+  ($fset) = @{$fset_adaptor->store($fset)};
 
-	my $pfeature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
-	  (
-	   -SLICE         => $slice,
-	   -START         => $start,
-	   -END           => $end,
-	   -STRAND        => 1,
-	   -DISPLAY_LABEL => $text,
-	   #-ANALYSIS      => $anal,
-	   -SCORE         => $score,
-	   -FEATURE_SET   => $fset,
-	   #-EXPERIMENT_IDS => \@exp_id, 
-	   #-FEATURE_TYPE => $ftype,
-	);
+  warn("Generated FeatureSet\n");
+}
 
-	push @p_features, $pfeature;
+
+open (FILE, $file) || die "Unable to open input\t$file";
+
+warn("Loading PredictedFeatures from $file\n");
+
+while ($line = <FILE>){
+
+  chomp $line;
+  my @tmp = split /\s+/, $line;
+  my $start = $tmp[1];
+  my $end = $tmp[2];
+  my $score = $tmp[4];
+  my $text = "enriched_site";
+  my $chr = $tmp[0];
+
+  $chr =~ s/chr//;
+
+  #	print STDERR "$cdb->get_SliceAdaptor()->fetch_by_region(\'chromosome\', $chr);\n";
+  
+
+  if (! exists  $slice_cache{$chr}){
+    $slice_cache{$chr} = $cdb->get_SliceAdaptor()->fetch_by_region('chromosome', $chr);
+    throw("Could not generate slice for chromosome $chr") if ! $slice_cache{$chr};
+  }
+
+  my $pfeature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+    (
+     -SLICE         => $slice_cache{$chr},
+     -START         => $start,
+     -END           => $end,
+     -STRAND        => 1,
+     -DISPLAY_LABEL => $text,
+     -SCORE         => $score,
+     -FEATURE_SET   => $fset,
+    );
+  
+  push @p_features, $pfeature;
 
 }
 
 $pfa->store(@p_features);
-   							     	
+
+warn("Loaded ".($.)." PredictedFeatures onto chromosomes ".(keys %slice_cache)."\n");
+
+
+
+__END__
