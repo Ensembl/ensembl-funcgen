@@ -25,6 +25,7 @@ Optional
   -ssh             Forces use of tcp protocol for using ssh forwarded ports from remote machine(remove and just specify 127.0.0.1 as host?)
   -array_set       Flag to treat all chip designs as part of same array
   -array_name      Name of the set of array chips
+  -result_set      Name to give the raw/normalised result set.
   -fasta           Fasta dump flag
   -norm|n          Normalisation method (default=vsn)
   -species|s       Species name any standard e! species alias(will be reset to dbname/latin name e.g. "homo_sapiens")
@@ -131,7 +132,7 @@ use strict;
 
 
 $| = 1;#autoflush
-my ($input_name, $input_dir, $name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
+my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $exp_date);
 my $reg = "Bio::EnsEMBL::Registry";
 
@@ -174,6 +175,7 @@ GetOptions (
 	    "data_version|d=s" => \$data_version,
 	    "array_set"    => \$array_set,
 	    "array_name=s" => \$array_name,
+	    "result_set=s" => \$rset_name,
 	    "debug=i"    => \$main::_debug_level,
 	    "data_root=s"  => \$data_dir,
 	    "input_dir=s"  => \$input_dir,
@@ -222,7 +224,8 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       ssh         =>  $ssh,
 					       dbname      => $dbname,
 					       array_set   => $array_set,
-					       array_name => $array_name,						       
+					       array_name  => $array_name,
+					       result_set_name => $rset_name,  
 					       data_version => $data_version,
 					       data_root   => $data_dir,
 					       output_dir  => $output_dir,

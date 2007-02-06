@@ -45,7 +45,6 @@ use Bio::EnsEMBL::Funcgen::ArrayDefs;#will inherit or set Vendor/GroupDefs?
 use Bio::EnsEMBL::Funcgen::Helper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;#eventually add this to Registry?
 use Bio::EnsEMBL::Registry;
-#use Bio::EnsEMBL::Utils::ConfigRegistry;
 my $reg = "Bio::EnsEMBL::Registry";
 
 
@@ -81,6 +80,7 @@ my $reg = "Bio::EnsEMBL::Registry";
                     -array_set Flag to treat all chip designs as part of same array (default = 0)
                     -array_name Name for array set
                     -array_file Path of array file to import for sanger ENCODE array
+                    -result_set_name  Name to give the raw and normalised result sets (default uses experiment and analysis name)
                     -norm_method  Normalisation method (default = vsn_norm, put defaults in Defs?)
                     -dbname Override for autogeneration of funcgen dbaname
                     -reg_config path to local registry config file (default = ~/ensembl.init || undef)
@@ -307,7 +307,7 @@ sub init_import{
   if(! defined $self->get_dir("output")){
     $self->{'output_dir'} = $self->get_dir("data")."/".$self->vendor()."/".$self->name();
     mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
-    chmod 0755, $self->get_dir("output");
+    chmod 0744, $self->get_dir("output");
   }
   
   $self->create_output_dirs("raw", "norm");
@@ -412,7 +412,7 @@ sub create_output_dirs{
   foreach my $name(@dirnames){
     $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
     mkdir $self->get_dir($name) if(! -d $self->get_dir($name));
-    chmod 0755, $self->get_dir($name);
+    chmod 0744, $self->get_dir($name);
   }
   
   return;
@@ -1066,6 +1066,7 @@ sub import_results{
 		my $achip = $array->get_ArrayChip_by_design_id($design_id);
 		$self->log("Loading results for ".$achip->name());
 		$self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
+		$self->log("Finishing loading ".$achip->name());
 	      }
 	    }
 	    
@@ -1079,17 +1080,19 @@ sub import_results{
 	  
 	  $self->log("Loading results for ExperimentalChip:\t".$echip->unique_id());
 	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$echip->unique_id().".txt");
+	  $self->log("Finishing loading ".$echip->unique_id());
 	}
 
-	warn("Need to catch load error here before marking as imported");
+	#DBAdaptor throws if load failed
+	#warn("Need to catch load error here before marking as imported");
 	$echip->adaptor->set_status('IMPORTED', $echip);
       }
     }
   }
   else{#norm data
-    $self->log("Loading raw results from ".$self->get_dir($results_dir)."/result.txt");
+    $self->log("Loading norm results from ".$self->get_dir($results_dir)."/result.txt");
     $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
-    
+    $self->log("Finished loading norm results");
     
     #How do we know which Echips have been normalised?
     #just loop through echips checking for the status
@@ -1099,7 +1102,7 @@ sub import_results{
   }
   
   
-  $self->log("Finished Loading raw results");
+  $self->log("Finished Loading $results_dir results");
   return;
 }
 

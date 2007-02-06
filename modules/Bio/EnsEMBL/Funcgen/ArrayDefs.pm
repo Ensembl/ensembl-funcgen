@@ -288,7 +288,7 @@ sub read_array_chip_data{
       $channel = $chan_adaptor->fetch_by_type_experimental_chip_id(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
     }
 
-    if(! $self->recovery || ! $channel){
+    if(! $self->recovery() || ! $channel){
       #Handles single/mutli
       $channel =  Bio::EnsEMBL::Funcgen::Channel->new
 	(
@@ -794,7 +794,6 @@ sub read_sanger_result_data{
 
       print $rfile $r_string;
       close($rfile);
-      system("chmod 644 $file");
     }
   }
  
@@ -1411,64 +1410,73 @@ sub read_results_data{
     
     if( ! $echip->has_status('IMPORTED')){
 
-      foreach my $freq (values %{$self->get_def('dye_freqs')}){
-	$channel_idx{$echip->unique_id()."_${freq}"} = undef;
-      }
-    }
+      if( ! $result_set){
 
-    if( ! $result_set){
+	if($self->recovery()){
+	  warn ("Hardcoded to recover rset dbid 1, need to implment rset name, this is failing as we're not pulling back feature or cell types");
+	  warn ("RsetAdaptor only fetch experimental_chip set so far");
 
-      if($self->recovery()){
-	throw "Need to clean old result here and retrieve old result set";
-      }else{
 
-	$result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
-	  (
-	   -analysis   => $anal,
-	   -table_name => 'channel',
-	  );
+	  warn ("Should use ResultSet/Experiment name here");#experiment name?
+
+	  $result_set = $result_adaptor->fetch_by_dbID(1);
+
+	  throw("Could not find recovery ResultSet with dbID 1 from adaptor $result_adaptor") if ! $result_set;
+	}else{
+
+	  $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
+	    (
+	     -analysis   => $anal,
+	     -table_name => 'channel',
+	    );
 	
-	$result_adaptor->store($result_set);
+	  $result_adaptor->store($result_set);
+	}
+      }
+	
+      if($self->recovery()){
+	warn "Need to clean old result here and retrieve old result set";
+
+	#$result_set->get_chip_channel_id($self->get_channel($field)->dbID());
+
+	#$self->db->clean_table('result', 
+	#"chip_channel_id = ".$result_set->get_chip_channel_id($self->get_channel($field)->dbID());
+      }
+
+
+	
+      foreach my $freq (values %{$self->get_def('dye_freqs')}){
+	my $field = $echip->unique_id()."_${freq}";
+	$channel_idx{$field} = undef;
+	$result_set->add_table_id($self->get_channel($field)->dbID());
+	
       }
     }
-    #$self->get_channel($field)->dbID();
-    $result_set->add_table_id($echip->dbID());#this is the problem, need to add channel here instead of echip id
-
-
-    #adding table id
-    #but trying to recall using channel dbID
-
   }
-
-  $result_adaptor->store_chip_channels($result_set);
-  
   
 
-  #build chip_channel_id hash
-  foreach my $field(keys %channel_idx){
+  
+  if($result_set){#we have some new data to import
+  
+    #will this ignore chip_channel entries which have already been stored?????????????
+    $result_adaptor->store_chip_channels($result_set);
+  
+    #build chip_channel_id hash after we store
+    foreach my $field(keys %channel_idx){
+      $cc_id{$field} = $result_set->get_chip_channel_id($self->get_channel($field)->dbID());
+    }
 
-    warn "populating ccid for $field with ".$result_set->get_chip_channel_id($self->get_channel($field)->dbID());
-
-    $cc_id{$field} = $result_set->get_chip_channel_id($self->get_channel($field)->dbID());
-  }
-
-  exit;
-  if(%channel_idx){
 
     foreach my $array(@{$self->arrays()}){
-
-
-
       #This should be accessing echips for this experiment, not design_ids.
-    #we may have only a subset of designs/chips form the whole array
-    #and we only want to import the ones we have in the context of this experiment
-
-
+      #we may have only a subset of designs/chips form the whole array
+      #and we only want to import the ones we have in the context of this experiment
+      
       @design_ids = @{$array->get_design_ids()};
    
       foreach my $design_id(@design_ids){
 
-	$self->log("Reading/Importing results for $design_id\n");
+	$self->log("Reading results for chip design id:\t$design_id\n");
 	my (%tmp);
 	my $achip = $array->get_ArrayChip_by_design_id($design_id);
 	$r_string = "";
@@ -1525,11 +1533,12 @@ sub read_results_data{
 		delete $channel_idx{$field};
 	      }
 	    }
-	    
-	    next;
+	    my @tmp = keys %channel_idx;
+	    $self->log("Parsing results for channels:\t@tmp");
+
+	    next;#finshed processing header
 	  }
 	  
-
 	  ###PROCESS DATA
 	  @data = split/\t/o, $line;
 	
@@ -1537,17 +1546,8 @@ sub read_results_data{
 	    $cnt ++;
 
 	    my $tmp= $self->get_probe_id_by_name($data[$probe_elem]);
-	    
-
-	    warn "getting probe id for name ".$data[$probe_elem]." at element $probe_elem ".$self->get_probe_id_by_name($data[$probe_elem]);
-
-	    
-
 	    $r_string .= "\t".$self->get_probe_id_by_name($data[$probe_elem])."\t".
 	      $data[$channel_idx{$field}]."\t".$cc_id{$field}."\n";
-	  
-	    warn "rstring is $r_string";
-	    exit;
 	  }
 	
 	
@@ -1567,8 +1567,6 @@ sub read_results_data{
 	#PRINT/CLOSE ArrayChip FILE
 	print $r_out $r_string;
 	close($r_out);
-	system("chmod 644 $file");
-	
       }
 
       if(%tmp){
@@ -1580,6 +1578,8 @@ sub read_results_data{
   }
 
   $self->log("Finished parsing results");
+
+
   return;
 }
 

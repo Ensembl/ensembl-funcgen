@@ -212,6 +212,11 @@ sub _tables {
 	  [ 'result_set',        'rs' ],
 	  [ 'chip_channel',      'cc' ],
 	  [ 'experimental_chip', 'ec' ],
+	  [ 'channel',           'c'  ],
+
+	  #we can have channel here, but only if we make the link in the default where, otherwise we'll get spurious results
+	  #must also make all the fetch methods use an OR constraint dependent on the table name
+	  #this would also be in default where
 	 );
 }
 
@@ -233,8 +238,8 @@ sub _columns {
 
 	return qw(
 		  rs.result_set_id    rs.analysis_id
-		  cc.chip_channel_id  cc.table_id         
-		  cc.table_name       ec.feature_type_id  
+		  cc.table_name       cc.chip_channel_id  
+                  cc.table_id         ec.feature_type_id  
 		  ec.cell_type_id
 		 );
 
@@ -256,9 +261,9 @@ sub _columns {
 =cut
 
 sub _default_where_clause {
-	my $self = shift;
+  my $self = shift;
 	
-	return 'rs.result_set_id = cc.result_set_id AND cc.table_id = ec.experimental_chip_id';
+  return 'rs.result_set_id = cc.result_set_id AND  c.experimental_chip_id=ec.experimental_chip_id AND ((cc.table_name="experimental_chip" AND cc.table_id = ec.experimental_chip_id) OR (cc.table_name="channel" AND cc.table_id = c.channel_id))';
 }
 
 =head2 _final_clause
@@ -280,7 +285,7 @@ sub _default_where_clause {
 #do we need this?
 
 sub _final_clause {
-	return ' ORDER BY ec.cell_type_id, ec.feature_type_id';
+  return ' GROUP by cc.chip_channel_id ORDER BY ec.cell_type_id, ec.feature_type_id, cc.chip_channel_id';
 }
 
 =head2 _objs_from_sth
@@ -300,24 +305,19 @@ sub _final_clause {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id, $table_name, $cc_id, $ftype_id, $ctype_id);
+  my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id);
+  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id);
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
-  
+ 
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$table_id, \$cc_id, \$ftype_id, \$ctype_id);
   
   while ( $sth->fetch() ) {
-    
-    throw("ResultSet/Adaptor does not yet accomodate channel level results") if ($table_name eq "channel");
-    #shall we do exactly the same and then handle the channel in ResultFeature or Result?
-    #Prolly not needed at all as we handle this once in a tab format with R and load from file
-    
+
     if(! $rset || ($rset->dbID() != $dbid)){
       
       push @rsets, $rset if $rset;
-      
-    
       $anal = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
@@ -341,7 +341,6 @@ sub _objs_from_sth {
     #we're not controlling ctype and ftype during creating new ResultSets to store.
     #we should change add_table_id to add_ExperimentalChip and check in that method
     
-
     #add just the ids here, as we're aiming at quick web display.
     $rset->add_table_id($table_id, $cc_id);
   
@@ -664,8 +663,6 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   
   while ( $sth->fetch() ) {
     #we need to get best result here if start and end the same
-
-    warn "Found $score, $start, $end";
     
     #set start end for first result
     $old_start ||= $start;

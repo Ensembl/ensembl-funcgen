@@ -58,36 +58,7 @@ my $reg = "Bio::EnsEMBL::Registry";
 
 
 
-#Should we have a new method which adds itself to reg if host is not default reg host.??
-#would need to do test for reg?
-
-
-
-
-=head2 fetch_channel_dbid_by_echip_dye
-
-  Arg [1]    : int - ExpeimentalChip dbID
-  Arg [1]    : string - channel dye
-  Example    : my $chan_id = $db->fetch_channel_dbid_by_echip_dye('1', 'Cy5');
-  DESCRIPTION: 
-  Returntype : none
-  Exceptions : none
-  Caller     : general
-  Status     : At risk - replace with ExperimentalChip::get_channel methods?
-
-=cut
-
-#sub fetch_channel_dbid_by_echip_dye{
-#	my ($self, $chip_dbid, $dye) = @_;
-
-#	my $sql = "select channel_id from channel where experimental_chip_id =\"$chip_dbid\" and dye = \"$dye\"";
-
-#	return $self->dbc->db_handle->selectrow_array($sql);
-#}	
-
-
-
-=head2 load_table_method
+=head2 load_table_data
 
   Arg [1]    : string - table name
   Arg [1]    : string - file path for file to load
@@ -103,15 +74,26 @@ my $reg = "Bio::EnsEMBL::Registry";
 sub load_table_data{
   my ($self, $table, $file) = @_;
 
-  chmod 644, $file;
+  chmod 0755, $file;
 
-  warn("Loading $table data from $file");
-  my $sql = "load data infile \"$file\" into table $table";
-  $self->dbc->do($sql);
+  warn("Importing $table data from $file");
+  #my $sql = "load data infile '$file' into table $table";
+  #$self->dbc->do($sql);
 
-  
+  #if this gives an Errcode: 2, then your mysql instance cannot see the file.
+  #This could be due to a soft link on a visible directory to an unmounted filesystem
+  #change this to use the mysqlimport?
 
-  $self->log("Finished loading $table data with shebang $!");
+  my $cmd = "mysqlimport -h".$self->dbc->host()." -u".$self->dbc->username()." -p".$self->dbc->password()." -P".$self->dbc->port().
+    " -L ".$self->dbc->dbname()." ".$file;
+
+  system("$cmd");
+
+
+  if($?){
+    throw("Failed to load data from $file");
+  }
+
   return;
 }
 

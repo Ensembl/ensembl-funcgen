@@ -66,6 +66,9 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 						      -port => '3306',
 						     );
 
+#should check db's here
+
+
 my $pfa = $db->get_PredictedFeatureAdaptor();
 my $fset_adaptor = $db->get_FeatureSetAdaptor();
 
@@ -79,7 +82,7 @@ if($fset_id){
        "\tCellType:\t".$fset->cell_type->name()."\n".
        "\tFeatureType:\t".$fset->feature_type->name()."\n");
 
-
+  #should also check types and anal if the have been set
   #should add more on which experiment/s this is associated with and feature_set/dat_set_name when we have implemented it.
   #also ask continute question or use force_import flag
   #we could also do a count on the PFs in the set to make sure we're know we're adding to a populated set.
