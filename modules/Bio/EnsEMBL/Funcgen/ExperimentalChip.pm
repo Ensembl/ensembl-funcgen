@@ -115,25 +115,68 @@ sub new {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Channel objects
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
 sub get_Channels {
   my $self = shift;
 
-  
-  #do we need to do this everytime?  Check if they are defined first?
-  if ( $self->dbID() && $self->adaptor() ) {
-    foreach my $channel (@{$self->adaptor->db->get_ChannelAdaptor->fetch_all_by_ExperimentalChip($self)}){
-      $self->{'channels'}{$channel->dbID()} = $channel;
-    }	
-  } else {
-    warning('Need database connection to retrieve Channels');
+  if (! $self->{'channels'}){
+
+    if ($self->dbID() && $self->adaptor() ) {
+      foreach my $channel (@{$self->adaptor->db->get_ChannelAdaptor->fetch_all_by_ExperimentalChip($self)}){
+	$self->add_Channel($channel);
+      }	
+    } else {
+      warning('Need database connection to retrieve Channels');
+    }
   }
   
   return [values %{$self->{'channels'}}];
 }
+
+
+=head2 add_Channel
+
+  Args       : Bio::EnsEMBL::Funcgen::Channel
+  Example    : $exp_chip->add_channel($chan);
+  Description: Sets ad channel object for the ExperimentalChip
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Channel objects
+  Exceptions : warns if Channel already set
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub add_Channel{
+  my ($self, $chan) = @_;
+
+
+  if(! ($chan  && $chan->isa("Bio::EnsEMBL::Funcgen::Channel") && $chan->dbID())){
+    throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::Channel object");
+  }
+  
+
+  $self->{'channels'} ||= {};
+
+  if (exists $self->{'channels'}->{$chan->dbID()}){
+    #should this throw?
+    #This currently prevents haveing to check whether a channel has already been added
+    #If we were duplicating then we probably would have a different dbID
+    warn("You cannot add the same Channel to an ExperimentalChip more than once");
+  }else{
+
+
+    ##change this to key on freq?
+
+    $self->{'channels'}{$chan->dbID()} = $chan;
+  }
+  
+  return;
+}
+
+
 
 =head2 get_channel_ids
 
@@ -154,6 +197,61 @@ sub get_channel_ids{
 
   return [keys %{$self->{'channels'}}];
 }
+
+=head2 get_Channel_by_dye
+
+  Args       : string - dye used in channel
+  Example    : my $chan = $echip->get_Channel_by_dye("CY5");
+  Description: Returnsthe channel corresponding to the frequency specified
+  Returntype : Bio::EnsEMBL::Funcgen::Channel
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_Channel_by_dye{
+  my ($self, $dye) = @_;
+
+  my @chans;
+
+  foreach my $chan(@{$self->get_Channels()}){
+    push @chans, $chan if uc($chan->dye()) eq uc($dye);
+  }
+
+  throw("Found more than one Channels with the same dye") if(scalar(@chans) > 1);
+
+
+  return (@chans) ? $chans[0] : undef;
+}
+
+=head2 contains_Channel
+
+  Args [1]   : Bio::EnsEMBL::Funcgen::Channel
+  Example    : if(! $echip->contains_Channel($chan){..add channel ..};
+  Description: Checks whether this Channel has already been added to the ExperimentalChip
+  Returntype : Boolean
+  Exceptions : Throws if arg not a valid stored Bio::EnseMBL::Funcgen::Channel
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub contains_Channel{
+  my ($self, $chan) = @_;
+  
+  if(! ($chan  && $chan->isa("Bio::EnsEMBL::Funcgen::Channel") && $chan->dbID())){
+    throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::Channel object");
+  }
+  
+  my $contains = 0;
+
+  $contains = 1 if(exists $self->{'channels'}->{$chan->dbID()});
+
+  return $contains;
+}
+
+
 
 =head2 unique_id
 

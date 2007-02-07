@@ -328,6 +328,23 @@ sub table_ids {
 }
 
 
+
+sub contains{
+  my ($self, $chip_channel) = @_;
+
+  my $contains = 0;
+  my @tables = $chip_channel->adaptor->_tables();
+  my ($table_name, undef) = @{$tables[0]};
+
+  if($table_name ne $self->table_name()){
+    warn("ResultSet(".$self->table_name().") cannot contain ${table_name}s");
+  }else{
+    $contains = 1 if (exists $self->{'table_id_hash'}->{$chip_channel->dbID()});
+  }
+  
+  return $contains;
+}
+
 =head2 get_chip_channel_id
 
   Arg [1]    : int - ExperimentalChip dbID

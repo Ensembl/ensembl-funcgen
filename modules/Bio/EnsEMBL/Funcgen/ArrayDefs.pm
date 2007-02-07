@@ -93,7 +93,7 @@ sub set_defs{
 					results_file     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData/All_Pair.txt",
 					
 					results_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData",
-					norm_method => 'vsn_norm',
+					norm_method => 'VSN_GLOG',
 					dye_freqs => {(
 						       Cy5 => 635,
 						       Cy3 => 532,
@@ -306,7 +306,8 @@ sub read_array_chip_data{
 
 
     #do we still need this if we can retrieve the channels frm the echips?
-    $self->set_channel($data[$hpos{'CHIP_ID'}], $channel);
+    #$self->set_channel($data[$hpos{'CHIP_ID'}], $channel);
+    $echip->add_Channel($channel) if (! $echip->contains_Channel($channel));
     
   }
   
@@ -334,6 +335,8 @@ sub read_array_chip_data{
 sub add_array{
   my $self = shift;
 
+  warn("Move add_array to Experiment");
+
 
   #do we need to check if stored?
   if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')){
@@ -356,35 +359,6 @@ sub arrays{
 
 
 
-=head2 echip_data
-
-  Arg [1]    : mandatory - ExperimentalChip design_id
-  Arg [2]    : mandatory - data type/name
-  Arg [3]    : optional - value
-  Example    : $self->echip_data($design_id, $data_type, $value));
-  Description: Getter/Setter for ExperimentalChip data from cache
-  Returntype : various
-  Exceptions : throws if no design id or data type defined
-  Caller     : Importer
-  Status     : Deprecated
-
-=cut
-
-
-#sub echip_data{
- # my ($self, $design_id, $data_type, $value) = @_;
-
-#  deprecate("Use ExperimentalChip methods directly");
-
-#  throw("Need to specify a design_id  and a data_type") if (! defined $data_type || ! defined $design_id);
-  
-#  if(defined $value){
-#    ${$self->get_data('echips', $design_id)}{$data_type} = $value;#can we deref with -> instead to set value?
-#}
-#else{
-#  return ${$self->get_data('echips', $design_id)}{$data_type};#will this cause undefs?
-#}
-#}
 
 
 =head2 get_channels
@@ -402,6 +376,9 @@ sub arrays{
 
 sub get_channels{
   my ($self, $chip_uid) = @_;
+
+  throw("deprecated use, echip->get_Channels");
+
   throw("Need to specify a chip unique_id") if (! defined $chip_uid);
 
   #rename and move to Experiment?
@@ -426,6 +403,8 @@ sub get_channel{
   my ($self, $chan_uid) = @_;
 
   #rename and move to Experiment?
+  throw("deprecated use, echip->get_Channel_by_dye");
+
 
   throw('Need to specify a chan unique_id (${chip_uid}_${dye_freq})') if (! defined $chan_uid);	
   return $self->{'channels'}{$chan_uid};
@@ -453,6 +432,8 @@ sub get_channel{
 
 sub set_channel{
   my ($self, $chip_uid, $channel) = @_;
+
+  throw("deprecated, use echip->add_Channel");
 	
   throw("Need to pass a chip_uid and a Channel object") if(! defined $chip_uid || ! $channel->isa('Bio::EnsEMBL::Funcgen::Channel'));
   $self->{'channels'}{"${chip_uid}_".${$self->get_def("dye_freqs")}{$channel->dye()}} = $channel;
@@ -696,107 +677,97 @@ sub read_sanger_array_probe_data{
 sub read_sanger_result_data{
   my $self = shift;
 
+  #change this to read_gff_chip_results
+  #as opposed to gff channel results
+  #This should also use the default logic names for the Vendor, or take a user defined list 
+  $self->log("Parsing ".$self->vendor()." result data (".localtime().")");
 
-  #warn("This should never import array/probes/feature.  Force adf/gff import and use this simply to import results");
-  #shoudl also check wether experimental_chips have been previously imported
-  
-
-  my ($file, $result_set, $chip_uid, $line, $echip, $fh, $r_string, $rfile);
-  my ($ratio, $pid, $imported, %tmp);
+  my ($file, $chip_uid, $line, $echip);
+  my ($ratio, $pid, %chip_files);
   my $of_adaptor = $self->db->get_ProbeFeatureAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $analysis = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR");
   my $result_adaptor = $self->db->get_ResultSetAdaptor();
-    			       
+  #this is done to avoid having to self->array_name in loop, will make multiple array loop easier 
+  my $array = ${$self->arrays()}[0];
 
-         
+  #This works a little differently as we're not parsing a meta file
+  #so the echips haven't been added yet.
   #This is treating each array chip as a separate array, unless arrayset is defined
   #AT present we have no way of differentiating between different array_chips on same array???!!!
   #Need to add functionality afterwards to collate array_chips into single array
   
- 
-  #this is done to avoid having to self->array_name in loop, will make multiple array loop easier 
-  my $array = ${$self->arrays()}[0];
 
-
-  $self->log("Parsing ".$self->vendor()." probe data (".localtime().")");
-  warn("Parsing ".$self->vendor()." probe data (".localtime().")");
-  
+  #First add the echips to the Experiment
   my $list = "ls ".$self->input_dir()."/*all*";
   
   foreach $file(`$list`){
 
-    warn($file);
-
     ($chip_uid = $file) =~ s/.*\///;
     $chip_uid =~ s/\.all.*\n//;
-
-    if($self->recovery()){
-      $echip = $self->experiment->get_ExperimentalChip_by_unique_id($chip_uid);
-    }
-
-      if(! $self->recovery() || ! $echip){
-
-	$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
-	  (
-	   -EXPERIMENT_ID  => $self->experiment->dbID(),
-	   #-DESCRIPTION    => "",
-	   -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($array->name())->dbID(),
-	   -UNIQUE_ID      => $chip_uid,
-	  );
-	
-	($echip) = @{$ec_adaptor->store($echip)};	
-      }
+    $chip_files{$chip_uid} = $file;
     
-       
-    $self->experiment->add_ExperimentalChip($echip);
 
-    if($echip->has_status('IMPORTED', $echip)){
-      $imported = 1;
-      $self->log("Skipping experimental chip import (".$echip->unique_id().") already fully imported\n");
+    $echip = $self->experiment->get_ExperimentalChip_by_unique_id($chip_uid);
+
+    #this should throw if not recovery
+    #Nee to check Nimbelgen methods
+
+    if($echip){#
+      
+      if(! $self->recovery()){
+	throw("ExperimentalChip(".$echip->unqiue_id().") already exists in the database\nMaybe you want to recover?");
+      }
     }else{
 
-      warn("Need to check for partial import and clean here");
-      #should we nest these in the Experiment and 
-      #don't need to add them to store, just have method which always retrieves all echips from db
-    
-      $fh = open_file("<", $file);
-      $rfile = open_file(">", $self->get_dir("norm")."/result.".$echip->unique_id().".txt");
-      $r_string = "";
+      $echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
+	(
+	 -EXPERIMENT_ID  => $self->experiment->dbID(),
+	 -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($array->name())->dbID(),
+	 -UNIQUE_ID      => $chip_uid,
+	);
       
-      #as we don't know contig chips before hand set everything to the same result_set, then alter after wards
-      if(! defined $result_set){
+      ($echip) = @{$ec_adaptor->store($echip)};	
+    }
+    
+    $self->experiment->add_ExperimentalChip($echip);
+  }
 
-	$result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
-	  (
-	   -analysis   => $analysis,
-	   -table_name => 'experimental_chip',
-	  );
 
-	$result_adaptor->store($result_set);
+  
+  #Now get rset using experiment echips
+  my $rset = $self->get_import_ResultSet('experimental_chip', $analysis);
 
-      }
+  if($rset){#we have some new data
 
-      $result_set->add_table_id($echip->dbID());
-      $result_set = $result_adaptor->store_chip_channels($result_set);
-      my $cc_id = $result_set->get_chip_channel_id($echip->dbID());
+    foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
 
-      while($line = <$fh>){
-	$line =~ s/\r*\n//o;
+      if($echip->has_status('IMPORTED_SangerPCR', $echip)){
+	$self->log("ExperimentalChip (".$echip->unique_id().") already has status:\tIMPORTED_SangerPCR");
+      }else{
 	
-	($ratio, $pid) = (split/\t/, $line)[3..4];
-	$pid =~ s/.*://o;
-
-	#this is throwing away the encode region which could be used for the probeset/family?	
-	#NA ratio imports as 0
-	$r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${cc_id}\n";
+	my $fh = open_file("<", $file);
+	my $rfile = open_file(">", $self->get_dir("norm")."/result.SangerPCR.".$echip->unique_id().".txt");
+	my $r_string = "";
+	my $cc_id = $rset->get_chip_channel_id($echip->dbID());
+	
+	while($line = <$fh>){
+	  $line =~ s/\r*\n//o;
+	  
+	  ($ratio, $pid) = (split/\t/, $line)[3..4];
+	  $pid =~ s/.*://o;
+	  
+	  #this is throwing away the encode region which could be used for the probeset/family?	
+	  #NA ratio imports as 0
+	  $r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${cc_id}\n";
+	}
+	
+	print $rfile $r_string;
+	close($rfile);
       }
-
-      print $rfile $r_string;
-      close($rfile);
     }
   }
- 
+
   $self->log("Finished parsing ".$self->vendor()." probe data (".localtime().")");
   return;
 }
@@ -819,7 +790,7 @@ sub read_probe_data{
   
   my ($fh, $line, @data, %hpos, %probe_pos);#, %duplicate_probes);
 
-  $self->log("Parsing probe data (".localtime().")");
+  $self->log("Parsing ".$self->vendor()." probe data (".localtime().")");
   #can we do a reduced parse if we know the array chips are already imported");
   
 
@@ -1384,100 +1355,49 @@ sub get_probe_id_by_name{
 sub read_results_data{
   my $self = shift;
   
-  my (%channel_idx, %tmp, %cc_id, $result_set);
-  my $result_adaptor = $self->db->get_ResultSetAdaptor();
-
   #TO DO
   #Recovery ? read feature_map.tmp into , query DB for last imported result(remove for safety?), restart from that point in file?
   #slurp here may require too much memory?
   #import files and do checks on ids to make sure they've imported properly
   #i.e. select the last entry based on the expected table id.
   
-  $self->log("Parsing results(".localtime().")...");
-  #warn("Parsing results(".localtime().")...");
-   
-  my ($fh, $tmp, $line, $r_string, $probe_elem, $first_result, $file_name, @header, @data, @design_ids);
+  $self->log("Parsing ".$self->vendor()." results(".localtime().")...");
+  my (%channel_idx, %cc_id, @header, @data, @design_ids);
+  my ($fh, $tmp, $line, $r_string, $probe_elem, $first_result, $file_name);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
-  
-
-  #as we're importing all echip result in parallel, there is no point in checking for IMPORTED?
-  #Or do we need to set flag for experiment or each chip and check somehow?
-  my $cnt = 0;
-
-
-  #Build channel idx for directly accessing only those results which haven't be stored
-  foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
-    
-    if( ! $echip->has_status('IMPORTED')){
-
-      if( ! $result_set){
-
-	if($self->recovery()){
-	  warn ("Hardcoded to recover rset dbid 1, need to implment rset name, this is failing as we're not pulling back feature or cell types");
-	  warn ("RsetAdaptor only fetch experimental_chip set so far");
-
-
-	  warn ("Should use ResultSet/Experiment name here");#experiment name?
-
-	  $result_set = $result_adaptor->fetch_by_dbID(1);
-
-	  throw("Could not find recovery ResultSet with dbID 1 from adaptor $result_adaptor") if ! $result_set;
-	}else{
-
-	  $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
-	    (
-	     -analysis   => $anal,
-	     -table_name => 'channel',
-	    );
-	
-	  $result_adaptor->store($result_set);
-	}
-      }
-	
-      if($self->recovery()){
-	warn "Need to clean old result here and retrieve old result set";
-
-	#$result_set->get_chip_channel_id($self->get_channel($field)->dbID());
-
-	#$self->db->clean_table('result', 
-	#"chip_channel_id = ".$result_set->get_chip_channel_id($self->get_channel($field)->dbID());
-      }
-
-
-	
-      foreach my $freq (values %{$self->get_def('dye_freqs')}){
-	my $field = $echip->unique_id()."_${freq}";
-	$channel_idx{$field} = undef;
-	$result_set->add_table_id($self->get_channel($field)->dbID());
-	
-      }
-    }
-  }
-  
+  my $result_set = $self->get_import_ResultSet('channel', $anal);
 
   
   if($result_set){#we have some new data to import
-  
-    #will this ignore chip_channel entries which have already been stored?????????????
-    $result_adaptor->store_chip_channels($result_set);
-  
-    #build chip_channel_id hash after we store
-    foreach my $field(keys %channel_idx){
-      $cc_id{$field} = $result_set->get_chip_channel_id($self->get_channel($field)->dbID());
+    
+    #build channel_idx and chip_channel_id hash after we store
+    foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+      
+      if( ! $echip->has_status('IMPORTED')){
+	
+	foreach my $chan (@{$echip->get_Channels()}){
+	  my $field = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
+	  $channel_idx{$field} = undef;
+	  $cc_id{$field} = $result_set->get_chip_channel_id($chan->dbID());
+	}
+      }else{
+	$self->log("ExperimentalChip (".$echip->unqiue_id().") already has status:\tIMPORTED");
+      }
     }
-
-
+    
+    
     foreach my $array(@{$self->arrays()}){
       #This should be accessing echips for this experiment, not design_ids.
       #we may have only a subset of designs/chips form the whole array
       #and we only want to import the ones we have in the context of this experiment
       
       @design_ids = @{$array->get_design_ids()};
-   
+      
       foreach my $design_id(@design_ids){
 
 	$self->log("Reading results for chip design id:\t$design_id\n");
 	my (%tmp);
+	my $cnt = 0;
 	my $achip = $array->get_ArrayChip_by_design_id($design_id);
 	$r_string = "";
 
@@ -1569,8 +1489,8 @@ sub read_results_data{
 	close($r_out);
       }
 
-      if(%tmp){
-	throw("Not all the Experiment Channel result fields were found\nAbsent channels:\t".(keys %tmp));
+      if(%channel_idx){
+	throw("Not all the Experiment Channel result fields were found\nAbsent channels:\t".(keys %channel_idx));
       }
     }
   }else{

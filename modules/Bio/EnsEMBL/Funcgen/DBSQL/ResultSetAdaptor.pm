@@ -112,53 +112,36 @@ use vars qw(@ISA);
 #could have attach_result to feature method?
 #force association when loading features
 
-=head2 fetch_all_by_Experiment
+=head2 fetch_all_by_Experiment_Analysis
 
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2...] : listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_arrayname($slice, $exp);
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the given ExperimentalChip.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::OligoFeature objects
-  Exceptions : Throws if no array name is provided
-  Caller     : 
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
+  Arg [2]    : Bio::EnsEMBL::Analysis
+  Arg [3]    : optional string - chip_set name
+  Example    : my @rsets = @{$rset_adaptor->fetch_all_by_Experiment_Analysis($exp, $anal)};
+  Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets with the given Analysis from the Experiment
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
+  Exceptions : Throws if Analysis or Experiment are not calid and stored
+  Caller     : general
   Status     : At Risk
 
 =cut
 
-#This is no longer appropriate
-#should this take >1 EC? What if we can't fit a all mappings onto one chip
-#Would possibly miss some from the slice
+sub fetch_all_by_Experiment_Analysis{
+  my ($self, $exp, $analysis) = @_;
 
+  if( !($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
+    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment");
+  }
 
-#sub fetch_all_by_Experiment{
-#	my ($self, $exp, $analysis) = @_;
+  if( !($analysis && $analysis->isa("Bio::EnsEMBL::Analysis") && $analysis->dbID())){
+    throw("Need to pass a valid stored Bio::EnsEMBL::Analysis");
+  }
+  
 
-#	throw("Not yet implemented");
-
-#	my (%nr);
-
-
-#	foreach my $ec(@$exp_chips){
-#				
-#	  throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
-#	    if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
-	  
-#	  $nr{$ec->array_chip_id()} = 1;
-#	}
-
-	#get array_chip_ids from all ExperimentalChips and do a
-	#where op.array_chip_id IN (".(join ", ", @ac_ids)
-
-	#my @echips = @{$self->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($exp->dbID())};
-	#map $nr{$_->array_chip_id()} = 1, @echips;
-#	my $constraint = " op.array_chip_id IN (".join(", ", keys %nr).") AND op.oligo_probe_id = of.oligo_probe_id ";
-
-
+  my $constraint = "ec.experiment_id=".$exp->dbID()." AND rs.analysis_id=".$analysis->dbID();
 	
-#	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-#}
+  return $self->generic_fetch($constraint);
+}
 
 
 
@@ -180,16 +163,15 @@ use vars qw(@ISA);
 =cut
 
 sub fetch_all_by_FeatureType {
-	my ($self, $ftype, $analysis) = @_;
+  my ($self, $ftype) = @_;
 
-
-	throw("Not implemented yet\n");
+  if( !($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())){
+    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
+  }
 	
-	throw('Need type as parameter') if ! $ftype;
+  my $constraint = "ec.feature_type_id =".$ftype->dbID();
 	
-	my $constraint = qq( a.type = '$ftype' );
-	
-	#return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+  return $self->generic_fetch($constraint);
 }
  
 =head2 _tables

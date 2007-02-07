@@ -997,16 +997,20 @@ sub register_experiment{
   $self->read_data("array");
   $self->read_data("probe");
   $self->read_data("results");
-  $self->import_results("raw");
+
+  warn("we need to access the default method for the vendor here, or override using the gff option");
+  my $tmp_logic_name = ($self->vendor() eq "SANGER") ? "SangerPCR" : "RawValue";
+  $self->import_results("raw", $tmp_logic_name);
   
   #Need to be able to run this separately, so we can normalise previously imported sets with different methods
   #should be able t do this without raw data files e.g. retrieve info from DB
-  
+
   my $norm_method = $self->norm_method();
   
   if(defined $norm_method){
-    $self->$norm_method;
-    $self->import_results("norm");
+    #$self->$norm_method;
+    $self->R_norm($norm_method);
+    $self->import_results("norm", $norm_method);
   }
   
   
@@ -1034,75 +1038,76 @@ sub register_experiment{
 =cut
 
 sub import_results{
-  my ($self, $results_dir) = @_;
-
-  my $loaded;
-
-  #should we split this into vendor specific load methods?
+  my ($self, $results_dir, @logic_names) = @_;
 
 
+  foreach my $logic_name(@logic_names){
+
+    my $loaded = 0;
+    my $status = ($logic_name eq "RawValue") ? "IMPORTED" : "IMPORTED_${logic_name}";
   
-  if($results_dir ne "norm"){#raw data, why not eq raw? as sanger is treated has no raw change this in the methods!
-
+    
+    #should we split this into vendor specific load methods?
     #This loop behaves wierdly due to the naming/array design of each platform
     #Nimblegen loads all experimental chips from an arraychip(can be All_pair if only one Achip)
     #Sanger has individual Echip files
-
+    
     foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
       
-      if( ! $echip->has_status('IMPORTED')){#must have some results	
+      if( ! $echip->has_status($status)){#must have some results	
 	
-	if($self->recovery()){
-	  warn("Need to clean results here if recovery");
-	}
-
-	if($self->vendor() eq "NIMBLEGEN"){
-
-	  if(! $loaded){  #Loads all Echip data from ArrayChip file/s
-
-	    foreach my $array(@{$self->arrays()}){
+	if(! $loaded){
+	  
+	  if($results_dir ne "norm"){
 	    
-	      foreach my $design_id(@{$array->get_design_ids()}){
-		my $achip = $array->get_ArrayChip_by_design_id($design_id);
-		$self->log("Loading results for ".$achip->name());
-		$self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
-		$self->log("Finishing loading ".$achip->name());
+	    #now done in get_import_ResultSet
+	    #if($self->recovery()){
+	    #  warn("Need to clean results here if recovery");
+	    #}
+	    
+	    if($self->vendor() eq "NIMBLEGEN"){
+	      
+	      foreach my $array(@{$self->arrays()}){
+		
+		foreach my $design_id(@{$array->get_design_ids()}){
+		  my $achip = $array->get_ArrayChip_by_design_id($design_id);
+		  $self->log("Loading results for ".$achip->name());
+		  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
+		  $self->log("Finishing loading ".$achip->name());
+		}
 	      }
 	    }
+	    elsif($self->vendor() eq "SANGER"){#this is norm data, but we're importing norm, rather than processing.
+	      warn ("Need to fix the sanger methods so imports as norm, not raw");
+	      #IMPORTED is not correct status for these Echips, well, should have
+	      #IMPORTED?  and IMPORTED_NORM_METHOD
+	      
 	    
-	    $loaded = 1;
+	      $self->log("Loading results for ExperimentalChip:\t".$echip->unique_id());
+	      $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.${logic_name}.".$echip->unique_id().".txt");
+	      $self->log("Finishing loading ".$echip->unique_id());
+	    }
 	  }
-	}elsif($self->vendor() eq "SANGER"){#this is norm data, but we're importing norm, rather than processing.
-		
-	  #IMPORTED is not correct status for these Echips, well, should have
-	  #IMPORTED?  and IMPORTED_NORM_METHOD
-	  
-	  
-	  $self->log("Loading results for ExperimentalChip:\t".$echip->unique_id());
-	  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$echip->unique_id().".txt");
-	  $self->log("Finishing loading ".$echip->unique_id());
+	  else{#norm data
+	    #should add logic_name here
+	    
+	    $self->log("Loading norm results from ".$self->get_dir($results_dir)."/result.${logic_name}.txt");
+	    $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.${logic_name}.txt");
+	    $self->log("Finished loading norm results");
+	  }
 	}
-
-	#DBAdaptor throws if load failed
-	#warn("Need to catch load error here before marking as imported");
-	$echip->adaptor->set_status('IMPORTED', $echip);
+	
+	$echip->adaptor->set_status($status, $echip);
+	$loaded = 1;	
       }
     }
-  }
-  else{#norm data
-    $self->log("Loading norm results from ".$self->get_dir($results_dir)."/result.txt");
-    $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.txt");
-    $self->log("Finished loading norm results");
-    
-    #How do we know which Echips have been normalised?
-    #just loop through echips checking for the status
-    
-    #      warn("Need to catch load error here before marking as imported_analysis");
-    #    }
+
+    $self->log("Finished loading $logic_name $results_dir results");
+
   }
   
   
-  $self->log("Finished Loading $results_dir results");
+  $self->log("Finished loading results ");
   return;
 }
 
@@ -1143,38 +1148,6 @@ sub design_type{
   return $self->{'design_type'};
 }
 
-
-
-=head2 read_data
-  
-  Example    : $self->read_data("probe")
-  Description: Calls each method in data_type array from defs hash
-  Arg [1]    : mandatory - data type
-  Returntype : none
-  Exceptions : none
-  Caller     : self
-  Status     : At risk
-
-=cut
-
-
-#nimblegen specific!
-#sub get_channel_dbid{
-#  my ($self, $chan_uid) = @_;
-#  my ($chip_uid);
-
-#  warn "Replace this with direct calls to Channel via ExperimentalChip::get_channel";
-
-#  if( ! $self->channel_data($chan_uid, 'dbID')){
-#    ($chip_uid = $chan_uid) =~ s/_.*//;
-#    $self->channel_data($chan_uid, 'dbid', 
-#			$self->db->fetch_channel_dbid_by_echip_dye(
-#								   $self->experiment->get_ExperimentalChip_by_unique_id($chip_uid)->dbID(),
-#								   $self->get_channel($chan_uid)->{'dye'}));
-#  }
-
-#  return $self->channel_data($chan_uid, 'dbid');
-#}
 
 
 
@@ -1256,137 +1229,247 @@ sub vsn_norm{
 
 sub R_norm{
   my ($self, @logic_names) = @_;
-  #This currently normalises a single two colour array at a time
+  #This currently normalises a single two colour chip at a time
+  #rather than normalising across a set of chip
+  #also does in sets of analyses
+  #good for keeping data separate, but not efficient in terms of querying
+  #convert to use one script which only queries for each echip once, then does each anal
 
-  #hack, need to implement multiple analyses
-  my $logic_name = $logic_names[0];
 
-
+  my $aa = $self->db->get_AnalysisAdaptor();
+  my $rset_adaptor = $self->db->get_ResultSetAdaptor();
+  my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
   my %r_libs = (
 		"VSN_GLOG"      => ['vsn'],
 		"TukeyBiweight" => ['affy'],
 	       );
-	
-  my @dbids;
-  my $aa = $self->db->get_AnalysisAdaptor();
-  my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
-  my $va_id = $aa->fetch_by_logic_name($logic_name)->dbID();
-  my $R_file = $self->get_dir("norm")."/norm.R";
-  my $outfile = $self->get_dir("norm")."/result.txt";
-  my $r_cmd = "/nfs/farm/R/bin/R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
-  my $bsub = "bsub -R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -o ".
-    $self->get_dir("norm")."/R.out /nfs/farm/R/bin/R-dev CMD BATCH ".$self->get_dir("norm")."/norm.R";
-  
-  unlink($outfile);#Need to do this as we're appending in the loop
-  
-  #setup qurey
-  #scipen is to prevent probe_ids being converted to exponents
 
-  warn "Need to add host and port here";
 
-  #Set up DB, defaults and libs for each logic name
-  my $query = "options(scipen=20);library(RMySQL);";
 
-  foreach my $ln(@logic_names){
-    
-    foreach my $lib(@{$r_libs{$ln}}){
-      $query .= "library($lib);";
-    }
-  }
 
-  $query .= "con<-dbConnect(dbDriver(\"MySQL\"), host=\"".$self->host()."\", port=\"".$self->port()."\", dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
-  $query .= (defined $self->pass()) ? ", pass=\"".$self->pass()."\")\n" : ")\n";
+  foreach my $logic_name(@logic_names){
+    throw("Not yet implemented TukeyBiweight") if $logic_name eq "TukeyBiweight";
   
+    my $rset = $self->get_import_ResultSet('experimental_chip', $logic_name);
   
-  #This is now retrieving a ExperimentalChip obj
+    if(! $rset){
+      $self->log("All ExperimentalChips already have status:\tIMPORTED_${logic_name}");
+    }else{#Got data to normalise and import
+            
+      my @dbids;
+      my $norm_anal = $aa->fetch_by_logic_name($logic_name);
+      my $R_file = $self->get_dir("norm")."/${logic_name}.R";
+      my $outfile = $self->get_dir("norm")."/result.${logic_name}.txt";
+      my $r_cmd = "/software/bin/R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+      my $bsub = "bsub -R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -o ".
+	$self->get_dir("norm")."/${logic_name}.out /software/R-2.4.0/bin/R CMD BATCH ".$self->get_dir("norm")."/${logic_name}.R";
+      $self->backup_file($outfile);#Need to do this as we're appending in the loop
   
-  foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
-    warn "Build $logic_name R cmd for ".$echip->unique_id()."  log this?\n";
-    @dbids = ();
-
-    foreach my $chan(@{$echip->get_Channels()}){
+      #setup qurey
+      #warn "Need to add host and port here";
+      #Set up DB, defaults and libs for each logic name
+      my $query = "options(scipen=20);library(RMySQL);"; #scipen is to prevent probe_ids being converted to exponents
       
-      if($chan->type() eq "EXPERIMENTAL"){
-	push @dbids, $chan->dbID();
-      }else{
-	unshift @dbids, $chan->dbID();
+      #foreach my $ln(@logic_names){
+	
+      foreach my $lib(@{$r_libs{$logic_name}}){
+	$query .= "library($lib);";
       }
+      #}
+      
+      $query .= "con<-dbConnect(dbDriver(\"MySQL\"), host=\"".$self->host()."\", port=\"".$self->port()."\", dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
+      $query .= (defined $self->pass()) ? ", pass=\"".$self->pass()."\")\n" : ")\n";
+      
+      
+      #Build queries for each chip
+      foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+    
+
+	#should implement logic name here?
+	#can't as we need seperate ResultSet for each
+
+  
+	if($echip->has_status("IMPORTED_".$logic_name)){
+	  $self->log("ExperimentalChip ".$echip->unique_id()." already has status:\tIMPORTED_".$logic_name);
+	}else{
+	  
+	  my $cc_id = $rset->get_chip_channel_id($echip->dbID());
+	  $self->log("Building $logic_name R cmd for ".$echip->unique_id());
+	  @dbids = ();
+	  
+	  foreach my $chan(@{$echip->get_Channels()}){
+	    if($chan->type() eq "EXPERIMENTAL"){
+	      push @dbids, $chan->dbID();
+	    }else{
+	      unshift @dbids, $chan->dbID();
+	    }
+	  }
+	  
+	  throw("vsn does not accomodate more than 2 channels") if (scalar(@dbids > 2) && $logic_name eq "VSN_GLOG");
+	  
+	  #should do some of this with maps?
+	  #HARDCODED metric ID for raw data as one
+	
+	  #Need to get total and experimental here and set db_id accordingly
+	
+	  
+	  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} c.chip_channel_id=rs.chip_channel_id and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id}')\n";
+	  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} c.chip_channel_id=rs.chip_channel_id and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id}')\n";
+	  
+	  
+	
+	  #should do some sorting here?  Probes are in same order anyway
+	  #does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
+	  $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";		
+	  #variance stabilise
+	  $query .= "vsn_df<-vsn(raw_df)\n";
+    
+	  
+	  #do some more calcs here and print report?
+	  #fold change exponentiate? See VSN docs
+	  #should do someplot's of raw and glog and save here?
+	  #set log func and params
+	  #$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
+	  #plot
+	  #$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
+	  #  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
+	  #FAILS ON RAW PLOT!!
+	  #par(mfrow = c(1, 2)) 
+	  #> meanSdPlot(nkid, ranks = TRUE) 
+	  #> meanSdPlot(nkid, ranks = FALSE) 
+	  
+	
+	  #Now create table structure with glog values(diffs)
+	  #3 sig dec places on scores(doesn't work?!)
+	  $query .= "glog_df<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], format(exprs(vsn_df[,2]) - exprs(vsn_df[,1]), nsmall=3), rep(\"".$cc_id."\", length(c1[\"probe_id\"]))\n";
+	  
+	  
+	  #load back into DB
+	  #c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
+	  #may want to use safe.write here
+	  #dbWriteTable(con, "result", c3results, append=TRUE)
+	  #dbWriteTable returns true but does not load any data into table!!!
+	  
+	  $query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+	
+	  warn("Need to implement R DB import\n");
+	
+	  #tidy up here?? 
+	}
+      }
+  
+      #or here, specified no save so no data will be dumped
+      $query .= "q();";
+  
+  
+      #This is giving duplicates for probe_ids 2 & 3 for metric_id =2 i.e. vsn'd data.
+      #duplicates are not present in import file!!!!!!!!!!!!!!!!!!!!
+      
+      open(RFILE, ">$R_file") || die("Cannot open $R_file for writing");
+      print RFILE $query;
+      close(RFILE);
+    
+      
+      #We should really open a pipe to bsub here and execute the R directly using /nfs/farm/R/bin/R-dev
+      #shoudl really directly import from R
+      #but presently checking for non 0 R exit code ? dumping and running mysqlimport
+      
+      #system($r_cmd) == 0 or throw("R normalisation failed with error code $? ($R_file)");
+      system($bsub) == 0 or throw("R $logic_name normalisation failed with error code $? ($R_file)");
+      #can we not retrieve the job id?
+      #we have no way of capturing the error from the failed farm job
+      #grep the out file for the job ir of Exited job with 
+
+      warn("Can we load here directly, to avoid having to re-analyse data if it crashes after the first norm?");
+
     }
-    
-    
-    throw("vsn does not accomodate more than 2 channels") if (scalar(@dbids > 2) && $logic_name eq "VSN_GLOG");
-    
-    #should do some of this with maps?
-    #HARDCODED metric ID for raw data as one
-    
-    #Need to get total and experimental here and set db_id accordingly
-    
-    
-    $query .= "c1<-dbGetQuery(con, 'select probe_id, score as ${dbids[0]}_score from result where table_name=\"channel\" and table_id=${dbids[0]} and analysis_id=${ra_id}')\n";
-    $query .= "c2<-dbGetQuery(con, 'select probe_id, score as ${dbids[1]}_score from result where table_name=\"channel\" and table_id=${dbids[1]} and analysis_id=${ra_id}')\n";
-    
-    #should do some sorting here?  Probes are in same order anyway
-    #does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
-    $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";		
-    #variance stabilise
-    $query .= "vsn_df<-vsn(raw_df)\n";
-    
-    
-    #do some more calcs here and print report?
-    #fold change exponentiate? See VSN docs
-    #should do someplot's of raw and glog and save here?
-    #set log func and params
-    #$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
-    #plot
-    #$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
-    #  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
-    #FAILS ON RAW PLOT!!
-    #par(mfrow = c(1, 2)) 
-    #> meanSdPlot(nkid, ranks = TRUE) 
-    #> meanSdPlot(nkid, ranks = FALSE) 
-    
-    
-    #Now create table structure with glog values(diffs)
-    #3 sig dec places on scores(doesn't work?!)
-    $query .= "glog_df<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], format(exprs(vsn_df[,2]) - exprs(vsn_df[,1]), nsmall=3), rep(\"${va_id}\", length(c1[\"probe_id\"])), rep(\"".$echip->dbID()."\", length(c1[\"probe_id\"])),   rep(\"experimental_chip\", length(c1[\"probe_id\"])))\n";
-    
-    
-    #load back into DB
-    #c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
-    #may want to use safe.write here
-    #dbWriteTable(con, "result", c3results, append=TRUE)
-    #dbWriteTable returns true but does not load any data into table!!!
-    
-    $query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
-    
-    warn("Need to implement R DB import\n");
-    
-    #tidy up here?? 
   }
-  
-  
-  #or here, specified no save so no data will be dumped
-  $query .= "q();";
-  
-  
-  #This is giving duplicates for probe_ids 2 & 3 for metric_id =2 i.e. vsn'd data.
-  #duplicates are not present in import file!!!!!!!!!!!!!!!!!!!!
-  
-  open(RFILE, ">$R_file") || die("Cannot open $R_file for writing");
-  print RFILE $query;
-  close(RFILE);
-  
-
-  #We should really open a pipe to bsub here and execute the R directly using /nfs/farm/R/bin/R-dev
-  #shoudl really directly import from R
-  #but presently checking for non 0 R exit code ? dumping and running mysqlimport
-
-  #system($r_cmd) == 0 or throw("R normalisation failed with error code $? ($R_file)");
-  system($bsub) == 0 or throw("R normalisation failed with error code $? ($R_file)");
 
   return;
 }
 
+#can we sub this? args: table_name, logic_name
+#also use result_set_name
+#would also clean all data for result set if recovery
+#return would be result_set
+
+sub get_import_ResultSet{
+  my ($self, $table_name, $anal) = @_;
+  
+  if(!($anal && $anal->isa("Bio::EnsEMBL::Analysis") && $anal->dbID())){
+    throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
+  }
+
+  my ($rset);
+  my $result_adaptor = $self->db->get_ResultSetAdaptor();
+  my $logic_name = ($anal->logic_name() eq "RawValue") ? "" : "_".$anal->logic_name();
+
+  #could drop the table name here and use a hash?
+
+  warn("Need to implement chip_sets here");
+
+
+  foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+
+    #clean chip import and generate rset
+    if( ! $echip->has_status("IMPORTED${logic_name}")){#this translates to each channel have the IMPORTED_RawValue status
+
+      if( ! $rset){
+	
+	if($self->recovery()){
+	  warn ("Should use ResultSet name here, currently retrieving using the analysis and experiment id");#experiment name?
+	  #fetch by anal and experiment_id
+	  #Need to change this to result_set.name!
+	  warn("add chip set handling here");
+	  	  
+	  my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
+	  throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t$logic_name") if (scalar(@tmp) >1);
+	  $rset = $tmp[0];
+	  throw("Could not find recovery ResultSet with dbID 1 from adaptor $result_adaptor") if ! $rset;
+	}else{
+	  
+	  $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
+	    (
+	     -analysis   => $anal,
+	     -table_name => $table_name,
+	    );
+	  
+	  $result_adaptor->store($rset);
+	}
+      }
+
+      if($self->recovery()){
+	warn "Need to clean old results here";
+	my @cc_ids;
+
+	if($table_name eq 'experimental_chip'){
+	  push @cc_ids, $rset->get_chip_channel_id($echip->dbID());
+	}else{
+	  foreach my $chan(@{$echip->get_Channels()}){
+	    push @cc_ids, $rset->get_chip_channel_id($chan->dbID());
+	  }
+	}
+		
+	$self->db->rollback_results(@cc_ids);	
+      }
+    }
+    
+    #check whether it is present in the ResultSet and add if not
+    if($table_name eq 'channel'){
+      
+      foreach my $chan(@{$echip->get_Channels()}){
+	$rset->add_table_id($chan->dbID()) if(! $rset->contains($chan));
+      }
+    }else{#experimental_chip
+      $rset->add_table_id($echip->dbID()) if(! $rset->contains($echip));
+    }
+  }
+  
+  $result_adaptor->store_chip_channels($rset) if $rset;
+  
+  #this only returns a result set if there is new data to import
+  return $rset;
+}
 
 
 sub backup_file{

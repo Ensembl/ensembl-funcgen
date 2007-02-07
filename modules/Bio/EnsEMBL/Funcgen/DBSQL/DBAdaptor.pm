@@ -72,17 +72,27 @@ my $reg = "Bio::EnsEMBL::Registry";
 =cut
 
 sub load_table_data{
-  my ($self, $table, $file) = @_;
+  my ($self, $table, $file, $ssh) = @_;
 
   chmod 0755, $file;
 
   warn("Importing $table data from $file");
-  #my $sql = "load data infile '$file' into table $table";
-  #$self->dbc->do($sql);
-
   #if this gives an Errcode: 2, then your mysql instance cannot see the file.
   #This could be due to a soft link on a visible directory to an unmounted filesystem
   #change this to use the mysqlimport?
+
+
+
+  #This is failing as ssh is not set up to login silently without password prompt
+  #Need to defined ssh keys?
+
+  #(my $tmp_file = $file) =~ s/.*\///;
+  #$tmp_file = '/tmp/'.$tmp_file;
+
+  #my $scp = 'scp $(hostname):'.$file." ".$self->dbc->host().":${tmp_file}";
+  #my $sql = "load data infile '$tmp_file' into table $table";
+  #$self->dbc->do($sql);
+  #remove tmp file via ssh if load successful
 
   my $cmd = "mysqlimport -h".$self->dbc->host()." -u".$self->dbc->username()." -p".$self->dbc->password()." -P".$self->dbc->port().
     " -L ".$self->dbc->dbname()." ".$file;
@@ -91,11 +101,30 @@ sub load_table_data{
 
 
   if($?){
-    throw("Failed to load data from $file");
+    throw("Failed to load data from $file\n$?");
   }
 
   return;
 }
+
+
+sub rollback_results{
+  my ($self, @cc_ids) = @_;
+
+  throw("Need to pass some chip_channel_ids to roll_back") if ! @cc_ids;
+
+  my $sql = 'DELETE from result where chip_channel_id in ('.join(',', @cc_ids).');';
+
+  $self->dbc->do($sql);
+
+  if($?){
+    throw("Results rollback failed for cc_ids:\t@cc_ids\nError:\t$?");
+  }
+
+  return;
+}
+
+
 
 #Only validates if already present
 #add flag to alter table if any inconsistencies found?
