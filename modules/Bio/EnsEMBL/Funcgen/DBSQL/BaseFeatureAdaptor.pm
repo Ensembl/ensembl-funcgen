@@ -140,19 +140,18 @@ sub fetch_all_by_Slice_constraint {
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
 
-  #warn "Fetch by Slice con for projs @proj";
-
+  
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
     my $offset = $seg->from_start();
     my $seg_slice  = $seg->to_Slice();
 
 
-    my $test = $seg_slice->coord_system();
+    my $test = $seg_slice->coord_system()->dbID();
 
-    #warn("_slice_fetchign with $seg_slice and contraint $constraint and coordsys $test");
+    ###warn("_slice_fetchign with $seg_slice and contraint $constraint and coordsys $test");
 
-    my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS
+    my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
 
     # if this was a symlinked slice offset the feature coordinates as needed
     if($seg_slice->name() ne $slice->name()) {
@@ -182,7 +181,6 @@ sub fetch_all_by_Slice_constraint {
   }
 
   $self->{'_slice_feature_cache'}->{$key} = \@result;
-
 
   return \@result;
 }

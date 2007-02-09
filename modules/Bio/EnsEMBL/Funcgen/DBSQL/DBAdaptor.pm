@@ -111,9 +111,12 @@ sub load_table_data{
 sub rollback_results{
   my ($self, @cc_ids) = @_;
 
-  throw("Need to pass some chip_channel_ids to roll_back") if ! @cc_ids;
 
+  throw("Need to pass some chip_channel_ids to roll_back") if (scalar(@cc_ids) == 0);
+  
   my $sql = 'DELETE from result where chip_channel_id in ('.join(',', @cc_ids).');';
+
+  #warn "sql is $sql";
 
   $self->dbc->do($sql);
 

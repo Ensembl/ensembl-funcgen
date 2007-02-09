@@ -113,6 +113,7 @@ sub fetch_contigsets_by_experiment_dbID {
     my $self = shift;
     my $e_dbid = shift;
     
+    throw("deprecated, use ResultSet");
 
     my (@tracksets, @hack1);
     #my @hack1 = ("H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)");

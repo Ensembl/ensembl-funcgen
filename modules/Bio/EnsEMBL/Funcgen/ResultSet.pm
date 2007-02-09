@@ -327,7 +327,22 @@ sub table_ids {
   return [ keys %{$self->{'table_id_hash'}} ];
 }
 
+=head2 chip_channel_ids
 
+  Example    : my @rset_cc_ids = @{$result_set->chip_channel_ids()};
+  Description: Getter for the chip channel ids for this ResultSet.
+  Returntype : listref
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub chip_channel_ids {
+  my $self = shift;
+  
+  return [ values %{$self->{'table_id_hash'}} ];
+}
 
 sub contains{
   my ($self, $chip_channel) = @_;
@@ -362,6 +377,36 @@ sub get_chip_channel_id{
   
   return (exists $self->{'table_id_hash'}->{$table_id}) ?  $self->{'table_id_hash'}->{$table_id} : undef;
 }
+
+=head2 get_ExperimentalChips
+
+  Example    : my @ecs = @{$result_set->get_ExperimentalChips()};
+  Description: Retrieves a chip_channel_id from the cahce given an ExperimentalChip dbID
+  Returntype : Listref of ExperimentalChip object
+  Exceptions : throw is not an expermental_chip ResultSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_ExperimentalChips{
+  my ($self, $table_id) = @_;
+  
+  throw("Cannot retrieve ExperimentalChips for a non-experimental_Chip ResultSet") if ($self->table_name ne "experimental_chip");
+
+  if(! defined $self->{'experimental_chips'}){
+    my $ec_adaptor = $self->adaptor->db->get_ExperimentalChipAdaptor();
+    
+    foreach my $ec_id(@{$self->table_ids()}){
+    #  warn "Getting ec with id $ec_id";
+      push @{$self->{'experimental_chips'}}, $ec_adaptor->fetch_by_dbID($ec_id);
+    }
+  }
+
+  return $self->{'experimental_chips'};
+}
+
+
 
 
 =head2 display_label

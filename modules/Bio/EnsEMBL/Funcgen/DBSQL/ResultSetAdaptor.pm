@@ -267,7 +267,7 @@ sub _default_where_clause {
 #do we need this?
 
 sub _final_clause {
-  return ' GROUP by cc.chip_channel_id ORDER BY ec.cell_type_id, ec.feature_type_id, cc.chip_channel_id';
+  return ' GROUP by cc.chip_channel_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
 }
 
 =head2 _objs_from_sth
@@ -293,7 +293,7 @@ sub _objs_from_sth {
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
  
-  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$table_id, \$cc_id, \$ftype_id, \$ctype_id);
+  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$ftype_id, \$ctype_id);
   
   while ( $sth->fetch() ) {
 
@@ -316,10 +316,14 @@ sub _objs_from_sth {
     
     #This assumes logical association between chip from the same exp, confer in store method?????????????????
 
-
+    if(defined $rset->feature_type()){    
+      throw("ResultSet does not accomodate multiple FeatureTypes") if ($ftype_id != $rset->feature_type->dbID());
+    }
     
-    throw("ResultSet does not accomodate multiple FeatureTypes") if ($ftype_id != $rset->feature_type->dbID());
-    throw("ResultSet does not accomodate multiple CellTypes") if ($ctype_id != $rset->cell_type->dbID());								     
+    if(defined $rset->cell_type()){
+      throw("ResultSet does not accomodate multiple CellTypes") if ($ctype_id != $rset->cell_type->dbID());
+    }
+
     #we're not controlling ctype and ftype during creating new ResultSets to store.
     #we should change add_table_id to add_ExperimentalChip and check in that method
     
@@ -448,7 +452,7 @@ sub store_chip_channels{
     if(! defined $rset->get_chip_channel_id($table_id)){
       $sth->bind_param(1, $rset->dbID(),       SQL_INTEGER);
       $sth->bind_param(2, $table_id,           SQL_INTEGER);
-      $sth->bind_param(3, 'experimental_chip', SQL_VARCHAR);
+      $sth->bind_param(3, $rset->table_name(), SQL_VARCHAR);
       
       $sth->execute();
       $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
@@ -475,127 +479,6 @@ sub list_dbIDs {
 	
 	return $self->_list_dbIDs('result_set');
 }
-
-# All the results methods may be moved to a ResultAdaptor
-
-=head2 fetch_results_by_channel_analysis
-
-  Arg [1]    : int - OligoProbe dbID
-  Arg [2]    : int - Channel dbID
-  Arg [1]    : string - Logic name of analysis
-  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($op_id, $channel_id, 'RAW_VALUE')};
-  Description: Gets all analysis results for probe on given channel
-  Returntype : ARRAYREF
-  Exceptions : warns if analysis is not valid in Channel context
-  Caller     : OligoFeature
-  Status     : At Risk - rename fetch_results_by_probe_channel_analysis
-
-=cut
-
-
-
-sub fetch_results_by_channel_analysis{
-	my ($self, $probe_id, $channel_id, $logic_name) = @_;
-	
-	#Will this always be RAW_VALUE?
-
-	my %channel_metrics = (
-						   RawValue => 1,
-						  );
-
-
-	if(! defined $probe_id || ! defined $channel_id) {
-		throw("Need to define a valid probe and channel dbID");
-	}
-		
-
-	my $analysis_clause = "";
-
-	if($logic_name){
-		if(exists $channel_metrics{$logic_name}){
-			$analysis_clause = "AND a.logic_name = \"$logic_name\"";
-		}else{
-			warn("$logic_name is not a channel specific metric\nNo results returned\n");
-			return;
-		}
-	}
-
-	my $query = "SELECT r.score, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"channel\" AND r.table_id=\"$channel_id\" AND r.analysis_id = a.analysis_id $analysis_clause";
-	
-	return $self->dbc->db_handle->selectall_arrayref($query);
-}
-
-
-sub fetch_results_by_probe_experimental_chips_analysis{
-	my ($self, $probe_id, $chip_ids, $logic_name) = @_;
-
-
-	$self->depracted("This needs updating to mirro the function of the ProbeFeature method");
-
-	
-	my ($table_ids, $result);
-	my $table_name = "experimental_chip";
-
-	my %chip_metrics = (
-			    VSN_GLOG => 1,
-			   );
-
-	#else no logic name or not a chip metric, then return channel and metric=?
-
-
-	if(! defined $probe_id || ! @$chip_ids) {
-		throw("Need to define a valid probe and pass a listref of experimental chip dbIDs");
-	}
-		
-
-	my $analysis_clause = ($logic_name) ? "AND a.logic_name = \"$logic_name\"" : "";
-
-	if(! exists $chip_metrics{$logic_name}){
-	  $table_name = "channel";
-	  warn("Logic name($logic_name) is not a chip specific metric\nNo results returned\n");
-	  
-	  #build table ids from exp chip channel ids
-	  #need to then sort out which channel is which in caller.
-
-	  #need to enable raw data retrieval!!
-	  return;
-	}else{
-	  $table_ids = join(", ", @$chip_ids);
-	}
-
-
-	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.oligo_probe_id =\"$probe_id\" AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause";
-	
-	return $self->dbc->db_handle->selectall_arrayref($query);
-}
-
-
-#This checks each locus to ensure identically mapped probes only return a median/mean
-#can we just return array triplets?, start, end, score?
-
-#sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
-#  my ($self, $slice, $analysis, $exp_chips) = @_;
-
-  #warn("Put in ResultAdaptor");
-
-#  my (@ofs);
-
-  
-#  foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
-    
-#    if((! @ofs) || ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
-#      push @ofs, $of;
-#    }else{#Found new location, deal with previous
-#      push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-#      @ofs = ($of);
-#    }
-#  }
-
-#  push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-
-#  return \@results;
-
-#}
 
 
 sub fetch_ResultFeatures_by_Slice_ResultSet{
@@ -683,6 +566,9 @@ sub _get_best_result{
 
   my ($score, $mpos);
 
+
+  #need to deal with lines with no results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   #deal with one score fastest
   return  $scores->[0] if (scalar(@$scores) == 1);
 
@@ -703,6 +589,42 @@ sub _get_best_result{
   }
 
   return $score;
+}
+
+
+
+=head2 fetch_results_by_ProbeFeature_ResultSet
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ProbeFeature
+  Arg [2]    : Bio::EnsEMBL::Funcgen::ResultSet
+  Example    : my @probe_results = @{$ofa->fetch_results_by_ProbeFeature_ResultSet($probe_feature, $result_set)};
+  Description: Gets result for a given probe in a ResultSet
+  Returntype : ARRAYREF
+  Exceptions : throws if args not valid
+  Caller     : General
+  Status     : At Risk - Change to take Probe?
+
+=cut
+
+sub fetch_results_by_ProbeFeature_ResultSet{
+  my ($self, $pfeature, $rset) = @_;
+  
+  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ResultSet") if (! ($rset  &&
+									       $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet")
+									       && $rset->dbID()));
+  
+  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ProbeFeature") if (! ($pfeature  &&
+										  $pfeature->isa("Bio::EnsEMBL::Funcgen::ProbeFeature")
+										  && $pfeature->dbID()));
+  
+  
+  
+  my $cc_ids = join(',', @{$rset->chip_channel_ids()});
+
+  my $query = "SELECT r.score from result where r.probe_id ='".$pfeature->probe_id().
+    "' AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
+  
+  return $self->dbc->db_handle->selectall_arrayref($query);
 }
 
 

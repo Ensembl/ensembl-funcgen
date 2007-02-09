@@ -481,8 +481,9 @@ sub get_ArrayChip_by_design_id{
 sub add_ArrayChip{
   my ($self, $array_chip) = @_;
 
-  throw("You must supply a stored Bio::EnsEMBL::Funcgen::ArrayChip") if(! $array_chip->isa("Bio::EnsEMBL::Funcgen::ArrayChip") && 
-								 $array_chip->dbID());
+  throw("You must supply a stored Bio::EnsEMBL::Funcgen::ArrayChip") if(! ($array_chip && 
+									   $array_chip->isa("Bio::EnsEMBL::Funcgen::ArrayChip") && 
+									   $array_chip->dbID()));
   
   if ($self->dbID() && $self->adaptor()){
     $self->get_ArrayChips() if (! $self->{'array_chips'});

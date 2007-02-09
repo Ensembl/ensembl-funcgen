@@ -113,6 +113,48 @@ sub fetch_by_array_probe_probeset_name {
 	}
 }
 
+=head2 fetch_probe_cache_by_Experiment
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
+  Example    : my $probe_cache = $opa->fetch_probe_cache_by_Experiment($exp);
+  Description: Returns a hashref with key value pairs as probe name and id respectively.
+               This is intended as a quick and dirty method for experimental data import
+  Returntype : Hashref
+  Exceptions : Throws if arg is not valid and stored
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub fetch_probe_cache_by_Experiment{
+  my ($self, $exp) = @_;
+
+
+  if(! ($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
+    throw("Must proved a valid stored Bio::EnsEMBL::Funcgen::Experiment");
+  }
+
+  my @achip_ids;
+  
+  foreach my $echip(@{$exp->get_ExperimentalChips()}){
+    push @achip_ids, $echip->array_chip_id();
+  }
+
+
+  #need to validate probe_cache here by check keys against probe count ;)
+
+  my $sql = "SELECT probe_id, name from probe where array_chip_id IN (".join(',', @achip_ids).");";
+
+  warn "This will break if we have duplicated names within the Experimental set";
+  
+
+  return $self->db->dbc->db_handle->selectall_hashref($sql, 'name');
+}
+
+
+
+
 =head2 fetch_all_by_probeset
 
   Arg [1]    : string - probeset name
@@ -433,6 +475,8 @@ sub list_dbIDs {
 
 	return $self->_list_dbIDs('probe');
 }
+
+
 
 1;
 

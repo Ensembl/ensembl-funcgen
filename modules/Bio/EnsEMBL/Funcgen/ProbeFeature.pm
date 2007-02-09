@@ -498,6 +498,18 @@ sub get_result_by_Analysis_ExperimentalChips{
 
 #Will this be too slow, can we not do one query across all tables
 
+sub get_result_by_ResultSet{
+    my ($self, $rset) = @_;
+
+    my $results = $rset->adaptor->fetch_results_by_ProbeFeature_ResultSet($self, $rset);
+
+   
+    return $rset->adaptor->_get_best_result($results);
+}
+
+
+
+
 
 1;
 

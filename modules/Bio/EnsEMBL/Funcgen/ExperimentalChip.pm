@@ -287,7 +287,7 @@ sub feature_type {
   my $self = shift;
 
   if(@_){
-    throw("Must pass a valid Bio::EnsEMBL::Funcgen::FeatureType object") if (! $_[0]->isa("Bio::EnsEMBL::FeatureType"));
+    throw("Must pass a valid Bio::EnsEMBL::Funcgen::FeatureType object") if (! $_[0]->isa("Bio::EnsEMBL::Funcgen::FeatureType"));
     $self->{'feature_type'} = shift;
   }
 
@@ -311,7 +311,7 @@ sub cell_type {
   my $self = shift;
 
   if(@_){
-    throw("Must pass a valid Bio::EnsEMBL::Funcgen::CellType object") if (! $_[0]->isa("Bio::EnsEMBL::CellType"));
+    throw("Must pass a valid Bio::EnsEMBL::Funcgen::CellType object") if (! $_[0]->isa("Bio::EnsEMBL::Funcgen::CellType"));
     $self->{'cell_type'} = shift;
   }
 

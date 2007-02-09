@@ -167,29 +167,29 @@ sub fetch_all_by_Slice_arrayname {
 =cut
 
 sub fetch_all_by_Slice_ExperimentalChips {
-	my ($self, $slice, $exp_chips) = @_;
+  my ($self, $slice, $exp_chips) = @_;
 
-	my (%nr);
+  my (%nr);
 
 
-	foreach my $ec(@$exp_chips){
-				
-	  throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
-	    if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
-	  
-	  $nr{$ec->array_chip_id()} = 1;
-	}
-
+  foreach my $ec(@$exp_chips){
+    
+    throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
+      if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
+    
+    $nr{$ec->array_chip_id()} = 1;
+  }
+  
 	#get array_chip_ids from all ExperimentalChips and do a
-	#where op.array_chip_id IN (".(join ", ", @ac_ids)
+  #where op.array_chip_id IN (".(join ", ", @ac_ids)
+  
+  #my @echips = @{$self->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($exp->dbID())};
+  #map $nr{$_->array_chip_id()} = 1, @echips;
 
-	#my @echips = @{$self->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($exp->dbID())};
-	#map $nr{$_->array_chip_id()} = 1, @echips;
-	my $constraint = " p.array_chip_id IN (".join(", ", keys %nr).") AND p.probe_id = pf.probe_id ";
 
-
-	
-	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  my $constraint = " p.array_chip_id IN (".join(", ", keys %nr).") AND p.probe_id = pf.probe_id ";
+    
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
 
@@ -638,6 +638,9 @@ sub list_dbIDs {
 
 sub fetch_results_by_channel_analysis{
 	my ($self, $probe_id, $channel_id, $logic_name) = @_;
+
+	throw("deprecated, use ResultSetAdaptor");
+
 	
 	#Will this always be RAW_VALUE?
 
@@ -684,6 +687,8 @@ sub fetch_results_by_channel_analysis{
 sub fetch_results_by_Probe_Analysis_experimental_chip_ids{
 	my ($self, $probe, $anal, $chip_ids) = @_;
 
+	throw("deprecated, use ResultSetAdaptor");
+
 
 	my $logic_name = $anal->logic_name();
 	my @cs = @$chip_ids;
@@ -722,6 +727,9 @@ sub fetch_results_by_Probe_Analysis_experimental_chip_ids{
 	}
 
 
+	#my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.probe_id ='".$probe-dbID().
+	#"' AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause order by r.score";
+
 	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.probe_id ='".$probe-dbID().
 	  "' AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause order by r.score";
 	
@@ -734,6 +742,8 @@ sub fetch_results_by_Probe_Analysis_experimental_chip_ids{
 
 sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
   my ($self, $slice, $analysis, $exp_chips) = @_;
+
+  throw("depreacated, use ResultSetAdaptor");
 
   #warn("Put in ResultAdaptor");
 
@@ -805,6 +815,7 @@ sub fetch_result_set_by_Slice_Analysis_ExperimentalChips{
   #Slice needs to be genrated from eFG not core DB?
   #we need to make sure seq_region_id for slice corresponds to db
   
+  throw("deprecated, use ResultSetAdaptor");
 
 
   #do an equals check here
@@ -867,6 +878,9 @@ sub fetch_result_set_by_Slice_Analysis_ExperimentalChips{
 	
   return $self->dbc->db_handle->selectall_arrayref($query);
 }
+
+
+
 
 1;
 

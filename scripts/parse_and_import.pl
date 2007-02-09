@@ -202,13 +202,11 @@ pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 #Build and validate all these in Experiment::new? We only need these for importing/analysing???
-$output_dir  = $data_dir."/".uc($vendor)."/".$name;
+$output_dir  = $data_dir."/output/".uc($vendor)."/".$name;
 mkdir $output_dir;#log/debug files fail in Helper without this
 chmod 0755, $output_dir;
 $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
 $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file);
-
-
 
 ### SET UP IMPORTER (FUNCGENDB/DNADB/EXPERIMENT) ###
 

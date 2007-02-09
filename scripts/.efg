@@ -5,10 +5,14 @@ echo "Setting up eFG environment" #and cd'ing to $EFG_SRC"
 #add alias efg='. ~/src/ensembl-efg/.efg' to your .bashrc
 
 # ENV VARS
-export EFG_SRC=~/src/ensembl-functgenomics
-export EFG_SQL="${EFG_SRC}/sql"
+export SRC=~/src
+export EFG_SRC=$SRC/ensembl-functgenomics
+export EFG_SQL=$EFG_SRC/sql
 export EFG_DATA=/lustre/work1/ensembl/nj1/efg
 #should make data dirs here
+
+
+
 
 export PATH=$PATH:$EFG_SRC/scripts
 export PERL5LIB=$EFG_SRC/modules:$PERL5LIB
@@ -16,8 +20,17 @@ export PS1='efg@$PS1HOST>'
 export WRITE_USER="-uensadmin"
 export READ_USER="-uensro"
 export MYSQL_ARGS="-hens-genomics1 -P3306"
+export R_LIBS=${R_LIBS:=$SRC/R-modules}
+export R_PATH=/software/bin/R
+export R_FARM_PATH=/software/R-2.4.0/bin/R
+
+#need to check/define R_LIBS here
 
 #could add PERL5LIB here too, this could be extended to include all config for shipping to users?  in bashrc for now
+
+
+#should check for input and output dirs here and create with a question
+#would need to sed file to set permanently
 
 
 # ALIASES

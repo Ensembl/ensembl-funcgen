@@ -108,20 +108,20 @@ sub new{
     # objects private data and default values
     %attrdata = (
 				 #User defined/built 
-				 name        => undef,
-				 format      => 'Tiled',
-				 vendor      => undef,
-				 group       => undef,
-				 species     => undef,
-				 data_version => undef,
-				 recover     => 0,
-				 location    => undef,
-				 contact     => undef,
-				 data_dir    => $ENV{'EFG_DATA'},#?
+		 name        => undef,
+		 format      => 'Tiled',
+		 vendor      => undef,
+		 group       => undef,
+		 species     => undef,
+		 data_version => undef,
+		 recover     => 0,
+		 location    => undef,
+		 contact     => undef,
+		 data_dir    => $ENV{'EFG_DATA'},#?
 		 exp_date => undef,
 		 
-				 dump_fasta  => 0,
-				 #norm_method => undef,
+		 dump_fasta  => 0,
+		 #norm_method => undef,
 		 description => undef,
 		 #DBDefs, have ability to override here, or restrict to DBDefs.pm?
 		 pass       => undef,
@@ -136,52 +136,55 @@ sub new{
 		 array_set => 0,
 		 array_name => undef,
 		 array_file => undef,
-				 
-
-				 #Need to separate pipeline vars/methods from true Experiment methods?
-				 #Separate Pipeline object(or just control scripts? Handing step/dir validation?
-				 output_dir => undef,
-
-				 #ArrayDefs defined
-				 input_dir  => undef,#Can pass this to over-ride ArrayDefs default?
-				 array_defs => undef,
-				 #import_dir => undef,#parsed native data for import
-				 norm_dir   => undef,
-								 
-
-				 #Data defined
-				 #_group_dbid      => undef,
-				 #_experiment_id   => undef,
-				 #echips          => {},
-				 arrays          => [],
-				 achips          => undef,
-				 channels        => {},#?
-
+		 
+		 
+		 #Need to separate pipeline vars/methods from true Experiment methods?
+		 #Separate Pipeline object(or just control scripts? Handing step/dir validation?
+		 output_dir => undef,
+		 
+		 #ArrayDefs defined
+		 input_dir  => undef,#Can pass this to over-ride ArrayDefs default?
+		 array_defs => undef,
+		 #import_dir => undef,#parsed native data for import
+		 norm_dir   => undef,
+		 
+		 
+		 #Data defined
+		 #_group_dbid      => undef,
+		 #_experiment_id   => undef,
+		 #echips          => {},
+		 arrays          => [],
+		 achips          => undef,
+		 channels        => {},#?
+		 
 		 #Other
 		 db    => undef,#this should really be an ExperimentAdaptor, but it is the db at the moment?
 		 dbname => undef,#to over-ride autogeneration of eFG dbname
-				 #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
-				 reg_config    => (-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef,
-			
-		
-				 #HARDCODED
-				 #Need to handle a lot more user defined info here which may not be caught by the data files
-				 design_type  => "binding_site_identification",#Hard coded MGED type term for now, should have option to enable other array techs?
-				);
-
-
+		 #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
+		 reg_config    => (-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef,
+		 
+		 
+		 #HARDCODED
+		 #Need to handle a lot more user defined info here which may not be caught by the data files
+		 design_type  => "binding_site_identification",#Hard coded MGED type term for now, should have option to enable other array techs?
+		);
+    
+    
     # set each class attribute using passed value or default value
     foreach $attrname (keys %attrdata){
-        ($argname = $attrname) =~ s/^_//; # remove leading underscore
-        $self->{$attrname} = (exists $args{$argname} && defined $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
+      ($argname = $attrname) =~ s/^_//; # remove leading underscore
+      $self->{$attrname} = (exists $args{$argname} && defined $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
     }
 
 
-	
-	#Can some of these be set in ArrayDefs or "Vendor"Defs?
-	#pass?
+    #check for ENV vars?
+    #R_LIBS
+    #R_PATH
+    #R_FARM_PATH
 
-  
+
+    #Can some of these be set in ArrayDefs or "Vendor"Defs?
+    #pass?  
     foreach my $tmp("vendor", "format", "data_version", "species", "host", "user"){
       $self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
     }
@@ -305,7 +308,7 @@ sub init_import{
 
   #this is now done in control script as the log file is created before the dir is :?
   if(! defined $self->get_dir("output")){
-    $self->{'output_dir'} = $self->get_dir("data")."/".$self->vendor()."/".$self->name();
+    $self->{'output_dir'} = $self->get_dir("data")."/output/".$self->vendor()."/".$self->name();
     mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
     chmod 0744, $self->get_dir("output");
   }
@@ -336,7 +339,7 @@ sub init_import{
     $self->log("Using previously stored Experiment:\t".$exp->name);
   }
   elsif((! $self->recovery()) && $exp){
-    throw("Your experiment name is already registered in the database, please choose a different \"name\", this will require renaming you input directory, or specify -recover if you are working with a failed import. Or specify recovery?");
+    throw("Your experiment name is already registered in the database, please choose a different \"name\", this will require renaming you input directory, or specify -recover if you are working with a failed/partial import.");
     #can we skip this and store, and then check in register experiment if it is already stored then throw if not recovery
   }
   else{# (recover && exp) || (recover  && ! exp) 
@@ -419,8 +422,6 @@ sub create_output_dirs{
 }
 
 
-
-## GENERIC GET/SET METHODS
 
 =head2 vendor
   
@@ -1038,7 +1039,7 @@ sub register_experiment{
 =cut
 
 sub import_results{
-  my ($self, $results_dir, @logic_names) = @_;
+  my ($self, $dir, @logic_names) = @_;
 
 
   foreach my $logic_name(@logic_names){
@@ -1054,55 +1055,53 @@ sub import_results{
     
     foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
       
-      if( ! $echip->has_status($status)){#must have some results	
-	
-	if(! $loaded){
+      if( ! $echip->has_status($status)){#must have some results
+
+	if($dir ne "norm"){
 	  
-	  if($results_dir ne "norm"){
-	    
-	    #now done in get_import_ResultSet
-	    #if($self->recovery()){
-	    #  warn("Need to clean results here if recovery");
-	    #}
-	    
-	    if($self->vendor() eq "NIMBLEGEN"){
+	  if($self->vendor() eq "NIMBLEGEN"){
 	      
-	      foreach my $array(@{$self->arrays()}){
+	    #if(! $loaded){
+
+	    #  foreach my $array(@{$self->arrays()}){#load data for all echips
 		
-		foreach my $design_id(@{$array->get_design_ids()}){
-		  my $achip = $array->get_ArrayChip_by_design_id($design_id);
-		  $self->log("Loading results for ".$achip->name());
-		  $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.".$achip->name().".txt");
-		  $self->log("Finishing loading ".$achip->name());
-		}
-	      }
+	    #foreach my $design_id(@{$array->get_design_ids()}){
+	    #  my $achip = $array->get_ArrayChip_by_design_id($design_id);
+	    foreach my $chan(@{$echip->get_Channels()}){
+	      my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
+	      $self->log("Loading $logic_name data for Channel:\t$chan_name");
+	      $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${chan_name}.txt");
+	      $self->log("Finishing loading $logic_name data for Channel:\t${chan_name}");
 	    }
-	    elsif($self->vendor() eq "SANGER"){#this is norm data, but we're importing norm, rather than processing.
-	      warn ("Need to fix the sanger methods so imports as norm, not raw");
-	      #IMPORTED is not correct status for these Echips, well, should have
-	      #IMPORTED?  and IMPORTED_NORM_METHOD
-	      
-	    
-	      $self->log("Loading results for ExperimentalChip:\t".$echip->unique_id());
-	      $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.${logic_name}.".$echip->unique_id().".txt");
-	      $self->log("Finishing loading ".$echip->unique_id());
-	    }
+	    # }
+	    #}
 	  }
-	  else{#norm data
-	    #should add logic_name here
+	  elsif($self->vendor() eq "SANGER"){#this is norm data, but we're importing norm, rather than processing.
+	    warn ("Need to fix the sanger methods so imports as norm, not raw");
+	    #IMPORTED is not correct status for these Echips, well, should have
+	    #IMPORTED?  and IMPORTED_NORM_METHOD
 	    
-	    $self->log("Loading norm results from ".$self->get_dir($results_dir)."/result.${logic_name}.txt");
-	    $self->db->load_table_data("result",  $self->get_dir($results_dir)."/result.${logic_name}.txt");
-	    $self->log("Finished loading norm results");
+	    
+	    $self->log("Loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
+	    $self->db->load_table_data("result",  $self->get_dir('norm')."/result.${logic_name}.".$echip->unique_id().".txt");
+	    $self->log("Finishing loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
 	  }
 	}
+	elsif(! $loaded){#norm data, imports all echip/set data as one
+	  #should add logic_name here
+	  
+	  $self->log("Loading $logic_name norm data from ".$self->get_dir($dir)."/result.${logic_name}.txt");
+	  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${logic_name}.txt");
+	  $self->log("Finished loading $logic_name norm data");
+	}
+      
 	
 	$echip->adaptor->set_status($status, $echip);
 	$loaded = 1;	
       }
     }
 
-    $self->log("Finished loading $logic_name $results_dir results");
+    $self->log("Finished loading $logic_name $dir results");
 
   }
   
@@ -1249,8 +1248,9 @@ sub R_norm{
 
   foreach my $logic_name(@logic_names){
     throw("Not yet implemented TukeyBiweight") if $logic_name eq "TukeyBiweight";
-  
-    my $rset = $self->get_import_ResultSet('experimental_chip', $logic_name);
+    
+    my $norm_anal = $aa->fetch_by_logic_name($logic_name);
+    my $rset = $self->get_import_ResultSet('experimental_chip', $norm_anal);
   
     if(! $rset){
       $self->log("All ExperimentalChips already have status:\tIMPORTED_${logic_name}");
@@ -1260,9 +1260,9 @@ sub R_norm{
       my $norm_anal = $aa->fetch_by_logic_name($logic_name);
       my $R_file = $self->get_dir("norm")."/${logic_name}.R";
       my $outfile = $self->get_dir("norm")."/result.${logic_name}.txt";
-      my $r_cmd = "/software/bin/R --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+      #my $r_cmd = "$ENV{'R_PATH'} --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
       my $bsub = "bsub -R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -o ".
-	$self->get_dir("norm")."/${logic_name}.out /software/R-2.4.0/bin/R CMD BATCH ".$self->get_dir("norm")."/${logic_name}.R";
+	$self->get_dir("norm")."/${logic_name}.out $ENV{'R_FARM_PATH'} CMD BATCH ".$self->get_dir("norm")."/${logic_name}.R";
       $self->backup_file($outfile);#Need to do this as we're appending in the loop
   
       #setup qurey
@@ -1313,8 +1313,8 @@ sub R_norm{
 	  #Need to get total and experimental here and set db_id accordingly
 	
 	  
-	  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} c.chip_channel_id=rs.chip_channel_id and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id}')\n";
-	  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} c.chip_channel_id=rs.chip_channel_id and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id}')\n";
+	  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id}')\n";
+	  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id}')\n";
 	  
 	  
 	
@@ -1400,20 +1400,24 @@ sub get_import_ResultSet{
     throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
   }
 
+  $self->log("Getting import ResultSet for analysis:\t".$anal->logic_name());
+
   my ($rset);
   my $result_adaptor = $self->db->get_ResultSetAdaptor();
   my $logic_name = ($anal->logic_name() eq "RawValue") ? "" : "_".$anal->logic_name();
-
-  #could drop the table name here and use a hash?
-
+  my $status = "IMPORTED${logic_name}";
+  
+  #could drop the table name here and use analysis hash?
   warn("Need to implement chip_sets here");
-
-
+  
   foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
 
+    #warn "echip ".$echip->unique_id();
+    
     #clean chip import and generate rset
-    if( ! $echip->has_status("IMPORTED${logic_name}")){#this translates to each channel have the IMPORTED_RawValue status
-
+    if($echip->has_status($status)){#this translates to each channel have the IMPORTED_RawValue status
+      $self->log("ExperimentalChip(".$echip->unique_id().") already has status:\t".$status);
+    }else{
       if( ! $rset){
 	
 	if($self->recovery()){
@@ -1421,12 +1425,17 @@ sub get_import_ResultSet{
 	  #fetch by anal and experiment_id
 	  #Need to change this to result_set.name!
 	  warn("add chip set handling here");
-	  	  
+	  
 	  my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
 	  throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t$logic_name") if (scalar(@tmp) >1);
 	  $rset = $tmp[0];
-	  throw("Could not find recovery ResultSet with dbID 1 from adaptor $result_adaptor") if ! $rset;
-	}else{
+
+	  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
+	}
+	
+	if(! $rset){
+	  
+	  $self->log("Generating new ResultSet for analysis ".$anal->logic_name());
 	  
 	  $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
 	    (
@@ -1437,35 +1446,43 @@ sub get_import_ResultSet{
 	  $result_adaptor->store($rset);
 	}
       }
-
+      
       if($self->recovery()){
-	warn "Need to clean old results here";
-	my @cc_ids;
-
+	
+	my (@cc_ids);
+	
 	if($table_name eq 'experimental_chip'){
-	  push @cc_ids, $rset->get_chip_channel_id($echip->dbID());
+	  
+	  push @cc_ids, $rset->get_chip_channel_id($echip->dbID()) if($rset->contains($echip));
 	}else{
 	  foreach my $chan(@{$echip->get_Channels()}){
-	    push @cc_ids, $rset->get_chip_channel_id($chan->dbID());
+	    push @cc_ids, $rset->get_chip_channel_id($chan->dbID()) if($rset->contains($chan));
 	  }
 	}
-		
-	$self->db->rollback_results(@cc_ids);	
+
+	$self->db->rollback_results(@cc_ids) if (@cc_ids);	
       }
     }
     
     #check whether it is present in the ResultSet and add if not
-    if($table_name eq 'channel'){
-      
-      foreach my $chan(@{$echip->get_Channels()}){
-	$rset->add_table_id($chan->dbID()) if(! $rset->contains($chan));
+    if($rset){
+      #ids will already be present if not rset i.e. already imported
+      if($table_name eq 'channel'){
+	
+	foreach my $chan(@{$echip->get_Channels()}){
+	  $rset->add_table_id($chan->dbID()) if(! $rset->contains($chan));
+	}
+      }else{#experimental_chip
+	$rset->add_table_id($echip->dbID()) if(! $rset->contains($echip));
       }
-    }else{#experimental_chip
-      $rset->add_table_id($echip->dbID()) if(! $rset->contains($echip));
     }
   }
   
-  $result_adaptor->store_chip_channels($rset) if $rset;
+  if($rset){
+    $result_adaptor->store_chip_channels($rset);
+  }else{
+    $self->log("All ExperimentalChips have status:\t$status");
+  }
   
   #this only returns a result set if there is new data to import
   return $rset;

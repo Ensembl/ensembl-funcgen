@@ -286,15 +286,14 @@ sub set_status{
 
     if(! $status_id){
       warn("Creating NEW status_name entry for $state.  Is this a valid state?");
-      $sql = "INSERT into status_name ('', $state)";
+      $sql = "INSERT into status_name(name) values('$state')";
       $self->db->dbc->do($sql);
       $status_id = $self->get_status_id($state);
     }
 
     my $table = $self->_test_funcgen_table($obj);
     
-    $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES(\"".$obj->dbID()."\", \"$table\", \"$status_id\")";
-    
+    $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".$obj->dbID()."', '$table', '$status_id')";
     $self->db->dbc->do($sql);
   }
 
