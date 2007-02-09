@@ -565,10 +565,7 @@ sub _get_best_result{
   my ($self, $scores) = @_;
 
   my ($score, $mpos);
-
-
   #need to deal with lines with no results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
   #deal with one score fastest
   return  $scores->[0] if (scalar(@$scores) == 1);
 
@@ -587,6 +584,8 @@ sub _get_best_result{
       $score = ($scores->[$mpos] + $scores->[($mpos+1)])/2 ;
     }
   }
+
+  my @tmp = @$scores;
 
   return $score;
 }
@@ -621,10 +620,13 @@ sub fetch_results_by_ProbeFeature_ResultSet{
   
   my $cc_ids = join(',', @{$rset->chip_channel_ids()});
 
-  my $query = "SELECT r.score from result where r.probe_id ='".$pfeature->probe_id().
+  my $query = "SELECT r.score from result r where r.probe_id ='".$pfeature->probe_id().
     "' AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
+
+
+  my @results = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($query)};
   
-  return $self->dbc->db_handle->selectall_arrayref($query);
+  return \@results;
 }
 
 

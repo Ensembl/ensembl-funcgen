@@ -179,15 +179,9 @@ sub fetch_all_by_Slice_ExperimentalChips {
     
     $nr{$ec->array_chip_id()} = 1;
   }
-  
-	#get array_chip_ids from all ExperimentalChips and do a
-  #where op.array_chip_id IN (".(join ", ", @ac_ids)
-  
-  #my @echips = @{$self->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($exp->dbID())};
-  #map $nr{$_->array_chip_id()} = 1, @echips;
-
-
+   
   my $constraint = " p.array_chip_id IN (".join(", ", keys %nr).") AND p.probe_id = pf.probe_id ";
+
     
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }

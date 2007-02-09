@@ -108,7 +108,7 @@ sub new {
 
   #Need to add analysis/cigar_line(remove mismatch?)
 
-  $self->{'_probe_id'} = $pid;
+  $self->{'probe_id'} = $pid;
   $self->probe($probe);
   
   $self->mismatchcount($mismatchcount);
@@ -281,7 +281,7 @@ sub probe {
     my $probe = shift;
 
     #can we not use _probe_id here?
-
+    #why is probe_id not set sometimes?
 
     if ($probe) {
       if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
@@ -295,10 +295,10 @@ sub probe {
     return $self->{'probe'};
   }
 
-sub _probe_id{
+sub probe_id{
   my $self = shift;
 
-  return $self->{'_probe_id'} || $self->probe->dbID();
+  return $self->{'probe_id'} || $self->probe->dbID();
 }
 
 =head2 get_results_by_channel_id
@@ -320,7 +320,7 @@ sub get_results_by_channel_id {
     my $channel_id = shift;
     my $anal_name = shift;
 
-    warn "This method not fully implemented, remove/deprecate?";
+    warn("This method not fully implemented, remove/deprecate?");
 
     #$self->{'results'} ||= {};
     $self->{'results_complete'} ||= 0;
@@ -502,7 +502,6 @@ sub get_result_by_ResultSet{
     my ($self, $rset) = @_;
 
     my $results = $rset->adaptor->fetch_results_by_ProbeFeature_ResultSet($self, $rset);
-
    
     return $rset->adaptor->_get_best_result($results);
 }
