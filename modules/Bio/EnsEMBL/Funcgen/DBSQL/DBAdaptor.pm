@@ -127,7 +127,21 @@ sub rollback_results{
   return;
 }
 
+sub rollback_ArrayChip{
+  my ($self, $ac) =@_;
 
+  throw("Need to pass a valid stored ArrayChip to roll back") if (! ($ac && $ac->isa("Bio::EnsEMBL::Funcgen::ArrayChip") 
+								     && $ac->dbID()));
+
+  #Do in 3 stages to avoid orphaned probe
+  my $sql = "DELETE pf from probe_feature pf, probe p where p.array_chip_id=".$ac->dbID()." and p.probe_id=pf.probe_id";
+  $sql .= "DELETE from probe where array_chip_id=".$ac->dbID();
+
+  $self->dbc->do($sql);
+
+  return;
+
+}
 
 #Only validates if already present
 #add flag to alter table if any inconsistencies found?

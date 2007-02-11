@@ -193,6 +193,8 @@ sub read_array_chip_data{
   $fh = open_file("<", $self->get_def("chip_file"));
   $self->log("Reading chip data");
 
+  warn("We need to change Array/ArrayChip retrieval to ensure that we have IMPORTED status, so avoid having an incomplete arraychip");
+
   while ($line = <$fh>){
     $line =~ s/\r*\n//;#chump
     @data =  split/\t/o, $line;
@@ -738,10 +740,11 @@ sub read_probe_data{
 
 
       if($achip->has_status('IMPORTED')){
-	$self->log("Skipping ArrayAhip (".$achip->design_id().") already fully imported");
+	$self->log("Skipping fully imported ArrayChip:\t".$achip->design_id())l
 	next;
       }elsif($self->recovery()){
-	warn("Need to clean all probe/feature/feature_set from db");
+	$self->log("Rolling back partially imported ArrayChip:\t".$achip->design_id());
+	$self->db->rollback_ArrayChip($achip);
       }
       
       $self->log("Importing ArrayChip:".$achip->design_id());
@@ -815,10 +818,10 @@ sub read_probe_data{
 	#Skip probe if there is a duplicate
 	
 	if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
-	  throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]." implement duplicate logging/cleaning");
+	  throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]." need implement duplicate logging/cleaning");
 	  #need to build duplicate hash to clean elements from hash
 	  # $duplicate_probes{$data[$hpos{'PROBE_ID'}]} = 1;
-	  next;
+	  #next;
 	}
 	
 	#
