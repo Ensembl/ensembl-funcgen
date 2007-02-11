@@ -104,7 +104,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   my ($probe, $mismatchcount, $coord_sys_id, $pid)
-    = rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID', '_PROBE_ID'], @_);
+    = rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID', 'PROBE_ID'], @_);
 
   #Need to add analysis/cigar_line(remove mismatch?)
 
