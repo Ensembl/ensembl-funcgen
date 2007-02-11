@@ -83,6 +83,10 @@ sub set_defs{
 					array_data   => ["array_chip"],
 					probe_data   => ["probe"],
 					results_data => ["results"],
+					sample_key_fields => ['DESIGN_ID', 'DESIGN_NAME', 'CHIP_ID', 'DYE',
+							      'SAMPLE_DESCRIPTION', 'PROMOT_SAMPLE_TYPE'],
+					'ndf_fields'      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
+					pos_fields        => ['CHROMOSOME', 'PROBE_ID', 'POSITION', 'COUNT'],
 					#import_methods  => [],
 					#data paths here?
 													
@@ -196,7 +200,10 @@ sub read_array_chip_data{
     #ORD_ID  CHIP_ID DYE     DESIGN_NAME     DESIGN_ID       SAMPLE_LABEL    SAMPLE_SPECIES  SAMPLE_DESCRIPTION      TISSUE_TREATMENT        PROMOT_SAMPLE_TYPE
 
     if ($. == 1){
-      %hpos = %{$self->set_header_hash(\@data)};
+
+      warn "Need to use NimbleGen defs header feilds here to validate";
+
+      %hpos = %{$self->set_header_hash(\@data, $self->get_def('sample_key_fields'))};
 
       #we need to set the sample description field name, as it can vary :(((
       @data = grep(/SAMPLE_DESCRIPTION/, keys %hpos);
@@ -210,7 +217,7 @@ sub read_array_chip_data{
     #look up alias from registry and match to self->species
     #registry may not be loaded for local installation
     
-    if(! defined $array){
+	if(! defined $array){
       #This is treating each array chip as a separate array, unless arrayset is defined
       #AT present we have no way of differentiating between different array_chips on same array???!!!
       #Need to add functionality afterwards to collate array_chips into single array
@@ -226,7 +233,8 @@ sub read_array_chip_data{
 		);
 
       ($array) = @{$oa_adaptor->store($array)};
-      
+
+
       $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
 							  -ARRAY_ID  => $array->dbID(),
 							  -NAME      => $data[$hpos{'DESIGN_NAME'}],
@@ -525,7 +533,7 @@ sub read_sanger_array_probe_data{
 							 -SLICE         => $self->cache_slice($chr),
 							 -ANALYSIS      => $fanal,
 							 -MISMATCHCOUNT => 0,
-							 -_PROBE_ID     => $self->get_probe_id_by_name($pid),#work around to avoid cacheing probes
+							 -PROBE_ID     => $self->get_probe_id_by_name($pid),#work around to avoid cacheing probes
 							);
 
 	  $of_adaptor->store($of);
@@ -800,7 +808,7 @@ sub read_probe_data{
 	
 	#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
 	if ($. == 1){
-	  %hpos = %{$self->set_header_hash(\@data)};
+	  %hpos = %{$self->set_header_hash(\@data, $self->get_def('pos_fields'))};
 	  next;
 	}
 	
@@ -814,8 +822,8 @@ sub read_probe_data{
 	}
 	
 	#
-	if(! $self->cache_slice($data[$hpos{'SEQ_ID'}])){
-	  push @log, "Skipping probe ".$data[$hpos{'PROBE_ID'}]." with non-standard region ".$data[$hpos{'SEQ_ID'}];
+	if(! $self->cache_slice($data[$hpos{'CHROMOSOME'}])){
+	  push @log, "Skipping probe ".$data[$hpos{'PROBE_ID'}]." with non-standard region ".$data[$hpos{'CHROMOSOME'}];
 	}
 	
 	$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
@@ -861,7 +869,7 @@ sub read_probe_data{
 				#2067_0025_0001  BLOCK1          0       chrX    TTAGTTTAAAATAAACAAAAAGATACTCTCTGGTTATTAAATCAATTTCT      0       52822449        52822449        1       25      experimental    chrXP10404896   10404896        2067    25      1
 				
 	if ($. == 1){	
-	  %hpos = %{$self->set_header_hash(\@data)};
+	  %hpos = %{$self->set_header_hash(\@data, $self->get_def('ndf_fields'))};
 	  next;
 	}
 		  
@@ -1009,7 +1017,7 @@ sub read_probe_data{
 	if($self->{'_dump_fasta'}){			
 	  #filter controls/randoms?  Or would it be sensible to see where they map
 	  #wrap seq here?
-	  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'SEQ_ID'}].
+	  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
 	    "\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
 	}
       }

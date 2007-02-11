@@ -97,6 +97,7 @@ package Bio::EnsEMBL::Funcgen::Helper;
 #put in Utils?
 use Bio::Root::Root;
 use Data::Dumper;
+use Bio::EnsEMBL::Utils::Exception qw (throw);
 #use Devel::Timer;
 use Carp;#? Can't use unless we can get it to redirect
 use File::Basename;
@@ -462,13 +463,22 @@ sub Timer{
 
 
 sub set_header_hash{
-	my ($self, $header_ref) = @_;
+	my ($self, $header_ref, $fields) = @_;
 	
 	my %hpos;
 
 	for my $x(0..$#{$header_ref}){
 		$hpos{${$header_ref}[$x]} = $x;
 	}
+
+	foreach my $field(@$fields){
+	  
+	  if(! exists $hpos{$field}){
+	    throw("Header does not contain mandatory field:\t$field");
+	  }
+
+	}
+
 
 	return \%hpos;
 }
