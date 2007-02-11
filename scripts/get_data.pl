@@ -11,7 +11,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 $| =1;
 
-my ($file, $ofile, $ftype_name, $ctype_name, $pass, $line, $fset_id, %slice_cache, $status);
+my ($file, $ofile, $ftype_name, $ctype_name, $pnames, $pass, $line, $fset_id, %slice_cache, $status);
 my ($fset, $dbhost, $exp_name, $dbname, $cdbname, $help, $pids, $man, @features, $chr, $not_status);
 my $port = 3306;
 my $anal_name = 'Nessie';
@@ -29,6 +29,7 @@ GetOptions (
             "dbname=s"         => \$dbname,
 	    "dbhost=s"         => \$dbhost,
 	    "probe_ids"        => \$pids,
+	    "probe_names"      => \$pnames,
             "cdbname=s"        => \$cdbname,
 	    "analysis_name=s"  => \$anal_name,
 	    "outdir=s"         => \$out_dir,
@@ -52,6 +53,10 @@ throw("Must define your funcgen dbhost -dbhost") if ! $dbhost;
 #throw("Must supply an input file with -file") if ! $file;
 throw("Must supply a password for your fungen db") if ! $pass;
 
+
+if($pnames && $probe_ids){
+  throw("Can only specific probe name or ids");
+}
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 					      -host => "ens-staging",
@@ -122,7 +127,9 @@ sub print_Probe_results{
     
     #this is restrieving results in a feature centric manner, so some may not have results
     if($result){
-      $out_string .= "chr${chr}\t".$pfeature->probe_id(),"\t".$pfeature->start().
+      my $id_name = ($pids) ? $pfeature->probe_id() : $pfeature->probe->get_probename();
+
+      $out_string .= "chr${chr}\t${id_name}\t".$pfeature->start().
 	"\t".$pfeature->end()."\t${result}\n";
     }
 
