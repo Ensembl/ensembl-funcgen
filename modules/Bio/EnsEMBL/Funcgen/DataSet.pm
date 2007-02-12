@@ -126,8 +126,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($ds_id, $fset, $rset)
-    = rearrange(['DBID', 'FEATURE_SET', 'RESULT_SET', 'UPDATE_SUBSETS', 'DISPLAYABLE'], @_);
+  my ($fset, $rset)
+    = rearrange(['FEATURE_SET', 'RESULT_SET'], @_); #, 'UPDATE_SUBSETS', 'DISPLAYABLE'], @_);
 
  
   my @caller = caller();
@@ -169,6 +169,8 @@ sub new {
   #add_featureSet must thro if already defined.
 
   throw("Must specify at least one Result/FeatureSet") if((! $rset) && (! $fset));
+
+  warn "in new got rset $rset";
 
   $self->add_ResultSet($rset) if $rset;
   $self->feature_set($fset)   if $fset;	  
@@ -312,6 +314,10 @@ sub add_ResultSet {
   my ($self, $rset, $displayable) = @_;
 	
 
+
+  warn "Adding resultset";
+
+
   #should we handle displayable here, and propogate to the ResultSet if update_status is set
   #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
   #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
@@ -406,7 +412,7 @@ sub get_ResultSets_by_Analysis {
 
   #could we have >1 rset with the same analysis?
   
-  foreach my $anal_rset(@{$self->{$analysis->dbID()}}){
+  foreach my $anal_rset(@{$self->{'result_sets'}->{$analysis->dbID()}}){
 	  
 	  if(! defined $status){
 		  push @rsets, $anal_rset;
@@ -438,9 +444,6 @@ sub get_ResultSets{
   my @rsets;
 
   foreach my $anal_id(keys %{$self->{'result_sets'}}){
-
-    
-
     
     foreach my $rset(@{$self->{'result_sets'}->{$anal_id}}){
 

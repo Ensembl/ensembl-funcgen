@@ -194,7 +194,7 @@ sub _tables {
 	  [ 'result_set',        'rs' ],
 	  [ 'chip_channel',      'cc' ],
 	  [ 'experimental_chip', 'ec' ],
-	  [ 'channel',           'c'  ],
+	  #[ 'channel',           'c'  ],#This causes the N(no channelrecords) records to be returned when there is no linkable channel.
 
 	  #we can have channel here, but only if we make the link in the default where, otherwise we'll get spurious results
 	  #must also make all the fetch methods use an OR constraint dependent on the table name
@@ -245,7 +245,7 @@ sub _columns {
 sub _default_where_clause {
   my $self = shift;
 	
-  return 'rs.result_set_id = cc.result_set_id AND  c.experimental_chip_id=ec.experimental_chip_id AND ((cc.table_name="experimental_chip" AND cc.table_id = ec.experimental_chip_id) OR (cc.table_name="channel" AND cc.table_id = c.channel_id))';
+  return 'rs.result_set_id = cc.result_set_id AND ((cc.table_name="experimental_chip" AND cc.table_id = ec.experimental_chip_id) OR (cc.table_name="channel" AND cc.table_id = (SELECT channel_id from channel) AND ec.experimental_chip_id=(SELECT experimental_chip_id from channel)))';
 }
 
 =head2 _final_clause

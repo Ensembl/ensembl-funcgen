@@ -1260,9 +1260,10 @@ sub R_norm{
       my $norm_anal = $aa->fetch_by_logic_name($logic_name);
       my $R_file = $self->get_dir("norm")."/${logic_name}.R";
       my $outfile = $self->get_dir("norm")."/result.${logic_name}.txt";
-      #my $r_cmd = "$ENV{'R_PATH'} --no-save < $R_file >".$self->get_dir("norm")."/R.out 2>&1";
+      my $errfile = $self->get_dir("norm")."/${logic_name}.out";
+      #my $r_cmd = "$ENV{'R_PATH'} --no-save < $R_file >$errfile 2>&1";
       my $bsub = "bsub -R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -o ".
-	$self->get_dir("norm")."/${logic_name}.out $ENV{'R_FARM_PATH'} CMD BATCH ".$self->get_dir("norm")."/${logic_name}.R";
+	"$errfile $ENV{'R_FARM_PATH'} CMD BATCH ".$self->get_dir("norm")."/${logic_name}.R";
       $self->backup_file($outfile);#Need to do this as we're appending in the loop
   
       #setup qurey

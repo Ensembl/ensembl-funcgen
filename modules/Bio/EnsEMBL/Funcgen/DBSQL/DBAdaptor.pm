@@ -128,7 +128,7 @@ sub rollback_results{
 }
 
 sub rollback_ArrayChip{
-  my ($self, $ac) =@_;
+  my ($self, $ac) = @_;
 
   throw("Need to pass a valid stored ArrayChip to roll back") if (! ($ac && $ac->isa("Bio::EnsEMBL::Funcgen::ArrayChip") 
 								     && $ac->dbID()));
@@ -479,7 +479,7 @@ sub fetch_status_by_name{
 
 	throw("DBAdaptor::fetch_status_by_name is deprecated");
 
-	throw("Need to specifiy a table and an id to retrieve status") if (! $table || ! $id || ! $state);
+	throw("Need to specify a table and an id to retrieve status") if (! $table || ! $id || ! $state);
 
 	#should we enum the state?
 

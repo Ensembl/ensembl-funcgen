@@ -202,9 +202,6 @@ sub read_array_chip_data{
     #ORD_ID  CHIP_ID DYE     DESIGN_NAME     DESIGN_ID       SAMPLE_LABEL    SAMPLE_SPECIES  SAMPLE_DESCRIPTION      TISSUE_TREATMENT        PROMOT_SAMPLE_TYPE
 
     if ($. == 1){
-
-      warn "Need to use NimbleGen defs header feilds here to validate";
-
       %hpos = %{$self->set_header_hash(\@data, $self->get_def('sample_key_fields'))};
 
       #we need to set the sample description field name, as it can vary :(((
@@ -433,6 +430,7 @@ sub read_sanger_array_probe_data{
     $imported = 1;
     warn("Skipping ArrayChip probe import (".$array->name().") already fully imported");
   }
+  throw("Need to implement ArrayChip rollback");
 
   #need to check whether already imported on specified schema_build
   #check for appropriate file given format in input dir or take path
@@ -740,7 +738,7 @@ sub read_probe_data{
 
 
       if($achip->has_status('IMPORTED')){
-	$self->log("Skipping fully imported ArrayChip:\t".$achip->design_id())l
+	$self->log("Skipping fully imported ArrayChip:\t".$achip->design_id());
 	next;
       }elsif($self->recovery()){
 	$self->log("Rolling back partially imported ArrayChip:\t".$achip->design_id());
@@ -1327,11 +1325,23 @@ sub read_results_data{
 	  #open/slurp input
 	  #$file_name = (scalar(@design_ids) > 1) ? $achip->name() : "All";  
 	  (my $alt_chan_name = $chan_name) =~ s/\_/\_1h\_/;
-	  
-	  foreach my $name($chan_name, $alt_chan_name){
-	    $file = $self->get_def("results_dir")."/".$name."_pair.txt";
-	    last if(-e $file);
+	  my $found = 0;
+
+	  FILE: foreach my $name($chan_name, $alt_chan_name){
+
+	    foreach my $suffix("_pair.txt", ".pair"){
+	      
+	      $file = $self->get_def("results_dir")."/".$name.$suffix;
+
+	      if(-f $file){
+		$found = 1;
+		last FILE;
+	      }
+	    }
 	  }
+
+	  throw("Could not find result file for Channel(${chan_name}) in ".$self->get_def('results_dir')) if ! $found; 
+
 
 	  $fh = open_file("<", $file);	
 	  my @lines = <$fh>;

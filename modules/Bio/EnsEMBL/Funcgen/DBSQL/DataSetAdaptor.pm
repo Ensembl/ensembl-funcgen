@@ -250,6 +250,11 @@ sub _objs_from_sth {
 
       $fset = (defined $fset_id && $fset_id != 0) ? $fset_adaptor->fetch_by_dbID($fset_id) : undef;
 
+      
+      my $tmp = $rset_adaptor->fetch_by_dbID($rset_id);
+
+      warn "creating new data set with rset id $rset_id $tmp";
+
       $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
 						      -DBID        => $dbID,
 						      -FEATURE_SET => $fset,
