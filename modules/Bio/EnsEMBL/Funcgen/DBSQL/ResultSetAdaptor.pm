@@ -547,7 +547,9 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
       #store previous feature with best result from @scores
 		#Do not change arg order, this is an array object!!
       push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-		([$old_start, $old_end,(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
+		([($old_start - $position_mod), 
+		  ($old_end - $position_mod),
+		  (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
 
       $old_start = $start;
       $old_end = $end;
