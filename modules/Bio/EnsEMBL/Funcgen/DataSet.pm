@@ -170,8 +170,6 @@ sub new {
 
   throw("Must specify at least one Result/FeatureSet") if((! $rset) && (! $fset));
 
-  warn "in new got rset $rset";
-
   $self->add_ResultSet($rset) if $rset;
   $self->feature_set($fset)   if $fset;	  
   
@@ -313,11 +311,6 @@ sub feature_set {
 sub add_ResultSet {
   my ($self, $rset, $displayable) = @_;
 	
-
-
-  warn "Adding resultset";
-
-
   #should we handle displayable here, and propogate to the ResultSet if update_status is set
   #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
   #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
