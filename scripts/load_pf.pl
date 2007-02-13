@@ -152,10 +152,10 @@ while ($line = <FILE>){
   push @p_features, $pfeature;
 
 }
-
+my @chrs = keys(%slice_cache);
 $pfa->store(@p_features);
 
-warn("Loaded ".($.)." PredictedFeatures onto chromosomes ".(keys %slice_cache)."\n");
+warn("Loaded ".($.)." PredictedFeatures onto chromosomes @chrs\n");
 
 
 
