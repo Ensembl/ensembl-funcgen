@@ -144,8 +144,7 @@ sub status_to_constraint{
   my @status_ids;
 
   my $sql = "SELECT table_id from status where table_name='$table_name' and status_name_id='$status_id'";
-  
-  
+    
   @status_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
   $constraint = " $syn.${table_name}_id IN (".join(',', @status_ids).")" if @status_ids;
   
@@ -332,8 +331,9 @@ sub get_status_id{
   my $sql = "SELECT status_name_id from status_name where name='$status'";
 
   my $ref = $self->db->dbc->db_handle->selectrow_arrayref($sql);
+
   my ($status_id) = @$ref if $ref;
-  
+
   return $status_id;
 }
 

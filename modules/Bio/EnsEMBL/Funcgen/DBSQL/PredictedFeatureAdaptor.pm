@@ -105,7 +105,7 @@ sub fetch_all_by_Slice_FeatureSet {
   throw('Need type as parameter') if ! $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet");
   my $fs_id = $fset->dbID();
   
-  my $constraint = qq( pf.feature_set_id = fs.feature_set_id );
+  my $constraint = qq( pf.feature_set_id =$fs_id );
 
   #could have individual logic_names for each predicted feature here?
   #$constraint = $self->_logic_name_to_constraint($constraint, $logic_name);

@@ -276,6 +276,10 @@ sub equals {
 
  #this fails if we are using two different versions with the same cs's
   
+
+  #Do we really need to check the schema build?  Don't we just need to check the name and version?
+  #what exactly are we using schema build for?
+
   if($self->{'version'} eq $cs->version() && $self->{'name'} eq $cs->name() && $self->adaptor->db->_get_schema_build($cs->adaptor()) eq $self->schema_build()) {
     return 1;
   }
