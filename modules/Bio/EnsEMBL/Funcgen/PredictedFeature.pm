@@ -216,8 +216,8 @@ sub display_label {
     
     if(! $self->{'display_label'}  && $self->adaptor()){
       $self->{'display_label'} = $self->feature_type->name()." -";
-      $self->{'display_label'} .= " ".$self->cell_type->display_name() if $self->cell_type->display_name();
-      $self->{'display_label'} .= " Enriched Sites";
+      $self->{'display_label'} .= " ".$self->cell_type->name();# if $self->cell_type->display_name();
+      $self->{'display_label'} .= " Enriched Site";
     }
 	
     return $self->{'display_label'};
