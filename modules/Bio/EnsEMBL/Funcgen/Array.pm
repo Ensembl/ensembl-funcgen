@@ -115,12 +115,17 @@ sub new {
     throw("You must use the ArrayAdaptor($stack[0]) to generate Arrays with a dbID i.e. from the DB, as this module accomodates updating which may cause incorrect data if the object is not generated form the DB");
   } 
 
+
+  throw("Must provide a vendor parameter") if ! $vendor;
+  throw("Must provide a name parameter") if ! $name;
+  #any others?
+
   
-  $self->name($name)          if defined $name;
+  $self->name($name);
   $self->format($format)      if defined $format;
   $self->size($size)          if defined $size;
-  $self->species($species)    if defined $species;
-  $self->vendor($vendor)      if defined $vendor;
+  #$self->species($species)    if defined $species;
+  $self->vendor($vendor);
   #$self->array_chips($ac_hash) if defined $ac_hash;
   $self->description($desc)   if defined $desc;
   
@@ -328,6 +333,9 @@ sub species {
   my $self = shift;
   my $species = shift;
   
+  warn "species is deprecated";
+
+
   if ($species) {
     #check for registry_register here?
     #$species = $reg->get_alias($self->species()));

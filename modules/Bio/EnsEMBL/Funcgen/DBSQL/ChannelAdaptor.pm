@@ -153,28 +153,30 @@ sub fetch_all_by_experimental_chip_dbID {
 
 	my ($chan_id, @results);
 
-	throw("Must specify an experiemntal dbID") if(! $ec_dbid);
+    throw("Must specify an experiemntal dbID") if(! $ec_dbid);
 
 
-	my $sth = $self->prepare("
-		SELECT c.channel_id
-		FROM experimental_chip ec, channel c
-		WHERE c.experimental_chip_id = ec.experimental_chip_id
-        AND ec.experimental_chip_id = $ec_dbid
-	");
+    #my $sth = $self->prepare("
+    #SELECT c.channel_id
+    #		FROM experimental_chip ec, channel c
+    #		WHERE c.experimental_chip_id = ec.experimental_chip_id
+    #        AND ec.experimental_chip_id = $ec_dbid
+    #	");
+    
 
+    my $constraint = "c.experimental_chip_id=$ec_dbid";
 
 	#can we do a generic fetch here?
 
 
-	$sth->execute();
+    #$sth->execute();
+    
+    
+    #while ($chan_id = $sth->fetchrow()){
+    #	  push @results, $self->fetch_by_dbID($chan_id);
+    #	      }
 
-
-	while ($chan_id = $sth->fetchrow()){
-		push @results, $self->fetch_by_dbID($chan_id);
-	}
-
-	return \@results;
+    return $self->generic_fetch($constraint);
 }
 
 =head2 fetch_all_by_ExperimentalChip

@@ -299,13 +299,23 @@ sub get_ExperimentalChips{
 
 sub add_ExperimentalChip{
   my ($self, $echip) = @_;
+ 
+
+ throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object") 
+    if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
+ 
+  if(! exists $self->{'experimental_chips'}){
+    $self->get_ExperimentalChips();
+  }
   
 
-  #this should throw if not stored
-  throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object") 
-    if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
+  #do we also need to check we're not overwriting existin chips?
 
-  $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
+  if(exists  $self->{'experimental_chips'}->{$echip->unique_id()}){
+    warn("You cannot add the same ExperimentalChip to an Experiment more than once, check your code");
+  }else{
+    $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
+  }
   
   return;
 }

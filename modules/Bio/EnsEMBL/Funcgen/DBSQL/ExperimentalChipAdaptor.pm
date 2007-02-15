@@ -226,6 +226,9 @@ sub fetch_contigsets_by_experiment_dbID {
 sub fetch_by_unique_and_experiment_id {
   my ($self, $c_uid, $e_dbid) = @_;
     
+
+  
+
   throw("Must provide and unique_id and and experiment_id") if(! $c_uid || ! $e_dbid);
 
   my $sth = $self->prepare("
@@ -242,6 +245,55 @@ sub fetch_by_unique_and_experiment_id {
 	
   return $self->fetch_by_dbID($ec_id) if $ec_id;
 }
+
+
+=head2 fetch_by_unique_id_vendor
+
+  Arg [2]    : string - unique_id
+  Arg [1]    : string - name of array vendor e.g. NIMBLEGEN
+  Example    : my $ec = $ec_a->fetch_by_unique_id_vendor($c_uid, $vendor);
+  Description: Fetches a unique ExperimentalChip for a given unique id and vendor
+  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Exceptions : None
+  Caller     : General
+  Status     : at Risk
+
+=cut
+
+sub fetch_by_unique_id_vendor {
+  my ($self, $c_uid, $vendor) = @_;
+
+  throw("Must provide and unique_id and and vendor") if(! $c_uid || ! $vendor);
+
+  my ($ec_id, $ac_id, @ecids, $avendor);
+
+
+  my $sth = $self->prepare("
+		SELECT ec.experimental_chip_id, ec.array_chip_id
+		FROM experimental_chip ec
+		WHERE ec.unique_id ='$c_uid'
+	");
+  
+
+  $sth->execute();
+  
+  while (($ec_id, $ac_id) = $sth->fetchrow()){
+
+    my $sql = "SELECT a.vendor from array a, array_chip ac where a.array_id=ac.array_id and ac.array_chip_id=$ac_id;";
+    ($avendor) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
+    push @ecids, $ec_id if (uc($avendor) eq uc($vendor));
+  }
+  
+  #This check shouldn't be necessary if this control is illicited on import
+  #no unique key possible so just for safety until import fully tested.
+  if(scalar(@ecids) > 1){
+    throw("Found more than one ExperimentalChip with the same unique_id($c_uid) for $vendor");
+
+  }
+
+  return $self->fetch_by_dbID($ecids[0]) if $ecids[0];
+}
+
 
 
 
@@ -367,7 +419,11 @@ sub store {
     
     if (!( $ec->dbID() && $ec->adaptor() == $self )){
       
-      my $s_ec = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
+      #Some slight jiggery pokery here to get the vendor as the EC does not yet have an adaptor
+      #cache these?
+      my $vendor = $self->db->get_ArrayChipAdaptor->fetch_by_dbID($ec->array_chip_id)->get_Array->vendor();
+      my $s_ec = $self->fetch_by_unique_id_vendor($ec->unique_id(), $vendor);
+
       throw("ExperimentalChip already exists in the database with dbID:".$s_ec->dbID().
 	    "\nTo reuse/update this ExperimentalChip you must retrieve it using the ExperimentalChipAdaptor".
 	    "\nMaybe you want to use the -recover option?") if $s_ec;

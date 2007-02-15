@@ -266,6 +266,21 @@ sub read_array_chip_data{
     
     #Parse and Populate ExperimentalChip/Channels
     if ((! $tmp_uid) || $data[$hpos{'CHIP_ID'}] != $tmp_uid){
+
+      #Test both channels are available, i.e. the SampleKey has two TOTAL channels
+      if($echip){
+
+	for my $type('TOTAL', 'EXPERIMENTAL'){
+
+	  my $test_chan =  $chan_adaptor->fetch_by_type_experimental_chip_id($type, $echip->dbID());
+	  throw("ExperimentalChip(".$echip->unique_id().
+		") does not have a $type channel, please check the SampleKey.txt file") if ! $test_chan;
+
+	}
+      }
+      
+
+
       $tmp_uid = $data[$hpos{'CHIP_ID'}];
 
     
@@ -290,11 +305,11 @@ sub read_array_chip_data{
 	  );
       
 	($echip) = @{$ec_adaptor->store($echip)};	
-  	#$self->experiment->add_ExperimentalChip($echip);
       }
-      
     }
-    
+   
+
+ 
     $channel = $chan_adaptor->fetch_by_type_experimental_chip_id(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
 
     if($channel){

@@ -154,6 +154,28 @@ sub design_id {
 }
 
 
+=head2 get_Array
+
+  Example    : my $array = $array_chip->get_array();
+  Description: Getter for the array attribute
+  Returntype : Bio::EnsEMBL::Funcgen::Array
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_Array {
+  my $self = shift;
+
+  if(! defined $self->{'array'}){
+    $self->{'array'} = $self->adaptor->db->get_ArrayAdaptor()->fetch_by_dbID($self->array_id());
+  }
+
+  return $self->{'array'};
+}
+
+
 
 1;
 

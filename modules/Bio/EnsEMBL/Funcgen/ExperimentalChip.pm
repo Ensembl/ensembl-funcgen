@@ -244,6 +244,8 @@ sub contains_Channel{
     throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::Channel object");
   }
   
+  $self->get_Channels();
+
   my $contains = 0;
 
   $contains = 1 if(exists $self->{'channels'}->{$chan->dbID()});
@@ -374,6 +376,32 @@ sub array_chip_id {
   $self->{'array_chip_id'} = shift if @_; 
   return $self->{'array_chip_id'};
 }
+
+=head2 get_ArrayChip
+
+  Example    : my $array_chip = $exp_chip->get_ArrayChip();
+  Description: Getter for the array_chip attribute
+  Returntype : Bio::EnsEMBL::Funcgen::ArrayChip
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_ArrayChip {
+  my $self = shift;
+
+  if(! defined $self->{'array_chip'}){
+
+    warn "adaptor is ".$self->adaptor();
+
+    $self->{'array_chip'} = $self->adaptor->db->get_ArrayChipAdaptor()->fetch_by_dbID($self->array_chip_id());
+  }
+
+  return $self->{'array_chip'};
+}
+
+
 
 1;
 

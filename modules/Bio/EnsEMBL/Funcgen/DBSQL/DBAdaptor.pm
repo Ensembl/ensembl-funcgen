@@ -133,10 +133,12 @@ sub rollback_ArrayChip{
   throw("Need to pass a valid stored ArrayChip to roll back") if (! ($ac && $ac->isa("Bio::EnsEMBL::Funcgen::ArrayChip") 
 								     && $ac->dbID()));
 
-  #Do in 3 stages to avoid orphaned probe
-  my $sql = "DELETE pf from probe_feature pf, probe p where p.array_chip_id=".$ac->dbID()." and p.probe_id=pf.probe_id";
-  $sql .= "DELETE from probe where array_chip_id=".$ac->dbID();
+  #Do in 2 stages to avoid orphaned probe
+  #do doesn't like multiple statements
+  my $sql = "DELETE pf from probe_feature pf, probe p where p.array_chip_id='".$ac->dbID()."' and p.probe_id=pf.probe_id;";
+  $self->dbc->do($sql);
 
+  $sql = " DELETE from probe where array_chip_id='".$ac->dbID()."';";
   $self->dbc->do($sql);
 
   return;

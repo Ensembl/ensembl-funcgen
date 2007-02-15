@@ -495,10 +495,11 @@ CREATE TABLE `experimental_chip` (
    PRIMARY KEY  (`experimental_chip_id`),
    KEY `experiment_idx` (`experiment_id`),
    KEY `feature_type_idx` (`feature_type_id`),
-   KEY `chip_idx` (`unique_id`)
+   KEY `unique_id_idx` (`unique_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
+-- We can't implement uniqueness of ec(unique_id for a given vendor) via key here
+-- We need to implement this in the API 
 
 -- add cell type key?
 -- composite unique key onchi/exp/arra_chip ids?

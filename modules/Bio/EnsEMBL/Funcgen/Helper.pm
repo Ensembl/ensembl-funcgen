@@ -463,24 +463,22 @@ sub Timer{
 
 
 sub set_header_hash{
-	my ($self, $header_ref, $fields) = @_;
+  my ($self, $header_ref, $fields) = @_;
 	
-	my %hpos;
+  my %hpos;
 
-	for my $x(0..$#{$header_ref}){
-		$hpos{${$header_ref}[$x]} = $x;
-	}
+  for my $x(0..$#{$header_ref}){
+    $hpos{$header_ref->[$x]} = $x;
+  }	
 
-	foreach my $field(@$fields){
+  foreach my $field(@$fields){
 	  
-	  if(! exists $hpos{$field}){
-	    throw("Header does not contain mandatory field:\t$field");
-	  }
-
-	}
-
-
-	return \%hpos;
+    if(! exists $hpos{$field}){
+      throw("Header does not contain mandatory field:\t${field}");
+    }
+  }
+  
+  return \%hpos;
 }
 
 

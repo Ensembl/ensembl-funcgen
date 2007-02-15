@@ -99,7 +99,7 @@ my $reg = "Bio::EnsEMBL::Registry";
 sub new{
     my ($caller, %args) = @_;
 
-    my ($self, %attrdata, $attrname, $argname, $db);
+    my ($self, %attrdata, $attrname, $argname, $db, $farm);
     my $reg = "Bio::EnsEMBL::Registry";
     my $class = ref($caller) || $caller;
     #Create object from parent class
@@ -157,6 +157,7 @@ sub new{
 		 achips          => undef,
 		 channels        => {},#?
 		 
+		 
 		 #Other
 		 db    => undef,#this should really be an ExperimentAdaptor, but it is the db at the moment?
 		 dbname => undef,#to over-ride autogeneration of eFG dbname
@@ -176,6 +177,8 @@ sub new{
       $self->{$attrname} = (exists $args{$argname} && defined $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
     }
 
+
+    $self->farm($farm) if $farm;
 
     #check for ENV vars?
     #R_LIBS
@@ -321,7 +324,7 @@ sub init_import{
   $self->validate_group();
 
 
-
+  warn "Need to check env vars here?";
 	
   #fetch experiment
   #if recovery and ! experiment throw 
@@ -1215,6 +1218,37 @@ sub vsn_norm{
   return $self->R_norm("VSN_GLOG");
 }
 
+
+=head2 farm
+  
+  Arg [1]    : Boolean
+  Example    : $importer->farm(1);
+  Description: Flag to turn farm submission on
+  Returntype : Boolean
+  Exceptions : Throws is argument not a boolean
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+
+sub farm{
+  my ($self, $farm) = @_;
+
+  $self->{'farm'} ||= undef;
+
+  if($farm){
+
+    throw("Argument to farm must be a boolean 1 or 0")  if($farm != 1 || $farm != 0);
+
+    $self->{'farm'} = $farm;
+  }
+
+  return $self->{'farm'};
+
+}
+
+
 =head2 R_norm
   
   Example    : $self->R_norm(@logic_names);
@@ -1262,9 +1296,13 @@ sub R_norm{
       my $job_name = $self->experiment->name()."_${logic_name}";
       my $outfile = $self->get_dir("norm")."/result.${logic_name}.txt";
       my $errfile = $self->get_dir("norm")."/${logic_name}.out";
-      #my $r_cmd = "$ENV{'R_PATH'} --no-save < $R_file >$errfile 2>&1";
-      my $bsub = "bsub -K -J $job_name -R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -q bigmem -o ".
-	"$errfile $ENV{'R_FARM_PATH'} CMD BATCH ".$self->get_dir("norm")."/${logic_name}.R";
+
+      my $cmdline = "$ENV{'R_PATH'} --no-save < $R_file >$errfile 2>&1";
+      my $bsub = "bsub -K -J $job_name ".$ENV{'R_BSUB_OPTIONS'}.
+	" -e $errfile $ENV{'R_FARM_PATH'} CMD BATCH $R_file";#--no-save?
+
+      my $r_cmd = (! $self->farm()) ? $cmdline : $bsub;
+
       $self->backup_file($outfile);#Need to do this as we're appending in the loop
   
       #setup qurey
@@ -1300,6 +1338,7 @@ sub R_norm{
 	  @dbids = ();
 	  
 	  foreach my $chan(@{$echip->get_Channels()}){
+
 	    if($chan->type() eq "EXPERIMENTAL"){
 	      push @dbids, $chan->dbID();
 	    }else{
@@ -1315,8 +1354,8 @@ sub R_norm{
 	  #Need to get total and experimental here and set db_id accordingly
 	
 	  
-	  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id}')\n";
-	  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id}')\n";
+	  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+	  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
 	  
 	  
 	
@@ -1343,7 +1382,7 @@ sub R_norm{
 	
 	  #Now create table structure with glog values(diffs)
 	  #3 sig dec places on scores(doesn't work?!)
-	  $query .= "glog_df<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], format(exprs(vsn_df[,2]) - exprs(vsn_df[,1]), nsmall=3), rep(\"".$cc_id."\", length(c1[\"probe_id\"]))\n";
+	  $query .= "glog_df<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(vsn_df[,2]) - exprs(vsn_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])))\n";
 	  
 	  
 	  #load back into DB
@@ -1353,40 +1392,18 @@ sub R_norm{
 	  #dbWriteTable returns true but does not load any data into table!!!
 	  
 	  $query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
-	
-	  warn("Need to implement R DB import\n");
-	
+		
 	  #tidy up here?? 
 	}
       }
   
-      #or here, specified no save so no data will be dumped
       $query .= "q();";
   
-  
-      #This is giving duplicates for probe_ids 2 & 3 for metric_id =2 i.e. vsn'd data.
-      #duplicates are not present in import file!!!!!!!!!!!!!!!!!!!!
-      
       open(RFILE, ">$R_file") || die("Cannot open $R_file for writing");
       print RFILE $query;
       close(RFILE);
-    
-      
-      #We should really open a pipe to bsub here and execute the R directly using /nfs/farm/R/bin/R-dev
-      #shoudl really directly import from R
-      #but presently checking for non 0 R exit code ? dumping and running mysqlimport
-      
-      #system($r_cmd) == 0 or throw("R normalisation failed with error code $? ($R_file)");
-      system($bsub) == 0 or throw("R $logic_name normalisation failed with error code $? ($R_file)");
-      #can we not retrieve the job id?
-      #we have no way of capturing the error from the failed farm job
-      #grep the out file for the job ir of Exited job with
-
-
-      #now get job id using namebjobs
-
-      warn("Can we load here directly, to avoid having to re-analyse data if it crashes after the first norm?");
-
+ 
+      system($r_cmd) == 0 or throw("R $logic_name normalisation failed with error code $? ($R_file)");
     }
   }
 
