@@ -85,8 +85,9 @@ sub set_defs{
 					results_data => ["results"],
 					sample_key_fields => ['DESIGN_ID', 'DESIGN_NAME', 'CHIP_ID', 'DYE',
 							      'SAMPLE_DESCRIPTION', 'PROMOT_SAMPLE_TYPE'],
-					'ndf_fields'      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
-					pos_fields        => ['CHROMOSOME', 'PROBE_ID', 'POSITION', 'COUNT'],
+					ndf_fields      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
+					pos_fields      => ['CHROMOSOME', 'PROBE_ID', 'POSITION', 'COUNT'],
+					result_fields   => ['PROBE_ID', 'PM'],
 					#import_methods  => [],
 					#data paths here?
 													
@@ -267,14 +268,20 @@ sub read_array_chip_data{
     if ((! $tmp_uid) || $data[$hpos{'CHIP_ID'}] != $tmp_uid){
       $tmp_uid = $data[$hpos{'CHIP_ID'}];
 
+    
+      
+      $echip = $ec_adaptor->fetch_by_unique_id_vendor($data[$hpos{'CHIP_ID'}], 'NIMBLEGEN');
+      
 
-      if($self->recovery()){
-	$echip = $self->experiment->get_ExperimentalChip_by_unique_id($data[$hpos{'CHIP_ID'}]);
-      }
+      if($echip){
 
-      if(! $self->recovery() || ! $echip){
-
-	$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
+	if(! $self->recovery()){
+	  throw("ExperimentalChip(".$echip->unqiue_id().
+		" already exists in the database\nMaybe you want to recover?");
+	}
+      }else{
+      
+   	$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
 	  (
 	   -EXPERIMENT_ID  => $self->experiment->dbID(),
 	   -DESCRIPTION    => $data[$hpos{$sample_desc}],
@@ -283,19 +290,19 @@ sub read_array_chip_data{
 	  );
       
 	($echip) = @{$ec_adaptor->store($echip)};	
+  	#$self->experiment->add_ExperimentalChip($echip);
       }
-
-      $self->experiment->add_ExperimentalChip($echip);
       
     }
     
-  
+    $channel = $chan_adaptor->fetch_by_type_experimental_chip_id(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
 
-    if($self->recovery()){
-      $channel = $chan_adaptor->fetch_by_type_experimental_chip_id(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
-    }
-
-    if(! $self->recovery() || ! $channel){
+    if($channel){
+      if(! $self->recovery()){
+	throw("Channel(".$echip->unqiue_id().":".uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]).
+	      " already exists in the database\nMaybe you want to recover?");
+	}
+    }else{
       #Handles single/mutli
       $channel =  Bio::EnsEMBL::Funcgen::Channel->new
 	(
@@ -309,13 +316,8 @@ sub read_array_chip_data{
       #would never happen on one chip?  May happen between chips in one experiment
 
       ($channel) = @{$chan_adaptor->store($channel)};
-    }
-
-
-    #do we still need this if we can retrieve the channels frm the echips?
-    #$self->set_channel($data[$hpos{'CHIP_ID'}], $channel);
-    $echip->add_Channel($channel) if (! $echip->contains_Channel($channel));
-    
+      #$echip->add_Channel($channel);
+    }    
   }
   
   #Set the array now we have stored all details
@@ -584,6 +586,7 @@ sub read_sanger_result_data{
   my ($ratio, $pid, %chip_files);
   my $of_adaptor = $self->db->get_ProbeFeatureAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
+  my $chan_adaptor = $self->db->get_ChannelAdaptor();
   my $analysis = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("SangerPCR");
   my $result_adaptor = $self->db->get_ResultSetAdaptor();
   #this is done to avoid having to self->array_name in loop, will make multiple array loop easier 
@@ -606,13 +609,13 @@ sub read_sanger_result_data{
     $chip_files{$chip_uid} = $file;
     
 
-    $echip = $self->experiment->get_ExperimentalChip_by_unique_id($chip_uid);
+    $echip = $self->ec_adaptor->fetch_by_unique_id_vendor($chip_uid, 'SANGER');
 
     #this should throw if not recovery
     #Nee to check Nimbelgen methods
 
-    if($echip){#
-      
+    if($echip){
+
       if(! $self->recovery()){
 	throw("ExperimentalChip(".$echip->unqiue_id().") already exists in the database\nMaybe you want to recover?");
       }
@@ -624,11 +627,34 @@ sub read_sanger_result_data{
 	 -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($array->name())->dbID(),
 	 -UNIQUE_ID      => $chip_uid,
 	);
-      
+          
       ($echip) = @{$ec_adaptor->store($echip)};	
     }
+
+   
+    #sub this passing the echip?
+    foreach my $type('DUMMY_TOTAL', 'DUMMY_EXPERIMENTAL'){
+
+      my $channel = $chan_adaptor->fetch_by_type_experimental_chip_id($type, $echip->dbID());
+      
+      if($channel){
+	if(! $self->recovery()){
+	  throw("Channel(".$echip->unique_id().":$type) already exists in the database\nMaybe you want to recover?");
+	}
+      }else{
+
+	$channel =  Bio::EnsEMBL::Funcgen::Channel->new
+	(
+	 -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
+	 -TYPE                 => $type,
+	);
+	
+	($channel) = @{$chan_adaptor->store($channel)};
+      }
+    }
     
-    $self->experiment->add_ExperimentalChip($echip);
+    #$self->experiment->add_ExperimentalChip($echip);#do we really need this?
+    #this is only required if we start adding chips before we have retrieved any from the DB
   }
 
 
@@ -804,7 +830,7 @@ sub read_probe_data{
       
       #don't % = map ! Takes a lot longer than a while ;)
       while($line = <$fh>){
-	#$line =~ s/\r*\n//;#Not using last element
+	$line =~ s/\r*\n//o;#Not using last element
 	@data =  split/\t/o, $line;
 	
 	#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
@@ -1268,7 +1294,7 @@ sub read_results_data{
   #i.e. select the last entry based on the expected table id.
   
   $self->log("Parsing ".$self->vendor()." results");
-  my (@header, @data, @design_ids);#%channel_idx, %cc_id
+  my (@header, @data, @design_ids, %hpos);#%channel_idx, %cc_id
   my ($fh, $pid, $line, $file);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
   my $result_set = $self->get_import_ResultSet('channel', $anal);
@@ -1329,7 +1355,7 @@ sub read_results_data{
 
 	  FILE: foreach my $name($chan_name, $alt_chan_name){
 
-	    foreach my $suffix("_pair.txt", ".pair"){
+	    foreach my $suffix("_pair.txt", ".pair", ".txt"){
 	      
 	      $file = $self->get_def("results_dir")."/".$name.$suffix;
 
@@ -1358,23 +1384,26 @@ sub read_results_data{
 	    next if $line =~ /RANDOM/;
 
 	    $line =~ s/\r*\n//o;
+	    @data = split/\t/o, $line;
 	  
 	    ###PROCESS HEADER
 	    if ($line =~ /PROBE_ID/o){
 	      
 	      #GENE_EXPR_OPTION	SEQ_ID	PROBE_ID	POSITION	43827_532	43827_635	43837_532	43837_635	46411_532	46411_635	46420_532	46420_635	47505_532	47505_635	47525_532	47525_635
-	      @header = split/\t/o, $line;
+	  
 	      
 	      
 	      #find probe column
-	      for my $i(0..$#header){
+	      #for my $i(0..$#header){
 		
-		if($header[$i] eq "PROBE_ID"){
-		  $probe_elem = $i;
-		  #next;
-		}elsif($header[$i] eq "PM"){#found score field
-		  $score_elem = $i;
-		}	    
+	      %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
+
+		#if($header[$i] eq "PROBE_ID"){
+		#  $probe_elem = $i;
+		#  #next;
+		#}elsif($header[$i] eq "PM"){#found score field
+		#  $score_elem = $i;
+		#}	    
 		
 		#Populate channel idx for directly accessing unstored channel results
 		#foreach my $field(keys %channel_idx){
@@ -1384,7 +1413,7 @@ sub read_results_data{
 		#	  $channel_idx{$field} = $i;
 		#	}
 		#}
-	      }
+	      #}
 	      
 	      ##make tmp hash with remaining(other achip) channel fields
 	      #foreach my $field(keys %channel_idx){
@@ -1402,23 +1431,16 @@ sub read_results_data{
 	    }
 	    
 	    ###PROCESS DATA
-	    @data = split/\t/o, $line;
-	    
 	    #foreach my $field(@chan_fields){
 	 
 
 	    #Is this string concat causing the slow down, would it befaster to use an array and print a join?
  	    
-	    if($pid = $self->get_probe_id_by_name($data[$probe_elem])){
+	    if($pid = $self->get_probe_id_by_name($data[$hpos{'PROBE_ID'}])){
 	       $cnt ++;
-	       
-	       #my $tmp= "\t".$pid."\t".
-	       #	 $data[$score_elem]."\t${cc_id}\n";
-	       #       warn $tmp;
-
-	      $r_string .= "\t${pid}\t".$data[$score_elem]."\t${cc_id}\n";
-	    }else{
-	      warn "Found unfiltered non-experimental probe in input $data[$probe_elem]";
+	       $r_string .= "\t${pid}\t".$data[$hpos{'PM'}]."\t${cc_id}\n";
+	     }else{
+	      warn "Found unfiltered non-experimental probe in input $data[$hpos{'PROBE_ID'}]";
 	    }
 	  
 	  

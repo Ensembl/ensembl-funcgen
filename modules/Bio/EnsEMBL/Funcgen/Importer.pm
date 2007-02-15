@@ -1259,10 +1259,11 @@ sub R_norm{
       my @dbids;
       my $norm_anal = $aa->fetch_by_logic_name($logic_name);
       my $R_file = $self->get_dir("norm")."/${logic_name}.R";
+      my $job_name = $self->experiment->name()."_${logic_name}";
       my $outfile = $self->get_dir("norm")."/result.${logic_name}.txt";
       my $errfile = $self->get_dir("norm")."/${logic_name}.out";
       #my $r_cmd = "$ENV{'R_PATH'} --no-save < $R_file >$errfile 2>&1";
-      my $bsub = "bsub -R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -o ".
+      my $bsub = "bsub -K -J $job_name -R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -q bigmem -o ".
 	"$errfile $ENV{'R_FARM_PATH'} CMD BATCH ".$self->get_dir("norm")."/${logic_name}.R";
       $self->backup_file($outfile);#Need to do this as we're appending in the loop
   
@@ -1379,7 +1380,10 @@ sub R_norm{
       system($bsub) == 0 or throw("R $logic_name normalisation failed with error code $? ($R_file)");
       #can we not retrieve the job id?
       #we have no way of capturing the error from the failed farm job
-      #grep the out file for the job ir of Exited job with 
+      #grep the out file for the job ir of Exited job with
+
+
+      #now get job id using namebjobs
 
       warn("Can we load here directly, to avoid having to re-analyse data if it crashes after the first norm?");
 
