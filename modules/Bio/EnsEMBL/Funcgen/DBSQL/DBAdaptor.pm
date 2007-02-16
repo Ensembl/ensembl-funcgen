@@ -122,13 +122,16 @@ sub rollback_results{
 
   if($?){
     throw("Results rollback failed for cc_ids:\t@cc_ids\nError:\t$?");
+  }else{
+    warn "Need to remove imported status from Echips/channels here";
   }
+
 
   return;
 }
 
 sub rollback_ArrayChip{
-  my ($self, $ac) = @_;
+  my ($self, $ac, $cs) = @_;
 
   throw("Need to pass a valid stored ArrayChip to roll back") if (! ($ac && $ac->isa("Bio::EnsEMBL::Funcgen::ArrayChip") 
 								     && $ac->dbID()));
@@ -140,6 +143,15 @@ sub rollback_ArrayChip{
 
   $sql = " DELETE from probe where array_chip_id='".$ac->dbID()."';";
   $self->dbc->do($sql);
+
+ if($?){
+    throw("ArrayChip(".$ac->name().")\nError:\t$?");
+  }else{
+    warn "need to remove imported status for ArrayChip here";
+
+  }
+  
+
 
   return;
 

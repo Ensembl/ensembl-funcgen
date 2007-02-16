@@ -438,18 +438,31 @@ sub read_sanger_array_probe_data{
   #This fails if we're pointing to an old DB during the release cycle.  Will be fine if we manage to cs mapping dynamically
 
 
+  if($array_chip->has_status('IMPORTED')){
+    $imported = 1;
+    warn("Skipping ArrayChip probe import (".$array_chip->name().") already fully imported");
+  }elsif($self->recovery()){
+    $self->log("Rolling back partially imported ArrayChip:\t".$array_chip->name());
+    $self->db->rollback_ArrayChip($array_chip);
+  }
+
+
   if($array_chip->has_status('IMPORTED_CS_'.$fg_cs->dbID())){
+    $imported = 1;
+    warn("Skipping ArrayChip feature import (".$array_chip->name().") already fully imported for ".$self->data_version());
+  }elsif($self->recovery()){
 
-    $fimported = 1;
-    $imported = 1;
-    warn("Skipping ArrayChip feature import (".$array->name().") already fully imported for ".$self->data_version());
-  }
-  elsif($array_chip->has_status('IMPORTED')){
-    $imported = 1;
-    warn("Skipping ArrayChip probe import (".$array->name().") already fully imported");
   }
 
-  warn("Need to implement ArrayChip rollback");
+
+  if($array_chip->has_status('IMPORTED')){
+    $imported = 1;
+    warn("Skipping ArrayChip probe import (".$array_chip->name().") already fully imported");
+  }elsif($self->recovery()){
+    $self->log("Rolling back partially imported ArrayChip:\t".$array_chip->name());
+    $self->db->rollback_ArrayChip($array_chip);
+  }
+
 
   #need to check whether already imported on specified schema_build
   #check for appropriate file given format in input dir or take path
@@ -646,7 +659,7 @@ sub read_sanger_result_data{
 	);
           
       ($echip) = @{$ec_adaptor->store($echip)};	
-      $self->experiment->add_ExperimentalChip($echip); #if we need a contains method in  here 
+      $self->experiment->add_ExperimentalChip($echip); #if we need a contains method in  here , always add!!
     }
 
    
@@ -670,9 +683,6 @@ sub read_sanger_result_data{
 	($channel) = @{$chan_adaptor->store($channel)};
       }
     }
-    
-    #$self->experiment->add_ExperimentalChip($echip);#do we really need this?
-    #this is only required if we start adding chips before we have retrieved any from the DB
   }
 
 
@@ -702,11 +712,10 @@ sub read_sanger_result_data{
 	  ($ratio, $pid) = (split/\t/, $line)[3..4];
 	  $pid =~ s/.*://o;
 
-	  $ratio = 'NULL' if $ratio eq 'NA';
+	  $ratio = 'NULL' if $ratio eq 'NA';#NULL is still useful info to store in result
 
 	  
 	  #this is throwing away the encode region which could be used for the probeset/family?	
-	  #NA ratio imports as 0
 	  $r_string .= "\t".$self->get_probe_id_by_name($pid)."\t${ratio}\t${cc_id}\n";
 	}
 	
