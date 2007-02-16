@@ -616,11 +616,13 @@ sub read_sanger_result_data{
   my $list = "ls ".$self->input_dir()."/[0-9]*-[0-9]*\.all\.*";
   
   foreach $file(`$list`){
+    chomp $file;
+
     warn "Found SANGER results file:\t$file";
     $self->log("Found SANGER results file:\t$file");
 
     ($chip_uid = $file) =~ s/.*\///;
-    $chip_uid =~ s/\.all.*\n//;
+    $chip_uid =~ s/\.all.*//;
     $chip_files{$chip_uid} = $file;
     
 

@@ -1436,14 +1436,12 @@ sub get_import_ResultSet{
   
   foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
 
-    warn "echip ".$echip->unique_id();
-    
     #clean chip import and generate rset
     if($echip->has_status($status)){#this translates to each channel have the IMPORTED_RawValue status
       $self->log("ExperimentalChip(".$echip->unique_id().") already has status:\t".$status);
     }else{
 
-      warn "Found ExperiemntalChip(".$echip->unique_id().") without status $status";
+      warn "Found ExperimentalChip(".$echip->unique_id().") without status $status";
 
       if( ! $rset){
 	
