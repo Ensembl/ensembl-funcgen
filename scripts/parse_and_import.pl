@@ -133,7 +133,7 @@ use strict;
 
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
-my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $exp_date);
+my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -142,7 +142,6 @@ my ($import_dir);
 my $data_dir = $ENV{'EFG_DATA'};
 my $interactive = 1;
 my $format = "tiled";
-my $vendor = "nimblegen";
 my $user = "ensadmin";
 my $host = 'localhost';
 my $port = '3306';
@@ -203,6 +202,9 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 #Build and validate all these in Experiment::new? We only need these for importing/analysing???
 $output_dir  = $data_dir."/output/".uc($vendor)."/".$name;
+
+warn "making out dir $output_dir";
+
 mkdir $output_dir;#log/debug files fail in Helper without this
 chmod 0755, $output_dir;
 $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
