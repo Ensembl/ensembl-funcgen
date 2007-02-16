@@ -123,6 +123,7 @@ use Getopt::Long;
 #use Carp;#For dev only? cluck not exported by default Remove this and implement in Helper
 use Pod::Usage;
 #POSIX? File stuff
+use File::Path;
 use Bio::EnsEMBL::Funcgen::Importer;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Registry;
@@ -203,9 +204,10 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 #Build and validate all these in Experiment::new? We only need these for importing/analysing???
 $output_dir  = $data_dir."/output/".uc($vendor)."/".$name;
 
-warn "making out dir $output_dir";
+#mkpath $output_dir;#log/debug files fail in Helper without this
+system("mkdir -p $output_dir -m 0755");
 
-mkdir $output_dir;#log/debug files fail in Helper without this
+
 chmod 0755, $output_dir;
 $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
 $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file);
