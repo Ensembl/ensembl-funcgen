@@ -712,7 +712,7 @@ sub read_sanger_result_data{
 	  ($ratio, $pid) = (split/\t/, $line)[3..4];
 	  $pid =~ s/.*://o;
 
-	  $ratio = 'NULL' if $ratio eq 'NA';#NULL is still useful info to store in result
+	  $ratio = '\N' if $ratio eq 'NA';#NULL is still useful info to store in result
 
 	  
 	  #this is throwing away the encode region which could be used for the probeset/family?	
