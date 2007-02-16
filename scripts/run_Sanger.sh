@@ -2,6 +2,13 @@
 
 #. ~/src/ensembl-efg/scripts/.efg
 
+ARGS=$@
+
+PASS=$1
+
+ARGS=$(echo $ARGS | sed "s/$PASS //")
+
+
 $EFG_SRC/scripts/parse_and_import.pl\
 	-name  H3K4me1-HeLa\
 	-format tiled\
@@ -19,6 +26,6 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-exp_date 2006-11-02\
 	-verbose 2\
 	-pass $1\
-	-recover
+	-recover $ARGS
 
 
