@@ -443,24 +443,25 @@ sub read_sanger_array_probe_data{
     warn("Skipping ArrayChip probe import (".$array_chip->name().") already fully imported");
   }elsif($self->recovery()){
     $self->log("Rolling back partially imported ArrayChip:\t".$array_chip->name());
-    $self->db->rollback_ArrayChip($array_chip);
+    $self->db->rollback_ArrayChip($array_chip);#This should really remove all CS imports to!
   }
 
+
+  #should never really have CS imports if not IMPORTED
+  #there is however the potential to trash a lot of data if we were to remove the CS importes by mistake
+  #do we need to check whether any other sets are using the data?
+  #we have to check for result using relevant cs_id and cc_id
+  #no removal of probes is the key thing here as nothing is dependent on the feature_ids
+  #get all result sets by array chip?  or get all ExperimentalChips by array chip
+  #would have to be result set as we would find our own ecs.  May find our own rset
+  
+  
 
   if($array_chip->has_status('IMPORTED_CS_'.$fg_cs->dbID())){
-    $imported = 1;
+    $fimported = 1;
     warn("Skipping ArrayChip feature import (".$array_chip->name().") already fully imported for ".$self->data_version());
   }elsif($self->recovery()){
-
-  }
-
-
-  if($array_chip->has_status('IMPORTED')){
-    $imported = 1;
-    warn("Skipping ArrayChip probe import (".$array_chip->name().") already fully imported");
-  }elsif($self->recovery()){
-    $self->log("Rolling back partially imported ArrayChip:\t".$array_chip->name());
-    $self->db->rollback_ArrayChip($array_chip);
+    
   }
 
 
@@ -471,13 +472,15 @@ sub read_sanger_array_probe_data{
 
     if(! $array_file){
 
-      throw("No input_dir defined, if you are running in a non Experiment context please use -array_file") if(! defined $self->get_dir('input'));
+      if(! defined $self->get_dir('input')){
+	throw("No input_dir defined, if you are running in a non Experiment context please use -array_file");
+      }
       
       #hacky ..do better?
       for my $suffix("gff", "adf"){
 	$cmd = $self->get_dir('input')."/".$self->{'array_name'}."*".$suffix;
 	@list = `ls $cmd`;
-      
+	
 	if((scalar(@list) == 1) && 
 	   ($list[0] !~ /No such file or directory/o)){###this is only printed to STDERR?
 	  
@@ -488,11 +491,11 @@ sub read_sanger_array_probe_data{
 	  }
 	}
       }
-
+      
       throw("Cannot find array file. Specify one with -array_file") if (! defined $array_file);
     }
     
-
+    
     if($array_file =~ /gff/io){
       $array_file_format = "GFF";
     }elsif($array_file =~ /adf/io){
@@ -517,59 +520,59 @@ sub read_sanger_array_probe_data{
       #($chr, $start, $end, $ratio, $pid) = split/\t/o, $line;
       ($chr, undef, undef, $start, $end, undef, $strand, undef, $pid) = split/\t|\;/o, $line;
       $pid =~ s/reporter_id=//o;
+      $chr  =~ s/chr//;
+      $strand = ($strand eq "+") ? 0 : 1;
+
+      #Hack!!!!!!  This is still maintaining the probe entry (and result?)
+      if(!  $self->cache_slice($chr)){
+	warn("Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
+	next;
+      }
+
 
       #need to parse dependant on file format 
       #also need to account for duplicate probes on grid
       
-      if(! $imported){
-	#when we utilise array coords, we need to look up probe cache and store again with new coords
-	#we're currently storing duplicates i.e. different ids with for same probe
-	#when we should be storing two records for the same probe/id
-	#the criteria for this will be different for each vendor, may have to check container etc for NimbleGen
+      if(! $self->get_probe_id_by_name($pid)){
 
-	if(! $self->get_probe_id_by_name($pid)){
+
+	if(! $imported){
+
+	  #when we utilise array coords, we need to look up probe cache and store again with new coords
+	  #we're currently storing duplicates i.e. different ids with for same probe
+	  #when we should be storing two records for the same probe/id
+	  #the criteria for this will be different for each vendor, may have to check container etc for NimbleGen
+	  
 	  #$length = $start - $end;
 	  #warn "length is $length";
-
+	  
 	  $op = Bio::EnsEMBL::Funcgen::Probe->new(
-						       -NAME          => $pid,
+						  -NAME          => $pid,
 						       -LENGTH        => ($end - $start),
 						       -ARRAY         => $array,
-						       -ARRAY_CHIP_ID => $array->get_ArrayChip_by_design_id($array->name())->dbID(),
+						  -ARRAY_CHIP_ID => $array->get_ArrayChip_by_design_id($array->name())->dbID(),
 						       -CLASS         => 'EXPERIMENTAL',
-						      );
+						 );
 	  ($op) = @{$op_adaptor->store($op)};
 	  $self->cache_name_id($op->get_probename(), $op->dbID);
-
-       	  #build slice hash cache
-	  $chr  =~ s/chr//;
-	  $strand = ($strand eq "+") ? 0 : 1;
-
-	  $self->cache_slice($chr);
-
 	  
-	  #Hack!!!!!!  This is still maintaining the probe entry (and result?)
-	  if(!  $self->cache_slice($chr)){
-	    warn("Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
-	    next;
-	  }
-	  
-	
-	  $of = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
-							 -START         => $start,
-							 -END           => $end,
-							 -STRAND        => $strand,
-							 -SLICE         => $self->cache_slice($chr),
-							 -ANALYSIS      => $fanal,
-							 -MISMATCHCOUNT => 0,
-							 -PROBE_ID     => $self->get_probe_id_by_name($pid),#work around to avoid cacheing probes
-							);
-
-	  $of_adaptor->store($of);
-
-	}else{
-	  #warn "Need to accomdate duplicate probes here";¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡!!!!!!!
 	}
+      
+
+	$of = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
+						       -START         => $start,
+						       -END           => $end,
+						       -STRAND        => $strand,
+						       -SLICE         => $self->cache_slice($chr),
+						       -ANALYSIS      => $fanal,
+						       -MISMATCHCOUNT => 0,
+						       -PROBE_ID     => $self->get_probe_id_by_name($pid),#work around to avoid cacheing probes
+						      );
+	
+	$of_adaptor->store($of);
+	
+      }else{
+	warn "Need to accomdate duplicate probes here $pid";
       }
     }
     $array_chip->adaptor->set_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip);
