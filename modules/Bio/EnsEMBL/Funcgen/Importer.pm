@@ -136,6 +136,7 @@ sub new{
 		 array_set => 0,
 		 array_name => undef,
 		 array_file => undef,
+		 result_files => undef,
 		 
 		 
 		 #Need to separate pipeline vars/methods from true Experiment methods?
@@ -179,7 +180,7 @@ sub new{
 
 
     $self->farm($farm) if $farm;
-
+  
     #check for ENV vars?
     #R_LIBS
     #R_PATH
@@ -563,6 +564,27 @@ sub name{
   $self->{'name'} = shift if(@_);
   return $self->{'name'};
 }
+
+=head2 result_files
+  
+  Example    : $imp->result_files(\@files);
+  Description: Getter/Setter for the result file paths
+  Arg [1]    : Listref of file paths
+  Returntype : Listref
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+
+sub result_files{
+  my ($self) = shift;	
+  $self->{'result_files'} = shift if(@_);
+  return $self->{'result_files'};
+}
+
+
 
 
 =head2 verbose

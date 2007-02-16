@@ -195,6 +195,12 @@ GetOptions (
 	   );
 
 
+my @result_files = @ARGV;
+
+throw("Nimblegen import does not support cmdline defined result files") if (@result_files && uc($vendor) eq "NIMBELGEN");
+
+warn "Got files @result_files";
+
 #Need to add (primary) design_type and description, or add to defs file?
 
 
@@ -240,6 +246,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       verbose     => $verbose,
 					       input_dir   => $input_dir,
 					       exp_date    => $exp_date,
+					       result_files => \@result_files,
 					       #Exp does not build input dir, but could
 					       #This allows input dir to be somewhere 
 					       #other than efg dir structure

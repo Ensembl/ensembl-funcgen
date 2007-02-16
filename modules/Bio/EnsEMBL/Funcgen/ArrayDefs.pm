@@ -443,7 +443,7 @@ sub read_sanger_array_probe_data{
     warn("Skipping ArrayChip probe import (".$array_chip->name().") already fully imported");
   }elsif($self->recovery()){
     $self->log("Rolling back partially imported ArrayChip:\t".$array_chip->name());
-    $self->db->rollback_ArrayChip($array_chip);#This should really remove all CS imports to!
+    $self->db->rollback_ArrayChip($array_chip);#This should really remove all CS imports too?
   }
 
 
@@ -461,7 +461,8 @@ sub read_sanger_array_probe_data{
     $fimported = 1;
     warn("Skipping ArrayChip feature import (".$array_chip->name().") already fully imported for ".$self->data_version());
   }elsif($self->recovery()){
-    
+    $self->log("Rolling back partially imported ArrayChip features:\t".$array_chip->name());
+    $self->db->rollback_ArrayChip_features($array_chip, $fg_cs);
   }
 
 
@@ -548,10 +549,10 @@ sub read_sanger_array_probe_data{
 	  
 	  $op = Bio::EnsEMBL::Funcgen::Probe->new(
 						  -NAME          => $pid,
-						       -LENGTH        => ($end - $start),
-						       -ARRAY         => $array,
+						  -LENGTH        => ($end - $start),
+						  -ARRAY         => $array,
 						  -ARRAY_CHIP_ID => $array->get_ArrayChip_by_design_id($array->name())->dbID(),
-						       -CLASS         => 'EXPERIMENTAL',
+						  -CLASS         => 'EXPERIMENTAL',
 						 );
 	  ($op) = @{$op_adaptor->store($op)};
 	  $self->cache_name_id($op->get_probename(), $op->dbID);
@@ -572,7 +573,8 @@ sub read_sanger_array_probe_data{
 	$of_adaptor->store($of);
 	
       }else{
-	warn "Need to accomdate duplicate probes here $pid";
+	#warn "Need to accomdate duplicate probes here $pid";　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+	#generate probe and add an x y position and store coordindates
       }
     }
     $array_chip->adaptor->set_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip);
@@ -584,7 +586,6 @@ sub read_sanger_array_probe_data{
   if(! $imported){
     $array_chip->adaptor->set_status('IMPORTED', $array_chip);
     $self->log("ArrayChip:\t".$array_chip->design_id()." has been IMPORTED");
-    $imported = 1;
   }
   
   $self->log("Finished parsing ".$self->vendor()." array/probe data (".localtime().")");
@@ -629,16 +630,22 @@ sub read_sanger_result_data{
   #Need to add functionality afterwards to collate array_chips into single array
 
   #First add the echips to the Experiment
-  my $list = "ls ".$self->input_dir().'/[0-9]*-[0-9]*\.all\.*';
   
-  foreach $file(`$list`){
+  if(! $self->result_files()){
+    my $list = "ls ".$self->input_dir().'/[0-9]*-[0-9]*\.all\.*';
+    my @rfiles = `$list`;
+    $self->result_files(\@rfiles);
+  }
+
+  
+  foreach $file(@{$self->result_files()}){
     chomp $file;
 
     warn "Found SANGER results file:\t$file";
     $self->log("Found SANGER results file:\t$file");
 
     ($chip_uid = $file) =~ s/.*\///;
-    $chip_uid =~ s/\.all.*//;
+    $chip_uid =~ s/\..*//;
     $chip_files{$chip_uid} = $file;
     
 
