@@ -271,9 +271,10 @@ sub get_ExperimentalChips{
   #what about immediate access to dbID
   #should we separate and have add_ExperimentalChip?
 
+  
+
   if(! exists $self->{'experimental_chips'}){
      $self->{'experimental_chips'} = {};
-  
 
      #need to warn about DBAdaptor here?
   

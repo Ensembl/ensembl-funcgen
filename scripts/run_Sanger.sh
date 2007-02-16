@@ -3,7 +3,7 @@
 #. ~/src/ensembl-efg/scripts/.efg
 
 $EFG_SRC/scripts/parse_and_import.pl\
-	-name  H3K4me3-GM06990\
+	-name  H3K4me1-GM06990-new\
 	-format tiled\
 	-location Hinxton\
 	-contact njohnson@ebi.ac.uk\

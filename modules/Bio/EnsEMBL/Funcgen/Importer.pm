@@ -1046,6 +1046,8 @@ sub import_results{
 
 
   foreach my $logic_name(@logic_names){
+    warn "Importing $logic_name data";
+
 
     my $loaded = 0;
     my $status = ($logic_name eq "RawValue") ? "IMPORTED" : "IMPORTED_${logic_name}";
@@ -1434,12 +1436,15 @@ sub get_import_ResultSet{
   
   foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
 
-    #warn "echip ".$echip->unique_id();
+    warn "echip ".$echip->unique_id();
     
     #clean chip import and generate rset
     if($echip->has_status($status)){#this translates to each channel have the IMPORTED_RawValue status
       $self->log("ExperimentalChip(".$echip->unique_id().") already has status:\t".$status);
     }else{
+
+      warn "Found ExperiemntalChip(".$echip->unique_id().") without status $status";
+
       if( ! $rset){
 	
 	if($self->recovery()){
@@ -1456,7 +1461,7 @@ sub get_import_ResultSet{
 	}
 	
 	if(! $rset){
-	  
+	  warn "Generating new ResultSet for analysis ".$anal->logic_name();
 	  $self->log("Generating new ResultSet for analysis ".$anal->logic_name());
 	  
 	  $rset = Bio::EnsEMBL::Funcgen::ResultSet->new

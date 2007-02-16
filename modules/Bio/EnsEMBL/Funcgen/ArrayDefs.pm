@@ -304,7 +304,8 @@ sub read_array_chip_data{
 	   -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
 	  );
       
-	($echip) = @{$ec_adaptor->store($echip)};	
+	($echip) = @{$ec_adaptor->store($echip)};
+	$self->experiment->add_ExperimentalChip($echip); #need a contains method here, #need to do this as the probe cache init 'experimental_chips'
       }
     }
    
@@ -610,12 +611,13 @@ sub read_sanger_result_data{
   #This is treating each array chip as a separate array, unless arrayset is defined
   #AT present we have no way of differentiating between different array_chips on same array???!!!
   #Need to add functionality afterwards to collate array_chips into single array
-  
 
   #First add the echips to the Experiment
-  my $list = "ls ".$self->input_dir()."/*all*";
+  my $list = "ls ".$self->input_dir()."/[0-9]*-[0-9]*\.all\.*";
   
   foreach $file(`$list`){
+    warn "Found SANGER results file:\t$file";
+    $self->log("Found SANGER results file:\t$file");
 
     ($chip_uid = $file) =~ s/.*\///;
     $chip_uid =~ s/\.all.*\n//;
@@ -628,7 +630,7 @@ sub read_sanger_result_data{
     #Nee to check Nimbelgen methods
 
     if($echip){
-
+  
       if(! $self->recovery()){
 	throw("ExperimentalChip(".$echip->unqiue_id().") already exists in the database\nMaybe you want to recover?");
       }
@@ -642,6 +644,7 @@ sub read_sanger_result_data{
 	);
           
       ($echip) = @{$ec_adaptor->store($echip)};	
+      $self->experiment->add_ExperimentalChip($echip); #if we need a contains method in  here 
     }
 
    
@@ -678,9 +681,14 @@ sub read_sanger_result_data{
   if($rset){#we have some new data
 
     foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+      
+      if($echip->has_status('IMPORTED_SangerPCR', $echip)){
+	$self->log("ExperimentalChip(".$echip->unique_id().") has already been imported");
+	warn "ExperimentalChip(".$echip->unique_id().") has already been imported";
+      }else{
+	warn "Reading SANGER result file:\t".$chip_files{$echip->unique_id()};
+	$self->log("Reading SANGER result file:\t".$chip_files{$echip->unique_id()});
 
-      if(! $echip->has_status('IMPORTED_SangerPCR', $echip)){
-	
 	my $fh = open_file("<", $chip_files{$echip->unique_id()});
 	my $rfile = open_file(">", $self->get_dir("norm")."/result.SangerPCR.".$echip->unique_id().".txt");
 	my $r_string = "";
@@ -702,7 +710,7 @@ sub read_sanger_result_data{
       }
     }
   }else{
-    $self->log("Skipping result parse & import");
+    $self->log("No new data, skipping result parse");
   }
 
   $self->log("Finished parsing ".$self->vendor()." probe data (".localtime().")");
