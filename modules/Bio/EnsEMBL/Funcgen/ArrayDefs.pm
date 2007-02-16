@@ -436,7 +436,7 @@ sub read_sanger_array_probe_data{
 
   #This fails if we're pointing to an old DB during the release cycle.  Will be fine if we manage to cs mapping dynamically
 
-  #if($self->db->fetch_status_by_name('array_chip', $ac_id, 'IMPORTED_CS_'.$fg_cs->dbID())){
+
   if($array_chip->has_status('IMPORTED_CS_'.$fg_cs->dbID())){
 
     $fimported = 1;
@@ -447,7 +447,8 @@ sub read_sanger_array_probe_data{
     $imported = 1;
     warn("Skipping ArrayChip probe import (".$array->name().") already fully imported");
   }
-  throw("Need to implement ArrayChip rollback");
+
+  warn("Need to implement ArrayChip rollback");
 
   #need to check whether already imported on specified schema_build
   #check for appropriate file given format in input dir or take path
@@ -502,9 +503,6 @@ sub read_sanger_array_probe_data{
       #($chr, $start, $end, $ratio, $pid) = split/\t/o, $line;
       ($chr, undef, undef, $start, $end, undef, $strand, undef, $pid) = split/\t|\;/o, $line;
       $pid =~ s/reporter_id=//o;
-
-      #warn ("($chr, undef, undef, $start, $end, undef, $strand, undef, $pid)");
- 
 
       #need to parse dependant on file format 
       #also need to account for duplicate probes on grid
@@ -624,7 +622,7 @@ sub read_sanger_result_data{
     $chip_files{$chip_uid} = $file;
     
 
-    $echip = $self->ec_adaptor->fetch_by_unique_id_vendor($chip_uid, 'SANGER');
+    $echip = $ec_adaptor->fetch_by_unique_id_vendor($chip_uid, 'SANGER');
 
     #this should throw if not recovery
     #Nee to check Nimbelgen methods
@@ -1247,10 +1245,12 @@ sub cache_slice{
 sub cache_name_id{
   my ($self, $pname, $pid) = @_;
 
+
   throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
 
+
   if(defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname} != $pid)){
-    throw("Found two differing dbIDs for $pname, need to sort out redundant oligo_probe entries");
+    throw("Found two differing dbIDs for $pname, need to sort out redundant probe entries");
   }
 
   $self->{'_probe_cache'}->{$pname} = $pid;
@@ -1276,7 +1276,11 @@ sub get_probe_id_by_name{
   #Should only ever be one pid per probe per array per n array_chips
   #i.e. duplicate records per array chip with same pid
 
-  if((! defined $self->{'_probe_cache'}) || (! defined $self->{'_probe_cache'}->{$name})){
+  if(! defined $self->{'_probe_cache'}){ #|| (! defined $self->{'_probe_cache'}->{$name})){
+
+    #this fails if we're testing for the probe_id
+    #this is because we have no chips associated with the experiemnt yet.
+  
     $self->{'_probe_cache'} = $self->db->get_ProbeAdaptor->fetch_probe_cache_by_Experiment($self->experiment());
     
   
@@ -1284,7 +1288,8 @@ sub get_probe_id_by_name{
     #$self->{'_probe_map'}{$name} = $op->dbID() if $op;
   }
   
-  return (exists $self->{'_probe_cache'}->{$name}->{'probe_id'}) ? $self->{'_probe_cache'}->{$name}->{'probe_id'} : undef;
+
+  return (exists $self->{'_probe_cache'}->{$name}) ? $self->{'_probe_cache'}->{$name} : undef;
 }
 
 =head2 read_results_data

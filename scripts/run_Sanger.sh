@@ -11,11 +11,11 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-fasta\
 	-port 3306\
 	-host ens-genomics1\
-	-dbname homo_sapiens_funcgen_43\
+	-dbname sanger_test_43_36e\
 	-array_name "ENCODE3.1.1"\
 	-group efg\
 	-vendor sanger\
-	-data_version 41_36c\
+	-data_version 42_36d\
 	-exp_date 2006-11-02\
 	-verbose 2\
 	-pass $1\

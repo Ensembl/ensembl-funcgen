@@ -147,9 +147,10 @@ sub fetch_probe_cache_by_Experiment{
   my $sql = "SELECT probe_id, name from probe where array_chip_id IN (".join(',', @achip_ids).");";
 
   warn "This will break if we have duplicated names within the Experimental set";
+
   
 
-  return $self->db->dbc->db_handle->selectall_hashref($sql, 'name');
+  return (@achip_ids) ? $self->db->dbc->db_handle->selectall_hashref($sql, 'name') : undef;
 }
 
 
