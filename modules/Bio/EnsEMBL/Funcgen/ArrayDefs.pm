@@ -613,7 +613,7 @@ sub read_sanger_result_data{
   #Need to add functionality afterwards to collate array_chips into single array
 
   #First add the echips to the Experiment
-  my $list = "ls ".$self->input_dir()."/[0-9]*-[0-9]*\.all\.*";
+  my $list = "ls ".$self->input_dir().'/[0-9]*-[0-9]*\.all\.*';
   
   foreach $file(`$list`){
     chomp $file;
