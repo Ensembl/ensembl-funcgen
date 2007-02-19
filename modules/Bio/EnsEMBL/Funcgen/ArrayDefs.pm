@@ -88,6 +88,7 @@ sub set_defs{
 					ndf_fields      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
 					pos_fields      => ['CHROMOSOME', 'PROBE_ID', 'POSITION', 'COUNT'],
 					result_fields   => ['PROBE_ID', 'PM'],
+					design_fields   => ['DESIGN_NAME', 'DESCRIPTION'],
 					#import_methods  => [],
 					#data paths here?
 													
@@ -172,7 +173,7 @@ sub read_array_chip_data{
   my $self = shift;
 
   my ($design_desc, $line, $tmp_uid, $array, $channel, $array_chip, $echip);
-  my ($sample_desc, %hpos, @data);
+  my ($sample_desc, %hpos, %designs, @data);
   my $oa_adaptor = $self->db->get_ArrayAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $chan_adaptor = $self->db->get_ChannelAdaptor();
@@ -180,8 +181,20 @@ sub read_array_chip_data{
 
   #Slurp file to string, sets local delimtter to null and subs new lines
   my $fh = open_file("<", $self->get_def("array_file"));
-  ($design_desc = do { local ($/); <$fh>;}) =~ s/\r*\n$//;
-  close($fh);
+  #($design_desc = do { local ($/); <$fh>;}) =~ s/\r*\n$//;#slurp all to string
+  #close($fh);
+
+  while ($line = <$fh>){
+    $line =~ s/\r*\n//;#chump
+    @data =  split/\t/o, $line;
+    
+    if($. == 1){
+      my %hpos = %{$self->set_header_hash(\@data, $self->get_def('design_fields'))};
+      next;
+    }
+    $designs{$data[$hpos{'DESIGN_NAME'}]} = $data[$hpos{'DESCRIPTION'}];
+  }
+
   
   #Currently 1 design = 1 chip = 1 array /DVD
   #Different designs are not currently collated into a chip_set/array in any ordered manner
@@ -215,8 +228,10 @@ sub read_array_chip_data{
     #validate species here
     #look up alias from registry and match to self->species
     #registry may not be loaded for local installation
-    
-	if(! defined $array){
+
+
+    ### CREATE AND STORE Array and ArrayChips  
+    if(! defined $array ){
       #This is treating each array chip as a separate array, unless arrayset is defined
       #AT present we have no way of differentiating between different array_chips on same array???!!!
       #Need to add functionality afterwards to collate array_chips into single array
@@ -228,7 +243,7 @@ sub read_array_chip_data{
 		 -FORMAT      => uc($self->format()),
 		 -VENDOR      => uc($self->vendor()),
 		 -TYPE        => 'OLIGO',
-		 -DESCRIPTION => $design_desc,
+		 -DESCRIPTION => $designs{$data[$hpos{'DESIGN_NAME'}]},
 		);
 
       ($array) = @{$oa_adaptor->store($array)};
@@ -247,7 +262,7 @@ sub read_array_chip_data{
     }
     elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
 
-      $self->log("Generating new ac for same array ".$data[$hpos{'DESIGN_ID'}]."\n");
+      $self->log("Generating new ArrayChip("$data[$hpos{'DESIGN_NAME'}].". for same Array ".$array->name()."\n");
 
       $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
 							  -ARRAY_ID  => $array->dbID(),
@@ -260,10 +275,11 @@ sub read_array_chip_data{
       
     }
     elsif(! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])){
-      throw("Found experiment with more than one design");
+      throw("Found experiment with more than one design without -array_set");
     }
     
-    #Parse and Populate ExperimentalChip/Channels
+
+    ### CREATE AND STORE ExperimentalChips
     if ((! $tmp_uid) || $data[$hpos{'CHIP_ID'}] != $tmp_uid){
 
       #Test both channels are available, i.e. the SampleKey has two TOTAL channels
@@ -278,14 +294,8 @@ sub read_array_chip_data{
 	}
       }
       
-
-
       $tmp_uid = $data[$hpos{'CHIP_ID'}];
-
-    
-      
       $echip = $ec_adaptor->fetch_by_unique_id_vendor($data[$hpos{'CHIP_ID'}], 'NIMBLEGEN');
-      
 
       if($echip){
 
@@ -309,7 +319,7 @@ sub read_array_chip_data{
     }
    
 
- 
+    ### CREATE AND STORE Channels
     $channel = $chan_adaptor->fetch_by_type_experimental_chip_id(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
 
     if($channel){
