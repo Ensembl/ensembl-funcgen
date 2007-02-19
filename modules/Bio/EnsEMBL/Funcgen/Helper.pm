@@ -146,10 +146,11 @@ sub new{
 
     # objects private data and default values
     %attrdata = (
-				 _debug_level  => $main::_debug_level,
-				 _debug_file   => $main::_debug_file,
-				 _log_file     => $main::_log_file,#default should be set in caller
-				);
+		 _tee          => $main::_tee,
+		 _debug_level  => $main::_debug_level,
+		 _debug_file   => $main::_debug_file,
+		 _log_file     => $main::_log_file,#default should be set in caller
+		);
 
     # set each class attribute using passed value or default value
     foreach $attrname (keys %attrdata){
@@ -180,20 +181,28 @@ sub new{
 
 	# LOG OUTPUT
 	if (defined $self->{_log_file}){
-		$main::_log_file = $self->{_log_file};
+	  $main::_log_file = $self->{_log_file};
 		
-		open(LOGFILE,">>".$self->{_log_file})
-		  or $self->throw("Failed to open log file : ".$self->{_log_file}."\tError: $!");
+	  my $log_file = ">>".$self->{'_log_file'};
+
+	  #we need to implment tee here
+	  if($self->{'_tee'}){
+	    #we're not resetting $main::_tee here, we only use it once.
+	    $log_file = "| tee -a ".$self->{_log_file};
+	  }
+
+	  open(LOGFILE, $log_file)
+	    or $self->throw("Failed to open log file : $log_file\nError: $!");
 	}
 	else{
-		open(LOGFILE,">&STDOUT");
+	  open(LOGFILE,">&STDOUT");
 	}
 
 	select LOGFILE; $| = 1;  # make log file unbuffered
 
 	$self->log("\n\nLogging started at ".localtime()."...");
 
-	# RESET STDOUT TO DEFAULT
+    # RESET STDOUT TO DEFAULT
     select STDOUT; $| = 1; 
 
     $self->debug(2,"Helper class instance created.");
@@ -280,10 +289,12 @@ sub _get_stack{
 sub log{
   my ($self,$message) = @_;
 
-  print LOGFILE "$message\t: ".$self->_get_stack.".\n";
+  print LOGFILE "::\t$message\n";
 
+  # Add to debug file if not printing to STDERR?
+  # only if verbose?
+  # this would double print everything to STDOUT if tee and debug has not redefined STDERR
 
-  # Add to debug file
   $self->debug(1,$message);
 }
 
@@ -312,7 +323,7 @@ sub debug{
 
 
 
-	#Can we not detect whther message is a scalar, array or hash and Dump or print accordingly?
+    #Can we not detect whther message is a scalar, array or hash and Dump or print accordingly?
 
     my (@call,$cnt,$prog_name,$prog_line,$call_name,$call_line);
 
@@ -335,7 +346,7 @@ sub debug{
         }
            
 		#This still attempts to print if file not opened
-        print DBGFILE "$message\t: [$$ - $prog_name:$prog_line  $call_name:$call_line]\n";
+        print DBGFILE "debug $message\t: [$$ - $prog_name:$prog_line  $call_name:$call_line]\n";
 
 		#carp("carping $message");
     }
@@ -471,10 +482,14 @@ sub set_header_hash{
     $hpos{$header_ref->[$x]} = $x;
   }	
 
-  foreach my $field(@$fields){
+
+  if($fields){
+
+    foreach my $field(@$fields){
 	  
-    if(! exists $hpos{$field}){
-      throw("Header does not contain mandatory field:\t${field}");
+      if(! exists $hpos{$field}){
+	throw("Header does not contain mandatory field:\t${field}");
+      }
     }
   }
   

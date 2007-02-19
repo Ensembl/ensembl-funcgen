@@ -267,7 +267,6 @@ sub new{
     $self->farm($farm) if $farm;
 
     if($self->result_files()){
-      warn "Found result files arguments:\n".join("\n", @{$self->result_files()});
       $self->log("Found result files arguments:\n".join("\n", @{$self->result_files()}));
     }
 
@@ -758,8 +757,6 @@ sub exp_date{
     $self->{'exp_date'} = &get_date("date", $self->get_def("chip_file")),
   }
 
-  #warn "returning date". $self->{'exp_date'};
-
   return $self->{'exp_date'};
 }
 
@@ -1168,7 +1165,7 @@ sub import_results{
 
 
   foreach my $logic_name(@logic_names){
-    warn "Importing $logic_name data";
+    $self->log("Importing $logic_name data");
 
 
     my $loaded = 0;
@@ -1563,7 +1560,7 @@ sub get_import_ResultSet{
       $self->log("ExperimentalChip(".$echip->unique_id().") already has status:\t".$status);
     }else{
 
-      warn "Found ExperimentalChip(".$echip->unique_id().") without status $status";
+      $self->log("Found ExperimentalChip(".$echip->unique_id().") without status $status");
 
       if( ! $rset){
 	

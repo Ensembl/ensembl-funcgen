@@ -131,11 +131,10 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
 use strict;
 
-
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
-my ($ctype, $ftype);
+my ($ctype, $ftype, $recover);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -148,12 +147,13 @@ my $user = "ensadmin";
 my $host = 'localhost';
 my $port = '3306';
 my $fasta = 0;#Shouldn't this be on by default?
-my $recover = 0;
+#my $recover = 0;
 my $verbose = 0;
 
 #Definitely need some sort of Defs modules for each array?
 
 $main::_debug_level = 0;
+$main::_tee = 0;
 
 
 #Use some sort of DBDefs for now, but need  to integrate with Register, and have put SQL into (E)FGAdaptor?
@@ -187,21 +187,22 @@ GetOptions (
 	    "norm=s"       => \$nmethod,
 	    "location=s"   => \$loc,
 	    "contact=s"    => \$contact,
+	    "tee"          => \$main::_tee,
 	    "log_file=s"   => \$main::_log_file,
 	    "debug_file=s" => \$main::_debug_file,
 	    #should have MAGE flag here? or would this be format?
 	    "interactive"  => \$interactive,
 	    "help|?"       => \$help,
 	    "man|m"        => \$man,
-	    "verbose=s"    => \$verbose,
+	    "verbose"    => \$verbose, # not implmented yet
 	   );
 
 
 my @result_files = @ARGV;
 
-throw("Nimblegen import does not support cmdline defined result files") if (@result_files && uc($vendor) eq "NIMBELGEN");
 
-warn "Got files @result_files";
+
+throw("Nimblegen import does not support cmdline defined result files") if (@result_files && uc($vendor) eq "NIMBELGEN");
 
 #Need to add (primary) design_type and description, or add to defs file?
 
@@ -217,6 +218,9 @@ system("mkdir -p $output_dir -m 0755");
 
 
 chmod 0755, $output_dir;
+
+
+# pass as args?
 $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
 $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file);
 
@@ -249,7 +253,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       contact     => $contact,
 					       verbose     => $verbose,
 					       input_dir   => $input_dir,
-					       exp_date    => $exp_date,
+					       exp_date     => $exp_date,
 					       result_files => \@result_files,
 					       #Exp does not build input dir, but could
 					       #This allows input dir to be somewhere 

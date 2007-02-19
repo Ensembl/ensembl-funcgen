@@ -8,6 +8,8 @@ PASS=$1
 
 ARGS=$(echo $ARGS | sed "s/$PASS //")
 
+echo "files are $ARGS"
+
 
 $EFG_SRC/scripts/parse_and_import.pl\
 	-name  H3K4me1-GM06990-new\
@@ -24,8 +26,8 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-vendor sanger\
 	-data_version 42_36d\
 	-exp_date 2006-11-02\
-	-verbose 2\
+	-tee\
+	-verbose\
 	-pass $1\
-	-recover $ARGS
-
-
+	-recover\
+	$ARGS

@@ -128,7 +128,6 @@ sub set_defs{
 
 			 );
 	
-	#warn "Setting ".$self->vendor()." defs to ".$array_defs{$self->vendor()}." ".Data::Dumper::Dumper($array_defs{$self->vendor()});
 	
 	$self->{'array_defs'} = $array_defs{$self->vendor()};
 
@@ -640,8 +639,6 @@ sub read_sanger_result_data{
   
   foreach $file(@{$self->result_files()}){
     chomp $file;
-
-    warn "Found SANGER results file:\t$file";
     $self->log("Found SANGER results file:\t$file");
 
     ($chip_uid = $file) =~ s/.*\///;
@@ -706,9 +703,7 @@ sub read_sanger_result_data{
       
       if($echip->has_status('IMPORTED_SangerPCR', $echip)){
 	$self->log("ExperimentalChip(".$echip->unique_id().") has already been imported");
-	warn "ExperimentalChip(".$echip->unique_id().") has already been imported";
       }else{
-	warn "Reading SANGER result file:\t".$chip_files{$echip->unique_id()};
 	$self->log("Reading SANGER result file:\t".$chip_files{$echip->unique_id()});
 
 	my $fh = open_file("<", $chip_files{$echip->unique_id()});
@@ -1514,8 +1509,6 @@ sub read_results_data{
 	  print $r_out $r_string;
 	  close($r_out);
 	  $self->log("Finished parsing $chan_name result");
-	  #warn `date +%T`;
-	  #exit;
 	}
       }
       #if(%channel_idx){
