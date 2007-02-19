@@ -88,14 +88,14 @@ sub set_defs{
 					ndf_fields      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
 					pos_fields      => ['CHROMOSOME', 'PROBE_ID', 'POSITION', 'COUNT'],
 					result_fields   => ['PROBE_ID', 'PM'],
-					design_fields   => ['DESIGN_NAME', 'DESCRIPTION'],
+					notes_fields   => ['DESIGN_NAME', 'DESCRIPTION'],
 					#import_methods  => [],
 					#data paths here?
 													
 					#but this is vendor specific and remains an array_def
 					design_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignFiles",
 					chip_file        => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/SampleKey.txt",
-					array_file       => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignNotes.txt",
+					notes_file       => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/DesignNotes.txt",
 					results_file     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData/All_Pair.txt",
 					
 					results_dir     => $self->get_dir("data")."/input/".$self->vendor()."/".$self->name()."/PairData",
@@ -157,6 +157,45 @@ sub get_def{
 }
 
 
+=head2 read_design_notes
+
+  Example    : my %designs = %{$imp->read_design_notes()};
+  Description: Parses NimbleGen DesignNotes.txt files and returns design description hash
+  Returntype : Hashref
+  Exceptions : None
+  Caller     : general
+  Status     : At risk - Move to importer
+
+=cut
+
+
+sub read_design_notes{
+  my ($self, $notes_file) = shift;
+
+  my ($line, @data, %hpos, %designs);
+
+  #Slurp file to string, sets local delimtter to null and subs new lines
+  my $fh = open_file("<", $notes_file);
+  #($design_desc = do { local ($/); <$fh>;}) =~ s/\r*\n$//;
+  #close($fh);
+  
+  while ($line = <$fh>){
+    $line =~ s/\r*\n//;#chump
+    @data =  split/\t/o, $line;
+    
+    if($. == 1){
+      my %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
+      next;
+    }
+    $designs{$data[$hpos{'DESIGN_NAME'}]} = $data[$hpos{'DESCRIPTION'}];
+  }
+  
+  close($fh);
+  
+  return \%designs;
+
+}
+
 
 =head2 read_array_chip_data
 
@@ -173,29 +212,14 @@ sub read_array_chip_data{
   my $self = shift;
 
   my ($design_desc, $line, $tmp_uid, $array, $channel, $array_chip, $echip);
-  my ($sample_desc, %hpos, %designs, @data);
+  my ($sample_desc, %hpos, @data);
   my $oa_adaptor = $self->db->get_ArrayAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $chan_adaptor = $self->db->get_ChannelAdaptor();
   my $ac_adaptor = $self->db->get_ArrayChipAdaptor();
+  my %designs = %{$self->read_design_notes($self->get_def('notes_file'))};
 
-  #Slurp file to string, sets local delimtter to null and subs new lines
-  my $fh = open_file("<", $self->get_def("array_file"));
-  #($design_desc = do { local ($/); <$fh>;}) =~ s/\r*\n$//;#slurp all to string
-  #close($fh);
 
-  while ($line = <$fh>){
-    $line =~ s/\r*\n//;#chump
-    @data =  split/\t/o, $line;
-    
-    if($. == 1){
-      my %hpos = %{$self->set_header_hash(\@data, $self->get_def('design_fields'))};
-      next;
-    }
-    $designs{$data[$hpos{'DESIGN_NAME'}]} = $data[$hpos{'DESCRIPTION'}];
-  }
-
-  
   #Currently 1 design = 1 chip = 1 array /DVD
   #Different designs are not currently collated into a chip_set/array in any ordered manner
   #Register each design as an array and an array_chip
@@ -203,7 +227,7 @@ sub read_array_chip_data{
   
  
   warn("Harcoded for one array(can have multiple chips from the same array) per experiment\n");
-  $fh = open_file("<", $self->get_def("chip_file"));
+  my $fh = open_file("<", $self->get_def("chip_file"));
   $self->log("Reading chip data");
 
   warn("We need to change Array/ArrayChip retrieval to ensure that we have IMPORTED status, so avoid having an incomplete arraychip");
@@ -262,7 +286,7 @@ sub read_array_chip_data{
     }
     elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
 
-      $self->log("Generating new ArrayChip("$data[$hpos{'DESIGN_NAME'}].". for same Array ".$array->name()."\n");
+      $self->log("Generating new ArrayChip(".$data[$hpos{'DESIGN_NAME'}].". for same Array ".$array->name()."\n");
 
       $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
 							  -ARRAY_ID  => $array->dbID(),
@@ -398,7 +422,7 @@ sub arrays{
 sub read_sanger_array_probe_data{
   my ($self, $array_file) = @_;
 
-  $array_file||= $self->array_file();
+  $array_file ||= $self->array_file();
   my ($line, $fh, @list, $array_file_format, $cmd);
   my ($op, $of, $imported, $fimported);
   my $oa_adaptor = $self->db->get_ArrayAdaptor();
@@ -501,7 +525,7 @@ sub read_sanger_array_probe_data{
 	  }
 	}
       }
-      
+
       throw("Cannot find array file. Specify one with -array_file") if (! defined $array_file);
     }
     
@@ -640,8 +664,8 @@ sub read_sanger_result_data{
 
   #First add the echips to the Experiment
   
-  if(! $self->result_files()){
-    my $list = "ls ".$self->input_dir().'/[0-9]*-[0-9]*\.all\.*';
+  if(! @{$self->result_files()}){
+    my $list = "ls ".$self->input_dir().'/[0-9]*-[0-9a-zA-Z]*\.all\.*';
     my @rfiles = `$list`;
     $self->result_files(\@rfiles);
   }
@@ -710,6 +734,8 @@ sub read_sanger_result_data{
   if($rset){#we have some new data
 
     foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+
+      warn "echip has unique_id ".$echip->unique_id();
       
       if($echip->has_status('IMPORTED_SangerPCR', $echip)){
 	$self->log("ExperimentalChip(".$echip->unique_id().") has already been imported");

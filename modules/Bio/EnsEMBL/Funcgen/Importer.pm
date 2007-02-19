@@ -105,6 +105,9 @@ sub new{
     #Create object from parent class
     $self = $class->SUPER::new(%args);
 
+
+    #keep this or use re-arrange?
+    #lot's of defaults and vars, nicer to have easily readable hash
     # objects private data and default values
     %attrdata = (
 				 #User defined/built 
@@ -182,9 +185,8 @@ sub new{
     }
 
 
-    #Can some of these be set in ArrayDefs or "Vendor"Defs?
-    #pass?  
-    foreach my $tmp("vendor", "format", "data_version", "species", "host", "user"){
+    #This is minimum mandatory params for any import
+    foreach my $tmp('vendor', 'format', 'data_version', 'species', 'host', 'user', 'pass'){
       $self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
     }
 
@@ -261,46 +263,6 @@ sub new{
     }else{#from config
       $reg->load_all($self->{'_reg_config'}, 1);
     }
-    
-    
-
-    $self->farm($farm) if $farm;
-
-    if($self->result_files()){
-      $self->log("Found result files arguments:\n".join("\n", @{$self->result_files()}));
-    }
-
-
-    if($self->{'feature_type_name'}){
-      my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($self->{'feature_type_name'});
-
-      if(! $ftype){
-	throw("FeatureType '".$self->{'feature_type_name'}."' is not valid or is not present in the DB\n".
-	      "Please create your FeatureType before importing the experiment");
-      }
-
-      $self->feature_type($ftype);
-
-    }
-
-    if($self->{'cell_type_name'}){
-      my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($self->{'cell_type_name'});
-      throw("CellType '".$self->{'cell_type_name'}."' is not valid or is not present in the DB\n".
-	    "Please create your CellType before importing the experiment");
-
-      $self->cell_type($ctype);
-    }
-
-
-    #check for cell||feature and warn if no met file supplied?
-
-
-  
-    #check for ENV vars?
-    #R_LIBS
-    #R_PATH if ! farm
-    #R_FARM_PATH 
-
 
 
     $self->debug(2, "Importer class instance created.");
@@ -329,7 +291,7 @@ sub new{
 =cut
 
 
-sub init_import{
+sub init_experiment_import{
   my ($self) = shift;
 
   foreach my $tmp("name", "group", "data_dir"){
@@ -350,6 +312,44 @@ sub init_import{
   }
   
   $self->create_output_dirs("raw", "norm");
+
+
+  if($self->result_files()){
+    $self->log("Found result files arguments:\n".join("\n", @{$self->result_files()}));
+  }
+
+
+  if($self->{'feature_type_name'}){
+    my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($self->{'feature_type_name'});
+    
+    if(! $ftype){
+      throw("FeatureType '".$self->{'feature_type_name'}."' is not valid or is not present in the DB\n".
+	    "Please create your FeatureType before importing the experiment");
+    }
+    
+    $self->feature_type($ftype);
+    
+  }
+
+  if($self->{'cell_type_name'}){
+    my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($self->{'cell_type_name'});
+    throw("CellType '".$self->{'cell_type_name'}."' is not valid or is not present in the DB\n".
+	  "Please create your CellType before importing the experiment");
+    
+    $self->cell_type($ctype);
+  }
+
+
+    #check for cell||feature and warn if no met file supplied?
+
+
+  
+    #check for ENV vars?
+    #R_LIBS
+    #R_PATH if ! farm
+    #R_FARM_PATH 
+
+
 
 
   
@@ -1109,7 +1109,7 @@ sub register_experiment{
   #Need to totally separate parse/read from import, so we can just do one method if required, i.e. normalise
   #Also need to move id generation to import methods, which would check that a previous import has been done, or check the DB for the relevant info?
   
-  $self->init_import();
+  $self->init_experiment_import();
 
   #check here is exp already stored?  Will this work properly?
   #then throw if not recovery

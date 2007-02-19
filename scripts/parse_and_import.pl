@@ -134,7 +134,7 @@ use strict;
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
-my ($ctype, $ftype, $recover);
+my ($ctype, $ftype, $recover, $mage_tab);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -178,6 +178,7 @@ GetOptions (
 	    "result_set=s" => \$rset_name,
 	    "feature_type=s" => \$ftype,
 	    "cell_type=s"    => \$ctype,
+	    "mage_tab=s"   => \$mage_tab,
 	    "debug=i"    => \$main::_debug_level,
 	    "data_root=s"  => \$data_dir,
 	    "input_dir=s"  => \$input_dir,
@@ -242,6 +243,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       result_set_name => $rset_name, #not implemented yet
 					       feature_type_name => $ftype,
 					       cell_type_name => $ctype,
+					       mage_tab    => $mage_tab,
 					       data_version => $data_version,
 					       data_root   => $data_dir,
 					       output_dir  => $output_dir,

@@ -2,13 +2,9 @@
 
 #. ~/src/ensembl-efg/scripts/.efg
 
-ARGS=$@
-
 PASS=$1
+ARGS=$(echo $@ | sed "s/$PASS//")
 
-ARGS=$(echo $ARGS | sed "s/$PASS //")
-
-echo "files are $ARGS"
 
 
 $EFG_SRC/scripts/parse_and_import.pl\
