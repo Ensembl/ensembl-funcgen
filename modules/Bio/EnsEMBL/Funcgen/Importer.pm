@@ -113,6 +113,9 @@ sub new{
 		 vendor      => undef,
 		 group       => undef,
 		 species     => undef,
+		 feature_type_name => undef,
+		 cell_type_name    => undef,
+		 farm => 1,
 		 data_version => undef,
 		 recover     => 0,
 		 location    => undef,
@@ -179,14 +182,6 @@ sub new{
     }
 
 
-    $self->farm($farm) if $farm;
-  
-    #check for ENV vars?
-    #R_LIBS
-    #R_PATH
-    #R_FARM_PATH
-
-
     #Can some of these be set in ArrayDefs or "Vendor"Defs?
     #pass?  
     foreach my $tmp("vendor", "format", "data_version", "species", "host", "user"){
@@ -197,83 +192,121 @@ sub new{
     $self->set_defs();
 
     ### LOAD AND RE-CONFIG REGISTRY ###
-	if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
+    if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
 	
-		#current ensembl DBs
-		$reg->load_registry_from_db(
-							   -host => "ensembldb.ensembl.org",
-							   -user => "anonymous",
-							   -verbose => $self->verbose(),
-							  );
-
-
-		#Get standard FGDB
-		$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
-
-		#reset species to standard alias to allow dbname generation
-		$self->species($reg->get_alias($self->species()));
-
-		#configure dnadb
-		#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      #current ensembl DBs
+      $reg->load_registry_from_db(
+				  -host => "ensembldb.ensembl.org",
+				  -user => "anonymous",
+				  -verbose => $self->verbose(),
+				 );
+      
+      
+      #Get standard FGDB
+      $self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
+      
+      #reset species to standard alias to allow dbname generation
+      $self->species($reg->get_alias($self->species()));
+      
+      #configure dnadb
+      #should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      
+      if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))){
 	
-		if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))){
-
-		  
-		  if($self->{'ssh'}){
-
-		    my $host = `host localhost`;#mac specific? nslookup localhost wont work on server/non-PC 
-		    #will this always be the same?
-		    warn "Need to get localhost IP from env, hardcoded for 127.0.0.1, $host";
-
-		    if ($self->host() ne 'localhost'){
-		      warn "Overriding host ".$self->host()." for ssh connection via localhost(127.0.0.1)";
-		    }
-		    
-
-
-		  }
-
-
-		  $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-							    -host => 'ensembldb.ensembl.org',
-							    -user => 'anonymous',
-							    -dbname => $self->species()."_core_".$self->data_version(),
-							    -species => $self->species(),
-							   );
-		}else{
-		  $db = $self->db->dnadb();
-		}
-
-
-		$self->{'dbname'} ||= $self->species()."_funcgen_".$self->data_version();
-
-		#generate and register DB with local connection settings
-		$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-								   -user => $self->user(),
-								   -host => ($self->{'ssh'}) ? '127.0.0.1' : $self->host(),
-								   -port => $self->port(),
-								   -pass => $self->pass(),
-								   #we need to pass dbname else we can use non-standard dbs
-								   -dbname => $self->dbname(),
-								   -dnadb  => $db,
-								   -species => $self->species(),
-								  );
-
-
-		#Redefine Fungen DB in registry
-		#dnadb already added to reg via SUPER::dnadb method		
-		$reg->add_DBAdaptor($self->species(), 'funcgen', $db);
-		$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
-		
-		throw("Unable to connect to local Funcgen DB\nPlease check the DB connect parameters and make sure the db is appropriately named") if( ! $self->db());
-
-	}else{#from config
-		$reg->load_all($self->{'_reg_config'}, 1);
+	
+	if($self->{'ssh'}){
+	  
+	  my $host = `host localhost`;#mac specific? nslookup localhost wont work on server/non-PC 
+	  #will this always be the same?
+	  warn "Need to get localhost IP from env, hardcoded for 127.0.0.1, $host";
+	  
+	  if ($self->host() ne 'localhost'){
+	    warn "Overriding host ".$self->host()." for ssh connection via localhost(127.0.0.1)";
+	  }
 	}
 
-	$self->debug(2, "Importer class instance created.");
-	$self->debug_hash(3, \$self);
+	$db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+						  -host => 'ensembldb.ensembl.org',
+						  -user => 'anonymous',
+						  -dbname => $self->species()."_core_".$self->data_version(),
+						  -species => $self->species(),
+						 );
+      }else{
+	$db = $self->db->dnadb();
+      }
+      
+      
+      $self->{'dbname'} ||= $self->species()."_funcgen_".$self->data_version();
+      
+      #generate and register DB with local connection settings
+      $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+							 -user => $self->user(),
+							 -host => ($self->{'ssh'}) ? '127.0.0.1' : $self->host(),
+							 -port => $self->port(),
+							 -pass => $self->pass(),
+							 #we need to pass dbname else we can use non-standard dbs
+							 -dbname => $self->dbname(),
+							 -dnadb  => $db,
+							 -species => $self->species(),
+							);
+      
+      
+      #Redefine Fungen DB in registry
+      #dnadb already added to reg via SUPER::dnadb method		
+      $reg->add_DBAdaptor($self->species(), 'funcgen', $db);
+      $self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
+      
+      throw("Unable to connect to local Funcgen DB\nPlease check the DB connect parameters and make sure the db is appropriately named") if( ! $self->db());
+      
+    }else{#from config
+      $reg->load_all($self->{'_reg_config'}, 1);
+    }
+    
+    
 
+    $self->farm($farm) if $farm;
+
+    if($self->result_files()){
+      warn "Found result files arguments:\n".join("\n", @{$self->result_files()});
+      $self->log("Found result files arguments:\n".join("\n", @{$self->result_files()}));
+    }
+
+
+    if($self->{'feature_type_name'}){
+      my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($self->{'feature_type_name'});
+
+      if(! $ftype){
+	throw("FeatureType '".$self->{'feature_type_name'}."' is not valid or is not present in the DB\n".
+	      "Please create your FeatureType before importing the experiment");
+      }
+
+      $self->feature_type($ftype);
+
+    }
+
+    if($self->{'cell_type_name'}){
+      my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($self->{'cell_type_name'});
+      throw("CellType '".$self->{'cell_type_name'}."' is not valid or is not present in the DB\n".
+	    "Please create your CellType before importing the experiment");
+
+      $self->cell_type($ctype);
+    }
+
+
+    #check for cell||feature and warn if no met file supplied?
+
+
+  
+    #check for ENV vars?
+    #R_LIBS
+    #R_PATH if ! farm
+    #R_FARM_PATH 
+
+
+
+    $self->debug(2, "Importer class instance created.");
+    $self->debug_hash(3, \$self);
+    
     return ($self);
 }
 
@@ -445,6 +478,73 @@ sub vendor{
   $self->{'vendor'} = uc($self->{'vendor'});
   return $self->{'vendor'};
 }
+
+
+=head2 feature_type
+  
+  Example    : $imp->feature_type($ftype);
+  Description: Getter/Setter for Experiment FeatureType
+  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::FeatureType
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub feature_type{
+  my ($self) = shift;
+
+  if(@_){
+    my $ftype = shift;
+    
+    #do we need this as we're checking in new?
+    if(! ($ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType') && $ftype->dbID())){
+      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
+    }
+  
+    $self->{'feature_type'} = $ftype;
+  }
+
+  return $self->{'feature_type'};
+}
+
+
+=head2 cell_type
+  
+  Example    : $imp->cell_type($ctype);
+  Description: Getter/Setter for Experiment CellType
+  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::CellType
+  Returntype : Bio::EnsEMBL::Funcgen::CellType
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub cell_type{
+  my ($self) = shift;
+
+  if(@_){
+    my $ctype = shift;
+    
+    #do we need this as we're checking in new?
+    if(! ($ctype->isa('Bio::EnsEMBL::Funcgen::CellType') && $ctype->dbID())){
+      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::CellType");
+    }
+  
+    $self->{'cell_type'} = $ctype;
+  }
+
+  return $self->{'cell_type'};
+}
+
+
+
+
+
+
+
 
 
 =head2 array_file

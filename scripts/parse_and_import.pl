@@ -135,6 +135,7 @@ use strict;
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
+my ($ctype, $ftype);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -154,7 +155,6 @@ my $verbose = 0;
 
 $main::_debug_level = 0;
 
-my @steps = ("s1_init_exp");#do we need steps?
 
 #Use some sort of DBDefs for now, but need  to integrate with Register, and have put SQL into (E)FGAdaptor?
 #Use ArrayDefs.pm module for some of these, class, vendor, format?
@@ -170,12 +170,14 @@ GetOptions (
 	    "user|u=s"     => \$user,
 	    "ssh"          => \$ssh,
 	    "dbname=s"     => \$dbname,
-	    "group|g=s"    => \$group,#Need user here too? Use group defs to avoid typos?
-	    "species|s=s"  => \$species,
+	    "group|g=s"    => \$group,
+	    "species|s=s"      => \$species, # Not needed as the db is species specific
 	    "data_version|d=s" => \$data_version,
 	    "array_set"    => \$array_set,
 	    "array_name=s" => \$array_name,
 	    "result_set=s" => \$rset_name,
+	    "feature_type=s" => \$ftype,
+	    "cell_type=s"    => \$ctype,
 	    "debug=i"    => \$main::_debug_level,
 	    "data_root=s"  => \$data_dir,
 	    "input_dir=s"  => \$input_dir,
@@ -233,7 +235,9 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       dbname      => $dbname,
 					       array_set   => $array_set,
 					       array_name  => $array_name,
-					       result_set_name => $rset_name,  
+					       result_set_name => $rset_name, #not implemented yet
+					       feature_type_name => $ftype,
+					       cell_type_name => $ctype,
 					       data_version => $data_version,
 					       data_root   => $data_dir,
 					       output_dir  => $output_dir,
