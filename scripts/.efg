@@ -8,7 +8,7 @@ echo "Setting up eFG environment" #and cd'ing to $EFG_SRC"
 export SRC=~/src
 export EFG_SRC=$SRC/ensembl-functgenomics
 export EFG_SQL=$EFG_SRC/sql
-export EFG_DATA=/lustre/work1/ensembl/nj1/efg
+export EFG_DATA=~/data/efg
 #should make data dirs here
 
 
@@ -34,14 +34,13 @@ export R_BSUB_OPTIONS="-R'select[type==LINUX64 && mem>6000] rusage[mem=6000]' -q
 #would need to sed file to set permanently
 
 
-# ALIASES
+# ALIASES single quotes enable dynamic updating of commands
 alias efg='cd $EFG_SRC'
 alias efgd='cd $EFG_DATA'
 alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
 alias efgmacs='xemacs $EFG_SRC/modules/Bio/EnsEMBL/Funcgen &'
-
-alias mysqlw="mysql $MYSQL_ARGS $WRITE_USER"
-alias mysqlro="mysql $MYSQL_ARGS $READ_USER"
+alias mysqlw='mysql $MYSQL_ARGS $WRITE_USER'
+alias mysqlro='mysql $MYSQL_ARGS $READ_USER'
 
 
 CreateDB(){
@@ -91,6 +90,17 @@ CreateDB(){
     mysqlw -p${pass} $dbname < $EFG_SQL/efg.sql
 	
 }
+
+
+CreateLocalDB(){
+	TMP=$MYSQL_ARGS
+	MYSQL_ARGS=" -P3306";
+	CreateDB $@
+	export MYSQL_ARGS=$TMP
+
+
+}
+
 
 QueryVal(){
 
