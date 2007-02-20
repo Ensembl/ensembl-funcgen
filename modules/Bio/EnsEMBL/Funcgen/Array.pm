@@ -102,7 +102,7 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
   
-  my ($name, $format, $size, $species, $vendor, $ac_hash, $desc)
+  my ($name, $format, $size, $species, $vendor, $desc)
     = rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'DESCRIPTION'], @_ );
   
   #mandatory params?
@@ -126,7 +126,6 @@ sub new {
   $self->size($size)          if defined $size;
   #$self->species($species)    if defined $species;
   $self->vendor($vendor);
-  #$self->array_chips($ac_hash) if defined $ac_hash;
   $self->description($desc)   if defined $desc;
   
   return $self;

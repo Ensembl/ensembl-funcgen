@@ -80,15 +80,14 @@ sub set_defs{
 	my %array_defs = (
 			  NIMBLEGEN => {
 					#order of these data arrays is important!
-					array_data   => ["array_chip"],
+					array_data   => ['experiment'],
 					probe_data   => ["probe"],
 					results_data => ["results"],
-					sample_key_fields => ['DESIGN_ID', 'DESIGN_NAME', 'CHIP_ID', 'DYE',
-							      'SAMPLE_DESCRIPTION', 'PROMOT_SAMPLE_TYPE'],
+					sample_key_fields => ['DESIGN_ID', 'CHIP_ID', 'DYE', 'PROMOT_SAMPLE_TYPE'],# 'SAMPLE_DESCRIPTION removed due to naming disparities
 					ndf_fields      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
 					pos_fields      => ['CHROMOSOME', 'PROBE_ID', 'POSITION', 'COUNT'],
 					result_fields   => ['PROBE_ID', 'PM'],
-					notes_fields   => ['DESIGN_NAME', 'DESCRIPTION'],
+					notes_fields   => ['DESIGN_ID', 'DESIGN_NAME', 'DESCRIPTION'],
 					#import_methods  => [],
 					#data paths here?
 													
@@ -157,22 +156,24 @@ sub get_def{
 }
 
 
-=head2 read_design_notes
+=head2 read_array_data
 
-  Example    : my %designs = %{$imp->read_design_notes()};
-  Description: Parses NimbleGen DesignNotes.txt files and returns design description hash
-  Returntype : Hashref
+  Example    : $imp->read_array_data();
+  Description: Parses NimbleGen DesignNotes.txt files to create and store new Arrays
+  Returntype : none
   Exceptions : None
   Caller     : general
-  Status     : At risk - Move to importer
+  Status     : At risk - Can this be generic? Can we force the creation of a DesignNotes file on other formats?
 
 =cut
 
 
-sub read_design_notes{
-  my ($self, $notes_file) = shift;
+sub read_array_data{
+  my ($self, $notes_file) = @_;
 
-  my ($line, @data, %hpos, %designs);
+  my ($line, $array, $array_chip, @data, %hpos);
+  my $oa_adaptor = $self->db->get_ArrayAdaptor();
+  my $ac_adaptor = $self->db->get_ArrayChipAdaptor();
 
   #Slurp file to string, sets local delimtter to null and subs new lines
   my $fh = open_file("<", $notes_file);
@@ -180,24 +181,80 @@ sub read_design_notes{
   #close($fh);
   
   while ($line = <$fh>){
+    
     $line =~ s/\r*\n//;#chump
     @data =  split/\t/o, $line;
     
+    
+
+
     if($. == 1){
-      my %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
+      %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
       next;
     }
-    $designs{$data[$hpos{'DESIGN_NAME'}]} = $data[$hpos{'DESCRIPTION'}];
+
+    ### CREATE AND STORE Array and ArrayChips  
+    if(! defined $array ){
+      #This is treating each array chip as a separate array, unless arrayset is defined
+      #AT present we have no way of differentiating between different array_chips on same array???!!!
+      #Need to add functionality afterwards to collate array_chips into single array
+           
+      #This will use a stored array if present
+
+      $array = Bio::EnsEMBL::Funcgen::Array->new
+	(
+	 -NAME        => $self->{'array_name'} || $data[$hpos{'DESIGN_NAME'}],
+	 -FORMAT      => uc($self->format()),
+	 -VENDOR      => uc($self->vendor()),
+	 -TYPE        => 'OLIGO',
+	 -DESCRIPTION => $data[$hpos{'DESCRIPTION'}],#need to trim the array chip specific description here
+	);
+
+      ($array) = @{$oa_adaptor->store($array)};
+
+
+      $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							  -ARRAY_ID  => $array->dbID(),
+							  -NAME      => $data[$hpos{'DESIGN_NAME'}],
+							  -DESIGN_ID => $data[$hpos{'DESIGN_ID'}],
+							  #add description?
+							 );
+
+      #This will use a stored array_chip if present
+      ($array_chip) = @{$ac_adaptor->store($array_chip)};
+      $array->add_ArrayChip($array_chip);
+        
+    }
+    elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
+      
+      $self->log("Generating new ArrayChip(".$data[$hpos{'DESIGN_NAME'}].". for same Array ".$array->name()."\n");
+      
+      $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+							  -ARRAY_ID  => $array->dbID(),
+							  -NAME        => $data[$hpos{'DESIGN_NAME'}],
+							  -DESIGN_ID => $data[$hpos{'DESIGN_ID'}],
+							 );
+      
+      ($array_chip) = @{$ac_adaptor->store($array_chip)};
+      $array->add_ArrayChip($array_chip);
+      
+    }
+    elsif(! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])){
+      throw("Found experiment with more than one design without -array_set");
+    }
   }
   
+
+  $self->add_array($array);
+
   close($fh);
   
-  return \%designs;
+  return;
 
 }
 
 
-=head2 read_array_chip_data
+=head2 read_experiment_data
 
   Example    : $imp->read_array_chip_data();
   Description: Parses and imports array & experimental chip meta data/objects
@@ -208,18 +265,17 @@ sub read_design_notes{
 
 =cut
 
-sub read_array_chip_data{
+sub read_experiment_data{
   my $self = shift;
 
-  my ($design_desc, $line, $tmp_uid, $array, $channel, $array_chip, $echip);
+  
+  $self->read_array_data($self->get_def('notes_file'));
+
+  my ($design_desc, $line, $tmp_uid, $channel, $echip);
   my ($sample_desc, %hpos, @data);
-  my $oa_adaptor = $self->db->get_ArrayAdaptor();
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $chan_adaptor = $self->db->get_ChannelAdaptor();
-  my $ac_adaptor = $self->db->get_ArrayChipAdaptor();
-  my %designs = %{$self->read_design_notes($self->get_def('notes_file'))};
-
-
+  
   #Currently 1 design = 1 chip = 1 array /DVD
   #Different designs are not currently collated into a chip_set/array in any ordered manner
   #Register each design as an array and an array_chip
@@ -244,7 +300,7 @@ sub read_array_chip_data{
       #we need to set the sample description field name, as it can vary :(((
       @data = grep(/SAMPLE_DESCRIPTION/, keys %hpos);
       $sample_desc = $data[0];
-      warn("More than one sample description(@data) in ".$self->get_def("chip_file")."\n") if(scalar @data >1);
+      throw("More than one sample description(@data) in ".$self->get_def("chip_file")."\n") if(scalar @data >1);
       next;
     }
     
@@ -253,55 +309,6 @@ sub read_array_chip_data{
     #look up alias from registry and match to self->species
     #registry may not be loaded for local installation
 
-
-    ### CREATE AND STORE Array and ArrayChips  
-    if(! defined $array ){
-      #This is treating each array chip as a separate array, unless arrayset is defined
-      #AT present we have no way of differentiating between different array_chips on same array???!!!
-      #Need to add functionality afterwards to collate array_chips into single array
-           
-      #This will use a stored array if present
-      $array = Bio::EnsEMBL::Funcgen::Array->new
-		(
-		 -NAME        => $self->{'array_name'} || $data[$hpos{'DESIGN_NAME'}],
-		 -FORMAT      => uc($self->format()),
-		 -VENDOR      => uc($self->vendor()),
-		 -TYPE        => 'OLIGO',
-		 -DESCRIPTION => $designs{$data[$hpos{'DESIGN_NAME'}]},
-		);
-
-      ($array) = @{$oa_adaptor->store($array)};
-
-
-      $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
-							  -ARRAY_ID  => $array->dbID(),
-							  -NAME      => $data[$hpos{'DESIGN_NAME'}],
-							  -DESIGN_ID => $data[$hpos{'DESIGN_ID'}],
-							 );
-
-      #This will use a stored array_chip if present
-      ($array_chip) = @{$ac_adaptor->store($array_chip)};
-      $array->add_ArrayChip($array_chip);
-        
-    }
-    elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
-
-      $self->log("Generating new ArrayChip(".$data[$hpos{'DESIGN_NAME'}].". for same Array ".$array->name()."\n");
-
-      $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
-							  -ARRAY_ID  => $array->dbID(),
-							  -NAME        => $data[$hpos{'DESIGN_NAME'}],
-							  -DESIGN_ID => $data[$hpos{'DESIGN_ID'}],
-							 );
-   
-      ($array_chip) = @{$ac_adaptor->store($array_chip)};
-      $array->add_ArrayChip($array_chip);
-      
-    }
-    elsif(! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])){
-      throw("Found experiment with more than one design without -array_set");
-    }
-    
 
     ### CREATE AND STORE ExperimentalChips
     if ((! $tmp_uid) || $data[$hpos{'CHIP_ID'}] != $tmp_uid){
@@ -333,7 +340,7 @@ sub read_array_chip_data{
 	  (
 	   -EXPERIMENT_ID  => $self->experiment->dbID(),
 	   -DESCRIPTION    => $data[$hpos{$sample_desc}],
-	   -ARRAY_CHIP_ID  => $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])->dbID(),
+	   -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])->dbID(),
 	   -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
 	  );
       
@@ -370,7 +377,6 @@ sub read_array_chip_data{
   }
   
   #Set the array now we have stored all details
-  $self->add_array($array);
 
   close($fh);
 
@@ -473,7 +479,7 @@ sub read_sanger_array_probe_data{
 
   if($array_chip->has_status('IMPORTED')){
     $imported = 1;
-    warn("Skipping ArrayChip probe import (".$array_chip->name().") already fully imported");
+    $self->log("Skipping ArrayChip probe import (".$array_chip->name().") already fully imported");
   }elsif($self->recovery()){
     $self->log("Rolling back partially imported ArrayChip:\t".$array_chip->name());
     $self->db->rollback_ArrayChip($array_chip);#This should really remove all CS imports too?
@@ -492,7 +498,7 @@ sub read_sanger_array_probe_data{
 
   if($array_chip->has_status('IMPORTED_CS_'.$fg_cs->dbID())){
     $fimported = 1;
-    warn("Skipping ArrayChip feature import (".$array_chip->name().") already fully imported for ".$self->data_version());
+    $self->log("Skipping ArrayChip feature import (".$array_chip->name().") already fully imported for ".$self->data_version());
   }elsif($self->recovery()){
     $self->log("Rolling back partially imported ArrayChip features:\t".$array_chip->name());
     $self->db->rollback_ArrayChip_features($array_chip, $fg_cs);
@@ -542,7 +548,6 @@ sub read_sanger_array_probe_data{
     my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name(($array_file_format eq "ADF") ? "VendorMap" : "LiftOver");
    
     $self->log("Parsing ".$self->vendor()." array data (".localtime().")");
-    warn("Parsing ".$self->vendor()." array data (".localtime().")");
     $fh = open_file("<", $array_file);
     
 
@@ -559,7 +564,7 @@ sub read_sanger_array_probe_data{
 
       #Hack!!!!!!  This is still maintaining the probe entry (and result?)
       if(!  $self->cache_slice($chr)){
-	warn("Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
+	warn("-- Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
 	next;
       }
 
@@ -734,8 +739,6 @@ sub read_sanger_result_data{
   if($rset){#we have some new data
 
     foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
-
-      warn "echip has unique_id ".$echip->unique_id();
       
       if($echip->has_status('IMPORTED_SangerPCR', $echip)){
 	$self->log("ExperimentalChip(".$echip->unique_id().") has already been imported");
@@ -1284,7 +1287,7 @@ sub cache_slice{
   
   if(! exists $self->{'slice_cache'}->{$region_name}){
     $self->{'slice_cache'}->{$region_name} = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
-    warn("Could not generate a slice for ${cs_name}:$region_name") if ! defined $self->{'slice_cache'}->{$region_name};
+    warn("-- Could not generate a slice for ${cs_name}:$region_name\n") if ! defined $self->{'slice_cache'}->{$region_name};
   }
   
   return $self->{'slice_cache'}->{$region_name};

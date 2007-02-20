@@ -278,7 +278,8 @@ sub new{
 #Move exeriment/probe/raw result import tests to register experiment?
 #Make all other register methods private, so we don't bypass the previously imported exp check
 
-=head2 init_import
+
+=head2 init_array_design_import
 
   Example    : $self->init_import();
   Description: Initialises import by creating working directories 
@@ -286,7 +287,36 @@ sub new{
   Returntype : none
   Exceptions : warns and throws depending on recover and Experiment status 
   Caller     : general
-  Status     : Medium
+  Status     : at risk - merge with register_array_design
+
+=cut
+
+
+sub init_array_design_import{
+  # we need to define which paramters we'll be storing
+  #use the logic names of the analyses as the field headers
+
+  #need to test for vendor here
+
+  #Sanger, NIMBLEGEN(no design_id issue, could get from the ndf, but we want it in the DesignNotes.txt)
+  #Then we can change the Array/Chip generation to soley use the DesignNotes.txt rather than SampleKey 
+  #which is experiment specific
+  #or eFG format.
+
+
+}
+
+
+
+=head2 init_experiment_import
+
+  Example    : $self->init_import();
+  Description: Initialises import by creating working directories 
+               and by storing the Experiemnt
+  Returntype : none
+  Exceptions : warns and throws depending on recover and Experiment status 
+  Caller     : general
+  Status     : at risk - merge with register exeriment
 
 =cut
 
@@ -314,7 +344,7 @@ sub init_experiment_import{
   $self->create_output_dirs("raw", "norm");
 
 
-  if($self->result_files()){
+  if(@{$self->result_files()}){
     $self->log("Found result files arguments:\n".join("\n", @{$self->result_files()}));
   }
 

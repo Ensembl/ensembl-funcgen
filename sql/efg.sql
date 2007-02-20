@@ -154,6 +154,7 @@ CREATE TABLE `probe` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
+--- Add X & Y coords
 --- remove array_id and link through probe_set, can't if we're not populating probe_set for sets of 1.
 --- name (for Affy) at least is array_chip to probe relationship, probeset is optional for some formats 
 --- remove? class = control, experimental etc... naming clash with array.class, different class types.
@@ -173,6 +174,17 @@ CREATE TABLE `probe` (
 --- pair_index table   `pair_index` int(10) unsigned NOT NULL default '0',
 --- joint index on probe_ids
 
+---
+-- Table structure for table `probe_design`
+--
+
+DROP TABLE IF EXISTS `probe_design`;
+CREATE TABLE `probe_design` (
+   `probe_id` int(10) unsigned NOT NULL,
+   `analysis_id` int(10) unsigned NOT NULL,
+   `score` double default NULL,
+    PRIMARY KEY  (`probe_id`, `analysis_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
