@@ -543,8 +543,8 @@ sub read_sanger_array_probe_data{
       throw("Does not yet accomodate Sanger adf format");
     }else{
       throw("Could not determine array file format: $array_file");
-    }
-
+  }
+	
     my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name(($array_file_format eq "ADF") ? "VendorMap" : "LiftOver");
    
     $self->log("Parsing ".$self->vendor()." array data (".localtime().")");
@@ -564,9 +564,9 @@ sub read_sanger_array_probe_data{
 
       #Hack!!!!!!  This is still maintaining the probe entry (and result?)
       if(!  $self->cache_slice($chr)){
-	warn("-- Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
-	next;
-      }
+		  warn("-- Skipping non standard probe (".$pid.") with location:\t${chr}:${start}-${end}\n");
+		  next;
+	  }
 
 
       #need to parse dependant on file format 
@@ -575,50 +575,51 @@ sub read_sanger_array_probe_data{
       if(! $self->get_probe_id_by_name($pid)){
 
 
-	if(! $imported){
+		  if(! $imported){
 
-	  #when we utilise array coords, we need to look up probe cache and store again with new coords
-	  #we're currently storing duplicates i.e. different ids with for same probe
-	  #when we should be storing two records for the same probe/id
-	  #the criteria for this will be different for each vendor, may have to check container etc for NimbleGen
+			  #when we utilise array coords, we need to look up probe cache and store again with new coords
+			  #we're currently storing duplicates i.e. different ids with for same probe
+			  #when we should be storing two records for the same probe/id
+			  #the criteria for this will be different for each vendor, may have to check container etc for NimbleGen
+			  
+			  #$length = $start - $end;
+			  #warn "length is $length";
 	  
-	  #$length = $start - $end;
-	  #warn "length is $length";
+			  $op = Bio::EnsEMBL::Funcgen::Probe->new(
+													  -NAME          => $pid,
+													  -LENGTH        => ($end - $start),
+													  -ARRAY         => $array,
+													  -ARRAY_CHIP_ID => $array->get_ArrayChip_by_design_id($array->name())->dbID(),
+													  -CLASS         => 'EXPERIMENTAL',
+													 );
+			  ($op) = @{$op_adaptor->store($op)};
+			  $self->cache_name_id($op->get_probename(), $op->dbID);
 	  
-	  $op = Bio::EnsEMBL::Funcgen::Probe->new(
-						  -NAME          => $pid,
-						  -LENGTH        => ($end - $start),
-						  -ARRAY         => $array,
-						  -ARRAY_CHIP_ID => $array->get_ArrayChip_by_design_id($array->name())->dbID(),
-						  -CLASS         => 'EXPERIMENTAL',
-						 );
-	  ($op) = @{$op_adaptor->store($op)};
-	  $self->cache_name_id($op->get_probename(), $op->dbID);
-	  
-	}
-      
+		  }
+		  
 
-	$of = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
-						       -START         => $start,
-						       -END           => $end,
-						       -STRAND        => $strand,
-						       -SLICE         => $self->cache_slice($chr),
-						       -ANALYSIS      => $fanal,
-						       -MISMATCHCOUNT => 0,
-						       -PROBE_ID     => $self->get_probe_id_by_name($pid),#work around to avoid cacheing probes
-						      );
-	
-	$of_adaptor->store($of);
-	
+		  $of = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
+														 -START         => $start,
+														 -END           => $end,
+														 -STRAND        => $strand,
+														 -SLICE         => $self->cache_slice($chr),
+														 -ANALYSIS      => $fanal,
+														 -MISMATCHCOUNT => 0,
+														 -PROBE_ID     => $self->get_probe_id_by_name($pid),#work around to avoid cacheing probes
+														);
+		  
+		  $of_adaptor->store($of);
+		  
+		  
       }else{
-	#warn "Need to accomdate duplicate probes here $pid";　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
-	#generate probe and add an x y position and store coordindates
-      }
-    }
-    $array_chip->adaptor->set_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip);
-    $self->log("ArrayChip:\t".$array_chip->design_id()." has been IMPORTED_CS_".$fg_cs->dbID());
+		  #warn "Need to accomdate duplicate probes here $pid";　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+		  #generate probe and add an x y position and store coordindates
+	  }
   }
-
+	$array_chip->adaptor->set_status('IMPORTED_CS_'.$fg_cs->dbID(), $array_chip);
+	$self->log("ArrayChip:\t".$array_chip->design_id()." has been IMPORTED_CS_".$fg_cs->dbID());
+}
+  
   
 
   if(! $imported){
