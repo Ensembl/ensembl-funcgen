@@ -112,7 +112,7 @@ sub fetch_by_name {
 =head2 get_all_experiment_names
 
   Arg [1]    : (optional) boolean - flag to denote whether experiment is flagged for web display
-  Example    : my @names = $exp_a->get_all_experiment_names();
+  Example    : my @names = @{$exp_a->get_all_experiment_names()};
   Description: Retrieves names of all experiments.
   Returntype : ARRAYREF
   Exceptions : none
