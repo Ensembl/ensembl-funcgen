@@ -103,21 +103,22 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($probe, $mismatchcount, $coord_sys_id, $pid)
-    = rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID', 'PROBE_ID'], @_);
+  my ($probe, $mismatchcount, $coord_sys_id, $pid, $cig_line)
+    = rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID', 'PROBE_ID', 'CIGAR_LINE'], @_);
 
-  #Need to add analysis/cigar_line(remove mismatch?)
+  #remove mismatch?
+  #mandatory args?
 
   $self->{'probe_id'} = $pid;
-  $self->probe($probe);
-  
-  $self->mismatchcount($mismatchcount);
+  $self->probe($probe); 
+  $self->mismatchcount($mismatchcount)  if defined $mismatchcount;#do not remove until probe mapping pipeline fixed
+  $self->cigar_line($cig_line)          if defined $cig_line;
    
   #do we need to validate this against the db?  Grab from slice and create new if not present?  Will this be from the dnadb?
   
   #do we need this coordsys id if we're passing a slice?  We should have the method but not in here?
 
-  $self->coord_system_id($coord_sys_id);
+  $self->coord_system_id($coord_sys_id) if defined $coord_sys_id;;
   return $self;
 }
 

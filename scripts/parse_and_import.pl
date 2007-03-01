@@ -134,7 +134,7 @@ use strict;
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
-my ($ctype, $ftype, $recover, $mage_tab);
+my ($ctype, $ftype, $recover, $output_dir, $mage_tab);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -171,7 +171,7 @@ GetOptions (
 	    "ssh"          => \$ssh,
 	    "dbname=s"     => \$dbname,
 	    "group|g=s"    => \$group,
-	    "species|s=s"      => \$species, # Not needed as the db is species specific
+	    "species|s=s"      => \$species, 
 	    "data_version|d=s" => \$data_version,
 	    "array_set"    => \$array_set,
 	    "array_name=s" => \$array_name,
@@ -182,6 +182,7 @@ GetOptions (
 	    "debug=i"    => \$main::_debug_level,
 	    "data_root=s"  => \$data_dir,
 	    "input_dir=s"  => \$input_dir,
+	    "output_dir=s" => \$output_dir,
 	    "exp_date=s"   => \$exp_date,
 	    "fasta"        => \$fasta,
 	    "recover|r"    => \$recover,
@@ -212,6 +213,8 @@ pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 #Build and validate all these in Experiment::new? We only need these for importing/analysing???
+#need to test this before making
+warn "change the implementation of Helper to set up log files etc only after we have initialised/tested Importer";
 $output_dir  = $data_dir."/output/".uc($vendor)."/".$name;
 
 #mkpath $output_dir;#log/debug files fail in Helper without this
@@ -228,35 +231,35 @@ $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file)
 ### SET UP IMPORTER (FUNCGENDB/DNADB/EXPERIMENT) ###
 
 my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
-					       name        => $name,
-					       format      => $format,
-					       vendor      => $vendor,
-					       group       => $group,
-					       pass        => $pass,
-					       host        => $host,
-					       user        => $user,
-					       port        => $port,
-					       ssh         =>  $ssh,
-					       dbname      => $dbname,
-					       array_set   => $array_set,
-					       array_name  => $array_name,
-					       result_set_name => $rset_name, #not implemented yet
-					       feature_type_name => $ftype,
-					       cell_type_name => $ctype,
-					       mage_tab    => $mage_tab,
-					       data_version => $data_version,
-					       data_root   => $data_dir,
-					       output_dir  => $output_dir,
-					       recover     => $recover,
-					       dump_fasta  => $fasta,
-					       norm_method => $nmethod,
-					       species     => $species,
-					       location    => $loc,
-					       contact     => $contact,
-					       verbose     => $verbose,
-					       input_dir   => $input_dir,
-					       exp_date     => $exp_date,
-					       result_files => \@result_files,
+					       -name        => $name,
+					       -format      => $format,
+					       -vendor      => $vendor,
+					       -group       => $group,
+					       -pass        => $pass,
+					       -host        => $host,
+					       -user        => $user,
+					       -port        => $port,
+					       -ssh         =>  $ssh,
+					       -dbname      => $dbname,
+					       -array_set   => $array_set,
+					       -array_name  => $array_name,
+					       -result_set_name => $rset_name, #not implemented yet
+					       -feature_type_name => $ftype,
+					       -cell_type_name => $ctype,
+					       -mage_tab    => $mage_tab,
+					       -data_version => $data_version,
+					       -data_root   => $data_dir,
+					       -output_dir  => $output_dir,
+					       -recover     => $recover,
+					       -dump_fasta  => $fasta,
+					       -norm_method => $nmethod,
+					       -species     => $species,
+					       -location    => $loc,
+					       -contact     => $contact,
+					       -verbose     => $verbose,
+					       -input_dir   => $input_dir,
+					       -exp_date     => $exp_date,
+					       -result_files => \@result_files,
 					       #Exp does not build input dir, but could
 					       #This allows input dir to be somewhere 
 					       #other than efg dir structure

@@ -392,9 +392,6 @@ sub get_ArrayChip {
   my $self = shift;
 
   if(! defined $self->{'array_chip'}){
-
-    warn "adaptor is ".$self->adaptor();
-
     $self->{'array_chip'} = $self->adaptor->db->get_ArrayChipAdaptor()->fetch_by_dbID($self->array_chip_id());
   }
 

@@ -168,7 +168,7 @@ sub fetch_by_ProbeFeature {
 	if (
 		!ref($feature)
 		|| !$feature->isa('Bio::EnsEMBL::Funcgen::ProbeFeature')
-		|| !$feature->{'_probe_id'}
+		|| !$feature->{'probe_id'}
 	) {
 		throw('fetch_by_ProbeFeature requires a stored Bio::EnsEMBL::Funcgen::ProbeFeature object');
 	}
@@ -181,7 +181,7 @@ sub fetch_by_ProbeFeature {
 		AND pf.probe_feature_id = ?
 	");
 
-	$sth->bind_param(1, $feature->{'_probe_id'},    SQL_VARCHAR);
+	$sth->bind_param(1, $feature->{'probe_id'},    SQL_VARCHAR);
 	$sth->execute();
 
 	my ($probeset_id) = $sth->fetchrow();

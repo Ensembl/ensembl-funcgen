@@ -383,7 +383,7 @@ sub get_chip_channel_id{
   Example    : my @ecs = @{$result_set->get_ExperimentalChips()};
   Description: Retrieves a chip_channel_id from the cahce given an ExperimentalChip dbID
   Returntype : Listref of ExperimentalChip object
-  Exceptions : throw is not an expermental_chip ResultSet
+  Exceptions : throw is not an experimental_chip ResultSet
   Caller     : General
   Status     : At Risk
 

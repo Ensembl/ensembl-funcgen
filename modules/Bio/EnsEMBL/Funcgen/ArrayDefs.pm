@@ -137,23 +137,6 @@ sub set_defs{
 	return;
 }
 
-=head2 get_def
-
-  Arg [1]    : mandatory - name of the data element to retrieve from the defs hash
-  Example    : %dye_freqs = %{$imp->get_def('dye_freqs')};
-  Description: returns data from the definitions hash
-  Returntype : various
-  Exceptions : none
-  Caller     : Importer
-  Status     : Medium - throw if no data_name?
-
-=cut
-
-
-sub get_def{
-  my ($self, $data_name) = @_;
-  return $self->get_data('array_defs', $data_name);#will this cause undefs?
-}
 
 
 =head2 read_array_data
@@ -184,10 +167,10 @@ sub read_array_data{
     
     $line =~ s/\r*\n//;#chump
     @data =  split/\t/o, $line;
-    
-    
 
-
+    #We need to have a DESIGN vendor type?
+    #also need to be able to set file path independently of defs
+    
     if($. == 1){
       %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
       next;
@@ -203,7 +186,7 @@ sub read_array_data{
 
       $array = Bio::EnsEMBL::Funcgen::Array->new
 	(
-	 -NAME        => $self->{'array_name'} || $data[$hpos{'DESIGN_NAME'}],
+	 -NAME        => $self->array_name() || $data[$hpos{'DESIGN_NAME'}],
 	 -FORMAT      => uc($self->format()),
 	 -VENDOR      => uc($self->vendor()),
 	 -TYPE        => 'OLIGO',
@@ -211,7 +194,6 @@ sub read_array_data{
 	);
 
       ($array) = @{$oa_adaptor->store($array)};
-
 
       $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
 							  -ARRAY_ID  => $array->dbID(),
@@ -225,7 +207,7 @@ sub read_array_data{
       $array->add_ArrayChip($array_chip);
         
     }
-    elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->{'array_set'})){
+    elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->array_set())){
       
       $self->log("Generating new ArrayChip(".$data[$hpos{'DESIGN_NAME'}].". for same Array ".$array->name()."\n");
       
@@ -289,6 +271,7 @@ sub read_experiment_data{
   warn("We need to change Array/ArrayChip retrieval to ensure that we have IMPORTED status, so avoid having an incomplete arraychip");
 
   while ($line = <$fh>){
+    next if $line =~ /^\s+\r*\n/;
     $line =~ s/\r*\n//;#chump
     @data =  split/\t/o, $line;
 
@@ -384,42 +367,6 @@ sub read_experiment_data{
 }
 
 
-=head2 add_array
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Array
-  Example    : $self->add_array($array);
-  Description: Setter for array elements
-  Returntype : none
-  Exceptions : throws if passed non Array or if more than one Array set
-  Caller     : Importer
-  Status     : Medium - Remove/Implement multiple arrays?
-
-=cut
-
-sub add_array{
-  my $self = shift;
-
-  warn("Move add_array to Experiment");
-
-
-  #do we need to check if stored?
-  if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')){
-    throw("Must supply a Bio::EnsEMBL::Funcgen::Array");
-  }elsif(@_){
-    push @{$self->{'arrays'}}, @_;
-  }
-   
-  throw("Does not yet support multiple array imports") if(scalar (@{$self->{'arrays'}}) > 1);
-  #need to alter read_probe data at the very least
-  
-  return;
-}
-
-
-sub arrays{
-  my $self = shift;
-  return $self->{'arrays'};
-}
 
 
 
@@ -443,7 +390,7 @@ sub read_sanger_array_probe_data{
  #store now checks whether already stored and updates array chips accordingly
   my $array = Bio::EnsEMBL::Funcgen::Array->new
     (
-     -NAME        => $self->{'array_name'},
+     -NAME        => $self->array_name(),
      -FORMAT      => uc($self->format()),
      -VENDOR      => uc($self->vendor()),
      -TYPE        => 'PCR',
@@ -518,7 +465,7 @@ sub read_sanger_array_probe_data{
       
       #hacky ..do better?
       for my $suffix("gff", "adf"){
-	$cmd = $self->get_dir('input')."/".$self->{'array_name'}."*".$suffix;
+	$cmd = $self->get_dir('input')."/".$self->array_name()."*".$suffix;
 	@list = `ls $cmd`;
 	
 	if((scalar(@list) == 1) && 
@@ -954,7 +901,7 @@ sub read_probe_data{
       #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
       #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
       my $f_out = open_file(">", $self->get_dir("output")."/probe.".$achip->name()."fasta")	if($self->{'_dump_fasta'});
-      my ($length, $ops, $op, $of, @probes, @features, %pfs);
+      my ($length, $ops, $op, $of, %pfs);
 
       #should define mapping_method arg to allows this to be set to LiftOver/EnsemblMap
       my $anal = $self->db->get_AnalysisAdaptor()->fetch_by_logic_name("VendorMap");
@@ -1013,8 +960,7 @@ sub read_probe_data{
 	    #THis is where we chose to update/validate
 	    #Do we need to pass probes if they're already stored..may aswell to reduce mysql load?
 	    #No point as we have to query anyway
-	    #$self->store_set_probes_features($achip->dbID(), $ops, \@probes, \@features);
-	    $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
+	    $self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
 	    throw("ops still defined in caller") if defined $ops;
 	  }
 	  
@@ -1033,7 +979,7 @@ sub read_probe_data{
 	  undef %pfs
 	}
 	elsif($. > 2){#may have previous ops set, but next has no ops, or maybe just no ops's at all
-	  $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
+	  $self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
 	  throw("ops still defined in caller") if defined $ops;
 	}
 	
@@ -1130,7 +1076,7 @@ sub read_probe_data{
       }
       
       #need to store last data here
-      $self->store_set_probes_features($achip->dbID(), $ops, \%pfs);
+      $self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
       $self->log(join("\n", @log));
       $achip->adaptor->set_status("IMPORTED", $achip);
       $self->log("ArrayChip:\t".$achip->design_id()." has been IMPORTED");
@@ -1190,174 +1136,6 @@ sub read_probe_data{
 
 
 
-=head2 store_set_probes_features
-
-  Arg [1]    : mandatory - array chip id
-  Arg [2]    : optional - Bio::EnsEMBL::Funcgen::ProbeSet
-  Arg [3]    : mandatory - hashref of keys probe id, values are 
-               hash of probe/features with values 
-               Bio::EnsEMBL::Funcgen::Probe/Features for a given 
-               probe set if defined.
-  Example    : $self->store_set_probes_features($ac->dbID(), $ops, \%pfs);
-  Description: Stores probe set, probes and probe features 
-  Returntype : none
-  Exceptions : none
-  Caller     : self
-  Status     : Medium
-
-=cut
-
-
-sub store_set_probes_features{
-  #my ($self, $ac_id, $ops, $probes, $features) = @_;
-
-  my ($self, $ac_id, $ops, $pf_hash) = @_;
-  
-
-  #just call these directly rather than setting each time?
-  #my $op_a = $self->db->get_ProbeAdaptor();
-  #my $opf_a = $self->db->get_ProbeFeatureAdaptor();
-
-
-  #if(scalar(@$probes) != scalar(@$features)){
-  #  my $t = scalar(@$probes);
-  #  my $f = scalar(@$features);
-  #  throw("Does not accomodate multiple features($f) per probe $t");
-  #}
-
-  #Maybe do some validation here against all probes for probeset and ac_id? 
-
-  if($ops){
-    $ops->size(scalar(keys %$pf_hash));
-    ($ops) = $self->db->get_ProbeSetAdaptor->store($ops);
-  }
-
-
-
-  #If we're going to validate fully, we need to check for probes in this probeset on this array chip
-  #Update size if we have any new probes
-  #Overkill? Only do on recover? Do not read if array chip is IMPORTED 
-
-  #This does not make any attempt to validate probes/set vs previously stored data
-
-
-   
-  for my $probe_id(keys %$pf_hash){
-    
-    #set probeset in probe and store
-    #the process corresponding feature
-    my $probe = $pf_hash->{$probe_id}->{'probe'};
-    $probe->probeset($ops) if $ops;
-    ($probe) = @{$self->db->get_ProbeAdaptor->store($probe)};
-
-      
-
-    #Can't use get_all_Arrays here as we can't guarantee this will only ever be the array we've generated
-    #Might dynamically load array if non-present
-    #This is allowing multiple dbIDs per probe???  Is this wrong?
-    $self->cache_name_id($probe->get_probename(), $probe->dbID());
-
-        
-    foreach my $feature(@{$pf_hash->{$probe_id}->{'features'}}){
-      $feature->probe($probe);
-      ($feature) = @{$self->db->get_ProbeFeatureAdaptor->store($feature)};
-    }
-  }
-
-  undef $ops;#Will this persist in the caller?
-  undef %{$pf_hash};
-
-# undef @$probes;
-#  undef @$features,
-
-  return;
-}
-
-sub cache_slice{
-  my ($self, $region_name, $cs_name) = @_;
-
-  throw("Need to define a region_name to cache a slice from") if ! $region_name;
-
-  $cs_name ||= 'chromosome';
-  $self->{'slice_cache'} ||= {};
-  $region_name =~ s/chr//;
-  $region_name = "MT" if $region_name eq "M";
-  
-  #can we handle UN/random chromosomes here?
-  
-  
-  if(! exists $self->{'slice_cache'}->{$region_name}){
-    $self->{'slice_cache'}->{$region_name} = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
-    warn("-- Could not generate a slice for ${cs_name}:$region_name\n") if ! defined $self->{'slice_cache'}->{$region_name};
-  }
-  
-  return $self->{'slice_cache'}->{$region_name};
-}
-
-
-=head2 cache_name_id
-
-  Arg [1]    : mandatory - probe name
-  Arg [2]    : mandatory - probe dbID
-  Example    : $self->cache_name_id("Probe1", $probe->dbID());
-  Description: Setter for probe cache values
-  Returntype : none
-  Exceptions : throws is cache conflict encountered
-  Caller     : self
-  Status     : At risk - merge with following?
-
-=cut
-
-
-sub cache_name_id{
-  my ($self, $pname, $pid) = @_;
-
-
-  throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
-
-
-  if(defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname} != $pid)){
-    throw("Found two differing dbIDs for $pname, need to sort out redundant probe entries");
-  }
-
-  $self->{'_probe_cache'}->{$pname} = $pid;
-  return;
-}
-
-=head2 get_probe_id_by_name
-
-  Arg [1]    : mandatory - probe name
-  Example    : $pid = $self->get_probe_id_by_name($pname);
-  Description: Getter for probe cache values
-  Returntype : int
-  Exceptions : none
-  Caller     : self
-  Status     : At risk - merge with previous, move to importer?
-
-=cut
-
-
-sub get_probe_id_by_name{
-  my ($self, $name) = @_;
-  
-  #Should only ever be one pid per probe per array per n array_chips
-  #i.e. duplicate records per array chip with same pid
-
-  if(! defined $self->{'_probe_cache'}){ #|| (! defined $self->{'_probe_cache'}->{$name})){
-
-    #this fails if we're testing for the probe_id
-    #this is because we have no chips associated with the experiemnt yet.
-  
-    $self->{'_probe_cache'} = $self->db->get_ProbeAdaptor->fetch_probe_cache_by_Experiment($self->experiment());
-    
-  
-    #my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
-    #$self->{'_probe_map'}{$name} = $op->dbID() if $op;
-  }
-  
-
-  return (exists $self->{'_probe_cache'}->{$name}) ? $self->{'_probe_cache'}->{$name} : undef;
-}
 
 =head2 read_results_data
 

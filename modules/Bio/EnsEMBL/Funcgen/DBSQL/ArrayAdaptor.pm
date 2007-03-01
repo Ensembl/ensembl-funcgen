@@ -42,7 +42,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::Array;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 
@@ -133,40 +133,39 @@ sub fetch_by_name_vendor {
     throw("Must provide and array and vendor name") if (! ($name && $vendor));
 
     #unique key means this only returns one element
-    my ($result) = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};
-	
+    my ($result) = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};	
     return $result;
 }
 
 
 
-#=head2 fetch_all_by_type
-#
-#  Arg [1]    : List of strings - type(s) (e.g. AFFY or OLIGO)
-#  Example    : my @arrays = @{$oaa->fetch_all_by_type('OLIGO')};
-#  Description: Fetch all arrays of a particular type.
-#  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
-#  Exceptions : Throws if no type is provided
-#  Caller     : General
-#  Status     : Medium Risk
+=head2 fetch_all_by_type
 
-#=cut
+  Arg [1]    : List of strings - type(s) (e.g. OLIGO, PCR)
+  Example    : my @arrays = @{$aa->fetch_all_by_type('OLIGO')};
+  Description: Fetch all arrays of a particular type.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
+  Exceptions : Throws if no type is provided
+  Caller     : General
+  Status     : at risk
 
-#sub fetch_all_by_type {
-#	my ($self, @types) = @_;
+=cut
+
+sub fetch_all_by_type {
+  my ($self, @types) = @_;
 	
-#	throw('Need type as parameter') if !@types;
+  throw('Need type as parameter') if ! @types;
 	
-#	my $constraint;
-#	if (scalar @types == 1) {
-#		$constraint = qq( oa.type = '$types[0]' );
-#	} else {
-#		$constraint = join q(','), @types;
-#		$constraint = qq( oa.type IN ('$constraint') );
-#	}
+  my $constraint;
+  if (scalar @types == 1) {
+    $constraint = qq( a.type = '$types[0]' );
+  } else {
+    $constraint = join q(','), @types;
+    $constraint = qq( a.type IN ('$constraint') );
+  }
 
-#	return $self->generic_fetch($constraint);
-#}
+  return $self->generic_fetch($constraint);
+}
 
 =head2 fetch_attributes
 
@@ -224,7 +223,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( a.array_id a.name a.format a.vendor a.description);
+	return qw( a.array_id a.name a.format a.vendor a.description a.type);
 }
 
 =head2 _objs_from_sth
@@ -242,33 +241,34 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth) = @_;
+  my ($self, $sth) = @_;
 	
-	my (@result, $array_id, $name, $format, $vendor, $description);
-	
-	$sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description);
-	
-	while ( $sth->fetch() ) {
-		my $array = Bio::EnsEMBL::Funcgen::Array->new(
-														   -dbID        => $array_id,
-														   -adaptor     => $self,
-														   -name        => $name,
-														   -format      => $format,
-														   -vendor      => $vendor,
-														   -description => $description,
-														  );
+  my (@result, $array_id, $name, $format, $vendor, $description, $type);
+  
+  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type);
+  
+  while ( $sth->fetch() ) {
+    my $array = Bio::EnsEMBL::Funcgen::Array->new(
+						  -dbID        => $array_id,
+						  -adaptor     => $self,
+						  -name        => $name,
+						  -format      => $format,
+						  -vendor      => $vendor,
+						  -description => $description,
+						  -type        => $type,
+						 );
 
-		push @result, $array;
-
-		#if ($parent_id) {
-		#	my $parent_array = Bio::EnsEMBL::Funcgen::Array->new(
-		#		-dbID    => $parent_id,
-		#		-adaptor => $self,
-		#	);
-		#	$array->superset($parent_array);
-		#}
-	}
-	return \@result;
+    push @result, $array;
+    
+    #if ($parent_id) {
+    #	my $parent_array = Bio::EnsEMBL::Funcgen::Array->new(
+    #		-dbID    => $parent_id,
+    #		-adaptor => $self,
+    #	);
+    #	$array->superset($parent_array);
+    #}
+  }
+  return \@result;
 }
 
 
@@ -336,8 +336,8 @@ sub store {
   
   my $sth = $self->prepare("
 			INSERT INTO array
-			(name, format, vendor, description)
-			VALUES (?, ?, ?, ?)");
+			(name, format, vendor, description, type)
+			VALUES (?, ?, ?, ?, ?)");
   
     
   foreach my $array (@args) {
@@ -351,12 +351,17 @@ sub store {
     if (!( $array->dbID() && $array->adaptor() == $self )){
       #try and fetch array here and set to array if valid
       $sarray = $self->fetch_by_name_vendor($array->name(), $array->vendor());#this should be name_vendor?
+
+      warn "stored array from ".$array->name(), $array->vendor()." is $sarray";
       
       if( ! $sarray){
+	#sanity check here
+	throw("Array name must not be longer than 30 characters") if (length($array->name) > 40);
 	$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
 	$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
 	$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
 	$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
+	$sth->bind_param(5, $array->type(),         SQL_VARCHAR);
 	
 	$sth->execute();
 	my $dbID = $sth->{'mysql_insertid'};

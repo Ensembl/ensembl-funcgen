@@ -167,8 +167,6 @@ sub new {
   $self->probeset($probeset) if defined $probeset;
   $self->class($aclass)      if defined $aclass;
   $self->length($length)     if defined $length;
-  
-  
   return $self;
 }
 
@@ -345,21 +343,24 @@ sub get_all_complete_names {
 	
     my @result = ();
 	
-	my $probeset = $self->probeset()->name();
-	$probeset .= ':' if $probeset;
+    my $probeset = $self->probeset()->name();
+    $probeset .= ':' if $probeset;
 	
+
+    warn "For Nimblegen this need to be Container:Seqid::probeid?";
+
     #while ( my ($arrayname, $probename) = each %{$self->{'probenames'}} ) {
-	while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
-		#would have to put test in here for $self->arrays()->vendor()
-		#if($array->vendor() eq "AFFY"){
-			
-		push @result, $array->name().":$probeset".$self->{'probenames'}{$array->name()};
-		#}
-		#else{
-		#	push @result, $self->{'probenames'}{$array->name()};
-		#}
-	}
-	
+    while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
+      #would have to put test in here for $self->arrays()->vendor()
+      #if($array->vendor() eq "AFFY"){
+      
+      push @result, $array->name().":$probeset".$self->{'probenames'}{$array->name()};
+      #}
+      #else{
+      #	push @result, $self->{'probenames'}{$array->name()};
+      #}
+    }
+    
     return \@result;
 }
 
@@ -461,7 +462,203 @@ sub length {
 }
 
 
+### ARRAY DESIGN SPECIFIC METHODS
+### Sould really split this into BaseProbeDesign and eFGProbeDesign wrapper class?
+### Quick implementation for now
+### These analyses are just the core Analysis classes representing
+### the output from a RunnableDB ensembl-analysis.
+### Note scores added to previously stored probes may never make it into the DB?
+### May also get duplicate record for previously stored probes?
+### This will only happen if we're Collapsing or we fully implemnt the nr probe id to seq theory
 
+=head2 add_Analysis_score
+
+  Arg [1]    : Bio::EnsEMBL::Analysis
+  Arg [2]    : string - analysis score (as string a precision may differ between analyses)??
+  Example    : $probe->add_analysis_score($analysis, $score);
+  Description: Setter for probe analysis attributes from an array design
+  Returntype : None
+  Exceptions : throws if args are not met or valid
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+sub add_Analysis_score{
+    my ($self, $anal, $score) = @_;
+
+    if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
+      throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
+    }
+
+    throw("Must provide a score to add to the probe") if ! defined $score;
+
+    $self->{'analysis'}{$anal->dbID()} = $score;
+
+    return;
+}
+
+=head2 add_Analysis_CoordSystem_score
+
+  Arg [1]    : Bio::EnsEMBL::Analysis
+  Arg [2]    : Bio::EnsEMBL::CoordSystem
+  Arg [3]    : string - analysis score (as string a precision may differ between analyses)??
+  Example    : $probe->add_analysis_coord_system_score($analysis, $coord_sys, $score);
+  Description: Setter for coord system dependant probe analysis attributes from an array design
+  Returntype : None
+  Exceptions : throws if args are not met or valid
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+sub add_Analysis_CoordSystem_score{
+    my ($self, $anal, $cs, $score) = @_;
+
+    if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
+      throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
+    }
+
+    if(! ($cs && $cs->dbID() && $cs->isa("Bio::EnsEMBL::CoordSystem"))){
+      throw("Must provide a valid stored Bio::EnsEMBL::CoordSystem");
+    }
+
+    throw("Must provide a score to add to the probe") if ! defined $score;
+
+    $self->{'analysis_coord_system'}{$anal->dbID()}{$cs->dbID()} = $score;
+
+    return;
+}
+
+=head2 get_score_by_Analysis
+
+  Arg [1]    : Bio::EnsEMBL::Analysis
+  Example    : my $anal_score = $probe->get_analysis_score($analysis);
+  Description: Setter for probe analysis attributes from an array design
+  Returntype : string
+  Exceptions : throws if args are not met or valid
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+sub get_score_by_Analysis{
+  my ($self, $anal) = @_;
+  
+  $self->get_all_design_scores() if ! defined $self->{'analysis'};
+
+  if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
+    throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
+  }
+
+
+  return (exists $self->{'analysis'}{$anal->dbID()}) ? undef;
+}
+
+=head2 get_score_by_Analysis_CoordSystem
+
+  Arg [1]    : Bio::EnsEMBL::Analysis
+  Arg [2]    : Bio::EnsEMBL::CoordSystem
+  Arg [3]    : string - analysis score (as string a precision may differ between analyses)??
+  Example    : $probe->add_analysis($analysis, $coord_sys, $score);
+  Description: Setter for coord system dependant probe analysis attributes from an array design
+  Returntype : None
+  Exceptions : throws if args are not met or valid
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+sub get_score_by_Analysis_CoordSystem{
+    my ($self, $anal, $cs) = @_;
+
+    $self->get_all_design_scores() if ! defined $self->{'analysis_coord_system'};
+
+    if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
+      throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
+    }
+
+    if(! ($cs && $cs->dbID() && $cs->isa("Bio::EnsEMBL::CoordSystem"))){
+      throw("Must provide a valid stored Bio::EnsEMBL::CoordSystem");
+    }
+
+    my $score = undef;
+
+    if(exists $self->{'analysis_coord_system'}{$anal->dbID()} &&
+       exists $self->{'analysis_coord_system'}{$anal->dbID()}{$cs->dbID()}){
+      $score = $self->{'analysis_coord_system'}{$anal->dbID()}{$cs->dbID()};
+    }
+
+    return $score;
+}
+
+
+=head2 get_all_design_scores
+
+  Arg [1]    : Boolean - No fetch flag, to fetch design scores from DB, used in adaptor
+               To avoid testing DB for each probe when no design scores have been added.
+  Example    : my @anal_score_coordsets = @{$probe->get_all_design_scores()};
+  Description: Gets all design scores as analysis_id, score and optionally coord_system_id
+  Returntype : ARRAYREF
+  Exceptions : throws if no fetch flag is not defined and adaptor or probe is not defined and or stored.
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+#not named get_all_Analysis_scores as this would imply only non-cs dependent scores
+#hence named after table, as this returns simple table records
+
+sub get_all_design_scores{
+  my ($self, $no_fetch) = @_;
+
+  my ($analysis_id, $cs_id, $score, @design_scores);
+
+  if(! $no_fetch){#can assume we have none stored already due to implementation of add methods
+    
+    throw("Probe must have and adaptor to fetch design scores from the DB") if(! $self->adaptor());
+    
+    foreach $probe_analysis(@{$self->adaptor->fetch_all_design_records($self)}){
+      #we can't use the add methods here as would be cyclical
+      #nor do we need extra validation
+      
+      ($analysis_id, $cs_id, $score) = @$probe_analysis;
+      
+      if($cs_id){
+	$self->{'analysis_coord_system'}{$anal->dbID()}{$cs->dbID()} = $score;
+      }else{
+	$self->{'analysis'}{$anal->dbID()} = $score;
+      }
+    }
+  }
+  
+  #populate array from attrs
+  if(exists $self->{'analysis_coord_system'}){
+    
+    foreach $analysis_id(keys %{$self->{'analysis_coord_system'}}){
+      
+      foreach $cs_id(keys %{$self->{'analysis_coord_system'}{$analysis_id}}){
+	push @design_scores, [$analysis_id, $self->{'analysis_coord_system'}{$analysis_id}{$cs_id}, $cs_id];
+      }
+    }
+  }
+  
+  if(exists $self->{'analysis'}){
+    
+    foreach $analysis_id(keys %{$self->{'analysis'}}){
+      
+      push @design_scores, [$analysis_id, $self->{'analysis'}{$analysis_id}];
+    }
+  }
+  
+
+  return \@design_scores;
+
+}
+
+
+#do we need get_all methods for Analysis and Analysis_CoordSystem?
+#maybe if we split into another Class and Adaptor
 
 1;
 

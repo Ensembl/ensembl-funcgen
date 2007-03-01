@@ -33,18 +33,19 @@ package Bio::EnsEMBL::Funcgen::Importer;
 
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date);
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-
-use strict;
-
-use vars qw(@ISA);
-
-@ISA = qw(Bio::EnsEMBL::Funcgen::Helper Bio::EnsEMBL::Funcgen::ArrayDefs);
-
+use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::ArrayDefs;#will inherit or set Vendor/GroupDefs?
+use Bio::EnsEMBL::Funcgen::DesignDefs;
 use Bio::EnsEMBL::Funcgen::Helper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;#eventually add this to Registry?
 use Bio::EnsEMBL::Registry;
+use strict;
+use vars qw(@ISA);
+
+@ISA = qw(Bio::EnsEMBL::Funcgen::Helper);# Bio::EnsEMBL::Funcgen::ArrayDefs);
+
+
 my $reg = "Bio::EnsEMBL::Registry";
 
 
@@ -76,7 +77,7 @@ my $reg = "Bio::EnsEMBL::Registry";
                     -input_dir  ?????????
                     -import_dir  ???????
                     -norm_dir    ??????
-                    -dump_fasta Fast dump flag (default =0)
+                    -fasta dump FASTA flag (default =0)
                     -array_set Flag to treat all chip designs as part of same array (default = 0)
                     -array_name Name for array set
                     -array_file Path of array file to import for sanger ENCODE array
@@ -97,98 +98,73 @@ my $reg = "Bio::EnsEMBL::Registry";
 ################################################################################
 
 sub new{
-    my ($caller, %args) = @_;
+    my ($caller) = shift;
 
-    my ($self, %attrdata, $attrname, $argname, $db, $farm);
     my $reg = "Bio::EnsEMBL::Registry";
     my $class = ref($caller) || $caller;
+
+    my ($name, $format, $vendor, $group, $location, $contact, $species,
+       $array_name, $array_set, $array_file, $data_dir, $result_files,
+       $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
+       $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
+       $farm, $ssh, $fasta, $recover, $reg_config, $mage_tab)
+      = rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
+		   'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
+		   'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
+		   'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
+		   'OUTPUT_DIR', 'INPUT_DIR',#to allow override of defaults
+		   'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'MAGE_TAB'], @_);
+    #add mail flag
+    #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
+    #would have to make sure GroupDefs is inherited first so we can set some mandatory params
+    #before checking in ArrayDefs and here
+
+     #define parent defs class based on vendor
+    throw("Mandatory argument -vendor not defined") if ! defined $vendor;
+    my $defs_type = lc($vendor);
+    $defs_type = ucfirst($defs_type)."Defs";
+    #interim soln until we split Defs classes
+    $defs_type = 'ArrayDefs' if $defs_type ne 'DesignDefs';
+    push @ISA, 'Bio::EnsEMBL::Funcgen::'.$defs_type;
+
+    #would need to set up output dir here to avoid errors on instatiation of Helper and log/debug files
     #Create object from parent class
-    $self = $class->SUPER::new(%args);
-
-
-    #keep this or use re-arrange?
-    #lot's of defaults and vars, nicer to have easily readable hash
-    # objects private data and default values
-    %attrdata = (
-				 #User defined/built 
-		 name        => undef,
-		 format      => 'Tiled',
-		 vendor      => undef,
-		 group       => undef,
-		 species     => undef,
-		 feature_type_name => undef,
-		 cell_type_name    => undef,
-		 farm => 1,
-		 data_version => undef,
-		 recover     => 0,
-		 location    => undef,
-		 contact     => undef,
-		 data_dir    => $ENV{'EFG_DATA'},#?
-		 exp_date => undef,
-		 
-		 dump_fasta  => 0,
-		 #norm_method => undef,
-		 description => undef,
-		 #DBDefs, have ability to override here, or restrict to DBDefs.pm?
-		 pass       => undef,
-		 host       => undef,
-		 user       => undef,
-		 port       => undef,
-		 ssh        => 0,
-
-
-		 #vars to handle array chip sets
-		 #no methods for these as we're replacing with a meta file or something
-		 array_set => 0,
-		 array_name => undef,
-		 array_file => undef,
-		 result_files => undef,
-		 
-		 
-		 #Need to separate pipeline vars/methods from true Experiment methods?
-		 #Separate Pipeline object(or just control scripts? Handing step/dir validation?
-		 output_dir => undef,
-		 
-		 #ArrayDefs defined
-		 input_dir  => undef,#Can pass this to over-ride ArrayDefs default?
-		 array_defs => undef,
-		 #import_dir => undef,#parsed native data for import
-		 norm_dir   => undef,
-		 
-		 
-		 #Data defined
-		 #_group_dbid      => undef,
-		 #_experiment_id   => undef,
-		 #echips          => {},
-		 arrays          => [],
-		 achips          => undef,
-		 channels        => {},#?
-		 
-		 
-		 #Other
-		 db    => undef,#this should really be an ExperimentAdaptor, but it is the db at the moment?
-		 dbname => undef,#to over-ride autogeneration of eFG dbname
-		 #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
-		 reg_config    => (-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef,
-		 
-		 
-		 #HARDCODED
-		 #Need to handle a lot more user defined info here which may not be caught by the data files
-		 design_type  => "binding_site_identification",#Hard coded MGED type term for now, should have option to enable other array techs?
-		);
+    my $self = $class->SUPER::new(@_);
     
-    
-    # set each class attribute using passed value or default value
-    foreach $attrname (keys %attrdata){
-      ($argname = $attrname) =~ s/^_//; # remove leading underscore
-      $self->{$attrname} = (exists $args{$argname} && defined $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
-    }
+    #Set vars and test minimum mandatory params for any import type
+    $self->{'name'} = $name if $name;
+    $self->vendor(uc($vendor));#already tested
+    $self->{'format'} = uc($format) || 'TILED';#remove default?
+    $self->group($group) if $group;
+    $self->location($location) if $location;
+    $self->contact($contact) if $contact;
+    $self->{'species'} = $species || throw('Mandatory param -species not met');
+    $self->array_name($array_name) if $array_name;
+    $self->array_set($array_set) if $array_set;
+    $self->array_file($array_file) if $array_file;
+    $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
+    $self->result_files($result_files)if $result_files;#Sanger specific ???
+    $self->{'feature_type_name'} = $ftype_name if $ftype_name;
+    $self->{'cell_type_name'} = $ctype_name if $ctype_name;
+    $self->experiment_date($exp_date) if $exp_date;
+    $self->description($desc) if $desc;
+    $self->{'user'} = $user || throw('Mandatory param -user not met');
+    $self->{'host'} = $host || 'localhost';
+    $self->{'port'} = $port || '3306';
+    $self->{'pass'} = $pass || throw('Mandatory param -pass not met');
+    $self->dbname($dbname) if $dbname;#overrides autogeneration of dbname
+    $self->db($db) if $db;#predefined db
+    $self->{'data_version'} = $data_version || throw('Mandatory param -data_version not met');
+    $self->{'design_type'} = $design_type || 'binding_site_identification';#remove default?
+    $self->output_dir($output_dir) if $output_dir;#defs default override
+    $self->input_dir($input_dir) if $input_dir;#defs default override
+    $self->{'farm'} = $farm || 1;
+    $self->{'ssh'} = $ssh || 0;
+    $self->{'fasta'} = $fasta || 0;
+    $self->{'recover'} = $recover || 0;
+    #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
+    $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
 
-
-    #This is minimum mandatory params for any import
-    foreach my $tmp('vendor', 'format', 'data_version', 'species', 'host', 'user', 'pass'){
-      $self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
-    }
 
     #Set vendor specific vars/methods
     $self->set_defs();
@@ -215,10 +191,9 @@ sub new{
       
       if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))){
 	
-	
 	if($self->{'ssh'}){
 	  
-	  my $host = `host localhost`;#mac specific? nslookup localhost wont work on server/non-PC 
+	  $host = `host localhost`;#mac specific? nslookup localhost wont work on server/non-PC 
 	  #will this always be the same?
 	  warn "Need to get localhost IP from env, hardcoded for 127.0.0.1, $host";
 	  
@@ -325,13 +300,13 @@ sub init_experiment_import{
   my ($self) = shift;
 
   foreach my $tmp("name", "group", "data_dir"){
-    $self->throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
+    throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
   }
   #Should we separate path on group here too, so we can have a dev/test group?
   
   #Set and validate input dir
   $self->{'input_dir'} ||= $self->get_dir("data")."/input/".$self->vendor()."/".$self->name();
-  $self->throw("input_dir is not defined or does not exist (".$self->get_dir("input").")") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
+  throw("input_dir is not defined or does not exist (".$self->get_dir("input").")") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
   
 
   #this is now done in control script as the log file is created before the dir is :?
@@ -414,7 +389,7 @@ sub init_experiment_import{
     $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
 						  -GROUP => $self->group(),
 						  -NAME  => $self->name(),
-						  -DATE  => $self->exp_date(),
+						  -DATE  => $self->experiment_date(),
 						  -PRIMARY_DESIGN_TYPE => $self->design_type(),
 						  -DESCRIPTION => $self->description(),
 						  -ADAPTOR => $self->db->get_ExperimentAdaptor(),
@@ -568,18 +543,10 @@ sub cell_type{
   return $self->{'cell_type'};
 }
 
-
-
-
-
-
-
-
-
 =head2 array_file
   
   Example    : my $array_file = $imp->array_file();
-  Description: Getter/Setter for sanger array file
+  Description: Getter/Setter for sanger/design array file
   Arg [1]    : optional - path to adf or gff array definition/mapping file
   Returntype : string
   Exceptions : none
@@ -593,6 +560,93 @@ sub array_file{
   $self->{'array_file'} = shift if(@_);
   return $self->{'array_file'};
 }
+
+=head2 array_name
+  
+  Example    : my $array_name = $imp->array_name();
+  Description: Getter/Setter for array name
+  Arg [1]    : optional string - name of array
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub array_name{
+  my ($self) = shift;
+  $self->{'array_name'} = shift if(@_);
+  return $self->{'array_name'};
+}
+
+
+=head2 array_set
+  
+  Example    : $imp->array_set(1);
+  Description: Getter/Setter for array set flag
+  Arg [1]    : optional boolean - treat all array chips as the same array
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub array_set{
+  my ($self) = shift;
+  $self->{'array_set'} = shift if(@_);
+  return $self->{'array_set'};
+}
+
+
+=head2 add_array
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Array
+  Example    : $self->add_array($array);
+  Description: Setter for array elements
+  Returntype : none
+  Exceptions : throws if passed non Array or if more than one Array set
+  Caller     : Importer
+  Status     : At risk - Implement multiple arrays? Move to Experiment?
+
+=cut
+
+sub add_array{
+  my $self = shift;
+
+  warn "Move add_arrays and arrays to experiment?";
+
+  #do we need to check if stored?
+  if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')){
+    throw("Must supply a Bio::EnsEMBL::Funcgen::Array");
+  }elsif(@_){
+    push @{$self->{'arrays'}}, @_;
+  }
+   
+  throw("Does not yet support multiple array imports") if(scalar (@{$self->{'arrays'}}) > 1);
+  #need to alter read_probe data at the very least
+  
+  return;
+}
+
+
+
+=head2 arrays
+  
+  Example    : foreach my $array(@{$imp->arrays}){ ...do an array of things ...};
+  Description: Getter for the arrays attribute
+  Returntype : ARRAYREF
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub arrays{
+  my $self = shift;
+  return $self->{'arrays'};
+}
+
 
 =head2 data_dir
   
@@ -617,11 +671,11 @@ sub data_dir{
   
   Example    : $imp->input_dir($dir);
   Description: Getter/Setter for input directory for an experiment
-  Arg [1]    : optional - inut directory path
+  Arg [1]    : optional - input directory path
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : at risk
 
 =cut
 
@@ -632,9 +686,35 @@ sub input_dir{
 
 
   #not implemented, need to convert all get_dir calls to check if method exists or use VendorDefs
+  warn "Not implmented input dir..need to cahnge all get_dir calls when we've implemented VendorDefs";
 
   return $self->{'input_dir'};
 }
+
+=head2 output_dir
+  
+  Example    : $imp->output_dir($dir);
+  Description: Getter/Setter for input directory for an experiment
+  Arg [1]    : optional - output directory path
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+
+sub output_dir{
+  my ($self) = shift;
+  $self->{'output_dir'} = shift if(@_);
+
+
+  #not implemented, need to convert all get_dir calls to check if method exists or use VendorDefs
+  warn "Not implmented output dir..need to cahnge all get_dir calls when we've implemented VendorDefs";
+
+  return $self->{'output_dir'};
+}
+
 
 
 =head2 location
@@ -764,9 +844,9 @@ sub data_version{
 }
 
 
-=head2 exp_date
+=head2 experiment_date
   
-  Example    : $imp->exp_date('2006-11-02');
+  Example    : $imp->experiment_date('2006-11-02');
   Description: Getter/Setter for the experiment date
   Arg [1]    : optional - date string in yyyy-mm-dd
   Returntype : string
@@ -778,16 +858,23 @@ sub data_version{
 
 
 
-sub exp_date{
+sub experiment_date{
   my ($self) = shift;	
 
   if(@_){
-    $self->{'exp_date'} = shift;
-  }elsif($self->vendor() eq "nimblegen" && ! defined $self->{'exp_date'}){
-    $self->{'exp_date'} = &get_date("date", $self->get_def("chip_file")),
+    my $date = shift;
+
+    if($date !~ /[0-9]{4}-[0-9]{2}[0-9]{2}/){
+      throw('Parameter -experiment_date needs to fe in the format: YYYY-MM-DD');
+    }
+
+    $self->{'experiment_date'} = $date;
+  }
+  elsif($self->vendor() eq "nimblegen" && ! defined $self->{'experiment_date'}){
+    $self->{'experiment_date'} = &get_date("date", $self->get_def("chip_file")),
   }
 
-  return $self->{'exp_date'};
+  return $self->{'experiment_date'};
 }
 
 
@@ -1029,8 +1116,8 @@ sub user{
 
 sub dump_fasta{
   my $self = shift;
-  $self->{'dump_fasta'} = shift if(@_);
-  return $self->{'dump_fasta'};
+  $self->{'fasta'} = shift if(@_);
+  return $self->{'fasta'};
 }
 
 
@@ -1105,6 +1192,29 @@ sub norm_method{
   return $self->{'norm_method'};
 }
 
+
+=head2 get_def
+
+  Arg [1]    : mandatory - name of the data element to retrieve from the defs hash
+  Example    : %dye_freqs = %{$imp->get_def('dye_freqs')};
+  Description: returns data from the definitions hash
+  Returntype : various
+  Exceptions : none
+  Caller     : Importer
+  Status     : at risk - to be removed and replaced with direct calls deendent on the inherited Defs class
+
+=cut
+
+
+sub get_def{
+  my ($self, $data_name) = @_;
+  return $self->get_data('array_defs', $data_name);#will this cause undefs?
+}
+
+
+
+
+
 =head2 register_experiment
   
   Example    : $imp->register_experiment()
@@ -1169,6 +1279,181 @@ sub register_experiment{
   
   return;
 }
+
+
+
+
+
+=head2 store_set_probes_features
+
+  Arg [1]    : mandatory - array chip id
+  Arg [2]    : optional - Bio::EnsEMBL::Funcgen::ProbeSet
+  Arg [3]    : mandatory - hashref of keys probe id, values are 
+               hash of probe/features with values 
+               Bio::EnsEMBL::Funcgen::Probe/Features for a given 
+               probe set if defined.
+  Example    : $self->store_set_probes_features($ac->dbID(), $ops, \%pfs);
+  Description: Stores probe set, probes and probe features 
+  Returntype : none
+  Exceptions : none
+  Caller     : self
+  Status     : Medium
+
+=cut
+
+
+sub store_set_probes_features{
+  #my ($self, $ac_id, $ops, $probes, $features) = @_;
+
+  my ($self, $ac_id, $pf_hash, $ops) = @_;
+  
+
+  #just call these directly rather than setting each time?
+  #my $op_a = $self->db->get_ProbeAdaptor();
+  #my $opf_a = $self->db->get_ProbeFeatureAdaptor();
+
+
+  #if(scalar(@$probes) != scalar(@$features)){
+  #  my $t = scalar(@$probes);
+  #  my $f = scalar(@$features);
+  #  throw("Does not accomodate multiple features($f) per probe $t");
+  #}
+
+  #Maybe do some validation here against all probes for probeset and ac_id? 
+
+  if($ops){
+    $ops->size(scalar(keys %$pf_hash));
+    ($ops) = $self->db->get_ProbeSetAdaptor->store($ops);
+  }
+
+
+
+  #If we're going to validate fully, we need to check for probes in this probeset on this array chip
+  #Update size if we have any new probes
+  #Overkill? Only do on recover? Do not read if array chip is IMPORTED 
+
+  #This does not make any attempt to validate probes/set vs previously stored data
+
+
+   
+  for my $probe_id(keys %$pf_hash){
+    
+    #set probeset in probe and store
+    #the process corresponding feature
+    my $probe = $pf_hash->{$probe_id}->{'probe'};
+    $probe->probeset($ops) if $ops;
+    ($probe) = @{$self->db->get_ProbeAdaptor->store($probe)};
+
+      
+
+    #Can't use get_all_Arrays here as we can't guarantee this will only ever be the array we've generated
+    #Might dynamically load array if non-present
+    #This is allowing multiple dbIDs per probe???  Is this wrong?
+    $self->cache_name_id($probe->get_probename(), $probe->dbID());
+
+        
+    foreach my $feature(@{$pf_hash->{$probe_id}->{'features'}}){
+      $feature->probe($probe);
+      ($feature) = @{$self->db->get_ProbeFeatureAdaptor->store($feature)};
+    }
+  }
+
+  undef $ops;#Will this persist in the caller?
+  undef %{$pf_hash};
+
+# undef @$probes;
+#  undef @$features,
+
+  return;
+}
+
+sub cache_slice{
+  my ($self, $region_name, $cs_name) = @_;
+
+  throw("Need to define a region_name to cache a slice from") if ! $region_name;
+
+  $cs_name ||= 'chromosome';
+  $self->{'slice_cache'} ||= {};
+  $region_name =~ s/chr//;
+  $region_name = "MT" if $region_name eq "M";
+  
+  #can we handle UN/random chromosomes here?
+  
+  
+  if(! exists $self->{'slice_cache'}->{$region_name}){
+    $self->{'slice_cache'}->{$region_name} = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
+    warn("-- Could not generate a slice for ${cs_name}:$region_name\n") if ! defined $self->{'slice_cache'}->{$region_name};
+  }
+  
+  return $self->{'slice_cache'}->{$region_name};
+}
+
+
+=head2 cache_name_id
+
+  Arg [1]    : mandatory - probe name
+  Arg [2]    : mandatory - probe dbID
+  Example    : $self->cache_name_id("Probe1", $probe->dbID());
+  Description: Setter for probe cache values
+  Returntype : none
+  Exceptions : throws is cache conflict encountered
+  Caller     : self
+  Status     : At risk - merge with following?
+
+=cut
+
+
+sub cache_name_id{
+  my ($self, $pname, $pid) = @_;
+
+
+  throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
+
+
+  if(defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname} != $pid)){
+    throw("Found two differing dbIDs for $pname, need to sort out redundant probe entries");
+  }
+
+  $self->{'_probe_cache'}->{$pname} = $pid;
+  return;
+}
+
+=head2 get_probe_id_by_name
+
+  Arg [1]    : mandatory - probe name
+  Example    : $pid = $self->get_probe_id_by_name($pname);
+  Description: Getter for probe cache values
+  Returntype : int
+  Exceptions : none
+  Caller     : self
+  Status     : At risk - merge with previous, move to importer?
+
+=cut
+
+
+sub get_probe_id_by_name{
+  my ($self, $name) = @_;
+  
+  #Should only ever be one pid per probe per array per n array_chips
+  #i.e. duplicate records per array chip with same pid
+
+  if(! defined $self->{'_probe_cache'}){ #|| (! defined $self->{'_probe_cache'}->{$name})){
+
+    #this fails if we're testing for the probe_id
+    #this is because we have no chips associated with the experiemnt yet.
+  
+    $self->{'_probe_cache'} = $self->db->get_ProbeAdaptor->fetch_probe_cache_by_Experiment($self->experiment());
+    
+  
+    #my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
+    #$self->{'_probe_map'}{$name} = $op->dbID() if $op;
+  }
+  
+
+  return (exists $self->{'_probe_cache'}->{$name}) ? $self->{'_probe_cache'}->{$name} : undef;
+}
+
+
 
 
 #the generic read_methods should go in here too?
@@ -1433,16 +1718,14 @@ sub R_norm{
 
   foreach my $logic_name(@logic_names){
     throw("Not yet implemented TukeyBiweight") if $logic_name eq "TukeyBiweight";
-    
     my $norm_anal = $aa->fetch_by_logic_name($logic_name);
     my $rset = $self->get_import_ResultSet('experimental_chip', $norm_anal);
   
     if(! $rset){
       $self->log("All ExperimentalChips already have status:\tIMPORTED_${logic_name}");
-    }else{#Got data to normalise and import
-            
+    }
+    else{#Got data to normalise and import
       my @dbids;
-      my $norm_anal = $aa->fetch_by_logic_name($logic_name);
       my $R_file = $self->get_dir("norm")."/${logic_name}.R";
       my $job_name = $self->experiment->name()."_${logic_name}";
       my $outfile = $self->get_dir("norm")."/result.${logic_name}.txt";

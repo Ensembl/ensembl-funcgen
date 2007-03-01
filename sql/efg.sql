@@ -48,6 +48,7 @@ CREATE TABLE `array` (
    `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
    `description` varchar(255) default NULL,
+   `type` varchar(20) default NULL,
    PRIMARY KEY  (`array_id`),
    UNIQUE KEY   (`vendor`, `name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -182,8 +183,9 @@ DROP TABLE IF EXISTS `probe_design`;
 CREATE TABLE `probe_design` (
    `probe_id` int(10) unsigned NOT NULL,
    `analysis_id` int(10) unsigned NOT NULL,
-   `score` double default NULL,
-    PRIMARY KEY  (`probe_id`, `analysis_id`)
+   `score` double default NULL,	
+   `coord_system_id` int(10) unsigned default NULL,
+    PRIMARY KEY  (`probe_id`, `analysis_id`, `coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 

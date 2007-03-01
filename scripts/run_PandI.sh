@@ -11,13 +11,16 @@
 
 #ln -s /nfs/acari/nj1/data/efg/input/nimblegen/Stunnenberg_all_OID_1963 /nfs/acari/nj1/data/efg/input/nimblegen/${x}_Stunnenberg_all_OID_1963
 
+PASS=$1
+
 
 $EFG_SRC/scripts/parse_and_import.pl\
-	-name ${x}_Stunnenberg_all_OID_1963\
+	-name Stunnenberg_all_OID_1963\
 	-format tiled\
 	-location Hinxton\
 	-contact njohnson@ebi.ac.uk\
 	-species homo_sapiens\
+	-vendor NIMBLEGEN\
 	-fasta\
 	-port 3306\
 	-host ens-genomics1\

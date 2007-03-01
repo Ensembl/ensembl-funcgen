@@ -73,9 +73,11 @@ use vars qw(@ISA);# %VALID_TYPE);
 
 =head2 new
 
-  Arg [-NAME]: string - the name of this array
-  Arg [-TYPE]: string - the vendor of this array (AFFY, NIMBLEGEN etc)
-  Arg [-FORMAT]: string - the format of this array (TILED, TARGETTED, GENE etc)
+  Arg [-NAME]        : string - the name of this array
+  Arg [-VENDOR]      : string - the vendor of this array (AFFY, NIMBLEGEN etc)
+  Arg [-TYPE]        : string - type of array e.g. OLIGO, PCR
+  Arg [-FORMAT]      : string - the format of this array (TILED, TARGETTED, GENE etc)
+  Arg [-DESCRIPTION] : strin - description of the array 
 
 #array_chips is array of hashes or design_id and name, dbID will be populated on store, this should be a simple object!
 
@@ -85,6 +87,7 @@ use vars qw(@ISA);# %VALID_TYPE);
 								  -SIZE        => '1',
 								  -SPECIES     => 'Mus_musculus',
 								  -VENDOR      => 'Nimblegen',
+                                                                  -TYPE        => 'OLIGO',
 								  -DESCRIPTION => $desc,
 								 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Array object.
@@ -102,8 +105,8 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
   
-  my ($name, $format, $size, $species, $vendor, $desc)
-    = rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'DESCRIPTION'], @_ );
+  my ($name, $format, $size, $species, $vendor, $type, $desc)
+    = rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'TYPE', 'DESCRIPTION'], @_ );
   
   #mandatory params?
   #name, format, vendor
@@ -127,6 +130,7 @@ sub new {
   #$self->species($species)    if defined $species;
   $self->vendor($vendor);
   $self->description($desc)   if defined $desc;
+  $self->type($type)          if defined $type;
   
   return $self;
 }
@@ -260,6 +264,29 @@ sub name{
   
   return $self->{'name'};
 }
+
+
+=head2 type
+
+  Arg [1]    : (optional) string - the type of this array
+  Example    : $array->type('OLIGO');
+  Description: Getter, setter of the type attribute for Array
+               objects.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub type{
+  my $self = shift;
+  
+  $self->{'type'} = shift if @_;
+    
+  return $self->{'type'};
+}
+
 
 =head2 format
 
@@ -412,13 +439,7 @@ sub description {
 
 sub get_ArrayChips {
   my $self = shift;
-  #my $achips = shift;
-  
-  #if($achips){
-  #  %{$self->{'array_chips'}} = %{$achips};
-  #}
-	
-
+ 
   #lazy loaded as we won't want this for light DB
   #should do meta check and want here
 
@@ -456,6 +477,9 @@ sub get_ArrayChips {
 
 sub get_ArrayChip_by_design_id{
   my ($self, $design_id) = @_;
+
+
+  warn "This needds to get the array chip if not defined";
 
   my ($achip);
   throw("Must supply a valid array chip design_id") if (! defined $design_id);
@@ -506,44 +530,8 @@ sub add_ArrayChip{
     throw("Array must be stored before adding an array_chip");
   }
 
-  return; #$array_chip;
+  return;
 }
-
-=head2 get_achip_status
-
-  Arg [1]    : (mandatory) int - design_id
-  Arg [2]    : (mandatory) hashref - array chip hash
-  Example    : $array->add_array_chip('1234', \%ac_hash);
-  Description: Setter for array chips
-  Returntype : None
-  Exceptions : Throws exception if no design_id defined or not part of this array
-  Caller     : General
-  Status     : High Risk - migrate to ArrayChip.pm, rename? accomodate multiple states
-
-=cut
-
-#sub get_achip_status{
-#  my ($self, $design_id, $state) = @_;
-	
-#  throw("Need to supply a design_id for the array_chip") if ! $design_id;
-
-  #Need to accomodate multiple states!!
-
-#  if(exists $self->{'array_chips'}{$design_id}){
-    #should we do a test for ac dbid here?
-
-#    if(! exists $self->{'array_chips'}{$design_id}{'status'}){
-#      my $ac_dbid = $self->{'array_chips'}{"$design_id"}{'dbID'};
-#      $self->{'array_chips'}{"$design_id"}{'status'} = $self->adaptor->db->fetch_status_by_name('array_chip', $ac_dbid, $state);
-#    }
-
-#  }else{
-#    #should be warn?
-#    throw("The design_id you have specified is not associated with this array ".$self->name());
-#  }
-
-#  return $self->{'array_chips'}{"$design_id"}{'status'};
-#}
 
 
 1;

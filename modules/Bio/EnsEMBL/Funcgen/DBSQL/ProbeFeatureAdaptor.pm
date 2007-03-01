@@ -236,7 +236,7 @@ sub _tables {
 	return (
 			[ 'probe_feature', 'pf' ], 
 			[ 'probe',   'p' ], 
-			[ 'array_chip',   'ac' ],#?
+			[ 'array_chip',   'ac' ],#these are required for array based queries
 			[ 'array',   'a' ]
 		   );
 }
@@ -731,38 +731,6 @@ sub fetch_results_by_Probe_Analysis_experimental_chip_ids{
 }
 
 
-#This checks each locus to ensure identically mapped probes only return a median/mean
-#can we just return array triplets?, start, end, score?
-
-sub fetch_result_features_by_Slice_Analysis_ExperimentalChips{
-  my ($self, $slice, $analysis, $exp_chips) = @_;
-
-  throw("depreacated, use ResultSetAdaptor");
-
-  #warn("Put in ResultAdaptor");
-
-  my (@ofs, @results, $result);
-
- 
-
-  #can we add sort by contraint here?
- 
-  foreach my $of(@{$self->fetch_all_by_Slice_ExperimentalChips($slice, $exp_chips)}){
-    
-    if((! @ofs) || ($of->start == $ofs[0]->start() && $of->end == $ofs[0]->end())){
-      push @ofs, $of;
-    }else{#Found new location, deal with previous
-      push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-      @ofs = ($of);
-    }
-  }
-
-  push @results, [$ofs[0]->start(), $ofs[0]->end(), $self->_get_best_result(\@ofs, $analysis, $exp_chips)];
-
-  return \@results;
-
-}
-
 
 sub _get_best_result{
   my ($self, $ofs, $analysis, $exp_chips) = @_;
@@ -801,76 +769,6 @@ sub _get_best_result{
   }
 
   return $result;
-}
-
-sub fetch_result_set_by_Slice_Analysis_ExperimentalChips{
-  my ($self, $slice, $anal, $exp_chips) = @_;
-
-  #Slice needs to be genrated from eFG not core DB?
-  #we need to make sure seq_region_id for slice corresponds to db
-  
-  throw("deprecated, use ResultSetAdaptor");
-
-
-  #do an equals check here
-  my (@ids);
-  my $id_type = "r.table_id";
-  my $channel_clause = "";
-  my $channel_alias = "";
-  my $table_name = 'experimental_chip';
-
-  my %chip_metrics = (
-		      VSN_GLOG => 1,
-		      SangerPCR => 1,
-		     );
-
-
-  if(! exists $chip_metrics{$anal->logic_name()}){
-    $table_name = "channel";
-    $id_type = "concat(r.table_id, ':', c.type)";
-    $channel_clause = "AND c.channel_id=r.table_id";
-    $channel_alias = ", channel c ";
-
-    foreach my $ec(@$exp_chips){
-      push @ids, @{$ec->get_channel_ids()};
-    }
-
-  }else{
-    foreach my $ec(@$exp_chips){#map?
-      push @ids, $ec->dbID;
-    }
-  }
-
-    #join(", ", @ids);
-
-  #need to then sort out which channel is which in caller.
-  #we need channel type (id?), exp_chip id(:channel type), probe_id, score, chr, start, end
-
-
-  #this needs to be a join so we don't include probes with no results?
-
-  my $query = "SELECT r.score, pf.seq_region_start, pf.seq_region_end, $id_type, r.probe_id from result r, probe_feature pf $channel_alias WHERE r.table_name=\"${table_name}\" ".
-    "AND r.table_id IN (".join(", ", @ids).") ".
-      "AND r.probe_id=pf.probe_id ".
-	"AND  pf.seq_region_id=".$slice->get_seq_region_id()." AND pf.seq_region_start>=".($slice->start() - 49).
-	  " AND pf.seq_region_end<=".($slice->end() + 49). 
-	    " AND r.analysis_id=".$anal->dbID()." $channel_clause order by pf.seq_region_start";
-
-
-  #warn "query is $query\n";
-
-
-  #this does not handle features over lapping ends...maybe we should just add the max probe length -1 for the given array.
-  #need to handle strand too!
-
-  #Is this what a result should look like?
-  #create array of objects from each line
-  #score, exp_chip_id(:channeltype), chr?, start(relative to slice?), end(relative to slice?), probe_id
-
-
-  #should be ordered by start (and seq_region_id?)
-	
-  return $self->dbc->db_handle->selectall_arrayref($query);
 }
 
 

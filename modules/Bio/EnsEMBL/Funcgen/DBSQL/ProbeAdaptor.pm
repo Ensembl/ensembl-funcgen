@@ -223,18 +223,18 @@ sub fetch_all_by_Array {
 =cut
 
 sub fetch_by_ProbeFeature {
-	my $self    = shift;
-	my $feature = shift;
-	
-	if (
-		!ref($feature)
-		|| !$feature->isa('Bio::EnsEMBL::Funcgen::ProbeFeature')
-		|| !$feature->{'_probe_id'}
-	) {
-		throw('fetch_by_ProbeFeature requires a stored Bio::EnsEMBL::Funcgen::ProbeFeature object');
-	}
-	
-	return $self->fetch_by_dbID($feature->{'_probe_id'});
+  my $self    = shift;
+  my $feature = shift;
+  
+  if (
+      !ref($feature)
+      || !$feature->isa('Bio::EnsEMBL::Funcgen::ProbeFeature')
+      || !$feature->{'probe_id'}
+     ) {
+    throw('fetch_by_ProbeFeature requires a stored Bio::EnsEMBL::Funcgen::ProbeFeature object');
+  }
+  
+  return $self->fetch_by_dbID($feature->{'probe_id'});
 }
 
 =head2 _tables
@@ -384,9 +384,13 @@ sub _objs_from_sth {
 sub store {
   my ($self, @probes) = @_;
   
-  my ($ac_id, $sth, $dbID);
+  my ($ac_id, $sth, $dbID, @panals, $pd_sth);
+  my $pd_sql = "INSERT IGNORE into probe_design values(?, ?, ?, ?)";
   my $db = $self->db();
   throw('Must call store with a list of Probe objects') if (scalar @probes == 0);
+
+  #mv all prep statements here?
+  #or at least main probe insert
 
 
  PROBE: foreach my $probe (@probes) {
@@ -420,6 +424,10 @@ sub store {
       
       if (defined $dbID) {
 	# Probe we've seen already
+
+	#we want to import design attrs bsed on ac_id..and cs id or design attr?
+
+
 	$sth = $self->prepare("INSERT INTO probe
                              ( probe_id, probe_set_id, name, length, array_chip_id, class )
 			     VALUES (?, ?, ?, ?, ?, ?)
@@ -427,7 +435,7 @@ sub store {
 	
 	$sth->bind_param(1, $dbID,                                                     SQL_INTEGER);
 	$sth->bind_param(2, $ps_id,                                                    SQL_INTEGER);
-	$sth->bind_param(3, $probe->get_probename($array_hashes{$ac_id}->name()),    SQL_VARCHAR);
+	$sth->bind_param(3, $probe->get_probename($array_hashes{$ac_id}->name()),      SQL_VARCHAR);
 	$sth->bind_param(4, $probe->length(),                                          SQL_INTEGER);
 	$sth->bind_param(5, $ac_id,                                                    SQL_INTEGER);
 	$sth->bind_param(6, $probe->class(),                                           SQL_VARCHAR);
@@ -451,12 +459,63 @@ sub store {
 	$probe->dbID($dbID);
 	$probe->adaptor($self);
       }
+
+      
+
+      if(@panals = @{$probe->get_all_design_scores(1)}){#1 is no fetch flag
+
+	#we need to check for duplicates here, or can we just ignore them in the insert statement?
+	#ignoring would be convenient but may lose info about incorrect duplicates
+	#also not good general practise
+	#solution would be nest them with a dbid value aswell as score
+	#use ignore for now and update implementation when we create BaseProbeDesign?
+
+	$pd_sth ||= $self->prepare($pd_sql);
+	
+	foreach $probe_analysis(@panals){
+	  my ($analysis_id, $score, $cs_id) = @$probe_analysis;
+	  $cs_id ||= 'NULL';
+	  
+	  $pd_sth->bind_param(1, $probe->dbID(),  SQL_INTEGER);
+	  $pd_sth->bind_param(1, $analysis_id,    SQL_INTEGER);
+	  $pd_sth->bind_param(1, $score,          SQL_VARCHAR);
+	  $pd_sth->bind_param(1, $cs_id,          SQL_INTEGER);
+
+	}
+      }
     }
   }
 
   return \@probes;
 
 }
+
+
+
+=head2 fetch_all_design_scores
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Probe
+  Example    : my @probe_analyses = @{$pa->fetch_all_design_scores($probe)};
+  Description: Fetchs all probe design analysis records as analysis_id, score and coord_system_id
+  Returntype : ARRAYREF
+  Exceptions : throws if not passed a valid stored Probe
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+sub fetch_all_design_scores{
+  my ($self, $probe) = @_;
+
+  if(! ($probe && $probe->isa('Bio::EnsEMBL::Funcgen::Probe') && $probe->dbID())){
+    throw('Must pass a valid stored Bio::EnsEMBL::Funcgen::Probe');
+  }
+
+  my $sql = 'SELECT analysis_id, score, coord_system_id from probe_design WHERE probe_id='.$probe->dbID.';';
+  return @{$self->db->dbc->db_hanle->selectall_arrayref($sql)};
+}
+
+
 
 =head2 list_dbIDs
 
