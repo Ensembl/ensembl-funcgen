@@ -519,8 +519,8 @@ sub add_Analysis_CoordSystem_score{
       throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
     }
 
-    if(! ($cs && $cs->dbID() && $cs->isa("Bio::EnsEMBL::CoordSystem"))){
-      throw("Must provide a valid stored Bio::EnsEMBL::CoordSystem");
+    if(! ($cs && $cs->dbID() && $cs->isa("Bio::EnsEMBL::Funcgen::CoordSystem"))){
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::CoordSystem");
     }
 
     throw("Must provide a score to add to the probe") if ! defined $score;
@@ -552,7 +552,7 @@ sub get_score_by_Analysis{
   }
 
 
-  return (exists $self->{'analysis'}{$anal->dbID()}) ? undef;
+  return (exists $self->{'analysis'}{$anal->dbID()}) ? $self->{'analysis'}{$anal->dbID()} : undef;
 }
 
 =head2 get_score_by_Analysis_CoordSystem
@@ -578,8 +578,8 @@ sub get_score_by_Analysis_CoordSystem{
       throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
     }
 
-    if(! ($cs && $cs->dbID() && $cs->isa("Bio::EnsEMBL::CoordSystem"))){
-      throw("Must provide a valid stored Bio::EnsEMBL::CoordSystem");
+    if(! ($cs && $cs->dbID() && $cs->isa("Bio::EnsEMBL::Funcgen::CoordSystem"))){
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::CoordSystem");
     }
 
     my $score = undef;
@@ -618,16 +618,16 @@ sub get_all_design_scores{
     
     throw("Probe must have and adaptor to fetch design scores from the DB") if(! $self->adaptor());
     
-    foreach $probe_analysis(@{$self->adaptor->fetch_all_design_records($self)}){
+    foreach my $probe_analysis(@{$self->adaptor->fetch_all_design_records($self)}){
       #we can't use the add methods here as would be cyclical
       #nor do we need extra validation
       
       ($analysis_id, $cs_id, $score) = @$probe_analysis;
       
       if($cs_id){
-	$self->{'analysis_coord_system'}{$anal->dbID()}{$cs->dbID()} = $score;
+	$self->{'analysis_coord_system'}{$analysis_id}{$cs_id} = $score;
       }else{
-	$self->{'analysis'}{$anal->dbID()} = $score;
+	$self->{'analysis'}{$analysis_id} = $score;
       }
     }
   }

@@ -385,7 +385,7 @@ sub store {
   my ($self, @probes) = @_;
   
   my ($ac_id, $sth, $dbID, @panals, $pd_sth);
-  my $pd_sql = "INSERT IGNORE into probe_design values(?, ?, ?, ?)";
+  my $pd_sql = "INSERT IGNORE into probe_design(probe_id, analysis_id, score, coord_system_id) values(?, ?, ?, ?)";
   my $db = $self->db();
   throw('Must call store with a list of Probe objects') if (scalar @probes == 0);
 
@@ -463,7 +463,6 @@ sub store {
       
 
       if(@panals = @{$probe->get_all_design_scores(1)}){#1 is no fetch flag
-
 	#we need to check for duplicates here, or can we just ignore them in the insert statement?
 	#ignoring would be convenient but may lose info about incorrect duplicates
 	#also not good general practise
@@ -472,15 +471,16 @@ sub store {
 
 	$pd_sth ||= $self->prepare($pd_sql);
 	
-	foreach $probe_analysis(@panals){
+	foreach my $probe_analysis(@panals){
 	  my ($analysis_id, $score, $cs_id) = @$probe_analysis;
-	  $cs_id ||= 'NULL';
-	  
-	  $pd_sth->bind_param(1, $probe->dbID(),  SQL_INTEGER);
-	  $pd_sth->bind_param(1, $analysis_id,    SQL_INTEGER);
-	  $pd_sth->bind_param(1, $score,          SQL_VARCHAR);
-	  $pd_sth->bind_param(1, $cs_id,          SQL_INTEGER);
+	  $cs_id ||=0;#NULL
 
+	  $pd_sth->bind_param(1, $probe->dbID(),  SQL_INTEGER);
+	  $pd_sth->bind_param(2, $analysis_id,    SQL_INTEGER);
+	  $pd_sth->bind_param(3, $score,          SQL_VARCHAR);
+	  $pd_sth->bind_param(4, $cs_id,          SQL_INTEGER);
+	  $pd_sth->execute();
+	  
 	}
       }
     }

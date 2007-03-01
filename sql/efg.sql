@@ -145,7 +145,7 @@ CREATE TABLE `probe_set` (
 DROP TABLE IF EXISTS `probe`;
 CREATE TABLE `probe` (
    `probe_id` int(10) unsigned NOT NULL auto_increment,
-   `probe_set_id` int(10) unsigned default NULL,
+   `probe_set_id` int(10) unsigned NOT NULL default '0',
    `name` varchar(40) NOT NULL default '',
    `length` smallint(6) unsigned NOT NULL default '0',
    `array_chip_id` int(10) unsigned NOT NULL default '0',
@@ -181,15 +181,16 @@ CREATE TABLE `probe` (
 
 DROP TABLE IF EXISTS `probe_design`;
 CREATE TABLE `probe_design` (
-   `probe_id` int(10) unsigned NOT NULL,
-   `analysis_id` int(10) unsigned NOT NULL,
+   `probe_id` int(10) unsigned NOT NULL default '0',
+   `analysis_id` int(10) unsigned NOT NULL default '0',
    `score` double default NULL,	
-   `coord_system_id` int(10) unsigned default NULL,
+   `coord_system_id` int(10) unsigned NOT NULL default '0',
     PRIMARY KEY  (`probe_id`, `analysis_id`, `coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-
+---
+--- really wanted default NULL for coord_system_id but cannot have with int
 --- Other fields:
 ---     length?
 --- Removed:
