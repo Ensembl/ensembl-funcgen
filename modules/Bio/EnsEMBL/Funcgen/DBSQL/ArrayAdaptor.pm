@@ -352,7 +352,7 @@ sub store {
       #try and fetch array here and set to array if valid
       $sarray = $self->fetch_by_name_vendor($array->name(), $array->vendor());#this should be name_vendor?
 
-      warn "stored array from ".$array->name(), $array->vendor()." is $sarray";
+      warn "Stored array from ".$array->name()." ".$array->vendor()." is $sarray";
       
       if( ! $sarray){
 	#sanity check here

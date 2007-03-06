@@ -35,18 +35,16 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date);
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Experiment;
-use Bio::EnsEMBL::Funcgen::ArrayDefs;#will inherit or set Vendor/GroupDefs?
-use Bio::EnsEMBL::Funcgen::DesignDefs;
+use Bio::EnsEMBL::Funcgen::Defs::DesignDefs;
+use Bio::EnsEMBL::Funcgen::Defs::SangerDefs;
+use Bio::EnsEMBL::Funcgen::Defs::NimblegenDefs;
 use Bio::EnsEMBL::Funcgen::Helper;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;#eventually add this to Registry?
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
 use strict;
 use vars qw(@ISA);
 
-@ISA = qw(Bio::EnsEMBL::Funcgen::Helper);# Bio::EnsEMBL::Funcgen::ArrayDefs);
-
-
-my $reg = "Bio::EnsEMBL::Registry";
 
 
 
@@ -119,17 +117,18 @@ sub new{
     #would have to make sure GroupDefs is inherited first so we can set some mandatory params
     #before checking in ArrayDefs and here
 
-     #define parent defs class based on vendor
+    #define parent defs class based on vendor
     throw("Mandatory argument -vendor not defined") if ! defined $vendor;
     my $defs_type = lc($vendor);
     $defs_type = ucfirst($defs_type)."Defs";
-    #interim soln until we split Defs classes
-    $defs_type = 'ArrayDefs' if $defs_type ne 'DesignDefs';
-    push @ISA, 'Bio::EnsEMBL::Funcgen::'.$defs_type;
+    unshift @ISA, 'Bio::EnsEMBL::Funcgen::Defs::'.$defs_type;
 
     #would need to set up output dir here to avoid errors on instatiation of Helper and log/debug files
     #Create object from parent class
     my $self = $class->SUPER::new(@_);
+
+    warn "called super new on $class @ISA";
+
     
     #Set vars and test minimum mandatory params for any import type
     $self->{'name'} = $name if $name;
@@ -165,8 +164,7 @@ sub new{
     #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
     $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
 
-
-    #Set vendor specific vars/methods
+    #Set vendor specific attr dependent vars
     $self->set_defs();
 
     ### LOAD AND RE-CONFIG REGISTRY ###
@@ -254,7 +252,7 @@ sub new{
 #Make all other register methods private, so we don't bypass the previously imported exp check
 
 
-=head2 init_array_design_import
+=head2 init_array_import
 
   Example    : $self->init_import();
   Description: Initialises import by creating working directories 
@@ -267,7 +265,7 @@ sub new{
 =cut
 
 
-sub init_array_design_import{
+sub init_array_import{
   # we need to define which paramters we'll be storing
   #use the logic names of the analyses as the field headers
 
@@ -599,10 +597,10 @@ sub array_set{
 }
 
 
-=head2 add_array
+=head2 add_Array
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Array
-  Example    : $self->add_array($array);
+  Example    : $self->add_Array($array);
   Description: Setter for array elements
   Returntype : none
   Exceptions : throws if passed non Array or if more than one Array set
@@ -611,10 +609,8 @@ sub array_set{
 
 =cut
 
-sub add_array{
+sub add_Array{
   my $self = shift;
-
-  warn "Move add_arrays and arrays to experiment?";
 
   #do we need to check if stored?
   if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')){
@@ -1122,12 +1118,6 @@ sub dump_fasta{
 
 
 
-sub get_id{
-  my ($self, $id_name) = @_;
-  deprecate("get_id is deprecated, move to Helper?");
-  return $self->get_data("${id_name}_id");
-}
-
 =head2 species
   
   Example    : $imp->species("homo_sapiens");
@@ -1158,7 +1148,7 @@ sub species{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Medium - move to Helper?
+  Status     : at risk - move to Helper?
 
 =cut
 
@@ -1201,14 +1191,14 @@ sub norm_method{
   Returntype : various
   Exceptions : none
   Caller     : Importer
-  Status     : at risk - to be removed and replaced with direct calls deendent on the inherited Defs class
+  Status     : at risk - replace with direct calls in the inherited Defs class?
 
 =cut
 
 
 sub get_def{
   my ($self, $data_name) = @_;
-  return $self->get_data('array_defs', $data_name);#will this cause undefs?
+  return $self->get_data('defs', $data_name);#will this cause undefs?
 }
 
 

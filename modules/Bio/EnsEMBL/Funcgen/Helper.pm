@@ -98,7 +98,7 @@ package Bio::EnsEMBL::Funcgen::Helper;
 use Bio::Root::Root;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::Exception qw (throw);
-#use Devel::Timer;
+use Devel::Timer;
 use Carp;#? Can't use unless we can get it to redirect
 use File::Basename;
 
@@ -139,9 +139,8 @@ sub new{
     my ($self,%attrdata,$attrname,$argname);
     my $class = ref($caller) || $caller;
 
-	#Create object from parent class
-    #$self = bless {}, $class;
-	$self = $class->SUPER::new(%args);
+    #Create object from parent class
+    $self = $class->SUPER::new(%args);
 
 
     # objects private data and default values
@@ -166,7 +165,7 @@ sub new{
 			$main::_debug_file = $self->{_debug_file};
 			  			  
             open(DBGFILE,">>".$self->{_debug_file})
-			  or $self->throw("Failed to open debug file : $!");
+			  or throw("Failed to open debug file : $!");
 
 			#open (DBGFILE, "<STDERR | tee -a ".$self->{_debug_file});#Mirrors STDERR to debug file
         }
@@ -192,7 +191,7 @@ sub new{
 	  }
 
 	  open(LOGFILE, $log_file)
-	    or $self->throw("Failed to open log file : $log_file\nError: $!");
+	    or throw("Failed to open log file : $log_file\nError: $!");
 	}
 	else{
 	  open(LOGFILE,">&STDOUT");
@@ -431,10 +430,10 @@ sub system{
   if ($status != 0){
 
     if ($exit){
-      $self->throw("system($command) - failed\nTo see system command output set debug_level to 3 and re-run.");
+      throw("system($command) - failed\nTo see system command output set debug_level to 3 and re-run.");
     }
     else{
-      $self->warn("system($command) - failed...");
+      warn("system($command) - failed...");
     }
   }
     
@@ -445,23 +444,26 @@ sub system{
 #add sys_get method ehre to handle system calls which retrieve data?
 #i.e.backtick commands `find . -name *fasta`
 #or use want or flag with above method?
+#should open pipe instead to capture error?
 
-sub get_data{#should be in Helper?
-	my ($self, $data_type, $data_name) = @_;
+sub get_data{
+  my ($self, $data_type, $data_name) = @_;
 
-	#$self->throw("Must not use get_data to retrieve dbids, as they may be lazyloaded") if($data_name eq "dbid");
-
-	#This method is just to provide standard checking for specific get_data methods
+  #This method is just to provide standard checking for specific get_data methods
 	
 
-	if(defined $data_name){
-		$self->throw("Defs data name $data_name for type $data_type does not exist\n") if (! exists $self->{"${data_type}"}{$data_name});
-	}else{
-		$self->throw("Defs data type $data_type does not exist\n") if (! exists $self->{"${data_type}"});
-	}
+  
 
-	return (defined $data_name) ? $self->{"${data_type}"}{$data_name} : $self->{"${data_type}"};
+
+  if(defined $data_name){
+    throw("Defs data name $data_name for type '$data_type' does not exist\n") if (! exists $self->{"${data_type}"}{$data_name});
+  }else{
+    throw("Defs data type $data_type does not exist\n") if (! exists $self->{"${data_type}"});
+  }
+  
+  return (defined $data_name) ? $self->{"${data_type}"}{$data_name} : $self->{"${data_type}"};
 }
+
 
 sub Timer{
 	my ($self) = shift;
