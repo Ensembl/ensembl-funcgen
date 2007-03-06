@@ -502,7 +502,7 @@ sub get_result_by_Analysis_ExperimentalChips{
 sub get_result_by_ResultSet{
     my ($self, $rset) = @_;
 
-    my $results = $rset->adaptor->fetch_results_by_ProbeFeature_ResultSet($self, $rset);
+    my $results = $rset->adaptor->fetch_results_by_probe_id_ResultSet($self->probe_id(), $rset);
    
     return $rset->adaptor->_get_best_result($results);
 }

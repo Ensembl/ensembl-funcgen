@@ -163,6 +163,14 @@ sub new{
     $self->{'recover'} = $recover || 0;
     #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
     $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
+    
+    if(defined $mage_tab){
+      $self->{'mage_tab'} = $mage_tab;
+
+      
+
+    }
+
 
     #Set vendor specific attr dependent vars
     $self->set_defs();

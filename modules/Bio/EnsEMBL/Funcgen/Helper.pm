@@ -98,7 +98,7 @@ package Bio::EnsEMBL::Funcgen::Helper;
 use Bio::Root::Root;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::Exception qw (throw);
-use Devel::Timer;
+#use Devel::Timer;
 use Carp;#? Can't use unless we can get it to redirect
 use File::Basename;
 

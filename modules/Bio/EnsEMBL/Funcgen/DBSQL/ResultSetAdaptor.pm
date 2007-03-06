@@ -603,11 +603,11 @@ sub _get_best_result{
 
 
 
-=head2 fetch_results_by_ProbeFeature_ResultSet
+=head2 fetch_results_by_probe_id_ResultSet
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::ProbeFeature
+  Arg [1]    : int - probe dbID
   Arg [2]    : Bio::EnsEMBL::Funcgen::ResultSet
-  Example    : my @probe_results = @{$ofa->fetch_results_by_ProbeFeature_ResultSet($probe_feature, $result_set)};
+  Example    : my @probe_results = @{$ofa->fetch_results_by_ProbeFeature_ResultSet($pid, $result_set)};
   Description: Gets result for a given probe in a ResultSet
   Returntype : ARRAYREF
   Exceptions : throws if args not valid
@@ -616,23 +616,21 @@ sub _get_best_result{
 
 =cut
 
-sub fetch_results_by_ProbeFeature_ResultSet{
-  my ($self, $pfeature, $rset) = @_;
+sub fetch_results_by_probe_id_ResultSet{
+  my ($self, $probe_id, $rset) = @_;
   
   throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ResultSet") if (! ($rset  &&
 									       $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet")
 									       && $rset->dbID()));
   
-  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ProbeFeature") if (! ($pfeature  &&
-										  $pfeature->isa("Bio::EnsEMBL::Funcgen::ProbeFeature")
-										  && $pfeature->dbID()));
+  throw('Must pass a probe dbID') if ! $probe_id;
   
   
   
   my $cc_ids = join(',', @{$rset->chip_channel_ids()});
 
-  my $query = "SELECT r.score from result r where r.probe_id ='".$pfeature->probe_id().
-    "' AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
+  my $query = "SELECT r.score from result r where r.probe_id ='${probe_id}'".
+    " AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
 
 
   my @results = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($query)};

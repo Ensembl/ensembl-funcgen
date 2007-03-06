@@ -35,7 +35,7 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::DesignDefs;
+package Bio::EnsEMBL::Funcgen::Defs::DesignDefs;
 
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::ProbeSet;
