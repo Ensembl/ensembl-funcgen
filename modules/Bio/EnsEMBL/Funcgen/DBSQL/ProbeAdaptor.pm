@@ -184,31 +184,49 @@ sub fetch_all_by_probeset {
   Example    : my @probes = @{$opa->fetch_all_by_Array($array)};
   Description: Fetch all probes on a particular array.
   Returntype : Listref of Bio::EnsEMBL::Probe objects.
-  Exceptions : None
+  Exceptions : throws if arg is not valid or stored
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub fetch_all_by_Array {
-	my $self  = shift;
-	my $array = shift;
-	
-	if ( !ref($array) || !$array->isa('Bio::EnsEMBL::Funcgen::Array') ) {
-		warning('fetch_all_by_Array requires a Bio::EnsEMBL::Funcgen::Array object');
-		return [];
-	}
-	
-	my $array_id = $array->dbID();
-	if (!defined $array_id) {
-		warning('fetch_all_by_Array requires a stored Bio::EnsEMBL::Funcgen::Array object');
-		return [];
-	}
+  my $self  = shift;
+  my $array = shift;
+  
+   if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
+     throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Array');
+   }
 
-	#get all array_chip_ids, for array and do a multiple OR statement with generic fetch
-	
-	return $self->generic_fetch("p.array_chip_id = ".join(" OR p.array_chip_id = ", @{$array->get_array_chip_ids()}));
+  #get all array_chip_ids, for array and do a multiple OR statement with generic fetch
+  
+  return $self->generic_fetch("p.array_chip_id IN (".join(",", @{$array->get_array_chip_ids()}).")");
 }
+
+=head2 fetch_all_by_ArrayChip
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ArrayChip
+  Example    : my @probes = @{$opa->fetch_all_by_ArrayChip($array_chip)};
+  Description: Fetch all probes on a particular ArrayChip.
+  Returntype : Listref of Bio::EnsEMBL::Probe objects.
+  Exceptions : throw is arg is not valid or stored
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Array {
+  my $self  = shift;
+  my $array_chip = shift;
+  
+  if(! (ref($array_chip) && $array_chip->isa('Bio::EnsEMBL::Funcgen::ArrayChip') && $array_chip->dbID())){
+    throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::ArrayChip');
+  }
+  
+  return $self->generic_fetch("p.array_chip_id =".$array_chip->dbID());
+}
+
+
 
 =head2 fetch_by_ProbeFeature
 
