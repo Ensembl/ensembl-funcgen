@@ -215,7 +215,7 @@ sub fetch_all_by_Array {
 
 =cut
 
-sub fetch_all_by_Array {
+sub fetch_all_by_ArrayChip {
   my $self  = shift;
   my $array_chip = shift;
   
