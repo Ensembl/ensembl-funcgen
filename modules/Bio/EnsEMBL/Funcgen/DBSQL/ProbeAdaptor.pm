@@ -130,6 +130,7 @@ sub fetch_by_array_probe_probeset_name {
 sub fetch_probe_cache_by_Experiment{
   my ($self, $exp) = @_;
 
+  my %cache;
 
   if(! ($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
     throw("Must proved a valid stored Bio::EnsEMBL::Funcgen::Experiment");
@@ -144,13 +145,17 @@ sub fetch_probe_cache_by_Experiment{
 
   #need to validate probe_cache here by check keys against probe count ;)
 
-  my $sql = "SELECT probe_id, name from probe where array_chip_id IN (".join(',', @achip_ids).");";
+  if(@achip_ids){
 
-  warn "This will break if we have duplicated names within the Experimental set";
+    my $sql = "SELECT name, probe_id from probe where array_chip_id IN (".join(',', @achip_ids).");";
 
+    warn "fetch_probe_cache will break if we have duplicated names within the Experimental set";
+
+    %cache = @{$self->db->dbc->db_handle->selectcol_arrayref($sql, { Columns =>[1, 2]})};
+  }
   
 
-  return (@achip_ids) ? $self->db->dbc->db_handle->selectall_hashref($sql, 'name') : undef;
+  return \%cache;
 }
 
 
