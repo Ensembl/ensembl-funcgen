@@ -734,41 +734,33 @@ sub fetch_results_by_Probe_Analysis_experimental_chip_ids{
 
 sub _get_best_result{
   my ($self, $ofs, $analysis, $exp_chips) = @_;
+  my ($median);
 
-  my ($result, $mpos);
-  my $num_features = scalar(@$ofs);
 
-  if($num_features > 1){
+  if(scalar(@$ofs) > 1){
     my @results = map $_->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips), @$ofs;
     @results = sort @results;
 
-
+    my $count = scalar(@$results);
+    my $index = $count -1;
     #need to account for features/probes without results.  How would this happen?  Not all probes present in result file or score = NA?!
     #while(! $results[0]){
     #shift @results;
     #}
-
-
-
-    if($num_features == 2){#mean
-      $result = ($results[0] + $results[1])/2;
+    if ($count == 1){
+      $median =  $results[0];
     }
-    elsif($num_features > 2){#median or mean of median flanks
-      $mpos = (scalar(@$ofs))/2;
-    
-      if($mpos =~ /\./){#true median
-	$mpos =~ s/\..*//;
-	$mpos ++;
-	$result = $results[$mpos];
-      }else{
-	$result = ($results[$mpos] + $results[($mpos+1)])/2;
-      }
+    elsif ($count % 2) { #odd number of scores
+      $median = $results[($index+1)/2];
+    }
+    else { #even
+      $median = ($results[($index)/2] + $results[($index/2)+1] ) / 2;
     }
   }else{
-    $result =  $ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
+    $median = $ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
   }
 
-  return $result;
+  return $median;
 }
 
 
