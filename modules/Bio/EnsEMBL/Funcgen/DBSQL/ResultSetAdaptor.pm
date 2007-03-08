@@ -47,6 +47,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Statistics::Descriptive;
 
 use vars qw(@ISA);
 
@@ -575,30 +576,46 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 sub _get_best_result{
   my ($self, $scores) = @_;
 
-  my ($score, $mpos);
+
+  my ($median);
+  my $count = scalar(@$scores);
+  my $index = $count-1;
   #need to deal with lines with no results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   #deal with one score fastest
-  return  $scores->[0] if (scalar(@$scores) == 1);
+  return  $scores->[0] if ($count == 1);
+  
+  #taken from Statistics::Descriptive
+  #remeber we're dealing with size starting with 1 but indices starting at 0
 
-
-  if(scalar(@$scores) == 2){#mean
-	  $score = ($scores->[0] + $scores->[1])/2;
+  if ($count % 2) { #odd number of scores
+    $median = $scores->[($index+1)/2];
   }
-  elsif(scalar(@$scores) > 2){#median or mean of median flanks
-    $mpos = (scalar(@$scores))/2;
+  else { #even
+    $median = ($scores->[($index)/2] + $scores->[($index/2)+1] ) / 2;
+
+
+  }
+
+
+
+  #if(scalar(@$scores) == 2){
+  #  $score = ($scores->[0] + $scores->[1])/2;
+  #}
+  #elsif(scalar(@$scores) > 2){#median or mean of median flanks
+  #  $mpos = (scalar(@$scores))/2;
     
-    if($mpos =~ /\./){#true median
-      $mpos =~ s/\..*//;
-      $mpos ++;
-      $score = $scores->[$mpos];
-    }else{
-      $score = ($scores->[$mpos] + $scores->[($mpos+1)])/2 ;
-    }
-  }
+  #  if($mpos =~ /\./){#true median
+  #    $mpos =~ s/\..*//;
+  #    $mpos ++;
+  #    $score = $scores->[$mpos];
+  #  }else{
+  #    $score = ($scores->[$mpos] + $scores->[($mpos+1)])/2 ;
+  #  }
+  #}
 
-  my @tmp = @$scores;
+  #my @tmp = @$scores;
 
-  return $score;
+  return $median;
 }
 
 
@@ -632,9 +649,12 @@ sub fetch_results_by_probe_id_ResultSet{
   my $query = "SELECT r.score from result r where r.probe_id ='${probe_id}'".
     " AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
 
+ 
+  #  warn "query is $query";
 
   my @results = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($query)};
   
+
   return \@results;
 }
 
