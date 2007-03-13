@@ -167,7 +167,7 @@ sub new{
     if(defined $mage_tab){
       $self->{'mage_tab'} = $mage_tab;
 
-      
+     
 
     }
 
@@ -1439,10 +1439,10 @@ sub get_probe_id_by_name{
 
     #this fails if we're testing for the probe_id
     #this is because we have no chips associated with the experiemnt yet.
+
   
     $self->{'_probe_cache'} = $self->db->get_ProbeAdaptor->fetch_probe_cache_by_Experiment($self->experiment());
-    
-  
+
     #my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
     #$self->{'_probe_map'}{$name} = $op->dbID() if $op;
   }

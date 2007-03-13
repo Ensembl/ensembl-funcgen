@@ -62,19 +62,18 @@ use warnings;
 =cut
 
 sub fetch_all_by_Probe {
-	my $self  = shift;
-	my $probe = shift;
+  my $self  = shift;
+  my $probe = shift;
+  
+  if ( !ref($probe) && !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
+    throw('fetch_all_by_Probe requires a Bio::EnsEMBL::Funcgen::Probe object');
+  }
 
-	throw("Not yet implemented");
+  if ( !defined $probe->dbID() ) {
+    throw('fetch_all_by_Probe requires a stored Bio::EnsEMBL::Funcgen::Probe object');
+  }
 	
-	if ( !ref($probe) && !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
-		throw('fetch_all_by_Probe requires a Bio::EnsEMBL::Funcgen::Probe object');
-	}
-	if ( !defined $probe->dbID() ) {
-		throw('fetch_all_by_Probe requires a stored Bio::EnsEMBL::Funcgen::Probe object');
-	}
-	
-	return $self->generic_fetch( 'pf.probe_id = ' . $probe->dbID() );
+  return $self->generic_fetch( 'pf.probe_id = ' . $probe->dbID() );
 }
 
 =head2 fetch_all_by_probeset

@@ -134,7 +134,7 @@ use strict;
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
-my ($ctype, $ftype, $recover, $output_dir, $mage_tab);
+my ($ctype, $ftype, $recover, $mage_tab);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed

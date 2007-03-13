@@ -145,12 +145,13 @@ CREATE TABLE `probe_set` (
 DROP TABLE IF EXISTS `probe`;
 CREATE TABLE `probe` (
    `probe_id` int(10) unsigned NOT NULL auto_increment,
-   `probe_set_id` int(10) unsigned NOT NULL default '0',
+   `probe_set_id` int(10) unsigned default NULL,
    `name` varchar(40) NOT NULL default '',
    `length` smallint(6) unsigned NOT NULL default '0',
    `array_chip_id` int(10) unsigned NOT NULL default '0',
    `class` varchar(20) default NULL,
     PRIMARY KEY  (`probe_id`, `name`),
+    KEY `array_chip_idx` (`array_chip_id`),
     KEY `probe_set_idx` (`probe_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -175,6 +176,14 @@ CREATE TABLE `probe` (
 --- pair_index table   `pair_index` int(10) unsigned NOT NULL default '0',
 --- joint index on probe_ids
 
+--- Other fields:
+---     length?
+--- Removed:
+---       `seq` mediumtext NOT NULL, - now captured via probe_feature.seq_region_id, see above for seq storage issues.
+---	  `mismatch` tinyint(4) NOT NULL default '0', - Now using probe_feature, see above
+---       array_id, now in probe_set
+
+
 ---
 -- Table structure for table `probe_design`
 --
@@ -191,12 +200,7 @@ CREATE TABLE `probe_design` (
 
 ---
 --- really wanted default NULL for coord_system_id but cannot have with int
---- Other fields:
----     length?
---- Removed:
----       `seq` mediumtext NOT NULL, - now captured via probe_feature.seq_region_id, see above for seq storage issues.
----	  `mismatch` tinyint(4) NOT NULL default '0', - Now using probe_feature, see above
----       array_id, now in probe_set
+
 --
 -- Table structure for table `experiment`
 --

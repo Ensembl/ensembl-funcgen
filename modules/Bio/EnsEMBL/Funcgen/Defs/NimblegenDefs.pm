@@ -168,6 +168,8 @@ sub read_array_data{
     #also need to be able to set file path independently of defs
     
     if($. == 1){
+      warn "header is ".join(" x ",@data);
+
       %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
       next;
     }
@@ -775,11 +777,11 @@ sub read_probe_data{
 =head2 read_results_data
 
   Example    : $imp->read_results_data();
-  Description: Parses and import raw results
+  Description: Parses and dumps raw results to file
   Returntype : none
   Exceptions : none
   Caller     : Importer
-  Status     : Medium - move parts to VendorDefs, should still function as normal
+  Status     : at risk 
 
 =cut
 
@@ -787,14 +789,8 @@ sub read_probe_data{
 sub read_results_data{
   my $self = shift;
   
-  #TO DO
-  #Recovery ? read feature_map.tmp into , query DB for last imported result(remove for safety?), restart from that point in file?
-  #slurp here may require too much memory?
-  #import files and do checks on ids to make sure they've imported properly
-  #i.e. select the last entry based on the expected table id.
-  
   $self->log("Parsing ".$self->vendor()." results");
-  my (@header, @data, @design_ids, %hpos);#%channel_idx, %cc_id
+  my (@header, @data, @design_ids, %hpos);
   my ($fh, $pid, $line, $file);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
   my $result_set = $self->get_import_ResultSet('channel', $anal);
@@ -802,31 +798,6 @@ sub read_results_data{
   
   if($result_set){#we have some new data to import
     
-    #build channel_idx and chip_channel_id hash after we store
-    #foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
-    #  
-    #  if( ! $echip->has_status('IMPORTED')){
-    #
-    #foreach my $chan (@{$echip->get_Channels()}){
-    #	  my $field = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
-    ##	  $channel_idx{$field} = undef;
-    #	  $cc_id{$field} = $result_set->get_chip_channel_id($chan->dbID());
-    #	}
-    #      }else{
-    #	$self->log("ExperimentalChip (".$echip->unqiue_id().") already has status:\tIMPORTED");
-    #      }
-    #    }
-    
-    
-    #foreach my $array(@{$self->arrays()}){
-    #  #This should be accessing echips for this experiment, not design_ids.
-    #  #we may have only a subset of designs/chips form the whole array
-    #  #and we only want to import the ones we have in the context of this experiment
-    #  
-    #  @design_ids = @{$array->get_design_ids()};
-      
-    #  foreach my $design_id(@design_ids){
-	
     foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
 
       if( ! $echip->has_status('IMPORTED')){
@@ -837,19 +808,13 @@ sub read_results_data{
 	  my $r_string = "";
 	  my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
 	  my $cc_id = $result_set->get_chip_channel_id($chan->dbID());
-	  
 	  $self->log("Reading results for channel:\t${chan_name}");
-	  #my (%tmp, @chan_fields);
-	  #my $achip = $array->get_ArrayChip_by_design_id($design_id);
 	  
 	  #open/backup output
 	  my $file = $self->get_dir("raw")."/result.".$chan_name.".txt";	
 	  $self->backup_file($file);	#This may cause empty file backups
 	  my $r_out = open_file(">", $file);
-	  
-	  
-	  #open/slurp input
-	  #$file_name = (scalar(@design_ids) > 1) ? $achip->name() : "All";  
+
 	  (my $alt_chan_name = $chan_name) =~ s/\_/\_1h\_/;
 	  my $found = 0;
 
@@ -868,7 +833,7 @@ sub read_results_data{
 
 	  throw("Could not find result file for Channel(${chan_name}) in ".$self->get_dir('results')) if ! $found; 
 
-
+	  #open/slurp input
 	  $fh = open_file("<", $file);	
 	  my @lines = <$fh>;
 	  close($fh);
@@ -888,52 +853,12 @@ sub read_results_data{
 	  
 	    ###PROCESS HEADER
 	    if ($line =~ /PROBE_ID/o){
-	      
-	      #GENE_EXPR_OPTION	SEQ_ID	PROBE_ID	POSITION	43827_532	43827_635	43837_532	43837_635	46411_532	46411_635	46420_532	46420_635	47505_532	47505_635	47525_532	47525_635
-	  
-	      
-	      
-	      #find probe column
-	      #for my $i(0..$#header){
-		
+	   	   		
 	      %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
-
-		#if($header[$i] eq "PROBE_ID"){
-		#  $probe_elem = $i;
-		#  #next;
-		#}elsif($header[$i] eq "PM"){#found score field
-		#  $score_elem = $i;
-		#}	    
-		
-		#Populate channel idx for directly accessing unstored channel results
-		#foreach my $field(keys %channel_idx){
-		#$header[$i] =~  s/1h_//;
-		#	
-		#	if($header[$i] eq $field){
-		#	  $channel_idx{$field} = $i;
-		#	}
-		#}
-	      #}
-	      
-	      ##make tmp hash with remaining(other achip) channel fields
-	      #foreach my $field(keys %channel_idx){
-	      
-	      #  if(! defined $channel_idx{$field}){
-	      #	#warn here.
-	      #	$tmp{$field} = undef;
-	      #	delete $channel_idx{$field};
-	      #      }
-	      #    }
-	      #    @chan_fields = keys %channel_idx;#do this once rather than having to call keys for everyline
-	      #$self->log("Parsing results for channels:\t@chan_fields");
-	      
 	      next;#finished processing header
 	    }
 	    
 	    ###PROCESS DATA
-	    #foreach my $field(@chan_fields){
-	 
-
 	    #Is this string concat causing the slow down, would it befaster to use an array and print a join?
  	    
 	    if($pid = $self->get_probe_id_by_name($data[$hpos{'PROBE_ID'}])){
@@ -943,7 +868,6 @@ sub read_results_data{
 	      warn "Found unfiltered non-experimental probe in input $data[$hpos{'PROBE_ID'}]";
 	    }
 	  
-	  
 	    ###PRINT SOME RESULTS
 	    if($cnt > 10000){
 	      $cnt = 0;
@@ -952,11 +876,6 @@ sub read_results_data{
 	      #could we fork here and import in the background?
 	    }
 	  	
-	    #SET REMANING CHANNELS
-	    #%channel_idx = %tmp;
-	    #@chan_fields = keys %channel_idx;
-	    
-	    #warn "Finished parsing file";
 	  } 
 	  #PRINT/CLOSE Channel file
 	  print $r_out $r_string;
@@ -964,9 +883,6 @@ sub read_results_data{
 	  $self->log("Finished parsing $chan_name result");
 	}
       }
-      #if(%channel_idx){
-      #	throw("Not all the Experiment Channel result fields were found\nAbsent channels:\t".(keys %channel_idx));
-      #      }
     }
   }else{
     $self->log("Skipping results parse and import");
