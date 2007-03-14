@@ -740,7 +740,7 @@ sub _get_best_result{
     my @results = map $_->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips), @$ofs;
     @results = sort @results;
 
-    my $count = scalar(@$results);
+    my $count = scalar(@results);
     my $index = $count -1;
     #need to account for features/probes without results.  How would this happen?  Not all probes present in result file or score = NA?!
     #while(! $results[0]){

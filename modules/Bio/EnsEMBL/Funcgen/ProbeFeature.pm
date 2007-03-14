@@ -273,28 +273,43 @@ sub probelength {
   Returntype : Bio::EnsEMBL::Funcgen::Probe
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : at risk
 
 =cut
 
 sub probe {
-    my $self = shift;
-    my $probe = shift;
-
-    #can we not use _probe_id here?
-    #why is probe_id not set sometimes?
-
-    if ($probe) {
-      if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
-	throw('Probe must be a Bio::EnsEMBL::Funcgen::Probe object');
-      }
-      $self->{'probe'} = $probe;
+  my $self = shift;
+  my $probe = shift;
+  
+  #can we not use _probe_id here?
+  #why is probe_id not set sometimes?
+  
+  
+  if ($probe) {
+    
+    if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
+      throw('Probe must be a Bio::EnsEMBL::Funcgen::Probe object');
     }
-    if ( !defined $self->{'probe'} && $self->dbID() && $self->adaptor() ) {
-      $self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_ProbeFeature($self);
-    }
-    return $self->{'probe'};
+    $self->{'probe'} = $probe;
   }
+
+  if ( !defined $self->{'probe'} && $self->dbID() && $self->adaptor() ) {
+    $self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_ProbeFeature($self);
+  }
+  return $self->{'probe'};
+}
+
+
+=head2 probe_id
+
+  Example    : my $probe_id = $pfeature->probe_id();
+  Description: Getter for the probe db id of the ProbeFeature
+  Returntype : int
+  Exceptions : None
+  Caller     : General
+  Status     : at risk
+
+=cut
 
 sub probe_id{
   my $self = shift;

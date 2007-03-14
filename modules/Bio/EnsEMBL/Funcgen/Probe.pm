@@ -192,16 +192,16 @@ sub add_array_chip_probename {
     my $self = shift;
     my ($ac_dbid, $probename, $array) = @_;
     $self->{ 'arrays'     } ||= {};
-	$self->{ 'probenames' } ||= {};
+    $self->{ 'probenames' } ||= {};
 
-	#mass redundancy here, possibility of fetching same array over and over!!!!!!!!!!!!!!
-	if(! defined $array){
-		$array = $self->adaptor()->db()->get_ArrayAdaptor()->fetch_by_array_chip_id($ac_dbid);
-	}
-
-	#mapping between probename and ac_dbid is conserved through array name between hashes
-	#only easily linked from arrays to probenames,as would have to do foreach on array name
-
+    #mass redundancy here, possibility of fetching same array over and over!!!!!!!!!!!!!!
+    if(! defined $array){
+      $array = $self->adaptor()->db()->get_ArrayAdaptor()->fetch_by_array_chip_id($ac_dbid);
+    }
+    
+    #mapping between probename and ac_dbid is conserved through array name between hashes
+    #only easily linked from arrays to probenames,as would have to do foreach on array name
+    
     $self->{ 'arrays'     }->{$ac_dbid} = $array;
     $self->{ 'probenames' }->{$array->name()} = $probename;
 }
@@ -297,9 +297,7 @@ sub get_all_probenames {
 #Needs more work
 
 sub get_probename {
-    my $self = shift;
-    my $arrayname = shift if @_;
-
+    my ($self, $arrayname) = @_;
     
     if (! $arrayname){
       

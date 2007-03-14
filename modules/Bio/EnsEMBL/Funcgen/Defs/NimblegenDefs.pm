@@ -83,11 +83,11 @@ sub new{
       array_data   => ['experiment'],
       probe_data   => ["probe"],
       results_data => ["results"],
-      sample_key_fields => ['DESIGN_ID', 'CHIP_ID', 'DYE', 'PROMOT_SAMPLE_TYPE', 'SAMPLE_LABEL'],
+      sample_key_fields => ['DESIGN_ID', 'CHIP_ID', 'DYE', 'PROMOT_SAMPLE_TYPE'],# 'SAMPLE_LABEL'],label now optional
       # 'SAMPLE_DESCRIPTION removed due to naming disparities
       ndf_fields      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
       pos_fields      => ['CHROMOSOME', 'PROBE_ID', 'POSITION', 'COUNT'],
-      result_fields   => ['PROBE_ID', 'PM'],
+      result_fields   => ['PROBE_ID', 'PM', 'X', 'Y'],
       notes_fields   => ['DESIGN_ID', 'DESIGN_NAME', 'DESCRIPTION'],
       norm_method => 'VSN_GLOG',
       dye_freqs => {(
@@ -251,7 +251,7 @@ sub read_experiment_data{
   
   $self->read_array_data($self->get_def('notes_file'));
 
-  my ($design_desc, $line, $tmp_uid, $channel, $echip);
+  my ($design_desc, $line, $tmp_uid, $channel, $echip, $sample_label);
   my ($sample_desc, %hpos, @data);
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $chan_adaptor = $self->db->get_ChannelAdaptor();
@@ -280,6 +280,7 @@ sub read_experiment_data{
       #we need to set the sample description field name, as it can vary :(((
       @data = grep(/SAMPLE_DESCRIPTION/, keys %hpos);
       $sample_desc = $data[0];
+ 
       throw("More than one sample description(@data) in ".$self->get_def("chip_file")."\n") if(scalar @data >1);
       next;
     }
@@ -340,12 +341,17 @@ sub read_experiment_data{
 	}
     }else{
       #Handles single/mutli
+
+      my $type = uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]);
+      $type = 'TOTAL' if ($type ne 'EXPERIMENTAL');
+      my $sample_label = (! exists $hpos{'SAMPLE_LABEL'}) ? '' :  $data[$hpos{'SAMPLE_LABEL'}];
+
       $channel =  Bio::EnsEMBL::Funcgen::Channel->new
 	(
 	 -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
 	 -DYE                  => $data[$hpos{'DYE'}],
-	 -SAMPLE_LABEL         => $data[$hpos{'SAMPLE_LABEL'}],
-	 -TYPE                 => uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]),
+	 -SAMPLE_LABEL         => $sample_label,
+	 -TYPE                 => $type,
       );
     
       #-SPECIES              => $self->species(),#on channel/sample to enable multi-species chip/experiment
@@ -863,7 +869,7 @@ sub read_results_data{
  	    
 	    if($pid = $self->get_probe_id_by_name($data[$hpos{'PROBE_ID'}])){
 	       $cnt ++;
-	       $r_string .= "\t${pid}\t".$data[$hpos{'PM'}]."\t${cc_id}\n";
+	       $r_string .= "\t${pid}\t".$data[$hpos{'PM'}]."\t${cc_id}\t".$data[$hpos{'X'}]."\t".$data[$hpos{'Y'}]."\n";
 	     }else{
 	      warn "Found unfiltered non-experimental probe in input $data[$hpos{'PROBE_ID'}]";
 	    }
