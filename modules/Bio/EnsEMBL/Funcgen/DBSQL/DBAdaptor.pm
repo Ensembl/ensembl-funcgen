@@ -302,6 +302,7 @@ sub _get_schema_build{
 
   #Have to explicitly pass self->db to this method if required, this highlights which db is being tested 
   throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $db);
+  #avoided using dnadb by default to avoid obfuscation of behaviour
   
   my $schema_build = $db->dbc->dbname();
 
@@ -359,7 +360,10 @@ sub get_SliceAdaptor{
   
   #Can we cache the DNA DBAdaptors against the FG csis rather than doing this everytime?
   #will this be too much memory overhead? Registry is already a cache, can we just reference the registry?
-  
+ 
+
+
+ 
   if($cs_id){
     my $csa = $self->get_FGCoordSystemAdaptor();
     my $fg_cs = $csa->fetch_by_dbID($cs_id);
@@ -389,6 +393,18 @@ sub get_SliceAdaptor{
   }
   else{
     #warn("No FGCoordSystem id passed. Getting SliceAdaptor from default dnadb\n");#stack trace this?
+
+	my $sbuild = $self->_get_schema_build($self);
+
+	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+	  (						
+	   -host => "ensembldb.ensembl.org",
+	   -user => "anonymous",
+	   -dbname => lc($self->species())."_core_${sbuild}",
+	  );
+	
+	$self->dnadb($dnadb);
+
   }
   
   return $self->dnadb->get_SliceAdaptor();#this causes circular reference if dnadb not set i.e if this is generated from scratch without a dnadb rather than from the reg?????
@@ -424,7 +440,7 @@ sub dnadb {
     #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
     #or shall we fetch/add all by name?
     
-    $self->get_FGCoordSystemAdaptor->validate_coord_system($cs);
+    $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
   }
     
   throw("dnadb needs to be set to a core db") if $self->SUPER::dnadb(@_)->group() ne "core";
