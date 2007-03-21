@@ -345,6 +345,8 @@ CREATE TABLE `result` (
    `probe_id` int(10) unsigned default NULL,
    `score` double default NULL,
    `chip_channel_id` int(10) unsigned NOT NULL,
+   `X` int(4) unsigned default NULL,
+   `Y` int(4) unsigned default NULL,
    PRIMARY KEY  (`result_id`),
    KEY `probe_idx` (`probe_id`),
    KEY `chip_channel_idx` (`chip_channel_id`)
@@ -716,12 +718,26 @@ CREATE TABLE `coord_system` (
   `rank` int(11) NOT NULL default '0',
   `attrib` set('default_version','sequence_level') default NULL,
   `schema_build` varchar(6) default NULL,
-  PRIMARY KEY  (`coord_system_id`),
-  UNIQUE KEY `rank` (`rank`, `schema_build`),
-  UNIQUE KEY `name` (`name`,`version`, `schema_build`)
+  `core_coord_system_id` int(10) NOT NULL, 
+  PRIMARY KEY  (`coord_system_id`, `core_coord_system_id`, `schema_build`),
+  KEY `name_version_idx` (`name`, `version`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
----Should only ever be chromosome?
+
+
+--- This is never being queried anyway as we cache all the CSs on start up!
+--- UNIQUE KEY `rank` (`rank`, `schema_build`),
+--- UNIQUE KEY `name` (`name`,`version`, `schema_build`)
+--- we want nr coord_system_id records to accomodate multiple coord_sys's which are effectively the same
+--- e.g. NCBI36 chromosome across all the core DB which have it
+--- can we ignore the unique keys for rank, name & version as these will be implied by the core DB?
+--- primary key should really be coord_sys_id, name, version, schema_build (core_coord_sys_id implied by other values)
+--- This however gives no access to the rest of the index for most of the queries
+--- don't need to really bother optimising the key structures as the table is so small?
+--- put core_coord_system_id at end of primary key and have separate key for coord_system_id
+--- primary key name, schema_build, version, core_coord_system_id
+--- or could we jsut depend on the core keys confering data integrity and have key optimised for query
+
 
 --- Further thoughts:
 

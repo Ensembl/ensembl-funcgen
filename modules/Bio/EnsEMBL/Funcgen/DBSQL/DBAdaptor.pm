@@ -375,7 +375,7 @@ sub get_SliceAdaptor{
     
     
     if($schema_build ne $self->_get_schema_build($self->dnadb())){
-
+	  my $lspecies = $reg->get_alias($self->species());
       #warn "Generating dnadb schema_build is $schema_build and dnadb is ".$self->_get_schema_build($self->dnadb())."\n";
 
       #get from cs_id
@@ -386,8 +386,8 @@ sub get_SliceAdaptor{
 		(						
 		 -host => "ensembldb.ensembl.org",
 		 -user => "anonymous",
-		 -species => $self->species(),
-		 -dbname => $self->species().'_core_'.$schema_build,
+		 -species => $lspecies,
+		 -dbname => $lspecies.'_core_'.$schema_build,
 		 -group => 'core',
 		);
   
@@ -425,14 +425,15 @@ sub dnadb {
   if($dnadb || $self->SUPER::dnadb->group() ne 'core'){
 
 	if(! $dnadb){
-	  my $dbname = lc($self->species()).'_core_'.$self->_get_schema_build($self);
+	  my $lspecies = $reg->get_alias($self->species());
+	  my $dbname = $lspecies.'_core_'.$self->_get_schema_build($self);
 	  warn "No dnadb passed, default to ${dbname}\n";
 	  
 	  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 		(						
 		 -host    => "ensembldb.ensembl.org",
 		 -user    => "anonymous",
-		 -species => $self->species(),
+		 -species => $lspecies,
 		 -dbname  => $dbname,
 		 -group   => 'core',
 		);
