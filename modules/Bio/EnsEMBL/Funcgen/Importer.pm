@@ -175,6 +175,9 @@ sub new{
     #Set vendor specific attr dependent vars
     $self->set_defs();
 
+
+	my $host_ip = '127.0.0.1';
+
     ### LOAD AND RE-CONFIG REGISTRY ###
     if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
 	
@@ -197,25 +200,33 @@ sub new{
       
       if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))){
 	
-	if($self->{'ssh'}){
+		if($self->{'ssh'}){
 	  
-	  $host = `host localhost`;#mac specific? nslookup localhost wont work on server/non-PC 
-	  #will this always be the same?
-	  warn "Need to get localhost IP from env, hardcoded for 127.0.0.1, $host";
-	  
-	  if ($self->host() ne 'localhost'){
-	    warn "Overriding host ".$self->host()." for ssh connection via localhost(127.0.0.1)";
-	  }
-	}
 
-	$db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-						  -host => 'ensembldb.ensembl.org',
-						  -user => 'anonymous',
-						  -dbname => $self->species()."_core_".$self->data_version(),
-						  -species => $self->species(),
-						 );
+
+
+		  $host = `host localhost`;#mac specific? nslookup localhost wont work on server/non-PC 
+		  #will this always be the same?
+
+		  if(! (exists $ENV{'EFG_HOST_IP'})){
+			warn "Environment varaible EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
+		  }else{
+			$host_ip = $ENV{'EFG_HOST_IP'};
+		  }
+		 
+		  if ($self->host() ne 'localhost'){
+			warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
+		  }
+		}
+
+		$db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+												  -host => 'ensembldb.ensembl.org',
+												  -user => 'anonymous',
+												  -dbname => $self->species()."_core_".$self->data_version(),
+												  -species => $self->species(),
+												 );
       }else{
-	$db = $self->db->dnadb();
+		$db = $self->db->dnadb();
       }
       
       
@@ -224,7 +235,7 @@ sub new{
       #generate and register DB with local connection settings
       $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 							 -user => $self->user(),
-							 -host => ($self->{'ssh'}) ? '127.0.0.1' : $self->host(),
+							 -host => ($self->{'ssh'}) ? $host_ip : $self->host(),
 							 -port => $self->port(),
 							 -pass => $self->pass(),
 							 #we need to pass dbname else we can use non-standard dbs

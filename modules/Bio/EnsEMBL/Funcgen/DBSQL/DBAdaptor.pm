@@ -349,6 +349,9 @@ sub _get_schema_build{
 sub get_SliceAdaptor{
   my ($self, $cs_id) = @_;
 
+  #$cs_id is only used in ProbeFeatureAdaptor
+  #but is this correct?
+
 
   #Need to add check if current cs_id refers to current dnadb
   
@@ -371,7 +374,7 @@ sub get_SliceAdaptor{
     #Get species here too
     
     
-    if(( ! $self->dnadb()) || ($schema_build ne $self->_get_schema_build($self->dnadb()))){
+    if($schema_build ne $self->_get_schema_build($self->dnadb())){
 
       #warn "Generating dnadb schema_build is $schema_build and dnadb is ".$self->_get_schema_build($self->dnadb())."\n";
 
@@ -379,36 +382,25 @@ sub get_SliceAdaptor{
       #can we return direct from registry for older versions?
       #best to generate directl as we may have only loaded the current DBs
       #set dnadb here and return after block
-      
-      my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-	(						
-	 -host => "ensembldb.ensembl.org",
-	 -user => "anonymous",
-	 -dbname => lc($self->species())."_core_${schema_build}",
-	);
+	  my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+		(						
+		 -host => "ensembldb.ensembl.org",
+		 -user => "anonymous",
+		 -species => $self->species(),
+		 -dbname => $self->species().'_core_'.$schema_build,
+		 -group => 'core',
+		);
+  
       
       $self->dnadb($dnadb);
       
     }
   }
-  else{
-    #warn("No FGCoordSystem id passed. Getting SliceAdaptor from default dnadb\n");#stack trace this?
-
-	my $sbuild = $self->_get_schema_build($self);
-
-	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-	  (						
-	   -host => "ensembldb.ensembl.org",
-	   -user => "anonymous",
-	   -dbname => lc($self->species())."_core_${sbuild}",
-	  );
-	
-	$self->dnadb($dnadb);
-
-  }
   
   return $self->dnadb->get_SliceAdaptor();#this causes circular reference if dnadb not set i.e if this is generated from scratch without a dnadb rather than from the reg?????
 }
+
+
 
 
 #Redefine dbadb here to add coordsystem
@@ -425,26 +417,39 @@ sub get_SliceAdaptor{
 
 
 sub dnadb { 
-  my $self = shift; 
+  my ($self, $dnadb, $cs_name) = @_; 
 
-  if(@_){ 
-    my $cs_name = $_[1] || 'chromosome';
-    
-    #print "adding $_[0]\n";
-    
-    
-    $reg->add_DNAAdaptor($self->species(),$self->group(),$_[0]->species(),$_[0]->group()); 
-    
-    #set default coordsystem here, do we need to handle non-chromosome here
-    my $cs = $_[0]->get_CoordSystemAdaptor->fetch_by_name($cs_name);
+  #super dnadb automatically sets the current DBAdaptor as the dnadb
+  #this is the only way of checking whether it has been defined properly.
+ 
+  if($dnadb || $self->SUPER::dnadb->group() ne 'core'){
+
+	if(! $dnadb){
+	  my $dbname = lc($self->species()).'_core_'.$self->_get_schema_build($self);
+	  warn "No dnadb passed, default to ${dbname}\n";
+	  
+	  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+		(						
+		 -host    => "ensembldb.ensembl.org",
+		 -user    => "anonymous",
+		 -species => $self->species(),
+		 -dbname  => $dbname,
+		 -group   => 'core',
+		);
+	}
+	
+	$self->SUPER::dnadb($dnadb); 
+
+	#set default coordsystem here, do we need to handle non-chromosome here
+	$cs_name ||= 'chromosome';
+	my $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name);
     #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
     #or shall we fetch/add all by name?
-    
+	
     $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
   }
-    
-  throw("dnadb needs to be set to a core db") if $self->SUPER::dnadb(@_)->group() ne "core";
-  return $self->SUPER::dnadb(@_);
+
+  return $self->SUPER::dnadb();#never pass @_ here!
 } 
 
 #Group methods, as not adaptor/class for Group(used in ExperimentAdaptor at present)

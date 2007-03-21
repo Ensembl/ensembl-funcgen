@@ -352,25 +352,25 @@ sub store {
       #try and fetch array here and set to array if valid
       $sarray = $self->fetch_by_name_vendor($array->name(), $array->vendor());#this should be name_vendor?
 
-      warn "Stored array from ".$array->name()." ".$array->vendor()." is $sarray";
+      #warn "Stored array from ".$array->name()." ".$array->vendor()." is $sarray";
       
       if( ! $sarray){
-	#sanity check here
-	throw("Array name must not be longer than 30 characters") if (length($array->name) > 40);
-	$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
-	$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
-	$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
-	$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
-	$sth->bind_param(5, $array->type(),         SQL_VARCHAR);
-	
-	$sth->execute();
-	my $dbID = $sth->{'mysql_insertid'};
-	$array->dbID($dbID);
-	$array->adaptor($self);
+		#sanity check here
+		throw("Array name must not be longer than 30 characters") if (length($array->name) > 40);
+		$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
+		$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
+		$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
+		$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
+		$sth->bind_param(5, $array->type(),         SQL_VARCHAR);
+		
+		$sth->execute();
+		my $dbID = $sth->{'mysql_insertid'};
+		$array->dbID($dbID);
+		$array->adaptor($self);
       }
       else{
-	#warn("Array already stored, using previously stored array\n");# validating array_chips\n");
-	$array = $sarray;
+		#warn("Array already stored, using previously stored array\n");# validating array_chips\n");
+		$array = $sarray;
       }
     }
     

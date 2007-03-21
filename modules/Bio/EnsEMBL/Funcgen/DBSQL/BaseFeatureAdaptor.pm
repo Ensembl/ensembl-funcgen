@@ -92,7 +92,7 @@ sub fetch_all_by_Slice_constraint {
   #check the cache and return if we have already done this query
 
   #Added schema_build to feature cache for EFG
-  my $key = uc(join(':', $slice->name, $constraint, $self->db->_get_schema_build($slice->adaptor())));
+  my $key = uc(join(':', $slice->name, $constraint, $self->db->_get_schema_build($slice->adaptor->db())));
 
 
   if(exists($self->{'_slice_feature_cache'}->{$key})) {
@@ -247,8 +247,29 @@ sub _pre_store {
  
   #retrieve corresponding Funcgen coord_system and set id in feature
   my $csa = $self->db->get_FGCoordSystemAdaptor();#had to call it FG as we were getting the core adaptor
-  my $fg_cs = $csa->validate_coord_system($cs);
-  $fg_cs = $csa->fetch_by_name_schema_build_version($cs->name(), $self->db->_get_schema_build($slice->adaptor()), $cs->version());
+  my $fg_cs = $csa->validate_and_store_coord_system($cs);
+
+  
+  $fg_cs = $csa->fetch_by_name($cs->name(), $cs->version());
+
+  #removed as we don't want this to slow down import
+  #my $sbuild = $self->db->_get_schema_build($slice->adaptor->db());
+
+  #if(! $fg_cs->contains_schema_build($sbuild)){
+
+	#warn "Adding new schema build $sbuild to CoordSystem\n";
+
+	#$fg_cs->add_core_coord_system_info(
+		#							   -RANK                 => $cs->rank(), 
+		#							   -SEQ_LVL              => $cs->is_sequence_level(), 
+		#							   -DEFAULT_LVL          => $cs->is_default(), 
+		#							   -SCHEMA_BUILD         => $sbuild, 
+		#							   -CORE_COORD_SYSTEM_ID => $cs->dbID(),
+		#							   -IS_STORED            => 0,
+		#							  );
+	#$fg_cs = $csa->store($fg_cs);
+  #}
+
   $feature->coord_system_id($fg_cs->dbID());
 
   my ($tab) = $self->_tables();

@@ -168,9 +168,7 @@ sub read_array_data{
     #also need to be able to set file path independently of defs
     
     if($. == 1){
-      warn "header is ".join(" x ",@data);
-
-      %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
+	  %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
       next;
     }
 
@@ -413,10 +411,7 @@ sub read_probe_data{
   #READ REGION POSITIONS
   #We need to handle different coord systems and possibly different assmemblies
   my $slice_a = $self->db->get_SliceAdaptor();
-  my $cs = $self->db->get_FGCoordSystemAdaptor()->fetch_by_name_schema_build_version(
-										     'chromosome', 
-										     $self->db->_get_schema_build($self->db->dnadb())
-										    );
+  my $cs = $self->db->get_FGCoordSystemAdaptor()->fetch_by_name('chromosome');
 
   #should really test and store here if not valid, but this will be handled by adaptor store methods
   #This should really focus on the experiemental chips, 
@@ -439,11 +434,11 @@ sub read_probe_data{
 
 
       if($achip->has_status('IMPORTED')){
-	$self->log("Skipping fully imported ArrayChip:\t".$achip->design_id());
-	next;
+		$self->log("Skipping fully imported ArrayChip:\t".$achip->design_id());
+		next;
       }elsif($self->recovery()){
-	$self->log("Rolling back ArrayChip:\t".$achip->design_id());
-	$self->db->rollback_ArrayChip($achip);
+		$self->log("Rolling back ArrayChip:\t".$achip->design_id());
+		$self->db->rollback_ArrayChip($achip);
       }
       
       $self->log("Importing ArrayChip:".$achip->design_id());
@@ -505,39 +500,39 @@ sub read_probe_data{
       
       #don't % = map ! Takes a lot longer than a while ;)
       while($line = <$fh>){
-	$line =~ s/\r*\n//o;#Not using last element
-	@data =  split/\t/o, $line;
+		$line =~ s/\r*\n//o;#Not using last element
+		@data =  split/\t/o, $line;
 	
-	#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
-	if ($. == 1){
-	  %hpos = %{$self->set_header_hash(\@data, $self->get_def('pos_fields'))};
-	  next;
-	}
-	
-	#Skip probe if there is a duplicate
-	
-	if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
-	  throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]." need implement duplicate logging/cleaning");
-	  #need to build duplicate hash to clean elements from hash
-	  # $duplicate_probes{$data[$hpos{'PROBE_ID'}]} = 1;
-	  #next;
-	}
-	
-	#
-	if(! $self->cache_slice($data[$hpos{'CHROMOSOME'}])){
-	  push @log, "Skipping probe ".$data[$hpos{'PROBE_ID'}]." with non-standard region ".$data[$hpos{'CHROMOSOME'}];
-	}
-	
-	$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
-						 chr => $data[$hpos{'CHROMOSOME'}],
-						 start => $data[$hpos{'POSITION'}],
-						)};
-	
+		#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
+		if ($. == 1){
+		  %hpos = %{$self->set_header_hash(\@data, $self->get_def('pos_fields'))};
+		  next;
+		}
+		
+		#Skip probe if there is a duplicate
+		
+		if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
+		  throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]." need implement duplicate logging/cleaning");
+		  #need to build duplicate hash to clean elements from hash
+		  # $duplicate_probes{$data[$hpos{'PROBE_ID'}]} = 1;
+		  #next;
+		}
+		
+		#
+		if(! $self->cache_slice($data[$hpos{'CHROMOSOME'}])){
+		  push @log, "Skipping probe ".$data[$hpos{'PROBE_ID'}]." with non-standard region ".$data[$hpos{'CHROMOSOME'}];
+		}
+		
+		$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
+												 chr => $data[$hpos{'CHROMOSOME'}],
+												 start => $data[$hpos{'POSITION'}],
+												)};
+		
       }
       
       
       #Remove duplicate probes 
-
+	  
       
       close($fh);
       
@@ -562,176 +557,176 @@ sub read_probe_data{
       #$self->Timer()->mark("Starting probe loop");
       
       while($line = <$fh>){
-	$line =~ s/\r*\n//;
-	@data =  split/\t/o, $line;
-	my $loc = "";
-	my $class = "EXPERIMENTAL";
-	
-	#PROBE_DESIGN_ID	CONTAINER	DESIGN_NOTE	SELECTION_CRITERIA	SEQ_ID	PROBE_SEQUENCE	MISMATCH	MATCH_INDEX	FEATURE_ID	ROW_NUM	COL_NUM	PROBE_CLASS	PROBE_ID	POSITION	DESIGN_ID	X	Y
-				#2067_0025_0001  BLOCK1          0       chrX    TTAGTTTAAAATAAACAAAAAGATACTCTCTGGTTATTAAATCAATTTCT      0       52822449        52822449        1       25      experimental    chrXP10404896   10404896        2067    25      1
-				
-	if ($. == 1){	
-	  %hpos = %{$self->set_header_hash(\@data, $self->get_def('ndf_fields'))};
-	  next;
-	}
+		$line =~ s/\r*\n//;
+		@data =  split/\t/o, $line;
+		my $loc = "";
+		my $class = "EXPERIMENTAL";
+		
+		#PROBE_DESIGN_ID	CONTAINER	DESIGN_NOTE	SELECTION_CRITERIA	SEQ_ID	PROBE_SEQUENCE	MISMATCH	MATCH_INDEX	FEATURE_ID	ROW_NUM	COL_NUM	PROBE_CLASS	PROBE_ID	POSITION	DESIGN_ID	X	Y
+		#2067_0025_0001  BLOCK1          0       chrX    TTAGTTTAAAATAAACAAAAAGATACTCTCTGGTTATTAAATCAATTTCT      0       52822449        52822449        1       25      experimental    chrXP10404896   10404896        2067    25      1
+		
+		if ($. == 1){	
+		  %hpos = %{$self->set_header_hash(\@data, $self->get_def('ndf_fields'))};
+		  next;
+		}
+		
+		
+		if (! exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
+		  push @log, "Skipping non-experimental probe:\t".$data[$hpos{'PROBE_ID'}];
+		  next;
+		}
+		
+		#Which non-experimental probes might we want to store?
+		#if($data[$hpos{'CONTAINER'}] =~ /control/io){
+		#	$class = "CONTROL";
+		#}
+		#elsif($data[$hpos{'CONTAINER'}] =~ /random/io){
+		#	$class = "RANDOM";
+		#}
+		#elsif($data[$hpos{'PROBE_CLASS'}] !~ /experimental/io){
+		#	$class = "OTHER";
+		#}
+		#elsif(! exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){	#HACKY HACKY HACK HACK!! Needed for valid region retrival
+		#  $class = "OTHER";
+		#}
+		#SPIKE INS?
+		
+		
+		
+		#This assumes all probes in feature/probeset are next to each other!!!!!!!!!!
+		
+		
+		if($data[$hpos{'FEATURE_ID'}] != $data[$hpos{'MATCH_INDEX'}]){#Probe set data
+		  #print "Generating new probeset:\tFeature id:\t".$data[$hpos{'FEATURE_ID'}]."\tmatchindex:\t".$data[$hpos{'MATCH_INDEX'}]."\n";
 		  
+		  if($ops && ($data[$hpos{'FEATURE_ID'}] ne $ops->name())){
+			#THis is where we chose to update/validate
+			#Do we need to pass probes if they're already stored..may aswell to reduce mysql load?
+			#No point as we have to query anyway
+			$self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
+			throw("ops still defined in caller") if defined $ops;
+		  }
+		  
+		  $ops = Bio::EnsEMBL::Funcgen::ProbeSet->new(
+													  -NAME => $data[$hpos{'FEATURE_ID'}],
+													  -SIZE => undef,
+													  -FAMILY  => $data[$hpos{'CONTAINER'}],
+													  #xref_id => $data[$hpos{'SEQ_ID'}],#Need to populate xref table
+													 );
+		  
+		  #should we store straight away or build a probeset/probe/feature set, and then store and validate in turn?
+		  #Store directly have separate method to validate and update?
+		  #would need to check if one exists before storing anyway, else we could potentially duplicate the same probe/probeset from a different array
+		  #remember for affy we need duplicate probe records with identical probe ids, probeset records unique across all arrays
+		  
+		  undef %pfs
+		}
+		elsif($. > 2){#may have previous ops set, but next has no ops, or maybe just no ops's at all
+		  $self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
+		  throw("ops still defined in caller") if defined $ops;
+		}
 	
-	if (! exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
-	  push @log, "Skipping non-experimental probe:\t".$data[$hpos{'PROBE_ID'}];
-	  next;
-	}
-	
-	#Which non-experimental probes might we want to store?
-				#if($data[$hpos{'CONTAINER'}] =~ /control/io){
-	#	$class = "CONTROL";
-	#}
-	#elsif($data[$hpos{'CONTAINER'}] =~ /random/io){
-	#	$class = "RANDOM";
-	#}
-	#elsif($data[$hpos{'PROBE_CLASS'}] !~ /experimental/io){
-	#	$class = "OTHER";
-	#}
-	#elsif(! exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){	#HACKY HACKY HACK HACK!! Needed for valid region retrival
-	#  $class = "OTHER";
-	#}
-	#SPIKE INS?
-	
-	
-
-	#This assumes all probes in feature/probeset are next to each other!!!!!!!!!!
-
-	
-	if($data[$hpos{'FEATURE_ID'}] != $data[$hpos{'MATCH_INDEX'}]){#Probe set data
-	  #print "Generating new probeset:\tFeature id:\t".$data[$hpos{'FEATURE_ID'}]."\tmatchindex:\t".$data[$hpos{'MATCH_INDEX'}]."\n";
-	  
-	  if($ops && ($data[$hpos{'FEATURE_ID'}] ne $ops->name())){
-	    #THis is where we chose to update/validate
-	    #Do we need to pass probes if they're already stored..may aswell to reduce mysql load?
-	    #No point as we have to query anyway
-	    $self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
-	    throw("ops still defined in caller") if defined $ops;
-	  }
-	  
-	  $ops = Bio::EnsEMBL::Funcgen::ProbeSet->new(
-						      -NAME => $data[$hpos{'FEATURE_ID'}],
-						      -SIZE => undef,
-						      -FAMILY  => $data[$hpos{'CONTAINER'}],
-						      #xref_id => $data[$hpos{'SEQ_ID'}],#Need to populate xref table
-															   );
-					
-	  #should we store straight away or build a probeset/probe/feature set, and then store and validate in turn?
-	  #Store directly have separate method to validate and update?
-	  #would need to check if one exists before storing anyway, else we could potentially duplicate the same probe/probeset from a different array
-	  #remember for affy we need duplicate probe records with identical probe ids, probeset records unique across all arrays
-	  
-	  undef %pfs
-	}
-	elsif($. > 2){#may have previous ops set, but next has no ops, or maybe just no ops's at all
-	  $self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
-	  throw("ops still defined in caller") if defined $ops;
-	}
-	
+		
+		###PROBES
+		#should we cat $xref_id to $probe_id here to generate unique id?
+		#would be messy to handle in the code, but would have to somewhere(in the retrieval code)
+		
+		$length = length($data[$hpos{'PROBE_SEQUENCE'}]);	
+		#$probe_string .= "\t${psid}\t".$data[$hpos{'PROBE_ID'}]."\t${length}\t$ac_id\t${class}\n";
+		#print "Generating new probe with $array ".$array->dbID()." and ac id ".$ac{'dbID'}."\n";
+		
+		$op = Bio::EnsEMBL::Funcgen::Probe->new(
+												-NAME          => $data[$hpos{'PROBE_ID'}],
+												-LENGTH        => $length,
+												-ARRAY         => $array,
+												-ARRAY_CHIP_ID => $achip->dbID(),
+												-CLASS         => $class,
+											   );
+		
+		
+		%{$pfs{$data[$hpos{'PROBE_ID'}]}} = (
+											 probe => $op,
+											 features => [],
+											);
+		
 				
-	###PROBES
-	#should we cat $xref_id to $probe_id here to generate unique id?
-	#would be messy to handle in the code, but would have to somewhere(in the retrieval code)
-	
-	$length = length($data[$hpos{'PROBE_SEQUENCE'}]);	
-	#$probe_string .= "\t${psid}\t".$data[$hpos{'PROBE_ID'}]."\t${length}\t$ac_id\t${class}\n";
-	#print "Generating new probe with $array ".$array->dbID()." and ac id ".$ac{'dbID'}."\n";
-	
-	$op = Bio::EnsEMBL::Funcgen::Probe->new(
-						-NAME          => $data[$hpos{'PROBE_ID'}],
-						-LENGTH        => $length,
-						-ARRAY         => $array,
-						-ARRAY_CHIP_ID => $achip->dbID(),
-						-CLASS         => $class,
-					       );
-	
-	
-	%{$pfs{$data[$hpos{'PROBE_ID'}]}} = (
-					     probe => $op,
-					     features => [],
-					    );
-	
-				
-	###PROBE FEATURES
-	#How can we be certain that we have the same mapping in the DB?
-	#Put checks in here for build?
-	#Need to handle controls/randoms here
-	#won't have features but will have results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	#The format of the pos file looks like it should have all the data required, but 
-	# chromsome is missing, first undef :(
-	#Need to use $pos here instead of .pos file
-	#However have problems defining probe class, as not populated in test set
-	#derive from container! :(
-	#Ignore controls/random as they won't have a region
-	#Also need to handle multiple mappings? 
-	#As results reference probes, no features, can have multiple features on different builds
-	
-	#if($class eq "EXPERIMENTAL"){
-	
-	#if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
-	#  $fid++;
-	#  $pf_string .= "\t".$regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}."\t".$data[$hpos{'POSITION'}]."\t".
-	#    ($data[$hpos{'POSITION'}] + $length)."\t${strand}\t".$regions{$data[$hpos{'SEQ_ID'}]}{'coord_system_id'}.
-	#	"\t${pid}\t${anal_id}\t".$data[$hpos{'MISMATCH'}]."\t${cig_line}\n";
-	#$loc .= $regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}.":".$data[$hpos{'POSITION'}].
-	#  "-".($data[$hpos{'POSITION'}] + $length).";" if ($self->{'_dump_fasta'});
-	# }
-	# else{ 
-	#   die("No regions defined for ".$data[$hpos{'SEQ_ID'}]." ".$data[$hpos{'PROBE_ID'}].
-	#" with family ".$data[$hpos{'CONTAINER'}]);
-	#  }
-	
+		###PROBE FEATURES
+		#How can we be certain that we have the same mapping in the DB?
+		#Put checks in here for build?
+		#Need to handle controls/randoms here
+		#won't have features but will have results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		#The format of the pos file looks like it should have all the data required, but 
+		# chromsome is missing, first undef :(
+		#Need to use $pos here instead of .pos file
+		#However have problems defining probe class, as not populated in test set
+		#derive from container! :(
+		#Ignore controls/random as they won't have a region
+		#Also need to handle multiple mappings? 
+		#As results reference probes, no features, can have multiple features on different builds
+		
+		#if($class eq "EXPERIMENTAL"){
+		
+		#if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
+		#  $fid++;
+		#  $pf_string .= "\t".$regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}."\t".$data[$hpos{'POSITION'}]."\t".
+		#    ($data[$hpos{'POSITION'}] + $length)."\t${strand}\t".$regions{$data[$hpos{'SEQ_ID'}]}{'coord_system_id'}.
+		#	"\t${pid}\t${anal_id}\t".$data[$hpos{'MISMATCH'}]."\t${cig_line}\n";
+		#$loc .= $regions{$data[$hpos{'SEQ_ID'}]}{'seq_region_id'}.":".$data[$hpos{'POSITION'}].
+		#  "-".($data[$hpos{'POSITION'}] + $length).";" if ($self->{'_dump_fasta'});
+		# }
+		# else{ 
+		#   die("No regions defined for ".$data[$hpos{'SEQ_ID'}]." ".$data[$hpos{'PROBE_ID'}].
+		#" with family ".$data[$hpos{'CONTAINER'}]);
+		#  }
+		
 	
 				
 	
-	if ($self->{'_dump_fasta'}){
-	  (my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}) =~ s/chr//;
-	  $loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
-	    ($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
-	}
+		if ($self->{'_dump_fasta'}){
+		  (my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}) =~ s/chr//;
+		  $loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
+			($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
+		}
 	
-	#Hack!!!!!! Still importing probe (and result?)
-	if(!  $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'})){
-	  #warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
-	  next;
-	}
-	
+		#Hack!!!!!! Still importing probe (and result?)
+		if(!  $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'})){
+		  #warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
+		  next;
+		}
+		
+				
+		
+		$of = Bio::EnsEMBL::Funcgen::ProbeFeature->new
+		  (
+		   -START         => $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'},
+		   -END           =>($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}  + $length),
+		   -STRAND        => $strand,
+		   -SLICE         => $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}),
+		   -ANALYSIS      => $anal,
+		   -MISMATCHCOUNT => $data[$hpos{'MISMATCH'}],
+		   -PROBE         => undef,	#Need to update this in the store method
+		  );
 				
 	
-	$of = Bio::EnsEMBL::Funcgen::ProbeFeature->new
-	  (
-	   -START         => $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'},
-	   -END           =>($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}  + $length),
-	   -STRAND        => $strand,
-	   -SLICE         => $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}),
-	   -ANALYSIS      => $anal,
-	   -MISMATCHCOUNT => $data[$hpos{'MISMATCH'}],
-	   -PROBE         => undef,#Need to update this in the store method
-	  );
-				
+		push @{$pfs{$data[$hpos{'PROBE_ID'}]}{'features'}}, $of;
 	
-	push @{$pfs{$data[$hpos{'PROBE_ID'}]}{'features'}}, $of;
-	
-	if($self->{'_dump_fasta'}){			
-	  #filter controls/randoms?  Or would it be sensible to see where they map
-	  #wrap seq here?
-	  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
+		if($self->{'_dump_fasta'}){			
+		  #filter controls/randoms?  Or would it be sensible to see where they map
+		  #wrap seq here?
+		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
 	    "\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
-	}
+		}
       }
       
       #need to store last data here
       $self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
       $self->log(join("\n", @log));
       $achip->adaptor->set_status("IMPORTED", $achip);
-      $self->log("ArrayChip:\t".$achip->design_id()." has been IMPORTED");
+	  $self->log("ArrayChip:\t".$achip->design_id()." has been IMPORTED");
       
       if ($self->{'_dump_fasta'}){
-	print $f_out $fasta if($self->{'_dump_fasta'});
-	close($f_out);
+		print $f_out $fasta if($self->{'_dump_fasta'});
+		close($f_out);
       }
     }
     

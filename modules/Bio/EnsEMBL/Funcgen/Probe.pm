@@ -204,6 +204,8 @@ sub add_array_chip_probename {
     
     $self->{ 'arrays'     }->{$ac_dbid} = $array;
     $self->{ 'probenames' }->{$array->name()} = $probename;
+
+    return;
 }
 
 
@@ -312,9 +314,9 @@ sub get_probename {
       }
     }
 
-
 	
     my $probename = $self->{'probenames'}->{$arrayname};
+
     if (!defined $probename) {
 		throw('Unknown array name');
     }

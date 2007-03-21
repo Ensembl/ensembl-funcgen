@@ -126,18 +126,129 @@ sub new {
   #We will also have to handle the top/default levels issues with multiple DBs
 
 
-  my ($name, $version, $sbuild, $top_level, $sequence_level, $default, $rank) =
-    rearrange(['NAME','VERSION', 'SCHEMA_BUILD','TOP_LEVEL', 'SEQUENCE_LEVEL',
-               'DEFAULT', 'RANK'], @_);
+  #my ($name, $version, $sbuild, $top_level, $sequence_level, $default, $rank) =
+  #  rearrange(['NAME','VERSION', 'SCHEMA_BUILD','TOP_LEVEL', 'SEQUENCE_LEVEL',
+  #             'DEFAULT', 'RANK'], @_);
 
-  throw('A name and schema_build argument are required') if(!$name || ! $sbuild);
+  my ($name, $version) =  rearrange(['NAME','VERSION'], @_);
+
+
+  throw('A name argument is required') if(! $name);
   
 
   $version = '' if(!defined($version));
+  
 
-  $top_level       = ($top_level)      ? 1 : 0;
+  #$top_level       = ($top_level)      ? 1 : 0;
+  #$sequence_level  = ($sequence_level) ? 1 : 0;
+  #$default         = ($default)        ? 1 : 0;
+  #$rank ||= 0;
+
+  #if($top_level) {
+  #  if($rank) {
+  #    throw('RANK argument must be 0 if TOP_LEVEL is 1');
+  #  }
+
+  #  if($name) {
+  #    if($name ne 'toplevel') {
+  #      throw('The NAME argument must be "toplevel" if TOP_LEVEL is 1')
+  #    }
+  #  } else {
+  #    $name = 'toplevel';
+  #  }
+
+  #  if($sequence_level) {
+  #    throw("SEQUENCE_LEVEL argument must be 0 if TOP_LEVEL is 1");
+  #  }
+
+  #  $default = 0;
+
+#  } else {
+#    if(!$rank) {
+#      throw("RANK argument must be non-zero if not toplevel CoordSystem");
+#    }
+#    if($name eq 'toplevel') {
+#      throw("Cannot name coord system 'toplevel' unless TOP_LEVEL is 1");
+#    }
+#  }
+
+#  if($rank !~ /^\d+$/) {
+#    throw('The RANK argument must be a positive integer');
+#  }
+
+
+  $self->{'core_cache'} = {};
+  $self->{'version'} = $version;
+  $self->{'name'} = $name;
+  #$self->{'schema_build'} = $sbuild;
+  #$self->{'top_level'} = $top_level;
+  #$self->{'sequence_level'} = $sequence_level;
+  #$self->{'default'} = $default;
+  #$self->{'rank'}    = $rank;
+
+
+
+
+  return $self;
+}
+
+
+=head2 add_core_coord_system_info
+
+  Arg [1]    : mandatory hash:
+                              
+							 	-RANK                 => $rank,
+								-SEQ_LVL              => $seq_lvl,
+								-DEFAULT_LVL          => $default,
+								-SCHEMA_BUILD         => $sbuild,
+								-CORE_COORD_SYSTEM_ID => $ccs_id,
+								-IS_STORED            => $stored_status,
+							  
+  Example    : $cs->add_core_coord_system_info(
+									-RANK                 => $rank,
+									-SEQ_LVL              => $seq_lvl,
+									-DEFAULT_LVL          => $default,
+									-SCHEMA_BUILD         => $sbuild,
+									-CORE_COORD_SYSTEM_ID => $ccs_id,
+									-IS_STORED            => 1,
+									);
+
+  Description: Setter for core coord system information
+  Returntype : none
+  Exceptions : throws if:
+               rank not 0 when toplevel
+               name not 'TOPLEVEL" when toplevel
+               sequence level and top level
+               no schema_build defined
+               no rank
+               rank 0 when not toplevel
+               name 'TOPLEVEL' when not toplevel
+               
+  Caller     : Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor and ?
+  Status     : at risk - replace with add_core_CoordSystem? implement top level?
+
+#this does not check name and version!
+
+
+=cut
+
+sub add_core_coord_system_info {
+  my ($self) = shift;
+
+  my ($sbuild, $top_level, $sequence_level, $default, $rank, $stored, $ccs_id) =
+    rearrange(['SCHEMA_BUILD','TOP_LEVEL', 'SEQUENCE_LEVEL',
+               'DEFAULT', 'RANK', 'IS_STORED', 'CORE_COORD_SYSTEM_ID'], @_);
+
+
+  throw('Must provide a schema_build') if ! $sbuild;
+  throw('Must provide a core_coord_system_id') if ! $ccs_id;
+
+  
+ #$top_level       = ($top_level)      ? 1 : 0;
   $sequence_level  = ($sequence_level) ? 1 : 0;
   $default         = ($default)        ? 1 : 0;
+  $stored ||=0;
+
   $rank ||= 0;
 
   if($top_level) {
@@ -145,12 +256,13 @@ sub new {
       throw('RANK argument must be 0 if TOP_LEVEL is 1');
     }
 
-    if($name) {
-      if($name ne 'toplevel') {
+    if($self->name()) {
+      if($self->name() ne 'toplevel') {
         throw('The NAME argument must be "toplevel" if TOP_LEVEL is 1')
       }
     } else {
-      $name = 'toplevel';
+	  throw('toplevel not yet implemented');
+      #$name = 'toplevel';
     }
 
     if($sequence_level) {
@@ -163,7 +275,7 @@ sub new {
     if(!$rank) {
       throw("RANK argument must be non-zero if not toplevel CoordSystem");
     }
-    if($name eq 'toplevel') {
+    if($self->name() eq 'toplevel') {
       throw("Cannot name coord system 'toplevel' unless TOP_LEVEL is 1");
     }
   }
@@ -172,15 +284,19 @@ sub new {
     throw('The RANK argument must be a positive integer');
   }
 
-  $self->{'version'} = $version;
-  $self->{'name'} = $name;
-  $self->{'schema_build'} = $sbuild;
-  $self->{'top_level'} = $top_level;
-  $self->{'sequence_level'} = $sequence_level;
-  $self->{'default'} = $default;
-  $self->{'rank'}    = $rank;
 
-  return $self;
+  $self->{'core_cache'}{$sbuild} = {(
+									 RANK                 => $rank,
+									 SEQ_LVL              => $sequence_level,
+									 DEFAULT              => $default,
+									 CORE_COORD_SYSTEM_ID => $ccs_id,
+									 IS_STORED            => $stored,
+									)};
+
+
+
+
+  return;
 }
 
 
@@ -212,16 +328,36 @@ sub name {
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : deprecated
 
 =cut
 
 sub schema_build {
   my $self = shift;
+
+  throw('schema_build deprecated, use contains_schema_build');
+
   return $self->{'schema_build'};
 }
 
+=head2 contains_schema_build
 
+  Example    : if ($coord_system->contains_schema_build('43_36e')){..do some coord system things ..};
+  Description: Returns true is the CoordSystem maps to the corresponding core CoordSystem
+  Returntype : Boolean
+  Exceptions : throws if schema_build not defined
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub contains_schema_build {
+  my ($self, $schema_build) = @_;
+  
+  throw('Must pass a schema_build') if ! $schema_build;
+
+  return (exists $self->{'core_cache'}{$schema_build}) ? 1 : 0;
+}
 
 =head2 version
 
@@ -266,21 +402,28 @@ sub equals {
 
   if(!$cs || !ref($cs) || 
 	 (!$cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')  && !$cs->isa('Bio::EnsEMBL::CoordSystem'))){
-	  throw('Argument must be a Bio::EnsEMBL(::Funcgen)::CoordSystem');
+	  throw('Argument must be a Bio::EnsEMBL[::Funcgen]::CoordSystem');
   }
   
   
   #need to add check on schema_build here
+  #all schema_builds should have been added by BaseFeatureAdaptor during import
 
   #warn $self->{'version'}." eq ".$cs->version()." && ".$self->{'name'}." eq ".$cs->name()." && ".$self->adaptor->db->_get_schema_build($cs->adaptor())." eq ".$self->schema_build()."\n"; 
 
  #this fails if we are using two different versions with the same cs's
   
 
-  #Do we really need to check the schema build?  Don't we just need to check the name and version?
-  #what exactly are we using schema build for?
+  #can we just restrict it to name and version here, then check for schema_build and add if not present?
+  #where is equals being called?
 
-  if($self->{'version'} eq $cs->version() && $self->{'name'} eq $cs->name() && $self->adaptor->db->_get_schema_build($cs->adaptor()) eq $self->schema_build()) {
+  if(($self->version() eq $cs->version()) &&
+	 ($self->name() eq $cs->name())){
+
+	if (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor()))) {
+	  warn 'You are using a schema_build which has no CoordSystem stored, defaulting to name version match';
+
+	}
     return 1;
   }
 
@@ -302,12 +445,15 @@ sub equals {
   Returntype : 0 or 1
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : at risk - not implemented yet
 
 =cut
 
 sub is_top_level {
   my $self = shift;
+
+  throw('Not yet implmented, need to test against the core cache using dnadb/schema_build');
+
   return $self->{'top_level'};
 }
 
@@ -320,12 +466,15 @@ sub is_top_level {
   Returntype : 0 or 1
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : at risk - not yet implemented
 
 =cut
 
 sub is_sequence_level {
   my $self = shift;
+
+  throw('Not yet implemented, need to test against core cache using dnadb/schema_build');
+
   return $self->{'sequence_level'};
 }
 
@@ -339,12 +488,15 @@ sub is_sequence_level {
   Returntype : 0 or 1
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : at risk - not yet implemented
 
 =cut
 
 sub is_default {
   my $self = shift;
+
+  throw('Not yet implemented, need to test against core cache using dnadb/schema_build');
+
   return $self->{'default'};
 }
 
@@ -365,12 +517,15 @@ sub is_default {
   Returntype : int
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : at risk - not yet implemented
 
 =cut
 
 sub rank {
   my $self = shift;
+
+  throw('Not yet implemented, need to test against core cache using dnadb/schema_build');
+
   return $self->{'rank'};
 }
 
