@@ -115,18 +115,16 @@ sub rollback_results{
   throw("Need to pass some chip_channel_ids to roll_back") if (scalar(@cc_ids) == 0);
   
   my $sql = 'DELETE from result where chip_channel_id in ('.join(',', @cc_ids).');';
-
-  #warn "sql is $sql";
-
   $self->dbc->do($sql);
 
-  if($?){
-    throw("Results rollback failed for cc_ids:\t@cc_ids\nError:\t$?");
-  }
+  #do doesn't like cat'd statements??
+  $sql = 'DELETE s from status s, chip_channel cc where cc.chip_channel_id in ('.join(',', @cc_ids).
+	') and cc.table_id=s.table_id and cc.table_name=s.table_name;';
+  $self->dbc->do($sql);
 
-  #warn "Need to remove imported status from Echips/channels here";
-  #this is only called if it doesn't have the status in question
 
+  warn "sql is $sql";
+  throw("Results rollback failed for cc_ids:\t@cc_ids\nError:\t$?") if ($?);
 
   return;
 }
@@ -148,16 +146,14 @@ sub rollback_ArrayChip{
   #would have to be result set as we would find our own ecs.  May find our own rset
   #we should throw if there are any more than this set and force the use of a separate script
 
-  my $sql = "DELETE from probe where array_chip_id='".$ac->dbID()."';";
+  my $sql = 'DELETE from probe where array_chip_id='.$ac->dbID().';';
   $self->dbc->do($sql);
 
-  if($?){
-    throw("ArrayChip(".$ac->name().")\nError:\t$?");
-  }
+  $sql = ' DELETE from status where table_name="array_chip" and table_id='.$ac->dbID().';';  
+  $self->dbc->do($sql);
 
-  #warn "need to remove imported status for ArrayChip here";
-  #this is only called if it doesn't have the status in question
-
+  throw("ArrayChip(".$ac->name().") rollback failed\nError:\t$?")  if($?);
+  
   return;
 }
 

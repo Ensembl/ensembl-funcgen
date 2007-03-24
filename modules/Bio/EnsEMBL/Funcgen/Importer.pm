@@ -171,7 +171,6 @@ sub new{
 
     }
 
-
     #Set vendor specific attr dependent vars
     $self->set_defs();
 
@@ -1358,7 +1357,7 @@ sub store_set_probes_features{
     #Can't use get_all_Arrays here as we can't guarantee this will only ever be the array we've generated
     #Might dynamically load array if non-present
     #This is allowing multiple dbIDs per probe???  Is this wrong?
-    $self->cache_name_id($probe->get_probename(), $probe->dbID());
+    $self->cache_probe_info($probe->get_probename(), $probe->dbID());
 
         
     foreach my $feature(@{$pf_hash->{$probe_id}->{'features'}}){
@@ -1398,11 +1397,15 @@ sub cache_slice{
 }
 
 
-=head2 cache_name_id
+=head2 cache_probe_info
 
-  Arg [1]    : mandatory - probe name
-  Arg [2]    : mandatory - probe dbID
-  Example    : $self->cache_name_id("Probe1", $probe->dbID());
+  Arg [0]    : mandatory - probe name
+  Arg [1]    : mandatory - probe dbID
+  Arg [2]    : optioanl int - x coord of probe on array
+  Arg [3]    : optional int - y coord of probe on array
+  Example    : $self->cache_probe_info("Probe1", $probe->dbID());
+               Or for result files which do not have X & Y, we need to cache 
+               X & Y from the design files: $self->cache_probe_info('Probe2', $probe->dbID(), $x, $y);
   Description: Setter for probe cache values
   Returntype : none
   Exceptions : throws is cache conflict encountered
@@ -1412,18 +1415,18 @@ sub cache_slice{
 =cut
 
 
-sub cache_name_id{
-  my ($self, $pname, $pid) = @_;
-
+sub cache_probe_info{
+  my ($self, $pname, $pid, $x, $y) = @_;
 
   throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
 
 
-  if(defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname} != $pid)){
+  if(defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname}->[0] != $pid)){
     throw("Found two differing dbIDs for $pname, need to sort out redundant probe entries");
   }
-
-  $self->{'_probe_cache'}->{$pname} = $pid;
+  
+  $self->{'_probe_cache'}->{$pname} = (defined $x && defined $y) ? [$pid, $x, $y] : [$pid];
+  
   return;
 }
 
@@ -1443,26 +1446,74 @@ sub cache_name_id{
 sub get_probe_id_by_name{
   my ($self, $name) = @_;
   
-  #Should only ever be one pid per probe per array per n array_chips
-  #i.e. duplicate records per array chip with same pid
+  #this is only ever called for fully imported ArrayChips, as will be deleted if recovering
+  $self->build_probe_info_cache() if(! defined $self->{'_probe_cache'});  
 
-  if(! defined $self->{'_probe_cache'}){ #|| (! defined $self->{'_probe_cache'}->{$name})){
+  return (exists $self->{'_probe_cache'}->{$name}) ? $self->{'_probe_cache'}->{$name}->[0] : undef;
+}
 
-    #this fails if we're testing for the probe_id
-    #this is because we have no chips associated with the experiemnt yet.
+=head2 build_probe_info_cache
 
-  
-    $self->{'_probe_cache'} = $self->db->get_ProbeAdaptor->fetch_probe_cache_by_Experiment($self->experiment());
+  Example    : $self->build_probe_info_cache();
+  Description: Build the probe info cache from the DB
+  Returntype : none
+  Exceptions : none
+  Caller     : general
+  Status     : At risk 
 
-    #my $op = $self->db->get_ProbeAdaptor->fetch_by_array_probe_probeset_name($self->arrays->[0]->name(), $name);
-    #$self->{'_probe_map'}{$name} = $op->dbID() if $op;
+=cut
+
+
+sub build_probe_info_cache{
+  my $self = shift;
+
+
+  if(defined $self->{'_probe_cache'}){
+	throw('If you really want to over-write the probe info cache, you must explicitly undef the cache first');
   }
-  
 
-  return (exists $self->{'_probe_cache'}->{$name}) ? $self->{'_probe_cache'}->{$name} : undef;
+  my %tmp = %{$self->db->get_ProbeAdaptor->fetch_probe_cache_by_Experiment($self->experiment())};
+
+  #map to the cache here 
+  map $self->{'_probe_cache'}{$_} = [ $tmp{$_} ] , keys %tmp;
+
+  return;
 }
 
 
+=head2 get_probe_x_y_by_name
+
+  Arg [1]    : mandatory - probe name
+  Example    : ($x, $y) = @{$self->get_probe_x_y_by_name($pname)};
+  Description: Getter for probe x y cache values
+  Returntype : LISTREF
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+
+sub get_probe_x_y_by_name{
+  my ($self, $name) = @_;
+  
+  my @xy;
+
+  #This does not test for x & y as we don't want to slow it down for every single probe call
+  #slightly odd behaviour have it still build the x/yless cache from the DB even tho it will return undef
+  #This is because we don't want it ti be testable for rebuilding the x y cache
+
+  if(! defined $self->{'_probe_cache'}){
+	$self->build_probe_info_cache();
+  }
+
+  if(exists  $self->{'_probe_cache'}->{$name} &&
+	 scalar(@{$self->{'_probe_cache'}->{$name}}) == 3){
+	@xy = ($self->{'_probe_cache'}->{$name}->[1], $self->{'_probe_cache'}->{$name}->[2]);
+  }
+
+  return \@xy;
+}
 
 
 #the generic read_methods should go in here too?

@@ -46,6 +46,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Helper;
+use Devel::Size qw(size total_size);
 use strict;
 
 use vars qw(@ISA);
@@ -247,6 +248,8 @@ sub read_experiment_data{
   my $self = shift;
 
   
+  warn "recovery is ".$self->recovery();
+
   $self->read_array_data($self->get_def('notes_file'));
 
   my ($design_desc, $line, $tmp_uid, $channel, $echip, $sample_label);
@@ -330,31 +333,30 @@ sub read_experiment_data{
 
 
     ### CREATE AND STORE Channels
-    $channel = $chan_adaptor->fetch_by_type_experimental_chip_id(uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]), $echip->dbID());
+	my $type = uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]);
+	$type = 'TOTAL' if ($type ne 'EXPERIMENTAL');
+    $channel = $chan_adaptor->fetch_by_type_experimental_chip_id($type, $echip->dbID());
 
     if($channel){
       if(! $self->recovery()){
-	throw("Channel(".$echip->unqiue_id().":".uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]).
-	      " already exists in the database\nMaybe you want to recover?");
-	}
+		throw("Channel(".$echip->unqiue_id().":".uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]).
+			  " already exists in the database\nMaybe you want to recover?");
+	  }
     }else{
       #Handles single/mutli
-
-      my $type = uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]);
-      $type = 'TOTAL' if ($type ne 'EXPERIMENTAL');
       my $sample_label = (! exists $hpos{'SAMPLE_LABEL'}) ? '' :  $data[$hpos{'SAMPLE_LABEL'}];
-
+	  
       $channel =  Bio::EnsEMBL::Funcgen::Channel->new
-	(
-	 -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
-	 -DYE                  => $data[$hpos{'DYE'}],
-	 -SAMPLE_LABEL         => $sample_label,
-	 -TYPE                 => $type,
-      );
+		(
+		 -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
+		 -DYE                  => $data[$hpos{'DYE'}],
+		 -SAMPLE_LABEL         => $sample_label,
+		 -TYPE                 => $type,
+		);
     
       #-SPECIES              => $self->species(),#on channel/sample to enable multi-species chip/experiment
       #would never happen on one chip?  May happen between chips in one experiment
-
+	  
       ($channel) = @{$chan_adaptor->store($channel)};
       #$echip->add_Channel($channel);
     }    
@@ -387,7 +389,7 @@ sub read_probe_data{
   
   my ($fh, $line, @data, %hpos, %probe_pos);#, %duplicate_probes);
 
-  $self->log("Parsing ".$self->vendor()." probe data (".localtime().")");
+  $self->log("Parsing and importing ".$self->vendor()." probe data (".localtime().")", 1);
   #can we do a reduced parse if we know the array chips are already imported");
   
 
@@ -418,22 +420,23 @@ sub read_probe_data{
   #altho' this amounts to the same thing if the chip has already been imported as
 
 
-
-
-  
-
   
   foreach my $array(@{$self->arrays()}){
     
     foreach my $achip(@{$array->get_ArrayChips()}){
 
-      my (@log);
+      my (@log, %probe_pos);
+	  warn("Probe pos cache is being rebuilt for each ArrayChip, inter-chip duplicates will not be caught");
+	  warn('Probe dbID cache is being reset on each ArrayChip, need ti implement TiedHash for this cache');
+	  $self->{'_probe_cache'} = {};
 
+
+	  #do we need to fetch probe by seq and array?
+	  #this would also id non-unique seqs in design
 
       #warn "We need to account for different cs feature amppings here
 
-
-      if($achip->has_status('IMPORTED')){
+	  if($achip->has_status('IMPORTED')){
 		$self->log("Skipping fully imported ArrayChip:\t".$achip->design_id());
 		next;
       }elsif($self->recovery()){
@@ -442,60 +445,11 @@ sub read_probe_data{
       }
       
       $self->log("Importing ArrayChip:".$achip->design_id());
-      #mgd files are for a different product?
-      #THIS BLOCK DOES NOT ACCOUNT FOR MULTIPLE ARRAYS PROPERLY, WOULD HAVE TO IMPLEMENT ARRAY SPECIFIC CACHES
-      #all out files are generic, but are we converting to adaptor store?
-      #      $fh = open_file("<", $self->get_def("design_dir")."/".$ac{'design_name'}.".ngd");
-      #      my ($start, $stop, %regions, %probe_pos);
-      #	  
-      #      #May not have both ngd and pos file?
-			#
-      #      while ($line = <$fh>){
-      #	$line =~ s/\r*\n//;#chump
-      #	@data =  split/\||\t/o, $line;
-      #	
-      #	
-      #	#SEQ_ID	SEQ_UNIQUE|BUILD|CHROMOSOME|LOCATION|DESCRIPTION|DATE_ENTERED|SOURCE_DB
-      #	if ($. == 1){
-      #	  %hpos = %{$self->set_header_hash(\@data)};
-      #	  next;
-      #	}
-      #	
-      #	#What about strand!!!!!!!!!!!
-      #	$data[$hpos{'CHROMOSOME'}] =~ s/chr//;
-      #	($start, $stop) = split/-/o, $data[$hpos{'LOCATION'}];
-      #	
-      #	#Do we need seq_id check here for validity?
-      #	#overkill?
-			#	if(exists $regions{$data[$hpos{'SEQ_ID'}]}){
-      #	  croak("Duplicate regions\n");
-      #	}else{
-      #	  #$data[$hpos{'CHROMOSOME'}] = species_chr_num($self->species(), 	$data[$hpos{'CHROMOSOME'}]);
-      #	  
-      #	  #Set region hash for SEQ_ID
-      #	  #Need to look up seq_region id here for given build
-      #	  #Build should be manually specified as we can't guarantee it will be in the correct format
-      #	  #or present at all
-      #	  
-      #	  $regions{$data[$hpos{'SEQ_ID'}]} = 
-      #	    {
-      #	     start => $start,
-      #	     stop  => $stop,
-      #	     seq_region_id => $self->get_chr_seq_region_id($data[$hpos{'CHROMOSOME'}], $start, $stop),
-      #	     coord_system_id => $cs->dbID(),
-      #	    };
-      #	}
-      #	
-      #      }
-      #      
-      #      close($fh);
-      
-	
-      
+       
       #Always use pos file, ndf file cannot be guranteed to contain all location info
       #pos file also gives a key to which probes should be considered 'EXPERIMENTAL'
       
-      #SLURP PROBE POSITIONS
+      #CACHE PROBE POSITIONS
       $fh = open_file("<", $self->get_dir("design")."/".$achip->name().".pos");
       
       #don't % = map ! Takes a lot longer than a while ;)
@@ -529,14 +483,16 @@ sub read_probe_data{
 												)};
 		
       }
-      
+
+
+	  
       
       #Remove duplicate probes 
 	  
-      
+	  $self->log("Built position cache from : ".$achip->name().".pos", 1);
       close($fh);
       
-      
+	  $self->log("Importing design probes from : ".$achip->name().".ndf");
       #OPEN PROBE IN/OUT FILES
       $fh = open_file("<", $self->get_dir("design")."/".$achip->name().".ndf");
       #Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
@@ -556,6 +512,11 @@ sub read_probe_data{
       
       #$self->Timer()->mark("Starting probe loop");
       
+
+	  #This is leaking about 30-60MB for each normal density chip?
+	  #need Devel::Monitor here?
+
+
       while($line = <$fh>){
 		$line =~ s/\r*\n//;
 		@data =  split/\t/o, $line;
@@ -728,8 +689,20 @@ sub read_probe_data{
 		print $f_out $fasta if($self->{'_dump_fasta'});
 		close($f_out);
       }
-    }
     
+	  $self->log("Imported design from : ".$achip->name().".ndf", 1);
+		
+
+	  my $hpos_size = size(\%hpos);
+	  my $cache_size = size(\%probe_pos);
+	  my $log_size = size(\@log);
+	  my $data_size = size(\@data);
+	  my $pfs_size = total_size(\%pfs);
+	  my $fasta_size = size($fasta);
+	  my $self_size = total_size(\$self);
+	  
+	  $self->log("Memory report:\nhpos\t$hpos_size\ncache\t$cache_size\nlog\t$log_size\ndata\t$data_size\npfs\t$pfs_size\nfasta\t$fasta_size\nself\t$self_size", 1);
+	}
 	
     #Should we build hash of probe_names:probe_feature_ids here for results import
     #Should we dump this as a lookup file for easier recoverability
@@ -745,26 +718,6 @@ sub read_probe_data{
     #periodic import when hit new probe_set, but no new data printed
 		
   }
-  
-  #    #Need to print last probe_set here only if current and last probeset_id match
-  #  if($probe_set{'name'} eq $data[$hpos{'FEATURE_ID'}]){
-  #	$ps_string .= "\t".$probe_set{'name'}."\t".$probe_set{'size'}."\t".$probe_set{'family'}."\n";
-  #      }
-  
-  
-  #     print $p_out $probe_string;
-  #     print $ps_out $ps_string;
-  #     print $pf_out $pf_string;
-  #     print $f_out $f_string if($self->{'_dump_fasta'});
-  #$self->Timer()->mark("End of probe loop");
-  
-  #    close($fh);
-  #    close($ps_out);
-  #    close($p_out);
-  #    close($pf_out);
-  #close($f_out) if ($self->{'_dump_fasta'});
-  
-  
   
   
   $self->log("Finished parsing probe data");

@@ -271,14 +271,11 @@ sub _get_stack{
 
 =head2 log
 
+ Arg[0]      : string  - log message.
+ Arg[1]      : boolean - memory usage, appends current process memory stats
  Description : Method to write messages to a previously set up log file.
-
- Args        : string, log message.
-
- ReturnType  : none
-
- Example     : $root->log("Processing file $filename ...");
-
+ Return type : none
+ Example     : $root->log("Processing file $filename ...", 1);
  Exceptions  : none
 
 =cut
@@ -286,7 +283,13 @@ sub _get_stack{
 ################################################################################
 
 sub log{
-  my ($self,$message) = @_;
+  my ($self, $message, $mem) = @_;
+
+  if($mem){
+	$message.= " :: ".`ps -p $$ -o vsz |tail -1`;
+	chomp $message;
+	$message .= " KB";
+  }
 
   print LOGFILE "::\t$message\n";
 

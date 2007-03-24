@@ -219,18 +219,10 @@ CREATE TABLE `experiment` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- joint key on egroup and array?
+-- alter table experiment add schema_build?  This would enable trace back to original import DB, just incse seq_region_ids change, or use status? IMPORTED_schema_build, MAPPED_schema_build or cs_id?
 -- remove primary design_type
 --- design_type  = CHIP2 etc... (is also design type in ontology i.e. binding_site_identification)
 --- Secondary design type may be redundant, so have associated_design_types table, containing MGED ontology types?  Or have ontology_types table to control input and have linker table with just IDs?  Too normalised?
---- epi_feature would also be redundant for non-CHIP2 experiments...have associated_target table?  Or just have target field, with "Experssion" for standard Xn chips?
-
-
---- Other fields:
----     egroup_member? (overkill?)
-
---- removed:
----    `array_id` int(10) unsigned default NULL, Cannot guarantee one array/chip set, especially as we may have to capture Nimblegen chips as individual chip sets.
 
 
 --

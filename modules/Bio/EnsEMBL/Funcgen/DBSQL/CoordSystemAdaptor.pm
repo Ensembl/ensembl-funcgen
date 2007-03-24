@@ -305,10 +305,11 @@ sub new {
 
   #handle last cs
  
-  $self->{'_dbID_cache'}->{$cs->dbID()} = $cs;
-  #push @{$self->{'_rank_cache'}->{$rank}}, $cs;
-  push @{$self->{'_name_cache'}->{lc($cs->name())}}, $cs;
-
+  if($cs){
+	$self->{'_dbID_cache'}->{$cs->dbID()} = $cs;
+	#push @{$self->{'_rank_cache'}->{$rank}}, $cs;
+	push @{$self->{'_name_cache'}->{lc($cs->name())}}, $cs;
+  }
 
   $sth->finish();
 
