@@ -1869,8 +1869,8 @@ sub R_norm{
 		  #Need to get total and experimental here and set db_id accordingly
 	
 	  
-		  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
-		  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+		  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+		  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
 	  
 	  
 	
@@ -1897,7 +1897,7 @@ sub R_norm{
 	
 		  #Now create table structure with glog values(diffs)
 		  #3 sig dec places on scores(doesn't work?!)
-		  $query .= "glog_df<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(vsn_df[,2]) - exprs(vsn_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])))\n";
+		  $query .= "glog_df<-cbind(rep(\"0\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(vsn_df[,2]) - exprs(vsn_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])), c1[\"X\"], c1[\"Y\"])\n";
 	  
 	  
 		  #load back into DB

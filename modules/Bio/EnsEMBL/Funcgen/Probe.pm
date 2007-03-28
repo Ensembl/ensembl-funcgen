@@ -475,7 +475,7 @@ sub length {
 
   Arg [1]    : Bio::EnsEMBL::Analysis
   Arg [2]    : string - analysis score (as string a precision may differ between analyses)??
-  Example    : $probe->add_analysis_score($analysis, $score);
+  Example    : $probe->add_Analysis_score($analysis, $score);
   Description: Setter for probe analysis attributes from an array design
   Returntype : None
   Exceptions : throws if args are not met or valid
@@ -503,7 +503,7 @@ sub add_Analysis_score{
   Arg [1]    : Bio::EnsEMBL::Analysis
   Arg [2]    : Bio::EnsEMBL::CoordSystem
   Arg [3]    : string - analysis score (as string a precision may differ between analyses)??
-  Example    : $probe->add_analysis_coord_system_score($analysis, $coord_sys, $score);
+  Example    : $probe->add_Analysis_CoordSystem_score($analysis, $coord_sys, $score);
   Description: Setter for coord system dependant probe analysis attributes from an array design
   Returntype : None
   Exceptions : throws if args are not met or valid

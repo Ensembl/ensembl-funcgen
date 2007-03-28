@@ -426,11 +426,9 @@ sub read_probe_data{
     foreach my $achip(@{$array->get_ArrayChips()}){
 
       my (@log, %probe_pos);
-	  warn("Probe pos cache is being rebuilt for each ArrayChip, inter-chip duplicates will not be caught");
-	  warn('Probe dbID cache is being reset on each ArrayChip, need ti implement TiedHash for this cache');
-	  $self->{'_probe_cache'} = undef;
-
-
+	  warn("Probe pos cache is being rebuilt for each ArrayChip, inter-chip duplicates will not be caught, need to use probe_info cache");
+	  warn('Probe dbID cache is being reset on each ArrayChip, need ti implement Tied File for this cache?');
+	 
 	  #do we need to fetch probe by seq and array?
 	  #this would also id non-unique seqs in design
 
@@ -697,8 +695,10 @@ sub read_probe_data{
 	  my $cache_size = size(\%probe_pos);
 	  my $info_size = size($self->{'_probe_cache'});
 	  my $self_size = total_size($self);
-	  
+	 
+	 
 	  $self->log("Memory report:\npos cache\t$cache_size\ninfo cache size\t$info_size\nself\t$self_size", 1);
+	  $self->{'_probe_cache'} = undef;#As we can't get Y and Y info from the DB, this is only possible as the results files contain X and Y info
 	}
 	
     #Should we build hash of probe_names:probe_feature_ids here for results import
