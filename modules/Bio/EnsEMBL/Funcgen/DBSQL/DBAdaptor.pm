@@ -123,7 +123,7 @@ sub rollback_results{
   $self->dbc->do($sql);
 
 
-  warn "sql is $sql";
+#  warn "sql is $sql";
   throw("Results rollback failed for cc_ids:\t@cc_ids\nError:\t$?") if ($?);
 
   return;

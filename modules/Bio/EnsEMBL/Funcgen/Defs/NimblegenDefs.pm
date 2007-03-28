@@ -428,7 +428,7 @@ sub read_probe_data{
       my (@log, %probe_pos);
 	  warn("Probe pos cache is being rebuilt for each ArrayChip, inter-chip duplicates will not be caught");
 	  warn('Probe dbID cache is being reset on each ArrayChip, need ti implement TiedHash for this cache');
-	  $self->{'_probe_cache'} = {};
+	  $self->{'_probe_cache'} = undef;
 
 
 	  #do we need to fetch probe by seq and array?
@@ -693,15 +693,12 @@ sub read_probe_data{
 	  $self->log("Imported design from : ".$achip->name().".ndf", 1);
 		
 
-	  my $hpos_size = size(\%hpos);
+
 	  my $cache_size = size(\%probe_pos);
-	  my $log_size = size(\@log);
-	  my $data_size = size(\@data);
-	  my $pfs_size = total_size(\%pfs);
-	  my $fasta_size = size($fasta);
-	  my $self_size = total_size(\$self);
+	  my $info_size = size($self->{'_probe_cache'});
+	  my $self_size = total_size($self);
 	  
-	  $self->log("Memory report:\nhpos\t$hpos_size\ncache\t$cache_size\nlog\t$log_size\ndata\t$data_size\npfs\t$pfs_size\nfasta\t$fasta_size\nself\t$self_size", 1);
+	  $self->log("Memory report:\npos cache\t$cache_size\ninfo cache size\t$info_size\nself\t$self_size", 1);
 	}
 	
     #Should we build hash of probe_names:probe_feature_ids here for results import

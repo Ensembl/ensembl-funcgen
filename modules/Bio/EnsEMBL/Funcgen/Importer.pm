@@ -96,170 +96,195 @@ use vars qw(@ISA);
 ################################################################################
 
 sub new{
-    my ($caller) = shift;
+  my ($caller) = shift;
 
-    my $reg = "Bio::EnsEMBL::Registry";
-    my $class = ref($caller) || $caller;
+  my $reg = "Bio::EnsEMBL::Registry";
+  my $class = ref($caller) || $caller;
 
-    my ($name, $format, $vendor, $group, $location, $contact, $species,
-       $array_name, $array_set, $array_file, $data_dir, $result_files,
-       $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
-       $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
-       $farm, $ssh, $fasta, $recover, $reg_config, $mage_tab)
-      = rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
-		   'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
-		   'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
-		   'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
-		   'OUTPUT_DIR', 'INPUT_DIR',#to allow override of defaults
-		   'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'MAGE_TAB'], @_);
-    #add mail flag
-    #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
-    #would have to make sure GroupDefs is inherited first so we can set some mandatory params
-    #before checking in ArrayDefs and here
+  my ($name, $format, $vendor, $group, $location, $contact, $species,
+	  $array_name, $array_set, $array_file, $data_dir, $result_files,
+	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
+	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
+	  $farm, $ssh, $fasta, $recover, $reg_config, $mage_tab)
+	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
+				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
+				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
+				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
+				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
+				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'MAGE_TAB', 'WRITE_MAGE'], @_);
+  #add mail flag
+  #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
+  #would have to make sure GroupDefs is inherited first so we can set some mandatory params
+  #before checking in ArrayDefs and here
 
-    #define parent defs class based on vendor
-    throw("Mandatory argument -vendor not defined") if ! defined $vendor;
-    my $defs_type = lc($vendor);
-    $defs_type = ucfirst($defs_type)."Defs";
-    unshift @ISA, 'Bio::EnsEMBL::Funcgen::Defs::'.$defs_type;
+  #define parent defs class based on vendor
+  throw("Mandatory argument -vendor not defined") if ! defined $vendor;
+  my $defs_type = lc($vendor);
+  $defs_type = ucfirst($defs_type)."Defs";
+  unshift @ISA, 'Bio::EnsEMBL::Funcgen::Defs::'.$defs_type;
 
-    #would need to set up output dir here to avoid errors on instatiation of Helper and log/debug files
-    #Create object from parent class
-    my $self = $class->SUPER::new(@_);
+  #would need to set up output dir here to avoid errors on instatiation of Helper and log/debug files
+  #Create object from parent class
+  my $self = $class->SUPER::new(@_);
 
-    warn "called super new on $class @ISA";
+  warn "called super new on $class @ISA";
 
     
-    #Set vars and test minimum mandatory params for any import type
-    $self->{'name'} = $name if $name;
-    $self->vendor(uc($vendor));#already tested
-    $self->{'format'} = uc($format) || 'TILED';#remove default?
-    $self->group($group) if $group;
-    $self->location($location) if $location;
-    $self->contact($contact) if $contact;
-    $self->{'species'} = $species || throw('Mandatory param -species not met');
-    $self->array_name($array_name) if $array_name;
-    $self->array_set($array_set) if $array_set;
-    $self->array_file($array_file) if $array_file;
-    $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
-    $self->result_files($result_files)if $result_files;#Sanger specific ???
-    $self->{'feature_type_name'} = $ftype_name if $ftype_name;
-    $self->{'cell_type_name'} = $ctype_name if $ctype_name;
-    $self->experiment_date($exp_date) if $exp_date;
-    $self->description($desc) if $desc;
-    $self->{'user'} = $user || throw('Mandatory param -user not met');
-    $self->{'host'} = $host || 'localhost';
-    $self->{'port'} = $port || '3306';
-    $self->{'pass'} = $pass || throw('Mandatory param -pass not met');
-    $self->dbname($dbname) if $dbname;#overrides autogeneration of dbname
-    $self->db($db) if $db;#predefined db
-    $self->{'data_version'} = $data_version || throw('Mandatory param -data_version not met');
-    $self->{'design_type'} = $design_type || 'binding_site_identification';#remove default?
-    $self->output_dir($output_dir) if $output_dir;#defs default override
-    $self->input_dir($input_dir) if $input_dir;#defs default override
-    $self->{'farm'} = $farm || 1;
-    $self->{'ssh'} = $ssh || 0;
-    $self->{'fasta'} = $fasta || 0;
-    $self->{'recover'} = $recover || 0;
-    #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
-    $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
+  #Set vars and test minimum mandatory params for any import type
+  $self->{'name'} = $name if $name;
+  $self->vendor(uc($vendor));	#already tested
+  $self->{'format'} = uc($format) || 'TILED'; #remove default?
+  $self->group($group) if $group;
+  $self->location($location) if $location;
+  $self->contact($contact) if $contact;
+  $self->{'species'} = $species || throw('Mandatory param -species not met');
+  $self->array_name($array_name) if $array_name;
+  $self->array_set($array_set) if $array_set;
+  $self->array_file($array_file) if $array_file;
+  $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
+  $self->result_files($result_files)if $result_files; #Sanger specific ???
+  $self->{'feature_type_name'} = $ftype_name if $ftype_name;
+  $self->{'cell_type_name'} = $ctype_name if $ctype_name;
+  $self->experiment_date($exp_date) if $exp_date;
+  $self->description($desc) if $desc;
+  $self->{'user'} = $user || throw('Mandatory param -user not met');
+  $self->{'host'} = $host || 'localhost';
+  $self->{'port'} = $port || '3306';
+  $self->{'pass'} = $pass || throw('Mandatory param -pass not met');
+  $self->dbname($dbname) if $dbname; #overrides autogeneration of dbname
+  $self->db($db) if $db;		#predefined db
+  $self->{'data_version'} = $data_version || throw('Mandatory param -data_version not met');
+  $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
+  $self->output_dir($output_dir) if $output_dir; #defs default override
+  $self->input_dir($input_dir) if $input_dir; #defs default override
+  $self->{'farm'} = $farm || 1;
+  $self->{'ssh'} = $ssh || 0;
+  $self->{'fasta'} = $fasta || 0;
+  $self->{'recover'} = $recover || 0;
+  #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
+  $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
     
-    if(defined $mage_tab){
-      $self->{'mage_tab'} = $mage_tab;
 
-     
-
-    }
-
-    #Set vendor specific attr dependent vars
-    $self->set_defs();
+  #do this in init_import
+  #if we write Exp info in init then a reimport will fail unless recover is set?
 
 
-	my $host_ip = '127.0.0.1';
+  if (defined $mage_tab) {
+	$self->{'mage_tab'} = $mage_tab;
 
-    ### LOAD AND RE-CONFIG REGISTRY ###
-    if(! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register){
+	#Experiment section	
+	#domain	ebi.ac.uk
+	#accession	
+	#quality_control	biological_replicate
+	#experiment_design_type	binding_site_identification_design
+	#name	
+	#release_date	2007-03-21
+	#submission_date	2006-04-21
+	#submitter	Nathan Johnson
+	#submitter_email	njohnson@ebi.ac.uk
+	#investigator	Nathan Johnson
+	#investigator_email	njohnson@ebi.ac.uk
+	#organization European Bioinformatics Institute
+	#address	European Bioinformatics Institute; Hinxton; Cambridge; CB10 1SD
+	#publication_title	
+	#authors	
+	#journal	
+	#volume		
+	#issue		
+	#pages		
+	#year
+	#pubmed_id		
+  }
+
+  #Set vendor specific attr dependent vars
+  $self->set_defs();
+
+
+  my $host_ip = '127.0.0.1';
+
+  ### LOAD AND RE-CONFIG REGISTRY ###
+  if (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
 	
-      #current ensembl DBs
-      $reg->load_registry_from_db(
-				  -host => "ensembldb.ensembl.org",
-				  -user => "anonymous",
-				  -verbose => $self->verbose(),
-				 );
+	#current ensembl DBs
+	$reg->load_registry_from_db(
+								-host => "ensembldb.ensembl.org",
+								-user => "anonymous",
+								-verbose => $self->verbose(),
+							   );
       
       
-      #Get standard FGDB
-      $self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
+	#Get standard FGDB
+	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
       
-      #reset species to standard alias to allow dbname generation
-      $self->species($reg->get_alias($self->species()));
+	#reset species to standard alias to allow dbname generation
+	$self->species($reg->get_alias($self->species()));
       
-      #configure dnadb
-      #should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	#configure dnadb
+	#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       
-      if(! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))){
+	if (! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))) {
 	
-		if($self->{'ssh'}){
+	  if ($self->{'ssh'}) {
 	  
 
 
 
-		  $host = `host localhost`;#mac specific? nslookup localhost wont work on server/non-PC 
-		  #will this always be the same?
+		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
+		#will this always be the same?
 
-		  if(! (exists $ENV{'EFG_HOST_IP'})){
-			warn "Environment varaible EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
-		  }else{
-			$host_ip = $ENV{'EFG_HOST_IP'};
-		  }
-		 
-		  if ($self->host() ne 'localhost'){
-			warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
-		  }
+		if (! (exists $ENV{'EFG_HOST_IP'})) {
+		  warn "Environment varaible EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
+		} else {
+		  $host_ip = $ENV{'EFG_HOST_IP'};
 		}
+		 
+		if ($self->host() ne 'localhost') {
+		  warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
+		}
+	  }
 
-		$db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-												  -host => 'ensembldb.ensembl.org',
-												  -user => 'anonymous',
-												  -dbname => $self->species()."_core_".$self->data_version(),
-												  -species => $self->species(),
-												 );
-      }else{
-		$db = $self->db->dnadb();
-      }
+	  $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+												-host => 'ensembldb.ensembl.org',
+												-user => 'anonymous',
+												-dbname => $self->species()."_core_".$self->data_version(),
+												-species => $self->species(),
+											   );
+	} else {
+	  $db = $self->db->dnadb();
+	}
       
       
-      $self->{'dbname'} ||= $self->species()."_funcgen_".$self->data_version();
+	$self->{'dbname'} ||= $self->species()."_funcgen_".$self->data_version();
       
-      #generate and register DB with local connection settings
-      $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-							 -user => $self->user(),
-							 -host => ($self->{'ssh'}) ? $host_ip : $self->host(),
-							 -port => $self->port(),
-							 -pass => $self->pass(),
-							 #we need to pass dbname else we can use non-standard dbs
-							 -dbname => $self->dbname(),
-							 -dnadb  => $db,
-							 -species => $self->species(),
-							);
+	#generate and register DB with local connection settings
+	$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+													   -user => $self->user(),
+													   -host => ($self->{'ssh'}) ? $host_ip : $self->host(),
+													   -port => $self->port(),
+													   -pass => $self->pass(),
+													   #we need to pass dbname else we can use non-standard dbs
+													   -dbname => $self->dbname(),
+													   -dnadb  => $db,
+													   -species => $self->species(),
+													  );
       
       
-      #Redefine Fungen DB in registry
-      #dnadb already added to reg via SUPER::dnadb method		
-      $reg->add_DBAdaptor($self->species(), 'funcgen', $db);
-      $self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
+	#Redefine Fungen DB in registry
+	#dnadb already added to reg via SUPER::dnadb method		
+	$reg->add_DBAdaptor($self->species(), 'funcgen', $db);
+	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
       
-      throw("Unable to connect to local Funcgen DB\nPlease check the DB connect parameters and make sure the db is appropriately named") if( ! $self->db());
+	throw("Unable to connect to local Funcgen DB\nPlease check the DB connect parameters and make sure the db is appropriately named") if( ! $self->db());
       
-    }else{#from config
-      $reg->load_all($self->{'_reg_config'}, 1);
-    }
+  } else {						#from config
+	$reg->load_all($self->{'_reg_config'}, 1);
+  }
 
 
-    $self->debug(2, "Importer class instance created.");
-    $self->debug_hash(3, \$self);
+  $self->debug(2, "Importer class instance created.");
+  $self->debug_hash(3, \$self);
     
-    return ($self);
+  return ($self);
 }
 
 
@@ -315,18 +340,18 @@ sub init_array_import{
 sub init_experiment_import{
   my ($self) = shift;
 
-  foreach my $tmp("name", "group", "data_dir"){
+  foreach my $tmp ("name", "group", "data_dir") {
     throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
   }
   #Should we separate path on group here too, so we can have a dev/test group?
   
   #Set and validate input dir
   $self->{'input_dir'} ||= $self->get_dir("data")."/input/".$self->vendor()."/".$self->name();
-  throw("input_dir is not defined or does not exist (".$self->get_dir("input").")") if(! -d $self->get_dir("input"));#Helper would fail first on log/debug files
+  throw("input_dir is not defined or does not exist (".$self->get_dir("input").")") if(! -d $self->get_dir("input")); #Helper would fail first on log/debug files
   
 
   #this is now done in control script as the log file is created before the dir is :?
-  if(! defined $self->get_dir("output")){
+  if (! defined $self->get_dir("output")) {
     $self->{'output_dir'} = $self->get_dir("data")."/output/".$self->vendor()."/".$self->name();
     mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
     chmod 0744, $self->get_dir("output");
@@ -335,40 +360,40 @@ sub init_experiment_import{
   $self->create_output_dirs("raw", "norm");
 
 
-  if(@{$self->result_files()}){
+  if (@{$self->result_files()}) {
     $self->log("Found result files arguments:\n".join("\n", @{$self->result_files()}));
   }
 
 
-  if($self->{'feature_type_name'}){
+  if ($self->{'feature_type_name'}) {
     my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($self->{'feature_type_name'});
     
-    if(! $ftype){
+    if (! $ftype) {
       throw("FeatureType '".$self->{'feature_type_name'}."' is not valid or is not present in the DB\n".
-	    "Please create your FeatureType before importing the experiment");
+			"Please create your FeatureType before importing the experiment");
     }
     
     $self->feature_type($ftype);
     
   }
 
-  if($self->{'cell_type_name'}){
+  if ($self->{'cell_type_name'}) {
     my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($self->{'cell_type_name'});
     throw("CellType '".$self->{'cell_type_name'}."' is not valid or is not present in the DB\n".
-	  "Please create your CellType before importing the experiment");
+		  "Please create your CellType before importing the experiment");
     
     $self->cell_type($ctype);
   }
 
 
-    #check for cell||feature and warn if no met file supplied?
+  #check for cell||feature and warn if no met file supplied?
 
 
   
-    #check for ENV vars?
-    #R_LIBS
-    #R_PATH if ! farm
-    #R_FARM_PATH 
+  #check for ENV vars?
+  #R_LIBS
+  #R_PATH if ! farm
+  #R_FARM_PATH 
 
 
 
@@ -389,27 +414,25 @@ sub init_experiment_import{
   
   #print "XXXXXXXXXX featching by name ".$self->name()."\n";
   
-  my $exp = $exp_adaptor->fetch_by_name($self->name());#, $self->group());
+  my $exp = $exp_adaptor->fetch_by_name($self->name());	#, $self->group());
   #should we not just do store here, as this will return the experiment if it has already been stored?
   
-  if ($self->recovery() && ($exp)){
+  if ($self->recovery() && ($exp)) {
     $self->log("Using previously stored Experiment:\t".$exp->name);
-  }
-  elsif((! $self->recovery()) && $exp){
+  } elsif ((! $self->recovery()) && $exp) {
     throw("Your experiment name is already registered in the database, please choose a different \"name\", this will require renaming you input directory, or specify -recover if you are working with a failed/partial import.");
     #can we skip this and store, and then check in register experiment if it is already stored then throw if not recovery
-  }
-  else{# (recover && exp) || (recover  && ! exp) 
+  } else {						# (recover && exp) || (recover  && ! exp) 
  
     
     $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
-						  -GROUP => $self->group(),
-						  -NAME  => $self->name(),
-						  -DATE  => $self->experiment_date(),
-						  -PRIMARY_DESIGN_TYPE => $self->design_type(),
-						  -DESCRIPTION => $self->description(),
-						  -ADAPTOR => $self->db->get_ExperimentAdaptor(),
-						 );
+												  -GROUP => $self->group(),
+												  -NAME  => $self->name(),
+												  -DATE  => $self->experiment_date(),
+												  -PRIMARY_DESIGN_TYPE => $self->design_type(),
+												  -DESCRIPTION => $self->description(),
+												  -ADAPTOR => $self->db->get_ExperimentAdaptor(),
+												 );
     
     ($exp) =  @{$exp_adaptor->store($exp)};
   }
@@ -440,10 +463,10 @@ sub validate_group{
 
   my $group_ref = $self->db->fetch_group_details($self->group());
 
-  if (! $group_ref){
-    if($self->location() && $self->contact()){
+  if (! $group_ref) {
+    if ($self->location() && $self->contact()) {
       $self->db->import_group($self->group(), $self->location, $self->contact());
-    }else{
+    } else {
       throw("Group ".$self->group()." does not exist, please specify a location and contact to register the group");
     }
   }
@@ -469,7 +492,7 @@ sub create_output_dirs{
 	
   #throw here
 
-  foreach my $name(@dirnames){
+  foreach my $name (@dirnames) {
     $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
     mkdir $self->get_dir($name) if(! -d $self->get_dir($name));
     chmod 0744, $self->get_dir($name);
@@ -515,11 +538,11 @@ sub vendor{
 sub feature_type{
   my ($self) = shift;
 
-  if(@_){
+  if (@_) {
     my $ftype = shift;
     
     #do we need this as we're checking in new?
-    if(! ($ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType') && $ftype->dbID())){
+    if (! ($ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType') && $ftype->dbID())) {
       throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
     }
   
@@ -545,11 +568,11 @@ sub feature_type{
 sub cell_type{
   my ($self) = shift;
 
-  if(@_){
+  if (@_) {
     my $ctype = shift;
     
     #do we need this as we're checking in new?
-    if(! ($ctype->isa('Bio::EnsEMBL::Funcgen::CellType') && $ctype->dbID())){
+    if (! ($ctype->isa('Bio::EnsEMBL::Funcgen::CellType') && $ctype->dbID())) {
       throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::CellType");
     }
   
@@ -631,9 +654,9 @@ sub add_Array{
   my $self = shift;
 
   #do we need to check if stored?
-  if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')){
+  if (! $_[0]->isa('Bio::EnsEMBL::Funcgen::Array')) {
     throw("Must supply a Bio::EnsEMBL::Funcgen::Array");
-  }elsif(@_){
+  } elsif (@_) {
     push @{$self->{'arrays'}}, @_;
   }
    
@@ -846,7 +869,7 @@ sub verbose{
 sub data_version{
   my ($self) = shift;	
 
-  if(@_){
+  if (@_) {
     $self->{'data_version'} = shift;
     #have reset_dnadb here?
     #Can only do this if we set data_version directly in new
@@ -875,16 +898,15 @@ sub data_version{
 sub experiment_date{
   my ($self) = shift;	
 
-  if(@_){
+  if (@_) {
     my $date = shift;
 
-    if($date !~ /[0-9]{4}-[0-9]{2}[0-9]{2}/){
+    if ($date !~ /[0-9]{4}-[0-9]{2}[0-9]{2}/) {
       throw('Parameter -experiment_date needs to fe in the format: YYYY-MM-DD');
     }
 
     $self->{'experiment_date'} = $date;
-  }
-  elsif($self->vendor() eq "nimblegen" && ! defined $self->{'experiment_date'}){
+  } elsif ($self->vendor() eq "nimblegen" && ! defined $self->{'experiment_date'}) {
     $self->{'experiment_date'} = &get_date("date", $self->get_def("chip_file")),
   }
 
@@ -926,7 +948,7 @@ sub group{
 sub dbname{
   my ($self) = shift;	
   
-  if(@_){
+  if (@_) {
     $self->{'dbname'} = shift;
   }
   
@@ -964,13 +986,13 @@ sub recovery{
 =cut
 
 sub description{
-	my $self = shift;
+  my $self = shift;
 
-	if(@_){
-		$self->{'description'} = shift;
-	}
+  if (@_) {
+	$self->{'description'} = shift;
+  }
 
-	return $self->{'description'};
+  return $self->{'description'};
 }
 
 =head2 format
@@ -1006,9 +1028,9 @@ sub format{
 sub experiment{
   my ($self) = shift;	
 
-  if(@_){
+  if (@_) {
 	
-    if(! $_[0]->isa('Bio::EnsEMBL::Funcgen::Experiment')){
+    if (! $_[0]->isa('Bio::EnsEMBL::Funcgen::Experiment')) {
       throw("Must pass a Bio::EnsEMBL::Funcgen::Experiment object");
     }
 
@@ -1033,9 +1055,9 @@ sub experiment{
 sub db{
   my $self = shift;
 
-  if(defined $_[0] && $_[0]->isa("Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor")){
+  if (defined $_[0] && $_[0]->isa("Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor")) {
     $self->{'db'} = shift;
-  }elsif(defined $_[0]){
+  } elsif (defined $_[0]) {
     throw("Need to pass a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor");
   }
   
@@ -1191,9 +1213,9 @@ sub get_dir{
 sub norm_method{
   my $self = shift;
 
-  if(@_){
+  if (@_) {
     $self->{'norm_method'} = shift;
-  }elsif(! defined  $self->{'norm_method'}){
+  } elsif (! defined  $self->{'norm_method'}) {
     $self->{'norm_method'}= $self->get_def('norm_method');
   }
 
@@ -1216,7 +1238,7 @@ sub norm_method{
 
 sub get_def{
   my ($self, $data_name) = @_;
-  return $self->get_data('defs', $data_name);#will this cause undefs?
+  return $self->get_data('defs', $data_name); #will this cause undefs?
 }
 
 
@@ -1240,14 +1262,13 @@ sub register_experiment{
   my ($self) = shift;
   
   #Need to check for dnadb passed with adaptor to contructor
-  if(@_){ 
+  if (@_) { 
 
-    if( ! $_[0]->isa("Bio::EnsEMBL::DBSQL::DBAdaptor")){
+    if ( ! $_[0]->isa("Bio::EnsEMBL::DBSQL::DBAdaptor")) {
       throw("You need to pass a valid dnadb adaptor to register the experiment");
     }
     $self->db->dnadb($_[0]);
-  }
-  elsif( ! $self->db()){
+  } elsif ( ! $self->db()) {
     throw("You need to pass/set a DBAdaptor with a DNADB attached of the relevant data version");
   }
   
@@ -1278,7 +1299,7 @@ sub register_experiment{
 
   my $norm_method = $self->norm_method();
   
-  if(defined $norm_method){
+  if (defined $norm_method) {
     #$self->$norm_method;
     $self->R_norm($norm_method);
     $self->import_results("norm", $norm_method);
@@ -1329,7 +1350,7 @@ sub store_set_probes_features{
 
   #Maybe do some validation here against all probes for probeset and ac_id? 
 
-  if($ops){
+  if ($ops) {
     $ops->size(scalar(keys %$pf_hash));
     ($ops) = $self->db->get_ProbeSetAdaptor->store($ops);
   }
@@ -1344,7 +1365,7 @@ sub store_set_probes_features{
 
 
    
-  for my $probe_id(keys %$pf_hash){
+  for my $probe_id (keys %$pf_hash) {
     
     #set probeset in probe and store
     #the process corresponding feature
@@ -1360,17 +1381,17 @@ sub store_set_probes_features{
     $self->cache_probe_info($probe->get_probename(), $probe->dbID());
 
         
-    foreach my $feature(@{$pf_hash->{$probe_id}->{'features'}}){
+    foreach my $feature (@{$pf_hash->{$probe_id}->{'features'}}) {
       $feature->probe($probe);
       ($feature) = @{$self->db->get_ProbeFeatureAdaptor->store($feature)};
     }
   }
 
-  undef $ops;#Will this persist in the caller?
+  undef $ops;					#Will this persist in the caller?
   undef %{$pf_hash};
 
-# undef @$probes;
-#  undef @$features,
+  # undef @$probes;
+  #  undef @$features,
 
   return;
 }
@@ -1388,7 +1409,7 @@ sub cache_slice{
   #can we handle UN/random chromosomes here?
   
   
-  if(! exists $self->{'slice_cache'}->{$region_name}){
+  if (! exists $self->{'slice_cache'}->{$region_name}) {
     $self->{'slice_cache'}->{$region_name} = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
     warn("-- Could not generate a slice for ${cs_name}:$region_name\n") if ! defined $self->{'slice_cache'}->{$region_name};
   }
@@ -1421,12 +1442,14 @@ sub cache_probe_info{
   throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
 
 
-  if(defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname}->[0] != $pid)){
+  if (defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname}->[0] != $pid)) {
     throw("Found two differing dbIDs for $pname, need to sort out redundant probe entries");
   }
   
   $self->{'_probe_cache'}->{$pname} = (defined $x && defined $y) ? [$pid, $x, $y] : [$pid];
   
+
+ 
   return;
 }
 
@@ -1467,8 +1490,9 @@ sub get_probe_id_by_name{
 sub build_probe_info_cache{
   my $self = shift;
 
+  $self->log('Building probe_info_cache from DB');
 
-  if(defined $self->{'_probe_cache'}){
+  if (defined $self->{'_probe_cache'}) {
 	throw('If you really want to over-write the probe info cache, you must explicitly undef the cache first');
   }
 
@@ -1503,12 +1527,12 @@ sub get_probe_x_y_by_name{
   #slightly odd behaviour have it still build the x/yless cache from the DB even tho it will return undef
   #This is because we don't want it ti be testable for rebuilding the x y cache
 
-  if(! defined $self->{'_probe_cache'}){
+  if (! defined $self->{'_probe_cache'}) {
 	$self->build_probe_info_cache();
   }
 
-  if(exists  $self->{'_probe_cache'}->{$name} &&
-	 scalar(@{$self->{'_probe_cache'}->{$name}}) == 3){
+  if (exists  $self->{'_probe_cache'}->{$name} &&
+	  scalar(@{$self->{'_probe_cache'}->{$name}}) == 3) {
 	@xy = ($self->{'_probe_cache'}->{$name}->[1], $self->{'_probe_cache'}->{$name}->[2]);
   }
 
@@ -1539,7 +1563,7 @@ sub import_results{
   my ($self, $dir, @logic_names) = @_;
 
 
-  foreach my $logic_name(@logic_names){
+  foreach my $logic_name (@logic_names) {
     $self->log("Importing $logic_name data");
 
 
@@ -1552,51 +1576,49 @@ sub import_results{
     #Nimblegen loads all experimental chips from an arraychip(can be All_pair if only one Achip)
     #Sanger has individual Echip files
     
-    foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+    foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
       
-      if( ! $echip->has_status($status)){#must have some results
+      if ( ! $echip->has_status($status)) {	#must have some results
 
-	if($dir ne "norm"){
+		if ($dir ne "norm") {
 	  
-	  if($self->vendor() eq "NIMBLEGEN"){
+		  if ($self->vendor() eq "NIMBLEGEN") {
 	      
-	    #if(! $loaded){
+			#if(! $loaded){
 
-	    #  foreach my $array(@{$self->arrays()}){#load data for all echips
+			#  foreach my $array(@{$self->arrays()}){#load data for all echips
 		
-	    #foreach my $design_id(@{$array->get_design_ids()}){
-	    #  my $achip = $array->get_ArrayChip_by_design_id($design_id);
-	    foreach my $chan(@{$echip->get_Channels()}){
-	      my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
-	      $self->log("Loading $logic_name data for Channel:\t$chan_name");
-	      $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${chan_name}.txt");
-	      $self->log("Finishing loading $logic_name data for Channel:\t${chan_name}");
-	    }
-	    # }
-	    #}
-	  }
-	  elsif($self->vendor() eq "SANGER"){#this is norm data, but we're importing norm, rather than processing.
-	    warn ("Need to fix the sanger methods so imports as norm, not raw");
-	    #IMPORTED is not correct status for these Echips, well, should have
-	    #IMPORTED?  and IMPORTED_NORM_METHOD
+			#foreach my $design_id(@{$array->get_design_ids()}){
+			#  my $achip = $array->get_ArrayChip_by_design_id($design_id);
+			foreach my $chan (@{$echip->get_Channels()}) {
+			  my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
+			  $self->log("Loading $logic_name data for Channel:\t$chan_name");
+			  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${chan_name}.txt");
+			  $self->log("Finishing loading $logic_name data for Channel:\t${chan_name}");
+			}
+			# }
+			#}
+		  } elsif ($self->vendor() eq "SANGER") { #this is norm data, but we're importing norm, rather than processing.
+			warn ("Need to fix the sanger methods so imports as norm, not raw");
+			#IMPORTED is not correct status for these Echips, well, should have
+			#IMPORTED?  and IMPORTED_NORM_METHOD
 	    
 	    
-	    $self->log("Loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
-	    $self->db->load_table_data("result",  $self->get_dir('norm')."/result.${logic_name}.".$echip->unique_id().".txt");
-	    $self->log("Finishing loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
-	  }
-	}
-	elsif(! $loaded){#norm data, imports all echip/set data as one
-	  #should add logic_name here
+			$self->log("Loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
+			$self->db->load_table_data("result",  $self->get_dir('norm')."/result.${logic_name}.".$echip->unique_id().".txt");
+			$self->log("Finishing loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
+		  }
+		} elsif (! $loaded) {	#norm data, imports all echip/set data as one
+		  #should add logic_name here
 	  
-	  $self->log("Loading $logic_name norm data from ".$self->get_dir($dir)."/result.${logic_name}.txt");
-	  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${logic_name}.txt");
-	  $self->log("Finished loading $logic_name norm data");
-	}
+		  $self->log("Loading $logic_name norm data from ".$self->get_dir($dir)."/result.${logic_name}.txt");
+		  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${logic_name}.txt");
+		  $self->log("Finished loading $logic_name norm data");
+		}
       
 	
-	$echip->adaptor->set_status($status, $echip);
-	$loaded = 1;	
+		$echip->adaptor->set_status($status, $echip);
+		$loaded = 1;	
       }
     }
 
@@ -1685,13 +1707,13 @@ sub get_chr_seq_region_id{
 #convinience method
 
 sub slice_adaptor{
-	my $self = shift;
+  my $self = shift;
 
-	if(! defined $self->{'slice_adaptor'}){
-		$self->{'slice_adaptor'} =  $self->db->get_SliceAdaptor();
-	}
+  if (! defined $self->{'slice_adaptor'}) {
+	$self->{'slice_adaptor'} =  $self->db->get_SliceAdaptor();
+  }
 
-	return $self->{'slice_adaptor'};
+  return $self->{'slice_adaptor'};
 }
 
 
@@ -1733,7 +1755,7 @@ sub farm{
 
   $self->{'farm'} ||= undef;
 
-  if($farm){
+  if ($farm) {
 
     throw("Argument to farm must be a boolean 1 or 0")  if($farm != 1 || $farm != 0);
 
@@ -1769,22 +1791,21 @@ sub R_norm{
   my $rset_adaptor = $self->db->get_ResultSetAdaptor();
   my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
   my %r_libs = (
-		"VSN_GLOG"      => ['vsn'],
-		"TukeyBiweight" => ['affy'],
-	       );
+				"VSN_GLOG"      => ['vsn'],
+				"TukeyBiweight" => ['affy'],
+			   );
 
 
 
 
-  foreach my $logic_name(@logic_names){
+  foreach my $logic_name (@logic_names) {
     throw("Not yet implemented TukeyBiweight") if $logic_name eq "TukeyBiweight";
     my $norm_anal = $aa->fetch_by_logic_name($logic_name);
     my $rset = $self->get_import_ResultSet('experimental_chip', $norm_anal);
   
-    if(! $rset){
+    if (! $rset) {
       $self->log("All ExperimentalChips already have status:\tIMPORTED_${logic_name}");
-    }
-    else{#Got data to normalise and import
+    } else {					#Got data to normalise and import
       my @dbids;
       my $R_file = $self->get_dir("norm")."/${logic_name}.R";
       my $job_name = $self->experiment->name()."_${logic_name}";
@@ -1793,11 +1814,11 @@ sub R_norm{
 
       my $cmdline = "$ENV{'R_PATH'} --no-save < $R_file >$errfile 2>&1";
       my $bsub = "bsub -K -J $job_name ".$ENV{'R_BSUB_OPTIONS'}.
-	" -e $errfile $ENV{'R_FARM_PATH'} CMD BATCH $R_file";#--no-save?
+		" -e $errfile $ENV{'R_FARM_PATH'} CMD BATCH $R_file"; #--no-save?
 
       my $r_cmd = (! $self->farm()) ? $cmdline : $bsub;
 
-      $self->backup_file($outfile);#Need to do this as we're appending in the loop
+      $self->backup_file($outfile);	#Need to do this as we're appending in the loop
   
       #setup qurey
       #warn "Need to add host and port here";
@@ -1806,8 +1827,8 @@ sub R_norm{
       
       #foreach my $ln(@logic_names){
 	
-      foreach my $lib(@{$r_libs{$logic_name}}){
-	$query .= "library($lib);";
+      foreach my $lib (@{$r_libs{$logic_name}}) {
+		$query .= "library($lib);";
       }
       #}
       
@@ -1816,79 +1837,79 @@ sub R_norm{
       
       
       #Build queries for each chip
-      foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+      foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
     
 
-	#should implement logic name here?
-	#can't as we need seperate ResultSet for each
+		#should implement logic name here?
+		#can't as we need seperate ResultSet for each
 
   
-	if($echip->has_status("IMPORTED_".$logic_name)){
-	  $self->log("ExperimentalChip ".$echip->unique_id()." already has status:\tIMPORTED_".$logic_name);
-	}else{
+		if ($echip->has_status("IMPORTED_".$logic_name)) {
+		  $self->log("ExperimentalChip ".$echip->unique_id()." already has status:\tIMPORTED_".$logic_name);
+		} else {
 	  
-	  my $cc_id = $rset->get_chip_channel_id($echip->dbID());
-	  $self->log("Building $logic_name R cmd for ".$echip->unique_id());
-	  @dbids = ();
+		  my $cc_id = $rset->get_chip_channel_id($echip->dbID());
+		  $self->log("Building $logic_name R cmd for ".$echip->unique_id());
+		  @dbids = ();
 	  
-	  foreach my $chan(@{$echip->get_Channels()}){
+		  foreach my $chan (@{$echip->get_Channels()}) {
 
-	    if($chan->type() eq "EXPERIMENTAL"){
-	      push @dbids, $chan->dbID();
-	    }else{
-	      unshift @dbids, $chan->dbID();
-	    }
-	  }
+			if ($chan->type() eq "EXPERIMENTAL") {
+			  push @dbids, $chan->dbID();
+			} else {
+			  unshift @dbids, $chan->dbID();
+			}
+		  }
 	  
-	  throw("vsn does not accomodate more than 2 channels") if (scalar(@dbids > 2) && $logic_name eq "VSN_GLOG");
+		  throw("vsn does not accomodate more than 2 channels") if (scalar(@dbids > 2) && $logic_name eq "VSN_GLOG");
 	  
-	  #should do some of this with maps?
-	  #HARDCODED metric ID for raw data as one
+		  #should do some of this with maps?
+		  #HARDCODED metric ID for raw data as one
 	
-	  #Need to get total and experimental here and set db_id accordingly
+		  #Need to get total and experimental here and set db_id accordingly
 	
 	  
-	  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
-	  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+		  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+		  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
 	  
 	  
 	
-	  #should do some sorting here?  Probes are in same order anyway
-	  #does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
-	  $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";		
-	  #variance stabilise
-	  $query .= "vsn_df<-vsn(raw_df)\n";
+		  #should do some sorting here?  Probes are in same order anyway
+		  #does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
+		  $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";		
+		  #variance stabilise
+		  $query .= "vsn_df<-vsn(raw_df)\n";
     
 	  
-	  #do some more calcs here and print report?
-	  #fold change exponentiate? See VSN docs
-	  #should do someplot's of raw and glog and save here?
-	  #set log func and params
-	  #$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
-	  #plot
-	  #$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
-	  #  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
-	  #FAILS ON RAW PLOT!!
-	  #par(mfrow = c(1, 2)) 
-	  #> meanSdPlot(nkid, ranks = TRUE) 
-	  #> meanSdPlot(nkid, ranks = FALSE) 
+		  #do some more calcs here and print report?
+		  #fold change exponentiate? See VSN docs
+		  #should do someplot's of raw and glog and save here?
+		  #set log func and params
+		  #$query .= "par(mfrow = c(1, 2)); log.na = function(x) log(ifelse(x > 0, x, NA));";
+		  #plot
+		  #$query .= "plot(exprs(glog_df), main = \"vsn\", pch = \".\");". 
+		  #  "plot(log.na(exprs(raw_df)), main = \"raw\", pch = \".\");"; 
+		  #FAILS ON RAW PLOT!!
+		  #par(mfrow = c(1, 2)) 
+		  #> meanSdPlot(nkid, ranks = TRUE) 
+		  #> meanSdPlot(nkid, ranks = FALSE) 
 	  
 	
-	  #Now create table structure with glog values(diffs)
-	  #3 sig dec places on scores(doesn't work?!)
-	  $query .= "glog_df<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(vsn_df[,2]) - exprs(vsn_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])))\n";
+		  #Now create table structure with glog values(diffs)
+		  #3 sig dec places on scores(doesn't work?!)
+		  $query .= "glog_df<-cbind(rep(\"\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(vsn_df[,2]) - exprs(vsn_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])))\n";
 	  
 	  
-	  #load back into DB
-	  #c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
-	  #may want to use safe.write here
-	  #dbWriteTable(con, "result", c3results, append=TRUE)
-	  #dbWriteTable returns true but does not load any data into table!!!
+		  #load back into DB
+		  #c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
+		  #may want to use safe.write here
+		  #dbWriteTable(con, "result", c3results, append=TRUE)
+		  #dbWriteTable returns true but does not load any data into table!!!
 	  
-	  $query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		  $query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
 		
-	  #tidy up here?? 
-	}
+		  #tidy up here?? 
+		}
       }
   
       $query .= "q();";
@@ -1912,7 +1933,7 @@ sub R_norm{
 sub get_import_ResultSet{
   my ($self, $table_name, $anal) = @_;
   
-  if(!($anal && $anal->isa("Bio::EnsEMBL::Analysis") && $anal->dbID())){
+  if (!($anal && $anal->isa("Bio::EnsEMBL::Analysis") && $anal->dbID())) {
     throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
   }
 
@@ -1926,78 +1947,78 @@ sub get_import_ResultSet{
   #could drop the table name here and use analysis hash?
   warn("Need to implement chip_sets here");
   
-  foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
+  foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
 
     #clean chip import and generate rset
-    if($echip->has_status($status)){#this translates to each channel have the IMPORTED_RawValue status
+    if ($echip->has_status($status)) { #this translates to each channel have the IMPORTED_RawValue status
       $self->log("ExperimentalChip(".$echip->unique_id().") already has status:\t".$status);
-    }else{
+    } else {
 
       $self->log("Found ExperimentalChip(".$echip->unique_id().") without status $status");
 
-      if( ! $rset){
+      if ( ! $rset) {
 	
-	if($self->recovery()){
-	  warn ("Should use ResultSet name here, currently retrieving using the analysis and experiment id");#experiment name?
-	  #fetch by anal and experiment_id
-	  #Need to change this to result_set.name!
-	  warn("add chip set handling here");
+		if ($self->recovery()) {
+		  warn ("Should use ResultSet name here, currently retrieving using the analysis and experiment id"); #experiment name?
+		  #fetch by anal and experiment_id
+		  #Need to change this to result_set.name!
+		  warn("add chip set handling here");
 	  
-	  my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
-	  throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t$logic_name") if (scalar(@tmp) >1);
-	  $rset = $tmp[0];
+		  my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
+		  throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t$logic_name") if (scalar(@tmp) >1);
+		  $rset = $tmp[0];
 
-	  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
-	}
+		  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
+		}
 	
-	if(! $rset){
-	  warn "Generating new ResultSet for analysis ".$anal->logic_name();
-	  $self->log("Generating new ResultSet for analysis ".$anal->logic_name());
+		if (! $rset) {
+		  warn "Generating new ResultSet for analysis ".$anal->logic_name();
+		  $self->log("Generating new ResultSet for analysis ".$anal->logic_name());
 	  
-	  $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
-	    (
-	     -analysis   => $anal,
-	     -table_name => $table_name,
-	    );
+		  $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
+			(
+			 -analysis   => $anal,
+			 -table_name => $table_name,
+			);
 	  
-	  $result_adaptor->store($rset);
-	}
+		  $result_adaptor->store($rset);
+		}
       }
       
-      if($self->recovery()){
+      if ($self->recovery()) {
 	
-	my (@cc_ids);
+		my (@cc_ids);
 	
-	if($table_name eq 'experimental_chip'){
+		if ($table_name eq 'experimental_chip') {
 	  
-	  push @cc_ids, $rset->get_chip_channel_id($echip->dbID()) if($rset->contains($echip));
-	}else{
-	  foreach my $chan(@{$echip->get_Channels()}){
-	    push @cc_ids, $rset->get_chip_channel_id($chan->dbID()) if($rset->contains($chan));
-	  }
-	}
+		  push @cc_ids, $rset->get_chip_channel_id($echip->dbID()) if($rset->contains($echip));
+		} else {
+		  foreach my $chan (@{$echip->get_Channels()}) {
+			push @cc_ids, $rset->get_chip_channel_id($chan->dbID()) if($rset->contains($chan));
+		  }
+		}
 
-	$self->db->rollback_results(@cc_ids) if (@cc_ids);	
+		$self->db->rollback_results(@cc_ids) if (@cc_ids);	
       }
     }
     
     #check whether it is present in the ResultSet and add if not
-    if($rset){
+    if ($rset) {
       #ids will already be present if not rset i.e. already imported
-      if($table_name eq 'channel'){
+      if ($table_name eq 'channel') {
 	
-	foreach my $chan(@{$echip->get_Channels()}){
-	  $rset->add_table_id($chan->dbID()) if(! $rset->contains($chan));
-	}
-      }else{#experimental_chip
-	$rset->add_table_id($echip->dbID()) if(! $rset->contains($echip));
+		foreach my $chan (@{$echip->get_Channels()}) {
+		  $rset->add_table_id($chan->dbID()) if(! $rset->contains($chan));
+		}
+      } else {					#experimental_chip
+		$rset->add_table_id($echip->dbID()) if(! $rset->contains($echip));
       }
     }
   }
   
-  if($rset){
+  if ($rset) {
     $result_adaptor->store_chip_channels($rset);
-  }else{
+  } else {
     $self->log("All ExperimentalChips have status:\t$status");
   }
   
@@ -2011,7 +2032,7 @@ sub backup_file{
 
   throw("Must define a file path to backup") if(! $file_path);
 
-  if(-f $file_path){
+  if (-f $file_path) {
     $self->log("Backing up:\t$file_path");
     system ("mv ${file_path} ${file_path}.".`date '+%T'`);
   }

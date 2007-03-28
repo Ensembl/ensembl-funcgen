@@ -47,7 +47,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
-use Statistics::Descriptive;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
 
 use vars qw(@ISA);
 
@@ -470,12 +470,12 @@ sub store_chip_channels{
 
   Args       : None
   Example    : my @rsets_ids = @{$rsa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all OligoFeature objects in
+  Description: Gets an array of internal IDs for all ProbeFeature objects in
                the current database.
   Returntype : List of ints
   Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
+  Caller     : general
+  Status     : stable
 
 =cut
 
@@ -486,51 +486,78 @@ sub list_dbIDs {
 }
 
 
+=head2 fetch_ResultFeatures_by_Slice_ResultSet
+
+  Arg[0]     : Bio::EnsEMBL::Slice - Slice to retrieve results from
+  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
+  Arg[2]     : optional string - STATUS e.g. 'DIPLAYABLE'
+  Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSet($slice, $rset, 'DISPLAYABLE')};
+  Description: Gets a list of lightweight ResultFeatures from the ResultSet and Slice passed.
+               Replicates are combined using a median of biological replicates based on 
+               their mean techinical replicate scores
+  Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
+  Exceptions : None
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+
+#Could we also have an optional net size for grouping ResultFeature into  Nbp pseudo ResultFeatures?
+
 sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status) = @_;
-
-  #Slice needs to be genrated from eFG not core DB?
-  #we need to make sure seq_region_id for slice corresponds to db
   
-  my (@rfeatures, @scores, $score, $start, $end, $old_start, $old_end, $median);
+  my (@rfeatures, %replicates, @filtered_ids, $score, $start, $end, $cc_id, $old_start, $old_end);
+  #@scores
   
-  
-  #Need to join this?
-  #or do a separate filter displayable call to Status adaptor
-  #for now just assume all ec's from a displayable ResultSet are themselves displayable? 
-  #No, Now have chip_channel table which allows result to chip rather than resultset mapping
-
   my @ids = @{$rset->table_ids()};
+  #should we do some more optimisation of method here if we know about presence or lack or replicates?
   
   if($ec_status){
-    @ids = @{$self->status_filter($ec_status, 'experimental_chip', @ids)};
+    @filtered_ids = @{$self->status_filter($ec_status, 'experimental_chip', @ids)};
 
-    if(! @ids){
+    if(! @filtered_ids){
 
       warn("No ExperimentalChips have the $ec_status status, No ResultFeatures retrieved");
       return \@rfeatures;
     }
   }
-
   
-  #we don't need to account for strnadedness here as we're dealign with a double stranded feature
+  
+  #we don't need to account for strnadedness here as we're dealing with a double stranded feature
   #need to be mindful if we ever consider expression
   
-  my $sql = "SELECT r.score, pf.seq_region_start, pf.seq_region_end FROM result r, probe_feature pf, chip_channel cc
-             WHERE cc.result_set_id = ".$rset->dbID()."
-             AND cc.table_id IN (".join(' ,', @ids).")
-             AND cc.chip_channel_id = r.chip_channel_id
-	     AND r.probe_id=pf.probe_id
-             AND pf.seq_region_id='".$slice->get_seq_region_id()."'
-             AND pf.seq_region_end>='".$slice->start()."'
-             AND pf.seq_region_start<='".$slice->end()."'
-             ORDER by pf.seq_region_start";
-
+  #my $sql = "SELECT r.score, pf.seq_region_start, pf.seq_region_end FROM result r, probe_feature pf, chip_channel cc
+  #           WHERE cc.result_set_id = ".$rset->dbID()."
+  #           AND cc.table_id IN (".join(' ,', @ids).")
+  #           AND cc.chip_channel_id = r.chip_channel_id
+  #	         AND r.probe_id=pf.probe_id
+  #             AND pf.seq_region_id='".$slice->get_seq_region_id()."'
+  #             AND pf.seq_region_end>='".$slice->start()."'
+  #             AND pf.seq_region_start<='".$slice->end()."'
+  #             ORDER by pf.seq_region_start";
   
+
+  #we don't need X Y here, as X Y for probe will be unique for cc_id.
+  #any result with the same cc_id will automatically be treated as a tech rep
+
+  my $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM result r, '.
+	'probe_feature pf, chip_channel cc WHERE cc.result_set_id = '.$rset->dbID();
+
+  $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
+
+  $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
+	      ' AND r.probe_id=pf.probe_id'.
+		  ' AND pf.seq_region_id='.$slice->get_seq_region_id().
+          ' AND pf.seq_region_end>='.$slice->start().
+          ' AND pf.seq_region_start<='.$slice->end().
+          ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
+
   my $sth = $self->prepare($sql);
   $sth->execute();
-  $sth->bind_columns(\$score, \$start, \$end);
-  my $position_mod = $slice->start() +1;
+  $sth->bind_columns(\$score, \$start, \$end, \$cc_id);
+  my $position_mod = $slice->start() + 1;
   
 
 
@@ -542,21 +569,22 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     $old_end   ||= $end; 
     
     if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature
-      push @scores, $score;
+	  push @{$replicates{$cc_id}}, $score;
     }else{#Found new location
    
-      #store previous feature with best result from @scores
+	  #store previous feature with best result from @scores
 		#Do not change arg order, this is an array object!!
       push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 		([($old_start - $position_mod), 
 		  ($old_end - $position_mod),
-		  (scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
+		  $self->resolve_replicates_by_ResultSet(\%replicates, $rset)]);
 
-      $old_start = $start;
+	  undef %replicates;
+	  $old_start = $start;
       $old_end = $end;
-    
+	  
       #record new score
-      @scores = ($score);
+	  @{$replicates{$cc_id}} = ($score);
     }
   }
   
@@ -567,11 +595,71 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
       ([($old_start - $position_mod), 
 	($old_end - $position_mod),
-	(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
+		$self->resolve_replicates_by_ResultSet(\%replicates, $rset)]);
+
+	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   }
   
   return \@rfeatures;
 }
+
+
+
+=head2 resolve_replicates_by_ResultSet
+
+  Arg[0]     : HASHREF - chip_channel_id => @scores pairs
+  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
+  Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSet($slice, $rset, 'DISPLAYABLE')};
+  Description: Gets a list of lightweight ResultFeatures from the ResultSet and Slice passed.
+               Replicates are combined using a median of biological replicates based on 
+               their mean techinical replicate scores
+  Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
+  Exceptions : None
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+
+#this may be done better inline rather than sub'd as we're going to have to rebuild the duplicate data each time?
+#Rset should return a hash of cc_ids keys with replicate name values.
+#these can then beused to build replicate name keys, with an array technical rep score values.
+#mean each value then give median of all.
+
+
+sub resolve_replicates_by_ResultSet{
+  my ($self, $rep_ref, $rset) = @_;
+
+  my ($score, @scores, $cc_id);
+
+  #deal with simplest case first and fastest?
+  #can we front load this with the replicate set info, i.e. if we know we only have one then we don't' have to do all this testing and can do a mean
+
+  if(scalar(keys %{$rep_ref}) == 1){
+	
+	($cc_id) = keys %{$rep_ref};
+
+	@scores = @{$rep_ref->{$cc_id}};
+
+	if (scalar(@scores) == 1){
+	  $score = $scores[0];
+	}else{
+	  $score = mean(\@scores)
+	}
+  }else{#deal with biol replicates
+
+	foreach $cc_id(keys %{$rep_ref}){
+	  push @scores, mean($rep_ref->{$cc_id});
+	}
+
+	$score = median(\@scores);
+
+  }
+
+  return $score;
+
+}
+
 
 sub _get_best_result{
   my ($self, $scores) = @_;
@@ -592,28 +680,7 @@ sub _get_best_result{
   }
   else { #even
     $median = ($scores->[($index)/2] + $scores->[($index/2)+1] ) / 2;
-
-
   }
-
-
-
-  #if(scalar(@$scores) == 2){
-  #  $score = ($scores->[0] + $scores->[1])/2;
-  #}
-  #elsif(scalar(@$scores) > 2){#median or mean of median flanks
-  #  $mpos = (scalar(@$scores))/2;
-    
-  #  if($mpos =~ /\./){#true median
-  #    $mpos =~ s/\..*//;
-  #    $mpos ++;
-  #    $score = $scores->[$mpos];
-  #  }else{
-  #    $score = ($scores->[$mpos] + $scores->[($mpos+1)])/2 ;
-  #  }
-  #}
-
-  #my @tmp = @$scores;
 
   return $median;
 }

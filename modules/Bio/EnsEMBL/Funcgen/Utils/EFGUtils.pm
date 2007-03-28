@@ -38,7 +38,7 @@ Nathan Johnson njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file);
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean);
 
 use strict;
 use Time::Local;
@@ -121,24 +121,24 @@ sub get_month_number{
 sub species_chr_num{
 	my ($species, $val) = @_;
 
-	($species = lc($species)) =~ s/\_/ /;
+	($species = lc($species)) =~ s/ /_/;
 
 	my %species_chrs = (
-						'homo sapiens' => {(
-											x  => 23,
-											y  => 24,
+						homo_sapiens => {(
+										  x  => 23,
+										  y  => 24,
 											mt => 25, 
 										   )},
 						
-						'mus musculus' => {(
-											x  => 20,
-											y  => 21,
+						mus_musculus => {(
+										  x  => 20,
+										  y  => 21,
 											mt => 22,
 										   )},
 						
-						'rattus norvegicus' =>  {(
-												  x  => 21,
-												  y  => 22,
+						rattus_norvegicus =>  {(
+												x  => 21,
+												y  => 22,
 												  mt => 23,
 												 )},
 						
@@ -164,5 +164,45 @@ sub open_file{
 	return $fh;
 }
 
+
+sub median{
+  my $scores = shift;
+
+
+  my @tmp = @$scores;
+
+  my ($median);
+  my $count = scalar(@$scores);
+  my $index = $count-1;
+  #need to deal with lines with no results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  #deal with one score fastest
+  return  $scores->[0] if ($count == 1);
+  
+  #taken from Statistics::Descriptive
+  #remeber we're dealing with size starting with 1 but indices starting at 0
+  
+  if ($count % 2) { #odd number of scores
+    $median = $scores->[($index+1)/2];
+  }
+  else { #even, get mean of flanks
+    $median = ($scores->[($index)/2] + $scores->[($index/2)+1] ) / 2;
+  }
+
+
+  return $median;
+}
+
+
+sub mean{
+  my $scores = shift;
+  
+  my $total = 0;
+
+  map $total+=$_, @$scores;
+  my $mean = $total/(scalar(@$scores));
+
+  return $mean;
+
+}
 
 1;

@@ -392,7 +392,7 @@ sub get_chip_channel_id{
 sub get_ExperimentalChips{
   my ($self, $table_id) = @_;
   
-  throw("Cannot retrieve ExperimentalChips for a non-experimental_Chip ResultSet") if ($self->table_name ne "experimental_chip");
+  throw("Cannot retrieve ExperimentalChips for a non-experimental_Chip ResultSet") if ($self->table_name() ne "experimental_chip");
 
   if(! defined $self->{'experimental_chips'}){
     my $ec_adaptor = $self->adaptor->db->get_ExperimentalChipAdaptor();
@@ -407,6 +407,42 @@ sub get_ExperimentalChips{
 }
 
 
+
+=head2 get_replicate_set_by_chip_channel_id
+
+  Arg[0]     : int - chip_channel_id
+  Example    : my $rep_set_name = $result_set->get_replicate_set_by_chip_channel_id($cc_id);
+  Description: Retrieves the replicate set name defined by the corresponding ExperimentalChip
+  Returntype : String - replicate set name
+  Exceptions : 
+  Caller     : General
+  Status     : At Risk - implement for Channels?
+
+=cut
+
+
+sub get_replicate_set_by_chip_channel_id{
+  my ($self, $cc_id) = @_;
+
+  if( ! defined $self->{'_replicate_cache'}){
+
+	warn "Generating replicate cache!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+
+
+	foreach my $ec (@{$self->get_ExperimentalChips()}){
+	  
+	  $self->{'_replicate_cache'}{$self->get_chip_channel_id($ec->dbID())} = $ec->replicate();
+	  
+
+	}
+  }
+
+
+  #warn here of absent replicate info?
+
+  return (exists $self->{'_replicate_cache'}{$cc_id}) ?  $self->{'_replicate_cache'}{$cc_id} : undef;
+
+}
 
 
 =head2 display_label
@@ -483,6 +519,9 @@ sub get_ResultFeatures_by_Slice{
   #This would eat more memory but may be faster for web display if we can support some sort of dynamic querying with respect to expanded/shifted slice and cached ResultFeatures.
   #would have to cater for 49 bp overhang which may result in duplicate ResultFeatures which overlap ends of adjacent/overlapping slices
   #49bp ? should be altered to cope with overlap properly.
+
+
+  #do we need to set the replicate_cache here first, or should this be done in new?
 
   return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, $status);
 }
