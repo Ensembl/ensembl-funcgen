@@ -127,7 +127,7 @@ sub species_chr_num{
 						homo_sapiens => {(
 										  x  => 23,
 										  y  => 24,
-											mt => 25, 
+mt => 25, 
 										   )},
 						
 						mus_musculus => {(
@@ -152,17 +152,7 @@ sub species_chr_num{
 
 }
 
-sub open_file{
-	my ($operator, $file) = @_;
-	
-	my $fh = new FileHandle "$operator $file";
-	
-	if(! defined $fh){
-		croak("Failed to open $operator $file");
-	}
 
-	return $fh;
-}
 
 
 sub median{
@@ -198,11 +188,27 @@ sub mean{
   
   my $total = 0;
 
-  map $total+=$_, @$scores;
+  map $total+= $_, @$scores;
   my $mean = $total/(scalar(@$scores));
 
   return $mean;
 
 }
+
+sub open_file{
+  my ($file, $operator) = @_;
+	
+  $operator ||= '<';
+
+  my $fh = new FileHandle "$operator $file";
+	
+  if(! defined $fh){
+	croak("Failed to open $operator $file");
+  }
+
+  return $fh;
+}
+
+
 
 1;

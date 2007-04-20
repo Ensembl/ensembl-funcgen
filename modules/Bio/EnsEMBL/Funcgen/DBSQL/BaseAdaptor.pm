@@ -347,7 +347,7 @@ sub _validate_status{
 
   #We could do some look up on the table here, but this may compound problems if someone has hacked the table
 
-  my @state_regexs = ('IMPORTED', 'IMPORTED_CS_', 'DISPLAYABLE');
+  my @state_regexs = ('IMPORTED', 'IMPORTED_CS_', 'DISPLAYABLE', 'RESOLVED');
 
 
   foreach my $regex(@state_regexs){

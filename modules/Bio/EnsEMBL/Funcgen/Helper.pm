@@ -388,7 +388,7 @@ sub debug_hash{
 
 ################################################################################
 
-=head2 system
+=head2 run_system_cmd
 
  Description : Method to control the execution of the standard system() command
 
@@ -406,14 +406,18 @@ sub debug_hash{
 #Move most of this to EFGUtils.pm
 #Maintain wrapper here with throws, only warn in EFGUtils
 
-sub system{
-  my ($self, $exit, $command) = @_;
+sub run_system_cmd{
+  my ($self, $command, $no_exit) = @_;
 
-  my ($redirect,$status);
+  my $redirect = '';
+  my $status;
 
   $self->debug(3, "system($command)");
   
   # decide where the command line output should be redirected
+
+  #This should account for redirects
+
   if ($self->{_debug_level} >= 3){
 
     if (defined $self->{_debug_file}){
@@ -424,7 +428,7 @@ sub system{
     }
   }
   else{
-    $redirect = " > /dev/null 2>&1";
+    #$redirect = " > /dev/null 2>&1";
   }
 
   # execute the passed system command
@@ -432,11 +436,11 @@ sub system{
   
   if ($status != 0){
 
-    if ($exit){
-      throw("system($command) - failed\nTo see system command output set debug_level to 3 and re-run.");
+    if (! $no_exit){
+      throw("system command failed with exit code $status:\t$command\n$@\n");
     }
     else{
-      warn("system($command) - failed...");
+      warn("system command failed with exit code $status:\t$command\n$@\n");
     }
   }
     
@@ -500,6 +504,22 @@ sub set_header_hash{
   
   return \%hpos;
 }
+
+
+sub backup_file{
+  my ($self, $file_path) = @_;
+
+  throw("Must define a file path to backup") if(! $file_path);
+
+  if (-f $file_path) {
+    $self->log("Backing up:\t$file_path");
+    system ("mv ${file_path} ${file_path}.".`date '+%T'`);
+  }
+
+  return;
+
+}
+
 
 
 1;

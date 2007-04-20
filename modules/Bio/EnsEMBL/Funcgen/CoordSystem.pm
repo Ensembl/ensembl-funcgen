@@ -340,6 +340,24 @@ sub schema_build {
   return $self->{'schema_build'};
 }
 
+=head2 get_latest_schema_build
+
+  Example    : my $db_schema_build = $coord_system->get_latest_schema_build();
+  Description: Getter for the most recent schema_build of this coordinate system
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub get_latest_schema_build {
+  my $self = shift;
+
+  return (sort (keys %{$self->{'core_cache'}}))[0];
+}
+
+
 =head2 contains_schema_build
 
   Example    : if ($coord_system->contains_schema_build('43_36e')){..do some coord system things ..};

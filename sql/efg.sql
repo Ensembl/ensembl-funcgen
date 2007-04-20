@@ -504,7 +504,7 @@ CREATE TABLE `experimental_chip` (
    `array_chip_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
-   `replicate` varchar(20) default 'UNKNOWN',
+   `replicate` varchar(20) default NULL,
    PRIMARY KEY  (`experimental_chip_id`),
    KEY `experiment_idx` (`experiment_id`),
    KEY `feature_type_idx` (`feature_type_id`),

@@ -17,7 +17,7 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-fasta\
 	-port 3306\
 	-host ens-genomics1\
-	-dbname duke1_homo_sapiens_funcgen_44_36e\
+	-dbname test_homo_sapiens_funcgen_45_36g\
 	-array_set\
 	-array_name "0701_HG18"\
 	-group efg\

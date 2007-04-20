@@ -24,11 +24,11 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-fasta\
 	-port 3306\
 	-host ens-genomics1\
-	-dbname test_homo_sapiens_funcgen_41_36c\
+	-dbname test_homo_sapiens_funcgen_45_36g\
 	-array_set\
 	-array_name "2005-05-10_HG17Tiling_Set"\
 	-group efg\
-	-data_version 41_36c\
+	-data_version 43_36e\
 	-verbose\
 	-tee\
 	-pass $PASS\

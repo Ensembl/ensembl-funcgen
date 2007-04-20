@@ -76,6 +76,31 @@ sub fetch_all_by_Probe {
   return $self->generic_fetch( 'pf.probe_id = ' . $probe->dbID() );
 }
 
+=head2 fetch_all_by_Probe_id
+
+  Arg [1]    : int - Probe dbID
+  Example    : my @features = @{$ofa->fetch_all_by_Probe_id($pid)};
+  Description: Fetchs all features that a given probe creates.
+  Returntype : Listref of Bio::EnsEMBL::PasteFeature objects
+  Exceptions : Throws if argument not defined
+  Caller     : Probe->get_all_ProbeFeatures()
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Probe_id {
+  my $self  = shift;
+  my $pid = shift;
+  
+  if ( ! defined $pid ) {
+    throw('Need to specify a probe _id');
+  }
+	
+  return $self->generic_fetch( 'pf.probe_id = ' . $pid );
+}
+
+
+
 =head2 fetch_all_by_probeset
 
   Arg [1]    : string - probeset
@@ -611,6 +636,68 @@ sub list_dbIDs {
 	return $self->_list_dbIDs('probe_feature');
 }
 
+
+=head2 reassign_features_to_probe
+
+  Arg[0]     : ARRAYREF - feature dbIDs to reassign
+  Arg[1]     : int - probe dbID to reassign to
+  Example    : $ofa->reassign_feature_to_probe(\@fids, $pid);
+  Description: Update features to link to given probe dbID
+  Returntype : None
+  Exceptions : Throws is args not met
+  Caller     : Importer
+  Status     : At Risk
+
+=cut
+
+sub reassign_feature_to_probe{
+	my ($self, $fids_ref, $pid) = @_;
+	
+	if(! @$fids_ref || ! $pid){
+	  throw('Need to pass a ref to an array of feature ids and a probe id to reassign to');
+	}
+	
+	my $cmd = 'UPDATE probe_feature SET probe_id='.$pid.' WHERE probe_feature_id IN ('.join(',', @$fids_ref).')';
+	$self->db->dbc->do($cmd);
+
+	#This will fail anyway?
+	#if($?){
+	#  throw("SQL Command failed:\t$sql\n$@");
+	#}
+
+	return;
+}
+
+=head2 delete_features
+
+  Arg[0]     : ARRAYREF - feature dbIDs to reassign
+  Example    : $pfa->delete_feature(\@fids);
+  Description: Deletes feature with given probe_feature_ids
+  Returntype : None
+  Exceptions : Throws if not arg defines
+  Caller     : Importer
+  Status     : At Risk
+
+=cut
+
+sub delete_features{
+	my ($self, $fids_ref) = @_;
+	
+	if(! @$fids_ref){
+	  throw('Need to pass a ref to an array of feature ids');
+	}
+	
+	my $cmd = 'DELETE from probe_feature WHERE probe_feature_id IN ('.join(',', @$fids_ref).')';
+	$self->db->dbc->do($cmd);
+
+	#This will fail anyway?
+	#if($?){
+	#  throw("SQL Command failed:\t$sql\n$@");
+	#}
+
+	return;
+}
+
 # All the results methods may be moved to a ResultAdaptor
 
 =head2 fetch_results_by_channel_analysis
@@ -734,6 +821,8 @@ sub fetch_results_by_Probe_Analysis_experimental_chip_ids{
 sub _get_best_result{
   my ($self, $ofs, $analysis, $exp_chips) = @_;
   my ($median);
+
+  throw('Deprecated, use EFGUtils');
 
 
   if(scalar(@$ofs) > 1){

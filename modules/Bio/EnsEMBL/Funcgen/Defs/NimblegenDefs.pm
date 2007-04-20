@@ -46,7 +46,8 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Helper;
-use Devel::Size qw(size total_size);
+#use Devel::Size::Report qw(report_size);
+use Devel::Size qw( size total_size);
 use strict;
 
 use vars qw(@ISA);
@@ -83,7 +84,7 @@ sub new{
       #order of these data arrays is important!
       array_data   => ['experiment'],
       probe_data   => ["probe"],
-      results_data => ["results"],
+      results_data => ["and_import_results"],
       sample_key_fields => ['DESIGN_ID', 'CHIP_ID', 'DYE', 'PROMOT_SAMPLE_TYPE'],# 'SAMPLE_LABEL'],label now optional
       # 'SAMPLE_DESCRIPTION removed due to naming disparities
       ndf_fields      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
@@ -156,7 +157,7 @@ sub read_array_data{
   my $ac_adaptor = $self->db->get_ArrayChipAdaptor();
 
   #Slurp file to string, sets local delimtter to null and subs new lines
-  my $fh = open_file("<", $notes_file);
+  my $fh = open_file($notes_file);
   #($design_desc = do { local ($/); <$fh>;}) =~ s/\r*\n$//;
   #close($fh);
   
@@ -247,9 +248,6 @@ sub read_array_data{
 sub read_experiment_data{
   my $self = shift;
 
-  
-  warn "recovery is ".$self->recovery();
-
   $self->read_array_data($self->get_def('notes_file'));
 
   my ($design_desc, $line, $tmp_uid, $channel, $echip, $sample_label);
@@ -264,10 +262,10 @@ sub read_experiment_data{
   
  
   warn("Harcoded for one array(can have multiple chips from the same array) per experiment\n");
-  my $fh = open_file("<", $self->get_def("chip_file"));
+  my $fh = open_file($self->get_def("chip_file"));
   $self->log("Reading chip data");
 
-  warn("We need to change Array/ArrayChip retrieval to ensure that we have IMPORTED status, so avoid having an incomplete arraychip");
+
   warn "Do we need to validate each line here against the header array?";
   while ($line = <$fh>){
     next if $line =~ /^\s+\r*\n/;
@@ -298,18 +296,18 @@ sub read_experiment_data{
       #Test both channels are available, i.e. the SampleKey has two TOTAL channels
       if($echip){
 
-	for my $type('TOTAL', 'EXPERIMENTAL'){
+		for my $type('TOTAL', 'EXPERIMENTAL'){
 
-	  my $test_chan =  $chan_adaptor->fetch_by_type_experimental_chip_id($type, $echip->dbID());
-	  throw("ExperimentalChip(".$echip->unique_id().
-		") does not have a $type channel, please check the SampleKey.txt file") if ! $test_chan;
-
-	}
-      }
+		  my $test_chan =  $chan_adaptor->fetch_by_type_experimental_chip_id($type, $echip->dbID());
+		  throw("ExperimentalChip(".$echip->unique_id().
+				") does not have a $type channel, please check the SampleKey.txt file") if ! $test_chan;
+		  
+		}
+	  }
       
       $tmp_uid = $data[$hpos{'CHIP_ID'}];
       $echip = $ec_adaptor->fetch_by_unique_id_vendor($data[$hpos{'CHIP_ID'}], 'NIMBLEGEN');
-
+	  
       if($echip){
 
 	if(! $self->recovery()){
@@ -341,6 +339,10 @@ sub read_experiment_data{
       if(! $self->recovery()){
 		throw("Channel(".$echip->unqiue_id().":".uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]).
 			  " already exists in the database\nMaybe you want to recover?");
+	  }else{
+		#push @{$self->{'_rollback_ids'}}, $channel->dbID();
+		#No point in doing this as all Channels mey be pre-registered in recovery mode
+		#Hence all will be rolled back
 	  }
     }else{
       #Handles single/mutli
@@ -358,7 +360,6 @@ sub read_experiment_data{
       #would never happen on one chip?  May happen between chips in one experiment
 	  
       ($channel) = @{$chan_adaptor->store($channel)};
-      #$echip->add_Channel($channel);
     }    
   }
   
@@ -375,6 +376,8 @@ sub read_experiment_data{
 
   Example    : $imp->read_probe_data();
   Description: Parses and imports probes, probe sets and features of a given array
+               No duplicate handling or probe caching is performed due to memory 
+               issues, this is done in resolve_probe_data.
   Returntype : none
   Exceptions : none
   Caller     : Importer
@@ -388,25 +391,13 @@ sub read_probe_data{
   my ($self) = shift;
   
   my ($fh, $line, @data, %hpos, %probe_pos);#, %duplicate_probes);
-
   $self->log("Parsing and importing ".$self->vendor()." probe data (".localtime().")", 1);
-  #can we do a reduced parse if we know the array chips are already imported");
-  
 
   ### Read in
   #ndf file: probe_set, probe and probe_feature(.err contains multiple mappings)
   #pos file: probe chromosome locations
-  #ndf file: build, chr, start stop,
   
-  #Need to test whether array exists and is validated before importing probe data.
-  #If already present, then can skip and just import results using probe_name to get probe_id and link to probe_feature.
-  #just needs to create a mapping between probe_feature_ids and results
-  #What if an array has been imported with only a few chips present?
-  #Need check on size in import_array
-  #e.g. someone has done an experiment with only a few chips from an array?
-  #This would mean absent probes
-  
-  #also need to change how probe_names are generated for nimblegen?
+  #Need to change how probe_names are generated for nimblegen?
   #native probe_ids may not be unique, but should be when combined with the seq_id which is currently being used as the xref_id
   #Handle with API!!
   
@@ -415,9 +406,12 @@ sub read_probe_data{
   my $slice_a = $self->db->get_SliceAdaptor();
   my $cs = $self->db->get_FGCoordSystemAdaptor()->fetch_by_name('chromosome');
 
-  #should really test and store here if not valid, but this will be handled by adaptor store methods
-  #This should really focus on the experiemental chips, 
-  #altho' this amounts to the same thing if the chip has already been imported as
+
+  #TIED FILE CACHE!!!
+  #We need to rebuild the cache from the DB before we start adding new probe info
+  #We only need to rebuild cache if we find a chip that hasn't been imported?
+  #No, we just need to import without cache, then re-do the resolve step
+  #Are we still going to get disconnects when we dump the cache?
 
 
   
@@ -426,9 +420,6 @@ sub read_probe_data{
     foreach my $achip(@{$array->get_ArrayChips()}){
 
       my (@log, %probe_pos);
-	  warn("Probe pos cache is being rebuilt for each ArrayChip, inter-chip duplicates will not be caught, need to use probe_info cache");
-	  warn('Probe dbID cache is being reset on each ArrayChip, need ti implement Tied File for this cache?');
-	 
 	  #do we need to fetch probe by seq and array?
 	  #this would also id non-unique seqs in design
 
@@ -448,7 +439,7 @@ sub read_probe_data{
       #pos file also gives a key to which probes should be considered 'EXPERIMENTAL'
       
       #CACHE PROBE POSITIONS
-      $fh = open_file("<", $self->get_dir("design")."/".$achip->name().".pos");
+      $fh = open_file($self->get_dir("design")."/".$achip->name().".pos");
       
       #don't % = map ! Takes a lot longer than a while ;)
       while($line = <$fh>){
@@ -462,7 +453,8 @@ sub read_probe_data{
 		}
 		
 		#Skip probe if there is a duplicate
-		
+	
+	
 		if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
 		  throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]." need implement duplicate logging/cleaning");
 		  #need to build duplicate hash to clean elements from hash
@@ -470,11 +462,32 @@ sub read_probe_data{
 		  #next;
 		}
 		
-		#
+		
+		my $random = 0;
+
 		if(! $self->cache_slice($data[$hpos{'CHROMOSOME'}])){
-		  push @log, "Skipping probe ".$data[$hpos{'PROBE_ID'}]." with non-standard region ".$data[$hpos{'CHROMOSOME'}];
+		  push @log, "Skipping feature import for probe ".$data[$hpos{'PROBE_ID'}]." with non-standard region ".$data[$hpos{'CHROMOSOME'}];
+
+		  #should we try and resolve the random chrs here?
+		  #at least store probe/set/result and skip feature
+		  #can we just import as chr with no start postition?
+		  
+		  #if ($data[$hpos{'CHROMOSOME'}] =~ /_random/){
+		  
+		  #	if(! $self->cache_slice($data[$hpos{'CHROMOSOME'}])){
+		   #push @log, "Skipping probe ".$data[$hpos{'PROBE_ID'}]." with non-standard region ".$data[$hpos{'CHROMOSOME'}];
+			#}else{
+		  #we should really log this in a seprate file to avoid overloading the lgo file
+		  # push @log, "Importing random probe ".$data[$hpos{'PROBE_ID'}]." on ".$data[$hpos{'CHROMOSOME'}]." omitting position";
+		  
+		#}
+
+		#}
+		  
 		}
 		
+		#This is not handling probes with random chrs
+
 		$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
 												 chr => $data[$hpos{'CHROMOSOME'}],
 												 start => $data[$hpos{'POSITION'}],
@@ -492,12 +505,12 @@ sub read_probe_data{
       
 	  $self->log("Importing design probes from : ".$achip->name().".ndf");
       #OPEN PROBE IN/OUT FILES
-      $fh = open_file("<", $self->get_dir("design")."/".$achip->name().".ndf");
+      $fh = open_file($self->get_dir("design")."/".$achip->name().".ndf");
       #Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
       #my $p_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'design_name'}."txt");
       #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
       #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
-      my $f_out = open_file(">", $self->get_dir("output")."/probe.".$achip->name()."fasta")	if($self->{'_dump_fasta'});
+      my $f_out = open_file($self->get_dir("output")."/probe.".$achip->name()."fasta", '>')	if($self->{'_dump_fasta'});
       my ($length, $ops, $op, $of, %pfs);
 
       #should define mapping_method arg to allows this to be set to LiftOver/EnsemblMap
@@ -592,7 +605,6 @@ sub read_probe_data{
 		
 		$length = length($data[$hpos{'PROBE_SEQUENCE'}]);	
 		#$probe_string .= "\t${psid}\t".$data[$hpos{'PROBE_ID'}]."\t${length}\t$ac_id\t${class}\n";
-		#print "Generating new probe with $array ".$array->dbID()." and ac id ".$ac{'dbID'}."\n";
 		
 		$op = Bio::EnsEMBL::Funcgen::Probe->new(
 												-NAME          => $data[$hpos{'PROBE_ID'}],
@@ -648,12 +660,9 @@ sub read_probe_data{
 		}
 	
 		#Hack!!!!!! Still importing probe (and result?)
-		if(!  $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'})){
-		  #warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
-		  next;
-		}
-		
-				
+		next if(!  $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}));
+		#warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
+		  				
 		
 		$of = Bio::EnsEMBL::Funcgen::ProbeFeature->new
 		  (
@@ -692,13 +701,7 @@ sub read_probe_data{
 		
 
 
-	  my $cache_size = size(\%probe_pos);
-	  my $info_size = size($self->{'_probe_cache'});
-	  my $self_size = total_size($self);
-	 
-	 
-	  $self->log("Memory report:\npos cache\t$cache_size\ninfo cache size\t$info_size\nself\t$self_size", 1);
-	  $self->{'_probe_cache'} = undef;#As we can't get Y and Y info from the DB, this is only possible as the results files contain X and Y info
+	  #$self->{'_probe_cache'} = undef;#As we can't get Y and Y info from the DB, this is only possible as the results files contain X and Y info
 	}
 	
     #Should we build hash of probe_names:probe_feature_ids here for results import
@@ -720,9 +723,14 @@ sub read_probe_data{
   $self->log("Finished parsing probe data");
   #Total probe_sets:\t$psid\n".
   #	       "Total probes:\t$pid\nTotal probe_features:\t$fid");
-  
+ 
+
+  $self->resolve_probe_data();
+ 
   return;
 }
+
+
 
 
 =head2 read_results_data
@@ -737,110 +745,163 @@ sub read_probe_data{
 =cut
 
  
-sub read_results_data{
+sub read_and_import_results_data{
   my $self = shift;
   
   $self->log("Parsing ".$self->vendor()." results");
-  my (@header, @data, @design_ids, %hpos);
+  my (@header, @data, @design_ids, @lines);
   my ($fh, $pid, $line, $file);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
   my $result_set = $self->get_import_ResultSet('channel', $anal);
 
-  
+
   if($result_set){#we have some new data to import
     
     foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
 
       if( ! $echip->has_status('IMPORTED')){
 
-	foreach my $chan(@{$echip->get_Channels()}){
-	  my ($probe_elem, $score_elem);
-	  my $cnt = 0;
-	  my $r_string = "";
-	  my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
-	  my $cc_id = $result_set->get_chip_channel_id($chan->dbID());
-	  $self->log("Reading results for channel:\t${chan_name}");
-	  
-	  #open/backup output
-	  my $file = $self->get_dir("raw")."/result.".$chan_name.".txt";	
-	  $self->backup_file($file);	#This may cause empty file backups
-	  my $r_out = open_file(">", $file);
-
-	  (my $alt_chan_name = $chan_name) =~ s/\_/\_1h\_/;
-	  my $found = 0;
-
-	  FILE: foreach my $name($chan_name, $alt_chan_name){
-
-	    foreach my $suffix("_pair.txt", ".pair", ".txt"){
-	      
-	      $file = $self->get_dir("results")."/".$name.$suffix;
-
-	      if(-f $file){
-		$found = 1;
-		last FILE;
-	      }
-	    }
-	  }
-
-	  throw("Could not find result file for Channel(${chan_name}) in ".$self->get_dir('results')) if ! $found; 
-
-	  #open/slurp input
-	  $fh = open_file("<", $file);	
-	  my @lines = <$fh>;
-	  close($fh);
+		my $array = $echip->get_ArrayChip->get_Array();
 	
-	  foreach $line(@lines){
-	  
-	    #can we preprocess effectively?
-	    
-	    next if $line =~ /^#/;
-	    next if $line =~ /NGS_CONTROLS/;
-	    next if $line =~ /V_CODE/;
-	    next if $line =~ /H_CODE/;
-	    next if $line =~ /RANDOM/;
+		foreach my $chan(@{$echip->get_Channels()}){
 
-	    $line =~ s/\r*\n//o;
-	    @data = split/\t/o, $line;
-	  
-	    ###PROCESS HEADER
-	    if ($line =~ /PROBE_ID/o){
-	   	   		
-	      %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
-	      next;#finished processing header
-	    }
-	    
-	    ###PROCESS DATA
-	    #Is this string concat causing the slow down, would it befaster to use an array and print a join?
- 	    
-	    if($pid = $self->get_probe_id_by_name($data[$hpos{'PROBE_ID'}])){
-	       $cnt ++;
-	       $r_string .= "\t${pid}\t".$data[$hpos{'PM'}]."\t${cc_id}\t".$data[$hpos{'X'}]."\t".$data[$hpos{'Y'}]."\n";
-	     }else{
-	      warn "Found unfiltered non-experimental probe in input $data[$hpos{'PROBE_ID'}]";
-	    }
-	  
-	    ###PRINT SOME RESULTS
-	    if($cnt > 10000){
-	      $cnt = 0;
-	      print $r_out $r_string;
-	      $r_string ="";
-	      #could we fork here and import in the background?
-	    }
-	  	
-	  } 
-	  #PRINT/CLOSE Channel file
-	  print $r_out $r_string;
-	  close($r_out);
-	  $self->log("Finished parsing $chan_name result");
-	}
+		  if( ! $chan->has_status('IMPORTED')){
+			$self->get_probe_cache_by_Array($array) || throw('Failed to reset the probe cache handle');
+			
+			my ($probe_elem, $score_elem, %hpos);
+			my $cnt = 0;
+			my $r_string = "";
+			my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
+			my $cc_id = $result_set->get_chip_channel_id($chan->dbID());
+
+
+			if ($self->recovery()){
+			  $self->log("Rolling back results for channel:\t${chan_name}");
+			  $self->db->rollback_results($cc_id);
+			}
+
+			#open/backup output
+			my $out_file = $self->get_dir("raw")."/result.".$chan_name.".txt";	
+			$self->backup_file($out_file);
+			my $r_out = open_file($out_file, '>');
+			
+			(my $alt_chan_name = $chan_name) =~ s/\_/\_1h\_/;
+			my $found = 0;
+			
+		  FILE: foreach my $name($chan_name, $alt_chan_name){
+			  
+			  foreach my $suffix("_pair.txt", ".pair", ".txt"){
+				
+				$file = $self->get_dir("results")."/".$name.$suffix;
+				
+				if(-f $file){
+				  $found = 1;
+				  last FILE;
+				}
+			  }
+			}
+			
+			throw("Could not find result file for Channel(${chan_name}) in ".$self->get_dir('results')) if ! $found;
+			
+			#open/slurp input
+			$self->log("Reading result for channel $chan_name}:\t$file", 1);
+			$fh = open_file($file);	
+			@lines = <$fh>;
+			close($fh);
+
+					
+			###PROCESS HEADER
+			
+			foreach my $i(0..$#lines){
+			  
+			  if ($lines[$i] =~ /PROBE_ID/o){
+				$lines[$i] =~ s/\r*\n//o;
+				@data = split/\t/o, $lines[$i];
+				
+				%hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
+				
+				#remove header
+				splice @lines, $i, 1;
+				
+				last;#finished processing header
+			  }
+			}
+			
+			#we need to sort the result files based on the unique key(name at present, should replace with seq at some point)
+			@lines = sort {(split/\t/o, $a)[$hpos{'PROBE_ID'}] cmp (split/\t/o, $b)[$hpos{'PROBE_ID'}]} @lines;
+			
+			$self->log('Parsing results', 1);
+			
+			foreach $line(@lines){
+			  
+			  #can we preprocess effectively?
+			  next if $line =~ /^#/;
+			  next if $line =~ /NGS_CONTROLS/;
+			  next if $line =~ /V_CODE/;
+			  next if $line =~ /H_CODE/;
+			  next if $line =~ /RANDOM/;
+			  
+			  $line =~ s/\r*\n//o;
+			  @data = split/\t/o, $line;
+			  
+			  ###PROCESS HEADER
+			  #if ($line =~ /PROBE_ID/o){
+			  #  
+			  #  %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
+			  #  next;#finished processing header
+			  #}
+			  
+			  ###PROCESS DATA
+			  #Is this string concat causing the slow down, would it befaster to use an array and print a join?
+			  
+			  if($pid = $self->get_probe_id_by_name_Array($data[$hpos{'PROBE_ID'}], $array)){
+				$cnt ++;
+				$r_string .= '\N'."\t${pid}\t".$data[$hpos{'PM'}]."\t${cc_id}\t".$data[$hpos{'X'}]."\t".$data[$hpos{'Y'}]."\n";
+			  }else{
+				warn "Found unfiltered non-experimental probe in input $data[$hpos{'PROBE_ID'}]";
+			  }
+			  
+			  ###PRINT SOME RESULTS
+			  if($cnt > 10000){
+				$cnt = 0;
+				print $r_out $r_string;
+				$r_string ="";
+				#could we fork here and import in the background?
+			  }
+			  
+			} 
+			#PRINT/CLOSE Channel file
+			print $r_out $r_string;
+			close($r_out);
+			$self->log("Finished parsing $chan_name result", 1);
+			
+			#$self->log("Memory report:\n".report_size( $self, { indent => "  " } ));
+			#$self->log("Memory report:\n".(total_size($self) / 1000));
+			
+			#Import directly here to avoid having to reparse all results if we crash!!!!
+			$self->log("Importing:\t$out_file");
+			$self->db->load_table_data("result",  $out_file);
+			$self->log("Finished importing:\t$out_file", 1);
+			$chan->adaptor->set_status('IMPORTED', $chan);
+
+			#$self->log("Size report:\n".report_size($self,  { indent => "  " }));
+
+		  }
+		}
+		$echip->adaptor->set_status('IMPORTED', $echip);
+
+
+		#foreach my $key(keys %{$self}){
+		#  $self->log("Getting mem for $key");
+		#  $self->log("$key mem\t".(size($self->{$key})));
+		#}
       }
     }
   }else{
     $self->log("Skipping results parse and import");
   }
 
-  $self->log("Finished parsing results");
-
+  $self->log("Finished parsing and importing results");
 
   return;
 }

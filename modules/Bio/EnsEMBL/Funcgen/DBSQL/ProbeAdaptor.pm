@@ -42,6 +42,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Probe;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Tie::File;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
@@ -122,7 +123,7 @@ sub fetch_by_array_probe_probeset_name {
   Returntype : Hashref
   Exceptions : Throws if arg is not valid and stored
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - move to Importer
 
 =cut
 
@@ -130,7 +131,21 @@ sub fetch_by_array_probe_probeset_name {
 sub fetch_probe_cache_by_Experiment{
   my ($self, $exp) = @_;
 
-  my %cache;
+  #my %cache;
+  my @tie_cache;
+
+
+  throw('Need to fetch the probe cache by Array not Experiment');
+
+  #where are we going to get the file path from?
+  my $cache_file = $ENV{'EFG_DATA'}.'/output/'.$exp->name().'/'.$exp->name().'.probe_cache';
+
+
+  #do we want to use a previously generated cache?
+  #could validate length versus count of probes in DB.
+  #cache could be corrupt, i.e. missing X Y vals?
+  #should be okay, but we may encounter problem if we try and overwrite the cache with new vals
+  
 
   if(! ($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
     throw("Must proved a valid stored Bio::EnsEMBL::Funcgen::Experiment");
@@ -147,15 +162,20 @@ sub fetch_probe_cache_by_Experiment{
 
   if(@achip_ids){
 
-    my $sql = "SELECT name, probe_id from probe where array_chip_id IN (".join(',', @achip_ids).");";
+    my $sql = 'SELECT name, probe_id from probe where array_chip_id IN ('.join(',', @achip_ids).');';
 
-    warn "fetch_probe_cache will break if we have duplicated names within the Experimental set";
+    warn 'fetch_probe_cache will break if we have duplicated names within the Experimental set';
 
-    %cache = @{$self->db->dbc->db_handle->selectcol_arrayref($sql, { Columns =>[1, 2]})};
+	my $cmd = 'mysql '.$self->db->connect_string()." -e \"$sql\" >".$cache_file;
+
+
+    #%cache = @{$self->db->dbc->db_handle->selectcol_arrayref($sql, { Columns =>[1, 2]})};
   }
   
 
-  return \%cache;
+  tie @tie_cache, 'Tie::File', $cache_file or throw('Failed to tie probe_cache file');
+
+  return \@tie_cache;
 }
 
 

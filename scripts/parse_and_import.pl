@@ -1,4 +1,6 @@
-#!/usr/local/ensembl/bin/perl -w
+#!/software/bin/perl -w
+
+##!/usr/local/ensembl/bin/perl -w
 
 ####!/opt/local/bin/perl -w
 

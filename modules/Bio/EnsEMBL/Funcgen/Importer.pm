@@ -31,8 +31,8 @@ Nathan Johnson, njohnson@ebi.ac.uk
 
 package Bio::EnsEMBL::Funcgen::Importer;
 
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date);
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date open_file);
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::Defs::DesignDefs;
@@ -42,6 +42,7 @@ use Bio::EnsEMBL::Funcgen::Helper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
+use Bio::MAGE::XMLUtils;
 use strict;
 use vars qw(@ISA);
 
@@ -142,9 +143,10 @@ sub new{
   $self->array_set($array_set) if $array_set;
   $self->array_file($array_file) if $array_file;
   $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
+  $self->{'cache_dir'} = $self->{'data_dir'}.'/caches/';
   $self->result_files($result_files)if $result_files; #Sanger specific ???
-  $self->{'feature_type_name'} = $ftype_name if $ftype_name;
-  $self->{'cell_type_name'} = $ctype_name if $ctype_name;
+  $self->{'feature_type_name'} = $ftype_name if $ftype_name;#make mandatory?
+  $self->{'cell_type_name'} = $ctype_name if $ctype_name;#make madatory?
   $self->experiment_date($exp_date) if $exp_date;
   $self->description($desc) if $desc;
   $self->{'user'} = $user || throw('Mandatory param -user not met');
@@ -163,38 +165,9 @@ sub new{
   $self->{'recover'} = $recover || 0;
   #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
-    
+  $self->{'mage_tab'} = $mage_tab;
 
-  #do this in init_import
-  #if we write Exp info in init then a reimport will fail unless recover is set?
-
-
-  if (defined $mage_tab) {
-	$self->{'mage_tab'} = $mage_tab;
-
-	#Experiment section	
-	#domain	ebi.ac.uk
-	#accession	
-	#quality_control	biological_replicate
-	#experiment_design_type	binding_site_identification_design
-	#name	
-	#release_date	2007-03-21
-	#submission_date	2006-04-21
-	#submitter	Nathan Johnson
-	#submitter_email	njohnson@ebi.ac.uk
-	#investigator	Nathan Johnson
-	#investigator_email	njohnson@ebi.ac.uk
-	#organization European Bioinformatics Institute
-	#address	European Bioinformatics Institute; Hinxton; Cambridge; CB10 1SD
-	#publication_title	
-	#authors	
-	#journal	
-	#volume		
-	#issue		
-	#pages		
-	#year
-	#pubmed_id		
-  }
+ 
 
   #Set vendor specific attr dependent vars
   $self->set_defs();
@@ -346,22 +319,15 @@ sub init_experiment_import{
   #Should we separate path on group here too, so we can have a dev/test group?
   
   #Set and validate input dir
-  $self->{'input_dir'} ||= $self->get_dir("data")."/input/".$self->vendor()."/".$self->name();
-  throw("input_dir is not defined or does not exist (".$self->get_dir("input").")") if(! -d $self->get_dir("input")); #Helper would fail first on log/debug files
+  $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->vendor().'/'.$self->name();
+  throw('input_dir is not defined or does not exist ('.$self->get_dir('input').')') if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
   
-
-  #this is now done in control script as the log file is created before the dir is :?
-  if (! defined $self->get_dir("output")) {
-    $self->{'output_dir'} = $self->get_dir("data")."/output/".$self->vendor()."/".$self->name();
-    mkdir $self->get_dir("output") if(! -d $self->get_dir("output"));
-    chmod 0744, $self->get_dir("output");
-  }
   
-  $self->create_output_dirs("raw", "norm");
+  $self->create_output_dirs('raw', 'norm', 'cache');
 
 
   if (@{$self->result_files()}) {
-    $self->log("Found result files arguments:\n".join("\n", @{$self->result_files()}));
+    $self->log("Found result files arguments:\n\t".join("\n\t", @{$self->result_files()}));
   }
 
 
@@ -379,10 +345,60 @@ sub init_experiment_import{
 
   if ($self->{'cell_type_name'}) {
     my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($self->{'cell_type_name'});
-    throw("CellType '".$self->{'cell_type_name'}."' is not valid or is not present in the DB\n".
-		  "Please create your CellType before importing the experiment");
-    
+
+	if(! $ctype){
+	  throw("CellType '".$self->{'cell_type_name'}."' is not valid or is not present in the DB\n".
+			"Please create your CellType before importing the experiment");
+    }
+
     $self->cell_type($ctype);
+  }
+
+  #if we write Exp info in init then a reimport will fail unless recover is set?
+
+
+  #have this in a separate method?
+  #we want it to generate if not present or flag specified
+  #then exit 
+  #unless mage_xml specified or present unless generate mage_tab specified in which case start from scratch?
+
+  #Do we really want to read this all the time?  Only if specified?
+  #How can we know, test whether xml is stored in DB, overwrite but warn if already present?
+  #what to do during recovery?
+
+  #what about retrospectively changing replicates in the DB?
+  #what impact would his have on result_sets and or norm results
+  #none if we have the standard chip by chip norm on the 'all chip' import set
+  #only affects exps which have mixed targets or design types
+  #for all others we just need to update the result sets accordingly and reimport the mage-xml
+
+  
+  #~/src/bin/tab2mage.pl -e E-TABM-TEST.txt -k -t ./ -c -d PairData/
+
+
+  if ($self->{'mage_tab'}) {
+
+	#back up xml if present? Or just recreate?
+
+	#do experiment check script first?
+
+	my $cmd = 'tab2mage.pl -e '.$self->{'mage_tab'}.' -t '.$self->get_dir('output').' -c -d '.$self->get_dir('results');
+	$self->run_system_command($cmd);
+
+	#rename file
+	$cmd = 'mv '.$self->get_dir('output').'/\{UNASSIGNED\}.xml '.$self->get_dir('output').'/'.$self->instance().'.xml';
+	$self->run_system_command($cmd);
+	
+
+	my $reader = Bio::MAGE::XML::Reader->new(verbose=>2);
+	$self->{'mage-ml'} = $reader->read($self->get_dir('output').'/'.$self->instance().'.xml');
+
+  }elsif($self->{'mage_xml'}){
+	
+
+  }else{#generate template and quit
+	
+
   }
 
 
@@ -490,7 +506,9 @@ sub validate_group{
 sub create_output_dirs{
   my ($self, @dirnames) = @_;
 	
-  #throw here
+
+  #unshift @dirnames, "";#create base output dir
+  #now done in control script due to log being generated first
 
   foreach my $name (@dirnames) {
     $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
@@ -1279,6 +1297,8 @@ sub register_experiment{
   #Also need to move id generation to import methods, which would check that a previous import has been done, or check the DB for the relevant info?
   
   $self->init_experiment_import();
+  #can we just have init here instead?
+  
 
   #check here is exp already stored?  Will this work properly?
   #then throw if not recovery
@@ -1290,9 +1310,9 @@ sub register_experiment{
   $self->read_data("probe");
   $self->read_data("results");
 
-  warn("we need to access the default method for the vendor here, or override using the gff option");
-  my $tmp_logic_name = ($self->vendor() eq "SANGER") ? "SangerPCR" : "RawValue";
-  $self->import_results("raw", $tmp_logic_name);
+  #warn("we need to access the default method for the vendor here, or override using the gff option");
+  #my $tmp_logic_name = ($self->vendor() eq "SANGER") ? "SangerPCR" : "RawValue";
+  #$self->import_results("raw", $tmp_logic_name);
   
   #Need to be able to run this separately, so we can normalise previously imported sets with different methods
   #should be able t do this without raw data files e.g. retrieve info from DB
@@ -1300,9 +1320,8 @@ sub register_experiment{
   my $norm_method = $self->norm_method();
   
   if (defined $norm_method) {
-    #$self->$norm_method;
-    $self->R_norm($norm_method);
-    $self->import_results("norm", $norm_method);
+	$self->R_norm($norm_method);
+    #$self->import_results("norm", $norm_method);
   }
   
   
@@ -1378,7 +1397,7 @@ sub store_set_probes_features{
     #Can't use get_all_Arrays here as we can't guarantee this will only ever be the array we've generated
     #Might dynamically load array if non-present
     #This is allowing multiple dbIDs per probe???  Is this wrong?
-    $self->cache_probe_info($probe->get_probename(), $probe->dbID());
+    #$self->cache_probe_info($probe->get_probename(), $probe->dbID());###########Remove as we're now importing all then resolving
 
         
     foreach my $feature (@{$pf_hash->{$probe_id}->{'features'}}) {
@@ -1439,12 +1458,18 @@ sub cache_slice{
 sub cache_probe_info{
   my ($self, $pname, $pid, $x, $y) = @_;
 
+  throw('Deprecated, too memory expensive, now resolving DB duplicates and using Tied File cache');
+
+
   throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
 
 
-  if (defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname}->[0] != $pid)) {
-    throw("Found two differing dbIDs for $pname, need to sort out redundant probe entries");
-  }
+  #do we need to loop through the file here?
+  #if we make sure we're testing for a previous dbID before storing probes then we don't need to do this
+  #we can catch the error when we get the probe id as we can check for >1 id for the same probe name
+  #if (defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname}->[0] != $pid)) {
+  #  throw("Found two differing dbIDs for $pname, need to sort out redundant probe entries");
+  #}
   
   $self->{'_probe_cache'}->{$pname} = (defined $x && defined $y) ? [$pid, $x, $y] : [$pid];
   
@@ -1453,7 +1478,7 @@ sub cache_probe_info{
   return;
 }
 
-=head2 get_probe_id_by_name
+=head2 get_probe_id_by_name_Array
 
   Arg [1]    : mandatory - probe name
   Example    : $pid = $self->get_probe_id_by_name($pname);
@@ -1466,48 +1491,147 @@ sub cache_probe_info{
 =cut
 
 
-sub get_probe_id_by_name{
-  my ($self, $name) = @_;
+sub get_probe_id_by_name_Array{
+  my ($self, $name, $array) = @_;
   
   #this is only ever called for fully imported ArrayChips, as will be deleted if recovering
-  $self->build_probe_info_cache() if(! defined $self->{'_probe_cache'});  
+  $self->resolve_probe_data() if(! exists $self->{'_probe_cache'}{$array->name()});
+  
+  #we want to cycle through the given cache starting from the last position or 0.
+  #we don't want to have to test for the size of the cache each time as this will be quite expensive
+  #so we should store sizes separately along with current position
 
-  return (exists $self->{'_probe_cache'}->{$name}) ? $self->{'_probe_cache'}->{$name}->[0] : undef;
+
+  my ($pid, $line);
+  #my $start = $self->{'_probe_cache'}{$array->name()}{'current_index'};
+  #my $end = $self->{'_probe_cache'}{$array->name()}{'size'};
+
+  #we could chop the array based on a sort off the name and the element
+  #or should we index this  properly?
+  #we could throw the cache and just use the index? 
+
+  #for $i($start..$end){
+	#$self->log("$name\twith $i entry ".$self->{'_probe_cache'}{$array->name()}{'entries'}->[$i]);
+
+#	if($self->{'_probe_cache'}{$array->name()}{'entries'}->[$i] =~ /^${name}\t/){
+#	  (undef, $pid) = split/\t/o, $self->{'_probe_cache'}{$array->name()}{'entries'}->[$i];
+#	  $self->{'_probe_cache'}{$array->name()}{'current_index'} = $i;
+#	  last;
+#	}
+#  }
+  
+
+  #check current line
+  if($line = $self->{'_probe_cache'}{$array->name()}{'current_line'}){
+	if($line =~ /^${name}\t/){
+	  $pid = (split/\t/o, $line)[1];
+	}
+  }
+
+
+  if(! $pid){
+	while($line = $self->{'_probe_cache'}{$array->name()}{'handle'}->getline()){
+	  
+	  if($line =~ /^${name}\t/){
+		$pid = (split/\t/o, $line)[1];
+		$self->{'_probe_cache'}{$array->name()}{'current_line'} = $line;
+		last;
+	  }
+	}
+  }
+
+  #do not remove this
+  if(! $pid){
+	throw("Did not find probe name ($name) in cache, cache may need rebuilding, results may need sorting, or do you have an anomolaous probe?")
+  }else{
+	chomp $pid;
+  }
+
+  return $pid;
 }
 
-=head2 build_probe_info_cache
+=head2 get_probe_cache_by_Array
 
-  Example    : $self->build_probe_info_cache();
-  Description: Build the probe info cache from the DB
-  Returntype : none
+  Example    : $self->get_probe_cache_by_Array();
+  Description: Gets the probe info cache which is an array tied to a file
+  Returntype : Boolean - True if cache has been generated and set successfully
   Exceptions : none
   Caller     : general
-  Status     : At risk 
+  Status     : At risk
 
 =cut
 
 
-sub build_probe_info_cache{
-  my $self = shift;
+sub get_probe_cache_by_Array{
+  my ($self, $array, $from_db) = @_;
 
-  $self->log('Building probe_info_cache from DB');
+  my $msg = "Getting probe cache for ".$array->name();
+  $msg .= " from DB" if $from_db;
+  $self->log($msg, 1);
 
-  if (defined $self->{'_probe_cache'}) {
-	throw('If you really want to over-write the probe info cache, you must explicitly undef the cache first');
+  if(! ($array && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
+	throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::Array object');
   }
 
-  my %tmp = %{$self->db->get_ProbeAdaptor->fetch_probe_cache_by_Experiment($self->experiment())};
+  my $set = 0;
+  my $cache_file = $self->get_dir('cache').'/'.$array->name().'.probe_cache';
 
-  #map to the cache here 
-  map $self->{'_probe_cache'}{$_} = [ $tmp{$_} ] , keys %tmp;
+  if($from_db){
 
-  return;
+	if(exists $self->{'_probe_cache'}{$array->name()}){
+	  $self->log('Rebuilding probe_cache from DB for '.$array->name(), 1);
+
+
+	  #untie @{$self->{'_probe_cache'}{$array->name()}{'entries'}};
+	  #close($self->{'_probe_cache'}{$array->name()}{'handle'});#do we need to do this?
+	  delete $self->{'_probe_cache'}{$array->name()};#implicitly closes
+	  $self->log('Deleted old cache', 1);
+	}else{
+	  $self->log('Building probe_cache from DB for '.$array->name(), 1);
+	}
+	
+	#Move this to ProbeAdaptor?
+	#This is where we'd set the unique key for a vendor and resolves duplicates based on the key
+	my $cmd = 'SELECT name, probe_id from probe WHERE array_chip_id IN ('.join(',', @{$array->get_array_chip_ids()}).') ORDER by name, probe_id';
+	$cmd = 'mysql '.$self->db->connect_string()." -e \"$cmd\" >".$cache_file;
+	$self->run_system_cmd($cmd);
+	
+  }
+  #elsif(exists $self->{'_probe_cache'}{$array->name()}){
+  #	throw('You are trying to overwrite an array cache, you must supply the from_db arg to overwrite');
+  #}
+ 
+	
+  if(-f $cache_file){ 
+	$self->log('MD5 check here?',1);
+	$self->{'_probe_cache'}{$array->name()}{'current_line'} = undef;
+	$self->{'_probe_cache'}{$array->name()}{'handle'} = open_file($cache_file);
+	#tie @{$self->{'_probe_cache'}{$array->name()}{'entries'}}, 'Tie::File', $cache_file, memory => 500000
+	#  or throw('Failed to tie probe_cache file\n$!');
+
+	#can we do a select count instead? and do this instead of the MD5?
+	#or can we cycle through array counting
+	#$# seems to look at the whole array and inflate the cache
+	#can we resitrict the read cache for this operation? 
+	#$cmd = "wc -l $cache_file";
+	#my $size = `$cmd`;
+
+	#throw("$cmd failed with exit code $?\n$@") if $?;
+	#$size--;
+
+	#This was eating nearly a GB when we id $# on the tied file
+	#$self->{'_probe_cache'}{$array->name()}{'size'} = $size;
+	$set = 1;
+  }
+ 
+  return $set;
 }
 
 
-=head2 get_probe_x_y_by_name
+=head2 get_probe_x_y_by_name_Array
 
   Arg [1]    : mandatory - probe name
+  Arg [2]    : mandatory - array
   Example    : ($x, $y) = @{$self->get_probe_x_y_by_name($pname)};
   Description: Getter for probe x y cache values
   Returntype : LISTREF
@@ -1518,25 +1642,32 @@ sub build_probe_info_cache{
 =cut
 
 
-sub get_probe_x_y_by_name{
-  my ($self, $name) = @_;
+sub get_probe_x_y_by_name_Array{
+  my ($self, $name, $array) = @_;
   
-  my @xy;
+
+  throw('Deprecated, X Y data is now required in the result file for import');
+
+  #my @xy;
 
   #This does not test for x & y as we don't want to slow it down for every single probe call
   #slightly odd behaviour have it still build the x/yless cache from the DB even tho it will return undef
   #This is because we don't want it ti be testable for rebuilding the x y cache
 
-  if (! defined $self->{'_probe_cache'}) {
-	$self->build_probe_info_cache();
-  }
 
-  if (exists  $self->{'_probe_cache'}->{$name} &&
-	  scalar(@{$self->{'_probe_cache'}->{$name}}) == 3) {
-	@xy = ($self->{'_probe_cache'}->{$name}->[1], $self->{'_probe_cache'}->{$name}->[2]);
-  }
+  #This is only a hacky solution to result data with no XY info
+  #All result data must have XY info associated to accomodate on plate duplicates
 
-  return \@xy;
+  #if (! defined $self->{'_probe_cache'}{$array->name()) {
+#	throw('Cannot generate probe_cache with X Y data from DB');
+#  }
+
+#  if (exists  $self->{'_probe_cache'}->{$name} &&
+#	  scalar(@{$self->{'_probe_cache'}->{$name}}) == 3) {
+#	@xy = ($self->{'_probe_cache'}->{$name}->[1], $self->{'_probe_cache'}->{$name}->[2]);
+#  }
+
+#  return \@xy;
 }
 
 
@@ -1555,80 +1686,91 @@ sub get_probe_x_y_by_name{
   Returntype : none
   Exceptions : throws if R
   Caller     : general
-  Status     : Medium
+  Status     : deprecated - now done directly in each method as load is some times as a set(chip for norm) or by chan
 
 =cut
 
 sub import_results{
-  my ($self, $dir, @logic_names) = @_;
+  my ($self, $file, $logic_name) = @_;
+
+  throw('Deprecated, should imprt directly from read_result methods');
 
 
-  foreach my $logic_name (@logic_names) {
-    $self->log("Importing $logic_name data");
+  #test for chip or channel here
+#  my $status = ($logic_name eq "RawValue") ? "IMPORTED" : "IMPORTED_${logic_name}";
+#  $self->log("Importing:\t$file");
+#  $self->db->load_table_data("result",  $file);
+#  $self->log("Finishing importing:\t$file");
+#  $chip_chan->adaptor->set_status($status, $chip_chan);
 
+#  return;
 
-    my $loaded = 0;
-    my $status = ($logic_name eq "RawValue") ? "IMPORTED" : "IMPORTED_${logic_name}";
-  
-    
-    #should we split this into vendor specific load methods?
-    #This loop behaves wierdly due to the naming/array design of each platform
-    #Nimblegen loads all experimental chips from an arraychip(can be All_pair if only one Achip)
-    #Sanger has individual Echip files
-    
-    foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
-      
-      if ( ! $echip->has_status($status)) {	#must have some results
-
-		if ($dir ne "norm") {
-	  
-		  if ($self->vendor() eq "NIMBLEGEN") {
-	      
-			#if(! $loaded){
-
-			#  foreach my $array(@{$self->arrays()}){#load data for all echips
-		
-			#foreach my $design_id(@{$array->get_design_ids()}){
-			#  my $achip = $array->get_ArrayChip_by_design_id($design_id);
-			foreach my $chan (@{$echip->get_Channels()}) {
-			  my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
-			  $self->log("Loading $logic_name data for Channel:\t$chan_name");
-			  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${chan_name}.txt");
-			  $self->log("Finishing loading $logic_name data for Channel:\t${chan_name}");
-			}
-			# }
-			#}
-		  } elsif ($self->vendor() eq "SANGER") { #this is norm data, but we're importing norm, rather than processing.
-			warn ("Need to fix the sanger methods so imports as norm, not raw");
-			#IMPORTED is not correct status for these Echips, well, should have
-			#IMPORTED?  and IMPORTED_NORM_METHOD
-	    
-	    
-			$self->log("Loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
-			$self->db->load_table_data("result",  $self->get_dir('norm')."/result.${logic_name}.".$echip->unique_id().".txt");
-			$self->log("Finishing loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
-		  }
-		} elsif (! $loaded) {	#norm data, imports all echip/set data as one
-		  #should add logic_name here
-	  
-		  $self->log("Loading $logic_name norm data from ".$self->get_dir($dir)."/result.${logic_name}.txt");
-		  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${logic_name}.txt");
-		  $self->log("Finished loading $logic_name norm data");
-		}
-      
-	
-		$echip->adaptor->set_status($status, $echip);
-		$loaded = 1;	
-      }
-    }
-
-    $self->log("Finished loading $logic_name $dir results");
-
-  }
-  
-  
-  $self->log("Finished loading results ");
-  return;
+#  foreach my $logic_name (@logic_names) {
+#    $self->log("Importing $logic_name data");
+#
+#
+#    my $loaded = 0;
+#    my $status = ($logic_name eq "RawValue") ? "IMPORTED" : "IMPORTED_${logic_name}";
+#  
+#    
+#    #should we split this into vendor specific load methods?
+#    #This loop behaves wierdly due to the naming/array design of each platform
+#    #Nimblegen loads all experimental chips from an arraychip(can be All_pair if only one Achip)
+#    #Sanger has individual Echip files
+#    
+#    foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
+#      
+#      if ( ! $echip->has_status($status)) {	#must have some results
+#
+#		if ($dir ne "norm") {
+#	  
+#		  if ($self->vendor() eq "NIMBLEGEN") {
+#	      
+#			#if(! $loaded){
+#
+#			#  foreach my $array(@{$self->arrays()}){#load data for all echips
+#		
+#			#foreach my $design_id(@{$array->get_design_ids()}){
+#			#  my $achip = $array->get_ArrayChip_by_design_id($design_id);
+#			foreach my $chan (@{$echip->get_Channels()}) {
+#			  my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
+#			  $self->log("Loading $logic_name data for Channel:\t$chan_name");
+#			  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${chan_name}.txt");
+#			  $self->log("Finishing loading $logic_name data for Channel:\t${chan_name}");
+#			}
+#			# }
+#			#}
+#		  } elsif ($self->vendor() eq "SANGER") { #this is norm data, but we're importing norm, rather than processing.
+#			warn ("Need to fix the sanger methods so imports as norm, not raw");
+#			#IMPORTED is not correct status for these Echips, well, should have
+#			#IMPORTED?  and IMPORTED_NORM_METHOD
+#	    
+#	    
+#			$self->log("Loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
+#			$self->db->load_table_data("result",  $self->get_dir('norm')."/result.${logic_name}.".$echip->unique_id().".txt");
+#			$self->log("Finishing loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
+#		  }
+#		} elsif (! $loaded) {	#norm data, imports all echip/set data as one
+#		  #should add logic_name here
+#	  
+#		  $self->log("Loading $logic_name norm data from ".$self->get_dir($dir)."/result.${logic_name}.txt");
+#		  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${logic_name}.txt");
+#		  $self->log("Finished loading $logic_name norm data");
+#		}
+#      
+#	
+#		$echip->adaptor->set_status($status, $echip);
+#		$loaded = 1;	
+#      }
+#    }
+#
+#    $self->log("Finished loading $logic_name $dir results");
+#
+#  }
+#  
+#  
+#  $self->log("Finished loading results ");
+#  return;
 }
 
 =head2 read_data
@@ -1753,12 +1895,10 @@ sub vsn_norm{
 sub farm{
   my ($self, $farm) = @_;
 
-  $self->{'farm'} ||= undef;
+  $self->{'farm'} ||= undef;#define farm
 
   if ($farm) {
-
     throw("Argument to farm must be a boolean 1 or 0")  if($farm != 1 || $farm != 0);
-
     $self->{'farm'} = $farm;
   }
 
@@ -1802,6 +1942,7 @@ sub R_norm{
     throw("Not yet implemented TukeyBiweight") if $logic_name eq "TukeyBiweight";
     my $norm_anal = $aa->fetch_by_logic_name($logic_name);
     my $rset = $self->get_import_ResultSet('experimental_chip', $norm_anal);
+	my @chips = ();
   
     if (! $rset) {
       $self->log("All ExperimentalChips already have status:\tIMPORTED_${logic_name}");
@@ -1848,7 +1989,16 @@ sub R_norm{
 		  $self->log("ExperimentalChip ".$echip->unique_id()." already has status:\tIMPORTED_".$logic_name);
 		} else {
 	  
+		  #warn "Need to roll back here if recovery, as norm import may fail halfway through";
+		  
+		  push @chips, $echip;
 		  my $cc_id = $rset->get_chip_channel_id($echip->dbID());
+
+		  if ($self->recovery()){
+			$self->log('Rolling back results for ExperimentalChip('.$echip->dbID().") $logic_name");
+			$self->db->rollback_results($cc_id) if $self->recovery();							  
+		  }
+		  
 		  $self->log("Building $logic_name R cmd for ".$echip->unique_id());
 		  @dbids = ();
 	  
@@ -1914,11 +2064,25 @@ sub R_norm{
   
       $query .= "q();";
   
-      open(RFILE, ">$R_file") || die("Cannot open $R_file for writing");
+      open(RFILE, ">$R_file") || throw("Cannot open $R_file for writing");
       print RFILE $query;
       close(RFILE);
  
+
+	  $self->log("Submitting $logic_name job to farm:\t".localtime());
       system($r_cmd) == 0 or throw("R $logic_name normalisation failed with error code $? ($R_file)");
+	  $self->log("Finished $logic_name job:\t".localtime());
+
+	  #Now load file and update status
+	  #Import directly here to avoid having to reparse all results if we crash!!!!
+	  $self->log("Importing:\t$outfile");
+	  $self->db->load_table_data("result",  $outfile);
+	  $self->log("Finishing importing:\t$outfile");
+	  
+
+	  foreach my $echip(@chips){
+		$echip->adaptor->set_status("IMPORTED_${logic_name}", $echip);
+	  }
     }
   }
 
@@ -1960,6 +2124,7 @@ sub get_import_ResultSet{
 	
 		if ($self->recovery()) {
 		  warn ("Should use ResultSet name here, currently retrieving using the analysis and experiment id"); #experiment name?
+		 
 		  #fetch by anal and experiment_id
 		  #Need to change this to result_set.name!
 		  warn("add chip set handling here");
@@ -2027,20 +2192,162 @@ sub get_import_ResultSet{
 }
 
 
-sub backup_file{
-  my ($self, $file_path) = @_;
 
-  throw("Must define a file path to backup") if(! $file_path);
+=head2 resolve_probe_data
 
-  if (-f $file_path) {
-    $self->log("Backing up:\t$file_path");
-    system ("mv ${file_path} ${file_path}.".`date '+%T'`);
+  Example    : $self->resolve_probe_data();
+  Description: Resolves DB probe duplicates and builds local probe cache
+  Returntype : none
+  Exceptions : ????
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub resolve_probe_data{
+  my $self = shift;
+
+  $self->log("Resolving probe data", 1);
+
+  warn "This needs to accomodate probesets too!";
+
+  foreach my $array(@{$self->arrays()}){
+	my $resolve = 0;
+	
+	if($self->get_probe_cache_by_Array($array)){#cache already generated
+
+	  #check if we have any new unresolved array chips to add to the cache
+	  foreach my $achip(@{$array->get_ArrayChips()}){
+		
+		if($achip->has_status('RESOLVED')){
+		  $self->log("ArrayChip has RESOLVED status:\t".$achip->design_id(), 1);
+		  next;
+		}else{
+		  $self->log("Found un-RESOLVED ArrayChip:\t".$achip->design_id());
+		  $resolve = 1;
+		  last;
+		}
+	  }
+	}else{#no cache file
+	  $resolve = 1;
+	  $self->log('No probe cache found for array '.$array->name());
+	}
+
+	if($resolve){
+	  $self->log('Resolving array duplicates('.$array->name().') and rebuilding probe cache.', 1);
+	  $self->get_probe_cache_by_Array($array, 1);#get from DB
+
+	  my ($line, $name, $pid, @pids);
+	  #my $index = 0;
+	  my $tmp_name = '';
+	  my $tmp_id = '';
+
+	  #miss the header
+
+	  while ($line = $self->{'_probe_cache'}{$array->name}{'handle'}->getline()){
+		($name, $pid) = split/\t/o, $line;
+
+		if($name eq $tmp_name){
+
+		  if($pid != $tmp_id){
+			push @pids, $pid;
+			#should reset to pid here if we have x y data else undef
+			#ignore this and force result to have x y
+		  }
+
+		  #can't do this naymore unless we figure out how to move the line pointer
+		  #would still need to sed the file anyway, better to regen from DB?
+		  #undef $self->{'_probe_cache'}{$array->name}{'entries'}->[$i];#delete true or to be resolved duplicate
+		}
+		elsif($name ne $tmp_name){#new probe
+		  $self->tidy_duplicates(\@pids) if(scalar(@pids) > 1);
+		  $tmp_name = $name;
+		  $tmp_id = $pid;
+		  @pids = ($pid);
+		  #$index = $i + 1;
+		}
+	  }
+
+	  $self->tidy_duplicates(\@pids) if(scalar(@pids) > 1);
+
+	  #remove empty lines from cache
+	  #only sensible way to do this is to sed the file
+	  #greping !/^\n/ doubles the memory
+	  #splicing may work but would have to manage indexes inside loop
+	  #and will be very inefficient
+	  #do sed or recreate from DB?
+	  #my $cache_file = $self->get_dir('cache').'/'.$array->name().'.probe_cache';
+	  #my $cmd = "sed '/^\$/d' $cache_file > ${cache_file}.tmp";
+	  #$self->run_system_cmd($cmd);
+	  #$cmd = "mv ${cache_file}.tmp $cache_file";
+	  #$self->run_system_cmd($cmd);
+	  
+	  #$self->log("Deleting gappy cache here", 1);
+	  #untie @{$self->{'_probe_cache'}{$array->name()}{'entries'}};
+	  #delete $self->{'_probe_cache'}{$array->name()};#needs to be delete to regenerate correctly
+	  $self->get_probe_cache_by_Array($array, 1);	#refresh cache from DB
+
+
+	  warn "Only generate MD5 here, as this is guranteed to be correct";
+	  
+	  foreach my $achip(@{$array->get_ArrayChips()}){
+		
+		if(! $achip->has_status('RESOLVED')){
+		  $self->log("Updating ArrayChip to RESOLVED status:\t".$achip->design_id());
+		  $achip->adaptor->set_status('RESOLVED', $achip);
+		}
+	  }
+	  
+	  $self->log('Finished building probe cache for '.$array->name(), 1);
+	}
   }
 
-  return;
+  $self->log('Finished resolving probe data', 1);
 
+  return;
 }
 
 
+sub tidy_duplicates{
+  my ($self, $pids) = @_;
+
+  my $pfa = $self->db->get_ProbeFeatureAdaptor();
+  my ($feature, %features);
+			
+  foreach my $dup_id(@$pids){
+			  
+	foreach $feature(@{$pfa->fetch_all_by_Probe_id($dup_id)}){
+	  #can we safely assume end will be same too?
+	  push @{$features{$feature->seq_region_name().':'.$feature->start()}}, $feature;
+	}
+  }
+			
+  my (@reassign_ids, @delete_ids);
+			
+  foreach my $seq_start_key(keys %features){
+	my $reassign_features = 1;
+	
+	foreach $feature(@{$features{$seq_start_key}}){
+	  
+	  if($feature->probe_id() == $pids->[0]){
+		$reassign_features = 0;
+	  }else{
+		push @delete_ids, $feature->dbID();
+	  }
+	}
+	
+	#This assumes that we actually have at least one element to every seq_start_key array
+	if($reassign_features){
+	  my $new_fid = pop @delete_ids;
+	  push @reassign_ids, $new_fid;
+	}
+  }
+			
+  #resolve features first so we don't get any orphaned features if we crash.
+  $pfa->reassign_features_to_probe(\@reassign_ids, $pids->[0]) if @reassign_ids;
+  $pfa->delete_features(\@delete_ids) if @delete_ids;
+
+  return;
+}
 
 1;

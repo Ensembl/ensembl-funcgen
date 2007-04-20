@@ -76,7 +76,7 @@ sub load_table_data{
 
   chmod 0755, $file;
 
-  warn("Importing $table data from $file");
+  #  warn("Importing $table data from $file");
   #if this gives an Errcode: 2, then your mysql instance cannot see the file.
   #This could be due to a soft link on a visible directory to an unmounted filesystem
   #change this to use the mysqlimport?
@@ -94,8 +94,7 @@ sub load_table_data{
   #$self->dbc->do($sql);
   #remove tmp file via ssh if load successful
 
-  my $cmd = "mysqlimport -h".$self->dbc->host()." -u".$self->dbc->username()." -p".$self->dbc->password()." -P".$self->dbc->port().
-    " -L ".$self->dbc->dbname()." ".$file;
+  my $cmd = 'mysqlimport -L '.$self->connect_string().' '.$file;
 
   system("$cmd");
 
@@ -112,6 +111,7 @@ sub rollback_results{
   my ($self, @cc_ids) = @_;
 
 
+
   throw("Need to pass some chip_channel_ids to roll_back") if (scalar(@cc_ids) == 0);
   
   my $sql = 'DELETE from result where chip_channel_id in ('.join(',', @cc_ids).');';
@@ -124,7 +124,7 @@ sub rollback_results{
 
 
 #  warn "sql is $sql";
-  throw("Results rollback failed for cc_ids:\t@cc_ids\nError:\t$?") if ($?);
+  throw("Results rollback failed for cc_ids:\t@cc_ids\nError:\t$?\n$@") if ($?);
 
   return;
 }
@@ -366,11 +366,11 @@ sub get_SliceAdaptor{
   if($cs_id){
     my $csa = $self->get_FGCoordSystemAdaptor();
     my $fg_cs = $csa->fetch_by_dbID($cs_id);
-    my $schema_build = $fg_cs->schema_build();
+    #my $schema_build = $fg_cs->schema_build();
     #Get species here too
     
-    
-    if($schema_build ne $self->_get_schema_build($self->dnadb())){
+	if(! $fg_cs->contains_schema_build($self->_get_schema_build($self->dnadb()))){
+    #if($schema_build ne $self->_get_schema_build($self->dnadb())){
 	  my $lspecies = $reg->get_alias($self->species());
       #warn "Generating dnadb schema_build is $schema_build and dnadb is ".$self->_get_schema_build($self->dnadb())."\n";
 
@@ -383,7 +383,7 @@ sub get_SliceAdaptor{
 		 -host => "ensembldb.ensembl.org",
 		 -user => "anonymous",
 		 -species => $lspecies,
-		 -dbname => $lspecies.'_core_'.$schema_build,
+		 -dbname => $lspecies.'_core_'.$fg_cs->get_latest_schema_build(),
 		 -group => 'core',
 		);
   
@@ -594,6 +594,25 @@ sub set_status{
 	return;
 }
 
-	       
+
+
+=head2 connect_string
+
+  Example    : my $import_cmd = 'mysqlimport '.$db->connect_string()." $table_file";
+  Description: Retrieves the mysql cmdline connection string
+  Returntype : String
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub connect_string{
+  my $self = shift;
+
+  return '-h'.$self->dbc->host().' -u'.$self->dbc->username().' -p'.$self->dbc->password()
+	.' -P'.$self->dbc->port().' '.$self->dbc->dbname();
+}
+
 1;
 
