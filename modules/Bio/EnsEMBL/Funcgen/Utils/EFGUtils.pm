@@ -159,7 +159,7 @@ sub median{
   my $scores = shift;
 
 
-  my @tmp = @$scores;
+  return undef if (! @$scores);
 
   my ($median);
   my $count = scalar(@$scores);
