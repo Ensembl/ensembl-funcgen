@@ -53,6 +53,7 @@ package Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(median);
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Feature);
@@ -519,7 +520,7 @@ sub get_result_by_ResultSet{
 
     my $results = $rset->adaptor->fetch_results_by_probe_id_ResultSet($self->probe_id(), $rset);
    
-    return $rset->adaptor->_get_best_result($results);
+    return median($results);
 }
 
 
