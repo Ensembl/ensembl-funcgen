@@ -73,6 +73,40 @@ sub fetch_all_by_array_id {
 }
 
 
+=head2 fetch_all_by_ExperimentalChips
+
+  Arg [1]    : arrayref of - Bio::EnsEMBL::Funcgen::ExperimentalChips
+  Example    : my @achips = @{$ec_a->fetch_all_by_ExperimentalChips($echips);
+  Description: Gets a non-redundant list of the corresponding ArrayChips
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ArrayChips
+  Exceptions : Throws if no ExperimentalChips passed or if ExperimentalChips are not stored or valid
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+sub fetch_all_by_ExperimentalChips {
+  my ($self, $echips) = @_;
+
+  my %ac_ids;
+
+  foreach my $echip(@$echips){
+
+	if(! ($echip->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') && $echip->dbID())){
+	  throw('Must provide an arrayref of valid stored Bio::EnsEMBL::Funcgen::ExperimentalChips');
+	}
+	
+	$ac_ids{$echip->array_chip_id} = 1;
+	
+  }
+	
+  if(! keys(%ac_ids)){
+	throw('Must provide an arrayref of valid stored Bio::EnsEMBL::Funcgen::ExperimentalChips');
+  }
+  
+  return $self->generic_fetch('ac.array_chip_id IN ('.join(', ', keys(%ac_ids)).')');
+}
+
 
 =head2 fetch_by_array_design_ids
 

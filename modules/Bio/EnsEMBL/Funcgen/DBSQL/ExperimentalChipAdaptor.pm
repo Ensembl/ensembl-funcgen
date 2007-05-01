@@ -73,8 +73,7 @@ sub fetch_all_by_experiment_dbID {
 	my $sth = $self->prepare("
 		SELECT ec.experimental_chip_id
 		FROM experimental_chip ec, experiment e
-		WHERE ec.experiment_id = e.experiment_id
-        AND e.experiment_id = $e_dbid
+		WHERE ec.experiment_id = $e_dbid
 	");
 
 
@@ -93,121 +92,27 @@ sub fetch_all_by_experiment_dbID {
 	return \@results;
 }
 
-=head2 fetch_contigsets_by_experiment_dbID
+=head2 fetch_all_by_Experiment
 
-  Arg [1]    : int - dbID of Experiment
-  Example    : my @track_sets = @{$ec_a->fetch_contigsets_experiment_dbID($ac_dbid);
-  Description: returns a list of track sets which are each an arrayref containing 
-               the track name as the first element, with the rest of the array being
-	       the contiguous chip making up the trackset i.e. chips to be displayed on
-	       the same track
-  Returntype : Listref of mixed types
-  Exceptions : None
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
+  Example    : my @ecs = @{$ec_a->fetch_all_by_Experiment($exp)};
+  Description: Does what it says on the tin
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ExperimentalChips
+  Exceptions : throws if valid stored Experiment not passed
   Caller     : General
-  Status     : At Risk - hardcoded for v41 release
+  Status     : at risk
 
 =cut
 
-#contiguous/subsets/tracksets?  i.e. want to display on same track
-sub fetch_contigsets_by_experiment_dbID {
-    my $self = shift;
-    my $e_dbid = shift;
-    
-    throw("deprecated, use ResultSet");
 
-    my (@tracksets, @hack1);
-    #my @hack1 = ("H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)");
-    #my @hack2 = ("H3kgac-2");
-    #46092 + 46078; 46082 + 46075
-    my $HeLa = "Human Epithelial Carcinoma Cells (HeLa)";
-    my $GM06990 = "Human B-Lymphocyte Cells (GM06990)";
+sub fetch_all_by_Experiment(){
+  my ($self, $exp) = @_;
 
-    #what are we going to return? arrayref to list of arrays of echips?
-    #where do we get set name from?
-    #first element should be set name
-    #hashref to key = set name values = array of echips
+  if(! ($exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
+	throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::Experiment');
+  }
 
-    #differentiating purely on chip uid at present
-    
-    #This is currently a hack!!
-    #Need ti implement contig_set_id in experimental_chip
-
-    
-    #HACKY HACKY!! NEED TO IMPLEMENT CONTIG SET IN DB AND API
-
-    foreach my $echip (@{$self->fetch_all_by_experiment_dbID($e_dbid)}){
-         
-      if($self->db->species() =~ /homo/i){
-
-	
-	#Hacky set control needs handling in EC adaptor using the status tables
-	#Also need to build/return name(Tissue/feature type name/desc) & FeatureType class > how to render
-	
-
-	if($echip->unique_id() eq "46092" || $echip->unique_id() eq "46078"){
-	  push @hack1, "H3K9ac - Human Bone Osteosarcoma Epithelial Cells (U2OS)" if (scalar(@hack1) == 0);
-	  push @hack1, $echip;
-	}
-	elsif($e_dbid == 7){
-	  push @hack1, "H3K4me1 - $GM06990" if (scalar(@hack1) == 0);
-	  push @hack1, $echip;
-	}
-	elsif($e_dbid == 6){
-	  push @hack1, "H3K4me1 - $HeLa" if (scalar(@hack1) == 0); 
-	  push @hack1, $echip;
-	}
-	elsif($e_dbid == 8){
-	  push @hack1, "H3K4me2 - $GM06990" if  (scalar(@hack1) == 0); 
-	  push @hack1, $echip;
-	}
-	elsif($e_dbid == 5){
-	   push @hack1, "H3K4me2 - $HeLa" if  (scalar(@hack1) == 0); 
-	   push @hack1, $echip;
-	}
-	elsif($e_dbid == 4){
-	  push @hack1, "H3K4me3 - $HeLa" if  (scalar(@hack1) == 0); 
-	  push @hack1, $echip;
-	}
-	elsif($e_dbid == 9){
-	  push @hack1, "H3ac - $GM06990" if  (scalar(@hack1) == 0); 
-	  push @hack1, $echip;
-	}
-	elsif($e_dbid == 3){
-	  push @hack1, "H3ac - $HeLa"  if  (scalar(@hack1) == 0); 
-	  push @hack1, $echip;
-       	}
-	elsif($e_dbid == 10){
-	  push @hack1, "H4ac - $GM06990"  if  (scalar(@hack1) == 0); 
-	  push @hack1, $echip;
-	}
-	elsif($e_dbid == 2){
-	  push @hack1, "H4ac - $HeLa" if  (scalar(@hack1) == 0); 
-	  push @hack1, $echip;
-	}
-	elsif($e_dbid == 11){
-	  push @hack1, "H3K4me3 - $GM06990" if  (scalar(@hack1) == 0); 
-	  push @hack1, $echip;
-	}
-
-      }elsif($self->db->species() =~ /mus/i){
-	
-	next if ($echip->unique_id() != "48317");
-	#&& $echip->unique_id() != "48316" &&
-	#  $echip->unique_id() != "48320" && $echip->unique_id() != "65797");				    
-	my @tmp = ("H3K4me3 - Mouse embyronic fibroblast (MEFf)", $echip);
-	push @tracksets, \@tmp;
-      }
-      else{
-	warn "No ExperimentalChip set hacks for species other than human or mouse";
-      }
-    }
-
-    if($self->db->species() =~ /homo/i){
-      @tracksets = (\@hack1);#, \@hack2);
-    }
-
-
-    return \@tracksets;
+  $self->generic_fetch("ec.experiment_id=".$exp->dbID());
 }
 
 =head2 fetch_by_unique_and_experiment_id
@@ -335,7 +240,7 @@ sub _columns {
 	return qw( ec.experimental_chip_id  ec.unique_id 
 		   ec.experiment_id         ec.array_chip_id 
 		   ec.feature_type_id       ec.cell_type_id
-		   ec.replicate );
+		   ec.biological_replicate  ec.technical_replicate);
 }
 
 =head2 _objs_from_sth
@@ -355,13 +260,13 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
 	
-  my (@result, $ec_id, $c_uid, $exp_id, $ac_id, $ftype_id, $ctype_id, $rep, $ftype, $ctype);
+  my (@result, $ec_id, $c_uid, $exp_id, $ac_id, $ftype_id, $ctype_id, $brep, $trep, $ftype, $ctype);
 
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
   
   
-  $sth->bind_columns(\$ec_id, \$c_uid, \$exp_id, \$ac_id, \$ftype_id, \$ctype_id, \$rep);
+  $sth->bind_columns(\$ec_id, \$c_uid, \$exp_id, \$ac_id, \$ftype_id, \$ctype_id, \$brep, \$trep);
   
   while ( $sth->fetch() ) {
 
@@ -369,15 +274,16 @@ sub _objs_from_sth {
     $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
     
     my $array = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
-							     -dbID           => $ec_id,
-							     -unique_id      => $c_uid,
-							     -experiment_id  => $exp_id,
-							     -array_chip_id  => $ac_id,
-							     -feature_type   => $ftype,
-							     -cell_type      => $ctype,
-							     -replicate      => $rep,
-							     -adaptor        => $self,
-							    );
+															 -dbID           => $ec_id,
+															 -unique_id      => $c_uid,
+															 -experiment_id  => $exp_id,
+															 -array_chip_id  => $ac_id,
+															 -feature_type   => $ftype,
+															 -cell_type      => $ctype,
+															 -biological_replicate => $brep,
+															 -technical_replicate  => $trep,
+															 -adaptor        => $self,
+															);
 	  
     push @result, $array;
     
@@ -409,11 +315,10 @@ sub store {
   
   my $sth = $self->prepare("
 			INSERT INTO experimental_chip
-			(unique_id, experiment_id, array_chip_id, feature_type_id, cell_type_id, replicate)
-			VALUES (?, ?, ?, ?, ?, ?)");
-  
+			(unique_id, experiment_id, array_chip_id, feature_type_id, 
+             cell_type_id, biological_replicate, technical_replicate)
+			VALUES (?, ?, ?, ?, ?, ?, ?)");
     
-  
   foreach my $ec (@args) {
     throw('Can only store ExperimentalChip objects') if ( ! $ec->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') );
     
@@ -431,13 +336,14 @@ sub store {
       my $ftype_id = (defined $ec->feature_type()) ? $ec->feature_type->dbID() : undef;
       my $ctype_id = (defined $ec->cell_type()) ? $ec->cell_type->dbID() : undef;
       
-      $sth->bind_param(1, $ec->unique_id(),      SQL_VARCHAR);
-      $sth->bind_param(2, $ec->experiment_id(),  SQL_VARCHAR);
-      $sth->bind_param(3, $ec->array_chip_id(),  SQL_VARCHAR);
-      $sth->bind_param(4, $ftype_id,             SQL_INTEGER);
-      $sth->bind_param(4, $ctype_id,             SQL_INTEGER);
-      $sth->bind_param(4, $ec->replicate(),      SQL_VARCHAR);
-      
+      $sth->bind_param(1, $ec->unique_id(),            SQL_VARCHAR);
+      $sth->bind_param(2, $ec->experiment_id(),        SQL_VARCHAR);
+      $sth->bind_param(3, $ec->array_chip_id(),        SQL_VARCHAR);
+      $sth->bind_param(4, $ftype_id,                   SQL_INTEGER);
+      $sth->bind_param(5, $ctype_id,                   SQL_INTEGER);
+      $sth->bind_param(6, $ec->biological_replicate(), SQL_VARCHAR);
+	  $sth->bind_param(7, $ec->technical_replicate(),  SQL_VARCHAR);
+
       $sth->execute();
       my $dbID = $sth->{'mysql_insertid'};
       $ec->dbID($dbID);
@@ -461,6 +367,27 @@ sub store {
   return \@args;
 }
 
+
+
+
+sub update_replicate_info{
+  my ($self, $echip) = @_;
+
+  if(! ($echip && $echip->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') && $echip->dbID())){
+	throw('Must provide a valid store Bio::EnsEMBL::Funcgen::ExperimentalChip');
+  }
+
+  my $sql = 'UPDATE experimental_chip set biological_replicate="'.$echip->biological_replicate().
+	'" where experimental_chip_id='.$echip->dbID();
+
+  $self->db->dbc->do($sql);
+
+  $sql = 'UPDATE experimental_chip set technical_replicate="'.$echip->technical_replicate().
+	'" where experimental_chip_id='.$echip->dbID();
+  $self->db->dbc->do($sql);
+
+  return;
+}
 
 =head2 list_dbIDs
 

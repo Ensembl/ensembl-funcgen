@@ -156,7 +156,7 @@ sub _columns {
   
   return qw(
 	    ds.data_set_id     ds.result_set_id
-	    ds.feature_set_id
+	    ds.feature_set_id  ds.name
 	   );	
 }
 
@@ -222,11 +222,11 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@data_sets, $data_set, $dbID, $rset_id, $fset_id, $fset);
+  my (@data_sets, $data_set, $dbID, $rset_id, $fset_id, $fset, $name);
 
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
   my $rset_adaptor = $self->db->get_ResultSetAdaptor();
-  $sth->bind_columns(\$dbID, \$rset_id, \$fset_id);
+  $sth->bind_columns(\$dbID, \$rset_id, \$fset_id, \$name);
 
   
   while ( $sth->fetch() ) {
@@ -251,10 +251,11 @@ sub _objs_from_sth {
       $fset = (defined $fset_id && $fset_id != 0) ? $fset_adaptor->fetch_by_dbID($fset_id) : undef;
 
       $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
-						      -DBID        => $dbID,
-						      -FEATURE_SET => $fset,
-						      -RESULT_SET  => $rset_adaptor->fetch_by_dbID($rset_id),
-						      -ADAPTOR     => $self,
+													  -DBID        => $dbID,
+													  -NAME        => $name,
+													  -FEATURE_SET => $fset,
+													  -RESULT_SET  => $rset_adaptor->fetch_by_dbID($rset_id),
+													  -ADAPTOR     => $self,
 						     );
     }
   }
@@ -317,10 +318,10 @@ sub _objs_from_sth {
 sub store{
   my ($self, @dsets) = @_;
 
-  my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, result_set_id) 
-                            VALUES (?, ?)");
-  my $sth2 = $self->prepare("INSERT INTO data_set (dbid, feature_set_id, result_set_id) 
+  my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, result_set_id, name) 
                             VALUES (?, ?, ?)");
+  my $sth2 = $self->prepare("INSERT INTO data_set (dbid, feature_set_id, result_set_id, name) 
+                            VALUES (?, ?, ?, ?)");
 
   my $db = $self->db();
 
@@ -349,7 +350,7 @@ sub store{
 	
 	$sth->bind_param(1, $fset_id,         SQL_INTEGER);
 	$sth->bind_param(2, $rset->dbID(),    SQL_INTEGER);
-	
+	$sth->bind_param(3, $dset->name(),    SQL_VARCHAR);
 	$sth->execute();
 	
 	$dset->dbID( $sth->{'mysql_insertid'} );
@@ -357,8 +358,9 @@ sub store{
 	
       }else{
 	$sth2->bind_param(1, $dset->dbID(),   SQL_INTEGER);
-	$sth2->bind_param(3, $fset_id,        SQL_INTEGER);
-	$sth2->bind_param(4, $rset->dbID(),   SQL_INTEGER);  
+	$sth2->bind_param(2, $fset_id,        SQL_INTEGER);
+	$sth2->bind_param(3, $rset->dbID(),   SQL_INTEGER);  
+	$sth2->bind_param(4, $dset->name(),   SQL_VARCHAR);  
       }
     }
   }

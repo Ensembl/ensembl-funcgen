@@ -227,7 +227,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( e.experiment_id e.name e.egroup_id e.date e.primary_design_type e.description);
+	return qw( e.experiment_id e.name e.egroup_id e.date e.primary_design_type e.description e.mage_xml_id);
 }
 
 =head2 _objs_from_sth
@@ -247,20 +247,21 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $exp_id, $name, $group_id, $p_design_type, $date, $description);
+	my (@result, $exp_id, $name, $group_id, $p_design_type, $date, $description, $xml_id);
 	
-	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, \$description);
+	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, \$description, \$xml_id);
 	
 	while ( $sth->fetch() ) {
 	  my $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
-							   -DBID                => $exp_id,
-							   -ADAPTOR             => $self,
-							   -NAME                => $name,
-							   -GROUP_ID            => $group_id,
-							   -DATE                => $date,
-							   -PRIMARY_DESIGN_TYPE => $p_design_type,
-							   -DESCRIPTION         => $description,
-							  );
+													   -DBID                => $exp_id,
+													   -ADAPTOR             => $self,
+													   -NAME                => $name,
+													   -GROUP_ID            => $group_id,
+													   -DATE                => $date,
+													   -PRIMARY_DESIGN_TYPE => $p_design_type,
+													   -DESCRIPTION         => $description,
+													   -MAGE_XML_ID         => $xml_id,
+													  );
 	  
 	  push @result, $exp;
 	  
@@ -291,39 +292,38 @@ sub store {
 	
 	my ($s_exp);
    	
-	my $sth = $self->prepare("INSERT INTO experiment
-                                 (name, egroup_id, date, primary_design_type, description)
-                                 VALUES (?, ?, ?, ?, ?)");
-		
+	my $sth = $self->prepare('INSERT INTO experiment
+                                 (name, egroup_id, date, primary_design_type, description, mage_xml_id)
+                                 VALUES (?, ?, ?, ?, ?, ?)');
+
     foreach my $exp (@args) {
-		throw('Can only store Experiment objects') 	if ( ! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'));
+	  throw('Can only store Experiment objects') 	if ( ! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'));
+	  
+	  if (!( $exp->dbID() && $exp->adaptor() == $self )){
 		
-		if (!( $exp->dbID() && $exp->adaptor() == $self )){
-
-			my ($g_dbid) = $self->db->fetch_group_details($exp->group());
-			throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
-			
-			$s_exp = $self->fetch_by_name($exp->name());#validate on group too!
-			throw("Experimental already exists in the database with dbID:".$s_exp->dbID().
-				  "\nTo reuse/update this Experimental you must retrieve it using the ExperimentalAdaptor".
-				  "\nMaybe you want to use the -recover option?") if $s_exp;
 		
-			#if(! $s_exp){
+		my ($g_dbid) = $self->db->fetch_group_details($exp->group());
+		throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
+		
+		$s_exp = $self->fetch_by_name($exp->name());#validate on group too!
+		throw("Experimental already exists in the database with dbID:".$s_exp->dbID().
+			  "\nTo reuse/update this Experimental you must retrieve it using the ExperimentalAdaptor".
+			  "\nMaybe you want to use the -recover option?") if $s_exp;
+		
+		
+		$exp = $self->update_mage_xml_by_Experiment($exp) if(defined $exp->mage_xml());
 			
-
-			#warn "Storing exp with name ".$exp->name()."\n";
-			
-			
-			$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
-			$sth->bind_param(2, $g_dbid,                     SQL_INTEGER);
-			$sth->bind_param(3, $exp->date(),                SQL_VARCHAR);#date?
-			$sth->bind_param(4, $exp->primary_design_type(), SQL_VARCHAR);
-			$sth->bind_param(5, $exp->description(),         SQL_VARCHAR);
-			
-			$sth->execute();
-			$exp->dbID($sth->{'mysql_insertid'});
-			$exp->adaptor($self);
-			
+		$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
+		$sth->bind_param(2, $g_dbid,                     SQL_INTEGER);
+		$sth->bind_param(3, $exp->date(),                SQL_VARCHAR);#date?
+		$sth->bind_param(4, $exp->primary_design_type(), SQL_VARCHAR);
+		$sth->bind_param(5, $exp->description(),         SQL_VARCHAR);
+		$sth->bind_param(6, $exp->mage_xml_id(),         SQL_INTEGER);
+		
+		$sth->execute();
+		$exp->dbID($sth->{'mysql_insertid'});
+		$exp->adaptor($self);
+		
 			
 			#do we need to set egroup, target, design_type, experimentall_variable here?
 			#}
@@ -340,6 +340,101 @@ sub store {
 		
     return \@args;
 }
+
+=head2 fetch_mage_xml_by_Experiment
+
+  Args       : Bio::EnsEMBL::Funcgen::Experiment
+  Example    : my $xml = $exp_adaptor->fetch_mage_xml_by_Experiment($exp);
+  Description: Gets the MAGE XML for this experiment
+  Returntype : string
+  Exceptions : throws if arg is not a valid stored Experiment
+  Caller     : general
+  Status     : at Risk
+
+=cut
+
+sub fetch_mage_xml_by_Experiment{
+  my ($self, $exp) = @_;
+
+  if(!($exp and $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
+	throw('You must provide a valid stored Bio::EnsEMBL::Funcgen::Experiment');
+  }
+
+  return if ! $exp->mage_xml_id();
+
+  my $sql = 'SELECT xml FROM mage_xml WHERE mage_xml_id='.$exp->mage_xml_id;
+  
+  return $self->db->dbc->db_handle->selectall_arrayref($sql)->[0];
+}
+
+=head2 fetch_mage_xml_by_experiment_name
+
+  Args       : 
+  Example    : my $xml = $exp_adaptor->fetch_mage_xml_by_Experiment($exp);
+  Description: Gets the MAGE XML for this experiment
+  Returntype : string
+  Exceptions : throws if no arg passed
+  Caller     : general
+  Status     : at Risk
+
+=cut
+
+sub fetch_mage_xml_by_experiment_name{
+  my ($self, $exp_name) = @_;
+
+  if(! defined $exp_name){
+	throw('You must provide an Experiment name argument');
+  }
+
+  my $sql = 'SELECT mx.xml FROM mage_xml mx, experiment e WHERE e.name="'.$exp_name.'" and e.mage_xml_id=mx.mage_xml_id';
+  
+  return $self->db->dbc->db_handle->selectall_arrayref($sql)->[0];
+}
+
+
+
+=head2 update_mage_xml_by_Experiment
+
+  Args       : Bio::EnsEMBL::Funcgen::Experiment
+  Example    : my $xml = $exp_adaptor->fetch_mage_xml_by_Experiment($exp);
+  Description: Gets the MAGE XML for this experiment
+  Returntype : string
+  Exceptions : throws if arg is not a valid stored Experiment
+  Caller     : general
+  Status     : at Risk
+
+=cut
+
+sub update_mage_xml_by_Experiment{
+  my ($self, $exp) = @_;
+
+  warn "In update with $exp";
+
+  if(!($exp and $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'))){
+	throw('You must provide a valid Bio::EnsEMBL::Funcgen::Experiment');
+  }
+
+  if($exp->mage_xml_id()){
+	#potentially calling dbID on a un-stored obj, implicit that it
+	warn('Overwriting mage_xml entry for Experiment:    '.$exp->name);
+	my $sql = "UPDATE mage_xml set xml='".$exp->mage_xml()."'";
+	$self->db->dbc->do($sql);
+
+  }else{
+	my $sql = "INSERT INTO mage_xml (xml) VALUES('".$exp->mage_xml()."'";
+	#need to get a statement handle to retrieve insert id
+	my $sth = $self->prepare($sql);
+	$sth->execute();
+	$exp->mage_xml_id($sth->{'mysql_insertid'});
+  }
+
+
+  warn "returning $exp";
+
+  return $exp;
+}
+
+
 
 =head2 list_dbIDs
 

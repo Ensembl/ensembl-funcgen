@@ -106,13 +106,13 @@ sub new{
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, $mage_tab)
+	  $farm, $ssh, $fasta, $recover, $reg_config, $write_xml)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
-				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'MAGE_TAB', 'WRITE_MAGE'], @_);
+				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE_XML'], @_);
   #add mail flag
   #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
   #would have to make sure GroupDefs is inherited first so we can set some mandatory params
@@ -157,7 +157,7 @@ sub new{
   $self->db($db) if $db;		#predefined db
   $self->{'data_version'} = $data_version || throw('Mandatory param -data_version not met');
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
-  $self->output_dir($output_dir) if $output_dir; #defs default override
+  $self->{'output_dir'} = $output_dir if $output_dir; #defs default override
   $self->input_dir($input_dir) if $input_dir; #defs default override
   $self->{'farm'} = $farm || 1;
   $self->{'ssh'} = $ssh || 0;
@@ -165,7 +165,7 @@ sub new{
   $self->{'recover'} = $recover || 0;
   #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
-  $self->{'mage_tab'} = $mage_tab;
+  $self->{'write_xml'} = $write_xml || 0;
 
  
 
@@ -354,54 +354,7 @@ sub init_experiment_import{
     $self->cell_type($ctype);
   }
 
-  #if we write Exp info in init then a reimport will fail unless recover is set?
-
-
-  #have this in a separate method?
-  #we want it to generate if not present or flag specified
-  #then exit 
-  #unless mage_xml specified or present unless generate mage_tab specified in which case start from scratch?
-
-  #Do we really want to read this all the time?  Only if specified?
-  #How can we know, test whether xml is stored in DB, overwrite but warn if already present?
-  #what to do during recovery?
-
-  #what about retrospectively changing replicates in the DB?
-  #what impact would his have on result_sets and or norm results
-  #none if we have the standard chip by chip norm on the 'all chip' import set
-  #only affects exps which have mixed targets or design types
-  #for all others we just need to update the result sets accordingly and reimport the mage-xml
-
-  
-  #~/src/bin/tab2mage.pl -e E-TABM-TEST.txt -k -t ./ -c -d PairData/
-
-
-  if ($self->{'mage_tab'}) {
-
-	#back up xml if present? Or just recreate?
-
-	#do experiment check script first?
-
-	my $cmd = 'tab2mage.pl -e '.$self->{'mage_tab'}.' -t '.$self->get_dir('output').' -c -d '.$self->get_dir('results');
-	$self->run_system_command($cmd);
-
-	#rename file
-	$cmd = 'mv '.$self->get_dir('output').'/\{UNASSIGNED\}.xml '.$self->get_dir('output').'/'.$self->instance().'.xml';
-	$self->run_system_command($cmd);
-	
-
-	my $reader = Bio::MAGE::XML::Reader->new(verbose=>2);
-	$self->{'mage-ml'} = $reader->read($self->get_dir('output').'/'.$self->instance().'.xml');
-
-  }elsif($self->{'mage_xml'}){
-	
-
-  }else{#generate template and quit
-	
-
-  }
-
-
+ 
   #check for cell||feature and warn if no met file supplied?
 
 
@@ -432,6 +385,156 @@ sub init_experiment_import{
   
   my $exp = $exp_adaptor->fetch_by_name($self->name());	#, $self->group());
   #should we not just do store here, as this will return the experiment if it has already been stored?
+
+
+
+
+  
+
+
+  #have this in a separate method?
+  #we want it to generate if not present or flag specified
+  #i.e. only skip generation if flag not defined 
+
+  #separate script?  Hard to decouple meta import from Tab2MAGE generation
+  #can we pass Tab2MAGE mode?
+  #if false we write the template and quit, if true we read xml and populate ExperimentalChips accordingly
+  #this should only write template when xml present if we specify write flag.
+  #this needs to be deciphered in init_import
+
+  
+
+
+  #so we want three modes?
+  #generate Tab2MAGE and exit, default if no file present of flag?
+  #read Tab2MAGE, import xml and update replicates and continue. default if no xml record present or overwrite flag specified
+  #skip all of above as we have already done it or are not bothered
+
+  #change get_import_ResultSet to sets based on replicate info
+  #validate this against xml?
+
+  #then exit 
+  #unless mage_xml specified or present unless generate mage_tab specified in which case start from scratch?
+
+  #Do we really want to read this all the time?  Only if specified?
+  #How can we know, test whether xml is stored in DB, overwrite but warn if already present?
+  #what to do during recovery?
+
+  #what about retrospectively changing replicates in the DB?
+  #what impact would his have on result_sets and or norm results
+  #none if we have the standard chip by chip norm on the 'all chip' import set
+  #only affects exps which have mixed targets or design types
+  #for all others we just need to update the result sets accordingly and reimport the mage-xml
+
+  
+  #~/src/bin/tab2mage.pl -e E-TABM-TEST.txt -k -t ./ -c -d PairData/
+
+
+  #this should only write if not present and xml record not present
+  #then if we define write mage we rewrite template only if not present
+
+  #so first thing is to try and retrieve xml from DB
+  #if true and write_mage is false skip everything
+  #this would only happen on recovery
+  #how are we going to handle changing xml midway through recovery
+
+  #we should probably add an option to load a custom xml file
+
+  #Need to validate result sets
+
+  #can we read XML directly from DB via MAGE, NO :(
+  
+  #how is recovery going to be affected
+
+  my $xml = $exp_adaptor->fetch_mage_xml_by_experiment_name($self->name()) if $self->{'write_xml'};
+  my $read_xml = 0;
+
+  #if(! $self->{'write_mage'}){#else must be a recovery? unless it's specified in error
+	
+	#surely we will only get xml if we are recovering!
+	#this depends on when we write the xml? has to be after exp import?
+	#do we have to import exp to write magetab?
+	#nope, this is too messy to implement a dry run, as we'redepending on DB queries during the array/exp chip import
+
+	#just run with recovery on ?  which kinda makes it a bit useless, not for first import when we write the mage tab
+	#this means we'll have to update the replicate fields
+	
+	#we need some way of turning 'recovery' on if we know we've imported, maybe don't have to do this
+	#if all recovery based methods after this are non critical
+	#The main problem is having to roll back ExpChips which haven't actually been imported
+	#We just need to create a 'LOADING' status
+	#then we can omit some of the recovery methods? and not have to define recovery unless we are truly recovering
+	#what about recovery methods during meta import, define another flag, or just turn recovery on?
+	#turn recovery on before generating(in 2nd real import) exp, if we have xml file?
+	#what if someone defines a custom file and we haven't actually imported yet?
+	#This will enable someone to append/overwrite exp/result data if exp names are duplicated
+
+	#should have full import flag to force people to be aware of possible overwrite issue?
+	#this will just get turned on by default all the time rendering it useless?
+	#This is a hard one to bullet proof.  Just write it and worry about protection later
+
+	#do we have xml_id(would have to update experiment table) or experiment_id(does not follow primary key naming convention).
+
+	#we could have this as a no fail, which would enable a custom xml file
+
+
+#	if( ! $self->run_system_cmd('mysql '.$self->db->connect_string()." -e '$sql' > ".$self->get_def('mage_xml_file'), 1)){
+	  #only write template if write_mage defined
+#	  $got_xml = 1;
+#	}
+#  }
+
+  #DO NOT CHANGE THIS LOGIC!
+  #write mage if we specify or we don't have a the final xml or the template
+  #recovery is turned on to stop exiting when previously stored chips
+  #are found from the 'write_mage' run.
+  #this does mean than if you import without running the write_mage step 
+  #(This is now not possible as we test the DB for xml, not for the presence of a file?)
+  #you could potentially be overwriting someone elses experiment info
+  #To get around the problem of rolling back every chip, we need to add teh LOADING status
+  #which should be removed once imported.
+
+  if($self->{'write_mage'} || !( -f $self->get_def('tab2mage_file') || $xml)){
+	$self->{'write_mage'} = 1;
+	$self->backup_file($self->get_def('tab2mage_file'));
+  }elsif($xml && (! $self->{'update_xml'})){
+	$self->{'recover'} = 1;
+  }elsif( -f $self->get_def('tab2mage_file')){#logic dictates this has to be true
+	#run tab2mage and import xml
+	#update replicate info
+	#do we need to validate xml vs meta info in read methods?
+	#turn recovery on?
+	
+	#back up xml if present? Or just recreate?
+	#can we allow custom xml files here
+	$self->backup_file($self->get_def('mage_xml_file'));
+
+	#do experiment check script first?
+
+	my $cmd = 'tab2mage.pl -e '.$self->get_def('tab2mage_file').' -k -t '.$self->get_dir('output').' -c -d '.$self->get_dir('results');
+
+	$self->log('Reading tab2mage file');
+
+	my $t2m_exit_code = $self->run_system_cmd($cmd, 1);#no exit flag due to non-zero exit codes
+
+	if(! ($t2m_exit_code > -1) && ($t2m_exit_code <255)){
+	  $self->log("tab2mage failed.  Please check and correct:\t".$self->get_def('tab2mage_file')."\n...and try again");
+	}
+
+	#rename file
+	#$cmd = 'mv '.$self->get_dir('output').'/\{UNASSIGNED\}.xml '.$self->get_dir('output').'/'.$self->name().'.xml';
+	#$self->run_system_command($cmd);
+	$self->{'recover'} = 1;
+  }else{
+	throw('Grrr, this should never be true, check the mage logic');
+  }
+
+
+  #now we just need to use read_meta/write_mage in read methods to figure out if we need to validate or just write the template
+  #we should read again if not write mage
+  #should validate mage
+
+
   
   if ($self->recovery() && ($exp)) {
     $self->log("Using previously stored Experiment:\t".$exp->name);
@@ -459,7 +562,75 @@ sub init_experiment_import{
   #remove and add specific report, this is catchig some Root stuff
   #$self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
   
+							
+ #if we write Exp info in init then a reimport will fail unless recover is set?
+
+
+
+
   return;
+}
+
+=heead init_tab2mage_export
+
+  Example    : $self->init_tab2mage_export;
+  Description: Writes the standard experiment section of the tab2mage file
+  Returntype : FileHandle
+  Exceptions : ???
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub init_tab2mage_export{
+  my $self = shift;
+
+  $self->backup_file($self->get_def('tab2mage_file')) if(-f $self->get_def('tab2mage_file'));
+
+  my $t2m_file = open_file($self->get_def('tab2mage_file'), '>');
+
+  #reformat this
+  my $exp_section = "experiment section\ndomain\t".(split/@/, $self->contact())[1]."\naccession\t\n".
+	"quality_control\tbiological_replicate\nexperiment_design_type\tbinding_set_identification\n".
+	  "name\t".$self->name()."\nrelease_date\t\nsubmission_date\t\nsubmitter\t???\n".
+		"submitter_email\t???\ninvestigator\t???\ninvestigator_email\t???\norganization\t???\naddress\t".
+		  "???\npublication_title\t\nauthors\t\njournal\t\nvolume\t\nissue\t\npages\t\nyear\t\npubmed_id\t\n";
+
+  my $protocol_section = "Protocol section\naccession\tname\ttext\tparameters\n";
+
+  foreach my $protocol(sort (keys %{$self->get_def('protocols')})){
+	$protocol_section .= $self->get_def('protocols')->{$protocol}->{'accession'}.
+	  "\t".$self->get_def('protocols')->{$protocol}->{'name'}.
+		"\t".$self->get_def('protocols')->{$protocol}->{'text'}."\t";
+
+	$protocol_section .= (defined $self->get_def('protocols')->{$protocol}->{'parameters'}) ?
+	  $self->get_def('protocols')->{$protocol}->{'parameters'}."\t\n" : "\t\n";
+  }
+
+  #File[raw]	Array[accession]	Array[serial]	Protocol[grow]	Protocol[treatment]	Protocol[extraction]	Protocol[labeling]	Protocol[hybridization]	Protocol[scanning]	BioSource	Sample	Extract	LabeledExtract	Immunoprecipitate	Hybridization	BioSourceMaterial	SampleMaterial	ExtractMaterial	LabeledExtractMaterial	Dye	BioMaterialCharacteristics[Organism]	BioMaterialCharacteristics[BioSourceType]	BioMaterialCharacteristics[StrainOrLine]	BioMaterialCharacteristics[CellType]	BioMaterialCharacteristics[Sex]	FactorValue[StrainOrLine]	FactorValue[Immunoprecipitate]
+
+
+  #Need to do this bit better?
+  #have array of fields.  We can then populate a hash in the read method based on field names, then use the array to print in order
+
+  my $hyb_header = "\nHybridization section\n".join("\t", @{$self->hybridisation_fields()});
+
+  print $t2m_file $exp_section."\n".$protocol_section."\n".$hyb_header."\n";
+
+  return $t2m_file;
+}
+
+
+sub hybridisation_fields{
+  my $self = shift;
+
+  return ['File[raw]', 'Array[accession]', 'Array[serial]', 
+		  (map 'Protocol['.$_.']', (sort (keys %{$self->get_def('protocols')}))),
+		  'BioSource', 'Sample', 'Extract', 'LabeledExtract', 'Immunoprecipitate', 'Hybridization', 
+		  'BioSourceMaterial', 'SampleMaterial', 'ExtractMaterial', 'LabeledExtractMaterial',
+		  'Dye', 'BioMaterialCharacteristics[Organism]', 'BioMaterialCharacteristics[BioSourceType]',	
+		  'BioMaterialCharacteristics[StrainOrLine]', 'BioMaterialCharacteristics[CellType]', 
+		  'BioMaterialCharacteristics[Sex]', 'FactorValue[StrainOrLine]', 'FactorValue[Immunoprecipitate]'];
 }
 
 
@@ -699,6 +870,11 @@ sub add_Array{
 
 sub arrays{
   my $self = shift;
+
+  if(! defined $self->{'arrays'}){
+	$self->{'arrays'} = $self->db->get_ArrayAdaptor->fetch_all_by_Experiment($self->experiment());
+  }
+
   return $self->{'arrays'};
 }
 
@@ -754,7 +930,7 @@ sub input_dir{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : at risk
+  Status     : deprecated
 
 =cut
 
@@ -763,6 +939,7 @@ sub output_dir{
   my ($self) = shift;
   $self->{'output_dir'} = shift if(@_);
 
+  throw("Deprecated, use get_dir('output') instead");
 
   #not implemented, need to convert all get_dir calls to check if method exists or use VendorDefs
   warn "Not implmented output dir..need to cahnge all get_dir calls when we've implemented VendorDefs";
@@ -1306,7 +1483,15 @@ sub register_experiment{
   #as bypassing this register_experiment method and calling directly will cause problems with duplication of data
   #we need to make this more stringent, maybe we can do a caller in each method to make sure it is register experiment calling each method
   
-  $self->read_data("array");
+  if($self->{'write_mage'}){
+	$self->read_data("array");
+	$self->log("Please check and edit autogenerated tab2mage file:\t".$self->get_def('tab2mage_file'));
+	exit;
+  }elsif($self->vendor ne 'SANGER'){#This should be a no_channel flag, set dependent on import mode(gff_chip, gff_chan)
+	#Need to accomodate chip level imports in validate!!
+	$self->validate_mage();
+  }
+
   $self->read_data("probe");
   $self->read_data("results");
 
@@ -1329,7 +1514,366 @@ sub register_experiment{
 }
 
 
+=head2 validate_mage
+  
+  Example    : $imp->validate_mage() if(! $imp->{'write_mage'};
+  Description: Validates auto-generated and manually edited mage against
+               Experiment information, aswell as checking replicate defitions.
+               Updates mage_xml table and replicate information accordingly.
+               Any other differences are logged or an error is thrown if the 
+               difference is deemed critical.
+  Returntype : none
+  Exceptions : throws if ...?
+  Caller     : Bio::EnsEMBL::Funcgen::Importer
+  Status     : At risk
 
+=cut
+
+
+#THis is hardcoded for a channel level import at present
+#Validation may fail on channels for Sanger?
+
+sub validate_mage(){
+  my ($self, $mage_xml, $update) = @_;
+
+  my (%echips, %bio_reps, %tech_reps, @log);
+
+  my $rset = $self->get_import_ResultSet('channel', $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue'));
+
+  if(! -l $self->get_dir('output').'/MAGE-ML.dtd'){
+	system('ln -s '.$ENV{'EFG_DATA'}.'/MAGE-ML.dtd '.$self->get_dir('output').'MAGE-ML.dtd') || 
+	  throw('Failed to link MAGE-ML.dtd');
+  }
+  
+  $self->log('VALIDATING MAGE XML');
+  my $reader = Bio::MAGE::XML::Reader->new();
+  $mage_xml ||= $self->get_def('mage_xml_file');
+  $self->{'mage'} = $reader->read($mage_xml);
+  
+  #this should only ever return 1 for an import
+  foreach my $mage_exp(@{$self->{'mage'}->getExperiment_package->getExperiment_list()}){	
+
+	if($mage_exp->getName() ne $self->name()){
+	  $self->log('MAGE experiment name ('.$mage_exp->getName().') does not match import name ('.$self->name().')');
+	}
+	
+	#add more experiment level validation here?
+
+	foreach my $assay (@{$mage_exp->getBioAssays()}){
+
+	  if($assay->isa('Bio::MAGE::BioAssay::PhysicalBioAssay')){#channel
+		$self->log('Validating PhysicalBioAssay "'.$assay->getName()."'\n");#hyb name(this is the file name for measured assays
+	
+		
+
+		my $bioassc = $assay->getBioAssayCreation();#This is a Hybridisation
+		#print "Got BioAssCreation $bioassc with name ".$bioassc->getName()."\n";#no name
+		
+		my $array = $bioassc->getArray();#this is an ArrayChip
+		
+
+
+		my $design_id = $array->getArrayDesign->getIdentifier();
+		my $chip_uid = $array->getArrayIdentifier();
+		
+		#print 'Chip UID is '.$chip_uid."\n";
+		#print 'Design ID is '.$design_id."\n";
+
+		foreach my $echip(@{$rset->get_ExperimentalChips()}){
+		
+		  if($echip->unique_id() eq $chip_uid){
+			$self->log("Found ExperimentalChip:\t".$chip_uid);
+
+
+			if(! exists $echips{$chip_uid}){
+			  $echips{$chip_uid} = {(
+									 biorep     => undef,
+									 biotechrep => undef,
+									 total_dye  => undef,
+									 experimental_dye => undef,
+									)};
+			}
+		
+			#Validate ArrayChip
+			my ($achip) = @{$self->db->get_ArrayChipAdaptor->fetch_all_by_ExperimentalChips([$echip])};
+
+			if($achip->design_id() ne $design_id){
+			  push @log, "ArrayDesign Identifier (${design_id}) does not match ArrayChip design ID (".
+				$achip->design_id().")\n\tSkipping channel and replicate validation";
+			  #skip the channel/replicate validation here?	  
+			}else{#validate channels and replicate names
+					
+			  foreach my $src_biomat(@{$bioassc->getSourceBioMaterialMeasurements()}){#Channel materials(X1)
+				my $biomat = $src_biomat->getBioMaterial();#LabelledExtract (IP/Control)
+				#identifier contains dye?
+				#label will give us dye?
+				
+				#foreach my $label(@{$biomat->getLabels()}){
+				#  print "Found dye label $label ".$label->getName()."\n";
+				#}
+
+
+
+				foreach my $treat(@{$biomat->getTreatments()}){
+				  #As there is effectively one more level of material extraction for the IP channel
+				  #this loop will returns materials an iteration out of sync for each channel
+
+				  foreach my $ssrc_biomat(@{$treat->getSourceBioMaterialMeasurements()}){#Channel measurement(x1)
+					my $sbiomat = $ssrc_biomat->getBioMaterial();
+					#This will either be techrep name for control of IP name for experimental channel
+					#SOM0035_BIOREP1_techrep2 IP  #Immunoprecicpitate
+					#SOM0035_BIOREP1_techrep2     #Extract
+				
+
+					#warn "sbiomat is ".$sbiomat->getName();
+
+					if($sbiomat->getName() =~ /BIOREP[0-9]+_techrep[0-9]+$/){
+					  #This is control channel
+
+					  if(! defined $echips{$chip_uid}{'biotechrep'}){
+						$echips{$chip_uid}{'biotechrep'} = $sbiomat->getName();
+					  }elsif($echips{$chip_uid}{'biotechrep'} ne $sbiomat->getName()){
+						push @log, "Found replicate mismatch:\t".$echips{$echip->unique_id()}{'biotechrep'}.
+						  "\tvs\t".$sbiomat->getName()
+					  }
+					}
+
+					#}else{#can we get rid of this else and test for biorep on control channel too?
+					  #This is Immunoprecipitate field i.e. EXPE
+					  #NEED TO VALIDATE AGAINST CHANNELS HERE?
+					  #i.e. get dye? or get filename?
+										
+					foreach my $ttreat(@{$sbiomat->getTreatments()}){
+									  
+					  foreach my $tsrc_biomat(@{$ttreat->getSourceBioMaterialMeasurements()}){
+						my $tbiomat = $tsrc_biomat->getBioMaterial();
+						#This will either be biolrep name for control or techrep name for experimental channel
+						#SOM0035_BIOREP1_techrep2     #Extract
+						#SOM0035_BIOREP1              #Sample
+						
+						  
+
+					  
+						if($tbiomat->getName() =~ /BIOREP[0-9]+_techrep[0-9]+$/){#experimental
+						  
+						  #warn "exp channel? ".$tbiomat->getName();
+							
+						  if(! defined $echips{$chip_uid}{'biotechrep'}){
+							$echips{$chip_uid}{'biotechrep'} = $tbiomat->getName();
+							
+							#if(length($echips{$chip_uid}{'biotechrep'}) > 40){
+							#  push @log, "Extract(techrep) field too long, maximium is 40 characters:\t$biotechrep";
+							#}#biorep should be a substring of techrep so implicit test
+							
+						  }elsif($echips{$chip_uid}{'biotechrep'} ne $tbiomat->getName()){
+							push @log, "Found technical replicate(Extract) mismatch:\t".
+							  $echips{$echip->unique_id()}{'biotechrep'}."\tvs\t".$tbiomat->getName();
+						  }
+
+						  my $dye = $biomat->getLabels()->[0]->getName();
+							
+						  foreach my $chan(@{$echip->get_Channels()}){
+							  
+							if($chan->type() eq 'EXPERIMENTAL'){
+								
+							  if(uc($dye) ne uc($chan->dye())){
+								push @log, "EXPERIMENTAL channel dye mismatch:\tMAGE = ".uc($dye).' vs DB '.uc($chan->dye);
+							  }else{
+								$echips{$chip_uid}{'experimental_dye'} = uc($dye);
+							  }
+							}
+						  }
+
+						  #need to get biorep here for exp channel?
+
+						  foreach my $ftreat(@{$tbiomat->getTreatments()}){
+									  
+							foreach my $fsrc_biomat(@{$ftreat->getSourceBioMaterialMeasurements()}){
+							  my $fbiomat = $fsrc_biomat->getBioMaterial();
+
+							  if(! defined $echips{$chip_uid}{'biorep'}){
+								#This must be control channel
+								$echips{$chip_uid}{'biorep'} = $fbiomat->getName();
+							  }
+							  elsif($echips{$chip_uid}{'biorep'} ne $fbiomat->getName()){
+								#Found two channel with three biomaterials
+								#need to remove this block if we get biorep from exp channel too
+								
+								push @log, "BIOREP mismatch for chip $chip_uid:\t".
+								  $echips{$chip_uid}{'biorep'}.' vs '.$fbiomat->getName();
+							  }
+							}
+						  }
+
+						}else{#control
+						  #warn "got ".$tbiomat->getName();
+						  
+						  if(! defined $echips{$chip_uid}{'biorep'}){
+							#This must be control channel
+							warn "control channel?";
+							$echips{$chip_uid}{'biorep'} = $tbiomat->getName();
+						  }
+						  elsif($echips{$chip_uid}{'biorep'} ne $tbiomat->getName()){
+							#Found two channel with three biomaterials
+							#need to remove this block if we get biorep from exp channel too
+							push @log, "BIOREP mismatch for chip $chip_uid:\t".
+							  $echips{$chip_uid}{'biorep'}.' vs '.$tbiomat->getName();
+						  }
+						  
+						  my $dye = $biomat->getLabels()->[0]->getName();
+						  
+						  foreach my $chan(@{$echip->get_Channels()}){
+							
+							if($chan->type() eq 'TOTAL'){
+							  
+							  if(uc($dye) ne uc($chan->dye())){
+								push @log, "TOTAL channel dye mismatch:\tMAGE = ".uc($dye).' vs DB '.uc($chan->dye);
+							  }else{
+								
+								
+								warn "Populating total channel for $chip_uid";
+								
+								$echips{$chip_uid}{'total_dye'} = uc($dye);
+							  }
+							}
+						  }
+						}
+						#could do one more iteration and get Source?
+						#Don't really need to validate this deep?
+					  }
+					 # }
+					}
+  				  }
+				}
+			  }
+			}
+		  }#end of echip
+		}#end of foreach echip
+
+		#if(! exists $echips{$chip_uid}){
+		#  push @log, "No ExperimentalChip found for MAGE entry:\t${chip_uid}";
+		#}
+	  }#end of physbioassay	
+	}#end of foreach assay
+  }#end of foreach exp
+
+
+
+
+
+
+  foreach my $echip(@{$rset->get_ExperimentalChips()}){
+	
+	if(! exists $echips{$echip->unique_id()}){
+	  push @log, "No MAGE entry found for ExperimentalChip:\t".$echip->unique();
+	}else{
+	  
+	  my $biorep = $echips{$echip->unique_id()}{'biorep'};
+	  my $biotechrep = $echips{$echip->unique_id()}{'biotechrep'};
+
+	  if(! defined $biotechrep){
+		push @log, 'ExperimentalChip('.$echip->unique_id().') Extract field do not meet naming convention(SAMPLE_BIOLREPN_techrepN)';
+	  }#! defined biorep? will never occur at present
+	  elsif($biotechrep !~ /$biorep/){
+		push @log, "Found Extract(techrep) vs Sample(biorep) naming mismatch\t${biotechrep}\tvs$biorep";
+	  }elsif(! $echips{$echip->unique_id()}{'experimental_dye'}){
+		push @log, "No EXPERIMENTAL channel found for ExperimentalChip:\t".$echip->unique_id();
+	  }
+	  elsif( ! $echips{$echip->unique_id()}{'total_dye'}){
+		push @log, "No TOTAL channel found for ExperimentalChip:\t".$echip->unique_id();
+	  }
+	  #don't really need this as this will be picked up by the dye mismatch test
+	  #elsif($echips{$echip->unique_id()}{'experimental_dye'} eq $echips{$echip->unique_id()}{'total_dye'}){
+	  #	push @log, "Channel dye duplication got ExperimentalChip:\t".$echip->unique_id();
+	  # }
+	  else{
+		push @{$tech_reps{$biotechrep}}, $echip->unique_id();
+		push @{$bio_reps{$biorep}}, $echip->unique_id();	
+	  }
+	}
+  }
+
+
+  if(@log){
+	$self->log("MAGE VALIATION REPORT\n\t".join("\n\t", @log));
+	throw("MAGE VALIDATION FAILED\nPlease correct tabe2mage file and try again:\t".$self->get_def('tab2mage_file'));
+  }else{
+	$self->log('MAGE VALDIATION SUCCEEDED');
+  }
+
+
+  #we also need to build the tech rep results sets(not displayable)
+  #do we need to have result sets for each biorep too?
+  #update ExperimentalChip replicate info
+  my %rsets;
+
+
+  warn "We need to protect against duplicating these replicate result sets";
+  #fetch by exp and rset name?
+  #we don't have a unique key on this 
+
+  foreach my $echip(@{$rset->get_ExperimentalChips()}){
+	
+
+	#Set biorep info and rset
+	foreach my $biorep(keys %bio_reps){
+
+	  foreach my $chip_uid(@{$bio_reps{$biorep}}){
+
+		if($chip_uid eq $echip->unique_id()){
+		  $echip->biological_replicate($biorep);
+
+		  if(! defined $rsets{$biorep}){
+			$rsets{$biorep} = Bio::EnsEMBL::Funcgen::ResultSet->new
+			  (
+			   -NAME       => $biorep,#this may not be unique, prepend with exp name? Force method to use Experiment_and_name?
+			   -ANALYSIS   => $rset->analysis(),
+			   -TABLE_NAME => 'experimental_chip',
+			  );
+		  }
+		  
+		  $rsets{$biorep}->add_table_id($echip->dbID());
+		}
+	  }
+	}
+
+	
+	#set tech rep info and rset
+	foreach my $techrep(keys %tech_reps){
+	  
+	  foreach my $chip_uid(@{$tech_reps{$techrep}}){
+		
+		if($chip_uid eq $echip->unique_id()){
+		  $echip->technical_replicate($techrep);
+
+		  if(! defined $rsets{$techrep}){
+			$rsets{$techrep} = Bio::EnsEMBL::Funcgen::ResultSet->new
+			  (
+			   -NAME       => $techrep,#this may not be unique, prepend with exp name? Force method to use Experiment_and_name?
+			   -ANALYSIS   => $rset->analysis(),
+			   -TABLE_NAME => 'experimental_chip',
+			  );
+		  }
+		  
+		  $rsets{$techrep}->add_table_id($echip->dbID());
+		}
+	  }
+	}
+
+	$echip->adaptor->update_replicate_info($echip);#store rep info
+  }
+
+
+  #Store new tech and biol rsets
+  foreach my $new_rset(values %rsets){
+	$rset->adaptor->store($new_rset);
+  }
+
+
+  warn "need to store xml here.";
+
+  return;
+}
 
 
 =head2 store_set_probes_features
@@ -2097,6 +2641,11 @@ sub R_norm{
 sub get_import_ResultSet{
   my ($self, $table_name, $anal) = @_;
   
+
+  warn "Should build a ResultSet cache here?";
+  #would have to remember to cache result set after changing it?
+
+
   if (!($anal && $anal->isa("Bio::EnsEMBL::Analysis") && $anal->dbID())) {
     throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
   }
@@ -2124,14 +2673,18 @@ sub get_import_ResultSet{
 	
 		if ($self->recovery()) {
 		  warn ("Should use ResultSet name here, currently retrieving using the analysis and experiment id"); #experiment name?
-		 
+		  
 		  #fetch by anal and experiment_id
 		  #Need to change this to result_set.name!
 		  warn("add chip set handling here");
 	  
-		  my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
-		  throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t$logic_name") if (scalar(@tmp) >1);
-		  $rset = $tmp[0];
+		  #my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
+		  #throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t".$anal->logic_name().')' if (scalar(@tmp) >1);
+		  #$rset = $tmp[0];
+
+		  $rset = $result_adaptor->fetch_by_name($self->name()."_IMPORT");
+
+		  warn "Got rset $rset";
 
 		  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
 		}
@@ -2144,25 +2697,28 @@ sub get_import_ResultSet{
 			(
 			 -analysis   => $anal,
 			 -table_name => $table_name,
+			 -name       => $self->name()."_IMPORT",
 			);
 	  
 		  $result_adaptor->store($rset);
 		}
       }
       
+
       if ($self->recovery()) {
 	
 		my (@cc_ids);
 	
 		if ($table_name eq 'experimental_chip') {
-	  
 		  push @cc_ids, $rset->get_chip_channel_id($echip->dbID()) if($rset->contains($echip));
-		} else {
+		} 
+		else{#channel
 		  foreach my $chan (@{$echip->get_Channels()}) {
 			push @cc_ids, $rset->get_chip_channel_id($chan->dbID()) if($rset->contains($chan));
 		  }
 		}
 
+		
 		$self->db->rollback_results(@cc_ids) if (@cc_ids);	
       }
     }

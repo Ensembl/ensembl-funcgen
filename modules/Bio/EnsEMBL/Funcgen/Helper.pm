@@ -410,7 +410,6 @@ sub run_system_cmd{
   my ($self, $command, $no_exit) = @_;
 
   my $redirect = '';
-  my $status;
 
   $self->debug(3, "system($command)");
   
@@ -432,19 +431,32 @@ sub run_system_cmd{
   }
 
   # execute the passed system command
-  $status = system("$command $redirect");
-  
-  if ($status != 0){
-
+  my $status = system("$command $redirect");
+  my $exit_code = $status >> 8; 
+ 
+  if ($status == -1) {	
+	warn "Failed to execute: $!\n";
+  }    
+  elsif ($status & 127) {
+	warn sprintf("Child died with signal %d, %s coredump\nError:\t$!",($status & 127),($status & 128) ? 'with' : 'without');
+  }    
+  else {	
+	warn sprintf("Child exited with value %d\nError:\t$!\n", $exit_code); #get the true exit code
+  }
+ 
+  if ($exit_code != 0){
+		  
     if (! $no_exit){
-      throw("system command failed with exit code $status:\t$command\n$@\n");
+      throw("System command failed:\t$command\n");
     }
     else{
-      warn("system command failed with exit code $status:\t$command\n$@\n");
+      warn("System command returned non-zero exit code:\t$command\n");
     }
   }
-    
-  return;
+  
+  #reverse boolean logic for perl...can't do this anymore due to tab2mage successful non-zero exit codes :/
+
+  return $exit_code;
 }
 
 

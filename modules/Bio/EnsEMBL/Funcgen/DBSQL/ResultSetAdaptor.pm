@@ -175,6 +175,32 @@ sub fetch_all_by_FeatureType {
   return $self->generic_fetch($constraint);
 }
  
+
+=head2 fetch_by_name
+
+  Arg [1]    : string - ResultSet name
+  Example    : my $rset = $rseta->fetch_by_name($exp->name().'_IMPORT');
+  Description: Retrieves a ResultSet based on the name attribute
+  Returntype : Bio::EnsEMBL::Funcgen::ResultSet
+  Exceptions : Throws if no name provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_by_name {
+  my ($self, $name) = @_;
+
+  if( ! defined $name){
+    throw('Need to pass a ResultSet name');
+  }
+	
+  my $constraint = "rs.name ='${name}'";
+	
+  return $self->generic_fetch($constraint)->[0];
+}
+
+
 =head2 _tables
 
   Args       : None
@@ -222,8 +248,8 @@ sub _columns {
 	return qw(
 		  rs.result_set_id    rs.analysis_id
 		  cc.table_name       cc.chip_channel_id  
-                  cc.table_id         ec.feature_type_id  
-		  ec.cell_type_id
+          cc.table_id         ec.feature_type_id  
+		  ec.cell_type_id     rs.name
 		 );
 
 	
@@ -292,13 +318,13 @@ sub _final_clause {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id);
+  my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id, $name);
   my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id);
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
  
-  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$ftype_id, \$ctype_id);
+  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$ftype_id, \$ctype_id, \$name);
   
   while ( $sth->fetch() ) {
 
@@ -310,13 +336,14 @@ sub _objs_from_sth {
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
             
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
-						    -DBID         => $dbid,
-						    -ANALYSIS     => $anal,
-						    -TABLE_NAME   => $table_name,
-						    -FEATURE_TYPE => $ftype,
-						    -CELL_TYPE    => $ctype,
-						    -ADAPTOR      => $self,
-						   );
+													-DBID         => $dbid,
+													-NAME         => $name,
+													-ANALYSIS     => $anal,
+													-TABLE_NAME   => $table_name,
+													-FEATURE_TYPE => $ftype,
+													-CELL_TYPE    => $ctype,
+													-ADAPTOR      => $self,
+												   );
     }
     
     #This assumes logical association between chip from the same exp, confer in store method?????????????????
@@ -364,11 +391,7 @@ sub store{
   
   my (%analysis_hash);
   
-  my $sth = $self->prepare("
-		INSERT INTO result_set (
-			analysis_id
-		) VALUES (?)
-	");
+  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name) VALUES (?, ?)');
   
   my $db = $self->db();
   my $analysis_adaptor = $db->get_AnalysisAdaptor();
@@ -402,7 +425,7 @@ sub store{
    
 
     $sth->bind_param(1, $rset->analysis->dbID(), SQL_INTEGER);
-    #$sth->bind_param(2, $rset->table_name(),     SQL_VARCHAR);
+    $sth->bind_param(2, $rset->name(),           SQL_VARCHAR);
     
     $sth->execute();
     
@@ -496,7 +519,7 @@ sub list_dbIDs {
                Replicates are combined using a median of biological replicates based on 
                their mean techinical replicate scores
   Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
-  Exceptions : None
+  Exceptions : throws if not experimental_chip ResultSet
   Caller     : general
   Status     : At risk
 
@@ -508,8 +531,9 @@ sub list_dbIDs {
 sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status) = @_;
   
-  my (@rfeatures, %replicates, @filtered_ids, $score, $start, $end, $cc_id, $old_start, $old_end);
-  #@scores
+  my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
+  my ($biol_rep, $score, $start, $end, $cc_id, $old_start, $old_end);
+
   
   my @ids = @{$rset->table_ids()};
   #should we do some more optimisation of method here if we know about presence or lack or replicates?
@@ -524,6 +548,28 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     }
   }
   
+
+  warn "We need to build techrep and biol rep strucs here based on cc_id";
+
+  #basically we need to build a hash of cc_id to biolrep value
+  #Then we use the biolrep as a key, and push all techrep values.
+  #this can then be resolved in the method below, using biolrep rather than cc_id
+
+  my $sql = "SELECT ec.biological_replicate, cc.chip_channel_id from experimental_chip ec, chip_channel cc 
+             WHERE cc.table_name='experimental_chip'
+             AND ec.experimental_id=cc.table_id
+             AND cc.table_id IN(".join(', ', (map $_->dbID(), $rset->get_ExperimentalChips())).")";
+
+  
+  my $sth = $self->prepare($sql);
+  $sth->execute();
+  $sth->bind_columns(\$biol_rep, \$cc_id);
+  #could maybe do a selecthashref here?
+
+  while($sth->fetch()){
+	$biol_reps{$cc_id} = $biol_rep;
+  }
+
   
   #we don't need to account for strnadedness here as we're dealing with a double stranded feature
   #need to be mindful if we ever consider expression
@@ -542,7 +588,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #we don't need X Y here, as X Y for probe will be unique for cc_id.
   #any result with the same cc_id will automatically be treated as a tech rep
 
-  my $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM result r, '.
+  $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM result r, '.
 	'probe_feature pf, chip_channel cc WHERE cc.result_set_id = '.$rset->dbID();
 
   $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
@@ -554,7 +600,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
           ' AND pf.seq_region_start<='.$slice->end().
           ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
 
-  my $sth = $self->prepare($sql);
+  $sth = $self->prepare($sql);
   $sth->execute();
   $sth->bind_columns(\$score, \$start, \$end, \$cc_id);
   my $position_mod = $slice->start() + 1;
@@ -569,7 +615,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     $old_end   ||= $end; 
     
     if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature
-	  push @{$replicates{$cc_id}}, $score;
+	  push @{$rep_scores{$biol_reps{$cc_id}}}, $score;
     }else{#Found new location
    
 	  #store previous feature with best result from @scores
@@ -577,14 +623,14 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
       push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 		([($old_start - $position_mod), 
 		  ($old_end - $position_mod),
-		  $self->resolve_replicates_by_ResultSet(\%replicates, $rset)]);
+		  $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)]);
 
-	  undef %replicates;
+	  undef %rep_scores;
 	  $old_start = $start;
       $old_end = $end;
 	  
       #record new score
-	  @{$replicates{$cc_id}} = ($score);
+	  @{$rep_scores{$biol_reps{$cc_id}}} = ($score);
     }
   }
   
@@ -595,7 +641,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
       ([($old_start - $position_mod), 
 	($old_end - $position_mod),
-		$self->resolve_replicates_by_ResultSet(\%replicates, $rset)]);
+		$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)]);
 
 	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   }
@@ -608,7 +654,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 =head2 resolve_replicates_by_ResultSet
 
   Arg[0]     : HASHREF - chip_channel_id => @scores pairs
-  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
+  #Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
   Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSet($slice, $rset, 'DISPLAYABLE')};
   Description: Gets a list of lightweight ResultFeatures from the ResultSet and Slice passed.
                Replicates are combined using a median of biological replicates based on 
@@ -628,18 +674,18 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
 
 sub resolve_replicates_by_ResultSet{
-  my ($self, $rep_ref, $rset) = @_;
+  my ($self, $rep_ref) = @_;#, $rset) = @_;
 
-  my ($score, @scores, $cc_id);
+  my ($score, @scores, $biol_rep);
 
   #deal with simplest case first and fastest?
   #can we front load this with the replicate set info, i.e. if we know we only have one then we don't' have to do all this testing and can do a mean
 
   if(scalar(keys %{$rep_ref}) == 1){
 	
-	($cc_id) = keys %{$rep_ref};
+	($biol_rep) = keys %{$rep_ref};
 
-	@scores = @{$rep_ref->{$cc_id}};
+	@scores = @{$rep_ref->{$biol_rep}};
 
 	if (scalar(@scores) == 1){
 	  $score = $scores[0];
@@ -648,8 +694,8 @@ sub resolve_replicates_by_ResultSet{
 	}
   }else{#deal with biol replicates
 
-	foreach $cc_id(keys %{$rep_ref}){
-	  push @scores, mean($rep_ref->{$cc_id});
+	foreach $biol_rep(keys %{$rep_ref}){
+	  push @scores, mean($rep_ref->{$biol_rep});
 	}
 
 	$score = median(\@scores);
@@ -657,7 +703,6 @@ sub resolve_replicates_by_ResultSet{
   }
 
   return $score;
-
 }
 
 

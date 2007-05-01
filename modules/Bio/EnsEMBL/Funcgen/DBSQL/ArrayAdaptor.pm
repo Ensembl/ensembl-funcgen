@@ -167,6 +167,36 @@ sub fetch_all_by_type {
   return $self->generic_fetch($constraint);
 }
 
+
+=head2 fetch_all_by_Experiment
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiement
+  Example    : my @arrays = @{$aa->fetch_all_by_Experiment($exp)};
+  Description: Fetch all arrays associated with a given Experiment
+               This is a convenience method to hide the 3 adaptor required 
+               for this call.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
+  Exceptions : none
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+sub fetch_all_by_Experiment{
+  my ($self, $exp) = @_;
+
+  my %array_ids;
+	
+  my $echips = $self->db->get_ExperimentalChipAdaptor->fetch_all_by_Experiment($exp);
+
+  foreach my $achip(@{$self->db->get_ArrayChipAdaptor->fetch_all_by_ExperimentalChips($echips)}){
+	$array_ids{$achip->array_id()} = 1;
+  }
+
+  return $self->generic_fetch('a.array_id IN ('.join(', ', keys %array_ids).')');
+}
+
+
 =head2 fetch_attributes
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Array - array to fetch attributes for
@@ -270,42 +300,6 @@ sub _objs_from_sth {
   }
   return \@result;
 }
-
-
-=head2 _fetch_array_chips_by_array_dbID
-
-  Arg [1]    : int - dbID or array
-  Example    : None
-  Description: Retrieves array_chip hashes guven an array id
-  Returntype : Listref of array_chip hashes
-  Exceptions : Throws if no array dbID specified
-  Caller     : Internal
-  Status     : At risk - rplace with ArrayChipAdaptor
-
-=cut
-
-sub _fetch_array_chips_by_array_dbID {
-	my ($self, $array_dbID) = @_;
-
-	throw("Must specifiy an array_id to retrieve array_chips") if (! $array_dbID);
-	my ($array_chip_id, $design_id, $name, %ac_tmp);
-
-	my $sth = $self->prepare("select array_chip_id, design_id, name from array_chip where array_id = $array_dbID");	
-	$sth->execute();
-
-	$sth->bind_columns(\$array_chip_id, \$design_id, \$name);
-	
-	while ( $sth->fetch() ) {
-		$ac_tmp{$design_id} = {(
-					array_id => $array_dbID,
-					dbID => $array_chip_id,
-					name => $name,
-				       )};
-	}
-
-	return \%ac_tmp;
-}
-
 
 
 

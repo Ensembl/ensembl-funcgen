@@ -28,7 +28,7 @@ CREATE TABLE `egroup` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-#insert into egroup values("", "efg", "Hinxton", "njohnson@ebi.ac.uk");
+--insert into egroup values("", "efg", "Hinxton", "njohnson@ebi.ac.uk");
 
 --- group is reserved by MySQL.
 ---Others? head? description? egroup_member(table?) probably overkill.
@@ -213,6 +213,7 @@ CREATE TABLE `experiment` (
    `date` date default '0000-00-00',
    `primary_design_type` varchar(30) default NULL, 
    `description`  varchar(255) default NULL,
+   `mage_xml_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`experiment_id`),
    KEY `egroup_idx` (`egroup_id`),
    KEY `design_idx` (`primary_design_type`)
@@ -236,6 +237,21 @@ CREATE TABLE `experimental_design` (
    `table_id` int(10) unsigned default NULL,	
    PRIMARY KEY  (`design_type_id`, `table_name`, `table_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `mage_xml`
+--
+
+DROP TABLE IF EXISTS `mage_xml`;
+CREATE TABLE `mage_xml` (
+   `mage_xml_id` int(10) unsigned NOT NULL auto_increment,
+   `xml` text,
+   PRIMARY KEY  (`mage_xml_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+
 
 
 
@@ -287,6 +303,7 @@ CREATE TABLE `data_set` (
    `data_set_id` int(10) unsigned NOT NULL auto_increment,
    `result_set_id` int(10) unsigned default NULL,
    `feature_set_id` int(10) unsigned default NULL,
+   `name` varchar(40) default NULL,
    PRIMARY KEY  (`data_set_id`, `result_set_id`, `feature_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -360,6 +377,7 @@ DROP TABLE IF EXISTS `result_set`;
 CREATE TABLE `result_set` (
    `result_set_id` int(10) unsigned NOT NULL auto_increment,
    `analysis_id` int(10) unsigned default NULL,
+   `name` varchar(40) default NULL,
    PRIMARY KEY  (`result_set_id`),
    KEY  `analysis_idx` (`analysis_id`) 
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -481,6 +499,7 @@ CREATE TABLE `feature_set` (
    `feature_type_id` int(10) unsigned NOT NULL,
    `analysis_id`  int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
+   `name` varchar(40) default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`)	
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -504,7 +523,8 @@ CREATE TABLE `experimental_chip` (
    `array_chip_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
-   `replicate` varchar(20) default NULL,
+   `biological_replicate` varchar(40) default NULL,
+   `technical_replicate` varchar(40) default NULL,
    PRIMARY KEY  (`experimental_chip_id`),
    KEY `experiment_idx` (`experiment_id`),
    KEY `feature_type_idx` (`feature_type_id`),

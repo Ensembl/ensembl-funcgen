@@ -126,8 +126,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($fset, $rset)
-    = rearrange(['FEATURE_SET', 'RESULT_SET'], @_); #, 'UPDATE_SUBSETS', 'DISPLAYABLE'], @_);
+  my ($fset, $rset, $name)
+    = rearrange(['FEATURE_SET', 'RESULT_SET', 'NAME'], @_); #, 'UPDATE_SUBSETS', 'DISPLAYABLE'], @_);
 
  
   my @caller = caller();
@@ -171,7 +171,9 @@ sub new {
   throw("Must specify at least one Result/FeatureSet") if((! $rset) && (! $fset));
 
   $self->add_ResultSet($rset) if $rset;
-  $self->feature_set($fset)   if $fset;	  
+  $self->feature_set($fset)   if $fset;	
+  $self->name($name)   if $name;	
+  
   
 
   #Now we need a store_sets method in DataSet Adaptor
@@ -550,6 +552,24 @@ sub feature_type {
   return $self->{'feature_type'};
 }
 
+=head2 name
+
+  Example    : my $dset->name('DATASET1');
+  Description: Getter/Setter for the name of this DataSet.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub name {
+  my $self = shift;
+     	
+  $self->{'name'} = shift if @_;
+
+  return $self->{'name'};
+}
 
 
 

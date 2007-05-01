@@ -164,6 +164,8 @@ sub type {
   my $self = shift;
 
   $self->{'type'} = shift if @_;
+
+  warn "we need to control EXPERIMENTAL OR CONTROL here or enum on DB";
   
   if ( !exists $self->{'type'} && $self->dbID() && $self->adaptor() ) {
     $self->adaptor->fetch_attributes($self);

@@ -169,7 +169,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id);
+	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id fs.name);
 }
 
 =head2 _objs_from_sth
@@ -189,7 +189,7 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type);
+	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name);
 	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, %ftype_hash, %ctype_hash);
 	
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
@@ -197,7 +197,7 @@ sub _objs_from_sth {
 	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	$ctype_hash{'NULL'} = undef;
 
-	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id);
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name);
 	
 	while ( $sth->fetch()) {
 
@@ -213,11 +213,12 @@ sub _objs_from_sth {
 		$ctype_hash{$ctype_id} = $ct_adaptor->fetch_by_dbID($ctype_id) if(! exists $ctype_hash{$ctype_id});
 
 		$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-							       -dbID         => $feature_set_id,
-							       -adaptor      => $self,
-							       -feature_type => $ftype_hash{$ftype_id},
-							       -analysis     => $analysis_hash{$analysis_id},
-							       -cell_type    => $ctype_hash{$ctype_id},
+													   -dbID         => $feature_set_id,
+													   -adaptor      => $self,
+													   -feature_type => $ftype_hash{$ftype_id},
+													   -analysis     => $analysis_hash{$analysis_id},
+													   -cell_type    => $ctype_hash{$ctype_id},
+													   -name         => $name,
 							      );
 
 		push @fsets, $fset;
@@ -250,8 +251,8 @@ sub store {
 	#if(scalar(@fsets) == 0);
 
 	my $sth = $self->prepare("INSERT INTO feature_set
-                                 (feature_type_id, analysis_id, cell_type_id)
-                                 VALUES (?, ?, ?)");
+                                 (feature_type_id, analysis_id, cell_type_id, name)
+                                 VALUES (?, ?, ?, ?)");
 
 
     foreach my $fset (@fsets) {
@@ -274,6 +275,7 @@ sub store {
 			$sth->bind_param(1, $fset->feature_type->dbID(), SQL_INTEGER);
 			$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);
 			$sth->bind_param(3, $ctype_id,                   SQL_INTEGER);
+			$sth->bind_param(4, $name,                       SQL_VARCHAR);
 		
 			$sth->execute();
 			$fset->dbID($sth->{'mysql_insertid'});

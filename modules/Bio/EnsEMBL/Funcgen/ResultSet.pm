@@ -54,10 +54,8 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-EXPERIMENT_ID]     : Experiment dbID
-  #or
-  #Arg [-EXPERIMENT]       : Bio::EnsEMBL::Funcgen::Experiment
-  Arg [-SLICE]             : Bio::EnsEMBL::Slice
+  Arg [-ANALYSIS] :
+
 
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::ResultSet->new(
@@ -81,8 +79,8 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($analysis, $table_name, $table_id, $ftype, $ctype)
-    = rearrange(['ANALYSIS', 'TABLE_NAME', 'TABLE_ID', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
+  my ($analysis, $table_name, $table_id, $ftype, $ctype, $name)
+    = rearrange(['ANALYSIS', 'TABLE_NAME', 'TABLE_ID', 'FEATURE_TYPE', 'CELL_TYPE', 'NAME'], @_);
 
 
   $self->{'table_id_hash'} = {};
@@ -104,6 +102,7 @@ sub new {
   $self->add_table_id($table_id) if $table_id;
   $self->feature_type($ftype) if $ftype;
   $self->cell_type($ctype) if $ctype;
+  $self->name($name) if $name;
 
   return $self;
 }
@@ -139,35 +138,6 @@ sub new {
 
 
 
-
-=head2 experiment_id
-
-  Arg [1]    : (optional) int - Experiment dbID
-  Example    : $result_set->experiment_id($exp_id);
-  Description: Getter and setter for the experiment_id for this ResultSet.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub experiment_id {
-    my $self = shift;
-	
-
-    throw("Not yet implemented");
-
-    #if(! defined $self->{'experiment_id'}){
-      
-
-    #$self->{'experiment_id'} = $self->adaptor->db->get_ExperimentalChipAdaptor->fetch_by_dbID(;
-		
-    return $self->{'experiment_id'};
-}
-
-
 =head2 table_name
 
   Arg [1]    : (optional) string - table_name (experimental_chip or channel)
@@ -194,6 +164,30 @@ sub table_name{
     }
 
     return $self->{'table_name'};
+}
+
+
+=head2 name
+
+  Arg [1]    : (optional) string - name of the result set
+  Example    : $result_set->name($name);
+  Description: Getter and setter for the name attribute for this ResultSet.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub name{
+    my $self = shift;
+
+    if (@_){
+      $self->{'name'} = shift;
+	}
+
+    return $self->{'name'};
 }
 
 
@@ -344,6 +338,18 @@ sub chip_channel_ids {
   return [ values %{$self->{'table_id_hash'}} ];
 }
 
+=head2 contains
+
+  Example    : if($result_set->contains($chip_or_channel)){...do some chip or channel erpartions here...};
+  Description: Returns true if the given Channel or ExperimentalChip is part of this ResultSet
+  Returntype : boolean
+  Exceptions : warns if ResultSet table name is not of argument type
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
 sub contains{
   my ($self, $chip_channel) = @_;
 
@@ -383,24 +389,38 @@ sub get_chip_channel_id{
   Example    : my @ecs = @{$result_set->get_ExperimentalChips()};
   Description: Retrieves a chip_channel_id from the cahce given an ExperimentalChip dbID
   Returntype : Listref of ExperimentalChip object
-  Exceptions : throw is not an experimental_chip ResultSet
+  Exceptions : warns is not an experimental_chip ResultSet
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub get_ExperimentalChips{
-  my ($self, $table_id) = @_;
+  my $self = shift;
   
-  throw("Cannot retrieve ExperimentalChips for a non-experimental_Chip ResultSet") if ($self->table_name() ne "experimental_chip");
-
   if(! defined $self->{'experimental_chips'}){
     my $ec_adaptor = $self->adaptor->db->get_ExperimentalChipAdaptor();
     
-    foreach my $ec_id(@{$self->table_ids()}){
-    #  warn "Getting ec with id $ec_id";
-      push @{$self->{'experimental_chips'}}, $ec_adaptor->fetch_by_dbID($ec_id);
-    }
+	if($self->table_name() eq "experimental_chip"){
+
+	  foreach my $ec_id(@{$self->table_ids()}){
+		#  warn "Getting ec with id $ec_id";
+		push @{$self->{'experimental_chips'}}, $ec_adaptor->fetch_by_dbID($ec_id);
+		#should this be hashed on chip_channel_id?
+	  }
+	}else{
+	  warn("Retrieving ExperimentalChips for a Channel ResultSet");
+	  
+	  my %echips;
+	  my $chan_adaptor = $self->adaptor->db->get_ChannelAdaptor(); 
+		  
+	  foreach my $chan_id(@{$self->table_ids()}){
+		my $chan = $chan_adaptor->fetch_by_dbID($chan_id);
+		$echips{$chan->experimental_chip_id} ||= $ec_adaptor->fetch_by_dbID($chan->experimental_chip_id);
+	  }
+	  
+	  @{$self->{'experimental_chips'}} = values %echips;
+	}
   }
 
   return $self->{'experimental_chips'};

@@ -95,14 +95,8 @@ sub load_table_data{
   #remove tmp file via ssh if load successful
 
   my $cmd = 'mysqlimport -L '.$self->connect_string().' '.$file;
-
-  system("$cmd");
-
-
-  if($?){
-    throw("Failed to load data from $file\n$?");
-  }
-
+  system($cmd) == 0 || throw("Failed to load data from $file\nExit code:\t".($?>>8)."\n$!");
+  
   return;
 }
 
@@ -114,17 +108,20 @@ sub rollback_results{
 
   throw("Need to pass some chip_channel_ids to roll_back") if (scalar(@cc_ids) == 0);
   
-  my $sql = 'DELETE from result where chip_channel_id in ('.join(',', @cc_ids).');';
-  $self->dbc->do($sql);
+
+  my $sql = 'DELETE from result where chip_channel_id in (0)';#'.join(',', @cc_ids).');';
+  
+  if(! $self->dbc->do($sql)){
+	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->dbc->db_handle->errstr());
+  }
 
   #do doesn't like cat'd statements??
-  $sql = 'DELETE s from status s, chip_channel cc where cc.chip_channel_id in ('.join(',', @cc_ids).
-	') and cc.table_id=s.table_id and cc.table_name=s.table_name;';
-  $self->dbc->do($sql);
+  $sql = 'DELETE s from status s, chip_channel cc WHERE cc.chip_channel_id IN ('.join(',', @cc_ids).
+	') AND cc.table_id=s.table_id AND cc.table_name=s.table_name';
 
-
-#  warn "sql is $sql";
-  throw("Results rollback failed for cc_ids:\t@cc_ids\nError:\t$?\n$@") if ($?);
+  if(! $self->dbc->do($sql)){
+	throw("Status rollback failed for chip_channel_ids:\t@cc_ids\n".$self->dbc->db_handle->errstr());
+  }
 
   return;
 }
@@ -146,13 +143,17 @@ sub rollback_ArrayChip{
   #would have to be result set as we would find our own ecs.  May find our own rset
   #we should throw if there are any more than this set and force the use of a separate script
 
-  my $sql = 'DELETE from probe where array_chip_id='.$ac->dbID().';';
-  $self->dbc->do($sql);
+  my $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();
 
-  $sql = ' DELETE from status where table_name="array_chip" and table_id='.$ac->dbID().';';  
-  $self->dbc->do($sql);
+  if(! $self->dbc->do($sql)){
+	throw("Probe rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
+  }
 
-  throw("ArrayChip(".$ac->name().") rollback failed\nError:\t$?")  if($?);
+  $sql = 'DELETE from status where table_name="array_chip" and table_id='.$ac->dbID();  
+  
+  if(! $self->dbc->do($sql)){
+	throw("Status rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
+  }
   
   return;
 }
@@ -162,13 +163,13 @@ sub rollback_ArrayChip{
 sub rollback_ArrayChip_features{
   my ($self, $ac, $cs) = @_;
 
-  throw("Need to pass a valid stored ArrayChip to roll back") if (! ($ac && $ac->isa("Bio::EnsEMBL::Funcgen::ArrayChip") 
-								     && $ac->dbID()));
 
-
-  throw("Need to pass a valid stored CoordSystem to roll back") if (! ($cs && $cs->isa("Bio::EnsEMBL::Funcgen::CoordSystem") 
-								     && $cs->dbID()));
-
+  if (! ($ac && $ac->isa("Bio::EnsEMBL::Funcgen::ArrayChip") && $ac->dbID())){
+	throw("Need to pass a valid stored ArrayChip to roll back");
+  } 
+  if (! ($cs && $cs->isa("Bio::EnsEMBL::Funcgen::CoordSystem") && $cs->dbID())){
+	throw("Need to pass a valid stored CoordSystem to roll back");
+  }
 
 
   #same here we need to check for other data sets using this cs and throw
@@ -177,10 +178,9 @@ sub rollback_ArrayChip_features{
   #Do in 2 stages to avoid orphaned probe
   #do doesn't like multiple statements
   my $sql = "DELETE pf from probe_feature pf, probe p where p.array_chip_id='".$ac->dbID()."' and p.probe_id=pf.probe_id;";
-  $self->dbc->do($sql);
-
-  if($?){
-    throw("ArrayChip(".$ac->name().")\nError:\t$?");
+  
+  if(! $self->dbc->do($sql)){
+    throw("ProbeFeature rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
   }
    
   #warn "do need to remove imported status for ArrayChip here";
@@ -194,44 +194,6 @@ sub rollback_ArrayChip_features{
 
 
 
-
-
-
-
-
-#Only validates if already present
-#add flag to alter table if any inconsistencies found?
-#This could be heavily utilised in the recovery method to avoid having to delete entries for incomplete imports
-sub register_entry{
-	my ($self, $table, $dbid, $alter, @data) = @_;
-
-	$self->deprecate("Regiter_entry no longer used, change to generic update/validate method here and implment in adaptors?");
-
-	my ($sql, @db_entry);
-	my $valid = 1;#just throw here instead? or warn as may be able
-	$self->throw("Alter entry function not yet implemented") if ($alter);
-
-	if(! defined $dbid){
-		$self->insert_table_row($table, @data);
-	}else{
-		#$self->log("$table $dbid already registered, validating");
-		$sql = "select * from $table where ${table}_id = \"$dbid\"";
-
-		@db_entry = $self->dbc->db_handle->selectrow_array($sql);
-		shift @db_entry;
-
-		for my $i(0..$#db_entry){
-
-			if($db_entry[$i] ne $data[$i]){
-				$valid = 0;
-				#should really get field names here too, and store if doing repeat validations to reduce no. of queries
-				warn("Validating $table entry $dbid found the following mismatch:\nData\t$data[$i]\nDB\t$db_entry[$i]");
-			}
-		}
-	}
-	
-	return $valid;#return value to allow caller to throw
-}
 
 =head2 get_available_adaptors
 
@@ -291,7 +253,7 @@ sub get_available_adaptors{
 =cut
 
 
-#Hacky convinience method to get the data/schema.version/build from a feature slice
+#Slightly hacky convinience method to get the data/schema.version/build from a feature slice
 
 sub _get_schema_build{
   my ($self, $db) = @_;

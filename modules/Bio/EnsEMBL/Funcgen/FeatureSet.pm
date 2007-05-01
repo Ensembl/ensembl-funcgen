@@ -82,7 +82,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   my ($analysis, $feature_type, $cell_type)
-    = rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
+    = rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'NAME'], @_);
 
   #Analysis already checked in BaseFeatureAdaptor
   if (! $feature_type || ! $analysis){
@@ -99,6 +99,7 @@ sub new {
   $self->analysis($analysis);
   $self->feature_type($feature_type);
   $self->cell_type($cell_type) if $cell_type;
+  $self->($name) if $name;
 
   return $self;
 }
@@ -152,6 +153,25 @@ sub new_fast {
 #get_raw_analysis_name
 #get_predicted_feature_analysis_name
 #set ResultFeatures and PredictedFeatures in hash keyed by analysis_name?
+
+=head2 name
+
+  Example    : my $dset->name('FEATURESET1');
+  Description: Getter/Setter for the name of this FeatureSet.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub name {
+  my $self = shift;
+     	
+  $self->{'name'} = shift if @_;
+
+  return $self->{'name'};
+}
 
 
 

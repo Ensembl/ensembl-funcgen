@@ -10,7 +10,7 @@ use Bio::EnsEMBL::Funcgen::Experiment;
 my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
 						   -ADAPTOR             => $self,
 						   -NAME                => $name,
-					           -GROUP               => $group,
+					       -GROUP               => $group,
 						   -DATE                => $date,
 						   -PRIMARY_DESIGN_TYPE => $p_design_type,
 						   -DESCRIPTION         => $description,
@@ -95,8 +95,8 @@ sub new {
 
 	my $self = $class->SUPER::new(@_);
 
-	my ($name, $group_id, $group, $date, $p_dtype, $desc)
-		= rearrange( ['NAME', 'GROUP_ID', 'GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 'DESCRIPTION'], @_ );
+	my ($name, $group_id, $group, $date, $p_dtype, $desc, $xml_id, $xml)
+		= rearrange( ['NAME', 'GROUP_ID', 'GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
 	
 	$self->name($name)          if defined $name;
 	$self->group_id($group_id)  if defined $group_id;
@@ -104,6 +104,8 @@ sub new {
 	$self->date($date)          if defined $date;
 	$self->primary_design_type($p_dtype)    if defined $p_dtype;
 	$self->description($desc)   if defined $desc;
+	$self->mage_xml_id($xml_id) if defined $xml_id;
+	$self->mage_xml($xml)       if defined $xml;
 
 
 	#Need to add mandatory params check here!!
@@ -157,6 +159,59 @@ sub group_id{
 
 	return $self->{'group_id'};
 }
+
+=head2 mage_xml
+
+  Arg [1]: string(optional) - MAGE XML
+  Example: my $xml = $exp->mage_xml();
+  Description: Getter/Setter for the mage_xml attribute
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+
+
+sub mage_xml{
+  my ($self) = shift;	
+
+  $self->{'mage_xml'} = shift if(@_);
+  
+  #use fetch_attrs?
+  if(! exists $self->{'mage_xml'} && $self->mage_xml_id()){
+	$self->{'mage_xml'} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
+  }
+
+  return (exists $self->{'mage_xml'}) ? $self->{'mage_xml'} : undef;
+}
+
+=head2 mage_xml_id
+
+  Arg [1]: int (optional) - mage_xml_id
+  Example: $exp->group_db_id('1');
+  Description: Getter/Setter for the mage_xml attribute
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+
+
+sub mage_xml_id{
+  my $self = shift;	
+
+  $self->{'mage_xml_id'} = shift if @_;
+  
+  return $self->{'mage_xml_id'};
+}
+
+
+
+
 
 =head2 group
 

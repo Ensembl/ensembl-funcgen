@@ -66,7 +66,9 @@ use vars qw(@ISA);
   Arg [-array_chip_id] : int - the dbID or the array_chip
   Arg [-feature_type ] : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [-cell_type ]    : Bio::EnsEMBL::Funcgen::CellType
-  Arg [-replicate ]    : string - the number or name to define the chips within the same set i.e. duplicate sets
+  Arg [-biological_replicate ]    : string - the name to define the biological replicate set
+  Arg [-technical_replicate ]    : string - the name to define the technical replicate set
+
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
 									-dbID          => $ec_id,
@@ -74,8 +76,9 @@ use vars qw(@ISA);
 									-experiment_id => $exp_id,
 									-array_chip_id => $ac_id,
 									-feature_type  => $ftype,
-              	                                                        -cell_type     => $ftype,
-	                                                                -replicate     => 1,
+              	                    -cell_type     => $ftype,
+	                                -biological_replicate => 'BIOREP1',
+                                    -technical_replicate  => 'techrep_1',
 								       );
   Description: Creates a new Bio::EnsEMBL::Funcgen::ExperimentalChip object.
   Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
@@ -93,8 +96,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
   
   #can we lc these?
-  my ($c_uid, $exp_dbid, $ac_id, $ftype, $ctype, $rep)
-    = rearrange( ['UNIQUE_ID', 'EXPERIMENT_ID', 'ARRAY_CHIP_ID', 'FEATURE_TYPE', 'CELL_TYPE', 'REPLICATE'], @_ );
+  my ($c_uid, $exp_dbid, $ac_id, $ftype, $ctype, $brep, $trep)
+    = rearrange( ['UNIQUE_ID', 'EXPERIMENT_ID', 'ARRAY_CHIP_ID', 'FEATURE_TYPE', 'CELL_TYPE', 'BIOLOGICAL_REPLICATE', 'TECHNICAL_REPLICATE'], @_ );
   
   
   $self->unique_id($c_uid)          if defined $c_uid;
@@ -102,8 +105,8 @@ sub new {
   $self->array_chip_id($ac_id)    if defined $ac_id;
   $self->feature_type($ftype)   if defined $ftype;
   $self->cell_type($ctype)   if defined $ctype;
-  $self->replicate($rep)   if defined $rep;
-
+  $self->biological_replicate($brep) if defined $brep;
+  $self->technical_replicate($trep) if defined $trep;
   return $self;
 }
 
@@ -322,11 +325,11 @@ sub cell_type {
 
 
 
-=head2 replicate
+=head2 biological_replicate
 
-  Arg [1]    : (optional) string - the name or number of the chip/duplicate set
-  Example    : $ec->replicate('Duplicate set 1'); or simply  $ec->replicate(1) 
-  Description: Getter, setter for the replicate attribute.
+  Arg [1]    : (optional) string - the name or number of the chip biological replicate set
+  Example    : $ec->biological_replicate('SAMPLENAME_BIOREP1');
+  Description: Getter, setter for the biological_replicate attribute.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -334,11 +337,30 @@ sub cell_type {
 
 =cut
 
-sub replicate {
+sub biological_replicate {
   my $self = shift;
-  $self->{'replicate'} = shift if @_;
-  return $self->{'replicate'};
+  $self->{'biological_replicate'} = shift if @_;
+  return $self->{'biological_replicate'};
 }
+
+=head2 technical_replicate
+
+  Arg [1]    : (optional) string - the name or number of the chip technical replicate set
+  Example    : $ec->technical_replicate('techrep_1');
+  Description: Getter, setter for the technical_replicate attribute.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub technical_replicate {
+  my $self = shift;
+  $self->{'technical_replicate'} = shift if @_;
+  return $self->{'technical_replicate'};
+}
+
 
 
 =head2 experiment_id

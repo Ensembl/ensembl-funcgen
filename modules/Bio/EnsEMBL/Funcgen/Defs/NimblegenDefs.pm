@@ -16,8 +16,8 @@ Bio::EnsEMBL::Funcgen::Defs::NimblegenDefs
 =head1 DESCRIPTION
 
 This is a definitions class which should not be instatiated directly, it 
-normally inherited by the Importer.  NimblegenDefs contains meta data and 
-methods specific to NimbleGen arrays to aid parsing and importing of 
+normally set by the Importer as the parent class.  NimblegenDefs contains meta 
+data and methods specific to NimbleGen arrays to aid parsing and importing of 
 experimental data.
 
 =head1 AUTHOR
@@ -96,6 +96,49 @@ sub new{
 		     Cy5 => 635,
 		     Cy3 => 532,
 		    )},
+
+
+	  #Need to make these definable?
+	  #have protocolfile arg and just parse tab2mage protocol section format
+	  protocols => {(
+					 grow          => {(
+										accession => 'GROW_NIMB',
+										name      => 'GROW NIMBLEGEN CULTURE CONDITIONS',
+										text      => 'Nimblegen culture conditions description here. Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.',
+										paramters => undef,
+									   )},
+					 treatment     => {(
+										accession => 'CROSSLINK_NIMB',
+										name      => 'NIMBLEGEN CHROMATIN PREPARATION',
+										text      => 'Nimblegen X-linking and DNA extraction protocol.Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.',
+										paramters => undef,
+									   )},
+					 extraction    => {(
+										accession => 'CHROMATIN_IP_NIMB',
+										name      => 'NIMBLEGEN CHROMATIN IMMUNOPRECIPITATION and DNA RECOVERY',
+										text      => 'Nimblegen chromatin immunoprecipitation and DNA extraction protocol here.Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.',
+										paramters => undef,
+									   )},
+					 labeling      => {(
+										accession => 'LABELLING_NIMB',
+										name      => 'NIMBLEGEN LABELLING',
+										text      => 'Nimblegen labelling protocol here.Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.',
+										paramteres => undef,
+									   )},
+					 hybridization => {(
+										accession => 'HYBRIDISATION_NIMB',
+										name      => 'NIMBLEGEN HYBRIDISATION',
+										text      => 'Nimblegen chip hybridisation protocol here.Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.',
+										parameters => undef,
+									   )},
+					 scanning      => {(
+										accession => 'SCANNING_NIMB',
+										name      => 'NIMBLESCAN',
+										text      => 'Nimblegen Nimblescan protocol here.Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.Padding text here to avoid description too short warnings.',
+										paramters => undef,
+									   )},
+					)},
+
      )};
 	
   return $self;
@@ -119,17 +162,23 @@ sub set_defs{
 
   #dir are not set in defs to enable generic get_dir method access
 
-  $self->{'design_dir'} = $self->get_dir("data")."/input/".
-    $self->vendor()."/".$self->name()."/DesignFiles";
+  $self->{'design_dir'} = $self->get_dir('data').'/input/'.
+    $self->vendor().'/'.$self->name().'/DesignFiles';
     
-  $self->{'defs'}{'chip_file'} = $self->get_dir("data")."/input/".
-    $self->vendor()."/".$self->name()."/SampleKey.txt";
+  $self->{'defs'}{'chip_file'} = $self->get_dir('data').'/input/'.
+    $self->vendor().'/'.$self->name().'/SampleKey.txt';
     
-  $self->{'defs'}{'notes_file'} = $self->get_dir("data")."/input/".
-    $self->vendor()."/".$self->name()."/DesignNotes.txt";
+  $self->{'defs'}{'notes_file'} = $self->get_dir('data').'/input/'.
+    $self->vendor().'/'.$self->name().'/DesignNotes.txt';
   
-  $self->{'results_dir'} = $self->get_dir("data")."/input/".
-    $self->vendor()."/".$self->name()."/PairData";
+  $self->{'defs'}{'tab2mage_file'} = $self->get_dir('data').'/output/'.
+    $self->vendor().'/'.$self->name().'/E-TABM-'.$self->name().'.txt';
+
+  $self->{'defs'}{'mage_xml_file'} = $self->get_dir('data').'/output/'.
+    $self->vendor().'/'.$self->name().'/{UNASSIGNED}.xml';
+
+  $self->{'results_dir'} = $self->get_dir('data').'/input/'.
+    $self->vendor().'/'.$self->name().'/PairData';
 
   return;
 }
@@ -207,7 +256,7 @@ sub read_array_data{
     }
     elsif((! $array->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])) && ($self->array_set())){
       
-      $self->log("Generating new ArrayChip(".$data[$hpos{'DESIGN_NAME'}].". for same Array ".$array->name()."\n");
+      $self->log("Generating new ArrayChip(".$data[$hpos{'DESIGN_NAME'}].") for same Array:\t".$array->name()."\n");
       
       $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
 							  -ARRAY_ID  => $array->dbID(),
@@ -249,6 +298,8 @@ sub read_experiment_data{
   my $self = shift;
 
   $self->read_array_data($self->get_def('notes_file'));
+  my $t2m_file = $self->init_tab2mage_export() if $self->{'write_mage'};
+
 
   my ($design_desc, $line, $tmp_uid, $channel, $echip, $sample_label);
   my ($sample_desc, %hpos, @data);
@@ -310,28 +361,29 @@ sub read_experiment_data{
 	  
       if($echip){
 
-	if(! $self->recovery()){
-	  throw("ExperimentalChip(".$echip->unqiue_id().
-		" already exists in the database\nMaybe you want to recover?");
-	}
-      }else{
+		if(! $self->recovery()){
+		  throw("ExperimentalChip(".$echip->unqiue_id().
+				" already exists in the database\nMaybe you want to recover?");
+		}
+	  }else{
       
-   	$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
-	  (
-	   -EXPERIMENT_ID  => $self->experiment->dbID(),
-	   -DESCRIPTION    => $data[$hpos{$sample_desc}],
-	   -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])->dbID(),
-	   -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
-	  );
-      
-	($echip) = @{$ec_adaptor->store($echip)};
-	$self->experiment->add_ExperimentalChip($echip); #need a contains method here, #need to do this as the probe cache init 'experimental_chips'
+		$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
+		  (
+		   -EXPERIMENT_ID  => $self->experiment->dbID(),
+		   -DESCRIPTION    => $data[$hpos{$sample_desc}],
+		   -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])->dbID(),
+		   -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
+		  );
+		
+		($echip) = @{$ec_adaptor->store($echip)};
+		$self->experiment->add_ExperimentalChip($echip);
       }
     }
 
 
     ### CREATE AND STORE Channels
 	my $type = uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]);
+	my $sample_label = (! exists $hpos{'SAMPLE_LABEL'}) ? '' :  $data[$hpos{'SAMPLE_LABEL'}];
 	$type = 'TOTAL' if ($type ne 'EXPERIMENTAL');
     $channel = $chan_adaptor->fetch_by_type_experimental_chip_id($type, $echip->dbID());
 
@@ -346,8 +398,7 @@ sub read_experiment_data{
 	  }
     }else{
       #Handles single/mutli
-      my $sample_label = (! exists $hpos{'SAMPLE_LABEL'}) ? '' :  $data[$hpos{'SAMPLE_LABEL'}];
-	  
+   	  
       $channel =  Bio::EnsEMBL::Funcgen::Channel->new
 		(
 		 -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
@@ -360,11 +411,79 @@ sub read_experiment_data{
       #would never happen on one chip?  May happen between chips in one experiment
 	  
       ($channel) = @{$chan_adaptor->store($channel)};
-    }    
+    }
+
+	#we need to build the channel level tab2mage line here
+	if($self->{'write_mage'}){
+	  my $sample_name = ($sample_label eq '') ? '???' : substr($sample_label, 0, (length($sample_label)-1));
+	  my $ctype_name = (defined $self->cell_type()) ? $self->cell_type->name() : '???';
+	  my $ftype_name = (defined $self->feature_type()) ? $self->feature_type->name() : '???';
+	  my $ctype_desc = (defined $self->cell_type()) ? $self->cell_type->description() : '???';
+
+
+	  #File[raw]
+	  my $tsm_line = $echip->unique_id().'_'.$self->get_def('dye_freqs')->{$data[$hpos{'DYE'}]}.'_pair.txt';
+	  #Array[accession] # Should this be left blank for AE accession?
+	  $tsm_line .= "\t".$data[$hpos{'DESIGN_ID'}];
+	  #Array[serial]
+	  $tsm_line .= "\t".$echip->unique_id();
+
+	  #Protocol(s)[grow][treatment][extraction][labelling][hybridisation][scanning]
+	  foreach my $protocol(sort (keys %{$self->get_def('protocols')})){
+		$tsm_line .= "\t".$self->get_def('protocols')->{$protocol}->{'accession'};
+	  }
+	  
+	  #BioSource
+	  $tsm_line .= "\t$ctype_name";
+	  #Sample
+	  $tsm_line .= "\t${sample_name}_BIOREPN";
+	  #Extract 
+	  $tsm_line .= "\t${sample_name}_BIOREPN_techrepN";
+
+	  #LabeledExtract & Immunoprecipitate
+	  if($type eq 'EXPERIMENTAL'){
+		$tsm_line .= "\tIP of ${sample_name}_BIOREPN_techrepN with anti $ftype_name (Ab vendor, Ab ID)";
+		$tsm_line .= "\t${sample_name}_BIOREPN_techrepN IP";
+	  }else{
+		$tsm_line .= "\tInput control DNA of ${sample_name}_BIOREPN_techrepN\t";
+	  }
+		
+	  #Hybridization	
+	  #U2OS BIOREP1_techrep1 ChIP H3KAc 46092 hyb
+	  $tsm_line .= "\t$ctype_name ${sample_name}_BIOREPN_techrepN ChIP $ftype_name ".$echip->unique_id().' hyb';
+	  
+	  #BioSourceMaterial    SampleMaterial	ExtractMaterial	LabeledExtractMaterial
+	  $tsm_line .= "\tcell\tgenomic_DNA\tgenomic_DNA\tsynthetic_DNA";
+	  
+	  #Dye	
+	  $tsm_line .= "\t".$data[$hpos{'DYE'}];
+
+	  #BioMaterialCharacteristics[Organism]
+	  $tsm_line .= "\t".$self->species();
+	  
+	  #BioMaterialCharacteristics[BioSourceType]
+	  $tsm_line .= "\tfrozen_sample";
+
+	  #BioMaterialCharacteristics[StrainOrLine]	
+	  $tsm_line .= "\t$ctype_name";
+
+	  #BioMaterialCharacteristics[CellType]
+	  $tsm_line .= "\t$ctype_desc";
+
+	  #BioMaterialCharacteristics[Sex]
+	  $tsm_line .= "\t???";
+	  #FactorValue[StrainOrLine]	
+	  $tsm_line .= "\t$ctype_name";
+	  #FactorValue[Immunoprecipitate]
+	  $tsm_line .= "\tanti-${ftype_name} antibody\n";
+
+	  print $t2m_file $tsm_line;
+
+	}
+   
   }
   
-  #Set the array now we have stored all details
-
+  close($t2m_file) if $self->{'write_mage'};
   close($fh);
 
   return;
@@ -804,7 +923,7 @@ sub read_and_import_results_data{
 			throw("Could not find result file for Channel(${chan_name}) in ".$self->get_dir('results')) if ! $found;
 			
 			#open/slurp input
-			$self->log("Reading result for channel $chan_name}:\t$file", 1);
+			$self->log("Reading result for channel $chan_name:\t$file", 1);
 			$fh = open_file($file);	
 			@lines = <$fh>;
 			close($fh);
