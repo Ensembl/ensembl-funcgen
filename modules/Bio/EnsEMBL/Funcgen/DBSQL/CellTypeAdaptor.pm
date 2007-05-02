@@ -177,7 +177,7 @@ sub store {
   my $sth = $self->prepare("
 			INSERT INTO cell_type
 			(name, display_label, description)
-			VALUES (?, ?)");
+			VALUES (?, ?, ?)");
     
   
   
