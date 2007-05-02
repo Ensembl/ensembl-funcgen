@@ -38,7 +38,7 @@ Nathan Johnson njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean);
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file);
 
 use strict;
 use Time::Local;
@@ -209,6 +209,95 @@ sub open_file{
   return $fh;
 }
 
+
+
+################################################################################
+
+=head2 run_system_cmd
+
+ Description : Method to control the execution of the standard system() command
+
+ ReturnType  : none
+
+ Example     : $Helper->debug(2,"dir=$dir file=$file");
+
+ Exceptions  : throws exception if system command returns none zero
+
+=cut
+
+################################################################################
+
+
+#Move most of this to EFGUtils.pm
+#Maintain wrapper here with throws, only warn in EFGUtils
+
+sub run_system_cmd{
+  my ($command, $no_exit) = @_;
+
+  my $redirect = '';
+
+  #$self->debug(3, "system($command)");
+  
+  # decide where the command line output should be redirected
+
+  #This should account for redirects
+
+  #if ($self->{_debug_level} >= 3){
+
+  #  if (defined $self->{_debug_file}){
+  #    $redirect = " >>".$self->{_debug_file}." 2>&1";
+  #  }
+  #  else{
+  #    $redirect = "";
+  #  }
+  #}
+  #else{
+    #$redirect = " > /dev/null 2>&1";
+  #}
+
+  # execute the passed system command
+  my $status = system("$command $redirect");
+  my $exit_code = $status >> 8; 
+ 
+  if ($status == -1) {	
+	warn "Failed to execute: $!\n";
+  }    
+  elsif ($status & 127) {
+	warn sprintf("Child died with signal %d, %s coredump\nError:\t$!",($status & 127),($status & 128) ? 'with' : 'without');
+  }    
+  elsif($status != 0) {	
+	warn sprintf("Child exited with value %d\nError:\t$!\n", $exit_code); #get the true exit code
+  }
+ 
+  if ($exit_code != 0){
+		  
+    if (! $no_exit){
+      throw("System command failed:\t$command\n");
+    }
+    else{
+      warn("System command returned non-zero exit code:\t$command\n");
+    }
+  }
+  
+  #reverse boolean logic for perl...can't do this anymore due to tab2mage successful non-zero exit codes :/
+
+  return $exit_code;
+}
+
+
+sub backup_file{
+  my $file_path = shift;
+
+  throw("Must define a file path to backup") if(! $file_path);
+
+  if (-f $file_path) {
+    #$self->log("Backing up:\t$file_path");
+    system ("mv ${file_path} ${file_path}.".`date '+%T'`) == 0 || return 0;
+  }
+
+  return 1;
+
+}
 
 
 1;

@@ -143,7 +143,7 @@ sub new{
   $self->array_set($array_set) if $array_set;
   $self->array_file($array_file) if $array_file;
   $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
-  $self->{'cache_dir'} = $self->{'data_dir'}.'/caches/';
+  #$self->{'cache_dir'} = $self->{'data_dir'}.'/caches/';
   $self->result_files($result_files)if $result_files; #Sanger specific ???
   $self->{'feature_type_name'} = $ftype_name if $ftype_name;#make mandatory?
   $self->{'cell_type_name'} = $ctype_name if $ctype_name;#make madatory?
@@ -161,17 +161,15 @@ sub new{
   $self->input_dir($input_dir) if $input_dir; #defs default override
   $self->{'farm'} = $farm || 1;
   $self->{'ssh'} = $ssh || 0;
-  $self->{'fasta'} = $fasta || 0;
+  $self->{'_dump_fasta'} = $fasta || 0;
   $self->{'recover'} = $recover || 0;
   #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
   $self->{'write_xml'} = $write_xml || 0;
 
  
-
   #Set vendor specific attr dependent vars
   $self->set_defs();
-
 
   my $host_ip = '127.0.0.1';
 
@@ -321,8 +319,7 @@ sub init_experiment_import{
   #Set and validate input dir
   $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->vendor().'/'.$self->name();
   throw('input_dir is not defined or does not exist ('.$self->get_dir('input').')') if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
-  
-  
+
   $self->create_output_dirs('raw', 'norm', 'cache');
 
 
@@ -517,8 +514,11 @@ sub init_experiment_import{
 
 	my $t2m_exit_code = $self->run_system_cmd($cmd, 1);#no exit flag due to non-zero exit codes
 
+
+	warn "tab2mage exit code is  $t2m_exit_code"; 
+
 	if(! ($t2m_exit_code > -1) && ($t2m_exit_code <255)){
-	  $self->log("tab2mage failed.  Please check and correct:\t".$self->get_def('tab2mage_file')."\n...and try again");
+	  throw("tab2mage failed.  Please check and correct:\t".$self->get_def('tab2mage_file')."\n...and try again");
 	}
 
 	#rename file
@@ -681,10 +681,21 @@ sub create_output_dirs{
   #unshift @dirnames, "";#create base output dir
   #now done in control script due to log being generated first
 
+
   foreach my $name (@dirnames) {
-    $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
-    mkdir $self->get_dir($name) if(! -d $self->get_dir($name));
-    chmod 0744, $self->get_dir($name);
+
+	if($name eq 'cache'){
+	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}.'/caches/'.$self->dbname() if(! defined $self->{"${name}_dir"});
+	}
+	else{
+	  $self->{"${name}_dir"} = $self->get_dir("output")."/${name}/" if(! defined $self->{"${name}_dir"});
+	}
+
+	if(! -d $self->get_dir($name)){
+	  $self->log("Creating directory:\t".$self->get_dir($name));
+	  mkdir $self->get_dir($name) || throw('Failed to create directory:    '. $self->get_dir($name));
+	  chmod 0744, $self->get_dir($name);
+	}
   }
   
   return;
@@ -1143,10 +1154,13 @@ sub group{
 sub dbname{
   my ($self) = shift;	
   
-  if (@_) {
-    $self->{'dbname'} = shift;
+  $self->{'dbname'} = shift if @_;
+
+
+  if(! defined  $self->{'dbname'}){
+	warn 'Need to guess dbname here?';
   }
-  
+    
   return $self->{'dbname'};
 }
 
@@ -1347,8 +1361,8 @@ sub user{
 
 sub dump_fasta{
   my $self = shift;
-  $self->{'fasta'} = shift if(@_);
-  return $self->{'fasta'};
+  $self->{'_dump_fasta'} = shift if @_;
+  return $self->{'_dump_fasta'};
 }
 
 
@@ -1537,14 +1551,21 @@ sub validate_mage(){
   my ($self, $mage_xml, $update) = @_;
 
   my (%echips, %bio_reps, %tech_reps, @log);
+  my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue');
 
-  my $rset = $self->get_import_ResultSet('channel', $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue'));
+  my $rset = $self->get_import_ResultSet($anal, 'channel');
+  #doesn't really matter whether we call channel or experimental_chip?
 
-  if(! -l $self->get_dir('output').'/MAGE-ML.dtd'){
-	system('ln -s '.$ENV{'EFG_DATA'}.'/MAGE-ML.dtd '.$self->get_dir('output').'MAGE-ML.dtd') || 
-	  throw('Failed to link MAGE-ML.dtd');
+  if(! $rset){
+	$rset = $self->db->get_ResultSetAdaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
   }
   
+
+  if(! -l $self->get_dir('output').'/MAGE-ML.dtd'){
+	system('ln -s '.$ENV{'EFG_DATA'}.'/MAGE-ML.dtd '.$self->get_dir('output').'/MAGE-ML.dtd') == 0 || 
+	  throw('Failed to link MAGE-ML.dtd');
+  }
+ 
   $self->log('VALIDATING MAGE XML');
   my $reader = Bio::MAGE::XML::Reader->new();
   $mage_xml ||= $self->get_def('mage_xml_file');
@@ -1710,7 +1731,6 @@ sub validate_mage(){
 						  
 						  if(! defined $echips{$chip_uid}{'biorep'}){
 							#This must be control channel
-							warn "control channel?";
 							$echips{$chip_uid}{'biorep'} = $tbiomat->getName();
 						  }
 						  elsif($echips{$chip_uid}{'biorep'} ne $tbiomat->getName()){
@@ -1729,10 +1749,6 @@ sub validate_mage(){
 							  if(uc($dye) ne uc($chan->dye())){
 								push @log, "TOTAL channel dye mismatch:\tMAGE = ".uc($dye).' vs DB '.uc($chan->dye);
 							  }else{
-								
-								
-								warn "Populating total channel for $chip_uid";
-								
 								$echips{$chip_uid}{'total_dye'} = uc($dye);
 							  }
 							}
@@ -1741,7 +1757,6 @@ sub validate_mage(){
 						#could do one more iteration and get Source?
 						#Don't really need to validate this deep?
 					  }
-					 # }
 					}
   				  }
 				}
@@ -1760,12 +1775,12 @@ sub validate_mage(){
 
 
 
-
+  #Validate and build replicates sets
 
   foreach my $echip(@{$rset->get_ExperimentalChips()}){
 	
 	if(! exists $echips{$echip->unique_id()}){
-	  push @log, "No MAGE entry found for ExperimentalChip:\t".$echip->unique();
+	  push @log, "No MAGE entry found for ExperimentalChip:\t".$echip->unique_id();
 	}else{
 	  
 	  my $biorep = $echips{$echip->unique_id()}{'biorep'};
@@ -1870,7 +1885,13 @@ sub validate_mage(){
   }
 
 
-  warn "need to store xml here.";
+  my $xml_file = open_file($self->get_def('mage_xml_file'));
+
+  #slurp in changing separator to null so we get it all in one string.
+  $self->experiment->mage_xml(do{ local ($/); <$xml_file>});
+  close($xml_file);
+
+  $self->experiment($self->db->get_ExperimentAdaptor->update_mage_xml_by_Experiment($self->experiment()));
 
   return;
 }
@@ -2485,7 +2506,7 @@ sub R_norm{
   foreach my $logic_name (@logic_names) {
     throw("Not yet implemented TukeyBiweight") if $logic_name eq "TukeyBiweight";
     my $norm_anal = $aa->fetch_by_logic_name($logic_name);
-    my $rset = $self->get_import_ResultSet('experimental_chip', $norm_anal);
+    my $rset = $self->get_import_ResultSet($norm_anal, 'experimental_chip');
 	my @chips = ();
   
     if (! $rset) {
@@ -2639,7 +2660,7 @@ sub R_norm{
 #return would be result_set
 
 sub get_import_ResultSet{
-  my ($self, $table_name, $anal) = @_;
+  my ($self, $anal, $table_name) = @_;
   
 
   warn "Should build a ResultSet cache here?";
@@ -2650,7 +2671,7 @@ sub get_import_ResultSet{
     throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
   }
 
-  $self->log("Getting import ResultSet for analysis:\t".$anal->logic_name());
+  $self->log("Getting import $table_name ResultSet for analysis:\t".$anal->logic_name());
 
   my ($rset);
   my $result_adaptor = $self->db->get_ResultSetAdaptor();
@@ -2682,10 +2703,7 @@ sub get_import_ResultSet{
 		  #throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t".$anal->logic_name().')' if (scalar(@tmp) >1);
 		  #$rset = $tmp[0];
 
-		  $rset = $result_adaptor->fetch_by_name($self->name()."_IMPORT");
-
-		  warn "Got rset $rset";
-
+		  $rset = $result_adaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
 		  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
 		}
 	

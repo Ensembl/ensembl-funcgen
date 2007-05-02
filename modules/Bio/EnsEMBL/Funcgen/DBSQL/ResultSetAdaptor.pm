@@ -176,9 +176,10 @@ sub fetch_all_by_FeatureType {
 }
  
 
-=head2 fetch_by_name
+=head2 fetch_by_name_Analysis
 
   Arg [1]    : string - ResultSet name
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Analysis
   Example    : my $rset = $rseta->fetch_by_name($exp->name().'_IMPORT');
   Description: Retrieves a ResultSet based on the name attribute
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
@@ -188,14 +189,19 @@ sub fetch_all_by_FeatureType {
 
 =cut
 
-sub fetch_by_name {
-  my ($self, $name) = @_;
+sub fetch_by_name_Analysis {
+  my ($self, $name, $anal) = @_;
 
   if( ! defined $name){
     throw('Need to pass a ResultSet name');
   }
+
+  if(!($anal && $anal->isa('Bio::EnsEMBL::Analysis') && $anal->dbID())){
+	throw('You must provide a valid, stored Bio::EnsEMBL::Analysis');
+  }
+
 	
-  my $constraint = "rs.name ='${name}'";
+  my $constraint = "rs.name ='${name}' AND rs.analysis_id=".$anal->dbID();
 	
   return $self->generic_fetch($constraint)->[0];
 }

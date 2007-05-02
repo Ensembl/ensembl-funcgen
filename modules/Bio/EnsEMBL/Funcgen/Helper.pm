@@ -440,17 +440,17 @@ sub run_system_cmd{
   elsif ($status & 127) {
 	warn sprintf("Child died with signal %d, %s coredump\nError:\t$!",($status & 127),($status & 128) ? 'with' : 'without');
   }    
-  else {	
+  elsif($status != 0) {	
 	warn sprintf("Child exited with value %d\nError:\t$!\n", $exit_code); #get the true exit code
   }
  
   if ($exit_code != 0){
 		  
     if (! $no_exit){
-      throw("System command failed:\t$command\n");
+      throw("System command failed:\t$command\nExit code:\t$exit_code\n$!");
     }
     else{
-      warn("System command returned non-zero exit code:\t$command\n");
+      warn("System command returned non-zero exit code:\t$command\nExit code:\t$exit_code\n$!");
     }
   }
   

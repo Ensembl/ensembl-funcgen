@@ -342,7 +342,7 @@ sub store{
     foreach my $rset (@{$dset->get_ResultSets()}){
 
       if(! ($rset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $rset->is_stored($db))){
-	throw("All FeatureSets must be stored previously") if(! $dset->feature_set->is_stored($db));
+		throw("All ResultSets must be stored previously") if(! $dset->feature_set->is_stored($db));
       }
       
       if(! defined $dset->dbID()){

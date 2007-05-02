@@ -366,7 +366,7 @@ sub read_experiment_data{
 				" already exists in the database\nMaybe you want to recover?");
 		}
 	  }else{
-      
+
 		$echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
 		  (
 		   -EXPERIMENT_ID  => $self->experiment->dbID(),
@@ -629,7 +629,13 @@ sub read_probe_data{
       #my $p_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'design_name'}."txt");
       #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
       #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
-      my $f_out = open_file($self->get_dir("output")."/probe.".$achip->name()."fasta", '>')	if($self->{'_dump_fasta'});
+
+	  my $fasta_file = $ENV{'EFG_DATA'}."/fastas/probe.".$achip->name()."fasta";
+	  $self->backup_file($fasta_file);
+      my $f_out = open_file($fasta_file, '>')	if($self->dump_fasta());
+
+
+
       my ($length, $ops, $op, $of, %pfs);
 
       #should define mapping_method arg to allows this to be set to LiftOver/EnsemblMap
@@ -772,8 +778,9 @@ sub read_probe_data{
 	
 				
 	
-		if ($self->{'_dump_fasta'}){
+		if ($self->dump_fasta()){
 		  (my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}) =~ s/chr//;
+
 		  $loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
 			($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
 		}
@@ -797,7 +804,7 @@ sub read_probe_data{
 	
 		push @{$pfs{$data[$hpos{'PROBE_ID'}]}{'features'}}, $of;
 	
-		if($self->{'_dump_fasta'}){			
+		if($self->dump_fasta()){			
 		  #filter controls/randoms?  Or would it be sensible to see where they map
 		  #wrap seq here?
 		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
@@ -811,12 +818,12 @@ sub read_probe_data{
       $achip->adaptor->set_status("IMPORTED", $achip);
 	  $self->log("ArrayChip:\t".$achip->design_id()." has been IMPORTED");
       
-      if ($self->{'_dump_fasta'}){
-		print $f_out $fasta if($self->{'_dump_fasta'});
+      if ($self->dump_fasta()){
+		print $f_out $fasta;
 		close($f_out);
       }
     
-	  $self->log("Imported design from : ".$achip->name().".ndf", 1);
+	  $self->log("Imported design from:\t".$achip->name().".ndf", 1);
 		
 
 
@@ -871,7 +878,7 @@ sub read_and_import_results_data{
   my (@header, @data, @design_ids, @lines);
   my ($fh, $pid, $line, $file);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("RawValue");
-  my $result_set = $self->get_import_ResultSet('channel', $anal);
+  my $result_set = $self->get_import_ResultSet($anal, 'channel');
 
 
   if($result_set){#we have some new data to import

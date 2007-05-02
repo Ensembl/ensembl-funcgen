@@ -58,25 +58,29 @@ use vars qw(@ISA);
                probe name. This will uniquely define an Affy probe. Only one
 			   probe is ever returned.
   Returntype : Bio::EnsEMBL::Funcgen::Probe
-  Exceptions : None
+  Exceptions : throws if array or probe name not defined
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub fetch_by_array_probe_probeset_name {
-	my $self          = shift;
-	my $array_name    = shift;
-	my $probe_name    = shift;
-	my $probeset_name = shift;
+	my ($self, $array_name, $probe_name, $probeset_name) = @_;
 	
 	my $probeset_clause = "";
 	my $ps_table_alias = "";
+
+
+	if(! defined $array_name || ! defined $probe_name){
+	  throw('You must provide at least and array and probe name');
+	}
 
 	if(defined $probeset_name){
 		$probeset_clause = "AND (p.probe_set_id = ps.probe_set_id AND ps.name = $probeset_name)";
 		$ps_table_alias = ", probe_set op";
 	}
+
+	
 
 	# Need to deal with non-Affy probes where probeset is NULL
 	# (Also allow probeset to be empty string, just in case)
@@ -86,22 +90,23 @@ sub fetch_by_array_probe_probeset_name {
 	#}
 	
 	#need to do a look up of all ac_ids and do a joined OR statement
-	my $array_ref = $self->dbc->db_handle->selectall_arrayref("select ac.array_chip_id from array_chip ac, array a where a.array_id = ac.array_id and a.name = \"$array_name\"");
+
+	my $sql = "select ac.array_chip_id from array_chip ac, array a where a.array_id = ac.array_id and a.name ='$array_name'";
+	my $array_ref = $self->dbc->db_handle->selectall_arrayref($sql);
+
+
+	throw("No ArrayChips foud for array:\t$array_name") if(! @$array_ref);
+
 	map $_ = "@{$_}", @$array_ref;#only works for one element arrays, as we're really turning it into a space separated string.
 
+	
 	my $ac_clause = "p.array_chip_id IN (".join(", ", @$array_ref).")";
 
-	my $sth = $self->prepare("
-		SELECT p.probe_id
-		FROM probe p $ps_table_alias
-		WHERE $ac_clause
-		$probeset_clause
-		AND p.name = ?
-	");
-	
+	$sql = "SELECT p.probe_id FROM probe p $ps_table_alias".
+	  " WHERE $ac_clause $probeset_clause AND p.name = ?";
 
-	#$sth->bind_param(1, $array_name,    SQL_VARCHAR);
-	#$sth->bind_param(1, $probeset,      SQL_VARCHAR);
+	my $sth = $self->prepare($sql);
+	
 	$sth->bind_param(1, $probe_name,    SQL_VARCHAR);
 	$sth->execute();
 	

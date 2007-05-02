@@ -498,7 +498,7 @@ sub read_and_import_result_data{
 
   
   #Now get rset using experiment echips
-  my $rset = $self->get_import_ResultSet('experimental_chip', $analysis);
+  my $rset = $self->get_import_ResultSet($analysis, 'experimental_chip');
 
   if ($rset) {					#we have some new data
 

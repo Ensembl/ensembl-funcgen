@@ -408,7 +408,6 @@ sub fetch_mage_xml_by_experiment_name{
 sub update_mage_xml_by_Experiment{
   my ($self, $exp) = @_;
 
-  warn "In update with $exp";
 
   if(!($exp and $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'))){
 	throw('You must provide a valid Bio::EnsEMBL::Funcgen::Experiment');
@@ -421,15 +420,12 @@ sub update_mage_xml_by_Experiment{
 	$self->db->dbc->do($sql);
 
   }else{
-	my $sql = "INSERT INTO mage_xml (xml) VALUES('".$exp->mage_xml()."'";
+	my $sql = "INSERT INTO mage_xml (xml) VALUES('".$exp->mage_xml()."')";
 	#need to get a statement handle to retrieve insert id
 	my $sth = $self->prepare($sql);
 	$sth->execute();
 	$exp->mage_xml_id($sth->{'mysql_insertid'});
   }
-
-
-  warn "returning $exp";
 
   return $exp;
 }
