@@ -271,6 +271,7 @@ sub store {
 			throw("FeatureSet must have a stored FeatureType") if (! $fset->feature_type->is_stored($self->db()));
 			 
 			my $ctype_id = (defined $fset->cell_type()) ? $fset->cell_type->dbID() : undef;
+			my $name = (defined $fset->name()) ? $fset->name() : undef;
 
 			$sth->bind_param(1, $fset->feature_type->dbID(), SQL_INTEGER);
 			$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);

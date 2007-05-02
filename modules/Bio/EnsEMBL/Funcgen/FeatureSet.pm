@@ -61,11 +61,11 @@ use vars qw(@ISA);
 
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-                                                                   -dbid        => $dbid,
-                                                                   -analysis    => $analysis,
-                                                                   -table_name  => 'experimental_chip',
-                                                                   -table_id    => $ec_id,
-			                                          ); 
+                                                                    -dbid        => $dbid,
+                                                                    -analysis    => $analysis,
+                                                                    -feature_type => $ftype,
+                                                                    -cell_type => $ctype,
+			                                                       ); 
   Description: Constructor for FeatureSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
   Exceptions : Throws if no experiment_id defined
@@ -81,7 +81,7 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($analysis, $feature_type, $cell_type)
+  my ($analysis, $feature_type, $cell_type, $name)
     = rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'NAME'], @_);
 
   #Analysis already checked in BaseFeatureAdaptor
