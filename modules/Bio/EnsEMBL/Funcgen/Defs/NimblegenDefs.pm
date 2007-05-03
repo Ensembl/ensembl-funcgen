@@ -783,8 +783,14 @@ sub read_probe_data{
 
 		  $loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
 			($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
-		}
 	
+		  #filter controls/randoms?  Or would it be sensible to see where they map
+		  #wrap seq here?
+		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
+			"\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
+		}
+
+
 		#Hack!!!!!! Still importing probe (and result?)
 		next if(!  $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}));
 		#warn("Skipping non standard probe (".$data[$hpos{'PROBE_ID'}].") with location:\t$loc\n");
@@ -804,12 +810,6 @@ sub read_probe_data{
 	
 		push @{$pfs{$data[$hpos{'PROBE_ID'}]}{'features'}}, $of;
 	
-		if($self->dump_fasta()){			
-		  #filter controls/randoms?  Or would it be sensible to see where they map
-		  #wrap seq here?
-		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
-	    "\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
-		}
       }
       
       #need to store last data here
