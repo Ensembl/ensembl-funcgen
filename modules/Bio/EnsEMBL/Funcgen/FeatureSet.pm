@@ -65,6 +65,7 @@ use vars qw(@ISA);
                                                                     -analysis    => $analysis,
                                                                     -feature_type => $ftype,
                                                                     -cell_type => $ctype,
+                                                                    -name => $name,
 			                                                       ); 
   Description: Constructor for FeatureSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
@@ -99,7 +100,7 @@ sub new {
   $self->analysis($analysis);
   $self->feature_type($feature_type);
   $self->cell_type($cell_type) if $cell_type;
-  $self->($name) if $name;
+  $self->name($name) if $name;
 
   return $self;
 }
