@@ -85,25 +85,27 @@ sub fetch_all_by_FeatureType {
 
 
 
-=head2 fetch_all_by_CellType
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::CelLType
+
+=head2 fetch_all_by_name
+
+  Arg [1]    : string - name of FeatureSet
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my @displayable_fsets = @{$fset_adaptor->fetch_all_by_CellType($ctype, 'DISPLAYABLE')};
-  Description: Fetch all FeatureSet with a given CellType.
+  Example    : my @fsets = @{$fset_adaptor->fetch_all_by_name('feature_set-1')};
+  Description: Fetch all FeatureSets wit a given name
   Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
-  Exceptions : Throws if no valid CellType passed
+  Exceptions : Throws if no name passed 
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - change to fetch_by_name when name is made unique key
 
 =cut
 
-sub fetch_all_by_CellType {
-  my ($self, $ctype, $status) = @_;
+sub fetch_all_by_name {
+  my ($self, $name, $status) = @_;
   
-  throw("Must provide a valid Bio::EnsEMBL::Funcgen::CellType") if (! ($ctype && $ctype->isa("Bio::EnsEMBL::Funcgen::CellType")));
+  throw("Must provide a name argument") if (! defined $name);
   
-  my $sql = "fs.cell_type_id='".$ctype->dbID()."'";
+  my $sql = "fs.name='".$name."'";
   
   if($status){
     my $constraint = $self->status_to_constraint($status) if $status;
