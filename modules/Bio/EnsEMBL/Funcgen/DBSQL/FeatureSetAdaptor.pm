@@ -80,8 +80,41 @@ sub fetch_all_by_FeatureType {
       $sql = (defined $constraint) ? $sql." ".$constraint : undef;
     }
 
-    return (defined $sql) ? $self->generic_fetch($sql) : undef;	
+    return $self->generic_fetch($sql);	
 }
+
+=head2 fetch_all_by_CellType
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Example    : my @fsets = $fs_adaptopr->fetch_all_by_CellType($ctype);
+  Description: Retrieves FeatureSet objects from the database based on the CellType.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : Throws if arg is not a valid CellType
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_CellType {
+    my $self = shift;
+    my $ctype = shift;
+    my $status = shift;
+    
+    if(! ($ctype && $ctype->isa("Bio::EnsEMBL::Funcgen::CellType") && $ctype->dbID())){
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::CellType object");
+    }
+	
+    my $sql = "fs.cell_type_id = '".$ctype->dbID()."'";
+
+    if($status){
+      my $constraint = $self->status_to_constraint($status) if $status;
+      $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+    }
+
+    return $self->generic_fetch($sql);	
+}
+
 
 
 =head2 fetch_all_by_FeatureType_Analysis
@@ -99,23 +132,34 @@ sub fetch_all_by_FeatureType {
 
 =cut
 
-sub fetch_all_by_FeatureType {
-    my $self = shift;
-    my $ftype = shift;
-    my $status = shift;
+sub fetch_all_by_FeatureType_Analysis {
+    my ($self, $ftype, $anal, $ctype) = @_;
     
-    if(! ($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType"))){
-      throw("Must provide a valid Bio::EnsEMBL::Funcgen::FeatureType object");
+
+	my $sql = '';
+
+    if(! ($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())){
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureType object");
     }
 	
-    my $sql = "fs.feature_type_id = '".$ftype->dbID()."'";
-
-    if($status){
-      my $constraint = $self->status_to_constraint($status) if $status;
-      $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+	if(! ($anal && $anal->isa("Bio::EnsEMBL::Analysis") && $anal->dbID())){
+      throw("Must provide a valid stored Bio::EnsEMBL::Analysis object");
     }
 
-    return (defined $sql) ? $self->generic_fetch($sql) : undef;	
+	if($ctype){
+
+	  if(! ($ctype->isa("Bio::EnsEMBL::Funcgen::CellType") && $ctype->dbID())){
+		throw("Argument must be a valid stored Bio::EnsEMBL::Funcgen::CellType object");
+	  }
+	  
+	  $sql = ' AND fs.cell_type_id='.$ctype->dbID();
+	}
+
+
+    $sql = 'fs.feature_type_id ='.$ftype->dbID().' AND fs.analysis_id='.$anal->dbID().$sql;
+
+  
+    return $self->generic_fetch($sql);	
 }
 
 
@@ -144,7 +188,7 @@ sub fetch_all_by_name {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
   
-  return (defined $sql) ? $self->generic_fetch($sql) : undef;	
+  return $self->generic_fetch($sql);	
 }
 
 =head2 fetch_attributes
@@ -309,7 +353,7 @@ sub store {
 			$sth->bind_param(1, $fset->feature_type->dbID(), SQL_INTEGER);
 			$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);
 			$sth->bind_param(3, $ctype_id,                   SQL_INTEGER);
-			$sth->bind_param(4, $name,                       SQL_VARCHAR);
+			$sth->bind_param(4, $fset->name(),                       SQL_VARCHAR);
 		
 			$sth->execute();
 			$fset->dbID($sth->{'mysql_insertid'});
