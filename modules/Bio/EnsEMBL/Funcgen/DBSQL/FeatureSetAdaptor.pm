@@ -84,7 +84,39 @@ sub fetch_all_by_FeatureType {
 }
 
 
+=head2 fetch_all_by_FeatureType_Analysis
 
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
+  Arg [2]    : Bio::EnsEMBL::Analysis
+  Arg [3]    : (optional) Bio::EnsEMBL::Funcgen::CellType
+  Example    : my @fsets = $fs_adaptopr->fetch_all_by_FeatureType_Analysis($ftype, $anal, $ctype);
+  Description: Retrieves FeatureSet objects from the database based on FeatureType, Analysis and 
+               CellType if defined.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : Throws if args 1 and 2 are not valid or stored
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_FeatureType {
+    my $self = shift;
+    my $ftype = shift;
+    my $status = shift;
+    
+    if(! ($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType"))){
+      throw("Must provide a valid Bio::EnsEMBL::Funcgen::FeatureType object");
+    }
+	
+    my $sql = "fs.feature_type_id = '".$ftype->dbID()."'";
+
+    if($status){
+      my $constraint = $self->status_to_constraint($status) if $status;
+      $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+    }
+
+    return (defined $sql) ? $self->generic_fetch($sql) : undef;	
+}
 
 
 =head2 fetch_all_by_name
@@ -273,7 +305,6 @@ sub store {
 			throw("FeatureSet must have a stored FeatureType") if (! $fset->feature_type->is_stored($self->db()));
 			 
 			my $ctype_id = (defined $fset->cell_type()) ? $fset->cell_type->dbID() : undef;
-			my $name = (defined $fset->name()) ? $fset->name() : undef;
 
 			$sth->bind_param(1, $fset->feature_type->dbID(), SQL_INTEGER);
 			$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);
