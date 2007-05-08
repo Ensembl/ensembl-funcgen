@@ -112,6 +112,34 @@ use warnings;
 #force association when loading features
 
 
+=head2 fetch_all_by_FeatureSet
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
+  Example    : my @dsets = $fs_adaptopr->fetch_all_by_FeatureSet($fset);
+  Description: Retrieves DataSet objects from the database based on the FeatureSet.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::DataSet objects
+  Exceptions : Throws if arg is not a valid FeatureSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_FeatureSet {
+    my $self = shift;
+    my $fset = shift;
+
+    
+    if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet") && $fset->dbID())){
+      throw("Must provide a valid Bio::EnsEMBL::Funcgen::FeatureSet object");
+    }
+	
+    my $sql = "ds.feature_set_id = '".$fset->dbID()."'";
+
+
+    return $self->generic_fetch($sql);	
+}
+
+
 
  
 =head2 _tables
