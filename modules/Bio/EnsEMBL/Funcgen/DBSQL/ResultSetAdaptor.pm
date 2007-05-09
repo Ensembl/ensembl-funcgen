@@ -563,7 +563,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   my $sql = "SELECT ec.biological_replicate, cc.chip_channel_id from experimental_chip ec, chip_channel cc 
              WHERE cc.table_name='experimental_chip'
-             AND ec.experimental_id=cc.table_id
+             AND ec.experimental_chip_id=cc.table_id
              AND cc.table_id IN(".join(', ', (map $_->dbID(), @{$rset->get_ExperimentalChips()})).")";
 
   
