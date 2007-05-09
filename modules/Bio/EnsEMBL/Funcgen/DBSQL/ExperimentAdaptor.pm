@@ -425,6 +425,10 @@ sub update_mage_xml_by_Experiment{
 	my $sth = $self->prepare($sql);
 	$sth->execute();
 	$exp->mage_xml_id($sth->{'mysql_insertid'});
+
+	$sql = "UPDATE experiment set mage_xml_id=".$exp->mage_xml_id()." where experiment_id =".$exp->dbID();
+	$sth = $self->prepare($sql);
+	$sth->execute();
   }
 
   return $exp;
