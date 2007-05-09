@@ -8,7 +8,7 @@ echo "Setting up eFG environment" #and cd'ing to $EFG_SRC"
 export SRC=~/src
 export EFG_SRC=$SRC/ensembl-functgenomics
 export EFG_SQL=$EFG_SRC/sql
-export EFG_DATA=~/data/efg
+export EFG_DATA=/lustre/work1/ensembl/nj1/efg
 #should make data dirs here
 
 
