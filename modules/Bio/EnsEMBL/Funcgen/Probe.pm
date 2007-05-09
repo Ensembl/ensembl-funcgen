@@ -307,7 +307,7 @@ sub get_probename {
       my @ac_ids = keys %{$self->{'arrays'}};
 
       if((scalar @ac_ids == 1) && ($self->get_all_Arrays()->[0]->vendor() ne "AFFY")){
-	$arrayname = $self->get_all_Arrays()->[0]->name();
+		$arrayname = $self->get_all_Arrays()->[0]->name();
       }
       else{
 	throw("Cannot retrieve probename without arrayname if more than 1 array chip(@ac_ids) and not NIMBELGEN(".$self->get_all_Arrays()->[0]->vendor().")\n");
