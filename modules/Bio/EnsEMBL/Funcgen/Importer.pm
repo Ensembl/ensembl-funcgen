@@ -31,7 +31,7 @@ Nathan Johnson, njohnson@ebi.ac.uk
 
 package Bio::EnsEMBL::Funcgen::Importer;
 
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date open_file);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date open_file run_system_cmd);
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Experiment;
@@ -165,7 +165,7 @@ sub new{
   $self->{'recover'} = $recover || 0;
   #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
-  $self->{'write_xml'} = $write_xml || 0;
+  $self->{'update_xml'} = $write_xml || 0;
 
  
   #Set vendor specific attr dependent vars
@@ -443,7 +443,7 @@ sub init_experiment_import{
   
   #how is recovery going to be affected
 
-  my $xml = $exp_adaptor->fetch_mage_xml_by_experiment_name($self->name()) if $self->{'write_xml'};
+  my $xml = $exp_adaptor->fetch_mage_xml_by_experiment_name($self->name());# if $self->{'write_xml'};
   my $read_xml = 0;
 
   #if(! $self->{'write_mage'}){#else must be a recovery? unless it's specified in error
@@ -491,17 +491,21 @@ sub init_experiment_import{
   #To get around the problem of rolling back every chip, we need to add teh LOADING status
   #which should be removed once imported.
 
+  
   if($self->{'write_mage'} || !( -f $self->get_def('tab2mage_file') || $xml)){
 	$self->{'write_mage'} = 1;
 	$self->backup_file($self->get_def('tab2mage_file'));
-  }elsif($xml && (! $self->{'update_xml'})){
+  }
+  elsif($xml && (! $self->{'update_xml'})){
 	$self->{'recover'} = 1;
-  }elsif( -f $self->get_def('tab2mage_file')){#logic dictates this has to be true
+	$self->{'skip_validate'} = 1;
+	
+  }
+  elsif( -f $self->get_def('tab2mage_file')){#logic dictates this has to be true
 	#run tab2mage and import xml
 	#update replicate info
 	#do we need to validate xml vs meta info in read methods?
 	#turn recovery on?
-	
 	#back up xml if present? Or just recreate?
 	#can we allow custom xml files here
 	$self->backup_file($self->get_def('mage_xml_file'));
@@ -512,9 +516,8 @@ sub init_experiment_import{
 
 	$self->log('Reading tab2mage file');
 
-	my $t2m_exit_code = $self->run_system_cmd($cmd, 1);#no exit flag due to non-zero exit codes
-
-
+	my $t2m_exit_code = run_system_cmd($cmd, 1);#no exit flag due to non-zero exit codes
+	
 	warn "tab2mage exit code is  $t2m_exit_code"; 
 
 	if(! ($t2m_exit_code > -1) && ($t2m_exit_code <255)){
@@ -691,7 +694,7 @@ sub create_output_dirs{
 	  $self->{"${name}_dir"} = $self->get_dir("output")."/${name}/" if(! defined $self->{"${name}_dir"});
 	}
 
-	if(! -d $self->get_dir($name)){
+	if(! (-d $self->get_dir($name) || (-l $self->get_dir($name)))){
 	  $self->log("Creating directory:\t".$self->get_dir($name));
 	  mkdir $self->get_dir($name) || throw('Failed to create directory:    '. $self->get_dir($name));
 	  chmod 0744, $self->get_dir($name);
@@ -1503,7 +1506,7 @@ sub register_experiment{
 	exit;
   }elsif($self->vendor ne 'SANGER'){#This should be a no_channel flag, set dependent on import mode(gff_chip, gff_chan)
 	#Need to accomodate chip level imports in validate!!
-	$self->validate_mage();
+	$self->validate_mage() if (! $self->{'skip_validate'});
   }
 
   $self->read_data("probe");
@@ -1560,6 +1563,9 @@ sub validate_mage(){
 	$rset = $self->db->get_ResultSetAdaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
   }
   
+  if(! $rset){
+	throw('Cannot find ResultSet, are you trying to import a new experiment which already has a tab2mage file present?  Try removing the file, or specifying the -write_mage flag to parse_and_import.pl');
+  }
 
   if(! -l $self->get_dir('output').'/MAGE-ML.dtd'){
 	system('ln -s '.$ENV{'EFG_DATA'}.'/MAGE-ML.dtd '.$self->get_dir('output').'/MAGE-ML.dtd') == 0 || 
@@ -2635,7 +2641,7 @@ sub R_norm{
  
 
 	  $self->log("Submitting $logic_name job to farm:\t".localtime());
-      system($r_cmd) == 0 or throw("R $logic_name normalisation failed with error code $? ($R_file)");
+	  run_system_cmd($r_cmd);
 	  $self->log("Finished $logic_name job:\t".localtime());
 
 	  #Now load file and update status
@@ -2676,6 +2682,11 @@ sub get_import_ResultSet{
   my ($rset);
   my $result_adaptor = $self->db->get_ResultSetAdaptor();
   my $logic_name = ($anal->logic_name() eq "RawValue") ? "" : "_".$anal->logic_name();
+
+  if(($anal->logic_name()) eq 'RawValue' && ($table_name eq 'experimental_chip')){
+	throw("Cannot have an ExperimentalChip ResultSet with a RawValue analysis, either specify 'channel' or another analysis");
+  }
+
   my $status = "IMPORTED${logic_name}";
   
   #could drop the table name here and use analysis hash?
