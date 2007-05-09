@@ -40,6 +40,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file);
 
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 use strict;
 use Time::Local;
 use FileHandle;
