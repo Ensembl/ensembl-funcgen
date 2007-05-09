@@ -573,10 +573,14 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #could maybe do a selecthashref here?
 
   while($sth->fetch()){
+	$biol_rep ||= 'NO_REP_SET';
 	$biol_reps{$cc_id} = $biol_rep;
   }
 
-  
+  if(grep(/^NO_REP_SET$/, values %biol_reps)){
+	warn 'You have ExperimentalChips with no biological_replicate information, these will be all treated as one biological replicate';
+  }
+
   #we don't need to account for strnadedness here as we're dealing with a double stranded feature
   #need to be mindful if we ever consider expression
   
@@ -636,6 +640,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
       $old_end = $end;
 	  
       #record new score
+
 	  @{$rep_scores{$biol_reps{$cc_id}}} = ($score);
     }
   }
