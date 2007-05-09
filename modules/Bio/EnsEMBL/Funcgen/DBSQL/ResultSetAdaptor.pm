@@ -224,15 +224,16 @@ sub _tables {
   my $self = shift;
 	
   return (
-	  [ 'result_set',        'rs' ],
-	  [ 'chip_channel',      'cc' ],
-	  [ 'experimental_chip', 'ec' ],
-	  [ 'channel',           'c'  ],#This causes the N(no channelrecords) records to be returned when there is no linkable channel.
-
-	  #we can have channel here, but only if we make the link in the default where, otherwise we'll get spurious results
-	  #must also make all the fetch methods use an OR constraint dependent on the table name
-	  #this would also be in default where
-	 );
+		  [ 'result_set',        'rs' ],
+		  [ 'chip_channel',      'cc' ],
+		  [ 'experimental_chip', 'ec' ],
+		  [ 'channel',           'c'  ],
+		  #This causes the N(no channelrecords) records to be returned when there is no linkable channel.
+		  #solution is to create dummy channels for chip level import e.g. Sanger
+		  #we can have channel here, but only if we make the link in the default where, otherwise we'll get spurious results
+		  #must also make all the fetch methods use an OR constraint dependent on the table name
+		  #this would also be in default where
+		 );
 }
 
 =head2 _columns
@@ -553,11 +554,8 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
       return \@rfeatures;
     }
   }
-  
 
-  warn "We need to build techrep and biol rep strucs here based on cc_id";
-
-  #basically we need to build a hash of cc_id to biolrep value
+  #we need to build a hash of cc_id to biolrep value
   #Then we use the biolrep as a key, and push all techrep values.
   #this can then be resolved in the method below, using biolrep rather than cc_id
 
@@ -583,18 +581,6 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   #we don't need to account for strnadedness here as we're dealing with a double stranded feature
   #need to be mindful if we ever consider expression
-  
-  #my $sql = "SELECT r.score, pf.seq_region_start, pf.seq_region_end FROM result r, probe_feature pf, chip_channel cc
-  #           WHERE cc.result_set_id = ".$rset->dbID()."
-  #           AND cc.table_id IN (".join(' ,', @ids).")
-  #           AND cc.chip_channel_id = r.chip_channel_id
-  #	         AND r.probe_id=pf.probe_id
-  #             AND pf.seq_region_id='".$slice->get_seq_region_id()."'
-  #             AND pf.seq_region_end>='".$slice->start()."'
-  #             AND pf.seq_region_start<='".$slice->end()."'
-  #             ORDER by pf.seq_region_start";
-  
-
   #we don't need X Y here, as X Y for probe will be unique for cc_id.
   #any result with the same cc_id will automatically be treated as a tech rep
 
@@ -619,7 +605,6 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   while ( $sth->fetch() ) {
     #we need to get best result here if start and end the same
-    
     #set start end for first result
     $old_start ||= $start;
     $old_end   ||= $end; 
@@ -717,32 +702,6 @@ sub resolve_replicates_by_ResultSet{
 }
 
 
-sub _get_best_result{
-  my ($self, $scores) = @_;
-
-
-  my ($median);
-  my $count = scalar(@$scores);
-  my $index = $count-1;
-  #need to deal with lines with no results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  #deal with one score fastest
-  return  $scores->[0] if ($count == 1);
-  
-  #taken from Statistics::Descriptive
-  #remeber we're dealing with size starting with 1 but indices starting at 0
-
-  if ($count % 2) { #odd number of scores
-    $median = $scores->[($index+1)/2];
-  }
-  else { #even
-    $median = ($scores->[($index)/2] + $scores->[($index/2)+1] ) / 2;
-  }
-
-  return $median;
-}
-
-
-
 =head2 fetch_results_by_probe_id_ResultSet
 
   Arg [1]    : int - probe dbID
@@ -771,9 +730,6 @@ sub fetch_results_by_probe_id_ResultSet{
 
   my $query = "SELECT r.score from result r where r.probe_id ='${probe_id}'".
     " AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
-
- 
-  #  warn "query is $query";
 
   my @results = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($query)};
   
