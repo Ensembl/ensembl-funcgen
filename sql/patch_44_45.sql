@@ -24,3 +24,11 @@ alter table experimental_chip add `technical_replicate` varchar(40) default NULL
 
 alter table experiment change date `date` date default '0000-00-00';
 update meta set meta_value=45 where meta_key='schema_version';
+
+-- add X and Y to result
+alter table result add  `X` int(4) unsigned default NULL;
+alter table result add  `Y` int(4) unsigned default NULL;
+
+
+-- Need to update status for old ec and chans
+-- select experimental_chip_id  from experimental_chip where experiment_id =12;
