@@ -630,7 +630,7 @@ sub read_probe_data{
       #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
       #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
 
-	  my $fasta_file = $ENV{'EFG_DATA'}."/fastas/probe.".$achip->name()."fasta";
+	  my $fasta_file = $ENV{'EFG_DATA'}."/fastas/probe.".$achip->name().".fasta";
 	  $self->backup_file($fasta_file);
       my $f_out = open_file($fasta_file, '>')	if($self->dump_fasta());
 
@@ -881,17 +881,16 @@ sub read_and_import_results_data{
   my $result_set = $self->get_import_ResultSet($anal, 'channel');
 
 
-  if($result_set){#we have some new data to import
+  if ($result_set) {			#we have some new data to import
     
-    foreach my $echip(@{$self->experiment->get_ExperimentalChips()}){
-
+    foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
+	  
       if( ! $echip->has_status('IMPORTED')){
-
-		my $array = $echip->get_ArrayChip->get_Array();
-	
-		foreach my $chan(@{$echip->get_Channels()}){
-
-		  if( ! $chan->has_status('IMPORTED')){
+		
+		foreach my $chan (@{$echip->get_Channels()}) {
+		  
+		  if ( ! $chan->has_status('IMPORTED')) {
+			my $array = $echip->get_ArrayChip->get_Array();
 			$self->get_probe_cache_by_Array($array) || throw('Failed to reset the probe cache handle');
 			
 			my ($probe_elem, $score_elem, %hpos);
@@ -899,13 +898,13 @@ sub read_and_import_results_data{
 			my $r_string = "";
 			my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
 			my $cc_id = $result_set->get_chip_channel_id($chan->dbID());
-
-
-			if ($self->recovery()){
+			
+			
+			if ($self->recovery()) {
 			  $self->log("Rolling back results for channel:\t${chan_name}");
 			  $self->db->rollback_results($cc_id);
 			}
-
+			
 			#open/backup output
 			my $out_file = $self->get_dir("raw")."/result.".$chan_name.".txt";	
 			$self->backup_file($out_file);
@@ -915,123 +914,124 @@ sub read_and_import_results_data{
 			my $found = 0;
 			
 		  FILE: foreach my $name($chan_name, $alt_chan_name){
+			
+			foreach my $suffix ("_pair.txt", ".pair", ".txt") {
 			  
-			  foreach my $suffix("_pair.txt", ".pair", ".txt"){
-				
-				$file = $self->get_dir("results")."/".$name.$suffix;
-				
-				if(-f $file){
-				  $found = 1;
-				  last FILE;
-				}
+			  $file = $self->get_dir("results")."/".$name.$suffix;
+			  
+			  if (-f $file) {
+				$found = 1;
+				last FILE;
 			  }
 			}
-			
-			throw("Could not find result file for Channel(${chan_name}) in ".$self->get_dir('results')) if ! $found;
-			
-			#open/slurp input
-			$self->log("Reading result for channel $chan_name:\t$file", 1);
-			$fh = open_file($file);	
-			@lines = <$fh>;
-			close($fh);
-
-					
-			###PROCESS HEADER
-			
-			foreach my $i(0..$#lines){
-			  
-			  if ($lines[$i] =~ /PROBE_ID/o){
-				$lines[$i] =~ s/\r*\n//o;
-				@data = split/\t/o, $lines[$i];
-				
-				%hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
-				
-				#remove header
-				splice @lines, $i, 1;
-				
-				last;#finished processing header
-			  }
-			}
-			
-			#we need to sort the result files based on the unique key(name at present, should replace with seq at some point)
-			@lines = sort {(split/\t/o, $a)[$hpos{'PROBE_ID'}] cmp (split/\t/o, $b)[$hpos{'PROBE_ID'}]} @lines;
-			
-			$self->log('Parsing results', 1);
-			
-			foreach $line(@lines){
-			  
-			  #can we preprocess effectively?
-			  next if $line =~ /^#/;
-			  next if $line =~ /NGS_CONTROLS/;
-			  next if $line =~ /V_CODE/;
-			  next if $line =~ /H_CODE/;
-			  next if $line =~ /RANDOM/;
-			  
-			  $line =~ s/\r*\n//o;
-			  @data = split/\t/o, $line;
-			  
-			  ###PROCESS HEADER
-			  #if ($line =~ /PROBE_ID/o){
-			  #  
-			  #  %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
-			  #  next;#finished processing header
-			  #}
-			  
-			  ###PROCESS DATA
-			  #Is this string concat causing the slow down, would it befaster to use an array and print a join?
-			  
-			  if($pid = $self->get_probe_id_by_name_Array($data[$hpos{'PROBE_ID'}], $array)){
-				$cnt ++;
-				$r_string .= '\N'."\t${pid}\t".$data[$hpos{'PM'}]."\t${cc_id}\t".$data[$hpos{'X'}]."\t".$data[$hpos{'Y'}]."\n";
-			  }else{
-				warn "Found unfiltered non-experimental probe in input $data[$hpos{'PROBE_ID'}]";
-			  }
-			  
-			  ###PRINT SOME RESULTS
-			  if($cnt > 10000){
-				$cnt = 0;
-				print $r_out $r_string;
-				$r_string ="";
-				#could we fork here and import in the background?
-			  }
-			  
-			} 
-			#PRINT/CLOSE Channel file
-			print $r_out $r_string;
-			close($r_out);
-			$self->log("Finished parsing $chan_name result", 1);
-			
-			#$self->log("Memory report:\n".report_size( $self, { indent => "  " } ));
-			#$self->log("Memory report:\n".(total_size($self) / 1000));
-			
-			#Import directly here to avoid having to reparse all results if we crash!!!!
-			$self->log("Importing:\t$out_file");
-			$self->db->load_table_data("result",  $out_file);
-			$self->log("Finished importing:\t$out_file", 1);
-			$chan->adaptor->set_status('IMPORTED', $chan);
-
-			#$self->log("Size report:\n".report_size($self,  { indent => "  " }));
-
 		  }
+		  
+		  throw("Could not find result file for Channel(${chan_name}) in ".$self->get_dir('results')) if ! $found;
+		  
+		  #open/slurp input
+		  $self->log("Reading result for channel $chan_name:\t$file", 1);
+		  $fh = open_file($file);	
+		  @lines = <$fh>;
+		  close($fh);
+		  
+					
+		  ###PROCESS HEADER
+		  
+		  foreach my $i (0..$#lines) {
+			
+			if ($lines[$i] =~ /PROBE_ID/o) {
+			  $lines[$i] =~ s/\r*\n//o;
+			  @data = split/\t/o, $lines[$i];
+			  
+			  %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
+			  
+			  #remove header
+			  splice @lines, $i, 1;
+			  
+			  last;				#finished processing header
+			}
+		  }
+		  
+		  #we need to sort the result files based on the unique key(name at present, should replace with seq at some point)
+		  @lines = sort {(split/\t/o, $a)[$hpos{'PROBE_ID'}] cmp (split/\t/o, $b)[$hpos{'PROBE_ID'}]} @lines;
+		  
+		  $self->log('Parsing results', 1);
+		  
+		  foreach $line(@lines) {
+			
+			#can we preprocess effectively?
+			next if $line =~ /^#/;
+			next if $line =~ /NGS_CONTROLS/;
+			next if $line =~ /V_CODE/;
+			next if $line =~ /H_CODE/;
+			next if $line =~ /RANDOM/;
+			
+			$line =~ s/\r*\n//o;
+			@data = split/\t/o, $line;
+			
+			###PROCESS HEADER
+			#if ($line =~ /PROBE_ID/o){
+			#  
+			#  %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
+			#  next;#finished processing header
+			#}
+			
+			###PROCESS DATA
+			#Is this string concat causing the slow down, would it befaster to use an array and print a join?
+			
+			if ($pid = $self->get_probe_id_by_name_Array($data[$hpos{'PROBE_ID'}], $array)) {
+			  $cnt ++;
+			  $r_string .= '\N'."\t${pid}\t".$data[$hpos{'PM'}]."\t${cc_id}\t".$data[$hpos{'X'}]."\t".$data[$hpos{'Y'}]."\n";
+			} else {
+			  warn "Found unfiltered non-experimental probe in input $data[$hpos{'PROBE_ID'}]";
+			}
+			
+			###PRINT SOME RESULTS
+			if ($cnt > 10000) {
+			  $cnt = 0;
+			  print $r_out $r_string;
+			  $r_string ="";
+			  #could we fork here and import in the background?
+			}
+			
+		  } 
+		  #PRINT/CLOSE Channel file
+		  print $r_out $r_string;
+		  close($r_out);
+		  $self->log("Finished parsing $chan_name result", 1);
+		  
+		  #Import directly here to avoid having to reparse all results if we crash!!!!
+		  $self->log("Importing:\t$out_file");
+		  $self->db->load_table_data("result",  $out_file);
+		  $self->log("Finished importing:\t$out_file", 1);
+		  $chan->adaptor->set_status('IMPORTED', $chan);
+		
+		  
+		  }
+		  #$echip->adaptor->set_status('IMPORTED', $echip);
+		  
+		  
+		  #foreach my $key(keys %{$self}){
+		  #  $self->log("Getting mem for $key");
+		  #  $self->log("$key mem\t".(size($self->{$key})));
+		  #}
+		
 		}
-		$echip->adaptor->set_status('IMPORTED', $echip);
-
-
-		#foreach my $key(keys %{$self}){
-		#  $self->log("Getting mem for $key");
-		#  $self->log("$key mem\t".(size($self->{$key})));
-		#}
-      }
-    }
-  }else{
-    $self->log("Skipping results parse and import");
+		
+		$echip->adaptor->set_status('IMPORTED', $echip);	
+				
+	  }
+	}
+  } 
+  else {
+	$self->log("Skipping results parse and import");
   }
-
+  
   $self->log("Finished parsing and importing results");
-
+  
   return;
 }
-
+  
 
 
 1;
