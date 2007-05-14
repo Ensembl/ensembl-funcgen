@@ -106,13 +106,13 @@ sub new{
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, $write_xml)
+	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
-				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE_XML'], @_);
+				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 'UPDATE_XML'], @_);
   #add mail flag
   #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
   #would have to make sure GroupDefs is inherited first so we can set some mandatory params
@@ -165,8 +165,8 @@ sub new{
   $self->{'recover'} = $recover || 0;
   #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
-  $self->{'update_xml'} = $write_xml || 0;
-
+  $self->{'update_xml'} = $update_xml || 0;
+  $self->{'write_mage'} = $write_mage || 0;
  
   #Set vendor specific attr dependent vars
   $self->set_defs();
@@ -444,7 +444,6 @@ sub init_experiment_import{
   #how is recovery going to be affected
 
   my $xml = $exp_adaptor->fetch_mage_xml_by_experiment_name($self->name());# if $self->{'write_xml'};
-  my $read_xml = 0;
 
   #if(! $self->{'write_mage'}){#else must be a recovery? unless it's specified in error
 	
@@ -499,7 +498,6 @@ sub init_experiment_import{
   elsif($xml && (! $self->{'update_xml'})){
 	$self->{'recover'} = 1;
 	$self->{'skip_validate'} = 1;
-	
   }
   elsif( -f $self->get_def('tab2mage_file')){#logic dictates this has to be true
 	#run tab2mage and import xml
@@ -528,9 +526,11 @@ sub init_experiment_import{
 	#$cmd = 'mv '.$self->get_dir('output').'/\{UNASSIGNED\}.xml '.$self->get_dir('output').'/'.$self->name().'.xml';
 	#$self->run_system_command($cmd);
 	$self->{'recover'} = 1;
-  }else{
-	throw('Grrr, this should never be true, check the mage logic');
-  }
+  }#else{
+	#this is true if we delete the tab2mage file and specify write_mage
+  #we should write the mage file and exit as normal
+  #	throw('Grrr, this should never be true, check the mage logic');
+  #  }
 
 
   #now we just need to use read_meta/write_mage in read methods to figure out if we need to validate or just write the template
