@@ -32,3 +32,5 @@ alter table result add  `Y` int(4) unsigned default NULL;
 
 -- Need to update status for old ec and chans
 -- select experimental_chip_id  from experimental_chip where experiment_id =12;
+
+-- select e.name, rs.result_set_id from experiment e, result_set rs, experimental_chip ec, chip_channel cc where e.experiment_id=ec.experiment_id and ec.experiment_id>1 and ec.experiment_id <12 and ec.experimental_chip_id =cc.table_id and cc.table_name='experimental_chip' and cc.result_set_id=rs.result_set_id group by result_set_id;

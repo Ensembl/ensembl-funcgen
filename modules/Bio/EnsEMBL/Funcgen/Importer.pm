@@ -2123,6 +2123,8 @@ sub get_probe_id_by_name_Array{
 
 =head2 get_probe_cache_by_Array
 
+  Arg[1]     : Bio::EnsEMBL::Funcgen::Array
+  Arg[2]     : boolean - from db flag, only to be used by Importer->resolve_probe_data !
   Example    : $self->get_probe_cache_by_Array();
   Description: Gets the probe info cache which is an array tied to a file
   Returntype : Boolean - True if cache has been generated and set successfully
@@ -2132,6 +2134,12 @@ sub get_probe_id_by_name_Array{
 
 =cut
 
+#from db flag should only be used by importer
+#this is because there is no guarantee that it will be resolved unless
+#called by resolve_probe_data
+#which then renames the file and resets the handle
+#can we clean this up and protect/hide this functionality?
+#can we check the cache file name in the get methods and throw if it contains unresolved?
 
 sub get_probe_cache_by_Array{
   my ($self, $array, $from_db) = @_;
@@ -2149,6 +2157,8 @@ sub get_probe_cache_by_Array{
 
   if($from_db){
 
+	$cache_file .= '.unresolved';
+
 	if(exists $self->{'_probe_cache'}{$array->name()}){
 	  $self->log('Rebuilding probe_cache from DB for '.$array->name(), 1);
 
@@ -2165,7 +2175,7 @@ sub get_probe_cache_by_Array{
 	#This is where we'd set the unique key for a vendor and resolves duplicates based on the key
 	my $cmd = 'SELECT name, probe_id from probe WHERE array_chip_id IN ('.join(',', @{$array->get_array_chip_ids()}).') ORDER by name, probe_id';
 	$cmd = 'mysql '.$self->db->connect_string()." -e \"$cmd\" >".$cache_file;
-	$self->run_system_cmd($cmd);
+	run_system_cmd($cmd);
 	
   }
   #elsif(exists $self->{'_probe_cache'}{$array->name()}){
@@ -2193,6 +2203,8 @@ sub get_probe_cache_by_Array{
 	#This was eating nearly a GB when we id $# on the tied file
 	#$self->{'_probe_cache'}{$array->name()}{'size'} = $size;
 	$set = 1;
+  }else{
+	warn 'Failed to get probe cache for array:'.$array->name();
   }
  
   return $set;
@@ -2822,6 +2834,10 @@ sub resolve_probe_data{
 	  $self->log('Resolving array duplicates('.$array->name().') and rebuilding probe cache.', 1);
 	  $self->get_probe_cache_by_Array($array, 1);#get from DB
 
+	  #we need ot make sure we mark cache as unresolved, so we don't use it by mistake.
+	  
+
+
 	  my ($line, $name, $pid, @pids);
 	  #my $index = 0;
 	  my $tmp_name = '';
@@ -2870,7 +2886,13 @@ sub resolve_probe_data{
 	  #$self->log("Deleting gappy cache here", 1);
 	  #untie @{$self->{'_probe_cache'}{$array->name()}{'entries'}};
 	  #delete $self->{'_probe_cache'}{$array->name()};#needs to be delete to regenerate correctly
+
 	  $self->get_probe_cache_by_Array($array, 1);	#refresh cache from DB
+	  #rename resovled cache and reset cache handle
+	  my $cmd = 'mv '.$self->get_dir('cache').'/'.$array->name().'.probe_cache.unresolved '.
+		$self->get_dir('cache').'/'.$array->name().'.probe_cache';
+	  run_system_cmd($cmd);
+	  $self->get_probe_cache_by_Array($array);
 
 
 	  warn "Only generate MD5 here, as this is guranteed to be correct";

@@ -47,7 +47,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Helper;
 #use Devel::Size::Report qw(report_size);
-use Devel::Size qw( size total_size);
+#use Devel::Size qw( size total_size);
 use strict;
 
 use vars qw(@ISA);
@@ -781,13 +781,14 @@ sub read_probe_data{
 		if ($self->dump_fasta()){
 		  (my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}) =~ s/chr//;
 
-		  $loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
-			($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
+		  #$loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
+		#	($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
 	
 		  #filter controls/randoms?  Or would it be sensible to see where they map
 		  #wrap seq here?
-		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
-			"\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
+		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
+		  #$fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
+		  #	"\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
 		}
 
 
@@ -891,7 +892,10 @@ sub read_and_import_results_data{
 		  
 		  if ( ! $chan->has_status('IMPORTED')) {
 			my $array = $echip->get_ArrayChip->get_Array();
-			$self->get_probe_cache_by_Array($array) || throw('Failed to reset the probe cache handle');
+
+			$self->get_probe_cache_by_Array($array) || throw('Failed to get the probe cache handle for results import');
+			warn("we should try and resolve the probe cache here if not present");
+
 			
 			my ($probe_elem, $score_elem, %hpos);
 			my $cnt = 0;

@@ -23,8 +23,8 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-vendor NIMBLEGEN\
 	-fasta\
 	-port 3306\
-	-host ens-genomics1\
-	-dbname test1_homo_sapiens_funcgen_45_36g\
+	-host ens-genomics2\
+	-dbname nj_3738_homo_sapiens_funcgen_45_36g\
 	-array_set\
 	-array_name "2005-05-10_HG17Tiling_Set"\
 	-group efg\

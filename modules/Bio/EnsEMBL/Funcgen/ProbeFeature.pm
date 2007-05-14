@@ -109,9 +109,10 @@ sub new {
 
   #remove mismatch?
   #mandatory args?
-
-  $self->{'probe_id'} = $pid;
-  $self->probe($probe); 
+  
+  #warn "creating probe feature with $pid";
+  $self->{'probe_id'} = $pid if $pid;
+  $self->probe($probe) if $probe; 
   $self->mismatchcount($mismatchcount)  if defined $mismatchcount;#do not remove until probe mapping pipeline fixed
   $self->cigar_line($cig_line)          if defined $cig_line;
    
@@ -119,7 +120,7 @@ sub new {
   
   #do we need this coordsys id if we're passing a slice?  We should have the method but not in here?
 
-  $self->coord_system_id($coord_sys_id) if defined $coord_sys_id;;
+  $self->coord_system_id($coord_sys_id) if defined $coord_sys_id;
   return $self;
 }
 
@@ -286,7 +287,11 @@ sub probe {
   #why is probe_id not set sometimes?
   
   
+  #warn "in pf and probe is ".$self->{'probe_id'};
+
   if ($probe) {
+
+	#warn "Probe defined and is ".$probe. "and probe id is".$self->{'probe_id'};
     
     if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
       throw('Probe must be a Bio::EnsEMBL::Funcgen::Probe object');
@@ -294,8 +299,10 @@ sub probe {
     $self->{'probe'} = $probe;
   }
 
-  if ( !defined $self->{'probe'} && $self->dbID() && $self->adaptor() ) {
-    $self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_ProbeFeature($self);
+  if ( ! defined $self->{'probe'}){# && $self->dbID() && $self->adaptor() ) {
+    #$self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_ProbeFeature($self);
+	#warn "fetching probe with dbID ".$self->probe_id();
+	$self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_dbID($self->probe_id());
   }
   return $self->{'probe'};
 }

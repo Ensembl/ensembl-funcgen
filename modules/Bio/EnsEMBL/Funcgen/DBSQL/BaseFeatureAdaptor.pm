@@ -294,163 +294,233 @@ sub _pre_store {
 
 #This is causing problems with remapping
 
-#sub _slice_fetch {
-#	my $self = shift;
-#	my $slice = shift;
-#	my $orig_constraint = shift;
-#	
-#	my $slice_start  = $slice->start();
-#	my $slice_end    = $slice->end();
-#	my $slice_strand = $slice->strand();
-#	my $slice_cs     = $slice->coord_system();
-#	my $slice_seq_region = $slice->seq_region_name();
-#	
-#	#Need to get schema/data.version here from meta
-#	
-#	
-#	
-#	#get the synonym and name of the primary_table
-#	my @tabs = $self->_tables;
-#	my ($tab_name, $tab_syn) = @{$tabs[0]};
-#	
-#	#find out what coordinate systems the features are in
-#	my $mcc = $self->db->get_MetaCoordContainer();
-#	
-#	#reimplement and restrict to schema_build????????????????????????????????
-#	#This will select for all schema_builds
-#	#Should really restrict here, do below to avoid copying another module
-#	#or should we really do it in the MCC to enable other usage?
-#	my @feat_css = @{$mcc->fetch_all_CoordSystems_by_feature_type($tab_name)};
+sub _slice_fetch {
+  my $self = shift;
+  my $slice = shift;
+  my $orig_constraint = shift;
+
+  my $slice_start  = $slice->start();
+  my $slice_end    = $slice->end();
+  my $slice_strand = $slice->strand();
+  my $slice_cs     = $slice->coord_system();
+  my $slice_seq_region = $slice->seq_region_name();
+  my $slice_seq_region_id = $slice->get_seq_region_id();
+
+  #get the synonym and name of the primary_table
+  my @tabs = $self->_tables;
+  my ($tab_name, $tab_syn) = @{$tabs[0]};
+
+  #find out what coordinate systems the features are in
+  my $mcc = $self->db->get_MetaCoordContainer();
+  my @feat_css=();
+
+
+  my $mca = $self->db->get_MetaContainer();
+  my $value_list = $mca->list_value_by_key( $tab_name."build.level" );
+  if( @$value_list and $slice->is_toplevel()) {   
+    push @feat_css, $slice_cs;
+  }
+  else{
+    @feat_css = @{$mcc->fetch_all_CoordSystems_by_feature_type($tab_name)};
+  }
+
+  my $asma = $self->db->get_AssemblyMapperAdaptor();
+  my @features;
+
+  # fetch the features from each coordinate system they are stored in
+ COORD_SYSTEM: foreach my $feat_cs (@feat_css) {
+
+	#warn "Got $feat_cs with dbID ".$feat_cs->dbID();
+
+    my $mapper;
+    my @coords;
+    my @ids;
+
+    if($feat_cs->equals($slice_cs)) {
+	  warn "got match";
+      # no mapping is required if this is the same coord system
+
+      my $max_len = $self->_max_feature_length() ||
+        $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
+
+      my $constraint = $orig_constraint;
+
+      my $sr_id;
+      if( $slice->adaptor() ) {
+	$sr_id = $slice->adaptor()->get_seq_region_id($slice);
+      } else {
+	$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+      }
+
+      $constraint .= " AND " if($constraint);
+      $constraint .=
+          "${tab_syn}.seq_region_id = $sr_id AND " .
+          "${tab_syn}.seq_region_start <= $slice_end AND " .
+          "${tab_syn}.seq_region_end >= $slice_start";
+
+      if($max_len) {
+        my $min_start = $slice_start - $max_len;
+        $constraint .=
+          " AND ${tab_syn}.seq_region_start >= $min_start";
+      }
+
+      my $fs = $self->generic_fetch($constraint,undef,$slice);
+
+      # features may still have to have coordinates made relative to slice
+      # start
+      $fs = _remap($fs, $mapper, $slice);
+
+      push @features, @$fs;
+    } 
+
+	#can't do remapping yet as AssemblyMapper expects a core CS
+	#change AssemblyMapper
+	#or do we just create a core CS just for the remap and convert back when done
+
+	#else {
+    #  $mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
+
+   #   next unless defined $mapper;
+
+      # Get list of coordinates and corresponding internal ids for
+      # regions the slice spans
+   #   @coords = $mapper->map($slice_seq_region, $slice_start, $slice_end,
+    #                         $slice_strand, $slice_cs);
+
+    #  @coords = grep {!$_->isa('Bio::EnsEMBL::Mapper::Gap')} @coords;
+
+    #  next COORD_SYSTEM if(!@coords);
+
+     # @ids = map {$_->id()} @coords;
+  ##coords are now id rather than name
+  ##      @ids = @{$asma->seq_regions_to_ids($feat_cs, \@ids)};
+
+      # When regions are large and only partially spanned by slice
+      # it is faster to to limit the query with start and end constraints.
+      # Take simple approach: use regional constraints if there are less
+      # than a specific number of regions covered.
+
+    #  if(@coords > $MAX_SPLIT_QUERY_SEQ_REGIONS) {
+    #    my $constraint = $orig_constraint;
+    #    my $id_str = join(',', @ids);
+    #    $constraint .= " AND " if($constraint);
+    #    $constraint .= "${tab_syn}.seq_region_id IN ($id_str)";
+
+     #   my $fs = $self->generic_fetch($constraint, $mapper, $slice);
+
+ #       $fs = _remap($fs, $mapper, $slice);
+
+  #      push @features, @$fs;
+
+   #   } else {
+        # do multiple split queries using start / end constraints
+
+    #    my $max_len = $self->_max_feature_length() ||
+      #    $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,
+    #                                                         $tab_name);
+     #   my $len = @coords;
+       # for(my $i = 0; $i < $len; $i++) {
+       #   my $constraint = $orig_constraint;
+       #   $constraint .= " AND " if($constraint);
+       #   $constraint .=
+       #       "${tab_syn}.seq_region_id = "     . $ids[$i] . " AND " .
+       #       "${tab_syn}.seq_region_start <= " . $coords[$i]->end() . " AND ".
+       #       "${tab_syn}.seq_region_end >= "   . $coords[$i]->start();
+
+       #   if($max_len) {
+       #     my $min_start = $coords[$i]->start() - $max_len;
+       #     $constraint .=
+       #       " AND ${tab_syn}.seq_region_start >= $min_start";
+       #   }
+
+        #  my $fs = $self->generic_fetch($constraint,$mapper,$slice);
+
+ #         $fs = _remap($fs, $mapper, $slice);
+
+#          push @features, @$fs;
+    #    }
+    #  }
+  ###  }
+  } #COORD system loop
+
+  return \@features;
+}
+
+
+
+
 #
-#	
-#	my $asma = $self->db->get_AssemblyMapperAdaptor();
-#	my @features;
-#	#warn "jere are $self, @feat_css\n";
+# Given a list of features checks if they are in the correct coord system
+# by looking at the first features slice.  If they are not then they are
+# converted and placed on the slice.
 #
-#	# fetch the features from each coordinate system they are stored in
-#  COORD_SYSTEM: foreach my $feat_cs (@feat_css) {
-#		my $mapper;
-#		my @coords;
-#		my @ids;
-#		
-#
-#		if($feat_cs->equals($slice_cs)) {#this now checks schema_build
-#			# no mapping is required if this is the same coord system
-#
-#				
-#			my $max_len = $self->_max_feature_length() ||
-#			  $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
-#			#should need to change this as we should have identified the correct EFG cs
-#		
-#			my $constraint = $orig_constraint;
-#			
-#			my $sr_id;
-#			if( $slice->adaptor() ) {
-#				$sr_id = $slice->adaptor()->get_seq_region_id($slice);
-#			} else {
-#				$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
-#			}
-#	
-#
-#			
-#
-#		
-#			$constraint .= " AND " if($constraint);
-#			$constraint .=
-#			  "${tab_syn}.seq_region_id = $sr_id AND " .
-#				"${tab_syn}.seq_region_start <= $slice_end AND " .
-#				  "${tab_syn}.seq_region_end >= $slice_start";
-#			
-#
-#			#ensure correct coord_sys mapped to schema_build in $feat_cs->equals above
-#			$constraint .= " AND ${tab_syn}.coord_system_id = ".$feat_cs->dbID();
-#
-#
-#			if($max_len) {
-#				my $min_start = $slice_start - $max_len;
-#				$constraint .=
-#				  " AND ${tab_syn}.seq_region_start >= $min_start";
-#			}
-#			
-#  
-#			my $fs = $self->generic_fetch($constraint,undef,$slice);
-#						
-#			# features may still have to have coordinates made relative to slice
-#			# start
-#			$fs = _remap($fs, $mapper, $slice);
-#			
-#			push @features, @$fs;
-#		} else {
-#			
-#			warn("Not yet implemented mapper for core to EFG DB");
-#			next;
-#			
-#			$mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
-#			
-#			next unless defined $mapper;
-#			
-#			# Get list of coordinates and corresponding internal ids for
-#			# regions the slice spans
-#			@coords = $mapper->map($slice_seq_region, $slice_start, $slice_end,
-#								   $slice_strand, $slice_cs);
-#			
-#			@coords = grep {!$_->isa('Bio::EnsEMBL::Mapper::Gap')} @coords;
-#			
-#			next COORD_SYSTEM if(!@coords);
-#			
-#			@ids = map {$_->id()} @coords;
-#			@ids = @{$asma->seq_regions_to_ids($feat_cs, \@ids)};
-#			
-#			# When regions are large and only partially spanned by slice
-#			# it is faster to to limit the query with start and end constraints.
-#			# Take simple approach: use regional constraints if there are less
-#			# than a specific number of regions covered.
-#			
-#			if(@coords > $MAX_SPLIT_QUERY_SEQ_REGIONS) {
-#				my $constraint = $orig_constraint;
-#				my $id_str = join(',', @ids);
-#				$constraint .= " AND " if($constraint);
-#				$constraint .= "${tab_syn}.seq_region_id IN ($id_str)";
-#				
-#				my $fs = $self->generic_fetch($constraint, $mapper, $slice);
-#			
-#				$fs = _remap($fs, $mapper, $slice);
-#			
-#				push @features, @$fs;
-#
-#			} else {
-#				# do multiple split queries using start / end constraints
-#				
-#				my $max_len = $self->_max_feature_length() ||
-#				  $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,
-#																	 $tab_name);
-#				my $len = @coords;
-#				for(my $i = 0; $i < $len; $i++) {
-#					my $constraint = $orig_constraint;
-#					$constraint .= " AND " if($constraint);
-#					$constraint .=
-#					  "${tab_syn}.seq_region_id = "     . $ids[$i] . " AND " .
-#						"${tab_syn}.seq_region_start <= " . $coords[$i]->end() . " AND ".
-#						  "${tab_syn}.seq_region_end >= "   . $coords[$i]->start();
-#					
-#					if($max_len) {
-#						my $min_start = $coords[$i]->start() - $max_len;
-#						$constraint .=
-#						  " AND ${tab_syn}.seq_region_start >= $min_start";
-#					}
-#					
-#					my $fs = $self->generic_fetch($constraint,$mapper,$slice);
-#				
-#					$fs = _remap($fs, $mapper, $slice);
-#				
-#					push @features, @$fs;
-#				}
-#			}
-#		}
-#	} #COORD system loop
-#
-#	return \@features;
-#}
+sub _remap {
+  my ($features, $mapper, $slice) = @_;
+
+  #check if any remapping is actually needed
+  if(@$features && (!$features->[0]->isa('Bio::EnsEMBL::Feature') ||
+                    $features->[0]->slice == $slice)) {
+    return $features;
+  }
+
+  #remapping has not been done, we have to do our own conversion from
+  #to slice coords
+
+  my @out;
+
+  my $slice_start = $slice->start();
+  my $slice_end   = $slice->end();
+  my $slice_strand = $slice->strand();
+  my $slice_cs    = $slice->coord_system();
+
+  my ($seq_region, $start, $end, $strand);
+
+  my $slice_seq_region_id = $slice->get_seq_region_id();
+  my $slice_seq_region = $slice->seq_region_name();
+
+  foreach my $f (@$features) {
+    #since feats were obtained in contig coords, attached seq is a contig
+    my $fslice = $f->slice();
+    if(!$fslice) {
+      throw("Feature does not have attached slice.\n");
+    }
+    my $fseq_region = $fslice->seq_region_name();
+    my $fseq_region_id = $fslice->get_seq_region_id();
+    my $fcs = $fslice->coord_system();
+
+    if(!$slice_cs->equals($fcs)) {
+      #slice of feature in different coord system, mapping required
+
+      ($seq_region, $start, $end, $strand) =
+        $mapper->fastmap($fseq_region_id,$f->start(),$f->end(),$f->strand(),$fcs);
+
+      # undefined start means gap
+      next if(!defined $start);
+    } else {
+      $start      = $f->start();
+      $end        = $f->end();
+      $strand     = $f->strand();
+      $seq_region = $f->slice->seq_region_name();
+    }
+    
+    # maps to region outside desired area
+    next if ($start > $slice_end) || ($end < $slice_start) || 
+      ($slice_seq_region ne $seq_region);
+
+    #shift the feature start, end and strand in one call
+    if($slice_strand == -1) {
+      $f->move( $slice_end - $end + 1, $slice_end - $start + 1, $strand * -1 );
+    } else {
+      $f->move( $start - $slice_start + 1, $end - $slice_start + 1, $strand );
+    }
+
+    $f->slice($slice);
+
+    push @out,$f;
+  }
+
+  return \@out;
+}
 
 
 1;
