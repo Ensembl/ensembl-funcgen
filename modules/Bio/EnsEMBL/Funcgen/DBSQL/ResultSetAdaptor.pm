@@ -498,11 +498,11 @@ sub store_chip_channels{
       $sth->execute();
       $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
     }else{
-	  $sth->bind_param(1, $rset->get_chip_channel_id($table_id),       SQL_INTEGER);
-	  $sth->bind_param(2, $rset->dbID(),       SQL_INTEGER);
-      $sth->bind_param(3, $table_id,           SQL_INTEGER);
-      $sth->bind_param(4, $rset->table_name(), SQL_VARCHAR);
-      $sth->execute();
+	  $sth1->bind_param(1, $rset->get_chip_channel_id($table_id),       SQL_INTEGER);
+	  $sth1->bind_param(2, $rset->dbID(),       SQL_INTEGER);
+      $sth1->bind_param(3, $table_id,           SQL_INTEGER);
+      $sth1->bind_param(4, $rset->table_name(), SQL_VARCHAR);
+      $sth1->execute();
 	}
   }
   return $rset;
