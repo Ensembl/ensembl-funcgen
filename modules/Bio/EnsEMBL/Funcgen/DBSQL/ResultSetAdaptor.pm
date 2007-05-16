@@ -305,7 +305,9 @@ sub _default_where_clause {
 #do we need this?
 
 sub _final_clause {
-  return ' GROUP by cc.chip_channel_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
+  #return ' GROUP by cc.chip_channel_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
+  return ' GROUP by cc.result_set_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
+  
 }
 
 =head2 _objs_from_sth
