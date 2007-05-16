@@ -479,6 +479,12 @@ sub store_chip_channels{
 			result_set_id, table_id, table_name
 		) VALUES (?, ?, ?)
 	");
+
+  my $sth1 = $self->prepare("
+		INSERT INTO chip_channel (
+			chip_channel_id, result_set_id, table_id, table_name
+		) VALUES (?, ?, ?, ?)
+	");
   
 
   #Store and set all previously unstored table_ids
@@ -491,7 +497,13 @@ sub store_chip_channels{
       
       $sth->execute();
       $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
-    }
+    }else{
+	  $sth->bind_param(1, $rset->get_chip_channel_id($table_id),       SQL_INTEGER);
+	  $sth->bind_param(2, $rset->dbID(),       SQL_INTEGER);
+      $sth->bind_param(3, $table_id,           SQL_INTEGER);
+      $sth->bind_param(4, $rset->table_name(), SQL_VARCHAR);
+      $sth->execute();
+	}
   }
   return $rset;
 }
