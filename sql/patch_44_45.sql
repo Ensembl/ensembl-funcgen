@@ -34,3 +34,30 @@ alter table result add  `Y` int(4) unsigned default NULL;
 -- select experimental_chip_id  from experimental_chip where experiment_id =12;
 
 -- select e.name, rs.result_set_id from experiment e, result_set rs, experimental_chip ec, chip_channel cc where e.experiment_id=ec.experiment_id and ec.experiment_id>1 and ec.experiment_id <12 and ec.experimental_chip_id =cc.table_id and cc.table_name='experimental_chip' and cc.result_set_id=rs.result_set_id group by result_set_id;
+
+create table `tmp_chip_channel`(
+   `chip_channel_id` int(10) unsigned NOT NULL auto_increment,
+   `result_set_id` int(10) unsigned default '0',
+   `table_id` int(10) unsigned NOT NULL,
+   `table_name` varchar(20) NOT NULL,
+   PRIMARY KEY  (`result_set_id`, `chip_channel_id`),
+   UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+insert into tmp_chip_channel(select * from chip_channel);
+
+
+---ctcf replicate chip_channel_id and name fix
+---update chip_channel cc, tmp_chip_channel tcc set cc.chip_channel_id=tcc.chip_channel_id where tcc.table_name='experimental_chip' and cc.table_name='experimental_chip' and tcc.table_id=cc.table_id and tcc.result_set_id=17;
+--update result_set set name=replace(name, 'SOM00H0', 'ctcf_ref');
+
+drop table chip_channel;
+
+rename table tmp_chip_channel to chip_channel;
+
+update result_set set name=replace(name, 'BIOREP', 'BR');
+update result_set set name=replace(name, 'techrep', 'TR');
+
+
+-- add probe_design?
