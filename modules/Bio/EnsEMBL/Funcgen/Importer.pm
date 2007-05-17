@@ -38,6 +38,7 @@ use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::Defs::DesignDefs;
 use Bio::EnsEMBL::Funcgen::Defs::SangerDefs;
 use Bio::EnsEMBL::Funcgen::Defs::NimblegenDefs;
+use Bio::EnsEMBL::Funcgen::Defs::SolexaDefs;
 use Bio::EnsEMBL::Funcgen::Helper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -102,17 +103,18 @@ sub new{
   my $reg = "Bio::EnsEMBL::Registry";
   my $class = ref($caller) || $caller;
 
-  my ($name, $format, $vendor, $group, $location, $contact, $species,
+  my ($format, $vendor, $group, $location, $contact, $species,
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml)
-	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
+	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, $no_mage)
+	= rearrange(['FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
-				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 'UPDATE_XML'], @_);
+				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
+				 'UPDATE_XML', 'NO_MAGE'], @_);
   #add mail flag
   #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
   #would have to make sure GroupDefs is inherited first so we can set some mandatory params
@@ -128,11 +130,16 @@ sub new{
   #Create object from parent class
   my $self = $class->SUPER::new(@_);
 
-  warn "called super new on $class @ISA";
+  #warn "called super new on $class @ISA";
 
+
+  #Maybe we can tidy this up a bit by making the parse_and_import script populate an Experiment
+  #then make this take the Experiment as a param?
+  #Can we have an underlying ArrayDefs, which just handles all the common params/methods for Array based imports
+  
     
   #Set vars and test minimum mandatory params for any import type
-  $self->{'name'} = $name if $name;
+  #$self->{'name'} = $name if $name; # Now done in Defs modules
   $self->vendor(uc($vendor));	#already tested
   $self->{'format'} = uc($format) || 'TILED'; #remove default?
   $self->group($group) if $group;
@@ -167,7 +174,12 @@ sub new{
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
   $self->{'update_xml'} = $update_xml || 0;
   $self->{'write_mage'} = $write_mage || 0;
+  $self->{'no_mage'} = $no_mage || 0;
  
+  warn "Hardocing no_magefor non-NIMBLEGEN imports";
+  $self->{'no_mage'} = 1 if ($self->vendor ne 'NIMBLEGEN');
+
+
   #Set vendor specific attr dependent vars
   $self->set_defs();
 
@@ -490,54 +502,55 @@ sub init_experiment_import{
   #To get around the problem of rolling back every chip, we need to add teh LOADING status
   #which should be removed once imported.
 
+  if( ! $self->{'no_mage'}){
   
-  if($self->{'write_mage'} || !( -f $self->get_def('tab2mage_file') || $xml)){
-	$self->{'write_mage'} = 1;
-	$self->backup_file($self->get_def('tab2mage_file'));
-  }
-  elsif($xml && (! $self->{'update_xml'})){
-	$self->{'recover'} = 1;
-	$self->{'skip_validate'} = 1;
-  }
-  elsif( -f $self->get_def('tab2mage_file')){#logic dictates this has to be true
-	#run tab2mage and import xml
-	#update replicate info
-	#do we need to validate xml vs meta info in read methods?
-	#turn recovery on?
-	#back up xml if present? Or just recreate?
-	#can we allow custom xml files here
-	$self->backup_file($self->get_def('mage_xml_file'));
-
-	#do experiment check script first?
-
-	my $cmd = 'tab2mage.pl -e '.$self->get_def('tab2mage_file').' -k -t '.$self->get_dir('output').' -c -d '.$self->get_dir('results');
-
-	$self->log('Reading tab2mage file');
-
-	my $t2m_exit_code = run_system_cmd($cmd, 1);#no exit flag due to non-zero exit codes
-	
-	warn "tab2mage exit code is  $t2m_exit_code"; 
-
-	if(! ($t2m_exit_code > -1) && ($t2m_exit_code <255)){
-	  throw("tab2mage failed.  Please check and correct:\t".$self->get_def('tab2mage_file')."\n...and try again");
+	if($self->{'write_mage'} || !( -f $self->get_def('tab2mage_file') || $xml)){
+	  $self->{'write_mage'} = 1;
+	  $self->backup_file($self->get_def('tab2mage_file'));
 	}
-
-	#rename file
-	#$cmd = 'mv '.$self->get_dir('output').'/\{UNASSIGNED\}.xml '.$self->get_dir('output').'/'.$self->name().'.xml';
-	#$self->run_system_command($cmd);
-	$self->{'recover'} = 1;
-  }#else{
+	elsif($xml && (! $self->{'update_xml'})){
+	  $self->{'recover'} = 1;
+	  $self->{'skip_validate'} = 1;
+	}
+	elsif( -f $self->get_def('tab2mage_file')){#logic dictates this has to be true
+	  #run tab2mage and import xml
+	  #update replicate info
+	  #do we need to validate xml vs meta info in read methods?
+	  #turn recovery on?
+	  #back up xml if present? Or just recreate?
+	  #can we allow custom xml files here
+	  $self->backup_file($self->get_def('mage_xml_file'));
+	  
+	  #do experiment check script first?
+	  
+	  my $cmd = 'tab2mage.pl -e '.$self->get_def('tab2mage_file').' -k -t '.$self->get_dir('output').' -c -d '.$self->get_dir('results');
+	  
+	  $self->log('Reading tab2mage file');
+	  
+	  my $t2m_exit_code = run_system_cmd($cmd, 1);#no exit flag due to non-zero exit codes
+	  
+	  warn "tab2mage exit code is  $t2m_exit_code"; 
+	  
+	  if(! ($t2m_exit_code > -1) && ($t2m_exit_code <255)){
+		throw("tab2mage failed.  Please check and correct:\t".$self->get_def('tab2mage_file')."\n...and try again");
+	  }
+	  
+	  #rename file
+	  #$cmd = 'mv '.$self->get_dir('output').'/\{UNASSIGNED\}.xml '.$self->get_dir('output').'/'.$self->name().'.xml';
+	  #$self->run_system_command($cmd);
+	  $self->{'recover'} = 1;
+	}#else{
 	#this is true if we delete the tab2mage file and specify write_mage
-  #we should write the mage file and exit as normal
-  #	throw('Grrr, this should never be true, check the mage logic');
-  #  }
-
-
-  #now we just need to use read_meta/write_mage in read methods to figure out if we need to validate or just write the template
-  #we should read again if not write mage
-  #should validate mage
-
-
+	#we should write the mage file and exit as normal
+	#	throw('Grrr, this should never be true, check the mage logic');
+	#  }
+  	
+	
+	#now we just need to use read_meta/write_mage in read methods to figure out if we need to validate or just write the template
+	#we should read again if not write mage
+	#should validate mage
+  }
+	
   
   if ($self->recovery() && ($exp)) {
     $self->log("Using previously stored Experiment:\t".$exp->name);
@@ -1487,24 +1500,19 @@ sub register_experiment{
   #This could still be the default core db for the current version
   #warn here if not passed DB?
   #These should be vendor independent, only the read methods should need specific order?
-  #Need to totally separate parse/read from import, so we can just do one method if required, i.e. normalise
-  #Also need to move id generation to import methods, which would check that a previous import has been done, or check the DB for the relevant info?
   
   $self->init_experiment_import();
   #can we just have init here instead?
   
-
-  #check here is exp already stored?  Will this work properly?
-  #then throw if not recovery
-  #else do following, but change to _private type methods
-  #as bypassing this register_experiment method and calling directly will cause problems with duplication of data
-  #we need to make this more stringent, maybe we can do a caller in each method to make sure it is register experiment calling each method
   
-  if($self->{'write_mage'}){
+  if($self->{'write_mage'} || $self->{'no_mage'}){
 	$self->read_data("array");
-	$self->log("Please check and edit autogenerated tab2mage file:\t".$self->get_def('tab2mage_file'));
-	exit;
-  }elsif($self->vendor ne 'SANGER'){#This should be a no_channel flag, set dependent on import mode(gff_chip, gff_chan)
+
+	if(! $self->{'no_mage'}){
+	  $self->log("Please check and edit autogenerated tab2mage file:\t".$self->get_def('tab2mage_file'));
+	  exit;
+	}
+  }elsif(! $self->{'no_mage'}){#This should be a no_channel flag, set dependent on import mode(gff_chip, gff_chan)
 	#Need to accomodate chip level imports in validate!!
 	$self->validate_mage() if (! $self->{'skip_validate'});
   }
@@ -1648,13 +1656,13 @@ sub validate_mage(){
 				  foreach my $ssrc_biomat(@{$treat->getSourceBioMaterialMeasurements()}){#Channel measurement(x1)
 					my $sbiomat = $ssrc_biomat->getBioMaterial();
 					#This will either be techrep name for control of IP name for experimental channel
-					#SOM0035_BIOREP1_techrep2 IP  #Immunoprecicpitate
-					#SOM0035_BIOREP1_techrep2     #Extract
+					#SOM0035_BR1_TR2 IP  #Immunoprecicpitate
+					#SOM0035_BR1_TR2     #Extract
 				
 
 					#warn "sbiomat is ".$sbiomat->getName();
 
-					if($sbiomat->getName() =~ /BIOREP[0-9]+_techrep[0-9]+$/){
+					if($sbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/){
 					  #This is control channel
 
 					  if(! defined $echips{$chip_uid}{'biotechrep'}){
@@ -1675,13 +1683,13 @@ sub validate_mage(){
 					  foreach my $tsrc_biomat(@{$ttreat->getSourceBioMaterialMeasurements()}){
 						my $tbiomat = $tsrc_biomat->getBioMaterial();
 						#This will either be biolrep name for control or techrep name for experimental channel
-						#SOM0035_BIOREP1_techrep2     #Extract
-						#SOM0035_BIOREP1              #Sample
+						#SOM0035_BR1_TR2     #Extract
+						#SOM0035_BR1              #Sample
 						
 						  
 
 					  
-						if($tbiomat->getName() =~ /BIOREP[0-9]+_techrep[0-9]+$/){#experimental
+						if($tbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/){#experimental
 						  
 						  #warn "exp channel? ".$tbiomat->getName();
 							
@@ -1793,7 +1801,7 @@ sub validate_mage(){
 	  my $biotechrep = $echips{$echip->unique_id()}{'biotechrep'};
 
 	  if(! defined $biotechrep){
-		push @log, 'ExperimentalChip('.$echip->unique_id().') Extract field do not meet naming convention(SAMPLE_BIOLREPN_techrepN)';
+		push @log, 'ExperimentalChip('.$echip->unique_id().') Extract field do not meet naming convention(SAMPLE_BRN_TRN)';
 	  }#! defined biorep? will never occur at present
 	  elsif($biotechrep !~ /$biorep/){
 		push @log, "Found Extract(techrep) vs Sample(biorep) naming mismatch\t${biotechrep}\tvs$biorep";

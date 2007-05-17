@@ -42,6 +42,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 use strict;
 use warnings;

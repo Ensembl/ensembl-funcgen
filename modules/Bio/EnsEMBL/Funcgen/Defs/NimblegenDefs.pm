@@ -436,21 +436,21 @@ sub read_experiment_data{
 	  #BioSource
 	  $tsm_line .= "\t$ctype_name";
 	  #Sample
-	  $tsm_line .= "\t${sample_name}_BIOREPN";
+	  $tsm_line .= "\t${sample_name}_BRN";
 	  #Extract 
-	  $tsm_line .= "\t${sample_name}_BIOREPN_techrepN";
+	  $tsm_line .= "\t${sample_name}_BRN_TRN";
 
 	  #LabeledExtract & Immunoprecipitate
 	  if($type eq 'EXPERIMENTAL'){
-		$tsm_line .= "\tIP of ${sample_name}_BIOREPN_techrepN with anti $ftype_name (Ab vendor, Ab ID)";
-		$tsm_line .= "\t${sample_name}_BIOREPN_techrepN IP";
+		$tsm_line .= "\tIP of ${sample_name}_BRN_TRN with anti $ftype_name (Ab vendor, Ab ID)";
+		$tsm_line .= "\t${sample_name}_BRN_TRN IP";
 	  }else{
-		$tsm_line .= "\tInput control DNA of ${sample_name}_BIOREPN_techrepN\t";
+		$tsm_line .= "\tInput control DNA of ${sample_name}_BRN_TRN\t";
 	  }
 		
 	  #Hybridization	
-	  #U2OS BIOREP1_techrep1 ChIP H3KAc 46092 hyb
-	  $tsm_line .= "\t$ctype_name ${sample_name}_BIOREPN_techrepN ChIP $ftype_name ".$echip->unique_id().' hyb';
+	  #U2OS BR1_TR1 ChIP H3KAc 46092 hyb
+	  $tsm_line .= "\t$ctype_name ${sample_name}_BRN_TRN ChIP $ftype_name ".$echip->unique_id().' hyb';
 	  
 	  #BioSourceMaterial    SampleMaterial	ExtractMaterial	LabeledExtractMaterial
 	  $tsm_line .= "\tcell\tgenomic_DNA\tgenomic_DNA\tsynthetic_DNA";
