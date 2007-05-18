@@ -301,8 +301,8 @@ CREATE TABLE `feature_type` (
 DROP TABLE IF EXISTS `data_set`;
 CREATE TABLE `data_set` (
    `data_set_id` int(10) unsigned NOT NULL auto_increment,
-   `result_set_id` int(10) unsigned default NULL,
-   `feature_set_id` int(10) unsigned default NULL,
+   `result_set_id` int(10) unsigned default '0',
+   `feature_set_id` int(10) unsigned default '0',
    `name` varchar(40) default NULL,
    PRIMARY KEY  (`data_set_id`, `result_set_id`, `feature_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -408,7 +408,7 @@ CREATE TABLE `chip_channel` (
    `result_set_id` int(10) unsigned default '0',
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(20) NOT NULL,
-   PRIMARY KEY  (`chip_channel_id`),
+   PRIMARY KEY  (`result_set_id`, `chip_channel_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -475,7 +475,7 @@ CREATE TABLE `predicted_feature` (
   `seq_region_end` int(11) unsigned NOT NULL default '0',
   `seq_region_strand` tinyint(1) NOT NULL default '0',
   `coord_system_id` int(10) unsigned NOT NULL default '0',	
-  `display_label` varchar(60) NOT NULL default '',
+  `display_label` varchar(60) default NULL,
   `score` double default NULL,
   `feature_set_id` int(10) unsigned NOT NULL default '0',
   PRIMARY KEY  (`predicted_feature_id`),

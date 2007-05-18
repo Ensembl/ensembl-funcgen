@@ -204,7 +204,11 @@ sub new{
       
 	#configure dnadb
 	#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      
+ 
+
+	#this should be in DBAdaptor
+	#set_dnadb_by_data_version
+     
 	if (! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))) {
 	
 	  if ($self->{'ssh'}) {
@@ -704,7 +708,7 @@ sub create_output_dirs{
 	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}.'/caches/'.$self->dbname() if(! defined $self->{"${name}_dir"});
 	}
 	else{
-	  $self->{"${name}_dir"} = $self->get_dir("output")."/${name}/" if(! defined $self->{"${name}_dir"});
+	  $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
 	}
 
 	if(! (-d $self->get_dir($name) || (-l $self->get_dir($name)))){

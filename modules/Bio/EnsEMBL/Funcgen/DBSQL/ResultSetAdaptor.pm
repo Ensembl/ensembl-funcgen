@@ -491,8 +491,9 @@ sub store_chip_channels{
 
   #Store and set all previously unstored table_ids
   foreach my $table_id(@{$rset->table_ids()}){
-    
-    if(! defined $rset->get_chip_channel_id($table_id)){
+    my $cc_id = $rset->get_chip_channel_id($table_id);
+
+    if(! defined $cc_id){
       $sth->bind_param(1, $rset->dbID(),       SQL_INTEGER);
       $sth->bind_param(2, $table_id,           SQL_INTEGER);
       $sth->bind_param(3, $rset->table_name(), SQL_VARCHAR);
@@ -500,11 +501,20 @@ sub store_chip_channels{
       $sth->execute();
       $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
     }else{
-	  $sth1->bind_param(1, $rset->get_chip_channel_id($table_id),       SQL_INTEGER);
-	  $sth1->bind_param(2, $rset->dbID(),       SQL_INTEGER);
-      $sth1->bind_param(3, $table_id,           SQL_INTEGER);
-      $sth1->bind_param(4, $rset->table_name(), SQL_VARCHAR);
-      $sth1->execute();
+
+	  #this should only store if not already stored for this rset
+	  #this is because we may want to add chip_channels to a previously stored rset
+	  my $sql = 'SELECT chip_channel_id from chip_channel where result_set_id='.$rset->dbID().
+		" AND chip_channel_id=${cc_id}";
+	  my ($loaded) = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+
+	  if(! $loaded){
+		$sth1->bind_param(1, $cc_id,       SQL_INTEGER);
+		$sth1->bind_param(2, $rset->dbID(),       SQL_INTEGER);
+		$sth1->bind_param(3, $table_id,           SQL_INTEGER);
+		$sth1->bind_param(4, $rset->table_name(), SQL_VARCHAR);
+		$sth1->execute();#this could still fail is some one duplicates a result_set_id, table_id, table_name entry
+	  }
 	}
   }
   return $rset;

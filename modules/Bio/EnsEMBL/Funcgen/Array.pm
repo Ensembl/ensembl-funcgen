@@ -207,7 +207,16 @@ sub get_array_chip_ids {
 
   my @ac_ids;
 
-  #can we not just return the values?
+
+  $self->get_ArrayChips();
+
+
+  #now need t
+
+  #should we get_ArrayChips is we have none cached?
+  #this may cause problem
+
+
   foreach my $achip(values %{$self->{'array_chips'}}){
     push @ac_ids, $achip->dbID();
   }

@@ -61,3 +61,6 @@ update result_set set name=replace(name, 'techrep', 'TR');
 
 
 -- add probe_design?
+alter table predicted_feature change display_label `display_label` varchar(60) default NULL;
+ alter table data_set change result_set_id `result_set_id` int(10) unsigned default '0';
+ alter table data_set change feature_set_id `feature_set_id` int(10) unsigned default '0';

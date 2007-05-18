@@ -118,7 +118,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use strict;
 
 $| = 1;							#autoflush
-my ($pass, $dbname, $help, $man, $ftname, $file, $set_name, $data_version, $clobber);
+my ($pass, $dbname, $help, $man, $ftname, $file, $species, $set_name, $data_version, $clobber);
 #my $reg = "Bio::EnsEMBL::Registry";
 my $data_dir = $ENV{'EFG_DATA'};
 my $user = "ensadmin";
@@ -142,11 +142,12 @@ GetOptions (
 			"host|h=s"     => \$host,
 			"user|u=s"     => \$user,
 			"dbname|d=s"   => \$dbname,
+			"species=s"    => \$species,
 			"help|?"       => \$help,
 			"man|m"        => \$man,
 		  	"feature_type|t=s" => \$ftname,
 			"set_name|n=s"   => \$set_name,
-			"data_version|s=s" => \$sbuild,
+			"data_version|s=s" => \$data_version,
 			'clobber'          => \$clobber,
 		   );
 
@@ -160,8 +161,8 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 											  -host => 'ensembldb.ensembl.org',
 											  -user => 'anonymous',
-											  -dbname => $self->species()."_core_".$self->data_version(),
-											  -species => $self->species(),
+											  -dbname => $species."_core_".$data_version,
+											  -species => $species,
 											 );
 
 
@@ -179,11 +180,13 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 my $fset_a = $db->get_FeatureSetAdaptor();
 my $dset_a = $db->get_DataSetAdaptor();
 my $anal_a = $db->get_AnalysisAdaptor();
-my $fset = $fset_a->fetch_by_name($set_name);
 my $ft_adaptor = $db->get_FeatureTypeAdaptor();
 my $slice_a = $db->get_SliceAdaptor();
 my $pfa = $db->get_PredictedFeatureAdaptor();
 
+my @fsets = @{$fset_a->fetch_all_by_name($set_name)};
+throw ("Found more than one FeatureSet with name:\t$set_name") if (scalar(@fsets) >1 );
+my $fset = $fsets[0];
 
 my $wanal = Bio::EnsEMBL::Analysis->new(
 										-logic_name      => 'Wiggle',
@@ -206,40 +209,43 @@ my $wanal = Bio::EnsEMBL::Analysis->new(
 
 $anal_a->store($wanal);
 
+warn "ftypename is $ftname";
 
-my $ftype = Bio:EnsEMBL:Funcgen::FeatureType->new(
+my $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(
 												  -name => $ftname,
 												 );
 
-($ftype) = $ft_adaptor->store($ftype);
-
+($ftype) = @{$ft_adaptor->store($ftype)};
 
 if($fset && ! $clobber){
   throw("Found pre-existing FeatureSet:\t$set_name\nUse -clobber to overwrite");
 }elsif($fset && $clobber){
-  my $sql = 'DELETE from predicetd_feature where feature_set_id='.$fset->dbID();
+  my $sql = 'DELETE from predicted_feature where feature_set_id='.$fset->dbID();
   $db->dbc->do($sql) || throw('Failed to roll back predicted_features for feature_set_id'.$fset->dbID());
 }else{#no fset
-  $fset = Bio::EnsEMBL::Funcgen::FeatureSet(
-											-name         => $set_name,
-											-analysis     => $wanal,
-											-feature_type => $ftype,
-										   );
+  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+												 -name         => $set_name,
+												 -analysis     => $wanal,
+												 -feature_type => $ftype,
+												);
+
+  ($fset) = @{$fset_a->store($fset)};
 }
+
+my @tmp = @{$dset_a->fetch_all_by_FeatureSet($fset)};
 
 if(! @{$dset_a->fetch_all_by_FeatureSet($fset)}){
   my $dset = Bio::EnsEMBL::Funcgen::DataSet->new(
 												 -feature_set => $fset,
 												 -name        => $set_name,
 												);
+
   $dset_a->store($dset);
 
 }
 
 
 my $wfile = open_file($file);
-my $out_file = open_file($ENV{'EFG_DATA'}.'/fastas/'.$aname.'.tmp', '>');
-
 my ($line, $chr, $start, $end, $score, $step, $pf, %slices);
 
 my $cnt = 0;
@@ -253,17 +259,17 @@ while ($line = <$wfile>) {
   if($line =~ /^f/){
 
 	if(defined $score){
-	  $score = ($score * $step) / $length;
-
+	  $score = ($score * $step) / ($end - $start);
 
 	  $pf = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
-															-feature_set => $fset,
-															-strand      => 0,
-															-start       => ($start+1);
-															-end         => ($end+1),
-															-score       => $score,
-															-slice       => $slices{$chr},
-														   );
+														 -feature_set => $fset,
+														 -strand      => 0,
+														 -start       => ($start+1),
+														 -end         => ($end+1),
+														 -score       => $score,
+														 -slice       => $slices{$chr},
+														 #-display_label
+														);
 	  $pfa->store($pf);
 	  $cnt ++;
 	}
@@ -272,8 +278,12 @@ while ($line = <$wfile>) {
 
 	if($line =~ /^fixedStep/){
 	  (undef, undef, $chr, undef, $start, undef, $step) = split/\s+|\=/o, $line;
-	  
+	  $chr =~ s/chr//;
+	  #warn 'slice is '.$slice_a->fetch_by_region('chromosome', $chr);
+
 	  $slices{$chr} ||= $slice_a->fetch_by_region('chromosome', $chr);
+
+	  #warn "Got $chr slice".$slices{$chr};
 	  $end = $start;
 
 	}else{
@@ -289,7 +299,7 @@ while ($line = <$wfile>) {
 $pf = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
 												   -feature_set => $fset,
 												   -strand      => 0,
-												   -start       => ($start+1);
+												   -start       => ($start+1),
 												   -end         => ($end+1),
 												   -score       => $score,
 												   -slice       => $slices{$chr},

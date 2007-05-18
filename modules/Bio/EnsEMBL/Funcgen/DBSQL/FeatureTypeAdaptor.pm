@@ -221,8 +221,8 @@ sub store {
 	$ft->adaptor($self);
       }
       else{
-	$ft = $s_ft;
-	warn("Using previously stored FeatureType (".$ft->class().":".$ft->name()."\n"); 
+		$ft = $s_ft;
+		warn("Using previously stored FeatureType:\t".$ft->class().":".$ft->name()."\n"); 
       }
     }
   }

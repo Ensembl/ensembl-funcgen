@@ -71,9 +71,9 @@ sub new{
 
   throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
 	
-  my ($name) = rearrange(['NAME'], @_);
+  ($self->{'name'}) = rearrange(['NAME'], @_);
 
-  throw('Must provide an Experiment name for a Sanger import') if ! defined $name;
+  #throw('Must provide an Experiment name for a Sanger import') if ! defined $name;
   
 
   $self->{'defs'} =   {(

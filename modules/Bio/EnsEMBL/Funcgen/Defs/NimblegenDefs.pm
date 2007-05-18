@@ -73,9 +73,9 @@ sub new{
 
   throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
 	
-  my ($name) = rearrange(['NAME'], @_);
+  ($self->{'name'}) = rearrange(['NAME'], @_);
 
-  throw('Must provide an Experiment name for a Nimblegen import') if ! defined $name;
+  #throw('Must provide an Experiment name for a Nimblegen import') if ! defined $name;
 
   #should we provide args override for all of these?
 
@@ -609,7 +609,7 @@ sub read_probe_data{
 
 		$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
 												 chr => $data[$hpos{'CHROMOSOME'}],
-												 start => $data[$hpos{'POSITION'}],
+												 start => ($data[$hpos{'POSITION'}] +1),
 												)};
 		
       }

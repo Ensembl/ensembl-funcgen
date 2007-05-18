@@ -130,7 +130,7 @@ sub fetch_all_by_FeatureSet {
 
     
     if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet") && $fset->dbID())){
-      throw("Must provide a valid Bio::EnsEMBL::Funcgen::FeatureSet object");
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet object");
     }
 	
     my $sql = "ds.feature_set_id = '".$fset->dbID()."'";
@@ -229,7 +229,7 @@ sub _columns {
 
 
 #sub _final_clause {
-#	return ' ORDER BY ds.data_set_id, fs.feature_type_id, fs.cell_type_id'; #group on cell_type_id
+#	return ' ORDER BY fs.feature_type_id, fs.cell_type_id'; #group on cell_type_id
 #}
 
 
@@ -250,7 +250,7 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@data_sets, $data_set, $dbID, $rset_id, $fset_id, $fset, $name);
+  my (@data_sets, $data_set, $dbID, $rset_id, $fset_id, $fset, $rset, $name);
 
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
   my $rset_adaptor = $self->db->get_ResultSetAdaptor();
@@ -259,35 +259,33 @@ sub _objs_from_sth {
   
   while ( $sth->fetch() ) {
 
-    #THIS LOOPS 10 TIMES FOR fetch_by_dbID  but only once for all_displayable ?????????????
-    #Both return 1 record
-
     if($data_set && ($data_set->dbID() == $dbID)){
 
-
       if((defined $data_set->feature_set() && ($fset_id == $data_set->feature_set->dbID())) ||
-	 (($fset_id == 0) && (! defined $data_set->feature_set()))){
+		 (($fset_id == 0) && (! defined $data_set->feature_set()))){
 
-	   $data_set->add_ResultSet($rset_adaptor->fetch_by_dbID($rset_id));
-
-      }else{
-	throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
+		$data_set->add_ResultSet($rset_adaptor->fetch_by_dbID($rset_id));
       }
-    }else{
+	  else{
+		throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
+      }
+    }
+	else{
       push @data_sets, $data_set if($data_set);
 
-      $fset = (defined $fset_id && $fset_id != 0) ? $fset_adaptor->fetch_by_dbID($fset_id) : undef;
+	  #handle absent sets, dbIDs of 0
+      $fset = ($fset_id) ? $fset_adaptor->fetch_by_dbID($fset_id) : undef;
+	  $rset = ($rset_id) ? $rset_adaptor->fetch_by_dbID($rset_id) : undef;
 
       $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
 													  -DBID        => $dbID,
 													  -NAME        => $name,
 													  -FEATURE_SET => $fset,
-													  -RESULT_SET  => $rset_adaptor->fetch_by_dbID($rset_id),
+													  -RESULT_SET  => $rset,
 													  -ADAPTOR     => $self,
-						     );
+													 );
     }
   }
-
 
   #we could do the sort on cell and types here
   #we can't do a default sort as some may have feature_set or result_sets absent
@@ -299,9 +297,7 @@ sub _objs_from_sth {
   #it's valid to have a combined exp, i.e. Promoter plus Histone features and results?
   #It can be valid to have several feature_types in the same set?
   #This is entirely dependent on sensible experimental design and how we want to view the data.
-  #We could then have multiple cell types too? Getting too many dimensions to display sensibly within e!
-  
-  
+  #We could then have multiple cell types too? Getting too many dimensions to display sensibly within e!  
   #Logically we need one constant to key on, cell_type, feature_type, but also allow support combined info 
   #i.e. all Histone mods for one cell_type, but also have promoter data too?
   #This is getting close to a 'regulon', as we're incorporating all sorts of supporting data
@@ -309,14 +305,9 @@ sub _objs_from_sth {
   #(or if we have same feature across several cell types then we order alphabetically?)
   #Other possible variables to order on:  
   #analysis_id, this would also separate the features as we can't base a feature on mutliple analyses of the same data
-  
-  
-  
   #So we either accomodate everything, where the only contraint is that we have one constant in the set
   #Or we restrict the Set to handle just one feature_set and it's supporting result_sets
-  
-
-    #Start simple, let's just take the one feature/data set problem first
+  #Start simple, let's just take the one feature/data set problem first
   
   return \@data_sets;
 }
@@ -367,30 +358,54 @@ sub store{
    
     my $fset_id = (defined $dset->feature_set()) ? $dset->feature_set->dbID() : 0;
     
-    foreach my $rset (@{$dset->get_ResultSets()}){
+	my @rsets = @{$dset->get_ResultSets()};
 
-      if(! ($rset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $rset->is_stored($db))){
-		throw("All ResultSets must be stored previously") if(! $dset->feature_set->is_stored($db));
-      }
-      
-      if(! defined $dset->dbID()){
-	
-	
-	$sth->bind_param(1, $fset_id,         SQL_INTEGER);
-	$sth->bind_param(2, $rset->dbID(),    SQL_INTEGER);
-	$sth->bind_param(3, $dset->name(),    SQL_VARCHAR);
-	$sth->execute();
-	
-	$dset->dbID( $sth->{'mysql_insertid'} );
-	$dset->adaptor($self);
-	
-      }else{
-	$sth2->bind_param(1, $dset->dbID(),   SQL_INTEGER);
-	$sth2->bind_param(2, $fset_id,        SQL_INTEGER);
-	$sth2->bind_param(3, $rset->dbID(),   SQL_INTEGER);  
-	$sth2->bind_param(4, $dset->name(),   SQL_VARCHAR);  
-      }
-    }
+	if(@rsets){
+	  
+	  foreach my $rset (@rsets){
+		
+		if(! ($rset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $rset->is_stored($db))){
+		  throw("All ResultSets must be stored previously") if(! $dset->feature_set->is_stored($db));
+		}
+		
+		if(! defined $dset->dbID()){
+		  $sth->bind_param(1, $fset_id || 0,         SQL_INTEGER);
+		  $sth->bind_param(2, $rset->dbID() || 0,    SQL_INTEGER);
+		  $sth->bind_param(3, $dset->name(),    SQL_VARCHAR);
+		  $sth->execute();
+		  
+		  $dset->dbID( $sth->{'mysql_insertid'} );
+		  $dset->adaptor($self);
+		  
+		}
+		else{
+		  $sth2->bind_param(1, $dset->dbID(),   SQL_INTEGER);
+		  $sth2->bind_param(2, $fset_id || 0,        SQL_INTEGER);
+		  $sth2->bind_param(3, $rset->dbID() || 0,   SQL_INTEGER);  
+		  $sth2->bind_param(4, $dset->name(),   SQL_VARCHAR); 
+		  $sth2->execute();
+		}
+	  }
+	}else{#got feature_set only data set
+
+	  if(! defined $dset->dbID()){
+		$sth->bind_param(1, $fset_id,         SQL_INTEGER);
+		$sth->bind_param(2, 0,                SQL_INTEGER);
+		$sth->bind_param(3, $dset->name(),    SQL_VARCHAR);
+		$sth->execute();
+		
+		$dset->dbID( $sth->{'mysql_insertid'} );
+		$dset->adaptor($self);
+		
+	  }
+	  else{
+		$sth2->bind_param(1, $dset->dbID(),   SQL_INTEGER);
+		$sth2->bind_param(2, $fset_id,        SQL_INTEGER);
+		$sth2->bind_param(3, 0,               SQL_INTEGER);  
+		$sth2->bind_param(4, $dset->name(),   SQL_VARCHAR); 
+		$sth2->execute();
+	  }
+	}
   }
       
   return \@dsets

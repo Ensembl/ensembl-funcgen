@@ -136,7 +136,7 @@ use strict;
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
-my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage);
+my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -182,6 +182,7 @@ GetOptions (
 	    "cell_type=s"    => \$ctype,
 			"write_mage"   => \$write_mage,
 			'update_xml'  => \$update_xml,
+			'no_mage' => \$no_mage,
 	    "debug=i"    => \$main::_debug_level,
 	    "data_root=s"  => \$data_dir,
 	    "input_dir=s"  => \$input_dir,
@@ -251,6 +252,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       -cell_type_name => $ctype,
 					       -write_mage    => $write_mage,
 											   -update_xml => $update_xml,
+											   -no_mage => $no_mage,
 											   -data_version => $data_version,
 					       -data_root   => $data_dir,
 					       -output_dir  => $output_dir,
@@ -356,6 +358,25 @@ my $vsn_anal = Bio::EnsEMBL::Analysis->new(
 					   -displayable     => 1,
 										  );
 
+my $pz_anal = Bio::EnsEMBL::Analysis->new(
+										   -logic_name      => 'Parzen',
+										   -db              => 'NULL',
+										   -db_version      => 'NULL',
+										   -db_file         => 'NULL',
+										   -program         => 'NULL',
+										   -program_version => 'NULL',
+										   -program_file    => 'NULL',
+										   -gff_source      => 'NULL',
+										   -gff_feature     => 'NULL',
+										   -module          => 'NULL',
+										   -module_version  => 'NULL',
+										   -parameters      => 'NULL',
+										   -created         => 'NULL',
+										   -description     => 'Solexa clusters',
+										   -display_label   => 'Parzen',
+					   -displayable     => 1,
+										  );
+
 
 my $t_anal = Bio::EnsEMBL::Analysis->new(
 									   -logic_name      => 'Nessie',
@@ -402,6 +423,7 @@ $anal_a->store($raw_anal);
 $anal_a->store($vsn_anal);
 $anal_a->store($t_anal);
 $anal_a->store($sanger_anal);
+$anal_a->store($pz_anal);
 
 
 #Validate, parse and import all experiment data
