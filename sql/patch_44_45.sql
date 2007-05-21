@@ -56,8 +56,10 @@ drop table chip_channel;
 
 rename table tmp_chip_channel to chip_channel;
 
-update result_set set name=replace(name, 'BIOREP', 'BR');
-update result_set set name=replace(name, 'techrep', 'TR');
+
+-- rename biorep and techrep names as appropriate
+--update result_set set name=replace(name, 'BIOREP', 'BR');
+--update result_set set name=replace(name, 'techrep', 'TR');
 
 
 
