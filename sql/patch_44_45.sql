@@ -2,7 +2,7 @@
 -- Table structure for table `mage_xml`
 --
 
-DROP TABLE IF EXISTS `mage_xml`;
+
 CREATE TABLE `mage_xml` (
    `mage_xml_id` int(10) unsigned NOT NULL auto_increment,
    `xml` text,
@@ -50,7 +50,7 @@ insert into tmp_chip_channel(select * from chip_channel);
 
 ---ctcf replicate chip_channel_id and name fix
 ---update chip_channel cc, tmp_chip_channel tcc set cc.chip_channel_id=tcc.chip_channel_id where tcc.table_name='experimental_chip' and cc.table_name='experimental_chip' and tcc.table_id=cc.table_id and tcc.result_set_id=17;
---update result_set set name=replace(name, 'SOM00H0', 'ctcf_ref');
+--update result_set set name=replace(name, 'SOM00H0', 'ctcf_ren');
 
 drop table chip_channel;
 
@@ -60,7 +60,25 @@ update result_set set name=replace(name, 'BIOREP', 'BR');
 update result_set set name=replace(name, 'techrep', 'TR');
 
 
--- add probe_design?
+
 alter table predicted_feature change display_label `display_label` varchar(60) default NULL;
--- alter table data_set change result_set_id `result_set_id` int(10) unsigned default '0';
--- alter table data_set change feature_set_id `feature_set_id` int(10) unsigned default '0';
+
+
+---
+-- Table structure for table `probe_design`
+--
+
+CREATE TABLE `probe_design` (
+   `probe_id` int(10) unsigned NOT NULL default '0',
+   `analysis_id` int(10) unsigned NOT NULL default '0',
+   `score` double default NULL,	
+   `coord_system_id` int(10) unsigned NOT NULL default '0',
+    PRIMARY KEY  (`probe_id`, `analysis_id`, `coord_system_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+
+-- make feature/set names unique key
+-- can't do result set yet due to duplicate names of channel and chip IMPORT sets
+create unique index `name_idx` on feature_set (name);
+create unique index `name_idx` on data_set (name);
