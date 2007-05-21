@@ -306,7 +306,10 @@ sub _default_where_clause {
 
 sub _final_clause {
   #return ' GROUP by cc.chip_channel_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
-  return ' GROUP by cc.result_set_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
+  return ' GROUP by cc.chip_channel_id, cc.result_set_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
+  
+  
+  
   
 }
 
@@ -340,6 +343,7 @@ sub _objs_from_sth {
     if(! $rset || ($rset->dbID() != $dbid)){
       
       push @rsets, $rset if $rset;
+
       $anal = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
@@ -568,7 +572,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   
   my @ids = @{$rset->table_ids()};
   #should we do some more optimisation of method here if we know about presence or lack or replicates?
-  
+
   if($ec_status){
     @filtered_ids = @{$self->status_filter($ec_status, 'experimental_chip', @ids)};
 
@@ -578,6 +582,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
       return \@rfeatures;
     }
   }
+
 
   #we need to build a hash of cc_id to biolrep value
   #Then we use the biolrep as a key, and push all techrep values.
@@ -596,6 +601,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   while($sth->fetch()){
 	$biol_rep ||= 'NO_REP_SET';
+
 	$biol_reps{$cc_id} = $biol_rep;
   }
 
@@ -628,6 +634,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
 
   while ( $sth->fetch() ) {
+
     #we need to get best result here if start and end the same
     #set start end for first result
     $old_start ||= $start;
@@ -635,7 +642,8 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     
     if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature
 	  push @{$rep_scores{$biol_reps{$cc_id}}}, $score;
-    }else{#Found new location
+    }
+	else{#Found new location
    
 	  #store previous feature with best result from @scores
 		#Do not change arg order, this is an array object!!
