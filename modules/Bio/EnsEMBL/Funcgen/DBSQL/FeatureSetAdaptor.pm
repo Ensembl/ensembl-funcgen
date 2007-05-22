@@ -39,7 +39,7 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( warning );
+use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
@@ -162,21 +162,20 @@ sub fetch_all_by_FeatureType_Analysis {
     return $self->generic_fetch($sql);	
 }
 
-
-=head2 fetch_all_by_name
+=head2 fetch_by_name
 
   Arg [1]    : string - name of FeatureSet
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my @fsets = @{$fset_adaptor->fetch_all_by_name('feature_set-1')};
+  Example    : my @fsets = @{$fset_adaptor->fetch_by_name('feature_set-1')};
   Description: Fetch all FeatureSets wit a given name
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet objects
   Exceptions : Throws if no name passed 
   Caller     : General
   Status     : At Risk - change to fetch_by_name when name is made unique key
 
 =cut
 
-sub fetch_all_by_name {
+sub fetch_by_name {
   my ($self, $name, $status) = @_;
   
   throw("Must provide a name argument") if (! defined $name);
@@ -187,8 +186,9 @@ sub fetch_all_by_name {
     my $constraint = $self->status_to_constraint($status) if $status;
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
+
+  return $self->generic_fetch($sql)->[0];
   
-  return $self->generic_fetch($sql);	
 }
 
 =head2 fetch_attributes
