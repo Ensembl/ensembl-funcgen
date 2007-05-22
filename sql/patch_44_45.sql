@@ -83,4 +83,25 @@ CREATE TABLE `probe_design` (
 -- make feature/set names unique key
 -- can't do result set yet due to duplicate names of channel and chip IMPORT sets
 create unique index `name_idx` on feature_set (name);
-create unique index `name_idx` on data_set (name);
+-- can't do this until we split the name of into a separate table
+
+--create unique index `name_idx` on data_set (name);
+
+
+--insert into cell_type values(NULL, 'CD4', NULL, 'Human CD4 T-Cells');
+--update experimental_chip ec, cell_type ct set ec.cell_type_id=ct.cell_type_id where ct.name='CD4' and ec.unique_id='CD4_parzen_02';
+--update experimental_chip ec, cell_type ct set ec.cell_type_id=ct.cell_type_id where ct.name='GM06996' and ec.unique_id='GM06990_parzen_0115';
+
+--insert into feature_type values('', 'DNase', 'DNA', 'DNase Hypersensitive Site');
+--update experimental_chip ec, feature_type ft set ec.feature_type_id=ft.feature_type_id where ft.name='DNase' and ec.unique_id='CD4_parzen_02';
+--update experimental_chip ec, feature_type ft set ec.feature_type_id=ft.feature_type_id where ft.name='DNase' and ec.unique_id='GM06990_parzen_0115';
+
+
+
+-- update  result_set rs, data_set ds set ds.name=rs.name where rs.result_set_id=ds.result_set_id;
+-- update  feature_set fs, data_set ds set fs.name=ds.name where fs.feature_set_id=ds.feature_set_id;
+-- insert into feature_type values ('', 'CTCF', 'INSULATOR', 'CCCCTC-binding factor');
+-- update experimental_chip ec, experiment e, feature_type ft  set ec.feature_type_id=ft.feature_type_id where e.name='ctcf_ren' and e.experiment_id=ec.experiment_id and ft.name='CTCF';
+-- insert into cell_type values ('', 'IMR90', '', 'Human Fetal Lung Fibroblast');
+-- update cell_type set display_label =NULL where display_label='';
+-- update experimental_chip ec, experiment e, cell_type ct  set ec.cell_type_id=ct.cell_type_id where e.name='ctcf_ren' and e.experiment_id=ec.experiment_id and ct.name='IMR90';
