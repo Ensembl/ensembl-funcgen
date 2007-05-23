@@ -104,6 +104,7 @@ use Getopt::Long;
 use Pod::Usage;
 #POSIX? File stuff
 use File::Path;
+use Data::Dumper;
 #use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file run_system_cmd backup_file);
@@ -164,7 +165,6 @@ GetOptions (
 
 @union_set_names = split/,/, join(',', @union_set_names);
 @focus_set_names = split/,/, join(',', @focus_set_names);
-
 
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -353,6 +353,23 @@ my (@start_ids, @names);
 
 foreach my $slice (@slices) {
 
+    my $transfer=0;
+    my $transfer_slice;
+    # get slice union features nedd to be transfered onto
+    if( $slice->start != 1 || $slice->strand != 1) {
+        $transfer=1;
+        $transfer_slice = $slice_a->fetch_by_region
+            (
+             $slice->coord_system->name(),
+             $slice->seq_region_name(),
+             undef, #start
+             undef, #end
+             undef, #strand
+             $slice->coord_system->version()
+             );
+        print Dumper $transfer_slice;
+    } 
+
   foreach my $feature (@{$pfa->fetch_all_by_Slice($slice)}) {
 
 	#skip non union sets
@@ -361,7 +378,6 @@ foreach my $slice (@slices) {
 	my ($first_end) = sort{$b <=> $a} values %ends;
 
 	#warn "first end is $first_end and next start is ".$feature->start()." ".$feature->feature_set->name();
-
 
 	if ((defined $first_end) && ($feature->start() > $first_end)) {
 	  #build co-occurence feature for feature with first_end and flush start end values appropriately
@@ -424,10 +440,16 @@ foreach my $slice (@slices) {
 					 -slice  => $slice,
 					 -start  => $starts{$start_id},
 					 -end    => $ends{$start_id},
-					 -strand => 0,
+					 -strand => 1,
 					 -feature_set => &get_union_FeatureSet($union_set_name),	
 					);
-				  
+
+          if ($transfer) {
+              warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+              $union_feature = $union_feature->transfer($transfer_slice);
+              warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+          }
+
 				  shift @names;
 				  
 				  if (! exists $current_unions{$union_set_name}) {
@@ -473,6 +495,8 @@ foreach my $slice (@slices) {
 
 					my $union_set_name = join(':', @names);
 				  
+          
+
 					my $union_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
 					  (
 					   -slice  => $slice,
@@ -481,6 +505,12 @@ foreach my $slice (@slices) {
 					   -strand => 0,
 					   -feature_set => &get_union_FeatureSet(\@names),	
 					  );
+          
+          if ($transfer) {
+              warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+              $union_feature = $union_feature->transfer($transfer_slice);
+              warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+          }
 					
 					shift @names;
 					
@@ -576,7 +606,7 @@ sub get_union_FeatureSet{
 		  
 		  $union_ftypes{$set_name} = Bio::EnsEMBL::Funcgen::FeatureType->new(
 																			 -name        => $set_name,
-																			 -description => 'Co-occurence of features $set_name',
+																			 -description => "Co-occurence of features $set_name",
 																			);
 		  
 		  ($union_ftypes{$set_name}) = @{$ft_adaptor->store($union_ftypes{$set_name})} if $write_features;
