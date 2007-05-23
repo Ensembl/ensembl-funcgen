@@ -112,6 +112,7 @@ use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DataSet;
 use Bio::EnsEMBL::Funcgen::PredictedFeature;
+use Bio::EnsEMBL::Funcgen::Utils::Encode qw(get_encode_regions);
 use Bio::EnsEMBL::Analysis;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -132,7 +133,6 @@ my $port = '3306';
 
 $main::_debug_level = 0;
 $main::_tee = 0;
-
 
 #Use some sort of DBDefs for now, but need  to integrate with Register, and have put SQL into (E)FGAdaptor?
 #Use ArrayDefs.pm module for some of these, class, vendor, format?
@@ -197,8 +197,9 @@ if (! ($write_features || $dump_features)) {
 
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-											  -host => 'ensembldb.ensembl.org',
-											  -user => 'anonymous',
+											  #-host => 'ensembldb.ensembl.org',
+											  -host => 'ens-livemirror',
+											  -user => 'ensro',
 											  -dbname => $species."_core_".$data_version,
 											  -species => $species,
 											 );
@@ -317,11 +318,20 @@ throw("Cannot specifiy a slice name and a chr name:\t$slice_name\t$chr_name") if
 
 if ($slice_name) {
 
-  @slices = $slice_a->fetch_by_name($slice_name);
+    if ($slice_name eq 'ENCODE') {
+        my $encode_regions = &get_encode_regions($cdb);
+        my @encode_region_names = sort keys %{$encode_regions};
+        map {push @slices, $slice_a->fetch_by_name($encode_regions->{$_});} @encode_region_names;
+        #print scalar(@slices), "\n";
+        
+    } else {
 
-  if (! @slices) {
-	throw("-slice name did not retrieve a valid slice:\t$slice_name\n");
-  }
+        @slices = $slice_a->fetch_by_name($slice_name);
+    }
+
+    if (! @slices) {
+        throw("-slice name did not retrieve a valid slice:\t$slice_name\n");
+    }
 
 } elsif ($chr_name) {
   
