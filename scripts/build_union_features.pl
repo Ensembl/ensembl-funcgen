@@ -98,6 +98,8 @@ BEGIN{
 #use Bio::EnsEMBL::Root; #Only used for rearrange see pdocs
 #Roll own Root object to handle debug levels, logging, dumps etc.
 
+use strict;
+
 ### MODULES ###
 use Getopt::Long;
 #use Carp;#For dev only? cluck not exported by default Remove this and implement in Helper
@@ -172,8 +174,8 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 
 if (! ($pass && $host && $dbname && $data_version && $species)) {
-  throw("Some mandatory parameters are not set, you must specify:\n".
-		"-pass\t-port\t-host\t-dbname\t-data_version\t-species");
+    throw("Some mandatory parameters are not set, you must specify:\n".
+          "-pass\t-port\t-host\t-dbname\t-data_version\t-species");
 }
 
 
@@ -181,16 +183,16 @@ run_system_cmd("mkdir -p $out_dir") if(! -d $out_dir);
 
 
 if (! $no_focus) {
-  throw('You must specificy some focus feature sets to build on') if(! @focus_set_names);
+    throw('You must specificy some focus feature sets to build on') if(! @focus_set_names);
 } elsif (@focus_set_names) {
-  throw('You cannot specify -no_focus and -focus_sets');
+    throw('You cannot specify -no_focus and -focus_sets');
 }
 print 'No union sets specified, using all feature set on $data_version' if (! @union_set_names);
 
 
 if (! ($write_features || $dump_features)) {
-  print "No output type specified turning on dump_features\n";
-  $dump_features = 1;
+    print "No output type specified turning on dump_features\n";
+    $dump_features = 1;
 }
 
 
@@ -247,71 +249,70 @@ $anal_a->store($anal);
 
 
 if (! $no_focus) {
-
-  foreach my $name (@focus_set_names) {
-  
-	if (! ($focus_sets{$name} = $fset_a->fetch_by_name($name))) {
-	  throw("One of your sepcified focus FeatureSets does not exist:\t$name");
-	} else {
-	  $focus_names{$focus_sets{$name}->dbID()} = $name;
-	}
-  }
+    
+    foreach my $name (@focus_set_names) {
+        
+        if (! ($focus_sets{$name} = $fset_a->fetch_by_name($name))) {
+            throw("One of your sepcified focus FeatureSets does not exist:\t$name");
+        } else {
+            $focus_names{$focus_sets{$name}->dbID()} = $name;
+        }
+    }
 } else {
-  print "No focus, using all available feature sets\n";
-
-  foreach my $fset (@{$fset_a->fetch_all()}) {
-	push @focus_set_names, $fset->name();
-
-	$focus_sets{$fset->name()} = $fset;
-	$focus_names{$fset->dbID()} = $fset->name();
-  }
+    print "No focus, using all available feature sets\n";
+    
+    foreach my $fset (@{$fset_a->fetch_all()}) {
+        push @focus_set_names, $fset->name();
+        
+        $focus_sets{$fset->name()} = $fset;
+        $focus_names{$fset->dbID()} = $fset->name();
+    }
 }
 
-print "Focus FeatureSets are:\t".join("\t", @focus_set_names)."\n";
+print "Focus FeatureSets are:\t".join("\t", sort values %focus_names)."\n";
 
 if ($no_focus) {
-  print "Setting union sets to focus sets";
-  %union_sets = %focus_sets;
-  %union_names = %focus_names;
-  @union_set_names = @focus_set_names;
+    print "Setting union sets to focus sets";
+    %union_sets = %focus_sets;
+    %union_names = %focus_names;
+    @union_set_names = @focus_set_names;
 } else {
-  if (! @union_set_names) {
-	print "No union FeatureSets specified, using all FeatureSets\n";
-	
-	foreach my $fset (@{$fset_a->fetch_all()}) {
-	  
-	  #next if(grep($fset->name(), @focus_set_names));
-	  push @union_set_names, $fset->name();
-	  
-	  $union_sets{$fset->name()} = $fset;
-	  $union_names{$fset->dbID()} = $fset->name();
-	  
-	}
-  } else {
-  
-	foreach my $name (@union_set_names) {
-	  
-	  if (! ($union_sets{$name} = $fset_a->fetch_by_name($name))){
-		throw("One of your sepcified union FeatureSets does not exist:\t$name");
-	  } else {
-		$union_names{$union_sets{$name}->dbID()} = $name
-	  }
-	}
-
-	#now add focus_sets to union sets
-	foreach my $name (@focus_set_names) {
-	  
-	  if (! exists $union_sets{$name}){
-		$union_names{$focus_sets{$name}->dbID()} = $name;
-		$union_sets{$focus_sets{$name}} = $focus_sets{$name};
-	  }
-	}
-  }
+    if (! @union_set_names) {
+        print "No union FeatureSets specified, using all FeatureSets\n";
+        
+        foreach my $fset (@{$fset_a->fetch_all()}) {
+            
+            #next if(grep($fset->name(), @focus_set_names));
+            push @union_set_names, $fset->name();
+            
+            $union_sets{$fset->name()} = $fset;
+            $union_names{$fset->dbID()} = $fset->name();
+            
+        }
+    } else {
+        
+        foreach my $name (@union_set_names) {
+            
+            if (! ($union_sets{$name} = $fset_a->fetch_by_name($name))){
+                throw("One of your sepcified union FeatureSets does not exist:\t$name");
+            } else {
+                $union_names{$union_sets{$name}->dbID()} = $name;
+            }
+        }
+        
+        #print "now add focus sets to union sets\n";
+        foreach my $name (@focus_set_names) {
+            
+            
+            if (! exists $union_sets{$name}){
+                $union_names{$focus_sets{$name}->dbID()} = $name;
+                $union_sets{$name} = $focus_sets{$name};
+            }
+        }
+    }
 }
 
-
-print "Union FeatureSets are:\t".join("\t", @union_set_names)."\n";
-
+print "Union FeatureSets are:\t".join("\t", sort values %union_names)."\n";
 
 throw("Cannot specifiy a slice name and a chr name:\t$slice_name\t$chr_name") if($slice_name && $chr_name);
 
@@ -334,14 +335,15 @@ if ($slice_name) {
     }
 
 } elsif ($chr_name) {
-  
-  @slices = $slice_a->fetch_by_region('chromosome', $chr_name);
-
-  if (! @slices) {
-	throw("-chr_name did not retrieve a valid slice:\t$chr_name\n");
-  }
+    
+    @slices = $slice_a->fetch_by_region('chromosome', $chr_name);
+    
+    if (! @slices) {
+        throw("-chr_name did not retrieve a valid slice:\t$chr_name\n");
+    }
+    
 } else {
-  @slices = @{$slice_a->fetch_all('toplevel')};
+    @slices = @{$slice_a->fetch_all('toplevel')};
 }
 
 print "Building co-occurrence features on slices:\n".join("\t", map $_->seq_region_name(), @slices)."\n";
@@ -367,273 +369,273 @@ foreach my $slice (@slices) {
              undef, #strand
              $slice->coord_system->version()
              );
-        print Dumper $transfer_slice;
+        #print Dumper $transfer_slice;
     } 
 
-  foreach my $feature (@{$pfa->fetch_all_by_Slice($slice)}) {
+    foreach my $feature (@{$pfa->fetch_all_by_Slice($slice)}) {
+        
+        #skip non union sets
+        next if(! exists $union_sets{$feature->feature_set->name()});
 
-	#skip non union sets
-	next if(! exists $union_sets{$feature->feature_set->name()});
-
-	my ($first_end) = sort{$b <=> $a} values %ends;
-
-	#warn "first end is $first_end and next start is ".$feature->start()." ".$feature->feature_set->name();
-
-	if ((defined $first_end) && ($feature->start() > $first_end)) {
-	  #build co-occurence feature for feature with first_end and flush start end values appropriately
-
-
-	  #warn "first end is $first_end and next start is ".$feature->start()." ".$feature->feature_set->name();
-		
-
-
-	  foreach my $fset_id (keys %ends) {
-		
-		if ($ends{$fset_id} == $first_end) { #find currently ending/ed features
-
-		  #now compare other start end vals of focus sets or all if fset_id is an focus set or no_focus sets specified
-
-		  if(scalar (keys %ends) > 1){#got over lap
-
-			#warn "got overlap with ended feature ".$union_names{$fset_id}." $first_end";
-
-			@start_ids = sort { $starts{$a} <=> $starts{$b} } keys %starts;
-			
-			if (exists $focus_names{$fset_id}) {
-			  
-			  #compare vs all union sets next if fset_id is same
-			  
-			  #we need to check whether we're duplicating last feature for a given co-occurence set
-			  #will this not be solved by cleaning the start ends as we go move along the features?
-			  #features should be named by sorting feature type names of co-occuring features
-			  #need to build current co-occur feature hash to stop duplicates being formed
-			  #we need to build these in order of starts to get multiplex co-occurences
-		
-			  @names = ($focus_names{$fset_id});
-			  
-			  #warn "Focus feature @names";
-			  
-			  foreach my $start_id (@start_ids) {
-				#warn "got $start_id";
-
-
-				next if $start_id == $fset_id;
-				
-				if ($multiplex) {
-				  push @names, $union_names{$start_id};
-				} else {
-				  @names = ($focus_names{$fset_id}, $union_names{$start_id});
-				}
-				
-				#warn "Found union of  @names";
-				
-				@names = sort @names;
-				
-				#shift names to move thro' all possible co-occurences
-				
-				while (scalar(@names) > 1) {
-				  
-				  my $union_set_name = join(':', @names);
-				  
-				  my $union_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
-					(
-					 -slice  => $slice,
-					 -start  => $starts{$start_id},
-					 -end    => $ends{$start_id},
-					 -strand => 1,
-					 -feature_set => &get_union_FeatureSet($union_set_name),	
-					);
-
-          if ($transfer) {
-              warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
-              $union_feature = $union_feature->transfer($transfer_slice);
-              warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
-          }
-
-				  shift @names;
-				  
-				  if (! exists $current_unions{$union_set_name}) {
-					$current_unions{$union_set_name} = $union_feature;
-				  } else {
-					#this should happen as we're deleting the A start end values after AB, before we have a chance to 
-					#build BA
-					warn "Found duplicate union sets for $union_set_name at:\t".$slice->name;
-				  }
-				}
-			  }
-			  
-			} 
-			else {#just compare vs focus_sets
-			  #no need to next as we know it's not present in focus_names
-
-			  @names = ($union_names{$fset_id});
-
-
-			  #warn "Non focus feature @names";
-
-			  
-			  foreach my $start_id (@start_ids) {
-				#next if $start_id == $fset_id;
-				
-				if ($focus_names{$start_id}) {
-				  
-				  
-				  if ($multiplex) {
-					push @names, $focus_names{$start_id};
-				  } else {
-					@names = ($union_names{$fset_id}, $focus_names{$start_id});
-				  }
-				  
-				  @names = sort @names;
-
-				  #warn "Found union of  @names";
-				  #exit;
-				  
-				  #shift names to move thro' all possible co-occurences
-				  
-				  while (scalar(@names) > 1) {
-
-					my $union_set_name = join(':', @names);
-				  
-          
-
-					my $union_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
-					  (
-					   -slice  => $slice,
-					   -start  => $starts{$start_id},
-					   -end    => $ends{$start_id},
-					   -strand => 0,
-					   -feature_set => &get_union_FeatureSet(\@names),	
-					  );
-          
-          if ($transfer) {
-              warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
-              $union_feature = $union_feature->transfer($transfer_slice);
-              warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
-          }
-					
-					shift @names;
-					
-					if (! exists $current_unions{$union_set_name}) {
-					  $current_unions{$union_set_name} = $union_feature;
-					} else {
-					  #this should happen as we're deleting the A start end values after AB, before we have a chance to 
-					  #build BA
-					  warn "Found duplicate union sets for $union_set_name at:\t".$slice->name;
-					}
-				  }
-				}
-			  }
-			}#end of if exists focus_names
-		  }
-
-		  #remove feature start ends for expired feature
-		  delete $starts{$fset_id};
-		  delete $ends{$fset_id};
-		}
-	  }
-
-	 
-	  #print and load here as required
-	  #we could cache here by pusing the hash
-
-	  foreach my $uset_name (keys %current_unions) {
-		
-		$union_cnts{$uset_name} ||= 0;
-		$union_cnts{$uset_name} ++;
-
-		$pfa->store($current_unions{$uset_name}) if $write_features;
-
-		if ($dump_features) {
-
-		  #warn "dumping $uset_name features";
-
-
-		  #we should test for file and clobber here too
-
-		  $file_handles{$uset_name} ||= open_file($out_dir."/${uset_name}.hitlist", '>');
-		  
-		  my $fh = $file_handles{$uset_name};
-
-		  print $fh 'chr'.$current_unions{$uset_name}->slice->seq_region_name()."\t".
-			$current_unions{$uset_name}->start()."\t".$current_unions{$uset_name}->end()."\t\n";
-		  #score field empty
-			  
-		}
-	  }
-	  
-	  %current_unions = ();
-	}
-
-	$starts{$feature->feature_set->dbID()} = $feature->start();
-	$ends{$feature->feature_set->dbID()} = $feature->end();
-  }
+        my ($first_end) = sort{$b <=> $a} values %ends;
+        
+        if ((defined $first_end) && ($feature->start() > $first_end)) {
+            #build co-occurence feature for feature with first_end and flush start end values appropriately
+            
+            
+            #warn "first end is $first_end and next start is ".$feature->start()." ".$feature->feature_set->name();
+            
+            
+            
+            foreach my $fset_id (keys %ends) {
+                
+                if ($ends{$fset_id} == $first_end) { #find currently ending/ed features
+                    
+                    #now compare other start end vals of focus sets or all if fset_id is an focus set or no_focus sets specified
+                    
+                    if(scalar (keys %ends) > 1){
+                        #got over lap
+                        
+                        #warn "got overlap with ended feature ".$union_names{$fset_id}." $first_end";
+                        
+                        @start_ids = sort { $starts{$a} <=> $starts{$b} } keys %starts;
+                        
+                        if (exists $focus_names{$fset_id}) {
+                            
+                            #compare vs all union sets next if fset_id is same
+                            
+                            #we need to check whether we're duplicating last feature for a given co-occurence set
+                            #will this not be solved by cleaning the start ends as we go move along the features?
+                            #features should be named by sorting feature type names of co-occuring features
+                            #need to build current co-occur feature hash to stop duplicates being formed
+                            #we need to build these in order of starts to get multiplex co-occurences
+                            
+                            @names = ($focus_names{$fset_id});
+                            
+                            #warn "Focus feature @names";
+                            
+                            foreach my $start_id (@start_ids) {
+                                #warn "got $start_id";
+                                
+                                
+                                next if $start_id == $fset_id;
+                                
+                                if ($multiplex) {
+                                    push @names, $union_names{$start_id};
+                                } else {
+                                    @names = ($focus_names{$fset_id}, $union_names{$start_id});
+                                }
+                                
+                                #warn "Found union of  @names";
+                                
+                                @names = sort @names;
+                                
+                                #shift names to move thro' all possible co-occurences
+                                
+                                while (scalar(@names) > 1) {
+                                    
+                                    my $union_set_name = join(':', @names);
+                                    
+                                    my $union_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+                                        (
+                                         -slice  => $slice,
+                                         -start  => $starts{$start_id},
+                                         -end    => $ends{$start_id},
+                                         -strand => 1,
+                                         -feature_set => &get_union_FeatureSet($union_set_name),	
+                                         );
+                                    
+                                    if ($transfer) {
+                                        #warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+                                        $union_feature = $union_feature->transfer($transfer_slice);
+                                        #warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+                                    }
+                                    
+                                    shift @names;
+                                    
+                                    if (! exists $current_unions{$union_set_name}) {
+                                        $current_unions{$union_set_name} = $union_feature;
+                                    } else {
+                                        #this should happen as we're deleting the A start end values after AB, before we have a chance to 
+                                        #build BA
+                                        warn "Found duplicate union sets for $union_set_name at:\t".$slice->name;
+                                    }
+                                }
+                            }
+                            
+                        } 
+                        else {
+                            #just compare vs focus_sets
+                            #no need to next as we know it's not present in focus_names
+                            
+                            @names = ($union_names{$fset_id});
+                            
+                            
+                            #warn "Non focus feature @names";
+                            
+                            
+                            foreach my $start_id (@start_ids) {
+                                #next if $start_id == $fset_id;
+                                
+                                if ($focus_names{$start_id}) {
+                                    
+                                    
+                                    if ($multiplex) {
+                                        push @names, $focus_names{$start_id};
+                                    } else {
+                                        @names = ($union_names{$fset_id}, $focus_names{$start_id});
+                                    }
+                                    
+                                    @names = sort @names;
+                                    
+                                    #warn "Found union of  @names";
+                                    #exit;
+                                    
+                                    #shift names to move thro' all possible co-occurences
+                                    
+                                    while (scalar(@names) > 1) {
+                                        
+                                        my $union_set_name = join(':', @names);
+                                        
+                                        
+                                        
+                                        my $union_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+                                            (
+                                             -slice  => $slice,
+                                             -start  => $starts{$start_id},
+                                             -end    => $ends{$start_id},
+                                             -strand => 0,
+                                             -feature_set => &get_union_FeatureSet(\@names),	
+                                             );
+                                        
+                                        if ($transfer) {
+                                            #warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+                                            $union_feature = $union_feature->transfer($transfer_slice);
+                                            #warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+                                        }
+                                        
+                                        shift @names;
+                                        
+                                        if (! exists $current_unions{$union_set_name}) {
+                                            $current_unions{$union_set_name} = $union_feature;
+                                        } else {
+                                            #this should happen as we're deleting the A start end values after AB, before we have a chance to 
+                                            #build BA
+                                            warn "Found duplicate union sets for $union_set_name at:\t".$slice->name;
+                                        }
+                                    }
+                                }
+                            }
+                        }#end of if exists focus_names
+                        }
+                    
+                    #remove feature start ends for expired feature
+                    delete $starts{$fset_id};
+                    delete $ends{$fset_id};
+                }
+            }
+            
+            
+            #print and load here as required
+            #we could cache here by pusing the hash
+            
+            foreach my $uset_name (keys %current_unions) {
+                
+                $union_cnts{$uset_name} ||= 0;
+                $union_cnts{$uset_name} ++;
+                
+                $pfa->store($current_unions{$uset_name}) if $write_features;
+                
+                if ($dump_features) {
+                    
+                    #warn "dumping $uset_name features";
+                    
+                    
+                    #we should test for file and clobber here too
+                    
+                    $file_handles{$uset_name} ||= open_file($out_dir."/${uset_name}.hitlist", '>');
+                    
+                    my $fh = $file_handles{$uset_name};
+                    
+                    print $fh 'chr'.$current_unions{$uset_name}->slice->seq_region_name()."\t".
+                        $current_unions{$uset_name}->start()."\t".$current_unions{$uset_name}->end()."\t\n";
+                    #score field empty
+                    
+                }
+            }
+            
+            %current_unions = ();
+        }
+        
+        $starts{$feature->feature_set->dbID()} = $feature->start();
+        $ends{$feature->feature_set->dbID()} = $feature->end();
+    }
 }
 
 foreach my $uset_name(keys %union_cnts){
-  print 'Found '.$union_cnts{$uset_name}." union features of type $uset_name\n";
+    print 'Found '.$union_cnts{$uset_name}." union features of type $uset_name\n";
 }
 
 
 foreach my $fh (values %file_handles) {
-  close($fh);
+    close($fh);
 }
 
 
 sub get_union_FeatureSet{
-  my $set_name = shift;
-
-  if (! exists $union_fsets{$set_name}) {
-	$union_fsets{$set_name} = $fset_a->fetch_by_name($set_name);
-
-	if ($union_fsets{$set_name}) {
-	  
-	  if ($clobber && $write_features) {
-		my $sql = 'DELETE from predicted_feature where feature_set_id='.$union_fsets{$set_name}->dbID();
-		$db->dbc->do($sql) || throw('Failed to roll back predicted_features for feature_set_id'.$union_fsets{$set_name}->dbID());
-	  } elsif ($write_features) {
-		throw("Their is a pre-existing FeatureSet with the name '$set_name'\n".
-			  'You must specify clobber is you want to delete and overwrite all pre-existing PredictedFeatures');
-	  }
-	} else {					#generate new fset
-	  
-	  #get ftype first
-	  if (! exists $union_ftypes{$set_name}) {
-		
-		$union_ftypes{$set_name} = $ft_adaptor->fetch_by_name($set_name);
-		
-		if (! $union_ftypes{$set_name}) {
-		  
-		  $union_ftypes{$set_name} = Bio::EnsEMBL::Funcgen::FeatureType->new(
-																			 -name        => $set_name,
-																			 -description => "Co-occurence of features $set_name",
-																			);
-		  
-		  ($union_ftypes{$set_name}) = @{$ft_adaptor->store($union_ftypes{$set_name})} if $write_features;
-		}
-	  }
-	  
-	  $union_fsets{$set_name} = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-																	   -analysis     => $anal,
-																	   -feature_type => $union_ftypes{$set_name},
-																	   -name         => $set_name,
-																	  );
-	  
-	  
-	  if ($write_features) {
-		($union_fsets{$set_name}) = @{$fset_a->store($union_fsets{$set_name})};
-		
-		#generate data_set here too
-		my $dset = Bio::EnsEMBL::Funcgen::DataSet->new(
-													   -feature_set => $union_fsets{$set_name},
-													   -name        => $set_name,
-													  );
-		
-		$dset_a->store($dset);
-	  }
-	}
-  }
-  return $union_fsets{$set_name};
+    my $set_name = shift;
+    
+    if (! exists $union_fsets{$set_name}) {
+        $union_fsets{$set_name} = $fset_a->fetch_by_name($set_name);
+        
+        if ($union_fsets{$set_name}) {
+            
+            if ($clobber && $write_features) {
+                my $sql = 'DELETE from predicted_feature where feature_set_id='.$union_fsets{$set_name}->dbID();
+                $db->dbc->do($sql) || throw('Failed to roll back predicted_features for feature_set_id'.$union_fsets{$set_name}->dbID());
+            } elsif ($write_features) {
+                throw("Their is a pre-existing FeatureSet with the name '$set_name'\n".
+                      'You must specify clobber is you want to delete and overwrite all pre-existing PredictedFeatures');
+            }
+        } else {					#generate new fset
+            
+            #get ftype first
+            if (! exists $union_ftypes{$set_name}) {
+                
+                $union_ftypes{$set_name} = $ft_adaptor->fetch_by_name($set_name);
+                
+                if (! $union_ftypes{$set_name}) {
+                    
+                    $union_ftypes{$set_name} = Bio::EnsEMBL::Funcgen::FeatureType->new(
+                                                                                       -name        => $set_name,
+                                                                                       -description => "Co-occurence of features $set_name",
+                                                                                       );
+                    
+                    ($union_ftypes{$set_name}) = @{$ft_adaptor->store($union_ftypes{$set_name})} if $write_features;
+                }
+            }
+            
+            $union_fsets{$set_name} = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+                                                                             -analysis     => $anal,
+                                                                             -feature_type => $union_ftypes{$set_name},
+                                                                             -name         => $set_name,
+                                                                             );
+            
+            
+            if ($write_features) {
+                ($union_fsets{$set_name}) = @{$fset_a->store($union_fsets{$set_name})};
+                
+                #generate data_set here too
+                my $dset = Bio::EnsEMBL::Funcgen::DataSet->new(
+                                                               -feature_set => $union_fsets{$set_name},
+                                                               -name        => $set_name,
+                                                               );
+                
+                $dset_a->store($dset);
+            }
+        }
+    }
+    return $union_fsets{$set_name};
 }
 
 1;
