@@ -320,8 +320,8 @@ if ($slice_name) {
     if ($slice_name eq 'ENCODE') {
         my $encode_regions = &get_encode_regions($cdb);
         my @encode_region_names = sort keys %{$encode_regions};
-        #map {push @slices, $slice_a->fetch_by_name($encode_regions->{$_});} @encode_region_names;
-        push @slices, $slice_a->fetch_by_name($encode_regions->{ENr333});
+        map {push @slices, $slice_a->fetch_by_name($encode_regions->{$_});} @encode_region_names;
+        #push @slices, $slice_a->fetch_by_name($encode_regions->{ENr333});
         #print scalar(@slices), "\n";
         
     } else {
@@ -452,17 +452,17 @@ foreach my $slice (@slices) {
                                     my $union_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
                                         (
                                          -slice  => $slice,
-                                         -start  => $starts{$start_id},
-                                         -end    => $ends{$end_id},
-                                         -strand => 1,
+                                         -start  => $start,
+                                         -end    => $end,
+                                         -strand => 0,
                                          -feature_set => &get_union_FeatureSet($union_set_name),	
                                          );
                                     
-                                    #if ($transfer) {
-                                    #    #warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
-                                    #    $union_feature = $union_feature->transfer($transfer_slice);
-                                    #    #warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
-                                    #}
+                                    if ($transfer) {
+                                        #warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+                                        $union_feature = $union_feature->transfer($transfer_slice);
+                                        #warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+                                    }
                                     
                                     shift @names;
                                     
@@ -531,11 +531,11 @@ foreach my $slice (@slices) {
                                              );
                                         
 
-                                        #if ($transfer) {
-                                        #    #warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
-                                        #    $union_feature = $union_feature->transfer($transfer_slice);
-                                        #    #warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
-                                        #}
+                                        if ($transfer) {
+                                            #warn("original uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+                                            $union_feature = $union_feature->transfer($transfer_slice);
+                                            #warn("transfered uf:\t", join("\t", $union_feature->start, $union_feature->end), "\n");
+                                        }
                                         
                                         shift @names;
                                         
@@ -546,11 +546,6 @@ foreach my $slice (@slices) {
                                             #before we have a chance to build BA
                                             warn "Found duplicate union sets for $union_set_name at:\t".$slice->name;
                                         }
-                                        #print " > ",join(" ",@{$current_unions{$union_set_name}->feature_set->name},
-                                        #                 $current_unions{$union_set_name}->start.'-'.$current_unions{$union_set_name}->end, 
-                                        #                 $union_feature->start.'-'.$union_feature->end,
-                                        #                 $feature->start.'-'.$feature->end
-                                        #                 ), "\n";
                                     }
                                 }
                             }
@@ -585,8 +580,8 @@ foreach my $slice (@slices) {
                     
                     my $fh = $file_handles{$uset_name};
                     
-                    #print $fh 'chr'.$current_unions{$uset_name}->slice->seq_region_name()."\t".
-                    #    $current_unions{$uset_name}->start()."\t".$current_unions{$uset_name}->end()."\t\n";
+                    print $fh 'chr'.$current_unions{$uset_name}->slice->seq_region_name()."\t".
+                        $current_unions{$uset_name}->start()."\t".$current_unions{$uset_name}->end()."\t\n";
                     print "chr".$current_unions{$uset_name}->slice->seq_region_name()."\t".
                         $current_unions{$uset_name}->start()."\t".$current_unions{$uset_name}->end()."\t$uset_name\n";
                     #score field empty
