@@ -886,38 +886,38 @@ sub read_and_import_results_data{
     
     foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
 	  
-      if( ! $echip->has_status('IMPORTED')){
+      #if( ! $echip->has_status('IMPORTED')){
 		
-		foreach my $chan (@{$echip->get_Channels()}) {
+	  foreach my $chan (@{$echip->get_Channels()}) {
+		
+		if ( ! $chan->has_status('IMPORTED')) {
+		  my $array = $echip->get_ArrayChip->get_Array();
 		  
-		  if ( ! $chan->has_status('IMPORTED')) {
-			my $array = $echip->get_ArrayChip->get_Array();
-
-			$self->get_probe_cache_by_Array($array) || throw('Failed to get the probe cache handle for results import');
-			warn("we should try and resolve the probe cache here if not present");
-
+		  $self->get_probe_cache_by_Array($array) || throw('Failed to get the probe cache handle for results import');
+		  warn("we should try and resolve the probe cache here if not present");
+		  
 			
-			my ($probe_elem, $score_elem, %hpos);
-			my $cnt = 0;
-			my $r_string = "";
-			my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
-			my $cc_id = $result_set->get_chip_channel_id($chan->dbID());
-			
-			
-			if ($self->recovery()) {
-			  $self->log("Rolling back results for channel:\t${chan_name}");
-			  $self->db->rollback_results($cc_id);
-			}
-			
-			#open/backup output
-			my $out_file = $self->get_dir("raw")."/result.".$chan_name.".txt";	
-			$self->backup_file($out_file);
-			my $r_out = open_file($out_file, '>');
-			
-			(my $alt_chan_name = $chan_name) =~ s/\_/\_1h\_/;
-			my $found = 0;
-			
-		  FILE: foreach my $name($chan_name, $alt_chan_name){
+		  my ($probe_elem, $score_elem, %hpos);
+		  my $cnt = 0;
+		  my $r_string = "";
+		  my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
+		  my $cc_id = $result_set->get_chip_channel_id($chan->dbID());
+		  
+		  
+		  #if ($self->recovery()) {
+		#	$self->log("Rolling back results for channel:\t${chan_name}");
+		#	$self->db->rollback_results($cc_id);
+		#  }
+		  
+		  #open/backup output
+		  my $out_file = $self->get_dir("raw")."/result.".$chan_name.".txt";	
+		  $self->backup_file($out_file);
+		  my $r_out = open_file($out_file, '>');
+		  
+		  (my $alt_chan_name = $chan_name) =~ s/\_/\_1h\_/;
+		  my $found = 0;
+		  
+		FILE: foreach my $name($chan_name, $alt_chan_name){
 			
 			foreach my $suffix ("_pair.txt", ".pair", ".txt") {
 			  
@@ -1009,22 +1009,22 @@ sub read_and_import_results_data{
 		  $self->db->load_table_data("result",  $out_file);
 		  $self->log("Finished importing:\t$out_file", 1);
 		  $chan->adaptor->set_status('IMPORTED', $chan);
-		
-		  
-		  }
-		  #$echip->adaptor->set_status('IMPORTED', $echip);
 		  
 		  
-		  #foreach my $key(keys %{$self}){
-		  #  $self->log("Getting mem for $key");
-		  #  $self->log("$key mem\t".(size($self->{$key})));
-		  #}
-		
 		}
+		#$echip->adaptor->set_status('IMPORTED', $echip);
 		
-		$echip->adaptor->set_status('IMPORTED', $echip);	
-				
+		
+		#foreach my $key(keys %{$self}){
+		  #  $self->log("Getting mem for $key");
+		#  $self->log("$key mem\t".(size($self->{$key})));
+		#}
+		
 	  }
+		
+		#$echip->adaptor->set_status('IMPORTED', $echip);	
+				
+	#}
 	}
   } 
   else {
