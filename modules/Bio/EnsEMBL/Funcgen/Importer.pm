@@ -2452,10 +2452,6 @@ sub R_norm{
     my $norm_anal = $aa->fetch_by_logic_name($logic_name);
     my $rset = $self->get_import_ResultSet($norm_anal, 'experimental_chip');
 
-	warn "got norm rset";
-
-	exit;
-
 	my @chips = ();
   
     if (! $rset) {
