@@ -35,14 +35,25 @@ alter table result add  `Y` int(4) unsigned default NULL;
 
 -- select e.name, rs.result_set_id from experiment e, result_set rs, experimental_chip ec, chip_channel cc where e.experiment_id=ec.experiment_id and ec.experiment_id>1 and ec.experiment_id <12 and ec.experimental_chip_id =cc.table_id and cc.table_name='experimental_chip' and cc.result_set_id=rs.result_set_id group by result_set_id;
 
+--create table `tmp_chip_channel`(
+ --  `chip_channel_id` int(10) unsigned NOT NULL auto_increment,
+ --  `result_set_id` int(10) unsigned default '0',
+ --  `table_id` int(10) unsigned NOT NULL,
+ --  `table_name` varchar(20) NOT NULL,
+ --  PRIMARY KEY  (`result_set_id`, `chip_channel_id`),
+ --  UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
+--) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+--this primary key is not increenting the cc_id when we are using a different table_name
 create table `tmp_chip_channel`(
    `chip_channel_id` int(10) unsigned NOT NULL auto_increment,
    `result_set_id` int(10) unsigned default '0',
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(20) NOT NULL,
-   PRIMARY KEY  (`result_set_id`, `chip_channel_id`),
+   PRIMARY KEY  (`chip_channel_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
 
 
 insert into tmp_chip_channel(select * from chip_channel);
@@ -105,3 +116,11 @@ create unique index `name_idx` on feature_set (name);
 -- insert into cell_type values ('', 'IMR90', '', 'Human Fetal Lung Fibroblast');
 -- update cell_type set display_label =NULL where display_label='';
 -- update experimental_chip ec, experiment e, cell_type ct  set ec.cell_type_id=ct.cell_type_id where e.name='ctcf_ren' and e.experiment_id=ec.experiment_id and ct.name='IMR90';
+
+
+-- insert into cell_type values(NULL, 'HL-60', NULL, 'Hman promyelotic Leukemia Cells');
+--  update feature_set set cell_type_id=6 where name like "Wiggle%";
+
+
+drop index analysis_idx on result_set;
+create unique index `name_analysis_idx` on result_set (name, analysis_id);
