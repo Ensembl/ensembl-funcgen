@@ -337,7 +337,7 @@ sub _slice_fetch {
     my @ids;
 
     if($feat_cs->equals($slice_cs)) {
-	  warn "got match";
+	  #warn "got match";
       # no mapping is required if this is the same coord system
 
       my $max_len = $self->_max_feature_length() ||

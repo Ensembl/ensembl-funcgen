@@ -166,7 +166,7 @@ sub new{
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
   $self->{'output_dir'} = $output_dir if $output_dir; #defs default override
   $self->input_dir($input_dir) if $input_dir; #defs default override
-  $self->{'farm'} = $farm || 1;
+  $self->farm($farm) if $farm;
   $self->{'ssh'} = $ssh || 0;
   $self->{'_dump_fasta'} = $fasta || 0;
   $self->{'recover'} = $recover || 0;
@@ -1507,8 +1507,7 @@ sub register_experiment{
   
   $self->init_experiment_import();
   #can we just have init here instead?
-  
-  
+    
   if($self->{'write_mage'} || $self->{'no_mage'}){
 	$self->read_data("array");
 
@@ -1565,11 +1564,20 @@ sub register_experiment{
 sub validate_mage(){
   my ($self, $mage_xml, $update) = @_;
 
+  $self->log("Validating mage file:\t".$self->get_def('mage_xml_file'));
+
+
   my (%echips, %bio_reps, %tech_reps, @log);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue');
+  my $vsn_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('VSN_GLOG');
 
-  my $rset = $self->get_import_ResultSet($anal, 'channel');
+  my $chan_rset = $self->get_import_ResultSet($anal, 'channel');
+  my $rset =  $self->get_import_ResultSet($vsn_anal, 'experimental_chip');
+
+
   #doesn't really matter whether we call channel or experimental_chip?
+  #yes it does, if we get a channel level set, we're going to resuse the channel cc_ids
+  #for the exp_chip result sets, causing the roll back bug
 
   if(! $rset){
 	$rset = $self->db->get_ResultSetAdaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
@@ -1865,7 +1873,7 @@ sub validate_mage(){
 			  );
 		  }
 		  
-		  $rsets{$biorep}->add_table_id($echip->dbID());
+		  $rsets{$biorep}->add_table_id($echip->dbID(), $rset->get_chip_channel_id($echip->dbID()));
 		}
 	  }
 	}
@@ -1888,7 +1896,7 @@ sub validate_mage(){
 			  );
 		  }
 		  
-		  $rsets{$techrep}->add_table_id($echip->dbID());
+		  $rsets{$techrep}->add_table_id($echip->dbID(), $rset->get_chip_channel_id($echip->dbID()));
 		}
 	  }
 	}
@@ -2273,100 +2281,6 @@ sub get_probe_x_y_by_name_Array{
 #probe reads probe_set, probes, which should definitely be in array, probe_feature? and results
 #native data format may not map to these methods directly, so may need to call previous method if required data not defined
 
-=head2 import_results
-  
-  Example    : $self->import_results()
-  Description: Imports results into DB from file
-  Arg [1]    : mandatory - results dir
-  Returntype : none
-  Exceptions : throws if R
-  Caller     : general
-  Status     : deprecated - now done directly in each method as load is some times as a set(chip for norm) or by chan
-
-=cut
-
-sub import_results{
-  my ($self, $file, $logic_name) = @_;
-
-  throw('Deprecated, should imprt directly from read_result methods');
-
-
-  #test for chip or channel here
-#  my $status = ($logic_name eq "RawValue") ? "IMPORTED" : "IMPORTED_${logic_name}";
-#  $self->log("Importing:\t$file");
-#  $self->db->load_table_data("result",  $file);
-#  $self->log("Finishing importing:\t$file");
-#  $chip_chan->adaptor->set_status($status, $chip_chan);
-
-#  return;
-
-#  foreach my $logic_name (@logic_names) {
-#    $self->log("Importing $logic_name data");
-#
-#
-#    my $loaded = 0;
-#    my $status = ($logic_name eq "RawValue") ? "IMPORTED" : "IMPORTED_${logic_name}";
-#  
-#    
-#    #should we split this into vendor specific load methods?
-#    #This loop behaves wierdly due to the naming/array design of each platform
-#    #Nimblegen loads all experimental chips from an arraychip(can be All_pair if only one Achip)
-#    #Sanger has individual Echip files
-#    
-#    foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
-#      
-#      if ( ! $echip->has_status($status)) {	#must have some results
-#
-#		if ($dir ne "norm") {
-#	  
-#		  if ($self->vendor() eq "NIMBLEGEN") {
-#	      
-#			#if(! $loaded){
-#
-#			#  foreach my $array(@{$self->arrays()}){#load data for all echips
-#		
-#			#foreach my $design_id(@{$array->get_design_ids()}){
-#			#  my $achip = $array->get_ArrayChip_by_design_id($design_id);
-#			foreach my $chan (@{$echip->get_Channels()}) {
-#			  my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
-#			  $self->log("Loading $logic_name data for Channel:\t$chan_name");
-#			  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${chan_name}.txt");
-#			  $self->log("Finishing loading $logic_name data for Channel:\t${chan_name}");
-#			}
-#			# }
-#			#}
-#		  } elsif ($self->vendor() eq "SANGER") { #this is norm data, but we're importing norm, rather than processing.
-#			warn ("Need to fix the sanger methods so imports as norm, not raw");
-#			#IMPORTED is not correct status for these Echips, well, should have
-#			#IMPORTED?  and IMPORTED_NORM_METHOD
-#	    
-#	    
-#			$self->log("Loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
-#			$self->db->load_table_data("result",  $self->get_dir('norm')."/result.${logic_name}.".$echip->unique_id().".txt");
-#			$self->log("Finishing loading $logic_name data for ExperimentalChip:\t".$echip->unique_id());
-#		  }
-#		} elsif (! $loaded) {	#norm data, imports all echip/set data as one
-#		  #should add logic_name here
-#	  
-#		  $self->log("Loading $logic_name norm data from ".$self->get_dir($dir)."/result.${logic_name}.txt");
-#		  $self->db->load_table_data("result",  $self->get_dir($dir)."/result.${logic_name}.txt");
-#		  $self->log("Finished loading $logic_name norm data");
-#		}
-#      
-#	
-#		$echip->adaptor->set_status($status, $echip);
-#		$loaded = 1;	
-#      }
-#    }
-#
-#    $self->log("Finished loading $logic_name $dir results");
-#
-#  }
-#  
-#  
-#  $self->log("Finished loading results ");
-#  return;
-}
 
 =head2 read_data
   
@@ -2492,8 +2406,8 @@ sub farm{
 
   $self->{'farm'} ||= undef;#define farm
 
-  if ($farm) {
-    throw("Argument to farm must be a boolean 1 or 0")  if($farm != 1 || $farm != 0);
+  if (defined $farm) {
+    throw("Argument to farm must be a boolean 1 or 0")  if(! ($farm == 1 || $farm == 0));
     $self->{'farm'} = $farm;
   }
 
@@ -2537,6 +2451,11 @@ sub R_norm{
     throw("Not yet implemented TukeyBiweight") if $logic_name eq "TukeyBiweight";
     my $norm_anal = $aa->fetch_by_logic_name($logic_name);
     my $rset = $self->get_import_ResultSet($norm_anal, 'experimental_chip');
+
+	warn "got norm rset";
+
+	exit;
+
 	my @chips = ();
   
     if (! $rset) {
@@ -2589,10 +2508,10 @@ sub R_norm{
 		  push @chips, $echip;
 		  my $cc_id = $rset->get_chip_channel_id($echip->dbID());
 
-		  if ($self->recovery()){
-			$self->log('Rolling back results for ExperimentalChip('.$echip->dbID().") $logic_name");
-			$self->db->rollback_results($cc_id) if $self->recovery();							  
-		  }
+		  #if ($self->recovery()){
+		#	$self->log('Rolling back results for ExperimentalChip('.$echip->dbID().") $logic_name");
+		#	$self->db->rollback_results($cc_id) if $self->recovery();							  
+		#  }
 		  
 		  $self->log("Building $logic_name R cmd for ".$echip->unique_id());
 		  @dbids = ();
@@ -2703,7 +2622,7 @@ sub get_import_ResultSet{
 
   $self->log("Getting import $table_name ResultSet for analysis:\t".$anal->logic_name());
 
-  my ($rset);
+  my ($rset, @new_chip_channels);
   my $result_adaptor = $self->db->get_ResultSetAdaptor();
   my $logic_name = ($anal->logic_name() eq "RawValue") ? "" : "_".$anal->logic_name();
 
@@ -2719,76 +2638,108 @@ sub get_import_ResultSet{
   foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
 
     #clean chip import and generate rset
-    if ($echip->has_status($status)) { #this translates to each channel have the IMPORTED_RawValue status
-      $self->log("ExperimentalChip(".$echip->unique_id().") already has status:\t".$status);
-    } else {
-
-      $self->log("Found ExperimentalChip(".$echip->unique_id().") without status $status");
-
-      if ( ! $rset) {
 	
-		if ($self->recovery()) {
-		  warn ("Should use ResultSet name here, currently retrieving using the analysis and experiment id"); #experiment name?
-		  
-		  #fetch by anal and experiment_id
-		  #Need to change this to result_set.name!
-		  warn("add chip set handling here");
+	if($table_name eq 'experimental_chip'){
 	  
-		  #my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
-		  #throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t".$anal->logic_name().')' if (scalar(@tmp) >1);
-		  #$rset = $tmp[0];
+	  if ($echip->has_status($status)) { #this translates to each channel have the IMPORTED_RawValue status
+		$self->log("ExperimentalChip(".$echip->unique_id().") already has status:\t".$status);
+	  } 
+	  else {
+		$self->log("Found ExperimentalChip(".$echip->unique_id().") without status $status");
 
-		  $rset = $result_adaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
-		  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
-		}
-	
-		if (! $rset) {
-		  warn "Generating new ResultSet for analysis ".$anal->logic_name();
-		  $self->log("Generating new ResultSet for analysis ".$anal->logic_name());
-	  
-		  $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
-			(
-			 -analysis   => $anal,
-			 -table_name => $table_name,
-			 -name       => $self->name()."_IMPORT",
-			);
-	  
-		  $result_adaptor->store($rset);
-		}
-      }
-      
+		push @new_chip_channels, $echip;
+	  }
 
-      if ($self->recovery()) {
-	
-		my (@cc_ids);
-	
-		if ($table_name eq 'experimental_chip') {
-		  push @cc_ids, $rset->get_chip_channel_id($echip->dbID()) if($rset->contains($echip));
+	}else{#channel
+	  
+	  foreach my $chan(@{$echip->get_Channels()}){
+
+		if ($chan->has_status($status)) { #this translates to each channel have the IMPORTED_RawValue status
+		  $self->log("Channel(".$echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()}.") already has status:\t".$status);
 		} 
-		else{#channel
-		  foreach my $chan (@{$echip->get_Channels()}) {
-			push @cc_ids, $rset->get_chip_channel_id($chan->dbID()) if($rset->contains($chan));
-		  }
+		else {
+		  $self->log("Found Channel(".$echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()}.") without status $status");
+		  push @new_chip_channels, $chan;
 		}
-
+	  }
+	}
+  
+	if (( ! $rset) && @new_chip_channels) {
+	  $rset = $result_adaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
+	  #do we need to throw here if not recovery?
+	  #what if we want the import result set elsewhere during the first import?
+	  
+	  #if ($self->recovery()) {
+	  warn ("Should use ResultSet name here, currently retrieving using the analysis and experiment id"); #experiment name?
+			
+		#fetch by anal and experiment_id
+		#Need to change this to result_set.name!
+	#	warn("add chip set handling here");
 		
-		$self->db->rollback_results(@cc_ids) if (@cc_ids);	
-      }
-    }
-    
-    #check whether it is present in the ResultSet and add if not
-    if ($rset) {
-      #ids will already be present if not rset i.e. already imported
-      if ($table_name eq 'channel') {
-	
-		foreach my $chan (@{$echip->get_Channels()}) {
-		  $rset->add_table_id($chan->dbID()) if(! $rset->contains($chan));
-		}
-      } else {					#experimental_chip
-		$rset->add_table_id($echip->dbID()) if(! $rset->contains($echip));
-      }
-    }
+		#my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
+		#throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t".$anal->logic_name().')' if (scalar(@tmp) >1);
+		#$rset = $tmp[0];
+		
+	  #warn "fetching rset with ".$self->name()."_IMPORT ". $anal->logic_name;
+
+		#$rset = $result_adaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
+	  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
+	  #}
+	  
+	  if (! $rset) {
+		warn "Generating new ResultSet for analysis ".$anal->logic_name();
+		$self->log("Generating new ResultSet for analysis ".$anal->logic_name());
+		
+		$rset = Bio::EnsEMBL::Funcgen::ResultSet->new
+		  (
+		   -analysis   => $anal,
+		   -table_name => $table_name,
+		   -name       => $self->name()."_IMPORT",
+		  );
+		
+		($rset) = @{$result_adaptor->store($rset)};
+	  }
+	}
   }
+
+  #do we need this here as we're rolling back in the read methods?
+  #we only want to roll back those chips/channels which have not been registered
+  
+  if ($self->recovery()) {
+
+	my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
+	
+	foreach my $cc(@new_chip_channels){
+	  
+	  #only roll back if already part of import set
+	  #Not previously registered if not 
+	  if($rset->contains($cc) && $rset->get_chip_channel_id($cc->dbID())){
+		
+		if($table_name eq 'channel'){
+		  my $chan_name = $ec_adaptor->fetch_by_dbID($cc->experimental_chip_id())->unique_id()."_".
+			$self->get_def('dye_freqs')->{$cc->dye()};
+		  $self->log("Rolling back results for $table_name:\t".$chan_name);
+		  
+		}else{
+		  $self->log("Rolling back results for $table_name:\t".$cc->unique_id);
+		}
+		
+		$self->db->rollback_results($rset->get_chip_channel_id($cc->dbID()));
+	  }
+	}
+  }
+
+  
+  #check whether it is present in the ResultSet and add if not
+  if ($rset) {
+	#ids will already be present if not rset i.e. already imported
+
+	foreach my $cc(@new_chip_channels){
+	  $rset->add_table_id($cc->dbID()) if(! $rset->contains($cc));
+	}
+  }
+
+
   
   if ($rset) {
     $result_adaptor->store_chip_channels($rset);

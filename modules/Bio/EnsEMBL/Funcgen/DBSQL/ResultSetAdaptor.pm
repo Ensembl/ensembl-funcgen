@@ -203,7 +203,7 @@ sub fetch_by_name_Analysis {
 	
   my $constraint = "rs.name ='${name}' AND rs.analysis_id=".$anal->dbID();
 	
-  return $self->generic_fetch($constraint)->[0];
+   return $self->generic_fetch($constraint)->[0];
 }
 
 
@@ -338,6 +338,9 @@ sub _objs_from_sth {
  
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$ftype_id, \$ctype_id, \$name);
   
+  #this fails if we delete entries from the joined tables
+  #causes problems if we then try and store an rs which is already stored
+
   while ( $sth->fetch() ) {
 
     if(! $rset || ($rset->dbID() != $dbid)){
@@ -503,6 +506,8 @@ sub store_chip_channels{
       $sth->bind_param(3, $rset->table_name(), SQL_VARCHAR);
       
       $sth->execute();
+
+	  $cc_id = $sth->{'mysql_insertid'};
       $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
     }else{
 

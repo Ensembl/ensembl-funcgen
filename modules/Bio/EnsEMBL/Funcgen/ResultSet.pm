@@ -404,7 +404,7 @@ sub get_ExperimentalChips{
 	if($self->table_name() eq "experimental_chip"){
 
 	  foreach my $ec_id(@{$self->table_ids()}){
-		#  warn "Getting ec with id $ec_id";
+#		  warn "Getting ec with id $ec_id";
 		push @{$self->{'experimental_chips'}}, $ec_adaptor->fetch_by_dbID($ec_id);
 		#should this be hashed on chip_channel_id?
 	  }

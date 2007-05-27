@@ -222,7 +222,7 @@ sub store {
       }
       else{
 		$ft = $s_ft;
-		warn("Using previously stored FeatureType:\t".$ft->class().":".$ft->name()."\n"); 
+		warn("Using previously stored FeatureType:\t".$ft->name()."\n"); 
       }
     }
   }
