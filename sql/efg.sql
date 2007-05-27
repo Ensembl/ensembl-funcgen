@@ -304,7 +304,8 @@ CREATE TABLE `data_set` (
    `result_set_id` int(10) unsigned default '0',
    `feature_set_id` int(10) unsigned default '0',
    `name` varchar(40) default NULL,
-   PRIMARY KEY  (`data_set_id`, `result_set_id`, `feature_set_id`)
+   PRIMARY KEY  (`data_set_id`, `result_set_id`, `feature_set_id`),
+   UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -379,7 +380,7 @@ CREATE TABLE `result_set` (
    `analysis_id` int(10) unsigned default NULL,
    `name` varchar(40) default NULL,
    PRIMARY KEY  (`result_set_id`),
-   KEY  `analysis_idx` (`analysis_id`) 
+   KEY  `name_analysis_idx` (`name`, `analysis_id`) 
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- This is still v hard to impose unique constraints without key's of every combination of 2 :(
@@ -408,7 +409,7 @@ CREATE TABLE `chip_channel` (
    `result_set_id` int(10) unsigned default '0',
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(20) NOT NULL,
-   PRIMARY KEY  (`result_set_id`, `chip_channel_id`),
+   PRIMARY KEY  (`chip_channel_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -501,7 +502,8 @@ CREATE TABLE `feature_set` (
    `cell_type_id` int(10) unsigned default NULL,
    `name` varchar(40) default NULL,
    PRIMARY KEY  (`feature_set_id`),
-   KEY `feature_type_idx` (`feature_type_id`)	
+   KEY `feature_type_idx` (`feature_type_id`),
+   UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
