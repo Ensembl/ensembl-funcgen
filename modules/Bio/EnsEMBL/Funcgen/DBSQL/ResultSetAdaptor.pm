@@ -634,7 +634,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   $sth = $self->prepare($sql);
   $sth->execute();
   $sth->bind_columns(\$score, \$start, \$end, \$cc_id);
-  my $position_mod = $slice->start() + 1;
+  my $position_mod = $slice->start() - 1;
   
 
 
