@@ -248,6 +248,8 @@ my $anal = Bio::EnsEMBL::Analysis->new(
 $anal_a->store($anal);
 
 
+print "Running in multiplex mode\n" if $multiplex;
+
 if (! $no_focus) {
     
     foreach my $name (@focus_set_names) {
@@ -618,13 +620,17 @@ sub get_union_FeatureSet{
         if ($union_fsets{$set_name}) {
             
             if ($clobber && $write_features) {
-                my $sql = 'DELETE from predicted_feature where feature_set_id='.
-                    $union_fsets{$set_name}->dbID();
-                $db->dbc->do($sql) 
-                    or throw('Failed to roll back predicted_features for feature_set_id'.
-                             $union_fsets{$set_name}->dbID());
-            } elsif ($write_features) {
-                throw("Their is a pre-existing FeatureSet with the name '$set_name'\n".
+			  my $cs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
+
+			  my $sql = 'DELETE from predicted_feature where feature_set_id='.
+				$union_fsets{$set_name}->dbID().' and coord_system_id='.$cs_id;
+
+			  $db->dbc->do($sql) 
+				or throw('Failed to roll back predicted_features for feature_set_id'.
+						 $union_fsets{$set_name}->dbID());
+            } 
+			elsif ($write_features) {
+			  throw("Their is a pre-existing FeatureSet with the name '$set_name'\n".
                       'You must specify clobber is you want to delete and overwrite all'.
                       ' pre-existing PredictedFeatures');
             }
