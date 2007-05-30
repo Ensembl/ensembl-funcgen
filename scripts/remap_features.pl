@@ -156,6 +156,16 @@ throw("FeatureSet name $set_name does not exist in $dbname") if ! defined $fset;
 my $fh = open_file($out_file, '>');
 
 
+if($clobber && $write_features){
+  my $fg_cs = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome', $new_assembly);
+  my $sql = 'delete from predicted_feature where feature_set_id='.$fset->dbID().' and coord_system_id='.$fg_cs->dbID();
+  
+  print "Deleting PredictedFeatures from $set_name on $new_assembly\n";
+  $db->dbc->do($sql) or throw("Failed to delete PredictedFeatures from $set_name on $new_assembly");
+}
+
+
+
 foreach my $chr (@chrs){
   my (@pfs);
   my $cnt = 0;
@@ -252,6 +262,10 @@ foreach my $chr (@chrs){
 
   if($write_features){
 	print "Loading PredictedFeatures\n";
+
+
+
+
 	$mapper_pfa->store(@pfs);
   }
 }
