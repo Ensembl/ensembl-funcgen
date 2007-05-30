@@ -439,9 +439,17 @@ sub equals {
   if(($self->version() eq $cs->version()) &&
 	 ($self->name() eq $cs->name())){
 
-	if (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor()))) {
-	  warn 'You are using a schema_build which has no CoordSystem stored, defaulting to name version match';
 
+	#we need to make sure these are default CS, otherwise we can get into trouble with
+	#re-used or mismatched seq_region_ids between DB wih different default assemblies
+
+
+	if(! $cs->is_default()){
+	  warn 'You are trying to use a non-default CoordSystem '.$cs->version().' which will have different seq_region_ids to a default CoordSystem of the same version';
+	  return 0;
+	}
+	elsif (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor()))) {
+	  warn 'You are using a schema_build which has no CoordSystem stored for '.$cs->version.'. Defaulting to closest name version match';
 	}
     return 1;
   }
