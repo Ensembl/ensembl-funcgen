@@ -83,7 +83,25 @@ sub fetch_all_by_Slice_constraint {
     throw("Bio::EnsEMBL::Slice argument expected.");
   }
 
-  $constraint ||= '';
+  #add cs_id here to amke sure we're definitely getting
+  #feature from the correct seq_region, as seq_region_ids can be re-used for
+  #different seq_region between DB with different default assemblies
+
+  $constraint ||= '';#need to addcs_id here and coord_system_id='.$slice;
+  
+
+  my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
+																$slice->coord_system->name(), 
+																$slice->coord_system->version()
+															   );
+
+
+  if(! defined $fg_cs){
+	warn "No CoordSystem present for ".$slice->coord_system->name().":".$slice->coord_system->version();
+	return \@result;
+  }
+
+  $constraint .= ' and coord_system_id='.$fg_cs->dbID();
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
   #if the logic name was invalid, undef was returned
