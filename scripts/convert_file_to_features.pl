@@ -269,7 +269,8 @@ if($ctname){
 if($fset && ! $clobber){
   throw("Found pre-existing FeatureSet:\t$set_name\nUse -clobber to overwrite");
 }elsif($fset && $clobber){
-  my $sql = 'DELETE from predicted_feature where feature_set_id='.$fset->dbID();
+  my $cs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
+  my $sql = 'DELETE from predicted_feature where feature_set_id='.$fset->dbID().' and coord_system_id='.$cs_id;
   $db->dbc->do($sql) || throw('Failed to roll back predicted_features for feature_set_id'.$fset->dbID());
 }else{#no fset
   $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
