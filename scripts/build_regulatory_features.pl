@@ -32,6 +32,12 @@ Please post comments/questions to the Ensembl development list
 
 =cut
 
+
+### NJ added clobber based on slice seq_region_id and current coord_system_id
+### NJ added various comments you may read or ignore as you see fit
+### NJ Do we need to look at what and where the STDOUT is going
+### There are log messages and data going to STDOUT, STDERR and OUT
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -40,17 +46,30 @@ use Getopt::Std;
 $| = 1;
 
 my %opts;
-getopts('hH:P:u:p:d:f:t:s:cwDo:', \%opts);
+
+getopts('hH:P:u:p:d:f:t:s:cwDo:i', \%opts);
 
 my $dbhost = $opts{H};
 my $dbport = $opts{P};
 my $dbuser = $opts{u};
 my $dbpass = $opts{p};
 my $dbname = $opts{d};
+my $do_intersect = $opts{i};
+my $write_features = $opts{w};
+my $seq_name = $opts{'s'};#added quotes as s does funny things to autoformating
+
+# NJ
+# we should assign an test all opts here, so it's easy to figure out what's going on.
+# or use Getopts::Long with aliases if single letter opts required, more code but
+# it's easier understand the opts this way. 
 
 if (! ($dbhost && $dbport && $dbuser && $dbname)) {
     throw("Must specify mandatory database parameters, like:\n".
           " -H host -P 3306 -u XXXX -p XXXX -d dbname");
+}
+
+if($do_intersect && ! $write_features){
+  warn "w - write_features not set, i - do intersect will be skipped\n";
 }
 
 my $outdir = $opts{o};
@@ -98,49 +117,147 @@ throw("No focus set specified! Use -f option.") if (!$opts{f});
 my %focus_fsets;
 $focus_fsets{$opts{f}} = $fsa->fetch_by_name($opts{f});
 #map { $focus_fsets{$_} = $fsa->fetch_by_name($_) } split(',', $opts{f});
-throw("Focus set $opts{f} is not defined!")if (! defined $focus_fsets{$opts{f}});
+throw("Focus set $opts{f} does not exist in the DB")if (! defined $focus_fsets{$opts{f}});
 
 throw("No target set(s) specified! Use -t option.") if (!$opts{t});
+
+#NJ we need to test each fset here, as we may be specifying invalid names
 my %target_fsets;
 map { $target_fsets{$_} = $fsa->fetch_by_name($_) } split(',', $opts{t});
 map { $target_fsets{$_} = $fsa->fetch_by_name($_) } keys %focus_fsets;
 
+
+
 my $slice;
-if ($opts{s}) {
 
-    $slice = $sa->fetch_by_region('chromosome', $opts{s});
-
+if ($seq_name) {
+  $slice = $sa->fetch_by_region('chromosome', $seq_name);
 } else {
-
-    warn("Perfoming whole genome analysis on toplevel slices using the farm.");
-
-    throw("LSF environment variable LSB_JOBINDEX not defined.") 
-        if (! defined $ENV{LSB_JOBINDEX});
-
-    my $toplevel = $sa->fetch_all('toplevel');
-    my @chr = sort (map $_->seq_region_name, @{$toplevel});
-    #print Dumper @chr;
-
-    my @slices;
-    foreach my $chr (@chr) {
-        
-        next if ($chr =~ m/^NT_/);
-        
-        push @slices, $sa->fetch_by_region('chromosome', $chr);
-    }
-
-    $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
-    print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
-
+  warn "Perfoming whole genome analysis on toplevel slices using the farm.\n";
+  
+  throw("LSF environment variable LSB_JOBINDEX not defined.") 
+	if (! defined $ENV{LSB_JOBINDEX});
+  
+  my $toplevel = $sa->fetch_all('toplevel');
+  my @chr = sort (map $_->seq_region_name, @{$toplevel});
+  #print Dumper @chr;
+  
+  my @slices;
+  foreach my $chr (@chr) {
+	
+	next if ($chr =~ m/^NT_/);
+	
+	push @slices, $sa->fetch_by_region('chromosome', $chr);
+  }
+  
+  $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
+  print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
+  
 }
-
-
+		  
+#should this be printing to OUT or STDERR?
+#or remove as we're printing this later?
 print '# Focus set: ', join(" ", keys %focus_fsets), "\n";
 print '# Target set(s): ', join(" ", sort keys %target_fsets), "\n";
 
-my (@starts, @ends, @fset_ids, 
-    $focus_start, $focus_end, $focus_fset_id,
-    @overlap_features);
+my (@starts, @ends, @fset_ids, $oanalysis, $ianalysis, @features,
+    $focus_start, $focus_end, $focus_fset_id, %cooc_fsets,
+    @overlap_features, $overlap_fset, $intersect_fset, %ftypes);
+
+
+#this next needs altering to accomodate multple focus sets
+#i.e. we need to create multiple fsets, one for each focus
+
+#set up new fsets here
+if($write_features){
+  my @tfset_names;
+
+  #get output set string and feature types
+
+
+  foreach my $target_fset(values %target_fsets){
+
+	my $is_focus = 0;
+
+	foreach my $focus_fset(values %focus_fsets){
+	  $is_focus = 1 if $focus_fset->name() eq $target_fset->name();
+	}
+
+	next if $is_focus;
+
+	my $ftype = $target_fset->FeatureType();
+	
+	if(! defined $ftype){
+	  throw("You have a target FeatureSet with no associated FeatureType\n".
+			"You must associat a FeatureType to ensure valid FeatureSet generation");
+	}
+
+	push @ftype_names, $ftype->name();
+	push @tfest_names, $target_fset->name();
+  }
+
+  #these sorts may give different orders
+  my $tfset_names = join(':', sort(@tfset_names));
+  my $tfset_ftype_names = join(':', sort(@ftype_names));
+
+
+  #set up default overlap fset and analysis
+  $oanalysis = Bio::EnsEMBL::Analysis->new
+	(
+	 -logic_name      => 'Co-occurrence Overlap',
+	 -db              => 'NULL',
+	 -db_version      => 'NULL',
+	 -db_file         => 'NULL',
+	 -program         => 'NULL',
+	 -program_version => 'NULL',
+	 -program_file    => 'NULL',
+	 -gff_source      => 'NULL',
+	 -gff_feature     => 'NULL',
+	 -module          => 'NULL',
+	 -module_version  => 'NULL',
+	 -parameters      => 'NULL',
+	 -created         => 'NULL',
+	 -description     => 'Co-occurrence of overlapping feature types',
+	 -display_label   => 'Co-occurrence Overlap',
+	 -displayable     => 1
+	);
+
+  $oanalysis = $aa->fetch_by_dbID($aa->store($oanalysis));
+ 
+  $overlap_fset = get_FeatureSet('Overlap_'.$tfset_names, $tfset_ftype_names, $analysis);	
+  
+ 
+  #set up intersect analysis and fset
+  if($do_intersect){
+
+	$ianalysis = Bio::EnsEMBL::Analysis->new
+	  (
+	   -logic_name      => 'Co-occurrence Intersect',
+	   -db              => 'NULL',
+	   -db_version      => 'NULL',
+	   -db_file         => 'NULL',
+	   -program         => 'NULL',
+	   -program_version => 'NULL',
+	   -program_file    => 'NULL',
+	   -gff_source      => 'NULL',
+	   -gff_feature     => 'NULL',
+	   -module          => 'NULL',
+	   -module_version  => 'NULL',
+	   -parameters      => 'NULL',
+	   -created         => 'NULL',
+	   -description     => 'Intersect of co feature types',
+	   -display_label   => 'Co-occurrence Intersect',
+	 -displayable     => 1
+	);
+
+	$ianalysis = $aa->fetch_by_dbID($aa->store($ianalysis));
+  
+	
+	$intersect_fset = get_FeatureSet('Intersect_'.$tfset_names, $tftype_names, $analysis);	
+
+  }
+
+}
 
 
 foreach my $pf (@{$pfa->fetch_all_by_Slice($slice)}) {
@@ -148,6 +265,7 @@ foreach my $pf (@{$pfa->fetch_all_by_Slice($slice)}) {
     #print join(" ", $pf->start, $pf->end, $pf->feature_set->name()), "\n";
     next if(! exists $target_fsets{$pf->feature_set->name()});
     
+	#shoud this print to STDERR?
     print join(" ", $pf->start, $pf->end,
                $pf->feature_set->dbID(),
                $pf->feature_set->name()), "\n" if ($opts{D});
@@ -191,11 +309,13 @@ if ($opts{D}) {
     print STDERR join("\t", @ends), "\n";
     print STDERR join("\t", @fset_ids), "\n";
 }
+
+
 push @overlap_features, @{&get_overlap_features(\@starts, \@ends, \@fset_ids, 
                                                 $focus_start, $focus_end, $focus_fset_id)};
 #print Dumper $overlap_features;
-#&get_overlap_string(\%regulatory_features, \@overlap_features, $focus_start, $focus_end);
-
+		  #&get_overlap_string(\%regulatory_features, \@overlap_features, $focus_start, $focus_end);
+		  
 #print Dumper %regulatory_features;
 
 
@@ -209,37 +329,131 @@ my $outfile = $opts{f}.'_chr'.$slice->seq_region_name.'.overlap';
 print "Output goes to $outdir/$outfile\n";
 open(OUT, "> $outdir/$outfile")
     or throw("Can't open file $outdir/$outfile");
-
+		  
 print OUT '# Focus set: ', join(" ", keys %focus_fsets), "\n";
-print OUT '# Target set(s): ', join(" ", sort keys %target_fsets), "\n";
-print OUT '# ', $slice->name(), "\n";
-foreach my $s (sort {$a<=>$b} keys %{$regulatory_features}) {
-    foreach my $e (keys %{$regulatory_features->{$s}}) {
-        
-        my ($overlap_string, $count_string);
-        foreach (sort keys %{$regulatory_features->{$s}->{$e}}) {
-            $overlap_string .= ($regulatory_features->{$s}->{$e}->{$_}>0)?1:0;
-            $count_string .= $regulatory_features->{$s}->{$e}->{$_};
-        }
-        
-        print OUT join("\t",
-                       sprintf("ENSR_%s_%06d",$opts{f},++$i),
-                       $slice->seq_region_name, $s, $e,
-                       $overlap_string,
-                       #$count_string
-                       ), "\n";
-        
-    }
+		  print OUT '# Target set(s): ', join(" ", sort keys %target_fsets), "\n";
+		  print OUT '# ', $slice->name(), "\n";
 
+
+		  
+
+
+#sort starts
+foreach my $s (sort {$a<=>$b} keys %{$regulatory_features}) {
+
+  #for each end (e) of feature with start s
+  foreach my $e (keys %{$regulatory_features->{$s}}) {
+	my ($overlap_string, $count_string);
+	
+	
+	foreach (sort keys %{$regulatory_features->{$s}->{$e}}) {
+	  $overlap_string .= ($regulatory_features->{$s}->{$e}->{$_}>0) ? 1 : 0;
+	  $count_string .= $regulatory_features->{$s}->{$e}->{$_};
+	}
+	
+
+	#should probably remove focus set name from stable_id
+	#need to ensure we have unique ensr IDs
+	#short term solution:
+	#  generate based on (chr number - 1) * 100000?
+	#we should get more than 100000 features per chr?
+	#are these actaully the final ensr features???
+	#maybe we should just load them as the final set, then do an 
+	#update based on the feature_ids for the final ensr set
+
+	print OUT join("\t",
+				   sprintf("ENSR_%s_%06d",$opts{f},++$i),
+				   $slice->seq_region_name, $s, $e,
+				   $overlap_string,
+				   #$count_string
+				  ), "\n";
+
+
+	if($write_features){
+
+	  my $feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+            (
+             -slice  => $slice,
+             -start  => $s,
+             -end    => $e,
+             -strand => 0,
+             -feature_set => $overlap_fset,
+             -display_label => $overlap_string,#omitted ensr id for now as we will generate these later
+			);
+	  
+	  push @features, $feature;
+
+
+	  #we should be able to generate the intersects here too!
+	  #this would prevent having to loop through the features twice
+
+	}
+  }
 }
+
+$pfa->store(@features);
 
 close OUT;
 
-#if ($opts{w}) {
-#    
-#    &write_intersection_features(\@overlap_features);
-#
-#}
+
+#write intersect features
+if($write_features && $do_intersect){
+  @features = ();
+
+  #build a hash to map the fset ids to the correct postion in the binary vector
+  #based on a sort of the fset names
+  
+
+  #could do this with some funky map hash
+  #but this is easier to understand
+
+  my @target_fsets = sort($_->name(), values %target_fsets);
+  my %fset_id_pos;
+
+  #build lookup of dbID to position in vector
+  foreach my $i(0..$#target_fsets){
+	$fset_id_pos{$target_fsets[$i]->dbID()} = $i;
+  }
+
+  foreach my $ft (@overlap_features) {
+        
+	#build vector of 0 for appropriate length
+	my @vector = map(0, keys %fset_id_pos);
+
+	my ($start, $end, $fset_id, 
+		$focus_start, $focus_end, $focus_fset_id) = @$ft;
+	
+	next if ($focus_fset_id == $fset_id);
+	
+	#set the intersecting features to 1
+	$vector[$fset_id_pos{$fset_id}] = 1;
+	$vector[$fset_id_pos{$focus_set_id}] = 1;
+
+
+	#take middle values to get intersect
+    my ($i_start,$i_end) = (sort {$a<=>$b} ($focus_start,
+											$focus_end,
+											$start,
+											$end))[1,2];
+
+
+	my $feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
+															   -slice  => $slice,
+															   -start  => $i_start,
+															   -end    => $i_end,
+															   -strand => 0,
+															   -feature_set => $intersect_fset,
+															   -display_label => join('', @vector), #need to build binary string here
+															  );
+	push @features, $feature;
+  }
+
+
+  $pfa->store(@features);
+}
+
+
+
 
 
 ##########################
@@ -326,6 +540,8 @@ sub get_overlap_strings()
 
         my $fset = $fsa->fetch_by_dbID($fset_id);
         #print Dumper $fset->name;
+
+		#count? will never be more than one for a given fset
         $regulatory_features{$focus_start}{$focus_end}{$fset->name}++;
     }
 
@@ -333,92 +549,114 @@ sub get_overlap_strings()
 }
 
 
-##########################
-sub write_intersection_features()
-##########################
-{
-    my ($overlap_features) = @_;
-    my (%i_fsets, %i_ftypes, @i_features);
-
-
-    my $analysis = Bio::EnsEMBL::Analysis->new
-        (
-         -logic_name      => 'Co-occurrence',
-         -db              => 'NULL',
-         -db_version      => 'NULL',
-         -db_file         => 'NULL',
-         -program         => 'NULL',
-         -program_version => 'NULL',
-         -program_file    => 'NULL',
-         -gff_source      => 'NULL',
-         -gff_feature     => 'NULL',
-         -module          => 'NULL',
-         -module_version  => 'NULL',
-         -parameters      => 'NULL',
-         -created         => 'NULL',
-         -description     => 'Co-occurrence of FeatureTypes',
-         -display_label   => 'Co-occurrence',
-         -displayable     => 1
-         );
-    $analysis = $aa->fetch_by_dbID($aa->store($analysis));
-
-    foreach my $ft (@$overlap_features) {
-        
-        my ($start, $end, $fset_id, 
-            $focus_start, $focus_end, $focus_fset_id) = @$ft;
-
-        next if ($focus_fset_id == $fset_id);
-
-        my ($i_start,$i_end) = (sort {$a<=>$b} ($focus_start,
-                                                $focus_end,
-                                                $start,
-                                                $end))[1,2];
-
-        my $i_ftype_name = 'Intersection';
-        my $i_fset_name = $i_ftype_name.'_'.
-            join(':',
-                 sort($fsa->fetch_by_dbID($focus_fset_id)->name(),
-                      $fsa->fetch_by_dbID($fset_id)->name()));
-
-        my $i_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
-            (
-             -slice  => $slice,
-             -start  => $i_start,
-             -end    => $i_end,
-             -strand => 0,
-             -feature_set => &get_FeatureSet($i_fset_name, \%i_fsets, 
-                                             $i_ftype_name,\%i_ftypes, 
-                                             $analysis)	
-             );
-
-        push(@i_features, $i_feature);
-    }
-    
-    $pfa->store(@i_features);
-}
+###########################
+#sub write_intersection_features()
+###########################
+#{
+#    my ($overlap_features) = @_;
+#    my (%i_fsets, %i_ftypes, @i_features);
+#
+#
+#    my $analysis = Bio::EnsEMBL::Analysis->new
+#        (
+#         -logic_name      => 'Co-occurrence',
+#         -db              => 'NULL',
+#         -db_version      => 'NULL',
+#         -db_file         => 'NULL',
+#         -program         => 'NULL',
+#         -program_version => 'NULL',
+#         -program_file    => 'NULL',
+#         -gff_source      => 'NULL',
+#         -gff_feature     => 'NULL',
+#         -module          => 'NULL',
+#         -module_version  => 'NULL',
+#         -parameters      => 'NULL',
+#         -created         => 'NULL',
+#         -description     => 'Co-occurrence of FeatureTypes',
+#         -display_label   => 'Co-occurrence',
+#         -displayable     => 1
+#         );
+#    $analysis = $aa->fetch_by_dbID($aa->store($analysis));
+#
+#    foreach my $ft (@$overlap_features) {
+#        
+#        my ($start, $end, $fset_id, 
+#            $focus_start, $focus_end, $focus_fset_id) = @$ft;
+#
+#        next if ($focus_fset_id == $fset_id);
+#
+#        my ($i_start,$i_end) = (sort {$a<=>$b} ($focus_start,
+#                                                $focus_end,
+#                                                $start,
+#                                                $end))[1,2];
+#
+#        my $i_ftype_name = 'Intersection';
+#        my $i_fset_name = $i_ftype_name.'_'.
+#            join(':',
+#                 sort($fsa->fetch_by_dbID($focus_fset_id)->name(),
+#                      $fsa->fetch_by_dbID($fset_id)->name()));
+#
+#        my $i_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+#            (
+#             -slice  => $slice,
+#             -start  => $i_start,
+#             -end    => $i_end,
+#             -strand => 0,
+#             -feature_set => &get_FeatureSet($i_fset_name, \%i_fsets, 
+#                                             $i_ftype_name,\%i_ftypes, 
+#                                             $analysis)	
+#             );
+#
+#        push(@i_features, $i_feature);
+#    }
+#    
+#    $pfa->store(@i_features);
+#}
 
 ##########################
 sub get_FeatureSet()
 ##########################
 {
-    my ($fset_name, $fsets, $ftype_name, $ftypes, $analysis) = @_;
+    my ($fset_name, $ftype_name, $analysis) = @_;
+
+	#whoa, this is setting the fset in the hash passed
+	#careful we don't add the overlap/intersect fset to the focus_sets
+	
+	#The caching functionality is a bit redundant at the mo, as we're
+	#only concerned with merged fsets i.e. we're just setting the fset in the main script
+	#rather than accessing dynamically dependent on which multiplex fset we're dealing with
+	#to implement this we really need to simplify access, remove some of the args?
+
+	#this was originally written for handling a cache of multiplex fsets
+	#hence the complexity, simplify, or keep for use with multiple focus sets
+
+	#do we need to pass the $fsets hash? - removed from args
+	#this is only necessary if we're populating more than one hash
+	#removed $ftypes, as this can be global
+
+	#this is really more suited to the old multiplex fsets
+	#needs rewrite if we're going to maintain merged binary vector fsets
 
 
-    if (! exists $fsets->{$fset_name}) {
+    if (! exists $cooc_fsets{$fset_name}) {
         
-        if (defined ($fsets->{$fset_name} = $fsa->fetch_by_name($fset_name))) {
+        if (defined ($cooc_fsets{$fset_name} = $fsa->fetch_by_name($fset_name))) {
             
             if ($opts{c}) {
+			  my $cs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
+
+			  print "Deleting PredictedFeatures for $fset_name on chromosome ".$slice->seq_region_name()."\n";
                 my $sql = 'DELETE from predicted_feature where feature_set_id='.
-                    $fsets->{$fset_name}->dbID();
+                    $cooc_fsets{$fset_name}->dbID().' and seq_region_id='.$slice->seq_region_id().
+					  'and coord_system_id='.$cs_id;
                 
                 $db->dbc->do($sql) 
-                    or throw('Failed to roll back predicted_features for feature_set_id'.
-                             $fsets->{$fset_name}->dbID());
-            } else {
-                throw("There is a pre-existing FeatureSet '$fset_name'.\n".
-                      'You must specify clobber (option -c) is you want to delete'.
-                      ' and overwrite all pre-existing PredictedFeatures');
+                    or throw('Failed to roll back $fset_name PredictedFeatures on chromosome '.$slice->seq_region_name());
+            } 
+			else {
+			  throw("There is a pre-existing FeatureSet '$fset_name'.\n".
+					'You must specify clobber (option -c) is you want to delete'.
+					' and overwrite all pre-existing PredictedFeatures');
             }
 
         } else {
@@ -426,27 +664,27 @@ sub get_FeatureSet()
             warn("Feature set '$fset_name' not defined in database!\n".
                  " Generating new FeatureSet.");
             
-            if (! exists $ftypes->{$ftype_name}) {
-                if (! defined ($ftypes->{$ftype_name} = $fta->fetch_by_name($ftype_name))) {
+            if (! exists $ftypes{$ftype_name}) {
+                if (! defined ($ftypes{$ftype_name} = $fta->fetch_by_name($ftype_name))) {
                     
-                    $ftypes->{$ftype_name} = Bio::EnsEMBL::Funcgen::FeatureType->new
+                    $ftypes{$ftype_name} = Bio::EnsEMBL::Funcgen::FeatureType->new
                         (
                          -name        => $ftype_name,
                          -description => "$ftype_name of $fset_name",
                          );
                     
-                    ($ftypes->{$ftype_name}) = @{$fta->store($ftypes->{$ftype_name})};
+                    ($ftypes{$ftype_name}) = @{$fta->store($ftypes{$ftype_name})};
                 }
             }
             
-            $fsets->{$fset_name} = Bio::EnsEMBL::Funcgen::FeatureSet->new
-                (
+            $cooc_fsets{$fset_name} = Bio::EnsEMBL::Funcgen::FeatureSet->new
+			  (
                  -analysis     => $analysis,
-                 -feature_type => $ftypes->{$ftype_name},
+                 -feature_type => $ftypes{$ftype_name},
                  -name         => $fset_name,
                  );
             
-            ($fsets->{$fset_name}) = @{$fsa->store($fsets->{$fset_name})};
+            ($cooc_fsets{$fset_name}) = @{$fsa->store($cooc_fsets{$fset_name})};
                 
 #            #generate data_set here too???
 #            my $dset = Bio::EnsEMBL::Funcgen::DataSet->new
@@ -461,7 +699,7 @@ sub get_FeatureSet()
             
     }
 
-    return $fsets->{$fset_name};
+    return $cooc_fsets{$fset_name};
 
 }
 
