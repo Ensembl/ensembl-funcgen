@@ -261,8 +261,8 @@ sub new {
 
 	$cs->add_core_coord_system_info(
 									-RANK                 => $rank,
-									-SEQ_LVL              => $seq_lvl,
-									-DEFAULT_LVL          => $default,
+									-SEQUENCE_LEVEL       => $seq_lvl,
+									-DEFAULT              => $default,
 									-SCHEMA_BUILD         => $sbuild,
 									-CORE_COORD_SYSTEM_ID => $ccs_id,
 									-IS_STORED            => 1,
@@ -574,6 +574,8 @@ sub fetch_by_name{
   
   foreach $cs (@coord_systems) {
 
+	warn "got $name $cs with name ".$cs->name;
+
     if($version) {
 	  #we need to get the one which corresponds to the dnadb?
 	  #mmmm, no, dnadb may be set to the latest schema_build
@@ -589,6 +591,10 @@ sub fetch_by_name{
 	  }
 	}else{
 	
+	  warn "sbuild is $sbuild";
+	  
+	  ###warn Data::Dumper::Dumper(\$cs);
+
 	  if($cs->contains_schema_build($sbuild) && $cs->{'core_cache'}{$sbuild}{'DEFAULT'}){#exact match
 		$found_cs = $cs;
 		last;
@@ -1080,7 +1086,7 @@ sub store {
   
   foreach my $sbuild(keys %{$cs->{'core_cache'}}){
 	my $rank    = $cs->{'core_cache'}->{$sbuild}->{'RANK'};
-	my $seqlevel = $cs->{'core_cache'}->{$sbuild}->{'SEQ_LVL'};
+	my $seqlevel = $cs->{'core_cache'}->{$sbuild}->{'SEQUENCE_LEVEL'};
 	my $default  = $cs->{'core_cache'}->{$sbuild}->{'DEFAULT'};
 	my $ccs_id = $cs->{'core_cache'}->{$sbuild}->{'CORE_COORD_SYSTEM_ID'};
 
@@ -1261,7 +1267,7 @@ sub validate_and_store_coord_system{
 	throw('Must provide a valid stored Bio::EnsEMBL::CoordSystem');
   }
   
-  
+
   #Need to add to Funcgen coord_system here
   #check if name and version are present and reset coord_system_id to that one, else get last ID and create a new one
   #coord_system_ids will not match those in core DBs, so we need ot be mindful about this.
@@ -1288,7 +1294,13 @@ sub validate_and_store_coord_system{
   #my $schema_build = ${$slice->adaptor->db->db_handle->selectrow_array("SELECT meta_value value from meta where meta_key = \"data.version\"")}[0];  #do we need to check whether there is only one?
   my $sbuild = $self->db->_get_schema_build($cs->adaptor->db());
 
+
+
+  #this should implicitly use the current schema_build
+  #hence providing specificty for non-version CS's e.g. supercontig etc...
   my $fg_cs = $self->fetch_by_name($cs->name(), $cs->version());
+  
+  
   #this needs to satify both schema_build and version
   #retrieving by name version should retunr the lastest schema_build unless the it is not the toplevel or highest expected rank?
   
@@ -1313,11 +1325,10 @@ sub validate_and_store_coord_system{
   #increasing import time.
 
   if(! $fg_cs->contains_schema_build($sbuild)){
-	warn "Adding new schema build $sbuild to CoordSystem\n";
 	
 	$fg_cs->add_core_coord_system_info(
 									   -RANK                 => $cs->rank(), 
-									   -SEQ_LVL              => $cs->is_sequence_level(), 
+									   -SEUENCEQ_LEVEL              => $cs->is_sequence_level(), 
 									   -DEFAULT              => $cs->is_default(), 
 									   -SCHEMA_BUILD         => $sbuild, 
 									   -CORE_COORD_SYSTEM_ID => $cs->dbID(),

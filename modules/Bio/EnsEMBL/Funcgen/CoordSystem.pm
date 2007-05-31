@@ -198,16 +198,16 @@ sub new {
   Arg [1]    : mandatory hash:
                               
 							 	-RANK                 => $rank,
-								-SEQ_LVL              => $seq_lvl,
-								-DEFAULT_LVL          => $default,
+								-SEQUENCE_LEVEL              => $seq_lvl,
+								-DEFAULT          => $default,
 								-SCHEMA_BUILD         => $sbuild,
 								-CORE_COORD_SYSTEM_ID => $ccs_id,
 								-IS_STORED            => $stored_status,
 							  
   Example    : $cs->add_core_coord_system_info(
 									-RANK                 => $rank,
-									-SEQ_LVL              => $seq_lvl,
-									-DEFAULT_LVL          => $default,
+									-SEQUENCE_LEVEL              => $seq_lvl,
+									-DEFAULT          => $default,
 									-SCHEMA_BUILD         => $sbuild,
 									-CORE_COORD_SYSTEM_ID => $ccs_id,
 									-IS_STORED            => 1,
@@ -284,10 +284,9 @@ sub add_core_coord_system_info {
     throw('The RANK argument must be a positive integer');
   }
 
-
   $self->{'core_cache'}{$sbuild} = {(
 									 RANK                 => $rank,
-									 SEQ_LVL              => $sequence_level,
+									 SEQUENCE_LEVEL              => $sequence_level,
 									 DEFAULT              => $default,
 									 CORE_COORD_SYSTEM_ID => $ccs_id,
 									 IS_STORED            => $stored,
