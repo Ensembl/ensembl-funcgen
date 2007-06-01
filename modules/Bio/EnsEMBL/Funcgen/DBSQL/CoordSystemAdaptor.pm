@@ -574,8 +574,6 @@ sub fetch_by_name{
   
   foreach $cs (@coord_systems) {
 
-	warn "got $name $cs with name ".$cs->name;
-
     if($version) {
 	  #we need to get the one which corresponds to the dnadb?
 	  #mmmm, no, dnadb may be set to the latest schema_build
@@ -591,10 +589,7 @@ sub fetch_by_name{
 	  }
 	}else{
 	
-	  warn "sbuild is $sbuild";
 	  
-	  ###warn Data::Dumper::Dumper(\$cs);
-
 	  if($cs->contains_schema_build($sbuild) && $cs->{'core_cache'}{$sbuild}{'DEFAULT'}){#exact match
 		$found_cs = $cs;
 		last;
