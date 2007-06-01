@@ -118,9 +118,13 @@ create unique index `name_idx` on feature_set (name);
 -- update experimental_chip ec, experiment e, cell_type ct  set ec.cell_type_id=ct.cell_type_id where e.name='ctcf_ren' and e.experiment_id=ec.experiment_id and ct.name='IMR90';
 
 
+
 -- insert into cell_type values(NULL, 'HL-60', NULL, 'Hman promyelotic Leukemia Cells');
 --  update feature_set set cell_type_id=6 where name like "Wiggle%";
 
-
 drop index analysis_idx on result_set;
 create unique index `name_analysis_idx` on result_set (name, analysis_id);
+
+-- patch feature_set table to allow for longer names
+ALTER TABLE feature_set CHANGE name `name` varchar(60) DEFAULT NULL;
+
