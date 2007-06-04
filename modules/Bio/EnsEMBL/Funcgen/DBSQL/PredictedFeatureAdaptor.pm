@@ -393,8 +393,6 @@ sub _objs_from_sth {
 	my $last_feature_id = -1;
 	FEATURE: while ( $sth->fetch() ) {
 
-
-
 	    #Need to build a slice adaptor cache here?
 	    #Would only ever want to do this if we enable mapping between assemblies??
 	    #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api

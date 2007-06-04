@@ -41,31 +41,44 @@ Please post comments/questions to the Ensembl development list
 use strict;
 use warnings;
 use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+
 use Getopt::Std;
 
 $| = 1;
 
 my %opts;
 
-getopts('hH:P:u:p:d:f:t:s:cwDo:i', \%opts);
+getopts('h:P:u:p:d:f:t:s:cwDo:iS:v:', \%opts);
 
-my $dbhost = $opts{H};
-my $dbport = $opts{P};
-my $dbuser = $opts{u};
+
+#H was for ?
+#f is focus set
+#t is target sets comma separated list
+#D is dump, but print to STDERR and STDOUT(actaully current default filehandle)
+
+my $dbhost = $opts{h};
+my $dbport = $opts{P} || 3306;
+my $dbuser = $opts{u} || 'ensadmin';
 my $dbpass = $opts{p};
 my $dbname = $opts{d};
+my $data_version = $opts{v};
 my $do_intersect = $opts{i};
 my $write_features = $opts{w};
+my $species = $opts{S} || 'homo_sapiens';
 my $seq_name = $opts{'s'};#added quotes as s does funny things to autoformating
+my $clobber = $opts{c};
+
 
 # NJ
 # we should assign an test all opts here, so it's easy to figure out what's going on.
 # or use Getopts::Long with aliases if single letter opts required, more code but
 # it's easier understand the opts this way. 
 
-if (! ($dbhost && $dbport && $dbuser && $dbname)) {
+if (! ($dbhost && $dbport && $dbuser && $dbname && $data_version)) {
     throw("Must specify mandatory database parameters, like:\n".
-          " -H host -P 3306 -u XXXX -p XXXX -d dbname");
+          " -h host -P 3306 -u XXXX -p XXXX -d dbname -v data_version( of dnadb e.g. 45_36g)");
 }
 
 if($do_intersect && ! $write_features){
@@ -73,7 +86,8 @@ if($do_intersect && ! $write_features){
 }
 
 my $outdir = $opts{o};
-throw("No output directory specified! Use -o option.") if (!$outdir);
+
+#throw("No output directory specified! Use -o option.") if (!$outdir);
 if (! -d $outdir) {
     system("mkdir -p $outdir");
 }
@@ -87,20 +101,26 @@ verbose($utils_verbosity);
 logger_verbosity($logger_verbosity);
 
 # databases and adaptors
-use Bio::EnsEMBL::Registry;
-Bio::EnsEMBL::Registry->load_registry_from_db
-    (
-     -host => 'ens-livemirror',
-     -user => 'ensro',
-     #-verbose => "1" 
-     );
-my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor('human', 'core');
+
+#use ensembldb as we may want to use an old version
+
+my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+											  -host => 'ensembldb.ensembl.org',
+											  -port => 3306,
+											  -user => 'anonymous',
+											  -dbname => $species.'_core_'.$data_version,
+											  -species => $species,
+											 );
+
+
+
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
      -host   => $dbhost,
      -user   => $dbuser,
      -dbname => $dbname,
+	 -species => $species,
      -pass   => $dbpass,
      -port   => $dbport,
      -dnadb  => $cdb
@@ -160,7 +180,7 @@ if ($seq_name) {
 print '# Focus set: ', join(" ", keys %focus_fsets), "\n";
 print '# Target set(s): ', join(" ", sort keys %target_fsets), "\n";
 
-my (@starts, @ends, @fset_ids, $oanalysis, $ianalysis, @features,
+my (@starts, @ends, @fset_ids, @features,
     $focus_start, $focus_end, $focus_fset_id, %cooc_fsets,
     @overlap_features, $overlap_fset, $intersect_fset, %ftypes);
 
@@ -170,7 +190,7 @@ my (@starts, @ends, @fset_ids, $oanalysis, $ianalysis, @features,
 
 #set up new fsets here
 if($write_features){
-  my @tfset_names;
+  my (@tfset_names, @ftype_names);
 
   #get output set string and feature types
 
@@ -179,13 +199,13 @@ if($write_features){
 
 	my $is_focus = 0;
 
-	foreach my $focus_fset(values %focus_fsets){
-	  $is_focus = 1 if $focus_fset->name() eq $target_fset->name();
-	}
+	#foreach my $focus_fset(values %focus_fsets){
+	#  $is_focus = 1 if $focus_fset->name() eq $target_fset->name();
+	#}
 
-	next if $is_focus;
+	#next if $is_focus;
 
-	my $ftype = $target_fset->FeatureType();
+	my $ftype = $target_fset->feature_type();
 	
 	if(! defined $ftype){
 	  throw("You have a target FeatureSet with no associated FeatureType\n".
@@ -193,16 +213,26 @@ if($write_features){
 	}
 
 	push @ftype_names, $ftype->name();
-	push @tfest_names, $target_fset->name();
+	push @tfset_names, $target_fset->name();
   }
 
+
+  warn "hardcoding for only one focus set!";
+
+  if (scalar (keys %focus_fsets) > 1){
+	throw('THis script does not yet accomodate multiple focus sets');
+  }
+
+ 
+
+
   #these sorts may give different orders
-  my $tfset_names = join(':', sort(@tfset_names));
+  my $tfset_names = join('', keys(%focus_fsets))."::".join(':', sort(@tfset_names));
   my $tfset_ftype_names = join(':', sort(@ftype_names));
 
 
   #set up default overlap fset and analysis
-  $oanalysis = Bio::EnsEMBL::Analysis->new
+  my $analysis = Bio::EnsEMBL::Analysis->new
 	(
 	 -logic_name      => 'Co-occurrence Overlap',
 	 -db              => 'NULL',
@@ -222,7 +252,7 @@ if($write_features){
 	 -displayable     => 1
 	);
 
-  $oanalysis = $aa->fetch_by_dbID($aa->store($oanalysis));
+  $aa->store($analysis);
  
   $overlap_fset = get_FeatureSet('Overlap_'.$tfset_names, $tfset_ftype_names, $analysis);	
   
@@ -230,7 +260,7 @@ if($write_features){
   #set up intersect analysis and fset
   if($do_intersect){
 
-	$ianalysis = Bio::EnsEMBL::Analysis->new
+	$analysis = Bio::EnsEMBL::Analysis->new
 	  (
 	   -logic_name      => 'Co-occurrence Intersect',
 	   -db              => 'NULL',
@@ -250,10 +280,10 @@ if($write_features){
 	 -displayable     => 1
 	);
 
-	$ianalysis = $aa->fetch_by_dbID($aa->store($ianalysis));
+	$aa->store($analysis);
   
 	
-	$intersect_fset = get_FeatureSet('Intersect_'.$tfset_names, $tftype_names, $analysis);	
+	$intersect_fset = get_FeatureSet('Intersect_'.$tfset_names, $tfset_ftype_names, $analysis);	
 
   }
 
@@ -391,7 +421,7 @@ foreach my $s (sort {$a<=>$b} keys %{$regulatory_features}) {
   }
 }
 
-$pfa->store(@features);
+$pfa->store(@features) if $write_features;
 
 close OUT;
 
@@ -418,6 +448,9 @@ if($write_features && $do_intersect){
   foreach my $ft (@overlap_features) {
         
 	#build vector of 0 for appropriate length
+
+	warn "check vector map is correct";
+
 	my @vector = map(0, keys %fset_id_pos);
 
 	my ($start, $end, $fset_id, 
@@ -427,7 +460,7 @@ if($write_features && $do_intersect){
 	
 	#set the intersecting features to 1
 	$vector[$fset_id_pos{$fset_id}] = 1;
-	$vector[$fset_id_pos{$focus_set_id}] = 1;
+	$vector[$fset_id_pos{$focus_fset_id}] = 1;
 
 
 	#take middle values to get intersect
@@ -456,20 +489,20 @@ if($write_features && $do_intersect){
 
 
 
-##########################
-sub get_overlap_features()
-##########################
-{
-    my ($starts, $ends, $fset_ids, 
-        $focus_start, $focus_end, $focus_fset_id) = @_;
-    print STDERR $focus_start.':'.$focus_end." (focus)\n" if ($opts{D});
 
-    my @overlap_features = ();
-    my ($start, $end, $fset_id);
-    my (@s, @e, @f);
-    while ($#starts>=0) {
-        
-        $start = shift @$starts;
+sub get_overlap_features{
+
+  my ($starts, $ends, $fset_ids, 
+	  $focus_start, $focus_end, $focus_fset_id) = @_;
+
+  print STDERR $focus_start.':'.$focus_end." (focus)\n" if ($opts{D});
+  
+  my @overlap_features = ();
+  my ($start, $end, $fset_id);
+  my (@s, @e, @f);
+  while ($#starts>=0) {
+	
+	$start = shift @$starts;
         $end = shift @$ends;
         $fset_id = shift @$fset_ids;
         
@@ -613,10 +646,8 @@ sub get_overlap_strings()
 #    $pfa->store(@i_features);
 #}
 
-##########################
-sub get_FeatureSet()
-##########################
-{
+
+sub get_FeatureSet{
     my ($fset_name, $ftype_name, $analysis) = @_;
 
 	#whoa, this is setting the fset in the hash passed
@@ -642,13 +673,16 @@ sub get_FeatureSet()
         
         if (defined ($cooc_fsets{$fset_name} = $fsa->fetch_by_name($fset_name))) {
             
-            if ($opts{c}) {
+            if ($clobber) {
 			  my $cs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
 
 			  print "Deleting PredictedFeatures for $fset_name on chromosome ".$slice->seq_region_name()."\n";
+
+			  
+
                 my $sql = 'DELETE from predicted_feature where feature_set_id='.
-                    $cooc_fsets{$fset_name}->dbID().' and seq_region_id='.$slice->seq_region_id().
-					  'and coord_system_id='.$cs_id;
+                    $cooc_fsets{$fset_name}->dbID().' and seq_region_id='.$slice->get_seq_region_id().
+					  ' and coord_system_id='.$cs_id;
                 
                 $db->dbc->do($sql) 
                     or throw('Failed to roll back $fset_name PredictedFeatures on chromosome '.$slice->seq_region_name());

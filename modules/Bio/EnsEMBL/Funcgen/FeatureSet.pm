@@ -210,7 +210,7 @@ sub analysis {
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : Throws if arg is not a valid Bio::EnsEMBL::Funcgen::FeatureType
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - needs changing to get_FeatureType
 
 =cut
 

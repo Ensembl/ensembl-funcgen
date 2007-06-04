@@ -125,6 +125,11 @@ create unique index `name_idx` on feature_set (name);
 drop index analysis_idx on result_set;
 create unique index `name_analysis_idx` on result_set (name, analysis_id);
 
+
+delete s from status s, status_name sn where sn.name='DISPLAYABLE' and sn.status_name_id=s.status_name_id;
+insert into status(table_id, table_name, status_name_id) values(24, 'data_set', 2);
+insert into status(table_id, table_name, status_name_id) values(27, 'feature_set', 2);
+
 -- patch feature_set table to allow for longer names
-ALTER TABLE feature_set CHANGE name `name` varchar(60) DEFAULT NULL;
+ALTER TABLE feature_set CHANGE name `name` varchar(250) DEFAULT NULL;
 

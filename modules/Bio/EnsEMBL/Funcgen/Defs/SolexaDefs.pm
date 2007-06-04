@@ -38,6 +38,8 @@ use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::Probe;
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
+use Bio::EnsEMBL::Funcgen::PredictedFeature;
+
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::ArrayChip;
@@ -194,6 +196,7 @@ sub read_and_import_bed_data{
   my $probe_a = $self->db->get_ProbeAdaptor();
   my $probef_a = $self->db->get_ProbeFeatureAdaptor();
   my $chan_adaptor = $self->db->get_ChannelAdaptor();
+#  my $pf_adaptor =$self->db->get_PredictedFeatureAdaptor();
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("Parzen");
   my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("VendorMap");
   
@@ -388,6 +391,17 @@ sub read_and_import_bed_data{
 				 -MISMATCHCOUNT => 0,
 				 -PROBE         => $probe,
 				);
+
+
+			 # my $pfeature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+			#	(
+			#	 -START         => $start,
+			#	 -END           => $end,
+			#	 -STRAND        => 1,
+			#	 -SLICE         => $self->cache_slice($chr),
+			#	 -ANALYSIS      => $anal,
+
+#				);
 
 			  $probef_a->store($feature);
 			  
