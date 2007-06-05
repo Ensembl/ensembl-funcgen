@@ -140,6 +140,55 @@ sub fetch_all_by_FeatureSet {
 }
 
 
+=head2 fetch_all_by_feature_type_class
+
+  Arg [1]    : string - class of associated FeatureSet FeatureType
+  Example    : my @dsets = @{$ds_adaptopr->fetch_all_by_feature_type_class('HISTONE')};
+  Description: Retrieves DataSet objects from the database based on the FeatureSet FeatureType class.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::DataSet objects
+  Exceptions : Throws if no class arg defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_feature_type_class {
+    my ($self, $class, $status) = @_;
+  
+	throw ('Must provide a FeatureType class to retrieve DataSets') if ! defined $class;
+  
+	my ($constraint, @dsets);
+
+	if($status){
+	  $constraint = $self->status_to_constraint($status) if $status;
+    }
+
+	foreach my $dset(@{$self->generic_fetch($constraint)}){
+	  push @dsets, $dset if $dset->feature_set->feature_type->class() eq $class;
+	}
+
+	return \@dsets;	
+}
+
+=head2 fetch_all_displayable_by_feature_type_class
+
+  Arg [1]    : string - class of associated FeatureSet FeatureType
+  Arg [2]    : string - status name e.g. DISPLAYABLE
+  Example    : my @dsets = @{$ds_adaptopr->fetch_all_by_feature_type_class('HISTONE')};
+  Description: Wrapper method, retrieves all displayable DataSets with given FeatureSet FeatureType class
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::DataSet objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_displayable_by_feature_type_class {
+    my ($self, $class) = @_;
+  
+	return $self->fetch_all_by_feature_type_class($class, 'DISPLAYABLE');	
+}
+
 
  
 =head2 _tables

@@ -589,12 +589,24 @@ sub name {
 sub display_label {
   my $self = shift;
   
+
+  #Add display label in table?
+
   if(! $self->{'display_label'}){
-    $self->{'display_label'} = $self->feature_type->name()." -";
-    $self->{'display_label'} .= " ".$self->cell_type->display_name() if $self->cell_type()->display_name();
-    $self->{'display_label'} .= " Enriched Sites";
+
+	if($self->feature_set->feature_type->class() eq 'REGULATORY FEATURE'){
+	  $self->{'display_label'} = 'Regulatory Features';
+	}
+	else{
+
+	  $self->{'display_label'} = $self->feature_type->name()." -";
+	  $self->{'display_label'} .= " ".($self->cell_type->display_label() || 
+									   $self->cell_type->description()   ||
+									   $self->cell_type()->name());
+	  $self->{'display_label'} .= " Enriched Sites";
+	}
   }
-	
+ 
   return $self->{'display_label'};
 }
 

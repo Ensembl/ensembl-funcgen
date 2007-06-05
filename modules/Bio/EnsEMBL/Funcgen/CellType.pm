@@ -87,7 +87,7 @@ sub new {
 
   $self->name($name);
   $self->display_label($dlabel) if $dlabel;
-  $self->display_label($desc) if $desc;
+  $self->description($desc) if $desc;
 
   return $self;
 }
