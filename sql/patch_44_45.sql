@@ -146,6 +146,11 @@ update feature_type set class='REGULATORY FEATURE' where feature_type_id =19;
 --feature type correction
 update feature_type set name=replace(name, 'H3K20', 'H4K20');
 update feature_set set name=replace(name, 'H3K20', 'H4K20');
+update feature_type set class='HISTONE' where feature_type_id in(11,12,13,14); 
+update feature_type set class='OVERLAP' where feature_type_id in(17,18,19); 
+
+
+
 
 --CTCF displayable update
 insert into status(table_id, table_name, status_name_id) select experimental_chip_id, 'experimental_chip', 2 from experimental_chip where experiment_id =12;
