@@ -321,12 +321,14 @@ sub _final_clause {
 sub _objs_from_sth {
 	my ($self, $sth, $mapper, $dest_slice) = @_;
 
+
 	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
 	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
 
 	# This code is ugly because caching is used to improve speed
 
 	#my $sa = $self->db->get_SliceAdaptor();
+
 	
 	my ($sa, $old_cs_id);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
@@ -484,6 +486,61 @@ sub _objs_from_sth {
 	    #$epsth->bind_param(1, $predicted_feature_id,    SQL_INTEGER);
 	    #$epsth->execute();
 	    #my @exp_ids = map $_ = "@$_", @{$epsth->fetchall_arrayref()};
+
+
+		#RegulatoryFeature hack
+		my ($reg_type, $stable_id, $reg_attrs, $vector);
+		
+		#look at analysis to avoid set name issues
+		if($fset_hash{$fset_id}->analysis->logic_name() eq 'RegulatoryRegion'){
+
+		  ($stable_id, $vector) = split/:/, $display_label;
+		  
+		  $display_label = 'Regulatory Feature';
+		  
+		  #RegulatoryFeature hack
+
+
+
+		  #We don't consider the non-epi feature bits as these are only used to
+		  #cluster and build the patterns, not to assign a classification
+		  #as this would prevent us from finding novel regions
+
+		  my %reg_class_regexs = (
+								  #'1....(10|01).'  => 'Gene end associated', 
+								  #'1...1...'        => 'Promoter associated',#orig
+								  '1...10..'        => 'Promoter associated',
+								  '1..(..010|0.01)' => 'Non-genic',
+								  '1(1...|...1)1..' => 'Genic',
+								 );
+
+
+
+		  #omit TSS and TES from here?
+		  my @reg_feature_attrs = ('DNase1', 'CTCF', 'H4K20me3', 'H3K27me3', 
+								   'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
+		  my @vector = split//, $vector;
+
+		  foreach my $i(0..$#vector){
+			push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
+		  }
+
+
+		  foreach my $regex(keys %reg_class_regexs){
+
+			if($vector =~ /$regex/){
+
+			  #warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
+
+			  throw('Found non-mutually exclusive regexs') if $reg_type;
+			  $reg_type = $reg_class_regexs{$regex};
+			}
+			
+		  }
+
+		  $reg_type ||= 'Unclassified';
+		}
+
 	
 	    push @features, $self->_new_fast( {
 										   'start'          => $seq_region_start,
@@ -496,7 +553,9 @@ sub _objs_from_sth {
 										   'score'          => $score,
 										   'display_label'  => $display_label,
 										   'feature_set'    => $fset_hash{$fset_id},
-										   #'experiment_ids' => \@exp_ids, #Now to be performed via Data/ResultSetAdaptor
+										   'regulatory_type'=> $reg_type,
+										   'regulatory_attributes' => $reg_attrs,
+										   'stable_id'      => $stable_id,
 										  } );
 	}
 	

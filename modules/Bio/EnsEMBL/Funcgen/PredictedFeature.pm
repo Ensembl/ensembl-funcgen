@@ -98,8 +98,8 @@ sub new {
   
   my $self = $class->SUPER::new(@_);
   
-  my ($display_label, $score, $fset)
-    = rearrange(['DISPLAY_LABEL', 'SCORE', 'FEATURE_SET'], @_);
+  my ($display_label, $score, $fset, $reg_type, $stable_id, $reg_attrs)
+    = rearrange(['DISPLAY_LABEL', 'SCORE', 'FEATURE_SET', 'REGULATORY_TYPE', 'STABLE_ID', 'REG_ATTRIBUTES'], @_);
   
   #check mandatory params here
  
@@ -107,6 +107,9 @@ sub new {
   $self->display_label($display_label) if $display_label;
   throw("Must provide a FeatureSet") if ! $fset;
   $self->feature_set($fset);
+  $self->regulatory_type($reg_type) if $reg_type;
+  $self->stable_id($stable_id) if $stable_id;
+  $self->regulatory_attributes(@$reg_attrs) if $reg_attrs;
 
   #$self->experiment_ids(@$exp_ids);
 
@@ -340,6 +343,75 @@ sub analysis{
 
   return (defined $self->{'analysis'}) ? $self->{'analysis'} : $self->feature_set->analysis();
 }
+
+
+#hack methods for regulatory features
+
+=head2 regulatory_type
+
+  Arg [1]    : (optional) string - regulatory type e.g. "Promoter Associated"
+  Example    : my $reg_type = $feature->regulatory_type();
+  Description: Getter and setter for the regulatory_type attribute for this feature. 
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub regulatory_type {
+    my $self = shift;
+	
+    $self->{'regulatory_type'} = shift if @_;
+		
+    return $self->{'regulatory_type'};
+}
+
+=head2 stable_id
+
+  Arg [1]    : (optional) string - stable_id e.g ENSR00000000001
+  Example    : my $stable_id = $feature->stable_id();
+  Description: Getter and setter for the stable_id attribute for this feature. 
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub stable_id {
+  my $self = shift;
+	
+  $self->{'stable_id'} = shift if @_;
+  
+  return $self->{'stable_id'};
+}
+
+
+=head2 regulatory_attributes
+
+  Arg [1]    : (optional) list of constituent feature type names
+               e.g. ['H4K20me3', 'DNase1', 'CTCF']
+  Example    : print "Regulatory Attributes:\n\t".join("\n\t", @{$feature->regulatory_attributes()})."\n";
+  Description: Getter and setter for the regulatory_attributes for this feature. 
+  Returntype : listref
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub regulatory_attributes {
+  my $self = shift;
+	
+  @{$self->{'regulatory_attributes'}} = @_ if @_;
+  
+  return $self->{'regulatory_attributes'};
+}
+
+
+
+
 
 
 #other methods
