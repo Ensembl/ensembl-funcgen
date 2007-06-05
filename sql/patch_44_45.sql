@@ -133,3 +133,26 @@ insert into status(table_id, table_name, status_name_id) values(27, 'feature_set
 -- patch feature_set table to allow for longer names
 ALTER TABLE feature_set CHANGE name `name` varchar(250) DEFAULT NULL;
 
+
+
+--set on RegulatoryFeatures to displayble
+delete s from status s, status_name sn where sn.name='DISPLAYABLE' and sn.status_name_id=s.status_name_id;
+insert into status(table_id, table_name, status_name_id) values(24, 'data_set', 2);
+insert into status(table_id, table_name, status_name_id) values(27, 'feature_set', 2);
+
+--feature class update to facilitate get data set methods
+update feature_type set class='REGULATORY FEATURE' where feature_type_id =19;
+
+--feature type correction
+update feature_type set name=replace(name, 'H3K20', 'H4K20');
+update feature_set set name=replace(name, 'H3K20', 'H4K20');
+
+--CTCF displayable update
+insert into status(table_id, table_name, status_name_id) select experimental_chip_id, 'experimental_chip', 2 from experimental_chip where experiment_id =12;
+insert into status values(22, 'feature_set', 2);
+insert into status values(22, 'data_set', 2);
+
+--remove CTCF spurious data set and revert rset name back to original
+delete from data_set where data_set_id=23;
+update result_set set name = 'ctcf_ren_BR1' where name ='ctcf_ren_BR1_TR2';
+
