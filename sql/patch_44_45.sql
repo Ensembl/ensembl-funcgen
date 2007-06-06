@@ -161,3 +161,8 @@ insert into status values(22, 'data_set', 2);
 delete from data_set where data_set_id=23;
 update result_set set name = 'ctcf_ren_BR1' where name ='ctcf_ren_BR1_TR2';
 
+
+
+
+--- unique index on exp name
+create unique index `name_idx` on experiment (name);
