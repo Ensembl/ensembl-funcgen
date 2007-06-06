@@ -215,6 +215,7 @@ CREATE TABLE `experiment` (
    `description`  varchar(255) default NULL,
    `mage_xml_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`experiment_id`),
+   UNIQUE KEY `name_idx` (`name`),
    KEY `egroup_idx` (`egroup_id`),
    KEY `design_idx` (`primary_design_type`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
