@@ -148,7 +148,7 @@ update feature_type set name=replace(name, 'H3K20', 'H4K20');
 update feature_set set name=replace(name, 'H3K20', 'H4K20');
 update feature_type set class='HISTONE' where feature_type_id in(11,12,13,14); 
 update feature_type set class='OVERLAP' where feature_type_id in(17,18,19); 
-
+update data_set set name ='Wiggle_H4K20me3' where name='H3K20me3_wiggle';
 
 
 
