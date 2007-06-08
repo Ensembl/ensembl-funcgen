@@ -169,6 +169,12 @@ foreach my $rset(@rsets){
 
 	my $table_name = $rset->table_name();
 	my $syn = $table_syns{$table_name};
+
+
+	print "::\tDeleting result chip_channel records for $table_name chip_channel_ids:\t".join(', ', values %cc_ids)."\n";
+	$sql = "DELETE from result where chip_channel_id IN (".join(', ', values %cc_ids).")";	
+	$db->dbc->do($sql);
+
 	
 	if(! $remove_rset){
 	  print "::\tOther ExperimentalChips persist, skipping ResultSet delete for:\t".$rset->name()."\n";
@@ -238,8 +244,8 @@ foreach my $rset(@rsets){
 
 	#do this very last so we don't orphan the ResultSet
 	#roll back just result and chip_channel first
-	print "::\tDeleting result and chip_channel records for $table_name chip_channel_ids:\t".join(', ', values %cc_ids)."\n";
-	$sql = "DELETE r, cc from result r, chip_channel cc  where cc.table_name='${table_name}' and cc.chip_channel_id=r.chip_channel_id and cc.chip_channel_id IN (".join(', ', values %cc_ids).")";	
+	print "::\tDeleting chip_channel records for $table_name chip_channel_ids:\t".join(', ', values %cc_ids)."\n";
+	$sql = "DELETE from chip_channel where chip_channel_id IN (".join(', ', values %cc_ids).")";	
 	$db->dbc->do($sql);
 
   }
@@ -262,7 +268,7 @@ foreach my $ec(@{$exp->get_ExperimentalChips()}){
 
 	#channels first
 	foreach my $chan(@{$ec->get_Channels()}){
-	  print "::\tDeleting channel records for ExperimentalChip:\t".$ec->unique_id().":".$chan->dye()\n";
+	  print "::\tDeleting channel records for ExperimentalChip:\t".$ec->unique_id().":".$chan->dye()."\n";
 
 	  #and status entries
 	  $sql = 'DELETE from status where table_name="channel" and table_id='.$chan->dbID();
