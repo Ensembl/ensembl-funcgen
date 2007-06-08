@@ -535,12 +535,13 @@ CREATE TABLE `experimental_chip` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- We can't implement uniqueness of ec(unique_id for a given vendor) via key here
--- We need to implement this in the API 
-
--- add cell type key?
--- composite unique key onchi/exp/arra_chip ids?
+-- There may be clashes between vendors, and a chip could potentially be re-used in another exp
+-- This is handled by the fetch methods:
+--    fetch_by_unique_and_experiment_id
+--    fetch_by_unique_id_vendor
+-- add key on cell_type? or remove key on feature_type.  Will we ever want to query based on these? I doubt it.
 --Should handle re-usage of physical chip
---Rename slide? or have array_chip, and experimental_chip
+
 
 --
 -- Table structure for table `channel`
