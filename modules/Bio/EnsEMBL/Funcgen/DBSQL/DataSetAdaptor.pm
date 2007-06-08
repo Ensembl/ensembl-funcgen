@@ -140,6 +140,36 @@ sub fetch_all_by_FeatureSet {
 }
 
 
+=head2 fetch_all_by_ResultSet
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ResultSet
+  Example    : my @dsets = $fs_adaptopr->fetch_all_by_ResultSet($rset);
+  Description: Retrieves DataSet objects from the database based on the ResultSet.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::DataSet objects
+  Exceptions : Throws if arg is not a valid ResultSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_ResultSet {
+    my $self = shift;
+    my $fset = shift;
+
+    if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $fset->dbID())){
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet object");
+    }
+	
+
+	#self join here to make sure we get all linked result_sets
+    my $sql = 'ds.data_set_id IN (SELECT ds.data from data_set ds where result_set_id='.$fset->dbID().')';
+
+
+    return $self->generic_fetch($sql);	
+}
+
+
+
 =head2 fetch_all_by_feature_type_class
 
   Arg [1]    : string - class of associated FeatureSet FeatureType

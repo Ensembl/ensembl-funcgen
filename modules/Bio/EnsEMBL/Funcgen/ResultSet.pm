@@ -409,7 +409,7 @@ sub get_ExperimentalChips{
 		#should this be hashed on chip_channel_id?
 	  }
 	}else{
-	  warn("Retrieving ExperimentalChips for a Channel ResultSet");
+	  #warn("Retrieving ExperimentalChips for a Channel ResultSet");
 	  
 	  my %echips;
 	  my $chan_adaptor = $self->adaptor->db->get_ChannelAdaptor(); 

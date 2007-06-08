@@ -16,20 +16,20 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 $| =1;
 
-my ($chips, $pass, $full_delete);
-my ($exp_name, $dbhost, $dbname, $help, $man, $log_msg);
+my ($chips, $pass, $full_delete, @chips);
+my ($exp_name, $host, $dbname, $help, $man, $log_msg);
 my $port = 3306;
 my $user = 'ensadmin';
 
 GetOptions (
-			"experiment_name|e=s" => \$exp_name,
+			"experiment|e=s"      => \$exp_name,
 			"chip_ids|c=s"        => \@chips,
 			"pass|p=s"            => \$pass,
 			"port=s"              => \$port,
 			"dbname|n=s"          => \$dbname,
-			"host|h=s"            => \$dbhost,
+			"host|h=s"            => \$host,
 			"user|u=s"            => \$user,
-			"full_delete|f=s"     => \$full_delete,
+			"full_delete|f"     => \$full_delete,
 			#"data_version|d=s"   => \$data_version,
 			"help|?"              => \$help,
 			"man|m"               => \$man,
@@ -38,27 +38,26 @@ GetOptions (
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
-
 ### Set up adaptors and FeatureSet 
 
 throw('Must define a -dbname parameter') if ! $dbname;
-throw('Must define a -dbhost parameter') if ! $dbhost;
+throw('Must define a -dbhost parameter') if ! $host;
 throw('Must define a -pass parameter') if ! $pass;
 throw('Must define an -experiment_name parameter') if ! $exp_name;
 
 $log_msg = "::\tRolling back experiment:\t$exp_name\n".
-  "::\tOn:t\${host}:${port}:${dbname}\n".
+  "::\tOn:\t${host}:${port}:${dbname}\n";
 
 
 
 if(@chips){
   @chips = split/,/, join('', @chips);
-  $log_msg .= "::\tPerforming chip only roll back\n::\tChip IDs:\t".join("\t", @chips)."\n"
+  $log_msg .= "::\tPerforming chip only roll back\n::\tChip IDs:\t".join("\t", @chips)."\n";
 }else{
-  $log_msg .- "::\tPerforming full chip roll back, all experiment data will be lost\n";
+  $log_msg .= "::\tPerforming full chip roll back, all experiment data will be lost\n";
 }
 
-$log_msg .= "::\t".
+$log_msg .= "::\t";
 $log_msg .= ($full_delete) ? "Removing all associated non-complex data/feature_sets\n" :
   "All associated data/feature_sets will persist\n";
 
@@ -70,7 +69,7 @@ print $log_msg;
 #we might not want to remove a feature set as it may be art of a combined experiment analysis
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-													  -host => $dbhost,
+													  -host => $host,
 													  -dbname => $dbname,
 													  -user => $user,
 													  -pass => $pass,
@@ -78,14 +77,15 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													 );
 
 
-my $exp_a = $d->get_ExperimentAdaptor();
+my $exp_a = $db->get_ExperimentAdaptor();
 my $rset_a = $db->get_ResultSetAdaptor();
+my $dset_a = $db->get_DataSetAdaptor();
 my $ec_a = $db->get_ExperimentalChipAdaptor();
 my $fset_adaptor = $db->get_FeatureSetAdaptor();
 
 
 my $exp = $exp_a->fetch_by_name($exp_name);
-throw("Experiment $exp_name does not exist in the database");
+throw("Experiment $exp_name does not exist in the database") if ! defined $exp;
 
 #do chips belong to experiment?
 if(@chips){
@@ -107,15 +107,16 @@ if(@chips){
 my %table_syns = (
 				  channel => 'c',
 				  experimental_chip => 'ec',
-				 )
+				 );
 
 #could maybe get all rsets first, get all ids, so we can compare to linked data_sets
 #skip delete data/feature_set if it is linked to another rset
-my @rsets = @{$rset_a->fetch_all_by_Experiment()};
+my @rsets = @{$rset_a->fetch_all_by_Experiment($exp)};
 my @rset_ids = map $_->dbID(), @rsets;
 my ($sql, %shared_dsets);
 
 foreach my $rset(@rsets){
+  print "::\tChecking ResultSet:\t".$rset->name()."\n";
   my ($syn, %cc_ids);
   my $remove_rset = 1;
 
@@ -125,8 +126,9 @@ foreach my $rset(@rsets){
 	
 
 	if(@chips){#delete only @chips
+	  my $uid = $ec->unique_id();
 
-	  if(! grep/$ec->unique_id()/, @chips){#other chips present, don't remove rset/cc
+	  if(! grep/$uid/, @chips){#other chips present, don't remove rset/cc
 		$remove_cc = 0;
 		$remove_rset = 0;
 	  }
@@ -159,47 +161,27 @@ foreach my $rset(@rsets){
 
   if(keys %cc_ids){#we have something to delete
 
+	#remove everything in reverse order to avoid orphaning records
+	#and making it impossible to link to them in the event of a failure
 
 	my $table_name = $rset->table_name();
 	my $syn = $table_syns{$table_name};
-	
-	#roll back just result and chip_channel first
-	$sql = "DELETE r, cc from result r, chip_channel cc  where cc.table_name='${table_name}' and cc.chip_channel_id=r.chip_channel_id and cc.chip_channel_id IN (".join(values %cc_ids).")";	
-	$db->dbc->do($sql) || throw("Failed to delete chip_channel and results for cc_ids:\t".join(', ', values %cc_ids));
-	
-
-	#No do this after for all ecs/channels
-	#roll back channel or experimental chip if not already deleted	
-	#foreach my $dbID(keys %cc_ids){
-	#  push @dbIDs, $dbID if(! exists $deleted{$table_name}{$dbID});
-	#}
-	
-	#$sql = "DELETE from $table_name where ${table_name}_id IN (".join(', ', @dbIDs).")";
-	#$db->dbc->do($sql) || throw('Failed to roll back ${table_name}s with dbID:\t('.join(', ', @dbIDs));
-
+		
 	if($remove_rset){
-	  #don't join tables as we have empty result set and would fail
-	  $sql = 'DELETE rs, cc from result_set rs, chip_channel cc where rs.result_set_id='.$rset->dbID().
-		' and cc.result_set_id='.$rset->dbID();
-	  $db->dbc->do($sql) || throw("Failed to delete result_set and associated chip_channels with dbID:\t".$rset->dbID());
-
-	  #delete status entries (should we do this first?)
-	  $sql = 'DELETE from status where table_name="result_set" and table_id='.$rset->dbID()
-	  $db->dbc->do($sql) || throw("Failed to delete status entries for result_set with dbID:\t".$rset->dbID());
-
 	  
 	  #remove data and feature sets if not linked to other experiments
 	  if($full_delete){
 		
-		foreach my $dset(@{$dest_a->fetch_all_by_ResultSet()}){
+		foreach my $dset(@{$dset_a->fetch_all_by_ResultSet()}){
 		  
 		  #has dset been seen with a lin kto another exp?
 		  if(! exists $shared_dsets{$dset->dbID()}){
 			my $delete = 1;
 
 			foreach my $d_rset(@{$dset->get_ResultSets()}){
-			  
-			  if(! grep/$d_rset->dbID()/, @rset_ids){
+			  my $rset_id = $d_rset->dbID();
+
+			  if(! grep/$rset_id/, @rset_ids){
 				$delete = 0;
 				
 				print "::\tSkipping delete of shared DataSet with dbID ".$dset->dbID."\n";
@@ -212,28 +194,49 @@ foreach my $rset(@rsets){
 			  #delete feature_set first, so we don't ever have an orphaned feature_set
 			  my $fset = $dset->feature_set();
 
-			  if(defined $feature_set){
-				$sql = 'DELETE from feature_set where feature_set_id='.$fset->dbID();
-				$db->dbc->do($sql) || throw("Failed to delete feature_set with dbID:\t".$fset->dbID());
+			  if(defined $fset){
+				print "::\tDeleting FeatureSet:\t".$fset->name()."\n";
 
 				#delete status entries (should we do this first?)
 				$sql = 'DELETE from status where table_name="feature_set" and table_id='.$fset->dbID();
 				$db->dbc->do($sql) || throw("Failed to delete status entries for feature_set with dbID:\t".$fset->dbID());
+
+				$sql = 'DELETE from feature_set where feature_set_id='.$fset->dbID();
+				$db->dbc->do($sql) || throw("Failed to delete feature_set with dbID:\t".$fset->dbID());
 			  }
 
+			  print "::\tDeleting DataSet:\t".$dset->name()."\n";
+
+			  #dset status entries
+			  $sql = 'DELETE from status where table_name="data_set" and table_id='.$dset->dbID();
+			  $db->dbc->do($sql) || throw("Failed to delete status entries for data_set with dbID:\t".$dset->dbID());
 			  #now delete data_set
 			  $sql = 'DELETE from data_set where data_set_id='.$dset->dbID();
 			  $db->dbc->do($sql) || throw("Failed to delete data_set with dbID:\t".$dset->dbID());
-
-
-			  #and status entries
-			  $sql = 'DELETE from status where table_name="data_set" and table_id='.$dset->dbID();
-			  $db->dbc->do($sql) || throw("Failed to delete status entries for data_set with dbID:\t".$dset->dbID());
 			}
 		  }
 		}
 	  }
+
+	  #remove rset last, so we don't potentially orphan the data_set
+	  
+	  print "::\tRemoving ResultSet:\t".$rset->name()."\n";
+	  #delete status entries (should we do this first?)
+	  $sql = 'DELETE from status where table_name="result_set" and table_id='.$rset->dbID();
+	  $db->dbc->do($sql);
+	  
+	  #don't join tables as we have empty result set and would fail
+	  $sql = 'DELETE rs, cc from result_set rs, chip_channel cc where rs.result_set_id='.$rset->dbID().
+		' and cc.result_set_id='.$rset->dbID();
+	  $db->dbc->do($sql);
 	}
+
+	#do this very last so we don't orphan the ResultSet
+	#roll back just result and chip_channel first
+	print "::\tDeleting result and chip_channel records for $table_name chip_channel_ids:\t".join(', ', values %cc_ids)."\n";
+	$sql = "DELETE r, cc from result r, chip_channel cc  where cc.table_name='${table_name}' and cc.chip_channel_id=r.chip_channel_id and cc.chip_channel_id IN (".join(', ', values %cc_ids).")";	
+	$db->dbc->do($sql);
+
   }
 }
 
@@ -252,21 +255,23 @@ foreach my $ec(@{$exp->get_ExperimentalChips()}){
 
 	#channels first
 	foreach my $chan(@{$ec->get_Channels()}){
-	  $sql = 'DELETE from channel where channel_id='.$chan->dbID();
-	  $db->dbc->do($sql) || throw("Failed to delete channel with dbID:\t".$chan->dbID());
+	  print "::\tDeleting channel records for ExperimentalChip:\t".$ec->unique_id()."\n";
 
 	  #and status entries
 	  $sql = 'DELETE from status where table_name="channel" and table_id='.$chan->dbID();
 	  $db->dbc->do($sql) || throw("Failed to delete status entries for channel with dbID:\t".$chan->dbID());
+	  
+	  $sql = 'DELETE from channel where channel_id='.$chan->dbID();
+	  $db->dbc->do($sql) || throw("Failed to delete channel with dbID:\t".$chan->dbID());
 	}
 
-	#now chip
-	$sql = 'DELETE from experimental_chip where experimental_chip_id='.$ec->dbID();
-	$db->dbc->do($sql) || throw("Failed to delete experimental_chip with dbID:\t".$ec->dbID());
-
+	print "::\tDeleting experimental_chip records for ExperimentalChip:\t".$ec->unique_id()."\n";
 	#and status entries
 	$sql = 'DELETE from status where table_name="experimental_chip" and table_id='.$ec->dbID();
 	$db->dbc->do($sql) || throw("Failed to delete status entries for experimental_chip with dbID:\t".$ec->dbID());
+	#now chip
+	$sql = 'DELETE from experimental_chip where experimental_chip_id='.$ec->dbID();
+	$db->dbc->do($sql) || throw("Failed to delete experimental_chip with dbID:\t".$ec->dbID());
   }
 }
 
@@ -276,14 +281,16 @@ if(! @chips){
   
   #xml first
   if($exp->mage_xml_id()){
-	$sql = = 'DELETE from mage_xml where mage_xml_id='.$exp->mage_xml_id();
-	$db->dbc->do($sql) || throw("Failed to delete mage_xml with dbID:\t".$exp->mage_xml_id);
+	print "::\tDeleting mage_xml for Experiment:\t".$exp->name()."\n";
+	$sql = 'DELETE from mage_xml where mage_xml_id='.$exp->mage_xml_id();
+	$db->dbc->do($sql) || throw("Failed to delete mage_xml with dbID:\t".$exp->mage_xml_id());
   }
   
   #and other tables? experimental_design_type, experimental_variable
   
+  print "::\tDeleting Experiment:\t".$exp->name()."\n";
   #then exp
-  $sql = = 'DELETE from experiment where experiment_id='.$exp->dbID();
+  $sql = 'DELETE from experiment where experiment_id='.$exp->dbID();
   $db->dbc->do($sql) || throw("Failed to delete experimentl with dbID:\t".$exp->dbID);
 }else{
   print "::\tWARNING:\tThe xml has not been changed to reflect the experimental chips you have deleted from this experiment\n::\tPlease update mage_xml manually\n";

@@ -117,7 +117,6 @@ use vars qw(@ISA);
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
   Arg [2]    : Bio::EnsEMBL::Analysis
-  Arg [3]    : optional string - chip_set name
   Example    : my @rsets = @{$rset_adaptor->fetch_all_by_Experiment_Analysis($exp, $anal)};
   Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets with the given Analysis from the Experiment
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
@@ -144,6 +143,30 @@ sub fetch_all_by_Experiment_Analysis{
   return $self->generic_fetch($constraint);
 }
 
+
+=head2 fetch_all_by_Experiment
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
+  Example    : my @rsets = @{$rset_adaptor->fetch_all_by_Experiment($exp)};
+  Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets from the Experiment
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
+  Exceptions : Throws if Analysis or Experiment are not calid and stored
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Experiment{
+  my ($self, $exp) = @_;
+
+  if( !($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
+    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment");
+  }
+
+  my $constraint = "ec.experiment_id=".$exp->dbID();
+	
+  return $self->generic_fetch($constraint);
+}
 
 
 
@@ -334,8 +357,7 @@ sub _objs_from_sth {
   my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id);
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
-  my $ct_adaptor = $self->db->get_CellTypeAdaptor();
- 
+  my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$ftype_id, \$ctype_id, \$name);
   
   #this fails if we delete entries from the joined tables
