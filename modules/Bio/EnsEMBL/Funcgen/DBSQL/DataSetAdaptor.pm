@@ -154,15 +154,15 @@ sub fetch_all_by_FeatureSet {
 
 sub fetch_all_by_ResultSet {
     my $self = shift;
-    my $fset = shift;
+    my $rset = shift;
 
-    if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $fset->dbID())){
+    if(! ($rset && $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $rset->dbID())){
       throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet object");
     }
 	
 
 	#self join here to make sure we get all linked result_sets
-    my $sql = 'ds.data_set_id IN (SELECT ds.data from data_set ds where result_set_id='.$fset->dbID().')';
+    my $sql = 'ds.data_set_id IN (SELECT ds.data_set_id from data_set ds where result_set_id='.$rset->dbID().')';
 
 
     return $self->generic_fetch($sql);	
@@ -338,12 +338,22 @@ sub _objs_from_sth {
   
   while ( $sth->fetch() ) {
 
+
+
     if($data_set && ($data_set->dbID() == $dbID)){
 
       if((defined $data_set->feature_set() && ($fset_id == $data_set->feature_set->dbID())) ||
 		 (($fset_id == 0) && (! defined $data_set->feature_set()))){
 
-		$data_set->add_ResultSet($rset_adaptor->fetch_by_dbID($rset_id));
+		my $rset = $rset_adaptor->fetch_by_dbID($rset_id);
+
+		if($rset){
+		  $data_set->add_ResultSet($rset);
+		}else{
+		  warn "DataSet $name is linked to a missing ResultSet with dbID $rset_id\n";
+		}
+		  
+
       }
 	  else{
 		throw("DataSet does not yet accomodate multiple feature_sets per DataSet");

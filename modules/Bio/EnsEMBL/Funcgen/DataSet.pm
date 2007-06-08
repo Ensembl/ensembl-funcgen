@@ -317,7 +317,7 @@ sub add_ResultSet {
   #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
   #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
 
-  if (! $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet")){
+  if (! ($rset && $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet"))){
     throw("Need to pass a valid Bio::EnsEMBL::Funcgen::ResultSet");
   }
 

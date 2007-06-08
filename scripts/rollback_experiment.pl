@@ -116,7 +116,7 @@ my @rset_ids = map $_->dbID(), @rsets;
 my ($sql, %shared_dsets);
 
 foreach my $rset(@rsets){
-  print "::\tChecking ResultSet:\t".$rset->name()."\n";
+  print "\n::\tChecking ResultSet:\t".$rset->name()."\n";
   my ($syn, %cc_ids);
   my $remove_rset = 1;
 
@@ -129,6 +129,7 @@ foreach my $rset(@rsets){
 	  my $uid = $ec->unique_id();
 
 	  if(! grep/$uid/, @chips){#other chips present, don't remove rset/cc
+		print "::\tResultSet contains other ExperimentalChip:\t".$ec->unique_id()."\n";
 		$remove_cc = 0;
 		$remove_rset = 0;
 	  }
@@ -159,20 +160,24 @@ foreach my $rset(@rsets){
   #we may have an ec which is not part of an rset?
   #so delete separately?
 
-  if(keys %cc_ids){#we have something to delete
+  if(! keys %cc_ids){
+	print "::\tResultSet does not contain specified ExperimentalChips\n";
+  }else{#we have something to delete
 
 	#remove everything in reverse order to avoid orphaning records
 	#and making it impossible to link to them in the event of a failure
 
 	my $table_name = $rset->table_name();
 	my $syn = $table_syns{$table_name};
-		
-	if($remove_rset){
+	
+	if(! $remove_rset){
+	  print "::\tOther ExperimentalChips persist, skipping ResultSet delete for:\t".$rset->name()."\n";
+	}else{
 	  
 	  #remove data and feature sets if not linked to other experiments
 	  if($full_delete){
 		
-		foreach my $dset(@{$dset_a->fetch_all_by_ResultSet()}){
+		foreach my $dset(@{$dset_a->fetch_all_by_ResultSet($rset)}){
 		  
 		  #has dset been seen with a lin kto another exp?
 		  if(! exists $shared_dsets{$dset->dbID()}){
@@ -242,6 +247,8 @@ foreach my $rset(@rsets){
 
 #now do final clean up delete channels, ec, and experiemnt (inc mage_xml...and any other linked entries)
 
+print "\n\n";
+
 foreach my $ec(@{$exp->get_ExperimentalChips()}){
   my $delete = 1;
 
@@ -255,7 +262,7 @@ foreach my $ec(@{$exp->get_ExperimentalChips()}){
 
 	#channels first
 	foreach my $chan(@{$ec->get_Channels()}){
-	  print "::\tDeleting channel records for ExperimentalChip:\t".$ec->unique_id()."\n";
+	  print "::\tDeleting channel records for ExperimentalChip:\t".$ec->unique_id().":".$chan->dye()\n";
 
 	  #and status entries
 	  $sql = 'DELETE from status where table_name="channel" and table_id='.$chan->dbID();
