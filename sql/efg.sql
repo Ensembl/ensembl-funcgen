@@ -43,7 +43,7 @@ CREATE TABLE `egroup` (
 
 DROP TABLE IF EXISTS `array`;
 CREATE TABLE `array` (
-   `array_id` int(11) unsigned NOT NULL auto_increment,
+   `array_id` int(10) unsigned NOT NULL auto_increment,
    `name` varchar(40) default NULL,
    `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
@@ -381,7 +381,7 @@ CREATE TABLE `result_set` (
    `analysis_id` int(10) unsigned default NULL,
    `name` varchar(40) default NULL,
    PRIMARY KEY  (`result_set_id`),
-   KEY  `name_analysis_idx` (`name`, `analysis_id`) 
+   UNIQUE KEY  `name_analysis_idx` (`name`, `analysis_id`) 
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- This is still v hard to impose unique constraints without key's of every combination of 2 :(
@@ -473,8 +473,8 @@ DROP TABLE IF EXISTS `predicted_feature`;
 CREATE TABLE `predicted_feature` (
   `predicted_feature_id` int(10) unsigned NOT NULL auto_increment,
   `seq_region_id` int(10) unsigned NOT NULL default '0',
-  `seq_region_start` int(11) unsigned NOT NULL default '0',
-  `seq_region_end` int(11) unsigned NOT NULL default '0',
+  `seq_region_start` int(10) unsigned NOT NULL default '0',
+  `seq_region_end` int(10) unsigned NOT NULL default '0',
   `seq_region_strand` tinyint(1) NOT NULL default '0',
   `coord_system_id` int(10) unsigned NOT NULL default '0',	
   `display_label` varchar(60) default NULL,
@@ -501,7 +501,7 @@ CREATE TABLE `feature_set` (
    `feature_type_id` int(10) unsigned NOT NULL,
    `analysis_id`  int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
-   `name` varchar(40) default NULL,
+   `name` varchar(250) default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    UNIQUE KEY `name_idx` (name)
@@ -639,6 +639,7 @@ CREATE TABLE `status_name` (
 INSERT into status_name values ('', 'DISPLAYABLE');
 INSERT into status_name values ('', 'IMPORTED');
 
+--change to small int?
 --INSERT into table status("", 'DISPLAYABLE');
 -- need to add more states, probably need to validate/insert required states in Importer
 -- would need to get CoordSys objects and set IMPORTED_CS_"cs_id" for relevant data_version
