@@ -510,8 +510,8 @@ sub _objs_from_sth {
 								  #'1....(10|01).'  => 'Gene end associated', 
 								  #'1...1...'        => 'Promoter associated',#orig
 								  '1...10..'        => 'Promoter associated',
-								  '1..(..010|0.01)' => 'Non-genic',
-								  '1(1...|...1)1..' => 'Genic',
+								  '1..(..010|0.01)' => 'Non-gene associated',
+								  '1(1...|...1)1..' => 'Gene associated',
 								 );
 
 
