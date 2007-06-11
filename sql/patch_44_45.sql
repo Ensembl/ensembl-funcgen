@@ -156,6 +156,7 @@ update data_set set name ='Wiggle_H4K20me3' where name='H3K20me3_wiggle';
 insert into status(table_id, table_name, status_name_id) select experimental_chip_id, 'experimental_chip', 2 from experimental_chip where experiment_id =12;
 insert into status values(22, 'feature_set', 2);
 insert into status values(22, 'data_set', 2);
+insert into status values(18, 'result_set', 2);
 
 --remove CTCF spurious data set and revert rset name back to original
 delete from data_set where data_set_id=23;
