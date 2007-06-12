@@ -262,12 +262,14 @@ sub _get_schema_build{
   throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $db);
   #avoided using dnadb by default to avoid obfuscation of behaviour
   
-  my $schema_build = $db->dbc->dbname();
+  my @dbname = split/_/, $db->dbc->dbname();
 
   #warn "dbname is $schema_build";
 
-  $schema_build =~ s/[a-zA-Z_]*//;
-  
+  my $schema_build = pop @dbname;
+  $schema_build = pop(@dbname).'_'.$schema_build;
+
+
   return $schema_build;
 }
 
@@ -384,6 +386,10 @@ sub dnadb {
 
 	if(! $dnadb){
 	  my $lspecies = $reg->get_alias($self->species());
+
+	  throw('Must provide a species to automatically set dnadb') if $lspecies eq 'default';
+
+	
 	  my $dbname = $lspecies.'_core_'.$self->_get_schema_build($self);
 	  warn "No dnadb passed, default to ${dbname}\n";
 	  
@@ -395,6 +401,46 @@ sub dnadb {
 		 -dbname  => $dbname,
 		 -group   => 'core',
 		);
+	  
+	  #we need to check if $dnadb is valid here and maybe guess at previous build with same assembly?
+	  #this would remove the need to specify data_version for dev DBs
+
+	  eval{ $dnadb->dbc()->db_handle(); };
+
+	  if ($@){
+		#alphabetical incrementing works in perl
+		#so we have to do the decrement of the gene build version manually
+		my $cnt = 0;
+		my @az = ('a'..'z');
+		my %az;
+		map $az{$_} = $cnt++, @az;
+
+
+		my(@dbn) = split/_/, $dbname;
+		my @assembly = split//, pop @dbn;
+
+		my $schema = pop @dbn;
+		$schema--;
+		my $build = pop @assembly;
+		$build = $az[($az{$build} - 1)];
+
+		$dbname = join('_', @dbn);
+		$dbname = join('', ($dbname, '_', $schema, '_', @assembly, $build));
+	   
+		warn "Trying to guess last release with same assembly:\t$dbname\n";
+		
+		$dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+		  (						
+		   -host    => "ensembldb.ensembl.org",
+		   -user    => "anonymous",
+		   -species => $lspecies,
+		   -dbname  => $dbname,
+		   -group   => 'core',
+		  );
+
+		#do not trap this time as we're not going to guess anymore
+		$dnadb->dbc()->db_handle(); 
+	  }
 	}
 	
 	$self->SUPER::dnadb($dnadb); 
