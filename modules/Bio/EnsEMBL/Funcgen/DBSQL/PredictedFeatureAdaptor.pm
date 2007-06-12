@@ -518,10 +518,10 @@ sub _objs_from_sth {
 
 		  #omit TSS and TES from here?
 		  my @reg_feature_attrs = ('DNase1', 'CTCF', 'H4K20me3', 'H3K27me3', 
-								   'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
+								   'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3');#, 'TSS Proximal', 'TES Proximal'); 
 		  my @vector = split//, $vector;
 
-		  foreach my $i(0..$#vector){
+		  foreach my $i(0..5){#ignore TSS TES for now
 			push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
 		  }
 
