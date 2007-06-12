@@ -509,9 +509,9 @@ sub _objs_from_sth {
 		  my %reg_class_regexs = (
 								  #'1....(10|01).'  => 'Gene end associated', 
 								  #'1...1...'        => 'Promoter associated',#orig
-								  '1...10..'        => 'Promoter associated',
-								  '1..(..010|0.01)' => 'Non-gene associated',
-								  '1(1...|...1)1..' => 'Gene associated',
+								  '1...1.....'        => 'Promoter associated',
+								  '1.0.001...' => 'Non-gene associated',
+								  '11..01....' => 'Gene associated',
 								 );
 
 
