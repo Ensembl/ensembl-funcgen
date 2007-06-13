@@ -112,6 +112,10 @@ use strict;
 $| = 1;							#autoflush
 my ($pass, $dbname, $help, $man, $array_name, $line, $label);
 my ($clobber, $type, $desc, $file, $class, $logic_name, $name);
+my ($anal_db, $db_version, $db_file, $program, $program_version, $program_file);
+my ($gff_source, $gff_feature, $module, $module_version, $parameters, $created);
+my ($displayable, $web_data);
+
 my $user = "ensadmin";
 my $host = 'ens-genomics1';
 my $port = '3306';
@@ -128,6 +132,7 @@ my $port = '3306';
 #same name can't refer to more than one seq
 
 GetOptions (
+			#general params
 			"file|f=s"        => \$file,
 			"pass|p=s"        => \$pass,
 			"port=s"          => \$port,
@@ -137,12 +142,29 @@ GetOptions (
 			"help|?"          => \$help,
 			"man|m"           => \$man,
 			"type|t=s"        => \$type,
+			'clobber'         => \$clobber,#update old entries?
+			#Cell/Feature params
 			"class=s"         => \$class,
 			"display_label=s" => \$label,
 			"name=s"          => \$name,
-			"logic_name=s"    => \$logic_name,
-			'clobber'         => \$clobber,#update old entries?
 			"description=s"   => \$desc,
+
+			#analysis opts
+			"logic_name=s"    => \$logic_name,
+			"db=s"            => \$anal_db,
+			"db_version=s"    => \$db_version,
+			"db_file=s"       => \$db_file,
+			"program=s"       => \$program,
+			"program_version=s" => \$program_version,
+			"program_file=s"    => \$program_file,
+			"gff_source=s"      => \$gff_source,
+			"gff_feature=s"     => \$gff_feature,
+			"module=s"          => \$module,
+			"module_version=s"  => \$module_version,
+			"parameters=s"      => \$parameters,
+			"created=s"         => \$created,
+			"displayable=s"     => \$displayable,
+			"web_data=s"        => \$web_data,
 		   );
 
 
@@ -153,6 +175,7 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 my %type_config = (
 				   'FeatureType' => {(
+									  class            => 'Bio::EnsEMBL::Funcgen::FeatureType',
 									  fetch_method     => 'fetch_by_name',
 									  fetch_args       => [$name],
 									  mandatory_params => {(
@@ -166,6 +189,7 @@ my %type_config = (
 									 )},
 
 				   'CellType' => {(
+								   class            => 'Bio::EnsEMBL::Funcgen::CellType',
 								   fetch_method     => 'fetch_by_name',
 								   fetch_args       => [$name],
 								   mandatory_params => {(
@@ -179,10 +203,51 @@ my %type_config = (
 								  )},
 				   
 				   'Analysis' => {(
+								   class            => 'Bio::EnsEMBL::Analysis',
 								   fetch_method => 'fetch_by_logic_name',
 								   fetch_args   => [$logic_name],
-								   mandatory_params => {()},
-								   optional_params => {()},
+								   
+								   #DB
+								   #DB_VERSION
+								   #DB_FILE
+								   #PROGRAM
+								   #PROGRAM_VERSION
+								   #PROGRAM_FILE
+								   #GFF_SOURCE
+								   #GFF_FEATURE
+								   #MODULE
+								   #MODULE_VERSION
+								   #PARAMETERS
+								   #CREATED
+								   #LOGIC_NAME
+								   #DESCRIPTION
+								   #DISPLAY_LABEL
+								   #DISPLAYABLE
+								   #WEB_DATA
+
+
+								   #this is assumed mandatory params as they are not forced in Analysis->new
+								   mandatory_params => {(
+														 -logic_name => $logic_name,
+														)},
+								   optional_params => {(
+														-db => $anal_db,
+														-db_version => $db_version,
+														-db_file => $db_file,
+														-program => $program,
+														-program_version => $program_version,
+														-program_file => $program_file,
+														-gff_source => $gff_source,
+														-gff_feature => $gff_feature,
+														-module => $module,
+														-module_version => $module_version,
+														-parameters => $parameters,
+														-created => $created,
+														-description => $desc, #DESCRIPTION
+														-display_label => $label,#DISPLAY_LABEL
+														-displayable => $displayable,
+														-web_data => $web_data,
+													   )},
 								  )},
 				  
 				   
@@ -243,7 +308,7 @@ if($file){
 
 
 }else{
-  $obj_class = 'Bio::EnsEMBL::Funcgen::'.$type;
+  $obj_class = $type_config{$type}->{'class'};
   $method = 'get_'.$type.'Adaptor';
   $adaptor = $db->$method();
   &import_type();
