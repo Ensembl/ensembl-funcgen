@@ -4,6 +4,13 @@ alter table result_set add  `feature_type_id` int(10) unsigned default NULL;
 drop index `name_analysis_idx` on result_set;
 create unique index `unique_idx` on result_set (name, analysis_id, feature_type_id, cell_type_id);
 
+-- now patch all cell_type and feature_type entries in result_set
+--chip sets first
+update result_set rs, chip_channel cc, experimental_chip ec set rs.feature_type_id=ec.feature_type_id where rs.result_set_id=cc.result_set_id and cc.table_name='experimental_chip' and cc.table_id=ec.experimental_chip_id;
+update result_set rs, chip_channel cc, experimental_chip ec set rs.cell_type_id=ec.cell_type_id where rs.result_set_id=cc.result_set_id and cc.table_name='experimental_chip' and cc.table_id=ec.experimental_chip_id; 
+-- now channel sets
+update result_set rs, chip_channel cc, channel c, experimental_chip ec set rs.feature_type_id=ec.feature_type_id where rs.result_set_id=cc.result_set_id and cc.table_name='channel' and cc.table_id=c.channel_id and c.experimental_chip_id=ec.experimental_chip_id; 
+update result_set rs, chip_channel cc, channel c, experimental_chip ec set rs.cell_type_id=ec.cell_type_id where rs.result_set_id=cc.result_set_id and cc.table_name='channel' and cc.table_id=c.channel_id and c.experimental_chip_id=ec.experimental_chip_id; 
 
 
 -- change all ids to int(10), 
