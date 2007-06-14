@@ -58,6 +58,28 @@ my $reg = "Bio::EnsEMBL::Registry";
 
 
 
+#do we need new method here, just simply to call dnadb straight away to determine whether 
+#we can ident the dnadb
+
+#This requires all calls to use a species, which we don't really want
+
+#sub new {
+#  my $caller = shift;
+	
+#  my $class = ref($caller) || $caller;
+  
+#  my $self = $class->SUPER::new(@_);
+
+#  #This simply forces dauto-detection of dnadb, to ensure that this is checked first;
+#  $self->dnadb();
+
+#  return $self;
+
+#}
+
+
+#some of these load methods should be moved to importer
+
 =head2 load_table_data
 
   Arg [1]    : string - table name
@@ -439,7 +461,9 @@ sub dnadb {
 		  );
 
 		#do not trap this time as we're not going to guess anymore
-		$dnadb->dbc()->db_handle(); 
+		eval { $dnadb->dbc()->db_handle(); };
+
+		throw('Could not auto-determine the dnadb, please pass a -dnadb parameter') if $@;
 	  }
 	}
 	

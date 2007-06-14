@@ -349,7 +349,7 @@ sub init_experiment_import{
     
     if (! $ftype) {
       throw("FeatureType '".$self->{'feature_type_name'}."' is not valid or is not present in the DB\n".
-			"Please create your FeatureType before importing the experiment");
+			"Please import using the import_type.pl script");
     }
     
     $self->feature_type($ftype);
@@ -361,7 +361,7 @@ sub init_experiment_import{
 
 	if(! $ctype){
 	  throw("CellType '".$self->{'cell_type_name'}."' is not valid or is not present in the DB\n".
-			"Please create your CellType before importing the experiment");
+			"Please import using the import_type.pl script");
     }
 
     $self->cell_type($ctype);
@@ -1632,10 +1632,15 @@ sub validate_mage(){
 			$self->log("Found ExperimentalChip:\t".$chip_uid);
 
 
+
+			#we need to log here based on replicates, no do this in NimblegenDefs validate replicates?
+
 			if(! exists $echips{$chip_uid}){
 			  $echips{$chip_uid} = {(
-									 biorep     => undef,
-									 biotechrep => undef,
+									 total_biorep     => undef,
+									 total_biotechrep => undef,
+									 experimental_biorep     => undef,
+									 experimental_biotechrep => undef,
 									 total_dye  => undef,
 									 experimental_dye => undef,
 									)};
@@ -1648,186 +1653,157 @@ sub validate_mage(){
 			  push @log, "ArrayDesign Identifier (${design_id}) does not match ArrayChip design ID (".
 				$achip->design_id().")\n\tSkipping channel and replicate validation";
 			  #skip the channel/replicate validation here?	  
-			}else{#validate channels and replicate names
+			} 
+			else {			#validate channels and replicate names
 					
-			  foreach my $src_biomat(@{$bioassc->getSourceBioMaterialMeasurements()}){#Channel materials(X1)
-				my $biomat = $src_biomat->getBioMaterial();#LabelledExtract (IP/Control)
-				#identifier contains dye?
-				#label will give us dye?
-				
-				#foreach my $label(@{$biomat->getLabels()}){
-				#  print "Found dye label $label ".$label->getName()."\n";
-				#}
+			  foreach my $src_biomat (@{$bioassc->getSourceBioMaterialMeasurements()}) { #Channel materials(X1)?
+				my $biomat = $src_biomat->getBioMaterial();	#LabelledExtract (IP/Control)
+				#we could sub this passing $echip and biomat?
+				#messy to pass regexs and populate correct echip hash attrs
+				#also messy to populate log
+				#keeping nested loop also prevents further obfuscation
 
-
-
-				foreach my $treat(@{$biomat->getTreatments()}){
+				foreach my $treat (@{$biomat->getTreatments()}) {
 				  #As there is effectively one more level of material extraction for the IP channel
 				  #this loop will returns materials an iteration out of sync for each channel
 
-				  foreach my $ssrc_biomat(@{$treat->getSourceBioMaterialMeasurements()}){#Channel measurement(x1)
+				  foreach my $ssrc_biomat (@{$treat->getSourceBioMaterialMeasurements()}) {	#Channel measurement(x1)
 					my $sbiomat = $ssrc_biomat->getBioMaterial();
 					#This will either be techrep name for control of IP name for experimental channel
 					#SOM0035_BR1_TR2 IP  #Immunoprecicpitate
 					#SOM0035_BR1_TR2     #Extract
 				
+					if ($sbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/) { #Total
 
-					#warn "sbiomat is ".$sbiomat->getName();
-
-					if($sbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/){
-					  #This is control channel
-
-					  if(! defined $echips{$chip_uid}{'biotechrep'}){
-						$echips{$chip_uid}{'biotechrep'} = $sbiomat->getName();
-					  }elsif($echips{$chip_uid}{'biotechrep'} ne $sbiomat->getName()){
-						push @log, "Found replicate mismatch:\t".$echips{$echip->unique_id()}{'biotechrep'}.
-						  "\tvs\t".$sbiomat->getName()
+					  if (! defined $echips{$chip_uid}{'total_biotechrep'}) {
+						$echips{$chip_uid}{'total_biotechrep'} = $sbiomat->getName();
+					  }else{
+						push @log, "Found two TOTAL Channels on same chip with biotechreps:\t".$sbiomat->getName().
+						  ." and ".$echips{$chip_uid}{'total_biotechrep'};
 					  }
 					}
 
-					#}else{#can we get rid of this else and test for biorep on control channel too?
-					  #This is Immunoprecipitate field i.e. EXPE
-					  #NEED TO VALIDATE AGAINST CHANNELS HERE?
-					  #i.e. get dye? or get filename?
-										
-					foreach my $ttreat(@{$sbiomat->getTreatments()}){
+					foreach my $ttreat (@{$sbiomat->getTreatments()}) {
 									  
-					  foreach my $tsrc_biomat(@{$ttreat->getSourceBioMaterialMeasurements()}){
+					  foreach my $tsrc_biomat (@{$ttreat->getSourceBioMaterialMeasurements()}) {
 						my $tbiomat = $tsrc_biomat->getBioMaterial();
-						#This will either be biolrep name for control or techrep name for experimental channel
-						#SOM0035_BR1_TR2     #Extract
-						#SOM0035_BR1              #Sample
+						#SOM0035_BR1_TR2     #Extract (exp)
+						#SOM0035_BR1              #Sample (total)
 						
+						if ($tbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/) { #experimental
 						  
-
-					  
-						if($tbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/){#experimental
-						  
-						  #warn "exp channel? ".$tbiomat->getName();
-							
-						  if(! defined $echips{$chip_uid}{'biotechrep'}){
-							$echips{$chip_uid}{'biotechrep'} = $tbiomat->getName();
-							
-							#if(length($echips{$chip_uid}{'biotechrep'}) > 40){
-							#  push @log, "Extract(techrep) field too long, maximium is 40 characters:\t$biotechrep";
-							#}#biorep should be a substring of techrep so implicit test
-							
-						  }elsif($echips{$chip_uid}{'biotechrep'} ne $tbiomat->getName()){
-							push @log, "Found technical replicate(Extract) mismatch:\t".
-							  $echips{$echip->unique_id()}{'biotechrep'}."\tvs\t".$tbiomat->getName();
+						  if (! defined $echips{$chip_uid}{'experimental_biotechrep'}) {
+							$echips{$chip_uid}{'experimental_biotechrep'} = $tbiomat->getName();
+						  }else{
+							push @log, "Found two EXPERIMENTAL Channels on same chip with biotechreps:\t".$tbiomat->getName().
+							  ." and ".$echips{$chip_uid}{'experimental_biotechrep'};
 						  }
-
+						
 						  my $dye = $biomat->getLabels()->[0]->getName();
 							
-						  foreach my $chan(@{$echip->get_Channels()}){
+						  foreach my $chan (@{$echip->get_Channels()}) {
 							  
-							if($chan->type() eq 'EXPERIMENTAL'){
+							if ($chan->type() eq 'EXPERIMENTAL') {
 								
-							  if(uc($dye) ne uc($chan->dye())){
+							  if (uc($dye) ne uc($chan->dye())) {
 								push @log, "EXPERIMENTAL channel dye mismatch:\tMAGE = ".uc($dye).' vs DB '.uc($chan->dye);
-							  }else{
+							  } else {
 								$echips{$chip_uid}{'experimental_dye'} = uc($dye);
 							  }
 							}
 						  }
-
-						  #need to get biorep here for exp channel?
-
+						
+						  #decesnd last level to get exp biorep
 						  foreach my $ftreat(@{$tbiomat->getTreatments()}){
-									  
+							
 							foreach my $fsrc_biomat(@{$ftreat->getSourceBioMaterialMeasurements()}){
 							  my $fbiomat = $fsrc_biomat->getBioMaterial();
-
-							  if(! defined $echips{$chip_uid}{'biorep'}){
+							  
+							  if(! defined $echips{$chip_uid}{'experimental_biorep'}){
 								#This must be control channel
-								$echips{$chip_uid}{'biorep'} = $fbiomat->getName();
-							  }
-							  elsif($echips{$chip_uid}{'biorep'} ne $fbiomat->getName()){
-								#Found two channel with three biomaterials
-								#need to remove this block if we get biorep from exp channel too
-								
-								push @log, "BIOREP mismatch for chip $chip_uid:\t".
-								  $echips{$chip_uid}{'biorep'}.' vs '.$fbiomat->getName();
+								$echips{$chip_uid}{'experimental_biorep'} = $fbiomat->getName();
+							  }else{
+								push @log, "Found two Experimental Channels on same chip with bioreps:\t".$fbiomat->getName().
+								  ." and ".$echips{$chip_uid}{'experimental_biorep'};
 							  }
 							}
 						  }
-
-						}else{#control
-						  #warn "got ".$tbiomat->getName();
-						  
-						  if(! defined $echips{$chip_uid}{'biorep'}){
+						} 
+						else { #control
+											  
+						  if (! defined $echips{$chip_uid}{'total_biorep'}) {
 							#This must be control channel
-							$echips{$chip_uid}{'biorep'} = $tbiomat->getName();
-						  }
-						  elsif($echips{$chip_uid}{'biorep'} ne $tbiomat->getName()){
-							#Found two channel with three biomaterials
-							#need to remove this block if we get biorep from exp channel too
-							push @log, "BIOREP mismatch for chip $chip_uid:\t".
-							  $echips{$chip_uid}{'biorep'}.' vs '.$tbiomat->getName();
+							$echips{$chip_uid}{'total_biorep'} = $tbiomat->getName();
+						  }else{
+							push @log, "Found two TOTAL Channels on same chip with biotechreps:\t".$tbiomat->getName().
+							  ." and ".$echips{$chip_uid}{'total_biorep'};
 						  }
 						  
 						  my $dye = $biomat->getLabels()->[0]->getName();
+						
+						  foreach my $chan (@{$echip->get_Channels()}) {
 						  
-						  foreach my $chan(@{$echip->get_Channels()}){
+							if ($chan->type() eq 'TOTAL') {
 							
-							if($chan->type() eq 'TOTAL'){
-							  
-							  if(uc($dye) ne uc($chan->dye())){
+							  if (uc($dye) ne uc($chan->dye())) {
 								push @log, "TOTAL channel dye mismatch:\tMAGE = ".uc($dye).' vs DB '.uc($chan->dye);
-							  }else{
+							  } else {
 								$echips{$chip_uid}{'total_dye'} = uc($dye);
 							  }
 							}
 						  }
 						}
-						#could do one more iteration and get Source?
-						#Don't really need to validate this deep?
+						#could do one more iteration and get Source and FeatureType?
+						#we should really extend this, and then update the EC cell_type and feature_types
+						#these features might not be biotmats tho...need to check
 					  }
 					}
-  				  }
+				  }
 				}
 			  }
 			}
-		  }#end of echip
-		}#end of foreach echip
+		  }						#end of echip
+		}						#end of foreach echip
 
 		#if(! exists $echips{$chip_uid}){
 		#  push @log, "No ExperimentalChip found for MAGE entry:\t${chip_uid}";
 		#}
-	  }#end of physbioassay	
-	}#end of foreach assay
-  }#end of foreach exp
+	  }							#end of physbioassay	
+	}							#end of foreach assay
+  }								#end of foreach exp
 
 
 
 
-  #Validate and build replicates sets
+  #Vendor specific replicate validation
+  $self->validate_and_update_replicates(\%echip, \@log);
 
-  foreach my $echip(@{$rset->get_ExperimentalChips()}){
+
+  #Further validation and build replicates sets
+  foreach my $echip (@{$rset->get_ExperimentalChips()}) {
 	
-	if(! exists $echips{$echip->unique_id()}){
+	if (! exists $echips{$echip->unique_id()}) {
 	  push @log, "No MAGE entry found for ExperimentalChip:\t".$echip->unique_id();
-	}else{
+	} else {
 	  
 	  my $biorep = $echips{$echip->unique_id()}{'biorep'};
 	  my $biotechrep = $echips{$echip->unique_id()}{'biotechrep'};
 
-	  if(! defined $biotechrep){
+	  if (! defined $biotechrep) {
 		push @log, 'ExperimentalChip('.$echip->unique_id().') Extract field do not meet naming convention(SAMPLE_BRN_TRN)';
-	  }#! defined biorep? will never occur at present
-	  elsif($biotechrep !~ /$biorep/){
+	  }							#! defined biorep? will never occur at present
+	  elsif ($biotechrep !~ /$biorep/) {
 		push @log, "Found Extract(techrep) vs Sample(biorep) naming mismatch\t${biotechrep}\tvs$biorep";
-	  }elsif(! $echips{$echip->unique_id()}{'experimental_dye'}){
+	  } elsif (! $echips{$echip->unique_id()}{'experimental_dye'}) {
 		push @log, "No EXPERIMENTAL channel found for ExperimentalChip:\t".$echip->unique_id();
-	  }
-	  elsif( ! $echips{$echip->unique_id()}{'total_dye'}){
+	  } elsif ( ! $echips{$echip->unique_id()}{'total_dye'}) {
 		push @log, "No TOTAL channel found for ExperimentalChip:\t".$echip->unique_id();
 	  }
 	  #don't really need this as this will be picked up by the dye mismatch test
 	  #elsif($echips{$echip->unique_id()}{'experimental_dye'} eq $echips{$echip->unique_id()}{'total_dye'}){
 	  #	push @log, "Channel dye duplication got ExperimentalChip:\t".$echip->unique_id();
 	  # }
-	  else{
+	  else {
 		push @{$tech_reps{$biotechrep}}, $echip->unique_id();
 		push @{$bio_reps{$biorep}}, $echip->unique_id();	
 	  }
@@ -1835,10 +1811,10 @@ sub validate_mage(){
   }
 
 
-  if(@log){
+  if (@log) {
 	$self->log("MAGE VALIATION REPORT\n\t".join("\n\t", @log));
 	throw("MAGE VALIDATION FAILED\nPlease correct tabe2mage file and try again:\t".$self->get_def('tab2mage_file'));
-  }else{
+  } else {
 	$self->log('MAGE VALDIATION SUCCEEDED');
   }
 
@@ -1853,11 +1829,11 @@ sub validate_mage(){
   #fetch by exp and rset name?
   #we don't have a unique key on this 
 
-  foreach my $echip(@{$rset->get_ExperimentalChips()}){
+  foreach my $echip (@{$rset->get_ExperimentalChips()}) {
 	
 
 	#Set biorep info and rset
-	foreach my $biorep(keys %bio_reps){
+	foreach my $biorep (keys %bio_reps){
 
 	  foreach my $chip_uid(@{$bio_reps{$biorep}}){
 

@@ -64,15 +64,13 @@ use vars qw(@ISA);
 sub new {
   my $caller = shift;
 
-  my $class = ref($caller) || $caller;
-
-  my $self = $class->SUPER::new(@_);
-  
+  my $obj_class = ref($caller) || $caller;
+  my $self = $obj_class->SUPER::new(@_);
   
   my (
       $name,
       $desc,
-      $cclass,
+      $class,
      ) = rearrange([
 		    'NAME', 'DESCRIPTION', 'CLASS',
 		   ], @_);
@@ -86,7 +84,7 @@ sub new {
 
 
   #add test for class and enum? Validate names against Brno etc?
-  $self->class($cclass) if $cclass;
+  $self->class($class) if $class;
   $self->description($desc) if $desc;
 
   return $self;

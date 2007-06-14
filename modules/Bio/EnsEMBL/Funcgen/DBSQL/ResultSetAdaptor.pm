@@ -120,7 +120,7 @@ use vars qw(@ISA);
   Example    : my @rsets = @{$rset_adaptor->fetch_all_by_Experiment_Analysis($exp, $anal)};
   Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets with the given Analysis from the Experiment
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
-  Exceptions : Throws if Analysis or Experiment are not calid and stored
+  Exceptions : Throws if Analysis is not valid and stored
   Caller     : general
   Status     : At Risk
 
@@ -129,18 +129,31 @@ use vars qw(@ISA);
 sub fetch_all_by_Experiment_Analysis{
   my ($self, $exp, $analysis) = @_;
 
-  if( !($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
-    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment");
-  }
-
   if( !($analysis && $analysis->isa("Bio::EnsEMBL::Analysis") && $analysis->dbID())){
     throw("Need to pass a valid stored Bio::EnsEMBL::Analysis");
   }
   
 
-  my $constraint = "ec.experiment_id=".$exp->dbID()." AND rs.analysis_id=".$analysis->dbID();
+  my $constraint = $self->get_Experiment_join_clause($exp)." AND rs.analysis_id=".$analysis->dbID();
 	
   return $self->generic_fetch($constraint);
+}
+
+sub get_Experiment_join_clause{
+  my ($self, $exp) = @_;
+
+  if( !($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
+    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment");
+  }
+
+  my @ecs = @{$exp->get_ExperimentalChips()};
+  my $ec_ids = join(', ', (map $_->dbID, @ecs));#get ' separated list of ecids
+  my $chan_ids = join(', ', (map $_->dbID(), (map $_->get_Channels(), @ecs)));#get ' separated list of chanids
+  
+  my $constraint = '((cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.
+	') OR (cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.'))';
+  
+  return $constraint;
 }
 
 
@@ -150,7 +163,7 @@ sub fetch_all_by_Experiment_Analysis{
   Example    : my @rsets = @{$rset_adaptor->fetch_all_by_Experiment($exp)};
   Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets from the Experiment
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
-  Exceptions : Throws if Analysis or Experiment are not calid and stored
+  Exceptions : None
   Caller     : general
   Status     : At Risk
 
@@ -159,13 +172,11 @@ sub fetch_all_by_Experiment_Analysis{
 sub fetch_all_by_Experiment{
   my ($self, $exp) = @_;
 
-  if( !($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
-    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment");
-  }
-
-  my $constraint = "ec.experiment_id=".$exp->dbID();
+  #my $constraint = "ec.experiment_id=".$exp->dbID();
+  #This was much easier with the more complicated default where join
+  #should we reinstate and just have a duplication of cell/feature_types?
 	
-  return $self->generic_fetch($constraint);
+  return $self->generic_fetch($self->get_Experiment_join_clause($exp));
 }
 
 
@@ -193,17 +204,17 @@ sub fetch_all_by_FeatureType {
     throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
   }
 	
-  my $constraint = "ec.feature_type_id =".$ftype->dbID();
+  my $constraint = "rs.feature_type_id =".$ftype->dbID();
 	
   return $self->generic_fetch($constraint);
 }
  
 
-=head2 fetch_by_name_Analysis
+=head2 fetch_all_by_name_Analysis
 
   Arg [1]    : string - ResultSet name
   Arg [2]    : Bio::EnsEMBL::Funcgen::Analysis
-  Example    : my $rset = $rseta->fetch_by_name($exp->name().'_IMPORT');
+  Example    : ($rset) = @{$rseta->fetch_by_name($exp->name().'_IMPORT')};
   Description: Retrieves a ResultSet based on the name attribute
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
   Exceptions : Throws if no name provided
@@ -212,7 +223,7 @@ sub fetch_all_by_FeatureType {
 
 =cut
 
-sub fetch_by_name_Analysis {
+sub fetch_all_by_name_Analysis {
   my ($self, $name, $anal) = @_;
 
   if( ! defined $name){
@@ -222,11 +233,10 @@ sub fetch_by_name_Analysis {
   if(!($anal && $anal->isa('Bio::EnsEMBL::Analysis') && $anal->dbID())){
 	throw('You must provide a valid, stored Bio::EnsEMBL::Analysis');
   }
-
 	
   my $constraint = "rs.name ='${name}' AND rs.analysis_id=".$anal->dbID();
 	
-   return $self->generic_fetch($constraint)->[0];
+  return $self->generic_fetch($constraint);
 }
 
 
@@ -249,8 +259,8 @@ sub _tables {
   return (
 		  [ 'result_set',        'rs' ],
 		  [ 'chip_channel',      'cc' ],
-		  [ 'experimental_chip', 'ec' ],
-		  [ 'channel',           'c'  ],
+		  #[ 'experimental_chip', 'ec' ],
+		  #[ 'channel',           'c'  ],
 		  #This causes the N(no channelrecords) records to be returned when there is no linkable channel.
 		  #solution is to create dummy channels for chip level import e.g. Sanger
 		  #we can have channel here, but only if we make the link in the default where, otherwise we'll get spurious results
@@ -276,10 +286,10 @@ sub _columns {
 	my $self = shift;
 
 	return qw(
-		  rs.result_set_id    rs.analysis_id
-		  cc.table_name       cc.chip_channel_id  
-          cc.table_id         ec.feature_type_id  
-		  ec.cell_type_id     rs.name
+			  rs.result_set_id    rs.analysis_id
+			  cc.table_name       cc.chip_channel_id
+			  cc.table_id         rs.name
+			  rs.cell_type_id     rs.feature_type_id
 		 );
 
 	
@@ -302,9 +312,14 @@ sub _columns {
 sub _default_where_clause {
   my $self = shift;
 	
-  #return 'rs.result_set_id = cc.result_set_id AND ((cc.table_name="experimental_chip" AND cc.table_id = ec.experimental_chip_id) OR (cc.table_name="channel" AND cc.table_id = (SELECT channel_id from channel) AND ec.experimental_chip_id=(SELECT experimental_chip_id from channel)))';
+  #return 'rs.result_set_id = cc.result_set_id AND ((cc.table_name="experimental_chip" AND cc.table_id = ec.experimental_chip_id) OR (cc.table_name="channel" AND cc.table_id=c.channel_id AND ec.experimental_chip_id=c.experimental_chip_id))';
 
-  return 'rs.result_set_id = cc.result_set_id AND ((cc.table_name="experimental_chip" AND cc.table_id = ec.experimental_chip_id) OR (cc.table_name="channel" AND cc.table_id=c.channel_id AND ec.experimental_chip_id=c.experimental_chip_id))';
+  
+  #no need for complex join due to adding feature/cell_type columns to result_set
+  #This was done to allow separation of top level rset with same name but different
+  #cell or feature_types
+  return 'rs.result_set_id = cc.result_set_id';
+
   
 
 }
@@ -325,11 +340,9 @@ sub _default_where_clause {
 =cut
 
 
-#do we need this?
-
 sub _final_clause {
-  #return ' GROUP by cc.chip_channel_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
-  return ' GROUP by cc.chip_channel_id, cc.result_set_id ORDER BY rs.result_set_id, ec.cell_type_id, ec.feature_type_id';
+  #do not mess with this!
+  return ' GROUP by cc.chip_channel_id, cc.result_set_id ORDER BY rs.result_set_id, rs.cell_type_id, rs.feature_type_id';
   
   
   
@@ -358,7 +371,7 @@ sub _objs_from_sth {
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
-  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$ftype_id, \$ctype_id, \$name);
+  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$name, \$ctype_id, \$ftype_id);
   
   #this fails if we delete entries from the joined tables
   #causes problems if we then try and store an rs which is already stored
@@ -429,7 +442,7 @@ sub store{
   
   my (%analysis_hash);
   
-  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name) VALUES (?, ?)');
+  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id) VALUES (?, ?, ?, ?)');
   
   my $db = $self->db();
   my $analysis_adaptor = $db->get_AnalysisAdaptor();
@@ -462,8 +475,10 @@ sub store{
     }
    
 
-    $sth->bind_param(1, $rset->analysis->dbID(), SQL_INTEGER);
-    $sth->bind_param(2, $rset->name(),           SQL_VARCHAR);
+    $sth->bind_param(1, $rset->analysis->dbID(),  SQL_INTEGER);
+    $sth->bind_param(2, $rset->name(),            SQL_VARCHAR);
+	$sth->bind_param(3, $rset->cell_type->dbID(), SQL_INTEGER);
+	$sth->bind_param(4, $rset->feature_type->dbID(), SQL_INTEGER);
     
     $sth->execute();
     

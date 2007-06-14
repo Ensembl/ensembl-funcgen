@@ -415,7 +415,7 @@ sub read_experiment_data{
 
 	#we need to build the channel level tab2mage line here
 	if($self->{'write_mage'}){
-	  my $sample_name = ($sample_label eq '') ? '???' : substr($sample_label, 0, (length($sample_label)-1));
+	  #my $sample_name = ($sample_label eq '') ? '???' : substr($sample_label, 0, (length($sample_label)-1));
 	  my $ctype_name = (defined $self->cell_type()) ? $self->cell_type->name() : '???';
 	  my $ftype_name = (defined $self->feature_type()) ? $self->feature_type->name() : '???';
 	  my $ctype_desc = (defined $self->cell_type()) ? $self->cell_type->description() : '???';
@@ -490,6 +490,40 @@ sub read_experiment_data{
 }
 
 
+=head2 validate_and_update_replicates
+
+  Example    : $imp->validate_and_update_replicates();
+  Description: Compares replicate naming convetions with respect to 
+               sample label channel pairs across technical and biological replicates.
+               Updates ExperimentalChip specific feature_type and cell_type information 
+               detailed in the tab2mage file
+  Returntype : none
+  Exceptions : none
+  Caller     : Importer::validate_mage
+  Status     : Medium
+
+=cut
+
+
+#this should also check feature and cell types are not mixed within biol reps
+#each feature_type/cell_type pair is to be imported as a separate result_set
+#how can we separate top level result_sets with different feature_type cell_type info?
+#we need two more columns
+
+sub validate_mage_replicates{
+  my ($self, $echip_hash, $log_ref) = @_;
+
+
+  my %rep_samples = ();
+
+  foreach my
+
+
+
+
+
+}
+
 
 =head2 read_probe_data
 
@@ -500,7 +534,7 @@ sub read_experiment_data{
   Returntype : none
   Exceptions : none
   Caller     : Importer
-  Status     : Medium - Move parts to "Vendor"Defs.pm, should function the same
+  Status     : Medium
 
 =cut
 

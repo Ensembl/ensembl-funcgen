@@ -521,7 +521,7 @@ sub _objs_from_sth {
 								   'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
 		  my @vector = split//, $vector;
 
-		  foreach my $i(0..5){#$#vector){
+		  foreach my $i(0..7){#$#vector){
 			push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
 		  }
 
