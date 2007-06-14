@@ -380,8 +380,10 @@ CREATE TABLE `result_set` (
    `result_set_id` int(10) unsigned NOT NULL auto_increment,
    `analysis_id` int(10) unsigned default NULL,
    `name` varchar(40) default NULL,
+   `cell_type_id` int(10) unsigned default NULL,
+   `feature_type_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`result_set_id`),
-   UNIQUE KEY  `name_analysis_idx` (`name`, `analysis_id`) 
+   UNIQUE KEY `unique_idx` (`name`,`analysis_id`,`feature_type_id`,`cell_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- This is still v hard to impose unique constraints without key's of every combination of 2 :(

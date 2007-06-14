@@ -162,6 +162,8 @@ insert into status values(18, 'result_set', 2);
 delete from data_set where data_set_id=23;
 update result_set set name = 'ctcf_ren_BR1' where name ='ctcf_ren_BR1_TR2';
 
+-- correct ctcf analysis id
+update feature_set set analysis_id =7 where analysis_id =14;
 
 
 
