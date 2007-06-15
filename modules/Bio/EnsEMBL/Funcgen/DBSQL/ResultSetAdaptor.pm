@@ -148,10 +148,11 @@ sub get_Experiment_join_clause{
 
   my @ecs = @{$exp->get_ExperimentalChips()};
   my $ec_ids = join(', ', (map $_->dbID, @ecs));#get ' separated list of ecids
-  my $chan_ids = join(', ', (map $_->dbID(), (map $_->get_Channels(), @ecs)));#get ' separated list of chanids
+  my @chans = map @$_, (map $_->get_Channels(), @ecs);
+  my $chan_ids = join(', ', (map $_->dbID(), @chans));#get ' separated list of chanids
   
-  my $constraint = '((cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.
-	') OR (cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.'))';
+  my $constraint = '(((cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.
+	')) OR (cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.'))))';
   
   return $constraint;
 }
