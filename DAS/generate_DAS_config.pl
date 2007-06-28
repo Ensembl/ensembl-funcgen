@@ -1,4 +1,4 @@
-#!/software/bin/perl
+#!/usr/bin/perl
 
 =head1 NAME
 
@@ -6,9 +6,12 @@ generate_DAS_config.pl
 
 =head1 SYNOPSIS
 
-this script will ...
+generate_DAS_config.pl -h ensembldb.ensembl.org -p 3306 -u anonymous -d homo_sapiens_funcgen_45_36g -H localhost -P 9000
 
 =head1 DESCRIPTION
+
+Produces ProServer DAS server configuration file based on a given
+eFG database.
 
 =head1 LICENCE
 
@@ -30,18 +33,6 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use Getopt::Std;
-my %opts;
-getopts('h:p:u:P:d:', \%opts);
-
-my $dbhost = $opts{h} || 'ens-genomics1';
-my $dbport = $opts{p} || 3306;
-my $dbuser = $opts{u} || 'ensadmin';
-my $dbpass = $opts{P} || 'ensembl';
-my $dbname = $opts{d} || 'sg_homo_sapiens_funcgen_45_36g';
-
-$| = 1;
-
 use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 use Bio::EnsEMBL::Analysis::Tools::Logger qw(logger_verbosity logger_info);
 
@@ -50,12 +41,28 @@ my $logger_verbosity = 'OFF';
 verbose($utils_verbosity);
 logger_verbosity($logger_verbosity);
 
+use Getopt::Std;
+my %opts;
+getopts('h:p:u:w:P:d:H:', \%opts);
+
+my $dbhost = $opts{h} or throw("Need to specify dbhost via option -h!");
+my $dbport = $opts{p} or throw("Need to specify dbport via option -p!");
+my $dbuser = $opts{u} or throw("Need to specify dbuser via option -u!");
+my $dbpass = $opts{w} || "";
+my $dbname = $opts{d} or throw("Need to specify dbname via option -d!");
+
+my $dashost = $opts{H} or throw("Need to specify DAS server hostname via option -H!");
+my $dasport = $opts{P} or throw("Need to specify DAS server hostname via option -P!");
+
+$| = 1;
+$| = 1;
+
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_registry_from_db
     (
-     -host => 'ens-livemirror',
-     -user => 'ensro',
-     #-verbose => "1" 
+	 -host => 'ensembldb.ensembl.org',
+	 -user => 'anonymous',
+     #-verbose => "1"
      );
 my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor('human', 'core');
 
@@ -92,8 +99,8 @@ sub print_header()
 [general]
 prefork=1
 maxclients=1
-port=9876
-hostname=bc-9-1-03.internal.sanger.ac.uk
+port=$dasport
+hostname=$dashost
 ;response_hostname=das.example.com
 ;response_port=80
 ;response_protocol=https
@@ -116,9 +123,9 @@ state             = on
 adaptor           = efg_feature_set
 transport         = dbi
 host              = $dbhost
-port              = 3306
+port              = $dbport
 dbname            = $dbname
-username          = ensro
+username          = $dbuser
 description       = [Homo sapiens] eFG feature
 source            = SOURCE
 type              = TYPE
