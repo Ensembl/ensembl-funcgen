@@ -136,7 +136,7 @@ use strict;
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
-my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage);
+my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -189,6 +189,7 @@ GetOptions (
 			"output_dir=s" => \$output_dir,
 			"exp_date=s"   => \$exp_date,
 			"fasta"        => \$fasta,
+			"farm=s"       => \$farm,
 			"recover|r"    => \$recover,
 			"norm=s"       => \$nmethod,
 			"location=s"   => \$loc,
@@ -260,6 +261,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       -dump_fasta  => $fasta,
 					       -norm_method => $nmethod,
 					       -species     => $species,
+											   -farm => $farm,
 					       -location    => $loc,
 					       -contact     => $contact,
 					       -verbose     => $verbose,

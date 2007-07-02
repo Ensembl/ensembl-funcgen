@@ -476,10 +476,14 @@ sub store{
     }
    
 
+	my $ct_id = (defined $rset->cell_type()) ? $rset->cell_type->dbID() : undef;
+	my $ft_id = (defined $rset->feature_type()) ? $rset->feature_type->dbID() : undef;
+
+
     $sth->bind_param(1, $rset->analysis->dbID(),  SQL_INTEGER);
     $sth->bind_param(2, $rset->name(),            SQL_VARCHAR);
-	$sth->bind_param(3, $rset->cell_type->dbID(), SQL_INTEGER);
-	$sth->bind_param(4, $rset->feature_type->dbID(), SQL_INTEGER);
+	$sth->bind_param(3, $ct_id,                   SQL_INTEGER);
+	$sth->bind_param(4, $ft_id,                   SQL_INTEGER);
     
     $sth->execute();
     

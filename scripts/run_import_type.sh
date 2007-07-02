@@ -6,10 +6,10 @@ ARGS=$(echo $@ | sed "s/$PASS//")
 
 
 $EFG_SRC/scripts/import_type.pl\
-		-type Analysis\
-       	-logic_name test\
-        -dbname nath_MA2C_3042_mus_musculus_funcgen_46_36g\
+		-type CellType\
+       	-name U2OS\
+        -dbname nath_homo_sapiens_funcgen_46_36h\
 		-class HISTONE\
-		-description 'Histone 3 Acetylation'\
+		-description 'Testing'\
         -pass $1\
 

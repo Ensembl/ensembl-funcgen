@@ -231,11 +231,11 @@ sub analysis {
 
 
 sub feature_type {
-  my $self = shift;
-	
-  if(@_){
-    throw("Must pass a valid Bio::EnsEMBL::Funcgen::FeatureType object") if (! $_[0]->isa("Bio::EnsEMBL::Funcgen::FeatureType"));
-    $self->{'feature_type'} = shift;
+  my ($self, $ft) = @_;
+
+  if($ft){
+    throw('Must pass a valid Bio::EnsEMBL::Funcgen::FeatureType object') if (! $ft->isa('Bio::EnsEMBL::Funcgen::FeatureType'));
+    $self->{'feature_type'} = $ft;
   }
 		
   return $self->{'feature_type'};

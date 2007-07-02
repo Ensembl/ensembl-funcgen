@@ -370,7 +370,7 @@ sub store {
 
 
 
-sub update_replicate_info{
+sub update_replicate_types{
   my ($self, $echip) = @_;
 
   if(! ($echip && $echip->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') && $echip->dbID())){
@@ -385,6 +385,21 @@ sub update_replicate_info{
   $sql = 'UPDATE experimental_chip set technical_replicate="'.$echip->technical_replicate().
 	'" where experimental_chip_id='.$echip->dbID();
   $self->db->dbc->do($sql);
+
+
+  if(defined $echip->cell_type()){
+	$sql = 'UPDATE experimental_chip set cell_type_id="'.$echip->cell_type()->dbID.
+	  '" where experimental_chip_id='.$echip->dbID();
+	$self->db->dbc->do($sql);
+  }
+
+  if(defined $echip->feature_type()){
+	$sql = 'UPDATE experimental_chip set feature_type_id="'.$echip->feature_type()->dbID.
+	  '" where experimental_chip_id='.$echip->dbID();
+	$self->db->dbc->do($sql);
+  }
+
+
 
   return;
 }

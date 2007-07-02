@@ -21,14 +21,16 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-contact njohnson@ebi.ac.uk\
 	-species homo_sapiens\
 	-vendor NIMBLEGEN\
+	-cell_type U2OS\
+	-feature_type H3ac\
 	-fasta\
 	-port 3306\
 	-host ens-genomics1\
-	-dbname maptest_human_funcgen_45_36g\
+	-dbname nath_homo_sapiens_funcgen_46_36h\
 	-array_set\
 	-array_name "2005-05-10_HG17Tiling_Set"\
 	-group efg\
-	-data_version 44_36f\
+	-data_version 45_36g\
 	-farm 0\
 	-verbose\
 	-tee\

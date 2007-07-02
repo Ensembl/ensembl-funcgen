@@ -302,9 +302,11 @@ sub read_experiment_data{
 
 
   my ($design_desc, $line, $tmp_uid, $channel, $echip, $sample_label);
-  my ($sample_desc, %hpos, @data);
+  my ($sample_desc, %hpos, @data, %uid_reps, %did_reps, %sample_reps);
   my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
   my $chan_adaptor = $self->db->get_ChannelAdaptor();
+  my $br_cnt = 1;
+  my $tr_cnt = 1;
   
   #Currently 1 design = 1 chip = 1 array /DVD
   #Different designs are not currently collated into a chip_set/array in any ordered manner
@@ -420,6 +422,59 @@ sub read_experiment_data{
 	  my $ftype_name = (defined $self->feature_type()) ? $self->feature_type->name() : '???';
 	  my $ctype_desc = (defined $self->cell_type()) ? $self->cell_type->description() : '???';
 
+	  #define reps
+	  # we can't do this with one has.
+	  #we need one to get the biorep based on the sample label and making sure the unique ID os the same
+	  
+
+
+	  #then we need to define the tech rep by matching the sample label and the making sure the design_id isn't already used
+
+	  if(exists $sample_reps{$sample_label}){#found br
+		
+		$uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'} = $sample_reps{$sample_label};
+
+	  }
+	  elsif(exists $uid_reps{$data[$hpos{'CHIP_ID'}]}){
+		$sample_reps{$sample_label} = $uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'};
+	  }
+	  else{#assign new br
+		$sample_reps{$sample_label} = $br_cnt;
+		$uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'} = $br_cnt;
+		$br_cnt++;
+	  }
+
+	  
+	  if(! exists $uid_reps{$data[$hpos{'CHIP_ID'}]}{'tr'}){
+		#we only assign a new tr here if this design has not been seen in any of the reps
+		#i.e. we need to get the first tr which does not contain this design_id
+
+		my $create_rep = 1;
+		my $tr;
+
+		foreach my $rep(keys %did_reps){
+		  #This just assigns to the first rep without the design
+
+		  if(! exists $did_reps{$rep}{$data[$hpos{'DESIGN_ID'}]}){
+			$did_reps{$rep}{$data[$hpos{'DESIGN_ID'}]} = $data[$hpos{'CHIP_ID'}]; #don't really need to assign this
+			$tr = $rep;
+			$create_rep = 0;
+			last;#do not remove this or we get wierd TR incrementing
+		  }
+		}
+
+		if($create_rep){
+		  ($tr) = sort {$b<=>$a} keys %did_reps;
+		  $tr++;
+		  $did_reps{$tr}{$data[$hpos{'DESIGN_ID'}]} = $data[$hpos{'CHIP_ID'}];
+		}
+
+		$uid_reps{$data[$hpos{'CHIP_ID'}]}{'tr'} = $tr;
+	  }
+
+	  my $br = $self->experiment->name().'_BR'.	$uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'};
+	  my $tr = $br.'_TR'.$uid_reps{$data[$hpos{'CHIP_ID'}]}{'tr'};
+
 
 	  #File[raw]
 	  my $tsm_line = $echip->unique_id().'_'.$self->get_def('dye_freqs')->{$data[$hpos{'DYE'}]}.'_pair.txt';
@@ -436,21 +491,21 @@ sub read_experiment_data{
 	  #BioSource
 	  $tsm_line .= "\t$ctype_name";
 	  #Sample
-	  $tsm_line .= "\t${sample_name}_BRN";
+	  $tsm_line .= "\t$br";
 	  #Extract 
-	  $tsm_line .= "\t${sample_name}_BRN_TRN";
+	  $tsm_line .= "\t$tr";
 
 	  #LabeledExtract & Immunoprecipitate
 	  if($type eq 'EXPERIMENTAL'){
-		$tsm_line .= "\tIP of ${sample_name}_BRN_TRN with anti $ftype_name (Ab vendor, Ab ID)";
-		$tsm_line .= "\t${sample_name}_BRN_TRN IP";
+		$tsm_line .= "\tIP of $tr with anti $ftype_name (Ab vendor, Ab ID)";
+		$tsm_line .= "\t$tr IP";
 	  }else{
-		$tsm_line .= "\tInput control DNA of ${sample_name}_BRN_TRN\t";
+		$tsm_line .= "\tInput control DNA of $tr\t";
 	  }
 		
 	  #Hybridization	
 	  #U2OS BR1_TR1 ChIP H3KAc 46092 hyb
-	  $tsm_line .= "\t$ctype_name ${sample_name}_BRN_TRN ChIP $ftype_name ".$echip->unique_id().' hyb';
+	  $tsm_line .= "\t$ctype_name $tr ChIP $ftype_name ".$echip->unique_id().' hyb';
 	  
 	  #BioSourceMaterial    SampleMaterial	ExtractMaterial	LabeledExtractMaterial
 	  $tsm_line .= "\tcell\tgenomic_DNA\tgenomic_DNA\tsynthetic_DNA";
@@ -468,14 +523,14 @@ sub read_experiment_data{
 	  $tsm_line .= "\t$ctype_name";
 
 	  #BioMaterialCharacteristics[CellType]
-	  $tsm_line .= "\t$ctype_desc";
+	  $tsm_line .= "\t$ctype_name";
 
 	  #BioMaterialCharacteristics[Sex]
 	  $tsm_line .= "\t???";
 	  #FactorValue[StrainOrLine]	
 	  $tsm_line .= "\t$ctype_name";
 	  #FactorValue[Immunoprecipitate]
-	  $tsm_line .= "\tanti-${ftype_name} antibody\n";
+	  $tsm_line .=  ($type eq 'EXPERIMENTAL') ? "\tanti-${ftype_name} antibody\n" : "\t\n";
 
 	  print $t2m_file $tsm_line;
 
@@ -490,39 +545,6 @@ sub read_experiment_data{
 }
 
 
-=head2 validate_and_update_replicates
-
-  Example    : $imp->validate_and_update_replicates();
-  Description: Compares replicate naming convetions with respect to 
-               sample label channel pairs across technical and biological replicates.
-               Updates ExperimentalChip specific feature_type and cell_type information 
-               detailed in the tab2mage file
-  Returntype : none
-  Exceptions : none
-  Caller     : Importer::validate_mage
-  Status     : Medium
-
-=cut
-
-
-#this should also check feature and cell types are not mixed within biol reps
-#each feature_type/cell_type pair is to be imported as a separate result_set
-#how can we separate top level result_sets with different feature_type cell_type info?
-#we need two more columns
-
-sub validate_mage_replicates{
-  my ($self, $echip_hash, $log_ref) = @_;
-
-
-  my %rep_samples = ();
-
-  foreach my
-
-
-
-
-
-}
 
 
 =head2 read_probe_data

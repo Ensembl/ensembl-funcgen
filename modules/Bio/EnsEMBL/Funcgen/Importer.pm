@@ -611,7 +611,7 @@ sub init_tab2mage_export{
 
   #reformat this
   my $exp_section = "experiment section\ndomain\t".(split/@/, $self->contact())[1]."\naccession\t\n".
-	"quality_control\tbiological_replicate\nexperiment_design_type\tbinding_set_identification\n".
+	"quality_control\tbiological_replicate\nexperiment_design_type\tbinding_site_identification\n".
 	  "name\t".$self->name()."\nrelease_date\t\nsubmission_date\t\nsubmitter\t???\n".
 		"submitter_email\t???\ninvestigator\t???\ninvestigator_email\t???\norganization\t???\naddress\t".
 		  "???\npublication_title\t\nauthors\t\njournal\t\nvolume\t\nissue\t\npages\t\nyear\t\npubmed_id\t\n";
@@ -1567,7 +1567,7 @@ sub validate_mage(){
   $self->log("Validating mage file:\t".$self->get_def('mage_xml_file'));
 
 
-  my (%echips, %bio_reps, %tech_reps, @log);
+  my (%echips, @log);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue');
   my $vsn_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('VSN_GLOG');
 
@@ -1580,7 +1580,12 @@ sub validate_mage(){
   #for the exp_chip result sets, causing the roll back bug
 
   if(! $rset){
-	$rset = $self->db->get_ResultSetAdaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
+	my @tmp = @{$self->db->get_ResultSetAdaptor->fetch_all_by_name_Analysis($self->name()."_IMPORT", $anal)};
+
+	if(scalar(@tmp) > 1){
+	  throw('Found more than one IMPORT ResultSet for '.$self->name().'_IMPORT with analysis '.$anal->logic_name());
+	}
+	$rset = shift @tmp;
   }
   
   if(! $rset){
@@ -1610,42 +1615,31 @@ sub validate_mage(){
 
 	  if($assay->isa('Bio::MAGE::BioAssay::PhysicalBioAssay')){#channel
 		$self->log('Validating PhysicalBioAssay "'.$assay->getName()."'\n");#hyb name(this is the file name for measured assays
-	
-		
 
 		my $bioassc = $assay->getBioAssayCreation();#This is a Hybridisation
-		#print "Got BioAssCreation $bioassc with name ".$bioassc->getName()."\n";#no name
-		
 		my $array = $bioassc->getArray();#this is an ArrayChip
-		
-
-
 		my $design_id = $array->getArrayDesign->getIdentifier();
 		my $chip_uid = $array->getArrayIdentifier();
-		
-		#print 'Chip UID is '.$chip_uid."\n";
-		#print 'Design ID is '.$design_id."\n";
+	
 
 		foreach my $echip(@{$rset->get_ExperimentalChips()}){
 		
 		  if($echip->unique_id() eq $chip_uid){
 			$self->log("Found ExperimentalChip:\t".$chip_uid);
 
-
-
-			#we need to log here based on replicates, no do this in NimblegenDefs validate replicates?
-
 			if(! exists $echips{$chip_uid}){
 			  $echips{$chip_uid} = {(
-									 total_biorep     => undef,
-									 total_biotechrep => undef,
+									 total_biorep            => undef,
+									 total_biotechrep        => undef,
 									 experimental_biorep     => undef,
 									 experimental_biotechrep => undef,
-									 total_dye  => undef,
-									 experimental_dye => undef,
+									 total_dye               => undef,
+									 experimental_dye        => undef,
+									 cell_type               => undef,
+									 feature_type            => undef,
 									)};
 			}
-		
+
 			#Validate ArrayChip
 			my ($achip) = @{$self->db->get_ArrayChipAdaptor->fetch_all_by_ExperimentalChips([$echip])};
 
@@ -1662,6 +1656,8 @@ sub validate_mage(){
 				#messy to pass regexs and populate correct echip hash attrs
 				#also messy to populate log
 				#keeping nested loop also prevents further obfuscation
+				#do we need to do all the defined checks, or maybe just the first one?
+				#Then we can skip all following warning?
 
 				foreach my $treat (@{$biomat->getTreatments()}) {
 				  #As there is effectively one more level of material extraction for the IP channel
@@ -1677,10 +1673,26 @@ sub validate_mage(){
 
 					  if (! defined $echips{$chip_uid}{'total_biotechrep'}) {
 						$echips{$chip_uid}{'total_biotechrep'} = $sbiomat->getName();
-					  }else{
-						push @log, "Found two TOTAL Channels on same chip with biotechreps:\t".$sbiomat->getName().
-						  ." and ".$echips{$chip_uid}{'total_biotechrep'};
 					  }
+					  else{
+						push @log, "Found two TOTAL Channels on same chip with biotechreps:\t".$sbiomat->getName().
+						  " and ".$echips{$chip_uid}{'total_biotechrep'};
+					  }
+					}else{#Experimental
+
+					  #get feature type from assay
+					  my @factor_values = @{$assay->getBioAssayFactorValues()};
+					  my ($feature_type);
+					  
+					  foreach my $fvalue(@factor_values){
+						
+						if($fvalue->getValue()->getCategory() eq 'Immunoprecipitate'){
+						  $feature_type = $fvalue->getName();
+						  $feature_type =~ s/anti\s*-\s*//;
+						  $feature_type =~ s/\s*antibody\s*//;
+						}
+					  }
+					  $echips{$chip_uid}{'feature_type'} = $feature_type;
 					}
 
 					foreach my $ttreat (@{$sbiomat->getTreatments()}) {
@@ -1689,14 +1701,15 @@ sub validate_mage(){
 						my $tbiomat = $tsrc_biomat->getBioMaterial();
 						#SOM0035_BR1_TR2     #Extract (exp)
 						#SOM0035_BR1              #Sample (total)
-						
+									   	
 						if ($tbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/) { #experimental
 						  
 						  if (! defined $echips{$chip_uid}{'experimental_biotechrep'}) {
 							$echips{$chip_uid}{'experimental_biotechrep'} = $tbiomat->getName();
-						  }else{
+						  }
+						  else{
 							push @log, "Found two EXPERIMENTAL Channels on same chip with biotechreps:\t".$tbiomat->getName().
-							  ." and ".$echips{$chip_uid}{'experimental_biotechrep'};
+							  " and ".$echips{$chip_uid}{'experimental_biotechrep'};
 						  }
 						
 						  my $dye = $biomat->getLabels()->[0]->getName();
@@ -1712,31 +1725,15 @@ sub validate_mage(){
 							  }
 							}
 						  }
-						
-						  #decesnd last level to get exp biorep
-						  foreach my $ftreat(@{$tbiomat->getTreatments()}){
-							
-							foreach my $fsrc_biomat(@{$ftreat->getSourceBioMaterialMeasurements()}){
-							  my $fbiomat = $fsrc_biomat->getBioMaterial();
-							  
-							  if(! defined $echips{$chip_uid}{'experimental_biorep'}){
-								#This must be control channel
-								$echips{$chip_uid}{'experimental_biorep'} = $fbiomat->getName();
-							  }else{
-								push @log, "Found two Experimental Channels on same chip with bioreps:\t".$fbiomat->getName().
-								  ." and ".$echips{$chip_uid}{'experimental_biorep'};
-							  }
-							}
-						  }
 						} 
 						else { #control
 											  
 						  if (! defined $echips{$chip_uid}{'total_biorep'}) {
-							#This must be control channel
 							$echips{$chip_uid}{'total_biorep'} = $tbiomat->getName();
-						  }else{
+						  }
+						  else{
 							push @log, "Found two TOTAL Channels on same chip with biotechreps:\t".$tbiomat->getName().
-							  ." and ".$echips{$chip_uid}{'total_biorep'};
+							  " and ".$echips{$chip_uid}{'total_biorep'};
 						  }
 						  
 						  my $dye = $biomat->getLabels()->[0]->getName();
@@ -1747,7 +1744,8 @@ sub validate_mage(){
 							
 							  if (uc($dye) ne uc($chan->dye())) {
 								push @log, "TOTAL channel dye mismatch:\tMAGE = ".uc($dye).' vs DB '.uc($chan->dye);
-							  } else {
+							  } 
+							  else {
 								$echips{$chip_uid}{'total_dye'} = uc($dye);
 							  }
 							}
@@ -1756,6 +1754,60 @@ sub validate_mage(){
 						#could do one more iteration and get Source and FeatureType?
 						#we should really extend this, and then update the EC cell_type and feature_types
 						#these features might not be biotmats tho...need to check
+
+
+						foreach my $ftreat (@{$tbiomat->getTreatments()}) {
+									  
+						  foreach my $fsrc_biomat (@{$ftreat->getSourceBioMaterialMeasurements()}) {
+							my $fbiomat = $fsrc_biomat->getBioMaterial();
+							#EXPERIMENTAL - biorep 
+							#TOTAL        - source/cell type
+							my $cell_type;
+
+							if($fbiomat->getName() =~ /BR[0-9]+$/){#EXPERIMETNAL
+							
+							  if(! defined $echips{$chip_uid}{'experimental_biorep'}){
+								$echips{$chip_uid}{'experimental_biorep'} = $fbiomat->getName();
+							  }
+							  else{
+								push @log, "Found two Experimental Channels on same chip with bioreps:\t".$fbiomat->getName().
+								  " and ".$echips{$chip_uid}{'experimental_biorep'};
+							  }
+
+
+							  #last treatment/measurement/biomat level should go here
+							  #as TOTAL channel does not have another level and will fail
+							  foreach my $xtreat (@{$fbiomat->getTreatments()}) {
+								
+								foreach my $xsrc_biomat (@{$xtreat->getSourceBioMaterialMeasurements()}) {
+								  my $xbiomat = $xsrc_biomat->getBioMaterial();
+								  
+								  foreach my $char(@{$xbiomat->getCharacteristics()}){
+									$cell_type = $char->getValue() if($char->getCategory() eq 'CellType');
+								  }
+								}
+							  }
+
+							}else{#this should be BioSource
+							  #which should have CellType as characteristic
+							  #we could change tab2mage and have this as a factor value, 
+							  #but don't want to start messing with "standard" format
+						
+							  foreach my $char(@{$fbiomat->getCharacteristics()}){
+								$cell_type = $char->getValue() if($char->getCategory() eq 'CellType');
+							  }
+							}
+						
+							#can have cell_type validation here
+							if(! defined $echips{$chip_uid}{'cell_type'}){
+							  $echips{$chip_uid}{'cell_type'} = $cell_type;
+							}
+							elsif( $echips{$chip_uid}{'cell_type'} ne $cell_type){
+							  push @log, "Found Channels on same chip (${chip_uid}) with different cell types:\t".
+								$cell_type." and ".$echips{$chip_uid}{'cell_type'};
+							}
+						  }
+						}
 					  }
 					}
 				  }
@@ -1764,56 +1816,142 @@ sub validate_mage(){
 			}
 		  }						#end of echip
 		}						#end of foreach echip
-
-		#if(! exists $echips{$chip_uid}){
-		#  push @log, "No ExperimentalChip found for MAGE entry:\t${chip_uid}";
-		#}
 	  }							#end of physbioassay	
 	}							#end of foreach assay
   }								#end of foreach exp
 
 
 
+  #we should fail here with log before we update the result sets
 
-  #Vendor specific replicate validation
-  $self->validate_and_update_replicates(\%echip, \@log);
+   #we need to build rep names
+  #we're currently using sample labels, in the tab2mage file
+  #altho' previous sets have been using exp name
+  #these have been manually patched afterwards
+
+  #More desirable to have exp name as rset name, but no way of doing BR validation
+  #based on sample label, if we don't have it in the tab2mage
+  #if we change it in the DB then we need to update the tab2mage
+
+  #no way to do this when generating tab2mage as the user hasn't yet defined the reps
+  #we could just make reps based on sample labels
+  #then we just assume that alterations made by the user are correct
+  #as we can no longer validate using sample labels
+  #can still validate using cell/feature type
+
+  #no longer need vendor specific validation as this will be done in tab2mage generation
 
 
-  #Further validation and build replicates sets
+  #We need to validate reps here
+  #the update ec records as appropriate and then create rsets
+
+  my (%bio_reps, %tech_reps);
+  my $ct_adaptor = $self->db->get_CellTypeAdaptor();
+  my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
+ 
   foreach my $echip (@{$rset->get_ExperimentalChips()}) {
-	
+
+	my ($biorep, $biotechrep);
+
 	if (! exists $echips{$echip->unique_id()}) {
 	  push @log, "No MAGE entry found for ExperimentalChip:\t".$echip->unique_id();
-	} else {
-	  
-	  my $biorep = $echips{$echip->unique_id()}{'biorep'};
-	  my $biotechrep = $echips{$echip->unique_id()}{'biotechrep'};
+	} 
+	else {
 
-	  if (! defined $biotechrep) {
-		push @log, 'ExperimentalChip('.$echip->unique_id().') Extract field do not meet naming convention(SAMPLE_BRN_TRN)';
-	  }							#! defined biorep? will never occur at present
-	  elsif ($biotechrep !~ /$biorep/) {
-		push @log, "Found Extract(techrep) vs Sample(biorep) naming mismatch\t${biotechrep}\tvs$biorep";
-	  } elsif (! $echips{$echip->unique_id()}{'experimental_dye'}) {
-		push @log, "No EXPERIMENTAL channel found for ExperimentalChip:\t".$echip->unique_id();
-	  } elsif ( ! $echips{$echip->unique_id()}{'total_dye'}) {
-		push @log, "No TOTAL channel found for ExperimentalChip:\t".$echip->unique_id();
+	  foreach my $chan_type('total', 'experimental'){
+		
+		$biorep = $echips{$echip->unique_id()}{$chan_type.'_biorep'};
+		$biotechrep = $echips{$echip->unique_id()}{$chan_type.'_biotechrep'};
+
+		if (! defined $biotechrep) {
+		  push @log, 'ExperimentalChip('.$echip->unique_id().') Extract field do not meet naming convention(SAMPLE_BRN_TRN)';
+		}							#! defined biorep? will never occur at present
+		elsif ($biotechrep !~ /$biorep/) {
+		  push @log, "Found Extract(techrep) vs Sample(biorep) naming mismatch\t${biotechrep}\tvs$biorep";
+		} 
+		
+		if ( ! $echips{$echip->unique_id()}{$chan_type.'_dye'}) {
+		  push @log, "No ".uc($chan_type)." channel found for ExperimentalChip:\t".$echip->unique_id();
+		}
+
 	  }
-	  #don't really need this as this will be picked up by the dye mismatch test
-	  #elsif($echips{$echip->unique_id()}{'experimental_dye'} eq $echips{$echip->unique_id()}{'total_dye'}){
-	  #	push @log, "Channel dye duplication got ExperimentalChip:\t".$echip->unique_id();
-	  # }
-	  else {
-		push @{$tech_reps{$biotechrep}}, $echip->unique_id();
-		push @{$bio_reps{$biorep}}, $echip->unique_id();	
+
+	  #Is this is really implicit in the test above
+	  if($echips{$echip->unique_id()}{'experimental_biorep'} ne $echips{$echip->unique_id()}{'total_biorep'}){
+		push @log, "Found biorep mismatch between channels of ExperimentalChip ".$echip->unique_id().":\n".
+		  "\tEXPERIMENTAL\t".$echips{$echip->unique_id()}{'experimental_biorep'}."\tTOTAL\t".
+			$echips{$echip->unique_id()}{'total_biorep'};
+	  }
+
+	  #Is this is really implicit in the test above
+	  if($echips{$echip->unique_id()}{'experimental_biotechrep'} ne $echips{$echip->unique_id()}{'total_biotechrep'}){
+		push @log, "Found biotechrep mismatch between channels of ExperimentalChip ".$echip->unique_id().":\n".
+		  "\tEXPERIMENTAL\t".$echips{$echip->unique_id()}{'experimental_biotechrep'}."\tTOTAL\t".
+			$echips{$echip->unique_id()}{'total_biotechrep'};
+	  }
+
+		   
+	}
+
+
+	#Now we need to validate ec has same feature/cell type as other ecs in this br
+	#this does not handle import sets which ARE allowed to have same name but different types
+	
+	if(exists $bio_reps{$biorep}){
+
+	  if($bio_reps{$biorep}{'cell_type'}->name() ne  $echips{$echip->unique_id()}{'cell_type'}){
+		push @log, "Found CellType mismatch between $biorep and ExperimentalChip ".$echip->unique_id();
+	  }
+	  
+	  if($bio_reps{$biorep}{'feature_type'}->name() ne  $echips{$echip->unique_id()}{'feature_type'}){
+		push @log, "Found FeatureType mismatch between $biorep and ExperimentalChip ".$echip->unique_id();
+	  } 
+
+	}else{
+
+	  if(defined $echips{$echip->unique_id()}{'cell_type'}){
+
+		my $cell_type = $ct_adaptor->fetch_by_name($echips{$echip->unique_id()}{'cell_type'});
+
+		if(! defined $cell_type){
+		  push @log, 'CellType '.$echips{$echip->unique_id()}{'cell_type'}.' does not exist in the database, please use the import_type.pl script';
+		}else{
+		  $bio_reps{$biorep}{'cell_type'} = $cell_type;
+		  $tech_reps{$biotechrep}{'cell_type'} = $cell_type;
+		}
+	  }else{
+		warn "No CellType specified for ExperimentalChip:\t".$echip->unique_id()."\n";
+	  }
+
+
+	  if(defined $echips{$echip->unique_id()}{'feature_type'}){
+		my $feature_type = $ft_adaptor->fetch_by_name($echips{$echip->unique_id()}{'feature_type'});
+
+		if(! defined $feature_type){
+		  push @log, 'FeatureType '.$echips{$echip->unique_id()}{'feature_type'}.' does not exist in the database, please use the import_type.pl script';
+		}
+		else{
+
+		  warn "setting featuretype for $biorep to $feature_type ". $feature_type->name();
+
+		  $bio_reps{$biorep}{'feature_type'} = $feature_type;
+		  $tech_reps{$biotechrep}{'feature_type'} = $feature_type;
+		}
+	  }else{
+		warn "No FeatureType specified for ExperimentalChip:\t".$echip->unique_id()."\n";
 	  }
 	}
+
+	push @{$tech_reps{$biotechrep}{'echips'}}, $echip->unique_id();
+	push @{$bio_reps{$biorep}{'echips'}}, $echip->unique_id();	
   }
+  
+
 
 
   if (@log) {
-	$self->log("MAGE VALIATION REPORT\n\t".join("\n\t", @log));
-	throw("MAGE VALIDATION FAILED\nPlease correct tabe2mage file and try again:\t".$self->get_def('tab2mage_file'));
+	$self->log("MAGE VALIATION REPORT\n\t".join("\n::\t", @log));
+	throw("MAGE VALIDATION FAILED\nPlease correct tab2mage file and try again:\t".$self->get_def('tab2mage_file'));
   } else {
 	$self->log('MAGE VALDIATION SUCCEEDED');
   }
@@ -1829,36 +1967,53 @@ sub validate_mage(){
   #fetch by exp and rset name?
   #we don't have a unique key on this 
 
+
+  #This needs to update and split the import/top level sets so they are of same types
+
+
+  #update ec type here as we have ec context
+  #careful not to update multiple times, just once for each ec
+  my $eca = $self->db->get_ExperimentalChipAdaptor();
+
   foreach my $echip (@{$rset->get_ExperimentalChips()}) {
-	
+	my ($cell_type, $feature_type);
 
 	#Set biorep info and rset
 	foreach my $biorep (keys %bio_reps){
 
-	  foreach my $chip_uid(@{$bio_reps{$biorep}}){
+	  foreach my $chip_uid(@{$bio_reps{$biorep}{'echips'}}){
 
 		if($chip_uid eq $echip->unique_id()){
 		  $echip->biological_replicate($biorep);
+		  $cell_type = $bio_reps{$biorep}{'cell_type'};
+		  $feature_type = $bio_reps{$biorep}{'feature_type'};
 
 		  if(! defined $rsets{$biorep}){
+			
 			$rsets{$biorep} = Bio::EnsEMBL::Funcgen::ResultSet->new
 			  (
-			   -NAME       => $biorep,#this may not be unique, prepend with exp name? Force method to use Experiment_and_name?
-			   -ANALYSIS   => $rset->analysis(),
-			   -TABLE_NAME => 'experimental_chip',
+			   -NAME         => $biorep,#this may not be unique, prepend with exp name? Force method to use Experiment_and_name?
+			   -ANALYSIS     => $rset->analysis(),
+			   -TABLE_NAME   => 'experimental_chip',
+			   -FEATURE_TYPE => $feature_type,
+			   -CELL_TYPE    => $cell_type,
 			  );
 		  }
 		  
 		  $rsets{$biorep}->add_table_id($echip->dbID(), $rset->get_chip_channel_id($echip->dbID()));
 		}
-	  }
+	  }		
 	}
+
+	#reset echip types
+	$echip->feature_type($feature_type);
+	$echip->cell_type($cell_type);
 
 	
 	#set tech rep info and rset
 	foreach my $techrep(keys %tech_reps){
 	  
-	  foreach my $chip_uid(@{$tech_reps{$techrep}}){
+	  foreach my $chip_uid(@{$tech_reps{$techrep}{'echips'}}){
 		
 		if($chip_uid eq $echip->unique_id()){
 		  $echip->technical_replicate($techrep);
@@ -1869,19 +2024,81 @@ sub validate_mage(){
 			   -NAME       => $techrep,#this may not be unique, prepend with exp name? Force method to use Experiment_and_name?
 			   -ANALYSIS   => $rset->analysis(),
 			   -TABLE_NAME => 'experimental_chip',
+			   -FEATURE_TYPE => $tech_reps{$techrep}{'feature_type'},
+			   -CELL_TYPE    => $tech_reps{$techrep}{'cell_type'},
 			  );
 		  }
-		  
 		  $rsets{$techrep}->add_table_id($echip->dbID(), $rset->get_chip_channel_id($echip->dbID()));
 		}
 	  }
 	}
 
-	$echip->adaptor->update_replicate_info($echip);#store rep info
+	$echip->adaptor->update_replicate_types($echip);#store rep info
+  }
+
+  #generate new top level sets here based on br type combos
+  #we risk duplicating sets here if import set is set to one cell/featuretype
+  #duplicate anyway, as import is really just for easy tracking of all chips during import
+
+  my %toplevel_sets;
+  my $toplevel_cnt = 1;
+  #use obj ref rather than name here to avoid calling name on unblessed ref
+  #unblessed ref should give null which will be valid for what we're doing here methinks
+
+  foreach my $new_rset(values %rsets){
+	
+	my $ftype_name = (defined $new_rset->{'feature_type'}) ? $new_rset->{'feature_type'}->name() : undef;
+	my $ctype_name = (defined $new_rset->{'cell_type'}) ? $new_rset->{'cell_type'}->name() : undef;
+
+	if(! exists $toplevel_sets{$ftype_name}){
+	  $toplevel_sets{$ftype_name} = {};
+	  $toplevel_sets{$ftype_name}{'feature_type'} = $new_rset->{'feature_type'};
+	}
+
+
+
+	if(! exists $toplevel_sets{$ftype_name}{$ctype_name}){
+	  $toplevel_sets{$ftype_name}{$ctype_name}{'cell_type'} = $new_rset->{'cell_type'};
+	  $toplevel_sets{$ftype_name}{$ctype_name}{'rsets'} = [$new_rset];
+	}else{
+	  push @{$toplevel_sets{$ftype_name}{$ctype_name}{'rsets'}}, $new_rset;
+	}
   }
 
 
-  #Store new tech and biol rsets
+
+  #build toplevel sets for each feature/cell type combo using constituent rsets
+  foreach my $feature_type(keys %toplevel_sets){
+	
+	foreach my $cell_type(keys %{$toplevel_sets{$feature_type}}){
+
+	  #we need to give these a different key so we're not overwriting in the rset hash
+	  $rsets{$self->experiment->name().'_'.$toplevel_cnt} = Bio::EnsEMBL::Funcgen::ResultSet->new
+		(
+		 -NAME       => $self->experiment->name(),
+		 -ANALYSIS   => $rset->analysis(),
+		 -TABLE_NAME => 'experimental_chip',
+		 -FEATURE_TYPE => $toplevel_sets{$feature_type}{'feature_type'},
+		 -CELL_TYPE    => $toplevel_sets{$feature_type}{'cell_type'},
+		);
+
+	  #add consituent table ids
+	  foreach my $new_rset(@{$toplevel_sets{$feature_type}{$cell_type}{'rsets'}}){
+		
+		foreach my $ec_id(@{$new_rset->table_ids()}){
+
+		  #Only add it if it has not already been added
+		  if(!  $rsets{$self->experiment->name().'_'.$toplevel_cnt}->get_chip_channel_id($ec_id)){
+			$rsets{$self->experiment->name().'_'.$toplevel_cnt}->add_table_id($ec_id, $new_rset->get_chip_channel_id($ec_id));
+		  }
+		}
+	  }
+	  $toplevel_cnt++;
+	}
+  }
+
+
+  #Store new tech, biol and toplevel type rsets
   foreach my $new_rset(values %rsets){
 	$rset->adaptor->store($new_rset);
   }
@@ -2637,7 +2854,15 @@ sub get_import_ResultSet{
 	}
   
 	if (( ! $rset) && @new_chip_channels) {
-	  $rset = $result_adaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
+	  my(@tmp) = @{$result_adaptor->fetch_all_by_name_Analysis($self->name()."_IMPORT", $anal)};
+
+	  if(scalar(@tmp) > 1){
+		throw('Found more than one IMPORT ResultSet for '.$self->name().'_IMPORT with analysis '.$anal->logic_name());
+	  }
+
+	  $rset = shift @tmp;
+
+
 	  #do we need to throw here if not recovery?
 	  #what if we want the import result set elsewhere during the first import?
 	  
@@ -2667,6 +2892,8 @@ sub get_import_ResultSet{
 		   -analysis   => $anal,
 		   -table_name => $table_name,
 		   -name       => $self->name()."_IMPORT",
+		   -feature_type => $self->feature_type(),
+		   -cell_type    => $self->cell_type(),
 		  );
 		
 		($rset) = @{$result_adaptor->store($rset)};
