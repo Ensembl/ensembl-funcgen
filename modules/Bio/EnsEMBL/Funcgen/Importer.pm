@@ -1965,7 +1965,11 @@ sub validate_mage(){
   #we also need to build the tech rep results sets(not displayable)
   #do we need to have result sets for each biorep too?
   #update ExperimentalChip replicate info
-  my %rsets;
+  my (%rsets);
+  my %types = (
+			   feature => {},
+			   cell    => {},
+			  );
 
 
   warn "We need to protect against duplicating these replicate result sets";
@@ -1974,7 +1978,7 @@ sub validate_mage(){
 
 
   #This needs to update and split the import/top level sets so they are of same types
-
+  warn "We need to update the import sets if we have more than one feature or cell type, set type ids to NULL";
 
   #update ec type here as we have ec context
   #careful not to update multiple times, just once for each ec
@@ -2003,6 +2007,10 @@ sub validate_mage(){
 			   -FEATURE_TYPE => $feature_type,
 			   -CELL_TYPE    => $cell_type,
 			  );
+
+			#record cell and feature types
+			$types{'feature'}{$feature_type->name()} = 1;
+			$types{'cell'}{$cell_type->name()} = 1;
 		  }
 		  
 		  $rsets{$biorep}->add_table_id($echip->dbID(), $rset->get_chip_channel_id($echip->dbID()));
@@ -2041,14 +2049,25 @@ sub validate_mage(){
 	$echip->adaptor->update_replicate_types($echip);#store rep info
   }
 
+  #Clean import sets type fields if we have more than one in the experiment
+  if(scalar keys %{$types{'feature'}} >1){
+
+
+
+  }
+
+  if(scalar keys %{$types{'cell'}} >1){
+
+  }
+
+
   #generate new top level sets here based on br type combos
   #we risk duplicating sets here if import set is set to one cell/featuretype
   #duplicate anyway, as import is really just for easy tracking of all chips during import
 
   my %toplevel_sets;
   my $toplevel_cnt = 1;
-  #use obj ref rather than name here to avoid calling name on unblessed ref
-  #unblessed ref should give null which will be valid for what we're doing here methinks
+  #could tidy up toplevel_sets implmentation
 
   foreach my $new_rset(values %rsets){
 	
@@ -2073,9 +2092,11 @@ sub validate_mage(){
 
 
   #build toplevel sets for each feature/cell type combo using constituent rsets
-  foreach my $feature_type(keys %toplevel_sets){
+  foreach my $ftype_name(keys %toplevel_sets){
 	
-	foreach my $cell_type(keys %{$toplevel_sets{$feature_type}}){
+	foreach my $ctype_name(keys %{$toplevel_sets{$ftype_name}}){
+	  
+	  next if $ctype_name eq 'feature_type';#skip feature type
 
 	  #we need to give these a different key so we're not overwriting in the rset hash
 	  $rsets{$self->experiment->name().'_'.$toplevel_cnt} = Bio::EnsEMBL::Funcgen::ResultSet->new
@@ -2083,12 +2104,12 @@ sub validate_mage(){
 		 -NAME       => $self->experiment->name(),
 		 -ANALYSIS   => $rset->analysis(),
 		 -TABLE_NAME => 'experimental_chip',
-		 -FEATURE_TYPE => $toplevel_sets{$feature_type}{'feature_type'},
-		 -CELL_TYPE    => $toplevel_sets{$feature_type}{'cell_type'},
+		 -FEATURE_TYPE => $toplevel_sets{$ftype_name}{'feature_type'},
+		 -CELL_TYPE    => $toplevel_sets{$ftype_name}{$ctype_name}{'cell_type'},
 		);
 
 	  #add consituent table ids
-	  foreach my $new_rset(@{$toplevel_sets{$feature_type}{$cell_type}{'rsets'}}){
+	  foreach my $new_rset(@{$toplevel_sets{$ftype_name}{$ctype_name}{'rsets'}}){
 		
 		foreach my $ec_id(@{$new_rset->table_ids()}){
 
@@ -2108,6 +2129,8 @@ sub validate_mage(){
 	$rset->adaptor->store($new_rset);
   }
 
+
+  exit;
 
   my $xml_file = open_file($self->get_def('mage_xml_file'));
 
