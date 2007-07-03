@@ -1899,11 +1899,19 @@ sub validate_mage(){
 	
 	if(exists $bio_reps{$biorep}){
 
-	  if($bio_reps{$biorep}{'cell_type'}->name() ne  $echips{$echip->unique_id()}{'cell_type'}){
+
+	  if(! defined $bio_reps{$biorep}{'cell_type'}){
+		push @log, "Found undefined CellType for biorep $biorep";
+	  }
+	  elsif($bio_reps{$biorep}{'cell_type'}->name() ne  $echips{$echip->unique_id()}{'cell_type'}){
 		push @log, "Found CellType mismatch between $biorep and ExperimentalChip ".$echip->unique_id();
 	  }
 	  
-	  if($bio_reps{$biorep}{'feature_type'}->name() ne  $echips{$echip->unique_id()}{'feature_type'}){
+	  
+	  if(! defined $bio_reps{$biorep}{'feature_type'}){
+		push @log, "Found undefined FeatureType for biorep $biorep";
+	  }
+	  elsif($bio_reps{$biorep}{'feature_type'}->name() ne  $echips{$echip->unique_id()}{'feature_type'}){
 		push @log, "Found FeatureType mismatch between $biorep and ExperimentalChip ".$echip->unique_id();
 	  } 
 
@@ -1931,9 +1939,6 @@ sub validate_mage(){
 		  push @log, 'FeatureType '.$echips{$echip->unique_id()}{'feature_type'}.' does not exist in the database, please use the import_type.pl script';
 		}
 		else{
-
-		  warn "setting featuretype for $biorep to $feature_type ". $feature_type->name();
-
 		  $bio_reps{$biorep}{'feature_type'} = $feature_type;
 		  $tech_reps{$biotechrep}{'feature_type'} = $feature_type;
 		}
