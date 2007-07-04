@@ -471,9 +471,9 @@ CREATE TABLE `chip_channel` (
 -- Table structure for table `predicted_feature`
 --
 
-DROP TABLE IF EXISTS `predicted_feature`;
-CREATE TABLE `predicted_feature` (
-  `predicted_feature_id` int(10) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `annotated_feature`;
+CREATE TABLE `annotated_feature` (
+  `annotated_feature_id` int(10) unsigned NOT NULL auto_increment,
   `seq_region_id` int(10) unsigned NOT NULL default '0',
   `seq_region_start` int(10) unsigned NOT NULL default '0',
   `seq_region_end` int(10) unsigned NOT NULL default '0',
@@ -482,7 +482,7 @@ CREATE TABLE `predicted_feature` (
   `display_label` varchar(60) default NULL,
   `score` double default NULL,
   `feature_set_id` int(10) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`predicted_feature_id`),
+  PRIMARY KEY  (`annotated_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `feature_set_idx` (`feature_set_id`)	  
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
@@ -722,8 +722,8 @@ CREATE TABLE `meta_coord` (
 --- Set up default meta coord entries...this should be done in import
 -- Change max lenght of oligo?
 
-insert into meta_coord values("predicted_feature", 1, 5000);
-insert into meta_coord values("probe_feature", 1, 2000);
+insert into meta_coord values("annotated_feature", 1, 5000);
+insert into meta_coord values("annotated_feature", 1, 2000);
 
 --
 -- Table structure for table `coord_system`
@@ -772,6 +772,10 @@ CREATE TABLE `seq_region` (
   PRIMARY KEY  (`seq_region_id`, `name`, `schema_build`),
   KEY `coord_system_id` (`coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1; 
+
+
+
+
 
 -- it maybe possible to have 2 seq_regions on different levels with the same name
 -- there fore have to use core cs id in primary key
