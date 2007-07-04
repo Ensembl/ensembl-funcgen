@@ -80,6 +80,10 @@ alter table regulatory_factor drop type;
 -- need to finish off the reg feature stuff, but doing cs stuff first
 
 
+
+--- Sort out the coord_system mess ---
+--- This is entirely dependent on the fact (but not rule, hence the change) that seq_region_ids have been stable between releases with the same assembly version
+
 -- Remove spurious cs
 delete from coord_system where coord_system_id =2459;
 
@@ -242,9 +246,13 @@ CREATE TABLE `tmp1_seq_region` (
 
 insert into tmp1_seq_region (select sr1.seq_region_id as old_id, sr.seq_region_id as new_id, sr.coord_system_id from (select seq_region_id, name, coord_system_id from tmp_seq_region group by name) sr, tmp_seq_region sr1 where sr.coord_system_id=sr1.coord_system_id and sr.name=sr1.name);
 
-
+-- create new nr seq_region IDs corresponding to multi-element primary key
 update seq_region sr, tmp1_seq_region tsr set sr.seq_region_id=tsr.new_seq_region_id where sr.coord_system_id=tsr.coord_system_id and sr.seq_region_id=.tsr.old_seq_region_id;
 
+
+-- update feature tables accordingly
+update predicted_feature pf, seq_region sr set pf.seq_region_id=sr.seq_region_id where pf.seq_region_id=sr.core_seq_region_id and sr.coord_system_id=pf.coord_system_id;
+update probe_feature pf, seq_region sr set pf.seq_region_id=sr.seq_region_id where pf.seq_region_id=sr.core_seq_region_id and sr.coord_system_id=pf.coord_system_id;
 
 --finally clean up the tables
 drop table tmp_seq_region;
