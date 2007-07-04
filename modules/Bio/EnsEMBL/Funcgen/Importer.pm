@@ -2048,7 +2048,7 @@ sub validate_mage(){
 	$echip->adaptor->update_replicate_types($echip);#store rep info
   }
 
-  $self->log("Created replicate ResultSets:\n::\t\t".join("\n::\t\t", map $_->name, values %rsets));
+  $self->log("Created replicate ResultSets:\n::\t\t\t\t\t\t".join("\n::\t\t\t\t\t\t", map $_->name, values %rsets));
 
 
   ### Reset/Update/Clean import sets type fields
