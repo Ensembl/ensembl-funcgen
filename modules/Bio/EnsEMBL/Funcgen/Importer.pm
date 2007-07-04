@@ -1982,6 +1982,7 @@ sub validate_mage(){
 
   #update ec type here as we have ec context
   #careful not to update multiple times, just once for each ec
+ 
   my $eca = $self->db->get_ExperimentalChipAdaptor();
 
   foreach my $echip (@{$rset->get_ExperimentalChips()}) {
@@ -2049,15 +2050,20 @@ sub validate_mage(){
 	$echip->adaptor->update_replicate_types($echip);#store rep info
   }
 
+  $self->log("Created replicate ResultSets:\n::\t\t".join("\n::\t\t", map $_->name, values %rsets));
+
+
   #Clean import sets type fields if we have more than one in the experiment
   if(scalar keys %{$types{'feature'}} >1){
-
-
-
+	$self->log('Resetting IMPORT FeatureType to NULL for multi-FeatureType Experiment');
+	my $sql = "UPDATE result_set set feature_type_id='NULL' where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
+	$self->db->dbc->do($sql);	
   }
 
   if(scalar keys %{$types{'cell'}} >1){
-
+	$self->log('Resetting IMPORT CellType to NULL for multi-CellType Experiment');
+	my $sql = "UPDATE result_set set cell_type_id='NULL' where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
+	$self->db->dbc->do($sql);
   }
 
 
@@ -2098,6 +2104,8 @@ sub validate_mage(){
 	  
 	  next if $ctype_name eq 'feature_type';#skip feature type
 
+	  $self->log("Creating toplevel ResultSet for:\t".$self->experiment->name()."\t${ftype_name}\t${ctype_name}");
+
 	  #we need to give these a different key so we're not overwriting in the rset hash
 	  $rsets{$self->experiment->name().'_'.$toplevel_cnt} = Bio::EnsEMBL::Funcgen::ResultSet->new
 		(
@@ -2123,7 +2131,7 @@ sub validate_mage(){
 	}
   }
 
-
+  $self->log('Storing ResultSets');
   #Store new tech, biol and toplevel type rsets
   foreach my $new_rset(values %rsets){
 	$rset->adaptor->store($new_rset);
