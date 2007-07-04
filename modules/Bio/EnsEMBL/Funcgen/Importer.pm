@@ -1974,12 +1974,10 @@ sub validate_mage(){
 
   warn "We need to protect against duplicating these replicate result sets";
   #fetch by exp and rset name?
-  #we don't have a unique key on this 
+  #any set with a NULL value can be duplicated
 
 
   #This needs to update and split the import/top level sets so they are of same types
-  warn "We need to update the import sets if we have more than one feature or cell type, set type ids to NULL";
-
   #update ec type here as we have ec context
   #careful not to update multiple times, just once for each ec
  
@@ -2010,8 +2008,8 @@ sub validate_mage(){
 			  );
 
 			#record cell and feature types
-			$types{'feature'}{$feature_type->name()} = 1;
-			$types{'cell'}{$cell_type->name()} = 1;
+			$types{'feature'}{$feature_type->name()} = $feature_type;
+			$types{'cell'}{$cell_type->name()} = $cell_type;
 		  }
 		  
 		  $rsets{$biorep}->add_table_id($echip->dbID(), $rset->get_chip_channel_id($echip->dbID()));
@@ -2053,21 +2051,54 @@ sub validate_mage(){
   $self->log("Created replicate ResultSets:\n::\t\t".join("\n::\t\t", map $_->name, values %rsets));
 
 
-  #Clean import sets type fields if we have more than one in the experiment
+  ### Reset/Update/Clean import sets type fields
+  my $sql;
+
   if(scalar keys %{$types{'feature'}} >1){
 	$self->log('Resetting IMPORT FeatureType to NULL for multi-FeatureType Experiment');
-	my $sql = "UPDATE result_set set feature_type_id='NULL' where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
-	$self->db->dbc->do($sql);	
+	$sql = "UPDATE result_set set feature_type_id='NULL' where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
+
+  }else{
+	my ($ftype) = values %{$types{'feature'}};
+
+	if(! defined $rset->feature_type()){
+	  $self->log('Updating IMPORT FeatureType to '.$ftype->name());
+	  $sql = "UPDATE result_set set feature_type_id=".$ftype->dbID()." where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
+	}
+	elsif($rset->feature_type->dbID ne $ftype->dbID()){
+	  warn 'FeatureType mismatch between IMPORT sets('.$rset->feature_type->name().') vs meta sets('.$ftype->name.
+	  "\nUpdating to IMPORT to match meta";
+	  $self->log('WARNING: FeatureType mismatch.  Updating IMPORT FeatureType('.$rset->feature_type->name().') to match meta('.$ftype->name.')');
+	  $sql = "UPDATE result_set set feature_type_id=".$ftype->dbID()." where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
+
+	}
   }
+
+  $self->db->dbc->do($sql) if $sql;
+
+  undef $sql;
 
   if(scalar keys %{$types{'cell'}} >1){
 	$self->log('Resetting IMPORT CellType to NULL for multi-CellType Experiment');
 	my $sql = "UPDATE result_set set cell_type_id='NULL' where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
-	$self->db->dbc->do($sql);
+  }else{
+	my ($ctype) = values %{$types{'cell'}};
+
+	if(! defined $rset->cell_type()){
+	  $self->log('Updating IMPORT CellType to '.$ctype->name());
+	  $sql = "UPDATE result_set set cell_type_id=".$ctype->dbID()." where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
+	}
+	elsif($rset->cell_type->dbID ne $ctype->dbID()){
+	  warn 'CellType mismatch between IMPORT sets('.$rset->cell_type->name().') vs meta sets('.$ctype->name.
+	  "\nUpdating to IMPORT to match meta";
+	  $self->log('WARNING: FeatureType mismatch.  Updating IMPORT CellType('.$rset->cell_type->name().') to match meta('.$ctype->name.')');
+	  $sql = "UPDATE result_set set cell_type_id=".$ctype->dbID()." where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
+	}
   }
 
+  $self->db->dbc->do($sql) if $sql;
 
-  #generate new top level sets here based on br type combos
+  ### Generate new top level sets here based on br type combos
   #we risk duplicating sets here if import set is set to one cell/featuretype
   #duplicate anyway, as import is really just for easy tracking of all chips during import
 
@@ -2136,9 +2167,6 @@ sub validate_mage(){
   foreach my $new_rset(values %rsets){
 	$rset->adaptor->store($new_rset);
   }
-
-
-  exit;
 
   my $xml_file = open_file($self->get_def('mage_xml_file'));
 
