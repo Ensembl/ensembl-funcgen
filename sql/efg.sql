@@ -736,7 +736,7 @@ CREATE TABLE `coord_system` (
   `version` varchar(40) default NULL,
   `rank` int(11) NOT NULL default '0',
   `attrib` set('default_version','sequence_level') default NULL,
-  `schema_build` varchar(6) default NULL,
+  `schema_build` varchar(10) default NULL,
   `core_coord_system_id` int(10) NOT NULL, 
   PRIMARY KEY  (`coord_system_id`, `core_coord_system_id`, `schema_build`),
   KEY `name_version_idx` (`name`, `version`)
@@ -756,6 +756,35 @@ CREATE TABLE `coord_system` (
 --- put core_coord_system_id at end of primary key and have separate key for coord_system_id
 --- primary key name, schema_build, version, core_coord_system_id
 --- or could we jsut depend on the core keys confering data integrity and have key optimised for query
+
+
+--
+-- Table structure for table `seq_region`
+--
+
+DROP TABLE IF EXISTS `seq_region`;
+CREATE TABLE `seq_region` (
+  `seq_region_id` int(10) unsigned NOT NULL auto_increment,
+  `name` varchar(40) NOT NULL default '',
+  `coord_system_id` int(10) unsigned NOT NULL default '0',
+  `core_seq_region_id` int(10) unsigned NOT NULL default '0',
+  `schema_build` varchar(10) default NULL,
+  PRIMARY KEY  (`seq_region_id`, `name`, `schema_build`),
+  KEY `coord_system_id` (`coord_system_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1; 
+
+-- it maybe possible to have 2 seq_regions on different levels with the same name
+-- there fore have to use core cs id in primary key
+-- order of extra primary key members doesn't really matter as we'll never query on them?
+-- swapped order of ke to name coord_system_id, as we will probably want to query on name primarily
+-- why does core table have cs id key?
+
+-- Name is only required to enable us to add new seq_regions to the correct seq_region_id
+-- It will never be used to retrieve a slice as we do that via the core DB
+-- how are we going to use this when querying?
+-- basically pull back seq_region_id based schema_build and core_seq_region_id
+-- can we omit core_coord_system_id? As we have this info from the cs table.
+-- other keys?
 
 
 --- Further thoughts:

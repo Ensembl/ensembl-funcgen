@@ -153,7 +153,7 @@ sub new_fast {
 
 #get_raw_analysis_name
 #get_predicted_feature_analysis_name
-#set ResultFeatures and PredictedFeatures in hash keyed by analysis_name?
+#set ResultFeatures and AnnotatedFeatures in hash keyed by analysis_name?
 
 =head2 name
 
@@ -278,11 +278,11 @@ sub display_label {
 
 
 
-=head2 get_PredictedFeatures_by_Slice
+=head2 get_AnnotatedFeatures_by_Slice
 
-  Example    : my @features = @{$FeatureSet->get_PredictedFeaturesby_Slice($slice)};
-  Description: Retrieves all PredictedFeatures for this FeatureSet for a given Slice
-  Returntype : List ref containing PredictedFeatures;
+  Example    : my @features = @{$FeatureSet->get_AnnotatedFeaturesby_Slice($slice)};
+  Description: Retrieves all AnnotatedFeatures for this FeatureSet for a given Slice
+  Returntype : List ref containing AnnotatedFeatures;
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -290,15 +290,15 @@ sub display_label {
 =cut
 
 
-sub get_PredictedFeatures_by_Slice{
+sub get_AnnotatedFeatures_by_Slice{
   my ($self, $slice) = @_;
 
   #Could potentially return previous features for a different slice
   #  if(! $self->{'predicted_features'}){
-  #	  $self->{'predicted_features'} =  $self->adaptor->db->get_PredictedFeatureAdaptor->fetch__ResultFeatures_by_Slice($slice, 1);
+  #	  $self->{'predicted_features'} =  $self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch__ResultFeatures_by_Slice($slice, 1);
   #  }
 
-  return $self->adaptor->db->get_PredictedFeatureAdaptor->fetch_all_by_Slice_FeatureSet($slice, $self);
+  return $self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch_all_by_Slice_FeatureSet($slice, $self);
 }
 
 

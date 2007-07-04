@@ -22,7 +22,7 @@ my $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
 
 =head1 DESCRIPTION
 
-A DataSet object provides access to either or both raw results and PredictedFeatures
+A DataSet object provides access to either or both raw results and AnnotatedFeatures
 for a given experiment within a Slice, associated with set wide experimental meta data.
 This was aimed primarily at easing access to data via the web API by creating
 a wrapper class with convenience methods.  The focus of this class is to contain raw and
@@ -214,7 +214,7 @@ sub new {
 
 #get_raw_analysis_name
 #get_predicted_feature_analysis_name
-#set ResultFeatures and PredictedFeatures in hash keyed by analysis_name?
+#set ResultFeatures and AnnotatedFeatures in hash keyed by analysis_name?
 
 
 
