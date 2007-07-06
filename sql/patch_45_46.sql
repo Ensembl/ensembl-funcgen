@@ -252,6 +252,8 @@ update seq_region sr, tmp1_seq_region tsr set sr.seq_region_id=tsr.new_seq_regio
 
 -- update feature tables accordingly
 update predicted_feature pf, seq_region sr set pf.seq_region_id=sr.seq_region_id where pf.seq_region_id=sr.core_seq_region_id and sr.coord_system_id=pf.coord_system_id;
+
+-- this one takes 4hr+!
 update probe_feature pf, seq_region sr set pf.seq_region_id=sr.seq_region_id where pf.seq_region_id=sr.core_seq_region_id and sr.coord_system_id=pf.coord_system_id;
 
 --finally clean up the tables
@@ -272,7 +274,7 @@ CREATE TABLE `annotated_feature` (
   `display_label` varchar(60) default NULL,
   `score` double default NULL,
   `feature_set_id` int(10) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`anotated_feature_id`),
+  PRIMARY KEY  (`annotated_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `feature_set_idx` (`feature_set_id`)	  
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;

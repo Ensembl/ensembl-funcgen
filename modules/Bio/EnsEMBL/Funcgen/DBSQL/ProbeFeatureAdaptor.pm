@@ -419,12 +419,21 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
+	#remove this?
 	my $last_feature_id = -1;
+
+	#This has already been done by
+	#build seq_region_cache based on slice
+	#$self->build_seq_region_cache_by_Slice($slice);
+
 	FEATURE: while ( $sth->fetch() ) {
 		  #Need to build a slice adaptor cache here?
 		  #Would only ever want to do this if we enable mapping between assemblies??
 		  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 		  
+		#get core seq_region_id
+		$seq_region_id = $self->get_core_seq_region_id($seq_region_id);
+
 	  
 		  if($old_cs_id && ($old_cs_id != $cs_id)){
 			  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
@@ -439,9 +448,11 @@ sub _objs_from_sth {
 
 
 
-		# This assumes that features come out sorted by ID
-		next if ($last_feature_id == $probe_feature_id);
-		$last_feature_id = $probe_feature_id;
+		  # This assumes that features come out sorted by ID?
+		  # THis is not true as when have default sorts on seq_region_start for slice queries
+		  #Can we remove this as this is just removing duplicates?
+		  next if ($last_feature_id == $probe_feature_id);
+		  $last_feature_id = $probe_feature_id;
 
 		# Get the analysis object
 		my $analysis = $analysis_hash{$analysis_id} ||= $aa->fetch_by_dbID($analysis_id);

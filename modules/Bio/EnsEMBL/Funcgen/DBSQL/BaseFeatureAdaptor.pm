@@ -101,9 +101,12 @@ sub fetch_all_by_Slice_constraint {
 	return \@result;
   }
 
+  #build seq_region cache here once for entire query
+  $self->build_seq_region_cache_by_Slice($slice, $fg_cs);
+
+
   my @tables = $self->_tables;
   my (undef, $syn) = @{$tables[0]};
-  
 
   $constraint .= ' AND ' if $constraint;#constraint can be empty string
   $constraint .= " ${syn}.coord_system_id=".$fg_cs->dbID();
@@ -140,14 +143,7 @@ sub fetch_all_by_Slice_constraint {
   # same seq_region as original slice
 
   my $sr_id = $slice->get_seq_region_id();
-
-
-
   @proj = grep { $_->to_Slice->get_seq_region_id() != $sr_id } @proj;
-
-
-
-
   my $segment = bless([1,$slice->length(),$slice ],
                       'Bio::EnsEMBL::ProjectionSegment');
   push( @proj, $segment );
@@ -162,19 +158,14 @@ sub fetch_all_by_Slice_constraint {
   shift @ent_proj; # skip first
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
-
   
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
     my $offset = $seg->from_start();
     my $seg_slice  = $seg->to_Slice();
 
-
-    my $test = $seg_slice->coord_system()->dbID();
-
-    ###warn("_slice_fetchign with $seg_slice and contraint $constraint and coordsys $test");
-
     my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
+
 
     # if this was a symlinked slice offset the feature coordinates as needed
     if($seg_slice->name() ne $slice->name()) {
@@ -208,6 +199,66 @@ sub fetch_all_by_Slice_constraint {
   return \@result;
 }
 
+
+
+
+sub build_seq_region_cache_by_Slice{
+  my ($self, $slice, $fg_cs) = @_;
+
+  warn "fgcs is ".$fg_cs;
+
+
+  if(defined $fg_cs && !(ref($fg_cs) && $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem'))){
+	throw('Optional argument must be a Bio::EnsEMBL::Funcgen::CoordSystem');
+  }else{
+	$fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
+																$slice->coord_system->name(), 
+																$slice->coord_system->version()
+															   );
+  }
+
+  my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
+
+  my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where coord_system_id='.
+	$fg_cs->dbID().' and schema_build="'.$schema_build.'"';
+
+  $self->{'seq_region_cache'} = {};
+  $self->{'core_seq_region_cache'} = {};
+  %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+
+  #now reverse cache
+  
+  foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){
+	$self->{'core_seq_region_cache'}->{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
+  }
+
+  return;
+}
+
+
+sub get_seq_region_id_by_Slice{
+  my ($self, $slice) = @_;
+
+  if(! ($slice && ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
+	throw('You must provide a valid Bio::EnsEMBL::Slice');
+  }
+
+  my $sr_id;
+
+  if( $slice->adaptor() ) {
+	$sr_id = $slice->adaptor()->get_seq_region_id($slice);
+  } else {
+	$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+  }
+
+  return (exists $self->{'seq_region_cache'}->{$sr_id}) ? $self->{'seq_region_cache'}->{$sr_id} : undef;
+}
+
+sub get_core_seq_region_id{
+  my ($self, $fg_sr_id) = @_;
+
+  return $self->{'core_seq_region_cache'}->{$fg_sr_id};
+}
 
 =head2 _pre_store
 
@@ -303,14 +354,47 @@ sub _pre_store {
   my $mcc = $db->get_MetaCoordContainer();
   $mcc->add_feature_type($fg_cs, $tabname, $feature->length);
 
- # my $seq_region_id = $slice_adaptor->get_seq_region_id($slice);
-  my $seq_region_id = $slice->get_seq_region_id();
+
+  #build seq_region cache here once for entire query
+  $self->build_seq_region_cache_by_Slice($slice, $fg_cs);
+
+  #Now need to check whether seq_region is already stored
+  my $seq_region_id = $self->get_seq_region_id_by_Slice($slice);
+
+  if(! $seq_region_id){
+	#check whether we have an equivalent seq_region_id
+	my $sql = 'SELECT seq_region_id from seq_region where coord_system_id='.$fg_cs->dbID().
+	  ' and name="'.$slice->seq_region_name.'"';
+	$seq_region_id = $self->db->dbc->do($sql);
+
+	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
+
+	#No compararble seq_region
+	if(! $seq_region_id){
+	  $sql = 'INSERT into seq_region(name, coord_system_id, core_seq_region_id, schema_build) '.
+		'values("'.$slice->seq_region_name().'", '.$fg_cs->dbID().', '.$slice->get_seq_region_id().', "'.$schema_build.'")';
+	}else{#Add to comparable seq_region
+	  $sql = 'INSERT into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) '.
+		'values("'.$seq_region_id.', '.$slice->seq_region_name().'", '.$fg_cs->dbID().', '.$slice->get_seq_region_id().', "'.$schema_build.'")';
+	}
+
+	my $sth = $self->prepare($sql);
+	$sth->execute();
+	$seq_region_id =  $sth->{'mysql_insertid'};
+  }
+
+  
+  #my $seq_region_id = $slice->get_seq_region_id();
 
   #would never get called as we're not validating against a different core DB
   #if(!$seq_region_id) {
   #  throw('Feature is associated with seq_region which is not in this dnadb.');
   #}
+  
 
+  #why are returning seq_region id here..is thi snot just in the feature slice?
+  #This is actually essential as the seq_region_ids are not stored in the slice
+  #retrieved from slice adaptor
   return ($feature, $seq_region_id);
 }
 
@@ -326,8 +410,31 @@ sub _slice_fetch {
   my $slice_end    = $slice->end();
   my $slice_strand = $slice->strand();
   my $slice_cs     = $slice->coord_system();
-  my $slice_seq_region = $slice->seq_region_name();
-  my $slice_seq_region_id = $slice->get_seq_region_id();
+  #my $slice_seq_region = $slice->seq_region_name();
+
+
+  #### Here!!! We Need to translate the seq_regions IDs to efg seq_region_ids
+  #we need to fetch the seq_region ID based on the coord_system id and the name
+  #we don't want to poulate with the eFG seq_region_id, jsut the core one, as we need to maintain core info in the slice.
+  
+  #we need to cache the seq_region_id mappings for the coord_system and schema_build, 
+  #so we don't do it for every feature in a slice
+  #should we just reset it in temporarily in fetch above, other wise we lose cache between projections
+  #should we add seq_region cache to coord_system/adaptor?
+  #Then we can access it from here and never change the slice seq_region_id
+  #how are we accessing the eFG CS?  As we only have the core CS from the slice here?
+  #No point in having in eFG CS if we're just having to recreate it for everyquery
+  #CSA already has all CS's cached, so query overhead would be mininal
+  #But cache overhead for all CS seq_region_id caches could be quite large.
+  #we're going to need it in the _pre_store, so having it in the CS would be natural there
+  #can we just cache dynamically instead?
+  #we're still calling for csa rather than accessing from cache
+  #could we cache the csa in the base feature adaptor?
+  
+
+  
+
+  #my $slice_seq_region_id = $slice->get_seq_region_id();
 
   #get the synonym and name of the primary_table
   my @tabs = $self->_tables;
@@ -368,12 +475,15 @@ sub _slice_fetch {
 
       my $constraint = $orig_constraint;
 
-      my $sr_id;
-      if( $slice->adaptor() ) {
-	$sr_id = $slice->adaptor()->get_seq_region_id($slice);
-      } else {
-	$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
-      }
+      #my $sr_id;
+      #if( $slice->adaptor() ) {
+	  #$sr_id = $self->get_seq_region_id_by_Slice($slice->adaptor()->get_seq_region_id($slice));
+      #} else {
+	  #	$sr_id = $self->get_seq_region_id_by_Slice($self->db()->get_SliceAdaptor()->get_seq_region_id($slice));
+	  #  }
+
+	  my $sr_id = $self->get_seq_region_id_by_Slice($slice);
+
 
       $constraint .= " AND " if($constraint);
       $constraint .=
@@ -392,6 +502,9 @@ sub _slice_fetch {
       # features may still have to have coordinates made relative to slice
       # start
       $fs = _remap($fs, $mapper, $slice);
+
+
+	  warn "got ".scalar(@$fs). " features";
 
       push @features, @$fs;
     } 
@@ -498,7 +611,7 @@ sub _remap {
 
   my ($seq_region, $start, $end, $strand);
 
-  my $slice_seq_region_id = $slice->get_seq_region_id();
+  #my $slice_seq_region_id = $slice->get_seq_region_id();
   my $slice_seq_region = $slice->seq_region_name();
 
   foreach my $f (@$features) {
