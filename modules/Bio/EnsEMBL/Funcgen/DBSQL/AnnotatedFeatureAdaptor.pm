@@ -691,6 +691,35 @@ sub store{
   return \@pfs;
 }
 
+#re-written for non-standard feature table
+
+=head2 fetch_all_by_logic_name 
+
+  Arg [1] : string $logic_name the logic name of the type of features to obtain 
+  Example : $fs = $a->fetch_all_by_logic_name('foobar'); 
+  Description: Returns a listref of features created from the database. only 
+               features with an analysis of type $logic_name will be returned. 
+  Returntype : listref of Bio::EnsEMBL::SeqFeatures 
+  Exceptions : thrown if $logic_name 
+  Caller : General 
+  Status : Stable 
+
+=cut 
+
+sub fetch_all_by_logic_name { 
+  my $self = shift; 
+  my $logic_name = shift || throw( "Need a logic_name" ); 
+
+  my $constraint;
+  my $an = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name); 
+  $constraint = ' af.feature_set_id=fs.feature_set_id and fs.analysis_id = '.$an->dbID() if($an);
+
+  return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
+} 
+
+
+
+
 =head2 list_dbIDs
 
   Args       : None
