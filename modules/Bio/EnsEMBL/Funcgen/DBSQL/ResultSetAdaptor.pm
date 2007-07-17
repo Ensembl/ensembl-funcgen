@@ -662,13 +662,15 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #any result with the same cc_id will automatically be treated as a tech rep
 
   $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM result r, '.
-	'probe_feature pf, chip_channel cc WHERE cc.result_set_id = '.$rset->dbID();
+	'probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = '.$rset->dbID();
 
   $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
 
   $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
-	      ' AND r.probe_id=pf.probe_id'.
-		  ' AND pf.seq_region_id='.$slice->get_seq_region_id().
+	' AND r.probe_id=pf.probe_id'.
+	  ' AND pf.seq_region_id=sr.seq_region_id'.
+		' AND sr.core_seq_region_id ='.$slice->get_seq_region_id().
+		  ' AND sr.schema_build="'.$self->db->_get_schema_build($slice->adaptor->db()).'"'.
           ' AND pf.seq_region_end>='.$slice->start().
           ' AND pf.seq_region_start<='.$slice->end().
           ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place

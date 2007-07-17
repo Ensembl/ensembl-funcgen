@@ -83,6 +83,8 @@ sub fetch_all_by_Slice_constraint {
     throw("Bio::EnsEMBL::Slice argument expected.");
   }
 
+  warn "fetch by slice constraint $constraint";
+
   #add cs_id here to amke sure we're definitely getting
   #feature from the correct seq_region, as seq_region_ids can be re-used for
   #different seq_region between DB with different default assemblies
@@ -204,9 +206,6 @@ sub fetch_all_by_Slice_constraint {
 
 sub build_seq_region_cache_by_Slice{
   my ($self, $slice, $fg_cs) = @_;
-
-  warn "fgcs is ".$fg_cs;
-
 
   if(defined $fg_cs && !(ref($fg_cs) && $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem'))){
 	throw('Optional argument must be a Bio::EnsEMBL::Funcgen::CoordSystem');
@@ -375,7 +374,7 @@ sub _pre_store {
 		'values("'.$slice->seq_region_name().'", '.$fg_cs->dbID().', '.$slice->get_seq_region_id().', "'.$schema_build.'")';
 	}else{#Add to comparable seq_region
 	  $sql = 'INSERT into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) '.
-		'values("'.$seq_region_id.', '.$slice->seq_region_name().'", '.$fg_cs->dbID().', '.$slice->get_seq_region_id().', "'.$schema_build.'")';
+		'values('.$seq_region_id.', "'.$slice->seq_region_name().'", '.$fg_cs->dbID().', '.$slice->get_seq_region_id().', "'.$schema_build.'")';
 	}
 
 	my $sth = $self->prepare($sql);
@@ -459,8 +458,6 @@ sub _slice_fetch {
 
   # fetch the features from each coordinate system they are stored in
  COORD_SYSTEM: foreach my $feat_cs (@feat_css) {
-
-	#warn "Got $feat_cs with dbID ".$feat_cs->dbID();
 
     my $mapper;
     my @coords;

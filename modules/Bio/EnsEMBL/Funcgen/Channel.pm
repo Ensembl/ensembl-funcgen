@@ -190,9 +190,9 @@ sub dye {
 
   $self->{'dye'} = shift if @_;
   
-  if ( !exists $self->{'dye'} && $self->dbID() && $self->adaptor() ) {
-    $self->adaptor->fetch_attributes($self);
-  }
+  #if ( !exists $self->{'dye'} && $self->dbID() && $self->adaptor() ) {
+  #  $self->adaptor->fetch_attributes($self);
+  #}
   return $self->{'dye'};
 }
 

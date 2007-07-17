@@ -38,7 +38,7 @@ use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::Probe;
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
-use Bio::EnsEMBL::Funcgen::PredictedFeature;
+use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
@@ -240,8 +240,10 @@ sub read_and_import_bed_data{
 	  #this assumes a successful dummy Array import has already been succesful
 	  #or should we just check the experiment_id here?
 
-	  $array_chip = $ac_adaptor->fetch_by_dbID($echip->dbID());
-	  $array = $a_adaptor->fetch_by_dbID($array_chip->dbID());
+	  $array_chip = $ac_adaptor->fetch_by_dbID($echip->array_chip_id());
+	  $array = $a_adaptor->fetch_by_array_chip_dbID($array_chip->dbID());
+
+	  warn "got array $array";
 
 	  
       if (! $self->recovery()) {
@@ -280,6 +282,8 @@ sub read_and_import_bed_data{
 		 -EXPERIMENT_ID  => $self->experiment->dbID(),
 		 -ARRAY_CHIP_ID  => $array_chip->dbID(),
 		 -UNIQUE_ID      => $chip_uid,
+		 -CELL_TYPE      => $self->cell_type(),
+		 -FEATURE_TYPE   => $self->feature_type(),
 		);
 	
 	  ($echip) = @{$ec_adaptor->store($echip)};	
@@ -364,8 +368,6 @@ sub read_and_import_bed_data{
 			#my ($x, $y) = @{$self->get_probe_x_y_by_name($pid)};
 		  
 			#this is throwing away the encode region which could be used for the probeset/family?	
-
-
 			my $probe = Bio::EnsEMBL::Funcgen::Probe->new(
 													-NAME          => $pid,
 													-LENGTH        => ($end - $start),
