@@ -15,9 +15,51 @@ update result_set rs, chip_channel cc, channel c, experimental_chip ec set rs.fe
 update result_set rs, chip_channel cc, channel c, experimental_chip ec set rs.cell_type_id=ec.cell_type_id where rs.result_set_id=cc.result_set_id and cc.table_name='channel' and cc.table_id=c.channel_id and c.experimental_chip_id=ec.experimental_chip_id; 
 
 
+-- add data_set name idx for human
+--alter table data_set add UNIQUE KEY `name_idx` (name);
+
+
 -- propogate set names for mouse only
 -- update result_set rs, data_set ds set ds.name=rs.name where ds.result_set_id=rs.result_set_id;
 --  update feature_set fs, data_set ds set fs.name=ds.name where fs.feature_set_id=ds.feature_set_id;
+
+
+-- more mouse tweaks which have slipped through the release net
+-- should use disable keys here?
+
+--CREATE TABLE `tmp_chip_channel` (
+--  `tmp_chip_channel_id` int(10) unsigned NOT NULL auto_increment,
+--  `result_set_id` int(10) unsigned NOT NULL default '0',
+--  `table_id` int(10) unsigned NOT NULL default '0',
+--  `table_name` varchar(20) NOT NULL default '',
+--  PRIMARY KEY  (`result_set_id`,`tmp_chip_channel_id`),
+--  UNIQUE KEY `rset_table_idname_idx` (`result_set_id`,`table_id`,`table_name`)
+--) ENGINE=MyISAM DEFAULT CHARSET=latin1; 
+--
+--insert into tmp_chip_channel(select * from chip_channel);
+--
+--DROP TABLE IF EXISTS `chip_channel`;
+--CREATE TABLE `chip_channel` (
+--   `chip_channel_id` int(10) unsigned NOT NULL auto_increment,
+--   `result_set_id` int(10) unsigned default '0',
+--   `table_id` int(10) unsigned NOT NULL,
+--   `table_name` varchar(20) NOT NULL,
+--   PRIMARY KEY  (`chip_channel_id`, `result_set_id`),
+--   UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
+--) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+--
+--
+--insert into chip_channel(select * from tmp_chip_channel);
+--
+--drop table tmp_chip_channel;
+
+-- alter table design_type add KEY `design_name_idx` (`name`);
+-- alter table feature_set change name `name` varchar(250) default NULL;
+
+-- alter table design_type change design_type_id `design_type_id` int(10) unsigned NOT NULL auto_increment;
+-- alter table design_type change name `name` varchar(255) default NULL;
+-- alter table array_chip change design_id  `design_id` varchar(20) default NULL;
+-- alter table experiment add UNIQUE KEY `name_idx` (`name`);
 
 
 --- Sort out the coord_system mess ---
