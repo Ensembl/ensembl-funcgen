@@ -10,10 +10,10 @@ storing AnnotatedFeature objects.
 
 =head1 SYNOPSIS
 
-my $pfa = $db->get_AnnotatedFeatureAdaptor();
+my $afa = $db->get_AnnotatedFeatureAdaptor();
 
-my $features = $pfa->fetch_all_by_Slice($slice);
-$features = $pfa->fetch_all_by_Slice_Target($slice, $target);
+my $features = $afa->fetch_all_by_Slice($slice);
+$features = $afa->fetch_all_by_Slice_Target($slice, $target);
 
 =head1 DESCRIPTION
 
@@ -77,7 +77,7 @@ sub fetch_all_by_Slice_FeatureType {
   throw('Need type as parameter') if ! $type->isa("Bio::EnsEMBL::Funcgen::FeatureType");
   my $ft_id = $type->dbID();
   
-  my $constraint = qq( pf.feature_set_id = fs.feature_set_id AND fs.feature_type_id = '$ft_id');
+  my $constraint = qq( af.feature_set_id = fs.feature_set_id AND fs.feature_type_id = '$ft_id');
 
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
@@ -107,7 +107,7 @@ sub fetch_all_by_Slice_FeatureSet {
   throw('Need type as parameter') if ! $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet");
   my $fs_id = $fset->dbID();
   
-  my $constraint = qq( pf.feature_set_id =$fs_id );
+  my $constraint = qq( af.feature_set_id =$fs_id );
 
   #could have individual logic_names for each annotated feature here?
   #$constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
@@ -203,7 +203,7 @@ sub fetch_all_by_Slice_Experiment {
   throw("Need to write DataSet and ResultSet to track back to experiment");
   
   
-  my $constraint = qq( pf.feature_set_id = fs.feature_set_id AND ep.experiment_id='$exp->dbID()' );
+  my $constraint = qq( af.feature_set_id = fs.feature_set_id AND ep.experiment_id='$exp->dbID()' );
   
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
   
@@ -280,7 +280,7 @@ sub _columns {
 sub _default_where_clause {
   my $self = shift;
 	
-  #return 'pf.feature_set_id = fs.feature_set_id';
+  #return 'af.feature_set_id = fs.feature_set_id';
 
   return;
 }
