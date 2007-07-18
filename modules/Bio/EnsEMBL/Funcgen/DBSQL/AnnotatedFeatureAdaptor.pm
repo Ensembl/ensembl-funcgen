@@ -115,6 +115,39 @@ sub fetch_all_by_Slice_FeatureSet {
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
+=head2 fetch_all_by_Slice_FeatureSets
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : listref Bio::EnsEMBL::FeatureSet objects
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_by_Slice_FeatureType($slice, $ft);
+  Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
+  Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
+  Exceptions : Throws if no FeatureType object provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Slice_FeatureSets {
+  my ($self, $slice, $fsets) = @_;
+	
+  my @fs_ids;
+  foreach my $fset (@$fsets) {
+	  throw('Not a FeatureSet object') 
+		  if ! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"));
+	  push (@fs_ids, $fset->dbID());
+  }
+
+  my $fs_ids = join(',', @fs_ids);
+  my $constraint = qq( af.feature_set_id IN ($fs_ids) );
+
+  #could have individual logic_names for each annotated feature here?
+  #$constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
+
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+}
+
 
 
 # Redefine BaseFeatureAdaptor method as analysis now abstracted to feature_set
