@@ -1,5 +1,4 @@
-#!/usr/bin/perl
-##!/software/bin/perl
+#!/software/bin/perl
 
 =head1 NAME
 
@@ -53,7 +52,6 @@ my %opts;
 
 getopts('h:P:u:p:d:f:t:s:cwDo:iS:v:', \%opts);
 
-
 #H was for ?
 #f is focus set
 #t is target sets comma separated list
@@ -71,6 +69,34 @@ my $species = $opts{S} || 'homo_sapiens';
 my $seq_name = $opts{'s'};#added quotes as s does funny things to autoformating
 my $clobber = $opts{c};
 
+my %ChIPseq_cutoff = (
+                      ### cutoff T/O <= 2
+                      'CD4_CTCF'=>        5,
+                      'CD4_H3K27me3'=>    8,
+                      'CD4_H3K36me3'=>    4,
+                      'CD4_H3K4me3'=>     6,
+                      'CD4_H3K79me3'=>   22,
+                      'CD4_H3K9me3'=>     7,
+                      'CD4_H4K20me3'=>   17,
+                      ### cutoff ~ <= 25000
+                      ### see /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI/data/*.clstr.cutoff_25000.dat
+                      'CD4_H2AZ'=>       14,
+                      'CD4_H2BK5me1'=>   15,
+                      'CD4_H3K27me1'=>    5,
+                      'CD4_H3K27me2'=>    4,
+                      'CD4_H3K36me1'=>    3,
+                      'CD4_H3K4me1'=>    30,
+                      'CD4_H3K4me2'=>     9,
+                      'CD4_H3K79me1'=>    4,
+                      'CD4_H3K79me2'=>    3,
+                      'CD4_H3K9me1'=>    11,
+                      'CD4_H3K9me2'=>     4,
+                      'CD4_H3R2me1'=>     4,
+                      'CD4_H3R2me2'=>     4,
+                      'CD4_H4K20me1'=>   29,
+                      'CD4_H4R3me2'=>     3,
+                      'CD4_PolII'=>       7
+                      );
 
 # NJ
 # we should assign an test all opts here, so it's easy to figure out what's going on.
@@ -106,15 +132,15 @@ logger_verbosity($logger_verbosity);
 #use ensembldb as we may want to use an old version
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-	#-host => 'ensembldb.ensembl.org',
-	#-port => 3306,
-	#-user => 'anonymous',
-	-host => '127.0.0.1',
-	-port => 33064,
-	-user => 'ensro',
-	-dbname => $species.'_core_'.$data_version,
-	-species => $species,
-	);
+                                              -host => 'ensembldb.ensembl.org',
+                                              -port => 3306,
+                                              -user => 'anonymous',
+                                              #-host => '127.0.0.1',
+                                              #-port => 33064,
+                                              #-user => 'ensro',
+                                              -dbname => $species.'_core_'.$data_version,
+                                              -species => $species,
+                                              );
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
@@ -165,21 +191,22 @@ if ($seq_name) {
   
   my @slices;
   foreach my $chr (@chr) {
-	
-	next if ($chr =~ m/^NT_/);
-	
-	push @slices, $sa->fetch_by_region('chromosome', $chr);
+      
+      next if ($chr =~ m/^NT_/);
+      
+      push @slices, $sa->fetch_by_region('chromosome', $chr);
   }
-  
+  #print Dumper @slices;
+
   $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
   print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
   
 }
-		  
+
 #should this be printing to OUT or STDERR?
 #or remove as we're printing this later?
-print '# Focus set: ', join(" ", keys %focus_fsets), "\n";
-print '# Target set(s): ', join(" ", sort keys %target_fsets), "\n";
+print STDERR '# Focus set: ', join(" ", keys %focus_fsets), "\n";
+print STDERR '# Target set(s): ', join(" ", sort keys %target_fsets), "\n";
 
 my (@starts, @ends, @fset_ids, @features,
     $focus_start, $focus_end, $focus_fset_id, $focus_score, %cooc_fsets,
@@ -297,14 +324,14 @@ map {push @target_fsets, $target_fsets{$_} } keys %target_fsets;
 # compare all target features against the focus features
 foreach my $af (@{$afa->fetch_all_by_Slice_FeatureSets($slice, \@target_fsets)}) {
     
-    print STDERR join(" ", $af->start, $af->end, $af->score,
+    print STDERR join(" ", $af->start, $af->end, $af->score?$af->score:'',
 					  $af->feature_set->dbID(),
 					  $af->feature_set->name()), "\n" if ($opts{D});
 
     next if(! exists $target_fsets{$af->feature_set->name()});
     
 	#shoud this print to STDERR?
-    print STDERR join(" ", $af->start, $af->end, $af->score,
+    print STDERR join(" ", $af->start, $af->end, $af->score?$af->score:'',
 					  $af->feature_set->dbID(),
 					  $af->feature_set->name()), "\n" if ($opts{D});
 
@@ -325,7 +352,7 @@ foreach my $af (@{$afa->fetch_all_by_Slice_FeatureSets($slice, \@target_fsets)})
         $focus_start = $af->start;
         $focus_end = $af->end;
         $focus_fset_id = $af->feature_set->dbID();
-		$focus_score = $af->score;
+		$focus_score = $af->score?$af->score:'';
 
     } elsif (defined $focus_end && $af->start > $focus_end) {
 
@@ -339,6 +366,16 @@ foreach my $af (@{$afa->fetch_all_by_Slice_FeatureSets($slice, \@target_fsets)})
         #&get_overlap_string(\%regulatory_features, \@overlap_features, $focus_start, $focus_end);
 
     }
+    
+    # quick hack for 2nd reg. build version. need to disregard ChIPseq 
+    # features below a certain threshold defined hardcoded in ChIPseq_cutoff hash.
+    # This works here fir target set, focus set need to be filtered elsewhere.
+    next if (exists $ChIPseq_cutoff{$af->feature_set->name()} &&
+             $af->score() < $ChIPseq_cutoff{$af->feature_set->name()});
+    
+    print STDERR join(" ", $af->start, $af->end, $af->score?$af->score:'',
+					  $af->feature_set->dbID(),
+					  $af->feature_set->name()), "(filtered)\n" if ($opts{D});
     
     push(@starts, $af->start());
     push(@ends, $af->end());
@@ -414,7 +451,7 @@ foreach my $s (sort {$a<=>$b} keys %{$regulatory_features}) {
 
 	if($write_features){
 
-	  my $feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+	  my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
             (
              -slice  => $slice,
              -start  => $s,
@@ -693,12 +730,12 @@ sub get_FeatureSet{
             if ($clobber) {
 			  my $cs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
 
-			  print "Deleting PredictedFeatures for $fset_name on chromosome ".
+			  print "Deleting AnnotatedFeatures for $fset_name on chromosome ".
 				  $slice->seq_region_name()."\n";
 
 			  
 
-                my $sql = 'DELETE from predicted_feature where feature_set_id='.
+                my $sql = 'DELETE from annotated_feature where feature_set_id='.
                     $cooc_fsets{$fset_name}->dbID().' and seq_region_id='.
 					$slice->get_seq_region_id().
 					' and coord_system_id='.$cs_id;
