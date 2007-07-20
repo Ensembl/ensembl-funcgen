@@ -353,7 +353,7 @@ sub store {
 			$sth->bind_param(1, $fset->feature_type->dbID(), SQL_INTEGER);
 			$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);
 			$sth->bind_param(3, $ctype_id,                   SQL_INTEGER);
-			$sth->bind_param(4, $fset->name(),               SQL_VARCHAR);
+			$sth->bind_param(4, $fset->name(),               SQL_TEXT);
 		
 			$sth->execute();
 			$fset->dbID($sth->{'mysql_insertid'});
