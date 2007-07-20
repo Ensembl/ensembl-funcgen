@@ -83,8 +83,6 @@ sub fetch_all_by_Slice_constraint {
     throw("Bio::EnsEMBL::Slice argument expected.");
   }
 
-  warn "fetch by slice constraint $constraint";
-
   #add cs_id here to amke sure we're definitely getting
   #feature from the correct seq_region, as seq_region_ids can be re-used for
   #different seq_region between DB with different default assemblies
@@ -225,6 +223,10 @@ sub build_seq_region_cache_by_Slice{
   $self->{'core_seq_region_cache'} = {};
   %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
+
+  #this return nothing for a new schema_build!!
+  #How can
+
   #now reverse cache
   
   foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){
@@ -362,10 +364,11 @@ sub _pre_store {
 
   if(! $seq_region_id){
 	#check whether we have an equivalent seq_region_id
+
 	my $sql = 'SELECT seq_region_id from seq_region where coord_system_id='.$fg_cs->dbID().
 	  ' and name="'.$slice->seq_region_name.'"';
-	$seq_region_id = $self->db->dbc->do($sql);
 
+  	($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
 
 	#No compararble seq_region
@@ -499,9 +502,6 @@ sub _slice_fetch {
       # features may still have to have coordinates made relative to slice
       # start
       $fs = _remap($fs, $mapper, $slice);
-
-
-	  warn "got ".scalar(@$fs). " features";
 
       push @features, @$fs;
     } 
