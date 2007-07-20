@@ -371,8 +371,7 @@ else{
 
 #THIS ASSUMES REGULATORY FEATURES NEVER OVERLAP WITHIN THE SAME BUILD
 #This will currently give a direction bias to the inheritance
-#currently default to 5' if overlaps are equal
-#maybe we could default to nfeat which contains most old features?
+#if overlap are equal in % overlap and number of constituents, default to 5'
 #then consider reverse overlap
 
 #o  --- -- -    --------
@@ -394,11 +393,11 @@ sub do_feature_map{
   my ($mapping_info, $from_db, $feature, $source_dbID) = @_;
 
   my $to_db = ($from_db eq 'OLD') ? 'NEW' : 'OLD';
+  my $slice = $feature->slice();
 
-  #foreach my $feat_slice_pair(@$feature_slices){
   #the source_rf_dbID is the dbID of the previous source feature
   #to ensure we don't redo the overlap
-  #we use this to figure out whether this fea or the last inherits the stable ID
+  #we use this to figure out whether this feat or the last inherits the stable ID
   #dependent on which direction we're going in
   
   #n-- ------
@@ -408,26 +407,19 @@ sub do_feature_map{
   #hence we must compare the overlap of the last source(which is the 1st ofeat i.e. the source_rf_dbID)
   #with the next ofeat.  Here the previous/source has the greater overlap so this nfeat inherits the previous 
   #ofeat stable ID
-  
-  
-  
-  
-  #my ($rf_slice, $source_rf_dbID) = @$feat_slice_pair;
-  #$rf_dbID will be absent if this is the first mapping
-  
-  my $slice = $feature->slice();
-  
-  
+      
+  #disabled default extend for now for simplicity
   # we should only do this if we have no mapping
-  if($expand && $mapping_info->{'iteration'} == 0){
-	$mapping_info->{'extended'} = 1;
-	$slice = $slice->expand($expand, $expand);
-  }
+  #if($expand && $mapping_info->{'iteration'} == 0){
+  #	$mapping_info->{'extended'} = 1;
+  #	$slice = $slice->expand($expand, $expand);
+  #  }
   
   
   my $next_slice = $obj_cache{$to_db}{'SLICE_ADAPTOR'}->fetch_by_region('toplevel', $slice->seq_region_name(), $slice->start(), $slice->end());
   
   if(! $next_slice){
+	#I don't think this should ever happen, can we remove?
 	print $reg_feat->display_label()." is on a slice which is not present in the $to_db DB:\t".
 	  $slice->seq_region_name().' '.$slice->start().' '.$slice->end."\n";
 	next;
@@ -448,40 +440,27 @@ sub do_feature_map{
   
   #}
   
-  #this is dependent on what we have already don, only currently true for first pass
-  #we also have to consider both 5' and 3' feature slice pairs.
-  
   
   if(! @nreg_feats){
 	  
 	#This is the first old to new mapping which has failed
-	if(! defined $rf_dbID){
+	if(! defined $source_dbID){
 	  print "No $to_db mapping possible for:\t".$mapping_info->{'stable_id'}."\n";
+
+	  warn "we need to record retirement of stable_id here";
+
 	  next;#there should only be one pair in this loop, so will exit loop
 	}
-	
-	#don't warn here, wait until we've done both
-	#and check wether they are contained or overlap
-	#else{
-	#This is at least iteration 1, so may have two feature_slice pairs
-	
-	
-	#}
   }
   else{
-	#ignore source rf_dbID
+	#ignore source_dbID for comparison(include in overlap ids for logging)
 	#store others associated with current dbID
-	#use nested hashes?
 	my ($overlap, $current_child, @nfeats, @overlap_ids);
 	my $end_overlap = 0;
 	
 	foreach my $nfeat(@nreg_feats){
-	  
 	  #if we're in the middle/end of a chain, the first will always be the source_dbID/dbID
 	  push @overlap_ids, ($to_db eq 'NEW') ? $_->dbID() : $_->stable_id();
-
-
-	  #can we deal with entirely contain feats here to?
 	  
 	  if(defined $source_dbID && $nfeat == $source_dbID){
 		#here we need to consider wether this over lap is greater than the last
@@ -494,13 +473,11 @@ sub do_feature_map{
 		#assign the stable id to the last nfeat
 		#clean the mapping hash and carry on
 		
-		
-		
+				
 		#do we next here?
 		#yes, but we need to make sure we have recorded the split properly
 		#aove example would spawn a new stable id for the last new feature
  
-
 		#??????????????????????????????  IS THIS RIGHT
 		#It's better for the assign_stable_ids alg
 		#if this is the last in the chain i.e. not other nreg_feats
@@ -607,11 +584,11 @@ sub do_feature_map{
 	  #array of hashes where each hash contitutes a transition?
 	  #every other element would eventually boil down to one stable ID
 
-	  my %tmp = (
-				 source         => $from_db,
-				 overlaps       => \@overlap_ids;#used when overlap == to next
-				 current_child  => $current_child
-				);
+	  my %transition = (
+						source         => $from_db,
+						overlaps       => \@overlap_ids;#used when overlap == to next
+						current_child  => $current_child
+					   );
 	  
 	  if ($to_db eq 'OLD') {
 		push @{$mapping_info->{'stable_ids'}}, $tmp[$current_child]->stable_id();
@@ -632,10 +609,10 @@ sub do_feature_map{
 		#o----  -----------  ------ ----------
 		#n  -------  - -------------------
 		
-		$tmp{'overlap'}   = $overlap;
-		$tmp{'overlap_factor'} = ($overlap/$feature->length());#used when overlaps ==
+		$transition{'overlap'}   = $overlap;
+		$transition{'overlap_factor'} = ($overlap/$feature->length());#used when overlaps ==
 		$feature = $tmp[$#tmp];
-		push @{$mapping_info->{'transitions'}}, \%tmp;	
+		push @{$mapping_info->{'transitions'}}, \%transition;	
 	  }
 	  elsif($end_overlap) {	
 		#end over lap, but not largest, do stable_id mapping and re-set mapping info?
@@ -646,7 +623,7 @@ sub do_feature_map{
 		#but it overlaps the 2nd nfeat even less
 		#this should result in a split, giving rise to an entirely new stable ID?
 				
-		$tmp{'overlap'}   = $overlap;
+		$transition{'overlap'}   = $overlap;
 		push @{$mapping_info->{'transitions'}}, \%tmp;	
 		&assign_stable_ids($mapping_info);
 		
@@ -749,20 +726,16 @@ sub assign_stable_ids{
 
   #if we have neither then the sizes from the above example are stable 3, dbID 2
   #then inheritance (OLD as we're working backwards) from stable_id array
-  #is transition pos/elem - num seen OLD transitions????
-  #for 4b>5b, 4b would inherit from    3 - 0 = 3 = last stable_id!!! CORRECT!!!
-  #for 2>3, 2 would inherit from       1 - 0 = 1 = 2nd stable_id...CORRECT!!!
-  #-1 if the last transition current_child == 0;
+  #is transition pos/elem + num seen OLD transitions - 1
+  #for 4b>5b(5a & 3), 4b would inherit from    3 + 0 - 1 = 2 = last stable_id (5b)!!! CORRECT!!!
+  #for 2>3, 2 would inherit from               1 + 1 - 1 = 1 = 2nd stable id(3) CORRECT!!! 
+  #-2 if the last transition current_child == 0;
 
-
-
-
-  #projection rules??
-  #transition pos/elem - num seen NEW transition - difference between stable_id and dbID lengths -1
-  #3>4b(2) would project to 2 - 0 - 1 - 1 = 0 = 1st dbID
-  #1>2     would project to 0 - 1 - 1 - 1 = -3?!!  1 does project anywhere, so is this right?
-  #shift in heritance and we get -2...still doesn't project as 2 has greater overlap..FAB
-
+  #projection rules
+  #transition pos/elem + num seen NEW transition - difference between stable_id and dbID lengths - 1
+  #3>4b(2) would project to 2 + 0 - 1 - 1 = 0 = 1st dbID
+  #1>2     would project to 0 + 1 - 1 - 1 = -1 = would be previous dbID if it existed
+  #but doesn't project...so CORRECT !!!
   #remove -1 if last transition current_child == 0
 
 
@@ -773,12 +746,10 @@ sub assign_stable_ids{
 
   #stable_ids == 3  dbIDs == 3
   #projection
-  #we need to modify the rules here, -2 instead of -1 modifier
-  #transition pos/elem - num seen NEW transition - difference between stable_id and dbID lengths -2
 
-  #5>6(4) 4/2 = 2 = last dbID...YAY!
-  #3>4(2) 2/2 = 1 = 2nd dbID  YAY!
-  #1>2    0/2 ? = 0 = 1st dbID YAY!!  Careful no to divide zero!!
+  #5>6(4) 4%2 = 2 = last dbID...YAY!
+  #3>4(2) 2%2 = 1 = 2nd dbID  YAY!
+  #1>2    0%2 ? = 0 = 1st dbID YAY!!  Careful no to divide zero!!
 
   #inheritance == same rule?
   #we need to use modulus here to round down
@@ -786,27 +757,47 @@ sub assign_stable_ids{
   #2>1(3) 1%2 = 0 = 1st stable_id  KABLAMMMM!!
 
 
-
   #or..NO this is not equal!!
 
   #o  -1--  --3----- ---5----
   #n2a- --2b--- ---4-------
+
+  #stable_ids = 3 and dbIDs = 2
+  #remember at present 2a is not stored in the dbID array, this is probably wrong as it is a potential mapping
 
   #1>2a & 2b
   #2b>3 &1
   #3>4 & 2b
   #4> 5 & 3
  
+  #this is same as first example
 
-  #stable_ids == 3 dbIDs == 2
-  #this is same as first example but 1 can project, this time to 2a
-  #will rules still hold?
-  #transition pos/elem - num seen OLD transitions????
+  #inheritance transition pos/elem + num seen OLD transitions - 1
+  #4>5(3)   3 + 0 - 1 = 2 = 3rd stable_id...CORRECT!!
+  #2b>3(1)  1 + 1 - 1 = 1 = 2nd stable_id...CORRECT!!
+  #shift is same
+
+  #projection transition pos/elem + num seen NEW transition - difference between stable_id and dbID lengths - 1
+  #3>4(2b)  2 + 0 - 1 -1 = 0 = 1st dbID CORRECT!!
+  #1>2b(2a) 0 + 1 - 1 -1 = -1 = ??? Is correct but element doesn't exist dbID
+
+  #we need to add 2a to the dbIDs array, but then rules will change no?
+  #using rules for equal sized arrays gives transition elem%2
+  #inheritance 4>5(3)   3%2 = 1 = WRONG!!!
   
-  #4>5(3)
+  #so we either need to change the rules to take account of which direction last transition is
+  #or just store 2a dbID in the mapping hash and if we get -1 then we check it exists and use it
+  #else we retire.
   
 
-  #what if stable_ids < dbIDs
+  #HERE!! WE NEED TO IMPLEMENT THIS BELOW!!!!!!!!!!!!!!!!!!!!!!!!!!
+  #add 2a to mapping_info as ???? only if it is not the biggest overlap
+  #as it would be added as a transiotion otherwise???
+  #need to test this set up
+  #o   -----    -----
+  #n-----  --------
+
+  #and test  if stable_ids < dbIDs
 
 
   #as we work backwards, we're dealing with every mapping twice due to nature of transitions
