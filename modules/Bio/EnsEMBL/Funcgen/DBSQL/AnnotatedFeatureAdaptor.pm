@@ -61,7 +61,7 @@ use vars qw(@ISA);
   Arg [2]    : Bio::EnsEMBL::FeatureType
   Arg [3]    : (optional) string - analysis logic name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_FeatureType($slice, $ft);
+               my $features = $ofa->fetch_all_by_Slice_FeatureType($slice, $ft);
   Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
   Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
   Exceptions : Throws if no FeatureType object provided
@@ -88,13 +88,13 @@ sub fetch_all_by_Slice_FeatureType {
 =head2 fetch_all_by_Slice_FeatureSet
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Bio::EnsEMBL::FeatureType
+  Arg [2]    : Bio::EnsEMBL::FeatureSet
   Arg [3]    : (optional) string - analysis logic name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_FeatureType($slice, $ft);
-  Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
+               my $features = $ofa->fetch_all_by_Slice_FeatureSet($slice, $fset);
+  Description: Retrieves a list of features on a given slice, specific for a given FeatureSet.
   Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
-  Exceptions : Throws if no FeatureType object provided
+  Exceptions : Throws if no FeatureSet object provided
   Caller     : General
   Status     : At Risk
 
@@ -120,10 +120,10 @@ sub fetch_all_by_Slice_FeatureSet {
   Arg [1]    : Bio::EnsEMBL::Slice
   Arg [2]    : listref Bio::EnsEMBL::FeatureSet objects
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_FeatureType($slice, $ft);
-  Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
+               my $features = $ofa->fetch_by_Slice_FeatureSets($slice, $fsets);
+  Description: Retrieves a list of features on a given slice, specific for a given list of FeatureSets.
   Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
-  Exceptions : Throws if no FeatureType object provided
+  Exceptions : Throws if list provided does not contain FeatureSets
   Caller     : General
   Status     : At Risk
 
