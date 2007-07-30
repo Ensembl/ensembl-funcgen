@@ -455,14 +455,29 @@ sub do_feature_map{
   else{
 	#ignore source_dbID for comparison(include in overlap ids for logging)
 	#store others associated with current dbID
-	my ($overlap, $current_child, @nfeats, @overlap_ids);
+	my ($overlap, $current_child, $five_prime_child, @new_feats, @overlap_ids);
+
+	#Tidier to declare here with all keys as undef
+	#But may be slower if we have many unmapping featerus
+	#vs time lost by checking key exists for values that might not be populated
+	#on the assumption that we should see overlap for most due to focus sets, define here
+	
+	my %transition = (
+					  source           => undef, #current feature feature_set, OLD or NEW
+					  overlap          => undef, #bp overlap with current child
+					  overlap_factor   => undef, #% of current child overlapping feature
+					  overlap_ids      => undef, #dbID or stableIDs of consitutent features of transition
+					  current_child    => undef, #index of current child in tmp new_feats array
+					  previous_child   => undef, #used to identify inheritance if it get's shifted
+					 );
+
 	my $end_overlap = 0;
 	
 	foreach my $nfeat(@nreg_feats){
 	  #if we're in the middle/end of a chain, the first will always be the source_dbID/dbID
 	  push @overlap_ids, ($to_db eq 'NEW') ? $_->dbID() : $_->stable_id();
 	  
-	  if(defined $source_dbID && $nfeat == $source_dbID){
+	  if(defined $source_dbID && $nfeat->dbID == $source_dbID){
 		#here we need to consider wether this over lap is greater than the last
 		#o --     --   ----
 		#n  ------------- ---  
@@ -489,7 +504,7 @@ sub do_feature_map{
 		
 	  }
 	  
-	  push @nfeats, $nfeat;
+	  push @new_feats, $nfeat;
 	  
 	  if($nfest->start() < $slice->start()){
 		#This can only be a 5' new feature
@@ -512,39 +527,81 @@ sub do_feature_map{
 		  #this should not be possible
 		  throw("Found 5' feature from $to_db which does not match the slice source feature");
 		}
+
+		#Have bonafide 5' mapping
+	
+		#biggest overlap
+		#these will both be stored in the dbID array
+		#o -------
+		#n--
+
+		#o   ----
+		#n ---- --
+ 
+		#smallest overlap
+		#would not be stored in array...can we just use the first overlap ID?
+		#We don't know whether this is 5'or contained
+		#we need to store dbID even if it is not the biggest overlap due to 
+		#inheritance issue e.g.
+
+		#o ---- ------
+		#n-- -------
 		
-		throw("Found more than one 5' feature") if(scalar(@nfeats) >1);
+		#ug we also nee to consider other overlaps
+
+		#o  -------------- ----------
+		#n----  ---   ----------
+
+		#this is only an issue fo rthe first transition, due to the nature of identifying chained overlaps?
+		#o--a----- ---c----------  --e-------
+		#n      -b--- -d1- -----d2---------
+
+		###NO !! GASH!!! WE NEED TO CONSIDER THIS IN ALL MODELS!!!!!!!!!!!!!!!
+		#Actually this is another case for splitting the mappings
+		#We should always split this into
+		#a>b we need to keep info about b > c but cannot have this as the longest overlap
+		#as despite what might happen with inheritance further down the chain, d1 will 
+		#always inherit over b
+		#do we just add b>c, but do not add longest overlap?
+
+		#mmm no I think we need, current child and previous child?
+		#as we can't assume it will be previous chaining overlap
+		
+
+		throw("Found more than one 5' feature") if(scalar(@new_feats) >1);
 		$current_child = 0;
 		
 		#we need to consider extend here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		
 		if($nfeat->end() >= $slice->end()){
-		  $overlap = $slice->length();
+			$overlap = $slice->length();
 		}else{
-		  $overlap = $slice->start() - $nfeat->end();
+			$overlap = $slice->start() - $nfeat->end();
 		}
 		
-	  } elsif ($nfeat->end() <= $slice->end()) {
+	} elsif ($nfeat->end() <= $slice->end()) {
 		#all fully contained features;
 		
 		my $tmp_length = $nfeat->length();
 		
 		if ($tmp_length > $overlap) {
-		  $overlap = $tmp_length;
-		  $current_child = $#nfeats;
+			$overlap = $tmp_length;
+			$previous_child = $current_child if (defined $current_child);
+			$current_child = $#new_feats;
 		}
-	  } else {					#found end overlap
-		  
+	} else {					#found end overlap
+		
 		my $tmp_length = $nfeat->start() - $slice->end();
 		$end_overlap = 1;
-		  
+		
 		if ($tmp_length > $overlap) {
-		  $overlap = $tmp_length;
-		  $current_child = $#nfeats;
+			$overlap = $tmp_length;
+			$previous_child = $current_child if (defined $current_child);
+			$current_child = $#new_feats;
 		}
-	  }
 	}
-	  
+  }
+	
 	#so here we have to trap the case where we have a to nothing(only parent) mapping, i.e at the end of a chain
 	#basically we don't want this transition as it doesn't really exist
 	#o-1-  --3--
@@ -584,34 +641,33 @@ sub do_feature_map{
 	  #array of hashes where each hash contitutes a transition?
 	  #every other element would eventually boil down to one stable ID
 
-	  my %transition = (
-						source         => $from_db,
-						overlaps       => \@overlap_ids;#used when overlap == to next
-						current_child  => $current_child
-					   );
+		$transition{'source'}         = $from_db;
+		$transition{'overlap_ids'}    = \@overlap_ids;#used when overlap == to next
+		$transition{'current_child'}  = $current_child;
+		$transition{'previous_child'} = $previous_child;
 	  
 	  if ($to_db eq 'OLD') {
-		push @{$mapping_info->{'stable_ids'}}, $tmp[$current_child]->stable_id();
+		push @{$mapping_info->{'stable_ids'}}, $new_feats[$current_child]->stable_id();
 		#we need to record dbID of feat we're mapping to
 		push @{$mapping_info->{'dbIDs'}}, $feature->dbID();
 	  } 
 	  else {
 		#do we need to record the dbIDs here too?
-		push @{$mapping_info->{'dbIDs'}},  $tmp[$current_child]->dbID();
+		push @{$mapping_info->{'dbIDs'}},  $new_feats[$current_child]->dbID();
 		push @{$mapping_info->{'stable_ids'}}, $feature->stable_id();
 	  }
 	
 	  #reset source dbID
 	  $source_dbID = $feature->dbID();
 	  	  
-	  if ($current_child == $#tmp) { 
+	  if ($current_child == $#new_feats) { 
 		#end overlap is largest, need to update mapping info
 		#o----  -----------  ------ ----------
 		#n  -------  - -------------------
 		
 		$transition{'overlap'}   = $overlap;
 		$transition{'overlap_factor'} = ($overlap/$feature->length());#used when overlaps ==
-		$feature = $tmp[$#tmp];
+		$feature = $new_feats[$#new_feats];
 		push @{$mapping_info->{'transitions'}}, \%transition;	
 	  }
 	  elsif($end_overlap) {	
@@ -628,7 +684,7 @@ sub do_feature_map{
 		&assign_stable_ids($mapping_info);
 		
 		$mapping_info = {};
-		$feature = $tmp[$#tmp];	#set the last feature
+		$feature = $new_feats[$#new_feats];	#set the last feature
 	  } 
 	  else {					#no end overlap, do stable id mapping, clean mapping info
 		push @{$mapping_info->{'transitions'}}, \%tmp;	
@@ -781,23 +837,38 @@ sub assign_stable_ids{
   #3>4(2b)  2 + 0 - 1 -1 = 0 = 1st dbID CORRECT!!
   #1>2b(2a) 0 + 1 - 1 -1 = -1 = ??? Is correct but element doesn't exist dbID
 
-  #we need to add 2a to the dbIDs array, but then rules will change no?
-  #using rules for equal sized arrays gives transition elem%2
-  #inheritance 4>5(3)   3%2 = 1 = WRONG!!!
-  
-  #so we either need to change the rules to take account of which direction last transition is
-  #or just store 2a dbID in the mapping hash and if we get -1 then we check it exists and use it
-  #else we retire.
+  #store 2a dbID in the mapping hash(as previous_child index) and if we get -1 then we check 
+  #it exists and use it else we retire.
+
+  #we're now using the previoud_child element to enable spliting over mappings based on a child which is not 
+  #a joining overlap.
   
 
-  #HERE!! WE NEED TO IMPLEMENT THIS BELOW!!!!!!!!!!!!!!!!!!!!!!!!!!
-  #add 2a to mapping_info as ???? only if it is not the biggest overlap
-  #as it would be added as a transiotion otherwise???
+
   #need to test this set up
-  #o   -----    -----
-  #n-----  --------
+  #o   --a--    --c--
+  #n-b1---  --b2-----
+  #this would get split on b2
 
   #and test  if stable_ids < dbIDs
+
+  #o  -a--  -c----   ---e---
+  #n     ---b- ---d------
+  #inheritance  transition pos/elem + num seen OLD transitions - 1
+  #3 + 0  -1 == 2  CORRECT!!!
+  #d>e(&c)  >  e == 2
+  #shifted -2 == CORRECT
+
+  #b>c(a) == 1
+  #1 + 1 - 1  CORRECT!!
+  
+  #projection
+  #transition pos/elem + num seen NEW transition - difference between stable_id and dbID lengths - 1
+  #a>b  nothing / -1
+  #0 + 1 -
+  
+  
+  
 
 
   #as we work backwards, we're dealing with every mapping twice due to nature of transitions
