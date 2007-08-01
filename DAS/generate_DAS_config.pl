@@ -43,13 +43,14 @@ logger_verbosity($logger_verbosity);
 
 use Getopt::Std;
 my %opts;
-getopts('h:p:u:w:P:d:H:', \%opts);
+getopts('h:p:u:w:d:v:H:P:', \%opts);
 
 my $dbhost = $opts{h} or throw("Need to specify dbhost via option -h!");
 my $dbport = $opts{p} or throw("Need to specify dbport via option -p!");
 my $dbuser = $opts{u} or throw("Need to specify dbuser via option -u!");
 my $dbpass = $opts{w} || "";
 my $dbname = $opts{d} or throw("Need to specify dbname via option -d!");
+my $dbversion = $opts{v} or throw("Need to specify dbversion via option -v!");
 
 my $dashost = $opts{H} or throw("Need to specify DAS server hostname via option -H!");
 my $dasport = $opts{P} or throw("Need to specify DAS server hostname via option -P!");
@@ -70,7 +71,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
      -host   => $dbhost,
      -user   => $dbuser,
-     -dbname => $dbname,
+     -dbname => $dbname."_".$dbversion,
      -pass   => $dbpass,
      -port   => $dbport,
      -dnadb  => $cdb
@@ -124,7 +125,8 @@ adaptor           = efg_feature_set
 transport         = dbi
 host              = $dbhost
 port              = $dbport
-dbname            = $dbname
+dbname            = ${dbname}_$dbversion
+version           = $dbversion
 username          = $dbuser
 description       = [Homo sapiens] eFG feature
 source            = SOURCE
