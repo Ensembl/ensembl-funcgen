@@ -220,6 +220,7 @@ my $pass = '';
 my $npass = $pass;
 my $host = 'ens-livemirror';
 my $nhost = 'ens-genomics1';
+my $new_fset_name = 'stableRegulatoryFeatures';
 my $port = '3306';
 my $nport = $port;
 my $dump = 1;
@@ -250,6 +251,7 @@ GetOptions (
 			"from_file|f=s" =>\$from_file,
 			"help|?"       => \$help,
 			"man|m"        => \$man,
+			#add opt for fset name
 		   );
 
 
@@ -258,6 +260,9 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 
 #check mandatory params here
+
+#we need to resolve odb ndb relationship, defulat to same if only one specified?
+#also need to add defaults for 
 
 my $ndb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
 												  host   => $nhost,
@@ -335,23 +340,46 @@ if(! $from_file){
 
   $obj_cache{'OLD'}{'AF_ADAPTOR'}    = $odb->get_AnnotatedFeatureAdaptor();
   $obj_cache{'OLD'}{'SLICE_ADAPTOR'} = $odb->get_SliceAdaptor();
-  $obj_cache{'OLD'}{'RF_TYPE'}       = $odb->get_FeatureTypeAdaptor->fetch_by_name('RegulatoryFeatures');
+  #$obj_cache{'OLD'}{'RF_TYPE'}       = $odb->get_FeatureTypeAdaptor->fetch_by_name('RegulatoryFeatures');
   $obj_cache{'NEW'}{'SLICE_ADAPTOR'} = $ndb->get_SliceAdaptor();
   $obj_cache{'NEW'}{'AF_ADAPTOR'}    = $ndb->get_AnnotatedFeatureAdaptor();
-  $obj_cache{'NEW'}{'RF_TYPE'}       = $odb->get_FeatureTypeAdaptor->fetch_by_name('RegulatoryFeatures');
+  #$obj_cache{'NEW'}{'RF_TYPE'}       = $ndb->get_FeatureTypeAdaptor->fetch_by_name('RegulatoryFeatures');
+
+  #should change RF_TYPE to FSET to allow comparison on the same DB.
+
 
   $next_stable_id = $db->dbc->db_handle->do('SELECT display_label from annotated_feature af, feature_set fs where fs.feature_type_id='$oftype->dbID().' and fs.feature_set_id=af.feature_set_id order by display_label desc limit 1');
   $next_stable_id =~ s/\:.*//;
   $next_stable_id =~ s/ENSR[A-Z]*0*//;
   $next_stable_id ++;
+
+  my $fset_a = $odb->get_FeatureSetAdaptor();
+
+  my $nreg_fset = $fset_a->fetch_by_name($new_fset_name);
+
+  if(defined $nreg_fset){
+
+	if(! defined $clobber){
+	  throw('The FeatureSet $new_fset_name already exists in the DB, please redefine the -feature_set or specify -clobber to overwrite');
+	}else{
+	  $odb->dbc->db_handle->do('DELETE from annotated_feature where feature_set_id='.$nreg_fset->dbID);
+	}
+  }
+  else{
+  	my $reg_ftype = $odb->get_FeatureTypeAdaptor->fetch_by_name('RegulatoryFeatures');
+	my $reg_atype = $odb->get_AnalysisAdaptor->fetch_by_name('RegulatoryRegion');
+	$nreg_fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+														name         => $new_fset_name,
+														analysis     => $reg_atype,
+														feature_type => $reg_ftype,
+													   );
+	
+	($nreg_fset) =  @{$fset_a->store($nreg_fset)};
+  }
+
+
+
   
-
-
-  #we need to do some sort of localised all vs all overlap
-  #i.e. do the associated forward and reverse.
-
-  #mapping logic shdould be very simple to start with as we're changing the data quite a lot
-  #and we don't want to create a huge amount of useless messy data
   #what is the concept of a RegulatoryFeature?
   #It can cross cell/tissue types but have differing modifications, hence states
   #but maintain same stable_id
@@ -363,7 +391,6 @@ if(! $from_file){
 
   foreach my $reg_feat(@{$opf_a->fetch_all_by_logic_name('RegulatoryRegion')}){
 	my $from_db = 'OLD';
-	#my $features_slices = []; #this has to be ref due to implementation in while
 	my $feature = $reg_feat;
 	my $mapping_info = {}; #this has to be ref due to implementation in while
 
@@ -514,44 +541,29 @@ else{
 
 sub do_feature_map{
   my ($mapping_info, $from_db, $feature, $source_dbID) = @_;
+  #the source_dbID is the dbID of the previous source feature
+  #to ensure we don't create a recursive transition, hence enabling detection of the end transition
 
   my ($o_start, $o_end, $overlap, $displacement, $num_parents, $current_child, $previous_child, @overlap_ids);
   my $overlap = 0;
   my $no_new_features = 0;
   my $to_db = ($from_db eq 'OLD') ? 'NEW' : 'OLD';
   my $slice = $feature->slice();
-
-  #the source_rf_dbID is the dbID of the previous source feature
-  #to ensure we don't redo the overlap
-  #we use this to figure out whether this feat or the last inherits the stable ID
-  #dependent on which direction we're going in
-  
-  #n-- ------
-  #o -----  ------
-  
-  #In the above example the current feature is the 2nd nfeat
-  #hence we must compare the overlap of the last source(which is the 1st ofeat i.e. the source_rf_dbID)
-  #with the next ofeat.  Here the previous/source has the greater overlap so this nfeat inherits the previous 
-  #ofeat stable ID
-      
   #disabled default extend for now for simplicity
   # we should only do this if we have no mapping
   #if($expand && $mapping_info->{'iteration'} == 0){
   #	$mapping_info->{'extended'} = 1;
   #	$slice = $slice->expand($expand, $expand);
   #  }
-  
-  
+    
   my $next_slice = $obj_cache{$to_db}{'SLICE_ADAPTOR'}->fetch_by_region('toplevel', $slice->seq_region_name(), $slice->start(), $slice->end());
   
-  if(! $next_slice){
-	#I don't think this should ever happen, can we remove?
-	print $reg_feat->display_label()." is on a slice which is not present in the $to_db DB:\t".
-	  $slice->seq_region_name().' '.$slice->start().' '.$slice->end."\n";
-	next;
-  }
-  
-  
+  #if(! $next_slice){#I don't think this should ever happen, can we remove?
+  #print $reg_feat->display_label()." is on a slice which is not present in the $to_db DB:\t".
+  #	  $slice->seq_region_name().' '.$slice->start().' '.$slice->end."\n";
+  #	next;
+  #  }
+    
   my @nreg_feats = @{$obj_cache{$to_db}{'AF_ADAPTOR'}->fetch_by_Slice_FeatureType($next_slice, 
 																				  $obj_cache{$to_db}{'RF_TYPE'})};
   
@@ -560,49 +572,43 @@ sub do_feature_map{
   #if(! @nreg_feats && ! $extend && $mapping_info->{'iteration'} == 0){
   #  $next_slice = $next_slice->expand(200, 200);#Just enough to catch the next nucleosome
   #  $mapping_info->{'extended'} = 1;
-  
   #  @nreg_feats =  @{$obj_cache{$to_db}{'AF_ADAPTOR'}->fetch_by_Slice_FeatureType($next_slice, 
   #$obj_cache{$to_db}{'RF_TYPE'})};
-  
   #}
   
-  
-
   ####Need to overhaul the above and below block!!!!!!
 
   if (! @nreg_feats) {
-	
 	#consider extend...as above
 	
-
 	#This is the first old to new mapping which has failed
 	if (! defined $source_dbID) {
 	  print "No $to_db mapping possible for:\t".$mapping_info->{'stable_id'}."\n";
-
 	  warn "we need to record retirement of stable_id here";
-
 	  next;						#there should only be one pair in this loop, so will exit loop
 	}
   }
 
-
-  #if(@nreg_feats){
+  #Loop through features assigning best overlap as child
+  #recording next best as previous child(?or next best in the case of twins?)
+  my $midpoint =  $slice->end() -  $slice->start();
 
   for my $i (0..$#nreg_feats) {
 	#if we're in the middle/end of a chain, the first will always be the source_dbID/dbID
 	
 	if (defined $source_dbID && $#nreg_feats == 0) { #we have found the end of a chain;
+	  #we could sanity check here that the source_dbID == the $nreg_feats[0] dbID
 	  $no_new_features = 1;
 	  last;
 	}
 	
-	push @overlap_ids, ($to_db eq 'NEW') ? $nreg_feats[$i]->dbID() : $nreg_feats[$i]->stable_id();
+	#push @overlap_features, $nreg_feats[$i];#, ($to_db eq 'NEW') ? $nreg_feats[$i]->dbID() : $nreg_feats[$i]->stable_id();
 	
 	#overlap length is always the difference between the two middle sorted values
 	(undef, $o_start, $o_end, undef) = sort($slice->start(), $slice->end(), $nreg_feats[$i]->start(), $nreg_feats[$i]->end());
 	my $tmp_length = $o_end - $o_start;
-	my $tmp_displacement
-	  my $new_child = 0;
+	my $tmp_displacement = $midpoint - ($nreg_feats[$i]->end() -  $nreg_feats[$i]->start());
+	my $new_child = 0;
 	
 	if ($tmp_length > $overlap) {
 	  $new_child = 1;
@@ -660,18 +666,33 @@ sub do_feature_map{
 		#as these would fail the number of parents test as they will only have one
 		#conversely the midpoint test for linking features would always fail as 
 		#linking features will always score equally on the midpoint after scoring equally on the coverage
-		
+	
+		$tmp_displacement * -1 if ($tmp_displacement < 0);
+	
 		if ($tmp_displacement < $displacement) {
 		  $new_child = 1;
+		  $diplacement = $tmp_displacement;
 		} elsif ($tmp_displacement == $displacement) {
-		  warn "Displacemnt is failing to resolve stable_id mapping, need more rules!!";
+		  warn "Displacement is failing to resolve stable_id mapping, need num parent rules!!";
 		  $new_child = 1;
+		  $diplacement = $tmp_displacement;
+
 		  #this is slightly different and may need to be worked out in the assign block!!!!!!!!!!!!!!!!
-		  
+		  #We need to compare num of parent of parents, but we won't know this until we traverse the 
+		  #next transition, hence this needs to be dealt with in the assign block when we walk backwards
+		  #or can we do it here as we move along?
+		  #as these 'twins' may be exact matches over many transitions
+		  #so we need to set a 'twin' flag, and record which transition it occured at
+		  #then walk forward comparing to the mirrored transition and seeing which wins, then track back to the
+		  #transition where the twin occured assigning child and previous child accordingly
+		  #can we leave this walk back until the assign step?
+		  #do we also need to record 2nd child instead of previous child, as the next best child might be 3' rather than
+		  #the default which is the previous seen i.e. 5'
+	  
 		  #if($tmp_num_parents > $num_parents){
 
 		  #}elsif($tmp_num_parents == $num_parents){
-		  warn "Number of parents is failing to resolve stable_id mapping, need more rules";
+		  #warn "Number of parents is failing to resolve stable_id mapping, need more rules";
 
 		  #o -a c1 --c2---- x1 x2
 		  #n --b------  --d------
@@ -716,13 +737,7 @@ sub do_feature_map{
 		  #also make sure we're returning the right source_dbID and feature
 
 
-
-
 		  #}
-
-		
-
-
 		}
 	  }
 	}
@@ -857,12 +872,12 @@ sub do_feature_map{
 	push @{$mapping_info->{'transitions'}},	
 	  {(source_id        => ($to_db eq 'NEW') ? $feature->stable_id() : $feature->dbID(),
 		source           => $from_db, #current feature feature_set, OLD or NEW
-		#overlap          => undef, #bp overlap with current child
-		#coverage         => $coverage, #% of current child overlapping feature
-		overlap_ids      => \@overlap_ids, #dbID or stableIDs of consitutent features of transition
+		#overlap         => undef, #bp overlap with current child
+		#coverage        => $coverage, #% of current child overlapping feature
+		overlap_features => \@nreg_features,
 		current_child    => $current_child, #index of current child in tmp new_feats array
 		previous_child   => $previous_child, #used to identify inheritance if it get's shifted
-		true_orphan      => ??????,
+		#true_orphan     => ??????,
 	   )};
   }
 
@@ -924,8 +939,13 @@ sub assign_stable_ids{
 	my ($orphan, @new_stable_ids);
 	my $last_orphan = $#{$mapping_info{'transitions'}[$i]{'overlap_ids'}};
 
-	$use_previous = 1 if($child != 0);
+	#would need to add stuff here to account for the twin situation
+	#would need next_child, rather than previous child
+	#more
 
+	#set use previous if last child was linking overlap
+	$use_previous = 1 if($child == 0);
+	
 	#reset child for current transition
 	$child = ($use_previous) ? $mapping_info{'transitions'}->[$i]->{'previous_child'} :
 	  $mapping_info{'transitions'}->[$i]->{'current_child'};
@@ -938,8 +958,15 @@ sub assign_stable_ids{
 	  #record other merged stable_ids
 
 
+	  #o  -b1- -b2- -b3--- xxx xx
+	  #nxxx  ---a----- xxxxxxxxx
+
+
 	  #no no no, this might not be true, as the previous transition
 	  #may have projected it's stable_id to this new feature
+
+
+
 	  
 	  if(exists $dbid_mappings{$mapping_info{'transitions'}[$i]{'source_id'}}){
 		throw("Found duplicate inheritance:\tdbID ".$mapping_info{'transitions'}[$i]{'source_id'}." > ".
@@ -1081,7 +1108,12 @@ sub assign_stable_ids{
 			#only if b1 wasn't the child of a
 			#we know this as we should be using_previous if this was the case
 
-			push @{$split_merge_cache{$orphan}}, $child_id if ! ($use_previous);
+			push @{$split_merge_cache{$orphan}}, $child_id if ($orphan_cnt == $child);
+			#we still need to assign to b1 and add to split merge cache even if b1 is not child
+			#but only if b1 wasn't the child of a
+
+
+
 
 		  }else{
 			#in fact do we need the above block?
@@ -1133,418 +1165,235 @@ sub assign_stable_ids{
 
 	}
 	else{#projection
+	  #my $outline = $mapping_info{'transitions'}[$i]{'source_id'};	  #stable_id
+	  #o -a--- -d---
+	  #n-b- -c----
+	  
+	  #so this needs to record split of
+	  #a>b & c  where a will project it's stable id to b
+	  
+	  #this will not be caught by above block
+	  
+	  
+	  #will this d>e?
+	  
+	  #o -a--- -d-----------  xxxxxx
+	  #n-b- -c----  -e1- --e2--
+	  #n                  ---e3-
+	  
+	  #we still need to record the split here
+	  
+	  
+	  #we also need to record the dbid_mappings
+	  #as the next transition c>d & a will not capture this
+	  #as c will inherit from a due to coverage of e2 being > c
+	  #e1 should get a new stable_id
+	  # we need to account for this here too
+	  
+	  #however if we consider e3 over e2
+	  #then we will record the d to c inheritance here
+	  #and when we get to the next transition
+	  #we can't record a&d > c fully here as we don't know about a yet
+	  #so if current_child == 0 then we need to leave it until the next transition?
+	  #and just record d > c e1 e3
+	  
+	  #else it would be d > e2 c e1
+	  #This would need recording the dbID hash only if we haven't already done
+	  #e2> d xxx
+	  
+	  
+	  #so basically we need to record in the dbID hash here if the child is not 0 or $#
+	  #this would be a fully contained dbID, therefore we would not have any other merged stable_ids
+	  
+	  
+	  #also need to record if
+	  #1 we are at the last(3') transition and child is $# and $# !=0
+	  #2 we are at the first(5') transition and the child == 0 and $# != 0
+	  
+	  
+	  #we also need to record split
+	  
+	  
+	  $mappings++;
+	  #oxxx  ---a----- xxxxxxxxx
+	  #n  -b1- -b2- -b3--- xxx xx
+	  
+	  #a>b2 (b1, b3)
+	  
+	  
+	  #this will not fail here
+	  #child will never be b3(which would already have a stable_id) as we will have specified use_previous
+	  #do we need to revise this in light of encountering a twin?	  
+	  if(exists $dbid_mappings{$child_id}){
+		throw("Found duplicate inheritance:\tdbID $child_id > ".$mapping_info{'transitions'}[$i]{'source_id'}.
+			  " & ".$dbid_mappings{$child_id});
+	  }
+	  
+	  #record dbID mapping first only done to check for duplicate inheritance
+	  #$dbid_mappings{$child_id} = $mapping_info{'transitions'}[$i]{'source_id'};
+	  #can't do this here as we're testing for it in the loop
+	  
+	  #then record splits?
+	  #can not record split until we have dealt with new stable id generation
+	  #and potential inherited stable_id from x>b1
 		
-	  #stable_id
-		my $outline = $mapping_info{'transitions'}[$i]{'source_id'};
+	  #can we sub this??
+				
+	  #what if b1 inherits here due t use_previous
+	  #oxxx  ---a--------- xxxx
+	  #n  -b1--- -b2- -b3------
+	  #This will always be added as we include the child_id first!!
+	  
+	  foreach my $orphan_cnt(0..$last_orphan){
+		my $orphan = $mapping_info{'transitions'}[$i]{'overlap_features'}[$orphan_cnt];
+		my $orphan_id = $orphan->dbID();
+
+
+		#Rules for dealing with 5' position
+		#we need to account for 5' link not having stable_id assign yet
+		#b1 at 0 in the above case will inherit from the next transition or xxx
+		#so if we are the first transition(5') we assign stable_id
+		#else we populate the split merge cache for a with b2 and b3, and finish in the next transtion with xxx
 		
-		if(! defined $child){
-		  #this can only be
-		  #o --a-- --c----
-		  #n     -b---
-		  #we're a has no previous_child
-		  #therefore retire!
-
-
-		#or could be
-		#o ---
-		#n
-
-		#Is this not caught above?
-		#Maybe we should just pass it anyway and let this bblock take care of the logic
-
-
-		$outline .= "\t".$child_id if (defined $child_id);
-
-
-
-		#we need to record this as a retired stable ID and children or no children
-		#The 'merge' behaviour will be captured by the b>c(a) inheritance transition
-
-
-		#we need access to the stable_id of b
-
-		#we only know this after we have done the previous transition assignment, so we need to store previous stable_id
-
-	  }else{
-		#o -a--- -d---
-		#n-b- -c----
-
-
-		#so this needs to record split of
-		#a>b & c  where a will project it's stable id to b
-
-		#this will not be caught by above block
-
-
-		#will this d>e?
-
-		#o -a--- -d-----------  xxxxxx
-		#n-b- -c----  -e1- --e2--
-		#n                  ---e3-
+		#Rules for accounting for 3' position
+		#if we know 3'($#) orphan has already been assigned a stable_id
+		#hence we know we should be using previous and will not be current_child
+		#so we use the previously assigned stable_id in our current stable_id array
+		#else if this current child, it could be mid chain or the last 3' transition
+		#so we project the stable_id and update the split_merge cache for the previous old stable_id
+		#else if it is not the current child it must be the 5' position
+		#otherwise the chain would have been split, so we create a new stable_id
 		
-		#we still need to record the split here
-
-		
-		#we also need to record the dbid_mappings
-		#as the next transition c>d & a will not capture this
-		#as c will inherit from a due to coverage of e2 being > c
-		#e1 should get a new stable_id
-		# we need to account for this here too
-
-		#however if we consider e3 over e2
-		#then we will record the d to c inheritance here
-		#and when we get to the next transition
-		#we can't record a&d > c fully here as we don't know about a yet
-		#so if current_child == 0 then we need to leave it until the next transition?
-		#and just record d > c e1 e3
-
-		#else it would be d > e2 c e1
-		#This would need recording the dbID hash only if we haven't already done
-		#e2> d xxx
-
-
-		#so basically we need to record in the dbID hash here if the child is not 0 or $#
-		#this would be a fully contained dbID, therefore we would not have any other merged stable_ids
-
-
-		#also need to record if
-		#1 we are at the last(3') transition and child is $# and $# !=0
-		#2 we are at the first(5') transition and the child == 0 and $# != 0
-
+		#Rules for all others: we assign new stable_ids
 	
-		#we also need to record split
+
+		#don't change the order of this block!
 	
-		#don't need this if now as the loop accounts for position of transition
-		
-		#if($child != 0 && $child != $#{$dbid_mappings{$mapping_info{'transitions'}[$i]{'overlap_ids'}}}){
-		 
-		$mappings++;
-		#oxxx  ---a----- xxxxxxxxx
-		#n  -b1- -b2- -b3--- xxx xx
-		
-		#a>b2 (b1, b3)
-		
-	 
-		#this will not fail here
-		#child will never be b3(which would already have a stable_id) as we will have specified use_previous
-		#otherwise the chain would be split as the linking overlap would not be maximal
-		
-		if(exists $dbid_mappings{$child_id}){
-		  throw("Found duplicate inheritance:\tdbID $child_id > ".$mapping_info{'transitions'}[$i]{'source_id'}.
-				" & ".$dbid_mappings{$child_id});
-		}
-		
-		#record dbID mapping first only done to check for duplicate inheritance
-		$dbid_mappings{$child_id} = $mapping_info{'transitions'}[$i]{'source_id'};
-		
-		#then record splits?
-		#can not record split until we have dealt with new stable id generation
-		#and potential inherited stable_id from x>b1
-		
-		
-		
-		#can we sub this??
-		
-		#make sure inherited stable_id is first
-
-		#@new_stable_ids = ($dbid_mappings{$child_id});
-		
-		#deal with new stable_ids e.g. db
-		
-		#my $start_orhpan = ($i == 0) ? 0 : 1;#last/5' transtion so deal with b1!
-		
-		#we normally deal with b1 in the next transition
-		#but if b1 is the current child then will this get duplicated
-		#we need to check that we don't add it again to the split merge cache of a
-		#if we already have a stable_id
-
-
-		#we need to deal with b1 if it is the current child as we are not adding this by deafult
-		#so we always need to consider 0, but skip if it is not the current child or is i > 0
-
-
-
-
-		#what if b1 inherits here due t use_previous
-		#oxxx  ---a--------- xxxx
-		#n  -b1--- -b2- -b3------
-		#This will always be added as we include the child_id first!!
-		
-		foreach my $orphan_cnt(0..$last_orphan){
-		  #orphan is dbID
-		  my $orphan = $mapping_info{'transitions'}[$i]{'overlap_ids'}[$orphan_cnt];
-
-		  #Rules for dealing with 5' position
-		  #we need to account for 5' link not having stable_id assign yet
-		  #b1 at 0 in the above case will inherit from the next transition or xxx
-		  #so if we are the first transition(5') we assign stable_id
-		  #else we populate the split merge cache for a with b2 and b3, and finish in the next transtion with xxx
-		  
-		  #Rules for accounting for 3' position
-		  #if we know 3'($#) orphan has already been assigned a stable_id
-		  #hence we know we should be using previous and will not be current_child
-		  #so we use the previously assigned stable_id in our current stable_id array
-		  #else if this current child, it could be mid chain or the last 3' transition
-		  #so we project the stable_id and update the split_merge cache for the previous old stable_id
-		  #else if it is not the current child it must be the 5' position
-		  #otherwise the chain would have been split, so we create a new stable_id
-		  
-	
-		  #Rules for all others: we assign new stable_ids
-		
-		  #3' rules
-		  if($orphan_cnt == $last_orphan){
-
-			if(exists $dbid_mappings{$mapping_info{$orphan}}){
-			  #This will have already been added to the previous split cache as it will be the previous child id
-			  $new_sid = $dbid_mappings{$mapping_info{$orphan}};
-			}
-			elsif($orphan == $child_id){
-			  unshift @stable_ids, $dbid_mappings{$child_id};
+		#3' rules
+		if($orphan_cnt == $last_orphan){
+				
+		  if(exists $dbid_mappings{$orphan}){
+			#already assigned from last transition(cannot be child)
+			#This will have already been added to the previous split cache as it will be the previous child id
+			$new_sid = $dbid_mappings{$orphan};
+			#just needs adding to current split cache
+		  }
+		  elsif($orphan_id == $child_id){
+			#last orphan is child
+			$dbid_mappings{$orphan_id} = $mapping_info{'transitions'}[$i]{'source_id'};
+			$new_sid = $dbid_mappings{$orphan_id};
+					
+			#we need add this to the previous split_merge_cache
+			if(defined $last_stable_id){
 			  
-			  #we need add this to the previous split_merge_cache
-			  if(defined $last_stable_id){
-
-				if(exists $split_merge_cache{$last_stable_id}){
-				  push @{$split_merge_cache{$last_stable_id}}, $dbid_mappings{$child_id};
-				}
-				else{
-				  throw("Failed to find split_merge_cache for old $last_stable_id when updating with linking new feature ".
-						$dbid_mappings{$child_id});
-				}
+			  if(exists $split_merge_cache{$last_stable_id}){
+				push @{$split_merge_cache{$last_stable_id}}, $dbid_mappings{$orphan_id};
 			  }
-			 
-
-			  next; #to avoid adding the last new_sid again
+			  else{
+				throw("Failed to find split_merge_cache for old $last_stable_id when updating with linking new feature ".
+					  $dbid_mappings{$child_id});
+			  }
 			}
-			elsif($i == $num_transitions){
-			  $new_sid = &get_new_stable_id();
-			  $dbid_mappings{$orphan} = $new_sid;
-			}
-			else{
-			  throw('This should never happen as this means a link has been made with a none maximal overlap, as link has not been used as child for either transition');
-			}		
-		  }
-		  elsif($orphan == $child_id){
-			#this will also account for the child being the 5' orphan
-
-			unshift @stable_ids, $dbid_mappings{$child_id};
-			#don't need to add this to the split_merge_cache as it is not overlapping
-			next;# to avoid adding the last new_sid
-
-		  }
-		  elsif($i > 0 || ($i == 0 && $orphan_cnt == 0)){#generate a new stable_id
-			$new_sid = &get_new_stable_id();
-			$dbid_mappings{$orphan} = $new_sid;
-			print $mapping_file $orphan."\t".$new_sid;
-
-			#we should have contributing stable_ids here too
-			#is this not duplcaiting the split_merge_cache?
-			
-			#we need to log the dbID and stable_id associations, simply to be able to update the features from file?
-			#what if we are just going to load a new set from file, need to dump the correct tab formatted data, but don't require
-			#the dbID...DO REQUIRE THE NEW FEATURE/S SO WE CAN DUMP/LOAD THE INFO CORRECTLY
-
-			
-			#need to do correct printing and updating here
-			#or store all in tmp caches and print in one go after w've finished all the transitions?
 		  }
 		  else{
-			next;
-			#5' orphan in the middle fo a chain
-			#don't now stable id, update split mrege cache in next transition
-		  }
-				
-		  #print to new stable_id file here
-		  #also record in dbID hash
+			#can only be last in chain
+			#or mid chain linking non-maximal overlap
+			$new_sid = &get_new_stable_id();
+			$new_mappings++;
+
+			if($i == $num_transitions){#last transition(first seen in this loop)
+			  $dbid_mappings{$orphan_id} = $new_sid;
+			}
+			else{
+			  #mid chain linking non-maximal overlap, populate previous split cache
+			  #o---- ----
+			  #n-- --- ---
+			  
+			  if(exists $split_merge_cache{$last_stable_id}){
+				push @{$split_merge_cache{$last_stable_id}}, $dbid_mappings{$orphan_id};
+			  }
+			  else{
+				throw("Failed to find split_merge_cache for old $last_stable_id when updating with linking new feature ".
+					  $dbid_mappings{$orphan_id});
+			  }
+ 			}
+		  }		
+		}
+		elsif($orphan_id == $child_id){
+		  #this will also account for the child being the 5' orphan
+		  $dbid_mappings{$orphan_id} = $mapping_info{'transitions'}[$i]{'source_id'};
+		  $new_sid =   $dbid_mappings{$orphan_id};
+		  #don't need to add this to the split_merge_cache as it is not overlapping
+		}
+		elsif($i > 0 || ($i == 0 && $orphan_cnt == 0)){
+		  #not child and contained orphan or 5' orphan at start of chain
+		  $new_sid = &get_new_stable_id();
+		  $dbid_mappings{$orphan_id} = $new_sid;
+		  $new_mappings++;
+		}
+		else{#5' orphan in the middle of a chain
+		  next;		  #don't now stable id, update split merge cache in next transition
+		}
+		
+   		if ($orphan_id == $child_id){
+		  unshift @stable_ids, $new_sid;
+		}else{
 		  push @new_stable_ids, $new_sid;
-			
 		}
 
-		#set the cache, may not contain the most 5' stable_id which may need to be assigned in the next transition
-		@{$split_merge_cache{$mapping_info{'transitions'}[$i]{'source_id'}}} = @new_stable_ids;
+		#dump this file in the correct tab txt format to enable file import
+		#rather than updating every single record individually
+		#this would require passing the features rather than just their dbIDs
+		#need to create new feature_set at start of process and use new feature_set id
+		#we're going to migrate reg_feats to another table, so do we want to do this
+		#we need a way of defining the old and new set within the reg_feature table
+		#have build field?
+		#adaptor would default to fetching all from the current schema version specified in meta.
+		#optional argument for schema
+		#so we would have 3 sets
+		#old                       e.g. 46
+		#new with no stable IDs    e.g. 47a
+		#new with stable           e.g. 47final
+		#would then delete 47a if flag specified and update table to shift dbIDs to start from last +1 dbID?
+		#would need to add this to update_db_for release script, which is essentially complex healthcheck script
+		#rather than simply mysql healthchecks
+
+
+		#print $mapping_file $orphan."\t".$new_sid."\n";
+		
+
+
+
+		#print unresolved 5' orphans in other block
+
 	  }
+	  
+	  #set the cache, may not contain the most 5' stable_id which may need to be assigned in the next transition
+	  @{$split_merge_cache{$mapping_info{'transitions'}[$i]{'source_id'}}} = @new_stable_ids;
 	}
   }
+  
 
-
-  #so we should prit out split_merge_cache here
+  #so we should print out split_merge_cache here
   #we should also print out dbID > stable id mappings too, in loop or here, and do we need other constributing/merged stable_ids in this file
   #lastly we need to print out retired stable ids? shouldn't this go in the split merge cache?
-  
-
-
-  #ignore all this old id array logic!!!!!!!!
-
-
-
-  #note 'nothing' transitions e.g. 5b>nothing(4b) below do not get passed
-  #so we do not have to consider them
-
-  #o-1--  ----3--------  --5a-- ------5b--
-  #n  --2----  -4a ----4b-------------  xxxxx
-  
-  #xxx is possible further overlap, but we would split into two mappings including the xx in both,
-  #and just pass 5b to the new mapings to ensure we don't migrate backwards
-
-  #This would result in 5 transitions
-  #1  > 2
-  #2  > 3 (&1)
-  #3  > 4a & 4b (&2)
-  #4b > 5a & 5b (&3)
-  #5b > xxxx which is a smaller overlap and therefore split(&4b)
-
-   
-  #we work backwards to define the mapping 
-  #The results should be as follows
-   
-  #Transition 4b > 5a & 5b
-  #gives
-  #5b & 5a > 4b with 5b as the stable_id
-  #due to larger overlap
-
-  #we also need to record merge of 5a
-  #but are we not missing the source_dbID of 3 in the merge?
-  #make sure this is in the constituents
-  #how are we going to record the split of 3 >2, 4a and 4b?!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  #so we just need to add this to the relevant hash when we get to the next transition
-  #this problem could cross mapping_info boundaries when we reset due to a non-inheriting overlap!!!
-  #this is okay?
-  
-  #Transition 3  > 4a & 4b
-  #gives
-  #so now we're working in reverse
-  #we know the very last feature has inherited from it's repective position
-  #so we inherit from the repective position too e.g. 2
-  #and because we're going in the opposite direction we're projecting this st
-  #we then has to check the dbID of the other constituents
-  
-  #what does 4a get?
-  #we need to make sure we assign new stable_ids for all constituent dbIDs which are not primary overlap
-  #4a new stable id
-  
-
-  #for all the other transition we know the biggest overlap is the conjugating overlap
-  #at either end depending on inheritance of the last feature(current_child)
-
-  #if we don't have an overlap in the very last transition then we know the biggest
-  #is the current child i.e. the dbID if we're going to NEW
-  #or the stable_id if we're going to OLD
-  #but is this the previous conjugating overlap or something in the middle?
-  #so basically we need to check whether current_chld for the last transition is >0
-  #if so then we use the repesctive element of the stable_id array else
-  #we inherit from the previous overlap, hence we inherit from respective position -1;
-  #this is only true for stable_id and dbID arrays of same length!
-
-  #we can have stable_id and dbID arrays off different lengths!
-  #this is a function of whether we have a 5' new overlap and a 3' new overlap
-  #so we can figure this out by just looking at the size of the stable_id and dbID arrays
-
-  #if we have neither then the sizes from the above example are stable 3, dbID 2
-  #then inheritance (OLD as we're working backwards) from stable_id array
-  #is transition pos/elem + num seen OLD transitions - 1
-  #for 4b>5b(5a & 3), 4b would inherit from    3 + 0 - 1 = 2 = last stable_id (5b)!!! CORRECT!!!
-  #for 2>3, 2 would inherit from               1 + 1 - 1 = 1 = 2nd stable id(3) CORRECT!!! 
-  #-2 if the last transition current_child == 0;
-
-  #projection rules
-  #transition pos/elem + num seen NEW transition - difference between stable_id and dbID lengths - 1
-  #3>4b(2) would project to 2 + 0 - 1 - 1 = 0 = 1st dbID
-  #1>2     would project to 0 + 1 - 1 - 1 = -1 = would be previous dbID if it existed
-  #but doesn't project...so CORRECT !!!
-  #remove -1 if last transition current_child == 0
-
-
-  #so what if they are equal? (reverse will not give same number of transitions...see below)
-
-  #o-1- --3---- ---5-------
-  #n  -2--  --4----- --6-----
-
-  #stable_ids == 3  dbIDs == 3
-  #projection
-
-  #5>6(4) 4%2 = 2 = last dbID...YAY!
-  #3>4(2) 2%2 = 1 = 2nd dbID  YAY!
-  #1>2    0%2 ? = 0 = 1st dbID YAY!!  Careful no to divide zero!!
-
-  #inheritance == same rule?
-  #we need to use modulus here to round down
-  #4>3(5) 3%2 = 1 = 2nd stable_id  CORRECT BOY WONDER!!
-  #2>1(3) 1%2 = 0 = 1st stable_id  KABLAMMMM!!
-
-
-  #or..NO this is not equal!!
-
-  #o  -1--  --3----- ---5----
-  #n2a- --2b--- ---4-------
-
-  #stable_ids = 3 and dbIDs = 2
-  #remember at present 2a is not stored in the dbID array, this is probably wrong as it is a potential mapping
-
-  #1>2a & 2b
-  #2b>3 &1
-  #3>4 & 2b
-  #4> 5 & 3
- 
-  #this is same as first example
-
-  #inheritance transition pos/elem + num seen OLD transitions - 1
-  #4>5(3)   3 + 0 - 1 = 2 = 3rd stable_id...CORRECT!!
-  #2b>3(1)  1 + 1 - 1 = 1 = 2nd stable_id...CORRECT!!
-  #shift is same
-
-  #projection transition pos/elem + num seen NEW transition - difference between stable_id and dbID lengths - 1
-  #3>4(2b)  2 + 0 - 1 -1 = 0 = 1st dbID CORRECT!!
-  #1>2b(2a) 0 + 1 - 1 -1 = -1 = ??? Is correct but element doesn't exist dbID
-
-  #store 2a dbID in the mapping hash(as previous_child index) and if we get -1 then we check 
-  #it exists and use it else we retire.
-
-  #we're now using the previous_child element to enable spliting over mappings based on a child which is not 
-  #a joining overlap.
-  
-
-
-  #need to test this set up
-  #o   --a--    --c--
-  #n-b1---  --b2-----
-  #this would get split on b2
-
-  #and test  if stable_ids < dbIDs
-
-  #o  -a--  -c----   ---e---
-  #n     ---b- ---d------
-  #inheritance  transition pos/elem + num seen OLD transitions - 1
-  #3 + 0  -1 == 2  CORRECT!!!
-  #d>e(&c)  >  e == 2
-  #shifted -2 == CORRECT
-
-  #b>c(a) == 1
-  #1 + 1 - 1  CORRECT!!
-  
-  #projection
-  #transition pos/elem + num seen NEW transition - difference between stable_id and dbID lengths - 1
-  #a>b  nothing / -1
-  #0 + 1 - 1 -1 = -1 CORRECT
-
-  #shifted
-  #0 + 1 - 1 = 0 CORRECT!!!
-  
-  
-  
-
-
-  #as we work backwards, we're dealing with every mapping twice due to nature of transitions
-  #can we avoid this some how?
-  #can we only store forward transition, and rely on this to record all mappings?
-  #this would mess up the logic above?
-
-
-  #Works, but overkill and messy, use simple previous child rules above
-
 
 }
 
 
+#implement this?
+#sub add_to_split_merge_cache{
+#  my ($old_stable_id, $new_stable_id) = @_;
+
+#  if(exists $split_merge_cache{$last_stable_id}){
+#	push @{$split_merge_cache{$last_stable_id}}, $dbid_mappings{$child_id};
+#  }
+#  else{
+#	throw("Failed to find split_merge_cache for old $last_stable_id when updating with linking new feature ".
+#		  $dbid_mappings{$child_id});
+#  }
+  
+#  return;
+#}
 
 1;
