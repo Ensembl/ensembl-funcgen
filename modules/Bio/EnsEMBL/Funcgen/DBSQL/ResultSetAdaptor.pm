@@ -661,27 +661,44 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #we don't need X Y here, as X Y for probe will be unique for cc_id.
   #any result with the same cc_id will automatically be treated as a tech rep
 
+
+  #This join between sr and pf is causing the slow down.  Need to select righ tjoin for this.
+  #just do two separate queries for now.
+
+  $sql = "SELECT seq_region_id from seq_region where core_seq_region_id=".$slice->get_seq_region_id().
+	" AND schema_build='".$self->db->_get_schema_build($slice->adaptor->db())."'";
+													  
+  my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+
+
   $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM result r, '.
 	'probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = '.$rset->dbID();
 
   $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
 
+
   $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
 	' AND r.probe_id=pf.probe_id'.
-	  ' AND pf.seq_region_id=sr.seq_region_id'.
-		' AND sr.core_seq_region_id ='.$slice->get_seq_region_id().
-		  ' AND sr.schema_build="'.$self->db->_get_schema_build($slice->adaptor->db()).'"'.
-          ' AND pf.seq_region_end>='.$slice->start().
+	  ' AND pf.seq_region_id='.$seq_region_id.
+		' AND pf.seq_region_end>='.$slice->start().
           ' AND pf.seq_region_start<='.$slice->end().
           ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
+
+ # $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
+#	' AND r.probe_id=pf.probe_id'.
+#	  ' AND pf.seq_region_id=sr.seq_region_id'.
+#		' AND sr.core_seq_region_id ='.$slice->get_seq_region_id().
+#		  ' AND sr.schema_build="'.$self->db->_get_schema_build($slice->adaptor->db()).'"'.
+#          ' AND pf.seq_region_end>='.$slice->start().
+#          ' AND pf.seq_region_start<='.$slice->end().
+#          ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
+
 
   $sth = $self->prepare($sql);
   $sth->execute();
   $sth->bind_columns(\$score, \$start, \$end, \$cc_id);
   my $position_mod = $slice->start() - 1;
   
-
-
   while ( $sth->fetch() ) {
 
     #we need to get best result here if start and end the same
