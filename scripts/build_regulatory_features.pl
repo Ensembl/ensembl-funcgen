@@ -114,7 +114,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DataSet;
-use Bio::EnsEMBL::Funcgen::PredictedFeature;
+use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Funcgen::Utils::Encode qw(get_encode_regions);
 use Bio::EnsEMBL::Analysis;
 
@@ -217,7 +217,7 @@ my $dset_a = $db->get_DataSetAdaptor();
 my $anal_a = $db->get_AnalysisAdaptor();
 my $ft_adaptor = $db->get_FeatureTypeAdaptor();
 my $slice_a = $db->get_SliceAdaptor();
-my $pfa = $db->get_PredictedFeatureAdaptor();
+my $afa = $db->get_AnnotatedFeatureAdaptor();
 
 
 my $anal = Bio::EnsEMBL::Analysis->new(
@@ -322,7 +322,7 @@ foreach $slice (@slices) {
 
   warn "Processing slice ".$slice->name."\n";
 
-  foreach my $feature (@{$pfa->fetch_all_by_Slice($slice)}) {
+  foreach my $feature (@{$afa->fetch_all_by_Slice($slice)}) {
 	
 	#skip non union sets
 	next if(! exists $overlap_sets{$feature->feature_set->name()});
@@ -330,8 +330,8 @@ foreach $slice (@slices) {
 	#get highest end value
 	($last_end) = sort{$b <=> $a} map @$_, values %ends;
 	
-	#print join("\t",$feature->start(), $feature->end(),$feature->feature_set->dbID(),
-	#          $feature->display_label()), "\n";
+	print join("\t",$feature->start(), $feature->end(),$feature->feature_set->dbID(),
+	          $feature->display_label()), "\n";
 	
 	
 	#next feature start after last end
@@ -341,13 +341,13 @@ foreach $slice (@slices) {
 	  ($first_start) =  sort{$a <=> $b} map @$_, values %starts;
 	  
 	  #Too long, just use default overlap set
-	  if(($last_end - $first_start) > $max_length){
-		@features = &build_default_features($slice, \%starts, \%ends, \%vectors);
-	  }
-	  else{
-		#build union feature with binary strings or'd
+	  #if(($last_end - $first_start) > $max_length){
+	#	@features = &build_default_features($slice, \%starts, \%ends, \%vectors);
+	#  }
+	#  else{
+	#	#build union feature with binary strings or'd
 		@features = &build_union_features($slice);
-	  }     
+	#  }     
 
 	  &transfer_and_write_features($slice, @features);
 
@@ -371,14 +371,14 @@ foreach $slice (@slices) {
   if($first_start){
 	
   #Too long, just use default overlap set
-	if(($last_end - $first_start) > $max_length){
-	  
-	  @features = &build_default_features($slice, \%starts, \%ends, \%vectors);
-	}else{
-	  #build union feature with binary strings or'd
+	#if(($last_end - $first_start) > $max_length){
+	#  
+	#  @features = &build_default_features($slice, \%starts, \%ends, \%vectors);
+	#}else{
+	#  #build union feature with binary strings or'd
 	  @features = &build_union_features($slice);
-	
-	}     
+	#
+	#}     
 	
 	warn "doing last with slice $slice";
 
@@ -447,7 +447,7 @@ sub transfer_and_write_features{
 	#They should not be used to assign the class as this would
 	#exclude any un-annotated genes from this classification
 
-	foreach my $gene($g_adaptor->fetch_all_by_slice($fslice)){
+	foreach my $gene(@{$g_adaptor->fetch_all_by_Slice($fslice)}){
 
 
 	  #add stuff for genic bit here?
@@ -456,12 +456,12 @@ sub transfer_and_write_features{
 	  
 		if($tx->strand == 1){
 		  
-		  $five_prime = 1 if($tx->seq_region_start() > 0);#TSS is in sub slice
-		  $three_prime = 1 if($tx->seq_region_end() <= $window_length);#3' region in sub slice
+		  $five_prime = 1 if($tx->start() > 0);#TSS is in sub slice
+		  $three_prime = 1 if($tx->end() <= $window_length);#3' region in sub slice
 		}
 		else{#opposite strand
-		  $three_prime = 1 if($tx->seq_region_start() >0);
-		  $five_prime = 1 if($tx->seq_region_end() <= $window_length);
+		  $three_prime = 1 if($tx->start() >0);
+		  $five_prime = 1 if($tx->end() <= $window_length);
 		}
 	  }
 	}
@@ -470,13 +470,13 @@ sub transfer_and_write_features{
 					 
 	if($dump_features){
 	  my ($ensr, $vector) = split/:/, $reg_feature->display_label();
-	  print $fh $ensr."\t".$reg_feature->slice->seq_region_name()."\t".$reg_feature->start()."\t".
+	  print $ensr."\t".$reg_feature->slice->seq_region_name()."\t".$reg_feature->start()."\t".
 		$reg_feature->end()."\t".$vector."\n";
 	}
   }
 
   if($write_features){
-	$pfa->store(@features);
+	$afa->store(@features);
   }
 }
 
@@ -494,7 +494,8 @@ sub build_default_features{
 	
 
 	if(scalar(keys(%starts)) >1 ){
-	  $default = 'Overlap_Wiggle_H3K4me3::GM06990_DNASE_IMPORT:Nessie_NG_STD_2_ctcf_ren_BR1:Wiggle_H3K20me3:Wiggle_H3K27me3:Wiggle_H3K36me3:Wiggle_H3K4me3:Wiggle_H3K79me3:Wiggle_H3K9me3';
+	  #$default = 'Overlap_Wiggle_H3K4me3::GM06990_DNASE_IMPORT:Nessie_NG_STD_2_ctcf_ren_BR1:Wiggle_H3K20me3:Wiggle_H3K27me3:Wiggle_H3K36me3:Wiggle_H3K4me3:Wiggle_H3K79me3:Wiggle_H3K9me3';
+	  $default = 'Overlap_GM06990_DNASE_IMPORT::CD4_CTCF:CD4_H2AZ:CD4_H2BK5me1:CD4_H3K27me1:CD4_H3K27me2:CD4_H3K27me3:CD4_H3K36me1:CD4_H3K36me3:CD4_H3K4me1:CD4_H3K4me2:CD4_H3K4me3:CD4_H3K79me1:CD4_H3K79me2:CD4_H3K79me3:CD4_H3K9me1:CD4_H3K9me2:CD4_H3K9me3:CD4_H3R2me1:CD4_H3R2me2:CD4_H4K20me1:CD4_H4K20me3:CD4_H4R3me2:CD4_PolII:GM06990_DNASE_IMPORT:Nessie_NG_STD_2_ctcf_ren_BR1:Wiggle_H3K27me3:Wiggle_H3K36me3:Wiggle_H3K4me3:Wiggle_H3K79me3:Wiggle_H3K9me3:Wiggle_H4K20me3';
 	}else{
 	  ($default) = keys(%starts);
 	}
@@ -516,7 +517,7 @@ sub build_default_features{
 	
 	warn "$ensr_id defaulted to $default\n";
 
-	my $reg_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+	my $reg_feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
 	  (
 	   -slice => $slice,
 	   -start => $starts[$i],
@@ -566,7 +567,7 @@ sub build_union_features{
 	
 	#warn "got ensr $ensr_id";
 	
-	my $reg_feature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
+	my $reg_feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
 	  (
 	   -slice => $slice,
 	   -start => $first_start,
@@ -597,11 +598,11 @@ sub get_union_FeatureSet{
             if ($clobber && $write_features) {
 			  my $cs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
 
-			  my $sql = 'DELETE from predicted_feature where feature_set_id='.
+			  my $sql = 'DELETE from annotated_feature where feature_set_id='.
 				$union_fsets{$set_name}->dbID().' and coord_system_id='.$cs_id;
 
 			  $db->dbc->do($sql) 
-				or throw('Failed to roll back predicted_features for feature_set_id'.
+				or throw('Failed to roll back annotated_features for feature_set_id'.
 						 $union_fsets{$set_name}->dbID());
             } 
 			elsif ($write_features) {
