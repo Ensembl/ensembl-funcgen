@@ -773,7 +773,7 @@ sub list_dbIDs {
 }
 
 
-
+sub _max_feature_length() { return 200000; }
 
 
 
