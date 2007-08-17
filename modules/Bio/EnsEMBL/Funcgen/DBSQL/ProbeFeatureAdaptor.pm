@@ -863,8 +863,7 @@ sub _get_best_result{
   return $median;
 }
 
-
-
+sub _max_feature_length() { return 200000; }
 
 1;
 
