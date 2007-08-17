@@ -213,11 +213,12 @@ use Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor;
 use strict;
 
 $| = 1;							#autoflush
-my ($dbname, $help, $man, $slice_name);
-my ($odbname, $ndbname, $npass, $nuser, $from_file, $ohost, $oport);
+my ($dbname, $help, $man, $slice_name, $clobber, $no_load, $odb);
+my ($odbname, $ndbname, $npass, $nuser, $ohost, $oport, $from_file);
 my $reg = "Bio::EnsEMBL::Registry";
 
 my $ouser  = 'ensro';
+my $species = 'homo_sapiens';
 my $opass = '';
 #my $ohost = 'ens-livemirror';
 my $nhost = 'ens-genomics1';
@@ -225,9 +226,6 @@ my $old_fset_name = 'RegulatoryFeatures';
 my $new_fset_name = 'newRegulatoryFeatures';
 my $stable_fset_name = 'stableRegulatoryFeatures';
 my $nport = '3306';
-my $no_load = 0;
-my $from_file = 0;
-#my $update = 0;
 my $expand = 0;
 my $out_dir = '.';
 
@@ -237,24 +235,29 @@ $main::_tee = 0;
 
 
 GetOptions (
-			"odbpass=s"     => \$opass,
-			"odbport=s"     => \$oport,
-			"ohost=s"     => \$ohost,
-			"ouser=s"     => \$ouser,
-			"odbname=s"   => \$odbname,
-			"ndbpass=s"     => \$npass,
-			"ndbport=s"     => \$nport,
-			"nhost=s"     => \$nhost,
-			"nuser=s"     => \$nuser,
-			"ndbname=s"   => \$ndbname,
-			"expand|e=s"  => \$expand,
-			"no_load"        => \$no_load,
-			"slice_name=s" => \$slice_name,
-			"outdir=s"    => \$out_dir,
-			"update"      => \$update,
-			"from_file|f=s" =>\$from_file,
-			"help|?"       => \$help,
-			"man|m"        => \$man,
+			"odbpass=s"          => \$opass,
+			"odbport=s"          => \$oport,
+			"ohost=s"            => \$ohost,
+			"ouser=s"            => \$ouser,
+			"odbname=s"          => \$odbname,
+			"npass=s"          => \$npass,
+			"nport=s"          => \$nport,
+			"nhost=s"            => \$nhost,
+			"nuser=s"            => \$nuser,
+			"ndbname=s"          => \$ndbname,
+			"old_fset_name=s"    => \$old_fset_name,
+			"new_fset_name=s"    => \$new_fset_name,
+			"stable_fset_name=s" => \$stable_fset_name,
+			"species=s"          => \$species,
+			"expand|e=s"         => \$expand,
+			'no_load'            => \$no_load,
+			'clobber'            => \$clobber,
+			"slice_name=s"       => \$slice_name,
+			"outdir=s"           => \$out_dir,
+			#"update"             => \$update,
+			"from_file|f=s"      =>\$from_file,
+			"help|?"             => \$help,
+			"man|m"              => \$man,
 			#add opt for old, new & stable fset name
 		   );
 
@@ -273,75 +276,56 @@ throw("You cannot specify load '-from_file' in conjunction with '-no_load'\n") i
 if(! ($nhost && $nuser && $npass && $ndbname)){
   throw("You must provide new DB details: -ndbhost -ndbuser -ndbpass -ndbname\n");
 }
+#else{
+#  print "Using new DB:\n\t".join("\n\t", ($nhost, $nuser, $npass, $ndbname))."\n";
+#}
 
-my $ndb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
-												  host   => $nhost,
-												  user   => $nuser,
-												  pass   => $npass,
-												  port   => $nport,
-												  dbname => $ndbname,
-												 );
+
+warn "species is $species\n";
+
+my $ndb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+													   -host   => $nhost,
+													   -user   => $nuser,
+													   -pass   => $npass,
+													   -port   => $nport,
+													   -dbname => $ndbname,
+													   -species => $species,
+													  );
 
 #Test connection, eval this?
 $ndb->dbc();
 
-if(! ($odbname && $ohost && $ouser && $oport)){
-  warn "Defaulting some old DB setting to new DB values\n";
-  $oport ||= $nport;
-  $odbname ||= $ndbname;
-  $ouser ||= $nuser;
-  $ohost ||= $nhost;
+
+if(! ($odbname && $ohost && $oport)){
+  warn "Defaulting some old DB to new DB\n";
+#  $oport ||= $nport;
+#  $odbname ||= $ndbname;
+#  #$ouser ||= $nuser;
+#  $ohost ||= $nhost;
+  $odb = $ndb;
+
 }
+else{
 
-my $odb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
-													host   => $ohost,
-													user   => $ouser,
-													pass   => $opass,
-													port   => $oport,
-													dbname => $odbname,
-												   );
-$odb->dbc();#Test connection, eval this?
+  warn "species in script is $species\n";
 
+  $odb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+														 -host   => $ohost,
+														 -user   => $ouser,
+														 -pass   => $opass,
+														 -port   => $oport,
+														 -dbname => $odbname,
+														 -species => $species,
+														);
+
+  $odb->dbc();#Test connection, eval this?
+}
 
 my ($next_stable_id, $stable_id, $new_reg_feat_handle);
 my ($new_id_handle, $stable_id_handle, %dbid_mappings, @slices);
 my (%mapping_cache, %obj_cache, $mappings, $new_mappings);#%new_id_cache?
 my $total_mappings = 0;
 
-###Set up new stable ID mapped FeatureSet
-my $fset_a = $odb->get_FeatureSetAdaptor();
-my $stable_fset = $fset_a->fetch_by_name($stable_fset_name);
-
-if(defined $stable_fset){
-  
-  if(! defined $clobber){
-	throw('The FeatureSet $stable_fset_name already exists in the DB,'.
-		  ' please redefine the -feature_set or specify -clobber to overwrite');
-  }else{
-	$odb->dbc->db_handle->do('DELETE from annotated_feature where feature_set_id='.$stable_fset->dbID);
-  }
-}
-else{
-  my $reg_ftype = $odb->get_FeatureTypeAdaptor->fetch_by_name('RegulatoryFeatures');
-  my $reg_atype = $odb->get_AnalysisAdaptor->fetch_by_name('RegulatoryRegion');
-  
-  $stable_fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-														name         => $stable_fset_name,
-														analysis     => $reg_atype,
-														feature_type => $reg_ftype,
-													   );
-  
-  ($stable_fset) =  @{$fset_a->store($stable_fset)};
-}
-
-
-
-  
-##Set start stable_id
-$next_stable_id = $odb->dbc->db_handle->do('SELECT display_label from annotated_feature af, feature_set fs where fs.feature_type_id='$oftype->dbID().' and fs.feature_set_id=af.feature_set_id order by display_label desc limit 1');
-$next_stable_id =~ s/\:.*//;
-$next_stable_id =~ s/ENSR[A-Z]*0*//;
-$next_stable_id ++;
 
 ###Get Old and New FeatureSets and set adaptors
 $obj_cache{'OLD'}{'AF_ADAPTOR'}    = $odb->get_AnnotatedFeatureAdaptor();
@@ -352,6 +336,45 @@ $obj_cache{'NEW'}{'AF_ADAPTOR'}    = $ndb->get_AnnotatedFeatureAdaptor();
 $obj_cache{'NEW'}{'FSET'}          = $ndb->get_FeatureSetAdaptor->fetch_by_name($new_fset_name);
 
 
+#test fsets here?
+
+###Set up Stable Feature sets
+my $fset_a = $ndb->get_FeatureSetAdaptor();
+
+my $stable_fset = $fset_a->fetch_by_name($stable_fset_name);
+
+if(defined $stable_fset){
+  
+  if(! defined $clobber){
+	throw("The FeatureSet $stable_fset_name already exists in the DB,".
+		  ' please redefine the -feature_set or specify -clobber to overwrite');
+  }else{
+	$odb->dbc->db_handle->do('DELETE from annotated_feature where feature_set_id='.$stable_fset->dbID);
+  }
+}
+else{
+  my $reg_ftype = $odb->get_FeatureTypeAdaptor->fetch_by_name('RegulatoryFeatures');
+  my $reg_atype = $odb->get_AnalysisAdaptor->fetch_by_logic_name('RegulatoryRegion');
+  
+  $stable_fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+														-name         => $stable_fset_name,
+														-analysis     => $reg_atype,
+														-feature_type => $reg_ftype,
+													   );
+  
+  ($stable_fset) =  @{$fset_a->store($stable_fset)};
+}
+
+
+
+##Set start stable_id
+$next_stable_id = $odb->dbc->db_handle->do('SELECT display_label from annotated_feature af where af.feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by display_label desc limit 1');
+
+#will this select the last stable_id?
+
+$next_stable_id =~ s/\:.*//;
+$next_stable_id =~ s/ENSR[A-Z]*0*//;
+$next_stable_id ++;
 
 if($slice_name){
   @slices = ( $obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_by_name($slice_name) );
@@ -362,7 +385,9 @@ else{
 
 #Process each top level seq_region
 foreach my $slice (@slices){
-  my $seq_name = $slice->seq_region_name();
+
+  #Need to change this to slice_name
+  my $seq_name = $slice->name();
 
   #Output files
   my $new_reg_feat_file = $out_dir.'/annotated_feature.'.$seq_name.'.txt';
@@ -388,22 +413,24 @@ foreach my $slice (@slices){
   #Start the stable ID mapping
   if(! $from_file){
 	#open files
-	$new_reg_feat_handle  = open_file($new_reg_feat_file);
-	$new_id_handle = open_file($new_id_file);
+	warn 'Need to implement recovery here for backing up files';
+	
+	$new_reg_feat_handle  = open_file($new_reg_feat_file, '>');
+	$new_id_handle = open_file($new_id_file, '>');
 	
 	#clean vars
-	%mapping_cache = {};
-	%dbid_mappings = {};
+	%mapping_cache = ();
+	%dbid_mappings = ();
 	$mappings = 0;
 	$new_mappings = 0;
 
 	foreach my $reg_feat(@{$obj_cache{'OLD'}{'AF_ADAPTOR'}->fetch_all_by_Slice_FeatureSet($slice, $obj_cache{'OLD'}{'FSET'})}){
 	  my $from_db = 'OLD';
 	  my $feature = $reg_feat;
-
 	  #Can we change this to an array as it's only containing transitions array and the orignal stable_id
-	  my $transitions = []; #this has to be ref due to implementation in while
+	  #my $transitions = []; #this has to be ref due to implementation in while
 
+	  warn "mapping old feature $reg_feat\n";
 
 
 	  my $source_dbID; #The source dbID this feature was fetched from, set to null for start feature.
@@ -413,11 +440,12 @@ foreach my $slice (@slices){
 	  #keep building transition whilst we have a 3' overhanging feature returned
 	  while(defined $feature){		
 		#we don't need to sub this part do we?
-		($transitions, $from_db, $feature, $source_dbID) = &build_transitions($transitions, $from_db, $feature, $source_dbID);
+		#can we not have this all in one hash and just test for the feature hash element?
+		($from_db, $feature, $source_dbID) = &build_transitions($from_db, $feature, $source_dbID);
 	  }
 	}
 
-	print 'Mapped $mappings old stable IDs for toplevel seq_region '.$seq_name."\n";
+	print "Mapped $mappings old stable IDs for toplevel seq_region $seq_name\n";
 	$total_mappings += $mappings;
 
 	#Now for this slice get each new feature which hasn't already been mapped, generate a new stable id
@@ -431,8 +459,8 @@ foreach my $slice (@slices){
 	  }
 	}
 
-	print 'Generated $new_mappings new stable IDs for toplevel seq_region '.$seq_name."\n";
-	print 'Total stable IDs for toplevel seq_region '.$seq_name.":\t".($mappings + $new_mappings)."\n";
+	print 'Generated $new_mappings new stable IDs for seq_region '.$seq_name."\n";
+	print 'Total stable IDs for seq_region '.$seq_name.":\t".($mappings + $new_mappings)."\n";
 	$total_mappings += $new_mappings;	
 
 	#print mapping cache
@@ -448,7 +476,7 @@ foreach my $slice (@slices){
   }
 
   #Import from file
-  if(! $dump){
+  if(! $no_load){
 	#recover mode should tidy stable id mapping tables
 	#can this be done with a large IN statement for all stable IDs on one chromosome
 	#we can't recover this per chromosome unless we then get all unassigned new RegFeats on a per chr basis
@@ -460,7 +488,7 @@ foreach my $slice (@slices){
 	#load mappings
 	if($from_file){
 	  #parse mappings and populate mapping_cache
-	  throw("-from_file parse not ye implemented\n");
+	  throw("-from_file parse not yet implemented\n");
 	}
 
 	foreach my $old_stable_id(keys %mapping_cache){
@@ -475,18 +503,34 @@ print "Finished mapping a total of $total_mappings old and new stable IDs\n" if(
 
 
 
+=head2 build_transitions
+
+  Arg [1]    : string - 'OLD' or 'NEW' denoting the DB source of the current feature 
+  Arg [2]    : Bio::EnsEMBL::Funcgen::AnnotatedFeature
+  Arg [3]    : int - The dbID of the source feature from which this feature was retrieved by overlap
+  Example    : 	($from_db, $feature, $source_dbID) = &build_transitions($from_db, $feature, $source_dbID);
+  Description: Traverses mapping transitions in reverse order assigning
+               or creating new stable IDs and caching stable ID history 
+  Returntype : None
+  Exceptions : Throws if duplicate mappings are found
+  Status     : At Risk
+
+=cut
 
 sub build_transitions{
-  my ($transitions, $from_db, $feature, $source_dbID) = @_;
+  my ($from_db, $feature, $source_dbID) = @_;
   #the source_dbID is the dbID of the previous source feature
   #to ensure we don't create a recursive transition, hence enabling detection of the end transition
 
-  my ($o_start, $o_end, $overlap, $displacement, $num_parents, $current_child, $previous_child, @overlap_ids);
+  my ($o_start, $o_end, $displacement, $num_parents, $coverage);
+  my (@transitions, $current_child, $previous_child, @overlap_ids);
   my $overlap = 0;#length of overlap
   my $no_new_features = 0;
   my $to_db = ($from_db eq 'OLD') ? 'NEW' : 'OLD';
 
-  my $slice = $feature->slice();
+  #my $slice = $feature->slice();
+
+ 
 
   #disabled default extend for now for simplicity
   # we should only do this if we have no mapping
@@ -495,17 +539,20 @@ sub build_transitions{
   #	$slice = $slice->expand($expand, $expand);
   #  }
     
-  my $next_slice = $obj_cache{$to_db}{'SLICE_ADAPTOR'}->fetch_by_region('toplevel', $slice->seq_region_name(), $slice->start(), $slice->end());
+  my $next_slice = $obj_cache{$to_db}{'SLICE_ADAPTOR'}->fetch_by_region('toplevel', $feature->seq_region_name(), $feature->seq_region_start(), $feature->seq_region_end());
   
+
   #if(! $next_slice){#I don't think this should ever happen, can we remove?
   #print $reg_feat->display_label()." is on a slice which is not present in the $to_db DB:\t".
   #	  $slice->seq_region_name().' '.$slice->start().' '.$slice->end."\n";
   #	next;
   #  }
     
-  my @nreg_feats = @{$obj_cache{$to_db}{'AF_ADAPTOR'}->fetch_by_Slice_FeatureSet($next_slice, 
+  my @nreg_feats = @{$obj_cache{$to_db}{'AF_ADAPTOR'}->fetch_all_by_Slice_FeatureSet($next_slice, 
 																				  $obj_cache{$to_db}{'FSET'})};
   
+  warn "Found nreg feats @nreg_feats\n";
+
   #disabled default extend for now for simplicity
   #only retry with default extend if we haven't extended already and we don't already have a mapping
   #if(! @nreg_feats && ! $extend && $mapping_info->{'iteration'} == 0){
@@ -533,7 +580,7 @@ sub build_transitions{
 
   #Loop through features assigning best overlap as child
   #recording next best as previous child(?or next best in the case of twins?)
-  my $midpoint =  $slice->end() -  $slice->start();
+  my $midpoint =  $feature->seq_region_end() -  $feature->seq_region_start();
   my $split_chain = 0;
 
   for my $i (0..$#nreg_feats) {
@@ -545,25 +592,28 @@ sub build_transitions{
 	  $no_new_features = 1;
 	  last;
 	}
-		
+	
+	warn "Got feature $feature and nreg_feat ".$nreg_feats[$i]."\n";
+	
 	#overlap length is always the difference between the two middle sorted values
-	(undef, $o_start, $o_end, undef) = sort($slice->start(), $slice->end(), $nreg_feats[$i]->start(), $nreg_feats[$i]->end());
-	my $tmp_length = $o_end - $o_start;
-	my $tmp_displacement = $midpoint - ($nreg_feats[$i]->end() -  $nreg_feats[$i]->start());
+	(undef, $o_start, $o_end, undef) = sort($feature->seq_region_start(), $feature->seq_region_end(), $nreg_feats[$i]->seq_region_start(), $nreg_feats[$i]->seq_region_end());
+	my $tmp_overlap = $o_end - $o_start;
+	my $tmp_displacement = $midpoint - ($nreg_feats[$i]->seq_region_end() -  $nreg_feats[$i]->seq_region_start());
 	my $new_child = 0;
+	my $tmp_coverage = $tmp_overlap / $nreg_feats[$i]->length();
 	
 	#Length test
-	if ($tmp_length > $overlap) {
+	if ($tmp_overlap > $overlap) {
 	  $new_child = 1;
 	} 
-	elsif ($tmp_length == $overlap) {
+	elsif ($tmp_overlap == $overlap) {
 
 	  #Coverage test
-	  if ($nreg_feats[$i]->length() > $coverage) {
+	  if ($tmp_coverage > $coverage) {
 		$new_child = 1;
-	  } elsif ($nreg_feats[$i]->length() == $coverage) {
-		warn "Coverage is not resolving stable_id inheritance, need more rules, defaulting to 3' inheritance for \n";
-		$new_child = 1;			#default to 3' inheritance!!!!!
+	  } elsif ($tmp_coverage == $coverage) {
+		#warn "Coverage is not resolving stable_id inheritance, need more rules, defaulting to 3' inheritance for \n";
+		#$new_child = 1;			#default to 3' inheritance!!!!!
 		#We need to resolve this, or just opt for >= in above statement for now
 		#this would give 3' presidence to inheritance
 		
@@ -610,17 +660,15 @@ sub build_transitions{
 	
 
 		#Displacement test
-		$tmp_displacement * -1 if ($tmp_displacement < 0);
+		$tmp_displacement *= -1 if ($tmp_displacement < 0);
 	
 		if ($tmp_displacement < $displacement) {
 		  $new_child = 1;
-		  $diplacement = $tmp_displacement;
 		} 
 		elsif ($tmp_displacement == $displacement) {
 		  warn "Displacement is failing to resolve stable_id mapping, need num parent rules!! Defaulting to 5' mapping";
 		  $new_child = 1;
-		  $diplacement = $tmp_displacement;
-
+		
 
 		  #STOP HERE! THIS IS GETTNIG WAY MORE COMPLICATED THAN WE CAN HANDLE IN ONE GO!
 		  #this is slightly different and may need to be worked out in the assign block!!!!!!!!!!!!!!!!
@@ -700,7 +748,7 @@ sub build_transitions{
 	
 
 	#Found 3' overhanging feature
-	if($nreg_feats[$i]->end() > $slice->end()){
+	if($nreg_feats[$i]->seq_region_end() > $feature->seq_region_end()){
 	  #set source/parent dbID for next transtion
 	  #and set new feature to overhang feature
 	  $source_dbID = $feature->dbID();
@@ -718,41 +766,49 @@ sub build_transitions{
 
 	#Found new child so update vars
 	if($new_child){
-	  $overlap = $tmp_length;
-	  $coverage = $overlap / $nreg_feats[$i]->length();
+	  $overlap = $tmp_overlap;
+	  $coverage = $tmp_coverage;
 	  $previous_child = $current_child if (defined $current_child);
+	  $displacement = $tmp_displacement;
 	  $current_child = $i;
 	}
   }
 
 
-  #Found end of chain so assign ids
-  if($no_new_features){
+  #Found end of chain or no overlap features
+  if($no_new_features || ! @nreg_feats){
 	#no_new_features ensures we don't add the last transition which has only parent as nreg_feat
-
+	#or no features????
+	#can we ever get !@nreg_features? due to source
+	#this is handled above in extend block
 
 	#This may be an empty hash as we can potentially break a chain on a non-maximal overlap
 	#which gives rise to no more features, will find source
 
-	if(@$transitions){
-	  &assign_stable_ids($transitions);
+	if(@transitions){
+	  &assign_stable_ids(\@transitions);
 	}
-	else{
-	  warn "No transitions to assign to, must have found broken non-maximal 3' overhang(dbID:".
-		$feature->dbID().") with no more overlapping features\n";
-	}
+	#else{
+	#  warn "No transitions to assign to, must have found broken non-maximal 3' overhang(dbID:".
+	#	$feature->dbID().") with no more overlapping features\n";
+	#}
+
+	#do we not need to undef the feature and source_dbID here?
+
+	undef $feature;
+
   }
-  elsif(@nreg_features){
+  elsif(@nreg_feats){
 	#Found some new overlapping features i.e. a transition
 
-	push @$transitions,
+	push @transitions,
 	  {(
 		#feature_id        => ($to_db eq 'NEW') ? $feature->stable_id() : $feature->dbID(),
-		feature          -> $feature,
+		feature          => $feature,
 		source           => $from_db, #current feature feature_set, OLD or NEW
 		#overlap         => undef, #bp overlap with current child
 		#coverage        => $coverage, #% of current child overlapping feature
-		overlap_features => \@nreg_features,
+		overlap_features => \@nreg_feats,
 		current_child    => $current_child, #index of current child in tmp new_feats array
 		previous_child   => $previous_child, #used to identify inheritance if it get's shifted
 		#true_orphan     => ??????,
@@ -762,19 +818,20 @@ sub build_transitions{
 
 	#we want to split chain here if last overlap was non-maximal
 	if($split_chain){
-	  &assign_stable_ids($transitions);
+	  &assign_stable_ids(\@transitions);
 	  #only clean the mapping info as we want to start from the right feature
 	  #but we don't want to redo the assignment for the first part of the chain
-	  undef $transitions;
+	  #undef $transitions;
 	}
 	#don't clean source_dbID and feature as we need them to start the next part of the chain
   }
-  else{#no mapping/features
-	undef $feature;
-  }
-
+  #else{#no mapping/features
+  #	undef $feature;
+  #	throw('No mappings found, This should be handled before we reach here
+  #  }
+  
   #finally return the mapping info hash and switch the db
-  return ($transitions, $to_db, $feature, $source_dbID);
+  return ($to_db, $feature, $source_dbID);
 }
 
 =head2 assign_stable_ids
@@ -792,7 +849,7 @@ sub build_transitions{
 sub assign_stable_ids{
   my $transitions = shift;
 
-  my ($i, $child_id, $last_stable_id);
+  my ($i, $child_id, $feature_id, $last_stable_id, $orphan_id);
   my $num_trans = $#{$transitions};
   my $child = 0; #default to 0 to avoid undef warning below
 
@@ -813,7 +870,7 @@ sub assign_stable_ids{
 	  $child =  $transitions->[$i]->{'previous_child'}; 
 	}
 	else{#no clash
-	  $transitions->[$i]->{'current_child'};
+	  $child = $transitions->[$i]->{'current_child'};
 	}
 
 
@@ -833,8 +890,8 @@ sub assign_stable_ids{
 	  $mappings++;
 	  
 	  #Assign mapping
-	  $feature->stable_id($child_id);
-	  $dbid_mappings{$feature_id} = $feature;
+	  $transitions->[$i]->{'feature'}->stable_id($child_id);
+	  $dbid_mappings{$feature_id} = $transitions->[$i]->{'feature'};
 	  	  	  
 	  
 	  #record all stable_id splits
@@ -872,7 +929,7 @@ sub assign_stable_ids{
 		  #or is 3' with no linking overlap
 		  #or is 5' with an unknown overlap
 		  #i.e. has only one known new stable_id(this feature)
-		   @{$mapping_cache{$orphan_id}}, $child_id;
+		   @{$mapping_cache{$orphan_id}} = ($child_id);
 		}
 	  }
 
@@ -967,6 +1024,7 @@ sub assign_stable_ids{
 	  #This will always be added as we include the child_id first!!
 	  
 	  foreach my $orphan_cnt(0..$last_orphan){
+		my $new_sid;
 		$orphan = $transitions->[$i]->{'overlap_features'}->[$orphan_cnt];
 		$orphan_id = $orphan->dbID();#new dbID
 
@@ -1020,7 +1078,7 @@ sub assign_stable_ids{
 		  }
 		  else{
 			#can only be last in chain
-			$new_sid = &assign_and_log_new_stable_id($orhpan_id);
+			$new_sid = &assign_and_log_new_stable_id($orphan_id);
 
 			#But may have been a split link i.e. a non-maximal lining overlap
 			#so check if we have to add it to the previous split mappings cache
@@ -1136,7 +1194,7 @@ sub assign_stable_ids{
 sub assign_and_log_new_stable_id{
   my $new_reg_feat = shift;
 
-  if(! (defined $new_reg_feat && $new_reg_feat->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature'))){
+  if(! (ref($new_reg_feat) && $new_reg_feat->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature'))){
 	throw('You must provide a valid Bio::EnsEMBL::Funcgen::AnnotatedFeature');
   }
 
@@ -1148,7 +1206,7 @@ sub assign_and_log_new_stable_id{
   $new_mappings ++;
   $next_stable_id ++;
 
-  print $new_ids_handle $new_reg_feat->dbID()."\t".$new_sid."\n";
+  print $new_id_handle $new_reg_feat->dbID()."\t".$new_sid."\n";
 
   return $new_sid;
 }
