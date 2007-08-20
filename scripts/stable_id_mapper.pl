@@ -429,7 +429,9 @@ else{
 
 
 ##Set start stable_id
-($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref('SELECT display_label from annotated_feature af where af.feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by display_label desc limit 1')};
+my $cmd = 'SELECT display_label from annotated_feature af where af.feature_set_id='.
+  $obj_cache{'OLD'}{'FSET'}->dbID().' order by display_label desc limit 1';
+($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref($cmd)};
 
 #will this select the last stable_id?
 
@@ -477,6 +479,30 @@ foreach my $slice (@slices){
   #this needs to check for any features already present and only delete if recovery set.
   #only delete for all seq_region_id is it is the full seq
   #we need to check starts and ends and warn if we're only doing a partial delete
+
+  if($obj_cache{'NEW'}{'AF_ADAPTOR'}->fetch_all_by_Slice_FeatureSet($slice)){
+
+	if(! $clobber){
+	  throw('Stable features were found for the slice $seq_name, specify -clobber to overwrite');
+	}elsif(! $no_load){
+	  my $tl_slice = $obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_by_region('toplevel', $slice->seq_region_name);
+
+	  
+	  if($tl_slice->start == $slice->start && $tl_slice->end == $slice->end){
+		$cmd = 'DELETE from annotated_feature where feature_set_id='.$stable_fset->dbID().' AND seq_region_id='.$slice->seq_region_id;
+	  }else{
+		#partial seq_region
+		#define seq_region_start/ends
+		$cmd = = 'DELETE from annotated_feature where feature_set_id='.$stable_fset->dbID().' AND seq_region_id='.$slice->seq_region_id.' AND seq_region_start>='.$slice->start.' AND seq_region_end<='.$slice->end;
+	  }
+
+	  $ndb->dbc->db_handle->do($cmd);
+	  
+	}else{
+	  warn "There are feature already present for $seq_name in the DB, you have chosen not to remove these and dump a summary of the new ones";
+	}
+  }
+
 
 
 
@@ -535,6 +561,10 @@ foreach my $slice (@slices){
 	$total_mappings += $new_mappings;	
 
 
+
+	#only do this for testing and comparison?
+	#as it will be difficult to load regulatory feature from file once we have implemented the attributes table
+
 	warn "Dumping new stable id features\n";
 
 	#or we could map dbID undef and set the new feature set for all the features and store directly?
@@ -549,11 +579,19 @@ foreach my $slice (@slices){
 	  #new features
 
 	  #we can't dump to file, so what should we do on no load?
+	  
+	  if($no_load){
+		#dump a summary
 
-	  print $new_reg_feat_handle "\t",join("\t", ($f->slice->get_seq_region_id, $f->seq_region_start, 
-												  $f->seq_region_end, $f->seq_region_strand, 
-												  $f->display_label, $f->score, $stable_fset->dbID)),"\n";
-	}
+		print $new_reg_feat_handle "\t",join("\t", ($f->slice->get_seq_region_id, $f->seq_region_start, 
+													$f->seq_region_end, $f->seq_region_strand, 
+													$f->display_label, $f->score, $stable_fset->dbID)),"\n";
+	  }else{
+		#load new feature via adaptor
+
+		#we should load mapping here too and remove block from below
+		
+	  }
 
 
 	warn "Dumping mapping cache\n";
@@ -575,8 +613,8 @@ foreach my $slice (@slices){
 	#we can't recover this per chromosome unless we then get all unassigned new RegFeats on a per chr basis
 	#Need to implement this!!!
 
-	my $cmd = "mysqlimport -d${ndbname} -P$nport} -h${nhost} -p{$npass} ".$new_reg_feat_file;
-	system($cmd);#this will exit on fail?
+	$cmd = "mysqlimport -d${ndbname} -P$nport} -h${nhost} -p{$npass} ".$new_reg_feat_file;
+	run_system_cmd($cmd);#this will exit on fail?
 	
 	#load mappings
 	if($from_file){
@@ -681,7 +719,7 @@ sub build_transitions{
   #set a few local vars to avoid accessors and redundancy
   my $fstart =  $feature->seq_region_start();
   my $fend =  $feature->seq_region_end();
-  my $midpoint =  $fstart + (($fend -  $fstart)/2);
+  my $midpoint =  $fstart + (($fend -  $fstart)/2);#this is different to slice->centrepoint
   my $end_chain = 0;
   my $split_chain = 0;
 
