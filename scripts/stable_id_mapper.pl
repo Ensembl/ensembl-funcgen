@@ -253,7 +253,7 @@ GetOptions (
 			'no_load'            => \$no_load,
 			'clobber'            => \$clobber,
 			"slice_name=s"       => \$slice_name,
-			"outdir=s"           => \$out_dir,
+			"out_dir=s"           => \$out_dir,
 			#"update"             => \$update,
 			"from_file|f=s"      =>\$from_file,
 			"help|?"             => \$help,
@@ -321,10 +321,71 @@ else{
   $odb->dbc();#Test connection, eval this?
 }
 
+
 my ($next_stable_id, $stable_id, $new_reg_feat_handle);
 my ($new_id_handle, $stable_id_handle, %dbid_mappings, @slices);
 my (%mapping_cache, %obj_cache, $mappings, $new_mappings);#%new_id_cache?
 my $total_mappings = 0;
+
+#Do not change the order of this array unless you know what you're doing!!!!!
+my @comparators = ('overlap_length', 'coverage', 'displacement');
+my %comparatees;
+
+
+#Define referenced methods here
+#Comparator calculation and compare methods
+#$tmp_comparatees{$comparator} = &$method($nstart, $nend, $midpoint, $nfstart, $nfend, $nflength);
+#these have to be generated in this order as the are dependent on each other
+
+sub calculate_overlap_length{
+  #overlap length is always the difference between the two middle sorted start/end value pairs
+  my ($overlap_start, $overlap_end) = sort($_[0], $_[1], $_[3], $_[4]);
+  return ($overlap_end - $overlap_start);
+}
+
+sub calculate_coverage{
+  return ($comparatees{'overlap_length'}{'tmp'}/ $_[4]);
+}
+
+sub calculate_displacement{
+  #source feature midpoint - new feature midpoint *-1 id < 0
+  my $disp = ($_[2] - ($_[3] + ( ($_[4] - $_[3]) /2 )));
+  return ($disp < 0 ) ? ($disp * -1) : $disp;
+}
+
+sub is_greater_than{
+  return ($_[0] > $_[1]);
+}
+
+sub is_less_than{
+  return ($_[0] < $_[1]);
+}
+
+
+#is this too obfuscated?
+#redundancy of subs here
+my %comparison_methods = 
+  (
+   'overlap_length' => 
+   {
+	compare   => \&is_greater_than,
+	calculate => \&calculate_overlap_length,
+   },
+
+   'coverage' => 
+   { 
+	compare   => \&is_greater_than,
+	calculate => \&calculate_coverage,
+   },
+
+   'displacement' => 
+   {
+	compare   => \&is_less_than,
+	calculate => \&calculate_displacement,
+   },
+  );
+
+
 
 
 ###Get Old and New FeatureSets and set adaptors
@@ -368,13 +429,15 @@ else{
 
 
 ##Set start stable_id
-$next_stable_id = $odb->dbc->db_handle->do('SELECT display_label from annotated_feature af where af.feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by display_label desc limit 1');
+($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref('SELECT display_label from annotated_feature af where af.feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by display_label desc limit 1')};
 
 #will this select the last stable_id?
 
 $next_stable_id =~ s/\:.*//;
 $next_stable_id =~ s/ENSR[A-Z]*0*//;
 $next_stable_id ++;
+
+
 
 if($slice_name){
   @slices = ( $obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_by_name($slice_name) );
@@ -410,6 +473,13 @@ foreach my $slice (@slices){
   #old_id5  old_id3       old_id2 old_id4         #merge/death
   #old_id7                                        #death
  
+  warn "Need to implement recovery here!";
+  #this needs to check for any features already present and only delete if recovery set.
+  #only delete for all seq_region_id is it is the full seq
+  #we need to check starts and ends and warn if we're only doing a partial delete
+
+
+
   #Start the stable ID mapping
   if(! $from_file){
 	#open files
@@ -430,7 +500,7 @@ foreach my $slice (@slices){
 	  #Can we change this to an array as it's only containing transitions array and the orignal stable_id
 	  #my $transitions = []; #this has to be ref due to implementation in while
 
-	  warn "mapping old feature $reg_feat\n";
+	  warn "\nMapping old feature $reg_feat\n";
 
 
 	  my $source_dbID; #The source dbID this feature was fetched from, set to null for start feature.
@@ -455,16 +525,39 @@ foreach my $slice (@slices){
 	  
 	  if(! exists $dbid_mappings{$nreg_feat->dbID()}){
 		#New regfeat has not been mapped to, so generate new stable_id
-		&assign_and_log_new_stable_id($nreg_feat->dbID());		
+		&assign_and_log_new_stable_id($nreg_feat);		
 	  }
 	}
 
-	print 'Generated $new_mappings new stable IDs for seq_region '.$seq_name."\n";
+
+	print "Generated $new_mappings new stable IDs for seq_region $seq_name\n";
 	print 'Total stable IDs for seq_region '.$seq_name.":\t".($mappings + $new_mappings)."\n";
 	$total_mappings += $new_mappings;	
 
-	#print mapping cache
-	$stable_id_handle = open_file($stable_id_file);
+
+	warn "Dumping new stable id features\n";
+
+	#or we could map dbID undef and set the new feature set for all the features and store directly?
+
+	foreach my $f(values %dbid_mappings){
+
+	  #we need to pass the stable_id:binary string
+	  #not the display label.
+	  #do we need to do direct import if we're going to have a attribute link table?
+	  #or we could do direct updating with just the stable_id
+	  #no because we wan't to be able to delete the stable set for recovery and not affect the original
+	  #new features
+
+	  #we can't dump to file, so what should we do on no load?
+
+	  print $new_reg_feat_handle "\t",join("\t", ($f->slice->get_seq_region_id, $f->seq_region_start, 
+												  $f->seq_region_end, $f->seq_region_strand, 
+												  $f->display_label, $f->score, $stable_fset->dbID)),"\n";
+	}
+
+
+	warn "Dumping mapping cache\n";
+	$stable_id_handle = open_file($stable_id_file, '>');
 
 	foreach my $old_stable_id(keys %mapping_cache){
 	  print $stable_id_handle $old_stable_id."\t".(join "\t", @{$mapping_cache{$old_stable_id}})."\n";
@@ -524,7 +617,8 @@ sub build_transitions{
 
   my ($o_start, $o_end, $displacement, $num_parents, $coverage);
   my (@transitions, $current_child, $previous_child, @overlap_ids);
-  my $overlap = 0;#length of overlap
+  #my $overlap = 0;#length of overlap
+  $comparatees{'overlap_length'}{'child'} = 0;
   my $no_new_features = 0;
   my $to_db = ($from_db eq 'OLD') ? 'NEW' : 'OLD';
 
@@ -548,10 +642,15 @@ sub build_transitions{
   #	next;
   #  }
     
+
+  #this needs to be replaced with some sort of intelligent sub which implements syntenic/seq comparisons
+  #if we can't map dynamically using the assemlby mapper
+  #this would also implement a prioritised code array of extension rules?
+
   my @nreg_feats = @{$obj_cache{$to_db}{'AF_ADAPTOR'}->fetch_all_by_Slice_FeatureSet($next_slice, 
 																				  $obj_cache{$to_db}{'FSET'})};
   
-  warn "Found nreg feats @nreg_feats\n";
+  warn "Mapping ($from_db) $feature to ".scalar(@nreg_feats)." nreg($to_db) feats\n";
 
   #disabled default extend for now for simplicity
   #only retry with default extend if we haven't extended already and we don't already have a mapping
@@ -578,11 +677,17 @@ sub build_transitions{
 	}
   }
 
-  #Loop through features assigning best overlap as child
-  #recording next best as previous child(?or next best in the case of twins?)
-  my $midpoint =  $feature->seq_region_end() -  $feature->seq_region_start();
+
+  #set a few local vars to avoid accessors and redundancy
+  my $fstart =  $feature->seq_region_start();
+  my $fend =  $feature->seq_region_end();
+  my $midpoint =  $fstart + (($fend -  $fstart)/2);
+  my $end_chain = 0;
   my $split_chain = 0;
 
+   #Loop through features assigning best overlap as child
+  #recording next best as previous child(?or next best in the case of twins?)
+ 
   for my $i (0..$#nreg_feats) {
 	#if we're in the middle/end of a chain, the first will always be the source_dbID/dbID
 	
@@ -593,142 +698,186 @@ sub build_transitions{
 	  last;
 	}
 	
-	warn "Got feature $feature and nreg_feat ".$nreg_feats[$i]."\n";
-	
+	warn "Found nreg_feat($to_db) ".$nreg_feats[$i]."\n";
+
+	#set a few more local vars
+	my $nfstart = $nreg_feats[$i]->seq_region_start();
+	my $nfend = $nreg_feats[$i]->seq_region_end();
+	my $nflength = $nreg_feats[$i]->length();
+	my $new_child = 0;	    
+
+
 	#overlap length is always the difference between the two middle sorted values
-	(undef, $o_start, $o_end, undef) = sort($feature->seq_region_start(), $feature->seq_region_end(), $nreg_feats[$i]->seq_region_start(), $nreg_feats[$i]->seq_region_end());
-	my $tmp_overlap = $o_end - $o_start;
-	my $tmp_displacement = $midpoint - ($nreg_feats[$i]->seq_region_end() -  $nreg_feats[$i]->seq_region_start());
-	my $new_child = 0;
-	my $tmp_coverage = $tmp_overlap / $nreg_feats[$i]->length();
+	#(undef, $o_start, $o_end, undef) = sort($feature->seq_region_start(), $feature->seq_region_end(), $nreg_feats[$i]->seq_region_start(), $nreg_feats[$i]->seq_region_end());
+	#my $tmp_overlap = $o_end - $o_start;
+	#my $tmp_displacement = $midpoint - ($nreg_feats[$i]->seq_region_end() -  $nreg_feats[$i]->seq_region_start());
+	#my $tmp_coverage = $tmp_overlap / $nreg_feats[$i]->length();
 	
-	#Length test
-	if ($tmp_overlap > $overlap) {
-	  $new_child = 1;
-	} 
-	elsif ($tmp_overlap == $overlap) {
 
-	  #Coverage test
-	  if ($tmp_coverage > $coverage) {
+
+	#Calculate all comparatees
+	foreach my $comparator(@comparators){
+	  warn "calculating $comparator with coderef ".$comparison_methods{$comparator}->{'calculate'}."\n";
+
+	  $comparatees{$comparator}{'tmp'} = $comparison_methods{$comparator}->{'calculate'}->
+		($fstart, $fend, $midpoint, $nfstart, $nfend, $nflength);
+	}
+
+	#Loop through comparators
+	foreach my $comparator(@comparators){
+
+	  #we need to call a compare routine here as it's not always >
+	  if($comparison_methods{$comparator}->{'compare'}->
+		 ($comparatees{$comparator}{'tmp'}, $comparatees{$comparator}{'child'})){
 		$new_child = 1;
-	  } elsif ($tmp_coverage == $coverage) {
-		#warn "Coverage is not resolving stable_id inheritance, need more rules, defaulting to 3' inheritance for \n";
-		#$new_child = 1;			#default to 3' inheritance!!!!!
-		#We need to resolve this, or just opt for >= in above statement for now
-		#this would give 3' presidence to inheritance
-		
-		#?????
-		#would also need to acount for equal %age overlap and look at number of overlaps?
-		#what would happen here?
-		#o   -------  -------
-		#n    --  ------  -
-		#what if this does not resolve?
-		#do we need another rule?
-		#o------------
-		#n    --    --
-		#arguably the one in the middle should inherit
-
-
-		#will we need to store coverage etc for resolving complex inheritance
-		#in the reverse assign loop?
-		#maybe not coverage, but maybe other info derive from the last transition 
-		#which will not be available from the linking overlap, which will be available in the next transition
-		#i.e. num of parents?
-		#o -a c1 --c2----
-		#n  --b-----  --d-----
-		#Here b should in herit from c and not d
-		#as their coverage is equal but b has other parental support
-		#what about?
-		#o -a c1  --c2--
-		#n  --b-----  --d-----
-		#b would inherit from c1 due to coverage
-		#and this?
-		#o  -a c1 --c2--
-		#n  --b-----  --d-----
-		#again b would inherit from c1, a, c1 and c2 have equal overlap, 
-		#a and c1 have equal coverage, but c1 is more central to b.
-		#is this the same in reverse?
-		#o---a---- --c--
-		#nb1 b2 -b3--
-		#this is the same as we don't account for direction here!!??
-		#this will take some funky logic in the assign block
-
-		#do mid point comparison first as this will always find the best contained feature first
-		#as these would fail the number of parents test as they will only have one
-		#conversely the midpoint test for linking features would always fail as 
-		#linking features will always score equally on the midpoint after scoring equally on the coverage
+	  }
+	  elsif($comparatees{$comparator}{'tmp'} ==  $comparatees{$comparator}{'child'}){
 	
-
-		#Displacement test
-		$tmp_displacement *= -1 if ($tmp_displacement < 0);
-	
-		if ($tmp_displacement < $displacement) {
-		  $new_child = 1;
-		} 
-		elsif ($tmp_displacement == $displacement) {
+		if($comparator eq 'displacement'){#must be ==
+		  #only required as comparators are not exhaustive
+		  
 		  warn "Displacement is failing to resolve stable_id mapping, need num parent rules!! Defaulting to 5' mapping";
 		  $new_child = 1;
-		
-
-		  #STOP HERE! THIS IS GETTNIG WAY MORE COMPLICATED THAN WE CAN HANDLE IN ONE GO!
-		  #this is slightly different and may need to be worked out in the assign block!!!!!!!!!!!!!!!!
-		  #We need to compare num of parent of parents, but we won't know this until we traverse the 
-		  #next transition, hence this needs to be dealt with in the assign block when we walk backwards
-		  #or can we do it here as we move along?
-		  #as these 'twins' may be exact matches over many transitions
-		  #so we need to set a 'twin' flag, and record which transition it occured at
-		  #then walk forward comparing to the mirrored transition and seeing which wins, then track back to the
-		  #transition where the twin occured assigning child and previous child accordingly
-		  #can we leave this walk back until the assign step?
-		  #do we also need to record 2nd child instead of previous child, as the next best child might be 3' rather than
-		  #the default which is the previous seen i.e. 5'
-	  
-		  #if($tmp_num_parents > $num_parents){
-
-		  #}elsif($tmp_num_parents == $num_parents){
-		  #warn "Number of parents is failing to resolve stable_id mapping, need more rules";
-
-		  #o -a c1 --c2---- x1 x2
-		  #n --b------  --d------
-
-		  #b should inherit from c2 due to increased number of children/parents
-		  #so when considering the c2> b & d transition
-		  #we currently don't know the number of parents of d or d
-		  #so we can't pick a current child
-		  #if they are truly equal then it's probably best to retire c2
-		  #and assign c1 to b and x1 to d
-
-		
-		  #num_parent is essentially $#overlaps, so we will need to trace this backwards 
-		  #through 3 transitions to be able to resolve this 
-		  #d  > c2(x1 & x2) 
-		  #c2 > b & d Don't know which is the child so can't assign an id yet
-		  #b  > a > c1 & c2 can now compare num parents and assign if there is a difference
-		  #else split c2 and use c1 and x1
-		  
-		  #what if parents have differing coverage?
-		  #o--a c1 --c2---- x1 x2
-		  #n --b------  --d------
-		  #b now inherit from a
-		  #and d from c2
-
-		  #what is a has better match?
-		  #o-----a c1 --c2---- x1 x2
-		  #n-z- --b------  --d------
-		  #we would have to work right back to z before assigning ids
-		  #z should inherit from a
-		  #b should inherit from previosu child i.e. c1
-		  #d should inherit from c2
-
-		  #That has to be it!!
-		  #another extension here would be caught by preceding rules no?
-		  #For walking forward then we find a twin, previous child has to be next best child i.e. 3' to current
-		  #we would have to have a nested loop here to compare back to the mirrored 'twins' to define
-		  #child/previous child for each before we pass to assign_ids?  Is this necessary, can we not resolves this in assign_ids?
-		  #}
 		}
+
+		#only call next if comparison is equal
+		next;
 	  }
+	  
+	  #default to exit if we don't find a better match
+	  last;
 	}
+
+
+
+	#left for docs on symmetrical inheritance/twins etc
+	#	#Length test
+	#	if ($tmp_overlap > $overlap) {
+	#	  $new_child = 1;
+#	} 
+#	elsif ($tmp_overlap == $overlap) {
+#
+#	  #Coverage test
+#	  if ($tmp_coverage > $coverage) {
+#		$new_child = 1;
+#	  } elsif ($tmp_coverage == $coverage) {
+#		#warn "Coverage is not resolving stable_id inheritance, need more rules, defaulting to 3' inheritance for \n";
+#		#$new_child = 1;			#default to 3' inheritance!!!!!
+#		#We need to resolve this, or just opt for >= in above statement for now
+#		#this would give 3' presidence to inheritance
+#		
+#		#?????
+#		#would also need to acount for equal %age overlap and look at number of overlaps?
+#		#what would happen here?
+#		#o   -------  -------
+#		#n    --  ------  -
+#		#what if this does not resolve?
+#		#do we need another rule?
+#		#o------------
+#		#n    --    --
+#		#arguably the one in the middle should inherit
+#
+#
+#		#will we need to store coverage etc for resolving complex inheritance
+#		#in the reverse assign loop?
+#		#maybe not coverage, but maybe other info derive from the last transition 
+#		#which will not be available from the linking overlap, which will be available in the next transition
+#		#i.e. num of parents?
+#		#o -a c1 --c2----
+#		#n  --b-----  --d-----
+#		#Here b should in herit from c and not d
+#		#as their coverage is equal but b has other parental support
+#		#what about?
+#		#o -a c1  --c2--
+#		#n  --b-----  --d-----
+#		#b would inherit from c1 due to coverage
+#		#and this?
+#		#o  -a c1 --c2--
+#		#n  --b-----  --d-----
+#		#again b would inherit from c1, a, c1 and c2 have equal overlap, 
+#		#a and c1 have equal coverage, but c1 is more central to b.
+#		#is this the same in reverse?
+#		#o---a---- --c--
+#		#nb1 b2 -b3--
+#		#this is the same as we don't account for direction here!!??
+#		#this will take some funky logic in the assign block
+#
+#		#do mid point comparison first as this will always find the best contained feature first
+#		#as these would fail the number of parents test as they will only have one
+#		#conversely the midpoint test for linking features would always fail as 
+#		#linking features will always score equally on the midpoint after scoring equally on the coverage
+#	
+#
+#		#Displacement test
+#		$tmp_displacement *= -1 if ($tmp_displacement < 0);
+#	
+#		if ($tmp_displacement < $displacement) {
+#		  $new_child = 1;
+#		} 
+#		elsif ($tmp_displacement == $displacement) {
+#		  warn "Displacement is failing to resolve stable_id mapping, need num parent rules!! Defaulting to 5' mapping";
+#		  $new_child = 1;
+#		
+#
+#		  #STOP HERE! THIS IS GETTNIG WAY MORE COMPLICATED THAN WE CAN HANDLE IN ONE GO!
+#		  #this is slightly different and may need to be worked out in the assign block!!!!!!!!!!!!!!!!
+#		  #We need to compare num of parent of parents, but we won't know this until we traverse the 
+#		  #next transition, hence this needs to be dealt with in the assign block when we walk backwards
+#		  #or can we do it here as we move along?
+#		  #as these 'twins' may be exact matches over many transitions
+#		  #so we need to set a 'twin' flag, and record which transition it occured at
+#		  #then walk forward comparing to the mirrored transition and seeing which wins, then track back to the
+#		  #transition where the twin occured assigning child and previous child accordingly
+#		  #can we leave this walk back until the assign step?
+#		  #do we also need to record 2nd child instead of previous child, as the next best child might be 3' rather than
+#		  #the default which is the previous seen i.e. 5'
+#	  
+#		  #if($tmp_num_parents > $num_parents){
+#
+#		  #}elsif($tmp_num_parents == $num_parents){
+#		  #warn "Number of parents is failing to resolve stable_id mapping, need more rules";
+#
+#		  #o -a c1 --c2---- x1 x2
+#		  #n --b------  --d------
+#
+#		  #b should inherit from c2 due to increased number of children/parents
+#		  #so when considering the c2> b & d transition
+#		  #we currently don't know the number of parents of d or d
+#		  #so we can't pick a current child
+#		  #if they are truly equal then it's probably best to retire c2
+#		  #and assign c1 to b and x1 to d
+#
+#		
+#		  #num_parent is essentially $#overlaps, so we will need to trace this backwards 
+#		  #through 3 transitions to be able to resolve this 
+#		  #d  > c2(x1 & x2) 
+#		  #c2 > b & d Don't know which is the child so can't assign an id yet
+#		  #b  > a > c1 & c2 can now compare num parents and assign if there is a difference
+#		  #else split c2 and use c1 and x1
+#		  
+#		  #what if parents have differing coverage?
+#		  #o--a c1 --c2---- x1 x2
+#		  #n --b------  --d------
+#		  #b now inherit from a
+#		  #and d from c2
+#
+#		  #what is a has better match?
+#		  #o-----a c1 --c2---- x1 x2
+#		  #n-z- --b------  --d------
+#		  #we would have to work right back to z before assigning ids
+#		  #z should inherit from a
+#		  #b should inherit from previosu child i.e. c1
+#		  #d should inherit from c2
+#
+#		  #That has to be it!!
+#		  #another extension here would be caught by preceding rules no?
+#		  #For walking forward then we find a twin, previous child has to be next best child i.e. 3' to current
+#		  #we would have to have a nested loop here to compare back to the mirrored 'twins' to define
+#		  #child/previous child for each before we pass to assign_ids?  Is this necessary, can we not resolves this in assign_ids?
+#		  #}
+#		}
+#	  }
+#	}
 
 	#non-maximal 3' overlap will be handled by ! use_previous in assign block
 	#will never get a unseen 5' new feature when going from new to old, 
@@ -749,31 +898,32 @@ sub build_transitions{
 
 	#Found 3' overhanging feature
 	if($nreg_feats[$i]->seq_region_end() > $feature->seq_region_end()){
-	  #set source/parent dbID for next transtion
-	  #and set new feature to overhang feature
-	  $source_dbID = $feature->dbID();
-	  $feature = $nreg_feats[$i];
+
 
 	  #Found non-maximal link
 	  $split_chain = 1 if(! $new_child);
-	  
 	}
-	else{
-	  #make sure we don't pass back current values and get caught in loop
-	  undef $source_dbID;
-	  undef $feature;
+	elsif($i == $#nreg_feats){
+	  #Last feature but no overhang
+	  $end_chain = 1;
 	}
 
 	#Found new child so update vars
 	if($new_child){
-	  $overlap = $tmp_overlap;
-	  $coverage = $tmp_coverage;
+
+	  map $comparatees{$_}{'child'} = $comparatees{$_}{'tmp'}, keys %comparatees; 
+	  #$overlap = $tmp_overlap;
+	  #$coverage = $tmp_coverage;
+	  #$displacement = $tmp_displacement;
+
 	  $previous_child = $current_child if (defined $current_child);
-	  $displacement = $tmp_displacement;
 	  $current_child = $i;
 	}
   }
 
+
+  #undef $feature if we're ending a chain
+  #no need to undef source_dbID as we're not testing it in the caller
 
   #Found end of chain or no overlap features
   if($no_new_features || ! @nreg_feats){
@@ -793,17 +943,14 @@ sub build_transitions{
 	#	$feature->dbID().") with no more overlapping features\n";
 	#}
 
-	#do we not need to undef the feature and source_dbID here?
-
 	undef $feature;
-
+	
   }
   elsif(@nreg_feats){
 	#Found some new overlapping features i.e. a transition
 
 	push @transitions,
 	  {(
-		#feature_id        => ($to_db eq 'NEW') ? $feature->stable_id() : $feature->dbID(),
 		feature          => $feature,
 		source           => $from_db, #current feature feature_set, OLD or NEW
 		#overlap         => undef, #bp overlap with current child
@@ -813,22 +960,30 @@ sub build_transitions{
 		previous_child   => $previous_child, #used to identify inheritance if it get's shifted
 		#true_orphan     => ??????,
 		#twin?? this could be figured out if previous child is > current_child
+		#pass %comparatees?
 	   )};
 
 
 	#we want to split chain here if last overlap was non-maximal
-	if($split_chain){
+	if($end_chain || $split_chain){
 	  &assign_stable_ids(\@transitions);
-	  #only clean the mapping info as we want to start from the right feature
-	  #but we don't want to redo the assignment for the first part of the chain
-	  #undef $transitions;
+	  
+	  if($end_chain){
+		#make sure we don't pass back current values and get caught in loop
+		undef $feature;
+		#undef $source_dbID;
+	  }
+	  else{#split
+		#set source/parent dbID for next transtion
+		#and set new feature to overhang feature
+		$source_dbID = $feature->dbID();
+		$feature = $nreg_feats[$#nreg_feats];
+	  }
 	}
-	#don't clean source_dbID and feature as we need them to start the next part of the chain
   }
-  #else{#no mapping/features
-  #	undef $feature;
-  #	throw('No mappings found, This should be handled before we reach here
-  #  }
+  else{#no mapping/features???
+	warn "not catching this!!!";
+  }
   
   #finally return the mapping info hash and switch the db
   return ($to_db, $feature, $source_dbID);
@@ -851,12 +1006,13 @@ sub assign_stable_ids{
 
   my ($i, $child_id, $feature_id, $last_stable_id, $orphan_id);
   my $num_trans = $#{$transitions};
-  my $child = 0; #default to 0 to avoid undef warning below
+  my $child = 1; #default to 1 to avoid undef and child clash
 
   #Walk backwards through transitions
   for($i = $num_trans; $i >= 0; $i--){
 	my ($feature, $orphan, $orphan_id, @new_stable_ids);
-	my $last_orphan = $#{$transitions->[$i]{'overlap_ids'}};
+	my $last_orphan = $#{$transitions->[$i]{'overlap_features'}};
+	warn "Processing transtion $i\n";
 
 	#would need to add stuff here to account for the twin situation
 	#would need next_child, rather than previous child
@@ -866,7 +1022,7 @@ sub assign_stable_ids{
 	#reset child for current transition
 	if($child == 0 && 
 	   ($transitions->[$i]->{'current_child'} == $#{$transitions->[$i]->{'overlap_features'}})){
-	  #children clash
+	  #child clash
 	  $child =  $transitions->[$i]->{'previous_child'}; 
 	}
 	else{#no clash
@@ -874,10 +1030,14 @@ sub assign_stable_ids{
 	}
 
 
+
 	#INHERITANCE
 	if ($transitions->[$i]->{'source'} eq 'NEW'){
 	  $child_id = $transitions->[$i]->{'overlap_features'}->[$child]->stable_id();
 	  $feature_id = $transitions->[$i]->{'feature'}->dbID();
+	  
+	  warn "Assigning IDs by Inheritance. Source is NEW $feature_id\n";
+
 
 	  #This should be true as will be using previous if last transition projected to this feature
 	  if(exists $dbid_mappings{$feature_id}){
@@ -896,9 +1056,13 @@ sub assign_stable_ids{
 	  
 	  #record all stable_id splits
 	  foreach my $orphan_cnt(0..$last_orphan){#these are stable_ids!
-		$orphan = $transitions->[$i]->{'overlap_ids'}->[$orphan_cnt];
+		$orphan = $transitions->[$i]->{'overlap_features'}->[$orphan_cnt];
 		$orphan_id = $orphan->stable_id();
 		
+		warn "Found $orphan_cnt orphan with stable_id $orphan_id\n";
+
+		
+
 		#Rules 
 		#we build a new mapping cache entry for each old stable id
 		#mapping it to the new child_id
@@ -937,12 +1101,10 @@ sub assign_stable_ids{
 	  $last_stable_id = $orphan_id;
 	}
 	else{#PROJECTION i.e. source == OLD
-
-	  #this should be dbID!!
-
 	  $child_id = $transitions->[$i]->{'overlap_features'}->[$child]->dbID();
 	  $feature_id = $transitions->[$i]->{'feature'}->stable_id();
 
+	  warn "Assigning IDs by Projection. Source is OLD $feature_id\n";
 
 	  #my $outline = $mapping_info{'transitions'}[$i]{'source_id'};	  #stable_id
 	  #o -a--- -d---
@@ -1022,11 +1184,13 @@ sub assign_stable_ids{
 	  #oxxx  ---a--------- xxxx
 	  #n  -b1--- -b2- -b3------
 	  #This will always be added as we include the child_id first!!
-	  
+
 	  foreach my $orphan_cnt(0..$last_orphan){
 		my $new_sid;
 		$orphan = $transitions->[$i]->{'overlap_features'}->[$orphan_cnt];
 		$orphan_id = $orphan->dbID();#new dbID
+
+		warn "Found $orphan_cnt orphan with dbID $orphan_id\n";
 
 
 		#Rules for dealing with 5' position
@@ -1051,52 +1215,46 @@ sub assign_stable_ids{
 	
 		#3' rules
 		if($orphan_cnt == $last_orphan){
-				
+		  
 		  if(exists $dbid_mappings{$orphan_id}){
 			#already assigned from last transition(cannot be child)
 			#This will have already been added to the previous split cache as it will be the previous child id
 			$new_sid = $dbid_mappings{$orphan_id}->stable_id();
 			#added to split cache below
 		  }
-		  elsif($orphan_id == $child_id){
-			#last orphan is child
-			$orphan->stable_id($feature_id);
-			$dbid_mappings{$orphan_id} = $orphan;
-			$new_sid = $dbid_mappings{$orphan_id}->stable_id();
-					
+		  #elsif($orphan_cnt == $child){
+		  else{
+
+			if($orphan_cnt == $child){
+			  #last orphan is child
+			  $orphan->stable_id($feature_id);
+			  $dbid_mappings{$orphan_id} = $orphan;
+			  $new_sid = $orphan->stable_id();
+			}
+			else{
+			  #can only be last in chain
+			  $new_sid = &assign_and_log_new_stable_id($orphan);
+
+			}
+
 			#we need add this to the previous split_merge_cache
 			if(defined $last_stable_id){
 			  
 			  if(exists $mapping_cache{$last_stable_id}){
-				push @{$mapping_cache{$last_stable_id}}, $dbid_mappings{$orphan_id}->stable_id();
+				push @{$mapping_cache{$last_stable_id}}, $orphan->stable_id();
 			  }
 			  else{
-				throw("Failed to find split_merge_cache for old $last_stable_id when updating with linking new feature ".
-					  $dbid_mappings{$orphan_id}->stable_id());
+				throw("Failed to find split_merge_cache for old $last_stable_id ".
+					  "when updating with linking new feature ".$orphan->stable_id());
 			  }
 			}
 		  }
-		  else{
-			#can only be last in chain
-			$new_sid = &assign_and_log_new_stable_id($orphan_id);
-
-			#But may have been a split link i.e. a non-maximal lining overlap
-			#so check if we have to add it to the previous split mappings cache
-
-			if(exists $mapping_cache{$last_stable_id}){
-			  push @{$mapping_cache{$last_stable_id}}, $dbid_mappings{$orphan_id}->stable_id();
-			}
-			else{
-			  throw("Failed to find mapping cache for old $last_stable_id when updating with non-maximal linking new feature ".
-					$dbid_mappings{$orphan_id}->stable_id());
-			}
-		  }		
 		}
-		elsif($orphan_id == $child_id){
+		elsif($orphan_cnt == $child){
 		  #this will also account for the child being the 5' orphan
 		  $orphan->stable_id($feature_id);
 		  $dbid_mappings{$orphan_id} = $orphan;
-		  $new_sid = $dbid_mappings{$orphan_id}->stable_id();;
+		  $new_sid = $orphan->stable_id();
 		  #don't need to add this to the split_merge_cache as it is not overlapping
 
 
@@ -1126,14 +1284,14 @@ sub assign_stable_ids{
 		}
 		elsif($i > 0 || ($i == 0 && $orphan_cnt == 0)){
 		  #not child and contained orphan or 5' orphan at start of chain
-		  $new_sid = &assign_and_log_new_stable_id($orphan_id);
+		  $new_sid = &assign_and_log_new_stable_id($orphan);
 		}
 		else{#5' orphan in the middle of a chain
 		  #don't assign stable id yet, update mapping cache in next transition
 		  next;	#to ensure we populate this transition's mapping cache
 		}
 		
-   		if ($orphan_id == $child_id){
+   		if ($orphan_cnt == $child){
 		  unshift @new_stable_ids, $new_sid;
 		}else{
 		  push @new_stable_ids, $new_sid;
@@ -1168,6 +1326,10 @@ sub assign_stable_ids{
 	  
 	  #set the cache, may not contain the most 5' stable_id which may need to be assigned in the next transition
 	  @{$mapping_cache{$feature_id}} = @new_stable_ids;
+
+
+	  warn "Mapping cache for $feature_id is @new_stable_ids\n";
+
 	}
   }
   
@@ -1201,6 +1363,9 @@ sub assign_and_log_new_stable_id{
   #Need to add species intrafix here
 
   my $new_sid = sprintf("ENSR%011d", $next_stable_id);
+
+  warn "Assigning new ID $new_sid to new feature dbID ".$new_reg_feat->dbID()."\n"; 
+
   $new_reg_feat->stable_id($new_sid);
   $dbid_mappings{$new_reg_feat->dbID()} = $new_reg_feat;
   $new_mappings ++;
@@ -1233,5 +1398,9 @@ sub dump_new_stable_feature{
   
 #  return;
 #}
+
+
+
+
 
 1;
