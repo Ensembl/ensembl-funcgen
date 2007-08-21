@@ -13,7 +13,7 @@ storing AnnotatedFeature objects.
 my $afa = $db->get_AnnotatedFeatureAdaptor();
 
 my $features = $afa->fetch_all_by_Slice($slice);
-$features = $afa->fetch_all_by_Slice_Target($slice, $target);
+
 
 =head1 DESCRIPTION
 
@@ -203,7 +203,7 @@ sub _logic_name_to_constraint {
   my $an_id = $an->dbID();
 
   $constraint .= ' AND' if($constraint);
-  $constraint .= " feature_set.analysis_id = $an_id";
+  $constraint .= " fs.analysis_id = $an_id";
   return $constraint;
 }
 
@@ -286,9 +286,8 @@ sub _columns {
   return qw(
 			af.annotated_feature_id  af.seq_region_id
 			af.seq_region_start      af.seq_region_end
-			af.seq_region_strand     af.coord_system_id
-			af.feature_set_id        af.display_label
-			af.score
+			af.seq_region_strand     af.feature_set_id
+			af.display_label         af.score
 	   );
 }
 
@@ -335,7 +334,7 @@ sub _default_where_clause {
 
 
 sub _final_clause {
-  return ' ORDER BY af.seq_region_id, af.seq_region_start, af.annotated_feature_id';
+  return ' ORDER BY af.seq_region_id, af.seq_region_start';
 }
 
 
@@ -365,7 +364,7 @@ sub _objs_from_sth {
 	#my $sa = $self->db->get_SliceAdaptor();
 
 	
-	my ($sa, $old_cs_id);
+	my ($sa);#, $old_cs_id);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
@@ -379,17 +378,15 @@ sub _objs_from_sth {
 	my (
 	    $annotated_feature_id,  $seq_region_id,
 	    $seq_region_start,      $seq_region_end,
-	    $seq_region_strand,     $cs_id,
-	    $fset_id,               $display_label,
-	    $score
+	    $seq_region_strand,     $fset_id,
+		$display_label,         $score
 	);
 
 	$sth->bind_columns(
 					   \$annotated_feature_id,  \$seq_region_id,
-					   \$seq_region_start,  \$seq_region_end,
-					   \$seq_region_strand, \$cs_id,
-					   \$fset_id,        \$display_label,
-					   \$score
+					   \$seq_region_start,      \$seq_region_end,
+					   \$seq_region_strand,     \$fset_id,
+					   \$display_label,         \$score
 					  );
 
 
@@ -439,22 +436,22 @@ sub _objs_from_sth {
 		
 
 	    
-	    if($old_cs_id && ($old_cs_id != $cs_id)){
-	      throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
-	    }
+	    #if($old_cs_id && ($old_cs_id+ != $cs_id)){
+	    #  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
+	    #}
 	    
-	    $old_cs_id = $cs_id;
+	    #$old_cs_id = $cs_id;
 	    
 	    
 	    #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
 	    
-	    $sa ||= $self->db->get_SliceAdaptor($cs_id);
+	    $sa ||= $self->db->get_SliceAdaptor();#$cs_id);
 	    
 	    
 	    
 	    # This assumes that features come out sorted by ID
-	    next if ($last_feature_id == $annotated_feature_id);
-	    $last_feature_id = $annotated_feature_id;
+	    #next if ($last_feature_id == $annotated_feature_id);
+	    #$last_feature_id = $annotated_feature_id;
 	    
 	    # Get the analysis object
 		#$analysis_hash{$analysis_id} = $aa->fetch_by_dbID($analysis_id) if(! exists $analysis_hash{$analysis_id});
@@ -539,44 +536,44 @@ sub _objs_from_sth {
 		  
 		  #RegulatoryFeature hack
 
-
-
-		  #We don't consider the non-epi feature bits as these are only used to
-		  #cluster and build the patterns, not to assign a classification
-		  #as this would prevent us from finding novel regions
-
-		  my %reg_class_regexs = (
-								  #'1....(10|01).'  => 'Gene end associated', 
-								  #'1...1...'        => 'Promoter associated',#orig
-								  '1...1.....'        => 'Promoter associated',
-								  '1.0.001...' => 'Non-gene associated',
-								  '11..01....' => 'Gene associated',
+		  if($vector){
+			
+			#We don't consider the non-epi feature bits as these are only used to
+			#cluster and build the patterns, not to assign a classification
+			#as this would prevent us from finding novel regions
+			
+			my %reg_class_regexs = (
+									#'1....(10|01).'  => 'Gene end associated', 
+									#'1...1...'        => 'Promoter associated',#orig
+									'1...1.....'        => 'Promoter associated',
+									'1.0.001...' => 'Non-gene associated',
+									'11..01....' => 'Gene associated',
 								 );
-
-
-
-		  #omit TSS and TES from here?
-		  my @reg_feature_attrs = ('DNase1', 'CTCF', 'H4K20me3', 'H3K27me3', 
-								   'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
-		  my @vector = split//, $vector;
-
-		  foreach my $i(0..7){#$#vector){
-			push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
-		  }
-
-
-		  foreach my $regex(keys %reg_class_regexs){
-
-			if($vector =~ /$regex/){
-
-			  #warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
-
-			  throw('Found non-mutually exclusive regexs') if $reg_type;
-			  $reg_type = $reg_class_regexs{$regex};
+			
+			
+			
+			#omit TSS and TES from here?
+			my @reg_feature_attrs = ('DNase1', 'CTCF', 'H4K20me3', 'H3K27me3', 
+									 'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
+			my @vector = split//, $vector;
+			
+			foreach my $i(0..7){#$#vector){
+			  push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
 			}
 			
+			
+			foreach my $regex(keys %reg_class_regexs){
+			  
+			  if($vector =~ /$regex/){
+				
+				#warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
+				
+				throw('Found non-mutually exclusive regexs') if $reg_type;
+				$reg_type = $reg_class_regexs{$regex};
+			  }
+			  
+			}
 		  }
-
 		  $reg_type ||= 'Unclassified';
 		}
 
@@ -646,9 +643,8 @@ sub store{
 		INSERT INTO annotated_feature (
 			seq_region_id,   seq_region_start,
 			seq_region_end,  seq_region_strand,
-                        coord_system_id, feature_set_id,
-			display_label,   score
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            feature_set_id,  display_label, score
+		) VALUES (?, ?, ?, ?, ?, ?, ?)
 	");
 	
 	#my $epsth = $self->prepare("INSERT INTO experiment_prediction (
@@ -704,10 +700,9 @@ sub store{
 		$sth->bind_param(2, $pf->start(),               SQL_INTEGER);
 		$sth->bind_param(3, $pf->end(),                 SQL_INTEGER);
 		$sth->bind_param(4, $pf->strand(),              SQL_TINYINT);
-		$sth->bind_param(5, $pf->coord_system_id(),     SQL_INTEGER);
-		$sth->bind_param(6, $pf->feature_set->dbID(),   SQL_INTEGER);
-		$sth->bind_param(7, $pf->display_label(),       SQL_VARCHAR);
-		$sth->bind_param(8, $pf->score(),                SQL_DOUBLE);
+		$sth->bind_param(5, $pf->feature_set->dbID(),   SQL_INTEGER);
+		$sth->bind_param(6, $pf->display_label(),       SQL_VARCHAR);
+		$sth->bind_param(7, $pf->score(),                SQL_DOUBLE);
 		
 		$sth->execute();
 		$pf->dbID( $sth->{'mysql_insertid'} );

@@ -508,17 +508,15 @@ sub _objs_from_sth {
 
 	  
 		#RegulatoryFeature hack
-		my ($reg_type, $stable_id, $reg_attrs, $vector);
-		
-			  
-		$display_label = 'Regulatory Feature';
-		  
+		my ($reg_type, $reg_attrs);
+					  		  
 		#We don't consider the non-epi feature bits as these are only used to
 		#cluster and build the patterns, not to assign a classification
 		#as this would prevent us from finding novel regions
 		
 	
 		my @vector = split//, $display_label;
+		$display_label = 'Regulatory Feature';
 		
 		foreach my $i(0..7){#$#vector){
 		  push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
@@ -541,7 +539,7 @@ sub _objs_from_sth {
 
 		#
 		
-
+		$ftype_hash{$reg_type} = $ft_adaptor->fetch_by_name($reg_type) if (! exists $ftype_hash{$reg_type});
 
 	
 	    push @features, $self->_new_fast( {
@@ -555,7 +553,7 @@ sub _objs_from_sth {
 										   'score'          => $score,
 										   'display_label'  => $display_label,
 										   'feature_set'    => $fset_hash{$fset_id},
-										   'regulatory_type'=> $reg_type,
+										   'feature_type'   => $ftype_hash{$reg_type},
 										   'regulatory_attributes' => $reg_attrs,
 										   'stable_id'      => $stable_id,
 										  } );

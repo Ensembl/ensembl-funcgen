@@ -243,7 +243,8 @@ sub get_available_adaptors{
 	       'Probe'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
 	       'ProbeFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
 	       'AnnotatedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
-	       'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+		   'RegulatoryFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
+			   'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
 	       'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
 	       'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
 	       'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
@@ -407,10 +408,9 @@ sub dnadb {
   if($dnadb || $self->SUPER::dnadb->group() ne 'core'){
 
 	if(! $dnadb){
+
 	  my $lspecies = $reg->get_alias($self->species());
-
 	  throw('Must provide a species to automatically set dnadb') if $lspecies eq 'default';
-
 	
 	  my $dbname = $lspecies.'_core_'.$self->_get_schema_build($self);
 	  warn "No dnadb passed, default to ${dbname}\n";

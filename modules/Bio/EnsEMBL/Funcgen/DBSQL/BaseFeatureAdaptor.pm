@@ -108,8 +108,8 @@ sub fetch_all_by_Slice_constraint {
   my @tables = $self->_tables;
   my (undef, $syn) = @{$tables[0]};
 
-  $constraint .= ' AND ' if $constraint;#constraint can be empty string
-  $constraint .= " ${syn}.coord_system_id=".$fg_cs->dbID();
+  #$constraint .= ' AND ' if $constraint;#constraint can be empty string
+  #$constraint .= " ${syn}.coord_system_id=".$fg_cs->dbID();
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
   #if the logic name was invalid, undef was returned

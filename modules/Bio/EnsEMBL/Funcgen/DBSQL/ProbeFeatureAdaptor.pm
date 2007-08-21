@@ -286,13 +286,12 @@ sub _columns {
 	#do we need array_name?
 	
 	return qw(
-		  pf.probe_feature_id  pf.seq_region_id
-		  pf.seq_region_start  pf.seq_region_end
-		  pf.seq_region_strand pf.coord_system_id
-		  pf.probe_id    pf.analysis_id
-		  pf.mismatches        pf.cigar_line
-		  p.name
-		 );
+			  pf.probe_feature_id  pf.seq_region_id
+			  pf.seq_region_start  pf.seq_region_end
+			  pf.seq_region_strand pf.probe_id    
+			  pf.analysis_id	   pf.mismatches
+			  pf.cigar_line        p.name
+			 );
 
 	#removed probeset and array name
 	
@@ -364,7 +363,7 @@ sub _objs_from_sth {
 
 	#my $sa = $self->db->get_SliceAdaptor();
 	
-	my ($sa, $old_cs_id);
+	my $sa;#, $old_cs_id);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
@@ -377,18 +376,16 @@ sub _objs_from_sth {
 	my (
 	    $probe_feature_id,  $seq_region_id,
 	    $seq_region_start,  $seq_region_end,
-	    $seq_region_strand, $cs_id,
-	    $mismatches,        $probe_id,    
-	    $analysis_id,       $probe_name,
-	    $cigar_line,
+	    $seq_region_strand, $mismatches,
+		$probe_id,    	    $analysis_id,
+		$probe_name,	    $cigar_line,
 	);
 	$sth->bind_columns(
-			   \$probe_feature_id,  \$seq_region_id,
-			   \$seq_region_start,  \$seq_region_end,
-			   \$seq_region_strand, \$cs_id,
-			   \$probe_id,    \$analysis_id, 
-			   \$mismatches,        \$cigar_line,
-			   \$probe_name
+					   \$probe_feature_id,  \$seq_region_id,
+					   \$seq_region_start,  \$seq_region_end,
+					   \$seq_region_strand, \$probe_id,
+					   \$analysis_id,       \$mismatches,
+					   \$cigar_line,        \$probe_name
 	);
 
 	my $asm_cs;
@@ -435,19 +432,32 @@ sub _objs_from_sth {
 		$seq_region_id = $self->get_core_seq_region_id($seq_region_id);
 
 	  
-		  if($old_cs_id && ($old_cs_id != $cs_id)){
-			  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
-		  }
-		  
-		  $old_cs_id = $cs_id;
+
+		
+		warn "Need to implement slice adaptor hash, based on seq_region id??";
+		#we need to be mindful of dynamic assembly mapping
+		#or would this be handled before here?
+		#will different cs_id be handled before here also, so we would never see different cs_ids?
+
+		#if($old_cs_id && ($old_cs_id != $cs_id)){
+		#  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
+		#}
+		
+		#$old_cs_id = $cs_id;
 
 
-		  #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
-
-		  $sa ||= $self->db->get_SliceAdaptor($cs_id);
-
+		#This should by default be the slice adaptor of the dnadb we're concerned with
+		#what about assembly mapping where we have feature from multiple dnadbs returned in the same query
 
 
+		#this needs to be reset for each seq_region_id
+		$sa ||= $self->db->get_SliceAdaptor();#$cs_id);
+
+
+		#do we need this now?
+		#this was to avoid displaying duplicate probes from different cs's due to remapping
+		#can remove this now
+		#how are we going to discern between duplication of feature fromphysical remapping and dunamic remapping
 		  # This assumes that features come out sorted by ID?
 		  # THis is not true as when have default sorts on seq_region_start for slice queries
 		  #Can we remove this as this is just removing duplicates?
@@ -577,10 +587,9 @@ sub store{
 		INSERT INTO probe_feature (
 			seq_region_id,  seq_region_start,
 			seq_region_end, seq_region_strand,
-            coord_system_id,
-			probe_id,  analysis_id,
+          	probe_id,  analysis_id,
 			mismatches, cigar_line
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
 	my $db = $self->db();
@@ -614,11 +623,10 @@ sub store{
 		$sth->bind_param(2, $of->start(),          SQL_INTEGER);
 		$sth->bind_param(3, $of->end(),            SQL_INTEGER);
 		$sth->bind_param(4, $of->strand(),         SQL_TINYINT);
-		$sth->bind_param(5, $of->coord_system_id(),SQL_INTEGER);
-		$sth->bind_param(6, $of->probe_id(),      SQL_INTEGER);
-		$sth->bind_param(7, $of->analysis->dbID(), SQL_INTEGER);
-		$sth->bind_param(8, $of->mismatchcount(),  SQL_TINYINT);
-		$sth->bind_param(9, $of->cigar_line(),     SQL_VARCHAR);
+		$sth->bind_param(5, $of->probe_id(),      SQL_INTEGER);
+		$sth->bind_param(6, $of->analysis->dbID(), SQL_INTEGER);
+		$sth->bind_param(7, $of->mismatchcount(),  SQL_TINYINT);
+		$sth->bind_param(8, $of->cigar_line(),     SQL_VARCHAR);
 
 		$sth->execute();
 

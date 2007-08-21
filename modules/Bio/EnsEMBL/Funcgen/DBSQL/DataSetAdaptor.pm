@@ -111,6 +111,36 @@ use warnings;
 #could have attach_result to feature method?
 #force association when loading features
 
+=head2 fetch_by_name
+
+  Arg [1]    : string - name of DataSet
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Example    : my $dsets = $dset_adaptor->fetch_by_name('data_set-1');
+  Description: Fetch all FeatureSets wit a given name
+  Returntype : Bio::EnsEMBL::Funcgen::DataSet
+  Exceptions : Throws if no name passed 
+  Caller     : General
+  Status     : At Risk 
+
+=cut
+
+sub fetch_by_name {
+  my ($self, $name, $status) = @_;
+  
+  throw("Must provide a name argument") if (! defined $name);
+  
+  my $sql = "ds.name='".$name."'";
+  
+  if($status){
+    my $constraint = $self->status_to_constraint($status) if $status;
+    $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+  }
+
+  return $self->generic_fetch($sql)->[0];
+  
+}
+
+
 
 =head2 fetch_all_by_FeatureSet
 
