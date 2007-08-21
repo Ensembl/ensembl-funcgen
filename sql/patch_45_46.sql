@@ -61,6 +61,7 @@ update result_set rs, chip_channel cc, channel c, experimental_chip ec set rs.ce
 -- alter table array_chip change design_id  `design_id` varchar(20) default NULL;
 -- alter table experiment add UNIQUE KEY `name_idx` (`name`);
 
+-- end of mouse specific stuff
 
 --- Sort out the coord_system mess ---
 --- This is entirely dependent on the fact (but not rule, hence the change) that seq_region_ids have been stable between releases with the same assembly version

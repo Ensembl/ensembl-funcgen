@@ -468,7 +468,7 @@ CREATE TABLE `chip_channel` (
 
 
 --
--- Table structure for table `predicted_feature`
+-- Table structure for table `annotated_feature`
 --
 
 DROP TABLE IF EXISTS `annotated_feature`;
@@ -514,6 +514,38 @@ CREATE TABLE `feature_set` (
 -- change default NOT/NULLs?
 -- feature_type_id is NR between this and pf, but need it here for ft type ResultSet queries 
 
+--
+-- Table structure for table `predicted_feature`
+--
+
+
+DROP TABLE IF EXISTS `regulatory_feature`;
+CREATE TABLE `regulatory_feature` (
+  `regulatory_feature_id` int(10) unsigned NOT NULL auto_increment,
+  `seq_region_id` int(10) unsigned NOT NULL default '0',
+  `seq_region_start` int(10) unsigned NOT NULL default '0',
+  `seq_region_end` int(10) unsigned NOT NULL default '0',
+  `seq_region_strand` tinyint(1) NOT NULL default '0',	
+  `display_label` varchar(60) default NULL,
+  `feature_type_id`	int(10) unsigned default NULL,
+  `build_version` tinyint(3) unsigned default NULL, 
+  PRIMARY KEY  (`regulatory_feature_id`),
+  KEY `feature_type_idx` (`feature_type_id`),
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+
+-- Do we want a build version? Default would be schema_version
+-- build may not change between version, so would have to patch table, which would indicate a build change
+-- do patch to avoid having text schema_build column
+-- enter build.name in meta to reflect true build? sould this be renamed schema_version?
+
+
+-- feature_type_id - feature type class would be regaultory feature, then have all the different types
+-- display label would be dynamically set to display_label else feature type name
+
+
+-- we need regulatory attribute/annotation which would map back to individual annotated_features
+-- how would we map to supporting_features? (core regulatory_feature)
 
 
 --
@@ -702,6 +734,15 @@ CREATE TABLE `meta` (
   KEY `meta_value_index` (`meta_value`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+
+-- entries
+-- regulatory build_name
+-- binary string vars:
+--   feature_set name list
+--   feature_type name list
+--   regulatory feature_type regexs, here rather than in feature_type as they may change between release? 
+-- what about old release meta if we are containing more than one reg build in the same db?
+-- what else?
 
 --
 -- Table structure for table `meta_coord`
