@@ -305,6 +305,7 @@ CREATE TABLE `data_set` (
    `result_set_id` int(10) unsigned default '0',
    `feature_set_id` int(10) unsigned default '0',
    `name` varchar(40) default NULL,
+   `member_set_type` enum("result", "feature") default NULL,
    PRIMARY KEY  (`data_set_id`, `result_set_id`, `feature_set_id`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -334,19 +335,30 @@ CREATE TABLE `data_set` (
 ---- result_set
 ---- experimental_chip
 
+-- we want to alter data_set to handle all type of data associations, rather than just feature < result
+-- feature >< result would we ever get two feature sets from a group analysis?
+-- feature < feature e.g. regulatory build/overlap sets
+-- currently just have 1 to 1 relationship apart from reg build
+-- let's just concentrate on later, many to many can be handle by duplicating data sets
+-- ancilliary table with data set members, making data_set nr
+-- can we have set type in data_set, rather than having redundant entries in data_set_member?
+-- this will only work if we never have mixed types.
 
--- Table structure for table `experiment_prediction`
 
---DROP TABLE IF EXISTS `experiment_prediction`;
---CREATE TABLE `experiment_prediction` (
---  `experiment_id` int(10) unsigned default NULL,
---   `predicted_feature_id` int(10) unsigned default NULL,
---   PRIMARY KEY  (`experiment_id`, `predicted_feature_id`)
---) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- Superceded by feature_set
--- Provides link between predicted_features and contributing experiments
--- Which may be a subset of those in experiment_target
+
+DROP TABLE IF EXISTS `data_set_member`;
+CREATE TABLE `data_set_member` (
+   `data_set_id` int(10) unsigned NOT NULL default '0',
+   `member_set_id` int(10) unsigned NOT NULL default '0',
+   PRIMARY KEY  (`data_set_id`, `member_set_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+-- primary key will always be unique as we will never 
+-- have mixed member_set type e.g.(result/feature) in the same data_set
+-- hence no possibilty of getting same id from different tables in same data_set
+
 
 -- Table structure for table `result`
 
@@ -504,15 +516,13 @@ CREATE TABLE `feature_set` (
    `analysis_id`  int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `name` varchar(250) default NULL,
+   `type` enum('annotated', 'regulatory', 'supporting') default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- make analysis NOT NULL
--- change default NOT/NULLs?
--- feature_type_id is NR between this and pf, but need it here for ft type ResultSet queries 
 
 --
 -- Table structure for table `predicted_feature`
@@ -528,9 +538,12 @@ CREATE TABLE `regulatory_feature` (
   `seq_region_strand` tinyint(1) NOT NULL default '0',	
   `display_label` varchar(60) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
-  `build_version` tinyint(3) unsigned default NULL, 
+  `feature_set_id`	int(10) unsigned default NULL,
+  `stable_id` mediumint(8) default NULL,
   PRIMARY KEY  (`regulatory_feature_id`),
   KEY `feature_type_idx` (`feature_type_id`),
+  KEY `feature_type_idx` (`feature_set_id`),
+  KEY `stable_idx` (`stable_id_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
@@ -538,10 +551,22 @@ CREATE TABLE `regulatory_feature` (
 -- build may not change between version, so would have to patch table, which would indicate a build change
 -- do patch to avoid having text schema_build column
 -- enter build.name in meta to reflect true build? sould this be renamed schema_version?
-
+-- now to be done in extended feature_set table
 
 -- feature_type_id - feature type class would be regaultory feature, then have all the different types
 -- display label would be dynamically set to display_label else feature type name
+
+
+-- we need an nr link to cell_type
+-- regulatory_feature_set or can we use feature_set?
+-- this would also provide link to all contributing feature_sets
+-- could remove meta record?
+-- analysis_id
+-- to reuse feature_set we would have to either add a feature class/type/table column 
+-- then generalise feature access by dynamically linking to the table in question
+-- this would mean the data set would be linking feature sets to feature sets, but of a different type.
+-- this would mean we would have to have AnnotatedFeature methods and RegulatoryFeature methods
+-- or can we generalise?
 
 
 -- we need regulatory attribute/annotation which would map back to individual annotated_features
