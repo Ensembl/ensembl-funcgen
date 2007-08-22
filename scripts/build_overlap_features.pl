@@ -770,10 +770,11 @@ sub get_FeatureSet{
             
             $cooc_fsets{$fset_name} = Bio::EnsEMBL::Funcgen::FeatureSet->new
 			  (
-                 -analysis     => $analysis,
-                 -feature_type => $ftypes{$ftype_name},
-                 -name         => $fset_name,
-                 );
+			   -analysis     => $analysis,
+			   -feature_type => $ftypes{$ftype_name},
+			   -name         => $fset_name,
+			   -type         => 'annotated',
+			  );
             
             ($cooc_fsets{$fset_name}) = @{$fsa->store($cooc_fsets{$fset_name})};
                 
