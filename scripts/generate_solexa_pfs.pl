@@ -201,13 +201,14 @@ if($fset && ! $clobber){
 }elsif($fset && $clobber){
   my $cs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
   my $sql = 'DELETE from annotated_feature where feature_set_id='.$fset->dbID().' and coord_system_id='.$cs_id;
-  $db->dbc->do($sql) || throw('Failed to roll back annotated_features for feature_set_id'.$fset->dbID());
+  #$db->dbc->do($sql) || throw('Failed to roll back annotated_features for feature_set_id'.$fset->dbID());
 }else{#no fset
   $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
 												 -name         => $set_name,
 												 -analysis     => $anal,
 												 -feature_type => $rset->feature_type(),
 												 -cell_type    => $rset->cell_type(),
+												 -type         => 'annotated',
 												);
 
   ($fset) = @{$fset_a->store($fset)};
@@ -230,8 +231,8 @@ if(! @{$dset_a->fetch_all_by_FeatureSet($fset)}){
 #foreach my $slice(@{$slice_a->fetch_all('top_level')}){
 
 
-my @chrs = (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y');
-
+#my @chrs = (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y');
+my @chrs = ('MT');
 
 foreach my $chr (@chrs){
 

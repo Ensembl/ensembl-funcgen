@@ -132,6 +132,8 @@ $main::_debug_level = 0;
 $main::_tee = 0;
 
 
+warn "Hardcoded for FeatureSet type 'annotated'\n";
+
 #Use some sort of DBDefs for now, but need  to integrate with Register, and have put SQL into (E)FGAdaptor?
 #Use ArrayDefs.pm module for some of these, class, vendor, format?
 #ArrayDefs would also contain paths to data and vendor specific parse methods?
@@ -278,6 +280,7 @@ if($fset && ! $clobber){
 												 -analysis     => $anal,
 												 -feature_type => $ftype,
 												 -cell_type    => $ctype,
+												 -type         => 'annotated',
 												);
 
   ($fset) = @{$fset_a->store($fset)};
