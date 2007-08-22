@@ -45,7 +45,7 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::FeatureSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
 use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
@@ -66,6 +66,7 @@ use vars qw(@ISA);
                                                                     -feature_type => $ftype,
                                                                     -cell_type => $ctype,
                                                                     -name => $name,
+                                                                    -type => 'annotated',
 			                                                       ); 
   Description: Constructor for FeatureSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
@@ -82,12 +83,12 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($analysis, $feature_type, $cell_type, $name)
-    = rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'NAME'], @_);
+  my ($analysis, $feature_type, $cell_type, $name, $type)
+    = rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'NAME', 'TYPE'], @_);
 
   #Analysis already checked in BaseFeatureAdaptor
-  if (! $feature_type || ! $analysis){
-    throw("Need to pass a feature_type and an analysis argument");
+  if (! $feature_type || ! $analysis || ! $type){
+    throw("Need to pass a feature_type, analysis and feature_set type argument");
   }
 
   #mandatory?
@@ -99,6 +100,7 @@ sub new {
 
   $self->analysis($analysis);
   $self->feature_type($feature_type);
+  $self->type($type);
   $self->cell_type($cell_type) if $cell_type;
   $self->name($name) if $name;
 
@@ -157,7 +159,7 @@ sub new_fast {
 
 =head2 name
 
-  Example    : my $dset->name('FEATURESET1');
+  Example    : my $fset->name('FEATURESET1');
   Description: Getter/Setter for the name of this FeatureSet.
   Returntype : string
   Exceptions : None
@@ -172,6 +174,27 @@ sub name {
   $self->{'name'} = shift if @_;
 
   return $self->{'name'};
+}
+
+=head2 type
+
+  Example    : my $fset->type('annotated');
+  Description: Getter/Setter for the type of this FeatureSet.
+               Valid values are 'annotated', 'regulatory' or 'supporting'.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub type {
+  my $self = shift;
+     	
+  #add validation of enum here..or leave to DB
+  $self->{'type'} = shift if @_;
+
+  return $self->{'type'};
 }
 
 
@@ -285,7 +308,7 @@ sub display_label {
   Returntype : List ref containing AnnotatedFeatures;
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - to be removed
 
 =cut
 
@@ -293,13 +316,63 @@ sub display_label {
 sub get_AnnotatedFeatures_by_Slice{
   my ($self, $slice) = @_;
 
-  #Could potentially return previous features for a different slice
-  #  if(! $self->{'predicted_features'}){
-  #	  $self->{'predicted_features'} =  $self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch__ResultFeatures_by_Slice($slice, 1);
-  #  }
-
-  return $self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch_all_by_Slice_FeatureSet($slice, $self);
+  deprecate('get_AnnotatedFeatures_by_Slice has been suprceded by the generic method get_Features_by_Slice');
+  
+  return $self->get_Fetures_by_Slice($slice);
 }
+
+
+
+=head2 get_FeatureAdaptor
+
+  Example    : 
+  Description: Retrieves and caches FeatureAdaptor of feature_set type 
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::ucfirst($self->type())FeatureAdaptor
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub get_FeatureAdaptor{
+  my $self = shift;
+
+  if(! exists $self->{'adaptor_refs'}){
+
+	#can we code ref this?
+
+	$self->{'adaptor_refs'} = {(
+								annotated  => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
+								regulatory => $self->adaptor->db->get_RegulatoryFeatureAdaptor,
+								#supporting => \$self->adaptor->db->get_SupportingFeatureAdaptor,
+							   )};
+
+  }
+  return $self->{'adaptor_refs'}->{$self->type()};
+
+}
+
+
+
+=head2 get_Features_by_Slice
+
+  Example    : my @features = @{$FeatureSet->get_Features_by_Slice($slice)};
+  Description: Retrieves all Features for this FeatureSet for a given Slice
+  Returntype : List ref containing Features of the feature_set type i.e. Annotated, Regulatory or Supporting;
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub get_Features_by_Slice{
+  my ($self, $slice) = @_;
+
+  return $self->get_FeatureAdaptor->fetch_all_by_Slice_FeatureSet($slice, $self);
+}
+
 
 
 
