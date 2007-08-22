@@ -389,13 +389,13 @@ my %comparison_methods =
 
 
 ###Get Old and New FeatureSets and set adaptors
-$obj_cache{'OLD'}{'AF_ADAPTOR'}    = $odb->get_AnnotatedFeatureAdaptor();
-$obj_cache{'OLD'}{'SLICE_ADAPTOR'} = $odb->get_SliceAdaptor();
+#get FeatureAdaptors from Fset, this will allow use of any feature type
 $obj_cache{'OLD'}{'FSET'}          = $odb->get_FeatureSetAdaptor->fetch_by_name($old_fset_name);
+$obj_cache{'OLD'}{'SLICE_ADAPTOR'} = $odb->get_SliceAdaptor();
 $obj_cache{'NEW'}{'SLICE_ADAPTOR'} = $ndb->get_SliceAdaptor();
-$obj_cache{'NEW'}{'AF_ADAPTOR'}    = $ndb->get_AnnotatedFeatureAdaptor();
 $obj_cache{'NEW'}{'FSET'}          = $ndb->get_FeatureSetAdaptor->fetch_by_name($new_fset_name);
-
+###Need this to store new features?
+$obj_cache{'NEW'}{'RF_ADAPTOR'}    = $obj_cache{'NEW'}{'FSET'}->get_FeatureAdaptor();
 
 #test fsets here?
 
@@ -421,6 +421,7 @@ else{
 														-name         => $stable_fset_name,
 														-analysis     => $reg_atype,
 														-feature_type => $reg_ftype,
+														-type         => 'regulatory',
 													   );
   
   ($stable_fset) =  @{$fset_a->store($stable_fset)};
@@ -480,7 +481,7 @@ foreach my $slice (@slices){
   #only delete for all seq_region_id is it is the full seq
   #we need to check starts and ends and warn if we're only doing a partial delete
 
-  if($obj_cache{'NEW'}{'AF_ADAPTOR'}->fetch_all_by_Slice_FeatureSet($slice)){
+  if($obj_cache{'NEW'}{'FSET'}->get_Features_by_Slice($slice)){
 
 	if(! $clobber){
 	  throw('Stable features were found for the slice $seq_name, specify -clobber to overwrite');
@@ -499,7 +500,7 @@ foreach my $slice (@slices){
 	  $ndb->dbc->db_handle->do($cmd);
 	  
 	}else{
-	  warn "There are feature already present for $seq_name in the DB, you have chosen not to remove these and dump a summary of the new ones";
+	  warn "There are features already present for $seq_name in the DB, you have chosen not to remove these and dump a summary of the new ones";
 	}
   }
 
@@ -520,7 +521,7 @@ foreach my $slice (@slices){
 	$mappings = 0;
 	$new_mappings = 0;
 
-	foreach my $reg_feat(@{$obj_cache{'OLD'}{'AF_ADAPTOR'}->fetch_all_by_Slice_FeatureSet($slice, $obj_cache{'OLD'}{'FSET'})}){
+	foreach my $reg_feat(@{$obj_cache{'OLD'}{'FSET'}->get_Features_by_Slice($slice)}){
 	  my $from_db = 'OLD';
 	  my $feature = $reg_feat;
 	  #Can we change this to an array as it's only containing transitions array and the orignal stable_id
@@ -545,9 +546,14 @@ foreach my $slice (@slices){
 	$total_mappings += $mappings;
 
 	#Now for this slice get each new feature which hasn't already been mapped, generate a new stable id
-	my $new_slice = $obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_by_region('toplevel', $seq_name);
+	#my $new_slice = $obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_by_region('toplevel', $seq_name);
+	#what was I going to do with this???????????????????????????????????????????????????????????????????????????????????????
 
-	foreach my $nreg_feat(@{$obj_cache{'NEW'}{'AF_ADAPTOR'}->fetch_all_by_Slice_FeatureSet($slice, $obj_cache{'NEW'}{'FSET'})}){
+						 
+
+
+
+	foreach my $nreg_feat(@{$obj_cache{'NEW'}{'FSET'}->get_Features_by_Slice($slice)}){
 	  
 	  if(! exists $dbid_mappings{$nreg_feat->dbID()}){
 		#New regfeat has not been mapped to, so generate new stable_id
@@ -685,8 +691,7 @@ sub build_transitions{
   #if we can't map dynamically using the assemlby mapper
   #this would also implement a prioritised code array of extension rules?
 
-  my @nreg_feats = @{$obj_cache{$to_db}{'AF_ADAPTOR'}->fetch_all_by_Slice_FeatureSet($next_slice, 
-																				  $obj_cache{$to_db}{'FSET'})};
+  my @nreg_feats = @{$obj_cache{$to_db}{'FSET'}->get_Features_by_Slice($next_slice)};
   
   warn "Mapping ($from_db) $feature to ".scalar(@nreg_feats)." nreg($to_db) feats\n";
 
