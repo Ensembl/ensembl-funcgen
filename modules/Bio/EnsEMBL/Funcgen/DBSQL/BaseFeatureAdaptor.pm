@@ -345,7 +345,7 @@ sub _pre_store {
 	#$fg_cs = $csa->store($fg_cs);
   #}
 
-  $feature->coord_system_id($fg_cs->dbID());
+  #$feature->coord_system_id($fg_cs->dbID());
 
   my ($tab) = $self->_tables();
   my $tabname = $tab->[0];

@@ -104,8 +104,8 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($probe, $mismatchcount, $coord_sys_id, $pid, $cig_line)
-    = rearrange(['PROBE', 'MISMATCHCOUNT', 'COORD_SYSTEM_ID', 'PROBE_ID', 'CIGAR_LINE'], @_);
+  my ($probe, $mismatchcount, $pid, $cig_line)
+    = rearrange(['PROBE', 'MISMATCHCOUNT', 'PROBE_ID', 'CIGAR_LINE'], @_);
 
   #remove mismatch?
   #mandatory args?
@@ -120,7 +120,6 @@ sub new {
   
   #do we need this coordsys id if we're passing a slice?  We should have the method but not in here?
 
-  $self->coord_system_id($coord_sys_id) if defined $coord_sys_id;
   return $self;
 }
 
@@ -138,10 +137,7 @@ sub new {
 =cut
 
 sub new_fast {
-   my ($class, $hashref)  = @_;
-
-
-   return bless ($hashref, $class);
+  bless ($_[1], $_[0]);
 }
 
 =head2 probeset
@@ -213,30 +209,6 @@ sub cigar_line {
   $self->{'cigar_line'} = shift if @_;
 	
   return $self->{'cigar_line'};
-}
-
-
-
-
-
-=head2 coord_system_id
-
-  Arg [1]    : int - dbID of corresponding coord_system for DB of origin
-  Example    : $feature->coord_system_id($cs_id);
-  Description: Getter and setter for the coord system id for this feature.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub coord_system_id {
-    my $self = shift;
-	
-    $self->{'coord_system_id'} = shift if @_;
-	
-    return $self->{'coord_system_id'};
 }
 
 

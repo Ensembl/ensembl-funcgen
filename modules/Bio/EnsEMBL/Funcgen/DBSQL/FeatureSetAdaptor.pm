@@ -76,12 +76,46 @@ sub fetch_all_by_FeatureType {
     my $sql = "fs.feature_type_id = '".$ftype->dbID()."'";
 
     if($status){
-      my $constraint = $self->status_to_constraint($status) if $status;
+      my $constraint = $self->status_to_constraint($status);
       $sql = (defined $constraint) ? $sql." ".$constraint : undef;
     }
 
     return $self->generic_fetch($sql);	
 }
+
+
+=head2 fetch_all_by_Type
+
+  Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Example    : my @fsets = $fs_adaptopr->fetch_all_by_Type('annotated');
+  Description: Retrieves FeatureSet objects from the database based on feature_set type.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : Throws if type not defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Type {
+    my $self = shift;
+    my $type = shift;
+    my $status = shift;
+    
+    throw('Must provide a feature_set type') if(! defined $type);
+	
+    my $sql = "fs.type = '".$type."'";
+
+    if($status){
+      my $constraint = $self->status_to_constraint($status);
+      $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+    }
+
+    return $self->generic_fetch($sql);	
+}
+
+
+
 
 =head2 fetch_all_by_CellType
 
@@ -247,7 +281,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id fs.name);
+	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id fs.name fs.type);
 }
 
 =head2 _objs_from_sth
@@ -267,7 +301,7 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name);
+	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type);
 	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, %ftype_hash, %ctype_hash);
 	
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
@@ -275,7 +309,7 @@ sub _objs_from_sth {
 	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	$ctype_hash{'NULL'} = undef;
 
-	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name);
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name, \$type);
 	
 	while ( $sth->fetch()) {
 
@@ -297,6 +331,7 @@ sub _objs_from_sth {
 													   -analysis     => $analysis_hash{$analysis_id},
 													   -cell_type    => $ctype_hash{$ctype_id},
 													   -name         => $name,
+													   -type         => $type,
 							      );
 
 		push @fsets, $fset;
@@ -329,8 +364,8 @@ sub store {
 	#if(scalar(@fsets) == 0);
 
 	my $sth = $self->prepare("INSERT INTO feature_set
-                                 (feature_type_id, analysis_id, cell_type_id, name)
-                                 VALUES (?, ?, ?, ?)");
+                                 (feature_type_id, analysis_id, cell_type_id, name, type)
+                                 VALUES (?, ?, ?, ?, ?)");
 
 
     foreach my $fset (@fsets) {
@@ -354,6 +389,7 @@ sub store {
 			$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);
 			$sth->bind_param(3, $ctype_id,                   SQL_INTEGER);
 			$sth->bind_param(4, $fset->name(),               SQL_VARCHAR);
+			$sth->bind_param(4, $fset->type(),               SQL_VARCHAR);
 		
 			$sth->execute();
 			$fset->dbID($sth->{'mysql_insertid'});

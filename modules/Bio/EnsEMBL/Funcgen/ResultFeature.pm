@@ -11,12 +11,7 @@ Bio::EnsEMBL::Funcgen::ResultFeature - A module to represent a lightweight Resul
 
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 
-my $rfeature = Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-			  (	{
-				 score => $score,
-				 start => $start,
-				 end   => $end,
-				});
+my $rfeature = Bio::EnsEMBL::Funcgen::ResultFeature->new_fast([$start, $end, $score ]);
 
 my @rfeatures = @{$rset->get_displayable_ResultFeature_by_Slice($slice)};
 
@@ -70,8 +65,9 @@ package Bio::EnsEMBL::Funcgen::ResultFeature;
 =cut
 
 sub new_fast {
-   my ($class, $arrayref)  = @_;
-   return bless ($arrayref, $class);
+  #my ($class, $arrayref)  = @_;
+  #return bless ($arrayref, $class);
+  bless $_[1], $_[0];
 }
 
 
@@ -90,8 +86,9 @@ sub new_fast {
 =cut
 
 sub start {
-    my $self = shift;
-	return $self->[0];
+    #my $self = shift;
+	#return $self->[0];
+  $_->[0]
 }
 
 
@@ -108,8 +105,10 @@ sub start {
 =cut
 
 sub end {
-    my $self = shift;
-	return $self->[1];
+    
+#my $self = shift;
+	#return $self->[1];
+  $_->[1];
 }
 
 =head2 score
@@ -125,8 +124,9 @@ sub end {
 =cut
 
 sub score {
-    my $self = shift;
-    return $self->[2];
+  #  my $self = shift;
+  #  return $self->[2];
+  $_->[2];
 }
 
 

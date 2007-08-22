@@ -140,14 +140,41 @@ sub fetch_by_name {
   
 }
 
+=head2 fetch_by_member_set_type
 
+  Arg [1]    : string - type of member_sets i.e. result or feature
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Example    : my $dsets = $dset_adaptor->fetch_by_member_set('feature');
+  Description: Fetch all DataSets whose pre-processed data consists of a particular set type
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
+  Exceptions : Throws if no member_set_type passed
+  Caller     : General
+  Status     : At Risk 
+
+=cut
+
+sub fetch_all_by_member_set_type {
+  my ($self, $mstype, $status) = @_;
+  
+  throw("Must provide a member_set_type argument") if (! defined $mstype);
+  
+  my $sql = "ds.member_set_type='".$mstype."'";
+  
+  if($status){
+    my $constraint = $self->status_to_constraint($status) if $status;
+    $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+  }
+
+  return $self->generic_fetch($sql);
+  
+}
 
 =head2 fetch_all_by_FeatureSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
   Example    : my @dsets = $fs_adaptopr->fetch_all_by_FeatureSet($fset);
   Description: Retrieves DataSet objects from the database based on the FeatureSet.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::DataSet objects
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : Throws if arg is not a valid FeatureSet
   Caller     : General
   Status     : At Risk
@@ -175,7 +202,7 @@ sub fetch_all_by_FeatureSet {
   Arg [1]    : Bio::EnsEMBL::Funcgen::ResultSet
   Example    : my @dsets = $fs_adaptopr->fetch_all_by_ResultSet($rset);
   Description: Retrieves DataSet objects from the database based on the ResultSet.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::DataSet objects
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : Throws if arg is not a valid ResultSet
   Caller     : General
   Status     : At Risk
@@ -205,7 +232,7 @@ sub fetch_all_by_ResultSet {
   Arg [1]    : string - class of associated FeatureSet FeatureType
   Example    : my @dsets = @{$ds_adaptopr->fetch_all_by_feature_type_class('HISTONE')};
   Description: Retrieves DataSet objects from the database based on the FeatureSet FeatureType class.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::DataSet objects
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : Throws if no class arg defined
   Caller     : General
   Status     : At Risk
@@ -236,7 +263,7 @@ sub fetch_all_by_feature_type_class {
   Arg [2]    : string - status name e.g. DISPLAYABLE
   Example    : my @dsets = @{$ds_adaptopr->fetch_all_by_feature_type_class('HISTONE')};
   Description: Wrapper method, retrieves all displayable DataSets with given FeatureSet FeatureType class
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::DataSet objects
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -257,7 +284,7 @@ sub fetch_all_displayable_by_feature_type_class {
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
                Returns the names and aliases of the tables to use for queries.
-  Returntype : List of listrefs of strings
+  Returntype : List
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
@@ -265,11 +292,11 @@ sub fetch_all_displayable_by_feature_type_class {
 =cut
 
 sub _tables {
-  my $self = shift;
+  #my $self = shift;
 	
   return (
-	  [ 'data_set',    'ds' ],
-	 );
+		  [ 'data_set',    'ds' ],
+		 );
 }
 
 =head2 _columns
@@ -278,7 +305,7 @@ sub _tables {
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
                Returns a list of columns to use for queries.
-  Returntype : List of strings
+  Returntype : List
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
@@ -286,14 +313,14 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
+  #my $self = shift;
 
   #will this work? May have multiple record/result_set_id
   
   
   return qw(
 	    ds.data_set_id     ds.result_set_id
-	    ds.feature_set_id  ds.name
+	    ds.feature_set_id  ds.name ds.member_set_type
 	   );	
 }
 
@@ -359,16 +386,17 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@data_sets, $data_set, $dbID, $rset_id, $fset_id, $fset, $rset, $name);
+  my (@data_sets, $data_set, $dbID, $rset_id, $fset_id, $fset, $rset, $name, $ms_type);
 
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
   my $rset_adaptor = $self->db->get_ResultSetAdaptor();
-  $sth->bind_columns(\$dbID, \$rset_id, \$fset_id, \$name);
+  $sth->bind_columns(\$dbID, \$rset_id, \$fset_id, \$name, \$ms_type);
 
   
   while ( $sth->fetch() ) {
 
 
+	#we can remove all this nonsense once we have cleaned the data_set table
 
     if($data_set && ($data_set->dbID() == $dbID)){
 
@@ -402,6 +430,7 @@ sub _objs_from_sth {
 													  -FEATURE_SET => $fset,
 													  -RESULT_SET  => $rset,
 													  -ADAPTOR     => $self,
+													  -MEMBER_SET_TYPE => $ms_type,
 													 );
     }
   }
@@ -457,7 +486,7 @@ sub store{
   my ($self, @dsets) = @_;
 
   my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, result_set_id, name) 
-                            VALUES (?, ?, ?)");
+                            VALUES (?, ?, ?, ?)");
   my $sth2 = $self->prepare("INSERT INTO data_set (dbid, feature_set_id, result_set_id, name) 
                             VALUES (?, ?, ?, ?)");
 
@@ -488,9 +517,10 @@ sub store{
 		}
 		
 		if(! defined $dset->dbID()){
-		  $sth->bind_param(1, $fset_id || 0,         SQL_INTEGER);
-		  $sth->bind_param(2, $rset->dbID() || 0,    SQL_INTEGER);
-		  $sth->bind_param(3, $dset->name(),    SQL_VARCHAR);
+		  $sth->bind_param(1, $fset_id || 0,            SQL_INTEGER);
+		  $sth->bind_param(2, $rset->dbID() || 0,       SQL_INTEGER);
+		  $sth->bind_param(3, $dset->name(),            SQL_VARCHAR);
+		  $sth->bind_param(4, $dset->member_set_type(), SQL_VARCHAR);#enum
 		  $sth->execute();
 		  
 		  $dset->dbID( $sth->{'mysql_insertid'} );
@@ -542,7 +572,7 @@ sub store{
   Returntype : List of ints
   Exceptions : None
   Caller     : ?
-  Status     : Medium Risk
+  Status     : Stable
 
 =cut
 

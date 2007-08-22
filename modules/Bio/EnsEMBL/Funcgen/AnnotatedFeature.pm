@@ -117,7 +117,6 @@ sub new {
   #do we need to validate this against the db?  Grab from slice and create new if not present? 
   #Will this be from the dnadb? Or will this work differently for AnnotatedFeatures?
 	
-  #$self->coord_system_id($coord_sys_id);
 	
   return $self;
 }
@@ -226,56 +225,6 @@ sub display_label {
     return $self->{'display_label'};
 }
 
-
-
-
-#retrieved and set from slice in _pre_store
-#can we move the to Funcgen::Feature?
-#will this be used by probe_feature?
-
-=head2 coord_system_id
-
-  Arg [1]    : int - dbID of corresponding coord_system for DB of origin
-  Example    : $feature->coord_system_id($cs_id);
-  Description: Getter and setter for the coord system id for this feature.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : Medium
-
-=cut
-
-sub coord_system_id {
-    my $self = shift;
-	
-    $self->{'coord_system_id'} = shift if @_;
-	
-    return $self->{'coord_system_id'};
-}
-
-#All the following can be moved/mirrored in FeatureSet
-#data will be in feature set table
-
-
-=head2 experiment_ids
-
-  Args       : array - experiment ids
-  Example    : $feature->experiment_ids(@ids);
-  Description: Getter/Setter for the experiment_id attribute for this feature.
-  Returntype : listref
-  Exceptions : None
-  Caller     : General
-  Status     : Medium
-             
-=cut
-
-#sub experiment_ids {
-#  my ($self, @ids) = @_;
-
-#  $self->{'experiment_ids'} = \@ids if @ids;
-
-#  return $self->{'experiment_ids'};
-#}
 
 
 =head2 cell_type
