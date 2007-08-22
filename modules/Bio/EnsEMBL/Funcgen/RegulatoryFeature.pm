@@ -107,6 +107,7 @@ sub new {
   $self->display_label($display_label) if $display_label;
   throw("Must provide a FeatureSet") if ! $fset;
   $self->feature_set($fset);
+  throw("Must provide a FeatureType") if ! $reg_type;
   $self->feature_type($reg_type) if $reg_type;
   $self->stable_id($stable_id) if $stable_id;
   $self->regulatory_attributes(@$reg_attrs) if $reg_attrs;
@@ -215,6 +216,14 @@ sub cell_type{
 sub feature_type{
   my $self = shift;
   
+  if(@_){
+	if(! ($_[0] && $_[0]->isa("Bio::EnsEMBL::Funcgen::FeatureType"))){
+	  throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureType object");
+	}
+
+	$self->{'feature_type'} = $_[0];
+    }
+
   return $self->{'feature_type'};
 }
 
