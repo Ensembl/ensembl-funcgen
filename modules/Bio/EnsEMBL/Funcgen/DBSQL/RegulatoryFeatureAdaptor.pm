@@ -354,7 +354,7 @@ sub _objs_from_sth {
 					   \$regulatory_feature_id, \$seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
 					   \$seq_region_strand,     \$display_label,
-					   \$ftype_id               \$fset_id,
+					   \$ftype_id,              \$fset_id,
 					   \$stable_id
 					  );
 
@@ -516,8 +516,7 @@ sub _objs_from_sth {
 		
 	
 		my @vector = split//, $display_label;
-		$display_label = 'Regulatory Feature';
-		
+			
 		foreach my $i(0..7){#$#vector){
 		  push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
 		}
@@ -525,7 +524,7 @@ sub _objs_from_sth {
 		
 		foreach my $regex(keys %reg_class_regexs){
 		  
-		  if($vector =~ /$regex/){
+		  if($display_label =~ /$regex/){
 			
 			#warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
 			
@@ -533,7 +532,8 @@ sub _objs_from_sth {
 			$reg_type = $reg_class_regexs{$regex};
 		  }
 		}
-		  
+	
+		$display_label = 'Regulatory Feature';
 		$reg_type ||= 'Unclassified';
 
 
@@ -550,7 +550,6 @@ sub _objs_from_sth {
 										   'analysis'       => $fset_hash{$fset_id}->analysis(),
 										   'adaptor'        => $self,
 										   'dbID'           => $regulatory_feature_id,
-										   'score'          => $score,
 										   'display_label'  => $display_label,
 										   'feature_set'    => $fset_hash{$fset_id},
 										   'feature_type'   => $ftype_hash{$reg_type},
@@ -597,9 +596,9 @@ sub _new_fast {
 =cut
 
 sub store{
-	my ($self, @pfs) = @_;
+	my ($self, @rfs) = @_;
 	
-	if (scalar(@pfs) == 0) {
+	if (scalar(@rfs) == 0) {
 		throw('Must call store with a list of RegulatoryFeature objects');
 	}
 	
@@ -607,8 +606,9 @@ sub store{
 		INSERT INTO regulatory_feature (
 			seq_region_id,   seq_region_start,
 			seq_region_end,  seq_region_strand,
-            feature_set_id,  display_label, score
-		) VALUES (?, ?, ?, ?, ?, ?, ?)
+            display_label,   feature_type_id,
+            feature_set_id,  stable_id
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
 	
 	#my $epsth = $self->prepare("INSERT INTO experiment_prediction (
@@ -618,15 +618,15 @@ sub store{
 	my $db = $self->db();
 	#my $analysis_adaptor = $db->get_AnalysisAdaptor();
 	
-  FEATURE: foreach my $pf (@pfs) {
+  FEATURE: foreach my $rf (@rfs) {
 		
-		if( !ref $pf || !$pf->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature') ) {
+		if( ! ref $rf || ! $rf->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature') ) {
 			throw('Feature must be an RegulatoryFeature object');
 		}
 		
-		if ( $pf->is_stored($db) ) {
+		if ( $rf->is_stored($db) ) {
 			#does not accomodate adding Feature to >1 feature_set
-			warning('RegulatoryFeature [' . $pf->dbID() . '] is already stored in the database');
+			warning('RegulatoryFeature [' . $rf->dbID() . '] is already stored in the database');
 			next FEATURE;
 		}
 		
@@ -634,17 +634,23 @@ sub store{
 		
 		#Have to do this for Analysis separately due to inheritance, removed defined as constrained in Feature->new
 		#Redundancy with Analysis in FeatureSet
-		if ( ! $pf->analysis->is_stored($db)) {
+		if ( ! $rf->analysis->is_stored($db)) {
 			throw('A stored Bio::EnsEMBL::Analysis must be attached to the RegulatoryFeature objects to be stored.');
 		}
 		
-		if (! $pf->feature_set->is_stored($db)) {
+		if (! $rf->feature_set->is_stored($db)) {
 			throw('A stored Bio::EnsEMBL::Funcgen::FeatureSet must be attached to the RegulatoryFeature objects to be stored.');
 		}
 
+		if (! $rf->feature_type->is_stored($db)) {
+		  throw('A stored Bio::EnsEMBL::Funcgen::FeatureType must be attached to the RegulatoryFeature objects to be stored.');
+		}
+
+
+
 		#sanity check analysis matches feature_set analysis
-		if($pf->analysis->dbID() != $pf->feature_set->analysis->dbID()){
-			throw("RegulatoryFeature analysis(".$pf->analysis->logic_name().") does not match FeatureSet analysis(".$pf->feature_set->analysis->logic_name().")\n".
+		if($rf->analysis->dbID() != $rf->feature_set->analysis->dbID()){
+			throw("RegulatoryFeature analysis(".$rf->analysis->logic_name().") does not match FeatureSet analysis(".$rf->feature_set->analysis->logic_name().")\n".
 				  "Cannot store mixed analysis sets");
 		}
 		#Complex analysis to be stored as one in analysis table, or have feature_set_prediciton link table?
@@ -658,18 +664,24 @@ sub store{
 		#could this potentially store the same on multiple times?
 
 		my $seq_region_id;
-		($pf, $seq_region_id) = $self->_pre_store($pf);
+
+		warn "prestoring rf $rf";
 		
+		($rf, $seq_region_id) = $self->_pre_store($rf);
+		
+		warn "prestored rf $rf";
+
 		$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
-		$sth->bind_param(2, $pf->start(),               SQL_INTEGER);
-		$sth->bind_param(3, $pf->end(),                 SQL_INTEGER);
-		$sth->bind_param(4, $pf->strand(),              SQL_TINYINT);
-		$sth->bind_param(5, $pf->feature_set->dbID(),   SQL_INTEGER);
-		$sth->bind_param(6, $pf->display_label(),       SQL_VARCHAR);
-		$sth->bind_param(7, $pf->score(),                SQL_DOUBLE);
+		$sth->bind_param(2, $rf->start(),               SQL_INTEGER);
+		$sth->bind_param(3, $rf->end(),                 SQL_INTEGER);
+		$sth->bind_param(4, $rf->strand(),              SQL_TINYINT);
+		$sth->bind_param(5, $rf->display_label(),       SQL_VARCHAR);
+		$sth->bind_param(6, $rf->feature_type->dbID(),  SQL_INTEGER);
+		$sth->bind_param(7, $rf->feature_set->dbID(),   SQL_INTEGER);
+		$sth->bind_param(8, $rf->stable_id(),           SQL_VARCHAR);
 		
 		$sth->execute();
-		$pf->dbID( $sth->{'mysql_insertid'} );
+		$rf->dbID( $sth->{'mysql_insertid'} );
 
 		#foreach my $exp_id(@{$pf->experiment_ids()}){
 		#  $epsth->bind_param(1, $exp_id);
@@ -677,10 +689,10 @@ sub store{
 		#  $epsth->execute();
 		#}
 		
-		$pf->adaptor($self);
+		$rf->adaptor($self);
 	}
 
-  return \@pfs;
+  return \@rfs;
 }
 
 #re-written for non-standard feature table
