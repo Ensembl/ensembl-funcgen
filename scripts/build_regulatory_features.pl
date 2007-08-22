@@ -454,6 +454,8 @@ sub transfer_and_write_features{
 	
 	  foreach my $tx(@{$tx_adaptor->fetch_all_by_Gene($gene)}){
 	  
+		#use relative values or comparison
+
 		if($tx->strand == 1){
 		  
 		  $five_prime = 1 if($tx->start() > 0);#TSS is in sub slice
@@ -635,6 +637,7 @@ sub get_union_FeatureSet{
                  -analysis     => $anal,
                  -feature_type => $union_ftypes{$set_name},
                  -name         => $set_name,
+				 -type         => 'annotated',
                  );
             
             
