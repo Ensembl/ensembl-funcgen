@@ -140,25 +140,25 @@ sub fetch_by_name {
   
 }
 
-=head2 fetch_by_member_set_type
+=head2 fetch_by_supporting_set_type
 
-  Arg [1]    : string - type of member_sets i.e. result or feature
+  Arg [1]    : string - type of supporting_sets i.e. result or feature
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my $dsets = $dset_adaptor->fetch_by_member_set('feature');
+  Example    : my $dsets = $dset_adaptor->fetch_by_supporting_set('feature');
   Description: Fetch all DataSets whose pre-processed data consists of a particular set type
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
-  Exceptions : Throws if no member_set_type passed
+  Exceptions : Throws if no supporting_set_type passed
   Caller     : General
   Status     : At Risk 
 
 =cut
 
-sub fetch_all_by_member_set_type {
-  my ($self, $mstype, $status) = @_;
+sub fetch_all_by_supporting_set_type {
+  my ($self, $type, $status) = @_;
   
-  throw("Must provide a member_set_type argument") if (! defined $mstype);
+  throw("Must provide a supporting_set_type argument") if (! defined $type);
   
-  my $sql = "ds.member_set_type='".$mstype."'";
+  my $sql = "ds.supporting_set_type='".$type."'";
   
   if($status){
     my $constraint = $self->status_to_constraint($status) if $status;
@@ -224,6 +224,43 @@ sub fetch_all_by_ResultSet {
 
     return $self->generic_fetch($sql);	
 }
+
+
+
+=head2 fetch_all_by_supporting_set
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Result|FeatureSet
+  Example    : my @dsets = $fs_adaptopr->fetch_all_by_supporting_set($rset);
+  Description: Retrieves DataSet objects from the database based on the
+               given supporting Result or FeatureSet.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
+  Exceptions : Throws if arg is not a valid Result|FeatureSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_supporting_set {
+    my $self = shift;
+    my $set = shift;
+
+    if(! (ref($set) && 
+		  ( $set->isa("Bio::EnsEMBL::Funcgen::ResultSet") || $set->isa("Bio::EnsEMBL::Funcgen::FeatureSet") )
+		  && $set->dbID())){
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet or FeatureSet object");
+    }
+	
+
+	my $type = (ref($set) eq 'ResultSet') ? 'result' : 'feature';
+
+	#self join here to make sure we get all linked result_sets
+    #my $sql = 'ds.data_set_id IN (SELECT ds.data_set_id from data_set ds where result_set_id='.$set->dbID().')';
+	my $sql = "ss.supporting_set_type='$type' AND ss.supporting_set_id=".$set->dbID();
+
+    return $self->generic_fetch($sql);	
+}
+
+
 
 
 
@@ -296,7 +333,7 @@ sub _tables {
 	
   return (
 		  [ 'data_set',    'ds' ],
-		  [ 'data_set_member', 'dsm'],
+		  [ 'supporting_set', 'ss'],
 		 );
 }
 
@@ -320,9 +357,9 @@ sub _columns {
   
   
   return qw(
-			ds.data_set_id     ds.result_set_id
-			ds.feature_set_id  ds.name ds.member_set_type
-			dsm.member_set_id
+			ds.data_set_id	    ds.feature_set_id
+			ds.name             ds.supporting_set_type
+			ss.supporting_set_id
 		   );	
 }
 
@@ -365,11 +402,8 @@ sub _columns {
 
 sub _left_join {
   my $self = shift;
-  #will this return if there are no entrie in data_set_member?
-  #do we have to implement a join here?
-
 	
-  return (['data_set_member', 'ds.data_set_id = dsm.data_set_id']);
+  return (['supporting_set', 'ds.data_set_id = ss.data_set_id']);
 }
 
 
@@ -412,17 +446,14 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
   
   my (@data_sets, @supporting_sets, $data_set, $dbID, $set_id);
-  my ($fset_id, $fset, $set, $name, $ms_type, $dsmember_id);
+  my ($fset_id, $fset, $set, $name, $ss_type, $ss_id);
   
-  #to be removed
-  my ($rset_id);
-
   my %set_adaptors = (
 					  feature => $self->db->get_FeatureSetAdaptor(),
 					  result  => $self->db->get_ResultSetAdaptor(),
 					 );
 
-  $sth->bind_columns(\$dbID, \$rset_id, \$fset_id, \$name, \$ms_type, \$dsmember_id);
+  $sth->bind_columns(\$dbID, \$fset_id, \$name, \$ss_type, \$ss_id);
   
   while ( $sth->fetch() ) {
 
@@ -449,7 +480,7 @@ sub _objs_from_sth {
 	#need to change keys on data_set!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	#only pushes supporting set if defined, 0's return for no data_set_member records?
-	push @supporting_sets, $set_adaptors{$ms_type}->fetch_by_dbID($dsmember_id) if $dsmember_id;
+	push @supporting_sets, $set_adaptors{$ss_type}->fetch_by_dbID($ss_id) if $ss_id;
   }
 
   #we could do the sort on cell and types here
@@ -506,9 +537,9 @@ sub _objs_from_sth {
 sub store{
   my ($self, @dsets) = @_;
 
-  my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, result_set_id, name) 
+  my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, name, supporting_set_type) 
                             VALUES (?, ?, ?, ?)");
-  my $sth2 = $self->prepare("INSERT INTO data_set (dbid, feature_set_id, result_set_id, name) 
+  my $sth2 = $self->prepare("INSERT INTO data_set (dbid, feature_set_id, name, supporting_set_type) 
                             VALUES (?, ?, ?, ?)");
 
   my $db = $self->db();
@@ -541,7 +572,7 @@ sub store{
 		  $sth->bind_param(1, $fset_id || 0,            SQL_INTEGER);
 		  $sth->bind_param(2, $rset->dbID() || 0,       SQL_INTEGER);
 		  $sth->bind_param(3, $dset->name(),            SQL_VARCHAR);
-		  $sth->bind_param(4, $dset->member_set_type(), SQL_VARCHAR);#enum
+		  $sth->bind_param(4, $dset->supporting_set_type(), SQL_VARCHAR);#enum
 		  $sth->execute();
 		  
 		  $dset->dbID( $sth->{'mysql_insertid'} );
