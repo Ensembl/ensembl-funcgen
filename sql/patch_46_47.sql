@@ -146,6 +146,46 @@ CREATE TABLE `regulatory_attribute` (
 
 -- do we need key on feature_type and or feature_id?
 
+
+
+
+-- finally remove regulatory feature from annotated_feature table
+delete from annotated_feature where feature_set_id = 27;
+
+
+-- patched regulatory_feature feature_typ and stable_id using patch_reg_feature.pl
+-- no alter column defs for stable_id
+alter table regulatory_feature change column stable_id `stable_id` mediumint(8) unsigned default NULL;
+-- allows for ~16 millions regulatory features
+
+-- v47 build specific data tidy up
+-- delete from annotated_feature where feature_set_id >56;
+-- update feature_set set type='regulatory' where feature_set_id >56;
+
+-- need to tidy new reg features sets in feature_set table, change to regulatory
+-- tidy up overlap feature_sets and create data_sets for them
+
+-- reduce size of name field in feature_set
+
+
+
+-- change small table primary key ids to medium int?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- change all ids to int(10), 
 -- add UNIQUE KEY `name_idx` (name) on data_set
 -- alter key on array_chip  UNIQUE KEY `array_design_idx` (`array_id`, `design_id`)

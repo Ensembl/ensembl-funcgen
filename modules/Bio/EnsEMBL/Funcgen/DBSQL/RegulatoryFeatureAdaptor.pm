@@ -277,13 +277,12 @@ sub _columns {
 
 #we need to do some sort of default join on the attributes table here dependent on zoom level?
 
-#sub _default_where_clause {
-#  my $self = shift;
+sub _default_where_clause {
+  my $self = shift;
 	
-  #return 'af.feature_set_id = fs.feature_set_id';
+  return 'rf.feature_set_id = fs.feature_set_id';
 
-#  return;
-#}
+}
 
 
 =head2 _left_join
@@ -546,38 +545,39 @@ sub _objs_from_sth {
 		#RegulatoryFeature hack
 		#will have no reg attrs
 
-		if(! defined $ftype_id && $display_label =~ /[01]/){
+		#if(! defined $ftype_id && $display_label =~ /[01]/){
 		  
-		  #We don't consider the non-epi feature bits as these are only used to
-		  #cluster and build the patterns, not to assign a classification
-		  #as this would prevent us from finding novel regions
+		#  #We don't consider the non-epi feature bits as these are only used to
+		#  #cluster and build the patterns, not to assign a classification
+		#  #as this would prevent us from finding novel regions
 		  
 		  
-		  my @vector = split//, $display_label;
+		#  my @vector = split//, $display_label;
 		  
-		  foreach my $i(0..7){#$#vector){
-			push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
-		  }
+		#  foreach my $i(0..7){#$#vector){
+		#	push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
+		#  }
 		
 		  
-		  foreach my $regex(keys %reg_class_regexs){
+		#  foreach my $regex(keys %reg_class_regexs){
 			
-			if($display_label =~ /$regex/){
+		#	if($display_label =~ /$regex/){
 			  
-			  #warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
+		#	  #warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
 			  
-			  throw('Found non-mutually exclusive regexs') if $reg_type;
-			  $reg_type = $reg_class_regexs{$regex};
-			}
+		#	  throw('Found non-mutually exclusive regexs') if $reg_type;
+		#	  $reg_type = $reg_class_regexs{$regex};
+		#	}
 
-		  }
+		#  }
 
-		  undef $display_label;
-		  $reg_type ||= 'Unclassified';
-		  $ftype_hash{$reg_type} = $ft_adaptor->fetch_by_name($reg_type) if (! exists $ftype_hash{$reg_type});
-		  $ftype = $ftype_hash{$reg_type};
-		}
-		elsif(defined $ftype_id){
+		#  undef $display_label;
+		#  $reg_type ||= 'Unclassified';
+		#  $ftype_hash{$reg_type} = $ft_adaptor->fetch_by_name($reg_type) if (! exists $ftype_hash{$reg_type});
+		#  $ftype = $ftype_hash{$reg_type};
+		#}
+		
+		if(defined $ftype_id){
 		  $ftype = $ft_adaptor->fetch_by_dbID($ftype_id);
 		}
 		
@@ -597,15 +597,22 @@ sub _objs_from_sth {
 			'stable_id'      => $stable_id,
 		   });
 	  }
-	}
 	
-	#populate attributes array
-	if(defined $attr_id  && ! $skip_feature){
-	  push @reg_attrs, $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
+	
+	  #populate attributes array
+	  if(defined $attr_id  && ! $skip_feature){
+		push @reg_attrs, $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
+	  }
 	}
-  
-	return \@features;
+
+  #hande last record
+  if($reg_feat){
+	$reg_feat->regulatory_attributes(\@reg_attrs);
+	push @features, $reg_feat;
   }
+  
+  return \@features;
+}
 
 
 
@@ -777,7 +784,6 @@ sub fetch_all_by_logic_name {
 
 sub list_dbIDs {
 	my $self = shift;
-	
 	return $self->_list_dbIDs('regulatory_feature');
 }
 

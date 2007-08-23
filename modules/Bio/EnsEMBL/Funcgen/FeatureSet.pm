@@ -359,7 +359,7 @@ sub get_FeatureAdaptor{
 
   Example    : my @features = @{$FeatureSet->get_Features_by_Slice($slice)};
   Description: Retrieves all Features for this FeatureSet for a given Slice
-  Returntype : List ref containing Features of the feature_set type i.e. Annotated, Regulatory or Supporting;
+  Returntype : ARRAYREF containing Features of the feature_set type i.e. Annotated, Regulatory or Supporting;
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -372,6 +372,7 @@ sub get_Features_by_Slice{
 
   return $self->get_FeatureAdaptor->fetch_all_by_Slice_FeatureSet($slice, $self);
 }
+
 
 
 

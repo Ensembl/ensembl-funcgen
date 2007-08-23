@@ -540,7 +540,7 @@ CREATE TABLE `regulatory_feature` (
   `display_label` varchar(60) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id`	int(10) unsigned default NULL,
-  `stable_id` mediumint(8) default NULL,
+  `stable_id` mediumint(8) unsigned default NULL,
   PRIMARY KEY  (`regulatory_feature_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_type_idx` (`feature_set_id`),
