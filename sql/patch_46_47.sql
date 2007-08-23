@@ -92,38 +92,37 @@ insert into feature_type values(NULL, 'Non-Gene Associated', 'REGULATORY FEATURE
 insert into feature_type values(NULL, 'Unclassified', 'REGULATORY FEATURE', 'Unclassified regulatory feature'); 
 
 
--- Table structure for table `data_set_member`
+-- Table structure for table `supporting_set`
 
-DROP TABLE IF EXISTS `data_set_member`;
-CREATE TABLE `data_set_member` (
+DROP TABLE IF EXISTS `supporting_set`;
+CREATE TABLE `supporting_set` (
    `data_set_id` int(10) unsigned NOT NULL default '0',
-   `member_set_id` int(10) unsigned NOT NULL default '0',
-   PRIMARY KEY  (`data_set_id`, `member_set_id`)
+   `supporting_set_id` int(10) unsigned NOT NULL default '0',
+   PRIMARY KEY  (`data_set_id`, `supporting_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- primary key will always be unique as we will never 
--- have mixed member_set type e.g.(result/feature) in the same data_set
+-- have mixed supporting_set type e.g.(result/feature) in the same data_set
 -- hence no possibilty of getting same id from different tables in same data_set
 
 
-alter table data_set add column `member_set_type` enum("result", "feature") default NULL;
+alter table data_set add column `supporting_set_type` enum("result", "feature") default NULL; 
 -- can't have not NULL here or will default to result!  Will this default to result on other than enum val?
 
--- populate data_set member_set_type
-update data_set set member_set_type='result';
+-- populate data_set supporting_set_type
+update data_set set supporting_set_type='result';
 
 -- ensembl specific data patches 
---update data_set set member_set_type='feature' where name like "Regulatory_%";
+--update data_set set supporting_set_type='feature' where name like "Regulatory_%";
 
--- populate the data_set_member table
-insert into data_set_member select data_set_id, result_set_id from data_set;
+-- populate the supporting_set table
+insert into supporting_set select data_set_id, result_set_id from data_set;
 --tidy data_set_memebr table where we only have feature_sets
-delete from data_set_member where member_set_id=0;
+delete from supporting_set where member_set_id=0;
 
 
-
-
-
+-- remove old result_set_id column from data_set
+alter table data_set drop column result_set_id; 
 
 
 

@@ -305,8 +305,9 @@ CREATE TABLE `data_set` (
    `result_set_id` int(10) unsigned default '0',
    `feature_set_id` int(10) unsigned default '0',
    `name` varchar(40) default NULL,
-   `member_set_type` enum("result", "feature") default NULL,
-   PRIMARY KEY  (`data_set_id`, `result_set_id`, `feature_set_id`),
+   `supporting_set_type` enum("result", "feature") default NULL,
+   PRIMARY KEY  (`data_set_id`, `feature_set_id`),
+   KEY `supporting_type_idx` (`supporting_set_type`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -347,16 +348,16 @@ CREATE TABLE `data_set` (
 
 
 
-DROP TABLE IF EXISTS `data_set_member`;
-CREATE TABLE `data_set_member` (
+DROP TABLE IF EXISTS `supporting_set`;
+CREATE TABLE `supporting_set` (
    `data_set_id` int(10) unsigned NOT NULL default '0',
-   `member_set_id` int(10) unsigned NOT NULL default '0',
-   PRIMARY KEY  (`data_set_id`, `member_set_id`)
+   `supporting_set_id` int(10) unsigned NOT NULL default '0',
+   PRIMARY KEY  (`data_set_id`, `supporting_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 -- primary key will always be unique as we will never 
--- have mixed member_set type e.g.(result/feature) in the same data_set
+-- have mixed supporting_set type e.g.(result/feature) in the same data_set
 -- hence no possibilty of getting same id from different tables in same data_set
 
 
