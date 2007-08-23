@@ -574,6 +574,20 @@ CREATE TABLE `regulatory_feature` (
 -- how would we map to supporting_features? (core regulatory_feature)
 
 
+
+DROP TABLE IF EXISTS `regulatory_attribute`;
+CREATE TABLE `regulatory_attribute` (
+  `regulatory_feature_id` int(10) unsigned NOT NULL default '0',
+  `attribute_feature_id` int(10) unsigned NOT NULL default '0',
+  `attribute_feature_type` enum('annotated', 'supporting') default NULL,
+  PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_type`, `attribute_feature_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=17;
+
+
+-- do we need key on feature_type and or feature_id?
+
+
+
 --
 -- Table structure for table `experimental_chip`
 --

@@ -446,7 +446,7 @@ sub _left_join {
   Description: PROTECTED implementation of superclass abstract method.
                Creates Array objects from an executed DBI statement
 			   handle.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : None
   Caller     : Internal
   Status     : At Risk

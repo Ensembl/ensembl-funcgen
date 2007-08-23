@@ -47,10 +47,40 @@ our $SLICE_FEATURE_CACHE_SIZE = 4;
 our $MAX_SPLIT_QUERY_SEQ_REGIONS = 3;
 
 
+#need to wrap _generic_fetch to always generate the seq_region_cache other wise non-slice based
+#fetch methods fail
+
+=head2 generic_fetch
+
+  Arg [1]    : (optional) string $constraint
+               An SQL query constraint (i.e. part of the WHERE clause)
+  Arg [2]    : (optional) Bio::EnsEMBL::AssemblyMapper $mapper
+               A mapper object used to remap features
+               as they are retrieved from the database
+  Arg [3]    : (optional) Bio::EnsEMBL::Slice $slice
+               A slice that features should be remapped to
+  Example    : $fts = $a->generic_fetch('contig_id in (1234, 1235)', 'Swall');
+  Description: Wrapper method for core BaseAdaptor, build seq_region cache for features
+  Returntype : ARRAYREF of Bio::EnsEMBL::SeqFeature in contig coordinates
+  Exceptions : none
+  Caller     : FeatureAdaptor classes
+  Status     : at risk
+
+=cut
+
+sub generic_fetch {
+  my $self = shift;
+
+  #, $constraint, $mapper, $slice) = @_;
+  #build seq_region cache here once for entire query
+  $self->build_seq_region_cache();
+
+  return $self->SUPER::generic_fetch(@_);
+}
 
 
 
-#Added schema_build to feature cache key
+#Added schema_buildo feature cache key
 #Do not remove
 
 =head2 fetch_all_by_Slice_constraint
@@ -102,7 +132,7 @@ sub fetch_all_by_Slice_constraint {
   }
 
   #build seq_region cache here once for entire query
-  $self->build_seq_region_cache_by_Slice($slice, $fg_cs);
+  $self->build_seq_region($slice);#, $fg_cs);
 
 
   my @tables = $self->_tables;
@@ -200,25 +230,36 @@ sub fetch_all_by_Slice_constraint {
 }
 
 
+#do we even need to have the coord system?
+#so lon as we are only using one schema build i.e. one dnadb defualt = current
+#slice and fg_cs are optional
+#need to look at this
 
+sub build_seq_region_cache{
+  my ($self, $slice) = @_;
 
-sub build_seq_region_cache_by_Slice{
-  my ($self, $slice, $fg_cs) = @_;
+  #if(defined $fg_cs && !(ref($fg_cs) && $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem'))){
+#	throw('Optional argument must be a Bio::EnsEMBL::Funcgen::CoordSystem');
+#  }else{
+#	$fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
+#																$slice->coord_system->name(), 
+#																$slice->coord_system->version()
+#															   );
+#  }
 
-  if(defined $fg_cs && !(ref($fg_cs) && $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem'))){
-	throw('Optional argument must be a Bio::EnsEMBL::Funcgen::CoordSystem');
-  }else{
-	$fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
-																$slice->coord_system->name(), 
-																$slice->coord_system->version()
-															   );
+  if(defined $slice){
+	throw('Optional argument must be a Bio::EnsEMBL::Slice') if(! ( ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
   }
 
-  my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
 
-  my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where coord_system_id='.
-	$fg_cs->dbID().' and schema_build="'.$schema_build.'"';
+  my $dnadb = (defined $slice) ? $slice->adaptor->db() : $self->db->dnadb();
+  my $schema_build = $self->db->_get_schema_build($dnadb);
 
+  #my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where coord_system_id='.
+#	$fg_cs->dbID().' and schema_build="'.$schema_build.'"';
+  my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where schema_build="'.$schema_build.'"';
+
+  
   $self->{'seq_region_cache'} = {};
   $self->{'core_seq_region_cache'} = {};
   %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
@@ -357,7 +398,7 @@ sub _pre_store {
 
 
   #build seq_region cache here once for entire query
-  $self->build_seq_region_cache_by_Slice($slice, $fg_cs);
+  $self->build_seq_region_cache($slice);#, $fg_cs);
 
   #Now need to check whether seq_region is already stored
   my $seq_region_id = $self->get_seq_region_id_by_Slice($slice);

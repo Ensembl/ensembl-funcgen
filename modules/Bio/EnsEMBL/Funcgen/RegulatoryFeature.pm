@@ -71,7 +71,8 @@ use vars qw(@ISA);
   Arg [-DISPLAY_LABEL]: string - Display label for this feature
   Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
   Arg [-FEATURE_SET]  : Bio::EnsEMBL::Funcgen::FeatureSet - Regulatory Feature set
-  Arg [-FEATURE_TYPE] : Bio::EnsEMBL::Funcgen::FeatureType - Regulatory Feature sub type 
+  Arg [-FEATURE_TYPE] : Bio::EnsEMBL::Funcgen::FeatureType - Regulatory Feature sub type
+  Arg [-ATTRIBUTES]   : ARRAYREF of attribute features e.g. Annotated or ? Features
   Arg [-dbID]         : (optional) int - Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
   Example    : my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new(
@@ -82,6 +83,7 @@ use vars qw(@ISA);
 									                                      -DISPLAY_LABEL => $text,
 									                                      -FEATURE_SET   => $fset,
                                                                           -FEATURE_TYPE  => $reg_ftype,
+                                                                          -REGULATORY_ATTRIBUTES    => \@features,
                                                                          );
 
 
@@ -101,7 +103,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
   
   my ($display_label, $fset, $reg_type, $stable_id, $reg_attrs)
-    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE', 'STABLE_ID', 'REG_ATTRIBUTES'], @_);
+    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE', 'STABLE_ID', 'REGULATORY_ATTRIBUTES'], @_);
   
   #check mandatory params here
   $self->display_label($display_label) if $display_label;
@@ -110,7 +112,7 @@ sub new {
   throw("Must provide a FeatureType") if ! $reg_type;
   $self->feature_type($reg_type) if $reg_type;
   $self->stable_id($stable_id) if $stable_id;
-  $self->regulatory_attributes(@$reg_attrs) if $reg_attrs;
+  $self->regulatory_attributes($reg_attrs) if $reg_attrs;
 
   #$self->experiment_ids(@$exp_ids);
 
@@ -127,11 +129,11 @@ sub new {
 
   Args       : Hashref with all internal attributes set
   Example    : none
-  Description: Quick and dirty version of new. Only works if the code is very
+  Description: Quick and very dirty version of new. Only works if the code is very
                disciplined.
   Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Exceptions : None
-  Caller     : General
+  Caller     : Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor
   Status     : Medium Risk
 
 =cut
@@ -308,21 +310,26 @@ sub stable_id {
 
 =head2 regulatory_attributes
 
-  Arg [1]    : (optional) list of constituent feature type names
-               e.g. ['H4K20me3', 'DNase1', 'CTCF']
+  Arg [1]    : (optional) list of constituent features
   Example    : print "Regulatory Attributes:\n\t".join("\n\t", @{$feature->regulatory_attributes()})."\n";
   Description: Getter and setter for the regulatory_attributes for this feature. 
-  Returntype : listref
+  Returntype : ARRAYREF
   Exceptions : None
   Caller     : General
-  Status     : At Risk - change to  return attribute features, should be two array refs for focus and other?
+  Status     : At Risk
 
 =cut
 
+
+#change to store attrs in type hash?
+
 sub regulatory_attributes {
-  my $self = shift;
+  my ($self, $attrs) = @_;
 	
-  @{$self->{'regulatory_attributes'}} = @_ if @_;
+  #deref here for safety??
+  $self->{'regulatory_attributes'} =  [@$attrs] if $attrs;
+
+  #check for isa->Feature here?
   
   return $self->{'regulatory_attributes'};
 }

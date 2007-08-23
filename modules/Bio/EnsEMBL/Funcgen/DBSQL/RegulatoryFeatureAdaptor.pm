@@ -227,7 +227,7 @@ sub _tables {
   return (
 		  [ 'regulatory_feature', 'rf' ],
 		  [ 'feature_set', 'fs'],
-		  #['regulatory_attributes', 'ra']
+		  [ 'regulatory_attribute', 'ra']
 		 );
 }
 
@@ -252,7 +252,8 @@ sub _columns {
 			rf.seq_region_start      rf.seq_region_end
 			rf.seq_region_strand     rf.display_label
 			rf.feature_type_id       rf.feature_set_id
-			rf.stable_id
+			rf.stable_id             ra.attribute_feature_id
+			ra.attribute_feature_type
 	   );
 }
 
@@ -283,6 +284,30 @@ sub _columns {
 
 #  return;
 #}
+
+
+=head2 _left_join
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns an additional table joining constraint to use for
+			   queries.
+  Returntype : List
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _left_join {
+  my $self = shift;
+	
+  return (['regulatory_attribute', 'rf.regulatory_feature_id = ra.regulatory_feature_id']);
+}
+
+
+
 
 =head2 _final_clause
 
@@ -320,7 +345,7 @@ sub _final_clause {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth, $mapper, $dest_slice) = @_;
+  my ($self, $sth, $mapper, $dest_slice) = @_;
 
 
 	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
@@ -331,31 +356,41 @@ sub _objs_from_sth {
 	#my $sa = $self->db->get_SliceAdaptor();
 
 	
-	my ($sa);#, $old_cs_id);
-	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
+	my ($sa, $reg_feat);#, $old_cs_id);
+	$sa = ($dest_slice) ? $dest_slice->adaptor->db->get_SliceAdaptor() : $self->db->get_SliceAdaptor();
+	#don't really need this if we're using DNADBSliceAdaptor?
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
 	#Hence it should always be on the same coord system
 	#my $aa = $self->db->get_AnalysisAdaptor();
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-	my @features;
+	my (@features, @reg_attrs);
 	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
+	my $skip_feature = 0;
 
+	my %feature_adaptors = (
+							'annotated' => $self->db->get_AnnotatedFeatureAdaptor(),
+							#?
+						   );
+	
+	
 	my (
-	    $regulatory_feature_id, $seq_region_id,
+	    $dbID,                  $seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $display_label,
 		$ftype_id,              $fset_id,
-		$stable_id
+		$stable_id,             $attr_id,
+		$attr_type
 	);
 
 	$sth->bind_columns(
-					   \$regulatory_feature_id, \$seq_region_id,
+					   \$dbID,                  \$seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
 					   \$seq_region_strand,     \$display_label,
 					   \$ftype_id,              \$fset_id,
-					   \$stable_id
+					   \$stable_id,             \$attr_id,
+					   \$attr_type
 					  );
 
 
@@ -364,12 +399,9 @@ sub _objs_from_sth {
     #                                FROM experiment_prediction 
     #                                WHERE regulatory_feature_id = ?");
 
-	my $asm_cs;
-	my $cmp_cs;
-	my $asm_cs_name;
-	my $asm_cs_vers;
-	my $cmp_cs_name;
-	my $cmp_cs_vers;
+	my ($asm_cs, $cmp_cs, $asm_cs_name);
+	my ($asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
+
 	if ($mapper) {
 		$asm_cs      = $mapper->assembled_CoordSystem();
 		$cmp_cs      = $mapper->component_CoordSystem();
@@ -377,13 +409,11 @@ sub _objs_from_sth {
 		$asm_cs_vers = $asm_cs->version();
 		$cmp_cs_name = $cmp_cs->name();
 		$cmp_cs_vers = $cmp_cs->version();
-	}
+	  }
+	
+	my ($dest_slice_start, $dest_slice_end);
+	my ($dest_slice_strand, $dest_slice_length, $dest_slice_sr_name);
 
-	my $dest_slice_start;
-	my $dest_slice_end;
-	my $dest_slice_strand;
-	my $dest_slice_length;
-	my $dest_slice_sr_name;
 	if ($dest_slice) {
 		$dest_slice_start   = $dest_slice->start();
 		$dest_slice_end     = $dest_slice->end();
@@ -409,46 +439,42 @@ sub _objs_from_sth {
 	my @reg_feature_attrs = ('DNase1', 'CTCF', 'H4K20me3', 'H3K27me3', 
 							 'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
 	
+	
+  FEATURE: while ( $sth->fetch() ) {
 
+	  if(! $reg_feat || ($reg_feat->dbID != $dbID)){
+	
+		if($skip_feature){
+		  undef $reg_feat;#so we don't duplicate the push for the feature previous to the skip feature
+		  $skip_feature = 0;
+		}
 
-	#my $last_feature_id = -1;
-
-	FEATURE: while ( $sth->fetch() ) {
-
-		#This need to be a lot more clever when we start returning redundant reg_feature records for every attribute
+		if($reg_feat){
+		  $reg_feat->regulatory_attributes(\@reg_attrs);
+		  push @features, $reg_feat;
+		  undef @reg_attrs;
+		}
 
 	    #Need to build a slice adaptor cache here?
 	    #Would only ever want to do this if we enable mapping between assemblies??
 	    #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 	    
+		#this should only be done once for each regulatory_feature_id
+		
+		
 		#get core seq_region_id
 		$seq_region_id = $self->get_core_seq_region_id($seq_region_id);
 		
-
-	    
 	    #if($old_cs_id && ($old_cs_id+ != $cs_id)){
 	    #  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
 	    #}
-	    
 	    #$old_cs_id = $cs_id;
-	    
-	    
 	    #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
 	    
-	    $sa ||= $self->db->get_SliceAdaptor();#$cs_id);
-	    
-	    
-	    
-	    # This assumes that features come out sorted by ID
-	    #next if ($last_feature_id == $regulatory_feature_id);
-	    #$last_feature_id = $regulatory_feature_id;
-	    
-		
-		#possiblity of circular reference here?
 		#Get the FeatureSet object
 		$fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
-
-   
+		
+		
 	    # Get the slice object
 	    my $slice = $slice_hash{'ID:'.$seq_region_id};
 	    
@@ -469,9 +495,12 @@ sub _objs_from_sth {
 	      
 	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
 			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-	      
+	
 	      # Skip features that map to gaps or coord system boundaries
-	      next FEATURE if !defined $sr_name;
+		  if(! defined $sr_name){
+			$skip_feature = 1;
+			next FEATURE;
+		  }
 	      
 	      # Get a slice in the coord system we just mapped to
 	      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
@@ -486,99 +515,99 @@ sub _objs_from_sth {
 	    # If a destination slice was provided convert the coords
 	    # If the destination slice starts at 1 and is forward strand, nothing needs doing
 	    if ($dest_slice) {
+
 	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-		if ($dest_slice_strand == 1) {
-		  $seq_region_start = $seq_region_start - $dest_slice_start + 1;
-		  $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
-		} else {
-		  my $tmp_seq_region_start = $seq_region_start;
-		  $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-		  $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-		  $seq_region_strand      *= -1;
-		}
+			
+			if ($dest_slice_strand == 1) {
+			  $seq_region_start = $seq_region_start - $dest_slice_start + 1;
+			  $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+			} 
+			else {
+			  my $tmp_seq_region_start = $seq_region_start;
+			  $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
+			  $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+			  $seq_region_strand      *= -1;
+			}
 	      }
 	      
 	      # Throw away features off the end of the requested slice
-	      next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
-		|| ( $dest_slice_sr_name ne $sr_name );
+	      if ($seq_region_end < 1 || $seq_region_start > $dest_slice_length
+			  || ( $dest_slice_sr_name ne $sr_name )){
+			$skip_feature = 1;
+			next FEATURE;
+		  }
 	      
 	      $slice = $dest_slice;
 	    }
 	    
 
-	  
+		my ($reg_type, $reg_attrs, $ftype);
+		
 		#RegulatoryFeature hack
-		my ($reg_type, $reg_attrs);
-					  		  
-		#We don't consider the non-epi feature bits as these are only used to
-		#cluster and build the patterns, not to assign a classification
-		#as this would prevent us from finding novel regions
-		
-	
-		my @vector = split//, $display_label;
-			
-		foreach my $i(0..7){#$#vector){
-		  push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
-		}
-		
-		
-		foreach my $regex(keys %reg_class_regexs){
+		#will have no reg attrs
+
+		if(! defined $ftype_id && $display_label =~ /[01]/){
 		  
-		  if($display_label =~ /$regex/){
-			
-			#warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
-			
-			throw('Found non-mutually exclusive regexs') if $reg_type;
-			$reg_type = $reg_class_regexs{$regex};
+		  #We don't consider the non-epi feature bits as these are only used to
+		  #cluster and build the patterns, not to assign a classification
+		  #as this would prevent us from finding novel regions
+		  
+		  
+		  my @vector = split//, $display_label;
+		  
+		  foreach my $i(0..7){#$#vector){
+			push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
 		  }
-		}
-	
-		$display_label = 'Regulatory Feature';
-		$reg_type ||= 'Unclassified';
-
-
-		#
 		
-		$ftype_hash{$reg_type} = $ft_adaptor->fetch_by_name($reg_type) if (! exists $ftype_hash{$reg_type});
+		  
+		  foreach my $regex(keys %reg_class_regexs){
+			
+			if($display_label =~ /$regex/){
+			  
+			  #warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
+			  
+			  throw('Found non-mutually exclusive regexs') if $reg_type;
+			  $reg_type = $reg_class_regexs{$regex};
+			}
 
-	
-	    push @features, $self->_new_fast( {
-										   'start'          => $seq_region_start,
-										   'end'            => $seq_region_end,
-										   'strand'         => $seq_region_strand,
-										   'slice'          => $slice,
-										   'analysis'       => $fset_hash{$fset_id}->analysis(),
-										   'adaptor'        => $self,
-										   'dbID'           => $regulatory_feature_id,
-										   'display_label'  => $display_label,
-										   'feature_set'    => $fset_hash{$fset_id},
-										   'feature_type'   => $ftype_hash{$reg_type},
-										   'regulatory_attributes' => $reg_attrs,
-										   'stable_id'      => $stable_id,
-										  } );
+		  }
+
+		  undef $display_label;
+		  $reg_type ||= 'Unclassified';
+		  $ftype_hash{$reg_type} = $ft_adaptor->fetch_by_name($reg_type) if (! exists $ftype_hash{$reg_type});
+		  $ftype = $ftype_hash{$reg_type};
+		}
+		elsif(defined $ftype_id){
+		  $ftype = $ft_adaptor->fetch_by_dbID($ftype_id);
+		}
+		
+		$reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
+		  ({
+			'start'          => $seq_region_start,
+			'end'            => $seq_region_end,
+			'strand'         => $seq_region_strand,
+			'slice'          => $slice,
+			'analysis'       => $fset_hash{$fset_id}->analysis(),
+			'adaptor'        => $self,
+			'dbID'           => $dbID,
+			'display_label'  => $display_label,
+			'feature_set'    => $fset_hash{$fset_id},
+			'feature_type'   => $ftype,
+			#'regulatory_attributes' => $reg_attrs,
+			'stable_id'      => $stable_id,
+		   });
+	  }
 	}
 	
+	#populate attributes array
+	if(defined $attr_id  && ! $skip_feature){
+	  push @reg_attrs, $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
+	}
+  
 	return \@features;
-}
+  }
 
-=head2 _new_fast
 
-  Args       : Hashref to be passed to RegulatoryFeature->new_fast()
-  Example    : None
-  Description: Construct a RegulatoryFeature object using quick and dirty new_fast.
-  Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
-  Exceptions : None
-  Caller     : _objs_from_sth
-  Status     : At Risk
-
-=cut
-
-sub _new_fast {
-	my $self = shift;
-	
-	my $hash_ref = shift;
-	return Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast($hash_ref);
-}
 
 =head2 store
 
@@ -589,108 +618,117 @@ sub _new_fast {
 			   duplicates. Sets dbID and adaptor on the objects that it stores.
   Returntype : Listref of stored RegulatoryFeatures
   Exceptions : Throws if a list of RegulatoryFeature objects is not provided or if
-               the Analysis, CellType and FeatureType objects are not attached or stored
+               the Analysis, CellType and FeatureType objects are not attached or stored.
+               Throws if analysis of set and feature do not match
+               Warns if RegulatoryFeature already stored in DB and skips store.
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub store{
-	my ($self, @rfs) = @_;
+  my ($self, @rfs) = @_;
 	
-	if (scalar(@rfs) == 0) {
-		throw('Must call store with a list of RegulatoryFeature objects');
-	}
-	
-	my $sth = $self->prepare("
+  if (scalar(@rfs) == 0) {
+	throw('Must call store with a list of RegulatoryFeature objects');
+  }
+  
+
+  my %attr_feat_types = (
+						 'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
+						 #??
+						 
+						);
+
+  my $sth = $self->prepare("
 		INSERT INTO regulatory_feature (
 			seq_region_id,   seq_region_start,
 			seq_region_end,  seq_region_strand,
             display_label,   feature_type_id,
             feature_set_id,  stable_id
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	");
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+  
+  my $sth2 = $self->prepare("
+		INSERT INTO regulatory_attribute (
+              regulatory_feature_id, attribute_feature_id, attribute_feature_type
+		) VALUES (?, ?, ?)");
+  
+  my $db = $self->db();
+  
+  foreach my $rf (@rfs) {
 	
-	#my $epsth = $self->prepare("INSERT INTO experiment_prediction (
-	#experiment_id, regulatory_feature_id)
-    #                          VALUES (?, ?)");
-	
-	my $db = $self->db();
-	#my $analysis_adaptor = $db->get_AnalysisAdaptor();
-	
-  FEATURE: foreach my $rf (@rfs) {
-		
-		if( ! ref $rf || ! $rf->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature') ) {
-			throw('Feature must be an RegulatoryFeature object');
-		}
-		
-		if ( $rf->is_stored($db) ) {
-			#does not accomodate adding Feature to >1 feature_set
-			warning('RegulatoryFeature [' . $rf->dbID() . '] is already stored in the database');
-			next FEATURE;
-		}
-		
-		
-		
-		#Have to do this for Analysis separately due to inheritance, removed defined as constrained in Feature->new
-		#Redundancy with Analysis in FeatureSet
-		if ( ! $rf->analysis->is_stored($db)) {
-			throw('A stored Bio::EnsEMBL::Analysis must be attached to the RegulatoryFeature objects to be stored.');
-		}
-		
-		if (! $rf->feature_set->is_stored($db)) {
-			throw('A stored Bio::EnsEMBL::Funcgen::FeatureSet must be attached to the RegulatoryFeature objects to be stored.');
-		}
-
-		if (! $rf->feature_type->is_stored($db)) {
-		  throw('A stored Bio::EnsEMBL::Funcgen::FeatureType must be attached to the RegulatoryFeature objects to be stored.');
-		}
-
-
-
-		#sanity check analysis matches feature_set analysis
-		if($rf->analysis->dbID() != $rf->feature_set->analysis->dbID()){
-			throw("RegulatoryFeature analysis(".$rf->analysis->logic_name().") does not match FeatureSet analysis(".$rf->feature_set->analysis->logic_name().")\n".
-				  "Cannot store mixed analysis sets");
-		}
-		#Complex analysis to be stored as one in analysis table, or have feature_set_prediciton link table?
-		#Or only have single analysis feature which can contribute to multi analysis "regulons"
-		#Or can we have multiple entries in feature_set with the same id but different analyses?
-		#This would still not be specific for each feature, nor would the regulatory_feature analysis_id
-		#reflect all the combined analyses.  Maybe just the one which contributed most?
-
-		# Store the analysis if it has not been stored yet
-		#$analysis_adaptor->store( $pf->analysis()) if ( !$pf->analysis->is_stored($db) );
-		#could this potentially store the same on multiple times?
-
-		my $seq_region_id;
-
-		warn "prestoring rf $rf";
-		
-		($rf, $seq_region_id) = $self->_pre_store($rf);
-		
-		warn "prestored rf $rf";
-
-		$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
-		$sth->bind_param(2, $rf->start(),               SQL_INTEGER);
-		$sth->bind_param(3, $rf->end(),                 SQL_INTEGER);
-		$sth->bind_param(4, $rf->strand(),              SQL_TINYINT);
-		$sth->bind_param(5, $rf->display_label(),       SQL_VARCHAR);
-		$sth->bind_param(6, $rf->feature_type->dbID(),  SQL_INTEGER);
-		$sth->bind_param(7, $rf->feature_set->dbID(),   SQL_INTEGER);
-		$sth->bind_param(8, $rf->stable_id(),           SQL_VARCHAR);
-		
-		$sth->execute();
-		$rf->dbID( $sth->{'mysql_insertid'} );
-
-		#foreach my $exp_id(@{$pf->experiment_ids()}){
-		#  $epsth->bind_param(1, $exp_id);
-		#  $epsth->bind_param(2, $original->dbID());
-		#  $epsth->execute();
-		#}
-		
-		$rf->adaptor($self);
+	if( ! ref $rf || ! $rf->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature') ) {
+	  throw('Feature must be an RegulatoryFeature object');
 	}
+	
+	if ( $rf->is_stored($db) ) {
+	  #does not accomodate adding Feature to >1 feature_set
+	  warning('RegulatoryFeature [' . $rf->dbID() . '] is already stored in the database');
+	  next;
+	}
+	
+	#Have to do this for Analysis separately due to inheritance
+	if ( ! $rf->analysis->is_stored($db)) {
+	  throw('A stored Bio::EnsEMBL::Analysis must be attached to the RegulatoryFeature objects to be stored.');
+	}
+	
+	if (! $rf->feature_set->is_stored($db)) {
+	  throw('A stored Bio::EnsEMBL::Funcgen::FeatureSet must be attached to the RegulatoryFeature objects to be stored.');
+	}
+	
+	if (! $rf->feature_type->is_stored($db)) {
+	  throw('A stored Bio::EnsEMBL::Funcgen::FeatureType must be attached to the RegulatoryFeature objects to be stored.');
+	}
+	  
+
+
+	#sanity check analysis matches feature_set analysis
+	if($rf->analysis->dbID() != $rf->feature_set->analysis->dbID()){
+	  throw("RegulatoryFeature analysis(".$rf->analysis->logic_name().") does not match FeatureSet analysis(".$rf->feature_set->analysis->logic_name().")\n".
+			"Cannot store mixed analysis sets");
+	}
+
+	#Complex analysis to be stored as one in analysis table, or have feature_set_prediciton link table?
+	#Or only have single analysis feature which can contribute to multi analysis "regulons"
+	#Or can we have multiple entries in feature_set with the same id but different analyses?
+	#This would still not be specific for each feature, nor would the regulatory_feature analysis_id
+	#reflect all the combined analyses.  Maybe just the one which contributed most?
+	
+	# Store the analysis if it has not been stored yet
+	#$analysis_adaptor->store( $pf->analysis()) if ( !$pf->analysis->is_stored($db) );
+	#could this potentially store the same on multiple times?
+	
+	my $seq_region_id;
+	($rf, $seq_region_id) = $self->_pre_store($rf);
+	
+	$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
+	$sth->bind_param(2, $rf->start(),               SQL_INTEGER);
+	$sth->bind_param(3, $rf->end(),                 SQL_INTEGER);
+	$sth->bind_param(4, $rf->strand(),              SQL_TINYINT);
+	$sth->bind_param(5, $rf->display_label(),       SQL_VARCHAR);
+	$sth->bind_param(6, $rf->feature_type->dbID(),  SQL_INTEGER);
+	$sth->bind_param(7, $rf->feature_set->dbID(),   SQL_INTEGER);
+	$sth->bind_param(8, $rf->stable_id(),           SQL_VARCHAR);
+	
+	$sth->execute();
+	$rf->dbID( $sth->{'mysql_insertid'} );
+	
+	#foreach my $exp_id(@{$pf->experiment_ids()}){
+	#  $epsth->bind_param(1, $exp_id);
+	#  $epsth->bind_param(2, $original->dbID());
+	#  $epsth->execute();
+	#}
+
+	$rf->adaptor($self);
+
+	foreach my $attr_feat(@{$rf->regulatory_attributes()}){
+	  
+	  $sth2->bind_param(1, $rf->dbID(),                SQL_INTEGER);
+	  $sth2->bind_param(2, $attr_feat->dbID(),         SQL_INTEGER);
+	  $sth2->bind_param(3, $attr_feat_types{ref($attr_feat)}, SQL_VARCHAR);
+	  $sth2->execute();
+	}
+  }
 
   return \@rfs;
 }

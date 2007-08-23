@@ -9,8 +9,8 @@ use Bio::EnsEMBL::Funcgen::ProbeFeature;
 
 my $reg = "Bio::EnsEMBL::Registry";
 
-my $species = 'mus_musculus';
-my $schema_build = '46_36g';
+my $species = 'homo_sapiens';
+my $schema_build = '47_36i';
 my $pass = $ARGV[0];
 my $port = 3306;
 my $user = 'ensadmin';
@@ -80,6 +80,7 @@ foreach my $slice(@{$slice_adaptor->fetch_all('toplevel')}){
 	$slice = $slice_adaptor->fetch_by_region($slice->coord_system_name(), $slice->seq_region_name());
   }
 
+
   print "Storing seq_region info for slice:\t".$slice->name()."\n";
 
   my $pseudo_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
@@ -91,4 +92,5 @@ foreach my $slice(@{$slice_adaptor->fetch_all('toplevel')}){
 	);
 
   $pf_adaptor->_pre_store($pseudo_feature);
+
 }

@@ -125,13 +125,26 @@ delete from supporting_set where member_set_id=0;
 alter table data_set drop column result_set_id; 
 
 
+-- alter keys on data_set
+alter table data_set add KEY `supporting_type_idx` (`supporting_set_type`);
 
 
 
+-- now data_set can handled feature to feature sets
+-- add the regulatory_attribute table to capture the specific feature overlaps/attributes
+
+-- add new regulatory_attribute table
+
+DROP TABLE IF EXISTS `regulatory_attribute`;
+CREATE TABLE `regulatory_attribute` (
+  `regulatory_feature_id` int(10) unsigned NOT NULL default '0',
+  `attribute_feature_id` int(10) unsigned NOT NULL default '0',
+  `attribute_feature_type` enum('annotated', 'supporting') default NULL,
+  PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_type`, `attribute_feature_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=17;
 
 
-
-
+-- do we need key on feature_type and or feature_id?
 
 -- change all ids to int(10), 
 -- add UNIQUE KEY `name_idx` (name) on data_set

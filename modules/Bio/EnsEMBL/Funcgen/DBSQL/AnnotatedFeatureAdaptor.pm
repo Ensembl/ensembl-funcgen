@@ -312,9 +312,7 @@ sub _columns {
 sub _default_where_clause {
   my $self = shift;
 	
-  #return 'af.feature_set_id = fs.feature_set_id';
-
-  return;
+  return 'af.feature_set_id = fs.feature_set_id';
 }
 
 =head2 _final_clause
@@ -361,12 +359,12 @@ sub _objs_from_sth {
 
 	# This code is ugly because caching is used to improve speed
 
-	#my $sa = $self->db->get_SliceAdaptor();
-
 	
 	my ($sa);#, $old_cs_id);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
+	$sa ||= $self->db->get_SliceAdaptor();
 
+ 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
 	#Hence it should always be on the same coord system
 	#my $aa = $self->db->get_AnalysisAdaptor();
@@ -424,19 +422,16 @@ sub _objs_from_sth {
 	}
 
 
-	my $last_feature_id = -1;
-	FEATURE: while ( $sth->fetch() ) {
+  FEATURE: while ( $sth->fetch() ) {
 
 	    #Need to build a slice adaptor cache here?
 	    #Would only ever want to do this if we enable mapping between assemblies??
 	    #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
-	    
-		#get core seq_region_id
+	  
+	  #get core seq_region_id
 		$seq_region_id = $self->get_core_seq_region_id($seq_region_id);
 		
-
-	    
-	    #if($old_cs_id && ($old_cs_id+ != $cs_id)){
+		#if($old_cs_id && ($old_cs_id+ != $cs_id)){
 	    #  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
 	    #}
 	    
@@ -445,15 +440,9 @@ sub _objs_from_sth {
 	    
 	    #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
 	    
-	    $sa ||= $self->db->get_SliceAdaptor();#$cs_id);
+		#	    $sa ||= $self->db->get_SliceAdaptor();#$cs_id);
 	    
-	    
-	    
-	    # This assumes that features come out sorted by ID
-	    #next if ($last_feature_id == $annotated_feature_id);
-	    #$last_feature_id = $annotated_feature_id;
-	    
-	    # Get the analysis object
+		# Get the analysis object
 		#$analysis_hash{$analysis_id} = $aa->fetch_by_dbID($analysis_id) if(! exists $analysis_hash{$analysis_id});
 		
 		#possiblity of circular reference here?
@@ -464,8 +453,8 @@ sub _objs_from_sth {
 	    # Get the slice object
 	    my $slice = $slice_hash{'ID:'.$seq_region_id};
 	    
-	    if (!$slice) {
-	      $slice                              = $sa->fetch_by_seq_region_id($seq_region_id);
+	    if (! $slice) {
+	      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
 	      $slice_hash{'ID:'.$seq_region_id} = $slice;
 	      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
 	      $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
