@@ -296,6 +296,7 @@ sub _tables {
 	
   return (
 		  [ 'data_set',    'ds' ],
+		  [ 'data_set_member', 'dsm'],
 		 );
 }
 
@@ -319,9 +320,10 @@ sub _columns {
   
   
   return qw(
-	    ds.data_set_id     ds.result_set_id
-	    ds.feature_set_id  ds.name ds.member_set_type
-	   );	
+			ds.data_set_id     ds.result_set_id
+			ds.feature_set_id  ds.name ds.member_set_type
+			dsm.member_set_id
+		   );	
 }
 
 =head2 _default_where_clause
@@ -331,7 +333,7 @@ sub _columns {
   Description: PROTECTED implementation of superclass abstract method.
                Returns an additional table joining constraint to use for
 			   queries.
-  Returntype : List of strings
+  Returntype : String
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
@@ -340,13 +342,36 @@ sub _columns {
 
 #sub _default_where_clause {
 #  my $self = shift;
+  #will this return if there are no entrie in data_set_member?
+  #do we have to implement a join here?
 
-  #Will sthis cause problems if ds or fs is absent?
 	
-#  return 'ds.data_set_id = s.table_id and s.table_name="data_set"';
-  #unnecessary join, need to reimplment StatusAdaptor
-  #This sitll returns duplicate records matching the number of records in status
+#  return 'ds.data_set_id = dsm.data_set_id';
 #}
+
+=head2 _left_join
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns an additional table joining constraint to use for
+			   queries.
+  Returntype : List
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _left_join {
+  my $self = shift;
+  #will this return if there are no entrie in data_set_member?
+  #do we have to implement a join here?
+
+	
+  return (['data_set_member', 'ds.data_set_id = dsm.data_set_id']);
+}
+
 
 =head2 _final_clause
 
@@ -386,59 +411,55 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@data_sets, $data_set, $dbID, $rset_id, $fset_id, $fset, $rset, $name, $ms_type);
+  my (@data_sets, @supporting_sets, $data_set, $dbID, $set_id);
+  my ($fset_id, $fset, $set, $name, $ms_type, $dsmember_id);
+  
+  #to be removed
+  my ($rset_id);
 
-  my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-  my $rset_adaptor = $self->db->get_ResultSetAdaptor();
-  $sth->bind_columns(\$dbID, \$rset_id, \$fset_id, \$name, \$ms_type);
+  my %set_adaptors = (
+					  feature => $self->db->get_FeatureSetAdaptor(),
+					  result  => $self->db->get_ResultSetAdaptor(),
+					 );
 
+  $sth->bind_columns(\$dbID, \$rset_id, \$fset_id, \$name, \$ms_type, \$dsmember_id);
   
   while ( $sth->fetch() ) {
 
+    if((! $data_set) || ($data_set->dbID() != $dbID)){
 
-	#we can remove all this nonsense once we have cleaned the data_set table
-
-    if($data_set && ($data_set->dbID() == $dbID)){
-
-      if((defined $data_set->feature_set() && ($fset_id == $data_set->feature_set->dbID())) ||
-		 (($fset_id == 0) && (! defined $data_set->feature_set()))){
-
-		my $rset = $rset_adaptor->fetch_by_dbID($rset_id);
-
-		if($rset){
-		  $data_set->add_ResultSet($rset);
-		}else{
-		  warn "DataSet $name is linked to a missing ResultSet with dbID $rset_id\n";
-		}
-		  
-
-      }
-	  else{
-		throw("DataSet does not yet accomodate multiple feature_sets per DataSet");
-      }
-    }
-	else{
-      push @data_sets, $data_set if($data_set);
+	  if($data_set){
+		$data_set->add_supporting_sets(\@supporting_sets);
+		push @data_sets, $data_set;
+		#do not set to empty array as this will cause failure of check in DataSet->new
+		undef @supporting_sets;
+	  }
 
 	  #handle absent sets, dbIDs of 0
-      $fset = ($fset_id) ? $fset_adaptor->fetch_by_dbID($fset_id) : undef;
-	  $rset = ($rset_id) ? $rset_adaptor->fetch_by_dbID($rset_id) : undef;
+      $fset = ($fset_id) ? $set_adaptors{'feature'}->fetch_by_dbID($fset_id) : undef;
 
       $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
-													  -DBID        => $dbID,
-													  -NAME        => $name,
-													  -FEATURE_SET => $fset,
-													  -RESULT_SET  => $rset,
-													  -ADAPTOR     => $self,
+													  -DBID            => $dbID,
+													  -NAME            => $name,
+													  -FEATURE_SET     => $fset,
+													  -ADAPTOR         => $self,
 													  -MEMBER_SET_TYPE => $ms_type,
 													 );
-    }
+	}
+	#need to change keys on data_set!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	#only pushes supporting set if defined, 0's return for no data_set_member records?
+	push @supporting_sets, $set_adaptors{$ms_type}->fetch_by_dbID($dsmember_id) if $dsmember_id;
   }
 
   #we could do the sort on cell and types here
   #we can't do a default sort as some may have feature_set or result_sets absent
-
-  push @data_sets, $data_set if($data_set);
+  
+  #handle last set
+  if($data_set){
+	$data_set->add_supporting_sets(\@supporting_sets);
+	push @data_sets, $data_set;
+  }
 
 
   #As we're not (quite) constraining how DataSets are associated
