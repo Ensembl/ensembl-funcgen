@@ -29,6 +29,7 @@ CREATE TABLE `regulatory_feature` (
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
+
 -- Do we want a build version? Default would be schema_version
 -- build may not change between version, so would have to patch table, which would indicate a build change
 -- do patch to avoid having text schema_build column
@@ -162,13 +163,15 @@ alter table regulatory_feature change column stable_id `stable_id` mediumint(8) 
 -- delete from annotated_feature where feature_set_id >56;
 -- update feature_set set type='regulatory' where feature_set_id >56;
 
--- need to tidy new reg features sets in feature_set table, change to regulatory
--- tidy up overlap feature_sets and create data_sets for them
 
+
+
+-- tidy up overlap feature_sets and create data_sets for them
 -- reduce size of name field in feature_set
 
 
-
+-- should change max rows to 17000000 for reg feats to reflect max stable ids
+-- also consider average row?
 -- change small table primary key ids to medium int?
 
 

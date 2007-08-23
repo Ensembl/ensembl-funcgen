@@ -336,9 +336,85 @@ sub regulatory_attributes {
 
 
 
+=head2 bound_start
 
+  Example    : my $bound_start = $feature->bound_start();
+  Description: Getter for the bound_start attribute for this feature.
+               Gives the 5' most start value of the underlying attribute
+               features.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
 
+=cut
 
+sub bound_start {
+  my $self = shift;
+
+  $self->_generate_underlying_structure() if(! exists $self->{'bound_start'});
+  
+  return $self->{'bound_start'};
+}
+
+=head2 bound_end
+
+  Example    : my $bound_end = $feature->bound_start();
+  Description: Getter for the bound_end attribute for this feature.
+               Gives the 3' most end value of the underlying attribute
+               features.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub bound_end {
+  my $self = shift;
+	
+  $self->_generate_underlying_structure() if(! exists $self->{'bound_end'});
+  
+  return $self->{'bound_end'};
+}
+
+=head2 _generate_underlying_structure
+
+  Example    :  $self->_generate_underlying_structure() if(! exists $self->{'bound_end'});
+  Description: Getter for the bound_end attribute for this feature.
+               Gives the 3' most end value of the underlying attribute
+               features.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub _generate_underlying_structure{
+  my $self = shift;
+
+  if(! @{$self->regulatory_attributes()}){
+	warn "No underlying regulatory_attribute features to generate comples structure from";
+	
+	#set to undef so we don't cause too many errors
+	$self->{'bound_end'} = undef;
+	$self->{'bound_end'} = undef;
+  }
+  else{
+	my (@start_ends);
+
+	map { push @start_ends, $_->start;
+		  push @start_ends,   $_->end; } @{$self->regulatory_attributes()};
+
+	sort @start_ends;
+
+	$self->{'bound_end'} = pop @start_ends;
+	$self->{'bound_start'} = shift @start_ends;
+  }
+
+  return;
+}
 #other methods
 #type!! Add to BaseFeature?  Hard code val in oligo_feature
 #analysis? Use AnalsisAdapter here, or leave to caller?
