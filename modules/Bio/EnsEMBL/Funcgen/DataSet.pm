@@ -104,7 +104,7 @@ use vars qw(@ISA);
                                                              -FEATURE_SET     => $fset,
                                                              -DISPLAYABLE     => 1,
                                                              -NAME            => 'DATASET1',
-                                                             -MEMBER_SET_TYPE => 'feature',
+                                                             -SUPPORTING_SET_TYPE => 'feature',
 			                                                 );
 
 #for COMPLEX DataSet could use this, where 1 and 2 are the positions they are to be returned in
@@ -131,8 +131,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($fset, $sets, $name, $mset_type)
-    = rearrange(['FEATURE_SET', 'SUPPORTING_SETS', 'NAME', 'MEMBER_SET_TYPE'], @_);
+  my ($fset, $sets, $name, $sset_type)
+    = rearrange(['FEATURE_SET', 'SUPPORTING_SETS', 'NAME', 'SUPPORTING_SET_TYPE'], @_);
   
   
   my @caller = caller();
@@ -172,14 +172,14 @@ sub new {
   #both need to check whether feature or cell predefined.
   #then check names
   #add_featureSet must thro if already defined.
-  throw('Must specify a member_set_type') if ! defined $mset_type;
+  throw('Must specify a supporting_set_type') if ! defined $sset_type;
 
   #Is this really required now, what was the need for this?
   throw("Must specify at least one Result/FeatureSet") if((! $sets) && (! $fset));
   #is this right? we could be passing an empty array which would be true?
 
 
-  $self->member_set_type($mset_type);
+  $self->supporting_set_type($sset_type);
   $self->add_supporting_sets($sets) if $sets;
   $self->FeatureSet($fset)   if $fset;	
   $self->name($name)   if $name;	
@@ -268,6 +268,8 @@ sub FeatureSet {
   
   if($fset){
 	
+	warn "setting fset $fset";
+
 	if (! ($fset && ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
 	  throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet")
 	}
@@ -334,7 +336,7 @@ sub add_supporting_sets {
 
   foreach my $set(@$sets){
   
-	if (! ($set && $set->isa('Bio::EnsEMBL::Funcgen::'.ucfirst($self->member_set_type).'Set'))){
+	if (! ($set && $set->isa('Bio::EnsEMBL::Funcgen::'.ucfirst($self->supporting_set_type).'Set'))){
 	  throw("Need to pass a valid Bio::EnsEMBL::Funcgen::ResultSet");
 	}
 	
@@ -661,10 +663,10 @@ sub name {
 }
 
 
-=head2 member_set_type
+=head2 supporting_set_type
 
-  Example    : my $dset->member_set_type('feature');
-  Description: Getter/Setter for the member_set type of this DataSet i.e. feature or result.
+  Example    : my $dset->supporting_set_type('feature');
+  Description: Getter/Setter for the supporting_set type of this DataSet i.e. feature or result.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -672,12 +674,12 @@ sub name {
 
 =cut
 
-sub member_set_type {
+sub supporting_set_type {
   my $self = shift;
      	
-  $self->{'member_set_type'} = shift if @_;
+  $self->{'supporting_set_type'} = shift if @_;
 
-  return $self->{'member_set_type'};
+  return $self->{'supporting_set_type'};
 }
 
 
