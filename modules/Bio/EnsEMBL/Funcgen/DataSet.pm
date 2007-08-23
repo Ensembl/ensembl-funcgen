@@ -249,6 +249,8 @@ sub feature_set {
 #changed in line with method naming convention, but don't like lack of prefix
 #resultant_FeatureSet
 #main_FeatureSet
+#processed
+#combined
 #??
 
 =head2 FeatureSet
@@ -268,8 +270,6 @@ sub FeatureSet {
   
   if($fset){
 	
-	warn "setting fset $fset";
-
 	if (! ($fset && ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
 	  throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet")
 	}
@@ -347,7 +347,7 @@ sub add_supporting_sets {
 	#doh! we forgot to set the feature_set
 	
 	
-	$self->_validate_and_set_types($set);
+	$self->_validate_and_set_types($set) if $self->supporting_set_type() ne 'feature';
 	
 	
 	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
@@ -387,13 +387,22 @@ sub _validate_and_set_types{
 
   #slightly dodgy bypassing methods, but extendable
 
+
+  #This currently restricts all set types to one cell and feature type
+  #this is incorrect for feature_set types as we want to munge several feature and possibly cell types 
+  #into one combined data set.
+  #this should set it to the FeatureSet type if is feature_set data_set
+  #this only works as we only validate supporting_sets if type is not feature
+
   for my $type('feature_type', 'cell_type'){
 	
 	if(defined $self->{$type}){
 	  
 	  if($set->{$type}->name() ne $self->{$type}->name()){
+
 		throw(ref($set).' feature_type('.$set->{$type}->name().
 			  ") does not match DataSet feature_type(".$self->{$type}->name().")");
+		
 	  }
 	}
 	else{
