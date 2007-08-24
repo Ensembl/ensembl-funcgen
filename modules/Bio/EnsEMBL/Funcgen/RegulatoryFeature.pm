@@ -304,7 +304,7 @@ sub stable_id {
 	
   $self->{'stable_id'} = shift if @_;
   
-  return $self->{'stable_id'};
+  return  sprintf("ENSR%011d", $self->{'stable_id'});
 }
 
 
