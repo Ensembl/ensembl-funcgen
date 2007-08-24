@@ -165,6 +165,41 @@ alter table regulatory_feature change column stable_id `stable_id` mediumint(8) 
 
 
 
+-- tweak result table
+-- No need for avg length or result_id as primary key
+-- need probe_id as first in primary key
+-- need chip_channel_idx for chip level methods, i.e. norm
+
+CREATE TABLE `tmp_result` (
+   `probe_id` int(10) unsigned default NULL,
+   `score` double default NULL,
+   `chip_channel_id` int(10) unsigned NOT NULL,
+   `X` int(4) unsigned default NULL,
+   `Y` int(4) unsigned default NULL,
+   PRIMARY KEY (`probe_id`, `chip_channel_id`),
+   KEY `chip_channel_idx` (`chip_channel_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+
+
+--do we really need chip_channel_idx, or will this just be a romp through the table anyway.
+--probably can get rid when we federate, will reduce the size of the DB.
+
+insert into tmp_result select probe_id, score, chip_channel_id, X, Y from result;
+
+
+DROP TABLE IF EXISTS `result`;
+CREATE TABLE `result` (
+   `probe_id` int(10) unsigned default NULL,
+   `score` double default NULL,
+   `chip_channel_id` int(10) unsigned NOT NULL,
+   `X` int(4) unsigned default NULL,
+   `Y` int(4) unsigned default NULL,
+   PRIMARY KEY  (`probe_id`, `chip_channel_id`),
+   KEY `chip_channel_idx` (`chip_channel_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+
+insert into result select * from tmp_result;
+DROP TABLE IF EXISTS `tmp_result`;
 
 -- tidy up overlap feature_sets and create data_sets for them
 -- reduce size of name field in feature_set
@@ -175,7 +210,7 @@ alter table regulatory_feature change column stable_id `stable_id` mediumint(8) 
 -- change small table primary key ids to medium int?
 
 
-
+-- tidy up probe_feature table
 
 
 

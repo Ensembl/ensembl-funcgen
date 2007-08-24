@@ -365,26 +365,22 @@ CREATE TABLE `supporting_set` (
 
 DROP TABLE IF EXISTS `result`;
 CREATE TABLE `result` (
-   `result_id` int(10) unsigned NOT NULL auto_increment,
    `probe_id` int(10) unsigned default NULL,
    `score` double default NULL,
    `chip_channel_id` int(10) unsigned NOT NULL,
-   `X` int(4) unsigned default NULL,
-   `Y` int(4) unsigned default NULL,
-   PRIMARY KEY  (`result_id`),
-   KEY `probe_idx` (`probe_id`),
+   `X` smallint(4) unsigned default NULL,
+   `Y` smallint(4) unsigned default NULL,
+   PRIMARY KEY  (`probe_id`, `chip_channel_id`),
    KEY `chip_channel_idx` (`chip_channel_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000  AVG_ROW_LENGTH=40;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+
+-- removed as not needed unless BLOB or TEXT present AVG_ROW_LENGTH=40;
 
 
---- joint index on all but result_id and maybe analysis_id?
---- REMOVEd experimental_id?   `experimental_chip_id` int(10) unsigned default NULL,
---- joint primary key with probe_feature_id?
---- metric default would be id for "RAW"..no, need to test has been specifically set, so NULL
+-- X Y here allows repicate probes on same ship
 --- Allows storage of none raw values
 ---Also needs to accommodate different normalisations 
----    `table_id` int(10) unsigned default NULL,
----   `table_name` varchar(20) default NULL,
+
 
 --- Table structure for `result_set`
 
