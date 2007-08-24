@@ -171,12 +171,14 @@ alter table regulatory_feature change column stable_id `stable_id` mediumint(8) 
 -- need chip_channel_idx for chip level methods, i.e. norm
 
 CREATE TABLE `tmp_result` (
+   `result_id` int(10) unsigned NOT NULL auto_increment,
    `probe_id` int(10) unsigned default NULL,
    `score` double default NULL,
    `chip_channel_id` int(10) unsigned NOT NULL,
    `X` int(4) unsigned default NULL,
    `Y` int(4) unsigned default NULL,
-   PRIMARY KEY (`probe_id`, `chip_channel_id`),
+   PRIMARY KEY  (`result_id`),
+   KEY `probe_idx` (`probe_id`),
    KEY `chip_channel_idx` (`chip_channel_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
@@ -184,22 +186,146 @@ CREATE TABLE `tmp_result` (
 --do we really need chip_channel_idx, or will this just be a romp through the table anyway.
 --probably can get rid when we federate, will reduce the size of the DB.
 
-insert into tmp_result select probe_id, score, chip_channel_id, X, Y from result;
+insert into tmp_result select * from result;
 
 
 DROP TABLE IF EXISTS `result`;
 CREATE TABLE `result` (
+   `result_id` int(10) unsigned NOT NULL auto_increment,
    `probe_id` int(10) unsigned default NULL,
    `score` double default NULL,
    `chip_channel_id` int(10) unsigned NOT NULL,
-   `X` int(4) unsigned default NULL,
-   `Y` int(4) unsigned default NULL,
-   PRIMARY KEY  (`probe_id`, `chip_channel_id`),
+   `X` smallint(4) unsigned default NULL,
+   `Y` smallint(4) unsigned default NULL,
+   PRIMARY KEY  (`result_id`),
+   KEY `probe_idx` (`probe_id`),
    KEY `chip_channel_idx` (`chip_channel_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 insert into result select * from tmp_result;
 DROP TABLE IF EXISTS `tmp_result`;
+
+
+-- some federation testing
+CREATE TABLE `experiment_1_result` (
+   `result_id` int(10) unsigned NOT NULL auto_increment,
+   `probe_id` int(10) unsigned default NULL,
+   `score` double default NULL,
+   `chip_channel_id` int(10) unsigned NOT NULL,
+   `X` smallint(4) unsigned default NULL,
+   `Y` smallint(4) unsigned default NULL,
+   PRIMARY KEY  (`result_id`),
+   KEY `probe_idx` (`probe_id`),
+   KEY `chip_channel_idx` (`chip_channel_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+
+
+insert into experiment_1_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y from result r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=r.chip_channel_id;
+
+insert into experiment_1_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y from result r, chip_channel cc, experimental_chip ec, channel c where ec.experiment_id=1 and ec.experimental_chip_id=c.experimental_chip_id and c.channel_id=cc.table_id and cc.table_name='channel' and cc.chip_channel_id=r.chip_channel_id;
+
+
+select count(e1r.score) from experiment_1_result e1r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=e1r.chip_channel_id;
+
+-- without result_id
+--+------------------+
+--| count(e1r.score) |
+--+------------------+
+--|          1507152 |
+--+------------------+
+--1 row in set (17.34 sec)
+
+--with result_id
+
+--+------------------+
+--| count(e1r.score) |
+--+------------------+
+--|          1507152 |
+--+------------------+
+--1 row in set (18.02 sec)
+
+
+select count(r.score) from result r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=r.chip_channel_id;
+
+--+----------------+
+--| count(r.score) |
+--+----------------+
+--|        1507152 |
+--+----------------+
+--1 row in set (1 min 32.54 sec)
+
+-- 6 * faster for 4 chip set at start or table!!! 
+
+CREATE TABLE `experiment_12_result` (
+   `result_id` int(10) unsigned NOT NULL auto_increment,
+   `probe_id` int(10) unsigned default NULL,
+   `score` double default NULL,
+   `chip_channel_id` int(10) unsigned NOT NULL,
+   `X` smallint(4) unsigned default NULL,
+   `Y` smallint(4) unsigned default NULL,
+   PRIMARY KEY  (`result_id`),
+   KEY `probe_idx` (`probe_id`),
+   KEY `chip_channel_idx` (`chip_channel_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+
+
+
+--insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r, chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=r.chip_channel_id;
+--- this is triplicating due to psuedo triplicate result set!!!!
+--- Need to do a join on the insert selects? 
+
+
+insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r where r.chip_channel_id IN(select distinct(cc.chip_channel_id) from  chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip');
+
+insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r where r.chip_channel_id IN(select distinct(cc.chip_channel_id) from  channel c, chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=c.experimental_chip_id and c.channel_id=cc.table_id and cc.table_name='channel');
+
+
+select count(e12r.score) from experiment_12_result e12r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=e12r.chip_channel_id;
+
+--+-------------------+
+--| count(e12r.score) |
+--+-------------------+
+--|                 0 |
+--+-------------------+
+--1 row in set (8 min 38.02 sec)
+
+
+
+select count(r.score) from result r, chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=r.chip_channel_id;
+
+
+--+----------------+
+--| count(r.score) |
+--+----------------+
+--|       41575161 |
+--+----------------+
+--1 row in set (1 min 50.84 sec)
+
+
+-- now a few typical slice query
+SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM result r, probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = 18 AND cc.chip_channel_id = r.chip_channel_id AND r.probe_id=pf.probe_id AND pf.seq_region_id=29 AND pf.seq_region_end>=30773649 AND pf.seq_region_start<=30873649 ORDER by pf.seq_region_start;
+
+--161202 rows in set (1.87 sec)
+
+SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM experiment_12_result r, probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = 18 AND cc.chip_channel_id = r.chip_channel_id AND r.probe_id=pf.probe_id AND pf.seq_region_id=29 AND pf.seq_region_end>=30773649 AND pf.seq_region_start<=30873649 ORDER by pf.seq_region_start;
+
+-- 483606 rows in set (2.75 sec)
+
+-- pager took a lot longer to display result for both queries
+-- so problem is shuttling data, not necessarily table size?
+
+-- I think we're getting duplications here due to incorrect join!!
+-- what's going on here?
+
+
+
+-- can we speed this up by breaking the up the queries?
+
+-- This should be all experiments present in result, altho avoiding join on result
+select distinct(ec.experiment_id) from chip_channel cc, experimental_chip ec where ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip';
+select distinct(ec.experiment_id) from chip_channel cc, experimental_chip ec, channel c where ec.experimental_chip_id=c.experimentl_chip_id and c.channel_id=cc.table_id and cc.table_name='channel;
+
+
 
 -- tidy up overlap feature_sets and create data_sets for them
 -- reduce size of name field in feature_set

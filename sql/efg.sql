@@ -365,17 +365,19 @@ CREATE TABLE `supporting_set` (
 
 DROP TABLE IF EXISTS `result`;
 CREATE TABLE `result` (
+   `result_id` int(10) unsigned NOT NULL auto_increment,
    `probe_id` int(10) unsigned default NULL,
    `score` double default NULL,
    `chip_channel_id` int(10) unsigned NOT NULL,
    `X` smallint(4) unsigned default NULL,
    `Y` smallint(4) unsigned default NULL,
-   PRIMARY KEY  (`probe_id`, `chip_channel_id`),
+   PRIMARY KEY  (`result_id`),
+   KEY `probe_idx` (`probe_id`),
    KEY `chip_channel_idx` (`chip_channel_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 -- removed as not needed unless BLOB or TEXT present AVG_ROW_LENGTH=40;
-
+-- result_id needed as we may have replicate probe on same chip
 
 -- X Y here allows repicate probes on same ship
 --- Allows storage of none raw values
