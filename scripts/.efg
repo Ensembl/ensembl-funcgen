@@ -1,6 +1,6 @@
 #!/usr/local/bin/bash
 
-echo "Setting up eFG environment" #and cd'ing to $EFG_SRC" 
+echo "Setting up Ensembl Function Genomics environment..." #and cd'ing to $EFG_SRC" 
 
 #add alias efg='. ~/src/ensembl-efg/.efg' to your .bashrc
 
@@ -42,6 +42,9 @@ alias efgmacs='xemacs $EFG_SRC/modules/Bio/EnsEMBL/Funcgen &'
 alias mysqlw='mysql $MYSQL_ARGS $WRITE_USER'
 alias mysqlro='mysql $MYSQL_ARGS $READ_USER'
 
+#check for vars then suggest defaults or take stdin?
+
+echo "Welcome to eFG!"
 
 CreateDB(){
 

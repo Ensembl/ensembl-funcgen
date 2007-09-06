@@ -253,7 +253,7 @@ sub _columns {
 			rf.seq_region_strand     rf.display_label
 			rf.feature_type_id       rf.feature_set_id
 			rf.stable_id             ra.attribute_feature_id
-			ra.attribute_feature_type
+			ra.attribute_feature_table
 	   );
 }
 
@@ -657,7 +657,7 @@ sub store{
   
   my $sth2 = $self->prepare("
 		INSERT INTO regulatory_attribute (
-              regulatory_feature_id, attribute_feature_id, attribute_feature_type
+              regulatory_feature_id, attribute_feature_id, attribute_feature_table
 		) VALUES (?, ?, ?)");
   
   my $db = $self->db();

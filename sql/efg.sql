@@ -95,7 +95,6 @@ CREATE TABLE `probe_feature` (
    `seq_region_start` int(10) NOT NULL default '0',
    `seq_region_end` int(10) NOT NULL default '0',
    `seq_region_strand` tinyint(4) NOT NULL default '0', 
-   `coord_system_id` int(10) unsigned NOT NULL default '0',
    `probe_id` int(10) unsigned NOT NULL default '0',
    `analysis_id` int(10) unsigned NOT NULL default '0',	
    `mismatches` tinyint(4) NOT NULL default '0',
@@ -104,6 +103,10 @@ CREATE TABLE `probe_feature` (
    KEY `probe_idx` (`probe_id`),
    KEY `seq_region_idx` (`seq_region_id`, `seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- do we need to add probe_id to the en dof the seq_region_idx?
+-- we should also append range query based on the seq_region start and feature max length?
+-- This will facilitate the ResultFeature query
 
 
 -- remove mismatches?
@@ -489,7 +492,6 @@ CREATE TABLE `annotated_feature` (
   `seq_region_start` int(10) unsigned NOT NULL default '0',
   `seq_region_end` int(10) unsigned NOT NULL default '0',
   `seq_region_strand` tinyint(1) NOT NULL default '0',
-  `coord_system_id` int(10) unsigned NOT NULL default '0',	
   `display_label` varchar(60) default NULL,
   `score` double default NULL,
   `feature_set_id` int(10) unsigned NOT NULL default '0',
@@ -577,13 +579,13 @@ DROP TABLE IF EXISTS `regulatory_attribute`;
 CREATE TABLE `regulatory_attribute` (
   `regulatory_feature_id` int(10) unsigned NOT NULL default '0',
   `attribute_feature_id` int(10) unsigned NOT NULL default '0',
-  `attribute_feature_type` enum('annotated', 'supporting') default NULL,
-  PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_type`, `attribute_feature_id`)
+  `attribute_feature_table` enum('annotated', 'supporting') default NULL,
+  PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=17;
 
 
 -- do we need key on feature_type and or feature_id?
-
+-- we need to add cell type id here
 
 
 --

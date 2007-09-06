@@ -670,9 +670,8 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 													  
   my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 
-
-  $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM result r, '.
-	'probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = '.$rset->dbID();
+  $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM '.$rset->get_result_table().
+	' r, probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = '.$rset->dbID();
 
   $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
 
@@ -693,6 +692,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 #          ' AND pf.seq_region_start<='.$slice->end().
 #          ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
 
+  warn "SQL is $sql";
 
   $sth = $self->prepare($sql);
   $sth->execute();

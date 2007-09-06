@@ -119,7 +119,7 @@ update data_set set supporting_set_type='result';
 -- populate the supporting_set table
 insert into supporting_set select data_set_id, result_set_id from data_set;
 --tidy data_set_memebr table where we only have feature_sets
-delete from supporting_set where member_set_id=0;
+delete from supporting_set where supporting_set_id=0;
 
 
 -- remove old result_set_id column from data_set
@@ -140,9 +140,10 @@ DROP TABLE IF EXISTS `regulatory_attribute`;
 CREATE TABLE `regulatory_attribute` (
   `regulatory_feature_id` int(10) unsigned NOT NULL default '0',
   `attribute_feature_id` int(10) unsigned NOT NULL default '0',
-  `attribute_feature_type` enum('annotated', 'supporting') default NULL,
-  PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_type`, `attribute_feature_id`)
+  `attribute_feature_table` enum('annotated', 'supporting') default NULL,
+  PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=17;
+
 
 
 -- do we need key on feature_type and or feature_id?
@@ -275,9 +276,14 @@ CREATE TABLE `experiment_12_result` (
 --- Need to do a join on the insert selects? 
 
 
-insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r where r.chip_channel_id IN(select distinct(cc.chip_channel_id) from  chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip');
+--insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r where r.chip_channel_id IN(select distinct(cc.chip_channel_id) from  chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip');
 
-insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r where r.chip_channel_id IN(select distinct(cc.chip_channel_id) from  channel c, chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=c.experimental_chip_id and c.channel_id=cc.table_id and cc.table_name='channel');
+--insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r where r.chip_channel_id IN(select distinct(cc.chip_channel_id) from  channel c, chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=c.experimental_chip_id and c.channel_id=cc.table_id and cc.table_name='channel');
+
+
+--these cause loss of server, tmp table too big?
+--try different approach
+--copy entire table and delete all those not matching the IN list;
 
 
 select count(e12r.score) from experiment_12_result e12r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=e12r.chip_channel_id;
@@ -317,6 +323,9 @@ SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM 
 -- I think we're getting duplications here due to incorrect join!!
 -- what's going on here?
 
+-- I THINK WE NEED AN EXTRA KEY ON PROBE_FEATURE
+
+-- HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!See above and do below
 
 
 -- can we speed this up by breaking the up the queries?

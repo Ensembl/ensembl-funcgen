@@ -464,6 +464,55 @@ sub get_replicate_set_by_chip_channel_id{
 
 }
 
+=head2 get_result_table
+
+  Example    : my $result_table = $rset->get_result_table();
+  Description: Getter for the federated result table name for this ResultSet.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk - extend to use bins
+
+=cut
+
+sub get_result_table{
+  my $self = shift;
+
+  #This method should be extended to use bins if we pass a range
+  my $table;
+  my @exp_ids = @{$self->get_experiment_ids()};
+
+  if($#exp_ids >0){
+	$table = 'result';
+  }
+  else{
+	#$table = 'experiment_'.$exp_ids[0].'_result';
+	$table ='result';
+  }
+
+  return $table;
+}
+
+=head2 get_experiment_ids
+
+  Example    : my @exp_ids = @{$rset->get_experiment)ids()};
+  Description: Getter for the experiment_ids associated with this ResultSet
+  Returntype : ARRAYREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk 
+
+=cut
+
+sub get_result_table{
+  my $self = shift;
+
+  #This method should be extended to use bins if we pass a range
+  
+  return 'result';
+
+}
+
 
 =head2 display_label
 
