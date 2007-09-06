@@ -356,7 +356,7 @@ select distinct(ec.experiment_id) from chip_channel cc, experimental_chip ec, ch
 
 
 
-
+--add key on ec cell_type_id?
 
 
 -- change all ids to int(10), 
@@ -364,7 +364,7 @@ select distinct(ec.experiment_id) from chip_channel cc, experimental_chip ec, ch
 -- alter key on array_chip  UNIQUE KEY `array_design_idx` (`array_id`, `design_id`)
 -- recreate predicted_feature as annotated_feature
 
--- add enum on channel type TOTAL, EXPERIMENTAL & psuedo channels
+-- add enum on channel type TOTAL, EXPERIMENTAL & DUMMY? channels
 
 -- add core regulatory tables as supporting_feature tables
 -- regulatory_factor_coding is empty and unused?

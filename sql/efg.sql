@@ -587,6 +587,64 @@ CREATE TABLE `regulatory_attribute` (
 -- do we need key on feature_type and or feature_id?
 -- we need to add cell type id here
 
+--
+-- Table structure for table `experimental_set`
+-- experimental_file?
+
+-- This is to accomodate any direct import of features from a pre-processed experiment
+-- e.g. a short reads experiment
+-- It by passes all the array_chip/experimental_chip/channel/result level information and ties directly into a feature/data_set
+-- we need to be able to record the status of each set member/file individually for recovery purposes?
+-- No because we can't roll bak on a file basis anyway due to lack of chip_channel like ids in the annotated_feature table
+-- Would this be restricted to one feature per experiment?
+-- If not need to have a experimental_set_id
+-- best to do this anyway so we are in line with chip experiemtns in allowing multiple feature/cell_type per experimenht
+-- and then we also have an experimental_set_idin the data_set table
+
+-- should we intercede 'file' into ther table names to make it more clear? 
+
+DROP TABLE IF EXISTS `experimental_set`;
+CREATE TABLE `experimental_set` (
+   `experimental_set_id` int(10) unsigned NOT NULL auto_increment,
+   `experiment_id` int(10) unsigned default NULL, --
+   `feature_type_id` int(10) unsigned default NULL,
+   `cell_type_id` int(10) unsigned default NULL,
+   `format` varchar(20) default NULL,
+   `vendor` varchar(40) default NULL,
+--   `biological_replicate` varchar(40) default NULL,
+--   `technical_replicate` varchar(40) default NULL,
+   PRIMARY KEY  (`experimental_set_id`),
+   KEY `experiment_idx` (`experiment_id`),
+   KEY `feature_type_idx` (`feature_type_id`),
+   KEY `cell_type_idx` (`cell_type_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
+
+
+-- now where do we put the experimental type? Format? Vendor?
+-- do we need an auxilliary table here akin to supporting set to remove redundancy of cell_type, feature_type
+-- Do we need replicates if we are peak calling outside the DB?
+-- keys on vendor?
+
+--
+-- Table structure for table `experimental_set`
+--
+
+-- represents a file from a subset
+-- mainly used for tracking import and recovery 
+
+DROP TABLE IF EXISTS `experimental_subset`;
+CREATE TABLE `experimental_subset` (
+   `experimental_subset_id` int(10) unsigned NOT NULL auto_increment,
+   `experimental_set_id` int(10) unsigned NOT NULL default '0',
+   `unique_id` varchar(20) NOT NULL default '0', -- filename?	
+   PRIMARY KEY  (`experimental_subset_id`), 
+   UNIQUE KEY `unique_id_dx` (`unique_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=20;
+
+
+-- remove experimental_set_id from key to force uniqueness of file
+-- or do we want to be able to add file to other sets?
+-- no we can't have multi experiment sets at present
 
 --
 -- Table structure for table `experimental_chip`
