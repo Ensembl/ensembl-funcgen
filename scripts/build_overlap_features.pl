@@ -6,7 +6,7 @@ build_overlap_features.pl
 
 =head1 SYNOPSIS
 
-build_overlap_features.pl -H dbhost -P 3306 -u user -d password 
+build_overlap_features.pl -host host -P 3306 -u user -d password 
     -o /tmp -f testA -t testB,testC
 
 =head1 DESCRIPTION
@@ -44,31 +44,70 @@ use Data::Dumper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-use Getopt::Std;
 
 $| = 1;
 
-my %opts;
-
-getopts('h:P:u:p:d:f:t:s:cwDo:iS:v:', \%opts);
+### OLD ###
+#my %opts;
+#getopts('h:P:u:p:d:f:t:s:cwDo:iS:v:', \%opts);
 
 #H was for ?
 #f is focus set
 #t is target sets comma separated list
 #D is dump, but print to STDERR and STDOUT(actaully current default filehandle)
 
-my $dbhost = $opts{h};
-my $dbport = $opts{P} || 3306;
-my $dbuser = $opts{u} || 'ensro';
-my $dbpass = $opts{p} || '';
-my $dbname = $opts{d};
-my $data_version = $opts{v};
-my $do_intersect = $opts{i};
-my $write_features = $opts{w};
-my $species = $opts{S} || 'homo_sapiens';
-my $seq_name = $opts{'s'};#added quotes as s does funny things to autoformating
-my $clobber = $opts{c};
+use Getopt::Long;
+my ($pass,$port,$host,$user,$dbname,$species,$help,$man,
+    $data_version,$outdir,$do_intersect,$write_features,$seq_name,$clobber,
+    $focus,$target,$dump,$debug);
+GetOptions (
+            "pass|p=s"       => \$pass,
+            "port=s"         => \$port,
+            "host|h=s"       => \$host,
+            "user|u=s"       => \$user,
+            "dbname|d=s"     => \$dbname,
+            "species=s"      => \$species,
+            "help|?"         => \$help,
+            "man|m"          => \$man,
+            "data_version|v=s" => \$data_version,
+            "outdir|o=s"     => \$outdir,
+            "do_intersect|i=s" => \$do_intersect,
+            "write_features|w" => \$write_features,
+            "seq_name|s" => \$seq_name,
+            "clobber" => \$clobber,
+            "focus|f=s" => \$focus,
+            "target|t=s" => \$target,
+            "dump|d" => \$dump,
+            "debug" => \$debug
+            );
 
+### defaults ###
+$port = 3306 if !$port;
+$species = 'homo_sapiens' if !$species;
+$debug = 0;
+
+### check options ###
+
+throw("Must specify mandatory database hostname (-host).\n") if ! defined $host;
+throw("Must specify mandatory database username. (-user)\n") if ! defined $user;
+throw("Must specify mandatory database password (-pass).\n") if ! defined $pass;
+throw("Must specify mandatory database name (-dbname).\n") if ! defined $dbname;
+throw("Must specify mandatory database data version, like 47_36i (-data_version).\n") 
+    if !$data_version;
+
+throw("Must specify mandatory focus sets (-focus).\n") if ! defined $focus;
+throw("Must specify mandatory target sets (-target).\n") if ! defined $target;
+
+warn("write_features not set: do_intersect will be skipped\n") 
+    if ($do_intersect && ! $write_features);
+
+#throw("No output directory specified! Use -o option.") if (!$outdir);
+if (defined $outdir && ! -d $outdir) {
+    system("mkdir -p $outdir");
+}
+$outdir =~ s/\/$//;
+
+### ChipSeq stuff
 my %ChIPseq_cutoff = (
                       ### cutoff T/O <= 2
                       'CD4_CTCF'=>        5,
@@ -80,44 +119,24 @@ my %ChIPseq_cutoff = (
                       'CD4_H4K20me3'=>   17,
                       ### cutoff ~ <= 25000
                       ### see /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI/data/*.clstr.cutoff_25000.dat
-                      'CD4_H2AZ'=>       14,
-                      'CD4_H2BK5me1'=>   15,
-                      'CD4_H3K27me1'=>    5,
-                      'CD4_H3K27me2'=>    4,
-                      'CD4_H3K36me1'=>    3,
-                      'CD4_H3K4me1'=>    30,
-                      'CD4_H3K4me2'=>     9,
-                      'CD4_H3K79me1'=>    4,
-                      'CD4_H3K79me2'=>    3,
-                      'CD4_H3K9me1'=>    11,
-                      'CD4_H3K9me2'=>     4,
-                      'CD4_H3R2me1'=>     4,
-                      'CD4_H3R2me2'=>     4,
-                      'CD4_H4K20me1'=>   29,
-                      'CD4_H4R3me2'=>     3,
-                      'CD4_PolII'=>       7
+                      'CD4_H2AZ'=>       15,
+                      'CD4_H2BK5me1'=>   16,
+                      'CD4_H3K27me1'=>    6,
+                      'CD4_H3K27me2'=>    5,
+                      'CD4_H3K36me1'=>    4,
+                      'CD4_H3K4me1'=>    31,
+                      'CD4_H3K4me2'=>    10,
+                      'CD4_H3K79me1'=>    5,
+                      'CD4_H3K79me2'=>    4,
+                      'CD4_H3K9me1'=>    12,
+                      'CD4_H3K9me2'=>     5,
+                      'CD4_H3R2me1'=>     5,
+                      'CD4_H3R2me2'=>     5,
+                      'CD4_H4K20me1'=>   30,
+                      'CD4_H4R3me2'=>     4,
+                      'CD4_PolII'=>       8
                       );
 
-# NJ
-# we should assign an test all opts here, so it's easy to figure out what's going on.
-# or use Getopts::Long with aliases if single letter opts required, more code but
-# it's easier understand the opts this way. 
-
-if (! ($dbhost && $dbport && $dbuser && $dbname && $data_version)) {
-    throw("Must specify mandatory database parameters, like:\n".
-          " -h host -P 3306 -u XXXX -p XXXX -d dbname -v data_version( of dnadb e.g. 45_36g)");
-}
-
-if($do_intersect && ! $write_features){
-  warn "w - write_features not set, i - do intersect will be skipped\n";
-}
-
-my $outdir = $opts{o};
-
-#throw("No output directory specified! Use -o option.") if (!$outdir);
-if (! -d $outdir) {
-    system("mkdir -p $outdir");
-}
 
 use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 use Bio::EnsEMBL::Analysis::Tools::Logger qw(logger_verbosity logger_info);
@@ -129,7 +148,7 @@ logger_verbosity($logger_verbosity);
 
 # databases and adaptors
 
-#use ensembldb as we may want to use an old version
+# use ensembldb as we may want to use an old version
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
                                               -host => 'ensembldb.ensembl.org',
@@ -144,15 +163,14 @@ my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
-     -host   => $dbhost,
-     -user   => $dbuser,
+     -host   => $host,
+     -user   => $user,
      -dbname => $dbname,
-	 -species => $species,
-     -pass   => $dbpass,
-     -port   => $dbport,
+	   -species => $species,
+     -pass   => $pass,
+     -port   => $port,
      -dnadb  => $cdb
      );
-
 #print Dumper $db;
 
 my $fsa = $db->get_FeatureSetAdaptor();
@@ -161,30 +179,36 @@ my $afa = $db->get_AnnotatedFeatureAdaptor();
 my $sa = $db->get_SliceAdaptor();
 my $aa = $db->get_AnalysisAdaptor();
 
-# checking options
-throw("No focus set specified! Use -f option.") if (!$opts{f});
+# parse focus and target sets and check that they exist
+my @fset_ids;
+
 my %focus_fsets;
-$focus_fsets{$opts{f}} = $fsa->fetch_by_name($opts{f});
-#map { $focus_fsets{$_} = $fsa->fetch_by_name($_) } split(',', $opts{f});
-throw("Focus set $opts{f} does not exist in the DB")if (! defined $focus_fsets{$opts{f}});
+map { $focus_fsets{$_} = $fsa->fetch_by_name($_); 
+      throw("Focus set $_ does not exist in the DB") 
+          if (! defined $focus_fsets{$focus}); 
+      push(@fset_ids, $focus_fsets{$_}->dbID);
+  } split(',', $focus);
 
-throw("No target set(s) specified! Use -t option.") if (!$opts{t});
 
-#NJ we need to test each fset here, as we may be specifying invalid names
 my %target_fsets;
-map { $target_fsets{$_} = $fsa->fetch_by_name($_) } split(',', $opts{t});
+map { $target_fsets{$_} = $fsa->fetch_by_name($_); 
+      throw("Target set $_ does not exist in the DB") 
+          if (! defined $target_fsets{$_}); 
+      push(@fset_ids, $target_fsets{$_}->dbID);
+      } split(',', $target);
+
+# make sure that target sets also contain focus sets (Do we really need this?)
 map { $target_fsets{$_} = $fsa->fetch_by_name($_) } keys %focus_fsets;
 
+
+# retrieve sequence to be analyzed 
 my $slice;
 
 if ($seq_name) {
   $slice = $sa->fetch_by_region('chromosome', $seq_name);
-} else {
-  warn "Perfoming whole genome analysis on toplevel slices using the farm.\n";
-  
-  throw("LSF environment variable LSB_JOBINDEX not defined.") 
-	if (! defined $ENV{LSB_JOBINDEX});
-  
+} elsif (defined $ENV{LSB_JOBINDEX}) {
+  warn "Performing whole genome analysis on toplevel slices using the farm.\n";
+    
   my $toplevel = $sa->fetch_all('toplevel');
   my @chr = sort (map $_->seq_region_name, @{$toplevel});
   #print Dumper @chr;
@@ -201,14 +225,52 @@ if ($seq_name) {
   $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
   print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
   
+} else {
+
+    throw("Must specify mandatory chromosome name (-seq_name) or set\n ".
+          "LSF environment variable LSB_JOBINDEX to perform whole\n ".
+          "genome analysis on toplevel slices using the farm.\n");
+
 }
 
 #should this be printing to OUT or STDERR?
 #or remove as we're printing this later?
-print STDERR '# Focus set: ', join(" ", keys %focus_fsets), "\n";
-print STDERR '# Target set(s): ', join(" ", sort keys %target_fsets), "\n";
+print STDERR '# Focus set: ', join(" ", keys %focus_fsets), "\n",
+    '# Target set(s): ', join(" ", sort keys %target_fsets), "\n",
+    '# Species: ', $species, "\n",
+    '# Chromosome: ', join(" ",$slice->display_id(),$slice->dbID), "\n";
 
-my (@starts, @ends, @fset_ids, @features,
+if ($dump) {
+    
+    print STDERR "# Dumping annotated features from database to file.\n";
+    print STDERR "# This will delete existing file dumps of that data version!\n";
+
+    throw("Must specify directory to write the output (-outdir).\n") if ! defined $outdir;
+    print STDERR "# Output goes to ", $outdir, "\n";
+
+
+    my $sql = "select seq_region_id,seq_region_start,seq_region_end,".
+        "seq_region_strand,feature_set_id from annotated_feature";
+    my $command = "echo \"$sql\" ".
+        " | mysql -h".$host." -P".$port." -u".$user." ".$dbname.
+        " | gawk '{if (\$5==".join("||\$5==", @fset_ids).") print }'".
+        " | sort -n -k 1,1 -k 2,2 -k3,3".
+        " | gawk '{ print >> \"".$outdir."/".$dbname.".annotated_feature_\" \$1 \".txt\"}'";
+        #." > ".$outdir."/".$dbname.".annotated_feature.txt";
+
+    print STDERR "# Execute: ".$command."\n";
+    
+    # need to remove existing dump files, since we append to the file
+    system("rm -f $outdir/$dbname.annotated_feature_*.txt") &&
+        throw ("Can't remove files");
+
+    system($command) &&
+        throw ("Can't dump data to file $outdir/$dbname.annotated_feature.txt");
+
+}
+
+#my (@starts, @ends, @fset_ids, @features,
+my (@starts, @ends, @features,
     $focus_start, $focus_end, $focus_fset_id, $focus_score, %cooc_fsets,
     @overlap_features, $overlap_fset, $intersect_fset, %ftypes);
 
@@ -323,17 +385,18 @@ map {push @target_fsets, $target_fsets{$_} } keys %target_fsets;
 
 # compare all target features against the focus features
 foreach my $af (@{$afa->fetch_all_by_Slice_FeatureSets($slice, \@target_fsets)}) {
+#foreach my $af (@{$afa->fetch_all_by_Slice($slice)}) {
     
     print STDERR join(" ", $af->start, $af->end, $af->score?$af->score:'',
 					  $af->feature_set->dbID(),
-					  $af->feature_set->name()), "\n" if ($opts{D});
+					  $af->feature_set->name()), "\n" if ($debug);
 
     next if(! exists $target_fsets{$af->feature_set->name()});
     
-	#shoud this print to STDERR?
+    #shoud this print to STDERR?
     print STDERR join(" ", $af->start, $af->end, $af->score?$af->score:'',
 					  $af->feature_set->dbID(),
-					  $af->feature_set->name()), "\n" if ($opts{D});
+					  $af->feature_set->name()), "\n" if ($debug);
 
     if (exists $focus_fsets{$af->feature_set->name()}) {
         
@@ -375,14 +438,14 @@ foreach my $af (@{$afa->fetch_all_by_Slice_FeatureSets($slice, \@target_fsets)})
     
     print STDERR join(" ", $af->start, $af->end, $af->score?$af->score:'',
 					  $af->feature_set->dbID(),
-					  $af->feature_set->name()), "(filtered)\n" if ($opts{D});
+					  $af->feature_set->name()), "(filtered)\n" if ($debug);
     
     push(@starts, $af->start());
     push(@ends, $af->end());
     push(@fset_ids, $af->feature_set()->dbID());
 
 }
-if ($opts{D}) {
+if ($debug) {
     print STDERR join("\t", @starts), "\n";
     print STDERR join("\t", @ends), "\n";
     print STDERR join("\t", @fset_ids), "\n";
@@ -403,7 +466,7 @@ my $regulatory_features = &get_overlap_strings(\@overlap_features);
 
 my $i = 0;
 
-my $outfile = $opts{f}.'_chr'.$slice->seq_region_name.'.overlap';
+my $outfile = $focus.'_chr'.$slice->seq_region_name.'.overlap';
 
 print "Output goes to $outdir/$outfile\n";
 open(OUT, "> $outdir/$outfile")
@@ -442,7 +505,7 @@ foreach my $s (sort {$a<=>$b} keys %{$regulatory_features}) {
 	#update based on the feature_ids for the final ensr set
 
 	print OUT join("\t",
-				   sprintf("ENSR_%s_%06d",$opts{f},++$i),
+				   sprintf("ENSR_%s_%06d",$focus,++$i),
 				   $slice->seq_region_name, $s, $e,
 				   $overlap_string, $regulatory_features->{$s}->{$e}->{'score'}
 				   #$count_string
@@ -547,7 +610,7 @@ sub get_overlap_features{
 	  $focus_start, $focus_end, 
 	  $focus_fset_id, $focus_score) = @_;
 
-  print STDERR $focus_start.':'.$focus_end."\t".$focus_score." (focus)\n" if ($opts{D});
+  print STDERR $focus_start.':'.$focus_end."\t".$focus_score." (focus)\n" if ($debug);
   
   my @overlap_features = ();
   my ($start, $end, $fset_id);
@@ -561,19 +624,19 @@ sub get_overlap_features{
         #don't compare the focus_set with itself
         #next if ($focus_fset_id == $fset_id);
 
-        print STDERR $start.':'.$end."\n" if ($opts{D});
+        print STDERR $start.':'.$end."\n" if ($debug);
         
         if ($focus_start < $end && $focus_end > $start) {
 
             print STDERR "Found intersection: ".
                 join(":", sort {$a<=>$b} ($focus_start, $focus_end, $start,$end)).
-                " with ". $fsa->fetch_by_dbID($fset_id)->name()."\n" if ($opts{D});
+                " with ". $fsa->fetch_by_dbID($fset_id)->name()."\n" if ($debug);
 
             push @overlap_features, [ $start, $end, $fset_id, 
                                       $focus_start, $focus_end, $focus_fset_id, $focus_score];
 
         }
-        if ($opts{D}) {
+        if ($debug) {
             print STDERR join("\t", @$starts), "\n";
             print STDERR join("\t", @$ends), "\n";
             print STDERR join("\t", @$fset_ids), "\n";
@@ -591,7 +654,7 @@ sub get_overlap_features{
     push @$ends, @e;
     push @$fset_ids, @f;
 
-    if ($opts{D}) {
+    if ($debug) {
         print STDERR join("\t", @$starts), "\n";
         print STDERR join("\t", @$ends), "\n";
         print STDERR join("\t", @$fset_ids), "\n";
