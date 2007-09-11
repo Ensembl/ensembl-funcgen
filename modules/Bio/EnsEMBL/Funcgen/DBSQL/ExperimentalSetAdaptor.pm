@@ -223,9 +223,10 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
   
   my ($dbid, $exp_id, $ftype_id, $ctype_id, $format, $vendor, $ess_name, $ess_id);
-  my ($eset, @esets);
+  my ($eset, @esets, $ftype, $ctype);
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
-  my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
+  my $ct_adaptor = $self->db->get_CellTypeAdaptor();
+  my $exp_adaptor = $self->db->get_ExperimentAdaptor();
   $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, \$vendor, \$ess_name, \$ess_id);
   
   #this fails if we delete entries from the joined tables
@@ -238,39 +239,35 @@ sub _objs_from_sth {
       push @esets, $eset if $eset;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-            
-      $rset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new(
-													-DBID         => $dbid,
-													-NAME         => $name,
-													-ANALYSIS     => $anal,
-													-TABLE_NAME   => $table_name,
-													-FEATURE_TYPE => $ftype,
-													-CELL_TYPE    => $ctype,
-													-ADAPTOR      => $self,
+
+      $eset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new(
+														  -DBID         => $dbid,
+														  -EXPERIMENT   => $exp_adaptor->fetch_by_dbID($exp_id),
+														  -FORMAT       => $format,
+														  -VENDOR       => $vendor,
+														  -FEATURE_TYPE => $ftype,
+														  -CELL_TYPE    => $ctype,
+														  -ADAPTOR      => $self,
 												   );
     }
     
     #This assumes logical association between chip from the same exp, confer in store method?????????????????
-
-    if(defined $rset->feature_type()){    
-      throw("ExperimentalSet does not accomodate multiple FeatureTypes") if ($ftype_id != $rset->feature_type->dbID());
-    }
+	
+	
+	#we're not controlling ctype and ftype during creating new ExperimentalSets to store.
+	#we should change add_table_id to add_ExperimentalChip and check in that method
     
-    if(defined $rset->cell_type()){
-      throw("ExperimentalSet does not accomodate multiple CellTypes") if ($ctype_id != $rset->cell_type->dbID());
-    }
-
-    #we're not controlling ctype and ftype during creating new ExperimentalSets to store.
-    #we should change add_table_id to add_ExperimentalChip and check in that method
-    
-    #add just the ids here, as we're aiming at quick web display.
-    $rset->add_table_id($table_id, $cc_id);
-  
+	
+	$eset->add_subset($ess_name, Bio::EnsEMBL::Funcgen::ExperimentalSubset->new( -name    => $ess_name,
+																				 -dbID    => $ess_id,
+																				 -adaptor => $self,
+																			   ));
+	
   }
 
-  push @rsets, $rset if $rset;
+  push @esets, $eset if $eset;
   
-  return \@rsets;
+  return \@esets;
 }
 
 
@@ -278,7 +275,7 @@ sub _objs_from_sth {
 =head2 store
 
   Args       : List of Bio::EnsEMBL::Funcgen::ExperimentalSet objects
-  Example    : $rsa->store(@rsets);
+  Example    : $rsa->store(@esets);
   Description: Stores or updates previously stored ExperimentalSet objects in the database. 
   Returntype : None
   Exceptions : Throws if a List of ExperimentalSet objects is not provided or if
@@ -295,7 +292,7 @@ sub store{
   
   
   
-  my $sth = $self->prepare('INSERT INTO expeiment_set (experiment_id, feature_type_id, 
+  my $sth = $self->prepare('INSERT INTO experimental_set (experiment_id, feature_type_id, 
                                                        cell_type_id,format, vendor) 
                                                        VALUES (?, ?, ?, ?, ?)');
   
@@ -314,10 +311,10 @@ sub store{
     }
    
 
-	my $ct_id = (defined $rset->cell_type()) ? $rset->cell_type->dbID() : undef;
-	my $ft_id = (defined $rset->feature_type()) ? $rset->feature_type->dbID() : undef;
+	my $ct_id = (defined $set->cell_type()) ? $set->cell_type->dbID() : undef;
+	my $ft_id = (defined $set->feature_type()) ? $set->feature_type->dbID() : undef;
 
-    $sth->bind_param(1, $rset->get_Experiment->dbID(),  SQL_INTEGER);
+    $sth->bind_param(1, $set->get_Experiment->dbID(),  SQL_INTEGER);
 	$sth->bind_param(4, $ft_id,                         SQL_INTEGER);
 	$sth->bind_param(3, $ct_id,                         SQL_INTEGER);
   	$sth->bind_param(4, $set->format,                   SQL_VARCHAR);
@@ -326,8 +323,8 @@ sub store{
     
     $sth->execute();
     
-    $rset->dbID( $sth->{'mysql_insertid'} );
-    $rset->adaptor($self);
+    $set->dbID( $sth->{'mysql_insertid'} );
+    $set->adaptor($self);
     
     $self->store_ExperimentalSubsets($set);
   }
@@ -338,12 +335,11 @@ sub store{
 
 =head2 store_ExperimentalSubsets
 
-  Args       : Bio::EnsEMBL::Funcgen::ExperimentalSet
-  Example    : $rsa->store_chip_channel(@rset);
-  Description: Convinience methods extracted from store to allow updating of chip_channel entries 
+  Args       : Bio::EnsEMBL::Funcgen::ExperimentalSet 
+  Example    : $esa->store_ExperimentalSubsets(\@e_subsets);
+  Description: Convenience methods extracted from store to allow updating of ExperimentalSubset entries 
                during inline result processing which would otherwise be troublesome due to the need
-               for a chip_channel_id in the result table before the ExperimentalSet would normally be stored
-               i.e. after it has been fully populated with data.
+               for an ExperimentalSet 
   Returntype : Bio::EnsEMBL::Funcgen::ExperimentalSet
   Exceptions : Throws if a stored ExperimentalSet object is not provided
                Throws if no ExperimentalSubsets present
@@ -358,7 +354,7 @@ sub store_ExperimentalSubsets{
   
   if(! (ref($exp_set) && 
 		$exp_set->isa("Bio::EnsEMBL::Funcgen::ExperimentalSet") &&
-		$rset->is_stored($self->db()))){
+		$exp_set->is_stored($self->db()))){
     throw("You must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalSet");
   }
   
@@ -396,8 +392,9 @@ sub store_ExperimentalSubsets{
 	#add directly to avoid name clash warnings
 	$exp_set->{'subsets'}{$sub_set_name} = Bio::EnsEMBL::Funcgen::ExperimentalSubset->new
 	  (
-	   -dbID => $sth->{'mysql_insertid'},
-	   -name => $name,
+	   -dbID    => $sth->{'mysql_insertid'},
+	   -name    => $sub_set_name,
+	   -adaptor => $self,
 	   #-experimental_set_id?
 	  );
 
@@ -409,8 +406,8 @@ sub store_ExperimentalSubsets{
 =head2 list_dbIDs
 
   Args       : None
-  Example    : my @rsets_ids = @{$rsa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all ProbeFeature objects in
+  Example    : my @sets_ids = @{$esa->list_dbIDs()};
+  Description: Gets an array of internal IDs for all ExperimentalSet objects in
                the current database.
   Returntype : List of ints
   Exceptions : None

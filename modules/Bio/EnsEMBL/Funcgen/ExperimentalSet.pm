@@ -97,7 +97,7 @@ sub new {
    
   $self->{'subsets'} = {};
   
-  if (! (ref $exp && $exo->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
+  if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
 
@@ -145,7 +145,7 @@ sub new {
 sub add_subset {
   my ($self, $ss_name, $exp_sset) = @_;
 	
-  if($self->contains_subset($ss_name)){
+  if($self->get_subset_by_name($ss_name)){
 	throw("Subset $ss_name is already present in this ExperimentalSet, maybe you need to alter the filename?");
   }
 
@@ -209,7 +209,7 @@ sub get_subsets{
 sub get_subset_by_name{
   my ($self, $name) = @_;
 
-  return (exists $self->{'subsets'}{$name}) ? $self->{'subsets'}{$name}) : under ;
+  return (exists $self->{'subsets'}{$name}) ? $self->{'subsets'}{$name} : undef;
 }
 
 =head2 get_subset_names
@@ -231,64 +231,6 @@ sub get_subset_names{
 
 
 
-=head2 contains_subset
-
-  Arg[1]     : string - subset name
-  Example    : if($exp_set->contains_subset($filename)){ ..do something here ..};
-  Description: returns true if subset is already contained
-  Returntype : Boolean
-  Exceptions : Throwsis no subset name passed
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub contains_subset{
-  my ($self, $ss_name) = @_;
-
-  throw('Must provide a subset name parameter') if ! defined $ss_name;
-
-  return (grep($ss_name, keys $self->{'subsets'})) ? 1 : 0;
-}
-
-
-
-
-=head2 subset_has_status
-
-  Arg[1]     : string - subset name
-  Arg[2]     : string - status name
-  Example    : if($exp_set->get_displayable_supporting_sets()};
-  Description: Returns true if subset has given status recorded
-  Returntype : Boolean
-  Exceptions : Throws if subset is not part of ExperimentalSet
-               Warns if subset is not stored yet
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub subset_has_status{
-  my ($self, $ss_name, $status) = shift;
-  
-  #test for name?
-
-  if(! exists $self->{'subsets'}{$ss_name}){
-	throw("Subset $ss_name is not a member of this ExperimentalSet, have you forgotten to add it?");
-  }
-
-  if(! defined $ss_id){
-	warn "Subset $ss_name is not stored in the DB yet, have you forgotten to store the ExperimentalSet?";
-  }
-
-	#This is all in storable, but subset is not a storable..it's not even a class, just a hash
-	#can we code around this, or do we have to write a class and an adaptor
-	#can we move all the status methods to a different class to avoid inheritance issues?
-	#No this is even messier 
-	
-
-  return $self->{'subsets'}{$ss_name}->has_status($status);
-}
 
 
 =head2 name
@@ -310,15 +252,52 @@ sub subset_has_status{
 #  return $self->{'name'};
 #}
 
+=head2 vendor
+
+  Arg[1]     : string - vendor 
+  Example    : my $eset->vendor('SOLEXA');
+  Description: Getter/Setter for the vendor attribute of this DataSet.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub vendor {
+  my $self = shift;
+     	
+  $self->{'vendor'} = shift if @_;
+
+  return $self->{'vendor'};
+}
 
 
-#The following attributes are generated dynamically from the consituent Result/FeatureSets
-#Naming convention? CellType and FeatureType?
+=head2 format
+
+  Arg[1]     : string - format i.e. product type/format
+  Example    : my $eset->format('DATASET1');
+  Description: Getter/Setter for the format attribute of this ExperimentalSet.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub format {
+  my $self = shift;
+     	
+  $self->{'format'} = shift if @_;
+  
+  return $self->{'format'};
+}
+
 
 =head2 cell_type
 
-  Example    : my $dset_ctype_name = $dset->cell_type->name();
-  Description: Getter for the cell_type for this DataSet.
+  Example    : my $eset_ctype_name = $dset->cell_type->name();
+  Description: Getter for the cell_type for this ExperimentalSet.
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
@@ -334,8 +313,8 @@ sub cell_type {
 
 =head2 feature_type
 
-  Example    : my $dset_ftype_name = $dset->feature_type->name();
-  Description: Getter for the feature_type for this DataSet.
+  Example    : my $eset_ftype_name = $dset->feature_type->name();
+  Description: Getter for the feature_type for this ExperimentalSet.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None
   Caller     : General

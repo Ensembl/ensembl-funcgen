@@ -235,24 +235,26 @@ sub get_available_adaptors{
   my ($self) = shift;
   
   my %pairs = (
-	       'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
-	       'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
-	       'ArrayChip'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
-	       'Array'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
-	       'ProbeSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
-	       'Probe'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
-	       'ProbeFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
-	       'AnnotatedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
-		   'RegulatoryFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
+			   'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
+			   'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
+			   'ArrayChip'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
+			   'Array'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
+			   'ProbeSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
+			   'Probe'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
+			   'ProbeFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
+			   'AnnotatedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
+			   'RegulatoryFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
 			   'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-	       'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-	       'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
-	       'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
-	       'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
-	       'FeatureSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
-	       'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
-	       'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-	       'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
+			   'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
+			   'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
+			   'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG o override core  adaptor
+			   'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
+			   'FeatureSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
+			   'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+			   'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
+			   'ExperimentalSet'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalSetAdaptor',
+			   'CuratedSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::CuratedSetAdaptor',
+			   'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
 	 	       
 	       #add required EnsEMBL(core) adaptors here
 	       #Should write/retrieve from efg not dna db
