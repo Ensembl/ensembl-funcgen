@@ -350,6 +350,8 @@ sub _final_clause {
   
 }
 
+
+
 =head2 _objs_from_sth
 
   Arg [1]    : DBI statement handle object

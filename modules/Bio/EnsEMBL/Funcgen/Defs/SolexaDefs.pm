@@ -218,7 +218,13 @@ sub read_and_import_bed_data{
   }
 
 
+  #how are we going to track import of files if they are being directly imported into annotated_feature?
+  #Current solution is to create dummy chips, but we want something neater
+  #do we need to track import as closely as with chips?
   
+  
+
+
 
   foreach $file(@{$self->result_files()}) {
 	my ($chip_uid, $array, $array_chip);
@@ -383,15 +389,16 @@ sub read_and_import_bed_data{
 			  warn "Skipping ProbeFeature import, cound non standard chromosome: $chr";
 			}else{
 			
-			  my $feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
-				(
+			  #my $feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
+			my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
+			  (
 				 -START         => $start,
 				 -END           => $end,
 				 -STRAND        => 1,
 				 -SLICE         => $self->cache_slice($chr),
 				 -ANALYSIS      => $fanal,
-				 -MISMATCHCOUNT => 0,
-				 -PROBE         => $probe,
+			   #-MISMATCHCOUNT => 0,
+			   #	 -PROBE         => $probe,
 				);
 
 

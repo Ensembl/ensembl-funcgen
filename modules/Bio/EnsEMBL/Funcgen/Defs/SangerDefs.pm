@@ -472,7 +472,8 @@ sub read_and_import_result_data{
       $self->experiment->add_ExperimentalChip($echip); #if we need a contains method in  here , always add!!
     }
 
-   
+	#do we need DUMMY entries any more?
+
     #sub this passing the echip?
     foreach my $type ('DUMMY_TOTAL', 'DUMMY_EXPERIMENTAL') {
 

@@ -620,6 +620,9 @@ CREATE TABLE `experimental_set` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
+-- do we want a name field?
+-- do we want a type field? 'SHORT_READ' or ????
+-- format is type of short read, platform name? 
 -- now where do we put the experimental type? Format? Vendor?
 -- do we need an auxilliary table here akin to supporting set to remove redundancy of cell_type, feature_type
 -- Do we need replicates if we are peak calling outside the DB?
@@ -636,15 +639,16 @@ DROP TABLE IF EXISTS `experimental_subset`;
 CREATE TABLE `experimental_subset` (
    `experimental_subset_id` int(10) unsigned NOT NULL auto_increment,
    `experimental_set_id` int(10) unsigned NOT NULL default '0',
-   `unique_id` varchar(20) NOT NULL default '0', -- filename?	
+   `name` varchar(30) NOT NULL default '0', -- filename?	
    PRIMARY KEY  (`experimental_subset_id`), 
-   UNIQUE KEY `unique_id_dx` (`unique_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=20;
+   UNIQUE KEY `set_name_dx` (`experimental_set_id`, `name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
--- remove experimental_set_id from key to force uniqueness of file
--- or do we want to be able to add file to other sets?
--- no we can't have multi experiment sets at present
+-- remove experimental_set_id from key to force uniqueness of file?
+-- No file names may be same across expeirments, this allows addition of same sub set to different sets
+-- whilst making it unique whtin a set
+-- no we can't have multi experiment sets at present, still migh have same filename tho
 
 --
 -- Table structure for table `experimental_chip`

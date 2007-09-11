@@ -99,6 +99,7 @@ sub fetch_all_displayable{
   Status     : At Risk
 
 =cut
+
 sub fetch_all_by_status{ 
   my ($self, $status) = @_; 
   my $constraint = $self->status_to_constraint('DISPLAYABLE');
