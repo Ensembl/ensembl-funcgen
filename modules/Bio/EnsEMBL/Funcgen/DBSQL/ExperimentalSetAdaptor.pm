@@ -1,0 +1,429 @@
+#
+# Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::ExperimentalSetAdaptor
+#
+# You may distribute this module under the same terms as Perl itself
+
+=head1 NAME
+
+Bio::EnsEMBL::DBSQL::Funcgen::ExperimentalSetAdaptor - A database adaptor for fetching and
+storing ExperimentalSet objects.  
+
+=head1 SYNOPSIS
+
+my $rset_adaptor = $db->get_ExperimentalSetAdaptor();
+
+my @rsets = @{$rset_adaptor->fetch_all_ExperimentalSets_by_Experiment()};
+my @displayable_rsets = @{$rset_adaptor->fetch_all_displayable_ExperimentalSets()};
+
+#Other methods?
+#by FeatureType, CellType all with displayable flag?
+
+
+=head1 DESCRIPTION
+
+The ExperimentalSetAdaptor is a database adaptor for storing and retrieving
+ExperimentalSet objects.
+
+=head1 AUTHOR
+
+This module was created by Nathan Johnson.
+
+This module is part of the Ensembl project: http://www.ensembl.org/
+
+=head1 CONTACT
+
+Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+
+=head1 METHODS
+
+=cut
+
+use strict;
+use warnings;
+
+package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalSetAdaptor;
+
+use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Funcgen::ExperimentalSet;
+use Bio::EnsEMBL::Funcgen::ResultFeature;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
+
+use vars qw(@ISA);
+
+
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+
+
+
+=head2 fetch_all_by_FeatureType
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
+  Example    : 
+  Description: Retrieves a list of features on a given slice that are created
+               by probes from the specified type of array.
+  Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
+  Exceptions : Throws if no array type is provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_FeatureType {
+  my ($self, $ftype) = @_;
+
+  if( !(ref($ftype) && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())){
+    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
+  }
+  
+  my $constraint = "es.feature_type_id =".$ftype->dbID();
+	
+  return $self->generic_fetch($constraint);
+}
+
+
+=head2 fetch_all_by_CellType
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType
+  Example    : 
+  Description: 
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::ExperimentalSet objects
+  Exceptions : Throws if no CellType is provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_CellType {
+  my ($self, $ctype) = @_;
+
+  if( !(ref($ctype) && $ctype->isa("Bio::EnsEMBL::Funcgen::CellType") && $ctype->dbID())){
+    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::CellType");
+  }
+	
+  my $constraint = "es.cell_type_id =".$ctype->dbID();
+	
+  return $self->generic_fetch($constraint);
+}
+ 
+
+=head2 fetch_by_Experiment
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
+  Example    : $exp_set = $eseta->fetch_by_Experiment($exp);
+  Description: Retrieves a ExperimentalSet based on the given Experiment
+  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalSet
+  Exceptions : Throws if no valid stored Experiment provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_by_Experiment {
+  my ($self, $exp) = @_;
+
+  if( ! ( ref($exp) &&
+		  $exp->isa('Bio::EnsEMBL::Fucngen::Experiment') &&
+		  $exp->dbID())){
+	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experimental');
+  }
+		
+  return $self->generic_fetch('es.experiment_id = '.$exp->dcID());
+}
+
+
+=head2 _tables
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns the names and aliases of the tables to use for queries.
+  Returntype : List of listrefs of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _tables {
+  my $self = shift;
+	
+  return (
+		  [ 'experimental_set',    'es' ],
+		  [ 'experimental_subset', 'ess' ],
+		 );
+}
+
+=head2 _columns
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns a list of columns to use for queries.
+  Returntype : List of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _columns {
+	my $self = shift;
+
+	return qw(
+			  es.experimental_set_id  es.experiment_id
+			  es.feature_type_id      es.cell_type_id
+			  es.format               es.vendor
+			  ess.name                ess.supporting_set_id
+		 );
+
+	
+}
+
+=head2 _default_where_clause
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns an additional table joining constraint to use for
+			   queries.
+  Returntype : List of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _default_where_clause {
+  my $self = shift;
+
+  return 'es.experimental_set_id = ess.experimental_set_id';
+
+  
+
+}
+
+#No need for left join as we are forcing at the one ExperimentalSubset
+
+=head2 _objs_from_sth
+
+  Arg [1]    : DBI statement handle object
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Creates Array objects from an executed DBI statement
+			   handle.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _objs_from_sth {
+  my ($self, $sth) = @_;
+  
+  my ($dbid, $exp_id, $ftype_id, $ctype_id, $format, $vendor, $ess_name, $ess_id);
+  my ($eset, @esets);
+  my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
+  my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
+  $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, \$vendor, \$ess_name, \$ess_id);
+  
+  #this fails if we delete entries from the joined tables
+  #causes problems if we then try and store an rs which is already stored
+
+  while ( $sth->fetch() ) {
+
+    if(! $eset || ($eset->dbID() != $dbid)){
+      
+      push @esets, $eset if $eset;
+      $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
+      $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
+            
+      $rset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new(
+													-DBID         => $dbid,
+													-NAME         => $name,
+													-ANALYSIS     => $anal,
+													-TABLE_NAME   => $table_name,
+													-FEATURE_TYPE => $ftype,
+													-CELL_TYPE    => $ctype,
+													-ADAPTOR      => $self,
+												   );
+    }
+    
+    #This assumes logical association between chip from the same exp, confer in store method?????????????????
+
+    if(defined $rset->feature_type()){    
+      throw("ExperimentalSet does not accomodate multiple FeatureTypes") if ($ftype_id != $rset->feature_type->dbID());
+    }
+    
+    if(defined $rset->cell_type()){
+      throw("ExperimentalSet does not accomodate multiple CellTypes") if ($ctype_id != $rset->cell_type->dbID());
+    }
+
+    #we're not controlling ctype and ftype during creating new ExperimentalSets to store.
+    #we should change add_table_id to add_ExperimentalChip and check in that method
+    
+    #add just the ids here, as we're aiming at quick web display.
+    $rset->add_table_id($table_id, $cc_id);
+  
+  }
+
+  push @rsets, $rset if $rset;
+  
+  return \@rsets;
+}
+
+
+
+=head2 store
+
+  Args       : List of Bio::EnsEMBL::Funcgen::ExperimentalSet objects
+  Example    : $rsa->store(@rsets);
+  Description: Stores or updates previously stored ExperimentalSet objects in the database. 
+  Returntype : None
+  Exceptions : Throws if a List of ExperimentalSet objects is not provided or if
+               an analysis is not attached to any of the objects
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub store{
+  my ($self, @exp_sets) = @_;
+
+  throw("Must provide a list of ExperimentalSet objects") if(scalar(@exp_sets == 0));
+  
+  
+  
+  my $sth = $self->prepare('INSERT INTO expeiment_set (experiment_id, feature_type_id, 
+                                                       cell_type_id,format, vendor) 
+                                                       VALUES (?, ?, ?, ?, ?)');
+  
+  my $db = $self->db();
+  
+  foreach my $set (@exp_sets) {
+    
+    if( ! ref $set || ! $set->isa('Bio::EnsEMBL::Funcgen::ExperimentalSet') ) {
+      throw('Must be an ExperimentalSet object to store');
+    }
+    
+        
+    if ( $set->is_stored($db) ) {
+      throw('ExperimentalSet [' . $set->dbID() . '] is already stored in the database\nExperimentalSetAdaptor does not yet accomodate updating ExperimentalSets');
+      #would need to retrive stored result set and update table_ids
+    }
+   
+
+	my $ct_id = (defined $rset->cell_type()) ? $rset->cell_type->dbID() : undef;
+	my $ft_id = (defined $rset->feature_type()) ? $rset->feature_type->dbID() : undef;
+
+    $sth->bind_param(1, $rset->get_Experiment->dbID(),  SQL_INTEGER);
+	$sth->bind_param(4, $ft_id,                         SQL_INTEGER);
+	$sth->bind_param(3, $ct_id,                         SQL_INTEGER);
+  	$sth->bind_param(4, $set->format,                   SQL_VARCHAR);
+  	$sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
+  
+    
+    $sth->execute();
+    
+    $rset->dbID( $sth->{'mysql_insertid'} );
+    $rset->adaptor($self);
+    
+    $self->store_ExperimentalSubsets($set);
+  }
+  
+  return \@exp_sets;
+}
+
+
+=head2 store_ExperimentalSubsets
+
+  Args       : Bio::EnsEMBL::Funcgen::ExperimentalSet
+  Example    : $rsa->store_chip_channel(@rset);
+  Description: Convinience methods extracted from store to allow updating of chip_channel entries 
+               during inline result processing which would otherwise be troublesome due to the need
+               for a chip_channel_id in the result table before the ExperimentalSet would normally be stored
+               i.e. after it has been fully populated with data.
+  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalSet
+  Exceptions : Throws if a stored ExperimentalSet object is not provided
+               Throws if no ExperimentalSubsets present
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub store_ExperimentalSubsets{
+  my ($self, $exp_set) = @_;
+  
+  if(! (ref($exp_set) && 
+		$exp_set->isa("Bio::EnsEMBL::Funcgen::ExperimentalSet") &&
+		$rset->is_stored($self->db()))){
+    throw("You must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalSet");
+  }
+  
+  my $sth = $self->prepare("
+		INSERT INTO experimental_subset (
+			experimental_set_id, name
+		) VALUES (?, ?)
+	");
+
+  my @sset_names = @{$exp_set->get_subset_names()};
+  
+
+  if(! @sset_names){
+	throw('Must provide at least one ExperimentalSubset');
+  }
+
+  #Store and set all previously unstored table_ids
+  foreach my $sub_set_name(@sset_names){
+	my $sset;
+
+	#Test if subset is already stored and warn
+	if($sset = $exp_set->get_subset_by_name($sub_set_name)){
+	  
+	  if($sset->dbID()){
+		warn "Skipping ExperimentalSubset $sub_set_name - already stored in the DB";
+		next;
+	  }
+	}
+
+	$sth->bind_param(1, $exp_set->dbID(),       SQL_INTEGER);
+	$sth->bind_param(2, $sub_set_name,          SQL_VARCHAR);
+	$sth->execute();
+
+
+	#add directly to avoid name clash warnings
+	$exp_set->{'subsets'}{$sub_set_name} = Bio::EnsEMBL::Funcgen::ExperimentalSubset->new
+	  (
+	   -dbID => $sth->{'mysql_insertid'},
+	   -name => $name,
+	   #-experimental_set_id?
+	  );
+
+  }
+  
+  return $exp_set;
+}
+
+=head2 list_dbIDs
+
+  Args       : None
+  Example    : my @rsets_ids = @{$rsa->list_dbIDs()};
+  Description: Gets an array of internal IDs for all ProbeFeature objects in
+               the current database.
+  Returntype : List of ints
+  Exceptions : None
+  Caller     : general
+  Status     : stable
+
+=cut
+
+sub list_dbIDs {
+	my $self = shift;
+	
+	return $self->_list_dbIDs('result_set');
+}
+
+1;
+
