@@ -84,6 +84,7 @@ use vars qw(@ISA);
 									                                      -FEATURE_SET   => $fset,
                                                                           -FEATURE_TYPE  => $reg_ftype,
                                                                           -REGULATORY_ATTRIBUTES    => \@features,
+                                                                          -_ATTRIBUTE_CACHE => \%attr_cache,
                                                                          );
 
 
@@ -102,8 +103,9 @@ sub new {
   
   my $self = $class->SUPER::new(@_);
   
-  my ($display_label, $fset, $reg_type, $stable_id, $reg_attrs)
-    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE', 'STABLE_ID', 'REGULATORY_ATTRIBUTES'], @_);
+  my ($display_label, $fset, $reg_type, $stable_id, $reg_attrs, $attr_cache)
+    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE', 
+				 'STABLE_ID', 'REGULATORY_ATTRIBUTES', '_ATTRIBUTE_CACHE'], @_);
   
   #check mandatory params here
   $self->display_label($display_label) if $display_label;
@@ -113,6 +115,8 @@ sub new {
   $self->feature_type($reg_type) if $reg_type;
   $self->stable_id($stable_id) if $stable_id;
   $self->regulatory_attributes($reg_attrs) if $reg_attrs;
+  $self->_attribute_cache($attr_cache) if $attr_cache;
+  
 
   #$self->experiment_ids(@$exp_ids);
 
@@ -326,13 +330,79 @@ sub stable_id {
 sub regulatory_attributes {
   my ($self, $attrs) = @_;
 	
-  #deref here for safety??
-  $self->{'regulatory_attributes'} =  [@$attrs] if $attrs;
-
-  #check for isa->Feature here?
+  my $table;
+  my %adaptors = (
+				  'annotated_feature' => $self->adaptor->db->get_AnnotatedFeatureAdaptor(),
+				  #'curated_feature' => $self->adaptor->db->get_CuratedFeatureAdaptor(),
+				 );
+  #my %attr_class_tables = (
+  #'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
+  #					   'Bio::EnsEMBL::Funcgen::CuratedFeature' => 'curated',
+  #mm, get from adaptor instead? attrs should always have an adaptor set as they should be stored by now
   
+
+  #change this to a dbID key'd hash to allow storage of only dbIDs during reg build
+
+  #deref here for safety??
+  #$self->{'regulatory_attributes'} =  [@$attrs] if $attrs;
+
+  foreach my $attr(@$attrs){
+	#will this work?
+	$table = $attr->adaptor->_tables()->[0]->[0];
+	
+	#check for isa Feature here?
+
+	#$table =~ s/_feature//;
+	$self->{'regulatory_attributes'}{$table}{$attr->dbID()} = $attr; 
+  }
+
+  #do we need this block if we are not using the id approach outside of the reg_build script?
+  #foreach my $table(keys %{$self->{'regulatory_attributes'}}){
+
+	#foreach my $dbID(values %{$self->{'regulatory_attributes'}{$table}}){
+	  
+	 # if(! defined $self->{'regulatory_attributes'}{$table}{$dbID}){
+	#	$self->{'regulatory_attributes'}{$table}{$dbID} = $adaptors->{$table}->fetch_by_dbID($dbID);
+	#  }
+#	}
+#  }
+  
+  return [ map values %{$self->{'regulatory_attributes'}{$_}}, keys %{$self->{'regulatory_attributes'}} ];
+}
+
+=head2 _attribute_cache
+
+  Arg [1]    : (optional) hash of attribute table keys with dbID list vakues for regulatory attributes
+  Example    : $feature->_attribute_cache(%attribute_table_ids);
+  Description: Setter for the regulatory_attributes dbIDs for this feature. This is a short cut method used by the 
+               regulatory build and the webcode to avoid having to query the DB for the underlying attribute features
+  Returntype : Hasref of table keys and hash values with dbID keys
+  Exceptions : None?? check for enum'd types?
+  Caller     : RegulatoryFeatureAdaptor.pm and build_regulatory_features.pl
+  Status     : At Risk
+
+=cut
+
+
+sub _attribute_cache{
+  my ($self, $attr_table_ids) = @_;
+	
+  foreach my $table(keys %{$attr_table_ids}){
+
+	foreach my $dbID(keys %{$attr_table_ids->{$table}}){
+
+	  if(exists $self->{'regulatory_attributes'}{$table}{$dbID}){
+		warn "You are trying to overwrite a pre-existing regulatory atribute cache entry for $table dbID $dbID\n";
+	  }
+	  else{
+		$self->{'regulatory_attributes'}{$table}{$dbID} = undef;
+	  }
+	}
+  }
+
   return $self->{'regulatory_attributes'};
 }
+
 
 
 
@@ -407,7 +477,7 @@ sub _generate_underlying_structure{
 	map { push @start_ends, $_->start;
 		  push @start_ends,   $_->end; } @{$self->regulatory_attributes()};
 
-	sort @start_ends;
+	@start_ends = sort @start_ends;
 
 	$self->{'bound_end'} = pop @start_ends;
 	$self->{'bound_start'} = shift @start_ends;

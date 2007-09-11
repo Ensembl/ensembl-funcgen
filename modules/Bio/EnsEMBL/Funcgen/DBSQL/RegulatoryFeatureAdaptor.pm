@@ -641,11 +641,11 @@ sub store{
   }
   
 
-  my %attr_feat_types = (
-						 'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
+  #my %attr_feat_types = (
+#						 'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
 						 #??
 						 
-						);
+#						);
 
   my $sth = $self->prepare("
 		INSERT INTO regulatory_feature (
@@ -715,7 +715,7 @@ sub store{
 	$sth->bind_param(5, $rf->display_label(),       SQL_VARCHAR);
 	$sth->bind_param(6, $rf->feature_type->dbID(),  SQL_INTEGER);
 	$sth->bind_param(7, $rf->feature_set->dbID(),   SQL_INTEGER);
-	$sth->bind_param(8, $rf->stable_id(),           SQL_VARCHAR);
+	$sth->bind_param(8, $rf->{'stable_id'},         SQL_INTEGER);
 	
 	$sth->execute();
 	$rf->dbID( $sth->{'mysql_insertid'} );
@@ -728,15 +728,22 @@ sub store{
 
 	$rf->adaptor($self);
 
-	foreach my $attr_feat(@{$rf->regulatory_attributes()}){
-	  
-	  $sth2->bind_param(1, $rf->dbID(),                SQL_INTEGER);
-	  $sth2->bind_param(2, $attr_feat->dbID(),         SQL_INTEGER);
-	  $sth2->bind_param(3, $attr_feat_types{ref($attr_feat)}, SQL_VARCHAR);
-	  $sth2->execute();
+	my $table_type;
+	my %attrs = %{$rf->_attribute_cache()};
+
+	foreach my $table(keys %attrs){
+	  ($table_type = $table)  =~ s/_feature//;
+
+	  foreach my $id(keys %{$attrs{$table}}){
+		$sth2->bind_param(1, $rf->dbID,   SQL_INTEGER);
+		$sth2->bind_param(2, $id,         SQL_INTEGER);
+		$sth2->bind_param(3, $table_type, SQL_VARCHAR);
+						  #$attr_feat_types{ref($attr_feat)}, SQL_VARCHAR);
+		$sth2->execute();
+	  }
 	}
   }
-
+  
   return \@rfs;
 }
 
