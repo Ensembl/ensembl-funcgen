@@ -639,13 +639,6 @@ sub store{
   if (scalar(@rfs) == 0) {
 	throw('Must call store with a list of RegulatoryFeature objects');
   }
-  
-
-  #my %attr_feat_types = (
-#						 'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
-						 #??
-						 
-#						);
 
   my $sth = $self->prepare("
 		INSERT INTO regulatory_feature (
@@ -701,9 +694,6 @@ sub store{
 	#This would still not be specific for each feature, nor would the regulatory_feature analysis_id
 	#reflect all the combined analyses.  Maybe just the one which contributed most?
 	
-	# Store the analysis if it has not been stored yet
-	#$analysis_adaptor->store( $pf->analysis()) if ( !$pf->analysis->is_stored($db) );
-	#could this potentially store the same on multiple times?
 	
 	my $seq_region_id;
 	($rf, $seq_region_id) = $self->_pre_store($rf);
@@ -719,13 +709,6 @@ sub store{
 	
 	$sth->execute();
 	$rf->dbID( $sth->{'mysql_insertid'} );
-	
-	#foreach my $exp_id(@{$pf->experiment_ids()}){
-	#  $epsth->bind_param(1, $exp_id);
-	#  $epsth->bind_param(2, $original->dbID());
-	#  $epsth->execute();
-	#}
-
 	$rf->adaptor($self);
 
 	my $table_type;
@@ -738,7 +721,6 @@ sub store{
 		$sth2->bind_param(1, $rf->dbID,   SQL_INTEGER);
 		$sth2->bind_param(2, $id,         SQL_INTEGER);
 		$sth2->bind_param(3, $table_type, SQL_VARCHAR);
-						  #$attr_feat_types{ref($attr_feat)}, SQL_VARCHAR);
 		$sth2->execute();
 	  }
 	}
@@ -747,7 +729,6 @@ sub store{
   return \@rfs;
 }
 
-#re-written for non-standard feature table
 
 =head2 fetch_all_by_logic_name 
 
