@@ -664,7 +664,17 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #any result with the same cc_id will automatically be treated as a tech rep
 
 
-  #This join between sr and pf is causing the slow down.  Need to select righ tjoin for this.
+  #This does not currently handle multiple CSs i.e. level mapping
+  my $mcc =  $self->db->get_MetaCoordContainer();
+  my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
+																$slice->coord_system->name(), 
+																$slice->coord_system->version()
+																);
+
+  my $max_len = $mcc->fetch_max_length_by_CoordSystem_feature_type($fg_cs, 'probe_feature');
+
+
+ #This join between sr and pf is causing the slow down.  Need to select righ tjoin for this.
   #just do two separate queries for now.
 
   $sql = "SELECT seq_region_id from seq_region where core_seq_region_id=".$slice->get_seq_region_id().
@@ -673,7 +683,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 
   $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM '.$rset->get_result_table().
-	' r, probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = '.$rset->dbID();
+	' r, probe_feature pf, chip_channel cc WHERE cc.result_set_id = '.$rset->dbID();
 
   $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
 
@@ -681,9 +691,15 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
 	' AND r.probe_id=pf.probe_id'.
 	  ' AND pf.seq_region_id='.$seq_region_id.
-		' AND pf.seq_region_end>='.$slice->start().
-          ' AND pf.seq_region_start<='.$slice->end().
-          ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
+    ' AND pf.seq_region_start<='.$slice->end();
+  
+  $sql .= ' AND pf.seq_region_start >= '.($slice->start() - $max_len) if $max_len;
+  
+  $sql .= ' AND pf.seq_region_end>='.$slice->start().
+	' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
+
+
+  warn "sql is: \n$sql";
 
  # $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
 #	' AND r.probe_id=pf.probe_id'.
@@ -693,8 +709,6 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 #          ' AND pf.seq_region_end>='.$slice->start().
 #          ' AND pf.seq_region_start<='.$slice->end().
 #          ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
-
-  warn "SQL is $sql";
 
   $sth = $self->prepare($sql);
   $sth->execute();
