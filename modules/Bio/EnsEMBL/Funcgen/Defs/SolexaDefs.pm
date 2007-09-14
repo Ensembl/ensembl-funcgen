@@ -34,22 +34,13 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 
 package Bio::EnsEMBL::Funcgen::Defs::SolexaDefs;
 
-use Bio::EnsEMBL::Funcgen::Array;
-use Bio::EnsEMBL::Funcgen::ProbeSet;
-use Bio::EnsEMBL::Funcgen::Probe;
-use Bio::EnsEMBL::Funcgen::ProbeFeature;
+use Bio::EnsEMBL::Funcgen::ExperimentalSet;
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
-
 use Bio::EnsEMBL::Funcgen::FeatureType;
-use Bio::EnsEMBL::Funcgen::ExperimentalChip;
-use Bio::EnsEMBL::Funcgen::ArrayChip;
-use Bio::EnsEMBL::Funcgen::Channel;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Helper;
-#use Devel::Size::Report qw(report_size);
-#use Devel::Size qw( size total_size);
 use strict;
 
 use vars qw(@ISA);
@@ -161,7 +152,7 @@ sub set_defs{
 #  #dir are not set in defs to enable generic get_dir method access
 
 #  $self->{'design_dir'} = $self->get_dir('data').'/input/'.
-#    $self->vendor().'/'.$self->name().'/DesignFiles';
+  #    $self->vendor().'/'.$self->name().'/DesignFiles';
     
   #$self->{'defs'}{'bed_file'} = $self->get_dir('data').'/input/'.
   #  $self->vendor().'/'.$self->name().'/SampleKey.txt';
@@ -189,23 +180,40 @@ sub read_and_import_bed_data{
   
   $self->log("Reading and importing ".$self->vendor()." data");
   my (@header, @data, @design_ids, @lines);
-  my ($fh, $file, %roll_back, %chip_files);
-  my $ec_adaptor = $self->db->get_ExperimentalChipAdaptor();
-  my $a_adaptor = $self->db->get_ArrayAdaptor();
-  my $ac_adaptor = $self->db->get_ArrayChipAdaptor();
-  my $probe_a = $self->db->get_ProbeAdaptor();
-  my $probef_a = $self->db->get_ProbeFeatureAdaptor();
-  my $chan_adaptor = $self->db->get_ChannelAdaptor();
-#  my $pf_adaptor =$self->db->get_PredictedFeatureAdaptor();
+  my ($fh, $file);
+ 
+  my $eset_adaptor = $self->db->get_ExperimentalSetAdaptor();
+  my $af_adaptor = $self->db->get_AnnotatedFeatureAdaptor();
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("Parzen");
   my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("VendorMap");
+  my $new_data = 0;
+ 
+  my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name());
   
-  
+  if(! defined $eset){
+	$eset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new(
+														-name         => $self->experimental_set_name(),
+														-experiment   => $self->experiment(),
+														-feature_type => $self->feature_type(),
+														-cell_type    => $self->cell_type(),
+														-vendor       => $self->vendor(),
+														-format       => $self->format(),
+													   );
+	($eset)  = @{$eset_adaptor->store($eset)};
+  }
+
+
+  #we need a way to define replicates on a file basis when we have no meta file!
+  #can we make this generic for application to array imports?
+  #currently we have to do a separate import for each replicate, specifying the result files each time
+  #we need to add a experimental_set_name option
+
+
   #Get file
   if (! @{$self->result_files()}) {
     my $list = "ls ".$self->input_dir().'/'.$self->name().'*.bed';
     my @rfiles = `$list`;
-	throw("Found more than one cluster file:\n@rfiles") if (scalar(@rfiles) >1);
+	throw("Found more than one cluster file:\n@rfiles\nNeed to implement ExperimentalSubset rollback before removing this!") if (scalar(@rfiles) >1);
 	
     $self->result_files(\@rfiles);
   }
@@ -222,238 +230,108 @@ sub read_and_import_bed_data{
   #Current solution is to create dummy chips, but we want something neater
   #do we need to track import as closely as with chips?
   
+  foreach my $filepath(@{$self->result_files()}) {
+	chomp $filepath;
+	my $filename;
+	my $roll_back = 0;
+    ($filename = $filepath) =~ s/.*\///;
+	my $sub_set;
+
+	$self->log("Found SOLEXA results file\t$filename");
+
+	if($sub_set = $eset->get_subset_by_name($filename)){
+	  $roll_back = 1;
+	}else{
+	  $sub_set = $eset->add_new_subset($filename);
+	}
+	
+	#store if not already, skips if stored
+	$eset_adaptor->store_ExperimentalSubsets([$sub_set]);
+
+	warn "Got stored eset with dbID ".$eset->dbID();
   
+	if ($sub_set->adaptor->has_status('IMPORTED', $sub_set)){
+	  $self->log("ExperimentalSubset(${filename}) has already been imported");
+	} 
+	else {
+	  $new_data = 1;
 
+	  if ($self->recovery() && $roll_back) {
+		$self->log("Rolling back results for ExperimentalSubset:\t".$filename);
 
-
-  foreach $file(@{$self->result_files()}) {
-	my ($chip_uid, $array, $array_chip);
-
-	chomp $file;
-    ($chip_uid = $file) =~ s/.*\///;
-    $chip_uid =~ s/\..*//;
-
-	$self->log("Found SOLEXA results file for $chip_uid:\t$file");
-    $chip_files{$chip_uid} = $file;
-
-	#Store/retrieve dummy chips
-	warn "SOLEXA chip_uids are not guaranteed to be unique";
-
-	#do we need to force this to use Experiment to?
-	my $echip =  $ec_adaptor->fetch_by_unique_id_vendor($chip_uid, 'SOLEXA');
-  
-	if ($echip) {
-	  #this assumes a successful dummy Array import has already been succesful
-	  #or should we just check the experiment_id here?
-
-	  $array_chip = $ac_adaptor->fetch_by_dbID($echip->array_chip_id());
-	  $array = $a_adaptor->fetch_by_array_chip_dbID($array_chip->dbID());
-
-	  warn "got array $array";
-
-	  
-      if (! $self->recovery()) {
-		throw("ExperimentalChip(".$echip->unqiue_id().") already exists in the database\nMaybe you want to recover?");
-      } else {#log pre-reg'd chips for rollback
-		$roll_back{$echip->dbID()} = 1;
+		warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
+		throw("Need to implement annotated_feature rollback!\n");
+		#$self->db->rollback_results($cc_id);
 	  }
-    } else {
-	  #we need to make this handle replicates
-	  #this needs to be done for each replicate, otherwise we're going to run into problems with resolving the probe cache
-
-	  #create dummy Array and ArrayChip
-	  $array = Bio::EnsEMBL::Funcgen::Array->new
-		(
-		 -NAME        => $self->name().":${chip_uid}",
-		 -FORMAT      => 'DUMMY',
-		 -VENDOR      => uc($self->vendor()),
-		 -TYPE        => 'SEQUENCING',
-		 -DESCRIPTION => 'Dummy array for sequencing data',
-		);
-	  
-	  ($array) = @{$a_adaptor->store($array)};  
-	  
-	  $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
-															 -NAME      => $array->name(),
-															 -DESIGN_ID => $array->name(),
-															 -ARRAY_ID  => $array->dbID(),
-															);
-	  
-	  ($array_chip) = @{$ac_adaptor->store($array_chip)};
-	  $array->add_ArrayChip($array_chip);
-	  $self->add_Array($array);
-	  
-	  $echip =  Bio::EnsEMBL::Funcgen::ExperimentalChip->new
-		(
-		 -EXPERIMENT_ID  => $self->experiment->dbID(),
-		 -ARRAY_CHIP_ID  => $array_chip->dbID(),
-		 -UNIQUE_ID      => $chip_uid,
-		 -CELL_TYPE      => $self->cell_type(),
-		 -FEATURE_TYPE   => $self->feature_type(),
-		);
-	
-	  ($echip) = @{$ec_adaptor->store($echip)};	
-	  $self->experiment->add_ExperimentalChip($echip); #if we need a contains method in  here , always add!!
-	
-	  
-	  
-	  foreach my $type ('DUMMY_TOTAL', 'DUMMY_EXPERIMENTAL') {
-		
-		my $channel = $chan_adaptor->fetch_by_type_experimental_chip_id($type, $echip->dbID());
-		
-		if ($channel) {
-		  if (! $self->recovery()) {
-			throw("Channel(".$echip->unique_id().":$type) already exists in the database\nMaybe you want to recover?");
-		  }
-		} else {
 		  
-		  $channel =  Bio::EnsEMBL::Funcgen::Channel->new
+	  $self->log("Reading SOLEXA cluster file:\t".$filename);
+	  my $fh = open_file($filepath);
+	  my @lines = <$fh>;
+	  close($fh);
+		  
+	  #my $rfile_path = $self->get_dir("norm")."/result.Parzen.".$echip->unique_id().".txt";
+	  #my $rfile = open_file($rfile_path, '>');
+	  #my $r_string = "";
+	  my ($line, $f_out);
+	  my $fasta = '';
+	  
+	  #warn "we need to either dump the pid rather than the dbID or dump the fasta in the DB dir";
+	  my $fasta_file = $ENV{'EFG_DATA'}."/fastas/".$self->experiment->name().'.'.$filename.'.fasta';
+
+	  if($self->dump_fasta()){
+		$self->backup_file($fasta_file);
+		$f_out = open_file($fasta_file, '>');
+	  }
+		  
+	  $self->log("Parsing file:\t$filename");
+
+	  foreach my $line (@lines) {
+		$line =~ s/\r*\n//o;
+		next if $line =~ /^#/;
+		
+		my ($chr, $start, $end, $pid, $score) = split/\t/o, $line;				  
+		#change from UCSC to EnsEMBL coords
+		$start +=1;
+		$end +=1;
+		
+		if(!  $self->cache_slice($chr)){
+		  warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
+		}else{
+		  
+		  #this is throwing away the encode region which could be used for the probeset/family?	
+		  my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
 			(
-			 -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
-			 -TYPE                 => $type,
+			 -START         => $start,
+			 -END           => $end,
+			 -STRAND        => 1,
+			 -SLICE         => $self->cache_slice($chr),
+			 -ANALYSIS      => $fanal,
+			 -DISPLAY_LABEL => $pid,
 			);
 		  
-		  ($channel) = @{$chan_adaptor->store($channel)};
-		}
-	  }
-	}
-  
-	my $rset = $self->get_import_ResultSet($anal, 'experimental_chip');
-
-
-	if ($rset) {				#we have some new data
-
-	  foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
-
-		if ($echip->has_status('IMPORTED_Parzen', $echip)) {
-		  $self->log("ExperimentalChip(".$echip->unique_id().") has already been imported");
-		} else {
+		  $af_adaptor->store($feature);
 		  
-		  my $cc_id = $rset->get_chip_channel_id($echip->dbID());
-		  
-		  if ($self->recovery() && $roll_back{$echip->dbID()}) {
-			$self->log("Rolling back results for ExperimentalChip:\t".$echip->unique_id());
-			$self->db->rollback_results($cc_id);
-		  }
-		  
-		  $self->log("Reading SOLEXA cluster file for ".$echip->unique_id().":\t".$chip_files{$echip->unique_id()});
-		  my $fh = open_file($chip_files{$echip->unique_id()});
-		  my @lines = <$fh>;
-		  close($fh);
-		  
-		  my $rfile_path = $self->get_dir("norm")."/result.Parzen.".$echip->unique_id().".txt";
-		  my $rfile = open_file($rfile_path, '>');
-		  my $r_string = "";
-		  my ($line, $f_out);
-		  my $fasta = '';
-
-		  #warn "we need to either dump the pid rather than the dbID or dump the fasta in the DB dir";
-		  my $fasta_file = $ENV{'EFG_DATA'}."/fastas/probe.".$array_chip->name().".fasta";
-
-		  if($self->dump_fasta()){
-			$self->backup_file($fasta_file);
-			$f_out = open_file($fasta_file, '>');
-		  }
-		  
-		  $self->log("Parsing file:\t $rfile_path");
-
-
-		  foreach my $line (@lines) {
-			$line =~ s/\r*\n//o;
-
-			next if $line =~ /^#/;
-		  
-			my ($chr, $start, $end, $pid, $score) = split/\t/o, $line;
-				  
-			#change from UCSC to EnsEMBL coords
-			$start +=1;
-			$end +=1;
-			  
-
-			#$ratio = '\N' if $ratio eq 'NA'; #NULL is still useful info to store in result
-			#my ($x, $y) = @{$self->get_probe_x_y_by_name($pid)};
-		  
-			#this is throwing away the encode region which could be used for the probeset/family?	
-			my $probe = Bio::EnsEMBL::Funcgen::Probe->new(
-													-NAME          => $pid,
-													-LENGTH        => ($end - $start),
-													-ARRAY         => $array,
-													-ARRAY_CHIP_ID => $array_chip->dbID(),
-													-CLASS         => 'CLUSTER',
-												   );
-
-
-			($probe) = @{$probe_a->store($probe)};
-
-			if(!  $self->cache_slice($chr)){
-			  warn "Skipping ProbeFeature import, cound non standard chromosome: $chr";
-			}else{
-			
-			  #my $feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
-			my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
-			  (
-				 -START         => $start,
-				 -END           => $end,
-				 -STRAND        => 1,
-				 -SLICE         => $self->cache_slice($chr),
-				 -ANALYSIS      => $fanal,
-			   #-MISMATCHCOUNT => 0,
-			   #	 -PROBE         => $probe,
-				);
-
-
-			 # my $pfeature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
-			#	(
-			#	 -START         => $start,
-			#	 -END           => $end,
-			#	 -STRAND        => 1,
-			#	 -SLICE         => $self->cache_slice($chr),
-			#	 -ANALYSIS      => $anal,
-
-#				);
-
-			  $probef_a->store($feature);
-			  
-
-			  #dump fasta here
-
-			  if ($self->dump_fasta()){
-				$fasta .= '>'.$pid."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
-			  }
-
-			}
-
-
-
-
-			$r_string .= '\N'."\t".$probe->dbID()."\t${score}\t${cc_id}\t".'\N'."\t".'\N'."\n";#${x}\t${y}\n";
-		  }
-				
-		  print $rfile $r_string;
-		  close($rfile);
-
+		  #dump fasta here
 		  if ($self->dump_fasta()){
-			print $f_out $fasta;
-			close($f_out);
+			$fasta .= '>'.$pid."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
 		  }
-
-
-		  $self->log("Importing:\t$rfile_path");
-		  $self->db->load_table_data("result",  $rfile_path);
-		  $self->log("Finished importing:\t$rfile_path");
-		  $echip->adaptor->set_status('IMPORTED_Parzen', $echip);
-
-
-		  #get probe cache from DB for completness
-		  #used in probe mapping
-		  $self->get_probe_cache_by_Array($array, 1) || throw('Failed to build probe cache');
 		}
 	  }
-	} else {
-	  $self->log("No new data, skipping result parse");
+
+
+	  if ($self->dump_fasta()){
+		print $f_out $fasta;
+		close($f_out);
+	  }
+
+
+	  $self->log("Finished importing:\t$filepath");
+	  $sub_set->adaptor->set_status('IMPORTED', $sub_set);
 	}
   }
 
+  $self->log("No new data, skipping result parse") if ! $new_data;
+  
   $self->log("Finished parsing and importing results");
   
   return;

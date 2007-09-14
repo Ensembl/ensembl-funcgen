@@ -480,6 +480,9 @@ sub get_result_table{
 
   #This method should be extended to use bins if we pass a range
   my $table;
+  
+  return 'result';
+
   my @exp_ids = @{$self->get_experiment_ids()};
 
   if($#exp_ids >0){
@@ -491,26 +494,6 @@ sub get_result_table{
   }
 
   return $table;
-}
-
-=head2 get_experiment_ids
-
-  Example    : my @exp_ids = @{$rset->get_experiment)ids()};
-  Description: Getter for the experiment_ids associated with this ResultSet
-  Returntype : ARRAYREF
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk 
-
-=cut
-
-sub get_result_table{
-  my $self = shift;
-
-  #This method should be extended to use bins if we pass a range
-  
-  return 'result';
-
 }
 
 

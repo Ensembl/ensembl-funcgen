@@ -308,7 +308,7 @@ CREATE TABLE `data_set` (
    `result_set_id` int(10) unsigned default '0',
    `feature_set_id` int(10) unsigned default '0',
    `name` varchar(40) default NULL,
-   `supporting_set_type` enum("result", "feature") default NULL,
+   `supporting_set_type` enum('result', 'feature', 'experimental') default NULL,
    PRIMARY KEY  (`data_set_id`, `feature_set_id`),
    KEY `supporting_type_idx` (`supporting_set_type`),
    UNIQUE KEY `name_idx` (name)
@@ -543,10 +543,17 @@ CREATE TABLE `regulatory_feature` (
   `stable_id` mediumint(8) unsigned default NULL,
   PRIMARY KEY  (`regulatory_feature_id`),
   KEY `feature_type_idx` (`feature_type_id`),
-  KEY `feature_type_idx` (`feature_set_id`),
-  KEY `stable_idx` (`stable_id_id`),
+  KEY `feature_set_idx` (`feature_set_id`),
+  KEY `stable_id_idx` (`stable_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+
+--stable_id is not unique as we may have several instances across different cell_types
+--This should eventually be made NR by moving the feature_set_id into the regulatory attributes table
+-- and defining a common start end across all cell lines.
+-- This will cause problem for query on cell_line?  Is this a right join, we don't want any reg_feat which don't have 
+-- attrs with the corresponding feature_set_id.
+-- this is tricky as we may want a generic all feats query (noo attrs required)and one where we only get records for those athat a re present in the attrs table
 
 -- Do we want a build version? Default would be schema_version
 -- build may not change between version, so would have to patch table, which would indicate a build change
@@ -611,25 +618,27 @@ CREATE TABLE `experimental_set` (
    `cell_type_id` int(10) unsigned default NULL,
    `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
---   `biological_replicate` varchar(40) default NULL,
---   `technical_replicate` varchar(40) default NULL,
+   `name` varchar(40) not NULL default '0',
    PRIMARY KEY  (`experimental_set_id`),
+   UNIQUE KEY `name_idx` (`name`),
    KEY `experiment_idx` (`experiment_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    KEY `cell_type_idx` (`cell_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
--- do we want a name field?
+-- do we want a name field? 40 to coomodate exp_name plus BR /TR notation etc.
 -- do we want a type field? 'SHORT_READ' or ????
 -- format is type of short read, platform name? 
 -- now where do we put the experimental type? Format? Vendor?
 -- do we need an auxilliary table here akin to supporting set to remove redundancy of cell_type, feature_type
 -- Do we need replicates if we are peak calling outside the DB?
--- keys on vendor?
+-- keys on vendor/format?
+
+
 
 --
--- Table structure for table `experimental_set`
+-- Table structure for table `experimental_subset`
 --
 
 -- represents a file from a subset
@@ -865,8 +874,8 @@ CREATE TABLE `meta_coord` (
 --- Set up default meta coord entries...this should be done in import
 -- Change max lenght of oligo?
 
-insert into meta_coord values("annotated_feature", 1, 5000);
-insert into meta_coord values("annotated_feature", 1, 2000);
+--insert into meta_coord values("annotated_feature", 1, 5000);
+--insert into meta_coord values("annotated_feature", 1, 2000);
 
 --
 -- Table structure for table `coord_system`

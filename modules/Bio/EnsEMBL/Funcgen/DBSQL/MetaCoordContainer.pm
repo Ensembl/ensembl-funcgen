@@ -111,7 +111,7 @@ sub fetch_max_length_by_CoordSystem_feature_type {
   my $table = shift;
 
   if(!ref($cs) || !$cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')) {
-    throw('Bio::EnsEMBL::CoordSystem argument expected');
+    throw('Bio::EnsEMBL::Funcgen::CoordSystem argument expected');
   }
 
   throw("Table name argument is required") unless $table;

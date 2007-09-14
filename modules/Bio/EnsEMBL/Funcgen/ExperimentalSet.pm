@@ -92,11 +92,7 @@ sub new {
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
   my ($exp, $ftype, $ctype, $format, $vendor)
     = rearrange(['EXPERIMENT', 'FEATURE_TYPE', 'CELL_TYPE', 'FORMAT', 'VENDOR'], @_);
-  
-  
-   
-  $self->{'subsets'} = {};
-  
+    
   if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
@@ -122,17 +118,17 @@ sub new {
   $self->format($format) if defined $format;
   $self->vendor($vendor) if defined $vendor;
   $self->{'experiment'} = $exp;
-  #$self->name($name)   if $name;	
+  #$self->name($name)   if $name;
+  $self->{'subsets'} = {};
   
   return $self;
 }
 
 
-=head2 add_subset
+=head2 add_new_subset
 
   Arg [1]    : string - sub set name e.g. the file name (not path as we're restricted to 30 chars)
-  Arg [2]    : (optional) Bio::EnsEMBL::Funcgen::ExperimentalSubset
-  Example    : $expset->add_subset($ss_name, $exp_subset);
+  Example    : $expset->add_new_subset($ss_name, $exp_subset);
   Description: Adds experimental_subset
   Returntype : none
   Exceptions : Throws if set is already present
@@ -142,7 +138,7 @@ sub new {
 
 =cut
 
-sub add_subset {
+sub add_new_subset {
   my ($self, $ss_name, $exp_sset) = @_;
 	
   if($self->get_subset_by_name($ss_name)){
@@ -155,8 +151,16 @@ sub add_subset {
 	  throw('ExperimentalSubsets must be valid and stored');
 	}
   }
+  else{
+	$exp_sset = Bio::EnsEMBL::Funcgen::ExperimentalSubset->new(
+															   -name => $ss_name,
+															   -experiment => $self,
+															  );
+  }
 
   $self->{'subsets'}{$ss_name} = $exp_sset;
+
+  return $self->{'subsets'}{$ss_name};
 }
 
 

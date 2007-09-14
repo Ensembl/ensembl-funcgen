@@ -248,7 +248,7 @@ sub _objs_from_sth {
 														  -FEATURE_TYPE => $ftype,
 														  -CELL_TYPE    => $ctype,
 														  -ADAPTOR      => $self,
-												   );
+														 );
     }
     
     #This assumes logical association between chip from the same exp, confer in store method?????????????????
@@ -261,6 +261,7 @@ sub _objs_from_sth {
 	$eset->add_subset($ess_name, Bio::EnsEMBL::Funcgen::ExperimentalSubset->new( -name    => $ess_name,
 																				 -dbID    => $ess_id,
 																				 -adaptor => $self,
+																				 -experimental_set => $eset,
 																			   ));
 	
   }
@@ -314,7 +315,7 @@ sub store{
 	my $ct_id = (defined $set->cell_type()) ? $set->cell_type->dbID() : undef;
 	my $ft_id = (defined $set->feature_type()) ? $set->feature_type->dbID() : undef;
 
-    $sth->bind_param(1, $set->get_Experiment->dbID(),  SQL_INTEGER);
+    $sth->bind_param(1, $set->get_Experiment->dbID(),   SQL_INTEGER);
 	$sth->bind_param(4, $ft_id,                         SQL_INTEGER);
 	$sth->bind_param(3, $ct_id,                         SQL_INTEGER);
   	$sth->bind_param(4, $set->format,                   SQL_VARCHAR);
@@ -326,7 +327,7 @@ sub store{
     $set->dbID( $sth->{'mysql_insertid'} );
     $set->adaptor($self);
     
-    $self->store_ExperimentalSubsets($set);
+    $self->store_ExperimentalSubsets($set->get_subsets()) if @{$set->get_subsets()};
   }
   
   return \@exp_sets;
@@ -350,13 +351,7 @@ sub store{
 
 
 sub store_ExperimentalSubsets{
-  my ($self, $exp_set) = @_;
-  
-  if(! (ref($exp_set) && 
-		$exp_set->isa("Bio::EnsEMBL::Funcgen::ExperimentalSet") &&
-		$exp_set->is_stored($self->db()))){
-    throw("You must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalSet");
-  }
+  my ($self, $ssets) = @_;
   
   my $sth = $self->prepare("
 		INSERT INTO experimental_subset (
@@ -364,43 +359,40 @@ sub store_ExperimentalSubsets{
 		) VALUES (?, ?)
 	");
 
-  my @sset_names = @{$exp_set->get_subset_names()};
-  
-
-  if(! @sset_names){
-	throw('Must provide at least one ExperimentalSubset');
-  }
+  throw('Must provide at least one ExperimentalSubset') if(! @$ssets);
 
   #Store and set all previously unstored table_ids
-  foreach my $sub_set_name(@sset_names){
-	my $sset;
-
-	#Test if subset is already stored and warn
-	if($sset = $exp_set->get_subset_by_name($sub_set_name)){
-	  
-	  if($sset->dbID()){
-		warn "Skipping ExperimentalSubset $sub_set_name - already stored in the DB";
-		next;
-	  }
+  foreach my $sset(@$ssets){
+	
+	#use is_stored here?
+	if($sset->dbID()){
+	  warn "Skipping ExperimentalSubset ".$sset->()." - already stored in the DB";
+	  next;
 	}
+	
 
-	$sth->bind_param(1, $exp_set->dbID(),       SQL_INTEGER);
-	$sth->bind_param(2, $sub_set_name,          SQL_VARCHAR);
+	$sth->bind_param(1, $sset->experimental_set->dbID(), SQL_INTEGER);
+	$sth->bind_param(2, $sset->name(),                   SQL_VARCHAR);
 	$sth->execute();
 
+	$sset->dbID($sth->{'mysql_insertid'});
+	$sset->adaptor($self);
 
+
+	#No need to set it as we're working on the hasref here, so should be updated in the class.
 	#add directly to avoid name clash warnings
-	$exp_set->{'subsets'}{$sub_set_name} = Bio::EnsEMBL::Funcgen::ExperimentalSubset->new
-	  (
-	   -dbID    => $sth->{'mysql_insertid'},
-	   -name    => $sub_set_name,
-	   -adaptor => $self,
-	   #-experimental_set_id?
-	  );
+	#$exp_set->{'subsets'}{$sub_set_name} = Bio::EnsEMBL::Funcgen::ExperimentalSubset->new
+	#  (
+	#   -dbID    => $sth->{'mysql_insertid'},
+	#   -name    => $sub_set_name,
+	#   -adaptor => $self,
+	#   #-experimental_set_id?
+	#  );
 
   }
   
-  return $exp_set;
+  #don't really need to return as we're passing the ref
+  return $ssets;
 }
 
 =head2 list_dbIDs

@@ -159,6 +159,8 @@ delete from annotated_feature where feature_set_id = 27;
 -- no alter column defs for stable_id
 alter table regulatory_feature change column stable_id `stable_id` mediumint(8) unsigned default NULL;
 -- allows for ~16 millions regulatory features
+--add index
+alter table regulatory_feature add  KEY `stable_id_idx` (`stable_id`);
 
 -- v47 build specific data tidy up
 -- delete from annotated_feature where feature_set_id >56;
@@ -207,133 +209,100 @@ insert into result select * from tmp_result;
 DROP TABLE IF EXISTS `tmp_result`;
 
 
--- some federation testing
-CREATE TABLE `experiment_1_result` (
-   `result_id` int(10) unsigned NOT NULL auto_increment,
-   `probe_id` int(10) unsigned default NULL,
-   `score` double default NULL,
-   `chip_channel_id` int(10) unsigned NOT NULL,
-   `X` smallint(4) unsigned default NULL,
-   `Y` smallint(4) unsigned default NULL,
-   PRIMARY KEY  (`result_id`),
-   KEY `probe_idx` (`probe_id`),
-   KEY `chip_channel_idx` (`chip_channel_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+
+--
+-- Table structure for table `experimental_set`
+-- experimental_file?
+
+-- This is to accomodate any direct import of features from a pre-processed experiment
+-- e.g. a short reads experiment
+-- It by passes all the array_chip/experimental_chip/channel/result level information and ties directly into a feature/data_set
+-- we need to be able to record the status of each set member/file individually for recovery purposes?
+-- No because we can't roll bak on a file basis anyway due to lack of chip_channel like ids in the annotated_feature table
+-- Would this be restricted to one feature per experiment?
+-- If not need to have a experimental_set_id
+-- best to do this anyway so we are in line with chip experiemtns in allowing multiple feature/cell_type per experimenht
+-- and then we also have an experimental_set_idin the data_set table
+
+-- should we intercede 'file' into ther table names to make it more clear? 
+
+DROP TABLE IF EXISTS `experimental_set`;
+CREATE TABLE `experimental_set` (
+   `experimental_set_id` int(10) unsigned NOT NULL auto_increment,
+   `experiment_id` int(10) unsigned default NULL, --
+   `feature_type_id` int(10) unsigned default NULL,
+   `cell_type_id` int(10) unsigned default NULL,
+   `format` varchar(20) default NULL,
+   `vendor` varchar(40) default NULL,
+   `name` varchar(40) not NULL default '0',
+   PRIMARY KEY  (`experimental_set_id`),
+   UNIQUE KEY `name_idx` (`name`),
+   KEY `experiment_idx` (`experiment_id`),
+   KEY `feature_type_idx` (`feature_type_id`),
+   KEY `cell_type_idx` (`cell_type_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
-insert into experiment_1_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y from result r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=r.chip_channel_id;
+-- do we want a name field? 40 to coomodate exp_name plus BR /TR notation etc.
+-- do we want a type field? 'SHORT_READ' or ????
+-- format is type of short read, platform name? 
+-- now where do we put the experimental type? Format? Vendor?
+-- do we need an auxilliary table here akin to supporting set to remove redundancy of cell_type, feature_type
+-- Do we need replicates if we are peak calling outside the DB?
+-- keys on vendor/format?
 
-insert into experiment_1_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y from result r, chip_channel cc, experimental_chip ec, channel c where ec.experiment_id=1 and ec.experimental_chip_id=c.experimental_chip_id and c.channel_id=cc.table_id and cc.table_name='channel' and cc.chip_channel_id=r.chip_channel_id;
+--
+-- Table structure for table `experimental_subset`
+--
 
+-- represents a file from a subset
+-- mainly used for tracking import and recovery 
 
-select count(e1r.score) from experiment_1_result e1r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=e1r.chip_channel_id;
-
--- without result_id
---+------------------+
---| count(e1r.score) |
---+------------------+
---|          1507152 |
---+------------------+
---1 row in set (17.34 sec)
-
---with result_id
-
---+------------------+
---| count(e1r.score) |
---+------------------+
---|          1507152 |
---+------------------+
---1 row in set (18.02 sec)
-
-
-select count(r.score) from result r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=r.chip_channel_id;
-
---+----------------+
---| count(r.score) |
---+----------------+
---|        1507152 |
---+----------------+
---1 row in set (1 min 32.54 sec)
-
--- 6 * faster for 4 chip set at start or table!!! 
-
-CREATE TABLE `experiment_12_result` (
-   `result_id` int(10) unsigned NOT NULL auto_increment,
-   `probe_id` int(10) unsigned default NULL,
-   `score` double default NULL,
-   `chip_channel_id` int(10) unsigned NOT NULL,
-   `X` smallint(4) unsigned default NULL,
-   `Y` smallint(4) unsigned default NULL,
-   PRIMARY KEY  (`result_id`),
-   KEY `probe_idx` (`probe_id`),
-   KEY `chip_channel_idx` (`chip_channel_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+DROP TABLE IF EXISTS `experimental_subset`;
+CREATE TABLE `experimental_subset` (
+   `experimental_subset_id` int(10) unsigned NOT NULL auto_increment,
+   `experimental_set_id` int(10) unsigned NOT NULL default '0',
+   `name` varchar(30) NOT NULL default '0', -- filename?	
+   PRIMARY KEY  (`experimental_subset_id`), 
+   UNIQUE KEY `set_name_dx` (`experimental_set_id`, `name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
-
---insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r, chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=r.chip_channel_id;
---- this is triplicating due to psuedo triplicate result set!!!!
---- Need to do a join on the insert selects? 
-
-
---insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r where r.chip_channel_id IN(select distinct(cc.chip_channel_id) from  chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip');
-
---insert into experiment_12_result select NULL, r.probe_id, r.score, r.chip_channel_id, r.X, r.Y  from result r where r.chip_channel_id IN(select distinct(cc.chip_channel_id) from  channel c, chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=c.experimental_chip_id and c.channel_id=cc.table_id and cc.table_name='channel');
+-- remove experimental_set_id from key to force uniqueness of file?
+-- No file names may be same across expeirments, this allows addition of same sub set to different sets
+-- whilst making it unique whtin a set
+-- no we can't have multi experiment sets at present, still migh have same filename tho
 
 
---these cause loss of server, tmp table too big?
---try different approach
---copy entire table and delete all those not matching the IN list;
+--uppdate data_set
+alter table data_set change `supporting_set_type` `supporting_set_type` enum('result', 'feature', 'experimental') default NULL;
 
 
-select count(e12r.score) from experiment_12_result e12r, chip_channel cc, experimental_chip ec where ec.experiment_id=1 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=e12r.chip_channel_id;
+--start generating curated_feature schema, to support core regulatory features.
 
---+-------------------+
---| count(e12r.score) |
---+-------------------+
---|                 0 |
---+-------------------+
---1 row in set (8 min 38.02 sec)
+DROP TABLE IF EXISTS `curated_feature`;
+CREATE TABLE `curate_feature` (
+  `curated_feature_id` int(10) unsigned NOT NULL auto_increment,
+  `seq_region_id` int(10) unsigned NOT NULL default '0',
+  `seq_region_start` int(10) unsigned NOT NULL default '0',
+  `seq_region_end` int(10) unsigned NOT NULL default '0',
+  `seq_region_strand` tinyint(1) NOT NULL default '0',	
+  `display_label` varchar(60) default NULL,
+  `feature_type_id`	int(10) unsigned default NULL,
+  `feature_set_id`	int(10) unsigned default NULL,
+  PRIMARY KEY  (`curated_feature_id`),
+  KEY `curated_type_idx` (`curated_type_id`),
+  KEY `curated_set_idx` (`curated_set_id`),
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 
 
-select count(r.score) from result r, chip_channel cc, experimental_chip ec where ec.experiment_id=12 and ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip' and cc.chip_channel_id=r.chip_channel_id;
+--need to vhange average row length on this and on regulatory feature!!
 
 
---+----------------+
---| count(r.score) |
---+----------------+
---|       41575161 |
---+----------------+
---1 row in set (1 min 50.84 sec)
-
-
--- now a few typical slice query
-SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM result r, probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = 18 AND cc.chip_channel_id = r.chip_channel_id AND r.probe_id=pf.probe_id AND pf.seq_region_id=29 AND pf.seq_region_end>=30773649 AND pf.seq_region_start<=30873649 ORDER by pf.seq_region_start;
-
---161202 rows in set (1.87 sec)
-
-SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM experiment_12_result r, probe_feature pf, chip_channel cc, seq_region sr WHERE cc.result_set_id = 18 AND cc.chip_channel_id = r.chip_channel_id AND r.probe_id=pf.probe_id AND pf.seq_region_id=29 AND pf.seq_region_end>=30773649 AND pf.seq_region_start<=30873649 ORDER by pf.seq_region_start;
-
--- 483606 rows in set (2.75 sec)
-
--- pager took a lot longer to display result for both queries
--- so problem is shuttling data, not necessarily table size?
-
--- I think we're getting duplications here due to incorrect join!!
--- what's going on here?
-
--- I THINK WE NEED AN EXTRA KEY ON PROBE_FEATURE
-
--- HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!See above and do below
-
-
--- can we speed this up by breaking the up the queries?
-
--- This should be all experiments present in result, altho avoiding join on result
-select distinct(ec.experiment_id) from chip_channel cc, experimental_chip ec where ec.experimental_chip_id=cc.table_id and cc.table_name='experimental_chip';
-select distinct(ec.experiment_id) from chip_channel cc, experimental_chip ec, channel c where ec.experimental_chip_id=c.experimentl_chip_id and c.channel_id=cc.table_id and cc.table_name='channel;
-
+--alter feature set column
+alter table feature_set change type `type` enum("annotated", "regulatory", "curated") default NULL;
 
 
 -- tidy up overlap feature_sets and create data_sets for them

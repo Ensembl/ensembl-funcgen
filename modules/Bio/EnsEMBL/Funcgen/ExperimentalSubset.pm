@@ -13,10 +13,10 @@ Bio::EnsEMBL::ExperimentalSet - A module to represent ExperimentalSubset object.
 use Bio::EnsEMBL::Funcgen::ExperimetnalSubset;
 
 my $data_set = Bio::EnsEMBL::Funcgen::ExperimentalSubset->new(
-	                                                         -DBID            => $dbID,
-							 					             -ADAPTOR         => $self,
-                                                             -NAME            => $name,
-                                                             #do we really need ExperimentalSet or maybe just dbID?
+	                                                         -DBID             => $dbID,
+							 					             -ADAPTOR          => $self,
+                                                             -NAME             => $name,
+                                                             -EXPERIMENTAL_SET => $eset,
                                                              );
 
 
@@ -60,6 +60,7 @@ use vars qw(@ISA);
                                                                         -DBID            => $dbID,
 							 					                        -ADAPTOR         => $self,
                                                                         -NAME            => $name,
+                                                                        -EXPERIMENTAL_SET => $eset,
                                                                         );
 
 
@@ -81,13 +82,21 @@ sub new {
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
   my ($name)
-    = rearrange(['NAME'], @_);
+    = rearrange(['NAME', 'EXPERIMENTAL_SET'], @_);
   
   
   throw('Must provide a name argument') if ! defined $name;
 
-  $self->{'name'} = $name;
+  if(!(ref($eset) && 
+	   $eset->isa('Bio::EnsEMBL::Fucngen::ExperimentalSet')
+	   && $eset->dbID())){
+	throw('Must provide a valid stored experimental_set argument');
+  }
   
+
+  $self->{'name'} = $name;
+  $self->{'experimental_set'} = $eset;
+
   return $self;
 }
 
@@ -108,7 +117,21 @@ sub name {
   return $self->{'name'};
 }
 
+=head2 experimental_set
 
+  Example    : my $eset = $exp_sset->experimental_set();
+  Description: Getter for the experimental_set attribute of this ExperimentalSubset.
+  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalSet
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub experimental_set {
+  my $self = shift;
+  return $self->{'experiemental_set'};
+}
 
 
 
