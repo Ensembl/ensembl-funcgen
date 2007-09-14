@@ -22,7 +22,9 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 
 =head1 AUTHOR(S)
 
-Nathan Johnson, njohnson@ebi.ac.uk
+Nathan Johnson, njohnson@ebi.ac.ukAll sounds pretty good to me.  Maybe I'd just add that a wiggle track is available on contigview too?
+
+
 
 
 =cut
@@ -107,14 +109,14 @@ sub new{
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, $no_mage)
+	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, $no_mage, $eset_name)
 	= rearrange(['FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
-				 'UPDATE_XML', 'NO_MAGE'], @_);
+				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME'], @_);
   #add mail flag
   #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
   #would have to make sure GroupDefs is inherited first so we can set some mandatory params
@@ -175,6 +177,7 @@ sub new{
   $self->{'update_xml'} = $update_xml || 0;
   $self->{'write_mage'} = $write_mage || 0;
   $self->{'no_mage'} = $no_mage || 0;
+  $self->{'experimental_set_name'} = $eset_name if $eset_name;
  
   warn "Hardocing no_magefor non-NIMBLEGEN imports";
   $self->{'no_mage'} = 1 if ($self->vendor ne 'NIMBLEGEN');
@@ -723,6 +726,30 @@ sub create_output_dirs{
 
 
 
+#move this to SolexaDefs/ExperimentalSetDefs?
+
+=head2 experimental_set_name
+  
+  Example    : my $esset_name = $imp->experimental_set_name();
+  Description: Getter/Setter for experimental_set_name
+  Arg [1]    : optional - ExperimentalSet name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub experimental_set_name{
+  my $self = shift;
+
+  $self->{'experimental_set_name'} = shift if @_;
+
+  return $self->{'experimental_set_name'};
+}
+
+
+
 =head2 vendor
   
   Example    : $imp->vendor("NimbleGen");
@@ -737,8 +764,12 @@ sub create_output_dirs{
 
 sub vendor{
   my ($self) = shift;
-  $self->{'vendor'} = shift if(@_);
-  $self->{'vendor'} = uc($self->{'vendor'});
+
+  if(@_){
+	$self->{'vendor'} = shift;
+	$self->{'vendor'} = uc($self->{'vendor'});
+  }
+
   return $self->{'vendor'};
 }
 

@@ -68,7 +68,6 @@ sub new{
 	
   ($self->{'name'}) = rearrange(['NAME'], @_);
 
-  #throw('Must provide an Experiment name for a Solexa import') if ! defined $name;
 
   #should we provide args override for all of these?
 
@@ -149,6 +148,10 @@ sub new{
 sub set_defs{
   my $self = shift;
 
+
+  throw('Must provide an ExperimentalSet name for a Solexa import') if ! defined $self->experimental_set_name();
+  
+
 #  #dir are not set in defs to enable generic get_dir method access
 
 #  $self->{'design_dir'} = $self->get_dir('data').'/input/'.
@@ -190,6 +193,8 @@ sub read_and_import_bed_data{
  
   my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name());
   
+  warn "got eset $eset";
+
   if(! defined $eset){
 	$eset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new(
 														-name         => $self->experimental_set_name(),
@@ -201,7 +206,6 @@ sub read_and_import_bed_data{
 													   );
 	($eset)  = @{$eset_adaptor->store($eset)};
   }
-
 
   #we need a way to define replicates on a file basis when we have no meta file!
   #can we make this generic for application to array imports?
@@ -248,9 +252,7 @@ sub read_and_import_bed_data{
 	#store if not already, skips if stored
 	$eset_adaptor->store_ExperimentalSubsets([$sub_set]);
 
-	warn "Got stored eset with dbID ".$eset->dbID();
-  
-	if ($sub_set->adaptor->has_status('IMPORTED', $sub_set)){
+	if ($sub_set->has_status('IMPORTED')){
 	  $self->log("ExperimentalSubset(${filename}) has already been imported");
 	} 
 	else {

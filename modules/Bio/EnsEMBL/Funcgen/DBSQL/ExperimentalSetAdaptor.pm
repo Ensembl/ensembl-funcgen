@@ -107,7 +107,7 @@ sub fetch_all_by_CellType {
 }
  
 
-=head2 fetch_by_Experiment
+=head2 fetch_all_by_Experiment
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
   Example    : $exp_set = $eseta->fetch_by_Experiment($exp);
@@ -119,18 +119,37 @@ sub fetch_all_by_CellType {
 
 =cut
 
-sub fetch_by_Experiment {
+sub fetch_all_by_Experiment {
   my ($self, $exp) = @_;
 
   if( ! ( ref($exp) &&
 		  $exp->isa('Bio::EnsEMBL::Fucngen::Experiment') &&
 		  $exp->dbID())){
-	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experimental');
+	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
 		
-  return $self->generic_fetch('es.experiment_id = '.$exp->dcID());
+  return $self->generic_fetch('es.experiment_id = '.$exp->ddID());
 }
 
+=head2 fetch_by_name
+
+  Arg [1]    : string - ExperimentalSet name
+  Example    : $exp_set = $eseta->fetch_by_Experiment('exp_set_1');
+  Description: Retrieves a ExperimentalSet based on the ExperimetnalSet name
+  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalSet
+  Exceptions : Throws if no name provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_by_name {
+  my ($self, $name) = @_;
+
+  throw('Need to pass a name argument') if( ! defined $name);
+		
+  return $self->generic_fetch("es.name ='${name}'")->[0];
+}
 
 =head2 _tables
 
@@ -174,7 +193,8 @@ sub _columns {
 			  es.experimental_set_id  es.experiment_id
 			  es.feature_type_id      es.cell_type_id
 			  es.format               es.vendor
-			  ess.name                ess.supporting_set_id
+			  es.name     			  ess.name
+			  ess.experimental_subset_id
 		 );
 
 	
@@ -194,16 +214,36 @@ sub _columns {
 
 =cut
 
-sub _default_where_clause {
+#sub _default_where_clause {
+#  my $self = shift;
+
+#  return 'es.experimental_set_id = ess.experimental_set_id';
+
+#}
+
+=head2 _left_join
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns an additional table joining constraint to use for
+			   queries.
+  Returntype : List
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _left_join {
   my $self = shift;
-
-  return 'es.experimental_set_id = ess.experimental_set_id';
-
-  
-
+	
+  return (['experimental_subset', 'es.experimental_set_id = ess.experimental_set_id']);
 }
 
-#No need for left join as we are forcing at the one ExperimentalSubset
+
+
+
 
 =head2 _objs_from_sth
 
@@ -222,12 +262,12 @@ sub _default_where_clause {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my ($dbid, $exp_id, $ftype_id, $ctype_id, $format, $vendor, $ess_name, $ess_id);
+  my ($dbid, $exp_id, $ftype_id, $ctype_id, $format, $vendor, $name, $ess_name, $ess_id);
   my ($eset, @esets, $ftype, $ctype);
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
   my $exp_adaptor = $self->db->get_ExperimentAdaptor();
-  $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, \$vendor, \$ess_name, \$ess_id);
+  $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, \$vendor, \$name, \$ess_name, \$ess_id);
   
   #this fails if we delete entries from the joined tables
   #causes problems if we then try and store an rs which is already stored
@@ -248,6 +288,7 @@ sub _objs_from_sth {
 														  -FEATURE_TYPE => $ftype,
 														  -CELL_TYPE    => $ctype,
 														  -ADAPTOR      => $self,
+														  -NAME         => $name,
 														 );
     }
     
@@ -256,16 +297,17 @@ sub _objs_from_sth {
 	
 	#we're not controlling ctype and ftype during creating new ExperimentalSets to store.
 	#we should change add_table_id to add_ExperimentalChip and check in that method
-    
-	
-	$eset->add_subset($ess_name, Bio::EnsEMBL::Funcgen::ExperimentalSubset->new( -name    => $ess_name,
-																				 -dbID    => $ess_id,
-																				 -adaptor => $self,
-																				 -experimental_set => $eset,
-																			   ));
-	
+    if(defined $ess_name){
+	  
+	  $eset->add_new_subset($ess_name, Bio::EnsEMBL::Funcgen::ExperimentalSubset->new( -name    => $ess_name,
+																				   -dbID    => $ess_id,
+																				   -adaptor => $self,
+																				   -experimental_set => $eset,
+																				 ));
+	  
+	}
   }
-
+  
   push @esets, $eset if $eset;
   
   return \@esets;
@@ -294,8 +336,8 @@ sub store{
   
   
   my $sth = $self->prepare('INSERT INTO experimental_set (experiment_id, feature_type_id, 
-                                                       cell_type_id,format, vendor) 
-                                                       VALUES (?, ?, ?, ?, ?)');
+                                                       cell_type_id,format, vendor, name) 
+                                                       VALUES (?, ?, ?, ?, ?, ?)');
   
   my $db = $self->db();
   
@@ -320,12 +362,16 @@ sub store{
 	$sth->bind_param(3, $ct_id,                         SQL_INTEGER);
   	$sth->bind_param(4, $set->format,                   SQL_VARCHAR);
   	$sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
+	$sth->bind_param(6, $set->name,                     SQL_VARCHAR);
+	
+	
   
     
     $sth->execute();
     
     $set->dbID( $sth->{'mysql_insertid'} );
     $set->adaptor($self);
+
     
     $self->store_ExperimentalSubsets($set->get_subsets()) if @{$set->get_subsets()};
   }
@@ -366,7 +412,7 @@ sub store_ExperimentalSubsets{
 	
 	#use is_stored here?
 	if($sset->dbID()){
-	  warn "Skipping ExperimentalSubset ".$sset->()." - already stored in the DB";
+	  warn "Skipping ExperimentalSubset ".$sset->name()." - already stored in the DB";
 	  next;
 	}
 	

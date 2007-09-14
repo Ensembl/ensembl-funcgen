@@ -20,6 +20,7 @@ my $data_set = Bio::EnsEMBL::Funcgen::ExperimentalSet->new(
                                                           -CELL_TYPE    => $ctype,
                                                           -FORMAT       => 'READ_FORMAT',
                                                           -VENDOR       => 'SOLEXA',
+                                                          -NAME         => 'ExpSet1',
                                                           );
 
 
@@ -49,6 +50,7 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::ExperimentalSet;
 
+use Bio::EnsEMBL::Funcgen::ExperimentalSubset;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
 use Bio::EnsEMBL::Funcgen::Storable;
@@ -67,8 +69,7 @@ use vars qw(@ISA);
                                                                      -CELL_TYPE    => $ctype,
                                                                      -FORMAT       => 'READ_FORMAT',
                                                                      -VENDOR       => 'SOLEXA',
-                                                                     #-SUBSETS     => \@file_names,???
-                                                                     # -NAME ???  
+                                                                     -NAME         => 'ExpSet1',
                                                                      );
 
   Do we want to define subsets likes this or are we more likely to add them one by one?
@@ -90,8 +91,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($exp, $ftype, $ctype, $format, $vendor)
-    = rearrange(['EXPERIMENT', 'FEATURE_TYPE', 'CELL_TYPE', 'FORMAT', 'VENDOR'], @_);
+  my ($exp, $ftype, $ctype, $format, $vendor, $name)
+    = rearrange(['EXPERIMENT', 'FEATURE_TYPE', 'CELL_TYPE', 'FORMAT', 'VENDOR', 'NAME'], @_);
     
   if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
@@ -115,10 +116,12 @@ sub new {
 	$self->{'cell_type'} = $ctype;
   }
 
+  throw('Must provide a name parameter') if(! defined $name);
+
   $self->format($format) if defined $format;
   $self->vendor($vendor) if defined $vendor;
   $self->{'experiment'} = $exp;
-  #$self->name($name)   if $name;
+  $self->{'name'} = $name;
   $self->{'subsets'} = {};
   
   return $self;
@@ -152,9 +155,10 @@ sub add_new_subset {
 	}
   }
   else{
+	
 	$exp_sset = Bio::EnsEMBL::Funcgen::ExperimentalSubset->new(
 															   -name => $ss_name,
-															   -experiment => $self,
+															   -experimental_set => $self,
 															  );
   }
 
@@ -239,8 +243,8 @@ sub get_subset_names{
 
 =head2 name
 
-  Example    : my $dset->name('DATASET1');
-  Description: Getter/Setter for the name of this DataSet.
+  Example    : my $dset->name('ExpSet1');
+  Description: Getter for the name of this ExperimentalSet.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -248,13 +252,10 @@ sub get_subset_names{
 
 =cut
 
-#sub name {
-#  my $self = shift;
-     	
-#  $self->{'name'} = shift if @_;
-
-#  return $self->{'name'};
-#}
+sub name {
+  my $self = shift;
+  return $self->{'name'};
+}
 
 =head2 vendor
 

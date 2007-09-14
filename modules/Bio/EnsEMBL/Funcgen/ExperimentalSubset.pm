@@ -81,14 +81,14 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($name)
+  my ($name, $eset)
     = rearrange(['NAME', 'EXPERIMENTAL_SET'], @_);
   
   
   throw('Must provide a name argument') if ! defined $name;
 
   if(!(ref($eset) && 
-	   $eset->isa('Bio::EnsEMBL::Fucngen::ExperimentalSet')
+	   $eset->isa('Bio::EnsEMBL::Funcgen::ExperimentalSet')
 	   && $eset->dbID())){
 	throw('Must provide a valid stored experimental_set argument');
   }
@@ -130,7 +130,7 @@ sub name {
 
 sub experimental_set {
   my $self = shift;
-  return $self->{'experiemental_set'};
+  return $self->{'experimental_set'};
 }
 
 
