@@ -35,8 +35,8 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Defs::SolexaDefs;
 
 use Bio::EnsEMBL::Funcgen::ExperimentalSet;
+use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
-use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
@@ -187,14 +187,12 @@ sub read_and_import_bed_data{
  
   my $eset_adaptor = $self->db->get_ExperimentalSetAdaptor();
   my $af_adaptor = $self->db->get_AnnotatedFeatureAdaptor();
+  my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("Parzen");
-  my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("VendorMap");
   my $new_data = 0;
  
   my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name());
   
-  warn "got eset $eset";
-
   if(! defined $eset){
 	$eset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new(
 														-name         => $self->experimental_set_name(),
@@ -211,6 +209,30 @@ sub read_and_import_bed_data{
   #can we make this generic for application to array imports?
   #currently we have to do a separate import for each replicate, specifying the result files each time
   #we need to add a experimental_set_name option
+  #Actually ExperimentalSet is a little redundant as we can do the roll back which is exactly what this is designed to facilitate
+  #It does however allow incremental addition of new subsets
+
+  #Now define FeatureSet
+  
+  #shouldn't we be using the exp name?
+  my $fset = $fset_adaptor->fetch_by_name($self->experiment->name());
+
+  warn "got fset $fset";
+  
+  if(! defined $fset){
+
+	#currently hardcoded, but we should probably add feature_analysis_name
+	$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+												   -name         => $self->experiment->name(),
+												   -feature_type => $self->feature_type(),
+												   -cell_type    => $self->cell_type(),
+												   -type         => 'annotated',
+												   -analysis     => $anal,
+												  );
+	($fset)  = @{$fset_adaptor->store($fset)};
+
+	warn "got fset $fset";
+  }
 
 
   #Get file
@@ -307,8 +329,9 @@ sub read_and_import_bed_data{
 			 -END           => $end,
 			 -STRAND        => 1,
 			 -SLICE         => $self->cache_slice($chr),
-			 -ANALYSIS      => $fanal,
+			 -ANALYSIS      => $anal,
 			 -DISPLAY_LABEL => $pid,
+			 -FEATURE_SET   => $fset,
 			);
 		  
 		  $af_adaptor->store($feature);

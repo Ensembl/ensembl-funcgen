@@ -324,6 +324,7 @@ sub _objs_from_sth {
 		# Get the cell_type object
 		$ctype_hash{$ctype_id} = $ct_adaptor->fetch_by_dbID($ctype_id) if(! exists $ctype_hash{$ctype_id});
 
+
 		$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
 													   -dbID         => $feature_set_id,
 													   -adaptor      => $self,
@@ -389,7 +390,7 @@ sub store {
 			$sth->bind_param(2, $fset->analysis->dbID(),     SQL_INTEGER);
 			$sth->bind_param(3, $ctype_id,                   SQL_INTEGER);
 			$sth->bind_param(4, $fset->name(),               SQL_VARCHAR);
-			$sth->bind_param(4, $fset->type(),               SQL_VARCHAR);
+			$sth->bind_param(5, $fset->type(),               SQL_VARCHAR);
 		
 			$sth->execute();
 			$fset->dbID($sth->{'mysql_insertid'});
