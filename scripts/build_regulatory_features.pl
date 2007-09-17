@@ -1,4 +1,5 @@
-#!/software/bin/perl
+#!/usr/bin/perl
+##!/software/bin/perl
 
 =head1 NAME
 
@@ -93,7 +94,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file);
-use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild;
+use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
 
 # use ensembldb as we may want to use an old version
 
@@ -187,11 +188,11 @@ $fg_sr_id = $afa->get_seq_region_id_by_Slice($slice);
 #should this be printing to OUT or STDERR?
 #or remove as we're printing this later?
 print
-    '# Focus set(s): ', join(" ", map {$focus_fsets{$_}->name} keys %focus_fsets), "\n",
-    '# Target set(s): ', join(" ", map {$target_fsets{$_}->name} sort keys %target_fsets), "\n",
+    '# Focus set(s): ', join(", ", map {$focus_fsets{$_}->name.' ('.$focus_fsets{$_}->dbID.')'} keys %focus_fsets), "\n",
+    '# Target set(s): ', join(", ", map {$target_fsets{$_}->name.' ('.$target_fsets{$_}->dbID.')'} sort keys %target_fsets), "\n",
     '# Species: ', $species, "\n",
     '# Chromosome: ', join(" ",$slice->display_id(),$slice->get_seq_region_id), "\n",
-    '# core seq_region_id '.$core_sr_id." => fg seq_region_id ".$fg_sr_id."\n";
+    '#   core seq_region_id '.$core_sr_id." => fg seq_region_id ".$fg_sr_id."\n";
 
 if ($dump) {
     
@@ -228,6 +229,144 @@ if ($dump) {
 }
 
 my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
+
+
+
+
+# Read from file and process sequentially in sorted by start, end order. Each 
+# new feature is checked if it overlaps with the preceeding already seen 
+# features. If yes we just carry on with the next one. Otherwise
+
+
+my (@features, $focus_feature, @regulatory_features, %regulatory_feature);
+my ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
+
+while (<$fh>) {
+
+    ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id) = split (/\s+/, $_);
+    #print Dumper ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
+	
+	&add_feature();
+
+	if (exists $focus_fsets{$fset_id}) {
+
+		# current feature is focus feature
+		print "Focus feature\n";
+
+		# no focus feature as seed available
+		if (! %regulatory_feature ) {
+
+			%regulatory_feature = (
+				start => $start,
+				end => $end,
+				annotated => { $af_id => ''}
+			);
+
+			# look upstream for features overlaping with focus feature
+			for (my $i=$#features; $i>=0; $i--) {
+				
+				if ($features[$i]->{end} >= $start) {
+					
+					print "Found overlap\n";
+					
+					# add annot. feature id to reg. feature
+					$regulatory_feature{annotated}{$features[$i]->{af_id}} = '';
+					
+					# update start of regulatory feature
+					$regulatory_feature{start} = $features[$i]->{start}
+					if ($features[$i]->{start} < $regulatory_feature{start});
+					
+					# update end of regulatory feature
+					$regulatory_feature{end} = $features[$i]->{end}
+					if ($features[$i]->{end} > $regulatory_feature{end});
+					
+				}
+			
+			}
+
+		} else {
+
+			# next focus_feature overlaps either previous focus feature or 
+			# current focus feature
+			if ($start < $regulatory_feature{end}) {
+				
+				# add annot. feature id to reg. feature
+				$regulatory_feature{annotated}{$af_id} = '';
+					
+				# update end of regulatory feature
+				$regulatory_feature{end} = $end
+					if ($end > $regulatory_feature{end});
+
+			} else {
+
+				push(@regulatory_features, %regulatory_feature);
+				%regulatory_feature = ();
+
+			}
+
+		}
+
+		#print Dumper %regulatory_feature;
+
+		$focus_feature = $features[$#features];
+
+	} else {
+
+		# ordinary feature
+
+		if ( $focus_feature && $start <= $focus_feature->{end} ) {
+
+			print "Found overlap\n";
+
+			# add annot. feature id to reg. feature
+			$regulatory_feature{annotated}{$af_id} = '';
+			
+			# update end of regulatory feature
+			$regulatory_feature{end} = $end
+				if ($end > $regulatory_feature{end});
+			
+		}
+# else {
+#
+#			push(@regulatory_features, %regulatory_feature);
+#			%regulatory_feature = ();
+#
+#		}
+
+	}
+			
+}
+
+
+if (%regulatory_feature) {
+	push(@regulatory_features, %regulatory_feature);
+
+}
+print Dumper @regulatory_features;
+
+
+sub add_feature ()
+{
+
+    push(@features, 
+         {
+             af_id => $af_id,
+             start => $start,
+             end => $end,
+             strand => $strand,
+             score => $score,
+             fset_id => $fset_id
+             }
+         );
+
+}
+
+sub build_regulatory_feature ()
+{
+
+    my ($features) = @_;
+    
+}
 
 
 1;
