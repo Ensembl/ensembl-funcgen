@@ -65,7 +65,7 @@ use strict;
 
 =cut
 
-=pod
+
 
 sub fetch_by_db_accession {
   my $self = shift;
@@ -143,93 +143,23 @@ sub fetch_by_db_accession {
 }
 
 
-=cut
-
-
-=head2 fetch_all_by_Gene
-
-  Arg [1]    : Bio::EnsEMBL::Gene $gene 
-               (The gene to retrieve DBEntries for)
-  Example    : @db_entries = @{$db_entry_adaptor->fetch_by_Gene($gene)};
-  Description: This returns a list of DBEntries associated with this gene.
-               Note that this method was changed in release 15.  Previously
-               it set the DBLinks attribute of the gene passed in to contain
-               all of the gene, transcript, and translation xrefs associated
-               with this gene.
-  Returntype : listref of Bio::EnsEMBL::DBEntries; may be of type IdentityXref if
-               there is mapping data, or GoXref if there is linkage data.
-  Exceptions : thows if gene object not passed
-  Caller     : Bio::EnsEMBL::Gene
-  Status     : Stable
-
-=cut
 
 sub fetch_all_by_Gene {
   my ( $self, $gene) = @_;
-
-  if(!ref($gene) || !$gene->isa('Bio::EnsEMBL::Gene')) {
-    throw("Bio::EnsEMBL::Gene argument expected.");
-  }
-
-  return $self->fetch_by_db_accession('core', $gene->stable_id());
+  throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');
 }
-
-
-=head2 fetch_all_by_Transcript
-
-  Arg [1]    : Bio::EnsEMBL::Transcript
-  Example    : @db_entries = @{$db_entry_adaptor->fetch_by_Transcript($trans)};
-  Description: This returns a list of DBEntries associated with this 
-               transcript. Note that this method was changed in release 15.
-               Previously it set the DBLinks attribute of the gene passed in
-               to contain all of the gene, transcript, and translation xrefs
-               associated with this gene.
-  Returntype : listref of Bio::EnsEMBL::DBEntries; may be of type IdentityXref if
-               there is mapping data, or GoXref if there is linkage data.
-  Exceptions : throes if transcript argument not passed
-  Caller     : Bio::EnsEMBL::Gene
-  Status     : Stable
-
-=cut
 
 sub fetch_all_by_Transcript {
   my ( $self, $trans) = @_;
-
-  if(!ref($trans) || !$trans->isa('Bio::EnsEMBL::Transcript')) {
-    throw("Bio::EnsEMBL::Transcript argument expected.");
-  }
-
-  return $self->fetch_by_db_accession('core', $trans->stable_id());
+  throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');
 }
 
-
-=head2 fetch_all_by_Translation
-
-  Arg [1]    : Bio::EnsEMBL::Translation $trans
-               (The translation to fetch database entries for)
-  Example    : @db_entries = @{$db_entry_adptr->fetch_by_Translation($trans)};
-  Description: Retrieves external database entries for an EnsEMBL translation
-  Returntype : listref of Bio::EnsEMBL::DBEntries; may be of type IdentityXref if
-               there is mapping data, or GoXref if there is linkage data.
-  Exceptions : throws if translation object not passed
-  Caller     : general
-  Status     : Stable
-
-=cut
 
 sub fetch_all_by_Translation {
   my ( $self, $trans) = @_;
-
-  if(!ref($trans) || !$trans->isa('Bio::EnsEMBL::Translation')) {
-    throw('Bio::EnsEMBL::Translation argument expected.');
-  }
-  if( ! $trans->dbID ){ 
-    warning( "Cannot fetch_all_by_Translation without a dbID" );
-    return [];
-  }
-
-  return $self->fetch_by_db_accession('core', $trans->stable_id );
+  throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');  
 }
+
 
 
 =head2 list_gene_ids_by_external_db_id
@@ -368,9 +298,10 @@ sub list_translation_ids_by_extids {
 sub list_regulatory_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
-  return
-    $self->_type_by_external_id( $external_name, 'regulatory_feature', undef,
-                                 $external_db_name );
+  warn "in list with $external_name, $external_db_name ";
+
+  return $self->_type_by_external_id( $external_name, 'regulatory_feature', 
+									  undef, $external_db_name );
 }
 
 =head2 list_external_feature_ids_by_extid

@@ -51,11 +51,11 @@ package Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Funcgen::Feature;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Feature);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Feature);
 
 
 =head2 new
@@ -333,8 +333,9 @@ sub regulatory_attributes {
   my $table;
   my %adaptors = (
 				  'annotated_feature' => $self->adaptor->db->get_AnnotatedFeatureAdaptor(),
-				  #'curated_feature' => $self->adaptor->db->get_CuratedFeatureAdaptor(),
+				  #'external_feature' => $self->adaptor->db->get_ExternalFeatureAdaptor(),
 				 );
+
   #my %attr_class_tables = (
   #'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
   #					   'Bio::EnsEMBL::Funcgen::CuratedFeature' => 'curated',
@@ -346,14 +347,17 @@ sub regulatory_attributes {
   #deref here for safety??
   #$self->{'regulatory_attributes'} =  [@$attrs] if $attrs;
 
-  foreach my $attr(@$attrs){
-	#will this work?
-	$table = $attr->adaptor->_tables()->[0]->[0];
-	
-	#check for isa Feature here?
+  if(@$attrs){
 
-	#$table =~ s/_feature//;
-	$self->{'regulatory_attributes'}{$table}{$attr->dbID()} = $attr; 
+	foreach my $attr(@$attrs){
+	  #will this work?
+	  $table = $attr->adaptor->_tables()->[0]->[0];
+	  
+	  #check for isa Feature here?
+	  
+	  #$table =~ s/_feature//;
+	  $self->{'regulatory_attributes'}{$table}{$attr->dbID()} = $attr; 
+	}
   }
 
   #do we need this block if we are not using the id approach outside of the reg_build script?

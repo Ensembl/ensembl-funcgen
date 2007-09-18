@@ -697,6 +697,83 @@ sub _remap {
 }
 
 
+
+=head2 fetch_all_by_external_name
+
+  Arg [1]    : String $external_name
+               An external identifier of the feature to be obtained
+  Arg [2]    : (optional) String $external_db_name
+               The name of the external database from which the
+               identifier originates.
+  Example    : my @features =
+                  @{ $adaptor->fetch_all_by_external_name( 'NP_065811.1') };
+  Description: Retrieves all features which are associated with
+               an external identifier such as a GO term, Swissprot
+               identifer, etc.  Usually there will only be a single
+               feature returned in the list reference, but not
+               always.  Features are returned in their native
+               coordinate system, i.e. the coordinate system in which
+               they are stored in the database.  If they are required
+               in another coordinate system the Feature::transfer or
+               Feature::transform method can be used to convert them.
+               If no features with the external identifier are found,
+               a reference to an empty list is returned.
+  Returntype : arrayref of Bio::EnsEMBL::Feature objects
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub fetch_all_by_external_name {
+  my ( $self, $external_name, $external_db_name ) = @_;
+
+  my $entryAdaptor = $self->db->get_DBEntryAdaptor();
+
+  my @ids;
+
+  if($self->isa('Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor')){
+	@ids = $entryAdaptor->list_regulatory_feature_ids_by_extid($external_name, $external_db_name);
+  }else{
+	warn "Does not yet accomodate non regulatory feature external names";
+	return;
+	@ids = $entryAdaptor->list_external_feature_ids_by_extid($external_name, $external_db_name);
+  }
+
+  return $self->fetch_all_by_dbID_list( \@ids );
+}
+
+=head2 fetch_by_display_label
+
+  Arg [1]    : String $label - display label of feature to fetch
+  Example    : my $feat = $adaptor->fetch_by_display_label("BRCA2");
+  Description: Returns the feature which has the given display label or
+               undef if there is none. If there are more than 1, only the first
+               is reported.
+  Returntype : Bio::EnsEMBL::Funcgen::Feature
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub fetch_by_display_label {
+  my $self = shift;
+  my $label = shift;
+
+  my @tables = $self->_tables();
+  #my $syn = $tables[0]->[1];
+
+  my $constraint = "x.display_label = '$label'";# AND ${syn}.is_current = 1";
+  my ($feature) = @{ $self->generic_fetch($constraint) };
+
+  return $feature;
+}
+
+
+
+
+
 1;
 
 
