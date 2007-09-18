@@ -227,7 +227,7 @@ sub _tables {
   return (
 		  [ 'regulatory_feature', 'rf' ],
 		  [ 'feature_set', 'fs'],
-		  [ 'regulatory_attribute', 'ra']
+		  [ 'regulatory_attribute', 'ra'],
 		 );
 }
 

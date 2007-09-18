@@ -255,6 +255,7 @@ sub get_available_adaptors{
 			   'ExperimentalSet'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalSetAdaptor',
 			   'CuratedSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::CuratedSetAdaptor',
 			   'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
+			   'DBEntry'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
 	 	       
 	       #add required EnsEMBL(core) adaptors here
 	       #Should write/retrieve from efg not dna db
