@@ -1,10 +1,9 @@
-#!/usr/bin/perl
-##!/software/bin/perl
+#!/software/bin/perl
 
 =head1 NAME
 
 build_regulatory_features.pl -- builds features for the "Ensembl 
-Regulatory Ruild", the moral equivalent of the gene build
+Regulatory Build", the moral equivalent of the gene build
 
 =head1 SYNOPSIS
 
@@ -14,7 +13,27 @@ build_regulatory_features.pl -host host -user user -pass password
 
 =head1 DESCRIPTION
 
+This script is the core to compute the regulatory features for the 
+"Ensembl Regulatory Build". A regulatory feature consists of
 
+ a) all features that directly overlap with a focus feature, and
+ b) features that are contained in focus-feature-overlaping features
+
+The following figure gives examples.
+
+      |------|  |-------- F1 --------|   |----|
+
+      |---------------------------------------|
+
+  |--X--|  |------| |------|   |---------|  |--X---|
+
+      |============= RegFeature ==============|
+
+                                            |- F2 -|
+
+      |=============== RegFeature =================|
+
+[more documentation to be added]
 
 =head1 LICENCE
 
@@ -230,119 +249,132 @@ if ($dump) {
 
 my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
 
-
-
-
 # Read from file and process sequentially in sorted by start, end order. Each 
 # new feature is checked if it overlaps with the preceeding already seen 
 # features. If yes we just carry on with the next one. Otherwise
 
 
-my (@features, $focus_feature, @regulatory_features, %regulatory_feature);
+my (@features, $focus_end, @regulatory_features, %regulatory_feature);
 my ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
 
 while (<$fh>) {
 
+	next if (/^#/);
+	
+	print if ($debug);
+
     ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id) = split (/\s+/, $_);
     #print Dumper ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
-	
-	&add_feature();
+	#print $af_id, "\n";
 
 	if (exists $focus_fsets{$fset_id}) {
 
-		# current feature is focus feature
-		print "Focus feature\n";
 
-		# no focus feature as seed available
-		if (! %regulatory_feature ) {
+		# current feature is focus feature
+		print "focus feature ($af_id)\n" if ($debug);
+
+		# no regulatory feature seed available
+		if ( ! %regulatory_feature ) {
 
 			%regulatory_feature = (
-				start => $start,
-				end => $end,
-				annotated => { $af_id => ''}
-			);
-
-			# look upstream for features overlaping with focus feature
-			for (my $i=$#features; $i>=0; $i--) {
-				
-				if ($features[$i]->{end} >= $start) {
-					
-					print "Found overlap\n";
-					
-					# add annot. feature id to reg. feature
-					$regulatory_feature{annotated}{$features[$i]->{af_id}} = '';
-					
-					# update start of regulatory feature
-					$regulatory_feature{start} = $features[$i]->{start}
-					if ($features[$i]->{start} < $regulatory_feature{start});
-					
-					# update end of regulatory feature
-					$regulatory_feature{end} = $features[$i]->{end}
-					if ($features[$i]->{end} > $regulatory_feature{end});
-					
-				}
+				'start' => $start,
+				'end' => $end,
+				'annotated' => { 
+					$af_id => undef 
+				});
 			
-			}
+			$focus_end = $regulatory_feature{end};
+
+			&update_5prime();
 
 		} else {
 
-			# next focus_feature overlaps either previous focus feature or 
-			# current focus feature
+			
 			if ($start < $regulatory_feature{end}) {
-				
+			
+				print "focus_feature overlaps regulatory feature; add ($af_id) to reg. feature\n"
+					if ($debug);
+	
 				# add annot. feature id to reg. feature
-				$regulatory_feature{annotated}{$af_id} = '';
-					
+				$regulatory_feature{annotated}{$af_id} = undef;
+
 				# update end of regulatory feature
 				$regulatory_feature{end} = $end
 					if ($end > $regulatory_feature{end});
 
+				# add annot. feature id to reg. feature
+				map {
+					if ($_->{end} <= $regulatory_feature{end}) {
+						print "add (".$_->{af_id}.") to reg. feature\n" if ($debug);
+						$regulatory_feature{annotated}{$_->{af_id}} = undef 
+					} 
+				} @features;
+
+				@features = ();
+					
 			} else {
 
+				print "close regulatory feature\n" if ($debug);
 				push(@regulatory_features, %regulatory_feature);
-				%regulatory_feature = ();
+
+				%regulatory_feature = (
+					'start' => $start,
+					'end' => $end,
+					'annotated' => { 
+						$af_id => undef 
+					});
+			
+				$focus_end = $regulatory_feature{end};
+
+				&update_5prime();
 
 			}
 
 		}
 
-		#print Dumper %regulatory_feature;
-
-		$focus_feature = $features[$#features];
+		$focus_end = ($end > $focus_end) ? $end : $focus_end;
 
 	} else {
 
 		# ordinary feature
 
-		if ( $focus_feature && $start <= $focus_feature->{end} ) {
+		if ( defined $focus_end && $start <= $focus_end ) {
 
-			print "Found overlap\n";
+			print "overlap w/ focus feature; add (".$af_id.") to reg. feature\n" 
+				if ($debug);
 
 			# add annot. feature id to reg. feature
-			$regulatory_feature{annotated}{$af_id} = '';
+			$regulatory_feature{annotated}{$af_id} = undef;
 			
 			# update end of regulatory feature
 			$regulatory_feature{end} = $end
 				if ($end > $regulatory_feature{end});
 			
+		} elsif (%regulatory_feature && $end <= $regulatory_feature{end}) {
+
+			print "contained within reg. feature; add ($af_id) to reg. feature\n" 
+				if ($debug);
+
+			# add annot. feature id to reg. feature
+			$regulatory_feature{annotated}{$af_id} = undef;
+			
+		} else {
+
+			print "add to feature list ($af_id)\n" if ($debug);
+			&add_feature();
+
 		}
-# else {
-#
-#			push(@regulatory_features, %regulatory_feature);
-#			%regulatory_feature = ();
-#
-#		}
 
 	}
 			
 }
 
-
 if (%regulatory_feature) {
 	push(@regulatory_features, %regulatory_feature);
 
 }
-print Dumper @regulatory_features;
+
+print "\n", Dumper @regulatory_features;
 
 
 sub add_feature ()
@@ -361,12 +393,44 @@ sub add_feature ()
 
 }
 
-sub build_regulatory_feature ()
+sub update_5prime()
 {
+	
+	# look upstream for features overlaping with focus feature
+	
+	foreach my $ft (@features) {
+		
+		if ($ft->{end} >= $start) {
+			
+			print "1st feature that overlaps w/ focus (".$ft->{af_id}.")\n" if ($debug);
+			
+			# update start of regulatory feature
+			$regulatory_feature{start} = $ft->{start}
+			if ($ft->{start} < $regulatory_feature{start});
+			
+			# add all annot. features (af_ids) from the list to reg. feature 
+			# and update reg. feature end if necessary
+			map {
+				if ($_->{start} >= $regulatory_feature{start})
+				{
+					print "add (".$_->{af_id}.") to reg. feature\n" if ($debug);
+					$regulatory_feature{annotated}{$_->{af_id}} = ();
+					$regulatory_feature{end} = $_->{end}
+								if ($_->{end} > $regulatory_feature{end});
+				}
+			} @features;
+			
+			print "empty feature list\n" if ($debug);
+			@features = ();
+			
+			last;
+			
+		}
+		
+	}
 
-    my ($features) = @_;
-    
 }
+
 
 
 1;
