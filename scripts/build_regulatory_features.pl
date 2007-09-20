@@ -1,5 +1,6 @@
-#!/usr/bin/perl
-##!/software/bin/perl
+#!/software/bin/perl
+
+####!/usr/bin/perl
 
 =head1 NAME
 
@@ -61,6 +62,7 @@ my ($pass,$port,$host,$user,$dbname,$species,$help,$man,
     $data_version,$outdir,$do_intersect,$write_features,
 	$dump_features,$seq_name,$clobber,
     $focus,$target,$dump,$debug);
+
 GetOptions (
 	"pass|p=s"       => \$pass,
 	"port=s"         => \$port,
@@ -149,6 +151,8 @@ my $fsa = $db->get_FeatureSetAdaptor();
 my $afa = $db->get_AnnotatedFeatureAdaptor();
 my $sa = $db->get_SliceAdaptor();
 my $aa = $db->get_AnalysisAdaptor();
+my $ga = $cdb->get_GeneAdaptor();
+#my $ta = $cdb->get_TranscriptAdaptor();
 
 my $anal = Bio::EnsEMBL::Analysis->new(
 	-logic_name      => 'RegulatoryFeature',
@@ -534,7 +538,8 @@ sub update_5prime()
 
 }
 
-sub build_binstring(){
+sub build_binstring()
+{
 
 	my ($rf) = @_;
 
@@ -544,7 +549,43 @@ sub build_binstring(){
 			(exists $rf->{fsets}->{$_->dbID})? 1 : 0;	
 	}
 
+	$binstring .= &get_gene_signature($rf);
+	
 	return $binstring;
+
+}
+
+
+sub get_gene_signature()
+{
+
+	my ($rf) = @_;
+
+
+	my $tss = 0;
+	my $tts = 0;
+
+    # get feature slice +/- 2.5kB
+    my $expand = 2500;
+	
+	my ($feature_slice, $expanded_slice);
+	$feature_slice = $sa->fetch_by_seq_region_id($core_sr_id,
+												 $rf->{start},
+												 $rf->{end});
+	$expanded_slice = $feature_slice->expand($expand, $expand);
+
+	foreach my $g (@{$ga->fetch_all_by_Slice($expanded_slice)}) {
+	
+		$tss = 1 if (($g->strand == 1  && $g->start > 0) ||
+                     ($g->strand == -1 && $g->end <= $expanded_slice->length));
+        $tts = 1 if (($g->strand == 1  && $g->end <= $expanded_slice->length) ||
+                     ($g->strand == -1 && $g->start > 0));
+
+		last if ($tss && $tts);
+
+	}
+	
+	return $tss.$tts;
 
 }
 
