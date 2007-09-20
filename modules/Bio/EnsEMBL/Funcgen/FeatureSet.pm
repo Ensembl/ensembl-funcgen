@@ -83,8 +83,8 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($analysis, $feature_type, $cell_type, $name, $type)
-    = rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'NAME', 'TYPE'], @_);
+  my ($analysis, $feature_type, $cell_type, $name, $type, $edb_name)
+    = rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'NAME', 'TYPE', 'EXTERNAL_DB_NAME'], @_);
 
   #Analysis already checked in BaseFeatureAdaptor
   if (! $feature_type || ! $analysis || ! $type){
@@ -103,6 +103,8 @@ sub new {
   $self->type($type);
   $self->cell_type($cell_type) if $cell_type;
   $self->name($name) if $name;
+  $self->external_db_name($edb_name) if $edb_name;
+  
 
   return $self;
 }
@@ -175,6 +177,27 @@ sub name {
 
   return $self->{'name'};
 }
+
+=head2 external_db_name
+
+  Example    : my $fset->external_db_name('miRanda');
+  Description: Getter/Setter for the external_db name of this FeatureSet.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub external_db_name {
+  my $self = shift;
+     	
+  $self->{'external_db_name'} = shift if @_;
+
+  return $self->{'external_db_name'};
+}
+
+
 
 =head2 type
 

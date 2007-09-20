@@ -225,6 +225,36 @@ sub fetch_by_name {
   
 }
 
+=head2 fetch_by_external_db
+
+  Arg [1]    : string - name of external_db
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Example    : my @fsets = @{$fset_adaptor->fetch_by_external_db('miRanda')};
+  Description: Fetch all FeatureSets which are linked to an external_db of a given name
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : Throws if no external_db name passed 
+  Caller     : General
+  Status     : At Risk 
+
+=cut
+
+sub fetch_by_external_db {
+  my ($self, $name, $status) = @_;
+  
+  throw("Must provide a name argument") if (! defined $name);
+  
+  my $sql = "ed.name='".$name."'";
+  
+  if($status){
+    my $constraint = $self->status_to_constraint($status) if $status;
+    $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+  }
+
+  return $self->generic_fetch($sql)->[0];
+  
+}
+
+
 =head2 fetch_attributes
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::OligoArray - array to fetch attributes for
@@ -262,7 +292,10 @@ sub fetch_attributes {
 sub _tables {
 	my $self = shift;
 	
-	return ['feature_set', 'fs'];
+	return (['feature_set',     'fs'],
+			['feature_set_db', 'fsd'],
+			['external_db',     'ed'],
+		   );
 }
 
 =head2 _columns
@@ -281,8 +314,54 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id fs.name fs.type);
+	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id fs.name fs.type ed.db_name);
 }
+
+
+=head2 _left_join
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns an additional table joining constraint to use for
+			   queries.
+  Returntype : List
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _left_join {
+  my $self = shift;
+	
+  return (['feature_set_db', 'fs.feature_set_id = fsd.feature_set_id']);
+}
+
+=head2 _default_where_clause
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns an additional table joining constraint to use for
+			   queries.
+  Returntype : String
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _default_where_clause {
+  my $self = shift;
+  #will this return if there are no entrie in data_set_member?
+  #do we have to implement a join here?
+
+	
+  return 'fsd.external_db_id = ed.external_db_id';
+}
+
+
 
 =head2 _objs_from_sth
 
@@ -301,7 +380,7 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type);
+	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type, $dbname);
 	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, %ftype_hash, %ctype_hash);
 	
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
@@ -309,7 +388,7 @@ sub _objs_from_sth {
 	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	$ctype_hash{'NULL'} = undef;
 
-	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name, \$type);
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name, \$type, \$dbname);
 	
 	while ( $sth->fetch()) {
 
@@ -333,6 +412,7 @@ sub _objs_from_sth {
 													   -cell_type    => $ctype_hash{$ctype_id},
 													   -name         => $name,
 													   -type         => $type,
+													   -external_db_name  => $dbname,
 							      );
 
 		push @fsets, $fset;
@@ -353,6 +433,8 @@ sub _objs_from_sth {
   Returntype : Listref of stored FeatureSet objects
   Exceptions : Throws if FeatureSet does not have a stored FeatureType
                Throws if invalid FeatureSet passed
+               Warns if external_db_name not defined is type is external
+               Throws if external_db is not present in the db
   Caller     : General
   Status     : At Risk
 
@@ -369,19 +451,36 @@ sub store {
                                  VALUES (?, ?, ?, ?, ?)");
 
 
+	my $esd_sth = $self->prepare("INSERT INTO feature_set_db
+                                 (feature_set_id, external_db_id)
+                                 VALUES (?, ?)");
+
+	my ($sql, $edb_id, %edb_hash);
+
     foreach my $fset (@fsets) {
 		throw('Can only store FeatureSet objects, skipping $fset')	if ( ! $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet'));
-
+		
 		if (!( $fset->dbID() && $fset->adaptor() == $self )){#use is_stored?
 
-			
+		  if($fset->type() eq 'external' && ! defined $fset->external_db_name()){
+			warn('You are loading an ExternalFeature FeatureSet with no associated external_db name');
+		  }
+
+
+		  #Need to check external_db is present.
+		  	if(defined $fset->external_db_name() && ! exists $edb_hash{$fset->external_db_name()}){
+			  $sql = 'SELECT external_db_id from external_db where db_name="'.$fset->external_db_name().'"';
+			  ($edb_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+			  
+			  throw ('You must specifcy a previously stored external_db name') if(! $edb_id);
+			  $edb_hash{$fset->external_db_name()} = $edb_id;
+			}
+					
 			#my $s_fset = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
 			#throw("ExperimentalChip already exists in the database with dbID:".$s_ec->dbID().
 			#	  "\nTo reuse/update this ExperimentalChip you must retrieve it using the ExperimentalChipAdaptor".
 			#	  "\nMaybe you want to use the -recover option?") if $s_ec;
-		
-
-			 
+					 
 			throw("FeatureSet must have a stored FeatureType") if (! $fset->feature_type->is_stored($self->db()));
 			 
 			my $ctype_id = (defined $fset->cell_type()) ? $fset->cell_type->dbID() : undef;
@@ -395,6 +494,13 @@ sub store {
 			$sth->execute();
 			$fset->dbID($sth->{'mysql_insertid'});
 			$fset->adaptor($self);
+
+			if(defined $edb_id){
+			  $esd_sth->bind_param(1, $fset->dbID(), SQL_INTEGER);
+			  $esd_sth->bind_param(2, $edb_id,       SQL_INTEGER);
+			  $esd_sth->execute();
+			}
+
 		}else{
 			#assume we want to update the states
 			warn('You may want to use $fset->adaptor->store_states($fset)');

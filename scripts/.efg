@@ -1,6 +1,6 @@
 #!/usr/local/bin/bash
 
-echo "Setting up Ensembl Function Genomics environment..." #and cd'ing to $EFG_SRC" 
+echo "Setting up the Ensembl Function Genomics environment..." #and cd'ing to $EFG_SRC" 
 
 #add alias efg='. ~/src/ensembl-efg/.efg' to your .bashrc
 

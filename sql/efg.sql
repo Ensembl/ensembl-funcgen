@@ -154,8 +154,8 @@ CREATE TABLE `probe` (
    `array_chip_id` int(10) unsigned NOT NULL default '0',
    `class` varchar(20) default NULL,
     PRIMARY KEY  (`probe_id`, `name`),
-    KEY `array_chip_idx` (`array_chip_id`),
-    KEY `probe_set_idx` (`probe_set_id`)
+    KEY `probe_set_idx` (`probe_set_id`),
+    KEY `array_chip_idx` (`array_chip_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -287,7 +287,7 @@ DROP TABLE IF EXISTS `feature_type`;
 CREATE TABLE `feature_type` (
    `feature_type_id` int(10) unsigned NOT NULL auto_increment,
    `name` varchar(40) default NULL,
-   `class` varchar(40) default NULL,
+   `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region') default NULL,
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`feature_type_id`),
    UNIQUE KEY `name_class_idx` (`name`, `class`)
@@ -305,10 +305,9 @@ CREATE TABLE `feature_type` (
 DROP TABLE IF EXISTS `data_set`;
 CREATE TABLE `data_set` (
    `data_set_id` int(10) unsigned NOT NULL auto_increment,
-   `result_set_id` int(10) unsigned default '0',
    `feature_set_id` int(10) unsigned default '0',
    `name` varchar(40) default NULL,
-   `supporting_set_type` enum('result', 'feature', 'experimental') default NULL,
+   `supporting_set_type` enum('result', 'feature', 'experimental', 'external') default NULL,
    PRIMARY KEY  (`data_set_id`, `feature_set_id`),
    KEY `supporting_type_idx` (`supporting_set_type`),
    UNIQUE KEY `name_idx` (name)
@@ -517,11 +516,18 @@ CREATE TABLE `feature_set` (
    `analysis_id`  int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `name` varchar(250) default NULL,
-   `type` enum('annotated', 'regulatory', 'supporting') default NULL,
+   `type` enum('annotated', 'regulatory', 'external') default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `external_feature`
+--
+
+
 
 
 
@@ -544,8 +550,8 @@ CREATE TABLE `regulatory_feature` (
   PRIMARY KEY  (`regulatory_feature_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
-  KEY `stable_id_idx` (`stable_id`),
-  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
+  KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 --stable_id is not unique as we may have several instances across different cell_types
@@ -586,7 +592,7 @@ DROP TABLE IF EXISTS `regulatory_attribute`;
 CREATE TABLE `regulatory_attribute` (
   `regulatory_feature_id` int(10) unsigned NOT NULL default '0',
   `attribute_feature_id` int(10) unsigned NOT NULL default '0',
-  `attribute_feature_table` enum('annotated', 'supporting') default NULL,
+  `attribute_feature_table` enum('annotated', 'external') default NULL,
   PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=17;
 
@@ -941,6 +947,122 @@ CREATE TABLE `seq_region` (
 -- basically pull back seq_region_id based schema_build and core_seq_region_id
 -- can we omit core_coord_system_id? As we have this info from the cs table.
 -- other keys?
+
+
+
+
+--xref stuff
+
+DROP TABLE IF EXISTS `object_xref`;
+CREATE TABLE object_xref (
+  object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  ensembl_id                  INT(10) UNSIGNED NOT NULL, 
+  ensembl_object_type         ENUM('regulatory feature', 'external_feature')
+                              not NULL,
+  xref_id                     INT UNSIGNED NOT NULL,
+  linkage_annotation          VARCHAR(255) DEFAULT NULL,
+  UNIQUE (ensembl_object_type, ensembl_id, xref_id),
+  KEY oxref_idx (object_xref_id, xref_id, ensembl_object_type, ensembl_id),
+  KEY xref_idx (xref_id, ensembl_object_type)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
+
+
+--regulatory_feature or RegulatoryModule or/and RegulatoryRegion?
+--we are going to have to do the vega trick here of loading all the regulatory features as an external_db to enable xrefs to core.
+--ensembl_id could be eFG dbID or core stable_id
+
+DROP TABLE IF EXISTS identity_xref;
+CREATE TABLE identity_xref (
+  object_xref_id          INT(10) UNSIGNED NOT NULL,
+  query_identity 	  INT(5),
+  target_identity         INT(5),
+  hit_start               INT,
+  hit_end                 INT,
+  translation_start       INT,
+  translation_end         INT,
+  cigar_line              TEXT, 
+  score                   DOUBLE,
+  evalue                  DOUBLE,
+  analysis_id             SMALLINT UNSIGNED NOT NULL,
+  PRIMARY KEY (object_xref_id),
+  KEY analysis_idx (analysis_id)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+DROP TABLE IF EXISTS xref;
+CREATE TABLE xref (
+   xref_id 		      INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+   external_db_id             SMALLINT UNSIGNED NOT NULL,
+   dbprimary_acc              VARCHAR(40) NOT NULL,
+   display_label              VARCHAR(128) NOT NULL,
+   version                    VARCHAR(10) DEFAULT '0' NOT NULL,
+   description                VARCHAR(255),
+   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED') not NULL,
+   info_text                  VARCHAR(255),
+   PRIMARY KEY (xref_id),
+   UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text),
+   KEY display_index (display_label),
+   KEY info_type_idx (info_type)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=100;
+
+
+
+--  Table structure for table 'external_synonym'
+
+DROP TABLE IF EXISTS external_synonym;
+CREATE TABLE external_synonym (
+  xref_id                     INT(10) UNSIGNED NOT NULL,
+  synonym                     VARCHAR(40) NOT NULL, 
+  PRIMARY KEY (xref_id, synonym),
+  KEY name_index (synonym)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=20;
+
+
+
+-- Table structure for table 'external_db' 
+
+DROP TABLE IF EXISTS external_db;
+CREATE TABLE external_db (
+  external_db_id 	          SMALLINT(5) UNSIGNED NOT NULL auto_increment,
+  db_name                     VARCHAR(28) NOT NULL,
+  db_release                  VARCHAR(255),
+  status                      ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL,
+  dbprimary_acc_linkable      BOOLEAN DEFAULT 1 NOT NULL,
+  display_label_linkable      BOOLEAN DEFAULT 0 NOT NULL,
+  priority                    INT NOT NULL,
+  db_display_name             VARCHAR(255),
+  type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM'),
+  secondary_db_name           VARCHAR(255) DEFAULT NULL,
+  secondary_db_table          VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (external_db_id) 
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
+
+
+
+-- Table structure for table 'go_xref'
+
+DROP TABLE if EXISTS go_xref;
+CREATE TABLE go_xref (
+  object_xref_id          INT(10) UNSIGNED DEFAULT '0' NOT NULL,
+  linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 
+		               'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL,
+  source_xref_id          INT(10) UNSIGNED DEFAULT NULL,
+  KEY (object_xref_id),
+  KEY (source_xref_id),
+  UNIQUE (object_xref_id, source_xref_id, linkage_type)
+)  ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+-- This is just an empty to table to avoid having to rework all the core sql and API to accomodate eFG specific xref schema
+
+
+
+
+
+
+
+
+
 
 
 --- Further thoughts:

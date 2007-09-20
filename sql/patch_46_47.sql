@@ -278,31 +278,184 @@ CREATE TABLE `experimental_subset` (
 alter table data_set change `supporting_set_type` `supporting_set_type` enum('result', 'feature', 'experimental') default NULL;
 
 
---start generating curated_feature schema, to support core regulatory features.
+--tidy up old overlap features/set/types
+delete from annotated_feature where feature_set_id in(56, 55);
+delete from feature_type where name='CTCF:CTCF:DNase1:H2AZ:H2BK5me1:H3K27me1:';
+delete from feature_set where feature_set_id in(56, 55);
+update feature_type set name='Wiggle_H3K4me3_focus' where feature_type_id=17;
+update feature_type set name='Nessie_NG_STD_2_ctcf_ren_BR1_focus' where feature_type_id=16;
+update feature_type set name='GM06990_DNASE_IMPORT_focus' where feature_type_id=18;
 
-DROP TABLE IF EXISTS `curated_feature`;
-CREATE TABLE `curate_feature` (
-  `curated_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `seq_region_id` int(10) unsigned NOT NULL default '0',
-  `seq_region_start` int(10) unsigned NOT NULL default '0',
-  `seq_region_end` int(10) unsigned NOT NULL default '0',
-  `seq_region_strand` tinyint(1) NOT NULL default '0',	
-  `display_label` varchar(60) default NULL,
-  `feature_type_id`	int(10) unsigned default NULL,
-  `feature_set_id`	int(10) unsigned default NULL,
-  PRIMARY KEY  (`curated_feature_id`),
-  KEY `curated_type_idx` (`curated_type_id`),
-  KEY `curated_set_idx` (`curated_set_id`),
-  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+
+-- Tidy up sql discrepencies
+
+alter table array change array_id `array_id` int(10) unsigned NOT NULL auto_increment;
+alter table array_chip change array_chip_id `array_chip_id` int(10) unsigned NOT NULL auto_increment;
+alter table array_chip change array_id `array_id` int(10) unsigned NOT NULL;
+alter table array_chip drop key design_idx;
+alter table array_chip drop key array_idx;
+alter table array_chip add unique key `array_design_idx` (`array_id`, `design_id`);
+alter table channel change channel_id `channel_id` int(10) unsigned NOT NULL auto_increment;
+alter table channel change experimental_chip_id `experimental_chip_id` int(11) unsigned default NULL;
+
+alter table meta_coord change coord_system_id `coord_system_id` int(10) NOT NULL;
+alter table coord_system change coord_system_id `coord_system_id` int(10) NOT NULL auto_increment;
+
+alter table experimental_chip change experimental_chip_id `experimental_chip_id` int(10) unsigned NOT NULL auto_increment;
+alter table experimental_chip change experiment_id `experiment_id` int(10) unsigned NOT NULL;
+alter table experimental_chip change array_chip_id `array_chip_id` int(10) unsigned NOT NULL;
+alter table experimental_chip drop key chip_idx;
+alter table experimental_chip add KEY `feature_type_idx` (`feature_type_id`);
+alter table experimental_chip add KEY `unique_id_idx` (`unique_id`);
+
+alter table experiment change experiment_id `experiment_id` int(10) unsigned NOT NULL auto_increment;
+
+
+alter table feature_type change feature_type_id `feature_type_id` int(10) unsigned NOT NULL auto_increment;
+alter table feature_type drop key feature_type_name_idx;
+alter table feature_type add UNIQUE KEY `name_class_idx` (`name`, `class`);
+
+
+alter table meta change meta_id `meta_id` int(10) NOT NULL auto_increment;
+alter table status change table_id `table_id` int(10) unsigned NOT NULL default '0';
+alter table experimental_variable change table_id `table_id` int(10) unsigned NOT NULL default '0';
+
+alter table regulatory_attribute change `attribute_feature_table` `attribute_feature_table` enum('annotated', 'external') NOT NULL default 'annotated';
+alter table data_set change  supporting_set_type `supporting_set_type` enum('result', 'feature', 'experimental', 'external') default NULL;
+alter table feature_set change type `type` enum("annotated", "regulatory", "external") default NULL;
+
+
+--add xref schema
+
+
+--xref stuff
+
+DROP TABLE IF EXISTS `object_xref`;
+CREATE TABLE object_xref (
+  object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  ensembl_id                  INT(10) UNSIGNED NOT NULL, 
+  ensembl_object_type         ENUM('regulatory_feature', 'external_feature')
+                              not NULL,
+  xref_id                     INT UNSIGNED NOT NULL,
+  linkage_annotation          VARCHAR(255) DEFAULT NULL,
+  UNIQUE (ensembl_object_type, ensembl_id, xref_id),
+  KEY oxref_idx (object_xref_id, xref_id, ensembl_object_type, ensembl_id),
+  KEY xref_idx (xref_id, ensembl_object_type)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
+
+
+--regulatory_feature or RegulatoryModule or/and RegulatoryRegion?
+--we are going to have to do the vega trick here of loading all the regulatory features as an external_db to enable xrefs to core.
+--ensembl_id could be eFG dbID or core stable_id
+
+DROP TABLE IF EXISTS identity_xref;
+CREATE TABLE identity_xref (
+  object_xref_id          INT(10) UNSIGNED NOT NULL,
+  query_identity 	  INT(5),
+  target_identity         INT(5),
+  hit_start               INT,
+  hit_end                 INT,
+  translation_start       INT,
+  translation_end         INT,
+  cigar_line              TEXT, 
+  score                   DOUBLE,
+  evalue                  DOUBLE,
+  analysis_id             SMALLINT UNSIGNED NOT NULL,
+  PRIMARY KEY (object_xref_id),
+  KEY analysis_idx (analysis_id)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+DROP TABLE IF EXISTS xref;
+CREATE TABLE xref (
+   xref_id 		      INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+   external_db_id             SMALLINT UNSIGNED NOT NULL,
+   dbprimary_acc              VARCHAR(40) NOT NULL,
+   display_label              VARCHAR(128) NOT NULL,
+   version                    VARCHAR(10) DEFAULT '0' NOT NULL,
+   description                VARCHAR(255),
+   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED') not NULL,
+   info_text                  VARCHAR(255),
+   PRIMARY KEY (xref_id),
+   UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text),
+   KEY display_index (display_label),
+   KEY info_type_idx (info_type)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=100;
+
+
+
+--  Table structure for table 'external_synonym'
+
+DROP TABLE IF EXISTS external_synonym;
+CREATE TABLE external_synonym (
+  xref_id                     INT(10) UNSIGNED NOT NULL,
+  synonym                     VARCHAR(40) NOT NULL, 
+  PRIMARY KEY (xref_id, synonym),
+  KEY name_index (synonym)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=20;
+
+
+
+-- Table structure for table 'external_db' 
+
+DROP TABLE IF EXISTS external_db;
+CREATE TABLE external_db (
+  external_db_id 	          SMALLINT(5) UNSIGNED NOT NULL auto_increment,
+  db_name                     VARCHAR(28) NOT NULL,
+  db_release                  VARCHAR(255),
+  status                      ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL,
+  dbprimary_acc_linkable      BOOLEAN DEFAULT 1 NOT NULL,
+  display_label_linkable      BOOLEAN DEFAULT 0 NOT NULL,
+  priority                    INT NOT NULL,
+  db_display_name             VARCHAR(255),
+  type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM'),
+  secondary_db_name           VARCHAR(255) DEFAULT NULL,
+  secondary_db_table          VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (external_db_id) 
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
+
+
+
+-- Table structure for table 'go_xref'
+
+DROP TABLE if EXISTS go_xref;
+CREATE TABLE go_xref (
+  object_xref_id          INT(10) UNSIGNED DEFAULT '0' NOT NULL,
+  linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 
+		               'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL,
+  source_xref_id          INT(10) UNSIGNED DEFAULT NULL,
+  KEY (object_xref_id),
+  KEY (source_xref_id),
+  UNIQUE (object_xref_id, source_xref_id, linkage_type)
+)  ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+-- This is just an empty to table to avoid having to rework all the core sql and API to accomodate eFG specific xref schema
+
+
+-- back to the external_feature stuff
+
+--prepare feature_type table to receive new feature classes
+alter table feature_type change class class enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region') default NULL; 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 --need to vhange average row length on this and on regulatory feature!!
 
-
---alter feature set column
-alter table feature_set change type `type` enum("annotated", "regulatory", "curated") default NULL;
 
 
 -- tidy up overlap feature_sets and create data_sets for them
@@ -314,81 +467,12 @@ alter table feature_set change type `type` enum("annotated", "regulatory", "cura
 -- change small table primary key ids to medium int?
 
 
--- tidy up probe_feature table
-
-
-
-
-
-
-
-
-
 
 --add key on ec cell_type_id?
-
-
--- change all ids to int(10), 
--- add UNIQUE KEY `name_idx` (name) on data_set
--- alter key on array_chip  UNIQUE KEY `array_design_idx` (`array_id`, `design_id`)
--- recreate predicted_feature as annotated_feature
-
 -- add enum on channel type TOTAL, EXPERIMENTAL & DUMMY? channels
 
--- add core regulatory tables as supporting_feature tables
--- regulatory_factor_coding is empty and unused?
+-- add core regulatory tables as other_feature tables
+-- regulatory_factor_coding is empty and unused? migrate to xrefs
 
 
--- supporting feature table or import directly into annotated feature
--- where do we draw the line between what goes in supporting rather than annotated?
--- what do we do about the overloading of the feature_type table?
--- supporting features must have multiple insatnces of feature_type with unique ids
--- i.e. high volume e.g. individual miRNAs
-
-CREATE TABLE `supporting_feature` (
- `supporting_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `name` varchar(255) NOT NULL default '',
-  `seq_region_id` int(10) unsigned NOT NULL default '0',
-  `seq_region_start` int(10) unsigned NOT NULL default '0',
-  `seq_region_end` int(10) unsigned NOT NULL default '0',
-  `seq_region_strand` tinyint(4) NOT NULL default '0',
-  `analysis_id` smallint(5) unsigned NOT NULL default '0',
-  `regulatory_factor_id` int(10) unsigned default NULL,
-  `coord_system_id` int(10) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`supporting_feature_id`),
-  KEY `seq_region_idx` (`seq_region_id`,`analysis_id`,`seq_region_start`),
-  KEY `seq_region_idx_2` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
--- imported core regulatory_feature/factor/search_region here
---insert into supporting_feature(select *, 1 from regulatory_feature);
-
---strip off ENST prefixes for names??
-
-
--- add feature_type_id column to replace type
-alter table regulatory_factor add feature_type_id int(10) unsigned NOT NULL default '0';
-insert into feature_type(name, class, description) values('miRNA Target', 'RNA', 'miRNA target motif');
-insert into feature_type(name, class, description) values('Transcription Factor', 'TRANSCRIPTION FACTOR', 'Transcription factor motif');
-insert into feature_type(name, class, description) values('Transcription Factor Complex', 'TRANSCRIPTION FACTOR', 'Transcription complex factor motif');
-
-update regulatory_factor rf, feature_type ft set rf.feature_type_id=ft.feature_type_id where rf.type='miRNA_target' and ft.name='miRNA Target';
-
---don't need to update other as they are all NULL
-
--- remove old type column
-
-alter table regulatory_factor drop type;
-
-
---we need to split the regulatory_search_region table to extract the xrefs
-
-
--- add regulatory factor types to feature_type
-
-
--- need to finish off the reg feature stuff, but doing cs stuff first
-
-
-
+--enum feature_type class default NULL

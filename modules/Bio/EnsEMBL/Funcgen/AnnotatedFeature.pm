@@ -51,11 +51,11 @@ package Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Funcgen::SetFeature;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Feature);
+@ISA = qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
 
 =head2 new
@@ -98,48 +98,16 @@ sub new {
   
   my $self = $class->SUPER::new(@_);
   
-  my ($display_label, $score, $fset, $reg_type, $stable_id, $reg_attrs)
-    = rearrange(['DISPLAY_LABEL', 'SCORE', 'FEATURE_SET', 'REGULATORY_TYPE', 'STABLE_ID', 'REG_ATTRIBUTES'], @_);
+  my ($score,)
+    = rearrange(['SCORE'], @_);
   
-  #check mandatory params here
- 
+  
   $self->score($score) if $score;
-  $self->display_label($display_label) if $display_label;
-  throw("Must provide a FeatureSet") if ! $fset;
-  $self->feature_set($fset);
-  $self->regulatory_type($reg_type) if $reg_type;
-  $self->stable_id($stable_id) if $stable_id;
-  $self->regulatory_attributes(@$reg_attrs) if $reg_attrs;
-
-  #$self->experiment_ids(@$exp_ids);
-
-
-  #do we need to validate this against the db?  Grab from slice and create new if not present? 
-  #Will this be from the dnadb? Or will this work differently for AnnotatedFeatures?
-	
+ 	
 	
   return $self;
 }
 
-=head2 new_fast
-
-  Args       : Hashref with all internal attributes set
-  Example    : none
-  Description: Quick and dirty version of new. Only works if the code is very
-               disciplined.
-  Returntype : Bio::EnsEMBL::Funcgen::AnnotatedFeature
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub new_fast {
-   my ($class, $hashref)  = @_;
-
-
-   return bless ($hashref, $class);
-}
 
 =head2 score
 
@@ -162,32 +130,6 @@ sub score {
 }
 
 
-=head2 feature_set
-
-  Arg [1]    : (optional) Bio::EnsEMBL::FeatureSet 
-  Example    : $pfeature->feature_set($fset);
-  Description: Getter and setter for the feature_set attribute for this feature. 
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
-  Exceptions : Throws is arg is not a valid Bio::EnsEMBL::Funcgen::FeatureSet
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub feature_set {
-    my $self = shift;
-
-    if(@_){
-      my $fset = shift;
-      if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
-	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
-      }
-
-      $self->{'feature_set'} = $fset;
-    }
-
-    return $self->{'feature_set'};
-}
 
 =head2 display_label
 
@@ -224,150 +166,6 @@ sub display_label {
 	
     return $self->{'display_label'};
 }
-
-
-
-=head2 cell_type
-
-  Example    : my $cell_name = $pfeature->cell_type()->name();
-  Description: Getter for the cell_type attribute for this feature.
-  Returntype : Bio::EnsEMBL::Funcgen:CellType
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub cell_type{
-	my $self = shift;
-
-	return $self->feature_set->cell_type();
-}
-
-=head2 feature_type
-
-  Example    : my $ft_name = $pfeature->feature_type()->name();
-  Description: Getter for the feature_type attribute for this feature.
-  Returntype : Bio::EnsEMBL::Funcgen:FeatureType
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub feature_type{
-  my $self = shift;
-  
-  return $self->feature_set->feature_type();
-}
-
-
-#redefined from Feature to use FeatureSet, unless specifically set
-
-=head2 analysis
-
-  Example    : my $analysis = $pfeature->feature_type()->name();
-  Description: Getter for the type attribute for this feature.
-  Returntype : Bio:EnsEMBL::Funcgen::FeatureType
-  Exceptions : Throws if analysis passed is not a valid Bio::EnsEMBL::Analysis
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub analysis{
-  my $self = shift;
-
-
-  #this is to allow multi analysis sets, but the adaptor currently  throws if they are not the same on store
-  if(@_){
-
-    if($_[0]->isa("Bio::EnsEMBL::Analysis")){
-      $self->{'analysis'} = $_[0];
-    }else{
-      throw("Must pass a valid Bio::EnsEMBL::Analysis");
-    }
-    
-  }
-
-  return (defined $self->{'analysis'}) ? $self->{'analysis'} : $self->feature_set->analysis();
-}
-
-
-#hack methods for regulatory features
-
-=head2 regulatory_type
-
-  Arg [1]    : (optional) string - regulatory type e.g. "Promoter Associated"
-  Example    : my $reg_type = $feature->regulatory_type();
-  Description: Getter and setter for the regulatory_type attribute for this feature. 
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub regulatory_type {
-    my $self = shift;
-	
-    $self->{'regulatory_type'} = shift if @_;
-		
-    return $self->{'regulatory_type'};
-}
-
-=head2 stable_id
-
-  Arg [1]    : (optional) string - stable_id e.g ENSR00000000001
-  Example    : my $stable_id = $feature->stable_id();
-  Description: Getter and setter for the stable_id attribute for this feature. 
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub stable_id {
-  my $self = shift;
-	
-  $self->{'stable_id'} = shift if @_;
-  
-  return $self->{'stable_id'};
-}
-
-
-=head2 regulatory_attributes
-
-  Arg [1]    : (optional) list of constituent feature type names
-               e.g. ['H4K20me3', 'DNase1', 'CTCF']
-  Example    : print "Regulatory Attributes:\n\t".join("\n\t", @{$feature->regulatory_attributes()})."\n";
-  Description: Getter and setter for the regulatory_attributes for this feature. 
-  Returntype : listref
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub regulatory_attributes {
-  my $self = shift;
-	
-  @{$self->{'regulatory_attributes'}} = @_ if @_;
-  
-  return $self->{'regulatory_attributes'};
-}
-
-
-
-
-
-
-#other methods
-#type!! Add to BaseFeature?  Hard code val in oligo_feature
-#analysis? Use AnalsisAdapter here, or leave to caller?
-#sources/experiments
-#target, tar
 
 
 

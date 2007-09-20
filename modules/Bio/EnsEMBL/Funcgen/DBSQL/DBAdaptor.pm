@@ -253,7 +253,7 @@ sub get_available_adaptors{
 			   'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
 			   'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
 			   'ExperimentalSet'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalSetAdaptor',
-			   'CuratedSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::CuratedSetAdaptor',
+			   'ExternalFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
 			   'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
 			   'DBEntry'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
 	 	       
