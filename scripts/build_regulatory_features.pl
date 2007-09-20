@@ -1,4 +1,5 @@
-#!/software/bin/perl
+#!/usr/bin/perl
+##!/software/bin/perl
 
 =head1 NAME
 
@@ -57,28 +58,30 @@ use Data::Dumper;
 use Getopt::Long;
 
 my ($pass,$port,$host,$user,$dbname,$species,$help,$man,
-    $data_version,$outdir,$do_intersect,$write_features,$seq_name,$clobber,
+    $data_version,$outdir,$do_intersect,$write_features,
+	$dump_features,$seq_name,$clobber,
     $focus,$target,$dump,$debug);
 GetOptions (
-            "pass|p=s"       => \$pass,
-            "port=s"         => \$port,
-            "host|h=s"       => \$host,
-            "user|u=s"       => \$user,
-            "dbname|d=s"     => \$dbname,
-            "species=s"      => \$species,
-            "help|?"         => \$help,
-            "man|m"          => \$man,
-            "data_version|v=s" => \$data_version,
-            "outdir|o=s"     => \$outdir,
-            "do_intersect|i=s" => \$do_intersect,
-            "write_features|w" => \$write_features,
-            "seq_name|s" => \$seq_name,
-            "clobber" => \$clobber,
-            "focus|f=s" => \$focus,
-            "target|t=s" => \$target,
-            "dump" => \$dump,
-            "debug" => \$debug
-            );
+	"pass|p=s"       => \$pass,
+	"port=s"         => \$port,
+	"host|h=s"       => \$host,
+	"user|u=s"       => \$user,
+	"dbname|d=s"     => \$dbname,
+	"species=s"      => \$species,
+	"help|?"         => \$help,
+	"man|m"          => \$man,
+	"data_version|v=s" => \$data_version,
+	"outdir|o=s"     => \$outdir,
+	"do_intersect|i=s" => \$do_intersect,
+	"write_features|w" => \$write_features,
+	"dump_features"  => \$dump_features,
+	"seq_name|s" => \$seq_name,
+	"clobber" => \$clobber,
+	"focus|f=s" => \$focus,
+	"target|t=s" => \$target,
+	"dump" => \$dump,
+	"debug" => \$debug
+	);
 
 ### defaults ###
 $port = 3306 if !$port;
@@ -113,7 +116,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file);
-use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
+#use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
 
 # use ensembldb as we may want to use an old version
 
@@ -134,7 +137,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -host   => $host,
      -user   => $user,
      -dbname => $dbname,
-	   -species => $species,
+	 -species => $species,
      -pass   => $pass,
      -port   => $port,
      -dnadb  => $cdb
@@ -145,7 +148,30 @@ my $fsa = $db->get_FeatureSetAdaptor();
 #my $fta = $db->get_FeatureTypeAdaptor();
 my $afa = $db->get_AnnotatedFeatureAdaptor();
 my $sa = $db->get_SliceAdaptor();
-#my $aa = $db->get_AnalysisAdaptor();
+my $aa = $db->get_AnalysisAdaptor();
+
+my $anal = Bio::EnsEMBL::Analysis->new(
+	-logic_name      => 'RegulatoryFeature',
+	-db              => 'NULL',
+	-db_version      => 'NULL',
+	-db_file         => 'NULL',
+	-program         => 'NULL',
+	-program_version => 'NULL',
+	-program_file    => 'NULL',
+	-gff_source      => 'NULL',
+	-gff_feature     => 'NULL',
+	-module          => 'NULL',
+	-module_version  => 'NULL',
+	-parameters      => 'NULL',
+	-created         => 'NULL',
+	-description     => 'Union of focus features, features overlapping focus features, '.
+	                    ' and features that are comteined within those',
+	### name changed from "RegulatoryRegion"
+	-display_label   => 'RegulatoryFeature',
+	-displayable     => 1,
+	);
+my $analysis = $aa->fetch_by_dbID($aa->store($anal)) if ($write_features);
+#print Dumper $analysis;
 
 # parse focus and target sets and check that they exist
 my (%focus_fsets, %target_fsets);
@@ -154,6 +180,7 @@ map { my $fset = $fsa->fetch_by_name($_);
       throw("Focus set $_ does not exist in the DB") 
           if (! defined $focus_fsets{$fset->dbID}); 
   } split(',', $focus);
+#print Dumper %focus_fsets;
 
 map { 
     my $fset = $fsa->fetch_by_name($_);
@@ -161,9 +188,79 @@ map {
       throw("Target set $_ does not exist in the DB") 
           if (! defined $target_fsets{$fset->dbID}); 
       } split(',', $target);
+#print Dumper %target_fsets;
 
 # make sure that target sets also contain focus sets (Do we really need this?)
 map { $target_fsets{$_} = $focus_fsets{$_} } keys %focus_fsets;
+
+# dump data to files and exit
+if ($dump) {
+    
+    my @fset_ids = keys %target_fsets;
+    #print Dumper @fset_ids; 
+
+    print STDERR "# Dumping annotated features from database to file.\n";
+    print STDERR "# This will delete existing file dumps of that data version!\n";
+
+    throw("Must specify directory to write the output (-outdir).\n") 
+		if ! defined $outdir;
+    print STDERR "# Output goes to ", $outdir, "\n";
+
+
+    my $sql = "select annotated_feature_id, seq_region_id,".
+        "seq_region_start, seq_region_end,seq_region_strand,".
+        "score,feature_set_id from annotated_feature";
+    my $command = "echo \"$sql\" ".
+        " | mysql -quick -h".$host." -P".$port." -u".$user." -p".$pass." ".$dbname.
+        " | gawk '{if (\$7==".join("||\$7==", @fset_ids).") print }'".
+        " | sort -n -k 2,2 -k 3,3 -k 4,4".
+        " | gawk '{ print >> \"".$outdir."/".$dbname.".annotated_feature_\" \$2 \".dat\" }'";
+
+    print STDERR "# Execute: ".$command."\n" if ($debug);
+    
+    # need to remove existing dump files, since we append to the file
+    system("rm -f $outdir/$dbname.annotated_feature_*.dat") &&
+        throw ("Can't remove files");
+
+    system($command) &&
+        throw ("Can't dump data to file in $outdir");
+
+    exit;
+
+}
+
+
+### build regulatory features
+
+### ChipSeq stuff
+my %ChIPseq_cutoff = (
+                      ### cutoff T/O <= 2
+                      'CD4_CTCF'=>        5,
+                      'CD4_H3K27me3'=>    8,
+                      'CD4_H3K36me3'=>    4,
+                      'CD4_H3K4me3'=>     6,
+                      'CD4_H3K79me3'=>   22,
+                      'CD4_H3K9me3'=>     7,
+                      'CD4_H4K20me3'=>   17,
+                      ### cutoff ~ <= 25000
+                      ### see /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI/data/*.clstr.cutoff_25000.dat
+                      'CD4_H2AZ'=>       15,
+                      'CD4_H2BK5me1'=>   16,
+                      'CD4_H3K27me1'=>    6,
+                      'CD4_H3K27me2'=>    5,
+                      'CD4_H3K36me1'=>    4,
+                      'CD4_H3K4me1'=>    31,
+                      'CD4_H3K4me2'=>    10,
+                      'CD4_H3K79me1'=>    5,
+                      'CD4_H3K79me2'=>    4,
+                      'CD4_H3K9me1'=>    12,
+                      'CD4_H3K9me2'=>     5,
+                      'CD4_H3R2me1'=>     5,
+                      'CD4_H3R2me2'=>     5,
+                      'CD4_H4K20me1'=>   30,
+                      'CD4_H4R3me2'=>     4,
+                      'CD4_PolII'=>       8
+                      );
 
 # retrieve sequence to be analyzed 
 my $slice;
@@ -207,68 +304,40 @@ $fg_sr_id = $afa->get_seq_region_id_by_Slice($slice);
 #should this be printing to OUT or STDERR?
 #or remove as we're printing this later?
 print
-    '# Focus set(s): ', join(", ", map {$focus_fsets{$_}->name.' ('.$focus_fsets{$_}->dbID.')'} keys %focus_fsets), "\n",
-    '# Target set(s): ', join(", ", map {$target_fsets{$_}->name.' ('.$target_fsets{$_}->dbID.')'} sort keys %target_fsets), "\n",
+    '# Focus set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'} sort {$a->name cmp $b->name} values %focus_fsets), "\n",
+    '# Target set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'} sort {$a->name cmp $b->name}  values %target_fsets), "\n",
     '# Species: ', $species, "\n",
     '# Chromosome: ', join(" ",$slice->display_id(),$slice->get_seq_region_id), "\n",
     '#   core seq_region_id '.$core_sr_id." => fg seq_region_id ".$fg_sr_id."\n";
-
-if ($dump) {
-    
-    my @fset_ids = keys %target_fsets;
-    #print Dumper @fset_ids; 
-
-    print STDERR "# Dumping annotated features from database to file.\n";
-    print STDERR "# This will delete existing file dumps of that data version!\n";
-
-    throw("Must specify directory to write the output (-outdir).\n") if ! defined $outdir;
-    print STDERR "# Output goes to ", $outdir, "\n";
-
-
-    my $sql = "select annotated_feature_id, seq_region_id,".
-        "seq_region_start, seq_region_end,seq_region_strand,".
-        "score,feature_set_id from annotated_feature";
-    my $command = "echo \"$sql\" ".
-        " | mysql -quick -h".$host." -P".$port." -u".$user." ".$dbname.
-        " | gawk '{if (\$7==".join("||\$7==", @fset_ids).") print }'".
-        " | sort -n -k 2,2 -k 3,3 -k 4,4".
-        " | gawk '{ print >> \"".$outdir."/".$dbname.".annotated_feature_\" \$2 \".dat\" }'";
-
-    print STDERR "# Execute: ".$command."\n" if ($debug);
-    
-    # need to remove existing dump files, since we append to the file
-    system("rm -f $outdir/$dbname.annotated_feature_*.dat") &&
-        throw ("Can't remove files");
-
-    system($command) &&
-        throw ("Can't dump data to file in $outdir");
-
-    exit;
-
-}
-
-my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
 
 # Read from file and process sequentially in sorted by start, end order. Each 
 # new feature is checked if it overlaps with the preceeding already seen 
 # features. If yes we just carry on with the next one. Otherwise
 
+my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
 
 my (@features, $focus_end, @regulatory_features, %regulatory_feature);
 my ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
 
+my $feature_count=0;
+
 while (<$fh>) {
 
 	next if (/^#/);
-	
-	print if ($debug);
+	$feature_count++;
+
+	#print if ($debug);
 
     ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id) = split (/\s+/, $_);
     #print Dumper ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
 	#print $af_id, "\n";
 
-	if (exists $focus_fsets{$fset_id}) {
+    # Quick hack for 2nd/3rd version of reg. build. Need to disregard ChIPseq 
+    # features below a certain threshold defined hardcoded in ChIPseq_cutoff hash.
+    next if (exists $ChIPseq_cutoff{$target_fsets{$fset_id}->name()} 
+			 && $score < $ChIPseq_cutoff{$target_fsets{$fset_id}->name()});
 
+	if (exists $focus_fsets{$fset_id}) {
 
 		# current feature is focus feature
 		print "focus feature ($af_id)\n" if ($debug);
@@ -281,6 +350,9 @@ while (<$fh>) {
 				'end' => $end,
 				'annotated' => { 
 					$af_id => undef 
+				},
+				'fsets' => {
+					$fset_id => 1
 				});
 			
 			$focus_end = $regulatory_feature{end};
@@ -297,7 +369,8 @@ while (<$fh>) {
 	
 				# add annot. feature id to reg. feature
 				$regulatory_feature{annotated}{$af_id} = undef;
-
+				$regulatory_feature{fsets}{$fset_id}++;
+				
 				# update end of regulatory feature
 				$regulatory_feature{end} = $end
 					if ($end > $regulatory_feature{end});
@@ -306,7 +379,8 @@ while (<$fh>) {
 				map {
 					if ($_->{end} <= $regulatory_feature{end}) {
 						print "add (".$_->{af_id}.") to reg. feature\n" if ($debug);
-						$regulatory_feature{annotated}{$_->{af_id}} = undef 
+						$regulatory_feature{annotated}{$_->{af_id}} = undef;
+						$regulatory_feature{fsets}{$_->{fset_id}}++;
 					} 
 				} @features;
 
@@ -315,13 +389,19 @@ while (<$fh>) {
 			} else {
 
 				print "close regulatory feature\n" if ($debug);
-				push(@regulatory_features, %regulatory_feature);
+				
+				# build binary string
+				$regulatory_feature{binstring} = &build_binstring(\%regulatory_feature);
+				push(@regulatory_features, {%regulatory_feature});
 
 				%regulatory_feature = (
 					'start' => $start,
 					'end' => $end,
 					'annotated' => { 
 						$af_id => undef 
+					},
+					'fsets' => {
+						$fset_id => 1
 					});
 			
 				$focus_end = $regulatory_feature{end};
@@ -345,7 +425,8 @@ while (<$fh>) {
 
 			# add annot. feature id to reg. feature
 			$regulatory_feature{annotated}{$af_id} = undef;
-			
+			$regulatory_feature{fsets}{$fset_id}++;
+
 			# update end of regulatory feature
 			$regulatory_feature{end} = $end
 				if ($end > $regulatory_feature{end});
@@ -357,6 +438,7 @@ while (<$fh>) {
 
 			# add annot. feature id to reg. feature
 			$regulatory_feature{annotated}{$af_id} = undef;
+			$regulatory_feature{fsets}{$fset_id}++;
 			
 		} else {
 
@@ -370,12 +452,32 @@ while (<$fh>) {
 }
 
 if (%regulatory_feature) {
-	push(@regulatory_features, %regulatory_feature);
+	# build binary string
+	$regulatory_feature{binstring} = &build_binstring(\%regulatory_feature);
+	push(@regulatory_features, {%regulatory_feature});
+
+}
+print "\n", Dumper @regulatory_features if ($debug);
+
+if ($dump_features) {
+
+	my $outfile  = $outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.rf';
+	my $out = open_file($outfile, ">");
+
+	map {
+		printf $out "%d\t%d\t%d\t%s\t%s\n", 
+		$fg_sr_id, $_->{start}, $_->{end}, 
+		$_->{binstring}, join(",", keys %{$_->{annotated}});
+	} @regulatory_features;
+
+	printf "# Regulatory features written to ".$outfile."\n";
 
 }
 
-print "\n", Dumper @regulatory_features;
+printf "# Number of read features: %10d\n", $feature_count;
+printf "# Number of reg. features: %10d\n", scalar(@regulatory_features);
 
+###############################################################################
 
 sub add_feature ()
 {
@@ -414,7 +516,8 @@ sub update_5prime()
 				if ($_->{start} >= $regulatory_feature{start})
 				{
 					print "add (".$_->{af_id}.") to reg. feature\n" if ($debug);
-					$regulatory_feature{annotated}{$_->{af_id}} = ();
+					$regulatory_feature{annotated}{$_->{af_id}} = undef;
+					$regulatory_feature{fsets}{$_->{fset_id}}++;
 					$regulatory_feature{end} = $_->{end}
 								if ($_->{end} > $regulatory_feature{end});
 				}
@@ -431,6 +534,19 @@ sub update_5prime()
 
 }
 
+sub build_binstring(){
+
+	my ($rf) = @_;
+
+	my $binstring = '';
+	foreach (sort {$a->name cmp $b->name} values %target_fsets) {
+		$binstring .= 
+			(exists $rf->{fsets}->{$_->dbID})? 1 : 0;	
+	}
+
+	return $binstring;
+
+}
 
 
 1;
