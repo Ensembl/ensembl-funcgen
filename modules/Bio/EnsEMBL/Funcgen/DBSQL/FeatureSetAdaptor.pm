@@ -84,11 +84,11 @@ sub fetch_all_by_FeatureType {
 }
 
 
-=head2 fetch_all_by_Type
+=head2 fetch_all_by_type
 
   Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my @fsets = $fs_adaptopr->fetch_all_by_Type('annotated');
+  Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
   Description: Retrieves FeatureSet objects from the database based on feature_set type.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
   Exceptions : Throws if type not defined
@@ -97,7 +97,7 @@ sub fetch_all_by_FeatureType {
 
 =cut
 
-sub fetch_all_by_Type {
+sub fetch_all_by_type {
     my $self = shift;
     my $type = shift;
     my $status = shift;
@@ -225,34 +225,34 @@ sub fetch_by_name {
   
 }
 
-=head2 fetch_by_external_db
+#=head2 fetch_by_external_db
 
-  Arg [1]    : string - name of external_db
-  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my @fsets = @{$fset_adaptor->fetch_by_external_db('miRanda')};
-  Description: Fetch all FeatureSets which are linked to an external_db of a given name
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet objects
-  Exceptions : Throws if no external_db name passed 
-  Caller     : General
-  Status     : At Risk 
+#  Arg [1]    : string - name of external_db
+#  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+#  Example    : my @fsets = @{$fset_adaptor->fetch_by_external_db('miRanda')};
+#  Description: Fetch all FeatureSets which are linked to an external_db of a given name
+#  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet objects
+#  Exceptions : Throws if no external_db name passed 
+#  Caller     : General
+#  Status     : At Risk 
 
-=cut
+#=cut
 
-sub fetch_by_external_db {
-  my ($self, $name, $status) = @_;
+#sub fetch_by_external_db {
+#  my ($self, $name, $status) = @_;
   
-  throw("Must provide a name argument") if (! defined $name);
+#  throw("Must provide a name argument") if (! defined $name);
   
-  my $sql = "ed.name='".$name."'";
+#  my $sql = "ed.name='".$name."'";
   
-  if($status){
-    my $constraint = $self->status_to_constraint($status) if $status;
-    $sql = (defined $constraint) ? $sql." ".$constraint : undef;
-  }
+#  if($status){
+#    my $constraint = $self->status_to_constraint($status) if $status;
+#    $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+#  }
 
-  return $self->generic_fetch($sql)->[0];
+#  return $self->generic_fetch($sql)->[0];
   
-}
+#}
 
 
 =head2 fetch_attributes
@@ -293,8 +293,8 @@ sub _tables {
 	my $self = shift;
 	
 	return (['feature_set',     'fs'],
-			['feature_set_db', 'fsd'],
-			['external_db',     'ed'],
+			#['feature_set_db', 'fsd'],
+			#['external_db',     'ed'],
 		   );
 }
 
@@ -314,7 +314,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id fs.name fs.type ed.db_name);
+	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id fs.name fs.type);# ed.db_name);
 }
 
 
@@ -332,11 +332,11 @@ sub _columns {
 
 =cut
 
-sub _left_join {
-  my $self = shift;
+#sub _left_join {
+#  my $self = shift;
 	
-  return (['feature_set_db', 'fs.feature_set_id = fsd.feature_set_id']);
-}
+#  return (['feature_set_db', 'fs.feature_set_id = fsd.feature_set_id']);
+#}
 
 =head2 _default_where_clause
 
@@ -352,14 +352,14 @@ sub _left_join {
 
 =cut
 
-sub _default_where_clause {
-  my $self = shift;
+#sub _default_where_clause {
+#  my $self = shift;
   #will this return if there are no entrie in data_set_member?
   #do we have to implement a join here?
 
 	
-  return 'fsd.external_db_id = ed.external_db_id';
-}
+  #return 'fsd.external_db_id = ed.external_db_id';
+#}
 
 
 
@@ -380,7 +380,7 @@ sub _default_where_clause {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type, $dbname);
+	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type);#, $dbname);
 	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, %ftype_hash, %ctype_hash);
 	
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
@@ -388,7 +388,7 @@ sub _objs_from_sth {
 	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	$ctype_hash{'NULL'} = undef;
 
-	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name, \$type, \$dbname);
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name, \$type);# \$dbname);
 	
 	while ( $sth->fetch()) {
 
@@ -412,7 +412,7 @@ sub _objs_from_sth {
 													   -cell_type    => $ctype_hash{$ctype_id},
 													   -name         => $name,
 													   -type         => $type,
-													   -external_db_name  => $dbname,
+													   #-external_db_name  => $dbname,
 							      );
 
 		push @fsets, $fset;
@@ -468,13 +468,13 @@ sub store {
 
 
 		  #Need to check external_db is present.
-		  	if(defined $fset->external_db_name() && ! exists $edb_hash{$fset->external_db_name()}){
-			  $sql = 'SELECT external_db_id from external_db where db_name="'.$fset->external_db_name().'"';
-			  ($edb_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-			  
-			  throw ('You must specifcy a previously stored external_db name') if(! $edb_id);
-			  $edb_hash{$fset->external_db_name()} = $edb_id;
-			}
+		#  if(defined $fset->external_db_name() && ! exists $edb_hash{$fset->external_db_name()}){
+		#	$sql = 'SELECT external_db_id from external_db where db_name="'.$fset->external_db_name().'"';
+		#	($edb_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+		##	
+		#	throw ('You must specifcy a previously stored external_db name') if(! $edb_id);
+		#	$edb_hash{$fset->external_db_name()} = $edb_id;
+		  #}
 					
 			#my $s_fset = $self->fetch_by_unique_and_experiment_id($ec->unique_id(), $ec->experiment_id());
 			#throw("ExperimentalChip already exists in the database with dbID:".$s_ec->dbID().
@@ -495,11 +495,11 @@ sub store {
 			$fset->dbID($sth->{'mysql_insertid'});
 			$fset->adaptor($self);
 
-			if(defined $edb_id){
-			  $esd_sth->bind_param(1, $fset->dbID(), SQL_INTEGER);
-			  $esd_sth->bind_param(2, $edb_id,       SQL_INTEGER);
-			  $esd_sth->execute();
-			}
+			#if(defined $edb_id){
+			#  $esd_sth->bind_param(1, $fset->dbID(), SQL_INTEGER);
+			#  $esd_sth->bind_param(2, $edb_id,       SQL_INTEGER);
+			#  $esd_sth->execute();
+			#}
 
 		}else{
 			#assume we want to update the states

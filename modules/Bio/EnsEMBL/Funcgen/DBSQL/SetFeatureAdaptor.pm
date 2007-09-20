@@ -112,7 +112,7 @@ sub fetch_all_by_Slice_FeatureSets {
 
   my $fs_ids = join(',', @fs_ids) if scalar(@fs_ids >1);
   my $constraint = $self->_main_table->[1].'.feature_set_id '; 
-  $constraint .= (scalar(@fs_ids) >1) ? "IN ($fs_ids)" : "='$fs_ids'";
+  $constraint .= (scalar(@fs_ids) >1) ? "IN ($fs_ids)" : '='.$fs_ids[0];
 
   #could have individual logic_names for each annotated feature here?
   #$constraint = $self->_logic_name_to_constraint($constraint, $logic_name);

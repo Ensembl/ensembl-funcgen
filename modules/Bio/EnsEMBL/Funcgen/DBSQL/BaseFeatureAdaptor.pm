@@ -132,7 +132,7 @@ sub fetch_all_by_Slice_constraint {
   }
 
   #build seq_region cache here once for entire query
-  $self->build_seq_region($slice);#, $fg_cs);
+  $self->build_seq_region_cache($slice);#, $fg_cs);
 
 
   my @tables = $self->_tables;
@@ -264,13 +264,14 @@ sub build_seq_region_cache{
   $self->{'core_seq_region_cache'} = {};
   %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
-
+  
   #this return nothing for a new schema_build!!
   #How can
 
   #now reverse cache
   
   foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){
+
 	$self->{'core_seq_region_cache'}->{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
   }
 
@@ -292,6 +293,8 @@ sub get_seq_region_id_by_Slice{
   } else {
 	$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
   }
+
+  #should we wanr or thro here if not exists?
 
   return (exists $self->{'seq_region_cache'}->{$sr_id}) ? $self->{'seq_region_cache'}->{$sr_id} : undef;
 }
@@ -531,6 +534,7 @@ sub _slice_fetch {
           "${tab_syn}.seq_region_id = $sr_id AND " .
           "${tab_syn}.seq_region_start <= $slice_end AND " .
           "${tab_syn}.seq_region_end >= $slice_start";
+
 
       if($max_len) {
         my $min_start = $slice_start - $max_len;

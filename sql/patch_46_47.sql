@@ -436,13 +436,174 @@ CREATE TABLE go_xref (
 -- back to the external_feature stuff
 
 --prepare feature_type table to receive new feature classes
-alter table feature_type change class class enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region') default NULL; 
+
+update feature_type set class='Insulator' where class='INSULATOR';
+update feature_type set class ='Histone' where class ='Histone';
+update feature_type set class ='Regulatory Feature' where class ='REGULATORY FEATURE';
+update feature_type set class ='Overlap' where class ='OVERLAP';
+update feature_type set class ='Polymerase' where class ='POLYMERASE';
+update feature_type set class ='Transcription Factor' where class ='TRANSCRIPTION FACTOR';
+
+alter table feature_type change class class enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region', 'Enhancer') default NULL; 
+
+
+
+DROP TABLE IF EXISTS `external_feature`;
+CREATE TABLE `external_feature` (
+  `external_feature_id` int(10) unsigned NOT NULL auto_increment,
+  `seq_region_id` int(10) unsigned NOT NULL default '0',
+  `seq_region_start` int(10) unsigned NOT NULL default '0',
+  `seq_region_end` int(10) unsigned NOT NULL default '0',
+  `seq_region_strand` tinyint(1) NOT NULL default '0',	
+  `display_label` varchar(60) default NULL,
+  `feature_type_id`	int(10) unsigned default NULL,
+  `feature_set_id` int(10) unsigned NOT NULL default '0',
+  PRIMARY KEY  (`external_feature_id`),
+  KEY `feature_type_idx` (`feature_type_id`),
+  KEY `feature_set_idx` (`feature_set_id`),
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 
 
 
+insert into feature_type values(NULL, 'cisRED Search Region', 'Region', 'cisRED search region');
+insert into feature_type values(NULL, 'cisRED', 'Regulatory Motif', 'cisRED group motif set');
+insert into feature_type values(NULL, 'miRanda', 'RNA', 'miRanda microRNA set');
 
 
+insert into analysis(name) values('miRanda');
+insert into analysis_description select analysis_id, 'miRanda microRNA target prediction (http://cbio.mskcc.org/mirnaviewer/)', 'miRanda', 0, NULL from analysis where logic_name='miRanda';
+
+
+insert into analysis(logic_name) values('cisRED');
+insert into analysis_description select analysis_id, 'cisRED motif search (www.cisred.org)', 'cisRED', 0, NULL from analysis where logic_name='cisRED';
+
+
+
+--Now the data patch for human only
+--this is an ensembl only internal patch
+
+--dump the following tables from v46 core
+--regulatory_feature
+--regulatory_factor
+--regulatory_factor_coding
+--regulatory_search_region
+--edit the regulatory_feature dump to regulatory_feature_core(or copy and patch table before dump)
+--to avoid overwriting the eFG regulatory_feature_table
+
+--import all above tables
+
+-- we have 4 distinct sets from 3 sources
+
+--cisRED atomic patterns(feature_types) and group motifs (external_features)
+--cisRED search regions, 1 type with multiple features
+--miRanda microRNAs(feature_type) and alignments(external_feature)
+--http://enhancer.lbl.gov/ enhancer positive regions and enhancer negative regions.
+
+--each has a generic feature_type to define the feature_set, and (apart from the cisRED regions) at least 2 or many more feature_type to represent alignments/motif hits or +ve or -ve regions.
+
+-- we need to merge enhancer analyses into one, so we can have one set giving different feature_types at the external_feature level.
+-- also merge cisRED analyses into one and represent search regions and motif simply as sifferent typs in two different sets
+
+--is the enhancer set just Mouse data?
+
+-- let's deal with the miRanda first
+-- first let's create set with all the factor orphans removed i.e. factor which don't have features
+-- there are numerous factors which don't have mapping, most of which are present 3-10 times with different ids but the same name
+
+
+CREATE TABLE `regulatory_factor_nr` (
+  `regulatory_factor_id` int(10) unsigned NOT NULL auto_increment,
+  `name` varchar(255) NOT NULL default '',
+  `type` varchar(255) default NULL,
+  PRIMARY KEY  (`regulatory_factor_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+insert into regulatory_factor_nr select rf.* from regulatory_factor rf, regulatory_feature_core rfc where rf.regulatory_factor_id=rfc.regulatory_factor_id group by rf.regulatory_factor_id;
+
+
+-- now migrate the miRanda factors to feature_types
+-- we we need to clean up the non-hsa ones? These are already removed by the feature only select above
+insert into feature_type select regulatory_factor_id, name, 'RNA', 'miRanda miRNA' from regulatory_factor_nr where type='miRNA_target';
+
+--create the feature_set
+insert into feature_set select NULL, ft.feature_type_id, a.analysis_id, NULL, 'miRanda miRNA', 'external' from feature_type ft, analysis a where ft.name='miRanda' and a.logic_name='miRanda';
+
+--now migrate the features
+insert into external_feature select NULL, rfc.seq_region_id, rfc.seq_region_start, rfc.seq_region_end, rfc.seq_region_strand, rfc.name, ft.feature_type_id, fs.feature_set_id from regulatory_feature_core rfc, feature_type ft, feature_set fs, regulatory_factor_nr rfn where fs.name='miRanda miRNA' and ft.name=rfn.name and rfc.regulatory_factor_id=rfn.regulatory_factor_id;
+
+
+-- now the cisRED search set
+insert into feature_set select NULL, ft.feature_type_id, a.analysis_id, NULL, 'cisRED search regions', 'external' from feature_type ft, analysis a where ft.name='cisRED Search Region' and a.logic_name='cisRED';
+
+
+--migrate the features from regulatory_search_region
+insert into external_feature select NULL, rsr.seq_region_id, rsr.seq_region_start, rsr.seq_region_end, rsr.seq_region_strand, rsr.name, fs.feature_type_id, fs.feature_set_id from regulatory_search_region rsr, feature_set fs where fs.name='cisRED Search Regions';
+
+--we will have to patch the xrefs later so don't delete this table!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+-- now the cisRED motifs
+insert into feature_set select NULL, ft.feature_type_id, a.analysis_id, NULL, 'cisRED group motifs', 'external' from feature_type ft, analysis a where ft.name='cisRED' and a.logic_name='cisRED';
+
+
+--were going to do the select on is null, so need to change this for the empty enhancer factor record
+update regulatory_factor set name='Vista Enhancer', type='Enhancer' where name ='';
+--probably need to rename this
+
+insert into feature_type select regulatory_factor_id, name, 'Regulatory Motif', 'cisRED group motif' from regulatory_factor_nr where type is null;
+
+insert into external_feature select NULL, rfc.seq_region_id, rfc.seq_region_start, rfc.seq_region_end, rfc.seq_region_strand, rfc.name, ft.feature_type_id, fs.feature_set_id from regulatory_feature_core rfc, feature_type ft, feature_set fs, regulatory_factor_nr rfn where fs.name='cisRED group motifs' and ft.name=rfn.name and rfc.regulatory_factor_id=rfn.regulatory_factor_id;
+
+--now finally the enhancer set
+insert into feature_type values(NULL, 'VISTA Target', 'Region', 'VISTA target region');
+insert into feature_type values(NULL, 'VISTA Enhancer', 'Enhancer', 'Enhancer identified by positive VISTA assay');
+-- do we need this last one as? It is implicit that there is no enhancer
+-- do we need to change the name??
+insert into feature_type values(NULL, 'VISTA Target - Negative', 'Region', 'Enhancer negative region identified by VISTA assay');
+
+insert into analysis(logic_name) values('VISTA');
+insert into analysis_description select analysis_id, 'VISTA Enhancer Assay (http://enhancer.lbl.gov/)', 'VISTA', 0, NULL from analysis where logic_name='VISTA';
+
+
+insert into feature_set select NULL, ft.feature_type_id, a.analysis_id, NULL, 'VISTA enhancer set', 'external' from feature_type ft, analysis a where ft.name='VISTA Target' and a.logic_name='VISTA';
+
+-- +ve features frist analysis_id 5210
+insert into external_feature select NULL, rfc.seq_region_id, rfc.seq_region_start, rfc.seq_region_end, rfc.seq_region_strand, rfc.name, ft.feature_type_id, fs.feature_set_id from regulatory_feature_core rfc, feature_type ft, feature_set fs, regulatory_factor_nr rfn where ft.name='VISTA Enhancer'  and fs.name='VISTA enhancer set' and rfc.regulatory_factor_id=rfn.regulatory_factor_id and rfc.analysis_id=5210;
+
+-- -ve features frist analysis_id 5211
+insert into external_feature select NULL, rfc.seq_region_id, rfc.seq_region_start, rfc.seq_region_end, rfc.seq_region_strand, rfc.name, ft.feature_type_id, fs.feature_set_id from regulatory_feature_core rfc, feature_type ft, feature_set fs, regulatory_factor_nr rfn where ft.name='VISTA Target - Negative'  and fs.name='VISTA enhancer set' and rfc.regulatory_factor_id=rfn.regulatory_factor_id and rfc.analysis_id=5211;
+
+
+-- now we can drop some tables
+drop table regulatory_factor;
+drop table regulatory_factor_nr;
+drop table regulatory_feature_core;
+drop table regulatory_factor_coding;
+
+-- oops we had all the miRNAs in the cisRED set :|
+delete ef from feature_type ft, external_feature ef where ef.feature_type_id=ft.feature_type_id and ft.class ='RNA' and ef.feature_set_id=61;
+delete from feature_type where feature_type_id=375975;
+-- and the enhancer set..doh!
+
+
+
+-- darn it, forgot about efg seq_region_ids
+--need to convert to core sr_ids in external_feature table to efg sr_ids
+-- they are all on cs_id 1 and we no none match between the two sets as this returns nothing
+-- select distinct(coord_system_id) from seq_region sr, external_feature ef where ef.seq_region_id=sr.seq_region_id;
+--this means we can do a direct update without worrying about clashing sr_ids between core annd efg.
+update external_feature ef, seq_region sr set ef.seq_region_id=sr.seq_region_id where ef.seq_region_id=sr.core_seq_region_id and sr.coord_system_id=1;
+
+--and finally meta_coord
+select (seq_region_end - seq_region_start + 1) as maxlength from external_feature order by maxlength desc limit 5;
+insert into meta_coord values('external_feature', 1, 131013);
+
+-- cisRED search regions are still all on NCBI35 coords, but in a v36 seq_region_table, i.e. 35 is not the default build.
+-- we need to import this seq_region info.
+
+-- we still have the search_region table as we want to populate the xrefs
 
 
 

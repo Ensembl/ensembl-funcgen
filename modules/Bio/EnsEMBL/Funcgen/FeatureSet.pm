@@ -103,7 +103,7 @@ sub new {
   $self->type($type);
   $self->cell_type($cell_type) if $cell_type;
   $self->name($name) if $name;
-  $self->external_db_name($edb_name) if $edb_name;
+  #$self->external_db_name($edb_name) if $edb_name;
   
 
   return $self;
@@ -178,24 +178,24 @@ sub name {
   return $self->{'name'};
 }
 
-=head2 external_db_name
+#=head2 external_db_name
 
-  Example    : my $fset->external_db_name('miRanda');
-  Description: Getter/Setter for the external_db name of this FeatureSet.
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
+#  Example    : my $fset->external_db_name('miRanda');
+#  Description: Getter/Setter for the external_db name of this FeatureSet.
+#  Returntype : string
+#  Exceptions : None
+#  Caller     : General
+#  Status     : At Risk
 
-=cut
+#=cut
 
-sub external_db_name {
-  my $self = shift;
+#sub external_db_name {
+#  my $self = shift;
      	
-  $self->{'external_db_name'} = shift if @_;
+#  $self->{'external_db_name'} = shift if @_;
 
-  return $self->{'external_db_name'};
-}
+#  return $self->{'external_db_name'};
+#}
 
 
 
@@ -324,28 +324,6 @@ sub display_label {
 
 
 
-=head2 get_AnnotatedFeatures_by_Slice
-
-  Example    : my @features = @{$FeatureSet->get_AnnotatedFeaturesby_Slice($slice)};
-  Description: Retrieves all AnnotatedFeatures for this FeatureSet for a given Slice
-  Returntype : List ref containing AnnotatedFeatures;
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk - to be removed
-
-=cut
-
-
-sub get_AnnotatedFeatures_by_Slice{
-  my ($self, $slice) = @_;
-
-  deprecate('get_AnnotatedFeatures_by_Slice has been suprceded by the generic method get_Features_by_Slice');
-  
-  return $self->get_Fetures_by_Slice($slice);
-}
-
-
-
 =head2 get_FeatureAdaptor
 
   Example    : 
@@ -368,7 +346,7 @@ sub get_FeatureAdaptor{
 	$self->{'adaptor_refs'} = {(
 								annotated  => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
 								regulatory => $self->adaptor->db->get_RegulatoryFeatureAdaptor,
-								#supporting => \$self->adaptor->db->get_SupportingFeatureAdaptor,
+								external   => $self->adaptor->db->get_ExternalFeatureAdaptor,
 							   )};
 
   }
@@ -393,7 +371,7 @@ sub get_FeatureAdaptor{
 sub get_Features_by_Slice{
   my ($self, $slice) = @_;
 
-  return $self->get_FeatureAdaptor->fetch_all_by_Slice_FeatureSet($slice, $self);
+  return $self->get_FeatureAdaptor->fetch_all_by_Slice_FeatureSets($slice, $self);
 }
 
 
