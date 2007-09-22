@@ -19,11 +19,12 @@ shift
 ARGS=$*
 
 FOCUS=\
+CD4_CTCF,\
 CD4_DNASE_IMPORT,\
-GM06990_DNASE_IMPORT
+GM06990_DNASE_IMPORT,\
+Nessie_NG_STD_2_ctcf_ren_BR1
 
 TARGET=\
-CD4_CTCF,\
 CD4_H2AZ,\
 CD4_H2BK5me1,\
 CD4_H3K27me1,\
@@ -46,7 +47,6 @@ CD4_H4K20me1,\
 CD4_H4K20me3,\
 CD4_H4R3me2,\
 CD4_PolII,\
-Nessie_NG_STD_2_ctcf_ren_BR1,\
 Wiggle_H3K27me3,\
 Wiggle_H3K36me3,\
 Wiggle_H3K4me3,\
@@ -59,7 +59,7 @@ OUTDIR=/lustre/scratch1/ensembl/graef/RegBuild/v47
 # first dump annotated features from database 
 # for further processing
 
-bsub -o "$OUTDIR/RegulatoryBuild.log" -J RegBuild_Dump \
+bsub -o "$OUTDIR/RegulatoryBuild_$FOCUS.log" -J RegBuild_Dump \
 $EFG_SRC/scripts/build_regulatory_features.pl \
     -host $HOST \
     -port $PORT \
@@ -76,7 +76,7 @@ $EFG_SRC/scripts/build_regulatory_features.pl \
 # build regulatory features and dump to file when dumping 
 # features has been sucessfully completed
 
-bsub -o "$OUTDIR/RegulatoryBuild.log" -J RegBuild_[1-25] \
+bsub -o "$OUTDIR/RegulatoryBuild_$FOCUS.log" -J RegBuild_[1-25] \
     -w 'done(RegBuild_Dump)' \
     $EFG_SRC/scripts/build_regulatory_features.pl \
     -host $HOST \
@@ -88,7 +88,8 @@ bsub -o "$OUTDIR/RegulatoryBuild.log" -J RegBuild_[1-25] \
     -focus $FOCUS \
     -target $TARGET \
     -outdir $OUTDIR \
+    -gene_signature \
     -dump_features \
     $ARGS
 
-#    -s 1 \
+#    -seq_name 20 \
