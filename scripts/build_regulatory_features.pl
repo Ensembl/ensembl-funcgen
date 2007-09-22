@@ -1,6 +1,6 @@
 #!/software/bin/perl
-
 ####!/usr/bin/perl
+
 
 =head1 NAME
 
@@ -61,7 +61,7 @@ use Getopt::Long;
 my ($pass,$port,$host,$user,$dbname,$species,$help,$man,
     $data_version,$outdir,$do_intersect,$write_features,
 	$dump_features,$seq_name,$clobber,
-    $focus,$target,$dump,$debug);
+    $focus,$target,$dump,$gene_signature,$debug);
 
 GetOptions (
 	"pass|p=s"       => \$pass,
@@ -77,11 +77,12 @@ GetOptions (
 	"do_intersect|i=s" => \$do_intersect,
 	"write_features|w" => \$write_features,
 	"dump_features"  => \$dump_features,
-	"seq_name|s" => \$seq_name,
+	"seq_name|s=s" => \$seq_name,
 	"clobber" => \$clobber,
 	"focus|f=s" => \$focus,
 	"target|t=s" => \$target,
 	"dump" => \$dump,
+	"gene_signature" => \$gene_signature,
 	"debug" => \$debug
 	);
 
@@ -132,7 +133,7 @@ my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
      #-user => 'ensro',
      -dbname => $species.'_core_'.$data_version,
      -species => $species,
-     );
+	);
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
@@ -143,7 +144,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -pass   => $pass,
      -port   => $port,
      -dnadb  => $cdb
-     );
+	);
 #print Dumper $db;
 
 my $fsa = $db->get_FeatureSetAdaptor();
@@ -169,7 +170,7 @@ my $anal = Bio::EnsEMBL::Analysis->new(
 	-parameters      => 'NULL',
 	-created         => 'NULL',
 	-description     => 'Union of focus features, features overlapping focus features, '.
-	                    ' and features that are comteined within those',
+	' and features that are comteined within those',
 	### name changed from "RegulatoryRegion"
 	-display_label   => 'RegulatoryFeature',
 	-displayable     => 1,
@@ -183,15 +184,15 @@ map { my $fset = $fsa->fetch_by_name($_);
       $focus_fsets{$fset->dbID} = $fset; 
       throw("Focus set $_ does not exist in the DB") 
           if (! defined $focus_fsets{$fset->dbID}); 
-  } split(',', $focus);
+} split(',', $focus);
 #print Dumper %focus_fsets;
 
 map { 
     my $fset = $fsa->fetch_by_name($_);
     $target_fsets{$fset->dbID()} = $fset; 
-      throw("Target set $_ does not exist in the DB") 
-          if (! defined $target_fsets{$fset->dbID}); 
-      } split(',', $target);
+	throw("Target set $_ does not exist in the DB") 
+		if (! defined $target_fsets{$fset->dbID}); 
+} split(',', $target);
 #print Dumper %target_fsets;
 
 # make sure that target sets also contain focus sets (Do we really need this?)
@@ -238,58 +239,58 @@ if ($dump) {
 
 ### ChipSeq stuff
 my %ChIPseq_cutoff = (
-                      ### cutoff T/O <= 2
-                      'CD4_CTCF'=>        5,
-                      'CD4_H3K27me3'=>    8,
-                      'CD4_H3K36me3'=>    4,
-                      'CD4_H3K4me3'=>     6,
-                      'CD4_H3K79me3'=>   22,
-                      'CD4_H3K9me3'=>     7,
-                      'CD4_H4K20me3'=>   17,
-                      ### cutoff ~ <= 25000
-                      ### see /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI/data/*.clstr.cutoff_25000.dat
-                      'CD4_H2AZ'=>       15,
-                      'CD4_H2BK5me1'=>   16,
-                      'CD4_H3K27me1'=>    6,
-                      'CD4_H3K27me2'=>    5,
-                      'CD4_H3K36me1'=>    4,
-                      'CD4_H3K4me1'=>    31,
-                      'CD4_H3K4me2'=>    10,
-                      'CD4_H3K79me1'=>    5,
-                      'CD4_H3K79me2'=>    4,
-                      'CD4_H3K9me1'=>    12,
-                      'CD4_H3K9me2'=>     5,
-                      'CD4_H3R2me1'=>     5,
-                      'CD4_H3R2me2'=>     5,
-                      'CD4_H4K20me1'=>   30,
-                      'CD4_H4R3me2'=>     4,
-                      'CD4_PolII'=>       8
-                      );
+	### cutoff T/O <= 2
+	'CD4_CTCF'=>        5,
+	'CD4_H3K27me3'=>    8,
+	'CD4_H3K36me3'=>    4,
+	'CD4_H3K4me3'=>     6,
+	'CD4_H3K79me3'=>   22,
+	'CD4_H3K9me3'=>     7,
+	'CD4_H4K20me3'=>   17,
+	### cutoff ~ <= 25000
+	### see /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI/data/*.clstr.cutoff_25000.dat
+	'CD4_H2AZ'=>       15,
+	'CD4_H2BK5me1'=>   16,
+	'CD4_H3K27me1'=>    6,
+	'CD4_H3K27me2'=>    5,
+	'CD4_H3K36me1'=>    4,
+	'CD4_H3K4me1'=>    31,
+	'CD4_H3K4me2'=>    10,
+	'CD4_H3K79me1'=>    5,
+	'CD4_H3K79me2'=>    4,
+	'CD4_H3K9me1'=>    12,
+	'CD4_H3K9me2'=>     5,
+	'CD4_H3R2me1'=>     5,
+	'CD4_H3R2me2'=>     5,
+	'CD4_H4K20me1'=>   30,
+	'CD4_H4R3me2'=>     4,
+	'CD4_PolII'=>       8
+	);
 
 # retrieve sequence to be analyzed 
 my $slice;
 
 if ($seq_name) {
-  $slice = $sa->fetch_by_region('chromosome', $seq_name);
+	$slice = $sa->fetch_by_region('chromosome', $seq_name);
 } elsif (defined $ENV{LSB_JOBINDEX}) {
-  warn "Performing whole genome analysis on toplevel slices using the farm.\n";
+	warn "Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".$ENV{LSB_JOBINDEX}.").\n";
     
-  my $toplevel = $sa->fetch_all('toplevel');
-  my @chr = sort (map $_->seq_region_name, @{$toplevel});
-  #print Dumper @chr;
-  
-  my @slices;
-  foreach my $chr (@chr) {
-      
-      next if ($chr =~ m/^NT_/);
-      
-      push @slices, $sa->fetch_by_region('chromosome', $chr);
-  }
-  #print Dumper @slices;
+	my $toplevel = $sa->fetch_all('toplevel');
+	my @chr = sort (map $_->seq_region_name, @{$toplevel});
+	#print Dumper @chr;
+	
+	my @slices;
+	foreach my $chr (@chr) {
+		
+		next if ($chr =~ m/^NT_/);
+		
+		push @slices, $sa->fetch_by_region('chromosome', $chr);
+	}
+	#print Dumper @slices;
 
-  $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
-  print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
-  
+	$slice=$slices[$ENV{LSB_JOBINDEX}-1];      
+	#print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
+	
 } else {
 
     throw("Must specify mandatory chromosome name (-seq_name) or set\n ".
@@ -308,8 +309,10 @@ $fg_sr_id = $afa->get_seq_region_id_by_Slice($slice);
 #should this be printing to OUT or STDERR?
 #or remove as we're printing this later?
 print
-    '# Focus set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'} sort {$a->name cmp $b->name} values %focus_fsets), "\n",
-    '# Target set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'} sort {$a->name cmp $b->name}  values %target_fsets), "\n",
+    '# Focus set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'}
+							 sort {$a->name cmp $b->name} values %focus_fsets), "\n",
+    '# Target set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'} 
+							  sort {$a->name cmp $b->name}  values %target_fsets), "\n",
     '# Species: ', $species, "\n",
     '# Chromosome: ', join(" ",$slice->display_id(),$slice->get_seq_region_id), "\n",
     '#   core seq_region_id '.$core_sr_id." => fg seq_region_id ".$fg_sr_id."\n";
@@ -323,14 +326,13 @@ my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
 my (@features, $focus_end, @regulatory_features, %regulatory_feature);
 my ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
 
-my $feature_count=0;
+
+my (%feature_count);
 
 while (<$fh>) {
 
 	next if (/^#/);
-	$feature_count++;
-
-	#print if ($debug);
+	chomp;
 
     ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id) = split (/\s+/, $_);
     #print Dumper ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
@@ -340,6 +342,11 @@ while (<$fh>) {
     # features below a certain threshold defined hardcoded in ChIPseq_cutoff hash.
     next if (exists $ChIPseq_cutoff{$target_fsets{$fset_id}->name()} 
 			 && $score < $ChIPseq_cutoff{$target_fsets{$fset_id}->name()});
+
+	print $_, "\n" if ($debug);
+
+	# some stats
+	$feature_count{$fset_id}++;
 
 	if (exists $focus_fsets{$fset_id}) {
 
@@ -367,10 +374,10 @@ while (<$fh>) {
 
 			
 			if ($start < $regulatory_feature{end}) {
-			
-				print "focus_feature overlaps regulatory feature; add ($af_id) to reg. feature\n"
-					if ($debug);
-	
+				
+				print "focus_feature overlaps regulatory feature; ",
+				"add ($af_id) to reg. feature\n" if ($debug);
+				
 				# add annot. feature id to reg. feature
 				$regulatory_feature{annotated}{$af_id} = undef;
 				$regulatory_feature{fsets}{$fset_id}++;
@@ -389,7 +396,7 @@ while (<$fh>) {
 				} @features;
 
 				@features = ();
-					
+				
 			} else {
 
 				print "close regulatory feature\n" if ($debug);
@@ -407,7 +414,7 @@ while (<$fh>) {
 					'fsets' => {
 						$fset_id => 1
 					});
-			
+				
 				$focus_end = $regulatory_feature{end};
 
 				&update_5prime();
@@ -452,7 +459,7 @@ while (<$fh>) {
 		}
 
 	}
-			
+	
 }
 
 if (%regulatory_feature) {
@@ -478,8 +485,24 @@ if ($dump_features) {
 
 }
 
+my $feature_count;
+map {$feature_count+=$_} values %feature_count;
 printf "# Number of read features: %10d\n", $feature_count;
 printf "# Number of reg. features: %10d\n", scalar(@regulatory_features);
+
+
+my %rf_count;
+map { 
+	foreach my $k (keys %{$_->{fsets}}){
+		#print join(" ", $k, $_->{fsets}->{$k}), "\n";
+		$rf_count{$k} += $_->{fsets}->{$k};
+	}
+} @regulatory_features;
+
+printf "# %-34s\t%8s\t%8s\n", 'Number of feature sets', 'total', 'included';
+map {printf "# %29s (%d)\t%8d\t%8d\n", $_->name, $_->dbID, 
+	 $feature_count{$_->dbID}||0, $rf_count{$_->dbID}||0}
+sort {$a->name cmp $b->name} values %target_fsets;
 
 ###############################################################################
 
@@ -494,8 +517,8 @@ sub add_feature ()
              strand => $strand,
              score => $score,
              fset_id => $fset_id
-             }
-         );
+		 }
+		);
 
 }
 
@@ -523,7 +546,7 @@ sub update_5prime()
 					$regulatory_feature{annotated}{$_->{af_id}} = undef;
 					$regulatory_feature{fsets}{$_->{fset_id}}++;
 					$regulatory_feature{end} = $_->{end}
-								if ($_->{end} > $regulatory_feature{end});
+					if ($_->{end} > $regulatory_feature{end});
 				}
 			} @features;
 			
@@ -549,7 +572,7 @@ sub build_binstring()
 			(exists $rf->{fsets}->{$_->dbID})? 1 : 0;	
 	}
 
-	$binstring .= &get_gene_signature($rf);
+	$binstring .= &get_gene_signature($rf) if ($gene_signature);
 	
 	return $binstring;
 
@@ -575,7 +598,7 @@ sub get_gene_signature()
 	$expanded_slice = $feature_slice->expand($expand, $expand);
 
 	foreach my $g (@{$ga->fetch_all_by_Slice($expanded_slice)}) {
-	
+		
 		$tss = 1 if (($g->strand == 1  && $g->start > 0) ||
                      ($g->strand == -1 && $g->end <= $expanded_slice->length));
         $tts = 1 if (($g->strand == 1  && $g->end <= $expanded_slice->length) ||
