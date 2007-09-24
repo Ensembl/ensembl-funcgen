@@ -605,15 +605,87 @@ insert into meta_coord values('external_feature', 1, 131013);
 
 -- we still have the search_region table as we want to populate the xrefs
 
+-- This is presently unfinished as we need to manually store all 35 seq_regions as toplevel will not return any.
 
 
 
 
 
+-- Ensembl only data patch
+-- Migrate all ChIP-Seq imports to the experimental_set table
+
+insert into experimental_set select NULL, ec.experiment_id, ec.feature_type_id, ec.cell_type_id, 'SEQUENCING', 'SOLEXA', ec.unique_id from experimental_chip ec where ec.experiment_id>=13;
+
+
+update data_set ds, supporting_set ss, experimental_set es set ds.supporting_set_type='experimental', ss.supporting_set_id=es.experimental_set_id where ds.name=es.name and ds.data_set_id=ss.data_set_id;
+
+--CD4_DNASE result_set and have been duplicated for some reason, no feature set for duplciation so remove this set first;
+delete ds, ss from data_set ds, supporting_set ss where ds.name='CD4_DNASE' and ds.data_set_id=ss.data_set_id;
+
+-- Now update names in data_set and experimental_set
+update data_set set name=replace(name, '_IMPORT', '') where data_set_id in (20,21);
+update experimental_set set name='CD4_DNASE' where name ='CD4_parzen_02';
+update experimental_set set name='GM06990_DNASE' where name='GM06990_parzen_0115';
+
+--Now redo experimental_set patch for these
+update data_set ds, supporting_set ss, experimental_set es set ds.supporting_set_type='experimental', ss.supporting_set_id=es.experimental_set_id where ds.name=es.name and ds.data_set_id=ss.data_set_id and ds.data_set_id in(20,21);
+
+--Now tidy up all array/chip/probe/probe_feature level records for these experiments
+
+--results first 
+-- create tmp table to aid delete
+DROP TABLE IF EXISTS `tmp_ccids`;
+CREATE TABLE `tmp_ccids` (
+  `chip_channel_id` int(10) unsigned NOT NULl,
+  PRIMARY KEY  (`chip_channel_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
 
+insert into tmp_ccids select cc.chip_channel_id from chip_channel cc, experimental_chip ec where cc.table_name='experimental_chip' and cc.table_id=ec.experimental_chip_id and ec.experiment_id>=13;
 
+insert into tmp_ccids select cc.chip_channel_id from chip_channel cc, experimental_chip ec, channel c where cc.table_name='channel' and cc.table_id=c.channel_id and c.experimental_chip_id=ec.experimental_chip_id and ec.experiment_id>=13;
+
+delete r from result r, tmp_ccids tc where r.chip_channel_id=tc.chip_channel_id;
+--Query OK, 24205493 rows affected (8 min 45.35 sec)
+
+DROP TABLE IF EXISTS `tmp_ccids`;
+
+-- now delete the channel and experimental_chip records
+delete c from channel c, experimental_chip ec where c.experimental_chip_id=ec.experimental_chip_id and ec.experiment_id>=13;
+delete from experimental_chip where experiment_id>=13;
+
+--now delete the pseudo probes/features
+--do another tmp table to aid the delete
+DROP TABLE IF EXISTS `tmp_probe_ids`;
+CREATE TABLE `tmp_probe_ids` (
+  `probe_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY  (`probe_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+
+insert  into tmp_probe_ids select probe_id from probe where array_chip_id>=44;
+--Query OK, 24869910 rows affected (3 min 6.35 sec)
+delete p from probe p, tpi_probe_ids tpi where p.probe_id=tpi.probe_id;
+--Query OK, 24869910 rows affected (20 min 53.63 sec)
+
+delete pf from probe_feature pf, tmp_probe_ids tpi where pf.probe_id=tpi.probe_id;
+--Query OK, 24869908 rows affected (10 min 54.17 sec)
+-- array/chips and result sets/chip_channel_ids we forgot
+delete from array_chip where array_chip_id>=44;
+delete from array where array_id>=3;
+
+delete cc from chip_channel cc, result_set rs where cc.result_set_id=rs.result_set_id and rs.result_set_id>=23;
+delete from result_set where result_set_id>=23;
+
+
+--That's all the external_sets cleaned up, just need to add the filenames for each set as subsets.
+-- or is it?  What about the wiggle sets?
+
+
+--tweak RegFeat entry in feature_type table
+update feature_type set name='RegulatoryFeature', description='Regulatory Feature' where name='RegulatoryFeatures';
+
+alter table feature_type change name `name` varchar(40) NOT NULL;
 
 --need to vhange average row length on this and on regulatory feature!!
 

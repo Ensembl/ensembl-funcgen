@@ -286,7 +286,7 @@ CREATE TABLE `design_type` (
 DROP TABLE IF EXISTS `feature_type`;
 CREATE TABLE `feature_type` (
    `feature_type_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(40) default NULL,
+   `name` varchar(40) NOT NULL,
    `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region', 'Enhancer') default NULL,
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`feature_type_id`),
