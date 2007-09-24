@@ -59,7 +59,7 @@ OUTDIR=/lustre/scratch1/ensembl/graef/RegBuild/v47
 # first dump annotated features from database 
 # for further processing
 
-bsub -o "$OUTDIR/RegulatoryBuild_$FOCUS.log" -J RegBuild_Dump \
+bsub -o "$OUTDIR/RegulatoryBuild_$FOCUS.log" -J RegBuild_TableDump \
 $EFG_SRC/scripts/build_regulatory_features.pl \
     -host $HOST \
     -port $PORT \
@@ -77,7 +77,7 @@ $EFG_SRC/scripts/build_regulatory_features.pl \
 # features has been sucessfully completed
 
 bsub -o "$OUTDIR/RegulatoryBuild_$FOCUS.log" -J RegBuild_[1-25] \
-    -w 'done(RegBuild_Dump)' \
+    -w 'done(RegBuild_TableDump)' \
     $EFG_SRC/scripts/build_regulatory_features.pl \
     -host $HOST \
     -port $PORT \
@@ -90,6 +90,8 @@ bsub -o "$OUTDIR/RegulatoryBuild_$FOCUS.log" -J RegBuild_[1-25] \
     -outdir $OUTDIR \
     -gene_signature \
     -dump_features \
+    -write_features \
+    -clobber \
     $ARGS
 
 #    -seq_name 20 \
