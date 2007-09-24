@@ -57,46 +57,20 @@ sub build_features
     my $end   = $args->{'end'} || return ();
 
 
-#    use Bio::EnsEMBL::DBSQL::DBAdaptor;
-#    my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-#        (
-#         -user   => 'ensro',
-#         -dbname => 'homo_sapiens_core_45_36g',
-#         -host   => 'ens-livemirror',
-#         );
-#    my $sa = $cdb->get_SliceAdaptor();
-#    my $slice = $sa->fetch_by_region('chromosome', "$segment");
-#
-#    my $seq_region_id = $slice->get_seq_region_id();
-#    print Dumper $seq_region_id if ($self->{'debug'});
-#    my ($name, $version) = (split(/:/, $slice->name()))[0,1];
-#    print Dumper ($name, $version) if ($self->{'debug'});
-#    (my $schema_build = $self->config()->{'dbname'}) =~ s/.*_(\d+_\d+[a-z])$/$1/;
-#    print Dumper ($schema_build) if ($self->{'debug'});
-#
-#    my $sql = "SELECT coord_system_id
-#                 FROM coord_system
-#                WHERE name='$name'
-#                  AND version='$version'
-#                  AND schema_build='$schema_build'
-#                  AND attrib='default_version'";
-#    my $coord_system_id = $self->transport->query($sql)->[0]->{coord_system_id};
-#    print Dumper $coord_system_id if ($self->{'debug'});
-#
-    my $feature_set = $self->config()->{'feature_set'};
-    print Dumper $feature_set if ($self->{'debug'});
+    my $type = $self->config()->{'type'};
+    my $feature_set_id = $self->config()->{'feature_set_id'};
+    print Dumper $feature_set_id if ($self->{'debug'});
 
     # get data
     
     my $qbounds = ($start && $end)?qq(AND seq_region_start <= $end AND seq_region_end >= $start):"";
     my $version = $self->config()->{'version'};
     my $sql = "SELECT *
-              FROM feature_set fs, annotated_feature af, seq_region sr 
-             WHERE fs.feature_set_id=af.feature_set_id 
-               AND sr.seq_region_id=af.seq_region_id
+              FROM ${type}_feature f, seq_region sr 
+             WHERE sr.seq_region_id=f.seq_region_id
                AND sr.name=\"$segment\"
                AND sr.schema_build=\"$version\"
-               AND fs.name=\"$feature_set\"
+               AND f.feature_set_id=$feature_set_id
                $qbounds";
     
     print Dumper $sql if ($self->{'debug'});
@@ -115,10 +89,7 @@ sub build_features
                           $ft->{'seq_region_end'}
                           );
 
-        my $note = $feature_set;
-        if ($note =~ m/^(Overlap_|Regulatory)/) {
-            $note = $ft->{'display_label'};
-        }
+        my $note = $ft->{'display_label'};
         
         push @features,
         {
@@ -129,7 +100,7 @@ sub build_features
             'ori'         => $ft->{'seq_region_strand'},
             'score'       => $ft->{'score'},
 #            #'method'      => $self->config()->{'source'},
-#            #'type'        => $ft->{'type'},
+            'type'        => $type,
 #            #'typecategory'=> $self->config()->{'category'},
             'note'        => $note,
 #            'link'        => 'http://www.sanger.ac.uk/PostGenomics/epigenome/',
