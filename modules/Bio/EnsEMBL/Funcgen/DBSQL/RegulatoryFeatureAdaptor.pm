@@ -40,6 +40,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
+use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 
 use vars qw(@ISA);
