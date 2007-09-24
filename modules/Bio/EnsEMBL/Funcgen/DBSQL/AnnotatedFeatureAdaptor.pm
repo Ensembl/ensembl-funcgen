@@ -41,10 +41,11 @@ package Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
+
+use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);# Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);# Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 #why is baseadaptor req'd? can we remove this?
 
 
