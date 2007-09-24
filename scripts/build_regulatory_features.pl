@@ -497,7 +497,7 @@ if ($write_features) {
 	my @rf = ();
 
 	map {
-		push (@rf, &get_regulatory_feature);
+		push (@rf, &get_regulatory_feature($_));
 	} @regulatory_features;
 
 	$rfa->store(@rf);
@@ -637,18 +637,21 @@ sub get_gene_signature()
 
 sub get_regulatory_feature{
 
+	my ($rf) = @_;
+
+  #print Dumper $rf;
+
 	return Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
 		(
 		 -slice            => $slice,
-		 -start            => $regulatory_feature{start},
-		 -end              => $regulatory_feature{end},
+		 -start            => $rf->{start},
+		 -end              => $rf->{end},
 		 -strand           => 0,
-		 -display_label    => $regulatory_feature{binstring} || '',
+		 -display_label    => $rf->{binstring} || '',
 		 -feature_set      => $rfset,
 		 -feature_type     => $rfset->type,
-		 -_attribute_cache => {'annotated' => $regulatory_feature{annotated}},
+		 -_attribute_cache => {'annotated' => $rf->{annotated}},
 		);
-
 
 }
 
@@ -657,74 +660,74 @@ sub get_regulatory_feature{
 
 sub get_regulatory_FeatureSet{
     
-	my $rfset = $fsa->fetch_by_name('Regulatory_Features');
+    my $rfset = $fsa->fetch_by_name('RegulatoryFeatures');
 
-	if (defined $rfset) {
+    if ($rfset) {
 
-		if ($write_features && $clobber) {
-			my $fg_srcs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
-			
-			my $sql = 'DELETE from regulatory_feature where feature_set_id='.
-				$rfset->dbID().' and seq_region_id='.$fg_sr_id;
+        if ($write_features && $clobber) {
 
-			$db->dbc->do($sql) 
-				or throw('Failed to roll back regulatory_features for feature_set_id'.
-						 $rfset->dbID());
-		} elsif ($write_features) {
-			throw("Their is a pre-existing FeatureSet with the name 'Regulatory_Features'\n".
-				  'You must specify clobber is you want to delete and overwrite all'.
-				  ' pre-existing RegulatoryFeatures');
-		}
-	} else {					#generate new fset
+            my $sql = 'DELETE from regulatory_feature where feature_set_id='.
+                $rfset->dbID().' and seq_region_id='.$fg_sr_id;
 
-		my $ftype = $fta->fetch_by_name('RegulatoryFeature');
-		
-		if (! $ftype) {
-				
-			$ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
-					(
-					 -name        => 'RegulatoryFeature',
-					 -description => 'RegulatoryFeature',
-					);
-				
-			$ftype = @{$fta->store($ftype)} if ($write_features);
+            $db->dbc->do($sql) 
+                or throw('Failed to roll back regulatory_features for feature_set_id'.
+                         $rfset->dbID());
 
-		}
+        } elsif ($write_features) {
+            throw("Their is a pre-existing FeatureSet with the name 'Regulatory_Features'\n".
+                  'You must specify clobber is you want to delete and overwrite all'.
+                  ' pre-existing RegulatoryFeatures');
+        }
+    } else {					#generate new fset
 
-		$rfset = $fsa->fetch_by_name('RegulatoryFeatures');
+        my $ftype = $fta->fetch_by_name('RegulatoryFeature');
+        
+        if (! $ftype) {
+            
+            $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
+                (
+                 -name        => 'RegulatoryFeature',
+                 -description => 'RegulatoryFeature',
+                 );
+            
+            $ftype = @{$fta->store($ftype)} if ($write_features);
 
-		if (! $ftype) {
+        }
 
-			$rfset = Bio::EnsEMBL::Funcgen::FeatureSet->new
-				(
-				 -analysis     => $analysis,
-				 -feature_type => $ftype,
-				 -name         => 'RegulatoryFeatures',
-				 -type         => 'regulatory'
-				);
-			
-			$rfset = @{$fsa->store($rfset)} if ($write_features);
+        $rfset = $fsa->fetch_by_name('RegulatoryFeatures');
 
-		}
-			
-		#generate data_set here too
+        if (! $ftype) {
 
-		my $dset = $fsa->fetch_by_name('RegulatoryFeatures');
+            $rfset = Bio::EnsEMBL::Funcgen::FeatureSet->new
+                (
+                 -analysis     => $analysis,
+                 -feature_type => $ftype,
+                 -name         => 'RegulatoryFeatures',
+                 -type         => 'regulatory'
+                 );
+            
+            $rfset = @{$fsa->store($rfset)} if ($write_features);
 
-		if (! $dset) {
+        }
+        
+        #generate data_set here too
 
-			my $dset = Bio::EnsEMBL::Funcgen::DataSet->new
-				(
-				 -feature_set => $rfset,
-				 -name        => 'RegulatoryFeatures',
-				 -supporting_set_type => 'feature'
-				);
-			
-			$dsa->store($dset) if ($write_features);
-		}
-	}
+        my $dset = $fsa->fetch_by_name('RegulatoryFeatures');
 
-	return $rfset;
+        if (! $dset) {
+
+            my $dset = Bio::EnsEMBL::Funcgen::DataSet->new
+                (
+                 -feature_set => $rfset,
+                 -name        => 'RegulatoryFeatures',
+                 -supporting_set_type => 'feature'
+                 );
+            
+            $dsa->store($dset) if ($write_features);
+        }
+    }
+
+    return $rfset;
 
 
 }
