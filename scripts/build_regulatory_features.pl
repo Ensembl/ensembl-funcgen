@@ -1,6 +1,5 @@
 #!/software/bin/perl
-####!/usr/bin/perl
-
+###!/usr/bin/perl
 
 =head1 NAME
 
@@ -102,9 +101,6 @@ throw("Must specify mandatory database data version, like 47_36i (-data_version)
 throw("Must specify mandatory focus sets (-focus).\n") if ! defined $focus;
 throw("Must specify mandatory target sets (-target).\n") if ! defined $target;
 
-warn("write_features not set: do_intersect will be skipped\n") 
-    if ($do_intersect && ! $write_features);
-
 #throw("No output directory specified! Use -o option.") if (!$outdir);
 if (defined $outdir && ! -d $outdir) {
     system("mkdir -p $outdir");
@@ -119,6 +115,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file);
+use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 #use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
 
 # use ensembldb as we may want to use an old version
@@ -148,35 +145,15 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 #print Dumper $db;
 
 my $fsa = $db->get_FeatureSetAdaptor();
-#my $fta = $db->get_FeatureTypeAdaptor();
+my $dsa = $db->get_DataSetAdaptor();
+my $fta = $db->get_FeatureTypeAdaptor();
 my $afa = $db->get_AnnotatedFeatureAdaptor();
+my $rfa = $db->get_RegulatoryFeatureAdaptor();
 my $sa = $db->get_SliceAdaptor();
 my $aa = $db->get_AnalysisAdaptor();
 my $ga = $cdb->get_GeneAdaptor();
 #my $ta = $cdb->get_TranscriptAdaptor();
 
-my $anal = Bio::EnsEMBL::Analysis->new(
-	-logic_name      => 'RegulatoryFeature',
-	-db              => 'NULL',
-	-db_version      => 'NULL',
-	-db_file         => 'NULL',
-	-program         => 'NULL',
-	-program_version => 'NULL',
-	-program_file    => 'NULL',
-	-gff_source      => 'NULL',
-	-gff_feature     => 'NULL',
-	-module          => 'NULL',
-	-module_version  => 'NULL',
-	-parameters      => 'NULL',
-	-created         => 'NULL',
-	-description     => 'Union of focus features, features overlapping focus features, '.
-	' and features that are comteined within those',
-	### name changed from "RegulatoryRegion"
-	-display_label   => 'RegulatoryFeature',
-	-displayable     => 1,
-	);
-my $analysis = $aa->fetch_by_dbID($aa->store($anal)) if ($write_features);
-#print Dumper $analysis;
 
 # parse focus and target sets and check that they exist
 my (%focus_fsets, %target_fsets);
@@ -317,10 +294,38 @@ print
     '# Chromosome: ', join(" ",$slice->display_id(),$slice->get_seq_region_id), "\n",
     '#   core seq_region_id '.$core_sr_id." => fg seq_region_id ".$fg_sr_id."\n";
 
+
+
+my $analysis = Bio::EnsEMBL::Analysis->new(
+	-logic_name      => 'RegulatoryRegion',
+	-db              => 'NULL',
+	-db_version      => 'NULL',
+	-db_file         => 'NULL',
+	-program         => 'NULL',
+	-program_version => 'NULL',
+	-program_file    => 'NULL',
+	-gff_source      => 'NULL',
+	-gff_feature     => 'NULL',
+	-module          => 'NULL',
+	-module_version  => 'NULL',
+	-parameters      => 'NULL',
+	-created         => 'NULL',
+	-description     => 'Union of focus features, features overlapping focus features, '.
+	' and features that are contained within those',
+	### display_label is going to be changed to "RegulatoryBuild" or so
+	-display_label   => 'RegulatoryRegion',
+	-displayable     => 1,
+	);
+$analysis = $aa->fetch_by_dbID($aa->store($analysis)) if ($write_features) ;
+#print Dumper $analysis;
+
+my $rfset = &get_regulatory_FeatureSet($analysis);
+
 # Read from file and process sequentially in sorted by start, end order. Each 
 # new feature is checked if it overlaps with the preceeding already seen 
 # features. If yes we just carry on with the next one. Otherwise
 
+$dbname =~ s/sg_//;
 my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
 
 my (@features, $focus_end, @regulatory_features, %regulatory_feature);
@@ -403,6 +408,7 @@ while (<$fh>) {
 				
 				# build binary string
 				$regulatory_feature{binstring} = &build_binstring(\%regulatory_feature);
+
 				push(@regulatory_features, {%regulatory_feature});
 
 				%regulatory_feature = (
@@ -465,6 +471,7 @@ while (<$fh>) {
 if (%regulatory_feature) {
 	# build binary string
 	$regulatory_feature{binstring} = &build_binstring(\%regulatory_feature);
+
 	push(@regulatory_features, {%regulatory_feature});
 
 }
@@ -484,6 +491,19 @@ if ($dump_features) {
 	printf "# Regulatory features written to ".$outfile."\n";
 
 }
+
+if ($write_features) {
+
+	my @rf = ();
+
+	map {
+		push (@rf, &get_regulatory_feature);
+	} @regulatory_features;
+
+	$rfa->store(@rf);
+
+}
+
 
 my $feature_count;
 map {$feature_count+=$_} values %feature_count;
@@ -611,6 +631,104 @@ sub get_gene_signature()
 	return $tss.$tts;
 
 }
+
+
+
+
+sub get_regulatory_feature{
+
+	return Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
+		(
+		 -slice            => $slice,
+		 -start            => $regulatory_feature{start},
+		 -end              => $regulatory_feature{end},
+		 -strand           => 0,
+		 -display_label    => $regulatory_feature{binstring} || '',
+		 -feature_set      => $rfset,
+		 -feature_type     => $rfset->type,
+		 -_attribute_cache => {'annotated' => $regulatory_feature{annotated}},
+		);
+
+
+}
+
+
+
+
+sub get_regulatory_FeatureSet{
+    
+	my $rfset = $fsa->fetch_by_name('Regulatory_Features');
+
+	if (defined $rfset) {
+
+		if ($write_features && $clobber) {
+			my $fg_srcs_id = $db->get_FGCoordSystemAdaptor->fetch_by_name('chromosome')->dbID();
+			
+			my $sql = 'DELETE from regulatory_feature where feature_set_id='.
+				$rfset->dbID().' and seq_region_id='.$fg_sr_id;
+
+			$db->dbc->do($sql) 
+				or throw('Failed to roll back regulatory_features for feature_set_id'.
+						 $rfset->dbID());
+		} elsif ($write_features) {
+			throw("Their is a pre-existing FeatureSet with the name 'Regulatory_Features'\n".
+				  'You must specify clobber is you want to delete and overwrite all'.
+				  ' pre-existing RegulatoryFeatures');
+		}
+	} else {					#generate new fset
+
+		my $ftype = $fta->fetch_by_name('RegulatoryFeature');
+		
+		if (! $ftype) {
+				
+			$ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
+					(
+					 -name        => 'RegulatoryFeature',
+					 -description => 'RegulatoryFeature',
+					);
+				
+			$ftype = @{$fta->store($ftype)} if ($write_features);
+
+		}
+
+		$rfset = $fsa->fetch_by_name('RegulatoryFeatures');
+
+		if (! $ftype) {
+
+			$rfset = Bio::EnsEMBL::Funcgen::FeatureSet->new
+				(
+				 -analysis     => $analysis,
+				 -feature_type => $ftype,
+				 -name         => 'RegulatoryFeatures',
+				 -type         => 'regulatory'
+				);
+			
+			$rfset = @{$fsa->store($rfset)} if ($write_features);
+
+		}
+			
+		#generate data_set here too
+
+		my $dset = $fsa->fetch_by_name('RegulatoryFeatures');
+
+		if (! $dset) {
+
+			my $dset = Bio::EnsEMBL::Funcgen::DataSet->new
+				(
+				 -feature_set => $rfset,
+				 -name        => 'RegulatoryFeatures',
+				 -supporting_set_type => 'feature'
+				);
+			
+			$dsa->store($dset) if ($write_features);
+		}
+	}
+
+	return $rfset;
+
+
+}
+
 
 
 1;
