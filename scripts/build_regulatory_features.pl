@@ -483,8 +483,8 @@ if ($dump_features) {
 	my $out = open_file($outfile, ">");
 
 	map {
-		printf $out "%d\t%d\t%d\t%s\t%s\n", 
-		$fg_sr_id, $_->{start}, $_->{end}, 
+		printf $out "%d\t%s\t%d\t%d\t%s\t%s\n", 
+		$fg_sr_id, $slice->seq_region_name, $_->{start}, $_->{end}, 
 		$_->{binstring}, join(",", keys %{$_->{annotated}});
 	} @regulatory_features;
 
