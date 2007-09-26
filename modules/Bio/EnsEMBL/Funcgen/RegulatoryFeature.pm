@@ -169,7 +169,7 @@ sub stable_id {
 	
   $self->{'stable_id'} = shift if @_;
   
-  return  sprintf("ENSR%011d", $self->{'stable_id'});
+  return  (defined $self->{'stable_id'}) ? sprintf("ENSR%011d", $self->{'stable_id'}) : undef;
 }
 
 
@@ -211,8 +211,7 @@ sub regulatory_attributes {
   if(@$attrs){
 
 	foreach my $attr(@$attrs){
-	  #will this work?
-	  $table = $attr->adaptor->_tables()->[0]->[0];
+	  $table = $attr->adaptor->_main_table();
 	  
 	  #check for isa Feature here?
 	  
@@ -310,6 +309,8 @@ sub bound_end {
 	
   $self->_generate_underlying_structure() if(! exists $self->{'bound_end'});
   
+  #This should return the attr name to?
+
   return $self->{'bound_end'};
 }
 

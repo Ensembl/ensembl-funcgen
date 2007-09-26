@@ -46,6 +46,33 @@ use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
+=head2 fetch_by_stable_id
+
+  Arg [1]    : String $stable_id 
+               The stable id of the regulatory feature to retrieve
+  Example    : my $rf = $rf_adaptor->fetch_by_stable_id('ENSR00000309301');
+  Description: Retrieves a regulatory feature via its stable id.
+  Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_by_stable_id {
+  my ($self, $stable_id) = @_;
+
+
+  $stable_id =~ s/ENSR0*//;
+
+  my $constraint = 'rf.stable_id='.$stable_id;
+  my ($reg_feat) = @{ $self->generic_fetch($constraint) };
+
+  return $reg_feat;
+}
+
+
+
 =head2 _tables
 
   Args       : None
@@ -517,6 +544,30 @@ sub store{
   
   return \@rfs;
 }
+
+
+=head2 fetch_all_by_Slice
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_by_Slice($slice);
+  Description: Retrieves a list of features on a given slice, specific for the current 
+               default RegulatoryFeature set.
+  Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Slice {
+  my ($self, $slice) = @_;
+	
+  my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
+
+  return $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]);
+}
+
 
 
 1;
