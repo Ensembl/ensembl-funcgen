@@ -1,5 +1,5 @@
 #!/software/bin/perl
-###!/usr/bin/perl
+####!/usr/bin/perl
 
 =head1 NAME
 
@@ -59,8 +59,8 @@ use Getopt::Long;
 
 my ($pass,$port,$host,$user,$dbname,$species,$help,$man,
     $data_version,$outdir,$do_intersect,$write_features,
-	$dump_features,$seq_name,$clobber,
-    $focus,$target,$dump,$gene_signature,$debug);
+	$dump_features,$seq_name,$clobber,$focus_max_length,
+    $focus_extend,$focus,$target,$dump,$gene_signature,$stats,$debug);
 
 GetOptions (
 	"pass|p=s"       => \$pass,
@@ -79,9 +79,12 @@ GetOptions (
 	"seq_name|s=s" => \$seq_name,
 	"clobber" => \$clobber,
 	"focus|f=s" => \$focus,
+	"focus_max_length=i" => \$focus_max_length,
+	"focus_extend=i" => \$focus_extend,
 	"target|t=s" => \$target,
 	"dump" => \$dump,
 	"gene_signature" => \$gene_signature,
+	"stats" => \$stats,
 	"debug" => \$debug
 	);
 
@@ -100,6 +103,9 @@ throw("Must specify mandatory database data version, like 47_36i (-data_version)
 
 throw("Must specify mandatory focus sets (-focus).\n") if ! defined $focus;
 throw("Must specify mandatory target sets (-target).\n") if ! defined $target;
+
+$focus_max_length = 2000 if (! defined $focus_max_length);
+$focus_extend = 2000 if (! defined $focus_extend);
 
 #throw("No output directory specified! Use -o option.") if (!$outdir);
 if (defined $outdir && ! -d $outdir) {
@@ -325,12 +331,10 @@ my $rfset = &get_regulatory_FeatureSet($analysis);
 # new feature is checked if it overlaps with the preceeding already seen 
 # features. If yes we just carry on with the next one. Otherwise
 
-$dbname =~ s/sg_//;
 my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
 
-my (@features, $focus_end, @regulatory_features, %regulatory_feature);
+my (@rf,@af);
 my ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
-
 
 my (%feature_count);
 
@@ -349,133 +353,91 @@ while (<$fh>) {
 			 && $score < $ChIPseq_cutoff{$target_fsets{$fset_id}->name()});
 
 	print $_, "\n" if ($debug);
+	my  $length = $end-$start+1;
+
 
 	# some stats
 	$feature_count{$fset_id}++;
 
 	if (exists $focus_fsets{$fset_id}) {
 
+		# focus feature
+
+		# focus features that are longer than a given threshold are only 
+		# considered as attribute features
+		if ($length > $focus_max_length) {
+			print "focus feature ($af_id) longer than $focus_max_length; ",
+			"added to attribute feature list\n" if ($debug);
+			&add_feature();
+			# need to check overlaps with current focus_features
+			next;
+		}
+
 		# current feature is focus feature
 		print "focus feature ($af_id)\n" if ($debug);
 
-		# no regulatory feature seed available
-		if ( ! %regulatory_feature ) {
 
-			%regulatory_feature = (
-				'start' => $start,
-				'end' => $end,
-				'annotated' => { 
-					$af_id => undef 
-				},
-				'fsets' => {
-					$fset_id => 1
-				});
-			
-			$focus_end = $regulatory_feature{end};
+		# focus feature overlaps w/ rf core (0° of separation)
+		if ( @rf && $start <= $rf[$#rf]{focus_end}) {
 
-			&update_5prime();
+			&update_focus();
 
+		# open new regulatory feature
 		} else {
-
 			
-			if ($start < $regulatory_feature{end}) {
-				
-				print "focus_feature overlaps regulatory feature; ",
-				"add ($af_id) to reg. feature\n" if ($debug);
-				
-				# add annot. feature id to reg. feature
-				$regulatory_feature{annotated}{$af_id} = undef;
-				$regulatory_feature{fsets}{$fset_id}++;
-				
-				# update end of regulatory feature
-				$regulatory_feature{end} = $end
-					if ($end > $regulatory_feature{end});
-
-				# add annot. feature id to reg. feature
-				map {
-					if ($_->{end} <= $regulatory_feature{end}) {
-						print "add (".$_->{af_id}.") to reg. feature\n" if ($debug);
-						$regulatory_feature{annotated}{$_->{af_id}} = undef;
-						$regulatory_feature{fsets}{$_->{fset_id}}++;
-					} 
-				} @features;
-
-				@features = ();
-				
-			} else {
-
-				print "close regulatory feature\n" if ($debug);
-				
-				# build binary string
-				$regulatory_feature{binstring} = &build_binstring(\%regulatory_feature);
-
-				push(@regulatory_features, {%regulatory_feature});
-
-				%regulatory_feature = (
-					'start' => $start,
-					'end' => $end,
-					'annotated' => { 
-						$af_id => undef 
-					},
-					'fsets' => {
-						$fset_id => 1
-					});
-				
-				$focus_end = $regulatory_feature{end};
-
-				&update_5prime();
-
-			}
+			&add_focus();
+			&update_attributes();
 
 		}
 
-		$focus_end = ($end > $focus_end) ? $end : $focus_end;
+		&add_feature();
 
 	} else {
 
-		# ordinary feature
+		# attribute feature
 
-		if ( defined $focus_end && $start <= $focus_end ) {
+		if ( @rf && $start <= $rf[$#rf]{focus_end} ) {
 
 			print "overlap w/ focus feature; add (".$af_id.") to reg. feature\n" 
 				if ($debug);
-
+			
 			# add annot. feature id to reg. feature
-			$regulatory_feature{annotated}{$af_id} = undef;
-			$regulatory_feature{fsets}{$fset_id}++;
+			$rf[$#rf]{annotated}{$af_id} = undef;
+			$rf[$#rf]{fsets}{$fset_id}++;
 
 			# update end of regulatory feature
-			$regulatory_feature{end} = $end
-				if ($end > $regulatory_feature{end});
+			$rf[$#rf]{attribute_end} = $end
+				if ($end > $rf[$#rf]{attribute_end});
 			
-		} elsif (%regulatory_feature && $end <= $regulatory_feature{end}) {
+		} elsif (@rf && $end <= $rf[$#rf]{attribute_end} &&
+				 $start <= $rf[$#rf]{focus_end}+$focus_extend) {
 
-			print "contained within reg. feature; add ($af_id) to reg. feature\n" 
+			print "contained within reg. feature; add (".$af_id.") to reg. feature\n" 
 				if ($debug);
 
 			# add annot. feature id to reg. feature
-			$regulatory_feature{annotated}{$af_id} = undef;
-			$regulatory_feature{fsets}{$fset_id}++;
-			
-		} else {
-
-			print "add to feature list ($af_id)\n" if ($debug);
-			&add_feature();
+			$rf[$#rf]{annotated}{$af_id} = undef;
+			$rf[$#rf]{fsets}{$fset_id}++;
 
 		}
+		
+		print "add to attribute feature list ($af_id)\n" if ($debug);
+		&add_feature();
 
 	}
 	
 }
 
-if (%regulatory_feature) {
-	# build binary string
-	$regulatory_feature{binstring} = &build_binstring(\%regulatory_feature);
+# build binary string
 
-	push(@regulatory_features, {%regulatory_feature});
+map {
+	
+	$_->{binstring} = &build_binstring($_);
 
-}
-print "\n", Dumper @regulatory_features if ($debug);
+} @rf;
+
+print "\n", Dumper @rf if ($debug);
+
 
 if ($dump_features) {
 
@@ -483,10 +445,12 @@ if ($dump_features) {
 	my $out = open_file($outfile, ">");
 
 	map {
-		printf $out "%d\t%s\t%d\t%d\t%s\t%s\n", 
-		$fg_sr_id, $slice->seq_region_name, $_->{start}, $_->{end}, 
-		$_->{binstring}, join(",", keys %{$_->{annotated}});
-	} @regulatory_features;
+		printf $out "%d\t%s\t%d\t%d\t%d\t%d\t%s\t%s\n", 
+		$fg_sr_id, $slice->seq_region_name, 
+		$_->{focus_start}, $_->{focus_end},
+		$_->{attribute_start}, $_->{attribute_end}, 
+		$_->{binstring}, join(",", sort {$a<=>$b} keys %{$_->{annotated}});
+	} @rf;
 
 	printf "# Regulatory features written to ".$outfile."\n";
 
@@ -498,9 +462,9 @@ if ($write_features) {
 
 	map {
 		push (@rf, &get_regulatory_feature($_));
-	} @regulatory_features;
+	} @rf;
 
-	$rfa->store(@rf);
+	#$rfa->store(@rf);
 
 }
 
@@ -508,28 +472,112 @@ if ($write_features) {
 my $feature_count;
 map {$feature_count+=$_} values %feature_count;
 printf "# Number of read features: %10d\n", $feature_count;
-printf "# Number of reg. features: %10d\n", scalar(@regulatory_features);
+printf "# Number of reg. features: %10d\n", scalar(@rf);
 
-
-my %rf_count;
-map { 
-	foreach my $k (keys %{$_->{fsets}}){
-		#print join(" ", $k, $_->{fsets}->{$k}), "\n";
-		$rf_count{$k} += $_->{fsets}->{$k};
-	}
-} @regulatory_features;
-
-printf "# %-34s\t%8s\t%8s\n", 'Number of feature sets', 'total', 'included';
-map {printf "# %29s (%d)\t%8d\t%8d\n", $_->name, $_->dbID, 
-	 $feature_count{$_->dbID}||0, $rf_count{$_->dbID}||0}
-sort {$a->name cmp $b->name} values %target_fsets;
-
+if ($stats) {
+	my (%rf_count, %rf_count_global);
+	map { 
+		foreach my $k (keys %{$_->{fsets}}){
+			#print join(" ", $k, $_->{fsets}->{$k}), "\n";
+			$rf_count{$k} += $_->{fsets}->{$k};
+			$rf_count_global{$k}++;
+		}
+	} @rf;
+	
+	printf "# %-34s\t%8s\t%8s\t%8s\n",
+	'Number of feature sets', 'total', 'included', 'global';
+	map {printf "# %29s (%d)\t%8d\t%8d\t%8d\n", $_->name, $_->dbID, 
+		 $feature_count{$_->dbID}||0, $rf_count{$_->dbID}||0,
+		 $rf_count_global{$_->dbID}||0}
+	sort {$a->name cmp $b->name} values %target_fsets;
+}
 ###############################################################################
+
+sub add_focus ()
+{
+
+	print "add focus\n" if ($debug);
+
+	push @rf, 
+	{
+		'focus_start' => $start,
+		'focus_end' => $end,
+		'attribute_start' => $start,
+		'attribute_end' => $end,
+		'annotated' => { 
+			$af_id => undef
+		},
+		'fsets' => {
+			$fset_id => 1
+	    }
+	};
+	
+	#print Dumper @rf;
+	
+}
+
+sub update_focus ()
+{
+
+	print "update focus_feature\n" if ($debug);
+
+	$rf[$#rf]{focus_end} = $end
+		if ($end > $rf[$#rf]{focus_end});
+	$rf[$#rf]{attribute_end}=$rf[$#rf]{focus_end};
+
+	$rf[$#rf]{fsets}{$fset_id}++;
+	$rf[$#rf]{annotated}{$af_id}=undef;
+
+
+	#print Dumper @rf if ($debug);
+
+}
+
+sub update_attributes ()
+{
+
+	print "update attributes\n" if ($debug);
+	
+    # look upstream for features overlaping focus feature
+	for (my $i=0; $i<=$#af; $i++) {
+		
+		if ($af[$i]{end} >= $start) {
+
+			# FIRST update attribute start and end of regulatory feature...
+			$rf[$#rf]{attribute_start} = $af[$i]{start}
+				if ($af[$i]{start} < $rf[$#rf]{attribute_start});
+			$rf[$#rf]{attribute_end} = $af[$i]{end}
+				if ($af[$i]{end} > $rf[$#rf]{attribute_end});
+			
+			# ... then remove features that are out of scope
+			splice(@af, 0, $i);
+			#print Dumper @af;
+
+			# and add the remaining attribute features if applicable
+			map {
+				
+				if ($_->{end} >= $start ||
+					$_->{start} >= $rf[$#rf]{focus_start}-$focus_extend) {
+
+					$rf[$#rf]{annotated}{$_->{af_id}} = undef;
+					$rf[$#rf]{fsets}{$_->{fset_id}}++;
+
+				}
+
+			} @af;
+			
+			last;
+
+		}
+
+	}
+
+}
 
 sub add_feature ()
 {
 
-    push(@features, 
+    push(@af, 
          {
              af_id => $af_id,
              start => $start,
@@ -539,45 +587,6 @@ sub add_feature ()
              fset_id => $fset_id
 		 }
 		);
-
-}
-
-sub update_5prime()
-{
-	
-	# look upstream for features overlaping with focus feature
-	
-	foreach my $ft (@features) {
-		
-		if ($ft->{end} >= $start) {
-			
-			print "1st feature that overlaps w/ focus (".$ft->{af_id}.")\n" if ($debug);
-			
-			# update start of regulatory feature
-			$regulatory_feature{start} = $ft->{start}
-			if ($ft->{start} < $regulatory_feature{start});
-			
-			# add all annot. features (af_ids) from the list to reg. feature 
-			# and update reg. feature end if necessary
-			map {
-				if ($_->{start} >= $regulatory_feature{start})
-				{
-					print "add (".$_->{af_id}.") to reg. feature\n" if ($debug);
-					$regulatory_feature{annotated}{$_->{af_id}} = undef;
-					$regulatory_feature{fsets}{$_->{fset_id}}++;
-					$regulatory_feature{end} = $_->{end}
-					if ($_->{end} > $regulatory_feature{end});
-				}
-			} @features;
-			
-			print "empty feature list\n" if ($debug);
-			@features = ();
-			
-			last;
-			
-		}
-		
-	}
 
 }
 
@@ -598,7 +607,6 @@ sub build_binstring()
 
 }
 
-
 sub get_gene_signature()
 {
 
@@ -613,8 +621,8 @@ sub get_gene_signature()
 	
 	my ($feature_slice, $expanded_slice);
 	$feature_slice = $sa->fetch_by_seq_region_id($core_sr_id,
-												 $rf->{start},
-												 $rf->{end});
+												 $rf->{focus_start},
+												 $rf->{focus_end});
 	$expanded_slice = $feature_slice->expand($expand, $expand);
 
 	foreach my $g (@{$ga->fetch_all_by_Slice($expanded_slice)}) {
@@ -632,14 +640,11 @@ sub get_gene_signature()
 
 }
 
-
-
-
 sub get_regulatory_feature{
 
 	my ($rf) = @_;
 
-  #print Dumper $rf;
+	#print Dumper $rf;
 
 	return Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
 		(
@@ -665,9 +670,12 @@ sub get_regulatory_FeatureSet{
     if ($rfset) {
 
         if ($write_features && $clobber) {
-
-            my $sql = 'DELETE from regulatory_feature where feature_set_id='.
-                $rfset->dbID().' and seq_region_id='.$fg_sr_id;
+			
+            my $sql = 
+				'DELETE ra FROM regulatory_attribute ra, regulatory_feature rf '.
+				'WHERE ra.regulatory_feature_id=rf.regulatory_feature_id; '.
+				'DELETE FROM regulatory_feature where feature_set_id='.$rfset->dbID().
+				'AND seq_region_id='.$fg_sr_id;
 
             $db->dbc->do($sql) 
                 or throw('Failed to roll back regulatory_features for feature_set_id'.
