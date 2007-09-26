@@ -1,5 +1,5 @@
 #!/software/bin/perl
-####!/usr/bin/perl
+###!/usr/bin/perl
 
 =head1 NAME
 
@@ -336,7 +336,8 @@ my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
 my (@rf,@af);
 my ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
 
-my (%feature_count);
+### variables for statistics
+my (%feature_count, %seen_af, %removed_af);
 
 while (<$fh>) {
 
@@ -369,6 +370,7 @@ while (<$fh>) {
 			print "focus feature ($af_id) longer than $focus_max_length; ",
 			"added to attribute feature list\n" if ($debug);
 			&add_feature();
+			$removed_af{$fset_id}{$af_id} = 1;
 			# need to check overlaps with current focus_features
 			next;
 		}
@@ -405,6 +407,8 @@ while (<$fh>) {
 			$rf[$#rf]{annotated}{$af_id} = undef;
 			$rf[$#rf]{fsets}{$fset_id}++;
 
+			$seen_af{$fset_id}{$af_id} = 1;
+
 			# update end of regulatory feature
 			$rf[$#rf]{attribute_end} = $end
 				if ($end > $rf[$#rf]{attribute_end});
@@ -418,6 +422,8 @@ while (<$fh>) {
 			# add annot. feature id to reg. feature
 			$rf[$#rf]{annotated}{$af_id} = undef;
 			$rf[$#rf]{fsets}{$fset_id}++;
+
+			$seen_af{$fset_id}{$af_id} = 1;
 
 		}
 		
@@ -475,21 +481,22 @@ printf "# Number of read features: %10d\n", $feature_count;
 printf "# Number of reg. features: %10d\n", scalar(@rf);
 
 if ($stats) {
-	my (%rf_count, %rf_count_global);
+	my (%rf_count);
 	map { 
 		foreach my $k (keys %{$_->{fsets}}){
 			#print join(" ", $k, $_->{fsets}->{$k}), "\n";
 			$rf_count{$k} += $_->{fsets}->{$k};
-			$rf_count_global{$k}++;
 		}
 	} @rf;
 	
-	printf "# %-34s\t%8s\t%8s\t%8s\n",
-	'Number of feature sets', 'total', 'included', 'global';
-	map {printf "# %29s (%d)\t%8d\t%8d\t%8d\n", $_->name, $_->dbID, 
-		 $feature_count{$_->dbID}||0, $rf_count{$_->dbID}||0,
-		 $rf_count_global{$_->dbID}||0}
-	sort {$a->name cmp $b->name} values %target_fsets;
+	printf "# %-34s\t%8s\t%8s\t%8s\t%8s\n",
+	'Number of feature sets', 'total', 'included', 'distinct', 'removed';
+	map {
+		printf "# %29s (%d)\t%8d\t%8d\t%8d\t%8d\n", $_->name, $_->dbID, 
+		$feature_count{$_->dbID}||0, $rf_count{$_->dbID}||0,
+		scalar(keys %{$seen_af{$_->dbID}})||0,
+		scalar(keys %{$removed_af{$_->dbID}})||0
+	} sort {$a->name cmp $b->name} values %target_fsets;
 }
 ###############################################################################
 
@@ -511,6 +518,8 @@ sub add_focus ()
 			$fset_id => 1
 	    }
 	};
+
+	$seen_af{$fset_id}{$af_id} = 1;
 	
 	#print Dumper @rf;
 	
@@ -528,6 +537,7 @@ sub update_focus ()
 	$rf[$#rf]{fsets}{$fset_id}++;
 	$rf[$#rf]{annotated}{$af_id}=undef;
 
+	$seen_af{$fset_id}{$af_id} = 1;
 
 	#print Dumper @rf if ($debug);
 
@@ -561,6 +571,8 @@ sub update_attributes ()
 
 					$rf[$#rf]{annotated}{$_->{af_id}} = undef;
 					$rf[$#rf]{fsets}{$_->{fset_id}}++;
+
+					$seen_af{$fset_id}{$af_id} = 1;
 
 				}
 
@@ -739,7 +751,5 @@ sub get_regulatory_FeatureSet{
 
 
 }
-
-
 
 1;
