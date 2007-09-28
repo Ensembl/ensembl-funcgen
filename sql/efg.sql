@@ -515,7 +515,7 @@ CREATE TABLE `feature_set` (
    `feature_type_id` int(10) unsigned NOT NULL,
    `analysis_id`  int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
-   `name` varchar(250) default NULL,
+   `name` varchar(40) default NULL,
    `type` enum('annotated', 'regulatory', 'external') default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),

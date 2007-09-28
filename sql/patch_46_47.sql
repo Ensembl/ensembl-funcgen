@@ -1,3 +1,7 @@
+select "This patch should be worked through manually as there are data specific and species specific patches";
+exit;
+
+
 -- meta
 update meta set meta_value=47 where meta_key='schema_version';
 
@@ -150,8 +154,8 @@ CREATE TABLE `regulatory_attribute` (
 
 
 
-
--- finally remove regulatory feature from annotated_feature table
+-- check we have migrated the regulatory_feature before this
+-- finally remove regulatory feature from annotated_feature table???
 delete from annotated_feature where feature_set_id = 27;
 
 
@@ -277,7 +281,7 @@ CREATE TABLE `experimental_subset` (
 --uppdate data_set
 alter table data_set change `supporting_set_type` `supporting_set_type` enum('result', 'feature', 'experimental') default NULL;
 
-
+--Ensembl data pach only
 --tidy up old overlap features/set/types
 delete from annotated_feature where feature_set_id in(56, 55);
 delete from feature_type where name='CTCF:CTCF:DNase1:H2AZ:H2BK5me1:H3K27me1:';
@@ -539,6 +543,8 @@ insert into feature_set select NULL, ft.feature_type_id, a.analysis_id, NULL, 'c
 
 
 --migrate the features from regulatory_search_region
+--this has been redone with v47 regions which were mapped to NCBI36
+
 insert into external_feature select NULL, rsr.seq_region_id, rsr.seq_region_start, rsr.seq_region_end, rsr.seq_region_strand, rsr.name, fs.feature_type_id, fs.feature_set_id from regulatory_search_region rsr, feature_set fs where fs.name='cisRED Search Regions';
 
 --we will have to patch the xrefs later so don't delete this table!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -686,6 +692,89 @@ delete from result_set where result_set_id>=23;
 update feature_type set name='RegulatoryFeature', description='Regulatory Feature' where name='RegulatoryFeatures';
 
 alter table feature_type change name `name` varchar(40) NOT NULL;
+
+
+
+
+
+
+
+-- Data patch for overlapping old reg feats, this is to enable stable id mapping code to work
+
+
+--The first features in the overlapping pairs
+
+mysql> select * from regulatory_feature rf inner join regulatory_feature rf1 on rf1.seq_region_start=rf.seq_region_end and rf.seq_region_id=rf1.seq_region_id and rf1.feature_set_id=rf.feature_set_id and rf.feature_set_id=27;
++-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+
+| regulatory_feature_id | seq_region_id | seq_region_start | seq_region_end | seq_region_strand | display_label | feature_type_id | feature_set_id | stable_id | regulatory_feature_id | seq_region_id | seq_region_start | seq_region_end | seq_region_strand | display_label | feature_type_id | feature_set_id | stable_id |
++-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+
+|                 23522 |           257 |         12141408 |       12148061 |                 0 | 0011111100    |             117 |             27 |     23522 |                 23523 |           257 |         12148061 |       12149948 |                 0 | 0011011100    |             117 |             27 |     23523 |
+|                 23541 |           257 |         12331307 |       12332398 |                 0 | 0011011100    |             117 |             27 |     23541 |                 23542 |           257 |         12332398 |       12335452 |                 0 | 0011111100    |             117 |             27 |     23542 |
+|                 52037 |            29 |         45003728 |       45005056 |                 0 | 0011011100    |             117 |             27 |     52037 |                 52038 |            29 |         45005056 |       45008548 |                 0 | 0011011100    |             117 |             27 |     52038 |
+|                 63403 |            89 |        171237984 |      171240084 |                 0 | 0100011010    |             117 |             27 |     63403 |                 63404 |            89 |        171240084 |      171241746 |                 0 | 0000111010    |             117 |             27 |     63404 |
+|                 79529 |            41 |        141476862 |      141483419 |                 0 | 0011111100    |             117 |             27 |     79529 |                 79530 |            41 |        141483419 |      141484341 |                 0 | 0011111100    |             117 |             27 |     79530 |
+|                104835 |            25 |        127359713 |      127362848 |                 0 | 0011011100    |             117 |             27 |    104835 |                104836 |            25 |        127362848 |      127364726 |                 0 | 0011011100    |             117 |             27 |    104836 |
+|                104983 |            25 |        128777241 |      128778840 |                 0 | 0011011100    |             117 |             27 |    104983 |                104984 |            25 |        128778840 |      128782578 |                 0 | 0011011100    |             117 |             27 |    104984 |
+|                105122 |            25 |        130477548 |      130480838 |                 0 | 0011111100    |             117 |             27 |    105122 |                105123 |            25 |        130480838 |      130482511 |                 0 | 0011111100    |             117 |             27 |    105123 |
++-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+
+8 rows in set (0.84 sec)
+
+
+
+-- THe second feature in the overlapping pairs
+
+select * from regulatory_feature rf inner join regulatory_feature rf1 on rf.seq_region_start=rf1.seq_region_end and rf.seq_region_id=rf1.seq_region_id and rf1.feature_set_id=rf.feature_set_id and rf.feature_set_id=27;
+
+
+
++-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+
+| regulatory_feature_id | seq_region_id | seq_region_start | seq_region_end | seq_region_strand | display_label | feature_type_id | feature_set_id | stable_id | regulatory_feature_id | seq_region_id | seq_region_start | seq_region_end | seq_region_strand | display_label | feature_type_id | feature_set_id | stable_id |
++-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+
+|                 23523 |           257 |         12148061 |       12149948 |                 0 | 0011011100    |             117 |             27 |     23523 |                 23522 |           257 |         12141408 |       12148061 |                 0 | 0011111100    |             117 |             27 |     23522 |
+|                 23542 |           257 |         12332398 |       12335452 |                 0 | 0011111100    |             117 |             27 |     23542 |                 23541 |           257 |         12331307 |       12332398 |                 0 | 0011011100    |             117 |             27 |     23541 |
+|                 52038 |            29 |         45005056 |       45008548 |                 0 | 0011011100    |             117 |             27 |     52038 |                 52037 |            29 |         45003728 |       45005056 |                 0 | 0011011100    |             117 |             27 |     52037 |
+|                 63404 |            89 |        171240084 |      171241746 |                 0 | 0000111010    |             117 |             27 |     63404 |                 63403 |            89 |        171237984 |      171240084 |                 0 | 0100011010    |             117 |             27 |     63403 |
+|                 79530 |            41 |        141483419 |      141484341 |                 0 | 0011111100    |             117 |             27 |     79530 |                 79529 |            41 |        141476862 |      141483419 |                 0 | 0011111100    |             117 |             27 |     79529 |
+|                104836 |            25 |        127362848 |      127364726 |                 0 | 0011011100    |             117 |             27 |    104836 |                104835 |            25 |        127359713 |      127362848 |                 0 | 0011011100    |             117 |             27 |    104835 |
+|                104984 |            25 |        128778840 |      128782578 |                 0 | 0011011100    |             117 |             27 |    104984 |                104983 |            25 |        128777241 |      128778840 |                 0 | 0011011100    |             117 |             27 |    104983 |
+|                105123 |            25 |        130480838 |      130482511 |                 0 | 0011111100    |             117 |             27 |    105123 |                105122 |            25 |        130477548 |      130480838 |                 0 | 0011111100    |             117 |             27 |    105122 |
++-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+-----------------------+---------------+------------------+----------------+-------------------+---------------+-----------------+----------------+-----------+
+8 rows in set (0.00 sec)
+
+--Now tweak the 3'/2nd feature to have a start value of srtart+1
+
+--update regulatory_feature set seq_region_start=(seq_region_start+1) where regulatory_feature_id=(select rf.regulatory_feature_id from regulatory_feature rf inner join regulatory_feature rf1 on rf.seq_region_start=rf1.seq_region_end and rf.seq_region_id=rf1.seq_region_id and rf1.feature_set_id=rf.feature_set_id and rf.feature_set_id=27);
+
+--will this work with the nested select on an update?
+--need to double nest, to get work around just do in for simplicity
+update regulatory_feature set seq_region_start=(seq_region_start+1) where regulatory_feature_id IN (23523, 23542,52038,  63404, 79530, 104836, 104984, 105123);
+
+
+-- Now patch/remove the old overlap sets in human
+delete from annotated_feature where feature_set_id in(24,25,26);
+delete from feature_set where feature_set_id in(24,25,26);
+
+
+--General patch! i.e. non-data patch
+alter table feature_set drop index name_idx;
+alter table feature_set change name `name` varchar(40) default NULL;
+alter table feature_set add UNIQUE KEY `name_idx` (`name`);
+
+
+-- Remove search region table
+-- These contain the xrefs, which we have not yet loaded, but we will just reload them all next release 
+-- when we use the import script instead of a patch
+-- possible bug in migration as vista element  count doesn't match that in core
+DROP table if exists regulatory_search_region;
+
+
+
+-- mouse only meta_coord data patch
+update meta_coord set max_length=50 where table_name='probe_feature';
+
+--human data patch
+--remove old CS level imported status entries
+delete s, sn  from status s, status_name sn where s.status_name_id=sn.status_name_id and sn.name='IMPORTED_CS_17';
 
 --need to vhange average row length on this and on regulatory feature!!
 

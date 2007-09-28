@@ -9,12 +9,14 @@ use Bio::EnsEMBL::Funcgen::ProbeFeature;
 
 my $reg = "Bio::EnsEMBL::Registry";
 
-my $species = 'homo_sapiens';
-my $schema_build = '47_36i';
-my $pass = $ARGV[0];
+my $species = 'mus_musculus';
+my $schema_build = '47_37';
+my $pass = shift @ARGV;
 my $port = 3306;
 my $user = 'ensadmin';
 my $host = 'ens-genomics1';
+my @builds =('');#blank string for the default build;
+push @builds, @ARGV;
 
 #only loads v43 no v44 DBs???
 #$reg->load_registry_from_db(
@@ -73,24 +75,29 @@ my $core_db = $efg_db->dnadb();
 my $pf_adaptor = $efg_db->get_ProbeFeatureAdaptor();
 my $slice_adaptor = $efg_db->get_SliceAdaptor();
 
-foreach my $slice(@{$slice_adaptor->fetch_all('toplevel')}){
+foreach my $build(@builds){
 
-  if($slice->start() != 1){
-	#we must have some sort of PAR linked region i.e. Y
-	$slice = $slice_adaptor->fetch_by_region($slice->coord_system_name(), $slice->seq_region_name());
+  print "Importing seq_region/coord_system info for build: ".(($build eq '') ? 'DEFAULT' : $build)."\n";
+
+  foreach my $slice(@{$slice_adaptor->fetch_all('toplevel', $build)}){
+	
+	if($slice->start() != 1){
+	  #we must have some sort of PAR linked region i.e. Y
+	  $slice = $slice_adaptor->fetch_by_region($slice->coord_system_name(), $slice->seq_region_name());
+	}
+	
+	
+	print "Storing seq_region info for slice:\t".$slice->name()."\n";
+	
+	my $pseudo_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
+	  (
+	   -slice => $slice,
+	   -start => $slice->start(),
+	   -end   => $slice->end(),
+	   -strand => 0,
+	  );
+	
+	$pf_adaptor->_pre_store($pseudo_feature);
+	
   }
-
-
-  print "Storing seq_region info for slice:\t".$slice->name()."\n";
-
-  my $pseudo_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
-	(
-	 -slice => $slice,
-	 -start => $slice->start(),
-	 -end   => $slice->end(),
-	 -strand => 0,
-	);
-
-  $pf_adaptor->_pre_store($pseudo_feature);
-
 }
