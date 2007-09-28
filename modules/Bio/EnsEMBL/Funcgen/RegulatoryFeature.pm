@@ -142,13 +142,17 @@ sub display_label {
     #auto generate here if not set in table
     #need to go with one or other, or can we have both, split into diplay_name and display_label?
     
-    if(! $self->{'display_label'}  && $self->adaptor()){
+	#HACK to hide binary string and siplay something more meaningful
+
+    #if(! $self->{'display_label'}  && $self->adaptor()){
 	  #hardcoded for RegulatoryF Feature here instead of accessing feature_set 
-      $self->{'display_label'} = $self->feature_type->name()." Regulatory Feature";
-      $self->{'display_label'} .= " - ".$self->cell_type->name() if $self->cell_type->display_name();#?
-    }
+	#$self->{'display_label'} = $self->feature_type->name()." Regulatory Feature";
+	#$self->{'display_label'} .= " - ".$self->cell_type->name() if $self->cell_type->display_name();#?
+    #}
 	
-    return $self->{'display_label'};
+	my $tmp = $self->feature_type->name()." Regulatory Feature";
+	$tmp .= " - ".$self->cell_type->name() if $self->cell_type->display_name();#?
+    return $tmp;
 }
 
 
