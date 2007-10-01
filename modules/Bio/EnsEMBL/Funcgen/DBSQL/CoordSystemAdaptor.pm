@@ -1323,7 +1323,7 @@ sub validate_and_store_coord_system{
 	
 	$fg_cs->add_core_coord_system_info(
 									   -RANK                 => $cs->rank(), 
-									   -SEUENCEQ_LEVEL              => $cs->is_sequence_level(), 
+									   -SEQUENCE_LEVEL       => $cs->is_sequence_level(), 
 									   -DEFAULT              => $cs->is_default(), 
 									   -SCHEMA_BUILD         => $sbuild, 
 									   -CORE_COORD_SYSTEM_ID => $cs->dbID(),

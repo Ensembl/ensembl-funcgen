@@ -118,7 +118,6 @@ sub fetch_all_by_Slice_constraint {
   #different seq_region between DB with different default assemblies
 
   $constraint ||= '';#need to addcs_id here and coord_system_id='.$slice;
-  
 
   my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
 																$slice->coord_system->name(), 
@@ -196,8 +195,7 @@ sub fetch_all_by_Slice_constraint {
 
     my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
 
-
-    # if this was a symlinked slice offset the feature coordinates as needed
+	# if this was a symlinked slice offset the feature coordinates as needed
     if($seg_slice->name() ne $slice->name()) {
 
     FEATURE:
@@ -511,7 +509,6 @@ sub _slice_fetch {
     my @ids;
 
     if($feat_cs->equals($slice_cs)) {
-	  #warn "got match";
       # no mapping is required if this is the same coord system
 
       my $max_len = $self->_max_feature_length() ||

@@ -139,6 +139,7 @@ sub fetch_all_by_Slice_FeatureSets {
 	
   my @fs_ids;
 
+
   throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@fsets) == 0;
 
   foreach my $fset (@fsets) {
