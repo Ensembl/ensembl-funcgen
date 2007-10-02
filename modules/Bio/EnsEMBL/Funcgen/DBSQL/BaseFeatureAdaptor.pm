@@ -75,6 +75,13 @@ sub generic_fetch {
   #build seq_region cache here once for entire query
   $self->build_seq_region_cache();
 
+
+  #we need to extend this to handle features which may be on supercontigs which may no longer be in the DB
+  #These will only be generated from non-slice based queries, as the definition of the slice will 
+  #'filter' the absent features based on location/
+
+  #so we need to implement the slice check in all the _obj_from_sth methods
+
   return $self->SUPER::generic_fetch(@_);
 }
 

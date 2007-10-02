@@ -9,8 +9,8 @@ use Bio::EnsEMBL::Funcgen::ProbeFeature;
 
 my $reg = "Bio::EnsEMBL::Registry";
 
-my $species = 'mus_musculus';
-my $schema_build = '47_37';
+my $species = 'homo_sapiens';
+my $schema_build = '47_36i';
 my $pass = shift @ARGV;
 my $port = 3306;
 my $user = 'ensadmin';
@@ -34,9 +34,9 @@ push @builds, @ARGV;
 
 my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 												-dbname  => $species.'_core_'.$schema_build,
-												-host    => 'ens-staging',
+												-host    => 'ens-staging',# 'ensembldb',
 												-port    => 3306,
-												-user    => $user,
+												-user    =>  $user,
 												-pass    => $pass,
 												-species => $species,
 											   );

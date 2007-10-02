@@ -571,8 +571,15 @@ sub fetch_by_name{
   my @coord_systems = @{$self->{'_name_cache'}->{$name}};
  
   #Filter versions if or get the default for the schema_build or comparable
+
+  #This will only get non-versioned CSs if there are already loaded on a given schema_build
+  #Hence we can never retrieve a 'comparable' supercontig if it has not been loaded onto the current schema_build
+  #Hence we end up loading a new CS for each non-versioned level.
+  
   
   foreach $cs (@coord_systems) {
+
+	#Need if version first to allow for versioned and non-versioned supercontig level
 
     if($version) {
 	  #we need to get the one which corresponds to the dnadb?
@@ -588,21 +595,29 @@ sub fetch_by_name{
 		#push @schema_css, $cs if(lc($cs->version()) eq $version);
 	  }
 	}else{
-	
-	  
-	  if($cs->contains_schema_build($sbuild) && $cs->{'core_cache'}{$sbuild}{'DEFAULT'}){#exact match
-		$found_cs = $cs;
-		last;
-	  }else{#find best equivalent default
 
-		foreach my $cache_sbuild(keys %{$cs->{'core_cache'}}){
-		  		  
-		  #Find DB with same assembly and take default CS
-		  if($cache_sbuild =~ /_${assembly}/ && $cs->{'core_cache'}{$cache_sbuild}{'DEFAULT'}){
-			$found_cs = $cs;
-			last;
+	  #only for chromosome? else we just use the name as we are not on a versioned level
+
+	  if($name eq 'chromosome'){
+
+		if($cs->contains_schema_build($sbuild) && $cs->{'core_cache'}{$sbuild}{'DEFAULT'}){#exact match
+		  $found_cs = $cs;
+		  last;
+		}else{#find best equivalent default
+		  
+		  foreach my $cache_sbuild(keys %{$cs->{'core_cache'}}){
+			
+			#Find DB with same assembly and take default CS
+			if($cache_sbuild =~ /_${assembly}/ && $cs->{'core_cache'}{$cache_sbuild}{'DEFAULT'}){
+			  $found_cs = $cs;
+			  last;
+			}
 		  }
 		}
+	  }else{
+		#should only ever be one of these by definition		
+		throw("Found more than one non-versioned CoordSystem:\t$name") if $found_cs;
+		$found_cs = $cs;
 	  }
 	}
   }
@@ -1267,15 +1282,10 @@ sub validate_and_store_coord_system{
   #check if name and version are present and reset coord_system_id to that one, else get last ID and create a new one
   #coord_system_ids will not match those in core DBs, so we need ot be mindful about this.
   #can't use is_stored as this simply checks the dbID
-  #seq_region_ids may change between shemas with the same assembly version
-  #Need to store schema_version somewhere to maintain the seq_region_id mapping
-  #extend the coord_system table to have schema version, link to feature tables via coord_system_id
-  #how are we going to retrieve, we have species and schema version, so will have to do some jiggery pokery
-  #There is a possibility that the same schema may be used for two different gene builds
-  #thus having the same name version schema triplets, but different seq_region_ids?
-  #can't really code around this...unless we stored the schema and the build instead of just the schema
-  #this would make it easier to generate the dnadb as we could simply concat $species."_core_".$schema_build
-  #can not get this from the meta table, so we'll have to fudge it from the db_name
+  #seq_region_ids may change between schemas with the same assembly version
+  #Store schema_version in coord_system and create seq_region translation
+  #table to maintain the seq_region_id mapping back to each core DB
+
   
   #Do we need to check the the dnadb and the slice db match?
   #Do we have to have specified a dnadb at this point?  No.
@@ -1284,18 +1294,16 @@ sub validate_and_store_coord_system{
 
 
 
-  #This will get called for each feature!!
-  #No guarantee that each feature will be built from the same db (could set once in store otherwise)
-  #my $schema_build = ${$slice->adaptor->db->db_handle->selectrow_array("SELECT meta_value value from meta where meta_key = \"data.version\"")}[0];  #do we need to check whether there is only one?
+
   my $sbuild = $self->db->_get_schema_build($cs->adaptor->db());
-
-
 
   #this should implicitly use the current schema_build
   #hence providing specificty for non-version CS's e.g. supercontig etc...
   my $fg_cs = $self->fetch_by_name($cs->name(), $cs->version());
+
   
-  
+  #why is this not picking up super contig?
+
   #this needs to satify both schema_build and version
   #retrieving by name version should retunr the lastest schema_build unless the it is not the toplevel or highest expected rank?
   

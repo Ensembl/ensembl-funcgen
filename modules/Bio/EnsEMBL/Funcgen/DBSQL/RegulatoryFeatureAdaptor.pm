@@ -279,7 +279,13 @@ sub _objs_from_sth {
 		
 		#get core seq_region_id
 		$seq_region_id = $self->get_core_seq_region_id($seq_region_id);
-		
+
+		if(! $seq_region_id){
+		  warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
+			"The region you are using is not present in the cuirrent dna DB";
+		  next;
+		}
+
 	    #if($old_cs_id && ($old_cs_id+ != $cs_id)){
 	    #  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
 	    #}

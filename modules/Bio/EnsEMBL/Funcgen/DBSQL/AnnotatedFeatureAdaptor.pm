@@ -223,50 +223,41 @@ sub _objs_from_sth {
 
   FEATURE: while ( $sth->fetch() ) {
 
-	    #Need to build a slice adaptor cache here?
-	    #Would only ever want to do this if we enable mapping between assemblies??
-	    #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
+	  #Need to build a slice adaptor cache here?
+	  #Would only ever want to do this if we enable mapping between assemblies??
+	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 	  
 	  #get core seq_region_id
 	  $seq_region_id = $self->get_core_seq_region_id($seq_region_id);
 		
-		#if($old_cs_id && ($old_cs_id+ != $cs_id)){
-	    #  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
-	    #}
-	    
-	    #$old_cs_id = $cs_id;
-	    
-	    
-	    #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
-	    
-		#	    $sa ||= $self->db->get_SliceAdaptor();#$cs_id);
-	    
-		# Get the analysis object
-		#$analysis_hash{$analysis_id} = $aa->fetch_by_dbID($analysis_id) if(! exists $analysis_hash{$analysis_id});
-		
-		#possiblity of circular reference here?
-		#Get the FeatureSet object
-		$fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
+	  if(! $seq_region_id){
+		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
+		  "The region you are using is not present in the cuirrent dna DB";
+		next;
+	  }
 
+	  #Get the FeatureSet object
+	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
+	  
    
-	    # Get the slice object
-	    my $slice = $slice_hash{'ID:'.$seq_region_id};
-	    
-	    if (! $slice) {
-	      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
-	      $slice_hash{'ID:'.$seq_region_id} = $slice;
-	      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
-	      $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
-	    }
-	    
-	    my $sr_name = $sr_name_hash{$seq_region_id};
+	  # Get the slice object
+	  my $slice = $slice_hash{'ID:'.$seq_region_id};
+	  
+	  if (! $slice) {
+		$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
+		$slice_hash{'ID:'.$seq_region_id} = $slice;
+		$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
+		$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
+	  }
+	  
+	  my $sr_name = $sr_name_hash{$seq_region_id};
 	    my $sr_cs   = $sr_cs_hash{$seq_region_id};
-	    
-	    # Remap the feature coordinates to another coord system if a mapper was provided
-	    if ($mapper) {
-	      
-	      throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-	      
+	  
+	  # Remap the feature coordinates to another coord system if a mapper was provided
+	  if ($mapper) {
+		
+		throw("Not yet implmented mapper, check equals are Funcgen calls too!");
+		
 	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
 			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
 	      
@@ -306,66 +297,7 @@ sub _objs_from_sth {
 	    }
 	    
 
-	    #my @exp_ids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
-	    #$epsth->bind_param(1, $annotated_feature_id,    SQL_INTEGER);
-	    #$epsth->execute();
-	    #my @exp_ids = map $_ = "@$_", @{$epsth->fetchall_arrayref()};
-
-
-		#RegulatoryFeature hack
-		my ($reg_type, $stable_id, $reg_attrs, $vector);
-		
-		#look at analysis to avoid set name issues
-		if($fset_hash{$fset_id}->analysis->logic_name() eq 'RegulatoryRegion'){
-
-		  ($stable_id, $vector) = split/:/, $display_label;
-		  
-		  $display_label = 'Regulatory Feature';
-		  
-		  #RegulatoryFeature hack
-
-		  if($vector){
-			
-			#We don't consider the non-epi feature bits as these are only used to
-			#cluster and build the patterns, not to assign a classification
-			#as this would prevent us from finding novel regions
-			
-			my %reg_class_regexs = (
-									#'1....(10|01).'  => 'Gene end associated', 
-									#'1...1...'        => 'Promoter associated',#orig
-									'1...1.....'        => 'Promoter associated',
-									'1.0.001...' => 'Non-gene associated',
-									'11..01....' => 'Gene associated',
-								 );
-			
-			
-			
-			#omit TSS and TES from here?
-			my @reg_feature_attrs = ('DNase1', 'CTCF', 'H4K20me3', 'H3K27me3', 
-									 'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
-			my @vector = split//, $vector;
-			
-			foreach my $i(0..7){#$#vector){
-			  push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
-			}
-			
-			
-			foreach my $regex(keys %reg_class_regexs){
-			  
-			  if($vector =~ /$regex/){
-				
-				#warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
-				
-				throw('Found non-mutually exclusive regexs') if $reg_type;
-				$reg_type = $reg_class_regexs{$regex};
-			  }
-			  
-			}
-		  }
-		  $reg_type ||= 'Unclassified';
-		}
-
-	
+	  
 	    push @features, $self->_new_fast( {
 										   'start'          => $seq_region_start,
 										   'end'            => $seq_region_end,
@@ -377,9 +309,6 @@ sub _objs_from_sth {
 										   'score'          => $score,
 										   'display_label'  => $display_label,
 										   'feature_set'    => $fset_hash{$fset_id},
-										   'regulatory_type'=> $reg_type,
-										   'regulatory_attributes' => $reg_attrs,
-										   'stable_id'      => $stable_id,
 										  } );
 	}
 	

@@ -363,7 +363,7 @@ sub _objs_from_sth {
 
 	#my $sa = $self->db->get_SliceAdaptor();
 	
-	my $sa;#, $old_cs_id);
+	my ($sa, $seq_region_id);#, $old_cs_id);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
@@ -375,25 +375,20 @@ sub _objs_from_sth {
 
 	my (
 	    $probe_feature_id,  $seq_region_id,
-	    $seq_region_start,  $seq_region_end,
+	    $seq_region_start,  $efg_seq_region_end,
 	    $seq_region_strand, $mismatches,
 		$probe_id,    	    $analysis_id,
 		$probe_name,	    $cigar_line,
 	);
 	$sth->bind_columns(
-					   \$probe_feature_id,  \$seq_region_id,
+					   \$probe_feature_id,  \$efg_seq_region_id,
 					   \$seq_region_start,  \$seq_region_end,
 					   \$seq_region_strand, \$probe_id,
 					   \$analysis_id,       \$mismatches,
 					   \$cigar_line,        \$probe_name
 	);
 
-	my $asm_cs;
-	my $cmp_cs;
-	my $asm_cs_name;
-	my $asm_cs_vers;
-	my $cmp_cs_name;
-	my $cmp_cs_vers;
+	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers ,$cmp_cs_name, $cmp_cs_vers);
 	if ($mapper) {
 		$asm_cs      = $mapper->assembled_CoordSystem();
 		$cmp_cs      = $mapper->component_CoordSystem();
@@ -403,11 +398,8 @@ sub _objs_from_sth {
 		$cmp_cs_vers = $cmp_cs->version();
 	}
 
-	my $dest_slice_start;
-	my $dest_slice_end;
-	my $dest_slice_strand;
-	my $dest_slice_length;
-	my $dest_slice_sr_name;
+	my ($dest_slice_start, $dest_slice_end, $dest_slice_strand);
+	my ($dest_slice_length, $dest_slice_sr_name);
 	if ($dest_slice) {
 		$dest_slice_start   = $dest_slice->start();
 		$dest_slice_end     = $dest_slice->end();
@@ -415,9 +407,6 @@ sub _objs_from_sth {
 		$dest_slice_length  = $dest_slice->length();
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
-
-	#remove this?
-	my $last_feature_id = -1;
 
 	#This has already been done by
 	#build seq_region_cache based on slice
@@ -429,9 +418,13 @@ sub _objs_from_sth {
 		  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 		  
 		#get core seq_region_id
-		$seq_region_id = $self->get_core_seq_region_id($seq_region_id);
-
-	  
+		$seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
+		
+		if(! $seq_region_id){
+		  warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
+		  "The region you are using is not present in the cuirrent dna DB";
+		  next;
+		}
 
 		
 		warn "Need to implement slice adaptor hash, based on seq_region id??";
@@ -454,16 +447,6 @@ sub _objs_from_sth {
 		$sa ||= $self->db->get_SliceAdaptor();#$cs_id);
 
 
-		#do we need this now?
-		#this was to avoid displaying duplicate probes from different cs's due to remapping
-		#can remove this now
-		#how are we going to discern between duplication of feature fromphysical remapping and dunamic remapping
-		  # This assumes that features come out sorted by ID?
-		  # THis is not true as when have default sorts on seq_region_start for slice queries
-		  #Can we remove this as this is just removing duplicates?
-		  next if ($last_feature_id == $probe_feature_id);
-		  $last_feature_id = $probe_feature_id;
-
 		# Get the analysis object
 		my $analysis = $analysis_hash{$analysis_id} ||= $aa->fetch_by_dbID($analysis_id);
 
@@ -476,6 +459,10 @@ sub _objs_from_sth {
 			$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
 			$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
 		}
+
+		#need to check once more here as it may not be in the DB, 
+		#i.e. a supercontig(non-versioned) may have been deleted between releases
+
 
 		my $sr_name = $sr_name_hash{$seq_region_id};
 		my $sr_cs   = $sr_cs_hash{$seq_region_id};
@@ -523,21 +510,25 @@ sub _objs_from_sth {
 			$slice = $dest_slice;
 		}
 
+
+		
+
 		push @features, $self->_new_fast( {
-						   'start'         => $seq_region_start,
-						   'end'           => $seq_region_end,
-						   'strand'        => $seq_region_strand,
-						   'slice'         => $slice,
-						   'analysis'      => $analysis,
-						   'adaptor'       => $self,
-						   'dbID'          => $probe_feature_id,
-						   'mismatchcount' => $mismatches,
-						   'cigar_line'    => $cigar_line,
-						   'probe_id'     => $probe_id,
-						   #'probeset'      => $probeset,#???do we need this?
-						   '_probe_name'   => $probe_name
-						  } );
-	}
+											 'start'         => $seq_region_start,
+											 'end'           => $seq_region_end,
+											 'strand'        => $seq_region_strand,
+											 'slice'         => $slice,
+											 'analysis'      => $analysis,
+											 'adaptor'       => $self,
+											 'dbID'          => $probe_feature_id,
+											 'mismatchcount' => $mismatches,
+											 'cigar_line'    => $cigar_line,
+											 'probe_id'     => $probe_id,
+											 #'probeset'      => $probeset,#???do we need this?
+											 '_probe_name'   => $probe_name
+											} );
+
+	  }
 
 	return \@features;
 }
