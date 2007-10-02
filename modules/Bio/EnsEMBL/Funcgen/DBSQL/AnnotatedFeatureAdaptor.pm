@@ -228,7 +228,7 @@ sub _objs_from_sth {
 	    #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 	  
 	  #get core seq_region_id
-		$seq_region_id = $self->get_core_seq_region_id($seq_region_id);
+	  $seq_region_id = $self->get_core_seq_region_id($seq_region_id);
 		
 		#if($old_cs_id && ($old_cs_id+ != $cs_id)){
 	    #  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");

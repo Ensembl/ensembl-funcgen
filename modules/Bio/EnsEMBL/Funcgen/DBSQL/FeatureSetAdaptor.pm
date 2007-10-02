@@ -108,13 +108,30 @@ sub fetch_all_by_type {
 
     if($status){
       my $constraint = $self->status_to_constraint($status);
-      $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+      $sql = (defined $constraint) ? $sql." AND ".$constraint : undef;
     }
 
     return $self->generic_fetch($sql);	
 }
 
+=head2 fetch_all_displayable_by_type
 
+  Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
+  Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
+  Description: Wrapper method for fetch_all_by_type
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_displayable_by_type {
+    my $self = shift;
+    my $type = shift;
+  
+	$self->fetch_all_by_type($type, 'DISPLAYABLE');
+}
 
 
 =head2 fetch_all_by_CellType

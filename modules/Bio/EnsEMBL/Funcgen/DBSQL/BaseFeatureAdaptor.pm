@@ -258,16 +258,16 @@ sub build_seq_region_cache{
   my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where schema_build="'.$schema_build.'"';
 
   
+  #we need to make this a schema_build based cache to enable multi schema/assembly queries without resetting the dnadb?
+  #what will be the point of the dnadb in this case?
+
   $self->{'seq_region_cache'} = {};
   $self->{'core_seq_region_cache'} = {};
   %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
   
-  #this return nothing for a new schema_build!!
-  #How can
 
   #now reverse cache
-  
   foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){
 
 	$self->{'core_seq_region_cache'}->{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
@@ -299,6 +299,12 @@ sub get_seq_region_id_by_Slice{
 
 sub get_core_seq_region_id{
   my ($self, $fg_sr_id) = @_;
+
+  #This is based on what the current schema_build is
+  #to enable multi-schema/assmelby look up
+  #we will have to nest these in schema_build caches
+  #and use the schema_build of the slice which is passed to acquire the core_seq_region_id
+  #likewise for reverse, i.e. when we store.
 
   return $self->{'core_seq_region_cache'}->{$fg_sr_id};
 }

@@ -13,7 +13,7 @@ storing DataSet objects.
 my $dset_adaptor = $db->get_DataSetAdaptor();
 
 my $dset = $dset_adaptor->fetch_by_dbID(1);
-my @displayable_dsets = $dset_adaptor->fetch_all_displayable_DataSets();
+my @displayable_dsets = $dset_adaptor->fetch_all_displayable();
 
 =head1 DESCRIPTION
 
@@ -140,11 +140,11 @@ sub fetch_by_name {
   
 }
 
-=head2 fetch_by_supporting_set_type
+=head2 fetch_all_by_supporting_set_type
 
   Arg [1]    : string - type of supporting_sets i.e. result or feature
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my $dsets = $dset_adaptor->fetch_by_supporting_set('feature');
+  Example    : my $dsets = $dset_adaptor->fetch_all_by_supporting_set('feature');
   Description: Fetch all DataSets whose pre-processed data consists of a particular set type
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : Throws if no supporting_set_type passed
@@ -169,10 +169,60 @@ sub fetch_all_by_supporting_set_type {
   
 }
 
-=head2 fetch_all_by_FeatureSet
+=head2 fetch_all_by_product_feature_set_type
+
+  Arg [1]    : string - product feature set type for this data_set e.g. 'annotated', 'regulatory'
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Example    : my $dsets = $dset_adaptor->fetch_all_by_product_feature_set_type('regulatory');
+  Description: Fetch all DataSets of a given product feature set type
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
+  Exceptions : Throws if no product feaure set type passed
+  Caller     : General
+  Status     : At Risk - not yet implmented
+
+=cut
+
+sub fetch_all_by_product_supporting_set_type {
+  my ($self, $type, $status) = @_;
+  
+  throw('Not yet implemented');
+  #left join? same for result_set?
+  #Or do we do a sneaky workaround and use the FeatureSet adaptor here to get the feature sets we require
+  #and then call self?
+  #or do we just use feature_sets for reg feats and forget about the possiblity of displaying the suppoorting sets?
+  #will we ever want to display supporting sets in contig/neighbourhood view?
+  #or will we only use expanded view in a feature context, hence we can just use the Regulatory Attribs?
+  #don't really want to expand regulatory feats on contig view, so access FeatureSet directly
+
+  throw("Must provide a supporting_set_type argument") if (! defined $type);
+  
+  my $sql = "ds.supporting_set_type='".$type."'";
+  
+  if($status){
+    my $constraint = $self->status_to_constraint($status) if $status;
+    $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+  }
+
+  return $self->generic_fetch($sql);
+  
+}
+
+
+
+sub fetch_all_by_FeatureSet {
+  my $self = shift;
+
+  deprecate('Use fetch_all_by_product_FeatureSet');
+
+  return $self->fetch_all_by_product_FeatureSet(@_);
+
+}
+
+
+=head2 fetch_all_by_product_FeatureSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
-  Example    : my @dsets = $fs_adaptopr->fetch_all_by_FeatureSet($fset);
+  Example    : my @dsets = $fs_adaptopr->fetch_all_by_product_FeatureSet($fset);
   Description: Retrieves DataSet objects from the database based on the FeatureSet.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : Throws if arg is not a valid FeatureSet
@@ -185,7 +235,7 @@ sub fetch_all_by_supporting_set_type {
 #This is main FeatureSet, i.e. the result of the analysis of the supporting_sets
 #Supporting sets could also be FeatureSets!!!  Confusion!
 
-sub fetch_all_by_FeatureSet {
+sub fetch_all_by_product_FeatureSet {
     my $self = shift;
     my $fset = shift;
 
@@ -294,6 +344,12 @@ sub fetch_all_by_feature_type_class {
 	if($status){
 	  $constraint = $self->status_to_constraint($status) if $status;
     }
+
+
+	#This is fetching all feature sets!
+	#we need to left join this?
+	#we can't do it for class
+	#but we can do it for product feature_set type
 
 	foreach my $dset(@{$self->generic_fetch($constraint)}){
 	  push @dsets, $dset if $dset->feature_set->feature_type->class() eq $class;
@@ -431,7 +487,7 @@ sub _left_join {
 =cut
 
 
-#this should be another left join?
+#this should be another left join? on feature_set and a join on feature_type so we can sort lexically on class, name
 #should we implement a default sort in the data_set adaptor which could be superceeded by a custom list?
 
 #sub _final_clause {
@@ -538,12 +594,6 @@ sub _objs_from_sth {
   Status     : At Risk
 
 =cut
-
-
-#We need to control what can be stored, so we need to check cell_line_ids?
-#Or is this level of control to be implicit?  Would there be a use for a multi-celled DataSet
-#Yes!  So we let the DB take anything, and make the obj_from_sth method handle all
-
 
 sub store{
   my ($self, @dsets) = @_;
