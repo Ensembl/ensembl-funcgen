@@ -247,7 +247,7 @@ sub new_fast {
 sub cell_type{
 	my $self = shift;
 
-	return $self->feature->cell_type();
+	return $self->feature_set->cell_type();
 }
 
 =head2 feature_type
