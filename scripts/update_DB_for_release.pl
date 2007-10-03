@@ -10,7 +10,8 @@ use Bio::EnsEMBL::Funcgen::ProbeFeature;
 my $reg = "Bio::EnsEMBL::Registry";
 
 my $species = 'homo_sapiens';
-my $schema_build = '47_36i';
+my $schema_build = '46';
+my $build = '36h';
 my $pass = shift @ARGV;
 my $port = 3306;
 my $user = 'ensadmin';
@@ -33,20 +34,22 @@ push @builds, @ARGV;
 
 
 my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-												-dbname  => $species.'_core_'.$schema_build,
-												-host    => 'ens-staging',# 'ensembldb',
+												-dbname  => "${species}_core_${schema}_${build}",
+												#-host    => 'ens-staging',# 
+												-host    => 'ensembldb',
 												-port    => 3306,
-												-user    =>  $user,
-												-pass    => $pass,
+												#-user    =>  $user,
+												-user    =>  'anonymous',
+												#-pass    => $pass,
 												-species => $species,
 											   );
 die ("You have not provided sufficient arguments to make a DB connection\n".
-	 "-dbname  => ${species}_funcgen_{$schema_build}, host   => $host, port   => $port, user   => $user, pass   => $pass") if ! $dnadb;
+	 "-dbname  => ${species}_funcgen_${schema_build}, host   => $host, port   => $port, user   => $user, pass   => $pass") if ! $dnadb;
 
 
 #This will add the default chromosome CS, but not any other levels
 my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-														  -dbname  => $species.'_funcgen_'.$schema_build,
+														  -dbname  => "${species}_funcgen_${schema}_${build}",
 														  -host    => $host,
 														  -port    => $port,
 														  -user    => $user,
@@ -57,7 +60,8 @@ my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 
 
 die ("You have not provided sufficient arguments to make a DB connection\n".
-	 "-dbname  => ${species}_funcgen_{$schema_build}, host   => $host, port   => $port, user   => $user, pass   => $pass") if ! $efg_db;
+	 "-dbname  => ${species}_funcgen_${schema_build}, host   => $host, port".
+	 "  => $port, user   => $user, pass   => $pass") if ! $efg_db;
 
 
 
@@ -87,7 +91,7 @@ foreach my $build(@builds){
 	}
 	
 	
-	print "Storing seq_region info for slice:\t".$slice->name()."\n";
+	print "_pre_storing seq_region info for slice:\t".$slice->name()."\n";
 	
 	my $pseudo_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
 	  (
@@ -101,3 +105,4 @@ foreach my $build(@builds){
 	
   }
 }
+
