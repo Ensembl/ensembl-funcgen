@@ -151,7 +151,7 @@ sub display_label {
     #}
 	
 	my $tmp = $self->feature_type->name()." Regulatory Feature";
-	$tmp .= " - ".$self->cell_type->name() if $self->cell_type->display_name();#?
+	$tmp .= " - ".$self->cell_type->name() if defined $self->cell_type();#?
     return $tmp;
 }
 
