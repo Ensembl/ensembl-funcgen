@@ -10,8 +10,7 @@ use Bio::EnsEMBL::Funcgen::ProbeFeature;
 my $reg = "Bio::EnsEMBL::Registry";
 
 my $species = 'homo_sapiens';
-my $schema_build = '46';
-my $build = '36h';
+my $schema_build = '47_36i';
 my $pass = shift @ARGV;
 my $port = 3306;
 my $user = 'ensadmin';
@@ -34,7 +33,7 @@ push @builds, @ARGV;
 
 
 my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-												-dbname  => "${species}_core_${schema}_${build}",
+												-dbname  => "${species}_core_${schema_build}",
 												#-host    => 'ens-staging',# 
 												-host    => 'ensembldb',
 												-port    => 3306,
@@ -49,7 +48,7 @@ die ("You have not provided sufficient arguments to make a DB connection\n".
 
 #This will add the default chromosome CS, but not any other levels
 my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-														  -dbname  => "${species}_funcgen_${schema}_${build}",
+														  -dbname  => "${species}_funcgen_${schema_build}",
 														  -host    => $host,
 														  -port    => $port,
 														  -user    => $user,
