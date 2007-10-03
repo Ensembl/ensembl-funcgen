@@ -12,7 +12,7 @@ my $reg = "Bio::EnsEMBL::Registry";
 my $port = 3306;
 my $user = 'ensro';
 my $host = 'ens-genomics1';
-my ($help, $pass, $species, $schema_build, $slice, $num_feats);
+my ($help, $pass, $species, $schema_build, $slice, $num_feats, $skip_counts);
 my $usage;
 
 GetOptions( 'help'             => \$help,
@@ -22,6 +22,7 @@ GetOptions( 'help'             => \$help,
             'pass|p=s'         => \$pass,
 			'slice=s'          => \$slice,
             'species|d=s'      => \$species,
+			'skip_counts'      => \$skip_counts,
 			'schema_build|s=s' => \$schema_build,
 		  );
 
@@ -79,17 +80,24 @@ foreach my $set(@sets){
   else{
 	
 	foreach my $slice(@tl_slices){
-	  @feats = @{$set->get_Features_by_Slice($slice)};
-	  $num_feats .= scalar(@feats);
-	  
-	  #we should count the types here?
-	  if($slice->name =~ /chromosome/ || @feats){
-		print 'Found '.scalar(@feats).' RegulatoryFeatures on slice '.$slice->name."\n";
+
+	  if($skip_counts){
+		print "Skipping counts for regulatory FeatureSet ".$set->name."\n";
+	  }
+	  else{
+		
+		@feats = @{$set->get_Features_by_Slice($slice)};
+		$num_feats .= scalar(@feats);
+		
+		#we should count the types here?
+		if($slice->name =~ /chromosome/ || @feats){
+		  print 'Found '.scalar(@feats).' RegulatoryFeatures on slice '.$slice->name."\n";
+		}
 	  }
 	}
   }
   
-  print "Total:\t$num_feats\n";
+  print "Total:\t$num_feats\n" if ! $skip_counts;
 }
 
 #now other data_sets
@@ -100,9 +108,9 @@ if(defined $slice){
   $slice = $slice_adaptor->fetch_by_region('chromosome', 17);
 }
 
-@sets = @{$dset_adaptor->fetch_all_by_feature_type('regulatory')};
+@sets = @{$dset_adaptor->fetch_all()};
 my $non_disp_count = 0;
-
+my $warn;
 print "Checking DataSets\n";
 
 foreach my $set(@sets){
@@ -113,31 +121,50 @@ foreach my $set(@sets){
 	my $fset = $set->get_displayable_product_FeatureSet();
 
 	if(defined $fset){
-	  print 'FeatureSet '.$fset->name." has states:\t".join("\t", sort(@{$fset->get_all_states()}))."\n"
-	}else{
+	  print 'FeatureSet '.$fset->name." has states:\t".join("\t", sort(@{$fset->get_all_states()}))."\n";
+	  
+	  if($skip_counts){
+		print "Skipping features counts for product ".ref($fset).' '.$fset->name()."\n";
+	  }
+	  else{
+		@feats = @{$fset->get_Features_by_Slice($slice)};
+		$num_feats = scalar(@feats);
+		$warn = ($num_feats) ? '' :  "WARNING:\t";
+		
+		print $warn.'Product '.ref($fset).' '.$fset->name().
+		  " has ${num_feats} for test slice ".$slice->name."\n";
+	  }
+	}
+	else{
 	  print "WARNING:\tNo DISPLAYABLE FeatureSet\n";
 	}
 
 	my @supporting_sets = @{$set->get_displayable_supporting_sets()};
 
 	if(! @supporting_sets){
-	  print "WARNING:\tNo DISPLAYABLE suppoorting sets\n";
+	  print "WARNING:\tNo DISPLAYABLE supporting sets\n";
 	}else{
 	  
 	  foreach my $sset(@supporting_sets){
 		
-		if($sset->isa('Bio::EnsEMBL::Funcgen::ResultSet')){
-		  @feats = @{$sset->get_ResultFeatures_by_Slice($slice)};
+		if($skip_counts){
+		  print "Skipping features counts for supporting ".ref($sset).' '.$sset->name()."\n";
 		}
 		else{
-		  @feats = @{$sset->get_Features_by_Slice($slice)};
+
+		  if($sset->isa('Bio::EnsEMBL::Funcgen::ResultSet')){
+			@feats = @{$sset->get_ResultFeatures_by_Slice($slice)};
+		  }
+		  else{
+			@feats = @{$sset->get_Features_by_Slice($slice)};
+		  }
+
+		  $num_feats = scalar(@feats);
+		  $warn = ($num_feats) ? '' :  "WARNING:\t";
+		  
+		  print $warn.'Supporting '.ref($sset).' '.$sset->name().
+			" has ${num_feats} for test slice ".$slice->name."\n";
 		}
-		$num_feats = scalar(@feats);
-
-		#bah
-
-		print ''.(($num_feats) ? '' : "WARNING:\t").'Supporting '.ref($sset).' '.$sset->name().
-		  " has ${num_feats} for test slice ".$slice->name."\n";
 	  }
 	}
   }

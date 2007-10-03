@@ -19,7 +19,7 @@ my $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
                                                   -FEATURE_SET     => $fset,
                                                   -DISPLAYABLE     => 1,
                                                   -NAME            => 'DATASET1',
-                                                  -MEMBER_SET_TYPE => 'result',
+                                                  -SUPPORTING_SET_TYPE => 'result',
                                                   );
 
 
@@ -181,7 +181,7 @@ sub new {
 
   $self->supporting_set_type($sset_type);
   $self->add_supporting_sets($sets) if $sets;
-  $self->FeatureSet($fset)   if $fset;	
+  $self->product_FeatureSet($fset)   if $fset;	
   $self->name($name)   if $name;	
   
   return $self;
@@ -224,48 +224,20 @@ sub new {
 #or should we maintain to provide explicit method for delineating between parent and supporting FeatureSets?
 #yes, and sub the feature_type/cell_type checks
 
-=head2 feature_set
+
+=head2 product_FeatureSet
 
   Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::FeatureSet
-  Example    : $data_set->feature_set($fset);
+  Example    : $data_set->product_FeatureSet($fset);
   Description: Getter and setter for the main feature_set attribute for this DataSet.
-  Returntype : Bio::EnsEMBL::Funcgne::FeatureSet
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
   Exceptions : Throws not a valid FeatureSet or if main feature_set has already been set.
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub feature_set {
-  my $self = shift;
-  
-  deprecate('Deprecated, use FeatureSet');
-  
-  
-  $self->FeatureSet(@_);
-}
-
-
-#changed in line with method naming convention, but don't like lack of prefix
-#resultant_FeatureSet
-#main_FeatureSet
-#processed
-#combined
-#??
-
-=head2 FeatureSet
-
-  Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::FeatureSet
-  Example    : $data_set->FeatureSet($fset);
-  Description: Getter and setter for the main feature_set attribute for this DataSet.
-  Returntype : Bio::EnsEMBL::Funcgne::FeatureSet
-  Exceptions : Throws not a valid FeatureSet or if main feature_set has already been set.
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub FeatureSet {
+sub product_FeatureSet {
   my ($self, $fset) = @_;
   
   if($fset){
@@ -593,31 +565,10 @@ sub get_displayable_supporting_sets{
 }
 
 
-=head2 get_displayable_FeatureSets
 
-  Example    : my @displayable_fsets = @{$result_set->get_displayable_FeatureSets()};
-  Description: Convenience method for web display
-  Returntype : Arrayref
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk - to be removed
+=head2 get_displayable_product_FeatureSet
 
-=cut
-
-sub get_displayable_FeatureSets{
-  my $self = shift;
-
-  #need to write get_feature_sets, only when we accomodate multiple feature_sets
-  #this is just a place holder method to reduce change in teh AI with repsect to the web API
-
-  deprecate('Use get_displayable_FeatureSet');
-  return [$self->get_displayable_FeatureSet()];
-}
-
-
-=head2 get_displayable_FeatureSet
-
-  Example    : my $fset = $data_set->get_displayable_FeatureSet();
+  Example    : my $fset = $data_set->get_displayable_product_FeatureSet();
   Description: Convenience method for web display
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
   Exceptions : None
@@ -626,10 +577,10 @@ sub get_displayable_FeatureSets{
 
 =cut
 
-sub get_displayable_FeatureSet{
+sub get_displayable_product_FeatureSet{
   my $self = shift;
 
-  return  $self->FeatureSet->has_status('DISPLAYABLE') ?  $self->FeatureSet() : undef;
+  return  $self->product_FeatureSet->has_status('DISPLAYABLE') ?  $self->product_FeatureSet() : undef;
 }
 
 

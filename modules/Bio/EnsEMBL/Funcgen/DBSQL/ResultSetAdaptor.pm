@@ -699,7 +699,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 	' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
 
 
-  warn "sql is: \n$sql";
+  #warn "sql is: \n$sql";
 
  # $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
 #	' AND r.probe_id=pf.probe_id'.

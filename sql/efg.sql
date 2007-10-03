@@ -527,12 +527,27 @@ CREATE TABLE `feature_set` (
 -- Table structure for table `external_feature`
 --
 
+DROP TABLE IF EXISTS `external_feature`;
+CREATE TABLE `external_feature` (
+  `external_feature_id` int(10) unsigned NOT NULL auto_increment,
+  `seq_region_id` int(10) unsigned NOT NULL default '0',
+  `seq_region_start` int(10) unsigned NOT NULL default '0',
+  `seq_region_end` int(10) unsigned NOT NULL default '0',
+  `seq_region_strand` tinyint(1) NOT NULL default '0',	
+  `display_label` varchar(60) default NULL,
+  `feature_type_id`	int(10) unsigned default NULL,
+  `feature_set_id` int(10) unsigned NOT NULL default '0',
+  PRIMARY KEY  (`external_feature_id`),
+  KEY `feature_type_idx` (`feature_type_id`),
+  KEY `feature_set_idx` (`feature_set_id`),
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 
 
 
 --
--- Table structure for table `predicted_feature`
+-- Table structure for table `regulaotry_feature`
 --
 
 
