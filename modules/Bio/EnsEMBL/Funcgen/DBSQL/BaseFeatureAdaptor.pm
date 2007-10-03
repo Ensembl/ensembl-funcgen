@@ -71,24 +71,12 @@ our $MAX_SPLIT_QUERY_SEQ_REGIONS = 3;
 sub generic_fetch {
   my $self = shift;
 
-  #, $constraint, $mapper, $slice) = @_;
   #build seq_region cache here once for entire query
   $self->build_seq_region_cache();
-
-
-  #we need to extend this to handle features which may be on supercontigs which may no longer be in the DB
-  #These will only be generated from non-slice based queries, as the definition of the slice will 
-  #'filter' the absent features based on location/
-
-  #so we need to implement the slice check in all the _obj_from_sth methods
 
   return $self->SUPER::generic_fetch(@_);
 }
 
-
-
-#Added schema_buildo feature cache key
-#Do not remove
 
 =head2 fetch_all_by_Slice_constraint
 
@@ -120,11 +108,7 @@ sub fetch_all_by_Slice_constraint {
     throw("Bio::EnsEMBL::Slice argument expected.");
   }
 
-  #add cs_id here to amke sure we're definitely getting
-  #feature from the correct seq_region, as seq_region_ids can be re-used for
-  #different seq_region between DB with different default assemblies
-
-  $constraint ||= '';#need to addcs_id here and coord_system_id='.$slice;
+  $constraint ||= '';
 
   my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
 																$slice->coord_system->name(), 
@@ -234,6 +218,18 @@ sub fetch_all_by_Slice_constraint {
   return \@result;
 }
 
+=head2 build_seq_region_cache
+
+  Arg [1]    : optional - Bio::EnsEMBL::Slice 
+               the slice from which to obtain features
+  Example    : $self->build_seq_region_cache();
+  Description: Builds the seq_region_id translation caches
+  Returntype : None
+  Exceptions : thrown if optional Slice argument is not valid
+  Caller     : self
+  Status     : At risk - should be private _build_seq_region_cache? Change arg to DBAdaptor? Or remove if we are building the full cache?
+
+=cut
 
 #do we even need to have the coord system?
 #so lon as we are only using one schema build i.e. one dnadb defualt = current
@@ -259,20 +255,16 @@ sub build_seq_region_cache{
 
   my $dnadb = (defined $slice) ? $slice->adaptor->db() : $self->db->dnadb();
   my $schema_build = $self->db->_get_schema_build($dnadb);
-
-  #my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where coord_system_id='.
-#	$fg_cs->dbID().' and schema_build="'.$schema_build.'"';
   my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where schema_build="'.$schema_build.'"';
 
   
   #we need to make this a schema_build based cache to enable multi schema/assembly queries without resetting the dnadb?
   #what will be the point of the dnadb in this case?
+  #we can always transiently use the slice DB as the dnadb
 
   $self->{'seq_region_cache'} = {};
   $self->{'core_seq_region_cache'} = {};
   %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-
-  
 
   #now reverse cache
   foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){

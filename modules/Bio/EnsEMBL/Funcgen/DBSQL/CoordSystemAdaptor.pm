@@ -392,106 +392,6 @@ sub new {
   return $self;
 }
 
-=head2 fetch_by_name_schema_build_version
-
-  Arg [1]    : string $name
-               The name of the coordinate system to retrieve.  Alternatively
-               this may be an alias for a real coordinate system.  Valid
-               aliases are 'toplevel' and 'seqlevel'.
-  Arg [2]    : optional - string $schema_build
-               The schema and data build used to specify and identify the DB
-               and data build which a feature was originally built on. e.g. 39_36a
-  Arg [3]    : optional - string $version (optional)
-               The version of the coordinate system to retrieve.  If not
-               specified the default version will be used.
-  Example    : $coord_sys = $csa->fetch_by_name('chromosome', '39_36a', 'NCBI36');
-               # toplevel is an pseudo coord system representing the highest
-               # coord system in a given region
-               # such as the chromosome coordinate system
-               $coord_sys = $csa->fetch_by_name('toplevel');
-               #seqlevel is an alias for the sequence level coordinate system
-               #such as the clone or contig coordinate system
-               $coord_sys = $csa->fetch_by_name('seqlevel');
-  Description: Retrieves a coordinate system by its name
-  Returntype : Bio::EnsEMBL::Funcgen::CoordSystem
-  Exceptions : throw if no name argument provided
-               warning if no version provided and default does not exist
-  Caller     : general
-  Status     : deprecated
-
-=cut
-
-
-#can we remove schema_build totally or should we split this method?
-#having more than
-#I think we need to split this method
-
-#this is really only required for checking whether a new schema_build has been previously stored
-#could we get rid of this and just call fetch_by_name_version, then call $cs->contains_schema_build($schema_build
-#what if we specifically want to use a particular core DB?
-#how would we force this behaviour, by passing the dnadb to start with?
-#will this be picked up or will it use this by default?
-
-sub fetch_by_name_schema_build_version{
-  my $self = shift;
-  my $name = lc(shift); #case insensitve matching
-  my $sbuild = shift;
-  my $version = shift;
-
-  throw('Deprecated, use fetch_by_name_version instead');
-
-  throw('Name argument is required.') if(! $name);
-  throw('Version or schema_build arguments are required') if(! ($version || $sbuild));
-
-  $version = lc($version) if($version);
-
-
-  #right sb and version now optional, if version supplied then we get the most recent sb cs
-  #if sb supplied then we get the default version for that sb
-
-
-  if($name eq 'seqlevel') {
-    return $self->fetch_sequence_level_by_schema_build($sbuild);
-  } elsif($name eq 'toplevel') {
-    return $self->fetch_top_level_by_schema_build($sbuild);
-  }
-
-  if(!exists($self->{'_name_cache'}->{$name})) {
-    if($name =~ /top/) {
-      warning("Did you mean 'toplevel' coord system instead of '$name'?");
-    } elsif($name =~ /seq/) {
-      warning("Did you mean 'seqlevel' coord system instead of '$name'?");
-    }
-    return undef;
-  }
-
-
-  my @coord_systems = @{$self->{'_name_cache'}->{$name}};
-
-  foreach my $cs (@coord_systems) {
-    if($version) {
-      return $cs if(lc($cs->version()) eq $version);
-    } 
-	elsif($self->{'_is_default_version'}->{$cs->dbID()}) {#this is schema_build specific
-	  #could potentially return the wrong cs if we have an old default here
-	  #need to add a check for schema_build?
-	  #this is only to accomodate not supplying a version
-      return $cs;
-    }
-  }
-
-  if($version) {
-	  warning("No coord system found for verion '$version'");
-	  return undef;
-  }
-
-  #didn't find a default, just take first one
-  my $cs =  shift @coord_systems;
-  warning("No default version for coord_system [$name] exists. " .
-      "Using version [".$cs->version()."] arbitrarily");
-
-  return $cs;
-}
 
 =head2 fetch_by_name
 
@@ -540,8 +440,8 @@ sub fetch_by_name{
   my $name = lc(shift);
   my $version = lc(shift);  
   my $sbuild = $self->db->_get_schema_build($self->db->dnadb());
-  my ($assembly, $cs, $found_cs);
-  ($assembly = $sbuild) =~ s/[0-9]+_//;
+  my $assembly =  $self->db->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version();
+  my ($cs, $found_cs);
  
   throw('Mandatory argument \'name\'') if(! $name);
 
@@ -576,9 +476,7 @@ sub fetch_by_name{
   #Hence we can never retrieve a 'comparable' supercontig if it has not been loaded onto the current schema_build
   #Hence we end up loading a new CS for each non-versioned level.
   
-  
   foreach $cs (@coord_systems) {
-
 	#Need if version first to allow for versioned and non-versioned supercontig level
 
     if($version) {
@@ -594,33 +492,39 @@ sub fetch_by_name{
 		last;
 		#push @schema_css, $cs if(lc($cs->version()) eq $version);
 	  }
-	}else{
-
-	  #only for chromosome? else we just use the name as we are not on a versioned level
-
-	  if($name eq 'chromosome'){
-
-		if($cs->contains_schema_build($sbuild) && $cs->{'core_cache'}{$sbuild}{'DEFAULT'}){#exact match
-		  $found_cs = $cs;
-		  last;
-		}else{#find best equivalent default
-		  
-		  foreach my $cache_sbuild(keys %{$cs->{'core_cache'}}){
-			
-			#Find DB with same assembly and take default CS
-			if($cache_sbuild =~ /_${assembly}/ && $cs->{'core_cache'}{$cache_sbuild}{'DEFAULT'}){
-			  $found_cs = $cs;
-			  last;
-			}
-		  }
-		}
-	  }else{
-		#should only ever be one of these by definition		
-		throw("Found more than one non-versioned CoordSystem:\t$name") if $found_cs;
-		$found_cs = $cs;
-	  }
+	}elsif($cs->version eq $assembly){
+	  #assume we want the current dnadb assembly version
+	  #No longer need to check schema build as we a forcing the use of assembly version in eFG
+	  $found_cs = $cs;
+	  last;
 	}
+
+
+	  #if($cs->contains_schema_build($sbuild) && $cs->{'core_cache'}{$sbuild}{'DEFAULT'}){#exact match
+	#	$found_cs = $cs;
+	#	last;
+	#  }else{#find best equivalent default
+		
+	#	foreach my $cache_sbuild(keys %{$cs->{'core_cache'}}){
+	#	  warn "got cached $cache_sbuild matching against assembly $assembly";
+		  
+		  #we need to deal with the version here rather than the DB assembly_version string
+		  
+		  
+	#	  #Find DB with same assembly and take default CS
+	#	  if($cache_sbuild =~ /_${assembly}/ && $cs->{'core_cache'}{$cache_sbuild}{'DEFAULT'}){
+	#		$found_cs = $cs;
+	#		last;
+	#	  }
+	#	}
+	#  }
+	#}else{#non-assmebled levels e.g. clone
+	#	#should only ever be one of these by definition		
+	#	throw("Found more than one non-versioned CoordSystem:\t$name") if $found_cs;
+	#	$found_cs = $cs;
+	#  }
   }
+  
 
 
   #should these throw?
@@ -1273,6 +1177,8 @@ sub store {
 sub validate_and_store_coord_system{
   my ($self, $cs) = @_;
 	
+  my @tmp = caller();
+  
   if(! (ref($cs) && $cs->isa('Bio::EnsEMBL::CoordSystem') && $cs->dbID())){
 	throw('Must provide a valid stored Bio::EnsEMBL::CoordSystem');
   }
@@ -1301,18 +1207,33 @@ sub validate_and_store_coord_system{
   #hence providing specificty for non-version CS's e.g. supercontig etc...
   my $fg_cs = $self->fetch_by_name($cs->name(), $cs->version());
 
-  
-  #why is this not picking up super contig?
 
   #this needs to satify both schema_build and version
   #retrieving by name version should retunr the lastest schema_build unless the it is not the toplevel or highest expected rank?
   
+  my $version;
+
   if(! $fg_cs){
-	warn "Creating new CoordSystem:\t".$cs->name().":",$cs->version()."\n";
+	
+
+	die "Not found cs";
+
+	if($cs->name ne 'clone' && (! $cs->version)){
+	  #NO VERSION for assembled level !!
+	  #Assume the default version
+	  #we could get this from meta, but is unreliable
+	  #get from default chromosome version
+	  my $tmp_cs = $cs->adaptor->fetch_by_name('chromosome');
+	  $version = $tmp_cs->version;
+	}
+
+	
 	$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
 													 -NAME    => $cs->name(),
-													 -VERSION => $cs->version(),
+													 -VERSION => $version || $cs->version(),
 													);
+
+	warn "Created new CoordSystem:\t".$fg_cs->name().":".$fg_cs->version()."\n";
   }
 
 

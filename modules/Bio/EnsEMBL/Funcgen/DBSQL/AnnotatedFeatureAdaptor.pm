@@ -159,7 +159,7 @@ sub _objs_from_sth {
 	# This code is ugly because caching is used to improve speed
 
 	
-	my ($sa);#, $old_cs_id);
+	my ($sa, $seq_region_id);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 	$sa ||= $self->db->get_SliceAdaptor();
 
@@ -173,14 +173,14 @@ sub _objs_from_sth {
 	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
-	    $annotated_feature_id,  $seq_region_id,
+	    $annotated_feature_id,  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $fset_id,
 		$display_label,         $score
 	);
 
 	$sth->bind_columns(
-					   \$annotated_feature_id,  \$seq_region_id,
+					   \$annotated_feature_id,  \$efg_seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
 					   \$seq_region_strand,     \$fset_id,
 					   \$display_label,         \$score
@@ -228,7 +228,7 @@ sub _objs_from_sth {
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 	  
 	  #get core seq_region_id
-	  $seq_region_id = $self->get_core_seq_region_id($seq_region_id);
+	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 		
 	  if(! $seq_region_id){
 		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".

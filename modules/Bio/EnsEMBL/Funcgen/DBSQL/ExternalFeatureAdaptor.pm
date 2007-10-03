@@ -114,21 +114,21 @@ sub _objs_from_sth {
 	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
 
 
-	my ($sa, @features, %fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
+	my ($sa, @features, $seq_region_id, %fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 	$sa ||= $self->db->get_SliceAdaptor();
 
 	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
 	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my (
-	    $external_feature_id,  $seq_region_id,
+	    $external_feature_id,  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $fset_id,
 		$display_label,         $ftype_id
 	   );
 
 	$sth->bind_columns(
-					   \$external_feature_id,   \$seq_region_id,
+					   \$external_feature_id,   \$efg_seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
 					   \$seq_region_strand,     \$display_label,         
 					   \$ftype_id,              \$fset_id,
@@ -165,7 +165,7 @@ sub _objs_from_sth {
 	  #which would have to be handled by the core api
 	  
 	  #get core seq_region_id
-	  $seq_region_id = $self->get_core_seq_region_id($seq_region_id);
+	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 	  
 	  if(! $seq_region_id){
 		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".

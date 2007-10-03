@@ -380,7 +380,7 @@ sub contains_schema_build {
 
   Arg [1]    : none
   Example    : print $coord->version();
-  Description: Getter for the version of this coordinate system.  This
+  Description: Getter/Setter for the version of this coordinate system.  This
                will return an empty string if no version is defined for this
                coordinate system.
   Returntype : string
@@ -392,6 +392,7 @@ sub contains_schema_build {
 
 sub version {
   my $self = shift;
+
   return $self->{'version'};
 }
 

@@ -180,7 +180,7 @@ sub _objs_from_sth {
 	#my $aa = $self->db->get_AnalysisAdaptor();
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-	my (@features, @reg_attrs);
+	my (@features, @reg_attrs, $seq_region_id);
 	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
 	my $skip_feature = 0;
 
@@ -191,7 +191,7 @@ sub _objs_from_sth {
 	
 	
 	my (
-	    $dbID,                  $seq_region_id,
+	    $dbID,                  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $display_label,
 		$ftype_id,              $fset_id,
@@ -200,7 +200,7 @@ sub _objs_from_sth {
 	);
 
 	$sth->bind_columns(
-					   \$dbID,                  \$seq_region_id,
+					   \$dbID,                  \$efg_seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
 					   \$seq_region_strand,     \$display_label,
 					   \$ftype_id,              \$fset_id,
@@ -278,7 +278,7 @@ sub _objs_from_sth {
 		
 		
 		#get core seq_region_id
-		$seq_region_id = $self->get_core_seq_region_id($seq_region_id);
+		$seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 
 		if(! $seq_region_id){
 		  warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".

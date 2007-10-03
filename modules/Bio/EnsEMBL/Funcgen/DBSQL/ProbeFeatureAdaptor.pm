@@ -360,10 +360,7 @@ sub _objs_from_sth {
 
 	
 	# This code is ugly because caching is used to improve speed
-
-	#my $sa = $self->db->get_SliceAdaptor();
-	
-	my ($sa, $seq_region_id);#, $old_cs_id);
+	my ($sa, $seq_region_id);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
@@ -374,8 +371,8 @@ sub _objs_from_sth {
 	my (%analysis_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
-	    $probe_feature_id,  $seq_region_id,
-	    $seq_region_start,  $efg_seq_region_end,
+	    $probe_feature_id,  $efg_seq_region_id,
+	    $seq_region_start,  $seq_region_end,
 	    $seq_region_strand, $mismatches,
 		$probe_id,    	    $analysis_id,
 		$probe_name,	    $cigar_line,
