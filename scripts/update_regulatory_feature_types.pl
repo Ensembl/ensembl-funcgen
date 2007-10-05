@@ -13,9 +13,9 @@ my $reg = "Bio::EnsEMBL::Registry";
 
 my $species = 'homo_sapiens';
 my ($pass, $test_slice, $schema_build, $type, $help, @slices);
-my $port = 3306;
-my $user = 'ensadmin';
-my $host = 'ens-genomics1';
+my $port = $ENV{'PORT'};
+my $user = $ENV{'WRITE_USER'};
+my $host = $ENV{'HOST'};
 my $out_dir = './';
 my $log_file = $out_dir.'RegulatoryFeatures.type.log';
 

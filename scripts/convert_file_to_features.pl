@@ -120,11 +120,10 @@ use strict;
 $| = 1;							#autoflush
 my ($pass, $dbname, $help, $man, $ftname, $file, $species, $ctname);
 my ($format, $set_name, $data_version, $clobber, $is_ucsc, $ctype, $ftype);
-#my $reg = "Bio::EnsEMBL::Registry";
 my $data_dir = $ENV{'EFG_DATA'};
-my $user = "ensadmin";
-my $host = 'localhost';
-my $port = '3306';
+my $user = $ENV{'WRITE_USER'};
+my $host = $ENV{'HOST'};
+my $port = $NEV{'PORT'};
 
 #Definitely need some sort of Defs modules for each array?
 

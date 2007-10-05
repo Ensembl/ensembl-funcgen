@@ -9,9 +9,9 @@ use Getopt::Long;
 
 my $reg = "Bio::EnsEMBL::Registry";
 
-my $port = 3306;
-my $user = 'ensro';
-my $host = 'ens-genomics1';
+my $port = $ENV{'PORT'};
+my $user = $ENV{'READ_USER'};
+my $host = $ENV{'HOST'};
 my ($help, $pass, $species, $schema_build, $slice, $num_feats, $skip_counts);
 my $usage;
 
