@@ -36,6 +36,8 @@ use DBI qw(:sql_types);
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
 
+#do we want to keep the IMPORTED_CS status for feature_sets/array_chips?
+#rename to MAPPED_CS_N?
 
 
 =head2 store_states
@@ -51,24 +53,21 @@ use DBI qw(:sql_types);
 =cut
 
 
-#We need to control what can be stored, so we need to check cell_line_ids?
-#Or is this level of control to be implicit?  Would there be a use for a multi-celled DataSet
-#Yes!  So we let the DB take anything, and make the obj_from_sth method handle all
-
-
 sub store_states{
   my ($self, $storable) = @_;
 
-  throw('Must call store with a list of OligoFeature objects') if(! $storable->isa("Bio::EnsEMBL::Funcgen::Storable"));
+  throw('Must pass a Bio::EnsEMBL::Funcgen::Storable') if(! $storable->isa("Bio::EnsEMBL::Funcgen::Storable"));
   
   foreach my $state(@{$storable->get_all_states()}){
 
-    $self->set_status($state, $storable) if (! $self->has_stored_status($state, $storable));
+    $self->store_status($state, $storable) if (! $self->has_stored_status($state, $storable));
   }
 
   return;
 
 }
+
+
 
 
 =head2 fetch_all_diplayable
@@ -127,7 +126,7 @@ sub status_to_constraint{
   my $constraint;
 
   #This will throw if status not valid, but still may be absent
-  my $status_id = $self->get_status_id($status);
+  my $status_id = $self->_get_status_name_id($status);
 
   
 
@@ -243,7 +242,7 @@ sub has_stored_status{
   my (@row);
 
   #Only used for set_status, merge with set_status?
-  my $status_id = $self->get_status_id($state);
+  my $status_id = $self->_get_status_name_id($state);
 
   throw("Must pass a stored Bio::EnsEMBL::Funcgen::Storable") if (! ($obj->isa("Bio::EnsEMBL::Funcgen::Storable") && $obj->dbID()));
 
@@ -260,21 +259,33 @@ sub has_stored_status{
   return (@row) ? 1 : 0;
 }
 
-=head2 set_status
+
+
+
+sub set_status{
+  my ($self, $state, $obj) = @_;
+
+  deprecate('set_status us deprecated.  Please use store_status');
+  
+  $self->store_status($state, $obj);
+}
+
+=head2 store_status
 
   Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
   Arg [2]    : Bio::EnsEMBL::"OBJECT"
-  Example    : $status_a->set_status('IMPORTED', $array_chip);
+  Example    : $status_a->store_status('IMPORTED', $array_chip);
   Description: Sets a state for a given object
   Returntype : None
   Exceptions : Warns if state already set
+               Throws is status name is not already stored.
   Caller     : general
   Status     : At risk - Move to Status
 
 =cut
 
 
-sub set_status{
+sub store_status{
   my ($self, $state, $obj) = @_;
 
   my $sql;
@@ -282,13 +293,13 @@ sub set_status{
   if($self->has_stored_status($state, $obj)){
     warn("$obj with dbID ".$obj->dbID()." already has status $state set\n");
   }else{
-    my $status_id = $self->get_status_id($state);
+    my $status_id = $self->_get_status_name_id($state);
 
     if(! $status_id){
-      warn("Creating NEW status_name entry for $state.  Is this a valid state?");
-      $sql = "INSERT into status_name(name) values('$state')";
-      $self->db->dbc->do($sql);
-      $status_id = $self->get_status_id($state);
+      throw("$state is not a valid status_name for $obj:\t".$obj->dbID);
+      #$sql = "INSERT into status_name(name) values('$state')";
+      #$self->db->dbc->do($sql);
+      #$status_id = $self->_get_status_name_id($state);
     }
 
     my $table = $self->_test_funcgen_table($obj);
@@ -300,7 +311,79 @@ sub set_status{
   return;
 }
 
-#quick method for ResultSetAdaptor->fetch_Resultfeatures_by_Slice
+
+=head2 revoke_status
+
+  Arg [1]    : string - status name e.g. 'IMPORTED'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Storable
+  Example    : $rset_adaptor->revoke_status('DAS DISPLAYABLE', $result_set);
+  Description: Revokes the given state of Storable in status table.
+  Returntype : None
+  Exceptions : Warns if storable does not have state
+               Throws is status name is not valid
+               Throws if not state passed
+               Throws if Storable is not valid and stored
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub revoke_status{
+  my ($self, $state, $storable) = @_;
+
+  throw('Must provide a status name') if(! defined $state);
+  throw('Must pass a Bio::EnsEMBL::Funcgen::Storable') if(! $storable->isa("Bio::EnsEMBL::Funcgen::Storable"));
+ 
+  my $status_id = $self->_get_status_name_id($state);
+  my $table_name = $storable->adaptor->_main_table;
+
+  if(! $self->has_store_status($state, $storable)){
+	warn $storable.' '.$storable->dbID()." does not have status $state to revoke\n";
+	return;
+  }
+
+  #do sanity checks on table to ensure that IMPORTED does not get revoke before data deleted?
+  #how would we test this easily?
+
+  my $sql = "delete from status where status where table_name='${table_name}'".
+	" and status_name_id=${status_id} and table_id=".$storable->dbID();
+
+  $self->db->dbc->db_handle->do($sql);
+
+  #now splice from status array;
+  #splice in loop should work as we will only see 1
+
+  for my $i(0..$#{$self->{'states'}}){
+	
+	if($self->{'states'}->[0] eq $state){
+	  splice @{$self->{'states'}}, $i, 1;
+	  last;
+	}
+  }
+
+  return;
+}
+
+
+
+=head2 status_filter
+
+  Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
+  Arg [2]    : string - table name e.g. experimental_chip
+  Arg [3]    : list   - table dbIDs
+  Exmaple    : my @displayable_ec_ids = @{$ec_adaptor->status_filter('DISPLAYABLE', 
+                                                                     'experimental_chip', 
+                                                                     (map $_->dbID, @echips))};
+  Description: Quick method for filtering dbIDs based on their table and and status
+  Returntype : ARRAYREF
+  Exceptions : Warns if state already set
+               Throws is status name is not already stored.
+  Caller     : general - ResultSetAdaptor->fetch_Resultfeatures_by_Slice
+  Status     : At risk - Move to Status?
+
+=cut
+
 
 sub status_filter{
   my ($self, $status, $table_name, @table_ids) = @_;
@@ -308,7 +391,7 @@ sub status_filter{
 
   my @status_ids;
 
-  my $status_id = $self->get_status_id($status);
+  my $status_id = $self->_get_status_name_id($status);
 
 
   return \@status_ids if(! $status_id);
@@ -324,10 +407,24 @@ sub status_filter{
 	
 }
 
-sub get_status_id{
+
+=head2 _get_status_name_id
+
+  Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
+  Example    : my $status_id = $self->_get_status_name_id('IMPORTED');
+  Description: Retrieves the dbID of a given status_name
+  Returntype : INT
+  Exceptions : None
+  Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
+  Status     : At risk - Move to Status?
+
+=cut
+
+
+sub _get_status_name_id{
   my ($self, $status) = @_;
 
-  $self->_validate_status($status);
+  #$self->_validate_status($status);
 
   my $sql = "SELECT status_name_id from status_name where name='$status'";
 
@@ -335,30 +432,19 @@ sub get_status_id{
 
   my ($status_id) = @$ref if $ref;
 
+
+  #we should throw here?
+  #To force manual addition of the status_name
+  #need to make sure all status_names which are explicitly used by API
+  #are stored in all DBs, else we could find ourselves with broken code
+  #for sparsely populated DBs
+
+  throw("Status name $status is not valid.  Maybe you need to add it using update_status_name.pl?") if ! $status_id;
+
+
   return $status_id;
 }
 
-
-sub _validate_status{
-  my ($self, $status) = @_;
-
-  throw("Must pass a status to validate") if ! $status;
-
-  my $valid = 0;
-
-  #We could do some look up on the table here, but this may compound problems if someone has hacked the table
-
-  my @state_regexs = ('IMPORTED', 'IMPORTED_CS_', 'DISPLAYABLE', 'RESOLVED');
-
-
-  foreach my $regex(@state_regexs){
-    $valid = 1 if ($status =~ /$regex/);
-  }
-
-  throw("Not a valid status: $status") if(! $valid);
-  
-  return;
-}
 
 1;
 

@@ -804,6 +804,13 @@ CREATE TABLE `status_name` (
 
 INSERT into status_name values ('', 'DISPLAYABLE');
 INSERT into status_name values ('', 'IMPORTED');
+INSERT into status_name values ('', 'DAS DISPLAYABLE');
+INSERT into status_name values ('', 'RESOLVED');
+-- Also need to add status name for all chip/channel level analyses
+-- Defaults
+INSERT into status_name values ('', 'IMPORTED_VSN_GLOG');
+INSERT into status_name values ('', 'IMPORTED_Parzen');
+
 
 --change to small int?
 --INSERT into table status("", 'DISPLAYABLE');
@@ -836,6 +843,11 @@ CREATE TABLE `analysis` (
   UNIQUE KEY `logic_name` (`logic_name`),
   KEY `logic_name_idx` (`logic_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+-- add defaults here?
+insert into analysis(logic_name) values('external');
+
 
 --
 -- Table structure for table `analysis_description`

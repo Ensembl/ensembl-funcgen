@@ -65,7 +65,7 @@ my %regex_types =
    '10......................1..01...' => 'Gene Associated - Cell type specific',
    
    #promoter
-   '.1......................1.1.....' => 'Promoter Associated', 
+   '.1......................1.1.....' => 'Promoter Associated',
    '.1......................0.1.....' => 'Promoter Associated - Cell type specific',
    '.0......................1.1.....' => 'Promoter Associated - Cell type specific',
 );
@@ -90,12 +90,12 @@ my %counts;
 my %ftypes = (
 			  'Unclassified' => undef,
 			  'Unclassified - Cell type specific ' => undef,		
-			  'Promoter associated' => undef,
+			  'Promoter Associated' => undef,
 			  'Gene Associated' => undef,
-			  'Non-gene associated - Cell type specific' => undef,
-			  'Promoter associated - Cell type specific' => undef,
-			  'Gene associated - Cell type specific' => undef,
-			  'Non-gene associated - Cell type specific' => undef,
+			  'Non-gene Associated - Cell type specific' => undef,
+			  'Promoter Associated - Cell type specific' => undef,
+			  'Gene Associated - Cell type specific' => undef,
+			  'Non-gene Associated - Cell type specific' => undef,
 			 );
 
 
@@ -136,6 +136,11 @@ foreach my $slice(@slices){
   $total_cnt += scalar(@features);
 
   print "\nAssigning to ".scalar(@features)." RegulatoryFeatures on slice:\t".$slice->name."\n";
+
+  #convert this to use sql directly?
+  #or is this now redundant, do operation on flat files and reimport from file
+
+
   
  FEATURE: foreach my $rfeat(@features){
 	my $assigned = 0;

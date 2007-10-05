@@ -516,8 +516,9 @@ sub _objs_from_sth {
   my ($fset_id, $fset, $set, $name, $ss_type, $ss_id);
   
   my %set_adaptors = (
-					  feature => $self->db->get_FeatureSetAdaptor(),
-					  result  => $self->db->get_ResultSetAdaptor(),
+					  feature      => $self->db->get_FeatureSetAdaptor(),
+					  result       => $self->db->get_ResultSetAdaptor(),
+					  experimental => $self->db->get_ExperimentalSetAdaptor(),
 					 );
 
   $sth->bind_columns(\$dbID, \$fset_id, \$name, \$ss_type, \$ss_id);

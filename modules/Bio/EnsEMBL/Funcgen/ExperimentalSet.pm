@@ -70,6 +70,7 @@ use vars qw(@ISA);
                                                                      -FORMAT       => 'READ_FORMAT',
                                                                      -VENDOR       => 'SOLEXA',
                                                                      -NAME         => 'ExpSet1',
+                                                                     -ANALYSIS     => $anal,
                                                                      );
 
   Do we want to define subsets likes this or are we more likely to add them one by one?
@@ -91,8 +92,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($exp, $ftype, $ctype, $format, $vendor, $name)
-    = rearrange(['EXPERIMENT', 'FEATURE_TYPE', 'CELL_TYPE', 'FORMAT', 'VENDOR', 'NAME'], @_);
+  my ($exp, $ftype, $ctype, $format, $vendor, $name, $anal)
+    = rearrange(['EXPERIMENT', 'FEATURE_TYPE', 'CELL_TYPE', 'FORMAT', 'VENDOR', 'NAME', 'ANALYSIS'], @_);
     
   if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
@@ -107,7 +108,7 @@ sub new {
 	$self->{'feature_type'} = $ftype;
   }
 
-   if(defined $ctype){
+  if(defined $ctype){
 
 	if(! (ref $ctype && $ctype->isa('Bio::EnsEMBL::Funcgen::CellType') && $ctype->dbID())){
 	  throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::CellType');
@@ -115,6 +116,23 @@ sub new {
 
 	$self->{'cell_type'} = $ctype;
   }
+
+  if(defined $anal){
+
+	if(! (ref $anal && $anal->isa('Bio::EnsEMBL::Analysis') && $anal->dbID())){
+	  throw('Must specify a valid stored Bio::EnsEMBL::Analysis');
+	}
+	
+	$self->{'analysis'} = $anal;
+  }
+  else{
+	#default analysis hack for v47
+	$self->{'analysis'} = Bio::EnsEMBL::Analysis->new(-logic_name => 'external',
+													  -id       => 0,#??someone needs to rewrite analysis
+													 );
+  }
+
+
 
   throw('Must provide a name parameter') if(! defined $name);
 
@@ -296,6 +314,24 @@ sub format {
   $self->{'format'} = shift if @_;
   
   return $self->{'format'};
+}
+
+
+=head2 analysis
+
+  Example    : my $eset_anal_name = $eset->analysis->logic_name();
+  Description: Getter for the analsysis for this ExperimentalSet.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub analysis {
+  my $self = shift;
+     		
+  return $self->{'analysis'};
 }
 
 

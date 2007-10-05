@@ -292,7 +292,7 @@ sub add_ResultSet {
   Example    : $dset->add_supporting_sets($rset);
   Description: Adds Result/FeatureSets to the DataSet
   Returntype : none
-  Exceptions : Throws if set not valid for member_set_type of DataSet
+  Exceptions : Throws if set not valid for supporting_set_type of DataSet
   Caller     : General
   Status     : At Risk
 
