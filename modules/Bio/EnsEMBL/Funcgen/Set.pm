@@ -75,13 +75,29 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($ftype, $ctype, $name, $analysis)
+  my ($ftype, $ctype, $name, $anal)
     = rearrange(['FEATURE_TYPE', 'CELL_TYPE', 'NAME', 'ANALYSIS'], @_);
   
 
-  if (! ($ftype && $anal && $name)){
-    throw('Need to specify a name, feature_type and analysis parameters');
+  throw('Need to specify a name') if ! defined $name;
+  
+  if (! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
+		 && $ftype->dbID())){ 
+	throw('Must pass a valid stored FeatureType')
   }
+  else{
+	$self->{'feature_type'} = $ftype;
+  }
+  
+  
+  if (! (ref($anal) eq 'Bio::EnsEMBL::Analysis'
+		 && $anal->dbID())){ 
+	throw('Must pass a valid stored Analysis')
+  }
+  else{
+	$self->{'feature_type'} = $ftype;
+  }
+  
   
 
 
@@ -92,7 +108,7 @@ sub new {
   
   $self->feature_type($ftype);
   $self->cell_type($ctype)     if $ctype;
-  $self->analysis($anal)      if $anal;
+  $self->analysis($anal);
   $self->name($name);	
   
   return $self;
@@ -106,7 +122,7 @@ sub new {
 =head2 name
 
   Example    : my $set->name('SET1');
-  Description: Getter/Setter for the name of this DataSet.
+  Description: Getter/Setter for the name of this Set.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -116,8 +132,6 @@ sub new {
 
 sub name {
   my $self = shift;
-     	
-  $self->{'name'} = shift if @_;
 
   return $self->{'name'};
 }
@@ -158,17 +172,26 @@ sub cell_type {
 
 sub feature_type {
   my $self = shift;
-     		
-  if(@_){
-   throw('Must pass a valid stored FeatureType') if (! (ref($_[0]) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
-														&& $_[0]->dbID()));
-   $self->{'feature_type'} = shift;
- }
-  
+     		  
   return $self->{'feature_type'};
 }
 
+=head2 analysis
 
+  Example    : my $anal_name = $set->analysis->logic_name();
+  Description: Getter for the analysis attribute for this Set.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub analysis {
+  my $self = shift;
+ 
+  return $self->{'analysis'};
+}
 
 =head2 display_label
 

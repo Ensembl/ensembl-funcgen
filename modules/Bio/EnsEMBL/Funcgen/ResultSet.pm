@@ -46,7 +46,7 @@ package Bio::EnsEMBL::Funcgen::ResultSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::Storable;
+use Bio::EnsEMBL::Funcgen::Set;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);

@@ -46,7 +46,7 @@ package Bio::EnsEMBL::Funcgen::FeatureSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
-use Bio::EnsEMBL::Funcgen::Storable;
+use Bio::EnsEMBL::Funcgen::Set;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);
@@ -83,14 +83,10 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($type, $edb_name)
+  my ($type)
     = rearrange(['TYPE'],@_);#, 'EXTERNAL_DB_NAME'], @_);
 
-  #Analysis already checked in BaseFeatureAdaptor
-  if (! $feature_type || ! $analysis || ! $type){
-    throw("Need to pass a feature_type, analysis and feature_set type argument");
-  }
-
+  throw("You must defined a FeatureSet type e.g. 'annotated'") if ! $type;
   $self->type($type);
 
   return $self;
