@@ -56,7 +56,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
 use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);#change to Set once we have implemented analysis properly
 
 
 =head2 new

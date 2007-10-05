@@ -49,7 +49,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
 
 =head2 new
@@ -79,8 +79,8 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($analysis, $table_name, $table_id, $ftype, $ctype, $name)
-    = rearrange(['ANALYSIS', 'TABLE_NAME', 'TABLE_ID', 'FEATURE_TYPE', 'CELL_TYPE', 'NAME'], @_);
+  my ($table_name, $table_id)
+    = rearrange(['TABLE_NAME', 'TABLE_ID'], @_);
 
 
   $self->{'table_id_hash'} = {};
@@ -96,13 +96,8 @@ sub new {
   #potential for someone to create one from new using a duplicate dbID and then linking incorrect data to a pre-existing ResultGroup
   #we need to verify that each table_name/id in the set is from the same experiment
 
-
-  $self->analysis($analysis) if $analysis;
   $self->table_name($table_name);
   $self->add_table_id($table_id) if $table_id;
-  $self->feature_type($ftype) if $ftype;
-  $self->cell_type($ctype) if $ctype;
-  $self->name($name) if $name;
 
   return $self;
 }
@@ -165,108 +160,6 @@ sub table_name{
 
     return $self->{'table_name'};
 }
-
-
-=head2 name
-
-  Arg [1]    : (optional) string - name of the result set
-  Example    : $result_set->name($name);
-  Description: Getter and setter for the name attribute for this ResultSet.
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub name{
-    my $self = shift;
-
-    if (@_){
-      $self->{'name'} = shift;
-	}
-
-    return $self->{'name'};
-}
-
-
-
-=head2 analysis
-
-  Arg [1]    : (optional) - Bio::EnsEMBL::Analysis
-  Example    : $anal_id = $rset->analysis->dbID();
-  Description: Getter and setter for the analysis attribute for this ResultSet.
-  Returntype : Bio::EnsEMBL::Analysis
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub analysis {
-  my $self = shift;
-	
-  if(@_){
-	  throw("Must pass a valid Bio::EnsEMBL::Analysis object") if (! $_[0]->isa("Bio::EnsEMBL::Analysis"));
-	  $self->{'analysis'} = shift;
-  }
-		
-  return $self->{'analysis'};
-}
-
-
-=head2 feature_type
-
-  Arg [1]    : (optional) - Bio::EnsEMBL::Funcgen::FeatureType
-  Example    : $fname = $rset->feature_type->name();
-  Description: Getter and setter for the feature_type attribute for this ResultSet.
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : Throws if arg is not a valid Bio::EnsEMBL::Funcgen::FeatureType
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub feature_type {
-  my ($self, $ft) = @_;
-
-  if($ft){
-    throw('Must pass a valid Bio::EnsEMBL::Funcgen::FeatureType object') if (! $ft->isa('Bio::EnsEMBL::Funcgen::FeatureType'));
-    $self->{'feature_type'} = $ft;
-  }
-		
-  return $self->{'feature_type'};
-}
-
-
-
-=head2 cell_type
-
-  Arg [1]    : (optional) - Bio::EnsEMBL::Funcgen::CellType
-  Example    : $cname = $rset->cell_type->name();
-  Description: Getter and setter for the cell_type attribute for this ResultSet.
-  Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : Throws if arg is not a valid Bio::EnsEMBL::Funcgen::CellType
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub cell_type {
-  my $self = shift;
-	
-  if(@_){
-    throw("Must pass a valid Bio::EnsEMBL::Funcgen::CellType object") if (! $_[0]->isa("Bio::EnsEMBL::Funcgen::CellType"));
-    $self->{'cell_type'} = shift;
-  }
-		
-  return $self->{'cell_type'};
-}
-
 
 
 
