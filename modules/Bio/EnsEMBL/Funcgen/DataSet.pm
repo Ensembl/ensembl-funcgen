@@ -5,7 +5,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::DataSet - A module to represent DataSet object.
+Bio::EnsEMBL::Funcgen::DataSet - A module to represent DataSet object.
  
 
 =head1 SYNOPSIS
