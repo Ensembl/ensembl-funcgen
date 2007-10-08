@@ -798,3 +798,6 @@ delete s, sn  from status s, status_name sn where s.status_name_id=sn.status_nam
 
 
 --enum feature_type class default NULL
+
+-- correct data_set.supporting_set_type for Wiggle_H* and H3ac_claes data
+-- update data_set set supporting_set_type='experimental' where data_set_id >= 12 AND data_set_id <= 19;
