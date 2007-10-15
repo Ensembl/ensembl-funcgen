@@ -264,7 +264,9 @@ sub cell_type{
 sub feature_type{
   my $self = shift;
   
-  return $self->feature_set->feature_type();
+
+
+  return (defined $self->{'feature_type'}) ?  $self->{'feature_type'} : $self->feature_set->feature_type();
 }
 
 

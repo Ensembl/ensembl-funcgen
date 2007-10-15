@@ -106,6 +106,7 @@ sub new {
     = rearrange(['FEATURE_TYPE', 'STABLE_ID', 'REGULATORY_ATTRIBUTES', '_ATTRIBUTE_CACHE'], @_);
   
   #check mandatory params here
+
   throw("Must provide a FeatureType") if ! $reg_type;
   $self->feature_type($reg_type) if $reg_type;
   $self->stable_id($stable_id) if $stable_id;
