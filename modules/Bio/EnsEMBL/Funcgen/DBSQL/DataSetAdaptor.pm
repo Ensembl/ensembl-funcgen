@@ -352,6 +352,8 @@ sub fetch_all_by_feature_type_class {
 	#but we can do it for product feature_set type
 
 	foreach my $dset(@{$self->generic_fetch($constraint)}){
+
+
 	  push @dsets, $dset if $dset->product_FeatureSet->feature_type->class() eq $class;
 	}
 
@@ -545,8 +547,6 @@ sub _objs_from_sth {
 													  -SUPPORTING_SET_TYPE => $ss_type,
 													 );
 
-	  warn "created dset $data_set $name";
-
 	}
 	#need to change keys on data_set!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -580,9 +580,7 @@ sub _objs_from_sth {
   #Or we restrict the Set to handle just one feature_set and it's supporting result_sets
   #Start simple, let's just take the one feature/data set problem first
  
-  warn "returning dsets @data_sets";
- 
-  return \@data_sets;
+   return \@data_sets;
 }
 
 
