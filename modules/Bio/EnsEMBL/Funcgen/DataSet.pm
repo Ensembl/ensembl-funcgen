@@ -332,6 +332,9 @@ sub add_supporting_sets {
 	#Can have more than one experiment for a compound feature set, would we ever want to display raw data?
 	#This is actually an easier problem unless we are displaying two feature types(i.e. complex and compound)
 	
+
+
+
 	$self->{'supporting_sets'}->{$set->analysis->dbID()} ||= ();
 	push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
   }
@@ -358,7 +361,6 @@ sub _validate_and_set_types{
 
 
   #slightly dodgy bypassing methods, but extendable
-
 
   #This currently restricts all set types to one cell and feature type
   #this is incorrect for feature_set types as we want to munge several feature and possibly cell types 

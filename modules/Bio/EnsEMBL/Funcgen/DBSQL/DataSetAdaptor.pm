@@ -169,11 +169,11 @@ sub fetch_all_by_supporting_set_type {
   
 }
 
-=head2 fetch_all_by_product_feature_set_type
+=head2 fetch_all_by_product_FeatureSet_type
 
   Arg [1]    : string - product feature set type for this data_set e.g. 'annotated', 'regulatory'
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my $dsets = $dset_adaptor->fetch_all_by_product_feature_set_type('regulatory');
+  Example    : my $dsets = $dset_adaptor->fetch_all_by_product_FeatureSet_type('regulatory');
   Description: Fetch all DataSets of a given product feature set type
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : Throws if no product feaure set type passed
@@ -182,7 +182,7 @@ sub fetch_all_by_supporting_set_type {
 
 =cut
 
-sub fetch_all_by_product_supporting_set_type {
+sub fetch_all_by_product_FeatureSet_type {
   my ($self, $type, $status) = @_;
   
   throw('Not yet implemented');
@@ -352,7 +352,7 @@ sub fetch_all_by_feature_type_class {
 	#but we can do it for product feature_set type
 
 	foreach my $dset(@{$self->generic_fetch($constraint)}){
-	  push @dsets, $dset if $dset->feature_set->feature_type->class() eq $class;
+	  push @dsets, $dset if $dset->product_FeatureSet->feature_type->class() eq $class;
 	}
 
 	return \@dsets;	
@@ -544,6 +544,9 @@ sub _objs_from_sth {
 													  -ADAPTOR             => $self,
 													  -SUPPORTING_SET_TYPE => $ss_type,
 													 );
+
+	  warn "created dset $data_set $name";
+
 	}
 	#need to change keys on data_set!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -576,7 +579,9 @@ sub _objs_from_sth {
   #So we either accomodate everything, where the only contraint is that we have one constant in the set
   #Or we restrict the Set to handle just one feature_set and it's supporting result_sets
   #Start simple, let's just take the one feature/data set problem first
-  
+ 
+  warn "returning dsets @data_sets";
+ 
   return \@data_sets;
 }
 

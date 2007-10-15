@@ -98,18 +98,15 @@ sub new {
 	$self->{'feature_type'} = $ftype;
   }
   
-  
-
-
   #this clashes with Data::Set->product_feature_type
   #do we @INC Set in DataSet?
   #mandatory params would also be different
   #keep DataSet separate for now.
   
-  $self->feature_type($ftype);
+  $self->{'feature_type'} = $ftype;
   $self->cell_type($ctype)     if $ctype;
-  $self->analysis($anal);
-  $self->name($name);	
+  $self->{'analysis'} = $anal;
+  $self->{'name'} = $name;	
   
   return $self;
 }

@@ -220,7 +220,7 @@ sub fetch_all_by_FeatureType {
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
   Exceptions : Throws if no name provided
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - remove all, there should only be one?
 
 =cut
 
@@ -236,6 +236,31 @@ sub fetch_all_by_name_Analysis {
   }
 	
   my $constraint = "rs.name ='${name}' AND rs.analysis_id=".$anal->dbID();
+	
+  return $self->generic_fetch($constraint);
+}
+
+=head2 fetch_all_by_name
+
+  Arg [1]    : string - ResultSet name
+  Example    : ($rset) = @{$rseta->fetch_all_by_name($exp->name().'_IMPORT')};
+  Description: Retrieves ResultSets based on the name attribute
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::ResultSet objects
+  Exceptions : Throws if no name provided
+  Caller     : General
+  Status     : At Risk - remove all, there should only be one?
+
+=cut
+
+sub fetch_all_by_name{
+  my ($self, $name) = @_;
+
+  if( ! defined $name){
+    throw('Need to pass a ResultSet name');
+  }
+
+	
+  my $constraint = "rs.name ='${name}'";
 	
   return $self->generic_fetch($constraint);
 }
@@ -388,7 +413,8 @@ sub _objs_from_sth {
       $anal = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-            
+           
+
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
 													-DBID         => $dbid,
 													-NAME         => $name,
@@ -698,6 +724,8 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   $sql .= ' AND pf.seq_region_end>='.$slice->start().
 	' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
 
+  #can we resolves replicates here by doing a median on the score and grouping by probe_id?
+  #what if a probe_id is present more than once, i.e. on plate replicates?
 
   #warn "sql is: \n$sql";
 
@@ -709,6 +737,8 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 #          ' AND pf.seq_region_end>='.$slice->start().
 #          ' AND pf.seq_region_start<='.$slice->end().
 #          ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
+
+  #warn "sql is \n$sql";
 
   $sth = $self->prepare($sql);
   $sth->execute();

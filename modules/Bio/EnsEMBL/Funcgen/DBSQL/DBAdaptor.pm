@@ -308,7 +308,7 @@ sub _get_schema_build{
   Returntype : Bio::EnsEMBL::DBSQL::SLiceAdaptor
   Exceptions : Throws if arguments not supplied
   Caller     : general
-  Status     : At risk
+  Status     : At risk - remove and add this to BaseFeatureAdaptor->fetch_all_by_Slice_constraint
 
 =cut
 
@@ -368,6 +368,12 @@ sub get_SliceAdaptor{
       #can we return direct from registry for older versions?
       #best to generate directl as we may have only loaded the current DBs
       #set dnadb here and return after block
+
+	  #should we really permanently set this here
+	  #what is we were on ens-livemirror?
+	  #we would then lose that association
+	  #should we change dnadb to be totally dynamic anyway and only set it for the current default?
+
 	  my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 		(						
 		 -host => "ensembldb.ensembl.org",
@@ -395,9 +401,14 @@ sub get_SliceAdaptor{
 
   Title :      dnadb 
   Usage :      my $dnadb = $db->dnadb(); 
-  Description: returns the database adaptor where the dna lives i.e. the core db fot a given species
+  Description: returns the database adaptor where the dna lives i.e. the core db for a given species
+               There are at least 2 cases where you need to set this explicitly
+               1.  If you want to retrieve features on an assembly which is not the default in 
+               the correspeonding core DB with matching schema_build
+               2.  If the corresponding core DB is not available on the default ensembl DB 
+               server(ensembldb/ens-livemirror) i.e. before a new release.
   Args :       Bio::EnsEMBL::DBSQL::BaseAdaptor
-  Status :     At risk.
+  Status :     At risk. - Might remove validation of CS
 
 =cut
 
