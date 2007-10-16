@@ -509,9 +509,6 @@ sub _objs_from_sth {
 			$slice = $dest_slice;
 		}
 
-
-		warn "Got ".scalar(@features)." features" if (! (scalar(@features)%1000));
-
 		push @features, $self->_new_fast( {
 											 'start'         => $seq_region_start,
 											 'end'           => $seq_region_end,
