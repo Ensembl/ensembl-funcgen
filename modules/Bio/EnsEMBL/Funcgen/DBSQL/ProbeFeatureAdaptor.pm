@@ -261,8 +261,8 @@ sub _tables {
 	return (
 			[ 'probe_feature', 'pf' ], 
 			[ 'probe',   'p' ], 
-			[ 'array_chip',   'ac' ],#these are required for array based queries
-			[ 'array',   'a' ]
+			#[ 'array_chip',   'ac' ],#these are required for array based queries not implemented yet
+			#[ 'array',   'a' ]
 		   );
 }
 
@@ -313,7 +313,7 @@ sub _columns {
 sub _default_where_clause {
 	my $self = shift;
 	
-	return 'pf.probe_id = p.probe_id AND p.array_chip_id = ac.array_chip_id';
+	return 'pf.probe_id = p.probe_id';# AND p.array_chip_id = ac.array_chip_id';
 }
 
 =head2 _final_clause
@@ -424,7 +424,9 @@ sub _objs_from_sth {
 		}
 
 		
-		warn "Need to implement slice adaptor hash, based on seq_region id??";
+		#warn "Need to implement slice adaptor hash, based on seq_region id??";#
+
+
 		#we need to be mindful of dynamic assembly mapping
 		#or would this be handled before here?
 		#will different cs_id be handled before here also, so we would never see different cs_ids?
@@ -508,14 +510,14 @@ sub _objs_from_sth {
 		}
 
 
-		
+		warn "Got ".scalar(@features)." features" if (! (scalar(@features)%1000));
 
 		push @features, $self->_new_fast( {
 											 'start'         => $seq_region_start,
 											 'end'           => $seq_region_end,
 											 'strand'        => $seq_region_strand,
 											 'slice'         => $slice,
-											 'analysis'      => $analysis,
+											 'analysis'      => $analysis,#we should lazy load this
 											 'adaptor'       => $self,
 											 'dbID'          => $probe_feature_id,
 											 'mismatchcount' => $mismatches,
@@ -525,6 +527,8 @@ sub _objs_from_sth {
 											 '_probe_name'   => $probe_name
 											} );
 
+
+	
 	  }
 
 	return \@features;
