@@ -85,11 +85,7 @@ sub new_fast {
 
 =cut
 
-sub start {
-    #my $self = shift;
-	#return $self->[0];
-  $_->[0]
-}
+sub start {  $_[0]->[0];}
 
 
 =head2 end
@@ -104,12 +100,7 @@ sub start {
 
 =cut
 
-sub end {
-    
-#my $self = shift;
-	#return $self->[1];
-  $_->[1];
-}
+sub end {  $_[0]->[1];}
 
 =head2 score
 
@@ -123,11 +114,7 @@ sub end {
 
 =cut
 
-sub score {
-  #  my $self = shift;
-  #  return $self->[2];
-  $_->[2];
-}
+sub score {  $_[0]->[2];}
 
 
 
