@@ -213,14 +213,11 @@ sub regulatory_attributes {
   #deref here for safety??
   #$self->{'regulatory_attributes'} =  [@$attrs] if $attrs;
 
-  if(@$attrs){
+  if(defined $attrs && @$attrs){
 
 	foreach my $attr(@$attrs){
-	  $table = $attr->adaptor->_main_table();
-	  
+	  $table = $attr->adaptor->_main_table->[0];
 	  #check for isa Feature here?
-	  
-	  #$table =~ s/_feature//;
 	  $self->{'regulatory_attributes'}{$table}{$attr->dbID()} = $attr; 
 	}
   }
@@ -235,7 +232,8 @@ sub regulatory_attributes {
 	#  }
 #	}
 #  }
-  
+    
+
   return [ map values %{$self->{'regulatory_attributes'}{$_}}, keys %{$self->{'regulatory_attributes'}} ];
 }
 

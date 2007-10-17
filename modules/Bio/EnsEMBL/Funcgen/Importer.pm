@@ -2727,10 +2727,19 @@ sub R_norm{
   my $aa = $self->db->get_AnalysisAdaptor();
   my $rset_adaptor = $self->db->get_ResultSetAdaptor();
   my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
-  my %r_libs = (
-				"VSN_GLOG"      => ['vsn'],
-				"TukeyBiweight" => ['affy'],
-			   );
+  my %r_config = (
+				  "VSN_GLOG"      => {( libs         => ['vsn'],
+										bind_method => 'cbind',
+										norm_method => 'vsn',
+									  )},
+									
+				  "TukeyBiweight" => {(
+									   libs => ['affy'],
+									   bind_method => 'rbind',
+									   norm_method => 'tukey.biweight',
+									  )},
+				 );
+
 
 
 
@@ -2766,7 +2775,7 @@ sub R_norm{
       
       #foreach my $ln(@logic_names){
 	
-      foreach my $lib (@{$r_libs{$logic_name}}) {
+      foreach my $lib (@{$r_config{$logic_name}{'libs'}}) {
 		$query .= "library($lib);";
       }
       #}
@@ -2824,9 +2833,17 @@ sub R_norm{
 	
 		  #should do some sorting here?  Probes are in same order anyway
 		  #does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
-		  $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";		
+
+		  #this need to be rbind for tukeybiweight
+		  
+
+		  
+		  $query .= "raw_df<-".$r_config{$logic_name}{'bind_method'}."(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";
+
+
+		
 		  #variance stabilise
-		  $query .= "vsn_df<-vsn(raw_df)\n";
+		  $query .= "norm_df<-".$r_config{$logic_name}{'norm_method'}."(raw_df)\n";
     
 	  
 		  #do some more calcs here and print report?
@@ -2845,7 +2862,7 @@ sub R_norm{
 	
 		  #Now create table structure with glog values(diffs)
 		  #3 sig dec places on scores(doesn't work?!)
-		  $query .= "glog_df<-cbind(rep(\"0\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(vsn_df[,2]) - exprs(vsn_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])), c1[\"X\"], c1[\"Y\"])\n";
+		  $query .= "formatted_df<-cbind(rep(\"0\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(norm_df[,2]) - exprs(norm_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])), c1[\"X\"], c1[\"Y\"])\n";
 	  
 	  
 		  #load back into DB
@@ -2854,7 +2871,7 @@ sub R_norm{
 		  #dbWriteTable(con, "result", c3results, append=TRUE)
 		  #dbWriteTable returns true but does not load any data into table!!!
 	  
-		  $query .= "write.table(glog_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		  $query .= "write.table(formatted_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
 		
 		  #tidy up here?? 
 		}

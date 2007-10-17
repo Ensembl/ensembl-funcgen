@@ -216,7 +216,7 @@ sub _objs_from_sth {
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name);
 	my ($asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
-
+  
 	if ($mapper) {
 		$asm_cs      = $mapper->assembled_CoordSystem();
 		$cmp_cs      = $mapper->component_CoordSystem();
@@ -254,6 +254,7 @@ sub _objs_from_sth {
 	my @reg_feature_attrs = ('DNase1', 'CTCF', 'H4K20me3', 'H3K27me3', 
 							 'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
 	
+  my $slice;
 	
   FEATURE: while ( $sth->fetch() ) {
 
@@ -297,7 +298,7 @@ sub _objs_from_sth {
 		
 		
 	    # Get the slice object
-	    my $slice = $slice_hash{'ID:'.$seq_region_id};
+	    $slice = $slice_hash{'ID:'.$seq_region_id};
 	    
 	    if (!$slice) {
 	      $slice                              = $sa->fetch_by_seq_region_id($seq_region_id);
@@ -363,42 +364,7 @@ sub _objs_from_sth {
 	    
 
 		my ($reg_type, $reg_attrs, $ftype);
-		
-		#RegulatoryFeature hack
-		#will have no reg attrs
-
-		#if(! defined $ftype_id && $display_label =~ /[01]/){
-		  
-		#  #We don't consider the non-epi feature bits as these are only used to
-		#  #cluster and build the patterns, not to assign a classification
-		#  #as this would prevent us from finding novel regions
-		  
-		  
-		#  my @vector = split//, $display_label;
-		  
-		#  foreach my $i(0..7){#$#vector){
-		#	push @$reg_attrs, $reg_feature_attrs[$i] if $vector[$i];
-		#  }
-		
-		  
-		#  foreach my $regex(keys %reg_class_regexs){
-			
-		#	if($display_label =~ /$regex/){
-			  
-		#	  #warn "$vector matches ".$reg_class_regexs{$regex}."\t$regex\n";
-			  
-		#	  throw('Found non-mutually exclusive regexs') if $reg_type;
-		#	  $reg_type = $reg_class_regexs{$regex};
-		#	}
-
-		#  }
-
-		#  undef $display_label;
-		#  $reg_type ||= 'Unclassified';
-		#  $ftype_hash{$reg_type} = $ft_adaptor->fetch_by_name($reg_type) if (! exists $ftype_hash{$reg_type});
-		#  $ftype = $ftype_hash{$reg_type};
-		#}
-		
+	   		
 		if(defined $ftype_id){
 		  $ftype = $ft_adaptor->fetch_by_dbID($ftype_id);
 		}
@@ -423,7 +389,12 @@ sub _objs_from_sth {
 	
 	  #populate attributes array
 	  if(defined $attr_id  && ! $skip_feature){
-		push @reg_attrs, $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
+
+		#These will all be fetched on their native slice, not necessarily the slice we have fetched this
+		#reg feature on, hence we need to map the features to the current slice
+		#otherwise the bounds may get messed up
+
+		push @reg_attrs, $feature_adaptors{$attr_type}->fetch_by_dbID_Slice($attr_id, $slice);
 	  }
 	}
 

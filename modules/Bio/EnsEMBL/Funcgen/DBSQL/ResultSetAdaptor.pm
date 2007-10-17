@@ -875,6 +875,13 @@ sub fetch_results_by_probe_id_ResultSet{
   my $query = "SELECT r.score from result r where r.probe_id ='${probe_id}'".
     " AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
 
+  #without a left join this will return empty results for any probes which may have been remapped 
+  #to the a chromosome, but no result exist for a given set due to only importing a subset of
+  #a vendor specified mapping
+
+
+  #warn "sql is $query";
+
   my @results = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($query)};
   
 
