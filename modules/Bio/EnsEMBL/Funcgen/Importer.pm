@@ -84,7 +84,7 @@ use vars qw(@ISA);
                     -array_name Name for array set
                     -array_file Path of array file to import for sanger ENCODE array
                     -result_set_name  Name to give the raw and normalised result sets (default uses experiment and analysis name)
-                    -norm_method  Normalisation method (default = vsn_norm, put defaults in Defs?)
+                    -norm_method  Normalisation method (Nimblegen default = VSN_GLOG or $ENV{'NORM_METHOD'})
                     -dbname Override for autogeneration of funcgen dbaname
                     -reg_config path to local registry config file (default = ~/ensembl.init || undef)
                     -design_type MGED term (default = binding_site_identification) get from meta/MAGE?
@@ -109,14 +109,14 @@ sub new{
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, $no_mage, $eset_name)
+	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, $no_mage, $eset_name, $norm_method)
 	= rearrange(['FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
-				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME'], @_);
+				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD'], @_);
   #add mail flag
   #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
   #would have to make sure GroupDefs is inherited first so we can set some mandatory params
@@ -178,10 +178,14 @@ sub new{
   $self->{'write_mage'} = $write_mage || 0;
   $self->{'no_mage'} = $no_mage || 0;
   $self->{'experimental_set_name'} = $eset_name if $eset_name;
- 
-  warn "Hardocing no_magefor non-NIMBLEGEN imports";
-  $self->{'no_mage'} = 1 if ($self->vendor ne 'NIMBLEGEN');
 
+  #Will a general norm method be applicable fo all imports?
+  $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};
+ 
+  if ($self->vendor ne 'NIMBLEGEN'){
+	$self->{'no_mage'} = 1;
+	warn "Hardcoding no_mage for non-NIMBLEGEN imports";
+  }
 
   #Set vendor specific attr dependent vars
   $self->set_defs();
@@ -370,8 +374,16 @@ sub init_experiment_import{
     $self->cell_type($ctype);
   }
 
+  
  
   #check for cell||feature and warn if no met file supplied?
+
+  #check norm analysis
+  my $norm_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method);
+
+  #should we list the valid analyses?
+  throw($self->norm_method.' is not a valid analysis') if ! $norm_anal;
+  $self->norm_analysis($norm_anal);
 
 
   
@@ -644,6 +656,8 @@ sub init_tab2mage_export{
 }
 
 
+#Move to MAGE package?
+
 sub hybridisation_fields{
   my $self = shift;
 
@@ -802,6 +816,36 @@ sub feature_type{
 
   return $self->{'feature_type'};
 }
+
+=head2 norm_analysis
+  
+  Example    : $imp->norm_analysis($anal);
+  Description: Getter/Setter for the normalisation analysis
+  Arg [1]    : optional - Bio::EnsEMBL::Analysis
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub norm_analysis{
+  my ($self) = shift;
+
+  if (@_) {
+    my $anal = shift;
+    
+    #do we need this as we're checking in new?
+    if (! (ref($anal) && $anal->isa('Bio::EnsEMBL::Analysis') && $anal->dbID())) {
+      throw("Must pass a valid stored Bio::EnsEMBL::Analysis");
+    }
+  
+    $self->{'norm_analysis'} = $anal;
+  }
+
+  return $self->{'norm_analysis'};
+}
+
 
 
 =head2 cell_type
@@ -1600,6 +1644,8 @@ sub validate_mage(){
 
   my (%echips, @log);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue');
+
+  #need to change this to default
   my $vsn_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('VSN_GLOG');
 
   my $chan_rset = $self->get_import_ResultSet($anal, 'channel');
@@ -2729,14 +2775,12 @@ sub R_norm{
   my $ra_id = $aa->fetch_by_logic_name("RawValue")->dbID();
   my %r_config = (
 				  "VSN_GLOG"      => {( libs         => ['vsn'],
-										bind_method => 'cbind',
-										norm_method => 'vsn',
+										#norm_method => 'vsn',
 									  )},
 									
-				  "TukeyBiweight" => {(
+				  "Tukey_Biweight" => {(
 									   libs => ['affy'],
-									   bind_method => 'rbind',
-									   norm_method => 'tukey.biweight',
+										#norm_method => 'tukey.biweight',
 									  )},
 				 );
 
@@ -2745,8 +2789,13 @@ sub R_norm{
 
 
   foreach my $logic_name (@logic_names) {
-    throw("Not yet implemented TukeyBiweight") if $logic_name eq "TukeyBiweight";
+    #throw("Not yet implemented TukeyBiweight") if $logic_name eq "Tukey_Biweight";
+
+	#this has already been chcecked and set as the norm_analysis
+	#need to resolve this multi method approach
     my $norm_anal = $aa->fetch_by_logic_name($logic_name);
+
+
     my $rset = $self->get_import_ResultSet($norm_anal, 'experimental_chip');
 
 	my @chips = ();
@@ -2824,26 +2873,33 @@ sub R_norm{
 		  #HARDCODED metric ID for raw data as one
 	
 		  #Need to get total and experimental here and set db_id accordingly
+		  #can probably do this directly into one df
+	  
+		  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as CONTROL_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+
+		  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as EXPERIMENTAL_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+	  
+	  
 	
-	  
-		  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[0]}_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
-		  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as ${dbids[1]}_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
-	  
-	  
-	
-		  #should do some sorting here?  Probes are in same order anyway
-		  #does this affect how vsn works?  if not then don't bother and just load the correct probe_ids for each set
+		  #MvA plot here before doing norm
 
-		  #this need to be rbind for tukeybiweight
+
+		  if($logic_name eq 'Tukey_Biweight'){
+
+			#log2 ratios
+			$query .= 'lr_df<-cbind(log((c2["EXPERIMENTAL_score"]/c1["CONTROL_score"]), base=exp(2)))';
+			
+		  #Adjust using tukey.biweight weighted average
+		  #inherits first col name
+		  $query .= 'norm_df<-(lr_df["EXPERIMENTAL_score"]-tukey.biweight(as.matrix(lr_df)))';
+		  $query .= 'formatted_df<-cbind(rep("0", length(c1["probe_id"])), c1["probe_id"], sprintf("%.3f", norm_df[,1]), rep("'.$cc_id.'", length(c1["probe_id"])), c1["X"], c1["Y"])'."\n";
 		  
-
-		  
-		  $query .= "raw_df<-".$r_config{$logic_name}{'bind_method'}."(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";
-
-
-		
+		}
+		elsif($logic_name eq 'VSN_GLOG'){
+		  #could do this directly
+		  $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";
 		  #variance stabilise
-		  $query .= "norm_df<-".$r_config{$logic_name}{'norm_method'}."(raw_df)\n";
+		  $query .= "norm_df<-vsn(raw_df)\n";
     
 	  
 		  #do some more calcs here and print report?
@@ -2858,22 +2914,22 @@ sub R_norm{
 		  #par(mfrow = c(1, 2)) 
 		  #> meanSdPlot(nkid, ranks = TRUE) 
 		  #> meanSdPlot(nkid, ranks = FALSE) 
-	  
+		
 	
 		  #Now create table structure with glog values(diffs)
 		  #3 sig dec places on scores(doesn't work?!)
 		  $query .= "formatted_df<-cbind(rep(\"0\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(norm_df[,2]) - exprs(norm_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])), c1[\"X\"], c1[\"Y\"])\n";
-	  
-	  
-		  #load back into DB
-		  #c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
-		  #may want to use safe.write here
-		  #dbWriteTable(con, "result", c3results, append=TRUE)
-		  #dbWriteTable returns true but does not load any data into table!!!
-	  
-		  $query .= "write.table(formatted_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		  
+		}
+		#load back into DB
+		#c3results<-cbind(rep("", length(c3["probe_id"])), c3["probe_id"], c3["c3_score"], rep(1, length(c3["probe_id"])), rep(1, length(c3["probe_id"])))
+		#may want to use safe.write here
+		#dbWriteTable(con, "result", c3results, append=TRUE)
+		#dbWriteTable returns true but does not load any data into table!!!
 		
-		  #tidy up here?? 
+		$query .= "write.table(formatted_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		
+		#tidy up here?? 
 		}
       }
   
@@ -2999,6 +3055,12 @@ sub get_import_ResultSet{
 		warn "Generating new ResultSet for analysis ".$anal->logic_name();
 		$self->log("Generating new ResultSet for analysis ".$anal->logic_name());
 		
+		
+		#this is throwing if feature_type not defined
+		#but we are handling multiple feature types in mage?
+		#feature type does not get set even if we only see one feature_type in tab2mage
+		#we need to relax this param in Set.pm and implement in FeatureSet only
+
 		$rset = Bio::EnsEMBL::Funcgen::ResultSet->new
 		  (
 		   -analysis   => $anal,

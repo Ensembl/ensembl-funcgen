@@ -81,12 +81,15 @@ sub new {
 
   throw('Need to specify a name') if ! defined $name;
   
-  if (! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
-		 && $ftype->dbID())){ 
-	throw('Must pass a valid stored FeatureType')
-  }
-  else{
-	$self->{'feature_type'} = $ftype;
+  if ($ftype){
+	
+	if(! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
+		  && $ftype->dbID())){ 
+	  throw('Must pass a valid stored FeatureType')
+	}
+	else{
+	  $self->{'feature_type'} = $ftype;
+	}
   }
   
   

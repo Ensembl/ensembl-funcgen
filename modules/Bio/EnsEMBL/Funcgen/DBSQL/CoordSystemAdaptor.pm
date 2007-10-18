@@ -1215,9 +1215,6 @@ sub validate_and_store_coord_system{
 
   if(! $fg_cs){
 	
-
-	die "Not found cs";
-
 	if($cs->name ne 'clone' && (! $cs->version)){
 	  #NO VERSION for assembled level !!
 	  #Assume the default version

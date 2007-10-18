@@ -489,6 +489,8 @@ sub dnadb {
     #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
     #or shall we fetch/add all by name?
 	
+	warn "validating here";
+
     $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
   }
 

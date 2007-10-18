@@ -86,6 +86,7 @@ sub new {
   my ($type)
     = rearrange(['TYPE'],@_);#, 'EXTERNAL_DB_NAME'], @_);
 
+  throw('Must pass a valid stored FeatureType') if ! $self->feature_type;
   throw("You must defined a FeatureSet type e.g. 'annotated'") if ! $type;
   $self->type($type);
 
