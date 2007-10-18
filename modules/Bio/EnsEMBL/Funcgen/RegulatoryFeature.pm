@@ -335,18 +335,19 @@ sub _generate_underlying_structure{
 
   if(! @{$self->regulatory_attributes()}){
 	warn "No underlying regulatory_attribute features to generate comples structure from";
+	#This should never happen
 	
 	#set to undef so we don't cause too many errors
+	#set these to start and end instead?
 	$self->{'bound_end'} = undef;
 	$self->{'bound_end'} = undef;
   }
   else{
 	my (@start_ends);
 
-	map { push @start_ends, $_->start;
-		  push @start_ends,   $_->end; } @{$self->regulatory_attributes()};
+	map {push @start_ends, ($_->start, $_->end)} @{$self->regulatory_attributes()};
 
-	@start_ends = sort @start_ends;
+	@start_ends = sort { $a <=> $b } @start_ends;
 
 	$self->{'bound_end'} = pop @start_ends;
 	$self->{'bound_start'} = shift @start_ends;
