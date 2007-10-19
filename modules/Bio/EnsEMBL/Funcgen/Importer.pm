@@ -3089,10 +3089,7 @@ sub get_import_ResultSet{
 	  #}
 	  
 	  if (! $rset) {
-		warn "Generating new ResultSet for analysis ".$anal->logic_name();
 		$self->log("Generating new ResultSet for analysis ".$anal->logic_name());
-		
-		
 		#this is throwing if feature_type not defined
 		#but we are handling multiple feature types in mage?
 		#feature type does not get set even if we only see one feature_type in tab2mage
