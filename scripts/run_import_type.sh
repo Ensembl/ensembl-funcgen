@@ -6,10 +6,9 @@ ARGS=$(echo $@ | sed "s/$PASS//")
 
 
 $EFG_SRC/scripts/import_type.pl\
-		-type FeatureType\
-       	-name H4R3me2\
-        -dbname expset_homo_sapiens_funcgen_47_36i\
-		-class HISTONE\
+		-type CellType\
+       	-name U2OS\
+        -dbname tukey_homo_sapiens_funcgen_48_36j\
 		-description 'TESTING'\
-        -pass $1\
-
+        -pass $1
+#		-class HISTONE\

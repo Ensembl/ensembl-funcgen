@@ -93,13 +93,8 @@ sub new {
   }
   
   
-  if (! (ref($anal) eq 'Bio::EnsEMBL::Analysis'
-		 && $anal->dbID())){ 
-	throw('Must pass a valid stored Analysis')
-  }
-  else{
-	$self->{'feature_type'} = $ftype;
-  }
+    throw('Must pass a valid Analysis parameter') if ! defined $anal;
+
   
   #this clashes with Data::Set->product_feature_type
   #do we @INC Set in DataSet?
@@ -108,7 +103,7 @@ sub new {
   
   $self->{'feature_type'} = $ftype;
   $self->cell_type($ctype)     if $ctype;
-  $self->{'analysis'} = $anal;
+  $self->analysis($anal);
   $self->{'name'} = $name;	
   
   return $self;
@@ -189,6 +184,13 @@ sub feature_type {
 
 sub analysis {
   my $self = shift;
+
+  if(@_){
+	throw('Must pass a valid stored Analysis') if (! (ref($_[0]) eq 'Bio::EnsEMBL::Analysis'
+													  && $_[0]->dbID()));
+	$self->{'analysis'} = shift;
+  }
+  
  
   return $self->{'analysis'};
 }

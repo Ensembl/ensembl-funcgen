@@ -265,7 +265,7 @@ sub has_stored_status{
 sub set_status{
   my ($self, $state, $obj) = @_;
 
-  deprecate('set_status us deprecated.  Please use store_status');
+  warn('set_status us deprecated.  Please use store_status');
   
   $self->store_status($state, $obj);
 }

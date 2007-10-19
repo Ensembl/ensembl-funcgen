@@ -872,7 +872,7 @@ sub read_probe_data{
       #need to store last data here
       $self->store_set_probes_features($achip->dbID(), \%pfs, $ops);
       $self->log(join("\n", @log));
-      $achip->adaptor->set_status("IMPORTED", $achip);
+      $achip->adaptor->store_status("IMPORTED", $achip);
 	  $self->log("ArrayChip:\t".$achip->design_id()." has been IMPORTED");
       
       if ($self->dump_fasta()){
@@ -916,7 +916,7 @@ sub read_probe_data{
 
 
 
-=head2 read_results_data
+=head2 read_and_import_results_data
 
   Example    : $imp->read_results_data();
   Description: Parses and dumps raw results to file

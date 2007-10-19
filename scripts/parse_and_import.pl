@@ -192,7 +192,7 @@ GetOptions (
 			"fasta"        => \$fasta,
 			"farm=s"       => \$farm,
 			"recover|r"    => \$recover,
-			"norm=s"       => \$nmethod,
+			"norm_method=s"       => \$nmethod,
 			"location=s"   => \$loc,
 			"contact=s"    => \$contact,
 			"tee"          => \$main::_tee,
@@ -262,7 +262,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
 					       -recover     => $recover,
 					       -dump_fasta  => $fasta,
 					       -norm_method => $nmethod,
-					       -species     => $species,
+											   -species     => $species,
 											   -farm => $farm,
 					       -location    => $loc,
 					       -contact     => $contact,
@@ -362,6 +362,27 @@ my $vsn_anal = Bio::EnsEMBL::Analysis->new(
 					   -displayable     => 1,
 										  );
 
+my $tbw_anal = Bio::EnsEMBL::Analysis->new(
+										   -logic_name      => 'T.Biweight',
+										   -db              => 'NULL',
+										   -db_version      => 'NULL',
+										   -db_file         => 'NULL',
+										   -program         => 'NULL',
+										   -program_version => 'NULL',
+										   -program_file    => 'NULL',
+										   -gff_source      => 'NULL',
+										   -gff_feature     => 'NULL',
+										   -module          => 'NULL',
+										   -module_version  => 'NULL',
+										   -parameters      => 'NULL',
+										   -created         => 'NULL',
+										   -description     => 'Weighted mean standardisation using the one step Tukey Biweight algorithm',
+										   -display_label   => 'Tukey Biweight',
+					   -displayable     => 1,
+										  );
+
+
+
 my $pz_anal = Bio::EnsEMBL::Analysis->new(
 										   -logic_name      => 'Parzen',
 										   -db              => 'NULL',
@@ -428,6 +449,7 @@ $anal_a->store($vsn_anal);
 $anal_a->store($t_anal);
 $anal_a->store($sanger_anal);
 $anal_a->store($pz_anal);
+$anal_a->store($tbw_anal);
 
 
 #Validate, parse and import all experiment data

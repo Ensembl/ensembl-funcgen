@@ -488,9 +488,7 @@ sub dnadb {
 	my $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name);
     #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
     #or shall we fetch/add all by name?
-	
-	warn "validating here";
-
+   
     $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
   }
 

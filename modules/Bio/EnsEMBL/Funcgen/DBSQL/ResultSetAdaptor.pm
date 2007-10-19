@@ -147,7 +147,12 @@ sub get_Experiment_join_clause{
   }
 
   my @ecs = @{$exp->get_ExperimentalChips()};
+
+  
+
   my $ec_ids = join(', ', (map $_->dbID, @ecs));#get ' separated list of ecids
+
+
   my @chans = map @$_, (map $_->get_Channels(), @ecs);
   my $chan_ids = join(', ', (map $_->dbID(), @chans));#get ' separated list of chanids
   
@@ -406,6 +411,7 @@ sub _objs_from_sth {
 
   while ( $sth->fetch() ) {
 
+
     if(! $rset || ($rset->dbID() != $dbid)){
       
       push @rsets, $rset if $rset;
@@ -507,7 +513,6 @@ sub store{
 	my $ct_id = (defined $rset->cell_type()) ? $rset->cell_type->dbID() : undef;
 	my $ft_id = (defined $rset->feature_type()) ? $rset->feature_type->dbID() : undef;
 
-
     $sth->bind_param(1, $rset->analysis->dbID(),  SQL_INTEGER);
     $sth->bind_param(2, $rset->name(),            SQL_VARCHAR);
 	$sth->bind_param(3, $ct_id,                   SQL_INTEGER);
@@ -518,7 +523,9 @@ sub store{
     $rset->dbID( $sth->{'mysql_insertid'} );
     $rset->adaptor($self);
     
+	$self->store_states($rset);
     $self->store_chip_channels($rset);
+	
     
   }
   

@@ -17,10 +17,27 @@ export EFG_DATA=/lustre/work1/ensembl/nj1/efg
 export PATH=$PATH:$EFG_SRC/scripts
 export PERL5LIB=$EFG_SRC/modules:$PERL5LIB
 export PS1='efg@$PS1HOST>'
+
+
+#Your efg DB connection params
 export WRITE_USER="ensadmin"
 export READ_USER="ensro"
 export HOST='ens-genomics1'
-export PORT='3306'
+export PORT=3306
+#pass always supplied on cmd line
+
+#Your ensembl core DB connection params, read only
+export CORE_USER='ensro'
+export CORE_HOST='ens-staging'
+export CORE_PORT=3306
+
+#Default norm and analysis methods
+export NORM_METHOD='VSN_GLOG'
+export PEAK_METHOD='Nessie'
+
+
+#could do with a quick method to change these between ens-livemirror, ensembldb/ensdb-archive?
+
 export MYSQL_ARGS="-h${HOST} -P${PORT}"
 export R_LIBS=${R_LIBS:=$SRC/R-modules}
 export R_PATH=/software/bin/R

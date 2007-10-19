@@ -11,253 +11,206 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 $| =1;
 
-my ($file, $ofile, $ftype_name, $ctype_name, $pnames, $pass, $line, $fset_id, %slice_cache, $status);
-my ($fset, $dbhost, $exp_name, $dbname, $cdbname, $help, $pids, $man, @features, $chr, $not_status);
-my $port = 3306;
-my $anal_name = 'Nessie';
+my ($ftype_name, $ctype_name, $pnames, $pass, $status, $chr);
+my ($fset, $exp_name, $db_name, $cdb_name, $help, $man, @features, $slices, $not_status);
+my $port = $ENV{'PORT'};
+my $host = $ENV{'HOST'};
+my $user = $ENV{'READ_USER'};
+my $cdb_port = $ENV{'CORE_PORT'};
+my $cdb_host = $ENV{'CORE_HOST'};
+my $cdb_user = $ENV{'CORE_USER'};
+
+my $anal_name = 'VSN_GLOG';
+my $probe_names = 0;
 my $out_dir = "./";
+my $format = 'ProbeFeature';
+
+
+
 
 
 GetOptions (
-	    "feature_type=s"   => \$ftype_name,
-	    "file=s"           => \$file,
-	    "exp_name=s"       => \$exp_name,
-	    "cell_type=s"      => \$ctype_name,
-	    "feature_set_id=i" => \$fset_id,
-	    "pass=s"           => \$pass,
-	    "port=s"           => \$port,
-            "dbname=s"         => \$dbname,
-	    "dbhost=s"         => \$dbhost,
-	    "probe_ids"        => \$pids,
-	    "probe_names"      => \$pnames,
-            "cdbname=s"        => \$cdbname,
-	    "analysis_name=s"  => \$anal_name,
-	    "outdir=s"         => \$out_dir,
-	    "help|?"           => \$help,
-	    "man|m"            => \$man,
-	    "chr=s"	       => \$chr,
-	    "status=s"         => \$status,
-	    "not_status"       => \$not_status,
-	   );
+			#"feature_type=s"   => \$ftype_name,
+			#"file=s"           => \$file,
+			"exp_name=s"       => \$exp_name,
+			#"cell_type=s"      => \$ctype_name,
+			#"feature_set_id=i" => \$fset_id,
+			"pass=s"           => \$pass,
+			"port=s"           => \$port,
+            "dbname=s"         => \$db_name,
+			"host=s"           => \$host,
+			"format=s"         => \$format,
+			"cdbname=s"       => \$cdb_name,
+			"cdbhost=s"       => \$cdb_host,
+			"cdbuser=s"       => \$cdb_user,
+			'probe_names'      => \$probe_names,
+			"analysis=s"       => \$anal_name,
+			"outdir=s"         => \$out_dir,
+			"help|?"           => \$help,
+			"man|m"            => \$man,
+			"slice=s"          => \$slices,
+			"chr=s"	           => \$chr,
+			"status=s"         => \$status,
+			"not_status"       => \$not_status,
+		   );
 
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 
+
+
+#my %format_columns = (
+#					  ResultFeature => [( '
+#					  
+#					 );
+
+#can we validate this as a custom list using the 'has' method?
+
+die("You cannot specify a -slice and a -chr option") if($chr && $slices);
+
 ### Set up adaptors and FeatureSet 
 
-if(! $cdbname  || ! $dbname ){
+if(! $cdb_name  || ! $db_name ){
   throw("You must provide a funcgen(-dbname) and a core(-cdbname) dbname");
 }
-throw("Must define your funcgen dbhost -dbhost") if ! $dbhost;
+throw("Must define your funcgen dbhost -dbhost") if ! $host;
 #throw("Must supply an input file with -file") if ! $file;
-throw("Must supply a password for your fungen db") if ! $pass;
+#throw("Must supply a password for your fungen db") if ! $pass;
 
 
-if($pnames && $probe_ids){
-  throw("Can only specific probe name or ids");
-}
+#Keep this as local dbname not likely to work with auto dnadb
 
-my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-					      -host => "ens-staging",
-					      -dbname => $cdbname,
-					      #-species => "homo_sapiens",
-					      -user => "ensro",
-					      -pass => "",
-					      #	-group => 'funcgen',
-					      -port => '3306',
-					     );
 
-my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-						      -host => $dbhost,
-						      -dbname => $dbname,
-						      #-species => "homo_sapiens",
-						      -user => "ensadmin",
-						      -pass => $pass,
-						      -dnadb => $cdb,
-						      -port => '3306',
-						     );
+my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  (
+   -host   => $cdb_host,
+   -dbname => $cdb_name,
+   -user   => $cdb_user,
+  # -pass   => "",
+   -group => 'core',
+   -port => $cdb_port,
+  );
+
+my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+  (
+   -host   => $host,
+   -dbname => $db_name,
+   -user   => $user,
+   -group  => 'funcgen',
+   -pass   => $pass,
+   -dnadb  => $cdb,
+   -port   => $port,
+  );
 
 #should check db's here
-
 
 my $rsa = $db->get_ResultSetAdaptor();
 my $exa = $db->get_ExperimentAdaptor();
 my $ex_obj = $exa->fetch_by_name($exp_name);#"Stunnenberg_all_OID_1963");
 throw("Not a valid Experiment name in the DB:\t$exp_name") if ! $ex_obj;
 
-my $analy_obj = $db->get_AnalysisAdaptor()->fetch_by_logic_name("VSN_GLOG");
-my $slice = $cdb->get_SliceAdaptor()->fetch_by_region('chromosome', $chr); 
+my $analysis = $db->get_AnalysisAdaptor()->fetch_by_logic_name($anal_name) 
+  || die ("Not a valid analysis logic_name:\t$anal_name");
+
+if(defined $chr){
+  $slices = [ $cdb->get_SliceAdaptor->fetch_by_region('chromosome', $chr) ];
+}
+elsif(defined $slices){
+  $slices = [ $cdb->get_SliceAdaptor->fetch_by_name($slices) ];
+}
+else{
+  print "Defaulting to use all toplevel slices\n";
+  $slices = $cdb->get_SliceAdaptor->fetch_all('toplevel');
+}
+
+
+die("You have no valid slices.  Did you specify a valid chromosome?") if(! @$slices);
+
+
 my $pfa = $db->get_ProbeFeatureAdaptor();
-my @result_sets = @{$rsa->fetch_all_by_Experiment_Analysis($ex_obj, $analy_obj)};
+my @result_sets = @{$rsa->fetch_all_by_Experiment_Analysis($ex_obj, $analysis)};
+
 
 foreach my $set (@result_sets) {
   
-  if ($set->has_status($status)  && (! $not_status)){
-        
-    if($pids){
-      &print_Probe_results($set, $status);
-    }else{
-      &print_ResultFeatures($set, $status);
-    }
-  }elsif((! $set->has_status($status)) && ($not_status)){
-    if($pids){
-      &print_Probe_results($set, "not_${status}");
-    }else{
-      &print_ResultFeatures($set, "not_${status}");
-    }
+  if(! defined $status){
+	&print_data($set);
+  }
+  elsif ($set->has_status($status)  && (! $not_status)){
+	&print_data($set, $status);
+  }
+  elsif((! $set->has_status($status)) && ($not_status)){
+	&print_data($set, 'not_'.$status);
   }
 }
 
-sub print_Probe_results{
+
+
+
+sub print_data{
   my ($set, $status) = @_;
 
-  warn "Getting Probe results with status: $status\n";
+  my $logic_name  = $set->analysis->logic_name;
 
-  my $out_string = "";
-  my $ofile = $out_dir.$exp_name."_".$set->dbID()."_${status}_ProbeFeature_results.${chr}";
-  open (OUT, ">$ofile") || throw("Cannot open output:\t$ofile");
-      
 
-  my @features = @{$pfa->fetch_all_by_Slice_ExperimentalChips($slice, $set->get_ExperimentalChips())};
-  warn "Feature array size: ". @features ."\n";
-      
-  foreach my $pfeature(@features){
-    my $result = $pfeature->get_result_by_ResultSet($set);
+  my $status_string = ($status) ? " with status '$status'" : '';
+  $status = ($status) ? "_${status}" : '';
+
+  foreach my $slice(@$slices){
+	my ($result, @features);
+	my $no_score = 0;
+	my $probe_id_name = '';
+
+	print "Getting ".$set->name." $format results${status_string} for slice:\t".$slice->name."\n";
+
+	my $out_string = "";
+	
+	my $ofile = $out_dir.$set->name()."${status}_${format}.".$logic_name.'.'.$slice->name;
+	open (OUT, ">$ofile") || throw("Cannot open output:\t$ofile");
+
+
+	if($format eq 'ResultFeature'){
+	  @features =  @{$set->get_ResultFeatures_by_Slice($slice)};
+	}
+	elsif($format eq 'ProbeFeature'){
+	  @features = @{$pfa->fetch_all_by_Slice_ExperimentalChips($slice, $set->get_ExperimentalChips())};
+	}
+
+	print $set->name." has ". @features ." ${format}s for slice:\t".$slice->name."\n";
     
-    #this is restrieving results in a feature centric manner, so some may not have results
-    if($result){
-      my $id_name = ($pids) ? $pfeature->probe_id() : $pfeature->probe->get_probename();
+	foreach my $feat (@features) {
+	  
+	  if($format eq 'ResultFeature'){
+		$result = $feat->score;
+	  }
+	  elsif($format eq 'ProbeFeature'){
+		$result = $feat->get_result_by_ResultSet($set);
+		$probe_id_name = (($probe_names) ? $feat->probe->get_probename() : $feat->probe_id())."\t";
+	  }
 
-      $out_string .= "chr${chr}\t${id_name}\t".$pfeature->start().
-	"\t".$pfeature->end()."\t${result}\n";
-    }
 
-    #warn "chr${chr}\t".$pfeature->probe_id()."\t".$pfeature->start()."\t".$pfeature->end()."\t${result}\n";
+	  if($result){
+		$out_string .= $slice->seq_region_name()."\t".$probe_id_name;
+		$out_string .= join("\t", ($feat->start(), $feat->end(), $result))."\n";
+	  }
+	  else{
+		$no_score++;
+	  }
+	}
+
+	if($no_score){
+	  print "Found $no_score features with no result associated for slice:\t".$slice->name.
+		"\nThis is probably due to importing a subset of an array and remapping the probes\n";
+	}
+	
+	print OUT $out_string;
+	close(OUT);
   }
 
-  print OUT $out_string;
-      
-  close(OUT);
   return;
 }
 
-sub print_ResultFeatures{
-  my ($set, $status) = @_;
-
-  warn "Getting ResultFeatures with status: $status\n";
-  my $out_string = "";
-  my $ofile = $out_dir.$exp_name."_".$set->dbID()."_${status}_ResultFeatures.${chr}";
-  open (OUT, ">$ofile") || throw("Cannot open output:\t$ofile");
-  #    warn "Displayable set ".$set->dbID()." has analysis ".$set->analysis->logic_name()."\n";
-  
-  my @features =  @{$set->get_ResultFeatures_by_Slice($slice)};
-  warn "ResultFeature array size: ". @features ."\n";
-    
-  foreach my $feat (@features) {
-     $out_string .= "chr${chr}". "\t". $feat->start() ."\t". $feat->end() ."\t". $feat->score() ."\n";
-  }
 
 
-  print OUT $out_string;
-  close(OUT);
-  return;
-}
-
-
-exit;
-
-__END__
-
-my $pfa = $db->get_PredictedFeatureAdaptor();
-my $fset_adaptor = $db->get_FeatureSetAdaptor();
-
-if($fset_id){
-  $fset = $fset_adaptor->fetch_by_dbID($fset_id);
-
-
-  throw("Could not retrieve FeatureSet with dbID $fset_id") if ! $fset;
-
-  warn("You are loading PredictedFeature using a previously stored FeatureSet:\n".
-       "\tCellType:\t".$fset->cell_type->name()."\n".
-       "\tFeatureType:\t".$fset->feature_type->name()."\n");
-
-  #should also check types and anal if the have been set
-  #should add more on which experiment/s this is associated with and feature_set/dat_set_name when we have implemented it.
-  #also ask continute question or use force_import flag
-  #we could also do a count on the PFs in the set to make sure we're know we're adding to a populated set.
-  #hard to repair if we do load ontop of another feature set
-
-
-}elsif(! ($ftype_name && $ctype_name)){
-  throw("Must provide a FeatureType and a CellType name to load your PredictedFeatures");
-}else{
-  my $anal =  $db->get_AnalysisAdaptor->fetch_by_logic_name($anal_name);
-  my $ftype = $db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
-  my $ctype = $db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
-
-
-  throw("No valid CellType available for $ctype_name") if ! $ctype; 
-  throw("No valid FeatureType available for $ftype_name") if ! $ftype;
-  throw("No valid Analysis available for $anal_name") if ! $anal;
-  
-  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
-    (
-     -CELL_TYPE => $ctype,
-     -FEATURE_TYPE => $ftype,
-     -ANALYSIS => $anal,
-    );
-
-  ($fset) = @{$fset_adaptor->store($fset)};
-
-  warn("Generated FeatureSet\n");
-}
-
-
-open (FILE, $file) || die "Unable to open input\t$file";
-
-warn("Loading PredictedFeatures from $file\n");
-
-@features =();
-while ($line = <FILE>){
-
-  chomp $line;
-  my @tmp = split /\s+/, $line;
-  my $start = $tmp[1];
-  my $end = $tmp[2];
-  my $score = $tmp[4];
-  my $text = "enriched_site";
-  my $chr = $tmp[0];
-
-  $chr =~ s/chr//;
-
-  #	print STDERR "$cdb->get_SliceAdaptor()->fetch_by_region(\'chromosome\', $chr);\n";
-  
-
-  if (! exists  $slice_cache{$chr}){
-    $slice_cache{$chr} = $cdb->get_SliceAdaptor()->fetch_by_region('chromosome', $chr);
-    throw("Could not generate slice for chromosome $chr") if ! $slice_cache{$chr};
-  }
-
-  my $pfeature = Bio::EnsEMBL::Funcgen::PredictedFeature->new
-    (
-     -SLICE         => $slice_cache{$chr},
-     -START         => $start,
-     -END           => $end,
-     -STRAND        => 1,
-     -DISPLAY_LABEL => $text,
-     -SCORE         => $score,
-     -FEATURE_SET   => $fset,
-    );
-  
-  push @features, $pfeature;
-
-}
-
-$pfa->store(@features);
-
-warn("Loaded ".($.)." PredictedFeatures onto chromosomes ".(keys %slice_cache)."\n");
-
-
-
-__END__
+1;

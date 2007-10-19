@@ -378,13 +378,12 @@ sub init_experiment_import{
  
   #check for cell||feature and warn if no met file supplied?
 
-  #check norm analysis
+
   my $norm_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method);
 
   #should we list the valid analyses?
   throw($self->norm_method.' is not a valid analysis') if ! $norm_anal;
   $self->norm_analysis($norm_anal);
-
 
   
   #check for ENV vars?
@@ -1595,8 +1594,12 @@ sub register_experiment{
 	$self->validate_mage() if (! $self->{'skip_validate'});
   }
 
+
   $self->read_data("probe");
   $self->read_data("results");
+
+
+  
 
   #warn("we need to access the default method for the vendor here, or override using the gff option");
   #my $tmp_logic_name = ($self->vendor() eq "SANGER") ? "SangerPCR" : "RawValue";
@@ -2242,6 +2245,7 @@ sub validate_mage(){
   $self->log('Storing ResultSets');
   #Store new tech, biol and toplevel type rsets
   foreach my $new_rset(values %rsets){
+	$new_rset->add_status('DAS_DISPLAYABLE');
 	$rset->adaptor->store($new_rset);
   }
 
@@ -2500,7 +2504,7 @@ sub get_probe_cache_by_Array{
 
   my $msg = "Getting probe cache for ".$array->name();
   $msg .= " from DB" if $from_db;
-  $self->log($msg, 1);
+  $self->log($msg);#, 1);
 
   if(! ($array && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
 	throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::Array object');
@@ -2778,7 +2782,7 @@ sub R_norm{
 										#norm_method => 'vsn',
 									  )},
 									
-				  "Tukey_Biweight" => {(
+				  "T.Biweight" => {(
 									   libs => ['affy'],
 										#norm_method => 'tukey.biweight',
 									  )},
@@ -2796,8 +2800,18 @@ sub R_norm{
     my $norm_anal = $aa->fetch_by_logic_name($logic_name);
 
 
-    my $rset = $self->get_import_ResultSet($norm_anal, 'experimental_chip');
+	
+	#This only creates an RSet for the IMPORT set
+	#So if we re-run with a different analysis
+	#tab2mage will have already been validated
+	#So RSet generation will be skipped
+	#We need to recreate the each non-import RSet for this norm analysis
+	
+	#This also means the RSets are being created before the data has been imported
+	#This avoids having to parse tab2mage each time but means we have an uncertain status of these Rsets
 
+    my $rset = $self->get_import_ResultSet($norm_anal, 'experimental_chip');
+	
 	my @chips = ();
   
     if (! $rset) {
@@ -2884,15 +2898,15 @@ sub R_norm{
 		  #MvA plot here before doing norm
 
 
-		  if($logic_name eq 'Tukey_Biweight'){
+		  if($logic_name eq 'T.Biweight'){
 
 			#log2 ratios
-			$query .= 'lr_df<-cbind(log((c2["EXPERIMENTAL_score"]/c1["CONTROL_score"]), base=exp(2)))';
+			$query .= 'lr_df<-cbind((log(c2["EXPERIMENTAL_score"], base=exp(2)) - log(c1["CONTROL_score"], base=exp(2))))'."\n";
 			
-		  #Adjust using tukey.biweight weighted average
-		  #inherits first col name
-		  $query .= 'norm_df<-(lr_df["EXPERIMENTAL_score"]-tukey.biweight(as.matrix(lr_df)))';
-		  $query .= 'formatted_df<-cbind(rep("0", length(c1["probe_id"])), c1["probe_id"], sprintf("%.3f", norm_df[,1]), rep("'.$cc_id.'", length(c1["probe_id"])), c1["X"], c1["Y"])'."\n";
+			#Adjust using tukey.biweight weighted average
+			#inherits first col name
+			$query .= 'norm_df<-(lr_df["EXPERIMENTAL_score"]-tukey.biweight(as.matrix(lr_df)))'."\n";
+			$query .= 'formatted_df<-cbind(rep("0", length(c1["probe_id"])), c1["probe_id"], sprintf("%.3f", norm_df[,1]), rep("'.$cc_id.'", length(c1["probe_id"])), c1["X"], c1["Y"])'."\n";
 		  
 		}
 		elsif($logic_name eq 'VSN_GLOG'){
@@ -2952,8 +2966,35 @@ sub R_norm{
 	  
 
 	  foreach my $echip(@chips){
-		$echip->adaptor->set_status("IMPORTED_${logic_name}", $echip);
+		$echip->adaptor->store_status("IMPORTED_${logic_name}", $echip);
 	  }
+
+	  #Recreate all non-import RSets for analysis if not already present
+	  #
+
+	  my $rset_a = $self->db->get_ResultSetAdaptor();
+	  my %seen_rsets;
+	 
+	  foreach my $anal_rset(@{$rset_a->fetch_all_by_Experiment($self->experiment)}){
+		next if($anal_rset->name =~ /_IMPORT$/);
+		next if(exists $seen_rsets{$anal_rset->name});
+		next if $anal_rset->analysis->logic_name eq $norm_anal->logic_name;
+		$seen_rsets{$rset->name} = 1;
+		$anal_rset->analysis($norm_anal);
+		$anal_rset->{'dbID'} = undef;
+		$anal_rset->{'adaptor'} = undef;
+		
+		#add the chip_channel_ids from the new anal IMPORT set
+		foreach my $table_id(@{$anal_rset->table_ids}){
+		  $anal_rset->{'table_id_hash'}{$table_id} = $rset->get_chip_channel_id($table_id);
+		}
+
+		$self->log('Adding new ResultSet '.$anal_rset->name.' with analysis '.$norm_anal->logic_name);
+		$rset_a->store($anal_rset);
+	  }
+
+
+
     }
   }
 
@@ -2967,11 +3008,6 @@ sub R_norm{
 
 sub get_import_ResultSet{
   my ($self, $anal, $table_name) = @_;
-  
-
-  warn "Should build a ResultSet cache here?";
-  #would have to remember to cache result set after changing it?
-
 
   if (!($anal && $anal->isa("Bio::EnsEMBL::Analysis") && $anal->dbID())) {
     throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
@@ -2990,7 +3026,7 @@ sub get_import_ResultSet{
   my $status = "IMPORTED${logic_name}";
   
   #could drop the table name here and use analysis hash?
-  warn("Need to implement chip_sets here");
+  #warn("Need to implement chip_sets here");
   
   foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
 
@@ -3035,19 +3071,18 @@ sub get_import_ResultSet{
 	  #what if we want the import result set elsewhere during the first import?
 	  
 	  #if ($self->recovery()) {
-	  warn ("Should use ResultSet name here, currently retrieving using the analysis and experiment id"); #experiment name?
-			
+	  
 		#fetch by anal and experiment_id
-		#Need to change this to result_set.name!
-	#	warn("add chip set handling here");
-		
+	  #Need to change this to result_set.name!
+	  #	warn("add chip set handling here");
+	  
 		#my @tmp = @{$result_adaptor->fetch_all_by_Experiment_Analysis($self->experiment(), $anal)};
-		#throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t".$anal->logic_name().')' if (scalar(@tmp) >1);
-		#$rset = $tmp[0];
-		
+	  #throw("Found more than one ResultSet for Experiment:\t".$self->experiment->name()."\tAnalysis:\t".$anal->logic_name().')' if (scalar(@tmp) >1);
+	  #$rset = $tmp[0];
+	  
 	  #warn "fetching rset with ".$self->name()."_IMPORT ". $anal->logic_name;
-
-		#$rset = $result_adaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
+	  
+	  #$rset = $result_adaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
 	  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
 	  #}
 	  
@@ -3142,7 +3177,7 @@ sub resolve_probe_data{
 
   $self->log("Resolving probe data", 1);
 
-  warn "This needs to accomodate probesets too!";
+  warn "Probe cache resolution needs to accomodate probesets too!";
 
   foreach my $array(@{$self->arrays()}){
 	my $resolve = 0;
@@ -3153,7 +3188,7 @@ sub resolve_probe_data{
 	  foreach my $achip(@{$array->get_ArrayChips()}){
 		
 		if($achip->has_status('RESOLVED')){
-		  $self->log("ArrayChip has RESOLVED status:\t".$achip->design_id(), 1);
+		  $self->log("ArrayChip has RESOLVED status:\t".$achip->design_id());#, 1);
 		  next;
 		}else{
 		  $self->log("Found un-RESOLVED ArrayChip:\t".$achip->design_id());
@@ -3237,7 +3272,7 @@ sub resolve_probe_data{
 		
 		if(! $achip->has_status('RESOLVED')){
 		  $self->log("Updating ArrayChip to RESOLVED status:\t".$achip->design_id());
-		  $achip->adaptor->set_status('RESOLVED', $achip);
+		  $achip->adaptor->store_status('RESOLVED', $achip);
 		}
 	  }
 	  

@@ -810,6 +810,7 @@ INSERT into status_name values ('', 'RESOLVED');
 -- Defaults
 INSERT into status_name values ('', 'IMPORTED_VSN_GLOG');
 INSERT into status_name values ('', 'IMPORTED_Parzen');
+INSERT into status_name values ('', 'IMPORTED_T.Biweight');
 
 
 --change to small int?
