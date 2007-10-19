@@ -109,14 +109,15 @@ sub new{
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, $no_mage, $eset_name, $norm_method)
+	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, 
+	  $no_mage, $eset_name, $norm_method, $old_dvd_format)
 	= rearrange(['FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
-				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD'], @_);
+				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT'], @_);
   #add mail flag
   #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
   #would have to make sure GroupDefs is inherited first so we can set some mandatory params
@@ -178,6 +179,7 @@ sub new{
   $self->{'write_mage'} = $write_mage || 0;
   $self->{'no_mage'} = $no_mage || 0;
   $self->{'experimental_set_name'} = $eset_name if $eset_name;
+  $self->{'old_dvd_format'} = $old_dvd_format || 0;
 
   #Will a general norm method be applicable fo all imports?
   $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};

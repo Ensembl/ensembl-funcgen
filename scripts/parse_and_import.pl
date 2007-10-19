@@ -136,7 +136,7 @@ use strict;
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
-my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set);
+my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
 my $reg = "Bio::EnsEMBL::Registry";
 
 #to be removed
@@ -195,6 +195,7 @@ GetOptions (
 			"norm_method=s"       => \$nmethod,
 			"location=s"   => \$loc,
 			"contact=s"    => \$contact,
+			"old_dvd_format" => \$old_dvd_format,
 			"tee"          => \$main::_tee,
 			"log_file=s"   => \$main::_log_file,
 			"debug_file=s" => \$main::_debug_file,
@@ -236,44 +237,46 @@ $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file)
 
 ### SET UP IMPORTER (FUNCGENDB/DNADB/EXPERIMENT) ###
 
-my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
-					       -name        => $name,
-					       -format      => $format,
-					       -vendor      => $vendor,
-					       -group       => $group,
-					       -pass        => $pass,
-					       -host        => $host,
-					       -user        => $user,
-					       -port        => $port,
-					       -ssh         =>  $ssh,
-					       -dbname      => $dbname,
-					       -array_set   => $array_set,
-											   -experimental_set_name => $exp_set,
-					       -array_name  => $array_name,
-					       -result_set_name => $rset_name, #not implemented yet
-					       -feature_type_name => $ftype,
-					       -cell_type_name => $ctype,
-					       -write_mage    => $write_mage,
-											   -update_xml => $update_xml,
-											   -no_mage => $no_mage,
-											   -data_version => $data_version,
-					       -data_root   => $data_dir,
-					       -output_dir  => $output_dir,
-					       -recover     => $recover,
-					       -dump_fasta  => $fasta,
-					       -norm_method => $nmethod,
-											   -species     => $species,
-											   -farm => $farm,
-					       -location    => $loc,
-					       -contact     => $contact,
-					       -verbose     => $verbose,
-					       -input_dir   => $input_dir,
-					       -exp_date     => $exp_date,
-					       -result_files => \@result_files,
-					       #Exp does not build input dir, but could
-					       #This allows input dir to be somewhere 
-					       #other than efg dir structure
-					      );
+my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
+  (
+   -name        => $name,
+   -format      => $format,
+   -vendor      => $vendor,
+   -group       => $group,
+   -pass        => $pass,
+   -host        => $host,
+   -user        => $user,
+   -port        => $port,
+   -ssh         =>  $ssh,
+   -dbname      => $dbname,
+   -array_set   => $array_set,
+   -experimental_set_name => $exp_set,
+   -array_name  => $array_name,
+   -result_set_name => $rset_name, #not implemented yet
+   -feature_type_name => $ftype,
+   -cell_type_name => $ctype,
+   -write_mage    => $write_mage,
+   -update_xml => $update_xml,
+   -no_mage => $no_mage,
+   -data_version => $data_version,
+   -data_root   => $data_dir,
+   -output_dir  => $output_dir,
+   -recover     => $recover,
+   -dump_fasta  => $fasta,
+   -norm_method => $nmethod,
+   -species     => $species,
+   -farm => $farm,
+   -location    => $loc,
+   -contact     => $contact,
+   -verbose     => $verbose,
+   -input_dir   => $input_dir,
+   -exp_date     => $exp_date,
+   -result_files => \@result_files,
+   -old_dvd_format => $old_dvd_format,
+   #Exp does not build input dir, but could
+   #This allows input dir to be somewhere 
+   #other than efg dir structure
+  );
 
 
 

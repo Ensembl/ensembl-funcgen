@@ -162,24 +162,40 @@ sub set_defs{
 
   #dir are not set in defs to enable generic get_dir method access
 
-  $self->{'design_dir'} = $self->get_dir('data').'/input/'.
-    $self->vendor().'/'.$self->name().'/DesignFiles';
-    
+
+  if($self->{'old_dvd_format'}){
+	$self->{'design_dir'} = $self->get_dir('data').'/input/'.
+	  $self->vendor().'/'.$self->name().'/DesignFiles';
+  }else{
+	$self->{'design_dir'} = $self->get_dir('data').'/input/'.
+	  $self->vendor().'/'.$self->name().'/Design_information';
+  }
+
+  
+  if($self->{'old_dvd_format'}){
+	$self->{'defs'}{'notes_file'} = $self->get_dir('data').'/input/'.
+	  $self->vendor().'/'.$self->name().'/DesignNotes.txt';
+  }else{
+	$self->{'defs'}{'notes_file'} = $self->{'design_dir'}.'/DesignNotes.txt';
+  }
+  
   $self->{'defs'}{'chip_file'} = $self->get_dir('data').'/input/'.
     $self->vendor().'/'.$self->name().'/SampleKey.txt';
-    
-  $self->{'defs'}{'notes_file'} = $self->get_dir('data').'/input/'.
-    $self->vendor().'/'.$self->name().'/DesignNotes.txt';
-  
+
   $self->{'defs'}{'tab2mage_file'} = $self->get_dir('data').'/output/'.
     $self->vendor().'/'.$self->name().'/E-TABM-'.$self->name().'.txt';
 
   $self->{'defs'}{'mage_xml_file'} = $self->get_dir('data').'/output/'.
     $self->vendor().'/'.$self->name().'/{UNASSIGNED}.xml';
 
-  $self->{'results_dir'} = $self->get_dir('data').'/input/'.
-    $self->vendor().'/'.$self->name().'/PairData';
-
+  if($self->{'old_dvd_format'}){
+	$self->{'results_dir'} = $self->get_dir('data').'/input/'.
+	  $self->vendor().'/'.$self->name().'/PairData';
+  }else{
+	$self->{'results_dir'} = $self->get_dir('data').'/input/'.
+	  $self->vendor().'/'.$self->name().'/Raw_data_files';
+  }
+	
   return;
 }
 
@@ -949,10 +965,7 @@ sub read_and_import_results_data{
 		if ( ! $chan->has_status('IMPORTED')) {
 		  my $array = $echip->get_ArrayChip->get_Array();
 		  
-		  $self->get_probe_cache_by_Array($array) || throw('Failed to get the probe cache handle for results import');
-		  warn("we should try and resolve the probe cache here if not present");
-		  
-			
+		  $self->get_probe_cache_by_Array($array) || throw('Failed to get the probe cache handle for results import, resolve cache here?');			
 		  my ($probe_elem, $score_elem, %hpos);
 		  my $cnt = 0;
 		  my $r_string = "";
@@ -1064,23 +1077,11 @@ sub read_and_import_results_data{
 		  $self->log("Importing:\t$out_file");
 		  $self->db->load_table_data("result",  $out_file);
 		  $self->log("Finished importing:\t$out_file", 1);
-		  $chan->adaptor->set_status('IMPORTED', $chan);
+		  $chan->adaptor->store_status('IMPORTED', $chan);
 		  
 		  
 		}
-		#$echip->adaptor->set_status('IMPORTED', $echip);
-		
-		
-		#foreach my $key(keys %{$self}){
-		  #  $self->log("Getting mem for $key");
-		#  $self->log("$key mem\t".(size($self->{$key})));
-		#}
-		
 	  }
-		
-		#$echip->adaptor->set_status('IMPORTED', $echip);	
-				
-	#}
 	}
   } 
   else {
