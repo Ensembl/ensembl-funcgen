@@ -625,7 +625,7 @@ sub store{
 			'use store_updated_sets method to add new supporting sets in this DataSet');
     }
 		
-    $fset_id = (defined $dset->FeatureSet()) ? $dset->FeatureSet->dbID() : 0;
+    $fset_id = (defined $dset->product_FeatureSet()) ? $dset->product_FeatureSet->dbID() : 0;
 	
 	$sth->bind_param(1, $fset_id,                     SQL_INTEGER);
 	$sth->bind_param(2, $dset->name(),                SQL_VARCHAR);
