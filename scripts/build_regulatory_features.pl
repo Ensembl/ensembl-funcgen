@@ -462,7 +462,7 @@ print "\n", Dumper @rf if ($debug);
 
 if ($dump_features) {
     
-    my $outfile  = $outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.rf';
+    my $outfile  = $outdir.'/'.$dbname.'.regulatory_feature'.$fg_sr_id.'.dat';
     my $out = open_file($outfile, ">");
     
     map {
@@ -735,25 +735,20 @@ sub get_regulatory_FeatureSet{
 
         }
 
-        $rfset = $fsa->fetch_by_name('RegulatoryFeatures');
+        $rfset = Bio::EnsEMBL::Funcgen::FeatureSet->new
+            (
+             -analysis     => $analysis,
+             -feature_type => $ftype,
+             -name         => 'RegulatoryFeatures',
+             -type         => 'regulatory'
+             );
 
-        if (! $ftype) {
+        $rfset->add_state('DISPLAYABLE');
+        $rfset = @{$fsa->store($rfset)} if ($write_features);
 
-            $rfset = Bio::EnsEMBL::Funcgen::FeatureSet->new
-                (
-                 -analysis     => $analysis,
-                 -feature_type => $ftype,
-                 -name         => 'RegulatoryFeatures',
-                 -type         => 'regulatory'
-                 );
-            
-            $rfset = @{$fsa->store($rfset)} if ($write_features);
-
-        }
-        
         #generate data_set here too
 
-        my $dset = $fsa->fetch_by_name('RegulatoryFeatures');
+        my $dset = $dsa->fetch_by_name('RegulatoryFeatures');
 
         if (! $dset) {
 
