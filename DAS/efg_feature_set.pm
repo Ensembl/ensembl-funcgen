@@ -57,14 +57,14 @@ sub build_features
     my $end   = $args->{'end'} || return ();
 
 
-    my $type = $self->config()->{'type'};
+    my $type = $self->config()->{'feature_set_type'};
     my $feature_set_id = $self->config()->{'feature_set_id'};
     print Dumper $feature_set_id if ($self->{'debug'});
 
     # get data
     
     my $qbounds = ($start && $end)?qq(AND seq_region_start <= $end AND seq_region_end >= $start):"";
-    my $version = $self->config()->{'version'};
+    my $version = $self->config()->{'data_version'};
     my $sql = "SELECT *
               FROM ${type}_feature f, seq_region sr 
              WHERE sr.seq_region_id=f.seq_region_id
