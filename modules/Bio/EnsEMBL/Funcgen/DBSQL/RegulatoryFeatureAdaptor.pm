@@ -386,7 +386,7 @@ sub _objs_from_sth {
 		   });
 	  }
 	
-	
+  
 	  #populate attributes array
 	  if(defined $attr_id  && ! $skip_feature){
 
@@ -394,7 +394,14 @@ sub _objs_from_sth {
 		#reg feature on, hence we need to map the features to the current slice
 		#otherwise the bounds may get messed up
 
-		push @reg_attrs, $feature_adaptors{$attr_type}->fetch_by_dbID_Slice($attr_id, $slice);
+		my $attr = $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
+
+		#now need to reset start and ends for the current slice		
+		$attr->slice($slice);
+		$attr->start($attr->start - $slice->start +1);
+		$attr->end($attr->end - $slice->start +1);	
+
+		push @reg_attrs, $attr;
 	  }
 	}
 

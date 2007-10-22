@@ -52,34 +52,6 @@ use vars qw(@ISA @EXPORT);
 
 
 
-=head2 fetch_by_dbID_Slice
-
-  Arg [2]    : int - dbID
-  Arg [2]    : Bio::EnsEMBL::Slice
-  Example    : my $reg_attribute = $sf_a->fetch_by_dbID_Slice($dbID, $slice);
-  Description: Special method to retrieve specific objects in a given slice context.
-               This enables a RegulatoryFeatures to maintain the same slice context
-               between it and it's attributes.
-  Returntype : Bio::EnsEMBL::SetFeature
-  Exceptions : Throws if no dbID passed
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_by_dbID_Slice{
-  my ($self, $dbID, $slice) = @_;
-	
-
-  throw('Need to pass a dbID argument') if (! $dbID);
-  
-  my $constraint = $self->_main_table->[1].'.'.$self->_main_table->[0].'_id = '.$dbID;
-
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint)->[0];
-}
-
-
-
 
 
 =head2 fetch_all_by_Slice_FeatureType
