@@ -185,9 +185,9 @@ sub add_status{
 
 
    #this does not resolve the problem!!???
-   #can add a status to an unstored object which 
+   #can add a status to an unstored object which    
 
-   if($self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
+   if($self->adaptor && $self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
      $self->{'states'} = @{$self->adaptor->fetch_all_states($self)};
    }
 
