@@ -2913,7 +2913,7 @@ sub R_norm{
 		}
 		elsif($logic_name eq 'VSN_GLOG'){
 		  #could do this directly
-		  $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";
+		  $query .= "raw_df<-cbind(c1[\"CONTROL_score\"], c2[\"EXPERIMENTAL_score\"])\n";
 		  #variance stabilise
 		  $query .= "norm_df<-vsn(raw_df)\n";
     
