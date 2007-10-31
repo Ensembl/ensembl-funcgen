@@ -6,13 +6,43 @@ run_chipotle.pl - run Chipotle on datasets in eFG database
 
 =head1 SYNOPSIS
 
-run_Nessie.pl -dbhost=dbhost -dbname=dbname -dbuser=dbuser -dbpass=password \
-    -input_name=ENr333 -e H3ac-HeLa -result_set_analysis=SangerPCR \
-    -logic_name Chipotle
+run_Chipotle.pl -dbhost=host -dbport=port -dbuser=user -dbpass=XXXXXX \
+	-dbname=homo_sapiens_funcgen_47_36i \
+	-logic_name=Chipotle -module=Chipotle \
+	-species homo_sapiens -data_version 46_36h \
+	-input_name=21 -verbose
 
 =head1 DESCRIPTION
 
-This script will run Chipotle on given eFG database result sets
+This script runs TileMap on given eFG database result sets. 
+To configure your analysis you need to set the following environment
+variables (here bash syntax).
+
+# General config
+
+ANALYSIS_WORK_DIR='/tmp'
+EXPERIMENT='ctcf_ren'
+NORM_ANALYSIS='VSN_GLOG' # 'SANGER_PCR'
+RESULT_SET_REGEXP='_IMPORT'
+DATASET_NAME='Chipotle'
+
+export EXPERIMENT RESULT_SET_REGEXP NORM_ANALYSIS DATASET_NAME
+
+# Chipotle config
+CHIPOTLE_DIR="$HOME/src/chipotle"
+PATH="$PATH:$CHIPOTLE_DIR/bin"
+CH_LOGIC_NAME='Chipotle'
+CH_MODULE=$TM_LOGIC_NAME
+CH_PROGRAM=$TM_LOGIC_NAME
+CH_PROGRAM_FILE='chipotle.pl'
+CH_VERSION='1.03'
+CH_PARAMETERS=' --model gauss --window 990 --step 198 --correction BH --alpha 0.05'
+                 # --dolog2
+                 # --transform 0
+
+export CH_LOGIC_NAME CH_MODULE CH_PROGRAM CH_PROGRAM_FILE \
+       CH_VERSION CH_PARAMETERS PATH
+
 
 =head1 LICENCE
 
@@ -48,13 +78,13 @@ my $dbuser;
 my $dbpass;
 my $dbport;
 my $dbname;
+my $species;
+my $data_version;
 my $input_id;
 my $input_name;
 my $logic_name = 'Chipotle';
+my $norm_analysis = $ENV{NORM_ANALYSIS} || undef; # 'VSN_GLOG' or 'SANGER_PCR';
 my $experiment;
-my $result_set_analysis;
-#my $result_set_analysis = 'SangerPCR';
-#my $result_set_analysis = 'VSN_GLOG';
 my $check  = 0;
 my $output_dir;
 my $write = 0;
@@ -77,11 +107,13 @@ my @command_args = @ARGV;
              'dbuser=s'      => \$dbuser,
              'dbpass=s'      => \$dbpass,
              'dbport=s'      => \$dbport,
+             'species=s'     => \$species,
+             'data_version=s'=> \$data_version,
              'input_id:s'    => \$input_id,
              'input_name=s'    => \$input_name,
              'logic_name|analysis:s'  => \$logic_name,
+             'norm_analysis=s' => \$norm_analysis,
              'experiment:s'  => \$experiment,
-             'result_set_analysis:s' => \$result_set_analysis,
              'check'       => \$check,
              'write!' => \$write,
              'help!' => \$help,
@@ -129,38 +161,59 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -dnadb  => $cdb,
      );
 
-if (! defined $input_id) {
-    warn("No input_id provided! Using input_name ".
-         "to select an Encode region.");
-    my $encode_regions = &get_encode_regions($cdb, $assembly_version);
-    
-    if (! defined $input_name) {
-        warn("No input_name provided! Using LSB_JOBINDEX ".
-             "to select an Encode region.");
+# get slice to work on
+my $sa = $db->get_SliceAdaptor();
+my $slice;
 
-        throw("LSF environment variable LSB_JOBINDEX not defined.") 
-            if (! defined $ENV{LSB_JOBINDEX});
+if ($input_name) {
+	my @input_name = split(/[:,]/, $input_name);
+    $slice = $sa->fetch_by_region('chromosome', @input_name);
+	throw("Input name $input_name didn't return a slice. Must specify mandatory chromosome\n".
+		  " name (start and end are optional), like '-input_name=22:1,20000'.") if (! $slice);
+	$input_id = $slice->id;
+} elsif (defined $ENV{LSB_JOBINDEX}) {
+    warn "Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".$ENV{LSB_JOBINDEX}.").\n";
     
-        my @encode_regions = sort keys %{$encode_regions};
-        $input_name = $encode_regions[$ENV{LSB_JOBINDEX}-1];
+    my $toplevel = $sa->fetch_all('toplevel');
+    my @chr = sort (map $_->seq_region_name, @{$toplevel});
+    #print Dumper @chr;
+    
+    my @slices;
+    foreach my $chr (@chr) {
+        
+        next if ($chr =~ m/^NT_/);
+        
+        push @slices, $sa->fetch_by_region('chromosome', $chr);
     }
-    $input_id = $encode_regions->{$input_name};
-    print Dumper ($input_name, $input_id);
+    #print Dumper @slices;
+
+    $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
+    print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
+        
+	$input_id = $slice->id;
+} else {
+
+    throw("Must specify mandatory chromosome name (-input_name) or set\n ".
+          "LSF environment variable LSB_JOBINDEX to perform whole\n ".
+          "genome analysis on toplevel slices using the farm.\n");
+
 }
+
+
 throw("No input_id defined!")
     unless (defined $input_id);
 
 ### check for experiment to be analysed
 #print Dumper $experiment;
-if (! defined $experiment ) {
-    throw("Must provide an experiment name to be analysed.");
-}
+#if (! defined $experiment ) {
+#    throw("Must provide an experiment name to be analysed.");
+#}
 
 ### check for result_set_analysis
-#print Dumper $result_set_analysis;
-if (! defined $result_set_analysis ) {
-    throw("Must provide an result_set analysis name.");
-}
+#print Dumper $norm_analysis;
+#if (! defined $norm_analysis ) {
+#    throw("Must provide an result_set analysis name.");
+#}
 
 ### setup analysis object
 my $aa = $db->get_AnalysisAdaptor;
@@ -213,8 +266,6 @@ $runnable =~ s/\//::/g;
 my $runobj = "$runnable"->new(-db         => $db,
                               -input_id   => $input_id,
                               -analysis   => $analysis,
-                              -experiment => $experiment,
-                              -result_set_analysis => $result_set_analysis
                              );
 print STDERR "Instantiated ".$runnable." runnabledb\n" if ($verbose);
 

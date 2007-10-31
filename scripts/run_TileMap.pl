@@ -1,19 +1,44 @@
-#!/usr/bin/perl
-##!/software/bin/perl
+#!/software/bin/perl
+##!/usr/bin/perl
 
 =head1 NAME
 
-run_TileMap.pl - run Chipotle on datasets in eFG database
+run_TileMap.pl - run TileMap on datasets in eFG database
 
 =head1 SYNOPSIS
 
-run_TileMap.pl -dbhost=dbhost -dbname=dbname -dbuser=dbuser -dbpass=password \
-    -input_name=ENr333 -e H3ac-HeLa -result_set_analysis=SangerPCR \
-    -logic_name TileMap
+run_TileMap.pl -dbhost=host -dbport=port -dbuser=user -dbpass=XXXXXX \
+	-dbname=homo_sapiens_funcgen_48_36j \
+	-logic_name=TileMap -module=TileMap \
+	-species homo_sapiens -data_version 46_36h \
+	-input_name=21 -verbose
 
 =head1 DESCRIPTION
 
-This script will run Chipotle on given eFG database result sets
+This script runs TileMap on given eFG database result sets. 
+To configure your analysis you need to set the following environment
+variables (here bash syntax).
+
+# General config
+
+ANALYSIS_WORK_DIR='/tmp'
+EXPERIMENT='ctcf_ren'
+NORM_ANALYSIS='VSN_GLOG' # 'SANGER_PCR'
+RESULT_SET_REGEXP='_IMPORT'
+DATASET_NAME='TileMap'
+
+export EXPERIMENT RESULT_SET_REGEXP NORM_ANALYSIS DATASET_NAME
+
+# TilMap config
+TILEMAP_DIR="$HOME/src/tilemap"
+TM_LOGIC_NAME='TileMap'
+TM_MODULE=$TM_LOGIC_NAME
+TM_PROGRAM=$TM_LOGIC_NAME
+TM_PROGRAM_FILE='tilemap'
+TM_VERSION='2.0'
+TM_PARAMETERS="$TILEMAP_DIR/efg/efg_runnable_tilemap_arg.txt"
+
+export TM_LOGIC_NAME TM_MODULE TM_PROGRAM TM_PROGRAM_FILE TM_VERSION TM_PARAMETERS
 
 =head1 LICENCE
 
@@ -22,7 +47,7 @@ http://www.ensembl.org/info/about/code_licence.html for details.
 
 =head1 AUTHOR
 
-Stefan Graf <graef@ebi.ac.uk>, Ensembl Functional Genomics
+Stefan Graf, Ensembl Functional Genomics
 
 =head1 CONTACT
 
@@ -54,7 +79,6 @@ my $data_version;
 my $input_id;
 my $input_name;
 my $logic_name = $ENV{TM_LOGIC_NAME} || undef;
-my $result_set_name;
 my $norm_analysis = $ENV{NORM_ANALYSIS} || undef; # 'VSN_GLOG' or 'SANGER_PCR';
 my $experiment;
 my $check  = 0;
@@ -81,17 +105,17 @@ my @command_args = @ARGV;
 	'dbport=s'      => \$dbport,
 	'species=s'     => \$species,
 	'data_version=s'=> \$data_version,
-	'input_id:s'    => \$input_id,
+	'input_id=s'    => \$input_id,
 	'input_name=s'    => \$input_name,
-	'logic_name|analysis:s'  => \$logic_name,
+	'logic_name|analysis=s'  => \$logic_name,
 	'norm_analysis=s' => \$norm_analysis,
 	'experiment=s' => \$experiment,
 	'check'       => \$check,
 	'write!' => \$write,
 	'help!' => \$help,
 	'verbose!' => \$verbose,
-	'module:s'    => \$module,
-	'runnabledb_path:s' => \$perl_path,
+	'module=s'    => \$module,
+	'runnabledb_path=s' => \$perl_path,
 	'utils_verbosity=s' => \$utils_verbosity,
 	'logger_verbosity=s' => \$logger_verbosity,
 	) or ($help = 1);
@@ -113,32 +137,13 @@ throw("Must provide a dbhost, dbname, and dbuser!")
 throw("Must provide a logic_name for analysis!")
 	if( !$logic_name );
 
-
-
-
 &usage(\@command_args) if($help);
-
-use Bio::EnsEMBL::Registry;
-
-#Bio::EnsEMBL::Registry->load_registry_from_db
-#    (
-#     #-host => 'ens-livemirror',
-#     #-user => 'ensro',
-#     -host => '127.0.0.1',
-#     -port => '33064',
-#     -user => 'ensro',
-#     #-verbose => "1" 
-#     );
-#my $cdb = Bio::EnsEMBL::Registry->get_DBAdaptor('human', 'core');
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
-     #-host => 'ensembldb.ensembl.org',
-     #-port => 3306,
-     #-user => 'anonymous',
-     -host => '127.0.0.1',
-     -port => 33064,
-     -user => 'ensro',
+     -host => 'ensembldb.ensembl.org',
+     -port => 3306,
+     -user => 'anonymous',
      -dbname => $species.'_core_'.$data_version,
      -species => $species,
      );
@@ -164,7 +169,8 @@ if ($input_name) {
 		  " name (start and end are optional), like '-input_name=22:1,20000'.") if (! $slice);
 	$input_id = $slice->id;
 } elsif (defined $ENV{LSB_JOBINDEX}) {
-    warn "Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".$ENV{LSB_JOBINDEX}.").\n";
+    warn("Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".
+         $ENV{LSB_JOBINDEX}.").\n");
     
     my $toplevel = $sa->fetch_all('toplevel');
     my @chr = sort (map $_->seq_region_name, @{$toplevel});
@@ -180,8 +186,9 @@ if ($input_name) {
     #print Dumper @slices;
 
     $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
-    #print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
-    
+    print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
+        
+	$input_id = $slice->id;
 } else {
 
     throw("Must specify mandatory chromosome name (-input_name) or set\n ".
@@ -190,28 +197,10 @@ if ($input_name) {
 
 }
 
-#if (! defined $input_id) {
-#    warn("No input_id provided! Using input_name ".
-#         "to select an Encode region.");
-#	
-#    my $encode_regions = &get_encode_regions($cdb, $assembly_version);
-#    
-#    if (! defined $input_name) {
-#        warn("No input_name provided! Using LSB_JOBINDEX ".
-#             "to select an Encode region.");
-#
-#        throw("LSF environment variable LSB_JOBINDEX not defined.") 
-#            if (! defined $ENV{LSB_JOBINDEX});
-#    
-#        my @encode_regions = sort keys %{$encode_regions};
-#        $input_name = $encode_regions[$ENV{LSB_JOBINDEX}-1];
-#    }
-#    $input_id = $encode_regions->{$input_name};
-#    print Dumper ($input_name, $input_id);
-#}
-
 throw("No input_id defined!")
     unless (defined $input_id);
+
+print Dumper $input_id;
 
 ### setup analysis object
 my $aa = $db->get_AnalysisAdaptor;
@@ -266,8 +255,6 @@ my $runobj = "$runnable"->new(-db            => $db,
                               -analysis      => $analysis,
                              );
 print STDERR "Instantiated ".$runnable." runnabledb\n" if ($verbose);
-
-
 
 $runobj->fetch_input;
 print STDERR "Fetched input\n" if($verbose);
