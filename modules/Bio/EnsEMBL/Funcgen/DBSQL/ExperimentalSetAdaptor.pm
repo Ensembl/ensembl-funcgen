@@ -123,7 +123,7 @@ sub fetch_all_by_Experiment {
   my ($self, $exp) = @_;
 
   if( ! ( ref($exp) &&
-		  $exp->isa('Bio::EnsEMBL::Fucngen::Experiment') &&
+		  $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') &&
 		  $exp->dbID())){
 	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
