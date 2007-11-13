@@ -149,7 +149,7 @@ sub fetch_all_by_Slice_FeatureSets {
 
   foreach my $fset (@fsets) {
 	throw('Not a FeatureSet object') 
-	  if ! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"));
+	  if ! ($fset && ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"));
 	push (@fs_ids, $fset->dbID());
   }
 
