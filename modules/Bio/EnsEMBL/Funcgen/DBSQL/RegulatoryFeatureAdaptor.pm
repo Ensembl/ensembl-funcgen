@@ -53,7 +53,7 @@ use vars qw(@ISA);
   Example    : my $rf = $rf_adaptor->fetch_by_stable_id('ENSR00000309301');
   Description: Retrieves a regulatory feature via its stable id.
   Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
-  Exceptions : none
+  Exceptions : throws ifno stable ID provided
   Caller     : general
   Status     : Stable
 
@@ -62,6 +62,7 @@ use vars qw(@ISA);
 sub fetch_by_stable_id {
   my ($self, $stable_id) = @_;
 
+  throw('Must provide a stable ID') if ! defined $stable_id;
 
   $stable_id =~ s/ENSR0*//;
 
@@ -237,22 +238,6 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-
-
-	#reg feature hack
-	my %reg_class_regexs = (
-							#'1....(10|01).'  => 'Gene end associated', 
-							#'1...1...'        => 'Promoter associated',#orig
-							'1...1.....'        => 'Promoter associated',
-							'1.0.001...' => 'Non-gene associated',
-							'11..01....' => 'Gene associated',
-						   );
-		
-		
-		
-	#omit TSS and TES from here?
-	my @reg_feature_attrs = ('DNase1', 'CTCF', 'H4K20me3', 'H3K27me3', 
-							 'H3K36me3', 'H3K4me3', 'H3K79me3', 'H3K9me3', 'TSS Proximal', 'TES Proximal'); 
 	
   my $slice;
 	
@@ -266,7 +251,8 @@ sub _objs_from_sth {
 		}
 
 		if($reg_feat){
-		  $reg_feat->regulatory_attributes(\@reg_attrs);
+		  
+		  $reg_feat->regulatory_attributes(\@reg_attrs);# if @reg_attrs;
 		  push @features, $reg_feat;
 		  undef @reg_attrs;
 		}
@@ -407,10 +393,11 @@ sub _objs_from_sth {
 
   #hande last record
   if($reg_feat){
-	$reg_feat->regulatory_attributes(\@reg_attrs);
+	$reg_feat->regulatory_attributes(\@reg_attrs);# if(@reg_attrs);
 	push @features, $reg_feat;
   }
   
+
   return \@features;
 }
 
@@ -549,7 +536,7 @@ sub fetch_all_by_Slice {
 	
   my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
 
-  return $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]);
+  return $self->fetch_all_by_Slice_FeatureSets($slice, $fset);
 }
 
 
