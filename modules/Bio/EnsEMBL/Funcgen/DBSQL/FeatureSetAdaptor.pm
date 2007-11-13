@@ -479,9 +479,11 @@ sub store {
 		
 		if (!( $fset->dbID() && $fset->adaptor() == $self )){#use is_stored?
 
-		  if($fset->type() eq 'external' && ! defined $fset->external_db_name()){
-			warn('You are loading an ExternalFeature FeatureSet with no associated external_db name');
-		  }
+		  #this should use the xref API directly
+		  
+		  #if($fset->type() eq 'external' && ! defined $fset->external_db_name()){
+		  #	warn('You are loading an ExternalFeature FeatureSet with no associated external_db name');
+		  #  }
 
 
 		  #Need to check external_db is present.

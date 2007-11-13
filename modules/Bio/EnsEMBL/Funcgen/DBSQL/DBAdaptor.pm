@@ -451,6 +451,8 @@ sub dnadb {
 		my %az;
 		map $az{$_} = $cnt++, @az;
 
+		#we should really try the cuurent build on the old version first
+
 
 		my(@dbn) = split/_/, $dbname;
 		my @assembly = split//, pop @dbn;

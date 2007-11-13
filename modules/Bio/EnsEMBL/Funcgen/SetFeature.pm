@@ -100,10 +100,23 @@ sub new {
   
   my $self = $class->SUPER::new(@_);
   
-  my ($display_label, $fset)
-    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET'], @_);
+  my ($display_label, $fset, $ftype)
+    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE'], @_);
+
+
+  #should have feature_type & cell_type here too?
+
   
   $self->display_label($display_label) if $display_label;
+
+  if($ftype){
+
+	if(! (ref($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType'))){
+	  throw('feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType');
+	}
+
+	$self->{'feature_type'} = $ftype;
+  }
 
   if(! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
 	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
@@ -264,7 +277,8 @@ sub cell_type{
 sub feature_type{
   my $self = shift;
   
-
+  #why is this not a setter?
+  #this should only be set in new
 
   return (defined $self->{'feature_type'}) ?  $self->{'feature_type'} : $self->feature_set->feature_type();
 }

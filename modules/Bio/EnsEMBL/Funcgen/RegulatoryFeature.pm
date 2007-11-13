@@ -102,13 +102,12 @@ sub new {
   
   my $self = $class->SUPER::new(@_);
   
-  my ($reg_type, $stable_id, $reg_attrs, $attr_cache)
-    = rearrange(['FEATURE_TYPE', 'STABLE_ID', 'REGULATORY_ATTRIBUTES', '_ATTRIBUTE_CACHE'], @_);
+  my ($stable_id, $reg_attrs, $attr_cache)
+    = rearrange(['STABLE_ID', 'REGULATORY_ATTRIBUTES', '_ATTRIBUTE_CACHE'], @_);
   
   #check mandatory params here
 
   throw("Must provide a FeatureType") if ! $reg_type;
-  $self->feature_type($reg_type) if $reg_type;
   $self->stable_id($stable_id) if $stable_id;
   $self->regulatory_attributes($reg_attrs) if $reg_attrs;
   $self->_attribute_cache($attr_cache) if $attr_cache;
@@ -195,7 +194,8 @@ sub stable_id {
 
 sub regulatory_attributes {
   my ($self, $attrs) = @_;
-	
+  
+
   my $table;
   my %adaptors = (
 				  'annotated_feature' => $self->adaptor->db->get_AnnotatedFeatureAdaptor(),
@@ -213,9 +213,12 @@ sub regulatory_attributes {
   #deref here for safety??
   #$self->{'regulatory_attributes'} =  [@$attrs] if $attrs;
 
-  if(defined $attrs && @$attrs){
+  if(defined $attrs){# && @$attrs){
 
-	foreach my $attr(@$attrs){
+	my @attrs = @$attrs;
+	
+	foreach my $attr(@attrs){
+
 	  $table = $attr->adaptor->_main_table->[0];
 	  #check for isa Feature here?
 	  $self->{'regulatory_attributes'}{$table}{$attr->dbID()} = $attr; 

@@ -2891,9 +2891,9 @@ sub R_norm{
 		  #Need to get total and experimental here and set db_id accordingly
 		  #can probably do this directly into one df
 	  
-		  $query .= "c1<-dbGetQuery(con, 'select r.probe_id, r.score as CONTROL_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+		  $query .= "c1<-dbGetQuery(con, 'select r.probe_id as PROBE_ID, r.score as CONTROL_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[0]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
 
-		  $query .= "c2<-dbGetQuery(con, 'select r.probe_id, r.score as EXPERIMENTAL_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
+		  $query .= "c2<-dbGetQuery(con, 'select r.probe_id as PROBE_ID, r.score as EXPERIMENTAL_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
 	  
 	  
 	
@@ -2908,12 +2908,12 @@ sub R_norm{
 			#Adjust using tukey.biweight weighted average
 			#inherits first col name
 			$query .= 'norm_df<-(lr_df["EXPERIMENTAL_score"]-tukey.biweight(as.matrix(lr_df)))'."\n";
-			$query .= 'formatted_df<-cbind(rep("0", length(c1["probe_id"])), c1["probe_id"], sprintf("%.3f", norm_df[,1]), rep("'.$cc_id.'", length(c1["probe_id"])), c1["X"], c1["Y"])'."\n";
+			$query .= 'formatted_df<-cbind(rep("0", length(c1["PROBE_ID"])), c1["PROBE_ID"], sprintf("%.3f", norm_df[,1]), rep("'.$cc_id.'", length(c1["PROBE_ID"])), c1["X"], c1["Y"])'."\n";
 		  
 		}
 		elsif($logic_name eq 'VSN_GLOG'){
 		  #could do this directly
-		  $query .= "raw_df<-cbind(c1[\"${dbids[0]}_score\"], c2[\"${dbids[1]}_score\"])\n";
+		  $query .= "raw_df<-cbind(c1[\"CONTROL_score\"], c2[\"EXPERIMENTAL_score\"])\n";
 		  #variance stabilise
 		  $query .= "norm_df<-vsn(raw_df)\n";
     
@@ -2934,7 +2934,7 @@ sub R_norm{
 	
 		  #Now create table structure with glog values(diffs)
 		  #3 sig dec places on scores(doesn't work?!)
-		  $query .= "formatted_df<-cbind(rep(\"0\", length(c1[\"probe_id\"])), c1[\"probe_id\"], sprintf(\"%.3f\", (exprs(norm_df[,2]) - exprs(norm_df[,1]))), rep(\"".$cc_id."\", length(c1[\"probe_id\"])), c1[\"X\"], c1[\"Y\"])\n";
+		  $query .= "formatted_df<-cbind(rep(\"0\", length(c1[\"PROBE_ID\"])), c1[\"PROBE_ID\"], sprintf(\"%.3f\", (exprs(norm_df[,2]) - exprs(norm_df[,1]))), rep(\"".$cc_id."\", length(c1[\"PROBE_ID\"])), c1[\"X\"], c1[\"Y\"])\n";
 		  
 		}
 		#load back into DB

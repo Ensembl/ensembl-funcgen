@@ -313,7 +313,7 @@ sub store{
 
 	  my $seq_region_id;
 	  ($ef, $seq_region_id) = $self->_pre_store($ef);
-		
+
 	  $sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
 	  $sth->bind_param(2, $ef->start(),               SQL_INTEGER);
 	  $sth->bind_param(3, $ef->end(),                 SQL_INTEGER);

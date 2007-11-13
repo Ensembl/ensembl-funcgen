@@ -96,11 +96,7 @@ sub new {
 	
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
-  
-  my ($ftype) = rearrange(['FEATURE_TYPE'], @_);
-  
-  $self->feature_type($ftype) if $ftype;
-		
+ 		
   return $self;
 }
 
@@ -133,46 +129,6 @@ sub display_label {
 }
 
 
-=head2 feature_type
-
-  Example    : my $ft_name = $efeature->feature_type()->name();
-  Description: Getter/Setter for the feature_type attribute for this feature.
-               Defaults to FeatureSet FeatureType if absent?
-  Returntype : Bio::EnsEMBL::Funcgen:FeatureType
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub feature_type{
-  my ($self, $ftype) = @_;
-  
-  if(defined $ftype && ! (ref($ftype) && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType"))){
-	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureType object");
-  }else{
-	$self->{'feature_type'} = $ftype;
-  }
-
-  return (defined $self->{'feature_type'}) ? $self->{'feature_type'} : $self->feature_set->feature_type();
-}
-
-#=head2 external_db_name
-
-#  Example    : my $edb_name = $efeature->external_db_name();
-#  Description: Getter for the external_db_name  attribute for this feature.
-#  Returntype : string - external_db_name
-#  Exceptions : None
-#  Caller     : General
-#  Status     : At risk
-
-#=cut
-
-#sub external_db_name{
-#  my $self = shift;
-  
-#  return $self->feature_set->external_db_name();
-#}
 
 1;
 
