@@ -985,8 +985,7 @@ DROP TABLE IF EXISTS `object_xref`;
 CREATE TABLE object_xref (
   object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   ensembl_id                  INT(10) UNSIGNED NOT NULL, 
-  ensembl_object_type         ENUM('regulatory feature', 'external_feature')
-                              not NULL,
+  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature') not NULL,
   xref_id                     INT UNSIGNED NOT NULL,
   linkage_annotation          VARCHAR(255) DEFAULT NULL,
   UNIQUE (ensembl_object_type, ensembl_id, xref_id),
