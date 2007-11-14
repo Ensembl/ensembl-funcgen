@@ -37,10 +37,10 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date open_file run_system_cmd)
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Experiment;
-use Bio::EnsEMBL::Funcgen::Defs::DesignDefs;
-use Bio::EnsEMBL::Funcgen::Defs::SangerDefs;
-use Bio::EnsEMBL::Funcgen::Defs::NimblegenDefs;
-use Bio::EnsEMBL::Funcgen::Defs::SolexaDefs;
+use Bio::EnsEMBL::Funcgen::Parsers::ArrayDesign;
+use Bio::EnsEMBL::Funcgen::Parsers::Sanger;
+use Bio::EnsEMBL::Funcgen::Parsers::Nimblegen;
+use Bio::EnsEMBL::Funcgen::Parsers::Solexa;
 use Bio::EnsEMBL::Funcgen::Helper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -105,44 +105,35 @@ sub new{
   my $reg = "Bio::EnsEMBL::Registry";
   my $class = ref($caller) || $caller;
 
-  my ($format, $vendor, $group, $location, $contact, $species,
+  my ($name, $format, $vendor, $group, $location, $contact, $species,
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
 	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, 
 	  $no_mage, $eset_name, $norm_method, $old_dvd_format)
-	= rearrange(['FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
+	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
 				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT'], @_);
-  #add mail flag
-  #add user defined norm methods!!!!!!!!!!!!!!!!!!!!!!!!!
-  #would have to make sure GroupDefs is inherited first so we can set some mandatory params
-  #before checking in ArrayDefs and here
 
-  #define parent defs class based on vendor
+  
+  #### Define parent defs class based on vendor
   throw("Mandatory argument -vendor not defined") if ! defined $vendor;
   my $defs_type = lc($vendor);
   $defs_type = ucfirst($defs_type)."Defs";
   unshift @ISA, 'Bio::EnsEMBL::Funcgen::Defs::'.$defs_type;
+  #change this to be called explicitly from the load script?
 
-  #would need to set up output dir here to avoid errors on instatiation of Helper and log/debug files
-  #Create object from parent class
+  #### Create object from parent class
+
   my $self = $class->SUPER::new(@_);
-
-  #warn "called super new on $class @ISA";
-
-
-  #Maybe we can tidy this up a bit by making the parse_and_import script populate an Experiment
-  #then make this take the Experiment as a param?
-  #Can we have an underlying ArrayDefs, which just handles all the common params/methods for Array based imports
-  
     
-  #Set vars and test minimum mandatory params for any import type
-  #$self->{'name'} = $name if $name; # Now done in Defs modules
+  #### Set vars and test minimum mandatory params for any import type
+
+  $self->{'name'} = $name if $name;
   $self->vendor(uc($vendor));	#already tested
   $self->{'format'} = uc($format) || 'TILED'; #remove default?
   $self->group($group) if $group;
@@ -153,7 +144,6 @@ sub new{
   $self->array_set($array_set) if $array_set;
   $self->array_file($array_file) if $array_file;
   $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
-  #$self->{'cache_dir'} = $self->{'data_dir'}.'/caches/';
   $self->result_files($result_files)if $result_files; #Sanger specific ???
   $self->{'feature_type_name'} = $ftype_name if $ftype_name;#make mandatory?
   $self->{'cell_type_name'} = $ctype_name if $ctype_name;#make madatory?
@@ -180,7 +170,6 @@ sub new{
   $self->{'no_mage'} = $no_mage || 0;
   $self->{'experimental_set_name'} = $eset_name if $eset_name;
   $self->{'old_dvd_format'} = $old_dvd_format || 0;
-
   #Will a general norm method be applicable fo all imports?
   $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};
  
@@ -190,9 +179,9 @@ sub new{
   }
 
   #Set vendor specific attr dependent vars
-  $self->set_defs();
+  $self->set_config();
 
-  my $host_ip = '127.0.0.1';
+  my $host_ip = '127.0.0.1';#is this valid for all localhosts?
 
   ### LOAD AND RE-CONFIG REGISTRY ###
   if (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
@@ -212,7 +201,7 @@ sub new{
 	$self->species($reg->get_alias($self->species()));
       
 	#configure dnadb
-	#should use meta container here for schem_build/data_version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	#use meta container here for schem_build/data_version?
  
 
 	#this should be in DBAdaptor
@@ -284,12 +273,7 @@ sub new{
 }
 
 
-#Kept separate from new as it is not necessary to have native format raw data
-#change name as need dir struc for processing aswell as import, may have imported in a different way
-#Need to separate this further as we need still need to set the Experiment object if we're doing a re-normalise/analyse
-#Move exeriment/probe/raw result import tests to register experiment?
-#Make all other register methods private, so we don't bypass the previously imported exp check
-
+#init method kept separate from new due to differing madatory check and set up
 
 =head2 init_array_import
 
@@ -302,7 +286,6 @@ sub new{
   Status     : at risk - merge with register_array_design
 
 =cut
-
 
 sub init_array_import{
   # we need to define which paramters we'll be storing
@@ -319,7 +302,6 @@ sub init_array_import{
 }
 
 
-
 =head2 init_experiment_import
 
   Example    : $self->init_import();
@@ -331,7 +313,6 @@ sub init_array_import{
   Status     : at risk - merge with register exeriment
 
 =cut
-
 
 sub init_experiment_import{
   my ($self) = shift;
