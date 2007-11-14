@@ -338,7 +338,7 @@ sub parse_and_load {
 	my $display_name = $self->get_display_name_by_stable_id($gene_id, 'gene');
 	
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => 'core',
+											 -dbname                 => 'core_gene',
 											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,

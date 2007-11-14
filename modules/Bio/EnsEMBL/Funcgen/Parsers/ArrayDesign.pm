@@ -147,7 +147,7 @@ sub read_array_data{
     #also need to be able to set file path independently of config
 
     if($. == 1){
-      %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
+      %hpos = %{$self->set_header_hash(\@data, $self->get_config('notes_fields'))};
       next;
     }
 
@@ -308,7 +308,7 @@ sub read_probe_data{
 
     
     if ($. == 1){	
-      %hpos = %{$self->set_header_hash(\@data, $self->get_def('prb_fields'))};
+      %hpos = %{$self->set_header_hash(\@data, $self->get_config('prb_fields'))};
       next;
     }
 		  

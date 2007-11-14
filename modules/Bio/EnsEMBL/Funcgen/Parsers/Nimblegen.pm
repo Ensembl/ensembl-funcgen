@@ -231,7 +231,7 @@ sub read_array_data{
     #also need to be able to set file path independently of config
     
     if($. == 1){
-	  %hpos = %{$self->set_header_hash(\@data, $self->get_def('notes_fields'))};
+	  %hpos = %{$self->set_header_hash(\@data, $self->get_config('notes_fields'))};
       next;
     }
 
@@ -309,7 +309,7 @@ sub read_array_data{
 sub read_experiment_data{
   my $self = shift;
 
-  $self->read_array_data($self->get_def('notes_file'));
+  $self->read_array_data($self->get_config('notes_file'));
   my $t2m_file = $self->init_tab2mage_export() if $self->{'write_mage'};
 
 
@@ -327,7 +327,7 @@ sub read_experiment_data{
   
  
   warn("Harcoded for one array(can have multiple chips from the same array) per experiment\n");
-  my $fh = open_file($self->get_def("chip_file"));
+  my $fh = open_file($self->get_config("chip_file"));
   $self->log("Reading chip data");
 
 
@@ -339,13 +339,13 @@ sub read_experiment_data{
     #we could validate line against scalar of header array
      #ORD_ID  CHIP_ID DYE     DESIGN_NAME     DESIGN_ID       SAMPLE_LABEL    SAMPLE_SPECIES  SAMPLE_DESCRIPTION      TISSUE_TREATMENT        PROMOT_SAMPLE_TYPE
     if ($. == 1){
-      %hpos = %{$self->set_header_hash(\@data, $self->get_def('sample_key_fields'))};
+      %hpos = %{$self->set_header_hash(\@data, $self->get_config('sample_key_fields'))};
 
       #we need to set the sample description field name, as it can vary :(((
       @data = grep(/SAMPLE_DESCRIPTION/, keys %hpos);
       $sample_desc = $data[0];
  
-      throw("More than one sample description(@data) in ".$self->get_def("chip_file")."\n") if(scalar @data >1);
+      throw("More than one sample description(@data) in ".$self->get_config("chip_file")."\n") if(scalar @data >1);
       next;
     }
     
@@ -489,15 +489,15 @@ sub read_experiment_data{
 
 
 	  #File[raw]
-	  my $tsm_line = $echip->unique_id().'_'.$self->get_def('dye_freqs')->{$data[$hpos{'DYE'}]}.'_pair.txt';
+	  my $tsm_line = $echip->unique_id().'_'.$self->get_config('dye_freqs')->{$data[$hpos{'DYE'}]}.'_pair.txt';
 	  #Array[accession] # Should this be left blank for AE accession?
 	  $tsm_line .= "\t".$data[$hpos{'DESIGN_ID'}];
 	  #Array[serial]
 	  $tsm_line .= "\t".$echip->unique_id();
 
 	  #Protocol(s)[grow][treatment][extraction][labelling][hybridisation][scanning]
-	  foreach my $protocol(sort (keys %{$self->get_def('protocols')})){
-		$tsm_line .= "\t".$self->get_def('protocols')->{$protocol}->{'accession'};
+	  foreach my $protocol(sort (keys %{$self->get_config('protocols')})){
+		$tsm_line .= "\t".$self->get_config('protocols')->{$protocol}->{'accession'};
 	  }
 	  
 	  #BioSource
@@ -635,7 +635,7 @@ sub read_probe_data{
 	
 		#SEQ_ID	CHROMOSOME	PROBE_ID	POSITION	COUNT
 		if ($. == 1){
-		  %hpos = %{$self->set_header_hash(\@data, $self->get_def('pos_fields'))};
+		  %hpos = %{$self->set_header_hash(\@data, $self->get_config('pos_fields'))};
 		  next;
 		}
 		
@@ -731,7 +731,7 @@ sub read_probe_data{
 		#2067_0025_0001  BLOCK1          0       chrX    TTAGTTTAAAATAAACAAAAAGATACTCTCTGGTTATTAAATCAATTTCT      0       52822449        52822449        1       25      experimental    chrXP10404896   10404896        2067    25      1
 		
 		if ($. == 1){	
-		  %hpos = %{$self->set_header_hash(\@data, $self->get_def('ndf_fields'))};
+		  %hpos = %{$self->set_header_hash(\@data, $self->get_config('ndf_fields'))};
 		  next;
 		}
 		
@@ -965,7 +965,7 @@ sub read_and_import_results_data{
 		  my ($probe_elem, $score_elem, %hpos);
 		  my $cnt = 0;
 		  my $r_string = "";
-		  my $chan_name = $echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()};
+		  my $chan_name = $echip->unique_id()."_".$self->get_config('dye_freqs')->{$chan->dye()};
 		  my $cc_id = $result_set->get_chip_channel_id($chan->dbID());
 		  
 		  
@@ -1012,7 +1012,7 @@ sub read_and_import_results_data{
 			  $lines[$i] =~ s/\r*\n//o;
 			  @data = split/\t/o, $lines[$i];
 			  
-			  %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
+			  %hpos = %{$self->set_header_hash(\@data, $self->get_config('result_fields'))};
 			  
 			  #remove header
 			  splice @lines, $i, 1;
@@ -1041,7 +1041,7 @@ sub read_and_import_results_data{
 			###PROCESS HEADER
 			#if ($line =~ /PROBE_ID/o){
 			#  
-			#  %hpos = %{$self->set_header_hash(\@data, $self->get_def('result_fields'))};
+			#  %hpos = %{$self->set_header_hash(\@data, $self->get_config('result_fields'))};
 			#  next;#finished processing header
 			#}
 			

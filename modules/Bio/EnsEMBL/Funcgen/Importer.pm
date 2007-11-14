@@ -120,11 +120,10 @@ sub new{
 				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT'], @_);
 
   
-  #### Define parent defs class based on vendor
+  #### Define parent parser class based on vendor
   throw("Mandatory argument -vendor not defined") if ! defined $vendor;
-  my $defs_type = lc($vendor);
-  $defs_type = ucfirst($defs_type)."Defs";
-  unshift @ISA, 'Bio::EnsEMBL::Funcgen::Defs::'.$defs_type;
+  my $parser_type = ucfirst(lc($vendor));
+  unshift @ISA, 'Bio::EnsEMBL::Funcgen::Parsers::'.$parser_type;
   #change this to be called explicitly from the load script?
 
   #### Create object from parent class
@@ -157,8 +156,8 @@ sub new{
   $self->db($db) if $db;		#predefined db
   $self->{'data_version'} = $data_version || throw('Mandatory param -data_version not met');
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
-  $self->{'output_dir'} = $output_dir if $output_dir; #defs default override
-  $self->input_dir($input_dir) if $input_dir; #defs default override
+  $self->{'output_dir'} = $output_dir if $output_dir; #config default override
+  $self->input_dir($input_dir) if $input_dir; #config default override
   $self->farm($farm) if $farm;
   $self->{'ssh'} = $ssh || 0;
   $self->{'_dump_fasta'} = $fasta || 0;
@@ -487,7 +486,7 @@ sub init_experiment_import{
 	#we could have this as a no fail, which would enable a custom xml file
 
 
-#	if( ! $self->run_system_cmd('mysql '.$self->db->connect_string()." -e '$sql' > ".$self->get_def('mage_xml_file'), 1)){
+#	if( ! $self->run_system_cmd('mysql '.$self->db->connect_string()." -e '$sql' > ".$self->get_config('mage_xml_file'), 1)){
 	  #only write template if write_mage defined
 #	  $got_xml = 1;
 #	}
@@ -505,26 +504,26 @@ sub init_experiment_import{
 
   if( ! $self->{'no_mage'}){
   
-	if($self->{'write_mage'} || !( -f $self->get_def('tab2mage_file') || $xml)){
+	if($self->{'write_mage'} || !( -f $self->get_config('tab2mage_file') || $xml)){
 	  $self->{'write_mage'} = 1;
-	  $self->backup_file($self->get_def('tab2mage_file'));
+	  $self->backup_file($self->get_config('tab2mage_file'));
 	}
 	elsif($xml && (! $self->{'update_xml'})){
 	  $self->{'recover'} = 1;
 	  $self->{'skip_validate'} = 1;
 	}
-	elsif( -f $self->get_def('tab2mage_file')){#logic dictates this has to be true
+	elsif( -f $self->get_config('tab2mage_file')){#logic dictates this has to be true
 	  #run tab2mage and import xml
 	  #update replicate info
 	  #do we need to validate xml vs meta info in read methods?
 	  #turn recovery on?
 	  #back up xml if present? Or just recreate?
 	  #can we allow custom xml files here
-	  $self->backup_file($self->get_def('mage_xml_file'));
+	  $self->backup_file($self->get_config('mage_xml_file'));
 	  
 	  #do experiment check script first?
 	  
-	  my $cmd = 'tab2mage.pl -e '.$self->get_def('tab2mage_file').' -k -t '.$self->get_dir('output').' -c -d '.$self->get_dir('results');
+	  my $cmd = 'tab2mage.pl -e '.$self->get_config('tab2mage_file').' -k -t '.$self->get_dir('output').' -c -d '.$self->get_dir('results');
 	  
 	  $self->log('Reading tab2mage file');
 	  
@@ -533,7 +532,7 @@ sub init_experiment_import{
 	  warn "tab2mage exit code is  $t2m_exit_code"; 
 	  
 	  if(! ($t2m_exit_code > -1) && ($t2m_exit_code <255)){
-		throw("tab2mage failed.  Please check and correct:\t".$self->get_def('tab2mage_file')."\n...and try again");
+		throw("tab2mage failed.  Please check and correct:\t".$self->get_config('tab2mage_file')."\n...and try again");
 	  }
 	  
 	  #rename file
@@ -602,9 +601,9 @@ sub init_experiment_import{
 sub init_tab2mage_export{
   my $self = shift;
 
-  $self->backup_file($self->get_def('tab2mage_file')) if(-f $self->get_def('tab2mage_file'));
+  $self->backup_file($self->get_config('tab2mage_file')) if(-f $self->get_config('tab2mage_file'));
 
-  my $t2m_file = open_file($self->get_def('tab2mage_file'), '>');
+  my $t2m_file = open_file($self->get_config('tab2mage_file'), '>');
 
   #reformat this
   my $exp_section = "experiment section\ndomain\t".(split/@/, $self->contact())[1]."\naccession\t\n".
@@ -615,13 +614,13 @@ sub init_tab2mage_export{
 
   my $protocol_section = "Protocol section\naccession\tname\ttext\tparameters\n";
 
-  foreach my $protocol(sort (keys %{$self->get_def('protocols')})){
-	$protocol_section .= $self->get_def('protocols')->{$protocol}->{'accession'}.
-	  "\t".$self->get_def('protocols')->{$protocol}->{'name'}.
-		"\t".$self->get_def('protocols')->{$protocol}->{'text'}."\t";
+  foreach my $protocol(sort (keys %{$self->get_config('protocols')})){
+	$protocol_section .= $self->get_config('protocols')->{$protocol}->{'accession'}.
+	  "\t".$self->get_config('protocols')->{$protocol}->{'name'}.
+		"\t".$self->get_config('protocols')->{$protocol}->{'text'}."\t";
 
-	$protocol_section .= (defined $self->get_def('protocols')->{$protocol}->{'parameters'}) ?
-	  $self->get_def('protocols')->{$protocol}->{'parameters'}."\t\n" : "\t\n";
+	$protocol_section .= (defined $self->get_config('protocols')->{$protocol}->{'parameters'}) ?
+	  $self->get_config('protocols')->{$protocol}->{'parameters'}."\t\n" : "\t\n";
   }
 
   #File[raw]	Array[accession]	Array[serial]	Protocol[grow]	Protocol[treatment]	Protocol[extraction]	Protocol[labeling]	Protocol[hybridization]	Protocol[scanning]	BioSource	Sample	Extract	LabeledExtract	Immunoprecipitate	Hybridization	BioSourceMaterial	SampleMaterial	ExtractMaterial	LabeledExtractMaterial	Dye	BioMaterialCharacteristics[Organism]	BioMaterialCharacteristics[BioSourceType]	BioMaterialCharacteristics[StrainOrLine]	BioMaterialCharacteristics[CellType]	BioMaterialCharacteristics[Sex]	FactorValue[StrainOrLine]	FactorValue[Immunoprecipitate]
@@ -644,7 +643,7 @@ sub hybridisation_fields{
   my $self = shift;
 
   return ['File[raw]', 'Array[accession]', 'Array[serial]', 
-		  (map 'Protocol['.$_.']', (sort (keys %{$self->get_def('protocols')}))),
+		  (map 'Protocol['.$_.']', (sort (keys %{$self->get_config('protocols')}))),
 		  'BioSource', 'Sample', 'Extract', 'LabeledExtract', 'Immunoprecipitate', 'Hybridization', 
 		  'BioSourceMaterial', 'SampleMaterial', 'ExtractMaterial', 'LabeledExtractMaterial',
 		  'Dye', 'BioMaterialCharacteristics[Organism]', 'BioMaterialCharacteristics[BioSourceType]',	
@@ -1190,7 +1189,7 @@ sub experiment_date{
 
     $self->{'experiment_date'} = $date;
   } elsif ($self->vendor() eq "nimblegen" && ! defined $self->{'experiment_date'}) {
-    $self->{'experiment_date'} = &get_date("date", $self->get_def("chip_file")),
+    $self->{'experiment_date'} = &get_date("date", $self->get_config("chip_file")),
   }
 
   return $self->{'experiment_date'};
@@ -1502,17 +1501,17 @@ sub norm_method{
   if (@_) {
     $self->{'norm_method'} = shift;
   } elsif (! defined  $self->{'norm_method'}) {
-    $self->{'norm_method'}= $self->get_def('norm_method');
+    $self->{'norm_method'}= $self->get_config('norm_method');
   }
 
   return $self->{'norm_method'};
 }
 
 
-=head2 get_def
+=head2 get_config
 
-  Arg [1]    : mandatory - name of the data element to retrieve from the defs hash
-  Example    : %dye_freqs = %{$imp->get_def('dye_freqs')};
+  Arg [1]    : mandatory - name of the data element to retrieve from the config hash
+  Example    : %dye_freqs = %{$imp->get_config('dye_freqs')};
   Description: returns data from the definitions hash
   Returntype : various
   Exceptions : none
@@ -1522,9 +1521,9 @@ sub norm_method{
 =cut
 
 
-sub get_def{
+sub get_config{
   my ($self, $data_name) = @_;
-  return $self->get_data('defs', $data_name); #will this cause undefs?
+  return $self->get_data('config', $data_name); #will this cause undefs?
 }
 
 
@@ -1569,7 +1568,7 @@ sub register_experiment{
 	$self->read_data("array");
 
 	if(! $self->{'no_mage'}){
-	  $self->log("Please check and edit autogenerated tab2mage file:\t".$self->get_def('tab2mage_file'));
+	  $self->log("Please check and edit autogenerated tab2mage file:\t".$self->get_config('tab2mage_file'));
 	  exit;
 	}
   }elsif(! $self->{'no_mage'}){#This should be a no_channel flag, set dependent on import mode(gff_chip, gff_chan)
@@ -1625,7 +1624,7 @@ sub register_experiment{
 sub validate_mage(){
   my ($self, $mage_xml, $update) = @_;
 
-  $self->log("Validating mage file:\t".$self->get_def('mage_xml_file'));
+  $self->log("Validating mage file:\t".$self->get_config('mage_xml_file'));
 
 
   my (%echips, @log);
@@ -1662,7 +1661,7 @@ sub validate_mage(){
  
   $self->log('VALIDATING MAGE XML');
   my $reader = Bio::MAGE::XML::Reader->new();
-  $mage_xml ||= $self->get_def('mage_xml_file');
+  $mage_xml ||= $self->get_config('mage_xml_file');
   $self->{'mage'} = $reader->read($mage_xml);
   
   #this should only ever return 1 for an import
@@ -2019,7 +2018,7 @@ sub validate_mage(){
 
   if (@log) {
 	$self->log("MAGE VALIATION REPORT\n\t".join("\n::\t", @log));
-	throw("MAGE VALIDATION FAILED\nPlease correct tab2mage file and try again:\t".$self->get_def('tab2mage_file'));
+	throw("MAGE VALIDATION FAILED\nPlease correct tab2mage file and try again:\t".$self->get_config('tab2mage_file'));
   } else {
 	$self->log('MAGE VALDIATION SUCCEEDED');
   }
@@ -2232,7 +2231,7 @@ sub validate_mage(){
 	$rset->adaptor->store($new_rset);
   }
 
-  my $xml_file = open_file($self->get_def('mage_xml_file'));
+  my $xml_file = open_file($self->get_config('mage_xml_file'));
 
   #slurp in changing separator to null so we get it all in one string.
   $self->experiment->mage_xml(do{ local ($/); <$xml_file>});
@@ -2606,7 +2605,7 @@ sub get_probe_x_y_by_name_Array{
 =head2 read_data
   
   Example    : $self->read_data("probe")
-  Description: Calls each method in data_type array from defs hash
+  Description: Calls each method in data_type array from config hash
   Arg [1]    : mandatory - data type
   Returntype : none
   Exceptions : none
@@ -2617,7 +2616,7 @@ sub get_probe_x_y_by_name_Array{
 
 sub read_data{
   my($self, $data_type) = @_;
-  map {my $method = "read_${_}_data"; $self->$method()} @{$self->get_def("${data_type}_data")};
+  map {my $method = "read_${_}_data"; $self->$method()} @{$self->get_config("${data_type}_data")};
   return;
 }
 
@@ -2647,7 +2646,7 @@ sub design_type{
 =head2 get_chr_seq_region_id
   
   Example    : $seq_region_id = $self->get_seq_region_id('X');
-  Description: Calls each method in data_type array from defs hash
+  Description: Calls each method in data_type array from config hash
   Arg [1]    : mandatory - chromosome name
   Arg [2]    : optional - start value
   Arg [3]    : optional - end value
@@ -3031,10 +3030,10 @@ sub get_import_ResultSet{
 	  foreach my $chan(@{$echip->get_Channels()}){
 
 		if ($chan->has_status($status)) { #this translates to each channel have the IMPORTED_RawValue status
-		  $self->log("Channel(".$echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()}.") already has status:\t".$status);
+		  $self->log("Channel(".$echip->unique_id()."_".$self->get_config('dye_freqs')->{$chan->dye()}.") already has status:\t".$status);
 		} 
 		else {
-		  $self->log("Found Channel(".$echip->unique_id()."_".$self->get_def('dye_freqs')->{$chan->dye()}.") without status $status");
+		  $self->log("Found Channel(".$echip->unique_id()."_".$self->get_config('dye_freqs')->{$chan->dye()}.") without status $status");
 		  push @new_chip_channels, $chan;
 		}
 	  }
@@ -3105,7 +3104,7 @@ sub get_import_ResultSet{
 		
 		if($table_name eq 'channel'){
 		  my $chan_name = $ec_adaptor->fetch_by_dbID($cc->experimental_chip_id())->unique_id()."_".
-			$self->get_def('dye_freqs')->{$cc->dye()};
+			$self->get_config('dye_freqs')->{$cc->dye()};
 		  $self->log("Rolling back results for $table_name:\t".$chan_name);
 		  
 		}else{
