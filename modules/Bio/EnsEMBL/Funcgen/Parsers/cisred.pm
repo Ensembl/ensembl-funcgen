@@ -339,10 +339,11 @@ sub parse_and_load {
 	
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
 											 -dbname                 => 'core',
-											 -release                => $self->db->dnadb->dbc->dbname,
+											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
-											 -db_display_name        => $self->db->dnadb->dbc->dbname,
+											 #-db_display_name        => $self->db->dnadb->dbc->dbname,
+											 -db_display_name        => 'ensembl_core_gene',
 											 -type                   => 'MISC',
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
@@ -350,7 +351,7 @@ sub parse_and_load {
 											 -description            => 'cisRED search region gene xref',
 											 #could have version here if we use the correct dnadb to build the cache
 											  );
-	$dbentry_adaptor->store($dbentry, $search_feature->dbID, 'ExternalFeature');  
+	$dbentry_adaptor->store($dbentry, $search_feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag  
   }
 
   close(SEARCH_REGIONS);

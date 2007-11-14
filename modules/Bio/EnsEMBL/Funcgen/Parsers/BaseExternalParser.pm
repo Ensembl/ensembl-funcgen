@@ -141,14 +141,16 @@ sub set_feature_sets{
 		print ':: Analysis '.$self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'}.
 		  " not found, storing from config hash\n";
 		
+
 		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new
 								 (
-								  #%{$self->{'feature_sets'}{$fset_name}{'analysis'}}
-								  -logic_name    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'logic_name'},
-								  -description   => $self->{'feature_sets'}{$fset_name}{'analysis'}{'description'},
-								  -display_label => $self->{'feature_sets'}{$fset_name}{'analysis'}{'display_label'},
-								  -diplayable    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'displayable'},
-								 ));
+								  %{$self->{'feature_sets'}{$fset_name}{'analysis'}}
+								  #-logic_name    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'},
+								  #-description   => $self->{'feature_sets'}{$fset_name}{'analysis'}{'-description'},
+								  #-display_label => $self->{'feature_sets'}{$fset_name}{'analysis'}{'-display_label'},
+								  #-diplayable    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'-displayable'},
+								 )
+								);
 		
 		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'});
 	  }
