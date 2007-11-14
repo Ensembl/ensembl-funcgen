@@ -45,10 +45,10 @@ sub new {
 													feature_type      => \$self->{'feature_types'}{'VISTA Target'},
 													analysis          => 
 													{ 
-													 logic_name => 'VISTA',
-													 description   => 'VISTA Enhancer Assay (http://enhancer.lbl.gov/)',
-													 display_label => 'VISTA',
-													 displayable   => 1,
+													 -logic_name => 'VISTA',
+													 -description   => 'VISTA Enhancer Assay (http://enhancer.lbl.gov/)',
+													 -display_label => 'VISTA',
+													 -displayable   => 1,
 													},
 												   },
 						   };
