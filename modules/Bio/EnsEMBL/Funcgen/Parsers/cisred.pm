@@ -128,13 +128,13 @@ sub parse_and_load {
   my $skipped_xref = 0;
   #my $coords_changed = 0;
   my $cnt = 0;
-
+	
   open (FILE, "<$file") || die "Can't open $file";
   <FILE>; # skip header
 
   while (<FILE>) {
     next if ($_ =~ /^\s*\#/ || $_ =~ /^\s*$/);
-
+	chomp;
     # name	chromosome	start	end	strand	group_name   ensembl_gene_id
     my ($motif_name, $chromosome, $start, $end, $strand, $group_name, $gene_id) = split (/\t/);
     #($gene_id) = $gene_id =~ /(ENS.*G\d{11})/;
@@ -230,20 +230,23 @@ sub parse_and_load {
 
 	my $display_name = $self->get_display_name_by_stable_id($gene_id);
 
+	#Handle release/version in xref version as stable_id version?
+
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => 'core',
-											 -release                => $self->db->dnadb->dbc->dbname,
+											 -dbname                 => 'core_gene',
+											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
-											 -db_display_name        => $self->db->dnadb->dbc->dbname,
+											 -#db_display_name        => $self->db->dnadb->dbc->dbname,
+											 -db_display_name        => 'ensembl_core_gene',
 											 -type                   => 'MISC',
-											 -primary_id            => $gene_id,
+											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
 											 -info_type              => 'MISC',
 											 -description            => 'cisRED motif gene xref',
 											 #could have version here if we use the correct dnadb to build the cache
 											);
-	$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature');  
+	$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag
   }
   
 	
@@ -252,8 +255,6 @@ sub parse_and_load {
   print ":: Stored $cnt cisRED ExternalFeature motif\n";
   print ":: Skipped $skipped cisRED ExternalFeature motif imports\n";
   print ":: Skipped an additional $skipped_xref DBEntry imports\n";
-
-
 
   # ----------------------------------------
   # Search regions 
@@ -276,8 +277,6 @@ sub parse_and_load {
     my ($id, $chromosome, $start, $end, $strand, $gene_id) = split;
     my $display_id = $self->get_display_name_by_stable_id($gene_id);
 	my $name = "CisRed_Search_$id";
-
-  
 
 	if(! exists $slice_cache{$chromosome}){
 	  
@@ -307,8 +306,8 @@ sub parse_and_load {
 	   -start         => $start,
 	   -end           => $end,
 	   -strand        => $strand,
-	   -feature_type  => $self->{'feature_sets'}{'cisRED group motifs'}->feature_type,
-	   -feature_set   => $self->{'feature_sets'}{'cisRED group motifs'},
+	   -feature_type  => $self->{'feature_sets'}{'cisRED search regions'}->feature_type,
+	   -feature_set   => $self->{'feature_sets'}{'cisRED search regions'},
 	   -slice         => $slice_cache{$chromosome},
 	  );
 																
@@ -325,9 +324,7 @@ sub parse_and_load {
 	}
 
 	$extf_adaptor->store($search_feature);
-
-
-
+	$cnt++;
 
 	#Build Xref here
 	#need to validate gene_id here!!

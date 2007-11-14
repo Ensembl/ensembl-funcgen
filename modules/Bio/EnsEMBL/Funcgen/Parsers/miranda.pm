@@ -2,10 +2,23 @@ package Bio::EnsEMBL::Funcgen::Parsers::miranda;
 
 use strict;
 
-# Parse data from miRanda analyses; format:
+#contact svd@sanger.ac.uk stijn van dongen
+#From our download page
+#http://microrna.sanger.ac.uk/cgi-bin/targets/v5/download.pl
+
+#and then
+#ftp://ftp.sanger.ac.uk/pub/mirbase/targets/v5/arch.v5.gff.homo_sapiens.zip
+
+
+
 #  #<GROUP>	<SEQ>	<METHOD>	<FEATURE>	<CHR>	<START>	<END>	<STRAND>	<PHASE>	<SCORE>	
 #  Similarity	hsa-miR-23b	miRanda	miRNA_target	1	919788	919807	+	.	69	transcript id "ENST00000310998"
 #  Similarity	hsa-miR-23a	miRanda	miRNA_target	1	919787	919807	+	.	71	transcript id "ENST00000310998"
+
+##GROUP SEQ     METHOD  FEATURE CHR     START   END     STRAND  PHASE   SCORE   PVALUE_OG       TRANSCRIPT_ID   EXTERNAL_NAME
+#Similarity      mmu-miR-707     miRanda miRNA_target    2       120824620       120824640       +       .       15.3548 2.796540e-02    ENST00000295228 INHBB
+
+
 
 use Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser;
 use Bio::EnsEMBL::DBEntry;
@@ -66,26 +79,33 @@ sub parse_and_load{
 
   print ":: Parsing miRanda data from:\t$file\n";
 
-  my $analysis_adaptor = $db_adaptor->get_AnalysisAdaptor();
+  my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
+  my $ftype_adaptor    = $self->db->get_FeatureTypeAdaptor();
+  my $extf_adaptor     = $self->db->get_ExternalFeatureAdaptor;
+  my $dbentry_adaptor     = $self->db->get_DBEntryAdaptor; 
   my %features_by_name; # name -> feature_type
   my %slice_cache;
-  my $display_name_cache = $self->build_display_name_cache('gene');
   # this object is only used for projection
   my $dummy_analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'miRandaProjection');
   my $skipped = 0;
-
+  my $cnt = 0;
+  my $skipped_xref = 0;
+  
 
   open (FILE, "<$file") || die "Can't open $file";
 
   while (<FILE>) {
 	next if ($_ =~ /^\s*\#/ || $_ =~ /^\s*$/);
 
-    my ($group, $seq, $method, $feature, $chr, $start, $end, $str, $phase, $score, $pvalue, $type, $id_ignore, $id) = split;
-    my $strand = ($str =~ /\+/ ? 1 : -1);
-    $id =~ s/[\"\']//g;  # strip quotes
+	##GROUP SEQ     METHOD  FEATURE CHR     START   END     STRAND  PHASE   SCORE   PVALUE_OG       TRANSCRIPT_ID   EXTERNAL_NAME
+#Similarity      mmu-miR-707     miRanda miRNA_target    2       120824620       120824640       +       .       15.3548 2.796540e-02    ENST00000295228 INHBB
+
+    my ($group, $seq, $method, $feature, $chr, $start, $end, $strand, undef, undef, undef, $ens_id, $display_name) = split;
+    $strand = ($strand =~ /\+/) ? 1 : -1;
+    my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
 	$id .= ':'.$seq;
 
-	if(! exists $slice_cache{$chromosome}){
+	if(! exists $slice_cache{$chr}){
 	
 	  if($old_assembly){
 		$slice_cache{$chr} = $self->slice_adaptor->fetch_by_region('chromosome', 
@@ -105,21 +125,9 @@ sub parse_and_load{
 	  }
 	}
 
+	
 
-
-
-
-    # ----------------------------------------
-    # Feature name
-
-    # For miRNA_target, individual features don't have a unique name, so create
-    # a composite one. Also set influence.
-
-  
-    #$feature{INFLUENCE} = "negative";#???????????????????????????
-
-    # ----------------------------------------
-    # Factor
+	#Cache/store FeatureType
 
 	if(! exists $features_by_name{$seq}){
 	  $features_by_name{$seq} = $ftype_adaptor->fetch_by_name($seq);
@@ -129,7 +137,7 @@ sub parse_and_load{
 															 (
 															  -name  => $seq,
 															  -class => 'RNA',
-															  -description => 'miRanda RNA',
+															  -description => $method.' '.$feature,
 															 ))};
 	  }
 	}
@@ -137,11 +145,11 @@ sub parse_and_load{
    
 	my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
-	   -display_label => $seq,
+	   -display_label => $id,
 	   -start         => $start,
 	   -end           => $end,
-	   -strand        => $str,
-	   -feature_type  => $features_by_name{$seq}
+	   -strand        => $strand,
+	   -feature_type  => $features_by_name{$seq},
 	   -feature_set   => $self->{'feature_sets'}{'miRanda miRNA'},
 	   -slice         => $slice_cache{$chr},
 	  );
@@ -158,71 +166,56 @@ sub parse_and_load{
 	  }
     }
 
+	($feature) = @{$extf_adaptor->store($feature)};
+	$cnt++;
+
  
-    # ----------------------------------------
-    # Ensembl object
+	#Build xref
 
-    my ($ensembl_type) = $type =~ /(gene|transcript|translation)/;
-	
-    if (!$ensembl_type) {
-      print STDERR "Can't get ensembl type from $type, skipping\n";
+	#This should enever happen, as the search regions are defined by ens transcript
+	if (! $ens_id) {
+      warn("No xref available for miRNA $id\n");
+      $skipped_xref++;
       next;
     }
 
-    my $ensembl_id = $self->get_display_name_by_stable_id($id, $ensembl_type);
-    $ensembl_type = ucfirst(lc($ensembl_type));
 
-    if (!$ensembl_id) {
-      print STDERR "Can't get ensembl internal ID for $id, skipping\n";
-      next;
-    }
+	#use external_name first, else try and get it from the core DB
+	#should we just get it from the core DB anyway?
 
-    $feature{ENSEMBL_TYPE} = $ensembl_type;
-    $feature{ENSEMBL_ID} = $ensembl_id;
+	if(! defined $display_name){
+	  $display_name = $self->get_display_name_by_stable_id($ens_id, 'transcript');
+	}
 
-    # ----------------------------------------
-    # Feature internal ID
-    # note this is not the "id" referred to above
 
-    $feature{INTERNAL_ID} = $feature_internal_id++;
+	#Handle release/version in xref version as stable_id version?
 
-    # ----------------------------------------
-    # Evidence
+	my $dbentry = Bio::EnsEMBL::DBEntry->new(
+											 -dbname                 => 'core_transcript',
+											 #-release                => $self->db->dnadb->dbc->dbname,
+											 -status                 => 'KNOWNXREF',
+											 #-display_label_linkable => 1,
+											 #-db_display_name        => $self->db->dnadb->dbc->dbname,
+											 -db_display_name        => 'ensembl_core_transcript',
+											 -type                   => 'MISC',
+											 -primary_id             => $ens_id,
+											 -display_id             => $display_name,
+											 -info_type              => 'DEPENDENT',
+											 -info_text              => 'negative influence',#Is this always the same?
+											 -description            => 'miRanda miRNA transcript xref',
+											 #could have version here if we use the correct dnadb to build the cache
+											);
 
-    $feature{EVIDENCE} = "";
-
-    # ----------------------------------------
-    # Add to object to be returned
-
-    push @features, \%feature;
-
-    #print "Feature: ";
-    #foreach my $field (keys %feature) {
-    #  print $field . ": " . $feature{$field} . " ";
-    #}
-    #print "\n";
-
+	$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag  
   }
 
   close FILE;
 
-  $result{FEATURES} = \@features;
-  $result{FACTORS} = \@factors;
+  print ":: Stored $cnt miRanda miRNA ExternalFeatures\n";
+  print ":: Skipped $skipped miRanda miRNA imports\n";
+  print ":: Skipped an additional $skipped_xref DBEntry imports\n";
 
-  print "Parsed " . scalar(@{$result{FEATURES}}) . " features and " . scalar(@{$result{FACTORS}}) . " factors\n";
-
-  return \%result;
-
-}
-
-
-
-sub new {
-
-  my $self = {};
-  bless $self, "RegulatoryFeatureParser::miranda";
-  return $self;
-
+  return;
 }
 
 1;

@@ -143,11 +143,11 @@ sub set_feature_sets{
 		
 		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new
 								 (
-								  %{$self->{'feature_sets'}{$fset_name}{'analysis'}}
-								  #-logic_name    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'logic_name'},
-								  #-description   => $self->{'feature_sets'}{$fset_name}{'analysis'}{'description'},
-								  #-display_label => $self->{'feature_sets'}{$fset_name}{'analysis'}{'display_label'},
-								  #-diplayable    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'displayable'},
+								  #%{$self->{'feature_sets'}{$fset_name}{'analysis'}}
+								  -logic_name    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'logic_name'},
+								  -description   => $self->{'feature_sets'}{$fset_name}{'analysis'}{'description'},
+								  -display_label => $self->{'feature_sets'}{$fset_name}{'analysis'}{'display_label'},
+								  -diplayable    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'displayable'},
 								 ));
 		
 		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'});
@@ -175,53 +175,6 @@ sub set_feature_sets{
 
 
 
-# --------------------------------------------------------------------------------
-# Delete existing regulatory features etc
-
-#This needn't be done in line any more as we can just make the old set not displayable
-
-sub delete_existing {
-
-  my ($db_adaptor, $type) = @_;
-
-
-  throw('delete existing is deprecated');
-
-  my $t = lc($type);
-
-  print "Deleting existing features & related data for type $type\n";
-
-  # Delete any regulatory_feature_coding entries first
-  my $sth = $db_adaptor->dbc->prepare("DELETE rft FROM regulatory_feature rfeat, regulatory_factor_coding rft, analysis a WHERE rfeat.regulatory_factor_id=rft.regulatory_factor_id AND a.analysis_id=rfeat.analysis_id AND LOWER(a.logic_name)=?");
-  $sth->execute($t);
-
-  # now delete interlinked regulatory_feature, regulatory_factor and regulatory_feature_object entries
-  $sth = $db_adaptor->dbc->prepare("DELETE rfeat, rfact, rfo FROM regulatory_feature rfeat, regulatory_factor rfact, regulatory_feature_object rfo, analysis a WHERE rfeat.regulatory_feature_id=rfo.regulatory_feature_id AND rfeat.regulatory_factor_id=rfact.regulatory_factor_id AND rfeat.analysis_id=a.analysis_id AND LOWER(a.logic_name)=?");
-  $sth->execute($t);
-
-  # delete dangling regulatory_factors
-  $sth = $db_adaptor->dbc->prepare("DELETE rfact FROM regulatory_feature rfeat, regulatory_factor rfact, analysis a WHERE rfeat.regulatory_factor_id=rfact.regulatory_factor_id AND a.analysis_id=rfeat.analysis_id AND LOWER(a.logic_name)=?");
-  $sth->execute($t);
-
-  # and finally any dangling regulatory features
-  $sth = $db_adaptor->dbc->prepare("DELETE rfeat FROM regulatory_feature rfeat, analysis a WHERE a.analysis_id=rfeat.analysis_id AND LOWER(a.logic_name)=?");
-  $sth->execute($t);
-
-  # Delete search regions; they have a different analysis_id
-  if ($type eq "cisred") {
-    my $sr_type = $type . "_search";
-    die "Can't find analysis for $sr_type " unless validate_type($db_adaptor, $sr_type);
-    my $anal_sth = $db_adaptor->dbc->prepare("SELECT analysis_id FROM analysis WHERE LOWER(logic_name)=?");
-    $anal_sth->execute($sr_type);
-    my $anal = ($anal_sth->fetchrow_array())[0];
-    $sth = $db_adaptor->dbc->prepare("DELETE FROM regulatory_search_region WHERE analysis_id=?");
-    $sth->execute($anal);
-  }
-
-}
-
-# --------------------------------------------------------------------------------
-# Check that the type specified corresponds to an analysis
 
 sub validate_and_store_feature_types{
   my $self = shift;
@@ -289,141 +242,20 @@ sub validate_and_store_feature_types{
 
 
 sub get_display_name_by_stable_id{
-  my ($self, $stable_id) = @_;
+  my ($self, $stable_id, $type) = @_;
 
+
+
+  if($type !~ /(gene|transcript|translation)/){
+	warn "Cannot get display_name for stable_id $stable_id with type $type\n";
+	return;
+  }
+  
   if(! exists $self->{'display_name_cache'}->{$stable_id}){
-	($self->{'display_name_cache'}->{$stable_id}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT x.display_label FROM gene_stable_id gs, gene g, xref x where g.display_xref_id=x.xref_id and gs.gene_id=g.gene_id and gs.stable_id='${stable_id}'");
-	chomp $self->{'display_name_cache'}->{$stable_id};
-
+	($self->{'display_name_cache'}->{$stable_id}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT x.display_label FROM ${type}_stable_id s, $type t, xref x where t.display_xref_id=x.xref_id and s.${type}_id=t.gene_id and s.stable_id='${stable_id}'");
   }
 
   return $self->{'display_name_cache'}->{$stable_id};
-}
-
-
-
-
-
-sub build_display_name_cache {
-
-  my ($self, @types) = @_;
-
-  my %display_name_cache;
-
-  #validate types here?
-
-   foreach my $type (@types){#'gene', 'transcript', 'translation') { # Add exon here if required
-
-	#No display_xref for translations!!
-	throw('Cannot build cache for tranlsations, just use stable_id, check your implementatio') if $type eq 'translation';
-
-    print ":: Caching stable ID ->  display_name links for ${type}s\n";
-    my $count = 0;
-	my $sql;
-
-	#could do a fetchall_hashref here?
-	my $sth= $self->db->dnadb->dbc->prepare("SELECT s.stable_id, x.display_label FROM ${type}_stable_id s, ${type} t left join xref x on t.display_xref_id=x.xref_id and s.${type}_id=t.${type}_id");
-
-    $sth->execute();
-    my ($stable_id, $display_name);
-    $sth->bind_columns(\$stable_id, \$display_name);
-
-    while ($sth->fetch) {
-	  #removed type
-      $display_name_cache{$stable_id} = $display_name;
-      $count++ if $display_name;#will this be ! NULL?
-    }
-
-    print ":: Got $count $type stable ID -> display_name mappings\n";
-
-  }
-
-  return %display_name_cache;
-}
-
-# --------------------------------------------------------------------------------
-# Upload features and factors etc to database
-
-sub upload_features_and_factors {
-
-  my ($self, $objects) = @_;
-
-
-  throw("upload_features_and_factors is deprecated");
-
-  my $dbc = $self->db->dbc;
-
-
-
-  # we need to convert this to use the external_feature API
-  #this means we need to build external_features in the other modules and test for each RNA_feature_type/motif_feature_type?
-  #keep as feature_types for now, maybe next release?
-
-  my $feature_sth = $dbc->prepare("INSERT INTO regulatory_feature (regulatory_feature_id, name, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, analysis_id, regulatory_factor_id) VALUES(?,?,?,?,?,?,?,?)");
-  my $factor_sth = $dbc->prepare("INSERT INTO regulatory_factor (regulatory_factor_id, name, type) VALUES(?,?,?)");
-  my $feature_object_sth = $dbc->prepare("INSERT INTO regulatory_feature_object (regulatory_feature_id, ensembl_object_type, ensembl_object_id, influence, evidence) VALUES(?,?,?,?,?)");
-
-  my $sr_sth = $dbc->prepare("INSERT INTO regulatory_search_region (name, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, ensembl_object_type, ensembl_object_id, analysis_id ) VALUES(?,?,?,?,?,?,?,?)");
-
-  print "Uploading " . scalar(@{$objects->{FEATURES}}) . " features ...\n";
-
-  foreach my $feature (@{$objects->{FEATURES}}) {
-
-    $feature_sth->execute($feature->{INTERNAL_ID},
-			  $feature->{NAME},
-			  $feature->{SEQ_REGION_ID},
-			  $feature->{START},
-			  $feature->{END},
-			  $feature->{STRAND},
-			  $feature->{ANALYSIS_ID},
-			  $feature->{FACTOR_ID});
-
-    if ($feature->{ENSEMBL_TYPE} && $feature->{ENSEMBL_ID}) {
-      $feature_object_sth->execute($feature->{INTERNAL_ID},
-				   $feature->{ENSEMBL_TYPE},
-				   $feature->{ENSEMBL_ID},
-				   $feature->{INFLUENCE},
-				   $feature->{EVIDENCE});
-    }
-
-  }
-
-  if ($objects->{FACTORS}) {
-
-    print "Uploading " . scalar(@{$objects->{FACTORS}}) . " factors ...\n";
-
-    foreach my $factor (@{$objects->{FACTORS}}) {
-
-      $factor_sth->execute($factor->{INTERNAL_ID},
-			   $factor->{NAME},
-			   $factor->{TYPE});
-
-    }
-
-  }
-
-  if ($objects->{SEARCH_REGIONS}) {
-
-    print "Uploading " . scalar(@{$objects->{SEARCH_REGIONS}}) . " search regions ...\n";
-
-    foreach my $search_region (@{$objects->{SEARCH_REGIONS}}) {
-
-      $sr_sth->execute($search_region->{NAME},
-		       $search_region->{SEQ_REGION_ID},
-		       $search_region->{START},
-		       $search_region->{END},
-		       $search_region->{STRAND},
-		       $search_region->{ENSEMBL_OBJECT_TYPE},
-		       $search_region->{ENSEMBL_OBJECT_ID},
-		       $search_region->{ANALYSIS_ID});
-
-
-    }
-
-  }
-
-  print "Done\n";
-
 }
 
 # --------------------------------------------------------------------------------
