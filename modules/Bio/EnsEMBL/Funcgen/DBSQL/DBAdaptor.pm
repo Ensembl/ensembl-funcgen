@@ -444,30 +444,45 @@ sub dnadb {
 	  eval{ $dnadb->dbc()->db_handle(); };
 
 	  if ($@){
-		#alphabetical incrementing works in perl
-		#so we have to do the decrement of the gene build version manually
-		my $cnt = 0;
-		my @az = ('a'..'z');
-		my %az;
-		map $az{$_} = $cnt++, @az;
 
-		#we should really try the cuurent build on the old version first
+		my $count = 0;
 
+		while($@ && $count <2){
+		  $count++;
+	
+		  #alphabetical incrementing works in perl
+		  #so we have to do the decrement of the gene build version manually
+		  my $cnt = 0;
+		  my @az = ('a'..'z');
+		  my %az;
+		  map $az{$_} = $cnt++, @az;
+		  
+		  #we should really try the cuurent build on the old version first
+		  
+		  
+		  my(@dbn) = split/_/, $dbname;
+		  my @assembly = split//, pop @dbn;
+		  
+		  my $schema = pop @dbn;
+		  my $build = pop @assembly;
+		  
+		  #we should really do these alternately with a modus operator
 
-		my(@dbn) = split/_/, $dbname;
-		my @assembly = split//, pop @dbn;
+		  $schema-- if $count == 1;
 
-		my $schema = pop @dbn;
-		$schema--;
-		my $build = pop @assembly;
-		$build = $az[($az{$build} - 1)];
-
-		$dbname = join('_', @dbn);
-		$dbname = join('', ($dbname, '_', $schema, '_', @assembly, $build));
-	   
-		warn "Trying to guess last release with same assembly:\t$dbname\n";
-		
-		$dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+		  if($count != 1){
+			$build = $az[($az{$build} -1)];
+			#no build if z
+			$build = '' if $build eq 'z';
+		  }
+		  #else try same build first
+		 
+		  $dbname = join('_', @dbn);
+		  $dbname = join('', ($dbname, '_', $schema, '_', @assembly, $build));
+		  
+		  warn "Trying to guess last release with same assembly:\t$dbname\n";
+		  
+		  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 		  (						
 		   -host    => "ensembldb.ensembl.org",
 		   -user    => "anonymous",
@@ -475,10 +490,12 @@ sub dnadb {
 		   -dbname  => $dbname,
 		   -group   => 'core',
 		  );
+		  
+		  #do not trap this time as we're not going to guess anymore
+		  eval { $dnadb->dbc()->db_handle(); };
+		}
 
-		#do not trap this time as we're not going to guess anymore
-		eval { $dnadb->dbc()->db_handle(); };
-
+		#Will this be true, as we will have evaluated another while?
 		throw('Could not auto-determine the dnadb, please pass a -dnadb parameter') if $@;
 	  }
 	}
