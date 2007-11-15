@@ -279,7 +279,7 @@ sub add_ResultSet {
   my ($self, $rset, $displayable) = @_;
 	
 
-  deprecate('add_ResultSet is deprecated, Please use add_SupportingSets');
+  deprecate('add_ResultSet is deprecated, Please use add_supporting_sets()');
 
   		
   return $self->add_supporting_sets([$rset]);
