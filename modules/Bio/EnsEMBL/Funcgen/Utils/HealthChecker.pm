@@ -83,39 +83,40 @@ use vars qw(@ISA);
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-  my $self = {};
-
-  bless $self, $class;
-
+  my $self = $class->SUPER::new(@_);
+    
   #validate and set type, analysis and feature_set here
   my ($db, $builds) = rearrange(['DB', 'BUILDS'], @_);
   
-  throw('You must define a type of external_feature to import') if(! defined $type);
-
+  
   if (! ($db && ref($db) &&
 		 $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
 	throw('You must provide a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
   }
-
+  
   #test connection
   $db->dbc->db_handle;
   
   $self->{'db'} = $db;
-  $self->{'builds'} = (@$builds) ? @$builds : ('DEFAULT');
+  $self->{'mysql_connect_string'} = 'mysql -h'.$db->dbc->host.' -u'.$db->dbc->username.' -p'
+	.$db->dbc->password.' '.$db->dbc->dbname.' -P'.$db->dbc->port;
+  $self->{'dbname'} = $db->dbc->dbname;
+
+  $self->{'builds'} = (@$builds) ? $builds : [('DEFAULT')];
   
   return $self;
 }
 
 sub db{
   my ($self) = @_;
-
+  
   return $self->{'db'};
 }
 
 
 #wrapper method
 
-=hea2
+=head2
 
   Arg[0]     : boolean - 
   Arg[1]     : boolean -
@@ -131,23 +132,24 @@ sub db{
 
 sub update_db_for_release{
   my ($self, @args) = @_;
-
-  if(@args)
-
+  
+  if(@args){
+  }
+	
   #do seq_region_update to validate dnadb first
   #hence avoiding redoing longer methods
-  $self->validate_new_seq_regions($force_srs);
-  $self->
+  $self->validate_new_seq_regions();#$force_srs);
+  $self->update_meta_schema_version;
+  $self->update_meta_coord;
   
-
-  $self->log(' :: Finished updating '.$self->db->dbhost.':'.$self->db->dbc->dbname.' for release');
+  $self->log(' :: Finished updating '.$self->{'dbname'}.' for release');
 }
 
 sub validate_new_seq_regions{
   my ($self, $force) = @_;
-
   
-
+  
+  
   #do we need to add the none default levels here?
   #or are we only bothered about those which constitute the toplevel?
 
@@ -159,9 +161,9 @@ sub validate_new_seq_regions{
   #Validate the efgdb and dnadb schema version are the same first
   
   if(! $force){
-	my $efgdb_sm = join('_', @{$self->get_schema_and_build($self->db->dbc->dbname)});
-	my $dnadb_sm = join('_', @{$self->get_schema_and_build($self->db->dnadb->dbc->dbname)});
-						
+	my $efgdb_sm = join('_', @{$self->get_schema_and_build($self->{'dbname'})});
+	my $dnadb_sm = join('_', @{$self->get_schema_and_build($self->{'dbname'})});
+	
 	if($efgdb_sm ne $dnadb_sm){
 	  $self->log("WARNING Skipped validate_new_seq_regions as schema_versions are mismatched:\t".
 				 "efgdb $efgdb_sm\tdnadb $dnadb_sm");
@@ -169,12 +171,12 @@ sub validate_new_seq_regions{
 	}
   }
   
-  my $pf_adaptor = $efg_db->get_ProbeFeatureAdaptor();
-  my $slice_adaptor = $efg_db->get_SliceAdaptor();
+  my $pf_adaptor = $self->db->get_ProbeFeatureAdaptor();
+  my $slice_adaptor = $self->db->get_SliceAdaptor();
   
   $self->log(" :: Validating new coord_systems/seq_regions :: ::");
-
-  foreach my $build(@builds){
+  
+  foreach my $build(@{$self->{'builds'}}){
 	
 	$self->log("Importing seq_region/coord_system info for build:\t".$build);
 	
@@ -195,18 +197,19 @@ sub validate_new_seq_regions{
 	  my $pseudo_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
 		(
 		 -slice => $slice,
-		 -start => $slice->start(),
-		 -end   => $slice->end(),
+		 -start => 0,
+		 -end   => 0,
 		 -strand => 0,
 		);
 	  
 	  $pf_adaptor->_pre_store($pseudo_feature);
+	  #This will create a meta_coord entry of max_length 1 for features which have an absent meta_coord entry
 	  
 	}
   }
 
   $self->log("Finished validating seq_regions\n");
-
+  
   return;
 }
 
@@ -214,11 +217,11 @@ sub validate_new_seq_regions{
 
 sub update_meta_schema_version{
   my ($self) = @_;
-
-  my $schema_version = $self->get_schema_and_build($self->db->dbname)->[0];
-
+  
+  my $schema_version = $self->get_schema_and_build($self->{'dbname'})->[0];
+  
   my $sql = "UPDATE meta set meta_value='.$schema_version.' where meta_key='schema_version'";
-  $efg_db->dbc->db_handle->do($sql);
+  $self->db->dbc->db_handle->do($sql);
 
   $self->log(" :: Updated meta.schema_version to $schema_version :: ::\n");
 
@@ -227,13 +230,13 @@ sub update_meta_schema_version{
 
 sub update_meta_coord{
   my ($self, @table_names) = @_;
-
+  
   my $sql = 'UPDATE meta set meta_value=48 where meta_key="schema_version"';
-  $efg_db->dbc->db_handle->do($sql);
-
+  $self->db->dbc->db_handle->do($sql);
+  
   #set default table_name
   if(! @table_names || scalar(@table_names) == 0){
-
+	
 	@table_names = qw(
 					  regulatory_feature
 					  probe_feature
@@ -243,17 +246,22 @@ sub update_meta_coord{
   }
 
   #backup meta coord
-  if(system("mysql -h$host -P$port -u$user -p$pass -N "
-			. "-e 'SELECT * FROM meta_coord' ${species}_funcgen_${schema_build}"
-			. "> ${species}_funcgen_${schema_build}.meta_coord.backup"
+  #if(system("mysql -h$host -P$port -u$user -p$pass -N "
+#			. "-e 'SELECT * FROM meta_coord' ${species}_funcgen_${schema_build}"
+#			. "> ${species}_funcgen_${schema_build}.meta_coord.backup"
+#		   ) != 0 ){
+
+  if(system($self->{'mysql_connect_string'}." -e 'SELECT * FROM meta_coord'"
+			. '> '.$self->{'dbname'}.'meta_coord.backup'
 		   ) != 0 ){
+
 	throw("Can't dump the original meta_coord for back up");#will this get copied to log?
   } 
   else {
 	$self->log(" :: Updating meta_coord table. Original meta_coord table backed up in "
-			   . "${species}_funcgen_${schema_build}.meta_coord.backup :: ::\n");
+			   . $self->{'dbname'}.".meta_coord.backup :: ::\n");
   }
-
+  
 
   #Update each max_length for table_name and coord_system
   foreach my $table_name(@table_names){
@@ -263,21 +271,21 @@ sub update_meta_coord{
 	
 	#can we test for emtpy array here? Then skip delete.
 	
-	my @info = @{$efg_db->dbc->db_handle->selectall_arrayref($sql1)};
+	my @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql1)};
 	
 	map {print join("\t", @{$_})."\n"} @info;
 	
 	# Clean old entries
 	$self->log("Deleting old meta_coord entries");
 	my $sql = "DELETE FROM meta_coord WHERE table_name ='$table_name'";
-	$efg_db->dbc->db_handle->do($sql);
+	$self->db->dbc->db_handle->do($sql);
 	
 	# Generate new max_lengths
 	$self->log("Generating new max_lengths");
 	
 	#Is this query running for each redundant cs_id?
 	#would it be more efficient to retrieve the NR cs_ids first and loop the query for each cs_id?
-
+	
 	$sql =
 	  "INSERT INTO meta_coord "
 		. "SELECT '$table_name', s.coord_system_id, "
@@ -286,17 +294,17 @@ sub update_meta_coord{
 			  . "WHERE t.seq_region_id = s.seq_region_id "
 				. "GROUP BY s.coord_system_id";
   
-	$efg_db->dbc->db_handle->do($sql);
-
+	$self->db->dbc->db_handle->do($sql);
+	
 	$self->log("New max_lengths for $table_name are:");
   
-	@info = @{$efg_db->dbc->db_handle->selectall_arrayref($sql1)};
-
+	@info = @{$self->db->dbc->db_handle->selectall_arrayref($sql1)};
+	
 	map {$self->log(join("\t", @{$_})."\n")} @info;
   }  
-
+  
   $self->log("Finished updating meta_coord max_lengths\n");
-
+  
   return;
 }
 
@@ -306,8 +314,8 @@ sub check_displayable_sets{
   my $self = shift;
   
   $self->log(" :: Checking DataSets :: ::\n");
-
-  my @dsets = @{$efg_db->get_DataSetAdaptor->fetch_all()};
+  
+  my @dsets = @{$self->db->get_DataSetAdaptor->fetch_all()};
   
   
   foreach my $dset(@dsets){

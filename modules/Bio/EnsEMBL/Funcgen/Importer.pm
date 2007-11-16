@@ -41,7 +41,7 @@ use Bio::EnsEMBL::Funcgen::Parsers::ArrayDesign;
 use Bio::EnsEMBL::Funcgen::Parsers::Sanger;
 use Bio::EnsEMBL::Funcgen::Parsers::Nimblegen;
 use Bio::EnsEMBL::Funcgen::Parsers::Solexa;
-use Bio::EnsEMBL::Funcgen::Helper;
+use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;

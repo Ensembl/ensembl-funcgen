@@ -1,7 +1,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::Helper
+Bio::EnsEMBL::Funcgen::Utils::Helper
   
 =head1 SYNOPSIS
 
@@ -29,31 +29,6 @@ Bio::EnsEMBL::Funcgen::Helper
 
 =over 8
 
-=item B<-instance|i>
-
-Mandatory:  Instance name for the data set, this is the directory where the native data files are located
-
-=item B<-format|f>
-
-Mandatory:  The format of the data files e.g. nimblegen
-
-=over 8
-
-=item B<-group|g>
-
-Mandatory:  The name of the experimental group
-
-=over 8
-
-=item B<-data_root>
-
-The root data dir containing native data and pipeline data, default = $ENV{'EFG_DATA'}
-
-=over 8
-
-=item B<-fasta>
-
-Flag to turn on dumping of all probe_features in fasta format for the remapping pipeline
 
 =item B<-debug>
 
@@ -93,7 +68,7 @@ Nathan Johnson, njohnson@ebi.ac.uk
 
 ################################################################################
 
-package Bio::EnsEMBL::Funcgen::Helper;
+package Bio::EnsEMBL::Funcgen::Utils::Helper;
 #put in Utils?
 use Bio::Root::Root;
 use Data::Dumper;
@@ -468,11 +443,7 @@ sub run_system_cmd{
 sub get_data{
   my ($self, $data_type, $data_name) = @_;
 
-  #This method is just to provide standard checking for specific get_data methods
-	
-
-  
-
+  #This method is just to provide standard checking for specific get_data/config methods
 
   if(defined $data_name){
     throw("Defs data name $data_name for type '$data_type' does not exist\n") if (! exists $self->{"${data_type}"}{$data_name});
@@ -484,14 +455,14 @@ sub get_data{
 }
 
 
-sub Timer{
-	my ($self) = shift;
+#sub Timer{
+#	my ($self) = shift;
 
-	$self->{'_timer'} = new Devel::Timer()  if(! defined $self->{'_timer'});
+#	$self->{'_timer'} = new Devel::Timer()  if(! defined $self->{'_timer'});
 
-	return $self->{'_timer'};
+#	return $self->{'_timer'};
 	
-}
+#}
 
 
 sub set_header_hash{
@@ -532,7 +503,11 @@ sub backup_file{
 
 }
 
-
+sub get_schema_and_build{
+  my ($self, $dbname) = @_;
+  my @dbname = split/_/, $dbname;
+  return [$dbname[($#dbname -1)], $dbname[($#dbname -1)]];
+}
 
 1;
 

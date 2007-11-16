@@ -1,12 +1,21 @@
 # Load data from a file of regulatory regions into a database
 
+#To do
+#remove get_all_regulatory_features from Gene.pm
+#do we need some different feature tables for these high volume features?
+#how would we trace this feature_type association...in feature_set, feature_type column?
+#would be feature_type for most, maybe rna_feature and/or motif_feature
+#store influence and evidence in a functional xref table?
+#set analysis and ftype adaptor internally?
+#implement version in xref to denote version of stable id and hence implicitly release of core DB
+#Or implement release in external_db?
+#can we use linkage annotation in object_xref?
+
 use strict;
 
-use DBI;
-#use RegulatoryFeatureParser::BaseParser;
-use RegulatoryFeatureParser::vista;
-use RegulatoryFeatureParser::cisred;
-#use RegulatoryFeatureParser::miranda;
+use Bio::EnsEMBL::Funcgen::Parsers::vista;
+use Bio::EnsEMBL::Funcgen::Parsers::cisred;
+use Bio::EnsEMBL::Funcgen::Parsers::miranda;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Getopt::Long;
 
@@ -43,8 +52,6 @@ my $db_adaptor = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
 #test db connections
 $db_adaptor->dbc->db_handle;
 $db_adaptor->dnadb->dbc->db_handle;
-
-
 $type = lc($type);
 #we need to validate module in a different way
 # validate type
@@ -52,12 +59,12 @@ $type = lc($type);
 #Need to eval the use? No use is performed before anything?
 
 
-eval "require RegulatoryFeatureParser::$type";
+eval "require Bio::EnsEMBL::Funcgen::Parsers::$type";
 if($@) {
   die("Did not find a parser module corresponding to $type");
 }
 
-my $parser = "RegulatoryFeatureParser::$type"->new(
+my $parser = "Bio::EnsEMBL::Funcgen::Parsers::$type"->new(
 												   -db      => $db_adaptor,
 												   -clobber => $clobber,
 												   -archive => $archive,

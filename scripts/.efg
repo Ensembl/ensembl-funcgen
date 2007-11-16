@@ -1,43 +1,43 @@
 #!/usr/local/bin/bash
 
-echo "Setting up the Ensembl Function Genomics environment..." #and cd'ing to $EFG_SRC" 
-
+echo "Setting up the Ensembl Function Genomics environment..." 
 #add alias efg='. ~/src/ensembl-efg/.efg' to your .bashrc
 
-# ENV VARS
-export SRC=~/src
-export EFG_SRC=$SRC/ensembl-functgenomics
-export EFG_SQL=$EFG_SRC/sql
-export EFG_DATA=/lustre/work1/ensembl/nj1/efg
-#should make data dirs here
+### ENV VARS ###
 
-
-
-
-export PATH=$PATH:$EFG_SRC/scripts
-export PERL5LIB=$EFG_SRC/modules:$PERL5LIB
+#Prompt
 export PS1='efg@$PS1HOST>'
 
+#Code/Data Directories
+export SRC=~/src                                #Root source code directory. EDIT
+export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
+export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
+export EFG_DATA=/lustre/work1/ensembl/nj1/efg   #Data directory. EDIT
+export PATH=$PATH:$EFG_SRC/scripts              #eFG scripts directory
+export PERL5LIB=$EFG_SRC/modules:$PERL5LIB      #Update PERL5LIB. EDIT add ensembl(core) etc. if required
 
 #Your efg DB connection params
-export WRITE_USER="ensadmin"
-export READ_USER="ensro"
-export HOST='ens-genomics1'
-export PORT=3306
+export WRITE_USER="ensadmin"                    #EDIT
+export READ_USER="ensro"                        #EDIT
+export HOST='ens-genomics1'                     #EDIT
+export PORT=3306                                #EDIT
+export MYSQL_ARGS="-h${HOST} -P${PORT}"         
 #pass always supplied on cmd line
 
 #Your ensembl core DB connection params, read only
-export CORE_USER='ensro'
-export CORE_HOST='ens-staging'
-export CORE_PORT=3306
+export CORE_USER='ensro'                        #EDIT if required e.g. anonymous
+export CORE_HOST='ens-staging'                  #EDIT if required e.g. ensembldb.ensembl.org
+export CORE_PORT=3306                           #EDIT if required
+#could do with a quick method to change these between ens-livemirror, ensembldb/ensdb-archive?
 
 #Default norm and analysis methods
-export NORM_METHOD='VSN_GLOG'
-export PEAK_METHOD='Nessie'
+
+export NORM_METHOD='VSN_GLOG'                   #EDIT if required e.g. T.Biweight, Loess
+export PEAK_METHOD='Nessie'                     #EDIT if required e.g. TileMap, MPeak, Chipotle
 
 
 #could do with a quick method to change these between ens-livemirror, ensembldb/ensdb-archive?
-
+#R config
 export MYSQL_ARGS="-h${HOST} -P${PORT}"
 export R_LIBS=${R_LIBS:=$SRC/R-modules}
 export R_PATH=/software/bin/R
@@ -46,15 +46,14 @@ export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q 
 
 
 #need to check/define R_LIBS here
-
 #could add PERL5LIB here too, this could be extended to include all config for shipping to users?  in bashrc for now
-
-
 #should check for input and output dirs here and create with a question
-#would need to sed file to set permanently
+#would need to sed file to set permanently?
 
 
-# ALIASES single quotes enable dynamic updating of commands
+### ALIASES ###
+#single quotes enable dynamic updating of commands
+
 alias efg='cd $EFG_SRC'
 alias efgd='cd $EFG_DATA'
 alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
@@ -65,6 +64,9 @@ alias mysqlro='mysql $MYSQL_ARGS -u${READ_USER}'
 #check for vars then suggest defaults or take stdin?
 
 echo "Welcome to eFG!"
+
+
+### FUNCTIONS ###
 
 CreateDB(){
 

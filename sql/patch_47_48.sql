@@ -11,15 +11,14 @@ exit;
 update meta set meta_value=48 where meta_key='schema_version';
 
 
-
+--Ensembl only data patch human
 --remove duplicate probe_features from stunnenburg set?
-delete from probe_feature where analysis_id=5;
-delete from analysis where analysis_id=5;
-
+--delete from probe_feature where analysis_id=5;
+--delete from analysis where analysis_id=5;
+--remove spurious reg feat records
+--delete from regulatory_feature where regulatory_feature_id=779946;
 --patch ctcf result_set as displayable
-
-
-insert into status values(18,'result_set' ,2);
+--insert into status values(18,'result_set' ,2);
 
 
 --alter status name
