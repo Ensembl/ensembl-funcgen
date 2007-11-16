@@ -15,17 +15,6 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   my $self = {};
-
-  #my $self = {(
-#			  feature_sets => {(
-#								vista   => {('VISTA enhancer set' => undef)},
-#								cisred  => {(
-#											 'cisRED search regions' => undef,
-#											 'cisRED group motifs'   => undef,
-#											)},
-#								miranda => {('miRanda miRNA' => undef)},
-#							   )},
-#			  )};
   bless $self, $class;
 
   #validate and set type, analysis and feature_set here
@@ -53,16 +42,7 @@ sub new {
 }
 
 sub db{
-  my ($self, $db) = @_;
-
-  if($db){
-
-	if(! $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor')){
-	  throw('You must prove a Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
-	}
-	
-	$self->{'db'} = $db;
-  }
+  my ($self) = @_;
 
   return $self->{'db'};
 }
@@ -87,33 +67,34 @@ sub set_feature_sets{
 	#we don't need data sets for external_sets!
 
 	if(defined $fset){
+	  print ":: Found previous FeatureSet $fset_name\n";
 
 	  if($self->{'clobber'}){
-		#Need to clobber any DBEntries first!!!
 
-		if($self->{'type'} eq 'cisred'){
-		  my @ext_feat_ids = 	map @{$_}, @{$self->db->dbc->db_handle->selectall_arrayref('select external_feature_id from external_feature where feature_set_id='.$fset->dbID)};
+		#Need to clobber any DBEntries first!!!
+		if(exists $self->{'feature_sets'}{$fset_name}{'xrefs'} &&
+		   $self->{'feature_sets'}{$fset_name}{'xrefs'}){
+
+
+		  my @ext_feat_ids =  map @{$_}, @{$self->db->dbc->db_handle->selectall_arrayref('select external_feature_id from external_feature where feature_set_id='.$fset->dbID)};
 		  
 		  if(@ext_feat_ids){
-
+			
 			my ($core_ext_dbid) = $self->db->dbc->db_handle->selectrow_array('select external_db_id from external_db where db_name="core"');
-
+			
 			if($core_ext_dbid){
 			  #double table delete?
 			  my $sql = "delete x, ox from object_xref ox, xref x where ox.ensembl_object_type='ExternalFeature' and x.external_db_id=$core_ext_dbid and ox.xref_id=x.xref_id and ensembl_id in(".join(', ', @ext_feat_ids).')';
 			  print ":: Clobbering xrefs for $fset_name\n";
-
-			  #warn "sql is $sql";
-
+			  
 			  $self->db->dbc->do($sql);
 			}
 		  }
-	
-		  print ":: Clobbering old features for external feature_set:\t$fset_name\n";
-		  my $sql = 'delete from external_feature where feature_set_id='.$fset->dbID;
-		  $self->db->dbc->do($sql);
 		}
-
+		
+		print ":: Clobbering old features for external feature_set:\t$fset_name\n";
+		my $sql = 'delete from external_feature where feature_set_id='.$fset->dbID;
+		$self->db->dbc->do($sql);
 	  }
 	  elsif($self->{'archive'}){
 		my $archive_fset =  $fset_adaptor->fetch_by_name($fset_name."_v".$self->{'archive'});
@@ -264,16 +245,6 @@ sub get_display_name_by_stable_id{
 # Project a feature from one slice to another
 sub project_feature {
   my ($self, $feat, $new_assembly) = @_;
-
-  # just use a SimpleFeature for convenience
-  #my $feat = Bio::EnsEMBL::SimpleFeature->new
-  #  (-start    => $start,
-  #   -end      => $end,
-  #   -strand   => $strand,
-  #   -slice    => $slice,
-  #   -analysis => $analysis,
-  #   -display_label => $label,
-  #   -score   => 0);
 
   # project feature to new assembly
   my $feat_slice = $feat->feature_Slice;

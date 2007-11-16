@@ -2260,40 +2260,19 @@ sub validate_mage(){
 
 =cut
 
-
 sub store_set_probes_features{
-  #my ($self, $ac_id, $ops, $probes, $features) = @_;
-
   my ($self, $ac_id, $pf_hash, $ops) = @_;
   
-
-  #just call these directly rather than setting each time?
-  #my $op_a = $self->db->get_ProbeAdaptor();
-  #my $opf_a = $self->db->get_ProbeFeatureAdaptor();
-
-
-  #if(scalar(@$probes) != scalar(@$features)){
-  #  my $t = scalar(@$probes);
-  #  my $f = scalar(@$features);
-  #  throw("Does not accomodate multiple features($f) per probe $t");
-  #}
-
-  #Maybe do some validation here against all probes for probeset and ac_id? 
-
+  ### Deal with ProbeSets
   if ($ops) {
     $ops->size(scalar(keys %$pf_hash));
     ($ops) = $self->db->get_ProbeSetAdaptor->store($ops);
   }
 
-
-
   #If we're going to validate fully, we need to check for probes in this probeset on this array chip
   #Update size if we have any new probes
   #Overkill? Only do on recover? Do not read if array chip is IMPORTED 
-
   #This does not make any attempt to validate probes/set vs previously stored data
-
-
    
   for my $probe_id (keys %$pf_hash) {
     
@@ -2303,9 +2282,7 @@ sub store_set_probes_features{
     $probe->probeset($ops) if $ops;
     ($probe) = @{$self->db->get_ProbeAdaptor->store($probe)};
 
-      
-
-    #Can't use get_all_Arrays here as we can't guarantee this will only ever be the array we've generated
+	#Can't use get_all_Arrays here as we can't guarantee this will only ever be the array we've generated
     #Might dynamically load array if non-present
     #This is allowing multiple dbIDs per probe???  Is this wrong?
     #$self->cache_probe_info($probe->get_probename(), $probe->dbID());###########Remove as we're now importing all then resolving
@@ -2320,11 +2297,22 @@ sub store_set_probes_features{
   undef $ops;					#Will this persist in the caller?
   undef %{$pf_hash};
 
-  # undef @$probes;
-  #  undef @$features,
-
   return;
 }
+
+
+=head2 cache_slice
+
+  Arg [0]    : string - region_name e.g. X
+  Arg [1]    : optional - coordinate system name e.g. supercontig, defaults to chromosome
+  Example    : my $slice = $self->cache_slice(12);
+  Description: Caches or retrieves from cache a given slice
+  Returntype : Bio::EnsEMBL::Slice
+  Exceptions : throws f no region name specified
+  Caller     : self
+  Status     : At risk
+
+=cut
 
 sub cache_slice{
   my ($self, $region_name, $cs_name) = @_;
@@ -2365,13 +2353,10 @@ sub cache_slice{
 
 =cut
 
-
 sub cache_probe_info{
   my ($self, $pname, $pid, $x, $y) = @_;
 
   throw('Deprecated, too memory expensive, now resolving DB duplicates and using Tied File cache');
-
-
   throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
 
 
@@ -2384,10 +2369,9 @@ sub cache_probe_info{
   
   $self->{'_probe_cache'}->{$pname} = (defined $x && defined $y) ? [$pid, $x, $y] : [$pid];
   
-
- 
   return;
 }
+
 
 =head2 get_probe_id_by_name_Array
 
@@ -2401,7 +2385,6 @@ sub cache_probe_info{
 
 =cut
 
-
 sub get_probe_id_by_name_Array{
   my ($self, $name, $array) = @_;
   
@@ -2414,24 +2397,7 @@ sub get_probe_id_by_name_Array{
 
 
   my ($pid, $line);
-  #my $start = $self->{'_probe_cache'}{$array->name()}{'current_index'};
-  #my $end = $self->{'_probe_cache'}{$array->name()}{'size'};
-
-  #we could chop the array based on a sort off the name and the element
-  #or should we index this  properly?
-  #we could throw the cache and just use the index? 
-
-  #for $i($start..$end){
-	#$self->log("$name\twith $i entry ".$self->{'_probe_cache'}{$array->name()}{'entries'}->[$i]);
-
-#	if($self->{'_probe_cache'}{$array->name()}{'entries'}->[$i] =~ /^${name}\t/){
-#	  (undef, $pid) = split/\t/o, $self->{'_probe_cache'}{$array->name()}{'entries'}->[$i];
-#	  $self->{'_probe_cache'}{$array->name()}{'current_index'} = $i;
-#	  last;
-#	}
-#  }
-  
-
+ 
   #check current line
   if($line = $self->{'_probe_cache'}{$array->name()}{'current_line'}){
 	if($line =~ /^${name}\t/){
@@ -2480,6 +2446,7 @@ sub get_probe_id_by_name_Array{
 #which then renames the file and resets the handle
 #can we clean this up and protect/hide this functionality?
 #can we check the cache file name in the get methods and throw if it contains unresolved?
+#make this private?
 
 sub get_probe_cache_by_Array{
   my ($self, $array, $from_db) = @_;
@@ -2495,6 +2462,7 @@ sub get_probe_cache_by_Array{
   my $set = 0;
   my $cache_file = $self->get_dir('cache').'/'.$array->name().'.probe_cache';
 
+  ### Generate and resolve fresh cache from DB
   if($from_db){
 
 	$cache_file .= '.unresolved';
@@ -2518,32 +2486,20 @@ sub get_probe_cache_by_Array{
 	run_system_cmd($cmd);
 	
   }
-  #elsif(exists $self->{'_probe_cache'}{$array->name()}){
-  #	throw('You are trying to overwrite an array cache, you must supply the from_db arg to overwrite');
-  #}
  
-	
+  ### Set cache
   if(-f $cache_file){ 
 	$self->log('MD5 check here?',1);
 	$self->{'_probe_cache'}{$array->name()}{'current_line'} = undef;
 	$self->{'_probe_cache'}{$array->name()}{'handle'} = open_file($cache_file);
-	#tie @{$self->{'_probe_cache'}{$array->name()}{'entries'}}, 'Tie::File', $cache_file, memory => 500000
-	#  or throw('Failed to tie probe_cache file\n$!');
 
 	#can we do a select count instead? and do this instead of the MD5?
-	#or can we cycle through array counting
-	#$# seems to look at the whole array and inflate the cache
-	#can we resitrict the read cache for this operation? 
 	#$cmd = "wc -l $cache_file";
 	#my $size = `$cmd`;
 
-	#throw("$cmd failed with exit code $?\n$@") if $?;
-	#$size--;
-
-	#This was eating nearly a GB when we id $# on the tied file
-	#$self->{'_probe_cache'}{$array->name()}{'size'} = $size;
 	$set = 1;
-  }else{
+  }
+  else{
 	warn 'Failed to get probe cache for array:'.$array->name();
   }
  
@@ -2551,50 +2507,6 @@ sub get_probe_cache_by_Array{
 }
 
 
-=head2 get_probe_x_y_by_name_Array
-
-  Arg [1]    : mandatory - probe name
-  Arg [2]    : mandatory - array
-  Example    : ($x, $y) = @{$self->get_probe_x_y_by_name($pname)};
-  Description: Getter for probe x y cache values
-  Returntype : LISTREF
-  Exceptions : none
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-
-sub get_probe_x_y_by_name_Array{
-  my ($self, $name, $array) = @_;
-  
-
-  throw('Deprecated, X Y data is now required in the result file for import');
-
-  #my @xy;
-
-  #This does not test for x & y as we don't want to slow it down for every single probe call
-  #slightly odd behaviour have it still build the x/yless cache from the DB even tho it will return undef
-  #This is because we don't want it ti be testable for rebuilding the x y cache
-
-
-  #This is only a hacky solution to result data with no XY info
-  #All result data must have XY info associated to accomodate on plate duplicates
-
-  #if (! defined $self->{'_probe_cache'}{$array->name()) {
-#	throw('Cannot generate probe_cache with X Y data from DB');
-#  }
-
-#  if (exists  $self->{'_probe_cache'}->{$name} &&
-#	  scalar(@{$self->{'_probe_cache'}->{$name}}) == 3) {
-#	@xy = ($self->{'_probe_cache'}->{$name}->[1], $self->{'_probe_cache'}->{$name}->[2]);
-#  }
-
-#  return \@xy;
-}
-
-
-#the generic read_methods should go in here too?
 #should reorganise these emthods to split reading the array data, and the actual data
 #currently:
 #meta reads array and chip data
@@ -2620,6 +2532,7 @@ sub read_data{
   return;
 }
 
+
 =head2 design_type
   
   Example    : $self->design_type("binding_site_identification")
@@ -2632,15 +2545,10 @@ sub read_data{
 
 =cut
 
-
-
 sub design_type{
   my $self = shift;
   return $self->{'design_type'};
 }
-
-
-
 
 
 =head2 get_chr_seq_region_id

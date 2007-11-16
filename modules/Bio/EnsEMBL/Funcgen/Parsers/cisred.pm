@@ -75,6 +75,7 @@ sub new {
 														-display_label => 'cisRED',
 														-displayable   => 1,
 													   },
+													   xrefs => 1,
 													  },
 						   'cisRED group motifs' => {
 													 feature_type      => \$self->{'feature_types'}{'cisRED Motif'},
@@ -85,6 +86,7 @@ sub new {
 													  -display_label => 'cisRED',
 													  -displayable   => 1,
 													 },
+													 xrefs => 1,
 													},
 						  };
  
@@ -151,13 +153,14 @@ sub parse_and_load {
 	  }else{
 		$slice_cache{$chromosome} = $self->slice_adaptor->fetch_by_region('chromosome', $chromosome);
 	  }
-
-	  if(! defined 	$slice_cache{$chromosome}){
-		warn "Can't get slice $chromosome for motif $motif_name\n";
-		$skipped++;
-		next;
-	  }
 	}
+
+	if(! defined  $slice_cache{$chromosome}){
+	  warn "Can't get slice $chromosome for motif $motif_name\n";
+	  $skipped++;
+	  next;
+	}
+	
 
 	#get feature_type first
 
@@ -290,12 +293,13 @@ sub parse_and_load {
 	  }else{
 		$slice_cache{$chromosome} = $self->slice_adaptor->fetch_by_region('chromosome', $chromosome);
 	  }
-
-	  if(! defined 	$slice_cache{$chromosome}){
-		warn "Can't get slice $chromosome for for search region $name\n";
-		next;
-	  }
 	}
+
+	if(! defined $slice_cache{$chromosome}){
+	  warn "Can't get slice $chromosome for search region $name\n";
+	  next;
+	}
+	
 
 
 	

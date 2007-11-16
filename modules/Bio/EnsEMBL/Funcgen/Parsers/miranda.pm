@@ -59,6 +59,7 @@ sub new {
 												-display_label => 'miRanda',
 												-displayable   => 1,
 											   },
+											   xrefs => 1,
 											  },						   
 						  };
 
@@ -102,8 +103,8 @@ sub parse_and_load{
 
     my ($group, $seq, $method, $feature, $chr, $start, $end, $strand, undef, undef, undef, $ens_id, $display_name) = split;
     $strand = ($strand =~ /\+/) ? 1 : -1;
-    my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
-	$id .= ':'.$seq;
+    #my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
+	my $id = $ens_id.':'.$seq;
 
 	if(! exists $slice_cache{$chr}){
 	

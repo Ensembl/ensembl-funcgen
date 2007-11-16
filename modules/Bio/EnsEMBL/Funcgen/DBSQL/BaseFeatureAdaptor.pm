@@ -256,20 +256,27 @@ sub build_seq_region_cache{
   my $dnadb = (defined $slice) ? $slice->adaptor->db() : $self->db->dnadb();
   my $schema_build = $self->db->_get_schema_build($dnadb);
   my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where schema_build="'.$schema_build.'"';
-
   
   #we need to make this a schema_build based cache to enable multi schema/assembly queries without resetting the dnadb?
   #what will be the point of the dnadb in this case?
   #we can always transiently use the slice DB as the dnadb
 
+
+  #mmm do we really need this? we implementing this to get old assembly seq_region_ids
+  #but this should already be in the seq_region table for this DB, but are only loading the default assembly?
+  #If we retrieve
+
+
   $self->{'seq_region_cache'} = {};
   $self->{'core_seq_region_cache'} = {};
+  #%{$self->{'seq_region_cache'}{$schema_build}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
   %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+  
 
   #now reverse cache
   foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){
-
 	$self->{'core_seq_region_cache'}->{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
+	#$self->{'core_seq_region_cache'}->{$schema_build}{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
   }
 
   return;
@@ -283,16 +290,20 @@ sub get_seq_region_id_by_Slice{
 	throw('You must provide a valid Bio::EnsEMBL::Slice');
   }
 
-  my $sr_id;
+  my ($sr_id);#, $schema_build);
+
 
   if( $slice->adaptor() ) {
 	$sr_id = $slice->adaptor()->get_seq_region_id($slice);
-  } else {
+	#$schema_build = $self->db->_get_schema_build($slice->adaptor->db);
+  } 
+  else {
 	$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+	#$schema_build = $self->db->_get_schema_build($self->db->dnadb);	
   }
 
-  #should we wanr or thro here if not exists?
 
+  #return (exists $self->{'seq_region_cache'}->{$schema_build}->{$sr_id}) ? $self->{'seq_region_cache'}->{$schema_build}->{$sr_id} : undef;
   return (exists $self->{'seq_region_cache'}->{$sr_id}) ? $self->{'seq_region_cache'}->{$sr_id} : undef;
 }
 
@@ -304,6 +315,9 @@ sub get_core_seq_region_id{
   #we will have to nest these in schema_build caches
   #and use the schema_build of the slice which is passed to acquire the core_seq_region_id
   #likewise for reverse, i.e. when we store.
+
+
+  my $schema_build = $self->db->_get_schema_build($self->db->dnadb);
 
   return $self->{'core_seq_region_cache'}->{$fg_sr_id};
 }
