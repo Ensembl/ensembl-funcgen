@@ -823,7 +823,7 @@ sub feature_type{
 
 =cut
 
-sub feature_type{
+sub feature_analysis{
   my ($self) = shift;
 
   if (@_) {
