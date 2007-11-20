@@ -1,0 +1,12 @@
+Tiling Array Data
+
+Raw data from tiling array experiments is normalised and displayed as a simple wiggle tracks.  This data is supplied to support and give a visual reference for the associated predicted features track e.g. Histone modifications, TFBS (Transcription Factor Binding Site). 
+
+The default normalisation of the data uses the VSN (Variance Stabilisation Normalisation) package of Bioconductor, which performs a generalised log transformation.  This roughly equates to the difference between the control and experimental value at low signal and smoothly transforms to the ratio between the values at high signals i.e. significant signal. This has the effect of minimising anomalies arising from low signal pairs giving high ratio scores.
+
+http://bioconductor.org/packages/1.9/bioc/html/vsn.html
+
+Gentleman RC, Carey VJ, Bates DM, Bolstad B, Dettling M, Dudoit S, Ellis B, Gautier L, Ge Y, Gentry J, Hornik K, Hothorn T, Huber W, Iacus S, Irizarry R, Leisch F, Li C, Maechler M, Rossini AJ, Sawitzki G, Smith C, Smyth G, Tierney L, Yang JY, Zhang J.
+Bioconductor: open software development for computational biology and bioinformatics.
+Genome Biol. 2004; 5(10): R80.
+<td nowrap="nowrap">| <a class="toc-link" href="http://www.pubmedcentral.gov/articlerender.fcgi?tool=pmcentrez&amp;rendertype=abstract&amp;artid=545600">Abstract</a> | <a class="toc-link" href="http://www.pubmedcentral.gov/articlerender.fcgi?tool=pmcentrez&amp;artid=545600">Full Text</a> | </td>

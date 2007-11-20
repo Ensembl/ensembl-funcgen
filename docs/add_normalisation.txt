@@ -1,0 +1,10 @@
+Write RunnableDB, Normalisation.pm - Does validity checks and calls runnable, prints output and loads back into DB.
+Write Runnable - Simply build R cmd and reformat output
+Add following to efg.sql:
+insert into status_name(name) values('IMPORTED_Norm_Method');
+insert into analysis(logic_name) values('Norm_Method');
+
+Alter $ENV{'NORM_METHOD'} in .efg if required as default
+Add $ENF{'NORM_PARAMS'} ?????
+
+
