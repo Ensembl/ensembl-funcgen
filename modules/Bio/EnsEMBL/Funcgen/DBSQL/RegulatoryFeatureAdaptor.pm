@@ -549,7 +549,7 @@ sub fetch_all_by_Slice {
 	
   my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
 
-  return $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]);
+  return $self->fetch_all_by_Slice_FeatureSets($slice, $fset);
 }
 
 
