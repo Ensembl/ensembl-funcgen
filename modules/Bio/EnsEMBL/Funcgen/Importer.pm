@@ -110,14 +110,15 @@ sub new{
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
 	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, 
-	  $no_mage, $eset_name, $norm_method, $old_dvd_format)
+	  $no_mage, $eset_name, $norm_method, $old_dvd_format, $feature_analysis)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
-				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT'], @_);
+				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
+				 'FEATURE_ANALYSIS'], @_);
 
   
   #### Define parent parser class based on vendor
@@ -169,8 +170,20 @@ sub new{
   $self->{'no_mage'} = $no_mage || 0;
   $self->{'experimental_set_name'} = $eset_name if $eset_name;
   $self->{'old_dvd_format'} = $old_dvd_format || 0;
+
+
+
+  #Move all type and analysis validation here
+  #use same attr?
+
   #Will a general norm method be applicable fo all imports?
   $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};
+ 
+  if($feature_analysis){
+	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
+ 	throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
+	$self->feature_analysis($fanal);
+  }
  
   if ($self->vendor ne 'NIMBLEGEN'){
 	$self->{'no_mage'} = 1;
@@ -796,6 +809,35 @@ sub feature_type{
   }
 
   return $self->{'feature_type'};
+}
+
+=head2 feature_analysis
+  
+  Example    : $imp->feature_analysis($fanal);
+  Description: Getter/Setter for Analysis used for creating the imported Features
+  Arg [1]    : optional - Bio::EnsEMBL::Analysis
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub feature_type{
+  my ($self) = shift;
+
+  if (@_) {
+    my $fanal = shift;
+    
+    #do we need this as we're checking in new?
+    if (! ($fanal->isa('Bio::EnsEMBL::Analysis') && $fanal->dbID())) {
+      throw("Must pass a valid stored Bio::EnsEMBL::Analysis");
+    }
+  
+    $self->{'feature_analysis'} = $fanal;
+  }
+
+  return $self->{'feature_analysis'};
 }
 
 =head2 norm_analysis
