@@ -40,7 +40,7 @@ use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Helper;
+use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use strict;
 
 use vars qw(@ISA);

@@ -44,7 +44,7 @@ use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Channel;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
-use Bio::EnsEMBL::Funcgen::Helper;
+use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use strict;
 
