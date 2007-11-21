@@ -105,9 +105,10 @@ sub new {
   my ($stable_id, $reg_attrs, $attr_cache)
     = rearrange(['STABLE_ID', 'REGULATORY_ATTRIBUTES', '_ATTRIBUTE_CACHE'], @_);
   
-  #check mandatory params here
+  #moved to set feature, but not mandatory?
+  #throw("Must provide a FeatureType") if ! $reg_type;
 
-  throw("Must provide a FeatureType") if ! $reg_type;
+
   $self->stable_id($stable_id) if $stable_id;
   $self->regulatory_attributes($reg_attrs) if $reg_attrs;
   $self->_attribute_cache($attr_cache) if $attr_cache;
