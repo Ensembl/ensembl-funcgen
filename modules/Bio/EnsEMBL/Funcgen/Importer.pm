@@ -111,7 +111,7 @@ sub new{
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
 	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, 
-	  $no_mage, $eset_name, $norm_method, $old_dvd_format, $feature_analysis)
+	  $no_mage, $eset_name, $norm_method, $old_dvd_format, $feature_analysis, $reg_db)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
@@ -119,7 +119,7 @@ sub new{
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
 				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
-				 'FEATURE_ANALYSIS'], @_);
+				 'FEATURE_ANALYSIS', 'REGISTRY_DB'], @_);
 
   
   #### Define parent parser class based on vendor
@@ -146,17 +146,15 @@ sub new{
   $self->array_file($array_file) if $array_file;
   $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
   $self->result_files($result_files)if $result_files; #Sanger specific ???
-  $self->{'feature_type_name'} = $ftype_name if $ftype_name;#make mandatory?
-  $self->{'cell_type_name'} = $ctype_name if $ctype_name;#make madatory?
   $self->experiment_date($exp_date) if $exp_date;
   $self->description($desc) if $desc;
-  $self->{'user'} = $user || throw('Mandatory param -user not met');
-  $self->{'host'} = $host || 'localhost';
-  $self->{'port'} = $port || '3306';
-  $self->{'pass'} = $pass || throw('Mandatory param -pass not met');
-  $self->dbname($dbname) if $dbname; #overrides autogeneration of dbname
-  $self->db($db) if $db;		#predefined efg db
-  $self->{'data_version'} = $data_version || throw('Mandatory param -data_version not met');
+  #$self->{'user'} = $user || throw('Mandatory param -user not met');
+  #$self->{'host'} = $host || 'localhost';
+  #$self->{'port'} = $port || '3306';
+  #$self->{'pass'} = $pass || throw('Mandatory param -pass not met');
+  #$self->dbname($dbname) if $dbname; #overrides autogeneration of dbname
+  #$self->db($db) if $db;		#predefined efg db
+  $data_version || throw('Mandatory param -data_version not met');
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
   $self->{'output_dir'} = $output_dir if $output_dir; #config default override
   $self->input_dir($input_dir) if $input_dir; #config default override
@@ -172,15 +170,8 @@ sub new{
   $self->{'experimental_set_name'} = $eset_name if $eset_name;
   $self->{'old_dvd_format'} = $old_dvd_format || 0;
 
-
-
-  #Move all type and analysis validation here
-  #use same attr?
-
   #Will a general norm method be applicable fo all imports?
   $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};
- 
- 
  
   if ($self->vendor ne 'NIMBLEGEN'){
 	$self->{'no_mage'} = 1;
@@ -190,23 +181,125 @@ sub new{
   #Set vendor specific attr dependent vars
   $self->set_config();
 
-  my $host_ip = '127.0.0.1';#is this valid for all localhosts?
 
-  ### LOAD AND RE-CONFIG REGISTRY ###
-  if(defined $db){
+  #### Set up DBs and load and reconfig registry
 
-	#need to load and set db in registry?
-
-
-  }
-  elsif (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
-	
+  ### LOAD REGISTRY
+  if (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
 	#current ensembl DBs
 	$reg->load_registry_from_db(
 								-host => "ensembldb.ensembl.org",
 								-user => "anonymous",
 								-verbose => $self->verbose(),
 							   );
+  }else{
+	$reg->load_all($self->{'_reg_config'}, 1);
+  }
+
+
+  #SET UP DBs
+  #reset species to standard alias to allow dbname generation
+  $self->species($reg->get_alias($self->species()));
+
+  if($db){
+	#sanity test vs. data_version
+	if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
+	  $self->throw('-db must be a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+	}
+  }
+  else{
+	#define eFG DB from params or registry
+
+	if($reg_db){#load eFG DB from reg
+	  $self->log('WARNING: Loading eFG DB from Registry');
+	  $db = $reg->get_DBAdaptor($self->species(), 'funcgen');
+	  throw("Unable to retrieve ".$self->species." funcgen DB from the registry");
+	}
+	else{#from params
+	  $self->dbname($dbname) if $dbname; #overrides autogeneration of dbname
+
+	  if(! (defined $user && defined $pass)){
+		throw('If not passing a db param must define -pass and -user params to build default eFG DB');
+	  }
+
+	  if(! defined $host){
+		$self->log('WARNING: Defaulting to localhost');
+		$host = 'localhost';
+	  }
+	  
+	  $port ||= 3306;
+	  my $host_ip = '127.0.0.1';#is this valid for all localhosts?
+	  
+	  if ($self->{'ssh'}) {
+		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
+		#will this always be the same?
+		
+		if (! (exists $ENV{'EFG_HOST_IP'})) {
+		  warn "Environment varaible EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
+		} else {
+		  $host_ip = $ENV{'EFG_HOST_IP'};
+		}
+		
+		if ($self->host() ne 'localhost') {
+		  warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
+		}
+	  }
+	
+	  $dbname ||= $self->species()."_funcgen_".$self->data_version();
+
+	  $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+														 -user => $user,
+														 -host => ($self->{'ssh'}) ? $host_ip : $host,
+														 -port => $port,
+														 -pass => $pass,
+														 #we need to pass dbname else we can use non-standard dbs
+														 -dbname => $dbname(),
+														 -species => $self->species(),
+														);
+	}
+  }
+
+  #Test connections 
+  $db->dbc->db_handle;
+  
+  ### VALIDATE DNADB
+  if($data_version ne $self->db->_get_schema_build($self->db->dnadb())){
+	my $warning = "WARNING: dnadb does not match data_version $data_version. Using ensembldb.enembl.org to define the dnadb";
+	$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
+	$self->log($warning);
+	
+	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+													-host => 'ensembldb.ensembl.org',
+													-user => 'anonymous',
+													-dbname => $self->species()."_core_".$data_version(),
+													-species => $self->species(),
+												   );
+	$db->dnadb($dnadb);
+  }
+	
+ 
+
+  ### REGISTER DNADB
+  #dnadb already added to reg via SUPER::dnadb method?	
+  $reg->add_DBAdaptor($self->species(), 'funcgen', $db);
+  $self->db($self->db($reg->get_DBAdaptor($self->species(), 'funcgen')););
+
+
+  ### LOAD AND RE-CONFIG REGISTRY ###
+  #if(defined $db){
+
+	#need to load and set db in registry?
+
+
+  #}
+  #elsif (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
+	
+	#current ensembl DBs
+#	$reg->load_registry_from_db(
+#								-host => "ensembldb.ensembl.org",
+#								-user => "anonymous",
+#								-verbose => $self->verbose(),
+#							   );
 	
 	
 	#why this all a bit backwards? doc please
@@ -215,86 +308,96 @@ sub new{
 	
 	
 	#Get standard FGDB
-	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
+  #$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
       
 	#reset species to standard alias to allow dbname generation
-	$self->species($reg->get_alias($self->species()));
+#	$self->species($reg->get_alias($self->species()));
       
 	#configure dnadb
 
 	#this should be in DBAdaptor?
 	#set_dnadb_by_data_version
      
-	if (! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))) {
+#	if (! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))) {
 	
-	  if ($self->{'ssh'}) {
+#	  if ($self->{'ssh'}) {
 	  
 
-		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
-		#will this always be the same?
+#		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
+#		#will this always be the same?
+#
+#		if (! (exists $ENV{'EFG_HOST_IP'})) {
+#		  warn "Environment varaible EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
+#		} else {
+#		  $host_ip = $ENV{'EFG_HOST_IP'};
+#		}
+#		 
+#		if ($self->host() ne 'localhost') {
+#		  warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
+#		}
+#	  }
 
-		if (! (exists $ENV{'EFG_HOST_IP'})) {
-		  warn "Environment varaible EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
-		} else {
-		  $host_ip = $ENV{'EFG_HOST_IP'};
-		}
-		 
-		if ($self->host() ne 'localhost') {
-		  warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
-		}
-	  }
-
-	  $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-												-host => 'ensembldb.ensembl.org',
-												-user => 'anonymous',
-												-dbname => $self->species()."_core_".$self->data_version(),
-												-species => $self->species(),
-											   );
-	} else {
-	  $db = $self->db->dnadb();
-	}
+#	  $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+#												-host => 'ensembldb.ensembl.org',
+#												-user => 'anonymous',
+#												-dbname => $self->species()."_core_".$self->data_version(),
+#												-species => $self->species(),
+#											   );
+#	} else {
+#	  $db = $self->db->dnadb();
+#	}
       
       
-	$self->{'dbname'} ||= $self->species()."_funcgen_".$self->data_version();
+#	$self->{'dbname'} ||= $self->species()."_funcgen_".$self->data_version();
       
 	#generate and register DB with local connection settings
-	$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-													   -user => $self->user(),
-													   -host => ($self->{'ssh'}) ? $host_ip : $self->host(),
-													   -port => $self->port(),
-													   -pass => $self->pass(),
-													   #we need to pass dbname else we can use non-standard dbs
-													   -dbname => $self->dbname(),
-													   -dnadb  => $db,
-													   -species => $self->species(),
-													  );
+#	$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+#													   -user => $self->user(),
+#													   -host => ($self->{'ssh'}) ? $host_ip : $self->host(),
+#													   -port => $self->port(),
+#													   -pass => $self->pass(),
+#													   #we need to pass dbname else we can use non-standard dbs
+#													   -dbname => $self->dbname(),
+#													   -dnadb  => $db,
+#													   -species => $self->species(),
+#													  );
+#      
       
+#	#Redefine Fungen DB in registry
+#	#dnadb already added to reg via SUPER::dnadb method		
+#	$reg->add_DBAdaptor($self->species(), 'funcgen', $db);
+#	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
       
-	#Redefine Fungen DB in registry
-	#dnadb already added to reg via SUPER::dnadb method		
-	$reg->add_DBAdaptor($self->species(), 'funcgen', $db);
-	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
-      
-	throw("Unable to connect to local Funcgen DB\nPlease check the DB connect parameters and make sure the db is appropriately named") if( ! $self->db());
-      
-  } else {						#from config
-	$reg->load_all($self->{'_reg_config'}, 1);
-	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
+#	throw("Unable to connect to local Funcgen DB\nPlease check the DB connect parameters and make sure the db is appropriately named") if( ! $self->db());
+#      
+#  } else {						#from config
+#	$reg->load_all($self->{'_reg_config'}, 1);
+#	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
 	#we also need to override the registry if the dbname doesn't match that in the registry
 	#we still need to reset dnadb here
 	#do we need to then reset the efg DB in the reg?
-  }
+#  }
 
 
-  #check analyses/feature_type/cell_type
-  
+  ### Check analyses/feature_type/cell_type
+
   if($feature_analysis){
 	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
  	throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
 	$self->feature_analysis($fanal);
   }
 
+  if($ctype_name){
+	my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
+ 	throw("The CellType $ctype_name does not exist in the database") if(!$ctype);
+	$self->cell_type($fanal);
+  }
 
+  if ($ftype_name) {
+    my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
+	throw("The FeatureType $ftype_name does not exist in the database") if(!$ftype);
+	$self->feature_type($ftype);
+  }
 
 
   $self->debug(2, "Importer class instance created.");
@@ -366,30 +469,8 @@ sub init_experiment_import{
   }
 
 
-  if ($self->{'feature_type_name'}) {
-    my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($self->{'feature_type_name'});
-    
-    if (! $ftype) {
-      throw("FeatureType '".$self->{'feature_type_name'}."' is not valid or is not present in the DB\n".
-			"Please import using the import_type.pl script");
-    }
-    
-    $self->feature_type($ftype);
-    
-  }
-
-  if ($self->{'cell_type_name'}) {
-    my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($self->{'cell_type_name'});
-
-	if(! $ctype){
-	  throw("CellType '".$self->{'cell_type_name'}."' is not valid or is not present in the DB\n".
-			"Please import using the import_type.pl script");
-    }
-
-    $self->cell_type($ctype);
-  }
-
-  
+ 
+   
  
   #check for cell||feature and warn if no met file supplied?
 
@@ -1204,7 +1285,7 @@ sub verbose{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : At risk - rename to mirror MetaConatiner method implement reset_dbnadb?
+  Status     : At risk - remove
 
 =cut
 
@@ -1212,6 +1293,9 @@ sub verbose{
 
 sub data_version{
   my ($self) = shift;	
+
+
+  throw('Deprecated, no longer required, use get_schema_build on dnadb?');
 
   if (@_) {
     $self->{'data_version'} = shift;
