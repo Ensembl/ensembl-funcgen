@@ -199,7 +199,13 @@ sub new{
 
   #SET UP DBs
   #reset species to standard alias to allow dbname generation
+
+  warn "setting $species alias";
+
   $self->species($reg->get_alias($self->species()));
+
+
+  warn "alias is ".$self->species;
 
   if($db){
 	#sanity test vs. data_version
@@ -247,23 +253,32 @@ sub new{
 	
 	  $dbname ||= $self->species()."_funcgen_".$self->data_version();
 
+
+	  warn "setting efg DB to $dbname with species ".$self->species."\n";
+
 	  $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 														 -user => $user,
 														 -host => ($self->{'ssh'}) ? $host_ip : $host,
 														 -port => $port,
 														 -pass => $pass,
 														 #we need to pass dbname else we can use non-standard dbs
-														 -dbname => $dbname(),
+														 -dbname => $dbname,
 														 -species => $self->species(),
 														);
+
+
+	  warn "db species is ".$db->species;
 	}
   }
+
+  warn "db species is ".$db->species;
+
 
   #Test connections 
   $db->dbc->db_handle;
   
   ### VALIDATE DNADB
-  if($data_version ne $self->db->_get_schema_build($self->db->dnadb())){
+  if($data_version ne $db->_get_schema_build($db->dnadb())){
 	my $warning = "WARNING: dnadb does not match data_version $data_version. Using ensembldb.enembl.org to define the dnadb";
 	$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
 	$self->log($warning);
@@ -271,7 +286,7 @@ sub new{
 	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 													-host => 'ensembldb.ensembl.org',
 													-user => 'anonymous',
-													-dbname => $self->species()."_core_".$data_version(),
+													-dbname => $self->species()."_core_".$data_version,
 													-species => $self->species(),
 												   );
 	$db->dnadb($dnadb);
@@ -282,7 +297,7 @@ sub new{
   ### REGISTER DNADB
   #dnadb already added to reg via SUPER::dnadb method?	
   $reg->add_DBAdaptor($self->species(), 'funcgen', $db);
-  $self->db($self->db($reg->get_DBAdaptor($self->species(), 'funcgen')););
+  $self->db($self->db($reg->get_DBAdaptor($self->species(), 'funcgen')));
 
 
   ### LOAD AND RE-CONFIG REGISTRY ###
@@ -390,7 +405,7 @@ sub new{
   if($ctype_name){
 	my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
  	throw("The CellType $ctype_name does not exist in the database") if(!$ctype);
-	$self->cell_type($fanal);
+	$self->cell_type($ctype);
   }
 
   if ($ftype_name) {
@@ -474,13 +489,15 @@ sub init_experiment_import{
  
   #check for cell||feature and warn if no met file supplied?
 
+  if($self->norm_method){
+	my $norm_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method);
 
-  my $norm_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method);
-
-  #should we list the valid analyses?
-  throw($self->norm_method.' is not a valid analysis') if ! $norm_anal;
-  $self->norm_analysis($norm_anal);
-
+	#should we list the valid analyses?
+	throw($self->norm_method.' is not a valid analysis') if ! $norm_anal;
+	$self->norm_analysis($norm_anal);
+  }else{
+	$self->log('WARNING: No normalisation analysis specified');
+  }
   
   #check for ENV vars?
   #R_LIBS
