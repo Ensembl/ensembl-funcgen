@@ -355,11 +355,12 @@ sub init_experiment_import{
   
   #Set and validate input dir
   $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->vendor().'/'.$self->name();
-  throw('input_dir is not defined or does not exist ('.$self->get_dir('input').')') if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
+  throw('input_dir is not defined or does not exist ('.$self->get_dir('input').')') 
+      if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
 
   $self->create_output_dirs('raw', 'norm', 'cache');
 
-
+  throw("No result_files defined.") if (! defined $self->result_files());
   if (@{$self->result_files()}) {
     $self->log("Found result files arguments:\n\t".join("\n\t", @{$self->result_files()}));
   }
