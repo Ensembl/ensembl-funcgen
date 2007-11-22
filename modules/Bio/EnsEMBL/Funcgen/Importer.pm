@@ -154,7 +154,7 @@ sub new{
   $self->{'port'} = $port || '3306';
   $self->{'pass'} = $pass || throw('Mandatory param -pass not met');
   $self->dbname($dbname) if $dbname; #overrides autogeneration of dbname
-  $self->db($db) if $db;		#predefined db
+  $self->db($db) if $db;		#predefined efg db
   $self->{'data_version'} = $data_version || throw('Mandatory param -data_version not met');
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
   $self->{'output_dir'} = $output_dir if $output_dir; #config default override
@@ -179,11 +179,7 @@ sub new{
   #Will a general norm method be applicable fo all imports?
   $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};
  
-  if($feature_analysis){
-	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
- 	throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
-	$self->feature_analysis($fanal);
-  }
+ 
  
   if ($self->vendor ne 'NIMBLEGEN'){
 	$self->{'no_mage'} = 1;
@@ -196,7 +192,13 @@ sub new{
   my $host_ip = '127.0.0.1';#is this valid for all localhosts?
 
   ### LOAD AND RE-CONFIG REGISTRY ###
-  if (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
+  if(defined $db){
+
+	#need to load and set db in registry?
+
+
+  }
+  elsif (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
 	
 	#current ensembl DBs
 	$reg->load_registry_from_db(
@@ -204,8 +206,13 @@ sub new{
 								-user => "anonymous",
 								-verbose => $self->verbose(),
 							   );
-      
-      
+	
+	
+	#why this all a bit backwards? doc please
+	#should we define the eFG DB first based on the params
+	#Then check the dnadb and reset if required?
+	
+	
 	#Get standard FGDB
 	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
       
@@ -213,18 +220,14 @@ sub new{
 	$self->species($reg->get_alias($self->species()));
       
 	#configure dnadb
-	#use meta container here for schem_build/data_version?
- 
 
-	#this should be in DBAdaptor
+	#this should be in DBAdaptor?
 	#set_dnadb_by_data_version
      
 	if (! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))) {
 	
 	  if ($self->{'ssh'}) {
 	  
-
-
 
 		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
 		#will this always be the same?
@@ -275,7 +278,22 @@ sub new{
       
   } else {						#from config
 	$reg->load_all($self->{'_reg_config'}, 1);
+	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
+	#we also need to override the registry if the dbname doesn't match that in the registry
+	#we still need to reset dnadb here
+	#do we need to then reset the efg DB in the reg?
   }
+
+
+  #check analyses/feature_type/cell_type
+  
+  if($feature_analysis){
+	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
+ 	throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
+	$self->feature_analysis($fanal);
+  }
+
+
 
 
   $self->debug(2, "Importer class instance created.");
@@ -1595,7 +1613,7 @@ sub register_experiment{
       throw("You need to pass a valid dnadb adaptor to register the experiment");
     }
     $self->db->dnadb($_[0]);
-  } elsif ( ! $self->db()) {
+  } elsif ( ! $self->db) {
     throw("You need to pass/set a DBAdaptor with a DNADB attached of the relevant data version");
   }
   
@@ -2713,16 +2731,13 @@ sub R_norm{
 				  "VSN_GLOG"      => {( libs         => ['vsn'],
 										#norm_method => 'vsn',
 									  )},
-									
+				  
 				  "T.Biweight" => {(
-									   libs => ['affy'],
-										#norm_method => 'tukey.biweight',
-									  )},
+									libs => ['affy'],
+									#norm_method => 'tukey.biweight',
+								   )},
 				 );
-
-
-
-
+  
 
   foreach my $logic_name (@logic_names) {
     #throw("Not yet implemented TukeyBiweight") if $logic_name eq "Tukey_Biweight";
