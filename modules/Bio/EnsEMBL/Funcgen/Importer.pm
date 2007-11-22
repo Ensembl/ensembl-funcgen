@@ -124,7 +124,16 @@ sub new{
   
   #### Define parent parser class based on vendor
   throw("Mandatory argument -vendor not defined") if ! defined $vendor;
-  my $parser_type = ucfirst(lc($vendor));
+
+
+  my $parser_type;
+
+  if ($vendor =~ /^affymetrix$/i) {
+      $parser_type = 'Bed';
+  } else {
+      $parser_type = ucfirst(lc($vendor));
+  }
+
   unshift @ISA, 'Bio::EnsEMBL::Funcgen::Parsers::'.$parser_type;
   #change this to be called explicitly from the load script?
 

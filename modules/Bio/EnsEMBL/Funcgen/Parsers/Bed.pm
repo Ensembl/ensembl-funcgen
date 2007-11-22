@@ -43,6 +43,8 @@ use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use strict;
 
+use Data::Dumper;
+
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
 
@@ -194,7 +196,7 @@ sub read_and_import_bed_data{
     ($filename = $filepath) =~ s/.*\///;
 	my $sub_set;
 
-	$self->log("Found SOLEXA results file\t$filename");
+	$self->log("Found bed file\t$filename");
 
 	if($sub_set = $eset->get_subset_by_name($filename)){
 	  $roll_back = 1;
@@ -215,11 +217,11 @@ sub read_and_import_bed_data{
 		$self->log("Rolling back results for ExperimentalSubset:\t".$filename);
 
 		warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
-		throw("Need to implement annotated_feature rollback!\n");
+		warn ("Need to implement annotated_feature rollback!\n");
 		#$self->db->rollback_results($cc_id);
 	  }
 		  
-	  $self->log("Reading SOLEXA cluster file:\t".$filename);
+	  $self->log("Reading bed file:\t".$filename);
 	  my $fh = open_file($filepath);
 	  my @lines = <$fh>;
 	  close($fh);
@@ -242,8 +244,10 @@ sub read_and_import_bed_data{
 
 	  foreach my $line (@lines) {
 		$line =~ s/\r*\n//o;
-		next if $line =~ /^#/;
-		
+		next if $line =~ /^\#/;	
+        next if $line =~ /^$/;
+		next if $line =~ /^(browser)|(track)/;
+
 		my ($chr, $start, $end, $pid, $score) = split/\t/o, $line;				  
 		#change from UCSC to EnsEMBL coords
 		$start +=1;
