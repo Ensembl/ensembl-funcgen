@@ -318,9 +318,9 @@ sub add_supporting_sets {
 	#this could never happen?
 	#doh! we forgot to set the feature_set
 	
-	
-	$self->_validate_and_set_types($set) if $self->supporting_set_type() ne 'feature';
-	
+	# I suppose we can skip this also for 'experimental' sets (SG)
+	#$self->_validate_and_set_types($set) if $self->supporting_set_type() ne 'feature';
+	$self->_validate_and_set_types($set) if $self->supporting_set_type() eq 'result';
 	
 	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
 	#DataSetAdaptor to perform the ordering according to feature/celltype
