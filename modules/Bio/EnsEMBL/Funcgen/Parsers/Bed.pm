@@ -112,16 +112,24 @@ sub set_config{
 
  
 sub read_and_import_bed_data{
-  my $self = shift;
+    my $self = shift;
   
   $self->log("Reading and importing ".$self->vendor()." data");
   my (@header, @data, @design_ids, @lines);
-  my ($fh, $file);
+  my ($anal, $fh, $file);
  
   my $eset_adaptor = $self->db->get_ExperimentalSetAdaptor();
   my $af_adaptor = $self->db->get_AnnotatedFeatureAdaptor();
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-  my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name("Parzen");
+ 
+  if ($self->feature_analysis->isa("Bio::EnsEMBL::Analysis")) {
+    $anal = $self->feature_analysis;
+  } elsif (defined $self->norm_method){
+    $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method);
+  } else {
+    throw("No analysis set.");
+  }
+
   my $new_data = 0;
  
   my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name());
