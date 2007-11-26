@@ -1,4 +1,5 @@
-#!/usr/bin/env perl
+#!/software/bin/perl
+##!/usr/bin/env perl
 
 =head1 NAME
 
@@ -141,7 +142,8 @@ $| = 1;
 my ($host, $user, $pass, $port, $dbname, $species, $data_version);
 my $input_id;
 my $input_name;
-my $logic_name = $ENV{TM_LOGIC_NAME} || undef;
+my $input_chip;
+my $logic_name = $ENV{LOGIC_NAME} || undef;
 my $norm_analysis = $ENV{NORM_ANALYSIS} || undef; # 'VSN_GLOG' or 'SANGER_PCR';
 my $experiment;
 my $check  = 0;
@@ -170,6 +172,7 @@ my @command_args = @ARGV;
 	'data_version=s' => \$data_version,
 	'input_id=s'     => \$input_id,
 	'input_name=s'   => \$input_name,
+	'input_chip=s'   => \$input_chip,
 	'logic_name|analysis=s'  => \$logic_name,
 	'norm_analysis=s' => \$norm_analysis,
 	'experiment=s'   => \$experiment,
@@ -196,6 +199,7 @@ throw("Must specify mandatory database username. (-user)\n") if (!$user);
 throw("Must specify mandatory database name (-dbname).\n") if (!$dbname);
 throw("Must specify mandatory database data version, like 47_36i (-data_version).\n") 
     if (!$data_version);
+$ENV{DATA_VERSION}=$data_version;
 throw("Must specify mandatory logic name for analysis (-logic_name).\n") 
 	if (!$logic_name);
 
@@ -203,12 +207,12 @@ throw("Must specify mandatory logic name for analysis (-logic_name).\n")
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
-     #-host => 'ensembldb.ensembl.org',
-     #-port => 3306,
-     #-user => 'anonymous',
-     -host => '127.0.0.1',
-     -port => 33064,
-     -user => 'ensro',
+     -host => 'ensembldb.ensembl.org',
+     -port => 3306,
+     -user => 'anonymous',
+     #-host => '127.0.0.1',
+     #-port => 33064,
+     #-user => 'ensro',
      -dbname => $species.'_core_'.$data_version,
      -species => $species,
      );
@@ -227,13 +231,24 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 my $sa = $db->get_SliceAdaptor();
 my $slice;
 
-if ($input_name) {
+if ($ENV{MODULE} eq 'MAT' && 
+    (defined $input_chip || defined $ENV{LSB_JOBINDEX})) {
+
+    $input_id = $input_chip || $ENV{LSB_JOBINDEX};
+
+    warn("Performing analysis on all $ENV{NOCHIPS} chips on the farm (LSB_JOBINDEX: ".
+         $ENV{LSB_JOBINDEX}.").\n") if (defined $ENV{LSB_JOBINDEX});
+
+} elsif ($input_name) {
+
 	my @input_name = split(/[:,]/, $input_name);
     $slice = $sa->fetch_by_region('chromosome', @input_name);
 	throw("Input name $input_name didn't return a slice. Must specify mandatory chromosome\n".
 		  " name (start and end are optional), like '-input_name=22:1,20000'.") if (! $slice);
-	$input_id = $slice->id;
+	$input_id = $slice;
+
 } elsif (defined $ENV{LSB_JOBINDEX}) {
+
     warn("Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".
          $ENV{LSB_JOBINDEX}.").\n");
     
@@ -249,16 +264,17 @@ if ($input_name) {
         push @slices, $sa->fetch_by_region('chromosome', $chr);
     }
     #print Dumper @slices;
-
+    
     $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
-    print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
-        
-	$input_id = $slice->id;
-} else {
+    #print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
+    
+    $input_id = $slice;
 
-    throw("Must specify mandatory chromosome name (-input_name) or set\n ".
-          "LSF environment variable LSB_JOBINDEX to perform whole\n ".
-          "genome analysis on toplevel slices using the farm.\n");
+} else {
+    
+    throw("Must specify mandatory chromosome name (-input_name) or chip\n".
+          "number (-input_chip) or set LSF environment variable LSB_JOBINDEX\n".
+          "to perform whole genome / chip set analysis using the farm.\n");
 
 }
 
@@ -298,23 +314,25 @@ if(!$analysis){
 my ($runnable, $file);
 
 if($analysis->module =~ "Bio::"){ 
-  $runnable = $analysis->module; 
-  ($file = $runnable) =~ s/::/\//g;
+    $runnable = $analysis->module; 
+    ($file = $runnable) =~ s/::/\//g;
 }else{
-  $file = $perl_path."/".$analysis->module; 
-  ($runnable = $file) =~ s/\//::/g;
+    $file = $perl_path."/".$analysis->module; 
+    ($runnable = $file) =~ s/\//::/g;
 }
+
 eval{
-  require "$file.pm";
+    require "$file.pm";
 };
 if($@){
-  throw("Couldn't require $file $@");
+    throw("Couldn't require $file $@");
 }
 print STDERR "Creating runnable ".$file."\n" if($verbose);
 
 $runnable =~ s/\//::/g;
 print 'runnable: ', $runnable, "\n";
-my $runobj = "$runnable"->new(-db            => $db,
+my $runobj = "$runnable"->new(
+                              -db            => $db,
                               -input_id      => $input_id,
                               -analysis      => $analysis,
                              );
@@ -334,7 +352,7 @@ if($write){
     print STDERR "Output received\n" if($verbose);
     my @output = @{$runobj->output};
 	print scalar(@output), " features to annotate.\n";
-	print Dumper @output;
+	#print Dumper @output;
 }
 
 sub usage{
