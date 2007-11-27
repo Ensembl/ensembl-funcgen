@@ -79,21 +79,33 @@ sub new {
     = rearrange(['FEATURE_TYPE', 'CELL_TYPE', 'NAME', 'ANALYSIS'], @_);
   
 
+  #hash to allow no cell_type to be defined for multi cell type sets
+  my %multi_cell_type = (
+						 'RegulatoryFeature' => 1,
+						);
+
   throw('Need to specify a name') if ! defined $name;
   
-  if ($ftype){
-	
-	if(! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
-		  && $ftype->dbID())){ 
-	  throw('Must pass a valid stored FeatureType')
-	}
-	else{
-	  $self->{'feature_type'} = $ftype;
-	}
+  if(! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
+		&& $ftype->dbID())){ 
+	throw('Must pass a valid stored FeatureType');
   }
+
+  $self->{'feature_type'} = $ftype;
+    
   
-  
-    throw('Must pass a valid Analysis parameter') if ! defined $anal;
+  if(! (ref($ctype) eq 'Bio::EnsEMBL::Funcgen::CellType'
+		&& $ctype->dbID())){ 
+
+	if(! exists $multi_cell_type{$self->feature_type->name}){
+	  throw('Must pass a valid stored CellType')
+	}
+  }else{
+	$self->{'cell_type'} = $ctype;
+  }
+
+
+  throw('Must pass a valid Analysis parameter') if ! defined $anal;
 
   
   #this clashes with Data::Set->product_feature_type
