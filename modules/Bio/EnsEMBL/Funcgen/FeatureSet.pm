@@ -89,6 +89,9 @@ sub new {
   throw ('Must provide a FeatureType') if(! defined $ftype);
   $self->feature_type($ftype);
 
+
+  
+
   $self->cell_type($ctype) if defined $ctype;
 
   throw("You must defined a FeatureSet type e.g. 'annotated'") if ! $type;
