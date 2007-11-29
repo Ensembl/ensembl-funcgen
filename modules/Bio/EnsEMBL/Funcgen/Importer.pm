@@ -2940,7 +2940,9 @@ sub R_norm{
       #}
       
       $query .= "con<-dbConnect(dbDriver(\"MySQL\"), host=\"".$self->db->dbc->host()."\", port=\"".$self->db->dbc->port()."\", dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->db->dbc->username()."\"";
-      $query .= (defined $self->db->dbc->password()) ? ", pass=\"".$self->db->dbc->password()."\")\n" : ")\n";
+
+	  #should use read only pass here as we are printing this to file
+      $query .= ", pass=\"".$self->db->dbc->password."\")\n";
       
       
       #Build queries for each chip
@@ -3019,7 +3021,23 @@ sub R_norm{
 		  $query .= 'logIntRatioM<-(log(testRG$R, base=exp(2)) - log(testRG$G, base=exp(2)))'."\n";
 		  $query .= "yMin<-min(logIntRatioM)\n";
 		  $query .= "yMax<-max(logIntRatioM)\n";
+
+
+
+		  #Need to validate yMax here
+		  #If is is Inf then we need to sort the vector and track back until we find the high real number
+		  #count number of Infs and note on MvA plot
+		  $query .= "infCount<-0\n";
+		  $query .= "if( yMax == Inf){; sortedM<-sort(logIntRatioM); lengthM<-length(logIntRatioM); indexM<-lengthM\n"
+			."while (yMax == Inf){; indexM<-(indexM-1); yMax<-sortedM[indexM];}; infCount<-(lengthM-indexM);}\n";
+
+		  #
+		  $query .= "if(infCount == 0){\n"; 
 		  $query .= 'plot(meanLogA, logIntRatioM, xlab="A - Average Log Ratio",ylab="M - Log Ratio",pch=".",ylim=c(yMin,yMax), main="'.$echip->unique_id.'")'."\n";
+		  $query .= "} else {\n";
+		  $query .= 'plot(meanLogA, logIntRatioM, xlab="A - Average Log Ratio",ylab="M - Log Ratio",pch=".",ylim=c(yMin,yMax), main="'.$echip->unique_id.'", sub=paste(infCount, " Inf values not plotted"));'."}\n";
+
+
 		  #$query .= 'plot(log(testRG$R*testRG$G, base=exp(2))/2, log(testRG$R/testRG$G, base=exp(2)),xlab="A",ylab="M",pch=".",ylim=c(-3,3), main="'.$echip->unique_id."\")\n";
 
 		  #Plate plots
@@ -3028,6 +3046,10 @@ sub R_norm{
 
 		  $query .= "dev.off()\n";
 		  #Finished QC pdf printing
+
+
+
+		  #The simple preprocess step of Ringo is actually vsn, so we can nest these in line
 
 
 		  ### Build Analyses cmds ###
