@@ -157,12 +157,6 @@ sub new{
   $self->result_files($result_files)if $result_files; #Sanger specific ???
   $self->experiment_date($exp_date) if $exp_date;
   $self->description($desc) if $desc;
-  #$self->{'user'} = $user || throw('Mandatory param -user not met');
-  #$self->{'host'} = $host || 'localhost';
-  #$self->{'port'} = $port || '3306';
-  #$self->{'pass'} = $pass || throw('Mandatory param -pass not met');
-  #$self->dbname($dbname) if $dbname; #overrides autogeneration of dbname
-  #$self->db($db) if $db;		#predefined efg db
   $data_version || throw('Mandatory param -data_version not met');
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
   $self->{'output_dir'} = $output_dir if $output_dir; #config default override
@@ -2934,7 +2928,7 @@ sub R_norm{
       #setup qurey
       #warn "Need to add host and port here";
       #Set up DB, defaults and libs for each logic name
-      my $query = "options(scipen=20);library(RMySQL);library(Ringo)"; 
+      my $query = "options(scipen=20);library(RMySQL);library(Ringo);"; 
 	  #scipen is to prevent probe_ids being converted to exponents
       #Ringo is for default QC
 
@@ -2945,8 +2939,8 @@ sub R_norm{
       }
       #}
       
-      $query .= "con<-dbConnect(dbDriver(\"MySQL\"), host=\"".$self->host()."\", port=\"".$self->port()."\", dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->user()."\"";
-      $query .= (defined $self->pass()) ? ", pass=\"".$self->pass()."\")\n" : ")\n";
+      $query .= "con<-dbConnect(dbDriver(\"MySQL\"), host=\"".$self->db->dbc->host()."\", port=\"".$self->db->dbc->port()."\", dbname=\"".$self->db->dbc->dbname()."\", user=\"".$self->db->dbc->username()."\"";
+      $query .= (defined $self->db->dbc->password()) ? ", pass=\"".$self->db->dbc->password()."\")\n" : ")\n";
       
       
       #Build queries for each chip
@@ -3005,13 +2999,13 @@ sub R_norm{
 		  #create RGList object
 		  $query .= "R<-as.matrix(c1['CONTROL_score'])\nG<-as.matrix(c2['EXPERIMENTAL_score'])\n";
 		  $query .= "genes<-cbind(c1['PROBE_ID'], c1['X'], c1['Y'])\n";
-		  $query .= "testRG<-new('RGList', list(R=R, G=G, genes=genes))";
+		  $query .= "testRG<-new('RGList', list(R=R, G=G, genes=genes))\n";
 		 
 
 		  #QC plots here before doing norm
 
 		  #open pdf device
-		  $query .= "pdf('".$self->norm_dir.'/'.$echip->unique_id."_QC.pdf', paper='a4', height = 15, width = 9)\n";
+		  $query .= "pdf('".$self->get_dir('norm').'/'.$echip->unique_id."_QC.pdf', paper='a4', height = 15, width = 9)\n";
 		  #set format
 		  $query .= "par(mfrow = c(2,2), font.lab = 2)\n";
 
@@ -3097,6 +3091,7 @@ sub R_norm{
 	  $self->log("Submitting $logic_name job to farm:\t".localtime());
 	  run_system_cmd($r_cmd);
 	  $self->log("Finished $logic_name job:\t".localtime());
+	  $self->log('See '.$self->get_dir('norm').' for ExperimentalChip QC files');
 
 	  #Now load file and update status
 	  #Import directly here to avoid having to reparse all results if we crash!!!!
