@@ -99,23 +99,13 @@ sub new {
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
 
-  if(defined $ftype){
+  
+  throw ('Must provide a FeatureType') if(! defined $ftype);
+  $self->feature_type($ftype);
 
-	if(! (ref $ftype && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType') && $ftype->dbID())){
-	  throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::FeatureType');
-	}
+  throw ('Must provide a CellType') if(! defined $ctype);
+  $self->cell_type($ctype) if defined $ctype;
 
-	$self->{'feature_type'} = $ftype;
-  }
-
-  if(defined $ctype){
-
-	if(! (ref $ctype && $ctype->isa('Bio::EnsEMBL::Funcgen::CellType') && $ctype->dbID())){
-	  throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::CellType');
-	}
-
-	$self->{'cell_type'} = $ctype;
-  }
 
   if(defined $anal){
 

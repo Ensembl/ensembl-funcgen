@@ -48,12 +48,12 @@ use vars qw(@ISA);
 
 =head2 fetch_by_stable_id
 
-  Arg [1]    : String $stable_id 
-               The stable id of the regulatory feature to retrieve
+  Arg [1]    : String $stable_id - The stable id of the regulatory feature to retrieve
+  Arg [2]    : optional list of FeatureSets
   Example    : my $rf = $rf_adaptor->fetch_by_stable_id('ENSR00000309301');
   Description: Retrieves a regulatory feature via its stable id.
   Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
-  Exceptions : throws ifno stable ID provided
+  Exceptions : none
   Caller     : general
   Status     : Stable
 
@@ -62,15 +62,60 @@ use vars qw(@ISA);
 sub fetch_by_stable_id {
   my ($self, $stable_id) = @_;
 
-  throw('Must provide a stable ID') if ! defined $stable_id;
+  my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
 
+  return @{$self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)};
+}
+
+=head2 fetch_all_by_stable_id_FeatureSets
+
+  Arg [1]    : String $stable_id - The stable id of the regulatory feature to retrieve
+  Arg [2]    : optional list of FeatureSets
+  Example    : my $rf = $rf_adaptor->fetch_by_stable_id('ENSR00000309301');
+  Description: Retrieves a regulatory feature via its stable id.
+  Returntype : Array ref of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
+  Exceptions : throws if no stable ID provided or FeatureSets aren't valid
+               warns if not FeatureSets defined
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub fetch_all_by_stable_id_FeatureSets {
+  my ($self, $stable_id, @fsets) = @_;
+
+  throw('Must provide a stable ID') if ! defined $stable_id;
   $stable_id =~ s/ENSR0*//;
 
   my $constraint = 'rf.stable_id='.$stable_id;
-  my ($reg_feat) = @{ $self->generic_fetch($constraint) };
 
-  return $reg_feat;
+
+  if(@fsets){#Get current
+	
+	#need to catch empty array an invalid FeatureSets
+	if(scalar(@fsets == 0)){
+	  warning("You have not specified any FeatureSets to fetch the RegulatoryFeature from, defaulting to all");
+	}
+	else{
+
+	  #validate FeatureSets
+	  map { 
+		if(! (ref($_) && && $_->isa('Bio::EnsEMBL::Funcgen::FeatureSet') && $_->dbID)){
+		  throw 'You must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet';
+		}} @fsets;
+		 
+	  if(scalar(@fsets) == 1){
+		$constraint .= ' and feature_set_id='.$fsets[0]->dbID;
+	  }else{
+		$constraint .= ' AND feature_set_id IN ('.join(', ', (map $_->dbID, @fsets)).')';
+	  } 
+	}
+  }
+ 
+
+  return $self->generic_fetch($constraint);
 }
+
 
 
 

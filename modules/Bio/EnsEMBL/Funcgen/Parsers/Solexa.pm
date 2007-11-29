@@ -44,7 +44,7 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use strict;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Helper);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
 
 =head2 new
 

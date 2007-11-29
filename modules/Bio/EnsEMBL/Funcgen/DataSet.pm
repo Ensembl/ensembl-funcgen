@@ -233,7 +233,7 @@ sub new {
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
   Exceptions : Throws not a valid FeatureSet or if main feature_set has already been set.
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - change to get_product_FeatureSet
 
 =cut
 
@@ -369,6 +369,9 @@ sub _validate_and_set_types{
 
 	if(defined $self->{$type}){
 	  
+
+	  #Need to test isa here?  Why is this passing the defined test if not set?
+
 	  if($set->{$type}->name() ne $self->{$type}->name()){
 
 		throw(ref($set).' feature_type('.$set->{$type}->name().
@@ -703,7 +706,7 @@ sub display_label {
 
   if(! $self->{'display_label'}){
 
-	if($self->FeatureSet->feature_type->class() eq 'REGULATORY FEATURE'){
+	if($self->product_FeatureSet->feature_type->class() eq 'REGULATORY FEATURE'){
 	  $self->{'display_label'} = 'Regulatory Features';
 	}
 	else{

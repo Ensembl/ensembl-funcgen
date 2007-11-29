@@ -53,7 +53,6 @@ use vars qw(@ISA);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
-#use Bio::EnsEMBL::Funcgen::Helper;
 my $reg = "Bio::EnsEMBL::Registry";
 
 
@@ -424,10 +423,10 @@ sub dnadb {
 	if(! $dnadb){
 
 	  my $lspecies = $reg->get_alias($self->species());
+
 	  throw('Must provide a species to automatically set dnadb') if $lspecies eq 'default';
 	
 	  my $dbname = $lspecies.'_core_'.$self->_get_schema_build($self);
-	  warn "No dnadb passed, default to ${dbname}\n";
 	  
 	  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 		(						

@@ -94,6 +94,9 @@ use vars qw(@ISA);
 sub new {
   my $caller = shift;
 	
+
+  #Can remove this?
+
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
  		
@@ -109,7 +112,7 @@ sub new {
   Returntype : str
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk - move to SetFeature?
 
 =cut
 

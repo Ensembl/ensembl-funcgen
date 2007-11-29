@@ -208,13 +208,7 @@ sub new{
 
   #SET UP DBs
   #reset species to standard alias to allow dbname generation
-
-  warn "setting $species alias";
-
   $self->species($reg->get_alias($self->species()));
-
-
-  warn "alias is ".$self->species;
 
   if($db){
 	#sanity test vs. data_version
@@ -263,8 +257,46 @@ sub new{
 	  $dbname ||= $self->species()."_funcgen_".$self->data_version();
 
 
-	  warn "setting efg DB to $dbname with species ".$self->species."\n";
 
+	  #ConfigRegistry will try ans set this
+	  #This will fail if there is already one in the registry as it will try
+	  #and defined a new unique species so as not to overwrite the original
+	  #e.g. homo_sapiens1
+	  
+	  #This is why it was orignally written backwards as we can't easily dynamically redefine
+	  #an adaptor in the registry without ConfigRegistry trying to change the name
+	  #the very act of creating a new db to redefine the registry with causes ConfigRegistry
+	  #to try and register it with a unique species name
+
+	  #Delte the old funcgen DB from the registry first
+	  #could we omit the _DB and delete the whole funcgen tree for this species?
+
+	  #delete $Bio::EnsEMBL::Registry::registry_register{$self->species}{funcgen};
+	  #This will remove the DBAdaptor and all the other adaptors
+	  
+	  #Now remove if from the _DBA array
+	  #my $index;
+	  #foreach my $i(0..$#{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}){
+		
+	#	my $dba = $Bio::EnsEMBL::Registry::registry_register{'_DBA'}->[$i];
+		
+	#	if(($dba->species eq $self->species) &&
+	#	   $dba->group eq 'funcgen'){
+		  
+	#	  warn "found dba $dba";
+		  
+	#	  $index = $i;
+	#	  last;
+	#	}
+	#  }
+	  
+	#  @{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}} = splice(@{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}, $index, 1);
+	  
+	  $reg->remove_DBAdaptor($self->species, 'funcgen');
+
+
+	  #ConfigRegistry will automatically configure this new db
+	  
 	  $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 														 -user => $user,
 														 -host => ($self->{'ssh'}) ? $host_ip : $host,
@@ -273,14 +305,15 @@ sub new{
 														 #we need to pass dbname else we can use non-standard dbs
 														 -dbname => $dbname,
 														 -species => $self->species(),
+														 -group    => 'funcgen',
 														);
 
 
-	  warn "db species is ".$db->species;
+	  #if we get a species like homo_sapiens1 here
+	  #This is because ConfigRegistry is try to make the dbname different between the 
+	  #one already present and the one you're trying to add
 	}
   }
-
-  warn "db species is ".$db->species;
 
 
   #Test connections 
@@ -292,21 +325,29 @@ sub new{
 	$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
 	$self->log($warning);
 	
+
+	#The same species_name clash will happen here, but we're nost using the dnadb species 
+	#for anything critical(like creating another db name)
+	#should still reset this in the registry when the methods has been implemented
+
 	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 													-host => 'ensembldb.ensembl.org',
 													-user => 'anonymous',
 													-dbname => $self->species()."_core_".$data_version,
 													-species => $self->species(),
+													-group    => 'core',
 												   );
+
 	$db->dnadb($dnadb);
   }
 	
  
+  $self->db($db);
 
-  ### REGISTER DNADB
+  ### REGISTER DNADB ? This is automatically done via DBAdaptor->new?
   #dnadb already added to reg via SUPER::dnadb method?	
-  $reg->add_DBAdaptor($self->species(), 'funcgen', $db);
-  $self->db($self->db($reg->get_DBAdaptor($self->species(), 'funcgen')));
+  #$reg->add_DBAdaptor($self->species(), 'funcgen', $db);
+  #$self->db($self->db($reg->get_DBAdaptor($self->species(), 'funcgen')));
 
 
   ### LOAD AND RE-CONFIG REGISTRY ###
@@ -2893,8 +2934,10 @@ sub R_norm{
       #setup qurey
       #warn "Need to add host and port here";
       #Set up DB, defaults and libs for each logic name
-      my $query = "options(scipen=20);library(RMySQL);"; #scipen is to prevent probe_ids being converted to exponents
-      
+      my $query = "options(scipen=20);library(RMySQL);library(Ringo)"; 
+	  #scipen is to prevent probe_ids being converted to exponents
+      #Ringo is for default QC
+
       #foreach my $ln(@logic_names){
 	
       foreach my $lib (@{$r_config{$logic_name}{'libs'}}) {
@@ -2952,11 +2995,49 @@ sub R_norm{
 
 		  $query .= "c2<-dbGetQuery(con, 'select r.probe_id as PROBE_ID, r.score as EXPERIMENTAL_score, r.X, r.Y from result r, chip_channel c, result_set rs where c.table_name=\"channel\" and c.table_id=${dbids[1]} and c.result_set_id=rs.result_set_id and rs.analysis_id=${ra_id} and c.chip_channel_id=r.chip_channel_id')\n";
 	  
-	  
-	
-		  #MvA plot here before doing norm
+		  #Can we define some of the basic structures here and reuse in the QC and each norm method?
 
 
+		  #Is this going to eat up memory?
+		  #can we strip out and separate the data from c1 and c2 into RGList and
+		  #individual vector for probe_ids, then rm c1 and c2 to free up memory
+
+		  #create RGList object
+		  $query .= "R<-as.matrix(c1['CONTROL_score'])\nG<-as.matrix(c2['EXPERIMENTAL_score'])\n";
+		  $query .= "genes<-cbind(c1['PROBE_ID'], c1['X'], c1['Y'])\n";
+		  $query .= "testRG<-new('RGList', list(R=R, G=G, genes=genes))";
+		 
+
+		  #QC plots here before doing norm
+
+		  #open pdf device
+		  $query .= "pdf('".$self->norm_dir.'/'.$echip->unique_id."_QC.pdf', paper='a4', height = 15, width = 9)\n";
+		  #set format
+		  $query .= "par(mfrow = c(2,2), font.lab = 2)\n";
+
+		  #Channel densisties
+		  #These need limma or Ringo
+		  $query .= "plotDensities(testRG)\n";
+		  
+		  #MvA Plot
+
+		  $query .= 'meanLogA<-((log(testRG$R, base=exp(2)) + log(testRG$G, base=exp(2)))/2)'."\n";
+		  $query .= 'logIntRatioM<-(log(testRG$R, base=exp(2)) - log(testRG$G, base=exp(2)))'."\n";
+		  $query .= "yMin<-min(logIntRatioM)\n";
+		  $query .= "yMax<-max(logIntRatioM)\n";
+		  $query .= 'plot(meanLogA, logIntRatioM, xlab="A - Average Log Ratio",ylab="M - Log Ratio",pch=".",ylim=c(yMin,yMax), main="'.$echip->unique_id.'")'."\n";
+		  #$query .= 'plot(log(testRG$R*testRG$G, base=exp(2))/2, log(testRG$R/testRG$G, base=exp(2)),xlab="A",ylab="M",pch=".",ylim=c(-3,3), main="'.$echip->unique_id."\")\n";
+
+		  #Plate plots
+		  $query .= 'image(testRG, 1, channel = "green", mycols = c("black", "green4", "springgreen"))'."\n";
+		  $query .= 'image(testRG, 1, channel = "red", mycols = c("black", "green4", "springgreen"))'."\n";
+
+		  $query .= "dev.off()\n";
+		  #Finished QC pdf printing
+
+
+		  ### Build Analyses cmds ###
+		  
 		  if($logic_name eq 'T.Biweight'){
 
 			#log2 ratios
@@ -2965,7 +3046,7 @@ sub R_norm{
 			#Adjust using tukey.biweight weighted average
 			#inherits first col name
 			$query .= 'norm_df<-(lr_df["EXPERIMENTAL_score"]-tukey.biweight(as.matrix(lr_df)))'."\n";
-			$query .= 'formatted_df<-cbind(rep("0", length(c1["PROBE_ID"])), c1["PROBE_ID"], sprintf("%.3f", norm_df[,1]), rep("'.$cc_id.'", length(c1["PROBE_ID"])), c1["X"], c1["Y"])'."\n";
+			$query .= 'formatted_df<-cbind(rep.int(0, length(c1["PROBE_ID"])), c1["PROBE_ID"], sprintf("%.3f", norm_df[,1]), rep.int('.$cc_id.', length(c1["PROBE_ID"])), c1["X"], c1["Y"])'."\n";
 		  
 		}
 		elsif($logic_name eq 'VSN_GLOG'){
@@ -2991,7 +3072,7 @@ sub R_norm{
 	
 		  #Now create table structure with glog values(diffs)
 		  #3 sig dec places on scores(doesn't work?!)
-		  $query .= "formatted_df<-cbind(rep(\"0\", length(c1[\"PROBE_ID\"])), c1[\"PROBE_ID\"], sprintf(\"%.3f\", (exprs(norm_df[,2]) - exprs(norm_df[,1]))), rep(\"".$cc_id."\", length(c1[\"PROBE_ID\"])), c1[\"X\"], c1[\"Y\"])\n";
+		  $query .= 'formatted_df<-cbind(rep.int(0, length(c1["PROBE_ID"])), c1["PROBE_ID"], sprintf("%.3f", (exprs(norm_df[,2]) - exprs(norm_df[,1]))), rep.int('.$cc_id.', length(c1["PROBE_ID"])), c1["X"], c1["Y"])'."\n";
 		  
 		}
 		#load back into DB

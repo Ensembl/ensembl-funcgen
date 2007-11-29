@@ -275,6 +275,30 @@ sub log{
   $self->debug(1,$message);
 }
 
+################################################################################
+
+=head2 log_header
+
+ Arg[0]      : string  - log message.
+ Arg[1]      : boolean - memory usage, appends current process memory stats
+ Description : Wrapper method to format a log as a header line
+ Return type : none
+ Example     : $root->log("Processing file $filename ...", 1);
+ Exceptions  : none
+
+=cut
+
+################################################################################
+
+sub log_header{
+  my ($self, $message, $mem) = @_;
+
+  $self->log("::\t$message\t::\t::\n", $mem);
+}
+
+
+
+
 
 ################################################################################
 

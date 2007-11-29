@@ -83,10 +83,14 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($type)
-    = rearrange(['TYPE'],@_);#, 'EXTERNAL_DB_NAME'], @_);
+  my ($type, $ftype, $ctype)
+    = rearrange(['TYPE','FEATURE_TYPE', 'CELL_TYPE',],@_);
 
-  throw('Must pass a valid stored FeatureType') if ! $self->feature_type;
+  throw ('Must provide a FeatureType') if(! defined $ftype);
+  $self->feature_type($ftype);
+
+  $self->cell_type($ctype) if defined $ctype;
+
   throw("You must defined a FeatureSet type e.g. 'annotated'") if ! $type;
   $self->type($type);
 

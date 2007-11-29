@@ -174,7 +174,7 @@ sub validate_new_seq_regions{
   my $pf_adaptor = $self->db->get_ProbeFeatureAdaptor();
   my $slice_adaptor = $self->db->get_SliceAdaptor();
   
-  $self->log(" :: Validating new coord_systems/seq_regions :: ::");
+  $self->log_header('Validating new coord_systems/seq_regions');
   
   foreach my $build(@{$self->{'builds'}}){
 	
@@ -223,7 +223,7 @@ sub update_meta_schema_version{
   my $sql = "UPDATE meta set meta_value='.$schema_version.' where meta_key='schema_version'";
   $self->db->dbc->db_handle->do($sql);
 
-  $self->log(" :: Updated meta.schema_version to $schema_version :: ::\n");
+  $self->log_header("Updated meta.schema_version to $schema_version");
 
 }
 
@@ -258,8 +258,8 @@ sub update_meta_coord{
 	throw("Can't dump the original meta_coord for back up");#will this get copied to log?
   } 
   else {
-	$self->log(" :: Updating meta_coord table. Original meta_coord table backed up in "
-			   . $self->{'dbname'}.".meta_coord.backup :: ::\n");
+	$self->log_header('Updating meta_coord table. Original meta_coord table backed up in '
+			   . $self->{'dbname'}.'.meta_coord.backup');
   }
   
 
@@ -308,31 +308,76 @@ sub update_meta_coord{
   return;
 }
 
+
+sub check_meta_strings{
+  my ($self, $all_builds) = @_;
+  
+  my @regf_fsets;
+  my $passed = 1;
+  
+
+  if($all_builds){
+	@regf_fsets = @{$self->db->get_FeatureSetAdaptor->fetch_all_by_type('regulatory')};
+  }else{
+	@regf_fsets = ($self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures'));
+  }
+  
+  my @meta_keys = ('regulatory_string_feature_set_id', 'regulatory_string_feature_type_id');
+  #my @meta_keys = ('regulatory_feature_set_ids', 'regulatory_feature_type_ids', 'regulatory_anchor_set_ids');
+  
+
+  my $mcc = $self->db->get_MetaContainer;
+
+  foreach my $fset(@regf_fsets){
+	
+  }
+
+}
+
+
+
 #Check displayable data_sets
 
-sub check_displayable_sets{
+sub check_displayable_data_sets{
   my $self = shift;
+  $self->log_data_sets(1);
+  return;
+}
+
+sub log_data_sets{
+  my ($self, $only_displayable) = @_;
   
-  $self->log(" :: Checking DataSets :: ::\n");
+  $self->log_header('Checking DataSets');
   
   my @dsets = @{$self->db->get_DataSetAdaptor->fetch_all()};
   
   
   foreach my $dset(@dsets){
-	print ":: Found DataSet ".$dset->display_name.'('.$dset->name.")\n";
+	$self->log_set("Found DataSet:\t\t", $dset) ;
+
+	my $fset = $dset->product_FeatureSet;
+	$self->log_set("Product FeatureSet:\t", $fset) if $fset;
 	
-	if($dset->is_displayable){
-	  
-	  #my $text = "
-	  
+	my @supporting_sets = @{$dset->get_supporting_sets};
+
+	if(my @supporting_sets = @{$dset->get_supporting_sets}){
+	  $self->log('SupportingSets('.$dset->supporting_set_type.'):');
+	  map $self->log_set("SupportingSet:\t\t", $_), @supporting_sets;
 	}
-	
   }
+
   return;
 }
 
+sub log_set{
+  my ($self, $text, $set) = @_;
+  
+  $text .= $set->display_label.'('.$set->name.')';
+  $text .= "\tDISPLAYABLE" if($set->is_displayable);
+  $self->log($text);
 
-
+  return;
+}
 
 ### Check for regulatory meta entries for all regulatory feature_sets
 

@@ -75,35 +75,12 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($ftype, $ctype, $name, $anal)
-    = rearrange(['FEATURE_TYPE', 'CELL_TYPE', 'NAME', 'ANALYSIS'], @_);
+  my ($name, $anal)
+    = rearrange(['NAME', 'ANALYSIS'], @_);
   
-
-  #hash to allow no cell_type to be defined for multi cell type sets
-  my %multi_cell_type = (
-						 'RegulatoryFeature' => 1,
-						);
-
   throw('Need to specify a name') if ! defined $name;
   
-  if(! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
-		&& $ftype->dbID())){ 
-	throw('Must pass a valid stored FeatureType');
-  }
-
-  $self->{'feature_type'} = $ftype;
-    
-  
-  if(! (ref($ctype) eq 'Bio::EnsEMBL::Funcgen::CellType'
-		&& $ctype->dbID())){ 
-
-	if(! exists $multi_cell_type{$self->feature_type->name}){
-	  throw('Must pass a valid stored CellType')
-	}
-  }else{
-	$self->{'cell_type'} = $ctype;
-  }
-
+ 
 
   throw('Must pass a valid Analysis parameter') if ! defined $anal;
 
@@ -113,8 +90,6 @@ sub new {
   #mandatory params would also be different
   #keep DataSet separate for now.
   
-  $self->{'feature_type'} = $ftype;
-  $self->cell_type($ctype)     if $ctype;
   $self->analysis($anal);
   $self->{'name'} = $name;	
   
@@ -148,19 +123,22 @@ sub name {
   Example    : my $dset_ctype_name = $dset->cell_type->name();
   Description: Getter for the cell_type for this DataSet.
   Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : None
+  Exceptions : throws if arg not valid
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub cell_type {
-  my $self = shift;
+  my ($self, $ctype) = @_;
 
-  if(@_){
-	throw('Must pass a valid stored CellType') if (! (ref($_[0]) eq 'Bio::EnsEMBL::Funcgen::CellType'
-													  && $_[0]->dbID()));
-	$self->{'cell_type'} = shift;
+  if(defined $ctype){
+
+	if(! (ref($ctype) eq 'Bio::EnsEMBL::Funcgen::CellType'
+		  && $ctype->dbID())){ 
+	  throw('Must pass a valid stored Bio::EnsEMBL::Funcgen::CellType');
+	}
+	$self->{'cell_type'} = $ctype;
   }
 
   return $self->{'cell_type'};
@@ -171,15 +149,25 @@ sub cell_type {
   Example    : my $dset_ftype_name = $dset->feature_type->name();
   Description: Getter for the feature_type for this DataSet.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : None
+  Exceptions : Throws if arg not valid
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub feature_type {
-  my $self = shift;
-     		  
+  my ($self, $ftype) = @_;
+   
+  if(defined $ftype){
+
+	if(! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
+		  && $ftype->dbID())){ 
+	  throw('Must pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType');
+	}
+	$self->{'feature_type'} = $ftype;
+  }
+
+  		  
   return $self->{'feature_type'};
 }
 

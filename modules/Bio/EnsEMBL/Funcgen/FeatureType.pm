@@ -30,6 +30,10 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 
 =cut
 
+#To do
+# add coding_transcript/gene methods.  Store as xrefs or custom feature_type_coding table? (miRanda etc)
+# 
+
 use strict;
 use warnings;
 
