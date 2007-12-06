@@ -1,8 +1,7 @@
 #!/bin/sh
 
 PASS=$1
-ARGS=$(echo $@ | sed "s/$PASS//")
-
+shift
 
 
 $EFG_SRC/scripts/import_type.pl\
