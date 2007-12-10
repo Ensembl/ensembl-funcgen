@@ -878,8 +878,11 @@ sub create_output_dirs{
 
   foreach my $name (@dirnames) {
 
-	if($name eq 'caches' || $name eq 'fastas'){
+	if($name eq 'caches'){
 	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}."/${name}/".$self->dbname() if(! defined $self->{"${name}_dir"});
+	}
+	elsif($name eq 'fastas'){
+	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}."/${name}/" if(! defined $self->{"${name}_dir"});
 	}
 	else{
 	  $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
