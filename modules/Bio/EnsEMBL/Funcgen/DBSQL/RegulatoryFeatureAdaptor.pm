@@ -100,7 +100,7 @@ sub fetch_all_by_stable_id_FeatureSets {
 
 	  #validate FeatureSets
 	  map { 
-		if(! (ref($_) && && $_->isa('Bio::EnsEMBL::Funcgen::FeatureSet') && $_->dbID)){
+		if(! (ref($_) && $_->isa('Bio::EnsEMBL::Funcgen::FeatureSet') && $_->dbID)){
 		  throw 'You must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet';
 		}} @fsets;
 		 
