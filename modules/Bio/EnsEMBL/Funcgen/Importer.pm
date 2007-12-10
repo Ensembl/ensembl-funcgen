@@ -286,7 +286,34 @@ sub new{
 	  
 	#  @{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}} = splice(@{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}, $index, 1);
 	  
-	  $reg->remove_DBAdaptor($self->species, 'funcgen');
+	  #$reg->remove_DBAdaptor($self->species, 'funcgen');
+
+
+	  #$species = $class->get_alias($species);
+
+	  delete $registry_register{$self->species}{'funcgen'};
+	  #This will remove the DBAdaptor and all the other adaptors
+
+	  #Now remove if from the _DBA array
+	  my $index;
+	  
+	  foreach my $i(0..$#{$registry_register{'_DBA'}}){
+		
+		my $dba = $registry_register{'_DBA'}->[$i];
+	
+		if(($dba->species eq $self->species) &&
+		   $dba->group eq $group){
+		  $index = $i;
+		  last;
+		}
+	  }
+  
+	  @{$registry_register{'_DBA'}} = splice(@{$registry_register{'_DBA'}}, $index, 1);
+
+
+
+
+
 
 
 	  #ConfigRegistry will automatically configure this new db
