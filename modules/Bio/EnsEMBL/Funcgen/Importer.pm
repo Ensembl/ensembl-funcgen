@@ -492,6 +492,8 @@ sub init_array_import{
   #which is experiment specific
   #or eFG format.
 
+  $self->create_output_dirs('caches', 'fastas');
+
 
 }
 
