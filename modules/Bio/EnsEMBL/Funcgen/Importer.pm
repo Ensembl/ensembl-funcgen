@@ -263,33 +263,7 @@ sub new{
 	  #to try and register it with a unique species name
 
 	  #Delte the old funcgen DB from the registry first
-	  #could we omit the _DB and delete the whole funcgen tree for this species?
-
-	  #delete $Bio::EnsEMBL::Registry::registry_register{$self->species}{funcgen};
-	  #This will remove the DBAdaptor and all the other adaptors
-	  
-	  #Now remove if from the _DBA array
-	  #my $index;
-	  #foreach my $i(0..$#{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}){
-		
-	#	my $dba = $Bio::EnsEMBL::Registry::registry_register{'_DBA'}->[$i];
-		
-	#	if(($dba->species eq $self->species) &&
-	#	   $dba->group eq 'funcgen'){
-		  
-	#	  warn "found dba $dba";
-		  
-	#	  $index = $i;
-	#	  last;
-	#	}
-	#  }
-	  
-	#  @{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}} = splice(@{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}, $index, 1);
-	  
 	  #$reg->remove_DBAdaptor($self->species, 'funcgen');
-
-
-	  #$species = $class->get_alias($species);
 
 	  delete $registry_register{$self->species}{'funcgen'};
 	  #This will remove the DBAdaptor and all the other adaptors
@@ -547,7 +521,7 @@ sub init_experiment_import{
   throw('input_dir is not defined or does not exist ('.$self->get_dir('input').')') 
       if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
 
-  $self->create_output_dirs('raw', 'norm', 'cache');
+  $self->create_output_dirs('raw', 'norm', 'caches', 'fastas');
 
   throw("No result_files defined.") if (! defined $self->result_files());
   if (@{$self->result_files()}) {
@@ -904,8 +878,8 @@ sub create_output_dirs{
 
   foreach my $name (@dirnames) {
 
-	if($name eq 'cache'){
-	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}.'/caches/'.$self->dbname() if(! defined $self->{"${name}_dir"});
+	if($name eq 'caches' || $name eq 'fastas'){
+	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}."/${name}/".$self->dbname() if(! defined $self->{"${name}_dir"});
 	}
 	else{
 	  $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
