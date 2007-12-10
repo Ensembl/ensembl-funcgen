@@ -385,8 +385,12 @@ sub read_experiment_data{
 		  (
 		   -EXPERIMENT_ID  => $self->experiment->dbID(),
 		   -DESCRIPTION    => $data[$hpos{$sample_desc}],
+           -FEATURE_TYPE   => $self->feature_type,
+           -CELL_TYPE      => $self->cell_type,
 		   -ARRAY_CHIP_ID  => $self->arrays->[0]->get_ArrayChip_by_design_id($data[$hpos{'DESIGN_ID'}])->dbID(),
 		   -UNIQUE_ID      => $data[$hpos{'CHIP_ID'}],
+           #-BIOLOGICAL_REPLICATE => ,
+           #-TECHNICAL_REPLICATE => ,
 		  );
 		
 		($echip) = @{$ec_adaptor->store($echip)};
@@ -699,7 +703,8 @@ sub read_probe_data{
       #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
 
 	  my $fasta_file = $ENV{'EFG_DATA'}."/fastas/probe.".$achip->name().".fasta";
-	  $self->backup_file($fasta_file);
+    warn("FASTA backup disabled");
+	  #$self->backup_file($fasta_file);
       my $f_out = open_file($fasta_file, '>')	if($self->dump_fasta());
 
 
