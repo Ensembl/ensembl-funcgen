@@ -231,7 +231,7 @@ sub fetch_all_by_Slice_Array {
   my ($self, $slice, $array) = @_;
 
   throw("Need pass a valid stored Bio::EnsEMBL::Funcgen::Array object") 
-	if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::ArrayChip") && $array->dbID));
+	if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::Array") && $array->dbID));
 
   my @ac_ids = map $_->dbID, @{$array->get_ArrayChips};
   
