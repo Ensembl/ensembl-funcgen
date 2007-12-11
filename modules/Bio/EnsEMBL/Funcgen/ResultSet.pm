@@ -79,11 +79,16 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($table_name, $table_id)
-    = rearrange(['TABLE_NAME', 'TABLE_ID'], @_);
+  my ($table_name, $table_id, $ftype, $ctype)
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
 
 
   $self->{'table_id_hash'} = {};
+
+  $self->cell_type($ctype) if $ctype;
+  $self->feature_type($ftype) if $ftype;
+
+  
 
   #maybe don't need tha analysis args as mandatory as we're testing in the adaptor store method
   if (! $table_name){
