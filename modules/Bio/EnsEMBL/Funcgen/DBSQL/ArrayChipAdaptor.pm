@@ -73,6 +73,29 @@ sub fetch_all_by_array_id {
 }
 
 
+=head2 fetch_all_by_Array
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Array
+  Example    : my @ccs = @{$ec_a->fetch_all_by_Array($array);
+  Description: Returns all ArrayChips which belong to the given Array
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::ArrayChip objects
+  Exceptions : Throws if ARg not valid and stored
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Array {
+  my ($self, $array) = @_;
+  
+  if(! (ref($array) && $array->isa->('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
+	throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::Array");
+  }
+  
+  return $self->fetch_all_by_array_id($array->dbID);
+}
+
+
 =head2 fetch_all_by_ExperimentalChips
 
   Arg [1]    : arrayref of - Bio::EnsEMBL::Funcgen::ExperimentalChips
