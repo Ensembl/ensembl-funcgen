@@ -212,7 +212,36 @@ sub fetch_all_by_Slice_ExperimentalChips {
 }
 
 
+=head2 fetch_all_by_Slice_Array
 
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2...] : Bio::EnsEMBL::Funcgen::Array
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $pfa->fetch_all_by_Slice_Array($slice, $exp);
+  Description: Retrieves a list of features on a given slice that are created
+               by probes from the given Array.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
+  Exceptions : Throws if no array name is provided
+  Caller     : 
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Slice_Array {
+  my ($self, $slice, $array) = @_;
+
+  throw("Need pass a valid stored Bio::EnsEMBL::Funcgen::Array object") 
+	if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::ArrayChip") && $array->dbID));
+
+  my @ac_ids = map $_->dbID, @{$array->get_ArrayChips};
+  
+  my $constraint = " p.array_chip_id IN (".join(", ", @ac_ids).") AND p.probe_id = pf.probe_id ";
+  
+    
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+
+
+}
 
 =head2 fetch_all_by_Slice_type
 
@@ -646,6 +675,8 @@ sub list_dbIDs {
 }
 
 
+#Probe cache methods?
+
 =head2 reassign_features_to_probe
 
   Arg[0]     : ARRAYREF - feature dbIDs to reassign
@@ -707,158 +738,6 @@ sub delete_features{
 	return;
 }
 
-# All the results methods may be moved to a ResultAdaptor
-
-=head2 fetch_results_by_channel_analysis
-
-  Arg [1]    : int - Probe dbID
-  Arg [2]    : int - Channel dbID
-  Arg [1]    : string - Logic name of analysis
-  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($op_id, $channel_id, 'RAW_VALUE')};
-  Description: Gets all analysis results for probe on given channel
-  Returntype : ARRAYREF
-  Exceptions : warns if analysis is not valid in Channel context
-  Caller     : ProbeFeature
-  Status     : At Risk - rename fetch_results_by_probe_channel_analysis
-
-=cut
-
-
-
-sub fetch_results_by_channel_analysis{
-	my ($self, $probe_id, $channel_id, $logic_name) = @_;
-
-	throw("deprecated, use ResultSetAdaptor");
-
-	
-	#Will this always be RAW_VALUE?
-
-	my %channel_metrics = (
-						   RawValue => 1,
-						  );
-
-
-	if(! defined $probe_id || ! defined $channel_id) {
-		throw("Need to define a valid probe and channel dbID");
-	}
-		
-
-	my $analysis_clause = "";
-
-	if($logic_name){
-		if(exists $channel_metrics{$logic_name}){
-			$analysis_clause = "AND a.logic_name = \"$logic_name\"";
-		}else{
-			warn("$logic_name is not a channel specific metric\nNo results returned\n");
-			return;
-		}
-	}
-
-	my $query = "SELECT r.score, a.logic_name from result r, analysis a where r.probe_id =\"$probe_id\" AND r.table_name=\"channel\" AND r.table_id=\"$channel_id\" AND r.analysis_id = a.analysis_id $analysis_clause";
-	
-	return $self->dbc->db_handle->selectall_arrayref($query);
-}
-
-=head2 fetch_results_by_Probe_Analysis_experimental_chip_ids
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Probe
-  Arg [2]    : Bio:EnsEMBL::Analysis
-  Arg [2]    : ARRAYREF - Bio::EnsEMBLExperimentalChip dbIDs
-  Example    : my @results = @{$ofa->fetch_results_by_channel_analysis($probe, $analysis, \@ec_ids)};
-  Description: Gets all analysis results for probe within a set of ExperimentalChips
-  Returntype : ARRAYREF
-  Exceptions : warns if analysis is not valid in ExperimentalChip context
-  Caller     : ProbeFeature
-  Status     : At Risk 
-
-=cut
-
-sub fetch_results_by_Probe_Analysis_experimental_chip_ids{
-	my ($self, $probe, $anal, $chip_ids) = @_;
-
-	throw("deprecated, use ResultSetAdaptor");
-
-
-	my $logic_name = $anal->logic_name();
-	my @cs = @$chip_ids;
-
-	#warn "Fetching result for $probe_id, @cs, $logic_name";
-	
-	my $table_ids;
-	my $table_name = "experimental_chip";
-
-	my %chip_metrics = (
-			    VSN_GLOG => 1,
-			    SangerPCR =>1,
-			   );
-
-	#else no logic name or not a chip metric, then return channel and metric=?
-
-
-	if(! defined $probe->dbID() || ! @$chip_ids) {
-		throw("Need to define a valid probe and pass a listref of experimental chip dbIDs");
-	}
-		
-
-	my $analysis_clause = ($logic_name) ? "AND a.logic_name = \"$logic_name\"" : "";
-
-	if(! exists $chip_metrics{$logic_name}){
-	  $table_name = "channel";
-	  warn("Logic name($logic_name) is not a chip specific metric\nNo results returned\n");
-	  
-	  #build table ids from exp chip channel ids
-	  #need to then sort out which channel is which in caller.
-
-	  #need to enable raw data retrieval!!
-	  return;
-	}else{
-	  $table_ids = join(", ", @$chip_ids);
-	}
-
-
-	#my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.probe_id ='".$probe-dbID().
-	#"' AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause order by r.score";
-
-	my $query = "SELECT r.score, r.table_id, a.logic_name from result r, analysis a where r.probe_id ='".$probe-dbID().
-	  "' AND r.table_name=\"${table_name}\" AND r.table_id IN (${table_ids}) AND r.analysis_id = a.analysis_id $analysis_clause order by r.score";
-	
-	return $self->dbc->db_handle->selectall_arrayref($query);
-}
-
-
-
-sub _get_best_result{
-  my ($self, $ofs, $analysis, $exp_chips) = @_;
-  my ($median);
-
-  throw('Deprecated, use EFGUtils');
-
-
-  if(scalar(@$ofs) > 1){
-    my @results = map $_->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips), @$ofs;
-    @results = sort @results;
-
-    my $count = scalar(@results);
-    my $index = $count -1;
-    #need to account for features/probes without results.  How would this happen?  Not all probes present in result file or score = NA?!
-    #while(! $results[0]){
-    #shift @results;
-    #}
-    if ($count == 1){
-      $median =  $results[0];
-    }
-    elsif ($count % 2) { #odd number of scores
-      $median = $results[($index+1)/2];
-    }
-    else { #even
-      $median = ($results[($index)/2] + $results[($index/2)+1] ) / 2;
-    }
-  }else{
-    $median = $ofs->[0]->get_result_by_Analysis_ExperimentalChips($analysis, $exp_chips);
-  }
-
-  return $median;
-}
 
 
 
