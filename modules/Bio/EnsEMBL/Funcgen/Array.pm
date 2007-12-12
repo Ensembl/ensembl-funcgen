@@ -85,9 +85,8 @@ use vars qw(@ISA);# %VALID_TYPE);
 								  -NAME        => 'Array-1',
 								  -FORMAT      => 'Tiled',
 								  -SIZE        => '1',
-								  -SPECIES     => 'Mus_musculus',
 								  -VENDOR      => 'Nimblegen',
-                                                                  -TYPE        => 'OLIGO',
+                                  -TYPE        => 'OLIGO',
 								  -DESCRIPTION => $desc,
 								 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Array object.
@@ -105,8 +104,8 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
   
-  my ($name, $format, $size, $species, $vendor, $type, $desc)
-    = rearrange( ['NAME', 'FORMAT', 'SIZE', 'SPECIES', 'VENDOR', 'TYPE', 'DESCRIPTION'], @_ );
+  my ($name, $format, $size,  $vendor, $type, $desc)
+    = rearrange( ['NAME', 'FORMAT', 'SIZE',  'VENDOR', 'TYPE', 'DESCRIPTION'], @_ );
   
   #mandatory params?
   #name, format, vendor
@@ -127,7 +126,6 @@ sub new {
   $self->name($name);
   $self->format($format)      if defined $format;
   $self->size($size)          if defined $size;
-  #$self->species($species)    if defined $species;
   $self->vendor($vendor);
   $self->description($desc)   if defined $desc;
   $self->type($type)          if defined $type;
@@ -351,39 +349,6 @@ sub size {
   return scalar(keys %{$self->{'array_chips'}});
 }
 
-=head2 species
-
-  Arg [1]    : (optional) string - the species of the array (e.g. Mus_musculus)
-  Example    : my $species = $array->species();
-  Description: Getter, setter of species attribute for Array
-               objects.
-  Returntype : string
-  Exceptions : Throws if argument cannot be mapped to a valid registry species alias
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub species {
-  my $self = shift;
-  my $species = shift;
-  
-  warn "species is deprecated";
-
-
-  if ($species) {
-    #check for registry_register here?
-    #$species = $reg->get_alias($self->species()));
-    $self->{'species'} = $species;
-  }
-  
-  #do we need this?
-  #if ( !exists $self->{'species'} && $self->dbID() && $self->adaptor() ) {
-  #  $self->adaptor->fetch_attributes($self);
-  #}
-
-  return $self->{'species'};
-}
 
 =head2 vendor
 
