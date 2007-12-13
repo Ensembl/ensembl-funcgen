@@ -482,6 +482,9 @@ sub new{
 =cut
 
 sub init_array_import{
+
+  my ($self) = shift;
+
   # we need to define which paramters we'll be storing
   #use the logic names of the analyses as the field headers
 
