@@ -128,6 +128,8 @@ sub new{
 
   my $parser_type;
 
+  
+
   if ($vendor =~ /^affymetrix$/i) {
       $parser_type = 'Bed';
   } else {
@@ -262,18 +264,18 @@ sub new{
 	  #the very act of creating a new db to redefine the registry with causes ConfigRegistry
 	  #to try and register it with a unique species name
 
-	  #Delte the old funcgen DB from the registry first
-	  #$reg->remove_DBAdaptor($self->species, 'funcgen');
+	  #Delete the old funcgen DB from the registry first
+	  #$reg->remove_DBAdaptor($self->species, 'funcgen');##########implement for v49
 
-	  delete $registry_register{$self->species}{'funcgen'};
+	  delete $Bio::EnsEMBL::Registry::registry_register{$self->species}{'funcgen'};
 	  #This will remove the DBAdaptor and all the other adaptors
 
 	  #Now remove if from the _DBA array
 	  my $index;
 	  
-	  foreach my $i(0..$#{$registry_register{'_DBA'}}){
+	  foreach my $i(0..$#{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}){
 		
-		my $dba = $registry_register{'_DBA'}->[$i];
+		my $dba = $Bio::EnsEMBL::Registry::registry_register{'_DBA'}->[$i];
 	
 		if(($dba->species eq $self->species) &&
 		   $dba->group eq $group){
@@ -282,7 +284,7 @@ sub new{
 		}
 	  }
   
-	  @{$registry_register{'_DBA'}} = splice(@{$registry_register{'_DBA'}}, $index, 1);
+	  @{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}} = splice(@{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}, $index, 1);
 
 
 
@@ -339,106 +341,7 @@ sub new{
  
   $self->db($db);
 
-  ### REGISTER DNADB ? This is automatically done via DBAdaptor->new?
-  #dnadb already added to reg via SUPER::dnadb method?	
-  #$reg->add_DBAdaptor($self->species(), 'funcgen', $db);
-  #$self->db($self->db($reg->get_DBAdaptor($self->species(), 'funcgen')));
-
-
-  ### LOAD AND RE-CONFIG REGISTRY ###
-  #if(defined $db){
-
-	#need to load and set db in registry?
-
-
-  #}
-  #elsif (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
-	
-	#current ensembl DBs
-#	$reg->load_registry_from_db(
-#								-host => "ensembldb.ensembl.org",
-#								-user => "anonymous",
-#								-verbose => $self->verbose(),
-#							   );
-	
-	
-	#why this all a bit backwards? doc please
-	#should we define the eFG DB first based on the params
-	#Then check the dnadb and reset if required?
-	
-	
-	#Get standard FGDB
-  #$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
-      
-	#reset species to standard alias to allow dbname generation
-#	$self->species($reg->get_alias($self->species()));
-      
-	#configure dnadb
-
-	#this should be in DBAdaptor?
-	#set_dnadb_by_data_version
-     
-#	if (! $self->db() || ($self->data_version() ne $self->db->_get_schema_build($self->db()))) {
-	
-#	  if ($self->{'ssh'}) {
-	  
-
-#		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
-#		#will this always be the same?
-#
-#		if (! (exists $ENV{'EFG_HOST_IP'})) {
-#		  warn "Environment varaible EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
-#		} else {
-#		  $host_ip = $ENV{'EFG_HOST_IP'};
-#		}
-#		 
-#		if ($self->host() ne 'localhost') {
-#		  warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
-#		}
-#	  }
-
-#	  $db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-#												-host => 'ensembldb.ensembl.org',
-#												-user => 'anonymous',
-#												-dbname => $self->species()."_core_".$self->data_version(),
-#												-species => $self->species(),
-#											   );
-#	} else {
-#	  $db = $self->db->dnadb();
-#	}
-      
-      
-#	$self->{'dbname'} ||= $self->species()."_funcgen_".$self->data_version();
-      
-	#generate and register DB with local connection settings
-#	$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-#													   -user => $self->user(),
-#													   -host => ($self->{'ssh'}) ? $host_ip : $self->host(),
-#													   -port => $self->port(),
-#													   -pass => $self->pass(),
-#													   #we need to pass dbname else we can use non-standard dbs
-#													   -dbname => $self->dbname(),
-#													   -dnadb  => $db,
-#													   -species => $self->species(),
-#													  );
-#      
-      
-#	#Redefine Fungen DB in registry
-#	#dnadb already added to reg via SUPER::dnadb method		
-#	$reg->add_DBAdaptor($self->species(), 'funcgen', $db);
-#	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
-      
-#	throw("Unable to connect to local Funcgen DB\nPlease check the DB connect parameters and make sure the db is appropriately named") if( ! $self->db());
-#      
-#  } else {						#from config
-#	$reg->load_all($self->{'_reg_config'}, 1);
-#	$self->db($reg->get_DBAdaptor($self->species(), 'funcgen'));
-	#we also need to override the registry if the dbname doesn't match that in the registry
-	#we still need to reset dnadb here
-	#do we need to then reset the efg DB in the reg?
-#  }
-
-
+ 
   ### Check analyses/feature_type/cell_type
 
   if($feature_analysis){
