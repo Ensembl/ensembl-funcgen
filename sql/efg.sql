@@ -804,7 +804,7 @@ CREATE TABLE `status_name` (
 
 INSERT into status_name values ('', 'DISPLAYABLE');
 INSERT into status_name values ('', 'IMPORTED');
-INSERT into status_name values ('', 'DAS DISPLAYABLE');
+INSERT into status_name values ('', 'DAS_DISPLAYABLE');
 INSERT into status_name values ('', 'RESOLVED');
 -- Also need to add status name for all chip/channel level analyses
 -- Defaults
