@@ -106,7 +106,6 @@ sub new {
   throw ('Must provide a CellType') if(! defined $ctype);
   $self->cell_type($ctype) if defined $ctype;
 
-
   if(defined $anal){
 
 	if(! (ref $anal && $anal->isa('Bio::EnsEMBL::Analysis') && $anal->dbID())){
@@ -337,8 +336,17 @@ sub analysis {
 =cut
 
 sub cell_type {
-  my $self = shift;
-     		
+  my ($self, $ctype) = @_;
+   
+
+  if(defined $ctype){
+	if(!(ref ($ctype) && $ctype->isa('Bio::EnsEMBL::Funcgen::CellType'))){
+	  throw('Must provide a valid Bio::EnsEMBL::Funcgen::CellType');
+	}
+
+	$self->{'cell_type'}= $ctype;
+  }
+
   return $self->{'cell_type'};
 }
 
@@ -354,8 +362,16 @@ sub cell_type {
 =cut
 
 sub feature_type {
-  my $self = shift;
-     		
+  my ($self, $ftype) = @_;
+     
+ if(defined $ftype){
+	if(!(ref ($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType'))){
+	  throw('Must provide a valid Bio::EnsEMBL::Funcgen::FeatureType');
+	}
+
+	$self->{'feature_type'}= $ftype;
+  }
+		
   return $self->{'feature_type'};
 }
 
