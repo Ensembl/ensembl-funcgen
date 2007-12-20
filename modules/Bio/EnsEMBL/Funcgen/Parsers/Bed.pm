@@ -122,14 +122,24 @@ sub read_and_import_bed_data{
     my $af_adaptor = $self->db->get_AnnotatedFeatureAdaptor();
     my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
     my $dset_adaptor = $self->db->get_DataSetAdaptor();
-    
-    if ($self->feature_analysis->isa("Bio::EnsEMBL::Analysis")) {
-        $anal = $self->feature_analysis;
-    } elsif (defined $self->norm_method){
-        $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method);
-    } else {
-        throw("No analysis set.");
-    }
+   
+
+	#Don't need this isa, tested in feature_analysis method already
+    #if ($self->feature_analysis->isa("Bio::EnsEMBL::Analysis")) {
+    #    $anal = $self->feature_analysis;
+    #}
+
+	#Commented this out as ExperimentalSets should not be normalised array data
+	#rather processed data from any format i.e. a feature analysis
+	#elsif (defined $self->norm_method){
+	#        $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method);
+	#    } 
+
+	#else {
+	  #We could set a default 'Experimental' placeholder analysis here and warn
+	  #Or just remove this whole block as ExperimentalSet->new will barf if the feature_analysis is not valid
+    #    throw("No analysis set.");
+    #}
 
     my $new_data = 0;
     
@@ -143,6 +153,7 @@ sub read_and_import_bed_data{
                                                             -cell_type    => $self->cell_type(),
                                                             -vendor       => $self->vendor(),
                                                             -format       => $self->format(),
+															-analysis     => $self->feature_analysis,
                                                             );
         ($eset)  = @{$eset_adaptor->store($eset)};
     }
@@ -169,7 +180,7 @@ sub read_and_import_bed_data{
                                                        -feature_type => $self->feature_type(),
                                                        -cell_type    => $self->cell_type(),
                                                        -type         => 'annotated',
-                                                       -analysis     => $anal,
+                                                       -analysis     => $self->feature_analysis,
                                                        );
         ($fset)  = @{$fset_adaptor->store($fset)};
 
@@ -295,7 +306,7 @@ sub read_and_import_bed_data{
                          -END           => $end,
                          -STRAND        => 1,
                          -SLICE         => $self->cache_slice($chr),
-                         -ANALYSIS      => $anal,
+                         -ANALYSIS      => $fset->anal,
                          -DISPLAY_LABEL => $pid,
                          -FEATURE_SET   => $fset,
                          );
