@@ -188,8 +188,13 @@ sub get_all_DBEntries {
   my @tables = $self->adaptor->_tables;
 
   if(!defined $self->{$cache_name} && $self->adaptor()) {
+
+	my @tables = $self->adaptor->_tables;
+	@tables = split/_/, $tables[0]->[0];
+	my $object_type = join('', (map ucfirst($_), @tables));
+	
     $self->{$cache_name} = 
-      $self->adaptor->db->get_DBEntryAdaptor->_fetch_by_object_type($self->dbID(), $tables[0]->[0], $ex_db_exp, $ex_db_type);
+      $self->adaptor->db->get_DBEntryAdaptor->_fetch_by_object_type($self->dbID(), $object_type, $ex_db_exp, $ex_db_type);
   }
 
   $self->{$cache_name} ||= [];
