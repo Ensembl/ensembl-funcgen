@@ -657,6 +657,10 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
   }
 
+  if(! (ref($rset) && $slice->isa('Bio::EnsEMBL::Funcgen::ResultSet'))){
+	throw('You must pass a valid Bio::EnsEMBL::Funcgen::ResultSet');
+  }
+
   
   my @ids = @{$rset->table_ids()};
   #should we do some more optimisation of method here if we know about presence or lack or replicates?
