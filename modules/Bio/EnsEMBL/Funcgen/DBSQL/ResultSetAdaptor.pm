@@ -636,7 +636,8 @@ sub list_dbIDs {
                Replicates are combined using a median of biological replicates based on 
                their mean techinical replicate scores
   Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
-  Exceptions : throws if not experimental_chip ResultSet
+  Exceptions : Throws if not experimental_chip ResultSet
+               Throws if no Slice passed
   Caller     : general
   Status     : At risk
 
@@ -650,6 +651,11 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   
   my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
   my ($biol_rep, $score, $start, $end, $cc_id, $old_start, $old_end);
+
+
+  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
+	throw('You must pass a valid Bio::EnsEMBL::Slice');
+  }
 
   
   my @ids = @{$rset->table_ids()};
