@@ -657,7 +657,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
   }
 
-  if(! (ref($rset) && $slice->isa('Bio::EnsEMBL::Funcgen::ResultSet'))){
+  if(! (ref($rset) && $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet'))){
 	throw('You must pass a valid Bio::EnsEMBL::Funcgen::ResultSet');
   }
 
