@@ -197,7 +197,26 @@ sub fetch_all_by_ExperimentalChip{
   return $self->fetch_all_by_experimental_chip_dbID($exp->dbID());
 }
 
+=head2 fetch_attributes
 
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Array - array to fetch attributes for
+  Example    : None
+  Description: This function is solely intended to lazy load attributes into
+               empty Array objects. You should not need to call this.
+  Returntype : None
+  Exceptions : None
+  Caller     : Bio::EnsEMBL::Funcgen::Array getters
+  Status     : Medium Risk
+
+=cut
+
+sub fetch_attributes {
+    my $self = shift;
+    my $array = shift;
+
+    my $tmp_array = $self->fetch_by_dbID( $array->dbID() );
+    %$array = %$tmp_array;
+}
 
 =head2 _tables
 
