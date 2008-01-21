@@ -1745,14 +1745,8 @@ sub register_experiment{
   }
 
 
-
-   exit;
-
   $self->read_data("probe");
-  $self->read_data("results");
-
-
-  
+  $self->read_data("results");  
 
   #warn("we need to access the default method for the vendor here, or override using the gff option");
   #my $tmp_logic_name = ($self->vendor() eq "SANGER") ? "SangerPCR" : "RawValue";
@@ -2134,7 +2128,7 @@ sub validate_mage(){
 	#Now we need to validate ec has same feature/cell type as other ecs in this br
 	#this does not handle import sets which ARE allowed to have same name but different types
 
-	warn "Processing ".$echip->unique_id()." $biorep $biotechrep";
+	#warn "Processing ".$echip->unique_id()." $biorep $biotechrep";
 
 	
 	if(exists $bio_reps{$biorep}){
@@ -2155,7 +2149,7 @@ sub validate_mage(){
 		push @log, "Found FeatureType mismatch between $biorep and ExperimentalChip ".$echip->unique_id();
 	  }
 	  
-	  warn "$biorep exists with\t".$bio_reps{$biorep}{'cell_type'}->name().' '.$bio_reps{$biorep}{'feature_type'}->name();
+	  #warn "$biorep exists with\t".$bio_reps{$biorep}{'cell_type'}->name().' '.$bio_reps{$biorep}{'feature_type'}->name();
 	  
 	  #We need to set the tech rep here too!
 	  #Do we need to validate this also, as above.
@@ -2169,7 +2163,7 @@ sub validate_mage(){
 
 	}else{
 
-	  warn "Creating new BR $biorep and TR $biotechrep";
+	  #warn "Creating new BR $biorep and TR $biotechrep";
 
 	  if(defined $echips{$echip->unique_id()}{'cell_type'}){
 
@@ -2180,9 +2174,7 @@ sub validate_mage(){
 		}else{
 		  $bio_reps{$biorep}{'cell_type'} = $cell_type;
 		  $tech_reps{$biotechrep}{'cell_type'} = $cell_type;
-
-		  warn "Setting ".$echip->unique_id()." $biorep $biotechrep ".$cell_type->name;
-
+		#  warn "Setting ".$echip->unique_id()." $biorep $biotechrep ".$cell_type->name;
 		}
 	  }else{
 		warn "No CellType specified for ExperimentalChip:\t".$echip->unique_id()."\n";
@@ -2199,7 +2191,7 @@ sub validate_mage(){
 		  $bio_reps{$biorep}{'feature_type'} = $feature_type;
 		  $tech_reps{$biotechrep}{'feature_type'} = $feature_type;
 
-		  warn "Setting ".$echip->unique_id()." $biorep $biotechrep ".$feature_type->name;
+		  #warn "Setting ".$echip->unique_id()." $biorep $biotechrep ".$feature_type->name;
 		}
 	  }else{
 		warn "No FeatureType specified for ExperimentalChip:\t".$echip->unique_id()."\n";
@@ -2231,11 +2223,7 @@ sub validate_mage(){
 			  );
 
 
-  warn "We need to protect against duplicating these replicate result sets";
-  #fetch by exp and rset name?
-  #any set with a NULL value can be duplicated
-
-
+ 
   #This needs to update and split the import/top level sets so they are of same types
   #update ec type here as we have ec context
   #careful not to update multiple times, just once for each ec
@@ -2442,9 +2430,6 @@ sub validate_mage(){
   close($xml_file);
 
   $self->experiment($self->db->get_ExperimentAdaptor->update_mage_xml_by_Experiment($self->experiment()));
-
-
-  throw('Exiting validate mage');
   
   return;
 }
