@@ -1795,13 +1795,11 @@ sub validate_mage(){
   my (%echips, @log);
   my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue');
 
-  #need to change this to default
+  #need to change this to default analysis
   my $vsn_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('VSN_GLOG');
 
   my $chan_rset = $self->get_import_ResultSet($anal, 'channel');
   my $rset =  $self->get_import_ResultSet($vsn_anal, 'experimental_chip');
-
-
   #doesn't really matter whether we call channel or experimental_chip?
   #yes it does, if we get a channel level set, we're going to resuse the channel cc_ids
   #for the exp_chip result sets, causing the roll back bug
@@ -2415,6 +2413,9 @@ sub validate_mage(){
 
   $self->experiment($self->db->get_ExperimentAdaptor->update_mage_xml_by_Experiment($self->experiment()));
 
+
+  throw('Exiting validate mage');
+  
   return;
 }
 
