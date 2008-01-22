@@ -722,8 +722,8 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   $sql = "SELECT seq_region_id from seq_region where core_seq_region_id=".$slice->get_seq_region_id().
 	" AND schema_build='".$self->db->_get_schema_build($slice->adaptor->db())."'";
-													  
-  my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+
+   my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 
   $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM '.$rset->get_result_table().
 	' r, probe_feature pf, chip_channel cc WHERE cc.result_set_id = '.$rset->dbID();
@@ -734,7 +734,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
 	' AND r.probe_id=pf.probe_id'.
 	  ' AND pf.seq_region_id='.$seq_region_id.
-    ' AND pf.seq_region_start<='.$slice->end();
+		' AND pf.seq_region_start<='.$slice->end();
   
   $sql .= ' AND pf.seq_region_start >= '.($slice->start() - $max_len) if $max_len;
   
@@ -744,7 +744,6 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #can we resolves replicates here by doing a median on the score and grouping by probe_id?
   #what if a probe_id is present more than once, i.e. on plate replicates?
 
-  #warn "sql is: \n$sql";
 
  # $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
 #	' AND r.probe_id=pf.probe_id'.
@@ -897,7 +896,7 @@ sub fetch_results_by_probe_id_ResultSet{
   #a vendor specified mapping
 
 
-  #warn "sql is $query";
+  #This converts no result to a 0!
 
   my @results = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($query)};
   
