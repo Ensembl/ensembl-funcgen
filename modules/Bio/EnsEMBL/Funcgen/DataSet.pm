@@ -110,9 +110,6 @@ use vars qw(@ISA);
 #This would allow any config of display based on what is defined in the DB.
 
 
-  #-DATA_GROUPS    => \([1, $fset1, @rsets1], [2, $fset2, @rsets2]),
-  #add_ResultSet($rset, $display_priority)?
-
   Description: Constructor for DataSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
   Exceptions : Throws if no experiment_id defined
@@ -129,8 +126,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($fset, $sets, $name, #$sset_type)
-    = rearrange(['FEATURE_SET', 'SUPPORTING_SETS', 'NAME'], @_);# 'SUPPORTING_SET_TYPE'], @_);
+  my ($fset, $sets, $name)
+    = rearrange(['FEATURE_SET', 'SUPPORTING_SETS', 'NAME'], @_);
   
   
   my @caller = caller();
@@ -170,14 +167,11 @@ sub new {
   #both need to check whether feature or cell predefined.
   #then check names
   #add_featureSet must thro if already defined.
-  #throw('Must specify a supporting_set_type') if ! defined $sset_type;
 
   #Is this really required now, what was the need for this?
   throw("Must specify at least one Result/FeatureSet") if((! $sets) && (! $fset));
   #is this right? we could be passing an empty array which would be true?
 
-
-  #$self->supporting_set_type($sset_type);
   $self->add_supporting_sets($sets) if $sets;
   $self->product_FeatureSet($fset)   if $fset;	
   $self->name($name)   if $name;	
@@ -290,7 +284,7 @@ sub add_ResultSet {
   Example    : $dset->add_supporting_sets($rset);
   Description: Adds Result/FeatureSets to the DataSet
   Returntype : none
-  Exceptions : Throws if set not valid for supporting_set_type of DataSet
+  Exceptions : Throws if set not valid for supporting_set type of DataSet
   Caller     : General
   Status     : At Risk
 
@@ -304,15 +298,18 @@ sub add_supporting_sets {
   #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
   #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
 
+
+  
+
   foreach my $set(@$sets){
   
 	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->type ne 'data' && $set->dbID)){
 	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet");
 	}
-
+	
 	#Only validate is we are dealing with result type data
 	#As we can have various cell/feature_types for compound analyses e.g. RegulatoryFeatures
-	$self->_validate_and_set_types($set) if $self->supporting_set_type() ne 'feature';
+	$self->_validate_and_set_types($set) if $self->type() ne 'feature';
 	
 	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
 	#DataSetAdaptor to perform the ordering according to feature/celltype
@@ -629,6 +626,8 @@ sub name {
 sub supporting_set_type {
   my $self = shift;
      	
+  throw('This method is deprecated as DataSets can have different supporting set types');
+
   $self->{'supporting_set_type'} = shift if @_;
 
   return $self->{'supporting_set_type'};
