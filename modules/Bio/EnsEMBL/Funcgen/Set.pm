@@ -12,17 +12,17 @@ Bio::EnsEMBL::Funcgen::Set - A module to represent a base Set object.
 
 use Bio::EnsEMBL::Funcgen::Set;
 
-my $data_set = Bio::EnsEMBL::Funcgen::Set->new(
-	                                              -DBID            => $dbID,
-							 					  -ADAPTOR         => $self,
-                                                  -ANALYSIS        => $anal,
-                                                  -FEATURE_TYPE    => $ftype,
-                                                  -CELL_TYPE       => $ctype,
-                                                  -DISPLAYABLE     => 1,
-                                                  -NAME            => 'SET1',
-                                               );
+@INC = qw (Bio::EnsEMBL::Funcgen::Set)
 
+sub new {
+  my $caller = shift;
+	
+  my $class = ref($caller) || $caller;
+	
+  my $self = $class->SUPER::new(@_);
 
+  
+}
 
 =head1 DESCRIPTION
 
@@ -79,18 +79,11 @@ sub new {
     = rearrange(['NAME', 'ANALYSIS'], @_);
   
   throw('Need to specify a name') if ! defined $name;
-  
- 
 
-  throw('Must pass a valid Analysis parameter') if ! defined $anal;
-
-  
-  #this clashes with Data::Set->product_feature_type
-  #do we @INC Set in DataSet?
-  #mandatory params would also be different
-  #keep DataSet separate for now.
-  
-  $self->analysis($anal);
+  throw('Must pass a valid -analysis parameter') if (! defined $anal && $self->type ne 'experimental');
+  #Move analysis to child Sets where it is appropriate?
+    
+  $self->analysis($anal) if defined $anal;
   $self->{'name'} = $name;	
   
   return $self;
