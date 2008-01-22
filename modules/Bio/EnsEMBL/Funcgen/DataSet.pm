@@ -19,7 +19,6 @@ my $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
                                                   -FEATURE_SET     => $fset,
                                                   -DISPLAYABLE     => 1,
                                                   -NAME            => 'DATASET1',
-                                                  -SUPPORTING_SET_TYPE => 'result',
                                                   );
 
 
@@ -104,7 +103,6 @@ use vars qw(@ISA);
                                                              -FEATURE_SET     => $fset,
                                                              -DISPLAYABLE     => 1,
                                                              -NAME            => 'DATASET1',
-                                                             -SUPPORTING_SET_TYPE => 'feature',
 			                                                 );
 
 #for COMPLEX DataSet could use this, where 1 and 2 are the positions they are to be returned in
@@ -131,8 +129,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($fset, $sets, $name, $sset_type)
-    = rearrange(['FEATURE_SET', 'SUPPORTING_SETS', 'NAME', 'SUPPORTING_SET_TYPE'], @_);
+  my ($fset, $sets, $name, #$sset_type)
+    = rearrange(['FEATURE_SET', 'SUPPORTING_SETS', 'NAME'], @_);# 'SUPPORTING_SET_TYPE'], @_);
   
   
   my @caller = caller();
@@ -172,14 +170,14 @@ sub new {
   #both need to check whether feature or cell predefined.
   #then check names
   #add_featureSet must thro if already defined.
-  throw('Must specify a supporting_set_type') if ! defined $sset_type;
+  #throw('Must specify a supporting_set_type') if ! defined $sset_type;
 
   #Is this really required now, what was the need for this?
   throw("Must specify at least one Result/FeatureSet") if((! $sets) && (! $fset));
   #is this right? we could be passing an empty array which would be true?
 
 
-  $self->supporting_set_type($sset_type);
+  #$self->supporting_set_type($sset_type);
   $self->add_supporting_sets($sets) if $sets;
   $self->product_FeatureSet($fset)   if $fset;	
   $self->name($name)   if $name;	
@@ -308,16 +306,12 @@ sub add_supporting_sets {
 
   foreach my $set(@$sets){
   
-	if (! ($set && $set->isa('Bio::EnsEMBL::Funcgen::'.ucfirst($self->supporting_set_type).'Set'))){
-	  throw("Need to pass a valid Bio::EnsEMBL::Funcgen::ResultSet");
+	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->type ne 'data' && $set->dbID)){
+	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet");
 	}
-	
-	#if(! ($self->member_set_type eq 'feature' 
-	#		&& ! defined $self->{'feature_set'} 
-	#		&& $set->isa('Bio::EnsEMBL::Funcgen::FeatureSet'))){
-	#this could never happen?
-	#doh! we forgot to set the feature_set
-	
+
+	#Only validate is we are dealing with result type data
+	#As we can have various cell/feature_types for compound analyses e.g. RegulatoryFeatures
 	$self->_validate_and_set_types($set) if $self->supporting_set_type() ne 'feature';
 	
 	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
@@ -329,8 +323,6 @@ sub add_supporting_sets {
 	
 	#Can have more than one experiment for a compound feature set, would we ever want to display raw data?
 	#This is actually an easier problem unless we are displaying two feature types(i.e. complex and compound)
-	
-
 
 
 	$self->{'supporting_sets'}->{$set->analysis->dbID()} ||= ();
@@ -369,9 +361,7 @@ sub _validate_and_set_types{
 
 	if(defined $self->{$type}){
 	  
-
 	  #Need to test isa here?  Why is this passing the defined test if not set?
-
 	  if($set->{$type}->name() ne $self->{$type}->name()){
 
 		throw(ref($set).' feature_type('.$set->{$type}->name().
