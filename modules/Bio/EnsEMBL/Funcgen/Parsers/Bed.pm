@@ -71,7 +71,8 @@ sub new{
 	
   $self->{'config'} =  
     {(
-      #order of these data arrays is important!
+      #order of these method arrays is important!
+	  #remove method arrays and execute serially?
       array_data   => [],#['experiment'],
       probe_data   => [],#["probe"],
       results_data => ["and_import_bed"],
@@ -123,24 +124,6 @@ sub read_and_import_bed_data{
     my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
     my $dset_adaptor = $self->db->get_DataSetAdaptor();
    
-
-	#Don't need this isa, tested in feature_analysis method already
-    #if ($self->feature_analysis->isa("Bio::EnsEMBL::Analysis")) {
-    #    $anal = $self->feature_analysis;
-    #}
-
-	#Commented this out as ExperimentalSets should not be normalised array data
-	#rather processed data from any format i.e. a feature analysis
-	#elsif (defined $self->norm_method){
-	#        $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method);
-	#    } 
-
-	#else {
-	  #We could set a default 'Experimental' placeholder analysis here and warn
-	  #Or just remove this whole block as ExperimentalSet->new will barf if the feature_analysis is not valid
-    #    throw("No analysis set.");
-    #}
-
     my $new_data = 0;
     
     my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name());
@@ -170,8 +153,6 @@ sub read_and_import_bed_data{
     #shouldn't we be using the exp name?
     my $fset = $fset_adaptor->fetch_by_name($self->experiment->name());
 
-    warn "got fset $fset";
-    
     if(! defined $fset){
 
         #currently hardcoded, but we should probably add feature_analysis_name
@@ -183,16 +164,10 @@ sub read_and_import_bed_data{
                                                        -analysis     => $self->feature_analysis,
                                                        );
         ($fset)  = @{$fset_adaptor->store($fset)};
-
-        warn "got fset $fset";
     }
 
-    #Now define DataSet
-
-    #shouldn't we be using the exp name?
+    #Define DataSet
     my $dset = $dset_adaptor->fetch_by_name($self->experiment->name());
-
-    warn "got dset $dset";
     
     if(! defined $dset){
 
@@ -204,8 +179,6 @@ sub read_and_import_bed_data{
                                                     -supporting_set_type => 'experimental',
                                                     );
         ($dset)  = @{$dset_adaptor->store($dset)};
-
-        warn "got dset $dset";
     }
     
 
@@ -226,11 +199,8 @@ sub read_and_import_bed_data{
         #do we even need to?
     }
 
-
-    #how are we going to track import of files if they are being directly imported into annotated_feature?
-    #Current solution is to create dummy chips, but we want something neater
-    #do we need to track import as closely as with chips?
-    
+	#Here were are tracking the import of individual bed files by adding them as ExperimentalSubSets
+       
     foreach my $filepath(@{$self->result_files()}) {
         chomp $filepath;
         my $filename;
@@ -259,7 +229,7 @@ sub read_and_import_bed_data{
                 $self->log("Rolling back results for ExperimentalSubset:\t".$filename);
 
                 warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
-                warn ("Need to implement annotated_feature rollback!\n");
+                throw("Need to implement annotated_feature rollback!\n");
                 #$self->db->rollback_results($cc_id);
             }
             
@@ -268,10 +238,7 @@ sub read_and_import_bed_data{
             my @lines = <$fh>;
             close($fh);
             
-            #my $rfile_path = $self->get_dir("norm")."/result.Parzen.".$echip->unique_id().".txt";
-            #my $rfile = open_file($rfile_path, '>');
-            #my $r_string = "";
-            my ($line, $f_out);
+			my ($line, $f_out);
             my $fasta = '';
             
             #warn "we need to either dump the pid rather than the dbID or dump the fasta in the DB dir";
@@ -291,9 +258,11 @@ sub read_and_import_bed_data{
                 next unless $line =~ /^chr/i;
 
                 my ($chr, $start, $end, $pid, $score) = split/\t/o, $line;				  
-                #change from UCSC to EnsEMBL coords
-                $start +=1;
-                $end +=1;
+             
+				if($self->ucsc_coords){
+				  $start +=1;
+				  $end +=1;
+				}
                 
                 if(!  $self->cache_slice($chr)){
                     warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
