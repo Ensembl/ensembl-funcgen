@@ -196,7 +196,7 @@ sub fetch_all_by_product_FeatureSet_type {
 
   throw("Must provide a supporting_set_type argument") if (! defined $type);
   
-  my $sql = "ds.supporting_set_type='".$type."'";
+  my $sql = "ss.supporting_set_type='".$type."'";
   
   if($status){
     my $constraint = $self->status_to_constraint($status) if $status;
@@ -304,16 +304,16 @@ sub fetch_all_by_supporting_set {
     my $set = shift;
 
     if(! (ref($set) && 
-		  ( $set->isa("Bio::EnsEMBL::Funcgen::ResultSet") || $set->isa("Bio::EnsEMBL::Funcgen::FeatureSet") )
+		  ( $set->isa("Bio::EnsEMBL::Funcgen::ResultSet") || 
+			$set->isa("Bio::EnsEMBL::Funcgen::FeatureSet") ||
+			$set->isa("Bio::EnsEMBL::Funcgen::ExperimentalSet")) 
 		  && $set->dbID())){
-      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet or FeatureSet object");
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet, FeatureSet or ExperimentalSet object");
     }
 	
-	my $type = ($set->isa('Bio::EnsEMBL::Funcgen::ResultSet')) ? 'result' : 'feature';
-
 	#self join here to make sure we get all linked result_sets
     #my $sql = 'ds.data_set_id IN (SELECT ds.data_set_id from data_set ds where result_set_id='.$set->dbID().')';
-	my $sql = "ds.supporting_set_type='$type' AND ss.supporting_set_id=".$set->dbID();
+	my $sql = 'ss.supporting_set_type="'.$set->type.'" AND ss.supporting_set_id='.$set->dbID();
 
     return $self->generic_fetch($sql);	
 }
@@ -424,33 +424,11 @@ sub _columns {
   
   return qw(
 			ds.data_set_id	    ds.feature_set_id
-			ds.name             ds.supporting_set_type
+			ds.name             ss.supporting_set_type
 			ss.supporting_set_id
 		   );	
 }
 
-=head2 _default_where_clause
-
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns an additional table joining constraint to use for
-			   queries.
-  Returntype : String
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-#sub _default_where_clause {
-#  my $self = shift;
-  #will this return if there are no entrie in data_set_member?
-  #do we have to implement a join here?
-
-	
-#  return 'ds.data_set_id = dsm.data_set_id';
-#}
 
 =head2 _left_join
 
@@ -544,7 +522,6 @@ sub _objs_from_sth {
 													  -NAME                => $name,
 													  -FEATURE_SET         => $fset,
 													  -ADAPTOR             => $self,
-													  -SUPPORTING_SET_TYPE => $ss_type,
 													 );
 
 	}
@@ -605,10 +582,10 @@ sub store{
   throw('Must pass a list of DataSet objects to store') if(! @dsets || $#dsets < 0);
 
 
-  my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, name, supporting_set_type) 
-                            VALUES (?, ?, ?)");
-  my $sth2 = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id) 
+  my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, name) 
                             VALUES (?, ?)");
+  my $sth2 = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, supporting_set_type) 
+                            VALUES (?, ?, ?)");
 
   my ($fset_id);
 
@@ -629,7 +606,6 @@ sub store{
 	
 	$sth->bind_param(1, $fset_id,                     SQL_INTEGER);
 	$sth->bind_param(2, $dset->name(),                SQL_VARCHAR);
-	$sth->bind_param(3, $dset->supporting_set_type(), SQL_VARCHAR);#enum feature/result
 	$sth->execute();
 	$dset->dbID( $sth->{'mysql_insertid'} );
 	$dset->adaptor($self);
@@ -641,8 +617,9 @@ sub store{
 	  throw("All supporting Feature and ResultSets must be stored previously.".
 			" Use store_updated_sets method if your DataSet has been stored") if(! $sset->is_stored($db));
 
-	  $sth2->bind_param(1, $dset->dbID(),            SQL_INTEGER);
-	  $sth2->bind_param(2, $sset->dbID(),            SQL_INTEGER);
+	  $sth2->bind_param(1, $dset->dbID(),                SQL_INTEGER);
+	  $sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
+	  $sth2->bind_param(3, $sset->supporting_set_type(), SQL_VARCHAR);#enum feature/result/experimental
 	  $sth2->execute();
 	}
   }
@@ -673,8 +650,8 @@ sub store_updated_sets{
   throw('Must pass a list of DataSet objects to store') if(! @dsets || $#dsets < 0);
 
 
-  my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id) 
-                            VALUES (?, ?)");
+  my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, supporting_set_type) 
+                            VALUES (?, ?, ?)");
 
   my $db = $self->db();
 
@@ -699,8 +676,10 @@ sub store_updated_sets{
 		throw("All supporting Feature and ResultSets must be stored previously.".
 			  " Use store_updated_sets method if your DataSet has been stored") if(! $sset->is_stored($db));
 
-		$sth->bind_param(1, $dset->dbID(),            SQL_INTEGER);
-		$sth->bind_param(2, $sset->dbID(),            SQL_INTEGER);
+		$sth->bind_param(1, $dset->dbID,            SQL_INTEGER);
+		$sth->bind_param(2, $sset->dbID,            SQL_INTEGER);
+		$sth->bind_param(2, $sset->type,            SQL_VARCHAR);
+		
 		$sth->execute();
 	  }
 	}
