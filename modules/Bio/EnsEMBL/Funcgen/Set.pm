@@ -249,8 +249,8 @@ sub display_label {
 sub type {
   my $self = shift;
  
-  my $type
-  ($type = lc(ref($self)) =~ s/set//;
+  my $type;
+  ($type = lc(ref($self))) =~ s/set//;
 
   return $type;
 }
