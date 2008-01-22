@@ -235,7 +235,25 @@ sub display_label {
 
 
 
+=head2 type
 
+  Example    : my $set_type = $dset->type;
+  Description: Getter for the Set type for this Set.
+  Returntype : string e.g. result, feature, data or experimental
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub type {
+  my $self = shift;
+ 
+  my $type
+  ($type = lc(ref($self)) =~ s/set//;
+
+  return $type;
+}
 
 1;
 
