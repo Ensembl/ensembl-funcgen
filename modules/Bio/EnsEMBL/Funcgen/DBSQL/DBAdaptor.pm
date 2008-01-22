@@ -532,7 +532,7 @@ sub fetch_group_details{
 	my ($self, $gname) = @_;
 
 	throw("Need to specify a group name") if ! $gname;
-	my $sql = "SELECT * from egroup where name=\"$gname\"";
+	my $sql = "SELECT * from experimental_group where name=\"$gname\"";
 	return $self->dbc->db_handle->selectrow_array($sql);
 }
 
@@ -555,10 +555,8 @@ sub import_group{
 
 	throw("Need to supply a group name, location and contact") if (!($gname && $loc && $contact));
 
-
-	my $sql = "INSERT INTO egroup(name, location, contact) VALUES(\"$gname\", \"$loc\", \"$contact\")";
+	my $sql = "INSERT INTO experimental_group(name, location, contact) VALUES(\"$gname\", \"$loc\", \"$contact\")";
 	$self->dbc->do($sql);
-
 
 	#$self->dbc->db_handle->last_insert_id(undef, undef, undef, undef);	
 	return;#return last insert id here?

@@ -227,7 +227,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( e.experiment_id e.name e.egroup_id e.date e.primary_design_type e.description e.mage_xml_id);
+	return qw( e.experiment_id e.name e.experimental_group_id e.date e.primary_design_type e.description e.mage_xml_id);
 }
 
 =head2 _objs_from_sth
@@ -293,7 +293,7 @@ sub store {
 	my ($s_exp);
    	
 	my $sth = $self->prepare('INSERT INTO experiment
-                                 (name, egroup_id, date, primary_design_type, description, mage_xml_id)
+                                 (name, experimental_group_id, date, primary_design_type, description, mage_xml_id)
                                  VALUES (?, ?, ?, ?, ?, ?)');
 
     foreach my $exp (@args) {
