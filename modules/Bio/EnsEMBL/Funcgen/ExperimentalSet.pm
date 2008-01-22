@@ -53,10 +53,10 @@ package Bio::EnsEMBL::Funcgen::ExperimentalSet;
 use Bio::EnsEMBL::Funcgen::ExperimentalSubset;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
-use Bio::EnsEMBL::Funcgen::Storable;
+use Bio::EnsEMBL::Funcgen::Set;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);#change to Set once we have implemented analysis properly
+@ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
 
 =head2 new
@@ -92,43 +92,17 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($exp, $ftype, $ctype, $format, $vendor, $name, $anal)
-    = rearrange(['EXPERIMENT', 'FEATURE_TYPE', 'CELL_TYPE', 'FORMAT', 'VENDOR', 'NAME', 'ANALYSIS'], @_);
+  my ($exp, $format, $vendor, $name)
+    = rearrange(['EXPERIMENT', 'FORMAT', 'VENDOR'], @_);
     
   if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
 
   
-  throw ('Must provide a FeatureType') if(! defined $ftype);
-  $self->feature_type($ftype);
-
-  throw ('Must provide a CellType') if(! defined $ctype);
-  $self->cell_type($ctype) if defined $ctype;
-
-  if(defined $anal){
-
-	if(! (ref $anal && $anal->isa('Bio::EnsEMBL::Analysis') && $anal->dbID())){
-	  throw('Must specify a valid stored Bio::EnsEMBL::Analysis');
-	}
-	
-	$self->{'analysis'} = $anal;
-  }
-  else{
-	#default analysis hack for v47
-	$self->{'analysis'} = Bio::EnsEMBL::Analysis->new(-logic_name => 'external',
-													  -id       => 0,#??someone needs to rewrite analysis
-													 );
-  }
-
-
-
-  throw('Must provide a name parameter') if(! defined $name);
-
   $self->format($format) if defined $format;
   $self->vendor($vendor) if defined $vendor;
   $self->{'experiment'} = $exp;
-  $self->{'name'} = $name;
   $self->{'subsets'} = {};
   
   return $self;
@@ -322,59 +296,6 @@ sub analysis {
      		
   return $self->{'analysis'};
 }
-
-
-=head2 cell_type
-
-  Example    : my $eset_ctype_name = $dset->cell_type->name();
-  Description: Getter for the cell_type for this ExperimentalSet.
-  Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub cell_type {
-  my ($self, $ctype) = @_;
-   
-
-  if(defined $ctype){
-	if(!(ref ($ctype) && $ctype->isa('Bio::EnsEMBL::Funcgen::CellType'))){
-	  throw('Must provide a valid Bio::EnsEMBL::Funcgen::CellType');
-	}
-
-	$self->{'cell_type'}= $ctype;
-  }
-
-  return $self->{'cell_type'};
-}
-
-=head2 feature_type
-
-  Example    : my $eset_ftype_name = $dset->feature_type->name();
-  Description: Getter for the feature_type for this ExperimentalSet.
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub feature_type {
-  my ($self, $ftype) = @_;
-     
- if(defined $ftype){
-	if(!(ref ($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType'))){
-	  throw('Must provide a valid Bio::EnsEMBL::Funcgen::FeatureType');
-	}
-
-	$self->{'feature_type'}= $ftype;
-  }
-		
-  return $self->{'feature_type'};
-}
-
 
 
 
