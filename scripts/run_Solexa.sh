@@ -21,6 +21,7 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-cell_type CD4\
 	-feature_type H4R3me2\
 	-vendor SOLEXA\
+	-parser Bed\
 	-data_version 46_36h\
 	-exp_date 2007-07-17\
 	-tee\

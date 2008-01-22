@@ -35,6 +35,7 @@ Optional
   -contact         Contact details for experimental group
   -debug           Debug level (1-3)
   -log_file        Defines the log file
+  -ucsc_coords     Flag to define usage of UCSC coord system in source files
   -help            Brief help message
   -man             Full documentation
 
@@ -135,7 +136,7 @@ use strict;
 
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
-my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date);
+my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
 my $reg = "Bio::EnsEMBL::Registry";
 
@@ -196,6 +197,7 @@ GetOptions (
 			"location=s"   => \$loc,
 			"contact=s"    => \$contact,
 			"old_dvd_format" => \$old_dvd_format,
+			"ucsc_coords"  => \$ucsc,
 			"tee"          => \$main::_tee,
 			"log_file=s"   => \$main::_log_file,
 			"debug_file=s" => \$main::_debug_file,
@@ -273,6 +275,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -exp_date     => $exp_date,
    -result_files => \@result_files,
    -old_dvd_format => $old_dvd_format,
+   -ucsc_coords => $ucsc,
    #Exp does not build input dir, but could
    #This allows input dir to be somewhere 
    #other than efg dir structure
@@ -280,11 +283,8 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
 
 
 
-#Can be moved to set up script?
-
-#print "exp is ".$Imp->db->get_ExperimentAdaptor->fetch_by_dbID(1)->name()."\n";
-
-#exit;
+#Move the following to validate_analyses.pl
+#This should read from a tab delimted text file
 
 my $anal_a = $Imp->db->get_AnalysisAdaptor();
 my $anal = Bio::EnsEMBL::Analysis->new(
@@ -343,7 +343,7 @@ my $raw_anal = Bio::EnsEMBL::Analysis->new(
 										   -created         => 'NULL',
 										   -description    => 'Raw value',
 										   -display_label   => 'Raw value',
-					     -displayable     => 1,
+										   -displayable     => 1,
 										  );
 
 my $vsn_anal = Bio::EnsEMBL::Analysis->new(

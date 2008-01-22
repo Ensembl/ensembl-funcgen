@@ -1,8 +1,6 @@
-#!/opt/local/bin/perl -w
+#!$ENV{EFG_PERL} -w
 
-####!/usr/local/ensembl/bin/perl -w
 
-###!/opt/local/bin/perl -w
 
 
 =head1 NAME
@@ -82,21 +80,35 @@ BEGIN{
 	}
 }
 	
+use Getopt::Long;
+use Pod::Usage;
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::Utils::Helper;
+
+
+GetOptions (
+	 	    "pass|p=s"     => \$pass,
+			"port|l=s"     => \$port,
+			"host|h=s"     => \$host,
+			"user|u=s"     => \$user,
+			"dbname=s"     => \$dbname,
+			#"species|s=s"  => \$species,
+			#"data_version|d=s" => \$data_version,
+			"array_name=s" => \$array_name,
+			"input_dir=s"  => \$input_dir,
+			"output_dir=s" => \$output_dir,
+			#should have MAGE flag here? or would this be format?
+			"help|?"       => \$help,
+			"man|m"        => \$man,
+			"verbose=s"    => \$verbose,
+		   );
 
 
 
-#Would only need data dir and out path?
-#Would need more mandatory params to use Experiment.pm
-#This should really just use Helper and Defs/format to reduce maintenance
-#This should all be genericised using format/defs etc. what about methods which require Experiment.pm?
-
-#Need to take root data dir and experiment name
 
 
-my ($input_dir, $design_name, $output_dir) = @ARGV;
-
-if(! defined $input_dir || ! defined $design_name || ! defined $output_dir){
-  die("You must supply the following args input_dir design_name(file_name) output_dir\n");
+if(! defined $input_dir || ! defined $array_name){
+  die("You must supply the following args -input_dir -array_name\n");
 }
 
 print "Input Dir:\t$input_dir\nDesign Name:\t$design_name\nOutput Dir:\t$output_dir\n";
@@ -159,7 +171,19 @@ close(IN);
 
 =cut
 
-#$file = $input_dir."/DesignFiles/${design_name}.ndf";#Helper would do handle opening and warning
+
+#Problem with NR probes in an array set(either by name or seq, not hashed on seq at present)
+#We could simply use a hash here to see whether we've seen the probe ID before
+#Or we can print all NR probes to file, sort and then remove replicates by looping and reprinting/skipping.
+#Go for hash at present as work with >14million probes with less than 2GB memory
+
+
+
+#Validate NDF files
+
+my $array = $
+
+
 $file = $input_dir."/${design_name}.ndf";#He
 
 open(IN, $file) || die ("Cannot open file:\t$file");
