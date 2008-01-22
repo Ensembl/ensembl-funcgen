@@ -156,9 +156,9 @@ sub fetch_by_name {
 sub fetch_all_by_supporting_set_type {
   my ($self, $type, $status) = @_;
   
-  throw("Must provide a supporting_set_type argument") if (! defined $type);
+  throw("Must provide a supporting_set type argument") if (! defined $type);
   
-  my $sql = "ds.supporting_set_type='".$type."'";
+  my $sql = "ss.type='".$type."'";
   
   if($status){
     my $constraint = $self->status_to_constraint($status) if $status;
@@ -194,9 +194,9 @@ sub fetch_all_by_product_FeatureSet_type {
   #or will we only use expanded view in a feature context, hence we can just use the Regulatory Attribs?
   #don't really want to expand regulatory feats on contig view, so access FeatureSet directly
 
-  throw("Must provide a supporting_set_type argument") if (! defined $type);
+  throw("Must provide a supporting_set type argument") if (! defined $type);
   
-  my $sql = "ss.supporting_set_type='".$type."'";
+  my $sql = "ss.type='".$type."'";
   
   if($status){
     my $constraint = $self->status_to_constraint($status) if $status;
@@ -313,7 +313,7 @@ sub fetch_all_by_supporting_set {
 	
 	#self join here to make sure we get all linked result_sets
     #my $sql = 'ds.data_set_id IN (SELECT ds.data_set_id from data_set ds where result_set_id='.$set->dbID().')';
-	my $sql = 'ss.supporting_set_type="'.$set->type.'" AND ss.supporting_set_id='.$set->dbID();
+	my $sql = 'ss.type="'.$set->type.'" AND ss.supporting_set_id='.$set->dbID();
 
     return $self->generic_fetch($sql);	
 }
@@ -424,7 +424,7 @@ sub _columns {
   
   return qw(
 			ds.data_set_id	    ds.feature_set_id
-			ds.name             ss.supporting_set_type
+			ds.name             ss.type
 			ss.supporting_set_id
 		   );	
 }
@@ -584,7 +584,7 @@ sub store{
 
   my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, name) 
                             VALUES (?, ?)");
-  my $sth2 = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, supporting_set_type) 
+  my $sth2 = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) 
                             VALUES (?, ?, ?)");
 
   my ($fset_id);
@@ -619,7 +619,7 @@ sub store{
 
 	  $sth2->bind_param(1, $dset->dbID(),                SQL_INTEGER);
 	  $sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
-	  $sth2->bind_param(3, $sset->supporting_set_type(), SQL_VARCHAR);#enum feature/result/experimental
+	  $sth2->bind_param(3, $sset->type(),                SQL_VARCHAR);#enum feature/result/experimental
 	  $sth2->execute();
 	}
   }
@@ -650,7 +650,7 @@ sub store_updated_sets{
   throw('Must pass a list of DataSet objects to store') if(! @dsets || $#dsets < 0);
 
 
-  my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, supporting_set_type) 
+  my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) 
                             VALUES (?, ?, ?)");
 
   my $db = $self->db();
