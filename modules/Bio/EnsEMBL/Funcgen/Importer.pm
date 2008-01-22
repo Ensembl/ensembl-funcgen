@@ -2894,7 +2894,7 @@ sub R_norm{
 	my @chips = ();
   
     if (! $rset) {
-      $self->log("All ExperimentalChips already have status:\tIMPORTED_${logic_name}");
+      $self->log("All ExperimentalChips already have status:\t${logic_name}");
     } else {					#Got data to normalise and import
       my @dbids;
       my $R_file = $self->get_dir("norm")."/${logic_name}.R";
@@ -2938,8 +2938,8 @@ sub R_norm{
 		#can't as we need seperate ResultSet for each
 
   
-		if ($echip->has_status("IMPORTED_".$logic_name)) {
-		  $self->log("ExperimentalChip ".$echip->unique_id()." already has status:\tIMPORTED_".$logic_name);
+		if ($echip->has_status($logic_name)) {
+		  $self->log("ExperimentalChip ".$echip->unique_id()." already has status:\t$logic_name);
 		} else {
 	  
 		  #warn "Need to roll back here if recovery, as norm import may fail halfway through";
@@ -3108,7 +3108,7 @@ sub R_norm{
 	  
 
 	  foreach my $echip(@chips){
-		$echip->adaptor->store_status("IMPORTED_${logic_name}", $echip);
+		$echip->adaptor->store_status($logic_name, $echip);
 	  }
 
 	  #Recreate all non-import RSets for analysis if not already present
@@ -3159,17 +3159,14 @@ sub get_import_ResultSet{
 
   my ($rset, @new_chip_channels);
   my $result_adaptor = $self->db->get_ResultSetAdaptor();
-  my $logic_name = ($anal->logic_name() eq "RawValue") ? "" : "_".$anal->logic_name();
+  my $logic_name = $anal->logic_name;
+  my $status = ($logic_name eq "RawValue") ? "IMPORTED" : $logic_name;
 
-  if(($anal->logic_name()) eq 'RawValue' && ($table_name eq 'experimental_chip')){
+  if(($logic_name) eq 'RawValue' && ($table_name eq 'experimental_chip')){
 	throw("Cannot have an ExperimentalChip ResultSet with a RawValue analysis, either specify 'channel' or another analysis");
   }
 
-  my $status = "IMPORTED${logic_name}";
-  
-  #could drop the table name here and use analysis hash?
-  #warn("Need to implement chip_sets here");
-  
+  #Build IMPORT Set for $table_name
   foreach my $echip (@{$self->experiment->get_ExperimentalChips()}) {
 
     #clean chip import and generate rset
@@ -3203,7 +3200,7 @@ sub get_import_ResultSet{
 	  my(@tmp) = @{$result_adaptor->fetch_all_by_name_Analysis($self->name()."_IMPORT", $anal)};
 
 	  if(scalar(@tmp) > 1){
-		throw('Found more than one IMPORT ResultSet for '.$self->name().'_IMPORT with analysis '.$anal->logic_name());
+		throw('Found more than one IMPORT ResultSet for '.$self->name().'_IMPORT with analysis '.$logic_name);
 	  }
 
 	  $rset = shift @tmp;
@@ -3225,16 +3222,12 @@ sub get_import_ResultSet{
 	  #warn "fetching rset with ".$self->name()."_IMPORT ". $anal->logic_name;
 	  
 	  #$rset = $result_adaptor->fetch_by_name_Analysis($self->name()."_IMPORT", $anal);
-	  warn("Warning: Could not find recovery ResultSet for analysis ".$anal->logic_name()) if ! $rset;
+	  warn("Warning: Could not find recovery ResultSet for analysis ".$logic_name) if ! $rset;
 	  #}
 	  
 	  if (! $rset) {
-		$self->log("Generating new ResultSet for analysis ".$anal->logic_name());
-		#this is throwing if feature_type not defined
-		#but we are handling multiple feature types in mage?
-		#feature type does not get set even if we only see one feature_type in tab2mage
-		#we need to relax this param in Set.pm and implement in FeatureSet only
-
+		$self->log("Generating new ResultSet for analysis ".$logic_name);
+	
 		$rset = Bio::EnsEMBL::Funcgen::ResultSet->new
 		  (
 		   -analysis   => $anal,
@@ -3243,7 +3236,9 @@ sub get_import_ResultSet{
 		   -feature_type => $self->feature_type(),
 		   -cell_type    => $self->cell_type(),
 		  );
-		
+	
+		#These types should be set to NULL during the MAGE-XML validation if we have more than one type in an experiment
+	
 		($rset) = @{$result_adaptor->store($rset)};
 	  }
 	}
