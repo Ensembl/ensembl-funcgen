@@ -78,7 +78,8 @@ sub new{
   $self->{'config'} =  
     {(
       #order of these data arrays is important!
-      array_data   => ['experiment'],
+	  #Remove these method arrays, snd just run them serially?
+      array_data   => ['experiment'],#Rename this!!
       probe_data   => ["probe"],
       results_data => ["and_import_results"],
       sample_key_fields => ['DESIGN_ID', 'CHIP_ID', 'DYE', 'PROMOT_SAMPLE_TYPE'],# 'SAMPLE_LABEL'],label now optional
@@ -157,6 +158,8 @@ sub set_config{
   my $self = shift;
 
   #dir are not set in config to enable generic get_dir method access
+
+  #do we need to set an input_dir and an output_dir?
 
 
   if($self->{'old_dvd_format'}){
@@ -402,6 +405,8 @@ sub read_experiment_data{
     ### CREATE AND STORE Channels
 	my $type = uc($data[$hpos{'PROMOT_SAMPLE_TYPE'}]);
 	my $sample_label = (! exists $hpos{'SAMPLE_LABEL'}) ? '' :  $data[$hpos{'SAMPLE_LABEL'}];
+
+
 	$type = 'TOTAL' if ($type ne 'EXPERIMENTAL');
     $channel = $chan_adaptor->fetch_by_type_experimental_chip_id($type, $echip->dbID());
 
@@ -421,7 +426,7 @@ sub read_experiment_data{
 		(
 		 -EXPERIMENTAL_CHIP_ID => $echip->dbID(),
 		 -DYE                  => $data[$hpos{'DYE'}],
-		 -SAMPLE_LABEL         => $sample_label,
+		 -SAMPLE_ID            => $sample_label,
 		 -TYPE                 => $type,
 		);
     
@@ -429,9 +434,22 @@ sub read_experiment_data{
       #would never happen on one chip?  May happen between chips in one experiment
 	  
       ($channel) = @{$chan_adaptor->store($channel)};
-    }
+
+	}
 
 	#we need to build the channel level tab2mage line here
+
+	#For each BR there will be two sample_labels, one for each channel
+	#These will be used across multiple chips.
+	#If two chips the same design ID and the same sample labels, then we have a technical replicate
+	#else if they have different sample labels then we have another biological replicate
+	#We have a problem of associating channels to the same BR with differing sample labels
+	#This is solved by checking whether the chip ID has already been registered in a BR
+
+	#This fails if more than one sample label is used for any given BR
+	#This will result in the BR being split into the number of unique sample label pairs(Experimental/Control  channel)
+	#This also fails if the same sample label has been used for two different BRs
+
 	if($self->{'write_mage'}){
 	  #my $sample_name = ($sample_label eq '') ? '???' : substr($sample_label, 0, (length($sample_label)-1));
 	  my $ctype_name = (defined $self->cell_type()) ? $self->cell_type->name() : '???';
@@ -439,27 +457,30 @@ sub read_experiment_data{
 	  my $ctype_desc = (defined $self->cell_type()) ? $self->cell_type->description() : '???';
 
 	  #define reps
-	  # we can't do this with one has.
-	  #we need one to get the biorep based on the sample label and making sure the unique ID os the same
-	  
 
 
-	  #then we need to define the tech rep by matching the sample label and the making sure the design_id isn't already used
+	  #we need one to get the biorep based on the sample label and making sure the unique ID are the same
+	  #we need to define the tech rep by matching the sample label and the making sure the design_id isn't already used
 
-	  if(exists $sample_reps{$sample_label}){#found br
-		
+	  #Is this doing the BR assignment properly?
+
+	  if(exists $sample_reps{$sample_label}){#Found chip in a previously seen BR
+		#Register the BR of this chip ID
 		$uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'} = $sample_reps{$sample_label};
 
 	  }
-	  elsif(exists $uid_reps{$data[$hpos{'CHIP_ID'}]}){
+	  elsif(exists $uid_reps{$data[$hpos{'CHIP_ID'}]}){#Found the other channel
 		$sample_reps{$sample_label} = $uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'};
 	  }
 	  else{#assign new br
-		$sample_reps{$sample_label} = $br_cnt;
-		$uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'} = $br_cnt;
+		$sample_reps{$sample_label} = $br_cnt;                  #Assign BR to sample label
+		$uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'} = $br_cnt;     #Assign BR to chip id
 		$br_cnt++;
 	  }
 
+
+
+	  #Something is going awry here. The TR is not being reset for some new BRs
 	  
 	  if(! exists $uid_reps{$data[$hpos{'CHIP_ID'}]}{'tr'}){
 		#we only assign a new tr here if this design has not been seen in any of the reps
@@ -467,24 +488,61 @@ sub read_experiment_data{
 
 		my $create_rep = 1;
 		my $tr;
+		my @chip_ids;
+		my $br = 	$uid_reps{$data[$hpos{'CHIP_ID'}]}{'br'};
 
-		foreach my $rep(keys %did_reps){
-		  #This just assigns to the first rep without the design
+		foreach my $chip_id(keys %uid_reps){
+		  
+		  push @chip_ids, $chip_id if($uid_reps{$chip_id}{'br'} == $br);
+		}
 
+		#This is looping through all the TRs for all the design IDs
+	   
+		foreach my $rep(sort keys %did_reps){
+		  #Doesn't exist for the given BR?
+		  #So we need to get all the chip_ids for a given br
+		  #Check wether it exists and wether it exists in did_reps and check wether the chip_id value is part of the BR set
+		  #else we add it
+																				 
 		  if(! exists $did_reps{$rep}{$data[$hpos{'DESIGN_ID'}]}){
+			#Not seen in a TR of this $rep yet
+			$create_rep = 0;
+		  }elsif(! grep(/$did_reps{$rep}{$data[$hpos{'DESIGN_ID'}]}/, @chip_ids)){
+			#Not seen in this BR with this TR $rep
+			$create_rep = 0;
+		  }
+
+		  if(! $create_rep){
+			#Design ID not seen so add to this TR
 			$did_reps{$rep}{$data[$hpos{'DESIGN_ID'}]} = $data[$hpos{'CHIP_ID'}]; #don't really need to assign this
 			$tr = $rep;
-			$create_rep = 0;
 			last;#do not remove this or we get wierd TR incrementing
 		  }
 		}
 
+		
 		if($create_rep){
-		  ($tr) = sort {$b<=>$a} keys %did_reps;
+		  #Get the next TR value for this given BR
+		  my @trs;
+
+		  foreach my $rep(keys %did_reps){
+			
+			foreach my $chip_id(values %{$did_reps{$rep}}){
+			  
+			  #Push TR if chip_id is present in this BR
+			  push @trs, $rep if(grep(/$chip_id/, @chip_ids));
+			}
+		  }
+		  ($tr) = sort {$b<=>$a} @trs;
+
+		  $tr ||=0;
 		  $tr++;
+		  
+		  #register design ID to chip ID mapping for this TR
 		  $did_reps{$tr}{$data[$hpos{'DESIGN_ID'}]} = $data[$hpos{'CHIP_ID'}];
 		}
 
+		#register TR for this chip ID
 		$uid_reps{$data[$hpos{'CHIP_ID'}]}{'tr'} = $tr;
 	  }
 
@@ -503,6 +561,7 @@ sub read_experiment_data{
 	  foreach my $protocol(sort (keys %{$self->get_config('protocols')})){
 		$tsm_line .= "\t".$self->get_config('protocols')->{$protocol}->{'accession'};
 	  }
+
 	  
 	  #BioSource
 	  $tsm_line .= "\t$ctype_name";
@@ -513,10 +572,10 @@ sub read_experiment_data{
 
 	  #LabeledExtract & Immunoprecipitate
 	  if($type eq 'EXPERIMENTAL'){
-		$tsm_line .= "\tIP of $tr with anti $ftype_name (Ab vendor, Ab ID)";
+		$tsm_line .= "\t$sample_label - IP of $tr with anti $ftype_name (Ab vendor, Ab ID)";
 		$tsm_line .= "\t$tr IP";
 	  }else{
-		$tsm_line .= "\tInput control DNA of $tr\t";
+		$tsm_line .= "\t$sample_label - Input control DNA of $tr\t";
 	  }
 		
 	  #Hybridization	
@@ -702,7 +761,7 @@ sub read_probe_data{
       #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
       #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
 
-	  my $fasta_file = $ENV{'EFG_DATA'}."/fastas/probe.".$achip->name().".fasta";
+	  my $fasta_file = $self->get_dir('fastas').'/probe.'.$achip->name().".fasta";
     warn("FASTA backup disabled");
 	  #$self->backup_file($fasta_file);
       my $f_out = open_file($fasta_file, '>')	if($self->dump_fasta());
