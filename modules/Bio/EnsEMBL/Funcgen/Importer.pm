@@ -39,7 +39,6 @@ use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::Parsers::ArrayDesign;
 use Bio::EnsEMBL::Funcgen::Parsers::Sanger;
 use Bio::EnsEMBL::Funcgen::Parsers::Nimblegen;
-#use Bio::EnsEMBL::Funcgen::Parsers::Solexa;
 use Bio::EnsEMBL::Funcgen::Parsers::Bed;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
@@ -110,7 +109,7 @@ sub new{
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
 	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, 
-	  $no_mage, $eset_name, $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type)
+	  $no_mage, $eset_name, $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, $ucsc_coords)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
@@ -118,7 +117,7 @@ sub new{
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
 				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
-				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER'], @_);
+				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS'], @_);
 
   
   #### Define parent parser class based on vendor
@@ -220,6 +219,7 @@ sub new{
   $self->{'no_mage'} = $no_mage || 0;
   $self->{'experimental_set_name'} = $eset_name if $eset_name;
   $self->{'old_dvd_format'} = $old_dvd_format || 0;
+  $self->{'ucsc_coords'} = $ucsc_coords || 0;
 
   #Will a general norm method be applicable fo all imports?
   $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};
@@ -1019,6 +1019,25 @@ sub cell_type{
 
   return $self->{'cell_type'};
 }
+
+
+=head2 ucsc_coords
+  
+  Example    : $start += 1 if $self->ucsc_coords;
+  Description: Getter for UCSC coordinate usage flag
+  Returntype : boolean
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub ucsc_coords{
+  my $self = shift;
+  return $self->{'ucsc_coords'};
+}
+
+
 
 =head2 array_file
   
@@ -2939,7 +2958,7 @@ sub R_norm{
 
   
 		if ($echip->has_status($logic_name)) {
-		  $self->log("ExperimentalChip ".$echip->unique_id()." already has status:\t$logic_name);
+		  $self->log("ExperimentalChip ".$echip->unique_id()." already has status:\t$logic_name");
 		} else {
 	  
 		  #warn "Need to roll back here if recovery, as norm import may fail halfway through";
