@@ -15,16 +15,16 @@
 
 
 --
--- Table structure for table `egroup`
+-- Table structure for table `experimental_group`
 --
 
-DROP TABLE IF EXISTS `egroup`;
-CREATE TABLE `egroup` (
-   `egroup_id` smallint(6) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `experimental_group`;
+CREATE TABLE `experimental_group` (
+   `experimental_group_id` smallint(6) unsigned NOT NULL auto_increment,
    `name` varchar(40) NOT NULL default '',
    `location` varchar(120) default NULL,
    `contact` varchar(40) default NULL,
-   PRIMARY KEY  (`egroup_id`)
+   PRIMARY KEY  (`experimental_group_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -212,14 +212,14 @@ DROP TABLE IF EXISTS `experiment`;
 CREATE TABLE `experiment` (
    `experiment_id` int(10) unsigned NOT NULL auto_increment,
    `name` varchar(30) default NULL,
-   `egroup_id` smallint(6) unsigned default NULL,
+   `experimental_group_id` smallint(6) unsigned default NULL,
    `date` date default '0000-00-00',
    `primary_design_type` varchar(30) default NULL, 
    `description`  varchar(255) default NULL,
    `mage_xml_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`experiment_id`),
    UNIQUE KEY `name_idx` (`name`),
-   KEY `egroup_idx` (`egroup_id`),
+   KEY `experimental_group_idx` (`experimental_group_id`),
    KEY `design_idx` (`primary_design_type`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
