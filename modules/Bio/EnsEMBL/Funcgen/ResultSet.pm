@@ -79,16 +79,11 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($table_name, $table_id, $ftype, $ctype)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
+  my ($table_name, $table_id)
+    = rearrange(['TABLE_NAME', 'TABLE_ID'], @_);
 
 
   $self->{'table_id_hash'} = {};
-
-  $self->cell_type($ctype) if $ctype;
-  $self->feature_type($ftype) if $ftype;
-
-  
 
   #maybe don't need tha analysis args as mandatory as we're testing in the adaptor store method
   if (! $table_name){
@@ -302,7 +297,7 @@ sub get_ExperimentalChips{
 	if($self->table_name() eq "experimental_chip"){
 
 	  foreach my $ec_id(@{$self->table_ids()}){
-#		  warn "Getting ec with id $ec_id";
+		#warn "Getting ec with id $ec_id";
 		push @{$self->{'experimental_chips'}}, $ec_adaptor->fetch_by_dbID($ec_id);
 		#should this be hashed on chip_channel_id?
 	  }

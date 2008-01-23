@@ -83,16 +83,10 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($type, $ftype, $ctype)
-    = rearrange(['TYPE','FEATURE_TYPE', 'CELL_TYPE',],@_);
+  my ($type)
+    = rearrange(['TYPE'],@_);
 
-  throw ('Must provide a FeatureType') if(! defined $ftype);
-  $self->feature_type($ftype);
-
-
-  
-
-  $self->cell_type($ctype) if defined $ctype;
+  throw ('Must provide a FeatureType') if(! defined $self->feature_type);
 
   throw("You must defined a FeatureSet type e.g. 'annotated'") if ! $type;
   $self->type($type);
