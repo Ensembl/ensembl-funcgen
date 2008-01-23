@@ -75,16 +75,22 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($name, $anal)
-    = rearrange(['NAME', 'ANALYSIS'], @_);
+  my ($name, $anal, $ftype, $ctype)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
   
   throw('Need to specify a name') if ! defined $name;
 
-  throw('Must pass a valid -analysis parameter') if (! defined $anal && $self->type ne 'experimental');
-  #Move analysis to child Sets where it is appropriate?
-    
-  $self->analysis($anal) if defined $anal;
-  $self->{'name'} = $name;	
+  if(defined $anal){#Move this to child Sets, and just set anal here
+	$self->analysis($anal);
+  }elsif($self->type ne 'experimental'){
+	throw('Must pass a valid -analysis parameter');
+  }
+
+  $self->{'name'} = $name;
+  $self->cell_type($ctype) if $ctype;
+  $self->feature_type($ftype) if $ftype;
+
+  #Set type here but don't validate, as this can be done selectively in the Child Sets, do this for analysis too?
   
   return $self;
 }
@@ -207,6 +213,7 @@ sub display_label {
   throw('Not yet implemented in the Base Set class');
 
   #Add display label in table?
+  #Can we aborc ResultSet method into this?
 
   if(! $self->{'display_label'}){
 
