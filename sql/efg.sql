@@ -211,7 +211,7 @@ CREATE TABLE `probe_design` (
 DROP TABLE IF EXISTS `experiment`;
 CREATE TABLE `experiment` (
    `experiment_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(40) default NULL,
+   `name` varchar(100) default NULL,
    `experimental_group_id` smallint(6) unsigned default NULL,
    `date` date default '0000-00-00',
    `primary_design_type` varchar(30) default NULL, 
