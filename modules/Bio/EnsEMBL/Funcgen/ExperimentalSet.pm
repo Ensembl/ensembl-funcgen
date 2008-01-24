@@ -53,7 +53,8 @@ package Bio::EnsEMBL::Funcgen::ExperimentalSet;
 use Bio::EnsEMBL::Funcgen::ExperimentalSubset;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
-use Bio::EnsEMBL::Funcgen::Storable;
+use Bio::EnsEMBL::Funcgen::Set;
+
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);#change to Set once we have implemented analysis properly
