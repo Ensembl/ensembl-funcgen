@@ -14,8 +14,11 @@ update feature_type set description='Histone 3 Lysine 79 Tri-Methylation' where 
 -- Add 'expression' class to feature_type
 alter table feature_type modify class enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region', 'Enhancer', 'Expression') default NULL;
 
--- Allow for longer experiment.name
+-- Allow for longer names in experiment, experimental_chip, result_set
 alter table experiment modify name varchar(100) default NULL;
+alter table experimental_chip modify biological_replicate varchar(100) default NULL;
+alter table experimental_chip modify technical_replicate varchar(100) default NULL;
+alter table result_set modify name varchar(100) default NULL;
 
 --tidy up array description
 update array set description='2005-05-10_HG17Tiling_Set. Whole human genome (hg17 from UCSC) tiled at 100 bp spacing. Repeat masked. 148 synthesis cycle limit. Contains random probes with GC content between 15-35%.' where name='2005-05-10_HG17Tiling_Set';
