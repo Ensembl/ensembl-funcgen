@@ -1367,7 +1367,7 @@ sub experiment_date{
   if (@_) {
     my $date = shift;
 
-    if ($date !~ /[0-9]{4}-[0-9]{2}[0-9]{2}/) {
+    if ($date !~ /[0-9]{4}-[0-9]{2}[0-9]{2}/o) {
       throw('Parameter -experiment_date needs to fe in the format: YYYY-MM-DD');
     }
 
@@ -1917,7 +1917,7 @@ sub validate_mage(){
 					#SOM0035_BR1_TR2 IP  #Immunoprecicpitate
 					#SOM0035_BR1_TR2     #Extract
 				
-					if ($sbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/) { #Total
+					if ($sbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/o) { #Total
 
 					  if (! defined $echips{$chip_uid}{'total_biotechrep'}) {
 						$echips{$chip_uid}{'total_biotechrep'} = $sbiomat->getName();
@@ -1950,7 +1950,7 @@ sub validate_mage(){
 						#SOM0035_BR1_TR2     #Extract (exp)
 						#SOM0035_BR1              #Sample (total)
 									   	
-						if ($tbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/) { #experimental
+						if ($tbiomat->getName() =~ /BR[0-9]+_TR[0-9]+$/o) { #experimental
 						  
 						  if (! defined $echips{$chip_uid}{'experimental_biotechrep'}) {
 							$echips{$chip_uid}{'experimental_biotechrep'} = $tbiomat->getName();
@@ -2012,7 +2012,7 @@ sub validate_mage(){
 							#TOTAL        - source/cell type
 							my $cell_type;
 
-							if($fbiomat->getName() =~ /BR[0-9]+$/){#EXPERIMETNAL
+							if($fbiomat->getName() =~ /BR[0-9]+$/o){#EXPERIMETNAL
 							
 							  if(! defined $echips{$chip_uid}{'experimental_biorep'}){
 								$echips{$chip_uid}{'experimental_biorep'} = $fbiomat->getName();
@@ -2116,8 +2116,8 @@ sub validate_mage(){
 		if (! defined $biotechrep) {
 		  push @log, 'ExperimentalChip('.$echip->unique_id().') Extract field do not meet naming convention(SAMPLE_BRN_TRN)';
 		}							#! defined biorep? will never occur at present
-		elsif ($biotechrep !~ /$biorep/) {
-		  push @log, "Found Extract(techrep) vs Sample(biorep) naming mismatch\t${biotechrep}\tvs$biorep";
+		elsif ($biotechrep !~ /\Q$biorep\E/) {
+		  push @log, "Found Extract(techrep) vs Sample(biorep) naming mismatch\t${biotechrep}\tvs\t$biorep";
 		} 
 		
 		if ( ! $echips{$echip->unique_id()}{$chan_type.'_dye'}) {
@@ -2225,7 +2225,7 @@ sub validate_mage(){
 
 
   if (@log) {
-	$self->log("MAGE VALIATION REPORT\n\t".join("\n::\t", @log));
+	$self->log("MAGE VALIDATION REPORT\n::\t".join("\n::\t", @log));
 	throw("MAGE VALIDATION FAILED\nPlease correct tab2mage file and try again:\t".$self->get_config('tab2mage_file'));
   } else {
 	$self->log('MAGE VALDIATION SUCCEEDED');
@@ -2611,7 +2611,7 @@ sub get_probe_id_by_name_Array{
  
   #check current line
   if($line = $self->{'_probe_cache'}{$array->name()}{'current_line'}){
-	if($line =~ /^${name}\t/){
+	if($line =~ /^\Q${name}\E\t/){
 	  $pid = (split/\t/o, $line)[1];
 	}
   }
@@ -2620,7 +2620,7 @@ sub get_probe_id_by_name_Array{
   if(! $pid){
 	while($line = $self->{'_probe_cache'}{$array->name()}{'handle'}->getline()){
 	  
-	  if($line =~ /^${name}\t/){
+	  if($line =~ /^\Q${name}\E\t/){
 		$pid = (split/\t/o, $line)[1];
 		$self->{'_probe_cache'}{$array->name()}{'current_line'} = $line;
 		last;
@@ -3137,7 +3137,7 @@ sub R_norm{
 	  my %seen_rsets;
 	 
 	  foreach my $anal_rset(@{$rset_a->fetch_all_by_Experiment($self->experiment)}){
-		next if($anal_rset->name =~ /_IMPORT$/);
+		next if($anal_rset->name =~ /_IMPORT$/o);
 		next if(exists $seen_rsets{$anal_rset->name});
 		next if $anal_rset->analysis->logic_name eq $norm_anal->logic_name;
 		$seen_rsets{$rset->name} = 1;
