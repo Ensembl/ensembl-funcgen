@@ -394,7 +394,6 @@ sub log_data_sets{
 	my @supporting_sets = @{$dset->get_supporting_sets};
 
 	if(my @supporting_sets = @{$dset->get_supporting_sets}){
-	  $self->log('SupportingSets('.$dset->supporting_set_type.'):');
 	  map $self->log_set("SupportingSet:\t\t", $_), @supporting_sets;
 	}
   }
@@ -404,6 +403,10 @@ sub log_data_sets{
 
 sub log_set{
   my ($self, $text, $set) = @_;
+  
+  if(! $set->isa('Bio::EnsEMBL::Funcgen::DataSet')){
+	$text .= $set->set_type.":\t";
+  }
   
   $text .= $set->display_label.'('.$set->name.')';
   $text .= "\tDISPLAYABLE" if($set->is_displayable);
