@@ -204,8 +204,15 @@ sub type {
 sub display_label {
   my $self = shift;
   
+ 
   if(! $self->{'display_label'}){
-    $self->{'display_label'} = $self->feature_type->name()." - ".$self->cell_type->name()." Enriched Sites";
+
+	if($self->feature_type->class() eq 'Regulatory Feature'){
+	  $self->{'display_label'} = 'Regulatory Features';
+	}
+	else{
+	  $self->{'display_label'} = $self->feature_type->name()." - ".$self->cell_type->name()." Enriched Sites";
+	}
   }
 	
   return $self->{'display_label'};

@@ -63,5 +63,5 @@ my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
 																-builds => \@builds,
 															   );
 
-$hchecker->update_db_for_release($skip_mc);
+#$hchecker->update_db_for_release($skip_mc);
 $hchecker->log_data_sets();

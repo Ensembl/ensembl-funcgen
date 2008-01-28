@@ -702,7 +702,7 @@ sub display_label {
 
   if(! $self->{'display_label'}){
 
-	if($self->product_FeatureSet->feature_type->class() eq 'REGULATORY FEATURE'){
+	if($self->product_FeatureSet->feature_type->class() eq 'Regulatory Feature'){
 	  $self->{'display_label'} = 'Regulatory Features';
 	}
 	else{

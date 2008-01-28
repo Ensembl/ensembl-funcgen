@@ -407,7 +407,7 @@ sub log_set{
   if(! $set->isa('Bio::EnsEMBL::Funcgen::DataSet')){
 	$text .= $set->set_type.":\t";
   }
-  
+ 
   $text .= $set->display_label.'('.$set->name.')';
   $text .= "\tDISPLAYABLE" if($set->is_displayable);
   $self->log($text);

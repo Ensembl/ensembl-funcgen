@@ -21,9 +21,6 @@ update meta set meta_value=48 where meta_key='schema_version';
 --insert into status values(18,'result_set' ,2);
 
 
---alter status name
-alter table status_name change `name` `name` varchar(30) not NULL;
-update status_name set name=replace(name, 'IMPORTED_', '');
 
 
 --remove spurious reg feat records

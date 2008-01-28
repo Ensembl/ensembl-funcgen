@@ -210,24 +210,23 @@ sub analysis {
 sub display_label {
   my $self = shift;
 
-  throw('Not yet implemented in the Base Set class');
-
+ 
   #Add display label in table?
   #Can we aborc ResultSet method into this?
 
   if(! $self->{'display_label'}){
 
-	if($self->FeatureSet->feature_type->class() eq 'REGULATORY FEATURE'){
-	  $self->{'display_label'} = 'Regulatory Features';
-	}
-	else{
+	#if($self->product_FeatureSet->feature_type->class() eq 'Regulatory Feature'){
+	#  $self->{'display_label'} = 'Regulatory Features';
+	#}
+	#else{
 
 	  $self->{'display_label'} = $self->feature_type->name()." -";
 	  $self->{'display_label'} .= " ".($self->cell_type->display_label() || 
 									   $self->cell_type->description()   ||
 									   $self->cell_type()->name());
 	  $self->{'display_label'} .= " Enriched Sites";
-	}
+	#}
   }
  
   return $self->{'display_label'};

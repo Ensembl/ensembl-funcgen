@@ -1,5 +1,10 @@
 #!/usr/local/ensembl/bin/perl
 
+
+#Add pod docs here!
+
+
+
 use warnings;
 use strict;
 use Getopt::Long;
@@ -57,19 +62,18 @@ GetOptions (
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
+### Check conflicting params
+$format = lc($format);
 
+if($format eq 'regulatoryfeature' && defined $exp_name){
+  #Does throw exit from a script?
+  throw("Conflicting parameters:\n\t-format\t$format\n\t-exp_name\t$exp_name");
+  die("Throw not exiting");
+}
 
+die("Conflicting parameters:\n\t-slice\t$slice\n\t-chr\t$chr") if($chr && $slices);
 
-#my %format_columns = (
-#					  ResultFeature => [( '
-#					  
-#					 );
-
-#can we validate this as a custom list using the 'has' method?
-
-die("You cannot specify a -slice and a -chr option") if($chr && $slices);
-
-### Set up adaptors and FeatureSet 
+#Mandatory params
 
 if(! $cdb_name  || ! $db_name ){
   throw("You must provide a funcgen(-dbname) and a core(-cdbname) dbname");
@@ -78,9 +82,7 @@ throw("Must define your funcgen dbhost -dbhost") if ! $host;
 #throw("Must supply an input file with -file") if ! $file;
 #throw("Must supply a password for your fungen db") if ! $pass;
 
-
 #Keep this as local dbname not likely to work with auto dnadb
-
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
   (
@@ -104,6 +106,27 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
   );
 
 #should check db's here
+#Check db_handle|dbc?
+
+
+
+#Validate formats and set adaptor here
+my $feature_adaptor;
+
+
+if($format eq 'probefeature'){
+  $feature_adaptor = $db->get_ProbeFeatureAdaptor();
+}
+elsif($format eq 'resultfeature'){
+  $feature_adaptor = $db->get_ResultSetAdaptor();
+}
+elsif($format eq 'regulatoryfeature'){
+  $feature_adaptor = $db->get_RegulatoryFeatureAdaptor();
+}
+
+
+
+### Set up adaptors and FeatureSet 
 
 my $rsa = $db->get_ResultSetAdaptor();
 my $exa = $db->get_ExperimentAdaptor();
@@ -128,7 +151,6 @@ else{
 die("You have no valid slices.  Did you specify a valid chromosome?") if(! @$slices);
 
 
-my $pfa = $db->get_ProbeFeatureAdaptor();
 my @result_sets = @{$rsa->fetch_all_by_Experiment_Analysis($ex_obj, $analysis)};
 
 
@@ -171,10 +193,13 @@ sub print_data{
 
 
 	if($format eq 'ResultFeature'){
-	  @features =  @{$set->get_ResultFeatures_by_Slice($slice)};
+	  @features =  @{$set->get_ResultFeatures_by_Slice($slice)};#Change this to ResultSetAdaptor
 	}
 	elsif($format eq 'ProbeFeature'){
 	  @features = @{$pfa->fetch_all_by_Slice_ExperimentalChips($slice, $set->get_ExperimentalChips())};
+	}
+	elsif($format eq 'RegulatoryFeature'){
+
 	}
 
 	print $set->name." has ". @features ." ${format}s for slice:\t".$slice->name."\n";
