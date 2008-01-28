@@ -27,6 +27,14 @@ update array set description='2005-05-10_HG17Tiling_Set. Whole human genome (hg1
 delete pf from probe_feature pf, probe p, array_chip ac where ac.design_id='GM06990_DNASE:GM0699' and p.array_chip_id=ac.array_chip_id and pf.probe_id=p.probe_id;
 delete p from probe p, array_chip ac where ac.design_id='GM06990_DNASE:GM0699' and p.array_chip_id=ac.array_chip_id;
 delete from array_chip where design_id='GM06990_DNASE:GM0699';
+--update feature_type table, add missing class and description fields
+update feature_type set class='Histone' where name='H4K20me3';
+update feature_type set description='Histone 4 Lysine 20 Tri-Methylation' where name='H4K20me3';
+update feature_type set description='Histone 3 Lysine 27 Tri-Methylation' where name='H3K27me3';
+update feature_type set description='Histone 3 Lysine 36 Tri-Methylation' where name='H3K36me3';
+update feature_type set description='Histone 3 Lysine 79 Tri-Methylation' where name='H3K79me3';
+update feature_type set description='Histone 3 Lysine 9 Tri-Methylation' where name='H3K9me3';
+
 -- Data patch finished
 
 
