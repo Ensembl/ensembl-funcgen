@@ -8,8 +8,8 @@ use Bio::EnsEMBL::Funcgen::Utils::HealthChecker;
 
 my $reg = "Bio::EnsEMBL::Registry";
 
-my $species = 'mus_musculus';
-my $schema_build = '48_37a';
+my $species = 'homo_sapiens';
+my $schema_build = '49_36k';
 my $pass = shift @ARGV;
 my $port = 3306;
 my $user = 'ensadmin';
@@ -63,5 +63,5 @@ my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
 																-builds => \@builds,
 															   );
 
-#$hchecker->update_db_for_release($skip_mc);
+$hchecker->update_db_for_release($skip_mc);
 $hchecker->log_data_sets();
