@@ -142,6 +142,9 @@ sub update_db_for_release{
   $self->update_meta_schema_version;
   $self->update_meta_coord;
   
+
+  $self->log('??? Have you dumped/copied GFF dumps ???');
+
   $self->log(' :: Finished updating '.$self->{'dbname'}.' for release');
 }
 
@@ -267,13 +270,14 @@ sub update_meta_coord{
   foreach my $table_name(@table_names){
 	my $sql1 = "select distinct(cs.name), mc.coord_system_id, cs.version, mc.max_length from coord_system cs, meta_coord mc where mc.table_name='$table_name' and mc.coord_system_id=cs.coord_system_id";
 	
-	$self->log("Updating meta_coord max_length for $table_name:\nname\tcoord_system_id\tversion\tmax_length");
+	$self->log("Updating meta_coord max_length for $table_name:\n\tname\tcoord_system_id\tversion\tmax_length");
 	
 	#can we test for emtpy array here? Then skip delete.
 	
 	my @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql1)};
 	
-	map {print join("\t", @{$_})."\n"} @info;
+	#log this
+	map {print "\t".join("\t", @{$_})."\n"} @info;
 	
 	# Clean old entries
 	$self->log("Deleting old meta_coord entries");
@@ -286,21 +290,50 @@ sub update_meta_coord{
 	#Is this query running for each redundant cs_id?
 	#would it be more efficient to retrieve the NR cs_ids first and loop the query for each cs_id?
 	
-	$sql =
-	  "INSERT INTO meta_coord "
-		. "SELECT '$table_name', s.coord_system_id, "
-		  . "MAX( t.seq_region_end - t.seq_region_start + 1 ) "
+	#Can we get the dbID of the largest feature for ease of checking?
+	#This won't work as we're grouping by coord_system
+	#would need to select distinct coord_system_id for table first
+	#This may well slow down quite a bit doing it this way
+	
+	$sql = "select distinct s.coord_system_id from seq_region s, $table_name t WHERE t.seq_region_id = s.seq_region_id";
+	my @cs_ids = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+	#Convert single element arrayrefs to scalars
+	map $_ = ${$_}[0], @cs_ids;
+
+	$self->log("New max_lengths for $table_name are:");
+	map {$self->log(join("\t", @{$_})."\n")} ['coord_system_id', 'max_length', 'longest record dbID'];
+
+	foreach my $cs_id(@cs_ids){
+	  
+	  $sql = "SELECT s.coord_system_id, (t.seq_region_end - t.seq_region_start + 1 ) as max, t.${table_name}_id "
 			. "FROM $table_name t, seq_region s "
 			  . "WHERE t.seq_region_id = s.seq_region_id "
-				. "GROUP BY s.coord_system_id";
+				. "and s.coord_system_id=${cs_id} order by max desc limit 1";
+
+
+	  @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+	  #Convert one multi element array_ref into array
+	  @info = @{$info[0]};
+	  $self->log(join("\t", @info));
+
+	  $sql = "INSERT INTO meta_coord values(\"${table_name}\", \"${cs_id}\", \"$info[1]\")";
+
+
+	  #$sql = "INSERT INTO meta_coord "
+	  #. "SELECT '$table_name', s.coord_system_id, "
+	  #	. "MAX( t.seq_region_end - t.seq_region_start + 1 ) "
+	  #	  . "FROM $table_name t, seq_region s "
+	  #		. "WHERE t.seq_region_id = s.seq_region_id "
+	  #		  . "GROUP BY s.coord_system_id";
+	  
+		$self->db->dbc->db_handle->do($sql);
+	}
+
+	#$self->log("New max_lengths for $table_name are:");
   
-	$self->db->dbc->db_handle->do($sql);
+	#@info = @{$self->db->dbc->db_handle->selectall_arrayref($sql1)};
 	
-	$self->log("New max_lengths for $table_name are:");
-  
-	@info = @{$self->db->dbc->db_handle->selectall_arrayref($sql1)};
-	
-	map {$self->log(join("\t", @{$_})."\n")} @info;
+	#map {$self->log(join("\t", @{$_})."\n")} @info;
   }  
   
   $self->log("Finished updating meta_coord max_lengths\n");
