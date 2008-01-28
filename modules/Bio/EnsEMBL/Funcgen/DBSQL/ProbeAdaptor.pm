@@ -21,7 +21,7 @@ Probe objects.
 
 =head1 AUTHOR
 
-This module was created by Ian Sealy, but is almost entirely based on the
+This module was created by Nathan Johnson, but is almost entirely based on the
 ProbeAdaptor module written by Arne Stabenau.
 
 This module is part of the Ensembl project: http://www.ensembl.org/
@@ -60,7 +60,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Funcgen::Probe
   Exceptions : throws if array or probe name not defined
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - rename to fetch_by_probe_array_probeset_name?
 
 =cut
 
@@ -71,7 +71,7 @@ sub fetch_by_array_probe_probeset_name {
 	my $ps_table_alias = "";
 
 
-	if(! defined $array_name || ! defined $probe_name){
+	if(! (defined $array_name && defined $probe_name)){
 	  throw('You must provide at least and array and probe name');
 	}
 
@@ -101,6 +101,10 @@ sub fetch_by_array_probe_probeset_name {
 
 	
 	my $ac_clause = "p.array_chip_id IN (".join(", ", @$array_ref).")";
+
+
+	#Need to change this to throw if we get more than one probe back
+
 
 	$sql = "SELECT p.probe_id FROM probe p $ps_table_alias".
 	  " WHERE $ac_clause $probeset_clause AND p.name = ?";
@@ -369,8 +373,12 @@ sub _objs_from_sth {
 		#would slightly slow down processing, and would slightly increase memory as cache(small as non-redundant)
 		#and map hashes would persist
 
-		#Do we even need this????
-
+	
+	  ####MAKE THIS LAZY LOADED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	  #Can we even do this given we won't then have the array context?
+	  #We should just force this for efficiency and make people keep the array if they ever want to use that info?
+	  #Will this affect any other methods?
+	  
 
 		$array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
 

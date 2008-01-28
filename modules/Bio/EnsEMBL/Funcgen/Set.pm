@@ -82,8 +82,8 @@ sub new {
 
   if(defined $anal){#Move this to child Sets, and just set anal here
 	$self->analysis($anal);
-  }elsif($self->type ne 'experimental'){
-	throw('Must pass a valid -analysis parameter');
+  }elsif($self->set_type ne 'experimental'){
+	throw('Must pass a valid -analysis parameter for a '.ref($self));
   }
 
   $self->{'name'} = $name;
@@ -235,9 +235,9 @@ sub display_label {
 
 
 
-=head2 type
+=head2 set_type
 
-  Example    : my $set_type = $dset->type;
+  Example    : my $set_type = $set->set_type;
   Description: Getter for the Set type for this Set.
   Returntype : string e.g. result, feature, data or experimental
   Exceptions : None
@@ -246,11 +246,12 @@ sub display_label {
 
 =cut
 
-sub type {
+sub set_type {
   my $self = shift;
  
   my $type;
-  ($type = lc(ref($self))) =~ s/set//;
+  my @namespace = split/\:\:/, ref($self);
+  ($type = lc($namespace[$#namespace])) =~ s/set//;
 
   return $type;
 }

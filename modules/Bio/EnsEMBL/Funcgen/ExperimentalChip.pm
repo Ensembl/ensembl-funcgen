@@ -328,7 +328,7 @@ sub cell_type {
 =head2 biological_replicate
 
   Arg [1]    : (optional) string - the name or number of the chip biological replicate set
-  Example    : $ec->biological_replicate('SAMPLENAME_BIOREP1');
+  Example    : $ec->biological_replicate('SAMPLENAME_BR1');
   Description: Getter, setter for the biological_replicate attribute.
   Returntype : string
   Exceptions : None
@@ -346,7 +346,7 @@ sub biological_replicate {
 =head2 technical_replicate
 
   Arg [1]    : (optional) string - the name or number of the chip technical replicate set
-  Example    : $ec->technical_replicate('techrep_1');
+  Example    : $ec->technical_replicate('SAMPLENAME_BR1_TR1');
   Description: Getter, setter for the technical_replicate attribute.
   Returntype : string
   Exceptions : None

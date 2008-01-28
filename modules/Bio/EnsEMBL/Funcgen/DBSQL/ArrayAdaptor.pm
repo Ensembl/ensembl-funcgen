@@ -278,6 +278,7 @@ sub _objs_from_sth {
   $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type);
   
   while ( $sth->fetch() ) {
+
     my $array = Bio::EnsEMBL::Funcgen::Array->new(
 						  -dbID        => $array_id,
 						  -adaptor     => $self,
@@ -290,13 +291,7 @@ sub _objs_from_sth {
 
     push @result, $array;
     
-    #if ($parent_id) {
-    #	my $parent_array = Bio::EnsEMBL::Funcgen::Array->new(
-    #		-dbID    => $parent_id,
-    #		-adaptor => $self,
-    #	);
-    #	$array->superset($parent_array);
-    #}
+ 
   }
   return \@result;
 }

@@ -306,16 +306,17 @@ sub add_supporting_sets {
   
 
 	
-	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->type ne 'data' && $set->dbID)){
+	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->set_type ne 'data' && $set->dbID)){
 	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet");
 	}
-	#set type cannot be data at present
+	#set type cannot be data at present as it does not inherit from Set.pm
 
 
 
 	#Only validate if we are dealing with result type data
 	#As we can have various cell/feature_types for compound analyses e.g. RegulatoryFeatures
-	$self->_validate_and_set_types($set) if $set->type() ne 'feature';
+
+	$self->_validate_and_set_types($set) if $set->set_type() ne 'feature';
 	
 	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
 	#DataSetAdaptor to perform the ordering according to feature/celltype

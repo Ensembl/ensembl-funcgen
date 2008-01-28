@@ -170,11 +170,11 @@ sub new_fast {
 
   Example    : my $fset->type('annotated');
   Description: Getter/Setter for the type of this FeatureSet.
-               Valid values are 'annotated', 'regulatory' or 'supporting'.
+               Valid values are 'annotated', 'regulatory' or 'external'.
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - change to feature_type
 
 =cut
 

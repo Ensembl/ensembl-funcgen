@@ -291,6 +291,12 @@ sub read_array_probe_data{
 	  ($chr, undef, undef, $start, $end, undef, $strand, undef, $pid) = split/\t|\;/o, $line;
 	  
 
+	  if($self->ucsc_coords){
+		$start += 1;
+		$end += 1;
+	  }
+
+
 	  #$meta_x =~ s/META_X=//;
 	  #$x =~ s/X=//;
 	  #$x = $x + (($meta_x -1)*26);

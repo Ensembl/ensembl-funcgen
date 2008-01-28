@@ -703,8 +703,6 @@ sub read_probe_data{
 		}
 		
 		#Skip probe if there is a duplicate
-	
-	
 		if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
 		  throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]." need implement duplicate logging/cleaning");
 		  #need to build duplicate hash to clean elements from hash
@@ -740,7 +738,7 @@ sub read_probe_data{
 
 		$probe_pos{$data[$hpos{'PROBE_ID'}]} = {(
 												 chr => $data[$hpos{'CHROMOSOME'}],
-												 start => ($data[$hpos{'POSITION'}] +1),
+												 start => ($data[$hpos{'POSITION'}] +1),#default UCSC->Ensembl coord conversion
 												)};
 		
       }

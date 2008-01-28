@@ -313,7 +313,7 @@ sub fetch_all_by_supporting_set {
 	
 	#self join here to make sure we get all linked result_sets
     #my $sql = 'ds.data_set_id IN (SELECT ds.data_set_id from data_set ds where result_set_id='.$set->dbID().')';
-	my $sql = 'ss.type="'.$set->type.'" AND ss.supporting_set_id='.$set->dbID();
+	my $sql = 'ss.type="'.$set->set_type.'" AND ss.supporting_set_id='.$set->dbID();
 
     return $self->generic_fetch($sql);	
 }
@@ -619,7 +619,7 @@ sub store{
 
 	  $sth2->bind_param(1, $dset->dbID(),                SQL_INTEGER);
 	  $sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
-	  $sth2->bind_param(3, $sset->type(),                SQL_VARCHAR);#enum feature/result/experimental
+	  $sth2->bind_param(3, $sset->set_type(),                SQL_VARCHAR);#enum feature/result/experimental
 	  $sth2->execute();
 	}
   }
@@ -678,7 +678,7 @@ sub store_updated_sets{
 
 		$sth->bind_param(1, $dset->dbID,            SQL_INTEGER);
 		$sth->bind_param(2, $sset->dbID,            SQL_INTEGER);
-		$sth->bind_param(2, $sset->type,            SQL_VARCHAR);
+		$sth->bind_param(2, $sset->set_type,            SQL_VARCHAR);
 		
 		$sth->execute();
 	  }
