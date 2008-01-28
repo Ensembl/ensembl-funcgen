@@ -92,6 +92,7 @@ use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+#Should not be a Set as is sufficiently different
 
 
 =head2 new
@@ -303,13 +304,18 @@ sub add_supporting_sets {
 
   foreach my $set(@$sets){
   
+
+	
 	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->type ne 'data' && $set->dbID)){
 	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet");
 	}
-	
-	#Only validate is we are dealing with result type data
+	#set type cannot be data at present
+
+
+
+	#Only validate if we are dealing with result type data
 	#As we can have various cell/feature_types for compound analyses e.g. RegulatoryFeatures
-	$self->_validate_and_set_types($set) if $self->type() ne 'feature';
+	$self->_validate_and_set_types($set) if $set->type() ne 'feature';
 	
 	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
 	#DataSetAdaptor to perform the ordering according to feature/celltype
