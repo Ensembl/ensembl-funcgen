@@ -201,7 +201,7 @@ sub parse_and_load{
 											 -type                   => 'MISC',
 											 -primary_id             => $ens_id,
 											 -display_id             => $display_name,
-											 -info_type              => 'DEPENDENT',
+											 -info_type              => 'TARGET',
 											 -info_text              => 'negative influence',#Is this always the same?
 											 -description            => 'miRanda miRNA transcript xref',
 											 #could have version here if we use the correct dnadb to build the cache
