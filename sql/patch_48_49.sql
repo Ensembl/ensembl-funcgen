@@ -29,11 +29,11 @@ update feature_type set description='Histone 3 Lysine 36 Tri-Methylation' where 
 update feature_type set description='Histone 3 Lysine 79 Tri-Methylation' where name='H3K79me3';
 update feature_type set description='Histone 3 Lysine 9 Tri-Methylation' where name='H3K9me3';
 
---- Data patch finished ---
+--- Human Data patch finished ---
 
 -- alter xref table to capture coding and target info for external features
 
-alter table xref change info_type `info_type` enum('PROJECTION','MISC','DEPENDENT','DIRECT','SEQUENCE_MATCH','INFERRED_PAIR','PROBE','UNMAPPED', 'CODING', 'TARGET') NOT NULL default 'PROJECTION';
+alter table xref change info_type `info_type` enum('PROJECTION','MISC','DEPENDENT','DIRECT','SEQUENCE_MATCH','INFERRED_PAIR','PROBE','UNMAPPED', 'CODING', 'TARGET') NOT NULL;
 update xref set info_type='TARGET' where info_type='DEPENDENT';
 
 
@@ -79,22 +79,28 @@ alter table external_db modify `priority` int(11) NOT NULL;
 alter table external_synonym modify `xref_id` int(10) unsigned NOT NULL;
 alter table external_synonym modify `synonym` varchar(40) NOT NULL;
 alter table feature_set modify `feature_type_id` int(10) unsigned NOT NULL;
+alter table feature_type modify  `name` varchar(40) NOT NULL;
 alter table experimental_group modify `name` varchar(40) NOT NULL;
 alter table go_xref modify linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL;
-alter table object_xref modify `object_xref_id` int(10) unsigned NOT NULL;
+
 alter table identity_xref modify `analysis_id` smallint(5) unsigned NOT NULL;
+alter table identity_xref modify `object_xref_id` int(10) unsigned NOT NULL;
+alter table object_xref modify `object_xref_id` int(10) unsigned NOT NULL auto_increment;
 alter table object_xref modify  `ensembl_id` int(10) unsigned NOT NULL;
 alter table object_xref modify  `xref_id` int(10) unsigned NOT NULL;
 alter table result modify `chip_channel_id` int(10) unsigned NOT NULL;
 
 alter table result_set modify   `name` varchar(100) default NULL;
 alter table status modify `status_name_id` int(10) NOT NULL;
+alter table status_name modify   `name` varchar(20) default NULL;
 alter table xref modify `dbprimary_acc` varchar(40) NOT NULL;
 alter table xref modify   `display_label` varchar(128) NOT NULL;
+alter table xref modify  `external_db_id` smallint(5) unsigned NOT NULL;
 
 alter table annotated_feature modify `seq_region_id` int(10) unsigned NOT NULL;
 alter table annotated_feature modify `seq_region_start` int(10) unsigned NOT NULL;
 alter table annotated_feature modify `seq_region_end` int(10) unsigned NOT NULL;
+alter table annotated_feature modify   `seq_region_strand` tinyint(1) NOT NULL;
 alter table annotated_feature modify `feature_set_id` int(10) unsigned NOT NULL;
 
 alter table external_feature modify  `seq_region_id` int(10) unsigned NOT NULL;
@@ -121,6 +127,7 @@ alter table meta_coord modify `table_name` varchar(40) NOT NULL;
 alter table meta_coord modify `coord_system_id` int(10) NOT NULL;
 alter table coord_system modify  `name` varchar(40) NOT NULL;
 alter table coord_system modify   `rank` int(11) NOT NULL;
+alter table coord_system modify `coord_system_id` int(10) NOT NULL auto_increment;
 
 alter table seq_region modify `name` varchar(40) NOT NULL;
 alter table seq_region modify `coord_system_id` int(10) unsigned NOT NULL;

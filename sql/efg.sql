@@ -220,8 +220,8 @@ CREATE TABLE `experiment` (
    `mage_xml_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`experiment_id`),
    UNIQUE KEY `name_idx` (`name`),
-   KEY `experimental_group_idx` (`experimental_group_id`),
-   KEY `design_idx` (`primary_design_type`)
+   KEY `design_idx` (`primary_design_type`),
+   KEY `experimental_group_idx` (`experimental_group_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -351,8 +351,8 @@ CREATE TABLE `data_set` (
 
 DROP TABLE IF EXISTS `supporting_set`;
 CREATE TABLE `supporting_set` (
-   `data_set_id` int(10) unsigned NOT NULL default '0',
-   `supporting_set_id` int(10) unsigned NOT NULL default '0',
+   `data_set_id` int(10) unsigned NOT NULL,
+   `supporting_set_id` int(10) unsigned NOT NULL,
    `type` enum('result','feature','experimental') default NULL,
    PRIMARY KEY  (`data_set_id`, `supporting_set_id`),
    KEY `type_idx` (`type`)
