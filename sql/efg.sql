@@ -21,10 +21,11 @@
 DROP TABLE IF EXISTS `experimental_group`;
 CREATE TABLE `experimental_group` (
    `experimental_group_id` smallint(6) unsigned NOT NULL auto_increment,
-   `name` varchar(40) NOT NULL default '',
+   `name` varchar(40) NOT NULL,
    `location` varchar(120) default NULL,
    `contact` varchar(40) default NULL,
-   PRIMARY KEY  (`experimental_group_id`)
+   PRIMARY KEY  (`experimental_group_id`),
+   UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -91,13 +92,13 @@ CREATE TABLE `array_chip` (
 DROP TABLE IF EXISTS `probe_feature`;
 CREATE TABLE `probe_feature` (
    `probe_feature_id` int(10) unsigned NOT NULL auto_increment,
-   `seq_region_id` int(10) unsigned NOT NULL default '0',
-   `seq_region_start` int(10) NOT NULL default '0',
-   `seq_region_end` int(10) NOT NULL default '0',
-   `seq_region_strand` tinyint(4) NOT NULL default '0', 
-   `probe_id` int(10) unsigned NOT NULL default '0',
-   `analysis_id` int(10) unsigned NOT NULL default '0',	
-   `mismatches` tinyint(4) NOT NULL default '0',
+   `seq_region_id` int(10) unsigned NOT NULL,
+   `seq_region_start` int(10) NOT NULL,
+   `seq_region_end` int(10) NOT NULL,
+   `seq_region_strand` tinyint(4) NOT NULL, 
+   `probe_id` int(10) unsigned NOT NULL,
+   `analysis_id` int(10) unsigned NOT NULL,	
+   `mismatches` tinyint(4) NOT NULL,
    `cigar_line` text,
    PRIMARY KEY  (`probe_feature_id`),
    KEY `probe_idx` (`probe_id`),
@@ -127,8 +128,8 @@ CREATE TABLE `probe_feature` (
 DROP TABLE IF EXISTS `probe_set`;
 CREATE TABLE `probe_set` (
    `probe_set_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(20) NOT NULL default '',
-   `size` smallint(6) unsigned NOT NULL default '0',
+   `name` varchar(20) NOT NULL,
+   `size` smallint(6) unsigned NOT NULL,
    `family` varchar(20) default NULL,
    PRIMARY KEY  (`probe_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -149,9 +150,9 @@ DROP TABLE IF EXISTS `probe`;
 CREATE TABLE `probe` (
    `probe_id` int(10) unsigned NOT NULL auto_increment,
    `probe_set_id` int(10) unsigned default NULL,
-   `name` varchar(40) NOT NULL default '',
-   `length` smallint(6) unsigned NOT NULL default '0',
-   `array_chip_id` int(10) unsigned NOT NULL default '0',
+   `name` varchar(40) NOT NULL,
+   `length` smallint(6) unsigned NOT NULL,
+   `array_chip_id` int(10) unsigned NOT NULL,
    `class` varchar(20) default NULL,
     PRIMARY KEY  (`probe_id`, `name`),
     KEY `probe_set_idx` (`probe_set_id`),
@@ -193,10 +194,10 @@ CREATE TABLE `probe` (
 
 DROP TABLE IF EXISTS `probe_design`;
 CREATE TABLE `probe_design` (
-   `probe_id` int(10) unsigned NOT NULL default '0',
-   `analysis_id` int(10) unsigned NOT NULL default '0',
+   `probe_id` int(10) unsigned NOT NULL,
+   `analysis_id` int(10) unsigned NOT NULL,
    `score` double default NULL,	
-   `coord_system_id` int(10) unsigned NOT NULL default '0',
+   `coord_system_id` int(10) unsigned NOT NULL,
     PRIMARY KEY  (`probe_id`, `analysis_id`, `coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -422,7 +423,7 @@ CREATE TABLE `result_set` (
 DROP TABLE IF EXISTS `chip_channel`;
 CREATE TABLE `chip_channel` (
    `chip_channel_id` int(10) unsigned NOT NULL auto_increment,
-   `result_set_id` int(10) unsigned default '0',
+   `result_set_id` int(10) unsigned NOT NULL,
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(20) NOT NULL,
    PRIMARY KEY  (`chip_channel_id`, `result_set_id`),
@@ -487,13 +488,13 @@ CREATE TABLE `chip_channel` (
 DROP TABLE IF EXISTS `annotated_feature`;
 CREATE TABLE `annotated_feature` (
   `annotated_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `seq_region_id` int(10) unsigned NOT NULL default '0',
-  `seq_region_start` int(10) unsigned NOT NULL default '0',
-  `seq_region_end` int(10) unsigned NOT NULL default '0',
-  `seq_region_strand` tinyint(1) NOT NULL default '0',
+  `seq_region_id` int(10) unsigned NOT NULL,
+  `seq_region_start` int(10) unsigned NOT NULL,
+  `seq_region_end` int(10) unsigned NOT NULL,
+  `seq_region_strand` tinyint(1) NOT NULL,
   `display_label` varchar(60) default NULL,
   `score` double default NULL,
-  `feature_set_id` int(10) unsigned NOT NULL default '0',
+  `feature_set_id` int(10) unsigned NOT NULL,
   PRIMARY KEY  (`annotated_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `feature_set_idx` (`feature_set_id`)	  
@@ -530,13 +531,13 @@ CREATE TABLE `feature_set` (
 DROP TABLE IF EXISTS `external_feature`;
 CREATE TABLE `external_feature` (
   `external_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `seq_region_id` int(10) unsigned NOT NULL default '0',
-  `seq_region_start` int(10) unsigned NOT NULL default '0',
-  `seq_region_end` int(10) unsigned NOT NULL default '0',
-  `seq_region_strand` tinyint(1) NOT NULL default '0',	
+  `seq_region_id` int(10) unsigned NOT NULL,
+  `seq_region_start` int(10) unsigned NOT NULL,
+  `seq_region_end` int(10) unsigned NOT NULL,
+  `seq_region_strand` tinyint(1) NOT NULL,	
   `display_label` varchar(60) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
-  `feature_set_id` int(10) unsigned NOT NULL default '0',
+  `feature_set_id` int(10) unsigned NOT NULL,
   PRIMARY KEY  (`external_feature_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
@@ -554,10 +555,10 @@ CREATE TABLE `external_feature` (
 DROP TABLE IF EXISTS `regulatory_feature`;
 CREATE TABLE `regulatory_feature` (
   `regulatory_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `seq_region_id` int(10) unsigned NOT NULL default '0',
-  `seq_region_start` int(10) unsigned NOT NULL default '0',
-  `seq_region_end` int(10) unsigned NOT NULL default '0',
-  `seq_region_strand` tinyint(1) NOT NULL default '0',	
+  `seq_region_id` int(10) unsigned NOT NULL,
+  `seq_region_start` int(10) unsigned NOT NULL,
+  `seq_region_end` int(10) unsigned NOT NULL,
+  `seq_region_strand` tinyint(1) NOT NULL,	
   `display_label` varchar(60) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id`	int(10) unsigned default NULL,
@@ -605,8 +606,8 @@ CREATE TABLE `regulatory_feature` (
 
 DROP TABLE IF EXISTS `regulatory_attribute`;
 CREATE TABLE `regulatory_attribute` (
-  `regulatory_feature_id` int(10) unsigned NOT NULL default '0',
-  `attribute_feature_id` int(10) unsigned NOT NULL default '0',
+  `regulatory_feature_id` int(10) unsigned NOT NULL,
+  `attribute_feature_id` int(10) unsigned NOT NULL,
   `attribute_feature_table` enum('annotated', 'external') default NULL,
   PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=17;
@@ -634,12 +635,12 @@ CREATE TABLE `regulatory_attribute` (
 DROP TABLE IF EXISTS `experimental_set`;
 CREATE TABLE `experimental_set` (
    `experimental_set_id` int(10) unsigned NOT NULL auto_increment,
-   `experiment_id` int(10) unsigned default NULL, --
+   `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
-   `name` varchar(40) not NULL default '0',
+   `name` varchar(40) not NULL,
    PRIMARY KEY  (`experimental_set_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `experiment_idx` (`experiment_id`),
@@ -668,8 +669,8 @@ CREATE TABLE `experimental_set` (
 DROP TABLE IF EXISTS `experimental_subset`;
 CREATE TABLE `experimental_subset` (
    `experimental_subset_id` int(10) unsigned NOT NULL auto_increment,
-   `experimental_set_id` int(10) unsigned NOT NULL default '0',
-   `name` varchar(100) NOT NULL default '0', -- filename?	
+   `experimental_set_id` int(10) unsigned NOT NULL,
+   `name` varchar(100) NOT NULL, -- filename?	
    PRIMARY KEY  (`experimental_subset_id`), 
    UNIQUE KEY `set_name_dx` (`experimental_set_id`, `name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
@@ -687,7 +688,7 @@ CREATE TABLE `experimental_subset` (
 DROP TABLE IF EXISTS `experimental_chip`;
 CREATE TABLE `experimental_chip` (
    `experimental_chip_id` int(10) unsigned NOT NULL auto_increment,
-   `unique_id` varchar(20) NOT NULL default '0',
+   `unique_id` varchar(20) NOT NULL,
    `experiment_id` int(10) unsigned default NULL,
    `array_chip_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
@@ -829,7 +830,7 @@ DROP TABLE IF EXISTS `analysis`;
 CREATE TABLE `analysis` (
   `analysis_id` int(10) unsigned NOT NULL auto_increment,
   `created` datetime NOT NULL default '0000-00-00 00:00:00',
-  `logic_name` varchar(40) NOT NULL default '',
+  `logic_name` varchar(40) NOT NULL,
   `db` varchar(120) default NULL,
   `db_version` varchar(40) default NULL,
   `db_file` varchar(120) default NULL,
@@ -857,7 +858,7 @@ insert into analysis(logic_name) values('external');
 
 DROP TABLE IF EXISTS `analysis_description`;
 CREATE TABLE `analysis_description` (
-  `analysis_id` int(10) unsigned NOT NULL default '0',
+  `analysis_id` int(10) unsigned NOT NULL,
   `description` text,
   `display_label` varchar(255) default NULL,
   `displayable` tinyint(1) NOT NULL default '1',
@@ -873,8 +874,8 @@ CREATE TABLE `analysis_description` (
 DROP TABLE IF EXISTS `meta`;
 CREATE TABLE `meta` (
   `meta_id` int(10) NOT NULL auto_increment,
-  `meta_key` varchar(40) NOT NULL default '',
-  `meta_value` varchar(255) NOT NULL default '',
+  `meta_key` varchar(40) NOT NULL,
+  `meta_value` varchar(255) NOT NULL,
   PRIMARY KEY  (`meta_id`),
   KEY `meta_key_index` (`meta_key`),
   KEY `meta_value_index` (`meta_value`)
@@ -896,8 +897,8 @@ CREATE TABLE `meta` (
 
 DROP TABLE IF EXISTS `meta_coord`;
 CREATE TABLE `meta_coord` (
-  `table_name` varchar(40) NOT NULL default '',
-  `coord_system_id` int(10) NOT NULL default '0',
+  `table_name` varchar(40) NOT NULL,
+  `coord_system_id` int(10) NOT NULL,
   `max_length` int(11) default NULL,
   UNIQUE KEY `table_name` (`table_name`,`coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -919,9 +920,9 @@ CREATE TABLE `meta_coord` (
 DROP TABLE IF EXISTS `coord_system`;
 CREATE TABLE `coord_system` (
   `coord_system_id` int(10) NOT NULL auto_increment,
-  `name` varchar(40) NOT NULL default '',
+  `name` varchar(40) NOT NULL,
   `version` varchar(40) default NULL,
-  `rank` int(11) NOT NULL default '0',
+  `rank` int(11) NOT NULL,
   `attrib` set('default_version','sequence_level') default NULL,
   `schema_build` varchar(10) default NULL,
   `core_coord_system_id` int(10) NOT NULL, 
@@ -952,9 +953,9 @@ CREATE TABLE `coord_system` (
 DROP TABLE IF EXISTS `seq_region`;
 CREATE TABLE `seq_region` (
   `seq_region_id` int(10) unsigned NOT NULL auto_increment,
-  `name` varchar(40) NOT NULL default '',
-  `coord_system_id` int(10) unsigned NOT NULL default '0',
-  `core_seq_region_id` int(10) unsigned NOT NULL default '0',
+  `name` varchar(40) NOT NULL,
+  `coord_system_id` int(10) unsigned NOT NULL,
+  `core_seq_region_id` int(10) unsigned NOT NULL,
   `schema_build` varchar(10) default NULL,
   PRIMARY KEY  (`seq_region_id`, `name`, `schema_build`),
   KEY `coord_system_id` (`coord_system_id`)
@@ -1011,7 +1012,7 @@ CREATE TABLE identity_xref (
   cigar_line              TEXT, 
   score                   DOUBLE,
   evalue                  DOUBLE,
-  analysis_id             SMALLINT UNSIGNED NOT NULL,
+  `analysis_id` smallint(5) unsigned NOT NULL,
   PRIMARY KEY (object_xref_id),
   KEY analysis_idx (analysis_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1025,7 +1026,7 @@ CREATE TABLE xref (
    display_label              VARCHAR(128) NOT NULL,
    version                    VARCHAR(10) DEFAULT '0' NOT NULL,
    description                VARCHAR(255),
-   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED', 'CODING', 'TARGET') not NULL default 'PROJECTION',
+   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED', 'CODING', 'TARGET') not NULL,
    info_text                  VARCHAR(255),
    PRIMARY KEY (xref_id),
    UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text),
@@ -1059,7 +1060,7 @@ CREATE TABLE external_db (
   display_label_linkable      BOOLEAN DEFAULT 0 NOT NULL,
   priority                    INT NOT NULL,
   db_display_name             VARCHAR(255),
-  type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM'),
+  type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM') default NULL,
   secondary_db_name           VARCHAR(255) DEFAULT NULL,
   secondary_db_table          VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY (external_db_id) 

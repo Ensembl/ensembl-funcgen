@@ -54,6 +54,122 @@ alter table experimental_chip modify technical_replicate varchar(100) default NU
 alter table result_set modify name varchar(100) default NULL;
 alter table experimental_subset modify name varchar(100) default NULL;
 
+-- Some minimal filed definition tidy up
+-- Most of these are due to differences in table creations between MySQL 4 > 5
+-- NOT NULLs where extended to default '' or 0 dependent on variable.
+-- enums no longer extended to explicitly state default logic
+alter table array_chip modify `array_id` int(10) unsigned NOT NULL;
+alter table cell_type modify `name` varchar(120) NOT NULL;
+alter table channel modify `experimental_chip_id` int(10) unsigned default NULL;
+alter table channel drop description;
+alter table chip_channel modify `table_id` int(10) unsigned NOT NULL;
+alter table chip_channel modify `table_name` varchar(20) NOT NULL;
+alter table chip_channel modify `result_set_id` int(10) unsigned NOT NULL;
+alter table coord_system modify `core_coord_system_id` int(10) NOT NULL;
+alter table experimental_chip modify `experiment_id` int(10) unsigned default NULL;
+alter table experimental_chip modify `array_chip_id` int(10) unsigned default NULL;
+alter table experimental_chip modify `biological_replicate` varchar(100) default NULL;
+alter table experimental_chip modify `technical_replicate` varchar(100) default NULL;
+alter table experimental_set modify  `name` varchar(40) not NULL;
+alter table experimental_subset modify `experimental_set_id` int(10) unsigned NOT NULL;
+alter table experimental_subset modify `name` varchar(100) NOT NULL;
+alter table external_db modify `db_name` varchar(28) NOT NULL;
+alter table external_db modify status ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL;
+alter table external_db modify `priority` int(11) NOT NULL;
+alter table external_synonym modify `xref_id` int(10) unsigned NOT NULL;
+alter table external_synonym modify `synonym` varchar(40) NOT NULL;
+alter table feature_set modify `feature_type_id` int(10) unsigned NOT NULL;
+alter table experimental_group modify `name` varchar(40) NOT NULL;
+alter table go_xref modify linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL;
+alter table object_xref modify `object_xref_id` int(10) unsigned NOT NULL;
+alter table identity_xref modify `analysis_id` smallint(5) unsigned NOT NULL;
+alter table object_xref modify  `ensembl_id` int(10) unsigned NOT NULL;
+alter table object_xref modify  `xref_id` int(10) unsigned NOT NULL;
+alter table result modify `chip_channel_id` int(10) unsigned NOT NULL;
+
+alter table result_set modify   `name` varchar(100) default NULL;
+alter table status modify `status_name_id` int(10) NOT NULL;
+alter table xref modify `dbprimary_acc` varchar(40) NOT NULL;
+alter table xref modify   `display_label` varchar(128) NOT NULL;
+
+alter table annotated_feature modify `seq_region_id` int(10) unsigned NOT NULL;
+alter table annotated_feature modify `seq_region_start` int(10) unsigned NOT NULL;
+alter table annotated_feature modify `seq_region_end` int(10) unsigned NOT NULL;
+alter table annotated_feature modify `feature_set_id` int(10) unsigned NOT NULL;
+
+alter table external_feature modify  `seq_region_id` int(10) unsigned NOT NULL;
+alter table external_feature modify   `seq_region_start` int(10) unsigned NOT NULL;
+alter table external_feature modify   `seq_region_end` int(10) unsigned NOT NULL;
+alter table external_feature modify   `seq_region_strand` tinyint(1) NOT NULL;
+alter table external_feature modify  `feature_set_id` int(10) unsigned NOT NULL;
+
+alter table regulatory_feature modify  `seq_region_id` int(10) unsigned NOT NULL;
+alter table regulatory_feature modify   `seq_region_start` int(10) unsigned NOT NULL;
+alter table regulatory_feature modify   `seq_region_end` int(10) unsigned NOT NULL;
+alter table regulatory_feature modify   `seq_region_strand` tinyint(1) NOT NULL;
+
+alter table regulatory_attribute modify  `regulatory_feature_id` int(10) unsigned NOT NULL;
+alter table regulatory_attribute modify  `attribute_feature_id` int(10) unsigned NOT NULL;
+
+alter table experimental_chip modify `unique_id` varchar(20) NOT NULL;
+alter table analysis modify `logic_name` varchar(40) NOT NULL;
+alter table analysis_description modify `analysis_id` int(10) unsigned NOT NULL;
+
+alter table meta modify `meta_key` varchar(40) NOT NULL;
+alter table meta modify `meta_value` varchar(255) NOT NULL;
+alter table meta_coord modify `table_name` varchar(40) NOT NULL;
+alter table meta_coord modify `coord_system_id` int(10) NOT NULL;
+alter table coord_system modify  `name` varchar(40) NOT NULL;
+alter table coord_system modify   `rank` int(11) NOT NULL;
+
+alter table seq_region modify `name` varchar(40) NOT NULL;
+alter table seq_region modify `coord_system_id` int(10) unsigned NOT NULL;
+alter table seq_region modify `core_seq_region_id` int(10) unsigned NOT NULL;
+
+alter table probe_feature modify  `seq_region_id` int(10) unsigned NOT NULL;
+alter table probe_feature modify   `seq_region_start` int(10) NOT NULL;
+alter table probe_feature modify   `seq_region_end` int(10) NOT NULL;
+alter table probe_feature modify   `seq_region_strand` tinyint(4) NOT NULL;
+alter table probe_feature modify   `probe_id` int(10) unsigned NOT NULL;
+alter table probe_feature modify   `analysis_id` int(10) unsigned NOT NULL;
+alter table probe_feature modify   `mismatches` tinyint(4) NOT NULL;
+
+alter table probe_set modify `name` varchar(20) NOT NULL;
+alter table probe_set modify `size` smallint(6) unsigned NOT NULL;
+
+alter table probe modify  `name` varchar(40) NOT NULL;
+alter table probe modify  `length` smallint(6) unsigned NOT NULL;
+alter table probe modify  `array_chip_id` int(10) unsigned NOT NULL;
+
+alter table probe_design modify `probe_id` int(10) unsigned NOT NULL;
+alter table probe_design modify `analysis_id` int(10) unsigned NOT NULL;
+alter table probe_design modify `coord_system_id` int(10) unsigned NOT NULL;
+
+alter table supporting_set modify `data_set_id` int(10) unsigned NOT NULL;
+alter table supporting_set modify `supporting_set_id` int(10) unsigned NOT NULL;
+
+
+CREATE TABLE `experimental_design` (
+   `design_type_id` int(10) unsigned NOT NULL auto_increment,
+   `table_name` varchar(40) default NULL,
+   `table_id` int(10) unsigned default NULL,	
+   PRIMARY KEY  (`design_type_id`, `table_name`, `table_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- likley no data in here anyway
+insert into experimental_design select * from experimental_design_type;
+DROP TABLE IF EXISTS `experimental_design_type`;
+
+-- delete first just in case it already exists
+alter table experimental_group drop key name_idx;
+alter table experimental_group add UNIQUE KEY `name_idx` (`name`);
+
+
+
+
+
+
+
 
 
 --change status_name to remove IMPORTED from analysis states
@@ -84,6 +200,8 @@ CREATE TABLE `experimental_group` (
 insert into experimental_group select * from egroup;
 drop table egroup;
 alter table experiment change egroup_id experimental_group_id smallint(6) unsigned default NULL;
+alter table experiment drop key egroup_idx;
+alter table experiment add KEY `experimental_group_idx` (`experimental_group_id`);
 
 
 --change DAS DISPLAYABLE to DAS_DISPLAYABLE
