@@ -307,9 +307,7 @@ CREATE TABLE `data_set` (
    `data_set_id` int(10) unsigned NOT NULL auto_increment,
    `feature_set_id` int(10) unsigned default '0',
    `name` varchar(40) default NULL,
-   `supporting_set_type` enum('result', 'feature', 'experimental', 'external') default NULL,
    PRIMARY KEY  (`data_set_id`, `feature_set_id`),
-   KEY `supporting_type_idx` (`supporting_set_type`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -354,7 +352,9 @@ DROP TABLE IF EXISTS `supporting_set`;
 CREATE TABLE `supporting_set` (
    `data_set_id` int(10) unsigned NOT NULL default '0',
    `supporting_set_id` int(10) unsigned NOT NULL default '0',
-   PRIMARY KEY  (`data_set_id`, `supporting_set_id`)
+   `type` enum('result','feature','experimental') default NULL,
+   PRIMARY KEY  (`data_set_id`, `supporting_set_id`),
+   KEY `type_idx` (`type`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -669,7 +669,7 @@ DROP TABLE IF EXISTS `experimental_subset`;
 CREATE TABLE `experimental_subset` (
    `experimental_subset_id` int(10) unsigned NOT NULL auto_increment,
    `experimental_set_id` int(10) unsigned NOT NULL default '0',
-   `name` varchar(30) NOT NULL default '0', -- filename?	
+   `name` varchar(100) NOT NULL default '0', -- filename?	
    PRIMARY KEY  (`experimental_subset_id`), 
    UNIQUE KEY `set_name_dx` (`experimental_set_id`, `name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
@@ -808,9 +808,10 @@ INSERT into status_name values ('', 'DAS_DISPLAYABLE');
 INSERT into status_name values ('', 'RESOLVED');
 -- Also need to add status name for all chip/channel level analyses
 -- Defaults
-INSERT into status_name values ('', 'IMPORTED_VSN_GLOG');
-INSERT into status_name values ('', 'IMPORTED_Parzen');
-INSERT into status_name values ('', 'IMPORTED_T.Biweight');
+INSERT into status_name values ('', 'VSN_GLOG');
+INSERT into status_name values ('', 'Parzen');
+INSERT into status_name values ('', 'T.Biweight');
+INSERT into status_name values ('', 'LOESS');
 
 
 --change to small int?
@@ -1024,7 +1025,7 @@ CREATE TABLE xref (
    display_label              VARCHAR(128) NOT NULL,
    version                    VARCHAR(10) DEFAULT '0' NOT NULL,
    description                VARCHAR(255),
-   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED') not NULL,
+   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED', 'CODING', 'TARGET') not NULL default 'PROJECTION',
    info_text                  VARCHAR(255),
    PRIMARY KEY (xref_id),
    UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text),
