@@ -13,6 +13,8 @@ export SRC=~/src                                #Root source code directory. EDI
 export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
 export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
 export EFG_DATA=/lustre/work1/ensembl/nj1/efg   #Data directory. EDIT
+
+export EFG_PERL=/software/bin/perl
 export PATH=$PATH:$EFG_SRC/scripts              #eFG scripts directory
 export PERL5LIB=$EFG_SRC/modules:$PERL5LIB      #Update PERL5LIB. EDIT add ensembl(core) etc. if required
 

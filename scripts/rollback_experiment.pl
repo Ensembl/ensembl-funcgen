@@ -229,10 +229,10 @@ foreach my $rset(@rsets){
 #Now remove Features/DataSets
 if($full_delete){
 
-  foreach my $dset(keys %rollback_dsets){
+  foreach my $dset(values %rollback_dsets){
 	  
 	#delete feature_set first, so we don't ever have an orphaned feature_set
-	my $fset = $dset->feature_set();
+	my $fset = $dset->product_FeatureSet();
 		  
 	if(defined $fset){
 	  print "::\tDeleting FeatureSet:\t".$fset->name()."\n";
