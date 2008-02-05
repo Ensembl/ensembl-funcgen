@@ -13,9 +13,9 @@ $| =1;
 
 my ($file, $ofile, $pass, $line, $fset_name);
 my ($exp_name, $dbname, $cdbname, $help, $pids, $man, @features, $chr, $not_status);
-my $dbhost = $ENV{'HOST'};
-my $port = $ENV{'PORT'};
-my $user = $ENV{'READ_USER'};
+my $dbhost = $ENV{'EFG_HOST'};
+my $port = $ENV{'EFG_PORT'};
+my $user = $ENV{'EFG_READ_USER'};
 my $anal_name = 'Nessie';
 my $out_dir = ".";
 

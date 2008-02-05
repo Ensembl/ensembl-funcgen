@@ -6,17 +6,19 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::HealthChecker;
 
+
 my $reg = "Bio::EnsEMBL::Registry";
 
-my $species = 'homo_sapiens';
-my $schema_build = '49_36k';
+my $species = 'mus_musculus';
+#my $species = 'homo_sapiens';
+#my $species = 'drosophila_melanogaster';
+my $schema_build = '49_37b';
 my $pass = shift @ARGV;
 my $port = 3306;
 my $user = 'ensadmin';
 my $host = 'ens-genomics1';
 my $skip_mc;
-my @builds =('');#blank string for the default build;
-push @builds, @ARGV;
+my @builds = @ARGV;
 
 #only loads v43 no v44 DBs???
 #$reg->load_registry_from_db(
@@ -63,5 +65,5 @@ my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
 																-builds => \@builds,
 															   );
 
-#$hchecker->update_db_for_release($skip_mc);
+$hchecker->update_db_for_release($skip_mc);
 $hchecker->log_data_sets();

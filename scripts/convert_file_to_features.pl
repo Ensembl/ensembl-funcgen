@@ -121,9 +121,9 @@ $| = 1;							#autoflush
 my ($pass, $dbname, $help, $man, $ftname, $file, $species, $ctname);
 my ($format, $set_name, $data_version, $clobber, $is_ucsc, $ctype, $ftype);
 my $data_dir = $ENV{'EFG_DATA'};
-my $user = $ENV{'WRITE_USER'};
-my $host = $ENV{'HOST'};
-my $port = $NEV{'PORT'};
+my $user = $ENV{'EFG_WRITE_USER'};
+my $host = $ENV{'EFG_HOST'};
+my $port = $NEV{'EFG_PORT'};
 
 #Definitely need some sort of Defs modules for each array?
 

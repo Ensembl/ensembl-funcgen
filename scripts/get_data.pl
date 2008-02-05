@@ -18,9 +18,9 @@ $| =1;
 
 my ($ftype_name, $ctype_name, $pnames, $pass, $status, $chr);
 my ($fset, $exp_name, $db_name, $cdb_name, $help, $man, @features, $slices, $not_status);
-my $port = $ENV{'PORT'};
-my $host = $ENV{'HOST'};
-my $user = $ENV{'READ_USER'};
+my $port = $ENV{'EFG_PORT'};
+my $host = $ENV{'EFG_HOST'};
+my $user = $ENV{'EFG_READ_USER'};
 my $cdb_port = $ENV{'CORE_PORT'};
 my $cdb_host = $ENV{'CORE_HOST'};
 my $cdb_user = $ENV{'CORE_USER'};
