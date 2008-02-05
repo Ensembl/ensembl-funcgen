@@ -179,10 +179,12 @@ foreach my $rset(@rsets){
   print "\n::\tChecking ResultSet:\t".$rset->name()."\n";
   my $simple_rset = 1;
 
-  foreach my $dset(@{$dset_a->fetch_all_by_ResultSet($rset)}){
+  foreach my $dset(@{$dset_a->fetch_all_by_supporting_set($rset)}){
 	my @dsets;
 
-	foreach my $d_rset(@{$dset->get_ResultSets()}){
+	foreach my $d_rset(@{$dset->get_supporting_sets()}){
+	  #implicit that this will always be a ResultSet
+
 	  my $rset_id = $d_rset->dbID();
 
 	  if(! grep/$rset_id/, @rset_ids){
@@ -195,6 +197,9 @@ foreach my $rset(@rsets){
 	if (scalar(@dsets) == 0){
 	  #Not a complex dset, so can delete
 
+	  #But is this accounting for the specified chip_ids?
+	  #We need to filter these dsets based on the chip ids!!
+
 	  if(! exists $rollback_dsets{$dset->dbID}){
 		print "\n::\tIdentified DataSet for removal:\t".$dset->name()."\n";
 		$rollback_dsets{$dset->dbID} = $dset;
@@ -205,6 +210,7 @@ foreach my $rset(@rsets){
 
 	  if($force_delete){
 		die "force delete not yet implemented";
+		#Is this sensible to remove underlying data from a combined data set?
 		$simple_rset = 1;
 	  }
 	  else{
@@ -225,39 +231,6 @@ foreach my $rset(@rsets){
 
 #Now we have an nr hash of data sets to remove, an nr list of result sets to remove and a nr hash of chip_channel_ids we don't want to remove from the result table
 #We haven't yet accunted for any user specified chip_ids
-
-#Now remove Features/DataSets
-if($full_delete){
-
-  foreach my $dset(values %rollback_dsets){
-	  
-	#delete feature_set first, so we don't ever have an orphaned feature_set
-	my $fset = $dset->product_FeatureSet();
-		  
-	if(defined $fset){
-	  print "::\tDeleting FeatureSet:\t".$fset->name()."\n";
-	  
-	  #delete status entries (should we do this first?)
-	  $sql = 'DELETE from status where table_name="feature_set" and table_id='.$fset->dbID();
-	  $db->dbc->do($sql) || throw("Failed to delete status entries for feature_set with dbID:\t".$fset->dbID());
-	  
-	  $sql = 'DELETE from feature_set where feature_set_id='.$fset->dbID();
-	  $db->dbc->do($sql) || throw("Failed to delete feature_set with dbID:\t".$fset->dbID());
-	}
-
-	print "::\tDeleting DataSet:\t".$dset->name()."\n";
-
-	#dset status entries
-	$sql = 'DELETE from status where table_name="data_set" and table_id='.$dset->dbID();
-	$db->dbc->do($sql) || throw("Failed to delete status entries for data_set with dbID:\t".$dset->dbID());
-	#now delete data_set
-	$sql = 'DELETE from data_set where data_set_id='.$dset->dbID();
-	$db->dbc->do($sql) || throw("Failed to delete data_set with dbID:\t".$dset->dbID());
-  }
-}
-
-
-
 
 #Now filter simple rsets for chip IDs
 my ($remove_rset, $remove_cc);
@@ -280,11 +253,8 @@ foreach my $rset(@simple_rsets){
 	}
 
 	if($remove_cc){
-
 	  #Need to filter here on no_delete_cc_ids
-	  #But need to log chips or channel for removal
-
-
+	
 	  if($rset->table_name eq 'experimental_chip'){
 		$cc_ids{$rset->get_chip_channel_id($ec->dbID())} = $ec;
 	  }
@@ -307,6 +277,16 @@ foreach my $rset(@simple_rsets){
   #we may have an ec which is not part of an rset?
   #so delete separately?
 
+
+  #Remove corresponding data_sets from hash if we are keeping this result_set
+  if(! $remove_rset){
+
+	foreach my $dset(@{$dset_a->fetch_all_by_supporting_set($rset)}){
+	  delete $rollback_dsets{$dset->dbID} if exists  $rollback_dsets{$dset->dbID};
+	}
+  }
+
+
   if(! keys %cc_ids){
 	print "::\tResultSet does not contain specified ExperimentalChips\n";
   }
@@ -320,6 +300,42 @@ foreach my $rset(@simple_rsets){
 	}
   }
 }
+
+
+#Now remove filtered Features/DataSets
+if($full_delete){
+
+  foreach my $dset(values %rollback_dsets){
+	  
+	#delete feature_set first, so we don't ever have an orphaned feature_set
+	my $fset = $dset->product_FeatureSet();
+		  
+	if(defined $fset){
+	  print "::\tDeleting FeatureSet:\t".$fset->name()."\n";
+	  
+	  #delete status entries (should we do this first?)
+	  $sql = 'DELETE from status where table_name="feature_set" and table_id='.$fset->dbID();
+	  $db->dbc->do($sql) || throw("Failed to delete status entries for feature_set with dbID:\t".$fset->dbID());
+
+	  	  
+	  $sql = 'DELETE from '.$fset->type.'_feature where feature_set_id='.$fset->dbID();
+	  $db->dbc->do($sql) || throw("Failed to delete ".$fset->type." features with feature_set dbID:\t".$fset->dbID());
+	  
+	  $sql = 'DELETE from feature_set where feature_set_id='.$fset->dbID();
+	  $db->dbc->do($sql) || throw("Failed to delete feature_set with dbID:\t".$fset->dbID());
+	}
+
+	print "::\tDeleting DataSet:\t".$dset->name()."\n";
+
+	#dset status entries
+	$sql = 'DELETE from status where table_name="data_set" and table_id='.$dset->dbID();
+	$db->dbc->do($sql) || throw("Failed to delete status entries for data_set with dbID:\t".$dset->dbID());
+	#now delete data_set
+	$sql = 'DELETE from data_set where data_set_id='.$dset->dbID();
+	$db->dbc->do($sql) || throw("Failed to delete data_set with dbID:\t".$dset->dbID());
+  }
+}
+
 
 
 ### Delete all results and chip_channel records in one go
