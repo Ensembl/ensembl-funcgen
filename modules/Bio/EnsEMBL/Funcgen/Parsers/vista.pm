@@ -27,14 +27,17 @@ sub new {
   #Set default feature_type and feature_set config
   $self->{'feature_types'} = {(
 							   'VISTA Target'   => {
-													 class       => 'Region',
+													name        => 'VISTA Target', 
+													class       => 'Region',
 													description => 'VISTA target region',
 												   },
 							   'VISTA Enhancer' => {
+													name        => 'VISTA Enhancer', 
 													class       => 'Enhancer',
-													 description => 'Enhancer identified by positive VISTA assay',
+													description => 'Enhancer identified by positive VISTA assay',
 												   },
 							   'VISTA Target - Negative' => {
+															 name        => 'VISTA Target - Negative', 
 															 class => 'Region',
 															 description => 'Enhancer negative region identified by VISTA assay',
 															},

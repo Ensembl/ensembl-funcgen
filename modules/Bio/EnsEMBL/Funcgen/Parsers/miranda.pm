@@ -45,9 +45,10 @@ sub new {
   #Set default feature_type and feature_set config
   $self->{'feature_types'} = {
 							  'miRanda'   => {
-														   class       => 'RNA',
-														   description => 'miRanda microRNA',
-														  },
+											  name        => 'miRanda',
+											  class       => 'RNA',
+											  description => 'miRanda microRNA',
+											 },
 							 };
   $self->{feature_sets} = {
 						   'miRanda miRNA' => {

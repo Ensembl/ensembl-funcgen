@@ -186,8 +186,12 @@ sub read_and_import_bed_data{
     if (! @{$self->result_files()}) {
         my $list = "ls ".$self->input_dir().'/'.$self->name().'*.bed';
         my @rfiles = `$list`;
-        throw("Found more than one cluster file:\n@rfiles\nNeed to implement ExperimentalSubset rollback before removing this!")
-            if (scalar(@rfiles) >1);
+
+		if (scalar(@rfiles) >1){
+		  #Need to test whether this is the initial import or if in recovery mode.
+		  
+		  throw("Found more than one cluster file:\n@rfiles\nNeed to implement ExperimentalSubset rollback before removing this!")
+        }
         
         $self->result_files(\@rfiles);
     }

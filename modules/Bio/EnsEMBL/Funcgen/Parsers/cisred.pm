@@ -56,10 +56,12 @@ sub new {
   #Set default feature_type and feature_set config
   $self->{'feature_types'} = {
 							   'cisRED Search Region'   => {
+															name        => 'cisRED Search Region',
 															class       => 'Region',
 															description => 'cisRED search region',
 												   },
 							   'cisRED Motif' => {
+												  name        => 'cisRED Motif',
 												  class       => 'Regulatory Motif',
 												  description => 'cisRED group motif',
 												 },
@@ -242,7 +244,7 @@ sub parse_and_load {
 											 #-display_label_linkable => 1,
 											 -#db_display_name        => $self->db->dnadb->dbc->dbname,
 											 -db_display_name        => 'ensembl_core_gene',
-											 -type                   => 'MISC',
+											 -type                   => 'MISC',#Is this a TARGET
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
 											 -info_type              => 'MISC',

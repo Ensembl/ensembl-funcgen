@@ -9,7 +9,11 @@ use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Analysis;
 
+
 # Base functionality for external_feature parsers
+
+#Make this inherit from Helper?
+#Then change all the prints to logs
 
 sub new {
   my $caller = shift;
@@ -18,7 +22,7 @@ sub new {
   bless $self, $class;
 
   #validate and set type, analysis and feature_set here
-  my ($type, $db, $clobber, $archive) = rearrange(['TYPE', 'DB', 'CLOBBER', 'ARCHIVE'], @_);
+  my ($type, $db, $clobber, $archive, $import_fsets) = rearrange(['TYPE', 'DB', 'CLOBBER', 'ARCHIVE', 'IMPORT_SETS'], @_);
   
   throw('You must define a type of external_feature to import') if(! defined $type);
 
@@ -34,6 +38,8 @@ sub new {
   $self->{type} = $type;
   $self->{'clobber'} = $clobber if defined $clobber;
   $self->{'archive'} = $archive if defined $archive;
+  @{$self->{'import_sets'}} = (defined $import_fsets) ? @{$import_fsets} || undef;
+  
   
   print ":: Parsing and loading $type ExternalFeatures\n";
 
@@ -41,12 +47,55 @@ sub new {
 
 }
 
+
+=head2 db
+
+  Args       : None
+  Example    : my $feature_set_adaptor = $seld->db->get_FeatureSetAdaptor
+  Description: Getter for the DBAdaptor.
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
 sub db{
-  my ($self) = @_;
+  my $self = shift;
 
   return $self->{'db'};
 }
 
+=head2 import_sets
+
+  Args       : None
+  Example    : foreach my $import_set_name(@{$self->import_sets}){ ... do the import ... }
+  Description: Getter for the list of import feature set names, defaults to all in parser config.
+  Returntype : Arrayref of import feature_set names
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub import_sets{
+  my $self = shift;
+
+  return $self->{'import_sets'};
+}
+
+
+=head2 set_feature_sets
+
+  Args       : None
+  Example    : $self->set_feature_sets;
+  Description: Imports feature sets defined by import_sets.
+  Returntype : None
+  Exceptions : Throws if feature set already present and clobber or archive not set
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
 
 sub set_feature_sets{
   my $self = shift;
@@ -57,7 +106,7 @@ sub set_feature_sets{
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor;
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
   
-  foreach my $fset_name(keys %{$self->{feature_sets}}){
+  foreach my $fset_name(@{$self->import_sets}){
 	
 	#check feature_type is validated?
 
@@ -157,7 +206,17 @@ sub set_feature_sets{
 }
 
 
+=head2 validate_and_store_feature_types
 
+  Args       : None
+  Example    : $self->validate_and_store_feature_types;
+  Description: Imports feature types defined by import_sets.
+  Returntype : None
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
 
 sub validate_and_store_feature_types{
   my $self = shift;
@@ -192,46 +251,59 @@ sub validate_and_store_feature_types{
 
   my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
 
-  foreach my $ftype_name(keys %{$self->{'feature_types'}}){
+  foreach my $import_set(@{$self->import_sets}){
 
-	my $ftype = $ftype_adaptor->fetch_by_name($ftype_name);
+	my $ftype_config = $self->{'feature_sets'}{$import_set}{'feature_type'};
+
+	my $ftype = $ftype_adaptor->fetch_by_name($ftype_config->{'name'});
 
 
 	if(! defined $ftype){
-	  print ":: FeatureType '".$ftype_name."' for external feature_set ".$self->{'type'}." not present\n".
+	  print ":: FeatureType '".$ftype_config->{'name'}."' for external feature_set ".$self->{'type'}." not present\n".
 		":: Storing using type hash definitions\n";
 	
 	  $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(
-													   -name => $ftype_name,
-													   -class => $self->{'feature_types'}{$ftype_name}{'class'},
-													   -description => $self->{'feature_types'}{$ftype_name}{'description'},
+													   -name => $ftype_config->{'name'},
+													   -class => $ftype_config->{'class'},
+													   -description => $ftype_config->{'description'},
 													  );
 	  ($ftype) = @{$ftype_adaptor->store($ftype)};
 	}
 
 	#Replace hash config with object
-	$self->{'feature_types'}{$ftype_name} = $ftype;
+	$self->{'feature_types'}{$ftype_config->{'name'}} = $ftype;
   }
 
   return;
 }
 
 
+=head2 get_display_name_by_id
+
+  Args [0]   : stable ID from core DB.
+  Args [1]   : stable feature type e.g. gene, transcript, translation
+  Example    : $self->validate_and_store_feature_types;
+  Description: Builds a cache of stable ID to display names.
+  Returntype : string - display name
+  Exceptions : Throws is type is not valid.
+  Caller     : General
+  Status     : At risk
+
+=cut
 
 # --------------------------------------------------------------------------------
 # Build a cache of ensembl stable ID -> display_name
 # Return hashref keyed on {$type}{$stable_id}
-# Type is always all lower case
-
+#Need to update cache if we're doing more than one 'type' at a time
+# as it will never get loaded for the new type!
 
 sub get_display_name_by_stable_id{
   my ($self, $stable_id, $type) = @_;
 
-
+  $type = lc($type);
 
   if($type !~ /(gene|transcript|translation)/){
-	warn "Cannot get display_name for stable_id $stable_id with type $type\n";
-	return;
+	throw("Cannot get display_name for stable_id $stable_id with type $type");
   }
   
   if(! exists $self->{'display_name_cache'}->{$stable_id}){
@@ -241,6 +313,22 @@ sub get_display_name_by_stable_id{
   return $self->{'display_name_cache'}->{$stable_id};
 }
 
+
+=head2 project_feature
+
+  Args [0]   : Bio::EnsEMBL::Feature
+  Args [1]   : string - Assembly e.g. NCBI37
+  Example    : $self->project($feature, $new_assembly);
+  Description: Projects a feature to a new assembly via the AssemblyMapper
+  Returntype : Bio::EnsEMBL::Feature
+  Exceptions : Throws is type is not valid.
+  Caller     : General
+  Status     : At risk - move to core API? Utils?
+
+=cut
+
+
+
 # --------------------------------------------------------------------------------
 # Project a feature from one slice to another
 sub project_feature {
@@ -249,11 +337,6 @@ sub project_feature {
   # project feature to new assembly
   my $feat_slice = $feat->feature_Slice;
   my @segments = @{ $feat_slice->project('chromosome', $new_assembly) };
-
-
-  #next what?
-  #next unless (@segments);
-  #next if (scalar(@segments) > 1);
 
   if(! @segments){
 	print "Failed to project feature:\t".$feat->display_label."\n";
