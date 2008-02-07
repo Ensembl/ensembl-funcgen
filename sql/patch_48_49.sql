@@ -35,6 +35,7 @@ update feature_type set description='Histone 3 Lysine 9 Tri-Methylation' where n
 
 alter table xref change info_type `info_type` enum('PROJECTION','MISC','DEPENDENT','DIRECT','SEQUENCE_MATCH','INFERRED_PAIR','PROBE','UNMAPPED', 'CODING', 'TARGET') NOT NULL;
 update xref set info_type='TARGET' where info_type='DEPENDENT';
+alter table object_xref modify `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature', 'FeatureType') NOT NULL,
 
 
 -- Add LOESS to status tables
