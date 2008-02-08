@@ -35,7 +35,7 @@ update feature_type set description='Histone 3 Lysine 9 Tri-Methylation' where n
 
 alter table xref change info_type `info_type` enum('PROJECTION','MISC','DEPENDENT','DIRECT','SEQUENCE_MATCH','INFERRED_PAIR','PROBE','UNMAPPED', 'CODING', 'TARGET') NOT NULL;
 update xref set info_type='TARGET' where info_type='DEPENDENT';
-alter table object_xref modify `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature', 'FeatureType') NOT NULL,
+alter table object_xref modify `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature', 'FeatureType') NOT NULL;
 
 
 -- Add LOESS to status tables
@@ -72,11 +72,8 @@ alter table chip_channel modify `result_set_id` int(10) unsigned NOT NULL;
 alter table coord_system modify `core_coord_system_id` int(10) NOT NULL;
 alter table experimental_chip modify `experiment_id` int(10) unsigned default NULL;
 alter table experimental_chip modify `array_chip_id` int(10) unsigned default NULL;
-alter table experimental_chip modify `biological_replicate` varchar(100) default NULL;
-alter table experimental_chip modify `technical_replicate` varchar(100) default NULL;
 alter table experimental_set modify  `name` varchar(40) not NULL;
 alter table experimental_subset modify `experimental_set_id` int(10) unsigned NOT NULL;
-alter table experimental_subset modify `name` varchar(100) NOT NULL;
 alter table external_db modify `db_name` varchar(28) NOT NULL;
 alter table external_db modify status ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL;
 alter table external_db modify `priority` int(11) NOT NULL;
@@ -94,7 +91,6 @@ alter table object_xref modify  `ensembl_id` int(10) unsigned NOT NULL;
 alter table object_xref modify  `xref_id` int(10) unsigned NOT NULL;
 alter table result modify `chip_channel_id` int(10) unsigned NOT NULL;
 
-alter table result_set modify   `name` varchar(100) default NULL;
 alter table status modify `status_name_id` int(10) NOT NULL;
 alter table status_name modify   `name` varchar(20) default NULL;
 alter table xref modify `dbprimary_acc` varchar(40) NOT NULL;
@@ -122,7 +118,6 @@ alter table regulatory_attribute modify  `regulatory_feature_id` int(10) unsigne
 alter table regulatory_attribute modify  `attribute_feature_id` int(10) unsigned NOT NULL;
 
 alter table experimental_chip modify `unique_id` varchar(20) NOT NULL;
-alter table analysis modify `logic_name` varchar(40) NOT NULL;
 alter table analysis_description modify `analysis_id` int(10) unsigned NOT NULL;
 
 alter table meta modify `meta_key` varchar(40) NOT NULL;
