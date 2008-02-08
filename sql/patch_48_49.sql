@@ -53,7 +53,7 @@ alter table experiment modify name varchar(100) default NULL;
 alter table experimental_chip modify biological_replicate varchar(100) default NULL;
 alter table experimental_chip modify technical_replicate varchar(100) default NULL;
 alter table result_set modify name varchar(100) default NULL;
-alter table data__set modify name varchar(100) default NULL;
+alter table data_set modify name varchar(100) default NULL;
 alter table feature_set modify name varchar(100) default NULL;
 alter table experimental_subset modify name varchar(100) default NULL;
 alter table analysis modify logic_name varchar(100) default NULL;
