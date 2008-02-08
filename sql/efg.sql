@@ -516,7 +516,7 @@ CREATE TABLE `feature_set` (
    `feature_type_id` int(10) unsigned NOT NULL,
    `analysis_id`  int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
-   `name` varchar(40) default NULL,
+   `name` varchar(100) default NULL,
    `type` enum('annotated', 'regulatory', 'external') default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
@@ -830,7 +830,7 @@ DROP TABLE IF EXISTS `analysis`;
 CREATE TABLE `analysis` (
   `analysis_id` int(10) unsigned NOT NULL auto_increment,
   `created` datetime NOT NULL default '0000-00-00 00:00:00',
-  `logic_name` varchar(40) NOT NULL,
+  `logic_name` varchar(100) NOT NULL,
   `db` varchar(120) default NULL,
   `db_version` varchar(40) default NULL,
   `db_file` varchar(120) default NULL,

@@ -48,12 +48,15 @@ INSERT into status_name values ('', 'LOESS');
 alter table feature_type modify class enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region', 'Enhancer', 'Expression') default NULL;
 
 
--- Allow for longer names in experiment, experimental_chip, result_set
+-- Allow for longer names in experiment, experimental_chip, *_set, and analysis
 alter table experiment modify name varchar(100) default NULL;
 alter table experimental_chip modify biological_replicate varchar(100) default NULL;
 alter table experimental_chip modify technical_replicate varchar(100) default NULL;
 alter table result_set modify name varchar(100) default NULL;
+alter table data__set modify name varchar(100) default NULL;
+alter table feature_set modify name varchar(100) default NULL;
 alter table experimental_subset modify name varchar(100) default NULL;
+alter table analysis modify logic_name varchar(100) default NULL;
 
 -- Some minimal filed definition tidy up
 -- Most of these are due to differences in table creations between MySQL 4 > 5
