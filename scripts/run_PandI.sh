@@ -14,7 +14,7 @@
 PASS=$1
 
 
-$EFG_SRC/scripts/parse_and_import.pl\
+$EFG_SRC/scripts/import/parse_and_import.pl\
 	-name Stunnenberg_all_OID_1963\
 	-format tiled\
 	-location Hinxton\

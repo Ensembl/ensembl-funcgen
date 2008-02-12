@@ -9,10 +9,10 @@ use Bio::EnsEMBL::Funcgen::Utils::HealthChecker;
 
 my $reg = "Bio::EnsEMBL::Registry";
 
-my $species = 'mus_musculus';
+#my $species = 'mus_musculus';
 #my $species = 'homo_sapiens';
-#my $species = 'drosophila_melanogaster';
-my $schema_build = '49_37b';
+my $species = 'drosophila_melanogaster';
+my $schema_build = '49_44';
 my $pass = shift @ARGV;
 my $port = 3306;
 my $user = 'ensadmin';

@@ -2,12 +2,15 @@
 
 #. ~/src/ensembl-efg/scripts/.efg
 
+
+#$ARGS is list of bed filepaths
+
 PASS=$1
 shift
 
 
 
-$EFG_SRC/scripts/parse_and_import.pl\
+$EFG_SRC/scripts/import/parse_and_import.pl\
 	-name  CD4_H4R3me2\
 	-format SEQUENCING\
 	-location Hinxton\

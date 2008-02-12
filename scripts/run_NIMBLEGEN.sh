@@ -3,7 +3,7 @@
 PASS=$1
 shift
 
-$EFG_SRC/scripts/parse_and_import.pl\
+$EFG_SRC/scripts/import/parse_and_import.pl\
 	-name 'DVD_OR_EXPERIMENT_NAME'\
 	-format tiled\
 	-location Hinxton\

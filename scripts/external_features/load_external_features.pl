@@ -16,7 +16,10 @@ use strict;
 use Bio::EnsEMBL::Funcgen::Parsers::vista;
 use Bio::EnsEMBL::Funcgen::Parsers::cisred;
 use Bio::EnsEMBL::Funcgen::Parsers::miranda;
+use Bio::EnsEMBL::Funcgen::Parsers::redfly;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+
 use Getopt::Long;
 
 my ($host, $user, $pass, $port, $dbname, $species, $file, $clobber, $type, $old_assembly, $new_assembly, $archive);
@@ -39,6 +42,19 @@ GetOptions( "host=s",         \$host,
 usage() if (!$host || !$user || !$dbname || !$type);
 
 
+
+
+my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+											  -host   => 'ens-staging',
+											  -port   => $port,
+											  -user   => $user,
+											  -pass   => $pass,
+											  -species => $species,
+											  -group  => 'core',
+											  -dbname => $species.'_core_49_44',
+											 );
+
+
 my $db_adaptor = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
 															 -host   => $host,
 															 -port   => $port,
@@ -46,7 +62,8 @@ my $db_adaptor = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
 															 -pass   => $pass,
 															 -species => $species,
 															 -group  => 'funcgen',
-															 -dbname => $dbname
+															 -dbname => $dbname,
+															 -dnadb  => $cdb,
 															);
 
 #test db connections
@@ -74,15 +91,15 @@ my $parser = "Bio::EnsEMBL::Funcgen::Parsers::$type"->new(
 
 #RegulatoryFeatureParser::BaseParser::delete_existing($db_adaptor, $type) if ($del);
 
-if(! defined $file){
-  print "Must provide a file to parse\n";
-  &usage;
-}
+#if(! defined $file){
+#  print "Must provide a file to parse\n";
+#  &usage;
+#}
 
-if(! -e $file){
-  print "Can't find $file\n";
-  &usage;
-}
+#if(! -e $file){
+ # print "Can't find $file\n";
+ # &usage;
+#}
 
 $parser->parse_and_load($file, $old_assembly, $new_assembly);
 
