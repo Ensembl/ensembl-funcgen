@@ -527,11 +527,127 @@ sub backup_file{
 
 }
 
+#This should move to Utils
+#as it is a simple string manipulation
+
 sub get_schema_and_build{
   my ($self, $dbname) = @_;
   my @dbname = split/_/, $dbname;
   return [$dbname[($#dbname -1)], $dbname[($#dbname -1)]];
 }
+
+
+
+#Rollback/load methods migrated from DBAdaptor
+
+#Do we need to add a rolling back status?
+#Set before and remove afterwards?
+
+#These assume the parent class has a db attr
+#do we need a $self->can(db) test here
+
+=head2 rollback_FeatureSet
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
+  Arg [1]    : boolean - Force delete flag
+  Example    : $self->rollback_FeatureSet($fset);
+  Description: Deletes all status and feature entries for this FeatureSet.
+               Checks whether FeatureSet is a supporting set in any other DataSet.
+  Returntype : none
+  Exceptions : Throws if any deletes fails or if db method unavailable
+  Caller     : Importers and Parsers
+  Status     : At risk
+
+=cut
+
+
+sub rollback_FeatureSet{
+  my ($self, $fset, $force_delete) = @_;
+
+  if( ! $self->can('db')){
+	throw($self.' cannot call method db. You must set this in the child object');
+  }
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
+
+  warn 'Rolling back '.$fset->type." FeatureSet:\t".$fset->name;
+
+  #Check whether this is a supporting set for another data_set
+  
+  my @dsets = @{$self->db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset)};
+
+  if(@dsets){
+	my $txt = $fset->name." is a supporting set of the following DataSets:\t".join(', ', (map {$_->name} @dsets));
+
+	if($force_delete){
+	  warn("WARNING:\t$txt\n");
+	}
+	else{
+	  $self->throw($txt."\nPlease resolve or specify the force_delete argument")
+	}
+  }
+
+  #Delete any status entries first?
+  my $sql = 'DELETE from status where table_name="feature_set" and table_id='.$fset->dbID;
+
+  if(! $self->db->dbc->do($sql)){
+	throw("Failed to roll back status entries for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  }
+
+  $sql = 'DELETE from '.$fset->type.'_feature where feature_set_id='.$fset->dbID;  
+  if(! $self->db->dbc->do($sql)){
+	throw('Failed to rollback '.$fset->type."_features for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  }
+
+  return;
+}
+
+=head2 rollback_ExperimentalSet
+
+  Example    : $self->rollback_ExperimentalSet($eset);
+  Description: Deletes all status entries for this ExperimentalSet and it's ExperimentalSubSets
+  Returntype : none
+  Exceptions : Throws if any deletes fails or if db method unavailable
+  Caller     : Importers and Parsers
+  Status     : At risk
+
+=cut
+
+
+sub rollback_ExperimentalSet{
+  my ($self, $eset) = @_;
+
+ if( ! $self->can('db')){
+	throw($self.' cannot call method db. You must set this in the child object');
+  }
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalSet', $eset);
+
+  my $sql;
+  warn "Rolling back ExperimentSet:\t".$eset->name;
+
+  #ExperimentalSubSets
+  foreach my $esset(@{$eset->get_subsets}){
+
+	#This is not working?
+	$sql = 'DELETE from status where table_name="experimental_subset" and table_id='.$esset->dbID;
+	
+	if(! $self->db->dbc->do($sql)){
+	  throw("Failed to roll back status entries for ExperimentalSubSet:\t".$esset->name.' (dbID:'.$esset->dbID.')');
+	}
+  }
+
+  #ExperimentalSet
+  $sql = 'DELETE from status where table_name="experimental_set" and table_id='.$eset->dbID;
+
+  if(! $self->db->dbc->do($sql)){
+	throw("Failed to roll back status entries for ExperimentalSet:\t".$eset->name.' (dbID:'.$eset->dbID.')');
+  }
+  
+  return;
+}
+  
+
 
 1;
 
