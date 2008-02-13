@@ -61,16 +61,16 @@ use vars qw(@ISA);
 
 
 sub new{
-    my $caller = shift;
-
+  my $caller = shift;
+  
   my $class = ref($caller) || $caller;
   my $self  = $class->SUPER::new();
-
+  
   throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") 
-      if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
-	
+	if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
+  
   $self->{'config'} =  
-    {(
+	{(
       #order of these method arrays is important!
 	  #remove method arrays and execute serially?
       array_data   => [],#['experiment'],
@@ -84,6 +84,7 @@ sub new{
 	  protocols => {()},
      )};
 	
+
   return $self;
 }
 
@@ -104,6 +105,16 @@ sub set_config{
   my $self = shift;
 
   throw('Must provide an ExperimentalSet name for a Bed import') if ! defined $self->experimental_set_name();
+
+  #Mandatory checks
+  if(! defined $self->feature_analysis){
+	throw('Must define a -feature_analysis parameter for Bed imports');
+  }
+
+
+  #We need to undef norm emthod as it has been set to the env var
+  $self->{'norm_method'} = undef;
+
   #dir are not set in config to enable generic get_dir method access
 
   return;
@@ -123,10 +134,8 @@ sub read_and_import_bed_data{
     my $af_adaptor = $self->db->get_AnnotatedFeatureAdaptor();
     my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
     my $dset_adaptor = $self->db->get_DataSetAdaptor();
-   
-    my $new_data = 0;
-    
-    my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name());
+	my $new_data = 0;
+	my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name());
     
     if(! defined $eset){
         $eset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new(
@@ -156,13 +165,13 @@ sub read_and_import_bed_data{
     if(! defined $fset){
 
         #currently hardcoded, but we should probably add feature_analysis_name
-        $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-                                                       -name         => $self->experiment->name(),
-                                                       -feature_type => $self->feature_type(),
-                                                       -cell_type    => $self->cell_type(),
-                                                       -type         => 'annotated',
-                                                       -analysis     => $self->feature_analysis,
-                                                       );
+	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+													 -name         => $self->experiment->name(),
+													 -feature_type => $self->feature_type(),
+													 -cell_type    => $self->cell_type(),
+													 -type         => 'annotated',
+													 -analysis     => $self->feature_analysis,
+													);
         ($fset)  = @{$fset_adaptor->store($fset)};
     }
 
@@ -186,126 +195,145 @@ sub read_and_import_bed_data{
     if (! @{$self->result_files()}) {
         my $list = "ls ".$self->input_dir().'/'.$self->name().'*.bed';
         my @rfiles = `$list`;
-
-		if (scalar(@rfiles) >1){
-		  #Need to test whether this is the initial import or if in recovery mode.
-		  
-		  throw("Found more than one cluster file:\n@rfiles\nNeed to implement ExperimentalSubset rollback before removing this!")
-        }
-        
         $self->result_files(\@rfiles);
     }
     
     if (scalar(@{$self->result_files()}) >1) {
         warn("Found more than one bed file:\n".
-             join("\n", @{$self->result_files()})."\nBed does not yet handle replicates\n".
-             "we need to resolve how we are going handle replicates with random cluster IDs");
+             join("\n", @{$self->result_files()})."\nBed does not yet handle replicates.".
+             "  We need to resolve how we are going handle replicates with random cluster IDs");
         #do we even need to?
     }
 
 	#Here were are tracking the import of individual bed files by adding them as ExperimentalSubSets
-       
-    foreach my $filepath(@{$self->result_files()}) {
-        chomp $filepath;
-        my $filename;
-        my $roll_back = 0;
-        ($filename = $filepath) =~ s/.*\///;
-        my $sub_set;
-
-        $self->log("Found bed file\t$filename");
-
-        if($sub_set = $eset->get_subset_by_name($filename)){
-            $roll_back = 1;
-        }else{
-            $sub_set = $eset->add_new_subset($filename);
-        }
-        
-        #store if not already, skips if stored
-        $eset_adaptor->store_ExperimentalSubsets([$sub_set]);
-
-        if ($sub_set->has_status('IMPORTED')){
-            $self->log("ExperimentalSubset(${filename}) has already been imported");
-        } 
-        else {
-            $new_data = 1;
-
-            if ($self->recovery() && $roll_back) {
-                $self->log("Rolling back results for ExperimentalSubset:\t".$filename);
-
-                warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
-                throw("Need to implement annotated_feature rollback!\n");
-                #$self->db->rollback_results($cc_id);
-            }
-            
-            $self->log("Reading bed file:\t".$filename);
-            my $fh = open_file($filepath);
-            my @lines = <$fh>;
-            close($fh);
-            
-			my ($line, $f_out);
-            my $fasta = '';
-            
-            #warn "we need to either dump the pid rather than the dbID or dump the fasta in the DB dir";
-            my $fasta_file = $ENV{'EFG_DATA'}."/fastas/".$self->experiment->name().'.'.$filename.'.fasta';
-
-            if($self->dump_fasta()){
-                $self->backup_file($fasta_file);
-                $f_out = open_file($fasta_file, '>');
-            }
-            
-            $self->log("Parsing file:\t$filename");
-
-            foreach my $line (@lines) {
-                $line =~ s/\r*\n//o;
-                next if $line =~ /^\#/;	
-                next if $line =~ /^$/;
-                next unless $line =~ /^chr/i;
-
-                my ($chr, $start, $end, $pid, $score) = split/\t/o, $line;				  
-             
-				if($self->ucsc_coords){
-				  $start +=1;
-				  $end +=1;
-				}
-                
-                if(!  $self->cache_slice($chr)){
-                    warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
-                }else{
-                    
-                    #this is throwing away the encode region which could be used for the probeset/family?	
-                    my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
-                        (
-                         -START         => $start,
-                         -END           => $end,
-                         -STRAND        => 1,
-                         -SLICE         => $self->cache_slice($chr),
-                         -ANALYSIS      => $fset->anal,
-                         -DISPLAY_LABEL => $pid,
-                         -FEATURE_SET   => $fset,
-                         );
-                    
-                    $af_adaptor->store($feature);
-                    
-                    #dump fasta here
-                    if ($self->dump_fasta()){
-                        $fasta .= '>'.$pid."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
-                    }
-                }
-            }
+	#Recovery would never know what to delete
+	#So would need to delete all, Hence no point in setting status?
 
 
-            if ($self->dump_fasta()){
-                print $f_out $fasta;
-                close($f_out);
-            }
+
+	### VALIDATE FILES ###
+	#We need validate all the files first, so the import doesn't fall over half way through
+	#Or if we come across a rollback halfway through
+	my %new_data;
+	my $roll_back = 0;
+
+     foreach my $filepath(@{$self->result_files()}) {
+	  chomp $filepath;
+	  my $filename;
+	  ($filename = $filepath) =~ s/.*\///;
+	  my $sub_set;
+	  
+	  $self->log("Found bed file\t$filename");
+
+	  if($sub_set = $eset->get_subset_by_name($filename)){
+		$roll_back = 1;
+	  }else{
+		$sub_set = $eset->add_new_subset($filename);
+	  }
+	  
+	  #store if not already, skips if stored
+	  $eset_adaptor->store_ExperimentalSubsets([$sub_set]);
+	  
+	  if ($sub_set->has_status('IMPORTED')){
+		$self->log("ExperimentalSubset(${filename}) has already been imported");
+	  } 
+	  else {
+		$new_data{$filepath} = undef;
+		
+		if ($self->recovery() && $roll_back) {
+		  $self->log("Rolling back results for ExperimentalSubset:\t".$filename);
+		  warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
+
+		  $self->rollback_FeatureSet($fset);
+		  $self->rollback_ExperimentalSet($eset);
+		  last;
+		}
+		elsif($roll_back){
+		  throw("Found partially imported ExperimentalSubSet:\t$filepath\n".
+				"You must specify -recover  to perform a full roll back for this ExperimentalSet:\t".$eset->name);
+		}
+	  }
+	}
 
 
-            $self->log("Finished importing:\t$filepath");
-            $sub_set->adaptor->set_status('IMPORTED', $sub_set);
-        }
+	### READ AND IMPORT FILES ###
+	foreach my $filepath(@{$self->result_files()}) {
+	  chomp $filepath;
+	  my $filename;
+	  ($filename = $filepath) =~ s/.*\///;
+
+	  if($roll_back || exists $new_data{$filepath}){
+
+		 $self->log("Reading bed file:\t".$filename);
+		 my $fh = open_file($filepath);
+		 my @lines = <$fh>;
+		 close($fh);
+		 
+		 my ($line, $f_out);
+		 my $fasta = '';
+		 
+		 #warn "we need to either dump the pid rather than the dbID or dump the fasta in the DB dir";
+		 my $fasta_file = $ENV{'EFG_DATA'}."/fastas/".$self->experiment->name().'.'.$filename.'.fasta';
+
+		 if($self->dump_fasta()){
+		   $self->backup_file($fasta_file);
+		   $f_out = open_file($fasta_file, '>');
+		 }
+		 
+		 $self->log("Parsing file:\t$filename");
+
+		 foreach my $line (@lines) {
+		   $line =~ s/\r*\n//o;
+		   next if $line =~ /^\#/;	
+		   next if $line =~ /^$/;
+		   next unless $line =~ /^chr/i;
+		   
+		   my ($chr, $start, $end, $pid, $score) = split/\t/o, $line;				  
+		   
+		   if($self->ucsc_coords){
+			 $start +=1;
+			 $end +=1;
+		   }
+		   
+		   if(!  $self->cache_slice($chr)){
+			 warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
+		   }else{
+			 
+			 #this is throwing away the encode region which could be used for the probeset/family?	
+			 my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
+			   (
+				-START         => $start,
+				-END           => $end,
+				-STRAND        => 1,
+				-SLICE         => $self->cache_slice($chr),
+				-ANALYSIS      => $fset->anal,
+				-DISPLAY_LABEL => $pid,
+				-FEATURE_SET   => $fset,
+			   );
+			 
+			 $af_adaptor->store($feature);
+			 
+			 #dump fasta here
+			 if ($self->dump_fasta()){
+			   $fasta .= '>'.$pid."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
+			 }
+		   }
+		 }
+		 
+		 
+		 if ($self->dump_fasta()){
+		   print $f_out $fasta;
+		   close($f_out);
+		 }
+
+
+		 $self->log("Finished importing:\t$filepath");
+		 my $sub_set = $eset->get_subset_by_name($filename);
+		 $sub_set->adaptor->store_status('IMPORTED', $sub_set);
+	   }
     }
 
-    $self->log("No new data, skipping result parse") if ! $new_data;
+    $self->log("No new data, skipping result parse") if ! keys %new_data;
     
     $self->log("Finished parsing and importing results");
     
