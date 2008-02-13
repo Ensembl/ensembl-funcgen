@@ -336,7 +336,7 @@ sub store{
   
   
   my $sth = $self->prepare('INSERT INTO experimental_set (experiment_id, feature_type_id, 
-                                                       cell_type_id,format, vendor, name) 
+                                                       cell_type_id, format, vendor, name) 
                                                        VALUES (?, ?, ?, ?, ?, ?)');
   
   my $db = $self->db();
@@ -357,15 +357,16 @@ sub store{
 	my $ct_id = (defined $set->cell_type()) ? $set->cell_type->dbID() : undef;
 	my $ft_id = (defined $set->feature_type()) ? $set->feature_type->dbID() : undef;
 
+	warn "format is ".$set->format." and vendor is ".$set->vendor;
+
+
     $sth->bind_param(1, $set->get_Experiment->dbID(),   SQL_INTEGER);
-	$sth->bind_param(4, $ft_id,                         SQL_INTEGER);
+	$sth->bind_param(2, $ft_id,                         SQL_INTEGER);
 	$sth->bind_param(3, $ct_id,                         SQL_INTEGER);
   	$sth->bind_param(4, $set->format,                   SQL_VARCHAR);
   	$sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
 	$sth->bind_param(6, $set->name,                     SQL_VARCHAR);
 	
-	
-  
     
     $sth->execute();
     
