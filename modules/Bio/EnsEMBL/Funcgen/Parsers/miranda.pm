@@ -97,13 +97,13 @@ sub parse_and_load{
   open (FILE, "<$file") || die "Can't open $file";
 
   while (<FILE>) {
-	next if ($_ =~ /^\s*\#/ || $_ =~ /^\s*$/);
+	next if ($_ =~ /^\s*\#/o || $_ =~ /^\s*$/o);
 
 	##GROUP SEQ     METHOD  FEATURE CHR     START   END     STRAND  PHASE   SCORE   PVALUE_OG       TRANSCRIPT_ID   EXTERNAL_NAME
 #Similarity      mmu-miR-707     miRanda miRNA_target    2       120824620       120824640       +       .       15.3548 2.796540e-02    ENST00000295228 INHBB
 
     my ($group, $seq, $method, $feature, $chr, $start, $end, $strand, undef, undef, undef, $ens_id, $display_name) = split;
-    $strand = ($strand =~ /\+/) ? 1 : -1;
+    $strand = ($strand =~ /\+/o) ? 1 : -1;
     #my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
 	my $id = $ens_id.':'.$seq;
 

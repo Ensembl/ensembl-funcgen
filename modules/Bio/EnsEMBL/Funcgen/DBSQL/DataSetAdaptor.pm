@@ -39,7 +39,7 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::DataSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 

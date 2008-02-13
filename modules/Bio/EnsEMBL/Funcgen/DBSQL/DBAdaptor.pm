@@ -77,7 +77,22 @@ my $reg = "Bio::EnsEMBL::Registry";
 #}
 
 
-#some of these load methods should be moved to importer
+sub is_stored_and_valid{
+  my ($self, $class, $obj) = @_;
+
+  #my $s_and_v = 1;
+
+  if(! (ref($obj) && $obj->isa($class) && $obj->is_stored($self))){
+	#warn or throw?
+	#$s_and_v = 0;
+	throw('Must provide a valid stored '.$class."\nParamter provided was:\t$obj");
+  }
+
+  return;# $s_and_v;
+}
+
+
+#Move these to Helper.pm! Check method dependencies first!
 
 =head2 load_table_data
 
@@ -122,26 +137,24 @@ sub load_table_data{
 }
 
 
+
 sub rollback_results{
   my ($self, @cc_ids) = @_;
 
-
-
   throw("Need to pass some chip_channel_ids to roll_back") if (scalar(@cc_ids) == 0);
   
-
-  my $sql = 'DELETE from result where chip_channel_id in (0)';#'.join(',', @cc_ids).');';
-  
-  if(! $self->dbc->do($sql)){
-	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->dbc->db_handle->errstr());
-  }
-
-  #do doesn't like cat'd statements??
-  $sql = 'DELETE s from status s, chip_channel cc WHERE cc.chip_channel_id IN ('.join(',', @cc_ids).
+  #Rollback status entries
+  my $sql = 'DELETE s from status s, chip_channel cc WHERE cc.chip_channel_id IN ('.join(',', @cc_ids).
 	') AND cc.table_id=s.table_id AND cc.table_name=s.table_name';
-
   if(! $self->dbc->do($sql)){
 	throw("Status rollback failed for chip_channel_ids:\t@cc_ids\n".$self->dbc->db_handle->errstr());
+  }
+
+
+  #Rollback result entries
+  $sql = 'DELETE from result where chip_channel_id in (0)';#'.join(',', @cc_ids).');';
+  if(! $self->dbc->do($sql)){
+	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->dbc->db_handle->errstr());
   }
 
   return;
@@ -155,6 +168,10 @@ sub rollback_ArrayChip{
 
 
   warn "This should really check for other features and results based on this ArrayChip otherwise we end up with orphaned features";
+
+
+  #Shouldn't we rollback status first?
+
   #should never really have CS imports if not IMPORTED
   #there is however the potential to trash a lot of data if we were to remove the CS importes by mistake
   #e.g. the status is deleted by mitake

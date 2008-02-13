@@ -101,8 +101,7 @@ sub new {
   $self->{'mysql_connect_string'} = 'mysql -h'.$db->dbc->host.' -u'.$db->dbc->username.' -p'
 	.$db->dbc->password.' '.$db->dbc->dbname.' -P'.$db->dbc->port;
   $self->{'dbname'} = $db->dbc->dbname;
-
-  $self->{'builds'} = (@$builds) ? $builds : [('DEFAULT')];
+  $self->{'builds'} = (scalar(@$builds)>0) ? $builds : ['DEFAULT'];
   
   return $self;
 }
@@ -144,6 +143,7 @@ sub update_db_for_release{
   
 
   $self->log('??? Have you dumped/copied GFF dumps ???');
+  $self->log("??? Have you diff'd the sql for each species vs. a fresh schema ???");
 
   $self->log(' :: Finished updating '.$self->{'dbname'}.' for release');
 }
@@ -183,9 +183,11 @@ sub validate_new_seq_regions{
 	
 	$self->log("Importing seq_region/coord_system info for build:\t".$build);
 	
-	foreach my $slice(@{$slice_adaptor->fetch_all('toplevel', $build)}){
-	  
+	foreach my $slice(@{$slice_adaptor->fetch_all('toplevel', $build, 1)}){
+	  #1 is non-reference flag, essential for haplotype regions
+
 	  if($slice->start() != 1){
+		$self->log("Reslicing slice:\t".$slice->name());
 		#we must have some sort of PAR linked region i.e. Y
 		$slice = $slice_adaptor->fetch_by_region($slice->coord_system_name(), $slice->seq_region_name());
 	  }

@@ -126,39 +126,33 @@ sub species_chr_num{
 
 	my %species_chrs = (
 						homo_sapiens => {(
-										  x  => 23,
-										  y  => 24,
-mt => 25, 
-										   )},
+										  'x' => 23,
+										  'y' => 24,
+										  'mt' => 25, 
+										 )},
 						
 						mus_musculus => {(
-										  x  => 20,
-										  y  => 21,
-											mt => 22,
+										  'x'  => 20,
+										  'y'  => 21,
+										  'mt' => 22,
 										   )},
 						
 						rattus_norvegicus =>  {(
-												x  => 21,
-												y  => 22,
-												  mt => 23,
-												 )},
-						
-
+												'x'  => 21,
+												'y'  => 22,
+												'mt' => 23,
+											   )},
 					   );
 
 	die("species not defined in chromosome hash") if(! exists $species_chrs{$species});
 
 	return (exists $species_chrs{$species}{lc($val)}) ? $species_chrs{$species}{lc($val)} : $val;
-
-
 }
-
 
 
 
 sub median{
   my $scores = shift;
-
 
   return undef if (! @$scores);
 

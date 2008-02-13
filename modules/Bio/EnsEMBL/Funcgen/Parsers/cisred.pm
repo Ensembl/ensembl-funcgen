@@ -137,10 +137,10 @@ sub parse_and_load {
   <FILE>; # skip header
 
   while (<FILE>) {
-    next if ($_ =~ /^\s*\#/ || $_ =~ /^\s*$/);
+    next if ($_ =~ /^\s*\#/o || $_ =~ /^\s*$/o);
 	chomp;
     # name	chromosome	start	end	strand	group_name   ensembl_gene_id
-    my ($motif_name, $chromosome, $start, $end, $strand, $group_name, $gene_id) = split (/\t/);
+    my ($motif_name, $chromosome, $start, $end, $strand, $group_name, $gene_id) = split/\t/o;
     #($gene_id) = $gene_id =~ /(ENS.*G\d{11})/;
 
 	if(! exists $slice_cache{$chromosome}){
@@ -170,7 +170,7 @@ sub parse_and_load {
 	#Do we need another xref for this or a different table?
 
 	
-	if ($group_name && $group_name ne '' && $group_name !~ /\s/) {
+	if ($group_name && $group_name ne '' && $group_name !~ /\s/o) {
 
 	  if(! exists $features_by_group{$group_name}){
 		$features_by_group{$group_name} = $ftype_adaptor->fetch_by_name('crtHsap'.$group_name);

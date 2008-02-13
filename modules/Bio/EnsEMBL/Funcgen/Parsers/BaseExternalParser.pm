@@ -38,8 +38,7 @@ sub new {
   $self->{type} = $type;
   $self->{'clobber'} = $clobber if defined $clobber;
   $self->{'archive'} = $archive if defined $archive;
-  @{$self->{'import_sets'}} = (defined $import_fsets) ? @{$import_fsets} || undef;
-  
+  $self->{'import_sets'} = (defined $import_fsets) ? @{$import_fsets} : undef;
   
   print ":: Parsing and loading $type ExternalFeatures\n";
 
@@ -109,7 +108,6 @@ sub set_feature_sets{
   foreach my $fset_name(@{$self->import_sets}){
 	
 	#check feature_type is validated?
-
 	my $fset = $fset_adaptor->fetch_by_name($fset_name);
 
 	#what about data sets?
@@ -172,6 +170,11 @@ sub set_feature_sets{
 		  " not found, storing from config hash\n";
 		
 
+
+		#warn Data::Dumper::Dumper({$self->{'feature_sets'}{$fset_name}{'analysis'}});
+		#Why does this no work the first time??
+
+
 		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new
 								 (
 								  %{$self->{'feature_sets'}{$fset_name}{'analysis'}}
@@ -184,6 +187,9 @@ sub set_feature_sets{
 		
 		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'});
 	  }
+
+
+	  #warn "analysis is $analysis";
 
 	  #replace hash config with object
 	  $self->{'feature_sets'}{$fset_name}{'analysis'} = $analysis;
@@ -253,8 +259,7 @@ sub validate_and_store_feature_types{
 
   foreach my $import_set(@{$self->import_sets}){
 
-	my $ftype_config = $self->{'feature_sets'}{$import_set}{'feature_type'};
-
+	my $ftype_config = ${$self->{'feature_sets'}{$import_set}{'feature_type'}};
 	my $ftype = $ftype_adaptor->fetch_by_name($ftype_config->{'name'});
 
 
@@ -278,7 +283,7 @@ sub validate_and_store_feature_types{
 }
 
 
-=head2 get_display_name_by_id
+=head2 get_display_name_by_stable_id
 
   Args [0]   : stable ID from core DB.
   Args [1]   : stable feature type e.g. gene, transcript, translation
@@ -312,6 +317,40 @@ sub get_display_name_by_stable_id{
 
   return $self->{'display_name_cache'}->{$stable_id};
 }
+
+
+=head2 get_stable_id_by_display_name
+
+  Args [0]   : display name (e.g. from core DB or GNC name)
+  Example    : 
+  Description: Builds a cache of stable ID to display names.
+  Returntype : string - gene stable ID
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+# --------------------------------------------------------------------------------
+# Build a cache of ensembl stable ID -> display_name
+# Return hashref keyed on {$type}{$stable_id}
+#Need to update cache if we're doing more than one 'type' at a time
+# as it will never get loaded for the new type!
+
+sub get_stable_id_by_display_name{
+  my ($self, $display_name) = @_;
+
+  #if($type !~ /(gene|transcript|translation)/){
+#	throw("Cannot get display_name for stable_id $stable_id with type $type");
+#  }
+  
+  if(! exists $self->{'stable_id_cache'}->{$display_name}){
+	($self->{'stable_id_cache'}->{$display_name}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT s.stable_id FROM gene_stable_id s, gene g, xref x where g.display_xref_id=x.xref_id and s.gene_id=g.gene_id and x.display_label='${display_name}'");
+  }
+
+  return $self->{'stable_id_cache'}->{$display_name};
+}
+
 
 
 =head2 project_feature

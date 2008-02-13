@@ -116,18 +116,18 @@ sub parse_and_load{
 
   while (<FILE>) {
 
-    next if ($_ !~ /^>/); # only read headers
+    next if ($_ !~ /^>/o); # only read headers
 
     my %feature;
 
     # >chr16:84987588-84988227 | element 1 | positive  | neural tube[12/12] | hindbrain (rhombencephalon)[12/12] | limb[3/12] | cranial nerve[8/12]
-    my ($coords, $element, $posneg, @stuff) = split /\s+\|\s+/;;
+    my ($coords, $element, $posneg, @stuff) = split /\s+\|\s+/o;
 
     # parse co-ordinates
-    my ($chr, $start, $end) = $coords =~ /chr([^:]+):(\d+)-(\d+)/;
+    my ($chr, $start, $end) = $coords =~ /chr([^:]+):(\d+)-(\d+)/o;
 
     # parse element name
-    my ($element_number) = $element =~ /\s*element\s*(\d+)/;
+    my ($element_number) = $element =~ /\s*element\s*(\d+)/o;
 
     # ----------------------------------------
     # Feature name

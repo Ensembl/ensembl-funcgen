@@ -282,6 +282,29 @@ sub list_translation_ids_by_extids {
                                  $external_db_name );
 }
 
+
+=head2 list_feature_type_ids_by_extid
+
+  Arg [1]    : string $external_name
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_feature_type_ids_by_extid('BEAF-32');
+  Description: Gets a list of regulatory_feature IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+sub list_feature_type_ids_by_extid {
+  my ( $self, $external_name, $external_db_name ) = @_;
+
+  return $self->_type_by_external_id( $external_name, 'feature_type', 
+									  undef, $external_db_name );
+}
+
+
+
 =head2 list_regulatory_feature_ids_by_extid
 
   Arg [1]    : string $external_name
@@ -298,8 +321,7 @@ sub list_translation_ids_by_extids {
 sub list_regulatory_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
-  warn "in list with $external_name, $external_db_name ";
-
+ 
   return $self->_type_by_external_id( $external_name, 'regulatory_feature', 
 									  undef, $external_db_name );
 }
