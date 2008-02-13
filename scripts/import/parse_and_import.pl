@@ -138,10 +138,12 @@ $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
-my $reg = "Bio::EnsEMBL::Registry";
+my ($parser, $fanal);
 
 #to be removed
 my ($import_dir);
+my $reg = "Bio::EnsEMBL::Registry";
+#?
 
 my $data_dir = $ENV{'EFG_DATA'};
 my $interactive = 1;
@@ -167,6 +169,7 @@ GetOptions (
 			"name|n=s"     => \$name,
 			"format|f=s"   => \$format,
 			"vendor|v=s"   => \$vendor,
+			"parser=s"     => \$parser,
 			"pass|p=s"     => \$pass,
 			"port|l=s"     => \$port,
 			"host|h=s"     => \$host,
@@ -181,6 +184,7 @@ GetOptions (
 			"result_set=s" => \$rset_name,
 			"experimental_set=s" => \$exp_set,
 			"feature_type=s" => \$ftype,
+			"feature_analysis=s" => \$fanal,
 			"cell_type=s"    => \$ctype,
 			"write_mage"   => \$write_mage,
 			'update_xml'  => \$update_xml,
@@ -210,8 +214,6 @@ GetOptions (
 
 
 my @result_files = @ARGV;
-
-
 
 throw("Nimblegen import does not support cmdline defined result files") if (@result_files && uc($vendor) eq "NIMBELGEN");
 
@@ -244,6 +246,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -name        => $name,
    -format      => $format,
    -vendor      => $vendor,
+   -parser      => $parser,
    -group       => $group,
    -pass        => $pass,
    -host        => $host,
@@ -256,6 +259,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -array_name  => $array_name,
    -result_set_name => $rset_name, #not implemented yet
    -feature_type_name => $ftype,
+   -feature_analysis => $fanal,
    -cell_type_name => $ctype,
    -write_mage    => $write_mage,
    -update_xml => $update_xml,
