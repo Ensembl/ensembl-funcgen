@@ -93,7 +93,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($exp, $ftype, $ctype, $format, $vendor)
+  my ($exp, $format, $vendor)
     = rearrange(['EXPERIMENT', 'FORMAT', 'VENDOR'], @_);
     
   if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
