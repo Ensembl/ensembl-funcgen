@@ -124,10 +124,6 @@ sub new{
   throw("Mandatory argument -vendor not defined") if ! defined $vendor;
 
 
-  #my $parser_type;
-
-
-
   #This is a little hacky
   #We need to change this to set the parser format as an option
   #This will override the default Vendor Parser type and expect inputs appropriate
@@ -139,8 +135,8 @@ sub new{
   #we should eval the vendor parser require here first
   my $parser_error;
   my $vendor_parser = ucfirst(lc($vendor));
-
-  eval {"require Bio::EnsEMBL::Funcgen::Parsers::$vendor_parser;"};#This warns
+  eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";};
+ 
 
   if($@){
 	#Don't warn/throw yet as we might have a standard parser format
@@ -153,11 +149,18 @@ sub new{
 	$parser_type = ucfirst(lc($parser_type));
 
 	#Now eval the new parser
-	eval {"require Bio::EnsEMBL::Funcgen::Parsers::$parser_type;"};#This warns
+	eval {require "Bio/EnsEMBL/Funcgen/Parsers/${parser_type}.pm";};
 
 	if($@){
-	  throw("There is no valid parser for the -parser format your have specified:\t".$parser_type.
-			"Maybe this is a typo or maybe you want run with the default $vendor_parser parser\n".$@);
+
+	  #Might be no default
+	  my $txt = "There is no valid parser for the -parser format your have specified:\t".$parser_type."\n";
+
+	  if(! $parser_error){
+		$txt .= "Maybe this is a typo or maybe you want run with the default $vendor_parser parser\n";
+	  }
+
+	  throw($txt.$@);
 	}
 		
 	#warn about over riding vendor parser here
@@ -222,6 +225,7 @@ sub new{
   $self->{'ucsc_coords'} = $ucsc_coords || 0;
 
   #Will a general norm method be applicable fo all imports?
+  #Already casued problems with Bed imports... remove?
   $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};
  
   if ($self->vendor ne 'NIMBLEGEN'){
@@ -230,7 +234,7 @@ sub new{
   }
 
   #Set vendor specific attr dependent vars
-  $self->set_config();
+  #$self->set_config();
 
 
   #### Set up DBs and load and reconfig registry
@@ -409,6 +413,12 @@ sub new{
   }
 
 
+  #Set config here instead?
+  #So we can check all mandatory params
+  #Set vendor specific attr dependent vars
+  $self->set_config();
+
+
   $self->debug(2, "Importer class instance created.");
   $self->debug_hash(3, \$self);
     
@@ -478,14 +488,11 @@ sub init_experiment_import{
   $self->create_output_dirs('raw', 'norm', 'caches', 'fastas');
 
   throw("No result_files defined.") if (! defined $self->result_files());
+
   if (@{$self->result_files()}) {
     $self->log("Found result files arguments:\n\t".join("\n\t", @{$self->result_files()}));
   }
 
-
- 
-   
- 
   #check for cell||feature and warn if no met file supplied?
 
   if($self->norm_method){
@@ -3464,5 +3471,7 @@ sub tidy_duplicates{
 
   return;
 }
+
+
 
 1;
