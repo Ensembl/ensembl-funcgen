@@ -99,6 +99,16 @@ sub new {
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
 
+
+   if(! defined $self->analysis){
+	#default analysis hack for v47
+	#Set directly to avoid dbID boolean check
+	$self->{'analysis'} = Bio::EnsEMBL::Analysis->new(-logic_name => 'external',
+													  -id       => 0,#??someone needs to rewrite analysis
+													 );
+  }
+
+
   
   $self->format($format) if defined $format;
   $self->vendor($vendor) if defined $vendor;
