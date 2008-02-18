@@ -17,7 +17,7 @@ $EFG_SRC/scripts/import/parse_and_import.pl\
 	-array_set\
 	-array_name 'DESIGN_NAME'\
 	-group efg\
-	-data_version 41_36c\
+	-assembly 36\
 	-verbose\
 	-tee\
 	-pass $PASS\

@@ -20,7 +20,7 @@ $EFG_SRC/scripts/parse_and_import.pl\
 	-array_name "ENCODE3.1.1"\
 	-group efg\
 	-vendor sanger\
-	-data_version 42_36d\
+	-assembly 36\
 	-exp_date 2006-11-02\
 	-tee\
 	-verbose\

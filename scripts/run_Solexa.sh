@@ -25,7 +25,7 @@ $EFG_SRC/scripts/import/parse_and_import.pl\
 	-feature_analysis Parzen\
 	-parser Bed\
 	-vendor SOLEXA\
-	-data_version 47_36i\
+	-assembly 36\
 	-exp_date 2007-07-17\
 	-tee\
 	-verbose\
