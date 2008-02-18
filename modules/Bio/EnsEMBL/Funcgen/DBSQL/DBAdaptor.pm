@@ -53,6 +53,7 @@ use vars qw(@ISA);
 use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
+use Bio::EnsEMBL::Registry;
 my $reg = "Bio::EnsEMBL::Registry";
 
 
@@ -69,7 +70,7 @@ my $reg = "Bio::EnsEMBL::Registry";
   
 #  my $self = $class->SUPER::new(@_);
 
-#  #This simply forces dauto-detection of dnadb, to ensure that this is checked first;
+#  #This simply forces dauto-de$db->dbc->db_handle;tection of dnadb, to ensure that this is checked first;
 #  $self->dnadb();
 
 #  return $self;
@@ -77,19 +78,37 @@ my $reg = "Bio::EnsEMBL::Registry";
 #}
 
 
+
+=head2 is_stored_and_valid
+
+  Arg [1]    : string - class namespace
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Storable e.g. ResultSet etc.
+  Example    : $result_set->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+  DESCRIPTION: Validates object class and stored status
+  Returntype : none
+  Exceptions : Throws if Storable is not valid or stored
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+
+#This has to be in the DBAdaptor rather than Storable as we're 
+#calling isa on self otherwise which we don't know whether we can
+
 sub is_stored_and_valid{
   my ($self, $class, $obj) = @_;
 
-  #my $s_and_v = 1;
-
   if(! (ref($obj) && $obj->isa($class) && $obj->is_stored($self))){
-	#warn or throw?
-	#$s_and_v = 0;
-	throw('Must provide a valid stored '.$class."\nParamter provided was:\t$obj");
+	#throw or warn and return boolean?
+	throw('Must provide a valid stored '.$class."\nParameter provided was:\t$obj");
   }
 
-  return;# $s_and_v;
+  return;
 }
+
+
+
 
 
 #Move these to Helper.pm! Check method dependencies first!
@@ -415,7 +434,8 @@ sub get_SliceAdaptor{
 
 =head2 dnadb
 
-  Title :      dnadb 
+  Arg [1]:     Bio::EnsEMBL::DBSQL::DBAdaptor
+  Arg [2]:     string - coord_system name e.g. chromosome
   Usage :      my $dnadb = $db->dnadb(); 
   Description: returns the database adaptor where the dna lives i.e. the core db for a given species
                There are at least 2 cases where you need to set this explicitly
@@ -423,11 +443,13 @@ sub get_SliceAdaptor{
                the correspeonding core DB with matching schema_build
                2.  If the corresponding core DB is not available on the default ensembl DB 
                server(ensembldb/ens-livemirror) i.e. before a new release.
-  Args :       Bio::EnsEMBL::DBSQL::BaseAdaptor
   Status :     At risk. - Might remove validation of CS
 
 =cut
 
+#This is not taking account of the registry which may have already been loaded
+#So we may be setting the dnadb correctly here
+#But it won't be the default core db in the registry, it will be cached as species1 or something?
 
 sub dnadb { 
   my ($self, $dnadb, $cs_name) = @_; 
@@ -524,11 +546,110 @@ sub dnadb {
     #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
     #or shall we fetch/add all by name?
    
+	#This is a non-obious store behaviour!!!!!!!!!!!!!!!!!
+	#This can result in coord_system entries being written
+	#unknowingly if you are using the efg DB with a write user/pass
     $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
   }
 
   return $self->SUPER::dnadb();#never pass @_ here!
 } 
+
+
+=head2 set_dnadb_by_assembly_version
+
+  Arg [1]:     string - Assembly version e.g. for homo_sapiens_core_49_36k it would be 36
+  Usage :      $efgdb->set_dnadb_by_assembly_version('36'); 
+  Description: Sets the dnadb to the latest version given the assembly version
+  Exceptions:  Throws if no assembly version provided or cannot for appropriate dnadb on ensembldb
+  Status :     At risk
+
+=cut
+
+#We can remove all the gubbins from the importer once we have implemented this properly
+#need to check for registry
+
+sub set_dnadb_by_assembly_version{
+  my ($self, $assm_ver) = @_;
+
+  throw('Must provide and assembly version to set the dnadb') if ! defined $assm_ver;
+
+  my $sql = 'show databases like "'.$self->species.'_core_%_'.$assm_ver.'%"';
+
+  my @dbnames = map {$_ = "@$_"} @{$self->dnadb->dbc->db_handle->selectall_arrayref($sql)};
+  #filter out non-core DB
+
+
+  @dbnames = grep(/core_[0-9]/, sort @dbnames);
+  
+  if(! @dbnames || scalar(@dbnames)==0){
+	throw('Failed to find '.$self->species.' funcgen DB for assembly version '.$assm_ver.' using host '.$self->dnadb->host);
+  }
+
+   
+  #Need to delete core DB from registry before creating new one
+  my $db = $self->reset_DBAdaptor($self->species, 'core', $dbnames[$#dbnames]);
+    
+  $self->dnadb($db);
+
+  return $db;
+}
+
+=head2 reset_DBAdaptor
+
+  Arg [1]:     string - species e.g. homo_sapiens
+  Arg [2]:     string - DB group e.g. core
+  Arg [3]:     string - new dbname
+  Args [4-7]:  string - optional DB parameters, defaults to current db params if omitted
+  Usage :      $reg->reset_DBAdaptor('homo_sapiens', 'core', 'homo_sapiens_core_37_35j');
+  Description: Resets a DB within the registry.
+  Exceptions:  Throws if mandatory params not supplied or if no current DB for species/group available
+  Status :     At risk - to be migrated to the Registry
+
+=cut
+
+sub reset_DBAdaptor{
+  my ($self, $species, $group, $dbname, $host, $port, $user, $pass) = @_;
+
+  #Check mandatory params
+  if(! (defined $species && defined $group && defined $dbname)){
+	throw('Must provide at least a species, group and dbname parmeter to redefine a DB in the registry');
+  }
+  
+  #Get all current defaults if not defined
+  my $current_db = $reg->get_DBAdaptor($species, $group);
+  
+  if(! defined $current_db){
+	throw("There is not current registry DB for:\t${species}\t${group}");
+  }
+
+
+  $host ||= $current_db->dbc->host;
+  $port ||= $current_db->dbc->port;
+  $user ||= $current_db->dbc->username;
+  $pass ||= $current_db->dbc->password;
+  my $class = ref($current_db);
+
+  $reg->remove_DBAdaptor($self->species, $group);
+  
+
+  #ConfigRegistry(via?) should automatically add this to the Registry
+  my $db = $class->new(
+					   -user => $user,
+					   -host => $host,
+					   -port => $port,
+					   -pass => $pass,
+					   #we need to pass dbname else we can use non-standard dbs
+					   -dbname => $dbname,
+					   -species => $species,
+					   -group    => $group,
+					  );
+
+  return $db;
+}
+
+
+
 
 #Group methods, as not adaptor/class for Group(used in ExperimentAdaptor at present)
 #will disppear when Group and GroupAdaptor written
