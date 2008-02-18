@@ -136,7 +136,7 @@ use strict;
 
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
-my ($data_version, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
+my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
 my ($parser, $fanal);
 
@@ -178,7 +178,7 @@ GetOptions (
 			"dbname=s"     => \$dbname,
 			"group|g=s"    => \$group,
 			"species|s=s"      => \$species, 
-			"data_version|d=s" => \$data_version,
+			"assembly|a=s" => \$assm_ver,
 			"array_set"    => \$array_set,
 			"array_name=s" => \$array_name,
 			"result_set=s" => \$rset_name,
@@ -264,7 +264,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -write_mage    => $write_mage,
    -update_xml => $update_xml,
    -no_mage => $no_mage,
-   -data_version => $data_version,
+   -assembly => $assm_ver,
    -data_root   => $data_dir,
    -output_dir  => $output_dir,
    -recover     => $recover,
