@@ -307,7 +307,7 @@ DROP TABLE IF EXISTS `data_set`;
 CREATE TABLE `data_set` (
    `data_set_id` int(10) unsigned NOT NULL auto_increment,
    `feature_set_id` int(10) unsigned default '0',
-   `name` varchar(40) default NULL,
+   `name` varchar(100) default NULL,
    PRIMARY KEY  (`data_set_id`, `feature_set_id`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
