@@ -50,6 +50,8 @@ use vars qw(@ISA);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::DBAdaptor);# Bio::EnsEMBL::Funcgen::Helper);
 
+use DBI;
+
 use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
@@ -469,80 +471,75 @@ sub dnadb {
 
 	  throw('Must provide a species to automatically set dnadb') if $lspecies eq 'default';
 	
-	  my $dbname = $lspecies.'_core_'.$self->_get_schema_build($self);
 	  
-	  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-		(						
-		 -host    => "ensembldb.ensembl.org",
-		 -user    => "anonymous",
-		 -species => $lspecies,
-		 -dbname  => $dbname,
-		 -group   => 'core',
-		 -port    => 5306,
-		);
+	  my $schema_build = $self->_get_schema_build($self);
+	  my $dbname = $lspecies.'_core_'.$schema_build;
+	  my ($schema, $assembly_build) = split/_/, $schema_build;
+	  my @assm_build = split//,$assembly_build;
+	  my $build = pop @assm_build;#This assumes gene build is only ever a single character
+	  my $assembly = join('', @assm_build);
+
+	  my $count = 0;
+	  my $connection_error = 'FIRST_TRY';
+	  my $cnt = 0;
+	  my @az = ('a'..'z');
+	  my (%az, $port);
+	  map $az{$_} = $cnt++, @az;
 	  
-	  #we need to check if $dnadb is valid here and maybe guess at previous build with same assembly?
-	  #this would remove the need to specify data_version for dev DBs
 
-	  eval{ $dnadb->dbc()->db_handle(); };
+	  #while($@ && $count <2){
+	  while($connection_error && $count <3){
 
-	  if ($@){
+		#Create and test the DB
 
-		my $count = 0;
+		$port = ($schema <48) ? 3306 : 5306;
 
-		while($@ && $count <2){
-		  $count++;
-	
-		  #alphabetical incrementing works in perl
-		  #so we have to do the decrement of the gene build version manually
-		  my $cnt = 0;
-		  my @az = ('a'..'z');
-		  my %az;
-		  map $az{$_} = $cnt++, @az;
-		  
-		  #we should really try the cuurent build on the old version first
-		  
-		  
-		  my(@dbn) = split/_/, $dbname;
-		  my @assembly = split//, pop @dbn;
-		  
-		  my $schema = pop @dbn;
-		  my $build = pop @assembly;
-		  
-		  #we should really do these alternately with a modus operator
-
-		  $schema-- if $count == 1;
-
-		  if($count != 1){
-			$build = $az[($az{$build} -1)];
-			#no build if z
-			$build = '' if $build eq 'z';
-		  }
-		  #else try same build first
-		 
-		  $dbname = join('_', @dbn);
-		  $dbname = join('', ($dbname, '_', $schema, '_', @assembly, $build));
-		  
-		  warn "Trying to guess last release with same assembly:\t$dbname\n";
-		  
-		  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+		
+		$dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 		  (						
 		   -host    => "ensembldb.ensembl.org",
 		   -user    => "anonymous",
 		   -species => $lspecies,
 		   -dbname  => $dbname,
 		   -group   => 'core',
-		   -port    => 5306,
+		   -port    => $port,
 		  );
 		  
-		  #do not trap this time as we're not going to guess anymore
-		  eval { $dnadb->dbc()->db_handle(); };
+		#do not trap this time as we're not going to guess anymore
+		if($count >0){
+		  warn "Trying to guess last release with same assembly:\t$dbname\n";
 		}
 
-		#Will this be true, as we will have evaluated another while?
-		throw('Could not auto-determine the dnadb, please pass a -dnadb parameter') if $@;
+		eval { $dnadb->dbc()->db_handle(); };
+
+		$connection_error = $@;
+
+		if($connection_error){
+		  $count++;
+		  #First try same assembly/build on old schema
+		  #Then try decremented build on same old schema before trying 
+		  #start with 49_36k which matches current schema_build
+		  #then       48_36k(incase we're dealing with a dev db or a gene build which hasn't been incremented)
+		  #then try   48_36j
+
+		  #we could do these alternately with a modus operator? 3 times is enough
+		  $schema-- if $count == 1;
+
+		  if($count > 1){
+			$build = $az[($az{$build} - 1)];
+			#no build if z
+			$build = '' if $build eq 'z';
+		  }
+		  #else try same build first
+		  $dbname = $lspecies.'_core_'.$schema.'_'.$assembly.$build;
+		  
+		}
 	  }
+
+	  #Will this be true, as we will have evaluated another while?
+	  throw("Could not auto-determine the dnadb, please pass a -dnadb parameter\n$connection_error") if $connection_error;
 	}
+	
 	
 	$self->SUPER::dnadb($dnadb); 
 
@@ -572,8 +569,7 @@ sub dnadb {
 
 =cut
 
-#We can remove all the gubbins from the importer once we have implemented this properly
-#need to check for registry
+
 
 sub set_dnadb_by_assembly_version{
   my ($self, $assm_ver) = @_;
@@ -581,83 +577,57 @@ sub set_dnadb_by_assembly_version{
   throw('Must provide and assembly version to set the dnadb') if ! defined $assm_ver;
 
   #We should probably allow for non-ensembldb core DBs here too
+  #Do we need to account for other ports, staging etc for release?
+  #These should run fine on 3306.
+  my $current_port = $self->dnadb->dbc->port;
+  #This is assuming dnadb port will only ever be one or the other
+  #This assumption is restricted to ensembldb in the port loop
+  my $tmp_port = ($current_port == 3306) ? 5306 : 3306;
+  my @ports = ($current_port, $tmp_port);
 
 
   my $sql = 'show databases like "'.$self->species.'_core_%_'.$assm_ver.'%"';
+  my ($dbh, @dbnames, $new_port);
 
-  my @dbnames = map {$_ = "@$_"} @{$self->dnadb->dbc->db_handle->selectall_arrayref($sql)};
-  #filter out non-core DB
+  foreach my $port(@ports){
+	
+	if($port == $current_port){
+	  $dbh = $self->dnadb->dbc->db_handle;
+	}
+	elsif($self->dnadb->dbc->host eq 'ensembldb.ensembl.org'){
+	
+	  $dbh = DBI->connect("DBI:mysql:host=ensembldb.ensembl.org;port=${port}",
+						  'anonymous', 
+						  '', 
+						  {'RaiseError' => 1});
+	  #should we eval this?
+	}
+	
 
+	@dbnames = map {$_ = "@$_"} @{$dbh->selectall_arrayref($sql)};
 
-  @dbnames = grep(/core_[0-9]/, sort @dbnames);
+	#sort and filter out non-core DBs
+	@dbnames = grep(/core_[0-9]/, sort @dbnames);
   
-  if(! @dbnames || scalar(@dbnames)==0){
-	throw('Failed to find '.$self->species.' funcgen DB for assembly version '.$assm_ver.' using host '.$self->dnadb->host);
+	if(scalar(@dbnames)==0){
+	  warn('Failed to find '.$self->species.' funcgen DB for assembly version '.$assm_ver.' using '.$self->dnadb->dbc->host.':'.$self->dnadb->dbc->port);
+	}
+	else{
+	  $new_port = $port;
+	  last;
+	}
   }
 
+  throw("Failed to find dnadb with assembly version $assm_ver") if(scalar(@dbnames)==0);
+  
    
   #Need to delete core DB from registry before creating new one
-  my $db = $self->reset_DBAdaptor($self->species, 'core', $dbnames[$#dbnames]);
+  my $db = $reg->reset_DBAdaptor($self->species, 'core', $dbnames[$#dbnames], undef, $new_port);
     
   $self->dnadb($db);
 
   return $db;
 }
-
-=head2 reset_DBAdaptor
-
-  Arg [1]:     string - species e.g. homo_sapiens
-  Arg [2]:     string - DB group e.g. core
-  Arg [3]:     string - new dbname
-  Args [4-7]:  string - optional DB parameters, defaults to current db params if omitted
-  Usage :      $reg->reset_DBAdaptor('homo_sapiens', 'core', 'homo_sapiens_core_37_35j');
-  Description: Resets a DB within the registry.
-  Exceptions:  Throws if mandatory params not supplied or if no current DB for species/group available
-  Status :     At risk - to be migrated to the Registry
-
-=cut
-
-sub reset_DBAdaptor{
-  my ($self, $species, $group, $dbname, $host, $port, $user, $pass) = @_;
-
-  #Check mandatory params
-  if(! (defined $species && defined $group && defined $dbname)){
-	throw('Must provide at least a species, group and dbname parmeter to redefine a DB in the registry');
-  }
-  
-  #Get all current defaults if not defined
-  my $current_db = $reg->get_DBAdaptor($species, $group);
-  
-  if(! defined $current_db){
-	throw("There is not current registry DB for:\t${species}\t${group}");
-  }
-
-
-  $host ||= $current_db->dbc->host;
-  $port ||= $current_db->dbc->port;
-  $user ||= $current_db->dbc->username;
-  $pass ||= $current_db->dbc->password;
-  my $class = ref($current_db);
-
-  $reg->remove_DBAdaptor($self->species, $group);
-  
-
-  #ConfigRegistry(via?) should automatically add this to the Registry
-  my $db = $class->new(
-					   -user => $user,
-					   -host => $host,
-					   -port => $port,
-					   -pass => $pass,
-					   #we need to pass dbname else we can use non-standard dbs
-					   -dbname => $dbname,
-					   -species => $species,
-					   -group    => $group,
-					  );
-
-  return $db;
-}
-
-
 
 
 #Group methods, as not adaptor/class for Group(used in ExperimentAdaptor at present)
