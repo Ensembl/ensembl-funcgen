@@ -538,6 +538,176 @@ sub get_schema_and_build{
 
 
 
+=head2 define_and_validate_sets
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::DBAdaptor
+  Arg [2]    : hashref - class constructor parameters:
+                            -name         Data/FeatureSet name to create
+                            -feature_type Bio::EnsEMBL::Funcgen::FeatureType
+                            -cell_type    Bio::EnsEMBL::Funcgen::CellType
+                            -analysis     FeatureSet Bio::EnsEMBL::Analysis   
+  Arg [3]    : boolean - roll back flag
+  Example    : my $fset = $self->define_and_validate_Set($db, 'FeatureSet', \%params, $delete);
+  Description: Checks whether set is already in DB based on set name, rolls back features 
+               if roll back flag set. Or creates new DB if not present.
+  Returntype : Bio::EnsEMBL::Funcgen::DataSet
+  Exceptions : Throws if DBAdaptor param not valid
+  Caller     : Importers and Parsers
+  Status     : At risk
+
+=cut
+
+sub define_and_validate_sets{
+  my ($self, $db, $params, $rollback) = @_;
+
+  #Check mandatory params
+  if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
+	throw('Must provide a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+  }
+
+  throw('Must provide a -name in the paramters hash') if(! (exists $params->{'-name'} 
+															&& defined $params->{'-name'}));
+  
+  throw('Must provide a -feature_type in the parameters hash') if(! exists $params->{'-feature_type'});
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',  $params->{'-feature_type'});
+
+  throw('Must provide a -cell_type in the parameters hash') if(! exists $params->{'-cell_type'});
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',  $params->{'-cell_type'});
+
+  throw('Must provide an -analysis in the parameters hash') if(! exists $params->{'-analysis'});
+  $db->is_stored_and_valid('Bio::EnsEMBL::Analysis',  $params->{'-analysis'});
+
+
+  my $dset_adaptor = $db->get_DataSetAdaptor;
+  my $fset_adaptor = $db->get_FeatureSetAdaptor;
+  
+  my $dset = $dset_adaptor->fetch_by_name($params->{'-name'});
+
+
+  my ($fset);
+
+  if(defined $dset){
+	$self->log('Found Stored DataSet '.$dset->name);
+
+	$fset = $dset->product_FeatureSet;
+	#Here we have the possiblity that a feature_set with a different name may have been associated with the DataSet
+
+
+	if(defined $fset){
+	  $self->log("Found associated product FeatureSet:\t".$fset->name);
+	  
+	  #if(! $clobber && 
+	  if($fset->name ne $params->{'-name'}){
+		throw('Invalid product FeatureSet name ('.$fset->name.') for DataSet ('.$params->{'-name'}.'). Rollback will overwrite the FeatureSet and mismatched name will be retained.');
+		#Need to clobber both or give explicit name for datasets or rename dataset???
+		#Force this throw for now, make this fix manual as we may end up automatically overwriting data
+	  }  
+	}
+
+	#check supporting_sets here if defined
+	if(exists $params->{'-supporting_sets'}){
+	  
+	  my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$params->{'-supporting_sets'}};
+	  my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
+	  my $mismatch = 0;
+
+	  $mismatch = 1 if(scalar(@sorted_ssets) != scalar(@stored_ssets));
+
+	  if(! $mismatch){
+		
+		for my $i(0..$#stored_ssets){
+		  if($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID){
+
+
+
+			$mismatch=1;
+			last;
+		  }
+		}
+	  }
+
+
+	  if($mismatch){
+		#We're really print this names here which may hide the true cell/feature/anal type differences.
+		throw('There is a (name/type/anal) mismatch between the supplied supporting_sets and the'.
+			  'supporting_sets in the DB for DataSet '.$dset->name."\nStored:\t"
+			  .join(', ', (map $_->name, @stored_ssets))."\nSupplied supporting_sets:\t"
+			  .join(', ', (map $_->name, @sorted_ssets)));
+	  }
+	}
+	else{
+	  warn("Skipping validating of supporting sets for Data/FeatureSet definition:\t".$params->{'-name'});
+	}
+  }
+
+
+  if(! defined $fset){
+	#Try and grab it anyway just in case it has been orphaned somehow
+	$fset = $fset_adaptor->fetch_by_name($params->{'-name'});
+
+	if(defined $fset){
+	  #Now we need to test whether it is attached to a dset
+	  #Will be incorrect dset if it is as we couldn't get it before
+	  #else we test the types and rollback
+	  $self->log("Found stored orphan FeatureSet:\t".$fset->name);
+
+	  my $stored_dset = $dset_adaptor->fetch_by_product_FeatureSet($fset);
+
+	  if(defined $stored_dset){
+		throw('Found FeatureSet('.$params->{'-name'}.') associated with incorrect DataSet('.$stored_dset->name.
+			  ").\nTry using another -name in the set parameters hash");
+
+	  }
+	}
+  }
+
+  #Rollback or create FeatureSet
+  if(defined $fset){
+
+	if($rollback){
+	  $self->rollback_FeatureSet($fset);
+	  #Not forcing delete here as this may be used as a supporting set itself.
+	}else{
+	  throw('Found pre-existing FeatureSet '.$fset->name.'. Maybe you want to specify the rollback flag?');
+	}
+  }
+  else{
+	#create a new one
+	$self->log("Creating new FeatureSet:\t".$params->{'-name'});
+
+	$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+												   -name => $params->{'-name'},
+												   -feature_type => $params->{'-feature_type'},
+												   -cell_type => $params->{'-cell_type'},
+												   -analysis => $params->{'-analysis'},
+												   -type     => 'annotated',
+												  );
+	($fset) = @{$fset_adaptor->store($fset)};
+  }
+
+
+  #Create/Update the DataSet
+  if(defined $dset){
+	
+	if(! defined $dset->product_FeatureSet){
+	  $self->log("Updating DataSet with new product FeatureSet:\t".$fset->name);
+	  ($dset) = @{$dset_adaptor->store_updated_sets($dset->product_FeatureSet($fset))};
+	}
+  }
+  else{
+	$self->log("Creating new DataSet:\t".$params->{'-name'});
+	$dset = Bio::EnsEMBL::Funcgen::DataSet->new(
+												-name => $params->{'-name'},
+												-feature_set => $fset,
+												-supporting_sets => $params->{'-supporting_sets'},
+											   );
+	($dset) = @{$dset_adaptor->store($dset)};
+  }
+  
+  return $dset;
+}
+
+
 #Rollback/load methods migrated from DBAdaptor
 
 #Do we need to add a rolling back status?
@@ -549,7 +719,7 @@ sub get_schema_and_build{
 =head2 rollback_FeatureSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
-  Arg [1]    : boolean - Force delete flag
+  Arg [2]    : boolean - Force delete flag
   Example    : $self->rollback_FeatureSet($fset);
   Description: Deletes all status and feature entries for this FeatureSet.
                Checks whether FeatureSet is a supporting set in any other DataSet.
@@ -564,38 +734,34 @@ sub get_schema_and_build{
 sub rollback_FeatureSet{
   my ($self, $fset, $force_delete) = @_;
 
-  if( ! $self->can('db')){
-	throw($self.' cannot call method db. You must set this in the child object');
-  }
+  my $adaptor = $fset->adaptor || throw('FeatureSet must have an adaptor');
+  my $db = $adaptor->db;
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
-
-  warn 'Rolling back '.$fset->type." FeatureSet:\t".$fset->name;
+  $self->log('Rolling back '.$fset->type." FeatureSet:\t".$fset->name);
 
   #Check whether this is a supporting set for another data_set
   
-  my @dsets = @{$self->db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset)};
+  my @dsets = @{$db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset)};
 
   if(@dsets){
 	my $txt = $fset->name." is a supporting set of the following DataSets:\t".join(', ', (map {$_->name} @dsets));
 
 	if($force_delete){
-	  warn("WARNING:\t$txt\n");
+	  $self->log("WARNING:\t$txt\n");
 	}
 	else{
-	  $self->throw($txt."\nPlease resolve or specify the force_delete argument")
+	  throw($txt."\nPlease resolve or specify the force_delete argument")
 	}
   }
 
-  #Delete any status entries first?
-  my $sql = 'DELETE from status where table_name="feature_set" and table_id='.$fset->dbID;
+  #Remove states
+  $fset->adaptor->revoke_states($fset);
 
-  if(! $self->db->dbc->do($sql)){
-	throw("Failed to roll back status entries for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
-  }
+  #Remove feature
+  my $sql = 'DELETE from '.$fset->type.'_feature where feature_set_id='.$fset->dbID;  
 
-  $sql = 'DELETE from '.$fset->type.'_feature where feature_set_id='.$fset->dbID;  
-  if(! $self->db->dbc->do($sql)){
+  if(! $db->dbc->do($sql)){
 	throw('Failed to rollback '.$fset->type."_features for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
   }
 
@@ -604,6 +770,7 @@ sub rollback_FeatureSet{
 
 =head2 rollback_ExperimentalSet
 
+  Arg[1]     : Bio::EnsEMBL::Funcgen::ExperimentalSet
   Example    : $self->rollback_ExperimentalSet($eset);
   Description: Deletes all status entries for this ExperimentalSet and it's ExperimentalSubSets
   Returntype : none
@@ -615,35 +782,33 @@ sub rollback_FeatureSet{
 
 
 sub rollback_ExperimentalSet{
-  my ($self, $eset) = @_;
+  my ($self, $eset, $force_delete) = @_;
 
- if( ! $self->can('db')){
-	throw($self.' cannot call method db. You must set this in the child object');
-  }
 
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalSet', $eset);
+  #Need to implement force_delete!!!!!!!!!!!!!!!!!!!!!!
 
-  my $sql;
-  warn "Rolling back ExperimentSet:\t".$eset->name;
+  my $adaptor = $eset->adaptor || throw('ExperimentalSet must have an adaptor');
+  my $db = $adaptor->db;
+  
+
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalSet', $eset);
+
+  $self->log("Rolling back ExperimentSet:\t".$eset->name);
 
   #ExperimentalSubSets
   foreach my $esset(@{$eset->get_subsets}){
-
-	#This is not working?
-	$sql = 'DELETE from status where table_name="experimental_subset" and table_id='.$esset->dbID;
-	
-	if(! $self->db->dbc->do($sql)){
-	  throw("Failed to roll back status entries for ExperimentalSubSet:\t".$esset->name.' (dbID:'.$esset->dbID.')');
-	}
+	$esset->adaptor->revoke_states($esset);
   }
 
   #ExperimentalSet
-  $sql = 'DELETE from status where table_name="experimental_set" and table_id='.$eset->dbID;
+  my $sql = 'DELETE from status where table_name="experimental_set" and table_id='.$eset->dbID;
 
-  if(! $self->db->dbc->do($sql)){
+  if(! $db->dbc->do($sql)){
 	throw("Failed to roll back status entries for ExperimentalSet:\t".$eset->name.' (dbID:'.$eset->dbID.')');
   }
   
+  $eset->adaptor->revoke_states($eset);
+
   return;
 }
   
