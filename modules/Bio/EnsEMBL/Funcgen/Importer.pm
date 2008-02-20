@@ -319,7 +319,8 @@ sub new{
 
 
 	  #Remove block below when we can
-	  $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $host, $port, $user, $pass);
+	  my $dbhost = ($self->{'ssh'}) ? $host_ip : $host;
+	  $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $user, $pass);
 
 
 	  #ConfigRegistry will try ans set this
