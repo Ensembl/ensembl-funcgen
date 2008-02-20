@@ -217,41 +217,41 @@ sub read_and_import_bed_data{
 	my %new_data;
 	my $roll_back = 0;
 
-     foreach my $filepath(@{$self->result_files()}) {
+	foreach my $filepath(@{$self->result_files()}) {
 	  chomp $filepath;
 	  my $filename;
 	  ($filename = $filepath) =~ s/.*\///;
 	  my $sub_set;
-	  
 	  $self->log("Found bed file\t$filename");
-
+	  
 	  if($sub_set = $eset->get_subset_by_name($filename)){
-		$roll_back = 1;
-	  }else{
-		$sub_set = $eset->add_new_subset($filename);
-	  }
-	  
-	  #store if not already, skips if stored
-	  $eset_adaptor->store_ExperimentalSubsets([$sub_set]);
-	  
-	  if ($sub_set->has_status('IMPORTED')){
-		$self->log("ExperimentalSubset(${filename}) has already been imported");
-	  } 
-	  else {
-		$new_data{$filepath} = undef;
 		
-		if ($self->recovery() && $roll_back) {
-		  $self->log("Rolling back results for ExperimentalSubset:\t".$filename);
-		  warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
+		if ($sub_set->has_status('IMPORTED')){
+		  $self->log("ExperimentalSubset(${filename}) has already been imported");
+		} 
+		else {
+		  $self->log("Found partially imported ExperimentalSubset(${filename})");
+		  $roll_back = 1;
 
-		  $self->rollback_FeatureSet($fset);
-		  $self->rollback_ExperimentalSet($eset);
-		  last;
+		  if ($self->recovery() && $roll_back) {
+			$self->log("Rolling back results for ExperimentalSubset:\t".$filename);
+			warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
+			
+			$self->rollback_FeatureSet($fset);
+			$self->rollback_ExperimentalSet($eset);
+			last;
+		  }
+		  elsif($roll_back){
+			throw("Found partially imported ExperimentalSubSet:\t$filepath\n".
+				  "You must specify -recover  to perform a full roll back for this ExperimentalSet:\t".$eset->name);
+		  }
 		}
-		elsif($roll_back){
-		  throw("Found partially imported ExperimentalSubSet:\t$filepath\n".
-				"You must specify -recover  to perform a full roll back for this ExperimentalSet:\t".$eset->name);
-		}
+	  }
+	  else{
+		$self->log("Found new ExperimentalSubset(${filename})");
+		$new_data{$filepath} = undef;
+		$sub_set = $eset->add_new_subset($filename);
+		$eset_adaptor->store_ExperimentalSubsets([$sub_set]);
 	  }
 	}
 
@@ -279,9 +279,7 @@ sub read_and_import_bed_data{
 		   $self->backup_file($fasta_file);
 		   $f_out = open_file($fasta_file, '>');
 		 }
-		 
-		 $self->log("Parsing file:\t$filename");
-
+		
 		 foreach my $line (@lines) {
 		   $line =~ s/\r*\n//o;
 		   next if $line =~ /^\#/;	
@@ -333,8 +331,7 @@ sub read_and_import_bed_data{
 	   }
     }
 
-    $self->log("No new data, skipping result parse") if ! keys %new_data;
-    
+    $self->log("No new data, skipping result parse") if ! keys %new_data && ! $roll_back;   
     $self->log("Finished parsing and importing results");
     
     return;
