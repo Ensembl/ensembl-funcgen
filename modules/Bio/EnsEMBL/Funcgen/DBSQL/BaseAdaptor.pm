@@ -129,7 +129,7 @@ sub status_to_constraint{
   my $status_id = $self->_get_status_name_id($status);
 
   
-
+  #THIS DOES NOT ACCOMODATE THE EXPEIRMENTAL_SUBSET ISSUE!!
 
   #NO we need to handle this better
   #can't just return as we'd then simply ignore the contraint
@@ -184,6 +184,9 @@ sub _test_funcgen_table{
   my @tables = $self->_tables;
 
   my ($table) = @{$tables[0]};
+  #ExpreimetnalSubSet fix, as doesn't have own adaptor
+  $table = 'experimental_subset' if $obj->isa('Bio::EnsEMBL::Funcgen::ExperimentalSubset');
+
 
   #my $table = ${$obj->adaptor->_tables()}[0];
 
@@ -209,6 +212,7 @@ sub fetch_all_states{
   my ($self, $obj) = @_;
 
   my $table = $self->_test_funcgen_table($obj);
+
 
   my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' AND s.table_id='".$obj->dbID()."' and s.status_name_id=sn.status_name_id";
 
@@ -247,6 +251,7 @@ sub has_stored_status{
   throw("Must pass a stored Bio::EnsEMBL::Funcgen::Storable") if (! ($obj->isa("Bio::EnsEMBL::Funcgen::Storable") && $obj->dbID()));
 
   my $table = $self->_test_funcgen_table($obj);
+ 
 
 
   if($status_id){
@@ -261,14 +266,6 @@ sub has_stored_status{
 
 
 
-
-sub set_status{
-  my ($self, $state, $obj) = @_;
-
-  warn('set_status us deprecated.  Please use store_status');
-  
-  $self->store_status($state, $obj);
-}
 
 =head2 store_status
 
@@ -303,9 +300,13 @@ sub store_status{
     }
 
     my $table = $self->_test_funcgen_table($obj);
-    
+  
+
     $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".$obj->dbID()."', '$table', '$status_id')";
     $self->db->dbc->do($sql);
+
+	#Should we not be setting it in the obj here too?
+	#No becasue we should have already added to the object.
   }
 
   return;
@@ -336,7 +337,7 @@ sub revoke_status{
   throw('Must pass a Bio::EnsEMBL::Funcgen::Storable') if(! $storable->isa("Bio::EnsEMBL::Funcgen::Storable"));
  
   my $status_id = $self->_get_status_name_id($state);
-  my $table_name = $storable->adaptor->_main_table;
+  my $table_name = $self->_test_funcgen_table($storable);
 
   if(! $self->has_store_status($state, $storable)){
 	warn $storable.' '.$storable->dbID()." does not have status $state to revoke\n";
@@ -346,23 +347,56 @@ sub revoke_status{
   #do sanity checks on table to ensure that IMPORTED does not get revoke before data deleted?
   #how would we test this easily?
 
-  my $sql = "delete from status where status where table_name='${table_name}'".
+  my $sql = "delete from status where table_name='${table_name}'".
 	" and status_name_id=${status_id} and table_id=".$storable->dbID();
 
   $self->db->dbc->db_handle->do($sql);
 
   #now splice from status array;
   #splice in loop should work as we will only see 1
+  #Just hash this?
 
-  for my $i(0..$#{$self->{'states'}}){
+  for my $i(0..$#{$storable->{'states'}}){
 	
-	if($self->{'states'}->[0] eq $state){
-	  splice @{$self->{'states'}}, $i, 1;
+	if($storable->{'states'}->[0] eq $state){
+	  splice @{$storable->{'states'}}, $i, 1;
 	  last;
 	}
   }
 
   return;
+}
+
+=head2 revoke_states
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
+  Example    : $rset_adaptor->revoke_status($result_set);
+  Description: Revokes all states of Storable in status table.
+  Returntype : Bio::EnsEMBL::Funcgen::Storable
+  Exceptions : None
+  Caller     : General + Helper rollback methods
+  Status     : At Risk
+
+=cut
+
+
+sub revoke_states{
+  my ($self, $storable) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $storable);
+ 
+  my $table_name = $self->_test_funcgen_table($storable);
+
+ 
+  my $sql = "delete from status where table_name='${table_name}'".
+	" and table_id=".$storable->dbID();
+
+  $self->db->dbc->db_handle->do($sql);
+
+
+  undef $storable->{'states'};
+
+  return $storable;
 }
 
 
