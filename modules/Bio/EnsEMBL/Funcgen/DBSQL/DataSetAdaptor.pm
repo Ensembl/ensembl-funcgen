@@ -212,22 +212,22 @@ sub fetch_all_by_product_FeatureSet_type {
 sub fetch_all_by_FeatureSet {
   my $self = shift;
 
-  deprecate('Use fetch_all_by_product_FeatureSet');
+  deprecate('Use fetch_product_FeatureSet');
 
-  return $self->fetch_all_by_product_FeatureSet(@_);
+  return $self->fetch_by_product_FeatureSet(@_);
 
 }
 
 
-=head2 fetch_all_by_product_FeatureSet
+=head2 fetch_by_product_FeatureSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
-  Example    : my @dsets = $fs_adaptopr->fetch_all_by_product_FeatureSet($fset);
+  Example    : my @dsets = $fs_adaptopr->fetch_by_product_FeatureSet($fset);
   Description: Retrieves DataSet objects from the database based on the FeatureSet.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : Throws if arg is not a valid FeatureSet
   Caller     : General
-  Status     : At Risk - to be renamed?
+  Status     : At Risk
 
 =cut
 
@@ -235,7 +235,7 @@ sub fetch_all_by_FeatureSet {
 #This is main FeatureSet, i.e. the result of the analysis of the supporting_sets
 #Supporting sets could also be FeatureSets!!!  Confusion!
 
-sub fetch_all_by_product_FeatureSet {
+sub fetch_by_product_FeatureSet {
     my $self = shift;
     my $fset = shift;
 
@@ -247,7 +247,7 @@ sub fetch_all_by_product_FeatureSet {
     my $sql = "ds.feature_set_id = '".$fset->dbID()."'";
 
 
-    return $self->generic_fetch($sql);	
+    return $self->generic_fetch($sql)->[0];	
 }
 
 
@@ -662,23 +662,54 @@ sub store_updated_sets{
 
 	throw('DataSet [' . $dset->dbID() . '] must be previous stored in the database') if (! $dset->is_stored($db) );
 
-		
-	my $tmp_dset = $self->fetch_by_name($dset->name);
+	my $stored_dset = $self->fetch_by_name($dset->name);
 
-	foreach my $sset (@{$dset->get_supporting_sets()}){
-	  my $is_new = 1;
 
-	  foreach my $tsset(@{$dset->get_supporting_sets()}){		
-		$is_new = 0 if $tsset->dbID() == $sset->dbID();
+	#Update product FeatureSet
+	#We need to do this first so we cacn check wether we're updated supporting_sets
+	#for a data set which has already got a product FeatureSet...not wise
+
+	my $fset = $dset->product_FeatureSet;
+	my $stored_fset = $stored_dset->product_FeatureSet;
+	#This fset check is slight overkill, as you have to severly mangle a dataset to fail this validation
+
+	if(defined $stored_fset){
+
+	  if(! defined $fset){
+		#How will this have ever happened?
+		warn("Populating absent product FeatureSet from DB for DataSet:\t".$dset->name);
+	  }else{
+		#validate sets
+		if($fset->dbID != $stored_fset->dbID){
+		  throw('Found product FeatureSet mismatch whilst updating DataSet('.$dset->name.
+				"):\tStored:".$stored_fset->name."\tUpdate:".$fset->name);
+		}
 	  }
+	}else{
+	  #update data_set table
+	  my $sql = 'update data_set set feature_set_id='.$fset->dbID.' where data_set_id='.$dset->dbID;
+	  $self->dbc->do($sql);
+	}
 
-	  if($is_new){
-		throw("All supporting Feature and ResultSets must be stored previously.".
+
+
+	#Update supporting sets
+	my %stored_dbids;
+	map {$stored_dbids{$_->dbID} = undef} @{$stored_dset->get_supporting_sets()};
+
+	foreach my $sset(@{$dset->get_supporting_sets()}){		
+	  my $dbid = $sset->dbid;
+
+	  if(! grep(/^${dbid}$/, keys %stored_dbids)){
+		throw("All supporting sets must be stored previously.".
 			  " Use store_updated_sets method if your DataSet has been stored") if(! $sset->is_stored($db));
+
+
+		throw('You are trying to update supporting sets for a data set which already has a product FeatureSet('.$stored_fset->name.').  You must rollback the FeatureSet before adding more supporting sets.') if defined $stored_fset;
 
 		$sth->bind_param(1, $dset->dbID,            SQL_INTEGER);
 		$sth->bind_param(2, $sset->dbID,            SQL_INTEGER);
-		$sth->bind_param(2, $sset->set_type,            SQL_VARCHAR);
+		$sth->bind_param(2, $sset->set_type,        SQL_VARCHAR);
 		
 		$sth->execute();
 	  }

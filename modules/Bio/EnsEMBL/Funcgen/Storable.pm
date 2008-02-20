@@ -74,13 +74,14 @@ sub new {
   #will these break using _new_fast
   #THerefore ResultFeature, Probe and ProbeFeature should not be Funcgen::Storables
 
-
-  #$self->{'states'} = [];
   @{$self->{'states'}} = @$states if $states;
-
 
   return $self;
 }
+
+
+
+
 
 
 =head2 has_status

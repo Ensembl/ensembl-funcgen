@@ -416,7 +416,11 @@ sub get_SliceAdaptor{
 		 -species => $lspecies,
 		 -dbname => $lspecies.'_core_'.$fg_cs->get_latest_schema_build(),
 		 -group => 'core',
+		 #-port  => 5306,
 		);
+
+
+	  #This new port only has from 48 onwards!!!
   
       
       $self->dnadb($dnadb);
@@ -474,6 +478,7 @@ sub dnadb {
 		 -species => $lspecies,
 		 -dbname  => $dbname,
 		 -group   => 'core',
+		 -port    => 5306,
 		);
 	  
 	  #we need to check if $dnadb is valid here and maybe guess at previous build with same assembly?
@@ -527,6 +532,7 @@ sub dnadb {
 		   -species => $lspecies,
 		   -dbname  => $dbname,
 		   -group   => 'core',
+		   -port    => 5306,
 		  );
 		  
 		  #do not trap this time as we're not going to guess anymore
@@ -573,6 +579,9 @@ sub set_dnadb_by_assembly_version{
   my ($self, $assm_ver) = @_;
 
   throw('Must provide and assembly version to set the dnadb') if ! defined $assm_ver;
+
+  #We should probably allow for non-ensembldb core DBs here too
+
 
   my $sql = 'show databases like "'.$self->species.'_core_%_'.$assm_ver.'%"';
 
