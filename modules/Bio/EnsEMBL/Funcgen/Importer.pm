@@ -71,7 +71,7 @@ use Data::Dumper;
                     -location of experimental/research group
                     -contact  e/mail address of primary contact for experimental group
                     -species 
-                    -data_version  schema_build of the corresponding dnadb (change name to mirror meta_entry)
+                    -assembly Genome assembly version i.e. 36 for NCBI36
                     -recover Recovery flag (default = 0)
                     -data_dir  Root data directory (default = $ENV{'EFG_DATA'})
                     -output_dir review these dirs ???????
@@ -107,13 +107,13 @@ sub new{
   my ($name, $format, $vendor, $group, $location, $contact, $species,
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
-	  $pass, $dbname, $db, $data_version, $design_type, $output_dir, $input_dir,
+	  $pass, $dbname, $db, $assm_version, $design_type, $output_dir, $input_dir,
 	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, 
 	  $no_mage, $eset_name, $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, $ucsc_coords)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
-				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'DATA_VERSION', 'DESIGN_TYPE',
+				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'ASSEMBLY', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
 				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
@@ -123,16 +123,8 @@ sub new{
   #### Define parent parser class based on vendor
   throw("Mandatory argument -vendor not defined") if ! defined $vendor;
 
-
-  #This is a little hacky
-  #We need to change this to set the parser format as an option
-  #This will override the default Vendor Parser type and expect inputs appropriate
-  #parser format specified
-  #we need to validate this in the parser somehow
-  #can we warn if we have other options specifed?
-  #These evals simply prevent the need to add the use lines to this script
-
-  #we should eval the vendor parser require here first
+  #This will override the default Vendor Parser type
+  #Evals simply protect from messy errors if parser type not found
   my $parser_error;
   my $vendor_parser = ucfirst(lc($vendor));
   eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";};
@@ -207,7 +199,7 @@ sub new{
   $self->result_files($result_files)if $result_files; #Sanger specific ???
   $self->experiment_date($exp_date) if $exp_date;
   $self->description($desc) if $desc;
-  $data_version || throw('Mandatory param -data_version not met');
+  $assm_version || throw('Mandatory param -assembly not met');
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
   $self->{'output_dir'} = $output_dir if $output_dir; #config default override
   $self->input_dir($input_dir) if $input_dir; #config default override
@@ -238,16 +230,27 @@ sub new{
 
 
   #### Set up DBs and load and reconfig registry
+  #Why are we defining reg_config and regdb?
+  #isn't regdb implicit from reg_config?
+  #Yes but we want to be able to temporarily overwrite registry with defined db
+  #Mmm this still has not effect and infact is not implemented like this anyway?
 
   ### LOAD REGISTRY
-  if (! defined $self->{'_reg_config'} && ! %Bio::EnsEMBL::Registry::registry_register) {
+
+  #Can we load the registry using the assembly version, then just redefine the efg DB?
+
+  if (! defined $self->{'_reg_config'}) {
 	#current ensembl DBs
 	$reg->load_registry_from_db(
 								-host => "ensembldb.ensembl.org",
 								-user => "anonymous",
 								-verbose => $self->verbose(),
 							   );
-  }else{
+
+	
+	throw('Not sensible to set the import DB as the default eFG DB from ensembldb, please define db params') if ! defined $dbname;
+  }
+  else{
 	$reg->load_all($self->{'_reg_config'}, 1);
   }
 
@@ -255,6 +258,7 @@ sub new{
   #SET UP DBs
   #reset species to standard alias to allow dbname generation
   $self->species($reg->get_alias($self->species()));
+
 
   if($db){
 	#sanity test vs. data_version
@@ -266,17 +270,25 @@ sub new{
 	#define eFG DB from params or registry
 
 	if($reg_db){#load eFG DB from reg
+
+	  #we should throw here if db params are set
+	  #How do we handle passwords within the reg config?
+	  #Do we still need to pass this when loading?
+
 	  $self->log('WARNING: Loading eFG DB from Registry');
 	  $db = $reg->get_DBAdaptor($self->species(), 'funcgen');
 	  throw("Unable to retrieve ".$self->species." funcgen DB from the registry");
 	}
 	else{#from params
-	  $self->dbname($dbname) if $dbname; #overrides autogeneration of dbname
+	  #This resets the eFG DB in the custom or generic registry
 
-	  if(! (defined $user && defined $pass)){
-		throw('If not passing a db param must define -pass and -user params to build default eFG DB');
-	  }
+	  #Need to check for mandatory params here
 
+	  $dbname || throw('Must provide a -dbname if not using default custom registry config');
+	  $user || throw('Must provide a -user parameter');
+	  $pass || throw('Must provide a -pass parameter');
+	 
+	  #remove this and throw?
 	  if(! defined $host){
 		$self->log('WARNING: Defaulting to localhost');
 		$host = 'localhost';
@@ -300,8 +312,14 @@ sub new{
 		}
 	  }
 	
-	  $dbname ||= $self->species()."_funcgen_".$self->data_version();
 
+	  #data version is only used if we don't want to define the dbname
+	  #This should never be guessed so don't need data_version here
+	  #$dbname ||= $self->species()."_funcgen_".$self->data_version();
+
+
+	  #Remove block below when we can
+	  $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $host, $port, $user, $pass);
 
 
 	  #ConfigRegistry will try ans set this
@@ -314,46 +332,21 @@ sub new{
 	  #the very act of creating a new db to redefine the registry with causes ConfigRegistry
 	  #to try and register it with a unique species name
 
-	  #Delte the old funcgen DB from the registry first
-	  #$reg->remove_DBAdaptor($self->species, 'funcgen');####################Implement for v49!!!!
-
-	  delete $Bio::EnsEMBL::Registry::registry_register{$self->species}{'funcgen'};
-	  #This will remove the DBAdaptor and all the other adaptors
-
-	  #Now remove if from the _DBA array
-	  my $index;
-	  
-	  foreach my $i(0..$#{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}){
-		
-		my $dba = $Bio::EnsEMBL::Registry::registry_register{'_DBA'}->[$i];
-	
-		if(($dba->species eq $self->species) &&
-		   $dba->group eq $group){
-		  $index = $i;
-		  last;
-		}
-	  }
-  
-	  @{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}} = splice(@{$Bio::EnsEMBL::Registry::registry_register{'_DBA'}}, $index, 1);
-
-
-
-
-
-
+	  #Delete the old funcgen DB from the registry first
+	  #$reg->remove_DBAdaptor($self->species, 'funcgen');
 
 	  #ConfigRegistry will automatically configure this new db
 	  
-	  $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-														 -user => $user,
-														 -host => ($self->{'ssh'}) ? $host_ip : $host,
-														 -port => $port,
-														 -pass => $pass,
-														 #we need to pass dbname else we can use non-standard dbs
-														 -dbname => $dbname,
-														 -species => $self->species(),
-														 -group    => 'funcgen',
-														);
+	  #$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+	#													 -user => $user,
+	#													 -host => ($self->{'ssh'}) ? $host_ip : $host,
+	#													 -port => $port,
+	#													 -pass => $pass,
+	#													 #we need to pass dbname else we can use non-standard dbs
+	#													 -dbname => $dbname,
+	#													 -species => $self->species(),
+	#													 -group    => 'funcgen',
+	#													);
 
 
 	  #if we get a species like homo_sapiens1 here
@@ -362,35 +355,37 @@ sub new{
 	}
   }
 
-
-  #Test connections 
-  $db->dbc->db_handle;
-  
+    
   ### VALIDATE DNADB
-  if($data_version ne $db->_get_schema_build($db->dnadb())){
-	my $warning = "WARNING: dnadb does not match data_version $data_version. Using ensembldb.enembl.org to define the dnadb";
+
+  #We can change this to just use the assembly version
+  #we could even have the wordy assmelby version from the meta table
+  #do the standard ensembl subs
+  #s/[A-Za-z]//g;
+  #s/\.//g;
+  #And then validate?
+  #Just stick to number version for now.
+
+
+  if($db->_get_schema_build($db->dnadb()) !~ /_[0-9]+_${assm_version}[a-z]*$/){
+	my $warning = "WARNING: dnadb does not match assembly_version $assm_version. Using ensembldb.enembl.org to define the dnadb";
 	$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
+
+	#We need to account for reg_config DBs which may have custom info in
+	#So try reg_config host first, then try ensembldb with warning
+	#Could have a reg_config only flag for core dbs
+	#Need to implement more params in set_dnadb_by_assembly_version
 	$self->log($warning);
-	
 
-	#The same species_name clash will happen here, but we're nost using the dnadb species 
-	#for anything critical(like creating another db name)
-	#should still reset this in the registry when the methods has been implemented
-
-	my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-													-host => 'ensembldb.ensembl.org',
-													-user => 'anonymous',
-													-dbname => $self->species()."_core_".$data_version,
-													-species => $self->species(),
-													-group    => 'core',
-												   );
-
-	$db->dnadb($dnadb);
+	$db->set_dnadb_by_assembly_version($assm_version);
   }
 	
  
   $self->db($db);
 
+  #Test connections
+  $db->dbc->db_handle;
+  $db->dnadb->dbc->db_handle;
  
   ### Check analyses/feature_type/cell_type
 
@@ -1322,36 +1317,6 @@ sub verbose{
   return $self->{'verbose'};
 }
 
-=head2 data_version
-  
-  Example    : my $schema_build = $imp->data_version();
-  Description: Getter/Setter for the data version
-  Arg [1]    : optional - schema and build version e.g. 41_36c
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : At risk - remove
-
-=cut
-
-
-
-sub data_version{
-  my ($self) = shift;	
-
-
-  throw('Deprecated, no longer required, use get_schema_build on dnadb?');
-
-  if (@_) {
-    $self->{'data_version'} = shift;
-    #have reset_dnadb here?
-    #Can only do this if we set data_version directly in new
-    #rather than calling this method
-    #as reset_dnadb assumes db is set
-  }
-
-  return $self->{'data_version'};
-}
 
 
 =head2 experiment_date
