@@ -447,8 +447,7 @@ foreach my $slice(@slices){
 
 			#Filter probes which are not entirely contained within slice
 			next if($feature->start < 0 || $feature->end > $expand_slice->length);
-				#warn "processing  $feature";
-		
+					
 			if($quick){
 			  $score += $feature->score;
 			}
@@ -467,18 +466,14 @@ foreach my $slice(@slices){
 
 		  #Finished all probes for this exon&result_set so create the exon features for each rset
 		  if($coverage > 0){ 
-
-			#warn "coverage is $coverage";
-			
+			$result_cache{$rset->name}{$trans_id}{$exon_id}{'probes'} = $coverage if $quick;
 			$result_cache{$rset->name}{$trans_id}{$exon_id}{'score'} = $score;
 			$score = $score/$coverage;
 			
-			#warn "got $score for  ${trans_id}:${exon_id}";
+			
 
 
 			if(! $no_load){
-			  #warn "storing exon feature";
-			  
 			  my $exon_feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
 				(
 				 -slice => $slice,#This may need changing to top level???????
@@ -512,10 +507,8 @@ foreach my $slice(@slices){
   
 	  #### Finished all exons for this transcript ####
 	  #So let's create the transcript features
-
-	  foreach my $rset(@rsets){
-
-		#Build (exon|full)transcript level info
+	  foreach my $rset(@rsets){#Build (exon|full)transcript level info
+		next if ! exists $result_cache{$rset->name}{$trans_id};
 
 		my $ftype = $rset->feature_type->name;
 		$score = 0;
@@ -523,113 +516,109 @@ foreach my $slice(@slices){
 		$display_label = '';
 		$coverage = 0;
 		my ($start, $end);
-
+		
 
 		### Get the transcript level info ###
-
-		if(exists $full_transcript_types{$ftype}){
+		if(exists $full_transcript_types{$ftype}){#full transcript coverage
 		  my $ftextend_slice = $textend_slice;
-
+		  
 		  #redefine extend slice here dependant on PolII?
 		  #Could defined by feature_type class ew POLYMERASE?
 		  #Or have default extend lengths in full_transcript_types hash
 		  $ftextend_slice = $ftextend_slice->extend(-1*$pol_crop) if $ftype eq 'PolII';
-		
-		  # Get probe/result features
-		  if($quick){
-			@probe_features = @{$rset->get_ResultFeatures_by_Slice($ftextend_slice)};
-		  }
-		  else{
-			@probe_features = @{$pf_a->fetch_all_by_Slice_ExperimentalChips
-								  ($ftextend_slice, $rset->get_ExperimentalChips)};
-		  }
-
-		  next if scalar(@probe_features) == 0;#No features, next rset
-		  
-
-		  # Calculate start end score etc... 
-		  foreach my $feature(@probe_features){
-
-			#Filter probes which are not entirely contained within slice
-			next if($feature->start < 0 || $feature->end> $ftextend_slice->length);
 			
+			# Get probe/result features
 			if($quick){
-			  $coverage++;
-			  $score += $feature->score;
-			  #display label????????????????????????????????????????????????????????????????????????????
+			  @probe_features = @{$rset->get_ResultFeatures_by_Slice($ftextend_slice)};
 			}
 			else{
-			  $display_label .= $feature->probe->get_probename.';';
-			  $score += $feature->get_result_by_ResultSet($rset);
+			  @probe_features = @{$pf_a->fetch_all_by_Slice_ExperimentalChips
+									($ftextend_slice, $rset->get_ExperimentalChips)};
 			}
-			$start = $ftextend_slice->start;
-			$end   = $ftextend_slice->end;
+
+			next if scalar(@probe_features) == 0;#No features, next rset
 			
+			
+			# Calculate start end score etc... 
+			foreach my $feature(@probe_features){
+			  
+			  #Filter probes which are not entirely contained within slice
+			  next if($feature->start < 0 || $feature->end> $ftextend_slice->length);
+			  
+			  if($quick){
+				$coverage++;
+				$score += $feature->score;
+				#display label????????????????????????????????????????????????????????????????????????????
+			  }
+			  else{
+				$display_label .= $feature->probe->get_probename.';';
+				$score += $feature->get_result_by_ResultSet($rset);
+			  }
+			  $start = $ftextend_slice->start;
+			  $end   = $ftextend_slice->end;
+			
+			}
 		  }
-		}
-		else{#exon transcript
+		  else{#exon transcript coverage
 	
-		  $start = ($transcript->seq_region_start - $expand_length);
-		  $end =  ($transcript->seq_region_end + $expand_length);
+			$start = ($transcript->seq_region_start - $expand_length);
+			$end =  ($transcript->seq_region_end + $expand_length);
+			
+			my @exon_ids = sort keys %{$result_cache{$rset->name}{$trans_id}};
+			next if scalar(@exon_ids) == 0;#next rset
 		  
-		  my @exon_ids = sort keys %{$result_cache{$rset->name}{$trans_id}};
-		  next if scalar(@exon_ids) == 0;#next rset
-		  
-		  foreach my $exon_id(@exon_ids){
-			my $exon_hash = $result_cache{$rset->name}{$trans_id}{$exon_id};
-			$score += $exon_hash->{'score'};
+			foreach my $exon_id(@exon_ids){
 
-			if($quick){
-			   $coverage += $exon_hash->{'probes'};
-			   #display label????????????????????????????????????????????????????????????????????????????
-			   #Is transcript level coverage enough, or do we want to dump exon level coverage?
-			}
-			else{
-			  $coverage += scalar(@{$exon_hash->{'probes'}});
-			  $display_label .= $exon_id.':'.join(',', @{$exon_hash->{'probes'}}).';';
+			  my $exon_hash = $result_cache{$rset->name}{$trans_id}{$exon_id};
+			  $score += $exon_hash->{'score'};
+
+			  if($quick){
+				$coverage += $exon_hash->{'probes'};
+				#display label????????????????????????????????????????????????????????????????????????????
+				#Is transcript level coverage enough, or do we want to dump exon level coverage?
+			  }
+			  else{
+				$coverage += scalar(@{$exon_hash->{'probes'}});
+				$display_label .= $exon_id.':'.join(',', @{$exon_hash->{'probes'}}).';';
+			  }
 			}
 		  }
-		}
 		
 
-		### Now build/store/dump the transcript feature ###
-
-
-		if($coverage > 0){
-
-		  $score = $score/$coverage;
-
-		  #Store feature
-		  if(! $no_load){
+		  ### Now build/store/dump the transcript feature ###
+		  if($coverage > 0){
+			$score = $score/$coverage;
 			
-			my $transcript_feature =  Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
-			  (
-			   -slice => $slice,#This may need changing to top level???????
-			   -start => $start,
-			   -end   => $end,
-			   #No strand information
-			   -strand => 0,
-			   -display_label => $trans_id.':Coverage='.$coverage,#.':'.$display_label,
-			   -score => $score,
-			   -feature_set => $feature_sets{'transcript_features_'.$rset->name}{'feature_set'},
-			  );
+			#Store feature
+			if(! $no_load){
+			  my $transcript_feature =  Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
+				(
+				 -slice => $slice,#This may need changing to top level???????
+				 -start => $start,
+				 -end   => $end,
+				 #No strand information
+				 -strand => 0,
+				 -display_label => $trans_id.':Coverage='.$coverage,#.':'.$display_label,
+				 -score => $score,
+				 -feature_set => $feature_sets{'transcript_features_'.$rset->name}{'feature_set'},
+				);
+			  
+			  $af_adaptor->store($transcript_feature);
+			}
 			
-			$af_adaptor->store($transcript_feature);
+			#Dump text
+			if(! $no_dump){
+			  #Annoyingly print want use a hash element as a file handle
+			  my $file_handle = $feature_sets{'transcript_features_'.$rset->name}{'file'};
+			  
+			  #GeneSID display name TranscriptSID ExonSIDchrom start end score list of probe name
+			  print $file_handle join("\t", ($gid, $gname, $trans_id, $chr, ($transcript->seq_region_start - $expand_length), 
+											 ($transcript->seq_region_end + $expand_length), $score, $coverage, $display_label))."\n";
+			  
+			}
+			
+			$transcript_cnt++;
 		  }
-		
-		  #Dump text
-		  if(! $no_dump){
-			#Annoyingly print want use a hash element as a file handle
-			my $file_handle = $feature_sets{'transcript_features_'.$rset->name}{'file'};
-			
-			#GeneSID display name TranscriptSID ExonSIDchrom start end score list of probe name
-			print $file_handle join("\t", ($gid, $gname, $trans_id, $chr, ($transcript->seq_region_start - $expand_length), 
-										   ($transcript->seq_region_end + $expand_length), $score, $coverage, $display_label))."\n";
-			
-		  }
-	  
-		  $transcript_cnt++;
-		}
 	  }
 	}
   }
