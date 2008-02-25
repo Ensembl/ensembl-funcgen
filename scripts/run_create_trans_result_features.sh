@@ -19,7 +19,8 @@ time $EFG_PERL $EFG_SRC/scripts/miscellaneous/create_transcript_result_features.
 	-dbname expset_homo_sapiens_funcgen_49_36k\
 	-assembly 36\
 	-tee\
-	-quick\
 	-rollback\
 	-pass $PASS\
+	-slice_name chromosome:NCBI36:MT\
 	$*
+#	-quick\

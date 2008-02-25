@@ -98,14 +98,17 @@ $| = 1;
 
 #Param definitions and defaults
 my ($dbname, $pass, $port, $host, $species, $user, $clobber, $help, $man, $assembly_version, $exon_set);
-my ($odbname, $opass, $oport, $ohost, $ouser, $no_dump, $no_load, $slice_name, @slices);
+my ($odbname, $opass, $oport, $ohost, $ouser, $no_dump, $no_load, $slice_name, $quick, @slices);
 my $logic_name = 'VSN_GLOG';
 my $outdir = './';
 my $overlap = 80;
 my $pol_crop = 5000;
 my $probe_length = 50;
 my $min_coverage = 0;#Should we calculate this as a function of length
-my $quick = 1;#ALWAYS ON AT THE MO UNTIL WE RESOLVE SPEED ISSUES
+
+warn "TEMPORARILY TUNRED OFF QUICK";
+#$quick = 1;#ALWAYS ON AT THE MO UNTIL WE RESOLVE SPEED ISSUES
+$quick = 0;
 
 my %full_transcript_types = (
 							#FeatureType->name => 5' crop?
@@ -437,8 +440,13 @@ foreach my $slice(@slices){
 			@probe_features = @{$rset->get_ResultFeatures_by_Slice($expand_slice)};
 		  }
 		  else{
-			@probe_features = @{$pf_a->fetch_all_by_Slice_ExperimentalChips
-								  ($expand_slice, $rset->get_ExperimentalChips)};
+			#@probe_features = @{$pf_a->fetch_all_by_Slice_ExperimentalChips
+			#					  ($expand_slice, $rset->get_ExperimentalChips)};
+
+			#ResultFeature->probe testing
+			
+			@probe_features = @{$rset->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($expand_slice, $rset, undef, 1)};
+
 		  }
 
 		  next if scalar(@probe_features) == 0;#No features, next rset
@@ -456,7 +464,11 @@ foreach my $slice(@slices){
 			  #Using array to account for multi-matching probes
 			  push @{$result_cache{$rset->name}{$trans_id}{$exon_id}{'probes'}}, $feature->probe->get_probename;
 			  #We need the probes array to build the exon transcript features
-			  $score += $feature->get_result_by_ResultSet($rset);
+			  
+			  #ResultFeature->probe testing
+			  #$score += $feature->get_result_by_ResultSet($rset);
+			  $score += $feature->score;
+
 			  $display_label .= $feature->probe->get_probename.';';
 			}
 
@@ -532,8 +544,14 @@ foreach my $slice(@slices){
 			  @probe_features = @{$rset->get_ResultFeatures_by_Slice($ftextend_slice)};
 			}
 			else{
-			  @probe_features = @{$pf_a->fetch_all_by_Slice_ExperimentalChips
-									($ftextend_slice, $rset->get_ExperimentalChips)};
+			  #@probe_features = @{$pf_a->fetch_all_by_Slice_ExperimentalChips
+			#						($ftextend_slice, $rset->get_ExperimentalChips)};
+
+			  #ResultFeature->probe testing
+			  warn "using RFprobe";
+			  @probe_features = @{$rset->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($ftextend_slice, $rset, undef, 1)};
+
+
 			}
 
 			next if scalar(@probe_features) == 0;#No features, next rset
@@ -551,8 +569,12 @@ foreach my $slice(@slices){
 				#display label????????????????????????????????????????????????????????????????????????????
 			  }
 			  else{
+
 				$display_label .= $feature->probe->get_probename.';';
-				$score += $feature->get_result_by_ResultSet($rset);
+
+				#ResultFeature->probe testing
+				#$score += $feature->get_result_by_ResultSet($rset);
+				$score += $feature->score;
 			  }
 			  $start = $ftextend_slice->start;
 			  $end   = $ftextend_slice->end;
