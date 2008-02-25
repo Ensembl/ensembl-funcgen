@@ -1902,10 +1902,14 @@ sub validate_mage(){
 					}else{#Experimental
 
 					  #get feature type from assay
-					  my @factor_values = @{$assay->getBioAssayFactorValues()};
+					  my $fv_ref = $assay->getBioAssayFactorValues();
+					  if(! defined $fv_ref){
+						throw('No FactorValues found, you must populate the "Immunoprecipitate" field. Maybe you forgot to specify -feature_type?'); 
+					  }
+
 					  my ($feature_type);
 					  
-					  foreach my $fvalue(@factor_values){
+					  foreach my $fvalue(@{$fv_ref}){
 						
 						if($fvalue->getValue()->getCategory() eq 'Immunoprecipitate'){
 						  $feature_type = $fvalue->getName();
