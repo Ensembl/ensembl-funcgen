@@ -86,7 +86,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
     
   #validate and set type, analysis and feature_set here
-  my ($db, $builds) = rearrange(['DB', 'BUILDS'], @_);
+  my ($db, $builds, $skip_mc, $check_displayable) = 
+	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE'], @_);
   
   
   if (! ($db && ref($db) &&
@@ -102,6 +103,8 @@ sub new {
 	.$db->dbc->password.' '.$db->dbc->dbname.' -P'.$db->dbc->port;
   $self->{'dbname'} = $db->dbc->dbname;
   $self->{'builds'} = (scalar(@$builds)>0) ? $builds : ['DEFAULT'];
+  $self->{'skip_mc'} = $skip_mc;
+  $self->{'check_displayable'} = $check_displayable;
   
   return $self;
 }
@@ -144,6 +147,7 @@ sub update_db_for_release{
 
   $self->log('??? Have you dumped/copied GFF dumps ???');
   $self->log("??? Have you diff'd the sql for each species vs. a fresh schema ???");
+  $self->log('Need to implement check meta string check');
 
   $self->log(' :: Finished updating '.$self->{'dbname'}.' for release');
 }
@@ -225,7 +229,8 @@ sub update_meta_schema_version{
   
   my $schema_version = $self->get_schema_and_build($self->{'dbname'})->[0];
   
-  my $sql = "UPDATE meta set meta_value='.$schema_version.' where meta_key='schema_version'";
+  my $sql = "UPDATE meta set meta_value='$schema_version' where meta_key='schema_version'";
+ 
   $self->db->dbc->db_handle->do($sql);
 
   $self->log_header("Updated meta.schema_version to $schema_version");
@@ -236,11 +241,20 @@ sub update_meta_schema_version{
 sub update_meta_coord{
   my ($self, @table_names) = @_;
   
+  if($self->{'skip_meta_coord'}){
+	$self->log("Skipping meta_coord update\n");
+	return;
+  }
+
+
   my $sql = 'UPDATE meta set meta_value=48 where meta_key="schema_version"';
   $self->db->dbc->db_handle->do($sql);
   
   #set default table_name
   if(! @table_names || scalar(@table_names) == 0){
+
+	#Can we do this via DBAdaptor and get all available adaptors which are BaseFeatureAdaptors then grab the first table name
+
 	
 	@table_names = qw(
 					  regulatory_feature
@@ -371,20 +385,25 @@ sub check_meta_strings{
 
 
 
-#Check displayable data_sets
-
-sub check_displayable_data_sets{
-  my $self = shift;
-  $self->log_data_sets(1);
-  return;
-}
 
 sub log_data_sets{
-  my ($self, $only_displayable) = @_;
+  my $self = shift;
   
-  $self->log_header('Checking DataSets');
+  my (@dsets, $status);
+  my $txt = 'Checking ';
+
+  if($self->{'check_displayable'}){
+	$status = 'DISPLAYABLE';
+	$txt .= $status.' ';
+  }
+
+  $txt .= 'DataSets';
+
+  $self->log_header($txt);
   
-  my @dsets = @{$self->db->get_DataSetAdaptor->fetch_all()};
+
+
+  @dsets = @{$self->db->get_DataSetAdaptor->fetch_all()};
   
   
   foreach my $dset(@dsets){
