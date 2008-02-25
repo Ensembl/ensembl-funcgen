@@ -81,8 +81,7 @@ alter table external_synonym modify `xref_id` int(10) unsigned NOT NULL;
 alter table external_synonym modify `synonym` varchar(40) NOT NULL;
 alter table feature_set modify `feature_type_id` int(10) unsigned NOT NULL;
 alter table feature_type modify  `name` varchar(40) NOT NULL;
-alter table experimental_group modify `name` varchar(40) NOT NULL;
-alter table go_xref modify linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL;
+alter table go_xref modify linkage_type ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL;
 
 alter table identity_xref modify `analysis_id` smallint(5) unsigned NOT NULL;
 alter table identity_xref modify `object_xref_id` int(10) unsigned NOT NULL;
@@ -166,9 +165,6 @@ CREATE TABLE `experimental_design` (
 insert into experimental_design select * from experimental_design_type;
 DROP TABLE IF EXISTS `experimental_design_type`;
 
--- delete first just in case it already exists
-alter table experimental_group drop key name_idx;
-alter table experimental_group add UNIQUE KEY `name_idx` (`name`);
 
 
 
