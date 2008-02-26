@@ -434,9 +434,11 @@ sub display_label {
 
 =head2 get_displayable_ResultFeatures_by_Slice
 
-  Example    : my @results = @{$ResultSet->get_all_displayable_results()};
-  Description: wrapper to get_all_results with displayable flag passed
-  Returntype : List ref to array refs containing ($display_label, @result_features);
+  Arg[1]     : Bio::EnsEMBL::Slice
+  Arg[2]     : Boolean - with probe flag, will nest Probe object in ResultFeature 
+  Example    : my @results = @{$ResultSet->get_all_displayable_ResultFeatures_by_Slice($slice)};
+  Description: Gets all the displayable ResultFeatures for a given Slice.
+  Returntype : Arrayref of ResultFeatures
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -445,30 +447,30 @@ sub display_label {
 
 
 sub get_displayable_ResultFeatures_by_Slice{
-  my ($self, $slice) = @_;
-  return $self->get_ResultFeatures_by_Slice($slice, 'DISPLAYABLE');
+  my ($self, $slice, $with_probe) = @_;
+  return $self->get_ResultFeatures_by_Slice($slice, 'DISPLAYABLE', $with_probe);
 }
 
 
-#Is it possible to to have one chip displayable and another not within the same set.
-#one may fail validation, but would just omit from result_set?
-#Or maybe we only want certain chips displayed, locational context is not split evenly over chips so not that useful :?
-#If we handle this here then all we have to do is filter table_ids first before passing them to the fetch.
+
+
+=head2 get_ResultFeatures_by_Slice
+
+  Arg[1]     : Bio::EnsEMBL::Slice
+  Arg[2]     : string - Status name e.g. 'DISPLAYABLE'
+  Arg[3]     : Boolean - with probe flag, will nest Probe object in ResultFeature 
+  Example    : my @rfs_with_rpobe = @{$ResultSet->get_all_ResultFeatures_by_Slice($slice, undef, 1)};
+  Description: Gets all the ResultFeatures for a given Slice.
+  Returntype : Arrayref of ResultFeatures
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
 
 sub get_ResultFeatures_by_Slice{
-  my ($self, $slice, $status) = @_;
-
-
-  #this does not store the ResultFeatures anywhere so we need to be mindful that calling this will always result in a DB query
-  #Can we generate a slice hash for this?
-  #This would eat more memory but may be faster for web display if we can support some sort of dynamic querying with respect to expanded/shifted slice and cached ResultFeatures.
-  #would have to cater for 49 bp overhang which may result in duplicate ResultFeatures which overlap ends of adjacent/overlapping slices
-  #49bp ? should be altered to cope with overlap properly.
-
-
-  #do we need to set the replicate_cache here first, or should this be done in new?
-
-  return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, $status);
+  my ($self, $slice, $status, $with_probe) = @_;
+  return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, $status, $with_probe);
 }
 
 
