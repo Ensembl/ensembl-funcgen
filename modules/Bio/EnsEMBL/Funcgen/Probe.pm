@@ -174,8 +174,8 @@ sub new {
 
   Arg [1]    : int - db ID of array_chip
   Arg [2]    : string - probe name
-  Arg [3]    : Bio::EnsEMBL::Funcgen::Array - optional, will get obj from DBAdaptor if not passed
-  Example    : $probe->add_array_chip_probename($ac_dbid, $probename);
+  Arg [3]    : Bio::EnsEMBL::Funcgen::Array
+  Example    : $probe->add_array_chip_probename($ac_dbid, $probename, $array);
   Description: Adds a probe name / array pair to a probe, allowing incremental
                generation of a probe.
   Returntype : None
@@ -195,14 +195,26 @@ sub add_array_chip_probename {
     $self->{ 'probenames' } ||= {};
 
     #mass redundancy here, possibility of fetching same array over and over!!!!!!!!!!!!!!
-    if(! defined $array){
-      $array = $self->adaptor()->db()->get_ArrayAdaptor()->fetch_by_array_chip_dbID($ac_dbid);
-    }
+	#Need to implement cache in caller i.e. adaptor
+	#Made mandatory to force creation of cache
+	#we need access to adaptor before we can test is valid and stored
+	#let's no test each time for adaptor as this would slow down
+	#Just test here instead.
+
+    if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID)){
+      #$array = $self->adaptor()->db()->get_ArrayAdaptor()->fetch_by_array_chip_dbID($ac_dbid);
+	  throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. Maybe you want to generate a cache in the caller?');
+	}
     
     #mapping between probename and ac_dbid is conserved through array name between hashes
     #only easily linked from arrays to probenames,as would have to do foreach on array name
     
+	#Can we change the implementation of this so we're only storing the array once, reverse
+	#the cache? But we want access to the array and using an object reference as a key is ????
+	#How would this impact on method functionality?
     $self->{ 'arrays'     }->{$ac_dbid} = $array;
+
+
     $self->{ 'probenames' }->{$array->name()} = $probename;
 
     return;
