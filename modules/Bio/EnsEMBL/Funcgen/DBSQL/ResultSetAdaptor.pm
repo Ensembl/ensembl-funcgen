@@ -798,8 +798,12 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 	  ' AND pf.seq_region_id='.$seq_region_id.
 		' AND pf.seq_region_start<='.$slice->end();
   
-  $sql .= ' AND pf.seq_region_start >= '.($slice->start - $max_len) if $max_len;
-  
+  if($max_len){
+	my $start = $slice->start - $max_len;
+	$start = 0 if $start < 0;
+	$sql .= ' AND pf.seq_region_start >= '.$start;
+  }
+
   $sql .= ' AND pf.seq_region_end>='.$slice->start().
 	' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
 
