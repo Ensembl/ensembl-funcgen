@@ -117,7 +117,19 @@ sub end {  $_[0]->[1];}
 sub score {  $_[0]->[2];}
 
 
+=head2 probe
 
+  Example    : my $probe = $rf->probe();
+  Description: Getter of the probe attribute for ResultFeature
+               objects
+  Returntype : Bio::EnsEMBL::Funcgen::Probe
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub probe {  $_[0]->[3];}
 
 1;
 

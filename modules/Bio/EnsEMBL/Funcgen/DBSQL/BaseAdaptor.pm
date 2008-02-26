@@ -107,6 +107,10 @@ sub fetch_all_by_status{
 }
 
 
+#Can we not just re implement fetch_all here to have the optional status arg?
+
+
+
 =head2 status_to_constraint
 
   Arg [1]    : string - status e.g. 'DISPLAYABLE'

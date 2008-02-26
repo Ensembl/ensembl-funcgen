@@ -89,7 +89,8 @@ my $reg = "Bio::EnsEMBL::Registry";
   DESCRIPTION: Validates object class and stored status
   Returntype : none
   Exceptions : Throws if Storable is not valid or stored
-  Caller     : general
+  Caller     : general - Adaptors, objects will probably be better off implementing in situ.
+               This is to avoid having to test for the adaptor for every object which could slow things down
   Status     : At risk
 
 =cut
@@ -489,11 +490,9 @@ sub dnadb {
 
 	  #while($@ && $count <2){
 	  while($connection_error && $count <3){
-
 		#Create and test the DB
 
 		$port = ($schema <48) ? 3306 : 5306;
-
 		
 		$dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 		  (						
