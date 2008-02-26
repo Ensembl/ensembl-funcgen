@@ -380,6 +380,9 @@ sub _objs_from_sth {
 	  #Will this affect any other methods?
 	  
 
+
+	  #Can we not change this to an ArrayChip cache and just reimplement the array method?
+
 		$array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
 
 		
@@ -417,7 +420,7 @@ sub _objs_from_sth {
 			$current_dbid = $probe_id;
 		} else {
 			# Extend existing probe
-			$probe->add_array_chip_probename($arraychip_id, $name);
+			$probe->add_array_chip_probename($arraychip_id, $name, $array);
 		}
 	}
 	return \@result;
