@@ -196,7 +196,7 @@ sub add_array_chip_probename {
 
     #mass redundancy here, possibility of fetching same array over and over!!!!!!!!!!!!!!
     if(! defined $array){
-      $array = $self->adaptor()->db()->get_ArrayAdaptor()->fetch_by_array_chip_id($ac_dbid);
+      $array = $self->adaptor()->db()->get_ArrayAdaptor()->fetch_by_array_chip_dbID($ac_dbid);
     }
     
     #mapping between probename and ac_dbid is conserved through array name between hashes
