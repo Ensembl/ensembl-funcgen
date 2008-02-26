@@ -98,17 +98,15 @@ $| = 1;
 
 #Param definitions and defaults
 my ($dbname, $pass, $port, $host, $species, $user, $clobber, $help, $man, $assembly_version, $exon_set);
-my ($odbname, $opass, $oport, $ohost, $ouser, $no_dump, $no_load, $slice_name, $quick, @slices);
+my ($odbname, $opass, $oport, $ohost, $ouser, $no_dump, $no_load, $slice_name, @slices);
 my $logic_name = 'VSN_GLOG';
 my $outdir = './';
 my $overlap = 80;
 my $pol_crop = 5000;
 my $probe_length = 50;
+my $with_probe = 1;
 my $min_coverage = 0;#Should we calculate this as a function of length
-
-warn "TEMPORARILY TUNRED OFF QUICK";
-#$quick = 1;#ALWAYS ON AT THE MO UNTIL WE RESOLVE SPEED ISSUES
-$quick = 0;
+my $quick = 0;
 
 my %full_transcript_types = (
 							#FeatureType->name => 5' crop?
@@ -150,6 +148,7 @@ die('Maybe you want to specify some ResultSet names to process?') if ! @result_s
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
+$with_probe = 0 if $quick;
 
 #Mandatory param checking here
 
@@ -334,7 +333,7 @@ foreach my $rset(@rsets){
 
   }
 }
-
+warn "quick is $quick";
 $helper->log('');
 $helper->log("Processing @feature_levels level features for the following ResultSets:\t@result_set_names");
 
@@ -435,20 +434,8 @@ foreach my $slice(@slices){
 	
 		  my $probe_annotation;
 		  $coverage = 0;
-
-		  if($quick){
-			@probe_features = @{$rset->get_ResultFeatures_by_Slice($expand_slice)};
-		  }
-		  else{
-			#@probe_features = @{$pf_a->fetch_all_by_Slice_ExperimentalChips
-			#					  ($expand_slice, $rset->get_ExperimentalChips)};
-
-			#ResultFeature->probe testing
-			
-			@probe_features = @{$rset->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($expand_slice, $rset, undef, 1)};
-
-		  }
-
+		  @probe_features = @{$rset->get_ResultFeatures_by_Slice($expand_slice, undef, $with_probe)};
+		  
 		  next if scalar(@probe_features) == 0;#No features, next rset
 
 		  foreach my $feature(@probe_features){
@@ -539,25 +526,13 @@ foreach my $slice(@slices){
 		  #Or have default extend lengths in full_transcript_types hash
 		  $ftextend_slice = $ftextend_slice->extend(-1*$pol_crop) if $ftype eq 'PolII';
 			
-			# Get probe/result features
-			if($quick){
-			  @probe_features = @{$rset->get_ResultFeatures_by_Slice($ftextend_slice)};
-			}
-			else{
-			  #@probe_features = @{$pf_a->fetch_all_by_Slice_ExperimentalChips
-			#						($ftextend_slice, $rset->get_ExperimentalChips)};
+		  # Get probe/result features
+		  @probe_features = @{$rset->get_ResultFeatures_by_Slice($ftextend_slice, undef, $with_probe)};
 
-			  #ResultFeature->probe testing
-			  warn "using RFprobe";
-			  @probe_features = @{$rset->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($ftextend_slice, $rset, undef, 1)};
-
-
-			}
-
-			next if scalar(@probe_features) == 0;#No features, next rset
+		  next if scalar(@probe_features) == 0;#No features, next rset
 			
 			
-			# Calculate start end score etc... 
+		  # Calculate start end score etc... 
 			foreach my $feature(@probe_features){
 			  
 			  #Filter probes which are not entirely contained within slice

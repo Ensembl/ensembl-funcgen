@@ -11,7 +11,6 @@ shift
 
 time $EFG_PERL $EFG_SRC/scripts/miscellaneous/create_transcript_result_features.pl\
 	-species homo_sapiens\
-	-port 3306\
 	-host ens-genomics1\
     -user ensadmin\
     -exon_set\
@@ -21,6 +20,8 @@ time $EFG_PERL $EFG_SRC/scripts/miscellaneous/create_transcript_result_features.
 	-tee\
 	-rollback\
 	-pass $PASS\
-	-slice_name chromosome:NCBI36:MT\
-	$*
+	-quick\
+   -slice_name chromosome:NCBI36:MT\
+		$*
 #	-quick\
+#	-slice_name chromosome:NCBI36:MT\
