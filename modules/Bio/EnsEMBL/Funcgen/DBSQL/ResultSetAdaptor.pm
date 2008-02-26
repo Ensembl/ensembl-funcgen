@@ -646,11 +646,64 @@ sub list_dbIDs {
 
 #Could we also have an optional net size for grouping ResultFeature into  Nbp pseudo ResultFeatures?
 
+
+#This does not account for strandedness!!
+###???
+#Is this sensible?  Do we really want the full probe object alongside the ResultFeatures?
+#strandedness?
+#what about just the probe name?
+#we could simplt add the probe_id to the ResultFeature
+#This would prevent creating probe features for all of the features which do not have results for a given resultset
+#This will mean the probe will still have to be individually created
+#But we're only creating it for those which we require
+#and we're now creating the lightweight ResultFeature instead of the ProbeFeature
+#However, if we're dealing with >1 rset in a loop
+#Then we'll be recreating the same ResultFeatures and probes for each set.
+#We're already restricting the ProbeFeatures to those within the rset
+#What we want is to get the score along side the ProbeFeature?
+#But we want the probe name!!
+#We really want something that will give Probe and ResultFeature
+#Let's set the Probe as an optional ResultFeature attribute
+
 sub fetch_ResultFeatures_by_Slice_ResultSet{
-  my ($self, $slice, $rset, $ec_status) = @_;
+  my ($self, $slice, $rset, $ec_status, $with_probe) = @_;
   
   my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
-  my ($biol_rep, $score, $start, $end, $cc_id, $old_start, $old_end);
+  my ($biol_rep, $score, $start, $end, $cc_id, $old_start, $old_end, $probe_field);
+
+
+  my ($padaptor, $probe, $array,);
+  my ($probe_id, $probe_set_id, $pname, $plength, $arraychip_id, $pclass, $probeset);
+  my (%array_cache, %probe_set_cache, $ps_adaptor, $array_adaptor);
+
+  my $ptable_syn = '';
+  my $pjoin = '';
+  my $pfields = '';
+
+  if($with_probe){
+	#This would be in BaseAdaptor? or core DBAdaptor?
+	#This would work on assuming that the default foreign key would be the primary key unless specified
+	
+	#my($table_info, $fields, $adaptor) = @{$self->validate_and_get_join_fields('probe')};
+	$padaptor = $self->db->get_ProbeAdaptor;
+	$ps_adaptor = $self->db->get_ProbeSetAdaptor;
+	$array_adaptor = $self->db->get_ArrayAdaptor;
+
+
+	#This would return table and syn and syn.fields
+	#Would also need access to obj_from_sth_values
+	#could return code ref or adaptor
+	$ptable_syn = ', probe p';
+	
+	#Some of these will be redundant: probe_id
+	#Can we remove the foreign key from the returned fields?
+	#But we need it here as it isn't being returned
+	$pfields =  ', p.probe_id, p.probe_set_id, p.name, p.length, p.array_chip_id, p.class ';
+  
+	#will this make a difference if we join on pf instead of r?
+	$pjoin = ' AND r.probe_id = p.probe_id ';
+  }
+
 
 
   if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
@@ -717,7 +770,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   my $max_len = $mcc->fetch_max_length_by_CoordSystem_feature_type($fg_cs, 'probe_feature');
 
 
- #This join between sr and pf is causing the slow down.  Need to select righ tjoin for this.
+ #This join between sr and pf is causing the slow down.  Need to select right join for this.
   #just do two separate queries for now.
 
   $sql = "SELECT seq_region_id from seq_region where core_seq_region_id=".$slice->get_seq_region_id().
@@ -725,23 +778,33 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
    my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 
-  $sql = 'SELECT r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id FROM '.$rset->get_result_table().
-	' r, probe_feature pf, chip_channel cc WHERE cc.result_set_id = '.$rset->dbID();
+
+
+
+  #Can we push the median calculation onto the server?
+  #group by pf.seq_region_start?
+  #will it always be a median?
+
+
+  $sql = 'SELECT STRAIGHT_JOIN r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id '.$pfields.
+	' FROM probe_feature pf, '.$rset->get_result_table().' r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '.
+	  $rset->dbID();
 
   $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
 
 
   $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
-	' AND r.probe_id=pf.probe_id'.
+	' AND r.probe_id=pf.probe_id'.$pjoin.
 	  ' AND pf.seq_region_id='.$seq_region_id.
 		' AND pf.seq_region_start<='.$slice->end();
   
-  $sql .= ' AND pf.seq_region_start >= '.($slice->start() - $max_len) if $max_len;
+  $sql .= ' AND pf.seq_region_start >= '.($slice->start - $max_len) if $max_len;
   
   $sql .= ' AND pf.seq_region_end>='.$slice->start().
 	' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
 
-  #can we resolves replicates here by doing a median on the score and grouping by probe_id?
+  #can we resolves replicates here by doing a median on the score and grouping by cc_id some how?
+  
   #what if a probe_id is present more than once, i.e. on plate replicates?
 
 
@@ -758,9 +821,20 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
   $sth = $self->prepare($sql);
   $sth->execute();
-  $sth->bind_columns(\$score, \$start, \$end, \$cc_id);
+  
+  if($with_probe){
+	$sth->bind_columns(\$score, \$start, \$end, \$cc_id, \$probe_id, \$probe_set_id, 
+					   \$pname, \$plength, \$arraychip_id, \$pclass);
+  }
+  else{
+	$sth->bind_columns(\$score, \$start, \$end, \$cc_id);
+  }
   my $position_mod = $slice->start() - 1;
   
+
+  my $new_probe = 0;
+  my $first_record = 1;
+
   while ( $sth->fetch() ) {
 
     #we need to get best result here if start and end the same
@@ -768,18 +842,58 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     $old_start ||= $start;
     $old_end   ||= $end; 
     
-    if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature
-	  push @{$rep_scores{$biol_reps{$cc_id}}}, $score;
+
+	#This is assuming that a feature at the exact same locus is from the same probe
+	#This may not be correct and will collapse probes with same sequence into one ResultFeature
+	#This is okay for analysis purposes, but obscures the probe to result relationship
+	#we arguably need to implement r.probe_id check here for normal ResultFeatures
+
+    if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature?
+
+	  #only if with_probe(otherwise we have a genuine on plate replicate)
+	  #if probe_id is same then we're just getting the extra probe record?
+	  #cc_id might be different for same probe_id?
+
+	  #How can we differentiate between an on plate replicate and just the extra probe records?
+	  #If array_chip_id is the same?  If it is then we have an on plate replicate (differing x/y vals in result)
+	  #Otherwise we know we're getting another probe record from a different Array/ArrayChip.
+	  #It is still possible for the extra probe record on a different ArrayChip to have a result, 
+	  #the cc_id would be different and would be captured?
+	  #This would still be the same probe tho, so still one RF
+
+	  #When do we want to split?
+	  #If probe_id is different...do we need to order by probe_id?
+
+	  #Don't we just want to check the result_id?
+	  #
+	  
+	  #probe will never be defined without with_probe
+	  #so can omit from test
+
+	  if(defined $probe && ($probe->dbID != $probe_id)){
+		$new_probe = 1;
+	  }
+	  else{
+		push @{$rep_scores{$biol_reps{$cc_id}}}, $score;
+	  }
     }
 	else{#Found new location
-   
+	  $new_probe = 1;
+	}
+
+	if($new_probe){
 	  #store previous feature with best result from @scores
 		#Do not change arg order, this is an array object!!
-      push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-		([($old_start - $position_mod), 
-		  ($old_end - $position_mod),
-		  $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)]);
 
+	  push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+		([
+		  ($old_start - $position_mod), 
+		  ($old_end - $position_mod),
+		  $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
+		  $probe,
+		 ]);
+	
+	 
 	  undef %rep_scores;
 	  $old_start = $start;
       $old_end = $end;
@@ -787,7 +901,59 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
       #record new score
 
 	  @{$rep_scores{$biol_reps{$cc_id}}} = ($score);
-    }
+	}
+
+	if($with_probe){
+
+	  #This would be done via the ProbeAdaptor->obj_from_sth_values
+	  #We need away ti maintain the Array/ProbeSet caches in obj_from_sth fetch
+	  #Pulling into an array would increase memory usage over the fetch loop
+	  #Can we maintain an object level cache which we would then have to reset?
+	  #Wouldn't be the end of the world if it wasn't, but would use memory
+
+	  
+	  #This is recreating the Probe->_obj_frm_sth
+	  #We need to be mindful that we can get multiple records for a probe
+	  #So we need to check whether the probe_id is the same
+	  #It may be possible to get two of the same probes contiguously
+	  #So we would also have to check on seq_region_start
+
+	  #Do we really need to set these?
+	  #We are getting the advantage that we're cacheing
+	  #Rather than a fetch for each object
+	  #But maybe we don't need this information?
+	  #Can we have two mode for obj_from_sth?
+
+	  $array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
+
+	  if($probe_set_id){
+		$probeset = $probe_set_cache{$probe_set_id} || $self->db->get_ProbeSetAdaptor()->fetch_by_dbID($probe_set_id);
+	  }
+
+
+	  if($first_record || $new_probe){
+
+		$probe = Bio::EnsEMBL::Funcgen::Probe->new
+			  (
+			   -dbID          => $probe_id,
+			   -name          => $pname,
+			   -array_chip_id => $arraychip_id,
+			   -array         => $array,
+			   -probe_set     => $probeset,
+			   -length        => $plength,
+			   -class         => $pclass,
+			   -adaptor       => $padaptor,
+			);
+
+	  } 
+	  else {
+		# Extend existing probe
+		$probe->add_array_chip_probename($arraychip_id, $pname, $array);
+	  }
+	}
+
+	$new_probe = 0;
+	$first_record = 0;
   }
   
   #store last feature  
@@ -795,15 +961,20 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #only if found previosu results
   if($old_start){
     push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-      ([($old_start - $position_mod), 
-	($old_end - $position_mod),
-		$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)]);
+      ([
+		($old_start - $position_mod), 
+		($old_end - $position_mod),
+		$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
+		$probe
+	   ]);
 
 	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   }
   
   return \@rfeatures;
 }
+
+
 
 
 
