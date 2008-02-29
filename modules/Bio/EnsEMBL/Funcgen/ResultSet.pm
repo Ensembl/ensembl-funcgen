@@ -474,5 +474,37 @@ sub get_ResultFeatures_by_Slice{
 }
 
 
+=head2 log_label
+
+  Example    : print $rset->log_label();
+  Description: Get a string of the unique key fields for logging purposes
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub log_label {
+  my $self = shift;
+
+  my $label;
+  
+  if(defined $self->feature_type()){
+	$label = $self->feature_type->name."\t";
+  }else{
+	$label = "Unknown FeatureType\t";
+  }
+
+  if(defined $self->cell_type()){
+	$label .= $self->cell_type->name."\t";
+  }else{
+	$label .= "Uknown CellType";
+  }
+
+  return $self->name."\t".$self->analysis->logic_name."\t".$label;
+}
+
+
 
 1;
