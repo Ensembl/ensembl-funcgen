@@ -37,6 +37,10 @@ B<This program> removes all the imported data for a given experiment name.
 =cut
 
 
+#To do
+# 1 Can we implement some of the Helper rollback methods here?
+# 2 Handle Experiments with no ResultSets
+
 use warnings;
 use strict;
 use Getopt::Long;
@@ -347,15 +351,19 @@ foreach my $key(keys %no_delete_cc_ids){
 
 print "::\tDeleting result, chip_channel and result_set records for:\t".join(', ', (map {$_->name} @rollback_rsets))."\n";
 
-
-$sql = "DELETE from result where chip_channel_id IN (".join(', ', keys %cc_ids).")";	
+#We could do with testing for the cc_ids here
+#So we can rollback an Rset if it have already been partially mangled
+$sql = "DELETE from result where chip_channel_id IN (".join(', ', keys %cc_ids).")";
 $db->dbc->do($sql);
-$sql = "DELETE from chip_channel where result_set_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";	
+$sql = "DELETE from chip_channel where result_set_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";
 $db->dbc->do($sql);
-$sql = "DELETE from status where table_name='result_set' and table_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";	
+$sql = "DELETE from status where table_name='result_set' and table_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";
+$db->dbc->do($sql);
+$sql = "DELETE from result_set where result_set_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";	
 $db->dbc->do($sql);
 
 
+#Where are we deleting the resultsets?
 
 #now do final clean up delete channels, ec, and experiemnt (inc mage_xml...and any other linked entries)
 #We should only delete those in the cc_ids hash as these have been filtered appropriately
