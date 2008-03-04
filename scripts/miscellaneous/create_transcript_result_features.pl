@@ -98,7 +98,7 @@ $| = 1;
 
 #Param definitions and defaults
 my ($dbname, $pass, $port, $host, $species, $user, $clobber, $help, $man, $assembly_version, $exon_set);
-my ($odbname, $opass, $oport, $ohost, $ouser, $no_dump, $no_load, $slice_name, @slices);
+my ($odbname, $opass, $oport, $ohost, $ouser, $no_dump, $no_load, $slice_name, @slices, $quick);
 my $logic_name = 'VSN_GLOG';
 my $outdir = './';
 my $overlap = 80;
@@ -106,7 +106,6 @@ my $pol_crop = 5000;
 my $probe_length = 50;
 my $with_probe = 1;
 my $min_coverage = 0;#Should we calculate this as a function of length
-my $quick = 0;
 
 my %full_transcript_types = (
 							#FeatureType->name => 5' crop?
@@ -221,7 +220,7 @@ my $gene_adaptor = $db->dnadb->get_GeneAdaptor;
 my $rset_analysis = $anal_a->fetch_by_logic_name('VSN_GLOG');
 my $fset_analysis = $anal_a->fetch_by_logic_name('ProbeFeatureWindow');
 
-if(! defined $fset_analysis){
+if(! defined $fset_analysis && ! $no_load){
 
   #This could do with added parameter values
   #However, parameters will not get stored if analysis already present
