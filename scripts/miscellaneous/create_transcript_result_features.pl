@@ -332,7 +332,7 @@ foreach my $rset(@rsets){
 
   }
 }
-warn "quick is $quick";
+
 $helper->log('');
 $helper->log("Processing @feature_levels level features for the following ResultSets:\t@result_set_names");
 
