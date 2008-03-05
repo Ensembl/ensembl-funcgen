@@ -55,14 +55,14 @@ sub adaptor {
         my $species  = $self->config->{'species'}  || 'homo_sapiens';
         my $data_version  = $self->config->{'data_version'};
         
-        my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-            (
-             -host => 'ensembldb.ensembl.org',
-             -port => 3306,
-             -user => 'anonymous',
-             -dbname => $species.'_core_'.$data_version,
-             -species => $species,
-             );
+        #my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+        #    (
+        #     -host => 'ensembldb.ensembl.org',
+        #     -port => 5306,
+        #     -user => 'anonymous',
+        #     -dbname => $species.'_core_'.$data_version,
+        #     -species => $species,
+        #     );
         
         $self->{'_adaptor'} ||= Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
             (
@@ -72,7 +72,7 @@ sub adaptor {
              -species => $species,
              -pass   => $password,
              -port   => $port,
-             -dnadb  => $cdb
+             #-dnadb  => $cdb
              );
         
         return $self->{'_adaptor'};
