@@ -169,7 +169,7 @@ sub _objs_from_sth {
 	  
 	  if(! $seq_region_id){
 		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-		  "The region you are using is not present in the cuirrent dna DB";
+		  "The region you are using is not present in the current dna DB";
 		next;
 	  }
 
