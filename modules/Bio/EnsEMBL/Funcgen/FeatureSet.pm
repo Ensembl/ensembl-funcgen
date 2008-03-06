@@ -270,7 +270,24 @@ sub get_Features_by_Slice{
   return $self->get_FeatureAdaptor->fetch_all_by_Slice_FeatureSets($slice, $self);
 }
 
+=head2 get_Features_by_FeatureType
 
+  Arg[0]     : Bio::EnsEMBL::Funcgen::FeatureType
+  Example    : my @features = @{$FeatureSet->get_Features_by_FeatureType($ftype)};
+  Description: Retrieves all Features for this FeatureSet for a given FeatureType
+  Returntype : ARRAYRE
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub get_Features_by_FeatureType{
+  my ($self, $type) = @_;
+
+  return $self->get_FeatureAdaptor->fetch_all_by_FeatureType_FeatureSets($type, $self);
+}
 
 
 
