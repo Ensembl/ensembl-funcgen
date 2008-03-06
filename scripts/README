@@ -1,0 +1,4 @@
+These run.sh scripts provide some example templates for the tool scripts present under this directory.
+As they are quite numerous, you might find that some of the options for a particular run script might 
+not have been updated in line with the script it is associated.  If warnings or errors occur due to 
+absent mandatory options or defunct options, please check the perl script for documentation.   
