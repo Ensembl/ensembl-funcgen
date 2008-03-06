@@ -218,7 +218,7 @@ sub table_ids {
 
   Example    : my @rset_cc_ids = @{$result_set->chip_channel_ids()};
   Description: Getter for the chip channel ids for this ResultSet.
-  Returntype : listref
+  Returntype : arrayref
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -491,18 +491,18 @@ sub log_label {
   my $label;
   
   if(defined $self->feature_type()){
-	$label = $self->feature_type->name."\t";
+	$label = $self->feature_type->name.":";
   }else{
-	$label = "Unknown FeatureType\t";
+	$label = "Unknown FeatureType:";
   }
 
   if(defined $self->cell_type()){
-	$label .= $self->cell_type->name."\t";
+	$label .= $self->cell_type->name;
   }else{
 	$label .= "Uknown CellType";
   }
 
-  return $self->name."\t".$self->analysis->logic_name."\t".$label;
+  return $self->name.":".$self->analysis->logic_name.":".$label;
 }
 
 
