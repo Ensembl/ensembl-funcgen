@@ -33,7 +33,7 @@ Nathan Johnson, njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Importer;
 
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date open_file run_system_cmd);
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::Parsers::ArrayDesign;
@@ -108,16 +108,16 @@ sub new{
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $assm_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $update_xml, 
-	  $no_mage, $eset_name, $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, $ucsc_coords)
+	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $no_mage, $eset_name, 
+	  $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, $ucsc_coords, $verbose)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'ASSEMBLY', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
-				 'UPDATE_XML', 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
-				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS'], @_);
+				 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
+				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS', 'VERBOSE'], @_);
 
   
   #### Define parent parser class based on vendor
@@ -209,15 +209,18 @@ sub new{
   $self->{'recover'} = $recover || 0;
   #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
-  $self->{'update_xml'} = $update_xml || 0;
+  #$self->{'update_xml'} = $update_xml || 0;
   $self->{'write_mage'} = $write_mage || 0;
   $self->{'no_mage'} = $no_mage || 0;
   $self->{'experimental_set_name'} = $eset_name if $eset_name;
   $self->{'old_dvd_format'} = $old_dvd_format || 0;
   $self->{'ucsc_coords'} = $ucsc_coords || 0;
+  $self->{'verbose'} = $verbose || 0;
 
-  #Will a general norm method be applicable fo all imports?
+  #Will a general norm method be applicable for all imports?
   #Already casued problems with Bed imports... remove?
+  #Could set NORM_METHOD in Parser!!
+  warn "Need to fully implement norm_method is validate_mage, remove ENV NORM_METHOD?";
   $self->{'norm_method'} = $norm_method || $ENV{'NORM_METHOD'};
  
   if ($self->vendor ne 'NIMBLEGEN'){
@@ -225,25 +228,38 @@ sub new{
 	warn "Hardcoding no_mage for non-NIMBLEGEN imports";
   }
 
-  #Set vendor specific attr dependent vars
-  #$self->set_config();
-
+ 
+  if($self->{'no_mage'} && $self->{'write_mage'}){
+	throw('-no_mage and -write_mage options are mutually exclusive, please select just one');
+  }
 
   #### Set up DBs and load and reconfig registry
-  #Why are we defining reg_config and regdb?
-  #isn't regdb implicit from reg_config?
-  #Yes but we want to be able to temporarily overwrite registry with defined db
-  #Mmm this still has not effect and infact is not implemented like this anyway?
 
-  ### LOAD REGISTRY
-
+  ### Load Registry
   #Can we load the registry using the assembly version, then just redefine the efg DB?
+  #We have problems here if we try and load on a dev version, where no dev DBs are available on ensembldb
+  #Right what we need to do here is get the latest API version for the assembly we want to use
+  #Then load the registry from that version
+  #Then we can remove some of the dnadb setting code below?
+
+  #How does the registry pick up the schema version??
+
+  #We should really load the registry first given the dnadb assembly version
+  #Then reset the eFG DB as appropriate
+
 
   if (! defined $self->{'_reg_config'}) {
 	#current ensembl DBs
+
+	#This will try and load the dev DBs if we are using v49 schema or API?
+	#Need to be mindful about this when developing
+	#Can we for loading of an older registry?
+
+
 	$reg->load_registry_from_db(
 								-host => "ensembldb.ensembl.org",
 								-user => "anonymous",
+								-db_version => 48, #$self->{'release'},
 								-verbose => $self->verbose(),
 							   );
 
@@ -320,7 +336,16 @@ sub new{
 
 	  #Remove block below when we can
 	  my $dbhost = ($self->{'ssh'}) ? $host_ip : $host;
-	  $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $user, $pass);
+
+	  #This isn't set yet!?
+	  #When we try to load, say 49, when we only have 48 on ensembldb
+	  #This fails because there is not DB set for v49, as it is not on ensembl DB
+	  #In this case we need to load from the previous version
+	  #Trap this and suggest using the -schema_version/release option
+	  #Can we autodetect this and reload the registry?
+	  #We want to reload the registry anyway with the right version corresponding to the dnadb
+
+	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $user, $pass);
 
 
 	  #ConfigRegistry will try ans set this
@@ -476,15 +501,14 @@ sub init_experiment_import{
   }
   #Should we separate path on group here too, so we can have a dev/test group?
   
-  #Set and validate input dir
+  #Set and create dirs
   $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->vendor().'/'.$self->name();
-  throw('input_dir is not defined or does not exist ('.$self->get_dir('input').')') 
-      if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
-
+  throw('input_dir is not defined or does not exist ('.
+		$self->get_dir('input').')') if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
   $self->create_output_dirs('raw', 'norm', 'caches', 'fastas');
-
   throw("No result_files defined.") if (! defined $self->result_files());
 
+  #Log input files
   if (@{$self->result_files()}) {
     $self->log("Found result files arguments:\n\t".join("\n\t", @{$self->result_files()}));
   }
@@ -501,190 +525,86 @@ sub init_experiment_import{
 	$self->log('WARNING: No normalisation analysis specified');
   }
   
+  warn "Need to check env vars here or in Parser or just after set_config?";
+  #Need generic method for checking ENV vars in Helper
   #check for ENV vars?
   #R_LIBS
   #R_PATH if ! farm
   #R_FARM_PATH 
 
+  $self->validate_group();#import experimental_group
 
-
-
-  
-  #Need to import to egroup here if not present and name, location & contact specified
-  $self->validate_group();
-
-
-  warn "Need to check env vars here?";
-	
-  #fetch experiment
-  #if recovery and ! experiment throw 
-  #else if ! experiment new and store
-  
-  #rename instance to name? Do we need this composite fetch?
-  my $exp_adaptor = $self->db->get_ExperimentAdaptor();
-  
-  #print "XXXXXXXXXX featching by name ".$self->name()."\n";
-  
+  #Get experiment
+  my $exp_adaptor = $self->db->get_ExperimentAdaptor();  
   my $exp = $exp_adaptor->fetch_by_name($self->name());	#, $self->group());
-  #should we not just do store here, as this will return the experiment if it has already been stored?
-
-
-
-
-  
-
-
-  #have this in a separate method?
-  #we want it to generate if not present or flag specified
-  #i.e. only skip generation if flag not defined 
-
-  #separate script?  Hard to decouple meta import from Tab2MAGE generation
-  #can we pass Tab2MAGE mode?
-  #if false we write the template and quit, if true we read xml and populate ExperimentalChips accordingly
-  #this should only write template when xml present if we specify write flag.
-  #this needs to be deciphered in init_import
-
-  
-
-
-  #so we want three modes?
-  #generate Tab2MAGE and exit, default if no file present of flag?
-  #read Tab2MAGE, import xml and update replicates and continue. default if no xml record present or overwrite flag specified
-  #skip all of above as we have already done it or are not bothered
-
-  #change get_import_ResultSet to sets based on replicate info
-  #validate this against xml?
-
-  #then exit 
-  #unless mage_xml specified or present unless generate mage_tab specified in which case start from scratch?
-
-  #Do we really want to read this all the time?  Only if specified?
-  #How can we know, test whether xml is stored in DB, overwrite but warn if already present?
-  #what to do during recovery?
-
-  #what about retrospectively changing replicates in the DB?
-  #what impact would his have on result_sets and or norm results
-  #none if we have the standard chip by chip norm on the 'all chip' import set
-  #only affects exps which have mixed targets or design types
-  #for all others we just need to update the result sets accordingly and reimport the mage-xml
-
-  
-  #~/src/bin/tab2mage.pl -e E-TABM-TEST.txt -k -t ./ -c -d PairData/
-
-
-  #this should only write if not present and xml record not present
-  #then if we define write mage we rewrite template only if not present
-
-  #so first thing is to try and retrieve xml from DB
-  #if true and write_mage is false skip everything
-  #this would only happen on recovery
-  #how are we going to handle changing xml midway through recovery
-
-  #we should probably add an option to load a custom xml file
-
-  #Need to validate result sets
-
-  #can we read XML directly from DB via MAGE, NO :(
-  
-  #how is recovery going to be affected
-
+ 
+  #This is only used for the first test below.
   my $xml = $exp_adaptor->fetch_mage_xml_by_experiment_name($self->name());# if $self->{'write_xml'};
-
-  #if(! $self->{'write_mage'}){#else must be a recovery? unless it's specified in error
-	
-	#surely we will only get xml if we are recovering!
-	#this depends on when we write the xml? has to be after exp import?
-	#do we have to import exp to write magetab?
-	#nope, this is too messy to implement a dry run, as we'redepending on DB queries during the array/exp chip import
-
-	#just run with recovery on ?  which kinda makes it a bit useless, not for first import when we write the mage tab
-	#this means we'll have to update the replicate fields
-	
-	#we need some way of turning 'recovery' on if we know we've imported, maybe don't have to do this
-	#if all recovery based methods after this are non critical
-	#The main problem is having to roll back ExpChips which haven't actually been imported
-	#We just need to create a 'LOADING' status
-	#then we can omit some of the recovery methods? and not have to define recovery unless we are truly recovering
-	#what about recovery methods during meta import, define another flag, or just turn recovery on?
-	#turn recovery on before generating(in 2nd real import) exp, if we have xml file?
-	#what if someone defines a custom file and we haven't actually imported yet?
-	#This will enable someone to append/overwrite exp/result data if exp names are duplicated
-
-	#should have full import flag to force people to be aware of possible overwrite issue?
-	#this will just get turned on by default all the time rendering it useless?
-	#This is a hard one to bullet proof.  Just write it and worry about protection later
-
-	#do we have xml_id(would have to update experiment table) or experiment_id(does not follow primary key naming convention).
-
-	#we could have this as a no fail, which would enable a custom xml file
-
-
-#	if( ! $self->run_system_cmd('mysql '.$self->db->connect_string()." -e '$sql' > ".$self->get_config('mage_xml_file'), 1)){
-	  #only write template if write_mage defined
-#	  $got_xml = 1;
-#	}
-#  }
 
   #DO NOT CHANGE THIS LOGIC!
   #write mage if we specify or we don't have a the final xml or the template
-  #recovery is turned on to stop exiting when previously stored chips
-  #are found from the 'write_mage' run.
-  #this does mean than if you import without running the write_mage step 
-  #(This is now not possible as we test the DB for xml, not for the presence of a file?)
+  #recovery is turned on to stop exiting when previously stored chips are found from the 'write_mage' run.
+  #This does mean that if you import without running the write_mage step
   #you could potentially be overwriting someone elses experiment info
-  #To get around the problem of rolling back every chip, we need to add teh LOADING status
-  #which should be removed once imported.
-
+  #No way of getting around this, need to make warning obvious, add to end of log!!!
+  #We always want to write and update xml and ResultSets if we're running the 2nd stage of the import
+  #Why would we ever want to skip the validate process?
+  #Leave for now as this is working as we want it
+  #But propose to remove skip functionality
+  
   if( ! $self->{'no_mage'}){
 
 	if($self->{'write_mage'} || !( -f $self->get_config('tab2mage_file') || $xml)){
 	  $self->{'write_mage'} = 1;
 	  $self->backup_file($self->get_config('tab2mage_file'));
 	}
-	elsif($xml && (! $self->{'update_xml'})){
-	  $self->{'recover'} = 1;
-	  $self->{'skip_validate'} = 1;
-	}
-	elsif( -f $self->get_config('tab2mage_file')){#logic dictates this has to be true
-	  #run tab2mage and import xml
-	  #update replicate info
-	  #do we need to validate xml vs meta info in read methods?
-	  #turn recovery on?
-	  #back up xml if present? Or just recreate?
-	  #can we allow custom xml files here
+	#elsif($xml && (! $self->{'update_xml'})){#Changed this so we always update
+	#elsif(! $self->{'update_xml'}){
+
+
+
+	  #Here, we need to always update_xml
+	  #If we are doing the 2nd stage
+	  #Currently this is skipping as we haven't explicitly set it
+	  #To remove this...
+	  #what we need to do is check that we don't test for update_xml, 
+	  # i.e. assuming that we're running the second stage of the import.
+	  # Therefore we need a boolean to set whether it is the first stage..else update_xml implicit
+	  # write mage is explicit flag
+	  # Or if we have not tab2mage file?
+	  # we can then override this explicitly with update_xml?
+	  # WE're never likely edit the xml directly, so we always want to validate and update
+	  # so write mage flag become update_experiment?  No this is no obvious behaviour
+	  # We need to warn about removing the write_mage flag after we have updated it
+	  # Otherwise we will never get to 2nd stage
+
+
+	#No mage is still valid as we may want to jus import and experiment
+	#Before receiving correct meta data
+	#When we can then rerun the import with -write_mage to update the resultsets
+
+	#  $self->{'recover'} = 1;
+	#  $self->{'skip_validate'} = 1;
+	#}
+	elsif( -f $self->get_config('tab2mage_file')){#Run Tab2Mage
+
 	  $self->backup_file($self->get_config('mage_xml_file'));
-	  
-	  #do experiment check script first?
-	  
-	  my $cmd = 'tab2mage.pl -e '.$self->get_config('tab2mage_file').' -k -t '.$self->get_dir('output').' -c -d '.$self->get_dir('results');
+	  my $cmd = 'tab2mage.pl -e '.$self->get_config('tab2mage_file').' -k -t '.$self->get_dir('output').
+		' -c -d '.$self->get_dir('results');
 	  
 	  $self->log('Reading tab2mage file');
-	  
-	  my $t2m_exit_code = run_system_cmd($cmd, 1);#no exit flag due to non-zero exit codes
-	  
+	  my $t2m_exit_code = run_system_cmd($cmd, 1);#no exit flag due to non-zero exit codes	  
 	  warn "tab2mage exit code is  $t2m_exit_code"; 
 	  
 	  if(! ($t2m_exit_code > -1) && ($t2m_exit_code <255)){
 		throw("tab2mage failed.  Please check and correct:\t".$self->get_config('tab2mage_file')."\n...and try again");
 	  }
 	  
-	  #rename file
-	  #$cmd = 'mv '.$self->get_dir('output').'/\{UNASSIGNED\}.xml '.$self->get_dir('output').'/'.$self->name().'.xml';
-	  #$self->run_system_command($cmd);
 	  $self->{'recover'} = 1;
-	}#else{
-	#this is true if we delete the tab2mage file and specify write_mage
-	#we should write the mage file and exit as normal
-	#	throw('Grrr, this should never be true, check the mage logic');
-	#  }
-  	
-	
-	#now we just need to use read_meta/write_mage in read methods to figure out if we need to validate or just write the template
-	#we should read again if not write mage
-	#should validate mage
+	}
   }
 	
-
+  #Recovery now set so deal with experiment
   if ($self->recovery() && ($exp)) {
     $self->log("Using previously stored Experiment:\t".$exp->name);
   } elsif ((! $self->recovery()) && $exp) {
@@ -711,12 +631,6 @@ sub init_experiment_import{
   #remove and add specific report, this is catchig some Root stuff
   #$self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
   
-							
- #if we write Exp info in init then a reimport will fail unless recover is set?
-
-
-
-
   return;
 }
 
@@ -836,7 +750,7 @@ sub create_output_dirs{
   foreach my $name (@dirnames) {
 
 	if($name eq 'caches'){
-	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}."/${name}/".$self->dbname() if(! defined $self->{"${name}_dir"});
+	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}."/${name}/".$self->db->dbc->dbname() if(! defined $self->{"${name}_dir"});
 	}
 	elsif($name eq 'fastas'){
 	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}."/${name}/" if(! defined $self->{"${name}_dir"});
@@ -1380,21 +1294,26 @@ sub group{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : At risk - to be removed, us db->dbc->dbname
 
 =cut
 
 sub dbname{
   my ($self) = shift;	
   
-  $self->{'dbname'} = shift if @_;
+
+  deprecate('Use $imp->db->dbname');
+
+  return $self->db->dbc->dbname;
+
+  #$self->{'dbname'} = shift if @_;
 
 
-  if(! defined  $self->{'dbname'}){
-	warn 'Need to guess dbname here?';
-  }
+ # if(! defined  $self->{'dbname'}){
+#	warn 'Need to guess dbname here?';
+#  }
     
-  return $self->{'dbname'};
+#  return $self->{'dbname'};
 }
 
 =head2 recovery
@@ -1721,29 +1640,25 @@ sub register_experiment{
   $self->init_experiment_import();
   #can we just have init here instead?
 
+
+  
   if($self->{'write_mage'} || $self->{'no_mage'}){
 	$self->read_data("array");
 
-
 	if(! $self->{'no_mage'}){
 	  $self->log("PLEASE CHECK AND EDIT AUTOGENERATED TAB2MAGE FILE:\t".$self->get_config('tab2mage_file'));
+	  #we could make this print only if it was set by the user, not by the Importer
+	  $self->log('REMEMBER TO REMOVE -write_mage FLAG BEFORE UPDATING');
 	  exit;
 	}
   }
   elsif(! $self->{'no_mage'}){#This should be a no_channel flag, set dependent on import mode(gff_chip, gff_chan)
-	#Need to accomodate chip level imports in validate!!
-
+	#Need to accomodate chip level imports in validate?
 	$self->validate_mage() if (! $self->{'skip_validate'});
   }
 
-
   $self->read_data("probe");
   $self->read_data("results");  
-
-  #warn("we need to access the default method for the vendor here, or override using the gff option");
-  #my $tmp_logic_name = ($self->vendor() eq "SANGER") ? "SangerPCR" : "RawValue";
-  #$self->import_results("raw", $tmp_logic_name);
-  
   #Need to be able to run this separately, so we can normalise previously imported sets with different methods
   #should be able t do this without raw data files e.g. retrieve info from DB
 
@@ -1751,7 +1666,8 @@ sub register_experiment{
   
   if (defined $norm_method) {
 	$self->R_norm($norm_method);
-    #$self->import_results("norm", $norm_method);
+	#change this to $self->$norm_method
+	#so we can have non-R_norm normalisation
   }
   
   
@@ -1784,29 +1700,63 @@ sub validate_mage(){
   $self->log("Validating mage file:\t".$self->get_config('mage_xml_file'));
 
 
+  #Updating ResultSets:
+  #Given that we might want to add a chip to an experiment we will also need to update the tab2MAGE
+  #mage_xml and ResultSets accordingly.
+
+  #This should happen if we specify update_xml
+  #Should recovery also always force update?
+  #Considering the two run modes, write tab2mage & validate and import
+  #There is a subtle difference between recovery and update mage_xml
+  #Do we always run in recovery mode for the validate&import step?
+  #Yes we do, so can't guarantee the this means we want to update.
+  #So we need to change update_xml to update to reflect the changed functionality on ResultSets
+  
+  #If we run an update without on then chips will be loaded but xml and ResultSets will not be altered :(
+  #If we're running the 2nd stage we should always be updating the xml anyway!!!!
+  #As there is no reason to rerun the validate & import step without it.(unless we're debugging maybe)
+  #So why should we ever run without it?
+
+  #To update ResultSets we validate as normal and then update where appropriate
+  #What has precedence? Replicate name?
+  #Update echip types as appropriate
+  #What if this invalidates original rsets?
+  #Then list sets not covered for removal by script?
+
+
+
   my (%echips, @log);
-  my $anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue');
+  my $rset_adaptor = $self->db->get_ResultSetAdaptor;
+  my $chan_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('RawValue');
 
   #need to change this to default analysis
-  my $vsn_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('VSN_GLOG');
+  #There we issues with setting VSN_GLOG as an env var
+  #as this is tested for and the norm was skipped for some reason?
+  my $chip_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('VSN_GLOG');
 
-  my $chan_rset = $self->get_import_ResultSet($anal, 'channel');
-  my $rset =  $self->get_import_ResultSet($vsn_anal, 'experimental_chip');
-  #doesn't really matter whether we call channel or experimental_chip?
-  #yes it does, if we get a channel level set, we're going to resuse the channel cc_ids
-  #for the exp_chip result sets, causing the roll back bug
+  #Try import sets like this first, so we know ther is new data
+  my $chan_rset = $self->get_import_ResultSet($chan_anal, 'channel');
+  my $rset =  $self->get_import_ResultSet($chip_anal, 'experimental_chip');
 
 
-
+  #Else get them anyway and log
   if(! $rset){
-	my @tmp = @{$self->db->get_ResultSetAdaptor->fetch_all_by_name_Analysis($self->name()."_IMPORT", $anal)};
-
-	if(scalar(@tmp) > 1){
-	  throw('Found more than one IMPORT ResultSet for '.$self->name().'_IMPORT with analysis '.$anal->logic_name());
+	
+	if($chan_rset){
+	  $self->log('Identified partial Channel only import, updating MAGE-XML');
 	}
-	$rset = shift @tmp;
+	else{
+	  ($chan_rset) = @{$rset_adaptor->fetch_all_by_name_Analysis($self->experiment->name.'_IMPORT', $chan_anal)};
+	  #Don't need to test for >1 here as this has already been done in get_import_ResultSet
+	  $self->log('All ExperimentalChips imported, updating MAGE-XML only');
+	}
+
+	($rset) = @{$rset_adaptor->fetch_all_by_name_Analysis($self->experiment->name.'_IMPORT', $chip_anal)};
   }
-  
+
+
+  #This will never happen now due to the change tab2mage rules in init_experiment
+  #Remove?
   if(! $rset){
 	throw('Cannot find ResultSet, are you trying to import a new experiment which already has a tab2mage file present?  Try removing the file, or specifying the -write_mage flag to parse_and_import.pl');
   }
@@ -2225,8 +2175,7 @@ sub validate_mage(){
   #careful not to update multiple times, just once for each ec
  
   my $eca = $self->db->get_ExperimentalChipAdaptor();
-
-  warn "WE DO NOT YET ACCOMODATE UPDATING THE RESULT_SETS VIA UPDATE_XML!!!";
+  
 
   foreach my $echip (@{$rset->get_ExperimentalChips()}) {
 	my ($cell_type, $feature_type);
@@ -2255,8 +2204,7 @@ sub validate_mage(){
 			#record cell and feature types
 			$types{'feature'}{$feature_type->name()} = $feature_type;
 			$types{'cell'}{$cell_type->name()} = $cell_type;
-
-			$self->log("Created BioRep ResultSet:\t$biorep\t$cell_type\t$feature_type");
+			$self->log("Created BioRep ResultSet:\t".$rsets{$biorep}->log_label);
 		  }
 		  
 		  $rsets{$biorep}->add_table_id($echip->dbID(), $rset->get_chip_channel_id($echip->dbID()));
@@ -2287,8 +2235,7 @@ sub validate_mage(){
 			   -CELL_TYPE    => $tech_reps{$techrep}{'cell_type'},
 			  );
 
-			$self->log("Created TechRep ResultSet:\t$techrep\t". $tech_reps{$techrep}{'cell_type'}."\t".
-					    $tech_reps{$techrep}{'feature_type'});
+			$self->log("Created TechRep ResultSet:\t".$rsets{$techrep}->log_label);
 		  }
 		  $rsets{$techrep}->add_table_id($echip->dbID(), $rset->get_chip_channel_id($echip->dbID()));
 		}
@@ -2297,8 +2244,6 @@ sub validate_mage(){
 
 	$echip->adaptor->update_replicate_types($echip);#store rep info
   }
-
-  #$self->log("Created replicate ResultSets:\n::\t\t\t\t\t\t".join("\n::\t\t\t\t\t\t", map $_->name, values %rsets));
 
 
   ### Reset/Update/Clean import sets type fields
@@ -2385,8 +2330,6 @@ sub validate_mage(){
 	  
 	  next if $ctype_name eq 'feature_type';#skip feature type
 
-	  $self->log("Creating toplevel ResultSet for:\t".$self->experiment->name()."\t${ctype_name}\t${ftype_name}");
-
 	  #we need to give these a different key so we're not overwriting in the rset hash
 	  $rsets{$self->experiment->name().'_'.$toplevel_cnt} = Bio::EnsEMBL::Funcgen::ResultSet->new
 		(
@@ -2396,6 +2339,8 @@ sub validate_mage(){
 		 -FEATURE_TYPE => $toplevel_sets{$ftype_name}{'feature_type'},
 		 -CELL_TYPE    => $toplevel_sets{$ftype_name}{$ctype_name}{'cell_type'},
 		);
+
+	  $self->log("Created toplevel ResultSet for:\t". $rsets{$self->experiment->name().'_'.$toplevel_cnt}->log_label);
 
 	  #add consituent table ids
 	  foreach my $new_rset(@{$toplevel_sets{$ftype_name}{$ctype_name}{'rsets'}}){
@@ -2412,11 +2357,81 @@ sub validate_mage(){
 	}
   }
 
+  #ResultSet update strategy
+  #To avoid messyness in resolving result_set differences
+  #Simply delete all that are not used as supporting sets
+  #and load new ones, log old supporting rsets for manual
+  #reassignment and rollback.
+  #If we have clash between an old set and a new set, rename old
+  #set and log
+  #We might not always have the previous data files.
+  #But we might want to maintain all the previous rsets and just add a new one
+  #At present this would require acquiring the previous Tab2Mage file
+  #and adding the new data to it.
+  #We could do with a way to merge data already in the DB with new meta data to form a new Tab2Mage file
+  #and validate that
+  
+
+  my @previous_rep_sets;
+  my @supporting_rset_dsets;
+
+
+  #Get non-import Sets
+  map {push @previous_rep_sets, $_ if $_->name !~ /_IMPORT$/} 
+	@{$rset_adaptor->fetch_all_by_Experiment_Analysis($self->experiment, $chip_anal)};
+ 
+
+  #rollback_ResultSet if possible
+  if(@previous_rep_sets){
+	$self->log('Found previously stored ResultSets');
+
+	foreach my $prev_rset(@previous_rep_sets){
+	  #THis is pushing undef array?
+	  #But surely this should do nothing?
+	  my $rset_dset = $self->rollback_ResultSet($prev_rset);
+	  push @supporting_rset_dsets, $rset_dset if @$rset_dset;
+	}
+  }
+
+  #Note: If we remove chips from an experiment, they are only removed from the non-import sets
+  #To fully remove them, you need to use the rollback_experiment.pl script with -chip_ids
+  #can we log this in get_import_ResultSet?
+
   $self->log('Storing ResultSets');
+
   #Store new tech, biol and toplevel type rsets
   foreach my $new_rset(values %rsets){
+	my $replace_txt;
+
+	#Rename old set if we have a name/anal/type clash
+	foreach my $prs(@supporting_rset_dsets){
+	
+	  my ($pset, $dset) = @$prs;
+
+	  if($pset->log_label eq $new_rset->log_label){
+		$self->log("Found update supporting ResultSet clash, renaming to:\tOLD_".$rset->log_label);
+
+		#We risk overwriting any previously renamed result sets.
+		#Should use datestamp
+		my $sql = 'UPDATE result_set set name="OLD_'.$rset->name.'" where result_set_id='.$pset->dbID;
+		$self->db->dbc->do($sql);
+
+		if($dset->product_FeatureSet){
+		  $self->log('Associated DataSet('.$dset->name.') has already been processed. It is not wise to replace a supporting set without first rolling back the FeatureSet, as there may be additional supporting data');
+		  warn 'Associated DataSet('.$dset->name.') has already been processed. It is not wise to replace a supporting set without first rolling back the FeatureSet, as there may be additional supporting data';
+		}
+		
+		$replace_txt = 'Proposed ResultSet(dbID) replacement for DataSet('.$dset->name."):\t".$pset->dbID.' > ';
+	  }
+	}
+
+
 	$new_rset->add_status('DAS_DISPLAYABLE');
-	$rset->adaptor->store($new_rset);
+	my ($new_rset) = @{$rset_adaptor->store($new_rset)};
+
+	if(defined $replace_txt){
+	  $self->log($replace_txt.$new_rset->dbID);
+	}
   }
 
   my $xml_file = open_file($self->get_config('mage_xml_file'));
@@ -3262,7 +3277,7 @@ sub get_import_ResultSet{
 		  $self->log("Rolling back results for $table_name:\t".$cc->unique_id);
 		}
 		
-		$self->db->rollback_results($rset->get_chip_channel_id($cc->dbID()));
+		$self->rollback_results([$rset->get_chip_channel_id($cc->dbID())]);
 	  }
 	}
   }
