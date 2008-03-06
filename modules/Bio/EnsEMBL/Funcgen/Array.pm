@@ -453,7 +453,7 @@ sub get_ArrayChip_by_design_id{
   my ($self, $design_id) = @_;
 
 
-  warn "This needs to get the array chip if not defined?? but we're using it to test whether is has been stored same problem as probe_design";
+  warn "This needs to get the array chip if not defined?? but we're using it to test whether is has been stored same problem as probe_design?";
 
   my ($achip);
   throw("Must supply a valid array chip design_id") if (! defined $design_id);

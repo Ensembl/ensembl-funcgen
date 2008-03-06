@@ -225,7 +225,7 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 #Build and validate all these in Experiment::new? We only need these for importing/analysing???
 #need to test this before making
-warn "change the implementation of Helper to set up log files etc only after we have initialised/tested Importer";
+
 $output_dir  = $data_dir."/output/".uc($vendor)."/".$name;
 
 #mkpath $output_dir;#log/debug files fail in Helper without this

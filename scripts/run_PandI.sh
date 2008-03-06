@@ -14,25 +14,22 @@
 PASS=$1
 
 
-$EFG_SRC/scripts/import/parse_and_import.pl\
-	-name Stunnenberg_all_OID_1963\
+time $EFG_SRC/scripts/import/parse_and_import.pl\
+	-name LF2_H3K36me3_NCMLS\
 	-format tiled\
 	-location Hinxton\
 	-contact njohnson@ebi.ac.uk\
-	-species homo_sapiens\
+	-species mus_musculus\
 	-vendor NIMBLEGEN\
-	-cell_type U2OS\
-	-feature_type H3ac\
-	-fasta\
+	-cell_type LF2\
+	-feature_type H3K36me3\
 	-port 3306\
 	-host ens-genomics1\
-	-dbname nath_homo_sapiens_funcgen_46_36h\
+	-dbname update_chip_mus_musculus_funcgen_49_37b\
 	-array_set\
-	-array_name "2005-05-10_HG17Tiling_Set"\
+	-array_name "2006-07-17_MM8Tiling_Set"\
 	-group efg\
-	-data_version 45_36g\
-	-farm 0\
-	-verbose\
+	-assembly 37\
 	-tee\
 	-pass $PASS\
 	-recover
