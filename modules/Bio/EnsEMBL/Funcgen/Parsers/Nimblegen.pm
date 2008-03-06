@@ -225,6 +225,9 @@ sub read_array_data{
   #($design_desc = do { local ($/); <$fh>;}) =~ s/\r*\n$//;
   #close($fh);
   
+  #Would be better if we only import the design info for the chips listed in the SampleKey.txt file
+  #Some cyclical dependency going on here :|
+
   while ($line = <$fh>){
     
     $line =~ s/\r*\n//;#chump
@@ -313,6 +316,7 @@ sub read_experiment_data{
   my $self = shift;
 
   $self->read_array_data($self->get_config('notes_file'));
+
   my $t2m_file = $self->init_tab2mage_export() if $self->{'write_mage'};
 
 
@@ -335,6 +339,7 @@ sub read_experiment_data{
 
 
   warn "Do we need to validate each line here against the header array?";
+
   while ($line = <$fh>){
     next if $line =~ /^\s+\r*\n/;
     $line =~ s/\r*\n//;#chump
@@ -663,6 +668,8 @@ sub read_probe_data{
   #No, we just need to import without cache, then re-do the resolve step
   #Are we still going to get disconnects when we dump the cache?
 
+  
+  warn "Read probe data should only read in the array chips which are specified by the ExperimentalChip?  Not just what is present in the DesignNotes file?";
 
   
   foreach my $array(@{$self->arrays()}){
@@ -1021,6 +1028,9 @@ sub read_and_import_results_data{
 	  foreach my $chan (@{$echip->get_Channels()}) {
 		
 		if ( ! $chan->has_status('IMPORTED')) {
+
+		  #we need to set write_mage here
+
 		  my $array = $echip->get_ArrayChip->get_Array();
 		  
 		  $self->get_probe_cache_by_Array($array) || throw('Failed to get the probe cache handle for results import, resolve cache here?');			
