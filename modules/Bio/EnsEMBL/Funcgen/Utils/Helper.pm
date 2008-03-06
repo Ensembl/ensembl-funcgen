@@ -616,10 +616,8 @@ sub define_and_validate_sets{
 	  if(! $mismatch){
 		
 		for my $i(0..$#stored_ssets){
+
 		  if($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID){
-
-
-
 			$mismatch=1;
 			last;
 		  }
@@ -734,6 +732,13 @@ sub define_and_validate_sets{
 sub rollback_FeatureSet{
   my ($self, $fset, $force_delete) = @_;
 
+  #Need to test before we do adaptor call? Cyclical dependency here :|
+  #We need to implement this method locally
+  #This is because we don't force Helper to have a DB attribute
+  #Maybe we should?
+  #We're always going to have a DB so why not?
+  #Because we might want to use the Helper to Log before we can create the DB?
+
   my $adaptor = $fset->adaptor || throw('FeatureSet must have an adaptor');
   my $db = $adaptor->db;
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
@@ -767,6 +772,210 @@ sub rollback_FeatureSet{
 
   return;
 }
+
+
+=head2 rollback_ResultSet
+
+  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
+  Arg[2]     : Boolean - optional flag to roll back IMPORT set results
+  Example    : $self->rollback_ResultSet($rset);
+  Description: Deletes all status. chip_channel and result_set entries for this ResultSet.
+               Will also rollback_results sets if rollback_results specified.  This will also
+               update or delete associated ResultSets where appropriate.
+               If an associated
+               I
+  Returntype : Arrayref 
+  Exceptions : Throws if ResultSet not valid
+               Throws is result_rollback flag specified but associated product FeatureSet found.
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+
+
+sub rollback_ResultSet{
+  my ($self, $rset, $rollback_results) = @_;
+  
+  #what about?
+  if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
+	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
+  }
+  
+  #We're still validating against itself??
+  #And reciprocating part of the test :|
+  my $sql;
+  my $db = $rset->adaptor->db;
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+  $self->log("Rolling back ResultSet:\t".$rset->name);
+  
+  #Is this ResultSet used in a DataSet?
+  my $dset_adaptor = $self->db->get_DataSetAdaptor;
+  my $rset_adaptor = $self->db->get_ResultSetAdaptor;
+  my @skipped_sets;
+  
+  foreach my $dset(@{$dset_adaptor->fetch_all_by_supporting_set($rset)}){
+	
+	if (defined $dset){
+	  $self->log('Found linked DataSet('.$dset->name.") for ResultSet:\t".$rset->log_label);
+	  
+	  if(my $fset = $dset->product_FeatureSet){
+		$self->log('Skipping rollback. Found product FeatureSet('.$fset->name.") for supporting ResultSet:\t".$rset->log_label);
+		warn('Add more info on logs here on which script to use to edit the DataSet');
+		
+		@skipped_sets = ($rset,$dset);
+
+		#What impact does this have on result_rollback?
+		#None as we never get there
+		#But what if we have specified rollback results?
+		#We should throw here as we can't perform the rollback
+		
+		if($rollback_results){
+		  throw("Could not rollback supporting ResultSet and results for:\t".$rset->log_label.
+				"\nManually resolve the supporting/feature set relationship or omit the ".
+				"rollback_results argument if you simply want to redefine the ResultSet without loading any new data");
+		}
+	  }
+	  else{
+		#Found rset in dset, but not yet processed so can remove safely.
+		$self->log("Removing supporting ResultSet from DataSet:\t".$dset->name."\tResultSet:".$rset->log_label);
+		$sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID.
+		  ' and type="result" and supporting_set_id='.$rset->dbID;
+		$db->dbc->do($sql);
+	  }
+	}
+  }
+  
+
+  #Now do similar for all associated ResultSets
+  if(! @skipped_sets){
+
+	#Rollback status first
+
+	#We need to move this as we could still fail after here, but before we've deleted anything else
+
+	$sql = 'DELETE from status where table_name="result_set" and table_id='.$rset->dbID;
+	$db->dbc->do($sql);
+	
+	#Rollback results if required
+	if($rollback_results){
+	  $self->log("Rolling back result for ResultSet:\t".$rset->log_label);
+	  #First we need to check whether these cc_ids are present in other result sets.
+	  #Get all associated data_sets
+	  #checking for other product_FeatureSets for given cc_ids
+	  #If we are rolling back results then we delete the cc_ids from 
+	  #associated result_sets and dompletely delete any ResultSets 
+	  #which are a subset of this one
+	  #Warn if we delete an off target set
+	  #Warn if we don't rollback results due associated supporting ResultSet
+	  #which has been used to produce a product FeatureSet.
+		
+	  my @assoc_rsets = @{$rset_adaptor->fetch_all_linked_by_ResultSet($rset)};
+	  my $feature_supporting = 0;
+	  
+	  foreach my $assoc_rset(@assoc_rsets){
+		
+		foreach my $dset(@{$dset_adaptor->fetch_all_by_supporting_set($assoc_rset)}){
+		  
+		  if(my $fset = $dset->product_FeatureSet){
+			$feature_supporting++;
+			$self->log('Found product FeatureSet('.$fset->name.
+					   ") for associated supporting ResultSet:\t".$rset->log_label);
+		  }
+		}					
+	  }
+		
+
+	  if(! $feature_supporting){
+		#This also handles Echip status rollback
+		$self->rollback_results($rset->chip_channel_ids);
+		$self->log('Removing chip_channel entries from associated ResultSets');
+		
+		#Now remove cc_ids from associated rsets.
+		foreach my $assoc_rset(@assoc_rsets){
+		  $sql = 'DELETE from chip_channel where result_set_id='.$assoc_rset->dbID.
+			' and chip_channel_id in('.join', ', @{$assoc_rset->chip_channel_ids}.')';
+		  $db->dbc->do($sql);
+		  
+		  # we need to delete complete subsets from the result_set table.
+		  my $subset = 1;
+		  
+		  foreach my $cc_id(@{$assoc_rset->chip_channel_ids}){
+			
+			if(! grep/$cc_id/, @{$rset->chip_channel_ids}){
+			  $subset = 0;
+			  last;
+			}
+		  }
+			
+		  #Found complete subset so can delete
+		  if($subset){
+			$self->log("Deleting associated subset ResultSet:\t".$assoc_rset->log_label);
+			
+			#Delete status entries first
+			$sql = 'DELETE from status where table_name="result_set" and table_id='.$assoc_rset->dbID;
+			$db->dbc->do($sql);
+			
+			#All cc records will have already been deleted
+			$sql = 'DELETE from result_set where result_set_id='.$assoc_rset->dbID;
+			$db->dbc->do($sql);
+		  }
+		}
+
+
+		#Now warn about Echips in Experiments which may need removing.
+		my %experiment_chips;
+		
+		foreach my $echip(@{$rset->get_ExperimentalChips}){
+		  $experiment_chips{$echip->experiment->name}{$echip->unique_id} = undef;
+		}
+		
+		foreach my $exp(keys %experiment_chips){
+		  $self->log("Experiment $exp has had ".scalar(values %{$experiment_chips{$exp}}).
+					 " ExperimentalChips rolled back:\t".join('; ', values %{$experiment_chips{$exp}}).
+					 ".\nTo fully remove these, use the rollback_experiment.pl (with -chip_ids) script");
+		}
+	  }
+	  else{
+		#$self->log("Skipping result rollback, found $feature_supporting associated supporting ResultSets for:\t".$rset->log_label);
+		#warn("Skipping result rollback, found $feature_supporting associated supporting ResultSets for:\t".$rset->log_label);
+		#do we need to return this info in skipped_rsets?
+		#This is just to allow importer to know which ones 
+		#weren't rolled back to avoid naming clashes.
+		#so no.
+
+		#But the results persist on the same chip_channel_ids
+		#So not returning this rset may result in loading of more data
+		#This should fail as status entries will not have been removed
+		#Still we should throw here as we'll most likely want to manually resolve this
+		#Besides this would be obfuscating the function
+
+		throw("Could not rollback ResultSet and results, found $feature_supporting associated supporting ".
+			  "ResultSets for:\t".$rset->log_label."\nManually resolve the supporting/feature set relationship or omit the ".
+			 "rollback_results argument if you simply want to redefine the ResultSet without loading any new data");
+	  }
+	}
+	else{
+	  $self->log('Skipping results rollback');
+	  
+	  if($rset->name =~ /_IMPORT$/){
+		throw("Rolling back an IMPORT set without rolling back the result can result in ophaning result records for a whole experiment.  Specify the result_rollback flag if you want to rollback the results for:\t".$rset->log_label);
+	  }
+	}
+	
+	#Delete chip_channel and result_set records
+	$sql = 'DELETE from chip_channel where result_set_id='.$rset->dbID;
+	$db->dbc->do($sql);
+	$sql = 'DELETE from result_set where result_set_id='.$rset->dbID;
+	$db->dbc->do($sql);
+  }
+
+  return \@skipped_sets;
+}
+
+
+
+
 
 =head2 rollback_ExperimentalSet
 
@@ -812,6 +1021,50 @@ sub rollback_ExperimentalSet{
   return;
 }
   
+
+
+=head2 rollback_results
+
+  Arg[1]     : Arrayref of chip_channel ids
+  Example    : $self->rollback_results($rset->chip_channels_ids);
+  Description: Deletes all result records for the given chip_channel ids.
+               Also deletes all status records for associated experimental_chips or channels
+  Returntype : None
+  Exceptions : Throws if no chip_channel ids provided
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+#changed implementation to take arrayref
+
+sub rollback_results{
+  my ($self, $cc_ids) = @_;
+
+  my @cc_ids = @{$cc_ids};
+  
+
+  if(! scalar(@cc_ids) >0){
+	throw('Must pass an array ref of chip_channel ids to rollback');
+  }
+  
+  #Rollback status entries
+  my $sql = 'DELETE s from status s, chip_channel cc WHERE cc.chip_channel_id IN ('.join(',', @cc_ids).
+	') AND cc.table_id=s.table_id AND cc.table_name=s.table_name';
+  
+  if(! $self->db->dbc->do($sql)){
+	throw("Status rollback failed for chip_channel_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
+  }
+
+
+  #Rollback result entries
+  $sql = 'DELETE from result where chip_channel_id in (0)';#'.join(',', @cc_ids).');';
+  if(! $self->db->dbc->do($sql)){
+	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
+  }
+
+  return;
+}
 
 
 1;
