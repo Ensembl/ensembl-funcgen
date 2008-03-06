@@ -312,8 +312,8 @@ sub fetch_all_by_supporting_set {
     }
 	
 	#self join here to make sure we get all linked result_sets
-    #my $sql = 'ds.data_set_id IN (SELECT ds.data_set_id from data_set ds where result_set_id='.$set->dbID().')';
-	my $sql = 'ss.type="'.$set->set_type.'" AND ss.supporting_set_id='.$set->dbID();
+    my $sql = ' ds.data_set_id IN (SELECT data_set_id from supporting_set where type="'.$set->set_type.'" and supporting_set_id='.$set->dbID().')';
+	#my $sql = 'ss.type="'.$set->set_type.'" AND ss.supporting_set_id='.$set->dbID();
 
     return $self->generic_fetch($sql);	
 }
