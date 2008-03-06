@@ -52,7 +52,44 @@ use vars qw(@ISA @EXPORT);
 
 
 
+=head2 fetch_all_by_FeatureType_FeatureSets
 
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : Bio::EnsEMBL::FeatureType
+  Arg [3]    : (optional) string - analysis logic name
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_all_by_Slice_FeatureType($slice, $ft);
+  Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
+  Returntype : Listref of Bio::EnsEMBL::SetFeature objects
+  Exceptions : Throws if no FeatureType object provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_FeatureType_FeatureSets {
+  my ($self, $ftype, @fsets) = @_;
+	
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
+
+  my @fs_ids;
+
+  throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@fsets) == 0;
+
+  foreach my $fset (@fsets) {
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
+	push (@fs_ids, $fset->dbID());
+  }
+
+  my $fs_ids = join(',', @fs_ids) if scalar(@fs_ids >1);
+
+  my $constraint = $self->_main_table->[1].'.feature_set_id = fs.feature_set_id AND '.
+	$self->_main_table->[1].'.feature_type_id='.$ftype->dbID.' AND '.$self->_main_table->[1].'.feature_set_id '; 
+  $constraint .= (scalar(@fs_ids) >1) ? "IN ($fs_ids)" : '='.$fs_ids[0];
+
+  return $self->generic_fetch($constraint);
+}
 
 =head2 fetch_all_by_Slice_FeatureType
 
@@ -72,8 +109,8 @@ use vars qw(@ISA @EXPORT);
 sub fetch_all_by_Slice_FeatureType {
   my ($self, $slice, $type, $logic_name) = @_;
 	
-
-  throw('Need type as parameter') if ! $type->isa("Bio::EnsEMBL::Funcgen::FeatureType");
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $type);
+  
   my $ft_id = $type->dbID();
   
   my $constraint = $self->_main_table->[1].".feature_set_id = fs.feature_set_id AND ".
