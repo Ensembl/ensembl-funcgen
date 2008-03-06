@@ -113,6 +113,41 @@ use vars qw(@ISA);
 #could have attach_result to feature method?
 #force association when loading features
 
+
+=head2 fetch_all_linked_by_ResultSet
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ResultSet
+  Arg [2]    : Bio::EnsEMBL::Analysis
+  Example    : my @rsets = @{$rset_adaptor->fetch_all_by_Experiment_Analysis($exp, $anal)};
+  Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets with the given Analysis from the Experiment
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
+  Exceptions : Throws if ResultSet not valid or stored
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_linked_by_ResultSet{
+  my ($self, $rset) = @_;
+
+  $self->db->is_stored_an_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+
+
+  my $constraint = ' cc.result_set_id in (SELECT distinct(result_set_id) from chip_channel where chip_channel_id in('.join(', ', @{$rset->chip_channel_ids}).') ';
+  
+  my @tmp = @{$self->generic_fetch($constraint)};
+
+  #Now remove query set
+  my @linked_sets;
+
+  map {push @linked_sets, $_ if $_->dbID != $rset->dbID} @tmp;
+
+  return \@linked_sets;
+
+}
+
+
+
 =head2 fetch_all_by_Experiment_Analysis
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
@@ -636,8 +671,9 @@ sub list_dbIDs {
                Replicates are combined using a median of biological replicates based on 
                their mean techinical replicate scores
   Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
-  Exceptions : Throws if not experimental_chip ResultSet
+  Exceptions : Warns if not experimental_chip ResultSet
                Throws if no Slice passed
+               Warns if 
   Caller     : general
   Status     : At risk
 
@@ -668,6 +704,20 @@ sub list_dbIDs {
 sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe) = @_;
   
+
+  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
+	throw('You must pass a valid Bio::EnsEMBL::Slice');
+  }
+
+  $self->db->is_valid_and_stored('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+
+
+  if($rset->table_name eq 'channel'){
+	warn('Can only get ResultFeatures for an ExperimentalChip level ResultSet');
+	return;
+  }
+
+
   my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
   my ($biol_rep, $score, $start, $end, $cc_id, $old_start, $old_end, $probe_field);
 
@@ -706,13 +756,6 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
 
 
-  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
-	throw('You must pass a valid Bio::EnsEMBL::Slice');
-  }
-
-  if(! (ref($rset) && $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet'))){
-	throw('You must pass a valid Bio::EnsEMBL::Funcgen::ResultSet');
-  }
 
   
   my @ids = @{$rset->table_ids()};
@@ -732,6 +775,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #we need to build a hash of cc_id to biolrep value
   #Then we use the biolrep as a key, and push all techrep values.
   #this can then be resolved in the method below, using biolrep rather than cc_id
+
 
   my $sql = "SELECT ec.biological_replicate, cc.chip_channel_id from experimental_chip ec, chip_channel cc 
              WHERE cc.table_name='experimental_chip'
@@ -808,20 +852,13 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 	' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
 
   #can we resolves replicates here by doing a median on the score and grouping by cc_id some how?
-  
   #what if a probe_id is present more than once, i.e. on plate replicates?
 
+  #To extend this to perform median calculation we'd have to group by probe_id, and ec.biological_replicate
+  #THen perform means across biol reps.  This would require nested selects 
+  #would this group correctly on NULL values if biol rep not set for a chip?
+  #This would require an extra join too. 
 
- # $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
-#	' AND r.probe_id=pf.probe_id'.
-#	  ' AND pf.seq_region_id=sr.seq_region_id'.
-#		' AND sr.core_seq_region_id ='.$slice->get_seq_region_id().
-#		  ' AND sr.schema_build="'.$self->db->_get_schema_build($slice->adaptor->db()).'"'.
-#          ' AND pf.seq_region_end>='.$slice->start().
-#          ' AND pf.seq_region_start<='.$slice->end().
-#          ' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
-
-  #warn "sql is \n$sql";
 
   $sth = $self->prepare($sql);
   $sth->execute();
@@ -855,7 +892,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
     if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature?
 
 	  #only if with_probe(otherwise we have a genuine on plate replicate)
-	  #if probe_id is same then we're just getting the extra probe record?
+	  #if probe_id is same then we're just getting the extra probe for a different array?
 	  #cc_id might be different for same probe_id?
 
 	  #How can we differentiate between an on plate replicate and just the extra probe records?
@@ -866,11 +903,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 	  #This would still be the same probe tho, so still one RF
 
 	  #When do we want to split?
-	  #If probe_id is different...do we need to order by probe_id?
-
-	  #Don't we just want to check the result_id?
-	  #
-	  
+	  #If probe_id is different...do we need to order by probe_id?	  
 	  #probe will never be defined without with_probe
 	  #so can omit from test
 
