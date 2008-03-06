@@ -514,7 +514,7 @@ sub read_and_import_result_data{
 		
 		if ($self->recovery() && $roll_back{$echip->dbID()}){
 		  $self->log("Rolling back results for ExperimentalChip:\t".$echip->unique_id());
-		  $self->db->rollback_results($cc_id);
+		  $self->rollback_results($cc_id);
 		}
 
 		$self->log("Reading SANGER result file for ".$echip->unique_id().":\t".$chip_files{$echip->unique_id()});
