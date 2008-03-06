@@ -163,6 +163,10 @@ sub load_table_data{
 sub rollback_results{
   my ($self, @cc_ids) = @_;
 
+
+  deprecate('rollback_results has Moved to Helper.pm, and now takes array ref');
+
+
   throw("Need to pass some chip_channel_ids to roll_back") if (scalar(@cc_ids) == 0);
   
   #Rollback status entries
