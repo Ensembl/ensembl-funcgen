@@ -709,7 +709,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
   }
 
-  $self->db->is_valid_and_stored('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
 
   if($rset->table_name eq 'channel'){
