@@ -103,7 +103,7 @@ sub new {
 	.$db->dbc->password.' '.$db->dbc->dbname.' -P'.$db->dbc->port;
   $self->{'dbname'} = $db->dbc->dbname;
   $self->{'builds'} = (scalar(@$builds)>0) ? $builds : ['DEFAULT'];
-  $self->{'skip_mc'} = $skip_mc;
+  $self->{'skip_meta_coord'} = $skip_mc;
   $self->{'check_displayable'} = $check_displayable;
   
   return $self;
@@ -140,16 +140,17 @@ sub update_db_for_release{
 	
   #do seq_region_update to validate dnadb first
   #hence avoiding redoing longer methods
-  $self->validate_new_seq_regions();#$force_srs);
+  $self->validate_new_seq_regions;#($force_srs);
   $self->update_meta_schema_version;
   $self->update_meta_coord;
+  $self->check_meta_strings;
   
 
   $self->log('??? Have you dumped/copied GFF dumps ???');
   $self->log("??? Have you diff'd the sql for each species vs. a fresh schema ???");
   $self->log('Need to implement check meta string check');
 
-  $self->log(' :: Finished updating '.$self->{'dbname'}.' for release');
+  $self->log(':: Finished updating '.$self->{'dbname'}." for release\n");
 }
 
 sub validate_new_seq_regions{
@@ -286,6 +287,7 @@ sub update_meta_coord{
   foreach my $table_name(@table_names){
 	my $sql1 = "select distinct(cs.name), mc.coord_system_id, cs.version, mc.max_length from coord_system cs, meta_coord mc where mc.table_name='$table_name' and mc.coord_system_id=cs.coord_system_id";
 	
+	$self->log('');
 	$self->log("Updating meta_coord max_length for $table_name:\n\tname\tcoord_system_id\tversion\tmax_length");
 	
 	#can we test for emtpy array here? Then skip delete.
@@ -317,7 +319,11 @@ sub update_meta_coord{
 	map $_ = ${$_}[0], @cs_ids;
 
 	$self->log("New max_lengths for $table_name are:");
-	map {$self->log(join("\t", @{$_})."\n")} ['coord_system_id', 'max_length', 'longest record dbID'];
+	
+	#wtf?
+	#map {$self->log(join("\t", @{$_}))} ['coord_system_id', 'max_length', 'longest record dbID'];
+	$self->log(join("\t", ('coord_system_id', 'max_length', 'longest record dbID')));
+
 
 	foreach my $cs_id(@cs_ids){
 	  #This will always give a length of 1 even if there are no features present
@@ -331,7 +337,7 @@ sub update_meta_coord{
 	  @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 	  #Convert one multi element array_ref into array
 	  @info = @{$info[0]};
-	  $self->log(join("\t", @info));
+	  $self->log(join("\t\t", @info));
 
 	  $sql = "INSERT INTO meta_coord values(\"${table_name}\", \"${cs_id}\", \"$info[1]\")";
 
@@ -362,26 +368,122 @@ sub update_meta_coord{
 sub check_meta_strings{
   my ($self, $all_builds) = @_;
   
+  #update flag?
+
   my @regf_fsets;
   my $passed = 1;
-  
+  my $fset_a = $self->db->get_featureSetAdaptor;
+  my $mc = $self->db->get_MetaContainer;
+  my $regf_a = $self->db->get_RegulatoryFeatureAdaptor;
 
   if($all_builds){
-	@regf_fsets = @{$self->db->get_FeatureSetAdaptor->fetch_all_by_type('regulatory')};
+	@regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
   }else{
-	@regf_fsets = ($self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures'));
+	@regf_fsets = ($fset_a->fetch_by_name('RegulatoryFeatures'));
   }
   
   my @meta_keys = ('regulatory_string_feature_set_id', 'regulatory_string_feature_type_id');
-  #my @meta_keys = ('regulatory_feature_set_ids', 'regulatory_feature_type_ids', 'regulatory_anchor_set_ids');
-  
 
-  my $mcc = $self->db->get_MetaContainer;
+  #What about anchor/seed sets?
+
+  $self->log_header("Validating meta entries for FeatureSets:\t".join("\t", (map $_->name, @regf_fsets)));
+
+
+  #How do we validate this?
+  #Check all feature_sets exist
+  #Pull back some features from a test slice and check the number of bits match.
+  #Check the feature_type string exists and matches else create.
+
 
   foreach my $fset(@regf_fsets){
+	#get version number of build
+	my (undef, $build_version) = split/v/, $fset->name;
+	$build_version = (defined $build_version) ? '_v'.$build_version : '';
+	my $fset_string_key = 'regulatory_string_feature_set_id'.$build_version;
+	my $ftype_string_key = 'regulatory_string_feature_type_id'.$build_version;
+	my $fset_string = $mc->list_value_by_key($fset_string_key)->[0];
+	my $ftype_string = $mc->list_value_by_key($ftype_string_key)->[0];
+
+	$self->log('Validating '.$fset->name.":\n\t$fset_string_key($fset_string) vs $ftype_string_key($ftype_string)");
+
+	#Test fset vs ftype string
+	if(! defined $fset_string && ! defined $ftype_string){
+	  $self->log("FAIL:\tNo $fset_string_key or $ftype_string_key found in meta table");
+	}
+	elsif(! defined $fset_string){
+	  $self->log("FAIL:\tNo $fset_string_key found in meta table");
+	}
+	else{
+	  my @fset_ids = split/,/, $fset_string;
+	  my @ftype_ids;
+	  my @new_ftype_ids;
+	  my $ftype_fail = 0;
+	  
+	  if(defined $ftype_string){
+		@ftype_ids = split/,/, $ftype_string;
+	  }
+	  else{
+		$self->log("WARNING:\tNo $ftype_string_key found in meta table, will update using $fset_string_key");
+	  }
+	  
+
+	  if(scalar(@fset_ids) != scalar(@ftype_ids)){
+		$self->log("FAIL:\tLength mismatch between $fset_string_key and $ftype_string_key");
+	  }
+
+	  foreach my $i(0..$#fset_ids){
+		my $supporting_set_id = $fset_ids[$i];
+		my $sset = $fset_a->fetch_by_dbID($supporting_set_id);
+
+		if(! defined $sset){
+		  $self->log("FAIL:\t$fset_string_key $supporting_set_id does not exist in the DB");
+		}
+		else{
+		  #test/build ftype string
+		  
+		  if(defined $ftype_string){
+			
+			if($sset->feature_type->dbID != $ftype_ids[$i]){
+			  $ftype_fail = 1;
+			  $self->log("FAIL:\t$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
+			}
+		  }
 	
+		  push @new_ftype_ids, $sset->feature_type->dbID;
+	
+		}
+	  }
+
+
+	  #Set ftype_string
+	  my $new_ftype_string = join(',', @new_ftype_ids);
+
+	  if(! defined $ftype_string){
+		$self->log("Updating $ftype_string_key to:\t$new_ftype_string");
+		$self->db->do("INSERT into meta values(NULL, '$ftype_string_key', '$new_ftype_string')");
+	  }
+	  elsif($ftype_fail){
+		$self->log("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
+	  }
+
+
+	  #Finally validate versus a reg feat
+	  my ($regf_dbID) = @{$self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1')};
+	  
+	  if(! defined $regf_dbID){
+		$self->log("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
+	  }
+	  else{
+		my @rf_bits = split/,/, $regf_a->fetch_by_dbID($regf_dbID)->display_label;
+		
+		if(scalar(@rf_bits) != scalar(@fset_ids)){
+		  $self->log("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key");
+		}
+	  }
+	}
   }
 
+  return;
 }
 
 
@@ -390,21 +492,20 @@ sub check_meta_strings{
 sub log_data_sets{
   my $self = shift;
   
-  my (@dsets, $status);
+  my ($status);
   my $txt = 'Checking ';
 
-  if($self->{'check_displayable'}){
-	$status = 'DISPLAYABLE';
-	$txt .= $status.' ';
-  }
+  $status = 'DISPLAYABLE' if($self->{'check_displayable'});
+
+	
+  my @dsets = @{$self->db->get_DataSetAdaptor->fetch_all($status)};
+  $txt .= scalar(@dsets).' ';
+  $txt.= $status.' ' if($self->{'check_displayable'});
 
   $txt .= 'DataSets';
 
   $self->log_header($txt);
   
-
-
-  @dsets = @{$self->db->get_DataSetAdaptor->fetch_all()};
   
   
   foreach my $dset(@dsets){
@@ -413,7 +514,7 @@ sub log_data_sets{
 	my $fset = $dset->product_FeatureSet;
 	$self->log_set("Product FeatureSet:\t", $fset) if $fset;
 	
-	my @supporting_sets = @{$dset->get_supporting_sets};
+	#my @supporting_sets = @{$dset->get_supporting_sets};
 
 	if(my @supporting_sets = @{$dset->get_supporting_sets}){
 	  map $self->log_set("SupportingSet:\t\t", $_), @supporting_sets;
