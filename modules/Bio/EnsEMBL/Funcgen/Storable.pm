@@ -189,7 +189,7 @@ sub add_status{
    #can add a status to an unstored object which 
 
    if($self->adaptor && $self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
-     $self->{'states'} = @{$self->adaptor->fetch_all_states($self)};
+     @{$self->{'states'}} = @{$self->adaptor->fetch_all_states($self)};
    }
 
    push @{$self->{'states'}}, $status;
