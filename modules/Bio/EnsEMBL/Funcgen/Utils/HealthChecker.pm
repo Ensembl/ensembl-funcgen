@@ -229,7 +229,11 @@ sub update_meta_schema_version{
   
   my $schema_version = $self->get_schema_and_build($self->{'dbname'})->[0];
   
-  my $sql = "UPDATE meta set meta_value='$schema_version' where meta_key='schema_version'";
+  
+
+  my $sql = 'DELETE from meta where meta_key="schema_version"';
+  $self->db->dbc->db_handle->do($sql);
+  $sql = "INSERT into meta values (NULL, 'schema_version', '$schema_version')";
  
   $self->db->dbc->db_handle->do($sql);
 
@@ -245,10 +249,6 @@ sub update_meta_coord{
 	$self->log("Skipping meta_coord update\n");
 	return;
   }
-
-
-  my $sql = 'UPDATE meta set meta_value=48 where meta_key="schema_version"';
-  $self->db->dbc->db_handle->do($sql);
   
   #set default table_name
   if(! @table_names || scalar(@table_names) == 0){
@@ -320,7 +320,8 @@ sub update_meta_coord{
 	map {$self->log(join("\t", @{$_})."\n")} ['coord_system_id', 'max_length', 'longest record dbID'];
 
 	foreach my $cs_id(@cs_ids){
-	  
+	  #This will always give a length of 1 even if there are no features present
+
 	  $sql = "SELECT s.coord_system_id, (t.seq_region_end - t.seq_region_start + 1 ) as max, t.${table_name}_id "
 			. "FROM $table_name t, seq_region s "
 			  . "WHERE t.seq_region_id = s.seq_region_id "
