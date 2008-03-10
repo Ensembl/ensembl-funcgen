@@ -67,6 +67,37 @@ sub store_states{
 
 }
 
+=head2 fetch_all
+
+  Arg[1]     : string - optional status name e.g. 'DISPLAYABLE'
+  Example    : my @dsets = @{$dsa->fetch_all()};
+  Description: Gets all available objects from the DB, which 
+               might not be a good idea, shouldnt be called on 
+               the BIG tables though
+  Returntype : ARRAYREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all {
+  my ($self, $status) = @_;
+
+  my ($constraint);
+  #Can we throw here if we're trying to get all from known large tables
+
+
+  $constraint = $self->status_to_constraint($status);
+
+  if(defined $status && ! defined $constraint){
+	warn "You have specifed a status($status) which is not present in the DB";
+  }
+
+
+  return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
+
+}
 
 
 
@@ -77,7 +108,7 @@ sub store_states{
   Returntype : ARRAYREF
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - can we just reimplement fetch_all with optional status arg
 
 =cut
 
@@ -95,13 +126,13 @@ sub fetch_all_displayable{
   Exceptions : Throws is no status defined
                Warns if  
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - change this to fetch_all with optional status arg
 
 =cut
 
 sub fetch_all_by_status{ 
   my ($self, $status) = @_; 
-  my $constraint = $self->status_to_constraint('DISPLAYABLE');
+  my $constraint = $self->status_to_constraint($status);
 
   return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
 }
