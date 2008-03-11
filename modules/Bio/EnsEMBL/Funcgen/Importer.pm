@@ -185,24 +185,24 @@ sub new{
     
   #### Set vars and test minimum mandatory params for any import type
 
-  $self->{'name'} = $name if $name;
+  $self->{'name'} = $name || throw('Mandatory param -name not met');#if $name;
   $self->vendor(uc($vendor));	#already tested
   $self->{'format'} = uc($format) || 'TILED'; #remove default?
   $self->group($group) if $group;
   $self->location($location) if $location;
   $self->contact($contact) if $contact;
-  $self->{'species'} = $species || throw('Mandatory param -species not met');
+  $species || throw('Mandatory param -species not met');
   $self->array_name($array_name) if $array_name;
   $self->array_set($array_set) if $array_set;
   $self->array_file($array_file) if $array_file;
   $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
-  $self->result_files($result_files)if $result_files; #Sanger specific ???
+  $self->result_files($result_files)if $result_files;
   $self->experiment_date($exp_date) if $exp_date;
   $self->description($desc) if $desc;
   $assm_version || throw('Mandatory param -assembly not met');
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
   $self->{'output_dir'} = $output_dir if $output_dir; #config default override
-  $self->input_dir($input_dir) if $input_dir; #config default override
+  $self->{'input_dir'} = $input_dir if $input_dir; #config default override
   $self->farm($farm) if $farm;
   $self->{'ssh'} = $ssh || 0;
   $self->{'_dump_fasta'} = $fasta || 0;
@@ -271,11 +271,13 @@ sub new{
   }
 
 
+
+  #Validate species
+  my $alias = $reg->get_alias($species) || throw("Could not find valid species alias for $species\nYou might want to clean up:\t".$self->get_dir('output'));
+  $self->species($alias);
+  $self->{'param_species'} = $species;#Only used for dir generation
+
   #SET UP DBs
-  #reset species to standard alias to allow dbname generation
-  $self->species($reg->get_alias($self->species()));
-
-
   if($db){
 	#sanity test vs. data_version
 	if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
@@ -437,6 +439,8 @@ sub new{
   #Set config here instead?
   #So we can check all mandatory params
   #Set vendor specific attr dependent vars
+  
+ 
   $self->set_config();
 
 
@@ -496,15 +500,18 @@ sub init_array_import{
 sub init_experiment_import{
   my ($self) = shift;
 
-  foreach my $tmp ("name", "group", "data_dir") {
+  #Change this to take config mandatory params?
+  #No specific to exp import
+  #Name is used in set_config anyway
+  #Currently we only have array and experiment import, both of which should have names
+  #Make mandatory?
+
+  foreach my $tmp ("group", "data_dir") {#name now generically mandatory
     throw("Mandatory arg $tmp not been defined") if (! defined $self->{$tmp});
   }
   #Should we separate path on group here too, so we can have a dev/test group?
   
-  #Set and create dirs
-  $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->vendor().'/'.$self->name();
-  throw('input_dir is not defined or does not exist ('.
-		$self->get_dir('input').')') if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
+  #Create output dirs
   $self->create_output_dirs('raw', 'norm', 'caches', 'fastas');
   throw("No result_files defined.") if (! defined $self->result_files());
 
@@ -756,7 +763,7 @@ sub create_output_dirs{
 	  $self->{"${name}_dir"} = $ENV{'EFG_DATA'}."/${name}/" if(! defined $self->{"${name}_dir"});
 	}
 	else{
-	  $self->{"${name}_dir"} = $self->get_dir("output")."/${name}" if(! defined $self->{"${name}_dir"});
+	  $self->{"${name}_dir"} = $self->get_dir('output')."/${name}" if(! defined $self->{"${name}_dir"});
 	}
 
 	if(! (-d $self->get_dir($name) || (-l $self->get_dir($name)))){
@@ -1061,75 +1068,6 @@ sub arrays{
   }
 
   return $self->{'arrays'};
-}
-
-
-=head2 data_dir
-  
-  Example    : $imp->data_dir($ENV{'EFG_DATA'});
-  Description: Getter/Setter for root data directory
-  Arg [1]    : optional - default $ENV{'EFG_DATA'}
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-
-sub data_dir{
-  my ($self) = shift;
-  $self->{'data_dir'} = shift if(@_);
-  return $self->{'date_dir'} || $ENV{'EFG_DATA'};
-}
-
-=head2 input_dir
-  
-  Example    : $imp->input_dir($dir);
-  Description: Getter/Setter for input directory for an experiment
-  Arg [1]    : optional - input directory path
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-
-sub input_dir{
-  my ($self) = shift;
-  $self->{'input_dir'} = shift if(@_);
-
-
-  #not implemented, need to convert all get_dir calls to check if method exists or use VendorDefs
-  warn "Not implmented input dir..need to cahnge all get_dir calls when we've implemented VendorDefs";
-
-  return $self->{'input_dir'};
-}
-
-=head2 output_dir
-  
-  Example    : $imp->output_dir($dir);
-  Description: Getter/Setter for input directory for an experiment
-  Arg [1]    : optional - output directory path
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : deprecated
-
-=cut
-
-
-sub output_dir{
-  my ($self) = shift;
-  $self->{'output_dir'} = shift if(@_);
-
-  throw("Deprecated, use get_dir('output') instead");
-
-  #not implemented, need to convert all get_dir calls to check if method exists or use VendorDefs
-  warn "Not implmented output dir..need to cahnge all get_dir calls when we've implemented VendorDefs";
-
-  return $self->{'output_dir'};
 }
 
 
@@ -1535,6 +1473,8 @@ sub species{
   my $self = shift;
 
   #should we do reg alias look up here?
+  #Will we ever want to redefine species?
+  #Change to just getter?
 
   $self->{'species'} = shift if(@_);
 	
