@@ -157,29 +157,36 @@ sub new{
 sub set_config{
   my $self = shift;
 
-  #dir are not set in config to enable generic get_dir method access
+  #This should be general config for all types of import
+  #dirs are not set in config to enable generic get_dir method access
+  #This is really just setting paths rather than config rename?
 
-  #do we need to set an input_dir and an output_dir?
+  $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();
+  throw('input_dir is not defined or does not exist ('.
+		$self->get_dir('input').')') if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
 
-
+  
   if($self->{'old_dvd_format'}){
-	$self->{'design_dir'} = $self->get_dir('data').'/input/'.
-	  $self->vendor().'/'.$self->name().'/DesignFiles';
+	$self->{'design_dir'} = $self->get_dir('input').'/DesignFiles';
   }else{
-	$self->{'design_dir'} = $self->get_dir('data').'/input/'.
-	  $self->vendor().'/'.$self->name().'/Design_information';
+	$self->{'design_dir'} = $self->get_dir('input').'/Design_information';
   }
 
   
   if($self->{'old_dvd_format'}){
-	$self->{'config'}{'notes_file'} = $self->get_dir('data').'/input/'.
-	  $self->vendor().'/'.$self->name().'/DesignNotes.txt';
+	$self->{'config'}{'notes_file'} = $self->get_dir('input').'/DesignNotes.txt';
   }else{
-	$self->{'config'}{'notes_file'} = $self->{'design_dir'}.'/DesignNotes.txt';
+	$self->{'config'}{'notes_file'} = $self->get_dir('design').'/DesignNotes.txt';
   }
   
-  $self->{'config'}{'chip_file'} = $self->get_dir('data').'/input/'.
-    $self->vendor().'/'.$self->name().'/SampleKey.txt';
+  $self->{'config'}{'chip_file'} = $self->get_dir('input').'/SampleKey.txt';
+
+
+
+  #Experiment(output) specific
+  #This should already be set in the run script
+  #As we could get log write errors before we have created the output dir otherwise
+  $self->{'output_dir'} ||= $self->get_dir("data").'/output/'.$self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();
 
   $self->{'config'}{'tab2mage_file'} = $self->get_dir('data').'/output/'.
     $self->vendor().'/'.$self->name().'/E-TABM-'.$self->name().'.txt';
