@@ -223,15 +223,10 @@ throw("Nimblegen import does not support cmdline defined result files") if (@res
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
-#Build and validate all these in Experiment::new? We only need these for importing/analysing???
-#need to test this before making
 
-$output_dir  = $data_dir."/output/".uc($vendor)."/".$name;
-
-#mkpath $output_dir;#log/debug files fail in Helper without this
+#log/debug files fail in Helper without this
+$output_dir  = $data_dir."/output/${species}/".uc($vendor)."/".$name;
 system("mkdir -p $output_dir -m 0755");
-
-
 chmod 0755, $output_dir;
 
 
