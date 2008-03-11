@@ -259,7 +259,7 @@ sub new{
 	$reg->load_registry_from_db(
 								-host => "ensembldb.ensembl.org",
 								-user => "anonymous",
-								-db_version => 48, #$self->{'release'},
+								#-db_version => 48, #$self->{'release'},
 								-verbose => $self->verbose(),
 							   );
 
