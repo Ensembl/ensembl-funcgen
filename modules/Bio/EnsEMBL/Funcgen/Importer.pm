@@ -259,7 +259,7 @@ sub new{
 	$reg->load_registry_from_db(
 								-host => "ensembldb.ensembl.org",
 								-user => "anonymous",
-								#-db_version => 48, #$self->{'release'},
+								-db_version => 48, #$self->{'release'},
 								-verbose => $self->verbose(),
 							   );
 
@@ -277,6 +277,7 @@ sub new{
   $self->species($alias);
   $self->{'param_species'} = $species;#Only used for dir generation
 
+  
   #SET UP DBs
   if($db){
 	#sanity test vs. data_version
@@ -440,7 +441,12 @@ sub new{
   #So we can check all mandatory params
   #Set vendor specific attr dependent vars
   
- 
+  #Generic input dir
+  $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();
+  throw('input_dir is not defined or does not exist ('.
+		$self->get_dir('input').')') if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
+
+  #Parser specific config
   $self->set_config();
 
 
