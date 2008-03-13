@@ -81,7 +81,7 @@ sub parse_and_load{
 
   #we want to set up the new external_feature set here or in the caller?
 
-  print "Parsing and loading LBNL VISTA enhancer data from:\t$file\n";
+  $self->log_header("Parsing and loading LBNL VISTA enhancer data from:\t$file");
 
   #my $feature_internal_id = ($self->find_max_id("external_feature")) + 1;
   
@@ -151,7 +151,7 @@ sub parse_and_load{
     }
 
     if (!$chr_slice) {
-      print STDERR "Can't get slice for chromosme $chr\n";
+      warn "Can't get slice for chromosme $chr\n";
       next;
     }
 
@@ -183,8 +183,6 @@ sub parse_and_load{
     # project if necessary
     if ($new_assembly) {
 
-      #print join("\t", "OLD: ", $start, $end, $strand, $chr, $feature{NAME}) . "\n";
-
       $feature = $self->project_feature($feature, $dummy_analysis, $new_assembly);
 
 	  if(! defined $feature){
@@ -201,9 +199,9 @@ sub parse_and_load{
 
   #$result{FEATURES} = \@features;
 
-  print "Parsed ".($cnt+$skipped)." features\n".
-	"Loaded $cnt features\n".
-	  "Skipped $skipped features\n";
+  $self->log('Parsed '.($cnt+$skipped).' features');
+  $self->log("Loaded $cnt features");
+  $self->log("Skipped $skipped features");
 
   return;
 

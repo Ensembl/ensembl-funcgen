@@ -109,7 +109,7 @@ sub new {
 
 sub parse_and_load {
   my ($self, $file, $old_assembly, $new_assembly) = @_;
-  print ":: Parsing cisRED data\n";
+  $self->log_header("Parsing cisRED data");
 
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   my %features_by_group; # name -> factor_id
@@ -127,7 +127,7 @@ sub parse_and_load {
   #my $blank_factor_id = $self->get_blank_factor_id($db_adaptor);
 
   # Parse motifs.txt file
-  print ":: Parsing cisRED motifs from $file\n";
+  $self->log_header("Parsing cisRED motifs from $file");
   my $skipped = 0;
   my $skipped_xref = 0;
   #my $coords_changed = 0;
@@ -257,9 +257,9 @@ sub parse_and_load {
 	
   close FILE;
 
-  print ":: Stored $cnt cisRED ExternalFeature motif\n";
-  print ":: Skipped $skipped cisRED ExternalFeature motif imports\n";
-  print ":: Skipped an additional $skipped_xref DBEntry imports\n";
+ $self->log("Stored $cnt cisRED ExternalFeature motif");
+ $self->log("Skipped $skipped cisRED ExternalFeature motif imports");
+ $self->log("Skipped an additional $skipped_xref DBEntry imports");
 
   # ----------------------------------------
   # Search regions 
@@ -273,7 +273,7 @@ sub parse_and_load {
   $cnt = 0;
   $skipped_xref = 0;
 	
-  print ":: Parsing cisRED search regions from $search_regions_file\n";
+  $self->log_header("Parsing cisRED search regions from $search_regions_file");
   open (SEARCH_REGIONS, "<$search_regions_file") || die "Can't open $search_regions_file";
   <SEARCH_REGIONS>; # skip header
 
@@ -363,9 +363,9 @@ sub parse_and_load {
   close(SEARCH_REGIONS);
 
   
-  print ":: Stored $cnt cisRED search region ExternalFeatures\n";
-  print ":: Skipped $skipped cisRED search region ExternalFeatures\n";
-  print ":: Skipped an additional $skipped_xref cisRED search region DBEntry imports\n";
+  $self->log("Stored $cnt cisRED search region ExternalFeatures");
+  $self->log("Skipped $skipped cisRED search region ExternalFeatures");
+  $self->log("Skipped an additional $skipped_xref cisRED search region DBEntry imports");
 
   #print "$coords_changed features had their co-ordinates changed as a result of assembly mapping.\n" if ($new_assembly);
 
