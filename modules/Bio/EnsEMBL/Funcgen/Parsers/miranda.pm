@@ -79,7 +79,7 @@ sub parse_and_load{
 
   my ($self, $file, $old_assembly, $new_assembly) = @_;
 
-  print ":: Parsing miRanda data from:\t$file\n";
+  $self->log("Parsing miRanda data from:\t$file");
 
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   my $ftype_adaptor    = $self->db->get_FeatureTypeAdaptor();
@@ -128,6 +128,13 @@ sub parse_and_load{
 	}
 
 	
+	#We can add coding xref to feature type based on the miRbase name
+	#.e.g hsa-mir-24-1
+	#However, this isn't stored as an xref
+	#It is stored in the gene.description
+	#e.g. hsa-mir-24-1 [Source:miRBase;Acc:MI0000080]
+	#Not easy to fetch as descriptions not indexed!
+	#
 
 	#Cache/store FeatureType
 
@@ -213,9 +220,9 @@ sub parse_and_load{
 
   close FILE;
 
-  print ":: Stored $cnt miRanda miRNA ExternalFeatures\n";
-  print ":: Skipped $skipped miRanda miRNA imports\n";
-  print ":: Skipped an additional $skipped_xref DBEntry imports\n";
+  $self->log("Stored $cnt miRanda miRNA ExternalFeatures");
+  $self->log("Skipped $skipped miRanda miRNA imports");
+  $self->log("Skipped an additional $skipped_xref DBEntry imports");
 
   return;
 }
