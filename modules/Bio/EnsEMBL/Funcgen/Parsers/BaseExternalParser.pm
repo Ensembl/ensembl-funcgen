@@ -8,7 +8,9 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Analysis;
+use Bio::EnsEMBL::Funcgen::Utils::Helper;
 
+@ISA = ('Bio::EnsEMBL::Funcgen::Utils::Helper');
 
 # Base functionality for external_feature parsers
 
@@ -18,8 +20,7 @@ use Bio::EnsEMBL::Analysis;
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-  my $self = {};
-  bless $self, $class;
+  my $self = $class->SUPER::new(@_);
 
   #validate and set type, analysis and feature_set here
   my ($type, $db, $clobber, $archive, $import_fsets) = rearrange(['TYPE', 'DB', 'CLOBBER', 'ARCHIVE', 'IMPORT_SETS'], @_);
@@ -40,7 +41,7 @@ sub new {
   $self->{'archive'} = $archive if defined $archive;
   $self->{'import_sets'} = (defined $import_fsets) ? @{$import_fsets} : undef;
   
-  print ":: Parsing and loading $type ExternalFeatures\n";
+  $self->log("Parsing and loading $type ExternalFeatures");
 
   return $self;
 
@@ -114,7 +115,7 @@ sub set_feature_sets{
 	#we don't need data sets for external_sets!
 
 	if(defined $fset){
-	  print ":: Found previous FeatureSet $fset_name\n";
+	  $self->log("Found previous FeatureSet $fset_name");
 
 	  if($self->{'clobber'}){
 
@@ -132,14 +133,14 @@ sub set_feature_sets{
 			if($core_ext_dbid){
 			  #double table delete?
 			  my $sql = "delete x, ox from object_xref ox, xref x where ox.ensembl_object_type='ExternalFeature' and x.external_db_id=$core_ext_dbid and ox.xref_id=x.xref_id and ensembl_id in(".join(', ', @ext_feat_ids).')';
-			  print ":: Clobbering xrefs for $fset_name\n";
+			  $self->log("Clobbering xrefs for $fset_name");
 			  
 			  $self->db->dbc->do($sql);
 			}
 		  }
 		}
 		
-		print ":: Clobbering old features for external feature_set:\t$fset_name\n";
+		$self->log("Clobbering old features for external feature_set:\t$fset_name");
 		my $sql = 'delete from external_feature where feature_set_id='.$fset->dbID;
 		$self->db->dbc->do($sql);
 	  }
@@ -166,8 +167,8 @@ sub set_feature_sets{
 	  my $analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'});
 	  if(! defined $analysis){
 		
-		print ':: Analysis '.$self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'}.
-		  " not found, storing from config hash\n";
+		$self->log('Analysis '.$self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'}.
+		  " not found, storing from config hash");
 		
 
 
@@ -264,8 +265,8 @@ sub validate_and_store_feature_types{
 
 
 	if(! defined $ftype){
-	  print ":: FeatureType '".$ftype_config->{'name'}."' for external feature_set ".$self->{'type'}." not present\n".
-		":: Storing using type hash definitions\n";
+	  $self->log("FeatureType '".$ftype_config->{'name'}."' for external feature_set ".$self->{'type'}." not present");
+	  $self->log("Storing using type hash definitions");
 	
 	  $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(
 													   -name => $ftype_config->{'name'},
@@ -378,17 +379,17 @@ sub project_feature {
   my @segments = @{ $feat_slice->project('chromosome', $new_assembly) };
 
   if(! @segments){
-	print "Failed to project feature:\t".$feat->display_label."\n";
+	$self->log("Failed to project feature:\t".$feat->display_label);
   }
   elsif(scalar(@segments) >1){
-	print "Failed to project feature to distinct location:\t".$feat->display_label."\n";
+	$self->log("Failed to project feature to distinct location:\t".$feat->display_label);
 	return;
   }
 
   my $proj_slice = $segments[0]->to_Slice;
 
   if($feat_slice->length != $proj_slice->length){
-	print "Failed to project feature to comparable length region:\t".$feat->display_label."\n";
+	$self->log("Failed to project feature to comparable length region:\t".$feat->display_label);
 	return;
   }
 
