@@ -11,7 +11,8 @@ perl $EFG_SRC/scripts/external_features/load_external_features.pl\
 	-user ensadmin\
 	-host ens-genomics1\
 	-clobber 1\
-	-dbname drosophila_melanogaster_funcgen_49_44\
+	-dbname not_patched_drosophila_melanogaster_funcgen_50_54a\
+	-cdbname drosophila_melanogaster_core_49_54\
 	-pass $1
 
 
