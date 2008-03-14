@@ -72,7 +72,7 @@ package Bio::EnsEMBL::Funcgen::Utils::Helper;
 #put in Utils?
 use Bio::Root::Root;
 use Data::Dumper;
-use Bio::EnsEMBL::Utils::Exception qw (throw);
+use Bio::EnsEMBL::Utils::Exception qw (throw stack_trace);
 #use Devel::Timer;
 use Carp;#? Can't use unless we can get it to redirect
 use File::Basename;
@@ -117,13 +117,19 @@ sub new{
     #Create object from parent class
     $self = $class->SUPER::new(%args);
 
+	#we need to mirror ensembl behaviour here
+	#use rearrange and set default afterwards if not defined
 
     # objects private data and default values
+	#Not all of these need to be in main
+
     %attrdata = (
-		 _tee          => $main::_tee,
-		 _debug_level  => $main::_debug_level,
-		 _debug_file   => $main::_debug_file,
-		 _log_file     => $main::_log_file,#default should be set in caller
+				 _tee          => $main::_tee,
+				 _debug_level  => $main::_debug_level,
+				 _debug_file   => $main::_debug_file,
+				 _log_file     => $main::_log_file,#default should be set in caller
+				 _no_log       => $main::_no_log,#suppresses log file generation if log file not defined
+				 _default_log_dir => $main::_default_log_dir,
 		);
 
     # set each class attribute using passed value or default value
@@ -131,6 +137,13 @@ sub new{
         ($argname = $attrname) =~ s/^_//; # remove leading underscore
         $self->{$attrname} = (exists $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
     }
+
+	$self->{'_tee'} = 1 if $self->{'_no_log'};
+	#should we undef log_file here too?
+	#This currently only turns off default logging
+
+	$self->{_default_log_dir} ||= $ENV{'HOME'}.'/logs';
+
 
     # DEBUG OUTPUT & STDERR
     if(defined $self->{_debug_level} && $self->{_debug_level}){
@@ -157,19 +170,50 @@ sub new{
 	if (defined $self->{_log_file}){
 	  $main::_log_file = $self->{_log_file};
 		
-	  my $log_file = ">>".$self->{'_log_file'};
+	  my $log_file = '>>'.$self->{'_log_file'};
 
 	  #we need to implment tee here
 	  if($self->{'_tee'}){
 	    #we're not resetting $main::_tee here, we only use it once.
-	    $log_file = "| tee -a ".$self->{_log_file};
+	    $log_file = '| tee -a '.$self->{_log_file};
 	  }
 
 	  open(LOGFILE, $log_file)
 	    or throw("Failed to open log file : $log_file\nError: $!");
 	}
 	else{
-	  open(LOGFILE,">&STDOUT");
+	  #Change this to get the name of the control script and append with PID.out
+	  #This is to ensure that we always capture output
+	  #We need to also log params
+	  #We will have to call this from the child class.
+
+	  #Only do this if we don't have supress default logs set
+	  #To avoid loads of loags during testing
+	  if(! $self->{'_no_log'}){
+
+		my @stack = stack_trace();
+		my $top_level = $stack[$#stack];
+		my (undef, $file) = @{$top_level};
+		$file =~ s/.*\///;
+
+		$self->run_system_cmd('mkdir '.$self->{_default_log_dir}) if(! -e $self->{_default_log_dir});
+		$self->{'_log_file'} = $self->{_default_log_dir}.'/'.$file.'.'.$$.'.log';
+		my $log_file = '>>'.$self->{'_log_file'};
+		warn "No log file defined, defaulting to:\t".$self->{'_log_file'}."\n";
+
+		#we should still tee here
+		if($self->{'_tee'}){
+		  #we're not resetting $main::_tee here, we only use it once.
+		  $log_file = '| tee -a '.$log_file;
+		}
+
+		open(LOGFILE,  $log_file)
+		  or throw("Failed to open log file : $log_file\nError: $!");
+
+	  }
+	  else{
+		open(LOGFILE,">&STDOUT");
+	  }
 	}
 
 	select LOGFILE; $| = 1;  # make log file unbuffered
@@ -415,8 +459,9 @@ sub run_system_cmd{
   # decide where the command line output should be redirected
 
   #This should account for redirects
+  #This just sends everything to 1 no?
 
-  if ($self->{_debug_level} >= 3){
+  if (defined $self->{_debug_level} && $self->{_debug_level} >= 3){
 
     if (defined $self->{_debug_file}){
       $redirect = " >>".$self->{_debug_file}." 2>&1";
@@ -1021,7 +1066,6 @@ sub rollback_ExperimentalSet{
   return;
 }
   
-
 
 =head2 rollback_results
 
