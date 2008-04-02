@@ -67,7 +67,7 @@ sub fetch_by_stable_id {
 
 
 
-  return @{$self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)};
+  return $self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)->[0];
 }
 
 =head2 fetch_all_by_stable_id_FeatureSets
