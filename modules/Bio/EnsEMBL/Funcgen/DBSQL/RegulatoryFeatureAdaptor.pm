@@ -62,7 +62,10 @@ use vars qw(@ISA);
 sub fetch_by_stable_id {
   my ($self, $stable_id) = @_;
 
+
   my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
+
+
 
   return @{$self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)};
 }
@@ -105,13 +108,12 @@ sub fetch_all_by_stable_id_FeatureSets {
 		}} @fsets;
 		 
 	  if(scalar(@fsets) == 1){
-		$constraint .= ' and feature_set_id='.$fsets[0]->dbID;
+		$constraint .= ' and rf.feature_set_id='.$fsets[0]->dbID;
 	  }else{
-		$constraint .= ' AND feature_set_id IN ('.join(', ', (map $_->dbID, @fsets)).')';
+		$constraint .= ' AND rf.feature_set_id IN ('.join(', ', (map $_->dbID, @fsets)).')';
 	  } 
 	}
   }
- 
 
   return $self->generic_fetch($constraint);
 }
