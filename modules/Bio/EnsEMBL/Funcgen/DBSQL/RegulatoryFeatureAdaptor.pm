@@ -64,7 +64,7 @@ sub fetch_by_stable_id {
 
   my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
 
-  return @{$self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)};
+  return $self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)->[0];
 }
 
 =head2 fetch_all_by_stable_id_FeatureSets
