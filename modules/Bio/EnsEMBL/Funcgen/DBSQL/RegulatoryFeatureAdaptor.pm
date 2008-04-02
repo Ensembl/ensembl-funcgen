@@ -105,9 +105,9 @@ sub fetch_all_by_stable_id_FeatureSets {
 		}} @fsets;
 		 
 	  if(scalar(@fsets) == 1){
-		$constraint .= ' and feature_set_id='.$fsets[0]->dbID;
+		$constraint .= ' and rf.feature_set_id='.$fsets[0]->dbID;
 	  }else{
-		$constraint .= ' AND feature_set_id IN ('.join(', ', (map $_->dbID, @fsets)).')';
+		$constraint .= ' AND rf.feature_set_id IN ('.join(', ', (map $_->dbID, @fsets)).')';
 	  } 
 	}
   }
