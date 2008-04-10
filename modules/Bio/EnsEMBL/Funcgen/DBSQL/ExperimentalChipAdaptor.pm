@@ -115,6 +115,27 @@ sub fetch_all_by_Experiment(){
   $self->generic_fetch("ec.experiment_id=".$exp->dbID());
 }
 
+=head2 fetch_all_by_ArrayChip
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ArrayChip
+  Example    : my @ecs = @{$ec_a->fetch_all_by_ArrayChip($achip)};
+  Description: Retrieves all ExperimentChips which have the corresponding ArrayChip design
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ExperimentalChips
+  Exceptions : throws if valid stored ArrayChip not passed
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+
+sub fetch_all_by_ArrayChip{
+  my ($self, $achip) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $achip);
+
+  $self->generic_fetch("ec.array_chip_id=".$achip->dbID());
+}
+
 =head2 fetch_by_unique_and_experiment_id
 
   Arg [2]    : int - unique_id

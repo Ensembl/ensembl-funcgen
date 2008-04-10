@@ -85,7 +85,7 @@ my $reg = "Bio::EnsEMBL::Registry";
 
   Arg [1]    : string - class namespace
   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable e.g. ResultSet etc.
-  Example    : $result_set->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+  Example    : $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
   DESCRIPTION: Validates object class and stored status
   Returntype : none
   Exceptions : Throws if Storable is not valid or stored
@@ -157,105 +157,6 @@ sub load_table_data{
   
   return;
 }
-
-
-
-sub rollback_results{
-  my ($self, @cc_ids) = @_;
-
-
-  deprecate('rollback_results has Moved to Helper.pm, and now takes array ref');
-
-
-  throw("Need to pass some chip_channel_ids to roll_back") if (scalar(@cc_ids) == 0);
-  
-  #Rollback status entries
-  my $sql = 'DELETE s from status s, chip_channel cc WHERE cc.chip_channel_id IN ('.join(',', @cc_ids).
-	') AND cc.table_id=s.table_id AND cc.table_name=s.table_name';
-  if(! $self->dbc->do($sql)){
-	throw("Status rollback failed for chip_channel_ids:\t@cc_ids\n".$self->dbc->db_handle->errstr());
-  }
-
-
-  #Rollback result entries
-  $sql = 'DELETE from result where chip_channel_id in (0)';#'.join(',', @cc_ids).');';
-  if(! $self->dbc->do($sql)){
-	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->dbc->db_handle->errstr());
-  }
-
-  return;
-}
-
-sub rollback_ArrayChip{
-  my ($self, $ac) = @_;
-
-  throw("Need to pass a valid stored ArrayChip to roll back") if (! ($ac && $ac->isa("Bio::EnsEMBL::Funcgen::ArrayChip") 
-								     && $ac->dbID()));
-
-
-  warn "This should really check for other features and results based on this ArrayChip otherwise we end up with orphaned features";
-
-
-  #Shouldn't we rollback status first?
-
-  #should never really have CS imports if not IMPORTED
-  #there is however the potential to trash a lot of data if we were to remove the CS importes by mistake
-  #e.g. the status is deleted by mitake
-  #check whether any other sets are using the data?
-  #we have to check for result using relevant cs_id and cc_id
-  #get all result sets by array chip?  or get all ExperimentalChips by array chip
-  #would have to be result set as we would find our own ecs.  May find our own rset
-  #we should throw if there are any more than this set and force the use of a separate script
-
-  my $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();
-
-  if(! $self->dbc->do($sql)){
-	throw("Probe rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
-  }
-
-  $sql = 'DELETE from status where table_name="array_chip" and table_id='.$ac->dbID();  
-  
-  if(! $self->dbc->do($sql)){
-	throw("Status rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
-  }
-  
-  return;
-}
-
-
-
-sub rollback_ArrayChip_features{
-  my ($self, $ac, $cs) = @_;
-
-
-  if (! ($ac && $ac->isa("Bio::EnsEMBL::Funcgen::ArrayChip") && $ac->dbID())){
-	throw("Need to pass a valid stored ArrayChip to roll back");
-  } 
-  if (! ($cs && $cs->isa("Bio::EnsEMBL::Funcgen::CoordSystem") && $cs->dbID())){
-	throw("Need to pass a valid stored CoordSystem to roll back");
-  }
-
-
-  #same here we need to check for other data sets using this cs and throw
-
-
-  #Do in 2 stages to avoid orphaned probe
-  #do doesn't like multiple statements
-  my $sql = "DELETE pf from probe_feature pf, probe p where p.array_chip_id='".$ac->dbID()."' and p.probe_id=pf.probe_id;";
-  
-  if(! $self->dbc->do($sql)){
-    throw("ProbeFeature rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
-  }
-   
-  #warn "do need to remove imported status for ArrayChip here";
-  #this is only called if it doesn't have the status in question
-
-  
-  return;
-}
-
-
-
 
 
 

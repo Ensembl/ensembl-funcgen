@@ -397,6 +397,8 @@ sub store {
 		#}
 		#}
 	}
+
+	return \@probesets;
 }
 
 =head2 list_dbIDs
