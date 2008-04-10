@@ -1111,5 +1111,77 @@ sub rollback_results{
 }
 
 
+=head2 rollback_ArrayChip
+
+  Arg[1]     : Bio::EnsEMBL::Funcgen::ArrayChip
+  Example    : $self->rollback_ArrayChip($achip);
+  Description: Deletes all Probes, ProbeSets, ProbeFeatures and 
+               states associated with this ArrayChip
+  Returntype : None
+  Exceptions : Throws if ArrayChip not valid and stored
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+
+sub rollback_ArrayChip{
+  my ($self, $ac) = @_;
+
+  my $adaptor = $ac->adaptor || throw('ArrayChip must have an adaptor');
+  my $db = $adaptor->db;
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $ac);
+
+  #Check for dependent ExperimentalChips
+  if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
+	my %exps;
+	my $txt = "Experiment\t\t\t\tExperimetnalChip Unique IDs\n";
+
+	foreach my $ec(@echips){
+	  $exps{$ec->get_Experiment->name} ||= '';
+	
+	  $exps{$ec->get_Experiment->name} .= "\t".$ec->unique_id;
+	}
+
+	map {$txt.= "\t".$_.":".$exps{$_}."\n"} keys %exps;
+	
+	throw("Cannot rollback ArrayChip:\t".$ac->name.
+		  "\nFound Dependent Experimental Data:\n".$txt);
+  }
+  
+
+
+  $self->log("Rolling back ArrayChip:\t".$ac->name);
+  $ac->adaptor->revoke_states($ac);
+
+  
+  #Need to rollback feature here too!
+  #Don't need to rollback on a CS as we have no dependant EChips?
+  #Is this true?  Should we enforce a 3rd CoordSystem argument, 'all' string we delete all?
+
+
+  my $sql = 'DELETE ps from probe p, probe_set ps where p.array_chip_id='.$ac->dbID().' and p.probe_set_id=ps.probe_set_id';
+  if(! $db->dbc->do($sql)){
+	throw("ProbeSet rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
+  }
+
+  $sql = 'DELETE pf from probe p, probe_feature pf where p.array_chip_id='.$ac->dbID().' and p.probe_id=pf.probe_id';
+  if(! $db->dbc->do($sql)){
+	throw("ProbeFeature rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
+  }
+
+
+  $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();
+  
+  if(! $db->dbc->do($sql)){
+	throw("Probe rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
+  }
+     
+  return;
+}
+
+
+
+
 1;
 
