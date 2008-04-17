@@ -28,7 +28,7 @@ require Exporter;
 use vars qw(@ISA @EXPORT);
 use strict;
 
-use Bio::EnsEMBL::Utils::Exception qw(throw);
+use Bio::EnsEMBL::Utils::Exception qw(throw deprecate);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use DBI qw(:sql_types);
 
@@ -88,14 +88,15 @@ sub fetch_all {
   #Can we throw here if we're trying to get all from known large tables
 
 
-  $constraint = $self->status_to_constraint($status);
+  $constraint = $self->status_to_constraint($status) if $status;
 
   if(defined $status && ! defined $constraint){
 	warn "You have specifed a status($status) which is not present in the DB";
+	return undef;
   }
 
 
-  return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
+  return $self->generic_fetch($constraint);
 
 }
 
@@ -126,15 +127,16 @@ sub fetch_all_displayable{
   Exceptions : Throws is no status defined
                Warns if  
   Caller     : General
-  Status     : At Risk - change this to fetch_all with optional status arg
+  Status     : At Risk - To be removed
 
 =cut
 
 sub fetch_all_by_status{ 
   my ($self, $status) = @_; 
-  my $constraint = $self->status_to_constraint($status);
 
-  return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
+  deprecate('Use fetch_all($status) instead');
+  return $self->fetch_all($status);
+
 }
 
 
