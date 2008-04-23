@@ -40,7 +40,7 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Funcgen::Probe;#?
+use Bio::EnsEMBL::Funcgen::ProbeSet;#?
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
