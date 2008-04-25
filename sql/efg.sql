@@ -14,6 +14,7 @@
 
 
 
+
 --
 -- Table structure for table `experimental_group`
 --
@@ -288,7 +289,7 @@ DROP TABLE IF EXISTS `feature_type`;
 CREATE TABLE `feature_type` (
    `feature_type_id` int(10) unsigned NOT NULL auto_increment,
    `name` varchar(40) NOT NULL,
-   `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region', 'Enhancer', 'Expression') default NULL,
+   `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region', 'Enhancer', 'Expression', 'Pseudo') default NULL,
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`feature_type_id`),
    UNIQUE KEY `name_class_idx` (`name`, `class`)
@@ -385,6 +386,23 @@ CREATE TABLE `result` (
 -- X Y here allows repicate probes on same ship
 --- Allows storage of none raw values
 ---Also needs to accommodate different normalisations 
+
+--- Table structure for result_feature
+
+DROP TABLE IF EXISTS `result_feature`;
+CREATE TABLE `result_feature` (
+  `result_feature_id` int(10) unsigned NOT NULL auto_increment,
+  `result_set_id` int(10) unsigned NOT NULL,
+  `seq_region_id` int(10) unsigned NOT NULL,
+  `seq_region_start` int(10) NOT NULL,
+  `seq_region_end` int(10) NOT NULL,
+  `seq_region_strand` tinyint(4) NOT NULL,
+  `window_size` smallint(5) unsigned NOT NULL,
+  `score` blob,
+  PRIMARY KEY  (`result_feature_id`),
+  KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=50;
+
 
 
 --- Table structure for `result_set`
