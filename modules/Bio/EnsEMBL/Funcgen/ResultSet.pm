@@ -13,7 +13,11 @@ Bio::EnsEMBL::ResultSet - A module to represent ResultSet.
 use Bio::EnsEMBL::Funcgen::ResultSet;
 
 my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
-
+                                                       -dbid        => $dbid,
+                                                       -analysis    => $analysis,
+                                                       -table_name  => 'experimental_chip',
+                                                       -table_id    => $ec_id,
+                                                       -type        => 'result',
 ); 
 
 
@@ -39,6 +43,10 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 
 =cut
 
+#To do
+#Change add_table_id to add_ExperimentalChip_Channel?
+
+
 use strict;
 use warnings;
 
@@ -62,7 +70,8 @@ use vars qw(@ISA);
                                                                    -dbid        => $dbid,
                                                                    -analysis    => $analysis,
                                                                    -table_name  => 'experimental_chip',
-                                                                   -table_id    => $ec_id,
+                                                                   -table_id       => $ec_id,
+                                                                   -result_feature_set => 1,
 			                                          ); 
   Description: Constructor for ResultSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
@@ -79,8 +88,8 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($table_name, $table_id)
-    = rearrange(['TABLE_NAME', 'TABLE_ID'], @_);
+  my ($table_name, $table_id, $rf_set)
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULLT_FEATURE_SET'], @_);
 
 
   $self->{'table_id_hash'} = {};
@@ -98,6 +107,7 @@ sub new {
 
   $self->table_name($table_name);
   $self->add_table_id($table_id) if $table_id;
+  $self->result_feature_set($rf_set) if $rf_set;
 
   return $self;
 }
@@ -131,6 +141,26 @@ sub new {
 #get_predicted_feature_analysis_name
 #set ResultFeatures and PredictedFeatures in hash keyed by analysis_name?
 
+
+=head2 result_feature_set
+
+  Arg [1]    : optional - boolean 0 or 1.
+  Example    : if($rset->result_feature_set){ ...use result_feature table ...};
+  Description: Getter and setter for the result_feature_set attribute.
+  Returntype : boolean
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub result_feature_set{
+  my $self = shift;
+
+  $self->{'result_feature_set'} = shift if @_;;
+  return $self->{'result_feature_set'};
+}
 
 
 =head2 table_name
