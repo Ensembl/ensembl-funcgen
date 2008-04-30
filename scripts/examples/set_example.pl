@@ -29,4 +29,13 @@ foreach my $sset ( @supporting_sets ){
 my $pfset = $data_set->product_FeatureSet;
 
 print 'Product FeatureSet is '.$pfset->name."\n";
- print 'Produced by analysis '.$pfset->analysis->logic_name."\n";
+print 'Produced by analysis '.$pfset->analysis->logic_name."\n";
+
+
+#Grab and list all the external feature sets
+my $featureset_adaptor = $efg_db->get_FeatureSetAdaptor;
+my @ext_fsets = @{$featureset_adaptor->fetch_all_by_type('external')};
+
+foreach my $ext_fset(@ext_fsets){
+  print "External FeatureSet:\t".$ext_fset->name."\n";
+}
