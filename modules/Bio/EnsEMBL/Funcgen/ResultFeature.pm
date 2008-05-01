@@ -125,11 +125,27 @@ sub score {  $_[0]->[2];}
   Returntype : Bio::EnsEMBL::Funcgen::Probe
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - This can only be used for Features with window 0.
 
 =cut
 
+#probe_id is currently not available in the result_feature table, so this would be a result/probe_feature query.
+
 sub probe {  $_[0]->[3];}
+
+
+#The following are only used for storage and retrieval, hence why they are not included in new_fast which is streamlined
+#for performance
+#These have no validation so all thi smust be done in the caller/storer i.e. the adaptor
+
+sub result_set_id {  $_[0]->[4];}
+
+sub seq_region_id {  $_[0]->[5];}
+
+sub seq_region_strand {  $_[0]->[6];}#Include this in new_fast?
+
+sub window_size {  $_[0]->[7];}
+
 
 1;
 
