@@ -62,6 +62,18 @@ use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
 
+#store as 4 byte float. If change here, must also change in ResultFeature.pm?
+my $_pack_size = 4;
+my $_pack_type = "f";
+my $_bucket;
+my $_score_index = 0;
+my $_no_score_value = undef; #value if no score
+my $PACKED = 1;
+
+#probe query extension flag
+#Can only do extension with probe/result/feature queries
+my $_probe_extend = 0;
+
 use vars qw(@ISA);
 
 
@@ -84,7 +96,7 @@ sub _tables {
   my $self = shift;
 
   my @result_tables = ( ['result', 'r'], ['probe_feature', 'pf'] );
-  push @result_tables, ( ['probe', 'p'] ) if $self->{'probe_extend'};
+  push @result_tables, ( ['probe', 'p'] ) if $_probe_extend;
 	
   return $self->{result_feature_set} ? ( [ 'result_feature', 'rf' ] )
 	: @result_tables;
@@ -121,7 +133,7 @@ sub _columns {
 	my @result_columns = qw (r.score            pf.seq_region_start 
 							 pf.seq_region_end  cc.chip_channel_id);
 
-	if($self->{probe_extend}){
+	if($_probe_extend){
 	  #We can get this direct from the ProbeAdaptor
 	  #Then we can use split/commodotised methods for generation of probe external to the ProbeAdaptor
 
@@ -130,12 +142,12 @@ sub _columns {
 								p.array_chip_id    p.class);
 	}
 
-	#Can we remove result_feature_id?
+	#Can we remove result_feature_id, result_set_id and seq_region_id?
+	#Need to dynamically add strand dependant on whether feature is stranded?rf.seq_region_strand
+	#May need to add rf.seq_region_id  if we want to create Collections
+	#Hve also left out window, as we don't need to know this.
 
-	return $self->{result_feature_set} ? qw(rf.result_feature_id rf.result_set_id
-											rf.seq_region_id     rf.seq_region_start
-											rf.seq_region_end    rf.seq_region_strand
-											rf.score )
+	return $self->{result_feature_set} ? qw(rf.seq_region_start rf.seq_region_end rf.score )
 	  : @result_columns;
 	}
 
@@ -160,7 +172,7 @@ sub _default_where_clause{
 
   my $where = '';
 
-  return 'r.probe_id = p.probe_id' $self->{probe_extend};
+  return 'r.probe_id = p.probe_id' if $_probe_extend;
 
 }
 
@@ -196,125 +208,113 @@ sub _default_where_clause{
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id, $name);
-  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id);
-  my $a_adaptor = $self->db->get_AnalysisAdaptor();
-  my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
-  my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
-  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$name, \$ctype_id, \$ftype_id);
+  my (@rfeats, $dbid, $rset_id, $seq_region_id, $sr_start, $sr_end, $sr_strand, $score);
+  my ($sql);
+
+  #Test speed with no dbID and sr_id
+  #Could dynamically define simple obj hash dependant on whether feauture is stranded and new_fast?
+
+  $sth->bind_columns(\$sr_start, \$sr_end, \$score);
   
   #this fails if we delete entries from the joined tables
   #causes problems if we then try and store an rs which is already stored
 
   while ( $sth->fetch() ) {
 
+	warn "Need to unpack score here!";
 
-    if(! $rset || ($rset->dbID() != $dbid)){
-      
-      push @rsets, $rset if $rset;
+	push @rfeats, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast($sr_start, $sr_end, $sr_score);
 
-      $anal = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
-      $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
-      $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-           
 
-      $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
-													-DBID         => $dbid,
-													-NAME         => $name,
-													-ANALYSIS     => $anal,
-													-TABLE_NAME   => $table_name,
-													-FEATURE_TYPE => $ftype,
-													-CELL_TYPE    => $ctype,
-													-ADAPTOR      => $self,
-												   );
-    }
-    
-    #This assumes logical association between chip from the same exp, confer in store method?????????????????
+	#We never want the heavy object from the result_feature table method
+	#In fact we never want the heavy object unless we create it from scratch to store it
+	#Therefore we don't need to use create_feature at all unless we ever want to use
+	#The collection to generate bins on the fly(rather than for storing)
+	#We would only want this if we don't want to implement the object, just the array
+	#Now we're back to considering the base collection array
+	#'DBID', 'START', 'END', 'STRAND', 'SLICE'
+	#we don't need dbID or slice for ResultFeature
+	#But we do need a score
+	#Stick with object implementation for now
 
-    if(defined $rset->feature_type()){    
-      throw("ResultSet does not accomodate multiple FeatureTypes") if ($ftype_id != $rset->feature_type->dbID());
-    }
-    
-    if(defined $rset->cell_type()){
-      throw("ResultSet does not accomodate multiple CellTypes") if ($ctype_id != $rset->cell_type->dbID());
-    }
+	  # Finally, create the new exon.
+    #push( @exons,
+    #      $self->_create_feature( 'Bio::EnsEMBL::Exon', {
+	#													 '-start'     => $seq_region_start,
+	#													 '-end'       => $seq_region_end,
+	#													 '-strand'    => $seq_region_strand,
+		#												 '-adaptor'   => $self,
+	#													 '-slice'     => $slice,
+	#													 '-dbID'      => $exon_id,
+	#													 '-stable_id' => $stable_id,
+	#													 '-version'   => $version,
+	#													 '-created_date' => $created_date
+	#													 || undef,
+	#													 '-modified_date' => $modified_date
+	#													 || undef,
+	#													 '-phase'      => $phase,
+	#													 '-end_phase'  => $end_phase,
+	#													 '-is_current' => $is_current
+	#													} ) );
 
-    #we're not controlling ctype and ftype during creating new ResultSets to store.
-    #we should change add_table_id to add_ExperimentalChip and check in that method
-    
-    #add just the ids here, as we're aiming at quick web display.
-    $rset->add_table_id($table_id, $cc_id);
-  
+
+
   }
 
-  push @rsets, $rset if $rset;
   
-  return \@rsets;
+  return \@rfeats;
 }
 
 
 
 =head2 store
 
-  Args       : List of Bio::EnsEMBL::Funcgen::ResultSet objects
-  Example    : $rsa->store(@rsets);
-  Description: Stores or updates previously stored ResultSet objects in the database. 
+  Args       : List of Bio::EnsEMBL::Funcgen::ResultFeature objects
+  Example    : $rfa->store(@rfeats);
+  Description: Stores ResultFeature objects in the result_feature table.
   Returntype : None
-  Exceptions : Throws if a List of ResultSet objects is not provided or if
-               an analysis is not attached to any of the objects
+  Exceptions : Throws if a List of ResultFeature objects is not provided or if
+               any of the attributes are not set or valid.
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub store{
-  my ($self, @rsets) = @_;
+  my ($self, @rfeats) = @_;
 
-  throw("Must provide a list of ResultSet objects") if(scalar(@rsets == 0));
+  throw("Must provide a list of ResultFeature objects") if(scalar(@rfeats == 0));
   
-  my (%analysis_hash);
-  
-  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id) VALUES (?, ?, ?, ?)');
-  
+  #These are in the order of the ResultFeature attr array(excluding probe_id, which is the result/probe_feature query only attr))
+  my $sth = $self->prepare('INSERT INTO result_feature (seq_region_start, seq_region_end, score, result_set_id, seq_region_id, seq_region_strand, window_size) VALUES (?, ?, ?, ?, ?, ?, ?)');  
   my $db = $self->db();
-  my $analysis_adaptor = $db->get_AnalysisAdaptor();
+
   
- FEATURE: foreach my $rset (@rsets) {
+ FEATURE: foreach my $rfeat (@rfeats) {
     
-    if( ! ref $rset || ! $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet') ) {
-      throw('Must be an ResultSet object to store');
+    if( ! ref $rfeat || ! $rfeat->isa('Bio::EnsEMBL::Funcgen::ResultFeature') ) {
+      throw('Must be an ResultFeature object to store');
     }
     
-        
-    if ( $rset->is_stored($db) ) {
-      throw('ResultSet [' . $rset->dbID() . '] is already stored in the database\nResultSetAdaptor does not yet accomodate updating ResultSets');
-      #would need to retrive stored result set and update table_ids
-    }
+	#This is the only validation! So all the validation must be done in the caller as we are simply dealing with ints?
+	#We can do some validation, all have to be scalars, except strand which can be undef(or 0).
+	#Not a lot of point in doing this.
+	#Just specify not null in table def
 
-    #above does not check if it has been generated from scratch but is identical i.e. recovery.
-    #Need to check table_id and analysis and that it has the correct status
+	#Remove result_feature_set from result_set and set as status?
 
+	warn "pack score into blob here";
 
-    
-    if ( ! defined $rset->analysis() ) {
-      throw('An analysis must be attached to the ResultSet objects to be stored.');
-    }
-    
-    # Store the analysis if it has not been stored yet
-    if ( ! $rset->analysis->is_stored($db) ) {
-      warn("Will this not keep storing the same analysis if we keep passing the same unstored analysis?");
-      $analysis_adaptor->store( $rset->analysis() );
-    }
-   
+	
 
-	my $ct_id = (defined $rset->cell_type()) ? $rset->cell_type->dbID() : undef;
-	my $ft_id = (defined $rset->feature_type()) ? $rset->feature_type->dbID() : undef;
-
-    $sth->bind_param(1, $rset->analysis->dbID(),  SQL_INTEGER);
-    $sth->bind_param(2, $rset->name(),            SQL_VARCHAR);
+    $sth->bind_param(1, $rfeat->sqe_region_start, SQL_INTEGER);
+    $sth->bind_param(2, $rfeat->seq_region_end,   SQL_INTEGER);
+	$sth->bind_param(3, $score,                   SQL_BLOB);#??
+	$sth->bind_param(4, $ft_id,                   SQL_INTEGER);
 	$sth->bind_param(3, $ct_id,                   SQL_INTEGER);
 	$sth->bind_param(4, $ft_id,                   SQL_INTEGER);
-    
+	$sth->bind_param(3, $rfeat,                   SQL_INTEGER);
+
     $sth->execute();
     
     $rset->dbID( $sth->{'mysql_insertid'} );
@@ -348,6 +348,53 @@ sub list_dbIDs {
 	
 	return $self->_list_dbIDs('result_feature');
 }
+
+
+=head2 window_sizes
+
+  Args       : None
+  Example    : foreach $wsize(@{$rfa->window_sizes}){  ... Generate ResultFeatures ... }
+  Description: Returns a list of predefined window sized based on a 50mer tiling design.
+  Returntype : List of ints
+  Exceptions : None
+  Caller     : general
+  Status     : at risk - window sizes may change in future dependent on underlying technology
+
+=cut
+
+sub window_sizes {
+	my $self = shift;
+
+	#Max slice length is 1MB, max default bucket size is 1429bp
+	#which would be 14.29 probes. Not sensible to average ovr this region as we lose too much resolution.
+	#We should still turn the track off at a sensible limit as the peaks are just going to be 
+	#averaged away.
+
+	#Standard design is 50 bp every 100 bp.
+	#So 150 is two probes, this should be the first bin size with 0 being the probes themselves
+
+	#Currently only displayed for less than 500KB
+	#200KB comes back okay for one track
+	#slice length limits increment 70KB for bins
+	#105KB, 175KB, 245KB, 315KB, 385KB, 455KB
+	#my @window_sizes = (0, 150, 250, 350, 450, 550, 650);
+	# 1000);# Do we really want to average more than 7 probes?
+	#Need to check how this looks
+	
+	#Maybe lose 550 and 650?
+
+	#we're not guaranteed to get 2 in 150.
+	#May have one sat in the middle
+	#We really need to extend to extend by the probe length
+	#to capture overlapping probes. 
+	#Not a problem between windows, as we can compare start/ends and count on the fly
+
+	#Maybe would could just omit window_size and let the Collection handle that bit
+	#This would reduce the amount of data stored.
+
+	return (0, 150, 250, 350, 450, 550, 650);
+}
+
 
 
 =head2 fetch_all_by_Slice_ResultSet
@@ -391,7 +438,7 @@ sub list_dbIDs {
 #Let's set the Probe as an optional ResultFeature attribute
 
 sub fetch_all_by_Slice_ResultSet{
-  my ($self, $slice, $rset, $ec_status, $display_size, $with_probe) = @_;
+  my ($self, $slice, $rset, $ec_status, $display_size, $window_size, $with_probe) = @_;
 
   if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
@@ -399,8 +446,10 @@ sub fetch_all_by_Slice_ResultSet{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
+
+  #change this rset call to a status call?
   $self->{result_feature_set} = $rset->result_feature_set;
-  $self->{probe_extend} = $with_probe;
+  $_probe_extend = $with_probe;
 
   #Work out window size here based on Slice length
 
@@ -408,42 +457,52 @@ sub fetch_all_by_Slice_ResultSet{
 
   if($self->{result_feature_set}){
 	
-	if($self->{probe_extend}){
-	  warn "Cannot retrieve Probe information with a result_feature_set query, try using ???";
+	if($_probe_extend){
+	  throw("Cannot retrieve Probe information with a result_feature_set query, try using ???");
 	}
 
 	#Set default display width
 	$display_size ||= 700;
 	my $bucket_size = ($slice->length)/$display_size;
+	my @window_sizes = $self->window_sizes;
 	
-	#Max slice length is 1MB, max default bucket size is 1429.
-	#We should still turn the track off at a sensible limit as the peaks are just going to be 
-	#averaged away.
-
-	#Standard design is 50 bp every 100 bp.
-	#So 150 is two probes, this should be the first bin size with 0 being the probes themselves
-
-	#Currently only displayed for less than 500KB
-	#200KB comes back okay for one track
-	#slice length limits increment 70KB for bins
-	#105KB, 175KB, 245KB, 315KB, 385KB, 455KB
-	my @window_sizes = (0, 150, 250, 350, 450, 550, 650);
-	# 1000);# Do we really want to average more than 7 probes?
-	#Need to check how this looks
-
-	#default is largest;
-	my $window_size = $window_sizes[scalar(@window_sizes)-1];
-
-	for (my $i = 0; $i <= $#window_sizes; $i++) {
+	if(defined $window_size){
+	  	  
+	  #default is largest;
+	  $window_size = $window_sizes[scalar(@window_sizes)-1];
 	  
-	  last if ($bucket_size < $window_sizes[$i]) {
-		$window_size = $window_sizes[$i-1];
-		last;    
+	  for (my $i = 0; $i <= $#window_sizes; $i++) {
+		
+		last if ($bucket_size < $window_sizes[$i]) {
+		  $window_size = $window_sizes[$i-1];
+		  last;    
+		}
 	  }
+	}
+	else{
+	  #Validate window size here
+	  throw("Invalid window size $window_size, must be one of:\t".
+			join(', ', @window_sizes)) if ! grep(/^${window_size}$/, @window_sizes);
 	}
 
 	my $contraint = 'rf.result_set_id='.$rset->dbID.' and rs.window_size='.$window_size;
 	return $self->fetch_all_by_Slice_contraint($constraint);
+
+	#What about over hanging features?
+	#Do these features currently get missed?
+	#we could extend the slice by the window size on each end and then trim the ResultFeature?
+	#Not much point, we are only talking about missing a maximim of two pixels out of 700 or more.
+
+	#Conservation score method is to store all scores within a given window, by packing each individually
+	#Then 
+
+	#They also calc min and max and store in first ConservationScore
+	#Can we do this on the fly and return as separate values e.g.
+	#my ($rfs, $max_score, $min_score) = @{$rf_adaptor->fetch_all_by_Slice_ResultSet};
+	#maybe fetch_all_min_mix
+	#If we're not doing this on the fly then we can just provide external method
+	#This alters the standard design pattern :/
+
   }
 
 
