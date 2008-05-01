@@ -107,14 +107,18 @@ sub fetch_by_array_probe_probeset_name {
 
 
 	$sql = "SELECT p.probe_id FROM probe p $ps_table_alias".
-	  " WHERE $ac_clause $probeset_clause AND p.name = ?";
+	  " WHERE $ac_clause $probeset_clause AND p.name ='$probe_name'";
 
-	my $sth = $self->prepare($sql);
+
+	my ($probe_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 	
-	$sth->bind_param(1, $probe_name,    SQL_VARCHAR);
-	$sth->execute();
+	#This could utilise commodotised obj_frm_sth method to bring all fields back here
+	#rather than calling the by dbID method
+
+	#$sth->bind_param(1, $probe_name,    SQL_VARCHAR);
+	#$sth->execute();
 	
-	my ($probe_id) = $sth->fetchrow();
+	#my ($probe_id) = $sth->fetchrow_array();
 
 	if ($probe_id) {
 		return $self->fetch_by_dbID($probe_id);
@@ -393,6 +397,11 @@ sub _objs_from_sth {
 		#potentially as many as the probes
 
 		#Just build cache and nest for now,may want to just return ID and lazy load
+
+		#This is a prime target for compound query extension
+		#Either extend query by default and nest probe_set
+		#Or lazy load probeset using cache somehow?
+		#Use persistant probeset cache in ProbeSetAdaptor for dbID/Probe style queries
 
 		my ($probeset);
 

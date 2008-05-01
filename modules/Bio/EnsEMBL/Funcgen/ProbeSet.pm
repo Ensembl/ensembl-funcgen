@@ -94,7 +94,7 @@ sub new {
 	
 	my $self = $class->SUPER::new(@_);
 
-	warn("The only way to get array names/ids, is to retrieve all the probes!!!");
+	#warn("The only way to get array names/ids, is to retrieve all the probes!!!");
 
 	
 	my (

@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.1 2008-04-28 19:12:12 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.2 2008-05-01 11:24:55 nj1 Exp $
 
 package Bio::EnsEMBL::Collection::Exon;
 
@@ -10,6 +10,21 @@ use Bio::EnsEMBL::Utils::Exception ('throw');
 
 use base( 'Bio::EnsEMBL::Collection',
           'Bio::EnsEMBL::DBSQL::ExonAdaptor' );
+
+
+#Using standard object generation methods for ResultFeature
+#We never want the heavy object from the result_feature table method
+#In fact we never want the heavy object unless we create it from scratch to store it
+#Therefore we don't need to use create_feature at all unless we ever want to use
+#The collection to generate bins on the fly(rather than for storing)
+#We would only want this if we don't want to implement the object, just the array
+#Now we're back to considering the base collection array
+#'DBID', 'START', 'END', 'STRAND', 'SLICE'
+#we don't need dbID or slice for ResultFeature
+#But we do need a score
+#Stick with object implementation for now i.e. dont use create_feature methods
+
+=pod
 
 sub _create_feature {
   my ( $this, $feature_type, $args ) = @_;
@@ -43,6 +58,9 @@ sub _create_feature_fast {
   return $feature;
 }
 
+
+#This might not be sensible for Features which are split across tables
+
 sub _tables {
   my ($this) = @_;
 
@@ -55,17 +73,23 @@ sub _tables {
   return @tables;
 }
 
+
 sub _columns {
   my ($this) = @_;
 
   my @columns = $this->SUPER::_columns();
 
   if ( $this->_lightweight() ) {
+
+	#What is this doing?
+	#Probably not sensible for ResultFeature
     @columns[ 5 .. $#columns ] = map( 1, 5 .. $#columns );
   }
 
   return @columns;
 }
+
+#Also not sensible for objects spread across several tables
 
 sub _default_where_clause {
   my ($this) = @_;
@@ -77,7 +101,7 @@ sub _default_where_clause {
   return $this->SUPER::_default_where_clause();
 }
 
-
+=cut
 
 
 sub store_window_bins_by_Slice_ResultSet {
@@ -122,7 +146,7 @@ sub store_window_bins_by_Slice_ResultSet {
   my @wsizes = sort $a <=> $b, @$window_sizes;
   
   #Current limit is 500KB, so let's start there
-  my ($multiplier) = split/\./, (500000/$wsizes[$#wizes]);
+  my ($multiplier) = int(500000/$wsizes[$#wizes]);
   my $chunk_length = $multiplier * $wsizes[$#wizes];
   warn "multiplier is $multiplier";
   my $not_divisible = 1;
@@ -184,7 +208,7 @@ sub store_window_bins_by_Slice_ResultSet {
 
 	#This should return a hash of window size => bin array pairs
 	$bins =
-	  $this->_bin_features_by_window_size( -slice  => $slice,
+	  $this->_bin_features_by_window_sizes( -slice  => $slice,
 										   -window_sizes  => $window_sizes,
 										   -method => $method,
 										   -features =>
@@ -235,7 +259,7 @@ sub store_window_bins_by_Slice_ResultSet {
 #This is a slight rewrite to calculate bins for a list of all window sizes
 #Should only be called by store_window_bins_by_Slice_ResultSet
 
-sub _bin_features_by_window_size{
+sub _bin_features_by_window_sizes{
   my $this = shift;
   my ( $slice, $window_sizes, $method_name, $features ) =
     rearrange( [ 'SLICE', 'WINDOW_SIZES', 'METHOD', 'FEATURES' ], @_ );
@@ -250,15 +274,13 @@ sub _bin_features_by_window_size{
 
   #No need to validate window sizes as done in the caller
 
-  $method_name ||= 'count';
-  if ( !exists( $VALID_BINNING_METHODS{$method_name} ) ) {
-    throw(
-           sprintf(
-              "Invalid binning method '%s', valid methods are:\n\t%s\n",
-              $method_name,
-              join( "\n\t", sort( keys(%VALID_BINNING_METHODS) ) ) ) );
-  }
-  my $method = $VALID_BINNING_METHODS{$method_name};
+
+  #Set default to ResultFeature implementation?
+  my $method_name ||= 'average_score';
+
+  #Should sub this to allow different implementations to use it
+  $method_name = $this->validate_bin_method($method_name);
+
 
   my $slice_start = $slice->start();
 
@@ -266,7 +288,7 @@ sub _bin_features_by_window_size{
   #my @bins;
 
   #Set up some hashes to store data by window_size
-  my (%bin_lengths, %window_bins);
+  my (%bin_lengths, %bins, %nbins, %bin_counts);
 
   if ( $method == 0 ||    # 'count' or 'density'
        $method == 3 ||    # 'fractional_count' or 'weight'
@@ -281,10 +303,15 @@ sub _bin_features_by_window_size{
 	$first_bin = undef;
   }
 
+  #Set up some bin data for the windows
   foreach my $wsize(@$window_sizes){
-	my ($nbins) = split/\./,($slice->length / $wsize);
-	$bin_lengths{$wsize} = ( $slice->end() - $slice_start + 1 )/$nbins;#This should be wsize!!!
-	$window_bins{$wsize} = map( $first_bin, 1 .. $nbins );
+	$nbins{$wsize}         = int($slice->length / $wsize);
+	$bin_lengths{$wsize}   = ( $slice->end() - $slice_start + 1 )/$nbins{$wsize};#This should be wsize!!!???
+	$bins{$wsize}          = map( $first_bin, 1 .. $nbins );#Shouldn't this be -1?
+
+	#Set bin counts to 0 for each bin
+	$bin_counts{$wsize}    = ();
+	map $bin_counts{$wsize}->[$_] = 0, @{$bins{$wsize}};
   }
   
 
@@ -301,143 +328,224 @@ sub _bin_features_by_window_size{
   warn 'Can remove wsize versus bin_length chceck and change assignment calc';
 
   my $feature_index = 0;
+
+  #What is this?
   my @bin_masks;
+  my %start_bins;
+  my %end_bins;
+
+  #Also store local starts and ends as we currently calc this several times
+  my $lfeature_start;
+  my $lfeature_end;
 
   foreach my $feature ( @{$features} ) {
-    my $start_bin =
-      int( ( $feature->[FEATURE_START] - $slice_start )/$bin_length );
-    my $end_bin =
-      int( ( $feature->[FEATURE_END] - $slice_start )/$bin_length );
 
-    if ( $end_bin >= $nbins ) {
-      # This might happen for the very last entry.
-      $end_bin = $nbins - 1;
-    }
+	$lfeature_start     = $feature->start  - $slice_start
+	  $lfeature_end       = $feature->end  - $slice_start
 
-    if ( $method == 0 ) {
-      # ----------------------------------------------------------------
-      # For 'count' and 'density'.
 
-      for ( my $bin_index = $start_bin ;
-            $bin_index <= $end_bin ;
+	#Set up the bins for each window size
+
+	foreach my $wsize(keys %bin_lengths){
+	
+	  #We have already highjacked the object creation by here
+	  #Where is this done?
+	  #We probably don't want to do this for ResultFeatures as we don't use the
+	  #standard feature implementation
+	  #we already use an array and we don't store the slice
+	  #as this is already known by the caller
+	  #and we always build on top level so we don't need to remap
+
+
+	  #Which bins do the start and end lie in for this feature?
+	  $start_bins{$wsize} = int(($lfeature_start )/$wsize );
+	  $ends_bins{$wsize}  = int(($lfeature_end  - $slice_start )/$wsize );
+	  
+
+	
+	  #my $start_bin =
+	  #	int( ( $feature->[FEATURE_START] - $slice_start )/$bin_length );
+	  
+	  #  my $end_bin =
+	  #	int( ( $feature->[FEATURE_END] - $slice_start )/$bin_length );
+	  
+	  if (   $ends_bins{$wsize} >= 	$nbins{$wsize} ) {
+		# This might happen for the very last entry.
+		#$end_bin = 	$nbins - 1;
+
+
+		#This is currently the next to last bin? As $#{$bins{$wsize}} = $nbins, not $nbins -1?
+		#Ask Andreas about this?
+		$ends_bins{$wsize} =  $nbins{$wsize} - 1;
+
+	  }
+
+	}
+
+	#Slightly obfuscated code here
+	#Altho this should speed up generation
+	#by avoiding string comparisons.
+	
+	#We should do default count processing for all methods as this is required for all no?
+	#No, just weight, coverage and average_score
+	
+	
+	
+	if ( $method == 0 ) {
+	  throw('Not implemented for method for count/density');
+	  # ----------------------------------------------------------------
+		# For 'count' and 'density'.
+	  
+	  for ( my $bin_index = $start_bin ;
+			$bin_index <= $end_bin ;
             ++$bin_index )
-      {
-        ++$bins[$bin_index];
-      }
+		{
+			++$bins[$bin_index];
+		  }
 
-    } elsif ( $method == 1 ) {
-      # ----------------------------------------------------------------
-      # For 'indices' and 'index'
+	  } elsif ( $method == 1 ) {
+		# ----------------------------------------------------------------
+		# For 'indices' and 'index'
 
-      for ( my $bin_index = $start_bin ;
-            $bin_index <= $end_bin ;
-            ++$bin_index )
-      {
-        push( @{ $bins[$bin_index] }, $feature_index );
-      }
+	  
+		#How is this useful?
+		#Is this not just count per bin?
+		#No this is a list of the feature indices
+		#So forms a distribution?
 
-      ++$feature_index;
+		throw('Not implemented for method for index'); 
 
-    } elsif ( $method == 2 ) {
-      # ----------------------------------------------------------------
-      # For 'features' and 'feature'.
+		for ( my $bin_index = $start_bin ;
+			  $bin_index <= $end_bin ;
+			  ++$bin_index ) {
+		  push( @{ $bins[$bin_index] }, $feature_index );
+		}
 
-      for ( my $bin_index = $start_bin ;
-            $bin_index <= $end_bin ;
-            ++$bin_index )
-      {
-        push( @{ $bins[$bin_index] }, $feature );
-      }
+		++$feature_index;
 
-    } elsif ( $method == 3 ) {
-      # ----------------------------------------------------------------
-      # For 'fractional_count' and 'weight'.
+	  } elsif ( $method == 2 ) {
+		# ----------------------------------------------------------------
+		# For 'features' and 'feature'.
 
-      if ( $start_bin == $end_bin ) {
-        ++$bins[$start_bin];
-      } else {
+		throw('Not implemented for method for feature/features'); 
+		
+		for ( my $bin_index = $start_bin ;
+			  $bin_index <= $end_bin ;
+			  ++$bin_index )
+		  {
+			push( @{ $bins[$bin_index] }, $feature );
+		  }
+		
+	  } elsif ( $method == 3 ) {
+		# ----------------------------------------------------------------
+		# For 'fractional_count' and 'weight'.
+		
 
-        my $feature_length =
+		throw('Not implemented for method for fractional_count/weight'); 
+		
+		if ( $start_bin == $end_bin ) {
+		  ++$bins[$start_bin];
+		} else {
+		  
+		  my $feature_length =
           $feature->[FEATURE_END] - $feature->[FEATURE_START] + 1;
+		  
+		  # The first bin...
+		  $bins[$start_bin] +=
+			( ( $start_bin + 1 )*$bin_length -
+			  ( $feature->[FEATURE_START] - $slice_start ) )/
+				$feature_length;
 
-        # The first bin...
-        $bins[$start_bin] +=
-          ( ( $start_bin + 1 )*$bin_length -
-            ( $feature->[FEATURE_START] - $slice_start ) )/
-          $feature_length;
+		  # The intermediate bins (if there are any)...
+		  for ( my $bin_index = $start_bin + 1 ;
+				$bin_index <= $end_bin - 1 ;
+				++$bin_index )
+			{
+			  $bins[$bin_index] += $bin_length/$feature_length;
+			}
+		  
+		  # The last bin...
+		  $bins[$end_bin] +=
+			( ( $feature->[FEATURE_END] - $slice_start ) -
+			  $end_bin*$bin_length +
+			  1 )/$feature_length;
+		  
+		} ## end else [ if ( $start_bin == $end_bin)
 
-        # The intermediate bins (if there are any)...
-        for ( my $bin_index = $start_bin + 1 ;
-              $bin_index <= $end_bin - 1 ;
-              ++$bin_index )
-        {
-          $bins[$bin_index] += $bin_length/$feature_length;
-        }
-
-        # The last bin...
-        $bins[$end_bin] +=
-          ( ( $feature->[FEATURE_END] - $slice_start ) -
-            $end_bin*$bin_length +
-            1 )/$feature_length;
-
-      } ## end else [ if ( $start_bin == $end_bin)
-
-    } elsif ( $method == 4 ) {
-      # ----------------------------------------------------------------
-      # For 'coverage'.
-
-      my $feature_start = $feature->[FEATURE_START] - $slice_start;
-      my $feature_end   = $feature->[FEATURE_END] - $slice_start;
-
-      if ( !defined( $bin_masks[$start_bin] )
+	  } elsif ( $method == 4 ) {
+		# ----------------------------------------------------------------
+		# For 'coverage'.
+		
+		#What exactly is this doing?
+		#This is coverage of bin
+		#Rather than coverage of feature as in fractional_count
+	  
+		
+		my $feature_start = $feature->[FEATURE_START] - $slice_start;
+		my $feature_end   = $feature->[FEATURE_END] - $slice_start;
+		
+		if ( !defined( $bin_masks[$start_bin] )
            || ( defined( $bin_masks[$start_bin] )
                 && $bin_masks[$start_bin] != 1 ) )
-      {
-        # Mask the $start_bin from the start of the feature to the end
-        # of the bin, or to the end of the feature (whichever occurs
-        # first).
-        my $bin_start = int( $start_bin*$bin_length );
-        my $bin_end = int( ( $start_bin + 1 )*$bin_length - 1 );
-        for ( my $pos = $feature_start ;
-              $pos <= $bin_end && $pos <= $feature_end ;
+		  {
+			# Mask the $start_bin from the start of the feature to the end
+			# of the bin, or to the end of the feature (whichever occurs
+			# first).
+			my $bin_start = int( $start_bin*$bin_length );
+			my $bin_end = int( ( $start_bin + 1 )*$bin_length - 1 );
+			for ( my $pos = $feature_start ;
+				  $pos <= $bin_end && $pos <= $feature_end ;
               ++$pos )
-        {
-          $bin_masks[$start_bin][ $pos - $bin_start ] = 1;
-        }
-      }
-
-      for ( my $bin_index = $start_bin + 1 ;
-            $bin_index <= $end_bin - 1 ;
-            ++$bin_index )
-      {
-        # Mark the middle bins between $start_bin and $end_bin as fully
-        # masked out.
-        $bin_masks[$bin_index] = 1;
-      }
-
-      if ( $end_bin != $start_bin ) {
-
-        if ( !defined( $bin_masks[$end_bin] )
-             || ( defined( $bin_masks[$end_bin] )
-                  && $bin_masks[$end_bin] != 1 ) )
-        {
-          # Mask the $end_bin from the start of the bin to the end of
+			  {
+				$bin_masks[$start_bin][ $pos - $bin_start ] = 1;
+			  }
+		  }
+		
+		for ( my $bin_index = $start_bin + 1 ;
+			  $bin_index <= $end_bin - 1 ;
+			  ++$bin_index )
+		  {
+			# Mark the middle bins between $start_bin and $end_bin as fully
+			# masked out.
+			$bin_masks[$bin_index] = 1;
+		  }
+		
+		if ( $end_bin != $start_bin ) {
+		
+		  if ( !defined( $bin_masks[$end_bin] )
+			   || ( defined( $bin_masks[$end_bin] )
+					&& $bin_masks[$end_bin] != 1 ) )
+			{
+			  # Mask the $end_bin from the start of the bin to the end of
           # the feature, or to the end of the bin (whichever occurs
-          # first).
-          my $bin_start = int( $end_bin*$bin_length );
-          my $bin_end = int( ( $end_bin + 1 )*$bin_length - 1 );
-          for ( my $pos = $bin_start ;
-                $pos <= $feature_end && $pos <= $bin_end ;
-                ++$pos )
-          {
-            $bin_masks[$end_bin][ $pos - $bin_start ] = 1;
-          }
-        }
-
-      }
-
-    } ## end elsif ( $method == 4 )
-
+			  # first).
+			  my $bin_start = int( $end_bin*$bin_length );
+			  my $bin_end = int( ( $end_bin + 1 )*$bin_length - 1 );
+			  for ( my $pos = $bin_start ;
+					$pos <= $feature_end && $pos <= $bin_end ;
+					++$pos )
+				{
+				  $bin_masks[$end_bin][ $pos - $bin_start ] = 1;
+				}
+			}
+		  
+		}
+		
+	  } ## end elsif ( $method == 4 )
+	  elsif( $method == 5 ){
+		#average score
+		#This is simple an average of all the scores for features which overlap this bin
+		#No weighting with respect to the bin or the feature
+		
+		for ( my $bin_index = $start_bin ;
+			  $bin_index <= $end_bin ;
+			  ++$bin_index )
+		  {
+			$bins{$wsize}->[$bin_index] += $feature->score;
+			$bins_counts{$wsize}->[$bin_index] ++;
+		  }
+	  }
+	
   } ## end foreach my $feature ( @{$features...
 
   if ( $method == 4 ) {
@@ -457,12 +565,39 @@ sub _bin_features_by_window_size{
         }
       }
     }
+  }
+  elsif( $method == 5){
+	#For average score, need to divide bins by bin_counts
 
+	foreach my $wsize(keys %bins){
+
+	  foreach my $bin_index(0..$#{$bins{$wsize}}){
+		$bins{$wsize}->[$bin_index] /= $bins_counts{$wsize}->[$bin_index];
+	  }
+	}
   }
 
-  return \@bins;
+
+
+  return \%bins;
 } ## end sub _bin_features
 
+sub validate_bin_method{
+  my ($self, $method) = @_;
 
+  #Add average_score to avoid changing Collection.pm
+  $VALID_BINNING_METHODS{'average_score'} = 5;
+
+
+  if ( !exists( $VALID_BINNING_METHODS{$method_name} ) ) {
+    throw(
+           sprintf(
+				   "Invalid binning method '%s', valid methods are:\n\t%s\n",
+				   $method_name,
+				   join( "\n\t", sort( keys(%VALID_BINNING_METHODS) ) ) ) );
+  }
+  
+  return $VALID_BINNING_METHODS{$method_name};
+}
 
 1;

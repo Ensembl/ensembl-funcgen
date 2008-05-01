@@ -152,6 +152,7 @@ sub new {
     }
     else{
       warn("You have not specified and Array objects, this will result in multiple/redundant queries based on the array_chip_id\nYou should pass Array objects to speed up this process");
+	  #Is this true? We should cache this in the ArrayChip and make sure we're caching it in the caller.
     }
     
     # Probe(s) have been specified
@@ -169,6 +170,30 @@ sub new {
   $self->length($length)     if defined $length;
   return $self;
 }
+
+#only takes single values for array and array_chip
+#as we're shortcuting the constructor and simply blessing the hash
+#therefore attr keys should not be lc and not prefix with '-'
+
+=head2 new_fast
+
+  Args       : Hashref with all internal attributes set
+  Example    : none
+  Description: Quick and dirty version of new. Only works if the code is very
+               disciplined. Cannot add array chip probe names unless we recreate
+               the data structure in the caller.
+  Returntype : Bio::EnsEMBL::Funcgen::Probe
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub new_fast {
+  bless ($_[1], $_[0]);
+}
+
+
 
 =head2 add_array_chip_probename
 
@@ -428,8 +453,6 @@ sub get_complete_name {
 sub probeset {
     my $self = shift;
 
-	#This is nesting a parent object in a child object....circular reference?
-	#Need to make sure we code around this when generating ProbeSets
 
     $self->{'probe_set'} = shift if @_;
     return $self->{'probe_set'};
