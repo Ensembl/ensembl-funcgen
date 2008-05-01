@@ -114,6 +114,25 @@ use vars qw(@ISA);
 #force association when loading features
 
 
+=head2 fetch_all_result_feature_sets
+
+  Example    : my @web_optimised_set = @{$rset_adaptor->fetch_all_result_feature_sets};
+  Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets which have been extracted 
+               and compressed in the result_feature table.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
+  Exceptions : None
+  Caller     : general
+  Status     : At Risk - remove and add status
+
+=cut
+
+sub fetch_all_result_feature_sets{
+  my $self = shift;
+  
+  return $self->generic_fetch('rs.result_feature_set=1');
+}
+
+
 =head2 fetch_all_linked_by_ResultSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::ResultSet
@@ -356,6 +375,7 @@ sub _columns {
 			  cc.table_name       cc.chip_channel_id
 			  cc.table_id         rs.name
 			  rs.cell_type_id     rs.feature_type_id
+			  rs.result_feature_set
 		 );
 
 	
@@ -435,11 +455,12 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
   
   my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id, $name);
-  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id);
+  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set);
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
-  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, \$name, \$ctype_id, \$ftype_id);
+  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, 
+					 \$table_id, \$name, \$ctype_id, \$ftype_id, \$rf_set);
   
   #this fails if we delete entries from the joined tables
   #causes problems if we then try and store an rs which is already stored
@@ -463,6 +484,7 @@ sub _objs_from_sth {
 													-TABLE_NAME   => $table_name,
 													-FEATURE_TYPE => $ftype,
 													-CELL_TYPE    => $ctype,
+													-RESULT_FEATURE_SET => $rf_set,
 													-ADAPTOR      => $self,
 												   );
     }
@@ -512,7 +534,7 @@ sub store{
   
   my (%analysis_hash);
   
-  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id) VALUES (?, ?, ?, ?)');
+  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id, result_feature_set) VALUES (?, ?, ?, ?)');
   
   my $db = $self->db();
   my $analysis_adaptor = $db->get_AnalysisAdaptor();
@@ -548,10 +570,12 @@ sub store{
 	my $ct_id = (defined $rset->cell_type()) ? $rset->cell_type->dbID() : undef;
 	my $ft_id = (defined $rset->feature_type()) ? $rset->feature_type->dbID() : undef;
 
-    $sth->bind_param(1, $rset->analysis->dbID(),  SQL_INTEGER);
-    $sth->bind_param(2, $rset->name(),            SQL_VARCHAR);
-	$sth->bind_param(3, $ct_id,                   SQL_INTEGER);
-	$sth->bind_param(4, $ft_id,                   SQL_INTEGER);
+    $sth->bind_param(1, $rset->analysis->dbID(),   SQL_INTEGER);
+    $sth->bind_param(2, $rset->name(),             SQL_VARCHAR);
+	$sth->bind_param(3, $ct_id,                    SQL_INTEGER);
+	$sth->bind_param(4, $ft_id,                    SQL_INTEGER);
+	$sth->bind_param(4, $rset->result_feature_set, SQL_INTEGER);
+	
     
     $sth->execute();
     
