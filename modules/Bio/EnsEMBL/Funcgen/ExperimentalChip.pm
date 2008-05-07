@@ -128,12 +128,13 @@ sub get_Experiment {
   if (! $self->{'experiment'}){
 	
     if ($self->dbID() && $self->adaptor() ) {
-	  $self->{'experiment'} = $self->adaptor->db->get_ExperimentAdaptor->fetch_by_dbID($self->dbID);
+	  $self->{'experiment'} = $self->adaptor->db->get_ExperimentAdaptor->fetch_by_dbID($self->experiment_id);
     } else {
       warning('Need database connection to retrieve Experiment');
     }
   }
-  
+
+
   return $self->{'experiment'};
 }
 
