@@ -187,11 +187,9 @@ sub set_config{
   #As we could get log write errors before we have created the output dir otherwise
   $self->{'output_dir'} ||= $self->get_dir("data").'/output/'.$self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();
 
-  $self->{'config'}{'tab2mage_file'} = $self->get_dir('output').'/'.
-    $self->vendor().'/'.$self->name().'/E-TABM-'.$self->name().'.txt';
+  $self->{'config'}{'tab2mage_file'} = $self->get_dir('output').'/E-TABM-'.$self->name().'.txt';
 
-  $self->{'config'}{'mage_xml_file'} = $self->get_dir('output').'/'.
-    $self->vendor().'/'.$self->name().'/{UNASSIGNED}.xml';
+  $self->{'config'}{'mage_xml_file'} = $self->get_dir('output').'/{UNASSIGNED}.xml';
 
   if($self->{'old_dvd_format'}){
 	$self->{'results_dir'} = $self->get_dir('input').'/'.
