@@ -84,7 +84,7 @@ sub new{
       results_data => ["and_import_results"],
       sample_key_fields => ['DESIGN_ID', 'CHIP_ID', 'DYE', 'PROMOT_SAMPLE_TYPE'],# 'SAMPLE_LABEL'],label now optional
       # 'SAMPLE_DESCRIPTION removed due to naming disparities
-      ndf_fields      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH', 'FEATURE_ID', 'PROBE_ID'],
+      ndf_fields      => ['CONTAINER', 'PROBE_SEQUENCE', 'MISMATCH','FEATURE_ID', 'PROBE_ID'],#MISMATCH is always 0!
       pos_fields      => ['CHROMOSOME', 'PROBE_ID', 'POSITION', 'COUNT'],
       result_fields   => ['PROBE_ID', 'PM', 'X', 'Y'],
       notes_fields   => ['DESIGN_ID', 'DESIGN_NAME', 'DESCRIPTION'],
@@ -161,10 +161,9 @@ sub set_config{
   #dirs are not set in config to enable generic get_dir method access
   #This is really just setting paths rather than config rename?
 
-  $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();
-  throw('input_dir is not defined or does not exist ('.
-		$self->get_dir('input').')') if(! -d $self->get_dir('input')); #Helper would fail first on log/debug files
+  #This is generic for all imports
 
+ 
   
   if($self->{'old_dvd_format'}){
 	$self->{'design_dir'} = $self->get_dir('input').'/DesignFiles';
@@ -188,17 +187,17 @@ sub set_config{
   #As we could get log write errors before we have created the output dir otherwise
   $self->{'output_dir'} ||= $self->get_dir("data").'/output/'.$self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();
 
-  $self->{'config'}{'tab2mage_file'} = $self->get_dir('data').'/output/'.
+  $self->{'config'}{'tab2mage_file'} = $self->get_dir('output').'/'.
     $self->vendor().'/'.$self->name().'/E-TABM-'.$self->name().'.txt';
 
-  $self->{'config'}{'mage_xml_file'} = $self->get_dir('data').'/output/'.
+  $self->{'config'}{'mage_xml_file'} = $self->get_dir('output').'/'.
     $self->vendor().'/'.$self->name().'/{UNASSIGNED}.xml';
 
   if($self->{'old_dvd_format'}){
-	$self->{'results_dir'} = $self->get_dir('data').'/input/'.
+	$self->{'results_dir'} = $self->get_dir('input').'/'.
 	  $self->vendor().'/'.$self->name().'/PairData';
   }else{
-	$self->{'results_dir'} = $self->get_dir('data').'/input/'.
+	$self->{'results_dir'} = $self->get_dir('input').'/'.
 	  $self->vendor().'/'.$self->name().'/Raw_data_files';
   }
 	
@@ -223,6 +222,8 @@ sub set_config{
 sub read_array_data{
   my ($self, $notes_file) = @_;
 
+
+  $notes_file ||= $self->get_config('notes_file');
   my ($line, $array, $array_chip, @data, %hpos);
   my $oa_adaptor = $self->db->get_ArrayAdaptor();
   my $ac_adaptor = $self->db->get_ArrayChipAdaptor();
@@ -322,7 +323,7 @@ sub read_array_data{
 sub read_experiment_data{
   my $self = shift;
 
-  $self->read_array_data($self->get_config('notes_file'));
+  $self->read_array_data();
 
   my $t2m_file = $self->init_tab2mage_export() if $self->{'write_mage'};
 
@@ -683,7 +684,7 @@ sub read_probe_data{
     
     foreach my $achip(@{$array->get_ArrayChips()}){
 
-      my (@log, %probe_pos);
+      my (@log, %probe_pos, $fasta_file, $f_out);
 	  #do we need to fetch probe by seq and array?
 	  #this would also id non-unique seqs in design
 
@@ -694,7 +695,7 @@ sub read_probe_data{
 		next;
       }elsif($self->recovery()){
 		$self->log("Rolling back ArrayChip:\t".$achip->design_id());
-		$self->db->rollback_ArrayChip($achip);
+		$self->rollback_ArrayChip($achip);
       }
       
       $self->log("Importing ArrayChip:".$achip->design_id());
@@ -769,15 +770,15 @@ sub read_probe_data{
       #OPEN PROBE IN/OUT FILES
       $fh = open_file($self->get_dir("design")."/".$achip->name().".ndf");
       #Need to set these paths in each  achip hash, file names could be tablename.chip_id.txt
-      #my $p_out = open_file(">", $self->get_dir("import")."/probe.".$ac{'design_name'}."txt");
-      #my $ps_out = open_file(">", $self->get_dir("import")."/probe_set.".$ac{'design_name'}.".txt");
-      #my $pf_out = open_file(">", $self->get_dir("import")."/probe_feature.".$ac{'design_name'}."txt");
-
-	  my $fasta_file = $self->get_dir('fastas').'/probe.'.$achip->name().".fasta";
-    warn("FASTA backup disabled");
-	  #$self->backup_file($fasta_file);
-      my $f_out = open_file($fasta_file, '>')	if($self->dump_fasta());
-
+ 
+	  #Need to add dbname/port/species/vendor to this path?
+	  #.efg DropDatabase should also clean the fasta dumps and caches for a given DB
+	  
+	  if($self->dump_fasta()){
+		$fasta_file = $self->get_dir('fastas').'/'.$achip->name().".fasta";
+		$self->backup_file($fasta_file);
+		$f_out = open_file($fasta_file, '>');
+	  }
 
 
       my ($length, $ops, $op, $of, %pfs);
@@ -787,7 +788,11 @@ sub read_probe_data{
 			
 		
       my $strand = 0;	#default for nimblegen, should be config hash?
-      my $cig_line = "50M";	#default for nimblegen, should be config hash?
+
+      #my $cig_line = "50M";	#default for nimblegen, should be config hash?
+	  #probe length can change within design, should be built from length
+
+
       my $fasta = "";
       
       #$self->Timer()->mark("Starting probe loop");
@@ -923,16 +928,36 @@ sub read_probe_data{
 				
 	
 		if ($self->dump_fasta()){
-		  (my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}) =~ s/chr//;
+		  #(my $chr = $probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}) =~ s/chr//;
 
 		  #$loc .= $chr.":".$probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}."-".
 		#	($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'start'}+ $length).";";
 	
-		  #filter controls/randoms?  Or would it be sensible to see where they map
-		  #wrap seq here?
-		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
 		  #$fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$data[$hpos{'CHROMOSOME'}].
 		  #	"\t$loc\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
+
+
+
+		  #filter controls/randoms?  Or would it be sensible to see where they map
+		  #wrap seq here?
+		  #$fasta .= ">".$data[$hpos{'PROBE_ID'}]."\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
+
+
+		  #To use this for mapping, we really need the dbID nr fasta
+		  #This can be generated after the import, or maybe during resolve?
+		  #This is also currently done on a chip level, where as the cache is resolved at the array level
+		  #We could simply cat the files before resolving the fasta file
+		  #Need to do this otherwise we risk overwriting the fasta file with incomplete data.
+		  #Can we validate sequence across probes with same name in this step?
+		  #Just use probe name for now.
+		  
+		  #We could cat and sort the fastas to make sure we have the same sequences
+		  #Need to dump the design_id in the fasta header
+		  #This would also reduce IO on the DB as identical probe will be consecutive, hence just one query to get the id.
+
+		  #Changed th format an content of this to facilitate dbID nr fasta file generation and sequence validation
+		  
+		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$achip->design_id."\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
 		}
 
 
@@ -948,7 +973,7 @@ sub read_probe_data{
 		   -STRAND        => $strand,
 		   -SLICE         => $self->cache_slice($probe_pos{$data[$hpos{'PROBE_ID'}]}->{'chr'}),
 		   -ANALYSIS      => $anal,
-		   -MISMATCHCOUNT => $data[$hpos{'MISMATCH'}],
+		   -MISMATCHCOUNT => $data[$hpos{'MISMATCH'}],#Is this always 0 for import? remove from header hash?
 		   -PROBE         => undef,	#Need to update this in the store method
 		  );
 				
