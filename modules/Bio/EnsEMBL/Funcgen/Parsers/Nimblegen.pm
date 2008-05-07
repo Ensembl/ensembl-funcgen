@@ -163,8 +163,8 @@ sub set_config{
 
   #This is generic for all imports
 
- 
-  
+
+
   if($self->{'old_dvd_format'}){
 	$self->{'design_dir'} = $self->get_dir('input').'/DesignFiles';
   }else{
@@ -192,11 +192,9 @@ sub set_config{
   $self->{'config'}{'mage_xml_file'} = $self->get_dir('output').'/{UNASSIGNED}.xml';
 
   if($self->{'old_dvd_format'}){
-	$self->{'results_dir'} = $self->get_dir('input').'/'.
-	  $self->vendor().'/'.$self->name().'/PairData';
+	$self->{'results_dir'} = $self->get_dir('input').'/PairData';
   }else{
-	$self->{'results_dir'} = $self->get_dir('input').'/'.
-	  $self->vendor().'/'.$self->name().'/Raw_data_files';
+	$self->{'results_dir'} = $self->get_dir('input').'/Raw_data_files';
   }
 	
   return;
