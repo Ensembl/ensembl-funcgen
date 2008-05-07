@@ -1102,7 +1102,7 @@ sub rollback_results{
 
 
   #Rollback result entries
-  $sql = 'DELETE from result where chip_channel_id in (0)';#'.join(',', @cc_ids).');';
+  $sql = 'DELETE from result where chip_channel_id in ('.join(',', @cc_ids).');';
   if(! $self->db->dbc->do($sql)){
 	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
   }
