@@ -110,6 +110,35 @@ sub new {
   return $self;
 }
 
+=head2 get_Experiment
+
+  Args       : None
+  Example    : my $exp = $exp_chip->get_Experiment();
+  Description: Returns the Experiment which this ExperimentalChip belongs to.
+  Returntype : Bio::EnsEMBL::Funcgen::Experiment
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_Experiment {
+  my $self = shift;
+  
+  if (! $self->{'experiment'}){
+	
+    if ($self->dbID() && $self->adaptor() ) {
+	  $self->{'experiment'} = $self->adaptor->db->get_ExperimentAdaptor->fetch_by_dbID($self->dbID);
+    } else {
+      warning('Need database connection to retrieve Experiment');
+    }
+  }
+  
+  return $self->{'experiment'};
+}
+
+
+
 =head2 get_Channels
 
   Args       : None
