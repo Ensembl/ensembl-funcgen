@@ -129,6 +129,7 @@ use vars qw(@ISA);
 sub fetch_all_result_feature_sets{
   my $self = shift;
   
+  throw('change to status call');
   return $self->generic_fetch('rs.result_feature_set=1');
 }
 
@@ -375,7 +376,6 @@ sub _columns {
 			  cc.table_name       cc.chip_channel_id
 			  cc.table_id         rs.name
 			  rs.cell_type_id     rs.feature_type_id
-			  rs.result_feature_set
 		 );
 
 	
@@ -460,7 +460,7 @@ sub _objs_from_sth {
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, 
-					 \$table_id, \$name, \$ctype_id, \$ftype_id, \$rf_set);
+					 \$table_id, \$name, \$ctype_id, \$ftype_id);
   
   #this fails if we delete entries from the joined tables
   #causes problems if we then try and store an rs which is already stored
@@ -484,7 +484,7 @@ sub _objs_from_sth {
 													-TABLE_NAME   => $table_name,
 													-FEATURE_TYPE => $ftype,
 													-CELL_TYPE    => $ctype,
-													-RESULT_FEATURE_SET => $rf_set,
+													#-RESULT_FEATURE_SET => $rf_set,#Change to add_status
 													-ADAPTOR      => $self,
 												   );
     }
@@ -534,7 +534,7 @@ sub store{
   
   my (%analysis_hash);
   
-  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id, result_feature_set) VALUES (?, ?, ?, ?)');
+  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id) VALUES (?, ?, ?, ?)');
   
   my $db = $self->db();
   my $analysis_adaptor = $db->get_AnalysisAdaptor();
@@ -574,7 +574,7 @@ sub store{
     $sth->bind_param(2, $rset->name(),             SQL_VARCHAR);
 	$sth->bind_param(3, $ct_id,                    SQL_INTEGER);
 	$sth->bind_param(4, $ft_id,                    SQL_INTEGER);
-	$sth->bind_param(4, $rset->result_feature_set, SQL_INTEGER);
+
 	
     
     $sth->execute();
