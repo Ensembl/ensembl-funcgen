@@ -899,8 +899,9 @@ sub rollback_ResultSet{
 
 	#We need to move this as we could still fail after here, but before we've deleted anything else
 
-	$sql = 'DELETE from status where table_name="result_set" and table_id='.$rset->dbID;
-	$db->dbc->do($sql);
+
+	#Use revoked states here!
+	$rset->adaptor->revoke_states($rset);
 	
 	#Rollback results if required
 	if($rollback_results){
@@ -958,8 +959,7 @@ sub rollback_ResultSet{
 			$self->log("Deleting associated subset ResultSet:\t".$assoc_rset->log_label);
 			
 			#Delete status entries first
-			$sql = 'DELETE from status where table_name="result_set" and table_id='.$assoc_rset->dbID;
-			$db->dbc->do($sql);
+			$assoc_rset->adaptor->revoke_states($assoc_rset);
 			
 			#All cc records will have already been deleted
 			$sql = 'DELETE from result_set where result_set_id='.$assoc_rset->dbID;
@@ -1055,11 +1055,8 @@ sub rollback_ExperimentalSet{
   }
 
   #ExperimentalSet
-  my $sql = 'DELETE from status where table_name="experimental_set" and table_id='.$eset->dbID;
+  $eset->adaptor->revoke_states($eset);
 
-  if(! $db->dbc->do($sql)){
-	throw("Failed to roll back status entries for ExperimentalSet:\t".$eset->name.' (dbID:'.$eset->dbID.')');
-  }
   
   $eset->adaptor->revoke_states($eset);
 
@@ -1093,6 +1090,9 @@ sub rollback_results{
   }
   
   #Rollback status entries
+  #Cannot use revoke_states here?
+  #We can if we retrieve the Chip or Channel first
+  #Add to ResultSet adaptor
   my $sql = 'DELETE s from status s, chip_channel cc WHERE cc.chip_channel_id IN ('.join(',', @cc_ids).
 	') AND cc.table_id=s.table_id AND cc.table_name=s.table_name';
   
@@ -1135,7 +1135,7 @@ sub rollback_ArrayChip{
   #Check for dependent ExperimentalChips
   if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
 	my %exps;
-	my $txt = "Experiment\t\t\t\tExperimetnalChip Unique IDs\n";
+	my $txt = "Experiment\t\t\t\tExperimentalChip Unique IDs\n";
 
 	foreach my $ec(@echips){
 	  $exps{$ec->get_Experiment->name} ||= '';
