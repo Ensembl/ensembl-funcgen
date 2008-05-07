@@ -1132,22 +1132,31 @@ sub rollback_ArrayChip{
   my $db = $adaptor->db;
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $ac);
 
+
+  #This is always the case as we register the association before we set the Import status 
+  #Hence the 2nd stage of the import fails as we have an associated ExperimentalChip
+  #We need to make sure the ExperimentalChip and Channel have not been imported!!!
+
+  warn "Need to implement EC/Channel import check before rolling back ArrayChip";
+
+  
+
   #Check for dependent ExperimentalChips
-  if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
-	my %exps;
-	my $txt = "Experiment\t\t\t\tExperimentalChip Unique IDs\n";
+#  if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
+#	my %exps;
+#	my $txt = "Experiment\t\t\t\tExperimentalChip Unique IDs\n";
 
-	foreach my $ec(@echips){
-	  $exps{$ec->get_Experiment->name} ||= '';
+#	foreach my $ec(@echips){
+#	  $exps{$ec->get_Experiment->name} ||= '';
 	
-	  $exps{$ec->get_Experiment->name} .= "\t".$ec->unique_id;
-	}
+#	  $exps{$ec->get_Experiment->name} .= "\t".$ec->unique_id;
+#	}
 
-	map {$txt.= "\t".$_.":".$exps{$_}."\n"} keys %exps;
+#	map {$txt.= "\t".$_.":".$exps{$_}."\n"} keys %exps;
 	
-	throw("Cannot rollback ArrayChip:\t".$ac->name.
-		  "\nFound Dependent Experimental Data:\n".$txt);
-  }
+#	throw("Cannot rollback ArrayChip:\t".$ac->name.
+#		  "\nFound Dependent Experimental Data:\n".$txt);
+#  }
   
 
 
