@@ -102,6 +102,8 @@ sub set_config{
   my ($self) = @_;
 
   #placeholder method for setting any attr dependant vars e.g. file paths etc.
+
+
   return;
 }
 

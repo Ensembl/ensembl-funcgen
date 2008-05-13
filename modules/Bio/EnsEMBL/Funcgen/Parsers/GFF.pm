@@ -1,14 +1,16 @@
 #
-# EnsEMBL module for Bio::EnsEMBL::Funcgen::Parsers::Bed
+# EnsEMBL module for Bio::EnsEMBL::Funcgen::Parsers::GFF
 #
+
+#Could this be based on a Generic Flat file parser?
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::Parsers::Bed
+Bio::EnsEMBL::Funcgen::Parsers::GFF
 
 =head1 SYNOPSIS
 
-  my $parser_type = "Bio::EnsEMBL::Funcgen::Parsers::Bed";
+  my $parser_type = "Bio::EnsEMBL::Funcgen::Parsers::GFF";
   push @INC, $parser_type;
   my $imp = $class->SUPER::new(@_);
 
@@ -34,26 +36,20 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 
 package Bio::EnsEMBL::Funcgen::Parsers::Bed;
 
-use Bio::EnsEMBL::Funcgen::ExperimentalSet;
-use Bio::EnsEMBL::Funcgen::FeatureSet;
-use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use strict;
 
-use Data::Dumper;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::Simple);
 
 =head2 new
 
   Example    : my $self = $class->SUPER::new(@_);
-  Description: Constructor method for Bed class
-  Returntype : Bio::EnsEMBL::Funcgen::Parsers::Bed
-  Exceptions : throws if Experiment name not defined or if caller is not Importer
+  Description: Constructor method for GFF class
+  Returntype : Bio::EnsEMBL::Funcgen::Parsers::GFF
+  Exceptions : None
   Caller     : Bio::EnsEMBL::Funcgen::Importer
   Status     : at risk
 
@@ -64,26 +60,52 @@ sub new{
   my $caller = shift;
   
   my $class = ref($caller) || $caller;
-  my $self  = $class->SUPER::new();
-  
-  throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") 
-	if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
-  
-  $self->{'config'} =  
-	{(
-      #order of these method arrays is important!
-	  #remove method arrays and execute serially?
-      array_data   => [],#['experiment'],
-      probe_data   => [],#["probe"],
-      results_data => ["and_import_bed"],
-      norm_method => undef,
 
-	  #Need to make these definable?
-	  #have protocolfile arg and just parse tab2mage protocol section format
-	  #SEE NIMBLEGEN FOR EXAMPLE
-	  protocols => {()},
-     )};
-	
+  #define default fields here and pass
+  #We also need to be able to take custom attrs mappings
+
+  #keys are array index of field, key are Feature paramter names
+  #reverse this?
+  #Unless we have a compound field which we name accordingly
+  #And then call e.g. parse_attrs
+  #Which will return a hash with the relevant Feature attributes
+
+  #Is splitting this up simply going to make the parse slower due to acessor methods?
+
+  #Pass or just set directly here?
+  #<seqname> <source> <feature> <start> <end> <score> <strand> <frame> [attributes] [comments]
+
+
+  #Some of these may be highly redundant due to the nature of the data.
+  #We can hash things to lessen the impact but we're still going to be checking if exists for each one
+  #No way around this?  Unless it is marginally faster to set a permanent type and then only check a boolean.
+  #Yes there is, this is the exhaustive GFF definition, we can just redefine or delete some entries dynamically to
+  #avoid ever considering a particular field index.
+
+  my %fields = (
+				0 => 'fetch_slice',
+				1 => 'get_source',
+				2 => 'get_feature_type',
+				3 => '-start',
+				4 => '-end',
+				5 => '-strand',#Will most likely be , need to convert to -.+ > -1 0 1
+				#6 => 'frame',#will most likely be .
+				7 => 'get_attributes',
+			   );
+
+  my $self  = $class->SUPER::new(@_);
+  
+
+  #We need to define meta header method, starting with '##'
+  #Also need to skip comments '#' at begining or end of line
+  #Do we also need to skip field header? No methinks not.
+
+  #Define result method
+ # $self->{'file_ext'} => 'gff';#Could use vendor here?
+  
+  #define this if we want to override the generic method in Simple
+  #$self->{'config'}{'results_data'} => ["and_import_gff"];  
+
 
   return $self;
 }
@@ -104,18 +126,9 @@ sub new{
 sub set_config{
   my $self = shift;
 
-  throw('Must provide an ExperimentalSet name for a Bed import') if ! defined $self->experimental_set_name();
+  $self->SUPER::set_config;
 
-  #Mandatory checks
-  if(! defined $self->feature_analysis){
-	throw('Must define a -feature_analysis parameter for Bed imports');
-  }
-
-
-  #We need to undef norm emthod as it has been set to the env var
-  $self->{'norm_method'} = undef;
-
-  #dir are not set in config to enable generic get_dir method access
+  #GFF specific stuff here.
 
   return;
 }

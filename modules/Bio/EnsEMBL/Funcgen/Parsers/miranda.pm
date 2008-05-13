@@ -79,7 +79,7 @@ sub parse_and_load{
 
   my ($self, $file, $old_assembly, $new_assembly) = @_;
 
-  $self->log("Parsing miRanda data from:\t$file");
+  $self->log_header("Parsing miRanda data from:\t$file");
 
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   my $ftype_adaptor    = $self->db->get_FeatureTypeAdaptor();
