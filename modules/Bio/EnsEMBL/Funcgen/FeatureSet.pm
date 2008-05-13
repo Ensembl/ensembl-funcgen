@@ -67,6 +67,7 @@ use vars qw(@ISA);
                                                                     -cell_type => $ctype,
                                                                     -name => $name,
                                                                     -type => 'annotated',
+                                                                    -description => 'Release 3.1',
 			                                                       ); 
   Description: Constructor for FeatureSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
@@ -83,13 +84,14 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($type)
-    = rearrange(['TYPE'],@_);
+  my ($type, $desc)
+    = rearrange(['TYPE', 'DESCRIPTION'],@_);
 
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
 
   throw("You must defined a FeatureSet type e.g. 'annotated'") if ! $type;
   $self->type($type);
+  $self->description($desc) if defined $desc;
 
   return $self;
 }
@@ -144,37 +146,36 @@ sub new_fast {
 #get_predicted_feature_analysis_name
 #set ResultFeatures and AnnotatedFeatures in hash keyed by analysis_name?
 
+=head2 description
 
-#=head2 external_db_name
+  Example    : print "Feature set description is:\t".$fset->description."\n";
+  Description: Getter/Setter for the description of this FeatureSet.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
 
-#  Example    : my $fset->external_db_name('miRanda');
-#  Description: Getter/Setter for the external_db name of this FeatureSet.
-#  Returntype : string
-#  Exceptions : None
-#  Caller     : General
-#  Status     : At Risk
+=cut
 
-#=cut
-
-#sub external_db_name {
-#  my $self = shift;
+sub description {
+  my $self = shift;
      	
-#  $self->{'external_db_name'} = shift if @_;
+  $self->{'description'} = shift if @_;
 
-#  return $self->{'external_db_name'};
-#}
+  return $self->{'description'};
+}
 
 
 
 =head2 type
 
-  Example    : my $fset->type('annotated');
+  Example    : my $type = $fset->type('annotated');
   Description: Getter/Setter for the type of this FeatureSet.
                Valid values are 'annotated', 'regulatory' or 'external'.
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk - change to feature_type
+  Status     : At Risk 
 
 =cut
 
