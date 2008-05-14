@@ -585,14 +585,17 @@ sub get_schema_and_build{
 
 =head2 define_and_validate_sets
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::DBAdaptor
-  Arg [2]    : hashref - class constructor parameters:
+  Arg [1]    : hash - set constructor parameters:
+                            -dbadaptor    Bio::EnsEMBL::Funcgen::DBAdaptor
                             -name         Data/FeatureSet name to create
                             -feature_type Bio::EnsEMBL::Funcgen::FeatureType
                             -cell_type    Bio::EnsEMBL::Funcgen::CellType
-                            -analysis     FeatureSet Bio::EnsEMBL::Analysis   
-  Arg [3]    : boolean - roll back flag
-  Example    : my $fset = $self->define_and_validate_Set($db, 'FeatureSet', \%params, $delete);
+                            -analysis     FeatureSet Bio::EnsEMBL::Analysis
+                            -type         e.g. annotated or regulatory
+                            -description  FeatureSet description
+                            -rollback     Boolean - Forces rollback of previously imported data
+                            -append       Boolean - Forces import on top of previously imported dataç
+  Example    : my $fset = $self->define_and_validate_Set(%params);
   Description: Checks whether set is already in DB based on set name, rolls back features 
                if roll back flag set. Or creates new DB if not present.
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
@@ -603,24 +606,42 @@ sub get_schema_and_build{
 =cut
 
 sub define_and_validate_sets{
-  my ($self, $db, $params, $rollback) = @_;
+  my $self = shift;
+
+  my ($name, $anal, $ftype, $ctype, $type, $append, $rollback, $db)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'TYPE', 'APPEND' 'ROLLBACK', 'DBADAPTOR'], @_);
+
+  #We need an append flag to allow addition of Features to a pre-existing feature set
+  #We should implement rearrange here, will this capture any ill-defined parameters
+  #add db, rollback and append to params
+
 
   #Check mandatory params
   if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
 	throw('Must provide a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
   }
 
-  throw('Must provide a -name in the paramters hash') if(! (exists $params->{'-name'} 
-															&& defined $params->{'-name'}));
+  throw('Must provide a -name ') if(! defined $name);
   
-  throw('Must provide a -feature_type in the parameters hash') if(! exists $params->{'-feature_type'});
-  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',  $params->{'-feature_type'});
+  #Not necessarily, just do rollback then append?
+  #Generating sets for an ExpSet will always have append set
+  #This could be valid for generically grabing/creating sets for adding new supporting sets e.g. reg build
+  #throw('-append and -rollback are mutually exclusive') if $rollback && $append;
+  
+  #warn only for append?
+  warn('You are defining a pre-existing FeatureSet without rolling back'.
+	   ' previous data, this could result in data duplication') if $append;
 
-  throw('Must provide a -cell_type in the parameters hash') if(! exists $params->{'-cell_type'});
-  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',  $params->{'-cell_type'});
 
-  throw('Must provide an -analysis in the parameters hash') if(! exists $params->{'-analysis'});
-  $db->is_stored_and_valid('Bio::EnsEMBL::Analysis',  $params->{'-analysis'});
+  throw('Must provide a -type e.g. annotated, external or regulatory') if(! defined $type);
+  #Check for annotated, external, regulatory etc here?
+  #Should never be external as we don't have DataSets for external sets?
+  
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',  $ftpye);
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',  $ctype);
+  $db->is_stored_and_valid('Bio::EnsEMBL::Analysis',  $anal);
+
+
 
 
   my $dset_adaptor = $db->get_DataSetAdaptor;
@@ -718,12 +739,15 @@ sub define_and_validate_sets{
 	#create a new one
 	$self->log("Creating new FeatureSet:\t".$params->{'-name'});
 
+	my $desc = (exists $params->{'description'}) ? $params->{'description'} : undef;
+
 	$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-												   -name => $params->{'-name'},
+												   -name         => $params->{'-name'},
 												   -feature_type => $params->{'-feature_type'},
-												   -cell_type => $params->{'-cell_type'},
-												   -analysis => $params->{'-analysis'},
-												   -type     => 'annotated',
+												   -cell_type    => $params->{'-cell_type'},
+												   -analysis     => $params->{'-analysis'},
+												   -type         => $params->{'-type'},
+												   -description  => $desc,
 												  );
 	($fset) = @{$fset_adaptor->store($fset)};
   }
