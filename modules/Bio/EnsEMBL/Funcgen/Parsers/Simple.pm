@@ -47,9 +47,9 @@ use vars qw(@ISA);
 
   Example    : my $self = $class->SUPER::new(@_);
   Description: Constructor method for Bed class
-  Returntype : Bio::EnsEMBL::Funcgen::Parsers::Bed
+  Returntype : Bio::EnsEMBL::Funcgen::Parsers::Simple
   Exceptions : throws if caller is not Importer
-  Caller     : Bio::EnsEMBL::Funcgen::Parsers:Bed
+  Caller     : Bio::EnsEMBL::Funcgen::Parsers:Simple
   Status     : at risk
 
 =cut
@@ -116,23 +116,39 @@ sub set_config{
   return;
 }
 
+sub define_sets{
+  my ($self) = @_;
 
 
- 
-sub read_and_import_simple_data{
-  my $self = shift;
-    
-  $self->log("Reading and importing ".$self->vendor()." data");
-  my (@header, @data, @design_ids, @lines);
-  my ($anal, $fh, $file);
-  
   my $eset_adaptor = $self->db->get_ExperimentalSetAdaptor();
-  my $af_adaptor = $self->db->get_AnnotatedFeatureAdaptor();
-  my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-  my $dset_adaptor = $self->db->get_DataSetAdaptor();
-  my $new_data = 0;
-  my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name());
+ 
+ 
+
+  #Use define_and_validate with append as we may have a pre-existing set
+ 
+  my $dset = $self->define_and_validate_sets
+	(
+	 -dbadaptor    => $self->db,
+	 -name         => $self->experimental_set_name,
+	 -feature_type => $self->feature_type,
+	 -cell_type    => $self->cell_type,
+	 -analysis     => $self->feature_analysis,
+	 -type         => 'annotated', 
+	 -description  => $self->set_description,
+	 -rollback     => $self->rollback,
+	 -append       => 1,
+	);
+
+  #It may already be defined as we may be adding a subset to a previously imported set.
   
+  my ($eset) = @{$dset->get_supporting_sets};#Only expecting one.
+ 
+  if($eset->name ne $self->experimental_set_name){
+	throw('Found pre-exiting DataSet('.$dset->name.') with incorrect supporting '
+		  .ucfirst($eset->type).'Set('.$eset->name.')');
+  }
+
+
   if(! defined $eset){
 	$eset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new
 	  (
@@ -145,51 +161,40 @@ sub read_and_import_simple_data{
 	   -analysis     => $self->feature_analysis,
 	  );
 	($eset)  = @{$eset_adaptor->store($eset)};
+
+	#add to dset here and store
+	$dset->add_supporting_set($eset);
+	$dset->adaptor->update_supporting_sets($dset);
   }
 
-  #we need a way to define replicates on a file basis when we have no meta file!
-  #can we make this generic for application to array imports?
-  #currently we have to do a separate import for each replicate, specifying the result files each time
-  #we need to add a experimental_set_name option
-  #Actually ExperimentalSet is a little redundant as we can do the roll back which is exactly what this is designed to facilitate
-  #It does however allow incremental addition of new subsets
-  
-  #Now define FeatureSet
-  
-  #shouldn't we be using the exp name?
-  my $fset = $fset_adaptor->fetch_by_name($self->experiment->name());
-  
-  if(! defined $fset){
-	
-	#currently hardcoded, but we should probably add feature_analysis_name
-	$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
-	  (
-	   -name         => $self->experiment->name(),
-	   -feature_type => $self->feature_type(),
-	   -cell_type    => $self->cell_type(),
-	   -type         => 'annotated',
-	   -analysis     => $self->feature_analysis,
-	   -description  => $self->description,
-	  );
+  #We could retrieve the DataSet by supporting set here, but define_and_validate_sets is more exhautive
+  #Just need to check the ExperimentalSet hasn't already be added as a supporting set
 
-	($fset)  = @{$fset_adaptor->store($fset)};
-  }
+  #We are now using IMPORTED to define wheather a FeatureSet has been imported succesfully
+  #However we already have IMPORTED on the ExperimentalSubSet
+  #We shoiuld add it to FeatureSet to remain consistent.
+  #Do we not need to remove IMPORTED from FeatureSet whilst we are doing the import
+  #Yes as we may try importing more, but not point at the old files
+  #so this will never get noticed if we don't have set wide status
   
-  #Define DataSet
-  my $dset = $dset_adaptor->fetch_by_name($self->experiment->name());
-  
-  if(! defined $dset){
-	
-	$dset = Bio::EnsEMBL::Funcgen::DataSet->new(
-												-name                => $self->experiment->name(),
-												-supporting_sets     => [$eset],
-												-feature_set         => $fset,
-												-displayable         => 1,
-												-supporting_set_type => 'experimental',
-											   );
-	($dset)  = @{$dset_adaptor->store($dset)};
-    }
+  return $dset;
+
+}
+
+ 
+sub read_and_import_simple_data{
+  my $self = shift;
     
+  $self->log("Reading and importing ".$self->vendor()." data");
+  my (@header, @data, @design_ids, @lines);
+  my ($anal, $fh, $file);
+  
+ 
+  my $af_adaptor = $self->db->get_AnnotatedFeatureAdaptor();
+  my $new_data = 0;
+
+  my $dset   = $self->define_sets;
+  my ($eset) = @{$dset->get_supporting_sets};   
 
   #Get file
   if (! @{$self->result_files()}) {
