@@ -608,8 +608,8 @@ sub get_schema_and_build{
 sub define_and_validate_sets{
   my $self = shift;
 
-  my ($name, $anal, $ftype, $ctype, $type, $append, $rollback, $db)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'TYPE', 'APPEND' 'ROLLBACK', 'DBADAPTOR'], @_);
+  my ($name, $anal, $ftype, $ctype, $type, $append, $rollback, $db, $ssets, $description)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'TYPE', 'APPEND', 'ROLLBACK', 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION'], @_);
 
   #We need an append flag to allow addition of Features to a pre-existing feature set
   #We should implement rearrange here, will this capture any ill-defined parameters
@@ -637,7 +637,7 @@ sub define_and_validate_sets{
   #Check for annotated, external, regulatory etc here?
   #Should never be external as we don't have DataSets for external sets?
   
-  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',  $ftpye);
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',  $ftype);
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',  $ctype);
   $db->is_stored_and_valid('Bio::EnsEMBL::Analysis',  $anal);
 
@@ -647,7 +647,7 @@ sub define_and_validate_sets{
   my $dset_adaptor = $db->get_DataSetAdaptor;
   my $fset_adaptor = $db->get_FeatureSetAdaptor;
   
-  my $dset = $dset_adaptor->fetch_by_name($params->{'-name'});
+  my $dset = $dset_adaptor->fetch_by_name($name);
 
 
   my ($fset);
@@ -663,17 +663,17 @@ sub define_and_validate_sets{
 	  $self->log("Found associated product FeatureSet:\t".$fset->name);
 	  
 	  #if(! $clobber && 
-	  if($fset->name ne $params->{'-name'}){
-		throw('Invalid product FeatureSet name ('.$fset->name.') for DataSet ('.$params->{'-name'}.'). Rollback will overwrite the FeatureSet and mismatched name will be retained.');
+	  if($fset->name ne $name){
+		throw('Invalid product FeatureSet name ('.$fset->name.') for DataSet ('.$name.'). Rollback will overwrite the FeatureSet and mismatched name will be retained.');
 		#Need to clobber both or give explicit name for datasets or rename dataset???
 		#Force this throw for now, make this fix manual as we may end up automatically overwriting data
 	  }  
 	}
 
 	#check supporting_sets here if defined
-	if(exists $params->{'-supporting_sets'}){
+	if(defined $ssets){
 	  
-	  my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$params->{'-supporting_sets'}};
+	  my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$ssets};
 	  my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
 	  my $mismatch = 0;
 
@@ -700,14 +700,14 @@ sub define_and_validate_sets{
 	  }
 	}
 	else{
-	  warn("Skipping validating of supporting sets for Data/FeatureSet definition:\t".$params->{'-name'});
+	  warn("Skipping validating of supporting sets for Data/FeatureSet definition:\t".$name);
 	}
   }
 
 
   if(! defined $fset){
 	#Try and grab it anyway just in case it has been orphaned somehow
-	$fset = $fset_adaptor->fetch_by_name($params->{'-name'});
+	$fset = $fset_adaptor->fetch_by_name($name);
 
 	if(defined $fset){
 	  #Now we need to test whether it is attached to a dset
@@ -718,7 +718,7 @@ sub define_and_validate_sets{
 	  my $stored_dset = $dset_adaptor->fetch_by_product_FeatureSet($fset);
 
 	  if(defined $stored_dset){
-		throw('Found FeatureSet('.$params->{'-name'}.') associated with incorrect DataSet('.$stored_dset->name.
+		throw('Found FeatureSet('.$name.') associated with incorrect DataSet('.$stored_dset->name.
 			  ").\nTry using another -name in the set parameters hash");
 
 	  }
@@ -737,17 +737,15 @@ sub define_and_validate_sets{
   }
   else{
 	#create a new one
-	$self->log("Creating new FeatureSet:\t".$params->{'-name'});
-
-	my $desc = (exists $params->{'description'}) ? $params->{'description'} : undef;
+	$self->log("Creating new FeatureSet:\t".$name);
 
 	$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-												   -name         => $params->{'-name'},
-												   -feature_type => $params->{'-feature_type'},
-												   -cell_type    => $params->{'-cell_type'},
-												   -analysis     => $params->{'-analysis'},
-												   -type         => $params->{'-type'},
-												   -description  => $desc,
+												   -name         => $name,
+												   -feature_type => $ftype,
+												   -cell_type    => $ctype,
+												   -analysis     => $anal,
+												   -type         => $type,
+												   -description  => $description,
 												  );
 	($fset) = @{$fset_adaptor->store($fset)};
   }
@@ -762,11 +760,11 @@ sub define_and_validate_sets{
 	}
   }
   else{
-	$self->log("Creating new DataSet:\t".$params->{'-name'});
+	$self->log("Creating new DataSet:\t".$name);
 	$dset = Bio::EnsEMBL::Funcgen::DataSet->new(
-												-name => $params->{'-name'},
+												-name => $name,
 												-feature_set => $fset,
-												-supporting_sets => $params->{'-supporting_sets'},
+												-supporting_sets => $ssets,
 											   );
 	($dset) = @{$dset_adaptor->store($dset)};
   }
