@@ -185,7 +185,8 @@ sub new{
     
   #### Set vars and test minimum mandatory params for any import type
 
-  $self->{'name'} = $name || throw('Mandatory param -name not met');#if $name;
+  $self->{'name'} = $name || throw('Mandatory param -name not met');#This is not mandatory for array design import
+  $self->{'user'} = $user || $ENV{'EFG_WRITE_USER'};
   $self->vendor(uc($vendor));	#already tested
   $self->{'format'} = uc($format) || 'TILED'; #remove default?
   $self->group($group) if $group;
@@ -254,12 +255,13 @@ sub new{
 	#This will try and load the dev DBs if we are using v49 schema or API?
 	#Need to be mindful about this when developing
 	#Can we for loading of an older registry?
+	#we need to tip all this on it's head and load the reg from the dnadb version
 
 
 	$reg->load_registry_from_db(
 								-host => "ensembldb.ensembl.org",
 								-user => "anonymous",
-								-db_version => 48, #$self->{'release'},
+								-db_version => $self->{'release'},
 								-verbose => $self->verbose(),
 							   );
 
@@ -304,7 +306,7 @@ sub new{
 	  #Need to check for mandatory params here
 
 	  $dbname || throw('Must provide a -dbname if not using default custom registry config');
-	  $user || throw('Must provide a -user parameter');
+	  #$user || throw('Must provide a -user parameter');#make this default to EFG_WRITE_USER?
 	  $pass || throw('Must provide a -pass parameter');
 	 
 	  #remove this and throw?
@@ -348,7 +350,7 @@ sub new{
 	  #Can we autodetect this and reload the registry?
 	  #We want to reload the registry anyway with the right version corresponding to the dnadb
 
-	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $user, $pass);
+	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $self->user, $pass);
 
 
 	  #ConfigRegistry will try ans set this
@@ -1678,7 +1680,7 @@ sub validate_mage(){
   #need to change this to default analysis
   #There we issues with setting VSN_GLOG as an env var
   #as this is tested for and the norm was skipped for some reason?
-  my $chip_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name('VSN_GLOG');
+  my $chip_anal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($self->norm_method());
 
   #Try import sets like this first, so we know ther is new data
   my $chan_rset = $self->get_import_ResultSet($chan_anal, 'channel');
