@@ -346,16 +346,17 @@ sub _objs_from_sth {
 		$ctype_hash{$ctype_id} = $ct_adaptor->fetch_by_dbID($ctype_id) if(! exists $ctype_hash{$ctype_id});
 
 
-		$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-													   -dbID         => $feature_set_id,
-													   -adaptor      => $self,
-													   -feature_type => $ftype_hash{$ftype_id},
-													   -analysis     => $analysis_hash{$analysis_id},
-													   -cell_type    => $ctype_hash{$ctype_id},
-													   -name         => $name,
-													   -type         => $type,
-													   -description  => $desc,
-							      );
+		$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
+		  (
+		   -dbID         => $feature_set_id,
+		   -adaptor      => $self,
+		   -feature_type => $ftype_hash{$ftype_id},
+		   -analysis     => $analysis_hash{$analysis_id},
+		   -cell_type    => $ctype_hash{$ctype_id},
+		   -name         => $name,
+		   -type         => $type,
+		   -description  => $desc,
+		  );
 
 		push @fsets, $fset;
 
@@ -410,7 +411,7 @@ sub store {
 		  $sth->bind_param(3, $ctype_id,                 SQL_INTEGER);
 		  $sth->bind_param(4, $fset->name,               SQL_VARCHAR);
 		  $sth->bind_param(5, $fset->type,               SQL_VARCHAR);
-		  $sth->bind_param(5, $fset->description,        SQL_VARCHAR);
+		  $sth->bind_param(6, $fset->description,        SQL_VARCHAR);
 		  		  
 		  $sth->execute();
 		  $fset->dbID($sth->{'mysql_insertid'});
