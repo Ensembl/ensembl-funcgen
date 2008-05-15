@@ -89,7 +89,11 @@ sub new {
 
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
 
-  throw("You must defined a FeatureSet type e.g. 'annotated'") if ! $type;
+
+  if(! ($type || grep /$type/, ('annotated', 'external', 'regulatory'))){
+	throw("You must defined a FeatureSet type e.g. 'annotated', 'external' or 'regaultory'");
+  }
+
   $self->type($type);
   $self->description($desc) if defined $desc;
 
