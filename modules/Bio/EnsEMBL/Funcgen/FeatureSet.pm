@@ -89,9 +89,12 @@ sub new {
 
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
 
+  #explicit type check here to avoid invalid types being imported as NULL
+  #subsequently throwing errors on retrieval
 
-  if(! ($type || grep /$type/, ('annotated', 'external', 'regulatory'))){
-	throw("You must defined a FeatureSet type e.g. 'annotated', 'external' or 'regaultory'");
+
+  if(! ($type && grep /$type/, ('annotated', 'external', 'regulatory'))){
+	throw("You must define a valid FeatureSet type e.g. 'annotated', 'external' or 'regulatory'");
   }
 
   $self->type($type);
