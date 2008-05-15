@@ -45,6 +45,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
 use Bio::MAGE::XMLUtils;
+use File::Path;
 use strict;
 use vars qw(@ISA);
 
@@ -776,7 +777,7 @@ sub create_output_dirs{
 
 	if(! (-d $self->get_dir($name) || (-l $self->get_dir($name)))){
 	  $self->log("Creating directory:\t".$self->get_dir($name));
-	  mkdir $self->get_dir($name) || throw('Failed to create directory:    '. $self->get_dir($name));
+	  mkpath $self->get_dir($name) || throw('Failed to create directory:    '. $self->get_dir($name));
 	  chmod 0744, $self->get_dir($name);
 	}
   }
