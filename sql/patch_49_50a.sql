@@ -11,10 +11,14 @@ alter table feature_type modify `class` enum('Insulator','DNA','Regulatory Featu
 
 
 
---New patches
+--New patches - only done on human
+
+--add description to feature_set
+alter table feature_set add `description` varchar(80) default NULL,
 
 -- add result_feature column to result_set
-alter table result_set add `result_feature_set` tinyint(1) unsigned default 0;  
+--alter table result_set add `result_feature_set` tinyint(1) unsigned default 0;  
+--Now done with status
 
 -- add result_feature table
 CREATE TABLE `result_feature` (
