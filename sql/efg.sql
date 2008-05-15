@@ -536,6 +536,7 @@ CREATE TABLE `feature_set` (
    `cell_type_id` int(10) unsigned default NULL,
    `name` varchar(100) default NULL,
    `type` enum('annotated', 'regulatory', 'external') default NULL,
+   `description` varchar(80) default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    UNIQUE KEY `name_idx` (name)
