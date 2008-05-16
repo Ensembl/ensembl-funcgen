@@ -58,47 +58,84 @@ sub build_features
     my $dba = $self->transport->adaptor();
     my $slice = $dba->get_SliceAdaptor->fetch_by_region
         ('chromosome', $segment, $start, $end);
-    #print Dumper $slice;
+    print Dumper $slice if ($self->{'debug'});
 
-    my $dset = $dba->get_DataSetAdaptor->fetch_by_dbID
-        ($self->config()->{'data_set_id'});
-    #print Dumper $dset->get_supporting_sets;
+    my $rset = $dba->get_ResultSetAdaptor->fetch_by_dbID
+        ($self->config()->{'result_set_id'});
 
     my @features;
 
-    foreach my $rset (@{$dset->get_supporting_sets()}) 
-    {
-        
-        #print Dumper $rset->get_ResultFeatures_by_Slice($slice);
-        map {
-            #print Dumper $_;
-            my $ft_start = $start+$_->start;
-            my $ft_end = $start+$_->end;
-            my $id = sprintf( "%s:%s,%s",
-                              $segment,
-                              $ft_start,
-                              $ft_end);
-            #print Dumper $id;
-            push @features, {
-              
-                'id'          => $id,
-                'label'       => $id,
-                'start'       => $ft_start,
-                'end'         => $ft_end,
-                #'ori'         => 1,
-                'score'       => $_->score,
-                'method'      => $self->config()->{'source'},
-                'type'        => $self->config()->{'type'},
-                'typecategory'=> $self->config()->{'category'},
-                #'note'        => $note,
-                #'link'        => 'http://www.sanger.ac.uk/PostGenomics/epigenome/',
-                #'linktxt'     => 'Human Epigenome Project (HEP)'
+    map {
+        my $ft_start = $start+$_->start;
+        my $ft_end = $start+$_->end;
+        my $id = sprintf( "%s:%s,%s",
+                          $segment,
+                          $ft_start,
+                          $ft_end);
+        print Dumper $id if ($self->{'debug'});
+        push @features, {
+            
+            'id'          => $id,
+            'label'       => $id,
+            'start'       => $ft_start,
+            'end'         => $ft_end,
+            #'ori'         => 1,
+            'score'       => $_->score,
+            'method'      => $self->config()->{'source'},
+            'type'        => $self->config()->{'type'},
+            'typecategory'=> $self->config()->{'category'},
+            #'note'        => $note,
+            #'link'        => 'http://www.sanger.ac.uk/PostGenomics/epigenome/',
+            #'linktxt'     => 'Human Epigenome Project (HEP)'
+            
+        }
 
-            } } @{$rset->get_ResultFeatures_by_Slice($slice)};
+    } @{$rset->get_ResultFeatures_by_Slice($slice)};
+    print 'NoRF: '.scalar(@features)."\n";
 
-        return @features;
-        
-    }
+    return @features;
+
+
+
+#    my $dset = $dba->get_DataSetAdaptor->fetch_by_dbID
+#        ($self->config()->{'data_set_id'});
+#    #print Dumper $dset->get_supporting_sets;
+#
+#    my @features;
+#
+#    foreach my $rset (@{$dset->get_supporting_sets()}) 
+#    {
+#        
+#        #print Dumper $rset->get_ResultFeatures_by_Slice($slice);
+#        map {
+#            #print Dumper $_;
+#            my $ft_start = $start+$_->start;
+#            my $ft_end = $start+$_->end;
+#            my $id = sprintf( "%s:%s,%s",
+#                              $segment,
+#                              $ft_start,
+#                              $ft_end);
+#            #print Dumper $id;
+#            push @features, {
+#              
+#                'id'          => $id,
+#                'label'       => $id,
+#                'start'       => $ft_start,
+#                'end'         => $ft_end,
+#                #'ori'         => 1,
+#                'score'       => $_->score,
+#                'method'      => $self->config()->{'source'},
+#                'type'        => $self->config()->{'type'},
+#                'typecategory'=> $self->config()->{'category'},
+#                #'note'        => $note,
+#                #'link'        => 'http://www.sanger.ac.uk/PostGenomics/epigenome/',
+#                #'linktxt'     => 'Human Epigenome Project (HEP)'
+#
+#            } } @{$rset->get_ResultFeatures_by_Slice($slice)};
+#
+#        return @features;
+#        
+#    }
 
 
 #    my $type = $self->config()->{'type'};
@@ -161,12 +198,13 @@ sub das_stylesheet
 <!DOCTYPE DASSTYLE SYSTEM "http://www.biodas.org/dtd/dasstyle.dtd">
 <DASSTYLE>
     <STYLESHEET version="0.01">
-        <CATEGORY id="epigenomic modification">
-            <TYPE id="DNA methylation">
+        <CATEGORY id="default">
+            <TYPE id="default">
                 <GLYPH>
                     <BOX>
-                        <FGCOLOR>blue</FGCOLOR>
-                        <BGCOLOR>black</BGCOLOR>
+                        <FGCOLOR>brown3</FGCOLOR>
+                        <BGCOLOR>brown3</BGCOLOR>
+                        <HEIGHT>30</HEIGHT>
                     </BOX>
                 </GLYPH>
             </TYPE>

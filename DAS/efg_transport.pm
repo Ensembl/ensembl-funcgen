@@ -35,6 +35,7 @@ package Bio::Das::ProServer::SourceAdaptor::Transport::efg_transport;
 #}
 
 use strict;
+use Data::Dumper;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
@@ -55,26 +56,16 @@ sub adaptor {
         my $species  = $self->config->{'species'}  || 'homo_sapiens';
         my $data_version  = $self->config->{'data_version'};
         
-        #my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-        #    (
-        #     -host => 'ensembldb.ensembl.org',
-        #     -port => 5306,
-        #     -user => 'anonymous',
-        #     -dbname => $species.'_core_'.$data_version,
-        #     -species => $species,
-        #     );
-        
         $self->{'_adaptor'} ||= Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
             (
-             -host   => $host,
-             -user   => $username,
-             -dbname => $dbname,
+             -host    => $host,
+             -user    => $username,
+             -dbname  => $dbname,
              -species => $species,
-             -pass   => $password,
-             -port   => $port,
-             #-dnadb  => $cdb
+             -pass    => $password,
+             -port    => $port,
              );
-        
+        print Dumper $self->{'_adaptor'} if ($self->{'debug'});
         return $self->{'_adaptor'};
     }
 }
@@ -86,6 +77,19 @@ sub chromosome_by_region {
        'chromosome', $chr, $start, $end
        );
   return $slice;
+}
+
+sub disconnect {
+  my $self = shift;
+  return unless (exists $self->{'_adaptor'});
+  $self->{'_adaptor'}->disconnect();
+  delete $self->{'_adaptor'};
+  $self->{'debug'} and print STDERR "$self PERFORMED DBA DISCONNECT\n";
+}
+
+sub DESTROY {
+  my $self = shift;
+  $self->disconnect();
 }
 
 1;

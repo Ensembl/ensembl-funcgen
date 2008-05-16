@@ -65,6 +65,7 @@ sub build_features
     
     my $qbounds = ($start && $end)?qq(AND seq_region_start <= $end AND seq_region_end >= $start):"";
     my $version = $self->config()->{'data_version'};
+    print Dumper $version if ($self->{'debug'});
     my $sql = "SELECT *
               FROM ${type}_feature f, seq_region sr 
              WHERE sr.seq_region_id=f.seq_region_id
@@ -108,6 +109,7 @@ sub build_features
         };
     }
 
+    print 'NoF: '.scalar(@features)."\n";
     return @features;
 }
 
@@ -119,7 +121,24 @@ sub das_stylesheet
 <!DOCTYPE DASSTYLE SYSTEM "http://www.biodas.org/dtd/dasstyle.dtd">
 <DASSTYLE>
     <STYLESHEET version="0.01">
-        <CATEGORY id="epigenomic modification">
+        <CATEGORY id="default">
+            <TYPE id="default">
+                <GLYPH>
+                    <BOX>
+                        <FGCOLOR>red</FGCOLOR>
+                        <BGCOLOR>black</BGCOLOR>
+                    </BOX>
+                </GLYPH>
+            </TYPE>
+            <TYPE id="annotated">
+                <GLYPH>
+                    <BOX>
+                        <FGCOLOR>black</FGCOLOR>
+                        <BGCOLOR>brown4</BGCOLOR>
+                        <HEIGHT>5</HEIGHT>
+                    </BOX>
+                </GLYPH>
+            </TYPE>
             <TYPE id="DNA methylation">
                 <GLYPH>
                     <BOX>
