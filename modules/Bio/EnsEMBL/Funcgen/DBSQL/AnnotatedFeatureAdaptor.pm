@@ -85,6 +85,40 @@ sub fetch_all_by_Slice_Experiment {
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
 
+=head2 fetch_all_by_Slice_FeatureSet
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Experiment
+  Arg [3]    : (optional) string - logic name
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_by_Slice_experiment_id($slice, $exp);
+  Description: Retrieves a list of features on a given slice, specific for a given experiment.
+  Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
+  Exceptions : Throws if no Experiment object defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Slice_FeatureSet {
+  my ($self, $slice, $fset, $logic_name) = @_;
+	
+
+  if (! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
+    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet");
+  }
+  
+
+  #throw("Need to write DataSet and ResultSet to track back to experiment");
+  
+  
+  my $constraint = qq( af.feature_set_id ='$fset->dbID()' );
+  
+  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
+  
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+}
+
 
 =head2 _tables
 
