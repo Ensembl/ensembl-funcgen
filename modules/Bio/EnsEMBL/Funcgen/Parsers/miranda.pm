@@ -200,18 +200,18 @@ sub parse_and_load{
 	#Handle release/version in xref version as stable_id version?
 
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => 'core_transcript',
+											 -dbname                 => 'ensembl_core_Transcript',
 											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
 											 #-db_display_name        => $self->db->dnadb->dbc->dbname,
-											 -db_display_name        => 'ensembl_core_transcript',
+											 -db_display_name        => 'ensembl_core_Transcript',
 											 -type                   => 'MISC',
 											 -primary_id             => $ens_id,
 											 -display_id             => $display_name,
 											 -info_type              => 'TARGET',
 											 -info_text              => 'negative influence',#Is this always the same?
-											 -description            => 'miRanda miRNA transcript xref',
+											 -linkage_annotation     => 'miRanda miRNA transcript xref',
 											 #could have version here if we use the correct dnadb to build the cache
 											);
 

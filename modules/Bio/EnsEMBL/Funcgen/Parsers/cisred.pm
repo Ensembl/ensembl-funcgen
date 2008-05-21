@@ -238,16 +238,16 @@ sub parse_and_load {
 	#Handle release/version in xref version as stable_id version?
 
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => 'core_gene',
+											 -dbname                 => 'ensembl_core_Gene',
 											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
 											 -#db_display_name        => $self->db->dnadb->dbc->dbname,
-											 -db_display_name        => 'ensembl_core_gene',
-											 -type                   => 'MISC',#Is this a TARGET
+											 -db_display_name        => 'ensembl_core_Gene',
+											 -type                   => 'MISC',#this is external_db.type
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
-											 -info_type              => 'MISC',
+											 -info_type              => 'TARGET',
 											 -description            => 'cisRED motif gene xref',
 											 #could have version here if we use the correct dnadb to build the cache
 											);
@@ -344,17 +344,17 @@ sub parse_and_load {
 	my $display_name = $self->get_display_name_by_stable_id($gene_id, 'gene');
 	
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => 'core_gene',
+											 -dbname                 => 'ensembl_core_Gene',
 											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
 											 #-db_display_name        => $self->db->dnadb->dbc->dbname,
-											 -db_display_name        => 'ensembl_core_gene',
+											 -db_display_name        => 'ensembl_core_Gene',
 											 -type                   => 'MISC',
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
 											 -info_type              => 'MISC',
-											 -description            => 'cisRED search region gene xref',
+											 -linkage_annotation     => 'cisRED search region gene xref',
 											 #could have version here if we use the correct dnadb to build the cache
 											  );
 	$dbentry_adaptor->store($dbentry, $search_feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag  

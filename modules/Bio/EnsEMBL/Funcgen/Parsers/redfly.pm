@@ -310,16 +310,16 @@ sub parse_and_load {
 			  #warn "got $stable_id for ".$attr_cache{'Factor'};
 
 			  my $dbentry = Bio::EnsEMBL::DBEntry->new(
-													   -dbname                 => 'core_gene',
+													   -dbname                 => 'ensembl_core_Gene',
 													   #-release                => $self->db->dnadb->dbc->dbname,
 													   -status                 => 'KNOWNXREF',#This is for the external DB
 													   #-display_label_linkable => 1,
 													   -#db_display_name        => $self->db->dnadb->dbc->dbname,
-													   -db_display_name        => 'ensembl_core_gene',
+													   -db_display_name        => 'ensembl_core_Gene',
 													   -type                   => 'PRIMARY_DB_SYNONYM',#Is for the external_db 
 													   -primary_id             => $stable_id,
 													   -display_id             => $attr_cache{'Factor'},
-													   -info_type              => 'CODING',
+													   -info_type              => 'CODING',#is this 
 
 													   #-description            => 'cisRED motif gene xref',#This is now generic and no longer resitricted to REDfly
 													   #could have version here if we use the correct dnadb to build the cache
@@ -384,17 +384,17 @@ sub parse_and_load {
 		#Handle release/version in xref version as stable_id version?
 		
 		my $dbentry = Bio::EnsEMBL::DBEntry->new(
-												 -dbname                 => 'core_gene',
+												 -dbname                 => 'ensembl_core_Gene',
 												 #-release                => $self->db->dnadb->dbc->dbname,
 												 -status                 => 'KNOWNXREF',
 												 #-display_label_linkable => 1,
 												 -#db_display_name        => $self->db->dnadb->dbc->dbname,
-												 -db_display_name        => 'ensembl_core_gene',
-											   -type                   => 'PRIMARY_DB_SYNONYM',#
+												 -db_display_name        => 'ensembl_core_Gene',
+												 -type                   => 'PRIMARY_DB_SYNONYM',#
 												 -primary_id             => $stable_id,
 												 -display_id             => $target,
 												 -info_type              => 'TARGET',
-											   -description            => $fset->feature_type->name.' xref',
+												 -linkage_annotation     => $fset->feature_type->name.' xref',
 												 #could have version here if we use the correct dnadb to build the cache
 											);
 		$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag
