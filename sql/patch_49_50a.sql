@@ -16,6 +16,13 @@ alter table feature_type modify `class` enum('Insulator','DNA','Regulatory Featu
 --add description to feature_set
 alter table feature_set add `description` varchar(80) default NULL,
 
+
+--Increase length of name field in experimental_set
+alter table experimental_set modify `name` varchar(100) default NULL;
+
+
+
+
 -- add result_feature column to result_set
 --alter table result_set add `result_feature_set` tinyint(1) unsigned default 0;  
 --Now done with status
