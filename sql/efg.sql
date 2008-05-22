@@ -659,7 +659,7 @@ CREATE TABLE `experimental_set` (
    `cell_type_id` int(10) unsigned default NULL,
    `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
-   `name` varchar(40) not NULL,
+   `name` varchar(100) not NULL,
    PRIMARY KEY  (`experimental_set_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `experiment_idx` (`experiment_id`),
