@@ -36,6 +36,9 @@ reg_feat_gen_feat_overlaps.pl -e dk_genomic_features_36k -v1 -c /lustre/work1/en
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2008/04/11 11:06:42  dkeefe
+ Classifies regulatory features on the basis of their pattern of attributes and their overlap with various classes of genomic feature.
+
 
 
 
@@ -262,6 +265,8 @@ exit;
 sub create_types_table{
     my($dbh,$dbu,$flags_table,$types_table)=@_;
 
+    &commentary("creating table $types_table\n") if $verbose;
+
     my @sql;
     push @sql, "drop table if exists $types_table";
     push @sql, "create table $types_table select regulatory_feature_id,display_label,if(gm06990+cd4+imr90 = 1,1,0) as cell_type_specific,protein_coding_exon1_plus_enhancer as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
@@ -280,6 +285,39 @@ sub create_types_table{
 
     &execute($dbh,@sql) or die;
 
+    # add the feature_type_id column
+    @sql = ();
+    push @sql, "alter table $types_table add column feature_type_id int(10) unsigned";
+    foreach my $ft ('Gene Associated',
+                    'Gene Associated - Cell type specific',
+                    'Non-Gene Associated',
+                    'Non-Gene Associated - Cell type specific',
+                    'Promoter Associated',
+                    'Promoter Associated - Cell type specific',
+                    'Unclassified',
+                    'Unclassified - Cell type specific',
+		    ){
+
+	my $ftid = $dbu->get_count("select feature_type_id from feature_type where name = '$ft' and class = 'Regulatory Feature'");
+	if($ftid <1){die "feature_type_id value is less than 1 $ftid"}
+        my $cts = 0;
+	my $col;
+	if($ft =~ 'specific'){
+            $cts = 1;
+	    ($col) = $ft =~ /(.+ *.+) -.*/;
+	    $col = lc($col);
+	    $col =~ tr/ /_/;
+	    $col =~ tr/-/_/;
+        }else{
+	    $col = lc($ft);
+	    $col =~ tr/ /_/;
+	    $col =~ tr/-/_/;
+        }
+	print "ft $ft col $col\n";
+        push @sql, "update $types_table set feature_type_id = $ftid where cell_type_specific = $cts and $col = 1";
+       
+    }
+    &execute($dbh,@sql) or die;
 
 
     my $res = $dbu->get_count("select count(*) from  regulatory_features_classified where promoter_associated and cell_type_specific");
@@ -291,10 +329,14 @@ sub create_types_table{
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where gene_associated and not cell_type_specific");
     &commentary("gene_associated and not cell_type_specific         $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where non_gene_associated and cell_type_specific");
-    &commentary(" non_gene_associated and cell_type_specific        $res\n");
+    &commentary("non_gene_associated and cell_type_specific         $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where non_gene_associated and not cell_type_specific");
     &commentary("non_gene_associated and not cell_type_specific     $res\n");
 
+    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where unclassified and cell_type_specific");
+    &commentary("unclassified and cell_type_specific                $res\n");
+    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where unclassified and not cell_type_specific");
+    &commentary("unclassified and not cell_type_specific            $res\n");
 
 }
 
