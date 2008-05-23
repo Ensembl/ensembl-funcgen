@@ -23,6 +23,8 @@ alter table experimental_set modify `name` varchar(100) default NULL;
 
 
 
+--Not done yet!!
+
 -- add result_feature column to result_set
 --alter table result_set add `result_feature_set` tinyint(1) unsigned default 0;  
 --Now done with status
