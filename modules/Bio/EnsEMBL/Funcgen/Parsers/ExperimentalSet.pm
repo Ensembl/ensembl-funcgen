@@ -66,6 +66,10 @@ sub new{
   my $self  = $class->SUPER::new(@_);
   
 
+  #No rollback flag yet to void losing old data which we are not reimporting
+
+
+
   #Could potentially take fields params directly to define a custom format
   #Take direct field mappings, plus special fields which needs parsing differently
   #i.e. default is tab delimited, and GFF would define Attrs field as compound field and provide special parsing and field mapping
@@ -77,23 +81,24 @@ sub new{
   $self->{'config'} =  
 	{(
 	  #can we omit these?
-      #array_data   => [],#['experiment'],
-      #probe_data   => [],#["probe"],
-      #norm_method => undef,
+      array_data   => [],#['experiment'],
+      probe_data   => [],#["probe"],
+      norm_method => undef,
 	  #protocols => {()},
-	  'results_data' => ["and_import_simple"], 
+	  'results_data' => ["and_import"], 
      )};
 
-
-  #some convenience methods
-  $self->{'annotated_feature_adaptor'} = $self->db->get_AnnotatedFeatureAdaptor;
-  $self->{'dbentry_adaptor'}           = $self->db->dnadb->get_DBEntryAdaptor;
+  #set up feature params
+  $self->{'_feature_params'} = {};
+  $self->{'_dbentry_params'} = [];
   
+  $self->{'counts'} = {};
+
   return $self;
 }
 
 #we surely use thes only once in the code
-#is it faster to cache like this over the reg method
+#is it faster to cache like this over the reg method?
 #or should we just use reg directly?
 
 sub annotated_feature_adaptor{
@@ -106,6 +111,10 @@ sub dbentry_adaptor{
   return $self->{'dbentry_adaptor'};
 }
 
+sub experimental_set_adaptor{
+  my $self = shift;
+  return $self->{'experimental_set_adaptor'};
+}
 
 =head2 set_config
 
@@ -131,28 +140,26 @@ sub set_config{
 
 
   #We need to undef norm method as it has been set to the env var
-  $self->{'norm_method'} = undef;
+  $self->{'config'}{'norm_method'} = undef;
 
   #dir are not set in config to enable generic get_dir method access
+
+
+  #some convenience methods
+  $self->{'annotated_feature_adaptor'} = $self->db->get_AnnotatedFeatureAdaptor;
+  $self->{'dbentry_adaptor'}           = $self->db->get_DBEntryAdaptor;
+  $self->{'experimental_set_adaptor'}  = $self->db->get_ExperimentalSetAdaptor();
+
 
   return;
 }
 
 
-sub display_label_field{
-  my ($self, $field_name) = @_;
-
-  $self->{'display_label_field'} = $field_name if defined $field_name;
-
-  return $self->{'display_label_field'};
-}
 
 sub define_sets{
   my ($self) = @_;
 
-
-  my $eset_adaptor = $self->db->get_ExperimentalSetAdaptor();
-  my $eset = $eset_adaptor->fetch_by_name($self->experimental_set_name);
+  my $eset = $self->experimental_set_adaptor->fetch_by_name($self->experimental_set_name);
   
   if(! defined $eset){
 	$eset = Bio::EnsEMBL::Funcgen::ExperimentalSet->new
@@ -165,14 +172,11 @@ sub define_sets{
 	   -format       => $self->format(),
 	   -analysis     => $self->feature_analysis,
 	  );
-	($eset)  = @{$eset_adaptor->store($eset)};
+	($eset)  = @{$self->experimental_set_adaptor->store($eset)};
 
-	#add to dset here and store
-	$dset->add_supporting_set($eset);
-	$dset->adaptor->update_supporting_sets($dset);
   }
 
-  #Use define_and_validate with append as we may have a pre-existing set
+  #Use define_and_validate with fetch/append as we may have a pre-existing set
  
   my $dset = $self->define_and_validate_sets
 	(
@@ -182,28 +186,32 @@ sub define_sets{
 	 -cell_type    => $self->cell_type,
 	 -analysis     => $self->feature_analysis,
 	 -type         => 'annotated', 
-	 -description  => $self->set_description,
-	 -rollback     => $self->rollback,
-	 -append       => 1,
-	 -supporting_sets => $eset,
+	 -description  => $self->feature_set_description,
+	 #-append          => 1,#Omit append to ensure we only have this eset
+	 -recovery     => $self->recovery,
+	 -supporting_sets => [$eset],
+	 #Can't set rollback here, as we don't know until we've validated the files
+	 #Can't validate the files until we have the sets.
+	 #So we're doing this manually in validate_files
 	);
-
-  
-
-
 
   #We are now using IMPORTED to define wheather a FeatureSet has been imported succesfully
   #However we already have IMPORTED on the ExperimentalSubSet
-  #We shoiuld add it to FeatureSet to remain consistent.
-  #Do we not need to remove IMPORTED from FeatureSet whilst we are doing the import
-  #Yes as we may try importing more, but not point at the old files
-  #so this will never get noticed if we don't have set wide status
+  #We should add it to FeatureSet to remain consistent.
+  #See Helper::define_and_validate_sets for more notes on
+  #potential problems with FeatureSet IMPORTED status
  
 
-
+  $self->{'_data_set'} = $dset;
  
-  return $dset;
+  return $self->{'_data_set'};
 
+}
+
+
+sub data_set{
+  my $self = shift;
+  return $self->{'_data_set'};
 }
 
 sub validate_files{
@@ -223,15 +231,19 @@ sub validate_files{
 	#do we even need to?
   }
   
-  #Here were are tracking the import of individual bed files by adding them as ExperimentalSubSets
+  #Here were are tracking the import of individual files by adding them as ExperimentalSubSets
   #Recovery would never know what to delete
   #So would need to delete all, Hence no point in setting status?
+  #We do not rollback IMPORTED data here.  This is done via separate scripts
+  #To reduce the rick of accidentally deleting/overwriting data by leaving a stry -rollback
+  #flag in the run script
 
- ### VALIDATE FILES ###
+  ### VALIDATE FILES ###
   #We need validate all the files first, so the import doesn't fall over half way through
   #Or if we come across a rollback halfway through
   my (%new_data);
-  my $roll_back = 0;
+  my $recover_unimported = 0;
+  my ($eset) = @{$self->data_set->get_supporting_sets};
   
   foreach my $filepath( @{$self->result_files} ) {
 	chomp $filepath;
@@ -242,22 +254,38 @@ sub validate_files{
 	
 	if( $sub_set = $eset->get_subset_by_name($filename) ){
 	  
+	  if($recover_unimported){
+		$new_data{$filepath} = 1;
+		next;
+	  }
+
 	  if( $sub_set->has_status('IMPORTED') ){
-		$self->log("ExperimentalSubset(${filename}) has already been imported");
+		$new_data{$filepath} = 0;
+
+	
+		#if(! $self->rollback){
+		  $self->log("ExperimentalSubset(${filename}) has already been imported");
+		#}
+		#else{
+		  #remove IMPORTED status and rollback, set recover_unimported?
+		#}
+
 	  } 
 	  else{
 		$self->log("Found partially imported ExperimentalSubset(${filename})");
-		$roll_back = 1;
+		$recover_unimported = 1;
+		$new_data{$filepath} = 1;
 		
-		if ( $self->recovery && $roll_back ) {
+		if ( $self->recovery && $recover_unimported ) {
 		  $self->log("Rolling back results for ExperimentalSubset:\t".$filename);
 		  warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
-		  
-		  $self->rollback_FeatureSet($fset);
+		  warn "WARNING:: This may be deleting previously imported data which you are not re-importing..list?!!!\n";
+	  
+		  $self->rollback_FeatureSet($self->data_set->product_FeatureSet);
 		  $self->rollback_ExperimentalSet($eset);
 		  last;
 		}
-		elsif( $roll_back ){
+		elsif( $recover_unimported ){
 		  throw("Found partially imported ExperimentalSubSet:\t$filepath\n".
 				"You must specify -recover  to perform a full roll back for this ExperimentalSet:\t".$eset->name);
 		}
@@ -265,53 +293,105 @@ sub validate_files{
 	}
 	else{
 	  $self->log("Found new ExperimentalSubset(${filename})");
-	  $new_data{$filepath} = undef;
+	  $new_data{$filepath} = 1;
 	  $sub_set = $eset->add_new_subset($filename);
-	  $eset_adaptor->store_ExperimentalSubsets([$sub_set]);
+	  $self->experimental_set_adaptor->store_ExperimentalSubsets([$sub_set]);
 	}
   }
 
-  #Probably need to set these internally
-  return ($rollback, \%new_data);
+  #Set all the new if we have rolled back due to a recovery.
+  if ($recover_unimported){
+
+	foreach my $esset(@{$eset->get_subsets}){
+	  #map $new_data{$_} = 1, keys %new_data if $recover_unimported;
+	  $new_data{$esset->name} = 1; 
+	  $eset->adaptor->revoke_states($esset);
+	}
+  }
+
+  return (\%new_data);
 }
 
 
+sub set_feature_separator{
+  my ($self, $separator) = @_;
+
+  #How do we test if something undefined was passed?
+  #Rather than nothing passed at all?
+  #Can't do this as this is the accessor
+  #Need to split method
+ 
+  throw('Must provide a valid feature separator') if ( (! defined $separator) || ($separator eq '') ); 
+
+  $self->{'_feature_separator'} = $separator;
+
+}
+
+sub feature_separator{
+  my $self = shift;
+  return $self->{'_feature_separator'};
+}
+
+#getter only
+sub feature_params{
+  my $self = shift;
+  return $self->{'_feature_params'};
+}
+
+#getter only
+sub dbentry_params{
+  my $self = shift;
+  return $self->{'_dbentry_params'};
+}
+
+sub counts{
+  my $self = shift;
+  return $self->{'_counts'}
+}
+
+sub count{
+  my ($self, $count_type) = @_;
+
+  $self->{'_counts'}{$count_type} ||=0;
+  $self->{'_counts'}{$count_type}++;
+  return;
+}
 
 
-
-sub read_and_import_simple_data{
+sub read_and_import_data{
   my $self = shift;
     
   $self->log("Reading and importing ".$self->vendor()." data");
-  my (@header, @data, @design_ids, @lines);
-  my ($anal, $fh, $file);
-  my $new_data = 0;
-
+  my ($filename, $fh, $f_out, $fasta_file,  %feature_params, @lines);
   my $dset   = $self->define_sets;
-  my ($eset) = @{$dset->get_supporting_sets};   
-  my ($rollback, $new_data) = $self->validate_files;
- 
- 
-  
-  ### READ AND IMPORT FILES ###
-  my ($filename, $fh, $f_out, $fasta_file,  %feature_params);
+  my $fset   = $dset->product_FeatureSet;
 
+  #If we can do these the other way araound we can get define_sets to rollback the FeatureSet
+  #Cyclical dependency for the sets :|
+  my ($eset) = @{$dset->get_supporting_sets};   
+  my ($new_data) = $self->validate_files;
+  
+
+  #should remove IMPORTED status from FeatureSet before commencing load?
+
+  ### READ AND IMPORT FILES ###
   foreach my $filepath(@{$self->result_files()}) {
 	chomp $filepath;
-
-	my $count   = 0;
-	my $skipped = 0;
 	($filename = $filepath) =~ s/.*\///;
+
+	#We're checking for recover here, as we have to reload all if just one has been screwed up.
 	
-	if( $roll_back || exists $new_data->{$filepath} ){
+	if( $new_data->{$filepath} ){
 	  
-	  $self->log('Reading '.$self->vendor." file:\t".$filename);
+	  $filepath = $self->pre_process_file($filepath) if $self->can('pre_process_file');
+
+	  $self->log('Reading '.$self->vendor." file:\t".$filepath);
 	  $fh = open_file($filepath);
 	  my @lines = <$fh>;
 	  close($fh);
 	  
 	
-	  my $fasta = '';
+	  $self->{'_fasta'} = '';
 	  
 	  #warn "we need to either dump the pid rather than the dbID or dump the fasta in the DB dir";
 	  #make this use get_fit
@@ -331,8 +411,6 @@ sub read_and_import_simple_data{
 		next if $line =~ /^\#/;	
 		next if $line =~ /^$/;
 
-		my $seq;
-
 		#next $line !~ /^chr/i;
 		#next if $line =~ /^chr/i;#Mikkelson hack
 		
@@ -351,35 +429,30 @@ sub read_and_import_simple_data{
 
 		#  }	
 
-		my ($feature_params, @dbentry_params) = $self->parse_line($line);
-
-
-		#if(! defined $feature_params){
-		  #warn "Skipping feature";
-		  #$skipped++;
-
-		  #Handle this in the caller, as this way we cn handle multiline formats
-		#}
-		
-		$self->load_features_and_xrefs($feature_params, @dbentry_params) if(defined $feature_params);
+		$self->parse_line($line);		
 	  }
 	 
 	  #Now we need to deal with anything left in the read cache
-	  #duplication of code, sub out?
-	  $self->load_features_and_xrefs($self->feature_params, @{$self->dbentry_params});
+	  $self->process_params;
 	  
-	  #Clean data cache, for the next file
-	  undef $self->{'_feature_params'};
-	  undef $self->{'_dbentry_params'};
+	
+	  #This may get a little large, probably need to print periodically. Use $.?
+	  if ($self->dump_fasta()){
+		print $f_out $self->{'_fasta'};
+		close($f_out);
+	  } 
+
 		 
-	  $self->log('Finished importing '.$self->counts->{'feature'}.' '.
-				 $dset->product_FeatureSet->name." features from:\t$filepath");
+	  $self->log('Finished importing '.$self->counts->{'features'}.' '.
+				 $fset->name." features from:\t$filepath");
 
-	  warn "Need to handle other count in caller here";
+	  warn "Need to handle other counts in caller here?";
 
-	  foreach my $key (%{$self->counts}){
-		$self->log("Count $key:\t".$self->counts->{$key}."\n");
-	  }
+	  $self->log("Counts:\n".Data::Dumper::Dumper($self->{'_counts'}));
+
+	  #foreach my $key (%{$self->counts}){
+	#	$self->log("Count $key:\t".$self->counts->{$key}."\n");
+	#  }
 
 	  my $sub_set = $eset->get_subset_by_name($filename);
 	  $sub_set->adaptor->store_status('IMPORTED', $sub_set);
@@ -387,39 +460,50 @@ sub read_and_import_simple_data{
 	}
   }
 
-  $self->log("No new data, skipping result parse") if ! keys %{$new_data} && ! $roll_back;
-  $self->log("Finished parsing and importing results");
+  #Here we should set IMPORTED on the FeatureSet
+  #We could also log the first dbID of each feature in a subset to facilitate subset rollback
+  #in feature table
+  #this would be sketchy at best
+  #delete from annotated_feature where annotated_feature_id >= $first_subset_feature_id and feature_set_id=$feature_set_id
+  #This may already have IMPORTED status as we don't revoke the status whilst
+  #updating to protect the feature set due to lack of supportingset tracking
+  #see Helper::defined_and_validate_sets for more notes.
+  #Is there any point in setting it if we don't revoke it?
+  #To allow consistent status handling across sets. Just need to be aware of fset status caveat.
 
+  if(! $fset->has_status('IMPORTED')){
+	$fset->adaptor->store_status('IMPORTED', $fset);
+  }
 
-  #Retrieve DataSet here as sanity check it is valid
-  #We had one which had a mismatched feature_type between the feature_set and the experimental_set
-  #How was this possible, surely this should have failed on generation/storage?
-  
+  $self->log("No new data, skipping result parse") if ! grep /1/,values %{$new_data};
+  $self->log("Finished parsing and importing results");  
     
   return;
 }
   
 
 
-sub load_features_and_xrefs{
-  my ($self, $feature_params, @dbentry_params) = @_;
+sub load_feature_and_xrefs{
+  my $self = shift;
+
+  my $seq;
 
   #grab seq if dump fasta and available
   if($self->dump_fasta){
 	
-	if(exists $feature_params->{'sequence'}){
-	  $seq = $feature_params->{'sequence'};
-	  delete $feature_params->{'sequence'};
+	if(exists $self->feature_params->{'sequence'}){
+	  $seq = $self->feature_params->{'sequence'};
+	  delete $self->feature_params->{'sequence'};
 	}
 	else{
-	  $self->log('No fasta sequence available for '.$feature_params->display_label);
+	  $self->log('No fasta sequence available for '.$self->feature_params->display_label);
 	}
   }
 		  
 		  
-  my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(%{$feature_params});
-  $self->annotatedfeature_adaptor->store($feature);
-  $self->counts->{feature}++;
+  my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(%{$self->feature_params});
+  ($feature) = @{$self->annotated_feature_adaptor->store($feature)};
+  $self->count('stored_features');
 
 
   ##This needs to be handled in caller as we are validating loci
@@ -437,19 +521,31 @@ sub load_features_and_xrefs{
 		  
   #dump fasta here
   if ($self->dump_fasta){
-	$fasta .= $self->generate_fasta_header($feature)."\n$seq\n";
+	$self->{'_fasta'} .= $self->generate_fasta_header($feature)."\n$seq\n";
 	#$fasta .= '>'.$pid."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
   }
   
   #Now we need to store the xrefs
   
-  foreach my $dbentry_hash(@dbentry_params){
+
+  my ($edbname) = @{$self->db->dbc->db_handle->selectrow_arrayref('select db_name from external_db where db_name="ensembl_variation_Variation"')};
+
+
+  foreach my $dbentry_hash(@{$self->{'_dbentry_params'}}){
+	my $ftype = $dbentry_hash->{feature_type};
+	delete $dbentry_hash->{feature_type};
+
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(%{$dbentry_hash});
-	$self->dbentry_adaptor->store($dbentry, $feature->dbID, 'AnnotatedFeature', 1);#1 is ignore release flag
+	$self->dbentry_adaptor->store($dbentry, $feature->dbID, $ftype, 1);#1 is ignore release flag
 	#count here? no count in caller
   }
 
-  return;
+  
+  #Clean data cache
+  $self->{'_feature_params'} = {};
+  $self->{'_dbentry_params'} = [];
+
+  return $feature;
 }
 
 
