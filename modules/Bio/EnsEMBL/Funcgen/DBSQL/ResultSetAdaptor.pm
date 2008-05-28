@@ -1086,6 +1086,8 @@ sub resolve_replicates_by_ResultSet{
 	  push @scores, mean($rep_ref->{$biol_rep});
 	}
 
+	@scores = sort {$a<=>$b} @scores;
+
 	$score = median(\@scores);
 
   }
