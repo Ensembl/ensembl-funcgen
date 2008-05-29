@@ -385,7 +385,7 @@ sub read_and_import_data{
 	  
 	  $filepath = $self->pre_process_file($filepath) if $self->can('pre_process_file');
 
-	  $self->log('Reading '.$self->vendor." file:\t".$filepath);
+	  $self->log_header('Reading '.$self->vendor." file:\t".$filepath);
 	  $fh = open_file($filepath);
 	  my @lines = <$fh>;
 	  close($fh);
@@ -404,30 +404,24 @@ sub read_and_import_data{
 	  }
 	  
 	  foreach my $line (@lines) {
-		
 		#Generic line processing
 		#Move these to parse_line?
 		$line =~ s/\r*\n//o;
 		next if $line =~ /^\#/;	
 		next if $line =~ /^$/;
 
-		#next $line !~ /^chr/i;
-		#next if $line =~ /^chr/i;#Mikkelson hack
-		
-		#my ($chr, $start, $end, $pid, $score) = split/\t/o, $line;				  
-		#my ($chr, $start, $end, $score) = split/\t/o, $line;#Mikkelson hack				  
-		#This has now been simplified to process_line method
+				#This has now been simplified to process_line method
 		#my @fields = split/\t/o, $line;
 		#start building parameters hash
 		#foreach my $field_index(@{$self->get_field_indices}){
-		#  
 		#  my $field = $self->get_field_by_index($field_index);
-		
-		  #
-
 		#  $feature_params = ($field =~ /^-/) ? $fields[$field_index] : $self->$field($fields[$field_index]);
-
 		#  }	
+
+
+		#We also need to enable different parse line methods if we have different file
+		#e.g. cisRED
+		#Code refs?
 
 		$self->parse_line($line);		
 	  }

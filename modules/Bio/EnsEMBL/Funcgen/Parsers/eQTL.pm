@@ -210,6 +210,15 @@ sub parse_line{
   my ($rsid, $gene_name, undef, $gene_chr, $snp_chr, $snp_start, $gene_start) = split/\t/o, $line;			
   #currently ignoring GENE_ID, distance, pvalue, -log10(pvalue), Adjusted_R^2 and Gradient.
   
+
+  #This appears to slow things down a lot
+  #Hack to handle scientific notation
+  #$gene_chr = sprintf('%d', $gene_chr);
+  #$snp_chr = sprintf('%d', $snp_chr);
+  #$gene_start = sprintf('%d', $gene_start);
+  #$snp_start = sprintf('%d', $snp_start);
+
+
   if($self->ucsc_coords){
 	$gene_start += 1;
 	$snp_start  += 1;
@@ -343,7 +352,7 @@ sub parse_line{
 		 -status                 => 'KNOWNXREF',
 		 #-display_label_linkable => 1,
 		 #-db_display_name        => $self->db->dnadb->dbc->dbname,
-		 -db_display_name        => 'ensembl_core_Gene',
+		 -db_display_name        => 'EnsemblGene',
 		 -type                   => 'MISC',#edb.type???
 		 -primary_id             => $gene->stable_id,
 		 #This may cause duplications in xref, as we are assigning the gene_name
@@ -471,7 +480,7 @@ sub parse_line{
 								 -status                 => 'KNOWNXREF',
 								 #-display_label_linkable => 1,
 								 #-db_display_name        => $self->db->dnadb->dbc->dbname,
-								 -db_display_name        => 'ensembl_variation_Variation',
+								 -db_display_name        => 'EnsemblVariation',
 								 -type                   => 'MISC',#???#this is external_db.type
 								 -primary_id             => $snp_feat->variation_name,##?????????
 								 -display_id             => $snp_feat->display_id,#This is the same as variation name.

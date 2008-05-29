@@ -315,8 +315,8 @@ sub parse_and_load {
 													   -status                 => 'KNOWNXREF',#This is for the external DB
 													   #-display_label_linkable => 1,
 													   -#db_display_name        => $self->db->dnadb->dbc->dbname,
-													   -db_display_name        => 'ensembl_core_Gene',
-													   -type                   => 'PRIMARY_DB_SYNONYM',#Is for the external_db 
+													   -db_display_name        => 'EnsemblGene',
+													   -type                   => 'MISC',#Is for the external_db 
 													   -primary_id             => $stable_id,
 													   -display_id             => $attr_cache{'Factor'},
 													   -info_type              => 'CODING',#is this 
@@ -389,8 +389,8 @@ sub parse_and_load {
 												 -status                 => 'KNOWNXREF',
 												 #-display_label_linkable => 1,
 												 -#db_display_name        => $self->db->dnadb->dbc->dbname,
-												 -db_display_name        => 'ensembl_core_Gene',
-												 -type                   => 'PRIMARY_DB_SYNONYM',#
+												 -db_display_name        => 'EnsemblGene',
+												 -type                   => 'MISC',#
 												 -primary_id             => $stable_id,
 												 -display_id             => $target,
 												 -info_type              => 'TARGET',

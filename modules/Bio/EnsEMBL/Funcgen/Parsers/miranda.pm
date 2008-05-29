@@ -205,7 +205,7 @@ sub parse_and_load{
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
 											 #-db_display_name        => $self->db->dnadb->dbc->dbname,
-											 -db_display_name        => 'ensembl_core_Transcript',
+											 -db_display_name        => 'EnsemblTranscript',
 											 -type                   => 'MISC',
 											 -primary_id             => $ens_id,
 											 -display_id             => $display_name,
