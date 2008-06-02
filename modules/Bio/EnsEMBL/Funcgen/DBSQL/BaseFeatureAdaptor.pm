@@ -255,6 +255,11 @@ sub build_seq_region_cache{
 
   my $dnadb = (defined $slice) ? $slice->adaptor->db() : $self->db->dnadb();
   my $schema_build = $self->db->_get_schema_build($dnadb);
+
+  #This is the problem
+  #we are building this cache based on a schema_build which might not be in the DB
+  #hence we want to retrieve the  fgsr_id based on name, build and level.
+
   my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where schema_build="'.$schema_build.'"';
   
   #we need to make this a schema_build based cache to enable multi schema/assembly queries without resetting the dnadb?
@@ -284,27 +289,53 @@ sub build_seq_region_cache{
 
 
 sub get_seq_region_id_by_Slice{
-  my ($self, $slice) = @_;
+  my ($self, $slice, $fg_cs) = @_;
 
   if(! ($slice && ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
 	throw('You must provide a valid Bio::EnsEMBL::Slice');
   }
 
-  my ($sr_id);#, $schema_build);
+  my ($core_sr_id);
 
 
   if( $slice->adaptor() ) {
-	$sr_id = $slice->adaptor()->get_seq_region_id($slice);
-	#$schema_build = $self->db->_get_schema_build($slice->adaptor->db);
+	$core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
   } 
   else {
-	$sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
-	#$schema_build = $self->db->_get_schema_build($self->db->dnadb);	
+	$core_sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+  }
+
+  
+  #This cache has been built based on the schema_build
+  my $fg_sr_id = $self->{'seq_region_cache'}->{$core_sr_id} if exists  $self->{'seq_region_cache'}->{$core_sr_id};
+  
+
+  if(! $fg_sr_id && ref($fg_cs)){
+
+	if( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')){
+	  throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
+	}
+
+	my $sql = 'SELECT seq_region_id from seq_region where coord_system_id='.$fg_cs->dbID().
+	  ' and name="'.$slice->seq_region_name.'"';
+
+  	($fg_sr_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+
+	#if we are providing forward comptaiblity
+	#Then we know the eFG DB doesn't have the core seq_region_ids in the DB
+	#Hence retrieving the slice will fail in _obj_from_sth
+	#So we need to set it internally here
+	#Then pick it up when get_core_seq_region_id is called for the first time
+	#and populate the cache with the value
+
+	$self->{'_tmp_core_seq_region_cache'} = {(
+											  $fg_sr_id => $core_sr_id
+											 )};
+	
   }
 
 
-  #return (exists $self->{'seq_region_cache'}->{$schema_build}->{$sr_id}) ? $self->{'seq_region_cache'}->{$schema_build}->{$sr_id} : undef;
-  return (exists $self->{'seq_region_cache'}->{$sr_id}) ? $self->{'seq_region_cache'}->{$sr_id} : undef;
+  return $fg_sr_id;
 }
 
 sub get_core_seq_region_id{
@@ -316,10 +347,16 @@ sub get_core_seq_region_id{
   #and use the schema_build of the slice which is passed to acquire the core_seq_region_id
   #likewise for reverse, i.e. when we store.
 
+  my $core_sr_id = $self->{'core_seq_region_cache'}{$fg_sr_id};
 
-  my $schema_build = $self->db->_get_schema_build($self->db->dnadb);
+  if(! defined $core_sr_id && exists $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id}){
+	$self->{'core_seq_region_cache'}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id};
+	#Delete here so we don't have schema_build specific sr_ids hanging around for another query
+	delete  $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id};
+	$core_sr_id = $self->{'core_seq_region_cache'}{$fg_sr_id};
+  }
 
-  return $self->{'core_seq_region_cache'}->{$fg_sr_id};
+  return $core_sr_id;
 }
 
 =head2 _pre_store
@@ -425,12 +462,9 @@ sub _pre_store {
 
   if(! $seq_region_id){
 	#check whether we have an equivalent seq_region_id
-
-	my $sql = 'SELECT seq_region_id from seq_region where coord_system_id='.$fg_cs->dbID().
-	  ' and name="'.$slice->seq_region_name.'"';
-
-  	($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+	$seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
 	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
+	my $sql;
 
 	#No compararble seq_region
 	if(! $seq_region_id){
@@ -542,7 +576,7 @@ sub _slice_fetch {
 	  #	$sr_id = $self->get_seq_region_id_by_Slice($self->db()->get_SliceAdaptor()->get_seq_region_id($slice));
 	  #  }
 
-	  my $sr_id = $self->get_seq_region_id_by_Slice($slice);
+	  my $sr_id = $self->get_seq_region_id_by_Slice($slice, $feat_cs);
 
 
       $constraint .= " AND " if($constraint);
