@@ -521,8 +521,13 @@ sub load_feature_and_xrefs{
   
   #Now we need to store the xrefs
   
+  #my $edb_ref = $self->db->dbc->db_handle->selectrow_arrayref('select db_name from external_db where db_name="ensembl_variation_Variation"');
 
-  my ($edbname) = @{$self->db->dbc->db_handle->selectrow_arrayref('select db_name from external_db where db_name="ensembl_variation_Variation"')};
+  #if(! defined $edb_ref){
+#	throw('Could not find external_db ensembl_variation_Variation');
+#  }
+
+ # my ($edbname) = @{$edb_ref};
 
 
   foreach my $dbentry_hash(@{$self->{'_dbentry_params'}}){

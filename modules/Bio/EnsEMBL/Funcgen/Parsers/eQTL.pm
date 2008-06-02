@@ -101,7 +101,7 @@ sub new{
   #$self->display_label_field($display_label_field);
   
 
-  $self->{'store_reg_feat_xrefs'} = $store_regf_xrefs;
+  $self->{'store_reg_feat_xrefs'} = 1; #$store_regf_xrefs;
 
   return $self;
 }
@@ -547,8 +547,8 @@ sub process_params{
 
 	foreach my $reg_feat(@reg_feats){
 	  
-	  $self->count($reg_feat->feature_type->name);
-	  $self->count('Total RegulatoryFeature xrefs');
+	  #$self->count($reg_feat->feature_type->name);
+	  #$self->count('Total RegulatoryFeature xrefs');
 
 	  if($self->{'store_reg_feat_xrefs'}){
 		my $first_dbentry = $self->dbentry_params->[0];
@@ -556,6 +556,9 @@ sub process_params{
 		#test whether it is the gene xref
 		if($first_dbentry->{-dbname} eq 'ensembl_core_Gene'){
 		  #defined when assigning
+
+		  $self->count($reg_feat->feature_type->name);
+		  $self->count('Total RegulatoryFeature xrefs');
 		  
 		  my $dbentry = Bio::EnsEMBL::DBEntry->new(%{$first_dbentry});
 		  $self->dbentry_adaptor->store($dbentry, $reg_feat->dbID, 'RegulatoryFeature', 1);#1 is ignore release flag	
