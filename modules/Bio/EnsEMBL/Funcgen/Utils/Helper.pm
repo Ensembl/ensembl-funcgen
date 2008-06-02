@@ -73,6 +73,7 @@ package Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::Root::Root;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::Exception qw (throw stack_trace);
+use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 #use Devel::Timer;
 use Carp;#? Can't use unless we can get it to redirect
 use File::Basename;
@@ -593,8 +594,9 @@ sub get_schema_and_build{
                             -analysis     FeatureSet Bio::EnsEMBL::Analysis
                             -type         e.g. annotated or regulatory
                             -description  FeatureSet description
-                            -rollback     Boolean - Forces rollback of previously imported data
-                            -append       Boolean - Forces import on top of previously imported dataç
+                            -recovery     Allows definition of extant sets so long as they match
+                            -append       Boolean - Forces import on top of previously imported data
+                            -rollback     Rolls back product feature set.
   Example    : my $fset = $self->define_and_validate_Set(%params);
   Description: Checks whether set is already in DB based on set name, rolls back features 
                if roll back flag set. Or creates new DB if not present.
@@ -608,13 +610,28 @@ sub get_schema_and_build{
 sub define_and_validate_sets{
   my $self = shift;
 
-  my ($name, $anal, $ftype, $ctype, $type, $append, $rollback, $db, $ssets, $description)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'TYPE', 'APPEND', 'ROLLBACK', 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION'], @_);
+  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'TYPE', 'APPEND',
+				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY'], @_);
 
+
+  #This rollback flag should only really be used for ExperimentalSet import
+  #This is because we have to rollback the entire FeatureSet, where as we want to 
+  #protect against deleting/overwriting other data by keeping rollback function separate 
+  #to import
+  #No need for this here as we can handle the rollback separately in ExperimentalSet parser?
+  #No no no, this is okay for FeatureSets in general?
   #We need an append flag to allow addition of Features to a pre-existing feature set
   #We should implement rearrange here, will this capture any ill-defined parameters
   #add db, rollback and append to params
 
+  #Fetch flag is just normal behaviour no? Yes, removed
+  #But how are we going to resolve the append behaviour when we also want to validate the ssets?
+  #Can't, so append also functions to enable addition in the absence of some or all previous data/esets?
+  #No this is not true, we want to be able to fetch an extant set for import,
+  #we just need to be aware of sset IMPORTED status?
+  #This should be a recovery thing, allow fetch, but validate sets?
+  
 
   #Check mandatory params
   if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
@@ -624,13 +641,23 @@ sub define_and_validate_sets{
   throw('Must provide a -name ') if(! defined $name);
   
   #Not necessarily, just do rollback then append?
+  #But then we'd potentially have a supporting set associated which has had it's data removed from the feature set.
   #Generating sets for an ExpSet will always have append set
   #This could be valid for generically grabing/creating sets for adding new supporting sets e.g. reg build
-  #throw('-append and -rollback are mutually exclusive') if $rollback && $append;
+  throw('-append and -rollback are mutually exclusive') if $rollback && $append;
   
   #warn only for append?
+  #This message is wrong
   warn('You are defining a pre-existing FeatureSet without rolling back'.
-	   ' previous data, this could result in data duplication') if $append;
+	   ' previous data, this could result in data duplication') if $append && ! $rollback;
+  #Is this really possible, surely the supporting set will fail to store due to unique key?
+
+
+  #Should we warn here about append && recovery?
+  #Aren't these mutually exclusive?
+  #Do we know if we have new data? append should override recovery, or just specifiy append
+  #This will stop the import and highlight the issue to the user
+  #We need to be able to run with both otherwise the import will not work
 
 
   throw('Must provide a -type e.g. annotated, external or regulatory') if(! defined $type);
@@ -641,23 +668,18 @@ sub define_and_validate_sets{
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',  $ctype);
   $db->is_stored_and_valid('Bio::EnsEMBL::Analysis',  $anal);
 
-
-
-
   my $dset_adaptor = $db->get_DataSetAdaptor;
   my $fset_adaptor = $db->get_FeatureSetAdaptor;
   
   my $dset = $dset_adaptor->fetch_by_name($name);
-
-
   my ($fset);
+
+  #Validate stored vs passed set data 
 
   if(defined $dset){
 	$self->log('Found Stored DataSet '.$dset->name);
-
 	$fset = $dset->product_FeatureSet;
 	#Here we have the possiblity that a feature_set with a different name may have been associated with the DataSet
-
 
 	if(defined $fset){
 	  $self->log("Found associated product FeatureSet:\t".$fset->name);
@@ -671,6 +693,9 @@ sub define_and_validate_sets{
 	}
 
 	#check supporting_sets here if defined
+	#We have the problem here of wanting to add ssets to a previously existing dset
+	#we may not know the original sset, or which of the ssets are new
+	#Hence there is a likelihood of a mismatch.
 	if(defined $ssets){
 	  
 	  my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$ssets};
@@ -690,13 +715,19 @@ sub define_and_validate_sets{
 		}
 	  }
 
-
 	  if($mismatch){
 		#We're really print this names here which may hide the true cell/feature/anal type differences.
-		throw('There is a (name/type/anal) mismatch between the supplied supporting_sets and the'.
-			  'supporting_sets in the DB for DataSet '.$dset->name."\nStored:\t"
-			  .join(', ', (map $_->name, @stored_ssets))."\nSupplied supporting_sets:\t"
-			  .join(', ', (map $_->name, @sorted_ssets)));
+		my $mismatch = 'There is a (name/type/analysis) mismatch between the supplied supporting_sets and the'.
+		  'supporting_sets in the DB for DataSet '.$dset->name."\nStored:\t"
+				.join(', ', (map $_->name, @stored_ssets))."\nSupplied supporting_sets:\t"
+				.join(', ', (map $_->name, @sorted_ssets));
+
+		if($append){
+		  warn($mismatch."\nAppending supporting set data to unvalidated supporting sets");
+		}
+		else{
+		  throw($mismatch);
+		}
 	  }
 	}
 	else{
@@ -704,9 +735,8 @@ sub define_and_validate_sets{
 	}
   }
 
-
+  #Try and grab the fset just in case it has been orphaned somehow
   if(! defined $fset){
-	#Try and grab it anyway just in case it has been orphaned somehow
 	$fset = $fset_adaptor->fetch_by_name($name);
 
 	if(defined $fset){
@@ -729,13 +759,46 @@ sub define_and_validate_sets{
   if(defined $fset){
 
 	if($rollback){
-	  $self->rollback_FeatureSet($fset);
+	  #Don't check for IMPORTED here as we want to rollback anyway
 	  #Not forcing delete here as this may be used as a supporting set itself.
-	}else{
-	  throw('Found pre-existing FeatureSet '.$fset->name.'. Maybe you want to specify the rollback flag?');
+	  $self->rollback_FeatureSet($fset);
+	}
+	elsif($append || $recovery){
+	  #This is only true if we have an sset mismatch
+
+	  #Do we need to revoke IMPORTED here too?
+	  #This behaves differently dependant on the supporting set.
+	  #ExperimentalSet status refers to loading in FeatureSet, where as ResultSet status refers to loading into result table
+	  #So we really want to revoke it
+	  #But this leaves us vulnerable to losing data if the import crashes after this point
+	  #because we have no way of assesing which is complete data and which is incomplete data
+	  #within a feature set.
+	  #This means we need a status on supporting_set, not ExperimentalSet or ResultSet
+	  #as this has to be in the context of a dataset.
+	  #Grrr, this means we need a SupportingSet class which simply wraps the ExperimentalSet/ResultSet
+	  #We also need a single dbID for the supporting_set table
+	  #Which means we will have to do some wierdity with the normal dbID implementation
+	  #i.e. Have supporting_set_id, so we can still access all the normal dbID method for the given Set class
+	  #This will have to be hardcoded into the state methods
+	  #Also will need to specify when we want to store as supporting_status or normal set status.
+
+	  #This is an awful lot to protect against vulnerability
+	  #Also as there easy way to track what features came from which supporting set
+	  #There isn't currently a viable way to rollback, hence will have to redo the whole set.
+
+	  #Maybe we can enforce this by procedure?
+	  #By simply not associating the supporting set until it has been loaded into the feature set?
+	  #This may cause even more tracking problems
+
+	  #Right then, simply warn and do not revoke IMPORTED to protect old data
+	  
+	  $self->log("WARNING::\tAdding data to a extant FeatureSet(".$fset->name.')');
+	}
+	else{
+	  throw('Found extant FeatureSet '.$fset->name.'. Maybe you want to specify the rollback, append or recovery parameter or roll back the FeatureSet separately?');
 	}
   }
-  else{
+	else{
 	#create a new one
 	$self->log("Creating new FeatureSet:\t".$name);
 
@@ -805,9 +868,12 @@ sub rollback_FeatureSet{
   #Maybe we should?
   #We're always going to have a DB so why not?
   #Because we might want to use the Helper to Log before we can create the DB?
-
+  my $sql;
+  my $table = $fset->type.'_feature';
   my $adaptor = $fset->adaptor || throw('FeatureSet must have an adaptor');
   my $db = $adaptor->db;
+
+
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 
   $self->log('Rolling back '.$fset->type." FeatureSet:\t".$fset->name);
@@ -830,11 +896,26 @@ sub rollback_FeatureSet{
   #Remove states
   $fset->adaptor->revoke_states($fset);
 
-  #Remove feature
-  my $sql = 'DELETE from '.$fset->type.'_feature where feature_set_id='.$fset->dbID;  
+
+  #Rollback reg attributes
+  if($fset->type eq 'regulatory'){
+	$sql = "DELETE ra from regulatory_attributes ra, $table rf where rf.${table}_id=ra.${table}_id and rf.feature_set_id=".$fset->dbID;
+  }
+
+
+  #Need to remove object xrefs here
+  #Do not remove xrefs as these may be used by something else!
+  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".uc($fset->type)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID;
 
   if(! $db->dbc->do($sql)){
-	throw('Failed to rollback '.$fset->type."_features for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+	throw("Failed to rollback xrefs for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  }
+
+  #Remove feature
+  $sql = "DELETE from $table where feature_set_id=".$fset->dbID;  
+
+  if(! $db->dbc->do($sql)){
+	throw("Failed to rollback ${table}s for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
   }
 
   return;
