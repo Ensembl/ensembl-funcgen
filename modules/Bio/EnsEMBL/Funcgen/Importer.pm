@@ -110,7 +110,8 @@ sub new{
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $assm_version, $design_type, $output_dir, $input_dir,
 	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $no_mage, $eset_name, 
-	  $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, $ucsc_coords, $verbose)
+	  $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, 
+	  $ucsc_coords, $verbose, $fset_desc)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
@@ -118,7 +119,8 @@ sub new{
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
 				 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
-				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS', 'VERBOSE'], @_);
+				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS', 'VERBOSE',
+				 'FEATURE_SET_DESCRIPTION'], @_);
 
   
   #### Define parent parser class based on vendor
@@ -127,56 +129,69 @@ sub new{
   #This will override the default Vendor Parser type
   #Evals simply protect from messy errors if parser type not found
   my $parser_error;
-  my $vendor_parser = ucfirst(lc($vendor));
+  my $vendor_parser =  ucfirst(lc($vendor));
+
+
+  #WARNING evaling these parsers to enable pluggability hides errors in parser
+  #use a perl -MBio::EnsEMBL::Funcgen::Parsers:ParserType to debug
+  #get rid of all this case guessing and force correct parser name usage?
+
+
+  #WARNING
+  #Dynamic setting of ISA in this way reports the resultant object as Importer, when 
+  #some throws/methods are actually in other base/custom Parsers
+  #This can seem a little counterintuitive, but allows plugability
+  #With out the need for separate control scripts
+
+
   eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";};
  
-
   if($@){
-	#Don't warn/throw yet as we might have a standard parser format
-	$parser_error = "There is no valid parser for the vendor your have specified:\t".$vendor.
+	  #Don't warn/throw yet as we might have a standard parser format
+	
+	$parser_error .= "There is no valid parser for the vendor your have specified:\t".$vendor.
 	  "\nMaybe this is a typo or maybe you want to specify a default import format using the -parser option\n".$@;
   }
+  
 
-
+  
   if(defined $parser_type){
-	$parser_type = ucfirst(lc($parser_type));
 
-	#Now eval the new parser
+	#try normal case first
 	eval {require "Bio/EnsEMBL/Funcgen/Parsers/${parser_type}.pm";};
 
 	if($@){
+	  $parser_type = ucfirst(lc($parser_type));
 
-	  #Might be no default
-	  my $txt = "There is no valid parser for the -parser format your have specified:\t".$parser_type."\n";
+	  #Now eval the new parser
+	  eval {require "Bio/EnsEMBL/Funcgen/Parsers/${parser_type}.pm";};
 
-	  if(! $parser_error){
-		$txt .= "Maybe this is a typo or maybe you want run with the default $vendor_parser parser\n";
-	  }
-
-	  throw($txt.$@);
-	}
+	  if($@){
 		
-	#warn about over riding vendor parser here
-	if(! $parser_error){
-	  #Can't log this as we haven't blessed the Helper yet
-	  warn("WARNING\t::\tYou are over-riding the default ".$vendor." parser with -parser ".$parser_type);
+		#Might be no default
+		my $txt = "There is no valid parser for the -parser format your have specified:\t".$parser_type."\n";
+		
+		if(! $parser_error){
+		  $txt .= "Maybe this is a typo or maybe you want run with the default $vendor_parser parser\n";
+		}
+		
+		throw($txt.$@);
+	  }
+	  
+	  #warn about over riding vendor parser here
+	  if(! $parser_error){
+		#Can't log this as we haven't blessed the Helper yet
+		warn("WARNING\t::\tYou are over-riding the default ".$vendor." parser with -parser ".$parser_type);
+	  }
 	}
   }
   else{
 	throw($parser_error) if $parser_error;
 	$parser_type = $vendor_parser;
   }
+  
 
-  #we should now really set parser_type as an attrtibute
-  #So we know what we're dealing with outside of the Parser itself
-
-
-  #if ($vendor =~ /^affymetrix$/i) {
-  #    $parser_type = 'Bed';
-  #} else {
-  #    $parser_type = ucfirst(lc($vendor));
-  #}
-
+  #we should now really set parser_type as an attrtibute?
   unshift @ISA, 'Bio::EnsEMBL::Funcgen::Parsers::'.$parser_type;
   #change this to be called explicitly from the load script?
 
@@ -200,7 +215,8 @@ sub new{
   $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
   $self->result_files($result_files)if $result_files;
   $self->experiment_date($exp_date) if $exp_date;
-  $self->description($desc) if $desc;
+  $self->description($desc) if $desc;#experiment
+  $self->feature_set_description($fset_desc) if $fset_desc;
   $assm_version || throw('Mandatory param -assembly not met');
   $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
   $self->{'output_dir'} = $output_dir if $output_dir; #config default override
@@ -255,15 +271,14 @@ sub new{
 
 	#This will try and load the dev DBs if we are using v49 schema or API?
 	#Need to be mindful about this when developing
-	#Can we for loading of an older registry?
-	#we need to tip all this on it's head and load the reg from the dnadb version
+	#we need to tip all this on it's head and load the reg from the dnadb version!!!!!!!
 
 
 	$reg->load_registry_from_db(
 								-host => "ensembldb.ensembl.org",
 								-user => "anonymous",
 								-db_version => $self->{'release'},
-								-verbose => $self->verbose(),
+								-verbose => $self->verbose,
 							   );
 
 	
@@ -351,7 +366,11 @@ sub new{
 	  #Can we autodetect this and reload the registry?
 	  #We want to reload the registry anyway with the right version corresponding to the dnadb
 
+
+
+
 	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $self->user, $pass);
+
 
 
 	  #ConfigRegistry will try ans set this
@@ -411,11 +430,12 @@ sub new{
 
 	$db->set_dnadb_by_assembly_version($assm_version);
   }
-	
- 
-  $self->db($db);
+
+
+
 
   #Test connections
+  $self->db($db);
   $db->dbc->db_handle;
   $db->dnadb->dbc->db_handle;
  
@@ -521,6 +541,7 @@ sub init_experiment_import{
   #Should we separate path on group here too, so we can have a dev/test group?
   
   #Create output dirs
+  #This should be moved to the Parser to avoid generating directories which are needed for different imports
   $self->create_output_dirs('raw', 'norm', 'caches', 'fastas');
   throw("No result_files defined.") if (! defined $self->result_files());
 
@@ -541,7 +562,7 @@ sub init_experiment_import{
 	$self->log('WARNING: No normalisation analysis specified');
   }
   
-  warn "Need to check env vars here or in Parser or just after set_config?";
+  #warn "Need to check env vars here or in Parser or just after set_config?";
   #Need generic method for checking ENV vars in Helper
   #check for ENV vars?
   #R_LIBS
@@ -777,6 +798,7 @@ sub create_output_dirs{
 
 	if(! (-d $self->get_dir($name) || (-l $self->get_dir($name)))){
 	  $self->log("Creating directory:\t".$self->get_dir($name));
+	  #This did not throw with mkdir!!
 	  mkpath $self->get_dir($name) || throw('Failed to create directory:    '. $self->get_dir($name));
 	  chmod 0744, $self->get_dir($name);
 	}
@@ -1301,6 +1323,27 @@ sub description{
   }
 
   return $self->{'description'};
+}
+
+=head2 feature_set_description
+  
+  Example    : $imp->description("ExperimentalSet description");
+  Description: Getter/Setter for the FeatureSet description for an 
+               ExperimentalSet import e.g. preprocessed GFF/Bed data
+  Arg [1]    : optional - string feature set description
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub feature_set_description{
+  my $self = shift;
+
+  $self->{'feature_set_description'} = shift if @_;
+  
+  return $self->{'feature_set_description'};
 }
 
 =head2 format
