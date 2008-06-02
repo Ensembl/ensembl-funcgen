@@ -1177,8 +1177,6 @@ sub store {
 sub validate_and_store_coord_system{
   my ($self, $cs) = @_;
 	
-  my @tmp = caller();
-  
   if(! (ref($cs) && $cs->isa('Bio::EnsEMBL::CoordSystem') && $cs->dbID())){
 	throw('Must provide a valid stored Bio::EnsEMBL::CoordSystem');
   }
