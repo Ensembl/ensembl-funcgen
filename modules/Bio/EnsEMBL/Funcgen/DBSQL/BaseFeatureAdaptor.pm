@@ -238,16 +238,6 @@ sub fetch_all_by_Slice_constraint {
 
 sub build_seq_region_cache{
   my ($self, $slice) = @_;
-
-  #if(defined $fg_cs && !(ref($fg_cs) && $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem'))){
-#	throw('Optional argument must be a Bio::EnsEMBL::Funcgen::CoordSystem');
-#  }else{
-#	$fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
-#																$slice->coord_system->name(), 
-#																$slice->coord_system->version()
-#															   );
-#  }
-
   if(defined $slice){
 	throw('Optional argument must be a Bio::EnsEMBL::Slice') if(! ( ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
   }
@@ -255,33 +245,16 @@ sub build_seq_region_cache{
 
   my $dnadb = (defined $slice) ? $slice->adaptor->db() : $self->db->dnadb();
   my $schema_build = $self->db->_get_schema_build($dnadb);
-
-  #This is the problem
-  #we are building this cache based on a schema_build which might not be in the DB
-  #hence we want to retrieve the  fgsr_id based on name, build and level.
-
   my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where schema_build="'.$schema_build.'"';
+  #Can't maintain these caches as we may be adding to them when storing
   
-  #we need to make this a schema_build based cache to enable multi schema/assembly queries without resetting the dnadb?
-  #what will be the point of the dnadb in this case?
-  #we can always transiently use the slice DB as the dnadb
-
-
-  #mmm do we really need this? we implementing this to get old assembly seq_region_ids
-  #but this should already be in the seq_region table for this DB, but are only loading the default assembly?
-  #If we retrieve
-
-
   $self->{'seq_region_cache'} = {};
   $self->{'core_seq_region_cache'} = {};
-  #%{$self->{'seq_region_cache'}{$schema_build}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
   %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-  
-
+ 
   #now reverse cache
   foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){
 	$self->{'core_seq_region_cache'}->{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
-	#$self->{'core_seq_region_cache'}->{$schema_build}{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
   }
 
   return;
@@ -305,9 +278,19 @@ sub get_seq_region_id_by_Slice{
 	$core_sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
   }
 
-  
+
+  #This does not work!! When updating for a new schema_build we get the first
+  #seq_region stored, than for each subsequent one, it arbitrarily assigns a value from the hash even tho the 
+  #the exists condition isn't met!
+  #my $fg_sr_id = $self->{'seq_region_cache'}{$core_sr_id} if exists $self->{'seq_region_cache'}{$core_sr_id};
+  #Can't replicate this using a normal hash
+
   #This cache has been built based on the schema_build
-  my $fg_sr_id = $self->{'seq_region_cache'}->{$core_sr_id} if exists  $self->{'seq_region_cache'}->{$core_sr_id};
+  my $fg_sr_id;
+
+  if (exists $self->{'seq_region_cache'}{$core_sr_id}){
+	$fg_sr_id = $self->{'seq_region_cache'}{$core_sr_id};
+  }
   
 
   if(! $fg_sr_id && ref($fg_cs)){
@@ -333,7 +316,6 @@ sub get_seq_region_id_by_Slice{
 											 )};
 	
   }
-
 
   return $fg_sr_id;
 }
@@ -460,6 +442,7 @@ sub _pre_store {
   #Now need to check whether seq_region is already stored
   my $seq_region_id = $self->get_seq_region_id_by_Slice($slice);
 
+
   if(! $seq_region_id){
 	#check whether we have an equivalent seq_region_id
 	$seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
@@ -475,9 +458,15 @@ sub _pre_store {
 		'values('.$seq_region_id.', "'.$slice->seq_region_name().'", '.$fg_cs->dbID().', '.$slice->get_seq_region_id().', "'.$schema_build.'")';
 	}
 
+
 	my $sth = $self->prepare($sql);
-	$sth->execute();
-	$seq_region_id =  $sth->{'mysql_insertid'};
+
+	#Need to eval this
+	eval{$sth->execute();};
+
+	if(! $@){
+	  $seq_region_id =  $sth->{'mysql_insertid'};
+	}
   }
 
   
