@@ -86,8 +86,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
     
   #validate and set type, analysis and feature_set here
-  my ($db, $builds, $skip_mc, $check_displayable) = 
-	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE'], @_);
+  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse) = 
+	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE'], @_);
   
   
   if (! ($db && ref($db) &&
@@ -104,6 +104,7 @@ sub new {
   $self->{'dbname'} = $db->dbc->dbname;
   $self->{'builds'} = (scalar(@$builds)>0) ? $builds : ['DEFAULT'];
   $self->{'skip_meta_coord'} = $skip_mc;
+  $self->{'skip_analyse'} = $skip_analyse;
   $self->{'check_displayable'} = $check_displayable;
   
   return $self;
@@ -144,6 +145,7 @@ sub update_db_for_release{
   $self->update_meta_schema_version;
   $self->update_meta_coord;
   $self->check_meta_strings;
+  $self->analyse_tables;
   
 
   $self->log('??? Have you dumped/copied GFF dumps ???');
@@ -475,7 +477,7 @@ sub check_meta_strings{
 
 	  if(! defined $ftype_string){
 		$self->log("Updating $ftype_string_key to:\t$new_ftype_string");
-		$self->db->do("INSERT into meta values(NULL, '$ftype_string_key', '$new_ftype_string')");
+		$self->db->dbc->db_handle->do("INSERT into meta values(NULL, '$ftype_string_key', '$new_ftype_string')");
 	  }
 	  elsif($ftype_fail){
 		$self->log("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
@@ -553,9 +555,9 @@ sub log_data_sets{
 sub log_set{
   my ($self, $text, $set) = @_;
   
-  if(! $set->isa('Bio::EnsEMBL::Funcgen::DataSet')){
-	$text .= $set->set_type.":\t";
-  }
+  #if(! $set->isa('Bio::EnsEMBL::Funcgen::DataSet')){
+#	$text .= $set->set_type.":\t";
+#  }
  
   $text .= $set->display_label.'('.$set->name.')';
   $text .= "\tDISPLAYABLE" if($set->is_displayable);
@@ -563,6 +565,33 @@ sub log_set{
 
   return;
 }
+
+sub analyse_tables{
+  my $self = shift;
+
+  #myisamchk --analyze. or analyze statement
+
+  if($self->{'skip_analyse'}){
+	$self->log('Skipping analyse tables');
+	return;
+  }
+
+
+  
+
+  my $sql = 'show tables;';
+  my @tables = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};	  
+  map $_ = "@{$_}", @tables;
+  $sql = 'analyze table ';
+
+  foreach my $table(@tables){
+	$self->log('Analysing table '.$table);
+	$self->db->dbc->do($sql.$table);
+  }
+
+  return;
+}
+
 
 ### Check for regulatory meta entries for all regulatory feature_sets
 
