@@ -10,3 +10,13 @@ i--nsert into feature_type values(NULL, 'TTS 2.5KB', 'Pseudo', 'Feature is withi
 --remove MT reg features
 -- delete from regulatory_feature where seq_region_id =137;
 --End human only data patch
+
+--mouse Vienna set renaming and feature_type fix
+--update result_set set name=replace(name, 'H4K4', 'H3K4') where name like "Vienna MEFf H4K4%";
+--update data_set set name=replace(name, 'H4K4', 'H3K4') where name like "Vienna MEFf H4K4%";
+--update feature_set set name=replace(name, 'H4K4', 'H3K4') where name like "Vienna MEFf H4K4%";
+
+--update result_set set feature_type_id=(select feature_type_id from feature_type where name='H3K4me3') where name like 'Vienna MEFf H3K4me3';
+--update result_set set feature_type_id=(select feature_type_id from feature_type where name='H3K4me2') where name like 'Vienna MEFf H3K4me2';
+--update feature_set set feature_type_id=(select feature_type_id from feature_type where name='H3K4me3') where name like 'Vienna MEFf H3K4me3';
+--update feature_set set feature_type_id=(select feature_type_id from feature_type where name='H3K4me2') where name like 'Vienna MEFf H3K4me2';
