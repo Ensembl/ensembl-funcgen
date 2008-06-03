@@ -516,7 +516,10 @@ sub log_data_sets{
   $status = 'DISPLAYABLE' if($self->{'check_displayable'});
 
 	
-  my @dsets = @{$self->db->get_DataSetAdaptor->fetch_all($status)};
+  my @dsets;
+  my $dsets = $self->db->get_DataSetAdaptor->fetch_all($status);
+  @dsets = @$dsets if defined $dsets;
+
   $txt .= scalar(@dsets).' ';
   $txt.= $status.' ' if($self->{'check_displayable'});
 
