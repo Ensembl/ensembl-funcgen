@@ -286,6 +286,7 @@ sub add_ResultSet {
   Description: Adds Result/FeatureSets to the DataSet
   Returntype : none
   Exceptions : Throws if set not valid for supporting_set type of DataSet
+               Throws if supporting_sets is not an array ref
   Caller     : General
   Status     : At Risk
 
@@ -299,12 +300,9 @@ sub add_supporting_sets {
   #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
   #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
 
-
-  
+  throw("Supporting sets need to be a reference to an ARRAY:\t".$sets) if ref($sets) ne 'ARRAY';
 
   foreach my $set(@$sets){
-  
-
 	
 	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->set_type ne 'data' && $set->dbID)){
 	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet");
