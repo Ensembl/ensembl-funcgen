@@ -111,7 +111,7 @@ sub new{
 	  $pass, $dbname, $db, $assm_version, $design_type, $output_dir, $input_dir,
 	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $no_mage, $eset_name, 
 	  $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, 
-	  $ucsc_coords, $verbose, $fset_desc)
+	  $ucsc_coords, $verbose, $fset_desc, $release)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
@@ -120,7 +120,7 @@ sub new{
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
 				 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
 				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS', 'VERBOSE',
-				 'FEATURE_SET_DESCRIPTION'], @_);
+				 'FEATURE_SET_DESCRIPTION', 'RELEASE'], @_);
 
   
   #### Define parent parser class based on vendor
@@ -234,6 +234,7 @@ sub new{
   $self->{'old_dvd_format'} = $old_dvd_format || 0;
   $self->{'ucsc_coords'} = $ucsc_coords || 0;
   $self->{'verbose'} = $verbose || 0;
+  $self->{'release'} = $release;
 
   #Will a general norm method be applicable for all imports?
   #Already casued problems with Bed imports... remove?
