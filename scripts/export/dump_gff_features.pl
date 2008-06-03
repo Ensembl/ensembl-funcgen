@@ -67,7 +67,15 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -port => $port,
 													 );
 
-#should check db's here
+#Check DB connections
+$cdb->dbc->db_handle;
+$db->dbc->db_handle;
+
+#Check out_dir
+#Use Helper!
+system('mkdir -p '.$out_dir) if(! -d $out_dir);
+
+
 #ChrX  . operon   XXXX YYYY  .  +  . ID=operon01;name=my_operon
 
 my $slice_a = $db->get_SliceAdaptor();
