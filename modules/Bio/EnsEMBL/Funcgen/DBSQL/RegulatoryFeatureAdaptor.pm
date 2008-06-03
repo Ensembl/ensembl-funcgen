@@ -46,6 +46,31 @@ use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
+
+=head2 _get_current_FeatureSet
+
+  Example    : my $regf_featureset = $self->_get_current_FeatureSet;
+  Description: Convenience method to get and test the current
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
+  Exceptions : Throws is FeatureSet is not available
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub _get_current_FeatureSet{
+  my $self = shift;
+
+  my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
+
+  if(! $fset){
+	throw('Could not retrieve current RegulatoryFeatures FeatureSet');
+  }
+  
+  return $fset;
+}
+
+
 =head2 fetch_by_stable_id
 
   Arg [1]    : String $stable_id - The stable id of the regulatory feature to retrieve
@@ -62,12 +87,7 @@ use vars qw(@ISA);
 sub fetch_by_stable_id {
   my ($self, $stable_id) = @_;
 
-
-  my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
-
-
-
-  return $self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)->[0];
+  return $self->fetch_all_by_stable_id_FeatureSets($stable_id, $self->_get_current_FeatureSet)->[0];
 }
 
 =head2 fetch_all_by_stable_id_FeatureSets
@@ -581,9 +601,7 @@ sub store{
 sub fetch_all_by_Slice {
   my ($self, $slice) = @_;
 	
-  my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
-
-  return $self->fetch_all_by_Slice_FeatureSets($slice, $fset);
+  return $self->fetch_all_by_Slice_FeatureSets($slice, $self->_get_current_FeatureSet);
 }
 
 
