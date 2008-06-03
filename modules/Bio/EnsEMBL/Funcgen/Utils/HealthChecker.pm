@@ -150,7 +150,8 @@ sub update_db_for_release{
   $self->log("??? Have you diff'd the sql for each species vs. a fresh schema ???");
   $self->log('Need to implement check meta string check');
 
-  $self->log(':: Finished updating '.$self->{'dbname'}." for release\n");
+  #Log footer? Pass optional counts hash?
+  $self->log('Finished updating '.$self->{'dbname'}." for release\n\n");
 }
 
 sub validate_new_seq_regions{
@@ -379,25 +380,31 @@ sub check_meta_strings{
   if($all_builds){
 	@regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
   }else{
-	@regf_fsets = ($fset_a->fetch_by_name('RegulatoryFeatures'));
+	my $fset = $fset_a->fetch_by_name('RegulatoryFeatures');
+	push @regf_fsets, $fset if defined $fset;
   }
   
   my @meta_keys = ('regulatory_string_feature_set_id', 'regulatory_string_feature_type_id');
 
   #What about anchor/seed sets?
 
-  $self->log_header("Validating meta entries for FeatureSets:\t".join("\t", (map $_->name, @regf_fsets)));
+  if(scalar(@regf_fsets) == 0){
+	$self->log_header("Found no RegulatoryFeature sets for meta_string check");
+  }
+  else{
 
-
-  #How do we validate this?
-  #Check all feature_sets exist
-  #Pull back some features from a test slice and check the number of bits match.
+	$self->log_header("Validating meta entries for FeatureSets:\t".join("\t", (map $_->name, @regf_fsets)));
+	
+	
+	#How do we validate this?
+	#Check all feature_sets exist
+	#Pull back some features from a test slice and check the number of bits match.
   #Check the feature_type string exists and matches else create.
-
-
-  foreach my $fset(@regf_fsets){
+	
+	
+	foreach my $fset(@regf_fsets){
 	#get version number of build
-	my (undef, $build_version) = split/v/, $fset->name;
+	  my (undef, $build_version) = split/v/, $fset->name;
 	$build_version = (defined $build_version) ? '_v'.$build_version : '';
 	my $fset_string_key = 'regulatory_string_feature_set_id'.$build_version;
 	my $ftype_string_key = 'regulatory_string_feature_type_id'.$build_version;
@@ -425,6 +432,13 @@ sub check_meta_strings{
 	  else{
 		$self->log("WARNING:\tNo $ftype_string_key found in meta table, will update using $fset_string_key");
 	  }
+	  
+
+	  #Now need to work backwards through ftypes to remove pseudo ftypes before validating
+	  #New string should be A,A,A;S,S,S,S,S,S;P,P,P
+	  #Where A is and Anchor/Seed set
+	  #S is a supporting set
+	  #P is a pseudo feature type e.g. TSS proximal
 	  
 
 	  if(scalar(@fset_ids) != scalar(@ftype_ids)){
@@ -456,6 +470,7 @@ sub check_meta_strings{
 
 
 	  #Set ftype_string
+	  #This will not account for pseudo ftypes?  Remove!!!?
 	  my $new_ftype_string = join(',', @new_ftype_ids);
 
 	  if(! defined $ftype_string){
@@ -468,25 +483,28 @@ sub check_meta_strings{
 
 
 	  #Finally validate versus a reg feat
+	  #Need to change this to ftype string rather than fset string?
+
 	  my ($regf_dbID) = @{$self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1')};
 	  
 	  if(! defined $regf_dbID){
 		$self->log("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
 	  }
 	  else{
-		my @rf_bits = split/,/, $regf_a->fetch_by_dbID($regf_dbID)->display_label;
-		
-		if(scalar(@rf_bits) != scalar(@fset_ids)){
-		  $self->log("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key");
+		my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->{'display_label'};#Direct access to avoid feature type
+			
+		if(length($rf_string) != scalar(@fset_ids)){
+		  $self->log("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
 		}
 	  }
 	}
   }
-
+  }
   return;
 }
 
 
+#Change this to log sets and incorporate RegFeat FeatureSet as standard
 
 
 sub log_data_sets{
@@ -507,7 +525,6 @@ sub log_data_sets{
   $self->log_header($txt);
   
   
-  
   foreach my $dset(@dsets){
 	$self->log_set("Found DataSet:\t\t", $dset) ;
 
@@ -520,6 +537,12 @@ sub log_data_sets{
 	  map $self->log_set("SupportingSet:\t\t", $_), @supporting_sets;
 	}
   }
+
+  $self->log_header('Checking Regulatory FeatureSets');
+
+  
+  
+  
 
   return;
 }
