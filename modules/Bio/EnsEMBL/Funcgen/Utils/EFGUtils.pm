@@ -149,7 +149,7 @@ sub species_chr_num{
 	return (exists $species_chrs{$species}{lc($val)}) ? $species_chrs{$species}{lc($val)} : $val;
 }
 
-
+#should we implement sort here or in the caller?
 
 sub median{
   my $scores = shift;

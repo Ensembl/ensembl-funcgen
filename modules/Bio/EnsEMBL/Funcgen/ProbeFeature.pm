@@ -112,7 +112,7 @@ sub new {
   
   #warn "creating probe feature with $pid";
   $self->{'probe_id'} = $pid if $pid;
-  $self->probe($probe) if $probe; 
+  $self->probe($probe) if $probe;
   $self->mismatchcount($mismatchcount)  if defined $mismatchcount;#do not remove until probe mapping pipeline fixed
   $self->cigar_line($cig_line)          if defined $cig_line;
    
@@ -128,11 +128,11 @@ sub new {
   Args       : Hashref with all internal attributes set
   Example    : none
   Description: Quick and dirty version of new. Only works if the code is very
-               disciplined.
+               disciplined. 
   Returntype : Bio::EnsEMBL::Funcgen::ProbeFeature
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -271,7 +271,8 @@ sub probe {
     $self->{'probe'} = $probe;
   }
 
-  if ( ! defined $self->{'probe'}){# && $self->dbID() && $self->adaptor() ) {
+  if ( ! defined $self->{'probe'}){
+	# && $self->dbID() && $self->adaptor() ) {
     #$self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_ProbeFeature($self);
 	#warn "fetching probe with dbID ".$self->probe_id();
 	$self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_dbID($self->probe_id());
