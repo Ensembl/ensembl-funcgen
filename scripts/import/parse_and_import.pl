@@ -36,6 +36,7 @@ Optional
   -debug           Debug level (1-3)
   -log_file        Defines the log file
   -ucsc_coords     Flag to define usage of UCSC coord system in source files
+  -release         Release version to load the registry from, defaults to latest release.
   -help            Brief help message
   -man             Full documentation
 
@@ -138,7 +139,7 @@ $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
-my ($parser, $fanal);
+my ($parser, $fanal, $release);
 
 #to be removed
 my ($import_dir);
@@ -202,6 +203,7 @@ GetOptions (
 			"contact=s"    => \$contact,
 			"old_dvd_format" => \$old_dvd_format,
 			"ucsc_coords"  => \$ucsc,
+            "release=s"    => \$release,
 			"tee"          => \$main::_tee,
 			"log_file=s"   => \$main::_log_file,
 			"debug_file=s" => \$main::_debug_file,
@@ -222,6 +224,11 @@ throw("Nimblegen import does not support cmdline defined result files") if (@res
 
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+#checking params used in this scripts
+die('Must provide a -vendor parameter') if ! defined $vendor;
+die('Must provide a -name parameter') if ! defined $name;
+die('Must provide a -species parameter') if ! defined $species;
 
 
 #log/debug files fail in Helper without this
@@ -275,6 +282,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -result_files => \@result_files,
    -old_dvd_format => $old_dvd_format,
    -ucsc_coords => $ucsc,
+   -release => $release,
    #Exp does not build input dir, but could
    #This allows input dir to be somewhere 
    #other than efg dir structure
