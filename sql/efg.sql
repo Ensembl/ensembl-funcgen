@@ -398,7 +398,7 @@ CREATE TABLE `result_feature` (
   `seq_region_end` int(10) NOT NULL,
   `seq_region_strand` tinyint(4) NOT NULL,
   `window_size` smallint(5) unsigned NOT NULL,
-  `score` blob,
+  `score` double default NULL,
   PRIMARY KEY  (`result_feature_id`),
   KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=50;
@@ -1006,7 +1006,7 @@ DROP TABLE IF EXISTS `object_xref`;
 CREATE TABLE object_xref (
   object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   ensembl_id                  INT(10) UNSIGNED NOT NULL, 
-  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType') not NULL,
+  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'Annotated', 'FeatureType') not NULL,
   xref_id                     INT UNSIGNED NOT NULL,
   linkage_annotation          VARCHAR(255) DEFAULT NULL,
   UNIQUE (ensembl_object_type, ensembl_id, xref_id),

@@ -40,10 +40,13 @@ CREATE TABLE `result_feature` (
   `seq_region_end` int(10) NOT NULL,
   `seq_region_strand` tinyint(4) NOT NULL,
   `window_size` smallint(5) unsigned NOT NULL,
-  `score` blob,
+  `score` double default NULL,
   PRIMARY KEY  (`result_feature_id`),
   KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=50;
+
+
+--alter table result_feature modify `score` double default NULL;
 
 
 -- alter external_db.db_name naming conventions to reflect the Class name to enable adaptor retrieval
@@ -52,6 +55,14 @@ CREATE TABLE `result_feature` (
 update external_db set db_name='ensembl_core_Gene', db_display_name='EnsemblGene' where db_name='core_gene';
 update external_db set db_name='ensembl_core_Transcript', db_display_name='EnsemblTranscript' where db_name='core_transcript';
 update external_db set type='MISC' where db_name like 'ensembl_core%';
+
+
+-- change the analysis.logic_name to NOT NULL
+alter table analysis modify `logic_name` varchar(100) NOT NULL;
+
+
+-- change all names to not NULL? Will this just insert a blank name instead, or 0 for a numeric field?
+
 
 
 --alter table experiment change `date` `created` datetime DEFAULT CURRENT_TIMESTAMP;
