@@ -186,7 +186,7 @@ sub get_available_adaptors{
 			   'Probe'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
 			   'ProbeFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
 			   'AnnotatedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
-			   'RegulatoryFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
+			   'RegulatoryFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
 			   'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
 			   'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
 			   'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
@@ -199,6 +199,11 @@ sub get_available_adaptors{
 			   'ExternalFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
 			   'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
 			   'DBEntry'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
+
+
+			   #New collections
+			   'ResultFeatureCollection' => 'Bio::EnsEMBL::Funcgen::Collection::ResultFeature',
+
 	 	       
 	       #add required EnsEMBL(core) adaptors here
 	       #Should write/retrieve from efg not dna db
@@ -396,7 +401,6 @@ sub dnadb {
 	  #while($@ && $count <2){
 	  while($connection_error && $count <3){
 		#Create and test the DB
-
 		$port = ($schema <48) ? 3306 : 5306;
 		
 		$dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
@@ -411,7 +415,7 @@ sub dnadb {
 		  
 		#do not trap this time as we're not going to guess anymore
 		if($count >0){
-		  warn "Trying to guess last release with same assembly:\t$dbname\n";
+		  warn "Attempting to connect to:\t$dbname\n";
 		}
 
 		eval { $dnadb->dbc()->db_handle(); };
