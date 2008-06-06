@@ -73,7 +73,9 @@ my $PACKED = 1;
 #probe query extension flag
 #Can only do extension with probe/result/feature queries
 my $_probe_extend = 0;
-my $_result_feature_set = 0;
+#Default is 1 so meta_coords get updated properly in _pre_store
+#This is reset for every fetch method
+my $_result_feature_set = 1;
 
 use vars qw(@ISA);
 
@@ -266,7 +268,9 @@ sub _objs_from_sth {
 
   }
 
-  
+  #reset for safety, altho this will be reset in fetch method
+  $_result_feature_set = 1;
+
   return \@rfeats;
 }
 
@@ -310,6 +314,11 @@ sub store{
 
 	
 	my $seq_region_id;
+
+	#Here we need to temporarily override the $_result_feature_set
+	#As when we are storing
+	#Or should we just change default?
+
 	($rfeat, $seq_region_id) = $self->_pre_store($rfeat);
 		
 	$sth->bind_param(1, $rfeat->result_set_id, SQL_INTEGER);
@@ -492,12 +501,14 @@ sub fetch_all_by_Slice_ResultSet{
 	}
 
 	my $contraint = 'rf.result_set_id='.$rset->dbID.' and rs.window_size='.$window_size;
+
+
+
+
+
 	return $self->fetch_all_by_Slice_contraint($constraint);
 
-	#What about over hanging features?
-	#Do these features currently get missed?
-	#we could extend the slice by the window size on each end and then trim the ResultFeature?
-	#Not much point, we are only talking about missing a maximim of two pixels out of 700 or more.
+
 
 	#Conservation score method is to store all scores within a given window, by packing each individually
 	#Then 
