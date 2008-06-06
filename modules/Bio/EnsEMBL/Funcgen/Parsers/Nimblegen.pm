@@ -715,7 +715,21 @@ sub read_probe_data{
 		
 		#Skip probe if there is a duplicate
 		if(exists $probe_pos{$data[$hpos{'PROBE_ID'}]}){
-		  throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}]." need implement duplicate logging/cleaning");
+		  
+		  if($data[$hpos{'CHROMOSOME'}] eq $probe_pos{$data[$hpos{'PROBE_ID'}]}->{chr} &&
+			 ($data[$hpos{'POSITION'}]+1) eq $probe_pos{$data[$hpos{'PROBE_ID'}]}->{start}){
+			#log or warn here?
+			
+			#Not matching probe length here
+			
+			next;
+			#Do we need to skip this in the ndf file too?
+
+		  }
+		  else{
+			throw("Found duplicate mapping for ".$data[$hpos{'PROBE_ID'}].
+				  " need implement duplicate logging/cleaning");
+		  }
 		  #need to build duplicate hash to clean elements from hash
 		  # $duplicate_probes{$data[$hpos{'PROBE_ID'}]} = 1;
 		  #next;
