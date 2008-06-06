@@ -584,9 +584,15 @@ sub analyse_tables{
   map $_ = "@{$_}", @tables;
   $sql = 'analyze table ';
 
+
   foreach my $table(@tables){
-	$self->log('Analysing table '.$table);
-	$self->db->dbc->do($sql.$table);
+	$self->log("Analysing table $table:");
+
+	my @anal_info = @{$self->db->dbc->db_handle->selectall_arrayref($sql.$table)};
+
+	foreach my $line_ref(@anal_info){
+	  $self->log(join("\t", @$line_ref));
+	}
   }
 
   return;
