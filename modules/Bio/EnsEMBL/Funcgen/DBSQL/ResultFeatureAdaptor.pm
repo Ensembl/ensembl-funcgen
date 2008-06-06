@@ -59,7 +59,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
 
 #store as 4 byte float. If change here, must also change in ResultFeature.pm?
@@ -73,11 +73,15 @@ my $PACKED = 1;
 #probe query extension flag
 #Can only do extension with probe/result/feature queries
 my $_probe_extend = 0;
+my $_result_feature_set = 0;
 
 use vars qw(@ISA);
 
 
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
+
+#This is a little odd as ResultFeatures are not Bio::EnsEMBL::Features (yet?)
+
 
 =head2 _tables
 
@@ -98,7 +102,7 @@ sub _tables {
   my @result_tables = ( ['result', 'r'], ['probe_feature', 'pf'] );
   push @result_tables, ( ['probe', 'p'] ) if $_probe_extend;
 	
-  return $self->{result_feature_set} ? ( [ 'result_feature', 'rf' ] )
+  return $_result_feature_set ? ( [ 'result_feature', 'rf' ] )
 	: @result_tables;
 }
 
@@ -118,10 +122,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 
-	#This need to be dynamic dependent on whether result_feature_set is set.
-	#let's set an internal result_feature_set at the start of each query based on the ResultSet::result_feature_set value.
-
-	
+	#This need to be dynamic dependent on whether result_set has 'result_feature' status.
 
 	#removed window as we don't want to return that really?
 	#Could remove seq_region_id, but this may cause problems with attempts to map
@@ -131,7 +132,8 @@ sub _columns {
 	
 
 	my @result_columns = qw (r.score            pf.seq_region_start 
-							 pf.seq_region_end  cc.chip_channel_id);
+							 pf.seq_region_end  pf.seq_region_strand 
+							 cc.chip_channel_id);
 
 	if($_probe_extend){
 	  #We can get this direct from the ProbeAdaptor
@@ -147,7 +149,7 @@ sub _columns {
 	#May need to add rf.seq_region_id  if we want to create Collections
 	#Hve also left out window, as we don't need to know this.
 
-	return $self->{result_feature_set} ? qw(rf.seq_region_start rf.seq_region_end rf.score )
+	return $_result_feature_set ? qw(rf.seq_region_start rf.seq_region_end rf.seq_region_strand rf.score )
 	  : @result_columns;
 	}
 
@@ -213,17 +215,20 @@ sub _objs_from_sth {
 
   #Test speed with no dbID and sr_id
   #Could dynamically define simple obj hash dependant on whether feauture is stranded and new_fast?
+  #We never call _obj_from_sth for extended queries
+  #This is only for result_feature table queries i.e. standard/new queries
 
-  $sth->bind_columns(\$sr_start, \$sr_end, \$score);
+  $sth->bind_columns(\$sr_start, \$sr_end, \$sr_strand, \$score);
   
   #this fails if we delete entries from the joined tables
   #causes problems if we then try and store an rs which is already stored
 
   while ( $sth->fetch() ) {
 
-	warn "Need to unpack score here!";
+	#warn "Need to unpack score here!";
+	#Leave packing for v51
 
-	push @rfeats, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast($sr_start, $sr_end, $sr_score);
+	push @rfeats, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast($sr_start, $sr_end, $sr_strand, $score);
 
 
 	#We never want the heavy object from the result_feature table method
@@ -265,8 +270,6 @@ sub _objs_from_sth {
   return \@rfeats;
 }
 
-
-
 =head2 store
 
   Args       : List of Bio::EnsEMBL::Funcgen::ResultFeature objects
@@ -286,7 +289,7 @@ sub store{
   throw("Must provide a list of ResultFeature objects") if(scalar(@rfeats == 0));
   
   #These are in the order of the ResultFeature attr array(excluding probe_id, which is the result/probe_feature query only attr))
-  my $sth = $self->prepare('INSERT INTO result_feature (seq_region_start, seq_region_end, score, result_set_id, seq_region_id, seq_region_strand, window_size) VALUES (?, ?, ?, ?, ?, ?, ?)');  
+  my $sth = $self->prepare('INSERT INTO result_feature (result_set_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, window_size, score) VALUES (?, ?, ?, ?, ?, ?, ?)');  
   my $db = $self->db();
 
   
@@ -303,30 +306,28 @@ sub store{
 
 	#Remove result_feature_set from result_set and set as status?
 
-	warn "pack score into blob here";
+	#warn "pack score into blob here";
 
 	
+	my $seq_region_id;
+	($rfeat, $seq_region_id) = $self->_pre_store($rfeat);
+		
+	$sth->bind_param(1, $rfeat->result_set_id, SQL_INTEGER);
+	$sth->bind_param(2, $seq_region_id,        SQL_INTEGER);
+    $sth->bind_param(3, $rfeat->start,         SQL_INTEGER);
+    $sth->bind_param(4, $rfeat->end,           SQL_INTEGER);
+	$sth->bind_param(5, $rfeat->strand,        SQL_INTEGER);
+	$sth->bind_param(6, $rfeat->window_size,            SQL_INTEGER);
+	$sth->bind_param(7, sprintf("%.3f", $rfeat->score), SQL_DOUBLE);#??Change this to BLOB?
 
-    $sth->bind_param(1, $rfeat->sqe_region_start, SQL_INTEGER);
-    $sth->bind_param(2, $rfeat->seq_region_end,   SQL_INTEGER);
-	$sth->bind_param(3, $score,                   SQL_BLOB);#??
-	$sth->bind_param(4, $ft_id,                   SQL_INTEGER);
-	$sth->bind_param(3, $ct_id,                   SQL_INTEGER);
-	$sth->bind_param(4, $ft_id,                   SQL_INTEGER);
-	$sth->bind_param(3, $rfeat,                   SQL_INTEGER);
-
+	
     $sth->execute();
     
-    $rset->dbID( $sth->{'mysql_insertid'} );
-    $rset->adaptor($self);
-    
-	$self->store_states($rset);
-    $self->store_chip_channels($rset);
-	
-    
+    #$rfeat->dbID( $sth->{'mysql_insertid'} );
+    #$rset->adaptor($self);
   }
   
-  return \@rsets;
+  return \@rfeats;
 }
 
 
@@ -437,8 +438,11 @@ sub window_sizes {
 #We really want something that will give Probe and ResultFeature
 #Let's set the Probe as an optional ResultFeature attribute
 
+
+#should we pass params hash here?
+
 sub fetch_all_by_Slice_ResultSet{
-  my ($self, $slice, $rset, $ec_status, $display_size, $window_size, $with_probe) = @_;
+  my ($self, $slice, $rset, $ec_status, $display_size, $window_size, $with_probe, $constraint) = @_;
 
   if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
@@ -448,15 +452,17 @@ sub fetch_all_by_Slice_ResultSet{
 
 
   #change this rset call to a status call?
-  $self->{result_feature_set} = $rset->result_feature_set;
-  $_probe_extend = $with_probe;
+  $_result_feature_set = $rset->has_status('RESULT_FEATURE_SET');
+  $_probe_extend       = $with_probe;
 
   #Work out window size here based on Slice length
 
   #Keep working method here for now and just use generic fetch for simple result_feature table query
 
-  if($self->{result_feature_set}){
+  if($_result_feature_set){
 	
+	warn "IS RESULT FEATURE SET";
+
 	if($_probe_extend){
 	  throw("Cannot retrieve Probe information with a result_feature_set query, try using ???");
 	}
@@ -473,7 +479,7 @@ sub fetch_all_by_Slice_ResultSet{
 	  
 	  for (my $i = 0; $i <= $#window_sizes; $i++) {
 		
-		last if ($bucket_size < $window_sizes[$i]) {
+		if ($bucket_size < $window_sizes[$i]){
 		  $window_size = $window_sizes[$i-1];
 		  last;    
 		}
@@ -513,9 +519,8 @@ sub fetch_all_by_Slice_ResultSet{
 	return;
   }
 
-
   my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
-  my ($biol_rep, $score, $start, $end, $cc_id, $old_start, $old_end, $probe_field);
+  my ($biol_rep, $score, $start, $end, $strand, $cc_id, $old_start, $old_end, $probe_field, $old_strand);
 
 
   my ($padaptor, $probe, $array,);
@@ -628,7 +633,7 @@ sub fetch_all_by_Slice_ResultSet{
   #will it always be a median?
 
 
-  $sql = 'SELECT STRAIGHT_JOIN r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id '.$pfields.
+  $sql = 'SELECT STRAIGHT_JOIN r.score, pf.seq_region_start, pf.seq_region_end, pf.seq_region_strand, cc.chip_channel_id '.$pfields.
 	' FROM probe_feature pf, '.$rset->get_result_table().' r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '.
 	  $rset->dbID();
 
@@ -662,11 +667,11 @@ sub fetch_all_by_Slice_ResultSet{
   $sth->execute();
   
   if($with_probe){
-	$sth->bind_columns(\$score, \$start, \$end, \$cc_id, \$probe_id, \$probe_set_id, 
+	$sth->bind_columns(\$score, \$start, \$end, \$strand, \$cc_id, \$probe_id, \$probe_set_id, 
 					   \$pname, \$plength, \$arraychip_id, \$pclass);
   }
   else{
-	$sth->bind_columns(\$score, \$start, \$end, \$cc_id);
+	$sth->bind_columns(\$score, \$start, \$end, \$strand, \$cc_id);
   }
   my $position_mod = $slice->start() - 1;
   
@@ -679,7 +684,8 @@ sub fetch_all_by_Slice_ResultSet{
     #we need to get best result here if start and end the same
     #set start end for first result
     $old_start ||= $start;
-    $old_end   ||= $end; 
+    $old_end   ||= $end;
+	$old_strand||= $strand;
     
 
 	#This is assuming that a feature at the exact same locus is from the same probe
@@ -724,6 +730,7 @@ sub fetch_all_by_Slice_ResultSet{
 		([
 		  ($old_start - $position_mod), 
 		  ($old_end - $position_mod),
+		  $old_strand,
 		  $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
 		  $probe,
 		 ]);
@@ -799,6 +806,7 @@ sub fetch_all_by_Slice_ResultSet{
       ([
 		($old_start - $position_mod), 
 		($old_end - $position_mod),
+		$old_strand,
 		$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
 		$probe
 	   ]);
@@ -859,6 +867,8 @@ sub resolve_replicates_by_ResultSet{
 	foreach $biol_rep(keys %{$rep_ref}){
 	  push @scores, mean($rep_ref->{$biol_rep});
 	}
+
+	@scores = sort {$a<=>$b} @scores;
 
 	$score = median(\@scores);
 
