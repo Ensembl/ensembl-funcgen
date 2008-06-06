@@ -487,6 +487,8 @@ sub parse_line{
 								 -info_type              => 'DIRECT',#this should be moved to ox.linkage_type
 								 #-linkage_annotation     => 'eQTL SNP xref',	
 								 -info_text              => 'Variation',
+								 #store method param
+								 feature_type            => 'AnnotatedFeature',
 								);
 		
 		  #need sub cache_dbentry_params?
