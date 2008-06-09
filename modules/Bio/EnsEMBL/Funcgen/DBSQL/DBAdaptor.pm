@@ -199,6 +199,7 @@ sub get_available_adaptors{
 			   'ExternalFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
 			   'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
 			   'DBEntry'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
+			   'Slice'              => 'Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor',
 
 
 			   #New collections
@@ -280,10 +281,10 @@ sub _get_schema_build{
 #the problem arises when we get features from the DB by none Slice methods, these may not refer to the current dnadb
 #so we have to implement checks in non slice based feature calls to make sure we nest the correct dnadb adaptor
 
-sub get_SliceAdaptor{
-  my ($self, $cs_id) = @_;
+#sub get_SliceAdaptor{
+#  my ($self, $cs_id) = @_;
 
-  #$cs_id is only used in ProbeFeatureAdaptor
+  #$cs_id is only used in ProbeFeatureAdaptor, no longer used
   #but is this correct?
 
 
@@ -301,15 +302,15 @@ sub get_SliceAdaptor{
 
 
  
-  if($cs_id){
-    my $csa = $self->get_FGCoordSystemAdaptor();
-    my $fg_cs = $csa->fetch_by_dbID($cs_id);
+#  if($cs_id){
+#    my $csa = $self->get_FGCoordSystemAdaptor();
+#    my $fg_cs = $csa->fetch_by_dbID($cs_id);
     #my $schema_build = $fg_cs->schema_build();
     #Get species here too
     
-	if(! $fg_cs->contains_schema_build($self->_get_schema_build($self->dnadb()))){
+#	if(! $fg_cs->contains_schema_build($self->_get_schema_build($self->dnadb()))){
     #if($schema_build ne $self->_get_schema_build($self->dnadb())){
-	  my $lspecies = $reg->get_alias($self->species());
+#	  my $lspecies = $reg->get_alias($self->species());
       #warn "Generating dnadb schema_build is $schema_build and dnadb is ".$self->_get_schema_build($self->dnadb())."\n";
 
       #get from cs_id
@@ -322,27 +323,27 @@ sub get_SliceAdaptor{
 	  #we would then lose that association
 	  #should we change dnadb to be totally dynamic anyway and only set it for the current default?
 
-	  my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-		(						
-		 -host => "ensembldb.ensembl.org",
-		 -user => "anonymous",
-		 -species => $lspecies,
-		 -dbname => $lspecies.'_core_'.$fg_cs->get_latest_schema_build(),
-		 -group => 'core',
-		 #-port  => 5306,
-		);
+#	  my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+#		(						
+#		 -host => "ensembldb.ensembl.org",
+#		 -user => "anonymous",
+#		 -species => $lspecies,
+#		 -dbname => $lspecies.'_core_'.$fg_cs->get_latest_schema_build(),
+#		 -group => 'core',
+#		 #-port  => 5306,
+#		);
 
 
 	  #This new port only has from 48 onwards!!!
   
       
-      $self->dnadb($dnadb);
+#      $self->dnadb($dnadb);
       
-    }
-  }
+#    }
+#  }
   
-  return $self->dnadb->get_SliceAdaptor();#this causes circular reference if dnadb not set i.e if this is generated from scratch without a dnadb rather than from the reg?????
-}
+#  return $self->dnadb->get_SliceAdaptor();#this causes circular reference if dnadb not set i.e if this is generated from scratch without a dnadb rather than from the reg?????
+#}
 
 
 
@@ -418,6 +419,7 @@ sub dnadb {
 		  warn "Attempting to connect to:\t$dbname\n";
 		}
 
+		#This is not suppressing the error output.
 		eval { $dnadb->dbc()->db_handle(); };
 
 		$connection_error = $@;
