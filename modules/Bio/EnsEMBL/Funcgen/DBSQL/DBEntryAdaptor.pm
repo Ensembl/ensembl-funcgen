@@ -142,11 +142,32 @@ sub fetch_by_db_accession {
   return $exDB;
 }
 
-
+#Placeholders to catch error
+#These now work in reverse as the Gene/Transcript/Translation 
+#is the xref not the ensembl_object as with the core code
 
 sub fetch_all_by_Gene {
   my ( $self, $gene) = @_;
-  throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');
+ 
+  if(! (ref($gene) && $gene->isa('Bio::EnsEMBL::Gene'))) {
+    throw("Bio::EnsEMBL::Gene argument expected.");
+  }
+
+  throw('Not yet implemented for eFG');
+
+
+  #This is going to be a bit of a work around as we should really have a separate fetch method
+  #fetch_all_by_external_name_object_type?
+  #No!! Because this simply pulls back the xrefs, not the object xrefs!!
+  #This is the same for the fetch_by_dbID method???
+
+  #_fetch_by_external_id
+  #The problem here is that we want to return ox info aswell.
+  #Just rewrite _fetch_by_object_type
+
+
+
+
 }
 
 sub fetch_all_by_Transcript {
@@ -160,6 +181,7 @@ sub fetch_all_by_Translation {
   throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');  
 }
 
+#Haven't we replaced these for eFG feature with a direct call in the object/object_adaptor?
 
 
 =head2 list_gene_ids_by_external_db_id
@@ -299,7 +321,7 @@ sub list_translation_ids_by_extids {
 sub list_feature_type_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
-  return $self->_type_by_external_id( $external_name, 'feature_type', 
+  return $self->_type_by_external_id( $external_name, 'FeatureType', 
 									  undef, $external_db_name );
 }
 
@@ -322,7 +344,7 @@ sub list_regulatory_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
  
-  return $self->_type_by_external_id( $external_name, 'regulatory_feature', 
+  return $self->_type_by_external_id( $external_name, 'RegulatoryFeature', 
 									  undef, $external_db_name );
 }
 
@@ -343,7 +365,7 @@ sub list_external_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
   return
-    $self->_type_by_external_id( $external_name, 'external_feature', undef,
+    $self->_type_by_external_id( $external_name, 'ExternalFeature', undef,
                                  $external_db_name );
 }
 
@@ -364,7 +386,7 @@ sub list_annotated_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
   return
-    $self->_type_by_external_id( $external_name, 'annotated_feature', undef,
+    $self->_type_by_external_id( $external_name, 'AnnotatedFeature', undef,
                                  $external_db_name );
 }
 
@@ -389,9 +411,12 @@ sub list_regulatory_feature_ids_by_external_db_id{
    my ($self,$external_db_id) = @_;
 
    my %T = map { ($_, 1) }
-            $self->_type_by_external_db_id( $external_db_id, 'regulatory_feature' );
+            $self->_type_by_external_db_id( $external_db_id, 'RegulatoryFeature' );
    return keys %T;
 }
+
+
+
 
 
 =head2 _type_by_external_id
