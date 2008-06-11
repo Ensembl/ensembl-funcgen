@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.3 2008-06-06 10:04:01 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.4 2008-06-11 10:42:04 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
@@ -473,10 +473,10 @@ sub store_window_bins_by_Slice_ResultSet {
 		  
 		  #Note: list ref passed
 		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-		  			 ([
+		  			 (
 		  			  $bin_start, $bin_end, $strand, $bin_score, undef,#absent probe info
 		  			  $rset->dbID, $wsize, $slice
-					  ]));
+					  ));
 		  
 		  $bin_start += $wsize;
 		  
@@ -615,6 +615,20 @@ sub _bin_features_by_window_sizes{
   #Also store local starts and ends as we currently calc this several times
   my $lfeature_start;
   my $lfeature_end;
+
+
+  #To remove skew from bins we need to clip the start and end 
+  #if they do not have overlapping features.
+  #So we need to store features in each bin and post process.
+  #This would be easiest, but 2nd loop would slow it down.
+  #Not so bad for storage, but let's try and keep it quick
+  #So in line bin clipping requires awareness of when we have moved to a new bin
+  #between features.  This holds for overlapping and non-overlapping features.
+  #Once we have observed a gap we need to clip the end of the last bin and clip the start of the new bin.
+  #This requires knowing the greatest end values from the last bin's feature.
+  #what if two overlapping features had the same start and different end, would we see the longest last?
+  #Check default slice_fetch sort
+
 
   foreach my $feature ( @{$features} ) {
 	#Set up the bins for each window size
