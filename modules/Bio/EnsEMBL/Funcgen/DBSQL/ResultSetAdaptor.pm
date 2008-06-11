@@ -729,6 +729,11 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe) = @_;
   
 
+  warn "Using ResultFeatureAdaptor";
+
+  return $self->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $rset, $ec_status, $with_probe);
+
+
   if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
   }
@@ -947,12 +952,12 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 		#Do not change arg order, this is an array object!!
 
 	  push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-		([
+		(
 		  ($old_start - $position_mod), 
-		  ($old_end - $position_mod),
+		  ($old_end - $position_mod), undef,#strand needs adding
 		  $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
 		  $probe,
-		 ]);
+		 );
 	
 	 
 	  undef %rep_scores;
