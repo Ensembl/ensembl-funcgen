@@ -50,11 +50,12 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::ResultFeature;
 
-
+use base ('Bio::EnsEMBL::Feature');
 
 =head2 new_fast
 
-  Args       : Arrayref with attributes start, end, score as the element of the array IN THAT ORDER.
+  Args       : Array with attributes start, end, strand, score, probe, result_set_id, winow_size  IN THAT ORDER.
+               WARNING: None of these are validated, hence can omit some where not needed
   Example    : none
   Description: Fast and list version of new. Only works if the code is very disciplined.
   Returntype : Bio::EnsEMBL::Funcgen::ResultFeature
@@ -65,9 +66,12 @@ package Bio::EnsEMBL::Funcgen::ResultFeature;
 =cut
 
 sub new_fast {
-  #my ($class, $arrayref)  = @_;
+  my ($class, @args)  = @_;
   #return bless ($arrayref, $class);
-  bless $_[1], $_[0];
+
+  #Passing arrayref here may cause problems with changing vars after obj creation
+
+  bless \@args, $class;
 }
 
 
@@ -102,6 +106,11 @@ sub start {  $_[0]->[0];}
 
 sub end {  $_[0]->[1];}
 
+
+#Do we need to chacnge this to strand and have slice strand context, as with start and end
+
+sub strand {  $_[0]->[2];}
+
 =head2 score
 
   Example    : my $score = $rf->score();
@@ -114,7 +123,7 @@ sub end {  $_[0]->[1];}
 
 =cut
 
-sub score {  $_[0]->[2];}
+sub score {  $_[0]->[3];}
 
 
 =head2 probe
@@ -131,20 +140,30 @@ sub score {  $_[0]->[2];}
 
 #probe_id is currently not available in the result_feature table, so this would be a result/probe_feature query.
 
-sub probe {  $_[0]->[3];}
+sub probe {  $_[0]->[4];}
 
 
 #The following are only used for storage and retrieval, hence why they are not included in new_fast which is streamlined
 #for performance
 #These have no validation so all thi smust be done in the caller/storer i.e. the adaptor
 
-sub result_set_id {  $_[0]->[4];}
+sub result_set_id {  $_[0]->[5];}
+sub window_size {  $_[0]->[6];}
 
-sub seq_region_id {  $_[0]->[5];}
+#May not ever need this
+#We pass the slice to store
+#Don't want to remap, so don't need furing fetch
+sub slice {  $_[0]->[7];}
 
-sub seq_region_strand {  $_[0]->[6];}#Include this in new_fast?
 
-sub window_size {  $_[0]->[7];}
+#Had to reimplement these as they used direct hash calls rather than acessor
+#redefined to use accessors to array
+
+sub length {
+  my $self = shift;
+  return $self->end - $self->start + 1;
+}
+
 
 
 1;
