@@ -72,6 +72,7 @@ my $PACKED = 1;
 
 #probe query extension flag
 #Can only do extension with probe/result/feature queries
+#Do these need to be our'd?
 my $_probe_extend = 0;
 #Default is 1 so meta_coords get updated properly in _pre_store
 #This is reset for every fetch method
@@ -150,8 +151,9 @@ sub _columns {
 	#Need to dynamically add strand dependant on whether feature is stranded?rf.seq_region_strand
 	#May need to add rf.seq_region_id  if we want to create Collections
 	#Hve also left out window, as we don't need to know this.
+	warn "columns: probe_extend  $_probe_extend rfs $_result_feature_set";
 
-	return $_result_feature_set ? qw(rf.seq_region_start rf.seq_region_end rf.seq_region_strand rf.score )
+	return $_result_feature_set ? qw(rf.seq_region_start rf.seq_region_end rf.seq_region_strand rf.score rf.seq_region_id)
 	  : @result_columns;
 	}
 
@@ -172,11 +174,9 @@ sub _columns {
 sub _default_where_clause{
   my $self = shift;
 
-  warn 'need to build default where clause dependent on result_feature or result query';
+  warn "where: probe_extend  $_probe_extend rfs $_result_feature_set";
 
-  my $where = '';
-
-  return 'r.probe_id = p.probe_id' if $_probe_extend;
+  return 'r.probe_id = p.probe_id' if $_probe_extend && ! $_result_feature_set;
 
 }
 
@@ -212,7 +212,7 @@ sub _default_where_clause{
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my (@rfeats, $dbid, $rset_id, $seq_region_id, $sr_start, $sr_end, $sr_strand, $score);
+  my (@rfeats, $dbid, $rset_id, $seq_region_id, $sr_start, $sr_end, $sr_strand, $score, $sr_id);
   my ($sql);
 
   #Test speed with no dbID and sr_id
@@ -220,17 +220,35 @@ sub _objs_from_sth {
   #We never call _obj_from_sth for extended queries
   #This is only for result_feature table queries i.e. standard/new queries
 
-  $sth->bind_columns(\$sr_start, \$sr_end, \$sr_strand, \$score);
+  $sth->bind_columns(\$sr_start, \$sr_end, \$sr_strand, \$score, \$sr_id);
   
-  #this fails if we delete entries from the joined tables
-  #causes problems if we then try and store an rs which is already stored
+
+  #We could rmeove all the slice stuff if we can override the BaseFeature _remap stuff
+  #And implement out own here based on the query slice
+  my %slice_hash;
+  my $slice_adaptor = $self->db->get_SliceAdaptor;
+  
 
   while ( $sth->fetch() ) {
 
 	#warn "Need to unpack score here!";
 	#Leave packing for v51
+	
+	#get core seq_region_id
+	my $csr_id = $self->get_core_seq_region_id($sr_id);
+		
+	if(! $csr_id){
+	  warn "Cannot get slice for eFG seq_region_id $sr_id\n".
+		"The region you are using is not present in the cuirrent dna DB";
+	  next;
+	}
 
-	push @rfeats, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast($sr_start, $sr_end, $sr_strand, $score);
+
+	$slice_hash{$csr_id} ||= $slice_adaptor->fetch_by_seq_region_id($csr_id);
+	
+
+
+	push @rfeats, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast($sr_start, $sr_end, $sr_strand, $score, undef, undef, undef, $slice_hash{$csr_id});
 
 
 	#We never want the heavy object from the result_feature table method
@@ -274,6 +292,17 @@ sub _objs_from_sth {
   return \@rfeats;
 }
 
+
+sub _remap{
+  my $self = shift;
+
+  warn "Overriding remap method to avoid using slice";
+  #Can't override as it is a non class method, just a sub.
+
+  return;
+
+
+}
 =head2 store
 
   Args       : List of Bio::EnsEMBL::Funcgen::ResultFeature objects
@@ -451,7 +480,7 @@ sub window_sizes {
 #should we pass params hash here?
 
 sub fetch_all_by_Slice_ResultSet{
-  my ($self, $slice, $rset, $ec_status, $display_size, $window_size, $with_probe, $constraint) = @_;
+  my ($self, $slice, $rset, $ec_status, $with_probe, $display_size, $window_size, $constraint) = @_;
 
   if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
@@ -462,13 +491,13 @@ sub fetch_all_by_Slice_ResultSet{
 
   #change this rset call to a status call?
   $_result_feature_set = $rset->has_status('RESULT_FEATURE_SET');
-  $_probe_extend       = $with_probe;
+  $_probe_extend       = $with_probe if defined $with_probe;
 
   #Work out window size here based on Slice length
 
   #Keep working method here for now and just use generic fetch for simple result_feature table query
 
-  if($_result_feature_set){
+  if(! $_result_feature_set){
 	
 	warn "IS RESULT FEATURE SET";
 
@@ -481,18 +510,23 @@ sub fetch_all_by_Slice_ResultSet{
 	my $bucket_size = ($slice->length)/$display_size;
 	my @window_sizes = $self->window_sizes;
 	
-	if(defined $window_size){
+	if(! defined $window_size){
 	  	  
 	  #default is largest;
-	  $window_size = $window_sizes[scalar(@window_sizes)-1];
+	  $window_size = $window_sizes[$#window_sizes];
 	  
+	  #Try and find a smaller window
 	  for (my $i = 0; $i <= $#window_sizes; $i++) {
 		
 		if ($bucket_size < $window_sizes[$i]){
+		  warn "Found better window size";
 		  $window_size = $window_sizes[$i-1];
 		  last;    
 		}
 	  }
+
+	  warn "Using window size $window_size";
+
 	}
 	else{
 	  #Validate window size here
@@ -500,13 +534,12 @@ sub fetch_all_by_Slice_ResultSet{
 			join(', ', @window_sizes)) if ! grep(/^${window_size}$/, @window_sizes);
 	}
 
-	my $contraint = 'rf.result_set_id='.$rset->dbID.' and rs.window_size='.$window_size;
 
+	
+	$constraint .= ' AND ' if defined $constraint;
+	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='.$window_size;
 
-
-
-
-	return $self->fetch_all_by_Slice_contraint($constraint);
+	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
 
 
 
@@ -524,6 +557,8 @@ sub fetch_all_by_Slice_ResultSet{
 
 
   #This is the old method from ResultSetAdaptor
+  warn "using old method";
+
 
   if($rset->table_name eq 'channel'){
 	warn('Can only get ResultFeatures for an ExperimentalChip level ResultSet');
@@ -673,6 +708,8 @@ sub fetch_all_by_Slice_ResultSet{
   #would this group correctly on NULL values if biol rep not set for a chip?
   #This would require an extra join too. 
 
+  warn $sql."\n";
+  
 
   $sth = $self->prepare($sql);
   $sth->execute();
@@ -738,13 +775,13 @@ sub fetch_all_by_Slice_ResultSet{
 		#Do not change arg order, this is an array object!!
 
 	  push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-		([
+		(
 		  ($old_start - $position_mod), 
 		  ($old_end - $position_mod),
 		  $old_strand,
 		  $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
 		  $probe,
-		 ]);
+		 );
 	
 	 
 	  undef %rep_scores;
@@ -814,13 +851,13 @@ sub fetch_all_by_Slice_ResultSet{
   #only if found previosu results
   if($old_start){
     push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-      ([
+      (
 		($old_start - $position_mod), 
 		($old_end - $position_mod),
 		$old_strand,
 		$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
 		$probe
-	   ]);
+	   );
 
 	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   }
