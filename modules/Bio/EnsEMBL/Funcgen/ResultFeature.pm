@@ -71,6 +71,8 @@ sub new_fast {
 
   #Passing arrayref here may cause problems with changing vars after obj creation
 
+  #warn "in new fast with @args";
+
   bless \@args, $class;
 }
 
@@ -164,6 +166,43 @@ sub length {
   return $self->end - $self->start + 1;
 }
 
+=head2 move
+
+  Arg [1]    : int start
+  Arg [2]    : int end
+  Arg [3]    : (optional) int strand
+  Example    : None
+  Description: Sets the start, end and strand in one call rather than in 
+               3 seperate calls to the start(), end() and strand() methods.
+               This is for convenience and for speed when this needs to be
+               done within a tight loop.
+  Returntype : none
+  Exceptions : Thrown is invalid arguments are provided
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub move {
+  my $self = shift;
+
+  throw('start and end arguments are required') if(@_ < 2);
+
+  my $start  = shift;
+  my $end    = shift;
+  my $strand = shift;
+
+  if(defined($start) && defined($end) && $end < $start) {
+    throw('start must be less than or equal to end');
+  }
+  if(defined($strand) && $strand != 0 && $strand != -1 && $strand != 1) {
+    throw('strand must be 0, -1 or 1');
+  }
+
+  $self->[0] = $start;
+  $self->[1] = $end;
+  $self->[2] = $strand if(defined($strand));
+}
 
 
 1;
