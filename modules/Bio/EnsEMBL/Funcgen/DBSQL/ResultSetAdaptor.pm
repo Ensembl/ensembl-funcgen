@@ -1027,12 +1027,12 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   #only if found previosu results
   if($old_start){
     push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-      ([
-		($old_start - $position_mod), 
-		($old_end - $position_mod),
-		$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
-		$probe
-	   ]);
+      (
+	   ($old_start - $position_mod), 
+	   ($old_end - $position_mod),
+	   $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
+	   $probe
+	  );
 
 	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   }
