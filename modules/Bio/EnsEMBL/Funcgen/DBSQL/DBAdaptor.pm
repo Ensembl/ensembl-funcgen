@@ -200,8 +200,8 @@ sub get_available_adaptors{
 			   'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
 			   'DBEntry'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
 			   'Slice'              => 'Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor',
-
-
+			   'ResultFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
+			   
 			   #New collections
 			   'ResultFeatureCollection' => 'Bio::EnsEMBL::Funcgen::Collection::ResultFeature',
 
