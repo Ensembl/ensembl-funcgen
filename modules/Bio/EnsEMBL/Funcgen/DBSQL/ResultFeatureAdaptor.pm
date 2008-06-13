@@ -497,7 +497,7 @@ sub fetch_all_by_Slice_ResultSet{
 
   #Keep working method here for now and just use generic fetch for simple result_feature table query
 
-  if(! $_result_feature_set){
+  if($_result_feature_set){
 	
 	warn "IS RESULT FEATURE SET";
 
