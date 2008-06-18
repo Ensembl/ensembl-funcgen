@@ -43,12 +43,15 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
+#Remove these?
 our $SLICE_FEATURE_CACHE_SIZE = 4;
 our $MAX_SPLIT_QUERY_SEQ_REGIONS = 3;
 
-
-#need to wrap _generic_fetch to always generate the seq_region_cache other wise non-slice based
-#fetch methods fail
+### To do ###
+#Add Translation method for fetch by FeatureSets methods?
+#Test and implement feature mapping between coord systems
+#Correct/Document methods!!!
+#Implement externaldb db_name version registry
 
 =head2 generic_fetch
 
@@ -70,6 +73,9 @@ our $MAX_SPLIT_QUERY_SEQ_REGIONS = 3;
 
 sub generic_fetch {
   my $self = shift;
+
+  #need to wrap _generic_fetch to always generate the 
+  #seq_region_cache other wise non-slice based fetch methods fail
 
   #build seq_region cache here once for entire query
   $self->build_seq_region_cache();
@@ -232,7 +238,7 @@ sub fetch_all_by_Slice_constraint {
 =cut
 
 #do we even need to have the coord system?
-#so lon as we are only using one schema build i.e. one dnadb defualt = current
+#so long as we are only using one schema build i.e. one dnadb defualt = current
 #slice and fg_cs are optional
 #need to look at this
 
@@ -698,6 +704,7 @@ sub _remap {
   foreach my $f (@$features) {
     #since feats were obtained in contig coords, attached seq is a contig
     my $fslice = $f->slice();
+
     if(!$fslice) {
       throw("Feature does not have attached slice.\n");
     }
@@ -772,19 +779,214 @@ sub fetch_all_by_external_name {
   my ( $self, $external_name, $external_db_name ) = @_;
 
   my $entryAdaptor = $self->db->get_DBEntryAdaptor();
+  my (@ids);
+  my @tmp = split/::/, ref($self);
+  my $feature_type = pop @tmp;
+  $feature_type =~ s/FeatureAdaptor//;
+  my $xref_method = 'list_'.lc($feature_type).'_feature_ids_by_extid';
 
-  my @ids;
-
-  if($self->isa('Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor')){
-	@ids = $entryAdaptor->list_regulatory_feature_ids_by_extid($external_name, $external_db_name);
-  }else{
-	warn "Does not yet accomodate non regulatory feature external names";
+  if(! $entryAdaptor->can($xref_method)){
+	warn "Does not yet accomodate  $feature_type feature external names";
 	return;
-	@ids = $entryAdaptor->list_external_feature_ids_by_extid($external_name, $external_db_name);
+  }
+  else{
+	@ids = $entryAdaptor->$xref_method($external_name, $external_db_name);
   }
 
   return $self->fetch_all_by_dbID_list( \@ids );
 }
+
+
+
+
+
+=head2 fetch_all_by_stable_Feature_FeatureSets
+
+  Arg [1]    : string - seq_region_name i.e. chromosome name.
+  Arg [2]    : string - seq_region_start of current slice bound
+  Arg [3]    : string - seq_region_end of current slice bound.
+  Arg [4]    : Bio::EnsEMBL::Gene|Transcript|Translation
+  Arg [5]    : arrayref - Bio::EnsEMBL::Funcgen::FeatureSet
+  Example    : ($start, $end) = $self->_set_bounds_by_regulatory_feature_xref
+                              ($trans_chr, $start, $end, $transcript, $fsets);
+  Description: Internal method to set an xref Slice bounds given a list of
+               FeatureSets.
+  Returntype : List - ($start, $end);
+  Exceptions : throw if incorrent args provided
+  Caller     : self
+  Status     : at risk
+
+=cut
+
+#We really only want this method to work on storables
+#Namely all SetFeatures, could extend to FeatureTypes
+#This is a reimplementation of what has been used in the 
+#Funcgen::SliceAdaptor::_set_bounds_by_xref_FeatureSet
+
+#we could have a fourth arg here which is a coderef to filter the feature returned?
+#This could be used by the SliceAdaptor to only return features which exceed a current slice
+#We would still have to test the start and end in the caller, so not a massive win
+#for too much code obfucation.  Altho we are maintaining two versions of this code
+#which could get out of sync, epsecially with respect to external_db names
+
+#This is currently feature generic
+#So can call from one adaptor but will return features from all adaptors?
+#Where can we put this?
+#DBEntry adaptor?
+#The only logical place for this is really a convinience method in the core BaseFeatureAdaptor
+#This removes the problem of the generic nature of the returned data, as the focus is with the 
+#caller which is a singular feature, therefore, not mixing of data types
+
+#restrict to one feature type for now. but this will be slower as we will have to make the list call
+#for each type of feature_set passed, so if these are mixed they will be redundant
+#Let's just put a warning in
+#Keep this structure so we can port it to a convinience method somewhere
+#and slim down later?
+
+
+#This does not descend Gene>Transcript>Translation
+
+#Now we have conflicting standards
+#FeatureSets was kep as a list to prevent having to pass [$fset] for one FeatureSet
+#This also elimated the need to test ref == ARRAY
+#But now we want an extra optional descend flag
+#Should we change back?
+#Or should we wrap this method in one which will decend?
+#Write wrappers for now, as we will have to write the descend loop anyway
+#But this does not resolve the @fsets vs [$fset] issue
+
+#Will have to do this in the wrappers anyway, so change back
+#and live with the dichotomy of FeatureSet implementations for now
+
+sub fetch_all_by_stable_Storable_FeatureSets{
+  my ($self, $obj, $fsets) = @_;
+
+  my ($extdb_name, $efg_feature);
+  my $dbe_adaptor = $self->db->get_DBEntryAdaptor;
+
+ 
+  #Do we need a central registry for ensembl db names, what about versions?
+
+
+  if(ref($obj) && $obj->isa('Bio::EnsEMBL::Storable') && $obj->can('stable_id')){
+	my @tmp = split/::/, ref($obj);
+	my $obj_type = pop @tmp;
+	my $group = $obj->adaptor->db->group;
+	#Could sanity check for funcgen here?
+
+
+	if (! defined $group){
+	  throw('You must pass a stable Bio::EnsEMBL::Feature with an attached DBAdaptor with the group attribute set');
+	}
+
+	$extdb_name = 'ensembl_'.$group.'_'.$obj_type;
+
+	#warn "ext db name is $extdb_name";
+
+  }
+  else{
+	throw('Must pass a stable Bio::EnsEMBL::Feature, you passed a '.$obj);
+  }
+
+ 
+  #Set which eFG features we want to look at.
+
+  if(ref($fsets) ne 'ARRAY' || scalar(@$fsets) == 0){
+	throw('Must define an array of Bio::EnsEMBL::FeatureSets to extend xref Slice bound. You passed: '.$fsets);
+  }
+
+  my %feature_set_types;
+
+  foreach my $fset(@$fsets){
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
+	
+	$feature_set_types{$fset->type} ||= [];
+	push @{$feature_set_types{$fset->type}}, $fset;
+  }
+
+   
+  #We can list the outer loop here and put in the BaseFeatureAdaptor, or possible storable as we do have FeatureType xrefs.
+  #This would be useful for fetching all the efg features for a given xref and FeatureSets
+  #Don't implement as a parent sub and call from here as this would mean looping through array twice.
+  #Altho we could pass a code ref to do the filtering?
+  #Just copy and paste for now to avoid obfuscation
+
+  my @features;
+
+  #Get xrefs for each eFG feature set type
+  foreach my $fset_type(keys %feature_set_types){
+
+	#my $xref_method    = 'list_'.$fset_type.'_feature_ids_by_extid';
+	#e.g. list_regulatory_feature_ids_by_extid
+
+	
+	#Do type test here
+	my $adaptor_type = ucfirst($fset_type).'FeatureAdaptor';
+	
+	#remove this for generic method
+	next if ref($self) !~ /$adaptor_type/;
+			
+	#This is for generic method
+	#my $adaptor_method = 'get_'.ucfirst($fset_type).'FeatureAdaptor';
+	#my $adaptor = $self->db->$adaptor_method;
+	
+	my %feature_set_ids;
+	map $feature_set_ids{$_->dbID} = 1, @{$feature_set_types{$fset_type}};
+			
+	my $cnt = 0;
+
+	#Change this self to adaptor for generic method
+	foreach my $efg_feature(@{$self->fetch_all_by_external_name($obj->stable_id, $extdb_name)}){
+	  
+	  #Skip if it is not in one of our FeatureSets
+	  next if ! exists $feature_set_ids{$efg_feature->feature_set->dbID};
+	  push @features, $efg_feature;
+	}
+  }
+
+
+  return \@features;
+}
+
+
+sub fetch_all_by_Gene_FeatureSets{
+  my ($self, $gene, $fsets, $dblinks) = @_;
+
+  if(! ( ref($gene) && $gene->isa('Bio::EnsEMBL::Gene'))){
+    throw("You must pass a valid Bio::EnsEMBL::Gene object");
+  }
+
+  my @features = @{$self->fetch_all_by_stable_Storable_FeatureSets($gene, $fsets)};
+
+  if($dblinks){
+
+	foreach my $transcript(@{$gene->get_all_Transcripts}){
+	  push @features, @{$self->fetch_all_by_Transcript_FeatureSets($transcript, $fsets, $dblinks)};
+	}
+  }
+
+  return \@features;
+}
+
+sub fetch_all_by_Transcript_FeatureSets{
+  my ($self, $transc, $fsets, $dblinks) = @_;
+
+  if(! ( ref($transc) && $transc->isa('Bio::EnsEMBL::Transcript'))){
+    throw("You must pass a valid Bio::EnsEMBL::Transcript object");
+  }
+
+
+  my @features = @{$self->fetch_all_by_stable_Storable_FeatureSets($transc, $fsets)};
+
+  if($dblinks){
+	my $translation = $transc->translation;
+	push @features, @{$self->fetch_all_by_stable_Storable_FeatureSets($translation, $fsets)} if $translation;
+  }
+
+  return \@features;
+}
+
+
 
 =head2 fetch_by_display_label
 
