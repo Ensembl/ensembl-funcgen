@@ -88,13 +88,18 @@ sub fetch_by_Gene_FeatureSets {
   my $end          = $gene->seq_region_end;
   
 
-  ($start, $end) = $self->_set_bounds_by_xref_FeatureSets($gene_chr, $start, $end, $gene, $fsets);
+  ($start, $end) = $self->_set_bounds_by_xref_FeatureSets
+	($gene_chr, $start, $end, $gene, $fsets);
 
   #Now need to do this for all transcripts and proteins too?
   
   foreach my $trans(@{$gene->get_all_Transcripts}){
-	($start, $end) = $self->_set_bounds_by_xref_FeatureSets($gene_chr, $start, $end, $trans, $fsets);
-	($start, $end) = $self->_set_bounds_by_xref_FeatureSets($gene_chr, $start, $end, $trans->translation, $fsets);
+	($start, $end) = $self->_set_bounds_by_xref_FeatureSets
+	  ($gene_chr, $start, $end, $trans, $fsets);
+
+	my $translation = $trans->translation;
+	($start, $end) = $self->_set_bounds_by_xref_FeatureSets
+	  ($gene_chr, $start, $end, $translation, $fsets) if $translation;
   }
 
   return $self->fetch_by_region($cs_name, $gene_chr, $start, $end, $gene->strand);
@@ -131,12 +136,13 @@ sub fetch_by_Transcript_FeatureSets{
   my $end       = $transcript->seq_region_end;
   
 
-  ($start, $end) = $self->_set_bounds_by_xref_FeatureSets($trans_chr, $start, $end, $transcript, $fsets);
+  ($start, $end) = $self->_set_bounds_by_xref_FeatureSets
+	($trans_chr, $start, $end, $transcript, $fsets);
 
   #Now need to do this for the protein too
- 
-  ($start, $end) = $self->_set_bounds_by_xref_FeatureSets($trans_chr, $start, $end, $transcript->translation, $fsets);
-
+  my $translation = $transcript->translation;
+  ($start, $end) = $self->_set_bounds_by_xref_FeatureSets
+	($trans_chr, $start, $end, $translation, $fsets) if $translation;
 
 
   return $self->fetch_by_region($cs_name, $trans_chr, $start, $end, $transcript->strand);
@@ -176,6 +182,9 @@ sub _set_bounds_by_xref_FeatureSets{
   #Set ext_dbname and validate obj
   #Do we need a central store for ensembl db names?
 
+  
+
+
   if($obj->isa('Bio::EnsEMBL::Gene')){
 	$extdb_name = 'ensembl_core_Gene';
   }
@@ -194,8 +203,8 @@ sub _set_bounds_by_xref_FeatureSets{
 
   #Set which eFG features we want to look at.
 
-  if(! (defined $fsets || ( ref($fsets) eq 'ARRAY' && scalar(@$fsets) == 0)) ){
-	throw('Must define an array of Bio::EnsEMBL::FeatureSets to extend xref Slice bound by');
+  if(ref($fsets) ne 'ARRAY' || scalar(@$fsets) == 0){
+	throw('Must define an array of Bio::EnsEMBL::FeatureSets to extend xref Slice bound. You passed: '.$fsets);
   }
 
   my %feature_set_types;
@@ -206,6 +215,13 @@ sub _set_bounds_by_xref_FeatureSets{
 	$feature_set_types{$fset->type} ||= [];
 	push @{$feature_set_types{$fset->type}}, $fset;
   }
+
+
+  #We can list the outer loop here and put in the BaseFeatureAdaptor, or possible storable as we do have FeatureType xrefs.
+  #This would be useful for fetching all the efg features for a given xref and FeatureSets
+  #Don't implement as a parent sub and call from here as this would mean looping through array twice.
+  #Altho we could pass a code ref to do the filtering?
+  #Just copy and paste for now to avoid obfuscation
 
 
   #Get xrefs for each eFG feature set type
@@ -221,24 +237,24 @@ sub _set_bounds_by_xref_FeatureSets{
 	my %feature_set_ids;
 	map $feature_set_ids{$_->dbID} = 1, @{$feature_set_types{$fset_type}};
 
-	my $cnt = 0;
+	#my $cnt = 0;
 
-	foreach my $dbID($dbe_adaptor->$xref_method($obj->stable_id, $extdb_name)){
-	  $efg_feature = $adaptor->fetch_by_dbID($dbID);
-	
-	  #Skip if it is not in one of our FeatureSets
+
+	#This should use fetch_all_by_external_name method
+
+	foreach my $efg_feature(@{$adaptor->fetch_all_by_external_name($obj->stable_id, $extdb_name)}){
 	  next if ! exists $feature_set_ids{$efg_feature->feature_set->dbID};
 	  next if $efg_feature->seq_region_name ne $chr;
 	  
 
 	  #warn "found xref ".$efg_feature->display_label.' with start '.$efg_feature->seq_region_start;
-	  $cnt ++;
+	  #$cnt ++;
   	  
 	  $start = $efg_feature->seq_region_start if $efg_feature->seq_region_start < $start;
 	  $end   = $efg_feature->seq_region_end   if $efg_feature->seq_region_end   > $end;
 	}
 	
-	#	warn "Found $cnt $fset_type xrefs";
+	#warn "Found $cnt $fset_type xrefs";
 
   }
 
