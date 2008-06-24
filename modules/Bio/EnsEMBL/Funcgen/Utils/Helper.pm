@@ -579,7 +579,7 @@ sub backup_file{
 sub get_schema_and_build{
   my ($self, $dbname) = @_;
   my @dbname = split/_/, $dbname;
-  return [$dbname[($#dbname -1)], $dbname[($#dbname -1)]];
+  return [$dbname[($#dbname -1)], $dbname[($#dbname )]];
 }
 
 
