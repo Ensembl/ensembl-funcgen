@@ -128,7 +128,7 @@ sub fetch_all_by_Experiment {
 	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
 		
-  return $self->generic_fetch('es.experiment_id = '.$exp->ddID());
+  return $self->generic_fetch('es.experiment_id = '.$exp->dbID());
 }
 
 =head2 fetch_by_name
