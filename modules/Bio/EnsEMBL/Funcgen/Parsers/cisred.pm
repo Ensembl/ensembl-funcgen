@@ -248,7 +248,8 @@ sub parse_and_load {
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
 											 -info_type              => 'TARGET',
-											 -description            => 'cisRED motif gene xref',
+											 -info_text              => 'Gene',
+											 -linkage_annotation     => 'cisRED motif gene',#Can remove?
 											 #could have version here if we use the correct dnadb to build the cache
 											);
 	$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag

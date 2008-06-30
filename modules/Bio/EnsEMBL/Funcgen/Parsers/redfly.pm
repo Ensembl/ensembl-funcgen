@@ -319,7 +319,9 @@ sub parse_and_load {
 													   -type                   => 'MISC',#Is for the external_db 
 													   -primary_id             => $stable_id,
 													   -display_id             => $attr_cache{'Factor'},
-													   -info_type              => 'CODING',#is this 
+													   -info_type              => 'CODING',
+													   -into_text              => 'Gene',
+													   #-linkage_annotation     => 'Coding gene'
 
 													   #-description            => 'cisRED motif gene xref',#This is now generic and no longer resitricted to REDfly
 													   #could have version here if we use the correct dnadb to build the cache
