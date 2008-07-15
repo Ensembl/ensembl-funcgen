@@ -120,8 +120,6 @@ my $user = "ensadmin";
 my $host = 'ens-genomics1';
 my $port = '3306';
 
-
-
 #this should import using the API
 #taking array name vendor args to populate the appropriate array/arary_chip records
 #or parse them from the info line?
@@ -148,7 +146,6 @@ GetOptions (
 			"display_label=s" => \$label,
 			"name=s"          => \$name,
 			"description=s"   => \$desc,
-
 			#analysis opts
 			"logic_name=s"    => \$logic_name,
 			"db=s"            => \$anal_db,
@@ -165,8 +162,7 @@ GetOptions (
 			"created=s"         => \$created,
 			"displayable=s"     => \$displayable,
 			"web_data=s"        => \$web_data,
-		   );
-
+		   ) or die;
 
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
