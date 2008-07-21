@@ -67,6 +67,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -port => $port,
 													 );
 
+
 #Check DB connections
 $cdb->dbc->db_handle;
 $db->dbc->db_handle;
@@ -95,8 +96,10 @@ foreach my $slice(@{$slice_a->fetch_all('toplevel')}){
   foreach my $feature(@{$fset->get_Features_by_Slice($slice)}){
 	
 	#seqid source type start end score strand phase attrs
-	
-	print OUT join("\t", ('>'.$chr_name, 'ensembl:homo_sapiens_funcgen_45_36g', 'regulatory feature', $feature->start(), $feature->end(), '.', '.', '.', 'ID='.$feature->stable_id().';Note=Consists of following features:'.join(',', @{$feature->regulatory_attributes()})))."\n";
+
+	print OUT join("\t", ('>'.$chr_name, $dbname, 'regulatory feature', 
+                      $feature->start(), $feature->end(), '.', '.', '.', 'ID='.$feature->stable_id().';Note=Consists of following features: '.
+                      join(',', map {join(':', $_->feature_type->name, $_->cell_type->name)}@{$feature->regulatory_attributes()})))."\n";
 
   }
 
