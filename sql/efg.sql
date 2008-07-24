@@ -756,7 +756,7 @@ CREATE TABLE `cell_type` (
    `cell_type_id` int(10) unsigned NOT NULL auto_increment,
    `name`  varchar(120) not NULL,
    `display_label` varchar(20) default NULL,
-   `description` varchar(40) default NULL,
+   `description` varchar(80) default NULL,
    PRIMARY KEY  (`cell_type_id`),
    UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
