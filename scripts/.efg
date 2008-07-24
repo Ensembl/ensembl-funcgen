@@ -24,7 +24,7 @@ export EFG_READ_USER="ensro"                        #EDIT
 export EFG_HOST='ens-genomics1'                     #EDIT
 export EFG_PORT=3306                                #EDIT
 export MYSQL_ARGS="-h${EFG_HOST} -P${EFG_PORT}"         
-#pass always supplied on cmd line
+#pass always supplied on cmd line e.g. mysqlw -p your password
 
 #Your ensembl core DB connection params, read only
 export CORE_USER='ensro'                        #EDIT if required e.g. anonymous

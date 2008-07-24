@@ -22,7 +22,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 use Getopt::Long;
 
-my ($host, $user, $pass, $port, $dbname, $species, $file, $clobber, $type, $old_assembly, $new_assembly, $archive);
+my ($host, $user, $pass, $port, $dbname, $cdbname, $species, $file, $clobber, $type, $old_assembly, $new_assembly, $archive);
 
 GetOptions( "host=s",         \$host,
 			"user=s",         \$user,
@@ -30,6 +30,7 @@ GetOptions( "host=s",         \$host,
 			"pass=s",         \$pass,
 			"port=i",         \$port,
 			"dbname=s",       \$dbname,
+			"cdbname=s",      \$cdbname,
 			"type=s",         \$type,
 			"file=s",         \$file,
 			"archive=s",      \$archive,
@@ -51,7 +52,7 @@ my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 											  -pass   => $pass,
 											  -species => $species,
 											  -group  => 'core',
-											  -dbname => $species.'_core_49_44',
+											  -dbname => $cdbname,
 											 );
 
 

@@ -10,25 +10,24 @@ shift
 
 
 $EFG_SRC/scripts/import/parse_and_import.pl\
-	-name  rollback_test\
+	-name  NP_H3K4me3\
 	-format SEQUENCING\
 	-location Hinxton\
 	-contact njohnson@ebi.ac.uk\
-	-species homo_sapiens\
-	-experimental_set rollback_test\
-	-port 3306\
-	-host ens-genomics1\
-	-dbname expset_homo_sapiens_funcgen_49_36k\
 	-group efg\
-	-cell_type CD4\
-	-feature_type H4R3me2\
-	-feature_analysis Parzen\
+	-species mus_musculus\
+	-experimental_set Mikkelsen_NPC_H3K4me3\
+	-port 3306\
+	-is_ucsc\
+	-host ens-genomics1\
+	-dbname mus_musculus_funcgen_50_37c\
+	-cell_type NPC\
+	-feature_type H3K4me3\
+	-feature_analysis WindowInterval\
 	-parser Bed\
 	-vendor SOLEXA\
-	-assembly 36\
-	-exp_date 2007-07-17\
+	-assembly 37\
 	-tee\
-	-verbose\
 	-recover\
 	-pass $PASS\
 	$*

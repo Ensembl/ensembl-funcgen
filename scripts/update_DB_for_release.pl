@@ -13,7 +13,7 @@ my $user = 'ensadmin';
 my $port = 3306;
 my $host = 'ens-genomics1';
 
-GetOptions( 'help'             => \$help,
+GetOptions( 
             'host|h=s'         => \$host,
             'port=i'           => \$port,
             'user|u=s'         => \$user,

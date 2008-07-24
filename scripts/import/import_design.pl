@@ -129,7 +129,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use strict;
 
 $| = 1;#autoflush
-my ($loc, $contact, $group, $pass, $dbname, $ssh, $notes_file, $format, $port, $host, $fasta, $data_dir);
+my ($loc, $contact, $group, $pass, $dbname, $ssh, $notes_file, $format, $port, $host, $fasta, $data_dir, $name, $assembly);
 my ($data_version, $help, $logname, $man, $species, $array_set, $array_file, $array_name, $vendor, $recover, $mage_tab, $user);
 my $reg = "Bio::EnsEMBL::Registry";
 my $output_dir = ".";
@@ -141,8 +141,10 @@ $main::_debug_level = 0;
 $main::_tee = 0;
 
 GetOptions (
-	    "format|f=s"   => \$format,
-	    "vendor|v=s"   => \$vendor,
+			"format|f=s"   => \$format,
+			"vendor|v=s"   => \$vendor,
+			"name|n=s"     => \$name,
+			"assembly|a=s" => \$assembly,
 	    "pass|p=s"     => \$pass,
 	    "port|l=s"     => \$port,
 	    "host|h=s"     => \$host,
@@ -154,9 +156,12 @@ GetOptions (
 	    "data_version|d=s" => \$data_version,
 	    "array_set"    => \$array_set,
 	    "array_name=s" => \$array_name,
+			
+			#only required if no standard dir format available
 	    "notes_file=s" => \$notes_file,
 	    "array_file=s" => \$array_file,
-	    "mage_tab=s"   => \$mage_tab,
+
+	    "mage_tab=s"   => \$mage_tab,#what is this for..doc please
 	    "debug=i"    => \$main::_debug_level,
 	    "output_dir=s" => \$output_dir,
 	    "fasta"        => \$fasta,
@@ -202,28 +207,31 @@ $main::_debug_file = "${output_dir}./${logname}.dbg" if(! defined $main::_debug_
 
 ### SET UP IMPORTER (FUNCGENDB/DNADB) ###
 
-my $Imp = Bio::EnsEMBL::Funcgen::Importer->new(
-					       -format      => $format,
-					       -vendor      => $vendor,
-					       -group       => $group,
-					       -pass        => $pass,
-					       -host        => $host,
-					       -user        => $user,
-					       -port        => $port,
-					       -ssh         => $ssh,
-					       -dbname      => $dbname,
-					       -array_set   => $array_set,
-					       -array_name  => $array_name,
-					       -mage_tab    => $mage_tab,
-					       -data_version => $data_version,
-					       -data_root   => $data_dir,
-					       -output_dir  => $output_dir,
-					       -recover     => $recover,
-					       -dump_fasta  => $fasta,
-					       -species     => $species,
-					       -location    => $loc,
-					       -contact     => $contact,
-					      );
+my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
+  (
+   -format      => $format,
+   -vendor      => $vendor,
+   -group       => $group,
+   -pass        => $pass,
+   -host        => $host,
+   -user        => $user,
+   -port        => $port,
+   -ssh         => $ssh,
+   -dbname      => $dbname,
+   -array_set   => $array_set,
+   -array_name  => $array_name,
+   -assembly    => $assembly,
+   -name        => $name,
+   -mage_tab    => $mage_tab,#remove?
+   #-data_version => $data_version,
+   -data_root   => $data_dir,
+   -output_dir  => $output_dir,
+   -recover     => $recover,
+   -dump_fasta  => $fasta,
+   -species     => $species,
+   -location    => $loc,
+   -contact     => $contact,
+  );
 
 
 
@@ -316,6 +324,7 @@ $anal_a->store($tm_anal);
 $anal_a->store($tile_anal);
 
 #Validate, parse and import all array design data
+$Imp->init_array_import;
 $Imp->read_array_data($notes_file);
 $Imp->read_probe_data($array_file);
 
