@@ -449,11 +449,21 @@ sub _objs_from_sth {
 
 		my $attr = $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
 
-		#now need to reset start and ends for the current slice		
-		$attr->slice($slice);
-		$attr->start($attr->start - $slice->start +1);
-		$attr->end($attr->end - $slice->start +1);	
+		#now need to reset start and ends for the current slice	
+		#grab the seq_region_start/ends here first
+		#as resetting directly causes problems
+		my $attr_sr_start = $attr->seq_region_start;
+		my $attr_sr_end = $attr->seq_region_end;
+ 		$attr->slice($slice);
 
+		if($slice->strand ==1){
+		  $attr->start($attr_sr_start - $slice->start +1);
+		  $attr->end($attr_sr_end - $slice->start +1);	
+		}else{
+		  $attr->start($slice->end - $attr_sr_end +1);
+		  $attr->end($slice->end - $attr_sr_start +1);	
+		}
+		
 		push @reg_attrs, $attr;
 	  }
 	}
