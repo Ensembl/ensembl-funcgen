@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.4 2008-06-11 10:42:04 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.5 2008-07-25 13:11:19 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
@@ -472,6 +472,9 @@ sub store_window_bins_by_Slice_ResultSet {
 		  #Speed not essential for storing
 		  
 		  #Note: list ref passed
+
+		  #warn "storing $bin_start, $bin_end, $strand, $bin_score, undef, $rset->dbID, $wsize, $slice";
+
 		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 		  			 (
 		  			  $bin_start, $bin_end, $strand, $bin_score, undef,#absent probe info
@@ -491,12 +494,13 @@ sub store_window_bins_by_Slice_ResultSet {
 		foreach my $feature(@$features){
 		  $counts{$0}++;
 		  
-		  #Note: list ref passed
+		  #warn "storing ".join(', ',	($feature->start, $feature->end, $feature->strand, $feature->score, 'undef', $rset->dbID, 0, $slice));
+
 		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-					   ([
+					   (
 						$feature->start, $feature->end, $feature->strand, $feature->score, undef,#absent probe info
 						$rset->dbID, 0, $slice
-						])); 
+						)); 
 		}	
 	  }
 
@@ -913,9 +917,9 @@ sub validate_bin_method{
   
   warn "Still can't access VALID_BINNING_METHODS";
 
-  foreach my $method_name(keys %{$class::VALID_BINNING_METHODS}){
-	warn "valid method is $method name";
-  }
+  #foreach my $method_name(keys %{$class::VALID_BINNING_METHODS}){
+#	warn "valid method is $method name";
+#  }
 
 
   if ( ! exists( ${$class::VALID_BINNING_METHODS}{$method} ) ) {
@@ -926,7 +930,7 @@ sub validate_bin_method{
 				  join( "\n\t", sort( keys(%{$self::VALID_BINNING_METHODS}) ) ) ) );
   }
   else{
-	warn "found valid method $method with index ".${$class::VALID_BINNING_METHODS}{$method};
+	#warn "found valid method $method with index ".${$class::VALID_BINNING_METHODS}{$method};
   }
   
   return ${$class::VALID_BINNING_METHODS}{$method};
