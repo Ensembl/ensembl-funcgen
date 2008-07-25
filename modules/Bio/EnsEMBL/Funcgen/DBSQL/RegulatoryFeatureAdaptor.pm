@@ -367,9 +367,12 @@ sub _objs_from_sth {
 	    
 	    # If a destination slice was provided convert the coords
 	    # If the destination slice starts at 1 and is forward strand, nothing needs doing
+
+		#Can we not put this in the BaseFeatureAdaptor?
+
 	    if ($dest_slice) {
 
-	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
+		  unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
 			
 			if ($dest_slice_strand == 1) {
 			  $seq_region_start = $seq_region_start - $dest_slice_start + 1;
@@ -402,6 +405,7 @@ sub _objs_from_sth {
 		
 		$reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
 		  ({
+			#shouldn't these be seq_region_start/end? Isn't start/end calculated?
 			'start'          => $seq_region_start,
 			'end'            => $seq_region_end,
 			'strand'         => $seq_region_strand,
@@ -424,13 +428,24 @@ sub _objs_from_sth {
 		#These will all be fetched on their native slice, not necessarily the slice we have fetched this
 		#reg feature on, hence we need to map the features to the current slice
 		#otherwise the bounds may get messed up
+		#bearing in mind that slice start/ends are always seq_region_start and start < end, irrespective of slice strand
 
 		my $attr = $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
 
-		#now need to reset start and ends for the current slice		
-		$attr->slice($slice);
-		$attr->start($attr->start - $slice->start +1);
-		$attr->end($attr->end - $slice->start +1);	
+		#now need to reset start and ends for the current slice	
+		#grab the seq_region_start/ends here first
+		#as resetting directly causes problems
+		my $attr_sr_start = $attr->seq_region_start;
+		my $attr_sr_end = $attr->seq_region_end;
+ 		$attr->slice($slice);
+
+		if($slice->strand ==1){
+		  $attr->start($attr_sr_start - $slice->start +1);
+		  $attr->end($attr_sr_end - $slice->start +1);	
+		}else{
+		  $attr->start($slice->end - $attr_sr_end +1);
+		  $attr->end($slice->end - $attr_sr_start +1);	
+		}
 
 		push @reg_attrs, $attr;
 	  }
