@@ -352,9 +352,8 @@ sub fetch_all_by_feature_type_class {
 	#but we can do it for product feature_set type
 
 	foreach my $dset(@{$self->generic_fetch($constraint)}){
-
-
-	  push @dsets, $dset if $dset->product_FeatureSet->feature_type->class() eq $class;
+	  #uc both here to avoid case sensitivities
+	  push @dsets, $dset if uc($dset->product_FeatureSet->feature_type->class()) eq uc($class);
 	}
 
 	return \@dsets;	
