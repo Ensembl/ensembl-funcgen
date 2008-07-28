@@ -28,6 +28,7 @@ my @reg_feats = @{$regfeat_adaptor->fetch_all_by_Slice($gene_slice)};
 
 print 'Found '.scalar(@reg_feats).' RegulatoryFeatures on slice '.$gene_slice->name."\n";
 
+
 foreach my $reg_feat(@reg_feats){
 
   print 'Found '.$reg_feat->stable_id.' '.$reg_feat->feature_type->description.' at '.$reg_feat->bound_start.':'.$reg_feat->start.':'.$reg_feat->end.':'.$reg_feat->bound_end."\n";
@@ -36,4 +37,7 @@ foreach my $reg_feat(@reg_feats){
     print 'Attribute Feature '.$attr_feat->feature_type->name."\n";
   }
 
+
 } 
+
+
