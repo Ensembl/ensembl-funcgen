@@ -299,7 +299,7 @@ sub list_translation_ids_by_extids {
 sub list_feature_type_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
-  return $self->_type_by_external_id( $external_name, 'feature_type', 
+  return $self->_type_by_external_id( $external_name, 'FeatureType', 
 									  undef, $external_db_name );
 }
 
@@ -322,7 +322,7 @@ sub list_regulatory_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
  
-  return $self->_type_by_external_id( $external_name, 'regulatory_feature', 
+  return $self->_type_by_external_id( $external_name, 'RegulatoryFeature', 
 									  undef, $external_db_name );
 }
 
@@ -343,7 +343,7 @@ sub list_external_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
   return
-    $self->_type_by_external_id( $external_name, 'external_feature', undef,
+    $self->_type_by_external_id( $external_name, 'ExternalFeature', undef,
                                  $external_db_name );
 }
 
@@ -366,7 +366,7 @@ sub list_regulatory_feature_ids_by_external_db_id{
    my ($self,$external_db_id) = @_;
 
    my %T = map { ($_, 1) }
-            $self->_type_by_external_db_id( $external_db_id, 'regulatory_feature' );
+            $self->_type_by_external_db_id( $external_db_id, 'RegulatoryFeature' );
    return keys %T;
 }
 
@@ -389,6 +389,7 @@ sub list_regulatory_feature_ids_by_external_db_id{
 
 sub _type_by_external_id {
   my ( $self, $name, $ensType, $extraType, $external_db_name ) = @_;
+
 
   my $from_sql  = '';
   my $where_sql = '';
@@ -420,30 +421,37 @@ sub _type_by_external_id {
     }
   }
 
-  if ( lc($ensType) eq 'gene' ) {
-    $from_sql  = 'gene g, ';
-    $where_sql = 'g.gene_id = oxr.ensembl_id AND g.is_current = 1 AND ';
-  } elsif ( lc($ensType) eq 'transcript' ) {
-    $from_sql = 'transcript t, ';
-    $where_sql =
-      't.transcript_id = oxr.ensembl_id AND t.is_current = 1 AND ';
-  } elsif ( lc($ensType) eq 'translation' ) {
-    $from_sql  = 'transcript t, translation tl, ';
-    $where_sql = qq(
-        t.transcript_id = tl.transcript_id AND
-        tl.translation_id = oxr.ensembl_id AND
-        t.is_current = 1 AND
-    );
-  }
-  elsif(lc($ensType) eq 'regulatory_feature'){
+  #if ( lc($ensType) eq 'gene' ) {
+  #  $from_sql  = 'gene g, ';
+  #  $where_sql = 'g.gene_id = oxr.ensembl_id AND g.is_current = 1 AND ';
+  #} elsif ( lc($ensType) eq 'transcript' ) {
+  #  $from_sql = 'transcript t, ';
+  #  $where_sql =
+  #    't.transcript_id = oxr.ensembl_id AND t.is_current = 1 AND ';
+  #} elsif ( lc($ensType) eq 'translation' ) {
+  #  $from_sql  = 'transcript t, translation tl, ';
+  #  $where_sql = qq(
+  #      t.transcript_id = tl.transcript_id AND
+  #      tl.translation_id = oxr.ensembl_id AND
+  #      t.is_current = 1 AND
+  #  );
+  #}
+  
+  if(lc($ensType) eq 'regulatoryfeature'){
 	$from_sql  = 'regulatory_feature rf, ';
 	$where_sql = qq( rf.regulatory_feature_id = oxr.ensembl_id AND );
-	#rf.is_current = 1 AND );
   }
-  elsif(lc($ensType) eq 'external_feature'){
+  elsif(lc($ensType) eq 'externalfeature'){
 	$from_sql  = 'external_feature ef, ';
 	$where_sql = qq( ef.external_feature_id = oxr.ensembl_id AND );
-	#rf.is_current = 1 AND );
+  } 
+  elsif(lc($ensType) eq 'annotatedfeature'){
+	$from_sql  = 'annotated_feature af, ';
+	$where_sql = qq( af.annotated_feature_id = oxr.ensembl_id AND );
+  }
+  elsif(lc($ensType) eq 'featuretype'){
+	$from_sql  = 'featuretype ft, ';
+	$where_sql = qq( ft.feature_type_id = oxr.ensembl_id AND );
   }
 
   if ( defined($external_db_name) ) {
@@ -499,6 +507,7 @@ sub _type_by_external_id {
   my @result = ();
 
   foreach (@queries) {
+
     my $sth = $self->prepare($_);
     $sth->bind_param( 1, "$name",  SQL_VARCHAR );
     $sth->bind_param( 2, $ensType, SQL_VARCHAR );
@@ -563,28 +572,36 @@ sub _type_by_external_db_id{
     }
   }
 
-  if (lc($ensType) eq 'gene') {
-    $from_sql = 'gene g, ';
-    $where_sql = 'g.gene_id = oxr.ensembl_id AND g.is_current = 1 AND ';
-  } elsif (lc($ensType) eq 'transcript') {
-    $from_sql = 'transcript t, ';
-    $where_sql = 't.transcript_id = oxr.ensembl_id AND t.is_current = 1 AND ';
-  } elsif (lc($ensType) eq 'translation') {
-    $from_sql = 'transcript t, translation tl, ';
-    $where_sql = qq(
-        t.transcript_id = tl.transcript_id AND
-        tl.translation_id = oxr.ensembl_id AND
-        t.is_current = 1 AND
-    );
-  }elsif(lc($ensType) eq 'regulatory_feature'){
+  #if (lc($ensType) eq 'gene') {
+  #  $from_sql = 'gene g, ';
+  #  $where_sql = 'g.gene_id = oxr.ensembl_id AND g.is_current = 1 AND ';
+  #} elsif (lc($ensType) eq 'transcript') {
+  #  $from_sql = 'transcript t, ';
+  #  $where_sql = 't.transcript_id = oxr.ensembl_id AND t.is_current = 1 AND ';
+  #} elsif (lc($ensType) eq 'translation') {
+  #  $from_sql = 'transcript t, translation tl, ';
+  #  $where_sql = qq(
+  #      t.transcript_id = tl.transcript_id AND
+  #      tl.translation_id = oxr.ensembl_id AND
+  #      t.is_current = 1 AND
+  #  );
+
+
+  if(lc($ensType) eq 'regulatoryfeature'){
 	$from_sql  = 'regulatory_feature rf, ';
 	$where_sql = qq( rf.regulatory_feature_id = oxr.ensembl_id AND );
-	#rf.is_current = 1 AND );
   }
-  elsif(lc($ensType) eq 'external_feature'){
+  elsif(lc($ensType) eq 'externalfeature'){
 	$from_sql  = 'external_feature ef, ';
 	$where_sql = qq( ef.external_feature_id = oxr.ensembl_id AND );
-	#rf.is_current = 1 AND );
+  } 
+  elsif(lc($ensType) eq 'annotatedfeature'){
+	$from_sql  = 'annotated_feature af, ';
+	$where_sql = qq( af.annotated_feature_id = oxr.ensembl_id AND );
+  }
+  elsif(lc($ensType) eq 'featuretype'){
+	$from_sql  = 'featuretype ft, ';
+	$where_sql = qq( ft.feature_type_id = oxr.ensembl_id AND );
   }
 
 
