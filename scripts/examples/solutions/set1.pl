@@ -11,7 +11,7 @@ $reg->load_registry_from_db(
 my $efg_db = $reg->get_DBAdaptor('Human', 'funcgen');
 
 #Investigate what DataSets are present in the data base.
-#Create a script which lists all the DataSet names, feature types, cell types and their supporting set type
+#Create a script which lists all the DataSet names, feature types and cell types.
 
 
 
@@ -28,6 +28,5 @@ foreach my $dset(@data_sets){
     $cell_info = ' in '.$ctype->name.' '.$ctype->description;
   }
 
-  print $dset->name.' contains '.$dset->feature_type->name.' features'.$cell_info.' from supporting set type '.ucfirst($dset->supporting_set_type)."Set\n";
-
+  print $dset->name.' contains '.$dset->feature_type->name.' features'.$cell_info."\n";
 } 

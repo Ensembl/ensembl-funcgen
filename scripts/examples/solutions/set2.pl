@@ -18,9 +18,11 @@ my $efg_db = $reg->get_DBAdaptor('Human', 'funcgen');
 
 my $dataset_adaptor = $efg_db->get_DataSetAdaptor;
 
-my $data_set = $dataset_adaptor->fetch_by_name('RegulatoryFeatures');
+my $data_set = $dataset_adaptor->fetch_by_name('RegulatoryFeatures_v49');
 
-print $dset->name.' contains the following '.$dset->supporting_set_type." feature supporting sets:\n";
+my @supporting_sets = @{$data_set->get_supporting_sets};
+
+print $data_set->name.' contains '.scalar(@supporting_sets)." supporting sets:\n";
 
 foreach my $sset(@{$data_set->get_supporting_sets}){
   print "Supporting set:\t".$sset->name."\t".ucfirst($sset->type)."Features\n";
