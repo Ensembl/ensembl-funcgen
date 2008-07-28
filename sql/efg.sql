@@ -1006,7 +1006,7 @@ DROP TABLE IF EXISTS `object_xref`;
 CREATE TABLE object_xref (
   object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   ensembl_id                  INT(10) UNSIGNED NOT NULL, 
-  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'Annotated', 'FeatureType') not NULL,
+  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType') not NULL,
   xref_id                     INT UNSIGNED NOT NULL,
   linkage_annotation          VARCHAR(255) DEFAULT NULL,
   UNIQUE (ensembl_object_type, ensembl_id, xref_id),
@@ -1015,9 +1015,8 @@ CREATE TABLE object_xref (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
 
 
---regulatory_feature or RegulatoryModule or/and RegulatoryRegion?
---we are going to have to do the vega trick here of loading all the regulatory features as an external_db to enable xrefs to core.
---ensembl_id could be eFG dbID or core stable_id
+-- Note we use case correct versions of object name to allow easy adaptor generation
+
 
 DROP TABLE IF EXISTS identity_xref;
 CREATE TABLE identity_xref (
