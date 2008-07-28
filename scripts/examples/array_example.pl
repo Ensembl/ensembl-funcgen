@@ -7,6 +7,7 @@ $registry->load_registry_from_db
   (
    -host => 'ensembldb.ensembl.org',
    -user => 'anonymous',
+   #-verbose => 1,
   );
 
 
