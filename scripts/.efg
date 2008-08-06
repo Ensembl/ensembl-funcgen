@@ -150,6 +150,49 @@ RunUsage(){
 
 }
 
+
+UseBranch(){
+	branch=$1
+
+	if [[ ! $branch ]]
+    then
+		echo "Need to define and API version to create softlinks for"
+		echo "UseBranch 50"
+	return
+    fi 
+
+
+	#Should really test for softlinks here to avoid deleting a directory
+
+	modules='ensembl ensembl-functgenomics'
+
+	cdir=$PWD
+
+	cd $SRC
+
+	for module in $modules
+	do
+		if [ -L $module ]
+		then
+			rm -f $module
+
+			#could do check out here
+
+			#Just blindly link for now
+			ln -s v$branch/$module $module
+
+		else
+			echo "Failed: Found directory rather than symbolic link for module $module"
+			return
+		fi
+	done
+
+	echo "Now using v$branch for modules: $modules"
+
+	cd $cdir
+
+}
+
 HelpUsage(){
 	RunUsage
 
