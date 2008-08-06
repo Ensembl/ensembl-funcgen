@@ -5,6 +5,8 @@
 
 ALTER table cell_type change column description description varchar(80);
 
+# patch identifier
+INSERT INTO meta (meta_key, meta_value) VALUES ('patch', 'patch_50_51_a.sql|cell_type_description');
 
 
 -- data patch for mouse
@@ -14,6 +16,9 @@ ALTER table cell_type change column description description varchar(80);
 --delete s from status s, status_name sn, data_set ds where ds.name='Vienna MEFf H3K4me2' and ds.data_set_id =s.table_id and s.table_name='data_set' and s.status_name_id=sn.status_name_id and sn.name='DISPLAYABLE';
 
 -- end data patch
+
+
+
 
 
 
