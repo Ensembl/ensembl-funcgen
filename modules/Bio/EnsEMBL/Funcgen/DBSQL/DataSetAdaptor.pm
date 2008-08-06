@@ -212,7 +212,7 @@ sub fetch_all_by_product_FeatureSet_type {
 sub fetch_all_by_FeatureSet {
   my $self = shift;
 
-  deprecate('Use fetch_product_FeatureSet');
+  deprecate('Use fetch_by_product_FeatureSet');
 
   return $self->fetch_by_product_FeatureSet(@_);
 
@@ -325,6 +325,7 @@ sub fetch_all_by_supporting_set {
 =head2 fetch_all_by_feature_type_class
 
   Arg [1]    : string - class of associated FeatureSet FeatureType
+  Arg [2]    : optional: string - status e.g. 'DISPLAYABLE'
   Example    : my @dsets = @{$ds_adaptopr->fetch_all_by_feature_type_class('HISTONE')};
   Description: Retrieves DataSet objects from the database based on the FeatureSet FeatureType class.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
@@ -362,8 +363,7 @@ sub fetch_all_by_feature_type_class {
 =head2 fetch_all_displayable_by_feature_type_class
 
   Arg [1]    : string - class of associated FeatureSet FeatureType
-  Arg [2]    : string - status name e.g. DISPLAYABLE
-  Example    : my @dsets = @{$ds_adaptopr->fetch_all_by_feature_type_class('HISTONE')};
+  Example    : my @dsets = @{$ds_adaptopr->fetch_all_displayable_by_feature_type_class('HISTONE')};
   Description: Wrapper method, retrieves all displayable DataSets with given FeatureSet FeatureType class
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
   Exceptions : None
@@ -378,6 +378,22 @@ sub fetch_all_displayable_by_feature_type_class {
 	return $self->fetch_all_by_feature_type_class($class, 'DISPLAYABLE');	
 }
 
+=head2 fetch_all_displayable
+
+  Example    : my @dsets = @{$ds_adaptopr->fetch_all_displayable()};
+  Description: Wrapper method, retrieves all displayable DataSets
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_displayable{
+    my ($self, $class) = @_;
+  
+	return $self->fetch_all('DISPLAYABLE');	
+}
 
  
 =head2 _tables
