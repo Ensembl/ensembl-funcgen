@@ -394,7 +394,7 @@ sub fetch_all_displayable_by_feature_type_class {
 =cut
 
 sub _tables {
-  #my $self = shift;
+  my $self = shift;
 	
   return (
 		  [ 'data_set',    'ds' ],
