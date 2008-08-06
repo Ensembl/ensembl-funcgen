@@ -378,22 +378,6 @@ sub fetch_all_displayable_by_feature_type_class {
 	return $self->fetch_all_by_feature_type_class($class, 'DISPLAYABLE');	
 }
 
-=head2 fetch_all_displayable
-
-  Example    : my @dsets = @{$ds_adaptopr->fetch_all_displayable()};
-  Description: Wrapper method, retrieves all displayable DataSets
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_displayable{
-    my ($self, $class) = @_;
-  
-	return $self->fetch_all('DISPLAYABLE');	
-}
 
  
 =head2 _tables
