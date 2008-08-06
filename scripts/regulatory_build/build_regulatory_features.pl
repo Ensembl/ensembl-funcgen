@@ -106,7 +106,10 @@ throw("Must specify mandatory database username. (-user)\n") if ! defined $user;
 throw("Must specify mandatory database password (-pass).\n") if ! defined $pass;
 throw("Must specify mandatory database name (-dbname).\n") if ! defined $dbname;
 throw("Must specify mandatory database data version, like 47_36i (-data_version).\n") 
-    if !$data_version;
+     if !$data_version;
+
+throw("Must specify mandatory output directory (-outdir).\n") 
+     if !$outdir;
 
 throw("Must specify mandatory focus sets (-focus).\n") if ! defined $focus;
 throw("Must specify mandatory target sets (-target).\n") if ! defined $target;
@@ -135,9 +138,12 @@ use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
-     -host => 'ensembldb.ensembl.org',
+     #-host => 'ensembldb.ensembl.org',
+     #-user => 'anonymous',
+     #-port => 3306,
+     -host => 'ens-staging',
      -port => 3306,
-     -user => 'anonymous',
+     -user => 'ensro',
      #-host => '127.0.0.1',
      #-port => 33064,
      #-user => 'ensro',
@@ -153,7 +159,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -species => $species,
      -pass   => $pass,
      -port   => $port,
-     -dnadb  => $cdb
+     -dnadb  => $cdb,
      );
 #print Dumper $db;
 
@@ -164,24 +170,24 @@ my $afa = $db->get_AnnotatedFeatureAdaptor();
 my $rfa = $db->get_RegulatoryFeatureAdaptor();
 my $sa = $db->get_SliceAdaptor();
 my $aa = $db->get_AnalysisAdaptor();
-my $ga = $cdb->get_GeneAdaptor();
+my $ga = $db->dnadb->get_GeneAdaptor();
 #my $ta = $cdb->get_TranscriptAdaptor();
 
 
 # parse focus and target sets and check that they exist
 my (%focus_fsets, %target_fsets);
 map { my $fset = $fsa->fetch_by_name($_);
-      $focus_fsets{$fset->dbID} = $fset; 
       throw("Focus set $_ does not exist in the DB") 
-          if (! defined $focus_fsets{$fset->dbID}); 
+          if (! defined $fset); 
+      $focus_fsets{$fset->dbID} = $fset; 
   } split(',', $focus);
 #print Dumper %focus_fsets;
 
 map { 
     my $fset = $fsa->fetch_by_name($_);
-    $target_fsets{$fset->dbID()} = $fset; 
     throw("Target set $_ does not exist in the DB") 
-        if (! defined $target_fsets{$fset->dbID}); 
+        if (! defined $fset); 
+    $target_fsets{$fset->dbID()} = $fset; 
 } split(',', $target);
 #print Dumper %target_fsets;
 
@@ -197,18 +203,16 @@ if ($dump) {
     print STDERR "# Dumping annotated features from database to file.\n";
     print STDERR "# This will delete existing file dumps of that data version!\n";
 
-    throw("Must specify directory to write the output (-outdir).\n") 
-        if ! defined $outdir;
     print STDERR "# Output goes to ", $outdir, "\n";
 
-
-    my $sql = "select annotated_feature_id, seq_region_id,".
+    my $sql = "select annotated_feature_id, af.seq_region_id,".
         "seq_region_start, seq_region_end,seq_region_strand,".
-        "score,feature_set_id from annotated_feature";
+        "score,feature_set_id from annotated_feature af, seq_region sr ".
+        "where sr.seq_region_id=af.seq_region_id and schema_build='$data_version'";
     my $command = "echo \"$sql\" ".
         " | mysql -quick -h".$host." -P".$port." -u".$user." -p".$pass." ".$dbname.
         " | gawk '{if (\$7==".join("||\$7==", @fset_ids).") print }'".
-        " | sort -n -k 2,2 -k 3,3 -k 4,4".
+        " | sort -k2,2n -k3,3n -k4,4n".
         " | gawk '{ print >> \"".$outdir."/".$dbname.".annotated_feature_\" \$2 \".dat\" }'";
 
     print STDERR "# Execute: ".$command."\n" if ($debug);
@@ -227,35 +231,36 @@ if ($dump) {
 
 ### build regulatory features
 
-### ChipSeq stuff
-my %ChIPseq_cutoff = (
-                      ### cutoff T/O <= 2
-                      'CD4_CTCF'=>        5,
-                      'CD4_H3K27me3'=>    8,
-                      'CD4_H3K36me3'=>    4,
-                      'CD4_H3K4me3'=>     6,
-                      'CD4_H3K79me3'=>   22,
-                      'CD4_H3K9me3'=>     7,
-                      'CD4_H4K20me3'=>   17,
-                      ### cutoff ~ <= 25000
-                      ### see /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI/data/*.clstr.cutoff_25000.dat
-                      'CD4_H2AZ'=>       15,
-                      'CD4_H2BK5me1'=>   16,
-                      'CD4_H3K27me1'=>    6,
-                      'CD4_H3K27me2'=>    5,
-                      'CD4_H3K36me1'=>    4,
-                      'CD4_H3K4me1'=>    31,
-                      'CD4_H3K4me2'=>    10,
-                      'CD4_H3K79me1'=>    5,
-                      'CD4_H3K79me2'=>    4,
-                      'CD4_H3K9me1'=>    12,
-                      'CD4_H3K9me2'=>     5,
-                      'CD4_H3R2me1'=>     5,
-                      'CD4_H3R2me2'=>     5,
-                      'CD4_H4K20me1'=>   30,
-                      'CD4_H4R3me2'=>     4,
-                      'CD4_PolII'=>       8
-                      );
+### ChipSeq stuff deactivated; filtering after peak calling with SWEmbl not ncessary any more
+#my %ChIPseq_cutoff = (
+#                      ### cutoff T/O <= 2
+#                      'CD4_CTCF'=>        5,
+#                      'CD4_H3K27me3'=>    8,
+#                      'CD4_H3K36me3'=>    4,
+#                      'CD4_H3K4me3'=>     6,
+#                      'CD4_H3K79me3'=>   22,
+#                      'CD4_H3K9me3'=>     7,
+#                      'CD4_H4K20me3'=>   17,
+#                      ### cutoff ~ <= 25000
+#                      ### see /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI/data/*.clstr.cutoff_25000.dat
+#                      ### original data now moved to /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI_methylation
+#                      'CD4_H2AZ'=>       15,
+#                      'CD4_H2BK5me1'=>   16,
+#                      'CD4_H3K27me1'=>    6,
+#                      'CD4_H3K27me2'=>    5,
+#                      'CD4_H3K36me1'=>    4,
+#                      'CD4_H3K4me1'=>    31,
+#                      'CD4_H3K4me2'=>    10,
+#                      'CD4_H3K79me1'=>    5,
+#                      'CD4_H3K79me2'=>    4,
+#                      'CD4_H3K9me1'=>    12,
+#                      'CD4_H3K9me2'=>     5,
+#                      'CD4_H3R2me1'=>     5,
+#                      'CD4_H3R2me2'=>     5,
+#                      'CD4_H4K20me1'=>   30,
+#                      'CD4_H4R3me2'=>     4,
+#                      'CD4_PolII'=>       8
+#                      );
 
 # retrieve sequence to be analyzed 
 my $slice;
@@ -323,16 +328,17 @@ my $analysis = Bio::EnsEMBL::Analysis->new(
                                            -module_version  => 'NULL',
                                            -parameters      => 'NULL',
                                            -created         => 'NULL',
-                                           -description     => 'Union of focus features, features overlapping focus features, '.
+                                           -description     => 'Union of focus features, features overlapping focus features,'.
                                            ' and features that are contained within those',
                                            ### display_label is going to be changed to "RegulatoryBuild" or so
                                            -display_label   => 'RegulatoryRegion',
                                            -displayable     => 1,
                                            );
-$analysis = $aa->fetch_by_dbID($aa->store($analysis)) if ($write_features) ;
-#print Dumper $analysis;
+$analysis = $aa->fetch_by_dbID($aa->store($analysis));# if ($write_features) ;
+
 
 my $rfset = &get_regulatory_FeatureSet($analysis);
+#print Dumper $rfset;
 
 # Read from file and process sequentially in sorted by start, end order. Each 
 # new feature is checked if it overlaps with the preceeding already seen 
@@ -365,8 +371,8 @@ while (<$fh>) {
     
     # Quick hack for 2nd/3rd version of reg. build. Need to disregard ChIPseq 
     # features below a certain threshold defined hardcoded in ChIPseq_cutoff hash.
-    next if (exists $ChIPseq_cutoff{$target_fsets{$fset_id}->name()} 
-             && $score < $ChIPseq_cutoff{$target_fsets{$fset_id}->name()});
+    #next if (exists $ChIPseq_cutoff{$target_fsets{$fset_id}->name()} 
+    #         && $score < $ChIPseq_cutoff{$target_fsets{$fset_id}->name()});
     
     print $_, "\t", $target_fsets{$fset_id}->name, "\n" if ($debug);
     my  $length = $end-$start+1;
@@ -462,7 +468,7 @@ print "\n", Dumper @rf if ($debug);
 
 if ($dump_features) {
     
-    my $outfile  = $outdir.'/'.$dbname.'.regulatory_feature'.$fg_sr_id.'.dat';
+    my $outfile  = $outdir.'/'.$dbname.'.regulatory_feature_'.$fg_sr_id.'.dat';
     my $out = open_file($outfile, ">");
     
     map {
@@ -673,6 +679,7 @@ sub get_regulatory_feature{
     my ($rf) = @_;
 
     #print Dumper $rf;
+    #print Dumper $rfset;
 
     return Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
         (
@@ -743,7 +750,7 @@ sub get_regulatory_FeatureSet{
              -type         => 'regulatory'
              );
 
-        $rfset->add_state('DISPLAYABLE');
+        $rfset->add_status('DISPLAYABLE');
         $rfset = @{$fsa->store($rfset)} if ($write_features);
 
         #generate data_set here too
