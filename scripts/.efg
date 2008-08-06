@@ -172,18 +172,26 @@ UseBranch(){
 
 	for module in $modules
 	do
-		if [ -L $module ]
+		if [ -e $module ]
 		then
-			rm -f $module
 
-			#could do check out here
+			if [ -L $module ]
+			then
+				rm -f $module		
+			else
+				echo "Failed: Module $module is not a symbolic link, please rectify"
+				return
+			fi
 
-			#Just blindly link for now
-			ln -s v$branch/$module $module
-
-		else
-			echo "Failed: Found directory rather than symbolic link for module $module"
-			return
+	
+			if [ -d v$branch/$module ]
+			then
+				ln -s v$branch/$module $module
+			else
+				#could do cvs check out here
+				echo "You have not yet checked out v$branch/$module"
+				return
+			fi
 		fi
 	done
 
