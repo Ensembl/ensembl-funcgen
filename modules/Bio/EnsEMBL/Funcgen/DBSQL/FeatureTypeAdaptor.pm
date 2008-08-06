@@ -55,7 +55,7 @@ use vars qw(@ISA);
   Arg [1]    : optional string - class of FeatureType
   Example    : my $ft = $ft_adaptor->fetch_by_name('H3K4me2');
   Description: Does what it says on the tin
-  Returntype : Bio::EnsEMBL::Funcgen::Channel object
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType object
   Exceptions : Throws if more than one FeatureType for a given name found
   Caller     : General
   Status     : At risk
@@ -68,30 +68,53 @@ sub fetch_by_name{
   throw("Must specify a FeatureType name") if(! $name);
 
 
-  my $sql = "SELECT feature_type_id
-	     FROM feature_type
-	     WHERE name = ?";
+  my $constraint = " name = ?";
 
-  $sql .= " AND class = ?" if $class;
+  $constraint .= " AND class = ?" if $class;
 
-  my $sth = $self->prepare($sql);
-  $sth->bind_param(1, $name,   SQL_VARCHAR);
-  $sth->bind_param(2, $class,  SQL_VARCHAR) if $class;
 
-  #can we do a generic fetch here?
+  $self->bind_param_generic_fetch($name,   SQL_VARCHAR);
+  $self->bind_param_generic_fetch($class,  SQL_VARCHAR) if $class;
 
-  $sth->execute();
-  my @ft_ids = map $_ = "@$_", @{$sth->fetchall_arrayref()};
+  my @fts = @{$self->generic_fetch($constraint)};
+  
 
-  if(scalar @ft_ids >1){
+  #This should never happen?
+  if(scalar @fts >1){
     $class ||= "";
     throw("Found more than one FeatureType:$class $name");
   }
 
 
-  return ($ft_ids[0]) ? $self->fetch_by_dbID($ft_ids[0]) : undef;
+  return $fts[0];
 }
 
+=head2 fetch_all_by_class
+
+  Arg [1]    : string - class of FeatureType
+  Example    : my $ft = $ft_adaptor->fetch_all_by_class('Histone');
+  Description: Fetches all FeatureTypes of a given class.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_class{
+  my ($self, $class) = @_;
+
+  throw("Must specify a FeatureType class") if(! defined $class);
+
+
+  my $constraint = " class = ? ";
+
+
+  #Use bind param method to avoid injection
+  $self->bind_param_generic_fetch($class, SQL_VARCHAR);
+
+  return $self->generic_fetch($constraint);
+}
 
 
 
