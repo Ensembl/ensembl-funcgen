@@ -25,5 +25,8 @@ ALTER TABLE meta
 -- Optimize the modified tables
 OPTIMIZE TABLE meta;
 
+
+UPDATE  meta SET species_id = NULL WHERE meta_key IN ('patch', 'schema_version');
+
 # patch identifier
 INSERT INTO meta (meta_key, meta_value) VALUES ('patch', 'patch_50_51_b.sql|multispecies');
