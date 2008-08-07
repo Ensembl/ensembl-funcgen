@@ -79,7 +79,7 @@ use vars qw(@ISA);
 										                                  -SLICE         => $chr_1_slice,
 									                                      -START         => 1_000_000,
                       				                                      -END           => 1_000_024,
-									                                      -STRAND        => -1,
+									                                    http://www.hinxton.wellcome.ac.uk/onsite/menus/index.html  -STRAND        => -1,
 									                                      -DISPLAY_LABEL => $text,
 									                                      -FEATURE_SET   => $fset,
                                                                                   );
@@ -93,21 +93,19 @@ use vars qw(@ISA);
 
 =cut
 
+
+$|=1;
+
 sub new {
   my $caller = shift;
 	
   my $class = ref($caller) || $caller;
-  
+
   my $self = $class->SUPER::new(@_);
   
   my ($display_label, $fset, $ftype)
     = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE'], @_);
 
-
-  #should have feature_type & cell_type here too?
-
-  
-  $self->display_label($display_label) if $display_label;
 
   if($ftype){
 
@@ -121,9 +119,13 @@ sub new {
   if(! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
 	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
   }
+
+
   $self->{'feature_set'}= $fset;
 
-		
+  #Do not move this as it depends on the above being set
+  $self->display_label($display_label) if $display_label;
+	
   return $self;
 }
 
@@ -163,7 +165,7 @@ sub feature_set {
   Returntype : Listref of Bio::EnsEMBL::DBEntry objects
   Exceptions : none
   Caller     : get_all_DBLinks, TranscriptAdaptor::store
-  Status     : Stable
+  Status     : Stable - at risk move to storable
 
 =cut
 
@@ -289,6 +291,46 @@ sub feature_type{
 }
 
 
+=head2 get_associated_feature_types
+
+  Example    : my @associated_ftypes = @{$feature->get_associated_feature_types()};
+  Description: Getter for other associated FeatureTypes.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen:FeatureType object
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub get_associated_feature_types{
+  my $self = shift;
+  
+
+  #Lazy load
+
+  #How are we going to retrieve these?
+  #We don't really want to join on associated_feature_type for every feature query as very few will have them.
+  #Could use FeatureTypeAdaptor->fetch_by_associated_Feature
+  #But would have to do join again everytime unless we have a separate query
+  #Don't want a separate adaptor
+  #May aswell do separate query here for now, and just use the FeatureTypeAdaptor->fetch_by_dbID();
+  #Can we not use generic_fetch with an in constraint?
+  
+  #The fetch should really be implemented in FeatureTypeAdaptor
+  #
+  
+  if(! defined $self->{'associated_feature_types'}){
+	$self->{'assocaited_feature_types'} = $self->db->get_FeatureTypeAdaptor->fetch_all_by_associated_Feature($self);
+  }
+
+  return $self->{'assocaited_feature_types'};
+}
+
+
+
+
+
+
 #redefined from Feature to use FeatureSet, unless specifically set
 
 =head2 analysis
@@ -319,6 +361,9 @@ sub analysis{
 
   return (defined $self->{'analysis'}) ? $self->{'analysis'} : $self->feature_set->analysis();
 }
+
+
+
 
 
 1;
