@@ -998,17 +998,12 @@ sub rollback_ResultSet{
   #Now do similar for all associated ResultSets
   if(! @skipped_sets){
 
-	#Rollback status first
-
-	#We need to move this as we could still fail after here, but before we've deleted anything else
-
-
-	#Use revoked states here!
-	$rset->adaptor->revoke_states($rset);
 	
 	#Rollback results if required
 	if($rollback_results){
+
 	  $self->log("Rolling back result for ResultSet:\t".$rset->log_label);
+
 	  #First we need to check whether these cc_ids are present in other result sets.
 	  #Get all associated data_sets
 	  #checking for other product_FeatureSets for given cc_ids
@@ -1036,6 +1031,15 @@ sub rollback_ResultSet{
 		
 
 	  if(! $feature_supporting){
+
+		#RollBack result_feature table first
+		$self->rollback_result_features($rset);
+
+
+		#Now rollback other states
+		$rset->adaptor->revoke_states($rset);
+
+
 		#This also handles Echip status rollback
 		$self->rollback_results($rset->chip_channel_ids);
 		$self->log('Removing chip_channel entries from associated ResultSets');
@@ -1212,6 +1216,53 @@ sub rollback_results{
 
   return;
 }
+
+
+=head2 rollback_result_features
+
+  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
+  Example    : $self->rollback_result_features($rset);
+  Description: Deletes all result_feature records for the given ResultSet.
+               Also deletes 'RESULT_FEATURE_SET' status.
+  Returntype : None
+  Exceptions : Throws if ResultSet not provided
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub rollback_result_feature{
+  my ($self, $rset) = @_;
+
+  #what about?
+  if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
+	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
+  }
+  
+  #We're still validating against itself??
+  #And reciprocating part of the test :|
+  my $db = $rset->adaptor->db;
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+  $self->log("Rolling back result_features for ResultSet:\t".$rset->name);
+
+
+  #Rollback status entry
+  $rset->adaptor->revoke_state('RESULT_FEATURE_SET');
+
+
+  #Cannot use revoke_states here?
+  #We can if we retrieve the Chip or Channel first
+  #Add to ResultSet adaptor
+  my $sql = 'DELETE from result_feature where result_set_id='.$rset->dbID;
+  
+  if(! $self->db->dbc->do($sql)){
+	throw("result_feature rollback failed for ResultSet:\t".$rset->name.'('.$rset->dbID.")\n".
+		  $self->db->dbc->db_handle->errstr());
+  }
+
+  return;
+}
+
 
 
 =head2 rollback_ArrayChip
