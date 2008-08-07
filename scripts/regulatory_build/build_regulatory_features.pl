@@ -12,6 +12,44 @@ build_regulatory_features.pl -host host -user user -pass password
     -outdir output_directory -focus feature_setA,feature_setB  
     -target feature_setC,feature_setD -seq_name chr
 
+
+Options:
+
+Mandatory
+    -pass|p    Password for eFG DB
+    -host|h    Host for eFG DB      => \$host,
+            "user|u=s"       => \$user,
+            "dbname|d=s"     => \$dbname,
+
+
+
+            "data_version|v=s" => \$data_version,
+            "outdir|o=s"     => \$outdir,
+            "do_intersect|i=s" => \$do_intersect,
+            "write_features|w" => \$write_features,
+            "dump_features"  => \$dump_features,
+            "seq_name|s=s" => \$seq_name,
+            "clobber" => \$clobber,
+            "focus|f=s" => \$focus,
+            "focus_max_length=i" => \$focus_max_length,
+            "focus_extend=i" => \$focus_extend,
+            "target|t=s" => \$target,
+            "dump" => \$dump,
+            "gene_signature" => \$gene_signature,
+            "stats" => \$stats,
+            "debug" => \$debug,
+            "debug_start=i" => \$debug_start,
+            "debug_end=i" => \$debug_end
+
+
+Optional
+    -port      Port for eFG DB, default is 3306
+    -species   Latin species name e.g. homo_sapiens
+
+    -help    Does nothing yet.   
+    -man     Does nothing yet.    
+
+
 =head1 DESCRIPTION
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -56,10 +94,23 @@ Please post comments/questions to the Ensembl development list
 
 =cut
 
+
+#To do
+
+# 1 There are warns and STDERR prints, but we don't specify an -e or a -o file when bsubing
+#   This has the knock on effect of not knowing what has failed, as we're arbitrarily using the
+#   job index to select a chromosome from an array.  As this does not necessarily map to the job name it's 
+#   Could also separate the STDERR and STDOUT, not-essential.
+
+# 2 Need to run using non-ref toplevel, currently just using toplevel
+
+# 3 Fix LSB_JOBINDEX usage. We we're always getting one failure as we're subtracting 1 from the index which for LSB_JOBINDEX = 0 resulting in -1, which is not a valid array index. DONE.  Still need to improve this so we're not hardcoding how many slices we're running with(now getting two failures from non-existant slices).  We need to convert the perl script to perl so we can grab the toplevel non-ref slices before bsubing.  Can we use LSB_JOBNAME instead and use the seq_region names directly?
+
 use strict;
 use warnings;
 use Data::Dumper;
 use Getopt::Long;
+$|=1;
 
 my ($pass,$port,$host,$user,$dbname,$species,$help,$man,
     $data_version,$outdir,$do_intersect,$write_features,
@@ -95,9 +146,14 @@ GetOptions (
             "debug_end=i" => \$debug_end
             );
 
+#Can we catch unknown options here to avoid missing incorrect params
+#Something like:
+#my $opts_out = Getoptions();
+#Then check $opts_out.
+
 ### defaults ###
 $port = 3306 if !$port;
-$species = 'homo_sapiens' if !$species;
+$species = 'homo_sapiens' if !$species;#NJ make this mandatory?
 
 ### check options ###
 
@@ -133,8 +189,11 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file);
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 #use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
+#NJ what was this being used for and can we use the RangeRegistry?
+
 
 # use ensembldb as we may want to use an old version
+#NJ Default should be staging, but add params for overriding
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
@@ -161,7 +220,9 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -port   => $port,
      -dnadb  => $cdb,
      );
-#print Dumper $db;
+
+
+
 
 my $fsa = $db->get_FeatureSetAdaptor();
 my $dsa = $db->get_DataSetAdaptor();
@@ -268,9 +329,10 @@ my $slice;
 if ($seq_name) {
     $slice = $sa->fetch_by_region('chromosome', $seq_name);
 } elsif (defined $ENV{LSB_JOBINDEX}) {
+  
     warn "Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".$ENV{LSB_JOBINDEX}.").\n";
     
-    my $toplevel = $sa->fetch_all('toplevel');
+    my $toplevel = $sa->fetch_all('toplevel');#This needs to be non-reference too!
     my @chr = sort (map $_->seq_region_name, @{$toplevel});
     #print Dumper @chr;
     
@@ -283,8 +345,13 @@ if ($seq_name) {
     }
     #print Dumper @slices;
 
-    $slice=$slices[$ENV{LSB_JOBINDEX}-1];      
+    $slice=$slices[$ENV{LSB_JOBINDEX}];#-1];      
     #print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
+
+
+	warn "Slice is:\t".$slice->name.").\n";
+
+
     
 } else {
 
@@ -679,7 +746,7 @@ sub get_regulatory_feature{
     my ($rf) = @_;
 
     #print Dumper $rf;
-    #print Dumper $rfset;
+    #print $rfset->feature_type;
 
     return Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
         (
@@ -689,7 +756,7 @@ sub get_regulatory_feature{
          -strand           => 0,
          -display_label    => $rf->{binstring} || '',
          -feature_set      => $rfset,
-         -feature_type     => $rfset->type,
+         -feature_type     => $rfset->feature_type,
          -_attribute_cache => {'annotated' => $rf->{annotated}},
          );
 
