@@ -86,8 +86,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
     
   #validate and set type, analysis and feature_set here
-  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse) = 
-	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE'], @_);
+  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables) = 
+	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES'], @_);
   
   
   if (! ($db && ref($db) &&
@@ -104,6 +104,18 @@ sub new {
   $self->{'dbname'} = $db->dbc->dbname;
   $self->{'builds'} = (scalar(@$builds)>0) ? $builds : ['DEFAULT'];
   $self->{'skip_meta_coord'} = $skip_mc;
+
+  if(defined $meta_coord_tables){
+
+	throw('-skip_meta_coord is set, Cannot build meta_coord entries for tables '.join(', ', @$meta_coord_tables));
+
+	if(! ref($meta_coord_tables) eq 'ARRAY'){
+	  throw('-meta_coord_tables parameter must be an array ref');
+	}
+
+	@{$self->{'meta_coord_tables'}} = @$meta_coord_tables;
+  }
+
   $self->{'skip_analyse'} = $skip_analyse;
   $self->{'check_displayable'} = $check_displayable;
   
@@ -237,13 +249,15 @@ sub update_meta_schema_version{
 
   my $sql = 'DELETE from meta where meta_key="schema_version"';
   $self->db->dbc->db_handle->do($sql);
-  $sql = "INSERT into meta values (NULL, 'schema_version', '$schema_version')";
+  $sql = "INSERT into meta(meta_key, meta_value) values ('schema_version', '$schema_version')";
  
   $self->db->dbc->db_handle->do($sql);
 
   $self->log_header("Updated meta.schema_version to $schema_version");
 
 }
+
+
 
 
 sub update_meta_coord{
@@ -259,13 +273,19 @@ sub update_meta_coord{
 
 	#Can we do this via DBAdaptor and get all available adaptors which are BaseFeatureAdaptors then grab the first table name
 
-	
-	@table_names = qw(
-					  regulatory_feature
-					  probe_feature
-					  external_feature
-					  annotated_feature
+	if(defined $self->{'meta_coord_tables'}){
+	  @table_names = @{$self->{'meta_coord_tables'}};
+	}
+	else{#default
+
+	  @table_names = qw(
+						regulatory_feature
+						probe_feature
+						external_feature
+						annotated_feature
+						result_feature
 					 );
+	}
   }
 
   #backup meta coord
@@ -298,7 +318,7 @@ sub update_meta_coord{
 	my @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql1)};
 	
 	#log this
-	map {print "\t".join("\t", @{$_})."\n"} @info;
+	map {$self->log("\t".join("\t", @{$_})."\n")} @info;
 	
 	# Clean old entries
 	$self->log("Deleting old meta_coord entries");
