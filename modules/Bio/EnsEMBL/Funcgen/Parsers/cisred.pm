@@ -219,9 +219,6 @@ sub parse_and_load {
 	  next if exists $groups{$group};
 
 	  #else store the new group as a feature_type and set $group to be the feature_type
-
-	  warn "Storing $group";
-
 	  ($group) = @{$ftype_adaptor->store(Bio::EnsEMBL::Funcgen::FeatureType->new
 										 (
 										  -name  => $group,
@@ -234,8 +231,6 @@ sub parse_and_load {
 
 	#my $ftype = (defined $features_by_group{$group_name}) ? $features_by_group{$group_name} : $self->{'feature_sets'}{'cisRED group motifs'}->feature_type;
 
-
-	warn "creating feature";
 
 	my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
@@ -293,9 +288,9 @@ sub parse_and_load {
 											 -type                   => 'MISC',#this is external_db.type
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
-											 -info_type              => 'TARGET',
+											 -info_type              => 'MISC',
 											 -info_text              => 'Gene',
-											 -linkage_annotation     => 'cisRED motif gene',#Can remove?
+											 -linkage_annotation     => 'cisRED motif gene',
 											 #could have version here if we use the correct dnadb to build the cache
 											);
 	$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag
@@ -401,7 +396,8 @@ sub parse_and_load {
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
 											 -info_type              => 'MISC',
-											 -linkage_annotation     => 'cisRED search region gene xref',
+											 -info_text              => 'Gene',
+											 -linkage_annotation     => 'cisRED search region gene',#omit?
 											 #could have version here if we use the correct dnadb to build the cache
 											  );
 	$dbentry_adaptor->store($dbentry, $search_feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag  
