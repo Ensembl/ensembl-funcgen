@@ -63,7 +63,7 @@ sub new {
 							   'cisRED Motif' => {
 												  name        => 'cisRED Motif',
 												  class       => 'Regulatory Motif',
-												  description => 'cisRED group motif',
+												  description => 'cisRED atomic motif',
 												 },
 							 };
   
@@ -79,7 +79,7 @@ sub new {
 													   },
 													   xrefs => 1,
 													  },
-						   'cisRED group motifs' => {
+						   'cisRED motifs' => {
 													 feature_type      => \$self->{'feature_types'}{'cisRED Motif'},
 													 analysis          => 
 													 { 
@@ -107,41 +107,66 @@ sub new {
 # - arrayref of features
 # - arrayref of factors
 
+
+#To do
+# 1 This needs to take both file names, motifs, then search regions. Like the Bed/GFF importers do.
+
+
 sub parse_and_load {
-  my ($self, $file, $old_assembly, $new_assembly) = @_;
+  my ($self, $files, $old_assembly, $new_assembly) = @_;
   $self->log_header("Parsing cisRED data");
 
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
-  my %features_by_group; # name -> factor_id
+  #my %features_by_group; # name -> factor_id
+  my %groups;
   my %slice_cache;
   my $extf_adaptor  = $self->db->get_ExternalFeatureAdaptor;
   my $dbentry_adaptor = $self->db->get_DBEntryAdaptor;
   my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
   #my $display_name_cache = $self->build_display_name_cache('gene');
   # this object is only used for projection
-  my $dummy_analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'CisRedProjection');
+  my $dummy_analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'CisREDProjection');
 
   # ----------------------------------------
   # We need a "blank" factor for those features which aren't assigned factors
   # Done this way to maintain referential integrity
   #my $blank_factor_id = $self->get_blank_factor_id($db_adaptor);
 
+ #More validation of files here?
+  my ($motif_file)  = grep(/motif/,  @$files);
+  my ($search_file) = grep(/search/, @$files);
+
+
   # Parse motifs.txt file
-  $self->log_header("Parsing cisRED motifs from $file");
+  $self->log_header("Parsing cisRED motifs from $motif_file");
   my $skipped = 0;
   my $skipped_xref = 0;
   #my $coords_changed = 0;
   my $cnt = 0;
 	
-  open (FILE, "<$file") || die "Can't open $file";
+  
+  open (FILE, "<$motif_file") || die "Can't open $motif_file";
   <FILE>; # skip header
 
   while (<FILE>) {
     next if ($_ =~ /^\s*\#/o || $_ =~ /^\s*$/o);
 	chomp;
-    # name	chromosome	start	end	strand	group_name   ensembl_gene_id
-    my ($motif_name, $chromosome, $start, $end, $strand, $group_name, $gene_id) = split/\t/o;
+
+	#name    chromosome      start   end     strand  group_name      ensembl_gene
+	#craHsap1        1       168129978       168129997       -       crtHsap40066,crtHsap40060       ENSG00000000457
+	#craHsap2        1       168129772       168129781       -       crtHsap40068,crtHsap40193,crtHsap40130  ENSG00000000457
+
+	#So we only ever have one atomic motif, which may belong to several groups
+	#Do not store atmoic motifs as feature types as this is the actual feature
+	#simply use the feature_set->feature_type and store the atmoic motif id as the name
+
+
+    my ($motif_name, $chromosome, $start, $end, $strand, $groups, $gene_id) = split/\t/o;
     #($gene_id) = $gene_id =~ /(ENS.*G\d{11})/;
+	my @group_names = split/,/, $groups;
+
+	#These are stranded features, so either - or +, never 0;
+	$strand = ($strand eq '-') ? -1 : 1;
 
 	if(! exists $slice_cache{$chromosome}){
 	
@@ -170,27 +195,47 @@ sub parse_and_load {
 	#Do we need another xref for this or a different table?
 
 	
-	if ($group_name && $group_name ne '' && $group_name !~ /\s/o) {
-
-	  if(! exists $features_by_group{$group_name}){
-		$features_by_group{$group_name} = $ftype_adaptor->fetch_by_name('crtHsap'.$group_name);
-
-		if(! defined $features_by_group{$group_name}){
-		  ($features_by_group{$group_name}) = @{$ftype_adaptor->store(Bio::EnsEMBL::Funcgen::FeatureType->new
-																	  (
-																	   -name  => 'crtHsap'.$group_name,
-																	   -class => 'Regulatory Motif',
-																	   -description => 'cisRED group motif',
-																	  ))};
-		}
-	  }
-	}
+	#if ($group_name && $group_name ne '' && $group_name !~ /\s/o) {
+#
+#	  if(! exists $features_by_group{$group_name}){
+#		$features_by_group{$group_name} = $ftype_adaptor->fetch_by_name('crtHsap'.$group_name);
+#
+#		if(! defined $features_by_group{$group_name}){
+#		  ($features_by_group{$group_name}) = @{$ftype_adaptor->store(Bio::EnsEMBL::Funcgen::FeatureType->new
+#																	  (
+#																	   -name  => 'crtHsap'.$group_name,
+#																	   -class => 'Regulatory Motif',
+#																	   -description => 'cisRED group',
+#																	  ))};
+#		}
+#	  }
+#	}
 	#}else{
 	#  throw("Found cisRED feature $motif_name with no group_name, unable to defined feature_type");
 	#}
 
+	foreach my $group(@group_names){
 
-	my $ftype = (defined $features_by_group{$group_name}) ? $features_by_group{$group_name} : $self->{'feature_sets'}{'cisRED group motifs'}->feature_type;
+	  next if exists $groups{$group};
+
+	  #else store the new group as a feature_type and set $group to be the feature_type
+
+	  warn "Storing $group";
+
+	  ($group) = @{$ftype_adaptor->store(Bio::EnsEMBL::Funcgen::FeatureType->new
+										 (
+										  -name  => $group,
+										  -class => 'Regulatory Motif',
+										  -description => 'cisRED group',
+										 ))};
+	}
+
+
+
+	#my $ftype = (defined $features_by_group{$group_name}) ? $features_by_group{$group_name} : $self->{'feature_sets'}{'cisRED group motifs'}->feature_type;
+
+
+	warn "creating feature";
 
 	my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
@@ -198,8 +243,9 @@ sub parse_and_load {
 	   -start         => $start,
 	   -end           => $end,
 	   -strand        => $strand,
-	   -feature_type  => $ftype,
-	   -feature_set   => $self->{'feature_sets'}{'cisRED group motifs'},
+	   #-feature_type  => $ftype,
+	   -associated_feature_types => \@group_names,
+	   -feature_set   => $self->{'feature_sets'}{'cisRED motifs'},
 	   -slice         => $slice_cache{$chromosome},
 	  );
 
@@ -267,15 +313,15 @@ sub parse_and_load {
   # read search_regions.txt from same location as $file
 
   #my $search_regions_file = dirname($file) . "/search_regions.txt";
-  my $search_regions_file;
-  ($search_regions_file = $file) =~ s/motifs/searchregions/;
+  #my $search_file;
+  #($search_regions_file = $file) =~ s/motifs/searchregions/;
 
   $skipped = 0;
   $cnt = 0;
   $skipped_xref = 0;
 	
-  $self->log_header("Parsing cisRED search regions from $search_regions_file");
-  open (SEARCH_REGIONS, "<$search_regions_file") || die "Can't open $search_regions_file";
+  $self->log_header("Parsing cisRED search regions from $search_file");
+  open (SEARCH_REGIONS, "<$search_file") || die "Can't open $search_file";
   <SEARCH_REGIONS>; # skip header
 
   while (<SEARCH_REGIONS>) {
