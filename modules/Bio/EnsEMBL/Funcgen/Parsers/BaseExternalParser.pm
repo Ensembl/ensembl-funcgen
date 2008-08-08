@@ -9,6 +9,9 @@ use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
+use vars qw(@ISA);
+
+
 
 @ISA = ('Bio::EnsEMBL::Funcgen::Utils::Helper');
 
@@ -39,6 +42,13 @@ sub new {
   $self->{type} = $type;
   $self->{'clobber'} = $clobber if defined $clobber;
   $self->{'archive'} = $archive if defined $archive;
+
+
+  #This is not fully implemented yet and need to be validated against the config feature_set
+  #pass something like set1,set2 and split and validate each.
+  #Or do this in the calling script?
+
+  throw('-import_sets not fully implemented yet') if defined $import_fsets;
   $self->{'import_sets'} = (defined $import_fsets) ? @{$import_fsets} : undef;
   
   $self->log("Parsing and loading $type ExternalFeatures");
@@ -81,7 +91,7 @@ sub db{
 sub import_sets{
   my $self = shift;
 
-  return $self->{'import_sets'};
+  return $self->{'import_sets'} || [keys %{$self->{'feature_sets'}}];
 }
 
 
@@ -107,7 +117,9 @@ sub set_feature_sets{
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
   
   foreach my $fset_name(@{$self->import_sets}){
-	
+	warn "Setting $fset_name";
+
+
 	#check feature_type is validated?
 	my $fset = $fset_adaptor->fetch_by_name($fset_name);
 
@@ -118,6 +130,8 @@ sub set_feature_sets{
 	  $self->log("Found previous FeatureSet $fset_name");
 
 	  if($self->{'clobber'}){
+
+		warn "Implement rollback_FeatureSet here, need option to leave feature_set entry?";
 
 		#Need to clobber any DBEntries first!!!
 		if(exists $self->{'feature_sets'}{$fset_name}{'xrefs'} &&
@@ -363,7 +377,7 @@ sub get_stable_id_by_display_name{
   Returntype : Bio::EnsEMBL::Feature
   Exceptions : Throws is type is not valid.
   Caller     : General
-  Status     : At risk - move to core API? Utils?
+  Status     : At risk - is this in core API? Move to Utils?
 
 =cut
 
