@@ -103,8 +103,8 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
   
-  my ($display_label, $fset, $ftype)
-    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE'], @_);
+  my ($display_label, $fset, $ftype, $assoc_ftypes)
+    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE', 'ASSOCIATED_FEATURE_TYPES'], @_);
 
 
   if($ftype){
@@ -125,6 +125,8 @@ sub new {
 
   #Do not move this as it depends on the above being set
   $self->display_label($display_label) if $display_label;
+  $self->associated_feature_types($assoc_ftypes) if(defined $assoc_ftypes);
+  
 	
   return $self;
 }
@@ -291,22 +293,22 @@ sub feature_type{
 }
 
 
-=head2 get_associated_feature_types
+=head2 associated_feature_types
 
-  Example    : my @associated_ftypes = @{$feature->get_associated_feature_types()};
-  Description: Getter for other associated FeatureTypes.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen:FeatureType object
+  Example    : my @associated_ftypes = @{$feature->associated_feature_types()};
+  Description: Getter/Setter for other associated FeatureTypes.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen:FeatureType objects
   Exceptions : None
   Caller     : General
   Status     : At risk
 
 =cut
 
-sub get_associated_feature_types{
-  my $self = shift;
+sub associated_feature_types{
+  my ($self, $ftypes) = @_;
   
 
-  #Lazy load
+  #Lazy load as we don't want to have to do a join on all features when most will not have any
 
   #How are we going to retrieve these?
   #We don't really want to join on associated_feature_type for every feature query as very few will have them.
@@ -319,11 +321,65 @@ sub get_associated_feature_types{
   #The fetch should really be implemented in FeatureTypeAdaptor
   #
   
-  if(! defined $self->{'associated_feature_types'}){
-	$self->{'assocaited_feature_types'} = $self->db->get_FeatureTypeAdaptor->fetch_all_by_associated_Feature($self);
+
+  #Should we split this into an add and a get method?
+  #Need to split this?
+
+  if(defined $ftypes){
+
+
+	warn "defined";
+
+	if(ref($ftypes) eq 'ARRAY'){
+
+	  warn "array";
+
+	  foreach my $ftype(@$ftypes){
+		
+		#Can we do this if it is not yet stored?
+		#This cannot be tested here as the SetFeature may not have an adaptor
+		#Test here not useing method or wait until store?
+
+
+		if( ! $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType') ){
+		  throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::FeatureType objects');
+		}
+	  }
+
+	  if(defined $self->{'associated_feature_types'}){
+		warn('You are overwriting associated feature types');
+		#we could simply add the new ones and make them NR.
+	  }
+
+	  warn "setting";
+
+	  $self->{'associated_feature_types'} = $ftypes;
+	  
+	}
+	else{
+	  throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::FeatureType objects');
+	}
   }
 
-  return $self->{'assocaited_feature_types'};
+
+
+
+  #Will this fetch again if the first fetch returned nothing
+  #Or will the empty array be true?
+
+  if(! defined $self->{'associated_feature_types'}){
+
+	warn "fetching";
+
+	#This will fail if we have not stored yet
+
+	if(defined $self->adaptor){
+	  $self->{'associated_feature_types'} = $self->adaptor->db->get_FeatureTypeAdaptor->fetch_all_by_associated_SetFeature($self);
+	}
+  }
+
+  #This has the postential to return undef, or an arrayref which may be empty.
+  return $self->{'associated_feature_types'};
 }
 
 

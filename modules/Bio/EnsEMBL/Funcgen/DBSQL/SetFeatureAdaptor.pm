@@ -306,6 +306,55 @@ sub fetch_all_by_logic_name {
 } 
 
 
+=head2 store_associated_feature_types
+
+  Arg [1]     : string $logic_name the logic name of the analysis of features to obtain 
+  Example     : $fs = $a->fetch_all_by_logic_name('foobar'); 
+  Description : Returns an arrayref of features created from the database. only 
+                features with an analysis of type $logic_name will be returned. 
+  Returntype  : arrayref of Bio::EnsEMBL::SetFeatures
+  Exceptions  : thrown if $logic_name not defined
+  Caller      : General 
+  Status      : At risk
+
+=cut 
+
+sub store_associated_feature_types { 
+  my ($self, $set_feature) = @_;
+
+  #Direct access to avoid lazy loading with an unstored SetFeature
+  my $assoc_ftypes = $set_feature->{'associated_feature_types'};
+
+  #Could be undef or empty
+  return if ! defined $assoc_ftypes || scalar(@$assoc_ftypes) == 0;
+
+  my $type = $set_feature->feature_set->type;
+  my $feature_id = $set_feature->dbID;
+
+  my $sql = 'INSERT into associated_feature_type(feature_id, feature_table, feature_type_id) values (?,?,?)';
+
+  foreach my $ftype(@$assoc_ftypes){
+
+	#We have already tested the class but not whether it is stored
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
+
+
+	warn "$feature_id, $type, ".$ftype->dbID;
+
+	my $sth = $self->prepare($sql);
+	$sth->bind_param(1, $feature_id,  SQL_INTEGER);
+	$sth->bind_param(2, $type,        SQL_VARCHAR);
+	$sth->bind_param(3, $ftype->dbID, SQL_INTEGER);
+
+	$sth->execute();
+  }	
+
+
+  return;
+} 
+
+
+
 
 
 =head2 list_dbIDs

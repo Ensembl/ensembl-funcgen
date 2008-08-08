@@ -116,6 +116,39 @@ sub fetch_all_by_class{
   return $self->generic_fetch($constraint);
 }
 
+=head2 fetch_all_by_associated_SetFeature
+
+  Arg [1]    : Bio::EnsEMBL:SetFeature
+  Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
+  Description: Fetches all associated FeatureTypes for a given SetFeature. Note: The main FeatureType for
+               a SetFeature is accessible via the feature_type method.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_associated_SetFeature{
+  my ($self, $sfeat) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::SetFeature', $sfeat);
+
+
+  #Need to protect against SQL injection here?
+  #Not so vital as this never takes user supplied data
+
+  my $sql = 'SELECT feature_type_id from associated_feature_type where feature_table="'.$sfeat->feature_set->type.'" and feature_id='.$sfeat->dbID;
+
+  my @ft_ids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
+  
+  my $constraint = ' feature_type_id in ('.join(',',@ft_ids).') ';
+
+  warn "constraint is $constraint";
+
+  return $self->generic_fetch($constraint);
+}
+
 
 
 =head2 _tables

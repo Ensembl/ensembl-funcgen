@@ -325,6 +325,10 @@ sub store{
 	  $sth->execute();
 	  $ef->dbID( $sth->{'mysql_insertid'} );
 	  $ef->adaptor($self);
+
+	  $self->store_associated_feature_types($ef) if (defined $ef->{'associated_feature_types'});
+
+
 	}
 
   return \@efs;
