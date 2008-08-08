@@ -593,7 +593,7 @@ CREATE TABLE `regulatory_feature` (
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,	
-  `display_label` varchar(60) default NULL,
+  `display_label` varchar(80) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id`	int(10) unsigned default NULL,
   `stable_id` mediumint(8) unsigned default NULL,
@@ -908,6 +908,7 @@ CREATE TABLE `analysis_description` (
 DROP TABLE IF EXISTS `meta`;
 CREATE TABLE `meta` (
   `meta_id` int(10) NOT NULL auto_increment,
+  `species_id` int(10) unsigned default '1',
   `meta_key` varchar(40) NOT NULL,
   `meta_value` varchar(255) NOT NULL,
   PRIMARY KEY  (`meta_id`),
