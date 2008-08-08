@@ -862,6 +862,7 @@ sub define_and_validate_sets{
 sub rollback_FeatureSet{
   my ($self, $fset, $force_delete) = @_;
 
+ 
   #Need to test before we do adaptor call? Cyclical dependency here :|
   #We need to implement this method locally
   #This is because we don't force Helper to have a DB attribute
@@ -897,6 +898,8 @@ sub rollback_FeatureSet{
   $fset->adaptor->revoke_states($fset);
 
 
+  #should add some log statements here?
+
   #Rollback reg attributes
   if($fset->type eq 'regulatory'){
 	$sql = "DELETE ra from regulatory_attributes ra, $table rf where rf.${table}_id=ra.${table}_id and rf.feature_set_id=".$fset->dbID;
@@ -910,6 +913,20 @@ sub rollback_FeatureSet{
   if(! $db->dbc->do($sql)){
 	throw("Failed to rollback xrefs for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
   }
+
+  #Remove associated_feature_type records
+  #Do not remove actual feature_type records as they may be used by something else.
+
+  $sql = 'DELETE aft from associated_feature_type aft, '.$table.' f where f.feature_set_id='.$fset->dbID.' and f.'.$table.'_id=aft.feature_id and aft.feature_table="'.$fset->type.'"';
+  
+  if(! $db->dbc->do($sql)){
+	throw("Failed to rollback associated_feature_types for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  }
+
+
+
+  
+
 
   #Remove feature
   $sql = "DELETE from $table where feature_set_id=".$fset->dbID;  
