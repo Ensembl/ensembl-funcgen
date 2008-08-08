@@ -338,9 +338,6 @@ sub store_associated_feature_types {
 	#We have already tested the class but not whether it is stored
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
 
-
-	warn "$feature_id, $type, ".$ftype->dbID;
-
 	my $sth = $self->prepare($sql);
 	$sth->bind_param(1, $feature_id,  SQL_INTEGER);
 	$sth->bind_param(2, $type,        SQL_VARCHAR);
