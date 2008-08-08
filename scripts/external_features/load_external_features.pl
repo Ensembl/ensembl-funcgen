@@ -22,37 +22,43 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 use Getopt::Long;
 
-my ($host, $user, $pass, $port, $dbname, $cdbname, $species, $file, $clobber, $type, $old_assembly, $new_assembly, $archive);
+my ($host, $user, $dnadb_host, $dnadb_user, $pass, $port, $dbname, $dnadb_name);
+my ($species, $clobber, $type, $old_assembly, $new_assembly, $archive);
 
-GetOptions( "host=s",         \$host,
-			"user=s",         \$user,
-			"species=s",      \$species,
-			"pass=s",         \$pass,
-			"port=i",         \$port,
-			"dbname=s",       \$dbname,
-			"cdbname=s",      \$cdbname,
-			"type=s",         \$type,
-			"file=s",         \$file,
-			"archive=s",      \$archive,
-			"clobber",        \$clobber,#This is not behaving like a boolean flag??
-			"help",           \&usage,
-			"old_assembly=s", \$old_assembly,
-			"new_assembly=s", \$new_assembly
+GetOptions( "host=s",       =>  \$host,
+			"dnadb_host=s"  =>  \$dnadb_host,
+			"user=s",       =>  \$user,
+			"dnadb_user=s", =>  \$dnadb_user,
+			"species=s",    =>  \$species,
+			"pass=s",       =>  \$pass,
+			"port=i",       =>  \$port,
+			"dbname=s",     =>  \$dbname,
+			"dnadb_name=s",    =>  \$dnadb_name,
+			"type=s",       =>  \$type,
+			#"file=s",     =>    \$file,
+			"archive=s",    =>  \$archive,
+			"clobber",      =>  \$clobber,#This is not behaving like a boolean flag??
+			"help",         =>  \&usage,
+			"old_assembly=s", => \$old_assembly,
+			"new_assembly=s", => \$new_assembly
 	  );
+
+my @files = @ARGV;
 
 usage() if (!$host || !$user || !$dbname || !$type);
 
 
 
-
+#only do this if cdbname is specified
+#But we need to allow for other options for port/user/pass too
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-											  -host   => 'ens-staging',
+											  -host   => $dnadb_host || 'ens-staging',
 											  -port   => $port,
-											  -user   => $user,
-											  -pass   => $pass,
+											  -user   => $dnadb_user,
+											  #-pass   => $pass,
 											  -species => $species,
 											  -group  => 'core',
-											  -dbname => $cdbname,
+											  -dbname => $dnadb_name,
 											 );
 
 
@@ -102,7 +108,7 @@ my $parser = "Bio::EnsEMBL::Funcgen::Parsers::$type"->new(
  # &usage;
 #}
 
-$parser->parse_and_load($file, $old_assembly, $new_assembly);
+$parser->parse_and_load(\@files, $old_assembly, $new_assembly);
 
 #$parser->upload_features_and_factors($objects);
 
