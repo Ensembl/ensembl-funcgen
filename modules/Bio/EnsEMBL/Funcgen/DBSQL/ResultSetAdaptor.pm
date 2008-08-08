@@ -13,7 +13,7 @@ storing ResultSet objects.
 my $rset_adaptor = $db->get_ResultSetAdaptor();
 
 my @rsets = @{$rset_adaptor->fetch_all_ResultSets_by_Experiment()};
-my @displayable_rsets = @{$rset_adaptor->fetch_all_displayable_ResultSets()};
+#my @displayable_rsets = @{$rset_adaptor->fetch_all_displayable_ResultSets()};
 
 #Other methods?
 #by FeatureType, CellType all with displayable flag?

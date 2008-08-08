@@ -60,26 +60,6 @@ my $reg = "Bio::EnsEMBL::Registry";
 
 
 
-#do we need new method here, just simply to call dnadb straight away to determine whether 
-#we can ident the dnadb
-
-#This requires all calls to use a species, which we don't really want
-
-#sub new {
-#  my $caller = shift;
-	
-#  my $class = ref($caller) || $caller;
-  
-#  my $self = $class->SUPER::new(@_);
-
-#  #This simply forces dauto-de$db->dbc->db_handle;tection of dnadb, to ensure that this is checked first;
-#  $self->dnadb();
-
-#  return $self;
-
-#}
-
-
 
 =head2 is_stored_and_valid
 
@@ -404,9 +384,11 @@ sub dnadb {
 		#Create and test the DB
 		$port = ($schema <48) ? 3306 : 5306;
 		
+
+
 		$dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 		  (						
-		   -host    => "ensembldb.ensembl.org",
+		   -host    => 'ensembldb.ensembl.org',
 		   -user    => "anonymous",
 		   -species => $lspecies,
 		   -dbname  => $dbname,
@@ -682,6 +664,8 @@ sub set_status{
 
 	return;
 }
+
+
 
 
 

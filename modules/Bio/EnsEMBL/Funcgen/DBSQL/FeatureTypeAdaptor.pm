@@ -133,7 +133,7 @@ sub fetch_all_by_associated_SetFeature{
   my ($self, $sfeat) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::SetFeature', $sfeat);
-
+  my $constraint;
 
   #Need to protect against SQL injection here?
   #Not so vital as this never takes user supplied data
@@ -141,12 +141,9 @@ sub fetch_all_by_associated_SetFeature{
   my $sql = 'SELECT feature_type_id from associated_feature_type where feature_table="'.$sfeat->feature_set->type.'" and feature_id='.$sfeat->dbID;
 
   my @ft_ids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
-  
-  my $constraint = ' feature_type_id in ('.join(',',@ft_ids).') ';
+  $constraint = ' feature_type_id in ('.join(',',@ft_ids).') ' if @ft_ids;
 
-  warn "constraint is $constraint";
-
-  return $self->generic_fetch($constraint);
+  return ($constraint) ? $self->generic_fetch($constraint) : [];
 }
 
 

@@ -327,12 +327,7 @@ sub associated_feature_types{
 
   if(defined $ftypes){
 
-
-	warn "defined";
-
 	if(ref($ftypes) eq 'ARRAY'){
-
-	  warn "array";
 
 	  foreach my $ftype(@$ftypes){
 		
@@ -351,10 +346,7 @@ sub associated_feature_types{
 		#we could simply add the new ones and make them NR.
 	  }
 
-	  warn "setting";
-
 	  $self->{'associated_feature_types'} = $ftypes;
-	  
 	}
 	else{
 	  throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::FeatureType objects');
@@ -368,8 +360,6 @@ sub associated_feature_types{
   #Or will the empty array be true?
 
   if(! defined $self->{'associated_feature_types'}){
-
-	warn "fetching";
 
 	#This will fail if we have not stored yet
 

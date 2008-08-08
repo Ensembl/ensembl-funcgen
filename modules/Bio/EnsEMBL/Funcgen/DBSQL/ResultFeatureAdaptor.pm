@@ -708,7 +708,7 @@ sub fetch_all_by_Slice_ResultSet{
   #would this group correctly on NULL values if biol rep not set for a chip?
   #This would require an extra join too. 
 
-  warn $sql."\n";
+  #warn $sql."\n";
   
 
   $sth = $self->prepare($sql);

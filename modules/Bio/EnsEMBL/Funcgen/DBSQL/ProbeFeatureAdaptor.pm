@@ -389,11 +389,12 @@ sub _objs_from_sth {
 
 	
 	# This code is ugly because caching is used to improve speed
-	my ($sa, $seq_region_id);
+	my ($seq_region_id);
+	my $sa = $self->db->get_SliceAdaptor();
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
-	#Hence it should always be on the same coord system
+	#Hence it should always be on the same coord system, unless we're projecting
 
 	my $aa = $self->db->get_AnalysisAdaptor();
 	my @features;
@@ -453,28 +454,6 @@ sub _objs_from_sth {
 		}
 
 		
-		#warn "Need to implement slice adaptor hash, based on seq_region id??";#
-
-
-		#we need to be mindful of dynamic assembly mapping
-		#or would this be handled before here?
-		#will different cs_id be handled before here also, so we would never see different cs_ids?
-
-		#if($old_cs_id && ($old_cs_id != $cs_id)){
-		#  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
-		#}
-		
-		#$old_cs_id = $cs_id;
-
-
-		#This should by default be the slice adaptor of the dnadb we're concerned with
-		#what about assembly mapping where we have feature from multiple dnadbs returned in the same query
-
-
-		#this needs to be reset for each seq_region_id
-		$sa ||= $self->db->get_SliceAdaptor();#$cs_id);
-
-
 		# Get the analysis object
 		my $analysis = $analysis_hash{$analysis_id} ||= $aa->fetch_by_dbID($analysis_id);
 
