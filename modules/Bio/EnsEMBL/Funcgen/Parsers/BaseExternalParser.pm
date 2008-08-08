@@ -142,11 +142,19 @@ sub set_feature_sets{
 		  
 		  if(@ext_feat_ids){
 			
-			my ($core_ext_dbid) = $self->db->dbc->db_handle->selectrow_array('select external_db_id from external_db where db_name="core"');
+			#Why only core xrefs?
+			#my ($core_ext_dbid) = $self->db->dbc->db_handle->selectrow_array('select external_db_id from external_db where db_name="core"');
 			
 			if($core_ext_dbid){
 			  #double table delete?
-			  my $sql = "delete x, ox from object_xref ox, xref x where ox.ensembl_object_type='ExternalFeature' and x.external_db_id=$core_ext_dbid and ox.xref_id=x.xref_id and ensembl_id in(".join(', ', @ext_feat_ids).')';
+
+			  throw('This xref delete is wrong');
+
+			  #my $sql = "delete x, ox from object_xref ox, xref x where ox.ensembl_object_type='ExternalFeature' and x.external_db_id=$core_ext_dbid and ox.xref_id=x.xref_id and ensembl_id in(".join(', ', @ext_feat_ids).')';
+
+			  #should be something like
+			  #delete ox from object_xref ox, external_feature ef where ox.ensembl_object_type='ExternalFeature' and ox.ensembl_id=ef.external_feature_id and ef.feature_set_id in(64,65);
+
 			  $self->log("Clobbering xrefs for $fset_name");
 			  
 			  $self->db->dbc->do($sql);
