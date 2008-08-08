@@ -145,6 +145,8 @@ sub set_feature_sets{
 			#Why only core xrefs?
 			#my ($core_ext_dbid) = $self->db->dbc->db_handle->selectrow_array('select external_db_id from external_db where db_name="core"');
 			
+			my $core_ext_dbid;
+
 			if($core_ext_dbid){
 			  #double table delete?
 
@@ -157,7 +159,7 @@ sub set_feature_sets{
 
 			  $self->log("Clobbering xrefs for $fset_name");
 			  
-			  $self->db->dbc->do($sql);
+			  #$self->db->dbc->do($sql);
 			}
 		  }
 		}
