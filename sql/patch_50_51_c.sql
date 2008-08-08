@@ -53,4 +53,4 @@ CREATE TABLE `associated_feature_type` (
 
 
 # patch identifier
-INSERT INTO meta (meta_key, meta_value) VALUES ('patch', 'patch_50_51_c.sql|associated_feature_type');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_50_51_c.sql|associated_feature_type');
