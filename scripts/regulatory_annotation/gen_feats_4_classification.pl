@@ -36,6 +36,10 @@ edit the file ~dkeefe/dbs/ens_staging  to point at the latest ensembl core datab
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2008/07/28 14:20:33  dkeefe
+ moved from scripts directory.
+ IG biotypes updated.
+
  Revision 1.1  2008/04/11 10:29:18  dkeefe
  Copies and then denormalises data from an ensembl core database and creates tables of genomic features in a second database for use in classifying regulatory features.
 
@@ -62,7 +66,7 @@ use constant  NO_ROWS => '0E0';
 
 my($user, $password, $driver, $host, $port);
 my @temp_tables;
-my $dump_dir = '/lustre/scratch1/ensembl/dkeefe/junk/';
+my $dump_dir = '/lustre/scratch1/ensembl/dkeefe/gen_feat_junk/';
 my $slim_table = 'goslim_goa_acc_list';
 my $id_list;
 my $sp;
@@ -205,7 +209,7 @@ POST_IMPORT:
 #POST_IMPORT:
 &repeat_features($dbh,$dbu,$do_repeats);
 
-#exit;
+
 
 if($dbu->table_exists('de_ferrari_gene_classification')){
     &housekeeping_tissue_specific($dbh,$dbu);
@@ -1298,9 +1302,9 @@ sub help_text{
                   [-g] flag - create the GO classified gene tables
                   [-r] flag - create the repeat_feature tables
                   [-j] <label> jump to label then start execution
+                       POST_IMPORT
                   [-H] <host machine> eg ens-genomics2
                   [-u] <database user> 
-                  [-o] <output file> - name of a file for output
                   [-p] <mysql password> 
                   [-P] <mysql port> 
                   [-s] <species> eg -smus_musculus, default = homo_sapiens 
