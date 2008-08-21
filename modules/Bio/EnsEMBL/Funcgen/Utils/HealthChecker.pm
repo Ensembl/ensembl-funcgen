@@ -264,7 +264,8 @@ sub update_meta_coord{
   my ($self, @table_names) = @_;
   
   
-
+  warn 'Skipping meta coord as option always runs';
+  return;
   
   if($self->{'skip_meta_coord'}){
 	$self->log("Skipping meta_coord update\n");
@@ -398,7 +399,7 @@ sub check_meta_strings{
   my ($self, $all_builds) = @_;
   
 
-  $self->lo_header('Checking meta strings');
+  $self->log_header('Checking meta strings');
 
   #update flag?
 
@@ -572,7 +573,7 @@ sub log_data_sets{
 	}
   }
 
-  $self->log_header('Checking Regulatory FeatureSets');
+  #$self->log_header('Checking Regulatory FeatureSets');
 
   
   
@@ -612,12 +613,12 @@ sub analyse_and_optimise_tables{
   my @tables = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};	  
   map $_ = "@{$_}", @tables;
   my  $analyse_sql = 'analyze table ';
-  my $optimise_sql = 'optimze table ';   
+  my $optimise_sql = 'optimize table ';   
 
 
 
   foreach my $table(@tables){
-	$self->log("Analysingand optimising  table $table:");
+	$self->log("Analysing and optimising  table $table:");
 
 	my @anal_info = @{$self->db->dbc->db_handle->selectall_arrayref($analyse_sql.$table)};
 
