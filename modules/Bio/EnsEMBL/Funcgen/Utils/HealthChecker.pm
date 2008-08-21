@@ -157,7 +157,7 @@ sub update_db_for_release{
   $self->update_meta_schema_version;
   $self->update_meta_coord;
   $self->check_meta_strings;
-  $self->analyse_tables;
+  $self->analyse_and_optimise_tables;
   
 
   $self->log('??? Have you dumped/copied GFF dumps ???');
@@ -263,11 +263,18 @@ sub update_meta_schema_version{
 sub update_meta_coord{
   my ($self, @table_names) = @_;
   
+  
+
+  
   if($self->{'skip_meta_coord'}){
 	$self->log("Skipping meta_coord update\n");
 	return;
   }
   
+
+  $self->log_header('Updating meta_coord table');
+
+
   #set default table_name
   if(! @table_names || scalar(@table_names) == 0){
 
@@ -301,8 +308,7 @@ sub update_meta_coord{
 	throw("Can't dump the original meta_coord for back up");#will this get copied to log?
   } 
   else {
-	$self->log_header('Updating meta_coord table. Original meta_coord table backed up in '
-			   . $self->{'dbname'}.'.meta_coord.backup');
+	$self->log('Original meta_coord table backed up in '. $self->{'dbname'}.'.meta_coord.backup');
   }
   
 
@@ -391,6 +397,9 @@ sub update_meta_coord{
 sub check_meta_strings{
   my ($self, $all_builds) = @_;
   
+
+  $self->lo_header('Checking meta strings');
+
   #update flag?
 
   my @regf_fsets;
@@ -586,13 +595,13 @@ sub log_set{
   return;
 }
 
-sub analyse_tables{
+sub analyse_and_optimise_tables{
   my $self = shift;
 
   #myisamchk --analyze. or analyze statement
 
   if($self->{'skip_analyse'}){
-	$self->log('Skipping analyse tables');
+	$self->log('Skipping analyse/optimise tables');
 	return;
   }
 
@@ -602,17 +611,26 @@ sub analyse_tables{
   my $sql = 'show tables;';
   my @tables = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};	  
   map $_ = "@{$_}", @tables;
-  $sql = 'analyze table ';
+  my  $analyse_sql = 'analyze table ';
+  my $optimise_sql = 'optimze table ';   
+
 
 
   foreach my $table(@tables){
-	$self->log("Analysing table $table:");
+	$self->log("Analysingand optimising  table $table:");
 
-	my @anal_info = @{$self->db->dbc->db_handle->selectall_arrayref($sql.$table)};
+	my @anal_info = @{$self->db->dbc->db_handle->selectall_arrayref($analyse_sql.$table)};
 
 	foreach my $line_ref(@anal_info){
 	  $self->log(join("\t", @$line_ref));
 	}
+
+	my @opt_info = @{$self->db->dbc->db_handle->selectall_arrayref($optimise_sql.$table)};
+
+	foreach my $line_ref(@opt_info){
+	  $self->log(join("\t", @$line_ref));
+	}
+	
   }
 
   return;
