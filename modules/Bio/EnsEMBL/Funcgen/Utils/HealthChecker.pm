@@ -78,6 +78,13 @@ use Bio::EnsEMBL::Analysis;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
 
+
+
+#TO DO
+# 1 DONE Print all fails and warnings in summary at end of script.
+# 2 validate_RegulatoryFeature_Sets
+
+
 ################################################################################
 
 sub new {
@@ -119,6 +126,8 @@ sub new {
   $self->{'skip_analyse'} = $skip_analyse;
   $self->{'check_displayable'} = $check_displayable;
   
+  warn "skip mc is ".  $self->{'skip_meta_coord'};
+
   return $self;
 }
 
@@ -188,7 +197,7 @@ sub validate_new_seq_regions{
 	my $dnadb_sm = join('_', @{$self->get_schema_and_build($self->{'dbname'})});
 	
 	if($efgdb_sm ne $dnadb_sm){
-	  $self->log("WARNING Skipped validate_new_seq_regions as schema_versions are mismatched:\t".
+	  $self->report("WARNING Skipped validate_new_seq_regions as schema_versions are mismatched:\t".
 				 "efgdb $efgdb_sm\tdnadb $dnadb_sm");
 	  return 0;
 	}
@@ -405,7 +414,7 @@ sub check_meta_strings{
 
   my @regf_fsets;
   my $passed = 1;
-  my $fset_a = $self->db->get_featureSetAdaptor;
+  my $fset_a = $self->db->get_FeatureSetAdaptor;
   my $mc = $self->db->get_MetaContainer;
   my $regf_a = $self->db->get_RegulatoryFeatureAdaptor;
 
@@ -421,7 +430,7 @@ sub check_meta_strings{
   #What about anchor/seed sets?
 
   if(scalar(@regf_fsets) == 0){
-	$self->log_header("Found no RegulatoryFeature sets for meta_string check");
+	$self->report("WARNING: Found no regulatory FeatureSets for check_meta_strings");
   }
   else{
 
@@ -447,10 +456,10 @@ sub check_meta_strings{
 
 	#Test fset vs ftype string
 	if(! defined $fset_string && ! defined $ftype_string){
-	  $self->log("FAIL:\tNo $fset_string_key or $ftype_string_key found in meta table");
+	  $self->report("FAIL:\tNo $fset_string_key or $ftype_string_key found in meta table");
 	}
 	elsif(! defined $fset_string){
-	  $self->log("FAIL:\tNo $fset_string_key found in meta table");
+	  $self->report("FAIL:\tNo $fset_string_key found in meta table");
 	}
 	else{
 	  my @fset_ids = split/,/, $fset_string;
@@ -462,7 +471,7 @@ sub check_meta_strings{
 		@ftype_ids = split/,/, $ftype_string;
 	  }
 	  else{
-		$self->log("WARNING:\tNo $ftype_string_key found in meta table, will update using $fset_string_key");
+		$self->report("WARNING:\tNo $ftype_string_key found in meta table, will update using $fset_string_key");
 	  }
 	  
 
@@ -474,7 +483,7 @@ sub check_meta_strings{
 	  
 
 	  if(scalar(@fset_ids) != scalar(@ftype_ids)){
-		$self->log("FAIL:\tLength mismatch between $fset_string_key and $ftype_string_key");
+		$self->report("FAIL:\tLength mismatch between $fset_string_key and $ftype_string_key");
 	  }
 
 	  foreach my $i(0..$#fset_ids){
@@ -482,7 +491,7 @@ sub check_meta_strings{
 		my $sset = $fset_a->fetch_by_dbID($supporting_set_id);
 
 		if(! defined $sset){
-		  $self->log("FAIL:\t$fset_string_key $supporting_set_id does not exist in the DB");
+		  $self->report("FAIL:\t$fset_string_key $supporting_set_id does not exist in the DB");
 		}
 		else{
 		  #test/build ftype string
@@ -491,7 +500,7 @@ sub check_meta_strings{
 			
 			if($sset->feature_type->dbID != $ftype_ids[$i]){
 			  $ftype_fail = 1;
-			  $self->log("FAIL:\t$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
+			  $self->report("FAIL:\t$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
 			}
 		  }
 	
@@ -510,7 +519,7 @@ sub check_meta_strings{
 		$self->db->dbc->db_handle->do("INSERT into meta values(NULL, '$ftype_string_key', '$new_ftype_string')");
 	  }
 	  elsif($ftype_fail){
-		$self->log("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
+		$self->report("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
 	  }
 
 
@@ -520,13 +529,13 @@ sub check_meta_strings{
 	  my ($regf_dbID) = @{$self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1')};
 	  
 	  if(! defined $regf_dbID){
-		$self->log("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
+		$self->report("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
 	  }
 	  else{
 		my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->{'display_label'};#Direct access to avoid feature type
 			
 		if(length($rf_string) != scalar(@fset_ids)){
-		  $self->log("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
+		  $self->report("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
 		}
 	  }
 	}
@@ -594,6 +603,67 @@ sub log_set{
   $self->log($text);
 
   return;
+}
+
+
+sub check_stable_ids{
+  my ($self, @slices) = @_;
+
+  $self->log_header('Checking stable IDs');
+
+  my $fset_a = $self->db->get_FeatureSetAdaptor;
+  my $fset = $fset_a->fetch_by_name('RegulatoryFeatures');
+
+
+  if(! $fset){
+	$self->report('WARNING: No RegulatoryFeatures FeatureSet found');
+  }
+  else{
+
+	#Can't count NULL field, so have to count regulatory_ffeature_id!!!
+	my $sql = 'select count(regulatory_feature_id) from regulatory_feature where stable_id is NULL and feature_set_id='.$fset->dbID;
+	
+	warn "sql is $sql";
+
+	my ($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
+	
+	if($null_sids){
+	  $self->report("FAIL: Found a total of $null_sids NULL stable IDs");
+	
+	  my $slice_a = $self->db->get_SliceAdaptor;
+	  
+	  if(! @slices){
+		@slices = @{$slice_a->fetch_all('toplevel', 1)};
+	  }
+	  
+	  foreach my $slice(@slices){
+		my $sr_name=$slice->seq_region_name;
+		$sql = 'select count(stable_id) from regulatory_feature rf, seq_region sr where rf.seq_region_id=sr.seq_region_id and sr.name="'.$sr_name.'" and stable_id is NULL and feature_set_id='.$fset->dbID;
+		($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
+		
+		$self->log('Slice '.$slice->name." has $null_sids NULL stable IDs");
+	  }
+	}
+	else{
+	  $self->log('No NULL stable IDs found');
+	}
+  }
+
+  return;
+
+}
+
+
+sub validate_RegulatoryFeature_Sets{
+
+  
+  #checks feature data and supporting sets
+  #links between DatSet and FeatureSet, i.e. correct naming, not linking to old set
+  #Displayable
+  
+
+
+
 }
 
 sub analyse_and_optimise_tables{
