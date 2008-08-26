@@ -144,7 +144,7 @@ sub new{
 	#This currently only turns off default logging
 
 	$self->{_default_log_dir} ||= $ENV{'HOME'}.'/logs';
-
+	$self->{'_report'} = [];
 
     # DEBUG OUTPUT & STDERR
     if(defined $self->{_debug_level} && $self->{_debug_level}){
@@ -249,6 +249,9 @@ sub new{
 sub DESTROY{
     my ($self) = @_;
 
+
+	$self->report;
+
     if($self->{_log_file}){
         $self->log("Logging complete ".localtime().".");
 
@@ -319,6 +322,45 @@ sub log{
 
   $self->debug(1,$message);
 }
+
+################################################################################
+
+=head2 report
+
+ Arg[0]      : optional string  - log message.
+ Arg[1]      : optional boolean - memory usage, appends current process memory stats
+ Description : Wrapper method for log, which also stores message for summary reporting
+ Return type : none
+ Example     : $root->report("WARNING: You have not done this or that and want it reported at the end of a script");
+ Exceptions  : none
+
+=cut
+
+################################################################################
+
+sub report{
+  my ($self, $message, $mem) = @_;
+
+  if(defined $message){
+
+	$self->log($message, $mem);
+
+	push @{$self->{'_report'}}, $message;
+  }
+  elsif(scalar(@{$self->{'_report'}})){
+	print LOGFILE "\n::\tSUMMARY REPORT\t::\n";
+	print LOGFILE join("\n", @{$self->{'_report'}})."\n";
+
+	$self->{'_report'} = [];
+  }
+
+  return;
+}
+
+
+
+
+
 
 ################################################################################
 
