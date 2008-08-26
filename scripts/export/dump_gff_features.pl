@@ -85,7 +85,7 @@ my $fset = $fset_a->fetch_by_name($fset_name);
 
 foreach my $slice(@{$slice_a->fetch_all('toplevel')}){
 
-  print "Dumping slice $slice ".$slice->seq_region_name."\n";
+  print "Dumping slice ".$slice->name."\n";
 
   my $chr_name = 'Chr'.$slice->seq_region_name();
 
