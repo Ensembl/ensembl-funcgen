@@ -1,5 +1,11 @@
 #!/usr/local/ensembl/bin/perl
 
+
+#TO DO
+# 1 Make this generic for all feature sets
+# 2 Remove hardcoding for ens-staging, take cdb args or default to ensembldb
+# 3 Fix uninit value in concat in print statement, STABLE ID!!!!
+
 use warnings;
 use strict;
 use Getopt::Long;
@@ -97,9 +103,9 @@ foreach my $slice(@{$slice_a->fetch_all('toplevel')}){
 	
 	#seqid source type start end score strand phase attrs
 
-	print OUT join("\t", ('>'.$chr_name, $dbname, 'regulatory feature', 
+	print OUT join("\t", ($chr_name, $dbname, 'regulatory feature', 
                       $feature->start(), $feature->end(), '.', '.', '.', 'ID='.$feature->stable_id().';Note=Consists of following features: '.
-                      join(',', map {join(':', $_->feature_type->name, $_->cell_type->name)}@{$feature->regulatory_attributes()})))."\n";
+						  join(',', map {join(':', $_->feature_type->name, $_->cell_type->name)}@{$feature->regulatory_attributes()})))."\n";
 
   }
 
