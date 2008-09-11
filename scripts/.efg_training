@@ -1,5 +1,3 @@
-echo "sourcing bash"
-
 #!/bin/bash
 
 echo "Setting up the Ensembl Function Genomics environment..." 
@@ -14,7 +12,7 @@ export PS1='efg@$PS1HOST>'
 export SRC=$HOME/ensembl-src                                #Root source code directory. EDIT
 export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
 export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
-export EFG_DATA=$HOME/ensembl-data/   #Data directory. EDIT
+export EFG_DATA=$HOME/ensembl-data/efg   #Data directory. EDIT
 
 export EFG_PERL=/usr/bin/perl
 export PATH=$PATH:$EFG_SRC/scripts              #eFG scripts directory

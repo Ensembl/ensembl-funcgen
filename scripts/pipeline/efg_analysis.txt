@@ -38,28 +38,25 @@ To get started first you need to fill out a couple of configuration files.
 1. Global shell environment
 ---------------------------
 
-The eFG analysis pipeline system uses a couple of shell environment variables
-and functions to facilitate common tasks that are defined in a global config
-file, like
+The eFG analysis pipeline system uses various environmental variables
+and functions to facilitate common tasks. Some of the functions we will 
+refer to later on are defined within this environment file:
 
-   ~graef/src/ensembl-personal/graef/scripts/eFG/.eFG_pipeline
+   $SRC/ensembl-functgenomics/scripts/pipeline/.efg_pipeline
 
-Some of the functions we will refer to later on are defined within this 
-configuration file. 
 
-This file contains common settings and functions to facilitate common tasks
-that can be used for different projects and usually does not need to be
-edited. Instead a second config file can be used to define project specific
-settings that subsequently sources the global configuration. An example can be
-found at 
+This file contains common settings and functions utilised by the pipeline
+environment and hence does not usually need to be edited. A second config 
+file is used to define project specific settings, this is used to source the
+pipeline environment as follows: 
 
-   ~graef/src/ensembl-personal/graef/scripts/eFG/human_51.env
+  . $SRC/ensembl-functgenomics/scripts/pipeline/human_50.env
 
 Such a file has to be set up and maintained according to your project. To ease
 the access to the environment it is handy to set up an alias in your shell
 configuration like follows (in bash syntax).
 
-alias eFG_human='. ~graef/src/ensembl-personal/graef/scripts/eFG/human_50.env'
+alias eFG_human='. $SRC/ensembl-functgenomics/scripts/pipeline/human_50.env'
 
 
 2. Configuration of the eFG runnables
@@ -67,7 +64,7 @@ alias eFG_human='. ~graef/src/ensembl-personal/graef/scripts/eFG/human_50.env'
 
 All the configuration for the eFG analysis runnables can be found at
 
-        Bio/EnsEMBL/Analysis/Config/Fungen
+        Bio/EnsEMBL/Analysis/Config/Funcgen
 
 This directory contains all the example config modules (.pm.example) for the
 analysis that are currently implemented:
@@ -80,9 +77,9 @@ analysis that are currently implemented:
         SWEmbl (Wilder et al., unpublished)
                 
 Rename the config files for the analysis you are going to use so that it 
-ends on ".pm" and edit this file as needed. The environment variable used in
-should should already been set in your global shell configuration and should 
-not need to be edited.
+ends on ".pm" and edit this file if required. The environment variables used in
+the config files should should already been set in your efg_pipeline environment
+and should not need to be edited.
 
 In the same way you need to rename and edit 
 
