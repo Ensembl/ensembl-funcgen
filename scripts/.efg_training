@@ -1,0 +1,159 @@
+#!/usr/local/bin/bash
+
+echo "Setting up the Ensembl Function Genomics environment..." 
+#add alias efg='. ~/path/to/your/ensembl-functgenomics/scripts/.efg' to your .bashrc
+
+### ENV VARS ###
+
+#Prompt
+export PS1='efg@$PS1HOST>'
+
+#Code/Data Directories
+export SRC=$HOME/ensembl-src                                #Root source code directory. EDIT
+export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
+export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
+export EFG_DATA=$HOME/ensembl-data/   #Data directory. EDIT
+
+export EFG_PERL=/usr/bin/perl
+export PATH=$PATH:$EFG_SRC/scripts              #eFG scripts directory
+export PERL5LIB=$EFG_SRC/modules:$PERL5LIB      #Update PERL5LIB. EDIT add ensembl(core) etc. if required
+
+#Your efg DB connection params
+export EFG_WRITE_USER="ens-training"                    #EDIT
+export EFG_READ_USER="ensro"                        #EDIT
+export EFG_HOST='trpc6c04'                     #EDIT 172.24.2.50
+export EFG_PORT=3306                                #EDIT
+export MYSQL_ARGS="-h${EFG_HOST} -P${EFG_PORT}"         
+#pass always supplied on cmd line
+
+#Your ensembl core DB connection params, read only
+export CORE_USER='anonymous'                        #EDIT if required e.g. anonymous
+export CORE_HOST='ensembldb.ensembl'                  #EDIT if required e.g. ensembldb.ensembl.org
+export CORE_PORT=3306                           #EDIT if required
+#could do with a quick method to change these between ens-livemirror, ensembldb/ensdb-archive?
+
+#Default norm and analysis methods
+
+export NORM_METHOD='VSN_GLOG'                   #EDIT if required e.g. T.Biweight, Loess
+export PEAK_METHOD='Nessie'                     #EDIT if required e.g. TileMap, MPeak, Chipotle
+
+
+#could do with a quick method to change these between ens-livemirror, ensembldb/ensdb-archive?
+#R config
+export R_LIBS=${R_LIBS:=$SRC/R-modules}
+export R_PATH=/software/bin/R
+export R_FARM_PATH=/software/R-2.4.0/bin/R
+export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q bigmem"
+
+
+#need to check/define R_LIBS here
+#could add PERL5LIB here too, this could be extended to include all config for shipping to users?  in bashrc for now
+#should check for input and output dirs here and create with a question
+#would need to sed file to set permanently?
+
+
+### ALIASES ###
+#single quotes enable dynamic updating of commands
+
+alias efg='cd $EFG_SRC'
+alias efgd='cd $EFG_DATA'
+alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
+alias efgmacs='xemacs $EFG_SRC/modules/Bio/EnsEMBL/Funcgen &'
+alias mysqlw='mysql $MYSQL_ARGS -u${EFG_WRITE_USER}'
+alias mysqlro='mysql $MYSQL_ARGS -u${EFG_READ_USER}'
+
+#check for vars then suggest defaults or take stdin?
+
+echo "Welcome to eFG!"
+
+
+### FUNCTIONS ###
+
+CreateDB(){
+
+    if [[ ! $2 ]]
+    then
+	echo "Need to define dbname and password arguments"
+	echo "e.g. create_db.sh homo_sapiens_funcgen_44_36f 'password'"
+	return
+    fi
+    
+    dbname=$1
+    pass=$2
+	drop=''
+
+    if [[ $3 ]]
+    then 
+    
+        if [[ $3 != drop ]]
+        then 
+            echo "Unrecognised argument, did you mean to specify 'drop' as the 3rd argument?"
+            return
+        else
+            drop=$3
+        fi
+    fi
+
+    
+    present=$(QueryVal show databases like \"$dbname\")
+    
+ 
+    if [[ $present ]]
+    then
+
+        if [[ $drop ]]
+        then
+            echo "Dropping DB $dbname"
+            echo "DROP DATABASE IF EXISTS \`$1\`;" |  mysqlw -p${pass}
+        else
+            echo "DB $dbname already exists, please drop the database manually or using the 3rd argument 'drop'"
+            echo "e.g. e.g. create_db.sh homo_sapiens_funcgen_44_36f 'password' drop"
+            return
+        fi
+    fi
+
+    echo "Creating DB $dbname"
+    echo "CREATE database $dbname" | mysqlw -p${pass}
+    mysqlw -p${pass} $dbname < $EFG_SQL/efg.sql
+	
+}
+
+
+CreateLocalDB(){
+	TMP=$MYSQL_ARGS
+	MYSQL_ARGS=" -P${EFG_PORT}";
+	CreateDB $@
+	export MYSQL_ARGS=$TMP
+
+
+}
+
+
+QueryVal(){
+
+    #need to check if PASS defined else use READ_NAME
+    val=$(echo $* | mysqlro)
+
+	#should capture error here
+	#this works differently if passing a var or passing a quoted string, var get's split
+	#do not quote query!
+	echo $val | sed "s/$2 //"
+}
+
+
+
+RunUsage(){
+	#do run usage first then run the parse_and_import.pl script
+
+	echo "Usage: run.sh 'password' [result files]"
+	echo "       ARG[0]: 'password' - the write password to the import db specified in run.sh"
+	echo "       ARG[@]: optional - list of result files to use during import, currently only works for Sanger import"
+
+}
+
+HelpUsage(){
+	RunUsage
+
+	parse_and_import.pl -help
+}
+
