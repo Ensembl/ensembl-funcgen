@@ -1,5 +1,3 @@
-#!/sw/arch/bin/perl
-##!/software/bin/perl
 
 =head1 NAME
 
