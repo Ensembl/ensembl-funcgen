@@ -147,7 +147,12 @@ The output is written to three files located in the $SCRIPTSDIR/conf directory:
     o BatchQueue.conf - contains some analysis-specific settings to the pipeline
       to be copied and pasted into the actual BatchQueue.pm in
       Bio/EnsEMBL/Pipeline/Config (here it needs to be added to the QUEUE_CONFIG 
-      list of the Config hash)
+      list of the Config hash). Further keys in the Config hash that need 
+      changing/setting are
+         DEFAULT_OUTPUT_DIR => $ENV{'ANALYSIS_WORK_DIR'}
+         DEFAULT_BATCH_QUEUE => 'your queue name'
+         DEFAULT_RETRY_QUEUE => 'your retry queue name'
+         
     o analysis.conf - contains config to set up the analysis table and will be 
       read when setting up pipeline tables below
     o rules.conf - contains config to set up the rules table and will be read
