@@ -12,7 +12,7 @@ $EFG_DBNAME\
 \[\033[0m\]]$ "
 
 #Code/Data Directories
-export SRC=${HOME}/src                          #Root source code directory. EDIT
+export SRC=${HOME}/ensembl-src                          #Root source code directory. EDIT
 export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
 export EFG_SQL=${EFG_SRC}/sql                   #eFG SQL
 export EFG_MODULES=${EFG_SRC}/modules
