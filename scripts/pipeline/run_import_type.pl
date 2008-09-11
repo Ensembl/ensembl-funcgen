@@ -199,7 +199,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 foreach my $ft (keys %types) {
    
     my $cmd = 
-        "$ENV{EFG_SRC}/scripts/import/import_type.pl ". 
+        "perl $ENV{EFG_SRC}/scripts/import/import_type.pl ". 
         "-user $user  ".
         "-host $host  ".
         "-port $port ".
