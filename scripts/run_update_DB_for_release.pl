@@ -20,7 +20,8 @@ $EFG_SRC/scripts/update_DB_for_release.pl\
   -port 3306\
   -host ens-genomics1\
   -user ensadmin\
-  -data_version 49_36k\
-  -dbname expset_homo_sapiens_funcgen_49_36k\
+  -data_version 51_36m\
+  -dbname homo_sapiens_funcgen_50_36l\
   -pass $PASS\
+  -skip_meta_coord\
   $*
