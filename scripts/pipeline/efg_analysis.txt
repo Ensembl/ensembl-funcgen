@@ -214,7 +214,7 @@ experiments that begin with 'CD4_' in the name (see examples below). The optiona
 is subsequently store in the database. This option is to distinguish between sets/experiments 
 that have been performed on the same feature and cell type. Note that if you only want to add
 a suffix to the experiment name without filtering with <exp_regex> option, <exp_regex> needs to
-be an empty sting ("", see example below).
+be an empty sting ('', see example below).
 
 In the case of files the experiment name needs to be encoded in the filename that should have 
 the format 
@@ -252,7 +252,6 @@ creates for all experiments with 'PolII' in the name input_ids using all topleve
 
 creates for all gzipped bed files in given directory the corresponding input_id and appends 
 the string 'Mikkelsen2007' to the experiment name comprising cell and feature type.
-
 
 Once the input_ids have been imported into the pipeline database the analysis
 can be kicked off.
