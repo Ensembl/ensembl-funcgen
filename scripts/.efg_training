@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/bin/bash
 
 echo "Setting up the Ensembl Function Genomics environment..." 
 #add alias efg='. ~/path/to/your/ensembl-functgenomics/scripts/.efg' to your .bashrc
