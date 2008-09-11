@@ -64,7 +64,7 @@ alias eFG_human='. $SRC/ensembl-functgenomics/scripts/pipeline/human_50.env'
 
 All the configuration for the eFG analysis runnables can be found at
 
-        Bio/EnsEMBL/Analysis/Config/Funcgen
+        ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/Funcgen
 
 This directory contains all the example config modules (.pm.example) for the
 analysis that are currently implemented:
@@ -83,7 +83,7 @@ and should not need to be edited.
 
 In the same way you need to rename and edit 
 
-    Bio/EnsEMBL/Analysis/Config/General.pm.example
+    ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/General.pm.example
 
 For details see the documentation in ensembl-doc.
 
@@ -94,8 +94,8 @@ For details see the documentation in ensembl-doc.
 To configure the pipeline system you need to rename and edit the following two
 files:
 
-    Bio/EnsEMBL/Pipeline/Config/General.pm.example
-    Bio/EnsEMBL/Pipeline/Config/BatchQueue.pm.Example
+    ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/General.pm.example
+    ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/BatchQueue.pm.Example
 
 For details see the documentation in ensembl-doc. To help especially filling
 in the BatchQueue.pm module there is a script called write_pipeline_config.pl
