@@ -1,3 +1,4 @@
+bash
 #!/bin/bash
 
 echo "Setting up the Ensembl Function Genomics environment..." 
