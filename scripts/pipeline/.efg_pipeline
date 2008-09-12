@@ -240,16 +240,18 @@ CreateInputIds(){
     SUBMITVAL=$1
     shift
 
+	echo "SubmitType: $SUBMIT $SUBMITVAL"
+
     if [ "$SUBMIT" == "File" ]; then
        SUBMITVAL="dir $SUBMITVAL"
     fi
     
     OPTIONS=''
 
-    if [ "$1" != "" ]; then OPTIONS="-exp_regex $1"; fi
+    if [ "$1" != "" ]; then OPTIONS="-exp_regex $1"; echo "exp_regex: $1"; fi
     shift
     
-    if [ "$1" != "" ]; then OPTIONS="$OPTIONS -exp_suffix $1"; fi
+    if [ "$1" != "" ]; then OPTIONS="$OPTIONS -exp_suffix $1";  echo "exp_suffix: $1"; fi
     shift
     
     ### determine analysis_id for SubmitType and write input_ids
@@ -263,6 +265,27 @@ CreateInputIds(){
         echo "to drop input_ids and rerun CreateInputIds."
     fi
     
+}
+
+CleanInputIds(){
+
+    if [ $# -ne 1 ]; then
+        echo "Usage: CleanInputIds <password>"
+        return
+    fi
+    
+    PASS=$1
+    shift
+
+	echo "Cleaning input_id_analysis table"
+	echo "delete from input_id_analysis" | mysqlw -p$PASS $PDBNAME
+
+	echo "removing links from infiles directory ..."
+	for file in $ENV{ANALYSIS_WORK_DIR}/$ENV{EFG_DBNAME}/infiles/*; do
+		if [ -L $file ]; then 
+			rm -f $file
+		fi
+	done
 }
 
 CheckPipelineSanity(){
@@ -279,21 +302,6 @@ CheckPipelineSanity(){
     pipeline_sanity.pl -dbhost $PDBHOST -dbport $PDBPORT -dbuser $EFG_WRITE_USER -dbpass $PASS -dbname $PDBNAME
 
 }                        
-
-CleanInputIds(){
-
-    if [ $# -ne 1 ]; then
-        echo "Usage: CleanInputIds <password>"
-        return
-    fi
-    
-    PASS=$1
-    shift
-
-	echo "Cleaning input_id_analysis table"
-	echo "delete from input_id_analysis" | mysqlw -p$PASS $PDBNAME
-
-}
 
 test_eFG_Runnable () {
 
