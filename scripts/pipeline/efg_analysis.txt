@@ -213,11 +213,11 @@ to use the gzipped bed files in a given <directory> to create the input_ids.
 Behind the scenes it uses a perl script called create_input_ids.pl that either fetches
 the slices from the database or reads the files, concatenates them with the 
 experiment names (optionally selected by <exp_regex>), and imports them directly 
-into the pipeline database. As <exp_regex> you can pass any Perl regular expression to
-match a certain subset of experiment names, i.e. '^CD4_' would create input_ids for all 
-experiments that begin with 'CD4_' in the name (see examples below). The optional paramter
-<exp_suffix> allows you to specify an add an additional string to the experiment name that 
-is subsequently store in the database. This option is to distinguish between sets/experiments 
+into the pipeline database input_id_analysis table. As <exp_regex> you can pass any Perl 
+regular expression to match a certain subset of experiment names, i.e. '^CD4_' would create 
+input_ids for all experiments that begin with 'CD4_' in the name (see examples below). The 
+optional paramter <exp_suffix> allows you to specify an add an additional string to the experiment 
+name that is subsequently store in the database. This option is to distinguish between sets/experiments 
 that have been performed on the same feature and cell type. Note that if you only want to add
 a suffix to the experiment name without filtering with <exp_regex> option, <exp_regex> needs to
 be an empty sting ('', see example below).
@@ -259,8 +259,8 @@ creates for all experiments with 'PolII' in the name input_ids using all topleve
 creates for all gzipped bed files in given directory the corresponding input_id and appends 
 the string 'Mikkelsen2007' to the experiment name comprising cell and feature type.
 
-Once the input_ids have been imported into the pipeline database the analysis
-can be kicked off.
+Once the input_ids have been imported into the pipeline database, check the input_id_analysis table
+to make sure they look sensible. Now you're ready for running the analysis.
 
 The shell function
 
