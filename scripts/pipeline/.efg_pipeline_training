@@ -287,6 +287,9 @@ CleanInputIds(){
     PASS=$1
     shift
 
+	
+
+
 	echo "Cleaning input_id_analysis table"
 	echo "delete from input_id_analysis" | mysqlw -p$PASS $PDBNAME
 
