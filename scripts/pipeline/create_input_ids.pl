@@ -245,7 +245,7 @@ if ($slice) {
         throw("File is not compressed with gzip!") unless &is_gzip("$dir/$f");
 
         ### Check also that files are bed file format
-        throw("File format is not bed format compliant!") unless &is_bed("$dir/$f");
+        throw("File '$dir/$f' format is not bed format compliant!") unless &is_bed("$dir/$f");
 
         (my $experiment_name = $f) =~ s,(.*/)?([^/_]+_[^/_]+).*\.bed\.gz,$2,;
         $experiment_name .= '_'.$exp_suffix if ($exp_suffix);
@@ -311,13 +311,13 @@ sub is_bed {
         warn("Infile '$file' does not have 6 or more columns. We expect bed format: CHROM START END NAME SCORE STRAND.");
         return 0;
     } elsif ($line[0] !~ m/^((chr)?[MTXYNT_\d]+)$/) {
-        warn ("1st column must contain name of seq_region (e.g. chr1 or 1)");
+        warn ("1st column must contain name of seq_region (e.g. chr1 or 1) in '$file'");
         return 0;
     } elsif ($line[1] !~ m/^\d+$/ && $line[2] =~ m/^\d+$/) {
-        warn ("2nd and 3rd column must contain start and end respectively");
+        warn ("2nd and 3rd column must contain start and end respectively in '$file'");
         return 0;
     } elsif ($line[5] !~ m/^[+-]$/) {
-        warn ("6th column must define strand (either '+' or '-')");
+        warn ("6th column must define strand (either '+' or '-') in '$file'");
         return 0;
     }
     return 1;
