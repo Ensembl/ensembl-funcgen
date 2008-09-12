@@ -93,9 +93,6 @@ if (!$species) {
 	warn("No species specified, using default '$species'.")
 }
 
-print Dumper $exp_regex;
-print Dumper $exp_suffix;
-
 ### check options ###
 throw("Must specify mandatory database hostname (-host).\n") if ! defined $host;
 throw("Must specify mandatory database username. (-user)\n") if ! defined $user;
