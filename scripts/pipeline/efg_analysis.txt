@@ -180,6 +180,7 @@ Now the pipeline config can be imported by using the shell command
 which runs the three pipeline scripts analysis_setup.pl, rule_setup.pl, and 
 setup_batchqueue_outputdir.pl.
 
+Now check the analysis tables in your output DB, and the rule tables in your pipeline DB.
 
 
 Finally we needs to create input_ids. In eFG analysis pipeline terms an
@@ -356,6 +357,10 @@ Utility methods
  o DropPipelineDB <password>
 
    Removes entire pipeline DB should you wish to start from fresh
+
+#Add GetFailedJObs and Monitor here when there are configured correctly
+
+
 
 
 Summary (Protocol of release 51 running SWEmbl on histone data sets)
