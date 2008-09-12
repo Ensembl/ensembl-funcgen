@@ -28,6 +28,9 @@ documents overview.txt, quick_start_pipeline_guide,
 the_ensembl_pipeline_infrastructure.txt, and custom_analyses.txt 
 in ensembl-doc/pipeline_docs give a good overview.
 
+At the bottom of this document are a list of utlity methods which may come in 
+useful if you go wrong.  Take a brief look at these first before running the configuration 
+steps.
 
 Setup/Configuration
 ===================
@@ -162,8 +165,8 @@ The output is written to three files located in the $SCRIPTSDIR/conf directory:
       to be copied and pasted into the actual BatchQueue.pm in
       Bio/EnsEMBL/Pipeline/Config (here it needs to be added to the QUEUE_CONFIG 
       list of the Config hash). NOTE: It is important to remove or comment out any 
-	  other analyses which maybe present as default and are not required for your
-	  pipeline as these could be configured incorrectly and hence cause misdirecting
+	  other analyses which maybe present as default and may not have been configured 
+	  properly as these could be configured incorrectly and hence cause misdirecting
 	  errors.         
     o analysis.conf - contains config to set up the analysis table and will be 
       read when setting up pipeline tables below
@@ -182,13 +185,6 @@ which runs the three pipeline scripts analysis_setup.pl, rule_setup.pl, and
 setup_batchqueue_outputdir.pl.
 
 
-There are a few more shell functions to facilitate common tasks like
-
-    RemoveLock <password>
-
-or 
-
-    DropPipelineDB <password>
 
 Finally we needs to create input_ids. In eFG analysis pipeline terms an
 input_id consists of an experiment name and a genomic slice or path to an input 
@@ -245,9 +241,9 @@ feature types (See perl documentation of the script for details).
 
 Examples:
 
-   CreateInputIds **** File /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI_methylation
+   CreateInputIds **** File $EFG_DATA/input/SOLEXA/LMI_methylation
 
-creates for all gzipped bed files in .../SOLEXA/LMI_methylation the corresponding input_id
+creates for all gzipped bed files in $EFG_DATA/input/SOLEXA/LMI_methylation the corresponding input_id
 
    CreateInputIds **** File /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI_acetylation '^CD4_H3K.*'
 
@@ -344,6 +340,26 @@ GetFailedJobs - lists all failed jobs and the corresponding log files
 GetRunningJobs - lists all jobs that currently run
 
 Logfiles are written to $ANALYSIS_WORK_DIR/$DBNAME/[0-9]/
+
+
+
+Utility methods
+===============
+
+
+ o RemoveLock <password>
+
+   Remove a pipeline lock from the pipeline DB should your pipeline fall over and refuse to restart.
+
+
+ o CleanInputs <password>
+
+   Cleans all input IDs from the pipeline DB should you need to reload them.
+
+
+ o DropPipelineDB <password>
+
+   Removes entire pipeline DB should you wish to start from fresh
 
 
 Summary (Protocol of release 51 running SWEmbl on histone data sets)
