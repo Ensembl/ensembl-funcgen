@@ -273,7 +273,7 @@ CheckPipelineSanity(){
     shift
 
     echo "Check pipeline sanity"
-    pipeline_sanity.pl -dbhost $PDBHOST -dbport $PDBPORT -dbuser $WRITE_DBUSER -dbpass $PASS -dbname $PDBNAME
+    pipeline_sanity.pl -dbhost $PDBHOST -dbport $PDBPORT -dbuser $EFG_WRITE_USER -dbpass $PASS -dbname $PDBNAME
 
 }                        
 
