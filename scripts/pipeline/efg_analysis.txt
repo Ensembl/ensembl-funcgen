@@ -82,7 +82,8 @@ analysis that are currently implemented:
 Rename the config files for the analysis you are going to use so that it 
 ends on ".pm" and edit this file if required. The environment variables used in
 the config files should should already been set in your efg_pipeline environment
-and should not need to be edited.
+and should not need to be edited, with the exception of the EFGDB password, which
+will need to be harcoded (This is to be removed shortly and configured via the cmdline)
 
 
 
@@ -227,8 +228,8 @@ the format
     <cell_type>_<feature_type>[_<...>].bed.gz
 
 Note that the infiles are expected to be gzipped and formatted according to the bed file 
-format definitions with the first 6 fields being set (chr, start, end, name, score, 
-strand; see http://genome.ucsc.edu/FAQ/FAQformat)!
+format definitions with the first 6 fields being set: chr; start; end; name; score; 
+strand. (see http://genome.ucsc.edu/FAQ/FAQformat)
 
 Also you need to make sure that your eFG database knows about cell and feature types to 
 be analysed and imported. You can use $SCRIPTSDIR/run_import_type.pl to import cell and 
