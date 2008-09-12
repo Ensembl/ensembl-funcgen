@@ -224,7 +224,10 @@ ImportPipelineConfig (){
 CreateInputIds(){
 
     if [ $# -lt 3 ]; then
-        echo "Usage: CreateInputIds <password> <'Slice' ['encode'|'toplevel'] | 'File' dir> [<exp_regex> <exp_suffix>]"
+        echo "Usage: CreateInputIds <password> <SubmitType> [<exp_regex> <exp_suffix>]"
+		echo "       where <SubmitType> is either"
+		echo "          Slice ['encode'|'toplevel']  or  File <directory>"
+		echo "       See efg_analysis.txt for details!"
         return
     fi
     
