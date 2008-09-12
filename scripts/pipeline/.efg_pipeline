@@ -59,10 +59,6 @@ export MYSQL_ARGS="-h${EFG_HOST} -P${EFG_PORT}"
 export WRITE_DB_ARGS="-host ${EFG_HOST} -port ${EFG_PORT} -user ${EFG_WRITE_USER}"
 export READ_DB_ARGS="-host ${EFG_HOST} -port ${EFG_PORT} -user ${EFG_READ_USER}"
 
-#Default norm and analysis methods
-export NORM_METHOD='VSN_GLOG'       # EDIT if required e.g. T.Biweight, Loess
-export PEAK_METHOD='Nessie'         # EDIT if required e.g. TileMap, MPeak, Chipotle
-
 ### ALIASES ###
 #single quotes enable dynamic updating of commands
 
@@ -251,7 +247,7 @@ CreateInputIds(){
     if [ "$1" != "" ]; then OPTIONS="-exp_regex $1"; echo "exp_regex: $1"; fi
     shift
     
-    if [ "$1" != "" ]; then OPTIONS="$OPTIONS -exp_suffix $1";  echo "exp_suffix: $1"; fi
+    if [ "$1" != "" ]; then OPTIONS="$OPTIONS -exp_suffix $1"; echo "exp_suffix: $1"; fi
     shift
     
     ### determine analysis_id for SubmitType and write input_ids
