@@ -80,6 +80,7 @@ CreateDB(){
     
     dbname=$1
     pass=$2
+	drop=''
 
     if [[ $3 ]]
     then 
