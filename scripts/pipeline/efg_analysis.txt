@@ -84,11 +84,6 @@ ends on ".pm" and edit this file if required. The environment variables used in
 the config files should should already been set in your efg_pipeline environment
 and should not need to be edited.
 
-In the same way you need to rename and edit 
-
-    ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/General.pm.example
-
-For details see the documentation in ensembl-doc.
 
 
 3. Configuration of the analysis pipeline
@@ -220,7 +215,7 @@ experiment names (optionally selected by <exp_regex>), and imports them directly
 into the pipeline database. As <exp_regex> you can pass any Perl regular expression to
 match a certain subset of experiment names, i.e. '^CD4_' would create input_ids for all 
 experiments that begin with 'CD4_' in the name (see examples below). The optional paramter
-<exp_suffix> allows you to specify an adda n additional string to the experiment name that 
+<exp_suffix> allows you to specify an add an additional string to the experiment name that 
 is subsequently store in the database. This option is to distinguish between sets/experiments 
 that have been performed on the same feature and cell type. Note that if you only want to add
 a suffix to the experiment name without filtering with <exp_regex> option, <exp_regex> needs to
