@@ -210,6 +210,10 @@ if ($slice) {
 
     $submit_type='File';
 
+	# get cell and feature type adapter
+	my $cta = $db->get_CellTypeAdaptor();
+	my $fta = $db->get_FeatureTypeAdaptor();
+
     # get analysis_id of submit_type
     my $analysis_id = &get_analysis_id($submit_type);
     
@@ -246,6 +250,15 @@ if ($slice) {
 
         (my $experiment_name = $f) =~ s,(.*/)?([^/_]+_[^/_]+).*\.bed\.gz,$2,;
         $experiment_name .= '_'.$exp_suffix if ($exp_suffix);
+
+		### validate cell and feature type
+		my ($cell_type, $feature_type) = split('_', $experiment_name);
+		throw ("Cell type '$cell_type' doesn't exist in database! ".
+			   "Edit and rerun run_import_type.pl.") 
+			unless (defined $cta->fetch_by_name($cell_type));
+		throw ("Feature type '$feature_type' doesn't exist in database! ".
+			   "Edit and rerun run_import_type.pl.") 
+			unless (defined $fta->fetch_by_name($feature_type));
 
         # write input_id to database
         my $input_id = sprintf "%s:%s", $experiment_name, $f;
