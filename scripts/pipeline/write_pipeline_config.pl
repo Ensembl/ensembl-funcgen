@@ -10,19 +10,22 @@ write_pipeline_config.pl -module <name> [-module <module2>] (-file|-slice)
 
 Mandatory:
 
-   -module name    Name of Runnable, like SWEmbl or Nessie
+   -module name      Name of Runnable, like SWEmbl or Nessie
 
-   -slice|file     Select SubmitType, i.e. SubmitSlice or SubmitFile 
-                   respectively
+   -slice|file       Select SubmitType, i.e. SubmitSlice or SubmitFile 
+                     respectively
 
 Optional:
    
-   -regexp string  regular expression to select a subset of config keys
-                   (paramter sets)
+   -regexp <string>  Regular expression to select a subset of config keys
+                     (paramter sets)
 
-   -overwrite      Overwrite outfiles if they already exist
+   -overwrite        Overwrite outfiles if they already exist
 
-   -help|?         Print this 
+   -queue <string>   Set name of queue (default: normal)
+   -batch_size <int> Set size of batch (default: 10)
+
+   -help|?           Print this 
 
 =head1 DESCRIPTION
 
@@ -53,14 +56,23 @@ use Getopt::Long;
 my ($host,$port,$user,$pass,$dbname,$species,$assembly,$help,
     $module,$modules,$file,$slice,$regexp,$overwrite);
 
-GetOptions (
-            'module=s@'    => \$modules, 
-            'file'         => \$file,
-            'slice'        => \$slice,
-            'regexp=s'     => \$regexp, 
-            'overwrite'    => \$overwrite,
-            'help|?'       => \$help,
-            );
+### sone defaults for BatchQueue conf
+my $queue = 'normal';
+my $batch_size = 10;
+
+GetOptions 
+	(
+	 'module=s@'    => \$modules, 
+	 'file'         => \$file,
+	 'slice'        => \$slice,
+	 'regexp=s'     => \$regexp, 
+	 'overwrite'    => \$overwrite,
+
+	 'queue=s'      => \$queue,
+	 'batch_size=i' => \$batch_size,
+	 
+	 'help|?'       => \$help,
+	);
 
 system("perldoc $0") if (defined $help);
 
@@ -87,6 +99,12 @@ if ($slice) {
 #    $write_Submit = 1;
 #}
 
+my $dbhost;
+if ($ENV{EFG_HOST} eq "127.0.0.1") {
+	$dbhost = 'localhost';
+} else {
+	($dbhost = $ENV{EFG_HOST}) =~ s,-,_,g;
+}
 
 # create outfiles 
 my $analysis_conf = $ENV{ANALYSIS_CONFIG};
@@ -160,9 +178,9 @@ foreach my $module (@$modules) {
         print BATCHQ "
             {
              logic_name => '$_',
-             queue => 'normal', 
-             batch_size => 10, 
-             resources => 'select[type==X86_64 && myens_genomics1<80] rusage[myens_genomics1=10:duration=10]',
+             queue => '$queue', 
+             batch_size => $batch_size, 
+             resources => 'select[type==X86_64 && my$dbhost<80] rusage[my$dbhost=10:duration=10]',
              retries => 3,
              runnabledb_path => 'Bio/EnsEMBL/Analysis/RunnableDB/Funcgen',
              cleanup => 'no',
