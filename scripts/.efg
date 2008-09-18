@@ -6,10 +6,15 @@ echo "Setting up the Ensembl Function Genomics environment..."
 ### ENV VARS ###
 
 #Prompt
-export PS1='efg@$PS1HOST>'
+export PS1="efg@\h> "
+
+# Group data
+export EFG_GROUP='eFG'                          #EDIT
+export EFG_LOCATION='Hinxton, Cambridge'        #EDIT
+export EFG_CONTACT='your@email.ac.uk'           #EDIT
 
 #Code/Data Directories
-export SRC=$HOME/src                                #Root source code directory. EDIT
+export SRC=$HOME/src                            #Root source code directory. EDIT
 export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
 export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
 export EFG_DATA=/lustre/work1/ensembl/nj1/efg   #Data directory. EDIT
