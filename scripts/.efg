@@ -1,5 +1,8 @@
 #!/usr/local/bin/bash
 
+#Source in some handy functions
+. ~/env/funcs.sh
+
 echo "Setting up the Ensembl Function Genomics environment..." 
 #add alias efg='. ~/path/to/your/ensembl-functgenomics/scripts/.efg' to your .bashrc
 
@@ -165,7 +168,7 @@ UseBranch(){
 
 	#Should really test for softlinks here to avoid deleting a directory
 
-	modules='ensembl ensembl-functgenomics'
+	modules=('ensembl ensembl-functgenomics')
 
 	cdir=$PWD
 
@@ -176,24 +179,23 @@ UseBranch(){
 		if [ -e $module ]
 		then
 
-			if [ -L $module ]
+  			if [ -L $module ]
 			then
 				rm -f $module		
 			else
-				echo "Failed: Module $module is not a symbolic link, please rectify"
-				return
-			fi
-
-	
-			if [ -d v$branch/$module ]
-			then
-				ln -s v$branch/$module $module
-			else
-				#could do cvs check out here
-				echo "You have not yet checked out v$branch/$module"
+				echo "Failed: Module $module is not a symbolic link, please rectify by moving to vBRANCH dir"
 				return
 			fi
 		fi
+	
+		if [ -d v$branch/$module ]
+	  	then
+	   		ln -s v$branch/$module $module
+	   	else
+	   		#could do cvs check out here
+	   		echo "You have not yet checked out v$branch/$module"
+	   		return
+	   	fi
 	done
 
 	echo "Now using v$branch for modules: $modules"
