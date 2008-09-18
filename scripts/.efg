@@ -1,8 +1,5 @@
 #!/usr/local/bin/bash
 
-#Source in some handy functions
-. ~/env/funcs.sh
-
 echo "Setting up the Ensembl Function Genomics environment..." 
 #add alias efg='. ~/path/to/your/ensembl-functgenomics/scripts/.efg' to your .bashrc
 
@@ -12,7 +9,7 @@ echo "Setting up the Ensembl Function Genomics environment..."
 export PS1='efg@$PS1HOST>'
 
 #Code/Data Directories
-export SRC=~/src                                #Root source code directory. EDIT
+export SRC=$HOME/src                                #Root source code directory. EDIT
 export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
 export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
 export EFG_DATA=/lustre/work1/ensembl/nj1/efg   #Data directory. EDIT
@@ -54,6 +51,8 @@ export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q 
 #should check for input and output dirs here and create with a question
 #would need to sed file to set permanently?
 
+#Source in some handy functions
+. $EFG_SRC/scripts/funcs.sh
 
 ### ALIASES ###
 #single quotes enable dynamic updating of commands
