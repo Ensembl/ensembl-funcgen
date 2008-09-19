@@ -151,7 +151,7 @@ sub _columns {
 	#Need to dynamically add strand dependant on whether feature is stranded?rf.seq_region_strand
 	#May need to add rf.seq_region_id  if we want to create Collections
 	#Hve also left out window, as we don't need to know this.
-	warn "columns: probe_extend  $_probe_extend rfs $_result_feature_set";
+	#warn "columns: probe_extend  $_probe_extend rfs $_result_feature_set";
 
 	return $_result_feature_set ? qw(rf.seq_region_start rf.seq_region_end rf.seq_region_strand rf.score rf.seq_region_id)
 	  : @result_columns;
@@ -174,7 +174,7 @@ sub _columns {
 sub _default_where_clause{
   my $self = shift;
 
-  warn "where: probe_extend  $_probe_extend rfs $_result_feature_set";
+  #warn "where: probe_extend  $_probe_extend rfs $_result_feature_set";
 
   return 'r.probe_id = p.probe_id' if $_probe_extend && ! $_result_feature_set;
 
@@ -499,7 +499,7 @@ sub fetch_all_by_Slice_ResultSet{
 
   if($_result_feature_set){
 	
-	warn "IS RESULT FEATURE SET";
+	#warn "IS RESULT FEATURE SET";
 
 	if($_probe_extend){
 	  throw("Cannot retrieve Probe information with a result_feature_set query, try using ???");
@@ -525,7 +525,7 @@ sub fetch_all_by_Slice_ResultSet{
 		}
 	  }
 
-	  warn "Using window size $window_size";
+	  #warn "Using window size $window_size";
 
 	}
 	else{
@@ -557,7 +557,7 @@ sub fetch_all_by_Slice_ResultSet{
 
 
   #This is the old method from ResultSetAdaptor
-  warn "using old method";
+  #warn "using old method";
 
 
   if($rset->table_name eq 'channel'){
@@ -666,11 +666,11 @@ sub fetch_all_by_Slice_ResultSet{
  #This join between sr and pf is causing the slow down.  Need to select right join for this.
   #just do two separate queries for now.
 
-  $sql = "SELECT seq_region_id from seq_region where core_seq_region_id=".$slice->get_seq_region_id().
-	" AND schema_build='".$self->db->_get_schema_build($slice->adaptor->db())."'";
+  #$sql = "SELECT seq_region_id from seq_region where core_seq_region_id=".$slice->get_seq_region_id().
+  #	" AND schema_build='".$self->db->_get_schema_build($slice->adaptor->db())."'";
 
-   my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-
+  #my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+  my $seq_region_id = $self->get_seq_region_id_by_Slice($slice);
 
 
 
@@ -708,8 +708,6 @@ sub fetch_all_by_Slice_ResultSet{
   #would this group correctly on NULL values if biol rep not set for a chip?
   #This would require an extra join too. 
 
-  #warn $sql."\n";
-  
 
   $sth = $self->prepare($sql);
   $sth->execute();
