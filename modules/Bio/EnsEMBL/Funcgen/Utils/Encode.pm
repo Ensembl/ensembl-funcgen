@@ -45,7 +45,7 @@ use Data::Dumper;
 
   Arg [1]     : Bio::EnsEMBL::DBSQL::DBAdaptor
   Description : fetch encode region coordinates from core db
-  Returns     : reference to hash with Encode region names as keys
+  Returns     : reference to list of Bio::EnsEMBL::MiscFeatures Encode region slices
   Exceptions  : Throws if no Bio::EnsEMBL::DBSQL::DBAdaptor defined
   Example     : get_encode_regions($dnadb);
 
@@ -60,25 +60,28 @@ sub get_encode_regions {
 
     my $sa = $db->get_SliceAdaptor();
     my $tls = $sa->fetch_all('toplevel');
-    #print Dumper $tls;
+    #map { print Dumper $_->name } @$tls;
 
     my $mfa = $db->get_MiscFeatureAdaptor();
 
     my @encode_regions;
-    map { push @encode_regions,
-          @{$mfa->fetch_all_by_Slice_and_set_code($_, 'encode')} } @$tls;
-    #print Dumper @encode_regions;
+    map { 
+        push @encode_regions, @{$mfa->fetch_all_by_Slice_and_set_code($_, 'encode')};
+    } @$tls;
 
-    my %encode_regions;
-    map { $encode_regions{$_->display_id} = sprintf
-              ("%s:%s:%s:%d:%d:%d",
-               $_->slice->coord_system_name, 
-               $_->slice->coord_system()->version(),
-               $_->slice->seq_region_name,
-               $_->start, $_->end, $_->strand);
-      } @encode_regions;
-    
-    return \%encode_regions;
+    return \@encode_regions;
+
+
+    #my %encode_regions;
+    #map { $encode_regions{$_->display_id} = sprintf
+    #          ("%s:%s:%s:%d:%d:%d",
+    #           $_->slice->coord_system_name, 
+    #           $_->slice->coord_system()->version(),
+    #           $_->slice->seq_region_name,
+    #           $_->start, $_->end, $_->strand);
+    #  } @encode_regions;
+    #
+    #return \%encode_regions;
 
 }
 
