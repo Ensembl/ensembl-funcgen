@@ -267,8 +267,17 @@ sub build_seq_region_cache{
 }
 
 
+
+#Need to separate these into by slice and by cs?
+#We could just use an old cs/schema_build to grab the correct slice based on the name
+#however we want to at least warn that the db needs updating
+#The problem is that we want to detect whether the seq_region_id is present for _pre_store
+#but automatically use a comparable seq_region for the normal fetch_methods.
+
+#So we need to split or add $?
+
 sub get_seq_region_id_by_Slice{
-  my ($self, $slice, $fg_cs) = @_;
+  my ($self, $slice, $fg_cs, $test_present) = @_;
 
   if(! ($slice && ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
 	throw('You must provide a valid Bio::EnsEMBL::Slice');
@@ -277,6 +286,7 @@ sub get_seq_region_id_by_Slice{
   my ($core_sr_id);
 
 
+  #Slice should always have an adaptor, no?
   if( $slice->adaptor() ) {
 	$core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
   } 
@@ -297,13 +307,16 @@ sub get_seq_region_id_by_Slice{
   if (exists $self->{'seq_region_cache'}{$core_sr_id}){
 	$fg_sr_id = $self->{'seq_region_cache'}{$core_sr_id};
   }
-  
+
+
 
   if(! $fg_sr_id && ref($fg_cs)){
+	#This is used to store new seq_region info along side previous stored seq_regions of the same version
 
 	if( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')){
 	  throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
 	}
+
 
 	my $sql = 'SELECT seq_region_id from seq_region where coord_system_id='.$fg_cs->dbID().
 	  ' and name="'.$slice->seq_region_name.'"';
@@ -321,6 +334,34 @@ sub get_seq_region_id_by_Slice{
 											  $fg_sr_id => $core_sr_id
 											 )};
 	
+  }
+  elsif(! $fg_sr_id && ! $test_present){
+	#This generally happens when using a new core db with a efg db that hasn't been updated
+	#Default to name match or throw if not present in DB
+
+	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
+	my $core_cs = $slice->coord_system;
+	
+	#This is basically avoiding the mapping of core to efg seq_region_ids 
+	#via schema_build(of the new core db) as we are matching directly to the seq_name
+
+	my $sql = 'SELECT distinct(seq_region_id) from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and sr.name="'.$slice->seq_region_name.'" and cs.name="'.$core_cs->name.'" and cs.version="'.$core_cs->version.'"';
+
+	warn $sql;
+
+	($fg_sr_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+
+	warn "srid is $fg_sr_id";
+
+	if(! $fg_sr_id){
+	  throw('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
+			"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
+
+	}
+
+
+	warn('Defaulting to previously store seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
+	  "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
   }
 
   return $fg_sr_id;
@@ -446,7 +487,8 @@ sub _pre_store {
   $self->build_seq_region_cache($slice);#, $fg_cs);
 
   #Now need to check whether seq_region is already stored
-  my $seq_region_id = $self->get_seq_region_id_by_Slice($slice);
+  #1 is test present flag
+  my $seq_region_id = $self->get_seq_region_id_by_Slice($slice, undef, 1);
 
 
   if(! $seq_region_id){
