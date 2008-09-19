@@ -729,7 +729,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe) = @_;
   
 
-  warn "Using ResultFeatureAdaptor";
+  #warn "Using ResultFeatureAdaptor";
 
   return $self->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $rset, $ec_status, $with_probe);
 

@@ -346,12 +346,7 @@ sub get_seq_region_id_by_Slice{
 	#via schema_build(of the new core db) as we are matching directly to the seq_name
 
 	my $sql = 'SELECT distinct(seq_region_id) from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and sr.name="'.$slice->seq_region_name.'" and cs.name="'.$core_cs->name.'" and cs.version="'.$core_cs->version.'"';
-
-	warn $sql;
-
 	($fg_sr_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-
-	warn "srid is $fg_sr_id";
 
 	if(! $fg_sr_id){
 	  throw('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
@@ -359,10 +354,10 @@ sub get_seq_region_id_by_Slice{
 
 	}
 
-
-	warn('Defaulting to previously store seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
+	warning('Defaulting to previously store seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
 	  "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
   }
+
 
   return $fg_sr_id;
 }
