@@ -273,9 +273,6 @@ sub update_meta_coord{
   my ($self, @table_names) = @_;
   
   
-  warn 'Skipping meta coord as option always runs';
-  return;
-  
   if($self->{'skip_meta_coord'}){
 	$self->log("Skipping meta_coord update\n");
 	return;
