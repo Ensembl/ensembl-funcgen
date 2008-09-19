@@ -247,9 +247,6 @@ sub update_meta_coord{
   }
 
 
-  my $sql = 'UPDATE meta set meta_value=48 where meta_key="schema_version"';
-  $self->db->dbc->db_handle->do($sql);
-  
   #set default table_name
   if(! @table_names || scalar(@table_names) == 0){
 
