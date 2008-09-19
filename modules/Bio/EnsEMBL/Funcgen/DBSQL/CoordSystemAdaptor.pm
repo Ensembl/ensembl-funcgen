@@ -1258,7 +1258,7 @@ sub validate_and_store_coord_system{
 	
 	if($@){
 	  warn "$@\nYou do not have permisson to store the CoordSystem for schema_build $sbuild\n".
-		"Using comparable CoordSystem:\t".$fg_cs->name.':'.$fg_cs->version;
+		"Using comparable CoordSystem:\t".$fg_cs->name.':'.$fg_cs->version."\n";
 	}
   }
   
