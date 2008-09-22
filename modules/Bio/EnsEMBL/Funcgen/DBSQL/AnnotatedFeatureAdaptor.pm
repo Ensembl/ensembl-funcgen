@@ -82,7 +82,7 @@ sub fetch_all_by_Slice_Experiment {
   
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
   
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
 =head2 fetch_all_by_Slice_FeatureSet
@@ -101,22 +101,17 @@ sub fetch_all_by_Slice_Experiment {
 =cut
 
 sub fetch_all_by_Slice_FeatureSet {
-  my ($self, $slice, $fset, $logic_name) = @_;
+  my ($self, $slice, $fset) = @_;
 	
 
   if (! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
     throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet");
   }
-  
-
-  #throw("Need to write DataSet and ResultSet to track back to experiment");
-  
-  
+    
   my $constraint = qq( af.feature_set_id ='$fset->dbID()' );
   
-  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
   
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
 
