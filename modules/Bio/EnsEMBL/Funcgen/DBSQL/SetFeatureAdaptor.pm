@@ -166,6 +166,7 @@ sub fetch_all_by_FeatureSets {
 
   Arg [1]    : Bio::EnsEMBL::Slice
   Arg [2]    : Array of Bio::EnsEMBL::FeatureSet objects
+  Arg [3]    : optional - analysis.logic_name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $ofa->fetch_by_Slice_FeatureSets($slice, @fsets);
   Description: Retrieves a list of features on a given slice, specific for a given list of FeatureSets.
@@ -177,14 +178,14 @@ sub fetch_all_by_FeatureSets {
 =cut
 
 sub fetch_all_by_Slice_FeatureSets {
-  my ($self, $slice, @fsets) = @_;
+  my ($self, $slice, $fsets, $logic_name) = @_;
 	
   my @fs_ids;
 
 
-  throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@fsets) == 0;
+  throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@{$fsets}) == 0;
 
-  foreach my $fset (@fsets) {
+  foreach my $fset (@{$fsets}) {
 	throw('Not a FeatureSet object') 
 	  if ! ($fset && ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"));
 	push (@fs_ids, $fset->dbID());
@@ -197,7 +198,7 @@ sub fetch_all_by_Slice_FeatureSets {
   $constraint .= (scalar(@fs_ids) >1) ? "IN ($fs_ids)" : '='.$fs_ids[0];
 
   #could have individual logic_names for each annotated feature here?
-  #$constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
+  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
