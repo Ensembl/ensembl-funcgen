@@ -16,9 +16,12 @@ create_input_ids.pl OPTIONS
     -user USER        user name
     -pass PASSWORD    password
     -dbname DBNAME    database name
-    -encode           uses encode regions as input_ids
+    -slice            select slice as input id type
+    -encode           uses encode regions as input_ids (w/ -slice)
+    -toplevel         uses all toplevel slices as input_ids (w/ -slice)
+    -array            select array as input id type
     -file             uses files in given directory (-dir) as input_ids
-    -dir dir          directory to read infiles from
+    -dir dir          directory to read infiles from (w/ -file)
     -exp_regex REGEX  regular expression to select certain experiments
                       (default: fetch all available if omitted)
 
