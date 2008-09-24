@@ -49,7 +49,7 @@ use Data::Dumper;
 use Getopt::Long;
 
 my ($pass,$port,$host,$user,$dbname,$species,$data_version,
-    $exp_regex,$exp_suffix,$slice,$encode,$toplevel,$file,$dir,
+    $exp_regex,$exp_suffix,$slice,$encode,$toplevel,$array,$file,$dir,
 	$help,$man,$debug, $submit_type);
 
 $host = $ENV{EFG_HOST};
@@ -78,6 +78,8 @@ GetOptions (
             'slice'            => \$slice,
             'encode'           => \$encode,
             'toplevel'         => \$toplevel,
+
+            'array'            => \$array,
 
             'file'             => \$file,
             'dir=s'            => \$dir,
@@ -205,6 +207,40 @@ if ($slice) {
             if ($@);
     }
 
+
+} elsif ($array) {
+
+    $submit_type='Array';
+
+    # get analysis_id of submit_type
+    my $analysis_id = &get_analysis_id($submit_type);
+
+    # Get all experiments
+    my $ea = $db->get_ExperimentAdaptor();
+    my $exp = $ea->fetch_all();
+
+    my @input_ids = ();
+
+    foreach my $e (@$exp) {
+        
+        next if (defined $exp_regex && $e->name !~ m/$exp_regex/);
+        
+        #warn $e->name;
+        push ( @input_ids, join(':', $e->name, "ARRAY" ) );
+
+    }
+
+    foreach my $input_id (@input_ids) {
+        my $sql = "insert into input_id_analysis (input_id,analysis_id,input_id_type)".
+            " values ('${input_id}',${analysis_id},'${submit_type}');";
+        #warn($sql);
+        eval {
+            $pdb->dbc->do($sql);
+        };
+        throw("Couldn't store input_id '$input_id'. Most likely it has already been ".
+              "stored. Drop your input_ids with CleanInputIds and rerun CreateInputIds.")
+            if ($@);
+    }
 
 } elsif ($file) {
 
