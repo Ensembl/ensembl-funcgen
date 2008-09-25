@@ -46,8 +46,8 @@ export PEAK_METHOD='Nessie'                     #EDIT if required e.g. TileMap, 
 #could do with a quick method to change these between ens-livemirror, ensembldb/ensdb-archive?
 #R config
 export R_LIBS=${R_LIBS:=$SRC/R-modules}
-export R_PATH=/software/bin/R
-export R_FARM_PATH=/software/R-2.4.0/bin/R
+export R_PATH=/software/bin/R-2.7.1-dev
+export R_FARM_PATH=/software/bin/R-2.7.1
 export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q bigmem"
 
 
