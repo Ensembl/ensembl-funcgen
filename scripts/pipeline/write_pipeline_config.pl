@@ -54,7 +54,7 @@ use Data::Dumper;
 use Getopt::Long;
 
 my ($host,$port,$user,$pass,$dbname,$species,$assembly,$help,
-    $module,$modules,$file,$slice,$regexp,$overwrite);
+    $module,$modules,$file,$slice,$array,$regexp,$overwrite);
 
 ### sone defaults for BatchQueue conf
 my $queue = 'normal';
@@ -65,6 +65,7 @@ GetOptions
 	 'module=s@'    => \$modules, 
 	 'file'         => \$file,
 	 'slice'        => \$slice,
+	 'array'        => \$array,
 	 'regexp=s'     => \$regexp, 
 	 'overwrite'    => \$overwrite,
 	 
@@ -91,6 +92,8 @@ if ($slice) {
     $Submit = 'Slice';
 } elsif ($file) {
     $Submit = 'File';
+} elsif ($array) {
+    $Submit = 'Array';
 } else {
     throw("Need to pass a Submit type (either -file or -slice).");
 }
