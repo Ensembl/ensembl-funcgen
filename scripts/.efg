@@ -8,8 +8,13 @@ echo "Setting up the Ensembl Function Genomics environment..."
 #Prompt
 export PS1='efg@$PS1HOST>'
 
+# Group data
+export EFG_GROUP='eFG'
+export EFG_LOCATION='Hinxton, Cambridge'
+export EFG_CONTACT='graef@ebi.ac.uk'
+
 #Code/Data Directories
-export SRC=~/src                                #Root source code directory. EDIT
+export SRC=$HOME/src                                #Root source code directory. EDIT
 export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
 export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
 export EFG_DATA=/lustre/work1/ensembl/nj1/efg   #Data directory. EDIT
@@ -24,7 +29,7 @@ export EFG_READ_USER="ensro"                        #EDIT
 export EFG_HOST='ens-genomics1'                     #EDIT
 export EFG_PORT=3306                                #EDIT
 export MYSQL_ARGS="-h${EFG_HOST} -P${EFG_PORT}"         
-#pass always supplied on cmd line
+#pass always supplied on cmd line e.g. mysqlw -p your password
 
 #Your ensembl core DB connection params, read only
 export CORE_USER='ensro'                        #EDIT if required e.g. anonymous
@@ -41,8 +46,8 @@ export PEAK_METHOD='Nessie'                     #EDIT if required e.g. TileMap, 
 #could do with a quick method to change these between ens-livemirror, ensembldb/ensdb-archive?
 #R config
 export R_LIBS=${R_LIBS:=$SRC/R-modules}
-export R_PATH=/software/bin/R
-export R_FARM_PATH=/software/R-2.4.0/bin/R
+export R_PATH=/software/bin/R-2.7.1-dev
+export R_FARM_PATH=/software/bin/R-2.7.1
 export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q bigmem"
 
 
@@ -51,6 +56,8 @@ export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q 
 #should check for input and output dirs here and create with a question
 #would need to sed file to set permanently?
 
+#Source in some handy functions
+. $EFG_SRC/scripts/funcs.sh
 
 ### ALIASES ###
 #single quotes enable dynamic updating of commands
@@ -148,6 +155,56 @@ RunUsage(){
 	echo "Usage: run.sh 'password' [result files]"
 	echo "       ARG[0]: 'password' - the write password to the import db specified in run.sh"
 	echo "       ARG[@]: optional - list of result files to use during import, currently only works for Sanger import"
+
+}
+
+
+UseBranch(){
+	branch=$1
+
+	if [[ ! $branch ]]
+    then
+		echo "Need to define and API version to create softlinks for"
+		echo "UseBranch 50"
+	return
+    fi 
+
+
+	#Should really test for softlinks here to avoid deleting a directory
+
+	modules=('ensembl ensembl-functgenomics')
+
+	cdir=$PWD
+
+	cd $SRC
+
+	for module in $modules
+	do
+		if [ -e $module ]
+		then
+
+  			if [ -L $module ]
+			then
+				rm -f $module		
+			else
+				echo "Failed: Module $module is not a symbolic link, please rectify by moving to vBRANCH dir"
+				return
+			fi
+		fi
+	
+		if [ -d v$branch/$module ]
+	  	then
+	   		ln -s v$branch/$module $module
+	   	else
+	   		#could do cvs check out here
+	   		echo "You have not yet checked out v$branch/$module"
+	   		return
+	   	fi
+	done
+
+	echo "Now using v$branch for modules: $modules"
+
+	cd $cdir
 
 }
 
