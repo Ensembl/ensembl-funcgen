@@ -386,7 +386,7 @@ CheckPipelineSanity(){
 
 test_eFG_Runnable () {
 
-    if [ $# -lt 5 ]; then
+    if [ $# -lt 4 ]; then
         echo "Usage: test_eFG_Runnable <password> <module> <logic_name> <input_id>"
         return
     fi
