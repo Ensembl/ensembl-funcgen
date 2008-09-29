@@ -362,7 +362,7 @@ CleanInputIds(){
 	echo "delete from input_id_analysis" | mysqlw -p$PASS $PDBNAME
 
 	echo "removing links from infiles directory ..."
-	for file in $ENV{ANALYSIS_WORK_DIR}/$ENV{EFG_DBNAME}/infiles/*; do
+	for file in $ENV{ANALYSIS_WORK_DIR}/infiles/*; do
 		if [ -L $file ]; then 
 			rm -f $file
 		fi
