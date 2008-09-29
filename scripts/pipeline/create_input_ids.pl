@@ -275,8 +275,8 @@ if ($slice) {
 
     #print Dumper @files;
 
-    unless (-d "$ENV{ANALYSIS_WORK_DIR}/$ENV{EFG_DBNAME}/infiles") {
-        system("mkdir -p $ENV{ANALYSIS_WORK_DIR}/$ENV{EFG_DBNAME}/infiles");
+    unless (-d "$ENV{ANALYSIS_WORK_DIR}/infiles") {
+        system("mkdir -p $ENV{ANALYSIS_WORK_DIR}/infiles");
     }
 
     foreach my $f (sort @files) {
@@ -305,8 +305,8 @@ if ($slice) {
 
         # need to generate links in a workdir infiles directory to know where the 
         # files are that will be processed  
-        system("ln -s $dir/$f  $ENV{ANALYSIS_WORK_DIR}/$ENV{EFG_DBNAME}/infiles/$input_id") == 0
-            or throw("Can't link 'ln -s $dir/$f  $ENV{ANALYSIS_WORK_DIR}/$ENV{EFG_DBNAME}/infiles/$input_id'");
+        system("ln -s $dir/$f  $ENV{ANALYSIS_WORK_DIR}/infiles/$input_id") == 0
+            or throw("Can't link 'ln -s $dir/$f  $ENV{ANALYSIS_WORK_DIR}/infiles/$input_id'");
 
         my $sql = "insert into input_id_analysis (input_id,analysis_id,input_id_type)".
             " values ('${input_id}',${analysis_id},'${submit_type}');";
