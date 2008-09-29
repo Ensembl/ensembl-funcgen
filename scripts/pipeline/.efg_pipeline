@@ -340,10 +340,10 @@ CreateInputIds(){
     if [ $? == 0 ]; then 
         echo "Ready for Analysis"
     else 
-        echo "An error occured while inserting input_ids. Either your analysis pipeline isn't"
-        echo "configured properly (see WritePipelineConfig) or you are trying to import input"
-        echo "ids that have already been imported (use CleanInputIds to drop input_ids and"
-        echo "rerun CreateInputIds)."
+        echo "An error occured while inserting input_ids. You may double check your"
+        echo "analysis pipeline isn't configured properly (see WritePipelineConfig)"
+        echo "or you are trying to import input ids that have already been imported"
+        echo "(use CleanInputIds to drop input_ids and rerun CreateInputIds)."
     fi
     
 }
@@ -362,7 +362,7 @@ CleanInputIds(){
 	echo "delete from input_id_analysis" | mysqlw -p$PASS $PDBNAME
 
 	echo "removing links from infiles directory ..."
-	for file in $ENV{ANALYSIS_WORK_DIR}/infiles/*; do
+	for file in ${ANALYSIS_WORK_DIR}/infiles/*; do
 		if [ -L $file ]; then 
 			rm -f $file
 		fi
@@ -465,6 +465,26 @@ RunAnalysis(){
 
 
     return;
+
+}
+
+ResetAnalysis() {
+
+    if [ $# -ne 2 ]; then
+        echo "Usage: ResetAnalysis <password> <LOGIC_NAME>"
+        return
+    fi
+
+    PASS=$1
+    shift
+
+    LOGIC_NAME=$1
+    shift
+
+    echo "Resetting retry_count for logic_name $LOGIC_NAME to 0"
+
+    echo "update job, analysis set retry_count=0 where analysis.analysis_id=job.analysis_id and logic_name = \"${LOGIC_NAME}\"" \
+        | mysqlw -p$PASS $PDBNAME;
 
 }
 
