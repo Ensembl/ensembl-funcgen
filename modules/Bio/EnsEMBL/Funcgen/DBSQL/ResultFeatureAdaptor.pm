@@ -482,11 +482,20 @@ sub window_sizes {
 sub fetch_all_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe, $display_size, $window_size, $constraint) = @_;
 
+
+  #Change this so this optionally takes hashref of all params.
+
+
   if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
   }
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+
+  if($rset->table_name eq 'channel'){
+	warn('Can only get ResultFeatures for an ExperimentalChip level ResultSet');
+	return;
+  }
 
 
   #change this rset call to a status call?
@@ -510,6 +519,8 @@ sub fetch_all_by_Slice_ResultSet{
 	my $bucket_size = ($slice->length)/$display_size;
 	my @window_sizes = $self->window_sizes;
 	
+	warn "Optimum window_size is $bucket_size";
+
 	if(! defined $window_size){
 	  	  
 	  #default is largest;
@@ -519,8 +530,8 @@ sub fetch_all_by_Slice_ResultSet{
 	  for (my $i = 0; $i <= $#window_sizes; $i++) {
 		
 		if ($bucket_size < $window_sizes[$i]){
-		  warn "Found better window size";
 		  $window_size = $window_sizes[$i-1];
+		  warn "Found better window size $window_size";
 		  last;    
 		}
 	  }
@@ -538,6 +549,8 @@ sub fetch_all_by_Slice_ResultSet{
 	
 	$constraint .= ' AND ' if defined $constraint;
 	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='.$window_size;
+
+	warn "constraint is $constraint";
 
 	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
 
@@ -560,11 +573,7 @@ sub fetch_all_by_Slice_ResultSet{
   #warn "using old method";
 
 
-  if($rset->table_name eq 'channel'){
-	warn('Can only get ResultFeatures for an ExperimentalChip level ResultSet');
-	return;
-  }
-
+ 
   my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
   my ($biol_rep, $score, $start, $end, $strand, $cc_id, $old_start, $old_end, $probe_field, $old_strand);
 
@@ -670,6 +679,12 @@ sub fetch_all_by_Slice_ResultSet{
   #	" AND schema_build='".$self->db->_get_schema_build($slice->adaptor->db())."'";
 
   #my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+
+
+  
+  #This by passes fetch_all_by_Slice_constraint
+  #So we need to build the seq_region_cache here explicitly.
+  $self->build_seq_region_cache($slice);
   my $seq_region_id = $self->get_seq_region_id_by_Slice($slice);
 
 
