@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.5 2008-07-25 13:11:19 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.6 2008-09-30 10:51:22 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
@@ -187,7 +187,7 @@ sub store_window_bins_by_Slice_ResultSet {
   
   #Calulate sensible slice length based on window sizes
   my @wsizes = sort {$a <=> $b} @$window_sizes;
-
+  
   #Current limit is 500KB, so let's start there
   #we should really start with a nice round number
   #so 
@@ -212,6 +212,7 @@ sub store_window_bins_by_Slice_ResultSet {
 		$not_divisible = 1;
 	  }
 	  else{
+		#No need to listref here?
 		$workable_chunks{$wsize}{$chunk_length} = [];
 	  }
 	  
@@ -361,8 +362,10 @@ sub store_window_bins_by_Slice_ResultSet {
 	warn "Need to write iterative sub for set definition";
 
   }
-	else{
+  else{
 	warn "Found workable slice length $chunk_length for all window sizes";
+	@{$chunk_windows{$chunk_length}} = keys(%workable_chunks);
+	
   }
 
   #We need to subset the windows into workable sets
@@ -380,10 +383,11 @@ sub store_window_bins_by_Slice_ResultSet {
 
   my (%counts, $store_natural);
   $store_natural = 1 if(grep/0/, @$window_sizes);
- 
+
+  
   foreach my $chunk_length(keys %chunk_windows){
 
-	#warn "Processing windows ".join(', ', @{$chunk_windows{$chunk_length}})." with chunk length $chunk_length";
+	warn "Processing windows ".join(', ', @{$chunk_windows{$chunk_length}})." with chunk length $chunk_length";
 
 	#Now walk through slice using slice length chunks and build all windows in each chunk
 	my $in_slice     = 1;
@@ -416,21 +420,18 @@ sub store_window_bins_by_Slice_ResultSet {
 
 	  $features = $this->fetch_all_by_Slice_ResultSet($chunk_slice, $rset);
 
-	  #	  warn "before inslice with $in_slice";
+	  #warn "Got ".scalar(@$features);
 
 	  #Shift chunk coords
 	  if($in_slice){
 		$start_adj += $chunk_length;
 		$end_adj   += $chunk_length;
-
-		#warn "adjusts $start_adj $end_adj";
-
 	  }
 
 	
 	  next if scalar(@$features) == 0;
 
-	  #-b¤warn "\nFound ".scalar(@$features).' features';-A
+	  #warn "\nFound ".scalar(@$features).' features';
 
 	  
 	  #This should return a hash of window size => bin array pairs
@@ -442,8 +443,9 @@ sub store_window_bins_by_Slice_ResultSet {
 				   -features =>
 				   $features,
 				  );
-	  
-	
+
+
+
 
 	  #We need to handle strandedness of slice!?	  
 	  my ($chunk_start, $chunk_end, $bin_score);
@@ -451,40 +453,48 @@ sub store_window_bins_by_Slice_ResultSet {
 	  
 
 	  foreach my $wsize(keys %{$bins}){
-		
+		#warn "Got ".scalar(@{$bins->{$wsize}})." bins for window size $wsize";
 
 		#We need to place feature back on original full length slice to store
 		my $bin_start = $chunk_slice->start;
 		my $bin_end   = $chunk_slice->start;
 		$counts{$wsize} ||= 0;
+	
+
 		
+	
 		foreach my $bin_index(0..$#{$bins->{$wsize}}){
 		  $bin_score = $bins->{$wsize}->[$bin_index];
-		  next if ! $bin_score;#i.e. is 0
+
+		  
+		  #next if ! $bin_score;#No we're no inc'ing the start ends for bins with no scores
 
 		  $bin_end += $wsize;
-		  $counts{$wsize}++;
-	
-		  
-		  #This is a little backwards as we are generating the object to store it
-		  #If we are aiming for speed the maybe we could also commodotise the store method
-		  #store by args or hash? store_fast?
-		  #Speed not essential for storing
-		  
-		  #Note: list ref passed
 
-		  #warn "storing $bin_start, $bin_end, $strand, $bin_score, undef, $rset->dbID, $wsize, $slice";
 
-		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-		  			 (
+		  if($bin_score){
+			$counts{$wsize}++;	
+			  
+			#This is a little backwards as we are generating the object to store it
+			#If we are aiming for speed the maybe we could also commodotise the store method
+			#store by args or hash? store_fast?
+			#Speed not essential for storing
+			
+			#Note: list ref passed
+			
+			#warn "storing $bin_start, $bin_end, $strand, $bin_score, undef, $rset->dbID, $wsize, $slice";
+			
+			$this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+						 (
 		  			  $bin_start, $bin_end, $strand, $bin_score, undef,#absent probe info
-		  			  $rset->dbID, $wsize, $slice
-					  ));
+						  $rset->dbID, $wsize, $slice
+						 ));
+		  }
 		  
 		  $bin_start += $wsize;
-		  
 		}
 	  }
+
 
 
 	  #Store all normal features in result_feature
@@ -492,9 +502,10 @@ sub store_window_bins_by_Slice_ResultSet {
 		#warn "Storing natural resolution";
 
 		foreach my $feature(@$features){
-		  $counts{$0}++;
+		  $counts{0}++;
 		  
 		  #warn "storing ".join(', ',	($feature->start, $feature->end, $feature->strand, $feature->score, 'undef', $rset->dbID, 0, $slice));
+
 
 		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 					   (
@@ -503,10 +514,12 @@ sub store_window_bins_by_Slice_ResultSet {
 						)); 
 		}	
 	  }
-
-
+	  
+	  
 	  
 	}
+
+
 
 	#Turn off storing of natural resolution for next chunk length sets
 	$store_natural = 0;
@@ -518,9 +531,12 @@ sub store_window_bins_by_Slice_ResultSet {
 
   #print some counts here
 
+
   foreach my $wsize(keys %counts){
-	warn "Stored ".$counts{$wsize}." for window size $wsize for ".$slice->name;
+	warn "Stored ".$counts{$wsize}." for window size $wsize for ".$slice->name."\n";
   }
+
+  #Return this counts hash so we can print/log from the caller, hence we don't print in here.
   
   return;
 }
@@ -662,8 +678,11 @@ sub _bin_features_by_window_sizes{
 
 	  #Which bins do the start and end lie in for this feature?
 	  #Already dealing with local starts, so no slice subtraction
+
+
 	  my $start_bin =  int(($feature->start ) / $wsize);
 	  my $end_bin   =  int(($feature->end) / $wsize );
+	
 	
 	  #my $start_bin =
 	  #	int( ( $feature->[FEATURE_START] - $slice_start )/$bin_length );
@@ -845,7 +864,8 @@ sub _bin_features_by_window_sizes{
 	  }
 	
 	
-	}				
+	}
+				
   }	## end foreach my $feature ( @{$features...
 
 
@@ -915,7 +935,7 @@ sub validate_bin_method{
 
 
   
-  warn "Still can't access VALID_BINNING_METHODS";
+  #warn "Still can't access VALID_BINNING_METHODS";
 
   #foreach my $method_name(keys %{$class::VALID_BINNING_METHODS}){
 #	warn "valid method is $method name";
