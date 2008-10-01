@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.6 2008-09-30 10:51:22 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.7 2008-10-01 10:13:45 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
@@ -144,7 +144,7 @@ sub store_window_bins_by_Slice_ResultSet {
 
 	if($this->can('window_sizes')){
 	  @{$window_sizes} = $this->window_sizes;
-	  warn 'No window sizes provided running with defaults: '.join(', ', @$window_sizes);
+	  print 'No window sizes provided running with defaults: '.join(' ', @$window_sizes)."\n";
 	}
 	else{
 	  throw('No default window sizes available. Must supply at least one window size as an arrayref');
@@ -228,7 +228,7 @@ sub store_window_bins_by_Slice_ResultSet {
   
   if($chunk_length == 0){
 	
-	warn "Could not find workable slice length for all window sizes, attempting to subset";
+	print "Could not find chunk length for all window sizes, attempting to subset windows using alternate slice length\n";
 	
 	#my %sorted_windows
 	
@@ -295,14 +295,11 @@ sub store_window_bins_by_Slice_ResultSet {
 	my @largest_windows = keys %{$chunk_sets{$largest_chunk}};
 	@{$chunk_windows{$largest_chunk}} = @largest_windows;
 
-	warn "largest chunk $largest_chunk with size $largest_size contains windows @largest_windows";
+	print "Largest chunk $largest_chunk($largest_size) contains windows: @largest_windows\n";
 
 	my %remaining_windows = map {$_ => {}} @wsizes;
 	delete $remaining_windows{'0'};#get rid of natural resolution as this will always work
-	map { delete $remaining_windows{$_} } @largest_windows;
-
-	#warn "Remaning windows are:\n".Data::Dumper::Dumper(\%remaining_windows);
-	
+	map { delete $remaining_windows{$_} } @largest_windows;	
 	my $remaining_set_size = scalar(keys %remaining_windows);
 
 	#swapping to array here for practicality, would need to maintain hash if we need to iterate
@@ -311,7 +308,7 @@ sub store_window_bins_by_Slice_ResultSet {
 
 	#This could just be one window, but this will not be inthe co-occurence hash %chunk_sets
 	#Hence the normal approach will not work. and we just want to find a suitably large chunk for this one window.
-	  my $next_chunk;
+	my $next_chunk;
 
 	if(scalar(@rwindows) == 1){
 	  #we just want to find a suitably large chunk for this one window.
@@ -347,34 +344,26 @@ sub store_window_bins_by_Slice_ResultSet {
 
 	if($next_chunk){
 
-	  warn "Found next chunk length $next_chunk contain remaining windows:\t@rwindows";
+	  print "Found next chunk length $next_chunk contains remaining windows:\t@rwindows\n";
 
 	#Now we want to cycle through all the set lengths which could contain the ones not in the first
 	#so we need to
 	}
 	else{
-	  
+	  warn "Need to write iterative sub for set definition";
 	  throw('Could not find workable slice length for remaining windows: '.
 			join(', ', @rwindows));
 
 	}
-
-	warn "Need to write iterative sub for set definition";
-
   }
   else{
-	warn "Found workable slice length $chunk_length for all window sizes";
 	@{$chunk_windows{$chunk_length}} = keys(%workable_chunks);
-	
+   	print "Found workable chunk length($chunk_length) for all window sizes:\t".
+	  join(' ', @{$chunk_windows{$chunk_length}})."\n";
   }
-
-  #We need to subset the windows into workable sets
-  #so 
-
 
 
   #Not lightweight as we will be storing them
-
   # Temporarily set the collection to be lightweight??? #Why?
   #my $old_value = $this->_lightweight();
 
@@ -382,12 +371,24 @@ sub store_window_bins_by_Slice_ResultSet {
   #else                           { $this->_lightweight(1) }
 
   my (%counts, $store_natural);
-  $store_natural = 1 if(grep/0/, @$window_sizes);
+  $store_natural = 1 if(grep/^0/, @$window_sizes);
+
+  #Set natural res count to 0
+  $counts{0}=0;
+  
 
   
-  foreach my $chunk_length(keys %chunk_windows){
+ 
+  foreach my $chunk_length(sort keys %chunk_windows){
 
-	warn "Processing windows ".join(', ', @{$chunk_windows{$chunk_length}})." with chunk length $chunk_length";
+	print "Processing windows ".join(', ', @{$chunk_windows{$chunk_length}})." with chunk length $chunk_length\n";
+	
+	#Set window counts to 0
+	foreach my $window(@{$chunk_windows{$chunk_length}}){
+	  $counts{$window}=0;
+	}
+
+
 
 	#Now walk through slice using slice length chunks and build all windows in each chunk
 	my $in_slice     = 1;
@@ -403,7 +404,7 @@ sub store_window_bins_by_Slice_ResultSet {
 	while($in_slice){
 
 	  $start = $slice->start + $start_adj;
-	  $end   = $slice->start + $end_adj;
+	  $end   = $slice->start + $end_adj - 1;
 	  
 	  #Last chunk might not be the correct window length
 	  #Hence why we should do this on whole chromosomes
@@ -416,11 +417,9 @@ sub store_window_bins_by_Slice_ResultSet {
 	  
 
 	  $chunk_slice = $slice_adaptor->fetch_by_region($region, $seq_region_name, $start, $end, $strand);
-	  #warn "Processing slice ".$chunk_slice->name;
+	  warn "Processing slice ".$chunk_slice->name."\n";
 
 	  $features = $this->fetch_all_by_Slice_ResultSet($chunk_slice, $rset);
-
-	  #warn "Got ".scalar(@$features);
 
 	  #Shift chunk coords
 	  if($in_slice){
@@ -431,13 +430,11 @@ sub store_window_bins_by_Slice_ResultSet {
 	
 	  next if scalar(@$features) == 0;
 
-	  #warn "\nFound ".scalar(@$features).' features';
-
 	  
 	  #This should return a hash of window size => bin array pairs
 	  $bins = $this->_bin_features_by_window_sizes
 				  ( 
-				   -slice  => $slice,
+				   -slice  => $chunk_slice,
 				   -window_sizes  => $chunk_windows{$chunk_length},
 				   -method => $method,
 				   -features =>
@@ -445,24 +442,40 @@ sub store_window_bins_by_Slice_ResultSet {
 				  );
 
 
-
+	  my $bin_start = $chunk_slice->start;
+	  my $bin_end   = $chunk_slice->start;
 
 	  #We need to handle strandedness of slice!?	  
-	  my ($chunk_start, $chunk_end, $bin_score);
 	  
-	  
-
-	  foreach my $wsize(keys %{$bins}){
-		#warn "Got ".scalar(@{$bins->{$wsize}})." bins for window size $wsize";
-
-		#We need to place feature back on original full length slice to store
-		my $bin_start = $chunk_slice->start;
-		my $bin_end   = $chunk_slice->start;
-		$counts{$wsize} ||= 0;
-	
-
+	  #Store all normal features in result_feature
+	  if($store_natural){
 		
-	
+		foreach my $feature(@$features){
+		  $counts{0}++;
+		  
+		  #warn "storing ".join(', ',	($feature->start, $feature->end, $feature->strand, $feature->score, 'undef', $rset->dbID, 0, $slice));
+		  
+
+		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+					   (
+						($feature->start + $bin_start), 
+						($feature->end + $bin_end), 
+						$feature->strand, 
+						$feature->score, 
+						undef,#absent probe info
+						$rset->dbID, 
+						0, #window size
+						$slice
+					   )); 
+		}
+		print "Window size 0 (natural resolution) has ".scalar(@{$features})." feature bins\n";	
+	  }
+	  
+	  my ($chunk_start, $chunk_end, $bin_score);
+
+	  foreach my $wsize(sort keys %{$bins}){
+		my $count = 0;
+
 		foreach my $bin_index(0..$#{$bins->{$wsize}}){
 		  $bin_score = $bins->{$wsize}->[$bin_index];
 
@@ -470,11 +483,11 @@ sub store_window_bins_by_Slice_ResultSet {
 		  #next if ! $bin_score;#No we're no inc'ing the start ends for bins with no scores
 
 		  $bin_end += $wsize;
-
-
+	
 		  if($bin_score){
 			$counts{$wsize}++;	
-			  
+			$count++;
+
 			#This is a little backwards as we are generating the object to store it
 			#If we are aiming for speed the maybe we could also commodotise the store method
 			#store by args or hash? store_fast?
@@ -486,57 +499,41 @@ sub store_window_bins_by_Slice_ResultSet {
 			
 			$this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 						 (
-		  			  $bin_start, $bin_end, $strand, $bin_score, undef,#absent probe info
-						  $rset->dbID, $wsize, $slice
+						  $bin_start, 
+						  $bin_end, 
+						  $strand, 
+						  $bin_score, 
+						  undef,#absent probe info
+						  $rset->dbID, 
+						  $wsize, 
+						  $slice
 						 ));
 		  }
 		  
 		  $bin_start += $wsize;
 		}
+
+		print "Window size $wsize has ".scalar(@{$bins->{$wsize}})." bins, storing $count\n";
+		$counts{$wsize}+= $count;	
 	  }
-
-
-
-	  #Store all normal features in result_feature
-	  if($store_natural){
-		#warn "Storing natural resolution";
-
-		foreach my $feature(@$features){
-		  $counts{0}++;
-		  
-		  #warn "storing ".join(', ',	($feature->start, $feature->end, $feature->strand, $feature->score, 'undef', $rset->dbID, 0, $slice));
-
-
-		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-					   (
-						$feature->start, $feature->end, $feature->strand, $feature->score, undef,#absent probe info
-						$rset->dbID, 0, $slice
-						)); 
-		}	
-	  }
-	  
-	  
-	  
 	}
 
 
 
 	#Turn off storing of natural resolution for next chunk length sets
 	$store_natural = 0;
-
   }
   
 
   
 
   #print some counts here
-
-
+ 
   foreach my $wsize(keys %counts){
-	warn "Stored ".$counts{$wsize}." for window size $wsize for ".$slice->name."\n";
+	print "Stored ".$counts{$wsize}." for window size $wsize for ".$slice->name."\n";
   }
 
-  #Return this counts hash so we can print/log from the caller, hence we don't print in here.
+  #Return this counts hash so we can print/log from the caller, hence we don't print in here?
   
   return;
 }
@@ -683,6 +680,9 @@ sub _bin_features_by_window_sizes{
 	  my $start_bin =  int(($feature->start ) / $wsize);
 	  my $end_bin   =  int(($feature->end) / $wsize );
 	
+
+	  #Don't need slice start as we are dealing with local coords
+
 	
 	  #my $start_bin =
 	  #	int( ( $feature->[FEATURE_START] - $slice_start )/$bin_length );
