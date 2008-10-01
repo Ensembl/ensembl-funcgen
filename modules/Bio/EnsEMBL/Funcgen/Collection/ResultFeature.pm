@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.7 2008-10-01 10:13:45 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.8 2008-10-01 10:41:55 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
@@ -417,7 +417,7 @@ sub store_window_bins_by_Slice_ResultSet {
 	  
 
 	  $chunk_slice = $slice_adaptor->fetch_by_region($region, $seq_region_name, $start, $end, $strand);
-	  warn "Processing slice ".$chunk_slice->name."\n";
+	  print "Processing slice ".$chunk_slice->name."\n";
 
 	  $features = $this->fetch_all_by_Slice_ResultSet($chunk_slice, $rset);
 
