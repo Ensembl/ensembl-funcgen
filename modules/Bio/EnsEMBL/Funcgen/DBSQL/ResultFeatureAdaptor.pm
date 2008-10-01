@@ -519,7 +519,7 @@ sub fetch_all_by_Slice_ResultSet{
 	my $bucket_size = ($slice->length)/$display_size;
 	my @window_sizes = $self->window_sizes;
 	
-	warn "Optimum window_size is $bucket_size";
+	#warn "Optimum window_size is $bucket_size";
 
 	if(! defined $window_size){
 	  	  
@@ -531,7 +531,7 @@ sub fetch_all_by_Slice_ResultSet{
 		
 		if ($bucket_size < $window_sizes[$i]){
 		  $window_size = $window_sizes[$i-1];
-		  warn "Found better window size $window_size";
+		  #warn "Found better window size $window_size";
 		  last;    
 		}
 	  }
@@ -550,8 +550,7 @@ sub fetch_all_by_Slice_ResultSet{
 	$constraint .= ' AND ' if defined $constraint;
 	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='.$window_size;
 
-	warn "constraint is $constraint";
-
+	
 	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
 
 
