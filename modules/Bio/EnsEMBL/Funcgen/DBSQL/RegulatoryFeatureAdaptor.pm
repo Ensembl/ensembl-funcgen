@@ -87,7 +87,7 @@ sub _get_current_FeatureSet{
 sub fetch_by_stable_id {
   my ($self, $stable_id) = @_;
 
-  return $self->fetch_all_by_stable_id_FeatureSets($stable_id, [$self->_get_current_FeatureSet])->[0];
+  return $self->fetch_all_by_stable_id_FeatureSets($stable_id, $self->_get_current_FeatureSet)->[0];
 }
 
 =head2 fetch_all_by_stable_id_FeatureSets
@@ -126,6 +126,9 @@ sub fetch_all_by_stable_id_FeatureSets {
 		if(! (ref($_) && $_->isa('Bio::EnsEMBL::Funcgen::FeatureSet') && $_->dbID)){
 		  throw 'You must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet';
 		}} @fsets;
+
+
+
 		 
 	  if(scalar(@fsets) == 1){
 		$constraint .= ' and rf.feature_set_id='.$fsets[0]->dbID;
