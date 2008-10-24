@@ -107,6 +107,9 @@ sub fetch_by_stable_id {
 sub fetch_all_by_stable_id_FeatureSets {
   my ($self, $stable_id, @fsets) = @_;
 
+  #Standard implementation exposes logic name as a parameter
+  #But it will always be RegulatoryFeature/Build
+
   throw('Must provide a stable ID') if ! defined $stable_id;
   $stable_id =~ s/ENSR0*//;
 
