@@ -968,6 +968,12 @@ sub read_probe_data{
 		  #Changed th format an content of this to facilitate dbID nr fasta file generation and sequence validation
 		  
 		  $fasta .= ">".$data[$hpos{'PROBE_ID'}]."\t".$achip->design_id."\n".$data[$hpos{'PROBE_SEQUENCE'}]."\n";
+
+		  #Print fasta every 10000 lines
+		  if(! ($. % 10000)){
+			print $f_out $fasta;
+			$fasta = '';
+		  }
 		}
 
 
