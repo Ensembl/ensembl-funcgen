@@ -203,7 +203,6 @@ WritePipelineConfig (){
     SUBMIT=''
     case "$1" in
         'file'|'slice'|'array')
-            OVRWRT="-overwrite"
             SUBMIT=$1
             shift
             ;;
@@ -221,7 +220,7 @@ WritePipelineConfig (){
             ;;
     esac
 
-    write_pipeline_config.pl -module $MODULE -$SUBMIT $OVRWRT
+    write_pipeline_config.pl -module $MODULE -$SUBMIT $OVRWRT $*
     
 }
 
