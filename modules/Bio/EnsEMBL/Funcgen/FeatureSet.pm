@@ -294,7 +294,7 @@ sub get_Features_by_Slice{
 sub get_Features_by_FeatureType{
   my ($self, $type) = @_;
 
-  return $self->get_FeatureAdaptor->fetch_all_by_FeatureType_FeatureSets($type, $self);
+  return $self->get_FeatureAdaptor->fetch_all_by_FeatureType_FeatureSets($type, [$self]);
 }
 
 
