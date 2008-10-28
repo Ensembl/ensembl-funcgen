@@ -56,7 +56,9 @@ use vars qw(@ISA @EXPORT);
 
   Arg [1]    : Bio::EnsEMBL::Slice
   Arg [2]    : Bio::EnsEMBL::FeatureType
-  Arg [3]    : (optional) string - analysis logic name
+  Arg [3]    : (optional) hashref - params hash
+                                      associated => 1, #Also return feature which have the associated FeatureType
+                                      logic_name => 'analysis.logic_name'
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $ofa->fetch_all_by_Slice_FeatureType($slice, $ft);
   Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
@@ -68,9 +70,15 @@ use vars qw(@ISA @EXPORT);
 =cut
 
 sub fetch_all_by_FeatureType_FeatureSets {
-  my ($self, $ftype, $fsets, $logic_name) = @_;
+  my ($self, $ftype, $fsets, $params) = @_;
 	
 
+  #How do we validate the parameters?
+  #We can't catch typos as we don't know what might need passing on to other methods
+  #Set all these so we can use them without exists
+  $params->{'logic_name'} ||= undef;
+  $params->{'associated'} ||= undef;
+  
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
 
   my @fs_ids;
@@ -84,15 +92,113 @@ sub fetch_all_by_FeatureType_FeatureSets {
 
   my $fs_ids = join(',', @fs_ids) if scalar(@fs_ids >1);
 
-  my $constraint = $self->_main_table->[1].'.feature_set_id = fs.feature_set_id AND '.
-	$self->_main_table->[1].'.feature_type_id='.$ftype->dbID.' AND '.$self->_main_table->[1].'.feature_set_id '; 
+  my ($table_name, $table_syn) = @{$self->_main_table};
+  my $constraint = $table_syn.'.feature_set_id = fs.feature_set_id AND '.
+	$table_syn.'.feature_type_id='.$ftype->dbID.' AND '.$table_syn.'.feature_set_id '; 
   $constraint .= (scalar(@fs_ids) >1) ? "IN ($fs_ids)" : '='.$fs_ids[0];
 
-  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
+  #We should really pass the params hash on here
+
+  $constraint = $self->_logic_name_to_constraint($constraint, $params->{logic_name});
+
+  my @features = @{$self->generic_fetch($constraint)};
 
 
-  return $self->generic_fetch($constraint);
+  #This is an interim solution and really needs changing!
+  #Can we genericise this as a lazy loader function?
+  #Isn't there already something liek this in core?
+  if ($params->{'associated'}){
+
+	for my $fset(@{$fsets}){
+	  #We want to bring back features from the same set
+	  #We are not bringing back different class of feature i.e. AnnotatedFeatures and ExternalFeatures
+	  #Let's not catch this, but let it silently fail so peaople.
+
+	  next if $table_name ne lc($fset->type).'_feature';
+
+	  my $sql = 'SELECT feature_id from associated_feature_type where feature_table="'.$fset->type.'" and feature_type_id='.$ftype->dbID;
+
+	  my @dbids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
+
+	  if(@dbids){
+		$constraint = " $table_syn.${table_name}_id in (".join(',',@dbids).') ' if @dbids;
+		push @features, @{$self->generic_fetch($constraint, $params->{logic_name})};
+	  }
+	}
+  }
+
+  return \@features;
+  #return $self->generic_fetch($constraint);
 }
+
+
+=head2 fetch_all_by_Feature_associated_feature_types
+
+  Arg [1]    : Bio::EnsEMBL::SetFeature
+  Arg []    : (optional) string - analysis logic name
+  Arg [4]    : (optional) hashref - params hash, all entries optional
+                                      -logic_name => 'analysis.logic_name'
+                                      -include_direct_links => 1, #Also return feature which are linked by Feature->feature_type
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_all_by_Slice_FeatureType($slice, $ft);
+  Description: Retrieves a list of all features linked via the associated FeatureTypes of the given Feature in the same FeatureSet
+  Returntype : Listref of Bio::EnsEMBL::SetFeature objects
+  Exceptions : Throws if SetFeature not stored and valid
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Feature_associated_feature_types {
+  my ($self, $feature, $params) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::SetFeature', $feature);
+
+  #We always want associated!
+  #Otherwise it would be just a normal fetch_all_by_FeatureType_FeatureSets query 
+  #Which is more efficient.
+
+
+  #How do we validate the parameters?
+  #We can't catch typos as we don't know what might need passing on to other methods
+  #Set all these so we can use them without exists
+  $params->{'include_direct_links'} ||= undef;
+  $params->{'logic_name'}           ||= undef;
+
+  my %dbIDs;#Use a hash to reduce dbID redundancy
+  my ($table_name, $table_syn) = @{$self->_main_table};
+  my $fset = $feature->feature_set;
+  my ($sql, $constraint, @features);
+
+  #Direct FeatureType
+  if($params->{'include_direct_links'}){
+	#Just grab dbIDs here rather than use generic fetch
+	$sql = "SELECT ${table_name}_id from $table_name where feature_type_id=".$feature->feature_type->dbID.' and feature_set_id='.$fset->dbID;
+	#This just sets each value to a key with an undef value
+	map {$dbIDs{"@$_"} = undef} @{$self->dbc->db_handle->selectall_arrayref($sql)};
+  }
+
+ 
+  #Associated FeatureTypes
+  my $ftype_ids = join(', ', map $_->dbID, @{$feature->associated_feature_types});
+  
+  #Now we need to restrict the Features based on the FeatureSet of the original Feature, we could make this optional.
+  $sql = "SELECT feature_id from associated_feature_type aft, $table_name $table_syn where aft.feature_table='".$fset->type."' and aft.feature_type_id in ($ftype_ids) and aft.feature_id=${table_syn}.${table_name}_id and ${table_syn}.feature_set_id=".$fset->dbID;
+  #This just sets each value to a key with an undef value
+  map {$dbIDs{"@$_"} = undef} @{$self->dbc->db_handle->selectall_arrayref($sql)};
+
+  if(keys %dbIDs){
+	$constraint = " $table_syn.${table_name}_id in (".join(',', keys %dbIDs).')';
+	push @features, @{$self->generic_fetch($constraint, $params->{logic_name})};
+  }
+
+
+  return \@features;
+}
+
+
+
+
 
 =head2 fetch_all_by_Slice_FeatureType
 
