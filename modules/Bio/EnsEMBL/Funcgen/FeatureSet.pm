@@ -267,7 +267,7 @@ sub get_FeatureAdaptor{
 sub get_Features_by_Slice{
   my ($self, $slice) = @_;
 
-  return $self->get_FeatureAdaptor->fetch_all_by_Slice_FeatureSets($slice, $self);
+  return $self->get_FeatureAdaptor->fetch_all_by_Slice_FeatureSets($slice, [$self]);
 }
 
 =head2 get_Features_by_FeatureType
