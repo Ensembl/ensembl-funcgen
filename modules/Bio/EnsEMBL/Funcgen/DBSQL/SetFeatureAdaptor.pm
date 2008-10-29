@@ -174,18 +174,27 @@ sub fetch_all_by_Feature_associated_feature_types {
   if($params->{'include_direct_links'}){
 	#Just grab dbIDs here rather than use generic fetch
 	$sql = "SELECT ${table_name}_id from $table_name where feature_type_id=".$feature->feature_type->dbID.' and feature_set_id='.$fset->dbID;
+
 	#This just sets each value to a key with an undef value
 	map {$dbIDs{"@$_"} = undef} @{$self->dbc->db_handle->selectall_arrayref($sql)};
   }
 
  
-  #Associated FeatureTypes
-  my $ftype_ids = join(', ', map $_->dbID, @{$feature->associated_feature_types});
+    
+  my @assoc_ftypes = @{$feature->associated_feature_types};
+
+  if(@assoc_ftypes){
+
+	my $ftype_ids = join(', ', (map $_->dbID, @assoc_ftypes));
   
-  #Now we need to restrict the Features based on the FeatureSet of the original Feature, we could make this optional.
-  $sql = "SELECT feature_id from associated_feature_type aft, $table_name $table_syn where aft.feature_table='".$fset->type."' and aft.feature_type_id in ($ftype_ids) and aft.feature_id=${table_syn}.${table_name}_id and ${table_syn}.feature_set_id=".$fset->dbID;
-  #This just sets each value to a key with an undef value
-  map {$dbIDs{"@$_"} = undef} @{$self->dbc->db_handle->selectall_arrayref($sql)};
+	#Now we need to restrict the Features based on the FeatureSet of the original Feature, we could make this optional.
+	$sql = "SELECT feature_id from associated_feature_type aft, $table_name $table_syn where aft.feature_table='".$fset->type."' and aft.feature_type_id in ($ftype_ids) and aft.feature_id=${table_syn}.${table_name}_id and ${table_syn}.feature_set_id=".$fset->dbID;
+	#This just sets each value to a key with an undef value
+	
+	map {$dbIDs{"@$_"} = undef} @{$self->dbc->db_handle->selectall_arrayref($sql)};
+  }
+
+
 
   if(keys %dbIDs){
 	$constraint = " $table_syn.${table_name}_id in (".join(',', keys %dbIDs).')';
