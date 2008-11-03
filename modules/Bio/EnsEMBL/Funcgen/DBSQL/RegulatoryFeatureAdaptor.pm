@@ -63,8 +63,8 @@ sub _get_current_FeatureSet{
 
   my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
 
-  if(! $fset){
-	throw('Could not retrieve current RegulatoryFeatures FeatureSet');
+  if(! defined $fset){
+	warn('Could not retrieve current RegulatoryFeatures FeatureSet');
   }
   
   return $fset;
@@ -87,7 +87,9 @@ sub _get_current_FeatureSet{
 sub fetch_by_stable_id {
   my ($self, $stable_id) = @_;
 
-  return $self->fetch_all_by_stable_id_FeatureSets($stable_id, $self->_get_current_FeatureSet)->[0];
+  my $fset = $self->_get_current_FeatureSet;
+
+  return (defined $fset) ? $self->fetch_all_by_stable_id_FeatureSets($stable_id, $self->_get_current_FeatureSet)->[0] : undef;
 }
 
 =head2 fetch_all_by_stable_id_FeatureSets
@@ -617,7 +619,9 @@ sub store{
 sub fetch_all_by_Slice {
   my ($self, $slice) = @_;
 	
-  return $self->fetch_all_by_Slice_FeatureSets($slice, [$self->_get_current_FeatureSet]);
+  my $fset = $self->_get_current_FeatureSet;
+
+  return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$self->_get_current_FeatureSet]) : undef;
 }
 
 
