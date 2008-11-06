@@ -8,46 +8,41 @@ Regulatory Build", the moral equivalent of the gene build
 
 =head1 SYNOPSIS
 
-build_regulatory_features.pl -host host -user user -pass password 
+run_build_regulatory_features.pl -host host -user user -pass password 
     -outdir output_directory -focus feature_setA,feature_setB  
-    -target feature_setC,feature_setD -seq_name chr
+    -target feature_setC,feature_setD -seq_region_name string
 
 
 Options:
 
-Mandatory
-    -pass|p    Password for eFG DB
-    -host|h    Host for eFG DB      => \$host,
-            "user|u=s"       => \$user,
-            "dbname|d=s"     => \$dbname,
+  Mandatory
+    -host|h            Host for eFG DB
+    -user|u            User for eFG DB
+    -pass|p            Password for eFG DB
+    -dbname|d          Name of eFG DB
+    -data_version|v    Version of data in eFG DB (e.g. 51_36m)
+    -outdir|o          Name of outputut directory
+    
+    -focus|f           Focus features
+    -attrib|a          Attribute features
+    
 
+  Optional
+    -port              Port for eFG DB, default is 3306
+    -species           Latin species name e.g. homo_sapiens
 
+    -seq_region_name|s 
+    -gene_signature 
 
-            "data_version|v=s" => \$data_version,
-            "outdir|o=s"     => \$outdir,
-            "do_intersect|i=s" => \$do_intersect,
-            "write_features|w" => \$write_features,
-            "dump_features"  => \$dump_features,
-            "seq_name|s=s" => \$seq_name,
-            "clobber" => \$clobber,
-            "focus|f=s" => \$focus,
-            "focus_max_length=i" => \$focus_max_length,
-            "focus_extend=i" => \$focus_extend,
-            "target|t=s" => \$target,
-            "dump" => \$dump,
-            "gene_signature" => \$gene_signature,
-            "stats" => \$stats,
-            "debug" => \$debug,
-            "debug_start=i" => \$debug_start,
-            "debug_end=i" => \$debug_end
+    -write_features|w
+    -clobber
+    -dump_annotated_features
+    -dump_regulatory_features
 
+    -stats
 
-Optional
-    -port      Port for eFG DB, default is 3306
-    -species   Latin species name e.g. homo_sapiens
-
-    -help    Does nothing yet.   
-    -man     Does nothing yet.    
+    -help              Does nothing yet
+    -man               Does nothing yet
 
 
 =head1 DESCRIPTION
@@ -104,7 +99,15 @@ Please post comments/questions to the Ensembl development list
 
 # 2 Need to run using non-ref toplevel, currently just using toplevel
 
-# 3 Fix LSB_JOBINDEX usage. We we're always getting one failure as we're subtracting 1 from the index which for LSB_JOBINDEX = 0 resulting in -1, which is not a valid array index. DONE.  Still need to improve this so we're not hardcoding how many slices we're running with(now getting two failures from non-existant slices).  We need to convert the perl script to perl so we can grab the toplevel non-ref slices before bsubing.  Can we use LSB_JOBNAME instead and use the seq_region names directly?
+# 3 Fix LSB_JOBINDEX usage. We we're always getting one failure as we're subtracting 1 from the 
+#   index which for LSB_JOBINDEX = 0 resulting in -1, which is not a valid array index. DONE.  
+#   Still need to improve this so we're not hardcoding how many slices we're running with (now 
+#   getting two failures from non-existant slices).  We need to convert the perl script to perl 
+#   so we can grab the toplevel non-ref slices before bsubing.  Can we use LSB_JOBNAME instead 
+#   and use the seq_region names directly? 
+#   SG -- The run script is now written in perl and does facilitate running the build on reference
+#   toplevel slices. For now we exclude haplotypes as they are no captured in the underlying data. 
+#   However once we are using our own MAQ mappings strategy mightneed to change to reflect this (also 2).
 
 use strict;
 use warnings;
@@ -114,9 +117,17 @@ $|=1;
 
 my ($pass,$port,$host,$user,$dbname,$species,$help,$man,
     $data_version,$outdir,$do_intersect,$write_features,
-    $dump_features,$seq_name,$clobber,$focus_max_length,
-    $focus_extend,$focus,$target,$dump,$gene_signature,$stats,
+    $dump_annotated_features,$dump_regulatory_features,
+    $seq_region_name,$clobber,$focus_max_length,
+    $focus_extend,$focus,$attrib,$dump,$gene_signature,$stats,
     $debug,$debug_start,$debug_end);
+
+$host = $ENV{EFG_HOST};
+$port = $ENV{EFG_PORT};
+$user = $ENV{EFG_WRITE_USER};
+$dbname = $ENV{EFG_DBNAME};
+$species = $ENV{SPECIES};
+$data_version = $ENV{DATA_VERSION};
 
 GetOptions (
             "pass|p=s"       => \$pass,
@@ -131,13 +142,14 @@ GetOptions (
             "outdir|o=s"     => \$outdir,
             "do_intersect|i=s" => \$do_intersect,
             "write_features|w" => \$write_features,
-            "dump_features"  => \$dump_features,
-            "seq_name|s=s" => \$seq_name,
+            "dump_annotated_features"  => \$dump_annotated_features,
+            "dump_regulatory_features"  => \$dump_regulatory_features,
+            "seq_region_name|s=s" => \$seq_region_name,
             "clobber" => \$clobber,
             "focus|f=s" => \$focus,
             "focus_max_length=i" => \$focus_max_length,
             "focus_extend=i" => \$focus_extend,
-            "target|t=s" => \$target,
+            "attrib|a=s" => \$attrib,
             "dump" => \$dump,
             "gene_signature" => \$gene_signature,
             "stats" => \$stats,
@@ -168,7 +180,7 @@ throw("Must specify mandatory output directory (-outdir).\n")
      if !$outdir;
 
 throw("Must specify mandatory focus sets (-focus).\n") if ! defined $focus;
-throw("Must specify mandatory target sets (-target).\n") if ! defined $target;
+throw("Must specify mandatory attribute sets (-attrib).\n") if ! defined $attrib;
 
 $focus_max_length = 2000 if (! defined $focus_max_length);
 $focus_extend = 2000 if (! defined $focus_extend);
@@ -197,12 +209,12 @@ use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
-     #-host => 'ensembldb.ensembl.org',
-     #-user => 'anonymous',
-     #-port => 3306,
      -host => 'ens-staging',
      -port => 3306,
      -user => 'ensro',
+     #-host => 'ensembldb.ensembl.org',
+     #-user => 'anonymous',
+     #-port => 3306,
      #-host => '127.0.0.1',
      #-port => 33064,
      #-user => 'ensro',
@@ -222,8 +234,6 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      );
 
 
-
-
 my $fsa = $db->get_FeatureSetAdaptor();
 my $dsa = $db->get_DataSetAdaptor();
 my $fta = $db->get_FeatureTypeAdaptor();
@@ -235,8 +245,8 @@ my $ga = $db->dnadb->get_GeneAdaptor();
 #my $ta = $cdb->get_TranscriptAdaptor();
 
 
-# parse focus and target sets and check that they exist
-my (%focus_fsets, %target_fsets);
+# parse focus and attribute sets and check that they exist
+my (%focus_fsets, %attrib_fsets);
 map { my $fset = $fsa->fetch_by_name($_);
       throw("Focus set $_ does not exist in the DB") 
           if (! defined $fset); 
@@ -246,49 +256,14 @@ map { my $fset = $fsa->fetch_by_name($_);
 
 map { 
     my $fset = $fsa->fetch_by_name($_);
-    throw("Target set $_ does not exist in the DB") 
+    throw("Attribute set $_ does not exist in the DB") 
         if (! defined $fset); 
-    $target_fsets{$fset->dbID()} = $fset; 
-} split(',', $target);
-#print Dumper %target_fsets;
+    $attrib_fsets{$fset->dbID()} = $fset; 
+} split(',', $attrib);
+#print Dumper %attrib_fsets;
 
-# make sure that target sets also contain focus sets (Do we really need this?)
-map { $target_fsets{$_} = $focus_fsets{$_} } keys %focus_fsets;
-
-# dump data to files and exit
-if ($dump) {
-    
-    my @fset_ids = keys %target_fsets;
-    #print Dumper @fset_ids; 
-
-    print STDERR "# Dumping annotated features from database to file.\n";
-    print STDERR "# This will delete existing file dumps of that data version!\n";
-
-    print STDERR "# Output goes to ", $outdir, "\n";
-
-    my $sql = "select annotated_feature_id, af.seq_region_id,".
-        "seq_region_start, seq_region_end,seq_region_strand,".
-        "score,feature_set_id from annotated_feature af, seq_region sr ".
-        "where sr.seq_region_id=af.seq_region_id and schema_build='$data_version'";
-    my $command = "echo \"$sql\" ".
-        " | mysql -quick -h".$host." -P".$port." -u".$user." -p".$pass." ".$dbname.
-        " | gawk '{if (\$7==".join("||\$7==", @fset_ids).") print }'".
-        " | sort -k2,2n -k3,3n -k4,4n".
-        " | gawk '{ print >> \"".$outdir."/".$dbname.".annotated_feature_\" \$2 \".dat\" }'";
-
-    print STDERR "# Execute: ".$command."\n" if ($debug);
-    
-    # need to remove existing dump files, since we append to the file
-    system("rm -f $outdir/$dbname.annotated_feature_*.dat") &&
-        throw ("Can't remove files");
-
-    system($command) &&
-        throw ("Can't dump data to file in $outdir");
-
-    exit;
-
-}
-
+# make sure that attribute sets also contain focus sets (Do we really need this?)
+map { $attrib_fsets{$_} = $focus_fsets{$_} } keys %focus_fsets;
 
 ### build regulatory features
 
@@ -326,96 +301,169 @@ if ($dump) {
 # retrieve sequence to be analyzed 
 my $slice;
 
-if ($seq_name) {
-    $slice = $sa->fetch_by_region('chromosome', $seq_name);
+if ($seq_region_name) {
+    eval {
+        $slice = $sa->fetch_by_name($seq_region_name);
+    };
+    
+    if ($@) {
+
+        warn("Couldn't retrieve slice '$seq_region_name'");
+
+        my $slices = $sa->fetch_all('toplevel');
+        #print Dumper @slices;
+
+        print STDERR ("Available toplevel slices are:\n");
+
+        map { print STDERR ("\t", join (':', $_->coord_system_name, '', $_->seq_region_name ), "\n")} 
+        sort {$a->seq_region_name cmp $b->seq_region_name} @$slices;
+
+        throw("Select a toplevel slice from the above list");
+
+    }
+
 } elsif (defined $ENV{LSB_JOBINDEX}) {
   
     warn "Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".$ENV{LSB_JOBINDEX}.").\n";
     
-    my $toplevel = $sa->fetch_all('toplevel');#This needs to be non-reference too!
-    my @chr = sort (map $_->seq_region_name, @{$toplevel});
-    #print Dumper @chr;
-    
-    my @slices;
-    foreach my $chr (@chr) {
+    my @slices = ();
+    my $sa = $db->get_SliceAdaptor();
+    #foreach my $s (sort {$a->name cmp $b->name} @{$sa->fetch_all('toplevel', undef, 1)}) {
+    foreach my $s (sort {$a->name cmp $b->name} @{$sa->fetch_all('toplevel')}) {
         
-        next if ($chr =~ m/^NT_/);
+        next if ($s->seq_region_name =~ m/^MT/);
+        push @slices, $s;
         
-        push @slices, $sa->fetch_by_region('chromosome', $chr);
     }
     #print Dumper @slices;
 
-    $slice=$slices[$ENV{LSB_JOBINDEX}];#-1];      
-    #print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
+    throw ("LSB_JOBINDEX is too large. Use a a value between 1 and ".
+           scalar @slices) if ($ENV{LSB_JOBINDEX} > scalar @slices);
 
+    $slice=$slices[$ENV{LSB_JOBINDEX}-1];
+    print Dumper ($ENV{LSB_JOBINDEX}, $slice->name);
 
-	warn "Slice is:\t".$slice->name.").\n";
-
-
-    
+	warn "Slice is:\t".$slice->name.".\n";
+   
 } else {
 
-    throw("Must specify mandatory chromosome name (-seq_name) or set\n ".
-          "LSF environment variable LSB_JOBINDEX to perform whole\n ".
-          "genome analysis on toplevel slices using the farm.\n");
+    throw("Must either specify mandatory chromosome name (-seq_name) or use the \n".
+          "wrapper script 'run_build_regulatory_features.pl' to perform whole genome \n".
+          "analysis on all toplevel slices using the farm (via LSF environment \n".
+          "variable LSB_JOBINDEX).\n");
 
 }
 
 # get core and fg seq_region_id for slice
 my ($core_sr_id, $fg_sr_id);
 $core_sr_id = $slice->get_seq_region_id();
-#need to build cache first
+
+# need to build cache first
 $afa->build_seq_region_cache();
 $fg_sr_id = $afa->get_seq_region_id_by_Slice($slice);
+
+throw("No eFG seq_region id defined for ".$slice->name." Almost certain there is no data".
+      "available on this slice. You might want to run_update_DB_for_release.pl") 
+    if ! defined $fg_sr_id;
 
 #should this be printing to OUT or STDERR?
 #or remove as we're printing this later?
 print
     '# Focus set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'}
                              sort {$a->name cmp $b->name} values %focus_fsets), "\n",
-    '# Target set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'} 
-                              sort {$a->name cmp $b->name}  values %target_fsets), "\n",
+    '# Attribute set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'} 
+                              sort {$a->name cmp $b->name}  values %attrib_fsets), "\n",
     '# Species: ', $species, "\n",
-    '# Chromosome: ', join(" ",$slice->display_id(),$slice->get_seq_region_id), "\n",
-    '#   core seq_region_id '.$core_sr_id." => fg seq_region_id ".$fg_sr_id."\n";
+    '# Seq region: ', join(" ",$slice->display_id(),$slice->get_seq_region_id), "\n",
+    '#   core seq_region_id '.$core_sr_id." => efg seq_region_id ".$fg_sr_id."\n";
 
 
+### Check whether analysis is already stored 
 
-my $analysis = Bio::EnsEMBL::Analysis->new(
-                                           -logic_name      => 'RegulatoryRegion',
-                                           -db              => 'NULL',
-                                           -db_version      => 'NULL',
-                                           -db_file         => 'NULL',
-                                           -program         => 'NULL',
-                                           -program_version => 'NULL',
-                                           -program_file    => 'NULL',
-                                           -gff_source      => 'NULL',
-                                           -gff_feature     => 'NULL',
-                                           -module          => 'NULL',
-                                           -module_version  => 'NULL',
-                                           -parameters      => 'NULL',
-                                           -created         => 'NULL',
-                                           -description     => 'Union of focus features, features overlapping focus features,'.
-                                           ' and features that are contained within those',
-                                           ### display_label is going to be changed to "RegulatoryBuild" or so
-                                           -display_label   => 'RegulatoryRegion',
-                                           -displayable     => 1,
-                                           );
-$analysis = $aa->fetch_by_dbID($aa->store($analysis));# if ($write_features) ;
+my $analysis = Bio::EnsEMBL::Analysis->new
+    (
+     -logic_name      => 'RegulatoryRegion',
+     -db              => 'NULL',
+     -db_version      => 'NULL',
+     -db_file         => 'NULL',
+     -program         => 'NULL',
+     -program_version => 'NULL',
+     -program_file    => 'NULL',
+     -gff_source      => 'NULL',
+     -gff_feature     => 'NULL',
+     -module          => 'NULL',
+     -module_version  => 'NULL',
+     -parameters      => 'NULL',
+     -created         => 'NULL',
+     -description     => 'Union of focus features, features overlapping focus features,'.
+     ' and features that are contained within those',
+     -display_label   => 'RegulatoryRegion',
+     -displayable     => 1,
+     );
 
+my $logic_name = $analysis->logic_name();
+my $ana = $aa->fetch_by_logic_name($logic_name);
+
+if ( ! defined $ana ) { # NEW
+    
+    warn("Need to store new analysis with logic name $logic_name.");
+    $aa->store($analysis);
+    
+} elsif ( $ana->compare($analysis) ) { # EXISTS, but with different options
+
+    ### analysis compare
+    # returns  1 if this analysis is special case of given analysis
+    # returns  0 if they are equal
+    # returns -1 if they are completely different
+    
+    throw('Analysis with logic name \''.$logic_name.'\' already exists, but '.
+          "has different options! Use different logic_name for you analysis '$logic_name'!");
+
+    #$self->efg_analysis->dbID($analysis->dbID);
+    #$self->efg_analysis->adaptor($self->efgdb->get_AnalysisAdaptor);
+    #$aa->update($self->efg_analysis);
+ 
+} else { # EXISTS
+
+    warn('Analysis with logic name \''.$logic_name.'\' already '.
+         'exists.');
+    
+}
+
+$analysis = $aa->fetch_by_logic_name($logic_name);
 
 my $rfset = &get_regulatory_FeatureSet($analysis);
 #print Dumper $rfset;
+
 
 # Read from file and process sequentially in sorted by start, end order. Each 
 # new feature is checked if it overlaps with the preceeding already seen 
 # features. If yes we just carry on with the next one. Otherwise
 
 #$dbname =~ s/sg_//;
-my $fh = open_file($outdir.'/'.$dbname.'.annotated_feature_'.$fg_sr_id.'.dat');
+my $af_file = $outdir.'/'.$dbname.'.annotated_features.'.$slice->seq_region_name.'.dat';
+
+if (! -e $af_file  || $dump_annotated_features) {
+
+    warn("File containing dumped annotated features doesn't exist. Need ".
+         "to dump annotated features on slice '".$slice->name."' first!");
+    
+    #eval {
+        &dump_annotated_features();
+    #};
+
+    #throw ("Couldn't dump annotated features on slice '".$slice->name."'.") if ($@);
+    
+} else {
+
+    warn("File '$af_file' containing dumped annotated features exists.")
+
+}
+
+my $fh = open_file($af_file);
 
 my (@rf,@af);
-my ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
+my ($af_id, $sr_id, $sr_name, $start, $end, $strand, $score, $fset_id);
 
 ### variables for statistics
 my (%feature_count, %seen_af, %removed_af);
@@ -425,11 +473,11 @@ while (<$fh>) {
     next if (/^\#/);
     chomp;
     
-    ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id) = split (/\s+/, $_);
+    ($af_id, $sr_id, $sr_name, $start, $end, $strand, $score, $fset_id) = split (/\s+/, $_);
     #print Dumper ($af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
     #print $af_id, "\n";
 
-    if ($debug && $seq_name && $debug_start && $debug_end) {
+    if ($debug && $seq_region_name && $debug_start && $debug_end) {
 
         next if ($start < $debug_start);
         last if ($start > $debug_end);
@@ -438,10 +486,10 @@ while (<$fh>) {
     
     # Quick hack for 2nd/3rd version of reg. build. Need to disregard ChIPseq 
     # features below a certain threshold defined hardcoded in ChIPseq_cutoff hash.
-    #next if (exists $ChIPseq_cutoff{$target_fsets{$fset_id}->name()} 
-    #         && $score < $ChIPseq_cutoff{$target_fsets{$fset_id}->name()});
+    #next if (exists $ChIPseq_cutoff{$attrib_fsets{$fset_id}->name()} 
+    #         && $score < $ChIPseq_cutoff{$attrib_fsets{$fset_id}->name()});
     
-    print $_, "\t", $target_fsets{$fset_id}->name, "\n" if ($debug);
+    print $_, "\t", $attrib_fsets{$fset_id}->name, "\n" if ($debug);
     my  $length = $end-$start+1;
     
     
@@ -472,7 +520,7 @@ while (<$fh>) {
             
             &update_focus();
             
-            # open new regulatory feature
+        # open new regulatory feature
         } else {
             
             &add_focus();
@@ -533,9 +581,9 @@ map {
 print "\n", Dumper @rf if ($debug);
 
 
-if ($dump_features) {
+if ($dump_regulatory_features) {
     
-    my $outfile  = $outdir.'/'.$dbname.'.regulatory_feature_'.$fg_sr_id.'.dat';
+    my $outfile  = $outdir.'/'.$dbname.'.regulatory_features_'.$fg_sr_id.'.dat';
     my $out = open_file($outfile, ">");
     
     map {
@@ -559,6 +607,7 @@ if ($write_features) {
     } @rf;
     
     #print Dumper @f;
+    #warn("STORING DEACTIVATED");
     $rfa->store(@f);
     
 }
@@ -585,8 +634,46 @@ if ($stats) {
         $feature_count{$_->dbID}||0, $rf_count{$_->dbID}||0,
         scalar(keys %{$seen_af{$_->dbID}})||0,
         scalar(keys %{$removed_af{$_->dbID}})||0
-        } sort {$a->name cmp $b->name} values %target_fsets;
+        } sort {$a->name cmp $b->name} values %attrib_fsets;
 }
+
+###############################################################################
+# dump annotated features for given seq_region to file
+sub dump_annotated_features () {
+
+    my @fset_ids = keys %attrib_fsets;
+    #print Dumper @fset_ids; 
+
+    print STDERR "# Dumping annotated features from database to file.\n";
+    print STDERR "# This will delete existing file dumps of that data version!\n";
+    
+    print STDERR "# Output goes to ", $outdir, "\n";
+    
+    my $sql = "select annotated_feature_id, af.seq_region_id,".
+        "sr.name, seq_region_start, seq_region_end,seq_region_strand,".
+        "score,feature_set_id from annotated_feature af, seq_region sr ".
+        "where sr.seq_region_id=af.seq_region_id ".
+        "and schema_build='$data_version' ".
+        "and sr.name='".$slice->seq_region_name."' ".
+        "and af.feature_set_id in (".join(',', @fset_ids).")";
+    
+    my $command = "echo \"$sql\" ".
+        " | mysql -quick -N -h".$host." -P".$port." -u".$user." -p".$pass." ".$dbname.
+        #" | gawk '{if (\$7==".join("||\$7==", @fset_ids).") print }'".
+        " | sort -k3,3n -k4,4n -k5,5n".
+        " | gawk '{ print >> \"".$outdir."/".$dbname.".annotated_features.".$slice->seq_region_name.".dat\" }'";
+    
+    warn("# Execute: ".$command."\n");# if ($debug);
+
+    # need to remove existing dump files, since we append to the file
+    #system("rm -f $outdir/$dbname.annotated_feature_*.dat") &&
+    #        throw ("Can't remove files");
+    
+    system($command) &&
+        throw ("Can't dump data to file in $outdir");
+    
+}
+
 ###############################################################################
 
 sub add_focus ()
@@ -697,7 +784,7 @@ sub build_binstring()
     my ($rf) = @_;
 
     my $binstring = '';
-    foreach (sort {$a->name cmp $b->name} values %target_fsets) {
+    foreach (sort {$a->name cmp $b->name} values %attrib_fsets) {
         $binstring .= 
             (exists $rf->{fsets}->{$_->dbID})? 1 : 0;	
     }
@@ -746,9 +833,18 @@ sub get_regulatory_feature{
     my ($rf) = @_;
 
     #print Dumper $rf;
+    #print Dumper $rfset->feature_type;
     #print $rfset->feature_type;
+    if ($slice->start != 1 || $slice->strand != 1) {
 
-    return Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
+        warn("**** SLICE doesn't start at position 1; resetting start of slice to 1 ****");
+        $slice->{'start'} = 1;
+        #print "s_start:  ", $slice->start(), "\n";
+        ###$regulatory_feature->transfer($s)
+        
+    }
+
+    my $regulatory_feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
         (
          -slice            => $slice,
          -start            => $rf->{focus_start},
@@ -759,6 +855,11 @@ sub get_regulatory_feature{
          -feature_type     => $rfset->feature_type,
          -_attribute_cache => {'annotated' => $rf->{annotated}},
          );
+
+
+    return $regulatory_feature;
+
+
 
 }
 
@@ -789,8 +890,8 @@ sub get_regulatory_FeatureSet{
                          $rfset->dbID());
 
         } elsif ($write_features) {
-            throw("Their is a pre-existing FeatureSet with the name 'Regulatory_Features'\n".
-                  'You must specify clobber is you want to delete and overwrite all'.
+            throw("Their is a pre-existing FeatureSet with the name 'RegulatoryFeatures'\n".
+                  'You must specify clobber if you want to delete and overwrite all'.
                   ' pre-existing RegulatoryFeatures');
         }
     } else {					#generate new fset
