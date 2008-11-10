@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.8 2008-10-01 10:41:55 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.9 2008-11-10 14:27:01 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
@@ -136,7 +136,8 @@ sub store_window_bins_by_Slice_ResultSet {
 
 
   my $slice_adaptor = $this->db->dnadb->get_SliceAdaptor;
-  my $method='average_score';#average
+  #my $method='average_score';#average
+  my $method='max_magnitude';#i.e. greatest positive or negative score
   #Hardcoded method to average.  What about those probe which cross boundaries?
   #Will this be returned?
 
@@ -377,7 +378,23 @@ sub store_window_bins_by_Slice_ResultSet {
   $counts{0}=0;
   
 
+  my $store_slice = $slice;
+  my $slice_adj = 0;
+  my $slice_end   = $slice->end;
+  my $orig_slice  = $slice;
+  my $orig_start = $slice->start;
+  my $region       = $slice->coord_system_name;
+  my $seq_region_name  = $slice->seq_region_name;
+  my $strand       = $slice->strand;
+  my $rset_id      = $rset->dbID;
   
+  if($store_slice->start != 1){
+	$store_slice = $slice->adaptor->fetch_by_region('chromosome', $slice->seq_region_name);
+	$slice_adj = ($slice->start - 1);
+  }
+ 
+  #Can probably tidy this up and just alter start adjust directly
+ 
  
   foreach my $chunk_length(sort keys %chunk_windows){
 
@@ -393,40 +410,47 @@ sub store_window_bins_by_Slice_ResultSet {
 	#Now walk through slice using slice length chunks and build all windows in each chunk
 	my $in_slice     = 1;
 	my $start_adj    = 0;
-	my $end_adj      = $slice->start + $chunk_length - 1;
-	my $region       = $slice->coord_system_name;
-	my $seq_region_name  = $slice->seq_region_name;
-	my $strand       = $slice->strand;
-	my $rset_id      = $rset->dbID;
+	my $slice_start  = $orig_start;
 	
-	my ($start, $end, $chunk_slice, $features, $bins);
+	#my $end_adj      = $slice->start + $chunk_length - 1;
+	#my $end_adj = $chunk_length;
+
+	
+	
+	my ($start, $end, $features, $bins);
+	#$chunk_slice, 
+	
 
 	while($in_slice){
 
-	  $start = $slice->start + $start_adj;
-	  $end   = $slice->start + $end_adj - 1;
+	  $start = $slice_start + $start_adj;
+	  $end   = $start + $chunk_length - 1;
 	  
+
 	  #Last chunk might not be the correct window length
 	  #Hence why we should do this on whole chromosomes
 	  #Force this or just warn, check seq_region slice
 	  
-	  if($end >= $slice->end){
-		$end = $slice->end;
+	  
+	  #if($start > $slice_end);
+
+	  if($end >= $slice_end){
+		#or equal as we want to catch end of slice and set in_slice
+		$end = $slice_end;
 		$in_slice = 0;
 	  }
 	  
 
-	  $chunk_slice = $slice_adaptor->fetch_by_region($region, $seq_region_name, $start, $end, $strand);
-	  print "Processing slice ".$chunk_slice->name."\n";
-
-	  $features = $this->fetch_all_by_Slice_ResultSet($chunk_slice, $rset);
+	  $slice = $slice_adaptor->fetch_by_region($region, $seq_region_name, $start, $end, $strand);
+	  $features = $this->fetch_all_by_Slice_ResultSet($slice, $rset);
 
 	  #Shift chunk coords
-	  if($in_slice){
-		$start_adj += $chunk_length;
-		$end_adj   += $chunk_length;
-	  }
-
+	  $start_adj = $chunk_length if($in_slice);
+	  $slice_start = $slice->start;
+	  #$start_adj += $chunk_length;
+		#$end_adj   += $chunk_length;
+	  #}
+	
 	
 	  next if scalar(@$features) == 0;
 
@@ -434,7 +458,7 @@ sub store_window_bins_by_Slice_ResultSet {
 	  #This should return a hash of window size => bin array pairs
 	  $bins = $this->_bin_features_by_window_sizes
 				  ( 
-				   -slice  => $chunk_slice,
+				   -slice  => $slice,
 				   -window_sizes  => $chunk_windows{$chunk_length},
 				   -method => $method,
 				   -features =>
@@ -442,8 +466,8 @@ sub store_window_bins_by_Slice_ResultSet {
 				  );
 
 
-	  my $bin_start = $chunk_slice->start;
-	  my $bin_end   = $chunk_slice->start;
+	  my $bin_start = $slice->start;
+	  #my $bin_end   = $slice->start;#???? wtf?
 
 	  #We need to handle strandedness of slice!?	  
 	  
@@ -455,26 +479,30 @@ sub store_window_bins_by_Slice_ResultSet {
 		  
 		  #warn "storing ".join(', ',	($feature->start, $feature->end, $feature->strand, $feature->score, 'undef', $rset->dbID, 0, $slice));
 		  
-
+		  
 		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 					   (
-						($feature->start + $bin_start), 
-						($feature->end + $bin_end), 
+						($feature->start + $bin_start + $slice_adj), 
+						($feature->end   + $bin_start + $slice_adj), 
 						$feature->strand, 
 						$feature->score, 
 						undef,#absent probe info
 						$rset->dbID, 
 						0, #window size
-						$slice
+						$store_slice
 					   )); 
 		}
 		print "Window size 0 (natural resolution) has ".scalar(@{$features})." feature bins\n";	
 	  }
 	  
-	  my ($chunk_start, $chunk_end, $bin_score);
+	  my ($bin_end, $bin_score);
 
 	  foreach my $wsize(sort keys %{$bins}){
 		my $count = 0;
+
+		$bin_start = $slice->start;
+		$bin_end   = $slice->start;
+
 
 		foreach my $bin_index(0..$#{$bins->{$wsize}}){
 		  $bin_score = $bins->{$wsize}->[$bin_index];
@@ -485,7 +513,7 @@ sub store_window_bins_by_Slice_ResultSet {
 		  $bin_end += $wsize;
 	
 		  if($bin_score){
-			$counts{$wsize}++;	
+			#$counts{$wsize}++;	
 			$count++;
 
 			#This is a little backwards as we are generating the object to store it
@@ -499,14 +527,14 @@ sub store_window_bins_by_Slice_ResultSet {
 			
 			$this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 						 (
-						  $bin_start, 
-						  $bin_end, 
+						  ($bin_start + $slice_adj), 
+						  ($bin_end   + $slice_adj), 
 						  $strand, 
 						  $bin_score, 
 						  undef,#absent probe info
 						  $rset->dbID, 
 						  $wsize, 
-						  $slice
+						  $store_slice
 						 ));
 		  }
 		  
@@ -529,8 +557,8 @@ sub store_window_bins_by_Slice_ResultSet {
 
   #print some counts here
  
-  foreach my $wsize(keys %counts){
-	print "Stored ".$counts{$wsize}." for window size $wsize for ".$slice->name."\n";
+  foreach my $wsize(sort (keys %counts)){
+	print "Stored ".$counts{$wsize}." for window size $wsize for ".$orig_slice->name."\n";
   }
 
   #Return this counts hash so we can print/log from the caller, hence we don't print in here?
@@ -553,8 +581,8 @@ sub _bin_features_by_window_sizes{
 
   #No need to validate window sizes as done in the store_window_bins?
   #Do here anyway?
-
-  #warn "Processing window sizes ".join(', ',@$window_sizes);
+  
+  warn "Processing window sizes ".join(', ',@$window_sizes).' for slice '.$slice->name;
 
 
   #Set default to ResultFeature implementation?
@@ -601,6 +629,13 @@ sub _bin_features_by_window_sizes{
 	
 	#Set bin counts to 0 for each bin
 	@{$bin_counts{$wsize}}    = ();
+
+
+
+	#Huh this is doing the same thing?
+	#We don't want to do this as this implies we have seen a 0 value
+	#When we have not seen any value at all!
+	#Need to set to undef? Or not set at all?
 
 	#This is adding an undef to the start of the array!?
     map { $bin_counts{$wsize}->[($_)] = 0 } @{$bins{$wsize}};
@@ -859,7 +894,29 @@ sub _bin_features_by_window_sizes{
 		  $bins{$wsize}->[$bin_index] += $feature->score;
 		  $bin_counts{$wsize}->[$bin_index]++;
 		}
-	  } else {
+	  }  
+	  elsif( $method == 6){
+		#Max magnitude
+		#Take the highest value +ve or -ve score
+		for ( my $bin_index = $start_bin ;
+			  $bin_index <= $end_bin ;
+			  ++$bin_index ) {
+
+		  #we really need to capture the lowest -ve and higest +ve scores here and post process
+		  #To pick between them
+		  
+		  my $score = $feature->score;
+		  $bins{$wsize}->[$bin_index] ||= [0,0]; #-ve, +ve
+		  
+		  if($score <  $bins{$wsize}->[$bin_index]->[0]){
+			$bins{$wsize}->[$bin_index]->[0] = $score;
+		  }
+		  elsif($score > $bins{$wsize}->[$bin_index][1]){
+			$bins{$wsize}->[$bin_index]->[1] = $score;
+		  }
+		}
+	  }
+	  else {
 		throw("Only accomodates average score method");
 	  }
 	
@@ -907,6 +964,42 @@ sub _bin_features_by_window_sizes{
 	  }
 	}
   }
+  elsif( $method == 6){
+	#Max magnitude
+	#Take the highest value +ve or -ve score
+
+	foreach my $wsize(keys %bins){
+
+	  foreach my $bin_index(0..$#{$bins{$wsize}}){
+
+		#So we have the potential that we have no listref in a given bin
+
+		#default value if we haven't seen anything is 0
+		#we actually want an array of -ve +ve values
+
+		#warn "Are we storing 0 values for absent data?";
+		#Not for max_magnitude, but maybe for others?
+
+		if($bins{$wsize}->[$bin_index]){
+
+		  
+		  #warn $wsize.':'.$bin_index;
+		  #warn $bins{$wsize}->[$bin_index];
+		  #warn $bins{$wsize}->[$bin_index]->[0];
+
+
+		  my $tmp_minus = $bins{$wsize}->[$bin_index]->[0] * -1;
+		  
+		  if($tmp_minus > $bins{$wsize}->[$bin_index]->[1]){
+			$bins{$wsize}->[$bin_index] = $bins{$wsize}->[$bin_index]->[0];
+		  }
+		  else{
+			$bins{$wsize}->[$bin_index] = $bins{$wsize}->[$bin_index]->[1];
+		  }
+		}
+	  }
+	}
+  }
   else{
 	throw('Only accomodates average_score method');
   }
@@ -931,6 +1024,7 @@ sub validate_bin_method{
   #Add average_score to avoid changing Collection.pm
   my $class = ref($self);
   ${$class::VALID_BINNING_METHODS}{'average_score'} = 5;
+  ${$class::VALID_BINNING_METHODS}{'max_magnitude'} = 6;
 
 
 
