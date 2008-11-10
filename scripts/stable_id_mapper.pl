@@ -1,8 +1,3 @@
-#!/software/bin/perl -w
-
-
-####!/opt/local/bin/perl -w
-
 
 =head1 NAME
 
@@ -184,6 +179,13 @@ we need to factor this into the schema
 =cut
 
 
+#To do
+
+#1 Run on toplevel non-ref, now added, but what impace will this have?
+#2 remove empty files
+#3 Implement HealthChecker/Helper for logging and check_stable_ids sub
+
+
 BEGIN{
   if (! defined $ENV{'EFG_DATA'}) {
 	if (-f "~/src/ensembl-functgenomics/scripts/.efg") {
@@ -284,6 +286,17 @@ if(! ($nhost && $nuser && $npass && $ndbname)){
 #}
 
 
+
+my $cdb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+													   -host   => 'ens-staging',
+													   -user   => 'ensro',
+														#-pass   => $npass,
+													   -port   => $nport,
+													   -dbname => 'homo_sapiens_core_52_36n',
+													   -species => $species,
+													  );
+
+
 my $ndb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													   -host   => $nhost,
 													   -user   => $nuser,
@@ -291,6 +304,7 @@ my $ndb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													   -port   => $nport,
 													   -dbname => $ndbname,
 													   -species => $species,
+													   -dnadb => $cdb,
 													  );
 
 #Test connection, eval this?
@@ -389,6 +403,9 @@ $obj_cache{'NEW'}{'SLICE_ADAPTOR'} = $ndb->get_SliceAdaptor();
 $obj_cache{'NEW'}{'FSET'}          = $ndb->get_FeatureSetAdaptor->fetch_by_name($new_fset_name);
 
 
+
+
+
 ###Need this to store new features?
 my $rf_adaptor = $ndb->get_RegulatoryFeatureAdaptor();
 
@@ -403,8 +420,6 @@ warn "Need to implement clobber/recover in next_stable_id lookup";
 
 my $cmd = 'SELECT stable_id from regulatory_feature rf where feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by stable_id desc limit 1';
 ($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref($cmd)};
-#$next_stable_id =~ s/\:.*//;
-#$next_stable_id =~ s/ENSR[A-Z]*0*//;
 $next_stable_id ++;
 
 warn "Next stable id is $next_stable_id";
@@ -420,7 +435,8 @@ if($slice_name){
   warn "Running only on $stable_id ".$slices[0]->name."\n";
 }  
 else{
-  @slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all('toplevel')};
+  #fetch all top_level, including non-ref
+  @slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', 1)};
 }
 
 warn 'Mapping '.scalar(@slices)." slices\n";
@@ -454,11 +470,15 @@ foreach my $slice (@slices){
   #old_id4  old_id3       old_id2 old_id5         #merge/death
   #old_id5  old_id3       old_id2 old_id4         #merge/death
   #old_id7                                        #death
- 
+  
 
   #Check for mapped features and clobber
   $cmd = 'select count(regulatory_feature_id) from regulatory_feature where feature_set_id='.
 	$obj_cache{'NEW'}{'FSET'}->dbID().' and seq_region_id='.$rf_adaptor->get_seq_region_id_by_Slice($slice);
+
+
+  #warn $cmd;
+  #warn $slice->name;
 
   my ($feature_cnt) = @{$ndb->dbc->db_handle->selectrow_arrayref($cmd)};
   
@@ -536,9 +556,8 @@ foreach my $slice (@slices){
 	#what was I going to do with this???????????????????????????????????????????????????????????????????????????????????????
 
 						 
-
-
-
+	print "Assigning new stable IDs\n";
+	
 	foreach my $nreg_feat(@{$obj_cache{'NEW'}{'FSET'}->get_Features_by_Slice($slice)}){
 	  
 	  if(! exists $dbid_mappings{$nreg_feat->dbID()}){
@@ -625,6 +644,29 @@ foreach my $slice (@slices){
 }
 
 print "Finished mapping a total of $total_mappings old and new stable IDs\n" if( ! $from_file);
+
+
+#Now check we have mapped all reg feats for give slices
+#We need to add this to HealthChecker also, then implement HealthChecker here?
+
+
+foreach my $slice(@slices){
+
+  my $sname = $slice->name;
+  my (undef, undef, $sr_name, $sr_start, $sr_end) = split/:/, $sname;
+
+  #This is only counting the core rgions, will this be different from the mapping process?
+
+  my $sql = 'select count(stable_id) from regulatory_feature rf, seq_region sr where rf.seq_region_start <= $sr_start and rf.seq_region_end >= $sr_end feature_set_id='.$obj_cache{'NEW'}{'FSET'}->dbID.' and stable_id is NULL';
+  
+  #warn "sql is $sql";
+
+  my ($null_count) = @{$ndb->dbc->db_handle->selectrow_arrayref($cmd)};
+
+  if($null_count){#>1
+	print "WARNING: Slice $sname still has $null_count RegulatoryFeatures without a stable ID assignment\n";
+  }
+}
 
 
 
@@ -1620,7 +1662,7 @@ sub assign_and_log_new_stable_id{
   $new_mappings ++;
   $next_stable_id ++;
 
-  print $new_id_handle $new_reg_feat->dbID()."\t".$new_reg_feat->dbID()."\n";
+  print $new_id_handle $new_reg_feat->dbID()."\t".$new_reg_feat->stable_id()."\n";
 
   return $new_reg_feat->{'stable_id'};
 }
