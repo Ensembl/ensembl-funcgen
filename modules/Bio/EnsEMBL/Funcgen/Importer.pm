@@ -283,7 +283,7 @@ sub new{
 							   );
 
 	
-	throw('Not sensible to set the import DB as the default eFG DB from ensembldb, please define db params') if ! defined $dbname;
+	throw('Not sensible to set the import DB as the default eFG DB from ensembldb, please define db params') if((!$dbname) && (! $db));;
   }
   else{
 	$reg->load_all($self->{'_reg_config'}, 1);
@@ -418,8 +418,7 @@ sub new{
   #And then validate?
   #Just stick to number version for now.
 
-
-  if($db->_get_schema_build($db->dnadb()) !~ /_[0-9]+_${assm_version}[a-z]*$/){
+  if($db->_get_schema_build($db->dnadb()) !~ /[0-9]+_${assm_version}[a-z]*$/){
 	my $warning = "WARNING: dnadb does not match assembly_version $assm_version. Using ensembldb.enembl.org to define the dnadb";
 	$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
 
@@ -439,6 +438,11 @@ sub new{
   $self->db($db);
   $db->dbc->db_handle;
   $db->dnadb->dbc->db_handle;
+
+  $db->dbc->disconnect_when_inactive(1);
+  $db->dnadb->dbc->disconnect_when_inactive(1);
+  
+
  
   ### Check analyses/feature_type/cell_type
 
