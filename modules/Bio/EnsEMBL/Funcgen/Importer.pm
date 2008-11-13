@@ -264,7 +264,7 @@ sub new{
 							   );
 
 	
-	throw('Not sensible to set the import DB as the default eFG DB from ensembldb, please define db params') if ! defined $dbname;
+	throw('Not sensible to set the import DB as the default eFG DB from ensembldb, please define db params') if ((! $dbname) && (! $db));;
   }
   else{
 	$reg->load_all($self->{'_reg_config'}, 1);
@@ -412,7 +412,9 @@ sub new{
   #Test connections
   $db->dbc->db_handle;
   $db->dnadb->dbc->db_handle;
- 
+  $db->dbc->disconnect_when_inactive(1);
+  $db->dnadb->dbc->disconnect_when_inactive(1);
+  
   ### Check analyses/feature_type/cell_type
 
   if($feature_analysis){
