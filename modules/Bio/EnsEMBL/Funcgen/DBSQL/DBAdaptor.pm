@@ -56,7 +56,116 @@ use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 my $reg = "Bio::EnsEMBL::Registry";
+
+
+=head2 new
+
+  Arg [-DNADB]: (optional) Bio::EnsEMBL::DBSQL::DBAdaptor DNADB 
+               DNADB will be automatically select using the given parameters,
+               the current registry dnadb host or ensembldb.
+  Arg [-NO_CACHE]: (optional) int 1
+               This option will turn off caching for slice features, so, 
+               every time a set of features is retrieved, they will come from
+               the database instead of the cache. This option is only recommended
+               for advanced users, specially if you need to store and retrieve
+               features. It might reduce performance when querying the database if 
+               not used properly. If in doubt, do not use it or ask in ensembl-dev               
+  Arg [..]   : Other args are passed to superclass
+               Bio::EnsEMBL::DBSQL::DBConnection
+  Example    : $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+						    -user   => 'root',
+						    -dbname => 'pog',
+						    -host   => 'caldy',
+						    -driver => 'mysql' );
+  Exmaple2   : $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+                                                    -species => 'Homo_sapiens',
+                                                    -group   => 'core'
+						    -user   => 'root',
+						    -dbname => 'pog',
+						    -host   => 'caldy',
+						    -driver => 'mysql');
+  Description: Constructor for DBAdaptor.
+  Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub new {
+  my ( $class, @args ) = @_;
+
+  my $self = $class->SUPER::new(@args);
+
+
+  #Currently only uses dnadb params to auto select
+  #If attached dnadb or default reg dnadb does not match 
+  #given assembly version.
+
+  my ( $dnadb_host, $dnadb_user, $dnadb_port, $dnadb_pass, $dnadb_assm)
+    = rearrange( [ 'DNADB_HOST', 'DNADB_USER',
+                   'DNADB_PORT', 'DNADB_PASS',
+				   'DNADB_ASSEMBLY',
+                 ],
+                 @args );
+
+  my $default_dnadb = $self->SUPER::dnadb;
+  my ($default_host, $default_port, $default_user, $default_pass, $default_assm, $efg_assm, $dnadb_defined);
+
+  if($default_dnadb->group eq 'core'){
+	#This means you have loaded a registry or pass a dnadb to the efg DBAdaptor
+	
+	$default_host = $default_dnadb->dbc->host;
+	$default_port = $default_dnadb->dbc->port;
+	$default_user = $default_dnadb->dbc->username;
+	$default_pass = $default_dnadb->dbc->password;
+	($default_assm = (split/_/, $self->_get_schema_build($default_dnadb))[1]) =~ s/[a-z]//;
+	$dnadb_defined = 1;
+  }
+
+
+  #Defaults now set in dnadb as we want to test registry first;
+  #These will pick default_dnadb values if params not explicitly set
+  $self->{'dnadb_host'} = $dnadb_host || $default_host || 'ensembldb.ensembl.org';
+  #Do we need this to be dnadb_ports 3306 5306 for different mysqls?
+  #This is not correct for ensembldb, but we over-ride this in set_dnadb_by_assembly_version.
+  $self->{'dnadb_port'} = $dnadb_port || $default_port || 3306;
+  $self->{'dnadb_user'} = $dnadb_user || $default_user || 'anonymous';
+  $self->{'dnadb_pass'} = $dnadb_pass || $default_pass || undef;
+
+  
+  ($efg_assm = (split/_/, $self->_get_schema_build($self))[1]) =~ s/[a-z]//;
+  $dnadb_assm ||= $default_assm || $efg_assm;
+  $self->{'dnadb_assm'} = $dnadb_assm;
+
+
+  #Now we only want to reset the dnadb if it does not match the dnadb_assm
+  #Use dnadb method here as this will either return a predefined dnadb(attached or reg) or auto select
+
+  if($self->_get_schema_build($self->dnadb()) !~ /[0-9]+_${dnadb_assm}[a-z]*$/){
+	#my $warning = 'WARNING: dnadb does not match required -dnadb_assm '.self->dnadb_assembly;
+
+	#.'. Using ensembldb.enembl.org to define the dnadb";
+	#$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
+
+	#We need to account for reg_config DBs which may have custom info in
+	#So try reg_config host first, then try ensembldb with warning
+	#Could have a reg_config only flag for core dbs
+	#Need to implement more params in set_dnadb_by_assembly_version
+	#$self->log($warning);
+	warn ':: WARNING: dnadb('.$self->dnadb->dbc->dbname.') does not match required -dnadb_assm '.$self->dnadb_assembly;
+
+	if($dnadb_defined && $dnadb_host){
+	  warn ":: Over-riding pre-defined dnadb host values(reg/-dnadb arg) with dnadb params:\t".
+		$self->dnadb_user.'@'.$self->dnadb_host.':'.$self->dnadb_port;
+	}
+	$self->set_dnadb_by_assembly_version($self->dnadb_assembly);
+  }
+
+  return $self;
+} 
 
 
 
@@ -326,7 +435,35 @@ sub _get_schema_build{
 #}
 
 
+sub dnadb_host{
+  my ($self, $host) = @_;
+  $self->{'dnadb_host'} = $host if $host;
+  return $self->{'dnadb_host'};
+}
 
+sub dnadb_port{
+  my ($self, $port) = @_;
+  $self->{'dnadb_port'} = $port if $port;
+  return $self->{'dnadb_port'};
+}
+ 
+sub dnadb_pass{
+ my ($self, $pass) = @_;
+ $self->{'dnadb_pass'} = $pass if $pass;
+ return $self->{'dnadb_pass'};
+}
+
+sub dnadb_user{
+  my ($self, $user) = @_;
+  $self->{'dnadb_user'} = $user if $user;
+  return $self->{'dnadb_user'};
+}
+
+sub dnadb_assembly{
+  my ($self, $assm) = @_;
+  $self->{'dnadb_assm'} = $assm if $assm;
+  return $self->{'dnadb_assm'};
+}
 
 #Redefine dbadb here to add coordsystem
 
@@ -355,89 +492,52 @@ sub dnadb {
   #super dnadb automatically sets the current DBAdaptor as the dnadb
   #this is the only way of checking whether it has been defined properly.
  
+
+  #This needs to use the same host as the registry, which may differ from the efg host!
+  #What if we pass a reg config file? with multiple hosts?
+  #We probably always want to use the host of the current dnadb?
+
+  #Automatically selects the current core DB from the reg and may be wrong!!
+  #How do we want to deal with this?
+  
+  #So we want a method in DBAdaptor to reset efg DB and dna DB in registry?
+  #Or do we just let this happen
+
   if($dnadb || $self->SUPER::dnadb->group() ne 'core'){
 
-	if(! $dnadb){
-
-	  my $lspecies = $reg->get_alias($self->species());
-
-	  throw('Must provide a species to automatically set dnadb') if $lspecies eq 'default';
-	
+	if(! $dnadb){#Guess dnadb
+	  #We are only guessing the dnadb if we have not already defined one
+	  #Either by attaching to the efg db
+	  #Or by loading the reg
+	  #The Importer will automatically check if the dnadb matches and set_by_assembly_version
+	  #Do we want this functionality in the efg db->new?
+	  #The problem is redefining the db in the registry will not take the extra params required?
+	  #Maybe the method will take this. Then we can implement this check and set_dnadb_by_assembly_version
+	  #in new.
 	  
-	  my $schema_build = $self->_get_schema_build($self);
-	  my $dbname = $lspecies.'_core_'.$schema_build;
-	  my ($schema, $assembly_build) = split/_/, $schema_build;
-	  my @assm_build = split//,$assembly_build;
-	  my $build = pop @assm_build;#This assumes gene build is only ever a single character
-	  my $assembly = join('', @assm_build);
-
-	  my $count = 0;
-	  my $connection_error = 'FIRST_TRY';
-	  my $cnt = 0;
-	  my @az = ('a'..'z');
-	  my (%az, $port);
-	  map $az{$_} = $cnt++, @az;
-	  
-
-	  #while($@ && $count <2){
-	  while($connection_error && $count <3){
-		#Create and test the DB
-		$port = ($schema <48) ? 3306 : 5306;
-		
-
-
-		$dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-		  (						
-		   -host    => 'ensembldb.ensembl.org',
-		   -user    => "anonymous",
-		   -species => $lspecies,
-		   -dbname  => $dbname,
-		   -group   => 'core',
-		   -port    => $port,
-		  );
-		  
-		#do not trap this time as we're not going to guess anymore
-		if($count >0){
-		  warn "Attempting to connect to:\t$dbname\n";
-		}
-
-		#This is not suppressing the error output.
-		eval { $dnadb->dbc()->db_handle(); };
-
-		$connection_error = $@;
-
-		if($connection_error){
-		  $count++;
-		  #First try same assembly/build on old schema
-		  #Then try decremented build on same old schema before trying 
-		  #start with 49_36k which matches current schema_build
-		  #then       48_36k(incase we're dealing with a dev db or a gene build which hasn't been incremented)
-		  #then try   48_36j
-
-		  #we could do these alternately with a modus operator? 3 times is enough
-		  $schema-- if $count == 1;
-
-		  if($count > 1){
-			$build = $az[($az{$build} - 1)];
-			#no build if z
-			$build = '' if $build eq 'z';
-		  }
-		  #else try same build first
-		  $dbname = $lspecies.'_core_'.$schema.'_'.$assembly.$build;
-		  
-		}
-	  }
-
-	  #Will this be true, as we will have evaluated another while?
-	  throw("Could not auto-determine the dnadb, please pass a -dnadb parameter\n$connection_error") if $connection_error;
+	  return $self->set_dnadb_by_assembly_version($self->dnadb_assembly);
 	}
-	
 	
 	$self->SUPER::dnadb($dnadb); 
 
 	#set default coordsystem here, do we need to handle non-chromosome here
 	$cs_name ||= 'chromosome';
-	my $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name);
+
+	my $cs;
+	eval { $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name)};
+	my $error = $@;
+
+	if($error){
+	  my ($schema, $build) = split/_/, $self->_get_schema_build($dnadb);
+	  $build =~ s/[a-z]//;
+	  throw("It appears that the schema of ".$dnadb->dbc->dbname.
+			' is incompatible with your current core API version('.$reg->software_version.
+			').  You could try using the $schema version of the core API, or alternatively try specifying '.
+			"different -dnadb/registry_host parameters to point to a make recent version containing build $build\n");
+
+	}
+
+
     #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
     #or shall we fetch/add all by name?
    
@@ -467,57 +567,85 @@ sub set_dnadb_by_assembly_version{
   my ($self, $assm_ver) = @_;
 
   throw('Must provide and assembly version to set the dnadb') if ! defined $assm_ver;
+  my $lspecies = $reg->get_alias($self->species());
 
+  throw('Must provide a species to automatically set dnadb') if $lspecies eq 'default';
+	
+
+  #So we use params first
+  #else registry params
+  #else ensembldb
+  #Can we set these in new?
+
+  my @ports = ($self->dnadb_port);
+
+  #Start with lastest MySQL instances
+  #WE ARE OVER-RIDING specified port here!
+  #we should really account for this and make it nr
+  if($self->dnadb_host eq 'ensdb-archive'){#
+	@ports = (5304, 3304);
+  } 
+  elsif($self->dnadb_host eq 'ensembldb.ensembl.org'){
+	@ports = (5306, 3306);
+  }
+
+  
   #We should probably allow for non-ensembldb core DBs here too
   #Do we need to account for other ports, staging etc for release?
   #These should run fine on 3306.
-  my $current_port = $self->dnadb->dbc->port;
+  #my $current_port = $self->dnadb->dbc->port;
   #This is assuming dnadb port will only ever be one or the other
   #This assumption is restricted to ensembldb in the port loop
-  my $tmp_port = ($current_port == 3306) ? 5306 : 3306;
-  my @ports = ($current_port, $tmp_port);
+  #my $tmp_port = ($current_port == 3306) ? 5306 : 3306;
+  
+  #Do we need to get species from reg here?
+  #And test the species has been set?
 
+  my $sql = 'show databases like "'.$lspecies.'_core_%_'.$assm_ver.'%"';
+  my ($dbh, @dbnames, $port, $host_port);
 
-  my $sql = 'show databases like "'.$self->species.'_core_%_'.$assm_ver.'%"';
-  my ($dbh, @dbnames, $new_port);
+  foreach $port(@ports){	
+	#This is probably duplicating connections and over-riding any connection 
+	#pooling going on in the base DBConnection if we are using the same host port
+	#as the registry connection
 
-  foreach my $port(@ports){
-	
-	if($port == $current_port){
-	  $dbh = $self->dnadb->dbc->db_handle;
-	}
-	elsif($self->dnadb->dbc->host eq 'ensembldb.ensembl.org'){
-	
-	  $dbh = DBI->connect("DBI:mysql:host=ensembldb.ensembl.org;port=${port}",
-						  'anonymous', 
-						  '', 
-						  {'RaiseError' => 1});
-	  #should we eval this?
-	}
+	$dbh = DBI->connect('DBI:mysql:host='.$self->dnadb_host.";port=${port}",
+						$self->dnadb_user, 
+						$self->dnadb_pass, 
+						{'RaiseError' => 1});
+	#should we eval this?
+	#}
 	
 
 	@dbnames = map {$_ = "@$_"} @{$dbh->selectall_arrayref($sql)};
 
 	#sort and filter out non-core DBs
+	#This will always take the latest release, not the latest genebuild version
+	#Which is probably what we want anyway
 	@dbnames = grep(/core_[0-9]/, sort @dbnames);
   
 	if(scalar(@dbnames)==0){
-	  warn('Failed to find '.$self->species.' funcgen DB for assembly version '.$assm_ver.' using '.$self->dnadb->dbc->host.':'.$self->dnadb->dbc->port);
+	  warn(':: Failed to find '.$self->species.' funcgen DB for assembly version '.$assm_ver.' using '
+		   .$self->dnadb_user.'@'.$self->dnadb_host.':'.$port);
 	}
 	else{
-	  $new_port = $port;
+	  $host_port = $port;
 	  last;
 	}
   }
 
   throw("Failed to find dnadb with assembly version $assm_ver") if(scalar(@dbnames)==0);
+
+
+  warn ":: Auto-selecting build $assm_ver core DB as:\t".
+	$self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
+
+
+  my $db = $reg->reset_DBAdaptor($lspecies, 'core', $dbnames[$#dbnames], $self->dnadb_host, $host_port, $self->dnadb_user, $self->dnadb_pass);
   
-   
-  #Need to delete core DB from registry before creating new one
-  my $db = $reg->reset_DBAdaptor($self->species, 'core', $dbnames[$#dbnames], undef, $new_port);
-    
   $self->dnadb($db);
 
+  
   return $db;
 }
 
