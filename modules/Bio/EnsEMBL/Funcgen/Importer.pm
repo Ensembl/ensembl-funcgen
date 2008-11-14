@@ -59,14 +59,18 @@ use Data::Dumper;
  Description : Constructor method
 
  Arg  [1]    : hash containing optional attributes:
-                    -name     Name of Experiment(dir) 
-                    -format   of array e.g. Tiled(default)
-                    -vendor   name of array vendor
+                    -name        Name of Experiment(dir) 
+                    -format      of array e.g. Tiled(default)
+                    -vendor      name of array vendor
                     -description of the experiment
-                    -pass DB password
-		    -host DB host
-		    -user  DB user
-		    -port  DB port
+                    -pass        DB password
+		            -host        DB host
+		            -user        DB user
+		            -port        DB port
+                    -registry_host Host to load registry from
+                    -registry_port Port for registry host
+                    -registry_user User for registry host 
+                    -registry_pass Password for registry user
                     -ssh  Flag to set connection over ssh via forwarded port to localhost (default = 0); remove?
                     -group    name of experimental/research group
                     -location of experimental/research group
@@ -111,7 +115,7 @@ sub new{
 	  $pass, $dbname, $db, $assm_version, $design_type, $output_dir, $input_dir,
 	  $farm, $ssh, $fasta, $recover, $reg_config, $write_mage, $no_mage, $eset_name, 
 	  $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, 
-	  $ucsc_coords, $verbose, $fset_desc, $release)
+	  $ucsc_coords, $verbose, $fset_desc, $release, $reg_host, $reg_port, $reg_user, $reg_pass)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
 				 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
@@ -120,7 +124,8 @@ sub new{
 				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'WRITE_MAGE', 
 				 'NO_MAGE', 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
 				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS', 'VERBOSE',
-				 'FEATURE_SET_DESCRIPTION', 'RELEASE'], @_);
+				 'FEATURE_SET_DESCRIPTION', 'RELEASE', 'REGISTRY_HOST', 'REGISTRY_PORT',
+				'REGISTRY_USER', 'REGISTRY_PASS'], @_);
 
   
   #### Define parent parser class based on vendor
@@ -236,6 +241,13 @@ sub new{
   $self->{'verbose'} = $verbose || 0;
   $self->{'release'} = $release;
 
+ 
+  if($reg_host && $self->{'reg_config'}){
+	warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
+	  "\nOver-riding config file with specified paramters:\t${reg_user}@${reg_host}:$reg_port";
+  }
+
+
   #Will a general norm method be applicable for all imports?
   #Already casued problems with Bed imports... remove?
   #Could set NORM_METHOD in Parser!!
@@ -257,7 +269,7 @@ sub new{
   ### Load Registry
   #Can we load the registry using the assembly version, then just redefine the efg DB?
   #We have problems here if we try and load on a dev version, where no dev DBs are available on ensembldb
-  #Right what we need to do here is get the latest API version for the assembly we want to use
+  #Get the latest API version for the assembly we want to use
   #Then load the registry from that version
   #Then we can remove some of the dnadb setting code below?
 
@@ -267,25 +279,42 @@ sub new{
   #Then reset the eFG DB as appropriate
 
 
-  if (! defined $self->{'_reg_config'}) {
-	#current ensembl DBs
+  if ($reg_host || ! defined $self->{'_reg_config'}) {
+	#defaults to current ensembl DBs
+	$reg_host ||= 'ensembldb.ensembl.org';
+	$reg_user ||= 'anonymous';
+
+	#Default to the most recent port for ensdb
+	if(! $reg_port && $reg_host eq 'ensdb-archive'){
+	  $reg_port = 5304;
+	}
 
 	#This will try and load the dev DBs if we are using v49 schema or API?
 	#Need to be mindful about this when developing
 	#we need to tip all this on it's head and load the reg from the dnadb version!!!!!!!
 
+	my $version_text= ($self->{'release'}) ? 'version '.$self->{'release'} : 'current version';
+	$self->log("Loading $version_text registry from $reg_user".'@'.$reg_host);
 
+	#Note this defaults API version, hence running with head code
+	#And not specifying a release version will find not head version
+	#DBs on ensembldb, resulting in an exception from reset_DBAdaptor below
 	$reg->load_registry_from_db(
-								-host => "ensembldb.ensembl.org",
-								-user => "anonymous",
-								-db_version => $self->{'release'},
+								-host => $reg_host,
+								-user => $reg_user,
+								-port => $reg_port,
+								-pass => $reg_pass,
+								#-host => "ens-staging",
+								#-user => 'ensro',
+								-db_version => $self->{'release'},#51
 								-verbose => $self->verbose,
 							   );
 
 	
-	throw('Not sensible to set the import DB as the default eFG DB from ensembldb, please define db params') if((!$dbname) && (! $db));;
+	throw('Not sensible to set the import DB as the default eFG DB from ensembldb, please define db params') if ((! $dbname) && (! $db));
   }
   else{
+	$self->log("Loading registry from:\t".$self->{'_reg_config'});
 	$reg->load_all($self->{'_reg_config'}, 1);
   }
 
@@ -299,7 +328,8 @@ sub new{
   
   #SET UP DBs
   if($db){
-	#sanity test vs. data_version
+	#db will have been defined before reg loaded, so will be present in reg
+
 	if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
 	  $self->throw('-db must be a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
 	}
@@ -315,7 +345,7 @@ sub new{
 
 	  $self->log('WARNING: Loading eFG DB from Registry');
 	  $db = $reg->get_DBAdaptor($self->species(), 'funcgen');
-	  throw("Unable to retrieve ".$self->species." funcgen DB from the registry");
+	  throw("Unable to retrieve ".$self->species." funcgen DB from the registry") if ! $db;
 	}
 	else{#from params
 	  #This resets the eFG DB in the custom or generic registry
@@ -340,7 +370,7 @@ sub new{
 		#will this always be the same?
 		
 		if (! (exists $ENV{'EFG_HOST_IP'})) {
-		  warn "Environment varaible EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
+		  warn "Environment variable EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
 		} else {
 		  $host_ip = $ENV{'EFG_HOST_IP'};
 		}
@@ -367,11 +397,19 @@ sub new{
 	  #Can we autodetect this and reload the registry?
 	  #We want to reload the registry anyway with the right version corresponding to the dnadb
 
+	  #warn "reseting adaptor";
 
+	  #We could either test for the db in the regsitry or just pass the class.
 
-
-	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $self->user, $pass);
-
+	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $self->user, $pass,
+								  #'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
+								 {
+								  -dnadb_host => $reg_host,
+								  -dnadb_port => $reg_port,
+								  -dnadb_assembly => $assm_version,
+								  -dnadb_user => $reg_user,
+								  -dnadb_pass => $reg_pass,
+								 });
 
 
 	  #ConfigRegistry will try ans set this
@@ -409,6 +447,7 @@ sub new{
 
     
   ### VALIDATE DNADB
+  #This is now done in DBAdaptor
 
   #We can change this to just use the assembly version
   #we could even have the wordy assmelby version from the meta table
@@ -418,18 +457,27 @@ sub new{
   #And then validate?
   #Just stick to number version for now.
 
-  if($db->_get_schema_build($db->dnadb()) !~ /[0-9]+_${assm_version}[a-z]*$/){
-	my $warning = "WARNING: dnadb does not match assembly_version $assm_version. Using ensembldb.enembl.org to define the dnadb";
-	$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
+
+  #Now we need to set the dnadb_host params to avoid ensembldb defaults
+  #This should check the registry first
+  #Then load from the registry db?
+  #If we have a multi host registry config file this isn't going to work!
+
+  #Is this required anymore as the DBAdaptor handles this?
+  #Not if we pass a db with an incorrect dnadb attached.
+
+  #if($db->_get_schema_build($db->dnadb()) !~ /_[0-9]+_${assm_version}[a-z]*$/){
+#	my $warning = "WARNING: dnadb does not match assembly_version $assm_version. Using ensembldb.enembl.org to define the dnadb";
+#	$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
 
 	#We need to account for reg_config DBs which may have custom info in
 	#So try reg_config host first, then try ensembldb with warning
 	#Could have a reg_config only flag for core dbs
 	#Need to implement more params in set_dnadb_by_assembly_version
-	$self->log($warning);
+#	$self->log($warning);
 
-	$db->set_dnadb_by_assembly_version($assm_version);
-  }
+#	$db->set_dnadb_by_assembly_version($assm_version);
+#  }
 
 
 
@@ -438,14 +486,11 @@ sub new{
   $self->db($db);
   $db->dbc->db_handle;
   $db->dnadb->dbc->db_handle;
-
+  #Set re/disconnect options
   $db->dbc->disconnect_when_inactive(1);
   $db->dnadb->dbc->disconnect_when_inactive(1);
-  
 
- 
   ### Check analyses/feature_type/cell_type
-
   if($feature_analysis){
 	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
  	throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
@@ -482,6 +527,66 @@ sub new{
   $self->debug_hash(3, \$self);
     
   return ($self);
+}
+
+=head2 registry_host
+
+  Example    : my $reg_host = $imp->registry_host;
+  Description: Accessor for registry host attribute
+  Returntype : string e.g. ensembldb.ensembl.org
+  Exceptions : None
+  Caller     : general
+  Status     : at risk 
+
+=cut
+
+sub registry_host{
+  return $_[0]->{'reg_host'};
+}
+
+=head2 registry_user
+
+  Example    : my $reg_user = $imp->registry_user;
+  Description: Accessor for registry user attribute
+  Returntype : string e.g. ensembldb.ensembl.org
+  Exceptions : None
+  Caller     : general
+  Status     : at risk 
+
+=cut
+
+sub registry_user{
+  return $_[0]->{'reg_user'};
+}
+
+=head2 registry_port
+
+  Example    : my $reg_port = $imp->registry_port;
+  Description: Accessor for registry port attribute
+  Returntype : string e.g. ensembldb.ensembl.org
+  Exceptions : None
+  Caller     : general
+  Status     : at risk 
+
+=cut
+
+sub registry_port{
+  return $_[0]->{'reg_port'};
+}
+
+=head2 registry_pass
+
+  Example    : my $reg_pass = $imp->registry_pass;
+  Description: Accessor for registry pass attribute
+  Returntype : string e.g. ensembldb.ensembl.org
+  Exceptions : None
+  Caller     : general
+  Status     : at risk 
+
+=cut
+
+sub registry_pass{
+  return $_[0]->{'reg_pass'};
 }
 
 
