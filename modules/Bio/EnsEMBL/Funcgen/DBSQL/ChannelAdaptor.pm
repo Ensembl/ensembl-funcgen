@@ -80,6 +80,7 @@ sub fetch_by_type_experimental_chip_id {
 
     $sth->execute();
     my ($chan_id) = $sth->fetchrow();
+	$sth->finish();
     
     
     return $self->fetch_by_dbID($chan_id) if $chan_id;
