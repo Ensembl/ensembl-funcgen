@@ -45,10 +45,6 @@ CREATE TABLE `experimental_group` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---insert into egroup values("", "efg", "Hinxton", "njohnson@ebi.ac.uk");
-
---- group is reserved by MySQL.
----Others? head? description? egroup_member(table?) probably overkill.
 
 
 --- Need to separate fields between array and array_chip sensibly
@@ -72,13 +68,10 @@ CREATE TABLE `array` (
 
 
 
--- removed `size` tinyint(4) unsigned NOT NULL default '0', now dynamically generated from key array_chips
---- Size -> Chips?  Need some level of validation for chip sets to avoid incomplete chip sets
---- name = design_name, or is this the chip name?
---- format = tiled, gene, exon, targetted, custom/mixed? Need control/restrict these etc..
+
+--- format = tiled, gene, exon, targetted, custom/mixed? Do we need to enum these?
 --- species, could we have multi-species arrays?
---- removed:
---   `design_id` int(11) unsigned NOT NULL default '0',
+
 
 --
 -- Table structure for table `array_chip`
@@ -582,7 +575,7 @@ CREATE TABLE `external_feature` (
 
 
 --
--- Table structure for table `regulaotry_feature`
+-- Table structure for table `regulatory_feature`
 --
 
 
@@ -604,39 +597,26 @@ CREATE TABLE `regulatory_feature` (
   KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
---stable_id is not unique as we may have several instances across different cell_types
---This should eventually be made NR by moving the feature_set_id into the regulatory attributes table
--- and defining a common start end across all cell lines.
+-- stable_id is not unique, may have several instances across different cell_types/feature_sets
+
+-- Cell specific build:
+-- This should eventually be made NR for stable_id by moving the feature_set_id into the regulatory attributes table
+-- and defining a common start end across all cell lines. YES! But how do we accurately define the start 
+-- and end of the core region, given the technology and the fact that there are not distinct signals as with genes etc.
+ 
 -- This will cause problem for query on cell_line?  Is this a right join, we don't want any reg_feat which don't have 
 -- attrs with the corresponding feature_set_id.
 -- this is tricky as we may want a generic all feats query (noo attrs required)and one where we only get records for those athat a re present in the attrs table
-
--- Do we want a build version? Default would be schema_version
--- build may not change between version, so would have to patch table, which would indicate a build change
--- do patch to avoid having text schema_build column
--- enter build.name in meta to reflect true build? sould this be renamed schema_version?
--- now to be done in extended feature_set table
-
--- feature_type_id - feature type class would be regaultory feature, then have all the different types
--- display label would be dynamically set to display_label else feature type name
 
 
 -- we need an nr link to cell_type
 -- regulatory_feature_set or can we use feature_set?
 -- this would also provide link to all contributing feature_sets
--- could remove meta record?
--- analysis_id
--- to reuse feature_set we would have to either add a feature class/type/table column 
--- then generalise feature access by dynamically linking to the table in question
--- this would mean the data set would be linking feature sets to feature sets, but of a different type.
--- this would mean we would have to have AnnotatedFeature methods and RegulatoryFeature methods
--- or can we generalise?
 
 
--- we need regulatory attribute/annotation which would map back to individual annotated_features
--- how would we map to supporting_features? (core regulatory_feature)
-
-
+--
+-- Table structure for table `regulatory_attribute`
+--
 
 DROP TABLE IF EXISTS `regulatory_attribute`;
 CREATE TABLE `regulatory_attribute` (
@@ -647,8 +627,16 @@ CREATE TABLE `regulatory_attribute` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=17;
 
 
--- do we need key on feature_type and or feature_id?
--- we need to add cell type id here
+-- Cell specific build:
+-- Would need to add cell_type_id here? Or maybe we could simply have another feature_set representing
+-- each cell_type specific build.
+-- The feature_set_id in regulatory_feature table would be the main 'RegulatoryFeatures' feature_set
+-- and the feature_set_ids in regulatory_attribute would be e.g. 'GM06690 - RegulatoryFeatures'
+-- This would not behave like a normal feature_set, as we would not be able to retrieve it like the others
+-- Maybe we could give it a different feature_set type, and code the FeatureSetAdaptor/RegulatoryFeatureAdaptor to handle this
+-- Or do we need a slightly different class?
+
+
 
 --
 -- Table structure for table `experimental_set`
@@ -881,9 +869,6 @@ CREATE TABLE `analysis` (
   KEY `logic_name_idx` (`logic_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
--- add defaults here?
-insert into analysis(logic_name) values('external');
 
 
 --
