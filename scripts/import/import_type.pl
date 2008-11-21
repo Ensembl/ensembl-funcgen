@@ -114,7 +114,7 @@ my ($pass, $dbname, $help, $man, $array_name, $line, $label);
 my ($clobber, $type, $desc, $file, $class, $logic_name, $name);
 my ($anal_db, $db_version, $db_file, $program, $program_version, $program_file);
 my ($gff_source, $gff_feature, $module, $module_version, $parameters, $created);
-my ($displayable, $web_data);
+my ($displayable, $web_data, $species);
 
 my $user = "ensadmin";
 my $host = 'ens-genomics1';
@@ -137,6 +137,7 @@ GetOptions (
 			"host|h=s"        => \$host,
 			"user|u=s"        => \$user,
 			"dbname|d=s"      => \$dbname,
+			"species=s"       => \$species,
 			"help|?"          => \$help,
 			"man|m"           => \$man,
 			"type|t=s"        => \$type,
@@ -250,19 +251,20 @@ my %type_config = (
 				  );
 
 #generic mandatory params
-if(!(exists $type_config{$type} && $dbname && $pass)){
-  throw('Mandatory parameters not met, more here please');
+if(!(exists $type_config{$type} && $dbname && $pass && $species)){
+  throw("Mandatory parameters not met -dbname -pass -species or $type config is not yet accomodated");
 }
 
 
 #now do type specific checking
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-													  -dbname => $dbname,
-													  -port   => $port,
-													  -pass   => $pass,
-													  -host   => $host,
-													  -user   => $user,
+													  -dbname  => $dbname,
+													  -port    => $port,
+													  -pass    => $pass,
+													  -host    => $host,
+													  -user    => $user,
+													  -species => $species,
 													 );
 
 my ($adaptor, $method, $obj_class);
