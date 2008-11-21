@@ -1,9 +1,5 @@
 #!/software/bin/perl -w
 
-##!/usr/local/ensembl/bin/perl -w
-
-####!/opt/local/bin/perl -w
-
 
 =head1 NAME
 
@@ -13,6 +9,8 @@ ensembl-efg parse_and_import.pl
 
 parse_and_import.pl [options]
 
+Can we just point this at Importer perldoc?
+
 Options:
 
 Mandatory
@@ -21,6 +19,10 @@ Mandatory
   -group|g         Group name
 
 Optional
+  -registry_host Host to load registry from(defaults to ensembldb.ensembl.org)
+  -registry_port Port for registry host
+  -registry_user User for registry host 
+  -registry_pass Password for registry user
   -pass|p          The password for the target DB, if not defined in GroupDefs.pm
   -data_root       The root data dir
   -dbname          Defines the eFG dbname if it is not standard
@@ -139,6 +141,7 @@ $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
+my ($reg_host, $reg_user, $reg_port, $reg_pass);
 my ($parser, $fanal, $release);
 
 #to be removed
@@ -175,6 +178,10 @@ GetOptions (
 			"port|l=s"     => \$port,
 			"host|h=s"     => \$host,
 			"user|u=s"     => \$user,
+			"registry_user=s" => \$reg_user,
+			"registry_host=s" => \$reg_host,
+			"registry_pass=s" => \$reg_pass,
+			"registry_port=s" => \$reg_port,
 			"ssh"          => \$ssh,
 			"dbname=s"     => \$dbname,
 			"group|g=s"    => \$group,
@@ -254,6 +261,10 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -host        => $host,
    -user        => $user,
    -port        => $port,
+   -registry_pass => $reg_pass,
+   -registry_host => $reg_host,
+   -registry_user => $reg_user,
+   -registry_port => $reg_port,
    -ssh         =>  $ssh,
    -dbname      => $dbname,
    -array_set   => $array_set,
@@ -273,7 +284,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -dump_fasta  => $fasta,
    -norm_method => $nmethod,
    -species     => $species,
-   -farm => $farm,
+   -farm        => $farm,
    -location    => $loc,
    -contact     => $contact,
    -verbose     => $verbose,
