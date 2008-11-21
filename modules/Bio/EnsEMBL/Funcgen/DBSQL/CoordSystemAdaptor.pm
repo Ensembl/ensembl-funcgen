@@ -1010,10 +1010,7 @@ sub store {
 	
 	if($cs->{'core_cache'}->{$sbuild}->{'IS_STORED'}) {
 	  #Doesn't this only check on dbID?
-	  #warning("CoordSystem $name $version is already in db.\n");
-	  #return;
-
-	  warn "Skipping previously stored CoordSystem schema_build $sbuild\n";
+	  #warn "Skipping previously stored CoordSystem schema_build $sbuild\n";
 	  next;
 
 	}
