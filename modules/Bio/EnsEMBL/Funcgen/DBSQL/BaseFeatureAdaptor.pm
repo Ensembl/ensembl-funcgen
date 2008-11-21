@@ -127,6 +127,7 @@ sub fetch_all_by_Slice_constraint {
 	return \@result;
   }
 
+ 
   #build seq_region cache here once for entire query
   $self->build_seq_region_cache($slice);#, $fg_cs);
 
@@ -257,7 +258,7 @@ sub build_seq_region_cache{
   $self->{'seq_region_cache'} = {};
   $self->{'core_seq_region_cache'} = {};
   %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
- 
+
   #now reverse cache
   foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){
 	$self->{'core_seq_region_cache'}->{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
@@ -283,7 +284,7 @@ sub get_seq_region_id_by_Slice{
 	throw('You must provide a valid Bio::EnsEMBL::Slice');
   }
 
-  my ($core_sr_id);
+  my ($core_sr_id,  $fg_sr_id);
 
 
   #Slice should always have an adaptor, no?
@@ -294,7 +295,6 @@ sub get_seq_region_id_by_Slice{
 	$core_sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
   }
 
-
   #This does not work!! When updating for a new schema_build we get the first
   #seq_region stored, than for each subsequent one, it arbitrarily assigns a value from the hash even tho the 
   #the exists condition isn't met!
@@ -302,13 +302,10 @@ sub get_seq_region_id_by_Slice{
   #Can't replicate this using a normal hash
 
   #This cache has been built based on the schema_build
-  my $fg_sr_id;
-
+  
   if (exists $self->{'seq_region_cache'}{$core_sr_id}){
 	$fg_sr_id = $self->{'seq_region_cache'}{$core_sr_id};
   }
-
-
 
   if(! $fg_sr_id && ref($fg_cs)){
 	#This is used to store new seq_region info along side previous stored seq_regions of the same version
@@ -321,6 +318,8 @@ sub get_seq_region_id_by_Slice{
 	my $sql = 'SELECT seq_region_id from seq_region where coord_system_id='.$fg_cs->dbID().
 	  ' and name="'.$slice->seq_region_name.'"';
 
+
+	#This may not exist, so we need to catch it here?
   	($fg_sr_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 
 	#if we are providing forward comptaiblity
@@ -338,14 +337,11 @@ sub get_seq_region_id_by_Slice{
   elsif(! $fg_sr_id && ! $test_present){
 	#This generally happens when using a new core db with a efg db that hasn't been updated
 	#Default to name match or throw if not present in DB
-
 	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
 	my $core_cs = $slice->coord_system;
 
 	#This is basically avoiding the mapping of core to efg seq_region_ids 
 	#via schema_build(of the new core db) as we are matching directly to the seq_name
-
-
 	my $version_clause = ($core_cs->name eq 'chromosome') ? ' and cs.version="'.$core_cs->version.'"' : '';
 
 	my $sql = 'SELECT distinct(seq_region_id) from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and sr.name="'.$slice->seq_region_name.'" and cs.name="'.$core_cs->name.'"'.$version_clause;
@@ -358,10 +354,10 @@ sub get_seq_region_id_by_Slice{
 
 	}
 
-	warning('Defaulting to previously store seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
-	  "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
+	warn 'Defaulting to previously store seq_region for: '.$core_cs->name.':'.
+	  $core_cs->version.':'.$slice->seq_region_name.
+		"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
   }
-
 
   return $fg_sr_id;
 }
