@@ -217,9 +217,10 @@ sub data_set{
 sub validate_files{
   my $self = shift;
 
+
   #Get file
   if (! @{$self->result_files()}) {
-	my $list = "ls ".$self->input_dir().'/'.$self->name().'*.'.lc($self->vendor);#could use vendor here?
+	my $list = "ls ".$self->get_dir('input').'/'.$self->name().'*.'.lc($self->vendor);#could use vendor here?
 	my @rfiles = `$list`;
 	$self->result_files(\@rfiles);
   }
