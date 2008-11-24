@@ -356,7 +356,7 @@ sub get_seq_region_id_by_Slice{
 
 	warn 'Defaulting to previously store seq_region for: '.$core_cs->name.':'.
 	  $core_cs->version.':'.$slice->seq_region_name.
-		"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
+		"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n";
   }
 
   return $fg_sr_id;
@@ -898,7 +898,7 @@ sub fetch_all_by_external_name {
 sub fetch_all_by_stable_Storable_FeatureSets{
   my ($self, $obj, $fsets) = @_;
 
-  my ($extdb_name, $efg_feature);
+  my ($extdb_name);
   my $dbe_adaptor = $self->db->get_DBEntryAdaptor;
 
  
