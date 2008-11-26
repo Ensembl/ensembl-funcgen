@@ -490,6 +490,8 @@ sub new{
   $db->dbc->disconnect_when_inactive(1);
   $db->dnadb->dbc->disconnect_when_inactive(1);
 
+ 
+
   ### Check analyses/feature_type/cell_type
   if($feature_analysis){
 	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
@@ -3010,18 +3012,26 @@ sub R_norm{
       $self->log("All ExperimentalChips already have status:\t${logic_name}");
     } else {					#Got data to normalise and import
       my @dbids;
-      my $R_file = $self->get_dir("norm")."/${logic_name}.R";
-      my $job_name = $self->experiment->name()."_${logic_name}";
-      my $outfile = $self->get_dir("norm")."/result.${logic_name}.txt";
-      my $errfile = $self->get_dir("norm")."/${logic_name}.out";
+      my $R_file     = $self->get_dir("norm")."/${logic_name}.R";
+      my $job_name   = $self->experiment->name()."_${logic_name}";
+      my $resultfile = $self->get_dir("norm")."/result.${logic_name}.txt";
+      my $outfile    = $self->get_dir("norm")."/${logic_name}.out";
 
-      my $cmdline = "$ENV{'R_PATH'} --no-save < $R_file >$errfile 2>&1";
+	  #How do we get farm job output i.e. run time memusage
+	  #from interactive job?
+	  #This assumes R_PATH 
+	  my $errfile    = $self->get_dir("norm")."/${logic_name}.err";
+
+	  #Let's build this better so we capture the farm output aswell as the job output.
+      my $cmdline = "$ENV{'R_PATH'} --no-save < $R_file";# >$errfile 2>&1";
+	  #-K option waits for job to complete
       my $bsub = "bsub -K -J $job_name ".$ENV{'R_BSUB_OPTIONS'}.
-		" -e $errfile $ENV{'R_FARM_PATH'} CMD BATCH $R_file"; #--no-save?
+		" -e $errfile -o $outfile $ENV{'R_FARM_PATH'} CMD BATCH $R_file";
+	  
+	  #Can we separate the out and err for commandline?
+      my $r_cmd = (! $self->farm()) ? "$cmdline >$outfile 2>&1" : $bsub;
 
-      my $r_cmd = (! $self->farm()) ? $cmdline : $bsub;
-
-      $self->backup_file($outfile);	#Need to do this as we're appending in the loop
+      $self->backup_file($resultfile);	#Need to do this as we're appending in the loop
   
       #setup qurey
       #warn "Need to add host and port here";
@@ -3195,7 +3205,7 @@ sub R_norm{
 		#dbWriteTable(con, "result", c3results, append=TRUE)
 		#dbWriteTable returns true but does not load any data into table!!!
 		
-		$query .= "write.table(formatted_df, file=\"${outfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
+		$query .= "write.table(formatted_df, file=\"${resultfile}\", sep=\"\\t\", col.names=FALSE, row.names=FALSE, quote=FALSE, append=TRUE)\n";
 		
 		#tidy up here?? 
 		}
@@ -3207,17 +3217,18 @@ sub R_norm{
       print RFILE $query;
       close(RFILE);
  
-
-	  $self->log("Submitting $logic_name job to farm:\t".localtime());
+	  my $submit_text = "Submitting $logic_name job";
+	  $submit_text .= ' to farm' if $self->farm;
+	  $self->log("${submit_text}:\t".localtime());
 	  run_system_cmd($r_cmd);
 	  $self->log("Finished $logic_name job:\t".localtime());
 	  $self->log('See '.$self->get_dir('norm').' for ExperimentalChip QC files');
 
 	  #Now load file and update status
 	  #Import directly here to avoid having to reparse all results if we crash!!!!
-	  $self->log("Importing:\t$outfile");
-	  $self->db->load_table_data("result",  $outfile);
-	  $self->log("Finishing importing:\t$outfile");
+	  $self->log("Importing:\t$resultfile");
+	  $self->db->load_table_data("result",  $resultfile);
+	  $self->log("Finishing importing:\t$resultfile");
 	  
 
 	  foreach my $echip(@chips){
