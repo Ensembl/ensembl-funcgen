@@ -1,16 +1,260 @@
---mysql -hia64g -uensadmin -pensembl < efg_test.sql
 
---- Summary of current proposed/absent tables:
----     seq_region tables (incorporating chromosome name and assembly version)
----     xref tables - for linking probes to user/vendor defined features.
----     Denormalised probe_set/probe/probe_feature/results tables bt vendor, format or design_type? 
----     egroup_member table? 
+--- CORE TABLES ---
+
+--
+-- Table structure for table `analysis`
+--
+
+DROP TABLE IF EXISTS `analysis`;
+CREATE TABLE `analysis` (
+  `analysis_id` int(10) unsigned NOT NULL auto_increment,
+  `created` datetime NOT NULL default '0000-00-00 00:00:00',
+  `logic_name` varchar(100) NOT NULL,
+  `db` varchar(120) default NULL,
+  `db_version` varchar(40) default NULL,
+  `db_file` varchar(120) default NULL,
+  `program` varchar(80) default NULL,
+  `program_version` varchar(40) default NULL,
+  `program_file` varchar(80) default NULL,
+  `parameters` varchar(255) default NULL,
+  `module` varchar(80) default NULL,
+  `module_version` varchar(40) default NULL,
+  `gff_source` varchar(40) default NULL,
+  `gff_feature` varchar(40) default NULL,
+  PRIMARY KEY  (`analysis_id`),
+  UNIQUE KEY `logic_name` (`logic_name`),
+  KEY `logic_name_idx` (`logic_name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---- Mapping between assemblies?
---- All default values need checking
---- Use MGED terms for design_types & experimental_variables where possible.
---- Use Brno nomelcature for target features
+--
+-- Table structure for table `analysis_description`
+--
+
+DROP TABLE IF EXISTS `analysis_description`;
+CREATE TABLE `analysis_description` (
+  `analysis_id` int(10) unsigned NOT NULL,
+  `description` text,
+  `display_label` varchar(255) default NULL,
+  `displayable` tinyint(1) NOT NULL default '1',
+  `web_data` text,	
+  KEY `analysis_idx` (`analysis_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `meta`
+--
+
+DROP TABLE IF EXISTS `meta`;
+CREATE TABLE `meta` (
+  `meta_id` int(10) NOT NULL auto_increment,
+  `species_id` int(10) unsigned default '1',
+  `meta_key` varchar(40) NOT NULL,
+  `meta_value` varchar(255) NOT NULL,
+  PRIMARY KEY  (`meta_id`),
+  KEY `meta_key_index` (`meta_key`),
+  KEY `meta_value_index` (`meta_value`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `meta_coord`
+--
+
+DROP TABLE IF EXISTS `meta_coord`;
+CREATE TABLE `meta_coord` (
+  `table_name` varchar(40) NOT NULL,
+  `coord_system_id` int(10) NOT NULL,
+  `max_length` int(11) default NULL,
+  UNIQUE KEY `table_name` (`table_name`,`coord_system_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `object_xref`
+--
+
+DROP TABLE IF EXISTS `object_xref`;
+CREATE TABLE object_xref (
+  object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  ensembl_id                  INT(10) UNSIGNED NOT NULL, 
+  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType') not NULL,
+  xref_id                     INT UNSIGNED NOT NULL,
+  linkage_annotation          VARCHAR(255) DEFAULT NULL,
+  UNIQUE (ensembl_object_type, ensembl_id, xref_id),
+  KEY oxref_idx (object_xref_id, xref_id, ensembl_object_type, ensembl_id),
+  KEY xref_idx (xref_id, ensembl_object_type)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
+
+-- Note we use case correct versions of object name to allow easy adaptor generation
+
+--
+-- Table structure for table `identity_xref`
+--
+
+DROP TABLE IF EXISTS identity_xref;
+CREATE TABLE identity_xref (
+  object_xref_id          INT(10) UNSIGNED NOT NULL,
+  query_identity 	  INT(5),
+  target_identity         INT(5),
+  hit_start               INT,
+  hit_end                 INT,
+  translation_start       INT,
+  translation_end         INT,
+  cigar_line              TEXT, 
+  score                   DOUBLE,
+  evalue                  DOUBLE,
+  `analysis_id` smallint(5) unsigned NOT NULL,
+  PRIMARY KEY (object_xref_id),
+  KEY analysis_idx (analysis_id)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `xref`
+--
+
+DROP TABLE IF EXISTS xref;
+CREATE TABLE xref (
+   xref_id 		      INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+   external_db_id             SMALLINT UNSIGNED NOT NULL,
+   dbprimary_acc              VARCHAR(40) NOT NULL,
+   display_label              VARCHAR(128) NOT NULL,
+   version                    VARCHAR(10) DEFAULT '0' NOT NULL,
+   description                VARCHAR(255),
+   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED', 'CODING', 'TARGET') not NULL,
+   info_text                  VARCHAR(255),
+   PRIMARY KEY (xref_id),
+   UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text),
+   KEY display_index (display_label),
+   KEY info_type_idx (info_type)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=100;
+
+
+--
+--  Table structure for table 'external_synonym'
+--
+
+DROP TABLE IF EXISTS external_synonym;
+CREATE TABLE external_synonym (
+  xref_id                     INT(10) UNSIGNED NOT NULL,
+  synonym                     VARCHAR(40) NOT NULL, 
+  PRIMARY KEY (xref_id, synonym),
+  KEY name_index (synonym)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=20;
+
+
+--
+-- Table structure for table 'external_db' 
+--
+
+DROP TABLE IF EXISTS external_db;
+CREATE TABLE external_db (
+  external_db_id 	          SMALLINT(5) UNSIGNED NOT NULL auto_increment,
+  db_name                     VARCHAR(28) NOT NULL,
+  db_release                  VARCHAR(255),
+  status                      ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL,
+  dbprimary_acc_linkable      BOOLEAN DEFAULT 1 NOT NULL,
+  display_label_linkable      BOOLEAN DEFAULT 0 NOT NULL,
+  priority                    INT NOT NULL,
+  db_display_name             VARCHAR(255),
+  type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM') default NULL,
+  secondary_db_name           VARCHAR(255) DEFAULT NULL,
+  secondary_db_table          VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (external_db_id) 
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
+
+
+--
+-- Table structure for table 'go_xref'
+--
+
+DROP TABLE if EXISTS go_xref;
+CREATE TABLE go_xref (
+  object_xref_id          INT(10) UNSIGNED DEFAULT '0' NOT NULL,
+  linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 
+		               'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL,
+  source_xref_id          INT(10) UNSIGNED DEFAULT NULL,
+  KEY (object_xref_id),
+  KEY (source_xref_id),
+  UNIQUE (object_xref_id, source_xref_id, linkage_type)
+)  ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- This is just an empty to table to avoid having to rework all the core sql and API to accomodate eFG specific xref schema
+
+
+
+--- CORE LIKE TABLES ---
+
+
+--
+-- Table structure for table `coord_system`
+--
+
+DROP TABLE IF EXISTS `coord_system`;
+CREATE TABLE `coord_system` (
+  `coord_system_id` int(10) NOT NULL auto_increment,
+  `name` varchar(40) NOT NULL,
+  `version` varchar(40) default NULL,
+  `rank` int(11) NOT NULL,
+  `attrib` set('default_version','sequence_level') default NULL,
+  `schema_build` varchar(10) default NULL,
+  `core_coord_system_id` int(10) NOT NULL, 
+  PRIMARY KEY  (`coord_system_id`, `core_coord_system_id`, `schema_build`),
+  KEY `name_version_idx` (`name`, `version`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+--- This is never being queried anyway as we cache all the CSs on start up!
+--- UNIQUE KEY `rank` (`rank`, `schema_build`),
+--- UNIQUE KEY `name` (`name`,`version`, `schema_build`)
+--- we want nr coord_system_id records to accomodate multiple coord_sys's which are effectively the same
+--- e.g. NCBI36 chromosome across all the core DB which have it
+--- can we ignore the unique keys for rank, name & version as these will be implied by the core DB?
+--- primary key should really be coord_sys_id, name, version, schema_build (core_coord_sys_id implied by other values)
+--- This however gives no access to the rest of the index for most of the queries
+--- don't need to really bother optimising the key structures as the table is so small?
+--- put core_coord_system_id at end of primary key and have separate key for coord_system_id
+--- primary key name, schema_build, version, core_coord_system_id
+--- or could we jsut depend on the core keys confering data integrity and have key optimised for query
+
+
+--
+-- Table structure for table `seq_region`
+--
+
+DROP TABLE IF EXISTS `seq_region`;
+CREATE TABLE `seq_region` (
+  `seq_region_id` int(10) unsigned NOT NULL auto_increment,
+  `name` varchar(40) NOT NULL,
+  `coord_system_id` int(10) unsigned NOT NULL,
+  `core_seq_region_id` int(10) unsigned NOT NULL,
+  `schema_build` varchar(10) default NULL,
+  PRIMARY KEY  (`seq_region_id`, `name`, `schema_build`),
+  KEY `coord_system_id` (`coord_system_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1; 
+
+-- it maybe possible to have 2 seq_regions on different levels with the same name
+-- there fore have to use core cs id in primary key
+-- order of extra primary key members doesn't really matter as we'll never query on them?
+-- swapped order of ke to name coord_system_id, as we will probably want to query on name primarily
+-- why does core table have cs id key?
+
+-- Name is only required to enable us to add new seq_regions to the correct seq_region_id
+-- It will never be used to retrieve a slice as we do that via the core DB
+-- how are we going to use this when querying?
+-- basically pull back seq_region_id based schema_build and core_seq_region_id
+-- can we omit core_coord_system_id? As we have this info from the cs table.
+-- other keys?
+
+
+
+
+
+--- EFG tables
+
+
+
 
 --
 -- Table structure for table `associated_feature_type`
@@ -47,9 +291,6 @@ CREATE TABLE `experimental_group` (
 
 
 
---- Need to separate fields between array and array_chip sensibly
---- It seems Nimblgen can do pretty much anything they like in a chip set, but can we make any safe assumption that will be array/chip set specific
-
 --
 -- Table structure for table `array`
 --
@@ -65,9 +306,6 @@ CREATE TABLE `array` (
    PRIMARY KEY  (`array_id`),
    UNIQUE KEY   (`vendor`, `name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-
 
 --- format = tiled, gene, exon, targetted, custom/mixed? Do we need to enum these?
 --- species, could we have multi-species arrays?
@@ -88,10 +326,8 @@ CREATE TABLE `array_chip` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---- name = design_name, or is this the chip name?
+--- name = design_name
 --- removed  `description` varchar(255) default NULL,
-
-
 
 
 --
@@ -837,285 +1073,14 @@ INSERT into status_name values ('', 'T.Biweight');
 INSERT into status_name values ('', 'LOESS');
 
 
---change to small int?
---INSERT into table status("", 'DISPLAYABLE');
+
 -- need to add more states, probably need to validate/insert required states in Importer
 -- would need to get CoordSys objects and set IMPORTED_CS_"cs_id" for relevant data_version
 
 
 
---
--- Table structure for table `analysis`
---
-
-DROP TABLE IF EXISTS `analysis`;
-CREATE TABLE `analysis` (
-  `analysis_id` int(10) unsigned NOT NULL auto_increment,
-  `created` datetime NOT NULL default '0000-00-00 00:00:00',
-  `logic_name` varchar(100) NOT NULL,
-  `db` varchar(120) default NULL,
-  `db_version` varchar(40) default NULL,
-  `db_file` varchar(120) default NULL,
-  `program` varchar(80) default NULL,
-  `program_version` varchar(40) default NULL,
-  `program_file` varchar(80) default NULL,
-  `parameters` varchar(255) default NULL,
-  `module` varchar(80) default NULL,
-  `module_version` varchar(40) default NULL,
-  `gff_source` varchar(40) default NULL,
-  `gff_feature` varchar(40) default NULL,
-  PRIMARY KEY  (`analysis_id`),
-  UNIQUE KEY `logic_name` (`logic_name`),
-  KEY `logic_name_idx` (`logic_name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-
---
--- Table structure for table `analysis_description`
---
-
-DROP TABLE IF EXISTS `analysis_description`;
-CREATE TABLE `analysis_description` (
-  `analysis_id` int(10) unsigned NOT NULL,
-  `description` text,
-  `display_label` varchar(255) default NULL,
-  `displayable` tinyint(1) NOT NULL default '1',
-  `web_data` text,	
-  KEY `analysis_idx` (`analysis_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
---
--- Table structure for table `meta`
---
-
-DROP TABLE IF EXISTS `meta`;
-CREATE TABLE `meta` (
-  `meta_id` int(10) NOT NULL auto_increment,
-  `species_id` int(10) unsigned default '1',
-  `meta_key` varchar(40) NOT NULL,
-  `meta_value` varchar(255) NOT NULL,
-  PRIMARY KEY  (`meta_id`),
-  KEY `meta_key_index` (`meta_key`),
-  KEY `meta_value_index` (`meta_value`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
--- entries
--- regulatory build_name
--- binary string vars:
---   feature_set name list
---   feature_type name list
---   regulatory feature_type regexs, here rather than in feature_type as they may change between release? 
--- what about old release meta if we are containing more than one reg build in the same db?
--- what else?
-
---
--- Table structure for table `meta_coord`
---
-
-DROP TABLE IF EXISTS `meta_coord`;
-CREATE TABLE `meta_coord` (
-  `table_name` varchar(40) NOT NULL,
-  `coord_system_id` int(10) NOT NULL,
-  `max_length` int(11) default NULL,
-  UNIQUE KEY `table_name` (`table_name`,`coord_system_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
---- change to primary key?
----should only ever be predicted_feature, but with all the coord_sys_ids
----This is slightly redundant, but required for core API modules to work
-
---- Set up default meta coord entries...this should be done in import
--- Change max lenght of oligo?
-
---insert into meta_coord values("annotated_feature", 1, 5000);
---insert into meta_coord values("annotated_feature", 1, 2000);
-
---
--- Table structure for table `coord_system`
---
-
-DROP TABLE IF EXISTS `coord_system`;
-CREATE TABLE `coord_system` (
-  `coord_system_id` int(10) NOT NULL auto_increment,
-  `name` varchar(40) NOT NULL,
-  `version` varchar(40) default NULL,
-  `rank` int(11) NOT NULL,
-  `attrib` set('default_version','sequence_level') default NULL,
-  `schema_build` varchar(10) default NULL,
-  `core_coord_system_id` int(10) NOT NULL, 
-  PRIMARY KEY  (`coord_system_id`, `core_coord_system_id`, `schema_build`),
-  KEY `name_version_idx` (`name`, `version`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-
---- This is never being queried anyway as we cache all the CSs on start up!
---- UNIQUE KEY `rank` (`rank`, `schema_build`),
---- UNIQUE KEY `name` (`name`,`version`, `schema_build`)
---- we want nr coord_system_id records to accomodate multiple coord_sys's which are effectively the same
---- e.g. NCBI36 chromosome across all the core DB which have it
---- can we ignore the unique keys for rank, name & version as these will be implied by the core DB?
---- primary key should really be coord_sys_id, name, version, schema_build (core_coord_sys_id implied by other values)
---- This however gives no access to the rest of the index for most of the queries
---- don't need to really bother optimising the key structures as the table is so small?
---- put core_coord_system_id at end of primary key and have separate key for coord_system_id
---- primary key name, schema_build, version, core_coord_system_id
---- or could we jsut depend on the core keys confering data integrity and have key optimised for query
-
-
---
--- Table structure for table `seq_region`
---
-
-DROP TABLE IF EXISTS `seq_region`;
-CREATE TABLE `seq_region` (
-  `seq_region_id` int(10) unsigned NOT NULL auto_increment,
-  `name` varchar(40) NOT NULL,
-  `coord_system_id` int(10) unsigned NOT NULL,
-  `core_seq_region_id` int(10) unsigned NOT NULL,
-  `schema_build` varchar(10) default NULL,
-  PRIMARY KEY  (`seq_region_id`, `name`, `schema_build`),
-  KEY `coord_system_id` (`coord_system_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1; 
-
-
-
-
-
--- it maybe possible to have 2 seq_regions on different levels with the same name
--- there fore have to use core cs id in primary key
--- order of extra primary key members doesn't really matter as we'll never query on them?
--- swapped order of ke to name coord_system_id, as we will probably want to query on name primarily
--- why does core table have cs id key?
-
--- Name is only required to enable us to add new seq_regions to the correct seq_region_id
--- It will never be used to retrieve a slice as we do that via the core DB
--- how are we going to use this when querying?
--- basically pull back seq_region_id based schema_build and core_seq_region_id
--- can we omit core_coord_system_id? As we have this info from the cs table.
--- other keys?
-
-
-
-
---xref stuff
-
-DROP TABLE IF EXISTS `object_xref`;
-CREATE TABLE object_xref (
-  object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  ensembl_id                  INT(10) UNSIGNED NOT NULL, 
-  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType') not NULL,
-  xref_id                     INT UNSIGNED NOT NULL,
-  linkage_annotation          VARCHAR(255) DEFAULT NULL,
-  UNIQUE (ensembl_object_type, ensembl_id, xref_id),
-  KEY oxref_idx (object_xref_id, xref_id, ensembl_object_type, ensembl_id),
-  KEY xref_idx (xref_id, ensembl_object_type)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
-
-
--- Note we use case correct versions of object name to allow easy adaptor generation
-
-
-DROP TABLE IF EXISTS identity_xref;
-CREATE TABLE identity_xref (
-  object_xref_id          INT(10) UNSIGNED NOT NULL,
-  query_identity 	  INT(5),
-  target_identity         INT(5),
-  hit_start               INT,
-  hit_end                 INT,
-  translation_start       INT,
-  translation_end         INT,
-  cigar_line              TEXT, 
-  score                   DOUBLE,
-  evalue                  DOUBLE,
-  `analysis_id` smallint(5) unsigned NOT NULL,
-  PRIMARY KEY (object_xref_id),
-  KEY analysis_idx (analysis_id)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-DROP TABLE IF EXISTS xref;
-CREATE TABLE xref (
-   xref_id 		      INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-   external_db_id             SMALLINT UNSIGNED NOT NULL,
-   dbprimary_acc              VARCHAR(40) NOT NULL,
-   display_label              VARCHAR(128) NOT NULL,
-   version                    VARCHAR(10) DEFAULT '0' NOT NULL,
-   description                VARCHAR(255),
-   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED', 'CODING', 'TARGET') not NULL,
-   info_text                  VARCHAR(255),
-   PRIMARY KEY (xref_id),
-   UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text),
-   KEY display_index (display_label),
-   KEY info_type_idx (info_type)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=100;
-
-
-
---  Table structure for table 'external_synonym'
-
-DROP TABLE IF EXISTS external_synonym;
-CREATE TABLE external_synonym (
-  xref_id                     INT(10) UNSIGNED NOT NULL,
-  synonym                     VARCHAR(40) NOT NULL, 
-  PRIMARY KEY (xref_id, synonym),
-  KEY name_index (synonym)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=20;
-
-
-
--- Table structure for table 'external_db' 
-
-DROP TABLE IF EXISTS external_db;
-CREATE TABLE external_db (
-  external_db_id 	          SMALLINT(5) UNSIGNED NOT NULL auto_increment,
-  db_name                     VARCHAR(28) NOT NULL,
-  db_release                  VARCHAR(255),
-  status                      ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL,
-  dbprimary_acc_linkable      BOOLEAN DEFAULT 1 NOT NULL,
-  display_label_linkable      BOOLEAN DEFAULT 0 NOT NULL,
-  priority                    INT NOT NULL,
-  db_display_name             VARCHAR(255),
-  type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM') default NULL,
-  secondary_db_name           VARCHAR(255) DEFAULT NULL,
-  secondary_db_table          VARCHAR(255) DEFAULT NULL,
-  PRIMARY KEY (external_db_id) 
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
-
-
-
--- Table structure for table 'go_xref'
-
-DROP TABLE if EXISTS go_xref;
-CREATE TABLE go_xref (
-  object_xref_id          INT(10) UNSIGNED DEFAULT '0' NOT NULL,
-  linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 
-		               'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL,
-  source_xref_id          INT(10) UNSIGNED DEFAULT NULL,
-  KEY (object_xref_id),
-  KEY (source_xref_id),
-  UNIQUE (object_xref_id, source_xref_id, linkage_type)
-)  ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
--- This is just an empty to table to avoid having to rework all the core sql and API to accomodate eFG specific xref schema
-
-
-
-
-
-
-
-
-
-
 
 --- Further thoughts:
-
---- More tables required for probe remapping? meta, rule tables etc?
 
 
 --- Denormalise ---
@@ -1124,5 +1089,3 @@ CREATE TABLE go_xref (
 ---     probe > "array.vendor"_probe e.g. affy_probe, or "array.name"_probe e.g u133_probe, or "array.class"_probe e.g. CHIP2_probe
 
 
---- Mostly empty/unused fields which could be extracted to separate tables to reduce size?
----     cigar_line
