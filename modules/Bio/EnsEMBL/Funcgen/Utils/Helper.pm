@@ -1277,7 +1277,7 @@ sub rollback_results{
 }
 
 
-=head2 rollback_result_features
+=head2 rollback_ResultFeatures
 
   Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
   Example    : $self->rollback_result_features($rset);
@@ -1290,7 +1290,10 @@ sub rollback_results{
 
 =cut
 
-sub rollback_result_feature{
+#Need to implement this by slice?
+#Then we would need to add a force flag for creation to override the status check
+
+sub rollback_ResultFeatures{
   my ($self, $rset) = @_;
 
   #what about?
@@ -1337,6 +1340,14 @@ sub rollback_result_feature{
 
 =cut
 
+#This should be tied to a CS id!!!
+#And analysis dependant?
+#We may not want to delete alignment by different analyses?
+#In practise the slice methods ignore analysis_id for this table
+#So we currently never use this!
+#So IMPORTED status should be tied to CS id and Analysis id?
+
+#We may want to split this so we can just delete the mappings and leave the probes/probesets in place
 
 sub rollback_ArrayChip{
   my ($self, $ac) = @_;
@@ -1350,21 +1361,28 @@ sub rollback_ArrayChip{
   #Hence the 2nd stage of the import fails as we have an associated ExperimentalChip
   #We need to make sure the ExperimentalChip and Channel have not been imported!!!
 
-  warn "Need to implement EC/Channel import check before rolling back ArrayChip";
 
   
+  warn "Also need to delete potential ProbeTranscriptAlign IdentityXrefs";
+  #For affy this may rollback ProbeTranscript IDXrefs which apply to multiple array chips
+  #And in fact all external_dbs?
+  #This may delete xrefs which are not easily recreated
+  #BackUp?
+  
 
+  warn "NOTE: rollback_ArrayChip. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";
+  
   #Check for dependent ExperimentalChips
-#  if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
+  #if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
 #	my %exps;
 #	my $txt = "Experiment\t\t\t\tExperimentalChip Unique IDs\n";
-
+	
 #	foreach my $ec(@echips){
 #	  $exps{$ec->get_Experiment->name} ||= '';
 	
 #	  $exps{$ec->get_Experiment->name} .= "\t".$ec->unique_id;
 #	}
-
+	
 #	map {$txt.= "\t".$_.":".$exps{$_}."\n"} keys %exps;
 	
 #	throw("Cannot rollback ArrayChip:\t".$ac->name.
@@ -1392,13 +1410,35 @@ sub rollback_ArrayChip{
 	throw("ProbeFeature rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
   }
 
+  #We don't know the logic name, or can we build this from the array.format?
+  #Re-instate class in array? And swap meaning with format. do for v53!
+  #Just hack for now by embedding fetch_all_by_module
+  #my (@anal_ids) = @{$db->get_AnalysisAdaptor->generic_fetch("a.module='ProbeAlign'")};
+  #Grrrr! AnalysisAdaptor is not a standard BaseAdaptor implementation
+
+  my @anal_ids = @{$db->dbc->db_handle->selectall_arrayref("select analysis_id from analysis where module='ProbeAlign'")};
+  @anal_ids = map {$_= "@$_"} @anal_ids;
+
+  if(@anal_ids){
+	$sql = 'DELETE ix, ox from identity_xref ix, object_xref ox, probe p, array_chip ac '.
+	  'WHERE ix.object_xref_id=ox.object_xref_id and ox.ensembl_object_type="Probe" and ox.ensembl_id=p.probe_id'.
+		' and p.array_chip_id='.$ac->dbID.' and ix.analysis_id in('.join(',', @anal_ids).')';
+	
+	if(! $db->dbc->do($sql)){
+	  throw("ProbeTranscript IdentityXref rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
+	}
+  }
+
 
   $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();
   
   if(! $db->dbc->do($sql)){
 	throw("Probe rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
   }
-     
+   
+  
+  $self->log("Finished rolling back ArrayChip:\t".$ac->name);
+  
   return;
 }
 
