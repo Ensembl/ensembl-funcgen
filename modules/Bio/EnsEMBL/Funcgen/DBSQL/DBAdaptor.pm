@@ -728,7 +728,7 @@ sub fetch_all_states{
 
 	my $sql = "SELECT state FROM status WHERE table_name=\"$table\" AND table_id=\"$id\"";
 
-	my @states = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
+	my @states = map{ $_ = "@$_"} @{$self->dbc->db_handle->selectall_arrayref($sql)};
 
 	return \@states;
 }
