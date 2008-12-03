@@ -40,7 +40,7 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Funcgen::ProbeSet;#?
+use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
@@ -281,7 +281,7 @@ sub _objs_from_sth {
 
 		#Do we even need this????
 
-		warn("Can we lazy load the arrays from a global cache, which is itself lazy loaded and non-redundant?\n");
+		#warn("Can we lazy load the arrays from a global cache, which is itself lazy loaded and non-redundant?\n");
 
 		
 		#this current id stuff is due to lack of probeset table in core
