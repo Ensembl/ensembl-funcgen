@@ -28,8 +28,6 @@ export DB_PORT=3306
 export SPECIES=mus_musculus
 #This is used for accessing array directory
 export SPECIES_COMMON=Mouse
-#Only required for transcript mapping
-export SCHEMA_BUILD=51_37d
 export GENOMICSEQS=/path/to/your/soft/maksed/dusted/toplevel/including/non/ref/genome/sequence
 
 #See arrays.env $VALID_ARRAY_DESIGNS
