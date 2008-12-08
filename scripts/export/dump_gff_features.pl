@@ -18,13 +18,16 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 $| =1;
 
 my ($file, $ofile, $pass, $line, $fset_name);
-my ($exp_name, $dbname, $cdbname, $help, $pids, $man, @features, $chr, $not_status);
+my ($exp_name, $help, $pids, $man, @features, $chr, $not_status);
+
 my $dbhost = $ENV{'EFG_HOST'};
 my $port = $ENV{'EFG_PORT'};
 my $user = $ENV{'EFG_READ_USER'};
+my $dbname = $ENV{'EFG_DBNAME'};
+my $cdbname = $ENV{'CORE_DBNAME'};
+
 my $anal_name = 'Nessie';
 my $out_dir = ".";
-
 
 GetOptions (
 			"feature_set=s" => \$fset_name,
@@ -50,6 +53,8 @@ if(! $cdbname  || ! $dbname ){
 throw("Must define your funcgen dbhost -dbhost") if ! $dbhost;
 #throw("Must supply an input file with -file") if ! $file;
 #throw("Must supply a password for your fungen db") if ! $pass;
+
+throw("Must pass a feature_set name via -feature_set, i.e. 'RegulatoryFeatures'") if ! $fset_name;
 
 #this need genericising for ensembldb/ens-livemirror
 
