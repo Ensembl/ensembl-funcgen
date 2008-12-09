@@ -212,9 +212,31 @@ map {
 # make sure that attribute sets also contain focus sets (Do we really need this?)
 map { $attrib_fsets{$_} = $focus_fsets{$_} } keys %focus_fsets;
 
-### build and import regbuild strings by feature_set_id and feature_type_id
 
 my ($sql);
+
+# add missing supporting sets for data_set RegulatoryFeatures (140) in v52 that 
+# haven't been stored. This needs to go into the build regulatory feature script!!!
+#
+#my $dsa = $db->get_DataSetAdaptor();
+#my $dset = $dsa->fetch_by_name('RegulatoryFeatures');
+#
+#foreach (sort {$a <=> $b} keys %attrib_fsets ) {
+#
+#    #print Dumper ($_, $attrib_fsets{$_}->name);
+#
+#    $sql = sprintf "insert into supporting_set (data_set_id, supporting_set_id, type) "
+#        ."values (%d, %d, 'feature');", $dset->dbID, $_;
+#    print Dumper $sql;
+#    eval {
+#        $db->dbc->do($sql);
+#    };
+#    throw("Couldn't store supporting_set ".$attrib_fsets{$_}->name." (".$_.") for data_set"
+#          ."'RegulatoryFeatures' (".$dset->dbID.").") if ($@);
+#
+#}
+
+### build and import regbuild strings by feature_set_id and feature_type_id
 
 my $sth = $db->dbc->prepare("select * from meta where meta_key='regbuild.feature_set_ids'");
 $sth->execute();
