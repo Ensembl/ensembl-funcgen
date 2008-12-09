@@ -109,6 +109,9 @@ Please post comments/questions to the Ensembl development list
 #   toplevel slices. For now we exclude haplotypes as they are no captured in the underlying data. 
 #   However once we are using our own MAQ mappings strategy mightneed to change to reflect this (also 2).
 
+# SG: Need to double-check that feature_set and data_set are stored and have status "displayable" as well as 
+#     having supporting sets correctly associated with the data_set. In v52 there was still a problem.
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -934,6 +937,7 @@ sub get_regulatory_FeatureSet{
                  -supporting_set_type => 'feature'
                  );
             
+            $dset->add_status('DISPLAYABLE');
             $dsa->store($dset) if ($write_features);
         }
     }
