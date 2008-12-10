@@ -21,10 +21,10 @@ _FALSE=!$_
 
 #Do we want to trap any other signals?
 
-if [ $trap_exit -eq 1 ]
-then
-	trap TrapExit EXIT
-fi
+#if [ $trap_exit -eq 1 ]
+#then
+#	trap TrapExit EXIT
+#fi
 
 #alias exit="ding_bell"
 
