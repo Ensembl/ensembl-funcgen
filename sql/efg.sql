@@ -1,4 +1,14 @@
 
+# Ensembl table definitions
+# 
+# Note that more information about each table can be found in
+# ensembl/docs/schema_description/
+
+# Conventions:
+#  - use lower case and underscores
+#  - internal ids are integers named tablename_id
+#  - same name is given in foreign key relations
+
 --- CORE TABLES ---
 
 --
@@ -36,9 +46,9 @@ CREATE TABLE `analysis_description` (
   `analysis_id` int(10) unsigned NOT NULL,
   `description` text,
   `display_label` varchar(255) default NULL,
-  `displayable` tinyint(1) NOT NULL default '1',
+  `displayable` BOOLEAN NOT NULL default '1',
   `web_data` text,	
-  KEY `analysis_idx` (`analysis_id`)
+  UNIQUE KEY `analysis_idx` (`analysis_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -71,23 +81,7 @@ CREATE TABLE `meta_coord` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---
--- Table structure for table `object_xref`
---
 
-DROP TABLE IF EXISTS `object_xref`;
-CREATE TABLE object_xref (
-  object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  ensembl_id                  INT(10) UNSIGNED NOT NULL, 
-  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType') not NULL,
-  xref_id                     INT UNSIGNED NOT NULL,
-  linkage_annotation          VARCHAR(255) DEFAULT NULL,
-  UNIQUE (ensembl_object_type, ensembl_id, xref_id),
-  KEY oxref_idx (object_xref_id, xref_id, ensembl_object_type, ensembl_id),
-  KEY xref_idx (xref_id, ensembl_object_type)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
-
--- Note we use case correct versions of object name to allow easy adaptor generation
 
 --
 -- Table structure for table `identity_xref`
@@ -183,9 +177,61 @@ CREATE TABLE go_xref (
 
 -- This is just an empty to table to avoid having to rework all the core sql and API to accomodate eFG specific xref schema
 
+--
+-- Table structure for table 'unmapped_reason'
+--
+
+DROP TABLE if EXISTS unmapped_reason;
+CREATE TABLE `unmapped_reason` (
+  `unmapped_reason_id` smallint(5) unsigned NOT NULL auto_increment,
+  `summary_description` varchar(255) default NULL,
+  `full_description` varchar(255) default NULL,
+  PRIMARY KEY  (`unmapped_reason_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 --- CORE LIKE TABLES ---
+
+--
+-- Table structure for table `object_xref`
+--
+
+DROP TABLE IF EXISTS `object_xref`;
+CREATE TABLE object_xref (
+  object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  ensembl_id                  INT(10) UNSIGNED NOT NULL, 
+  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType') not NULL,
+  xref_id                     INT UNSIGNED NOT NULL,
+  linkage_annotation          VARCHAR(255) DEFAULT NULL,
+  UNIQUE (ensembl_object_type, ensembl_id, xref_id),
+  KEY oxref_idx (object_xref_id, xref_id, ensembl_object_type, ensembl_id),
+  KEY xref_idx (xref_id, ensembl_object_type)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
+
+-- Note we use case correct versions of object name to allow easy adaptor generation
+
+--
+-- Table structure for table `unmapped_object`
+--
+
+DROP TABLE IF EXISTS `unmapped_object`;
+CREATE TABLE `unmapped_object` (
+  `unmapped_object_id` int(10) unsigned NOT NULL auto_increment,
+  `type` enum('xref', 'probe2transcript') NOT NULL,
+  `analysis_id` smallint(5) unsigned NOT NULL,
+  `external_db_id` smallint(5) unsigned default NULL,
+  `identifier` varchar(255) NOT NULL,
+  `unmapped_reason_id` smallint(5) unsigned NOT NULL,
+  `query_score` double default NULL,
+  `target_score` double default NULL,
+  `ensembl_id` int(10) unsigned default '0',
+  `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe') NOT NULL,
+  `parent` varchar(255) default NULL,
+  PRIMARY KEY  (`unmapped_object_id`),
+  KEY `id_idx` (`identifier`),
+  KEY `anal_idx` (`analysis_id`),
+  KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 --
