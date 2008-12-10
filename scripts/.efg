@@ -57,7 +57,7 @@ export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q 
 #would need to sed file to set permanently?
 
 #Source in some handy functions
-. $EFG_SRC/scripts/funcs.sh
+. $EFG_SRC/scripts/environments/funcs.sh
 
 ### ALIASES ###
 #single quotes enable dynamic updating of commands
@@ -65,7 +65,7 @@ export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q 
 alias efg='cd $EFG_SRC'
 alias efgd='cd $EFG_DATA'
 alias efgm='cd $EFG_SRC/modules/Bio/EnsEMBL/Funcgen'
-alias efgmacs='xemacs $EFG_SRC/modules/Bio/EnsEMBL/Funcgen &'
+alias efgmacs='emacs $EFG_SRC/modules/Bio/EnsEMBL/Funcgen &'
 alias mysqlw='mysql $MYSQL_ARGS -u${EFG_WRITE_USER}'
 alias mysqlro='mysql $MYSQL_ARGS -u${EFG_READ_USER}'
 
