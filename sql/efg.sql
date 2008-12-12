@@ -225,7 +225,7 @@ CREATE TABLE `unmapped_object` (
   `query_score` double default NULL,
   `target_score` double default NULL,
   `ensembl_id` int(10) unsigned default '0',
-  `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe', 'CoordSystem') NOT NULL,
+  `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe') NOT NULL,
   `parent` varchar(255) default NULL,
   PRIMARY KEY  (`unmapped_object_id`),
   KEY `id_idx` (`identifier`),
