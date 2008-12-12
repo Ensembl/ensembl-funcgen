@@ -27,6 +27,8 @@ delete from analysis_description;
 insert into analysis_description select * from tmp_analysis_description;
 drop table tmp_analysis_description;
 
+-- Finally later description for regulatory feature? We need url embedded to link directly to reg build help.
+
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_52_53_b.sql|redefine analysis_description');
 
