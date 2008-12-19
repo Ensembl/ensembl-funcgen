@@ -53,7 +53,8 @@ sub get_date{
 	my ($time, $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);	
 
 
-	warn("need to add file -e test here");
+	throw("File does not exist or is not a regular file:\t$file") if ! -f $file;
+
 
 	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = (defined $file) ? 
 	  localtime((stat($file))[9]) : localtime();
@@ -149,7 +150,7 @@ sub species_chr_num{
 	return (exists $species_chrs{$species}{lc($val)}) ? $species_chrs{$species}{lc($val)} : $val;
 }
 
-#should we implement sort here or in the caller?
+#Sort should always be done in the caller if required
 
 sub median{
   my $scores = shift;
