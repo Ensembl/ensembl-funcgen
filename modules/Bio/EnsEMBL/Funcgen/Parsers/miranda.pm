@@ -152,7 +152,7 @@ sub parse_and_load{
 	}
 
    
-	my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
+	$feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
 	   -display_label => $id,
 	   -start         => $start,
