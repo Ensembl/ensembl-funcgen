@@ -74,6 +74,7 @@ use Bio::Root::Root;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::Exception qw (throw stack_trace);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (get_date);
 #use Devel::Timer;
 use Carp;#? Can't use unless we can get it to redirect
 use File::Basename;
@@ -315,7 +316,9 @@ sub log{
   }
   
   if($date){
-	$message .= ' - '.get_date('time');
+	my $time = localtime();
+	chomp($time);
+	$message .= ' - '.localtime();
   }
 
   $message .= "\n" if ! $no_return;
@@ -385,9 +388,9 @@ sub report{
 ################################################################################
 
 sub log_header{
-  my ($self, $message, $mem) = @_;
+  my ($self, $message, $mem, $date) = @_;
 
-  $self->log("::\t$message\t::\t::\n", $mem);
+  $self->log("::\t$message\t::\t::", $mem, $date);
 }
 
 
