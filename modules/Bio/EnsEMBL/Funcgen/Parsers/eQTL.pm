@@ -34,6 +34,10 @@ Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
 
 =cut
 
+#To do
+# 1 Remove the RegulatoryFeature xrefs? No we just need a script to calculate these independantly.
+
+
 package Bio::EnsEMBL::Funcgen::Parsers::eQTL;
 
 use Bio::EnsEMBL::Funcgen::Parsers::ExperimentalSet;
@@ -359,7 +363,9 @@ sub parse_line{
 		 #to display_id which is part of the unique key
 		 -display_id             => ($gene->display_xref) ? $gene->display_xref->display_id : $gene_name,
 		 -info_type              => 'TARGET',#This is not correct, need to move to ox.linkage_type
-		 #-linkage_annotation     => 'eQTL gene xref',#better text here?
+		 #Always need linkage annotation here
+		 #Otherwise ther is no way to trace how these object_xrefs were geneerated
+		 -linkage_annotation     => 'eQTL gene xref',#better text here?
 		 -info_text              => 'Gene',
 		 #store method param
 		 feature_type            => 'AnnotatedFeature',
@@ -485,7 +491,7 @@ sub parse_line{
 								 -primary_id             => $snp_feat->variation_name,##?????????
 								 -display_id             => $snp_feat->display_id,#This is the same as variation name.
 								 -info_type              => 'DIRECT',#this should be moved to ox.linkage_type
-								 #-linkage_annotation     => 'eQTL SNP xref',	
+								 -linkage_annotation     => 'eQTL SNP xref',	
 								 -info_text              => 'Variation',
 								 #store method param
 								 feature_type            => 'AnnotatedFeature',
@@ -563,7 +569,8 @@ sub process_params{
 		  $self->count('Total RegulatoryFeature xrefs');
 		  
 		  my $dbentry = Bio::EnsEMBL::DBEntry->new(%{$first_dbentry});
-		  $self->dbentry_adaptor->store($dbentry, $reg_feat->dbID, 'RegulatoryFeature', 1);#1 is ignore release flag	
+		  $self->dbentry_adaptor->store($dbentry, $reg_feat->dbID, 'RegulatoryFeature', 1);#1 is ignore release flag
+		  #We maybe actually want to use release flag here?
 		}
 	  }
 	}

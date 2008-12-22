@@ -152,13 +152,15 @@ sub set_feature_sets{
 
 			  throw('This xref delete is wrong');
 
-			  #my $sql = "delete x, ox from object_xref ox, xref x where ox.ensembl_object_type='ExternalFeature' and x.external_db_id=$core_ext_dbid and ox.xref_id=x.xref_id and ensembl_id in(".join(', ', @ext_feat_ids).')';
+			  my $sql = "delete x, ox from object_xref ox, xref x where ox.ensembl_object_type='ExternalFeature' and x.external_db_id=$core_ext_dbid and ox.xref_id=x.xref_id and ensembl_id in(".join(', ', @ext_feat_ids).')';
 
 			  #should be something like
 			  #delete ox from object_xref ox, external_feature ef where ox.ensembl_object_type='ExternalFeature' and ox.ensembl_id=ef.external_feature_id and ef.feature_set_id in(64,65);
 
 			  $self->log("Clobbering xrefs for $fset_name");
 			  
+			  throw("xref delete is wrong :$sql");
+
 			  #$self->db->dbc->do($sql);
 			}
 		  }
@@ -308,74 +310,77 @@ sub validate_and_store_feature_types{
 }
 
 
-=head2 get_display_name_by_stable_id
 
-  Args [0]   : stable ID from core DB.
-  Args [1]   : stable feature type e.g. gene, transcript, translation
-  Example    : $self->validate_and_store_feature_types;
-  Description: Builds a cache of stable ID to display names.
-  Returntype : string - display name
-  Exceptions : Throws is type is not valid.
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-# --------------------------------------------------------------------------------
-# Build a cache of ensembl stable ID -> display_name
-# Return hashref keyed on {$type}{$stable_id}
-#Need to update cache if we're doing more than one 'type' at a time
-# as it will never get loaded for the new type!
-
-sub get_display_name_by_stable_id{
-  my ($self, $stable_id, $type) = @_;
-
-  $type = lc($type);
-
-  if($type !~ /(gene|transcript|translation)/){
-	throw("Cannot get display_name for stable_id $stable_id with type $type");
-  }
-  
-  if(! exists $self->{'display_name_cache'}->{$stable_id}){
-	($self->{'display_name_cache'}->{$stable_id}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT x.display_label FROM ${type}_stable_id s, $type t, xref x where t.display_xref_id=x.xref_id and s.${type}_id=t.gene_id and s.stable_id='${stable_id}'");
-  }
-
-  return $self->{'display_name_cache'}->{$stable_id};
-}
-
-
-=head2 get_stable_id_by_display_name
-
-  Args [0]   : display name (e.g. from core DB or GNC name)
-  Example    : 
-  Description: Builds a cache of stable ID to display names.
-  Returntype : string - gene stable ID
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-# --------------------------------------------------------------------------------
-# Build a cache of ensembl stable ID -> display_name
-# Return hashref keyed on {$type}{$stable_id}
-#Need to update cache if we're doing more than one 'type' at a time
-# as it will never get loaded for the new type!
-
-sub get_stable_id_by_display_name{
-  my ($self, $display_name) = @_;
-
-  #if($type !~ /(gene|transcript|translation)/){
+#Moved these to Helper
+#
+#
+#=head2 get_display_name_by_stable_id
+#
+#  Args [0]   : stable ID from core DB.
+#  Args [1]   : stable feature type e.g. gene, transcript, translation
+#  Example    : $self->validate_and_store_feature_types;
+#  Description: Builds a cache of stable ID to display names.
+#  Returntype : string - display name
+#  Exceptions : Throws is type is not valid.
+#  Caller     : General
+#  Status     : At risk
+#
+#=cut
+#
+## --------------------------------------------------------------------------------
+## Build a cache of ensembl stable ID -> display_name
+## Return hashref keyed on {$type}{$stable_id}
+##Need to update cache if we're doing more than one 'type' at a time
+## as it will never get loaded for the new type!
+#
+#sub get_display_name_by_stable_id{
+#  my ($self, $stable_id, $type) = @_;
+#
+#  $type = lc($type);
+#
+#  if($type !~ /(gene|transcript|translation)/){
 #	throw("Cannot get display_name for stable_id $stable_id with type $type");
 #  }
-  
-  if(! exists $self->{'stable_id_cache'}->{$display_name}){
-	($self->{'stable_id_cache'}->{$display_name}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT s.stable_id FROM gene_stable_id s, gene g, xref x where g.display_xref_id=x.xref_id and s.gene_id=g.gene_id and x.display_label='${display_name}'");
-  }
-
-  return $self->{'stable_id_cache'}->{$display_name};
-}
-
+#  
+#  if(! exists $self->{'display_name_cache'}->{$stable_id}){
+#	($self->{'display_name_cache'}->{$stable_id}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT x.display_label FROM ${type}_stable_id s, $type t, xref x where t.display_xref_id=x.xref_id and s.${type}_id=t.gene_id and s.stable_id='${stable_id}'");
+#  }
+#
+#  return $self->{'display_name_cache'}->{$stable_id};
+#}
+#
+#
+#=head2 get_stable_id_by_display_name
+#
+#  Args [0]   : display name (e.g. from core DB or GNC name)
+#  Example    : 
+#  Description: Builds a cache of stable ID to display names.
+#  Returntype : string - gene stable ID
+#  Exceptions : None
+#  Caller     : General
+#  Status     : At risk
+#
+#=cut
+#
+## --------------------------------------------------------------------------------
+## Build a cache of ensembl stable ID -> display_name
+## Return hashref keyed on {$type}{$stable_id}
+##Need to update cache if we're doing more than one 'type' at a time
+## as it will never get loaded for the new type!
+#
+#sub get_stable_id_by_display_name{
+#  my ($self, $display_name) = @_;
+#
+#  #if($type !~ /(gene|transcript|translation)/){
+##	throw("Cannot get display_name for stable_id $stable_id with type $type");
+##  }
+#  
+#  if(! exists $self->{'stable_id_cache'}->{$display_name}){
+#	($self->{'stable_id_cache'}->{$display_name}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT s.stable_id FROM gene_stable_id s, gene g, xref x where g.display_xref_id=x.xref_id and s.gene_id=g.gene_id and x.display_label='${display_name}'");
+#  }
+#
+#  return $self->{'stable_id_cache'}->{$display_name};
+#}
 
 
 =head2 project_feature

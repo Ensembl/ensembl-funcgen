@@ -299,7 +299,7 @@ sub parse_and_load {
 			$factor_cnt ++;
 
 
-			my $stable_id = $self->get_stable_id_by_display_name($attr_cache{'Factor'});
+			my $stable_id = $self->get_core_stable_id_by_display_name($self->db->dnadb, $attr_cache{'Factor'});
 			
 			#Handle release/version in xref version as stable_id version?
 			
@@ -375,7 +375,7 @@ sub parse_and_load {
 	  my $stable_id;
 
 	  if($target ne 'Unspecified'){
-		$stable_id = $self->get_stable_id_by_display_name($target);
+		$stable_id = $self->get_core_stable_id_by_display_name($self->db->dnadb, $target);
 	  }
 
 

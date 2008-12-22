@@ -193,7 +193,7 @@ sub parse_and_load{
 	#should we just get it from the core DB anyway?
 
 	if(! defined $display_name){
-	  $display_name = $self->get_display_name_by_stable_id($ens_id, 'transcript');
+	  $display_name = $self->get_core_display_name_by_stable_id($self->db->dnadb, $ens_id, 'transcript');
 	}
 
 

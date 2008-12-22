@@ -274,7 +274,7 @@ sub parse_and_load {
       next;
     }
 
-	my $display_name = $self->get_display_name_by_stable_id($gene_id, 'gene');
+	my $display_name = $self->get_core_display_name_by_stable_id($self->db->dnadb, $gene_id, 'gene');
 
 	#Handle release/version in xref version as stable_id version?
 
@@ -322,7 +322,7 @@ sub parse_and_load {
   while (<SEARCH_REGIONS>) {
     chomp;
     my ($id, $chromosome, $start, $end, $strand, $gene_id) = split;
-    my $display_id = $self->get_display_name_by_stable_id($gene_id, 'gene');
+    my $display_id = $self->get_core_display_name_by_stable_id($self->db->dnadb, $gene_id, 'gene');
 	my $name = "CisRed_Search_$id";
 
 	if(! exists $slice_cache{$chromosome}){
@@ -383,7 +383,7 @@ sub parse_and_load {
       next;
     }
 
-	my $display_name = $self->get_display_name_by_stable_id($gene_id, 'gene');
+	my $display_name = $self->get_core_display_name_by_stable_id($self->db->dnadb, $gene_id, 'gene');
 	
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
 											 -dbname                 => 'ensembl_core_Gene',
