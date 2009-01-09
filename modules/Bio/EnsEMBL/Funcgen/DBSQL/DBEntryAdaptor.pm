@@ -367,7 +367,15 @@ sub fetch_all_by_Gene {
 
 sub fetch_all_by_Transcript {
   my ( $self, $trans) = @_;
-  throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');
+
+  throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');  
+
+
+  if(! $trans->isa('Bio::EnsEMBL::Transcript')){
+	throw('Must provide a valid stored Bio::EnsEMBL::Transcript');
+  }
+  #Thsi method doesn't work like this and just returns the xref with no object_xref info/join.
+  $self->fetch_by_db_accession($trans->stable_id, 'ensembl_core_Gene');
 }
 
 
@@ -545,6 +553,26 @@ sub list_annotated_feature_ids_by_extid {
                                  $external_db_name );
 }
 
+=head2 list_probe_feature_ids_by_extid
+
+  Arg [1]    : string $external_name
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_annotated_feature_ids_by_extid('ENST000000000001');
+  Description: Gets a list of annotated_feature IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+sub list_probe_feature_ids_by_extid {
+  my ( $self, $external_name, $external_db_name ) = @_;
+
+  return
+    $self->_type_by_external_id( $external_name, 'ProbeFeature', undef,
+                                 $external_db_name );
+}
 
 
 =head2 list_regulatory_feature_ids_by_external_db_id
@@ -656,6 +684,10 @@ sub _type_by_external_id {
   elsif(lc($ensType) eq 'featuretype'){
 	$from_sql  = 'featuretype ft, ';
 	$where_sql = qq( ft.feature_type_id = oxr.ensembl_id AND );
+  }
+  elsif(lc($ensType) eq 'probefeature'){
+	$from_sql  = 'probe_feature pf, ';
+	$where_sql = qq( pf.probe_feature_id = oxr.ensembl_id AND );
   }
 
   
@@ -807,6 +839,10 @@ sub _type_by_external_db_id{
   elsif(lc($ensType) eq 'featuretype'){
 	$from_sql  = 'featuretype ft, ';
 	$where_sql = qq( ft.feature_type_id = oxr.ensembl_id AND );
+  }
+  elsif(lc($ensType) eq 'probefeature'){
+	$from_sql  = 'probe_feature pf, ';
+	$where_sql = qq( pf.probe_feature_id = oxr.ensembl_id AND );
   }
 
 
