@@ -390,7 +390,9 @@ sub report{
 sub log_header{
   my ($self, $message, $mem, $date) = @_;
 
+  print LOGFILE "\n\n";
   $self->log("::\t$message\t::\t::", $mem, $date);
+  print LOGFILE "\n";
 }
 
 
