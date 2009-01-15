@@ -90,12 +90,12 @@ CREATE TABLE `meta_coord` (
 DROP TABLE IF EXISTS identity_xref;
 CREATE TABLE identity_xref (
   object_xref_id          INT(10) UNSIGNED NOT NULL,
-  query_identity 	  INT(5),
-  target_identity         INT(5),
-  hit_start               INT,
-  hit_end                 INT,
-  translation_start       INT,
-  translation_end         INT,
+  xref_identity 	  INT(5),	
+  ensembl_identity        INT(5),
+  xref_start              INT,
+  xref_end                INT,
+  ensembl_start           INT,
+  ensembl_end             INT,
   cigar_line              TEXT, 
   score                   DOUBLE,
   evalue                  DOUBLE,
@@ -153,7 +153,7 @@ CREATE TABLE external_db (
   display_label_linkable      BOOLEAN DEFAULT 0 NOT NULL,
   priority                    INT NOT NULL,
   db_display_name             VARCHAR(255),
-  type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM') default NULL,
+  type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM', 'ENSEMBL') default NULL,
   secondary_db_name           VARCHAR(255) DEFAULT NULL,
   secondary_db_table          VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY (external_db_id) 
@@ -349,8 +349,10 @@ CREATE TABLE `array` (
    `vendor` varchar(40) default NULL,
    `description` varchar(255) default NULL,
    `type` varchar(20) default NULL,
+   `class` varchar(20) default NULL,	
    PRIMARY KEY  (`array_id`),
-   UNIQUE KEY   (`vendor`, `name`)
+   UNIQUE KEY   (`vendor`, `name`),
+   KEY `class_idx` (`class`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --- format = tiled, gene, exon, targetted, custom/mixed? Do we need to enum these?
