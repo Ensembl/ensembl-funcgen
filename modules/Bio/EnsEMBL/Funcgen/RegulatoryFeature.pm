@@ -293,7 +293,7 @@ sub _attribute_cache{
 sub bound_start {
   my $self = shift;
 
-  $self->_generate_underlying_structure() if(! exists $self->{'bound_start'});
+  $self->_generate_underlying_structure() if(! defined $self->{'bound_start'});
   
   return $self->{'bound_start'};
 }
@@ -314,7 +314,7 @@ sub bound_start {
 sub bound_end {
   my $self = shift;
 	
-  $self->_generate_underlying_structure() if(! exists $self->{'bound_end'});
+  $self->_generate_underlying_structure() if(! defined $self->{'bound_end'});
   
   #This should return the attr name to?
 
@@ -336,6 +336,8 @@ sub bound_end {
 
 sub _generate_underlying_structure{
   my $self = shift;
+
+  warn "generating bounds";
 
   if(! @{$self->regulatory_attributes()}){
 	warn "No underlying regulatory_attribute features to generate comples structure from";
