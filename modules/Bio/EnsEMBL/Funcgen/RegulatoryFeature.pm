@@ -337,8 +337,6 @@ sub bound_end {
 sub _generate_underlying_structure{
   my $self = shift;
 
-  warn "generating bounds";
-
   if(! @{$self->regulatory_attributes()}){
 	warn "No underlying regulatory_attribute features to generate comples structure from";
 	#This should never happen
