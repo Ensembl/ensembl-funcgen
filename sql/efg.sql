@@ -869,7 +869,9 @@ CREATE TABLE `regulatory_feature` (
   `seq_region_id` int(10) unsigned NOT NULL,
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
-  `seq_region_strand` tinyint(1) NOT NULL,	
+  `seq_region_strand` tinyint(1) NOT NULL,
+  `bound_seq_region_start` int(10) unsigned NOT NULL,	
+  `bound_seq_region_start` int(10) unsigned NOT NULL,
   `display_label` varchar(80) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id`	int(10) unsigned default NULL,
@@ -880,6 +882,10 @@ CREATE TABLE `regulatory_feature` (
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+
+
+-- Do we want trigger to generate bound values?
+-- Do we want index on bound values
 
 -- stable_id is not unique, may have several instances across different cell_types/feature_sets
 
