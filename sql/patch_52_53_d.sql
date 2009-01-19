@@ -5,8 +5,8 @@
 # description:
 # Modify identity_xref changing 
 
-ALTER table object_xref change `query_identity` `xref_identity` int(5) default NULL;
-ALTER table object_xref change `target_identity` `ensembl_identity` int(5) default NULL;
+ALTER table identity_xref change `query_identity` `xref_identity` int(5) default NULL;
+ALTER table identity_xref change `target_identity` `ensembl_identity` int(5) default NULL;
 ALTER TABLE identity_xref CHANGE COLUMN hit_start xref_start INT;
 ALTER TABLE identity_xref CHANGE COLUMN hit_end xref_end INT;
 ALTER TABLE identity_xref CHANGE COLUMN translation_start ensembl_start INT;
