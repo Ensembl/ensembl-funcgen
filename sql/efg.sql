@@ -1115,16 +1115,16 @@ CREATE TABLE `status_name` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-INSERT into status_name values ('', 'DISPLAYABLE');
-INSERT into status_name values ('', 'IMPORTED');
-INSERT into status_name values ('', 'DAS_DISPLAYABLE');
-INSERT into status_name values ('', 'RESOLVED');
--- Also need to add status name for all chip/channel level analyses
--- Defaults
-INSERT into status_name values ('', 'VSN_GLOG');
-INSERT into status_name values ('', 'Parzen');
-INSERT into status_name values ('', 'T.Biweight');
-INSERT into status_name values ('', 'LOESS');
+INSERT into status_name(name) values ('DISPLAYABLE');
+INSERT into status_name(name) values ('IMPORTED');
+INSERT into status_name(name) values ('DAS_DISPLAYABLE');
+INSERT into status_name(name) values ('RESOLVED');
+INSERT into status_name(name) values ('VSN_GLOG');
+INSERT into status_name(name) values ('Parzen');
+INSERT into status_name(name) values ('T.Biweight');
+INSERT into status_name(name) values ('LOESS');
+INSERT into status_name(name) values ('MART_DISPLAYABLE');
+INSERT into status_name(name) values ('RESULT_FEATURE_SET');
 
 
 
