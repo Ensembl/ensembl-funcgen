@@ -297,8 +297,9 @@ sub get_available_adaptors{
 	 	       
 	       #add required EnsEMBL(core) adaptors here
 	       #Should write/retrieve from efg not dna db
-	       'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
-	       "MetaContainer"      => "Bio::EnsEMBL::DBSQL::MetaContainer",
+			   'UnmappedObject'     => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
+			   'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
+			   "MetaContainer"      => 'Bio::EnsEMBL::DBSQL::MetaContainer',
 	      );
   
   return (\%pairs);
@@ -532,7 +533,7 @@ sub dnadb {
 	  $build =~ s/[a-z]//;
 	  throw("It appears that the schema of ".$dnadb->dbc->dbname.
 			' is incompatible with your current core API version('.$reg->software_version.
-			').  You could try using the $schema version of the core API, or alternatively try specifying '.
+			").  You could try using the $schema version of the core API, or alternatively try specifying ".
 			"different -dnadb/registry_host parameters to point to a make recent version containing build $build\n");
 
 	}
