@@ -68,80 +68,92 @@ use strict;
 #Is this different to the core code?
 #Yes we don't have a max rows limit!
 
-sub fetch_by_db_accession {
-  my $self = shift;
-  my $dbname = shift;
-  my $accession = shift;
+#sub fetch_by_db_accession {
+#  my $self = shift;
+#  my $dbname = shift;
+#  my $accession = shift;
+#
+#  my $sth = $self->prepare(
+#   "SELECT xref.xref_id, xref.dbprimary_acc, xref.display_label,
+#           xref.version, xref.description,
+#           exDB.dbprimary_acc_linkable, exDB.display_label_linkable, exDB.priority,
+#           exDB.db_name, exDB.db_display_name, exDB.db_release, es.synonym,
+#           xref.info_type, xref.info_text, exDB.type, exDB.secondary_db_name,
+#           exDB.secondary_db_table
+#    FROM   (xref, external_db exDB)
+#    LEFT JOIN external_synonym es on es.xref_id = xref.xref_id
+#    WHERE  xref.dbprimary_acc = ?
+#    AND    exDB.db_name = ?
+#    AND    xref.external_db_id = exDB.external_db_id");
+#
+#  $sth->bind_param(1,$accession,SQL_VARCHAR);
+#  $sth->bind_param(2,$dbname,SQL_VARCHAR);
+#  $sth->execute();
+#
+#  if(!$sth->rows() && lc($dbname) eq 'interpro') {
+#    #
+#    # This is a minor hack that means that results still come back even
+#    # when a mistake was made and no interpro accessions were loaded into
+#    # the xref table.  This has happened in the past and had the result of
+#    # breaking domainview
+#    #
+#    $sth->finish();
+#    $sth = $self->prepare
+#      ("SELECT null, i.interpro_ac, i.id, null, null, 'Interpro', null, null ".
+#       "FROM interpro i where i.interpro_ac = ?");
+#    $sth->bind_param(1,$accession,SQL_VARCHAR);
+#    $sth->execute();
+#  }
+#
+#  my $exDB;
+#
+#  while ( my $arrayref = $sth->fetchrow_arrayref()){
+#    my ( $dbID, $dbprimaryId, $displayid, $version, $desc, 
+#	 $primary_id_linkable, $display_id_linkable, $priority, $dbname, $db_display_name,
+#         $release, $synonym, $info_type, $info_text, $type, $secondary_db_name,
+#	 $secondary_db_table) = @$arrayref;
+#
+#    if(!$exDB) {
+#      $exDB = Bio::EnsEMBL::DBEntry->new
+#        ( -adaptor => $self,
+#          -dbID => $dbID,
+#          -primary_id => $dbprimaryId,
+#          -display_id => $displayid,
+#          -version => $version,
+#          -release => $release,
+#          -dbname => $dbname,
+#	  -primary_id_linkable => $primary_id_linkable,
+#	  -display_id_linkable => $display_id_linkable,
+#	  -priority => $priority,
+#	  -db_display_name=>$db_display_name,
+#	  -info_type => $info_type,
+#	  -info_text => $info_text,
+#	  -type => $type,
+#	  -secondary_db_name => $secondary_db_name,
+#	  -secondary_db_table => $secondary_db_table);
+#
+#      $exDB->description( $desc ) if ( $desc );
+#    }
+#
+#    $exDB->add_synonym( $synonym )  if ($synonym);
+#  }
+#
+#  $sth->finish();
+#
+#  return $exDB;
+#}
 
-  my $sth = $self->prepare(
-   "SELECT xref.xref_id, xref.dbprimary_acc, xref.display_label,
-           xref.version, xref.description,
-           exDB.dbprimary_acc_linkable, exDB.display_label_linkable, exDB.priority,
-           exDB.db_name, exDB.db_display_name, exDB.db_release, es.synonym,
-           xref.info_type, xref.info_text, exDB.type, exDB.secondary_db_name,
-           exDB.secondary_db_table
-    FROM   (xref, external_db exDB)
-    LEFT JOIN external_synonym es on es.xref_id = xref.xref_id
-    WHERE  xref.dbprimary_acc = ?
-    AND    exDB.db_name = ?
-    AND    xref.external_db_id = exDB.external_db_id");
 
-  $sth->bind_param(1,$accession,SQL_VARCHAR);
-  $sth->bind_param(2,$dbname,SQL_VARCHAR);
-  $sth->execute();
+#Is this different to the core code? The only thing here is the 
+# description is sourced from the xref and not from external_db
+#Mailed Ian/Daniel to fix
 
-  if(!$sth->rows() && lc($dbname) eq 'interpro') {
-    #
-    # This is a minor hack that means that results still come back even
-    # when a mistake was made and no interpro accessions were loaded into
-    # the xref table.  This has happened in the past and had the result of
-    # breaking domainview
-    #
-    $sth->finish();
-    $sth = $self->prepare
-      ("SELECT null, i.interpro_ac, i.id, null, null, 'Interpro', null, null ".
-       "FROM interpro i where i.interpro_ac = ?");
-    $sth->bind_param(1,$accession,SQL_VARCHAR);
-    $sth->execute();
-  }
+#Have not fully change query/hit to ensembl target/translation to ensembl
 
-  my $exDB;
+#We need to modify this to return full DBEntries with ensembl_object and linkage annotation
+#for a given external_id/accession
+#Currently can only list reg feat IDs for a given external_id
 
-  while ( my $arrayref = $sth->fetchrow_arrayref()){
-    my ( $dbID, $dbprimaryId, $displayid, $version, $desc, 
-	 $primary_id_linkable, $display_id_linkable, $priority, $dbname, $db_display_name,
-         $release, $synonym, $info_type, $info_text, $type, $secondary_db_name,
-	 $secondary_db_table) = @$arrayref;
-
-    if(!$exDB) {
-      $exDB = Bio::EnsEMBL::DBEntry->new
-        ( -adaptor => $self,
-          -dbID => $dbID,
-          -primary_id => $dbprimaryId,
-          -display_id => $displayid,
-          -version => $version,
-          -release => $release,
-          -dbname => $dbname,
-	  -primary_id_linkable => $primary_id_linkable,
-	  -display_id_linkable => $display_id_linkable,
-	  -priority => $priority,
-	  -db_display_name=>$db_display_name,
-	  -info_type => $info_type,
-	  -info_text => $info_text,
-	  -type => $type,
-	  -secondary_db_name => $secondary_db_name,
-	  -secondary_db_table => $secondary_db_table);
-
-      $exDB->description( $desc ) if ( $desc );
-    }
-
-    $exDB->add_synonym( $synonym )  if ($synonym);
-  }
-
-  $sth->finish();
-
-  return $exDB;
-}
 
 
 =head2 _fetch_by_object_type
@@ -163,177 +175,172 @@ sub fetch_by_db_accession {
 
 =cut
 
-#We need to modify this to return full DBEntries with ensembl_object and linkage annotation
-#for a given external_id/accession
-#Currently can only list reg feat IDs for a given external_id
-#But we want 
 
-
-sub _fetch_by_object_type {
-  my ( $self, $ensID, $ensType, $exdbname, $exdb_type ) = @_;
-
-  my @out;
-
-  if ( !defined($ensID) ) {
-    throw("Can't fetch_by_EnsObject_type without an object");
-  }
-
-  if ( !defined($ensType) ) {
-    throw("Can't fetch_by_EnsObject_type without a type");
-  }
-
-  #  my $sth = $self->prepare("
-  my $sql = (<<SSQL);
-    SELECT xref.xref_id, xref.dbprimary_acc, xref.display_label, xref.version,
-           xref.description,
-           exDB.dbprimary_acc_linkable, exDB.display_label_linkable,
-           exDB.priority,
-           exDB.db_name, exDB.db_release, exDB.status, exDB.db_display_name,
-           exDB.secondary_db_name, exDB.secondary_db_table,
-           oxr.object_xref_id,
-           es.synonym,
-           idt.query_identity, idt.target_identity, idt.hit_start,
-           idt.hit_end, idt.translation_start, idt.translation_end,
-           idt.cigar_line, idt.score, idt.evalue, idt.analysis_id,
-           gx.linkage_type,
-           xref.info_type, xref.info_text, exDB.type, gx.source_xref_id,
-           oxr.linkage_annotation
-    FROM   (xref xref, external_db exDB, object_xref oxr)
-    LEFT JOIN external_synonym es on es.xref_id = xref.xref_id 
-    LEFT JOIN identity_xref idt on idt.object_xref_id = oxr.object_xref_id
-    LEFT JOIN go_xref gx on gx.object_xref_id = oxr.object_xref_id
-    WHERE  xref.xref_id = oxr.xref_id
-      AND  xref.external_db_id = exDB.external_db_id 
-      AND  oxr.ensembl_id = ?
-      AND  oxr.ensembl_object_type = ?
-SSQL
-  $sql .= " AND exDB.db_name like '" . $exdbname . "' " if ($exdbname);
-  $sql .= " AND exDB.type like '" . $exdb_type . "' "   if ($exdb_type);
-  my $sth = $self->prepare($sql);
-
-  $sth->bind_param( 1, $ensID,   SQL_INTEGER );
-  $sth->bind_param( 2, $ensType, SQL_VARCHAR );
-  $sth->execute();
-
-  my ( %seen, %linkage_types, %synonyms );
-
-  my $max_rows = 1000;
-
-  while ( my $rowcache = $sth->fetchall_arrayref( undef, $max_rows ) ) {
-    while ( my $arrRef = shift( @{$rowcache} ) ) {
-      my ( $refID,                  $dbprimaryId,
-           $displayid,              $version,
-           $desc,                   $primary_id_linkable,
-           $display_id_linkable,    $priority,
-           $dbname,                 $release,
-           $exDB_status,            $exDB_db_display_name,
-           $exDB_secondary_db_name, $exDB_secondary_db_table,
-           $objid,                  $synonym,
-           $queryid,                $targetid,
-           $query_start,            $query_end,
-           $translation_start,      $translation_end,
-           $cigar_line,             $score,
-           $evalue,                 $analysis_id,
-           $linkage_type,           $info_type,
-           $info_text,              $type,
-           $source_xref_id,          $link_annotation
-      ) = @$arrRef;
-
-      my $linkage_key =
-        ( $linkage_type || '' ) . ( $source_xref_id || '' );
-
-      my %obj_hash = ( 'adaptor'            => $self,
-                       'dbID'               => $refID,
-                       'primary_id'         => $dbprimaryId,
-                       'display_id'         => $displayid,
-                       'version'            => $version,
-                       'release'            => $release,
-                       'info_type'          => $info_type,
-                       'info_text'          => $info_text,
-                       'type'               => $type,
-                       'secondary_db_name'  => $exDB_secondary_db_name,
-                       'secondary_db_table' => $exDB_secondary_db_table,
-                       'dbname'             => $dbname,
-					   'linkage_annotation' => $link_annotation);
-
-      # Using an outer join on the synonyms as well as on identity_xref,
-      # we now have to filter out the duplicates (see v.1.18 for
-      # original). Since there is at most one identity_xref row per
-      # xref, this is easy enough; all the 'extra' bits are synonyms.
-      if ( !$seen{$refID} ) {
-        my $exDB;
-
-        if ( ( defined($queryid) ) ) {  # an xref with similarity scores
-          $exDB = Bio::EnsEMBL::IdentityXref->new_fast( \%obj_hash );
-          $exDB->query_identity($queryid);
-          $exDB->target_identity($targetid);
-
-          if ( defined($analysis_id) ) {
-            my $analysis =
-              $self->db()->get_AnalysisAdaptor()
-              ->fetch_by_dbID($analysis_id);
-
-            if ( defined($analysis) ) { $exDB->analysis($analysis) }
-          }
-
-          $exDB->cigar_line($cigar_line);
-          $exDB->query_start($query_start);
-          $exDB->translation_start($translation_start);
-          $exDB->translation_end($translation_end);
-          $exDB->score($score);
-          $exDB->evalue($evalue);
-
-        } elsif ( defined $linkage_type && $linkage_type ne "" ) {
-          $exDB = Bio::EnsEMBL::GoXref->new_fast( \%obj_hash );
-          my $source_xref = ( defined($source_xref_id)
-                              ? $self->fetch_by_dbID($source_xref_id)
-                              : undef );
-          $exDB->add_linkage_type( $linkage_type, $source_xref || () );
-          $linkage_types{$refID}->{$linkage_key} = 1;
-
-        } else {
-          $exDB = Bio::EnsEMBL::DBEntry->new_fast( \%obj_hash );
-        }
-
-        if ( defined($desc) )        { $exDB->description($desc) }
-        if ( defined($exDB_status) ) { $exDB->status($exDB_status) }
-
-        $exDB->primary_id_linkable($primary_id_linkable);
-        $exDB->display_id_linkable($display_id_linkable);
-        $exDB->priority($priority);
-        $exDB->db_display_name($exDB_db_display_name);
-
-        push( @out, $exDB );
-        $seen{$refID} = $exDB;
-
-      } ## end if ( !$seen{$refID} )
-
-      # $exDB still points to the same xref, so we can keep adding GO
-      # evidence tags or synonyms.
-
-      if ( defined($synonym) && !$synonyms{$refID}->{$synonym} ) {
-        if ( defined($synonym) ) {
-          $seen{$refID}->add_synonym($synonym);
-        }
-        $synonyms{$refID}->{$synonym} = 1;
-      }
-
-      if (    defined($linkage_type)
-           && $linkage_type ne ""
-           && !$linkage_types{$refID}->{$linkage_key} )
-      {
-        my $source_xref = ( defined($source_xref_id)
-                            ? $self->fetch_by_dbID($source_xref_id)
-                            : undef );
-        $seen{$refID}
-          ->add_linkage_type( $linkage_type, $source_xref || () );
-        $linkage_types{$refID}->{$linkage_key} = 1;
-      }
-    } ## end while ( my $arrRef = shift...
-  } ## end while ( my $rowcache = $sth...
-
-  return \@out;
-} ## end sub _fetch_by_object_type
+#sub _fetch_by_object_type {
+#  my ( $self, $ensID, $ensType, $exdbname, $exdb_type ) = @_;
+#
+#  my @out;
+#
+#  if ( !defined($ensID) ) {
+#    throw("Can't fetch_by_EnsObject_type without an object");
+#  }
+#
+#  if ( !defined($ensType) ) {
+#    throw("Can't fetch_by_EnsObject_type without a type");
+#  }
+#
+#  #  my $sth = $self->prepare("
+#  my $sql = (<<SSQL);
+#    SELECT xref.xref_id, xref.dbprimary_acc, xref.display_label, xref.version,
+#           xref.description,
+#           exDB.dbprimary_acc_linkable, exDB.display_label_linkable,
+#           exDB.priority,
+#           exDB.db_name, exDB.db_release, exDB.status, exDB.db_display_name,
+#           exDB.secondary_db_name, exDB.secondary_db_table,
+#           oxr.object_xref_id,
+#           es.synonym,
+#           idt.xref_identity, idt.ensembl_identity, idt.xref_start,
+#           idt.xref_end, idt.ensembl_start, idt.ensembl_end,
+#           idt.cigar_line, idt.score, idt.evalue, idt.analysis_id,
+#           gx.linkage_type,
+#           xref.info_type, xref.info_text, exDB.type, gx.source_xref_id,
+#           oxr.linkage_annotation
+#    FROM   (xref xref, external_db exDB, object_xref oxr)
+#    LEFT JOIN external_synonym es on es.xref_id = xref.xref_id 
+#    LEFT JOIN identity_xref idt on idt.object_xref_id = oxr.object_xref_id
+#    LEFT JOIN go_xref gx on gx.object_xref_id = oxr.object_xref_id
+#    WHERE  xref.xref_id = oxr.xref_id
+#      AND  xref.external_db_id = exDB.external_db_id 
+#      AND  oxr.ensembl_id = ?
+#      AND  oxr.ensembl_object_type = ?
+#SSQL
+#  $sql .= " AND exDB.db_name like '" . $exdbname . "' " if ($exdbname);
+#  $sql .= " AND exDB.type like '" . $exdb_type . "' "   if ($exdb_type);
+#  my $sth = $self->prepare($sql);
+#
+#  $sth->bind_param( 1, $ensID,   SQL_INTEGER );
+#  $sth->bind_param( 2, $ensType, SQL_VARCHAR );
+#  $sth->execute();
+#
+#  my ( %seen, %linkage_types, %synonyms );
+#
+#  my $max_rows = 1000;
+#
+#  while ( my $rowcache = $sth->fetchall_arrayref( undef, $max_rows ) ) {
+#    while ( my $arrRef = shift( @{$rowcache} ) ) {
+#      my ( $refID,                  $dbprimaryId,
+#           $displayid,              $version,
+#           $desc,                   $primary_id_linkable,
+#           $display_id_linkable,    $priority,
+#           $dbname,                 $release,
+#           $exDB_status,            $exDB_db_display_name,
+#           $exDB_secondary_db_name, $exDB_secondary_db_table,
+#           $objid,                  $synonym,
+#           $queryid,                $targetid,
+#           $query_start,            $query_end,
+#           $translation_start,      $translation_end,
+#           $cigar_line,             $score,
+#           $evalue,                 $analysis_id,
+#           $linkage_type,           $info_type,
+#           $info_text,              $type,
+#           $source_xref_id,          $link_annotation
+#      ) = @$arrRef;
+#
+#      my $linkage_key =
+#        ( $linkage_type || '' ) . ( $source_xref_id || '' );
+#
+#      my %obj_hash = ( 'adaptor'            => $self,
+#                       'dbID'               => $refID,
+#                       'primary_id'         => $dbprimaryId,
+#                       'display_id'         => $displayid,
+#                       'version'            => $version,
+#                       'release'            => $release,
+#                       'info_type'          => $info_type,
+#                       'info_text'          => $info_text,
+#                       'type'               => $type,
+#                       'secondary_db_name'  => $exDB_secondary_db_name,
+#                       'secondary_db_table' => $exDB_secondary_db_table,
+#                       'dbname'             => $dbname,
+#					   'linkage_annotation' => $link_annotation);
+#
+#      # Using an outer join on the synonyms as well as on identity_xref,
+#      # we now have to filter out the duplicates (see v.1.18 for
+#      # original). Since there is at most one identity_xref row per
+#      # xref, this is easy enough; all the 'extra' bits are synonyms.
+#      if ( !$seen{$refID} ) {
+#        my $exDB;
+#
+#        if ( ( defined($queryid) ) ) {  # an xref with similarity scores
+#          $exDB = Bio::EnsEMBL::IdentityXref->new_fast( \%obj_hash );
+#          $exDB->query_identity($queryid);
+#          $exDB->target_identity($targetid);
+#
+#          if ( defined($analysis_id) ) {
+#            my $analysis =
+#              $self->db()->get_AnalysisAdaptor()
+#              ->fetch_by_dbID($analysis_id);
+#
+#            if ( defined($analysis) ) { $exDB->analysis($analysis) }
+#          }
+#
+#          $exDB->cigar_line($cigar_line);
+#          $exDB->query_start($query_start);
+#          $exDB->translation_start($translation_start);
+#          $exDB->translation_end($translation_end);
+#          $exDB->score($score);
+#          $exDB->evalue($evalue);
+#
+#        } elsif ( defined $linkage_type && $linkage_type ne "" ) {
+#          $exDB = Bio::EnsEMBL::GoXref->new_fast( \%obj_hash );
+#          my $source_xref = ( defined($source_xref_id)
+#                              ? $self->fetch_by_dbID($source_xref_id)
+#                              : undef );
+#          $exDB->add_linkage_type( $linkage_type, $source_xref || () );
+#          $linkage_types{$refID}->{$linkage_key} = 1;
+#
+#        } else {
+#          $exDB = Bio::EnsEMBL::DBEntry->new_fast( \%obj_hash );
+#        }
+#
+#        if ( defined($desc) )        { $exDB->description($desc) }
+#        if ( defined($exDB_status) ) { $exDB->status($exDB_status) }
+#
+#        $exDB->primary_id_linkable($primary_id_linkable);
+#        $exDB->display_id_linkable($display_id_linkable);
+#        $exDB->priority($priority);
+#        $exDB->db_display_name($exDB_db_display_name);
+#
+#        push( @out, $exDB );
+#        $seen{$refID} = $exDB;
+#
+#      } ## end if ( !$seen{$refID} )
+#
+#      # $exDB still points to the same xref, so we can keep adding GO
+#      # evidence tags or synonyms.
+#
+#      if ( defined($synonym) && !$synonyms{$refID}->{$synonym} ) {
+#        if ( defined($synonym) ) {
+#          $seen{$refID}->add_synonym($synonym);
+#        }
+#        $synonyms{$refID}->{$synonym} = 1;
+#      }
+#
+#      if (    defined($linkage_type)
+#           && $linkage_type ne ""
+#           && !$linkage_types{$refID}->{$linkage_key} )
+#      {
+#        my $source_xref = ( defined($source_xref_id)
+#                            ? $self->fetch_by_dbID($source_xref_id)
+#                            : undef );
+#        $seen{$refID}
+#          ->add_linkage_type( $linkage_type, $source_xref || () );
+#        $linkage_types{$refID}->{$linkage_key} = 1;
+#      }
+#    } ## end while ( my $arrRef = shift...
+#  } ## end while ( my $rowcache = $sth...
+#
+#  return \@out;
+#} ## end sub _fetch_by_object_type
 
 
 
