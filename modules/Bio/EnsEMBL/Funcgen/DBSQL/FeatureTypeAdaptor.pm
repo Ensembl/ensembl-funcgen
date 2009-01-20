@@ -140,7 +140,9 @@ sub fetch_all_by_associated_SetFeature{
 
   my $sql = 'SELECT feature_type_id from associated_feature_type where feature_table="'.$sfeat->feature_set->type.'" and feature_id='.$sfeat->dbID;
 
-  my @ft_ids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
+
+
+  my @ft_ids = map {$_ = "@$_"} @{$self->dbc->db_handle->selectall_arrayref($sql)};
   $constraint = ' feature_type_id in ('.join(',',@ft_ids).') ' if @ft_ids;
 
   return ($constraint) ? $self->generic_fetch($constraint) : [];
