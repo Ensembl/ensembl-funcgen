@@ -137,6 +137,28 @@ sub fetch_by_name_vendor {
     return $result;
 }
 
+=head2 fetch_by_name_class
+
+  Arg [1]    : string - name of an array
+  Arg [2]    : string - class of array e.g. AFFY_UTR
+  Example    : my $array = $oaa->fetch_by_name_class('HuGene_1_0_st_v1', 'AFFY_ST');
+  Description: Retrieves Array object from the database based on name and class.
+  Returntype : Bio::EnsEMBL::Funcgen::Array
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_by_name_class {
+    my ($self, $name, $class) = @_;
+    
+    throw("Must provide and array and class e.g.'HuGene_1_0_st_v1', 'AFFY_ST'") if (! ($name && $class));
+
+
+    my ($result) = @{$self->generic_fetch("a.name = '$name' and a.class='".uc($class)."'")};	
+    return $result;
+}
 
 
 =head2 fetch_all_by_type
