@@ -268,13 +268,7 @@ sub associated_feature_types{
   }
 
 
-
-
-  #Will this fetch again if the first fetch returned nothing
-  #Or will the empty array be true?
-
   if(! defined $self->{'associated_feature_types'}){
-
 	#This will fail if we have not stored yet
 
 	if(defined $self->adaptor){
@@ -282,7 +276,7 @@ sub associated_feature_types{
 	}
   }
 
-  #This has the postential to return undef, or an arrayref which may be empty.
+  #This has the potential to return undef, or an arrayref which may be empty.
   return $self->{'associated_feature_types'};
 }
 
