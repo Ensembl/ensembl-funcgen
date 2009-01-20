@@ -68,6 +68,7 @@ use vars qw(@ISA);
                                                                     -name => $name,
                                                                     -type => 'annotated',
                                                                     -description => 'Release 3.1',
+                                                                    -display_label => 'Short name',
 			                                                       ); 
   Description: Constructor for FeatureSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
@@ -156,7 +157,7 @@ sub new_fast {
 =head2 description
 
   Example    : print "Feature set description is:\t".$fset->description."\n";
-  Description: Getter/Setter for the description of this FeatureSet.
+  Description: Getter/Setter for the description of this FeatureSet. e.g. Release 3.1
   Returntype : String
   Exceptions : None
   Caller     : General
@@ -171,7 +172,6 @@ sub description {
 
   return $self->{'description'};
 }
-
 
 
 =head2 type
@@ -199,8 +199,8 @@ sub type {
 =head2 display_label
 
   Example    : print $rset->display_label();
-  Description: Getter for the display_label attribute for this FeatureSet.
-               This is more appropriate for teh predicted_features of the set.
+  Description: Getter/Setter for the display_label attribute for this FeatureSet.
+               This is more appropriate for the predicted_features of the set.
                Use the individual display_labels for each raw result set.
   Returntype : str
   Exceptions : None
@@ -212,6 +212,7 @@ sub type {
 sub display_label {
   my $self = shift;
   
+  $self->{'display_label'} = shift if @_;
  
   if(! $self->{'display_label'}){
 
