@@ -5,7 +5,7 @@ Bio::EnsEMBL::Funcgen::Utils::EFGUtils
 
 =head1 DESCRIPTION
 
-This module collates a variety of miscellaneous methods
+This module collates a variety of miscellaneous methods.
 
 
 =head1 SYNOPSIS
@@ -33,6 +33,9 @@ Nathan Johnson njohnson@ebi.ac.uk
 
 =cut
 
+
+# No API/Object based methods in here
+
 ###############################################################################
 
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
@@ -46,25 +49,28 @@ use Time::Local;
 use FileHandle;
 use Carp;
 
-
 sub get_date{
 	my ($format, $file) = @_;
 
 	my ($time, $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);	
 
 
-	throw("File does not exist or is not a regular file:\t$file") if ! -f $file;
+	throw("File does not exist or is not a regular file:\t$file") if $file && ! -f $file;
 
 
 	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = (defined $file) ? 
 	  localtime((stat($file))[9]) : localtime();
 
+	#print "	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst)\n";
 	
 	if((! defined $format && ! defined $file) || $format eq "date"){
 		$time = ($year+1900)."-".$mday."-".($mon+1);	
 	}
 	elsif($format eq "time"){#not working!
 		$time = "${hour}:${min}:${sec}";
+	}
+	elsif($format eq "timedate"){#
+	  $time = localtime();
 	}
 	else{#add mysql formats here, datetime etc...
 		croak("get_date does not handle format:\t$format");
