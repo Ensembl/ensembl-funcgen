@@ -103,8 +103,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
   
-  my ($name, $format, $size,  $vendor, $type, $desc)
-    = rearrange( ['NAME', 'FORMAT', 'SIZE',  'VENDOR', 'TYPE', 'DESCRIPTION'], @_ );
+  my ($name, $format, $size,  $vendor, $type, $desc, $aclass)
+    = rearrange( ['NAME', 'FORMAT', 'SIZE',  'VENDOR', 'TYPE', 'DESCRIPTION', 'CLASS'], @_ );
   
   #mandatory params?
   #name, format, vendor
@@ -123,11 +123,12 @@ sub new {
 
   
   $self->name($name);
-  $self->format($format)      if defined $format;
-  $self->size($size)          if defined $size;
+  $self->format($format)    if defined $format;
+  $self->class($aclass)     if defined $aclass;
+  $self->size($size)        if defined $size;
   $self->vendor($vendor);
-  $self->description($desc)   if defined $desc;
-  $self->type($type)          if defined $type;
+  $self->description($desc) if defined $desc;
+  $self->type($type)        if defined $type;
   
   return $self;
 }
@@ -320,13 +321,34 @@ sub format {
   return $self->{'format'};
 }
 
+=head2 class
+
+  Arg [1]    : (optional) string - the class of the array
+  Example    : my $class = $array->class('AFFY_UTR');
+  Description: Getter, setter of class attribute for
+               Array objects e.g. AFFY_UTR, AFFY_ST
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub class {
+  my $self = shift;
+  
+  $self->{'class'} = shift if @_;
+  
+  return $self->{'class'};
+}
+
 
 =head2 size
 
   Arg [1]    : (optional) int - the number of ? in the array
   Example    : my $size = $array->size();
-  Description: Getter, setter and lazy loader of size attribute for
-               Array objects. The size is the number of ? in this array. 
+  Description: Getter of size attribute for Array objects. This
+               simply counts the constituent ArrayChips
   Returntype : int
   Exceptions : None
   Caller     : General
@@ -336,14 +358,6 @@ sub format {
 
 sub size {
   my $self = shift;
-  #$self->{'size'} = shift if @_;
-  #if ( !exists $self->{'size'} && $self->dbID() && $self->adaptor() ) {
-  #	$self->adaptor->fetch_attributes($self);
-  #}
-
-  #how are we going to discern between size of array and size of array in experimental context?
-  #array_chips does not update from DB if passed an arg!!
-  
 
   return scalar(keys %{$self->{'array_chips'}});
 }

@@ -253,7 +253,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( a.array_id a.name a.format a.vendor a.description a.type);
+	return qw( a.array_id a.name a.format a.vendor a.description a.type a.class);
 }
 
 =head2 _objs_from_sth
@@ -273,21 +273,23 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
 	
-  my (@result, $array_id, $name, $format, $vendor, $description, $type);
+  my (@result, $array_id, $name, $format, $vendor, $description, $type, $class);
   
-  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type);
+  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, $class);
   
   while ( $sth->fetch() ) {
 
-    my $array = Bio::EnsEMBL::Funcgen::Array->new(
-						  -dbID        => $array_id,
-						  -adaptor     => $self,
-						  -name        => $name,
-						  -format      => $format,
-						  -vendor      => $vendor,
-						  -description => $description,
-						  -type        => $type,
-						 );
+    my $array = Bio::EnsEMBL::Funcgen::Array->new
+	  (
+	   -dbID        => $array_id,
+	   -adaptor     => $self,
+	   -name        => $name,
+	   -format      => $format,
+	   -vendor      => $vendor,
+	   -description => $description,
+	   -type        => $type,
+	   -class       => $class, 
+	  );
 
     push @result, $array;
     
@@ -325,8 +327,8 @@ sub store {
   
   my $sth = $self->prepare("
 			INSERT INTO array
-			(name, format, vendor, description, type)
-			VALUES (?, ?, ?, ?, ?)");
+			(name, format, vendor, description, type, class)
+			VALUES (?, ?, ?, ?, ?, ?)");
   
     
   foreach my $array (@args) {
@@ -335,13 +337,9 @@ sub store {
       next;
     }
     
-    # Has array already been stored?
-    # What about array_chips? Still need to check they've been imported
     if (!( $array->dbID() && $array->adaptor() == $self )){
       #try and fetch array here and set to array if valid
       $sarray = $self->fetch_by_name_vendor($array->name(), $array->vendor());#this should be name_vendor?
-
-      #warn "Stored array from ".$array->name()." ".$array->vendor()." is $sarray";
       
       if( ! $sarray){
 		#sanity check here
@@ -351,6 +349,8 @@ sub store {
 		$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
 		$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
 		$sth->bind_param(5, $array->type(),         SQL_VARCHAR);
+		$sth->bind_param(6, $array->class(),        SQL_VARCHAR);
+		
 		
 		$sth->execute();
 		my $dbID = $sth->{'mysql_insertid'};
@@ -362,19 +362,9 @@ sub store {
 		$array = $sarray;
       }
     }
-    
-     
-    #need to make sure we have the full object here, so query again or can we use array or sarray?
-    #there may be problems with repopulating array with full achip complement if experiment only uses some of the achips?
-    #but we're reging the achips in the importer, so this shouldn't matter?
-    
   }
-  
-  
-  #will this be the original or the stored objects?
-  
+    
   return \@args;
-  #return $array;
 }
 
 
