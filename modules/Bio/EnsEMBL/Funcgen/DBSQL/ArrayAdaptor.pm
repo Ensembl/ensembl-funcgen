@@ -275,7 +275,7 @@ sub _objs_from_sth {
 	
   my (@result, $array_id, $name, $format, $vendor, $description, $type, $class);
   
-  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, $class);
+  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, \$class);
   
   while ( $sth->fetch() ) {
 
