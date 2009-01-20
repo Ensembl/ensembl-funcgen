@@ -124,6 +124,11 @@ sub new {
   
   $self->name($name);
   $self->format($format)    if defined $format;
+
+  if(defined $format && $format == 'EXPRESSION' && ! defined $class){
+	throw('You must defined a class if you are importing and array with an EXPRESSION format');
+  }
+
   $self->class($aclass)     if defined $aclass;
   $self->size($size)        if defined $size;
   $self->vendor($vendor);
