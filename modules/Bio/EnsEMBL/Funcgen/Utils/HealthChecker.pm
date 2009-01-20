@@ -128,6 +128,9 @@ sub new {
   
   warn "skip mc is ".  $self->{'skip_meta_coord'};
 
+  #$self->log_header(
+
+
   return $self;
 }
 
@@ -138,19 +141,16 @@ sub db{
 }
 
 
-#wrapper method
 
 =head2
 
-  Arg[0]     : boolean - 
-  Arg[1]     : boolean -
-  Example    : my @feature_ids = @{$ofa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all OligoFeature objects in
-               the current database.
-  Returntype : List of ints
+  Arg[0]     : 
+  Example    : 
+  Description: Wrapper method to perform all common update functions
+  Returntype : 
   Exceptions : None
-  Caller     : ?
-  Status     : StableArg[0] - boolean force
+  Caller     : General
+  Status     : at risk
 
 =cut
 
