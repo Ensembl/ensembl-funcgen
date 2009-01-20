@@ -129,7 +129,7 @@ sub new {
 	throw('You must defined a class if you are importing and array with an EXPRESSION format');
   }
 
-  $self->class($aclass)     if defined $aclass;
+  $self->class(uc($aclass))     if defined $aclass;
   $self->size($size)        if defined $size;
   $self->vendor($vendor);
   $self->description($desc) if defined $desc;
