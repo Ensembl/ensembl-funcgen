@@ -191,7 +191,8 @@ sub _columns {
   return qw(
 			rf.regulatory_feature_id rf.seq_region_id
 			rf.seq_region_start      rf.seq_region_end
-			rf.seq_region_strand     rf.display_label
+			rf.seq_region_strand     rf.bound_seq_region_start
+			rf.bound_seq_region_end  rf.display_label
 			rf.feature_type_id       rf.feature_set_id
 			rf.stable_id             ra.attribute_feature_id
 			ra.attribute_feature_table
@@ -262,14 +263,15 @@ sub _objs_from_sth {
 
 	my %feature_adaptors = (
 							'annotated' => $self->db->get_AnnotatedFeatureAdaptor(),
-							#?
+							#external?
 						   );
 	
 	
 	my (
 	    $dbID,                  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
-	    $seq_region_strand,     $display_label,
+	    $seq_region_strand,     $bound_seq_region_start,
+		$bound_seq_region_end,             $display_label,
 		$ftype_id,              $fset_id,
 		$stable_id,             $attr_id,
 		$attr_type
@@ -278,7 +280,8 @@ sub _objs_from_sth {
 	$sth->bind_columns(
 					   \$dbID,                  \$efg_seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
-					   \$seq_region_strand,     \$display_label,
+					   \$seq_region_strand,     \$bound_seq_region_start,
+					   \$bound_seq_region_end,  \$display_label,
 					   \$ftype_id,              \$fset_id,
 					   \$stable_id,             \$attr_id,
 					   \$attr_type
@@ -332,6 +335,11 @@ sub _objs_from_sth {
 		  undef @reg_attrs;
 		}
 
+		#Hack to get not NUL 0 autoinserted values to work
+		$bound_seq_region_start = undef if ! $bound_seq_region_start;
+		$bound_seq_region_end   = undef if ! $bound_seq_region_end;
+
+
 	    #Need to build a slice adaptor cache here?
 	    #Would only ever want to do this if we enable mapping between assemblies??
 	    #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
@@ -344,7 +352,7 @@ sub _objs_from_sth {
 
 		if(! $seq_region_id){
 		  warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-			"The region you are using is not present in the cuirrent dna DB";
+			"The region you are using is not present in the current dna DB";
 		  next;
 		}
 
@@ -362,7 +370,7 @@ sub _objs_from_sth {
 	    $slice = $slice_hash{'ID:'.$seq_region_id};
 	    
 	    if (!$slice) {
-	      $slice                              = $sa->fetch_by_seq_region_id($seq_region_id);
+	      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
 	      $slice_hash{'ID:'.$seq_region_id} = $slice;
 	      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
 	      $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
@@ -401,19 +409,30 @@ sub _objs_from_sth {
 
 	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
 			
+			#can remove the if $bound_seq_region_start/end once we have updated all reg feature entries and store API
+
 			if ($dest_slice_strand == 1) {
-			  $seq_region_start = $seq_region_start - $dest_slice_start + 1;
-			  $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+			  $seq_region_start       = $seq_region_start - $dest_slice_start + 1;
+			  $seq_region_end         = $seq_region_end   - $dest_slice_start + 1;
+
+			  #if as we never have a seq_region start of 0;
+			  $bound_seq_region_start = $bound_seq_region_start - $dest_slice_start + 1 if $bound_seq_region_start;
+			  $bound_seq_region_end   = $bound_seq_region_end   - $dest_slice_start + 1 if $bound_seq_region_end;
+			  
 			} 
 			else {
-			  my $tmp_seq_region_start = $seq_region_start;
+			  my $tmp_seq_region_start       = $seq_region_start;
+			  my $tmp_bound_seq_region_start = $bound_seq_region_start;
 			  $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
 			  $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+			  $bound_seq_region_start  = $dest_slice_end - $bound_seq_region_end + 1 if $bound_seq_region_end;
+			  $bound_seq_region_end    = $dest_slice_end - $tmp_bound_seq_region_start + 1 if $bound_seq_region_start;
 			  $seq_region_strand      *= -1;
 			}
 	      }
 	      
 	      # Throw away features off the end of the requested slice
+		  #Do not account for bounds here.
 	      if ($seq_region_end < 1 || $seq_region_start > $dest_slice_length
 			  || ( $dest_slice_sr_name ne $sr_name )){
 			$skip_feature = 1;
@@ -434,6 +453,8 @@ sub _objs_from_sth {
 		  ({
 			'start'          => $seq_region_start,
 			'end'            => $seq_region_end,
+			'bound_start'    => $bound_seq_region_start,
+			'bound_end'      => $bound_seq_region_end,
 			'strand'         => $seq_region_strand,
 			'slice'          => $slice,
 			'analysis'       => $fset_hash{$fset_id}->analysis(),
@@ -457,7 +478,8 @@ sub _objs_from_sth {
 
 		my $attr = $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
 
-		#now need to reset start and ends for the current slice	
+		#now need to reset start and ends for the current slice
+		#This is not redefining the slice, so we may get minus start values
 		#grab the seq_region_start/ends here first
 		#as resetting directly causes problems
 		my $attr_sr_start = $attr->seq_region_start;
@@ -476,7 +498,7 @@ sub _objs_from_sth {
 	  }
 	}
 
-  #hande last record
+  #handle last record
   if($reg_feat){
 	$reg_feat->regulatory_attributes(\@reg_attrs);# if(@reg_attrs);
 	push @features, $reg_feat;
@@ -514,10 +536,11 @@ sub store{
 
   my $sth = $self->prepare("
 		INSERT INTO regulatory_feature (
-			seq_region_id,   seq_region_start,
-			seq_region_end,  seq_region_strand,
-            display_label,   feature_type_id,
-            feature_set_id,  stable_id
+			seq_region_id,         seq_region_start,
+			seq_region_end,        bound_seq_region_start,
+			bound_seq_region_end,  seq_region_strand,
+            display_label,         feature_type_id,
+            feature_set_id,        stable_id
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
   
   my $sth2 = $self->prepare("
@@ -573,11 +596,13 @@ sub store{
 	$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
 	$sth->bind_param(2, $rf->start(),               SQL_INTEGER);
 	$sth->bind_param(3, $rf->end(),                 SQL_INTEGER);
-	$sth->bind_param(4, $rf->strand(),              SQL_TINYINT);
-	$sth->bind_param(5, $rf->{'display_label'},     SQL_VARCHAR);#Direct access so we always store the binary string
-	$sth->bind_param(6, $rf->feature_type->dbID(),  SQL_INTEGER);
-	$sth->bind_param(7, $rf->feature_set->dbID(),   SQL_INTEGER);
-	$sth->bind_param(8, $rf->{'stable_id'},         SQL_INTEGER);
+	$sth->bind_param(4, $rf->bound_start(),         SQL_INTEGER);
+	$sth->bind_param(5, $rf->bound_end(),           SQL_INTEGER);
+	$sth->bind_param(6, $rf->strand(),              SQL_TINYINT);
+	$sth->bind_param(7, $rf->{'display_label'},     SQL_VARCHAR);#Direct access so we always store the binary string
+	$sth->bind_param(8, $rf->feature_type->dbID(),  SQL_INTEGER);
+	$sth->bind_param(9, $rf->feature_set->dbID(),   SQL_INTEGER);
+	$sth->bind_param(10, $rf->{'stable_id'},        SQL_INTEGER);
 	
 	$sth->execute();
 	$rf->dbID( $sth->{'mysql_insertid'} );
