@@ -215,7 +215,7 @@ sub fetch_all_by_Slice_ExperimentalChips {
 =head2 fetch_all_by_Slice_Array
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2...] : Bio::EnsEMBL::Funcgen::Array
+  Arg [2] : Bio::EnsEMBL::Funcgen::Array
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $pfa->fetch_all_by_Slice_Array($slice, $exp);
   Description: Retrieves a list of features on a given slice that are created
@@ -242,6 +242,50 @@ sub fetch_all_by_Slice_Array {
 
 
 }
+
+=head2 fetch_all_by_Slice_Arrays
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
+  Arg [3]    : HASHREF - optional params hash e.g. {logic_name => 'AFFY_ProbeTranscriptAlign'}
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $pfa->fetch_all_by_Slice_Array($slice, $exp);
+  Description: Retrieves a list of features on a given slice that are created
+               by probes from the given Array.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
+  Exceptions : Throws if ARRAYREF if arrays is not provided
+  Caller     : 
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Slice_Arrays{
+  my ($self, $slice, $arrays, $params) = @_;
+
+  my $logic_name;
+  $logic_name = $params->{'logic_name'} if exists ${$params}{'logic_names'};
+
+
+  if(!(ref($arrays) eq 'ARRAY' &&  @$arrays)){
+	throw('Must pass an ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects');
+  }
+
+  my @ac_ids;
+
+  foreach my $array(@$arrays){
+
+	throw("Must pass an ARRAYREF of valid stored Bio::EnsEMBL::Funcgen::Array objects")
+	  if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::Array") && $array->dbID));
+
+	push @ac_ids, (map $_->dbID, @{$array->get_ArrayChips});
+  }
+
+  my $constraint = " p.array_chip_id IN (".join(", ", @ac_ids).") AND p.probe_id = pf.probe_id ";
+  
+    
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+}
+
 
 =head2 fetch_all_by_Slice_type
 
