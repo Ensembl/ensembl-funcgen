@@ -156,6 +156,7 @@ CREATE TABLE external_db (
   type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM', 'ENSEMBL') default NULL,
   secondary_db_name           VARCHAR(255) DEFAULT NULL,
   secondary_db_table          VARCHAR(255) DEFAULT NULL,
+  description                 TEXT,
   PRIMARY KEY (external_db_id) 
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
 
@@ -351,12 +352,13 @@ CREATE TABLE `array` (
    `type` varchar(20) default NULL,
    `class` varchar(20) default NULL,	
    PRIMARY KEY  (`array_id`),
-   UNIQUE KEY   (`vendor`, `name`),
-   KEY `class_idx` (`class`)
+   UNIQUE KEY  `vendor_name_idx` (`vendor`, `name`),
+   UNIQUE KEY  `class_name_idx` (`class`, `name`),	
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---- format = tiled, gene, exon, targetted, custom/mixed? Do we need to enum these?
---- species, could we have multi-species arrays?
+--- format = tiled, targetted, expression, custom/mixed?
+--- class = AFFY_UTR AFFY_ST ILLUMINA_WG
+-- Do we need to enum these?
 
 
 --
@@ -829,6 +831,7 @@ CREATE TABLE `feature_set` (
    `name` varchar(100) default NULL,
    `type` enum('annotated', 'regulatory', 'external') default NULL,
    `description` varchar(80) default NULL,
+   `display_label` varchar(80) default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    UNIQUE KEY `name_idx` (name)
