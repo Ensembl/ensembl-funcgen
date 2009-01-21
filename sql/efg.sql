@@ -353,7 +353,7 @@ CREATE TABLE `array` (
    `class` varchar(20) default NULL,	
    PRIMARY KEY  (`array_id`),
    UNIQUE KEY  `vendor_name_idx` (`vendor`, `name`),
-   UNIQUE KEY  `class_name_idx` (`class`, `name`),	
+   UNIQUE KEY  `class_name_idx` (`class`, `name`)	
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --- format = tiled, targetted, expression, custom/mixed?
@@ -874,7 +874,7 @@ CREATE TABLE `regulatory_feature` (
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
   `bound_seq_region_start` int(10) unsigned NOT NULL,	
-  `bound_seq_region_start` int(10) unsigned NOT NULL,
+  `bound_seq_region_end` int(10) unsigned NOT NULL,
   `display_label` varchar(80) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id`	int(10) unsigned default NULL,
