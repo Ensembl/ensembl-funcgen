@@ -19,12 +19,17 @@
 # Remove Anti-sense UnmappedObjects?
 # Test for external_dbs in healtcheck and force insert manually or prompt to change species name
 #Implement Helper for logs etc.
-
-
+# Handle non-probeset probes
+# Add Probe level DBEntries to enable ProbeSet view? No just add ProbeFeature IDs to linkage annotation?
+# Or just leave out, altho it will not be obvious exactly which ones will have been used in the mapping
+# No we need to do both, so we can identify exactly which feature mapped
+# But also know how many times a probe might have mapped to another transcript, to give a quality score!
+# Pod::Usage for help
+#Species specific check existing and delete based on external_db_name
 
 #To do
 
-
+#Reimpliment validate arrays, see old script
 #Add unannotated UTR clipping dependant on nearest neighbour
 #Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs in the neighbour.
 
@@ -39,23 +44,20 @@
 #Can we do some clean up afterwards? Let's add a clean up mode which simply deletes all probe sets which map too many times.
 #We would need to ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run clean up.
 # There is no reason to have separate probe and xref DBs???
-# Handle non-probeset probes
-# Add Probe level DBEntries to enable ProbeSet view? No just add ProbeFeature IDs to linkage annotation?
-# Or just leave out, altho it will not be obvious exactly which ones will have been used in the mapping
-# No we need to do both, so we can identify exactly which feature mapped
-# But also know how many times a probe might have mapped to another transcript, to give a quality score!
+# Validate array format against arrays specified? May want to just use an array format as a template???
 
-
-#Change docs to Pod and use PodUsage for help
+#Change docs to Pod
+#Can remove object_name and object_key from caches if we disable logs and just depend on xref/unmapped objects.
+#Else we need to maintain them so we have names rather than dbIDs in the logs
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
 # In which case we need to take a species param for each of the transcript, array and xref DBs
-# Also need to have -no_delete option, which will allow running of pipeline with xrefs stored
+# Also need to have -no_delete option, which will allow running of pipeline with previous xrefs stored?
 # Or can we force delete to be species specific? We would need to do this anyway to support updating of species asynchronously
 # We probably need to think about this for the 1st stage too, 
 # but will be easy as we just need to dump the correct top level sequence
-# Validate xref_species against registry alias and use this to generate species_core_Gene DB rather than ensembl_core_Gene
+# Validate species against registry alias and use this to generate species_core_Gene DB rather than ensembl_core_Gene
 # patch other efg DBs and alter External parsers accordingly.
 # Can't rely on Registry as species aliases may not be present or loaded
 
@@ -63,9 +65,142 @@
 
 # Issues
 # Does not handle internal mismatches of features wrt overlap of exon/exonutr.  Not likley to cause a problem.
+# Cannot account for running non-linked arrays which may use the same probe/set name.  This may cause failure if the probeset sizes are different. Xrefs and counts should be unaffected as we base these on the probe_set_ids not the names
+
+
+=head1 NAME
+
+probe2transcript.pl
+
+=head1 SYNOPSIS
+
+This script performs probe(set) to transcript mapping based on a few simple parameters. Overlap analysis 
+of ProbeFeatures is performed and annotations are stored as xrefs for individual ProbeFeatures, Probes or 
+ProbeSets as a whole. Any probe(set)s which fail the mapping procedure are by default stored in the 
+UnmappedObject tables and a logfile is also written.
+
+e.g. perl probe2transcript.pl --species $SPECIES --transcript_dbname $DNADB_NAME --transcript_host $DNADB_HOST --transcript_port $DNADB_PORT --transcript_user $DNADB_USER --xref_host $DB_HOST --xref_dbname $DB_NAME --xref_user $DB_USER --xref_pass $DB_PASS --calculate_utrs --utr_multiplier 1 --arrays HT_MG-430A  -vendor AFFY -format AFFY_UTR
+
+
+=head1 DESCRIPTION
+
+More wordy description here
+
+promiscuous probes
+completed unmapped probes
+
+This is generally executed by the eFG array mapping environment
+
+=head1 OPTIONS
+
+Mandatory
+ -species    Latin name as used in DB name or meta table e.g. homo_sapiens
+ -vendor     Array vendor e.g. AFFY, ILLUMINA etc
+ -format     Array format e.g. AFFY_UTR, AFFY_ST, ILLUMINA. Sets default array configuration
+ -arrays     List (space separated) of array names.
+
+Array configuration:
+ -linked_arrays       Boolean(0|1) - For probe(set)s which exist on multiple array e.g. AFFY
+ -probeset_arrays     Boolean(0|1) - For arrays which contain probesets rather than just single probes
+ -sense_interrogation Boolean(0|1) - Sets interrogation strand, normally 1 for AFFY but 0 for AFFY_ST i.e. anti-sense
+
+Mapping rules:
+
+ -mismatches                  Maximum number of mismatches allowed per probe
+ -calculate_utrs              This calculates the default unannotated UTR extension defined by
+                              the greater of either the mean or the median of all annotated UTRs
+                              This is overridden by the following extend options
+ -unannotated_5_utr           Default extension for transcripts with unannotated 5' UTRs
+ -unannotated_3_utr           Default extension for transcripts with unannotated 5' UTRs
+ -annotated_5_prime_extend    Default bp extension for all transcripts with annotated 5' UTRs
+ -annotated_3_prime_extend    Default bp extension for all transcripts with annotated 3' UTRs
+ -utr_multiplier              Defines UTR extension as multiple of annotated UTR. This is overridden 
+                              if the above options are set.
+ -max_transcripts             Maximum number of transcripts probe(set) can map to before we call it 
+                              promiscuous, default is 100.
+ -threshold                   This is the fraction(0-1) of probes within a probeset required to call it 
+                              mapped, default is 0.5
+
+
+Running modes:
+
+ -delete           Delete all pre-existing array xrefs generated by probe2transcript for given arrays
+ -no_triage        Does not load UnmappedObjects (still writes to log file)
+ -health_check     Performs healthcheck and exits
+ -parallelise      Not yet implemented, will chunk and submit to farm
+ -clean_up         Not yet implemented, will perform post parallelised run clean up
+		 
+DB connection parameters, registry will override direct connection:
+
+ -reg_verbose    Turns on verbose output when loading the registry
+
+ -reg_host
+ -reg_port
+ -reg_user
+ -reg_pass
+
+ or
+
+ -reg_file
+
+ or
+
+ -transcript_host    Mandatory
+ -transcript_user    Mandatory
+ -transcript_port    
+ -transcript_pass    Mandatory
+ -transcript_dbname  Mandatory
+
+ -xref_host          Mandatory
+ -xref_user          Mandatory
+ -xref_port
+ -xref_pass          Mandatory
+ -xref_dbname        Mandatory
+
+ -probe_host         Probe parameters
+ -probe_user         default to xref
+ -probe_port         DB paramters
+ -probe_pass         if not
+ -probe_dbname       specified
+
+Testing:
+
+ -test_transcripts   Number of transcripts to perform a test run on
+ -slice              Name of test slice to perform a test run on 
+ -transcripts        Not yet implemented, List of transcript stable IDs to test on
+ -no_store           Not yet implemented	
+		 
+Other options:
+ -tee                Tees output to STDOUT
+ -filename           Sets name to be used in output and logfile, default is xref_dbname_probe2transcript.log|out
+ -help               Prints this POD documentation and exits
+
+
+=head1 EXAMPLE
+
+
+=head1 SEE ALSO
+
+ensembl-functgenomics/scripts/environments/arrays.env
+
+=head1 AUTHOR
+
+This module was created by Nathan Johnson.
+
+This module is part of the Ensembl project: http://www.ensembl.org/
+
+=head1 CONTACT
+
+Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+
+
+=cut
+
+
 
 use strict;
 
+use Pod::Usage;
 use Getopt::Long;
 
 use Bio::EnsEMBL::DBEntry;
@@ -85,50 +220,44 @@ my $reg = 'Bio::EnsEMBL::Registry';
 
 #Helper params
 #declared here to avoid single usage warning
-$main::_log_file = undef;#This is different to the LOG file used to print the mappings
+$main::_log_file = undef;
 $main::_tee      = 0;    #tee the output of this scripts
 
 
 my ($transcript_host, $transcript_user, $transcript_pass, $transcript_dbname,
     $probe_host, $probe_user, $probe_pass, $probe_dbname, $load_from_db,
-    $xref_host, $xref_user, $xref_pass, $xref_dbname, $force_delete, $calc_utrs,
-    $max_transcripts, @arrays_names, $delete, $no_triage, $health_check, $test_slice);
+    $xref_host, $xref_user, $xref_pass, $xref_dbname, $calc_utrs,
+    $test_transcripts, @arrays_names, $delete, $no_triage, $health_check, $test_slice);
 #$annotated_utrs);
 
-my ($probe_db, $xref_db, $transcript_db, %promiscuous_probesets, %transcripts_per_probeset, @unmapped_objects, $um_obj,
-	%transcript_ids , %transcript_probeset_count, %arrays_per_probeset, %probeset_sizes, @transcripts, %arrays,
-   %array_xrefs, %transcript_xrefs, $transcript_sid, $clean_up, $parallelise, $sql, @array_names);
+my ($probe_db, $xref_db, $transcript_db, %promiscuous_objects, %transcripts_per_object, @unmapped_objects, $um_obj,
+	%transcript_ids , %transcript_feature_info, %arrays_per_object, %probeset_sizes, @transcripts, %arrays,
+   %array_xrefs, %transcript_xrefs, $transcript_sid, $clean_up, $parallelise, $filename, $sql, @array_names);
 
 my $reg_verbose = 0;
-my ($trans_species, $xref_species, $probe_species, $reg_file, $reg_host, $reg_user, $reg_pass, $reg_port);
+my ($species, $reg_file, $reg_host, $reg_user, $reg_pass, $reg_port);
+
+
 
 # Default options
 my $transcript_port = 3306; 
 my $probe_port = 3306; 
 my $xref_port = 3306;
 my $max_mismatches = 1;
-my $vendor = 'AFFY';
+my $sense_interrogation;
+#my $vendor = 'AFFY';
+#my $format = 'AFFY_IVT';#Rename this UTR?
+my ($vendor, $format);
 
-#Need to remove these explicit defaults and -default flag
-#This way we can check for conflicting options?
-
-#We also want to use annotated
-#Without calc, but with an unannotated default e.g. yeast?
-#Do we ever want to use calc with out annotated?
-#So just use defaults?
-#What we want is to use annotated else use calc or preset default
-#so calc and preset default are mutually exclusive
-#but annotated can be used with both
-#shouldn't median be mode?
-
-#Remove these completely and force some paramter setting to avoid
-#being run with defaults?
-
-
+my %array_config = (
+					probeset_arrays      => undef,
+					linked_arrays        => undef,
+					sense_interrogation  => undef,
+				   );
 
 my %utr_extends = (
-				   3 => 0,	  #three => 2000,
-				   5 => 0,
+				   3 => undef,	  #three => 2000,
+				   5 => undef,
 				  );
 
 #Set these to undef so we can allow no estimated UTR
@@ -142,9 +271,11 @@ my %unannotated_utrs = (
 my ($utr_multiplier);
 
 #my $unannotated_utr_length = 2000;
-my $max_transcripts_per_probeset = 100;
+my $max_transcripts = 100;
 my $mapping_threshold = 0.5;
 #based on the current UTR length
+
+my @tmp_args = @ARGV;
 
 GetOptions(
 		   'transcript_host=s'      => \$transcript_host,
@@ -164,24 +295,27 @@ GetOptions(
            'xref_dbname=s'          => \$xref_dbname,
 		   'reg_file=s'             => \$reg_file,
 		   'reg_host=s'             => \$reg_host,
+		   'reg_user=s'             => \$reg_user,
+		   'reg_pass=s'             => \$reg_pass,
+		   'reg_port=i'             => \$reg_port,
 		   'reg_verbose'            => \$reg_verbose,
-		   'transcript_species=s'   => \$trans_species,
-		   'xref_species=s'         => \$xref_species,
-		   'probe_species=s'        => \$probe_species,
+		   'species=s'              => \$species,
 		   'vendor=s'               => \$vendor,
+		   'format=s'               => \$format,
 		   'mismatches=i'           => \$max_mismatches,
-           '3_prime_extend=s'       => \$utr_extends{3},
-		   '5_prime_extend=s'       => \$utr_extends{5},
+           'annotated_3_prime_extend=s'       => \$utr_extends{3},
+		   'annotated_5_prime_extend=s'       => \$utr_extends{5},
 		   'calculate_utrs'         => \$calc_utrs,
 		   'unannotated_5_utr=s'    => \$unannotated_utrs{5},
 		   'unannotated_3_utr=s'    => \$unannotated_utrs{3},
 		   'utr_multiplier=s'       => \$utr_multiplier,#Make this for 5 and 3?
-		   'max_probesets=i'        => \$max_transcripts_per_probeset,
+		   'test_transcripts=i'     => \$test_transcripts,
 		   'max_transcripts=i'      => \$max_transcripts,
 		   'threshold=s'            => \$mapping_threshold,
 		   'arrays=s{,}'            => \@array_names, # this should take 1 or more space separate array names WARNING experimental feature!
+	
 		   'delete'                 => \$delete,
-		   'force_delete'           => \$force_delete,
+		   #'force_delete'           => \$force_delete,
 		   'no_triage'              => \$no_triage,
 		   'health_check'           => \$health_check,
 		   'parallelise'            => \$parallelise,
@@ -189,12 +323,23 @@ GetOptions(
 		   'slice=s'                => \$test_slice,#Only for testing purposes!
 		   'transcript=s'           => \$transcript_sid,
 
+		   'linked_arrays=i'          => \$array_config{linked_arrays},
+		   'probeset_arrays=i'        => \$array_config{probeset_arrays},
+		   'sense_interrogation=i'    => \$array_config{sense_interrogation},
+
 		   #Helper params
 		   'tee'                    => \$main::_tee,
+		   'filename'               => #\$main::_log_file,
 		   
 		   #add a reduced log to minimize memory usage?
-           'help'                   => sub { usage(); exit(0); }
-		  );
+           'help'                   => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
+		  ) or pod2usage(
+						 -exitval => 1,
+						 -message => "Params are:\t@tmp_args"
+						);
+
+
+
 
 
 #exit if unkown options specified? TEST!
@@ -210,12 +355,13 @@ GetOptions(
 #Make arrays mandatory?
 #Not sensible to AFFY AFFY_ST and ILLUMINA at same time!
 
-
-$main::_log_file =  "./${transcript_dbname}_probe2transcript.out";
+$filename ||= "${xref_dbname}_probe2transcript";
+$main::_log_file ||=  "./${filename}.log";
 my $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;
 my $hostname = `hostname`;
 chomp($hostname);
 $Helper->log_header('Running on probe2transcript.pl on: '.$hostname, 0, 'append_date');
+$Helper->log("Params are:\t@tmp_args");
 
 
 die("It is not wise to run all available arrays at the same time\nYou must supply a list of array names using -arrays, i.e. for all or a subset of a given array format(e.g. AFFY, AFFY_ST, ILLUMINA)") if(! @array_names);
@@ -223,9 +369,69 @@ die("It is not wise to run all available arrays at the same time\nYou must suppl
 
 #OTHER MANDATORY PARAMS HERE?
 
+#Now set some array config
+
+my %array_format_config = (
+						   AFFY_UTR => {
+									   probeset_arrays         => 1,
+									   linked_arrays      => 0,
+									   sense_interrogation  => 0,
+									   
+									  },
+						   AFFY_ST => {
+									   probeset_arrays         => 1,
+									   linked_arrays      => 1,
+									   sense_interrogation  => 1,
+									  },
+						   
+						   ILLUMINA => {
+										probeset_arrays        => 0,
+										linked_arrays     => 1,
+										sense_interrogation => 0,
+									   },					
+						  );
+die ('Must supply a -vendor parameter e.g. AFFY') if ! $vendor;
+
+if(defined $format && ! exists $array_format_config{$format}){
+  die("-format is not valid:\t$format\nMust specify valid format e.g. AFFY_UTR, AFFY_ST, ILLUMINA.\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameterss?\n");
+}
+
+
+if(! ($array_config{probeset_arrays} && 
+	  $array_config{linked_arrays} && 
+	  $array_config{sense_interrogation})
+   && ! $format){
+  die('You must specify a valid format parameter if you are not using -probeset_arrays, -linked_arrays and -sense_interrogation\n');
+}
+
+
+foreach my $key(keys %array_config){
+
+  if(! defined $array_config{$key}){
+  
+	if(exists $array_format_config{$format}){
+	  $array_config{$key} = $array_format_config{$format}{$key};
+	}
+	else{
+	  #This should never happen
+	  die("Cannot find default $key config for $format format");
+	}
+  }
+}
+
+my $xref_object = ($array_config{probeset_arrays}) ? 'ProbeSet' : 'Probe';
 
 
 #we need to do a check here on utr_length and unannotated_utr_length
+
+#Let's just have one species!?
+#What if we want to use different DBs for the xref, and probe DB?
+#Then we'll just have to use the old method and specify different dbnames
+
+if(! $species){
+  die("Must provide a -species");
+}
+
 
 if($reg_file || $reg_host){
 
@@ -261,30 +467,15 @@ if($reg_file || $reg_host){
 
   #Now load the db adaptors
 
-  if($xref_species){
-	$xref_db = $reg->get_DBAdaptor($xref_species, 'Funcgen');
-  }else{
-	die("Must provide a xref_species if loading registry from $reg_file");
-  }
-
-  if($trans_species){
-	$transcript_db = $reg->get_DBAdaptor($trans_species, 'Core');
-  }else{
-	warn "No trans_species defined, defaulting to xref_species: $xref_species\n";
-	$transcript_db = $reg->get_DBAdaptor($xref_species, 'Core');
-  }
-
-  if($probe_species){
-	$probe_db = $reg->get_DBAdaptor($probe_species, 'Funcgen');
-  }else{
-	warn "No probe_species defined, defaulting to xref_species: $xref_species\n";
-	$probe_db = $xref_db;
-  }
+  $transcript_db = $reg->get_DBAdaptor($species, 'Core');
+  $xref_db       = $reg->get_DBAdaptor($species, 'Funcgen');
+  #$probe_db      = $reg->get_DBAdaptor($probe_species, 'Funcgen');
+  $probe_db = $xref_db;
 }
 else{#load dbs from params
 
-  if(!$transcript_user || !$transcript_dbname || !$transcript_host || !$trans_species){
-	warn "You must specify a -transcript_user -transcript_dbname -transcript_host and a -transcript_species\n";
+  if(!$transcript_user || !$transcript_dbname || !$transcript_host){
+	warn "You must specify a -transcript_user -transcript_dbname -transcript_host\n";
 	usage();
   }
 
@@ -293,8 +484,11 @@ else{#load dbs from params
 													  '-user'   => $transcript_user,
 													  '-pass'   => $transcript_pass,
 													  '-dbname' => $transcript_dbname,
-													  '-species' => $trans_species);
+													  '-species' => $species);
 
+
+  #Change this to only check for dbname?
+  #quite likely core and efg DB will be on different machines
 
   if(!$xref_user || !$xref_dbname || !$xref_host){
 	warn "You must specify a -xref_user -xref_dbname and -xref_host\n";
@@ -306,7 +500,7 @@ else{#load dbs from params
 														 '-user'   => $xref_user,
 														 '-pass'   => $xref_pass,
 														 '-dbname' => $xref_dbname,
-														 '-species' => $xref_species || $trans_species);
+														 '-species' => $species);
 
   if ($probe_host && $probe_dbname && $probe_user) {
 	
@@ -315,7 +509,7 @@ else{#load dbs from params
 															'-user'   => $probe_user,
 															'-pass'   => $probe_pass,
 															'-dbname' => $probe_dbname,
-															'-species' => $probe_species || $trans_species
+															'-species' => $species
 														   );
 	
   }else{
@@ -324,7 +518,8 @@ else{#load dbs from params
   }
 }
 
-#Print params summary here?
+
+
 
 
 #Test the DBs here before starting
@@ -343,12 +538,12 @@ my $species_id = 1;
 
 if($xref_db->is_multispecies){
   #Can probably do this via the MetaContainer?
-  my $sql     = "SELECT species_id from meta where meta_key='species.db_name' and meta_value='$xref_species'";
+  my $sql     = "SELECT species_id from meta where meta_key='species.db_name' and meta_value='$species'";
   ($species_id) = @{$xref_db->dbc->db_handle->selectrow_array($sql)};
 
   if(! $species_id){
 	#This should never occur as we have generated the xref_db with this species
-	die("Could not find species_id for $xref_species");
+	die("Could not find species_id for $species");
   }
 }
 
@@ -360,43 +555,45 @@ my $schema_build = $xref_db->_get_schema_build($transcript_db);
 #This should be used in all the DBEntry and UnmappedObject records
 my ($edb_name, $transc_edb_name, $transc_edb_id, $transc_edb_display_name, $edb_display);
 
-for my $edb_type('Transcript', 'Species'){
-  my $found_edb_id = 0;
+#for my $edb_type('Transcript', 'Species'){
+#  my $found_edb_id = 0;
 
-  if($edb_type eq 'Transcript'){
-	$edb_name                = "${trans_species}_core_Transcript";
-	$transc_edb_name         = $edb_name;
-	$transc_edb_display_name = "Ensembl ${trans_species} Transcript";
-	$edb_display             = $transc_edb_display_name;
+#  if($edb_type eq 'Transcript'){
+$edb_name                = "${species}_core_Transcript";
+$transc_edb_name         = $edb_name;
+$transc_edb_display_name = "Ensembl ${species} Transcript";
+$edb_display             = $transc_edb_display_name;
 	
-  }else{
-	#This is used for storing completely Unmapped probes
-	$edb_name = 'ensembl_core_Species';
-	$edb_display = 'Ensembl Species';
-  }
+#  }else{
+#	#This is used for storing completely Unmapped probes
+#	$edb_name = 'ensembl_core_Species';
+#	$edb_display = 'Ensembl Species';
+#  }
 
 
-  $sql = "SELECT external_db_id, db_release from external_db where db_name='$edb_name'";
-  my @versions = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
+$sql = "SELECT external_db_id, db_release from external_db where db_name='$edb_name'";
+my @versions = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
+$sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
+  "'${edb_name}', '${schema_build}', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')";
+my @tmp;
+  
+foreach my $row(@versions){
+  my ($edb_id, $version) = @$row;
+  push @tmp, $version;
+  
+  $transc_edb_id   = $edb_id if($schema_build eq $version);
+  last;
+  #$transc_edb_id  = $edb_id if($edb_type eq 'Transcript');
+  #$species_edb_id = $edb_if if($edb_type eq 'Species');
+}
+
+
+if(! $transc_edb_id){
   $sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
 	"'${edb_name}', '${schema_build}', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')";
-  my @tmp;
-  
-  foreach my $row(@versions){
-	my ($edb_id, $version) = @$row;
-	push @tmp, $version;
-
-	$found_edb_id = $edb_id if($schema_build eq $version);
-	$transc_edb_id = $edb_id if($edb_type eq 'Transcript');
-  }
-
-
-  if(! $found_edb_id){
-	$sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
-	  "'${edb_name}', '${schema_build}', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')";
-	die("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n$sql");
-  }
+  die("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n$sql");
 }
+
 
 
 
@@ -430,17 +627,23 @@ foreach my $name(@array_names){
 	#This is really to keep the run time/mem usage down for a given process
   }
 
+
+
   $arrays{$name} = $array;
 }
 
 
 
-$delete = $force_delete if $force_delete;
+#$delete = $force_delete if $force_delete;
 
 #Merge these as they are related and we need to force unmapped check first
 
-delete_existing_xrefs($xref_db) if ($delete);
-check_existing_and_exit($probe_db, $xref_db);#???
+if($delete){
+  delete_existing_xrefs($xref_db);
+}
+else{
+  check_existing_and_exit($probe_db, $xref_db);
+}
 
 
 if ($health_check){
@@ -461,10 +664,10 @@ if ($health_check){
 	$Helper->log("$anal_id\t\t$lname");
 
 	if(! $lname){
-	  die('Found probe_feature analysis without a corresponding analysis entry');
+	  die("Found probe_feature analysis without a corresponding analysis entry:\t$lname");
 	}
 	
-	if($lname !~ /_ProbeAlign/ || $lname !~ /_ProbeTranscriptAlign/ || $lname ne 'AffyAlign'){
+	if(! ($lname =~ /_ProbeAlign/ || $lname =~ /_ProbeTranscriptAlign/ || $lname eq 'AffyAlign')){
 	  die('Found unexpected analysis entry in probe_feature table');
 	}
   }
@@ -482,7 +685,7 @@ if ($health_check){
 my $transcript_adaptor = $transcript_db->get_TranscriptAdaptor();
 my $slice_adaptor = $transcript_db->get_SliceAdaptor();
 my $probe_feature_adaptor = $probe_db->get_ProbeFeatureAdaptor();
-my $db_entry_adaptor = $xref_db->get_DBEntryAdaptor();
+my $dbentry_adaptor = $xref_db->get_DBEntryAdaptor();
 my $analysis_adaptor = $xref_db->get_AnalysisAdaptor();
 my $unmapped_object_adaptor = $xref_db->get_UnmappedObjectAdaptor();
 
@@ -493,17 +696,17 @@ my $last_pc = -1;
 
 my $rr = Bio::EnsEMBL::Mapper::RangeRegistry->new();
 
-open (LOG, ">${transcript_dbname}_probe2transcript.log");
+open (OUT, ">${filename}.out");
 
+#no defined extends and no multiplier would simply be just the annotated utr, which we don't want
+#no defined extends and mulplier would be multiplier for 5 and 3 prime
+#one extend defined (can be 0) and multiplier would be hard extend(or no extend/annotated) for one and multiplier for other
+#We currently can't set different multipliers for 3 and 5 prime.
 
-
-#Can't have both extends and multiplier
-#Can have one extend and the other using the multiplier
-#You would need to explicitly state multiplier as 0
-if($utr_extends{3} && $utr_extends{5} && $utr_multiplier){
+if(defined $utr_extends{3} && defined $utr_extends{5} && $utr_multiplier){
   die('You cannot set both -3/5_prime_extend values and a -utr_multiplier');
 }
-elsif(!( $utr_extends{3} || $utr_extends{5} || $utr_multiplier)){#Can't have niether
+elsif(!(defined  $utr_extends{3} || defined $utr_extends{5} || $utr_multiplier)){#Can't have niether? why not?
   die("You must set some extension rules using  -3/5_prime_extend values and/or -utr_multiplier\n".
 	  'Set -utr_multiplier to 0 and omit -3/5_prime_extend to run against UTR only');
 }
@@ -512,14 +715,14 @@ else{
 }
 
 #Multiplier needs to be a pisitive real number
-if(defined $utr_multiplier && $utr_multiplier !~ /[^\-]*[0-9]+\.*[0-9]*]/){
-  die('-utr_multiplier must be a positive real number');
+if(defined $utr_multiplier && $utr_multiplier !~ /-*[0-9]+[\.0-9]*/){
+  die("-utr_multiplier must be a positive real number:\t$utr_multiplier");
 }
 
 #Validate extend params
 for my $end('3', '5'){
   
-  if($utr_extends{$end} =~ /^\D+$/){
+  if(defined $utr_extends{$end} && $utr_extends{$end} =~ /\D+/){
 	die("Invalid -${end}_prime_extend parameter(".$utr_extends{$end}.").  Must be a number(bp)");
   }
 }
@@ -528,6 +731,8 @@ for my $end('3', '5'){
 if($unannotated_utrs{5} && $unannotated_utrs{3} && $calc_utrs){
   die('You cannot set both -unannotated_5/3utr values and -calc_utrs');
 }
+
+
 
 #Validate unannotated defaults
 for my $end('3', '5'){
@@ -539,12 +744,12 @@ for my $end('3', '5'){
 	
 	}
 	else{
-	$Helper->log("Setting $end unannotated UTR length to ".$unannotated_utrs{$end});
+	  $Helper->log("Setting $end unannotated UTR length to ".$unannotated_utrs{$end});
 	}
   }
   else{
 	if(! $calc_utrs){
- 	$Helper->log("Defaulting unannotated $end UTR length to 0");
+	  $Helper->log("Defaulting unannotated $end UTR length to 0");
 	  $unannotated_utrs{$end} = 0;
 	}
   }
@@ -555,6 +760,9 @@ if($test_slice && $transcript_sid){
   die('Can only run in one test mode, please specify -slice or -transcript');
 }
   
+
+#Need to warn here if max_transcripts??
+
 if($test_slice){
   $Helper->log("Running in test mode with slice:\t$test_slice\n".
 			   "WARNING:\tPromiscuous probesets will not be caught! Calculated UTRs will be wrong!");
@@ -571,18 +779,19 @@ elsif($transcript_sid){
 
   @transcripts = ($transcript_adaptor->fetch_by_stable_id($transcript_sid));
 }
-  else{
-	@transcripts = @{$transcript_adaptor->fetch_all()};
-  }
+else{
+  @transcripts = @{$transcript_adaptor->fetch_all()};
+}
+
 my $total =  scalar(@transcripts);
 
-  die('Could not find any transcripts') if $total == 0;
+die('Could not find any transcripts') if $total == 0;
   
-  $Helper->log("Identified ".scalar(@transcripts)." transcripts for probe mapping\n".
-			   "Allowed mismatches = $max_mismatches\n");
+$Helper->log("Identified ".scalar(@transcripts)." transcripts for probe mapping");
+$Helper->log("Allowed mismatches = $max_mismatches");
 
 if($calc_utrs){
-  $Helper->log('Calculating default UTR lengths from max median|mean', 0, 'append_date');
+  $Helper->log('Calculating default UTR lengths from greatest of max median|mean', 0, 'append_date');
   #We actually want to extend the potentially conservative ensembl UTRs
   #to the calculated default if they are shorter, but only if this does 
   #not cause overlap with a neighbouring gene.
@@ -612,7 +821,9 @@ if($calc_utrs){
 	  if(defined $three_utr){
 		$three_cnt++;
 		push @three_lengths, $three_utr->length;
-		$three_zero_cnt++ if  $three_utr->length == 0;
+	  }
+	  else{
+		$three_zero_cnt++;
 	  }
 	}
 
@@ -623,14 +834,16 @@ if($calc_utrs){
 	  if(defined $five_utr){
 		$five_cnt++;
 		push @five_lengths, $five_utr->length;
-		$five_zero_cnt++ if  $five_utr->length == 0;
+	  }
+	  else{
+		$five_zero_cnt++;	
 	  }
 	}
   }
 
  
   if(! defined $unannotated_utrs{5}){
-	$Helper->log("Seen $five_cnt 5' UTRs, $five_zero_cnt with length 0");
+	$Helper->log("Seen $five_cnt 5' UTRs, $five_zero_cnt have length 0");
 	$five_mean = mean(\@five_lengths);
 	($five_mean, $remainder) = split/\./, $five_mean;
 	$five_mean++ if $remainder =~ /^[5-9]/;
@@ -641,7 +854,7 @@ if($calc_utrs){
   }
 
    if(! defined $unannotated_utrs{3}){
-	 $Helper->log("Seen $three_cnt 3' UTRs, $three_zero_cnt with length 0");
+	 $Helper->log("Seen $three_cnt 3' UTRs, $three_zero_cnt have length 0");
 	 $three_mean = mean(\@three_lengths);
 	 ($three_mean, $remainder) = split/\./, $three_mean;
 	 $three_mean++ if $remainder =~ /^[5-9]/;
@@ -666,7 +879,7 @@ if($parallelise){
   #we need to test for which probe2transcript_new.pl
 
   my @slices = $slice_adaptor->fetch_all('toplevel', undef, 1);
-
+  
   foreach my $slice(@slices){
 	#my $bsub_cmd = "bsub -J $xref_dbname.".$slice->seq_region_name.".probe2transcript -q normal -R "select[mem>8000] rusage[8000=mem]" -M 8000000 -o ${DB_HOME}/mapper.out -e ${DB_HOME}/mapper.err time perl ${SRC}/ensembl/misc-scripts/probe_mapping/probe2transcript.pl --transcript_dbname $DBNAME --transcript_host $DBHOST --transcript_port $DBPORT --transcript_user ensro --xref_host $ODBHOST --xref_dbname $ODBNAME --xref_user ensadmin --xref_pass ensembl --utr_length annotated -calculate_utrs";
 	
@@ -683,9 +896,14 @@ my %flanks = (
 ### Not getting any xrefs? Try checking the meta_coord table if you have migrated the probe_features
 #Need to healtcheck this!!
 
+#Do caching first to highlight any problem with arrays before running mapping
+cache_arrays_per_object($probe_db);
+
 my ($linkage_annotation, $pc, $transcript_slice, $slice);
 my (@exons, $num_exons, $first_exon, $last_exon, $probe_features, $probe, $dbID);
-my ($probeset, $probeset_id);
+my ($probeset_id, $probeset_name, $transcript_key, $log_name);
+
+$Helper->log("Performing overlap analysis. % Complete:");
 
 foreach my $transcript (@transcripts) {
 
@@ -697,12 +915,17 @@ foreach my $transcript (@transcripts) {
     $last_pc = $pc;
   }
 
-  last if ($max_transcripts && $i >= $max_transcripts);
+  last if ($test_transcripts && $i >= $test_transcripts);
   $transcript_sid = $transcript->stable_id();
+
+  #warn "$i $pc $transcript_sid ".$transcript->feature_Slice->name;
 
  
   #Handle UTR extensions
   #The UTRs themselves are already included in the transcript/exons!!
+
+
+  #warn "flanks are ".$flanks{5}.' '. $flanks{3};
 
   foreach my $end('5', '3'){	
 	#so we only need to consider if we have extend, multplier or a default unannotated
@@ -713,25 +936,23 @@ foreach my $transcript (@transcripts) {
 	  $method .= '_prime_utr';
 	  my $utr = $transcript->$method;
 
-	  #UTRs or 0 length are never defined
-	  #Does this mean absetn annotation or an annotated UTR of length 0?
 	  if(defined $utr){
 		
 		#Hard extend takes presidence over multiplier
-		if($utr_extends{$end}){
+		if(defined $utr_extends{$end}){
 		  $flanks{$end} = $utr_extends{$end};
 		}
 		else{#mulitplier
-		  $flanks{$end} = $utr * $utr_multiplier;
+		  $flanks{$end} = $utr->length * $utr_multiplier;
 		}
 	  }
-	  else{#Use unannotated default, which is either set(can be 0) or calculated
-		$flanks{$end} = $unannotated_utrs{$end}
+	  elsif(defined  $unannotated_utrs{$end}){#Use unannotated default
+		#which can either bet set(can be 0) or calculated
+		$flanks{$end} = $unannotated_utrs{$end};
 	  }
 	}
   }
-
-
+ 
   $transcript_slice = $transcript->feature_Slice();
   $slice            = $transcript_slice->expand($flanks{5}, $flanks{3}) if $flanks{5} || $flanks{3};
 
@@ -749,13 +970,13 @@ foreach my $transcript (@transcripts) {
   #Register exon and utr loci
   $rr->flush();
   @exons     = @{$transcript->get_all_Exons};
-  $num_exons = scalar(@exons);
+  $num_exons = $#exons;
   #These exons start/ends are always local
   #But we pass probe_feature seq_region vals to the rr?!
 
-  foreach my $e (@exons) {
+  foreach my $e (0..$#exons) {
 	$rr->check_and_register('exonic', $exons[$e]->seq_region_start, $exons[$e]->seq_region_end);
-
+	
 	$first_exon = $exons[$e] if $e == 0;
 	$last_exon  = $exons[$e] if $e == $num_exons;
   }
@@ -788,9 +1009,11 @@ foreach my $transcript (@transcripts) {
   ### Now map each feature to the transcript
   #This works on the assumption that probesets are identical between arrays
   #i.e. if a probe set is present on different arrays, their probes are identical.
-  $probe_features = $probe_feature_adaptor->fetch_all_by_Slice_Arrays($slice, values(%arrays));
- 
 
+
+  
+
+  $probe_features = $probe_feature_adaptor->fetch_all_by_Slice_Arrays($slice, [values(%arrays)]);
   my %probe_feature_xrefs;
 
   foreach my $feature (@$probe_features) {
@@ -800,17 +1023,46 @@ foreach my $transcript (@transcripts) {
 	#already been recorded in ProbeAlign?
 	#We just want skip and add a step to get all the IdentityXrefs for a given transcript later
 	  
-	$probe = $feature->probe();
-	warn "Here we need to make this work for non ProbeSet designs!";
-	#Just use probe id in stead?
+	$probe          = $feature->probe;
 	$dbID           = $probe->dbID;
-	$probeset_id    = $probe->probeset->dbID;
-	$probeset       = $probe->probeset->name;
+	
+	
+	#Set some probe/probeset vars
+	if($array_config{probeset_arrays}){
+	  $probeset_id    = $probe->probeset->dbID;
+	  $probeset_name  = $probe->probeset->name;
+	  $log_name       = $transcript_sid."\t${probeset_name}\tdbID:${dbID}";
+	  $transcript_key = $transcript_sid.":".$probeset_id.":".$probeset_name;
+	}
+	else{
+	  #clean just in case
+	  #It would also be nice to print the probe name here
+	  #as there is generally only one
+	  #but we can't guarantee that this won't change.
+	  #Leaving this out makes the logs next to useless
+	  #For none probeset probes
+	  #Let's just assume that this will never be AFFY
+	  #It will fail if it is.
+	  $probeset_id    = '';
+	  $probeset_name  = '';
+	  $log_name       = $transcript_sid."\t\t".$probe->get_probename;
+	  $transcript_key = $transcript_sid.':'.$dbID.':'.$probe->get_probename;	
+	}
 
-	if ($transcript->seq_region_strand() != $feature->seq_region_strand()){
-	  print LOG "Unmapped anti-sense ".$transcript_sid."\t${probeset}\tdbID:${dbID}\n";
+
+	#Do we need these as UnmappedObjects or in the log at all?
+	if($array_config{sense_interrogation}){
 	  
-	  #if (! $no_triage) {		
+	  if($transcript->seq_region_strand = $feature->seq_region_strand){
+		print OUT "Unmapped sense ".$log_name."\n";
+		next;
+	  }
+	}
+	elsif ($transcript->seq_region_strand != $feature->seq_region_strand){
+	  print OUT "Unmapped anti-sense ".$log_name."\n";
+	
+	
+	#if (! $no_triage) {		
 	#	#Use of internal dbID in identifier is dodge
 	#	#can we use the actual probe names here?
 	#	$um_obj = new Bio::EnsEMBL::UnmappedObject(
@@ -829,14 +1081,14 @@ foreach my $transcript (@transcripts) {
 	}
 
 	#probeset here is only used for the logs?
-    my $transcript_key = $transcript_sid . ":" . $probeset_id.":".$probeset;
+    #my $transcript_key = $transcript_sid . ":" . $probeset_id.":".$probeset_name;
 
 	#Handle flank mismatches
 	my $five_mismatch  = 0;
 	my $three_mismatch = 0;
 	my $feature_start  = $feature->seq_region_start;
 	my $feature_end    = $feature->seq_region_end;
-
+  
 	if($feature->cigar_line =~ /(^[0-9]+m)/){
 	  ($five_mismatch = $1) =~ s/m//;
 	  $feature_start += $five_mismatch;
@@ -851,7 +1103,7 @@ foreach my $transcript (@transcripts) {
 	#This is naive to the internal mismatch as it could be anywhere in the alignment
 	#Leave like this for now as it is very unlikely to happen and is currently on the conservative side
 	#Likely only to happen if the max mismatches are set high and there is a mis match close to but not at an end
-	my $min_overlap  = ($probe->probelength - $max_mismatches + ($feature->mismatches - $five_mismatch - $three_mismatch));
+	my $min_overlap  = ($probe->length - $max_mismatches + ($feature->mismatchcount - $five_mismatch - $three_mismatch));
 	my $exon_overlap = $rr->overlap_size('exonic', $feature_start, $feature_end);
 
 	#This could map like this
@@ -887,8 +1139,21 @@ foreach my $transcript (@transcripts) {
 	### Test overlaps
 	if (($exon_overlap >= $min_overlap) ||
 		($flank_overlap >= $min_overlap)){
-	  $transcript_probeset_count{$transcript_key}{$dbID} ||= ();
-	  push @{$transcript_probeset_count{$transcript_key}{$dbID}}, $feature->dbID;
+
+
+
+	  #We don't need the feature dbIDs here(to add to the ProbeSet/Probe linkage_annotation
+	  #if we are storing the ProbeFeature xrefs
+	  #But we do want to pass the linkage annotation for single Probes
+	  #It is possible that we may get two matches of a single probe to a transcript
+	  #We should then change the linkage annotation to double/triple hit?
+
+	  #$transcript_feature_count{$transcript_key}{$dbID} ||= ();
+	  #push @{$transcript_feature_count{$transcript_key}{$dbID}}, $feature->dbID;
+
+
+	
+
 
 	  #we inc here but we never use the count, just record the fact that is has mapped
 	  #Can we add this to the mapping annotation?
@@ -907,6 +1172,23 @@ foreach my $transcript (@transcripts) {
 	  else{#only flank over lap
 		$linkage_annotation = "${flank_end}' flank";
 	  }
+
+	  
+	  if($array_config{probeset_arrays}){
+		
+		if(! $transcript_feature_info{$transcript_key}{$dbID}){
+		  $transcript_feature_info{$transcript_key}{$dbID} = 1;
+		}
+		else{
+		  $transcript_feature_info{$transcript_key}{$dbID}++;
+		}
+	  }
+	  else{
+		$transcript_feature_info{$transcript_key}{$dbID} ||= ();
+		push @{$transcript_feature_info{$transcript_key}{$dbID}}, $linkage_annotation;
+	  }
+
+
 
 	  add_xref($transcript_sid, $feature->dbID, 'ProbeFeature', $linkage_annotation);
 	}
@@ -971,7 +1253,7 @@ foreach my $transcript (@transcripts) {
 	  #So we need to test the flanks value before making this assumption!
 
 	  #Use probe dbID instead of name as this can vary across arrays
-	  print LOG "Unmapped $summary " . $transcript->stable_id . "\t${probeset}\tdbID:${dbID}\n";
+	  print OUT "Unmapped $summary ".$log_name."\n";
 	  
 	  if (!$no_triage) {		
 		$um_obj = new Bio::EnsEMBL::UnmappedObject(
@@ -988,26 +1270,67 @@ foreach my $transcript (@transcripts) {
 	  }
 	}
   }
+
+
+  #warn "after probe features";
+
+
+  #Now get ProbeFeature IdentityXrefs for each transcript
+
+  #my @id_xrefs = @{$dbentry_adaptor->fetch_all_by_Transcript($transcript)};
+
+
+  #We could list the probe feature ID xref'd to this transcript and then pull them back
+  #But what we want to do is pull back the full DBEntries directly
+  #Leave this to Ian and just do thw work around?
+  #Will this give us the full xref info?
+  #We will have to write the get_all_DBEntries method in ProbeFeature
+  #Are they implemented for all other xreffable classes? Just for SetFeatures.
+  #Not for Probe, ProbeFeature or FeatureType. Put this in storable and restrict to appropriate classes?
+  #ProbeFeature and all features have to inherit from Feature, so would need replicate this between Bio::EnsEMBL::Funcgen::Feature and funcgen Storable. Or can we just put the Funcgen storable first in the ISA array, so it overrides just for those functions
+
+  #Do not store extra DBEntry here as we already have it
+  #Just count and deal with promiscuous probes
+  #Can we get the linkage_annotation from above by match the feature ids in a cache?
+  #No as we are storing IDXref on Probes not ProbeFeatures
+  #Can we ditch the IDXref and just have the cigarline in probe_feature
+  #We lose some information this way i.e. mismatches? True full length alignment
+  #Or are we capturing this in probe_feature now?
+
+
+
+
+  print OUT "\n";
 }
 
-  $Helper->log("\n");
 
-  cache_arrays_per_probeset($probe_db);
+#Now done earlier to catch array problems before we start the mapping/storing
+#cache_arrays_per_object($probe_db);
 
-  $Helper->log_header('Writing xrefs', 0, 'append_date');
-  my $um_cnt = 0;
+$Helper->log_header('Writing xrefs', 0, 'append_date');
+my $um_cnt = 0;
+my $linkage_annotation;
 
 # now loop over all the mappings and add xrefs for those that have a suitable number of matches
-foreach my $key (keys %transcript_probeset_count) {
+#values can be a simple count or an array of annotations depending on probeset_arrays
 
-  my ($transcript_sid, $probeset_id, $probeset) = split (/:/, $key);
+foreach my $key (keys %transcript_feature_info) {
+
+  my ($transcript_sid, $object_id, $object_name) = split (/:/, $key);
+  my $object_key = $object_id.':'.$object_name;
+  
+  #pname can be either probeset or probe name
+  #Or could be
+  #$transcript_key = $transcript_sid."::".$probe->get_probename;	
+  #Now way of knowing whether these are non-probeset arrays by this point?
+
 
   # store one xref/object_xref for each array-probeset-transcript combination
   #Let's change this so that we only do one per ProbeSet
   #This will screw the counts!? Can we not add the array names to the DBEntry also?
 
   #my @arrays = split (/ /, $arrays_per_probeset{$probeset_id});
-  my @arrays = @{$arrays_per_probeset{$probeset_id}};
+  #my @arrays = @{$arrays_per_probeset{$probeset_id}};
   
 
 
@@ -1025,26 +1348,23 @@ foreach my $key (keys %transcript_probeset_count) {
   #This should never happen now, as we're enforcing running on all associated arrays
   #next if (@arrays && find_in_list($array, @arrays,) == -1 );
   
-  #my $size_key = $array . ":" . $probeset_id;
-  my $probeset_size = $probeset_sizes{$probeset_id};
+ 
+  my $probeset_size = $probeset_sizes{$object_key};
+  #This should always be 1 for non probeset_arrays
 
-  #Is this the only place we're using the complete name?
-  my $hits = scalar(keys %{$transcript_probeset_count{$key}});
+  #This is the distinct number of probes, not features!
+  #i.e. probe could hit twice, do we need to handle this?
+  my $hits = ($array_config{probeset_arrays}) ?  scalar(keys %{$transcript_feature_info{$key}}) 
+	: scalar(@{$transcript_feature_info{$key}{$object_id}});
+  
 
-
-
-
-
-	#We need to account for IdXrefs here
-	#Should we be counting probe which map twice?
-	#Will these show increased intensity
-
-
-  print LOG "$hits hits for $probeset\n";
+  print OUT "$hits hits for $object_name\n";
 
   if ($hits / $probeset_size >= $mapping_threshold) {
 	#This is inc'ing an undef?
-	$transcripts_per_probeset{$probeset_id}++;
+
+	#We also need to report xref_name here for logs
+	$transcripts_per_object{$object_key}++;
 	
 
 	###This is why we can't run on chr slices
@@ -1052,23 +1372,52 @@ foreach my $key (keys %transcript_probeset_count) {
 	#We need to chunk on probesets to parallelise
 	
 	
-	if ($transcripts_per_probeset{$probeset_id} <= $max_transcripts_per_probeset) {
+	if ($transcripts_per_object{$object_key} <= $max_transcripts) {
 	  
 	  #So we're passing these tests for xrefs of the opposite strand
 	  
-	  add_xref($transcript_sid, $probeset_id, 'ProbeSet', "${hits}/${probeset_size} in ProbeSet");
-	  print LOG "$probeset\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
+	  #Can we annotate the type of Probe match? e.g. exon, exon-exon, exon-utr, utr-exon
+
+	  #We can do this above!!
+	  #But this won't account for promiscuous probes
+	  #So we need to add something different to transcript_feature_count
+	  #current push feature dbID, but we don't use this
+	  #we already store the feature xrefs individually, but there is no way 
+	  #of associating them with an probeset level xref.
+	  #We could store all the probe feature dbID in the linkage annotation
+	  #This is not ideal but would make it explicit which probes are contributing to a given xref
+	  #This gives slight redundancy between the ProbeFeature and Probe/ProbeSet xrefs
+	  #Would need to tweak the data model to handle this properly.
+
+
+	  if($xref_object eq 'ProbeSet'){
+		$linkage_annotation = "${hits}/${probeset_size} in ProbeSet";
+	  }
+	  else{ 
+
+		if($hits > 1){
+		  $linkage_annotation = "Probe matches $hits times";
+		}
+		else{
+		  $linkage_annotation = 'Probe matches '.$transcript_feature_info{$key}{$object_id}->[0];
+		}
+	  }
+
+	  add_xref($transcript_sid, $object_id, $xref_object, $linkage_annotation);
+	  print OUT "$object_name\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
 	  
 	} 
 	else {
-	  print LOG "$probeset\t$transcript_sid\tpromiscuous\t$probeset_size\t$hits\tCurrentTranscripts".$transcripts_per_probeset{$probeset_id}."\n";
-	  push @{$promiscuous_probesets{$probeset_id}}, $transcript_sid;
+	  print OUT "$object_name\t$transcript_sid\tpromiscuous\t${hits}/$probeset_size\tCurrentTranscripts".$transcripts_per_object{$object_key}."\n";
+	  push @{$promiscuous_objects{$object_id}}, $transcript_sid;
 	}
 	
   } 
   else {
-	
-	print LOG "$probeset\t$transcript_sid\tinsufficient\t${hits}/${probeset_size} in ProbeSet\n";
+	#This will never happen for single probes
+
+
+	print OUT "$object_name\t$transcript_sid\tinsufficient\t${hits}/${probeset_size} in ProbeSet\n";
 	
 	if (!$no_triage) {
 	  
@@ -1095,14 +1444,14 @@ foreach my $key (keys %transcript_probeset_count) {
 
 
 #Now update promiscuous probesets
-$Helper->log("Updating ".scalar(keys %promiscuous_probesets).' promiscuous probesets', 0 , 'append_date');
+$Helper->log("Updating ".scalar(keys %promiscuous_objects).' promiscuous probesets', 0 , 'append_date');
 
-foreach my $probeset_id(keys %promiscuous_probesets){
+foreach my $object_id(keys %promiscuous_objects){
 
   #First delete mapped object_xrefs
   #As there is a chance that probes might be xreffed to a non-transcript entity
   #Deleting ox and x at the same time would orphan any non-transcript ox's
-  $xref_db->dbc()->do("DELETE ox FROM object_xref ox, xref x, external_db edb WHERE edb.db_name='$transc_edb_name' and edb.release='$schema_build' and edb.external_db_id=x.external_db_id AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeSet' and ox.ensembl_id='$probeset_id'");
+  $xref_db->dbc()->do("DELETE ox FROM object_xref ox, xref x, external_db edb WHERE edb.db_name='$transc_edb_name' and edb.db_release='$schema_build' and edb.external_db_id=x.external_db_id AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeSet' and ox.ensembl_id='$object_id'");
 
   #Any other oxs?
   #if(! @{ $xref_db->dbc->db_handle->selectall_arrayref("SELECT ox.object_xref_id from object_xref ox, xref x WHERE x.dbprimary_acc='$probeset' AND x.xref_id=ox.xref_id")}){
@@ -1113,29 +1462,32 @@ foreach my $probeset_id(keys %promiscuous_probesets){
 
   #Now load all unmapped objects
   #One for all arrays rather than one for each
-  foreach my $transcript_sid(@{$promiscuous_probesets{$probeset_id}}){
+  foreach my $transcript_sid(@{$promiscuous_objects{$object_id}}){
 
 	$um_obj = new Bio::EnsEMBL::UnmappedObject
 	  (
 	   -type       => 'probe2transcript',
 	   -analysis   => $analysis,
 	   -identifier => $transcript_sid,
-	   -summary    => 'Promiscuous ProbeSet',
-	   -full_desc  => 'ProbeSet maps to '.$transcripts_per_probeset{$probeset_id}.' transcripts (max 100)',
-	   -ensembl_object_type => 'ProbeSet',
-	   -ensembl_id => $probeset_id,
+	   -summary    => "Promiscuous $xref_object",
+	   -full_desc  => $xref_object.'maps to '.$transcripts_per_object{$object_id}.' transcripts (max 100)',
+	   -ensembl_object_type => $xref_object,
+	   -ensembl_id => $object_id,
 	   -external_db_id => $transc_edb_id,
 	  );
 		
 	&cache_and_load_unmapped_objects($um_obj);
   }
+
+  warn 'Do we need to modify %transcript_xrefs here so we dont summary report mappings which have been deleted';
+
 }
 
 # Find probesets that don't match any transcripts at all, write to log file
 #Why is this sub'd, we only call it once?
 log_orphan_probes();
 
-close (LOG);
+close (OUT);
 
 # upload triage information if required
 if (!$no_triage) {
@@ -1223,21 +1575,31 @@ sub log_orphan_probes {
 
   $Helper->log_header("Logging probesets that don't map to any transcripts");
 
-  foreach my $probeset_id(keys %arrays_per_probeset) {
+  my ($object_id, $object_name);
+
+  foreach my $object_key(keys %arrays_per_object) {
 	
-    if (!$transcripts_per_probeset{$probeset_id}) {
+    if (!$transcripts_per_object{$object_key}) {
 
-      print LOG "$probeset\tNo transcript mappings\n";
+	  ($object_id, $object_name) = split/:/, $object_key;
+	  
+	  #Do we need to add dbID here in case of redundant unlined probe/set names?
+      print OUT "$object_name\tNo transcript mappings\n";
 
-      if (!$no_triage && $probeset) {
+      if (!$no_triage){
+
+		#Shouldn't this be using the species external db?
+		#Can we just not use an identifier and then link to the transcript DB?
+
+
 		$um_obj = new Bio::EnsEMBL::UnmappedObject(-type       => 'probe2transcript',
 												   -external_db_id => $transc_edb_id,
 												   -analysis   => $analysis,
-												   #-identifier => $probeset,
-												   -ensembl_id => $probeset_id
-												   -ensembl_object_type => 'ProbeSet',
+												   -identifier => 'NO_MAPPINGS',
+												   -ensembl_id => $object_id
+												   -ensembl_object_type => $xref_object,
 												   -summary    => 'No transcript mappings',
-												   -full_desc  => 'ProbeSet did not map to any transcripts');
+												   -full_desc  => $xref_object.' did not map to any transcripts');
 		
 		&cache_and_load_unmapped_objects($um_obj);
       }
@@ -1247,42 +1609,63 @@ sub log_orphan_probes {
 
 # ----------------------------------------------------------------------
 
-sub cache_arrays_per_probeset {
+#Change this to mappable xrefs?
+#as this can be both probe or probeset?
+#Will probes with same name on illumina arrays be the same?
+#i.e. Are we collapsing none affy arrays?
+#No!
+#So we need a flag which turns this off.
+
+sub cache_arrays_per_object {
   my $db = shift;
 
   $Helper->log("Caching arrays per probeset", 0, 'append_date');
-  my $sql;#do not need distinct on count as we're linking by array?
+  my $sql;#do not need distinct on count as we're grouping by array?
 
-  #if(@array_names){
-	$sql = 'SELECT p.probeset_id, a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id ac.array_chip_id=p.array_chip_id and oa.name in ("'.join('", "', @array_names).'") GROUP BY op.probeset, oa.name';
-  #}
-  #else{
-#	$sql = 'SELECT op.probeset, oa.name, count(op.probe_probe_id) FROM probe_probe op, probe_array oa WHERE oa.probe_array_id=op.probe_array_id GROUP BY op.probeset, oa.name';
-#  }
+  if($array_config{probeset_arrays}){
+	$sql = 'SELECT ps.probe_set_id, ps.name, a.name, count(p.probe_id) FROM probe p, probe_set ps, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.probe_set_id=ps.probe_set_id and a.name in ("'.join('", "', @array_names).'") GROUP BY p.probe_set_id, a.name';
+  }
+  else{#Non probeset arrays
+	#Is this valid sql?
+	#We don't need the count at all
+	$sql = 'SELECT p.probe_id, p.name, a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY a.name';
+  }
 
 
+  #$sql .= ', a.name' if $array_config{linked_arrays};
+  
   my $sth = $db->dbc()->prepare($sql);
-  my ($probeset_id, $array, $probeset_size, @arrays);
-  my $last_probeset = "";
+  my ($object_id, $array, $probeset_size, $object_key, $object_name, @arrays);
+  my $last_object = "";
   $sth->execute();
-  $sth->bind_columns(\$probeset_id, \$array, \$probeset_size);
-
+  $sth->bind_columns(\$object_id, \$object_name, \$array, \$probeset_size);
  
   while($sth->fetch()){
+	$object_key = $object_id.':'.$object_name;
 
-    if ($probeset_id eq $last_probeset) {
+    if ($object_key eq $last_object) {
 	  push @arrays, $array;
     } 
 	else {
 	  @arrays = ($array);
     }
 
-    $arrays_per_probeset{$probeset_id} = @arrays;
-    $last_probeset = $probeset_id;
-    $probeset_sizes{ $probeset_id } ||= $probeset_size;
 
-	if($probeset_size !=  $probeset_sizes{ $probeset_id }){
-	  die("Found probeset with differing size between arrays dbID: $probeset_id");
+    $arrays_per_object{$object_key}  = @arrays;
+    $last_object                     = $object_key;
+    $probeset_sizes{ $object_key } ||= $probeset_size;
+
+	#This may be incorrect if we have unlinked arrays, but they have they use the same probeset names
+	#We should only run linked arrays together
+	#As unlinked arrays mey share probeset IDs which are not truly the same probeset
+	#Can we have non-unique probeset names? Yes, unique key is on probe_set_id
+	#We need to keep these caches separate
+
+	#This would result in possible failure if probeset sizes we different between arrays
+	#and also possibly the incorrect assignment of xrefs to an incorrect array.
+
+	if($probeset_size !=  $probeset_sizes{ $object_key }){
+	  die("Found probeset(dbID=$object_id) with differing size between arrays(@arrays)");
 	}
 
 
@@ -1328,7 +1711,7 @@ sub add_xref {
   #Add key on type of xref?
   #Will this warn as not defined?
 
-  foreach my $array(@{$arrays_per_probeset{$ensembl_id}}){
+  foreach my $array(@{$arrays_per_object{$ensembl_id}}){
 	$array_xrefs{$array}++;
   }
 
@@ -1336,14 +1719,11 @@ sub add_xref {
 
   my $dbe = new Bio::EnsEMBL::DBEntry
 	(
-	 #-adaptor              => $dbea,
-
 	 #xref data
 	 -primary_id           => $transcript_sid,
 	 -display_id           => $Helper->get_core_display_name_by_stable_id($transcript_db, $transcript_sid, 'transcript'),
-	 #-description          => undef,#xref.description
-	 #-version              => $schema_build,#xref.version remove as this is done through the external_db
-	 #And should be actual version number of transcript?
+	 #-version              => $schema_build,#xref.version This is implied through release of of the edb
+	 #And should be actual version transcript sid?
 
 	 #object_xref data
 	 -info_type            => "Transcript",
@@ -1353,10 +1733,13 @@ sub add_xref {
 	 #external_db data
 	 -dbname               => $transc_edb_name,
 	 -release              => $schema_build,
-	 -primary_id_linkable  => 1,
-	 -display_id_linkable  => 0,
-	 -priority             => 5,#?
-	 -db_display_name      => $transc_edb_display_name,
+
+	 #edb stuff useless in a storage context?!
+	 #-primary_id_linkable  => 1,
+	 #-display_id_linkable  => 0,
+	 #-priority             => 5,
+	 #-db_display_name      => $transc_edb_display_name,
+	 
 	);
 
 
@@ -1368,7 +1751,7 @@ sub add_xref {
 
   #This will enter blank entries if object_type does not enum!!
 
-  $db_entry_adaptor->store($dbe, $ensembl_id, $object_type);
+  $dbentry_adaptor->store($dbe, $ensembl_id, $object_type);
   
 }
 
@@ -1383,73 +1766,63 @@ sub add_xref {
 sub delete_existing_xrefs {
   my $xref_db = shift;
 
+  warn "Should we back up her before delete or leave this to the env?";
+
   my $sql;
-
-  #if(@arrays && ! $force_delete){
-  #if(! $force_delete){
-#	die("You are attempting to delete all unmapped objects even though you are only running a subsets of arrays.\n".
-#		"This may result in losing unmapped information for other arrays if probe_sets persist across array design(e.g.AFFY).\n".
-#		"If you really want to do this you must specify -force_delete")
- # }
-
-  
   my $array_names = '"'.join('", "', @array_names).'"';
-  my $text = "Deleting $xref_species";
+  my $text = "Deleting $species";
   $text .= ($array_names) ? "($array_names)" : 'ALL';
-  $Helper->log("$text unmapped records for probe2transcript");
+  $Helper->log("$text unmapped records and xrefs for probe2transcript...this may take a while");
 
   #Can this be speeded up by deleting separately?
   #Can't split ur and uo as would orphan ur records from analysis_id.
  
   #These are core CoordSystem/Species and Transcript references to probe and probe_set
   #Need to add ensembl_core_Species external_db
-
-  $sql = 'DELETE uo FROM analysis a, unmapped_reason ur, unmapped_object uo, array ar, array_chip ac, probe p, external_db edb WHERE a.logic_name ="probe2transcript" AND a.analysis_id=uo.analysis_id AND uo.unmapped_reason_id=ur.unmapped_reason_id and ar.name in ('.$array_names.') and ar.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.probe_id=uo.ensembl_id and uo.ensembl_object_type="Probe" and uo.external_db_id=edb.external_db_id and edb.db_name="ensembl_core_Species" and uo.identifier='.$species_id;#.' and edb.db_release="'.$schema_build.'"';
   #Do we need to add db_release to this?
   
-  warn "$sql";
-
-  $Helper->log("Deleting Probe unmapped_objects");
-  my $row_cnt = $xref_db->dbc->do($sql);
-  $Helper->log("Deleted $row_cnt records");	
-  
-
-  #Now delete xrefs for each array
-  #can we change this to use an IN?
-  #$del_sth = $dbentry_adaptor->dbc()->prepare("DELETE x, ox FROM xref x, object_xref ox, external_db e WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name = ?");
-  #foreach my $array (values %array_name_cache) {
-  #  print "Deleting xrefs and object_xrefs for $array\n";
-	#  $del_sth->execute($array);
-  #}
-  
-
-  #Does this work? Will there no be some x's left?
-  #$sql = 'DELETE x, ox FROM xref x, object_xref ox, external_db e WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name in ("'.join('", "', values %array_name_cache).'")';
-  #mmm, yes some x's were left, why is this not working?
-
-  #delete separately for now. This is working.
-  
-  $text = "Deleting $xref_species ProbeSet xrefs";
-  $text .= " for $array_names" if $array_names;
-  $Helper->log($text);
-
-  #Now do the delete for each object type
-  #ProbeSet?
-
-  #To link to species_id here we have to link to the core DB
-  #Simplest way to do this is to create another external_db for each species?
+  $Helper->log('Deleting UnmappedObjects');#: Failed Probes");
+  $sql = 'DELETE uo FROM analysis a, unmapped_reason ur, unmapped_object uo, array ar, array_chip ac, probe p WHERE a.logic_name ="probe2transcript" AND a.analysis_id=uo.analysis_id AND uo.unmapped_reason_id=ur.unmapped_reason_id and ar.name in ('.$array_names.') and ar.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.probe_id=uo.ensembl_id and uo.ensembl_object_type="Probe" and uo.external_db_id='.$transc_edb_id;
+  #.' and edb.db_release="'.$schema_build.'"';
  
+  my $row_cnt = $xref_db->dbc->do($sql);
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $Helper->log("Deleted $row_cnt records");	
+  
+  
+  
+  #Change to ProbeFeature DBEntry? Not complete in ProbeAlign
+  #This is more inline with the output of probe2transcript
+  #but the problem is that there is not way to discern between ProbeFeature oxs generated by ProbeAlign and this script
+  #and we don't want to delete the ones written by ProbAlign
+  #We need ox.analysis_id to differentiate
+  #v54?
 
-  #$sql = 'DELETE ox FROM xref x, object_xref ox, external_db e WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name in ("'.join('", "', values %array_name_cache).'")';
-
-
-  #Do we need to delete single probe xrefs as well as probeset xrefs?
-
-  $sql = 'DELETE ox FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE e.db_name="'.$transc_edb_name
-	.'" and e.external_db_id=x.external_db_id and x.xref_id=ox.xref_id AND ox.ensembl_object_type="ProbeSet" AND ox.ensembl_id=p.probe_set_id AND p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name in ('.$array_names.')';
+  $Helper->log("Deleting ProbeFeature xrefs");
+  $sql = 'DELETE ox FROM xref x, object_xref ox, external_db e, probe p, probe_feature pf, array_chip ac, array a WHERE x.external_db_id='.$transc_edb_id.' and x.xref_id=ox.xref_id AND ox.ensembl_object_type="ProbeFeature" AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name in ('.$array_names.')';
   $row_cnt = $xref_db->dbc->do($sql);
+  $row_cnt = 0 if $row_cnt eq '0E0';
   $Helper->log("Deleted $row_cnt records");	
 
+  
+  #Need to be mindful here that we do not also delete the Probe IdentityXrefs populated by the
+  #ProbeTranscriptAlign analysis(ProbeAlign module)
+
+  #For single probe arrays there will be duplication between the IDXref generated by the ProbeAlign
+  #and the more sparse DBEntry generated by this script
+  #What we need to do is not store DBEntries for IDXref probes 
+  #Just run through the mapping and handle the promiscuous probes and delete and store unampped object as appropriate.
+  #Are annotations in ProbeAlign sufficient? Are these comparable to exon/utr style annotations of genomic mappings?
+
+
+  #We need to only delete those which don't have an IDXref
+
+  $Helper->log("Deleting $xref_object xrefs");
+  my $probe_join = ($array_config{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
+  $sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE e.db_name='$transc_edb_name' and e.external_db_id=x.external_db_id and x.xref_id=ox.xref_id AND ox.ensembl_object_type='$xref_object' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name in ($array_names) and ox.linkage_annotation!='ProbeTranscriptAlign'";
+  $row_cnt = $xref_db->dbc->do($sql);
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $Helper->log("Deleted $row_cnt records");	
 
   return;
 }
@@ -1462,16 +1835,26 @@ sub delete_existing_xrefs {
 # Assumes external_db.dbname == probe_array.name
 
 sub check_existing_and_exit {
+  $Helper->log_header('Checking existing Xrefs');
+  warn "Need to add check for ProbeFeature xrefs or unmapped objects here to catch half done mapping";
 
-  #my ($probe_db, $xref_db) = @_;
+  #We need to check for ProbeFeature xrefs and UnamppedObjects here
+  #in case it has crashed half way through.
+
+  #Or can we set status?
+  #Or should we just check for ProbeFeature xrefs instead?
+
+  my $probe_join = ($array_config{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
 
 
-  my $xref_sth = $xref_db->dbc()->prepare("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='ProbeSet' and ox.ensembl_id=p.probe_set_id and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name=?");
+  my $xref_sth = $xref_db->dbc()->prepare("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='$xref_object' and ox.ensembl_id=${probe_join} and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name=?");
+
 
   foreach my $array (@array_names) {
 
     $xref_sth->execute($array);
-    my $cnt = @{$xref_sth->fetchrow_array()};
+    my $cnt = $xref_sth->fetchrow_array();#Does not return array if only one value?!
+	
     if ($cnt > 0) {
       print "Array $array already has $cnt xrefs, exiting.\nThere may be other arrays with xrefs. Use -delete to remove them if required.\n";
       exit(1);
@@ -1483,164 +1866,6 @@ sub check_existing_and_exit {
 
 }
 
-# ----------------------------------------------------------------------
-
-# Check that the array names in array_db appear in the external_db table in xref_db
-
-#sub check_names_match {
-#sub validate_arrays{
-# my ($probe_adaptor, $dbentry_adaptor) = @_;
-#
-# die('DEPRECATED');
-#
-#
-# my ($mismatch ,$sql);
-# my %probe_array_names;
-#
-# #Get all external_db entries and check probe_setsize
-# #Name is not unique in core!!??
-# $sql = "SELECT DISTINCT(name), probe_setsize FROM probe_array";
-# $sql .= ' where name in("'.join('", "', @array_names).'")';# if @arrays;
-#
-# my $probe_sth = $probe_adaptor->dbc->prepare($sql);
-# $probe_sth->execute();
-#
-# print "Validating external_db names\n";
-#
-# while(my ($oa_name, $ps_size) = $probe_sth->fetchrow_array()){
-#
-#   print "Array $oa_name does not have a probeset_size set, please rectify\n" if ! $ps_size;#boolean as we don't want 0 size
-#
-#
-#   #Define possible external_db.db_names
-#   my $dbname = 'AFFY_'.$oa_name;
-#   my ($dbname1, $edb_name);
-#   ($dbname1 = $dbname) =~ s/-/_/g;
-#   my @dbnames = ($oa_name, $dbname, $dbname1); 
-#
-#
-#   foreach my $dbn(@dbnames){
-#
-#	 ($edb_name) = $dbentry_adaptor->dbc->db_handle->selectrow_array("SELECT db_name FROM external_db where db_name='${dbn}'");
-#
-#	 last if defined $edb_name;
-#   }
-#
-#    
-#
-#   if( ! defined $edb_name){
-#	 print "Cannot find external_db for probe_array:\t$oa_name\n";
-#	 $mismatch = 1;
-#   }
-#   else{
-#	 print "Found probe_array\t$oa_name\tin external_db\t$edb_name\n";
-#
-#	 $probe_array_names{$oa_name} = $edb_name;
-#   }
-# }
-#
-# $probe_sth->finish();
-#
-# #Now do @arrays checks
-# #if(@arrays){
-#   print "Validating user specified arrays:\t@arrays\n";
-#
-#   #Now check all specified arrays are valid
-#   if(scalar(@arrays) != scalar(keys %probe_array_names)){
-#
-#	 foreach my $array(@arrays){
-#	   
-#	   if(! exists $probe_array_names{$array}){
-#		 print "Specified array does not exist in the probe_array table:\t$array\n";
-#	   }
-#	 }
-#	 print "Could not find specified arrays in probe_array table";
-#	 exit(1);
-#   }
-#   print "Found all external_dbs\n";
-#
-#   #Now check we have all link arrays in @arrays
-#   #This cannot be guaranteed to work as some probesets may be missing on related arrays
-#   #Let's take a handfull here to reduce the risk of missing linked arrays
-#   # You souldn't really xref the arrays as subsets unless they are not related in anyway
-#   # In which case filtering @arrays in the cache will reduce the saize of the cache by removing unwanted array data
-#   # How do we tell the array groups?
-#   # 1 All old affy 3' and gneomics arrays should be mapped/xreffed together
-#   # 2 All new affy exon/gene ST arrays should be mapped/xreffed together
-#   # 3 Custom arrays can be mapped separately only if they have nor relation to pre-existing arays? Optional
-#   # Do we need another field in array? Design family? 
-#
-#  
-#   #This is the ticket, will identify all linked arrays for a given array name
-#   my %linked_arrays;
-#   my $sth = $probe_adaptor->dbc->prepare('select distinct(oa.name) from probe_probe op, probe_array oa where oa.probe_array_id=op.probe_array_id and op.probe_probe_id in(select op.probe_probe_id from probe_probe op, probe_array oa where oa.probe_array_id=op.probe_array_id and oa.name =?)');
-#   
-#   print "Getting all associated array data...this may take a while :|\n";
-#   
-#   foreach my $array(@arrays){
-#
-#	 next if exists $linked_arrays{$array};
-#
-#	 $sth->execute($array);
-#
-#	 while(my ($larray) = $sth->fetchrow_array){
-#	   
-#	   $linked_arrays{$larray} = undef;
-#	 }
-#   }
-#
-#   my @missing_arrays;
-#
-#   foreach my $larray(keys %linked_arrays){
-#
-#	 if(! grep(/^${larray}$/, @arrays)){
-#	   push @missing_arrays, $larray;
-#	 } 
-#   }
-#
-#   if(@missing_arrays){
-#	 print "The array list you have specified is missing some associated arrays:\t@missing_arrays\n".
-#	   "This can cause incomplete xref data to be written.  Please check and start again\n";
-#	 exit(1);
-#   }
-# }
-#
-#
-# if ($mismatch) {
-#
-#   print "At least one probe array name was found that does not appear in external_db; this needs to be rectified before this script can be run successfully. Maybe you want to specify -arrays?\n";
-#   exit(1);
-# }
-#
-# return \%probe_array_names;
-#
-#}
-#
-#
-#
-## ----------------------------------------------------------------------
-#
-## Find the index of an item in a list(ref), or -1 if it's not in the list.
-## Only look for exact matches (case insensitive)
-#
-##sub find_in_list {
-#
-##  die("Not used?");
-#
-#
-##  my ($item, @list) = @_;
-#
-##  for (my $i = 0; $i < scalar(@list); $i++) {
-##    if (lc($list[$i]) eq lc($item)) {
-##      return $i;
-##    }
-#  }
-
-#  return -1;
-
-#}
-
-# ----------------------------------------------------------------------
 
 sub get_or_create_analysis {
 
@@ -1662,63 +1887,6 @@ sub get_or_create_analysis {
   return $analysis;
 
 }
-
-# ----------------------------------------------------------------------
-
-#sub median{
-#  my $scores = shift;
-
-#  return undef if (! @$scores);
-
-#  my ($median);
-#  my $count = scalar(@$scores);
-#  my $index = $count-1;
-  #need to deal with lines with no results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  #deal with one score fastest
-#  return  $scores->[0] if ($count == 1);
-  
-  #taken from Statistics::Descriptive
-  #remeber we're dealing with size starting with 1 but indices starting at 0
-  
-#  if ($count % 2) { #odd number of scores
-#    $median = $scores->[($index+1)/2];
-#  }
-#  else { #even, get mean of flanks
-#    $median = ($scores->[($index)/2] + $scores->[($index/2)+1] ) / 2;
-#  }
-
-
-#  return $median;
-#}
-
-# ----------------------------------------------------------------------
-
-#sub get_date{
-#	my ($format, $file) = @_;
-
-#	my ($time, $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);	
-
-
-#	warn("get_date need to add file -e test here");
-
-#	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = (defined $file) ? 
-#	  localtime((stat($file))[9]) : localtime();
-
-	
-#	if((! defined $format && ! defined $file) || $format eq "date"){
-#		$time = ($year+1900)."-".$mday."-".($mon+1);	
-#	}
-#	elsif($format eq "time"){#not working!
-#		$time = "${hour}:${min}:${sec}";
-#	}
-#	else{#add mysql formats here, datetime etc...
-#		croak("get_date does not handle format:\t$format");
-#	}
-
-#	return $time;
-#}
-
-# ----------------------------------------------------------------------
 
 
 sub usage {
