@@ -2,10 +2,19 @@ package Bio::EnsEMBL::Funcgen::Parsers::miranda;
 
 use strict;
 
+#This was in the description
+#For MSKCC miRanda targets
+#Contact is Doron Betel (or maybe Mark Levenstien levenstm@mskcc.org)
+#http://www.microrna.org/microrna/getDownloads.do
+#Current Human/Mouse/Rat
+
+
+
+#This is what we have actually hosted
+#For Sanger miRanda targets
 #contact svd@sanger.ac.uk stijn van dongen
 #From our download page
 #http://microrna.sanger.ac.uk/cgi-bin/targets/v5/download.pl
-
 #and then
 #ftp://ftp.sanger.ac.uk/pub/mirbase/targets/v5/arch.v5.gff.homo_sapiens.zip
 
@@ -18,7 +27,7 @@ use strict;
 ##GROUP SEQ     METHOD  FEATURE CHR     START   END     STRAND  PHASE   SCORE   PVALUE_OG       TRANSCRIPT_ID   EXTERNAL_NAME
 #Similarity      mmu-miR-707     miRanda miRNA_target    2       120824620       120824640       +       .       15.3548 2.796540e-02    ENST00000295228 INHBB
 
-
+#But we now want to host a reduced set from Anton
 
 use Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser;
 use Bio::EnsEMBL::DBEntry;
@@ -52,11 +61,12 @@ sub new {
 							 };
   $self->{feature_sets} = {
 						   'miRanda miRNA' => {
-											   feature_type      => \$self->{'feature_types'}{'cisRED Search Region'},
+											   feature_type      => \$self->{'feature_types'}{'miRanda'},
 											   analysis          => 
 											   { 
 												-logic_name    => 'miRanda',
-												-description   => 'miRanda microRNA target prediction (http://cbio.mskcc.org/mirnaviewer/)',
+												#-description   => 'miRanda microRNA target prediction (http://www.microrna.org)',
+												-description => 'miRanda microRNA target prediction (http://microrna.sanger.ac.uk/targets)',
 												-display_label => 'miRanda',
 												-displayable   => 1,
 											   },
@@ -99,12 +109,21 @@ sub parse_and_load{
   while (<FILE>) {
 	next if ($_ =~ /^\s*\#/o || $_ =~ /^\s*$/o);
 
+	#Sanger
 	##GROUP SEQ     METHOD  FEATURE CHR     START   END     STRAND  PHASE   SCORE   PVALUE_OG       TRANSCRIPT_ID   EXTERNAL_NAME
-#Similarity      mmu-miR-707     miRanda miRNA_target    2       120824620       120824640       +       .       15.3548 2.796540e-02    ENST00000295228 INHBB
+	#Similarity      mmu-miR-707     miRanda miRNA_target    2       120824620       120824640       +       .       15.3548 2.796540e-02    ENST00000295228 INHBB
+
+
+	#MSKCC
+	#UCSC ID	mRNA	Gene ID	miRNA acc	miRNA	miRNA align	alignment	gene align	align score	conservation	miRNA start	miRNA end	gene start	gene end	%ID	%Similar	energy	organism	prediction_date
+	#uc001abs.1	AK091100	LOC643837	MIMAT0000062	hsa-let-7a	uuGAUAUGUUGGAUGAUGGAGu	||:  || |:| ||:|||| 	guCUGCUCACCUUCCUGCCUCa	144	0.615759	2	21	396	417	63	78	0	9606	2008-05-16
+	#uc001afh.1	NM_001039577	CCNL2	MIMAT0000062	hsa-let-7a	uugauAUGUUGGAUGAUGGAGu	|::||||| ||:|||| 	cucacUGUAACCU-CUGCCUCc	147	0.767611	2	18	2290	2310	75	93	0	9606	2008-05-16
+
+
 
     my ($group, $seq, $method, $feature, $chr, $start, $end, $strand, undef, undef, undef, $ens_id, $display_name) = split;
     $strand = ($strand =~ /\+/o) ? 1 : -1;
-    #my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
+    ##my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
 	my $id = $ens_id.':'.$seq;
 
 	if(! exists $slice_cache{$chr}){
