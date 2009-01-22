@@ -81,39 +81,6 @@ sub fetch_by_array_chip_dbID {
 
 
 
-=head2 fetch_by_name
-
-  Arg [1]    : string - name of an array
-  Example    : my $array = $oaa->fetch_by_name('Array-1');
-  Description: Retrieves a named Array object from the database.
-  Returntype : Bio::EnsEMBL::Funcgen::Array
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_by_name {
-    my $self = shift;
-    my $name = shift;
-
-
-    throw("This method is deprecated, use fetch_by_name_vendor");
-    
-    my $result = $self->generic_fetch("a.name = '$name'");
-	
-    if (scalar @$result > 1) {
-		warning("Array $name is not unique in the database, but only one result has been returned");
-    } 
-
-
-    #should have fetch by name vendor, to provide uniqueness?
-    #should check for this on import!
-    return $result->[0];
-}
-
-
-
 =head2 fetch_by_name_vendor
 
   Arg [1]    : string - name of an array
@@ -144,7 +111,7 @@ sub fetch_by_name_vendor {
   Example    : my $array = $oaa->fetch_by_name_class('HuGene_1_0_st_v1', 'AFFY_ST');
   Description: Retrieves Array object from the database based on name and class.
   Returntype : Bio::EnsEMBL::Funcgen::Array
-  Exceptions : None
+  Exceptions : Throws is name and class not passed
   Caller     : General
   Status     : At Risk
 
@@ -158,6 +125,27 @@ sub fetch_by_name_class {
 
     my ($result) = @{$self->generic_fetch("a.name = '$name' and a.class='".uc($class)."'")};	
     return $result;
+}
+
+
+=head2 fetch_all_by_class
+
+  Arg [1]    : string - class
+  Example    : my $array = $oaa->fetch_all_by_class(''AFFY_ST');
+  Description: Retrieves Array object from the database based class.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
+  Exceptions : Throws if nor class passed
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_class {
+    my ($self, $class) = @_;
+    
+    throw("Must provide and array class e.g.'AFFY_ST'") if (! defined $class);
+
+    return $self->generic_fetch("a.class='".uc($class)."'");	
 }
 
 
