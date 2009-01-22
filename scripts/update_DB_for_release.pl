@@ -1,4 +1,3 @@
-#!/usr/local/ensembl/bin/perl -w
 
 use strict;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
@@ -12,40 +11,47 @@ my ($help, $man, $dbname);
 my $user = 'ensadmin';
 my $port = 3306;
 my $host = 'ens-genomics1';
+my @tmp_args = @ARGV;
 
 GetOptions( 
-            'host|h=s'         => \$host,
-            'port=i'           => \$port,
-            'user|u=s'         => \$user,
-            'pass|p=s'         => \$pass,
-			'dbname=s'         => \$dbname,
-			#'slice=s'          => \$test_slice,
-            'species|d=s'      => \$species,
-			'data_versions=s' => \$schema_build,#mandatory as default ensembldb will not exist
-			'from_ensembldb'   => \$from_ensdb,
-			'skip_meta_coord'  => \$skip_meta_coord,
-			#skip dumps?
-			#force update
-			'check_displayable' => \$check_displayable,
-			"help|?"             => \$help,
-			"man|m"              => \$man,
-			#add opt for old, new & stable fset name
-		   );
+		   'host|h=s'         => \$host,
+		   'port=i'           => \$port,
+		   'user|u=s'         => \$user,
+		   'pass|p=s'         => \$pass,
+		   'dbname=s'         => \$dbname,
+		   'species|d=s'      => \$species,
+		   'data_versions=s' => \$schema_build,#mandatory as default ensembldb will not exist
+		   'from_ensembldb'   => \$from_ensdb,
+		   'skip_meta_coord'  => \$skip_meta_coord,
+		   'check_displayable' => \$check_displayable,
+		   'help|?'             => \$help,
+		   'man|m'              => \$man,
+		   'log_file=s'        => \$main::_log_file,
+		   #'slice=s'          => \$test_slice,
+		   #skip dumps?
+		   #force update
+		   #add opt for old, new & stable fset name
+		  ) or pod2usage(
+						 -exitval => 1,
+						 -message => "Params are:\t@tmp_args"
+						);;
 
-
-pod2usage(1) if $help;
+pod2usage(0) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
-
 
 
 my @builds = @ARGV;
 
 $dbname = "${species}_funcgen_${schema_build}" if ! defined $dbname;
+$main::_log_file ||= $ENV{'HOME'}."/logs/update_DB_for_release.$dbname.$$.log";
+print "Writing log to:\t".$main::_log_file."\n";
 
 if(! $from_ensdb){
   $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 											   -dbname  => "${species}_core_${schema_build}",
 											   -host    => 'ens-staging',
+											   #-host => 'ensdb-1-13',
+											   #-port => 5307,
 											   -port    => 3306,
 											   -user    =>  'ensro',
 											   #-pass    => $pass,
@@ -72,7 +78,6 @@ my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 $efg_db->dbc->db_handle;
 $efg_db->dnadb->dbc->db_handle;
 
-
 my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
 																-db     => $efg_db,
 																-builds => \@builds,
@@ -84,4 +89,4 @@ my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
 
 $hchecker->update_db_for_release();
 $hchecker->log_data_sets();
-
+$hchecker->check_stable_ids;
