@@ -11,20 +11,19 @@ shift
 PASS=$1
 shift
 
-if [ ! $PASS ]
-then echo "Must provide at least a password argument"; echo "Write run script usage in .efg"; exit; fi
+if [ ! $PASS ] || [ ! $USER ]
+then echo "Must provide at a user and password argument"; echo "Write run script usage in .efg"; exit; fi
 
 
 perl -w $EFG_SRC/scripts/update_DB_for_release.pl\
-  -species homo_sapiens\
-  -port 3306\
-  -host ens-genomics1\
-  -user $USER\
-  -data_version 53_36f\
-  -dbname mus_musculus_funcgen_53_37f\
-  -check_displayable \
-  -pass $PASS\
-  -skip_meta_coord\	
-  $@
+	-species mus_musculus\
+	-port 3306\
+	-host ens-staging\
+	-user $USER\
+	-data_version 53_37f\
+	-dbname mus_musculus_funcgen_53_37f\
+	-check_displayable \
+	-pass $PASS\
+	-skip_meta_coord\
+	$@
 
-#	-skip_meta_coord\ #put this at the end, as it ignores everything after this opt for some reason
