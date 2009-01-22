@@ -126,7 +126,6 @@ sub new {
   $self->{'skip_analyse'} = $skip_analyse;
   $self->{'check_displayable'} = $check_displayable;
   
-  warn "skip mc is ".  $self->{'skip_meta_coord'};
 
   #$self->log_header(
 
