@@ -449,7 +449,7 @@ CREATE TABLE `probe` (
    `length` smallint(6) unsigned NOT NULL,
    `array_chip_id` int(10) unsigned NOT NULL,
    `class` varchar(20) default NULL,
-    PRIMARY KEY  (`probe_id`, `name`),
+    PRIMARY KEY  (`probe_id`, `name`, `array_chip_id`),
     KEY `probe_set_idx` (`probe_set_id`),
     KEY `array_chip_idx` (`array_chip_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
