@@ -24,9 +24,9 @@ elif [ $type = TXT ]; then
 
 	#awk -F"[[:space:]]" "{print \">${name}:\" \$15 \"\n\" \$19}" $file > ${file}.tmp
 
-	awk -F"[[:space:]]" "{if (\$1==\"Species\") probes=1;
+	awk "BEGIN { FS = \"\t\" }; {if (\$1==\"Species\") probes=1;
 else if (\$1==\"[Controls]\") exit;
-else if (probes == 1) print \">${name}:\" \$15 \"\n\" \$19}" $file > ${file}.tmp
+else if (probes == 1) print \">${name}:\" \$14 \"\n\" \$18}" $file > ${file}.tmp
 
 
 	#Remove spurious entries generated from header
@@ -57,4 +57,5 @@ fasta_file="${file%.*}.fasta"
 
 echo "Does this look okay? Now you need to:"
 echo " mv ${file}.tmp $fasta_file"
+
 
