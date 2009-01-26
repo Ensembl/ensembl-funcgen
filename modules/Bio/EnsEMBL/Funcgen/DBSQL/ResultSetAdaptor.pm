@@ -189,9 +189,9 @@ sub fetch_all_by_Experiment_Analysis{
   }
   
 
-  my $constraint = $self->get_Experiment_join_clause($exp)." AND rs.analysis_id=".$analysis->dbID();
+  my $join = $self->get_Experiment_join_clause($exp)." AND rs.analysis_id=".$analysis->dbID();
 	
-  return $self->generic_fetch($constraint);
+  return ($join) ? $join." AND rs.analysis_id=".$analysis->dbID() : [];
 }
 
 sub get_Experiment_join_clause{
@@ -210,9 +210,22 @@ sub get_Experiment_join_clause{
 
   my @chans = map @$_, (map $_->get_Channels(), @ecs);
   my $chan_ids = join(', ', (map $_->dbID(), @chans));#get ' separated list of chanids
-  
-  my $constraint = '(((cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.
-	')) OR (cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.'))))';
+  #These give empty strings which are defined
+
+
+  my $constraint;
+  #This will not work for single IDs of 0, but this will never happen.
+
+  if($ec_ids && $chan_ids){
+	$constraint = '(((cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.
+	  ')) OR (cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.'))))';
+  }
+  elsif($ec_ids){
+	$constraint = 'cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.')';
+  }
+  elsif($chan_ids){
+	$constraint = 'cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.')';
+  }
   
   return $constraint;
 }
@@ -237,7 +250,10 @@ sub fetch_all_by_Experiment{
   #This was much easier with the more complicated default where join
   #should we reinstate and just have a duplication of cell/feature_types?
 	
-  return $self->generic_fetch($self->get_Experiment_join_clause($exp));
+
+  my $join = $self->get_Experiment_join_clause($exp);
+  
+  return ($join) ? $self->generic_fetch($join) : [];
 }
 
 
@@ -729,7 +745,7 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe) = @_;
   
 
-  #warn "Using ResultFeatureAdaptor";
+  #warn "Using ResultSetAdaptor";
 
   return $self->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $rset, $ec_status, $with_probe);
 
