@@ -1,9 +1,9 @@
-
+=pod
 
 =head1 NAME
 
 ensembl-efg rollback_experiment.pl
-  
+
 =head1 SYNOPSIS
 
 rollback_experiment.pl [options]
@@ -40,6 +40,8 @@ B<This program> removes all the imported data for a given experiment name.
 #To do
 # 1 Can we implement some of the Helper rollback methods here?
 # 2 Handle Experiments with no ResultSets
+# 3 Move this to Helper and make this handle Experiments, FeatureSets or ResultSets etc..
+# 4 Needs updating to handle ExperimentalSets
 
 use warnings;
 use strict;
@@ -53,8 +55,10 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 $| =1;
 
 my ($chips, $pass, $full_delete, @chips);
-my ($exp_name, $host, $dbname, $help, $man, $log_msg, $force_delete);
+my ($exp_name, $host, $dbname, $help, $man, $log_msg, $species, $force_delete);
 my ($port, $user);
+
+warn "@ARGV\n";
 
 GetOptions (
 			"experiment|e=s"      => \$exp_name,
@@ -62,7 +66,8 @@ GetOptions (
 			"pass|p=s"            => \$pass,
 			"port=s"              => \$port,
 			"dbname|n=s"          => \$dbname,
-			"host|h=s"            => \$host,
+			"dbhost|h=s"          => \$host,
+			"species=s"           => \$species,
 			"user|u=s"            => \$user,
 			"full_delete|f"       => \$full_delete,
 			"force_delete|d"      => \$force_delete,
@@ -121,6 +126,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -user => $user,
 													  -pass => $pass,
 						   						      -port => $port,
+													  -species => $species,
 													 );
 
 
@@ -163,6 +169,7 @@ my %table_syns = (
 
 #could maybe get all rsets first, get all ids, so we can compare to linked data_sets
 #skip delete data/feature_set if it is linked to another rset
+
 my @rsets = @{$rset_a->fetch_all_by_Experiment($exp)};
 my @rset_ids = map $_->dbID(), @rsets;
 my ($sql, %cc_ids, %no_delete_cc_ids, @simple_rsets, @rollback_rsets, %rollback_dsets);
@@ -175,7 +182,6 @@ my ($sql, %cc_ids, %no_delete_cc_ids, @simple_rsets, @rollback_rsets, %rollback_
 
 #we need to check whether any of these rsets are used in combined data_sets using other experiment data
 #We then need log their cc_ids, skip the result delete and if we encounter these cc_ids in another rset, then we only delete the cc records pertaining to that rset.
-
 
 
 foreach my $rset(@rsets){
@@ -306,6 +312,7 @@ foreach my $rset(@simple_rsets){
 }
 
 
+
 #Now remove filtered Features/DataSets
 if($full_delete){
 
@@ -349,18 +356,21 @@ foreach my $key(keys %no_delete_cc_ids){
   delete $cc_ids{$key} if exists $cc_ids{$key};
 }
 
-print "::\tDeleting result, chip_channel and result_set records for:\t".join(', ', (map {$_->name} @rollback_rsets))."\n";
-
-#We could do with testing for the cc_ids here
-#So we can rollback an Rset if it have already been partially mangled
-$sql = "DELETE from result where chip_channel_id IN (".join(', ', keys %cc_ids).")";
-$db->dbc->do($sql);
-$sql = "DELETE from chip_channel where result_set_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";
-$db->dbc->do($sql);
-$sql = "DELETE from status where table_name='result_set' and table_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";
-$db->dbc->do($sql);
-$sql = "DELETE from result_set where result_set_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";	
-$db->dbc->do($sql);
+if(keys %cc_ids){
+  
+  print "::\tDeleting result, chip_channel and result_set records for:\t".join(', ', (map {$_->name} @rollback_rsets))."\n";
+  
+  #We could do with testing for the cc_ids here
+  #So we can rollback an Rset if it have already been partially mangled
+  $sql = "DELETE from result where chip_channel_id IN (".join(', ', keys %cc_ids).")";
+  $db->dbc->do($sql);
+  $sql = "DELETE from chip_channel where result_set_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";
+  $db->dbc->do($sql);
+  $sql = "DELETE from status where table_name='result_set' and table_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";
+  $db->dbc->do($sql);
+  $sql = "DELETE from result_set where result_set_id IN (".join(', ', (map {$_->dbID} @rollback_rsets)).")";	
+  $db->dbc->do($sql);
+}
 
 
 #Where are we deleting the resultsets?
