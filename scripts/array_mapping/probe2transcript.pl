@@ -561,7 +561,7 @@ my ($edb_name, $transc_edb_name, $transc_edb_id, $transc_edb_display_name, $edb_
 #  if($edb_type eq 'Transcript'){
 $edb_name                = "${species}_core_Transcript";
 $transc_edb_name         = $edb_name;
-$transc_edb_display_name = "Ensembl ${species} Transcript";
+$transc_edb_display_name = "EnsemblTranscript";
 $edb_display             = $transc_edb_display_name;
 	
 #  }else{
@@ -581,8 +581,10 @@ foreach my $row(@versions){
   my ($edb_id, $version) = @$row;
   push @tmp, $version;
   
-  $transc_edb_id   = $edb_id if($schema_build eq $version);
-  last;
+  if($schema_build eq $version){ 
+	$transc_edb_id   = $edb_id;
+	last;
+  }
   #$transc_edb_id  = $edb_id if($edb_type eq 'Transcript');
   #$species_edb_id = $edb_if if($edb_type eq 'Species');
 }
@@ -1628,7 +1630,7 @@ sub cache_arrays_per_object {
   else{#Non probeset arrays
 	#Is this valid sql?
 	#We don't need the count at all
-	$sql = 'SELECT p.probe_id, p.name, a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY a.name';
+	$sql = 'SELECT p.probe_id, p.name, a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY a.name';
   }
 
 
