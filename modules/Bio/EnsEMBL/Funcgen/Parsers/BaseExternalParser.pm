@@ -221,11 +221,14 @@ sub set_feature_sets{
 	  #replace hash config with object
 	  $self->{'feature_sets'}{$fset_name}{'analysis'} = $analysis;
 
+	  my $display_name = (exists $self->{'feature_sets'}{$fset_name}{'display_label'}) ? $self->{'feature_sets'}{$fset_name}{'display_label'} : $fset_name;
+
 	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
 													 -name         => $fset_name,
 													 -type         => 'external',
 													 -analysis     => $self->{'feature_sets'}{$fset_name}{'analysis'},
 													 -feature_type => ${$self->{'feature_sets'}{$fset_name}{'feature_type'}},
+													 -display_label => $display_name,
 													);
 
 	  ($fset) = @{$self->db->get_FeatureSetAdaptor->store($fset)};

@@ -61,10 +61,11 @@ sub new {
   $self->{feature_sets} = {
 						   'REDfly TFBSs' => {
 											  feature_type      => \$self->{'feature_types'}{'REDfly TFBS'},
+											  #display_label     => 'REDfly TFBSs',#defaults to name
 											  analysis          => 
 											  { 
 											   -logic_name    => 'REDfly TFBS',
-											   -description   => 'REDfly transcription factor binding site (http://redfly.ccr.buffalo.edu/)',
+											   -description   => 'REDfly transcription factor binding sites (http://redfly.ccr.buffalo.edu/)',
 											   -display_label => 'REDfly TFBS',
 											   -displayable   => 1,
 											  },
@@ -320,8 +321,8 @@ sub parse_and_load {
 													   -primary_id             => $stable_id,
 													   -display_id             => $attr_cache{'Factor'},
 													   -info_type              => 'CODING',
-													   -into_text              => 'Gene',
-													   #-linkage_annotation     => 'Coding gene'
+													   -into_text              => 'GENE',
+													   -linkage_annotation     => 'REDfly CODING'
 
 													   #-description            => 'cisRED motif gene xref',#This is now generic and no longer resitricted to REDfly
 													   #could have version here if we use the correct dnadb to build the cache
@@ -396,7 +397,8 @@ sub parse_and_load {
 												 -primary_id             => $stable_id,
 												 -display_id             => $target,
 												 -info_type              => 'TARGET',
-												 -linkage_annotation     => $fset->feature_type->name.' xref',
+												 -info_text              => 'GENE',
+												 -linkage_annotation     => 'REDfly Target',
 												 #could have version here if we use the correct dnadb to build the cache
 											);
 		$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag

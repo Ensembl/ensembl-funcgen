@@ -54,24 +54,26 @@ sub new {
   #Set default feature_type and feature_set config
   $self->{'feature_types'} = {
 							  'miRanda'   => {
-											  name        => 'miRanda',
+											  name        => 'miRanda Target',
 											  class       => 'RNA',
-											  description => 'miRanda microRNA',
+											  description => 'miRanda microRNA target',
 											 },
 							 };
   $self->{feature_sets} = {
-						   'miRanda miRNA' => {
-											   feature_type      => \$self->{'feature_types'}{'miRanda'},
-											   analysis          => 
-											   { 
-												-logic_name    => 'miRanda',
-												#-description   => 'miRanda microRNA target prediction (http://www.microrna.org)',
-												-description => 'miRanda microRNA target prediction (http://microrna.sanger.ac.uk/targets)',
-												-display_label => 'miRanda',
-												-displayable   => 1,
-											   },
-											   xrefs => 1,
-											  },						   
+						   'miRanda miRNA targets' => 
+						   {
+							feature_type      => \$self->{'feature_types'}{'miRanda'},
+							display_name      => 'miRanda Targets',
+							analysis          => 
+							{ 
+							 -logic_name    => 'miRanda',
+							 #-description   => 'miRanda microRNA target prediction (http://www.microrna.org)',
+							 -description => 'miRanda microRNA target prediction (http://microrna.sanger.ac.uk/targets)',
+							 -display_label => 'miRanda Target',
+							 -displayable   => 1,
+							},
+							xrefs => 1,
+						   },						   
 						  };
 
  

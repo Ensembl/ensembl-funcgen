@@ -46,6 +46,7 @@ sub new {
   $self->{feature_sets} = {
 						   'VISTA enhancer set' => {
 													feature_type      => \$self->{'feature_types'}{'VISTA Target'},
+													display_label     => 'VISTA Enhancers',
 													analysis          => 
 													{ 
 													 -logic_name => 'VISTA',

@@ -441,7 +441,7 @@ sub read_and_import_data{
 	  $self->log('Finished importing '.$self->counts->{'features'}.' '.
 				 $fset->name." features from:\t$filepath");
 
-	  warn "Need to handle other counts in caller here?";
+	  #warn "Need to handle other counts in caller here?";
 
 	  $self->log("Counts:\n".Data::Dumper::Dumper($self->{'_counts'}));
 

@@ -70,6 +70,7 @@ sub new {
   $self->{feature_sets} = {
 						   'cisRED search regions' => {
 													   feature_type      => \$self->{'feature_types'}{'cisRED Search Region'},
+													   display_label     => 'cisRED searches',
 													   analysis          => 
 													   { 
 														-logic_name    => 'cisRED',
@@ -81,6 +82,7 @@ sub new {
 													  },
 						   'cisRED motifs' => {
 													 feature_type      => \$self->{'feature_types'}{'cisRED Motif'},
+											   #display_label => 'cisRED motifs',#defaults to name
 													 analysis          => 
 													 { 
 													  -logic_name    => 'cisRED',
