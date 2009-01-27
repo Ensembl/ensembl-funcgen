@@ -96,7 +96,7 @@ This is generally executed by the eFG array mapping environment
 Mandatory
  -species    Latin name as used in DB name or meta table e.g. homo_sapiens
  -vendor     Array vendor e.g. AFFY, ILLUMINA etc
- -format     Array format e.g. AFFY_UTR, AFFY_ST, ILLUMINA. Sets default array configuration
+ -format     Array format e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG. Sets default array configuration
  -arrays     List (space separated) of array names.
 
 Array configuration:
@@ -364,7 +364,7 @@ $Helper->log_header('Running on probe2transcript.pl on: '.$hostname, 0, 'append_
 $Helper->log("Params are:\t@tmp_args");
 
 
-die("It is not wise to run all available arrays at the same time\nYou must supply a list of array names using -arrays, i.e. for all or a subset of a given array format(e.g. AFFY, AFFY_ST, ILLUMINA)") if(! @array_names);
+die("It is not wise to run all available arrays at the same time\nYou must supply a list of array names using -arrays, i.e. for all or a subset of a given array format(e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG)") if(! @array_names);
 
 
 #OTHER MANDATORY PARAMS HERE?
@@ -384,7 +384,7 @@ my %array_format_config = (
 									   sense_interrogation  => 1,
 									  },
 						   
-						   ILLUMINA => {
+						   ILLUMINA_WG => {
 										probeset_arrays        => 0,
 										linked_arrays     => 1,
 										sense_interrogation => 0,
@@ -393,7 +393,7 @@ my %array_format_config = (
 die ('Must supply a -vendor parameter e.g. AFFY') if ! $vendor;
 
 if(defined $format && ! exists $array_format_config{$format}){
-  die("-format is not valid:\t$format\nMust specify valid format e.g. AFFY_UTR, AFFY_ST, ILLUMINA.\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameterss?\n");
+  die("-format is not valid:\t$format\nMust specify valid format e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG.\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameterss?\n");
 }
 
 
@@ -1846,8 +1846,8 @@ sub check_existing_and_exit {
 
   my $probe_join = ($array_config{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
 
-
-  my $xref_sth = $xref_db->dbc()->prepare("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='$xref_object' and ox.ensembl_id=${probe_join} and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name=?");
+  
+  my $xref_sth = $xref_db->dbc()->prepare("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='$xref_object' and ox.ensembl_id=${probe_join} and ox.linkage_annotation!='ProbeTranscriptAlign' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name=?");
 
 
   foreach my $array (@array_names) {
