@@ -1045,10 +1045,26 @@ foreach my $transcript (@transcripts) {
 	  #For none probeset probes
 	  #Let's just assume that this will never be AFFY
 	  #It will fail if it is.
+
+	  #We may have probe present on 2 arrays, so we must pass array name here?
+
+	  #HACK
+	  #Let's just get all probenames and make sure they are all the same
+	  #Otherwise we need to either collapse separately
+	  #Or account for probes with different names
+	  my %pnames;
+	  map $pnames{$_} = undef, @{$probe->get_all_probenames};
+
+	  if(keys %pnames > 1){
+		throw('Found inconsitent probe names between arrays');
+	  }
+
+	  my ($pname) = keys %pnames;
+
 	  $probeset_id    = '';
 	  $probeset_name  = '';
-	  $log_name       = $transcript_sid."\t\t".$probe->get_probename;
-	  $transcript_key = $transcript_sid.':'.$dbID.':'.$probe->get_probename;	
+	  $log_name       = $transcript_sid."\t\t".$pname;
+	  $transcript_key = $transcript_sid.':'.$dbID.':'.$pname;	
 	}
 
 
