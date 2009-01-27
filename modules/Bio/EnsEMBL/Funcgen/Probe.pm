@@ -209,7 +209,7 @@ sub new_fast {
                Probe->new(),
                ProbeAdaptor->_obj_from_sth(),
 			   AffyProbeAdaptor->_obj_from_sth()
-  Status     : Medium Risk
+  Status     : Medium Risk - Change to take ArrayChip object.
 
 =cut
 
@@ -347,7 +347,7 @@ sub get_probename {
 		$arrayname = $self->get_all_Arrays()->[0]->name();
       }
       else{
-	throw("Cannot retrieve probename without arrayname if more than 1 array chip(@ac_ids) and not NIMBELGEN(".$self->get_all_Arrays()->[0]->vendor().")\n");
+		throw('Cannot retrieve name for Probe('.$self->dbID.") without arrayname if more than 1 array chip(@ac_ids) and not NIMBELGEN(".$self->get_all_Arrays()->[0]->vendor().")\n");
       }
     }
 
