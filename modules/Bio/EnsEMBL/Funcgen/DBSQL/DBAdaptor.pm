@@ -626,7 +626,7 @@ sub set_dnadb_by_assembly_version{
 	@dbnames = grep(/core_[0-9]/, sort @dbnames);
   
 	if(scalar(@dbnames)==0){
-	  warn(':: Failed to find '.$self->species.' funcgen DB for assembly version '.$assm_ver.' using '
+	  warn(':: Failed to find '.$self->species.' core DB for assembly version '.$assm_ver.' using '
 		   .$self->dnadb_user.'@'.$self->dnadb_host.':'.$port);
 	}
 	else{
