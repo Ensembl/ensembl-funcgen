@@ -1679,8 +1679,7 @@ sub cache_arrays_per_object {
 
     if ($object_id eq $last_object_id || $first_record) {
 	  push @arrays, $array;
-	  $first_record = 0;
-
+	
 	  if(! $object_key){
 
 		if( (scalar(@arrays) > 1) && ($last_object_name ne $object_name)){
@@ -1696,9 +1695,10 @@ sub cache_arrays_per_object {
 		#We need to keep these caches separate
 		#This would result in possible failure if probeset sizes we different between arrays
 		#and also possibly the incorrect assignment of xrefs to an incorrect array.
-		die("Found probeset(dbID=$object_id) with differing size between arrays(@arrays)");
-	  }
 
+		die("Found probe/probeset(dbID=$object_id) with differing size between arrays(@arrays)");
+	  }
+	  $first_record = 0;
 	  $last_probeset_size = $probeset_size;
 	  $last_object_name   = $object_name;
 	  $last_object_id     = $object_id;
