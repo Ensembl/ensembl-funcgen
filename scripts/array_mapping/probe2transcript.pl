@@ -111,7 +111,7 @@ Mapping rules:
                               the greater of either the mean or the median of all annotated UTRs
                               This is overridden by the following extend options
  -unannotated_5_utr           Default extension for transcripts with unannotated 5' UTRs
- -unannotated_3_utr           Default extension for transcripts with unannotated 5' UTRs
+ -unannotated_3_utr           Default extension for transcripts with unannotated 3' UTRs
  -annotated_5_prime_extend    Default bp extension for all transcripts with annotated 5' UTRs
  -annotated_3_prime_extend    Default bp extension for all transcripts with annotated 3' UTRs
  -utr_multiplier              Defines UTR extension as multiple of annotated UTR. This is overridden 
@@ -1055,11 +1055,15 @@ foreach my $transcript (@transcripts) {
 	  my %pnames;
 	  map $pnames{$_} = undef, @{$probe->get_all_probenames};
 
-	  if(keys %pnames > 1){
-		throw('Found inconsitent probe names between arrays');
-	  }
+	  my $pname;
 
-	  my ($pname) = keys %pnames;
+	  if(keys %pnames == 1){
+		#die("Found inconsistent probe names between arrays:\t".$probe->dbID.' has names '.join(', ', keys %pnames).'.');
+		($pname) = keys %pnames;
+	  }
+	  else{
+		$pname = 'MULTI_NAME'
+	  }
 
 	  $probeset_id    = '';
 	  $probeset_name  = '';
@@ -1376,7 +1380,10 @@ foreach my $key (keys %transcript_feature_info) {
 	: scalar(@{$transcript_feature_info{$key}{$object_id}});
   
 
-  print OUT "$hits hits for $object_name\n";
+  #print OUT "$hits hits for $object_key\n";
+
+
+  warn "$hits / $probeset_size hits for $object_key vs $transcript_sid\n";
 
   if ($hits / $probeset_size >= $mapping_threshold) {
 	#This is inc'ing an undef?
@@ -1422,11 +1429,12 @@ foreach my $key (keys %transcript_feature_info) {
 	  }
 
 	  add_xref($transcript_sid, $object_id, $xref_object, $linkage_annotation);
-	  print OUT "$object_name\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
+	  print OUT "$object_key\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
 	  
-	} 
+	}
 	else {
-	  print OUT "$object_name\t$transcript_sid\tpromiscuous\t${hits}/$probeset_size\tCurrentTranscripts".$transcripts_per_object{$object_key}."\n";
+	  #Change this to print at end so we can add the reall total number of transcripts
+	  print OUT "$object_key\t$transcript_sid\tpromiscuous\t${hits}/$probeset_size\tCurrentTranscripts".$transcripts_per_object{$object_key}."\n";
 	  push @{$promiscuous_objects{$object_id}}, $transcript_sid;
 	}
 	
@@ -1435,7 +1443,7 @@ foreach my $key (keys %transcript_feature_info) {
 	#This will never happen for single probes
 
 
-	print OUT "$object_name\t$transcript_sid\tinsufficient\t${hits}/${probeset_size} in ProbeSet\n";
+	print OUT "$object_key\t$transcript_sid\tinsufficient\t${hits}/${probeset_size} in ProbeSet\n";
 	
 	if (!$no_triage) {
 	  
@@ -1602,7 +1610,7 @@ sub log_orphan_probes {
 	  ($object_id, $object_name) = split/:/, $object_key;
 	  
 	  #Do we need to add dbID here in case of redundant unlined probe/set names?
-      print OUT "$object_name\tNo transcript mappings\n";
+      print OUT "$object_key\tNo transcript mappings\n";
 
       if (!$no_triage){
 
@@ -1646,12 +1654,15 @@ sub cache_arrays_per_object {
   else{#Non probeset arrays
 	#Is this valid sql?
 	#We don't need the count at all
-	$sql = 'SELECT p.probe_id, p.name, a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY a.name';
+	$sql = 'SELECT p.probe_id, p.name, a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY p.probe_id, a.name';
   }
 
 
   #$sql .= ', a.name' if $array_config{linked_arrays};
   
+
+  warn "$sql";
+
   my $sth = $db->dbc()->prepare($sql);
   my ($object_id, $array, $probeset_size, $object_key, $object_name, @arrays);
   my $last_object = "";
@@ -1667,6 +1678,8 @@ sub cache_arrays_per_object {
 	else {
 	  @arrays = ($array);
     }
+
+	#warn "object jey is $object_key";
 
 
     $arrays_per_object{$object_key}  = @arrays;
@@ -1685,6 +1698,8 @@ sub cache_arrays_per_object {
 	if($probeset_size !=  $probeset_sizes{ $object_key }){
 	  die("Found probeset(dbID=$object_id) with differing size between arrays(@arrays)");
 	}
+
+	warn "2836816:ILMN_1246380 probesets size is ".$probeset_sizes{ $object_key } if  $object_key eq '2836816:ILMN_1246380';
 
 
   }
