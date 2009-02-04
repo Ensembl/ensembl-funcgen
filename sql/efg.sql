@@ -201,7 +201,7 @@ DROP TABLE IF EXISTS `object_xref`;
 CREATE TABLE object_xref (
   object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   ensembl_id                  INT(10) UNSIGNED NOT NULL, 
-  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType', 'ProbeSet', 'Probe') not NULL,
+  ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType', 'ProbeSet', 'Probe', 'ProbeFeature') not NULL,
   xref_id                     INT UNSIGNED NOT NULL,
   linkage_annotation          VARCHAR(255) DEFAULT NULL,
   UNIQUE (ensembl_object_type, ensembl_id, xref_id),
@@ -226,7 +226,7 @@ CREATE TABLE `unmapped_object` (
   `query_score` double default NULL,
   `target_score` double default NULL,
   `ensembl_id` int(10) unsigned default '0',
-  `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe', 'ProbeSet') NOT NULL,
+  `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe', 'ProbeSet', 'ProbeFeature') NOT NULL,
   `parent` varchar(255) default NULL,
   PRIMARY KEY  (`unmapped_object_id`),
   KEY `id_idx` (`identifier`),
