@@ -203,8 +203,14 @@ sub is_displayable{
   return $self->has_status('DISPLAYABLE');
 }
 
-#These DBEntry methods are here to enable xrefs to FeatureType
-#Should really on be used for FeatureTypes and SetFeatures
+#These DBEntry methods are here to enable xrefs to FeatureType, Probe, ProbeSet & ProbeFeature
+#They only work as SetFeature has Storable as the second element of @ISA and Bio::EnsEMBL::Feature
+#get_all_DBEntries be incorporated into Bio::EnsEMBL::Storable as generic method
+#With the other wrapper methods in the Storables of the non-core APIs?
+#Or can these be moved to core as a supra core class?
+#i.e. Is common to all non-core APIs but not relevant for core?
+#Can we bring these together to stop code propogation?
+
 
 =head2 get_all_Gene_DBEntries
 
@@ -227,8 +233,22 @@ sub is_displayable{
 #change the to ensembl_core when we implement Gene/Transcript/Protein|Translation links on the same external_db
 
 sub get_all_Gene_DBEntries {
-  my $self = shift;;
-  return $self->get_all_DBEntries('ensembl_core_Gene');
+  my $self = shift;
+
+
+  #We wouldn't need this if we made the xref schema multi species
+  my $species = $self->adaptor->db->species;
+
+  if(!$species){
+	throw('You must specify a DBAdaptor -species to retrieve DBEntries based on the external_db.db_name');
+  }
+  
+  #safety in case we get Homo sapiens
+  ($species = lc($species)) =~ s/ /_/;
+  
+
+
+  return $self->get_all_DBEntries($species.'_core_Gene');
 }
 
 =head2 get_all_Transcript_DBEntries
@@ -253,7 +273,19 @@ sub get_all_Gene_DBEntries {
 
 sub get_all_Transcript_DBEntries {
   my $self = shift;
-  return $self->get_all_DBEntries('ensembl_core_Transcript');
+
+  #We wouldn't need this if we made the xref schema multi species
+  my $species = $self->adaptor->db->species;
+
+  if(!$species){
+	throw('You must specify a DBAdaptor -species to retrieve DBEntries based on the external_db.db_name');
+  }
+  
+  #safety in case we get Homo sapiens
+  ($species = lc($species)) =~ s/ /_/;
+  
+
+  return $self->get_all_DBEntries($species.'_core_Transcript');
 }
 
 
