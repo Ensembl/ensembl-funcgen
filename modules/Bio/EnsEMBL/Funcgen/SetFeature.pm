@@ -55,12 +55,18 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::SetFeature;
 
 use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Funcgen::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning);
 use vars qw(@ISA);
 
-@ISA = qw(Bio::EnsEMBL::Feature);
+@ISA = qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
+
+#Bio::EnsEMBL::Funcgen::Storable
+#gives access to DBEntry type methods
+#This only works as the DBEntry methods in the core API are at the Gene/Transcript/Translation level
+#This would not be a problem if this was integrated back into the core code
 
 =head2 new
 
@@ -322,154 +328,5 @@ sub analysis{
 #This causes inheritance problems, and we don't need the eFG Storable methods for Features.
 #Cater for FeatureTypes separately for now as we may remove DBEntries for these at some point.
 #And currently not used anywhere in the website??? Current xrefs are fly BioTIFFIN motif xrefs to FlyBase coding gene names?
-#
-
-=head2 get_all_Gene_DBEntries
-
-  Example    : my @gene_dbentries = @{ $set_feature->get_all_Gene_DBEntries };
-  Description: Retrieves Ensembl Gene DBEntries (xrefs) for this SetFeature.  
-          
-               This method will attempt to lazy-load DBEntries from a
-               database if an adaptor is available and no DBEntries are present
-               on the SetFeature (i.e. they have not already been added or 
-               loaded).
-  Returntype : Listref of Bio::EnsEMBL::DBEntry objects
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-#change the to ensembl_core when we implement Gene/Transcript/Protein|Translation links on the same external_db
-
-sub get_all_Gene_DBEntries {
-  my $self = shift;;
-  return $self->get_all_DBEntries('ensembl_core_Gene');
-}
-
-=head2 get_all_Transcript_DBEntries
-
-  Example    : my @transc_dbentries = @{ $set_feature->get_all_Transcript_DBEntries };
-  Description: Retrieves ensembl Transcript DBEntries (xrefs) for this SetFeature.  
-              
-               This method will attempt to lazy-load DBEntries from a
-               database if an adaptor is available and no DBEntries are present
-               on the SetFeature (i.e. they have not already been added or 
-               loaded).
-  Returntype : Listref of Bio::EnsEMBL::DBEntry objects
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-#change the to ensembl_core when we implement Gene/Transcript/Protein|Translation links on the same external_db
-
-sub get_all_Transcript_DBEntries {
-  my $self = shift;
-  return $self->get_all_DBEntries('ensembl_core_Transcript');
-}
-
-
-=head2 get_all_DBEntries
-
-  Arg[1]     : string - External DB name e.g. ensembl_core_Gene
-  Arg[2]     : string - External DB type 
-  Example    : my @dbentries = @{ $set_feature->get_all_DBEntries };
-  Description: Retrieves DBEntries (xrefs) for this SetFeature.  
-               This does _not_ include the corresponding translations 
-               DBEntries (see get_all_DBLinks).
-
-               This method will attempt to lazy-load DBEntries from a
-               database if an adaptor is available and no DBEntries are present
-               on the SetFeature (i.e. they have not already been added or 
-               loaded).
-  Returntype : Listref of Bio::EnsEMBL::DBEntry objects
-  Exceptions : none
-  Caller     : general, get_all_DBLinks
-  Status     : Stable - at risk move to storable
-
-=cut
-
-
-#We could add 3rd arg here which would be xref(info_)type e.g. Gene/Transcript etc.
-#Move info_type to ox.linkage_type to sit along side linkage_annotated
-
-
-sub get_all_DBEntries {
-  my $self = shift;
-  my $ex_db_exp = shift;
-  my $ex_db_type = shift;
-
-  my $cache_name = "dbentries";
-
-  if(defined($ex_db_exp)){
-    $cache_name .= $ex_db_exp;
-  }
-  if(defined($ex_db_type)){
-    $cache_name .= $ex_db_type;
-  }
-
-  #Need to add tests for valid objects for xrefs
-
-  # if not cached, retrieve all of the xrefs for this gene
-
-  #This is not using the caching optimally
-  #It seems for naive(ex_db_exp,ex_db_type) queries we create a naive cache
-  #This means that further more specific queries will make another query and not use the cache
-
-
-  my @tables = $self->adaptor->_tables;
-
-  if(!defined $self->{$cache_name} && $self->adaptor()) {
-
-	my @tables = $self->adaptor->_tables;
-	@tables = split/_/, $tables[0]->[0];#split annotated_feature
-	my $object_type = join('', (map ucfirst($_), @tables));#change to AnnotatedFeature
-	
-    $self->{$cache_name} = 
-      $self->adaptor->db->get_DBEntryAdaptor->_fetch_by_object_type($self->dbID(), $object_type, $ex_db_exp, $ex_db_type);
-  }
-
-  $self->{$cache_name} ||= [];
-
-  return $self->{$cache_name};
-}
-
-
-=head2 add_DBEntry
-
-  Arg [1]    : Bio::EnsEMBL::DBEntry $dbe
-               The dbEntry to be added
-  Example    : my $dbe = Bio::EnsEMBL::DBEntery->new(...);
-               $transcript->add_DBEntry($dbe);
-  Description: Associates a DBEntry with this transcript. Note that adding
-               DBEntries will prevent future lazy-loading of DBEntries for this
-               storable (see get_all_DBEntries).
-  Returntype : none
-  Exceptions : thrown on incorrect argument type
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub add_DBEntry {
-  my $self = shift;
-  my $dbe = shift;
-
-  unless($dbe && ref($dbe) && $dbe->isa('Bio::EnsEMBL::DBEntry')) {
-    throw('Expected DBEntry argument');
-  }
-
-  $self->{'dbentries'} ||= [];
-  push @{$self->{'dbentries'}}, $dbe;
-}
-
-
-
-
-
-
-
 
 1;
