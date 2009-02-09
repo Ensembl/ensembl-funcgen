@@ -144,10 +144,7 @@ sub fetch_by_array_probe_probeset_name {
 sub fetch_probe_cache_by_Experiment{
   my ($self, $exp) = @_;
 
-  #my %cache;
   my @tie_cache;
-
-
   throw('Need to fetch the probe cache by Array not Experiment');
 
   #where are we going to get the file path from?
@@ -189,6 +186,34 @@ sub fetch_probe_cache_by_Experiment{
   tie @tie_cache, 'Tie::File', $cache_file or throw('Failed to tie probe_cache file');
 
   return \@tie_cache;
+}
+
+
+
+
+=head2 fetch_all_by_name
+
+  Arg [1]    : string - probe name
+  Example    : my @probes = @{$opa->fetch_all_by_name('Probe1')};
+  Description: Returns an arrayref of all probes with this name. 
+               These may exist on different ArrayChips from different vendors.
+  Returntype : Arrayref
+  Exceptions : Throws if name not passed
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub fetch_all_by_name{
+  my ($self, $name) = @_;
+
+
+  throw('Must provide a probe name argument') if ! defined $name;
+
+  my $constraint = "p.name='$name'";
+
+  return $self->generic_fetch($constraint);
 }
 
 
