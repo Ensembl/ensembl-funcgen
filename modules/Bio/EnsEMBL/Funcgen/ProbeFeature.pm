@@ -57,7 +57,7 @@ use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(median);
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Feature);
+@ISA = qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new
