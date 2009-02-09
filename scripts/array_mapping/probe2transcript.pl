@@ -26,13 +26,16 @@
 # But also know how many times a probe might have mapped to another transcript, to give a quality score!
 # Pod::Usage for help
 #Species specific check existing and delete based on external_db_name
+#Change docs to Pod
+#Can remove object_name and object_key from caches if we disable logs and just depend on xref/unmapped objects.
+#Else we need to maintain them so we have names rather than dbIDs in the logs
 
 #To do
 
-#Reimpliment validate arrays, see old script
+#Reimpliment validate arrays, see old script?
 #Add unannotated UTR clipping dependant on nearest neighbour
 #Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs in the neighbour.
-
+# Separate UTR multipliers for 3' and 5'?
 
 #Implement incremental update from list of stable IDs. Consider unmapped probe changes etc...
 #parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide counts for a given probeset
@@ -45,10 +48,11 @@
 #We would need to ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run clean up.
 # There is no reason to have separate probe and xref DBs???
 # Validate array format against arrays specified? May want to just use an array format as a template???
+# Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and annotation
+# Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
+#Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode
+#And we won't get duplication should the job fail halfway through
 
-#Change docs to Pod
-#Can remove object_name and object_key from caches if we disable logs and just depend on xref/unmapped objects.
-#Else we need to maintain them so we have names rather than dbIDs in the logs
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
@@ -62,9 +66,7 @@
 # Can't rely on Registry as species aliases may not be present or loaded
 
 
-
 # Issues
-# Does not handle internal mismatches of features wrt overlap of exon/exonutr.  Not likley to cause a problem.
 # Cannot account for running non-linked arrays which may use the same probe/set name.  This may cause failure if the probeset sizes are different. Xrefs and counts should be unaffected as we base these on the probe_set_ids not the names
 
 
@@ -911,7 +913,7 @@ my %flanks = (
 cache_arrays_per_object($probe_db);
 
 my ($linkage_annotation, $pc, $transcript_slice, $slice);
-my (@exons, $num_exons, $first_exon, $last_exon, $probe_features, $probe, $dbID);
+my (@exons, $num_exons, $first_exon, $last_exon, $probe_features, $probe, $probe_id, $feature_id);
 my ($probeset_id, $probeset_name, $transcript_key, $log_name, $transcript_sid);
 
 $Helper->log("Performing overlap analysis. % Complete:");
@@ -929,15 +931,9 @@ foreach my $transcript (@transcripts) {
   last if ($test_transcripts && $i >= $test_transcripts);
   $transcript_sid = $transcript->stable_id();
 
-  #warn "$i $pc $transcript_sid ".$transcript->feature_Slice->name;
-
- 
+   
   #Handle UTR extensions
   #The UTRs themselves are already included in the transcript/exons!!
-
-
-  #warn "flanks are ".$flanks{5}.' '. $flanks{3};
-
   foreach my $end('5', '3'){	
 	#so we only need to consider if we have extend, multplier or a default unannotated
 	#These could all be set to 0
@@ -1016,7 +1012,6 @@ foreach my $transcript (@transcripts) {
 	$rr->check_and_register("${end}_exonutr", @{$exonutrs{$end}}) if $flanks{$end};
   }
 
-
   ### Now map each feature to the transcript
   #This works on the assumption that probesets are identical between arrays
   #i.e. if a probe set is present on different arrays, their probes are identical.
@@ -1035,15 +1030,18 @@ foreach my $transcript (@transcripts) {
 	#We just want skip and add a step to get all the IdentityXrefs for a given transcript later
 	  
 	$probe          = $feature->probe;
-	$dbID           = $probe->dbID;
+	$feature_id     = $feature->dbID;
+	$probe_id       = $probe->dbID;
 	
 	
 	#Set some probe/probeset vars
 	if($array_config{probeset_arrays}){
 	  $probeset_id    = $probe->probeset->dbID;
 	  $probeset_name  = $probe->probeset->name;
-	  $log_name       = $transcript_sid."\t${probeset_name}\tdbID:${dbID}";
-	  $transcript_key = $transcript_sid.":".$probeset_id.":".$probeset_name;
+	  #Due to resitrcting the collapse within probesets
+	  #we can only ever have one probe set name here.
+	  $log_name       = $transcript_sid."\t(${probeset_name})\t${probe_id}";
+	  $transcript_key = $transcript_sid.":".$probeset_id;
 	}
 	else{
 	  #clean just in case
@@ -1061,26 +1059,29 @@ foreach my $transcript (@transcripts) {
 	  #Let's just get all probenames and make sure they are all the same
 	  #Otherwise we need to either collapse separately
 	  #Or account for probes with different names
-	  my %pnames;
-	  map $pnames{$_} = undef, @{$probe->get_all_probenames};
+	  #my %pnames;
+	  #map $pnames{$_} = undef, @{$probe->get_all_probenames};
 
-	  my $pname;
+	#  my $pname;
 
-	  if(keys %pnames == 1){
-		#die("Found inconsistent probe names between arrays:\t".$probe->dbID.' has names '.join(', ', keys %pnames).'.');
-		($pname) = keys %pnames;
-	  }
-	  else{
+#	  if(keys %pnames == 1){
+#		#die("Found inconsistent probe names between arrays:\t".$probe->dbID.' has names '.join(', ', keys %pnames).'.');
+#		($pname) = keys %pnames;
+#	  }
+	##  else{
 
-		#This will not match arrays_per_object
-		#And so will not get logged if orphan!
-		$pname = 'MULTI_NAME'
-	  }
+	#	#This will not match arrays_per_object
+	#	#And so will not get logged if orphan!
+	#	$pname = 'MULTI_NAME'
+	#  }
 
 	  $probeset_id    = '';
 	  $probeset_name  = '';
-	  $log_name       = $transcript_sid."\t\t".$pname;
-	  $transcript_key = $transcript_sid.':'.$dbID.':'.$pname;	
+	  #Probe arrays are collapsed slightly differently as there is no probeset to restrict
+	  #the collapse within, any probe across all the available arrays may be associated
+	  #i.e. we may have more than one probe name for the same sequence
+	  $log_name       = $transcript_sid."\t(".join(',', @{$arrays_per_object{$probe_id}{names}}).")\t${probe_id}";
+	  $transcript_key = $transcript_sid.':'.$probe_id;	
 	}
 
 
@@ -1094,220 +1095,250 @@ foreach my $transcript (@transcripts) {
 	}
 	elsif ($transcript->seq_region_strand != $feature->seq_region_strand){
 	  print OUT "Unmapped anti-sense ".$log_name."\n";
-	
-	
-	#if (! $no_triage) {		
-	#	#Use of internal dbID in identifier is dodge
-	#	#can we use the actual probe names here?
-	#	$um_obj = new Bio::EnsEMBL::UnmappedObject(
-	#											   -type                => 'probe2transcript',
-	#											   -analysis            => $analysis,
-	#											   -identifier          => $transcript_sid,
-	#											   -summary             => 'Anti-sense',
-	#											   -full_desc           => 'Probe mapped to opposite strand of transcript',
-	#											   -ensembl_object_type => 'Probe',
-	#											   -ensembl_id          => $dbID,
-	#											   -external_db_id      => $transc_edb_id
-	#											  );
-	#	&cache_and_load_unmapped_objects($um_obj);
-	#  }
 	  next;
 	}
 
-	#probeset here is only used for the logs?
-    #my $transcript_key = $transcript_sid . ":" . $probeset_id.":".$probeset_name;
 
-	#Handle flank mismatches
-	my $five_mismatch  = 0;
-	my $three_mismatch = 0;
-	my $feature_start  = $feature->seq_region_start;
-	my $feature_end    = $feature->seq_region_end;
-  
-	if($feature->cigar_line =~ /(^[0-9]+m)/){
-	  ($five_mismatch = $1) =~ s/m//;
-	  $feature_start += $five_mismatch;
-	}
 
-	if($feature->cigar_line =~ /([0-9]+m$)/){
-	  ($three_mismatch = $1) =~ s/m//;
-	  $feature_end -= $three_mismatch;
-	}
-	
-	#Now takes into account overhangs/end mis matches and internal mismatches??
-	#This is naive to the internal mismatch as it could be anywhere in the alignment
-	#Leave like this for now as it is very unlikely to happen and is currently on the conservative side
-	#Likely only to happen if the max mismatches are set high and there is a mis match close to but not at an end
-	my $min_overlap  = ($probe->length - $max_mismatches + ($feature->mismatchcount - $five_mismatch - $three_mismatch));
-	my $exon_overlap = $rr->overlap_size('exonic', $feature_start, $feature_end);
+	my $cigar_line = $feature->cigar_line;
 
-	#This could map like this
-	#exonutrextension
-	#---probe--------
-	#Where is maps to last exon and to the exonutrextension
-	#If we have no extension and it was just 1 bp overlap then we have to take acount of the potential 1bp mismatch position
-	#As could cause it to be mapped or not
-	#So we are accounting for end mismatches already, but not internal matches
-	
 
-   	### Pre compute some values for the flanks
-	#Can only be one of 4 values
-	#0          = Not flank
-	#1          = Flank used but no overlap
-	#three|five = Flank used and overlap present
-	my $flank_end     = 0;
-	my $flank_overlap = 0;
+	if($cigar_line =~ /D/){#ProbeTranscriptAlign
+	  #Do we skip this and just get all in one go by the external_id
+	  #e.g. the transcript ID?
+	  
+	  #my @xrefs = @{$dbentry_adaptor->fetch_all_by_Transcript($transcript)};
+	  #This will not return the ProbeFeature objects?
+	  #But we only need the probe ID to build the cache
+	  #so
 
-	#This assumes we only have one flank overlap!!!!!!!!!!!!!!!!!
-	#Unless we had a probe the full length of the transcript!!!!!
+	  my @dbentries = @{$feature->get_all_Transcript_DBEntries};
 
-	foreach my $end('3', '5'){
-	  $flank_overlap = $rr->overlap_size("${end}_exonutr", $feature_start, $feature_end) if $flanks{$end};
 
-	  if($flank_overlap){
-		$flank_end = $end;
-		last;
+	  if(@dbentries){
+		my $txref;
+		
+
+		foreach my $dbentry(@dbentries){
+		  
+		  if($dbentry->primary_id eq $transcript_sid){
+			$txref = 1;
+			
+
+			#We need to implement mismatch checking here as we can define different rules for alignment
+			#and annotation
+
+
+			#Add the probe count
+			if ($array_config{probeset_arrays}) {
+			  
+			  if (! $transcript_feature_info{$transcript_key}{$probe_id}) {
+				$transcript_feature_info{$transcript_key}{$probe_id} = 1;
+			  } else {
+				$transcript_feature_info{$transcript_key}{$probe_id}++;
+			  }
+			} 
+			else {
+			  $transcript_feature_info{$transcript_key}{$probe_id} ||= ();
+			  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, $linkage_annotation;
+			}
+			
+			#No need to add an xref as we already have one
+		  }
+		}
+		
+		if(! $txref){
+		  print OUT "Unmapped Gapped ProbeFeature ".$log_name."\n";
+		  
+		  if (!$no_triage) {		
+			$um_obj = new Bio::EnsEMBL::UnmappedObject(
+													   -type       => 'probe2transcript',
+													   -analysis   => $analysis,
+													   -identifier => $transcript_sid,
+													   -external_db_id => $transc_edb_id,
+													   -summary    => "Unmapped Gapped ProbeFeature",
+													   -full_desc  => "Gapped ProbeFeature did not match transcript structure",
+													   -ensembl_object_type => 'ProbeFeature',
+													   -ensembl_id => $feature_id,
+													  );
+			&cache_and_load_unmapped_objects($um_obj);
+			
+		  }
+		}
 	  }
 	}
+	else{#ProbeAlign
+
+	  #Handle flank mismatches
+	  my $five_mismatch  = 0;
+	  my $three_mismatch = 0;
+	  my $feature_start  = $feature->seq_region_start;
+	  my $feature_end    = $feature->seq_region_end;
+	  
+	  if($cigar_line =~ /(^[0-9]+m)/){
+		($five_mismatch = $1) =~ s/m//;
+		$feature_start += $five_mismatch;
+	  }
+	  
+	  if($cigar_line =~ /([0-9]+m$)/){
+		($three_mismatch = $1) =~ s/m//;
+		$feature_end -= $three_mismatch;
+	  }
+	
+	  #Now takes into account overhangs/end mis matches and internal mismatches??
+	  #This is naive to the internal mismatch as it could be anywhere in the alignment
+	  #Leave like this for now as it is very unlikely to happen and is currently on the conservative side
+	  #Likely only to happen if the max mismatches are set high and there is a mis match close to but not at an end
+	  my $min_overlap  = ($probe->length - $max_mismatches + ($feature->mismatchcount - $five_mismatch - $three_mismatch));
+	  my $exon_overlap = $rr->overlap_size('exonic', $feature_start, $feature_end);
+
+	  #This could map like this
+	  #exonutrextension
+	  #---probe--------
+	  #Where is maps to last exon and to the exonutrextension
+	  #If we have no extension and it was just 1 bp overlap then we have to take acount of the potential 1bp mismatch position
+	  #As could cause it to be mapped or not
+	  #So we are accounting for end mismatches already, but not internal matches
 	
 
-	### Test overlaps
-	if (($exon_overlap >= $min_overlap) ||
-		($flank_overlap >= $min_overlap)){
+	  ### Pre compute some values for the flanks
+	  #Can only be one of 4 values
+	  #0          = Not flank
+	  #1          = Flank used but no overlap
+	  #three|five = Flank used and overlap present
+	  my $flank_end     = 0;
+	  my $flank_overlap = 0;
 
+	  #This assumes we only have one flank overlap!!!!!!!!!!!!!!!!!
+	  #Fine...unless we had a probe the full length of the transcript!!!!!
 
+	  foreach my $end ('3', '5') {
+		$flank_overlap = $rr->overlap_size("${end}_exonutr", $feature_start, $feature_end) if $flanks{$end};
 
-	  #We don't need the feature dbIDs here(to add to the ProbeSet/Probe linkage_annotation
-	  #if we are storing the ProbeFeature xrefs
-	  #But we do want to pass the linkage annotation for single Probes
-	  #It is possible that we may get two matches of a single probe to a transcript
-	  #We should then change the linkage annotation to double/triple hit?
-
-	  #$transcript_feature_count{$transcript_key}{$dbID} ||= ();
-	  #push @{$transcript_feature_count{$transcript_key}{$dbID}}, $feature->dbID;
-
-
+		if ($flank_overlap) {
+		  $flank_end = $end;
+		  last;
+		}
+	  }
 	
 
+	  ### Test overlaps
+	  if (($exon_overlap >= $min_overlap) ||
+		  ($flank_overlap >= $min_overlap)) {
 
-	  #we inc here but we never use the count, just record the fact that is has mapped
-	  #Can we add this to the mapping annotation?
-	  #Do we need to store DBEntries for individual probes?
-	  #If we want to display them in ProbeSet panel yes.
-	  #As we currently only store Unmapped info for Probes
-	  #And ProbeSet for mapped info.
+		#We don't need the feature dbIDs here(to add to the ProbeSet/Probe linkage_annotation
+		#if we are storing the ProbeFeature xrefs
+		#But we do want to pass the linkage annotation for single Probes
+		#It is possible that we may get two matches of a single probe to a transcript
+		#We should then change the linkage annotation to double/triple hit?
+		#$transcript_feature_count{$transcript_key}{$dbID} ||= ();
+		#push @{$transcript_feature_count{$transcript_key}{$dbID}}, $feature->dbID;
+		#we inc here but we never use the count, just record the fact that is has mapped
+		#Can we add this to the mapping annotation?
+		#Do we need to store DBEntries for individual probes?
+		#If we want to display them in ProbeSet panel yes.
+		#As we currently only store Unmapped info for Probes
+		#And ProbeSet for mapped info.
 
 	 
-	  if($exon_overlap && $flank_overlap){
-		$linkage_annotation = "exon/${flank_end}' flank boundary";
-	  }
-	  elsif($exon_overlap){
-		$linkage_annotation = 'exon match';
-	  }
-	  else{#only flank over lap
-		$linkage_annotation = "${flank_end}' flank";
-	  }
+		if ($exon_overlap && $flank_overlap) {
+		  $linkage_annotation = "exon/${flank_end}' flank boundary";
+		} elsif ($exon_overlap) {
+		  $linkage_annotation = 'exon match';
+		} else {				#only flank over lap
+		  $linkage_annotation = "${flank_end}' flank";
+		}
 
-	  
-	  if($array_config{probeset_arrays}){
+		#Count the probe & add the ProbeFeature xref
+		if ($array_config{probeset_arrays}) {
 		
-		if(! $transcript_feature_info{$transcript_key}{$dbID}){
-		  $transcript_feature_info{$transcript_key}{$dbID} = 1;
+		  if (! $transcript_feature_info{$transcript_key}{$probe_id}) {
+			$transcript_feature_info{$transcript_key}{$probe_id} = 1;
+		  } else {
+			$transcript_feature_info{$transcript_key}{$probe_id}++;
+		  }
+		} else {
+		  $transcript_feature_info{$transcript_key}{$probe_id} ||= ();
+		  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, $linkage_annotation;
 		}
-		else{
-		  $transcript_feature_info{$transcript_key}{$dbID}++;
-		}
-	  }
-	  else{
-		$transcript_feature_info{$transcript_key}{$dbID} ||= ();
-		push @{$transcript_feature_info{$transcript_key}{$dbID}}, $linkage_annotation;
-	  }
 
+		add_xref($transcript_sid, $feature_id, 'ProbeFeature', $linkage_annotation);
+	  } else {					# must be intronic, intron-exon, intron-first|lastexon, five_prime_flank, three_prime_flank
+	  	  
+		#Ignore the first last exon classes and count these as intron-exon
+		#We only know if is intron-exon if we have a negative result for the flank extension
+		#So we could call this exon boundary instead?
+		#We only lose this if we don't extend at all.
 
-
-	  add_xref($transcript_sid, $feature->dbID, 'ProbeFeature', $linkage_annotation);
-	}
-	else { # must be intronic, intron-exon, intron-first|lastexon, five_prime_flank, three_prime_flank
-
-	  #Ignore the first last exon classes and count these as intron-exon
-	  #We only know if is intron-exon if we have a negative result for the flank extension
-	  #So we could call this exon boundary instead?
-	  #We only lose this if we don't extend at all.
-
-	  #Deal with intronic first
-	  my ($summary, $region);
+		#Deal with intronic first
+		my ($summary, $region);
 	  
-	  if(!( $exon_overlap || $flank_overlap)){
-		$summary = 'intronic';
-		$region  = 'intronic region';
-	  }
-	  elsif($exon_overlap){
+		if (!( $exon_overlap || $flank_overlap)) {
+		  $summary = 'intronic';
+		  $region  = 'intronic region';
+		} elsif ($exon_overlap) {
 
-		if(! $flank_overlap){
-		  #This can be no overlap or no flank
-		  #e.g. exon-intron boundary or 5|3' exon boundary
-		  #No way of telling so just call both of these exon boundary
-		  $summary = 'exon boundary';
-		  $region  = $summary;
-		}
-		else{
-		  #This has to be a flank boundary
+		  if (! $flank_overlap) {
+			#This can be no overlap or no flank
+			#e.g. exon-intron boundary or 5|3' exon boundary
+			#No way of telling so just call both of these exon boundary
+			$summary = 'exon boundary';
+			$region  = $summary;
+		  } else {
+			#This has to be a flank boundary
+			$summary = "${flank_end}' flank boundary";
+			$region  = $summary;
+		  }
+		} else {				#only flank over lap
 		  $summary = "${flank_end}' flank boundary";
 		  $region  = $summary;
 		}
-	  }
-	  else{#only flank over lap
-		$summary = "${flank_end}' flank boundary";
-		$region  = $summary;
-	  }
 
 
-	  #No this could also over lap the 5' or 3' ends and/or intron depending on exon size?
-	  #What about exon/utr overlap, this would be a valid hit but would not be caught by this overlap method?!
-	  #Unless overlap method takes into account adjacent exons for UTRs
-	  #UTRs included in exons?! So not point in doing UTR overlap 
-	  #Unless we're extending, then we need to be mindful probes which may overlap short UTR and last/first coding exon
-	  #e.g.
-	  #last exon
-	  #      UTR
-	  #         extension
-	  #     probe
+		#No this could also over lap the 5' or 3' ends and/or intron depending on exon size?
+		#What about exon/utr overlap, this would be a valid hit but would not be caught by this overlap method?!
+		#Unless overlap method takes into account adjacent exons for UTRs
+		#UTRs included in exons?! So not point in doing UTR overlap 
+		#Unless we're extending, then we need to be mindful probes which may overlap short UTR and last/first coding exon
+		#e.g.
+		#last exon
+		#      UTR
+		#         extension
+		#     probe
 
-	  #The probe in the above alignment would not be caught!
-	  #We need to treat the 5' and 3' + extensions separately and redundantly
-	  #So we know where this has failed?
-	  #Still won't know exactly where the fail is?
+		#The probe in the above alignment would not be caught!
+		#We need to treat the 5' and 3' + extensions separately and redundantly
+		#So we know where this has failed?
+		#Still won't know exactly where the fail is?
 
-	  #Is we get exon and a UTR result we know it must be the first or last exon
-	  #If we get just a UTR result we know it is just the UTR or the very 5' or 3' end
-	  #if we get just an exon we know it is an internal exon or an exon/intron
-	  #If none of the above we know it is fully intronic
+		#Is we get exon and a UTR result we know it must be the first or last exon
+		#If we get just a UTR result we know it is just the UTR or the very 5' or 3' end
+		#if we get just an exon we know it is an internal exon or an exon/intron
+		#If none of the above we know it is fully intronic
 
-	  #This only counts if we do some extension
-	  #Otherwise the exonutr and exon values will be exactly the same!
-	  #So we need to test the flanks value before making this assumption!
+		#This only counts if we do some extension
+		#Otherwise the exonutr and exon values will be exactly the same!
+		#So we need to test the flanks value before making this assumption!
 
-	  #Use probe dbID instead of name as this can vary across arrays
-	  print OUT "Unmapped $summary ".$log_name."\n";
+		#Use probe dbID instead of name as this can vary across arrays
+		print OUT "Unmapped $summary ".$log_name."\n";
 	  
-	  if (!$no_triage) {		
-		$um_obj = new Bio::EnsEMBL::UnmappedObject(
-												   -type       => 'probe2transcript',
-												   -analysis   => $analysis,
-												   -identifier => $transcript_sid,
-												   -external_db_id => $transc_edb_id,
-												   -summary    => "Unmapped $summary",
-												   -full_desc  => "Probe mapped to $region of transcript",
-												   -ensembl_object_type => 'Probe',
-												   -ensembl_id => $dbID,
-												  );
-		&cache_and_load_unmapped_objects($um_obj);
+		if (!$no_triage) {		
+		  $um_obj = new Bio::EnsEMBL::UnmappedObject(
+													 -type       => 'probe2transcript',
+													 -analysis   => $analysis,
+													 -identifier => $transcript_sid,
+													 -external_db_id => $transc_edb_id,
+													 -summary    => "Unmapped $summary",
+													 -full_desc  => "Probe mapped to $region of transcript",
+													 -ensembl_object_type => 'ProbeFeature',
+													 -ensembl_id => $feature_id,
+													);
+		  &cache_and_load_unmapped_objects($um_obj);
+		}
 	  }
 	}
   }
-
-
-  #warn "after probe features";
-
 
   #Now get ProbeFeature IdentityXrefs for each transcript
 
@@ -1323,14 +1354,25 @@ foreach my $transcript (@transcripts) {
   #Not for Probe, ProbeFeature or FeatureType. Put this in storable and restrict to appropriate classes?
   #ProbeFeature and all features have to inherit from Feature, so would need replicate this between Bio::EnsEMBL::Funcgen::Feature and funcgen Storable. Or can we just put the Funcgen storable first in the ISA array, so it overrides just for those functions
 
-  #Do not store extra DBEntry here as we already have it
+  #Do not store extra DBEntry here as we already have it in the IDXref?
   #Just count and deal with promiscuous probes
   #Can we get the linkage_annotation from above by match the feature ids in a cache?
+
   #No as we are storing IDXref on Probes not ProbeFeatures
   #Can we ditch the IDXref and just have the cigarline in probe_feature
   #We lose some information this way i.e. mismatches? True full length alignment
   #Or are we capturing this in probe_feature now?
 
+  #Yes we need to change ProbeTranscriptAlign to use normal xrefs to ProbeFeatures rather than 
+  #IDXrefs to Probes
+  #This will maintain all the 'annotation' xrefs at the xref object level.
+  #And all the contributing feature xrefs at the feature level.
+
+  #Must make sure we change the rollback methods to account for this!
+  
+  #What is the most efficient way of retrieving the transcript link?
+  #If there is an existing ProbeFeature DBEntry then count and skip overlap?
+  #Skip overlap if prob feature cigar line has has D
 
 
 
@@ -1338,72 +1380,39 @@ foreach my $transcript (@transcripts) {
 }
 
 
-#Now done earlier to catch array problems before we start the mapping/storing
-#cache_arrays_per_object($probe_db);
-
-$Helper->log_header('Writing xrefs', 0, 'append_date');
+$Helper->log_header("Writing @array_names Xrefs", 0, 'append_date');
 my $um_cnt = 0;
 my $linkage_annotation;
 
 # now loop over all the mappings and add xrefs for those that have a suitable number of matches
 #values can be a simple count or an array of annotations depending on probeset_arrays
- warn "Before xrefs Got ".scalar(keys %arrays_per_object)." objects\n";
-
 
 foreach my $key (keys %transcript_feature_info) {
 
-  my ($transcript_sid, $object_id, $object_name) = split (/:/, $key);
-  my $object_key = $object_id.':'.$object_name;
-  
-  #pname can be either probeset or probe name
-  #Or could be
-  #$transcript_key = $transcript_sid."::".$probe->get_probename;	
-  #Now way of knowing whether these are non-probeset arrays by this point?
-
-
-  # store one xref/object_xref for each array-probeset-transcript combination
-  #Let's change this so that we only do one per ProbeSet
-  #This will screw the counts!? Can we not add the array names to the DBEntry also?
-
-  #my @arrays = split (/ /, $arrays_per_probeset{$probeset_id});
-  #my @arrays = @{$arrays_per_probeset{$probeset_id}};
-  
-
-
-  #foreach my $array (split (/ /, $arrays_per_probeset{$probeset_id})) {	
-  #Not sure about this?
-  #If we're restricting the an array list, then we're ignoring the genuine array relationship
-  #Which may give spurious results
-  #We need to think how we're rolling back xrefs and unmapped objects anyway
-  #As these are done one a probe_set/probe level, not an array level
-  #So we mayve have duplicates if we don't clean
-  #But we have no way of cleaning on an array level without deleting all
-  #Can we clean on a probe/probeset level?
-  
-  
-  #This should never happen now, as we're enforcing running on all associated arrays
-  #next if (@arrays && find_in_list($array, @arrays,) == -1 );
-  
- 
-  my $probeset_size = $probeset_sizes{$object_id};
+  my ($transcript_sid, $ensembl_id) = split (/:/, $key);
+   
+  #ensembl_id pname can be either probeset or probe name
+  my $probeset_size = $probeset_sizes{$ensembl_id};
   #This should always be 1 for non probeset_arrays
 
+
+  
   #This is the distinct number of probes, not features!
   #i.e. probe could hit twice, do we need to handle this?
+  #For non-probeset arrays the key in  %{transcript_feature_info{xref_object_id}}
+  #Has will be the same as the xref_object_id i.e. a probe_id
   my $hits = ($array_config{probeset_arrays}) ?  scalar(keys %{$transcript_feature_info{$key}}) 
-	: scalar(@{$transcript_feature_info{$key}{$object_id}});
+	: scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
   
 
-  #print OUT "$hits hits for $object_key\n";
 
-
-  #warn "$hits / $probeset_size hits for $object_key vs $transcript_sid\n";
+  my $id_names = $ensembl_id.'('.join(',', @{$arrays_per_object{$ensembl_id}{names}}).')';
 
   if ($hits / $probeset_size >= $mapping_threshold) {
 	#This is inc'ing an undef?
 
 	#We also need to report xref_name here for logs
-	$transcripts_per_object{$object_key}++;
+	$transcripts_per_object{$ensembl_id}++;
 	
 
 	###This is why we can't run on chr slices
@@ -1411,7 +1420,7 @@ foreach my $key (keys %transcript_feature_info) {
 	#We need to chunk on probesets to parallelise
 	
 	
-	if ($transcripts_per_object{$object_key} <= $max_transcripts) {
+	if ($transcripts_per_object{$ensembl_id} <= $max_transcripts) {
 	  
 	  #So we're passing these tests for xrefs of the opposite strand
 	  
@@ -1434,22 +1443,27 @@ foreach my $key (keys %transcript_feature_info) {
 	  }
 	  else{ 
 
+		#Hits here is number of distinct hiuts for a given probe dbIDs
+		#Not features
+		#Therefore for non-probeset arrays this will always be 1?
+
 		if($hits > 1){
 		  $linkage_annotation = "Probe matches $hits times";
 		}
 		else{
-		  $linkage_annotation = 'Probe matches '.$transcript_feature_info{$key}{$object_id}->[0];
+		  die("This should never happen!");
+		  $linkage_annotation = 'Probe matches '.$transcript_feature_info{$key}{$ensembl_id}->[0];
 		}
 	  }
 
-	  add_xref($transcript_sid, $object_id, $xref_object, $linkage_annotation);
-	  print OUT "$object_key\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
+	  add_xref($transcript_sid, $ensembl_id, $xref_object, $linkage_annotation);
+	  print OUT "$id_names\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
 	  
 	}
 	else {
 	  #Change this to print at end so we can add the reall total number of transcripts
-	  print OUT "$object_key\t$transcript_sid\tpromiscuous\t${hits}/$probeset_size\tCurrentTranscripts".$transcripts_per_object{$object_key}."\n";
-	  push @{$promiscuous_objects{$object_id}}, $transcript_sid;
+	  print OUT "$id_names\t$transcript_sid\tpromiscuous\t${hits}/$probeset_size\tCurrentTranscripts".$transcripts_per_object{$ensembl_id}."\n";
+	  push @{$promiscuous_objects{$ensembl_id}}, $transcript_sid;
 	}
 	
   } 
@@ -1457,7 +1471,7 @@ foreach my $key (keys %transcript_feature_info) {
 	#This will never happen for single probes
 
 
-	print OUT "$object_key\t$transcript_sid\tinsufficient\t${hits}/${probeset_size} in ProbeSet\n";
+	print OUT "$id_names\t$transcript_sid\tinsufficient\t${hits}/${probeset_size} in ProbeSet\n";
 	
 	if (!$no_triage) {
 	  
@@ -1469,6 +1483,7 @@ foreach my $key (keys %transcript_feature_info) {
 												 -type       => 'probe2transcript',
 												 -analysis   => $analysis,
 												 -identifier => $transcript_sid,
+												 -external_db_id => $transc_edb_id,
 												 -summary    => "Insufficient hits",
 												 -full_desc  => "Insufficient number of hits ${hits}/${probeset_size} in ProbeSet",
 												 -ensembl_object_type => 'ProbeSet',
@@ -1481,7 +1496,11 @@ foreach my $key (keys %transcript_feature_info) {
   # }
 }
 
- warn "Before promiscuous Got ".scalar(keys %arrays_per_object)." objects\n";
+
+# Find probesets that don't match any transcripts at all, write to log file
+#Why is this sub'd, we only call it once?
+log_orphan_probes();
+
 
 #Now update promiscuous probesets
 $Helper->log("Updating ".scalar(keys %promiscuous_objects).' promiscuous probesets', 0 , 'append_date');
@@ -1523,16 +1542,14 @@ foreach my $object_id(keys %promiscuous_objects){
 
 }
 
-# Find probesets that don't match any transcripts at all, write to log file
-#Why is this sub'd, we only call it once?
-log_orphan_probes();
+
 
 close (OUT);
 
 # upload triage information if required
 if (!$no_triage) {
 
-  $Helper->log("Uploading remaining unmapped objects to the xref DB", 0, 'append_date');
+  #$Helper->log("Uploading remaining unmapped objects to the xref DB", 0, 'append_date');
   $unmapped_object_adaptor->store(@unmapped_objects);
   $um_cnt += scalar(@unmapped_objects);
   $Helper->log("Loaded a total of $um_cnt UnmappedObjects to xref DB");
@@ -1559,15 +1576,38 @@ $Helper->log_header("Top 5 most mapped transcripts:");
 
 #sort keys with respect to values.
 my @tids = sort { $transcript_xrefs{$b} <=>  $transcript_xrefs{$a} } keys %transcript_xrefs;
-my @tcounts = sort { $b <=> $a }values %transcript_xrefs;
+my @tcounts = sort { $b <=> $a } values %transcript_xrefs;
 
 for my $i(0..4){
-  $Helper->log("Transcript $tids[$i] mapped $tcounts[$i] times");
+  $Helper->log("$tids[$i] mapped $tcounts[$i] times");
 }
 
-#Most mapped probesets?
+#Most (un)mapped probesets?
 
-$Helper->log_header('Completed probe mapping', 0, 'append_date');
+#$transcripts_per_object{$ensembl_id} <= $max_transcripts
+
+$Helper->log_header("Top 5 most mapped ${xref_object}s(inc. promoscuous):");
+my @xo_ids = sort { $transcripts_per_object{$b} <=>  $transcripts_per_object{$a} } keys %transcripts_per_object;
+my @xo_counts = sort { $b <=> $a } values %transcripts_per_object;
+my $num_ids = scalar(@xo_counts);
+
+for my $i(0..4){
+  $Helper->log("$xo_ids[$i] mapped $xo_counts[$i] times");
+}
+
+
+$Helper->log_header("Top 5 most mapped ${xref_object}s(no promiscuous):");
+#Now we need to grep out those counts which are less than the max_transcripts
+#As these are ordered we can then simply splice the relative elements from the id array
+@xo_counts = grep($_ <= $max_transcripts, @xo_counts);
+my $num_ids = $num_ids - scalar(@xo_counts);
+splice(@xo_ids, 0, $num_ids);
+
+for my $i(0..4){
+  $Helper->log("$xo_ids[$i] mapped $xo_counts[$i] times");
+}
+
+$Helper->log_header("Completed Transcript $xref_object annotation for @array_names", 0, 'append_date');
 
 
 
@@ -1614,26 +1654,20 @@ sub log_orphan_probes {
 	return;
   }
 
-  $Helper->log_header("Logging probesets that don't map to any transcripts");
+  $Helper->log("Logging probesets that don't map to any transcripts", 0, 'append_date');
 
   my ($object_id, $object_name);
 
-
-  #warn Data::Dumper::Dumper(\%arrays_per_object)."\n";
-
-  warn "Before log orphan Got ".scalar(keys %arrays_per_object)." objects\n";
-
-  foreach my $object_key(keys %arrays_per_object) {
-
-	#warn "object key is x${object_key}x";
-
+  foreach my $ensembl_id(keys %arrays_per_object) {
 	
-    if (!$transcripts_per_object{$object_key}) {
+    if (!$transcripts_per_object{$ensembl_id}) {
 
-	  ($object_id, $object_name) = split/:/, $object_key;
+	  #($object_id, $object_name) = split/:/, $object_key;
 	  
+	  my $names = join(',', @{$arrays_per_object{$ensembl_id}{names}});
+
 	  #Do we need to add dbID here in case of redundant unlined probe/set names?
-      print OUT "$object_key\tNo transcript mappings\n";
+      print OUT "$ensembl_id($names)\tNo transcript mappings\n";
 
       if (!$no_triage){
 		
@@ -1641,14 +1675,14 @@ sub log_orphan_probes {
 		#Can we just not use an identifier and then link to the transcript DB?
 
 
-		$um_obj = new Bio::EnsEMBL::UnmappedObject(-type       => 'probe2transcript',
+		$um_obj = new Bio::EnsEMBL::UnmappedObject(-type           => 'probe2transcript',
 												   -external_db_id => $transc_edb_id,
-												   -analysis   => $analysis,
-												   -identifier => 'NO_MAPPINGS',
-												   -ensembl_id => $object_id,
+												   -analysis       => $analysis,
+												   -identifier     => 'NO_TRANSCRIPT_MAPPINGS',
+												   -ensembl_id     => $ensembl_id,
 												   -ensembl_object_type => $xref_object,
-												   -summary    => 'No transcript mappings',
-												   -full_desc  => $xref_object.' did not map to any transcripts');
+												   -summary             => 'No transcript mappings',
+												   -full_desc           => $xref_object.' did not map to any transcripts');
 		
 		&cache_and_load_unmapped_objects($um_obj);
       }
@@ -1684,28 +1718,18 @@ sub cache_arrays_per_object {
   }
 
   my $sth = $db->dbc()->prepare($sql);
-  my ($object_id, $array, $probeset_size, $object_key, $object_name, @arrays);
+  my ($object_id, $array, $probeset_size, $object_key, $object_name, @arrays, @names);
   $sth->execute();
   $sth->bind_columns(\$object_id, \$object_name, \$array, \$probeset_size);
   my $first_record = 1;
-  my ($last_object_name, $last_object_id, $last_probeset_size);
+  my ($last_object_id, $last_probeset_size);
 
 
   while($sth->fetch()){
 	#print "$object_id, $object_name, $array, $probeset_size\n";
 
     if ($object_id eq $last_object_id || $first_record) {
-	  push @arrays, $array;
-	
 	  
-	  if(! $first_record){
-		#We only bothered if it has a different name
-		
-		if(($last_object_name ne $object_name)){
-		  $object_key = $object_id.':MULTI_NAME';
-		}
-	  }
-
 	  if(! $first_record && ($probeset_size !=  $last_probeset_size)){
 		#This may be incorrect if we have unlinked arrays, but they have they use the same probeset names
 		#We should only run linked arrays together
@@ -1718,42 +1742,30 @@ sub cache_arrays_per_object {
 		die("Found probe/probeset(dbID=$object_id) with differing size between arrays(@arrays)");
 	  }
 
+	  push @arrays, $array;
+	  push @names, $object_name;
 	  $first_record = 0;
 	  $last_probeset_size = $probeset_size;
-	  $last_object_name   = $object_name;
 	  $last_object_id     = $object_id;
-
-
-	  #print "Adding $array $object_id:$object_name\n";
-	  
     } 
 	else {
-	  #
-	  $object_key                        ||= $last_object_id.':'.$last_object_name;
-
+	  #Populate last entry
+	  @{$arrays_per_object{$last_object_id}{arrays}} = @arrays;
+	  @{$arrays_per_object{$last_object_id}{names}}  = @names;
+	  $probeset_sizes{ $last_object_id }             = $last_probeset_size;
 	  
-
-	  @{$arrays_per_object{$object_key}}   = @arrays;
-	  $probeset_sizes{ $last_object_id } ||= $last_probeset_size;
-	  
-	  my $key_no = scalar(keys %arrays_per_object);
-	  #print "Setting $key_no $object_key with @arrays and size $last_probeset_size\n";
-
-	  undef $object_key;
+	  #Start new entry
 	  $last_probeset_size = $probeset_size;
-	  $last_object_name   = $object_name;
 	  $last_object_id     = $object_id;
 	  @arrays = ($array);
+	  @names  = ($object_name);
     }
   }
 
-  #Now deal with last record.
-  $object_key                        ||= $last_object_id.':'.$last_object_name;
-  @{$arrays_per_object{$object_key}}   = @arrays;
-  $probeset_sizes{ $last_object_id } ||= $last_probeset_size;
-
-
-   warn "After cache Got ".scalar(keys %arrays_per_object)." objects\n";
+  #Now deal with last record
+  @{$arrays_per_object{$last_object_id}{arrays}} = @arrays;
+  @{$arrays_per_object{$last_object_id}{names}}  = @names;
+  $probeset_sizes{ $last_object_id }             = $last_probeset_size;
 
   $sth->finish();
 }
@@ -1786,16 +1798,28 @@ sub add_xref {
   #Maybe add linkage_type here?
 
  
-
-  # TODO - this only works if external_db db_name == array name; currently needs
-  # some manual hacking to acheive this
-
   #Some counts
   #Add key on type of xref?
   #Will this warn as not defined?
 
-  foreach my $array(@{$arrays_per_object{$ensembl_id}}){
-	$array_xrefs{$array}++;
+
+  
+  #Here the key is not the ensembl_id!
+  #The key is probe/setdbID:name|MULTI_NAME
+
+  #This defines the value as undef is the key doesn't exist
+  #Were counting all xrefs here not just Probe/ProbeSet xrefs
+  #But also ProbeFeature xrefs which is why we're getting probe feature ids in 
+  #what was initially a probe/probeset cache
+
+  #We don't need to count the ProbeFeature xrefs
+  #We are capturing this info in UnmappedObjects
+
+  if($object_type ne 'ProbeFeature'){
+	
+	foreach my $array(@{$arrays_per_object{$ensembl_id}{arrays}}){
+	  $array_xrefs{$array}++;
+	}
   }
 
   $transcript_xrefs{$transcript_sid}++;
@@ -1851,7 +1875,7 @@ sub delete_existing_xrefs {
 
   warn "Should we back up her before delete or leave this to the env?";
 
-  my $sql;
+  my ($sql, $row_cnt);
   my $array_names = '"'.join('", "', @array_names).'"';
   my $text = "Deleting $species";
   $text .= ($array_names) ? "($array_names)" : 'ALL';
@@ -1864,14 +1888,26 @@ sub delete_existing_xrefs {
   #Need to add ensembl_core_Species external_db
   #Do we need to add db_release to this?
   
-  $Helper->log('Deleting UnmappedObjects');#: Failed Probes");
-  $sql = 'DELETE uo FROM analysis a, unmapped_reason ur, unmapped_object uo, array ar, array_chip ac, probe p WHERE a.logic_name ="probe2transcript" AND a.analysis_id=uo.analysis_id AND uo.unmapped_reason_id=ur.unmapped_reason_id and ar.name in ('.$array_names.') and ar.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.probe_id=uo.ensembl_id and uo.ensembl_object_type="Probe" and uo.external_db_id='.$transc_edb_id;
+  
+   
+
+  $Helper->log("Deleting ProbeFeature and $xref_object UnmappedObjects");#: Failed Probes");
+  $sql = 'DELETE uo FROM analysis a, unmapped_object uo, array ar, array_chip ac, probe p, probe_feature pf WHERE a.logic_name ="probe2transcript" AND a.analysis_id=uo.analysis_id AND ar.name in ('.$array_names.") and ar.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=${transc_edb_id}";
   #.' and edb.db_release="'.$schema_build.'"';
  
-  my $row_cnt = $xref_db->dbc->do($sql);
+  $row_cnt = $xref_db->dbc->do($sql);
   $row_cnt = 0 if $row_cnt eq '0E0';
   $Helper->log("Deleted $row_cnt records");	
   
+  $Helper->log("Deleting $xref_object UnmappedObjects");#: Failed Probes");
+  my $probe_join = ($xref_object eq 'Probe') ? 'p.probe_id=uo.ensembl_id' : 'p.probe_set_id=uo.ensembl_id';
+
+  $sql = 'DELETE uo FROM analysis a, unmapped_object uo, array ar, array_chip ac, probe p WHERE a.logic_name ="probe2transcript" AND a.analysis_id=uo.analysis_id AND ar.name in ('.$array_names.") and ar.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and uo.ensembl_object_type='$xref_object' and $probe_join and uo.external_db_id=${transc_edb_id}";
+  #.' and edb.db_release="'.$schema_build.'"';
+ 
+  $row_cnt = $xref_db->dbc->do($sql);
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $Helper->log("Deleted $row_cnt records");	
   
   
   #Change to ProbeFeature DBEntry? Not complete in ProbeAlign
