@@ -19,6 +19,7 @@ my $feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
 	-START         => 1_000_000,
 	-END           => 1_000_024,
 	-STRAND        => -1,
+    -ANALYSIS      => $analysis,
 ); 
 
 #build_id/version, seq_region_id, seq_region_strand -  from slice?
@@ -82,12 +83,16 @@ use vars qw(@ISA);
         Database adaptor.
   Example    : my $feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
 				   -PROBE         => $probe,
-				   -MISMATCHCOUNT => 0,#remove?
+				   -MISMATCHCOUNT => 0,
 				   -SLICE         => $chr_1_slice,
 				   -START         => 1_000_000,
 				   -END           => 1_000_024,
 				   -STRAND        => -1,
-								      #-ANALYSIS?CIGARLINE!!!!!!!!!!
+				   -ANALYSIS      => $analysis,
+                   -CIGARLINE     => '15M2m3d4M', 
+                   #Can represent transcript alignment as gapped genomic alignments
+                   #D(eletions) representing introns
+                   #Lowercase m's showing sequence mismatches
 			   ); 
   Description: Constructor for ProbeFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::ProbeFeature
