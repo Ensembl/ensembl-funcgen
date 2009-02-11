@@ -358,7 +358,10 @@ GetOptions(
 #Make arrays mandatory?
 #Not sensible to AFFY AFFY_ST and ILLUMINA at same time!
 
-$filename ||= "${xref_dbname}_probe2transcript";
+#Set log type so we are no over writing to the same files for different 
+#format, or custom formats
+my $log_type = $format || $$;
+$filename ||= "${xref_dbname}_${log_type}_probe2transcript";
 $main::_log_file ||=  "./${filename}.log";
 my $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;
 my $hostname = `hostname`;
@@ -676,9 +679,9 @@ foreach my $record(@analysis_info){
 	die("Found probe_feature analysis without a corresponding analysis entry:\t$lname");
   }
 	
-  if(! ($lname =~ /_ProbeAlign/ || $lname =~ /_ProbeTranscriptAlign/)){
-	die("Found unexpected/mismatched analysis entry in probe_feature table:\t$lname");
-  }
+#  if(! ($lname =~ /_ProbeAlign/ || $lname =~ /_ProbeTranscriptAlign/)){
+#	die("Found unexpected/mismatched analysis entry in probe_feature table:\t$lname");
+  #}
 }
 
 
@@ -1124,10 +1127,11 @@ foreach my $transcript (@transcripts) {
 		  if($dbentry->primary_id eq $transcript_sid){
 			$txref = 1;
 			
-
 			#We need to implement mismatch checking here as we can define different rules for alignment
 			#and annotation
 
+
+			warn "Using ProbeFeature xrefs for $transcript_sid";
 
 			#Add the probe count
 			if ($array_config{probeset_arrays}) {
@@ -1140,10 +1144,11 @@ foreach my $transcript (@transcripts) {
 			} 
 			else {
 			  $transcript_feature_info{$transcript_key}{$probe_id} ||= ();
-			  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, $linkage_annotation;
+			  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, 'exon-exon match';
 			}
 			
 			#No need to add an xref as we already have one
+			#last;#likely only ever to be one DBEntry/ProbeFeature
 		  }
 		}
 		
@@ -1382,7 +1387,6 @@ foreach my $transcript (@transcripts) {
 
 $Helper->log_header("Writing @array_names Xrefs", 0, 'append_date');
 my $um_cnt = 0;
-my $linkage_annotation;
 
 # now loop over all the mappings and add xrefs for those that have a suitable number of matches
 #values can be a simple count or an array of annotations depending on probeset_arrays
@@ -1405,6 +1409,7 @@ foreach my $key (keys %transcript_feature_info) {
 	: scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
   
 
+  warn "$key has hits $hits:".join(', ', @{$transcript_feature_info{$key}{$ensembl_id}});
 
   my $id_names = $ensembl_id.'('.join(',', @{$arrays_per_object{$ensembl_id}{names}}).')';
 
@@ -1451,7 +1456,7 @@ foreach my $key (keys %transcript_feature_info) {
 		  $linkage_annotation = "Probe matches $hits times";
 		}
 		else{
-		  die("This should never happen!");
+		  die("This should never happen! Well maybe it could if a probe matches to a given transcript more than once");
 		  $linkage_annotation = 'Probe matches '.$transcript_feature_info{$key}{$ensembl_id}->[0];
 		}
 	  }
@@ -1600,7 +1605,7 @@ $Helper->log_header("Top 5 most mapped ${xref_object}s(no promiscuous):");
 #Now we need to grep out those counts which are less than the max_transcripts
 #As these are ordered we can then simply splice the relative elements from the id array
 @xo_counts = grep($_ <= $max_transcripts, @xo_counts);
-my $num_ids = $num_ids - scalar(@xo_counts);
+$num_ids = $num_ids - scalar(@xo_counts);
 splice(@xo_ids, 0, $num_ids);
 
 for my $i(0..4){
@@ -1881,67 +1886,14 @@ sub delete_existing_xrefs {
   $text .= ($array_names) ? "($array_names)" : 'ALL';
   $Helper->log("$text unmapped records and xrefs for probe2transcript...this may take a while");
 
-  #Can this be speeded up by deleting separately?
-  #Can't split ur and uo as would orphan ur records from analysis_id.
- 
-  #These are core CoordSystem/Species and Transcript references to probe and probe_set
-  #Need to add ensembl_core_Species external_db
-  #Do we need to add db_release to this?
+  #can we pass an arrayref of ArrayChips here instead of doing it once foreach?
   
-  
-   
-
-  $Helper->log("Deleting ProbeFeature and $xref_object UnmappedObjects");#: Failed Probes");
-  $sql = 'DELETE uo FROM analysis a, unmapped_object uo, array ar, array_chip ac, probe p, probe_feature pf WHERE a.logic_name ="probe2transcript" AND a.analysis_id=uo.analysis_id AND ar.name in ('.$array_names.") and ar.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=${transc_edb_id}";
-  #.' and edb.db_release="'.$schema_build.'"';
- 
-  $row_cnt = $xref_db->dbc->do($sql);
-  $row_cnt = 0 if $row_cnt eq '0E0';
-  $Helper->log("Deleted $row_cnt records");	
-  
-  $Helper->log("Deleting $xref_object UnmappedObjects");#: Failed Probes");
-  my $probe_join = ($xref_object eq 'Probe') ? 'p.probe_id=uo.ensembl_id' : 'p.probe_set_id=uo.ensembl_id';
-
-  $sql = 'DELETE uo FROM analysis a, unmapped_object uo, array ar, array_chip ac, probe p WHERE a.logic_name ="probe2transcript" AND a.analysis_id=uo.analysis_id AND ar.name in ('.$array_names.") and ar.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and uo.ensembl_object_type='$xref_object' and $probe_join and uo.external_db_id=${transc_edb_id}";
-  #.' and edb.db_release="'.$schema_build.'"';
- 
-  $row_cnt = $xref_db->dbc->do($sql);
-  $row_cnt = 0 if $row_cnt eq '0E0';
-  $Helper->log("Deleted $row_cnt records");	
-  
-  
-  #Change to ProbeFeature DBEntry? Not complete in ProbeAlign
-  #This is more inline with the output of probe2transcript
-  #but the problem is that there is not way to discern between ProbeFeature oxs generated by ProbeAlign and this script
-  #and we don't want to delete the ones written by ProbAlign
-  #We need ox.analysis_id to differentiate
-  #v54?
-
-  $Helper->log("Deleting ProbeFeature xrefs");
-  $sql = 'DELETE ox FROM xref x, object_xref ox, external_db e, probe p, probe_feature pf, array_chip ac, array a WHERE x.external_db_id='.$transc_edb_id.' and x.xref_id=ox.xref_id AND ox.ensembl_object_type="ProbeFeature" AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name in ('.$array_names.')';
-  $row_cnt = $xref_db->dbc->do($sql);
-  $row_cnt = 0 if $row_cnt eq '0E0';
-  $Helper->log("Deleted $row_cnt records");	
-
-  
-  #Need to be mindful here that we do not also delete the Probe IdentityXrefs populated by the
-  #ProbeTranscriptAlign analysis(ProbeAlign module)
-
-  #For single probe arrays there will be duplication between the IDXref generated by the ProbeAlign
-  #and the more sparse DBEntry generated by this script
-  #What we need to do is not store DBEntries for IDXref probes 
-  #Just run through the mapping and handle the promiscuous probes and delete and store unampped object as appropriate.
-  #Are annotations in ProbeAlign sufficient? Are these comparable to exon/utr style annotations of genomic mappings?
-
-
-  #We need to only delete those which don't have an IDXref
-
-  $Helper->log("Deleting $xref_object xrefs");
-  my $probe_join = ($array_config{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
-  $sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE e.db_name='$transc_edb_name' and e.external_db_id=x.external_db_id and x.xref_id=ox.xref_id AND ox.ensembl_object_type='$xref_object' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name in ($array_names) and ox.linkage_annotation!='ProbeTranscriptAlign'";
-  $row_cnt = $xref_db->dbc->do($sql);
-  $row_cnt = 0 if $row_cnt eq '0E0';
-  $Helper->log("Deleted $row_cnt records");	
+  foreach my $array(values(%arrays)){
+	
+	foreach my $ac(@{$array->get_ArrayChips}){
+	  $Helper->rollback_ArrayChip($ac, 'probe2transcript');
+	}
+  }
 
   return;
 }
