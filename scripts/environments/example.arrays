@@ -28,13 +28,16 @@ export DB_PORT=3306
 export SPECIES=mus_musculus
 #This is used for accessing array directory
 export SPECIES_COMMON=Mouse
-export GENOMICSEQS=/path/to/your/soft/maksed/dusted/toplevel/including/non/ref/genome/sequence
 
-#See arrays.env $VALID_ARRAY_DESIGNS
-export ARRAY_DESIGN='AFFY_EXPRESSION'
+#These can be omited. You will be asked to use previously dumped files or whether you
+#want to create new dump files
+export GENOMICSEQS=/path/to/your/soft/maksed/dusted/toplevel/including/non/ref/genome.fasta
+export TRANSCRIPTSEQS=/path/to/your/ensembl/dumped/transcript.fasta
 
-#Will run GENOMIC and TRANSCRIPT mapping
-export MAPPING_TYPES='GENOMIC TRANSCRIPT'
+#Must be present in $VALID_ARRAY_FORMATS
+#Will default to what is present in $ARRAYS_HOME | `arraysdir`
+export ARRAY_FORMATS='AFFY_UTR'
+
 
 ### Optional
 #Comment out to use defaults
@@ -62,6 +65,21 @@ export DNADB_PASS=$2
 #export PDB_NAME=
 #export PDB_PORT=
 
+#Others with defaults listed:
+#Set to 1 for to run in multi species mode i.e. you are using an Ensembl Genomes collection DB
+#MULTI_SPECIES=
+
+#Set to null to run on local machine
+#export BSUB_CMD='bsub -J ${SPECIES_COMMON}_${format}_probe2transcript -q long -R "select[mem>15000] rusage[mem=15000]" -M 15000000 -o ${DB_HOME}/mapper.out -e ${DB_HOME}/mapper.err'
+#For more/larger associated arrays
+#May require moving $WORKDIR to filesystem accessible from host i.e. /nfs/acari for hugemem
+#export BSUB_CMD='bsub -J ${SPECIES_COMMON}_${format}_probe2transcript -q hugemem -R "select[mem>30000] rusage[mem=30000]" -M 30000000 -o ${DB_HOME}/mapper.out -e ${DB_HOME}/mapper.err'
+
+#See $EFG_SRC/scripts/array_mapping/probe2transcript.pl for other params
+#PROBE2TRANSCRIPT_PARAMS='--calculate_utrs --utr_multiplier 1'
+
+#Remove TRANSCRIPT to do only GENOMIC alignment ProbeAlign
+#export ALIGN_TYPES='GENOMIC TRANSCRIPT'
 
 #Initialise the array mapping environment
 _InitEnv
