@@ -1838,8 +1838,9 @@ sub add_xref {
 	 #And should be actual version transcript sid?
 
 	 #object_xref data
-	 -info_type            => "Transcript",
-	 #-info_text            => $txt,#?
+	 #-info_type            => "Transcript",
+	 -info_type => 'MISC',
+	 -info_text            => 'TRANSCRIPT',#?
 	 -linkage_annotation   => $linkage_annotation,
 
 	 #external_db data
