@@ -1402,7 +1402,7 @@ sub rollback_ArrayChip{
 #  }
   
 
-  $self->log("Rolling back ArrayChip:\t".$ac->name);
+  $self->log("Rolling back ArrayChip $mode entries:\t".$ac->name);
   my ($row_cnt, $probe_join, $sql);
   $ac->adaptor->revoke_states($ac);
   my $species = $db->species;
@@ -1446,13 +1446,13 @@ sub rollback_ArrayChip{
 	$self->log("Deleting probe2transcript Xrefs and UnmappedObjects");
 
 	#Delete ProbeFeature UnmappedObjects	  
-	$sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND ar.array_id=ac.array_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
+	$sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
 	$row_cnt = $db->dbc->do($sql);
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature UnmappedObject records");
 	  
 	 #Delete ProbedFeature Xrefs/DBEntries
-	$sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id=".$ac->dbID;
+	$sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id=".$ac->dbID;
 	$row_cnt = $db->dbc->do($sql);
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature xref records");
@@ -1462,14 +1462,17 @@ sub rollback_ArrayChip{
 	  $probe_join = ($xref_object eq 'ProbeSet') ? 'p.probe_set_id' : 'p.probe_id';
 	  
 	  #Delete Probe/Set UnmappedObjects
-	  $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND uo.ensembl_object_type='$xref_object'AND $probe_join=uo.ensembl_id AND uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
+
+
+	  $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
+
 	  #.' and edb.db_release="'.$schema_build.'"'; 
 	  $row_cnt = $db->dbc->do($sql);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
-	  $self->log("Deleted $row_cnt probe2transcipt $xref_object UnmappedObject records");	
+	  $self->log("Deleted $row_cnt probe2transcript $xref_object UnmappedObject records");	
 
 	  #Delete Probe/Set Xrefs/DBEntries
-	  $sql = "DELETE x FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='$xref_object' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID;
+	  $sql = "DELETE x FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID;
 	  $row_cnt = $db->dbc->db_handle->do($sql);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->log("Deleted $row_cnt probe2transcript $xref_object xref records");
@@ -1486,7 +1489,7 @@ sub rollback_ArrayChip{
 	  
 	  $probe_join = ($xref_object eq 'ProbeSet') ? 'p.probe_set_id' : 'p.probe_id';
 	  
-	  $row_cnt = $db->dbc->db_handle->selectrow_array("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='$xref_object' and ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID);
+	  $row_cnt = $db->dbc->db_handle->selectrow_array("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='${xref_object}' and ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID);
 	  
 	  if($row_cnt){
 		throw("Cannot rollback ArrayChip(".$ac->name."), found $row_cnt $xref_object Xrefs. Pass 'force' argument or 'probe2transcript' mode to delete");
