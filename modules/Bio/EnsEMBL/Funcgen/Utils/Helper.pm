@@ -1359,31 +1359,31 @@ sub rollback_ResultFeatures{
 #So we currently never use this!
 #So IMPORTED status should be tied to CS id and Analysis id?
 
-#We may want to split this so we can just delete the mappings and leave the probes/probesets in place
-
 sub rollback_ArrayChip{
-  my ($self, $ac) = @_;
+  my ($self, $ac, $mode, $force) = @_;
+  
+  $mode ||= 'probe';
+  
+  if($mode && ($mode ne 'probe' &&
+			   $mode ne 'probe_feature' &&
+			   $mode ne 'ProbeAlign' &&
+			   $mode ne 'ProbeTranscriptAlign' &&
+			   $mode ne 'probe2transcript')){
+	throw("You have passed an invalid mode argument($mode), you must omit or specify either 'probe2transcript', 'probe', 'ProbeAlign, 'ProbeTranscriptAlign' or 'probe_feature' for all of the Align output");
+  }
+  
+  if($force && ($force ne 'force')){
+	throw("You have not specified a valid force argument($force), you must specify 'force' or omit");
+  }
 
   my $adaptor = $ac->adaptor || throw('ArrayChip must have an adaptor');
   my $db = $adaptor->db;
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $ac);
 
-
   #This is always the case as we register the association before we set the Import status 
   #Hence the 2nd stage of the import fails as we have an associated ExperimentalChip
-  #We need to make sure the ExperimentalChip and Channel have not been imported!!!
-
-
-  
-  warn "Also need to delete potential ProbeTranscriptAlign IdentityXrefs";
-  #For affy this may rollback ProbeTranscript IDXrefs which apply to multiple array chips
-  #And in fact all external_dbs?
-  #This may delete xrefs which are not easily recreated
-  #BackUp?
-  
-
-  warn "NOTE: rollback_ArrayChip. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";
-  
+  #We need to make sure the ExperimentalChip and Channel have not been imported!!! 
+  warn "NOTE: rollback_ArrayChip. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";  
   #Check for dependent ExperimentalChips
   #if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
 #	my %exps;
@@ -1402,55 +1402,173 @@ sub rollback_ArrayChip{
 #  }
   
 
-
   $self->log("Rolling back ArrayChip:\t".$ac->name);
+  my ($row_cnt, $probe_join, $sql);
   $ac->adaptor->revoke_states($ac);
+  my $species = $db->species;
 
-  
-  #Need to rollback feature here too!
-  #Don't need to rollback on a CS as we have no dependant EChips?
-  #Is this true?  Should we enforce a 3rd CoordSystem argument, 'all' string we delete all?
-
-
-  my $sql = 'DELETE ps from probe p, probe_set ps where p.array_chip_id='.$ac->dbID().' and p.probe_set_id=ps.probe_set_id';
-  if(! $db->dbc->do($sql)){
-	throw("ProbeSet rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
+  if(!$species){
+	throw('Cannot rollback probe2transcript level xrefs without specifying a species for the DBAdaptor');
   }
+  #Will from registry? this return Homo sapiens?
+  #Or homo_sapiens
+  ($species = lc($species)) =~ s/ /_/;
 
-  $sql = 'DELETE pf from probe p, probe_feature pf where p.array_chip_id='.$ac->dbID().' and p.probe_id=pf.probe_id';
-  if(! $db->dbc->do($sql)){
-	throw("ProbeFeature rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
-  }
+  my $transc_edb_name = "${species}_core_Transcript";
 
-  #We don't know the logic name, or can we build this from the array.format?
-  #Re-instate class in array? And swap meaning with format. do for v53!
-  #Just hack for now by embedding fetch_all_by_module
-  #my (@anal_ids) = @{$db->get_AnalysisAdaptor->generic_fetch("a.module='ProbeAlign'")};
-  #Grrrr! AnalysisAdaptor is not a standard BaseAdaptor implementation
+  #Maybe we want to rollback ProbeAlign and ProbeTranscriptAlign output separately so we 
+  #can re-run just one part of the alignment step.
 
-  my @anal_ids = @{$db->dbc->db_handle->selectall_arrayref("select analysis_id from analysis where module='ProbeAlign'")};
-  @anal_ids = map {$_= "@$_"} @anal_ids;
+ 
+  #We want this Probe(Transcript)Align rollback available in the environment
+  #So we can do it natively and before we get to the RunnableDB stage, 
+  #where we would be trying multiple rollbacks in parallel
+  #Wrapper script?
+  #Or do we keep it simple here and maintain probe_feature wide rollback
+  #And just the ProbeAlign/ProbeTranscriptAlign roll back in the environment?
 
-  if(@anal_ids){
-	$sql = 'DELETE ix, ox from identity_xref ix, object_xref ox, probe p, array_chip ac '.
-	  'WHERE ix.object_xref_id=ox.object_xref_id and ox.ensembl_object_type="Probe" and ox.ensembl_id=p.probe_id'.
-		' and p.array_chip_id='.$ac->dbID.' and ix.analysis_id in('.join(',', @anal_ids).')';
+    
+  #We can restrict the probe deletes using the ac_id
+  #We should test for other ac_ids using the same probe_id
+  #Then fail unless we have specified force delete
+
+  #These should be deleted for all other modes but only if force is set?
+  #This may delete xrefs for other ArrayChips
+
+  #The issues is if we need to specify force for one delete but don't want to delete something else?
+  #force should only be used to delete upto and including the mode specified
+  #no mode equates to probe mode
+  #if no force then we fail if previous levels/modes have xrefs etc...
+
+  if($mode eq 'probe2transcript' ||
+	 $force){
 	
-	if(! $db->dbc->do($sql)){
-	  throw("ProbeTranscript IdentityXref rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
+	$self->log("Deleting probe2transcript Xrefs and UnmappedObjects");
+
+	#Delete ProbeFeature UnmappedObjects	  
+	$sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND ar.array_id=ac.array_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
+	$row_cnt = $db->dbc->do($sql);
+	$row_cnt = 0 if $row_cnt eq '0E0';
+	$self->log("Deleted $row_cnt probe2transcript ProbeFeature UnmappedObject records");
+	  
+	 #Delete ProbedFeature Xrefs/DBEntries
+	$sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id=".$ac->dbID;
+	$row_cnt = $db->dbc->do($sql);
+	$row_cnt = 0 if $row_cnt eq '0E0';
+	$self->log("Deleted $row_cnt probe2transcript ProbeFeature xref records");
+
+	#Probe/Set specific entries
+	for my $xref_object('Probe', 'ProbeSet'){
+	  $probe_join = ($xref_object eq 'ProbeSet') ? 'p.probe_set_id' : 'p.probe_id';
+	  
+	  #Delete Probe/Set UnmappedObjects
+	  $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND uo.ensembl_object_type='$xref_object'AND $probe_join=uo.ensembl_id AND uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
+	  #.' and edb.db_release="'.$schema_build.'"'; 
+	  $row_cnt = $db->dbc->do($sql);
+	  $row_cnt = 0 if $row_cnt eq '0E0';
+	  $self->log("Deleted $row_cnt probe2transcipt $xref_object UnmappedObject records");	
+
+	  #Delete Probe/Set Xrefs/DBEntries
+	  $sql = "DELETE x FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='$xref_object' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID;
+	  $row_cnt = $db->dbc->db_handle->do($sql);
+	  $row_cnt = 0 if $row_cnt eq '0E0';
+	  $self->log("Deleted $row_cnt probe2transcript $xref_object xref records");
+	}
+  }
+  else{#Need to check for existing xrefs if not force
+	#we don't know whether this is on probe or probeset level
+	#This is a little hacky as there's not way we can guarantee this xref will be from probe2transcript
+	#until we get the analysis_id moved from identity_xref to xref
+	#We are also using the Probe/Set Xrefs as a proxy for all other Xrefs and UnmappedObjects
+	#Do we need to set a status here? Would have problem rolling back the states of associated ArrayChips
+	
+	for my $xref_object('Probe', 'ProbeSet'){
+	  
+	  $probe_join = ($xref_object eq 'ProbeSet') ? 'p.probe_set_id' : 'p.probe_id';
+	  
+	  $row_cnt = $db->dbc->db_handle->selectrow_array("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='$xref_object' and ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID);
+	  
+	  if($row_cnt){
+		throw("Cannot rollback ArrayChip(".$ac->name."), found $row_cnt $xref_object Xrefs. Pass 'force' argument or 'probe2transcript' mode to delete");
+	  }
+	  else{
+		$self->log("Found $row_cnt $xref_object Xrefs");
+	  }
+	}
+  }
+	
+
+  #ProbeFeatures inc ProbeTranscriptAlign xrefs
+
+  if($mode ne 'probe2transcript'){
+	
+	if(($mode eq 'probe' && $force) ||
+	   $mode eq 'probe_feature'  ||
+	   $mode eq 'ProbeAlign' ||
+	   $mode eq 'ProbeTranscriptAlign'){
+
+	  #ProbeTranscriptAlign Xref/DBEntries
+	  
+	  #my (@anal_ids) = @{$db->get_AnalysisAdaptor->generic_fetch("a.module='ProbeAlign'")};
+	  #Grrrr! AnalysisAdaptor is not a standard BaseAdaptor implementation
+	  #my @anal_ids = @{$db->dbc->db_handle->selectall_arrayref('select analysis_id from analysis where module like "%ProbeAlign"')};
+	  #@anal_ids = map {$_= "@$_"} @anal_ids;
+	
+	  if($mode ne 'ProbeAlign'){
+		$sql = "DELETE ox from object_xref ox, xref x, probe p, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+		$row_cnt =  $db->dbc->do($sql);
+		$row_cnt = 0 if $row_cnt eq '0E0';
+		$self->log("Deleted $row_cnt ProbeTranscriptAlign ProbeFeature Xref/DBEntry records");
+	  }
+
+	  if($mode ne 'ProbeTranscriptAlign'){
+		$sql = 'DELETE pf from probe_feature pf, probe p WHERE pf.probe_id=p.probe_id and p.array_chip_id='.$ac->dbID();
+		$row_cnt = $db->dbc->do($sql);
+		$row_cnt = 0 if $row_cnt eq '0E0';
+		$self->log("Deleted $row_cnt ProbeFeature records");
+	  }
+	}
+	else{
+	  #Need to count to see if we can carry on with a unforced probe rollback?
+	  #Do we need this level of control here
+	  #Can't we assume that if you want probe you also want probe_feature?
+	  #Leave for safety, at least until we get the dependant ExperimetnalChip test sorted
+	  #What about if we only want to delete one array from an associated set?
+	  #This would delete all the features from the rest?
+	  
+	  $sql = "select count(*) from object_xref ox, xref x, probe p, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+	  $row_cnt =  $db->dbc->db_handle->selectrow_array($sql);
+	  
+	  if($row_cnt){
+		throw("Cannot rollback ArrayChip(".$ac->name."), found $row_cnt ProbeFeatures. Pass 'force' argument or 'probe_feature' mode to delete");
+	  }
+	   else{
+		 $self->log("Found $row_cnt ProbeFeatures");
+	  }
+	}
+	
+	if($mode eq 'probe'){
+	  #Don't need to rollback on a CS as we have no dependant EChips?
+	  #Is this true?  Should we enforce a 3rd CoordSystem argument, 'all' string we delete all?
+	  
+	  $ac->adaptor->revoke_states($ac);#Do we need to change this to revoke specific states?
+	  #Current states are only IMPORTED, so not just yet, but we could change this for safety?
+	  
+	  #ProbeSets
+	  $sql = 'DELETE ps from probe p, probe_set ps where p.array_chip_id='.$ac->dbID().' and p.probe_set_id=ps.probe_set_id';
+	  $row_cnt = $db->dbc->do($sql);
+	  $row_cnt = 0 if $row_cnt eq '0E0';
+	  $self->log("Deleted $row_cnt ProbeSet records");
+	  
+	  #Probes
+	  $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();  
+	  $row_cnt = $db->dbc->do($sql);
+	  $row_cnt = 0 if $row_cnt eq '0E0';
+	  $self->log("Deleted $row_cnt Probe records");
 	}
   }
 
-
-  $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();
-  
-  if(! $db->dbc->do($sql)){
-	throw("Probe rollback failed for ArrayChip:\t".$ac->name()."\n".$self->dbc->db_handle->errstr());
-  }
-   
-  
-  $self->log("Finished rolling back ArrayChip:\t".$ac->name);
-  
+  $self->log("Finished $mode roll back for ArrayChip:\t".$ac->name);
   return;
 }
 
