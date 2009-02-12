@@ -1413,7 +1413,7 @@ foreach my $key (keys %transcript_feature_info) {
 
   my $id_names = $ensembl_id.'('.join(',', @{$arrays_per_object{$ensembl_id}{names}}).')';
 
-  if ($hits / $probeset_size >= $mapping_threshold) {
+  if (($hits / $probeset_size) >= $mapping_threshold) {
 	#This is inc'ing an undef?
 
 	#We also need to report xref_name here for logs
@@ -1448,7 +1448,7 @@ foreach my $key (keys %transcript_feature_info) {
 	  }
 	  else{ 
 
-		#Hits here is number of distinct hiuts for a given probe dbIDs
+		#Hits here is number of distinct hits for a given probe dbIDs
 		#Not features
 		#Therefore for non-probeset arrays this will always be 1?
 
@@ -1456,7 +1456,6 @@ foreach my $key (keys %transcript_feature_info) {
 		  $linkage_annotation = "Probe matches $hits times";
 		}
 		else{
-		  die("This should never happen! Well maybe it could if a probe matches to a given transcript more than once");
 		  $linkage_annotation = 'Probe matches '.$transcript_feature_info{$key}{$ensembl_id}->[0];
 		}
 	  }
