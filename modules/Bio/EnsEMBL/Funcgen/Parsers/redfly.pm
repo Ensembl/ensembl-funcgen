@@ -172,6 +172,14 @@ sub parse_and_load {
   my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
   # this object is only used for projection
   my $dummy_analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'REDflyProjection');#do we need this?
+  my $species = $self->db->species;
+  if(! $species){
+	throw('Must define a species to define the external_db');
+  }
+  #Just to make sure we hav homo_sapiens and not Homo Sapiens
+  ($species = lc($species)) =~ s/ /_/;
+
+
 
   foreach my $import_set(@{$self->import_sets}){
 	$self->log_header("Parsing $import_set data");
@@ -311,7 +319,7 @@ sub parse_and_load {
 			  #warn "got $stable_id for ".$attr_cache{'Factor'};
 
 			  my $dbentry = Bio::EnsEMBL::DBEntry->new(
-													   -dbname                 => 'ensembl_core_Gene',
+													   -dbname                 => $species.'_core_Gene',
 													   #-release                => $self->db->dnadb->dbc->dbname,
 													   -status                 => 'KNOWNXREF',#This is for the external DB
 													   #-display_label_linkable => 1,
@@ -320,7 +328,7 @@ sub parse_and_load {
 													   -type                   => 'MISC',#Is for the external_db 
 													   -primary_id             => $stable_id,
 													   -display_id             => $attr_cache{'Factor'},
-													   -info_type              => 'CODING',
+													   -info_type              => 'MISC',
 													   -into_text              => 'GENE',
 													   -linkage_annotation     => 'REDfly CODING'
 
@@ -344,7 +352,7 @@ sub parse_and_load {
 
 	  #Now build actual feature
 
-	  my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
+	  $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
 	   -display_label => $attr_cache{'ID'},
 	   -start         => $start,
@@ -370,8 +378,6 @@ sub parse_and_load {
 	  $feature_cnt++;
 
 
-
-   
 	  my $target = (exists $attr_cache{'Target'}) ?  $attr_cache{'Target'} : (split/_/, $attr_cache{'ID'})[0];
 	  my $stable_id;
 
@@ -387,7 +393,7 @@ sub parse_and_load {
 		#Handle release/version in xref version as stable_id version?
 		
 		my $dbentry = Bio::EnsEMBL::DBEntry->new(
-												 -dbname                 => 'ensembl_core_Gene',
+												 -dbname                 => $species.'_core_Gene',
 												 #-release                => $self->db->dnadb->dbc->dbname,
 												 -status                 => 'KNOWNXREF',
 												 #-display_label_linkable => 1,
@@ -396,11 +402,12 @@ sub parse_and_load {
 												 -type                   => 'MISC',#
 												 -primary_id             => $stable_id,
 												 -display_id             => $target,
-												 -info_type              => 'TARGET',
+												 -info_type              => 'MISC',
 												 -info_text              => 'GENE',
 												 -linkage_annotation     => 'REDfly Target',
 												 #could have version here if we use the correct dnadb to build the cache
 											);
+
 		$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag
 		
 		$feature_target_cnt ++;
