@@ -104,7 +104,14 @@ sub parse_and_load{
   my $skipped = 0;
   my $cnt = 0;
   my $skipped_xref = 0;
-  
+  my $species = $self->db->species;
+  if(! $species){
+	throw('Must define a species to define the external_db');
+  }
+  #Just to make sure we hav homo_sapiens and not Homo Sapiens
+  ($species = lc($species)) =~ s/ /_/;
+
+
 
   open (FILE, "<$file") || die "Can't open $file";
 
@@ -221,7 +228,7 @@ sub parse_and_load{
 	#Handle release/version in xref version as stable_id version?
 
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => 'ensembl_core_Transcript',
+											 -dbname                 => $species.'_core_Transcript',
 											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
@@ -230,9 +237,10 @@ sub parse_and_load{
 											 -type                   => 'MISC',
 											 -primary_id             => $ens_id,
 											 -display_id             => $display_name,
-											 -info_type              => 'TARGET',
-											 -info_text              => 'Transcript',
-											 -linkage_annotation     => 'miRanda miRNA negative influence',
+											 -info_type              => 'MISC',
+											 -info_text              => 'TRANSCRIPT',
+											 #-linkage_annotation     => 'miRanda miRNA negative influence',
+											 -linkage_annotation     => 'miRanda target - negative influence',
 											 #could have version here if we use the correct dnadb to build the cache
 											);
 
