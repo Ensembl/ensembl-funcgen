@@ -137,6 +137,12 @@ sub parse_and_load {
  #More validation of files here?
   my ($motif_file)  = grep(/motif/,  @$files);
   my ($search_file) = grep(/search/, @$files);
+  my $species = $self->db->species;
+  if(! $species){
+	throw('Must define a species to define the external_db');
+  }
+  #Just to make sure we hav homo_sapiens and not Homo Sapiens
+  ($species = lc($species)) =~ s/ /_/;
 
 
   # Parse motifs.txt file
@@ -281,7 +287,7 @@ sub parse_and_load {
 	#Handle release/version in xref version as stable_id version?
 
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => 'ensembl_core_Gene',
+											 -dbname                 => $species.'_core_Gene',
 											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
@@ -291,7 +297,7 @@ sub parse_and_load {
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
 											 -info_type              => 'MISC',
-											 -info_text              => 'Gene',
+											 -info_text              => 'GENE',
 											 -linkage_annotation     => 'cisRED motif gene',
 											 #could have version here if we use the correct dnadb to build the cache
 											);
@@ -388,7 +394,7 @@ sub parse_and_load {
 	my $display_name = $self->get_core_display_name_by_stable_id($self->db->dnadb, $gene_id, 'gene');
 	
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => 'ensembl_core_Gene',
+											 -dbname                 => $species.'_core_Gene',
 											 #-release                => $self->db->dnadb->dbc->dbname,
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
@@ -398,7 +404,7 @@ sub parse_and_load {
 											 -primary_id             => $gene_id,
 											 -display_id             => $display_name,
 											 -info_type              => 'MISC',
-											 -info_text              => 'Gene',
+											 -info_text              => 'GENE',
 											 -linkage_annotation     => 'cisRED search region gene',#omit?
 											 #could have version here if we use the correct dnadb to build the cache
 											  );
