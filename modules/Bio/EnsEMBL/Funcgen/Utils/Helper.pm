@@ -1512,6 +1512,9 @@ sub rollback_ArrayChip{
 	   $mode eq 'ProbeAlign' ||
 	   $mode eq 'ProbeTranscriptAlign'){
 
+
+	  #Should really revoke some state here but we only have IMPORTED
+   
 	  #ProbeTranscriptAlign Xref/DBEntries
 	  
 	  #my (@anal_ids) = @{$db->get_AnalysisAdaptor->generic_fetch("a.module='ProbeAlign'")};
@@ -1520,36 +1523,44 @@ sub rollback_ArrayChip{
 	  #@anal_ids = map {$_= "@$_"} @anal_ids;
 	
 	  if($mode ne 'ProbeAlign'){
-		$sql = "DELETE ox from object_xref ox, xref x, probe p, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+		my $lname = "${class}_ProbeTranscriptAlign";
+		$sql = "DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+
+		warn $sql;
+
 		$row_cnt =  $db->dbc->do($sql);
 		$row_cnt = 0 if $row_cnt eq '0E0';
-		$self->log("Deleted $row_cnt ProbeTranscriptAlign ProbeFeature Xref/DBEntry records");
+		$self->log("Deleted $row_cnt $lname ProbeFeature Xref/DBEntry records");
 
 		#Can't include uo.type='ProbeTranscriptAlign' in these deletes yet as uo.type is enum'd to xref or probe2transcript
 		#will have to join to analysis and do a like "%ProbeTranscriptAlign" on the the logic name?
 		#or/and ur.summary_description='Promiscuous probe'?
 
-		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${class}_ProbeTranscriptAlign' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 		$row_cnt =  $db->dbc->do($sql);
 		$row_cnt = 0 if $row_cnt eq '0E0';
-		$self->log("Deleted $row_cnt ProbeTranscriptAlign UnmappedObject records");
+		$self->log("Deleted $row_cnt $lname UnmappedObject records");
+
+		#Now the actual ProbeFeatures
+		
+		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id and p.array_chip_id=".$ac->dbID();
+		$row_cnt = $db->dbc->do($sql);
+		$row_cnt = 0 if $row_cnt eq '0E0';
+		$self->log("Deleted $row_cnt $lname ProbeFeature records");
 
 	  }
 
 	  if($mode ne 'ProbeTranscriptAlign'){
-		$sql = 'DELETE pf from probe_feature pf, probe p WHERE pf.probe_id=p.probe_id and p.array_chip_id='.$ac->dbID();
-		$row_cnt = $db->dbc->do($sql);
-		$row_cnt = 0 if $row_cnt eq '0E0';
-		$self->log("Deleted $row_cnt ProbeFeature records");
-
-		
-		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${class}_ProbeAlign' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
-
+		my $lname = "${class}_ProbeAlign";
+		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 		$row_cnt =  $db->dbc->do($sql);
 		$row_cnt = 0 if $row_cnt eq '0E0';
-		$self->log("Deleted $row_cnt ProbeAlign UnmappedObject records");
+		$self->log("Deleted $row_cnt $lname UnmappedObject records");
 
-
+		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id and p.array_chip_id=".$ac->dbID();
+		$row_cnt = $db->dbc->do($sql);
+		$row_cnt = 0 if $row_cnt eq '0E0';
+		$self->log("Deleted $row_cnt $lname ProbeFeature records");
 	  }
 	}
 	else{
