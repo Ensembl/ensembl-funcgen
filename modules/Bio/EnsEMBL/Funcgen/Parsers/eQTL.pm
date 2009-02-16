@@ -164,7 +164,12 @@ sub set_config{
   $self->{'gene_adaptor'} = $self->db->dnadb->get_GeneAdaptor;
   $self->{'slice_adaptor'} = $self->db->dnadb->get_SliceAdaptor;
   
-
+  my $species = $self->db->species;
+  if(! $species){
+	throw('Must define a species to define the external_db');
+  }
+  #Just to make sure we hav homo_sapiens and not Homo Sapiens
+  ($self->{'species'} = lc($species)) =~ s/ /_/;
   return;
 }
 
@@ -351,7 +356,7 @@ sub parse_line{
 	  #Now set up first DBEntry params
 	  my %gene_xref_params = 
 		(
-		 -dbname                 => 'ensembl_core_Gene',
+		 -dbname                 => $self->{'species'}.'_core_Gene',
 		 #-release                => $self->db->dnadb->dbc->dbname,
 		 -status                 => 'KNOWNXREF',
 		 #-display_label_linkable => 1,
@@ -362,11 +367,11 @@ sub parse_line{
 		 #This may cause duplications in xref, as we are assigning the gene_name
 		 #to display_id which is part of the unique key
 		 -display_id             => ($gene->display_xref) ? $gene->display_xref->display_id : $gene_name,
-		 -info_type              => 'TARGET',#This is not correct, need to move to ox.linkage_type
+		 -info_type              => 'MISC',
 		 #Always need linkage annotation here
 		 #Otherwise ther is no way to trace how these object_xrefs were geneerated
-		 -linkage_annotation     => 'eQTL gene xref',#better text here?
-		 -info_text              => 'Gene',
+		 -linkage_annotation     => 'eQTL target',#better text here?
+		 -info_text              => 'GENE',
 		 #store method param
 		 feature_type            => 'AnnotatedFeature',
 		);
@@ -481,7 +486,7 @@ sub parse_line{
 		  #Create the SNP xref
 		  
 		  my %snp_xref_params = (
-								 -dbname                 => 'ensembl_variation_Variation',
+								 -dbname                 => $self->{'species'}.'_variation_Variation',
 								 #-release                => $self->db->dnadb->dbc->dbname,
 								 -status                 => 'KNOWNXREF',
 								 #-display_label_linkable => 1,
@@ -490,9 +495,9 @@ sub parse_line{
 								 -type                   => 'MISC',#???#this is external_db.type
 								 -primary_id             => $snp_feat->variation_name,##?????????
 								 -display_id             => $snp_feat->display_id,#This is the same as variation name.
-								 -info_type              => 'DIRECT',#this should be moved to ox.linkage_type
-								 -linkage_annotation     => 'eQTL SNP xref',	
-								 -info_text              => 'Variation',
+								 -info_type              => 'MISC',
+								 -linkage_annotation     => 'eQTL SNP',#DIRECT?	
+								 -info_text              => 'VARIATION',
 								 #store method param
 								 feature_type            => 'AnnotatedFeature',
 								);
