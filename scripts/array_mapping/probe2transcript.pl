@@ -1409,7 +1409,7 @@ foreach my $key (keys %transcript_feature_info) {
 	: scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
   
 
-  warn "$key has hits $hits:".join(', ', @{$transcript_feature_info{$key}{$ensembl_id}});
+  #warn "$key has hits $hits:".join(', ', @{$transcript_feature_info{$key}{$ensembl_id}});
 
   my $id_names = $ensembl_id.'('.join(',', @{$arrays_per_object{$ensembl_id}{names}}).')';
 
