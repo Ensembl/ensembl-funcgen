@@ -54,6 +54,7 @@ package Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Feature;
+use Bio::EnsEMBL::Funcgen::Storable;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(median);
 
 use vars qw(@ISA);
