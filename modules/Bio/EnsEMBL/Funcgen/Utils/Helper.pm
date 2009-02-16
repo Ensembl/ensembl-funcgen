@@ -1416,6 +1416,7 @@ sub rollback_ArrayChip{
   ($species = lc($species)) =~ s/ /_/;
 
   my $transc_edb_name = "${species}_core_Transcript";
+  my $genome_edb_name = "${species}_core_Genome";
 
   #Maybe we want to rollback ProbeAlign and ProbeTranscriptAlign output separately so we 
   #can re-run just one part of the alignment step.
@@ -1528,7 +1529,7 @@ sub rollback_ArrayChip{
 		#will have to join to analysis and do a like "%ProbeTranscriptAlign" on the the logic name?
 		#or/and ur.summary_description='Promiscuous probe'?
 
-		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a, unmapped_reason ur WHERE ur.summary_description='Promiscuous Probe' AND ur.unmapped_reason_id=uo.unmapped_reason_id AND uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${class}_ProbeTranscriptAlign' AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.identifier=uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a, unmapped_reason ur WHERE ur.summary_description='Promiscuous Probe' AND ur.unmapped_reason_id=uo.unmapped_reason_id AND uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${class}_ProbeTranscriptAlign' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.identifier=uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 		$row_cnt =  $db->dbc->do($sql);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt ProbeTranscriptAlign UnmappedObject records");
@@ -1542,7 +1543,7 @@ sub rollback_ArrayChip{
 		$self->log("Deleted $row_cnt ProbeFeature records");
 
 		
-		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a, unmapped_reason ur WHERE ur.summary_description='Promiscuous Probe' AND ur.unmapped_reason_id=uo.unmapped_reason_id AND uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${class}_ProbeAlign' AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.identifier=uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a, unmapped_reason ur WHERE ur.summary_description='Promiscuous Probe' AND ur.unmapped_reason_id=uo.unmapped_reason_id AND uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${class}_ProbeAlign' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.identifier=uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 		$row_cnt =  $db->dbc->do($sql);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt ProbeAlign UnmappedObject records");
