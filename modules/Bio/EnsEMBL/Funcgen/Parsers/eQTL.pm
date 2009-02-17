@@ -370,7 +370,7 @@ sub parse_line{
 		 -info_type              => 'MISC',
 		 #Always need linkage annotation here
 		 #Otherwise ther is no way to trace how these object_xrefs were geneerated
-		 -linkage_annotation     => 'eQTL target',#better text here?
+		 -linkage_annotation     => 'eQTL Target',#better text here?
 		 -info_text              => 'GENE',
 		 #store method param
 		 feature_type            => 'AnnotatedFeature',
