@@ -404,7 +404,7 @@ sub parse_and_load {
 												 -display_id             => $target,
 												 -info_type              => 'MISC',
 												 -info_text              => 'GENE',
-												 -linkage_annotation     => 'REDfly Target',
+												 -linkage_annotation     => 'REDfly CRM Target',
 												 #could have version here if we use the correct dnadb to build the cache
 											);
 
