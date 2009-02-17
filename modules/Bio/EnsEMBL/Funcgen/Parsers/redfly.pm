@@ -330,7 +330,7 @@ sub parse_and_load {
 													   -display_id             => $attr_cache{'Factor'},
 													   -info_type              => 'MISC',
 													   -into_text              => 'GENE',
-													   -linkage_annotation     => 'REDfly CODING'
+													   -linkage_annotation     => 'REDfly Coding'
 
 													   #-description            => 'cisRED motif gene xref',#This is now generic and no longer resitricted to REDfly
 													   #could have version here if we use the correct dnadb to build the cache
@@ -404,7 +404,7 @@ sub parse_and_load {
 												 -display_id             => $target,
 												 -info_type              => 'MISC',
 												 -info_text              => 'GENE',
-												 -linkage_annotation     => 'REDfly CRM Target',
+												 -linkage_annotation      => $fset->feature_type->name.' Target', 
 												 #could have version here if we use the correct dnadb to build the cache
 											);
 
