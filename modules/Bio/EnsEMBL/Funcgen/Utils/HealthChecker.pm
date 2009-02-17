@@ -257,7 +257,7 @@ sub update_meta_schema_version{
 
   my $sql = 'DELETE from meta where meta_key="schema_version"';
   $self->db->dbc->db_handle->do($sql);
-  $sql = "INSERT into meta(meta_key, meta_value) values ('schema_version', '$schema_version')";
+  $sql = "INSERT into meta(meta_key, species_id, meta_value) values ('schema_version', NULL, '$schema_version')";
  
   $self->db->dbc->db_handle->do($sql);
 
