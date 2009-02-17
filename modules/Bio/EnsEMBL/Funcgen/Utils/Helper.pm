@@ -1526,8 +1526,6 @@ sub rollback_ArrayChip{
 		my $lname = "${class}_ProbeTranscriptAlign";
 		$sql = "DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 
-		warn $sql;
-
 		$row_cnt =  $db->dbc->do($sql);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname ProbeFeature Xref/DBEntry records");
