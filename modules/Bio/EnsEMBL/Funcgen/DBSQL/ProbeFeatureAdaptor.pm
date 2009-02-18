@@ -281,40 +281,9 @@ sub fetch_all_by_Slice_Arrays{
   }
 
   my $constraint = " p.array_chip_id IN (".join(", ", @ac_ids).") AND p.probe_id = pf.probe_id ";
-  
-    
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
 }
 
-
-=head2 fetch_all_by_Slice_type
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : string - type of array (e.g. AFFY or OLIGO)
-  Arg [3]    : (optional) string - logic name
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_type($slice, 'OLIGO');
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the specified type of array.
-  Returntype : Listref of Bio::EnsEMBL::ProbeFeature objects
-  Exceptions : Throws if no array type is provided
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Slice_type {
-	my ($self, $slice, $type, $logic_name) = @_;
-
-	throw("Not implemented yet\n");
-	
-	throw('Need type as parameter') if !$type;
-	
-	my $constraint = qq( a.type = '$type' );
-	
-	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
-}
- 
 =head2 _tables
 
   Args       : None
@@ -354,9 +323,6 @@ sub _tables {
 
 sub _columns {
 	my $self = shift;
-
-
-	#do we need array_name?
 	
 	return qw(
 			  pf.probe_feature_id  pf.seq_region_id
@@ -365,9 +331,6 @@ sub _columns {
 			  pf.analysis_id	   pf.mismatches
 			  pf.cigar_line        p.name
 			 );
-
-	#removed probeset and array name
-	
 }
 
 =head2 _default_where_clause
@@ -483,10 +446,18 @@ sub _objs_from_sth {
 	#build seq_region_cache based on slice
 	#$self->build_seq_region_cache_by_Slice($slice);
 
+
+	my $last_pfid;
+
 	FEATURE: while ( $sth->fetch() ) {
 		  #Need to build a slice adaptor cache here?
 		  #Would only ever want to do this if we enable mapping between assemblies??
 		  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
+
+		#This is only required due to multiple records being returned
+		#when using fetch_all_by_Arrays type methods
+		next if($last_pfid && ($last_pfid == $probe_feature_id));
+		$last_pfid = $probe_feature_id;
 		  
 		#get core seq_region_id
 		$seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
