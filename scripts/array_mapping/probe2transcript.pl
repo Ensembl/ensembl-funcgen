@@ -169,7 +169,7 @@ Testing:
 
  -test_transcripts   Number of transcripts to perform a test run on
  -slice              Name of test slice to perform a test run on 
- -transcripts        Not yet implemented, List of transcript stable IDs to test on
+ -transcript         Test transcript stable ID
  -no_store           Not yet implemented	
 		 
 Other options:
@@ -1018,25 +1018,14 @@ foreach my $transcript (@transcripts) {
   ### Now map each feature to the transcript
   #This works on the assumption that probesets are identical between arrays
   #i.e. if a probe set is present on different arrays, their probes are identical.
-
-
-  
-
   $probe_features = $probe_feature_adaptor->fetch_all_by_Slice_Arrays($slice, [values(%arrays)]);
   my %probe_feature_xrefs;
 
   foreach my $feature (@$probe_features) {
- 	next if($feature->cigar_line =~ /D/);
-	#We have a ProbeTranscriptAlign
-	#We don't want to record unmapped objects for these, as these have 
-	#already been recorded in ProbeAlign?
-	#We just want skip and add a step to get all the IdentityXrefs for a given transcript later
-	  
-	$probe          = $feature->probe;
+ 	$probe          = $feature->probe;
 	$feature_id     = $feature->dbID;
 	$probe_id       = $probe->dbID;
-	
-	
+
 	#Set some probe/probeset vars
 	if($array_config{probeset_arrays}){
 	  $probeset_id    = $probe->probeset->dbID;
@@ -1101,10 +1090,7 @@ foreach my $transcript (@transcripts) {
 	  next;
 	}
 
-
-
 	my $cigar_line = $feature->cigar_line;
-
 
 	if($cigar_line =~ /D/){#ProbeTranscriptAlign
 	  #Do we skip this and just get all in one go by the external_id
@@ -1123,15 +1109,12 @@ foreach my $transcript (@transcripts) {
 		
 
 		foreach my $dbentry(@dbentries){
-		  
+
 		  if($dbentry->primary_id eq $transcript_sid){
 			$txref = 1;
 			
 			#We need to implement mismatch checking here as we can define different rules for alignment
 			#and annotation
-
-
-			warn "Using ProbeFeature xrefs for $transcript_sid";
 
 			#Add the probe count
 			if ($array_config{probeset_arrays}) {
@@ -1262,13 +1245,17 @@ foreach my $transcript (@transcripts) {
 		  } else {
 			$transcript_feature_info{$transcript_key}{$probe_id}++;
 		  }
-		} else {
+		} 
+		else {
 		  $transcript_feature_info{$transcript_key}{$probe_id} ||= ();
+		  print "Pushing $probe_id $feature_id $linkage_annotation\n";
 		  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, $linkage_annotation;
 		}
 
+		print "adding xref\n";
 		add_xref($transcript_sid, $feature_id, 'ProbeFeature', $linkage_annotation);
-	  } else {					# must be intronic, intron-exon, intron-first|lastexon, five_prime_flank, three_prime_flank
+	  } 
+	  else {					# must be intronic, intron-exon, intron-first|lastexon, five_prime_flank, three_prime_flank
 	  	  
 		#Ignore the first last exon classes and count these as intron-exon
 		#We only know if is intron-exon if we have a negative result for the flank extension
@@ -1407,10 +1394,6 @@ foreach my $key (keys %transcript_feature_info) {
   #Has will be the same as the xref_object_id i.e. a probe_id
   my $hits = ($array_config{probeset_arrays}) ?  scalar(keys %{$transcript_feature_info{$key}}) 
 	: scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
-  
-
-  #warn "$key has hits $hits:".join(', ', @{$transcript_feature_info{$key}{$ensembl_id}});
-
   my $id_names = $ensembl_id.'('.join(',', @{$arrays_per_object{$ensembl_id}{names}}).')';
 
   if (($hits / $probeset_size) >= $mapping_threshold) {
@@ -1446,7 +1429,7 @@ foreach my $key (keys %transcript_feature_info) {
 	  if($xref_object eq 'ProbeSet'){
 		$linkage_annotation = "${hits}/${probeset_size} in ProbeSet";
 	  }
-	  else{ 
+	  else{
 
 		#Hits here is number of distinct hits for a given probe dbIDs
 		#Not features
