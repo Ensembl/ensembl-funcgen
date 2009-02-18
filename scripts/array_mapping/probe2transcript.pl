@@ -1248,11 +1248,9 @@ foreach my $transcript (@transcripts) {
 		} 
 		else {
 		  $transcript_feature_info{$transcript_key}{$probe_id} ||= ();
-		  print "Pushing $probe_id $feature_id $linkage_annotation\n";
 		  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, $linkage_annotation;
 		}
 
-		print "adding xref\n";
 		add_xref($transcript_sid, $feature_id, 'ProbeFeature', $linkage_annotation);
 	  } 
 	  else {					# must be intronic, intron-exon, intron-first|lastexon, five_prime_flank, three_prime_flank
