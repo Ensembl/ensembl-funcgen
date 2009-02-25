@@ -237,10 +237,17 @@ sub add_array_chip_probename {
 	#Can we change the implementation of this so we're only storing the array once, reverse
 	#the cache? But we want access to the array and using an object reference as a key is ????
 	#How would this impact on method functionality?
+
+	#We now handle multiple names per probe/array
+	#This will not capture the relationship between
+	#probe name and position on array!
+	#Not a problem for affy as name is position
+	#Currently not a problem for nimblegen as probes never have more than 1 name???
+
     $self->{ 'arrays'     }->{$ac_dbid} = $array;
 
-
-    $self->{ 'probenames' }->{$array->name()} = $probename;
+	$self->{ 'probenames' }->{$array->name()} ||= [];
+    push @{$self->{ 'probenames' }->{$array->name()}}, $probename;
 
     return;
 }
@@ -300,7 +307,7 @@ sub get_all_Arrays {
 
 =head2 get_all_probenames
 
-  Args       : None
+  Arg [1]    : Optional - list of array names, defaults to all available
   Example    : my @probenames = @{$probe->get_all_probenames()};
   Description: Retrieves all names for this probe. Only makes sense for probes
                that are part of a probeset (i.e. Affy probes), in which case
@@ -313,9 +320,19 @@ sub get_all_Arrays {
 =cut
 
 sub get_all_probenames {
-    my $self = shift;
-    return [ values %{$self->{'probenames'}} ];
+    my ($self, @array_names) = @_;
+
+	my @names;
+	@array_names = keys %{$self->{'probenames'}} if ! @array_names;
+
+	foreach my $array(@array_names){
+	  push @names, @{$self->{'probenames'}->{$array}};
+	}
+
+    return \@names;
 }
+
+
 
 =head2 get_probename
 
@@ -323,7 +340,8 @@ sub get_all_probenames {
   Example    : my $probename = $probe->get_probename('Array-1');
   Description: For a given array, retrieve the name for this probe.
   Returntype : string
-  Exceptions : Throws if the array name is not known for this probe
+  Exceptions : Throws if the array name is required but not specified
+               Warns if probe has more than one name for the given array.
   Caller     : General
   Status     : Medium Risk
 
@@ -337,7 +355,9 @@ sub get_all_probenames {
 
 sub get_probename {
     my ($self, $arrayname) = @_;
-    
+
+	my $probename;
+
     if (! $arrayname){
       
       #Sanity check that there is only one non-AFFY array
@@ -352,7 +372,15 @@ sub get_probename {
     }
 
 	
-    my $probename = $self->{'probenames'}->{$arrayname};	
+	my @names = @{$self->{'probenames'}->{$arrayname}};
+
+	if(scalar(@names) > 1){
+	  warn "This probe has more than one probe name for probeset $arrayname:".$self->probeset->name.":\t @names";
+	}
+	else{
+	  $probename = $self->{'probenames'}->{$arrayname};	
+	}
+
     return $probename;
 }
 
@@ -381,16 +409,14 @@ sub get_all_complete_names {
 
     warn "For Nimblegen this need to be Container:Seqid::probeid?";
 
-    #while ( my ($arrayname, $probename) = each %{$self->{'probenames'}} ) {
     while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
       #would have to put test in here for $self->arrays()->vendor()
       #if($array->vendor() eq "AFFY"){
       
-      push @result, $array->name().":$probeset".$self->{'probenames'}{$array->name()};
-      #}
-      #else{
-      #	push @result, $self->{'probenames'}{$array->name()};
-      #}
+	  foreach my $name(@{$self->{'probenames'}{$array->name()}}){
+
+		push @result, $array->name().":$probeset".$name;
+	  }
     }
     
     return \@result;
@@ -420,6 +446,7 @@ sub get_complete_name {
     my $arrayname = shift;
 
     my $probename = $self->{'probenames'}->{$arrayname};
+
     if (!defined $probename) {
 		throw('Unknown array name');
     }
