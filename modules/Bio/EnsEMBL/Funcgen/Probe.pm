@@ -352,12 +352,7 @@ sub get_probename {
     }
 
 	
-    my $probename = $self->{'probenames'}->{$arrayname};
-
-    if (!defined $probename) {
-		throw('Unknown array name');
-    }
-	
+    my $probename = $self->{'probenames'}->{$arrayname};	
     return $probename;
 }
 
