@@ -175,6 +175,7 @@ sub fetch_probe_cache_by_Experiment{
     my $sql = 'SELECT name, probe_id from probe where array_chip_id IN ('.join(',', @achip_ids).');';
 
     warn 'fetch_probe_cache will break if we have duplicated names within the Experimental set';
+	#Will this handle multiple name probes?
 
 	my $cmd = 'mysql '.$self->db->connect_string()." -e \"$sql\" >".$cache_file;
 
@@ -487,8 +488,9 @@ sub store {
 
 
  PROBE: foreach my $probe (@probes) {
-    
-     if ( !ref $probe || ! $probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
+    undef $dbID;
+
+	if ( !ref $probe || ! $probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
       throw("Probe must be an Probe object ($probe)");
     }
     
@@ -515,72 +517,65 @@ sub store {
     foreach $ac_id (keys %array_hashes) {			
       my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
       
-      if (defined $dbID) {
-	# Probe we've seen already
+	  foreach my $name(@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}){
 
-	#we want to import design attrs bsed on ac_id..and cs id or design attr?
-
-
-	$sth = $self->prepare("INSERT INTO probe
-                             ( probe_id, probe_set_id, name, length, array_chip_id, class )
-			     VALUES (?, ?, ?, ?, ?, ?)
-			    ");
-	
-	$sth->bind_param(1, $dbID,                                                     SQL_INTEGER);
-	$sth->bind_param(2, $ps_id,                                                    SQL_INTEGER);
-	$sth->bind_param(3, $probe->get_probename($array_hashes{$ac_id}->name()),      SQL_VARCHAR);
-	$sth->bind_param(4, $probe->length(),                                          SQL_INTEGER);
-	$sth->bind_param(5, $ac_id,                                                    SQL_INTEGER);
-	$sth->bind_param(6, $probe->class(),                                           SQL_VARCHAR);
-	$sth->execute();
-      } else {
-	# New probe
-	$sth = $self->prepare("
-					INSERT INTO probe
-					( probe_set_id, name, length, array_chip_id, class )
-					VALUES (?, ?, ?, ?, ?)
-				");
-	
-	$sth->bind_param(1, $ps_id,                                                    SQL_INTEGER);
-	$sth->bind_param(2, $probe->get_probename($array_hashes{$ac_id}->name()),    SQL_VARCHAR);
-	$sth->bind_param(3, $probe->length(),                                          SQL_INTEGER);
-	$sth->bind_param(4, $ac_id,                                                    SQL_INTEGER);
-	$sth->bind_param(5, $probe->class(),                                           SQL_VARCHAR);
-	
-	$sth->execute();
-	$dbID = $sth->{'mysql_insertid'};
-	$probe->dbID($dbID);
-	$probe->adaptor($self);
-      }
-
-      
-
-      if(@panals = @{$probe->get_all_design_scores(1)}){#1 is no fetch flag
-	#we need to check for duplicates here, or can we just ignore them in the insert statement?
-	#ignoring would be convenient but may lose info about incorrect duplicates
-	#also not good general practise
-	#solution would be nest them with a dbid value aswell as score
-	#use ignore for now and update implementation when we create BaseProbeDesign?
-
-	$pd_sth ||= $self->prepare($pd_sql);
-	
-	foreach my $probe_analysis(@panals){
-	  my ($analysis_id, $score, $cs_id) = @$probe_analysis;
-	  $cs_id ||=0;#NULL
-
-	  $pd_sth->bind_param(1, $probe->dbID(),  SQL_INTEGER);
-	  $pd_sth->bind_param(2, $analysis_id,    SQL_INTEGER);
-	  $pd_sth->bind_param(3, $score,          SQL_VARCHAR);
-	  $pd_sth->bind_param(4, $cs_id,          SQL_INTEGER);
-	  $pd_sth->execute();
-	  
+		if (defined $dbID) {  # Already stored
+		  #we want to import design attrs bsed on ac_id..and cs id or design attr?
+		
+		
+		  $sth = $self->prepare
+			("INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class )
+			  VALUES (?, ?, ?, ?, ?, ?)");
+		  $sth->bind_param(1, $dbID,            SQL_INTEGER);
+		  $sth->bind_param(2, $ps_id,           SQL_INTEGER);
+		  $sth->bind_param(3, $name,            SQL_VARCHAR);
+		  $sth->bind_param(4, $probe->length(), SQL_INTEGER);
+		  $sth->bind_param(5, $ac_id,           SQL_INTEGER);
+		  $sth->bind_param(6, $probe->class(),  SQL_VARCHAR);
+		  $sth->execute();
+		}
+		else {
+		  # New probe
+		  $sth = $self->prepare
+			("INSERT INTO probe( probe_set_id, name, length, array_chip_id, class )
+			VALUES (?, ?, ?, ?, ?)");
+		  $sth->bind_param(1, $ps_id,           SQL_INTEGER);
+		  $sth->bind_param(2, $name,            SQL_VARCHAR);
+		  $sth->bind_param(3, $probe->length(), SQL_INTEGER);
+		  $sth->bind_param(4, $ac_id,           SQL_INTEGER);
+		  $sth->bind_param(5, $probe->class(),  SQL_VARCHAR);
+		  $sth->execute();
+		  $dbID = $sth->{'mysql_insertid'};
+		  $probe->dbID($dbID);
+		  $probe->adaptor($self);
+		}
+	  }
 	}
-      }
-    }
+  
+	if(@panals = @{$probe->get_all_design_scores(1)}){#1 is no fetch flag
+	  #we need to check for duplicates here, or can we just ignore them in the insert statement?
+	  #ignoring would be convenient but may lose info about incorrect duplicates
+	  #also not good general practise
+	  #solution would be nest them with a dbid value aswell as score
+	  #use ignore for now and update implementation when we create BaseProbeDesign?
+	  
+	  $pd_sth ||= $self->prepare($pd_sql);
+	  
+	  foreach my $probe_analysis(@panals){
+		my ($analysis_id, $score, $cs_id) = @$probe_analysis;
+		$cs_id ||=0;#NULL
+		
+		$pd_sth->bind_param(1, $probe->dbID(),  SQL_INTEGER);
+		$pd_sth->bind_param(2, $analysis_id,    SQL_INTEGER);
+		$pd_sth->bind_param(3, $score,          SQL_VARCHAR);
+		$pd_sth->bind_param(4, $cs_id,          SQL_INTEGER);
+		$pd_sth->execute();
+		
+	  }
+	}
   }
 
   return \@probes;
-
 }
 
 
