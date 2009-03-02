@@ -57,7 +57,7 @@ ${SRC}/bioperl-live"
 
 # eFG database connection parameters
 export DATA_VERSION="${VERSION}_${ASSEMBLY}"
-export EFG_DBNAME="${PREFIX}${SPECIES}_funcgen_${DATA_VERSION}"
+export EFG_DBNAME=${EFG_DBNAME:="${PREFIX}${SPECIES}_funcgen_${DATA_VERSION}"}
 export CORE_DBNAME="${SPECIES}_core_${DATA_VERSION}"
 
 export MYSQL_ARGS="-h${EFG_HOST} -P${EFG_PORT}"
