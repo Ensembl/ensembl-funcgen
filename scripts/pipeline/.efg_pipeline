@@ -3,6 +3,7 @@
 echo "Setting up the Ensembl Functional Genomics pipeline environment..." 
 
 # Check that the following environment variables are set
+
 for var in SRC EFG_SRC EFG_DATA EFG_SQL \
     EFG_HOST EFG_PORT EFG_READ_USER EFG_WRITE_USER \
     CORE_HOST CORE_PORT CORE_USER \
@@ -58,7 +59,7 @@ ${SRC}/bioperl-live"
 # eFG database connection parameters
 export DATA_VERSION="${VERSION}_${ASSEMBLY}"
 export EFG_DBNAME=${EFG_DBNAME:="${PREFIX}${SPECIES}_funcgen_${DATA_VERSION}"}
-export CORE_DBNAME="${SPECIES}_core_${DATA_VERSION}"
+export CORE_DBNAME=${CORE_DBNAME:="${SPECIES}_core_${DATA_VERSION}"}
 
 export MYSQL_ARGS="-h${EFG_HOST} -P${EFG_PORT}"
 
