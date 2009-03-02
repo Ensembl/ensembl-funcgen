@@ -234,15 +234,15 @@ The shell function
 
 allows for doing this, where <SubmitType> can be either
 
-    Slice <'encode'|'toplevel'>
+    slice <'encode'|'toplevel'>
 
 to create Encode slices or toplevel slices as input_ids, 
 
-   Array
+   array
 
 to analyse entire array chips or
 
-    File <directory>
+    file <directory>
 
 to use the gzipped bed files in a given <directory> to create the input_ids.
 
@@ -278,27 +278,27 @@ lines.
 
 Examples:
 
-    CreateInputIds **** File $EFG_DATA/input/SOLEXA/LMI_methylation
+    CreateInputIds **** file $EFG_DATA/input/SOLEXA/LMI_methylation
 
   creates for all gzipped bed files in $EFG_DATA/input/SOLEXA/LMI_methylation
   the corresponding input_id
 
-    CreateInputIds **** File /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI_acetylation '^CD4_H3K.*'
+    CreateInputIds **** file /lustre/work1/ensembl/graef/efg/input/SOLEXA/LMI_acetylation '^CD4_H3K.*'
 
   creates for all gzipped bed files in .../SOLEXA/LMI_methylation that match 
   '^CD4_H3K.*' the corresponding input_id
 
-    CreateInputIds **** Slice encode 'CD4_DNAse'
+    CreateInputIds **** slice encode 'CD4_DNAse'
 
   creates for all experiments with 'CD4_DNAse' in the name input_ids using the
   Encode region
 
-    CreateInputIds **** Slice toplevel 'PolII'
+    CreateInputIds **** slice toplevel 'PolII'
 
   creates for all experiments with 'PolII' in the name input_ids using all 
   toplevel slices
 
-    CreateInputIds **** File /home/graef/data/Mikkelsen2007/alignments '' 'Mikkelsen2007'
+    CreateInputIds **** file /home/graef/data/Mikkelsen2007/alignments '' 'Mikkelsen2007'
 
   creates for all gzipped bed files in given directory the corresponding input_id 
   and appends the string 'Mikkelsen2007' to the experiment name comprising cell 
