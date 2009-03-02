@@ -141,7 +141,7 @@ my $pdb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
      -host    => $host,
      -user    => $user,
-     -dbname  => 'pipeline_'.$dbname,
+     -dbname  => $ENV{'PDBNAME'},
      -species => $species,
      -pass    => $pass,
      -port    => $port,
