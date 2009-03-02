@@ -207,8 +207,7 @@ Now the pipeline config can be imported by using the shell command
 which runs the three pipeline scripts analysis_setup.pl, rule_setup.pl, and 
 setup_batchqueue_outputdir.pl.
 
-Now double check the analysis tables in your output DB, and the rule tables in
-your pipeline DB.
+Now double check the analysis and rule tables in your pipeline DB.
 
 
 Finally we needs to create input_ids. In eFG analysis pipeline terms an
