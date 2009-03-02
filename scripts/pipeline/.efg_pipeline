@@ -93,7 +93,7 @@ echo "Welcome to eFG!"
 echo "  << ${EFG_DBNAME} @ ${EFG_HOST}:${EFG_PORT} >>"
 
 ### Analysis Pipeline DB ###
-export PDBNAME=pipeline_${EFG_DBNAME}
+export PDBNAME=chip_pipeline_${EFG_DBNAME}
 export PDBHOST=${EFG_HOST}
 export PDBPORT=${EFG_PORT}
 
