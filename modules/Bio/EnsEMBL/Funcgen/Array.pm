@@ -15,10 +15,10 @@ my $array = Bio::EnsEMBL::Funcgen::Array->new(
 	    -NAME        => 'Array-1',
         -FORMAT      => 'Tiled',
         -SIZE        => '1',
-        -SPECIES     => 'Mus_musculus',
-	    -VENDOR      => 'Nimblegen',
+     	-VENDOR      => 'Nimblegen',
         -DESCRIPTION => $desc,
         -TYPE        => 'OLIGO',
+        -CLASS       => 'VENDOR_FORMAT'
 );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
@@ -88,6 +88,7 @@ use vars qw(@ISA);# %VALID_TYPE);
 								  -VENDOR      => 'Nimblegen',
                                   -TYPE        => 'OLIGO',
 								  -DESCRIPTION => $desc,
+                                  -CLASS       => 'VENDOR_FORMAT',#e.g. AFFY_UTR, ILLUMINA_WG
 								 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Array object.
   Returntype : Bio::EnsEMBL::Funcgen::Array
