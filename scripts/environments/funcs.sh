@@ -1,5 +1,8 @@
 #!/usr/local/bin/bash
 
+
+#echo ":::: Sourcing funcs.sh"
+
 #To do
 #Add more error echos when exiting
 #Document error codes
@@ -117,6 +120,7 @@ CheckVariables()
     if [ ! -z "$line" ]
     then
         echo "Environment variable(s) :$line are not set"
+		#This is not exiting if it is called from another environment
 		exit 100
     fi
 }
@@ -483,10 +487,9 @@ ContinueOverride(){
 
     if [ ! $2 ]
     then
-		AskQuestion "$1"
+		AskQuestion "$1 [y|n]"
 
-		if [[ $REPLY != [yY]* ]]
-			then
+		if [[ $REPLY != [yY]* ]]; then
 			echo "Exiting"
 			exit
 		fi
