@@ -1695,11 +1695,16 @@ sub cache_arrays_per_object {
 
   if($array_config{probeset_arrays}){
 	$sql = 'SELECT ps.probe_set_id, ps.name, a.name, count(p.probe_id) FROM probe p, probe_set ps, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.probe_set_id=ps.probe_set_id and a.name in ("'.join('", "', @array_names).'") GROUP BY p.probe_set_id, a.name';
+	#We are not accounting for on plate replicate probes here
+	#These should really be removed from the hit calculation
+	#But we don't know which are replciates at that point
   }
   else{#Non probeset arrays
 	#We don't really need the count at all
 	#We need this for unmapped probes
-	$sql = 'SELECT p.probe_id, p.name, a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY p.probe_id, a.name';
+	$sql = 'SELECT p.probe_id, GROUP_CONCAT(p.name SEPARATOR "#"), a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY p.probe_id, a.name';
+	#GROUP_CONCAT handles nr probes with the same seq but different names
+
   }
 
   my $sth = $db->dbc()->prepare($sql);
@@ -1711,28 +1716,30 @@ sub cache_arrays_per_object {
 
 
   while($sth->fetch()){
-	#print "$object_id, $object_name, $array, $probeset_size\n";
 
     if ($object_id eq $last_object_id || $first_record) {
 	  
 	  if(! $first_record && ($probeset_size !=  $last_probeset_size)){
-		#This may be incorrect if we have unlinked arrays, but they have they use the same probeset names
-		#We should only run linked arrays together
-		#As unlinked arrays may share probeset IDs which are not truly the same probeset
-		#Can we have non-unique probeset names? Yes, unique key is on probe_set_id
-		#We need to keep these caches separate
-		#This would result in possible failure if probeset sizes we different between arrays
-		#and also possibly the incorrect assignment of xrefs to an incorrect array.
-
-		die("Found probe/probeset(dbID=$object_id) with differing size between arrays(@arrays)");
+		
+		if($array_config{probeset_arrays}){
+		  #If probeset size is different, this is due to identical seq
+		  #Therefore we only have one probe record, but multiple names
+		  $probeset_size = 1;
+		  push @names, (split/#/, $object_name);
+		}
+		else{
+		  die("Found probe/probeset(dbID=$object_id) with differing size between arrays(@arrays)");
+		}
 	  }
-
+	  else{
+		push @names, $object_name;
+	  }
+	
 	  push @arrays, $array;
-	  push @names, $object_name;
 	  $first_record = 0;
 	  $last_probeset_size = $probeset_size;
 	  $last_object_id     = $object_id;
-    } 
+	} 
 	else {
 	  #Populate last entry
 	  @{$arrays_per_object{$last_object_id}{arrays}} = @arrays;
