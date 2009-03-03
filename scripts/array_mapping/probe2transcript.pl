@@ -1721,7 +1721,7 @@ sub cache_arrays_per_object {
 	  
 	  if(! $first_record && ($probeset_size !=  $last_probeset_size)){
 		
-		if($array_config{probeset_arrays}){
+		if(! $array_config{probeset_arrays}){
 		  #If probeset size is different, this is due to identical seq
 		  #Therefore we only have one probe record, but multiple names
 		  $probeset_size = 1;
