@@ -393,7 +393,7 @@ sub store {
 
 	my $sth = $self->prepare("INSERT INTO feature_set
                                  (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label)
-                                 VALUES (?, ?, ?, ?, ?, ?)");
+                                 VALUES (?, ?, ?, ?, ?, ?, ?)");
 
 
 	my ($sql, $edb_id, %edb_hash);
