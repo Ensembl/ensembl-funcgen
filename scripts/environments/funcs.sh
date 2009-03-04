@@ -106,6 +106,8 @@ Checkuser()
 
 CheckVariables()
 {
+	line=
+
     for var in $*
     do
         val=$(eval "echo \$$var")
@@ -427,6 +429,22 @@ GetFilename()
 { 
     echo ${1##*/}
 }
+
+
+GetFileSize(){
+	file=$1
+	shift
+	
+	if [ ! -f $file ]; then
+		echo "$file does not exist, maybe you need to BuildFastas?"
+		exit 1;
+	fi
+		
+     	#Need to follow links here to get real size!
+	fasta_size=($(ls -lLk $file))
+	echo ${fasta_size[4]} 
+}
+
 
 ################################################################################
 # Func      : AskQuestion()
