@@ -32,26 +32,32 @@
 
 #To do
 
-#Reimpliment validate arrays, see old script?
-#Add unannotated UTR clipping dependant on nearest neighbour
-#Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs in the neighbour.
-# Separate UTR multipliers for 3' and 5'?
-
-#Implement incremental update from list of stable IDs. Consider unmapped probe changes etc...
-#parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide counts for a given probeset
-
-#Calc UTRs then submit chunks jobs to farm
-#Chunks by retrieving all probesets and sorting an array of probeset names, then splice the array according to the number of chunks
-#We're still going to have retrieve all the transcripts and retrieve all probes for each, so we are really not gaining anything!!
-#The only gain we can make is by chunking by slice, but then we need to know how many times something has mapped
-#Can we do some clean up afterwards? Let's add a clean up mode which simply deletes all probe sets which map too many times.
-#We would need to ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run clean up.
-# There is no reason to have separate probe and xref DBs???
-# Validate array format against arrays specified? May want to just use an array format as a template???
-# Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and annotation
-# Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
-#Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode
-#And we won't get duplication should the job fail halfway through
+# 1. Reimpliment validate arrays, see old script?
+# 2. Add unannotated UTR clipping dependant on nearest neighbour
+# 3. Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, 
+#    then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs 
+#    in the neighbour.
+# 4. Separate UTR multipliers for 3' and 5'?
+# 5. Implement incremental update from list of stable IDs. Consider unmapped probe changes etc. 
+# 6. Parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide 
+#    counts for a given probeset. Calc UTRs then submit chunks jobs to farm
+#    Chunk by retrieving all probesets and sorting an array of probeset names, then splice the array 
+#    according to the number of chunks. We're still going to have retrieve all the transcripts and retrieve 
+#    all probes for each, so we are really not gaining anything!! The only gain we can make is by chunking 
+#    by slice, but then we need to know how many times something has mapped. Can we do some clean up afterwards? 
+#    Let's add a clean up mode which simply deletes all probe sets which map too many times. We would need to 
+#    ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run 
+#    clean up.
+# 7. There is no reason to have separate probe and xref DBs???
+# 8. Validate array format against arrays specified? May want to just use an array format as a template???
+# 9. Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and 
+#    annotation
+# 10.Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the 
+#    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total 
+#    sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
+# 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and 
+#    we won't get duplication should the job fail halfway through
+# 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
 
 
 #Ensembl Genomes stuff
@@ -67,7 +73,8 @@
 
 
 # Issues
-# Cannot account for running non-linked arrays which may use the same probe/set name.  This may cause failure if the probeset sizes are different. Xrefs and counts should be unaffected as we base these on the probe_set_ids not the names
+# Cannot account for running non-linked arrays which may use the same probe/set name.  This may cause failure if the probeset sizes are different. Xrefs and counts should be unaffected as we base these on the probe_set_ids not the names. This is not really an issue as unlinked arrays should not be run together
+# Cannot currently handle probesets with different sizes between arrays, defaults to lowest probeset size to be permissive. See todo 12.
 
 
 =head1 NAME
@@ -90,92 +97,93 @@ More wordy description here
 
 promiscuous probes
 completed unmapped probes
+linked arrays
 
 This is generally executed by the eFG array mapping environment
 
 =head1 OPTIONS
 
-Mandatory
- -species    Latin name as used in DB name or meta table e.g. homo_sapiens
- -vendor     Array vendor e.g. AFFY, ILLUMINA etc
- -format     Array format e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG. Sets default array configuration
- -arrays     List (space separated) of array names.
+ Mandatory
+  -species    Latin name as used in DB name or meta table e.g. homo_sapiens
+  -vendor     Array vendor e.g. AFFY, ILLUMINA etc
+  -format     Array format e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG. Sets default array configuration
+  -arrays     List (space separated) of array names.
 
-Array configuration:
- -linked_arrays       Boolean(0|1) - For probe(set)s which exist on multiple array e.g. AFFY
- -probeset_arrays     Boolean(0|1) - For arrays which contain probesets rather than just single probes
- -sense_interrogation Boolean(0|1) - Sets interrogation strand, normally 1 for AFFY but 0 for AFFY_ST i.e. anti-sense
+ Array configuration:
+  -linked_arrays       Boolean(0|1) - For probe(set)s which exist on multiple array e.g. AFFY
+  -probeset_arrays     Boolean(0|1) - For arrays which contain probesets rather than just single probes
+  -sense_interrogation Boolean(0|1) - Sets interrogation strand, normally 1 for AFFY but 0 for AFFY_ST i.e. anti-sense
 
-Mapping rules:
+ Mapping rules:
 
- -mismatches                  Maximum number of mismatches allowed per probe
- -calculate_utrs              This calculates the default unannotated UTR extension defined by
-                              the greater of either the mean or the median of all annotated UTRs
-                              This is overridden by the following extend options
- -unannotated_5_utr           Default extension for transcripts with unannotated 5' UTRs
- -unannotated_3_utr           Default extension for transcripts with unannotated 3' UTRs
- -annotated_5_prime_extend    Default bp extension for all transcripts with annotated 5' UTRs
- -annotated_3_prime_extend    Default bp extension for all transcripts with annotated 3' UTRs
- -utr_multiplier              Defines UTR extension as multiple of annotated UTR. This is overridden 
-                              if the above options are set.
- -max_transcripts             Maximum number of transcripts probe(set) can map to before we call it 
-                              promiscuous, default is 100.
- -threshold                   This is the fraction(0-1) of probes within a probeset required to call it 
-                              mapped, default is 0.5
+  -mismatches                  Maximum number of mismatches allowed per probe
+  -calculate_utrs              This calculates the default unannotated UTR extension defined by
+                               the greater of either the mean or the median of all annotated UTRs
+                               This is overridden by the following extend options
+  -unannotated_5_utr           Default extension for transcripts with unannotated 5' UTRs
+  -unannotated_3_utr           Default extension for transcripts with unannotated 3' UTRs
+  -annotated_5_prime_extend    Default bp extension for all transcripts with annotated 5' UTRs
+  -annotated_3_prime_extend    Default bp extension for all transcripts with annotated 3' UTRs
+  -utr_multiplier              Defines UTR extension as multiple of annotated UTR. This is overridden 
+                               if the above options are set.
+  -max_transcripts             Maximum number of transcripts probe(set) can map to before we call it 
+                               promiscuous, default is 100.
+  -threshold                   This is the fraction(0-1) of probes within a probeset required to call it 
+                               mapped, default is 0.5
 
 
-Running modes:
+ Running modes:
 
- -multi_species    Creates core DB as multi-species
- -delete           Delete all pre-existing array xrefs generated by probe2transcript for given arrays
- -no_triage        Does not load UnmappedObjects (still writes to log file)
- -parallelise      Not yet implemented, will chunk and submit to farm
- -clean_up         Not yet implemented, will perform post parallelised run clean up
+  -multi_species    Creates core DB as multi-species
+  -delete           Delete all pre-existing array xrefs generated by probe2transcript for given arrays
+  -no_triage        Does not load UnmappedObjects (still writes to log file)
+  -parallelise      Not yet implemented, will chunk and submit to farm
+  -clean_up         Not yet implemented, will perform post parallelised run clean up
 		 
-DB connection parameters, registry will override direct connection:
+ DB connection parameters, registry will override direct connection:
 
- -reg_verbose    Turns on verbose output when loading the registry
+  -reg_verbose    Turns on verbose output when loading the registry
 
- -reg_host
- -reg_port
- -reg_user
- -reg_pass
+  -reg_host
+  -reg_port
+  -reg_user
+  -reg_pass
 
- or
+  or
 
- -reg_file
+  -reg_file
 
- or
+  or
 
- -transcript_host    Mandatory
- -transcript_user    Mandatory
- -transcript_port    
- -transcript_pass    Mandatory
- -transcript_dbname  Mandatory
+  -transcript_host    Mandatory
+  -transcript_user    Mandatory
+  -transcript_port    
+  -transcript_pass    Mandatory
+  -transcript_dbname  Mandatory
 
- -xref_host          Mandatory
- -xref_user          Mandatory
- -xref_port
- -xref_pass          Mandatory
- -xref_dbname        Mandatory
+  -xref_host          Mandatory
+  -xref_user          Mandatory
+  -xref_port
+  -xref_pass          Mandatory
+  -xref_dbname        Mandatory
 
- -probe_host         Probe parameters
- -probe_user         default to xref
- -probe_port         DB paramters
- -probe_pass         if not
- -probe_dbname       specified
+  -probe_host         Probe parameters
+  -probe_user         default to xref
+  -probe_port         DB paramters
+  -probe_pass         if not
+  -probe_dbname       specified
 
-Testing:
+ Testing:
 
- -test_transcripts   Number of transcripts to perform a test run on
- -slice              Name of test slice to perform a test run on 
- -transcript         Test transcript stable ID
- -no_store           Not yet implemented	
+  -test_transcripts   Number of transcripts to perform a test run on
+  -slice              Name of test slice to perform a test run on 
+  -transcript         Test transcript stable ID
+  -no_store           Not yet implemented	
 		 
-Other options:
- -tee                Tees output to STDOUT
- -filename           Sets name to be used in output and logfile, default is xref_dbname_probe2transcript.log|out
- -help               Prints this POD documentation and exits
+ Other options:
+  -tee                Tees output to STDOUT
+  -filename           Sets name to be used in output and logfile, default is xref_dbname_probe2transcript.log|out
+  -help               Prints this POD documentation and exits
 
 
 =head1 EXAMPLE
@@ -185,16 +193,10 @@ Other options:
 
 ensembl-functgenomics/scripts/environments/arrays.env
 
-=head1 AUTHOR
-
-This module was created by Nathan Johnson.
-
-This module is part of the Ensembl project: http://www.ensembl.org/
-
 =head1 CONTACT
 
+This module is part of the Ensembl project: http://www.ensembl.org/
 Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
-
 
 =cut
 
@@ -1728,7 +1730,20 @@ sub cache_arrays_per_object {
 		  push @names, (split/#/, $object_name);
 		}
 		else{
-		  die("Found probe/probeset(dbID=$object_id) with differing size between arrays(@arrays)");
+
+		  #This is still causing problems
+		  #As we can have different sizes between arrays for the same probeset
+		  #e.g. RT arrays(~850 genes) have 20 probes for the same set which only have 16 on the comparable
+		  #RG genomewide array
+		  #This means we need to handle two different annotations!
+		  #This would require being able to determine whether a give probe is available on 
+		  #a given array, e.g. Probe->arrays
+		  #This would be massivly redundant for most probes, so do we need a flag at the array/probeset 
+		  #level to say this is a member of a variable set?
+		  #Then need to generate array specific annotations
+
+		  warn("Found probeset(dbID=$object_id) with differing size between arrays:\t@arrays($last_probeset_size) and $array($probeset_size)\n");
+		  $probeset_size = $last_probeset_size if $last_probeset_size < $probeset_size;
 		}
 	  }
 	  else{
