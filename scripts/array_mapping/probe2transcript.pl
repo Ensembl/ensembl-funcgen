@@ -1082,7 +1082,7 @@ foreach my $transcript (@transcripts) {
 	#Do we need these as UnmappedObjects or in the log at all?
 	if($array_config{sense_interrogation}){
 	  
-	  if($transcript->seq_region_strand = $feature->seq_region_strand){
+	  if($transcript->seq_region_strand == $feature->seq_region_strand){
 		print OUT "Unmapped sense ".$log_name."\n";
 		next;
 	  }
