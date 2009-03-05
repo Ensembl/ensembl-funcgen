@@ -146,7 +146,7 @@ CREATE TABLE external_synonym (
 DROP TABLE IF EXISTS external_db;
 CREATE TABLE external_db (
   external_db_id 	          SMALLINT(5) UNSIGNED NOT NULL auto_increment,
-  db_name                     VARCHAR(28) NOT NULL,
+  db_name                     VARCHAR(100) NOT NULL,
   db_release                  VARCHAR(255),
   status                      ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL,
   dbprimary_acc_linkable      BOOLEAN DEFAULT 1 NOT NULL,
