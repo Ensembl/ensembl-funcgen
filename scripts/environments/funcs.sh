@@ -108,6 +108,12 @@ CheckVariables()
 {
 	line=
 
+	if [ ! "$*" ]; then
+		echo 'Must pass variable name(s) to check'
+		exit 100
+	fi
+
+
     for var in $*
     do
         val=$(eval "echo \$$var")
@@ -326,7 +332,8 @@ ChangeMakeDir()
 
 ################################################################################
 # Func      : CheckFile() 
-# Desc      : checks to see whether passed parameter is a file 
+# Desc      : checks to see whether passed parameter is a file or a link to an 
+#             existing file
 # Arg [1]   : file name 
 # Return    : none 
 # Exception : exists if not a file 
@@ -435,14 +442,11 @@ GetFileSize(){
 	file=$1
 	shift
 	
-	if [ ! -f $file ]; then
-		echo "$file does not exist, maybe you need to BuildFastas?"
-		exit 1;
-	fi
+	CheckFile $file
 		
-     	#Need to follow links here to get real size!
-	fasta_size=($(ls -lLk $file))
-	echo ${fasta_size[4]} 
+   	#Need to follow links here to get real size!
+	file_size=($(ls -lLk $file))
+	echo ${file_size[4]} 
 }
 
 
