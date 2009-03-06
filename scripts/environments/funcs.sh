@@ -133,6 +133,39 @@ CheckVariables()
     fi
 }
 
+
+CheckVariablesOrUsage(){
+	usage=$1
+	shift
+	variable_names="$*"
+
+	#Could CheckVariabl
+
+	tmp=$(CheckVariables $variable_names)
+
+	if [ $? != 0 ]; then
+		echo "$tmp"
+		echo "$usage"
+		exit 1;
+	fi
+}
+
+ValidateVariableOrUsage(){
+	usage=$1
+	shift
+
+	CheckVariables usage
+
+	tmp=$(ValidateVariable $*)
+
+	if [ $? != 0 ]; then
+		echo "$tmp"
+		echo "$usage"
+		exit 1;
+	fi
+}
+
+
 ################################################################################
 # Func      : ValidateVariable()
 # Desc      : Check that the passed variable is contained in pass valid variable
@@ -438,7 +471,7 @@ GetFilename()
 }
 
 
-GetFileSize(){
+SetFileSize(){
 	file=$1
 	shift
 	
@@ -446,7 +479,7 @@ GetFileSize(){
 		
    	#Need to follow links here to get real size!
 	file_size=($(ls -lLk $file))
-	echo ${file_size[4]} 
+	export file_size=${file_size[4]} 
 }
 
 
