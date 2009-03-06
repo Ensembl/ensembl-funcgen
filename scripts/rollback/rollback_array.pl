@@ -42,7 +42,8 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 $| =1;
 
 my ($array_name, $pass, $force, @chips, $vendor, %achips);
-my ($host, $dbname, $species, $mode, $port, $user);
+my ($host, $dbname, $species, $mode, $port, $user, $dnadb_pass);
+my ($dnadb_host, $dnadb_name, $dnadb_species, $dnadb_port, $dnadb_user);
 my @tmp_args = @ARGV;
 
 GetOptions (
@@ -50,12 +51,17 @@ GetOptions (
 			"chips|c=s{,}"    => \@chips,
 			"vendor|v=s"      => \$vendor,
 			"mode|m=s"        => \$mode,
+			"dbuser|u=s"      => \$user,
 			"dbpass|p=s"      => \$pass,
 			"dbport=s"        => \$port,
 			"dbname|n=s"      => \$dbname,
 			"dbhost|h=s"      => \$host,
+			"dnadb_pass=s"      => \$dnadb_pass,
+			"dnadb_port=s"        => \$dnadb_port,
+			"dnadb_name=s"      => \$dnadb_name,
+			"dnadb_host=s"      => \$dnadb_host,
+			"dnadb_user=s"      => \$dnadb_user,
 			"species=s"       => \$species,
-			"dbuser|u=s"      => \$user,
 			"force|f"         => \$force,
 			"help|?"          => sub { pos2usage(-exitval => 0,  
 												 -verbose => 2, 
@@ -74,6 +80,23 @@ die('Must define a -pass parameter')    if ! $pass;
 die('Must define a -species parameter') if ! $species;
 $force = 'force' if $force;
 
+
+my $dnadb;
+
+if($dnadb_name){
+
+  my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+	(
+	 -host => $dnadb_host || $host,
+	 -dbname => $dnadb_name,
+	 -user => $dnadb_user || $user,
+	 -pass => $dnadb_pass || $pass,
+	 -port => $dnadb_port,#don't default here as it may be on a different port
+	 -species => $species,
+	 -group => 'core'
+	);
+}
+
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -host => $host,
 													  -dbname => $dbname,
@@ -81,10 +104,14 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -pass => $pass,
 						   						      -port => $port,
 													  -species => $species,
+													  -dnadb => $dnadb,
+													  -group => 'funcgen',
 													 );
 $db->dbc->db_handle;#Test the DB connection
 my $array       = $db->get_ArrayAdaptor->fetch_by_name_vendor($array_name, $vendor);
+
 die ("Could not retrieve $vendor $array_name Array") if ! $array;
+
 my $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper(
 													  no_log => 1,#tees automatically with no_log
 													 );
