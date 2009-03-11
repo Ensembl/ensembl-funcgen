@@ -98,8 +98,6 @@ sub new {
   my ( $class, @args ) = @_;
 
   my $self = $class->SUPER::new(@args);
-
-
   #Currently only uses dnadb params to auto select
   #If attached dnadb or default reg dnadb does not match 
   #given assembly version.
@@ -134,8 +132,6 @@ sub new {
   $self->{'dnadb_port'} = $dnadb_port || $default_port || 3306;
   $self->{'dnadb_user'} = $dnadb_user || $default_user || 'anonymous';
   $self->{'dnadb_pass'} = $dnadb_pass || $default_pass || undef;
-
-  
   ($efg_assm = (split/_/, $self->_get_schema_build($self))[1]) =~ s/[a-z]//;
   $dnadb_assm ||= $default_assm || $efg_assm;
   $self->{'dnadb_assm'} = $dnadb_assm;
@@ -143,18 +139,13 @@ sub new {
 
   #Now we only want to reset the dnadb if it does not match the dnadb_assm
   #Use dnadb method here as this will either return a predefined dnadb(attached or reg) or auto select
+  #Can we change this so that it only does this when we call dnadb?
+  #This resulted in circular reference, so we need to be careful about changing this
 
   if($self->_get_schema_build($self->dnadb()) !~ /[0-9]+_${dnadb_assm}[a-z]*$/){
-	#my $warning = 'WARNING: dnadb does not match required -dnadb_assm '.self->dnadb_assembly;
-
-	#.'. Using ensembldb.enembl.org to define the dnadb";
-	#$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
-
-	#We need to account for reg_config DBs which may have custom info in
-	#So try reg_config host first, then try ensembldb with warning
-	#Could have a reg_config only flag for core dbs
-	#Need to implement more params in set_dnadb_by_assembly_version
-	#$self->log($warning);
+	#Do we need to consider reg_config here?
+	#We could potentially have two version of the core DB in the config
+	#But we would expect the user to handle predefining the dnadb correctly in this case
 	warn ':: WARNING: dnadb('.$self->dnadb->dbc->dbname.') does not match required -dnadb_assm '.$self->dnadb_assembly;
 
 	if($dnadb_defined && $dnadb_host){
@@ -329,12 +320,10 @@ sub _get_schema_build{
   
   my @dbname = split/_/, $db->dbc->dbname();
 
-  #warn "dbname is $schema_build";
+
 
   my $schema_build = pop @dbname;
   $schema_build = pop(@dbname).'_'.$schema_build;
-
-
   return $schema_build;
 }
 
