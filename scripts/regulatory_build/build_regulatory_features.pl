@@ -73,19 +73,23 @@ The following figure gives examples.
 
 [more documentation to be added]
 
-=head1 LICENCE
+=head1 LICENSE
 
-This code is distributed under an Apache style licence. Please see
-http://www.ensembl.org/info/about/code_licence.html for details.
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-=head1 AUTHOR
+  This software is distributed under a modified Apache license.
+  For license details, please see
 
-Stefan Graf, Ensembl Functional Genomics
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Please post comments/questions to the Ensembl development list
-<ensembl-dev@ebi.ac.uk>
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =cut
 
@@ -906,7 +910,8 @@ sub get_regulatory_FeatureSet{
             $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
                 (
                  -name        => 'RegulatoryFeature',
-                 -description => 'RegulatoryFeature',
+                 -description => 'Ensembl Regulatory Feature',
+				 -class       => 'Regulatory Feature',
                  );
             
             $ftype = @{$fta->store($ftype)} if ($write_features);
