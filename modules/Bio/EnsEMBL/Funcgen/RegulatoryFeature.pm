@@ -200,10 +200,10 @@ sub regulatory_attributes {
   my $table;
 
   #This is causing errors when we have not yet set the adaptor
-  #my %adaptors = (
-#				  'annotated_feature' => $self->adaptor->db->get_AnnotatedFeatureAdaptor(),
+  my %adaptors = (
+				  'annotated_feature' => $self->adaptor->db->get_AnnotatedFeatureAdaptor(),
 #				  #'external_feature' => $self->adaptor->db->get_ExternalFeatureAdaptor(),
-#				 );
+				 );
 
   #my %attr_class_tables = (
   #'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
@@ -227,18 +227,24 @@ sub regulatory_attributes {
 	  $self->{'regulatory_attributes'}{$table}{$attr->dbID()} = $attr; 
 	}
   }
+  else{
 
-  #do we need this block if we are not using the id approach outside of the reg_build script?
-  #foreach my $table(keys %{$self->{'regulatory_attributes'}}){
+	#do we need this block if we are not using the id approach outside of the reg_build script?
+	#temporarily yes!!
+	#Until we pass the actual features in the attr cache from build_regulatory_features.pl
+	
 
-	#foreach my $dbID(values %{$self->{'regulatory_attributes'}{$table}}){
-	  
-	 # if(! defined $self->{'regulatory_attributes'}{$table}{$dbID}){
-	#	$self->{'regulatory_attributes'}{$table}{$dbID} = $adaptors->{$table}->fetch_by_dbID($dbID);
-	#  }
-#	}
-#  }
-    
+
+	foreach my $table(keys %{$self->{'regulatory_attributes'}}){
+
+	  foreach my $dbID(values %{$self->{'regulatory_attributes'}{$table}}){
+		
+		if(! defined $self->{'regulatory_attributes'}{$table}{$dbID}){
+		  $self->{'regulatory_attributes'}{$table}{$dbID} = $adaptors{$table}->fetch_by_dbID($dbID);
+		}
+	  }
+	}
+  }
 
   return [ map values %{$self->{'regulatory_attributes'}{$_}}, keys %{$self->{'regulatory_attributes'}} ];
 }
@@ -268,6 +274,7 @@ sub _attribute_cache{
 		warn "You are trying to overwrite a pre-existing regulatory atribute cache entry for $table dbID $dbID\n";
 	  }
 	  else{
+		#why are we setting this to undef?
 		$self->{'regulatory_attributes'}{$table}{$dbID} = undef;
 	  }
 	}
@@ -339,7 +346,10 @@ sub bound_end {
 sub _generate_underlying_structure{
   my $self = shift;
 
-  if(! @{$self->regulatory_attributes()}){
+
+  my @attrs = @{$self->regulatory_attributes()};
+
+  if(! @attrs){
 	warn "No underlying regulatory_attribute features to generate comples structure from";
 	#This should never happen
 	
@@ -351,7 +361,9 @@ sub _generate_underlying_structure{
   else{
 	my (@start_ends);
 
-	map {push @start_ends, ($_->start, $_->end)} @{$self->regulatory_attributes()};
+	throw('arg');
+
+	map {push @start_ends, ($_->start, $_->end)} @attrs;
 
 	@start_ends = sort { $a <=> $b } @start_ends;
 
