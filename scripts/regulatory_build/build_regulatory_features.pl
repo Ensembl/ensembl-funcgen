@@ -412,9 +412,7 @@ my $logic_name = $analysis->logic_name();
 my $ana = $aa->fetch_by_logic_name($logic_name);
 
 if ( ! defined $ana ) { # NEW
-    
-    warn("Need to store new analysis with logic name $logic_name.");
-    $aa->store($analysis);
+  $aa->store($analysis);
     
 } elsif ( $ana->compare($analysis) ) { # EXISTS, but with different options
 
@@ -430,12 +428,13 @@ if ( ! defined $ana ) { # NEW
     #$self->efg_analysis->adaptor($self->efgdb->get_AnalysisAdaptor);
     #$aa->update($self->efg_analysis);
  
-} else { # EXISTS
-
-    warn('Analysis with logic name \''.$logic_name.'\' already '.
-         'exists.');
-    
 }
+# else { # EXISTS
+
+#  warn('Analysis with logic name \''.$logic_name.'\' already '.
+#         'exists.');
+    
+#}
 
 $analysis = $aa->fetch_by_logic_name($logic_name);
 
@@ -547,6 +546,7 @@ while (<$fh>) {
                 if ($debug);
             
             # add annot. feature id to reg. feature
+			#NJ why are we using a hash for this?
             $rf[$#rf]{annotated}{$af_id} = undef;
             $rf[$#rf]{fsets}{$fset_id}++;
             
@@ -609,9 +609,7 @@ if ($write_features) {
     
     my @f = ();
     
-    map {
-        push (@f, &get_regulatory_feature($_));
-    } @rf;
+    map { push (@f, &get_regulatory_feature($_)); } @rf;
     
     #print Dumper @f;
     #warn("STORING DEACTIVATED");
@@ -851,6 +849,7 @@ sub get_regulatory_feature{
         
     }
 
+	
     my $regulatory_feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
         (
          -slice            => $slice,
@@ -860,7 +859,7 @@ sub get_regulatory_feature{
          -display_label    => $rf->{binstring} || '',
          -feature_set      => $rfset,
          -feature_type     => $rfset->feature_type,
-         -_attribute_cache => {'annotated' => $rf->{annotated}},
+         -_attribute_cache => {'annotated_feature' => $rf->{annotated}},#This is passing a ref to a has of af_id keys and null values?
          );
 
 
