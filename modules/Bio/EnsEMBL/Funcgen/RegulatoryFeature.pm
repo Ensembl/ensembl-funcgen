@@ -216,6 +216,7 @@ sub regulatory_attributes {
   #deref here for safety??
   #$self->{'regulatory_attributes'} =  [@$attrs] if $attrs;
 
+
   if(defined $attrs){# && @$attrs){
 
 	my @attrs = @$attrs;
@@ -237,7 +238,7 @@ sub regulatory_attributes {
 
 	foreach my $table(keys %{$self->{'regulatory_attributes'}}){
 
-	  foreach my $dbID(values %{$self->{'regulatory_attributes'}{$table}}){
+	  foreach my $dbID(keys %{$self->{'regulatory_attributes'}{$table}}){
 		
 		if(! defined $self->{'regulatory_attributes'}{$table}{$dbID}){
 		  $self->{'regulatory_attributes'}{$table}{$dbID} = $adaptors{$table}->fetch_by_dbID($dbID);
@@ -360,8 +361,6 @@ sub _generate_underlying_structure{
   }
   else{
 	my (@start_ends);
-
-	throw('arg');
 
 	map {push @start_ends, ($_->start, $_->end)} @attrs;
 
