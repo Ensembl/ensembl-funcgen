@@ -239,7 +239,7 @@ sub _left_join {
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
 
-
+  
 	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
 	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
 
@@ -592,6 +592,8 @@ sub store{
 	
 	my $seq_region_id;
 	($rf, $seq_region_id) = $self->_pre_store($rf);
+	$rf->adaptor($self);#Set adaptor first to allow attr feature retreival for bounds
+	#This is only required when storing, 
 	
 	$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
 	$sth->bind_param(2, $rf->start(),               SQL_INTEGER);
@@ -606,7 +608,6 @@ sub store{
 	
 	$sth->execute();
 	$rf->dbID( $sth->{'mysql_insertid'} );
-	$rf->adaptor($self);
 
 	my $table_type;
 	my %attrs = %{$rf->_attribute_cache()};
