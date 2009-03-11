@@ -198,10 +198,12 @@ sub regulatory_attributes {
   
 
   my $table;
-  my %adaptors = (
-				  'annotated_feature' => $self->adaptor->db->get_AnnotatedFeatureAdaptor(),
-				  #'external_feature' => $self->adaptor->db->get_ExternalFeatureAdaptor(),
-				 );
+
+  #This is causing errors when we have not yet set the adaptor
+  #my %adaptors = (
+#				  'annotated_feature' => $self->adaptor->db->get_AnnotatedFeatureAdaptor(),
+#				  #'external_feature' => $self->adaptor->db->get_ExternalFeatureAdaptor(),
+#				 );
 
   #my %attr_class_tables = (
   #'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
