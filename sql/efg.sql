@@ -99,9 +99,7 @@ CREATE TABLE identity_xref (
   cigar_line              TEXT, 
   score                   DOUBLE,
   evalue                  DOUBLE,
-  `analysis_id` smallint(5) unsigned NOT NULL,
-  PRIMARY KEY (object_xref_id),
-  KEY analysis_idx (analysis_id)
+  PRIMARY KEY (object_xref_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -204,9 +202,11 @@ CREATE TABLE object_xref (
   ensembl_object_type         ENUM('RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType', 'ProbeSet', 'Probe', 'ProbeFeature') not NULL,
   xref_id                     INT UNSIGNED NOT NULL,
   linkage_annotation          VARCHAR(255) DEFAULT NULL,
+  analysis_id                 SMALLINT(5) UNSIGNED NOT NULL,
   UNIQUE (ensembl_object_type, ensembl_id, xref_id),
   KEY oxref_idx (object_xref_id, xref_id, ensembl_object_type, ensembl_id),
-  KEY xref_idx (xref_id, ensembl_object_type)
+  KEY xref_idx (xref_id, ensembl_object_type),
+  KEY `analysis_idx` (`analysis_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
 
 -- Note we use case correct versions of object name to allow easy adaptor generation
