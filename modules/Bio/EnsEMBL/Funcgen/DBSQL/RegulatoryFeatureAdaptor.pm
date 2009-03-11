@@ -541,7 +541,7 @@ sub store{
 			bound_seq_region_end,  seq_region_strand,
             display_label,         feature_type_id,
             feature_set_id,        stable_id
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
   
   my $sth2 = $self->prepare("
 		INSERT INTO regulatory_attribute (
