@@ -24,7 +24,7 @@ the creation of Slices in the context of eFG objects.
   $slice_adaptor = $db->get_SliceAdaptor();
 
   # get a slice on the entire chromosome X
-  $gene_regulation_slice = $slice_adaptor->fetch_by_gene($gene);
+  $gene_regulation_slice = $slice_adaptor->fetch_by_Gene_FeatureSets($gene, \@fsets);
 
 
 =head1 DESCRIPTION
@@ -64,7 +64,6 @@ sub new {
   #other non seq_region table style queries on core DB
   my $self = $class->SUPER::new($efgdb->dnadb);
   $self->efgdb($efgdb);
-
   return $self;
 }
 
