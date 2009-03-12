@@ -47,15 +47,43 @@ package Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor;
 use vars qw(@ISA);
 use strict;
 
-
 use Bio::EnsEMBL::DBSQL::SliceAdaptor;
-use Bio::EnsEMBL::Slice;
-
-
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning stack_trace_dump);
 
 
 @ISA = ('Bio::EnsEMBL::DBSQL::SliceAdaptor');
+
+sub new {
+  my ($caller, $efgdb) = @_;
+
+  my $class = ref($caller) || $caller;
+
+  #Now have to reset the efg db to the dnadb
+  #Does work using just efg.seq_region_id
+  #But this is undesirable as we want to perform 
+  #other non seq_region table style queries on core DB
+  my $self = $class->SUPER::new($efgdb->dnadb);
+  $self->efgdb($efgdb);
+
+  return $self;
+}
+
+
+sub efgdb{
+  my ($self, $efgdb) = @_;
+  
+  if($efgdb){
+
+	if(! (ref($efgdb) && $efgdb->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
+	  throw('Must provide a Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+	}
+	
+	$self->{'efgdb'} = $efgdb;	
+  }
+
+  return $self->{'efgdb'};
+}
+
 
 
 =head2 fetch_by_Gene_FeatureSets
@@ -172,7 +200,7 @@ sub _set_bounds_by_xref_FeatureSets{
   my ($self, $chr, $start, $end, $obj, $fsets) = @_;
 
   my ($extdb_name, $efg_feature);
-  my $dbe_adaptor = $self->db->get_DBEntryAdaptor;
+  my $dbe_adaptor = $self->efgdb->get_DBEntryAdaptor;
 
 
   #do we need to test for start/end/chr here?
@@ -210,7 +238,7 @@ sub _set_bounds_by_xref_FeatureSets{
   my %feature_set_types;
 
   foreach my $fset(@$fsets){
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
+	$self->efgdb->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 	
 	$feature_set_types{$fset->type} ||= [];
 	push @{$feature_set_types{$fset->type}}, $fset;
@@ -232,7 +260,7 @@ sub _set_bounds_by_xref_FeatureSets{
 
 	my $adaptor_method = 'get_'.ucfirst($fset_type).'FeatureAdaptor';
 
-	my $adaptor = $self->db->$adaptor_method;
+	my $adaptor = $self->efgdb->$adaptor_method;
 
 	my %feature_set_ids;
 	map $feature_set_ids{$_->dbID} = 1, @{$feature_set_types{$fset_type}};
