@@ -2,6 +2,7 @@
 
 
 #echo ":::: Sourcing funcs.sh"
+export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 
 #To do
 #Add more error echos when exiting
