@@ -203,7 +203,7 @@ sub validate_new_seq_regions{
   }
   
   my $pf_adaptor = $self->db->get_ProbeFeatureAdaptor();
-  my $slice_adaptor = $self->db->get_SliceAdaptor();
+  my $slice_adaptor = $self->db->dnadb->get_SliceAdaptor();
   
   $self->log_header('Validating new coord_systems/seq_regions');
   
@@ -213,6 +213,10 @@ sub validate_new_seq_regions{
 	
 	foreach my $slice(@{$slice_adaptor->fetch_all('toplevel', $build, 1)}){
 	  #1 is non-reference flag, essential for haplotype regions
+
+
+	  
+
 
 	  if($slice->start() != 1){
 		$self->log("Reslicing slice:\t".$slice->name());
@@ -406,6 +410,8 @@ sub check_meta_strings{
 
   $self->log_header('Checking meta strings');
 
+  warn "Need to check/update rebuild.version and regbuild.initial_release_date";
+
   #update flag?
 
   my @regf_fsets;
@@ -421,7 +427,7 @@ sub check_meta_strings{
 	push @regf_fsets, $fset if defined $fset;
   }
   
-  my @meta_keys = ('regulatory_string_feature_set_id', 'regulatory_string_feature_type_id');
+  my @meta_keys = ('reguild.feature_set_ids', 'regbuild.feature_type_ids');
 
   #What about anchor/seed sets?
 
@@ -442,101 +448,102 @@ sub check_meta_strings{
 	foreach my $fset(@regf_fsets){
 	#get version number of build
 	  my (undef, $build_version) = split/v/, $fset->name;
-	$build_version = (defined $build_version) ? '_v'.$build_version : '';
-	my $fset_string_key = 'regulatory_string_feature_set_id'.$build_version;
-	my $ftype_string_key = 'regulatory_string_feature_type_id'.$build_version;
-	my $fset_string = $mc->list_value_by_key($fset_string_key)->[0];
-	my $ftype_string = $mc->list_value_by_key($ftype_string_key)->[0];
+	  $build_version = (defined $build_version) ? '_v'.$build_version : '';
+	  my $fset_string_key = 'regulatory_string_feature_set_id'.$build_version;
+	  my $ftype_string_key = 'regulatory_string_feature_type_id'.$build_version;
+	  my $fset_string = $mc->list_value_by_key($fset_string_key)->[0];
+	  my $ftype_string = $mc->list_value_by_key($ftype_string_key)->[0];
 
-	$self->log('Validating '.$fset->name.":\n\t$fset_string_key($fset_string) vs $ftype_string_key($ftype_string)");
+	  $self->log('Validating '.$fset->name.":\n\t$fset_string_key($fset_string) vs $ftype_string_key($ftype_string)");
 
-	#Test fset vs ftype string
-	if(! defined $fset_string && ! defined $ftype_string){
-	  $self->report("FAIL:\tNo $fset_string_key or $ftype_string_key found in meta table");
-	}
-	elsif(! defined $fset_string){
-	  $self->report("FAIL:\tNo $fset_string_key found in meta table");
-	}
-	else{
-	  my @fset_ids = split/,/, $fset_string;
-	  my @ftype_ids;
-	  my @new_ftype_ids;
-	  my $ftype_fail = 0;
-	  
-	  if(defined $ftype_string){
-		@ftype_ids = split/,/, $ftype_string;
+	  #Test fset vs ftype string
+	  if(! defined $fset_string && ! defined $ftype_string){
+		$self->report("FAIL:\tNo $fset_string_key or $ftype_string_key found in meta table");
+	  }
+	  elsif(! defined $fset_string){
+		$self->report("FAIL:\tNo $fset_string_key found in meta table");
 	  }
 	  else{
-		$self->report("WARNING:\tNo $ftype_string_key found in meta table, will update using $fset_string_key");
-	  }
-	  
-
-	  #Now need to work backwards through ftypes to remove pseudo ftypes before validating
-	  #New string should be A,A,A;S,S,S,S,S,S;P,P,P
-	  #Where A is and Anchor/Seed set
-	  #S is a supporting set
-	  #P is a pseudo feature type e.g. TSS proximal
-	  
-
-	  if(scalar(@fset_ids) != scalar(@ftype_ids)){
-		$self->report("FAIL:\tLength mismatch between $fset_string_key and $ftype_string_key");
-	  }
-
-	  foreach my $i(0..$#fset_ids){
-		my $supporting_set_id = $fset_ids[$i];
-		my $sset = $fset_a->fetch_by_dbID($supporting_set_id);
-
-		if(! defined $sset){
-		  $self->report("FAIL:\t$fset_string_key $supporting_set_id does not exist in the DB");
+		my @fset_ids = split/,/, $fset_string;
+		my @ftype_ids;
+		my @new_ftype_ids;
+		my $ftype_fail = 0;
+		
+		if(defined $ftype_string){
+		  @ftype_ids = split/,/, $ftype_string;
 		}
 		else{
-		  #test/build ftype string
-		  
-		  if(defined $ftype_string){
-			
-			if($sset->feature_type->dbID != $ftype_ids[$i]){
-			  $ftype_fail = 1;
-			  $self->report("FAIL:\t$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
-			}
-		  }
-	
-		  push @new_ftype_ids, $sset->feature_type->dbID;
-	
+		  $self->report("WARNING:\tNo $ftype_string_key found in meta table, will update using $fset_string_key");
 		}
-	  }
-
-
-	  #Set ftype_string
-	  #This will not account for pseudo ftypes?  Remove!!!?
-	  my $new_ftype_string = join(',', @new_ftype_ids);
-
-	  if(! defined $ftype_string){
-		$self->log("Updating $ftype_string_key to:\t$new_ftype_string");
-		$self->db->dbc->db_handle->do("INSERT into meta values(NULL, '$ftype_string_key', '$new_ftype_string')");
-	  }
-	  elsif($ftype_fail){
-		$self->report("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
-	  }
-
-
-	  #Finally validate versus a reg feat
-	  #Need to change this to ftype string rather than fset string?
-
-	  my ($regf_dbID) = @{$self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1')};
 	  
-	  if(! defined $regf_dbID){
-		$self->report("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
-	  }
-	  else{
-		my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->{'display_label'};#Direct access to avoid feature type
-			
-		if(length($rf_string) != scalar(@fset_ids)){
-		  $self->report("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
+		
+		#Now need to work backwards through ftypes to remove pseudo ftypes before validating
+		#New string should be A,A,A;S,S,S,S,S,S;P,P,P
+		#Where A is and Anchor/Seed set
+		#S is a supporting set
+		#P is a pseudo feature type e.g. TSS proximal
+		
+
+		if(scalar(@fset_ids) != scalar(@ftype_ids)){
+		  $self->report("FAIL:\tLength mismatch between $fset_string_key and $ftype_string_key");
+		}
+		
+		foreach my $i(0..$#fset_ids){
+		  my $supporting_set_id = $fset_ids[$i];
+		  my $sset = $fset_a->fetch_by_dbID($supporting_set_id);
+		  
+		  if(! defined $sset){
+			$self->report("FAIL:\t$fset_string_key $supporting_set_id does not exist in the DB");
+		  }
+		  else{
+			#test/build ftype string
+		  
+			if(defined $ftype_string){
+			  
+			  if($sset->feature_type->dbID != $ftype_ids[$i]){
+				$ftype_fail = 1;
+				$self->report("FAIL:\t$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
+			  }
+			}
+	
+			push @new_ftype_ids, $sset->feature_type->dbID;
+	
+		  }
+		}
+
+
+		#Set ftype_string
+		#This will not account for pseudo ftypes?  Remove!!!?
+		my $new_ftype_string = join(',', @new_ftype_ids);
+
+		if(! defined $ftype_string){
+		  $self->log("Updating $ftype_string_key to:\t$new_ftype_string");
+		  $self->db->dbc->db_handle->do("INSERT into meta values(NULL, '$ftype_string_key', '$new_ftype_string')");
+		}
+		elsif($ftype_fail){
+		  $self->report("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
+		}
+
+
+		#Finally validate versus a reg feat
+		#Need to change this to ftype string rather than fset string?
+
+		my ($regf_dbID) = @{$self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1')};
+	  
+		if(! defined $regf_dbID){
+		  $self->report("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
+		}
+		else{
+		  my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->{'display_label'};#Direct access to avoid feature type
+		  
+		  if(length($rf_string) != scalar(@fset_ids)){
+			$self->report("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
+		  }
 		}
 	  }
 	}
   }
-  }
+
   return;
 }
 
