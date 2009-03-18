@@ -427,6 +427,7 @@ sub check_meta_strings{
 	push @regf_fsets, $fset if defined $fset;
   }
   
+  #Need to remove/implement this
   my @meta_keys = ('reguild.feature_set_ids', 'regbuild.feature_type_ids');
 
   #What about anchor/seed sets?
@@ -449,8 +450,8 @@ sub check_meta_strings{
 	#get version number of build
 	  my (undef, $build_version) = split/v/, $fset->name;
 	  $build_version = (defined $build_version) ? '_v'.$build_version : '';
-	  my $fset_string_key = 'regulatory_string_feature_set_id'.$build_version;
-	  my $ftype_string_key = 'regulatory_string_feature_type_id'.$build_version;
+	  my $fset_string_key = 'regbuild.feature_set_ids'.$build_version;
+	  my $ftype_string_key = 'regbuild.feature_type_ids'.$build_version;
 	  my $fset_string = $mc->list_value_by_key($fset_string_key)->[0];
 	  my $ftype_string = $mc->list_value_by_key($ftype_string_key)->[0];
 
@@ -626,7 +627,7 @@ sub check_stable_ids{
 	#Can't count NULL field, so have to count regulatory_ffeature_id!!!
 	my $sql = 'select count(regulatory_feature_id) from regulatory_feature where stable_id is NULL and feature_set_id='.$fset->dbID;
 	
-	warn "sql is $sql";
+	#warn "sql is $sql";
 
 	my ($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
 	
