@@ -24,6 +24,9 @@ _FALSE=!$_
 ### Trapping
 
 #Do we want to trap any other signals?
+#We probably want to capture CTRL-C (and CTRL-D?)
+#as we are exiting from scripts/cmds, but the env is then carrying on with the next step
+#Shouldn't we just Execute everything?
 
 #if [ $trap_exit -eq 1 ]
 #then
@@ -121,7 +124,6 @@ CheckVariables()
 
         if [ -z "$val" ]
 		then 
-			#Where is $line coming from?
 			line="$line \$$var"
 		fi
     done
@@ -381,6 +383,32 @@ CheckFile()
 		exit 204
     fi
 }
+
+#Could change this to CheckFilesOrUsage?
+#And just pass variable names like CheckVariables
+
+CheckFilesOrUsage(){
+	usage_string=$1
+	shift
+	file_variables=$*
+	
+
+	usage='usage: CheckFilesOrUsage "usage string" [/file/path]+ '
+ 	CheckVariablesOrUsage "$usage" usage_string $file_variables
+
+
+	for file_var in $file_variables; do
+		file=$(eval "echo \$$file_var")
+
+		if [ ! -f $file ]; then
+			echo "error : $file does not exist"
+			exit 204
+		fi
+	done
+}
+
+
+
 
 ################################################################################
 # Func      : Execute() 
