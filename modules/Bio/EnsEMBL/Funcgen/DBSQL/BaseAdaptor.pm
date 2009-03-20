@@ -287,7 +287,9 @@ sub has_stored_status{
   #Only used for set_status, merge with set_status?
   my $status_id = $self->_get_status_name_id($state);
 
-  throw("Must pass a stored Bio::EnsEMBL::Funcgen::Storable") if (! ($obj->isa("Bio::EnsEMBL::Funcgen::Storable") && $obj->dbID()));
+  if (! (ref($obj) && $obj->isa("Bio::EnsEMBL::Funcgen::Storable") && $obj->dbID())){
+	throw("Must pass a stored Bio::EnsEMBL::Funcgen::Storable");
+  }
 
   my $table = $self->_test_funcgen_table($obj);
  
