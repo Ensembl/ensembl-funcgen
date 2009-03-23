@@ -12,7 +12,7 @@ generate_DAS_config.pl \
     -dbuser ensro \
     -dbname homo_sapiens_funcgen_47_36i \
     -species homo_sapiens \
-    -das_home $EFG_SRC/DAS/
+    -das_config $EFG_SRC/config/DAS\
     -das_name efg \
     -das_host DAShost \
     -das_port  9000
@@ -33,7 +33,7 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets from a given D
 
  Mandatory: If running without -no_header (default).
     DAS parameters
-    -das_home
+    -das_config
     -das_name 
     -das_host 
     -das_port 
@@ -105,7 +105,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my ($dbhost, $dbport, $dbuser, $dbpass, $dbname, $das_port, $das_host, $species);
-my ($das_home, $set_type);
+my ($das_config, $set_type);
 my ($dnadb_host, $dnadb_port, $dnadb_user, $dnadb_pass, $dnadb_name, $dnadb, $set_name);
 my (@adaptor_names, $no_headers, $headers_only, $link_gene, $link_loci);
 my ($set_colour, $set_plot, $set_display_name);
@@ -211,7 +211,7 @@ GetOptions(
 		   
 		   #DAS Server params
 		   'das_host=s'   => \$das_host,
-		   'das_home=s'   => \$das_home,
+		   'das_config=s'   => \$das_config,
 		   'das_port=i'   => \$das_port,#$ENV{'EFG_DAS_PORT'} 9876?
 		   'maxclients=i' => \$max_clients,
 		   'das_name=s'   => \$das_name,
@@ -261,7 +261,7 @@ if(! defined $main::_log_file){
 
 
 # Some header only mandatory params
-if(! ($das_home && -d $das_home)){
+if(! ($das_config && -d $das_config)){
   pod2usage(
 			-exitval => 1,
 			-message => $pod_params,
@@ -273,7 +273,7 @@ if(! ($das_home && -d $das_home)){
 if(! $no_headers){
   my $prefork = int($max_clients/2);
   
-  my $header_file = $das_home."/${das_name}.config.header";
+  my $header_file = $das_config."/${das_name}.config.header";
   print ":: Generating DAS ini header:\t$header_file\n";
   open (OUT, ">$header_file") || die("Cannot open header file:\t$header_file");
 
@@ -285,8 +285,8 @@ prefork=${prefork}
 maxclients=${max_clients}
 port=${das_port}
 hostname=${das_host}
-pidfile=${das_home}/${das_name}.pid
-logfile=${das_home}/${das_name}.log";
+pidfile=${das_config}/${das_name}.pid
+logfile=${das_config}/${das_name}.log";
 
 #;response_hostname=das.example.com
 #;response_port=80
@@ -296,7 +296,7 @@ logfile=${das_home}/${das_name}.log";
 #;ensemblhome=/usr/local/ensembl
   close(OUT);
 
-  $header_file = $das_home."/${das_name}.html.header";
+  $header_file = $das_config."/${das_name}.html.header";
   print ":: Generating HTML header:\t$header_file\n";
   open (OUT, ">$header_file") || die("Cannot open header file:\t$header_file");
 
@@ -377,11 +377,11 @@ if(! $headers_only){
   foreach my $aname(keys %adaptors){
 	$plot = '';
 	$set_class = ucfirst($aname).'Set';
-	$sources_file = $das_home."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.sources";
+	$sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.sources";
 	print ":: Generating DAS $set_class ini sources:\t$sources_file\n";
 	open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
 
-	$html_file = $das_home."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.html";
+	$html_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.html";
 	print ":: Generating DAS $set_class source links:\t$html_file\n";
 	open (HTML, ">$html_file") || die("Cannot open html file:\t$html_file");
 
