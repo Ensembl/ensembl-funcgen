@@ -392,7 +392,6 @@ CheckFilesOrUsage(){
 	shift
 	file_variables=$*
 	
-
 	usage='usage: CheckFilesOrUsage "usage string" [/file/path]+ '
  	CheckVariablesOrUsage "$usage" usage_string $file_variables
 
@@ -401,7 +400,8 @@ CheckFilesOrUsage(){
 		file=$(eval "echo \$$file_var")
 
 		if [ ! -f $file ]; then
-			echo "error : $file does not exist"
+			echo "error : $file does not exist.
+$usage_string"
 			exit 204
 		fi
 	done
