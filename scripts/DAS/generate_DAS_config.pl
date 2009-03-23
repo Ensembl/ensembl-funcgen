@@ -272,8 +272,9 @@ if(! ($das_config && -d $das_config)){
 
 if(! $no_headers){
   my $prefork = int($max_clients/2);
-  
-  my $header_file = $das_config."/${das_name}.config.header";
+  my $das_instance="${das_name}.${das_host}:${das_port}";
+
+  my $header_file = $das_config."/${das_instance}.config.header";
   print ":: Generating DAS ini header:\t$header_file\n";
   open (OUT, ">$header_file") || die("Cannot open header file:\t$header_file");
 
@@ -296,7 +297,7 @@ logfile=${das_config}/${das_name}.log";
 #;ensemblhome=/usr/local/ensembl
   close(OUT);
 
-  $header_file = $das_config."/${das_name}.html.header";
+  $header_file = $das_config."/${das_instance}.html.header";
   print ":: Generating HTML header:\t$header_file\n";
   open (OUT, ">$header_file") || die("Cannot open header file:\t$header_file");
 
