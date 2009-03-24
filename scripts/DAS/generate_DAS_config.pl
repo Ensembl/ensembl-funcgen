@@ -272,7 +272,7 @@ if(! ($das_config && -d $das_config)){
 
 if(! $no_headers){
   my $prefork = int($max_clients/2);
-  my $das_instance="${das_name}.${das_host}:${das_port}";
+  my $das_instance="${das_name}.${das_host}.${das_port}";
 
   my $header_file = $das_config."/${das_instance}.config.header";
   print ":: Generating DAS ini header:\t$header_file\n";
@@ -378,6 +378,7 @@ if(! $headers_only){
   foreach my $aname(keys %adaptors){
 	$plot = '';
 	$set_class = ucfirst($aname).'Set';
+
 	$sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.sources";
 	print ":: Generating DAS $set_class ini sources:\t$sources_file\n";
 	open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
@@ -425,7 +426,7 @@ if(! $headers_only){
 
 	  print OUT "\n[${display_name}]
 state             = on
-adaptor           = $set_class
+adaptor           = ensembl_${aname}_set
 transport         = ensembl_funcgen
 host              = $dbhost
 port              = $dbport
