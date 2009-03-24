@@ -297,16 +297,11 @@ BackUpFile(){
 
 	#Can we add some file path parsing here to enable back up of file paths
 
-	file=$(GetFileName $1)
+	file=$(GetFilename $1)
 	file_dir=$(GetDir $1)
 
 	backup_dir=${BACKUP_DIR:=$file_dir}
 	MakeDirs $backup_dir
-
-
-
-	
-
 
 	if [[ -f $1 ]]; 
 	then 
