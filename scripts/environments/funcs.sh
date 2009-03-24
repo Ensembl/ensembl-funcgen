@@ -297,16 +297,20 @@ BackUpFile(){
 
 	#Can we add some file path parsing here to enable back up of file paths
 
-	backup_dir=${BACKUP_DIR:=.}
-	backup_dir="${backup_dir}/"
+	file=$(GetFileName $1)
+	file_dir=$(GetDir $1)
+
+	backup_dir=${BACKUP_DIR:=$file_dir}
 	MakeDirs $backup_dir
 
-	file=$(echo $1 | sed 's/.*\///')
+
+
+	
 
 
 	if [[ -f $1 ]]; 
 	then 
-		Execute cp $1 ${backup_dir}${file}.$$
+		Execute cp $1 ${backup_dir}/${file}.$$
 	fi
 }
 
@@ -584,23 +588,7 @@ ContinueOverride(){
 }
 
 
-################################################################################
-# Func      : isMac()
-# Desc      : tests whether machine is a Mac or not 
-# Args [0]  : 
-# Return    : returns true if OS is Darwin else false 
-# Exception : none 
-################################################################################
 
-isMac()
-{
-    if [ $(uname) = "Darwin" ]
-    then
-        echo $_TRUE
-    else
-        echo $_FALSE
-    fi
-}
 
 ################################################################################
 # Func      : CheckCompressedFile()
@@ -770,45 +758,6 @@ padNumber()
     echo $_PAD_NUM
 }
 
-################################################################################
-# Func      : toLowerCase()
-# Desc      : converts a string to lower case
-# Args [1]  : string
-# Return    : returns lower case version of string
-# Exception : none
-################################################################################
-
-toLowerCase()
-{
-    echo $1  | tr '[A-Z]' '[a-z]'
-}
-
-################################################################################
-# Func      : toUpperCase()
-# Desc      : converts a string to upper case
-# Args [1]  : string
-# Return    : returns upper case version of string
-# Exception : none
-################################################################################
-
-toUpperCase()
-{
-    echo $1  | tr '[a-z]' '[A-Z]'
-}
-
-################################################################################
-# Func      : Distribute()
-# Desc      : securely copies a local directory to a remote directory
-# Args [1]  : source directory
-# Args [2]  : remote machine name
-# Args [3]  : remote user name
-# Args [4]  : remote directory
-# Return    : scp exit status
-# Exception : none
-# Note      : Although -r is used in the scp command, which is for recursing
-#             through directories, this function can also upload single and
-#             multiple files as -r has no adverse effects when doing this.
-################################################################################
 
 Distribute()
 {
