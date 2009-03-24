@@ -43,9 +43,10 @@ export EFG_DAS_HOST=$(hostname -f)              #DAS sever host, set to $(hostna
 export EFG_DAS_PORT=9876                        #Default DAS port EDIT
 export EFG_DAS_NAME=efg                         #DAS instance name EDIT
 export EFG_DAS_HOME=$SRC/Bio-Das-ProServer      #DAS code dir, must be ProServer!
-#This is currently added to the PERL5LIB in .bashrc
-#But we need to be mindful of this growing for un related processes
+#This is currently added to the PERL5LIB in .cshrc
+#But we need to be mindful of this growing for unrelated processes
 #i.e. this will slow initialisation of other jobs(lsf!)
+
 
 #Default norm and analysis methods
 
@@ -204,15 +205,15 @@ StartDASServer(){
 	das_host=$EFG_DAS_HOST
 	das_config=$EFG_DAS_CONFIG
 	no_fork=
-	usage='usage: StartDASServer -i das_instance_name [ -c das_config(default=$EFG_DAS_CONFIG) -p das_port(default=$EFG_DAS_PORT) -s das_host(default=$EFG_DAS_HOST) -n(o fork) -h(elp) ]'
+	usage='usage: StartDASServer -i das_instance_name [ -c das_config(default=$EFG_DAS_CONFIG) -p das_port(default=$EFG_DAS_PORT) -s das_host(default=$EFG_DAS_HOST) -x(no fork) -h(elp) ]'
 
-	while getopts ":i:d:p:s:c:nh" opt; do
+	while getopts ":i:d:p:s:c:xh" opt; do
 		case $opt in 
 	        i  ) instance=$OPTARG ;; 
             c  ) das_config=$OPTARG ;;
             p  ) das_port=$OPTARG ;;
             s  ) das_host=$OPTARG ;;
-            n  ) no_fork=' -x ' ;;
+            x  ) no_fork=' -x ' ;;
 h  ) echo $usage; return 0;;
 \? ) echo $usage; exit 1;;
         esac 
@@ -223,6 +224,9 @@ h  ) echo $usage; return 0;;
 
 
 	$(CheckVariablesOrUsage "$usage" instance das_port das_host das_config EFG_DAS_HOME)
+
+	echo "$instance $das_port $das_host $das_config"
+
 
 	if [ $? -ne 0 ]; then
 		echo $error
@@ -248,8 +252,8 @@ h  ) echo $usage; return 0;;
 	
 	#Currently we can't restart the server using this func as the input files are deleted
 
-
-	instance_name=${instance}.${das_host}:${das_port}	
+	#Cannot use : in instance name here as Bio::Das::Proserver::Config truncates!
+	instance_name=${instance}.${das_host}.${das_port}	
 	config_header=${das_config}/${instance_name}.config.header
 	html_header=${das_config}/${instance_name}.html.header
 	error='Maybe you need to GenerateDASConfig?'
@@ -282,14 +286,17 @@ h  ) echo $usage; return 0;;
 	#Before we start messing aroung with the config
 	StopDASServer -i $instance -c $das_config -p $das_port -s $das_host
 	
+
+
+
 	#Cat the config files
-	config_file=${das_config}/${instance}.ini
+	config_file=${das_config}/${instance_name}.ini
 	BackUpFile $config_file
 	cat $config_header $config_files > $config_file
 	#rm -f $config_header $config_files
 	
 	#Cat the html files
-	html_file=${instance}.html
+	html_file=${das_config}/${instance_name}.html
 	BackUpFile $html_file
 	cat $html_header $html_files > $html_file
 	#rm -f $html_header $html_files
@@ -297,12 +304,15 @@ h  ) echo $usage; return 0;;
 	echo '</body></html>' | cat >> $html_file
 
 	#Start the server
+
+	echo "$EFG_DAS_HOME/eg/proserver $no_fork -debug -c $config_file "
+
 	$EFG_DAS_HOME/eg/proserver $no_fork -debug -c $config_file
 	
 	if [ $? -ne 0 ]; then
 		echo "Failed to start DAS instance: $instance_name"
-		return 1;
-	else
+		return 1
+	elif [ ! $no_fork ]; then
 		echo "Started DAS instance: $instance_name"
 	fi
 
@@ -350,8 +360,6 @@ h  ) echo $usage; return 0;;
 	fi
 
 	
-	echo "cehcking host"
-
     #CheckHost 	
 	fq_domain_name=$(hostname -f)
 
@@ -361,7 +369,7 @@ h  ) echo $usage; return 0;;
 	fi
 
 
-	instance_name=${instance}.${das_host}:${das_port}
+	instance_name=${instance}.${das_host}.${das_port}
 
 	#Stop the server
 	pid_file=${das_config}/${instance_name}.pid
@@ -384,7 +392,7 @@ h  ) echo $usage; return 0;;
 			echo "$instance_name DAS instance($pid) is not running"
 		fi
 	else
-		echo "No such instance configured: $instance_name"
+		echo "No such instance configured: $pid_file"
 	fi
 }
 
