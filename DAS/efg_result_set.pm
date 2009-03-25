@@ -45,6 +45,15 @@ sub init
 
 }
 
+sub title {
+    my $self = shift;
+    my ($title) = $self->dsn;
+
+    $title =~ s/\./_/;
+
+    return "$title";
+}
+
 sub build_features
 {
     my ( $self, $args ) = @_;
@@ -54,8 +63,8 @@ sub build_features
     my $start = $args->{'start'} || return ();
     my $end   = $args->{'end'} || return ();
 
-
     my $dba = $self->transport->adaptor();
+    
     my $slice = $dba->get_SliceAdaptor->fetch_by_region
         ('chromosome', $segment, $start, $end);
     print Dumper $slice if ($self->{'debug'});
@@ -66,13 +75,13 @@ sub build_features
     my @features;
 
     map {
-        my $ft_start = $start+$_->start;
-        my $ft_end = $start+$_->end;
+        my $ft_start = $start+$_->start();
+        my $ft_end = $start+$_->end();
         my $id = sprintf( "%s:%s,%s",
                           $segment,
                           $ft_start,
                           $ft_end);
-        print Dumper $id if ($self->{'debug'});
+        #print Dumper $id if ($self->{'debug'});
         push @features, {
             
             'id'          => $id,
@@ -91,6 +100,60 @@ sub build_features
         }
 
     } @{$rset->get_ResultFeatures_by_Slice($slice)};
+
+
+
+#    # get data via straight SQL
+#    my $version = $self->config()->{'data_version'};
+#    my $result_set_id = $self->config()->{'result_set_id'};
+#    my $qbounds = ($start && $end)?
+#        qq( AND pf.seq_region_start<=$end AND pf.seq_region_end>=$start):"";
+#
+#    my $sql = "SELECT STRAIGHT_JOIN pf.seq_region_start as start, pf.seq_region_end as end, 
+#                   pf.seq_region_strand as strand, r.score as score
+#               FROM probe_feature pf, result r, chip_channel cc, seq_region sr
+#              WHERE cc.result_set_id = $result_set_id 
+#                AND cc.chip_channel_id = r.chip_channel_id 
+#                AND r.probe_id = pf.probe_id
+#                AND sr.seq_region_id=pf.seq_region_id
+#                AND sr.schema_build=\"$version\"
+#                AND sr.name=\"$segment\"".
+#                $qbounds.";";
+#
+#    print Dumper $sql if ($self->{'debug'});
+#
+#    my $features = $self->transport->query($sql);
+#    print Dumper $features if ($self->{'debug'});
+#
+#    my @features;
+#
+#    map {
+#        my $id = sprintf( "%s:%d,%d",
+#                          $segment,
+#                          $_->{'start'},
+#                          $_->{'end'});
+#        #print Dumper $id if ($self->{'debug'});
+#        push @features, {
+#            
+#            'id'          => $id,
+#            'label'       => $id,
+#            'start'       => $_->{'start'},
+#            'end'         => $_->{'end'},
+#            #'ori'         => 1,
+#            'score'       => $_->{'score'},
+#            'method'      => $self->config()->{'source'},
+#            'type'        => $self->config()->{'type'},
+#            'typecategory'=> $self->config()->{'category'},
+#            #'note'        => $note,
+#            #'link'        => 'http://www.sanger.ac.uk/PostGenomics/epigenome/',
+#            #'linktxt'     => 'Human Epigenome Project (HEP)'
+#            
+#        }
+#
+#    } @{$features};
+    
+
+
     print 'NoRF: '.scalar(@features)."\n";
 
     return @features;
@@ -201,11 +264,10 @@ sub das_stylesheet
         <CATEGORY id="default">
             <TYPE id="default">
                 <GLYPH>
-                    <BOX>
-                        <FGCOLOR>brown3</FGCOLOR>
-                        <BGCOLOR>brown3</BGCOLOR>
+                    <TILING>
                         <HEIGHT>30</HEIGHT>
-                    </BOX>
+                        <COLOR1>brown3</COLOR1>
+                    </TILING>
                 </GLYPH>
             </TYPE>
         </CATEGORY>

@@ -47,10 +47,19 @@ sub init
 
 }
 
+sub title {
+    my $self = shift;
+    my ($title) = $self->dsn;
+
+    $title =~ s/\./_/;
+
+    return "$title";
+}
+
 sub build_features
 {
     my ( $self, $args ) = @_;
-    #print Dumper $args;
+    print Dumper $args if ($self->{'debug'});
     
     my $segment = $args->{'segment'} || return ();
     my $start = $args->{'start'} || return ();
@@ -117,7 +126,31 @@ sub das_stylesheet
 {
     my $self = shift;
 
-    return <<EOT;
+    print Dumper $self->{'dsn'};
+
+    if ($self->{'dsn'} =~ m/_BR/) {
+        return <<EOT;
+<!DOCTYPE DASSTYLE SYSTEM "http://www.biodas.org/dtd/dasstyle.dtd">
+<DASSTYLE>
+    <STYLESHEET version="0.01">
+        <CATEGORY id="default">
+            <TYPE id="default">
+                <GLYPH>
+                    <BOX>
+                        <FGCOLOR>black</FGCOLOR>
+                        <BGCOLOR>brown3</BGCOLOR>
+                        <HEIGHT>5</HEIGHT>
+                    </BOX>
+                </GLYPH>
+            </TYPE>
+        </CATEGORY>
+    </STYLESHEET>
+</DASSTYLE>
+EOT
+
+    } else {
+        
+        return <<EOT;
 <!DOCTYPE DASSTYLE SYSTEM "http://www.biodas.org/dtd/dasstyle.dtd">
 <DASSTYLE>
     <STYLESHEET version="0.01">
@@ -151,6 +184,7 @@ sub das_stylesheet
     </STYLESHEET>
 </DASSTYLE>
 EOT
+    }
 }
 
 1;
