@@ -93,6 +93,11 @@ ALTER table result ADD FOREIGN KEY (probe_id) REFERENCES probe(probe_id);
 ALTER table result_feature ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
 ALTER table result_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
+ALTER table result_set ADD FOREIGN KEY (cell_type_id) REFERENCES cell_type(cell_type_id);
+ALTER table result_set ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
+ALTER table result_set ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
+
+
 ALTER table status ADD FOREIGN KEY (status_name_id) REFERENCES status_name(status_name_id);
 --Can we add complex foriegn keys for status here?
 
