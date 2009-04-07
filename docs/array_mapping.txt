@@ -1,0 +1,222 @@
+:: Ensembl Functional Genomics Array Mapping
+
+This document details the configuration and functionality available using the eFG 'arrays' 
+environment, which utilises both the eFG pipeline environment and the Ensembl genebuild pipeline 
+technology. The eFG environment provides configuration and command line access to various functions 
+which can run the whole mapping pipeline or allow a more flexible step wise approach.
+
+The eFG environment currently supports the following formats unless otherwise stated:
+
+AFFY_UTR     - Standard IVT
+AFFY_ST      - Sense Target
+ILLUMINA_WG  - WholeGenome
+CODELINK
+PHALANX      - OneArray
+AGILENT      - Formats?
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+Contents
+
+1   Introduction
+2   Pre-requisites
+2   The Ensembl Pipeline
+3   The eFG Envronment
+4   Setting Up An Instance
+5   Running The Pipeline
+5.1 Probe Alignment
+5.2 Transcript Annotation
+6   Reports/Utilities
+7   Known Issues/Caveats
+8   To Do?
+9   Adding Additional Format Support
+10  MultiSpecies Concerns 
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+1 Introduction
+
+The array mapping pipeline consists of two distinct stages:
+
+Probe Alignment
+
+The probe sequences from a given array are aligned to the genomic sequence. If applicable (i.e. 
+expression design) probes are also mapped to transcript sequences.  These alignments are then 
+mapped back to the genome and stored as gapped alignments, any ungapped alignments from this process 
+are discarded as they will be represented by the genomic alignments. Transcript associations are 
+stored using a DBEntry object.
+
+Transcript Annotation
+
+Probe/sets are assigned to transcripts given a set of simple rules dependant on the array design.
+Historically this has involved a 2KB extension of the 3' UTR sequence as it is known that the Ensembl 
+gene build pipeline can be conservative in predicting UTRs. The new pipeline allows for much more 
+flexible configuration taking into account species specific variation of UTRs. The current default 
+strategy for annotating Affymetrix arrays is detailed here:
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+2 Pre-requisites/Requirements
+
+unix/linux
+
+bash
+
+bioperl-1.2.3
+
+ensembl
+
+ensembl-functgenomics
+
+ensembl-analysis
+
+ensembl-pipeline
+
+All the above ensembl packages and bioperl are available via CVS following the instructions here:
+
+http://www.ensembl.org/info/docs/api/api_installation.html
+
+exonerate-v2.2.0
+
+http://www.ebi.ac.uk/~guy/exonerate/
+
+LSF
+
+Not strictly essential as the pipeline code will run offline, but it would take a long time to run 
+these analysis using one machine.
+
+Memory
+
+This is entirely dependant on several factors including the number of arrays to be mapped, the
+format of the arrays and the size of the genome/transcriptome of a given species. 
+??? Some example numbers here 
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+2 The Ensembl Pipeline
+
+The main documentation for the Ensembl pipeline is available here:
+
+http://cvs.sanger.ac.uk/cgi-bin/viewcvs.cgi/ensembl-doc/pipeline_docs/the_ensembl_pipeline_infrastructure.txt?view=markup
+
+
+In summary, the ensembl-pipeline code deals with submission of jobs to the farm dependant on a set 
+of rules which describe the dependancies of each analysis step in a given pipeline. The rules and 
+job tracking information are stored in a special pipeline DB which contains a few extra tables for 
+the pipeline data. This can be your output DB, but for the purposes of safety the eFG environment 
+always uses a separate DB to handle this information.  This also means no post pipeline clean up is 
+required, whilst maintaining the ability to retain job information should it be required.
+
+The ensembl-analysis code deals with the actual work of a given analysis, with modules being split
+into Runnables which perform the actual analysis and RunnableDBs which handle post processing and
+interaction with the ensembl output DB e.g. your funcgen DB.  There are just three modules which 
+perform the bulk of the array mapping analyses:
+
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/RunnableDB/ImportArrays.pm - Runs as a single job to 
+collapse related arrays into a non-redundant set of probes, storing probe records in the output DB 
+and writing a non-reundant probe fasta file to be used in the alignment step.
+
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Runnable/ExonerateProbe.pm - Performs the exonerate 
+alignment, generates and filters ProbeFeatures given a max mismatch value.
+
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/RunnableDB/ProbeAlign.pm - Runs the ExonerateProbe 
+Runnable and performs post processing and storage of ProbeFeatures, UnmappedObjects and DBEntries.
+
+
+There are three main configuration files which need to be considered:
+
+ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/BatchQueue.pm.efg_arrays - This contains the 
+general pipeline configuration and specific configuration for each analysis, one per array format per
+mapping type. The should be ready to use by simply stripping the efg_arrays suffix, but it may be 
+necessary to alter some of the general pipeline configuration. DO NOT change any environmental 
+variables.
+
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ImportArrays.pm - This specifies some DB params 
+along with the regulator expressions to parse the fasta headers and some array specific meta data.
+
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ProbeAlign.pm - The provides analysis specific 
+configuration for exonerate alignment and filter options.
+
+
+All of the above have been edited such that configuration of analyses can be accessed using 
+environmental variables defined in a give instance of the arrays environment. This provides prevents 
+having to manualluy edit these configuration modules every time an instance is run.  However it may 
+be necessary to add configuration the first time you run a particular array or format. See section ??? 
+for futher details.
+
+It should also be noted that the arrays environment and the pipeline code are not inextricably 
+linked, so it should be possible to decouple and run the pipeline manually as stated in the main
+pipeline documentation. 
+#(This is not true for NR_FASTA/FASTA vars in ImportArrays as this build the input file from vars?) 
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+3 The eFG Environment
+
+The eFG shell environment was developed to aid administration of a local eFG instance. This has been 
+extended to provide specific support for different analysis pipelines.
+
+.efg
+
+The provides the most basic configuration and a handfull of administration functions.
+
+pipeline.env
+
+Provides configuration and functions to support any analysis environment which utilises the Ensembl
+pipeline technology
+
+arrays.env
+
+Provides array mapping specific configuration and functions
+
+arrays.config
+
+Separates user definable configuration from code in arrays.env
+
+
+You will need to edit all of the above files(excluding array.env), setting data and binary paths 
+where appropriate.  All environmental variables should be documented or self explanatory. These 
+should only need setting up once. It should be noted that any variables set in pipeline.env will 
+override those set in arrays.env/config, and likewise any set in arrays.env/config will override 
+those set in you instance file (See next section).
+
+Arrays dir/Format dirs
+
+
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+4 Setting Up An Instance File
+
+A small 'instance' file is used to set up a single instance of the pipeline. An example of this is 
+available here:
+
+ensembl-functgenomics/scripts/environments/example.arrays
+
+This contains s few variables to inform the pipeline where the output DB is.  As the eFG DBAdaptor
+auto-selects a core DB if one is not already specified, it may be necessary to define some DNADB
+If a valid corresponding 
+core DB in not available on 
+
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+Adding additional support
+
+Array
+
+Config/ImportArrays.pm
+
+Format
+
+BatchQueue.pm
