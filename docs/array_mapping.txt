@@ -1,37 +1,48 @@
-:: Ensembl Functional Genomics Array Mapping
+:::: The Ensembl Functional Genomics Array Mapping Environment ::::
 
 This document details the configuration and functionality available using the eFG 'arrays' 
 environment, which utilises both the eFG pipeline environment and the Ensembl genebuild pipeline 
 technology. The eFG environment provides configuration and command line access to various functions 
 which can run the whole mapping pipeline or allow a more flexible step wise approach.
 
-The eFG environment currently supports the following formats unless otherwise stated:
+The eFG environment currently supports genomic and transcript alignment, and transcript annotation of
+the following formats unless otherwise stated:
 
-AFFY_UTR     - Standard IVT
-AFFY_ST      - Sense Target
-ILLUMINA_WG  - WholeGenome
-CODELINK
-PHALANX      - OneArray
-AGILENT      - Formats?
+Format		  Description		Definition	   
+AFFY_UTR	  Standard IVT		25mer Probesets anti-sense target
+AFFY_ST		  Sense Target		25mer Probesets sense target
+ILLUMINA_WG	  WholeGenome		50mer Probes sense target 
+CODELINK_WG	  WholeGenome???	30mer Probes sense target 
+PHALANX		  OneArray			60mer Probes sense target
+AGILENT		  Formats???		60mer Probes sense target
+
+Not fully supported
+LEIDEN???
+NIMBLEGEN_TILING???
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+
 Contents
 
-1   Introduction
-2   Overview
-2   Pre-requisites
-2   The Ensembl Pipeline
-3   The eFG Envronment
-4   Initiating An Instance
-5   Running The Pipeline
-5.1 Probe Alignment
-5.2 Transcript Annotation
-6   Administration Functions
-7   Known Issues/Caveats
-8   To Do?
-9   Adding Additional Format Support
-10  MultiSpecies Concerns 
+1    Introduction
+2    Overview
+3    Pre-requisites
+4    The Ensembl Pipeline
+5    The eFG Envronment
+6    Input Data
+7    Initiating An Instance
+8    Running The Pipeline
+9.1  Probe Alignment
+9.2  Transcript Annotation
+10   Administration Functions
+11   Adding Additional Support
+11.1 Adding A New Array Format
+11.2 Adding A New Array
+11.2 Tiling Arrays???
+11.3 Multi-Species Concerns???
+12   Known Issues/Caveats
+13   To Do???
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -60,84 +71,79 @@ www.ensembl.org/info/docs/microarray_probe_set_mapping.html
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+
 2 Overview
 
+
+If required, edit the following pipeline configurations files(see section 4)
+
+ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/General.pm
+ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/BatchQueue.pm.efg_arrays
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ImportArrays.pm 
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ProbeAlign.pm 
+
+If required, edit the following environment files(see section 5):
+
+ensembl-functgenomics/scripts/.efg
+ensembl-functgenomics/scripts/environments/pipeline.env
+ensembl-functgenomics/scripts/environments/arrays.config
+
+If required, set up input directory structure and data (see section ???) e.g.
+
+$DATA_HOME/HOMO_SAPIENS/AFFY_UTR/HC-G110_probe_fasta     
+$DATA_HOME/HOMO_SAPIENS/AFFY_UTR/HG-U133A_probe_fasta        
+...
+
+$DATA_HOME/HOMO_SAPIENS/AFFY_ST/HuEx-1_0-st-v2.probe.fa
+$DATA_HOME/HOMO_SAPIENS/AFFY_ST/HuGene-1_0-st-v1.probe.fa
+
+etc.
+
+Create an instance file(see section 6), e.g.
+
+my_human_54_37p.arrays
+
+Initialise the environment and run the alignments and annotation (see section 7).
+If required, run TestImportArrays and TestProbleAlign.
+Check alignment reports before running transcript annotation.
+
 >bash
->efg
+>. ensembl-functgenomics/scripts/.efg
+>. my_human_54_37p.arrays password
+>RunAlignments
+>RunTranscriptXrefs
 
-
-
-
+Check transcript annotation logs to ensure probe2transcript has completed succesfully.
+See section 8 for rollback and administration functions.
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
+3 Pre-requisites/Requirements
 
-2 Pre-requisites/Requirements
-
-
-
-bioperl-1.2.3
-
-ensembl
-
-ensembl-functgenomics
-
-ensembl-analysis
-
-ensembl-pipeline
-
-All the above ensembl packages and bioperl are available via CVS following the instructions here:
-http://www.ensembl.org/info/docs/api/api_installation.html
-
-unix/linux
-
-bash
-
-perl (prefereably 5.8.8)
+See pipeline.txt Pre-requisites.
 
 exonerate-v2.2.0 can be found here :
 http://www.ebi.ac.uk/~guy/exonerate/
-
-LSF
-Not strictly essential as the pipeline code will run offline, but it would take a long time to run 
-these analyses using one machine.
 
 Memory
 
 This is dependant on several factors including the number of arrays to be mapped, the
 format of the arrays and the size of the genome/transcriptome of a given species. For human, which 
-tends to be the largest dataset Ensembl deals with, some steps can require upto 20GB of memory. However, 
+tends to be the largest dataset Ensembl deals with, some steps can require upto 12GB of memory. However, 
 this is handled dynamically by the environment dependant on the values of:
 
-HUGEMEM_HOME
-HUGEMEM_QUEUE
-MAX_NORMAL_MEM
-MAX_HUGE_MEM
-
- 
-??? Some real example numbers here ???
+HUGEMEM_HOME	- Directory visible to huge memory host(this may be the same as DATA_HOME)
+HUGEMEM_QUEUE	- LSF queue name for huge memory host
+MAX_NORMAL_MEM  - Maximum memory usage on normal memory host
+MAX_HUGE_MEM    - Maximum memory usage on huge memory host
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-2 The Ensembl Pipeline
+4 The Ensembl Pipeline
 
-The main documentation for the Ensembl pipeline is available here:
-
-http://cvs.sanger.ac.uk/cgi-bin/viewcvs.cgi/ensembl-doc/pipeline_docs/the_ensembl_pipeline_infrastructure.txt?view=markup
-
-
-In summary, the ensembl-pipeline code deals with submission of jobs to the farm dependant on a set 
-of rules which describe the dependancies of each analysis step in a given pipeline. The rules and 
-job tracking information are stored in a special pipeline DB which contains a few extra tables for 
-the pipeline data. This can be your output DB, but for the purposes of safety the eFG environment 
-always uses a separate DB to handle this information, named using the environment name e.g.
-
-array_pipeline_homo_sapiens_funcgen_54_37p
-
-This also means no post pipeline clean up is required, whilst maintaining the ability to retain job 
-information should it be required.
+See pipeline.txt for generic pipeline information and configuration.
 
 The ensembl-analysis code deals with the actual work of a given analysis, with modules being split
 into Runnables which perform the actual analysis and RunnableDBs which handle post processing and
@@ -145,31 +151,31 @@ interaction with the ensembl output DB e.g. your funcgen DB.  There are just thr
 perform the bulk of the array mapping analyses:
 
 ensembl-analysis/modules/Bio/EnsEMBL/Analysis/RunnableDB/ImportArrays.pm - Runs as a single job to 
-collapse related arrays into a non-redundant set of probes, storing probe records in the output DB 
-and writing a non-reundant probe fasta file to be used in the alignment step.
+collapse arrays of the same format into a non-redundant set of probes, storing probe records in the 
+output DB and writing a non-reundant probe fasta file to be used in the alignment step.
 
-ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Runnable/ExonerateProbe.pm - Performs the exonerate 
-alignment, generates and filters ProbeFeatures given a max mismatch value.
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Runnable/ExonerateProbe.pm - Performs exonerate 
+alignments and generates and filters ProbeFeatures given a max 
+mismatch value.
 
 ensembl-analysis/modules/Bio/EnsEMBL/Analysis/RunnableDB/ProbeAlign.pm - Runs the ExonerateProbe 
-Runnable and performs post processing and storage of ProbeFeatures, UnmappedObjects and DBEntries.
-
+Runnable using genomic or transcript target sequence, and performs post processing and storage of 
+ProbeFeatures, UnmappedObjects and DBEntries. Dependant on the target sequence the analysis run by 
+this module is refered to as ProbeAlign(genomic) or ProbeTranscriptAlign
 
 There are three main configuration files which need to be considered:
 
 ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/BatchQueue.pm.efg_arrays
 
-This contains the general pipeline configuration and specific configuration for each analysis, one per 
-array format per mapping type. This should be ready to use by simply stripping the efg_arrays suffix, 
-but it may be necessary to alter some of the general pipeline configuration. DO NOT change any environmental 
-variables.
-
+A QUEUE_CONFIG entry is defined for each analysis, one for each array format per mapping type, with 
+an additional 'Submit' type analysis. This already contains config for all supported array formats 
+and should be ready to use by simply stripping the efg_arrays suffix.
 
 ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ImportArrays.pm 
 
-This specifies some DB params along with regular expressions to parse the fasta headers and some 
-array specific meta data.
-
+This specifies some DB parameters along with specific configuration for each import analysis. For any given
+array format, this will include a regular expression and a field order list to parse the fasta headers and 
+a list of ARRAY_PARAMS which contain meta data defining each supported array for that format. 
 
 ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ProbeAlign.pm
 
@@ -181,47 +187,55 @@ All of the above have been edited such that, where appropriate, configuration of
 accessed using environmental variables defined in a give instance of the arrays environment. This 
 prevents having to manually edit these configuration modules every time an instance is run.  However, 
 it may be necessary to add configuration the first time you run a particular array or format. 
-See section ??? for futher details.
+See section ??? for futher details.??? Or add config here?
 
 It should also be noted that the arrays environment and the pipeline code are not inextricably 
 linked, so it should be possible to decouple and run the pipeline manually as stated in the main
 pipeline documentation. 
-#(This is not true for NR_FASTA/FASTA vars in ImportArrays as this build the input file from vars?) 
+#(This is not quite true for NR_FASTA/FASTA vars in ImportArrays as this build the input file from vars???) 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-3 The eFG Environment
+5 The eFG Environment
 
 The eFG shell environment was developed to aid administration of a local eFG instance by providing a
-collection of command line functions to perform common tasks. This has been extended to provide support 
-for different analysis pipelines, with the 'arrays' environment providing support specific to array mapping.
+collection of command line functions to perform common tasks. This has been extended to provide 
+support for different analysis pipelines, with the 'arrays' environment providing support specific 
+to array mapping.
 
 .efg - This provides the most basic configuration and a handfull of administration functions.
 
-pipeline.env - Provides configuration and functions to support any analysis environment which utilises 
-the Ensembl pipeline technology
+pipeline.env	 Provides functions to support any analysis efg environment which utilises the 
+				 Ensembl pipeline technology.
 
-arrays.env - Provides array mapping specific configuration and functions
+pipeline.config	 Provides deployment configuration for pipeline.env.
 
-arrays.config - Separates user definable configuration from code in arrays.env
+arrays.env		 Provides array mapping specific configuration and functions.
+
+arrays.config	 Provides deployment configuration for arrays.env
 
 
-You will need to edit all of the above files(excluding arrays.env), setting data and binary paths 
-where appropriate.  All environmental variables should be documented or self explanatory. These 
-should only need setting up once. It should be noted that any variables set in arrays.env/config will 
-override those set in pipeline.env, and likewise any set in your instance file(see next section) will override 
-those set in arrays.env/config.
+You will need to edit all of the above files(excluding arrays.env and pipeline.env), setting data and
+binary paths where appropriate.  All environmental variables should be documented or self explanatory. 
+These should only need setting up once. It should be noted that any variables set in arrays.config 
+will override those set in pipeline.env, and likewise any set in your instance file (see next 
+section) will override those set in arrays.config.
 
-Directory structure
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-The arrays environment assumes a particular directory structure based on the value of $DATA_HOME and $SPECIES e.g.
+
+6 Input Data
+
+The arrays environment assumes a particular directory structure based on the value of $DATA_HOME and 
+$SPECIES e.g.
 
 $DATA_HOME/HOMO_SAPIENS
 
-Each species directory should contain sub-directories for each array format, where the input array fasta files should 
-be located. If you do not specify GENOMIC/TRANSCRIPTSEQS paths in your instance file, additional sub-directories will 
-be created here e.g.
+Each species directory should contain sub-directories for each array format, where the input array 
+fasta files should be located. If you do not specify GENOMIC/TRANSCRIPTSEQS paths in your instance 
+file, additional sub-directories will be created here which will be used to dump the relevant 
+sequence from the core DB e.g.
 
 AFFY_UTR
 AFFY_ST
@@ -232,16 +246,22 @@ AGILENT
 GENOMICSEQS
 TRANSCRIPTSEQS
 
-By default, the environment will map whatever formats are present in this directory. Use the alias 'arraysdir' to 
-access this directory.
+By default, the environment will map whatever formats are present in this directory, unless this is 
+restricted by redefining ARRAY_FORMATS in the instance file or passing the required array format as 
+a parameter to a given function. Use the alias 'arraysdir' to access this array formats root 
+directory.
+
+There are many array design file(adf) formats which are implemented by various different array vendors, 
+sometimes differing even from the same vendor. Whilst the ImportArrays config(see section ???) goes 
+someway to account for this, this only supports fasta format. To transform non-affy adfs use
+the following script:
+
+ensembl-functgenomics/scripts/array_mapping/pre_process_probe_seqs.sh
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-4 Initiating An Instance 
 
-(Some of this can be moved to pipeline.txt)
-
-??? Add some stuff on screen here
+7 Initiating An Instance 
 
 To initialise an instance of the environment a small 'instance' file is sourced. An example of this is 
 available here:
@@ -259,16 +279,22 @@ your_prefix_species_name_funcgen_RELEASE_BUILDversion > my_homo_sapiens_funcgen_
 As detailed above, you may also want to add some more variables to the instance file to override those in 
 arrays.config or pipeline.env.
 
+Tip: Due to the nature of the efg arrays environemnt is it useful to create a separate 'screen' session for each.
+This prevents the pipeline being interupted should disconnection from the network occur. This also provides an easy
+way to manage multiple arrays environments.
+
 Sourcing the environment will print some config setting for you to review and also change the prompt 
 and window title, to inform you which instance of the environment you are using.  This is useful when running
-numerous instance in parallel.  Source an instance file by sourcing the base eFG environment first(invoking bash 
+numerous instance in parallel.  Source an instance file by sourcing the base eFG environment first (invoking bash 
 and passing a dnadbpass if required):
 
 >bash
+>screen -R my_instance_file_name          # Optional
 >. ensembl-functgenomics/scripts/.efg     # or just efg is you have set the alias in your .bashrc
 Setting up the Ensembl Function Genomics environment...
 Welcome to eFG!
->. path/to/you/instance_file.arrays dbpass dnadbpass
+>. path/to/my_instance_file.arrays dbpass dnadbpass
+
 :::: Welcome to the eFG array mapping environment
 :::: Setting up the eFG pipeline environment
 :: Sourcing ARRAYS_CONFIG: /nfs/acari/nj1/src/ensembl-functgenomics/scripts/environments/arrays.config
@@ -286,7 +312,7 @@ TRANSCRIPTSEQS:   /path/to/your/transcriptseqs.fasta
 arrays:homo_sapiens_funcgen_54_36p>
 
 
-If one does not already exist an output directory will be created here:
+If the output directory does not already exist, it will be created here:
 
 $DATA_HOME/$DB_NAME
 
@@ -301,12 +327,14 @@ The alias 'mysqlefg' and 'mysqlpipe' will allow you to connect to the output and
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-5 Running The Pipeline
+
+8 Running The Pipeline
 
 The arrays environment specifies several functions(not all documented here) available via the command 
 line, these can generally be invoked with a -h option to print a help or usage message.
 
-5.1 Probe Alignment 
+
+8.1 Probe Alignment 
 
 There are basically 5 main steps to running the probe alignment element of the pipeline:
 
@@ -362,7 +390,7 @@ for each array format. These provide an easy way to detect whether any unseen er
 alignment process.
 
 
-5.2 Transcript Annotation
+7.2 Transcript Annotation
 
 This depends on the array names file for each format which is normally written during the import step.  
 This should always be present as running the transcript annotation implies the gene build has been 
@@ -470,10 +498,17 @@ jobs have completed succesfully.
 
 6 Administration Functions
 
-Here is a summary of some helpful aliases:
+Here is a summary of some helpful aliases.
 
-efg	    	- cd's to root efg code dir 
-workdir		- cd's to working dir
+Add this to your .bashrc for convinient initiation of base environment
+
+efg='. ~/src/ensembl-functgenomics/scripts/.efg'
+
+After the base environment is initialised 'efg' and other aliases are defined as:
+
+efg	    	- cd's to root efg code dir
+efgd        - cd's to root data dir 
+workdir		- cd's to working database dir
 configdir	- cd's to analysis config dir
 configmacs	- Opens xemacs in configdir
 arraysdir	- cd's to the root array formats dir for a given species
@@ -482,13 +517,6 @@ mysqlpipe	- Connects to the pipeline DB
 mysqlcore   - Connects to the core/dna DB
 monitor		- Prints a summary of the pipeline status. Initialise a fresh environment to track a running 
 			  pipeline.
-
-There may also be references to using the 'efg' alias to initialise the base eFG environment.  This 
-alias is added to the .bashrc file:
-
-efg='. ~/src/ensembl-functgenomics/scripts/.efg'
-
-Once sourced this is redefined as above.
 
 This section could also be called 'What to do when things go wrong'.  Inevitably there will be times when 
 jobs fail. It is important to understand what has happened during the failure to take the correct course of
@@ -506,11 +534,114 @@ data before failing it may be necessary to rollback the data before restarting t
 ResetFailedJobs - Resets the rety_count of failed jobs to allow them to run.
 
 
-
-Adding additional support
-
-Array
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-Format
+12 Adding Additional Support
 
+
+12.1 Adding a new format:
+
+Assuming the array model is comparable to something that is already supported e.g. single probe or 
+probeset, sense/anti-sense target.
+
+Create your input data dir e.g.
+
+$EFG_DATA/HOMO_SAPIENS/NEW_FORMAT
+
+
+Edit ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/BatchQueue.pm.efg_arrays
+
+Add the required QUEUE_CONFIG for the new import and alignment analyses with associated blank submit 
+analysis for each format and each required alignment type e.g.
+
+Import_NEW_FORMAT_Arrays
+Submit_Import_NEW_FORMAT_Arrays
+NEW_FORMAT_ProbeAlign
+Submit_NEW_FORMAT_ProbeAlign
+NEW_FORMAT_ProbeTranscriptAlign
+Submit_NEW_FORMAT_ProbeTranscriptAlign
+
+Use an existing set of format analyses as a template, ensuring the following
+environmental variables are used in the import analysis hash.
+
+	queue      => $ENV{'IMPORT_ARRAYS_QUEUE'},
+	resource   => $ENV{'IMPORT_ARRAYS_RESOURCE'},
+
+
+Edit ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ImportArrays.pm 
+
+Add a new ARRAY_CONFIG entry named after your import analysis e.g.
+
+IMPORT_NEW_FORMAT_ARRAYS
+
+Using an existing one a template, being careful to maintain any environment variables. Redefine the 
+input ID regular expression(IIDREGEXP) and the input field order(IFIELDORDER) to enable parsing of 
+array fasta file. Add any array meta data to the ARRAY_PARAMS hash as described below.
+
+
+Edit ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ProbeAlign.pm 
+
+Add a new PROBE_CONFIG entry for each of the alignment analyses e.g.
+
+NEW_FORMAT_PROBEALIGN
+NEW_FORMAT_PROBETRANSCRIPTALIGN
+
+Use an existing comparable format as a template, being careful to maintain any environment 
+variables. Edit other paramters as required:
+
+HIT_SATURATION_LEVEL - Number of allowed alignments before probe is called 'promiscuous', is
+                       disregarded and stored as UnmappedObject.
+
+MAX_MISMATCHES       - Maximimum number of sequence mismatches allowed in an alignment.
+
+OPTIONS              - Exonerate options tuned with respect to probe length and MAX_MISMATCHES i.e.
+                       seedrepeat = MAX_MISMATCHES + 1
+                       dnawordlen = probe length/seedrepeat (rounded down)
+
+
+Finally, add the format name to VALID_ARRAY_FORMATS in arrays.config.
+
+WARNING: The probe2transcript.pl script uses hardcoded format configuration for supported formats.
+Hence, running the RunTranscriptXrefs step will fail unless the probe2transcript.pl code is edited 
+directly to add the necessary format config(see . This can be overcome by running the probe2transcript.pl 
+script directly using the following parameters:
+
+	   -linked_arrays
+	   -probeset_arrays
+	   -sense_interrogation
+
+
+12.2 Adding A New Array 
+
+To add a new array to an existing format, simply add the array meta data to the relevant format 
+specific ARRAY_PARAMS hash in: 
+
+ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ImportArrays.pm 
+
+
+12.3 Tiling Arrays ???
+
+As eFG was initially designed as a data storage and analysis platform for ChIP-Chip analysis...
+
+
+
+export ALIGN_TYPES='GENOMIC'
+
+
+12.2 Multi-Species Concerns(EnsemblGenomes)
+
+
+12 Known Issues/Caveats ???
+
+Updating the ProbeTranscriptAlignments for a new genebuild is not possible without the original 
+arrays_nr.FORMAT.fasta file. This could be reconsituted using the original sources but at present 
+requires a complete re import.
+
+Some alternative transcripts may give rise to duplicate ProbeFeatures. This is as yet unseen and 
+will not effect the transcript annotations.
+
+Tiling array support is not yet full implemented.
+
+The probe2transcript.pl script needs some work around resolving some rare cases concerning 
+ProbeFeature and overlap mismatches.
