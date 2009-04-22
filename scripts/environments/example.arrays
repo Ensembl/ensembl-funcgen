@@ -26,8 +26,7 @@ export DB_HOST=db_host
 export DB_NAME=your_funcgen_52_36n
 export DB_PORT=3306
 export SPECIES=mus_musculus
-#This is used for accessing array directory
-export SPECIES_COMMON=Mouse
+export SCHEMA_BUILD=52_36n
 
 #These can be omited. You will be asked to use previously dumped files or whether you
 #want to create new dump files
