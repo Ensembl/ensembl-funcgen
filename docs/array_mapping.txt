@@ -19,6 +19,7 @@ AGILENT      - Formats?
 Contents
 
 1   Introduction
+2   Overview
 2   Pre-requisites
 2   The Ensembl Pipeline
 3   The eFG Envronment
@@ -26,7 +27,7 @@ Contents
 5   Running The Pipeline
 5.1 Probe Alignment
 5.2 Transcript Annotation
-6   Reports/Utilities
+6   Administration Functions
 7   Known Issues/Caveats
 8   To Do?
 9   Adding Additional Format Support
@@ -59,12 +60,22 @@ www.ensembl.org/info/docs/microarray_probe_set_mapping.html
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+2 Overview
+
+>bash
+>efg
+
+
+
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
 
 2 Pre-requisites/Requirements
 
-unix/linux
 
-bash
 
 bioperl-1.2.3
 
@@ -77,23 +88,35 @@ ensembl-analysis
 ensembl-pipeline
 
 All the above ensembl packages and bioperl are available via CVS following the instructions here:
-
 http://www.ensembl.org/info/docs/api/api_installation.html
 
-exonerate-v2.2.0
+unix/linux
 
+bash
+
+perl (prefereably 5.8.8)
+
+exonerate-v2.2.0 can be found here :
 http://www.ebi.ac.uk/~guy/exonerate/
 
 LSF
-
 Not strictly essential as the pipeline code will run offline, but it would take a long time to run 
-these analysis using one machine.
+these analyses using one machine.
 
 Memory
 
 This is dependant on several factors including the number of arrays to be mapped, the
-format of the arrays and the size of the genome/transcriptome of a given species. 
-??? Some example numbers here ???
+format of the arrays and the size of the genome/transcriptome of a given species. For human, which 
+tends to be the largest dataset Ensembl deals with, some steps can require upto 20GB of memory. However, 
+this is handled dynamically by the environment dependant on the values of:
+
+HUGEMEM_HOME
+HUGEMEM_QUEUE
+MAX_NORMAL_MEM
+MAX_HUGE_MEM
+
+ 
+??? Some real example numbers here ???
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -152,13 +175,13 @@ ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ProbeAlign.pm
 
 This provides analysis specific configuration for exonerate alignment and filter options.
 
-Use the alias 'configdir' to access this directory.
+Once the environment is initiatied, the alias 'configdir' can be used to access this directory.
 
-All of the above have been edited such that configuration of analyses can be accessed using 
-environmental variables defined in a give instance of the arrays environment. This prevents 
-having to manually edit these configuration modules every time an instance is run.  However it may 
-be necessary to add configuration the first time you run a particular array or format. See section ??? 
-for futher details.
+All of the above have been edited such that, where appropriate, configuration of analyses can be 
+accessed using environmental variables defined in a give instance of the arrays environment. This 
+prevents having to manually edit these configuration modules every time an instance is run.  However, 
+it may be necessary to add configuration the first time you run a particular array or format. 
+See section ??? for futher details.
 
 It should also be noted that the arrays environment and the pipeline code are not inextricably 
 linked, so it should be possible to decouple and run the pipeline manually as stated in the main
@@ -216,7 +239,11 @@ access this directory.
 
 4 Initiating An Instance 
 
-To initialise an instance of the envinronment a small 'instance' file is sourced. An example of this is 
+(Some of this can be moved to pipeline.txt)
+
+??? Add some stuff on screen here
+
+To initialise an instance of the environment a small 'instance' file is sourced. An example of this is 
 available here:
 
 ensembl-functgenomics/scripts/environments/example.arrays
@@ -224,14 +251,23 @@ ensembl-functgenomics/scripts/environments/example.arrays
 This contains a few variables to inform the pipeline where the output DB is.  As the eFG DBAdaptor
 auto-selects a core DB if one is not already specified, it may be necessary to define some DNADB parameters.
 Do this if a valid corresponding core DB in not available on ensembldb.ensembl.org, or if you want to use 
-a particular core DB.
+a particular core DB. Due to the multi-assembly nature of the eFG schema it is also necessary to follow
+the ensembl standard naming convention for DBs i.e.
+
+your_prefix_species_name_funcgen_RELEASE_BUILDversion > my_homo_sapiens_funcgen_54_37p
+
+As detailed above, you may also want to add some more variables to the instance file to override those in 
+arrays.config or pipeline.env.
 
 Sourcing the environment will print some config setting for you to review and also change the prompt 
 and window title, to inform you which instance of the environment you are using.  This is useful when running
-numerous instance in parallel.  Source an instance file as follows(invoking bash and passing a dnadbpass if required):
-
+numerous instance in parallel.  Source an instance file by sourcing the base eFG environment first(invoking bash 
+and passing a dnadbpass if required):
 
 >bash
+>. ensembl-functgenomics/scripts/.efg     # or just efg is you have set the alias in your .bashrc
+Setting up the Ensembl Function Genomics environment...
+Welcome to eFG!
 >. path/to/you/instance_file.arrays dbpass dnadbpass
 :::: Welcome to the eFG array mapping environment
 :::: Setting up the eFG pipeline environment
@@ -254,12 +290,14 @@ If one does not already exist an output directory will be created here:
 
 $DATA_HOME/$DB_NAME
 
-Use the alias 'workdir' top access this directory.
+All output from the mapping pipeline will be written here. Use the alias 'workdir' top access this 
+directory.
 
 You are now ready to run the array mapping pipeline. If for some reason you have not specified the
 GENOMIC/TRANSCRIPTSEQS paths, the environment will prompt you to accept previously existing files, or 
 will dump the sequence for you.
 
+The alias 'mysqlefg' and 'mysqlpipe' will allow you to connect to the output and pipeline DBs respectively.
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -281,7 +319,7 @@ SubmitAlign    - Submits ProbeAlign/ProbeTranscriptAlign jobs for each format. F
 
 These are accessible as separate funtions but can be invoked by a wrapper function:
 
-RunMapping     - Does all of the above plus some pipeline monitoring.
+RunAlignments     - Does all of the above plus some pipeline monitoring.
 
 However, when running an array or species for the first time you it is wise to test some small jobs locally before 
 submitting thousands of jobs to the farm which may potentially fail. This can be done using the following functions:
@@ -295,23 +333,178 @@ TestProbeAlign   - Will run a genomic or transcript alignment for a given input 
 
 To rollback the data written in these test cases or if the alignments fail for some reason and require some clean up,
 use the RollbackArrays function. There are also various administrations functions which can be used in conjuctions with
-RollbackArrays (see section ???). It will then be possible to either RunMapping again or invoke the individual functions 
+RollbackArrays (see section ???). It will then be possible to either RunAlignments again or invoke the individual functions 
 required.
 
 When doing this for the first time it is likely that some configuration will have been omitted from one of the files in 
-section 2.  However, once this has been remedied the Test functions can be abandoned in favour of RunMapping.
+section 2.  It is also possible that some external_db entries may be missing from the DB. The external_db table is normally 
+curated outside of the API and so needs populating separately.  If this happens, then error message will contain the correct 
+sql to populate the table. (This is done manually to avoid multiple inserts by parallel processes, also as we may simply want to change the schema_build of the external DB if only the schema has changed, not yet fully supported in xref schema???)
 
-The ProbeAlignReport function generates
+Once these errors have been remedied the 'Test' functions can be abandoned in favour of RunAlignments.
+
+If only the genebuild has been updated and the genome assembly is unchanged, it is possible to only re-run the 
+ProbeTranscriptAlign step.  However, this requires the non-redundant dbID header fasta file and the array names file 
+from the original import.  Simply copy or link to the appropriate files from the original import workdir e.g.
+
+arrays_nr.AFFY_UTR.fasta
+arrays.AFFY_UTR.names
+
+It will also be necessary to restrict the align types variable to TRANSCRIPT in the instance file:
+
+export ALIGN_TYPES='TRANSCRIPT'
+
+(??? Write a function to do this???)
+
+Once all the probe alignments jobs have completed successfully for a given array format, or the AlignWait step has 
+completed, the ProbeAlignReport function can be used to generate reports detailing the numbers of probes mapped 
+for each array format. These provide an easy way to detect whether any unseen errors have occured during the 
+alignment process.
 
 
 5.2 Transcript Annotation
 
-Once all the probe alignments jobs have completed successfully for a given array format the transcript annotation 
-stage can be started. This depends on the array names file which may need to be manually created if this genomic alignment has not be performed for this instance, altho this should now never happen as we should always run the ProbeTranscriptAlign step?
+This depends on the array names file for each format which is normally written during the import step.  
+This should always be present as running the transcript annotation implies the gene build has been 
+updated, which also means a ProbeTranscriptAlign step is required and hence a non-redundant probe fasta 
+file, which is generated by the import step.
+
+If for some reason it is not present then it will need to be created, using the relevant array names from the array table:
+
+arrays:danio_rerio_funcgen_54_8>more arrays.AGILENT.names 
+G2519F
+G2518A
+
+The RunTranscriptXrefs function handles submitting the probe2transcript.pl jobs to the farm.  By default this will
+be done for all available array formats, but it is possible to specify additional paramaters to change this behaviour, 
+try -h for some usage information.
+
+If there are already transcript annotations present in the xref schema, the healthcheck mode will cause an error and 
+exit. To delete the existing xrefs simply specify the -d delete flag or RollbackArrays.
+
+The default settings for the probe2transcript.pl script are set using the PROBE2TRANSCRIPT_PARAMS variable e.g.
+
+export PROBE2TRANSCRIPT_PARAMS='--calculate_utrs --utr_multiplier 1'
+
+These parameters can be set and changed in the instance file, dependant or the requirements for a given species(i.e. no 
+utr extension for bacteria) or a given array format(which might not be recognised by probe2transcript and therefore 
+require extra configuration).
+
+This step can also be done by running the probe2transcript.pl script directly on a format by format basis.
+However, this will not perform the healthchecks and back ups which are part of the RunTranscriptXrefs function.
+Hence, this is not advised unless it is not possible to use RunTranscriptXrefs for some reason.
+
+Each probe2transcript.pl job will generate four output files per array format e.g.
+
+AFFY_ST_probe2transcript.err
+AFFY_ST_probe2transcript.out 
+homo_sapiens_funcgen_54_36p_AFFY_ST_probe2transcript.log
+homo_sapiens_funcgen_54_36p_AFFY_ST_probe2transcript.out
+
+The first two are LSF output, which can largely be ignored unless it appears the job has failed in 
+some way. The later two are a log of the job progression and a record of each ProbeFeature which has
+been considered for mapping.  This information is also stored as UnmappedObject or DBEntries, so it 
+is slightly redundant, but is handy for quickly looking up how a ProbeFeature was processed.
+
+As this step is not parallelised it can take a long time, especially when there are many arrays within
+a given format.  It is useful to monitor the progression of the job by tailing the log e.g.
+
+>tail -f homo_sapiens_funcgen_54_36p_AFFY_ST_probe2transcript.log
+::      Calculating default UTR lengths from greatest of max median|mean - Wed Mar 11 15:57:38 2009
+::      Seen 40728 5' UTRs, 22552 have length 0
+::      Calculated default unannotated 5' UTR length:   278
+::      Seen 40500 3' UTRs, 22780 have length 0
+::      Calculated default unannotated 3' UTR length:   1083
+::      Finished calculating unannotated UTR lengths - Wed Mar 11 16:21:31 2009
+::      Caching arrays per ProbeSet - Wed Mar 11 16:21:31 2009
+::      Performing overlap analysis. % Complete:
+::      0 ::    1 ::    2 ::    3 ::    4
+
+Once the overlap analysis has completed 100%, the DBEntries and remaning UnmappedObjects will be written.
+Finally a summary report of transcript annotation will be written which is useful for making sure everything
+is as it should be e.g.
+
+::      Updating 0 promiscuous probesets - Thu Mar 12 11:56:19 2009
+::      Loaded a total of 983575 UnmappedObjects to xref DB
+::      HuEx-1_0-st-v2 total xrefs mapped:      1568554
+::      HuGene-1_0-st-v1 total xrefs mapped:    78399
+::      Mapped 61502/63280 transcripts  - Thu Mar 12 11:56:22 2009
 
 
+::      ::      Top 5 most mapped transcripts:  ::      ::
+
+::      ENST00000369202 mapped 22 times
+::      ENST00000369198 mapped 22 times
+::      ENST00000369326 mapped 19 times
+::      ENST00000369194 mapped 16 times
+::      ENST00000321694 mapped 13 times
+
+
+::      ::      Top 5 most mapped ProbeSets(inc. promoscuous):  ::      ::
+
+::      1400062 mapped 70 times
+::      585732 mapped 67 times
+::      1579351 mapped 60 times
+::      888066 mapped 55 times
+::      379672 mapped 55 times
+
+
+::      ::      Top 5 most mapped ProbeSets(no promiscuous):    ::      ::
+
+::      1400062 mapped 70 times
+::      585732 mapped 67 times
+::      1579351 mapped 60 times
+::      888066 mapped 55 times
+::      379672 mapped 55 times
+
+
+::      ::      Completed Transcript ProbeSet annotation for HuEx-1_0-st-v2 HuGene-1_0-st-v1    ::      :: - Thu Mar 12 11:56:27 2009
+
+::      Logging complete Thu Mar 12 11:59:07 2009.
+
+
+Checking that every array format log file ends as above will ensure that all the transcript annotation
+jobs have completed succesfully.
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+6 Administration Functions
+
+Here is a summary of some helpful aliases:
+
+efg	    	- cd's to root efg code dir 
+workdir		- cd's to working dir
+configdir	- cd's to analysis config dir
+configmacs	- Opens xemacs in configdir
+arraysdir	- cd's to the root array formats dir for a given species
+mysqlefg	- Connects to the output DB
+mysqlpipe	- Connects to the pipeline DB
+mysqlcore   - Connects to the core/dna DB
+monitor		- Prints a summary of the pipeline status. Initialise a fresh environment to track a running 
+			  pipeline.
+
+There may also be references to using the 'efg' alias to initialise the base eFG environment.  This 
+alias is added to the .bashrc file:
+
+efg='. ~/src/ensembl-functgenomics/scripts/.efg'
+
+Once sourced this is redefined as above.
+
+This section could also be called 'What to do when things go wrong'.  Inevitably there will be times when 
+jobs fail. It is important to understand what has happened during the failure to take the correct course of
+action before restarting the pipeline.
+
+
+RollbackArrays
+
+Move these to pipeline.txt ?
+
+DropPipelineTables - Drops the pipeline DB. This will remove any record of analyses, rules or jobs
+CleanJobs
+GetFailedJobs - Check the output of the LSF job to identify and correct the cause of the failure. If this looks to have written
+data before failing it may be necessary to rollback the data before restarting the pipeline. You may find that failed jobs that have been restarted numerous times will not run, this is because the retry_count has been exceeded.  Use ResetFailedJobs to enable them to run again.
+ResetFailedJobs - Resets the rety_count of failed jobs to allow them to run.
+
 
 
 Adding additional support
@@ -321,16 +514,3 @@ Array
 
 Format
 
-
-
-
-
-
-Other helpful aliases/functions?
-
-
-
-
-
-DropPipelineTables - Drops the pipeline DB. This will remove any record of analyses, rules or jobs
-RollbackArrays
