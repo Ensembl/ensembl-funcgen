@@ -320,9 +320,16 @@ line, these can generally be invoked with a -h option to print a help or usage m
 
 There are basically 5 main steps to running the probe alignment element of the pipeline:
 
-BuildFastas    - Looks in the each array format directory and updates a cat'd file of all available 
-                 fasta.
-SetUpPipeline  - Creates pipeline DB and imports analyses and pipeline rule conditions and goals.
+BuildFastas    Looks in the each array format directory and updates a cat'd file of all available 
+			   fasta.
+SetUpPipeline  Creates pipeline DB and imports analyses and pipeline rule conditions and goals.
+			   This may show some errors as the pipeline system expects all the analyses in 
+			   BatchQueue.pm to be configured in the DB, as we the efg environment has dynamic and 
+			   templated configuration this can be ignored. There may also be some errors refering 
+			   to the submit type analyses having no module, which can also be ignored.
+			   (There may also be some some messages about accumulators, which can be igored due to
+			   the way the arrays environment implements the pipeline)
+			   
 ImportArrays   - Invokes the pipeline to import all available arrays. Followed by ImportWait
 CreateAlignIDs - Creates ProbeAlign job/chunk IDs to enable parallel processing of the non-redundant 
                  fasta output of ImportArrays.

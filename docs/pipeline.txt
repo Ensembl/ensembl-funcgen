@@ -5,6 +5,7 @@ environment. The eFG pipeline environment provides basic configuration and suppo
 eFG analysis environments (e.g. arrays.env, peaks.env), along with command line access to various 
 functions which provide administrative support to the Ensembl genebuild pipeline technology.
 
+NOTE: This currently also contains functions which should be moved to peaks.env.
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -16,6 +17,7 @@ Contents
 3    Pre-requisites
 4    The Ensembl Pipeline
 5    The eFG Pipeline Environment
+6	 Administrative Functions
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -114,4 +116,32 @@ You will need to edit pipeline.config, setting data and binary paths where appro
 environmental variables should be documented or self explanatory. These should only need setting up 
 once. It should be noted that any variables set in pipeline.config will be superceded by those set in 
 any 'analysis'.config or instance file (see next section).
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+6 Administrative Functions
+
+This list defines some generic administrative functions, more specific functions may also be 
+available in the analysis environment, check 'anaylsis'.txt for more information.
+
+
+DropPipelineDB	 Drops the pipeline DB, removing any record of job rule/goals, analyses or tracking.
+
+CleanJobs		 Deletes all input_id_analysis entries for a given RunnableDB.  This can be used if 
+				 an analysis was configured in error and needs to be removed before starting the 
+				 pipeline.
+
+GetRunningJobs	 Lists output files for jobs which are currently running.
+
+GetFailedJobs	 Lists output files for jobs with the current status of FAILED, FAIL_NOT_RETY or 
+				 AWOL.
+
+ResetFailedJobs	 Resets the rety_count of failed jobs to allow the pipeline to run if they have 
+				 exceeded the max DEFAULT_RETRIES/retries configuration set in BatchQueue.pm
+
+RemoveLock		 Removes the pipeline lock from the meta table.  This can occur if a pipeline exits
+				 unexpectedly.
+
+BackUpTables	 Performs table dumps for related groups of tables e.g. arrays, xrefs or pipeline.
 
