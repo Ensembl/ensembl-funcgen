@@ -12,13 +12,13 @@ Format		  Description		Definition
 AFFY_UTR	  Standard IVT		25mer Probesets anti-sense target
 AFFY_ST		  Sense Target		25mer Probesets sense target
 ILLUMINA_WG	  WholeGenome		50mer Probes sense target 
-CODELINK_WG	  WholeGenome???	30mer Probes sense target 
+CODELINK_WG	  WholeGenome		30mer Probes sense target 
 PHALANX		  OneArray			60mer Probes sense target
-AGILENT		  Formats???		60mer Probes sense target
+AGILENT		  Formats?			60mer Probes sense target
 
 Not fully supported
-LEIDEN???
-NIMBLEGEN_TILING???
+LEIDEN	  Danio rerio
+NIMBLEGEN_TILING
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -29,20 +29,19 @@ Contents
 2    Overview
 3    Pre-requisites
 4    The Ensembl Pipeline
-5    The eFG Envronment
+5    The eFG Arrays Environment
 6    Input Data
 7    Initiating An Instance
 8    Running The Pipeline
-9.1  Probe Alignment
-9.2  Transcript Annotation
-10   Administration Functions
-11   Adding Additional Support
-11.1 Adding A New Array Format
-11.2 Adding A New Array
-11.2 Tiling Arrays???
-11.3 Multi-Species Concerns???
-12   Known Issues/Caveats
-13   To Do???
+8.1  Probe Alignment
+8.2  Transcript Annotation
+9   Administration Functions
+10   Adding Additional Support
+10.1 Adding A New Array Format
+10.2 Adding A New Array
+10.3 Tiling Arrays
+10.4 Multi-Species Support
+11   Known Issues/Caveats
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -74,7 +73,6 @@ www.ensembl.org/info/docs/microarray_probe_set_mapping.html
 
 2 Overview
 
-
 If required, edit the following pipeline configurations files(see section 4)
 
 ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/General.pm
@@ -88,7 +86,7 @@ ensembl-functgenomics/scripts/.efg
 ensembl-functgenomics/scripts/environments/pipeline.env
 ensembl-functgenomics/scripts/environments/arrays.config
 
-If required, set up input directory structure and data (see section ???) e.g.
+If required, set up input directory structure and data (see section 6) e.g.
 
 $DATA_HOME/HOMO_SAPIENS/AFFY_UTR/HC-G110_probe_fasta     
 $DATA_HOME/HOMO_SAPIENS/AFFY_UTR/HG-U133A_probe_fasta        
@@ -186,41 +184,25 @@ Once the environment is initiatied, the alias 'configdir' can be used to access 
 All of the above have been edited such that, where appropriate, configuration of analyses can be 
 accessed using environmental variables defined in a give instance of the arrays environment. This 
 prevents having to manually edit these configuration modules every time an instance is run.  However, 
-it may be necessary to add configuration the first time you run a particular array or format. 
-See section ??? for futher details.??? Or add config here?
-
-It should also be noted that the arrays environment and the pipeline code are not inextricably 
-linked, so it should be possible to decouple and run the pipeline manually as stated in the main
-pipeline documentation. 
-#(This is not quite true for NR_FASTA/FASTA vars in ImportArrays as this build the input file from vars???) 
+it may be necessary to add configuration the first time you run a particular array or format. See 
+section 10 for futher details.
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-5 The eFG Environment
+5 The eFG Arrays Environment
 
-The eFG shell environment was developed to aid administration of a local eFG instance by providing a
-collection of command line functions to perform common tasks. This has been extended to provide 
-support for different analysis pipelines, with the 'arrays' environment providing support specific 
-to array mapping.
-
-.efg - This provides the most basic configuration and a handfull of administration functions.
-
-pipeline.env	 Provides functions to support any analysis efg environment which utilises the 
-				 Ensembl pipeline technology.
-
-pipeline.config	 Provides deployment configuration for pipeline.env.
+See pipeline.txt for information about general pipeline.env configuration.
 
 arrays.env		 Provides array mapping specific configuration and functions.
 
 arrays.config	 Provides deployment configuration for arrays.env
 
-
-You will need to edit all of the above files(excluding arrays.env and pipeline.env), setting data and
-binary paths where appropriate.  All environmental variables should be documented or self explanatory. 
-These should only need setting up once. It should be noted that any variables set in arrays.config 
-will override those set in pipeline.env, and likewise any set in your instance file (see next 
-section) will override those set in arrays.config.
+You will need to edit arrays.config, setting data and binary paths where appropriate.  All 
+environmental variables should be documented or self explanatory. These should only need setting up 
+once. It should be noted that any variables set in arrays.config will override those set in 
+pipeline.config, and likewise any set in your instance file (see section 7) will override those 
+set in arrays.config.
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -252,7 +234,7 @@ a parameter to a given function. Use the alias 'arraysdir' to access this array 
 directory.
 
 There are many array design file(adf) formats which are implemented by various different array vendors, 
-sometimes differing even from the same vendor. Whilst the ImportArrays config(see section ???) goes 
+sometimes differing even from the same vendor. Whilst the ImportArrays config(see section 10.1) goes 
 someway to account for this, this only supports fasta format. To transform non-affy adfs use
 the following script:
 
@@ -325,7 +307,7 @@ will dump the sequence for you.
 
 The alias 'mysqlefg' and 'mysqlpipe' will allow you to connect to the output and pipeline DBs respectively.
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
 8 Running The Pipeline
@@ -338,10 +320,12 @@ line, these can generally be invoked with a -h option to print a help or usage m
 
 There are basically 5 main steps to running the probe alignment element of the pipeline:
 
-BuildFastas    - Looks in the each array format directory and updates a cat'd file of all available fasta.
+BuildFastas    - Looks in the each array format directory and updates a cat'd file of all available 
+                 fasta.
 SetUpPipeline  - Creates pipeline DB and imports analyses and pipeline rule conditions and goals.
 ImportArrays   - Invokes the pipeline to import all available arrays. Followed by ImportWait
-CreateAlignIDs - Creates ProbeAlign job IDs given the non-redundant fasta output of ImportArrays.
+CreateAlignIDs - Creates ProbeAlign job/chunk IDs to enable parallel processing of the non-redundant 
+                 fasta output of ImportArrays.
 SubmitAlign    - Submits ProbeAlign/ProbeTranscriptAlign jobs for each format. Followed by AlignWait 
                  and ProbeAlignReport.
 
@@ -361,13 +345,15 @@ TestProbeAlign   - Will run a genomic or transcript alignment for a given input 
 
 To rollback the data written in these test cases or if the alignments fail for some reason and require some clean up,
 use the RollbackArrays function. There are also various administrations functions which can be used in conjuctions with
-RollbackArrays (see section ???). It will then be possible to either RunAlignments again or invoke the individual functions 
+RollbackArrays (see section 9). It will then be possible to either RunAlignments again or invoke the individual functions 
 required.
 
-When doing this for the first time it is likely that some configuration will have been omitted from one of the files in 
-section 2.  It is also possible that some external_db entries may be missing from the DB. The external_db table is normally 
-curated outside of the API and so needs populating separately.  If this happens, then error message will contain the correct 
-sql to populate the table. (This is done manually to avoid multiple inserts by parallel processes, also as we may simply want to change the schema_build of the external DB if only the schema has changed, not yet fully supported in xref schema???)
+When doing this for the first time it is likely that some configuration will have been omitted from 
+one of the files in section 4.  It is also possible that some external_db entries may be missing 
+from the DB. The external_db table is normally curated outside of the API and so needs populating 
+separately.  If this happens, then error message will contain the correct sql to populate the table. 
+This is done manually to avoid multiple inserts by parallel processes, and also as we may simply 
+want to change the schema_build/version of the external DB if only the schema has changed.
 
 Once these errors have been remedied the 'Test' functions can be abandoned in favour of RunAlignments.
 
@@ -382,15 +368,13 @@ It will also be necessary to restrict the align types variable to TRANSCRIPT in 
 
 export ALIGN_TYPES='TRANSCRIPT'
 
-(??? Write a function to do this???)
-
 Once all the probe alignments jobs have completed successfully for a given array format, or the AlignWait step has 
 completed, the ProbeAlignReport function can be used to generate reports detailing the numbers of probes mapped 
 for each array format. These provide an easy way to detect whether any unseen errors have occured during the 
 alignment process.
 
 
-7.2 Transcript Annotation
+8.2 Transcript Annotation
 
 This depends on the array names file for each format which is normally written during the import step.  
 This should always be present as running the transcript annotation implies the gene build has been 
@@ -496,7 +480,7 @@ jobs have completed succesfully.
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-6 Administration Functions
+9 Administration Functions
 
 Here is a summary of some helpful aliases.
 
@@ -518,29 +502,55 @@ mysqlcore   - Connects to the core/dna DB
 monitor		- Prints a summary of the pipeline status. Initialise a fresh environment to track a running 
 			  pipeline.
 
-This section could also be called 'What to do when things go wrong'.  Inevitably there will be times when 
-jobs fail. It is important to understand what has happened during the failure to take the correct course of
-action before restarting the pipeline.
+This section could also be called 'What to do when things go wrong'.  Inevitably there will be times 
+when jobs fail. It is important to understand what has happened during the failure to take the 
+correct course of action before restarting the pipeline, i.e. has any output been written? The import 
+stage will fail if an array had already been recorded as imported, which is a sign that you either 
+need to rollback or consider whether you actually need to import it. The alignment stage is not able
+to record import success for individual chunks, so it is very important that you are sure a 
+particular job has not written any output. The job output and error files should be able to provide
+this information. If it seems like the jobs has died before any processing has taken place, then it is 
+safe to just restart. If it seems like the job has fallen over half way through, then a rollback is 
+required.  This is due to the fact that currently, UnmappedObjects are written as they are created, 
+rather than being delayed as per the ProbeFeatures. The error file will have warnings if unmapped 
+objects or other otuput has been written, simply search for the following:
 
+		UnmappedObject
+		Writing ProbeFeatures
+
+If these are not present then it is safe to resubmit this job without rolling back.
 
 RollbackArrays
 
-Move these to pipeline.txt ?
+This handles all levels of rollback and will fail if there are data dependencies which are not 
+accounted for i.e. it will not let you orphan records in the database. There are several levels of 
+rollback available using the -m option:
 
-DropPipelineTables - Drops the pipeline DB. This will remove any record of analyses, rules or jobs
-CleanJobs
-GetFailedJobs - Check the output of the LSF job to identify and correct the cause of the failure. If this looks to have written
-data before failing it may be necessary to rollback the data before restarting the pipeline. You may find that failed jobs that have been restarted numerous times will not run, this is because the retry_count has been exceeded.  Use ResetFailedJobs to enable them to run again.
-ResetFailedJobs - Resets the rety_count of failed jobs to allow them to run.
+probe					 This is the default level, and will only rollback the data stored during 
+						 the import step i.e. array, array_chip, probe, probeset and any status 
+						 records which may have been stored
 
+ProbeAlign				 This will rollback any records stored by the genomic alignment analysis, 
+						 this includes any UnmappedObjects which may have been stored.
+
+ProbeTranscriptAlign	 As above but for transcript alignments.
+
+probe_feature			 Both the above alignment analyses.
+
+probe2transcript		 This will rollback all the output from the transcript annotation step.
+
+Use the -h option for more information.
+
+Dependant on the nature of the job failure, it may also be necessary to perform some job clean up 
+using the functions listed in pipeline.txt.
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-12 Adding Additional Support
+10 Adding Additional Support
 
 
-12.1 Adding a new format:
+10.1 Adding a new format:
 
 Assuming the array model is comparable to something that is already supported e.g. single probe or 
 probeset, sense/anti-sense target.
@@ -612,7 +622,7 @@ script directly using the following parameters:
 	   -sense_interrogation
 
 
-12.2 Adding A New Array 
+10.2 Adding A New Array 
 
 To add a new array to an existing format, simply add the array meta data to the relevant format 
 specific ARRAY_PARAMS hash in: 
@@ -620,28 +630,72 @@ specific ARRAY_PARAMS hash in:
 ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ImportArrays.pm 
 
 
-12.3 Tiling Arrays ???
+10.3 Tiling Arrays
 
-As eFG was initially designed as a data storage and analysis platform for ChIP-Chip analysis...
+As eFG was initially designed as a data storage and analysis platform for ChIP-Chip analysis, it is 
+possible to use the arrays environment to map tiling arrays which have been import via the eFG import 
+API.  To do this it is necessary to specify the -fasta flag when running parse_and_import.pl. This
+will dump a non-reundundant fasta file of the array used in a given experiment. Use this file as the 
+input file to the alignment step by moving or linking it to the working directory with the 
+appropriate name e.g.
 
+arrays_nr.NIMBLEGEN_TILING.fasta
 
+To restrict the analyses to genomic alignments only, add this to the instance file:
 
 export ALIGN_TYPES='GENOMIC'
 
+As the import has already taken place it is necessary to run the rest of the alignments stage in a
+step wise manner e.g.
 
-12.2 Multi-Species Concerns(EnsemblGenomes)
+SetUpPipeline
+CreateAlignIds
+SubmitAlign
+AlignWait
+ProbeAlignReport		#This may take some time if it is a whole genome tiling array
 
 
-12 Known Issues/Caveats ???
+10.4 Multi-Species Support(EnsemblGenomes)
+
+The arrays environment and pipeline code has been developed to support the new multi-species aspect
+of the EnsemblGenomes DBs. This has a few impacts on setup and configuration of the arrays 
+environment.
+
+To enable multi-species support add this to either arrays.config or the instance file.
+
+export MULTI_SPECIES=1
+
+As species are grouped into 'collection' DBs, this means that they will most likely share at least
+some if not all of the arrays to be mapped.  To reduce redundancy in the input data, fasta files 
+should be stored in a collection directory and specific species directories soft linked to these e.g
+
+$DATA_HOME/STAPH_COLLECTION
+$DATA_HOME/STAPHYLOCOCCUS_AUREUS -> $DATA_HOME/STAPH_COLLECTION/
+
+If there are differences between the arrays to be mapped within the collection, then more exhaustive
+individual file links will need to be set up in a standard input directory for that species.
+
+
+??? More here about SPECIES_COMMON? See Andy Yates for details.
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+11 Known Issues/Caveats 
 
 Updating the ProbeTranscriptAlignments for a new genebuild is not possible without the original 
 arrays_nr.FORMAT.fasta file. This could be reconsituted using the original sources but at present 
 requires a complete re import.
 
-Some alternative transcripts may give rise to duplicate ProbeFeatures. This is as yet unseen and 
-will not effect the transcript annotations.
+If a probe exceeds the maximum number of mappings(HIT_SATURATION_LEVEL) for a particular mapping type, 
+then the hits are filtered for perfect matches.  If the remaining perfect match hits do not exceed 
+the HIT_SATURATION_LEVEL then these are kept and the mismatch hits are disregarded. 
+HIT_SATURATION_LEVELs are currently not calculated cumulatively over mapping types.
+
+Some alternative transcripts may give rise to duplicate ProbeFeatures from the ProbeTranscriptAlign
+analysis. This is as yet unseen and will not effect the transcript annotations.
 
 Tiling array support is not yet full implemented.
 
 The probe2transcript.pl script needs some work around resolving some rare cases concerning 
-ProbeFeature and overlap mismatches.
+ProbeFeature mismatches and overlap mismatches.

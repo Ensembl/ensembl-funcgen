@@ -15,7 +15,7 @@ Contents
 2    Overview
 3    Pre-requisites
 4    The Ensembl Pipeline
-5    The eFG Envronment
+5    The eFG Pipeline Environment
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -92,3 +92,26 @@ This contains the general pipeline configuration and specific configuration for 
 should be run on the farm. A template file should be available for the efg analysis environment (see
 specific analysis documentation e.g. arrays.txt). It may be necessary to alter some of the general 
 pipeline configuration. 
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+5 The eFG Pipeline Environment
+
+The eFG shell environment was developed to aid administration of a local eFG instance by providing a
+collection of command line functions to perform common tasks. This has been extended to provide 
+basic support for different analysis pipelines, which contain more specific configuration and 
+functions.
+
+.efg			 This provides the most basic configuration and a handfull of administration functions.
+
+pipeline.env	 Provides functions to support any analysis efg environment which utilises the 
+				 Ensembl pipeline technology.
+
+pipeline.config	 Provides deployment configuration for pipeline.env.
+
+You will need to edit pipeline.config, setting data and binary paths where appropriate.  All 
+environmental variables should be documented or self explanatory. These should only need setting up 
+once. It should be noted that any variables set in pipeline.config will be superceded by those set in 
+any 'analysis'.config or instance file (see next section).
+
