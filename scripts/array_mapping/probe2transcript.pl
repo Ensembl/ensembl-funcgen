@@ -193,9 +193,13 @@ This is generally executed by the eFG array mapping environment
 
 ensembl-functgenomics/scripts/environments/arrays.env
 
+=head1 LICENCE
+
+This code is distributed under an Apache style licence. Please see
+http://www.ensembl.org/info/about/code_licence.html for details.
+
 =head1 CONTACT
 
-This module is part of the Ensembl project: http://www.ensembl.org/
 Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
 
 =cut
@@ -1829,7 +1833,9 @@ sub add_xref {
 	}
   }
 
-  $transcript_xrefs{$transcript_sid}++;
+  #$transcript_xrefs{$transcript_sid}{$object_type}++;
+  #Only count ProbeSet xrefs
+  $transcript_xrefs{$transcript_sid}++ if $object_type eq 'ProbeSet';
 
   my $dbe = new Bio::EnsEMBL::DBEntry
 	(
