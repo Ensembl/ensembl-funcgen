@@ -41,6 +41,7 @@ Contents
 10.2 Adding A New Array
 10.3 Tiling Arrays
 10.4 Multi-Species Support
+10.5 Unsuitable Species Name Support (SPECIES_COMMON) 
 11   Known Issues/Caveats
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -668,22 +669,63 @@ The arrays environment and pipeline code has been developed to support the new m
 of the EnsemblGenomes DBs. This has a few impacts on setup and configuration of the arrays 
 environment.
 
-To enable multi-species support add this to either arrays.config or the instance file.
+To enable multi-species support for funcgen databases add the following to 
+either arrays.config or the instance file.
 
 export MULTI_SPECIES=1
 
-As species are grouped into 'collection' DBs, this means that they will most likely share at least
-some if not all of the arrays to be mapped.  To reduce redundancy in the input data, fasta files 
-should be stored in a collection directory and specific species directories soft linked to these e.g
+To turn on core database multi-species support then export the following:
+
+export DNADB_MULTI_SPECIES=1
+
+If multi-species is specified for a core database and no species is found the
+environment will exit. However if you specify it for the funcational genomics
+database the environment will insert a multi-species entry for the current 
+species name if no species ID can be found in the database.
+
+As species are grouped into 'collection' DBs, this means that they will most 
+likely share at least some if not all of the arrays to be mapped. To 
+reduce redundancy in the input data, fasta files should be stored in 
+a collection directory and specific species directories soft linked to 
+these e.g
 
 $DATA_HOME/STAPH_COLLECTION
 $DATA_HOME/STAPHYLOCOCCUS_AUREUS -> $DATA_HOME/STAPH_COLLECTION/
 
-If there are differences between the arrays to be mapped within the collection, then more exhaustive
-individual file links will need to be set up in a standard input directory for that species.
+If there are differences between the arrays to be mapped within the 
+collection, then more exhaustive individual file links will need to be set 
+up in a standard input directory for that species.
 
+When running the analysis using MULTI_SPECIES you will only have to import the
+array once so runs of other species in the same schema require you to
+use RunAlignments -s. If running the pipeline this way then each and we assume
+our first species is called e_coli & our second s_flex then our file system 
+would look like:
 
-??? More here about SPECIES_COMMON? See Andy Yates for details.
+$DATA_HOME/e_coli/ARRAY_TYPE/arrays.ARRAY_TYPE.fasta*
+
+$DATA_HOME/s_flex/ARRAY_TYPE/symbolic_link_to_*
+
+Sequence files i.e. transcripts & genomic are still dumped to the 
+$ARRAYS_HOME/GENOMICSEQS and $ARRAYS_HOME/TRANSCRIPTSEQS directories.
+
+See known issues for race condition problems which can occur when running
+multi-species databases from the Ensembl Bacteria project.
+
+10.5 Unsuitable Species Name Support (SPECIES_COMMON) 
+
+SPECIES_COMMON is an attribute which when set will be used for file names. This
+is not a specific multi-species support attribute but more support for
+Ensembl Genomes & the various strain names that can appear which are not
+file system friendly. If you have a strain: 
+ 
+e.g. Escherichia coli O1:K1 / APEC 
+
+This can be changed to a more filesystem friendly name: 
+
+e.g. E_coli_O1_K1_APEC 
+
+This conversion must be done by yourself but the usage of it is automatic 
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -706,3 +748,15 @@ Tiling array support is not yet full implemented.
 
 The probe2transcript.pl script needs some work around resolving some rare cases concerning 
 ProbeFeature mismatches and overlap mismatches.
+
+When populating the pipeline for species with coordinate systems other than
+chromosome e.g. super-contig or plasmid a race condition can occur in the
+pipeline causing processes to fail as each one attempts to insert the missing
+coordinate system(s). To avoid this run the following script before the 
+pipeline:
+
+$EFG_PERL $EFG_SCRIPTS/import/import_coord_systems.pl
+
+This loads config from Bio::EnsEMBL::Funcgen::Config::ProbeAlign & imports
+the missing coordinate systems. Eventually this import will be done by
+the API in a safe manner. The issue does not affect sequence regions insertions.
