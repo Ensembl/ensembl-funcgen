@@ -23,9 +23,16 @@ sub new {
   # Retrieve the list of the coordinate systems that features are stored in
   # and cache them
   #
-  my $sth = $self->prepare
-    ('SELECT table_name, coord_system_id, max_length  FROM meta_coord');
-  $sth->execute();
+
+	my $sql = 'SELECT mc.table_name, mc.coord_system_id, mc.max_length  FROM meta_coord mc';
+	my @args;
+	if($self->is_multispecies()) {
+		$sql .= ' join coord_system cs using (coord_system_id) where cs.species_id =?';
+		push(@args, $self->species_id());
+	}
+  
+  my $sth = $self->prepare($sql);
+  $sth->execute(@args);
 
   while(my ($table_name, $cs_id, $max_length) = $sth->fetchrow_array()) {
     $self->{'_feature_cache'}->{lc($table_name)} ||= [];

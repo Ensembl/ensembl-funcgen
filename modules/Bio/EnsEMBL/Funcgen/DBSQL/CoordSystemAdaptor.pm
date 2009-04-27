@@ -171,11 +171,16 @@ sub new {
   #keyed on id, 1/undef values
   $self->{'_is_sequence_level'} = {};
   $self->{'_is_default_version'} = {};
-
-  my $sth = $self->prepare(
-						   'SELECT coord_system_id, name, rank, version, attrib, '.
-						   'schema_build, core_coord_system_id FROM coord_system order by coord_system_id');
-  $sth->execute();
+  
+  my $sql = 'SELECT coord_system_id, name, rank, version, attrib, schema_build, core_coord_system_id FROM coord_system';
+  my @args;
+  if($self->is_multispecies()) {
+  	$sql.=' where species_id =?';
+  	push(@args, $self->species_id());
+  }
+	$sql.=' order by coord_system_id';
+  my $sth = $self->prepare($sql);
+  $sth->execute(@args);
 
   my ($dbID, $name, $rank, $version, $attrib, $sbuild, $ccs_id, $cs);
   $sth->bind_columns(\$dbID, \$name, \$rank, \$version, \$attrib, \$sbuild, \$ccs_id);
@@ -1056,24 +1061,16 @@ sub store {
 	#
 	
 	if(! $cs->dbID()){
-	
-	  $sth = $db->dbc->prepare('INSERT INTO coord_system ' .
-								  'SET name    = ?, ' .
-								  'version = ?, ' .
-								  'attrib  = ?,' .
-								  'rank    = ?,' .
-								  'schema_build = ?,'.
-								  'core_coord_system_id = ?'
-								 );
-	  
+		
+		$sth = $self->prepare('insert into coord_system (name, version, attrib, rank, schema_build, core_coord_system_id, species_id) values (?,?,?,?,?,?,?)');  
 
-
-	  $sth->bind_param(1, $name,        SQL_VARCHAR);
-	  $sth->bind_param(2, $version,     SQL_VARCHAR);
-	  $sth->bind_param(3, $attrib_str,  SQL_VARCHAR);
-	  $sth->bind_param(4, $rank,        SQL_INTEGER);
-	  $sth->bind_param(5, $sbuild,      SQL_VARCHAR);
-	  $sth->bind_param(6, $ccs_id,      SQL_INTEGER);
+	  $sth->bind_param(1, $name,               SQL_VARCHAR);
+	  $sth->bind_param(2, $version,            SQL_VARCHAR);
+	  $sth->bind_param(3, $attrib_str,         SQL_VARCHAR);
+	  $sth->bind_param(4, $rank,               SQL_INTEGER);
+	  $sth->bind_param(5, $sbuild,             SQL_VARCHAR);
+	  $sth->bind_param(6, $ccs_id,             SQL_INTEGER);
+	  $sth->bind_param(7, $self->species_id(), SQL_INTEGER);
 
 	  $sth->execute();
 	  my $dbID = $sth->{'mysql_insertid'};
@@ -1088,29 +1085,21 @@ sub store {
 	}else{
 	  #can we prep this out of the loop
 	  #we don't know until we're in it
+		my $sql = 'insert into coord_system (coord_system_id, name, version, attrib, rank, schema_build, core_coord_system_id, species_id) values (?,?,?,?,?,?,?,?)';
+	  $sth = $db->dbc->prepare($sql);
 
-	  $sth = $db->dbc->prepare('INSERT INTO coord_system ' .
-									 'SET coord_system_id = ?,' .
-									 'name    = ?, ' .
-									 'version = ?, ' .
-									 'attrib  = ?,' .
-									 'rank    = ?,' .
-									 'schema_build = ?,'.
-									 'core_coord_system_id = ?'
-									);
-
-	  $sth->bind_param(1, $cs->dbID(),  SQL_INTEGER);
-	  $sth->bind_param(2, $name,        SQL_VARCHAR);
-	  $sth->bind_param(3, $version,     SQL_VARCHAR);
-	  $sth->bind_param(4, $attrib_str,  SQL_VARCHAR);
-	  $sth->bind_param(5, $rank,        SQL_INTEGER);
-	  $sth->bind_param(6, $sbuild,      SQL_VARCHAR);
-	  $sth->bind_param(7, $ccs_id,      SQL_INTEGER);
+	  $sth->bind_param(1, $cs->dbID(),         SQL_INTEGER);
+	  $sth->bind_param(2, $name,               SQL_VARCHAR);
+	  $sth->bind_param(3, $version,            SQL_VARCHAR);
+	  $sth->bind_param(4, $attrib_str,         SQL_VARCHAR);
+	  $sth->bind_param(5, $rank,               SQL_INTEGER);
+	  $sth->bind_param(6, $sbuild,             SQL_VARCHAR);
+	  $sth->bind_param(7, $ccs_id,             SQL_INTEGER);
+	  $sth->bind_param(8, $self->species_id(), SQL_INTEGER);
 	  $sth->execute();
 	  $sth->finish();
 	}
-
-
+	
 	$cs->{'core_cache'}{$sbuild}{'IS_STORED'} = 1;
 
 
@@ -1208,22 +1197,22 @@ sub validate_and_store_coord_system{
 
   if(! $fg_cs){
 	
-	if($cs->name ne 'clone' && (! $cs->version)){
-	  #NO VERSION for assembled level !!
-	  #Assume the default version
-	  #we could get this from meta, but is unreliable
-	  #get from default chromosome version
-	  my $tmp_cs = $cs->adaptor->fetch_by_name('chromosome');
-	  $version = $tmp_cs->version;
-	}
+		if($cs->name ne 'clone' && (! $cs->version)){
+	  	#NO VERSION for assembled level !!
+	  	#Assume the default version
+	  	#we could get this from meta, but is unreliable
+	  	#get from default chromosome version
+	  	my $tmp_cs = $cs->adaptor->fetch_by_name('chromosome');
+	  	$version = $tmp_cs->version;
+		}
 
 	
-	$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
+		$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
 													 -NAME    => $cs->name(),
 													 -VERSION => $version || $cs->version(),
 													);
 
-	warn "Created new CoordSystem:\t".$fg_cs->name().":".$fg_cs->version()."\n";
+		warn "Created new CoordSystem:\t".$fg_cs->name().":".$fg_cs->version()."\n";
   }
 
 

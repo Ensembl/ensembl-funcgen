@@ -275,6 +275,7 @@ sub update_meta_schema_version{
 sub update_meta_coord{
   my ($self, @table_names) = @_;
   
+  my $species_id = $self->db()->species_id();
   
   if($self->{'skip_meta_coord'}){
 	$self->log("Skipping meta_coord update\n");
@@ -324,7 +325,8 @@ sub update_meta_coord{
 
   #Update each max_length for table_name and coord_system
   foreach my $table_name(@table_names){
-	my $sql1 = "select distinct(cs.name), mc.coord_system_id, cs.version, mc.max_length from coord_system cs, meta_coord mc where mc.table_name='$table_name' and mc.coord_system_id=cs.coord_system_id";
+  
+	my $sql1 = "select distinct(cs.name), mc.coord_system_id, cs.version, mc.max_length from coord_system cs, meta_coord mc where mc.table_name='$table_name' and mc.coord_system_id=cs.coord_system_id and cs.species_id = $species_id";
 	
 	$self->log('');
 	$self->log("Updating meta_coord max_length for $table_name:\n\tname\tcoord_system_id\tversion\tmax_length");
@@ -338,7 +340,7 @@ sub update_meta_coord{
 	
 	# Clean old entries
 	$self->log("Deleting old meta_coord entries");
-	my $sql = "DELETE FROM meta_coord WHERE table_name ='$table_name'";
+	my $sql = "DELETE mc FROM meta_coord mc, coord_system cs WHERE mc.table_name ='$table_name' and mc.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
 	$self->db->dbc->db_handle->do($sql);
 	
 	# Generate new max_lengths
@@ -352,7 +354,7 @@ sub update_meta_coord{
 	#would need to select distinct coord_system_id for table first
 	#This may well slow down quite a bit doing it this way
 	
-	$sql = "select distinct s.coord_system_id from seq_region s, $table_name t WHERE t.seq_region_id = s.seq_region_id";
+	$sql = "select distinct s.coord_system_id from coord_system cs, seq_region s, $table_name t WHERE t.seq_region_id = s.seq_region_id and s.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
 	my @cs_ids = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 	#Convert single element arrayrefs to scalars
 	map $_ = ${$_}[0], @cs_ids;
@@ -368,9 +370,11 @@ sub update_meta_coord{
 	  #This will always give a length of 1 even if there are no features present
 
 	  $sql = "SELECT s.coord_system_id, (t.seq_region_end - t.seq_region_start + 1 ) as max, t.${table_name}_id "
-			. "FROM $table_name t, seq_region s "
+			. "FROM $table_name t, seq_region s, coord_system cs "
 			  . "WHERE t.seq_region_id = s.seq_region_id "
-				. "and s.coord_system_id=${cs_id} order by max desc limit 1";
+				. "and s.coord_system_id=${cs_id} "
+				. "and s.coord_system_id = cs.coord_system_id and cs.species_id = $species_id"
+				. "order by max desc limit 1";
 
 
 	  @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
@@ -612,6 +616,8 @@ sub log_set{
 
 sub check_stable_ids{
   my ($self, @slices) = @_;
+  
+  my $species_id = $self->db()->species_id();
 
   $self->log_header('Checking stable IDs');
 
@@ -625,7 +631,7 @@ sub check_stable_ids{
   else{
 
 	#Can't count NULL field, so have to count regulatory_ffeature_id!!!
-	my $sql = 'select count(regulatory_feature_id) from regulatory_feature where stable_id is NULL and feature_set_id='.$fset->dbID;
+	my $sql = 'select count(rf.regulatory_feature_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.stable_id is NULL and rf.seq_region_id = sr.seq_region_id and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.feature_set_id='.$fset->dbID;
 	
 	#warn "sql is $sql";
 
@@ -642,7 +648,7 @@ sub check_stable_ids{
 	  
 	  foreach my $slice(@slices){
 		my $sr_name=$slice->seq_region_name;
-		$sql = 'select count(stable_id) from regulatory_feature rf, seq_region sr where rf.seq_region_id=sr.seq_region_id and sr.name="'.$sr_name.'" and stable_id is NULL and feature_set_id='.$fset->dbID;
+		$sql = 'select count(rf.stable_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.seq_region_id=sr.seq_region_id and sr.name="'.$sr_name.'" and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.stable_id is NULL and rf.feature_set_id='.$fset->dbID;
 		($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
 		
 		$self->log('Slice '.$slice->name." has $null_sids NULL stable IDs");

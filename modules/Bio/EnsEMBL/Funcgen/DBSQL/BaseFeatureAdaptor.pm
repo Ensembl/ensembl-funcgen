@@ -252,17 +252,29 @@ sub build_seq_region_cache{
 
   my $dnadb = (defined $slice) ? $slice->adaptor->db() : $self->db->dnadb();
   my $schema_build = $self->db->_get_schema_build($dnadb);
-  my $sql = 'SELECT core_seq_region_id, seq_region_id from seq_region where schema_build="'.$schema_build.'"';
-  #Can't maintain these caches as we may be adding to them when storing
+  my $sql = 'select sr.core_seq_region_id, sr.seq_region_id from seq_region sr';
+  my @args = ($schema_build);
+  if($self->is_multispecies()) {
+  	$sql.= ', coord_system cs where sr.coord_system_id = cs.coord_system_id and cs.species_id=? and';
+  	unshift(@args, $self->species_id());
+  }
+  else {
+  	$sql.= ' where';
+  }
+  $sql.=' sr.schema_build =?';
   
+  #Can't maintain these caches as we may be adding to them when storing
+  #Caches seem like they are the wrong way around but this is still keeping it the original way
   $self->{'seq_region_cache'} = {};
   $self->{'core_seq_region_cache'} = {};
-  %{$self->{'seq_region_cache'}} = map @$_, @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-
-  #now reverse cache
-  foreach my $csr_id (keys %{$self->{'seq_region_cache'}}){
-	$self->{'core_seq_region_cache'}->{$self->{'seq_region_cache'}->{$csr_id}} = $csr_id;
-  }
+  
+	my $sth = $self->prepare($sql);
+	$sth->execute(@args);
+	while(my $ref = $sth->fetchrow_arrayref()) {
+		 $self->{seq_region_cache}->{$ref->[0]} = $ref->[1];
+		 $self->{core_seq_region_cache}->{$ref->[1]} = $ref->[0];
+	}
+	$sth->finish();
 
   return;
 }
@@ -289,10 +301,10 @@ sub get_seq_region_id_by_Slice{
 
   #Slice should always have an adaptor, no?
   if( $slice->adaptor() ) {
-	$core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
+		$core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
   } 
   else {
-	$core_sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+		$core_sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
   }
 
   #This does not work!! When updating for a new schema_build we get the first
@@ -304,59 +316,68 @@ sub get_seq_region_id_by_Slice{
   #This cache has been built based on the schema_build
   
   if (exists $self->{'seq_region_cache'}{$core_sr_id}){
-	$fg_sr_id = $self->{'seq_region_cache'}{$core_sr_id};
+		$fg_sr_id = $self->{'seq_region_cache'}{$core_sr_id};
   }
 
   if(! $fg_sr_id && ref($fg_cs)){
-	#This is used to store new seq_region info along side previous stored seq_regions of the same version
-
-	if( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')){
-	  throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
-	}
-
-
-	my $sql = 'SELECT seq_region_id from seq_region where coord_system_id='.$fg_cs->dbID().
-	  ' and name="'.$slice->seq_region_name.'"';
-
-
-	#This may not exist, so we need to catch it here?
-  	($fg_sr_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-
-	#if we are providing forward comptaiblity
-	#Then we know the eFG DB doesn't have the core seq_region_ids in the DB
-	#Hence retrieving the slice will fail in _obj_from_sth
-	#So we need to set it internally here
-	#Then pick it up when get_core_seq_region_id is called for the first time
-	#and populate the cache with the value
-
-	$self->{'_tmp_core_seq_region_cache'} = {(
-											  $fg_sr_id => $core_sr_id
-											 )};
+		#This is used to store new seq_region info along side previous stored seq_regions of the same version
 	
+		if( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')){
+		  throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
+		}
+	
+		my $sql = 'select seq_region_id from seq_region where coord_system_id =? and name =?';
+		my $sth = $self->prepare($sql);
+		$sth->execute($fg_cs->dbID(), $slice->seq_region_name());
+	
+		#This may not exist, so we need to catch it here?
+		($fg_sr_id) = $sth->fetchrow_array();
+		$sth->finish();
+	
+		#if we are providing forward comptaiblity
+		#Then we know the eFG DB doesn't have the core seq_region_ids in the DB
+		#Hence retrieving the slice will fail in _obj_from_sth
+		#So we need to set it internally here
+		#Then pick it up when get_core_seq_region_id is called for the first time
+		#and populate the cache with the value
+	
+		$self->{'_tmp_core_seq_region_cache'} = {(
+												  $fg_sr_id => $core_sr_id
+												 )};
   }
-  elsif(! $fg_sr_id && ! $test_present){
-	#This generally happens when using a new core db with a efg db that hasn't been updated
-	#Default to name match or throw if not present in DB
-	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
-	my $core_cs = $slice->coord_system;
-
-	#This is basically avoiding the mapping of core to efg seq_region_ids 
-	#via schema_build(of the new core db) as we are matching directly to the seq_name
-	my $version_clause = ($core_cs->name eq 'chromosome') ? ' and cs.version="'.$core_cs->version.'"' : '';
-
-	my $sql = 'SELECT distinct(seq_region_id) from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and sr.name="'.$slice->seq_region_name.'" and cs.name="'.$core_cs->name.'"'.$version_clause;
-
-	($fg_sr_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-
-	if(! $fg_sr_id){
-	  throw('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
-			"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
-
-	}
-
-	warn 'Defaulting to previously store seq_region for: '.$core_cs->name.':'.
-	  $core_cs->version.':'.$slice->seq_region_name.
-		"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n";
+  elsif(! $fg_sr_id && ! $test_present) {
+		#This generally happens when using a new core db with a efg db that hasn't been updated
+		#Default to name match or throw if not present in DB
+		my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
+		my $core_cs = $slice->coord_system;
+	
+		#This is basically avoiding the mapping of core to efg seq_region_ids 
+		#via schema_build(of the new core db) as we are matching directly to the seq_name
+	
+		my $sql = 'select distinct(seq_region_id) from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and sr.name=? and cs.name =?';
+		my @args = ($slice->seq_region_name(), $core_cs->name());
+		if($core_cs->is_top_level()) {
+			$sql.= ' and cs.version =?';
+			push(@args, $core_cs->version());
+		}
+		if($self->is_multispecies()) {
+			$sql.=' and cs.species_id=?';
+			push(@args, $self->species_id());
+		}
+		
+		my $sth = $self->prepare($sql);
+		$sth->execute(@args);
+		($fg_sr_id) = $sth->fetchrow_array();
+		$sth->finish();
+	
+		if(! $fg_sr_id){
+		  throw('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
+				"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
+		}
+	
+		warn 'Defaulting to previously store seq_region for: '.$core_cs->name.':'.
+		  $core_cs->version.':'.$slice->seq_region_name.
+			"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n";
   }
 
   return $fg_sr_id;
@@ -374,10 +395,10 @@ sub get_core_seq_region_id{
   my $core_sr_id = $self->{'core_seq_region_cache'}{$fg_sr_id};
 
   if(! defined $core_sr_id && exists $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id}){
-	$self->{'core_seq_region_cache'}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id};
-	#Delete here so we don't have schema_build specific sr_ids hanging around for another query
-	delete  $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id};
-	$core_sr_id = $self->{'core_seq_region_cache'}{$fg_sr_id};
+		$self->{'core_seq_region_cache'}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id};
+		#Delete here so we don't have schema_build specific sr_ids hanging around for another query
+		delete  $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id};
+		$core_sr_id = $self->{'core_seq_region_cache'}{$fg_sr_id};
   }
 
   return $core_sr_id;
@@ -487,29 +508,30 @@ sub _pre_store {
 
 
   if(! $seq_region_id){
-	#check whether we have an equivalent seq_region_id
-	$seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
-	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
-	my $sql;
+		#check whether we have an equivalent seq_region_id
+		$seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
+		my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
+		my $sql;
+		my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $slice->get_seq_region_id(), $schema_build);
 
-	#No compararble seq_region
-	if(! $seq_region_id){
-	  $sql = 'INSERT into seq_region(name, coord_system_id, core_seq_region_id, schema_build) '.
-		'values("'.$slice->seq_region_name().'", '.$fg_cs->dbID().', '.$slice->get_seq_region_id().', "'.$schema_build.'")';
-	}else{#Add to comparable seq_region
-	  $sql = 'INSERT into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) '.
-		'values('.$seq_region_id.', "'.$slice->seq_region_name().'", '.$fg_cs->dbID().', '.$slice->get_seq_region_id().', "'.$schema_build.'")';
-	}
+		#Add to comparable seq_region		
+		if($seq_region_id) {
+			$sql = 'insert into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?,?)';
+			unshift(@args, $seq_region_id);
+		}
+		#No compararble seq_region
+		else{
+			$sql = 'insert into seq_region(name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?)';			
+		}
 
-
-	my $sth = $self->prepare($sql);
-
-	#Need to eval this
-	eval{$sth->execute();};
-
-	if(! $@){
-	  $seq_region_id =  $sth->{'mysql_insertid'};
-	}
+		my $sth = $self->prepare($sql);
+	
+		#Need to eval this
+		eval{$sth->execute(@args);};
+	
+		if(!$@){
+		  $seq_region_id =  $sth->{'mysql_insertid'};
+		}
   }
 
   
