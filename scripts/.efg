@@ -108,6 +108,7 @@ GenerateDASConfig(){
 	das_config=$EFG_DAS_CONFIG
 	feature_set=
 	result_set=
+	xsl_home=
 	#Default to current working DB details
 	species=$SPECIES
 	db_name=$DB_NAME
@@ -116,7 +117,7 @@ GenerateDASConfig(){
 	db_host=$DB_HOST
 	db_pass=$DB_PASS
 	
-	usage='usage: GenerateDASConfig -i das_instance_name [ -c das_config(default=$EFG_DAS_CONFIG) -p das_port(default=$EFG_DAS_PORT) -s das_host(default=$EFG_DAS_HOST) -D dbname(default=$DB_NAME) -H dbhost(default=$DB_HOST) -U dbuser(default=$DB_USER) -P dbport(default=$DB_PORT) -W dbpassWord(default=$DB_PASS) -S latin_species_name -f feature_set -r result_set -h(elp) ]'
+	usage='usage: GenerateDASConfig -i das_instance_name [ -c das_config(default=$EFG_DAS_CONFIG) -p das_port(default=$EFG_DAS_PORT) -s das_host(default=$EFG_DAS_HOST) -D dbname(default=$DB_NAME) -H dbhost(default=$DB_HOST) -U dbuser(default=$DB_USER) -P dbport(default=$DB_PORT) -W dbpassWord(default=$DB_PASS) -S latin_species_name -f feature_set -r result_set -h(elp) -x styleshome ]'
 
 
 	#Need to add options for individual set config?
@@ -131,6 +132,7 @@ GenerateDASConfig(){
             u  ) das_user=$OPTARG ;;
             p  ) das_port=$OPTARG ;;
             s  ) das_host=$OPTARG ;;
+            x  ) xsl_home=$OPTARG ;;
 			D  ) db_name=$OPTARG ;;
             H  ) db_host=$OPTARG ;;
 			U  ) db_user=$OPTARG ;;
@@ -153,6 +155,21 @@ GenerateDASConfig(){
     #Can we use $MYSQL_SCRIPT_ARGS here?
 
 	error=$(CheckVariablesOrUsage "$usage" instance das_port das_host das_config db_name db_user db_port db_host EFG_DAS_HOME)
+
+	if [ ! $xsl_home ]; then
+		xsl_home=" -styleshome ${EFG_DAS_HOME}/stylesheets "
+	else
+		error='-x styleshome parameter cannot be found' 
+		error=$(CheckFilesOrUsage "$error" xsl_home)
+	
+	 	if [ $? -ne 0 ]; then
+ 			echo $error;
+			return 1
+		fi
+
+		xsl_home=" -styleshome $xsl_home "
+	fi
+
 
 	if [ $? -ne 0 ]; then
 		echo $error
@@ -177,7 +194,7 @@ GenerateDASConfig(){
 	if [ $db_pass ]; then
 		db_pass="-dbpass $db_pass"
 	fi
-	
+
 	
 	$EFG_SRC/scripts/DAS/generate_DAS_config.pl \
 	-species $species\
@@ -185,7 +202,7 @@ GenerateDASConfig(){
 	-dbhost $db_host\
 	-dbuser $db_user\
 	-dbname $db_name\
-	$db_pass \
+	$db_pass $xsl_home \
 	-das_host $das_host\
 	-das_port $das_port\
 	-das_config $das_config\
@@ -267,27 +284,22 @@ h  ) echo $usage; return 0;;
 	fi
 
 
-	#Now list files using patterns based on instance name	
-	config_files=$(ls ${das_config}/${instance}.*.*.*.*.sources)
-	html_files=$(ls ${das_config}/${instance}.*.*.*.*.html)
+	#Now list files using patterns based on instance name
+	config_files=$(ls ${das_config}/${instance}.*.*.*.*Set.sources)
+	html_files=$(ls ${das_config}/${instance}.*.*.*.*Set.html)
 	
-	for list in $html_files $config_files; do
+	for list in "$html_files" "$config_files"; do
  
 		if [[ $list = "*No such file*" ]]; then
-			echo "No source files found: $config_file"
-			return 1;
+			echo $list
+			return 1
 		fi
 	done
 
 
-	#Need to backup files first?
-
 	#Stop the server
 	#Before we start messing aroung with the config
 	StopDASServer -i $instance -c $das_config -p $das_port -s $das_host
-	
-
-
 
 	#Cat the config files
 	config_file=${das_config}/${instance_name}.ini
@@ -304,9 +316,6 @@ h  ) echo $usage; return 0;;
 	echo '</body></html>' | cat >> $html_file
 
 	#Start the server
-
-	echo "$EFG_DAS_HOME/eg/proserver $no_fork -debug -c $config_file "
-
 	$EFG_DAS_HOME/eg/proserver $no_fork -debug -c $config_file
 	
 	if [ $? -ne 0 ]; then
@@ -382,10 +391,10 @@ h  ) echo $usage; return 0;;
 			kill -TERM $pid
 
 			if [ $? -ne 0 ]; then
-				echo "Failed to stop DAS instance($pid): $instance"
+				echo "Failed to stop DAS instance($pid): $instance_name"
 				return 1
 			else
-				echo "Stopped DAS instance: $instance"
+				echo "Stopped DAS instance: $instance_name"
 			fi
 
 		else
