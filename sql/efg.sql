@@ -253,8 +253,7 @@ CREATE TABLE `coord_system` (
   PRIMARY KEY (`coord_system_id`),
   UNIQUE INDEX `cs_uniq_idx` (`core_coord_system_id`, `schema_build`, `species_id`),
   INDEX `name_version_idx` (`name`, `version`),
-  INDEX `coord_species_idx` (`species_id`),
-  
+  INDEX `coord_species_idx` (`species_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --- This is never being queried anyway as we cache all the CSs on start up!
