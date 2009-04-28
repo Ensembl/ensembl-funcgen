@@ -35,7 +35,10 @@ my $dnadbuser    = 'ensro';
 my $dnadbport    = 3306;
 my $dnadbpass    = undef;
 
-my ($species, $multi_species);
+my ($species, $multi_species, $dnadbmulti_species);
+my $species_id=1;
+my $dnadbspecies_id = 1;
+
 my $cdna;
 my $stable_id = 0;
 my $db_id = 0;
@@ -59,15 +62,18 @@ GetOptions(
 		   'dnadbuser=s' => \$dnadbuser,
 		   'dnadbport=s' => \$dnadbport,
 		   'dnadbpass=s' => \$dnadbpass,
+		   'dnadbspecies_id=i', => \$dnadbspecies_id,
+		   'dnadbmulti_species!' => \$dnadbmulti_species,
 		   'species=s'   => \$species,
 		   'multi_species' => \$multi_species,
+			 'species_id=i' => \$species_id,
 		   'stable_id!'  => \$stable_id,
 		   'db_id!'      => \$db_id,
 		   'file=s'      => \$file,
-           'slicename=s' => \$slicename,
-           'verbose'     => \$verbose,
-           'cdna!'       => \$cdna,
-           'evidence!'   => \$ev,
+       'slicename=s' => \$slicename,
+       'verbose'     => \$verbose,
+       'cdna!'       => \$cdna,
+       'evidence!'   => \$ev,
 		   'biotype=s'   => \$biotype,
 		   'stable_id_file=s' => \$stable_id_file,
 		   'help!'       => \$help,
@@ -83,7 +89,10 @@ die ("'dbname=s'    => $dbname,
 'dnadbuser=s' => $dnadbuser,
 'dnadbport=s' => $dnadbport,
 'dnadbpass=s' => $dnadbpass,
+'dnadbspecies_id=i' => $dnadbspecies_id,
+'dnadbmulti_species!' => $dnadbmulti_species,
 'species=s    => $species,
+'species_id=i' => $species_id,
 'multi_species!' => $multi_species,
 'stable_id!'  => $stable_id,
 'db_id!'      => $db_id,
@@ -105,8 +114,6 @@ if ($stable_id and $db_id){
 
 my $db;
 
-
-
 if ($dnadbname) {
   if (not $dnadbhost or not $dnadbuser) {
     die "Fine. Your DNA is not in '$dbname' but in '$dnadbname'. But you must give a user and host for it\n";
@@ -119,7 +126,8 @@ if ($dnadbname) {
                                                  '-pass'   => $dnadbpass,
                                                  '-port'   => $dnadbport,
 												 '-species' => $species,
-												 '-multispecies_db' => $multi_species,
+												 '-multispecies_db' => $dnadbmulti_species,
+												 '-species_id' => $dnadbspecies_id
                                               );
 
   $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
@@ -131,6 +139,7 @@ if ($dnadbname) {
 										   '-dnadb' => $dnadb,
 										   '-species' => $species,
 										   '-multispecies_db' => $multi_species,
+											 '-species_id' => $species_id
                                               );
 } else {
   $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
@@ -142,6 +151,7 @@ if ($dnadbname) {
 										      '-group'  => 'core',
 										   '-species' => $species,
 										   '-multispecies_db' => $multi_species,
+											 '-species_id' => $species_id
                                               );
 }
 
