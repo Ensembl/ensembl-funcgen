@@ -20,7 +20,7 @@ my $slice_adaptor = $efg_db->get_SliceAdaptor;
 my $slice = $slice_adaptor->fetch_by_name('chromosome:NCBI36:7:27132000:27139000');
 
 my $featureset_adaptor = $efg_db->get_FeatureSetAdaptor;
-my $cisred_fset = $featureset_adaptor->fetch_by_name('cisRED group motifs');
+my $cisred_fset = $featureset_adaptor->fetch_by_name('cisRED motifs');
 
 
 my @feats = @{$cisred_fset->get_Features_by_Slice($slice)};
