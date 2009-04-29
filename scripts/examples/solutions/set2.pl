@@ -20,7 +20,7 @@ my $dataset_adaptor = $efg_db->get_DataSetAdaptor;
 
 my $data_set = $dataset_adaptor->fetch_by_name('RegulatoryFeatures');
 
-print $dset->name.' contains the following '.$dset->supporting_set_type." feature supporting sets:\n";
+print $data_set->name." contains the following supporting sets:\n";
 
 foreach my $sset(@{$data_set->get_supporting_sets}){
   print "Supporting set:\t".$sset->name."\t".ucfirst($sset->type)."Features\n";
