@@ -378,7 +378,7 @@ sub get_probename {
 	  warn "This probe has more than one probe name for probeset $arrayname:".$self->probeset->name.":\t @names";
 	}
 	else{
-	  $probename = $self->{'probenames'}->{$arrayname};	
+	  ($probename) = @{$self->{'probenames'}->{$arrayname}};	
 	}
 
     return $probename;
