@@ -421,9 +421,9 @@ sub description {
 
 =head2 get_ArrayChips
 
-  Example    : my %achips = %{$array->get_ArrayChips()};
+  Example    : my @achips = @{$array->get_ArrayChips()};
   Description: Getter, setter and lazy loader of array_chip hashes
-  Returntype : Hashe of design_id keys and values of name and array_chip
+  Returntype : Arrays of ArrayChip objects
   Exceptions : Throws exception if none found for array_id
   Caller     : General
   Status     : High Risk - migrate to ArrayChip.pm
