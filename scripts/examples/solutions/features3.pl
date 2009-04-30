@@ -10,27 +10,44 @@ $reg->load_registry_from_db(
 
 my $efg_db = $reg->get_DBAdaptor('Human', 'funcgen');
 
-#Investigate what DataSets are present in the data base.
-#Create a script which lists all the DataSet names, feature types, cell types and their supporting sets
-
+#3. Generate a Promoter profile
+# Fetch all the promoter associated regulatory features for chr??
+# Count the presence of each supporting feature type to identify what defines a promoter
 
 my $efg_db = $reg->get_DBAdaptor('Human', 'funcgen');
 
 my $slice_adaptor = $efg_db->get_SliceAdaptor;
-my $slice = $slice_adaptor->fetch_by_name('chromosome:NCBI36:7:27132000:27139000');
+my $slice = $slice_adaptor->fetch_by_name('chromosome:NCBI36:1:500000:1000000');
 
 my $featureset_adaptor = $efg_db->get_FeatureSetAdaptor;
-my $cisred_fset = $featureset_adaptor->fetch_by_name('cisRED group motifs');
+my $regfeat_fset = $featureset_adaptor->fetch_by_name('RegulatoryFeatures');
 
 
-my @feats = @{$cisred_fset->get_Features_by_Slice($slice)};
+my @reg_feats = @{$regfeat_fset->get_Features_by_Slice($slice)};
 
-print 'Found '.scalar(@feats).' '.$cisred_fset->name.' on slice '.$slice->name."\n";
+my %feature_type_counts;
 
 
+foreach my $reg_feat(@reg_feats){
+  my %seen_feature_types;
 
-foreach my $feat(@feats){
+  next if $reg_feat->feature_type->name !~ /Promoter/;
+  
+  #Get all supporting features for this reg feat
+  foreach my $reg_attr_feature(@{$reg_feat->regulatory_attributes}){
 
-  print 'Found '.$feat->display_label."\n";
+	#Only count if we have not already seen it.
+	if(! exists $seen_feature_types{$reg_attr_feature->feature_type->name}){
+	  $feature_type_counts{$reg_attr_feature->feature_type->name}++;
+	}
+
+  }
 
 } 
+
+print 'Promoter profile from '.scalar(@reg_feats)." RegulatoryFeatures:\n";
+
+
+foreach my $ftype(keys(%feature_type_counts)){
+  printf("$ftype% 11d\n", $feature_type_counts{$ftype});
+}
