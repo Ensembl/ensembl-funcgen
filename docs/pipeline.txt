@@ -64,7 +64,7 @@ Also see main pipeline docs (see below).
 
 The main documentation for the Ensembl pipeline is available here:
 
-http://cvs.sanger.ac.uk/cgi-bin/viewcvs.cgi/ensembl-doc/pipeline_docs/the_ensembl_pipeline_infrastructure.txt?view=markup
+http://cvs.sanger.ac.uk/cgi-bin/viewvc.cgi/ensembl-doc/pipeline_docs/the_ensembl_pipeline_infrastructure.txt?view=markup&root=ensembl
 
 In summary, the ensembl-pipeline code deals with submission of jobs to the farm dependant on a set 
 of rules which describe the dependancies of each analysis step in a given pipeline. The rules and 
