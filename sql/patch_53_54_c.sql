@@ -3,13 +3,9 @@
 # title: Add multispecies support
 #
 # description:
-# Modifies meta, coord_system and seq_region to ensure that the primary keys and structure allows for multispecies 
+# Modifies coord_system and seq_region to ensure that the primary keys and structure allows for multispecies 
 
 
-
-
-
-#ALTER TABLE meta ADD KEY `meta_species_index` (`species_id`);
 
 # Auto-inc fields are indexed before primary key removal to avoid an ERROR 1075 (42000).
 
