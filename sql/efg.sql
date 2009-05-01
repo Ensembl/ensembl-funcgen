@@ -244,16 +244,16 @@ DROP TABLE IF EXISTS `coord_system`;
 CREATE TABLE `coord_system` (
   `coord_system_id` int(10) NOT NULL auto_increment,
   `name` varchar(40) NOT NULL,
-  `version` varchar(40) default NULL,
+  `version` varchar(255) NOT NULL default '',
   `rank` int(11) NOT NULL,
   `attrib` set('default_version','sequence_level') default NULL,
-  `schema_build` varchar(10) default NULL,
+  `schema_build` varchar(10) NOT NULL default '',
   `core_coord_system_id` int(10) NOT NULL,
-  `species_id` int(10) DEFAULT 1,
-  PRIMARY KEY (`coord_system_id`),
-  UNIQUE INDEX `cs_uniq_idx` (`core_coord_system_id`, `schema_build`, `species_id`),
-  INDEX `name_version_idx` (`name`, `version`),
-  INDEX `coord_species_idx` (`species_id`)
+  `species_id` int(10) NOT NULL default '1',
+  PRIMARY KEY  (`name`,`version`,`schema_build`,`species_id`),
+  KEY `name_version_idx` (`name`,`version`),
+  KEY `coord_species_idx` (`species_id`),
+  KEY `coord_system_id_idx` (`coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --- This is never being queried anyway as we cache all the CSs on start up!
@@ -280,11 +280,11 @@ CREATE TABLE `seq_region` (
   `name` varchar(40) NOT NULL,
   `coord_system_id` int(10) unsigned NOT NULL,
   `core_seq_region_id` int(10) unsigned NOT NULL,
-  `schema_build` varchar(10) default NULL,
-  PRIMARY KEY  (`seq_region_id`),
-  UNIQUE INDEX `sr_uniq_idx` (`name`, `schema_build`, `coord_system_id`),
-  KEY `coord_system_id` (`coord_system_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1; 
+  `schema_build` varchar(10) NOT NULL default '',
+  PRIMARY KEY  (`name`,`schema_build`,`coord_system_id`),
+  KEY `coord_system_id` (`coord_system_id`),
+  KEY `seq_region_id_idx` (`seq_region_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- it maybe possible to have 2 seq_regions on different levels with the same name
 -- there fore have to use core cs id in primary key
