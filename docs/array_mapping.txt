@@ -382,6 +382,11 @@ for each array format. These provide an easy way to detect whether any unseen er
 alignment process.
 
 
+NOTE: It may be apparent that the ProbeTranscriptAlign type analyses are returning only low levels
+of ProbeFeatures or none at all.  This is because any alignments are discarded when they map back to 
+the genome as ungapped to avoid redundancy of feature between the ProbeAlign and ProbeTranscriptAlign
+analyses.
+
 8.2 Transcript Annotation
 
 This depends on the array names file for each format which is normally written during the import step.  
@@ -732,19 +737,38 @@ This conversion must be done by yourself but the usage of it is automatic
 
 11 Known Issues/Caveats 
 
-Updating the ProbeTranscriptAlignments for a new genebuild is not possible without the original 
-arrays_nr.FORMAT.fasta file. This could be reconsituted using the original sources but at present 
-requires a complete re import.
+- Hardcoded perl
+
+Some of the main ensembl-pipeline scripts contain hardcoded perl paths which may need to be edited.
+
+
+- Updating ProbeTranscriptAlignments
+
+Given a new genebuild it is not possible to update just the ProbeTranscriptAlignments without the 
+original arrays_nr.FORMAT.fasta file. This could be reconsituted using the original sources but at 
+present requires a complete re-import.
+
+
+- MAX_HIT_SATURATION
 
 If a probe exceeds the maximum number of mappings(HIT_SATURATION_LEVEL) for a particular mapping type, 
 then the hits are filtered for perfect matches.  If the remaining perfect match hits do not exceed 
 the HIT_SATURATION_LEVEL then these are kept and the mismatch hits are disregarded. 
 HIT_SATURATION_LEVELs are currently not calculated cumulatively over mapping types.
 
+
+- Alt-trans ProbeFeature duplication
+
 Some alternative transcripts may give rise to duplicate ProbeFeatures from the ProbeTranscriptAlign
 analysis. This is as yet unseen and will not effect the transcript annotations.
 
-Tiling array support is not yet full implemented.
+
+- Tiling array support 
+
+This is not yet fully implemented.
+
+
+- ProbeFeature/Overlap mismatches
 
 The probe2transcript.pl script needs some work around resolving some rare cases concerning 
 ProbeFeature mismatches and overlap mismatches.
