@@ -1,11 +1,5 @@
 #!/usr/local/ensembl/bin/perl
 
-
-#TO DO
-# 1 Make this generic for all feature sets
-# 2 Remove hardcoding for ens-staging, take cdb args or default to ensembldb
-# 3 Fix uninit value in concat in print statement, STABLE ID!!!!
-
 use warnings;
 use strict;
 use Getopt::Long;
@@ -25,18 +19,20 @@ my $port = $ENV{'EFG_PORT'};
 my $user = $ENV{'EFG_READ_USER'};
 my $dbname = $ENV{'EFG_DBNAME'};
 my $cdbname = $ENV{'CORE_DBNAME'};
+my $no_zip = 0;
 
 my $anal_name = 'Nessie';
 my $out_dir = ".";
 
 GetOptions (
-			"feature_set=s" => \$fset_name,
+			"feature_set=s"    => \$fset_name,
 			"pass=s"           => \$pass,
 			"port=s"           => \$port,
             "dbname=s"         => \$dbname,
 			"dbhost=s"         => \$dbhost,
             "cdbname=s"        => \$cdbname,
 			"outdir=s"         => \$out_dir,
+			'no_zip|z'         => \$no_zip,
 			"help|?"           => \$help,
 			"man|m"            => \$man,
 		   );
@@ -93,8 +89,11 @@ system('mkdir -p '.$out_dir) if(! -d $out_dir);
 my $slice_a = $db->get_SliceAdaptor();
 my $fset_a = $db->get_FeatureSetAdaptor();
 my $fset = $fset_a->fetch_by_name($fset_name);
+my ($outline, @output);
+my $fset_ftype = ucfirst($fset->type).'Feature';
 
 foreach my $slice(@{$slice_a->fetch_all('toplevel')}){
+  my $cnt = 0;
 
   print "Dumping slice ".$slice->name."\n";
 
@@ -105,15 +104,56 @@ foreach my $slice(@{$slice_a->fetch_all('toplevel')}){
   open (OUT, ">$ofile") || die ("Can't open $ofile for writing");
 
   foreach my $feature(@{$fset->get_Features_by_Slice($slice)}){
+	$cnt++;
 	
 	#seqid source type start end score strand phase attrs
 
-	print OUT join("\t", ($chr_name, $dbname, 'regulatory feature', 
-                      $feature->start(), $feature->end(), '.', '.', '.', 'ID='.$feature->stable_id().';Note=Consists of following features: '.
-						  join(',', map {join(':', $_->feature_type->name, $_->cell_type->name)}@{$feature->regulatory_attributes()})))."\n";
+	#Let's push this onto an array here and only print OUT every 5000 lines to save I/O?
+	#We are no handling strand here
 
+	$outline = join("\t", ($chr_name, $dbname, $fset_ftype, $feature->start(), $feature->end(), '.', '.', '.', 'Name='.$feature->feature_type->name.';'));
+
+	#associated_feature_types?
+	#http://www.sequenceontology.org/gff3.shtml
+
+	if($fset_ftype eq 'RegulatoryFeature'){
+	  $outline .= join('; ', (' ID='.$feature->stable_id(), 'Note=Consists of following features: '.join(',', map {join(':', $_->feature_type->name, $_->cell_type->name)}@{$feature->regulatory_attributes()})));
+
+	}
+	#elsif($fset_ftype eq 'AnnotatedFeature'){
+	#  #feature_type->name
+	#  
+	#}				
+	elsif($fset_ftype eq 'ExternalFeature'){
+	  #It may be more appropriate to have this as the Name for external_features?
+	  $outline .= ' Alias='.$feature->display_label;
+	}
+
+	push @output, $outline;
+
+
+	if(scalar(@output) == 1000){
+	  print OUT join("\n", @output)."\n";
+	  @output = ();
+	}
   }
+
+  print OUT join("\n", @output);
+  @output = ();
 
   close(OUT);
 
+  #Remove empty files and zip
+
+  if(-z $ofile){
+	print "No features found\n";
+	unlink $ofile;
+  }
+  else{
+	print "Found $cnt features\n";
+
+	if(! $no_zip){
+	  system("gzip $ofile");
+	}
+  }
 }
