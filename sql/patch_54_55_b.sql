@@ -1,6 +1,6 @@
 # patch_54_55_a.sql
 #
-# title: FL consistency tweaks
+# title: FK consistency tweaks
 #
 # description:
 # Some general schema tweaks to bring var types in line with core and internally consistent
