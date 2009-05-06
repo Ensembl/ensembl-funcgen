@@ -64,7 +64,7 @@ CREATE TABLE `meta` (
   `meta_value` varchar(255) NOT NULL,
   PRIMARY KEY  (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
-  KEY `species_value_idx` (`species_id`,`meta_value`),
+  KEY `species_value_idx` (`species_id`,`meta_value`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
