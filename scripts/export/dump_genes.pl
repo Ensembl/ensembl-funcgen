@@ -156,6 +156,11 @@ if ($dnadbname) {
 }
 
 
+#Test DBConnections here before we generate file.
+$db->dbc->db_handle;
+$db->dnadb->dbc->db_handle;
+
+
 
 my $fh;
 if($file){
