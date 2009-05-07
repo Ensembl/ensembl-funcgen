@@ -2,6 +2,7 @@
 
 use warnings;
 use strict;
+use Carp;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
@@ -9,7 +10,7 @@ use Getopt::Long;
 use Pod::Usage;
 
 my $opts = {};
-GetOptions($opts, qw(help|? verbose man)) or pod2usage(1);
+GetOptions($opts, qw(seq_regions|sr help|? verbose man)) or pod2usage(1);
 pod2usage(1) if $opts->{help};
 pod2usage(-exitstatus => 0, -verbose => 2) if $opts->{man};
 
@@ -28,33 +29,53 @@ if($opts->{verbose}) {
 }
 
 my $sa = $d_dba->get_SliceAdaptor();
+my $pfa = $f_dba->get_ProbeFeatureAdaptor();
 my $fcsa = $f_dba->get_FGCoordSystemAdaptor();
 
 #Have to fetch slices then get toplevel coord systems
 my $slices = $sa->fetch_all('toplevel');
-my %seen;
-my @coord_systems =
 
-	grep {
-		my $cs = $_;
-		my $key = join('_|_', $cs->name(), $cs->version());
-		if($seen{$key}) {
-			0;
+foreach my $cs (sort { $a->rank() <=> $b->rank() } unique_cs($slices)) {
+	store_cs($cs);
+}
+
+foreach my $slice (@{$slices}) {
+	store_slice($slice);
+}
+
+sub unique_cs {
+	my ($slices) = @_;
+	my %seen;
+	my @coord_systems =
+		grep {
+			my $cs = $_;
+			my $key = join('_|_', $cs->name(), $cs->version());
+			if($seen{$key}) {
+				0;
+			}
+			else {
+				$seen{$key} = 1;
+				1;
+			}
 		}
-		else {
-			$seen{$key} = 1;
-			1;
+		
+		map {
+			my $slice = $_;
+			$slice->coord_system();
 		}
-	}
+		@{$slices};
 	
-	map {
-		my $slice = $_;
-		$slice->coord_system();
-	}
-@{$slices};
+	return @coord_systems;
+}
 
-foreach my $cs (sort { $a->rank() <=> $b->rank() } @coord_systems) {
-	my $fg_cs = $fcsa->fetch_by_name($cs->name(), $cs->version());
+sub fg_cs {
+	my ($cs) = @_;
+	return $fcsa->fetch_by_name($cs->name(), $cs->version());
+}
+
+sub store_cs {
+	my ($cs) = @_;
+	my $fg_cs = fg_cs($cs);
 	if($fg_cs) {
 		print STDERR 'Coord-system ', $cs->name(), ' already exists', "\n" if $opts->{verbose};
 	}
@@ -62,6 +83,53 @@ foreach my $cs (sort { $a->rank() <=> $b->rank() } @coord_systems) {
 		print STDERR 'Coord-system ', $cs->name(), ' needs to be inserted', "\n" if $opts->{verbose};
 		$fcsa->validate_and_store_coord_system($cs);
 	}
+}
+
+sub store_slice {
+	my($slice) = @_;
+	
+	if($opts->{verbose}) {
+		print STDERR 'Processing slice '.$slice->name()."\n";
+	}
+	
+	$pfa->build_seq_region_cache($slice);
+	
+	my $seq_region_id = $pfa->get_seq_region_id_by_Slice($slice, undef, 1);
+
+  if(! $seq_region_id) {
+  	my $fg_cs = fg_cs($slice->coord_system());
+		#check whether we have an equivalent seq_region_id
+		$seq_region_id = $pfa->get_seq_region_id_by_Slice($slice, $fg_cs);
+		my $schema_build = $f_dba->_get_schema_build($slice->adaptor->db());
+		my $sql;
+		my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $slice->get_seq_region_id(), $schema_build);
+
+		#Add to comparable seq_region		
+		if($seq_region_id) {
+			$sql = 'insert into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?,?)';
+			unshift(@args, $seq_region_id);
+		}
+		#No compararble seq_region
+		else{
+			$sql = 'insert into seq_region(name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?)';			
+		}
+
+		my $sth = $pfa->prepare($sql);
+	
+		#Need to eval this
+		eval{$sth->execute(@args);};
+	
+		if(!$@){
+		  $seq_region_id =  $sth->{'mysql_insertid'};
+		  print STDERR "Just inserted new seq region with ID ${seq_region_id}\n" if $opts->{verbose};;
+		}
+		else {
+			croak("Could not insert new sequence region: $@");
+		}
+  }
+  else {
+  	print STDERR 'Sequence region already represented', "\n"  if $opts->{verbose};
+  }
 }
 
 __END__
@@ -73,7 +141,7 @@ __END__
 	
 =head1 SYNOPSYS
 
-	./import_coord_systems.pl [-v] [-h] [-m]
+	./import_coord_systems.pl [-seq_regions] [-v] [-h] [-m]
 
 =head1 DESCRIPTION
 
@@ -87,6 +155,11 @@ when we have coordinate systems which are not chromosomes but are toplevel. The 
 occuring in an unmanaged manner is that database contraints will cause the pipeline to
 restart. This script allows us to register the coordinate systems in a single process & therefore
 far more managed than the old system.
+
+The script can also import sequence regions by using a copy of the sequence
+region insertion logic. Whilst this is not ideal it is required for genomes
+where regions may be intentionally missed by a mapping procedure and then
+later assumed they have been imported into the functional genomics schema.
 
 =head1 OPTIONS
 
@@ -105,7 +178,15 @@ Prints the manual version
 Prints a bit of extra information about the program you are running. This is feedback about the
 inserted coordindate systems & connection settings using Data::Dumper. This is crude feedback at
 best but the script is temporary.
- 
+
+=item B<-seq_regions>
+
+If specified this will attempt to write a feature to the probe feature table
+and then delete it. The result of this is to trigger the insertion of 
+sequence regions which may not have been persisted due to no probes being
+mapped to them. This causes problems during probe2transcript.pl where all
+slices from a core database are expected to be found in the target database.
+
 =back
 
 =cut
