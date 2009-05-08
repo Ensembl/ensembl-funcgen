@@ -445,10 +445,14 @@ sub fetch_by_name{
   my $name = lc(shift);
   my $version = lc(shift);  
   my $sbuild = $self->db->_get_schema_build($self->db->dnadb());
-  my $assembly =  $self->db->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version();
-  my ($cs, $found_cs);
- 
+  my ($cs, $found_cs, $core_version);
+  
   throw('Mandatory argument \'name\'') if(! $name);
+
+  #Set default_version if not specified
+  if(! $version){
+	$version =  $self->db->get_CoordSystemAdaptor->fetch_by_name($name)->version();
+  }
 
   #can we not just use
   #if(($name eq 'toplevel' || $name eq 'seqlevel') && ! $schema_build){
@@ -482,7 +486,7 @@ sub fetch_by_name{
   #Hence we end up loading a new CS for each non-versioned level.
   
   foreach $cs (@coord_systems) {
-	#Need if version first to allow for versioned and non-versioned supercontig level
+	#Versions are only relevant to assembled levels e.g. chromosome & scaffold?
 
     if($version) {
 	  #we need to get the one which corresponds to the dnadb?
@@ -497,11 +501,6 @@ sub fetch_by_name{
 		last;
 		#push @schema_css, $cs if(lc($cs->version()) eq $version);
 	  }
-	}elsif($cs->version eq $assembly){
-	  #assume we want the current dnadb assembly version
-	  #No longer need to check schema build as we a forcing the use of assembly version in eFG
-	  $found_cs = $cs;
-	  last;
 	}
 
 
