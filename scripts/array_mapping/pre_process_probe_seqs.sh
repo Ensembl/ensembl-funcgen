@@ -9,16 +9,17 @@ fi
 
 . $EFG_SRC/scripts/environments/funcs.sh
 
-
+#opt this as we don't need vendor for FASTA format
 vendor=$1
 file_type=$2
 array_name=$3
 file_path=$4
 
-export VALID_VENDORS='ILLUMINA CODELINK PHALANX'
+export VALID_VENDORS='ILLUMINA CODELINK PHALANX AGILENT'
+#AGILENT is 
 
 usage="Usage: ARG[1] vendor ARG[2] file_type ARG[3] array_name ARG[4] file_path 
-i.e. pre_process_codelink.sh ILLUMINA|CODELINK|PHALANX FASTA|TXT|CSV ARRAYNAME /path/to/file"
+i.e. pre_process_seqs.sh ILLUMINA|CODELINK|PHALANX FASTA|TXT|CSV ARRAYNAME /path/to/file"
 
 #We could head the files first by a number of line and test the expected last line
 #Then sed the header out.
@@ -26,7 +27,6 @@ i.e. pre_process_codelink.sh ILLUMINA|CODELINK|PHALANX FASTA|TXT|CSV ARRAYNAME /
 vendor=$(echo $vendor | tr [:lower:] [:upper:])
 file_type=$(echo $file_type | tr [:lower:] [:upper:])
 CheckVariablesOrUsage "$usage" file_type array_name file_path
-ValidateVariableOrUsage "$usage" vendor VALID_VENDORS
 
 
 new_file_path=$(echo "$file_path" | grep -E "[[:space:]()]")
@@ -48,6 +48,7 @@ if [ $file_type = FASTA ]; then
 	sed "s/^>/>${array_name}:/" $file_path > ${file_path}.tmp
 
 elif [ $file_type = TXT ]; then
+	ValidateVariableOrUsage "$usage" vendor VALID_VENDORS
 
 	#awk -F"[[:space:]]" "{print \">${name}:\" \$15 \"\n\" \$19}" $file > ${file}.tmp
 
@@ -80,7 +81,7 @@ elif [ $type = CSV ]; then
 	
 		rm -f ${file}.tmp1
 	else
-		echo "No support for $vendor $file_type file"
+		echo "No support for $vendor $file_type file, maybe you want FASTA file type?"
 		exit 1
 	fi
 else
@@ -88,12 +89,18 @@ else
 	exit 1;
 fi
 
-echo "head ${file_path}.tmp"
-head ${file_path}.tmp
+
+#Delete blank lines
+sed '/^[:space:]*$/d' ${file_path}.tmp > ${file_path}.temp
+rm -f ${file_path}.tmp
+
+echo "head ${file_path}.temp"
+head ${file_path}.temp
 
 fasta_file="${file_path%.*}.fasta"
 
-echo "Does this look okay? Now you need to:"
-echo "mv ${file_path}.tmp $fasta_file"
+echo "
+Does this look okay? Now you need to:"
+echo "mv ${file_path}.temp $fasta_file"
 
 
