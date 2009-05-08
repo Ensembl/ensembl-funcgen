@@ -510,31 +510,52 @@ sub dnadb {
 	
 	$self->SUPER::dnadb($dnadb); 
 
-	#set default coordsystem here, do we need to handle non-chromosome here
-	$cs_name ||= 'chromosome';
+	#set default coordsystem here
+	#there might not be a chromosome level if we just have a scaffold assembly
+	#supercontig is already loaded as we use toplevel?
+	#This should really get all the default CSs from the core CSAdaptor?
+	#We should also do this during the update?
+	#This will also enable people to query using clone/contig/supercontig level slices
+	#How will this work? Where will the mapping between CSs be done?
+	
 
-	my $cs;
-	eval { $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name)};
-	my $error = $@;
+	my @cs_names = ($cs_name) if $cs_name;
+	#$cs_name ||= 'chromosome';
 
-	if($error){
-	  my ($schema, $build) = split/_/, $self->_get_schema_build($dnadb);
-	  $build =~ s/[a-z]//;
-	  throw("It appears that the schema of ".$dnadb->dbc->dbname.
-			' is incompatible with your current core API version('.$reg->software_version.
-			").  You could try using the $schema version of the core API, or alternatively try specifying ".
-			"different -dnadb/registry_host parameters to point to a make recent version containing build $build\n");
+	if(! $cs_name){
+	  
+	  foreach my $cs(@{$dnadb->get_CoordSystemAdaptor->fetch_all_by_attrib('default_version')}){
+		push @cs_names, $cs->name;
+	  }
 
 	}
 
 
-    #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
-    #or shall we fetch/add all by name?
-   
-	#This is a non-obious store behaviour!!!!!!!!!!!!!!!!!
-	#This can result in coord_system entries being written
-	#unknowingly if you are using the efg DB with a write user/pass
-    $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
+	foreach my $cs_name(@cs_names){
+
+	  my $cs;
+	  eval { $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name)};
+	  my $error = $@;
+	  
+	  if($error){
+		my ($schema, $build) = split/_/, $self->_get_schema_build($dnadb);
+		$build =~ s/[a-z]//;
+		throw("It appears that the schema of ".$dnadb->dbc->dbname.
+			  ' is incompatible with your current core API version('.$reg->software_version.
+			  ").  You could try using the $schema version of the core API, or alternatively try specifying ".
+			  "different -dnadb/registry_host parameters to point to a make recent version containing build $build\n");
+		
+	  }
+	  
+	  
+	  #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
+	  #or shall we fetch/add all by name?
+	  
+	  #This is a non-obious store behaviour!!!!!!!!!!!!!!!!!
+	  #This can result in coord_system entries being written
+	  #unknowingly if you are using the efg DB with a write user/pass
+	  $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
+	}
   }
 
   return $self->SUPER::dnadb();#never pass @_ here!
