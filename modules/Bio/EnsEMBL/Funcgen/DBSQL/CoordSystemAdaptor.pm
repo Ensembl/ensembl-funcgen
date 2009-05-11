@@ -445,7 +445,7 @@ sub fetch_by_name{
   my $name = lc(shift);
   my $version = lc(shift);  
   my $sbuild = $self->db->_get_schema_build($self->db->dnadb());
-  my ($cs, $found_cs, $core_version);
+  my ($cs, $found_cs);
   
   throw('Mandatory argument \'name\'') if(! $name);
 
@@ -485,51 +485,25 @@ sub fetch_by_name{
   #Hence we can never retrieve a 'comparable' supercontig if it has not been loaded onto the current schema_build
   #Hence we end up loading a new CS for each non-versioned level.
   
+
+  
+
   foreach $cs (@coord_systems) {
 	#Versions are only relevant to assembled levels e.g. chromosome & scaffold?
 
-    if($version) {
-	  #we need to get the one which corresponds to the dnadb?
-	  #mmmm, no, dnadb may be set to the latest schema_build
-	  #which may not contain name version
-	  #take the dnadb if present, or else the latest
-	  #should we sort here or sort the caches in new
-	  #what if we add a new schema_build?  Will that be cached and sorted?
+    if($version) {#Assembled level
 
 	  if(lc($cs->version()) eq $version){
+		#This will pick the right CS even if the dnadb schema_build is not present
 		$found_cs = $cs;
 		last;
-		#push @schema_css, $cs if(lc($cs->version()) eq $version);
 	  }
 	}
-
-
-	  #if($cs->contains_schema_build($sbuild) && $cs->{'core_cache'}{$sbuild}{'DEFAULT'}){#exact match
-	#	$found_cs = $cs;
-	#	last;
-	#  }else{#find best equivalent default
-		
-	#	foreach my $cache_sbuild(keys %{$cs->{'core_cache'}}){
-	#	  warn "got cached $cache_sbuild matching against assembly $assembly";
-		  
-		  #we need to deal with the version here rather than the DB assembly_version string
-		  
-		  
-	#	  #Find DB with same assembly and take default CS
-	#	  if($cache_sbuild =~ /_${assembly}/ && $cs->{'core_cache'}{$cache_sbuild}{'DEFAULT'}){
-	#		$found_cs = $cs;
-	#		last;
-	#	  }
-	#	}
-	#  }
-	#}else{#non-assmebled levels e.g. clone
-	#	#should only ever be one of these by definition		
-	#	throw("Found more than one non-versioned CoordSystem:\t$name") if $found_cs;
-	#	$found_cs = $cs;
-	#  }
+	else{#We have an unassembled/non-versioned level and can use any as there should only be 1
+	  $found_cs = $cs;
+	  last;
+	}
   }
-  
-
 
   #should these throw?
   if(! $found_cs){
@@ -537,7 +511,7 @@ sub fetch_by_name{
 	  warn "No coord system found for $sbuild version '$version'";
 	  return undef;
 	}else{
-	  warn "Could not find default CoordSystem for '$sbuild', use next ranking?";
+	  warn "Could not find $name CoordSystem.";
 	  return undef
 	}
   }
@@ -1061,7 +1035,7 @@ sub store {
 	
 	if(! $cs->dbID()){
 		
-		$sth = $self->prepare('insert into coord_system (name, version, attrib, rank, schema_build, core_coord_system_id, species_id) values (?,?,?,?,?,?,?)');  
+	  $sth = $self->prepare('insert into coord_system (name, version, attrib, rank, schema_build, core_coord_system_id, species_id) values (?,?,?,?,?,?,?)');  
 
 	  $sth->bind_param(1, $name,               SQL_VARCHAR);
 	  $sth->bind_param(2, $version,            SQL_VARCHAR);
@@ -1071,20 +1045,34 @@ sub store {
 	  $sth->bind_param(6, $ccs_id,             SQL_INTEGER);
 	  $sth->bind_param(7, $self->species_id(), SQL_INTEGER);
 
+
+		#Here we are getting failures due to concurrent processes storing the same CS.
+		#There is no abolsolute way of protecting again this unless we lock the tables
+		#before we query.
+		#This could happen with seq_region also, but it is higly unlikley that we will write at the same time.
+		
 	  $sth->execute();
+	  
+	  #eval { 	$sth->execute() };
+	  
+	  #if($@){
+	  
+	  #}
+	  
+	  
 	  my $dbID = $sth->{'mysql_insertid'};
 	  $sth->finish();
-
+	  
 	  if(!$dbID) {
 		throw("Did not get dbID from store of CoordSystem.");
 	  }
-
+	  
 	  $cs->dbID($dbID);
 	  $cs->adaptor($self);
 	}else{
 	  #can we prep this out of the loop
 	  #we don't know until we're in it
-		my $sql = 'insert into coord_system (coord_system_id, name, version, attrib, rank, schema_build, core_coord_system_id, species_id) values (?,?,?,?,?,?,?,?)';
+	  my $sql = 'insert into coord_system (coord_system_id, name, version, attrib, rank, schema_build, core_coord_system_id, species_id) values (?,?,?,?,?,?,?,?)';
 	  $sth = $db->dbc->prepare($sql);
 
 	  $sth->bind_param(1, $cs->dbID(),         SQL_INTEGER);
@@ -1196,19 +1184,20 @@ sub validate_and_store_coord_system{
 
   if(! $fg_cs){
 	
-		if($cs->name ne 'clone' && (! $cs->version)){
+		#if($cs->name ne 'clone' && (! $cs->version)){
 	  	#NO VERSION for assembled level !!
 	  	#Assume the default version
 	  	#we could get this from meta, but is unreliable
 	  	#get from default chromosome version
-	  	my $tmp_cs = $cs->adaptor->fetch_by_name('chromosome');
-	  	$version = $tmp_cs->version;
-		}
+	  	#my $tmp_cs = $cs->adaptor->fetch_by_name('chromosome');
+	  	#$version = $tmp_cs->version;
+		#}
 
 	
 		$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
 													 -NAME    => $cs->name(),
-													 -VERSION => $version || $cs->version(),
+														 #-VERSION => $version || $cs->version(),
+														 -VERSION =>  $cs->version(),
 													);
 
 		warn "Created new CoordSystem:\t".$fg_cs->name().":".$fg_cs->version()."\n";
@@ -1228,11 +1217,13 @@ sub validate_and_store_coord_system{
 
   if(! $fg_cs->contains_schema_build($sbuild)){
 	
+	#Need to set all attribs here.
+
 	$fg_cs->add_core_coord_system_info(
 									   -RANK                 => $cs->rank(), 
 									   -SEQUENCE_LEVEL       => $cs->is_sequence_level(), 
 									   -DEFAULT              => $cs->is_default(), 
-									   -SCHEMA_BUILD         => $sbuild, 
+									   -SCHEMA_BUILD         => $sbuild,
 									   -CORE_COORD_SYSTEM_ID => $cs->dbID(),
 									   -IS_STORED            => 0,
 									  );
