@@ -508,30 +508,30 @@ sub _pre_store {
 
 
   if(! $seq_region_id){
-		#check whether we have an equivalent seq_region_id
-		$seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
-		my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
-		my $sql;
-		my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $slice->get_seq_region_id(), $schema_build);
-
-		#Add to comparable seq_region		
-		if($seq_region_id) {
-			$sql = 'insert into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?,?)';
-			unshift(@args, $seq_region_id);
-		}
-		#No compararble seq_region
-		else{
-			$sql = 'insert into seq_region(name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?)';			
-		}
-
-		my $sth = $self->prepare($sql);
+	#check whether we have an equivalent seq_region_id
+	$seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
+	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
+	my $sql;
+	my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $slice->get_seq_region_id(), $schema_build);
 	
-		#Need to eval this
-		eval{$sth->execute(@args);};
+	#Add to comparable seq_region		
+	if($seq_region_id) {
+	  $sql = 'insert into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?,?)';
+	  unshift(@args, $seq_region_id);
+	}
+	#No compararble seq_region
+	else{
+	  $sql = 'insert into seq_region(name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?)';			
+	}
+
+	my $sth = $self->prepare($sql);
 	
-		if(!$@){
-		  $seq_region_id =  $sth->{'mysql_insertid'};
-		}
+	#Need to eval this
+	eval{$sth->execute(@args);};
+	
+	if(!$@){
+	  $seq_region_id =  $sth->{'mysql_insertid'};
+	}
   }
 
   
@@ -622,15 +622,11 @@ sub _slice_fetch {
         $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
 
       my $constraint = $orig_constraint;
-
-      #my $sr_id;
-      #if( $slice->adaptor() ) {
-	  #$sr_id = $self->get_seq_region_id_by_Slice($slice->adaptor()->get_seq_region_id($slice));
-      #} else {
-	  #	$sr_id = $self->get_seq_region_id_by_Slice($self->db()->get_SliceAdaptor()->get_seq_region_id($slice));
-	  #  }
-
 	  my $sr_id = $self->get_seq_region_id_by_Slice($slice, $feat_cs);
+
+
+	  #If we have no slice id here, we know we don't have anything in the DB for this slice
+	  return [] if ! $sr_id;
 
 
       $constraint .= " AND " if($constraint);
