@@ -190,7 +190,7 @@ sub _objs_from_sth {
 	
 	my ($sa, $seq_region_id);
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
-	$sa ||= $self->db->get_SliceAdaptor();
+	$sa ||= $self->db->dnadb->get_SliceAdaptor();
 
  
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
