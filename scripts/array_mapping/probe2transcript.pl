@@ -412,8 +412,28 @@ my %array_format_config = (
 										probeset_arrays        => 0,
 										linked_arrays     => 1,
 										sense_interrogation => 0,
-									   },					
-						  );
+										  },
+						   
+						   AGILENT => {
+										   probeset_arrays        => 0,
+										   linked_arrays     => 1,
+										   sense_interrogation => 0,			   
+										  },					
+
+
+						     PHALANX => {
+										 probeset_arrays        => 0,
+										 linked_arrays     => 1,
+										 sense_interrogation => 0,
+										 },
+
+						   CODELINK => {
+										probeset_arrays        => 0,
+										linked_arrays     => 1,
+										sense_interrogation => 0,
+									   },
+
+										);
 die ('Must supply a -vendor parameter e.g. AFFY') if ! $vendor;
 
 if(defined $format && ! exists $array_format_config{$format}){
@@ -681,7 +701,6 @@ if($delete){
   delete_existing_xrefs($xref_db);
 }
 else{
-	$DB::single = 2;
   check_existing_and_exit($probe_db, $xref_db);
 }
 
