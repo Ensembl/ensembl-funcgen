@@ -232,13 +232,8 @@ sub new {
 
 		$self->{'_name_cache'}->{lc($cs->name())} ||= [];
 		#$self->{'_rank_cache'}->{$rank} ||= [];
-		
-
 		#push @{$self->{'_rank_cache'}->{$rank}}, $cs;
 		push @{$self->{'_name_cache'}->{lc($cs->name())}}, $cs;
-		
-
-
 	  }
 
 
@@ -247,11 +242,7 @@ sub new {
 		 -ADAPTOR        => $self,
 		 -NAME           => $name,
 		 -VERSION        => $version,
-		 #-RANK           => $rank,
-		 #-SEQUENCE_LEVEL => $seq_lvl,
-		 #-DEFAULT        => $default,
-		 #-SCHEMA_BUILD   => $sbuild,
-		 #-CORE_COORD_SYSTEM_ID => $ccs_id
+		 #-IS_CURRENT     => $is_current,
 	  );
 	}
 
@@ -486,10 +477,14 @@ sub fetch_by_name{
   #Hence we end up loading a new CS for each non-versioned level.
   
 
-  
-
   foreach $cs (@coord_systems) {
 	#Versions are only relevant to assembled levels e.g. chromosome & scaffold?
+	#No some DBs have version for contig, supercontig etc if they have no assembled level
+	#Issues around unassembled levels with version i.e. not being able to access data from 
+	#old version, even tho' 'assembly' of contig should be identical.  This should not be a big 
+	#problem as the only species we are likely to do this with will have mappings between levels
+	#or we can just re import for new version of unassembled level? This will give redundant data in 
+	#the DB for those contigs which appear in both versions and are identical.
 
     if($version) {#Assembled level
 
@@ -1195,10 +1190,9 @@ sub validate_and_store_coord_system{
 
 	
 		$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
-													 -NAME    => $cs->name(),
-														 #-VERSION => $version || $cs->version(),
+														 -NAME    => $cs->name(),
 														 -VERSION =>  $cs->version(),
-													);
+														);
 
 		warn "Created new CoordSystem:\t".$fg_cs->name().":".$fg_cs->version()."\n";
   }
