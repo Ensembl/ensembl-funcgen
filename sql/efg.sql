@@ -240,7 +240,7 @@ CREATE TABLE `unmapped_object` (
 --
 
 DROP TABLE IF EXISTS `coord_system`;
-CREATE TABLE `coord_system` (
+CREATE TABLE `tmp_coord_system` (
   `coord_system_id` int(10) NOT NULL auto_increment,
   `name` varchar(40) NOT NULL,
   `version` varchar(255) NOT NULL default '',
@@ -249,25 +249,15 @@ CREATE TABLE `coord_system` (
   `schema_build` varchar(10) NOT NULL default '',
   `core_coord_system_id` int(10) NOT NULL,
   `species_id` int(10) NOT NULL default '1',
+  `is_current` tinyint(1) NOT NULL default '1',
   PRIMARY KEY  (`name`,`version`,`schema_build`,`species_id`),
   KEY `name_version_idx` (`name`,`version`),
   KEY `coord_species_idx` (`species_id`),
   KEY `coord_system_id_idx` (`coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---- This is never being queried anyway as we cache all the CSs on start up!
---- UNIQUE KEY `rank` (`rank`, `schema_build`),
---- UNIQUE KEY `name` (`name`,`version`, `schema_build`)
---- we want nr coord_system_id records to accomodate multiple coord_sys's which are effectively the same
---- e.g. NCBI36 chromosome across all the core DB which have it
---- can we ignore the unique keys for rank, name & version as these will be implied by the core DB?
---- primary key should really be coord_sys_id, name, version, schema_build (core_coord_sys_id implied by other values)
---- This however gives no access to the rest of the index for most of the queries
---- don't need to really bother optimising the key structures as the table is so small?
---- put core_coord_system_id at end of primary key and have separate key for coord_system_id
---- primary key name, schema_build, version, core_coord_system_id
---- or could we jsut depend on the core keys confering data integrity and have key optimised for query
-
+-- Could use boolean for is_current, but is MySQL implementation is non standard and an alias to tiny int anyway
+-- This is only queried once to cache all the CSs on start up
 
 --
 -- Table structure for table `seq_region`
