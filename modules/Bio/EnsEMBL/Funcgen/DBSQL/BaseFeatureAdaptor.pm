@@ -78,6 +78,8 @@ sub generic_fetch {
   #seq_region_cache other wise non-slice based fetch methods fail
 
   #build seq_region cache here once for entire query
+  #Using default schema_build here
+  #So would need to set dnadb appropriately
   $self->build_seq_region_cache();
 
   return $self->SUPER::generic_fetch(@_);
@@ -129,14 +131,12 @@ sub fetch_all_by_Slice_constraint {
 
  
   #build seq_region cache here once for entire query
-  $self->build_seq_region_cache($slice);#, $fg_cs);
+  $self->build_seq_region_cache($slice);
 
 
   my @tables = $self->_tables;
   my (undef, $syn) = @{$tables[0]};
 
-  #$constraint .= ' AND ' if $constraint;#constraint can be empty string
-  #$constraint .= " ${syn}.coord_system_id=".$fg_cs->dbID();
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
   #if the logic name was invalid, undef was returned
@@ -230,7 +230,7 @@ sub fetch_all_by_Slice_constraint {
   Arg [1]    : optional - Bio::EnsEMBL::Slice 
                the slice from which to obtain features
   Example    : $self->build_seq_region_cache();
-  Description: Builds the seq_region_id translation caches
+  Description: Builds the seq_region_id caches based on the species and schema_build
   Returntype : None
   Exceptions : thrown if optional Slice argument is not valid
   Caller     : self
@@ -245,15 +245,26 @@ sub fetch_all_by_Slice_constraint {
 
 sub build_seq_region_cache{
   my ($self, $slice) = @_;
+
+  #instead of building this for each query
+  #we need to store the current cached coord_system
+  #and test whether it contains the query coord_system
+  #No as this then restricts us to one coord_system
+  #where as we want to cover all from one DB/schema_build
+
+  
+  
+
+
   if(defined $slice){
 	throw('Optional argument must be a Bio::EnsEMBL::Slice') if(! ( ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
   }
-
 
   my $dnadb = (defined $slice) ? $slice->adaptor->db() : $self->db->dnadb();
   my $schema_build = $self->db->_get_schema_build($dnadb);
   my $sql = 'select sr.core_seq_region_id, sr.seq_region_id from seq_region sr';
   my @args = ($schema_build);
+
   if($self->is_multispecies()) {
   	$sql.= ', coord_system cs where sr.coord_system_id = cs.coord_system_id and cs.species_id=? and';
   	unshift(@args, $self->species_id());
@@ -263,20 +274,52 @@ sub build_seq_region_cache{
   }
   $sql.=' sr.schema_build =?';
   
-  #Can't maintain these caches as we may be adding to them when storing
-  #Caches seem like they are the wrong way around but this is still keeping it the original way
-  $self->{'seq_region_cache'} = {};
-  $self->{'core_seq_region_cache'} = {};
+  #Check we have not already got the right cache
+  my $cache_key = join(':', @args);
+
+
+  #Do we already have a valid cache?
+  return if($self->cache_key eq $cache_key);
+	
   
-	my $sth = $self->prepare($sql);
-	$sth->execute(@args);
-	while(my $ref = $sth->fetchrow_arrayref()) {
-		 $self->{seq_region_cache}->{$ref->[0]} = $ref->[1];
-		 $self->{core_seq_region_cache}->{$ref->[1]} = $ref->[0];
-	}
-	$sth->finish();
+  #Can't maintain these caches as we may be adding to them when storing
+  #we should just maintain the cache with the cache_key
+
+  #$self->{'seq_region_cache'}{$cache_key} ||= {};
+  #$self->{'core_seq_region_cache'} = {};
+  
+  my $sth = $self->prepare($sql);
+  $sth->execute(@args);
+  while(my $ref = $sth->fetchrow_arrayref()) {
+	$self->{seq_region_cache}->{$cache_key}->{$ref->[0]} = $ref->[1];
+	$self->{core_seq_region_cache}->{$cache_key}->{$ref->[1]} = $ref->[0];
+  }
+  $sth->finish();
+
+  $self->cache_key($cache_key);
 
   return;
+}
+
+
+=head2 cache_key
+
+  Arg [1]    : optional string - species_id.schema_build e.g. 1.55_37
+               the slice from which to obtain features
+  Example    : $self->build_seq_region_cache();
+  Description: Getter/Setter for the seq_region cache_key 
+  Returntype : string
+  Exceptions : None
+  Caller     : self
+  Status     : At risk
+
+=cut
+
+sub cache_key{
+  my ($self, $key) = @_;
+
+  $self->{'cache_key'} = $key if $key;
+  return $self->{'cache_key'} || '';
 }
 
 
@@ -296,15 +339,28 @@ sub get_seq_region_id_by_Slice{
 	throw('You must provide a valid Bio::EnsEMBL::Slice');
   }
 
+
+  #We really need to validate the schema_build of the slice to make sure it
+  #present in the current default coord_system i.e. the one which was used to 
+  #generate the seq_region_cache
+  #This is set with the dnadb or with a slice query
+  #This may not always have been done.
+  
+  #Now all we have to do is test the cache_key
+  #Or can we just build_seq_region_cache as this checks and rebuilds if not correct
+  #This may generate a mistmach between the dnadb and the schema_build used to generate the cache
+  #This will be reset if required for subesquent queries using the cache key
+  $self->build_seq_region_cache($slice);
+  
   my ($core_sr_id,  $fg_sr_id);
 
 
   #Slice should always have an adaptor, no?
   if( $slice->adaptor() ) {
-		$core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
+	$core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
   } 
   else {
-		$core_sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+	$core_sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
   }
 
   #This does not work!! When updating for a new schema_build we get the first
@@ -315,35 +371,42 @@ sub get_seq_region_id_by_Slice{
 
   #This cache has been built based on the schema_build
   
-  if (exists $self->{'seq_region_cache'}{$core_sr_id}){
-		$fg_sr_id = $self->{'seq_region_cache'}{$core_sr_id};
+  if (exists $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id}){
+	$fg_sr_id = $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id};
   }
 
   if(! $fg_sr_id && ref($fg_cs)){
-		#This is used to store new seq_region info along side previous stored seq_regions of the same version
+	#This is used to store new seq_region info along side previous stored seq_regions of the same version
 	
-		if( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')){
-		  throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
-		}
+	if( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')){
+	  throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
+	}
 	
-		my $sql = 'select seq_region_id from seq_region where coord_system_id =? and name =?';
-		my $sth = $self->prepare($sql);
-		$sth->execute($fg_cs->dbID(), $slice->seq_region_name());
+	my $sql = 'select seq_region_id from seq_region where coord_system_id =? and name =?';
+	my $sth = $self->prepare($sql);
+	$sth->execute($fg_cs->dbID(), $slice->seq_region_name());
 	
-		#This may not exist, so we need to catch it here?
-		($fg_sr_id) = $sth->fetchrow_array();
-		$sth->finish();
+	#This may not exist, so we need to catch it here?
+	($fg_sr_id) = $sth->fetchrow_array();
+	$sth->finish();
 	
-		#if we are providing forward comptaiblity
-		#Then we know the eFG DB doesn't have the core seq_region_ids in the DB
-		#Hence retrieving the slice will fail in _obj_from_sth
-		#So we need to set it internally here
-		#Then pick it up when get_core_seq_region_id is called for the first time
-		#and populate the cache with the value
+	#if we are providing forward compatability
+	#Then we know the eFG DB doesn't have the core seq_region_ids in the DB
+	#Hence retrieving the slice will fail in _obj_from_sth
+	#So we need to set it internally here
+	#Then pick it up when get_core_seq_region_id is called for the first time(from where?)
+	#and populate the cache with the value
 	
-		$self->{'_tmp_core_seq_region_cache'} = {(
-												  $fg_sr_id => $core_sr_id
-												 )};
+	#This only works if there is a comparable slice
+	#If we are dealing with a new assembly, then no $fg_sr_id will be returned
+	#So need to catch this in the caller
+		
+	if($fg_sr_id){
+
+	  $self->{'_tmp_core_seq_region_cache'}{$self->cache_key} = {(
+																  $fg_sr_id => $core_sr_id
+																 )};
+	}
   }
   elsif(! $fg_sr_id && ! $test_present) {
 		#This generally happens when using a new core db with a efg db that hasn't been updated
@@ -392,13 +455,16 @@ sub get_core_seq_region_id{
   #and use the schema_build of the slice which is passed to acquire the core_seq_region_id
   #likewise for reverse, i.e. when we store.
 
-  my $core_sr_id = $self->{'core_seq_region_cache'}{$fg_sr_id};
+  my $core_sr_id = $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
 
-  if(! defined $core_sr_id && exists $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id}){
-		$self->{'core_seq_region_cache'}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id};
-		#Delete here so we don't have schema_build specific sr_ids hanging around for another query
-		delete  $self->{'_tmp_core_seq_region_cache'}{$fg_sr_id};
-		$core_sr_id = $self->{'core_seq_region_cache'}{$fg_sr_id};
+  if(! defined $core_sr_id && exists $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id}){
+	#Do we need to test the cache_key here, might it have changed since get_seq_region_id_by_Slice?
+	#Or will build_seq_region_cache handle this?
+	
+	$self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
+	#Delete here so we don't have schema_build specific sr_ids hanging around for another query
+	delete  $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
+	$core_sr_id = $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
   }
 
   return $core_sr_id;
@@ -466,30 +532,7 @@ sub _pre_store {
   #retrieve corresponding Funcgen coord_system and set id in feature
   my $csa = $self->db->get_FGCoordSystemAdaptor();#had to call it FG as we were getting the core adaptor
   my $fg_cs = $csa->validate_and_store_coord_system($cs);
-
-  
-  $fg_cs = $csa->fetch_by_name($cs->name(), $cs->version());
-
-  #removed as we don't want this to slow down import
-  #my $sbuild = $self->db->_get_schema_build($slice->adaptor->db());
-
-  #if(! $fg_cs->contains_schema_build($sbuild)){
-
-	#warn "Adding new schema build $sbuild to CoordSystem\n";
-
-	#$fg_cs->add_core_coord_system_info(
-		#							   -RANK                 => $cs->rank(), 
-		#							   -SEQ_LVL              => $cs->is_sequence_level(), 
-		#							   -DEFAULT_LVL          => $cs->is_default(), 
-		#							   -SCHEMA_BUILD         => $sbuild, 
-		#							   -CORE_COORD_SYSTEM_ID => $cs->dbID(),
-		#							   -IS_STORED            => 0,
-		#							  );
-	#$fg_cs = $csa->store($fg_cs);
-  #}
-
-  #$feature->coord_system_id($fg_cs->dbID());
-
+  $fg_cs = $csa->fetch_by_name($cs->name(), $cs->version());#Why are we refetching this?
   my ($tab) = $self->_tables();
   my $tabname = $tab->[0];
 
@@ -500,7 +543,7 @@ sub _pre_store {
 
 
   #build seq_region cache here once for entire query
-  $self->build_seq_region_cache($slice);#, $fg_cs);
+  $self->build_seq_region_cache($slice);
 
   #Now need to check whether seq_region is already stored
   #1 is test present flag
@@ -512,7 +555,8 @@ sub _pre_store {
 	$seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
 	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
 	my $sql;
-	my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $slice->get_seq_region_id(), $schema_build);
+	my $core_sr_id = $slice->get_seq_region_id;
+	my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $core_sr_id, $schema_build);
 	
 	#Add to comparable seq_region		
 	if($seq_region_id) {
@@ -532,20 +576,15 @@ sub _pre_store {
 	if(!$@){
 	  $seq_region_id =  $sth->{'mysql_insertid'};
 	}
+
+	#Now we need to add this to the seq_region caches
+	#As we are not regenerating them every time we query.
+	$self->{seq_region_cache}{$self->cache_key}{$core_sr_id} = $seq_region_id;
+	$self->{core_seq_region_cache}{$self->cache_key}{$seq_region_id} = $core_sr_id;
   }
 
-  
-  #my $seq_region_id = $slice->get_seq_region_id();
-
-  #would never get called as we're not validating against a different core DB
-  #if(!$seq_region_id) {
-  #  throw('Feature is associated with seq_region which is not in this dnadb.');
-  #}
-  
-
-  #why are returning seq_region id here..is thi snot just in the feature slice?
-  #This is actually essential as the seq_region_ids are not stored in the slice
-  #retrieved from slice adaptor
+  #Need to return seq_region_id as they  are not stored 
+  #in the slice retrieved from slice adaptor
   return ($feature, $seq_region_id);
 }
 
@@ -564,7 +603,7 @@ sub _slice_fetch {
   #my $slice_seq_region = $slice->seq_region_name();
 
 
-  #### Here!!! We Need to translate the seq_regions IDs to efg seq_region_ids
+  #We Need to translate the seq_regions IDs to efg seq_region_ids
   #we need to fetch the seq_region ID based on the coord_system id and the name
   #we don't want to poulate with the eFG seq_region_id, jsut the core one, as we need to maintain core info in the slice.
   
@@ -614,6 +653,9 @@ sub _slice_fetch {
     my $mapper;
     my @coords;
     my @ids;
+
+	#This is not returning true if the feat_cs is no default
+	#
 
     if($feat_cs->equals($slice_cs)) {
       # no mapping is required if this is the same coord system
