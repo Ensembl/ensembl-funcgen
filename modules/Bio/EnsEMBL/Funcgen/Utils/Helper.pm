@@ -912,9 +912,10 @@ sub define_and_validate_sets{
 
 =cut
 
+#Do we want to do this by slice?
 
 sub rollback_FeatureSet{
-  my ($self, $fset, $force_delete) = @_;
+  my ($self, $fset, $force_delete, $slice) = @_;
 
  
   #Need to test before we do adaptor call? Cyclical dependency here :|
@@ -923,15 +924,32 @@ sub rollback_FeatureSet{
   #Maybe we should?
   #We're always going to have a DB so why not?
   #Because we might want to use the Helper to Log before we can create the DB?
-  my $sql;
+  my ($sql, $slice_join, $slice_name);
   my $table = $fset->type.'_feature';
   my $adaptor = $fset->adaptor || throw('FeatureSet must have an adaptor');
   my $db = $adaptor->db;
-
-
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 
-  $self->log('Rolling back '.$fset->type." FeatureSet:\t".$fset->name);
+
+
+  $self->log_header('Rolling back '.$fset->type." FeatureSet:\t".$fset->name);
+
+  if($slice){
+   	throw("Must pass a valid Bio::EnsEMBL::Slice") if (! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
+	$slice_name= "\t".$slice->name;
+	$self->log("Restricting to slice:\t".$slice_name);
+
+	my $efg_sr_id = $fset->get_FeatureAdaptor->get_seq_region_id_by_Slice($slice);
+
+	if(! $efg_sr_id){
+	  $self->log("Slice is not present in eFG DB:\t".$slice->name);
+	}
+	else{
+	  #add range here from meta coord
+	  $slice_join = " and f.seq_region_id=$efg_sr_id and f.seq_region_start<=".$slice->end.' and f.seq_region_end>='.$slice->start;
+	}
+  }
+
 
   #Check whether this is a supporting set for another data_set
   
@@ -949,45 +967,69 @@ sub rollback_FeatureSet{
   }
 
   #Remove states
-  $fset->adaptor->revoke_states($fset);
-
+  if(! $slice){
+	$fset->adaptor->revoke_states($fset);
+  }
+  else{
+	$self->log('Skipping '.$fset->name.' revoke_states for partial Slice rollback, maybe revoke IMPORTED?');
+  }
 
   #should add some log statements here?
 
+  my $row_cnt;
+
   #Rollback reg attributes
   if($fset->type eq 'regulatory'){
-	$sql = "DELETE ra from regulatory_attributes ra, $table rf where rf.${table}_id=ra.${table}_id and rf.feature_set_id=".$fset->dbID;
+	$sql = "DELETE ra from regulatory_attributes ra, $table f where f.${table}_id=ra.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
+	$row_cnt = $db->dbc->do($sql);
+
+	if(! $row_cnt){
+	  throw("Failed to rollback regulatory_attributes for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
+	}
+
+	$row_cnt = 0 if $row_cnt eq '0E0';
+	$self->log("Deleted $row_cnt regulatory_attribute records");
   }
 
 
   #Need to remove object xrefs here
   #Do not remove xrefs as these may be used by something else!
-  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".uc($fset->type)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID;
-
-  if(! $db->dbc->do($sql)){
-	throw("Failed to rollback xrefs for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".uc($fset->type)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
+  $row_cnt = $db->dbc->do($sql);
+  
+  if(! $row_cnt){
+	throw("Failed to rollback object_xrefs for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
+  
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt object_xref records");
+  
 
   #Remove associated_feature_type records
   #Do not remove actual feature_type records as they may be used by something else.
 
-  $sql = 'DELETE aft from associated_feature_type aft, '.$table.' f where f.feature_set_id='.$fset->dbID.' and f.'.$table.'_id=aft.feature_id and aft.feature_table="'.$fset->type.'"';
+  $sql ="DELETE aft from associated_feature_type aft, $table f where f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.feature_id and aft.feature_table='".$fset->type."'".$slice_join;
+
+  $row_cnt = $db->dbc->do($sql);
   
-  if(! $db->dbc->do($sql)){
-	throw("Failed to rollback associated_feature_types for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  if(! $row_cnt){
+	throw("Failed to rollback associated_feature_types for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
 
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt associated_feature_type records");
 
 
-  
+  #Remove features
+  $sql = "DELETE f from $table f where f.feature_set_id=".$fset->dbID.$slice_join;
+  $row_cnt = $db->dbc->do($sql);
 
-
-  #Remove feature
-  $sql = "DELETE from $table where feature_set_id=".$fset->dbID;  
-
-  if(! $db->dbc->do($sql)){
-	throw("Failed to rollback ${table}s for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  if(! $row_cnt){
+	throw("Failed to rollback ${table}s for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
+  
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt $table records");
 
   return;
 }
@@ -1442,6 +1484,11 @@ sub rollback_ArrayChip{
   #no mode equates to probe mode
   #if no force then we fail if previous levels/modes have xrefs etc...
 
+
+  #Let's grab the edb ids first and use them directly, this will avoid table locks on edb
+  #and should also speed query up?
+
+
   if($mode eq 'probe2transcript' ||
 	 $force){
 	
@@ -1678,6 +1725,13 @@ sub get_core_stable_id_by_display_name{
 }
 
 
+
+#Can we do this for several common sets of params
+#And therefore cut down the code that we need to write for every new script?
+
+#sub generate_efgdb_from_params{
+#  my ($self, $argv) = @_;
+#}
 
 
 1;
