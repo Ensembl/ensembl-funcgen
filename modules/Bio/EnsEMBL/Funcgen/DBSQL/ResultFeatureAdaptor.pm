@@ -485,7 +485,6 @@ sub fetch_all_by_Slice_ResultSet{
 
   #Change this so this optionally takes hashref of all params.
 
-
   if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
   }
@@ -507,22 +506,19 @@ sub fetch_all_by_Slice_ResultSet{
   #Keep working method here for now and just use generic fetch for simple result_feature table query
 
   if($_result_feature_set){
-	
-	#warn "IS RESULT FEATURE SET";
 
 	if($_probe_extend){
 	  throw("Cannot retrieve Probe information with a result_feature_set query, try using ???");
 	}
 
-	#Set default display width
-	$display_size ||= 700;
-	my $bucket_size = ($slice->length)/$display_size;
 	my @window_sizes = $self->window_sizes;
-	
-	#warn "Optimum window_size is $bucket_size";
 
 	if(! defined $window_size){
-	  	  
+	  #Set default display width
+	  $display_size ||= 700;
+	  my $bucket_size = ($slice->length)/$display_size;
+	  #warn "Optimum window_size is $bucket_size";
+	  
 	  #default is largest;
 	  $window_size = $window_sizes[$#window_sizes];
 	  
@@ -544,13 +540,10 @@ sub fetch_all_by_Slice_ResultSet{
 	  throw("Invalid window size $window_size, must be one of:\t".
 			join(', ', @window_sizes)) if ! grep(/^${window_size}$/, @window_sizes);
 	}
-
-
 	
 	$constraint .= ' AND ' if defined $constraint;
 	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='.$window_size;
 
-	
 	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
 
 
@@ -687,6 +680,10 @@ sub fetch_all_by_Slice_ResultSet{
   my $seq_region_id = $self->get_seq_region_id_by_Slice($slice);
 
 
+  if(! $seq_region_id){
+	#We have tried to access a slice which has not been stored in the funcgen DB
+	return [];
+  }
 
   #Can we push the median calculation onto the server?
   #group by pf.seq_region_start?
