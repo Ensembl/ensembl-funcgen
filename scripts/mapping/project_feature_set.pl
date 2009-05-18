@@ -1,4 +1,4 @@
-#!/software/bin/perl
+#!/software/bin/perl -w
 
 =head1 NAME
 
@@ -42,11 +42,6 @@ assembly to a new assembly
 This code is distributed under an Apache style licence. Please see
 http://www.ensembl.org/info/about/code_licence.html for details.
 
-=head1 AUTHOR
-
-Nathan Johnson <njohnson@ebi.ac.uk>, based on the test_projection.pl script written by 
-Patrick Meidl <meidl@ebi.ac.uk>, Ensembl core API team.
-
 =head1 CONTACT
 
 Please post comments/questions to the Ensembl development list
@@ -56,7 +51,7 @@ Please post comments/questions to the Ensembl development list
 
 use strict;
 use warnings;
-no warnings 'uninitialized';
+#no warnings 'uninitialized';
 
 use FindBin qw($Bin);
 use Bio::EnsEMBL::Utils::ConfParser;
@@ -65,6 +60,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::AssemblyProjector;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+
+use Bio::EnsEMBL::Funcgen::Utils::Helper;#replace logger or inherit from logger?
 
 # parse configuration and commandline arguments
 my $conf = new Bio::EnsEMBL::Utils::ConfParser(
@@ -80,6 +77,10 @@ $conf->parse_options
    'pass=s' => 0,
    'dbname=s' => 1,
    'old_cdbname=s' => 1,
+   #'old_cdbport=n' => 0,
+   #'old_cdbuser=s' => 0,
+   #'old_cdbpass=s' => 0,
+   #'old_cdbhost=s' => 0,
    'cdbname=s' => 0,
    'cdbport=n' => 0,
    'cdbuser=s' => 0,
@@ -93,13 +94,18 @@ $conf->parse_options
    'feature_set=s' => 1,
    'old_assembly=s' => 1,
    'new_assembly=s' => 1,
+   'coord_system=s' => 0,
   );
 
-
+$main::_no_log = 1;
+$main::_tee    = 1;#Isn't this set by default if no log i set?
+my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;
 
 #assign assemblies for regex embedding
 my $new_assembly = $conf->param('new_assembly');
 my $old_assembly = $conf->param('old_assembly');
+my $cs_level     = $conf->param('coord_system') || 'chromosome';
+
 
 # get log filehandle and print heading and parameters to logfile
 my $logger = new Bio::EnsEMBL::Utils::Logger(
@@ -114,7 +120,13 @@ $logger->init_log($conf->list_param_values);
 
 # connect to database and get adaptors
 
-#we need to make this optional so we can autogenerate the
+#We only need the old DB to get access to the old toplevel
+#So can use ensembldb
+#This may include contigs which have now been merged into a chromosome
+#and so would not be easily accessable via the new DB
+#we would have to somehow get all non toplevel regions which are not 
+#included in the new assembly.
+#We are only
 
 my $old_cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
   (
@@ -122,13 +134,16 @@ my $old_cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
    -user   => 'anonymous',
    -dbname => $conf->param('old_cdbname'),
    -group  => 'core',
+   -port   => 5306,
   );
 
-my ($cdb);
+my ($new_cdb);
 
 if(defined $conf->param('cdbname') || defined $conf->param('cdbhost') || defined $conf->param('cdbport') ){
+
+  #This is the one with the mapping path between the assemblies
  
-  $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+  $new_cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 	(
 	 -host   => $conf->param('cdbhost') || $conf->param('host'),
 	 -port   => $conf->param('cdbport') || $conf->param('port'),
@@ -151,74 +166,122 @@ my $efg_db = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
    -pass   => $conf->param('pass'),
    -dbname => $conf->param('dbname'),
    -species =>  $conf->param('species'),
-   #-group  => 'funcgen',#this is set by default no?
-   -dnadb  => $old_cdb,
-);
-
-
-
-my $ap = Bio::EnsEMBL::Utils::AssemblyProjector->new
-  (
-   -OLD_ASSEMBLY    =>  $old_assembly,
-   -NEW_ASSEMBLY    =>  $new_assembly,
-   -CHECK_LENGTH    => 0,
-   -MERGE_FRAGMENTS => 1,
+   -group  => 'funcgen',
+   -dnadb  => $new_cdb,
   );
 
 
-my $sa = $efg_db->get_SliceAdaptor;
-my $new_sa = $cdb->get_SliceAdaptor;
-my %setfeat_adaptor = (
-					   'annotated'  => $efg_db->get_AnnotatedFeatureAdaptor(),
-					   'regulatory' => $efg_db->get_RegulatoryFeatureAdaptor(),
-					   'external'   => $efg_db->get_ExternalFeatureAdaptor(),
-					  );
+#This is required for clobber
+#As we need to project the slices to 
+#see whether we have any previous projected features
+#How will this handle two sequences which have been merged?
+#We may get one set of features overwriting another
+#We would have to do clobber at start before we project anything
+#Actually NT are not mapped if they are merged so not so useful
+#but may change?
 
-#can't dnadb set here as this will mess up the efg_db dnadb for the fetch on the old DB
+#THis is wrong and we don't even need this as we can use the project method on slices from the new DB.
+#This will obviosu not work for sr's which have disappeared between releases, but they are
+#not caught by mapping anyway.
 
+#my $ap = Bio::EnsEMBL::Utils::AssemblyProjector->new
+#  (
+#   -OLD_ASSEMBLY    =>  $old_assembly,
+#   -NEW_ASSEMBLY    =>  $new_assembly,
+#   -CHECK_LENGTH    => 0,
+#   -MERGE_FRAGMENTS => 1,
+#   -ADAPTOR         => $new_cdb,
+#  );
+
+
+
+
+my $old_sa = $old_cdb->get_SliceAdaptor;
+my $new_sa = $new_cdb->get_SliceAdaptor;
 my $fset_adaptor = $efg_db->get_FeatureSetAdaptor();
 my $fset = $fset_adaptor->fetch_by_name($conf->param('feature_set'));
-
 									   
 if(! defined $fset){
   throw("Cannot findFeatureSet:\t".$conf->param('feature_set')."\n");
 }
 
+my $set_feat_adaptor = $fset->get_FeatureAdaptor;
+
 
 
 #Do this slice wise to avoid possibility of running out of memmory for large sets
 #or we could pull everythign back based on the feature_set?
-my @slices;
+my (@slices);#, $old_assembled_cs);
 
 if($conf->param('slice')){
-  @slices = ($sa->fetch_by_name($conf->param('slice')));
+  @slices = ($old_sa->fetch_by_name($conf->param('slice')));
 
   warn('Need to test vs old assembly here');
 }
 else{
   #we can get toplevel for old assembly so we have to do for all?
   #Just do for chromosome now.
-  warn 'Hardcoded for just chromosome slices on old assembly due to now toplevel';
-  @slices = @{$sa->fetch_all('chromosome', $old_assembly)};
+  #warn 'Hardcoded for just chromosome slices on old assembly due to no toplevel';
+  #This will break for assemblies which does not have chromosome as top assembled level
+  #These maybe scaffold, gene_scaffold, supercontig etc...
+  #Currently mapping is only done for regions which are present in both assemblies
+  #So NTs which are incorporated into chrs are not handled.
 
+
+  #We just need to check that the default version is correct
+  my $old_cs = $old_cdb->get_coordSystemAdaptor->fetch_by_name($cs_level);
+  
+  if($old_cs->version ne $old_assembly){
+	warn "we need to implement old_assembled_level";
+	warn "Need to change assumption that old level is default level";
+	die("Old assembly($old_assembly) does not match default version in ".$conf->param('old_cdbname').":\t".$old_cs->version);
+  }
+
+  @slices = @{$old_sa->fetch_all($cs_level, $old_assembly)};
+  #@slices = @{$old_sa->fetch_all('toplevel', undef, 1)};#inc non-ref
+  #We can't do this on toplevel as projection only works for assembled levels
+  #So long as other levels are not versioned, the features should persist.
+
+  
+
+
+
+  #We actually need to get the default assembled level with the given versionb
+  #Normally chromosome but can be scaffold!
+  #This also has to come from the old DB as we may want to remap from scaffold to chromosome?
+  #This is why we need the old DB, to get the old toplevel which is not maynot be accessible in the new DB?
+  #Compenents must be present for the mapping, but no easy way of accessing them.
+  #my $old_assembled_cs;
+  #No fetch_by_version_method??
+  #foreach my $cs($old_cdb->get_CoordSystemAdaptor->fetch_all){
+  #	if($cs->version eq $old_assembly){
+  #	  $old_assembled_cs = $cs;
+  #	  last;
+  #	}
+  #  }
+  #if(! $old_assembled_cs){
+  #	die("Could not find an old CoordSystem with version:\t$old_assembly");
+  #  }
+  #@slices = @{$sa->fetch_all($assembl_cs->name, $old_assembly)};
 
   if(! @slices){
-	throw("There are no slices available for the old assembly $old_assembly. Maybe it is not present in the DB?");
+	die("There are no slices available for the old assembly $old_assembly. Maybe it is not present in the DB?");
   }
 }
-
+	
 #should check if we can get coord_system on new assembly here, or will this be caught by mapper?
 
 
 $logger->info("Projecting features on ".scalar(@slices)." slices from assembly $old_assembly to assembly $new_assembly\n");
 
-my ($new_slice, $slice_name, $failed_cnt, $wrong_length_cnt, $old_slice);
-my ($new_fslice, $old_fslice, $stored_cnt, @old_feats, @new_feats);
-my $total_failed = 0;
-my $total_wrong_length = 0;
-my $total_stored = 0;
-
-my $length_txt = ($conf->param('ignore_length')) ? 'features were skipped due to mismatched lengths in the new assembly' : 'features were stored despite mismatched lengths in the new assembly';
+my ($new_slice, $slice_name, $failed_cnt, $wrong_length_cnt, $old_slice, $multi_segment_cnt);
+my ($new_fslice, $old_fslice, $no_projection_cnt, $stored_cnt, @old_feats, @new_feats);
+my $total_failed        = 0;
+my $total_wrong_length  = 0;
+my $total_stored        = 0;
+my $total_multi_segment = 0;
+my $total_no_proj       = 0;
+my $length_txt = ($conf->param('ignore_length')) ? 'features were stored despite mismatched lengths in the new assembly' : 'features were skipped due to mismatched lengths in the new assembly';
 
 
 
@@ -231,107 +294,167 @@ my $length_txt = ($conf->param('ignore_length')) ? 'features were skipped due to
 #we could simply use the old DB to retrieve them and then set the new DB when we are storing
 #this should be fine so long as we are changing the slice?
 
+#Do check/clobber first just incase 
+#we have merged slices which may overwrite each other
+#if we rollback and store on a slice by slice basis
 
-
-foreach my $slice(@slices){
-  $fset_adaptor->db->dnadb($old_cdb);
-  throw('Not yet implemented projection segmant based clobber') if  $conf->param('clobber');
- 
-  #we need to try and pull back all features from projection segments first to see if there are already features projected
-  #we could also print out the projection segments for each slice we are projecting to
-  #could also have force_store, i.e. no clobber but load
-
-  @new_feats = ();
-  @old_feats = @{$fset->get_Features_by_Slice($slice)};
-  $failed_cnt = 0;
-  $wrong_length_cnt = 0;
-  $stored_cnt = 0;
-
-  ($slice_name = $slice->name) =~ s/$old_assembly/$new_assembly/;
-  $new_slice = $new_sa->fetch_by_name($slice_name);#recreate old slice in new DB  
-  $logger->info('Projecting '.scalar(@old_feats)." features from slice:\t".$slice->name()."\n");
-
-
-  #do we have to switch the dnadb here?
-  #yes we do as the internal caches only work for the current assembly/coordsystem
-  $fset->adaptor->db->dnadb($cdb);
-  @new_feats = @{$fset->get_Features_by_Slice($new_slice)};
-  $logger->info('Found '.scalar(@new_feats)." features on new slice\t:".$new_slice->name()."\n");
+foreach my $old_slice(@slices){
   
-  if(@new_feats){
+  #redefine using new DB
+  my $old_name = $old_slice->name;
 
-	if($conf->param('clobber')){
-	  my $sql = 'DELETE from '.$fset->type().'_feature WHERE  '.$fset->type().'_feature_id IN('.join(',', map $_->dbID(), @new_feats).')';
-	  $logger->info("Clobbering features from FeatureSet:\t".$conf->param('feature_set')." on ".$new_slice->name."\n");
-	  $efg_db->dbc_db_handle->do($sql);
-	}
-	elsif($conf->param('force_store')){
-	  $logger->info('WARNING: Projecting '.scalar(@old_feats).' old features onto '.scalar(@new_feats)." new features\n");
-	}else{
-	  throw('Must define -clobber or -force_store');
-	}
+  my $old_slice = $new_sa->fetch_by_name($old_name);
+
+  if(! $old_slice){
+	warn "Old seq_region is not present in new DB:\t$old_name\n";
+	next;
   }
 
-  #reset dnadb and new_feats
-  $fset->adaptor->db->dnadb($old_cdb);
+  my @segments = @{$old_slice->project($cs_level, $new_assembly)};
 
+  #Now for each new segment do some rollback
+
+  foreach my $segment(@segments){
+
+	my $new_slice = $segment->to_Slice;
+
+	#This should automatically use the correct seq_region_cache
+	@new_feats = @{$fset->get_Features_by_Slice($new_slice)};
+	
+	if(@new_feats){
+	  
+	  if($conf->param('clobber')){
+		#we actually want to force here as this will try and protect the old features
+		#but we are only rolling back the new features
+		$helper->rollback_FeatureSet($fset, 1 , $new_slice);
+	  }
+	  else{
+		die(scalar(@new_feats).' projected features already exist for '.$old_slice->name.' > '.$new_slice->name."\nMaybe you want to set -clobber?\n");
+	  }
+	}
+  }
+}
+
+
+#Now project the features
+print "\nProjecting features...\n";
+my $total_old_feats = 0;
+
+foreach my $slice(@slices){
+   
   @new_feats = ();
 
-  foreach my $old_feat(@{$fset->get_Features_by_Slice($slice)}){
-	$old_fslice = $old_feat->feature_Slice();
-	($slice_name = $old_fslice->name) =~ s/$old_assembly/$new_assembly/;
-    $new_fslice = $new_sa->fetch_by_name($slice_name);#recreate old slice in new DB
+  #All we need to do now is regenrate the old slice in the newer dnadb which has the mapping
+  #And then project them
+  my $old_slice_name  = $slice->name;
+  my $old_slice       = $new_sa->fetch_by_name($old_slice_name);
+  (my $new_slice_name = $old_slice_name) =~ s/$old_assembly/$new_assembly/;
+  my $new_slice = $new_sa->fetch_by_region($cs_level, $old_slice->seq_region_name);#No we can't do this here as we are assuming
+  #That all projections will be to same slice
 
-	if(! $new_fslice){
-	  $failed_cnt ++;
-	  $logger->info('Failed to project feature with dbID '.$old_feat->dbID().' from '.$old_fslice->name()."\n");
+  @old_feats = @{$fset->get_Features_by_Slice($old_slice)};
+  my $num_old_feats  = scalar(@old_feats);
+  $total_old_feats  += $num_old_feats;
+  $failed_cnt        = 0;
+  $wrong_length_cnt  = 0;
+  $stored_cnt        = 0;
+  $multi_segment_cnt = 0;
+  $no_projection_cnt = 0;
+
+
+  #Project each feature
+
+  if (! @old_feats){
+	print "No features found for slice:\t".$old_slice->name."\n";
+	next;
+  }
+
+  print "\nProjecting $num_old_feats features for slice:\t".$old_slice->name."\n";
+
+  foreach my $feat(@old_feats){
+		
+	my @segments = @{$feat->project($cs_level, $new_assembly)};
+    #print Dumper @segments;
+    
+    # do some sanity checks on the projection results:
+    # discard the projected feature if
+    #   1. it doesn't project at all (no segments returned)
+    #   2. the projection is fragmented (more than one segment)
+    #   3. the projection doesn't have the same length as the original
+    #      feature
+ 
+
+	#add logging of unprojected features here
+   
+    # this tests for (1) and (2)
+    if (scalar(@segments) == 0) {
+	  #print "Feature doesn't project!\n";
+	  $failed_cnt++;
+	  $no_projection_cnt++;
 	  next;
-	}
-	elsif($old_fslice->length() != $new_fslice->length()){
-	  $logger->info('Found length mismatch for dbID '.$old_feat->dbID.":\t".$conf->param('old_assembly').' '.
-					$old_fslice->length().' vs '.$conf->param('new_assembly').' '.$new_fslice->length()."\n");
-	  next if ! $conf->param('ignore_length');
-	}
+    } elsif (scalar(@segments) > 1) {
+	  $failed_cnt++;
+	  $multi_segment_cnt++;
+	  next;
+    }
+    
+    # test (3)
+    my $proj_slice = $segments[0]->to_Slice;
 
+    if ($feat->length != $proj_slice->length) {
+	  $wrong_length_cnt++;
 
-	$old_feat->slice($new_slice);
-	$old_feat->start($new_fslice->start);
-	$old_feat->end($new_fslice->end);
-	$old_feat->strand($new_fslice->strand);
-	$old_feat->{'dbID'} = undef;
-	$old_feat->{'adaptor'} = undef;
+	  if(! $conf->param('ignore_length')){
+		$failed_cnt++;
+		next;
+	  }
+    }
+    
+    # everything looks fine, so adjust the coords of your feature
+	#Have to generate new_slice here as we are not sure it is going to be 
+	#on the same slice as the old assembly
+	my $new_full_slice = $new_sa->fetch_by_region($cs_level, $proj_slice->seq_region_name);
 
-	#
-	push @new_feats, $old_feat;
+    $feat->start($proj_slice->start);
+    $feat->end($proj_slice->end);
+    $feat->slice($new_full_slice);
+    #do we need to deal with strand here or does project deal with that?
+	$feat->{'dbID'} = undef;
+	$feat->{'adaptor'} = undef;
+	push @new_feats, $feat;
 	$stored_cnt ++;
   }
 
-  #need to reset dnadb here??????????????????????????
-  $setfeat_adaptor{$fset->type}->db->dnadb($cdb);
-  $setfeat_adaptor{$fset->type}->store(@new_feats);
+  #No need to reset dnadb as we have attached the correct one in the feature slice
+  $set_feat_adaptor->store(@new_feats) if @new_feats;
 
   #test just to be sure
  
   my @tmp = @{$fset->get_Features_by_Slice($new_slice)};
 		   
 
-  $logger->info("Projected $stored_cnt features from ".$slice->name.' to new assembly '.
+  $logger->info("Projected ${stored_cnt}/${num_old_feats} features from ".$slice->name.' to new assembly '.
 				$conf->param('new_assembly')."\n");
 
+  $logger->info("$no_projection_cnt have no mapping\n");
+  $logger->info("$multi_segment_cnt mapped to multiple regions\n");
   $logger->info("$wrong_length_cnt $length_txt\n");
   $logger->info("$failed_cnt features failed to project to the new assembly\n");
   $logger->info('Retrieved '.scalar(@tmp).' features from new slice '.$new_slice->name()."\n");
   
-
-  $total_failed += $failed_cnt;
-  $total_wrong_length += $wrong_length_cnt;
-  $total_stored += $stored_cnt;
+  $total_no_proj       += $no_projection_cnt;
+  $total_multi_segment += $multi_segment_cnt;
+  $total_failed        += $failed_cnt;
+  $total_wrong_length  += $wrong_length_cnt;
+  $total_stored        += $stored_cnt;
 
 }
 
-$logger->info('Total projected feature to new assembly '.$conf->param('new_assembly').":\t$total_stored\n");
-$logger->info("$total_wrong_length $length_txt\n");
-$logger->info("$total_failed features failed to project to the new assembly\n");
+$logger->info('Total '.$fset->name.' features projected to new assembly '.$conf->param('new_assembly').":\t${total_stored}/$total_old_feats\n");
+$logger->info("Total $total_wrong_length $length_txt\n");
+$logger->info("Total multi region mappings:\t $total_multi_segment\n");
+$logger->info("Total with no mapping $total_no_proj\n");
+$logger->info("Total $total_failed features failed to project to the new assembly\n");
 # finish logfile
 $logger->finish_log;
 
