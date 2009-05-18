@@ -103,15 +103,10 @@ The following figure gives examples.
 
 # 2 Need to run using non-ref toplevel, currently just using toplevel
 
-# 3 Fix LSB_JOBINDEX usage. We we're always getting one failure as we're subtracting 1 from the 
-#   index which for LSB_JOBINDEX = 0 resulting in -1, which is not a valid array index. DONE.  
-#   Still need to improve this so we're not hardcoding how many slices we're running with (now 
-#   getting two failures from non-existant slices).  We need to convert the perl script to perl 
-#   so we can grab the toplevel non-ref slices before bsubing.  Can we use LSB_JOBNAME instead 
-#   and use the seq_region names directly? 
-#   SG -- The run script is now written in perl and does facilitate running the build on reference
-#   toplevel slices. For now we exclude haplotypes as they are no captured in the underlying data. 
-#   However once we are using our own MAQ mappings strategy mightneed to change to reflect this (also 2).
+# 3 Remove LSBJOBINDEX stuff
+
+# 4 Dump annotated_features using seq_name not seq_region_id
+
 
 # SG: Need to double-check that feature_set and data_set are stored and have status "displayable" as well as 
 #     having supporting sets correctly associated with the data_set. In v52 there was still a problem.
@@ -123,18 +118,21 @@ use Getopt::Long;
 $|=1;
 
 my ($pass,$port,$host,$user,$dbname,$species,$help,$man,
-    $data_version,$outdir,$do_intersect,$write_features,
+	$dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
+    $outdir,$do_intersect,$write_features,
     $dump_annotated_features,$dump_regulatory_features,
     $seq_region_name,$clobber,$focus_max_length,
     $focus_extend,$focus,$attrib,$dump,$gene_signature,$stats,
     $debug,$debug_start,$debug_end);
+
+
+#remove these defaults?
 
 $host = $ENV{EFG_HOST};
 $port = $ENV{EFG_PORT};
 $user = $ENV{EFG_WRITE_USER};
 $dbname = $ENV{EFG_DBNAME};
 $species = $ENV{SPECIES};
-$data_version = $ENV{DATA_VERSION};
 
 GetOptions (
             "pass|p=s"       => \$pass,
@@ -142,11 +140,17 @@ GetOptions (
             "host|h=s"       => \$host,
             "user|u=s"       => \$user,
             "dbname|d=s"     => \$dbname,
+			"dnadb_pass|p=s"       => \$dnadb_pass,
+            "dnadb_port=s"   => \$dnadb_port,
+            "dnadb_host|h=s" => \$dnadb_host,
+            "dnadb_user|u=s" => \$dnadb_user,
+            "dnadb_name|d=s" => \$dnadb_name,
+
+
             "species=s"      => \$species,
             "help|?"         => \$help,
             "man|m"          => \$man,
-            "data_version|v=s" => \$data_version,
-            "outdir|o=s"     => \$outdir,
+			"outdir|o=s"     => \$outdir,
             "do_intersect|i=s" => \$do_intersect,
             "write_features|w" => \$write_features,
             "dump_annotated_features"  => \$dump_annotated_features,
@@ -163,25 +167,33 @@ GetOptions (
             "debug" => \$debug,
             "debug_start=i" => \$debug_start,
             "debug_end=i" => \$debug_end
-            );
+
+
+			#Need to add man and help params here usaing pod2usage
+            );#Need to add pod2usage here
 
 #Can we catch unknown options here to avoid missing incorrect params
 #Something like:
 #my $opts_out = Getoptions();
 #Then check $opts_out.
 
+
 ### defaults ###
-$port = 3306 if !$port;
-$species = 'homo_sapiens' if !$species;#NJ make this mandatory?
+$port ||= 3306;
+
+$dnadb_port ||= $port;
+$dnadb_host ||= $host;
+$dnadb_user ||= $user;
+$dnadb_pass ||= $pass;
 
 ### check options ###
 
-throw("Must specify mandatory database hostname (-host).\n") if ! defined $host;
-throw("Must specify mandatory database username. (-user)\n") if ! defined $user;
-throw("Must specify mandatory database password (-pass).\n") if ! defined $pass;
-throw("Must specify mandatory database name (-dbname).\n") if ! defined $dbname;
-throw("Must specify mandatory database data version, like 47_36i (-data_version).\n") 
-     if !$data_version;
+throw("Must specify mandatory -host\n") if ! defined $host;
+throw("Must specify mandatory -user\n") if ! defined $user;
+throw("Must specify mandatory -pass\n") if ! defined $pass;
+throw("Must specify mandatory -dbname\n") if ! defined $dbname;
+throw("Must specify mandatory -dnadb_name).\n") if ! defined $dnadb_name;#We could just let it use ensembldb/livemirror default?
+#throw("Must specify mandatory database data version, like 47_36i (-data_version).\n") if !$data_version;
 
 throw("Must specify mandatory output directory (-outdir).\n") 
      if !$outdir;
@@ -216,17 +228,13 @@ use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 
 my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
-     -host => 'ens-staging',
-     -port => 3306,
-     -user => 'ensro',
-     #-host => 'ensembldb.ensembl.org',
-     #-user => 'anonymous',
-     #-port => 3306,
-     #-host => '127.0.0.1',
-     #-port => 33064,
-     #-user => 'ensro',
-     -dbname => $species.'_core_'.$data_version,
+     -host => $dnadb_host,
+     -port => $dnadb_port,
+     -user => $dnadb_user,
+	 -pass => $dnadb_pass,
+     -dbname => $dnadb_name,
      -species => $species,
+	 -group   => 'core',
      );
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
@@ -238,6 +246,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -pass   => $pass,
      -port   => $port,
      -dnadb  => $cdb,
+	 -group  => 'funcgen',#Should be set as default in adaptor new method
      );
 
 
@@ -246,9 +255,10 @@ my $dsa = $db->get_DataSetAdaptor();
 my $fta = $db->get_FeatureTypeAdaptor();
 my $afa = $db->get_AnnotatedFeatureAdaptor();
 my $rfa = $db->get_RegulatoryFeatureAdaptor();
-my $sa = $db->get_SliceAdaptor();
+my $sa = $db->dnadb->get_SliceAdaptor();
 my $aa = $db->get_AnalysisAdaptor();
 my $ga = $db->dnadb->get_GeneAdaptor();
+my $schema_build = $db->_get_schema_build($db);
 #my $ta = $cdb->get_TranscriptAdaptor();
 
 
@@ -334,7 +344,6 @@ if ($seq_region_name) {
     warn "Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".$ENV{LSB_JOBINDEX}.").\n";
     
     my @slices = ();
-    my $sa = $db->get_SliceAdaptor();
     #foreach my $s (sort {$a->name cmp $b->name} @{$sa->fetch_all('toplevel', undef, 1)}) {
     foreach my $s (sort {$a->name cmp $b->name} @{$sa->fetch_all('toplevel')}) {
         
@@ -354,10 +363,10 @@ if ($seq_region_name) {
    
 } else {
 
-    throw("Must either specify mandatory chromosome name (-seq_name) or use the \n".
-          "wrapper script 'run_build_regulatory_features.pl' to perform whole genome \n".
-          "analysis on all toplevel slices using the farm (via LSF environment \n".
-          "variable LSB_JOBINDEX).\n");
+  throw("Must either specify mandatory chromosome name (-seq_region_name) or use the \n".
+		"wrapper script 'run_build_regulatory_features.pl' to perform whole genome \n".
+		"analysis on all toplevel slices using the farm (via LSF environment \n".
+		"variable LSB_JOBINDEX).\n");
 
 }
 
@@ -379,7 +388,7 @@ print
     '# Focus set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'}
                              sort {$a->name cmp $b->name} values %focus_fsets), "\n",
     '# Attribute set(s): ', join(", ", map {$_->name.' ('.$_->dbID.')'} 
-                              sort {$a->name cmp $b->name}  values %attrib_fsets), "\n",
+								 sort {$a->name cmp $b->name}  values %attrib_fsets), "\n",
     '# Species: ', $species, "\n",
     '# Seq region: ', join(" ",$slice->display_id(),$slice->get_seq_region_id), "\n",
     '#   core seq_region_id '.$core_sr_id." => efg seq_region_id ".$fg_sr_id."\n";
@@ -448,6 +457,9 @@ my $rfset = &get_regulatory_FeatureSet($analysis);
 
 #$dbname =~ s/sg_//;
 my $af_file = $outdir.'/'.$dbname.'.annotated_features.'.$slice->seq_region_name.'.dat';
+
+#This dumps anyway if absent
+#the dump_annotated_features flag jsut redumps
 
 if (! -e $af_file  || $dump_annotated_features) {
 
@@ -654,13 +666,13 @@ sub dump_annotated_features () {
     
     print STDERR "# Output goes to ", $outdir, "\n";
     
-    my $sql = "select annotated_feature_id, af.seq_region_id,".
-        "sr.name, seq_region_start, seq_region_end,seq_region_strand,".
-        "score,feature_set_id from annotated_feature af, seq_region sr ".
-        "where sr.seq_region_id=af.seq_region_id ".
-        "and schema_build='$data_version' ".
-        "and sr.name='".$slice->seq_region_name."' ".
-        "and af.feature_set_id in (".join(',', @fset_ids).")";
+    my $sql = 'select annotated_feature_id, af.seq_region_id, sr.name,'.
+	  'seq_region_start, seq_region_end, seq_region_strand, score, feature_set_id '.
+		'from annotated_feature af, seq_region sr '.
+		  'where sr.seq_region_id=af.seq_region_id '.
+			"and schema_build='$schema_build' ".#This to stops the seq_region nr product
+			  "and sr.name='".$slice->seq_region_name."' ".
+				"and af.feature_set_id in (".join(',', @fset_ids).")";
     
     my $command = "echo \"$sql\" ".
         " | mysql -quick -N -h".$host." -P".$port." -u".$user." -p".$pass." ".$dbname.
@@ -928,13 +940,15 @@ sub get_regulatory_FeatureSet{
         $rfset->add_status('DISPLAYABLE');
         $rfset = @{$fsa->store($rfset)} if ($write_features);
 
+		warn "Got fset $rfset";
+
         #generate data_set here too
 
         my $dset = $dsa->fetch_by_name('RegulatoryFeatures');
 
         if (! $dset) {
 
-            my $dset = Bio::EnsEMBL::Funcgen::DataSet->new
+		  my $dset = Bio::EnsEMBL::Funcgen::DataSet->new
                 (
                  -feature_set => $rfset,
                  -name        => 'RegulatoryFeatures',
