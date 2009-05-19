@@ -1497,12 +1497,14 @@ sub rollback_ArrayChip{
 	#Delete ProbeFeature UnmappedObjects	  
 	$sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
 	$row_cnt = $db->dbc->do($sql);
+	$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature UnmappedObject records");
 	  
 	 #Delete ProbedFeature Xrefs/DBEntries
 	$sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id=".$ac->dbID;
 	$row_cnt = $db->dbc->do($sql);
+	$self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature xref records");
 
@@ -1517,12 +1519,15 @@ sub rollback_ArrayChip{
 
 	  #.' and edb.db_release="'.$schema_build.'"'; 
 	  $row_cnt = $db->dbc->do($sql);
+	  $self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
+	  
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->log("Deleted $row_cnt probe2transcript $xref_object UnmappedObject records");	
 
 	  #Delete Probe/Set Xrefs/DBEntries
-	  $sql = "DELETE x FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID;
+	  $sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID;
 	  $row_cnt = $db->dbc->db_handle->do($sql);
+	  $self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->log("Deleted $row_cnt probe2transcript $xref_object xref records");
 	}
@@ -1574,6 +1579,7 @@ sub rollback_ArrayChip{
 		$sql = "DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 
 		$row_cnt =  $db->dbc->do($sql);
+		$self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname ProbeFeature Xref/DBEntry records");
 
@@ -1583,6 +1589,7 @@ sub rollback_ArrayChip{
 
 		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 		$row_cnt =  $db->dbc->do($sql);
+		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname UnmappedObject records");
 
@@ -1590,6 +1597,8 @@ sub rollback_ArrayChip{
 		
 		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id and p.array_chip_id=".$ac->dbID();
 		$row_cnt = $db->dbc->do($sql);
+		$self->reset_table_autoinc('probe_feature', 'probe_feature_id', $db);
+
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname ProbeFeature records");
 	  }
@@ -1598,11 +1607,13 @@ sub rollback_ArrayChip{
 		my $lname = "${class}_ProbeAlign";
 		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 		$row_cnt =  $db->dbc->do($sql);
+		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname UnmappedObject records");
 
 		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id and p.array_chip_id=".$ac->dbID();
 		$row_cnt = $db->dbc->do($sql);
+		$self->reset_table_autoinc('probe_feature', 'probe_feature_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname ProbeFeature records");
 	  }
@@ -1636,6 +1647,7 @@ sub rollback_ArrayChip{
 	  #ProbeSets
 	  $sql = 'DELETE ps from probe p, probe_set ps where p.array_chip_id='.$ac->dbID().' and p.probe_set_id=ps.probe_set_id';
 	  $row_cnt = $db->dbc->do($sql);
+	  $self->reset_table_autoinc('probe_set', 'probe_set_id', $db);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->log("Deleted $row_cnt ProbeSet records");
 	  
@@ -1643,6 +1655,7 @@ sub rollback_ArrayChip{
 	  $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();  
 	  $row_cnt = $db->dbc->do($sql);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
+	  $self->reset_table_autoinc('probe', 'probe_id', $db);
 	  $self->log("Deleted $row_cnt Probe records");
 	}
   }
@@ -1650,6 +1663,45 @@ sub rollback_ArrayChip{
   $self->log("Finished $mode roll back for ArrayChip:\t".$ac->name);
   return;
 }
+
+
+#This will just fail silently if the reset value
+#Is less than the true autoinc value
+#i.e. if there are parallel inserts going on
+#So we can never assume that the $new_auto_inc will be used
+
+sub reset_table_autoinc{
+  my($self, $table_name, $autoinc_field, $db) = @_;
+
+  if(! ($table_name && $autoinc_field && $db)){
+	throw('You must pass a table_name and an autoinc_field to reset the autoinc value');
+  }
+
+  if(! (ref($db) && $db->isa('Bio::EnsEMBL::DBSQL::DBAdaptor'))){
+	throw('Must pass a valid Bio::EnsEMBL::DBSQL::DBAdaptor');
+  }
+
+  #my $sql = "show table status where name='$table_name'";
+  #my ($autoinc) = ${$db->dbc->db_handle->selectrow_array($sql)}[11];
+  #11 is the field in the show table status table
+  #We cannot select just the Auto_increment, so this will fail if the table format changes
+
+  #Why do we need autoinc here?
+
+  my $sql = "select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
+  my $new_autoinc = (($db->dbc->db_handle->selectrow_array($sql))[0] + 1);
+
+  $sql = "ALTER TABLE $table_name AUTO_INCREMENT=$new_autoinc";
+  $db->dbc->do($sql);
+  return;
+}
+
+#$qry=mysql_query("show table status where name='newblog'") or die (mysql_error());
+#$row=mysql_fetch_array($qry);
+#$newtid=$row[10];
+#Reset autoincrement
+
+#ALTER TABLE tablename AUTO_INCREMENT = 1
 
 
 
