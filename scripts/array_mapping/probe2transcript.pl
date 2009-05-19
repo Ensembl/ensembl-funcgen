@@ -965,6 +965,7 @@ cache_arrays_per_object($probe_db);
 my ($linkage_annotation, $pc, $transcript_slice, $slice);
 my (@exons, $num_exons, $first_exon, $last_exon, $probe_features, $probe, $probe_id, $feature_id);
 my ($probeset_id, $probeset_name, $transcript_key, $log_name, $transcript_sid);
+my $failed_extend = 0;
 
 $Helper->log("Performing overlap analysis. % Complete:");
 
@@ -1013,8 +1014,14 @@ foreach my $transcript (@transcripts) {
   $transcript_slice = $transcript->feature_Slice();
   $slice            = $transcript_slice->expand($flanks{5}, $flanks{3}) if $flanks{5} || $flanks{3};
 
-	#TODO as $slice is undefined if the above statement does not run!
+  #TODO as $slice is undefined if the above statement does not run!
   #$slice           ||= $transcript_slice;
+
+  if(! $slice){
+	$failed_extend++;
+	$slice = $transcript_slice;
+  }
+
 
   #We currently don't account for extension of next transcript!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   #We need to do this in a slice context, looking ahead at the next transcript to see
@@ -1419,6 +1426,7 @@ foreach my $transcript (@transcripts) {
   print OUT "\n";
 }
 
+$Helper->log("Failed to extend $failed_extend transcripts") if $failed_extend;
 
 $Helper->log_header("Writing @array_names Xrefs", 0, 'append_date');
 my $um_cnt = 0;
@@ -1894,6 +1902,7 @@ sub add_xref {
 	 -info_type => 'MISC',
 	 -info_text            => 'TRANSCRIPT',#?
 	 -linkage_annotation   => $linkage_annotation,
+	 -analysis             => $analysis,
 
 	 #external_db data
 	 -dbname               => $transc_edb_name,
