@@ -433,7 +433,14 @@ my %array_format_config = (
 										sense_interrogation => 0,
 									   },
 
-										);
+						   LEIDEN => {
+									  probeset_arrays        => 0,
+									  linked_arrays     => 1,
+									  sense_interrogation => 0,
+									 },
+
+
+						  );
 die ('Must supply a -vendor parameter e.g. AFFY') if ! $vendor;
 
 if(defined $format && ! exists $array_format_config{$format}){
@@ -1887,7 +1894,7 @@ sub add_xref {
 
   #$transcript_xrefs{$transcript_sid}{$object_type}++;
   #Only count ProbeSet xrefs
-  $transcript_xrefs{$transcript_sid}++ if $object_type eq 'ProbeSet';
+  $transcript_xrefs{$transcript_sid}++ if $object_type eq $xref_object;
 
   my $dbe = new Bio::EnsEMBL::DBEntry
 	(
