@@ -1000,7 +1000,7 @@ sub rollback_FeatureSet{
   if(! $row_cnt){
 	throw("Failed to rollback object_xrefs for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
-  
+  $self->reset_table_autoinc('object_xref', 'object_xref_id', $db); 
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt object_xref records");
   
@@ -1016,6 +1016,7 @@ sub rollback_FeatureSet{
 	throw("Failed to rollback associated_feature_types for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
 
+  
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt associated_feature_type records");
 
@@ -1027,7 +1028,7 @@ sub rollback_FeatureSet{
   if(! $row_cnt){
 	throw("Failed to rollback ${table}s for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
-  
+  $self->reset_table_autoinc($table, "${table}_id", $db);
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt $table records");
 
@@ -1231,8 +1232,13 @@ sub rollback_ResultSet{
 	#Delete chip_channel and result_set records
 	$sql = 'DELETE from chip_channel where result_set_id='.$rset->dbID;
 	$db->dbc->do($sql);
+	$self->reset_table_autoinc('chip_channel', 'chip_channel_id', $db);
+
 	$sql = 'DELETE from result_set where result_set_id='.$rset->dbID;
 	$db->dbc->do($sql);
+	$self->reset_table_autoinc('result_set', 'result_set_id', $db);
+
+
   }
 
   return \@skipped_sets;
@@ -1304,6 +1310,8 @@ sub rollback_results{
 
   my @cc_ids = @{$cc_ids};
   
+  #Need to test for $self->db here?
+
 
   if(! scalar(@cc_ids) >0){
 	throw('Must pass an array ref of chip_channel ids to rollback');
@@ -1326,6 +1334,9 @@ sub rollback_results{
   if(! $self->db->dbc->do($sql)){
 	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
   }
+
+  $self->reset_table_autoinc('result', 'result_id', $self->db);
+
 
   return;
 }
@@ -1371,10 +1382,12 @@ sub rollback_ResultFeatures{
   #Add to ResultSet adaptor
   my $sql = 'DELETE from result_feature where result_set_id='.$rset->dbID;
   
-  if(! $self->db->dbc->do($sql)){
+  if(! $db->dbc->do($sql)){
 	throw("result_feature rollback failed for ResultSet:\t".$rset->name.'('.$rset->dbID.")\n".
-		  $self->db->dbc->db_handle->errstr());
+		  $db->dbc->db_handle->errstr());
   }
+
+  $self->reset_table_autoinc('result_feature', 'result_feature_id', $db);
 
   return;
 }
