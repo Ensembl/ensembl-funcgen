@@ -100,6 +100,56 @@ Checkuser()
 }
 
 ################################################################################
+# Func      : BWait()
+# Desc      : Waits for lsf job
+# Arg  [1]  : Job ID
+# Arg  [2]  : Amount of time to wait before polling in seconds. Default is 280(5mins)
+#             Remove this and allow a list of Job IDs?
+# Return    : Exit code from lsf job
+# Exception : Exits if JobID not defined
+################################################################################
+
+BWait()
+{
+	job_id=$1
+	secs=$2
+	secs=${secs:=280}
+	
+	
+	CheckVariables job_id
+
+	complete=
+	exited=
+
+	#Test for valid job first?
+	
+
+	while [ ! $complete ]; do
+
+		job_info=($(bjobs $job_id))
+
+		#We probably need to catch lsf daemon not responding here
+		#as well as bjobs failure
+
+
+		if [[ ${job_info[10]} -eq 'EXIT' ]]; then
+			
+			#Get exit code
+			complete=$(bjobs -l $job_id | grep 'Exited with exit code')
+			complete=$(echo $complete | sed 's/.*code //')
+			complete=$(echo $complete | sed 's/\. The CPU.*//')
+
+			
+		elif [[ ${job_info[10]} -eq 'DONE' ]]; then
+			complete=0
+		fi
+	done
+
+	return $complete
+
+}
+
+################################################################################
 # Func      : CheckVariables()
 # Desc      : check that all passed environment variables have been assigned 
 #             values
