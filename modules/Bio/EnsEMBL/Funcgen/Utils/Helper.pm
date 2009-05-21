@@ -912,9 +912,10 @@ sub define_and_validate_sets{
 
 =cut
 
+#Do we want to do this by slice?
 
 sub rollback_FeatureSet{
-  my ($self, $fset, $force_delete) = @_;
+  my ($self, $fset, $force_delete, $slice) = @_;
 
  
   #Need to test before we do adaptor call? Cyclical dependency here :|
@@ -923,15 +924,32 @@ sub rollback_FeatureSet{
   #Maybe we should?
   #We're always going to have a DB so why not?
   #Because we might want to use the Helper to Log before we can create the DB?
-  my $sql;
+  my ($sql, $slice_join, $slice_name);
   my $table = $fset->type.'_feature';
   my $adaptor = $fset->adaptor || throw('FeatureSet must have an adaptor');
   my $db = $adaptor->db;
-
-
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 
-  $self->log('Rolling back '.$fset->type." FeatureSet:\t".$fset->name);
+
+
+  $self->log_header('Rolling back '.$fset->type." FeatureSet:\t".$fset->name);
+
+  if($slice){
+   	throw("Must pass a valid Bio::EnsEMBL::Slice") if (! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
+	$slice_name= "\t".$slice->name;
+	$self->log("Restricting to slice:\t".$slice_name);
+
+	my $efg_sr_id = $fset->get_FeatureAdaptor->get_seq_region_id_by_Slice($slice);
+
+	if(! $efg_sr_id){
+	  $self->log("Slice is not present in eFG DB:\t".$slice->name);
+	}
+	else{
+	  #add range here from meta coord
+	  $slice_join = " and f.seq_region_id=$efg_sr_id and f.seq_region_start<=".$slice->end.' and f.seq_region_end>='.$slice->start;
+	}
+  }
+
 
   #Check whether this is a supporting set for another data_set
   
@@ -949,45 +967,70 @@ sub rollback_FeatureSet{
   }
 
   #Remove states
-  $fset->adaptor->revoke_states($fset);
-
+  if(! $slice){
+	$fset->adaptor->revoke_states($fset);
+  }
+  else{
+	$self->log('Skipping '.$fset->name.' revoke_states for partial Slice rollback, maybe revoke IMPORTED?');
+  }
 
   #should add some log statements here?
 
+  my $row_cnt;
+
   #Rollback reg attributes
   if($fset->type eq 'regulatory'){
-	$sql = "DELETE ra from regulatory_attributes ra, $table rf where rf.${table}_id=ra.${table}_id and rf.feature_set_id=".$fset->dbID;
+	$sql = "DELETE ra from regulatory_attributes ra, $table f where f.${table}_id=ra.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
+	$row_cnt = $db->dbc->do($sql);
+
+	if(! $row_cnt){
+	  throw("Failed to rollback regulatory_attributes for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
+	}
+
+	$row_cnt = 0 if $row_cnt eq '0E0';
+	$self->log("Deleted $row_cnt regulatory_attribute records");
   }
 
 
   #Need to remove object xrefs here
   #Do not remove xrefs as these may be used by something else!
-  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".uc($fset->type)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID;
-
-  if(! $db->dbc->do($sql)){
-	throw("Failed to rollback xrefs for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".uc($fset->type)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
+  $row_cnt = $db->dbc->do($sql);
+  
+  if(! $row_cnt){
+	throw("Failed to rollback object_xrefs for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
+  $self->reset_table_autoinc('object_xref', 'object_xref_id', $db); 
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt object_xref records");
+  
 
   #Remove associated_feature_type records
   #Do not remove actual feature_type records as they may be used by something else.
 
-  $sql = 'DELETE aft from associated_feature_type aft, '.$table.' f where f.feature_set_id='.$fset->dbID.' and f.'.$table.'_id=aft.feature_id and aft.feature_table="'.$fset->type.'"';
+  $sql ="DELETE aft from associated_feature_type aft, $table f where f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.feature_id and aft.feature_table='".$fset->type."'".$slice_join;
+
+  $row_cnt = $db->dbc->do($sql);
   
-  if(! $db->dbc->do($sql)){
-	throw("Failed to rollback associated_feature_types for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  if(! $row_cnt){
+	throw("Failed to rollback associated_feature_types for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
 
-
-
   
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt associated_feature_type records");
 
 
-  #Remove feature
-  $sql = "DELETE from $table where feature_set_id=".$fset->dbID;  
+  #Remove features
+  $sql = "DELETE f from $table f where f.feature_set_id=".$fset->dbID.$slice_join;
+  $row_cnt = $db->dbc->do($sql);
 
-  if(! $db->dbc->do($sql)){
-	throw("Failed to rollback ${table}s for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.')');
+  if(! $row_cnt){
+	throw("Failed to rollback ${table}s for FeatureSet:\t".$fset->name.' (dbID:'.$fset->dbID.")$slice_name");
   }
+  $self->reset_table_autoinc($table, "${table}_id", $db);
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt $table records");
 
   return;
 }
@@ -1189,8 +1232,13 @@ sub rollback_ResultSet{
 	#Delete chip_channel and result_set records
 	$sql = 'DELETE from chip_channel where result_set_id='.$rset->dbID;
 	$db->dbc->do($sql);
+	$self->reset_table_autoinc('chip_channel', 'chip_channel_id', $db);
+
 	$sql = 'DELETE from result_set where result_set_id='.$rset->dbID;
 	$db->dbc->do($sql);
+	$self->reset_table_autoinc('result_set', 'result_set_id', $db);
+
+
   }
 
   return \@skipped_sets;
@@ -1262,6 +1310,8 @@ sub rollback_results{
 
   my @cc_ids = @{$cc_ids};
   
+  #Need to test for $self->db here?
+
 
   if(! scalar(@cc_ids) >0){
 	throw('Must pass an array ref of chip_channel ids to rollback');
@@ -1284,6 +1334,9 @@ sub rollback_results{
   if(! $self->db->dbc->do($sql)){
 	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
   }
+
+  $self->reset_table_autoinc('result', 'result_id', $self->db);
+
 
   return;
 }
@@ -1329,10 +1382,12 @@ sub rollback_ResultFeatures{
   #Add to ResultSet adaptor
   my $sql = 'DELETE from result_feature where result_set_id='.$rset->dbID;
   
-  if(! $self->db->dbc->do($sql)){
+  if(! $db->dbc->do($sql)){
 	throw("result_feature rollback failed for ResultSet:\t".$rset->name.'('.$rset->dbID.")\n".
-		  $self->db->dbc->db_handle->errstr());
+		  $db->dbc->db_handle->errstr());
   }
+
+  $self->reset_table_autoinc('result_feature', 'result_feature_id', $db);
 
   return;
 }
@@ -1442,6 +1497,11 @@ sub rollback_ArrayChip{
   #no mode equates to probe mode
   #if no force then we fail if previous levels/modes have xrefs etc...
 
+
+  #Let's grab the edb ids first and use them directly, this will avoid table locks on edb
+  #and should also speed query up?
+
+
   if($mode eq 'probe2transcript' ||
 	 $force){
 	
@@ -1450,12 +1510,14 @@ sub rollback_ArrayChip{
 	#Delete ProbeFeature UnmappedObjects	  
 	$sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
 	$row_cnt = $db->dbc->do($sql);
+	$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature UnmappedObject records");
 	  
 	 #Delete ProbedFeature Xrefs/DBEntries
 	$sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id=".$ac->dbID;
 	$row_cnt = $db->dbc->do($sql);
+	$self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature xref records");
 
@@ -1470,12 +1532,15 @@ sub rollback_ArrayChip{
 
 	  #.' and edb.db_release="'.$schema_build.'"'; 
 	  $row_cnt = $db->dbc->do($sql);
+	  $self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
+	  
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->log("Deleted $row_cnt probe2transcript $xref_object UnmappedObject records");	
 
 	  #Delete Probe/Set Xrefs/DBEntries
-	  $sql = "DELETE x FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID;
+	  $sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID;
 	  $row_cnt = $db->dbc->db_handle->do($sql);
+	  $self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->log("Deleted $row_cnt probe2transcript $xref_object xref records");
 	}
@@ -1527,6 +1592,7 @@ sub rollback_ArrayChip{
 		$sql = "DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 
 		$row_cnt =  $db->dbc->do($sql);
+		$self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname ProbeFeature Xref/DBEntry records");
 
@@ -1536,6 +1602,7 @@ sub rollback_ArrayChip{
 
 		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 		$row_cnt =  $db->dbc->do($sql);
+		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname UnmappedObject records");
 
@@ -1543,6 +1610,8 @@ sub rollback_ArrayChip{
 		
 		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id and p.array_chip_id=".$ac->dbID();
 		$row_cnt = $db->dbc->do($sql);
+		$self->reset_table_autoinc('probe_feature', 'probe_feature_id', $db);
+
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname ProbeFeature records");
 	  }
@@ -1551,11 +1620,13 @@ sub rollback_ArrayChip{
 		my $lname = "${class}_ProbeAlign";
 		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
 		$row_cnt =  $db->dbc->do($sql);
+		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname UnmappedObject records");
 
 		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id and p.array_chip_id=".$ac->dbID();
 		$row_cnt = $db->dbc->do($sql);
+		$self->reset_table_autoinc('probe_feature', 'probe_feature_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname ProbeFeature records");
 	  }
@@ -1589,6 +1660,7 @@ sub rollback_ArrayChip{
 	  #ProbeSets
 	  $sql = 'DELETE ps from probe p, probe_set ps where p.array_chip_id='.$ac->dbID().' and p.probe_set_id=ps.probe_set_id';
 	  $row_cnt = $db->dbc->do($sql);
+	  $self->reset_table_autoinc('probe_set', 'probe_set_id', $db);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->log("Deleted $row_cnt ProbeSet records");
 	  
@@ -1596,6 +1668,7 @@ sub rollback_ArrayChip{
 	  $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();  
 	  $row_cnt = $db->dbc->do($sql);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
+	  $self->reset_table_autoinc('probe', 'probe_id', $db);
 	  $self->log("Deleted $row_cnt Probe records");
 	}
   }
@@ -1603,6 +1676,45 @@ sub rollback_ArrayChip{
   $self->log("Finished $mode roll back for ArrayChip:\t".$ac->name);
   return;
 }
+
+
+#This will just fail silently if the reset value
+#Is less than the true autoinc value
+#i.e. if there are parallel inserts going on
+#So we can never assume that the $new_auto_inc will be used
+
+sub reset_table_autoinc{
+  my($self, $table_name, $autoinc_field, $db) = @_;
+
+  if(! ($table_name && $autoinc_field && $db)){
+	throw('You must pass a table_name and an autoinc_field to reset the autoinc value');
+  }
+
+  if(! (ref($db) && $db->isa('Bio::EnsEMBL::DBSQL::DBAdaptor'))){
+	throw('Must pass a valid Bio::EnsEMBL::DBSQL::DBAdaptor');
+  }
+
+  #my $sql = "show table status where name='$table_name'";
+  #my ($autoinc) = ${$db->dbc->db_handle->selectrow_array($sql)}[11];
+  #11 is the field in the show table status table
+  #We cannot select just the Auto_increment, so this will fail if the table format changes
+
+  #Why do we need autoinc here?
+
+  my $sql = "select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
+  my $new_autoinc = (($db->dbc->db_handle->selectrow_array($sql))[0] + 1);
+
+  $sql = "ALTER TABLE $table_name AUTO_INCREMENT=$new_autoinc";
+  $db->dbc->do($sql);
+  return;
+}
+
+#$qry=mysql_query("show table status where name='newblog'") or die (mysql_error());
+#$row=mysql_fetch_array($qry);
+#$newtid=$row[10];
+#Reset autoincrement
+
+#ALTER TABLE tablename AUTO_INCREMENT = 1
 
 
 
@@ -1678,6 +1790,13 @@ sub get_core_stable_id_by_display_name{
 }
 
 
+
+#Can we do this for several common sets of params
+#And therefore cut down the code that we need to write for every new script?
+
+#sub generate_efgdb_from_params{
+#  my ($self, $argv) = @_;
+#}
 
 
 1;
