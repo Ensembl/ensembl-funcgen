@@ -56,9 +56,9 @@
 #    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total 
 #    sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
 # 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and 
-#    we won't get duplication should the job fail halfway through
+#    we won't get duplication should the job fail halfway through. This is because hceck existing only check oxs, not uos.
 # 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
-
+# 13.Collect warning into summary repoprt to list at very end.
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
@@ -180,9 +180,10 @@ This is generally executed by the eFG array mapping environment
 
  Testing:
 
-  -test_transcripts   Number of transcripts to perform a test run on
+  -test_transcripts   Number of transcripts to perform a test run on. No tyet implemented
   -slice              Name of test slice to perform a test run on 
   -transcript         Test transcript stable ID
+  -no_delete          Skips delete/check_existing. 
   -no_store           Not yet implemented	
 		 
  Other options:
@@ -239,7 +240,7 @@ $main::_tee      = 0;    #tee the output of this scripts
 
 my ($transcript_host, $transcript_user, $transcript_pass, $transcript_dbname,
     $probe_host, $probe_user, $probe_pass, $probe_dbname, $load_from_db,
-    $xref_host, $xref_user, $xref_pass, $xref_dbname, $calc_utrs,
+    $xref_host, $xref_user, $xref_pass, $xref_dbname, $calc_utrs, $no_delete,
     $test_transcripts, @arrays_names, $delete, $no_triage, $test_slice);
 #$annotated_utrs);
 
@@ -341,12 +342,14 @@ GetOptions(
 		   #'health_check'           => \$health_check,
 		   'parallelise'            => \$parallelise,
 		   'clean_up'               => \$clean_up,
-		   'slice=s'                => \$test_slice,#Only for testing purposes!
-		   'transcript=s'           => \$test_transcript_sid,
-
-		   'linked_arrays=i'          => \$array_config{linked_arrays},
+  'linked_arrays=i'          => \$array_config{linked_arrays},
 		   'probeset_arrays=i'        => \$array_config{probeset_arrays},
 		   'sense_interrogation=i'    => \$array_config{sense_interrogation},
+
+		   #Testing
+		   'slice=s'                => \$test_slice,#Only for testing purposes!
+		   'transcript=s'           => \$test_transcript_sid,
+		   'no_delete'              => \$no_delete,
 
 		   #Helper params
 		   'tee'                    => \$main::_tee,
@@ -704,11 +707,17 @@ foreach my $name(@array_names){
 
 #Merge these as they are related and we need to force unmapped check first
 
-if($delete){
-  delete_existing_xrefs($xref_db);
+if(! $no_delete){
+
+  if($delete){
+	delete_existing_xrefs($xref_db);
+  }
+  else{
+	check_existing_and_exit($probe_db, $xref_db);
+  }
 }
 else{
-  check_existing_and_exit($probe_db, $xref_db);
+  warn "You are running with the -no_delete option. This may cause duplicate entries";
 }
 
 
@@ -1459,9 +1468,14 @@ foreach my $key (keys %transcript_feature_info) {
 	: scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
   my $id_names = $ensembl_id.'('.join(',', @{$arrays_per_object{$ensembl_id}{names}}).')';
 
-  if (($hits / $probeset_size) >= $mapping_threshold) {
-	#This is inc'ing an undef?
+  if ((($hits / $probeset_size) >= $mapping_threshold) ||
+	  ($hits && ($xref_object eq 'Probe'))){
+  
+	#hits/probe_set_size may be <1 for replicate single probes
+	#as probeset_size is actually just a count og the number of 
+	#replicate identical probes
 
+	#This is inc'ing an undef?
 	#We also need to report xref_name here for logs
 	$transcripts_per_object{$ensembl_id}++;
 	
@@ -1499,6 +1513,7 @@ foreach my $key (keys %transcript_feature_info) {
 		#Therefore for non-probeset arrays this will always be 1?
 
 		if($hits > 1){
+		  #Remove this?
 		  $linkage_annotation = "Probe matches $hits times";
 		}
 		else{
@@ -1518,9 +1533,6 @@ foreach my $key (keys %transcript_feature_info) {
 	
   } 
   else {
-	#This will never happen for single probes
-
-
 	print OUT "$id_names\t$transcript_sid\tinsufficient\t${hits}/${probeset_size} in ProbeSet\n";
 	
 	if (!$no_triage) {
@@ -1559,15 +1571,7 @@ foreach my $object_id(keys %promiscuous_objects){
 
   #First delete mapped object_xrefs
   #As there is a chance that probes might be xreffed to a non-transcript entity
-  #Deleting ox and x at the same time would orphan any non-transcript ox's
   $xref_db->dbc()->do("DELETE ox FROM object_xref ox, xref x, external_db edb WHERE edb.db_name='$transc_edb_name' and edb.db_release='$schema_build' and edb.external_db_id=x.external_db_id AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeSet' and ox.ensembl_id='$object_id'");
-
-  #Any other oxs?
-  #if(! @{ $xref_db->dbc->db_handle->selectall_arrayref("SELECT ox.object_xref_id from object_xref ox, xref x WHERE x.dbprimary_acc='$probeset' AND x.xref_id=ox.xref_id")}){
-	#Then delete xref
-#	 $xref_db->dbc()->do("DELETE FROM xref WHERE dbprimary_acc='$probeset'");
-#  }
-  
 
   #Now load all unmapped objects
   #One for all arrays rather than one for each
@@ -1597,9 +1601,9 @@ foreach my $object_id(keys %promiscuous_objects){
 close (OUT);
 
 # upload triage information if required
-if (!$no_triage) {
+if ((! $no_triage) && @unmapped_objects) {
 
-  #$Helper->log("Uploading remaining unmapped objects to the xref DB", 0, 'append_date');
+  #$Helper->log("Uploading ".scalar(@unmapped_objects)." remaining unmapped objects to the xref DB", 0, 'append_date');
   $unmapped_object_adaptor->store(@unmapped_objects);
   $um_cnt += scalar(@unmapped_objects);
   $Helper->log("Loaded a total of $um_cnt UnmappedObjects to xref DB");
@@ -1767,9 +1771,10 @@ sub cache_arrays_per_object {
   else{#Non probeset arrays
 	#We don't really need the count at all
 	#We need this for unmapped probes
-	$sql = 'SELECT p.probe_id, GROUP_CONCAT(p.name SEPARATOR "#"), a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY p.probe_id, a.name';
+	#This will actually count intra-array replicates or inter-array replicates if they have been collapsed together
+	#as a linked set.
 	#GROUP_CONCAT handles nr probes with the same seq but different names
-
+	$sql = 'SELECT p.probe_id, GROUP_CONCAT(p.name SEPARATOR "#"), a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @array_names).'") GROUP BY p.probe_id, a.name';
   }
 
   my $sth = $db->dbc()->prepare($sql);
@@ -1987,6 +1992,9 @@ sub check_existing_and_exit {
   my $probe_join = ($array_config{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
 
   
+  #Can we change this to use analysis_id?
+  #Need to write patch first?
+
   my $xref_sth = $xref_db->dbc()->prepare("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='$xref_object' and ox.ensembl_id=${probe_join} and ox.linkage_annotation!='ProbeTranscriptAlign' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name=?");
 
 
