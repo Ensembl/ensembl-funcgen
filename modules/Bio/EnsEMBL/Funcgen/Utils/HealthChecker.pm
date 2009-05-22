@@ -724,16 +724,16 @@ sub analyse_and_optimise_tables{
 	my @anal_info = @{$self->db->dbc->db_handle->selectall_arrayref($analyse_sql.$table)};
 
 	foreach my $line_ref(@anal_info){
-	  my $status = $line_ref->[2];
-	  $self->report("FAIL: analyse $table status $status") if $status ne 'OK' || $status ne 'Table is already up to date';
+	  my $status = $line_ref->[3];
+	  $self->report("FAIL: analyse $table status $status") if (!($status eq 'OK' || $status eq 'Table is already up to date'));
 	}
 
 	my @opt_info = @{$self->db->dbc->db_handle->selectall_arrayref($optimise_sql.$table)};
 
 	foreach my $line_ref(@opt_info){
 	  
-	  my $status = $line_ref->[2];
-	  $self->report("FAIL: optimise $table status $status") if $status ne 'OK' || $status ne 'Table is already up to date';
+	  my $status = $line_ref->[3];
+	  $self->report("FAIL: optimise $table status $status") if (!( $status eq 'OK' || $status eq 'Table is already up to date'));
 	}
 	
   }
