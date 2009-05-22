@@ -166,11 +166,12 @@ sub update_db_for_release{
   $self->update_meta_coord;
   $self->check_meta_strings;
   $self->analyse_and_optimise_tables;
+  $self->set_current_coord_system;
   
 
-  $self->log('??? Have you dumped/copied GFF dumps ???');
-  $self->log("??? Have you diff'd the sql for each species vs. a fresh schema ???");
-  $self->log('Need to implement check meta string check');
+  $self->log_header('??? Have you dumped/copied GFF dumps ???');
+  $self->log_header("??? Have you diff'd the sql for each species vs. a fresh schema ???");
+  $self->log_header('Need to implement check meta string check');
 
   #Log footer? Pass optional counts hash?
   $self->log('Finished updating '.$self->{'dbname'}." for release\n\n");
@@ -374,7 +375,7 @@ sub update_meta_coord{
 			  . "WHERE t.seq_region_id = s.seq_region_id "
 				. "and s.coord_system_id=${cs_id} "
 				. "and s.coord_system_id = cs.coord_system_id and cs.species_id = $species_id"
-				. "order by max desc limit 1";
+				. " order by max desc limit 1";
 
 
 	  @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
@@ -664,6 +665,26 @@ sub check_stable_ids{
 }
 
 
+#This is really just for mart to enable them to join to the seq_region table without
+#creating a product from all the reundant seq_region entries for each schema_build
+
+sub set_current_coord_system{
+  my ($self) = @_;
+
+
+
+  my $schema_build = $self->db->_get_schema_build($self->db->dnadb);
+
+  $self->log_header("Setting current coord_system on $schema_build");
+
+  my $sql = "update coord_system set is_current=False where schema_build !='$schema_build'";
+  $self->db->dbc->do($sql);
+  $sql = "update coord_system set is_current=True where schema_build ='$schema_build'";
+  $self->db->dbc->do($sql);
+
+  return;
+}
+
 sub validate_RegulatoryFeature_Sets{
 
   
@@ -698,18 +719,21 @@ sub analyse_and_optimise_tables{
 
 
   foreach my $table(@tables){
-	$self->log("Analysing and optimising  table $table:");
+	$self->log("Analysing and optimising $table");
 
 	my @anal_info = @{$self->db->dbc->db_handle->selectall_arrayref($analyse_sql.$table)};
 
 	foreach my $line_ref(@anal_info){
-	  $self->log(join("\t", @$line_ref));
+	  my $status = $line_ref->[2];
+	  $self->report("FAIL: analyse $table status $status") if $status ne 'OK' || $status ne 'Table is already up to date';
 	}
 
 	my @opt_info = @{$self->db->dbc->db_handle->selectall_arrayref($optimise_sql.$table)};
 
 	foreach my $line_ref(@opt_info){
-	  $self->log(join("\t", @$line_ref));
+	  
+	  my $status = $line_ref->[2];
+	  $self->report("FAIL: optimise $table status $status") if $status ne 'OK' || $status ne 'Table is already up to date';
 	}
 	
   }
