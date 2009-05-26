@@ -2,7 +2,7 @@
 
 =head1 DESCRIPTION
 
-Copies and then denormalises data from an ensembl core database and creates tables of genomic features in a second database for use in classifying regulatory features.
+Copies, via dumps to a scratch directory, and then denormalises data from an ensembl core database and creates tables of genomic features in a second database for use in classifying regulatory features.
 
 Tables all have a standard set of columns.
 
@@ -36,6 +36,9 @@ edit the file ~dkeefe/dbs/ens_staging  to point at the latest ensembl core datab
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2008/08/20 08:54:18  dkeefe
+ tidied and more pod
+
  Revision 1.1  2008/07/28 14:20:33  dkeefe
  moved from scripts directory.
  IG biotypes updated.
@@ -57,7 +60,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Getopt::Std;
 use IO::Handle;
 use IO::File;
-use lib '/nfs/acari/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
+use lib '/nfs/users/nfs_d/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
 use DBSQL::Utils;
 use DBSQL::DBS; # to use databases listed in ~/dbs.
 
@@ -88,7 +91,7 @@ if ($ARGV[0]){
 &config; # this may fail but config can be on command line
 
 
-my $enc_db = 'dk_funcgen_classify_51_1';# default, can be overridden by args
+my $enc_db = 'dk_funcgen_classify_55_1';# default, can be overridden by args
 &process_arguments;
 
 # hook up with the server
@@ -221,6 +224,8 @@ if($dbu->table_exists('de_ferrari_gene_classification')){
 &intergenic_features($dbh,$dbu);
 &cage_ditag_transcript_tss($dbh,$dbu);
 &karyotype_features($dbh,$dbu);
+POST_KARYOTYPE:
+
 # simple features contains FirstEF CpG, Eponine and tRNAscan
 # logic_name for CpG is 'CpG'
 
@@ -1023,6 +1028,10 @@ sub gene_features{
     my ($dbh) = @_;
 # not all transcripts are on chromosomes but if we only want those that are
 #select sr.seq_region_id,sr.name as seq_region_name,transcript_id as feature_id, from transcript t, seq_region sr, coord_system cs where t.seq_region_id = sr.seq_region_id and cs.coord_system_id = sr.coord_system_id and cs.name = 'chromosome' ;
+
+#if we want UTRs the data needed is in the translation and exon tables
+# select transcript_id,if(e1.seq_region_strand = 1,e1.seq_region_start,e2.seq_region_start+seq_end) as 5utr_start,if(e1.seq_region_strand = 1,e1.seq_region_start+tl.seq_start-2,e2.seq_region_end) as 5utr_end from translation tl,exon e1,exon e2 where e1.exon_id = tl.start_exon_id and e2.exon_id = tl.end_exon_id ; 
+
 
     my @sql;
     push @sql,"drop table if exists protein_coding_gene";
