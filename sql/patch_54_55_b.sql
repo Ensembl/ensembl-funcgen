@@ -11,8 +11,7 @@ alter table analysis modify `analysis_id` smallint(5) unsigned NOT NULL auto_inc
 alter table probe_feature modify `analysis_id` smallint(5) unsigned NOT NULL;
 alter table feature_set modify `analysis_id` smallint(5) unsigned NOT NULL;
 alter table result_set modify `analysis_id` smallint(5) unsigned NOT NULL;
-
-
+alter table probe_design modify `analysis_id` smallint(5) unsigned NOT NULL;
 
 -- Change s.status_name_id to unsigned
 alter table status modify `status_name_id` int(10) unsigned NOT NULL;

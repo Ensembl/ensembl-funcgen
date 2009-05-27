@@ -17,7 +17,7 @@
 
 DROP TABLE IF EXISTS `analysis`;
 CREATE TABLE `analysis` (
-  `analysis_id` int(10) unsigned NOT NULL auto_increment,
+  `analysis_id` smallint(5) unsigned NOT NULL auto_increment,
   `created` datetime NOT NULL default '0000-00-00 00:00:00',
   `logic_name` varchar(100) NOT NULL,
   `db` varchar(120) default NULL,
@@ -43,7 +43,7 @@ CREATE TABLE `analysis` (
 
 DROP TABLE IF EXISTS `analysis_description`;
 CREATE TABLE `analysis_description` (
-  `analysis_id` int(10) unsigned NOT NULL,
+  `analysis_id` smallint(5) unsigned NOT NULL,
   `description` text,
   `display_label` varchar(255) default NULL,
   `displayable` BOOLEAN NOT NULL default '1',
@@ -75,7 +75,7 @@ CREATE TABLE `meta` (
 DROP TABLE IF EXISTS `meta_coord`;
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
-  `coord_system_id` int(10) NOT NULL,
+  `coord_system_id` int(10) unsigned NOT NULL,
   `max_length` int(11) default NULL,
   UNIQUE KEY `table_name` (`table_name`,`coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -240,8 +240,8 @@ CREATE TABLE `unmapped_object` (
 --
 
 DROP TABLE IF EXISTS `coord_system`;
-CREATE TABLE `tmp_coord_system` (
-  `coord_system_id` int(10) NOT NULL auto_increment,
+CREATE TABLE `coord_system` (
+  `coord_system_id` int(10) unsigned NOT NULL auto_increment,
   `name` varchar(40) NOT NULL,
   `version` varchar(255) NOT NULL default '',
   `rank` int(11) NOT NULL,
@@ -249,7 +249,7 @@ CREATE TABLE `tmp_coord_system` (
   `schema_build` varchar(10) NOT NULL default '',
   `core_coord_system_id` int(10) NOT NULL,
   `species_id` int(10) NOT NULL default '1',
-  `is_current` tinyint(1) NOT NULL default '1',
+  `is_current` boolean default True,
   PRIMARY KEY  (`name`,`version`,`schema_build`,`species_id`),
   KEY `name_version_idx` (`name`,`version`),
   KEY `coord_species_idx` (`species_id`),
@@ -258,6 +258,7 @@ CREATE TABLE `tmp_coord_system` (
 
 -- Could use boolean for is_current, but is MySQL implementation is non standard and an alias to tiny int anyway
 -- This is only queried once to cache all the CSs on start up
+-- Do we need attrib and rank for eFG?
 
 --
 -- Table structure for table `seq_region`
@@ -386,7 +387,7 @@ CREATE TABLE `probe_feature` (
    `seq_region_end` int(10) NOT NULL,
    `seq_region_strand` tinyint(4) NOT NULL, 
    `probe_id` int(10) unsigned NOT NULL,
-   `analysis_id` int(10) unsigned NOT NULL,	
+   `analysis_id` smallint(5) unsigned NOT NULL,	
    `mismatches` tinyint(4) NOT NULL,
    `cigar_line` text,
    PRIMARY KEY  (`probe_feature_id`),
@@ -484,7 +485,7 @@ CREATE TABLE `probe` (
 DROP TABLE IF EXISTS `probe_design`;
 CREATE TABLE `probe_design` (
    `probe_id` int(10) unsigned NOT NULL,
-   `analysis_id` int(10) unsigned NOT NULL,
+   `analysis_id` smallint(5) unsigned NOT NULL,
    `score` double default NULL,	
    `coord_system_id` int(10) unsigned NOT NULL,
     PRIMARY KEY  (`probe_id`, `analysis_id`, `coord_system_id`)
@@ -577,7 +578,7 @@ DROP TABLE IF EXISTS `feature_type`;
 CREATE TABLE `feature_type` (
    `feature_type_id` int(10) unsigned NOT NULL auto_increment,
    `name` varchar(40) NOT NULL,
-   `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Overlap', 'Regulatory Motif', 'Region', 'Enhancer', 'Expression', 'Pseudo') default NULL,
+   `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo', 'Open Chromatin', 'Search Region', 'Association Locus') default NULL,
    `description`  varchar(255) default NULL,
    PRIMARY KEY  (`feature_type_id`),
    UNIQUE KEY `name_class_idx` (`name`, `class`)
@@ -689,16 +690,20 @@ CREATE TABLE `result_feature` (
   `score` double default NULL,
   PRIMARY KEY  (`result_feature_id`),
   KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=50;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=50
+ PARTITION BY KEY (`window_size`)
+ PARTITIONS 7;
 
-
+-- Partitions is set to number of windows here
+-- Should set this on a per species basis dependant on the number
+-- of seq_regions * window sizes in result_feature
 
 --- Table structure for `result_set`
 
 DROP TABLE IF EXISTS `result_set`;
 CREATE TABLE `result_set` (
    `result_set_id` int(10) unsigned NOT NULL auto_increment,
-   `analysis_id` int(10) unsigned default NULL,
+   `analysis_id` smallint(5) unsigned default NULL,
    `name` varchar(100) default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
@@ -820,7 +825,7 @@ DROP TABLE IF EXISTS `feature_set`;
 CREATE TABLE `feature_set` (
    `feature_set_id` int(10) unsigned NOT NULL auto_increment,
    `feature_type_id` int(10) unsigned NOT NULL,
-   `analysis_id`  int(10) unsigned default NULL,
+   `analysis_id`  smallint(5) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `name` varchar(100) default NULL,
    `type` enum('annotated', 'regulatory', 'external') default NULL,
@@ -1094,7 +1099,7 @@ DROP TABLE IF EXISTS `status`;
 CREATE TABLE `status` (
    `table_id` int(10) unsigned default NULL,
    `table_name` varchar(20) default NULL,	
-   `status_name_id` int(10) NOT NULL,
+   `status_name_id` int(10) unsigned NOT NULL,
    PRIMARY KEY  (`table_id`, `table_name`, `status_name_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
