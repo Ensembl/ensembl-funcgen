@@ -109,7 +109,7 @@ sub new {
   $self->{'mysql_connect_string'} = 'mysql -h'.$db->dbc->host.' -u'.$db->dbc->username.' -p'
 	.$db->dbc->password.' '.$db->dbc->dbname.' -P'.$db->dbc->port;
   $self->{'dbname'} = $db->dbc->dbname;
-  $self->{'builds'} = (scalar(@$builds)>0) ? $builds : ['DEFAULT'];
+  $self->{'builds'} = (scalar(@$builds)>0) ? $builds : [];
   $self->{'skip_meta_coord'} = $skip_mc;
 
   if(defined $meta_coord_tables){
@@ -203,49 +203,93 @@ sub validate_new_seq_regions{
 	}
   }
   
-  my $pf_adaptor = $self->db->get_ProbeFeatureAdaptor();
+  my $pf_adaptor    = $self->db->get_ProbeFeatureAdaptor();
   my $slice_adaptor = $self->db->dnadb->get_SliceAdaptor();
+  my $dnadb_csa     = $self->db->dnadb->get_CoordSystemAdaptor;
   
   $self->log_header('Validating new coord_systems/seq_regions');
   
-  foreach my $build(@{$self->{'builds'}}){
-	
-	$self->log("Importing seq_region/coord_system info for build:\t".$build);
-	
-	foreach my $slice(@{$slice_adaptor->fetch_all('toplevel', $build, 1)}){
-	  #1 is non-reference flag, essential for haplotype regions
+  my @slices;
+  my %versioned_levels;
+  my $default_version;
+  
+  #Grab unversioned top level slices and versioned levels
+  #May miss some old versioned level if the new assembly no longer has them
+  foreach my $slice(@{$slice_adaptor->fetch_all('toplevel', undef, 1)}){
 
+	if (! $slice->coord_system->version){
+	  push @slices, $slice;
+	}
+	else{
 
-	  
-
-
-	  if($slice->start() != 1){
-		$self->log("Reslicing slice:\t".$slice->name());
-		#we must have some sort of PAR linked region i.e. Y
-		$slice = $slice_adaptor->fetch_by_region($slice->coord_system_name(), $slice->seq_region_name());
+	  if($default_version &&
+		  ($default_version ne $slice->coord_system->version)){
+		throw("Found more than one default CoordSystem version:\t${default_version}\t".$slice->coord_system->version);
 	  }
-	  
-	
-	  #we need test if it needs doing first?
-	  #we would need to test for the coord_systems outside of this loop
-	  #and then for each seq_region inside the loop if the coord_system is present
-
-	  $self->log("_pre_storing seq_region info for slice:\t".$slice->name());
-	  
-	  my $pseudo_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
-		(
-		 -slice => $slice,
-		 -start => 0,
-		 -end   => 0,
-		 -strand => 0,
-		);
-	  
-	  $pf_adaptor->_pre_store($pseudo_feature);
-	  #This will create a meta_coord entry of max_length 1 for features which have an absent meta_coord entry
-	  
+	  else{
+		$default_version = $slice->coord_system->version;
+	  }
 	}
   }
+  
+ 
+  #Get all versioned levels for all builds
+  foreach my $cs(@{$dnadb_csa->fetch_all}){
+	
+	if($cs->version){
+	  $versioned_levels{$cs->version} ||= [];	
+	  push @{$versioned_levels{$cs->version}}, $cs->name;
+	}
+  }
+  
+  push @{$self->{'builds'}}, $default_version if scalar(@{$self->{'builds'}}) == 0;
+  
 
+
+  #Grab slices for each versioned level
+  foreach my $build(@{$self->{'builds'}}){
+	
+	if(! exists $versioned_levels{$build}){
+	  throw("CoordSystem version $build does not exist in the dnadb ".$self->db->dnadb->dbc->dbname);
+	}
+	
+	foreach my $level(@{$versioned_levels{$build}}){
+	  $self->log("Getting slices for $level $build");
+	  push @slices, @{$slice_adaptor->fetch_all($level, $build)};
+	}
+  }
+  
+  $self->log("Importing seq_region/coord_system info for builds:\t".join(',', @{$self->{'builds'}}));
+  
+  foreach my $slice(@slices){
+
+	if($slice->start() != 1){
+	  $self->log("Reslicing slice:\t".$slice->name());
+	  #we must have some sort of PAR linked region i.e. Y
+	  $slice = $slice_adaptor->fetch_by_region($slice->coord_system_name(), $slice->seq_region_name());
+	}
+	
+	
+	#we need test if it needs doing first?
+	#we would need to test for the coord_systems outside of this loop
+	#and then for each seq_region inside the loop if the coord_system is present
+	
+	$self->log("_pre_storing seq_region info for slice:\t".$slice->name());
+	
+	my $pseudo_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
+	  (
+	   -slice => $slice,
+	   -start => 0,
+	   -end   => 0,
+	   -strand => 0,
+		);
+	
+	$pf_adaptor->_pre_store($pseudo_feature);
+	#This will create a meta_coord entry of max_length 1 for features which have an absent meta_coord entry
+	
+  }
+
+  
   $self->log("Finished validating seq_regions\n");
   
   return;
