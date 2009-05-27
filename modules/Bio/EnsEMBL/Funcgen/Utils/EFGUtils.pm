@@ -44,6 +44,8 @@ require Exporter;
 @EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use File::Path qw (mkpath);
+use File::Basename qw (dirname);
 use strict;
 use Time::Local;
 use FileHandle;
@@ -159,9 +161,10 @@ sub species_chr_num{
 #Sort should always be done in the caller if required
 
 sub median{
-  my $scores = shift;
+  my ($scores, $sort) = shift;
 
   return undef if (! @$scores);
+
 
   my ($median);
   my $count = scalar(@$scores);
@@ -169,6 +172,13 @@ sub median{
   #need to deal with lines with no results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   #deal with one score fastest
   return  $scores->[0] if ($count == 1);
+
+	 
+  if($sort){
+	#This is going to sort the reference here, so will affect
+	#The array in the caller
+	#We need to deref to avoid this
+  }
   
   #taken from Statistics::Descriptive
   #remeber we're dealing with size starting with 1 but indices starting at 0
@@ -201,6 +211,10 @@ sub open_file{
   my ($file, $operator) = @_;
 	
   $operator ||= '<';
+
+  #Get dir here and create if not exists
+  my $dir = dirname($file);  
+  mkpath($dir, {verbose => 1, mode => 0750}) if(! -d $dir);
 
   my $fh = new FileHandle "$operator $file";
 	
