@@ -181,9 +181,15 @@ we need to factor this into the schema
 
 #To do
 
-#1 Run on toplevel non-ref, now added, but what impace will this have?
+#1 Run on toplevel non-ref, now added, but what impact will this have?
 #2 remove empty files
 #3 Implement HealthChecker/Helper for logging and check_stable_ids sub
+#4 Implement assembly mapping
+#5 Implement recover properly, cannot do for sub slices due to chaining
+#  Also mapped feature count may not always match old feature cnt
+#  Currently just redoes any slice with mismatched counts
+#  Mapped count is based on whole slice not just feature slice
+#  Should get same results due to chaining, but need to check
 
 
 BEGIN{
@@ -208,7 +214,7 @@ use Pod::Usage;
 #POSIX? File stuff
 use File::Path;
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+#use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file run_system_cmd backup_file);
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor;
@@ -217,6 +223,7 @@ use strict;
 $| = 1;							#autoflush
 my ($dbname, $help, $man, $slice_name, $clobber, $no_load, $odb, $recover);
 my ($odbname, $ndbname, $npass, $nuser, $ohost, $oport, $from_file, $stable_id);
+my ($dnadb_name, $dnadb_pass, $dnadb_user, $dnadb_host, $dnadb_port, $old_assm, $new_assm);
 my $reg = "Bio::EnsEMBL::Registry";
 
 my $ouser  = 'ensro';
@@ -228,7 +235,7 @@ my $new_fset_name = 'newRegulatoryFeatures';
 my $nport = '3306';
 my $expand = 0;
 my $out_dir = '.';
-
+my $cs_level = 'chromosome';
 
 $main::_debug_level = 0;
 $main::_tee = 0;
@@ -245,8 +252,17 @@ GetOptions (
 			"nhost=s"            => \$nhost,
 			"nuser=s"            => \$nuser,
 			"ndbname=s"          => \$ndbname,
+			"dnadb_host=s"       => \$dnadb_host,
+			"dnadb_pass=s"       => \$dnadb_pass,
+			"dnadb_port=s"       => \$dnadb_port,
+ 			"dnadb_user=s"       => \$dnadb_user,
+			"dnadb_name=s"       => \$dnadb_name,
+
 			"old_fset_name=s"    => \$old_fset_name,
 			"new_fset_name=s"    => \$new_fset_name,
+			'old_assembly=s'     => \$old_assm,
+			'new_assembly=s'     => \$new_assm,
+			'coord_system=s'     => \$cs_level,
 			"species=s"          => \$species,
 			"expand|e=s"         => \$expand,
 			'no_load'            => \$no_load,
@@ -264,7 +280,7 @@ GetOptions (
 			"help|?"             => \$help,
 			"man|m"              => \$man,
 			#add opt for old, new & stable fset name
-		   );
+		   ) || die('Specified invalid option, pod2usage needed here');
 
 
 pod2usage(1) if $help;
@@ -272,14 +288,14 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 
 #check mandatory params here
-throw("You cannot specify load '-from_file' in conjunction with '-no_load'\n") if($no_load && $from_file);
+die("You cannot specify load '-from_file' in conjunction with '-no_load'\n") if($no_load && $from_file);
 
 
 #we need to resolve odb ndb relationship, defulat to same if only one specified?
 #also need to add defaults for 
 
 if(! ($nhost && $nuser && $npass && $ndbname)){
-  throw("You must provide new DB details: -ndbhost -ndbuser -ndbpass -ndbname\n");
+  die("You must provide new DB details: -ndbhost -ndbuser -ndbpass -ndbname\n");
 }
 #else{
 #  print "Using new DB:\n\t".join("\n\t", ($nhost, $nuser, $npass, $ndbname))."\n";
@@ -287,14 +303,18 @@ if(! ($nhost && $nuser && $npass && $ndbname)){
 
 
 
+#This should always be the handover db on staging
+#Do we need to add old dnadb too?
+#Too account for unversioned slices which are not present in the new DB?
+
 my $cdb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-													   -host   => 'ens-staging',
-													   -user   => 'ensro',
-														#-pass   => $npass,
-													   -port   => $nport,
-													   -dbname => 'homo_sapiens_core_52_36n',
-													   -species => $species,
-													  );
+											   -host    => $dnadb_host || 'ens-staging',
+											   -user    => $dnadb_user || 'ensro',
+											   -pass    => $dnadb_pass || undef,
+											   -port    => $dnadb_port || 3306,
+											   -dbname  => $dnadb_name,
+											   -species => $species,
+											  );
 
 
 my $ndb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
@@ -307,8 +327,9 @@ my $ndb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													   -dnadb => $cdb,
 													  );
 
-#Test connection, eval this?
-$ndb->dbc();
+#Test connections, eval this?
+$ndb->dbc;
+$ndb->dnadb->dbc;
 
 
 if(! ($odbname && $ohost && $oport)){
@@ -403,6 +424,13 @@ $obj_cache{'NEW'}{'SLICE_ADAPTOR'} = $ndb->get_SliceAdaptor();
 $obj_cache{'NEW'}{'FSET'}          = $ndb->get_FeatureSetAdaptor->fetch_by_name($new_fset_name);
 
 
+#Now we need to test the CoordSystem versions if they have been specified
+#This will require a mapping path.
+#To use the project method on the old features the mapping path must be in the olddb
+#i.e. in the olddb and the newdb must be the same
+#This could be done without the project method, but is much easier like this.
+
+
 
 
 
@@ -422,27 +450,85 @@ my $cmd = 'SELECT stable_id from regulatory_feature rf where feature_set_id='.$o
 ($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref($cmd)};
 $next_stable_id ++;
 
-warn "Next stable id is $next_stable_id";
+print "Next stable id is $next_stable_id";
 
 
-throw('Cannot specify both a slice and a stable_id to test run on') if($stable_id && $slice_name);
+die('Cannot specify both a slice and a stable_id to test run on') if($stable_id && $slice_name);
 
-if($slice_name){
-  warn "Running only on slice $slice_name";
-  @slices = ( $obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_by_name($slice_name) );
-}elsif($stable_id){
-  @slices = ($odb->get_RegulatoryFeatureAdaptor->fetch_by_stable_id($stable_id)->feature_Slice());
-  warn "Running only on $stable_id ".$slices[0]->name."\n";
-}  
-else{
-  #fetch all top_level, including non-ref
-  @slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', 1)};
+
+#Check the old and new coord_systems
+
+if($old_assm || $new_assm){
+
+  if(! $old_assm || ! $new_assm){
+	die('Must provide both a -new_assm and an -old_assm if you wish to stable id map between assemblies');
+  }
+
+  my $cs = $odb->dnadb->get_coordSystemAdaptor->fetch_by_name($cs_level, $old_assm);
+	
+  if(! $cs){
+	die("Cannot access $cs_level $old_assm assembly from $dnadb_name");
+  }
+
+  $odb->dnadb->get_coordSystemAdaptor->fetch_by_name($cs_level, $new_assm);
+  
+  if(! $cs){
+	die("Cannot access $cs_level $old_assm assembly from $dnadb_name");
+  }
 }
 
-warn 'Mapping '.scalar(@slices)." slices\n";
+
+
+
+#Grab the old slices
+my @top_level_slices;
+
+if($slice_name){
+  print "Running only on slice $slice_name";
+
+  if($old_assm && $slice_name !~ /$old_assm/){
+	die("You must map from an old slice($old_assm) if you wish to map between assemblies:\t$slice_name");
+  }
+
+  @slices = ( $obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_by_name($slice_name) );
+}
+elsif($stable_id){
+  #This will automatically use the old assembly if the old fset only has features on the old assembly
+  @slices = ($odb->get_RegulatoryFeatureAdaptor->fetch_by_stable_id($stable_id, $obj_cache{'OLD'}{'FSET'})->feature_Slice());
+  print "Running only on $stable_id ".$slices[0]->name."\n";
+}  
+else{
+  #fetch top_level, including non-ref
+  #This could actually be the new toplevel if we have set the olddb to the newdb
+  #But we're only using this for the unversioned slices
+  @top_level_slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', undef, 1)};
+  
+  #Fetch old assembled level
+  #What about > 1 assembled/versioned level?
+  #These would not be caught below
+  @slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all($cs_level, $old_assm)};
+
+  #Now add all unversioned toplevel nonref slices
+  #So we have the old toplevel approximately(new non versioned slices may have been added/removed)
+  #But no mapping available for slices which are not present in both DBs
+  #Would have to do this with blast
+  #Also, are we missing some non-versioned slices which would be present in an old DB
+  #as they may have been removed from the new DB, which will only represent the old slices which have beem mapped
+
+  foreach my $slice(@top_level_slices){
+	
+	if(! $slice->coord_system->version){
+	  push @slices, $slice;
+	}
+  }
+}
+
+print 'Mapping '.scalar(@slices)." slices\n";
 
 #Need to explicitly build seq_region cache as were using the 'private' seq_region methods out of context
 $rf_adaptor->build_seq_region_cache();
+my $total_feat_cnt    = 0;
+my $total_failed_proj = 0;
 
 #Process each top level seq_region
 foreach my $slice (@slices){
@@ -474,13 +560,11 @@ foreach my $slice (@slices){
 
   #Check for mapped features and clobber
   $cmd = 'select count(regulatory_feature_id) from regulatory_feature where feature_set_id='.
-	$obj_cache{'NEW'}{'FSET'}->dbID().' and seq_region_id='.$rf_adaptor->get_seq_region_id_by_Slice($slice);
+	$obj_cache{'OLD'}{'FSET'}->dbID().' and seq_region_id='.$rf_adaptor->get_seq_region_id_by_Slice($slice);
 
-
-  #warn $cmd;
-  #warn $slice->name;
-
-  my ($feature_cnt) = @{$ndb->dbc->db_handle->selectrow_arrayref($cmd)};
+  my $failed_proj_cnt = 0;
+  my ($feature_cnt) = $ndb->dbc->db_handle->selectrow_array($cmd);
+  $total_feat_cnt+=$feature_cnt;
   
   $cmd = 'select count(regulatory_feature_id) from regulatory_feature where feature_set_id='.$obj_cache{'NEW'}{'FSET'}->dbID().
 	' and seq_region_id='.$rf_adaptor->get_seq_region_id_by_Slice($slice).' and stable_id is not NULL';
@@ -488,7 +572,7 @@ foreach my $slice (@slices){
   my ($mapped_feature_cnt) = @{$ndb->dbc->db_handle->selectrow_arrayref($cmd)};
   
  
-  warn "Processing slice $seq_name with $mapped_feature_cnt mapped features from a total of $feature_cnt";
+  print "Processing slice $seq_name with $mapped_feature_cnt mapped features from a total of $feature_cnt";
 
  
   if($mapped_feature_cnt != 0){
@@ -498,13 +582,13 @@ foreach my $slice (@slices){
 	  print "All RegulatoryFeatures have already been stable ID mapped for $seq_name\n" if($mapped_feature_cnt == $feature_cnt);
 
 	  if($recover){
-		throw "Skipping $seq_name in recover mode\n";
+		die("Skipping $seq_name in recover mode\n");
 		next;
 	  }
 	}
 
 	if(! $clobber){
-	  throw("$mapped_feature_cnt/$feature_cnt RegulatoryFeatures have already been stable ID mapped for $seq_name, specify -clobber to overwrite");
+	  die("$mapped_feature_cnt/$feature_cnt RegulatoryFeatures have already been stable ID mapped for $seq_name, specify -clobber to overwrite");
 	}elsif($no_load){
 	  print "There are features which have already been stable ID mapped for $seq_name in the DB, you have chosen leave these and dump a summary of the new ones\n";
 	}
@@ -525,14 +609,14 @@ foreach my $slice (@slices){
 	$mappings = 0;
 	$new_mappings = 0;
 
-	foreach my $reg_feat(@{$obj_cache{'OLD'}{'FSET'}->get_Features_by_Slice($slice)}){
+	REGFEAT: foreach my $reg_feat(@{$obj_cache{'OLD'}{'FSET'}->get_Features_by_Slice($slice)}){
 	  my $from_db = 'OLD';
 	  my $feature = $reg_feat;
 	  my $use_next_child = 0;
 	  #Can we change this to an array as it's only containing transitions array and the orignal stable_id
 	  #my $transitions = []; #this has to be ref due to implementation in while
 
-	  warn "\n:: Starting new feature chain with old regulatory feature ".$reg_feat->stable_id()." ::\n";
+	  print "\n:: Starting new feature chain with old regulatory feature ".$reg_feat->stable_id()." ::\n";
 
 
 	  my $source_dbID; #The source dbID this feature was fetched from, set to null for start feature.
@@ -544,8 +628,66 @@ foreach my $slice (@slices){
 	  while(defined $feature){		
 		#we don't need to sub this part do we?
 		#can we not have this all in one hash and just test for the feature hash element?
+
+		#Assembly map feature first if required
+		if($new_assm && $feature->slice->coord_system->version){
+		  my $fail;
+
+		  my @segments = @{$feature->project($cs_level, $new_assm)};
+		  # do some sanity checks on the projection results:
+		  # discard the projected feature if
+		  #   1. it doesn't project at all (no segments returned)
+		  #   2. the projection is fragmented (more than one segment)
+		  #   3. the projection doesn't have the same length as the original
+		  #      feature
+
+		  
+		  # this tests for (1) and (2)
+		  if (scalar(@segments) == 0) {
+			$failed_proj_cnt++;#Is this correct cnt?
+			#$no_projection_cnt++;
+			$fail = 1;
+		  } 
+		  elsif (scalar(@segments) > 1) {
+			$failed_proj_cnt++;
+			#$multi_segment_cnt++;
+			$fail = 1;
+		  }
+    
+		  # test (3)
+		  my $proj_slice = $segments[0]->to_Slice;
+		  
+		  if ($feature->length != $proj_slice->length) {
+			#$wrong_length_cnt++;
+			#if(! $ignore_length)){
+			$failed_proj_cnt++;
+			$fail = 1;
+			#}
+		  }
+
+		  if($fail){
+			print "No assembly mapping possible for:\t".$feature->stable_id()."\n";
+			$mapping_cache{$feature->stable_id()} = [];
+			#Do we need anythign else in here?
+			next REGFEAT;
+		  }
+    
+		  # everything looks fine, so adjust the coords of your feature
+		  #Have to generate new_slice here as we are not sure it is going to be 
+		  #on the same slice as the old assembly
+		  my $new_full_slice = $obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_by_region($cs_level, $proj_slice->seq_region_name);
+		  $feature->start($proj_slice->start);
+		  $feature->end($proj_slice->end);
+		  $feature->slice($new_full_slice);
+		}
+
 		($from_db, $feature, $source_dbID, $use_next_child, $split_id) = &build_transitions($from_db, $feature, $source_dbID, $use_next_child, $split_id);
 	  }
+	}
+
+	if($new_assm){
+	  $total_failed_proj+=$failed_proj_cnt;
+	  print "Failed to project ${failed_proj_cnt}/${feature_cnt}\n";
 	}
 
 	print "Mapped $mappings old stable IDs for toplevel seq_region $seq_name\n";
@@ -632,7 +774,7 @@ foreach my $slice (@slices){
 	#load mappings
 	if($from_file){
 	  #parse mappings and populate mapping_cache
-	  throw("-from_file parse not yet implemented\n");
+	  die("-from_file parse not yet implemented\n");
 	}
 	
 	foreach my $old_stable_id(keys %mapping_cache){
@@ -643,7 +785,11 @@ foreach my $slice (@slices){
   }
 }
 
-print "Finished mapping a total of $total_mappings old and new stable IDs\n" if( ! $from_file);
+if( ! $from_file){
+  print "Failed to project total:\t${total_failed_proj}/${total_feat_cnt}\n" if $new_assm;
+  #This maybe more or less than the total number of features due to merging/loss
+  print "Finished mapping a total of $total_mappings old and new stable IDs\n";
+}
 
 
 #Now check we have mapped all reg feats for give slices
@@ -657,11 +803,9 @@ foreach my $slice(@slices){
 
   #This is only counting the core rgions, will this be different from the mapping process?
 
-  my $sql = 'select count(stable_id) from regulatory_feature rf, seq_region sr where rf.seq_region_start <= $sr_start and rf.seq_region_end >= $sr_end feature_set_id='.$obj_cache{'NEW'}{'FSET'}->dbID.' and stable_id is NULL';
-  
-  #warn "sql is $sql";
+  my $sql = "select count(stable_id) from regulatory_feature rf, seq_region sr where rf.seq_region_start <= $sr_start and rf.seq_region_end >= $sr_end and feature_set_id=".$obj_cache{'NEW'}{'FSET'}->dbID.' and stable_id is NULL';
+  my ($null_count) = $ndb->dbc->db_handle->selectrow_array($sql);
 
-  my ($null_count) = @{$ndb->dbc->db_handle->selectrow_arrayref($cmd)};
 
   if($null_count){#>1
 	print "WARNING: Slice $sname still has $null_count RegulatoryFeatures without a stable ID assignment\n";
@@ -688,6 +832,8 @@ sub build_transitions{
   my ($from_db, $feature, $source_dbID, $use_next_child, $split_id) = @_;
   #the source_dbID is the dbID of the previous source feature
   #to ensure we don't create a recursive transition, hence enabling detection of the end transition
+
+  #warn "Building transitions:\t$from_db, $feature, $source_dbID, $use_next_child, $split_id";
 
   my ($o_start, $o_end, $previous_child, $current_child, $displacement, $num_parents, $coverage);
   my ($next_child, @transitions, @overlap_ids);
@@ -726,8 +872,9 @@ sub build_transitions{
 
   my @nreg_feats = @{$obj_cache{$to_db}{'FSET'}->get_Features_by_Slice($next_slice)};
   my $id = ($from_db eq 'OLD') ? $feature->stable_id() : $feature->dbID();
-
-  warn "\nMapping $from_db $feature ".$id." to ".scalar(@nreg_feats)." nreg($to_db) feats\n";
+  
+  #Surely this is always OLD to NEW?
+  warn "\nMapping $from_db $id  to ".scalar(@nreg_feats)." ($to_db) RegFeats\n";
   warn "split_id is $split_id" if $split_id;
   warn "use next_child is $use_next_child" if $use_next_child;
 
@@ -757,7 +904,7 @@ sub build_transitions{
 	  #next what?????
 	}
 	else{
-	  throw("this should never happen!");#REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	  die("this should never happen!");#REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	}
   }
   else{
@@ -1037,7 +1184,7 @@ sub build_transitions{
 	  $split_id = &assign_stable_ids(\@transitions, $split_chain, $split_id);
 	  
 	  #this should never happen
-	  throw("split chain and id with id $split_id with no new feature") if $split_id || $split_chain;
+	  die("split chain and id with id $split_id with no new feature") if $split_id || $split_chain;
 
 	  #split chain will always be false here
 	}
@@ -1177,7 +1324,7 @@ sub assign_stable_ids{
   #Set child to 1, so avoid use previous at transition end e.g. 1 to 1 mapping
   my $child = 1;
 
-  warn "Assigning stable IDs to ".($num_trans+1)." transitions\n";
+  print "Assigning stable IDs to ".($num_trans+1)." transitions\n";
   warn "split chain!!" if $split_chain;
   warn "previous split_id of $split_id\n" if $split_id;
   
@@ -1263,7 +1410,7 @@ sub assign_stable_ids{
 
 	  #This should be true as will be using previous if last transition projected to this feature
 	  if(exists $dbid_mappings{$feature_id}){
-		throw("Found duplicate inheritance:\tdbID ".$feature_id." > ".
+		die("Found duplicate inheritance:\tdbID ".$feature_id." > ".
 			  $dbid_mappings{$feature_id}->{'stable_id'}." & $child_id");
 	  }
 	  
@@ -1312,8 +1459,8 @@ sub assign_stable_ids{
 		  if(exists $mapping_cache{$orphan_id}){
 
 			if(! ($split_id && ($i == $num_trans))){
-			  throw("Have found duplicate mappings non very 5' feature in a transition chain for $orphan_id: previous "
-					.join(',', @{$mapping_cache{$orphan_id}}))." new $child_id";
+			  die("Have found duplicate mappings non very 5' feature in a transition chain for $orphan_id: previous "
+				  .join(',', @{$mapping_cache{$orphan_id}}))." new $child_id";
 			}
 
 			#This is because chain has been split and this transition knows nothing about
@@ -1412,7 +1559,7 @@ sub assign_stable_ids{
 	  #child will never be b3(which would already have a stable_id) as we will have specified use_previous
 	  #do we need to revise this in light of encountering a twin?	  
 	  if(exists $dbid_mappings{$child_id}){
-		throw("Found duplicate projection:\tdbID $child_id < stable_ids ".$feature_id.
+		die("Found duplicate projection:\tdbID $child_id < stable_ids ".$feature_id.
 			  " & ".$dbid_mappings{$child_id}->stable_id());
 	  }
 	  
@@ -1507,7 +1654,7 @@ sub assign_stable_ids{
 				#this is mid chain overlap which should either be the child
 				#or this is the last transition and it is a split chain 
 
-				throw('Found mid chain overlapping orphan!') if($i != $num_trans);
+				die('Found mid chain overlapping orphan!') if($i != $num_trans);
 
 				#split_chain
 				#so we need to wait for inheritance in next assinment and then populate 
@@ -1533,7 +1680,7 @@ sub assign_stable_ids{
 				push @{$mapping_cache{$last_stable_id}}, $orphan->{'stable_id'};
 			  }
 			  else{
-				throw("Failed to find split_merge_cache for old $last_stable_id ".
+				die("Failed to find split_merge_cache for old $last_stable_id ".
 					  "when updating with linking new feature ".$orphan->stable_id());
 			  }
 			}
@@ -1651,7 +1798,7 @@ sub assign_and_log_new_stable_id{
   my $new_reg_feat = shift;
 
   if(! (ref($new_reg_feat) && $new_reg_feat->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature'))){
-	throw('You must provide a valid Bio::EnsEMBL::Funcgen::RegulatoryFeature');
+	die('You must provide a valid Bio::EnsEMBL::Funcgen::RegulatoryFeature');
   }
 
   #Need to add species intrafix here
