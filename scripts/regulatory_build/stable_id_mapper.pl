@@ -444,7 +444,7 @@ my $rf_adaptor = $ndb->get_RegulatoryFeatureAdaptor();
 
 #This is dependent on clobber or recover.
 
-warn "Need to implement clobber/recover in next_stable_id lookup";
+warn "Need to implement clobber/recover in next_stable_id lookup\n";
 
 my $cmd = 'SELECT stable_id from regulatory_feature rf where feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by stable_id desc limit 1';
 ($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref($cmd)};
@@ -572,7 +572,7 @@ foreach my $slice (@slices){
   my ($mapped_feature_cnt) = @{$ndb->dbc->db_handle->selectrow_arrayref($cmd)};
   
  
-  print "Processing slice $seq_name with $mapped_feature_cnt mapped features from a total of $feature_cnt";
+  print "Processing slice $seq_name with $mapped_feature_cnt mapped features from a total of $feature_cnt\n";
 
  
   if($mapped_feature_cnt != 0){
@@ -608,6 +608,7 @@ foreach my $slice (@slices){
 	%dbid_mappings = ();
 	$mappings = 0;
 	$new_mappings = 0;
+	my $proj_slice;
 
 	REGFEAT: foreach my $reg_feat(@{$obj_cache{'OLD'}{'FSET'}->get_Features_by_Slice($slice)}){
 	  my $from_db = 'OLD';
@@ -642,6 +643,8 @@ foreach my $slice (@slices){
 		  #      feature
 
 		  
+		  warn "got ".scalar(@segments)." segments:\t @segments";
+
 		  # this tests for (1) and (2)
 		  if (scalar(@segments) == 0) {
 			$failed_proj_cnt++;#Is this correct cnt?
@@ -653,16 +656,18 @@ foreach my $slice (@slices){
 			#$multi_segment_cnt++;
 			$fail = 1;
 		  }
+		  else{
     
-		  # test (3)
-		  my $proj_slice = $segments[0]->to_Slice;
+			# test (3)
+			$proj_slice = $segments[0]->to_Slice;
 		  
-		  if ($feature->length != $proj_slice->length) {
-			#$wrong_length_cnt++;
-			#if(! $ignore_length)){
-			$failed_proj_cnt++;
-			$fail = 1;
-			#}
+			if ($feature->length != $proj_slice->length) {
+			  #$wrong_length_cnt++;
+			  #if(! $ignore_length)){
+			  $failed_proj_cnt++;
+			  $fail = 1;
+			  #}
+			}
 		  }
 
 		  if($fail){
@@ -710,7 +715,7 @@ foreach my $slice (@slices){
 
 
 	print "Generated $new_mappings new stable IDs for seq_region $seq_name\n";
-	print 'Total stable IDs for seq_region '.$seq_name.":\t".($mappings + $new_mappings)."\n";
+	print 'Total stable IDs for seq_region '.$seq_name.":\t".($mappings + $new_mappings)."/${feature_cnt}\n";
 	$total_mappings += $new_mappings;	
 
 
