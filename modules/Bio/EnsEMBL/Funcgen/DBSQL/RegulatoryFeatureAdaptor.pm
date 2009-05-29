@@ -74,7 +74,7 @@ sub _get_current_FeatureSet{
 =head2 fetch_by_stable_id
 
   Arg [1]    : String $stable_id - The stable id of the regulatory feature to retrieve
-  Arg [2]    : optional list of FeatureSets
+  Arg [2]    : optional - Bio::EnsEMBL::FeatureSet
   Example    : my $rf = $rf_adaptor->fetch_by_stable_id('ENSR00000309301');
   Description: Retrieves a regulatory feature via its stable id.
   Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
@@ -85,11 +85,11 @@ sub _get_current_FeatureSet{
 =cut
 
 sub fetch_by_stable_id {
-  my ($self, $stable_id) = @_;
+  my ($self, $stable_id, $fset) = @_;
 
-  my $fset = $self->_get_current_FeatureSet;
+  $fset ||= $self->_get_current_FeatureSet;
 
-  return (defined $fset) ? $self->fetch_all_by_stable_id_FeatureSets($stable_id, $self->_get_current_FeatureSet)->[0] : undef;
+  return (defined $fset) ? $self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)->[0] : undef;
 }
 
 =head2 fetch_all_by_stable_id_FeatureSets
@@ -115,6 +115,9 @@ sub fetch_all_by_stable_id_FeatureSets {
   throw('Must provide a stable ID') if ! defined $stable_id;
   $stable_id =~ s/ENSR0*//;
 
+  #Need to test stable_id here as there is a chance that this argument has been omitted and we are dealing with 
+  #a feature set object
+
   my $constraint = 'rf.stable_id='.$stable_id;
 
 
@@ -127,13 +130,7 @@ sub fetch_all_by_stable_id_FeatureSets {
 	else{
 
 	  #validate FeatureSets
-	  map { 
-		if(! (ref($_) && $_->isa('Bio::EnsEMBL::Funcgen::FeatureSet') && $_->dbID)){
-		  throw 'You must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet';
-		}} @fsets;
-
-
-
+	  map { $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $_)} @fsets;
 		 
 	  if(scalar(@fsets) == 1){
 		$constraint .= ' and rf.feature_set_id='.$fsets[0]->dbID;
