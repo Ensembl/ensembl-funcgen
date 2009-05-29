@@ -20,12 +20,6 @@ my @arrays = @{$oaa->fetch_all()};
 The ArrayAdaptor is a database adaptor for storing and retrieving
 Funcgen Array objects.
 
-=head1 AUTHOR
-
-This module was created by Nathan Johnson, but is almost entirely based on the
-ArrayAdaptor modules written by Ian Sealy and Arne Stabenau.
-
-This module is part of the Ensembl project: http://www.ensembl.org/
 
 =head1 CONTACT
 
