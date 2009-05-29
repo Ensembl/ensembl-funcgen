@@ -257,11 +257,15 @@ sub _objs_from_sth {
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 	  
 	  #get core seq_region_id
+	  #There is the potential to fail here
+	  #If we have set the dnadb to be the current db
+	  #and then retrieve features from an old feature set.
 	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 		
 	  if(! $seq_region_id){
 		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-		  "The region you are using is not present in the cuirrent dna DB";
+		  "The region you are using is not present in the current seq_region_cache.\n".
+			"Maybe you need to redefine the dnadb or update_DB_for_release?";
 		next;
 	  }
 
