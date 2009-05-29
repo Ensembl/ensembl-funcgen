@@ -1,4 +1,4 @@
-#
+ #
 # EnsEMBL module for Bio::EnsEMBL::Funcgen::CoordSystem
 #
 
@@ -39,11 +39,6 @@ versions, there is no version which applies to the entire set of clones.
 
 Coordinate system objects are immutable. Their name and version, and other
 attributes may not be altered after they are created.
-
-=head1 AUTHOR
-
-This module was written by Nathan Johnson, but was based heavily on the core module
-authored by Graham McVicker.
 
 =head1 CONTACT
 
