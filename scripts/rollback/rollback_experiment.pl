@@ -6,11 +6,11 @@ ensembl-efg rollback_experiment.pl
 
 =head1 SYNOPSIS
 
-rollback_experiment.pl [options]
+ rollback_experiment.pl [options]
 
-Options:
+=head1 OPTIONS
 
-Mandatory
+ Mandatory
   -experiment|e    Experiment name
   -chip_ids|c      List of ExperimentalChip unique IDs (comma separated, no spaces)
   -pass|p          The MySQL password
@@ -23,8 +23,6 @@ Mandatory
   #-result_set      Name to give the raw/normalised result set.
   -help            Brief help message
   -man             Full documentation
-
-=head1 OPTIONS
 
 =over 8
 
@@ -57,8 +55,9 @@ $| =1;
 my ($chips, $pass, $full_delete, @chips);
 my ($exp_name, $host, $dbname, $help, $man, $log_msg, $species, $force_delete);
 my ($port, $user);
+my @tmp_args=@ARGV;
 
-warn "@ARGV\n";
+die("This script needs to be updated and is currently unsafe");
 
 GetOptions (
 			"experiment|e=s"      => \$exp_name,
@@ -74,9 +73,12 @@ GetOptions (
 			#"data_version|d=s"   => \$data_version,
 			"help|?"              => \$help,
 			"man|m"               => \$man,
-		   );
+		   ) or pod2usage(
+							 -exitval => 1,
+							 -message => "Params are:\t@tmp_args"
+							);
 
-pod2usage(1) if $help;
+pod2usage(0) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 if(! $port){
@@ -120,6 +122,16 @@ print $log_msg;
 #do not delete data sets, just provide info about orphaned feature/data_sets?
 #we might not want to remove a feature set as it may be art of a combined experiment analysis
 
+my $dnadb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+												 -host => 'ens-staging',
+												 -dbname => 'homo_sapiens_core_55_37',
+												 -user => 'ensro',
+												 #-pass => $pass,
+												 -port => $port,
+												 -species => $species,
+												);
+
+
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -host => $host,
 													  -dbname => $dbname,
@@ -127,6 +139,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -pass => $pass,
 						   						      -port => $port,
 													  -species => $species,
+													  -dnadb => $dnadb,
 													 );
 
 
