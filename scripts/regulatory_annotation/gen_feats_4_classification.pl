@@ -36,6 +36,9 @@ edit the file ~dkeefe/dbs/ens_staging  to point at the latest ensembl core datab
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.3  2009/05/26 10:46:48  dkeefe
+ lib directory name change
+
  Revision 1.2  2008/08/20 08:54:18  dkeefe
  tidied and more pod
 
@@ -218,9 +221,10 @@ if($dbu->table_exists('de_ferrari_gene_classification')){
     &housekeeping_tissue_specific($dbh,$dbu);
 }
 
-
+#POST_IMPORT:
 &gene_features($dbh);
 &exon_features($dbh);
+exit;
 &intergenic_features($dbh,$dbu);
 &cage_ditag_transcript_tss($dbh,$dbu);
 &karyotype_features($dbh,$dbu);
@@ -823,8 +827,30 @@ sub split_by_biotype{
     push @sql,"drop table if exists RNA_gene_$feat_name";
     push @sql,"create table RNA_gene_$feat_name select * from $feat_name where feature_type like '%RNA_".$feat_name."'";
     #************* lump all RNA sub types together *********************
-    push @sql,"update RNA_gene_$feat_name set feature_type = 'RNA_gene_$feat_name'"; 
+    #push @sql,"update RNA_gene_$feat_name set feature_type = 'RNA_gene_$feat_name'"; 
     push @sql,&col_types_and_indices("RNA_gene_$feat_name");
+
+    if($feat_name eq 'exon1_plus_enhancer'){
+	push @sql,"drop table if exists snRNA_gene_$feat_name";
+	push @sql,"create table snRNA_gene_$feat_name select * from $feat_name where feature_type like '%snRNA_".$feat_name."'";
+	push @sql,&col_types_and_indices("snRNA_gene_$feat_name");
+
+	push @sql,"drop table if exists snoRNA_gene_$feat_name";
+	push @sql,"create table snoRNA_gene_$feat_name select * from $feat_name where feature_type like '%snoRNA_".$feat_name."'";
+	push @sql,&col_types_and_indices("snoRNA_gene_$feat_name");
+
+	push @sql,"drop table if exists miRNA_gene_$feat_name";
+	push @sql,"create table miRNA_gene_$feat_name select * from $feat_name where feature_type like '%miRNA_".$feat_name."'";
+	push @sql,&col_types_and_indices("miRNA_gene_$feat_name");
+
+	push @sql,"drop table if exists miscRNA_gene_$feat_name";
+	push @sql,"create table miscRNA_gene_$feat_name select * from $feat_name where feature_type like '%miscRNA_".$feat_name."'";
+	push @sql,&col_types_and_indices("miscRNA_gene_$feat_name");
+
+	push @sql,"drop table if exists rRNA_gene_$feat_name";
+	push @sql,"create table rRNA_gene_$feat_name select * from $feat_name where feature_type like '%rRNA_".$feat_name."'";
+	push @sql,&col_types_and_indices("rRNA_gene_$feat_name");
+    }
 
     my $pseuds = "'pseudogene_$feat_name','repeat_$feat_name','retrotransposed_$feat_name'";
     push @sql,"drop table if exists pseudogene_$feat_name";
