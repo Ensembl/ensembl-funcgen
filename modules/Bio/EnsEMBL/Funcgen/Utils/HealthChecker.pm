@@ -163,11 +163,10 @@ sub update_db_for_release{
   #hence avoiding redoing longer methods
   $self->validate_new_seq_regions;#($force_srs);
   $self->update_meta_schema_version;
-  $self->update_meta_coord;
   $self->check_meta_strings;
   $self->analyse_and_optimise_tables;
   $self->set_current_coord_system;
-  
+  $self->update_meta_coord;
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
   $self->log_header("??? Have you diff'd the sql for each species vs. a fresh schema ???");
@@ -369,23 +368,27 @@ sub update_meta_coord{
   
 
   #Update each max_length for table_name and coord_system
+
+  my $sql;
+
   foreach my $table_name(@table_names){
   
-	my $sql1 = "select distinct(cs.name), mc.coord_system_id, cs.version, mc.max_length from coord_system cs, meta_coord mc where mc.table_name='$table_name' and mc.coord_system_id=cs.coord_system_id and cs.species_id = $species_id";
+	$sql = "select distinct(cs.name), mc.coord_system_id, cs.version, mc.max_length from coord_system cs, meta_coord mc where mc.table_name='$table_name' and mc.coord_system_id=cs.coord_system_id and cs.species_id = $species_id";
 	
 	$self->log('');
-	$self->log("Updating meta_coord max_length for $table_name:\n\tname\tcoord_system_id\tversion\tmax_length");
+	$self->log("Updating meta_coord max_length for $table_name:");
+	$self->log("name\tcoord_system_id\tversion\tmax_length");
 	
 	#can we test for emtpy array here? Then skip delete.
 	
-	my @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql1)};
+	my @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 	
 	#log this
-	map {$self->log("\t".join("\t", @{$_})."\n")} @info;
+	map {$self->log(join("\t", @{$_}))} @info;
 	
 	# Clean old entries
 	$self->log("Deleting old meta_coord entries");
-	my $sql = "DELETE mc FROM meta_coord mc, coord_system cs WHERE mc.table_name ='$table_name' and mc.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
+	$sql = "DELETE mc FROM meta_coord mc, coord_system cs WHERE mc.table_name ='$table_name' and mc.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
 	$self->db->dbc->db_handle->do($sql);
 	
 	# Generate new max_lengths
@@ -410,24 +413,44 @@ sub update_meta_coord{
 	#map {$self->log(join("\t", @{$_}))} ['coord_system_id', 'max_length', 'longest record dbID'];
 	$self->log(join("\t", ('coord_system_id', 'max_length', 'longest record dbID')));
 
-
 	foreach my $cs_id(@cs_ids){
 	  #This will always give a length of 1 even if there are no features present
 
-	  $sql = "SELECT s.coord_system_id, (t.seq_region_end - t.seq_region_start + 1 ) as max, t.${table_name}_id "
-			. "FROM $table_name t, seq_region s, coord_system cs "
-			  . "WHERE t.seq_region_id = s.seq_region_id "
-				. "and s.coord_system_id=${cs_id} "
-				. "and s.coord_system_id = cs.coord_system_id and cs.species_id = $species_id"
-				. " order by max desc limit 1";
+	  my @cs_lengths;
 
+	  #The probe_feature table is now too big to do this in one go
+	  #We need to break this down into sr_ids
 
-	  @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+	  $sql = "SELECT distinct t.seq_region_id from $table_name t, seq_region sr where t.seq_region_id=sr.seq_region_id and sr.coord_system_id=$cs_id";
+	  
+	  my @sr_ids = @{$self->db->dbc->db_handle->selectcol_arrayref($sql)};
+	  
+	  foreach my $sr_id(@sr_ids){
+
+		$sql = "SELECT (t.seq_region_end - t.seq_region_start + 1 ) as max, t.${table_name}_id "
+		  . "FROM $table_name t "
+			. "WHERE t.seq_region_id = $sr_id "
+			  . " order by max desc limit 1";
+		
+		
+		#warn $sql;
+		push @cs_lengths, [ $self->db->dbc->db_handle->selectrow_array($sql) ];
+	  }
+
+	  #This will now contain a list of arrays refs contain the max length and feature id for 
+	  #each seq_region in this coord_system
+	  #Now sort to get the longest
+	  #Can't sort on 2 day array in the normal way
+	  #One list list lists, the comparatee is no longer a list but a reference
+	  @cs_lengths = sort { $b->[0] <=> $a->[0] } @cs_lengths;
+	  
+  	  #@info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 	  #Convert one multi element array_ref into array
-	  @info = @{$info[0]};
-	  $self->log(join("\t\t", @info));
+	  #@info = @{$info[0]};
+	  #$self->log(join("\t\t", @info));
+	  $self->log(join("\t\t", ($cs_id, @{$cs_lengths[0]})));
 
-	  $sql = "INSERT INTO meta_coord values(\"${table_name}\", \"${cs_id}\", \"$info[1]\")";
+	  $sql = "INSERT INTO meta_coord values('${table_name}', $cs_id, ".$cs_lengths[0][0].')';
 
 
 	  #$sql = "INSERT INTO meta_coord "
@@ -437,7 +460,7 @@ sub update_meta_coord{
 	  #		. "WHERE t.seq_region_id = s.seq_region_id "
 	  #		  . "GROUP BY s.coord_system_id";
 	  
-		$self->db->dbc->db_handle->do($sql);
+	  $self->db->dbc->db_handle->do($sql);
 	}
 
 	#$self->log("New max_lengths for $table_name are:");
@@ -676,7 +699,7 @@ sub check_stable_ids{
   else{
 
 	#Can't count NULL field, so have to count regulatory_ffeature_id!!!
-	my $sql = 'select count(rf.regulatory_feature_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.stable_id is NULL and rf.seq_region_id = sr.seq_region_id and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.feature_set_id='.$fset->dbID;
+	my $sql = "select count(rf.regulatory_feature_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.stable_id is NULL and rf.seq_region_id = sr.seq_region_id and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.feature_set_id=".$fset->dbID;
 	
 	#warn "sql is $sql";
 
