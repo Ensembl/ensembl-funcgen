@@ -47,113 +47,6 @@ use strict;
 @ISA = qw( Bio::EnsEMBL::DBSQL::DBEntryAdaptor Bio::EnsEMBL::DBSQL::BaseAdaptor);
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
-=head2 fetch_by_db_accession
-
-  Arg [1]    : string $dbname - The name of the database which the provided
-               accession is for.
-  Arg [2]    : string $accession - The accesion of the external reference to
-               retrieve.
-  Example    : my $xref = $dbea->fetch_by_db_accession('Interpro','IPR003439');
-               print $xref->description(), "\n" if($xref);
-  Description: Retrieves a DBEntry (xref) via the name of the database it is
-               from and its primary accession in that database. Undef is
-               returned if the xref cannot be found in the database.
-  Returntype : Bio::EnsEMBL::DBSQL::DBEntry
-  Exceptions : thrown if arguments are incorrect
-  Caller     : general, domainview
-  Status     : Stable
-
-=cut
-
-#Is this different to the core code?
-#Yes we don't have a max rows limit!
-
-#sub fetch_by_db_accession {
-#  my $self = shift;
-#  my $dbname = shift;
-#  my $accession = shift;
-#
-#  my $sth = $self->prepare(
-#   "SELECT xref.xref_id, xref.dbprimary_acc, xref.display_label,
-#           xref.version, xref.description,
-#           exDB.dbprimary_acc_linkable, exDB.display_label_linkable, exDB.priority,
-#           exDB.db_name, exDB.db_display_name, exDB.db_release, es.synonym,
-#           xref.info_type, xref.info_text, exDB.type, exDB.secondary_db_name,
-#           exDB.secondary_db_table
-#    FROM   (xref, external_db exDB)
-#    LEFT JOIN external_synonym es on es.xref_id = xref.xref_id
-#    WHERE  xref.dbprimary_acc = ?
-#    AND    exDB.db_name = ?
-#    AND    xref.external_db_id = exDB.external_db_id");
-#
-#  $sth->bind_param(1,$accession,SQL_VARCHAR);
-#  $sth->bind_param(2,$dbname,SQL_VARCHAR);
-#  $sth->execute();
-#
-#  if(!$sth->rows() && lc($dbname) eq 'interpro') {
-#    #
-#    # This is a minor hack that means that results still come back even
-#    # when a mistake was made and no interpro accessions were loaded into
-#    # the xref table.  This has happened in the past and had the result of
-#    # breaking domainview
-#    #
-#    $sth->finish();
-#    $sth = $self->prepare
-#      ("SELECT null, i.interpro_ac, i.id, null, null, 'Interpro', null, null ".
-#       "FROM interpro i where i.interpro_ac = ?");
-#    $sth->bind_param(1,$accession,SQL_VARCHAR);
-#    $sth->execute();
-#  }
-#
-#  my $exDB;
-#
-#  while ( my $arrayref = $sth->fetchrow_arrayref()){
-#    my ( $dbID, $dbprimaryId, $displayid, $version, $desc, 
-#	 $primary_id_linkable, $display_id_linkable, $priority, $dbname, $db_display_name,
-#         $release, $synonym, $info_type, $info_text, $type, $secondary_db_name,
-#	 $secondary_db_table) = @$arrayref;
-#
-#    if(!$exDB) {
-#      $exDB = Bio::EnsEMBL::DBEntry->new
-#        ( -adaptor => $self,
-#          -dbID => $dbID,
-#          -primary_id => $dbprimaryId,
-#          -display_id => $displayid,
-#          -version => $version,
-#          -release => $release,
-#          -dbname => $dbname,
-#	  -primary_id_linkable => $primary_id_linkable,
-#	  -display_id_linkable => $display_id_linkable,
-#	  -priority => $priority,
-#	  -db_display_name=>$db_display_name,
-#	  -info_type => $info_type,
-#	  -info_text => $info_text,
-#	  -type => $type,
-#	  -secondary_db_name => $secondary_db_name,
-#	  -secondary_db_table => $secondary_db_table);
-#
-#      $exDB->description( $desc ) if ( $desc );
-#    }
-#
-#    $exDB->add_synonym( $synonym )  if ($synonym);
-#  }
-#
-#  $sth->finish();
-#
-#  return $exDB;
-#}
-
-
-#Is this different to the core code? The only thing here is the 
-# description is sourced from the xref and not from external_db
-#Mailed Ian/Daniel to fix
-
-#Have not fully change query/hit to ensembl target/translation to ensembl
-
-#We need to modify this to return full DBEntries with ensembl_object and linkage annotation
-#for a given external_id/accession
-#Currently can only list reg feat IDs for a given external_id
-
 
 
 =head2 _fetch_by_object_type
@@ -365,7 +258,7 @@ sub fetch_all_by_Gene {
 
   #_fetch_by_external_id
   #The problem here is that we want to return ox info aswell.
-  #Just rewrite _fetch_by_object_type
+  #Just rewrite _fetch_by_object_type?
 
 
 
@@ -581,6 +474,49 @@ sub list_probe_feature_ids_by_extid {
                                  $external_db_name );
 }
 
+=head2 list_probe_ids_by_extid
+
+  Arg [1]    : string $external_name
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_probe_id_by_extid('ENST000000000001');
+  Description: Gets a list of probe IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+sub list_probe_ids_by_extid {
+  my ( $self, $external_name, $external_db_name ) = @_;
+
+  return
+    $self->_type_by_external_id( $external_name, 'Probe', undef,
+                                 $external_db_name );
+}
+
+
+=head2 list_probeset_ids_by_extid
+
+  Arg [1]    : string $external_name
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_probeset_ids_by_extid('ENST000000000001');
+  Description: Gets a list of probeset IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+sub list_probeset_ids_by_extid {
+  my ( $self, $external_name, $external_db_name ) = @_;
+
+  return
+    $self->_type_by_external_id( $external_name, 'ProbeSet', undef,
+                                 $external_db_name );
+}
+
 
 =head2 list_regulatory_feature_ids_by_external_db_id
 
@@ -696,7 +632,17 @@ sub _type_by_external_id {
 	$from_sql  = 'probe_feature pf, ';
 	$where_sql = qq( pf.probe_feature_id = oxr.ensembl_id AND );
   }
-
+  elsif(lc($ensType) eq 'probe'){
+	$from_sql  = 'probe p, ';
+	$where_sql = qq( p.probe_id = oxr.ensembl_id AND );
+  }
+  elsif(lc($ensType) eq 'probeset'){
+	$from_sql  = 'probe_set ps, ';
+	$where_sql = qq( ps.probe_set_id = oxr.ensembl_id AND );
+  }
+  else{
+	throw("ensembl_object_type $ensType is not accommodated");
+  }
   
 
   if ( defined($external_db_name) ) {
@@ -851,7 +797,17 @@ sub _type_by_external_db_id{
 	$from_sql  = 'probe_feature pf, ';
 	$where_sql = qq( pf.probe_feature_id = oxr.ensembl_id AND );
   }
-
+  elsif(lc($ensType) eq 'probe'){
+	$from_sql  = 'probe p, ';
+	$where_sql = qq( p.probe_id = oxr.ensembl_id AND );
+  }
+  elsif(lc($ensType) eq 'probeset'){
+	$from_sql  = 'probe_set ps, ';
+	$where_sql = qq( pf.probe_set_id = oxr.ensembl_id AND );
+  }
+  else{
+	throw("ensembl_object_type $ensType is not accommodated");
+  }
 
   my $query = 
     "SELECT $ID_sql
