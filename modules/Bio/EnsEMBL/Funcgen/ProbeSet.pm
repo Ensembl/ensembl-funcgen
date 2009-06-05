@@ -113,32 +113,6 @@ sub new {
 	return $self;
 }
 
-=head2 add_Array_probeset_name
-
-  Arg [1]    : Bio::EnsEMBL::Array - array
-  Arg [2]    : string - probeset name
-  Example    : $probe->add_Array_probeset_name($array, $probename);
-  Description: Adds a probeset name / array pair to a probeset, allowing incremental
-               generation of a probeset.
-  Returntype : None
-  Exceptions : None
-  Caller     : General,
-               ProbeSet->new(),
-               ProbeSetAdaptor->_obj_from_sth(),
-  Status     : Medium Risk
-
-=cut
-
-sub add_Array_probename {
-    my $self = shift;
-
-	throw("Not implemented");
-    my ($array, $probeset_name) = @_;
-    $self->{ 'arrays'     } ||= {};
-    $self->{ 'arrays'     }->{$array->name()} = $array;
-    $self->{ 'probesetnames' }->{$array->name()} = $probeset_name;
-}
-
 
 
 =head2 get_all_ProbeFeatures
@@ -182,21 +156,44 @@ sub get_all_ProbeFeatures {
 =cut
 
 sub get_all_Arrays {
-    my $self = shift;
+  my $self = shift;
 
-	throw("get_all_Arrays not implemented yet");
-
-	# Do we have Array objects for this probe?
-    if (defined $self->{'arrays'}) {
-		return [ values %{$self->{'arrays'}} ];
-    } elsif ( $self->adaptor() && $self->dbID() ) { 
-		warning('Not yet implemented, need to get Arrays from array_chip_ids');
-		return [];
-    } else {
-		warning('Need database connection to get Arrays by name');
-		return [];
-    }
+  if (defined $self->{'arrays'}) {
+	return $self->{'arrays'};
+  } 
+  else{
+	$self->{arrays} = $self->adaptor->db->get_ArrayAdaptor->fetch_all_by_ProbeSet($self);
+  }
+  
+  $self->{arrays}
 }
+
+
+=head2 get_all_Probes
+
+  Args       : None
+  Example    : my @probes = @{$probeset->get_all_Probes();
+  Description: Returns all probes belonging to this ProbeSet
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Probe objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_all_Probes {
+  my $self = shift;
+
+  if (defined $self->{'probes'}) {
+	return $self->{'probes'};
+  } 
+  else{
+	$self->{probes} = $self->adaptor->db->get_ProbeAdaptor->fetch_all_by_ProbeSet($self);
+  }
+  
+  $self->{probes}
+}
+
 
 
 #sub get_all_array_chips_ids?
