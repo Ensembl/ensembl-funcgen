@@ -45,7 +45,7 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Tie::File;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
 =head2 fetch_by_array_probe_probeset_name
@@ -228,7 +228,7 @@ sub fetch_all_by_name{
   Returntype : Listref of Bio::EnsEMBL::Probe objects
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk -  fetch_all_by_probeset_name?
 
 =cut
 
@@ -241,6 +241,28 @@ sub fetch_all_by_probeset {
 	my $probe_set_id = $self->db->get_ProbeSetAdaptor->fetch_by_name($probeset)->probe_set_id();
 	return $self->generic_fetch("p.probe_set_id = '$probe_set_id'");
 }
+
+
+=head2 fetch_all_by_ProbeSet
+
+  Arg [1]    : Bio::EnsEMBL::ProbeSet
+  Example    : my @probes = @{$opa->fetch_all_by_ProbeSet($pset)};
+  Description: Fetch all probes in a particular ProbeSet.
+  Returntype : Listref of Bio::EnsEMBL::Probe objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_ProbeSet {
+	my ($self, $probeset) = @_;
+	
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $probeset);
+	return $self->generic_fetch('p.probe_set_id = '.$probeset->dbID);
+}
+
+
 
 =head2 fetch_all_by_Array
 
