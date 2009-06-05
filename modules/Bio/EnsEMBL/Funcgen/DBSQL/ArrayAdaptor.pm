@@ -44,6 +44,10 @@ use vars qw(@ISA);
 #May need to our this?
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
+
+my @true_tables = (['array', 'a']);
+my @tables = @true_tables;
+
 =head2 fetch_by_array_chip_dbID
 
   Arg [1]    : int - dbID of array_chip
@@ -56,21 +60,25 @@ use vars qw(@ISA);
 
 =cut
 
+#Changed to use simple query extension
+#Removed 1 query
+#3.7 % or 1.04 times faster
+
 sub fetch_by_array_chip_dbID {
-    my $self = shift;
-    my $ac_dbid = shift;
-	my $sth = $self->prepare("
-		SELECT a.array_id
-		FROM array a, array_chip ac
-		WHERE a.array_id = ac.array_id
-		AND ac.array_chip_id = $ac_dbid
-	");
-
-
-	$sth->execute();
-	my ($array_id) = $sth->fetchrow();
-
-	return $self->fetch_by_dbID($array_id);
+  my ($self, $ac_dbid) = @_;
+  
+  throw('Must provide an ArrayChip dbID') if ! $ac_dbid;
+  
+  #Extend query tables
+  push @tables, (['array_chip', 'ac']);
+  
+  #Extend query and group
+  my $array = $self->generic_fetch('ac.array_chip_id='.$ac_dbid.' and ac.array_id=a.array_id GROUP by a.array_id')->[0];
+  
+  #Reset tables
+  @tables = @true_tables;
+  
+  return $array;
 }
 
 
@@ -94,8 +102,8 @@ sub fetch_by_name_vendor {
     throw("Must provide and array and vendor name") if (! ($name && $vendor));
 
     #unique key means this only returns one element
-    my ($result) = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};	
-    return $result;
+    #my ($result) = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};	
+    return $self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")->[0];
 }
 
 =head2 fetch_by_name_class
@@ -112,13 +120,10 @@ sub fetch_by_name_vendor {
 =cut
 
 sub fetch_by_name_class {
-    my ($self, $name, $class) = @_;
-    
-    throw("Must provide and array and class e.g.'HuGene_1_0_st_v1', 'AFFY_ST'") if (! ($name && $class));
-
-
-    my ($result) = @{$self->generic_fetch("a.name = '$name' and a.class='".uc($class)."'")};	
-    return $result;
+  my ($self, $name, $class) = @_;
+  throw("Must provide and array and class e.g.'HuGene_1_0_st_v1', 'AFFY_ST'") if (! ($name && $class));
+  #my ($result) = @{$self->generic_fetch("a.name = '$name' and a.class='".uc($class)."'")};	
+  return $self->generic_fetch("a.name = '$name' and a.class='".uc($class)."'")->[0];
 }
 
 
@@ -138,7 +143,6 @@ sub fetch_all_by_class {
     my ($self, $class) = @_;
     
     throw("Must provide and array class e.g.'AFFY_ST'") if (! defined $class);
-
     return $self->generic_fetch("a.class='".uc($class)."'");	
 }
 
@@ -174,10 +178,10 @@ sub fetch_all_by_type {
 
 =head2 fetch_all_by_Experiment
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiement
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
   Example    : my @arrays = @{$aa->fetch_all_by_Experiment($exp)};
   Description: Fetch all arrays associated with a given Experiment
-               This is a convenience method to hide the 3 adaptor required 
+               This is a convenience method to hide the 2 adaptors required 
                for this call.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : none
@@ -186,18 +190,62 @@ sub fetch_all_by_type {
 
 =cut
 
+#Changed to use simple query extension
+#Removed 2 queries
+#96.4% or 26.7 times faster!!!
+
 sub fetch_all_by_Experiment{
   my ($self, $exp) = @_;
 
-  my %array_ids;
+ $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
+  
+  #Extend query tables
+  push @tables, (['array_chip', 'ac'], ['experimental_chip', 'ec']);
+
+  #Extend query and group
+  my $arrays = $self->generic_fetch($exp->dbID.'=ec.experiment_id and ec.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
+
+  #Reset tables
+  @tables = @true_tables;
 	
-  my $echips = $self->db->get_ExperimentalChipAdaptor->fetch_all_by_Experiment($exp);
+  return $arrays;
+}
 
-  foreach my $achip(@{$self->db->get_ArrayChipAdaptor->fetch_all_by_ExperimentalChips($echips)}){
-	$array_ids{$achip->array_id()} = 1;
-  }
 
-  return $self->generic_fetch('a.array_id IN ('.join(', ', keys %array_ids).')');
+=head2 fetch_all_by_ProbeSet
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ProbeSet
+  Example    : my @arrays = @{$aa->fetch_all_by_ProbeSet($probeset)};
+  Description: Fetch all arrays containing a given ProbeSet
+               This is a convenience method to hide the 2 adaptors required 
+               for this call.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
+  Exceptions : none
+  Caller     : General
+  Status     : at risk
+
+=cut
+
+
+#Changed to use simple query extension
+#Removed 1 query and hash loop
+#This is only 1.04 times faster or ~ 4%
+
+sub fetch_all_by_ProbeSet{
+  my ($self, $pset) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
+
+  #Extend query tables
+  push @tables, (['array_chip', 'ac'], ['probe', 'p']);
+
+  #Extend query and group
+  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
+
+  #Reset tables
+  @tables = @true_tables;
+  
+  return $arrays;
 }
 
 
@@ -238,7 +286,7 @@ sub fetch_attributes {
 sub _tables {
 	my $self = shift;
 	
-	return ['array', 'a'];
+	return @tables;
 }
 
 =head2 _columns
