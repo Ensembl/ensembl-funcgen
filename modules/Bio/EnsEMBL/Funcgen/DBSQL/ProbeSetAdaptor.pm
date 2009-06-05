@@ -44,8 +44,10 @@ use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
+my @true_tables = (['probe_set', 'ps']);
+my @tables = @true_tables;
 
 #may need to pass array object, as there is a possibilty of it being non-unique between vendors?
 
@@ -161,33 +163,36 @@ sub fetch_all_by_Array {
 
 =cut
 
+#This is a good candidate for complex query extension
+#As we will most likely want the probe also if we are fetching the ProbeSet
+#For a given feature.
+#We could also set the probe in the ProbeFeature object, so we don't re-query
+#should the user use ProbeFeature->get_probe
+#This is also a case for passing the array name to automatically set
+#the probe name? As we will likely know the array name beforehand.
+
+#Could we also bring back annotations for this Probe/ProbeSet?
+#
+
 sub fetch_by_ProbeFeature {
-	my $self    = shift;
-	my $feature = shift;
+	my ($self, $pfeature) = @_;
 	
-	if (
-		!ref($feature)
-		|| !$feature->isa('Bio::EnsEMBL::Funcgen::ProbeFeature')
-		|| !$feature->{'probe_id'}
-	) {
-		throw('fetch_by_ProbeFeature requires a stored Bio::EnsEMBL::Funcgen::ProbeFeature object');
-	}
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeFeature', $pfeature);
+
+	#Extend query tables
+	push @tables, (['probe', 'p']);
 	
-	my $sth = $self->prepare("
-		SELECT probe_set_id
-		FROM probe_set ps, probe p, probe_feature pf
-		WHERE pf.probe_id = p.probe_id
-        AND ps.probe_set_id = p.probe_set_id
-		AND pf.probe_feature_id = ?
-	");
+	#Extend query and group
+	my $pset =  $self->generic_fetch('p.probe_id='.$pfeature->probe_id.' and p.probe_set_id=ps.probe_set_id GROUP by ps.probe_set_id')->[0];
 
-	$sth->bind_param(1, $feature->{'probe_id'},    SQL_VARCHAR);
-	$sth->execute();
+	#Reset tables
+	@tables = @true_tables;
+  
+	return $pset;
 
-	my ($probeset_id) = $sth->fetchrow();
 
-	return $self->fetch_by_dbID($probeset_id);
 }
+
 
 =head2 _tables
 
@@ -205,7 +210,7 @@ sub fetch_by_ProbeFeature {
 sub _tables {
 	my $self = shift;
 
-  	return [ 'probe_set', 'ps' ];
+  	return @tables;
 }
 
 =head2 _columns
@@ -344,43 +349,6 @@ sub store {
 			next PROBESET;
 		}
 		
-		# Get all the arrays this probe is on and check they're all in the database
-		#my $arrays = $probeset->get_all_Arrays();
-		#my @stored_arrays;
-		#for $array (@$arrays) {
-		#	if ( defined $array->dbID() ) {
-		#		push @stored_arrays, $array;
-		#	}
-		#}
-		#if ( !@stored_arrays ) {
-		#	warning('ProbeSets need attached arrays to be stored in the database');
-		#	next PROBESET;
-		#}
-
-		# Insert separate entry (with same probe_set_id) in probe_set
-		# for each array the probe is on
-		#my $dbID;
-		#for $array (@stored_arrays) {
-		#		
-
-		#	if (defined $dbID) {
-		#		$sth = $self->prepare("
-		#			INSERT INTO probe_set
-		#			(probe_set_id, name, size, array_chip_id, family)
-		#			VALUES (?, ?, ?, ?, ?, ?)
-		#		");
-		#
-
-		#		# Probesets we've seen already
-		#		$sth->bind_param(1, $dbID,                                 SQL_INTEGER);
-		#		$sth->bind_param(2, $probeset->name(),                     SQL_VARCHAR);
-		#		$sth->bind_param(3, $probeset->size(),                     SQL_INTEGER);
-		#		$sth->bind_param(4, $probeset->array_chip_id(),            SQL_INTEGER);
-		#		$sth->bind_param(5, $probeset->family(),                   SQL_VARCHAR);
-		#		$sth->execute();
-		#	} else {
-			
-		# New probeset
 		$sth = $self->prepare("
 					INSERT INTO probe_set
 					(name, size, family)
@@ -394,9 +362,7 @@ sub store {
 		my $dbID = $sth->{'mysql_insertid'};
 		$probeset->dbID($dbID);
 		$probeset->adaptor($self);
-		#}
-		#}
-	}
+	  }
 
 	return \@probesets;
 }
