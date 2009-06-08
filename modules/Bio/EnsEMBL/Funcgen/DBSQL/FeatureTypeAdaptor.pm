@@ -49,6 +49,9 @@ use vars qw(@ISA);
 #May need to our this?
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
+my @true_tables =(['feature_type', 'ft']);
+my @tables = @true_tables; 
+
 =head2 fetch_by_name
 
   Arg [1]    : string - name of FeatureType
@@ -133,22 +136,17 @@ sub fetch_all_by_associated_SetFeature{
   my ($self, $sfeat) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::SetFeature', $sfeat);
-  my $constraint;
-
-  #Need to protect against SQL injection here?
-  #Not so vital as this never takes user supplied data
-
-  my $sql = 'SELECT feature_type_id from associated_feature_type where feature_table="'.$sfeat->feature_set->type.'" and feature_id='.$sfeat->dbID;
+  
+  push @tables, ['associated_feature_type', 'aft'];
+  my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.feature_table="'.$sfeat->feature_set->type.'" AND aft.feature_id='.$sfeat->dbID;
 
 
+  my $feature_types =  $self->generic_fetch($constraint);
+  #Reset tables
+  @tables = @true_tables; 
 
-  my @ft_ids = map {$_ = "@$_"} @{$self->dbc->db_handle->selectall_arrayref($sql)};
-  $constraint = ' feature_type_id in ('.join(',',@ft_ids).') ' if @ft_ids;
-
-  return ($constraint) ? $self->generic_fetch($constraint) : [];
+  return $feature_types;
 }
-
-
 
 =head2 _tables
 
@@ -166,9 +164,7 @@ sub fetch_all_by_associated_SetFeature{
 sub _tables {
   my $self = shift;
 	
-  return (
-	  ['feature_type', 'ft'],
-	 );
+  return @tables;
 }
 
 =head2 _columns
