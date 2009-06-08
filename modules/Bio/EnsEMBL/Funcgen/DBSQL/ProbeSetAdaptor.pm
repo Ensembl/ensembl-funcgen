@@ -19,11 +19,6 @@ my $probeset = $opa->fetch_by_array_probeset_name('Array-1', 'ProbeSet-1');
 The ProbeSetAdaptor is a database adaptor for storing and retrieving
 ProbeSet objects.
 
-=head1 AUTHOR
-
-This module was created by Nathan Johnson, but is almost entirely based on the
-ProbeAdaptor module written by Ian Sealy and Arne Stabenau.
-
 This module is part of the Ensembl project: http://www.ensembl.org/
 
 =head1 CONTACT
@@ -49,7 +44,6 @@ use vars qw(@ISA);
 my @true_tables = (['probe_set', 'ps']);
 my @tables = @true_tables;
 
-#may need to pass array object, as there is a possibilty of it being non-unique between vendors?
 
 =head2 fetch_by_array_probeset_name
 
@@ -66,89 +60,32 @@ my @tables = @true_tables;
 
 =cut
 
-sub fetch_by_array_probeset_name {
-	my $self          = shift;
-	my $array_name    = shift;
-	my $probeset_name = shift;
+sub fetch_by_array_probeset_name{
+	my ($self, $array_name, $probeset_name) = @_;
 	
-	my $sth = $self->prepare("
-		SELECT probe_set_id
-		FROM probe_set ps, array a, array_chip ac
-		WHERE a.array_id = ac.array_id
-		AND a.name = ?
-		AND ps.name = ?
-	");
-	
-	$sth->bind_param(1, $array_name,    SQL_VARCHAR);
-	$sth->bind_param(2, $probeset_name, SQL_VARCHAR);
-
-	$sth->execute();
-	
-	my ($probeset_id) = $sth->fetchrow();
-	
-	if ($probeset_id) {
-		return $self->fetch_by_dbID($probeset_id);
-	} else {
-		return undef;
-	}
-}
-
-
-
-=head2 fetch_all_by_Array
-
-  Arg [1]    : Bio::EnsEMBL::Array
-  Example    : my @probesets = @{$opsa->fetch_all_by_Array($array)};
-  Description: Fetch all probes on a particular array.
-  Returntype : Listref of Bio::EnsEMBL::ProbeSet objects.
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Array {
-	my $self  = shift;
-	my $array = shift;
-
-	throw("Not yet implemented");
-
-	my ($probeset_id, @probesets);
-	
-	if ( !ref($array) || !$array->isa('Bio::EnsEMBL::Array') ) {
-		warning('fetch_all_by_Array requires a Bio::EnsEMBL::Array object');
-		return [];
-	}
-	
-	my $array_id = $array->dbID();
-	if (!defined $array_id) {
-		warning('fetch_all_by_Array requires a stored Bio::EnsEMBL::Array object');
-		return [];
+	if(! ($array_name && $probeset_name)){
+	 throw('Must provide array_name and probeset_name arguments'); 
 	}
 
 
-	#Nath
-	#retrieve all array_chip_ids and do a generic fetch using a joined or statement?
-	#or
-	#build and array of probesets using the fetch_by_dbID method
-
+	#Extend query tables
+	push @tables, (['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']);
 	
-	my $sth = $self->prepare("
-		SELECT probe_set_id
-		FROM probe_set ps, array a, array_chip ac
-		WHERE a.array_id = ac.array_id
-        AND ac.array_chip_id = ps.array_chip_id
-		AND a.name = $array_id
-	");
-	
+	#Extend query and group
+	#This needs generic_fetch_bind_param
+	my $constraint = 'ps.name= ? and ps.probe_set_id=p.probe_set_id and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name= ? group by ps.probe_set_id';
 
-	$sth->execute();
-	
-	while($probeset_id = $sth->fetchrow()){
-		push @probesets, $self->fetch_by_dbID($probeset_id);
-	}
+	#my $constraint = 'ps.name="'.$probeset_name.'" and ps.probe_set_id=p.probe_set_id and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name="'.$array_name.'" group by ps.probe_set_id';
 
-	return \@probesets;
+	$self->bind_param_generic_fetch($probeset_name,SQL_VARCHAR);
+	$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
+	my $pset =  $self->generic_fetch($constraint)->[0];
+	
+	#Reset tables
+	@tables = @true_tables;
+  
+	return $pset;
+
 }
 
 =head2 fetch_by_ProbeFeature
