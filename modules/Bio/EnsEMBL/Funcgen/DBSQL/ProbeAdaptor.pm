@@ -19,11 +19,6 @@ my $probe = $opa->fetch_by_array_probe_probeset('Array-1', 'Probe-1', undef);
 The ProbeAdaptor is a database adaptor for storing and retrieving
 Probe objects.
 
-=head1 AUTHOR
-
-This module was created by Nathan Johnson, but is almost entirely based on the
-ProbeAdaptor module written by Arne Stabenau.
-
 This module is part of the Ensembl project: http://www.ensembl.org/
 
 =head1 CONTACT
@@ -46,6 +41,8 @@ use Tie::File;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+my @true_tables = (['probe', 'p']);
+my @tables = @true_tables;
 
 
 =head2 fetch_by_array_probe_probeset_name
@@ -67,6 +64,35 @@ use vars qw(@ISA);
 sub fetch_by_array_probe_probeset_name {
 	my ($self, $array_name, $probe_name, $probeset_name) = @_;
 	
+	if(! (defined $array_name && defined $probe_name)){
+	  throw('You must provide at least and array and probe name');
+	}
+
+	#Extend query
+	push @tables, (['array', 'a'], ['array_chip', 'ac']);
+	my $constraint = 'a.name = ? AND a.array_id=ac.array_id AND ac.array_chip_id=p.array_chip_id AND p.name= ?' ;
+	$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
+	$self->bind_param_generic_fetch($probe_name,SQL_VARCHAR);
+
+	#Add probeset clause
+	if(defined $probeset_name){
+	  $constraint .= ' AND p.probe_set_id = ps.probe_set_id AND ps.name = ?';
+	  push @tables, ['probe_set', 'ps'];
+	  $self->bind_param_generic_fetch($probeset_name,SQL_VARCHAR);
+	}
+
+	#Have to group by primary key!
+	$constraint .= ' GROUP by p.probe_id, p.name, p.array_chip_id';	
+	my $probe =  $self->generic_fetch($constraint)->[0];
+		
+	#Reset tables
+	@tables = @true_tables; 
+	return $probe;
+}
+
+sub fetch_by_array_probe_probeset_nameold {
+	my ($self, $array_name, $probe_name, $probeset_name) = @_;
+	
 	my $probeset_clause = "";
 	my $ps_table_alias = "";
 
@@ -76,8 +102,8 @@ sub fetch_by_array_probe_probeset_name {
 	}
 
 	if(defined $probeset_name){
-		$probeset_clause = "AND (p.probe_set_id = ps.probe_set_id AND ps.name = $probeset_name)";
-		$ps_table_alias = ", probe_set op";
+		$probeset_clause = "AND (p.probe_set_id = ps.probe_set_id AND ps.name ='$probeset_name')";
+		$ps_table_alias = ", probe_set ps";
 	}
 
 	
@@ -109,6 +135,7 @@ sub fetch_by_array_probe_probeset_name {
 	$sql = "SELECT p.probe_id FROM probe p $ps_table_alias".
 	  " WHERE $ac_clause $probeset_clause AND p.name ='$probe_name'";
 
+	#warn $sql;
 
 	my ($probe_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 	
@@ -126,6 +153,7 @@ sub fetch_by_array_probe_probeset_name {
 		return undef;
 	}
 }
+
 
 =head2 fetch_probe_cache_by_Experiment
 
@@ -218,29 +246,6 @@ sub fetch_all_by_name{
 }
 
 
-
-
-=head2 fetch_all_by_probeset
-
-  Arg [1]    : string - probeset name
-  Example    : my @probes = @{$opa->fetch_all_by_probeset('Probeset-1')};
-  Description: Fetch all probes in a particular probeset.
-  Returntype : Listref of Bio::EnsEMBL::Probe objects
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk -  fetch_all_by_probeset_name?
-
-=cut
-
-sub fetch_all_by_probeset {
-	my $self     = shift;
-	my $probeset = shift;
-
-	#use ProbeSet adaptor?
-	#my $probe_set_id = $self->db->db_handle->selectrow_array("select oligo_probe_set_id from oligo_probe_set);
-	my $probe_set_id = $self->db->get_ProbeSetAdaptor->fetch_by_name($probeset)->probe_set_id();
-	return $self->generic_fetch("p.probe_set_id = '$probe_set_id'");
-}
 
 
 =head2 fetch_all_by_ProbeSet
@@ -357,7 +362,7 @@ sub fetch_by_ProbeFeature {
 sub _tables {
 	my $self = shift;
 
-  	return [ 'probe', 'p' ];
+  	return @tables;
 }
 
 =head2 _columns
@@ -436,7 +441,7 @@ sub _objs_from_sth {
 	  #Can we not change this to an ArrayChip cache and just reimplement the array method?
 
 		$array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
-
+	
 		
 		#I don't think we need this?  Certainly not for storing
 
