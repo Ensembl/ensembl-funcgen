@@ -57,7 +57,7 @@ sub new {
   $self->{'feature_types'} = {
 							   'cisRED Search Region'   => {
 															name        => 'cisRED Search Region',
-															class       => 'Region',
+															class       => 'Search Region',
 															description => 'cisRED search region',
 												   },
 							   'cisRED Motif' => {
