@@ -28,7 +28,7 @@ sub new {
   $self->{'feature_types'} = {(
 							   'VISTA Target'   => {
 													name        => 'VISTA Target', 
-													class       => 'Region',
+													class       => 'Search Region',
 													description => 'VISTA target region',
 												   },
 							   'VISTA Enhancer' => {
@@ -38,7 +38,7 @@ sub new {
 												   },
 							   'VISTA Target - Negative' => {
 															 name        => 'VISTA Target - Negative', 
-															 class => 'Region',
+															 class => 'Search Region',
 															 description => 'Enhancer negative region identified by VISTA assay',
 															},
 							  )};
