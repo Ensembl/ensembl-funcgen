@@ -114,26 +114,6 @@ use vars qw(@ISA);
 #force association when loading features
 
 
-=head2 fetch_all_result_feature_sets
-
-  Example    : my @web_optimised_set = @{$rset_adaptor->fetch_all_result_feature_sets};
-  Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets which have been extracted 
-               and compressed in the result_feature table.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
-  Exceptions : None
-  Caller     : general
-  Status     : At Risk - remove and add status
-
-=cut
-
-sub fetch_all_result_feature_sets{
-  my $self = shift;
-  
-  throw('change to status call');
-  return $self->generic_fetch('rs.result_feature_set=1');
-}
-
-
 =head2 fetch_all_linked_by_ResultSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::ResultSet
@@ -445,10 +425,6 @@ sub _default_where_clause {
 sub _final_clause {
   #do not mess with this!
   return ' GROUP by cc.chip_channel_id, cc.result_set_id ORDER BY rs.result_set_id, rs.cell_type_id, rs.feature_type_id';
-  
-  
-  
-  
 }
 
 
