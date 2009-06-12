@@ -174,7 +174,7 @@ sub stable_id {
 	
   $self->{'stable_id'} = shift if @_;
   
-  return  (defined $self->{'stable_id'}) ? sprintf("ENSR%011d", $self->{'stable_id'}) : undef;
+  return  (defined $self->{'stable_id'}) ? sprintf('ENS'.$self->{'_species_code'}."R%011d", $self->{'stable_id'}) : undef;
 }
 
 
@@ -193,10 +193,9 @@ sub stable_id {
 
 #change to store attrs in type hash?
 
-sub regulatory_attributes {
+sub regulatory_attributes{
   my ($self, $attrs) = @_;
   
-
   my $table;
 
   #This is causing errors when we have not yet set the adaptor
@@ -234,14 +233,13 @@ sub regulatory_attributes {
 	#temporarily yes!!
 	#Until we pass the actual features in the attr cache from build_regulatory_features.pl
 	
-
-
 	foreach my $table(keys %{$self->{'regulatory_attributes'}}){
 
 	  foreach my $dbID(keys %{$self->{'regulatory_attributes'}{$table}}){
 		
 		if(! defined $self->{'regulatory_attributes'}{$table}{$dbID}){
 		  $self->{'regulatory_attributes'}{$table}{$dbID} = $adaptors{$table}->fetch_by_dbID($dbID);
+		  #This is much faster than the fetch_all_by_dbID_list approach
 		}
 	  }
 	}
@@ -249,6 +247,7 @@ sub regulatory_attributes {
 
   return [ map values %{$self->{'regulatory_attributes'}{$_}}, keys %{$self->{'regulatory_attributes'}} ];
 }
+
 
 =head2 _attribute_cache
 

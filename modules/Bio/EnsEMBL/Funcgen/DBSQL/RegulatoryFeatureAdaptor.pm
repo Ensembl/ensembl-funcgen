@@ -237,32 +237,33 @@ sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
 
   
-	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
-	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
+  #For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
+  #So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
+  # This code is ugly because caching is used to improve speed
+  	
+  my ($sa, $reg_feat);#, $old_cs_id);
+  $sa = ($dest_slice) ? $dest_slice->adaptor->db->get_SliceAdaptor() : $self->db->get_SliceAdaptor();
+  #don't really need this if we're using DNADBSliceAdaptor?
+  
+  #Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
+  #Hence it should always be on the same coord system
+  my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
+  my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
+  my (@features, @reg_attrs, $seq_region_id);
+  my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
+  my $skip_feature = 0;
+  
+  my %feature_adaptors = (
+						  'annotated' => $self->db->get_AnnotatedFeatureAdaptor(),
+						  #external?
+						 );
+  
 
-	# This code is ugly because caching is used to improve speed
+  #Stable ID species prefix hack
+  #May not have species set so use dbname
 
-	#my $sa = $self->db->get_SliceAdaptor();
+  my $species_code = ($self->db->dbc->dbname =~ /mus_musculus/) ? 'MUS' : '';
 
-	
-	my ($sa, $reg_feat);#, $old_cs_id);
-	$sa = ($dest_slice) ? $dest_slice->adaptor->db->get_SliceAdaptor() : $self->db->get_SliceAdaptor();
-	#don't really need this if we're using DNADBSliceAdaptor?
-
-	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
-	#Hence it should always be on the same coord system
-	#my $aa = $self->db->get_AnalysisAdaptor();
-	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
-	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-	my (@features, @reg_attrs, $seq_region_id);
-	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
-	my $skip_feature = 0;
-
-	my %feature_adaptors = (
-							'annotated' => $self->db->get_AnnotatedFeatureAdaptor(),
-							#external?
-						   );
-	
 	
 	my (
 	    $dbID,                  $efg_seq_region_id,
@@ -463,6 +464,9 @@ sub _objs_from_sth {
 			#'regulatory_attributes' => $reg_attrs,
 			'stable_id'      => $stable_id,
 		   });
+
+		#Stable ID species code hack
+		$reg_feat->{'_species_code'} = $species_code;
 	  }
 	
   
