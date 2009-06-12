@@ -59,6 +59,7 @@
 #    we won't get duplication should the job fail halfway through. This is because hceck existing only check oxs, not uos.
 # 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
 # 13.Collect warning into summary repoprt to list at very end.
+# 14 Reduce max_transcripts as this is never being hit due to alignment threshold
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
@@ -980,7 +981,7 @@ cache_arrays_per_object($probe_db);
 
 my ($linkage_annotation, $pc, $transcript_slice, $slice);
 my (@exons, $num_exons, $first_exon, $last_exon, $probe_features, $probe, $probe_id, $feature_id);
-my ($probeset_id, $probeset_name, $transcript_key, $log_name, $transcript_sid);
+my ($probeset_id, $probeset_name, $transcript_key, $log_name, $transcript_sid, %utr_counts);
 my $failed_extend = 0;
 
 $Helper->log("Performing overlap analysis. % Complete:");
@@ -1011,6 +1012,8 @@ foreach my $transcript (@transcripts) {
 	  my $utr = $transcript->$method;
 
 	  if(defined $utr){
+
+		push @{$utr_counts{$end}}, $utr;
 		
 		#Hard extend takes presidence over multiplier
 		if(defined $utr_extends{$end}){
@@ -1305,7 +1308,7 @@ foreach my $transcript (@transcripts) {
 		if ($exon_overlap && $flank_overlap) {
 		  $linkage_annotation = "exon/${flank_end}' flank boundary";
 		} elsif ($exon_overlap) {
-		  $linkage_annotation = 'exon match';
+		  $linkage_annotation = 'exon';
 		} else {				#only flank over lap
 		  $linkage_annotation = "${flank_end}' flank";
 		}
@@ -1442,7 +1445,19 @@ foreach my $transcript (@transcripts) {
   print OUT "\n";
 }
 
+$Helper->log('');
 $Helper->log("Failed to extend $failed_extend transcripts") if $failed_extend;
+
+
+foreach my $end(5, 3){
+  my $total_length = 0;
+  map $total_length += $_, @{$utr_counts{$end}};
+  my $num_utrs = scalar(@{$utr_counts{$end}});
+  my $average = ($num_utrs) ? ($total_length/$num_utrs) : 0;
+  
+
+  $Helper->log("Seen $num_utrs $end prime UTRs with and average length of $average");
+}
 
 $Helper->log_header("Writing @array_names Xrefs", 0, 'append_date');
 my $um_cnt = 0;
@@ -1995,6 +2010,10 @@ sub check_existing_and_exit {
   #Can we change this to use analysis_id?
   #Need to write patch first?
 
+  #May this should be in ArrayHelper?
+  #And used by TranscriptXrefReport?
+  #Like wise with ProbeAlignReport?
+
   my $xref_sth = $xref_db->dbc()->prepare("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='$xref_object' and ox.ensembl_id=${probe_join} and ox.linkage_annotation!='ProbeTranscriptAlign' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name=?");
 
 
@@ -2004,14 +2023,13 @@ sub check_existing_and_exit {
     my $cnt = $xref_sth->fetchrow_array();#Does not return array if only one value?!
 	
     if ($cnt > 0) {
-      print "Array $array already has $cnt xrefs, exiting.\nThere may be other arrays with xrefs. Use -delete to remove them if required.\n";
+      warn "Array $array already has $cnt xrefs, exiting.\nThere may be other arrays with xrefs. Use -delete to remove them if required.\n";
       exit(1);
     }
 
   }
 
   $xref_sth->finish();
-
 }
 
 
