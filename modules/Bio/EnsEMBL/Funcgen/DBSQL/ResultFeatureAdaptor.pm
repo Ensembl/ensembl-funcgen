@@ -317,16 +317,16 @@ sub _remap{
 =cut
 
 sub store{
-  my ($self, @rfeats) = @_;
+  my ($self, $rfeats, $new_assembly) = @_;
 
-  throw("Must provide a list of ResultFeature objects") if(scalar(@rfeats == 0));
+  throw("Must provide a list of ResultFeature objects") if(scalar(@$rfeats == 0));
   
   #These are in the order of the ResultFeature attr array(excluding probe_id, which is the result/probe_feature query only attr))
   my $sth = $self->prepare('INSERT INTO result_feature (result_set_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, window_size, score) VALUES (?, ?, ?, ?, ?, ?, ?)');  
   my $db = $self->db();
 
   
- FEATURE: foreach my $rfeat (@rfeats) {
+ FEATURE: foreach my $rfeat (@$rfeats) {
     
     if( ! ref $rfeat || ! $rfeat->isa('Bio::EnsEMBL::Funcgen::ResultFeature') ) {
       throw('Must be an ResultFeature object to store');
@@ -348,7 +348,9 @@ sub store{
 	#As when we are storing
 	#Or should we just change default?
 
-	($rfeat, $seq_region_id) = $self->_pre_store($rfeat);
+	($rfeat, $seq_region_id) = $self->_pre_store($rfeat, $new_assembly);
+
+	next if ! $rfeat;#No projection to new assembly
 		
 	$sth->bind_param(1, $rfeat->result_set_id, SQL_INTEGER);
 	$sth->bind_param(2, $seq_region_id,        SQL_INTEGER);
@@ -365,7 +367,7 @@ sub store{
     #$rset->adaptor($self);
   }
   
-  return \@rfeats;
+  return $rfeats;
 }
 
 
@@ -506,6 +508,8 @@ sub fetch_all_by_Slice_ResultSet{
   #Keep working method here for now and just use generic fetch for simple result_feature table query
 
   if($_result_feature_set){
+
+	warn "Is RESULT_FEATURE_SET";
 
 	if($_probe_extend){
 	  throw("Cannot retrieve Probe information with a result_feature_set query, try using ???");
@@ -719,8 +723,7 @@ sub fetch_all_by_Slice_ResultSet{
   #would this group correctly on NULL values if biol rep not set for a chip?
   #This would require an extra join too. 
 
-
-  $sth = $self->prepare($sql);
+   $sth = $self->prepare($sql);
   $sth->execute();
   
   if($with_probe){
