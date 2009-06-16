@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-projection_feature_set.pl - Projects a feature set to a new genome assembly.
+project_feature_set.pl - Projects a feature set to a new genome assembly.
 
 =head1 SYNOPSIS
 
@@ -34,8 +34,7 @@ Optional arguments:
 
 =head1 DESCRIPTION
 
-This script uses Bio::EnsEMBL::Utils::AssemblyProjector to project features from an old 
-assembly to a new assembly
+This script projects features from an old assembly to a new assembly
 
 =head1 LICENCE
 
@@ -58,7 +57,6 @@ use Bio::EnsEMBL::Utils::ConfParser;
 use Bio::EnsEMBL::Utils::Logger;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Utils::AssemblyProjector;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;#replace logger or inherit from logger?
@@ -95,6 +93,7 @@ $conf->parse_options
    'old_assembly=s' => 1,
    'new_assembly=s' => 1,
    'coord_system=s' => 0,
+   'associations'      => 0,
   );
 
 $main::_no_log = 1;
@@ -199,14 +198,14 @@ my $efg_db = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
 my $old_sa = $old_cdb->get_SliceAdaptor;
 my $new_sa = $new_cdb->get_SliceAdaptor;
 my $fset_adaptor = $efg_db->get_FeatureSetAdaptor();
-my $fset = $fset_adaptor->fetch_by_name($conf->param('feature_set'));
-									   
+my $fset = $fset_adaptor->fetch_by_name($conf->param('feature_set'));	
+								   
 if(! defined $fset){
   throw("Cannot findFeatureSet:\t".$conf->param('feature_set')."\n");
 }
 
 my $set_feat_adaptor = $fset->get_FeatureAdaptor;
-
+my $feat_class       = ucfirst($fset->type).'Feature';
 
 
 #Do this slice wise to avoid possibility of running out of memmory for large sets
@@ -339,6 +338,8 @@ foreach my $old_slice(@slices){
 #Now project the features
 print "\nProjecting features...\n";
 my $total_old_feats = 0;
+my $dbentry_adaptor = $efg_db->get_DBEntryAdaptor();
+
 
 foreach my $slice(@slices){
    
@@ -419,6 +420,18 @@ foreach my $slice(@slices){
     $feat->end($proj_slice->end);
     $feat->slice($new_full_slice);
     #do we need to deal with strand here or does project deal with that?
+
+
+	#Now we have to deal with DBEntries/AssociatedFeatureTypes
+
+	if($conf->param('associations')){
+	  $feat->get_all_DBEntries;#this will simply store this in $feat->{'dbentries'}
+
+	  #This is currently only done by default for ExternalFeatures
+	  #So would need to explicitly store these for others
+	  $feat->associated_feature_types;#This will store in $feat->{'associated_feature_types'}
+	}
+
 	$feat->{'dbID'} = undef;
 	$feat->{'adaptor'} = undef;
 	push @new_feats, $feat;
@@ -426,7 +439,36 @@ foreach my $slice(@slices){
   }
 
   #No need to reset dnadb as we have attached the correct one in the feature slice
-  $set_feat_adaptor->store(@new_feats) if @new_feats;
+  #Will this store DBEntries and associated_feature_types
+  #This is a balance between calling the store accessor repeatedly here
+  #and testing the internal caches for all feature stores
+  #Let's do it here for now.
+
+  if (@new_feats){
+
+	foreach my $feat(@new_feats){
+
+	  #Associated ftypes will bestored by default for ExternalFeatures
+	  ($feat) = @{$set_feat_adaptor->store($feat)};
+
+	  if($conf->param('associations')){
+
+		#Now restore all DBEntries
+		
+		foreach my $dbentry(@{$feat->get_all_DBEntries}){
+		  
+		 
+		  #This fails if edb.version is NULL!
+
+		  $dbentry_adaptor->store($dbentry, $feat->dbID, $feat_class);#Do we need to ignore release here?
+		  #But this should have the same info as the stored DBEntry
+		  #Is this because db_release is not being returned?
+
+
+		}
+	  }
+	}
+  }
 
   #test just to be sure
  
