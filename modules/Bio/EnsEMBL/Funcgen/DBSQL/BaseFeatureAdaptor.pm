@@ -491,8 +491,9 @@ sub get_core_seq_region_id{
 
 
 sub _pre_store {
-  my $self    = shift;
-  my $feature = shift;
+  my ($self, $feature, $new_assembly) = @_;
+  #May want to add cs_level arg?
+  #What about ignore length flag?
 
   if(!ref($feature) || !$feature->isa('Bio::EnsEMBL::Feature')) {
     throw('Expected Feature argument.');
@@ -500,7 +501,6 @@ sub _pre_store {
 
   $self->_check_start_end_strand($feature->start(),$feature->end(),
                                  $feature->strand());
-
 
   my $db = $self->db();
   my $slice = $feature->slice();
@@ -512,6 +512,8 @@ sub _pre_store {
   # make sure feature coords are relative to start of entire seq_region
   if($slice->start != 1 || $slice->strand != 1) {
 	  throw("You must generate your feature on a slice starting at 1 with strand 1");
+	  #Why have we removed this transfer here?
+	  
 	  #move feature onto a slice of the entire seq_region
 	  #$slice = $slice_adaptor->fetch_by_region($slice->coord_system->name(),
 	  #                                         $slice->seq_region_name(),
@@ -526,6 +528,64 @@ sub _pre_store {
 	  #}
   }
   
+
+
+  #Project here before we start building sr caches and storing CSs
+  if($new_assembly){
+	#my $cs_level = 
+	#Don't set this for old and new slice as
+	#at some point in the future we have mappings between different levels.
+
+	
+	#warn "orig ".$feature->feature_Slice->name;
+
+	my @segments = @{$feature->feature_Slice->project($slice->coord_system->name, $new_assembly)};
+  # do some sanity checks on the projection results:
+    # discard the projected feature if
+    #   1. it doesn't project at all (no segments returned)
+    #   2. the projection is fragmented (more than one segment)
+    #   3. the projection doesn't have the same length as the original
+    #      feature
+    
+    # this tests for (1) and (2)
+    if (scalar(@segments) == 0) {
+	  warn "Feature doesn't project to $new_assembly\n";
+	  return;
+    } 
+	elsif (scalar(@segments) > 1) {
+	  warn "Feature projection is fragmented in $new_assembly\n";
+	  return;
+    }
+    
+    # test (3)
+    my $proj_slice = $segments[0]->to_Slice;
+
+    if ($feature->length != $proj_slice->length) {
+	
+	  #if(! $conf->param('ignore_length')){
+		warn "Feature projection is wrong length in $new_assembly\n";
+		return;
+	#  }
+    }
+    
+	#warn "proj ".$proj_slice->name;
+
+    # everything looks fine, so adjust the coords of your feature
+	#Have to generate new_slice here as we are not sure it is going to be 
+	#on the same slice as the old assembly
+	$slice = $proj_slice->adaptor->fetch_by_region($proj_slice->coord_system->name, $proj_slice->seq_region_name);
+	
+	#These are just callers for ResultFeature!
+	#For speed.
+
+    $feature->start($proj_slice->start);
+    $feature->end($proj_slice->end);
+    $feature->slice($slice);
+
+	#warn  "new feature ".$feature->feature_Slice->name;
+  }
+
+
   # Ensure this type of feature is known to be stored in this coord system.
   my $cs = $slice->coord_system;#from core/dnadb
  
@@ -558,7 +618,7 @@ sub _pre_store {
 	my $core_sr_id = $slice->get_seq_region_id;
 	my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $core_sr_id, $schema_build);
 	
-	#Add to comparable seq_region		
+	#Add to comparable seq_region
 	if($seq_region_id) {
 	  $sql = 'insert into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?,?)';
 	  unshift(@args, $seq_region_id);
@@ -842,57 +902,6 @@ sub _remap {
 
   return \@out;
 }
-
-
-
-=head2 fetch_all_by_external_name
-
-  Arg [1]    : String $external_name
-               An external identifier of the feature to be obtained
-  Arg [2]    : (optional) String $external_db_name
-               The name of the external database from which the
-               identifier originates.
-  Example    : my @features =
-                  @{ $adaptor->fetch_all_by_external_name( 'NP_065811.1') };
-  Description: Retrieves all features which are associated with
-               an external identifier such as a GO term, Swissprot
-               identifer, etc.  Usually there will only be a single
-               feature returned in the list reference, but not
-               always.  Features are returned in their native
-               coordinate system, i.e. the coordinate system in which
-               they are stored in the database.  If they are required
-               in another coordinate system the Feature::transfer or
-               Feature::transform method can be used to convert them.
-               If no features with the external identifier are found,
-               a reference to an empty list is returned.
-  Returntype : arrayref of Bio::EnsEMBL::Feature objects
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub fetch_all_by_external_name {
-  my ( $self, $external_name, $external_db_name ) = @_;
-
-  my $entryAdaptor = $self->db->get_DBEntryAdaptor();
-  my (@ids);
-  my @tmp = split/::/, ref($self);
-  my $feature_type = pop @tmp;
-  $feature_type =~ s/FeatureAdaptor//;
-  my $xref_method = 'list_'.lc($feature_type).'_feature_ids_by_extid';
-
-  if(! $entryAdaptor->can($xref_method)){
-	warn "Does not yet accomodate  $feature_type feature external names";
-	return;
-  }
-  else{
-	@ids = $entryAdaptor->$xref_method($external_name, $external_db_name);
-  }
-
-  return $self->fetch_all_by_dbID_list( \@ids );
-}
-
 
 
 
