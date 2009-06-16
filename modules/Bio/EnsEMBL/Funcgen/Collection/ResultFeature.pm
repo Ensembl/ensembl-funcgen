@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.9 2008-11-10 14:27:01 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.10 2009-06-16 16:55:05 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
@@ -131,8 +131,11 @@ sub _default_where_clause {
 
 sub store_window_bins_by_Slice_ResultSet {
   my $this = shift;
-  my ( $slice, $rset, $window_sizes, $logic_name, $rollback) =
-    rearrange( [ 'SLICE', 'RESULT_SET', 'WINDOW_SIZES', 'LOGIC_NAME', 'ROLLBACK'], @_ );
+  my ( $slice, $rset, $window_sizes, $logic_name, $rollback, $new_assm) =
+    rearrange( [ 'SLICE', 'RESULT_SET', 'WINDOW_SIZES', 'LOGIC_NAME', 'ROLLBACK', 'NEW_ASSEMBLY'], @_ );
+  #? These were never passed as key value pairs?
+  #But this return the correct order so long as we don't mix values only and key value pairs
+  #Is this the backwards compatible hash passing?
 
 
   my $slice_adaptor = $this->db->dnadb->get_SliceAdaptor;
@@ -384,6 +387,7 @@ sub store_window_bins_by_Slice_ResultSet {
   my $orig_slice  = $slice;
   my $orig_start = $slice->start;
   my $region       = $slice->coord_system_name;
+  my $version      = $slice->coord_system->version;
   my $seq_region_name  = $slice->seq_region_name;
   my $strand       = $slice->strand;
   my $rset_id      = $rset->dbID;
@@ -441,7 +445,8 @@ sub store_window_bins_by_Slice_ResultSet {
 	  }
 	  
 
-	  $slice = $slice_adaptor->fetch_by_region($region, $seq_region_name, $start, $end, $strand);
+	  #Can we not sub slice here instead?
+	  $slice = $slice_adaptor->fetch_by_region($region, $seq_region_name, $start, $end, $strand, $version);
 	  $features = $this->fetch_all_by_Slice_ResultSet($slice, $rset);
 
 	  #Shift chunk coords
@@ -480,7 +485,7 @@ sub store_window_bins_by_Slice_ResultSet {
 		  #warn "storing ".join(', ',	($feature->start, $feature->end, $feature->strand, $feature->score, 'undef', $rset->dbID, 0, $slice));
 		  
 		  
-		  $this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+		  $this->store([Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 					   (
 						($feature->start + $bin_start + $slice_adj), 
 						($feature->end   + $bin_start + $slice_adj), 
@@ -490,7 +495,7 @@ sub store_window_bins_by_Slice_ResultSet {
 						$rset->dbID, 
 						0, #window size
 						$store_slice
-					   )); 
+					   )], $new_assm); 
 		}
 		print "Window size 0 (natural resolution) has ".scalar(@{$features})." feature bins\n";	
 	  }
@@ -513,9 +518,7 @@ sub store_window_bins_by_Slice_ResultSet {
 		  $bin_end += $wsize;
 	
 		  if($bin_score){
-			#$counts{$wsize}++;	
-			$count++;
-
+		
 			#This is a little backwards as we are generating the object to store it
 			#If we are aiming for speed the maybe we could also commodotise the store method
 			#store by args or hash? store_fast?
@@ -525,7 +528,7 @@ sub store_window_bins_by_Slice_ResultSet {
 			
 			#warn "storing $bin_start, $bin_end, $strand, $bin_score, undef, $rset->dbID, $wsize, $slice";
 			
-			$this->store(Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
+			$this->store([Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
 						 (
 						  ($bin_start + $slice_adj), 
 						  ($bin_end   + $slice_adj), 
@@ -535,7 +538,11 @@ sub store_window_bins_by_Slice_ResultSet {
 						  $rset->dbID, 
 						  $wsize, 
 						  $store_slice
-						 ));
+						 )], $new_assm);
+
+			#Only count if we have a stored/projected feature
+
+			$count++;
 		  }
 		  
 		  $bin_start += $wsize;
@@ -582,7 +589,7 @@ sub _bin_features_by_window_sizes{
   #No need to validate window sizes as done in the store_window_bins?
   #Do here anyway?
   
-  warn "Processing window sizes ".join(', ',@$window_sizes).' for slice '.$slice->name;
+  warn "Processing window sizes ".join(', ',@$window_sizes).' for slice '.$slice->name."\n";
 
 
   #Set default to ResultFeature implementation?
