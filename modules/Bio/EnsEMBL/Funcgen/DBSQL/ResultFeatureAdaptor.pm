@@ -509,7 +509,7 @@ sub fetch_all_by_Slice_ResultSet{
 
   if($_result_feature_set){
 
-	warn "Is RESULT_FEATURE_SET";
+	#warn "Is RESULT_FEATURE_SET";
 
 	if($_probe_extend){
 	  throw("Cannot retrieve Probe information with a result_feature_set query, try using ???");
