@@ -41,13 +41,13 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 $| =1;
 
-my ($array_name, $pass, $force, @chips, $vendor, %achips);
+my (@array_names, $pass, $force, @chips, $vendor, %achips);
 my ($host, $dbname, $species, $mode, $port, $user, $dnadb_pass);
 my ($dnadb_host, $dnadb_name, $dnadb_species, $dnadb_port, $dnadb_user);
 my @tmp_args = @ARGV;
 
 GetOptions (
-			"arrays|a=s"      => \$array_name,
+			"arrays|a=s{,}"      => \@array_names,
 			"chips|c=s{,}"    => \@chips,
 			"vendor|v=s"      => \$vendor,
 			"mode|m=s"        => \$mode,
@@ -108,16 +108,30 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -group => 'funcgen',
 													 );
 $db->dbc->db_handle;#Test the DB connection
-my $array       = $db->get_ArrayAdaptor->fetch_by_name_vendor($array_name, $vendor);
 
-die ("Could not retrieve $vendor $array_name Array") if ! $array;
+
+
+#This needs putting in Helper::rollback_Arrays
+my $array_adaptor = $db->get_ArrayAdaptor;
+my @arrays;
+
+
+foreach my $aname(@array_names){
+  my $array = $array_adaptor->fetch_by_name_vendor($aname, $vendor);
+  die ("Could not retrieve $vendor $aname Array") if ! $array;
+  push @arrays, $array;
+}
 
 my $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper(
 													  no_log => 1,#tees automatically with no_log
 													 );
-my $arraychip_a = $db->get_ArrayChipAdaptor();
+
+
 my %acs;
-map {$acs{$_->design_id} = $_} @{$array->get_ArrayChips};
+
+foreach my $array(@arrays){
+  map {$acs{$_->design_id} = $_} @{$array->get_ArrayChips};
+}
 
 #do chips belong to experiment?
 if(@chips){
@@ -125,7 +139,7 @@ if(@chips){
   foreach my $chip_name(@chips){
 	
 	if(! exists $acs{$chip_name}){
-	  die("$chip_name is not a valid ArrayChip design_id for the $vendor $array_name Array");
+	  die("$chip_name is not a valid ArrayChip design_id for the $vendor arrays:\t@array_names");
 	}
 
 	$achips{$chip_name} = $acs{$chip_name};	
@@ -136,8 +150,8 @@ else{
 }
 
 
-foreach my $ac(values(%achips)){
-  $Helper->rollback_ArrayChip($ac, $mode, $force);
-}
+$Helper->rollback_ArrayChips([values(%achips)], $mode, $force);
+
+
 
 1;
