@@ -912,7 +912,6 @@ sub define_and_validate_sets{
 
 =cut
 
-#Do we want to do this by slice?
 
 sub rollback_FeatureSet{
   my ($self, $fset, $force_delete, $slice) = @_;
@@ -1394,14 +1393,15 @@ sub rollback_ResultFeatures{
 
 
 
-=head2 rollback_ArrayChip
+=head2 rollback_ArrayChips
 
-  Arg[1]     : Bio::EnsEMBL::Funcgen::ArrayChip
-  Example    : $self->rollback_ArrayChip($achip);
+  Arg[1]     : ARRAYREF: Bio::EnsEMBL::Funcgen::ArrayChip objects
+  Example    : $self->rollback_ArrayChips([$achip1, $achip2]);
   Description: Deletes all Probes, ProbeSets, ProbeFeatures and 
                states associated with this ArrayChip
   Returntype : None
   Exceptions : Throws if ArrayChip not valid and stored
+               Throws if ArrayChips are not of same class
   Caller     : General
   Status     : At risk
 
@@ -1414,8 +1414,8 @@ sub rollback_ResultFeatures{
 #So we currently never use this!
 #So IMPORTED status should be tied to CS id and Analysis id?
 
-sub rollback_ArrayChip{
-  my ($self, $ac, $mode, $force) = @_;
+sub rollback_ArrayChips{
+  my ($self, $acs, $mode, $force) = @_;
   
   $mode ||= 'probe';
   
@@ -1431,14 +1431,25 @@ sub rollback_ArrayChip{
 	throw("You have not specified a valid force argument($force), you must specify 'force' or omit");
   }
 
-  my $adaptor = $ac->adaptor || throw('ArrayChip must have an adaptor');
-  my $db = $adaptor->db;
-  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $ac);
+  my ($adaptor, $db, $class);
+
+  foreach my $ac(@$acs){
+	$adaptor ||= $ac->adaptor || throw('ArrayChip must have an adaptor');
+	$db      ||= $adaptor->db;
+	$db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $ac);
+
+	$class ||=  $ac->get_Array->class;
+
+	if($class ne $ac->get_Array->class){
+	  throw('You can only rollback_ArrayChips for ArrayChips with the same class');
+	}
+  }
+
 
   #This is always the case as we register the association before we set the Import status 
   #Hence the 2nd stage of the import fails as we have an associated ExperimentalChip
   #We need to make sure the ExperimentalChip and Channel have not been imported!!! 
-  warn "NOTE: rollback_ArrayChip. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";  
+  warn "NOTE: rollback_ArrayChips. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";  
   #Check for dependent ExperimentalChips
   #if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
 #	my %exps;
@@ -1455,14 +1466,17 @@ sub rollback_ArrayChip{
 #	throw("Cannot rollback ArrayChip:\t".$ac->name.
 #		  "\nFound Dependent Experimental Data:\n".$txt);
 #  }
-  
+ 
 
-  $self->log("Rolling back ArrayChip $mode entries:\t".$ac->name);
+  my $ac_names = join(', ', (map $_->name, @$acs));
+  my $ac_ids   = join(', ', (map $_->dbID, @$acs));
+
+
+  $self->log("Rolling back ArrayChips $mode entries:\t$ac_names");
   my ($row_cnt, $probe_join, $sql);
-  $ac->adaptor->revoke_states($ac);
+  #$ac->adaptor->revoke_states($ac);#This need to be more specific to the type of rollback
   my $species = $db->species;
-  my $class   = $ac->get_Array->class;
-
+ 
   if(!$species){
 	throw('Cannot rollback probe2transcript level xrefs without specifying a species for the DBAdaptor');
   }
@@ -1508,14 +1522,14 @@ sub rollback_ArrayChip{
 	$self->log("Deleting probe2transcript Xrefs and UnmappedObjects");
 
 	#Delete ProbeFeature UnmappedObjects	  
-	$sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
+	$sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
 	$row_cnt = $db->dbc->do($sql);
 	$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature UnmappedObject records");
 	  
 	 #Delete ProbedFeature Xrefs/DBEntries
-	$sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id=".$ac->dbID;
+	$sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id IN($ac_ids)";
 	$row_cnt = $db->dbc->do($sql);
 	$self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
 	$row_cnt = 0 if $row_cnt eq '0E0';
@@ -1528,7 +1542,7 @@ sub rollback_ArrayChip{
 	  #Delete Probe/Set UnmappedObjects
 
 
-	  $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' AND p.array_chip_id=".$ac->dbID;
+	  $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
 
 	  #.' and edb.db_release="'.$schema_build.'"'; 
 	  $row_cnt = $db->dbc->do($sql);
@@ -1538,7 +1552,7 @@ sub rollback_ArrayChip{
 	  $self->log("Deleted $row_cnt probe2transcript $xref_object UnmappedObject records");	
 
 	  #Delete Probe/Set Xrefs/DBEntries
-	  $sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID;
+	  $sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id IN($ac_ids)";
 	  $row_cnt = $db->dbc->db_handle->do($sql);
 	  $self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
@@ -1556,10 +1570,10 @@ sub rollback_ArrayChip{
 	  
 	  $probe_join = ($xref_object eq 'ProbeSet') ? 'p.probe_set_id' : 'p.probe_id';
 	  
-	  $row_cnt = $db->dbc->db_handle->selectrow_array("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='${xref_object}' and ox.ensembl_id=${probe_join} AND p.array_chip_id=".$ac->dbID);
+	  $row_cnt = $db->dbc->db_handle->selectrow_array("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='${xref_object}' and ox.ensembl_id=${probe_join} AND p.array_chip_id IN($ac_ids)");
 	  
 	  if($row_cnt){
-		throw("Cannot rollback ArrayChip(".$ac->name."), found $row_cnt $xref_object Xrefs. Pass 'force' argument or 'probe2transcript' mode to delete");
+		throw("Cannot rollback ArrayChips($ac_names), found $row_cnt $xref_object Xrefs. Pass 'force' argument or 'probe2transcript' mode to delete");
 	  }
 	  else{
 		#$self->log("Found $row_cnt $xref_object Xrefs");
@@ -1589,7 +1603,7 @@ sub rollback_ArrayChip{
 	
 	  if($mode ne 'ProbeAlign'){
 		my $lname = "${class}_ProbeTranscriptAlign";
-		$sql = "DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+		$sql = "DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 
 		$row_cnt =  $db->dbc->do($sql);
 		$self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
@@ -1600,7 +1614,7 @@ sub rollback_ArrayChip{
 		#will have to join to analysis and do a like "%ProbeTranscriptAlign" on the the logic name?
 		#or/and ur.summary_description='Promiscuous probe'?
 
-		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 		$row_cnt =  $db->dbc->do($sql);
 		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
@@ -1608,7 +1622,7 @@ sub rollback_ArrayChip{
 
 		#Now the actual ProbeFeatures
 		
-		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id and p.array_chip_id=".$ac->dbID();
+		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 		$row_cnt = $db->dbc->do($sql);
 		$self->reset_table_autoinc('probe_feature', 'probe_feature_id', $db);
 
@@ -1618,13 +1632,13 @@ sub rollback_ArrayChip{
 
 	  if($mode ne 'ProbeTranscriptAlign'){
 		my $lname = "${class}_ProbeAlign";
-		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 		$row_cnt =  $db->dbc->do($sql);
 		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
 		$self->log("Deleted $row_cnt $lname UnmappedObject records");
 
-		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id and p.array_chip_id=".$ac->dbID();
+		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 		$row_cnt = $db->dbc->do($sql);
 		$self->reset_table_autoinc('probe_feature', 'probe_feature_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
@@ -1639,11 +1653,11 @@ sub rollback_ArrayChip{
 	  #What about if we only want to delete one array from an associated set?
 	  #This would delete all the features from the rest?
 	  
-	  $sql = "select count(*) from object_xref ox, xref x, probe p, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=p.probe_id AND p.array_chip_id=".$ac->dbID;
+	  $sql = "select count(*) from object_xref ox, xref x, probe p, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 	  $row_cnt =  $db->dbc->db_handle->selectrow_array($sql);
 	  
 	  if($row_cnt){
-		throw("Cannot rollback ArrayChip(".$ac->name."), found $row_cnt ProbeFeatures. Pass 'force' argument or 'probe_feature' mode to delete");
+		throw("Cannot rollback ArrayChips($ac_names), found $row_cnt ProbeFeatures. Pass 'force' argument or 'probe_feature' mode to delete");
 	  }
 	   else{
 		 $self->log("Found $row_cnt ProbeFeatures");
@@ -1654,18 +1668,20 @@ sub rollback_ArrayChip{
 	  #Don't need to rollback on a CS as we have no dependant EChips?
 	  #Is this true?  Should we enforce a 3rd CoordSystem argument, 'all' string we delete all?
 	  
-	  $ac->adaptor->revoke_states($ac);#Do we need to change this to revoke specific states?
-	  #Current states are only IMPORTED, so not just yet, but we could change this for safety?
+	  foreach my $ac(@$acs){
+		$ac->adaptor->revoke_states($ac);#Do we need to change this to revoke specific states?
+		#Current states are only IMPORTED, so not just yet, but we could change this for safety?
+	  }
 	  
 	  #ProbeSets
-	  $sql = 'DELETE ps from probe p, probe_set ps where p.array_chip_id='.$ac->dbID().' and p.probe_set_id=ps.probe_set_id';
+	  $sql = "DELETE ps from probe p, probe_set ps where p.array_chip_id IN($ac_ids) and p.probe_set_id=ps.probe_set_id";
 	  $row_cnt = $db->dbc->do($sql);
 	  $self->reset_table_autoinc('probe_set', 'probe_set_id', $db);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->log("Deleted $row_cnt ProbeSet records");
 	  
 	  #Probes
-	  $sql = 'DELETE from probe where array_chip_id='.$ac->dbID();  
+	  $sql = "DELETE from probe where array_chip_id IN($ac_ids)";  
 	  $row_cnt = $db->dbc->do($sql);
 	  $row_cnt = 0 if $row_cnt eq '0E0';
 	  $self->reset_table_autoinc('probe', 'probe_id', $db);
@@ -1673,7 +1689,7 @@ sub rollback_ArrayChip{
 	}
   }
 
-  $self->log("Finished $mode roll back for ArrayChip:\t".$ac->name);
+  $self->log("Finished $mode roll back for ArrayChip:\t$ac_names");
   return;
 }
 
