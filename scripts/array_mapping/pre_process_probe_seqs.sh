@@ -70,16 +70,22 @@ else if (probes == 1) print \">${array_name}:\" \$1 \"\n\" \$2}" $file_path > ${
 		exit 1
 	fi
 
-elif [ $type = CSV ]; then
+elif [ $file_type = CSV ]; then
 
 	if [ $vendor = ILLUMINA ]; then
 			#ProbeID is 3rd field, Probe_Sequence is 10th
-		awk -F"," "{print \">${name}:\" \$3 \"\n\" \$10}" $file > ${file}.tmp
+		#echo '	awk -F"," "{print \">${name}:\" \$3 \"\n\" \$10}" '
+
+		#awk -F"," "{print \">${name}:\" \$3 \"\n\" \$10}" $file > ${file}.tmp
+
+		awk "BEGIN { FS = \",\" }; {if (\$1==\"Search_key\") probes=1;
+else if (probes == 1) print \">${name}:\" \$14 \"\n\" \$18}" $file > ${file}.tmp
+
 	#Now remove thr first two spurious line generated from the header
-		sed "/^>${name}:ProbeId$/d" ${file}.tmp > ${file}.tmp1
-		sed "/^Probe_Sequence$/d" ${file}.tmp1 > ${file}.tmp
+		#sed "/^>${name}:ProbeId$/d" ${file}.tmp > ${file}.tmp1
+		#sed "/^Probe_Sequence$/d" ${file}.tmp1 > ${file}.tmp
 	
-		rm -f ${file}.tmp1
+		#rm -f ${file}.tmp1
 	else
 		echo "No support for $vendor $file_type file, maybe you want FASTA file type?"
 		exit 1
