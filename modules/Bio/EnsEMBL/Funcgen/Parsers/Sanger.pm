@@ -179,7 +179,7 @@ sub read_array_probe_data{
 
   } elsif ($self->recovery()) {
     $self->log("Rolling back partially imported ArrayChip:\t".$array_chip->name());
-    $self->db->rollback_ArrayChip($array_chip);	#This should really remove all CS imports too?
+    $self->db->rollback_ArrayChip([$array_chip]);	#This should really remove all CS imports too?
   }
 
 
@@ -192,6 +192,7 @@ sub read_array_probe_data{
   #would have to be result set as we would find our own ecs.  May find our own rset
   
   
+  throw('This needs updating');
 
   if ($array_chip->has_status('IMPORTED_CS_'.$fg_cs->dbID())) {
     $fimported = 1;

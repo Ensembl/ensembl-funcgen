@@ -493,7 +493,8 @@ sub parse_line{
 								 #-db_display_name        => $self->db->dnadb->dbc->dbname,
 								 -db_display_name        => 'EnsemblVariation',
 								 -type                   => 'MISC',#???#this is external_db.type
-								 -primary_id             => $snp_feat->variation_name,##?????????
+								 -primary_id             => $snp_feat->variation_name,##?????????This should be the ENSVAR?
+								 #Is this a one to one mapping? Do we have ENSVARS for SNP we don't call?
 								 -display_id             => $snp_feat->display_id,#This is the same as variation name.
 								 -info_type              => 'MISC',
 								 -linkage_annotation     => 'eQTL SNP',#DIRECT?	

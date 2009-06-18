@@ -282,7 +282,7 @@ sub read_probe_data{
     return;
   }elsif($self->recovery()){
     $self->log("Rolling back partially imported ArrayChip:\t".$achip->design_id());
-    $self->db->rollback_ArrayChip($achip);
+    $self->db->rollback_ArrayChip([$achip]);
   }
       
   $self->log("Importing ArrayChip:".$achip->design_id());
