@@ -166,11 +166,24 @@ sub probeset {
 	
     $self->{'probeset'} = shift if @_;
 	
-    if ($self->{'probe'}) {
-		$self->{'probeset'} = $self->probe()->probeset();
+    if (! $self->{'probeset'}) {
+	  $self->{'probeset'} = $self->probe()->probeset();
     }
+
+	#We could bypass this entirely and call directly using proveset_id?
+
 	
     return $self->{'probeset'};
+}
+
+
+#Only ever needs to be set in _objs_from_sth
+#This is to allow linkage of probe_feature glyphs without retrieving the probeset.
+
+sub probeset_id{
+  my $self = shift;
+
+  return $self-{'_probeset_id'};
 }
 
 =head2 mismatchcount
