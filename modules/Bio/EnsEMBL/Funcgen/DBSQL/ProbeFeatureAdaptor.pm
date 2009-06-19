@@ -49,6 +49,16 @@ use warnings;
 
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
+my @true_tables = (	[ 'probe_feature', 'pf' ], [ 'probe',   'p' ]);
+#Include probe as we are always going to need this for querying
+#And will most likely need probe.name and/or probe.probe_set_id
+my @tables = @true_tables;
+
+my $true_final_clause = ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';
+#Do we really need this probe_feature_id in the order by?
+
+my $final_clause = $true_final_clause;
+
 
 =head2 fetch_all_by_Probe
 
@@ -77,7 +87,7 @@ sub fetch_all_by_Probe {
   return $self->generic_fetch( 'pf.probe_id = ' . $probe->dbID() );
 }
 
-=head2 fetch_all_by_Probe_id
+=head2 fetch_all_by_probe_id
 
   Arg [1]    : int - Probe dbID
   Example    : my @features = @{$ofa->fetch_all_by_Probe_id($pid)};
@@ -89,7 +99,7 @@ sub fetch_all_by_Probe {
 
 =cut
 
-sub fetch_all_by_Probe_id {
+sub fetch_all_by_probe_id {
   my $self  = shift;
   my $pid = shift;
   
@@ -110,23 +120,31 @@ sub fetch_all_by_Probe_id {
   Returntype : Listref of Bio::EnsEMBL::ProbeFeature objects
   Exceptions : Throws if no probeset argument
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - need to add vendor/class to this?
 
 =cut
 
 sub fetch_all_by_probeset {
-	my $self     = shift;
-	my $probeset = shift;
+	my ($self, $probeset) = @_;
 	
-	throw("Not implmeneted\n");
-
-	if (!$probeset) {
-		throw('fetch_all_by_probeset requires a probeset argument');
+	if (! $probeset) {
+	  throw('fetch_all_by_probeset requires a probeset name argument');
 	}
 	
-	
+	push @tables, (['probe_set', 'ps']);
 
-	return $self->generic_fetch( "p.probeset = '$probeset'" );
+	#Need to protect against SQL injection here due to text params
+
+	my $constraint = ' ps.name=? AND ps.probe_set_id=p.probe_set_id';
+	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
+
+	$self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
+	
+	my $features = $self->generic_fetch($constraint);
+	@tables = @true_tables;
+	$final_clause = $true_final_clause;
+
+	return $features;
 }
 
 
@@ -135,7 +153,7 @@ sub fetch_all_by_probeset {
 #fetch_all_by_Slice_experimentname ? name not unique enough?
 
 
-=head2 fetch_all_by_Slice_arrayname
+=head2 fetch_all_by_Slice_array_vendor
 
   Arg [1]    : Bio::EnsEMBL::Slice
   Arg [2...] : List of strings - array name(s)
@@ -150,27 +168,36 @@ sub fetch_all_by_probeset {
 
 =cut
 
-sub fetch_all_by_Slice_arrayname {
-	my ($self, $slice, @arraynames) = @_;
+sub fetch_all_by_Slice_array_vendor {
+	my ($self, $slice, $array, $vendor) = @_;
 
-	throw("This should return data from all experiments, but will break if arrays are mapped to different coord_systems");
-	
-	throw('Need array name as parameter') if !@arraynames;
-	
-	my $constraint;
-	if (scalar @arraynames == 1) {
-		#Will this work
-		#will this pick up the array_chip_id link from array_chip to probe?
-		$constraint = qq( a.name = '$arraynames[0]' AND a.array_id = ac.array_id );
-		#$constraint = qq( a.name = '$arraynames[0]' );
-	} else {
-		throw("Not implemented for multple arrays");
-		$constraint = join q(','), @arraynames;
-		$constraint = qq( a.name IN ('$constraint') );
+	if(! ($array && $vendor)){
+	  throw('You must provide and array name and a vendor name');
 	}
+
 	
-	return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+	push @tables, (['array', 'a'], ['array_chip', 'ac']);
+
+
+	#Need to protect against SQL injection here due to text params
+	my $constraint = ' a.name=? and a.vendor=? and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id ';
+
+	
+	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
+	#Do we need this group by?
+	#We may get array_chip to probe product if probe is presenton >1 array_chip.
+	#We handle this in _objects_from_sth anyway.
+	#That would have to be removed for complex extension.
+	$self->bind_param_generic_fetch($array,  SQL_VARCHAR);
+	$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
+	
+	my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+	@tables       = @true_tables;
+	$final_clause = $true_final_clause;
+
+	return $features;
 }
+
 
 
 #should this take >1 EC? What if we can't fit a all mappings onto one chip
@@ -232,16 +259,23 @@ sub fetch_all_by_Slice_Array {
 
   throw("Need pass a valid stored Bio::EnsEMBL::Funcgen::Array object") 
 	if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::Array") && $array->dbID));
-
-  my @ac_ids = map $_->dbID, @{$array->get_ArrayChips};
   
-  my $constraint = " p.array_chip_id IN (".join(", ", @ac_ids).") AND p.probe_id = pf.probe_id ";
+  push @tables, (['array', 'a'], ['array_chip', 'ac']);  
+  my $constraint = ' a.name="'.$array->name.'" and a.vendor="'.$array->vendor.'" and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id ';
+
+  #Do we need this group by?
+  #We may get array_chip to probe product if probe is presenton >1 array_chip.
+  #We handle this in _objects_from_sth anyway.
+  #That would have to be removed for complex extension.
+  $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
   
-    
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-
-
+  my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  @tables       = @true_tables;
+  $final_clause = $true_final_clause;
+  
+  return $features;
 }
+
 
 =head2 fetch_all_by_Slice_Arrays
 
@@ -270,19 +304,23 @@ sub fetch_all_by_Slice_Arrays{
 	throw('Must pass an ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects');
   }
 
-  my @ac_ids;
+  my $array_ids = join(',', (map $_->dbID, @$arrays));
 
-  foreach my $array(@$arrays){
+  push @tables, (['array', 'a'], ['array_chip', 'ac']);  
+  my $constraint = " a.array_id IN ($array_ids) and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id ";
 
-	throw("Must pass an ARRAYREF of valid stored Bio::EnsEMBL::Funcgen::Array objects")
-	  if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::Array") && $array->dbID));
-
-	push @ac_ids, (map $_->dbID, @{$array->get_ArrayChips});
-  }
-
-  my $constraint = " p.array_chip_id IN (".join(", ", @ac_ids).") AND p.probe_id = pf.probe_id ";
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+  #Do we need this group by?
+  #We may get array_chip to probe product if probe is presenton >1 array_chip.
+  #We handle this in _objects_from_sth anyway.
+  #That would have to be removed for complex extension.
+  $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;  
+  my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+  @tables       = @true_tables;
+  $final_clause = $true_final_clause;
+  
+  return $features;
 }
+
 
 =head2 _tables
 
@@ -300,13 +338,8 @@ sub fetch_all_by_Slice_Arrays{
 sub _tables {
 	my $self = shift;
 	
-	return (
-			[ 'probe_feature', 'pf' ], 
-			[ 'probe',   'p' ], 
-			#[ 'array_chip',   'ac' ],#these are required for array based queries not implemented yet
-			#[ 'array',   'a' ]
-		   );
-}
+	return @tables;
+  }
 
 =head2 _columns
 
@@ -330,6 +363,7 @@ sub _columns {
 			  pf.seq_region_strand pf.probe_id    
 			  pf.analysis_id	   pf.mismatches
 			  pf.cigar_line        p.name
+			  p.probe_set_id
 			 );
 }
 
@@ -349,7 +383,7 @@ sub _columns {
 sub _default_where_clause {
 	my $self = shift;
 	
-	return 'pf.probe_id = p.probe_id';# AND p.array_chip_id = ac.array_chip_id';
+	return 'pf.probe_id = p.probe_id';
 }
 
 =head2 _final_clause
@@ -369,7 +403,7 @@ sub _default_where_clause {
 
 
 sub _final_clause {
-	return ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';
+	return $final_clause; #' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';
 }
 
 
@@ -413,13 +447,15 @@ sub _objs_from_sth {
 	    $seq_region_strand, $mismatches,
 		$probe_id,    	    $analysis_id,
 		$probe_name,	    $cigar_line,
+		$probeset_id
 	);
 	$sth->bind_columns(
 					   \$probe_feature_id,  \$efg_seq_region_id,
 					   \$seq_region_start,  \$seq_region_end,
 					   \$seq_region_strand, \$probe_id,
 					   \$analysis_id,       \$mismatches,
-					   \$cigar_line,        \$probe_name
+					   \$cigar_line,        \$probe_name,
+					   \$probeset_id
 	);
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers ,$cmp_cs_name, $cmp_cs_vers);
@@ -455,7 +491,8 @@ sub _objs_from_sth {
 		  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 
 		#This is only required due to multiple records being returned
-		#when using fetch_all_by_Arrays type methods
+		#From nr probe entries due to being present on multiple ArrayChips
+		#Group instead?
 		next if($last_pfid && ($last_pfid == $probe_feature_id));
 		$last_pfid = $probe_feature_id;
 		  
@@ -532,20 +569,22 @@ sub _objs_from_sth {
 			$slice = $dest_slice;
 		}
 
-		push @features, $self->_new_fast( {
-											 'start'         => $seq_region_start,
-											 'end'           => $seq_region_end,
-											 'strand'        => $seq_region_strand,
-											 'slice'         => $slice,
-											 'analysis'      => $analysis,#we should lazy load this
-											 'adaptor'       => $self,
-											 'dbID'          => $probe_feature_id,
-											 'mismatchcount' => $mismatches,
-											 'cigar_line'    => $cigar_line,
-											 'probe_id'     => $probe_id,
-											 #'probeset'      => $probeset,#???do we need this?
-											 '_probe_name'   => $probe_name
-											} );
+		push @features, Bio::EnsEMBL::Funcgen::ProbeFeature->new_fast
+		  ({
+			'start'         => $seq_region_start,
+			'end'           => $seq_region_end,
+			'strand'        => $seq_region_strand,
+			'slice'         => $slice,
+			'analysis'      => $analysis,#we should lazy load this from analysis adaptor cache?
+			'adaptor'       => $self,
+			'dbID'          => $probe_feature_id,
+			'mismatchcount' => $mismatches,
+			'cigar_line'    => $cigar_line,
+			'probe_id'      => $probe_id,
+			#Do these need to be private?
+			'_probeset_id'  => $probeset_id,#Used for linking feature glyphs
+			'_probe_name'   => $probe_name,#?? There can be >1. Is this for array design purposes?
+		   } );
 
 
 	
@@ -554,24 +593,6 @@ sub _objs_from_sth {
 	return \@features;
 }
 
-=head2 _new_fast
-
-  Args       : Hashref to be passed to ProbeFeature->new_fast()
-  Example    : None
-  Description: Construct an ProbeFeature object using quick and dirty new_fast.
-  Returntype : Bio::EnsEMBL::Funcgen::ProbeFeature
-  Exceptions : None
-  Caller     : _objs_from_sth
-  Status     : Medium Risk
-
-=cut
-
-sub _new_fast {
-	my $self = shift;
-	
-	my $hash_ref = shift;
-	return Bio::EnsEMBL::Funcgen::ProbeFeature->new_fast($hash_ref);
-}
 
 =head2 store
 
@@ -697,11 +718,6 @@ sub reassign_feature_to_probe{
 	my $cmd = 'UPDATE probe_feature SET probe_id='.$pid.' WHERE probe_feature_id IN ('.join(',', @$fids_ref).')';
 	$self->db->dbc->do($cmd);
 
-	#This will fail anyway?
-	#if($?){
-	#  throw("SQL Command failed:\t$sql\n$@");
-	#}
-
 	return;
 }
 
@@ -726,11 +742,6 @@ sub delete_features{
 	
 	my $cmd = 'DELETE from probe_feature WHERE probe_feature_id IN ('.join(',', @$fids_ref).')';
 	$self->db->dbc->do($cmd);
-
-	#This will fail anyway?
-	#if($?){
-	#  throw("SQL Command failed:\t$sql\n$@");
-	#}
 
 	return;
 }
