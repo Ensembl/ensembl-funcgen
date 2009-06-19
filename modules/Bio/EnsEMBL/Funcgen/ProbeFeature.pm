@@ -183,7 +183,7 @@ sub probeset {
 sub probeset_id{
   my $self = shift;
 
-  return $self-{'_probeset_id'};
+  return $self->{'_probeset_id'};
 }
 
 =head2 mismatchcount
