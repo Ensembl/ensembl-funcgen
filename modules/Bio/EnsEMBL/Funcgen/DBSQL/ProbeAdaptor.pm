@@ -36,7 +36,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Probe;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use Tie::File;
 
 use vars qw(@ISA);
@@ -88,70 +88,6 @@ sub fetch_by_array_probe_probeset_name {
 	#Reset tables
 	@tables = @true_tables; 
 	return $probe;
-}
-
-sub fetch_by_array_probe_probeset_nameold {
-	my ($self, $array_name, $probe_name, $probeset_name) = @_;
-	
-	my $probeset_clause = "";
-	my $ps_table_alias = "";
-
-
-	if(! (defined $array_name && defined $probe_name)){
-	  throw('You must provide at least and array and probe name');
-	}
-
-	if(defined $probeset_name){
-		$probeset_clause = "AND (p.probe_set_id = ps.probe_set_id AND ps.name ='$probeset_name')";
-		$ps_table_alias = ", probe_set ps";
-	}
-
-	
-
-	# Need to deal with non-Affy probes where probeset is NULL
-	# (Also allow probeset to be empty string, just in case)
-	#if (!$probeset_name) {
-	#	$probeset_name = '';
-	#	$probeset_clause = "(op.oligo_probe_set_id IS NULL OR $probeset_clause)";
-	#}
-	
-	#need to do a look up of all ac_ids and do a joined OR statement
-
-	my $sql = "select ac.array_chip_id from array_chip ac, array a where a.array_id = ac.array_id and a.name ='$array_name'";
-	my $array_ref = $self->dbc->db_handle->selectall_arrayref($sql);
-
-
-	throw("No ArrayChips foud for array:\t$array_name") if(! @$array_ref);
-
-	map $_ = "@{$_}", @$array_ref;#only works for one element arrays, as we're really turning it into a space separated string.
-
-	
-	my $ac_clause = "p.array_chip_id IN (".join(", ", @$array_ref).")";
-
-
-	#Need to change this to throw if we get more than one probe back
-
-
-	$sql = "SELECT p.probe_id FROM probe p $ps_table_alias".
-	  " WHERE $ac_clause $probeset_clause AND p.name ='$probe_name'";
-
-	#warn $sql;
-
-	my ($probe_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-	
-	#This could utilise commodotised obj_frm_sth method to bring all fields back here
-	#rather than calling the by dbID method
-
-	#$sth->bind_param(1, $probe_name,    SQL_VARCHAR);
-	#$sth->execute();
-	
-	#my ($probe_id) = $sth->fetchrow_array();
-
-	if ($probe_id) {
-		return $self->fetch_by_dbID($probe_id);
-	} else {
-		return undef;
-	}
 }
 
 
@@ -406,8 +342,37 @@ sub _objs_from_sth {
 	my ($array, %array_cache, %probe_set_cache);
 	
 	$sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class);
+
+
+	#Complex query extension
+	#We want the arrays, array_chip and probeset information setting
+	#So the probe feature zmenu can just do one query to populate the zmenu unstead of 4
+	#Let's just do this with probset to start with as this is more simple
+	#The object creation for the linked adaptors need to be commodotised
+	#So we can say something like $probeset_adaptor->create_obj_from_sth_args
+	#Caches will need to be built in the calling adaptor rather than the true object adaptor
 	
+	#No group required as we will always want intermediate data
+	#Therefore cannot use this in combined with simple extension???
+	#Unless we explicitly state group by primary keys.
+
+	#Need to build array of adaptor column hashes(order important)
+	#Need to build and array of bound columns dependant 
+	#Then we need to parse output dependant on primary keys of each table
+	#So we would need bolumns bound to hash values
+	
+	#We need a way to define the extended tables
+	#Pass param hash to caller which uses BaseAdaptor method to add tables and columns
+	#This would have to take into account anything added by the caller
+	
+	#Maybe the better way of doing this test would be to include all probes in a probeset?
+	#Or maybe all probe_features for a probe?
+	
+
+
+
 	my $probe;
+	
 	while ( $sth->fetch() ) {
 
 		#warn("Need to sort array cacheing, have redundant cache!!");
