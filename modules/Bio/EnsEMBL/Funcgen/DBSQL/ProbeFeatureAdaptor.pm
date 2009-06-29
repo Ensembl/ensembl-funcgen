@@ -579,7 +579,7 @@ sub _objs_from_sth {
 			'adaptor'       => $self,
 			'dbID'          => $probe_feature_id,
 			'mismatchcount' => $mismatches,
-			'cigar_line'    => $cigar_line,
+			'cigar_string'    => $cigar_line,
 			'probe_id'      => $probe_id,
 			#Do these need to be private?
 			'_probeset_id'  => $probeset_id,#Used for linking feature glyphs
@@ -658,7 +658,7 @@ sub store{
 		$sth->bind_param(5, $of->probe_id(),       SQL_INTEGER);
 		$sth->bind_param(6, $of->analysis->dbID(), SQL_INTEGER);
 		$sth->bind_param(7, $of->mismatchcount(),  SQL_TINYINT);
-		$sth->bind_param(8, $of->cigar_line(),     SQL_VARCHAR);
+		$sth->bind_param(8, $of->cigar_string(),     SQL_VARCHAR);
 
 		$sth->execute();
 		$of->dbID( $sth->{'mysql_insertid'} );
