@@ -526,5 +526,62 @@ sub _get_status_name_id{
 }
 
 
+
+
+=head2 fetch_all_by_external_name
+
+  Arg [1]    : String $external_name
+               An external identifier of the feature to be obtained
+  Arg [2]    : (optional) String $external_db_name
+               The name of the external database from which the
+               identifier originates.
+  Example    : my @features =
+                  @{ $adaptor->fetch_all_by_external_name( 'NP_065811.1') };
+  Description: Retrieves all features which are associated with
+               an external identifier such as a GO term, Swissprot
+               identifer, etc.  Usually there will only be a single
+               feature returned in the list reference, but not
+               always.  Features are returned in their native
+               coordinate system, i.e. the coordinate system in which
+               they are stored in the database.  If they are required
+               in another coordinate system the Feature::transfer or
+               Feature::transform method can be used to convert them.
+               If no features with the external identifier are found,
+               a reference to an empty list is returned.
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Storable objects
+               Maybe any Feature, FeatureType, Probe or ProbeSet
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+#This might be mor eefficient if we wrote DBEntryAdaptor->fetch_all_by_
+
+sub fetch_all_by_external_name {
+  my ( $self, $external_name, $external_db_name ) = @_;
+
+  my $entryAdaptor = $self->db->get_DBEntryAdaptor();
+  my (@ids, $type, $type_name);
+  ($type = ref($self)) =~ s/.*:://;
+  $type =~ s/Adaptor$//;
+  ($type_name = $type) =~ s/Feature$/_feature/;
+  my $xref_method = 'list_'.lc($type_name).'_ids_by_extid';
+
+  if(! $entryAdaptor->can($xref_method)){
+	warn "Does not yet accomodate $type external names";
+	return;
+  }
+  else{
+	@ids = $entryAdaptor->$xref_method($external_name, $external_db_name);
+  }
+
+  return $self->fetch_all_by_dbID_list( \@ids );
+}
+
+
+
+
+
 1;
 
