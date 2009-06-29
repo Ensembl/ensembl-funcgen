@@ -64,19 +64,19 @@ sub fetch_by_array_probeset_name{
 	my ($self, $array_name, $probeset_name) = @_;
 	
 	if(! ($array_name && $probeset_name)){
-	 throw('Must provide array_name and probeset_name arguments'); 
+	  throw('Must provide array_name and probeset_name arguments'); 
 	}
-
+	
 
 	#Extend query tables
 	push @tables, (['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']);
 	
 	#Extend query and group
 	#This needs generic_fetch_bind_param
-	my $constraint = 'ps.name= ? and ps.probe_set_id=p.probe_set_id and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name= ? group by ps.probe_set_id';
-
+	my $constraint = 'ps.name= ? AND ps.probe_set_id=p.probe_set_id AND p.array_chip_id=ac.array_chip_id AND ac.array_id=a.array_id AND a.name= ? GROUP by ps.probe_set_id';
+	
 	#my $constraint = 'ps.name="'.$probeset_name.'" and ps.probe_set_id=p.probe_set_id and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name="'.$array_name.'" group by ps.probe_set_id';
-
+	
 	$self->bind_param_generic_fetch($probeset_name,SQL_VARCHAR);
 	$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
 	my $pset =  $self->generic_fetch($constraint)->[0];
