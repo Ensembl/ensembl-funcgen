@@ -20,10 +20,8 @@ my $feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
 	-END           => 1_000_024,
 	-STRAND        => -1,
     -ANALYSIS      => $analysis,
+    -CIGAR_STRING  => '1U2M426D2M1m21M',
 ); 
-
-#build_id/version, seq_region_id, seq_region_strand -  from slice?
-#cigar_line?
 
 
 =head1 DESCRIPTION
@@ -111,7 +109,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   my ($probe, $mismatchcount, $pid, $cig_line)
-    = rearrange(['PROBE', 'MISMATCHCOUNT', 'PROBE_ID', 'CIGAR_LINE'], @_);
+    = rearrange(['PROBE', 'MISMATCHCOUNT', 'PROBE_ID', 'CIGAR_STRING'], @_);
 
   #remove mismatch?
   #mandatory args?
@@ -120,7 +118,7 @@ sub new {
   $self->{'probe_id'} = $pid if $pid;
   $self->probe($probe) if $probe;
   $self->mismatchcount($mismatchcount)  if defined $mismatchcount;#do not remove until probe mapping pipeline fixed
-  $self->cigar_line($cig_line)          if defined $cig_line;
+  $self->cigar_string($cig_line)          if defined $cig_line;
    
   #do we need to validate this against the db?  Grab from slice and create new if not present?  Will this be from the dnadb?
   
@@ -210,10 +208,10 @@ sub mismatchcount {
 }
 
 
-=head2 cigar_line
+=head2 cigar_string
 
-  Arg [1]    : str - Cigar line alignment annotation
-  Example    : my $cg = $feature->cigar_line();
+  Arg [1]    : str - Cigar line alignment annotation (M = Align & Seq match, m = Align matcht & Seq mismatch, D = Deletion in ProbeFeature wrt genome, U = Unknown at time of alignment)
+  Example    : my $cg = $feature->cigar_string();
   Description: Getter and setter for number of the cigar line attribute for this feature.
   Returntype : str
   Exceptions : None
@@ -222,38 +220,14 @@ sub mismatchcount {
 
 =cut
 
-sub cigar_line {
+sub cigar_string {
   my $self = shift;
   
-  $self->{'cigar_line'} = shift if @_;
+  $self->{'cigar_string'} = shift if @_;
 	
-  return $self->{'cigar_line'};
+  return $self->{'cigar_string'};
 }
 
-
-
-=head2 probelength
-
-  Args       : None 
-  Example    : my $probelength = $feature->probelength();
-  Description: Getter for the length of the probe. Shortcut for
-               $feature->probe->length(), which should be used instead.
-			   Originally, this method returned the length of the feature,
-			   which was often, but not always, the same as the length of the
-			   probe.
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-             : Use $feature->probe->length() because this may be removed
-
-=cut
-
-sub probelength {
-    my $self = shift;
-	
-    return $self->probe->length();
-}
 
 =head2 probe
 
