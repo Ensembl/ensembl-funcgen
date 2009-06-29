@@ -63,7 +63,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Storable;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Storable);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new

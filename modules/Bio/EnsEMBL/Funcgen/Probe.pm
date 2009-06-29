@@ -60,7 +60,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Storable;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Storable);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new
@@ -75,6 +75,8 @@ use vars qw(@ISA);
         Used when the probe is on multiple arrays.
   Arg [-ARRAY_CHIP_ID]  : int - array_chip db ID
         Used when the probe is on one array.
+  Arg [-ARRAY_CHIP_IDS]  : Listref of ints - array_chip dbIDs
+        Used when the probe is on multiple array chips
   Arg [-NAMES]          : Listref of ints - arary_chip db IDs
         Used when the probe is on multiple arrays.
   Arg [-PROBE_SET]      : Bio::EnsEMBL::ProbeSet
@@ -474,7 +476,6 @@ sub get_complete_name {
 
 sub probeset {
     my $self = shift;
-
 
     $self->{'probe_set'} = shift if @_;
     return $self->{'probe_set'};
