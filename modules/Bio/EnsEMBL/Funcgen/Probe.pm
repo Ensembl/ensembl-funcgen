@@ -294,18 +294,33 @@ sub get_all_ProbeFeatures {
 
 sub get_all_Arrays {
     my $self = shift;
-	# Do we have Array objects for this probe?
-    if (defined $self->{'arrays'}) {
-		return [ values %{$self->{'arrays'}} ];
-    } elsif ( $self->adaptor() && $self->dbID() ) { 
-		# Only have names for arrays, so need to retrieve arrays from database
-		warning('Not yet implemented');
-		return [];
-    } else {
-		warning('Need database connection to get Arrays by name');
-		return [];
-    }
+	
+	#Arrays are currently preloaded using a cache in _objs_from_sth
+	return [ values %{$self->{'arrays'}} ];
 }
+
+=head2 get_names_Arrays
+
+  Args       : None
+  Example    : my %name_array_pairs = %{$probe->get_names_Arrays};
+  Description: Returns Array name hash
+  Returntype : hashref of probe name Bio::EnsEMBL::Funcgen::Array pairs 
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub get_names_Arrays {
+    my $self = shift;
+	
+	#Arrays are currently preloaded using a cache in _objs_from_sth
+	return $self->{'arrays'};
+}
+
+
+
+
 
 =head2 get_all_probenames
 
@@ -403,13 +418,17 @@ sub get_probename {
 sub get_all_complete_names {
     my $self = shift;
 	
-    my @result = ();
-	
-    my $probeset = $self->probeset()->name();
+    my ($probeset, @result);
+	my $pset = $self->probeset;
+
+	if($pset){
+	  $probeset = $pset->name;
+	}
+
     $probeset .= ':' if $probeset;
 	
 
-    warn "For Nimblegen this need to be Container:Seqid::probeid?";
+    #warn "For Nimblegen this need to be Container:Seqid::probeid?";
 
     while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
       #would have to put test in here for $self->arrays()->vendor()
