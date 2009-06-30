@@ -2043,7 +2043,7 @@ sub get_or_create_analysis {
 
     my $id = $analysis_adaptor->store(new Bio::EnsEMBL::Analysis(-logic_name    => 'probe2transcript',
 																 -program       => 'probe2transcript.pl',
-																 -description   => 'ProbeSet to Transcript mapping',
+																 -description   => 'Microarray probes from manufacturers are aligned to the genome by Ensembl, if the probe sequences are provided. The mapping is a two-step procedure outlined <a href="/info/docs/microarray_probe_set_mapping.html">here</a>.',
 																 -displayable   => '0'));
 
     $analysis = $analysis_adaptor->fetch_by_logic_name("probe2transcript");
