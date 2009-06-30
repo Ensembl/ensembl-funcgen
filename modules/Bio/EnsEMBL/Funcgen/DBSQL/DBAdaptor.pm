@@ -505,6 +505,8 @@ sub dnadb {
 	  #Maybe the method will take this. Then we can implement this check and set_dnadb_by_assembly_version
 	  #in new.
 	  
+	  
+
 	  return $self->set_dnadb_by_assembly_version($self->dnadb_assembly);
 	}
 	
@@ -645,7 +647,7 @@ sub set_dnadb_by_assembly_version{
 	}
   }
 
-  throw("Failed to find dnadb with assembly version $assm_ver") if(scalar(@dbnames)==0);
+  throw("Failed to find dnadb with assembly version $assm_ver. Maybe you want to set -dnadb_host?") if(scalar(@dbnames)==0);
 
 
   warn ":: Auto-selecting build $assm_ver core DB as:\t".
