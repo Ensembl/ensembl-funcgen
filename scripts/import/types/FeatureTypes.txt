@@ -1,0 +1,57 @@
+name	class	description
+CTCF	Insulator	CCCTC-binding factor
+DNase1	Open Chromatin	DNase1 Hypersensitive Site
+Gene Associated	Regulatory Feature	Gene like regulatory feature
+Gene Associated - Cell type specific	Regulatory Feature	Cell type specific gene like regulatory feature
+H2AK5ac	Histone	Histone 2A Lysine 5 Acetylation
+H2AK9ac	Histone	Histone 2A Lysine 9 Acetylation
+H2AZ	Histone	Histone 2A variant Z
+H2BK120ac	Histone	Histone 2B Lysine 120 Acetylation
+H2BK12ac	Histone	Histone 2B Lysine 12 Acetylation
+H2BK20ac	Histone	Histone 2B Lysine 20 Acetylation
+H2BK5ac	Histone	Histone 2B Lysine 5 Acetylation
+H2BK5me1	Histone	Histone 2B Lysine 5 mono-methylation
+H3	Histone	Histone 3
+H3K14ac	Histone	Histone 3 Lysine 14 Acetylation
+H3K18ac	Histone	Histone 3 Lysine 18 Acetylation
+H3K23ac	Histone	Histone 3 Lysine 23 Acetylation
+H3K27ac	Histone	Histone 3 Lysine 27 Acetylation
+H3K27me1	Histone	Histone 3 Lysine 27 mono-methylation
+H3K27me2	Histone	Histone 3 Lysine 27 di-methylation
+H3K27me3	Histone	Histone 3 Lysine 27 Tri-Methylation
+H3K36ac	Histone	Histone 3 Lysine 36 Acetylation
+H3K36me1	Histone	Histone 3 Lysine 36 mono-methylation
+H3K36me3	Histone	Histone 3 Lysine 36 Tri-Methylation
+H3K4ac	Histone	Histone 3 Lysine 4 Acetylation
+H3K4me1	Histone	Histone 3 Lysine 4 Mono-Methylation
+H3K4me2	Histone	Histone 3 Lysine 4 Di-Methylation
+H3K4me3	Histone	Histone 3 Lysine 4 Tri-Methylation
+H3K79me1	Histone	Histone 3 Lysine 79 mono-methylation
+H3K79me2	Histone	Histone 3 Lysine 79 di-methylation
+H3K79me3	Histone	Histone 3 Lysine 79 Tri-Methylation
+H3K9ac	Histone	Histone 3 Lysine 9 Acetylation
+H3K9me1	Histone	Histone 3 Lysine 9 mono-methylation
+H3K9me2	Histone	Histone 3 Lysine 9 di-methylation
+H3K9me3	Histone	Histone 3 Lysine 9 Tri-Methylation
+H3R2me1	Histone	Histone 3 Arginine 2 mono-methylation
+H3R2me2	Histone	Histone 3 Arginine 2 di-methylation
+H3ac	Histone	Histone 3 Acetylation
+H4K12ac	Histone	Histone 4 Lysine 12 Acetylation
+H4K16ac	Histone	Histone 4 Lysine 16 Acetylation
+H4K20me1	Histone	Histone 4 Lysine 20 mono-methylation
+H4K20me3	Histone	Histone 4 Lysine 20 Tri-Methylation
+H4K4me3	Histone	Histone 4 Lysine 4 Tri-Methylation
+H4K5ac	Histone	Histone 4 Lysine 5 Acetylation
+H4K8ac	Histone	Histone 4 Lysine 8 Acetylation
+H4K91ac	Histone	Histone 4 Lysine 91 Acetylation
+H4R3me2	Histone	Histone 4 Arginine 3 di-methylation
+H4ac	Histone	Histone 4 Acetylation
+Non-Gene Associated	Regulatory Feature	Non-Gene like regulatory feature
+Non-Gene Associated - Cell type specific	Regulatory Feature	Cell type specific non-gene like regulatory feature
+Promoter Associated	Regulatory Feature	Promoter like regulatory feature
+Promoter Associated - Cell type specific	Regulatory Feature	Cell type specific promoter like regulatory feature
+RegulatoryFeature	Regulatory Feature	Ensembl regulatory feature
+RegulatoryFeature	Regulatory Feature	Regulatory Feature
+Unclassified	Regulatory Feature	Unclassified regulatory feature
+Unclassified - Cell type specific	Regulatory Feature	Cell type specific unclassified regulatory feature
+name	class	description
