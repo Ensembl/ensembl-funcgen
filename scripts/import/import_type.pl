@@ -27,19 +27,14 @@ Mandatory:  Instance name for the data set, this is the directory where the nati
 
 Mandatory:  The format of the data files e.g. nimblegen
 
-=over 8
-
 =item B<-group|g>
 
 Mandatory:  The name of the experimental group
 
-=over 8
 
 =item B<-data_root>
 
 The root data dir containing native data and pipeline data, default = $ENV{'EFG_DATA'}
-
-=over 8
 
 =item B<-fasta>
 
@@ -57,7 +52,6 @@ Species name for the array.
 
 Turns on and defines the verbosity of debugging output, 1-3, default = 0 = off
 
-=over 8
 
 =item B<-help>
 
@@ -110,8 +104,8 @@ use Data::Dumper;
 use strict;
 
 $| = 1;							#autoflush
-my ($pass, $dbname, $help, $man, $array_name, $line, $label);
-my ($clobber, $type, $desc, $file, $class, $logic_name, $name);
+my ($pass, $dbname, $array_name, $line, $label, $dnadb_user, $dnadb_port);
+my ($clobber, $type, $desc, $file, $class, $logic_name, $name, $dnadb_host);
 my ($anal_db, $db_version, $db_file, $program, $program_version, $program_file);
 my ($gff_source, $gff_feature, $module, $module_version, $parameters, $created);
 my ($displayable, $web_data, $species);
@@ -122,14 +116,11 @@ my $user = "ensadmin";
 my $host = 'ens-genomics1';
 my $port = '3306';
 
-#this should import using the API
-#taking array name vendor args to populate the appropriate array/arary_chip records
-#or parse them from the info line?
-#currently just generates and imports flat file
 
 #should also build cache and generate nr file?
 #this depends on id/name field refering to unique seq
 #same name can't refer to more than one seq
+my @tmp_args = @ARGV;
 
 GetOptions (
 			#general params
@@ -137,11 +128,14 @@ GetOptions (
 			"pass|p=s"        => \$pass,
 			"port=s"          => \$port,
 			"host|h=s"        => \$host,
+			"dnadb_host=s"    => \$dnadb_host,
+			"dnadb_user=s"    => \$dnadb_user,
+			"dnadb_port=s"    => \$dnadb_port,
 			"user|u=s"        => \$user,
 			"dbname|d=s"      => \$dbname,
 			"species=s"       => \$species,
-			"help|?"          => \$help,
-			"man|m"           => \$man,
+			"help|?"          => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); },
+			"man|m"           => sub { pos2usage(-exitval => 0, -verbose => 2, -message => "Params are:\t@tmp_args"); },
 			"type|t=s"        => \$type,
 			'clobber'         => \$clobber,#update old entries?
 			#Cell/Feature params
@@ -165,10 +159,10 @@ GetOptions (
 			"created=s"         => \$created,
 			"displayable=s"     => \$displayable,
 			"web_data=s"        => \$web_data,
-		   ) or die;
+		   ) or pod2usage(
+						 -exitval => 1,
+						 -message => "Params are:\t@tmp_args");
 
-pod2usage(1) if $help;
-pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 #This should work for any object so long as we set u the config correctly
 
@@ -176,7 +170,7 @@ my %type_config = (
 				   'FeatureType' => {(
 									  class            => 'Bio::EnsEMBL::Funcgen::FeatureType',
 									  fetch_method     => 'fetch_by_name',
-									  fetch_args       => [$name],
+									  fetch_arg       => '-name',
 									  mandatory_params => {(
 															-name        => $name,
 														   )},
@@ -190,7 +184,7 @@ my %type_config = (
 				   'CellType' => {(
 								   class            => 'Bio::EnsEMBL::Funcgen::CellType',
 								   fetch_method     => 'fetch_by_name',
-								   fetch_args       => [$name],
+								   fetch_arg       => '-name',
 								   mandatory_params => {(
 														 -name          => $name,
 														)},
@@ -204,7 +198,7 @@ my %type_config = (
 				   'Analysis' => {(
 								   class            => 'Bio::EnsEMBL::Analysis',
 								   fetch_method => 'fetch_by_logic_name',
-								   fetch_args   => [$logic_name],
+								   fetch_arg   => '-logic_name',
 								   
 								   #DB
 								   #DB_VERSION
@@ -266,11 +260,17 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -pass    => $pass,
 													  -host    => $host,
 													  -user    => $user,
+													  -dnadb_host => $dnadb_host,
+													  -dnadb_port => $dnadb_port,
+													  -dnadb_user => $dnadb_user,
 													  -species => $species,
 													 );
 
-my ($adaptor, $method, $obj_class);
 my $fetch_method = $type_config{$type}->{'fetch_method'};
+my $obj_class = $type_config{$type}->{'class'};
+my $method = 'get_'.$type.'Adaptor';
+my $adaptor = $db->$method();
+my ($field, @values);
 
 if($file){
 
@@ -278,40 +278,50 @@ if($file){
   #parse headers to match to params and call relevant sub
 
 
-  throw('File import not yet implemented');
+  my @fields = keys %{$type_config{$type}{mandatory_params}};
+  push @fields, keys %{$type_config{$type}{optional_params}};
 
+  map $_=~ s/^-//, @fields;
+
+  #Could set header hash here? using helper?
+  #Or should this be in EFGUtils?
 
   #would need to clean hash values here
   my $in = open_file($file);
-  my ($line);
+
+
+  my @header = split /\s+/, <$in>;#Will this slurp?
+
+  #mysql -hens-genomics1 -uensro -e "select name, class, description from feature_type where class in('Histone', 'Regulatory Feature', 'Open Chromatin', 'Insulator')" homo_sapiens_funcgen_55_37
+
+
+  my $hposns = set_header_hash(\@header, \@fields);
 
   while ($line = <$in>){
 	next if $line =~ /^#/;
 
 	chomp $line;
 
-	if($line =~ /^>/){#found new header
-	  
-	  #set type and adaptor
-	  #validate header vs. mandatory keys
-
-	}else{
-
-	  #clean param values here
-	  #call import_type
-	  
-
+	@values = split /\t/, $line;
+	
+	#This will clean all the old values
+	foreach my $param(keys %{$type_config{$type}{mandatory_params}}){
+	  ($field = $param) =~ s/^-//;
+	  $type_config{$type}{mandatory_params}{$param} = $values[$hposns->{$field}];
 	}
-
+	
+	foreach my $param(keys %{$type_config{$type}{optional_params}}){
+	  ($field = $param) =~ s/^-//;
+	  $type_config{$type}{optional_params}{$param} = $values[$hposns->{$field}];
+	}
+		
+	&import_type;
   }
 
 
-
 }else{
-  $obj_class = $type_config{$type}->{'class'};
-  $method = 'get_'.$type.'Adaptor';
-  $adaptor = $db->$method();
-  &import_type();
+  #Values already set
+  &import_type;
 }
 
 
@@ -319,16 +329,16 @@ sub import_type{
 
   #check mandatorys here
 
-  foreach my $man_param(keys %{$type_config{$type}->{'mandatory_params'}}){
+  foreach my $man_param(keys %{$type_config{$type}{'mandatory_params'}}){
 	throw ("$man_param not defined") if ! defined $type_config{$type}->{'mandatory_params'}->{$man_param};
   }
 
 
   #test if already present
-  my $obj = $adaptor->$fetch_method(@{$type_config{$type}->{'fetch_args'}});
-
+  my $obj = $adaptor->$fetch_method($type_config{$type}{mandatory_params}->{$type_config{$type}->{'fetch_arg'}});
+  
   if(defined $obj){
-	warn("Found pre-existing $type object:\t".join("\t", @{$type_config{$type}->{'fetch_args'}}).
+	warn("Found pre-existing $type object:\t".$type_config{$type}{mandatory_params}->{$type_config{$type}->{'fetch_arg'}}.
 		 "\nClobber/Update not yet implementing, skipping import\n");
 	
   }
@@ -336,8 +346,36 @@ sub import_type{
 	$obj = new $obj_class(%{$type_config{$type}->{'mandatory_params'}}, 
 						   %{$type_config{$type}->{'optional_params'}});
 
+	print "Storing $type ".$type_config{$type}{mandatory_params}->{$type_config{$type}->{'fetch_arg'}}."\n";
+
 	$adaptor->store($obj);
   }
 
   return;
+}
+
+
+#Should use helper for this and add logging
+
+sub set_header_hash{
+  my ($self, $header_ref, $fields) = @_;
+	
+  my %hpos;
+
+  for my $x(0..$#{$header_ref}){
+    $hpos{$header_ref->[$x]} = $x;
+  }	
+
+
+  if($fields){
+
+    foreach my $field(@$fields){
+	  
+      if(! exists $hpos{$field}){
+	throw("Header does not contain mandatory field:\t${field}");
+      }
+    }
+  }
+  
+  return \%hpos;
 }
