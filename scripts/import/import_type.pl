@@ -1,16 +1,13 @@
 #!/software/bin/perl -w
 
 
-####!/opt/local/bin/perl -w
-
-
 =head1 NAME
 
 import_type.pl
   
 =head1 SYNOPSIS
 
-import_array_from_fasta.pl [options]
+import_type.pl [options]
 
 The script will import a new CellType, FeatureType or Analysis.
 
@@ -21,37 +18,16 @@ The script will import a new CellType, FeatureType or Analysis.
 
 =item B<-name|n>
 
-Mandatory:  Instance name for the data set, this is the directory where the native data files are located
+Mandatory:  
 
-=item B<-format|f>
+=item B<-type|t>
 
-Mandatory:  The format of the data files e.g. nimblegen
+Mandatory:  The type you are trying to import e.g. FeatureType or CellType
 
-=item B<-group|g>
-
-Mandatory:  The name of the experimental group
-
-
-=item B<-data_root>
-
-The root data dir containing native data and pipeline data, default = $ENV{'EFG_DATA'}
-
-=item B<-fasta>
-
-Flag to turn on dumping of all probe_features in fasta format for the remapping pipeline
-
-=item B<-norm>
-
-Normalisation method, deafult is the Bioconductor vsn package which performs generalised log ratio transformations
 
 =item B<-species|s>
 
 Species name for the array.
-
-=item B<-debug>
-
-Turns on and defines the verbosity of debugging output, 1-3, default = 0 = off
-
 
 =item B<-help>
 
@@ -65,12 +41,16 @@ Prints the manual page and exits.
 
 =head1 DESCRIPTION
 
-B<This program> takes a input redundant probe name fasta file and generates an NR probe dbID fasta file.
+B<This program> imports FeatureType or CellType entries either from paramters or from a flat file
 
 =cut
 
+#To do
+#1 POD Docs
+#2 Helper logs
+#3 Remove/Implement analysis?
 
-#add @INC stuff here, or leave to .bashrc/.efg?
+
 
 BEGIN{
   if (! defined $ENV{'EFG_DATA'}) {
@@ -248,7 +228,7 @@ my %type_config = (
 
 #generic mandatory params
 if(!(exists $type_config{$type} && $dbname && $pass && $species)){
-  throw("Mandatory parameters not met -dbname -pass -species or $type config is not yet accomodated");
+  throw("Mandatory parameters not met -dbname($dbname) -pass($pass) -species($species) or $type config is not yet accomodated");
 }
 
 
@@ -317,9 +297,8 @@ if($file){
 		
 	&import_type;
   }
-
-
-}else{
+}
+else{
   #Values already set
   &import_type;
 }
@@ -355,7 +334,7 @@ sub import_type{
 }
 
 
-#Should use helper for this and add logging
+#Should use helper for this and add logging too
 
 sub set_header_hash{
   my ($self, $header_ref, $fields) = @_;
