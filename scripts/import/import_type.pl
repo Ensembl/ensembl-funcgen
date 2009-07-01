@@ -200,6 +200,10 @@ my %type_config = (
 
 
 								   #this is assumed mandatory params as they are not forced in Analysis->new
+
+								   #select a.logic_name, a.db, a.db_version, a.db_file, a.program, a.program_version, a.program_file, a.parameters, a.module, a.module_version, a.created, a.gff_source, a.gff_feature, ad.description, ad.display_label, ad.displayable, ad.web_data from analysis a left join analysis_description ad on a.analysis_id=ad.analysis_id where logic_name not like "%Probe%Align" and logic_name !='probe2transcript';
+
+
 								   mandatory_params => {(
 														 -logic_name => $logic_name,
 														)},
@@ -231,6 +235,10 @@ if(!(exists $type_config{$type} && $dbname && $pass && $species)){
   throw("Mandatory parameters not met -dbname($dbname) -pass($pass) -species($species) or $type config is not yet accomodated");
 }
 
+if($file && ($name || $logic_name)){
+  throw('Cannot specify -file and -name|logic_name, use one or other');
+}
+
 
 #now do type specific checking
 
@@ -245,6 +253,23 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -dnadb_user => $dnadb_user,
 													  -species => $species,
 													 );
+#test db connections
+$db->dbc->db_handle;
+$db->dnadb->dbc->db_handle;
+
+my $info;
+
+if(defined $file){
+  $info = "s from file:\t$file";
+}
+elsif($name){
+  $info = ":\t$name";
+}
+elsif($logic_name){
+  $info = ":\t$logic_name";
+}
+
+print "Importing ${type}${info}\n";
 
 my $fetch_method = $type_config{$type}->{'fetch_method'};
 my $obj_class = $type_config{$type}->{'class'};
@@ -279,6 +304,7 @@ if($file){
 
   while ($line = <$in>){
 	next if $line =~ /^#/;
+	next if $line =~ /^$/;
 
 	chomp $line;
 
