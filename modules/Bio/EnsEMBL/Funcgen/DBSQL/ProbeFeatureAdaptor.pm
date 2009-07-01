@@ -190,6 +190,7 @@ sub fetch_all_by_Slice_array_vendor {
 	#Do we need this group by?
 	#We may get array_chip to probe product if probe is presenton >1 array_chip.
 	#We handle this in _objects_from_sth anyway.
+
 	#That would have to be removed for complex extension.
 #	$self->bind_param_generic_fetch($array,  SQL_VARCHAR);
 #	$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
