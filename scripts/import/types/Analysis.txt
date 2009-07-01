@@ -12,6 +12,8 @@ HitList	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NU
 RegulatoryRegion	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	Features from <a href="/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.	RegulatoryRegion	1	NULL
 eQTL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	NULL	NULL	NULL	NULL
 T.Biweight	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	Weighted mean standardisation using the one step Tukey Biweight algorithm	Tukey Biweight	1	NULL
+SupervisedHMM	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	Supervised Hidden Markov Model	SupervisedHMM	1	NULL
+WindowInterval	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	Window Interval	WindowInterval	1	NULL
 
 #This file should only contain analyses which are used during direct experimental import
 #Pipeline (peaks/arrays) analyses should be imported by the pipeline
