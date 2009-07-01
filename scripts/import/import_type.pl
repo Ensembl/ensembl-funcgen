@@ -294,13 +294,14 @@ if($file){
   #would need to clean hash values here
   my $in = open_file($file);
 
-
-  my @header = split /\s+/, <$in>;#Will this slurp?
+  $line = <$in>;
+  chomp $line;
+  my @header = split /\t/, $line;
 
   #mysql -hens-genomics1 -uensro -e "select name, class, description from feature_type where class in('Histone', 'Regulatory Feature', 'Open Chromatin', 'Insulator')" homo_sapiens_funcgen_55_37
 
-
   my $hposns = set_header_hash(\@header, \@fields);
+
 
   while ($line = <$in>){
 	next if $line =~ /^#/;
@@ -313,12 +314,12 @@ if($file){
 	#This will clean all the old values
 	foreach my $param(keys %{$type_config{$type}{mandatory_params}}){
 	  ($field = $param) =~ s/^-//;
-	  $type_config{$type}{mandatory_params}{$param} = $values[$hposns->{$field}];
+	  $type_config{$type}{mandatory_params}{$param} = ($values[$hposns->{$field}] eq 'NULL') ? undef : $values[$hposns->{$field}];
 	}
 	
 	foreach my $param(keys %{$type_config{$type}{optional_params}}){
 	  ($field = $param) =~ s/^-//;
-	  $type_config{$type}{optional_params}{$param} = $values[$hposns->{$field}];
+	  $type_config{$type}{optional_params}{$param} = ($values[$hposns->{$field}] eq 'NULL') ? undef : $values[$hposns->{$field}];
 	}
 		
 	&import_type;
@@ -348,6 +349,16 @@ sub import_type{
 	
   }
   else{
+	
+	#if(exists $type_config{$type}->{'mandatory_params'}{'-logic_name'} &&
+	 #  ($type_config{$type}->{'mandatory_params'}{'-logic_name'} eq 'Nessie_NG_STD_2')){
+
+	
+	 # warn Data::Dumper::Dumper($type_config{$type}->{'mandatory_params'});
+	 # warn Data::Dumper::Dumper($type_config{$type}->{'optional_params'});
+	  
+
+	#}
 	$obj = new $obj_class(%{$type_config{$type}->{'mandatory_params'}}, 
 						   %{$type_config{$type}->{'optional_params'}});
 
@@ -363,12 +374,12 @@ sub import_type{
 #Should use helper for this and add logging too
 
 sub set_header_hash{
-  my ($self, $header_ref, $fields) = @_;
+  my ($header_ref, $fields) = @_;
 	
   my %hpos;
 
   for my $x(0..$#{$header_ref}){
-    $hpos{$header_ref->[$x]} = $x;
+	$hpos{$header_ref->[$x]} = $x;
   }	
 
 
@@ -377,7 +388,7 @@ sub set_header_hash{
     foreach my $field(@$fields){
 	  
       if(! exists $hpos{$field}){
-	throw("Header does not contain mandatory field:\t${field}");
+		throw("Header does not contain mandatory field:\t${field}");
       }
     }
   }
