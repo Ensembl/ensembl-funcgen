@@ -51,7 +51,5 @@ Non-Gene Associated - Cell type specific	Regulatory Feature	Cell type specific n
 Promoter Associated	Regulatory Feature	Promoter like regulatory feature
 Promoter Associated - Cell type specific	Regulatory Feature	Cell type specific promoter like regulatory feature
 RegulatoryFeature	Regulatory Feature	Ensembl regulatory feature
-RegulatoryFeature	Regulatory Feature	Regulatory Feature
 Unclassified	Regulatory Feature	Unclassified regulatory feature
 Unclassified - Cell type specific	Regulatory Feature	Cell type specific unclassified regulatory feature
-name	class	description
