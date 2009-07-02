@@ -523,37 +523,47 @@ sub fetch_by_name{
 
 
 
-
-
 =head2 fetch_all
 
-  Arg [1]    : none
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Arg [2]    : optional string - attribute e.g. DEFAULT, SEQUENCE_LEVEL, RANK
   Example    : foreach my $cs (@{$csa->fetch_all()}) {
                  print $cs->name(), ' ', $cs->version(), "\n";
                }
-  Description: Retrieves every coordinate system defined in the DB.
-               These will be returned in ascending order of rank. I.e.
-               The highest coordinate system with rank=1 would be first in the
-               array.
+  Description: Retrieves every coordinate system defined in the DB. Will 
+               restrict to those from a particular dnadb if one is passed.
+               #These will be returned in ascending order of rank. I.e.
+               #The highest coordinate system with rank=1 would be first in the
+               #array.
   Returntype : listref of Bio::EnsEMBL::Funcgen::CoordSystems
   Exceptions : none
   Caller     : general
-  Status     : at risk
+  Status     : at risk - make arg optional so we can truly retrieve all
 
 =cut
 
 sub fetch_all {
-  my $self = shift;
+  my ($self, $dnadb, $attribute) = @_;
 
-
-  throw('Not implement rank cache');
+  if(! $dnadb || ! (ref($dnadb) && $dnadb->isa('Bio::EnsEMBL::DBSQL::DBAdaptor'))){
+	throw('Not yet implement full fetch_all, please pass a dnadb');
+  }
 
   my @coord_systems;
+  my $schema_build = $self->db->_get_schema_build($dnadb);
 
-  #order the array by rank in ascending order
-  foreach my $rank (sort {$a <=> $b} keys %{$self->{'_rank_cache'}}) {
-    push @coord_systems, $self->{'_rank_cache'}->{$rank};
+  foreach my $cs(values %{$self->{'_dbID_cache'}}){
+
+	if ($cs->contains_schema_build($schema_build)){
+	  next if($attribute && ! $cs->get_coord_system_attribute(uc($attribute), $dnadb));
+	  push @coord_systems, $cs;
+	}
   }
+
+  ##order the array by rank in ascending order
+  #foreach my $rank (sort {$a <=> $b} keys %{$self->{'_rank_cache'}}) {
+  #  push @coord_systems, $self->{'_rank_cache'}->{$rank};
+  #}
 
   return \@coord_systems;
 }
