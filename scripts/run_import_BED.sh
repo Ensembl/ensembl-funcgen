@@ -24,8 +24,8 @@ $EFG_SRC/scripts/import/parse_and_import.pl\
 	-experimental_set LMI_CD4_H3K4ac\
 	-ucsc_coords\
 	-registry_host ens-staging\
-	-registry_user ensro\    
-	-assembly 37\          
+	-registry_user ensro\
+	-assembly 37\
 	-host ens-genomics1\
 	-port 3306\
 	-dbname nj_importer_homo_sapiens_funcgen_55_37\
