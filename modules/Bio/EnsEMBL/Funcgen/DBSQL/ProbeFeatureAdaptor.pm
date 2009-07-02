@@ -181,19 +181,15 @@ sub fetch_all_by_Slice_array_vendor {
 
 
 	#Need to protect against SQL injection here due to text params
-  my $constraint = sprintf ' a.name="%s" and a.vendor="%s" and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id ',
-    $array,
-    $vendor;
-
-	
+	my $constraint = ' a.name=? and a.vendor=? and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id';
 	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
 	#Do we need this group by?
 	#We may get array_chip to probe product if probe is presenton >1 array_chip.
 	#We handle this in _objects_from_sth anyway.
 
 	#That would have to be removed for complex extension.
-#	$self->bind_param_generic_fetch($array,  SQL_VARCHAR);
-#	$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
+	$self->bind_param_generic_fetch($array,  SQL_VARCHAR);
+	$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
 	
 	my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 	@tables       = @true_tables;
