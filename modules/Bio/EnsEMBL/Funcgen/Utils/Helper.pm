@@ -612,6 +612,7 @@ sub set_header_hash{
   return \%hpos;
 }
 
+#Move this to EFGUtils?
 
 sub backup_file{
   my ($self, $file_path) = @_;
@@ -923,7 +924,8 @@ sub rollback_FeatureSet{
   #Maybe we should?
   #We're always going to have a DB so why not?
   #Because we might want to use the Helper to Log before we can create the DB?
-  my ($sql, $slice_join, $slice_name);
+  my ($sql, $slice_name);
+  my $slice_join = '';
   my $table = $fset->type.'_feature';
   my $adaptor = $fset->adaptor || throw('FeatureSet must have an adaptor');
   my $db = $adaptor->db;
@@ -993,7 +995,7 @@ sub rollback_FeatureSet{
 
   #Need to remove object xrefs here
   #Do not remove xrefs as these may be used by something else!
-  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".uc($fset->type)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
+  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".ucfirst($fset->type)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
   $row_cnt = $db->dbc->do($sql);
   
   if(! $row_cnt){
@@ -1718,8 +1720,8 @@ sub reset_table_autoinc{
   #Why do we need autoinc here?
 
   my $sql = "select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
-  my $new_autoinc = (($db->dbc->db_handle->selectrow_array($sql))[0] + 1);
-
+  my ($current_auto_inc) = $db->dbc->db_handle->selectrow_array($sql);
+  my $new_autoinc = ($current_auto_inc) ? ($current_auto_inc + 1) : 1;  
   $sql = "ALTER TABLE $table_name AUTO_INCREMENT=$new_autoinc";
   $db->dbc->do($sql);
   return;
