@@ -93,8 +93,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
     
   #validate and set type, analysis and feature_set here
-  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables) = 
-	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES'], @_);
+  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables, $skip_xrefs) = 
+	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES', 'SKIP_XREF_CLEANUP'], @_);
   
   
   if (! ($db && ref($db) &&
@@ -111,7 +111,8 @@ sub new {
   $self->{'dbname'} = $db->dbc->dbname;
   $self->{'builds'} = (scalar(@$builds)>0) ? $builds : [];
   $self->{'skip_meta_coord'} = $skip_mc;
-
+  $self->{'skip_xrefs'} = $skip_xrefs;
+  
   if(defined $meta_coord_tables){
 
 	throw('-skip_meta_coord is set, Cannot build meta_coord entries for tables '.join(', ', @$meta_coord_tables));
@@ -167,6 +168,7 @@ sub update_db_for_release{
   $self->analyse_and_optimise_tables;
   $self->set_current_coord_system;
   $self->update_meta_coord;
+  $self->clean_xrefs;
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
   $self->log_header("??? Have you diff'd the sql for each species vs. a fresh schema ???");
@@ -646,16 +648,27 @@ sub log_data_sets{
   
   
   foreach my $dset(@dsets){
-	$self->log_set("Found DataSet:\t\t", $dset) ;
+	$self->log_set("DataSet:\t\t", $dset) ;
 
 	my $fset = $dset->product_FeatureSet;
 	$self->log_set("Product FeatureSet:\t", $fset) if $fset;
 	
-	#my @supporting_sets = @{$dset->get_supporting_sets};
+	my @supporting_sets = @{$dset->get_supporting_sets};
+	
+	$self->log('Found '.scalar(@supporting_sets).' supporting sets:');
 
 	if(my @supporting_sets = @{$dset->get_supporting_sets}){
-	  map $self->log_set("SupportingSet:\t\t", $_), @supporting_sets;
+	  #type here could be result, experimental or feature
+	  #and feature could be annotated or experimental
+	  #Move this to log set?
+
+	  map { my $type = ref($_);
+			$type =~ s/.*://;			
+			$type .= '('.$_->type.')' if($type eq 'FeatureSet');
+			#Need to sprintf $type here to fixed width
+			$self->log_set($type.":\t", $_)} @supporting_sets;
 	}
+	$self->log();
   }
 
   #$self->log_header('Checking Regulatory FeatureSets');
@@ -746,7 +759,7 @@ sub set_current_coord_system{
 
   my $sql = "update coord_system set is_current=False where schema_build !='$schema_build'";
   $self->db->dbc->do($sql);
-  $sql = "update coord_system set is_current=True where schema_build ='$schema_build'";
+  $sql = 'update coord_system set is_current=True where schema_build ="'.$schema_build.'" and attrib like "%default_version%"';
   $self->db->dbc->do($sql);
 
   return;
@@ -770,11 +783,11 @@ sub analyse_and_optimise_tables{
   #myisamchk --analyze. or analyze statement
 
   if($self->{'skip_analyse'}){
-	$self->log('Skipping analyse/optimise tables');
+	$self->log_header('Skipping analyse/optimise tables');
 	return;
   }
 
-
+  $self->log_header("Analysing and optimising tables");
   
 
   my $sql = 'show tables;';
@@ -809,7 +822,26 @@ sub analyse_and_optimise_tables{
 }
 
 
-### Check for regulatory meta entries for all regulatory feature_sets
+sub clean_xrefs{
+  my ($self) = @_;
+
+  if($self->{'skip_xrefs'}){
+	$self->log_header('Skipping clean_xrefs');
+	return;
+  }
+
+  $self->log_header("Cleaning unlinked xref records");
+ 
+  my $sql = 'DELETE x from xref x where x.xref_id not in (select xref_id from object_xref)';
+
+  my $row_cnt = $self->db->dbc->do($sql);
+
+  $self->reset_table_autoinc('xref', 'xref_id', $self->db);
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt unlinked xref records");
+
+  return;
+}
 
 
 1;
