@@ -20,10 +20,6 @@ normally set by the Importer as the parent class.  Bed contains meta
 data and methods specific to data in bed format, to aid 
 parsing and importing of experimental data.
 
-=head1 AUTHOR
-
-This module was created by Stefan Graf.
-
 =head1 CONTACT
 
 Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
@@ -201,7 +197,7 @@ sub read_and_import_bed_data{
     if (scalar(@{$self->result_files()}) >1) {
         warn("Found more than one bed file:\n".
              join("\n", @{$self->result_files()})."\nBed does not yet handle replicates.".
-             "  We need to resolve how we are going handle replicates with random cluster IDs");
+             "  If they are from the same replicate cat them and retry\n(We need to resolve how we are going handle replicates with random cluster IDs)");
         #do we even need to?
     }
 
@@ -274,7 +270,7 @@ sub read_and_import_bed_data{
 		 my $fasta = '';
 		 
 		 #warn "we need to either dump the pid rather than the dbID or dump the fasta in the DB dir";
-		 my $fasta_file = $ENV{'EFG_DATA'}."/fastas/".$self->experiment->name().'.'.$filename.'.fasta';
+		 my $fasta_file = $self->get_dir('fastas')."/".$self->experiment->name().'.'.$filename.'.fasta';
 
 		 if($self->dump_fasta()){
 		   $self->backup_file($fasta_file);
@@ -283,13 +279,25 @@ sub read_and_import_bed_data{
 		
 		 foreach my $line (@lines) {
 		   $line =~ s/\r*\n//o;
-		   next if $line =~ /^\#/;	
-		   next if $line =~ /^$/;
-		   next unless $line =~ /^chr/i;
+
+		   #Need to parse header here e.g.
+		   #track name=pairedReads description="Clone Paired Reads" useScore=1
+
+		   next if $line =~ /^\#/o;	
+		   next if $line =~ /^$/o;
+		   next if $line !~ /^chr/io;
 		   #next if $line =~ /^chr/i;#Mikkelson hack
 		   
-		   my ($chr, $start, $end, $pid, $score) = split/\t/o, $line;				  
-		   #my ($chr, $start, $end, $score) = split/\t/o, $line;#Mikkelson hack				  
+		   #chr start end name score strand thickStart thickEnd itemRgb blockCount blockSizes blockStarts
+
+		   #Score should be between 0-1000 for ucsc gradient colouring, no such requirement for e!
+		   #Need to set itemRgb as TRACK_RGB colour status
+		   
+
+
+		   my ($chr, $start, $end, $name, $score) = split/\t/o, $line;				  
+		   #my ($chr, $start, $end, $score) = split/\t/o, $line;#Mikkelson hack	
+		   #Validate variables types here beofre we get a nasty error from bind_param?
 		   
 
 		   if($self->ucsc_coords){
@@ -311,17 +319,20 @@ sub read_and_import_bed_data{
 				-SLICE         => $self->cache_slice($chr),
 				-ANALYSIS      => $fset->analysis,
 				-SCORE         => $score,
-				-DISPLAY_LABEL => $pid,
+				-DISPLAY_LABEL => $name,
 				-FEATURE_SET   => $fset,
 			   );
-			 
+
+					 
 			 $af_adaptor->store($feature);
 			 
 			 $count++;
 
 			 #dump fasta here
 			 if ($self->dump_fasta()){
-			   $fasta .= '>'.$pid."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
+			   #We need to prefix this with the dbID?
+			   #And put the fasta in a host:port:dbname specfific dir?
+			   $fasta .= '>'.$name."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
 			 }
 		   }
 		 }
