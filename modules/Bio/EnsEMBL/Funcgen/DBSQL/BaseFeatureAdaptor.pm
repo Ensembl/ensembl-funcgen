@@ -1131,6 +1131,56 @@ sub fetch_by_display_label {
   return $feature;
 }
 
+=head2 _get_coord_system_ids
+
+  Arg [1]    : arrayref of Bio::EnsEMBL::Funcgen::CoordSystem objects
+  Example    : my $feat = $adaptor->fetch_by_display_label("BRCA2");
+  Description: Returns the feature which has the given display label or
+               undef if there is none. If there are more than 1, only the first
+               is reported.
+  Returntype : Bio::EnsEMBL::Funcgen::Feature
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+#Can we remove the need for this by restricting the sr cache to default entries?
+
+sub _get_coord_system_ids{
+  my ($self, $coord_systems) = @_;
+
+  	my @cs_ids;
+	
+  if($coord_systems){
+	  
+	if(ref($coord_systems) eq 'ARRAY' && 
+	   (scalar(@$coord_systems) >0)){
+	  
+	  foreach my $cs(@$coord_systems){
+		$self->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
+		push @cs_ids, $cs->dbID;
+	  }
+	}
+	else{
+	  throw('CoordSystems parameter must be an arrayref of one or more Bio::EnsEMBL::Funcgen::CoordSystems');
+	}
+  }
+  else{
+
+	#Get current default cs's
+	foreach my $cs(@{$self->db->get_FGCoordSystemAdaptor->fetch_all($self->db->dnadb, 'DEFAULT')}){
+	  push @cs_ids, $cs->dbID;
+	}
+  }
+	  
+  #This should never happen
+  if(scalar(@cs_ids) == 0){
+	throw('Could not find any default CoordSystems');
+  }
+
+  return \@cs_ids;
+}
 
 
 
