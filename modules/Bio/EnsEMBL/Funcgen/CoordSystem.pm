@@ -281,7 +281,7 @@ sub add_core_coord_system_info {
 
   $self->{'core_cache'}{$sbuild} = {(
 									 RANK                 => $rank,
-									 SEQUENCE_LEVEL              => $sequence_level,
+									 SEQUENCE_LEVEL       => $sequence_level,
 									 DEFAULT              => $default,
 									 CORE_COORD_SYSTEM_ID => $ccs_id,
 									 IS_STORED            => $stored,
@@ -314,25 +314,6 @@ sub name {
   return $self->{'name'};
 }
 
-
-=head2 schema_build
-
-  Example    : print $coord_system->schema_build();
-  Description: Getter for the schema_build of this coordinate system
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : deprecated
-
-=cut
-
-sub schema_build {
-  my $self = shift;
-
-  throw('schema_build deprecated, use contains_schema_build');
-
-  return $self->{'schema_build'};
-}
 
 =head2 get_latest_schema_build
 
@@ -496,60 +477,77 @@ sub is_top_level {
 }
 
 
+#These attribute methods are largely redundant
+#is_default is used by Feature Adaptors to restrict features to
+#current default assembly for non slice based methods
+#Especially redundant now we have implemented this in fetch_all
+
 =head2 is_sequence_level
 
-  Arg [1]    : none
-  Example    : if($coord_sys->is_sequence_level()) { ... }
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Example    : if($coord_sys->is_sequence_level($dnadb)) { ... }
   Description: Returns true if this is a sequence level coordinate system
+               for a given dnadb
   Returntype : 0 or 1
   Exceptions : none
   Caller     : general
-  Status     : at risk - not yet implemented
+  Status     : at risk
 
 =cut
 
 sub is_sequence_level {
-  my $self = shift;
+  my ($self, $dnadb) = @_;
 
-  throw('Not yet implemented, need to test against core cache using dnadb/schema_build');
-
-  return $self->{'sequence_level'};
+  return $self->get_coord_system_attribute('sequence_level', $dnadb);
 }
 
 
 =head2 is_default
 
-  Arg [1]    : none
-  Example    : if($coord_sys->is_default()) { ... }
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Example    : if($coord_sys->is_default($dnadb)) { ... }
   Description: Returns true if this coordinate system is the default
-               version of the coordinate system of this name.
+               version of the coordinate system of this name for a given dnadb.
   Returntype : 0 or 1
   Exceptions : none
-  Caller     : general
-  Status     : at risk - not yet implemented
+  Caller     : general - Used 
+  Status     : at risk
 
 =cut
 
 sub is_default {
-  my $self = shift;
+  my ($self, $dnadb) = @_;
 
-  throw('Not yet implemented, need to test against core cache using dnadb/schema_build');
-
-  return $self->{'default'};
+  return $self->get_coord_system_attribute('default', $dnadb);
 }
 
+sub get_coord_system_attribute{
+  my($self, $attr_name, $dnadb) = @_;
+  
+  if(! ($dnadb && ref($dnadb) && $dnadb->isa('Bio::EnsEMBL::DBSQL::DBAdaptor'))){
+	throw("You must pass a dnadb to access the CoordSystem attribute:\t $attr_name");
+  }
+  
+  my $schema_build = $self->adaptor->db->_get_schema_build($dnadb);
+  
+  if(! $self->contains_schema_build($schema_build)){
+	throw("CoordSystem does not contain the schema_build:\t$schema_build");
+  }
 
+  return $self->{'core_cache'}{$schema_build}{uc($attr_name)};
+
+}
 
 
 =head2 rank
 
-  Arg [1]    : none
-  Example    : if($cs1->rank() < $cs2->rank()) {
+  Arg [1]    : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Example    : if($cs1->rank($dnadb) < $cs2->rank($dnadb)) {
                  print $cs1->name(), " is a higher level coord system than",
                        $cs2->name(), "\n";
                }
-  Description: Returns the rank of this coordinate system.  A lower number
-               is a higher coordinate system.  The highest level coordinate
+  Description: Returns the rank of this coordinate system for a given dnadb. 
+               A lower number is a higher coordinate system.  The highest level coordinate
                system has a rank of 1 (e.g. 'chromosome').  The toplevel
                pseudo coordinate system has a rank of 0.
   Returntype : int
@@ -560,11 +558,9 @@ sub is_default {
 =cut
 
 sub rank {
-  my $self = shift;
+  my ($self, $dnadb) = @_;
+  return $self->get_coord_system_attribute('rank', $dnadb);
 
-  throw('Not yet implemented, need to test against core cache using dnadb/schema_build');
-
-  return $self->{'rank'};
 }
 
 1;
