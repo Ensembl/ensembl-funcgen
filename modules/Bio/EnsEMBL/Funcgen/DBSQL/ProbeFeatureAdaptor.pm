@@ -74,7 +74,7 @@ my $final_clause = $true_final_clause;
 =cut
 
 sub fetch_all_by_Probe {
-  my ($self, $probe, $cs) = @_;
+  my ($self, $probe, $coord_systems) = @_;
   
   if ( !ref($probe) && !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
     throw('fetch_all_by_Probe requires a Bio::EnsEMBL::Funcgen::Probe object');
@@ -83,8 +83,8 @@ sub fetch_all_by_Probe {
   if ( !defined $probe->dbID() ) {
     throw('fetch_all_by_Probe requires a stored Bio::EnsEMBL::Funcgen::Probe object');
   }
-	
-  return $self->generic_fetch( 'pf.probe_id = ' . $probe->dbID() );
+
+  return $self->fetch_all_by_probe_id($probe->dbID, $coord_systems);
 }
 
 =head2 fetch_all_by_probe_id
@@ -100,13 +100,24 @@ sub fetch_all_by_Probe {
 =cut
 
 sub fetch_all_by_probe_id {
-  my ($self, $pid, $cs) = @_;
+  my ($self, $pid, $coord_systems) = @_;
   
   if ( ! defined $pid ) {
     throw('Need to specify a probe _id');
   }
-	
-  return $self->generic_fetch( 'pf.probe_id = ' . $pid );
+  
+  my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
+  push @tables, (['seq_region', 'sr']);
+
+  my $cs_ids = join(', ', @cs_ids);
+  my $constraint = " pf.probe_id=$pid AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
+  $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
+ 	
+  my $features = $self->generic_fetch($constraint);
+  @tables = @true_tables;
+  $final_clause = $true_final_clause;
+  
+  return $features;
 }
 
 
@@ -126,47 +137,13 @@ sub fetch_all_by_probe_id {
 sub fetch_all_by_probeset {
 	my ($self, $probeset, $coord_systems) = @_;
 
-	#Need to add a clause to restrict to current default assembly
-	#As this can return features from an old assembly if they 
-	#have not been removed
-	
-	#Will this long IN be faster than a simple query extension to sr and cs?
 	if (! $probeset) {
 	  throw('fetch_all_by_probeset requires a probeset name argument');
 	}
 
-	my @cs_ids;
-	
-	if($coord_systems){
-	  
-	  if(ref($coord_systems) eq 'ARRAY' && 
-		 (scalar(@$coord_systems) >0)){
-		
-		foreach my $cs(@$coord_systems){
-		  $self->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
-		  push @cs_ids, $cs->dbID;
-		}
-	  }
-	  else{
-		throw('CoordSystems parameter must be an arrayref of one or more Bio::EnsEMBL::Funcgen::CoordSystems');
-	  }
-	}
-
-	else{
-
-	  #Get current default cs's
-	  foreach my $cs(@{$self->db->get_FGCoordSystemAdaptor->fetch_all($self->db->dnadb, 'DEFAULT')}){
-		push @cs_ids, $cs->dbID;
-	  }
-	}
-	  
-	#This should never happen
-	if(scalar(@cs_ids) == 0){
-	  throw('Could not find any default CoordSystems');
-	}
-	
-
-	
+	#Restrict to default coord_systems
+	#Can we remove the need for this by restricting the sr cache to default entries?
+	my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
 	push @tables, (['probe_set', 'ps'], ['seq_region', 'sr']);
 
 	#Need to protect against SQL injection here due to text params
