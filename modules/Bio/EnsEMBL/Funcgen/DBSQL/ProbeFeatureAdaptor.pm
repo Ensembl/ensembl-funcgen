@@ -74,8 +74,7 @@ my $final_clause = $true_final_clause;
 =cut
 
 sub fetch_all_by_Probe {
-  my $self  = shift;
-  my $probe = shift;
+  my ($self, $probe, $cs) = @_;
   
   if ( !ref($probe) && !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
     throw('fetch_all_by_Probe requires a Bio::EnsEMBL::Funcgen::Probe object');
@@ -101,8 +100,7 @@ sub fetch_all_by_Probe {
 =cut
 
 sub fetch_all_by_probe_id {
-  my $self  = shift;
-  my $pid = shift;
+  my ($self, $pid, $cs) = @_;
   
   if ( ! defined $pid ) {
     throw('Need to specify a probe _id');
@@ -126,17 +124,54 @@ sub fetch_all_by_probe_id {
 =cut
 
 sub fetch_all_by_probeset {
-	my ($self, $probeset) = @_;
+	my ($self, $probeset, $coord_systems) = @_;
+
+	#Need to add a clause to restrict to current default assembly
+	#As this can return features from an old assembly if they 
+	#have not been removed
 	
+	#Will this long IN be faster than a simple query extension to sr and cs?
 	if (! $probeset) {
 	  throw('fetch_all_by_probeset requires a probeset name argument');
 	}
+
+	my @cs_ids;
 	
-	push @tables, (['probe_set', 'ps']);
+	if($coord_systems){
+	  
+	  if(ref($coord_systems) eq 'ARRAY' && 
+		 (scalar(@$coord_systems) >0)){
+		
+		foreach my $cs(@$coord_systems){
+		  $self->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
+		  push @cs_ids, $cs->dbID;
+		}
+	  }
+	  else{
+		throw('CoordSystems parameter must be an arrayref of one or more Bio::EnsEMBL::Funcgen::CoordSystems');
+	  }
+	}
+
+	else{
+
+	  #Get current default cs's
+	  foreach my $cs(@{$self->db->get_FGCoordSystemAdaptor->fetch_all($self->db->dnadb, 'DEFAULT')}){
+		push @cs_ids, $cs->dbID;
+	  }
+	}
+	  
+	#This should never happen
+	if(scalar(@cs_ids) == 0){
+	  throw('Could not find any default CoordSystems');
+	}
+	
+
+	
+	push @tables, (['probe_set', 'ps'], ['seq_region', 'sr']);
 
 	#Need to protect against SQL injection here due to text params
-
-	my $constraint = ' ps.name=? AND ps.probe_set_id=p.probe_set_id';
+	my $cs_ids = join(', ', @cs_ids);
+	my $constraint = " ps.name=? AND ps.probe_set_id=p.probe_set_id AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
 	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
 
 	$self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
