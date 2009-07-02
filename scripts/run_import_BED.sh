@@ -3,33 +3,36 @@
 
 #Test for ENV_NAME here?
 
-#$* is list of bed filepaths
-
 PASS=$1
 shift
 
+#Test for pass
+
+#$* is an optional list of bed file paths
+#Contents of input_dir used if not supplied
+
 
 $EFG_SRC/scripts/import/parse_and_import.pl\
-	-name  LMI_CD4_H3K4ac\                        #experiment/input_dir name
-	-format SEQUENCING\                           #experimental format
-	-parser Bed\                                  #Import parser type
-	-vendor SOLEXA\                               #experiment technology vendor(Will use this parser if -parser not set)
-	-location Hinxton\                            #group location
-	-contact njohnson@ebi.ac.uk\                  #group contact
-	-group efg\                                   #group name
+    -name  LMI_CD4_H3K4ac\
+    -format SEQUENCING\
+	-parser Bed\
+	-vendor SOLEXA\
+	-location Hinxton\
+	-contact njohnson@ebi.ac.uk\
+	-group efg\
 	-species homo_sapiens\
-	-experimental_set LMI_CD4_H3K4ac\              
-	-ucsc_coords\                                 #Starts at 0 rather than 1
-	-registry_host ens-staging\                   #Registry params for selecting
-	-registry_user ensro\                         #correct dnadb
-	-assembly 37\                                 #Genome assembly version
-	-host ens-genomics1\                          #DB connection params
+	-experimental_set LMI_CD4_H3K4ac\
+	-ucsc_coords\
+	-registry_host ens-staging\
+	-registry_user ensro\    
+	-assembly 37\          
+	-host ens-genomics1\
 	-port 3306\
 	-dbname nj_importer_homo_sapiens_funcgen_55_37\
-	-pass $PASS\	
-	-cell_type CD4\                               #Feature/Cell/Analysis info
+	-pass $PASS\
+	-cell_type CD4\
 	-feature_type H3K4ac\
 	-feature_analysis WindowInterval\
-	-tee\                                         #Tees all log ouput to STDOUT(logfile also written)
-	-recover\                                     #Required for Nimblegen 2nd stage or if experiment already exists
-	$*                                            #List of file bed file paths
+	-tee\
+	-recover\
+	$*       
