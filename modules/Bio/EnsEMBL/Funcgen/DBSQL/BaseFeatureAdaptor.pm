@@ -145,11 +145,20 @@ sub fetch_all_by_Slice_constraint {
   #check the cache and return if we have already done this query
 
   #Added schema_build to feature cache for EFG
+
+  my $bind_params = $self->bind_param_generic_fetch();
   my $key = uc(join(':', $slice->name, $constraint, $self->db->_get_schema_build($slice->adaptor->db())));
 
+  if ( defined($bind_params) ) {
+    $key .= ':'
+      . join( ':', map { $_->[0] . '/' . $_->[1] } @{$bind_params} );
+  }
 
-  if(exists($self->{'_slice_feature_cache'}->{$key})) {
-    return $self->{'_slice_feature_cache'}->{$key};
+  # Will only use feature_cache if hasn't been no_cache attribute set
+  if ( !defined $self->db->no_cache() || !$self->db->no_cache() ) {
+	if(exists($self->{'_slice_feature_cache'}->{$key})) {
+	  return $self->{'_slice_feature_cache'}->{$key};
+	}
   }
 
   my $sa = $slice->adaptor();
@@ -192,6 +201,7 @@ sub fetch_all_by_Slice_constraint {
     my $seg_slice  = $seg->to_Slice();
 
     my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
+
 
 	# if this was a symlinked slice offset the feature coordinates as needed
     if($seg_slice->name() ne $slice->name()) {
