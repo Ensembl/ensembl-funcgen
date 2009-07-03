@@ -422,6 +422,7 @@ CREATE TABLE `probe_set` (
    `size` smallint(6) unsigned NOT NULL,
    `family` varchar(20) default NULL,
    PRIMARY KEY  (`probe_set_id`)
+	KEY `name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --- Now ancillary/optional table
@@ -1117,6 +1118,8 @@ CREATE TABLE `status_name` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
+
+--Remove these to separate file and handle with import_type.pl?
 INSERT into status_name(name) values ('DISPLAYABLE');
 INSERT into status_name(name) values ('IMPORTED');
 INSERT into status_name(name) values ('DAS_DISPLAYABLE');
