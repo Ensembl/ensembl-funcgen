@@ -240,7 +240,7 @@ sub fetch_all_by_ProbeSet{
   push @tables, (['array_chip', 'ac'], ['probe', 'p']);
 
   #Extend query and group
-  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
+  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY  a.array_id');# ORDER BY NULL');#Actually slower? Result set too small?
 
   #Reset tables
   @tables = @true_tables;
