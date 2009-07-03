@@ -305,7 +305,7 @@ sub add_supporting_sets {
   foreach my $set(@$sets){
 	
 	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->set_type ne 'data' && $set->dbID)){
-	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet");
+	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet:\t$set");
 	}
 	#set type cannot be data at present as it does not inherit from Set.pm
 
