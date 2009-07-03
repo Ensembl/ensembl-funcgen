@@ -147,7 +147,7 @@ sub new {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Probe objects
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
@@ -213,9 +213,6 @@ sub get_array_chip_ids {
 
 
   $self->get_ArrayChips();
-
-
-  #now need t
 
   #should we get_ArrayChips is we have none cached?
   #this may cause problem
