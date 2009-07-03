@@ -220,6 +220,8 @@ sub display_label {
 	  $self->{'display_label'} = 'Regulatory Features';
 	}
 	else{
+	  #This still fails here if we don't have a class or a cell_type set
+
 	  $self->{'display_label'} = $self->feature_type->name()." - ".$self->cell_type->name()." Enriched Sites";
 	}
   }
