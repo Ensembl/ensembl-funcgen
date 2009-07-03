@@ -619,8 +619,8 @@ sub backup_file{
 
   throw("Must define a file path to backup") if(! $file_path);
 
-  if (-f $file_path) {
-    $self->log("Backing up:\t$file_path");
+   if (-f $file_path) {
+	 $self->log("Backing up:\t$file_path");
     system ("mv ${file_path} ${file_path}.".`date '+%T'`);
   }
 
