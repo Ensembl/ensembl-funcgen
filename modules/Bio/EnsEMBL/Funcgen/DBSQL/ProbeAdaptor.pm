@@ -446,8 +446,9 @@ sub _objs_from_sth {
 			push @result, $probe;
 			$current_dbid = $probe_id;
 		} else {
-			# Extend existing probe
-			$probe->add_array_chip_probename($arraychip_id, $name, $array);
+		  # Extend existing probe
+		  # Probe methods depend on preloading of Array objects
+		  $probe->add_array_chip_probename($arraychip_id, $name, $array);
 		}
 	}
 	return \@result;
