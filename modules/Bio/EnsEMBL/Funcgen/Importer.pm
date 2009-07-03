@@ -11,9 +11,8 @@ $imp->register_experiment();
 
 =head1 DESCRIPTION
 
-B<This program> is the main class coordinating import of Arrays and experimental data.
-It utilises several underlying definitions classes specific to array vendor, array class and
-experimental group.  
+B<This program> is the main class coordinating import of tiling array design and experimental data.
+It utilises several underlying parser classes specific to array vendor or import file type.
 
 =head1 CONTACT
 
@@ -36,15 +35,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date open_file run_system_cmd)
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Experiment;
-#Do we need these
-#Will require not do the job dynamically?
-#Is GFF supported here
-#We need a way to determine whether given Parsers are Importers
-#use Bio::EnsEMBL::Funcgen::Parsers::ArrayDesign;
-#use Bio::EnsEMBL::Funcgen::Parsers::Sanger;
-#use Bio::EnsEMBL::Funcgen::Parsers::Nimblegen;
-#use Bio::EnsEMBL::Funcgen::Parsers::Bed;
-use Bio::EnsEMBL::Funcgen::Utils::Helper;
+#use Bio::EnsEMBL::Funcgen::Utils::Helper;#remove?
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;

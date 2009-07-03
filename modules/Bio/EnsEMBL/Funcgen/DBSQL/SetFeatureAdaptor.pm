@@ -382,9 +382,7 @@ sub _default_where_clause {
   Args       : None
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
-               Returns an ORDER BY clause. Sorting by oligo_feature_id would be
-			   enough to eliminate duplicates, but sorting by location might
-			   make fetching features on a slice faster.
+               Returns an GROUP/ORDER BY clause. 
   Returntype : String
   Exceptions : None
   Caller     : generic_fetch
@@ -395,6 +393,7 @@ sub _default_where_clause {
 
 sub _final_clause {
   my $self = shift;
+  #return '';
   return ' ORDER BY '.$self->_main_table->[1].'.seq_region_id, '.$self->_main_table->[1].'.seq_region_start';
 }
 
