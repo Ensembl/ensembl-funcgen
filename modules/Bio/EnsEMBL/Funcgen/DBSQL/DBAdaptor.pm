@@ -33,14 +33,14 @@ Post questions to the EnsEMBL development list <ensembl-dev@ebi.ac.uk>
 The rest of the documentation details each of the object methods. Internal
 methods are usually preceded with a _
 
-=head1 AUTHOR(S)
-
-Nathan Johnson, njohnson@ebi.ac.uk
 
 
 =cut
 
 ################################################################################
+
+#To do
+#1 Remove need for dnadb to be set, so we can do non feature imports/queries without setting the dnadb?
 
 package Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
