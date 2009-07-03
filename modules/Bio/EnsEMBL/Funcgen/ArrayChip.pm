@@ -10,13 +10,13 @@ a chip/slide within an array,  of which the physical manifestation is an Experim
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::ArrayChip;
+ use Bio::EnsEMBL::Funcgen::ArrayChip;
 
-my $ec = Bio::EnsEMBL::Funcgen::ArrayChip->new(
-							 -ARRAY_ID  => $array->dbID(),
-							 -NAME      => $desc,
-                                                         -DESIGN_ID => $design_id,
-							 );
+ my $ec = Bio::EnsEMBL::Funcgen::ArrayChip->new(
+                    							 -ARRAY_ID  => $array->dbID(),
+					                    		 -NAME      => $desc,
+                                                 -DESIGN_ID => $design_id,
+							                   );
 
 #add more methods here?
 
@@ -25,12 +25,6 @@ my $ec = Bio::EnsEMBL::Funcgen::ArrayChip->new(
 
 An ArrayChip object represent the concept of an array chip/slide withing a given array/chipset.
 The data for ArrayChips is stored in the array_chip table.
-
-
-
-=head1 AUTHOR
-
-This module was created by Nathan Johnson.
 
 This module is part of the Ensembl project: http://www.ensembl.org/
 
@@ -60,6 +54,7 @@ use vars qw(@ISA);
 =head2 new
 
   Arg [-ARRAY_ID]  : int - the dbID of the parent array
+  Arg [-ARRAY]     : Bio::EnsEMBL::Funcgen::Array
   Arg [-DESIGN_ID] : string - the unqiue deisng ID defined by the array vendor
   Arg [-NAME]      : string - the name of the array chip
 
@@ -83,13 +78,30 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($array_id, $name, $design_id)
-    = rearrange( ['ARRAY_ID', 'NAME', 'DESIGN_ID'], @_ );
-  
+  my ($array_id, $name, $design_id, $array)
+    = rearrange( ['ARRAY_ID', 'NAME', 'DESIGN_ID', 'ARRAY'], @_ );
+
+   
+  #Remove array_id so we can remove checking below?
+
   throw("Must define a name($name) and design_id($design_id)") if(! $name || ! $design_id);
 
 
-  #mandatory params all but design_id?
+  #Make these mutually exclusive to avoid checking
+  if($array_id && $array){
+	throw('Must provide either -array or -array_id but not both');
+  }
+
+  if(defined $array){
+	
+	if(!(ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
+	  throw('array paramter must be a valid Bio::EnsEMBL::Funcgen::Array');
+	}
+	
+	$self->{'array'} = $array;
+  }
+
+
 
   $self->array_id($array_id)  if defined $array_id;
   $self->name($name);
