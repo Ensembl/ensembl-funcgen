@@ -280,6 +280,7 @@ sub associated_feature_types{
 	if(defined $self->adaptor){
 	  $self->{'associated_feature_types'} = $self->adaptor->db->get_FeatureTypeAdaptor->fetch_all_by_associated_SetFeature($self);
 	}
+
   }
 
   #This has the potential to return undef, or an arrayref which may be empty.
