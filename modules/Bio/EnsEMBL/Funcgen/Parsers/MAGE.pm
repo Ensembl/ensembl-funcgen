@@ -95,8 +95,7 @@ use vars qw(@ISA);
 sub new{
   my ($caller) = shift;
   my $class = ref($caller) || $caller;
-  my $self = $class->SUPER::new();
-
+  my $self = $class->SUPER::new(@_);
 
   #This needs to be an Importer!
   throw("This is base class for the experiment Bio::EnsEMBL::Funcgen::Parsers, needs to inherit from Bio::EnsEMBL::Funcgen::Importer") if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
@@ -105,16 +104,16 @@ sub new{
   #Are we not passing any Helper params?
   #Log file etc is set in the run script
 
-  my ($write_mage, $no_mage)
-	= rearrange(['WRITE_MAGE', 'NO_MAGE'], @_);
+  my ($write_mage, $no_mage, $vendor)
+	= rearrange(['WRITE_MAGE', 'NO_MAGE', 'VENDOR'], @_);
 
 
   #$self->{'update_xml'} = $update_xml || 0;
   $self->{'write_mage'} = $write_mage || 0;
   $self->{'no_mage'} = $no_mage || 0;
+  $self->{'vendor'} = $vendor;
 
 
-  #REMOVE?
   if ($self->vendor ne 'NIMBLEGEN'){
 	$self->{'no_mage'} = 1;
 	warn "Hardcoding no_mage for non-NIMBLEGEN imports";
@@ -145,7 +144,7 @@ sub new{
 sub process_experiment_config{
   my $self = shift;
 
-  #Here, this is where we need to call the a Parser from Importer to do this for only MAGE experiments
+   #Here, this is where we need to call the a Parser from Importer to do this for only MAGE experiments
   #validate_import?
 
   #This is only used for the first test below.
@@ -301,6 +300,7 @@ sub hybridisation_fields{
 sub write_validate_experiment_config{
   my $self = shift;
     
+
   if($self->{'write_mage'} || $self->{'no_mage'}){
 	$self->read_data("array");
 
