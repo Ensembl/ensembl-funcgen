@@ -341,7 +341,7 @@ sub read_experiment_data{
   $self->log("Reading chip data");
 
 
-  warn "Do we need to validate each line here against the header array?";
+  #warn "Do we need to validate each line here against the header array?";
 
   while ($line = <$fh>){
     next if $line =~ /^\s+\r*\n/;
@@ -672,7 +672,7 @@ sub read_probe_data{
   #Are we still going to get disconnects when we dump the cache?
 
   
-  warn "Read probe data should only read in the array chips which are specified by the ExperimentalChip?  Not just what is present in the DesignNotes file?";
+  #warn "Read probe data should only read in the array chips which are specified by the ExperimentalChip?  Not just what is present in the DesignNotes file?";
 
   
   foreach my $array(@{$self->arrays()}){
