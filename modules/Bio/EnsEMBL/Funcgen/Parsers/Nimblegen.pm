@@ -690,7 +690,7 @@ sub read_probe_data{
 		next;
       }elsif($self->recovery()){
 		$self->log("Rolling back ArrayChip:\t".$achip->design_id());
-		$self->rollback_ArrayChip([$achip]);
+		$self->rollback_ArrayChips([$achip]);
       }
       
       $self->log("Importing ArrayChip:".$achip->design_id());
