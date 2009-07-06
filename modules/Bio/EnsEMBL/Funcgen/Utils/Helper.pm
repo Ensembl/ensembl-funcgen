@@ -1442,7 +1442,7 @@ sub rollback_ArrayChips{
 
 	$class ||=  $ac->get_Array->class;
 
-	if($class ne $ac->get_Array->class){
+	if($class && ($class ne $ac->get_Array->class)){
 	  throw('You can only rollback_ArrayChips for ArrayChips with the same class');
 	}
   }
