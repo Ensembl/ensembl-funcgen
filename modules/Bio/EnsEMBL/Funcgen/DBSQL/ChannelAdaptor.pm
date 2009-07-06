@@ -68,21 +68,13 @@ sub fetch_by_type_experimental_chip_id {
     throw("Must specify a channel type e.g. EXPERIMENTAL, TOTAL and an ExperimentalChip id") if(! ($type && $ec_id));
 
 
-    my $sth = $self->prepare("
-		SELECT c.channel_id
-		FROM channel c
-		WHERE c.experimental_chip_id = ?
-        AND c.type = ?
-	");
+	my $constraint = 'c.experimental_chip_id = ? AND c.type = ?';
 
-    $sth->bind_param(1, $ec_id,     SQL_INTEGER);
-    $sth->bind_param(2, $type,      SQL_VARCHAR);
+    $self->bind_param_generic_fetch($ec_id,     SQL_INTEGER);
+    $self->bind_param_generic_fetch($type,      SQL_VARCHAR);
 
-    $sth->execute();
-    my ($chan_id) = $sth->fetchrow();
-    
-    
-    return $self->fetch_by_dbID($chan_id) if $chan_id;
+      
+    return $self->generic_fetch($constraint);
   }
 
 
