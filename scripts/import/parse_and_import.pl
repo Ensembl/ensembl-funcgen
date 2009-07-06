@@ -13,40 +13,82 @@
 
  Options:
 
- Mandatory
-  -name|n          Instance name
-  -format|f        Data format
-  -group|g         Group name
+ Experiment (Mostly Mandatory)
+  --name|n           Instance/Experiment name. This will be used as the input/out_dir 
+                     unless otherwise specified (--input_dir/--output_dir).
+  --format|f         Format of experiment technology e.g. TILING.
+  --vendor|v         Vendor of experiment technology e.g. NIMBLEGEN
+                     This will be used to select the import parsers if the --parser
+                     is not defined.
+  --parser           Selects the import parser to use e.g. NIMBLEGEN, Bed, Sanger.
+  --array_name       Name of the set of array chips(Also see -array_set option)
+  --result_set       Name to give the raw/normalised result set.
+  --experimental_set Name to give the ExperimentalSet for 
+  --feature_type     The name of the FeatureType of the experiment e.g. H4K36me3.
+  --cell_type        The name of the CellType of the experiment.
+  --feature_analysis The name of the Analysis used in the experiment.
+  --norm|n           Normalisation method (default=vsn)
+                     NOTE: FeatureType, CellType and Analysis(inc norm) entries must already 
+                     exist in the eFG DB. See ensembl-functgenomics/script/import/import_types.pl
+  --exp_date         The date for the experiment.
+  --result_files     Space separated list of result files paths (Used in Bed import).
 
- Optional
-  -registry_host Host to load registry from(defaults to ensembldb.ensembl.org)
-  -registry_port Port for registry host
-  -registry_user User for registry host 
-  -registry_pass Password for registry user
-  -pass|p          The password for the target DB, if not defined in GroupDefs.pm
-  -data_root       The root data dir
-  -dbname          Defines the eFG dbname if it is not standard
-  -ssh             Forces use of tcp protocol for using ssh forwarded ports from remote machine(remove and just specify 127.0.0.1 as host?)
-  -array_set       Flag to treat all chip designs as part of same array
-  -array_name      Name of the set of array chips
-  -result_set      Name to give the raw/normalised result set.
-  -result_files    Space separated list of result files paths
-  -fasta           Fasta dump flag
-  -norm|n          Normalisation method (default=vsn)
-  -species|s       Species name any standard e! species alias(will be reset to dbname/latin name e.g. "homo_sapiens")
-  -location        Physical location of experimental group
-  -contact         Contact details for experimental group
-  -debug           Debug level (1-3)
-  -log_file        Defines the log file
-  -ucsc_coords     Flag to define usage of UCSC coord system in source files
-  -release         Release version to load the registry from, defaults to latest release.
-  -assembly        The specific assembly version to use e.g. 36 or 37.
+ Experimental group (Mostly Mandatory)
+  --format|f        Data format
+  --group|g         Group name
+  --location        Physical location of experimental group
+  --contact         Contact details for experimental group
 
-  -update_xml      ?? Is this required, isn't this always updated now?
+ Run modes
+  --array_set       Flag to treat all chip designs as part of same array
+  --ucsc_coords     Flag to define usage of UCSC coord system in source files (chr_start==0).
+  --fasta           Fasta dump flag
+  --farm
+  --interactive
+  --old_dvd_format  Flag to use the old NIMBLEGEN DVD format
+  --recover         Flag to enable rollback and over-writing of previously imported data
+                    NOTE: This must be on to run the 2nd stage of a MAGE inport e.g. NIMBLEGEN
 
 
-  -help            Brief help message
-  -man             Full documentation
+ MAGE
+  ##--update_xml      Deprecated, no longer used as we always update now
+  --write_mage      Flag to force 1st stage of MAGE import i.e. writing of 
+                    tab2mage file to define replicates and experimental meta data.
+  --no_mage         Flag to run import without mage creation/validation
+                    WARNING: Not advised as this can cause erroneous replicate ResultSet generation
+
+ eFG DB Connection (Mostly Mandatory)
+  --dbname          The eFG dbname
+  --user            The eFG user
+  --pass|p          The eFG write password 
+  --port            The eFG port
+  --host            The eFG host
+  --species|s       Species name any standard e! species alias(will be reset to dbname/latin name e.g. "homo_sapiens")
+ 
+  --ssh             Forces use of tcp protocol for using ssh forwarded ports from remote machine(remove and just specify 127.0.0.1 as host?)
+
+ Core DB Connection (This will default to load from ensembldb.ensembl.org)
+  --registry_host   Host to load registry from
+  --registry_port   Port for registry host
+  --registry_user   User for registry host 
+  --registry_pass   Password for registry user
+  --release         Release version to load the registry from, defaults to latest release.
+  --assembly        The specific assembly version to use e.g. 36 or 37.
+ 
+
+ Directory over-rides
+  --data_root       The root data dir ($ENV{'EFG_DATA'}).
+  --input_dir       Over-rides use of -name to define the input path
+  --output_dir      Over-rides use of -name to define the output path
+  
+ Other
+  --tee             Outputs logs to STDOUT aswell as log file.
+  #--debug           Debug level (1-3). Not implemented
+  --log_file        Defines the log file, default is $output_dir/"epxeriment_name".log
+  #--debug_file      Defines the debug file. Not implemented
+  --help            Brief help message
+  --man             Full documentation
+  --verbose
 
 
 =head1 DESCRIPTION
@@ -120,13 +162,13 @@ GetOptions (
 			"format|f=s"         => \$format,
 			"vendor|v=s"         => \$vendor,
 			"parser=s"           => \$parser,
-			"array_set"          => \$array_set,
 			"array_name=s"       => \$array_name,
 			"result_set=s"       => \$rset_name,
 			"experimental_set=s" => \$exp_set,
 			"feature_type=s"     => \$ftype,
 			"feature_analysis=s" => \$fanal,
 			"cell_type=s"        => \$ctype,
+			"norm_method=s"      => \$nmethod,
 			"exp_date=s"         => \$exp_date,
 			'result_files=s{,}'  => \@result_files,
 
@@ -135,14 +177,14 @@ GetOptions (
 			"location=s"   => \$loc,
 			"contact=s"    => \$contact,
 
-			#Run mode
+			#Run modes
 			"fasta"          => \$fasta,
 			"farm=s"         => \$farm,
 			"recover|r"      => \$recover,
-			"norm_method=s"  => \$nmethod,
 			"old_dvd_format" => \$old_dvd_format,
 			"ucsc_coords"    => \$ucsc,
 			"interactive"    => \$interactive,
+			"array_set"          => \$array_set,
 
 			#MAGE
 			"write_mage"   => \$write_mage,
