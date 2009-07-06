@@ -121,6 +121,7 @@ sub new{
 				'REGISTRY_USER', 'REGISTRY_PASS'], @_);
 
   
+ 
   #### Define parent parser class based on vendor
   throw("Mandatory argument -vendor not defined") if ! defined $vendor;
 
@@ -302,8 +303,7 @@ sub new{
 								-verbose => $self->verbose,
 							   );
 
-	
-	throw('Not sensible to set the import DB as the default eFG DB from ensembldb, please define db params') if ((! $dbname) && (! $db));
+	throw('Not sensible to set the import DB as the default eFG DB from '.$reg_host.', please define db params') if ((! $dbname) && (! $db));
   }
   else{
 	$self->log("Loading registry from:\t".$self->{'_reg_config'});
@@ -392,6 +392,8 @@ sub new{
 	  #warn "reseting adaptor";
 
 	  #We could either test for the db in the regsitry or just pass the class.
+
+	
 
 	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $self->user, $pass,
 								  #'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
@@ -686,11 +688,9 @@ sub init_experiment_import{
   #Get experiment
   my $exp_adaptor = $self->db->get_ExperimentAdaptor();  
   my $exp = $exp_adaptor->fetch_by_name($self->name());	#, $self->group());
+  $self->process_experiment_config if $self->can('process_experiment_config');#Parsers::MAGE::process_experiment_config
+
  
-
-
-  $self->process_experiment_config if $self->can('process_experiment_import');#Parsers::MAGE::process_experiment_config
-
 
   #This is only used for the first test below.
   #my $xml = $exp_adaptor->fetch_mage_xml_by_experiment_name($self->name());# if $self->{'write_xml'};
