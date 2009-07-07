@@ -60,10 +60,10 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets from a given D
     #-set_colour      Colour of track for given set e.g. contigblue1, contigblue2, red3
     #-set_plot        Plot type for given set e.g. hist or tiling
 
-	HTML link params, used to generate page with attachement links
-	#-link_gene    Name og gene
+	HTML/Feature link params, used to generate page with attachement links
+	-link_gene       Name of gene e.g. STAT1
 	or
- 	#-link_loci    Loci e.g. 19:1243:1567??? Is this correct?
+ 	-link_region     Loci e.g. 2:191541121-191588181
 
     #Add more here for default colours?
 
@@ -95,31 +95,22 @@ use warnings;
 use Data::Dumper;
 use Pod::Usage;
 use Getopt::Long;
-#use Bio::EnsEMBL::Registry;
 #use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 #use Bio::EnsEMBL::Analysis::Tools::Logger qw(logger_verbosity logger_info);
 #Use Helper instead of Logger?
-#use Bio::EnsEMBL::Funcgen::FeatureSet;
-
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my ($dbhost, $dbport, $dbuser, $dbpass, $dbname, $das_port, $das_host, $species);
 my ($das_config, $set_type);
 my ($dnadb_host, $dnadb_port, $dnadb_user, $dnadb_pass, $dnadb_name, $dnadb, $set_name);
-my (@adaptor_names, $no_headers, $headers_only, $link_gene, $link_loci);
-my ($set_colour, $set_plot, $set_display_name);
+my (@adaptor_names, $no_headers, $headers_only, $link_region, $styleshome);
+my ($set_colour, $set_plot, $set_display_name, $location);
 my $ini_password= '';
 my $max_clients = 5;
 my $das_name = 'efg';
-my $location = 'gene=STAT1';
-#$location = 'gene='.$opts{g} if ($opts{g});
-#$location = 'c='.$opts{c} if ($opts{c});
-
+my $link_gene = 'STAT1';
 my $pod_params = "Params are:\t".join(' ', @ARGV);
-
-#Need to print this to a config file which can be read/updated by this script or edited by hand
-#for each instance
 
 my %plots = (
 			 hist   => '+score=h',
@@ -136,6 +127,13 @@ my %display_params = (
 				  ResultSet  => '+score=s+fg_data=o+',
 				  FeatureSet => '',
 				 );
+
+#Need to write this to config file and use this to generate das xsl
+#We should always use config unless we have a value which isn't defined in config
+#Then use default or individual set params if the set name matches
+#Then write back to config file so we don't have to do this again
+#Hence can sey up each set individually without over writing other set config
+#This does mean regenerating the file each time, but thi sis little over head.
 
 my %set_config = (
            ctcf_ren_BR1_TR1_ =>    { color => 'contigblue2', name => 'IMR90_CTCF' },
@@ -215,8 +213,9 @@ GetOptions(
 		   'das_port=i'   => \$das_port,#$ENV{'EFG_DAS_PORT'} 9876?
 		   'maxclients=i' => \$max_clients,
 		   'das_name=s'   => \$das_name,
+		   'styleshome=s' => \$styleshome,
 
-		   
+		 		   
 		   #'default_colour=s' => \$default_colour,
 
 		   #Individual set
@@ -225,10 +224,13 @@ GetOptions(
 		   'set_colour=s' => \$set_colour,#Not yet implemented
 		   'set_plot=s'   => \$set_plot,#Not yet implemented
 		   'set_display_name=s' => \$set_display_name,#Not yet implemented
+		   #'set_link_gene=s'
+		   #'set_link_region=s
 
-		   #HTML link params
+		   #HTML/Feature link params
+		   #'local_port'    => \$local_port,#Will this work, isn't the data integrated on the server side?
 		   'link_gene=s' => \$link_gene,#Not yet implemented
-		   'link_loci=s' => \$link_loci,#Not yet implemented
+		   'link_region=s' => \$link_region,#Not yet implemented
 
 		   #Helper params
 		   #'tee'                    => \$main::_tee,#Not yet implemented
@@ -270,6 +272,16 @@ if(! ($das_config && -d $das_config)){
 
 #Do some set validation here plot?
 
+
+if ($link_region && $link_gene){
+  die('Must specify only one link e.g -link_region 2:191541121-191588181 or -link_gene STAT1');
+}
+
+#Could do with validating the region here
+$location = "gene=${link_gene}" if $link_gene;
+$location = "r=${link_region}"  if $link_region;
+ 
+
 if(! $no_headers){
   my $prefork = int($max_clients/2);
   my $das_instance="${das_name}.${das_host}.${das_port}";
@@ -280,14 +292,17 @@ if(! $no_headers){
 
   #Do we need both prefork and maxclients?
   #Is prefork deprecated?
+  
+  #hard coded coords here, but need to change to slice defined by $location
 
   print OUT "[general]
-prefork=${prefork}
-maxclients=${max_clients}
-port=${das_port}
-hostname=${das_host}
-pidfile=${das_config}/${das_name}.pid
-logfile=${das_config}/${das_name}.log";
+prefork      = ${prefork}
+maxclients   = ${max_clients}
+port         = ${das_port}
+hostname     = ${das_host}
+styleshome   = ${styleshome}
+pidfile      = ${das_config}/${das_instance}.pid
+logfile      = ${das_config}/${das_instance}.log\n\n";
 
 #;response_hostname=das.example.com
 #;response_port=80
@@ -320,9 +335,10 @@ EOHTML
 my ($sources_file, $html_file, $type);
 
 
-if(! $headers_only){
 
-  $ini_password = "\npassword = $dbpass\n" if $dbpass;
+if(! $headers_only){
+ 
+  $ini_password = "\npassword          = $dbpass" if $dbpass;
 
   # Mandatory DB params
   if((! ($dbhost && $dbuser && $dbname && $das_host && $species)) ||
@@ -371,7 +387,6 @@ if(! $headers_only){
 				 );
 
 
- 
   #Generate sources file for each type
  
 
@@ -424,24 +439,41 @@ if(! $headers_only){
 	  #Also build config array here to print back to file.
 
 
-	  print OUT "\n[${display_name}]
+
+	  #Do we need feature_query?
+	  #feature_query= field0 = %segment and field2 >= %start and field1 <= %end
+	  #coordinates  = NCBI_36,Chromosome,Homo sapiens -> X:1,2000000
+
+#Can we config style sheets from here?
+#TYPE id= $type?
+#annotated and DNA Methlyation are being set in ensembl_feature_set
+
+#Also need to add config here such that we can build das_xsl necessary for ensembl to auto configure tracks
+#Speak to James/Andy about necessary elements for species, coordinate system
+
+
+	  warn "coordinates are hardcoded for NCBI_36,Chromosome,Homo sapiens -> X:1000000,2000000\n";
+
+	  print OUT "\n[${display_name}.${species}]
 state             = on
 adaptor           = ensembl_${aname}_set
 transport         = ensembl_funcgen
 host              = $dbhost
 port              = $dbport
 dbname            = $dbname
+species           = $species
 source            = SOURCE
 type              = $type
 category          = CATEGORY
 username          = ${dbuser}${ini_password}
-description       = [ $species ] $desc
+description       = $desc
 set_name          = $name
-set_id            = ".$set->dbID."\n";
+set_id            = ".$set->dbID."
+coordinates      = NCBI_36,Chromosome,Homo sapiens -> X:1000000,2000000\n";
 
-
+#feature_query     = $location
 #What is CATEGORY, SOURCE and TYPE? TYPE was set_type for feature_set
-
+#Are these das style sheet config options?
 
 
 #TYPE = result, annotated, external, regulatory?
@@ -468,7 +500,7 @@ set_id            = ".$set->dbID."\n";
 		$plot = $plots{$set_config{$name}{plot}};
 	  }
 
-	  
+	  #This is currently not working!
 	  print HTML '<p><a href="'.
 		'http://www.ensembl.org/'.$species.
 		  '/contigview?'.$location.';'.

@@ -1,17 +1,29 @@
 #!/usr/local/bin/bash
 
+#LICENSE
 #
-# AUTHOR:
-# Stefan Graf, Ensembl Functional Genomics
+#  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+#  Genome Research Limited.  All rights reserved.
 #
-# LICENCE:
-# This code is distributed under an Apache style licence. Please see
-# http://www.ensembl.org/info/about/code_licence.html for details.
+#  This software is distributed under a modified Apache license.
+#  For license details, please see
 #
-# CONTACT
-# Please post comments/questions to the Ensembl development list
-# <ensembl-dev@ebi.ac.uk>
+#    http://www.ensembl.org/info/about/code_licence.html
 #
+#CONTACT
+#
+#  Please email comments or questions to the public Ensembl
+#  developers list at <ensembl-dev@ebi.ac.uk>.
+#
+#  Questions may also be sent to the Ensembl help desk at
+#  <helpdesk@ensembl.org>.
+
+# To do
+# Integrate this into efg.env as a function? BuildBedProfile?
+# GetOpts
+# Do we need to move the QUEUE params from pipeline.config to efg.config?
+# This will inevitably be superceded by matrix implementation?
+# MAQ_WORKDIR isn't used?
 
 # Check if environment variables are set
 if [ ! $MAQ_WORKDIR ]; then

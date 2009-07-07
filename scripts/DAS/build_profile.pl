@@ -37,10 +37,9 @@ use strict;
 use warnings;
 use Pod::Usage;
 use Getopt::Long;
-use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
+use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 my ($file, $bin_size, $frag_length, @files);
-#$dbname
 my $params_msg = "Params are:\t@ARGV";
 
 GetOptions (
@@ -67,8 +66,8 @@ throw("Must specify mandatory fragment length (-frag_length).\n") if ! defined $
 my (@bin, $start_bin, $start_bin_start, $end_bin, $end_bin_start,
     $seq, $read_start, $read_end, $read_length, $ori, $read_extend);
 
-#Is this used?
-# Get infile with features to project
+
+#Get/Check file
 if ($ENV{LSB_JOBINDEX}) {
     $file = $files[$ENV{LSB_JOBINDEX}-1];
 }
@@ -86,8 +85,8 @@ if(! -e $file){
 }
 
 
+#Build profile
 print "Building profile for:\t$file\n";
-
 open(FILE, "gzip -dc $file |")
     or throw ("Can't open file $file");
 
