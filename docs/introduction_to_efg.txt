@@ -126,7 +126,7 @@ It is desirable to maintain the standard Ensembl nomenclature for a database and
    
 Failure to do so may cause problems in dynamically detecting the correct core DB to use. 
 
-All of the efg enviroments make use of command line functions and aliases, type EFGHelp or aliases to see a list respectively.
+All of the efg enviroments make use of command line functions and aliases, type EFGHelp or aliases to see a list respectively. If a function exits for some reason, it will also exit the bash environment. Simply rerun the initialisation steps to get back into the environment.
 
 
 :: Data Import
@@ -308,3 +308,19 @@ The -experimental_set option allows several sets to be defined for one experimen
 
 
 :: Displaying data with DAS
+
+
+Given that the DAS pre-requisites have been met use the following functions to aid configuration of DAS sources:
+
+	  GenerateDASConfig
+	  Uses the generate_DAS_config.pl script to detect which FeatureSets have the 'DAS_DISPLAYABLE' status and 
+      generates an DAS instance specific config file.  This will also take feature_set and result_set options flag 
+	  specifc sets as 'DAS_DISPLAYABLE'. This will provide a basic configuration file which can be edited for
+	  further display customisation.
+	  An HTML file will also be written showing links which will attach the DAS sources to the Ensembl browser. 
+	  
+	  StartDASServer
+	  
+	  StopDASServer
+
+NOTE: COMING SOON - Dynamic DAS HydraSource configuration, enabling display of short reads alignments. 
