@@ -2,136 +2,92 @@
 
 =head1 NAME
 
-get_windows.pl -- 
+build_profile.pl
 
 =head1 SYNOPSIS
 
-Generates slices (sequence windows) based on given window size (--win_size)
-and optional shift (-shift; default: --window_size).
+build_profile.pl --bin_size X --frag_size Y --files /file/path1 /file/path2 ...
 
 =head1 DESCRIPTION
 
-=head1 LICENCE
+This script ...
 
-This code is distributed under an Apache style licence. Please see
-http://www.ensembl.org/info/about/code_licence.html for details.
+=head1 LICENSE
 
-=head1 AUTHOR
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-Stefan Graf, Ensembl Functional Genomics
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Please post comments/questions to the Ensembl development list
-<ensembl-dev@ebi.ac.uk>
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
 use strict;
 use warnings;
-use Data::Dumper;
+use Pod::Usage;
 use Getopt::Long;
+use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 
-my ($pass,$port,$host,$user,$dbname,$species,$help,$man, $data_version,
-	$debug, $file, $bin_size, $frag_length);
+my ($file, $bin_size, $frag_length, @files);
+#$dbname
+my $params_msg = "Params are:\t@ARGV";
 
 GetOptions (
-            'pass|p:s'         => \$pass,
-            'port:i'           => \$port,
-            'host|h=s'         => \$host,
-            'user|u=s'         => \$user,
-            'dbname|d=s'       => \$dbname,
-            'data_version|v=s' => \$data_version,
-            'species=s'        => \$species,
-            'help|?'           => \$help,
-            'man|m'            => \$man,
-            'debug'            => \$debug,
-            'file=s'             => \$file,
+			'files=s{,}'       => \@files,
             'bin_size=i'       => \$bin_size,
             'frag_length=i'    => \$frag_length,
-            );
+			'help|?'           => sub { pos2usage(-exitval => 0, -message => $params_msg);},
+			'man|m'            => sub { pos2usage(-exitval => 0, -message => $params_msg, verbose => 2);},
+		   ) or pod2usage ( -exitval => 1,
+							-message => $params_msg
+						  );
 
-### defaults ###
-#if (!$port) {
-#	$port = 3306;
-#	warn("No port specified, using default '$port'.")
-#}
-#if (!$species) {
-#	$species = 'homo_sapiens';
-#	warn("No species specified, using default '$species'.")
-#}
+if (@ARGV){
+  pod2usage( -exitval =>1,
+			 -message => "You have specified incomplete options. $params_msg");
+}
+
 
 ### check options ###
-throw("Must specify mandatory bin size (-bin_size).\n") 
-    if ! defined $bin_size;
-throw("Must specify mandatory fragment length (-frag_length).\n") 
-    if ! defined $frag_length;
-
-#throw("Must specify mandatory database name (-dbname).\n") if ! defined $dbname;
-#throw("Must specify mandatory database data version, like 47_36i (-data_version).\n") 
-#    if !$data_version;
-
-$| = 1;
-
-use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
-#use Bio::EnsEMBL::DBSQL::DBAdaptor;
-#use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-#use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file);
-
-#my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-#    (
-#     #-host => 'ensembldb.ensembl.org',
-#     #-port => 3306,
-#     #-user => 'anonymous',
-#	 ### local forwards
-#     -host => '127.0.0.1',
-#     #-port => 33060, # ensembldb.ensembl.org (local forward)
-#     -port => 33064, # ens-livemirror (local forward)
-#     -user => 'ensro',
-#     -dbname => $species.'_core_'.$data_version,
-#     -species => $species,
-#     );
-#print Dumper $cdb;
-
-#my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-#    (
-#     -host   => $host,
-#     -user   => $user,
-#     -dbname => $dbname,
-#     -species => $species,
-#     -pass   => $pass,
-#     -port   => $port,
-#     -dnadb  => $cdb
-#     );
-#print Dumper $db;
-
-## Ensembl core and FG adaptors
-#my $fsa = $db->get_FeatureSetAdaptor();
-#my $dsa = $db->get_DataSetAdaptor();
-#my $fta = $db->get_FeatureTypeAdaptor();
-#my $afa = $db->get_AnnotatedFeatureAdaptor();
-#my $rfa = $db->get_RegulatoryFeatureAdaptor();
-#my $aa = $db->get_AnalysisAdaptor();
-
-#my $sa = $cdb->get_SliceAdaptor();
-#my $ga = $cdb->get_GeneAdaptor();
-#my $ta = $cdb->get_TranscriptAdaptor();
+throw("Must specify mandatory bin size (-bin_size).\n") if ! defined $bin_size;
+throw("Must specify mandatory fragment length (-frag_length).\n") if ! defined $frag_length;
 
 
 my (@bin, $start_bin, $start_bin_start, $end_bin, $end_bin_start,
     $seq, $read_start, $read_end, $read_length, $ori, $read_extend);
 
+#Is this used?
 # Get infile with features to project
 if ($ENV{LSB_JOBINDEX}) {
-    $file = $ARGV[$ENV{LSB_JOBINDEX}-1];
+    $file = $files[$ENV{LSB_JOBINDEX}-1];
 }
-print $file, "\n";
+else{
 
-throw("Must specify mandatory file name (-file) or".
-      " run by wrapper script 'run_project_features'.\n")
-    unless $file;
+  if(scalar(@files) > 1){
+	throw('You have specified more than one file, maybe you want to submit this to the farm using run_build_profile.sh|BuildBedProfile');
+  }
 
-#open(FILE, $file)
+  $file = $files[0];
+}
+
+if(! -e $file){
+  throw("File does not exist:\t$file\nMust provide at least one file path to build a profile");
+}
+
+
+print "Building profile for:\t$file\n";
+
 open(FILE, "gzip -dc $file |")
     or throw ("Can't open file $file");
 
@@ -142,18 +98,13 @@ open(OUT, "| gzip -c > $out")
     or throw ("Can't open out file $out");
 
 while (<FILE>) {
-
     chomp;
     my @col = split("\t");
-    #print Dumper @col;
-
+  
     if (defined $seq && $seq ne $col[0]) {
-
-        &write_bins();
-
-        @bin = ();
-
-    }
+	  &write_bins();
+	  @bin = ();
+	}
 
     $seq = $col[0];
     $read_start = $col[1];
