@@ -317,7 +317,8 @@ Given that the DAS pre-requisites have been met use the following functions to a
       generates an DAS instance specific config file.  This will also take feature_set and result_set options flag 
 	  specifc sets as 'DAS_DISPLAYABLE'. This will provide a basic configuration file which can be edited for
 	  further display customisation.
-	  An HTML file will also be written showing links which will attach the DAS sources to the Ensembl browser. 
+	  An HTML file will also be written showing links which will attach the DAS sources to the Ensembl browser. This
+	  assumes your DAS server is visible to the web.
 	  
 	  StartDASServer
 	  
