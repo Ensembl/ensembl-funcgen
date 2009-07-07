@@ -421,7 +421,7 @@ CREATE TABLE `probe_set` (
    `name` varchar(20) NOT NULL,
    `size` smallint(6) unsigned NOT NULL,
    `family` varchar(20) default NULL,
-   PRIMARY KEY  (`probe_set_id`)
+   PRIMARY KEY  (`probe_set_id`),
 	KEY `name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
