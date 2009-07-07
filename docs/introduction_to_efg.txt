@@ -147,12 +147,12 @@ Array design import
 
 	ChIP-Seq/Feature level import
     It is possible to perform a direct feature import. This accommodates pre-analysed data or technologies which are not fully supported by eFG. e.g. Hitlists, Wiggletracks, Short reads.
-    See: run_BED.sh, run_import_hitlist.sh and run_import_wiggle.sh
+    See: run_import_BED.sh, run_import_hitlist.sh and run_import_wiggle.sh
 
 	Feature mapping
-    eFG utilises the assembly mapping information in the core DB to remap feature up to new versions of a given genome.
+    eFG utilises the assembly mapping information in the core DB to remap feature between genome assemblies.
     See: run_remap_features.sh and run_project_feature_set.sh
-    Note: This has been shown to give spurious results when remapping probe level features, dependent on the nature of the assembly change. A more exhaustive full genomic mapping is also possible via the eFG probe mapping pipeline.
+    Note: This has been shown to give spurious results when remapping probe level features, dependent on the nature of the assembly change. A more exhaustive full genomic mapping is also possible via the eFG array mapping environment.
 
 	Data export
     Various flavours of data export including GFF and custom formats.
@@ -162,9 +162,10 @@ Array design import
     Removes part or all of an experimental import and its associated data.
     See: roll_back_experiment.pl
 
-Importing an experiment
 
-Prior to running your first experiment import, you will likely need to import the necessary features types first.
+:: Importing an experiment
+
+Prior to running your first experiment import, you will need to make sure that the Feature/CellType and Analysis used in the experiment are present in the DB. CreateDB will automatically load the default types available in ensembl-functgenomics/scripts/import/types.  If your 'types' are not present then they must be imported using run_import_typ.sh:
 
 efg@bc-9-1-02>more run_import_type.sh 
 #!/bin/sh
@@ -180,7 +181,9 @@ $EFG_SRC/scripts/import_type.pl\
         -class HISTONE\
         -pass $PASS
 
-Feature type names should correspond to a recognised ontology or nomenclature where appropriate e.g. Brno nomenclature for histones. The class parameter is not required for CellType imports.
+FeatureType names should correspond to a recognised ontology or nomenclature where appropriate e.g. Brno nomenclature for histones. The class parameter is not required for CellType imports.
+
+
 To import an experiment you must first create an input directory for the array vendor and your experiment e.g.
 
 mkdir $EFG_DATA/input/NIMBLEGEN/EXPERIMENT_NAME
@@ -193,29 +196,33 @@ efg@bc-9-1-02>more run_NIMBLEGEN.sh
 PASS=$1
 shift
 
-$EFG_SRC/scripts/parse_and_import.pl\
+$EFG_SRC/scripts/import/parse_and_import.pl\
        -name 'DVD_OR_EXPERIMENT_NAME'\              #Name of the data directory
        -format tiled\                               #Array format
-       -vendor NIMBLEGEN\
-       -location Hinxton\                           #Your group location
+       -vendor NIMBLEGEN\                           #Technology vendor/import parser
+	   -array_name "DESIGN_NAME"\					
+	   -array_set\                                  #Flag to treat every chip/slide as part of one array			
+	   -cell_type e.g. U2OS\
+       -feature_type e.g. H3K4me3\
+       -version 55\									#DB version the registry should load	
+       -assembly 37\      
+	   -fasta\                                      #Fasta dump flag, uesful for remapping     
+       -location Hinxton\                           #Your experimental group details 
        -contact 'your@email.com'\
+	   -group efg\	
        -species homo_sapiens\
-       -fasta\                                      #Flag to dump the array as a fasta file, useful for remapping
+       -dbname 'your_homo_sapiens_funcgen_47_36i'\	#eFG DB details	
+	   -user write_user\
+       -pass $PASS\
        -port 3306\
        -host dbhost\
-       -dbname 'your_homo_sapiens_funcgen_47_36i'\
-       -array_set\                                  #Flag to treat every chip/slide as part of one array
-       -array_name "DESIGN_NAME"\
-       -cell_type e.g. U2OS\
-       -feature_type e.g. H3K4me3\
-       -group efg\                                  #Your groupname
-       -data_version 41_36c\                        #The Ensembl data version corresponding to your data
-       -verbose\
        -tee\
-       -pass $PASS\
-       -recover                                     #Enables recovery mode for failed/partial imports
+       #-recover                                     #Enables import/rollback when experiment is already present 
+													#e.g.2nd stage MAGE import or failed/partial imports
 
-Running the above script will perform a preliminary import. This involves validation checks and import of some basic meta data. The meta data gleaned from the import parameters and available files is automatically populated within a tab2mage file located in the output directory, at which point the import stops to allow manual curation of the tab2mage file. Due to the lack of comprehensive meta data associated with an experiment DVD, it is necessary to inspect, correct and annotate the tab2mage file where possible. Failure to do so may result in permanent loss of meta data, an inability to submit to ArrayExpress and a corrupted import which ultimately may prevent any further analysis.
+There are lots of additional optional parameters, for full documentation specify -help|man.
+
+Running the above script will perform a preliminary import, which involves validation checks and import of some basic experiment meta data. The meta data gleaned from the import parameters and available vendor files is automatically populated within a tab2mage file located in the output directory e.g. E-TABM-EXPERIMENT_NAME.txt  The import will then stop to allow manual curation of the tab2mage file. Due to the lack of comprehensive meta data associated with an experiment DVD, it is necessary to inspect, correct and annotate the tab2mage file where possible, paying close attention to the definition of the replicate sets. Failure check this properly may result in permanent loss of meta data, an inability to submit to ArrayExpress and a corrupted import which ultimately may prevent any further analysis.
 
 There are three main areas to be addressed, most of which may have been automatically populated. Fields which need attention are marked with three question marks e.g. ???
 
@@ -249,3 +256,11 @@ There are three main areas to be addressed, most of which may have been automati
       This is parsed during validation and used to store chip/slide level information. Replicates with mismatching feature type names in this field will fail validation.
 
       Note: The autogenerated tab2mage file is simply a template, you may add further valid fields to any section of the file, or supply your own tab2mage file. However, the validation checks will still be necessary for correct import, therefore it is advised to follow the standard naming rules given above.
+
+
+Once the tab2mage file has been edited the second stage of the import can commence. Simply uncomment the -recover option and rerun the import script as above.  The tab2mage package will run an extensive validation step on the tab2mage file (involving lot's of warnings) before writing the MAGE XML to the output directory. Unfortunately it is not possible to reliably capture a true error from this process, so a secondary validation of the XML is performed by the import script.  Unless you are familiar with tab2mage files. tt is likely this step will fail a few times before you manage to get the data correct. Look out for warning message from the XML validation which may give you useful information to help correct the data.
+
+On successful validation of the tab2mage and XML file, the main data import will begin. If the array design for a given experiment is not present this will be dealt with prior to loading the raw experimental data. Once this is complete a job will be submitted to the compute farm to run the chosen normalisation method. Dependant on the size and nature of the array being loaded, this stage can take several hours.  However, once loaded subsequent experiment imports using the same design will skip this step. 
+
+
+:: Displaying data with DAS
