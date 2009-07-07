@@ -35,4 +35,4 @@ $EFG_SRC/scripts/import/parse_and_import.pl\
 	-feature_analysis WindowInterval\
 	-tee\
 	-recover\
-	$*       
+	-result_files $*       
