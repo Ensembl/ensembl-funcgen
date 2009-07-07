@@ -39,7 +39,7 @@ use Bio::EnsEMBL::Utils::Cache;
 use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
+@ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
