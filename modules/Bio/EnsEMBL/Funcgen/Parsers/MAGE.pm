@@ -880,8 +880,6 @@ sub write_validate_experiment_config{
 	  $sql = "UPDATE result_set set feature_type_id=".$ftype->dbID()." where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
 	}
 	elsif($rset->feature_type->dbID ne $ftype->dbID()){
-	  warn 'FeatureType mismatch between IMPORT sets('.$rset->feature_type->name().') vs meta sets('.$ftype->name.
-	  "\nUpdating to IMPORT to match meta";
 	  $self->log('WARNING: FeatureType mismatch.  Updating IMPORT FeatureType('.$rset->feature_type->name().') to match meta('.$ftype->name.')');
 	  $sql = "UPDATE result_set set feature_type_id=".$ftype->dbID()." where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
 
@@ -903,9 +901,7 @@ sub write_validate_experiment_config{
 	  $sql = "UPDATE result_set set cell_type_id=".$ctype->dbID()." where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
 	}
 	elsif($rset->cell_type->dbID ne $ctype->dbID()){
-	  warn 'CellType mismatch between IMPORT sets('.$rset->cell_type->name().') vs meta sets('.$ctype->name.
-	  "\nUpdating to IMPORT to match meta";
-	  $self->log('WARNING: FeatureType mismatch.  Updating IMPORT CellType('.$rset->cell_type->name().') to match meta('.$ctype->name.')');
+	  $self->log('WARNING: CellType mismatch.  Updating IMPORT CellType('.$rset->cell_type->name().') to match meta('.$ctype->name.')');
 	  $sql = "UPDATE result_set set cell_type_id=".$ctype->dbID()." where result_set_id in (".$rset->dbID().', '.$chan_rset->dbID().')';
 	}
   }
