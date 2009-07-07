@@ -186,9 +186,12 @@ FeatureType names should correspond to a recognised ontology or nomenclature whe
 
 To import an experiment you must first create an input directory for the array vendor and your experiment e.g.
 
-mkdir $EFG_DATA/input/NIMBLEGEN/EXPERIMENT_NAME
+mkdir $EFG_DATA/input/homo_sapiens/NIMBLEGEN/EXPERIMENT_NAME
 
-The eFG system currently expects only one experiment per input directory. If your DVD contains more than one experiment, you will need to split the files up, recreating any meta files accordingly e.g. DesignNotes.txt, SampleKey.txt. A Nimblegen experiment import can be done using the appropriate run script:
+
+:: Importing a ChIP-Chip experiment
+
+The eFG system currently expects only one experiment per input directory. If your data contains more than one experiment, you will need to split the files up, recreating any meta files accordingly e.g. DesignNotes.txt, SampleKey.txt. A Nimblegen experiment import can be done using the appropriate run script:
 
 efg@bc-9-1-02>more run_NIMBLEGEN.sh
 #!/bin/sh
@@ -261,6 +264,47 @@ There are three main areas to be addressed, most of which may have been automati
 Once the tab2mage file has been edited the second stage of the import can commence. Simply uncomment the -recover option and rerun the import script as above.  The tab2mage package will run an extensive validation step on the tab2mage file (involving lot's of warnings) before writing the MAGE XML to the output directory. Unfortunately it is not possible to reliably capture a true error from this process, so a secondary validation of the XML is performed by the import script.  Unless you are familiar with tab2mage files. tt is likely this step will fail a few times before you manage to get the data correct. Look out for warning message from the XML validation which may give you useful information to help correct the data.
 
 On successful validation of the tab2mage and XML file, the main data import will begin. If the array design for a given experiment is not present this will be dealt with prior to loading the raw experimental data. Once this is complete a job will be submitted to the compute farm to run the chosen normalisation method. Dependant on the size and nature of the array being loaded, this stage can take several hours.  However, once loaded subsequent experiment imports using the same design will skip this step. 
+
+The eFG analysis pipeline can now be used to perform peak calling using the imported experiment data.
+
+:: Importing a ChIP-Seq experiment
+
+ChIP-Seq imports work slighlty differently that ChIP-Chip import, in that alignment (e.g.MAQ) and peak calling (e.g. SWEmbl) analyses are performed prior to import into an eFG DB.  This prevents having to store huge amounts of raw reads data, which might be better suited to an archive (ENA???). The output of of the analysis pipeline is peaks call in the form of BED files. The analysis pipeline can load these directly into an eFG DB, or alternatively any BED file can be load using the following script:
+
+efg@bc-9-1-02> more run_import_BED.sh
+#!/bin/sh
+
+PASS=$1
+shift
+
+#$* is an optional list of bed file paths
+#Contents of input_dir used if not supplied
+
+$EFG_SRC/scripts/import/parse_and_import.pl\
+    -name             LMI_CD4_H3K4ac\
+    -format           SEQUENCING\
+    -parser           Bed\
+    -vendor           SOLEXA\
+    -location         Hinxton\
+    -contact          your_name@email_host.ac.uk\
+    -group            your_research_group\
+    -species          homo_sapiens\
+    -experimental_set LMI_CD4_H3K4ac\							#This will be used to name the ExperimentalSet and the FeatureSet
+    -ucsc_coords\												#Chr starts at 0 not 1
+    -assembly         37\
+    -host             your_host\
+    -port             3306\
+    -dbname           my_homo_sapiens_funcgen_55_37\
+    -pass             $PASS\
+    -cell_type        CD4\
+    -feature_type     H3K4ac\
+    -feature_analysis WindowInterval\							#e.g. SWEmbl etc..
+    -tee\
+	-result_files $*
+		
+
+The -experimental_set option allows several sets to be defined for one experiment.
+
 
 
 :: Displaying data with DAS
