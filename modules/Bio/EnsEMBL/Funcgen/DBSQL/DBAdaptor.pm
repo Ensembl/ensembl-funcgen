@@ -146,7 +146,8 @@ sub new {
 	#Do we need to consider reg_config here?
 	#We could potentially have two version of the core DB in the config
 	#But we would expect the user to handle predefining the dnadb correctly in this case
-	warn ':: WARNING: dnadb('.$self->dnadb->dbc->dbname.') does not match required -dnadb_assm '.$self->dnadb_assembly;
+	warn ':: WARNING: Unable to match assembly version between the dnadb name ('.$self->dnadb->dbc->dbname.') and the specified -dnadb_assm '.$self->dnadb_assembly.
+	  "\nMaybe you need to rename your DBs according to the Ensembl naming convention e.g. myprefix_homo_sapiens_55_37";
 
 	if($dnadb_defined && $dnadb_host){
 	  warn ":: Over-riding pre-defined dnadb host values(reg/-dnadb arg) with dnadb params:\t".
