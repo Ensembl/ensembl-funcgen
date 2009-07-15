@@ -113,7 +113,7 @@ sub fetch_all_by_stable_id_FeatureSets {
   #But it will always be RegulatoryFeature/Build
 
   throw('Must provide a stable ID') if ! defined $stable_id;
-  $stable_id =~ s/ENSR0*//;
+  $stable_id =~ s/ENS([A-Z]{3})?R0*//;
 
   #Need to test stable_id here as there is a chance that this argument has been omitted and we are dealing with 
   #a feature set object
