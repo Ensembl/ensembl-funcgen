@@ -7,16 +7,46 @@ load_bed_source.pl
 
 =head1 SYNOPSIS
 
-load_bed_source.pl --files file1 file2 file3 [ --names source_name1 source_name2 source_name3 --prefix source_name_prefix ]
+load_bed_source.pl [options]
 
-
-
+e.g. load_bed_source.pl  -host dbhost --user write_user --dbname efg_DAS --files ES_DNase_le1m_reads.bed.gz --names ES_DNase --profile --pass $PASS --frag_length 150 --bin_size 25 -reads
 
 
 =head1 DESCRIPTION
 
 This script loads a DAS source from raw read alignments(bed) and/or 
 profiles generated from them.
+
+
+=head1 OPTIONS
+
+ DB Connection
+  --host|h
+  --port
+  --user|u
+  --pass|p
+  --dbname|d
+
+ Run Modes
+  --reads         Flag to load raw read alignments, expects input files are bed
+  --profile       Flag to generate and load read profile
+  --no_load       Skips load step and just generates profile if specified
+  --profile_input Skips profile generation, expects input is profile
+
+ Input
+  --files         Space separate list of input files
+  --names         Optional space speparated list of source names
+  --prefix        Optional prefix for source names
+  
+ Profile Options, only required if --profile specified
+  --bin_size      Bin size to compute profile scores over
+  --frag_length   Length to extend single reads to
+  Need to add paired end support here
+		
+ Other
+  --help          Prints a short help message and exits
+  --man|m         Prints the man page
+
 
 =head1 LICENSE
 
@@ -41,13 +71,10 @@ profiles generated from them.
 
 #To do
 #Integrate this with the collection code to get a set of bins
-#Merge this with load_bed, or load directly?
 #No need to keep reads/profile file? Can always dump out from DB?
-#Remove/implement multiple files properly, current overwrites previous table load
-#Change reads/profile support to be explicit options
 #Implement multiple windows sizes? Or matrix? MySQL COMPRESS?
 #Change to use mysqlimport
-
+#Does this work with paired end data???? 
 
 use strict;
 use warnings;
@@ -56,7 +83,7 @@ use Getopt::Long;
 use DBI;
 
 my ($pass,$port,$host,$user,$dbname,$prefix, $file, @files, @names);
-my ($no_load, $bin_size, $frag_length, $skip_profile, @formats, $name);
+my ($no_load, $bin_size, $frag_length, $profile_input, @formats, $name);
 my ($profile, $reads);
 
 my $params_msg = "Params are:\t@ARGV";
@@ -70,7 +97,7 @@ GetOptions (
 			'files=s{,}'       => \@files,
 			'reads'            => \$reads,
 			'profile'          => \$profile,
-			'skip_profile'     => \$skip_profile,
+			'profile_input'    => \$profile_input,
 			'prefix=s'         => \$prefix,
 			'names=s{,}'       => \@names,
 			'bin_size=i'       => \$bin_size,
@@ -110,6 +137,9 @@ elsif(($bin_size || $frag_length) &&
 	  (! $profile)){
   die('You have specified a --bin_size and/or --frag_length, did you want to load a --profile?')
 }
+elsif($profile_input && $reads){
+  die('You have specified mutuall exclusive options --profile_input and --reads');
+}
 
 if(@names &&
    scalar(@names) != scalar(@files)){
@@ -143,12 +173,12 @@ if(! -f $file){
 my (@bin, $start_bin, $start_bin_start, $end_bin, $end_bin_start,
 	$seq, $read_start, $read_end, $read_length, $ori, $read_extend);
 
-if($profile && ! $skip_profile){
+if($profile && ! $profile_input){
 
 
   #Build profile
   print ":: Building profile for:\t$file\n";
-
+  warn "WARNING:\tThis does not yet support paired end data";
   
   open(CMD, "file -L $file |")
 	or die "Can't execute command: $!";
@@ -186,7 +216,7 @@ if($profile && ! $skip_profile){
 
     die("read is longer ($read_length) than specified fragment length ($frag_length)") if ($frag_length<$read_length);
 
-    $read_extend = $frag_length-$read_length;
+	$read_extend = $frag_length-$read_length;
 	
 	# extend reads to given fragment length
 	if ($ori eq '+') {
@@ -293,7 +323,7 @@ if( ! $no_load){
 
 	  #Backup link
 	  if($link){
-		system("cp -fP $file ${file}.backup") or die('Failed to backup link');
+		system("cp -fP $file ${file}.backup") == 0 or die('Failed to backup link');
 	  }
 	  
 
@@ -369,7 +399,7 @@ if( ! $no_load){
 	  
 	  if($link){
 		print ":: Restoring link\n";
-		system("cp -f ${file}.gz.backup ${file}.gz") or die('Failed to restore link');
+		system("cp -f ${file}.gz.backup ${file}.gz") == 0 or die('Failed to restore link');
 	  }
 	  else{
 		print ":: Compressing file $file...\n";
