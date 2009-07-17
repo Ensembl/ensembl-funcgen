@@ -170,6 +170,14 @@ my $efg_db = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
   );
 
 
+
+#Test connections
+$efg_db->dbc->db_handle;
+$new_cdb = $efg_db->dnadb;#set new_cdb if using default
+$efg_db->dnadb->dbc->db_handle;
+$old_cdb->dbc->db_handle;
+
+
 #This is required for clobber
 #As we need to project the slices to 
 #see whether we have any previous projected features
