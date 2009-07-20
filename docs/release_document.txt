@@ -1,0 +1,108 @@
+This document details the various stages of the eFG release cycle.
+
+
+:::: Introduction
+
+
+:: Internal handovers and DB naming conventions
+
+During a release cycle a controlled DB naming convention is used in line with the informal handovers 
+we have throughout the regulatory build process.
+
+1	Dev		e.g. dev_homo_sapiens_funcgen_55_37
+
+Any pre reg build production data, including array mapping, annotated_feature or external data 
+updates. If no regulatory build is required for a given species, then this will be the only DB name
+used before the final prd DB name.
+
+
+2	Build	e.g. build_homo_sapiens_funcgen_55_37
+
+This should be used only for DBs which have a full healthchecked version of the regulatory feature structures.
+
+
+3	Annot 	e.g. annot_homo_sapiens_funcgen_55_37
+
+Reg feature annotation updated and validated.
+
+
+4   Production e.g. homo_sapiens_funcgen_55_37
+
+The unprefixed DB naming convention will be explicitly reserved for the final production version.
+
+
+
+
+
+:: Declaration of Intentions
+
+This list should contains items which are more than likely going to make the next release:
+
+	RegulatoryBuild updates
+	ExternalFeature updates
+	Array Mapping/Xref updates
+	AnnotatedFeature updates
+	Other data updates
+	New DBs
+	Methodology updates
+	Major API changes
+	Major Schema changes
+
+
+
+
+:::: Pre Genebuild Handover
+
+Load any supporting/attribute sets
+Update external sets
+Array mapping, genomic alignments? Can we do this now we are storing unmapped objects i.e. can we migrate?
+
+Regulatory Build (separate doc?)
+Regulatory Annotation
+
+
+
+
+:::: Post Genebuild Handover
+
+
+
+
+
+
+
+
+
+
+:::: Post eFG Handover
+
+
+:: Dynamic Content
+
+There are several pages which contain eFG data, these should be given cursory checks for each applicable species.
+
+Region in detail
+
+	RegulatoryFeatures
+	Bounds displayed?
+	Colour annotations?
+	zmenu correct?
+
+	cisRED/miRanda/VISTA
+	Only for Human and Mouse???	
+	
+
+
+
+:: Static Content
+
+There are several static content pages which may need updating if the eFG data or methodologies have changed:
+
+	public-plugins/ensembl/htdocs/info/docs/funcgen/index.html
+	Update if any part of the Regulatory Build has been redone.
+
+	public-plugins/ensembl/htdocs/info/docs/microarray_probe_set_mapping.html
+	Update if array mapping strategy has changed.
+
+
+:: Last minute declarations/news items/announcements?
