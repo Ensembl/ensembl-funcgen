@@ -50,8 +50,8 @@ The eFG system uses a shell environments to set global variables and help perfor
 The base 'efg' environment is split into two files, one containing functions and constants (efg.env) and another containing installation configuration (efg.config). To enable initialisation of the environment add these to your .bashrc:
 
 
-SRC=~/src                                                  #EDIT this if required
-alias efg='. $SRC/ensembl-functgenomics/scripts/efg.env'   #This will be redefined on initiation
+SRC=~/src                                                                #EDIT this if required
+alias efg='. $SRC/ensembl-functgenomics/scripts/environements/efg.env'   #This will be redefined on initiation
 
 
 You will also need to edit the configuration file accordingly:
