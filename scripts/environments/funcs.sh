@@ -7,6 +7,7 @@ export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 #To do
 #Add more error echos when exiting
 #Document error codes
+#rename funcs lcfirst or _ first to enable us to filter public and 'private' methods in help functions
 
 #We should add these to an array and then use the array values in ReportExit to list a nice error rather than a number
 # File : funcs.sh
@@ -20,6 +21,62 @@ export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 
 _TRUE=1;
 _FALSE=!$_
+
+
+
+
+_setOptArgArray(){
+
+	#Set var in sub
+	#Subshelling would cause problems with setting OPTIND 
+	array_var=$1
+	shift
+	  #Should this be $@ to avoid spliting 'words with' with spaces?
+	args=($*)   
+	OptArgArray=
+	nextarg=0
+
+
+	#Need to check args here!
+	#can I ever be less than 0?
+
+	CheckVariables array_var
+	#This is largely pointless as if it is not passed we just suck in the args
+	#$i will be -1 if called outside of getopts?
+	#Actaully Could be anything dependant on the last value of OPTIND
+	#Is also susceptible of polluting of OPTIND if not reset to 0 before calling getopts
+
+	i=$(($OPTIND - 2))
+
+	while [[ $nextarg = 0 ]]; do
+	
+		#echo "i is $i"
+
+		#echo "arg is ${args[$i]}"
+
+		
+		if [[ "${args[$i]}" = -* ]] || [[ -z "${args[$i]}" ]]; then
+			nextarg=1
+			OPTIND=$(($i + 1))
+			#echo "next arg is at $OPTIND"
+				#do we need to set this to -1?
+		else
+			#echo "using arg ${args[$i]}"
+			OptArgArray="$OptArgArray ${args[$i]}"
+			
+		fi
+		
+
+		i=$(($i + 1))
+
+	done
+
+
+	eval "$array_var=($OptArgArray)"
+	
+}
+
+
 
 ### Trapping
 
@@ -40,14 +97,14 @@ _FALSE=!$_
 #}
 
 ################################################################################
-# Func      : ReportExit()
+# Func      : _trapExt
 # Desc      : Reports exit status but calls bash before exit, so we don't exit the environment
 # Args [1]  : 
 # Return    : 
 # Exception : 
 ################################################################################
 
-TrapExit(){
+_trapExit(){
 	es=$?
 	echo "Exiting with status:$es"
 
@@ -197,8 +254,9 @@ CheckVariablesOrUsage(){
 	tmp=$(CheckVariables $variable_names)
 
 	if [ $? != 0 ]; then
-		echo "$tmp"
-		echo "$usage"
+		echo "$tmp."
+		echo "  $usage"
+		#This get's flattened into one line if we capture the output for returning rather than exit
 		exit 1;
 	fi
 }
@@ -804,17 +862,24 @@ padNumber()
 }
 
 
-Distribute()
-{
-   CheckBinaries scp
+#Distribute()
+#{
+#   CheckBinaries scp
    
-   _LOCAL_DIR=$1
-   _REMOTE_HOST=$2
-   _REMOTE_USER=$3
-   _REMOTE_DIR=$4
+#   _LOCAL_DIR=$1
+#   _REMOTE_HOST=$2
+#   _REMOTE_USER=$3
+#   _REMOTE_DIR=$4
 
-   _REMOTE_LOGIN="$_REMOTE_USER@$_REMOTE_HOST"
-   scp -r  $_LOCAL_DIR $_REMOTE_LOGIN:$_REMOTE_DIR
+#   _REMOTE_LOGIN="$_REMOTE_USER@$_REMOTE_HOST"
+#   scp -r  $_LOCAL_DIR $_REMOTE_LOGIN:$_REMOTE_DIR
+#}
+
+
+isMac(){
+
+	if [[ $(uname -s) = 'Darwin' ]]; then
+		echo $_TRUE
+	fi
 }
-
 
