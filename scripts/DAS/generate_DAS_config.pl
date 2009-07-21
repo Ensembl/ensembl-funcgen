@@ -6,53 +6,56 @@ generate_DAS_config.pl
 
 =head1 SYNOPSIS
 
-generate_DAS_config.pl \
-    -dbhost dbhost \
-    -dbport 3306 \
-    -dbuser ensro \
-    -dbname homo_sapiens_funcgen_47_36i \
-    -species homo_sapiens \
-    -das_config $EFG_SRC/config/DAS\
-    -das_name efg \
-    -das_host DAShost \
-    -das_port  9000
+ GenerateDASConfig|generate_DAS_config.pl [options]
+
+ e.g
+
+ generate_DAS_config.pl  -dbhost dbhost -dbport 3306 -dbuser ensro -dbname homo_sapiens_funcgen_47_36i -species homo_sapiens -das_config $EFG_SRC/config/DAS -das_name efg -das_host DAShost -das_port  9000
 
 =head1 DESCRIPTION
 
-This script writes DAS configuration for all DAS_DISPLAYABLE sets from a given DB.
+This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra source tables from a given DB. Most of the parameter use default values which can be set in the efg environment.>
 
 =head1 OPTIONS
 
  Mandatory: If running without -only_header (default).
     DB parameters
-    -dbhost  DB host name
-    -dbport  DB port
-    -dbuser  DB user name
-    -dbname  Name of DB
-    -species Latin name of species as used in DB name
+    -dbhost  DB host name, default is $DB_HOST
+    -dbport  DB port, default is $DB_PORT
+    -dbuser  DB user name, default is $DB_RO_USER
+    -dbname  Name of DB, default is $DB_NAME
+    -species Latin name of species as used in DB name, e.g. homo_sapiens. Default is $SPECIES
 
  Mandatory: If running without -no_header (default).
     DAS parameters
-    -das_config
-    -das_name 
-    -das_host 
-    -das_port 
-
+    -das_config  default is $EFG_DAS_CONFIG
+    -das_name    Das instance name
+    -das_host    default is $EFG_DAS_HOST
+    -das_port    default is $EFG_DAS_PORT
+    
  Optional:
-    -dbpass      DB password
-    -maxclients  Maximum DAS clients
 
-    DNA DB parameters, default is to use ensembldb.
-    -dnadb_host  DB host name
-    -dnadb_port  Core DB port
-    -dnadb_user  Core DB user name
-    -dnadb_name  Name of core DB
-    -dnadb_pass  Core DB password
+    DB parameters
+    -dbpass      default is $DB_PASS
+
+    DAS paramters
+    -severroot   ProServer root code directory (default = $SRC/Bio-Das-ProServer)
+    -maintainer  email of DAS server admin
+    -maxclients  Maximum DAS clients, default is 20
+
+    DNA DB parameters, default is to use ensembldb.ensembl.org
+    -dnadb_host  Core DB host name, default is $DNADB_HOST
+    -dnadb_port  Core DB port, default is $DNADB_PORT
+    -dnadb_user  Core DB user name, default is $DNADB_USER
+    -dnadb_name  Name of core DB, default is $DNADB_NAME
+    -dnadb_pass  Core DB password, default is $DNADB_PASS
     
     Run modes
-    -no_header   Only prints source config
-	-header_only Only prints DAS server config
-    -help        Prints this documentation and exits
+    -no_header    Only prints source config
+	-header_only  Only prints DAS server config
+    -help         Prints this documentation and exits
+    -not_hydra    Generates standard sources, default is dynamic Hydra sources
+    -source_types List of Hydra source types to generate, default is: feature_set, result_set, bed
 
     Individual Set handling
     -set_type        Set type e.g. result, feature, regualtory
@@ -67,19 +70,35 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets from a given D
 
     #Add more here for default colours?
 
+ Other:
+   --help Prints a short help message and exits
+   --man  Prints the man page and exits
 
-=head1 LICENCE
 
-This code is distributed under an Apache style licence. Please see
-http://www.ensembl.org/info/about/code_licence.html for details.
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Please post comments/questions to the Ensembl development list
-<ensembl-dev@ebi.ac.uk>
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
+
+#TO DO
 #This needs to use the DAS DISPLAYABLE status to auto set up for a given list of hosts
 #Or use default available config host file to poll the existing DB
 #Or add a given dbhost using either the 
@@ -89,27 +108,67 @@ Please post comments/questions to the Ensembl development list
 
 #We need func to list sources given host, cell/feature type, experiment name?
 
+#Implement location link! CUrrently hardcoded to some human loci
+
 
 use strict;
 use warnings;
-use Data::Dumper;
 use Pod::Usage;
 use Getopt::Long;
+
 #use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 #use Bio::EnsEMBL::Analysis::Tools::Logger qw(logger_verbosity logger_info);
 #Use Helper instead of Logger?
+
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
-my ($dbhost, $dbport, $dbuser, $dbpass, $dbname, $das_port, $das_host, $species);
-my ($das_config, $set_type);
-my ($dnadb_host, $dnadb_port, $dnadb_user, $dnadb_pass, $dnadb_name, $dnadb, $set_name);
-my (@adaptor_names, $no_headers, $headers_only, $link_region, $styleshome);
-my ($set_colour, $set_plot, $set_display_name, $location);
+my ($set_type, $dnadb, $set_name, $das_name);
+my (@adaptor_names, $no_headers, $headers_only, $link_region);
+my ($set_colour, $set_plot, $set_display_name, $location, $maintainer);
+
+#ENV DEFAULTS
+
+#These should be set in efg.env
+my $serverroot  = $ENV{'EFG_DAS_HOME'};
+my $das_config  = $ENV{'EFG_DAS_CONFIG'};
+my $das_port    = $ENV{'EFG_DAS_PORT'};
+my $das_host    = $ENV{'EFG_DAS_HOST'};
+
+#These are not that useful as we will only be doing this once per DB for hydra
+#So not much point in have a specific env file?
+
+#Change these to use EFG_READ_USER?
+#Grr should these have EFG prefix?
+my $dbname      = $ENV{'DB_NAME'};
+my $dbhost      = $ENV{'DB_HOST'};
+my $dbuser      = $ENV{'DB_RO_USER'};
+my $dbport      = $ENV{'DB_PORT'};
+my $dbpass      = $ENV{'DB_PASS'};
+my $species     = $ENV{'SPECIES'};
+my $dnadb_name  = $ENV{'DNADB_NAME'};
+my $dnadb_host  = $ENV{'DNADB_HOST'};
+my $dnadb_user  = $ENV{'DNADB_USER'};
+my $dnadb_port  = $ENV{'DNADB_PORT'};
+my $dnadb_pass  = $ENV{'DNADB_PASS'};
+
+
+
+my $styleshome = $serverroot.'/stylesheets';
+#coordshome?
+
+my %valid_source_types = (
+						  'feature_set' => 1,#Can we change value here to something useful
+						  'result_set'  => 1,
+						  'bed',        => 1,
+						  #should we separate reads and profile?
+						 );
 my $ini_password= '';
-my $max_clients = 5;
-my $das_name = 'efg';
+my $max_clients = 20;
+#my $das_name = 'efg';
 my $link_gene = 'STAT1';
+my $not_hydra = 0;
+my @source_types = keys %valid_source_types;
 my $pod_params = "Params are:\t".join(' ', @ARGV);
 
 my %plots = (
@@ -209,16 +268,21 @@ GetOptions(
 		   
 		   #DAS Server params
 		   'das_host=s'   => \$das_host,
-		   'das_config=s'   => \$das_config,
+		   'das_config=s' => \$das_config,
 		   'das_port=i'   => \$das_port,#$ENV{'EFG_DAS_PORT'} 9876?
 		   'maxclients=i' => \$max_clients,
 		   'das_name=s'   => \$das_name,
 		   'styleshome=s' => \$styleshome,
+		   'maintainer=s' => \$maintainer,
+		   'severroot=s'  => \$serverroot,
 
 		 		   
 		   #'default_colour=s' => \$default_colour,
 
 		   #Individual set
+		   #Change this to have result_set feature_set
+		   #Then move checking from shell func to here
+		   #Or just leave as we're moving to hydra
 		   'set_type=s'   => \$set_type,
 		   'set_name=s'   => \$set_name,
 		   'set_colour=s' => \$set_colour,#Not yet implemented
@@ -226,6 +290,10 @@ GetOptions(
 		   'set_display_name=s' => \$set_display_name,#Not yet implemented
 		   #'set_link_gene=s'
 		   #'set_link_region=s
+
+		   #Hydra options
+		   'not_hydra'         => \$not_hydra,
+		   'source_types=s{,}' => \@source_types,
 
 		   #HTML/Feature link params
 		   #'local_port'    => \$local_port,#Will this work, isn't the data integrated on the server side?
@@ -237,7 +305,8 @@ GetOptions(
 		   #'filename'               => \$main::_log_file,#Not yet implemented
 		   
 		   #add a reduced log to minimize memory usage?
-           'help'                   => sub { pos2usage(-exitval => 0, -message => $pod_params); },
+           'help'                   => sub { pod2usage(-exitval => 0, -message => $pod_params); },
+		   'man'                    => sub { pod2usage(-exitval => 0, -message => $pod_params, verbose => 2); },
 		  ) or pod2usage(
 						 -exitval => 1,
 						 -message => $pod_params
@@ -251,27 +320,51 @@ if(! defined $main::_log_file){
   $main::_tee    = 1;
 }
 
-#Do we need these? Or just use Helper?
-#my $utils_verbosity = 'WARNING';
-#my $logger_verbosity = 'OFF';
-#verbose($utils_verbosity);
-#logger_verbosity($logger_verbosity);
-
-
-#This needs to be done in env, as we never restart from this script!
-#my $local_host = `hostname --long`;
-
-
 # Some header only mandatory params
 if(! ($das_config && -d $das_config)){
+
   pod2usage(
 			-exitval => 1,
-			-message => $pod_params,
+			-message => "Could not find -das_config directory:\t$das_config",
 		   )
 }
 
-#Do some set validation here plot?
+# Mandatory DB params
+if(! $headers_only && 
+   ((! ($dbhost && $dbuser && $dbname && $das_host && $species)) ||
+	($set_name && ! $set_type) ||
+	($set_type && ! $set_name))){
+  pod2usage(
+			-exitval => 1,
+			-message => "You have omited some mandatory parameters required for generating DAS source configurations\n$pod_params",
+		   )
+}
 
+#Check we are not trying to turn on standard sources with hydra mode
+
+if(! $not_hydra){
+
+  if($set_type || $set_name){
+	die('Cannot yet specify individual set(-set_type|name) config with hydra source');
+	#We would have to do this by matching the source name to the table names somehow?
+	#Or maybe specifying a config string which could be split?
+	#Would still have to match to the table names, so probably best to set up separate sources
+  }
+
+  foreach my $source_type(@source_types){
+	
+	if(! exists $valid_source_types{$source_type}){
+	  die("Hydra source type $source_type is not valid. Please use one of the following:\t".
+		  join("\t", keys(%valid_source_types)));
+	}
+  }
+}
+#else{#Standard only validation?
+#
+#}
+
+#Do some set validation here
+# plot?
 
 if ($link_region && $link_gene){
   die('Must specify only one link e.g -link_region 2:191541121-191588181 or -link_gene STAT1');
@@ -283,8 +376,14 @@ $location = "r=${link_region}"  if $link_region;
  
 
 if(! $no_headers){
+  
+  if(! $das_name){
+	die('You must provide an -instance name to write das configuration header files');
+  }
+
   my $prefork = int($max_clients/2);
   my $das_instance="${das_name}.${das_host}.${das_port}";
+  $maintainer = (defined $maintainer) ? "maintainer   = $maintainer\n" : '';
 
   my $header_file = $das_config."/${das_instance}.config.header";
   print ":: Generating DAS ini header:\t$header_file\n";
@@ -295,6 +394,28 @@ if(! $no_headers){
   
   #hard coded coords here, but need to change to slice defined by $location
 
+  #Is this absolutely necessary?
+  #This appears only to be required if we want the default styles/coords home
+  #Why does this not default to this anyway?
+  if(! -d $serverroot){
+	warn "serverroot directory does not exist:\t$serverroot\n".
+	  'Default styles/coordhome will not be found?\n';
+  }
+  else{
+	$serverroot = "serverroot   = $serverroot";
+  }
+
+
+  if(! -d $styleshome){
+	die('Could not find -styleshome directory:\t$styleshome');
+  }
+
+  
+
+  #Do we need to add ensemblhome or bioperlhome to this?
+  #Only if we launch with these in the PERL5LIB!
+  #Do we need to add coordshome here?
+
   print OUT "[general]
 prefork      = ${prefork}
 maxclients   = ${max_clients}
@@ -302,7 +423,8 @@ port         = ${das_port}
 hostname     = ${das_host}
 styleshome   = ${styleshome}
 pidfile      = ${das_config}/${das_instance}.pid
-logfile      = ${das_config}/${das_instance}.log\n\n";
+logfile      = ${das_config}/${das_instance}.log
+${maintainer}${serverroot}\n\n";
 
 #;response_hostname=das.example.com
 #;response_port=80
@@ -322,9 +444,7 @@ logfile      = ${das_config}/${das_instance}.log\n\n";
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb"  lang="en-gb">
 <head><title>Ensembl Functional Genomics DAS links</title></head>
 <body>
-<h3>DAS data sources for</h3>
-<h2>$dbname on $das_host:$das_port</h2>
-<p>selected location: <a href='http://www.ensembl.org/${species}/contigview?${location};">${location}</a></p>
+<h3>DAS data sources available on $das_host:$das_port</h3>
 EOHTML
 
   close(OUT);
@@ -340,15 +460,7 @@ if(! $headers_only){
  
   $ini_password = "\npassword          = $dbpass" if $dbpass;
 
-  # Mandatory DB params
-  if((! ($dbhost && $dbuser && $dbname && $das_host && $species)) ||
-	 ($set_name && ! $set_type) ||
-	 ($set_type && ! $set_name)){
-	pod2usage(
-			  -exitval => 1,
-			  -message => $pod_params,
-			)
-  }
+ 
 
   # Set DBs & Adaptors
   if($dnadb_name){
@@ -376,85 +488,151 @@ if(! $headers_only){
 	 -species => $species,
 	 -group   => 'funcgen',
      );
+
   $db->dbc->db_handle;#Test connection
 
-  my %adaptors = (
-				  result  => $db->get_ResultSetAdaptor,
-				  feature => $db->get_FeatureSetAdaptor,
-				  #experimental => $db->get_ExperimentalSetAdaptor,
-				  #We need this to point to one file or a blob in the db
-				  #Need to extend the schema/API to handle this?
-				 );
+  #warn "WARNING:\tDoes not yet support dnadb params for to allow source on pre-prd DBs";
+
+  if(! $not_hydra){
+
+	warn "WARNING:\tCannot generate source attachment links for hydra sources\n";
 
 
-  #Generate sources file for each type
- 
-
-  foreach my $aname(keys %adaptors){
-	$plot = '';
-	$set_class = ucfirst($aname).'Set';
-
-	$sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.sources";
-	print ":: Generating DAS $set_class ini sources:\t$sources_file\n";
+	$sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.hydra.sources";
+	print ":: Generating DAS @source_types ini sources:\t$sources_file\n";
 	open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
 
-	$html_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.html";
-	print ":: Generating DAS $set_class source links:\t$html_file\n";
-	open (HTML, ">$html_file") || die("Cannot open html file:\t$html_file");
+	foreach my $type(@source_types){
+	  
+	  #To allow multiple source DBs
+	  #We need the name to define the source DB and type uniquely
+	  #define types separately so we can turn them off in the config without hacking the code
+	  #Do we need to turn them off without dropping them from the DB?
+	  #Move the table away from the DB OR implement some status checking?
 
-	$sets = $adaptors{$aname}->fetch_all;
+
+	  #Do we want to be able to change this prefix?
+	  #Or can we drop it all together?
+	  my $source_name = 'eFG_'.$type.'s_'.$dbname.'@'.$dbhost.':'.$dbport;
+	  
+	  #Do we need separate hydra/adaptor classes for bed/feature_set/result_set?
+
+	  print OUT "\n[${source_name}]
+state          = on
+adaptor        = efg
+hydra          = efg
+transport      = efg_funcgen
+type           = $type
+host           = $dbhost
+port           = $dbport
+user           = ${dbuser}${ini_password}
+dbname         = homo_sapiens_funcgen_55_37
+autodisconnect = no
+coordinates    = NCBI_36,Chromosome,Homo sapiens -> 17:35640000,35650000
+\n\n";
+
+#;skip_registry = 1
+#;category      = sequencing
+#;method        = Solexa 1G	
+#;basename      = 
+
+	}
+
+	close(OUT);
+
+  }
+  else{#Old standard source adaptor setup
+
+
+	my %adaptors = (
+					result  => $db->get_ResultSetAdaptor,
+					feature => $db->get_FeatureSetAdaptor,
+					#experimental => $db->get_ExperimentalSetAdaptor,
+					#We need this to point to one file or a blob in the db
+					#Need to extend the schema/API to handle this?
+				   );
 	
-	foreach my $set (sort @{$sets}) {
-	  $name = $set->name;
+	
+	#Generate sources file for each type
 
-	  #Skip if this is not the -set_name exists in set_config or does not has DAS_DISPLAYABLE status
-	  if ( (! (($set_name && ($set_name eq $name)) || (exists $set_config{$name}))) &&
-		   ! $set->adaptor->has_stored_status('DAS_DISPLAYABLE', $set)){
-		next;
-	  }
+	  $sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.sources";
+	  print ":: Generating DAS $set_class ini sources:\t$sources_file\n";
+	  open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
 	  
-	  if (! $set->adaptor->has_stored_status('DAS_DISPLAYABLE', $set)){
-		#Do this here or in the env?
+	  $html_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.html";
+	  print ":: Generating DAS $set_class source links:\t$html_file\n";
+	  open (HTML, ">$html_file") || die("Cannot open html file:\t$html_file");
 
-		#Need to eval this
-		eval { $set->adaptor->store_status('DAS_DISPLAYABLE', $set); };
 
-		warn "Failed to store DAS_DISPLAYABLE status for $set_class:\t$name\n" if $@;
-	  }
-
+	print HTML "<h2>Served from $dbname</h2>
+<p>selected location: <a href='http://www.ensembl.org/${species}/contigview?${location}'>${location}</a></p>";
+	
+	foreach my $aname(keys %adaptors){
+	  $plot = '';
+	  $set_class = ucfirst($aname).'Set';
 	  
+	  #$sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.sources";
+	  #print ":: Generating DAS $set_class ini sources:\t$sources_file\n";
+	  #open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
+	  
+	  #$html_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.${set_class}.html";
+	  #print ":: Generating DAS $set_class source links:\t$html_file\n";
+	  #open (HTML, ">$html_file") || die("Cannot open html file:\t$html_file");
+	  
+	  $sets = $adaptors{$aname}->fetch_all;
+	  
+	  foreach my $set (sort @{$sets}) {
+		$name = $set->name;
+		
+		#Skip if this is not the -set_name exists in set_config or does not has DAS_DISPLAYABLE status
+		if ( (! (($set_name && ($set_name eq $name)) || (exists $set_config{$name}))) &&
+			 ! $set->adaptor->has_stored_status('DAS_DISPLAYABLE', $set)){
+		  next;
+		}
+		
+		if (! $set->adaptor->has_stored_status('DAS_DISPLAYABLE', $set)){
+		  #Do this here or in the env?
+		  
+		  #Need to eval this
+		  eval { $set->adaptor->store_status('DAS_DISPLAYABLE', $set); };
+		  
+		  warn "Failed to store DAS_DISPLAYABLE status for $set_class:\t$name\n" if $@;
+		}
+		
+	  
+		
+		#Need to handle individual set override here
+		
+		$desc = $set->display_label;
+		$display_name = (exists $set_config{$name}{name})   ? $set_config{$name}{name}   : $name;
+		$colour       = (exists $set_config{$name}{colour}) ? $set_config{$name}{colour} : $default_colours{$set_class};
+		$type = ($set_class eq 'ResultSet') ? 'result' : $set->type;
+		
+		#my $desc = "[$species - $cell_type] $dsn ($fset_type feature set)";
+		#my $desc = "[$species - $cell_type] $dsn ($type set)";
 
-	  #Need to handle individual set override here
-
-	  $desc = $set->display_label;
-	  $display_name = (exists $set_config{$name}{name})   ? $set_config{$name}{name}   : $name;
-	  $colour       = (exists $set_config{$name}{colour}) ? $set_config{$name}{colour} : $default_colours{$set_class};
-	  $type = ($set_class eq 'ResultSet') ? 'result' : $set->type;
-
-	  #my $desc = "[$species - $cell_type] $dsn ($fset_type feature set)";
-	  #my $desc = "[$species - $cell_type] $dsn ($type set)";
-
-	  print  ":  Configuring $set_class\t$name\n";
-
-	  #Also build config array here to print back to file.
+		print  ":  Configuring $set_class\t$name\n";
+		
+		#Also build config array here to print back to file.
 
 
 
-	  #Do we need feature_query?
-	  #feature_query= field0 = %segment and field2 >= %start and field1 <= %end
-	  #coordinates  = NCBI_36,Chromosome,Homo sapiens -> X:1,2000000
+		#Do we need feature_query?
+		#feature_query= field0 = %segment and field2 >= %start and field1 <= %end
+		#coordinates  = NCBI_36,Chromosome,Homo sapiens -> X:1,2000000
 
-#Can we config style sheets from here?
-#TYPE id= $type?
-#annotated and DNA Methlyation are being set in ensembl_feature_set
-
-#Also need to add config here such that we can build das_xsl necessary for ensembl to auto configure tracks
-#Speak to James/Andy about necessary elements for species, coordinate system
-
-
-	  warn "coordinates are hardcoded for NCBI_36,Chromosome,Homo sapiens -> X:1000000,2000000\n";
-
-	  print OUT "\n[${display_name}.${species}]
+		#Can we config style sheets from here?
+		#TYPE id= $type?
+		#annotated and DNA Methlyation are being set in ensembl_feature_set
+		
+		#Also need to add config here such that we can build das_xsl necessary for ensembl to auto configure tracks
+		#Speak to James/Andy about necessary elements for species, coordinate system
+		
+		
+		warn "coordinates are hardcoded for NCBI_36,Chromosome,Homo sapiens -> X:1000000,2000000\n";
+		warn "Need to set dnadb opt here if specified";
+		
+		print OUT "\n[${display_name}.${species}]
 state             = on
 adaptor           = ensembl_${aname}_set
 transport         = ensembl_funcgen
@@ -471,53 +649,57 @@ set_name          = $name
 set_id            = ".$set->dbID."
 coordinates      = NCBI_36,Chromosome,Homo sapiens -> X:1000000,2000000\n";
 
-#feature_query     = $location
-#What is CATEGORY, SOURCE and TYPE? TYPE was set_type for feature_set
-#Are these das style sheet config options?
+		#feature_query     = $location
+		#What is CATEGORY, SOURCE and TYPE? TYPE was set_type for feature_set
+		#Are these das style sheet config options?
+		
 
+		#TYPE = result, annotated, external, regulatory?
+		#Do we even need this as we can access the FeatureAdaptor from the Set it's self?
+		#Can we omit or put in header if hardcoded?
+		
 
-#TYPE = result, annotated, external, regulatory?
-#Do we even need this as we can access the FeatureAdaptor from the Set it's self?
-#Can we omit or put in header if hardcoded?
-
-
-	  #set_name is included so we can manually edit the source name
-	  #But have an easy readable reference to the actual set
-	  #Use the dbID for fetching in the adaptor
-	  #feature_set       = $name\n";
-
-	  #These links are now used to attach the sources with a given format
-	  #We should really some more config and let the adaptor pass this format info as xss
-	  
-	  #result_sets
-
-
-	  if (exists $set_config{$name}{plot}){
-	  
-		if(! exists $plots{$set_config{$name}{plot}}){
-		  die("You have specified an invalid plot type for $set_class $name:\t".$set_config{$name}{plot});
+		#set_name is included so we can manually edit the source name
+		#But have an easy readable reference to the actual set
+		#Use the dbID for fetching in the adaptor
+		#feature_set       = $name\n";
+		
+		#These links are now used to attach the sources with a given format
+		#We should really some more config and let the adaptor pass this format info as xss
+		
+		#result_sets
+		
+		
+		if (exists $set_config{$name}{plot}){
+		  
+		  if(! exists $plots{$set_config{$name}{plot}}){
+			die("You have specified an invalid plot type for $set_class $name:\t".$set_config{$name}{plot});
+		  }
+		  $plot = $plots{$set_config{$name}{plot}};
 		}
-		$plot = $plots{$set_config{$name}{plot}};
+		
+
+
+
+
+		#This is currently not working!
+		print HTML '<p><a href="'.
+		  'http://www.ensembl.org/'.$species.
+			'/contigview?'.$location.';'.
+			  'add_das_source=(name='.$display_name.'+url=http://'.$das_host.':'.$das_port.
+				'/das+dsn='.$display_name.
+				  '+type=ensembl_location_chromosome'.
+					$plot.
+					  '+color='.$colour.'+strand=r+labelflag=n'.
+						'+group=n+'.$display_params{$set_class}.'active=1)">'.
+						  $desc.'</a></p>'."\n";
+		
+		
+		#No need to set_config for individual set if defined
+		
+		
 	  }
-
-	  #This is currently not working!
-	  print HTML '<p><a href="'.
-		'http://www.ensembl.org/'.$species.
-		  '/contigview?'.$location.';'.
-			'add_das_source=(name='.$display_name.'+url=http://'.$das_host.':'.$das_port.
-			  '/das+dsn='.$display_name.
-				'+type=ensembl_location_chromosome'.
-				  $plot.
-					'+color='.$colour.'+strand=r+labelflag=n'.
-					  '+group=n+'.$display_params{$set_class}.'active=1)">'.
-						$desc.'</a></p>'."\n";
-
-
-	  #No need to set_config for individual set if defined
-
-
 	}
-  
 	close(OUT);
 	close(HTML);
   }
