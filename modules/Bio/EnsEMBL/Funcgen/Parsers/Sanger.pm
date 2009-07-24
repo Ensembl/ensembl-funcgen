@@ -296,7 +296,6 @@ sub read_array_probe_data{
 
 	  if($self->ucsc_coords){
 		$start += 1;
-		$end += 1;
 	  }
 
 

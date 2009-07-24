@@ -302,7 +302,6 @@ sub read_and_import_bed_data{
 
 		   if($self->ucsc_coords){
 			 $start +=1;
-			 $end +=1;
 		   }
 		   
 		   if(!  $self->cache_slice($chr)){
