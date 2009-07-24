@@ -218,9 +218,25 @@ jobWait()
 
 }
 
-#Move to func.sh?
+
 # private method i.e. lcfirst
 # therefore do not need -h opt
+#Need to split this into checkJob
+
+checkJob(){
+	job_name=$1
+	CheckVariables job_name
+
+	#This does not catch Job <gallus_gallus_transcripts.55_2m.fasta> is not found
+	JOB_ID=$(bjobs -J $job_name | grep -e "^[0-9]" | sed -r 's/([0-9]+)[[:space:]].*/\1/')
+
+	if [ $? -ne 0 ]; then
+		echo "Failed to access job information"
+		exit 1
+	fi
+
+
+}
 
 submitJob(){
 
@@ -231,14 +247,7 @@ submitJob(){
 	bsub_job=$*
 
 	CheckVariables job_name job
-	
-	#This does not catch Job <gallus_gallus_transcripts.55_2m.fasta> is not found
-	JOB_ID=$(bjobs -J $job_name | grep -e "^[0-9]" | sed -r 's/([0-9]+)[[:space:]].*/\1/')
-
-	if [ $? -ne 0 ]; then
-		echo "Failed to access job information"
-		exit 1
-	fi
+	checkJob $job_name
 
 	#We should test for more than one job here?
 	#jid will currently catch all ids
