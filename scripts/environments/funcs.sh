@@ -246,7 +246,7 @@ submitJob(){
 	shift
 	bsub_job=$*
 
-	CheckVariables job_name job
+	CheckVariables job_name bsub_job
 	checkJob $job_name
 
 	#We should test for more than one job here?
