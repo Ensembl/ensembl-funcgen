@@ -157,7 +157,7 @@ Checkuser()
 }
 
 ################################################################################
-# Func      : BWait()
+# Func      : jobWait()
 # Desc      : Waits for lsf job
 # Arg  [1]  : Job ID
 # Arg  [2]  : Amount of time to wait before polling in seconds. Default is 280(5mins)
@@ -166,7 +166,7 @@ Checkuser()
 # Exception : Exits if JobID not defined
 ################################################################################
 
-BWait()
+jobWait()
 {
 	job_id=$1
 	secs=$2
@@ -184,12 +184,11 @@ BWait()
 	while [ ! $complete ]; do
 
 		job_info=($(bjobs $job_id))
-
+		status=${job_info[10]}
 		#We probably need to catch lsf daemon not responding here
 		#as well as bjobs failure
 
-
-		if [[ ${job_info[10]} -eq 'EXIT' ]]; then
+		if [[ $status = 'EXIT' ]]; then
 			
 			#Get exit code
 			complete=$(bjobs -l $job_id | grep 'Exited with exit code')
@@ -197,14 +196,70 @@ BWait()
 			complete=$(echo $complete | sed 's/\. The CPU.*//')
 
 			
-		elif [[ ${job_info[10]} -eq 'DONE' ]]; then
+		elif [[ $status = 'DONE' ]]; then
 			complete=0
+		else
+			echo sleeping for $secs secs
+			sleep $secs
 		fi
 	done
+
+	echo -e "Finished waiting for job:\t$job_id"
 
 	return $complete
 
 }
+
+#Move to func.sh?
+# private method i.e. lcfirst
+# therefore do not need -h opt
+
+submitJob(){
+
+	#Change this to take opts so we can wait for jobs?
+
+	job_name=$1
+	shift
+	bsub_job=$*
+
+	CheckVariables job_name job
+	
+	JOB_ID=$(bjobs -J $job_name | grep -e "^[0-9]" | sed -r 's/([0-9]+)[[:space:]].*/\1/')
+
+	if [ $? -ne 0 ]; then
+		echo "Failed to access job information"
+		exit 1
+	fi
+
+	#We should test for more than one job here?
+	#jid will currently catch all ids
+	#altho retu
+	
+	if [ $JOB_ID ]; then
+		echo "Job($JOB_ID) $job_name already exists"
+	else
+		#echo through bash to avoid wierd resources parameter truncation
+		JOB_ID=$(echo $bsub_job -J $job_name | bash)
+
+		if [ $? -ne 0 ]; then
+			echo "Failed to submit job $job_name"
+			exit 1
+		fi
+
+		JOB_ID=$(echo $JOB_ID | sed 's/Job <//')
+		JOB_ID=$(echo $JOB_ID | sed 's/>.*//')
+
+	fi
+
+	#To let LSF process the job
+	sleep 5
+	echo "To monitor job: bjobs -lJ $job_name"
+	bjobs -w $JOB_ID
+
+}
+
+
+
 
 ################################################################################
 # Func      : CheckVariables()
