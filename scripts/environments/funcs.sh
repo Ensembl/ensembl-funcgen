@@ -19,6 +19,14 @@ export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 # 255 - Execution of script failed
 
 
+# LIST OF RESERVED VARIABLES
+# These may be set in one function to be used in the caller
+# i.e. do not use/set these unless using the function which sets them
+# Also check func.sh and efg.env for similar reserved variables e.g REPLY
+# JOB_ID
+
+
+
 _TRUE=1;
 _FALSE=!$_
 
@@ -239,9 +247,13 @@ submitJob(){
 		echo "Job($JOB_ID) $job_name already exists"
 	else
 		#echo through bash to avoid wierd resources parameter truncation
-		JOB_ID=$(echo $bsub_job -J $job_name | bash)
+
+		#echo $bsub_job -J $job_name 
+
+		JOB_ID=$(echo bsub -J $job_name $bsub_job | bash)
 
 		if [ $? -ne 0 ]; then
+			echo $JOB_ID
 			echo "Failed to submit job $job_name"
 			exit 1
 		fi
