@@ -232,6 +232,7 @@ submitJob(){
 
 	CheckVariables job_name job
 	
+	#This does not catch Job <gallus_gallus_transcripts.55_2m.fasta> is not found
 	JOB_ID=$(bjobs -J $job_name | grep -e "^[0-9]" | sed -r 's/([0-9]+)[[:space:]].*/\1/')
 
 	if [ $? -ne 0 ]; then
@@ -257,6 +258,8 @@ submitJob(){
 			echo "Failed to submit job $job_name"
 			exit 1
 		fi
+
+		echo $JOB_ID
 
 		JOB_ID=$(echo $JOB_ID | sed 's/Job <//')
 		JOB_ID=$(echo $JOB_ID | sed 's/>.*//')
