@@ -1023,7 +1023,7 @@ foreach my $transcript (@transcripts) {
 
 	  if(defined $utr){
 
-		push @{$utr_counts{$end}}, $utr;
+		push @{$utr_counts{$end}}, $utr->length;
 		
 		#Hard extend takes presidence over multiplier
 		if(defined $utr_extends{$end}){
