@@ -16,7 +16,7 @@ dkeefe@ebi.ac.uk
 set the current regulatory database in file ~/dbs/current_funcgen
 
 reg_feats_4_classification.pl -e dk_reg_feat_classify_49
-
+    
 =head1 EXAMPLES
 
  reg_feats_4_classification.pl -e dk_funcgen_classify_51_1  -v2 
@@ -31,6 +31,10 @@ reg_feats_4_classification.pl -e dk_reg_feat_classify_49
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2008/08/20 07:20:13  dkeefe
+ moved from parent directory
+ added couple more tables
+
  Revision 1.1  2008/04/11 10:55:11  dkeefe
  Copies the reg_feature data needed for the overlap analysis into a
  specified database. Does a bit of denormalising and quite a lot of
@@ -54,7 +58,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Getopt::Std;
 use IO::Handle;
 use IO::File;
-use lib '/nfs/acari/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
+use lib '/nfs/users/nfs_d/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
 use DBSQL::Utils;
 use DBSQL::DBS; # to use databases listed in ~/dbs.
 
@@ -63,17 +67,19 @@ use constant  NO_ROWS => '0E0';
 
 my($user, $password, $driver, $host, $port);
 my @temp_tables;
-my $dump_dir = '/lustre/scratch1/ensembl/dkeefe/reg_feats_junk/';
+my $dump_dir = "/lustre/scratch103/ensembl/dkeefe/reg_feats_junk_$$/";
 my $id_list;
 my $sp;
 my $verbose = 0;
 my $jump_label = '';
 my $filtered_features_table = 'regulatory_features_filtered';
+my $gene_filter = 0;
+
 
 my %opt;
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('v:u:p:s:H:h:e:j:P:', \%opt) || die ;
+&Getopt::Std::getopts('v:u:p:s:H:h:e:J:P:G', \%opt) || die ;
 }else{
 &help_text; 
 }
@@ -105,13 +111,15 @@ if($jump_label){
 # the target db
 &backtick("rm -rf $dump_dir");
 &backtick("mkdir $dump_dir");
-my $dump_templ = "mysqldump --opt -h ".$source_dbs->host.
+my $dump_templ = "mysqldump --opt --skip-lock-tables -h ".$source_dbs->host.
                                  " -u ".$source_dbs->user.
-                                 " -P ".$source_dbs->port.
-                                 " -p".$source_dbs->pass.
-                                 " ".$source_dbs->name.
-                                 ' %s '.
-                                 " > $dump_dir".'%s'.".dump";
+                                 " -P ".$source_dbs->port;
+if($source_dbs->pass){
+    $dump_templ .= " -p".$source_dbs->pass;
+}
+$dump_templ .= " ".$source_dbs->name.
+               ' %s '.
+               " > $dump_dir".'%s'.".dump";
 
 my $load_templ = "mysql -h ".$host.
                  " -u ".$user.
@@ -135,7 +143,7 @@ my @core_tables =( 'regulatory_attribute',
 
 foreach my $table (@core_tables){
                    
-    unless( $source_dbu->table_exists($table)){die ("ERROR: The core database does not contain table $table")}
+    unless( $source_dbu->table_exists($table)){die ("ERROR: The funcgen database does not contain table $table")}
 
     my $command = sprintf($dump_templ,$table,$table);
     &backtick($command);
@@ -252,6 +260,26 @@ push @sql,"delete f from $filtered_features_table f,$temp3 t where f.regulatory_
 # so we remove them
 
 push @sql, "delete from $filtered_features_table where seq_region_name = 'MT'";
+
+
+&execute($dbh,@sql) or die;
+@sql=();
+
+if($gene_filter){ # remove features overlapping protein coding genes and their upstream enhancer regions
+    push @sql,"drop table if exists $temp3";
+
+    push @sql,"create table $temp3 select f.regulatory_feature_id from $filtered_features_table f, protein_coding_gene s where s.seq_region_name = f.seq_region_name and s.feature_end >= f.seq_region_start and s.feature_start <= f.seq_region_end";
+    push @sql,"delete f from $filtered_features_table f,$temp3 t where f.regulatory_feature_id = t.regulatory_feature_id";
+
+
+    push @sql,"drop table if exists $temp3";
+
+    push @sql,"create table $temp3 select f.regulatory_feature_id from $filtered_features_table f, protein_coding_exon1_plus_enhancer s where s.seq_region_name = f.seq_region_name and s.feature_end >= f.seq_region_start and s.feature_start <= f.seq_region_end";
+    push @sql,"delete f from $filtered_features_table f,$temp3 t where f.regulatory_feature_id = t.regulatory_feature_id";
+
+
+}
+
 
 # we make the col names compatible with the genomic features in the analysis
 push @sql,"alter table $filtered_features_table change column seq_region_start feature_start int(10) unsigned";
@@ -499,12 +527,16 @@ sub process_arguments{
 
 
 
-    if (exists $opt{j}){
-        $jump_label = $opt{j} ;
+    if (exists $opt{J}){
+        $jump_label = $opt{J} ;
     }
 
     if  (exists $opt{e}){
         $enc_db = $opt{e};
+    } 
+
+    if  (exists $opt{G}){
+        $gene_filter = 1;
     } 
 
 } 
@@ -521,15 +553,15 @@ sub help_text{
 
     .pl [-h] for help
                   [-e] use a particular local encode catalog
-                  [-H] <host machine> eg ecs2
+                  [-H] <host machine> default ens-genomics2
                   [-u] <database user>
-                  [-j] <label> jump to label then start execution
+                  [-J] <label> jump to label then start execution
                        POST_IMPORT, FILTER
                   [-p] <mysql password> 
                   [-P] <mysql port> 
                   [-s] <species> eg -smus_musculus, default = homo_sapiens
                   [-v] <integer> verbosity level 0,1 or 2 
-                  [-] 
+                  [-G] flag - remove features which overlap protein coding genes
                   [-] 
                   [-] <> 
                   [-] <> 
