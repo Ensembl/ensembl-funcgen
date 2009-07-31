@@ -35,7 +35,7 @@ Contents
 8    Running The Pipeline
 8.1  Probe Alignment
 8.2  Transcript Annotation
-9   Administration Functions
+9    Administration Functions
 10   Adding Additional Support
 10.1 Adding A New Array Format
 10.2 Adding A New Array
@@ -321,27 +321,37 @@ line, these can generally be invoked with a -h option to print a help or usage m
 
 There are basically 5 main steps to running the probe alignment element of the pipeline:
 
-BuildFastas    Looks in the each array format directory and updates a cat'd file of all available 
-			   fasta.
-SetUpPipeline  Creates pipeline DB and imports analyses and pipeline rule conditions and goals.
-			   This may show some errors as the pipeline system expects all the analyses in 
-			   BatchQueue.pm to be configured in the DB, as we the efg environment has dynamic and 
-			   templated configuration this can be ignored. There may also be some errors refering 
-			   to the submit type analyses having no module, which can also be ignored.
-			   (There may also be some some messages about accumulators, which can be igored due to
-			   the way the arrays environment implements the pipeline)
+BuildFastas     Looks in the each array format directory and updates a cat'd file of all available 
+			    fasta.
+
+SetUpPipeline   Creates pipeline DB and imports analyses and pipeline rule conditions and goals.
+			    This may show some errors as the pipeline system expects all the analyses in 
+			    BatchQueue.pm to be configured in the DB, as we the efg environment has dynamic and 
+			    templated configuration this can be ignored. There may also be some errors refering 
+			    to the submit type analyses having no module, which can also be ignored.
+			    (There may also be some some messages about accumulators, which can be igored due to
+			    the way the arrays environment implements the pipeline)
 			   
-ImportArrays   - Invokes the pipeline to import all available arrays. Followed by ImportWait
-CreateAlignIDs - Creates ProbeAlign job/chunk IDs to enable parallel processing of the non-redundant 
-                 fasta output of ImportArrays.
-SubmitAlign    - Submits ProbeAlign/ProbeTranscriptAlign jobs for each format. Followed by AlignWait 
-                 and ProbeAlignReport.
+ImportArrays    Invokes the pipeline to import all available arrays. Followed by ImportWait
+
+CreateAlignIDs  Creates ProbeAlign job/chunk IDs to enable parallel processing of the non-redundant 
+                fasta output of ImportArrays.
+
+SubmitAlign     Submits ProbeAlign/ProbeTranscriptAlign jobs for each format. Followed by AlignWait 
+                and ProbeAlignReport.
 
 These are accessible as separate funtions but can be invoked by a wrapper function:
 
 RunAlignments     - Does all of the above plus some pipeline monitoring.
 
-However, when running an array or species for the first time you it is wise to test some small jobs locally before 
+
+NOTE: The ImportWit step is a pipeline accumulator and simply waits for the ImportArrays jobs to 
+finished successfully.  If these jobs fail, then ImportWait will wait indefinitely.  It is a good idea
+to source the environment in a separate window and use the 'monitor' function to track the progress
+of the pipeline.
+
+
+When running an array or species for the first time you it is wise to test some small jobs locally before 
 submitting thousands of jobs to the farm which may potentially fail. This can be done using the following functions:
 
 TestImportArrays - Will parse the fasta file and store the results if the -w flag is set.  Note:  This will 
