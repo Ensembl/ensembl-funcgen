@@ -21,6 +21,7 @@ Mandatory
   -user|u          DB user name
   -species         Latin name e.g. homo_sapiens
   -force|f         Performs a full delete, removing all records upto the specified level.  This is to specifically force the rollback of probe2transcript entries, as these can be associated with more than one array i.e. you may be deleting annotations which also belong to another array.
+  -keep_xrefs      Flag to keep xrefs, even if we are deleting probe_features. Used when xrefs are external import i.e. not probe2transcript.
   -help            Brief help message
   -man             Full documentation
 
@@ -42,9 +43,10 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 $| =1;
 
 my (@array_names, $pass, $force, @chips, $vendor, %achips);
-my ($host, $dbname, $species, $mode, $port, $user, $dnadb_pass);
+my ($host, $dbname, $species, $mode, $port, $user, $dnadb_pass, $keep_xrefs);
 my ($dnadb_host, $dnadb_name, $dnadb_species, $dnadb_port, $dnadb_user);
 my @tmp_args = @ARGV;
+
 
 GetOptions (
 			"arrays|a=s{,}"      => \@array_names,
@@ -56,13 +58,14 @@ GetOptions (
 			"dbport=s"        => \$port,
 			"dbname|n=s"      => \$dbname,
 			"dbhost|h=s"      => \$host,
-			"dnadb_pass=s"      => \$dnadb_pass,
-			"dnadb_port=s"        => \$dnadb_port,
-			"dnadb_name=s"      => \$dnadb_name,
-			"dnadb_host=s"      => \$dnadb_host,
-			"dnadb_user=s"      => \$dnadb_user,
+			"dnadb_pass=s"    => \$dnadb_pass,
+			"dnadb_port=s"    => \$dnadb_port,
+			"dnadb_name=s"    => \$dnadb_name,
+			"dnadb_host=s"    => \$dnadb_host,
+			"dnadb_user=s"    => \$dnadb_user,
 			"species=s"       => \$species,
 			"force|f"         => \$force,
+			"keep_xrefs|k"    => \$keep_xrefs,
 			"help|?"          => sub { pos2usage(-exitval => 0,  
 												 -verbose => 2, 
 												 -message => "Params are:\t@tmp_args");
@@ -79,7 +82,7 @@ die('Must define a -dbhost parameter')  if ! $host;
 die('Must define a -pass parameter')    if ! $pass;
 die('Must define a -species parameter') if ! $species;
 $force = 'force' if $force;
-
+$keep_xrefs = 'keep_xrefs' if $keep_xrefs;
 
 my $dnadb;
 
@@ -150,7 +153,7 @@ else{
 }
 
 
-$Helper->rollback_ArrayChips([values(%achips)], $mode, $force);
+$Helper->rollback_ArrayChips([values(%achips)], $mode, $force, $keep_xrefs);
 
 
 
