@@ -1417,7 +1417,7 @@ sub rollback_ResultFeatures{
 #So IMPORTED status should be tied to CS id and Analysis id?
 
 sub rollback_ArrayChips{
-  my ($self, $acs, $mode, $force) = @_;
+  my ($self, $acs, $mode, $force, $keep_xrefs) = @_;
   
   $mode ||= 'probe';
   
@@ -1432,6 +1432,25 @@ sub rollback_ArrayChips{
   if($force && ($force ne 'force')){
 	throw("You have not specified a valid force argument($force), you must specify 'force' or omit");
   }
+
+   if($keep_xrefs && ($keep_xrefs ne 'keep_xrefs')){
+	throw("You have not specified a valid keep_xrefs argument($keep_xrefs), you must specify 'keep_xrefs' or omit");
+  }
+
+
+  if($keep_xrefs){
+
+	if($mode eq 'probe' || $mode eq 'probe2transcript'){
+	  throw("You cannot specify 'keep_xrefs' with mode $mode, you can only rollback features e.g. probe_feature, ProbeAlign or ProbeTranscriptAlign");
+	}
+
+	if($force){
+	  throw("You cannot 'force' delete the probe2transcript xrefs and 'keep_xrefs' at the same time. Please specify just one.");
+	}
+  }
+
+
+
 
   my ($adaptor, $db, $class);
 
@@ -1530,7 +1549,7 @@ sub rollback_ArrayChips{
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature UnmappedObject records");
 	  
-	 #Delete ProbedFeature Xrefs/DBEntries
+	 #Delete ProbeFeature Xrefs/DBEntries
 	$sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id IN($ac_ids)";
 	$row_cnt = $db->dbc->do($sql);
 	$self->reset_table_autoinc('object_xref', 'object_xref_id', $db);
@@ -1543,6 +1562,8 @@ sub rollback_ArrayChips{
 	  
 	  #Delete Probe/Set UnmappedObjects
 
+
+	 
 
 	  $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
 
@@ -1561,7 +1582,7 @@ sub rollback_ArrayChips{
 	  $self->log("Deleted $row_cnt probe2transcript $xref_object xref records");
 	}
   }
-  else{#Need to check for existing xrefs if not force
+  elsif(! $keep_xrefs){#Need to check for existing xrefs if not force
 	#we don't know whether this is on probe or probeset level
 	#This is a little hacky as there's not way we can guarantee this xref will be from probe2transcript
 	#until we get the analysis_id moved from identity_xref to xref
@@ -1617,6 +1638,10 @@ sub rollback_ArrayChips{
 		#or/and ur.summary_description='Promiscuous probe'?
 
 		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+
+
+		print "$sql\n";
+
 		$row_cnt =  $db->dbc->do($sql);
 		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
@@ -1635,6 +1660,9 @@ sub rollback_ArrayChips{
 	  if($mode ne 'ProbeTranscriptAlign'){
 		my $lname = "${class}_ProbeAlign";
 		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+
+	
+		print "$sql\n";
 		$row_cnt =  $db->dbc->do($sql);
 		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
