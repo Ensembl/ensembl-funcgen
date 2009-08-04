@@ -36,6 +36,9 @@ edit the file ~dkeefe/dbs/ens_staging  to point at the latest ensembl core datab
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.4  2009/06/03 10:18:20  dkeefe
+ created separate tables for each RNA type
+
  Revision 1.3  2009/05/26 10:46:48  dkeefe
  lib directory name change
 
@@ -72,7 +75,7 @@ use constant  NO_ROWS => '0E0';
 
 my($user, $password, $driver, $host, $port);
 my @temp_tables;
-my $dump_dir = '/lustre/scratch1/ensembl/dkeefe/gen_feat_junk/';
+my $dump_dir = "/lustre/scratch103/ensembl/dkeefe/gen_feat_junk_$$/";
 my $slim_table = 'goslim_goa_acc_list';
 my $id_list;
 my $sp;
@@ -123,7 +126,7 @@ if($jump_label){
 &make_sources_table($dbh,$core_dbs->name);
 
 
-my $dump_templ = "mysqldump --opt -h ".$core_dbs->host.
+my $dump_templ = "mysqldump --opt --skip-lock-tables -h ".$core_dbs->host.
                                  " -u ".$core_dbs->user.
                                  " -P ".$core_dbs->port.
                                  " ".$core_dbs->name.
@@ -151,8 +154,8 @@ my @core_tables = ('transcript',
                    'seq_region',
                    'seq_region_attrib',
                    'assembly',
-                   'ditag_feature',
-                   'ditag',
+#                   'ditag_feature',
+#                   'ditag',
                    'seq_region_attrib',
                    'simple_feature',
                    'analysis',
@@ -184,7 +187,7 @@ foreach my $table (@core_tables){
 
 
 
-$dump_templ = "mysqldump --opt -h ".$core_dbs->host.
+$dump_templ = "mysqldump --opt --skip-lock-tables -h ".$core_dbs->host.
                                  " -u ".$core_dbs->user.
                                  " -P ".$core_dbs->port.
                                  " ".$go_db.
@@ -213,8 +216,8 @@ POST_IMPORT:
 
 
 #POST_IMPORT:
-&repeat_features($dbh,$dbu,$do_repeats);
-
+#&repeat_features($dbh,$dbu,$do_repeats);
+&repeat_features_old_version($dbh,$dbu,$do_repeats);
 
 
 if($dbu->table_exists('de_ferrari_gene_classification')){
@@ -224,9 +227,12 @@ if($dbu->table_exists('de_ferrari_gene_classification')){
 #POST_IMPORT:
 &gene_features($dbh);
 &exon_features($dbh);
-exit;
+
+POST_EXON:
+
 &intergenic_features($dbh,$dbu);
 &cage_ditag_transcript_tss($dbh,$dbu);
+POST_DITAG:
 &karyotype_features($dbh,$dbu);
 POST_KARYOTYPE:
 
@@ -234,7 +240,9 @@ POST_KARYOTYPE:
 # logic_name for CpG is 'CpG'
 
 #POST_IMPORT:
-&cpg_features($dbh,$dbu);
+
+#&cpg_features($dbh,$dbu);
+&cpg_features_old_version($dbh,$dbu);
 if($dbu->table_exists($slim_table) && $do_go){
     &go_term_features($dbh,$dbu,$slim_table);
 }else{
@@ -242,7 +250,9 @@ if($dbu->table_exists($slim_table) && $do_go){
 }
 
 
+
 &clean_temp();
+&backtick("rm -rf $dump_dir");
 $dbh->disconnect;
 $core_dbh->disconnect;
 exit;
@@ -526,6 +536,7 @@ and sra.value = 1 ";
         @sql = ();
 	my $table = $type;
 	$table =~ tr/\//_/;
+	$table =~ tr/-/_/;
 	push @sql,"drop table if exists $table";
 	push @sql,"create table $table select * from all_repeats where feature_type = '$type'";
 	push @sql,"update $table set feature_type = '$table'";
@@ -673,7 +684,7 @@ and sra.value = 1 ";
     push @sql,"create table $temp1 select seq_region_name,seq_region_id,if(feature_strand = 1,feature_start-500,feature_end) as feature_start, if(feature_strand = 1, feature_start,feature_end +500) as feature_end from RNA_transcript";
     
     push @sql,"alter table $temp1 add index(seq_region_name)";
-    push @sql,"create table RNA_cpg select c.* from cpg_island c, $temp1  t where c.seq_region_name = t.seq_region_name and c.feature_end >= t.feature_start and c.feature_start <= t.feature_end ";
+    push @sql,"create table RNA_cpg select distinct c.* from cpg_island c, $temp1  t where c.seq_region_name = t.seq_region_name and c.feature_end >= t.feature_start and c.feature_start <= t.feature_end ";
     push @sql,&col_types_and_indices("RNA_cpg");
     &execute($dbh,@sql);
 
@@ -687,7 +698,7 @@ and sra.value = 1 ";
     # create temp table with protein_coding_transcript's upstream  500bp
     push @sql,"create table $temp1 select seq_region_name,seq_region_id,if(feature_strand = 1,feature_start-500,feature_end) as feature_start, if(feature_strand = 1, feature_start,feature_end +500) as feature_end from protein_coding_transcript";
     push @sql,"alter table $temp1 add index(seq_region_name)";
-    push @sql,"create table protein_coding_cpg select c.* from cpg_island c, $temp1  t where c.seq_region_name = t.seq_region_name and c.feature_end >= t.feature_start and c.feature_start <= t.feature_end ";
+    push @sql,"create table protein_coding_cpg select distinct c.* from cpg_island c, $temp1  t where c.seq_region_name = t.seq_region_name and c.feature_end >= t.feature_start and c.feature_start <= t.feature_end ";
     push @sql,&col_types_and_indices("protein_coding_cpg");
     &execute($dbh,@sql);
 
@@ -833,22 +844,27 @@ sub split_by_biotype{
     if($feat_name eq 'exon1_plus_enhancer'){
 	push @sql,"drop table if exists snRNA_gene_$feat_name";
 	push @sql,"create table snRNA_gene_$feat_name select * from $feat_name where feature_type like '%snRNA_".$feat_name."'";
+	push @sql,"update snRNA_gene_$feat_name set feature_type = 'snRNA_gene_$feat_name'";
 	push @sql,&col_types_and_indices("snRNA_gene_$feat_name");
 
 	push @sql,"drop table if exists snoRNA_gene_$feat_name";
 	push @sql,"create table snoRNA_gene_$feat_name select * from $feat_name where feature_type like '%snoRNA_".$feat_name."'";
+	push @sql,"update snoRNA_gene_$feat_name set feature_type = 'snoRNA_gene_$feat_name'";
 	push @sql,&col_types_and_indices("snoRNA_gene_$feat_name");
 
 	push @sql,"drop table if exists miRNA_gene_$feat_name";
 	push @sql,"create table miRNA_gene_$feat_name select * from $feat_name where feature_type like '%miRNA_".$feat_name."'";
+	push @sql,"update miRNA_gene_$feat_name set feature_type = 'miRNA_gene_$feat_name'";
 	push @sql,&col_types_and_indices("miRNA_gene_$feat_name");
 
 	push @sql,"drop table if exists miscRNA_gene_$feat_name";
 	push @sql,"create table miscRNA_gene_$feat_name select * from $feat_name where feature_type like '%miscRNA_".$feat_name."'";
+	push @sql,"update miscRNA_gene_$feat_name set feature_type = 'miscRNA_gene_$feat_name'";
 	push @sql,&col_types_and_indices("miscRNA_gene_$feat_name");
 
 	push @sql,"drop table if exists rRNA_gene_$feat_name";
 	push @sql,"create table rRNA_gene_$feat_name select * from $feat_name where feature_type like '%rRNA_".$feat_name."'";
+	push @sql,"update rRNA_gene_$feat_name set feature_type = 'rRNA_gene_$feat_name'";
 	push @sql,&col_types_and_indices("rRNA_gene_$feat_name");
     }
 
