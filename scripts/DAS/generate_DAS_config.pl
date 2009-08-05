@@ -10,63 +10,66 @@ generate_DAS_config.pl
 
  e.g
 
- generate_DAS_config.pl  -dbhost dbhost -dbport 3306 -dbuser ensro -dbname homo_sapiens_funcgen_47_36i -species homo_sapiens -das_config $EFG_SRC/config/DAS -das_name efg -das_host DAShost -das_port  9000
+ Using the efg environment function:
+
+ GenerateDASConfig -dbhost dbhost -dbport 3306 -dbuser ensro -dbname homo_sapiens_funcgen_47_36i -species homo_sapiens -das_config $EFG_SRC/config/DAS -das_name efg -das_host DAShost -das_port  9000
 
 =head1 DESCRIPTION
 
-This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra source tables from a given DB. Most of the parameter use default values which can be set in the efg environment.>
+This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra source tables from a given DB. Most of the parameter use default values which can be set in the efg environment.
 
 =head1 OPTIONS
 
- Mandatory: If running without -only_header (default).
+ Mandatory: If running without -only_headers (default).
     DB parameters
-    -dbhost  DB host name, default is $DB_HOST
-    -dbport  DB port, default is $DB_PORT
-    -dbuser  DB user name, default is $DB_RO_USER
-    -dbname  Name of DB, default is $DB_NAME
-    -species Latin name of species as used in DB name, e.g. homo_sapiens. Default is $SPECIES
+    --dbhost  DB host name, default is $DB_HOST
+    --dbport  DB port, default is $DB_PORT
+    --dbuser  DB user name, default is $DB_RO_USER
+    --dbname  Name of DB, default is $DB_NAME
+    --species Latin name of species as used in DB name, e.g. homo_sapiens. Default is $SPECIES
 
  Mandatory: If running without -no_header (default).
     DAS parameters
-    -das_config  default is $EFG_DAS_CONFIG
-    -das_name    Das instance name
-    -das_host    default is $EFG_DAS_HOST
-    -das_port    default is $EFG_DAS_PORT
+    --das_config  default is $EFG_DAS_CONFIG
+    --das_name    Das instance name
+    --das_host    default is $EFG_DAS_HOST
+    --das_port    default is $EFG_DAS_PORT
     
  Optional:
 
     DB parameters
-    -dbpass      default is $DB_PASS
+    --dbpass      default is $DB_PASS
 
     DAS paramters
-    -severroot   ProServer root code directory (default = $SRC/Bio-Das-ProServer)
-    -maintainer  email of DAS server admin
-    -maxclients  Maximum DAS clients, default is 20
+    --severroot   ProServer root code directory (default = $SRC/Bio-Das-ProServer)
+    --maintainer  email of DAS server admin
+    --maxclients  Maximum DAS clients, default is 20
 
     DNA DB parameters, default is to use ensembldb.ensembl.org
-    -dnadb_host  Core DB host name, default is $DNADB_HOST
-    -dnadb_port  Core DB port, default is $DNADB_PORT
-    -dnadb_user  Core DB user name, default is $DNADB_USER
-    -dnadb_name  Name of core DB, default is $DNADB_NAME
-    -dnadb_pass  Core DB password, default is $DNADB_PASS
+    --dnadb_host  Core DB host name, default is $DNADB_HOST
+    --dnadb_port  Core DB port, default is $DNADB_PORT
+    --dnadb_user  Core DB user name, default is $DNADB_USER
+    --dnadb_name  Name of core DB, default is $DNADB_NAME
+    --dnadb_pass  Core DB password, default is $DNADB_PASS
     
     Run modes
-    -no_header    Only prints source config
-	-header_only  Only prints DAS server config
-    -help         Prints this documentation and exits
-    -not_hydra    Generates standard sources, default is dynamic Hydra sources
-    -source_types List of Hydra source types to generate, default is: feature_set, result_set, bed
+    --no_headers   Only prints source config
+    --only_headers Only prints DAS server config
+    --help         Prints this documentation and exits
+    --not_hydra    Generates standard sources, default is dynamic Hydra sources
+    --source_types List of Hydra source types to generate, default is: feature_set, result_set, be
+    
 
-    Individual Set handling
-    -set_type        Set type e.g. result, feature, regualtory
-	-set_name        Name of set
+    Individual Set handling, for use with --not_hydra
+    --set_type        Set type e.g. result, feature, regualtory
+    --set_name        Name of set
     #-set_colour      Colour of track for given set e.g. contigblue1, contigblue2, red3
     #-set_plot        Plot type for given set e.g. hist or tiling
 
-	HTML/Feature link params, used to generate page with attachement links
-	-link_gene       Name of gene e.g. STAT1
-	or
- 	-link_region     Loci e.g. 2:191541121-191588181
+    HTML/Feature link params, used to generate page with attachement links
+    --link_gene       Name of gene e.g. STAT1
+    or
+    --link_region     Loci e.g. 2:191541121-191588181
 
     #Add more here for default colours?
 
@@ -108,7 +111,7 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra sourc
 
 #We need func to list sources given host, cell/feature type, experiment name?
 
-#Implement location link! CUrrently hardcoded to some human loci
+#Implement location link! Currently hardcoded to some human loci
 
 
 use strict;
@@ -123,7 +126,7 @@ use Getopt::Long;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
-my ($set_type, $dnadb, $set_name, $das_name);
+my ($set_type, $dnadb, $set_name, $das_name, @source_types);
 my (@adaptor_names, $no_headers, $headers_only, $link_region);
 my ($set_colour, $set_plot, $set_display_name, $location, $maintainer);
 
@@ -157,19 +160,39 @@ my $dnadb_pass  = $ENV{'DNADB_PASS'};
 my $styleshome = $serverroot.'/stylesheets';
 #coordshome?
 
-my %valid_source_types = (
-						  'feature_set' => 1,#Can we change value here to something useful
-						  'result_set'  => 1,
-						  'bed',        => 1,
-						  #should we separate reads and profile?
-						 );
+my %types = (
+			 'feature_set' => {(
+								adaptor   => 'ensembl_feature_set',
+								hydra     => 'efg',  
+								transport => 'ensembl_funcgen',
+								#Is this relevant for feature_sets?
+								#As always use DAS_DISPLAYABLE feature sets?
+								basename  => '',
+							  )},
+			 'result_set'  => {(
+								adaptor   => 'ensembl_result_set',
+								hydra     => 'efg',  
+								transport => 'ensembl_funcgen',
+								basename  => '',
+							  )},
+			 
+			 'bed'        => {(
+							   adaptor   => 'efg_reads',
+							   hydra     => 'dbi',  
+							   transport => 'dbi',
+							   basename  => "basename\t= bed\\_\n",
+							 )},
+			 
+			 #should we separate reads and profile?
+			);
+
 my $ini_password= '';
 my $max_clients = 20;
 #my $das_name = 'efg';
 my $link_gene = 'STAT1';
 my $not_hydra = 0;
-my @source_types = keys %valid_source_types;
 my $pod_params = "Params are:\t".join(' ', @ARGV);
+
 
 my %plots = (
 			 hist   => '+score=h',
@@ -178,13 +201,13 @@ my %plots = (
 			);
 
 my %default_colours = (
-					   ResultSet  => 'red',
-					   FeatureSet => 'blue',
+					   result_set  => 'red',
+					   feature_set => 'blue',
 					  );
 
 my %display_params = (
-				  ResultSet  => '+score=s+fg_data=o+',
-				  FeatureSet => '',
+				  result_set  => '+score=s+fg_data=o+',
+				  feature_set => '',
 				 );
 
 #Need to write this to config file and use this to generate das xsl
@@ -248,10 +271,11 @@ my %set_config = (
 #Shall we let the env handle cating the individual db config and the header?
 #The cat'd file needs to be named after the $das_instance
 
+
 GetOptions(
    	   #Run modes
 		   'no_headers'   => \$no_headers,
-		   'headers_only' => \$headers_only,
+		   'only_headers' => \$headers_only,
 
 		   #Source DB params
 		   'dbhost=s' => \$dbhost,
@@ -293,7 +317,7 @@ GetOptions(
 
 		   #Hydra options
 		   'not_hydra'         => \$not_hydra,
-		   'source_types=s{,}' => \@source_types,
+		   'source_types=s{,}' => \@source_types,#This pushes, so set default after
 
 		   #HTML/Feature link params
 		   #'local_port'    => \$local_port,#Will this work, isn't the data integrated on the server side?
@@ -313,6 +337,9 @@ GetOptions(
 						);
 
 $| = 1;
+
+#Set some more defaults
+@source_types = keys(%types) if ! @source_types;
 
 
 if(! defined $main::_log_file){
@@ -342,6 +369,7 @@ if(! $headers_only &&
 
 #Check we are not trying to turn on standard sources with hydra mode
 
+
 if(! $not_hydra){
 
   if($set_type || $set_name){
@@ -353,9 +381,9 @@ if(! $not_hydra){
 
   foreach my $source_type(@source_types){
 	
-	if(! exists $valid_source_types{$source_type}){
+	if(! exists $types{$source_type}){
 	  die("Hydra source type $source_type is not valid. Please use one of the following:\t".
-		  join("\t", keys(%valid_source_types)));
+		  join("\t", keys(%types)));
 	}
   }
 }
@@ -513,22 +541,25 @@ if(! $headers_only){
 
 	  #Do we want to be able to change this prefix?
 	  #Or can we drop it all together?
-	  my $source_name = 'eFG_'.$type.'s_'.$dbname.'@'.$dbhost.':'.$dbport;
+	  my $source_name = 'eFG_'.$type.'s:'.$dbname.'@'.$dbhost.':'.$dbport;
 	  
 	  #Do we need separate hydra/adaptor classes for bed/feature_set/result_set?
 
+#basename is tables hydra dbi looks for in DB using mysql like "$basename%"
+
 	  print OUT "\n[${source_name}]
-state          = on
-adaptor        = efg
-hydra          = efg
-transport      = efg_funcgen
-type           = $type
-host           = $dbhost
-port           = $dbport
-user           = ${dbuser}${ini_password}
-dbname         = homo_sapiens_funcgen_55_37
-autodisconnect = no
-coordinates    = NCBI_36,Chromosome,Homo sapiens -> 17:35640000,35650000
+state           = on\n".
+$types{$type}{basename}.
+"adaptor         = ".$types{$type}->{'adaptor'}."
+hydra           = ".$types{$type}->{'hydra'}."
+transport       = ".$types{$type}->{'transport'}."
+type            = $type
+host            = $dbhost
+port            = $dbport
+user            = ${dbuser}${ini_password}
+dbname          = $dbname
+autodisconnect  = no
+coordinates     = GRCh_37,Chromosome,Homo sapiens -> 17:35640000,35650000
 \n\n";
 
 #;skip_registry = 1
@@ -545,21 +576,24 @@ coordinates    = NCBI_36,Chromosome,Homo sapiens -> 17:35640000,35650000
 
 
 	my %adaptors = (
-					result  => $db->get_ResultSetAdaptor,
-					feature => $db->get_FeatureSetAdaptor,
+					result_set  => $db->get_ResultSetAdaptor,
+					feature_set => $db->get_FeatureSetAdaptor,
 					#experimental => $db->get_ExperimentalSetAdaptor,
 					#We need this to point to one file or a blob in the db
 					#Need to extend the schema/API to handle this?
+
+					
+
 				   );
 	
 	
 	#Generate sources file for each type
 
-	  $sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.sources";
+	  $sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.standard.sources";
 	  print ":: Generating DAS $set_class ini sources:\t$sources_file\n";
 	  open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
 	  
-	  $html_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.html";
+	  $html_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.standard.html";
 	  print ":: Generating DAS $set_class source links:\t$html_file\n";
 	  open (HTML, ">$html_file") || die("Cannot open html file:\t$html_file");
 
@@ -596,7 +630,7 @@ coordinates    = NCBI_36,Chromosome,Homo sapiens -> 17:35640000,35650000
 		  #Need to eval this
 		  eval { $set->adaptor->store_status('DAS_DISPLAYABLE', $set); };
 		  
-		  warn "Failed to store DAS_DISPLAYABLE status for $set_class:\t$name\n" if $@;
+		  warn "Failed to store DAS_DISPLAYABLE status for $aname:\t$name\n" if $@;
 		}
 		
 	  
@@ -606,7 +640,7 @@ coordinates    = NCBI_36,Chromosome,Homo sapiens -> 17:35640000,35650000
 		$desc = $set->display_label;
 		$display_name = (exists $set_config{$name}{name})   ? $set_config{$name}{name}   : $name;
 		$colour       = (exists $set_config{$name}{colour}) ? $set_config{$name}{colour} : $default_colours{$set_class};
-		$type = ($set_class eq 'ResultSet') ? 'result' : $set->type;
+		$type = ($set_class eq 'result_set') ? 'result' : $set->type;
 		
 		#my $desc = "[$species - $cell_type] $dsn ($fset_type feature set)";
 		#my $desc = "[$species - $cell_type] $dsn ($type set)";
@@ -629,13 +663,13 @@ coordinates    = NCBI_36,Chromosome,Homo sapiens -> 17:35640000,35650000
 		#Speak to James/Andy about necessary elements for species, coordinate system
 		
 		
-		warn "coordinates are hardcoded for NCBI_36,Chromosome,Homo sapiens -> X:1000000,2000000\n";
+		warn "coordinates are hardcoded for GRCh_37,Chromosome,Homo sapiens -> X:1000000,2000000\n";
 		warn "Need to set dnadb opt here if specified";
 		
 		print OUT "\n[${display_name}.${species}]
 state             = on
-adaptor           = ensembl_${aname}_set
-transport         = ensembl_funcgen
+adaptor        = ".$types{$aname}->{'adaptor'}."
+transport      = ".$types{$aname}->{'transport'}."
 host              = $dbhost
 port              = $dbport
 dbname            = $dbname
@@ -647,7 +681,7 @@ username          = ${dbuser}${ini_password}
 description       = $desc
 set_name          = $name
 set_id            = ".$set->dbID."
-coordinates      = NCBI_36,Chromosome,Homo sapiens -> X:1000000,2000000\n";
+coordinates       = GRCh_37,Chromosome,Homo sapiens -> X:1000000,2000000\n";
 
 		#feature_query     = $location
 		#What is CATEGORY, SOURCE and TYPE? TYPE was set_type for feature_set
