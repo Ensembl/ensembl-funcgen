@@ -7,9 +7,11 @@ load_bed_source.pl
 
 =head1 SYNOPSIS
 
-load_bed_source.pl [options]
+ LoadBedSources|load_bed_source.pl [options]
 
-e.g. load_bed_source.pl  -host dbhost --user write_user --dbname efg_DAS --files ES_DNase_le1m_reads.bed.gz --names ES_DNase --profile --pass $PASS --frag_length 150 --bin_size 25 -reads
+ e.g. Using the associated efg environment function
+
+ LoadBedDasSources  -host dbhost --user write_user --dbname efg_DAS --files ES_DNase_le1m_reads.bed.gz --names ES_DNase --profile --pass $PASS --frag_length 150 --bin_size 25 -reads
 
 
 =head1 DESCRIPTION
@@ -82,9 +84,10 @@ use Pod::Usage;
 use Getopt::Long;
 use DBI;
 
-my ($pass,$port,$host,$user,$dbname,$prefix, $file, @files, @names);
+my ($pass,$host,$user,$dbname,$prefix, $file, @files, @names);
 my ($no_load, $bin_size, $frag_length, $profile_input, @formats, $name);
 my ($profile, $reads);
+my $port = 3306;
 
 my $params_msg = "Params are:\t@ARGV";
 
@@ -120,25 +123,25 @@ if (@ARGV){
 #Check params
 
 if( ! ($host && $user && $pass && $dbname)){
-  die("You must provide some DB connection paramters:\t --host --user --pass --dbname [ --port ]");
+  die("You must provide some DB connection paramters:\t --host --user --pass --dbname [ --port ]\n");
 }
 
 if(! ($reads || $profile)){
-  die('Must provide at least one format to process e.g. --reads or --profile');
+  die("Must provide at least one format to process e.g. --reads or --profile\n");
 }
 elsif($no_load && ! $profile){
-  die('You have selected options --no_load without specifying --profile, no action taken');
+  die("You have selected options --no_load without specifying --profile, no action taken\n");
 }
 elsif($profile &&
 	  ! ($bin_size && $frag_length)){
-  die('You must provide a --bin_size and a --frag_length to generate a profile');
+  die("You must provide a --bin_size and a --frag_length to generate a profile\n");
 }
 elsif(($bin_size || $frag_length) &&
 	  (! $profile)){
-  die('You have specified a --bin_size and/or --frag_length, did you want to load a --profile?')
+  die("You have specified a --bin_size and/or --frag_length, did you want to load a --profile?\n")
 }
 elsif($profile_input && $reads){
-  die('You have specified mutuall exclusive options --profile_input and --reads');
+  die("You have specified mutuall exclusive options --profile_input and --reads\n");
 }
 
 if(@names &&
@@ -178,7 +181,7 @@ if($profile && ! $profile_input){
 
   #Build profile
   print ":: Building profile for:\t$file\n";
-  warn "WARNING:\tThis does not yet support paired end data";
+  warn "WARNING:\tThis does not yet support paired end data\n";
   
   open(CMD, "file -L $file |")
 	or die "Can't execute command: $!";
@@ -279,12 +282,13 @@ if($profile && ! $profile_input){
 
 if( ! $no_load){
 
-  warn("No Hydra source name prefix specified!\n") if (! $prefix);
+  #warn("No Hydra source name prefix specified!\n") if (! $prefix);
 
   my $dbh = DBI->connect("DBI:mysql:database=$dbname;host=$host;port=$port",
 						 "$user", "$pass",
-						 {'RaiseError' => 1});
-
+						 {RaiseError => 1,
+						  mysql_auto_reconnect => 1});
+  
 
 
 
