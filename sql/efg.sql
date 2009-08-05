@@ -418,7 +418,7 @@ CREATE TABLE `probe_feature` (
 DROP TABLE IF EXISTS `probe_set`;
 CREATE TABLE `probe_set` (
    `probe_set_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(20) NOT NULL,
+   `name` varchar(100) NOT NULL,
    `size` smallint(6) unsigned NOT NULL,
    `family` varchar(20) default NULL,
    PRIMARY KEY  (`probe_set_id`),
