@@ -309,7 +309,7 @@ sub get_Features_by_FeatureType{
   Example    : if($fset->is_focus_set){ ... }
   Description: Returns true if FeatureSet is a focus set used in the RegulatoryBuild
   Returntype : Boolean
-  Exceptions : None
+  Exceptions : Throws if meta entry not present
   Caller     : General
   Status     : At Risk
 
@@ -322,6 +322,12 @@ sub is_focus_set{
 
 	#list_value_by_key caches, so we don't need to implement this in the adaptor
 	my ($focus_ids) = @{$self->adaptor->db->get_MetaContainer->list_value_by_key( 'regbuild.focus_feature_set_ids' )};
+
+	if(! $focus_ids){
+	  throw('Cannot detect focus set as meta table does not contain regbuild.focus_feature_set_ids');
+	}
+
+
 	my @focus_ids = split ',', $focus_ids;
 	my $dbID = $self->dbID;
 
