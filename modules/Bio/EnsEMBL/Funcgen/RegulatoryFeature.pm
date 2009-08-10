@@ -249,6 +249,87 @@ sub regulatory_attributes{
 }
 
 
+=head2 get_focus_attributes
+
+  Arg [1]    : None
+  Example    : my @focus_attrs = @{$regf->get_focus_attributes};
+  Description: Getter for the focus features of this RegualtoryFeature, used to defined the core region
+  Returntype : ARRAYREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+#Store them separately or just regenerate each time?
+#We need them in table based hash for retrieval from DB
+#Have separate data structure for simplicity
+#We're really only duplicating the references anyway
+#If we change attr cache, we will need to change build_reg_feats.pl
+
+sub get_focus_attributes{
+  my $self = shift;
+
+  if(! exists $self->{'focus_attributes'} ||
+	 ! @{$self->{'focus_attributes'}}){
+	$self->_sort_attributes;
+  }
+
+
+  return $self->{'focus_attributes'};
+}
+
+
+=head2 get_nonfocus_attributes
+
+  Arg [1]    : None
+  Example    : my @non_focus_attrs = @{$regf->get_nonfocus_attributes};
+  Description: Getter for the non-focus features of this RegulatoryFeature, used to defined 
+               the non core region i.e. the whiskers.
+  Returntype : ARRAYREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub get_nonfocus_attributes{
+  my $self = shift;
+
+  #Test focus here as we may not have any nonfocus
+  #But focus will show that we have sorted already
+  if(! exists $self->{'focus_attributes'} ||
+	 ! @{$self->{'focus_attributes'}}){
+	$self->_sort_attributes;
+  }
+
+  return $self->{'nonfocus_attributes'};
+}
+
+sub _sort_attributes{
+  my $self = shift;
+  
+  warn "sorting";
+
+  $self->{'focus_attributes'} = [];
+  $self->{'nonfocus_attributes'} = [];
+
+  foreach my $attrf(@{$self->regulatory_attributes}){
+	  
+	if($attrf->feature_set->is_focus_set){
+	  push @{$self->{'focus_attributes'}}, $attrf;
+	}
+	else{
+	  push @{$self->{'nonfocus_attributes'}}, $attrf;
+	}
+  }
+
+  return;
+}
+
+
 =head2 _attribute_cache
 
   Arg [1]    : (optional) hash of attribute table keys with dbID list vakues for regulatory attributes
