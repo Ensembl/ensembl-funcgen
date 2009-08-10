@@ -303,5 +303,33 @@ sub get_Features_by_FeatureType{
 
 
 
+=head2 is_focus_set
+
+  Args       : None
+  Example    : if($fset->is_focus_set){ ... }
+  Description: Returns true if FeatureSet is a focus set used in the RegulatoryBuild
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub is_focus_set{
+  my $self = shift;
+
+  if(! defined $self->{focus_set}){
+
+	#list_value_by_key caches, so we don't need to implement this in the adaptor
+	my ($focus_ids) = @{$self->adaptor->db->get_MetaContainer->list_value_by_key( 'regbuild.focus_feature_set_ids' )};
+	my @focus_ids = split ',', $focus_ids;
+	my $dbID = $self->dbID;
+
+	$self->{focus_set} = grep /^${dbID}$/, @focus_ids;
+  }
+
+  return $self->{focus_set};
+}
+
 
 1;
