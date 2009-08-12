@@ -633,7 +633,7 @@ sub store{
 
   Arg [1]    : Bio::EnsEMBL::Slice
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice($slice);
+               my $features = $regf_adaptor->fetch_all_by_Slice($slice);
   Description: Retrieves a list of features on a given slice, specific for the current 
                default RegulatoryFeature set.
   Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
