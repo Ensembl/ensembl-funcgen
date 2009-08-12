@@ -181,7 +181,7 @@ sub stable_id {
 =head2 regulatory_attributes
 
   Arg [1]    : (optional) list of constituent features
-  Example    : print "Regulatory Attributes:\n\t".join("\n\t", @{$feature->regulatory_attributes()})."\n";
+  Example    : print "Regulatory Attributes:\n\t".join("\n\t", (map $_->feature_type->name, @{$feature->regulatory_attributes()}))."\n";
   Description: Getter and setter for the regulatory_attributes for this feature. 
   Returntype : ARRAYREF
   Exceptions : None
@@ -311,8 +311,6 @@ sub get_nonfocus_attributes{
 sub _sort_attributes{
   my $self = shift;
   
-  warn "sorting";
-
   $self->{'focus_attributes'} = [];
   $self->{'nonfocus_attributes'} = [];
 
