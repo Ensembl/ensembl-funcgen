@@ -272,8 +272,8 @@ sub fetch_all_by_Slice_Array {
   throw("Need pass a valid stored Bio::EnsEMBL::Funcgen::Array object") 
 	if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::Array") && $array->dbID));
   
-  push @tables, (['array', 'a'], ['array_chip', 'ac']);  
-  my $constraint = ' a.name="'.$array->name.'" and a.vendor="'.$array->vendor.'" and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id ';
+  push @tables, (['array_chip', 'ac']);  
+  my $constraint = ' ac.array_id='.$array->dbID.' and ac.array_chip_id=p.array_chip_id ';
 
   #Do we need this group by?
   #We may get array_chip to probe product if probe is presenton >1 array_chip.
@@ -318,8 +318,8 @@ sub fetch_all_by_Slice_Arrays{
 
   my $array_ids = join(',', (map $_->dbID, @$arrays));
 
-  push @tables, (['array', 'a'], ['array_chip', 'ac']);  
-  my $constraint = " a.array_id IN ($array_ids) and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id ";
+  push @tables, (['array_chip', 'ac']);  
+  my $constraint = " ac.array_id IN ($array_ids) and ac.array_chip_id=p.array_chip_id ";
 
   #Do we need this group by?
   #We may get array_chip to probe product if probe is presenton >1 array_chip.
