@@ -392,7 +392,15 @@ sub get_probename {
 	my @names = @{$self->{'probenames'}->{$arrayname}};
 
 	if(scalar(@names) > 1){
-	  warn "This probe has more than one probe name for probeset $arrayname:".$self->probeset->name.":\t @names";
+	  my $p_info;
+
+	  if($self->probeset){
+		$p_info = " probeset ".$self->probeset->name;
+	  }
+
+	  warn("Found replicate probes with different names for array ${arrayname}${p_info}:\t@names\nReturning comma separated string list");
+	  return join(',', @names);
+	  
 	}
 	else{
 	  ($probename) = @{$self->{'probenames'}->{$arrayname}};	
