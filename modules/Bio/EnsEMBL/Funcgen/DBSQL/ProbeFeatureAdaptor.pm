@@ -84,7 +84,7 @@ sub fetch_all_by_Probe {
     throw('fetch_all_by_Probe requires a stored Bio::EnsEMBL::Funcgen::Probe object');
   }
 
-  return $self->fetch_all_by_probe_id($probe->dbID, $coord_systems);}
+  return $self->fetch_all_by_probe_id($probe->dbID, $coord_systems);
 }
 
 =head2 fetch_all_by_probe_id
@@ -113,9 +113,7 @@ sub fetch_all_by_probe_id {
   my $constraint = " pf.probe_id=$pid AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
  	
-#  warn $constraint;
   
-
   my $features = $self->generic_fetch($constraint);
   @tables = @true_tables;
   $final_clause = $true_final_clause;
@@ -515,8 +513,15 @@ sub _objs_from_sth {
 		$seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 		
 		if(! $seq_region_id){
-		  warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-		  "The region you are using is not present in the current dna DB";
+		  #warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id for probe_feature $probe_feature_id\n".
+		  #"The region you are using is not present in the current dna DB";
+		  #This can happen as non slice fetches only restrict on cs_id
+		  #Hence for the non-versioned cs's there may be seq_regions which have 
+		  #disappeared in the current assembly and hence won't be in the sr cache.
+		  #We could get around this by adding an sr_id IN(all the sr_ids from this DB)
+		  #but this will most likely just slow things down for data which is not present on 
+		  #just one assembly
+		  #So preferable to clear old data!
 		  next;
 		}
 
