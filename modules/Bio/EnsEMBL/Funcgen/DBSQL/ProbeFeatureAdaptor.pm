@@ -75,8 +75,8 @@ my $final_clause = $true_final_clause;
 
 sub fetch_all_by_Probe {
   my ($self, $probe, $coord_systems) = @_;
-  
-  if ( !ref($probe) && !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
+
+  if (! (ref($probe) && $probe->isa('Bio::EnsEMBL::Funcgen::Probe'))) {
     throw('fetch_all_by_Probe requires a Bio::EnsEMBL::Funcgen::Probe object');
   }
 
@@ -84,7 +84,7 @@ sub fetch_all_by_Probe {
     throw('fetch_all_by_Probe requires a stored Bio::EnsEMBL::Funcgen::Probe object');
   }
 
-  return $self->fetch_all_by_probe_id($probe->dbID, $coord_systems);
+  return $self->fetch_all_by_probe_id($probe->dbID, $coord_systems);}
 }
 
 =head2 fetch_all_by_probe_id
@@ -113,6 +113,9 @@ sub fetch_all_by_probe_id {
   my $constraint = " pf.probe_id=$pid AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
  	
+#  warn $constraint;
+  
+
   my $features = $self->generic_fetch($constraint);
   @tables = @true_tables;
   $final_clause = $true_final_clause;
@@ -513,7 +516,7 @@ sub _objs_from_sth {
 		
 		if(! $seq_region_id){
 		  warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-		  "The region you are using is not present in the cuirrent dna DB";
+		  "The region you are using is not present in the current dna DB";
 		  next;
 		}
 
