@@ -8,7 +8,7 @@
 
 #ALTER TABLE analysis_description MODIFY `display_label` varchar(255) NOT NULL;
 
-
+DROP TABLE IF EXISTS tmp_analysis_description; 
 
 CREATE TABLE `tmp_analysis_description` (
   `analysis_id` int(10) unsigned NOT NULL,
@@ -35,6 +35,8 @@ CREATE TABLE `analysis_description` (
 
 insert into analysis_description select * from tmp_analysis_description;
 
+
+DROP TABLE tmp_analysis_description;
 
 ###
 
@@ -84,6 +86,12 @@ update analysis_description ad, analysis a set ad.description='Genomic alignment
 
 insert ignore into analysis_description(analysis_id) select analysis_id from analysis where logic_name='PHALANX_ProbeTranscriptAlign';
 update analysis_description ad, analysis a set ad.description='Transcript alignments for PHALANX arrays', display_label='PHALANX_ProbeTranscriptAlign', displayable=1, web_data="{'type' => '_oligo', 'key' => 'array_chip', 'colourset' => 'feature', 'display' =>'off' }" where a.logic_name='PHALANX_ProbeTranscriptAlign' and a.analysis_id=ad.analysis_id;
+
+
+
+update analysis_description 
+
+
 
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_55_56_c.sql|analysis_description.display_label_not_null');
