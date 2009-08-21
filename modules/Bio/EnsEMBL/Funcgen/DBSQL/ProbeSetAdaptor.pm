@@ -36,7 +36,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ProbeSet;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
