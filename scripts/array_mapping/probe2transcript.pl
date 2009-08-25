@@ -60,6 +60,7 @@
 # 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
 # 13.Collect warning into summary repoprt to list at very end.
 # 14 Reduce max_transcripts as this is never being hit due to alignment threshold
+# 15 Why can't we omit -arrays if we have -format?
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
@@ -272,8 +273,6 @@ my $probe_port = 3306;
 my $xref_port = 3306;
 my $max_mismatches = 1;
 my $sense_interrogation;
-#my $vendor = 'AFFY';
-#my $format = 'AFFY_IVT';#Rename this UTR?
 my ($vendor, $format, $multi_species);
 
 my %array_config = (
@@ -408,6 +407,7 @@ die("It is not wise to run all available arrays at the same time\nYou must suppl
 #OTHER MANDATORY PARAMS HERE?
 
 #Now set some array config
+#Need to import this from ini?
 
 my %array_format_config = (
 						   AFFY_UTR => {
@@ -458,7 +458,7 @@ my %array_format_config = (
 die ('Must supply a -vendor parameter e.g. AFFY') if ! $vendor;
 
 if(defined $format && ! exists $array_format_config{$format}){
-  die("-format is not valid:\t$format\nMust specify valid format e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG.\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameterss?\n");
+  die("-format is not valid:\t$format\nMust specify valid format e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG.\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameters?\n");
 }
 
 
@@ -648,8 +648,6 @@ $edb_display             = $transc_edb_display_name;
 
 
 $sql = "SELECT external_db_id, db_release from external_db where db_name='$edb_name'";
-#warn "$sql";
-
 my @versions = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
 $sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
   "'${edb_name}', '${schema_build}', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')";
@@ -1071,6 +1069,7 @@ foreach my $transcript (@transcripts) {
   #But we pass probe_feature seq_region vals to the rr?!
 
   foreach my $e (0..$#exons) {
+	#exons are ordered in transcript oreintation
 	$rr->check_and_register('exonic', $exons[$e]->seq_region_start, $exons[$e]->seq_region_end);
 	
 	$first_exon = $exons[$e] if $e == 0;
@@ -1087,11 +1086,11 @@ foreach my $transcript (@transcripts) {
 
   if ($transcript->strand == 1) {
 	$exonutrs{3} = [$last_exon->seq_region_start, $slice->end]   if $flanks{3};
-	$exonutrs{5}  = [$slice->start, $first_exon->seq_region_end] if $flanks{5};	
+	$exonutrs{5} = [$slice->start, $first_exon->seq_region_end] if $flanks{5};
   } 
   else {#-1 reverse strand
-	$exonutrs{3} = [$slice->start(), $first_exon->seq_region_end] if $flanks{3};
-	$exonutrs{5}  = [$last_exon->seq_region_start, $slice->end]   if $flanks{5};
+	$exonutrs{3} = [$slice->start(), $last_exon->seq_region_end] if $flanks{3};
+	$exonutrs{5} = [$first_exon->seq_region_start, $slice->end]  if $flanks{5};
   }
 
   #Test whether this overlaps with a neighbouring transcript on the same strand
@@ -1108,7 +1107,7 @@ foreach my $transcript (@transcripts) {
   my %probe_feature_xrefs;
 
   foreach my $feature (@$probe_features) {
- 	$probe          = $feature->probe;
+	$probe          = $feature->probe;
 	$feature_id     = $feature->dbID;
 	$probe_id       = $probe->dbID;
 
@@ -1266,6 +1265,8 @@ foreach my $transcript (@transcripts) {
 	  my $min_overlap  = ($probe->length - $max_mismatches + ($feature->mismatchcount - $five_mismatch - $three_mismatch));
 	  my $exon_overlap = $rr->overlap_size('exonic', $feature_start, $feature_end);
 
+
+
 	  #This could map like this
 	  #exonutrextension
 	  #---probe--------
@@ -1287,6 +1288,7 @@ foreach my $transcript (@transcripts) {
 	  #Fine...unless we had a probe the full length of the transcript!!!!!
 
 	  foreach my $end ('3', '5') {
+		
 		$flank_overlap = $rr->overlap_size("${end}_exonutr", $feature_start, $feature_end) if $flanks{$end};
 
 		if ($flank_overlap) {
@@ -1314,6 +1316,7 @@ foreach my $transcript (@transcripts) {
 		#As we currently only store Unmapped info for Probes
 		#And ProbeSet for mapped info.
 
+
 	 
 		if ($exon_overlap && $flank_overlap) {
 		  $linkage_annotation = "exon/${flank_end}' flank boundary";
@@ -1338,6 +1341,7 @@ foreach my $transcript (@transcripts) {
 		}
 
 		add_xref($transcript_sid, $feature_id, 'ProbeFeature', $linkage_annotation);
+
 	  } 
 	  else {					# must be intronic, intron-exon, intron-first|lastexon, five_prime_flank, three_prime_flank
 	  	  
@@ -1373,8 +1377,9 @@ foreach my $transcript (@transcripts) {
 
 		#No this could also over lap the 5' or 3' ends and/or intron depending on exon size?
 		#What about exon/utr overlap, this would be a valid hit but would not be caught by this overlap method?!
-		#Unless overlap method takes into account adjacent exons for UTRs
-		#UTRs included in exons?! So not point in doing UTR overlap 
+	#Unless overlap method takes into account adjacent exons for UTRs
+	
+	#UTRs included in exons?! So not point in doing UTR overlap 
 		#Unless we're extending, then we need to be mindful probes which may overlap short UTR and last/first coding exon
 		#e.g.
 		#last exon
@@ -1584,6 +1589,8 @@ foreach my $key (keys %transcript_feature_info) {
 }
 
 
+
+
 # Find probesets that don't match any transcripts at all, write to log file
 #Why is this sub'd, we only call it once?
 log_orphan_probes();
@@ -1780,9 +1787,6 @@ sub log_orphan_probes {
 
 sub cache_arrays_per_object {
   my $db = shift;
-
-
-
 
   $Helper->log("Caching arrays per $xref_object", 0, 'append_date');
   my $sql;#do not need distinct on count as we're grouping by array?
@@ -1988,10 +1992,7 @@ sub delete_existing_xrefs {
   #can we pass an arrayref of ArrayChips here instead of doing it once foreach?
   
   foreach my $array(values(%arrays)){
-	
-		foreach my $ac(@{$array->get_ArrayChips}){
-			$Helper->rollback_ArrayChip($ac, 'probe2transcript');
-		}
+	$Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript');
   }
 
   return;
@@ -2015,7 +2016,7 @@ sub check_existing_and_exit {
   #Or should we just check for ProbeFeature xrefs instead?
 
   my $probe_join = ($array_config{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
-
+  
   
   #Can we change this to use analysis_id?
   #Need to write patch first?
