@@ -258,7 +258,8 @@ submitJob(){
 	else
 		#echo through bash to avoid wierd resources parameter truncation
 
-		#echo $bsub_job -J $job_name 
+		echo bsub -J $job_name $bsub_job
+		
 
 		JOB_ID=$(echo bsub -J $job_name $bsub_job | bash)
 
@@ -503,6 +504,12 @@ BackUpFile(){
 # Return    : 
 # Exception : 
 ################################################################################
+
+
+#This needs to change to accomodate warehouse
+#rsync -essh -Wav /source /destination
+#We still need to back up tho
+#But archive is now defunct no?
 
 ArchiveFile()
 {
