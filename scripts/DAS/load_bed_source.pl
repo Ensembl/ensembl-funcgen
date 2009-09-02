@@ -11,7 +11,7 @@ load_bed_source.pl
 
  e.g. Using the associated efg environment function
 
- LoadBedDasSources  -host dbhost --user write_user --dbname efg_DAS --files ES_DNase_le1m_reads.bed.gz --names ES_DNase --profile --pass $PASS --frag_length 150 --bin_size 25 -reads
+ LoadBedDASSources  -host dbhost --user write_user --dbname efg_DAS --files ES_DNase_le1m_reads.bed.gz --names ES_DNase --profile --pass $PASS --frag_length 150 --bin_size 25 -reads -pass PASSWORD
 
 
 =head1 DESCRIPTION
@@ -77,6 +77,9 @@ profiles generated from them.
 #Implement multiple windows sizes? Or matrix? MySQL COMPRESS?
 #Change to use mysqlimport
 #Does this work with paired end data???? 
+#Can this use Collection code?
+#binary packing/windows?
+
 
 use strict;
 use warnings;
@@ -89,13 +92,15 @@ my ($no_load, $bin_size, $frag_length, $profile_input, @formats, $name);
 my ($profile, $reads);
 my $port = 3306;
 
+
+
 my $params_msg = "Params are:\t@ARGV";
 
 GetOptions (
             'host|h=s'         => \$host,
             'port:i'           => \$port,
             'user|u=s'         => \$user,
-            'pass|p:s'         => \$pass,
+            'pass|p:s'         => \$pass,#This optional is not catching pass in the middle of a parameter string!
             'dbname|d=s'       => \$dbname,
 			'files=s{,}'       => \@files,
 			'reads'            => \$reads,
@@ -123,6 +128,7 @@ if (@ARGV){
 #Check params
 
 if( ! ($host && $user && $pass && $dbname)){
+  warn "$host && $user && $pass && $dbname";
   die("You must provide some DB connection paramters:\t --host --user --pass --dbname [ --port ]\n");
 }
 
@@ -172,6 +178,7 @@ $name = $names[0];
 if(! -f $file){
   throw("File does not exist:\t$file\nMust provide at least one file path to build a profile");
 }
+
 
 my (@bin, $start_bin, $start_bin_start, $end_bin, $end_bin_start,
 	$seq, $read_start, $read_end, $read_length, $ori, $read_extend);
