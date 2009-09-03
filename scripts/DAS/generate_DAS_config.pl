@@ -41,9 +41,11 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra sourc
     --dbpass      default is $DB_PASS
 
     DAS paramters
-    --severroot   ProServer root code directory (default = $SRC/Bio-Das-ProServer)
-    --maintainer  email of DAS server admin
-    --maxclients  Maximum DAS clients, default is 20
+    --severroot    ProServer root code directory (default = $SRC/Bio-Das-ProServer)
+    --maintainer   email of DAS server admin
+    --maxclients   Maximum DAS clients, default is 20
+    --region       Region for feature capability test (default = 17:35640000,35650000)
+    --coord_system Name of coordinate system e.g. GRCh37 (default = default CoordSsystem in dnadb) 
 
     DNA DB parameters, default is to use ensembldb.ensembl.org
     --dnadb_host  Core DB host name, default is $DNADB_HOST
@@ -51,7 +53,7 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra sourc
     --dnadb_user  Core DB user name, default is $DNADB_USER
     --dnadb_name  Name of core DB, default is $DNADB_NAME
     --dnadb_pass  Core DB password, default is $DNADB_PASS
-    
+
     Run modes
     --no_headers   Only prints source config
     --only_headers Only prints DAS server config
@@ -108,9 +110,9 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra sourc
 #Then we cat the individual host files with the general section to make the complete ini file
 #What about losing sources that have been set up explicitly without DAS_DISPLAYABLE?
 #This script should set DAS_DISPLAYABLE!
-
+#Add option to clear away all previous source config
 #We need func to list sources given host, cell/feature type, experiment name?
-
+#Validate species vs registry.
 #Implement location link! Currently hardcoded to some human loci
 
 
@@ -127,7 +129,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my ($set_type, $dnadb, $set_name, $das_name, @source_types);
-my (@adaptor_names, $no_headers, $headers_only, $link_region);
+my (@adaptor_names, $no_headers, $headers_only, $link_region, $cs_version);
 my ($set_colour, $set_plot, $set_display_name, $location, $maintainer);
 
 #ENV DEFAULTS
@@ -180,7 +182,13 @@ my %types = (
 							   adaptor   => 'efg_reads',
 							   hydra     => 'dbi',  
 							   transport => 'dbi',
-							   basename  => "basename\t= bed\\_\n",
+							   basename  => "basename\t= bed\n",
+							   #This is used to fetch tables like "$basename"
+							   #So has to be mysql compliant wildcards?
+							   #Actually, no.
+							   #Hydra dbi does not handle wild cards well 
+							   #and corrupts table name
+							   #handle in SourceAdaptor/efg_reads.pm
 							 )},
 			 
 			 #should we separate reads and profile?
@@ -190,6 +198,7 @@ my $ini_password= '';
 my $max_clients = 20;
 #my $das_name = 'efg';
 my $link_gene = 'STAT1';
+my $features_region = '17:35640000,35650000';
 my $not_hydra = 0;
 my $pod_params = "Params are:\t".join(' ', @ARGV);
 
@@ -301,6 +310,10 @@ GetOptions(
 		   'severroot=s'  => \$serverroot,
 
 		 		   
+		   #Coord system config
+		   'features_region=s' => \$features_region,
+		   'assembly=s'    => \$cs_version,
+
 		   #'default_colour=s' => \$default_colour,
 
 		   #Individual set
@@ -530,6 +543,33 @@ if(! $headers_only){
 	print ":: Generating DAS @source_types ini sources:\t$sources_file\n";
 	open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
 
+
+	#Set DAS species name and default assembly
+	my $das_species = ucfirst($species);
+	$das_species =~ s/_/ /;
+
+
+	if($cs_version){#validate
+	  my $found_cs = 0;
+
+	  foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
+		$found_cs = 1 if $cs_version eq $cs->version;
+	  }
+
+	  if(! $found_cs){
+		die("Could not find the CoordSystem $cs_version in the dnadb $dnadb_name");
+	  }
+	}
+	else{#get default
+		  
+	  foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
+		$cs_version = $cs->version if $cs->is_default;
+	  }
+	}
+
+	$cs_version =~ s/([0-9]+)/_$1/;
+
+
 	foreach my $type(@source_types){
 	  
 	  #To allow multiple source DBs
@@ -537,7 +577,7 @@ if(! $headers_only){
 	  #define types separately so we can turn them off in the config without hacking the code
 	  #Do we need to turn them off without dropping them from the DB?
 	  #Move the table away from the DB OR implement some status checking?
-
+	  #This info will however be visible to user!!!
 
 	  #Do we want to be able to change this prefix?
 	  #Or can we drop it all together?
@@ -545,7 +585,7 @@ if(! $headers_only){
 	  
 	  #Do we need separate hydra/adaptor classes for bed/feature_set/result_set?
 
-#basename is tables hydra dbi looks for in DB using mysql like "$basename%"
+	  #basename is tables hydra dbi looks for in DB using mysql like "$basename%"
 
 	  print OUT "\n[${source_name}]
 state           = on\n".
@@ -556,10 +596,11 @@ transport       = ".$types{$type}->{'transport'}."
 type            = $type
 host            = $dbhost
 port            = $dbport
-user            = ${dbuser}${ini_password}
+species         = $species
+username        = ${dbuser}${ini_password}
 dbname          = $dbname
 autodisconnect  = no
-coordinates     = GRCh_37,Chromosome,Homo sapiens -> 17:35640000,35650000
+coordinates     = $cs_version,Chromosome,$das_species -> $features_region
 \n\n";
 
 #;skip_registry = 1
