@@ -85,8 +85,8 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($type, $desc)
-    = rearrange(['TYPE', 'DESCRIPTION'],@_);
+  my ($type, $desc, $dlabel)
+    = rearrange(['TYPE', 'DESCRIPTION', 'DISPLAY_LABEL'],@_);
 
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
 
@@ -100,6 +100,7 @@ sub new {
 
   $self->type($type);
   $self->description($desc) if defined $desc;
+  $self->display_label($dlabel) if defined $dlabel;
 
   return $self;
 }
