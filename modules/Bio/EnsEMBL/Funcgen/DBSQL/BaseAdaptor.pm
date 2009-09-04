@@ -92,10 +92,9 @@ sub fetch_all {
 
   
   if(defined $status && ! defined $constraint){
-	#warn "You have specifed a status($status) which is not present in the DB";
-	return undef;
+	warn "You have specifed a status($status) which is not present in the DB";
+	return [];
   }
-
 
   return $self->generic_fetch($constraint);
 
@@ -570,7 +569,7 @@ sub fetch_all_by_external_name {
 
   if(! $entryAdaptor->can($xref_method)){
 	warn "Does not yet accomodate $type external names";
-	return;
+	return [];
   }
   else{
 	@ids = $entryAdaptor->$xref_method($external_name, $external_db_name);
