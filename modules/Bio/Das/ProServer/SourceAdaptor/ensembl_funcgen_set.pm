@@ -234,6 +234,7 @@ sub das_stylesheet{
             <TYPE id="default">
                 <GLYPH>
                     <TILING>
+<LABEL>no</LABEL>
                         <HEIGHT>30</HEIGHT>
                         <COLOR1>brown3</COLOR1>
                     </TILING>
@@ -253,6 +254,7 @@ EOT
             <TYPE id="default">
                 <GLYPH>
                     <BOX>
+ <LABEL>no</LABEL>
                         <FGCOLOR>black</FGCOLOR>
                         <BGCOLOR>brown3</BGCOLOR>
                         <HEIGHT>5</HEIGHT>
@@ -274,6 +276,7 @@ EOT
             <TYPE id="default">
                 <GLYPH>
                     <BOX>
+                        <LABEL>no</LABEL>
                         <FGCOLOR>red</FGCOLOR>
                         <BGCOLOR>black</BGCOLOR>
                     </BOX>
@@ -282,6 +285,7 @@ EOT
             <TYPE id="peak">
                 <GLYPH>
                     <BOX>
+                        <LABEL>no</LABEL>
                         <FGCOLOR>black</FGCOLOR>
                         <BGCOLOR>brown4</BGCOLOR>
                         <HEIGHT>5</HEIGHT>
@@ -291,6 +295,7 @@ EOT
             <TYPE id="DNA methylation">
                 <GLYPH>
                     <BOX>
+                        <LABEL>no</LABEL>
                         <FGCOLOR>blue</FGCOLOR>
                         <BGCOLOR>black</BGCOLOR>
                     </BOX>
