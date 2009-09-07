@@ -6,15 +6,24 @@ efg_transport.pm
 
 Transport module to retrieve Annotated/ResultFeatures from an efg database
 
-=head1 LICENCE
+=head1 LICENSE
 
-This code is distributed under an Apache style licence. Please see
-http://www.ensembl.org/info/about/code_licence.html for details.
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Please post comments/questions to the Ensembl development list
-<ensembl-dev@ebi.ac.uk>
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
@@ -35,7 +44,7 @@ use Carp;
 use Data::Dumper;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-#use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Registry;
 use Bio::Das::ProServer::SourceAdaptor::Transport::generic;
 
 use vars qw(@ISA);
@@ -49,35 +58,49 @@ use vars qw(@ISA);
 sub adaptor {
     my $self = shift;
 
-    unless($self->{'_adaptor'}) {
-		  
-        
-	  #Can we add actaully ini file to this error?
 
+    if(! defined $self->{'_adaptor'}) {
+		  
+	  #Can get problems here with Registry persisting after transport has gone out of scope 
+	  #and been destroyed.
+	  #Creating a new adaptor will cause the species to be incremented
+	  #in turn causing the dnadb never to be found by the DBAdaptor
+	  
+	  #Will this cause a problem when we want to use more than one core DB for the same species?
+
+	  #Ensembl API was never designed to run like this!
+
+	  #Let's test the registry version to see if it matches what we want and reinstate it
+	  #Otherwise we are going to have to deal with incremented species names in the DBAdaptor
+
+	  
+
+	  #do we need to parse coordinates here to set dnadb_assembly?
 	  $self->{'_adaptor'} ||= Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 		(
 		 -host    => $self->config->{'host'}     || 'localhost',
 		 -user    => $self->config->{'username'} || 'ensro',
 		 -dbname  => $self->config->{'dbname'}   || carp('No dbname defined for '.$self->{'dsn'}.' in your das_source.ini file'),
 		 -species => $self->config->{'species'}  || carp('No species defined for '.$self->{'dsn'}.' in your das_source.ini file'),
-		 -pass    => $self->config->{'password'} || '',
-		 -port    => $self->config->{'port'}     || '3306',
-		 -type    => 'funcgen',
-		 -dnadb_assembly => $self->config('dnadb_assembly'),
-		 -dnadb_host => $self->config('dnadb_host'),
-		 -dnadb_port => $self->config('dnadb_post'),
-		 -dnadb_user => $self->config('dnadb_user'),
-		 -dnadb_pass => $self->config('dnadb_pass'),
-		 
-
-
+		 -pass    => $self->config->{'password'},
+		 -port    => $self->config->{'port'},
+		 -group   => 'funcgen',
+		 -dnadb_assembly => $self->config->{'dnadb_assembly'},
+		 -dnadb_host => $self->config->{'dnadb_host'},
+		 -dnadb_port => $self->config->{'dnadb_post'},
+		 -dnadb_user => $self->config->{'dnadb_user'},
+		 -dnadb_pass => $self->config->{'dnadb_pass'},
 		);
 	  print Dumper $self->{'_adaptor'} if ($self->{'debug'});
 
 	  #Test the connection
 	  $self->{'_adaptor'}->dbc->db_handle;
-	  return $self->{'_adaptor'};
+
+	  #Set disconnect when inactive to 1 to enable autoreconnect
+	  $self->{'_adaptor'}->dbc->disconnect_when_inactive(1);;
     }
+
+	return $self->{'_adaptor'};	
 }
 
 sub chromosome_by_region {
@@ -92,31 +115,85 @@ sub chromosome_by_region {
 sub disconnect {
   my $self = shift;
   return unless (exists $self->{'_adaptor'});
-  $self->{'_adaptor'}->disconnect();
+
+  $self->{'_adaptor'}->dbc->db_handle->disconnect();
   delete $self->{'_adaptor'};
   $self->{'debug'} and print STDERR "$self PERFORMED DBA DISCONNECT\n";
 }
 
-sub DESTROY {
-  my $self = shift;
-  $self->disconnect();
+
+
+sub fetch_set{
+  my ($self, $hydra_set_name) = @_;
+
+
+  #Don't know about methods hydra or dsn here, this is done in SourceAdaptor init
+  #If we have a set_name, we know this is a hydra set
+
+  my ($errmsg, $set);
+
+  if($hydra_set_name){
+	$errmsg = ' name '.$hydra_set_name;
+  }
+  else{
+	$errmsg = ' dbID '.$self->config->{'set_id'};
+  }
+
+  #Fetch the set
+  if($self->config->{'set_type'} eq 'feature'){
+
+	if($hydra_set_name){
+		$set = $self->adaptor->get_FeatureSetAdaptor->fetch_by_name($hydra_set_name);
+	  }
+	else{
+	  #we have a set_id in the ini
+	  $set = $self->adaptor->get_FeatureSetAdaptor->fetch_by_dbID($self->config->{'set_id'});
+	}
+  }
+  elsif($self->config->{'set_type'} eq 'result'){
+
+	if($hydra_set_name){
+	  #Do we need to add cell type, ftype and analysis to config to enable unique set fetch?
+	  #Would also have to add these to the dsn and title to avoid overwriting
+	  #Just assume we are dealing with uniquely named sets for now
+	  my @sets = @{$self->adaptor->get_ResultSetAdaptor->fetch_all_by_name($hydra_set_name)};
+	  
+	  if(scalar(@sets) >1){
+		  die "Found non-unique ResultSet name ".$self->{'set_name'};
+		}
+	  
+	  $set = $sets[0];
+	}
+	else{
+	  #we have a set_id in the ini
+	  $set = $self->adaptor->get_FeatureSetAdaptor->fetch_by_dbID($self->config->{'set_id'});
+	}
+  }
+  else{
+	#Can we die here instead or will that prevent other sources from being loaded?
+	#This should be eval'd in the caller
+	die 'Bio::Das::ProServer::SourceAdaptor::ensembl_set does not support set_type '.$self->config->{'set_type'};
+  }
+
+  #We need to test feature_set here
+  if (! defined  $set){
+	die 'Cannot find '.ucfirst($self->config->{'set_type'})."Set with $errmsg";
+  }
+  
+  return $set;
 }
 
 
-1;
 
-__END__
 
-#Are any of these used?
-#Or is this hangover from ensembl adaptor?
-#Using the registry will create problems
-#as we may had multiple DBs with the same species
-#which will cause the registry to redefine the species name
+#DO NOT NEED THIS
+#And in fact seems to cause problems with mysterious disconnections on and autreconnect handle
+#sub DESTROY {
+#  my $self = shift;
 
-sub version {
-  my ($self) = @_;
-  return Bio::EnsEMBL::Registry->software_version();
-}
+#  $self->disconnect();
+#}
+
 
 sub last_modified {
   my ($self) = @_;
@@ -134,6 +211,22 @@ sub last_modified {
   return $server_unix;
 }
 
+
+
+1;
+
+__END__
+
+#Are any of these used?
+#Or is this hangover from ensembl adaptor?
+#Using the registry will create problems
+#as we may had multiple DBs with the same species
+#which will cause the registry to redefine the species name
+
+sub version {
+  my ($self) = @_;
+  return Bio::EnsEMBL::Registry->software_version();
+}
 
 sub chromosomes {
   my ($self, $species, $group) = @_;
@@ -211,47 +304,5 @@ sub _apply_override {
   }
   return;
 }
-
-
-
-sub gene_by_id {
-  my ($self, $id, $species, $group) = @_;
-  return $self->gene_adaptor($species, $group)->fetch_by_stable_id($id);
-}
-
-sub genes {
-  my ($self, $species, $group) = @_;
-  return $self->gene_adaptor($species, $group)->fetch_all();
-}
-
-sub version {
-  my ($self) = @_;
-  return Bio::EnsEMBL::Registry->software_version();
-}
-
-sub last_modified {
-  my ($self) = @_;
-  my $dbc = $self->adaptor()->dbc();
-  my $sth = $dbc->prepare(q(SHOW TABLE STATUS));
-  $sth->execute();
-  my $server_text = [sort { $b cmp $a } ## no critic
-                     keys %{ $sth->fetchall_hashref('Update_time') }
-                    ]->[0]; # server local time
-  $sth->finish();
-  $sth = $dbc->prepare(q(SELECT UNIX_TIMESTAMP(?) as 'unix'));
-  $sth->execute($server_text); # sec since epoch
-  my $server_unix = $sth->fetchrow_arrayref()->[0];
-  $sth->finish();
-  return $server_unix;
-}
-
-sub disconnect {
-  my $self = shift;
-  Bio::EnsEMBL::Registry->disconnect_all();
-  $self->{'debug'} and carp "$self performed disconnect\n";
-  return;
-}
-
-
 
 1;
