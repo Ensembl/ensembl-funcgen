@@ -41,11 +41,18 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra sourc
     --dbpass      default is $DB_PASS
 
     DAS paramters
-    --severroot    ProServer root code directory (default = $SRC/Bio-Das-ProServer)
-    --maintainer   email of DAS server admin
-    --maxclients   Maximum DAS clients, default is 20
-    --region       Region for feature capability test (default = 17:35640000,35650000)
-    --coord_system Name of coordinate system e.g. GRCh37 (default = default CoordSsystem in dnadb) 
+    --hydra_instance  Unique name of source hydra instance, this is to differentiate between different host DBs.
+                      Default is 'eFG_SOURCETYPE:DBNAME@DBHOST:DBPORT
+                      e.g eFG_features:homo_sapiens_funcgen_56_37a@mydbhost:3306
+                      WARNING: This will be visible in the URL, so set this if you are concerned about privacy.
+                      e.g. human_sources_1, human_sources_2 etc.
+                      NOTE: StartDASServer will not catch any duplication of hydra_instance names between host
+                      So any duplication will result in sources being overwritten.
+    --severroot       ProServer root code directory (default = $SRC/Bio-Das-ProServer)
+    --maintainer      email of DAS server admin
+    --maxclients      Maximum DAS clients, default is 20
+    --region          Region for feature capability test (default = 17:35640000,35650000)
+    --coord_system    Name of coordinate system e.g. GRCh37 (default = default CoordSsystem in dnadb) 
 
     DNA DB parameters, default is to use ensembldb.ensembl.org
     --dnadb_host  Core DB host name, default is $DNADB_HOST
@@ -59,7 +66,7 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra sourc
     --only_headers Only prints DAS server config
     --help         Prints this documentation and exits
     --not_hydra    Generates standard sources, default is dynamic Hydra sources
-    --source_types List of Hydra source types to generate, default is: feature_set, result_set, be
+    --source_types List of Hydra source types to generate, default is: feature, result, bed
     
 
     Individual Set handling, for use with --not_hydra
@@ -128,7 +135,7 @@ use Getopt::Long;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
-my ($set_type, $dnadb, $set_name, $das_name, @source_types);
+my ($set_type, $dnadb, $set_name, $das_name, @source_types, $hydra_instance);
 my (@adaptor_names, $no_headers, $headers_only, $link_region, $cs_version);
 my ($set_colour, $set_plot, $set_display_name, $location, $maintainer);
 
@@ -163,23 +170,23 @@ my $styleshome = $serverroot.'/stylesheets';
 #coordshome?
 
 my %types = (
-			 'feature_set' => {(
-								adaptor   => 'ensembl_feature_set',
-								hydra     => 'efg',  
+			 'feature' => {(
+								adaptor   => 'ensembl_funcgen_set',
+								hydra     => 'ensembl_funcgen',  
 								transport => 'ensembl_funcgen',
 								#Is this relevant for feature_sets?
 								#As always use DAS_DISPLAYABLE feature sets?
 								basename  => '',
 							  )},
-			 'result_set'  => {(
-								adaptor   => 'ensembl_result_set',
-								hydra     => 'efg',  
+			 'result'  => {(
+								adaptor   => 'ensembl_funcgen_set',
+								hydra     => 'ensembl_funcgen',  
 								transport => 'ensembl_funcgen',
 								basename  => '',
 							  )},
 			 
 			 'bed'        => {(
-							   adaptor   => 'efg_reads',
+							   adaptor   => 'ensembl_funcgen_reads',
 							   hydra     => 'dbi',  
 							   transport => 'dbi',
 							   basename  => "basename\t= bed\n",
@@ -210,13 +217,13 @@ my %plots = (
 			);
 
 my %default_colours = (
-					   result_set  => 'red',
-					   feature_set => 'blue',
+					   result  => 'red',
+					   feature => 'blue',
 					  );
 
 my %display_params = (
-				  result_set  => '+score=s+fg_data=o+',
-				  feature_set => '',
+				  result  => '+score=s+fg_data=o+',
+				  feature => '',
 				 );
 
 #Need to write this to config file and use this to generate das xsl
@@ -298,6 +305,7 @@ GetOptions(
 		   'dnadb_pass=s' => \$dnadb_pass,
 		   'dnadb_port=i' => \$dnadb_port,
 		   'dnadb_name=s' => \$dnadb_name,
+		   'hydra_instance=s' => \$hydra_instance,
 		   
 		   #DAS Server params
 		   'das_host=s'   => \$das_host,
@@ -532,8 +540,32 @@ if(! $headers_only){
 
   $db->dbc->db_handle;#Test connection
 
-  #warn "WARNING:\tDoes not yet support dnadb params for to allow source on pre-prd DBs";
-
+  #Set DAS species name and default assembly
+  my $das_species = ucfirst($species);
+  $das_species =~ s/_/ /;
+  
+  
+  if($cs_version){#validate
+	my $found_cs = 0;
+	
+	foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
+	  $found_cs = 1 if $cs_version eq $cs->version;
+	}
+	
+	if(! $found_cs){
+	  die("Could not find the CoordSystem $cs_version in the dnadb $dnadb_name");
+	}
+  }
+  else{#get default
+	
+	foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
+	  $cs_version = $cs->version if $cs->is_default;
+	}
+  }
+  
+  $cs_version =~ s/([0-9]+)/_$1/;
+  
+  
   if(! $not_hydra){
 
 	warn "WARNING:\tCannot generate source attachment links for hydra sources\n";
@@ -544,30 +576,7 @@ if(! $headers_only){
 	open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
 
 
-	#Set DAS species name and default assembly
-	my $das_species = ucfirst($species);
-	$das_species =~ s/_/ /;
 
-
-	if($cs_version){#validate
-	  my $found_cs = 0;
-
-	  foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
-		$found_cs = 1 if $cs_version eq $cs->version;
-	  }
-
-	  if(! $found_cs){
-		die("Could not find the CoordSystem $cs_version in the dnadb $dnadb_name");
-	  }
-	}
-	else{#get default
-		  
-	  foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
-		$cs_version = $cs->version if $cs->is_default;
-	  }
-	}
-
-	$cs_version =~ s/([0-9]+)/_$1/;
 
 
 	foreach my $type(@source_types){
@@ -581,8 +590,9 @@ if(! $headers_only){
 
 	  #Do we want to be able to change this prefix?
 	  #Or can we drop it all together?
-	  my $source_name = 'eFG_'.$type.'s:'.$dbname.'@'.$dbhost.':'.$dbport;
-	  
+	  my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
+	  $source_name = 'eFG_'.$type.'s:'.$source_name;
+
 	  #Do we need separate hydra/adaptor classes for bed/feature_set/result_set?
 
 	  #basename is tables hydra dbi looks for in DB using mysql like "$basename%"
@@ -593,7 +603,7 @@ $types{$type}{basename}.
 "adaptor         = ".$types{$type}->{'adaptor'}."
 hydra           = ".$types{$type}->{'hydra'}."
 transport       = ".$types{$type}->{'transport'}."
-type            = $type
+set_type        = $type
 host            = $dbhost
 port            = $dbport
 species         = $species
@@ -681,7 +691,7 @@ coordinates     = $cs_version,Chromosome,$das_species -> $features_region
 		$desc = $set->display_label;
 		$display_name = (exists $set_config{$name}{name})   ? $set_config{$name}{name}   : $name;
 		$colour       = (exists $set_config{$name}{colour}) ? $set_config{$name}{colour} : $default_colours{$set_class};
-		$type = ($set_class eq 'result_set') ? 'result' : $set->type;
+		#$type = ($set_class eq 'result_set') ? 'result' : $set->type;
 		
 		#my $desc = "[$species - $cell_type] $dsn ($fset_type feature set)";
 		#my $desc = "[$species - $cell_type] $dsn ($type set)";
@@ -715,15 +725,16 @@ host              = $dbhost
 port              = $dbport
 dbname            = $dbname
 species           = $species
-source            = SOURCE
-type              = $type
-category          = CATEGORY
+set_type          = ".$set->type."
 username          = ${dbuser}${ini_password}
 description       = $desc
 set_name          = $name
 set_id            = ".$set->dbID."
-coordinates       = GRCh_37,Chromosome,Homo sapiens -> X:1000000,2000000\n";
+coordinates     = $cs_version,Chromosome,$das_species -> $features_region";
 
+#source            = SOURCE
+#category          = CATEGORY
+	
 		#feature_query     = $location
 		#What is CATEGORY, SOURCE and TYPE? TYPE was set_type for feature_set
 		#Are these das style sheet config options?
