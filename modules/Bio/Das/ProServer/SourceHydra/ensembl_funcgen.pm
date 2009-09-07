@@ -35,7 +35,7 @@ Result/FeatureSets with status 'DAS_DISPLAYABLE'
 #To do
 # 1 Incorporate result sets
 # 2 Change timeout?
-# 3 Rename efg_sets? Actually only provides set sources as we cannot rely on base_name and dbi hyrdra
+# 3 More debug stuff
 # 4 Docs
 
 package Bio::Das::ProServer::SourceHydra::ensembl_funcgen;
@@ -47,7 +47,7 @@ use Data::Dumper;
 use Carp;
 use Readonly;
 
-our $VERSION       = do { my ($v) = (q$Revision: 1.1 $ =~ /\d+/mxg); $v; };
+our $VERSION       = do { my ($v) = (q$Revision: 1.2 $ =~ /\d+/mxg); $v; };
 Readonly::Scalar our $CACHE_TIMEOUT => 30;
 
 #########
@@ -69,7 +69,7 @@ sub sources {
     delete $self->{'_sources'};
     $self->{'_sourcecache_timestamp'} = $now;
   }
-
+  
   # Use the configured query to find the names of the sources
   if(!exists $self->{'_sources'}) {
     $self->{'_sources'} = [];

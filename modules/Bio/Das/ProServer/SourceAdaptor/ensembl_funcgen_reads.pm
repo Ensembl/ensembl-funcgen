@@ -5,6 +5,8 @@ Bio::Das::ProServer::SourceAdaptor::ensembl_funcgen_reads
 =head1 DESCRIPTION
 
 This is a SourceAdaptor module to retrieve raw read alignments and profiles.
+Supports both standard and hydra implementation using the GenerateDASConfig function of the eFG environment.
+
 
 =head1 LICENSE
 
@@ -36,12 +38,9 @@ use Bio::Das::ProServer::SourceAdaptor;
 
 
 #To Do
-
-
-#Let's get this set up with just reads/profile first
-#Then what?
-#Implement colour hash?
-
+# Move transport stuff to transport? This module should only be for config parsing and display functions
+# Integrate colour ini file parsing from webcode to use same default colours as web display for different
+# feature types.
 
 sub init {
     my $self                = shift;

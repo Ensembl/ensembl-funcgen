@@ -8,6 +8,7 @@ ensembl_funcgen_set.pm
 =head1 DESCRIPTION
 
 Proserver module to access an ensembl funcgen Result/FeatureSet as a DAS source.
+Supports both standard and hydra implementation using the GenerateDASConfig function of the eFG environment.
 
 =head1 LICENSE
 
@@ -31,15 +32,16 @@ Proserver module to access an ensembl funcgen Result/FeatureSet as a DAS source.
 
 
 #To do
-# Rename ensembl_set and integrate result_set support?
 # Move transport stuff to transport? This module should only be for config parsing and display functions
+# Integrate colour ini file parsing from webcode to use same default colours as web display for different
+# feature types.
+#Add some debug info
 
 package Bio::Das::ProServer::SourceAdaptor::ensembl_funcgen_set;
 
 use warnings;
 use strict;
 use Data::Dumper;
-#use IO::File;
 
 use base qw(Bio::Das::ProServer::SourceAdaptor);
 
