@@ -97,10 +97,18 @@ my $reg = "Bio::EnsEMBL::Registry";
 sub new {
   my ( $class, @args ) = @_;
 
+
+  #Can we add defaults to start of @args?
+
   my $self = $class->SUPER::new(@args);
   #Currently only uses dnadb params to auto select
   #If attached dnadb or default reg dnadb does not match 
   #given assembly version.
+
+  #Set type to funcgen if not set?
+  #We really need to catch this before the SUPER new above, to allow the regsitry to catch the group
+  #$self->group('funcgen') if ! defined $self->group;
+
 
   my ( $dnadb_host, $dnadb_user, $dnadb_port, $dnadb_pass, $dnadb_assm)
     = rearrange( [ 'DNADB_HOST', 'DNADB_USER',
@@ -581,20 +589,27 @@ sub set_dnadb_by_assembly_version{
   my ($self, $assm_ver) = @_;
 
   throw('Must provide and assembly version to set the dnadb') if ! defined $assm_ver;
-  my $lspecies = $reg->get_alias($self->species());
+  my $reg_lspecies = $reg->get_alias($self->species());
+
+
+  #The registry has incremented the species as we have recreated the efg DB
+  #possibly using a different schema_build
+  #This set true lspecies to allow dnadb detection
+  #in multi DB environments e.g. DAS server
+  my $lspecies = $reg_lspecies;
+  $lspecies =~ s/[0-9]+$// if($lspecies =~ /[0-9]$/);
+
 
   throw('Must provide a species to automatically set dnadb') if $lspecies eq 'default';
 	
-
   #So we use params first
   #else registry params
   #else ensembldb
-  #Can we set these in new?
-
+ 
   my @ports = ($self->dnadb_port);
 
   #Start with lastest MySQL instances
-  #WE ARE OVER-RIDING specified port here!
+  #We are over-riding specified port here, only for known hosts
   #we should really account for this and make it nr
   if($self->dnadb_host eq 'ensdb-archive'){#
 	@ports = (5304, 3304);
@@ -655,7 +670,7 @@ sub set_dnadb_by_assembly_version{
 	$self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
 
 
-  my $db = $reg->reset_DBAdaptor($lspecies, 'core', $dbnames[$#dbnames], $self->dnadb_host, $host_port, $self->dnadb_user, $self->dnadb_pass);
+  my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames], $self->dnadb_host, $host_port, $self->dnadb_user, $self->dnadb_pass);
   
   $self->dnadb($db);
 
