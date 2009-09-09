@@ -367,9 +367,18 @@ ValidateVariableOrUsage(){
 # Exception : Exits if variable is not present in valid variable list
 ################################################################################
 
+#Can specific no_exit here
+#But probably better just to subshell, then we catch all the errors echoed
+
+# eg. error=$(ValidateVariablesOrUsage "$usage" type valid_types)
+# Then deal with error in context
+
 ValidateVariable(){
 	var_name=$1
 	valid_vars_name=$2
+	no_exit=$3
+	#
+
 	valid=
 
 	CheckVariables $var_name $valid_vars_name
@@ -391,8 +400,16 @@ ValidateVariable(){
     if [ ! $valid ]
     then
         echo "$var_value is not a valid $var e.g. $valid_var_values"
-		exit 101
+
+		if [ $no_exit ]; then
+			return 101
+		else
+			exit 101
+		fi
     fi
+	
+	return
+
 }
 
 
