@@ -3,7 +3,12 @@
 
 :: Installation Requirements
 
-Given that you have already followed the instructions for installation of the Ensembl core, functional genomics and BioPerl packages, the next step is to set up the eFG specific requirements. This is an exhaustive list and may not be necessary if you do not intend to use the full functionality of eFG. Install the following as required:
+Firstly, follow the instructions for installation of the Ensembl core, functional genomics and BioPerl packages available here:
+
+http://www.ensembl.org/info/docs/api/api_installation.html
+
+
+The next step is to set up the eFG specific requirements. This is an exhaustive list and may not be necessary if you do not intend to use the full functionality of eFG. Install the following as required:
 
 
 RDBMS Platform:
@@ -11,6 +16,7 @@ RDBMS Platform:
 	MySQL 5.1 Community Server
 	http://dev.mysql.com/downloads/mysql/5.1.html
 	Version 5.1 is required as some table utilise table partitioning
+
 
 Required for ChIP-Chip normalisation, QC reports and analysis:
 
@@ -26,6 +32,7 @@ Required for ChIP-Chip normalisation, QC reports and analysis:
 	Ringo - BioConductor package
     http://bioconductor.org/packages/2.1/bioc/html/Ringo.html
 
+
 Required for ChIP-Chip meta data validation and replicate definition:
 
 	MAGEstk - Bio::MAGE software tool kit.
@@ -37,6 +44,7 @@ Required for ChIP-Chip meta data validation and replicate definition:
     MAGE.dtd v1.1 is available from http://mged.sourceforge.net/software/docs.php
     The MAGE.dtd should be placed in the root data directory ($EFG_DATA).
 
+
 Required for DAS functionality:
 
 	 Bio-Das-Proserver
@@ -47,6 +55,7 @@ Required for DAS functionality:
 
 	 POE-Test-Loops-1.005
 	 http://search.cpan.org/~rcaputo/POE-Test-Loops-1.005/lib/POE/Test/Loops.pm
+
 
 Note: It is not necessary to set up the eFG environment if you simply want to query a remote eFG DB i.e. the eFG DBs available at ensembldb.ensembl.org. Only the ensembl-functgenomics package is required for this.
 
