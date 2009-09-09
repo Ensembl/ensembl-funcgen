@@ -3,7 +3,14 @@
 
 :: Installation Requirements
 
-Given that you have already followed the instructions for installation of the Ensembl core and functional genomics APIs, the next step is to set up the eFG specific requirements. This is an exhaustive list and may not be necessary if you do not intend to use the full functionality of eFG. Install the following as required:
+Given that you have already followed the instructions for installation of the Ensembl core, functional genomics and BioPerl packages, the next step is to set up the eFG specific requirements. This is an exhaustive list and may not be necessary if you do not intend to use the full functionality of eFG. Install the following as required:
+
+
+RDBMS Platform:
+
+	MySQL 5.1 Community Server
+	http://dev.mysql.com/downloads/mysql/5.1.html
+	Version 5.1 is required as some table utilise table partitioning
 
 Required for ChIP-Chip normalisation, QC reports and analysis:
 
@@ -47,11 +54,9 @@ Note: It is not necessary to set up the eFG environment if you simply want to qu
 :: Configuration
 
 The eFG system uses a shell environments to set global variables and help perform common tasks. 
-The base 'efg' environment is split into two files, one containing functions and constants (efg.env) and another containing installation configuration (efg.config). To enable initialisation of the environment add these to your .bashrc:
+The base 'efg' environment is split into two files, one containing functions and constants (efg.env) and another containing installation configuration (efg.config). To enable initialisation of the environment add the contents of the following file to the end of your .bashrsc:
 
-
-SRC=~/src                                                                #EDIT this if required
-alias efg='. $SRC/ensembl-functgenomics/scripts/environements/efg.env'   #This will be redefined on initiation
+ensembl-functgenomics/scripts/environments/efg/efg.bashrc
 
 
 You will also need to edit the configuration file accordingly:
@@ -105,7 +110,7 @@ export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q 
 
 :: Initialisation
 
-Once the configuration is complete, simply source bash (if this is not your default shell) and type 'efg' to enter the environment. This prints a brief welcome message and resets the prompt to show that you are in the eFG environment:
+Once the configuration is complete, simply source a bash subshell (even if your login shell is bash) and type 'efg' to enter the environment. This prints a brief welcome message and resets the prompt to show that you are in the eFG environment:
 
 user_name@host>bash
 user_name@host>efg
@@ -124,7 +129,7 @@ usage: CreateDB -d dbname -p password -s(pecies) e.g. e.g homo_sapiens [ -f(orce
 
 It is desirable to maintain the standard Ensembl nomenclature for a database and simply prefix it with some descriptive tag e.g  my_homo_sapiens_funcgen_47_36i
    
-Failure to do so may cause problems in dynamically detecting the correct core DB to use. 
+Failure keep the species name, db type and schema version information intact may cause problems in dynamically detecting the correct core DB to use. 
 
 All of the efg enviroments make use of command line functions and aliases, type EFGHelp or aliases to see a list respectively. If a function exits for some reason, it will also exit the bash environment. Simply rerun the initialisation steps to get back into the environment.
 
