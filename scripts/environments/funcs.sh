@@ -323,6 +323,10 @@ CheckVariables()
     fi
 }
 
+#No point in these OrUsage funcs
+#Best to do this in the caller using a subshell error=$(func)
+#As we are going to have to capture the error anyway!
+#This will also stop the error getting flattened
 
 CheckVariablesOrUsage(){
 	usage=$1
@@ -334,9 +338,9 @@ CheckVariablesOrUsage(){
 	tmp=$(CheckVariables $variable_names)
 
 	if [ $? != 0 ]; then
-		echo "$tmp."
-		echo "  $usage"
+		echo -e "$tmp\n$usage"
 		#This get's flattened into one line if we capture the output for returning rather than exit
+		#So we don't get full error
 		exit 1;
 	fi
 }
