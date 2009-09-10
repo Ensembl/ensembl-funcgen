@@ -60,12 +60,17 @@ Required for DAS functionality:
 	 svn co https://proserver.svn.sf.net/svnroot/proserver/trunk Bio-Das-ProServer
 	 Install normally or simply unpack in $SRC(see below) directory and modify $PERL5LIB accordingly
 
-
 	 POE-1.006
 	 http://search.cpan.org/~rcaputo/POE-1.006/
 
 	 POE-Test-Loops-1.005
 	 http://search.cpan.org/~rcaputo/POE-Test-Loops-1.005/lib/POE/Test/Loops.pm
+
+	 Config-IniFiles-2.52
+	 http://search.cpan.org/~shlomif/Config-IniFiles-2.52/lib/Config/IniFiles.pm
+
+	 Readonly-1.03
+	 http://search.cpan.org/~roode/Readonly-1.03/Readonly.pm
 
 
 Note: It is not necessary to set up the eFG environment if you simply want to query a remote eFG DB i.e. the eFG DBs available at ensembldb.ensembl.org. Only the ensembl-functgenomics package is required for this.
