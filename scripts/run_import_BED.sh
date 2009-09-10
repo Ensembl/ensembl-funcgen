@@ -12,8 +12,8 @@ shift
 #Contents of input_dir used if not supplied
 
 
-$EFG_SRC/scripts/import/parse_and_import.pl\
-    -name  LMI_CD4_H3K4ac\
+perl $EFG_SRC/scripts/import/parse_and_import.pl\
+    -name  bloodomics\
     -format SEQUENCING\
 	-parser Bed\
 	-vendor SOLEXA\
@@ -21,14 +21,14 @@ $EFG_SRC/scripts/import/parse_and_import.pl\
 	-contact njohnson@ebi.ac.uk\
 	-group efg\
 	-species homo_sapiens\
-	-experimental_set LMI_CD4_H3K4ac\
+	-experimental_set bloodomics\
 	-ucsc_coords\
-	-registry_host ens-staging\
-	-registry_user ensro\
+	-registry_host ensembldb.ensembl.org\
+	-registry_user anonymous\
 	-assembly 37\
-	-host ens-genomics1\
+	-host localhost\
 	-port 3306\
-	-dbname nj_importer_homo_sapiens_funcgen_55_37\
+	-dbname das_homo_sapiens_funcgen_56_37a\
 	-pass $PASS\
 	-cell_type CD4\
 	-feature_type H3K4ac\
