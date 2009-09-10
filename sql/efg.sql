@@ -10,6 +10,7 @@
 #  - same name is given in foreign key relations
 
 # DO NOT use '---' as a comment, this breaks in macosx mysql?!
+# This also generally applies to all  --[^ ] !?
 
 
 -- CORE TABLES --
@@ -620,7 +621,7 @@ CREATE TABLE `data_set` (
 -- Omitting experimental_feature_type_id from feature_set also allows us to drop this table for lite?
 
 
---THis was originally also the record of the experiment feature_type, but this is now NR in this table.
+-- THis was originally also the record of the experiment feature_type, but this is now NR in this table.
 -- We could move it to the result_set table, is more focused on the experimental_chips
 -- But would potentially also be NR there too.  
 -- Is still NR in result_set as we can have several analyses on the same chip/channels
@@ -678,7 +679,7 @@ CREATE TABLE `result` (
 
 -- X Y here allows repicate probes on same ship
 -- Allows storage of none raw values
---Also needs to accommodate different normalisations 
+-- Also needs to accommodate different normalisations 
 
 -- Table structure for result_feature
 
@@ -1024,7 +1025,7 @@ CREATE TABLE `experimental_chip` (
 --    fetch_by_unique_and_experiment_id
 --    fetch_by_unique_id_vendor
 -- add key on cell_type? or remove key on feature_type.  Will we ever want to query based on these? I doubt it.
---Should handle re-usage of physical chip
+-- Should handle re-usage of physical chip
 
 
 --
@@ -1121,7 +1122,7 @@ CREATE TABLE `status_name` (
 
 
 
---Remove these to separate file and handle with import_type.pl?
+-- Remove these to separate file and handle with import_type.pl?
 INSERT into status_name(name) values ('DISPLAYABLE');
 INSERT into status_name(name) values ('IMPORTED');
 INSERT into status_name(name) values ('DAS_DISPLAYABLE');
