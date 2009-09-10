@@ -12,7 +12,7 @@ generate_DAS_config.pl
 
  Using the efg environment function:
 
- GenerateDASConfig -dbhost dbhost -dbport 3306 -dbuser ensro -dbname homo_sapiens_funcgen_47_36i -species homo_sapiens -das_config $EFG_SRC/config/DAS -das_name efg -das_host DAShost -das_port  9000
+ GenerateDASConfig -dbhost $DB_HOST -dbport $DB_PORT -dbuser $DB_RO_USER -dbname homo_sapiens_funcgen_47_36i -species homo_sapiens -das_config $EFG_SRC/config/DAS -das_name efg -das_host DAShost -das_port  9000
 
 =head1 DESCRIPTION
 
