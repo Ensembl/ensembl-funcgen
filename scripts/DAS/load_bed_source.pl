@@ -11,7 +11,7 @@ load_bed_source.pl
 
  e.g. Using the associated efg environment function
 
- LoadBedDASSources  -host dbhost --user write_user --dbname efg_DAS --files ES_DNase_le1m_reads.bed.gz --names ES_DNase --profile --pass $PASS --frag_length 150 --bin_size 25 -reads -pass PASSWORD
+ LoadBedDASSources  -host $DB_HOST --user $DB_USER --pass WRITE_PASS --dbname efg_DAS --files ES_DNase_le1m_reads.bed.gz --names ES_DNase --profile --frag_length 150 --bin_size 25 -reads
 
 
 =head1 DESCRIPTION
@@ -33,11 +33,12 @@ profiles generated from them.
   --reads         Flag to load raw read alignments, expects input files are bed
   --profile       Flag to generate and load read profile
   --no_load       Skips load step and just generates profile if specified
-  --profile_input Skips profile generation, expects input is profile
+  --profile_input Skips profile generation, expects input(--files) is profile
 
  Input
   --files         Space separate list of input files
-  --names         Optional space speparated list of source names
+  --names         Optional space separated list of source names, must preferably end in valid 
+                  feature type to enable automatic colour usage e.g. ES_DNase1
   --prefix        Optional prefix for source names
   
  Profile Options, only required if --profile specified
@@ -57,7 +58,7 @@ profiles generated from them.
 
   This software is distributed under a modified Apache license.
   For license details, please see
-
+mysqlro
     http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
@@ -77,8 +78,11 @@ profiles generated from them.
 #Implement multiple windows sizes? Or matrix? MySQL COMPRESS?
 #Change to use mysqlimport
 #Does this work with paired end data???? 
-#Can this use Collection code?
-#binary packing/windows?
+#binary packing/windows? 
+#How does this use maxbins?
+#Merge this with bsub script
+#Validate/warn last token of name wrt feature type colours in config ini.
+
 
 
 use strict;
@@ -87,9 +91,9 @@ use Pod::Usage;
 use Getopt::Long;
 use DBI;
 
-my ($pass,$host,$user,$dbname,$prefix, $file, @files, @names);
-my ($no_load, $bin_size, $frag_length, $profile_input, @formats, $name);
-my ($profile, $reads);
+my ($pass,$host,$user,$dbname,$prefix, $input_file, @files, @names);
+my ($no_load, $bin_size, $frag_length, $profile_input, $source_name);
+my ($profile, $reads, %output_files);
 my $port = 3306;
 
 
@@ -100,7 +104,7 @@ GetOptions (
             'host|h=s'         => \$host,
             'port:i'           => \$port,
             'user|u=s'         => \$user,
-            'pass|p:s'         => \$pass,#This optional is not catching pass in the middle of a parameter string!
+            'pass|p:s'         => \$pass,
             'dbname|d=s'       => \$dbname,
 			'files=s{,}'       => \@files,
 			'reads'            => \$reads,
@@ -132,8 +136,8 @@ if( ! ($host && $user && $pass && $dbname)){
   die("You must provide some DB connection paramters:\t --host --user --pass --dbname [ --port ]\n");
 }
 
-if(! ($reads || $profile)){
-  die("Must provide at least one format to process e.g. --reads or --profile\n");
+if(! ($reads || $profile || $profile_input)){
+  die("Must provide at least one of the following run modes e.g. --reads or --profile or --profile_input\n");
 }
 elsif($no_load && ! $profile){
   die("You have selected options --no_load without specifying --profile, no action taken\n");
@@ -147,7 +151,10 @@ elsif(($bin_size || $frag_length) &&
   die("You have specified a --bin_size and/or --frag_length, did you want to load a --profile?\n")
 }
 elsif($profile_input && $reads){
-  die("You have specified mutuall exclusive options --profile_input and --reads\n");
+  die("You have specified mutually exclusive options --profile_input and --reads\n");
+}
+elsif($profile_input && $profile){
+  die("You have specified mutually exclusive options --profile_input and --profile, please select one or the other\n");
 }
 
 if(@names &&
@@ -170,13 +177,21 @@ else{
   @names = ($names[0]);
 }
 
-$file = $files[0];
-$name = $names[0];
+#We need to set this
+$input_file = $files[0];
+$source_name = $names[0];
+
+#Set the input file correctly
+if($profile_input){
+  $output_files{profile} = $input_file;
+}
+elsif($reads){
+  $output_files{reads} = $input_file;
+}
 
 
-
-if(! -f $file){
-  throw("File does not exist:\t$file\nMust provide at least one file path to build a profile");
+if(! -f $input_file){
+  die("File does not exist:\t$input_file\nMust provide at least one file path to build a profile");
 }
 
 
@@ -187,27 +202,34 @@ if($profile && ! $profile_input){
 
 
   #Build profile
-  print ":: Building profile for:\t$file\n";
+  print ":: Building profile for:\t$input_file\n";
   warn "WARNING:\tThis does not yet support paired end data\n";
   
-  open(CMD, "file -L $file |")
+  open(CMD, "file -L $input_file |")
 	or die "Can't execute command: $!";
   my $gzip = grep {/gzip compressed data/} (<CMD>);
   close CMD;
 
   if($gzip){
-	open(FILE, "gzip -dc $file |") or die ("Can't open compressed file:\t$file");
+	open(FILE, "gzip -dc $input_file |") or die ("Can't open compressed file:\t$input_file");
   }
   else{
-	open(FILE, $file) or die ("Cannot open file:$file");
+	open(FILE, $input_file) or die ("Cannot open file:$input_file");
   }
 
 
   my $binsize = sprintf("%03d", $bin_size);
-  (my $out = $file) =~ s,_reads\.bed,_profile_${binsize}.bed,;
 
-  open(OUT, "| gzip -c > $out")
-    or throw ("Can't open out file $out");
+  #We need to validate this input file name
+  #Let's not depend on _reads.bed
+
+  my $output_file = $input_file."_profile_${binsize}";
+  
+  #Need to test if compressed here!
+  
+
+  open(OUT, "| gzip -c > $output_file")
+    or throw ("Can't open out file $output_file");
 
   while (<FILE>) {
     chomp;
@@ -282,7 +304,14 @@ if($profile && ! $profile_input){
   close FILE;
   close OUT;
 
-  push @files, $out;
+
+  
+  $output_files{profile} = $output_file;
+  #push @files, $out;
+  #Okay this is not working with the names array!
+  
+  
+
 
 }
 
@@ -299,26 +328,17 @@ if( ! $no_load){
 
 
 
-  my $format;
+
 
   #Validate/identify file type, not by name!
-  foreach my $i(0..$#files){
+  foreach my $type(keys %output_files){
+	my $table_name = $source_name;
+	$table_name = "${prefix}_${table_name}" if $prefix;
+	$table_name = "bed_${type}_${table_name}";
 
-	if( ($#files == 0 && $reads) ||
-		($#files == 1 && $i == 0)){
-		  $format = 'reads';
-		}
-	elsif( ($#files == 0 && $profile) ||
-		   ($#files == 1 && $i == 1)){
-	  $format = 'profile';
-	}
-	else{
-	  die('Not catching load file type correctly');
-	}
-  
-	$file = $files[$i];
+	my $file = $output_files{$type};
 	
-	print ":: Loading $format file:\t$file\n";
+	print ":: Loading $type file:\t$file\n";
 	open(CMD, "file -L $file |")
 	  or die "Can't execute command: $!";
 	my $gzip = grep {/gzip compressed data/} (<CMD>);
@@ -351,25 +371,25 @@ if( ! $no_load){
 
 	#Maximal match/remove path and bed suffix
 	
-	if(! $name){
-	  ($name=$file) =~ s,^(.*/)?(.+)\.bed$,$2,;
-	  #remove .'s for MySQL
-	  $name =~ s,\.,_,g;
-	}
+	#if(! $name){
+	#  ($name=$file) =~ s,^(.*/)?(.+)\.bed$,$2,;
+	#  #remove .'s for MySQL
+	#  $name =~ s,\.,_,g;
+	#}
 
-	$name = $prefix.'_'.$name if($prefix);
-	$name = 'bed_'.$format.'_'.$name;
+	#$name = $prefix.'_'.$name if($prefix);
+	#$name = 'bed_'.$format.'_'.$name;
 
-	if(length($name) >64){
-	  die("Table name exceeded MySQL maximum of 64 characters:\t$name\n".
+	if(length($table_name) >64){
+	  die("Table name exceeded MySQL maximum of 64 characters:\t$table_name\n".
 		  'Please rename your file or choose a shorter --prefix or --names to rectify');
 	}
 
-	print ':: Table name: ', $name, "\n";
+	print ':: Table name: ', $table_name, "\n";
 
-	my $sth = $dbh->do("DROP TABLE IF EXISTS `$name`;");
+	my $sth = $dbh->do("DROP TABLE IF EXISTS `$table_name`;");
 		
-	$sth = $dbh->do("CREATE TABLE `$name` (
+	$sth = $dbh->do("CREATE TABLE `$table_name` (
     `feature_id`    INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
     `seq_region`    VARCHAR(20) NOT NULL,
     `start`         INT(10) UNSIGNED NOT NULL DEFAULT '0',
@@ -380,21 +400,23 @@ if( ! $no_load){
     `note`          VARCHAR(40) DEFAULT NULL,
     PRIMARY KEY     (`feature_id`),
     KEY `seq_region_idx` (`seq_region`, `start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_bin;");
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_bin;");#why do we need this COLLATE latin1_bin here?
 
+  
+  #This needs to change to mysqlimport!!!
+  
+  if ($type eq 'reads') {
 	
-	#This needs to change to mysqlimport!!!
-
-	if ($format eq 'reads') {
-	  
-	  $sth = $dbh->do("LOAD DATA LOCAL INFILE '$file' INTO TABLE $name 
+	#what is @mm for?
+	
+	$sth = $dbh->do("LOAD DATA LOCAL INFILE '$file' INTO TABLE $table_name 
                (seq_region,start,end,name,\@mm,strand,score) 
                set seq_region=replace(seq_region, 'chr', ''), note=concat('mm=',\@mm);");
-  
-	} 
-	elsif ($format eq 'profile') {
+	
+  } 
+	elsif ($type eq 'profile') {
 	  
-	  $sth = $dbh->do("LOAD DATA LOCAL INFILE '$file' INTO TABLE $name 
+	  $sth = $dbh->do("LOAD DATA LOCAL INFILE '$file' INTO TABLE $table_name 
                (seq_region,start,end,name,score,strand) 
                set seq_region=replace(seq_region, 'chr', '');");
 	  
