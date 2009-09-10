@@ -192,7 +192,7 @@ CREATE TABLE `unmapped_reason` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---- CORE LIKE TABLES ---
+-- CORE LIKE TABLES ---
 
 --
 -- Table structure for table `object_xref`
@@ -296,7 +296,7 @@ CREATE TABLE `seq_region` (
 
 
 
---- EFG tables
+-- EFG tables
 
 
 
@@ -354,8 +354,8 @@ CREATE TABLE `array` (
    UNIQUE KEY  `class_name_idx` (`class`, `name`)	
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---- format = tiled, targetted, expression, custom/mixed?
---- class = AFFY_UTR AFFY_ST ILLUMINA_WG
+-- format = tiled, targetted, expression, custom/mixed?
+-- class = AFFY_UTR AFFY_ST ILLUMINA_WG
 -- Do we need to enum these?
 
 
@@ -374,8 +374,8 @@ CREATE TABLE `array_chip` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---- name = design_name
---- removed  `description` varchar(255) default NULL,
+-- name = design_name
+-- removed  `description` varchar(255) default NULL,
 
 
 --
@@ -404,13 +404,13 @@ CREATE TABLE `probe_feature` (
 
 
 -- remove mismatches?
---- Do jointindex on seq region local start? ADD COORD_SYSTEM to joint index?
---- Currently use chr data in here rather than true seq_regions, Need to map all probe global values to seq_regions.
---- build_id currently set to freeze date, can go when we incorporate build mapping into the import API
---- Would not capture true probe seq if there were any mismatches in mapping.
---- Mismatches in mapping, should default be NULL?  Mismatch for nimblegen here would denote MM of PM/MM probe pair
---- Cigarline(from alignment) shows mismatches, would normally be "probe.length"M, would need original probe seq for alignment, not currently stored with seq_region style tables.  See comments below probe table re: seq storage.
---- Joint index on seq_region_id and local start? 
+-- Do jointindex on seq region local start? ADD COORD_SYSTEM to joint index?
+-- Currently use chr data in here rather than true seq_regions, Need to map all probe global values to seq_regions.
+-- build_id currently set to freeze date, can go when we incorporate build mapping into the import API
+-- Would not capture true probe seq if there were any mismatches in mapping.
+-- Mismatches in mapping, should default be NULL?  Mismatch for nimblegen here would denote MM of PM/MM probe pair
+-- Cigarline(from alignment) shows mismatches, would normally be "probe.length"M, would need original probe seq for alignment, not currently stored with seq_region style tables.  See comments below probe table re: seq storage.
+-- Joint index on seq_region_id and local start? 
 
 
 
@@ -428,15 +428,15 @@ CREATE TABLE `probe_set` (
 	KEY `name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---- Now ancillary/optional table
---- joint key on probe_set_id and array_id?
---- aka feature for nimblegen(optional, therefore some probes = their featureset/probeset)
---- Can we omit probe_sets for sets of size == 1?
---- family= ENCODE REGIONS, RANDOM etc, generic descriptor for probes, can have multiple families on one chip
---- xref_id = encode region name, removed!!!!  Generate real xref entries.
+-- Now ancillary/optional table
+-- joint key on probe_set_id and array_id?
+-- aka feature for nimblegen(optional, therefore some probes = their featureset/probeset)
+-- Can we omit probe_sets for sets of size == 1?
+-- family= ENCODE REGIONS, RANDOM etc, generic descriptor for probes, can have multiple families on one chip
+-- xref_id = encode region name, removed!!!!  Generate real xref entries.
 
 
----
+--
 -- Table structure for table `probe`
 --
 
@@ -454,35 +454,35 @@ CREATE TABLE `probe` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---- Add X & Y coords
---- remove array_id and link through probe_set, can't if we're not populating probe_set for sets of 1.
---- name (for Affy) at least is array_chip to probe relationship, probeset is optional for some formats 
---- remove? class = control, experimental etc... naming clash with array.class, different class types.
---- pair_index aka nimblegen match_index, id to connect paired probes (same as id/name for single probes).
---- 
---- Still have issues will true probe seq storage?  Some probes have mismatches and map multiple times therefore cannot use genome seq?
---- Seq storage not necessary for core, but maybe for FG analysis DB?
---- Have seq field/table?  Huge amount of probes and theoretically some could be >>1000bps.  If probes never overlapped would actually be less seq data as probe should be non-redundant within array.  Not the case, but may be easiest way to maintain true probe seq data.  Would negate the need for seq_region tables, this may hinder remapping. Then just have mismatches and cigar_line in probe_feature table instead of in both.  Would then also need build and chromosome tables.  How important is this?
+-- Add X & Y coords
+-- remove array_id and link through probe_set, can't if we're not populating probe_set for sets of 1.
+-- name (for Affy) at least is array_chip to probe relationship, probeset is optional for some formats 
+-- remove? class = control, experimental etc... naming clash with array.class, different class types.
+-- pair_index aka nimblegen match_index, id to connect paired probes (same as id/name for single probes).
+-- 
+-- Still have issues will true probe seq storage?  Some probes have mismatches and map multiple times therefore cannot use genome seq?
+-- Seq storage not necessary for core, but maybe for FG analysis DB?
+-- Have seq field/table?  Huge amount of probes and theoretically some could be >>1000bps.  If probes never overlapped would actually be less seq data as probe should be non-redundant within array.  Not the case, but may be easiest way to maintain true probe seq data.  Would negate the need for seq_region tables, this may hinder remapping. Then just have mismatches and cigar_line in probe_feature table instead of in both.  Would then also need build and chromosome tables.  How important is this?
 
---- As nimblegen probes are premapped to one location, can we capture this in probe_feature.analysis_id (e.g. vendor_mapping)?  Then alter this when we remap.  How can we maintain true match/mismatch pairs on remapping?  Only map PM probe, and then place MM probe at same location.  So mismatch in probe_feature would denote PM or MM probe only if probe/pair_index is valid and, vice versa.
-
-
---- Xref issue:  How are we going to consolidate vendor defined xrefs vs. ensembl core xrefs (e.g. affy) to ensure updating of xref table in core DB?
+-- As nimblegen probes are premapped to one location, can we capture this in probe_feature.analysis_id (e.g. vendor_mapping)?  Then alter this when we remap.  How can we maintain true match/mismatch pairs on remapping?  Only map PM probe, and then place MM probe at same location.  So mismatch in probe_feature would denote PM or MM probe only if probe/pair_index is valid and, vice versa.
 
 
-
---- pair_index table   `pair_index` int(10) unsigned NOT NULL default '0',
---- joint index on probe_ids
-
---- Other fields:
----     length?
---- Removed:
----       `seq` mediumtext NOT NULL, - now captured via probe_feature.seq_region_id, see above for seq storage issues.
----	  `mismatch` tinyint(4) NOT NULL default '0', - Now using probe_feature, see above
----       array_id, now in probe_set
+-- Xref issue:  How are we going to consolidate vendor defined xrefs vs. ensembl core xrefs (e.g. affy) to ensure updating of xref table in core DB?
 
 
----
+
+-- pair_index table   `pair_index` int(10) unsigned NOT NULL default '0',
+-- joint index on probe_ids
+
+-- Other fields:
+--     length?
+-- Removed:
+--       `seq` mediumtext NOT NULL, - now captured via probe_feature.seq_region_id, see above for seq storage issues.
+--	  `mismatch` tinyint(4) NOT NULL default '0', - Now using probe_feature, see above
+--       array_id, now in probe_set
+
+
+--
 -- Table structure for table `probe_design`
 --
 
@@ -496,8 +496,8 @@ CREATE TABLE `probe_design` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
----
---- really wanted default NULL for coord_system_id but cannot have with int
+--
+-- really wanted default NULL for coord_system_id but cannot have with int
 
 --
 -- Table structure for table `experiment`
@@ -521,8 +521,8 @@ CREATE TABLE `experiment` (
 
 -- alter table experiment add schema_build?  This would enable trace back to original import DB, just incse seq_region_ids change, or use status? IMPORTED_schema_build, MAPPED_schema_build or cs_id?
 -- remove primary design_type
---- design_type  = CHIP2 etc... (is also design type in ontology i.e. binding_site_identification)
---- Secondary design type may be redundant, so have associated_design_types table, containing MGED ontology types?  Or have ontology_types table to control input and have linker table with just IDs?  Too normalised?
+-- design_type  = CHIP2 etc... (is also design type in ontology i.e. binding_site_identification)
+-- Secondary design type may be redundant, so have associated_design_types table, containing MGED ontology types?  Or have ontology_types table to control input and have linker table with just IDs?  Too normalised?
 
 
 --
@@ -589,10 +589,10 @@ CREATE TABLE `feature_type` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---- Table to contain Brno nomenclature (modification ontology?) etc.
---- enum on class? HISTONE, PROMOTER
---- Have ontology name in field?
---- Have load ontology tool script?
+-- Table to contain Brno nomenclature (modification ontology?) etc.
+-- enum on class? HISTONE, PROMOTER
+-- Have ontology name in field?
+-- Have load ontology tool script?
 
 
 -- Table structure for table `data_set`
@@ -627,9 +627,9 @@ CREATE TABLE `data_set` (
 -- Feature type is also known before results are imported on an exp/ec level, but would always import results anyway
 -- So it's logically a little removed from where it should be, but more practical from a result set handling point of view.
 -- could have in:
----- result_feature, but would not necessarily have feature_set_id
----- result_set
----- experimental_chip
+-- result_feature, but would not necessarily have feature_set_id
+-- result_set
+-- experimental_chip
 
 -- we want to alter data_set to handle all type of data associations, rather than just feature < result
 -- feature >< result would we ever get two feature sets from a group analysis?
@@ -677,10 +677,10 @@ CREATE TABLE `result` (
 -- result_id needed as we may have replicate probe on same chip
 
 -- X Y here allows repicate probes on same ship
---- Allows storage of none raw values
----Also needs to accommodate different normalisations 
+-- Allows storage of none raw values
+--Also needs to accommodate different normalisations 
 
---- Table structure for result_feature
+-- Table structure for result_feature
 
 DROP TABLE IF EXISTS `result_feature`;
 CREATE TABLE `result_feature` (
@@ -702,7 +702,7 @@ CREATE TABLE `result_feature` (
 -- Should set this on a per species basis dependant on the number
 -- of seq_regions * window sizes in result_feature
 
---- Table structure for `result_set`
+-- Table structure for `result_set`
 
 DROP TABLE IF EXISTS `result_set`;
 CREATE TABLE `result_set` (
@@ -721,13 +721,13 @@ CREATE TABLE `result_set` (
 -- Have in separate table 
 
 
---- WE STILL NEED A TABLE SET ID i.e. to differentiate results by chip, otherwise we cannot deal with result within a result_set on a chip by chip basis
---- table_set_id should be unique?
---- table_set_id table_name table_id and analysis_id shoudl also be unique
---- result_set_id and table_set_id should be unique
+-- WE STILL NEED A TABLE SET ID i.e. to differentiate results by chip, otherwise we cannot deal with result within a result_set on a chip by chip basis
+-- table_set_id should be unique?
+-- table_set_id table_name table_id and analysis_id shoudl also be unique
+-- result_set_id and table_set_id should be unique
 
---- we could have another table here: table_set otherwise, table_name, analysis_id, result_set_id become redundant
---- table/chip_set: table_set_id, table_id, result_set_id
+-- we could have another table here: table_set otherwise, table_name, analysis_id, result_set_id become redundant
+-- table/chip_set: table_set_id, table_id, result_set_id
 
 -- this is basically using the table_set_id to provide a link to the table_name to deconvolute the table_name/id relationship
 -- we want one id in the result table to denote the chip/channel, analysis.
@@ -762,38 +762,37 @@ CREATE TABLE `chip_channel` (
 
 -- 3 solutions:
 -- 1 Big redundant result_set table and hang the individual experimental_sets? Have unique table_set_id key'd to result
---- We would have to update result appropriately or insist on chip sets being known in advance
---- REDUNDANT
---- No access to chip sets without accessing previous result_set or same ec ids?  OR could have chip_set_id in experimental_chip
---- TABLE LIGHT
+-- We would have to update result appropriately or insist on chip sets being known in advance
+-- REDUNDANT
+-- No access to chip sets without accessing previous result_set or same ec ids?  OR could have chip_set_id in experimental_chip
+-- TABLE LIGHT
 -- 2 Midway solution, Have experimental/analysis_set table which represent
---- LESS REDUNDANT
---- Same problems as above
+-- LESS REDUNDANT
+-- Same problems as above
 -- 3 Have experimental_set to represent the physical unique set, also have analysis_set table to link between result_set and experimental_set
 -- result would have analysis_set_id
---- Would have same probs as above but would haave uniquely accessible chip/experimental sets and NR all round.
---- NON_REDUNDANT
---- Access to chip sets
---- TABLE HEAVY
---- Would still have update problem
+-- Would have same probs as above but would haave uniquely accessible chip/experimental sets and NR all round.
+-- NON_REDUNDANT
+-- Access to chip sets
+-- TABLE HEAVY
+-- Would still have update problem
 
---- This is just replicating what we have in experiment or channel, too complicated, result_set will be low volume so just deal with redundancy
---- Can we still maintain unique result_set id and have a link result_table_entries, this will simply contain the individual table_id's, so call it chip_channel_result?
-
-
---- we could drop this table and just keep the index for e! prd
+-- This is just replicating what we have in experiment or channel, too complicated, result_set will be low volume so just deal with redundancy
+-- Can we still maintain unique result_set id and have a link result_table_entries, this will simply contain the individual table_id's, so call it chip_channel_result?
 
 
---- THe problem is only link features to chip sets, not individual chips, therefore result_group_id needs to be NR with respect to ec's within same set. Analysis_id delineates result_groups of the chip_set(tablename/id)
---- More keys?  Above key only defines uniqueness and linking from result_set, do we need exp > result_group query?
+-- we could drop this table and just keep the index for e! prd
 
---- > 1 chip set i.e. duplicates are linked to one(or many) result sets(feature_sets)
---- but each can have a displayable status set, but only in it's own context i.e. you can have it displayed in one set and not in another.
 
---- Now we have problem of channel result sets:
----	chip set values still valid
----     would be nice to be able to extract chip_set to it's own table/experimental_chip
----     move chip_set_id to experimental_chip? result_group_id effectively denotes chip set, but needs to use ec.chip_set_id as reference
+-- THe problem is only link features to chip sets, not individual chips, therefore result_group_id needs to be NR with respect to ec's within same set. Analysis_id delineates result_groups of the chip_set(tablename/id)
+-- More keys?  Above key only defines uniqueness and linking from result_set, do we need exp > result_group query?
+
+-- > 1 chip set i.e. duplicates are linked to one(or many) result sets(feature_sets)
+-- but each can have a displayable status set, but only in it's own context i.e. you can have it displayed in one set and not in another.
+-- Now we have problem of channel result sets:
+--	chip set values still valid
+--     would be nice to be able to extract chip_set to it's own table/experimental_chip
+--     move chip_set_id to experimental_chip? result_group_id effectively denotes chip set, but needs to use ec.chip_set_id as reference
 
 
 --
@@ -815,15 +814,15 @@ CREATE TABLE `annotated_feature` (
   KEY `feature_set_idx` (`feature_set_id`)	  
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
---- Need to be able to maintain link between prediction and source data i.e. experiment/s
---- Need to be able to have this table running completely from the persistent table
---- i.e. We want to be able to remove the experiment table data and still have access to all relevant data
---- e.g. primary design type, target_name/description 
---- Either make experiment->target 1:1 and have mixed persistent data in target(rm experiment_id and add target_id to experment)
---- Or add target_id to predicted_feature, may be redundant for non-tiling arrays?  How are we going to capture primary_design_type?
+-- Need to be able to maintain link between prediction and source data i.e. experiment/s
+-- Need to be able to have this table running completely from the persistent table
+-- i.e. We want to be able to remove the experiment table data and still have access to all relevant data
+-- e.g. primary design type, target_name/description 
+-- Either make experiment->target 1:1 and have mixed persistent data in target(rm experiment_id and add target_id to experment)
+-- Or add target_id to predicted_feature, may be redundant for non-tiling arrays?  How are we going to capture primary_design_type?
 
 
---- Table structure for `feature_set`
+-- Table structure for `feature_set`
 
 DROP TABLE IF EXISTS `feature_set`;
 CREATE TABLE `feature_set` (
@@ -1091,9 +1090,9 @@ CREATE TABLE `experimental_variable` (
 -- antibody?
 -- species
 -- description?
---- can this handle experimental management such that slides can be reused and classed as such
---- Or classed as failures etc.
---- Do we also need an extra table to hold experiment level meta data along side design type, and rename this channel variable
+-- can this handle experimental management such that slides can be reused and classed as such
+-- Or classed as failures etc.
+-- Do we also need an extra table to hold experiment level meta data along side design type, and rename this channel variable
 
 --
 -- Table structure for table `status`
@@ -1142,12 +1141,12 @@ INSERT into status_name(name) values ('RESULT_FEATURE_SET');
 
 
 
---- Further thoughts:
+-- Further thoughts:
 
 
---- Denormalise ---
---- To mart style to optimize queries? Mart style interface to export(to R)?
---- probe_set, probe, probe_feature and results could all e split on array vendor, format or experiment.design_type
----     probe > "array.vendor"_probe e.g. affy_probe, or "array.name"_probe e.g u133_probe, or "array.class"_probe e.g. CHIP2_probe
+-- Denormalise --
+-- To mart style to optimize queries? Mart style interface to export(to R)?
+-- probe_set, probe, probe_feature and results could all e split on array vendor, format or experiment.design_type
+--     probe > "array.vendor"_probe e.g. affy_probe, or "array.name"_probe e.g u133_probe, or "array.class"_probe e.g. CHIP2_probe
 
 
