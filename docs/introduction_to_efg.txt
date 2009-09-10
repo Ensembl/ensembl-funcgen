@@ -119,15 +119,14 @@ export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q 
 
 :: Initialisation
 
-Once the configuration is complete, simply source a bash subshell (even if your login shell is bash) and type 'efg' to enter the environment. This prints a brief welcome message and resets the prompt to show that you are in the eFG environment:
+Once the configuration is complete, simply type 'efg' to enter the environment. This prints a brief welcome message and resets the prompt to show that you are in the eFG environment:
 
-user_name@host>bash
 user_name@host>efg
 Setting up the Ensembl Function Genomics environment...
 Welcome to eFG!
 efg@host>
 
-The title bar of your termincal should also change to show you user name and the current working directory:
+The title bar of your terminal should also change to show you user name and the current working directory:
 
 	user_name@host:/your/current/working/dir
 
