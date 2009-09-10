@@ -18,6 +18,15 @@ RDBMS Platform:
 	Version 5.1 is required as some table utilise table partitioning
 
 
+Required for DB Access - These may already be present on your system:
+
+	DBI
+	http://search.cpan.org/~timb/DBI/DBI.pm
+
+	DBD::mysql
+	http://search.cpan.org/dist/DBD-mysql/	 
+
+
 Required for ChIP-Chip normalisation, QC reports and analysis:
 
 	R
