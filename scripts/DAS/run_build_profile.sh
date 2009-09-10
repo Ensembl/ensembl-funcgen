@@ -20,17 +20,19 @@
 
 # To do
 # Integrate this into efg.env as a function? BuildBedProfile?
-# GetOpts
+# GetOpts queue
 # Do we need to move the QUEUE params from pipeline.config to efg.config?
 # This will inevitably be superceded by matrix implementation?
 # MAQ_WORKDIR isn't used?
+# Take SAM format, needs import parser? This would be similar import to GFF
+# Optionally dump to file or load to new table in separate or eFG DB?
 
 # Check if environment variables are set
-if [ ! $MAQ_WORKDIR ]; then
-    echo "ERROR: Need to set and export variable MAQ_WORKDIR to define"
-    echo "working directory."
-    exit 1
-fi
+#if [ ! $MAQ_WORKDIR ]; then
+#    echo "ERROR: Need to set and export variable MAQ_WORKDIR to define"
+#    echo "working directory."
+#    exit 1
+#fi
 
 if [ $# -lt 3 ]; then
     echo "ERROR: Arguments missing!"
@@ -41,17 +43,24 @@ fi
 FRAGLEN=$1
 shift
 
+#default is 150???
+
 BIN_SIZE=$1
 shift
+#Default is 25???
+#Plug this into the collection code to generate multiple bin sizes?
 
 NOF=$#
 echo "Submitting job array with $NOF file(s) to the farm"
 
-QUEUE='64bit';
+#QUEUE='64bit';
+QUEUE='normal'
 
 LOG="${f}_build_profile.log";
 
+#Change this to include filename
 NAME="build_profile_${BIN_SIZE}";
 
+
 eval bsub -oo "${NAME}_%I.log" -J "${NAME}[1-${NOF}]" -q "$QUEUE" \
-    ${MAQ_BINDIR}/build_profile.pl -bin_size ${BIN_SIZE} -frag_length $FRAGLEN $*
+    $EFG_SRC/scripts/DAS/load_bed_source.pl  -host ens-genomics1 --user ensadmin --dbname nj1_DAS -bin_size 25 -frag_length 150 --files ES_DNase_le1m_reads.bed.gz --names test_reads -reads --pass ensembl --no_load
