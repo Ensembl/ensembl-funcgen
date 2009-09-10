@@ -58,6 +58,8 @@ Required for DAS functionality:
 
 	 Bio-Das-Proserver
 	 svn co https://proserver.svn.sf.net/svnroot/proserver/trunk Bio-Das-ProServer
+	 Install normally or simply unpack in $SRC(see below) directory and modify $PERL5LIB accordingly
+
 
 	 POE-1.006
 	 http://search.cpan.org/~rcaputo/POE-1.006/
@@ -93,7 +95,8 @@ export EFG_DATA=$HOME/data/efg                  #Data directory.
 
 export EFG_PERL=/software/bin/perl              
 export PATH=$PATH:$EFG_SRC/scripts              #eFG scripts directory
-export PERL5LIB=$EFG_SRC/modules:$PERL5LIB      #Update PERL5LIB. EDIT add ensembl(core) etc. if required
+export PERL5LIB=$EFG_SRC/modules:$PERL5LIB      #Update PERL5LIB. EDIT add $SRC/ensembl and $SRC/Bio-Das-Proserver/lib  if required
+
 
 #Your efg DB connection params
 export EFG_WRITE_USER="write_user"                  
