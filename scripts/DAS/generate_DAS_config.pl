@@ -388,8 +388,19 @@ if(! $headers_only &&
 		   )
 }
 
-#Check we are not trying to turn on standard sources with hydra mode
+#Validate/Over-ride das_host
 
+my $hostname = (`uname` eq 'Darwin') ? `hostname` : `hostname -f`;
+
+if($hostname ne $das_host){
+  warn "WARNING:\tdas_host($das_host) does not match local hostname($hostname)
+WARNING:\tOver-riding $das_host with $hostname
+WARNING:\tMaybe you want to reset \$DAS_HOST or run this script on a different host?";
+  $das_host = $hostname;
+}
+
+
+#Check we are not trying to turn on standard sources with hydra mode
 
 if(! $not_hydra){
 
