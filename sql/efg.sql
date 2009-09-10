@@ -9,7 +9,10 @@
 #  - internal ids are integers named tablename_id
 #  - same name is given in foreign key relations
 
---- CORE TABLES ---
+# DO NOT use '---' as a comment, this breaks in macosx mysql?!
+
+
+-- CORE TABLES --
 
 --
 -- Table structure for table `analysis`
