@@ -398,10 +398,9 @@ my $hostname = ($uname eq 'Darwin') ? `hostname` : `hostname -f`;
 chomp $hostname;
 
 if($hostname ne $das_host){
-  warn "WARNING:\tdas_host($das_host) does not match local hostname($hostname)
-WARNING:\tOver-riding $das_host with $hostname
-WARNING:\tMaybe you want to change -das_host/\$DAS_HOST or run this script on a different host?";
-  $das_host = $hostname;
+  warn "WARNING:\t You have specified the das_host $das_host but appear to be running from $hostname
+WARNING:\tMaybe you want to reset change the das_host or run this from a different host?\n";
+
 }
 
 
