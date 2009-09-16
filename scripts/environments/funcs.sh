@@ -748,16 +748,9 @@ AskQuestion()
    _QUESTION=$1
 
 
-	#Do we need this no trailing new line switch? 
-   #if [ $(isMac) -eq $_TRUE ]
-   #then
-   #    echo -n "$_QUESTION"
-   #else
-  #     echo -n "$_QUESTION" 
-   #fi
+   #-e works on mac altho not documented in echo man
 
-
-    echo -n "$_QUESTION?  " 
+    echo -en "$_QUESTION?  " 
     read REPLY
 
 
