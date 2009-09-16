@@ -73,7 +73,7 @@ Required for DAS functionality:
 	 http://search.cpan.org/~roode/Readonly-1.03/Readonly.pm
 
 
-Note: It is not necessary to set up the eFG environment if you simply want to query a remote eFG DB i.e. the eFG DBs available at ensembldb.ensembl.org. Only the ensembl-functgenomics package is required for this.
+NOTE: It is not necessary to set up the eFG environment if you simply want to query a remote eFG DB i.e. the eFG DBs available at ensembldb.ensembl.org. Only the ensembl-functgenomics package is required for this.
 
 
 :: Configuration
@@ -340,10 +340,20 @@ The -experimental_set option allows several sets to be defined for one experimen
 :: Displaying data with DAS
 
 
-Given that the DAS pre-requisites have been met use the following functions to aid configuration of DAS sources:
+The eFG API and envinroment now support dynamic Hydra DAS sources, removing the need for extra configuration every time
+a new DAS source is loaded. Given that the DAS pre-requisites have been met, use the following functions to aid 
+configuration of DAS sources:
 
-	  GenerateDASConfig
-	  Uses the generate_DAS_config.pl script to detect which FeatureSets have the 'DAS_DISPLAYABLE' status and 
+	  
+	  ListDASSources
+
+	  TurnOnDASSources
+	  
+	  TurnOffDASSources
+
+	  LoadBedDASSources	- Loads individual DAS sources from bed files as aligned reads as wiggle or profile displays
+
+	  GenerateDASConfig - Uses the generate_DAS_config.pl script to detect which FeatureSets have the 'DAS_DISPLAYABLE' status and 
       generates an DAS instance specific config file.  This will also take feature_set and result_set options flag 
 	  specifc sets as 'DAS_DISPLAYABLE'. This will provide a basic configuration file which can be edited for
 	  further display customisation.
@@ -351,7 +361,13 @@ Given that the DAS pre-requisites have been met use the following functions to a
 	  assumes your DAS server is visible to the web.
 	  
 	  StartDASServer
-	  
-	  StopDASServer
 
-NOTE: COMING SOON - Dynamic DAS HydraSource configuration, enabling display of short reads alignments. 
+	  StopDASServer
+	  
+	  ForwardDASPorts - Automates complicated port forwarding required from a private das host(i.e. your desk/laptop) to a publicly 
+	  available machine, which can then be used as the public das server.
+
+
+Remember to use the -h option with the functions to get some additional help.
+
+A typical set up routine would be as follows:
