@@ -32,6 +32,7 @@ NOTE: Does not yet support paired end data.
   --reads         Flag to load raw read alignments, expects input files are bed
   --profile       Flag to generate and load read profile
   --no_load       Skips load step and just generates profile if specified
+  --no_compress   Skips default compression of files after loading 
   --profile_input Skips profile generation, expects input(--files) is profile
 
  Input
@@ -94,31 +95,32 @@ my ($pass,$host,$user,$dbname,$prefix, $input_file, @files, @names);
 my ($no_load, $bin_size, $frag_length, $profile_input, $source_name);
 my ($profile, $reads, %output_files);
 my $port = 3306;
-
+my $no_compress = 0;
 
 
 my $params_msg = "Params are:\t@ARGV";
 
 GetOptions (
-            'host|h=s'         => \$host,
-            'port:i'           => \$port,
-            'user|u=s'         => \$user,
-            'pass|p:s'         => \$pass,
-            'dbname|d=s'       => \$dbname,
-			'files=s{,}'       => \@files,
-			'reads'            => \$reads,
-			'profile'          => \$profile,
-			'profile_input'    => \$profile_input,
-			'prefix=s'         => \$prefix,
-			'names=s{,}'       => \@names,
-			'bin_size=i'       => \$bin_size,
-			'no_load'          => \$no_load,
-            'frag_length=i'    => \$frag_length,
-            'help|?'           => sub { pos2usage(-exitval => 0, -message => $params_msg);},
-            'man|m'            => sub { pos2usage(-exitval => 0, -message => $params_msg, verbose => 2);},
-		   ) or pod2usage ( -exitval => 1,
-							-message => $params_msg
-						  );
+    'host|h=s'         => \$host,
+    'port:i'           => \$port,
+    'user|u=s'         => \$user,
+    'pass|p:s'         => \$pass,
+    'dbname|d=s'       => \$dbname,
+    'files=s{,}'       => \@files,
+    'reads'            => \$reads,
+    'profile'          => \$profile,
+    'profile_input'    => \$profile_input,
+    'prefix=s'         => \$prefix,
+    'names=s{,}'       => \@names,
+    'bin_size=i'       => \$bin_size,
+    'no_load'          => \$no_load,
+    'no_compress'      => \$no_compress,
+    'frag_length=i'    => \$frag_length,
+    'help|?'           => sub { pos2usage(-exitval => 0, -message => $params_msg);},
+    'man|m'            => sub { pos2usage(-exitval => 0, -message => $params_msg, verbose => 2);},
+    ) or pod2usage ( -exitval => 1,
+		     -message => $params_msg
+    );
 
 
 
@@ -230,10 +232,13 @@ if($profile && ! $profile_input){
   
   my $output_file;
   ($output_file = $input_file) =~ s/\.[gz]+$/./;
-  $output_file .= "profile_${binsize}.gz";
+  $output_file .= "profile_${binsize}";#.gz";
 
-  open(OUT, "| gzip -c > $output_file")
-    or throw ("Can't open out file $output_file");
+  #No need to compress file here as we are most likely just going to decompress it straight away to load
+  #open(OUT, "| gzip -c > $output_file")
+  #Actually should compress by default if no load?
+
+  open(OUT, "> $output_file") or throw ("Can't open out file $output_file");
 
   
   while (<FILE>) {
@@ -352,7 +357,7 @@ if( ! $no_load){
 	$link = 1 if -l $file;
 	
 	if ($gzip) {
-	  print ":: Decompressing $file\n";
+	  print ":: Decompressing:\t$file\n";
 
 	  #Get the suffix?
 
@@ -392,7 +397,7 @@ if( ! $no_load){
 		  'Please rename your file or choose a shorter --prefix or --names to rectify');
 	}
 
-	print ':: Table name: ', $table_name, "\n";
+	print ":: Table name:\t$table_name\n";
 
 	my $sth = $dbh->do("DROP TABLE IF EXISTS `$table_name`;");
 		
@@ -433,20 +438,24 @@ if( ! $no_load){
 
 	print ":: Finished loading $file\n";
 
-	if ($gzip) {
+
+	#We should default to gzipping all files here
+	#Unless we pass -no_ziop?
+
+	if ($gzip && $link) {
 	  
 	  #We need to remove if the file and regenrate link if file was link?
 	  
-	  if($link){
-		print ":: Restoring link\n";
-		system("cp -f ${file}.gz.backup ${file}.gz") == 0 or die('Failed to restore link');
-	  }
-	  else{
-		print ":: Compressing file $file...\n";
-		system("gzip $file") == 0
-		  or die "Can't compress file $file: $!";
-	  }	
+	    #if($link){
+	    print ":: Restoring link\n";
+	    system("cp -f ${file}.gz.backup ${file}.gz") == 0 or die('Failed to restore link');
 	}
+	elsif(! $no_compress){
+	    print ":: Compressing file $file...\n";
+	    system("gzip $file") == 0
+		or die "Can't compress file $file: $!";
+	}	
+	#}
   }
 }
 
