@@ -16,9 +16,8 @@ load_bed_source.pl
 
 =head1 DESCRIPTION
 
-This script loads a DAS source from raw read alignments(bed) and/or 
-profiles generated from them.
-
+This script loads a DAS source from raw read alignments(bed) and/or profiles generated from them.
+NOTE: Does not yet support paired end data.
 
 =head1 OPTIONS
 
