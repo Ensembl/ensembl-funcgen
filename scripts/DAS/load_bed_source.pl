@@ -348,7 +348,6 @@ if( ! $no_load){
 
 	my $file = $output_files{$type};
 	
-	print ":: Loading $type file:\t$file\n";
 
 	my $compressed_data =  `file -L $input_file` or die "Can't execute 'file -L $file'";  
 	my $gzip = 1 if $compressed_data =~ /gzip/;
@@ -375,6 +374,9 @@ if( ! $no_load){
 	elsif($compressed_data){
 	    die("This script only handles gzip compressed files, please uncompress $file manually before rerunning:\t$compressed_data\n");  
 	}
+
+	print ":: Loading $type file:\t$file\n";    
+	
 	
 	#Can we split this into something more readable/useable
 	#We need to be able to identify these table in an funcgen schema
@@ -397,7 +399,7 @@ if( ! $no_load){
 		  'Please rename your file or choose a shorter --prefix or --names to rectify');
 	}
 
-	print ":: Table name:\t$table_name\n";
+	print ":: Table name:\t\t$table_name\n";
 
 	my $sth = $dbh->do("DROP TABLE IF EXISTS `$table_name`;");
 		
@@ -436,7 +438,7 @@ if( ! $no_load){
 
 	$dbh->disconnect();
 
-	print ":: Finished loading $file\n";
+	print ":: Finished loading:\t$file\n";
 
 
 	#We should default to gzipping all files here
