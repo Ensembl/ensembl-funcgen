@@ -205,16 +205,22 @@ if($profile && ! $profile_input){
   print ":: Building profile for:\t$input_file\n";
   warn "WARNING:\tThis does not yet support paired end data\n";
   
-  open(CMD, "file -L $input_file |")
-	or die "Can't execute command: $!";
-  my $gzip = grep {/gzip compressed data/} (<CMD>);
-  close CMD;
+
+  #gzip expects .z or .gz
+  #This should be in Helper?
+  
+  my $compressed_data =  `file -L $input_file` or die "Can't execute 'file -L $input_file'";
+
+  my $gzip = 1 if $compressed_data =~ /gzip/;
 
   if($gzip){
 	open(FILE, "gzip -dc $input_file |") or die ("Can't open compressed file:\t$input_file");
   }
+  elsif($compressed_data){
+      die("This script only handles gzip compressed files, please uncompress $input_file manually before rerunning");
+  }
   else{
-	open(FILE, $input_file) or die ("Cannot open file:$input_file");
+      open(FILE, $input_file) or die ("Cannot open file:$input_file");
   }
 
 
@@ -222,15 +228,15 @@ if($profile && ! $profile_input){
 
   #We need to validate this input file name
   #Let's not depend on _reads.bed
-
-  my $output_file = $input_file."_profile_${binsize}";
   
-  #Need to test if compressed here!
-  
+  my $output_file;
+  ($output_file = $input_file) =~ s/\.[gz]+$/./;
+  $output_file .= "profile_${binsize}.gz";
 
   open(OUT, "| gzip -c > $output_file")
     or throw ("Can't open out file $output_file");
 
+  
   while (<FILE>) {
     chomp;
     my @col = split("\t");
@@ -339,10 +345,9 @@ if( ! $no_load){
 	my $file = $output_files{$type};
 	
 	print ":: Loading $type file:\t$file\n";
-	open(CMD, "file -L $file |")
-	  or die "Can't execute command: $!";
-	my $gzip = grep {/gzip compressed data/} (<CMD>);
-	close CMD;
+
+	my $compressed_data =  `file -L $input_file` or die "Can't execute 'file -L $file'";  
+	my $gzip = 1 if $compressed_data =~ /gzip/;
 
 	my $link;
 	$link = 1 if -l $file;
@@ -359,9 +364,12 @@ if( ! $no_load){
 	  
 
 	  system("gzip -df $file") == 0
-        or die "Can't decompress file $file";
+	      or die "Can't decompress file $file";
 	  $file =~ s/\.gz$//;
 	  die("$file does not exit, expected suffix is .gz") if (! -f $file);
+	}
+	elsif($compressed_data){
+	    die("This script only handles gzip compressed files, please uncompress $file manually before rerunning:\t$compressed_data\n");  
 	}
 	
 	#Can we split this into something more readable/useable
