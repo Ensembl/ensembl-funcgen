@@ -223,7 +223,7 @@ if($profile && ! $profile_input){
   if($gzip){
 	open(FILE, "gzip -dc $input_file |") or die ("Can't open compressed file:\t$input_file");
   }
-  elsif($compressed_data){
+  elsif($compressed_data =~ /compressed/){
       die("This script only handles gzip compressed files, please uncompress $input_file manually before rerunning");
   }
   else{
@@ -416,7 +416,7 @@ if( ! $no_load){
 	  $file =~ s/\.gz$//;
 	  die("$file does not exit, expected suffix is .gz") if (! -f $file);
 	}
-	elsif($compressed_data){
+	elsif($compressed_data =~ /compressed/){
 	    die("This script only handles gzip compressed files, please uncompress $file manually before rerunning:\t$compressed_data\n");  
 	}
 
