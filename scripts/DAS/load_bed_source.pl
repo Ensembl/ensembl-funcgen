@@ -47,8 +47,12 @@ NOTE: Does not yet support paired end data.
   Need to add paired end support here
 		
  Other
-  --help          Prints a short help message and exits
-  --man|m         Prints the man page
+  --mysql_sort_buffer Sets the minimum mysql_sort_buffer_size for this session(default=50331648 ~47MB)
+                      Also modifies myisam_max_sort_file_size accordingly. Increasing this can help
+                      speed up load times in 'Repair by KeyCache' is being used by mysql after the 
+                      initial file load. Check the processlist in the mysql client if things are too slow.
+  --help              Prints a short help message and exits
+  --man|m             Prints the man page
 
 
 =head1 LICENSE
@@ -96,6 +100,7 @@ my ($no_load, $bin_size, $frag_length, $profile_input, $source_name);
 my ($profile, $reads, %output_files);
 my $port = 3306;
 my $no_compress = 0;
+my $mysql_sort_buffer = 50331648;#6 * default 8388608  ~8GB >> ~47MB
 
 
 my $params_msg = "Params are:\t@ARGV";
@@ -116,6 +121,7 @@ GetOptions (
     'no_load'          => \$no_load,
     'no_compress'      => \$no_compress,
     'frag_length=i'    => \$frag_length,
+    'mysql_sort_buffer=s' => \$mysql_sort_buffer,
     'help|?'           => sub { pos2usage(-exitval => 0, -message => $params_msg);},
     'man|m'            => sub { pos2usage(-exitval => 0, -message => $params_msg, verbose => 2);},
     ) or pod2usage ( -exitval => 1,
@@ -338,6 +344,45 @@ if( ! $no_load){
 
 
 
+  my @sort_vars= $dbh->selectrow_array(q{select @@myisam_sort_buffer_size});#, @@myisam_max_sort_file_size});
+  
+  if($sort_vars[0] < $mysql_sort_buffer){
+      
+      #Could we generate this based on the actual file sizes and the suggested defaults ratios?
+
+      #Generate the ratio of increase
+      #my $mysql_sort_file = $sort_vars[1] * ( $mysql_sort_buffer / $sort_vars[0]);
+      print ":: Setting MySQL session vars for optimised load time:\tmyisam_sort_buffer_size=$mysql_sort_buffer\n";#\tmyisam_max_sort_file_size=$mysql_sort_file\n";
+      $dbh->do("SET SESSION myisam_sort_buffer_size=$mysql_sort_buffer");  #This is GLOBAL and SESSION
+      #$dbh->do("SET GLOBAL myisam_max_sort_file_size=$mysql_sort_file");  #This is GLOBAL hence should not set unless we can reset it afterwards safely
+      #Cannot do this as script may exit before we get a chance to reset
+
+      #Need to check if actually reset
+
+      @sort_vars= $dbh->selectrow_array(q{select @@myisam_sort_buffer_size});#, @@myisam_max_sort_file_size});
+
+      if($sort_vars[0] != $mysql_sort_buffer){ 
+	  warn ":: WARNING\tCould not reset misam_sort_buffer_size to $mysql_sort_buffer, using ".$sort_vars[0]."\n";
+      }
+
+      #As we cannot rely on reseting the max sort file size here we should warn that it will take a long time
+
+      
+      #if($sort_vars[1] != $mysql_sort_file){                                                                                                                           
+      #    warn ":: WARNING\tCould not reset misam_max_sort_dile_size to $mysql_sort_file, using ".$sort_vars[1]."\n";                                                    
+      #}   
+
+      #real    real    197m51.489s  Using defaults
+      #real    36m54.789s           With max size rest but buffer on default? No zip unzip between profile generation and load. Is this using file sort?
+
+
+  }
+
+  #Now check the @@myisam_max_sort_file_size is not smaller than the file size
+  #This relates to the mysql file size, not the input file size, but we can use this as a rough guide
+  @sort_vars= $dbh->selectrow_array(q{select @@myisam_max_sort_file_size}); 
+  my $max_sort_size = $sort_vars[0]/1024;
+  
 
 
   #Validate/identify file type, not by name!
@@ -376,7 +421,13 @@ if( ! $no_load){
 	}
 
 	print ":: Loading $type file:\t$file\n";    
-	
+	my $file_size = -s $file;
+
+	if ($file_size  < $max_sort_size){
+	    
+	    warn "WARNING: $file is larger than myisam_max_sort_file_size($file_size > $max_sort_size).\tWARNING: This may slow down import due to using 'Repair by KeyCache' rather than 'Repair by sorting'. If your import is taking a long time(>30 mins for ~3 million reads) check the repair type on the mysql process list.\nYou may need to get you DB admin to increase the GLOBAL session variable (N>".($file_size*1024).")e.g. mysql> SET GLOBAL myisam_max_sort_file_size=N\n";
+	}
+
 	
 	#Can we split this into something more readable/useable
 	#We need to be able to identify these table in an funcgen schema
@@ -414,7 +465,9 @@ if( ! $no_load){
     `note`          VARCHAR(40) DEFAULT NULL,
     PRIMARY KEY     (`feature_id`),
     KEY `seq_region_idx` (`seq_region`, `start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_bin;");#why do we need this COLLATE latin1_bin here?
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_bin;");
+
+#latin1_bin is case sensitive collation! Why do we need this?
 
   
   #This needs to change to mysqlimport!!!
@@ -422,6 +475,33 @@ if( ! $no_load){
   if ($type eq 'reads') {
 	
 	#what is @mm for?
+
+      #Wouldn't it be faster to get unix to do this replace?
+      #Also mysql automatically disable keys when loading data infile into an empty table
+      #once loaded it will attempt to to Repair with keycache
+      #However Repair with filesort would be 100-1000Xs faster
+      #Although doesn't work with primary/unique keys? Is this an issue?
+      #It chooses which method to use based on your myisam_sort_buffer_size, 
+      #myisam_max_sort_file_size and myisam_max_extra_sort_file_size.  Have 
+      #you increased the size of these?  Keep in mind these are SESSION 
+      #variables, so they can be set on the connection right before you LOAD 
+      #DATA INFILE.
+
+      # Also keep in mind that Repair by sort doesn't work for UNIQUE or 
+      # PRIMARY KEYs.
+
+      #mymac - default setting
+      #| myisam_max_sort_file_size | 2146435072 | # 2GB
+      #| myisam_sort_buffer_size   | 8388608    | #Which is about 8MB..this is tiny!
+      #Could probably up both of these default, but should we just set it temporarily for this connection at 5X?
+
+
+      #ens-genomics1
+      #| myisam_max_sort_file_size | 9223372036853727232 | #8589934590 GB??? wtf?
+      #| myisam_sort_buffer_size   | 67108864            |  #This is only about 60 MB?
+      #
+
+
 	
 	$sth = $dbh->do("LOAD DATA LOCAL INFILE '$file' INTO TABLE $table_name 
                (seq_region,start,end,name,\@mm,strand,score) 
