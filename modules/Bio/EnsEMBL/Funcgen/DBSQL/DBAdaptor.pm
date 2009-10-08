@@ -135,6 +135,7 @@ sub new {
   #Defaults now set in dnadb as we want to test registry first;
   #These will pick default_dnadb values if params not explicitly set
   $self->{'dnadb_host'} = $dnadb_host || $default_host || 'ensembldb.ensembl.org';
+
   #Do we need this to be dnadb_ports 3306 5306 for different mysqls?
   #This is not correct for ensembldb, but we over-ride this in set_dnadb_by_assembly_version.
   $self->{'dnadb_port'} = $dnadb_port || $default_port || 3306;
@@ -600,7 +601,7 @@ sub set_dnadb_by_assembly_version{
   $lspecies =~ s/[0-9]+$// if($lspecies =~ /[0-9]$/);
 
 
-  throw('Must provide a species to automatically set dnadb') if $lspecies eq 'default';
+  throw('Either specify a species to set dnadb automatically or pass a dnadb parameter?') if $lspecies eq 'default';
 	
   #So we use params first
   #else registry params
