@@ -36,7 +36,7 @@ export DNADB_SCRIPT_ARGS="-dnadb_host $DNADB_HOST -dnadb_user $DNADB_USER -dnadb
 
 #DAS params
 export EFG_DAS_CONFIG=$EFG_SRC/config/DAS        #DAS config dir where pid and config files are written
-export EFG_DAS_HOST=$(hostname $HOSTNAME_SWITCH) #DAS sever host, set to $(hostname $HOSTNAME_SWITCH) or EDIT?
+export EFG_DAS_HOST=$(hostname $HOSTNAME_SWITCH) #DAS sever host, set to $(hostname $HOSTNAME_SWITCH), localhost or EDIT?
 export EFG_DAS_PORT=9876                         #Default DAS port EDIT
 export EFG_DAS_NAME=efg                          #DAS instance name EDIT
 export EFG_DAS_HOME=$SRC/Bio-Das-ProServer       #DAS code dir, must be ProServer!
