@@ -84,9 +84,11 @@ The base 'efg' environment is split into two files, one containing functions and
 ensembl-functgenomics/scripts/environments/efg/efg.bashrc
 
 
-You will also need to edit the configuration file accordingly:
+You will also need to create the configuration file by copying the example file and editing accordingly:
 
-efg@bc-9-1-02>more ensembl-functgenomics/scripts/environments/efg.config
+efg@bc-9-1-02>cd ensembl-functgenomics/scripts/environments/
+efg@bc-9-1-02>cp efg.config_example efg.config
+efg@bc-9-1-02>more efg.config
 
 # Experimental group data
 export EFG_GROUP='eFG'                          
@@ -370,4 +372,25 @@ configuration of DAS sources:
 
 Remember to use the -h option with the functions to get some additional help.
 
-A typical set up routine would be as follows:
+There are ways to display data via DAS. The first is to simply set the 'DAS_DISPLAYABLE' status for any FeatureSet of peak calls loaded using the load scripts detailed in the previous section. The second deals with loading read alignments from BED files into individual tables of a DAS database.  This is not required to be an efg schema but can be integrated with an efg database. This goes someway to providing support for read alignment data which is not currently integrated within the main funcgen schema. In future this read alignment DAS table here will be merged with the main efg schema.
+
+A typical routine for setting up a DAS source from a BED file containing read alignments is as follows:
+
+  njohnson@mac>efg												#Initialise the environment
+  SOURCING SSH ENVIRONMENT
+  Setting up the Ensembl Function Genomics environment...
+  Welcome to eFG!
+
+  EFG:mac>efgd													#cd to the root data dir
+  EFG:mac>cd input/homo_sapiens/								#cd to human input dir	
+  EFG:mac>ls
+  ES_DNase_le1m_reads.bed.gz									#Here we have a bed file of aligned reads
+
+  #Now we load this file using the 'reads' and 'profile' display options using LoadBedDASSources
+
+  EFG:mac>LoadBedDASSources  -host $DB_HOST --user $DB_USER --pass ensembl --dbname your_das_dbname --files ES_DNase_le1m_reads.bed.gz --names ES_DNase --reads --profile --frag_length 150 --bin_size 25
+
+  :: Building profile for:        ES_DNase_le1m_reads.bed.gz
+  :: Decompressing:				  ES_DNase_le1m_reads.bed.profile_025.gz
+  :: Loading profile file:        ES_DNase_le1m_reads.bed.profile_025.gz
+  :: Table name:				  bed_profile_ES_DNase
