@@ -112,10 +112,15 @@ pipeline.env	 Provides functions to support any analysis efg environment which u
 
 pipeline.config	 Provides deployment configuration for pipeline.env.
 
-You will need to edit pipeline.config, setting data and binary paths where appropriate.  All 
-environmental variables should be documented or self explanatory. These should only need setting up 
-once. It should be noted that any variables set in pipeline.config will be superceded by those set in 
-any 'analysis'.config or instance file (see next section).
+You will need to create pipeline.config e.g.
+
+efg@bc-9-1-02>cd ensembl-functgenomics/scripts/environments/
+efg@bc-9-1-02>cp pipeline.config_example pipeline.config
+
+Esit this file setting data and binary paths where appropriate. All environmental variables should be 
+documented or self explanatory. These should only need setting up once. It should be noted that any 
+variables set in pipeline.config will be superceded by those set in any 'analysis'.config or instance 
+file (see next section).
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
