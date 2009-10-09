@@ -83,8 +83,8 @@ ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ProbeAlign.pm
 
 If required, edit the following environment files(see section 5):
 
-ensembl-functgenomics/scripts/.efg
-ensembl-functgenomics/scripts/environments/pipeline.env
+ensembl-functgenomics/scripts/efg.config
+ensembl-functgenomics/scripts/environments/pipeline.config
 ensembl-functgenomics/scripts/environments/arrays.config
 
 If required, set up input directory structure and data (see section 6) e.g.
@@ -199,11 +199,15 @@ arrays.env		 Provides array mapping specific configuration and functions.
 
 arrays.config	 Provides deployment configuration for arrays.env
 
-You will need to edit arrays.config, setting data and binary paths where appropriate.  All 
-environmental variables should be documented or self explanatory. These should only need setting up 
-once. It should be noted that any variables set in arrays.config will override those set in 
-pipeline.config, and likewise any set in your instance file (see section 7) will override those 
-set in arrays.config.
+You will need to create the arrays.config file e.g.
+
+efg@bc-9-1-02>cd ensembl-functgenomics/scripts/environments/
+efg@bc-9-1-02>cp arrays.config_example arrays.config
+
+Edit this file setting data and binary paths where appropriate. All environmental variables should be 
+documented or self explanatory. These should only need setting up once. It should be noted that any 
+variables set in arrays.config will override those set in pipeline.config and efg.config, likewise 
+any set in your instance file (see section 7) will override those set in arrays.config.
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -345,7 +349,7 @@ These are accessible as separate funtions but can be invoked by a wrapper functi
 RunAlignments     - Does all of the above plus some pipeline monitoring.
 
 
-NOTE: The ImportWit step is a pipeline accumulator and simply waits for the ImportArrays jobs to 
+NOTE: The ImportWait step is a pipeline accumulator and simply waits for the ImportArrays jobs to 
 finished successfully.  If these jobs fail, then ImportWait will wait indefinitely.  It is a good idea
 to source the environment in a separate window and use the 'monitor' function to track the progress
 of the pipeline.
