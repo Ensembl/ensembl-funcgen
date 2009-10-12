@@ -26,12 +26,17 @@ export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 # JOB_ID
 
 
-
 _TRUE=1;
 _FALSE=!$_
 
 
-
+#could set BACKUP_DIR here too?
+export ARCHIVE_DIR=/warehouse/ensembl02/nj1/data
+#Problems with which dir to use as EFG_DATA contains efg, so we can't sub that off the path
+#This require DATA_DIR (similar to SRC?)
+#Can now keep this outside of efg.env/config
+#Keep config in here for now, or move to .bashrc or funcs.config?
+export DATA_DIR=$HOME/scratch
 
 _setOptArgArray(){
 
@@ -112,9 +117,9 @@ _setOptArgArray(){
 # Exception : 
 ################################################################################
 
-_trapExit(){
-	es=$?
-	echo "Exiting with status:$es"
+#_trapExit(){
+#	es=$?
+#	echo "Exiting with status:$es"
 
 	#Need to move this to funcs.sh and define exit codes and error messages
 
@@ -137,11 +142,11 @@ _trapExit(){
 	#Is this because we are calling it from another script?
 	#This was working when we had it in arrays.env, but then funcs in this script couldn't rely on it and had to use exit directly.
 
-	bash
+#	bash
 
 
 
-}
+#}
 
 
 
@@ -519,32 +524,49 @@ BackUpFile(){
 }
 
 ################################################################################
-# Func      : ArchiveFile() 
-# Desc      : 
-# Args [n]  : 
-# Return    : 
+# Func      : ArchiveData() 
+# Desc      : rsyncs directory of files to archive dir
+# Args [n]  : List of files and/or directories
+# Return    : none
 # Exception : 
 ################################################################################
 
-
-#This needs to change to accomodate warehouse
-#rsync -essh -Wav /source /destination
-#We still need to back up tho
-#But archive is now defunct no?
-
-ArchiveFile()
+ArchiveData()
 {
+	#could do with a delete source flag?
 
-	backup_dir=${BACKUP_DIR:=.}
-	backup_dir="${backup_dir}/"
-	MakeDirs $backup_dir
+	error=$(CheckVariables ARCHIVE_DIR DATA_DIR)
 
-	file=$(echo $1 | sed 's/.*\///')
-
-	if [[ -f $1 ]]; 
-	then 
-		Execute mv $1 ${backup_dir}/${file}.$$
+	if [ $? -ne 0 ]; then
+		echo $error
+		return 1;
 	fi
+	
+	for filedir in $*; do
+		#now we need to generate the full path as we may not be in the working dir
+		#This will collapse any relative paths to the full concise path
+		filedir=$(ls -d $PWD/$filedir)
+
+		#Need to match $DATA_DIR here or skip with warning
+		if [[ ! $filedir = $DATA_DIR* ]]; then
+			echo -e "Skipping non data file/directory:\t$filedir"
+			echo -e "Source needs to be in \$DATA_DIR:\t$DATA_DIR"
+		else
+			#Use ' instead of / due to / in path
+			archive_filedir=$(echo $filedir | sed -r "s'^${DATA_DIR}''")
+			archive_filedir="$ARCHIVE_DIR/$archive_filedir"
+
+		    #Need to mkdir in the arhcive?
+			archive_dir=$(GetDir $archive_filedir)
+			
+			if [ ! -d $archive_dir ]; then
+				echo -e "Making archive directory:\t$arhcive_dir"
+				mkdir -p $archive_dir
+			fi
+			
+			rsync -essh -Wav $filedir $archive_filedir
+		fi
+	done
 }
 
 
