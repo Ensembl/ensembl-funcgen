@@ -79,6 +79,8 @@ sub fetch_by_array_probeset_name{
 	
 	$self->bind_param_generic_fetch($probeset_name,SQL_VARCHAR);
 	$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
+
+
 	my $pset =  $self->generic_fetch($constraint)->[0];
 	
 	#Reset tables
@@ -129,6 +131,37 @@ sub fetch_by_ProbeFeature {
 
 
 }
+
+=head2 fetch_all_by_Array
+
+Arg [1]    : Bio::EnsEMBL::Funcgen::Array
+Example    : my @probesets = @{$pset_adaptor->fetch_all_by_Array($array)};
+Description: Fetch all ProbeSets on a particular array.
+Returntype : Listref of Bio::EnsEMBL::ProbeSet objects.
+Exceptions : throws if arg is not valid or stored
+Caller     : General
+Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Array {
+  my $self  = shift;
+  my $array = shift;
+  
+  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
+	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Array');
+  }
+  
+  #get all array_chip_ids, for array and do a subselect statement with generic fetch
+  my $constraint = (  " ps.probe_set_id in"
+					  ." ( SELECT distinct(p.probe_set_id)"
+					  ."   from probe p where"
+					  ."   p.array_chip_id IN (".join(",", @{$array->get_array_chip_ids()}).")"
+					  ." )" );
+  
+  return $self->generic_fetch($constraint);
+}
+
 
 
 =head2 _tables

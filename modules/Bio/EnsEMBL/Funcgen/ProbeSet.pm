@@ -60,7 +60,7 @@ package Bio::EnsEMBL::Funcgen::ProbeSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Storable;
+use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
