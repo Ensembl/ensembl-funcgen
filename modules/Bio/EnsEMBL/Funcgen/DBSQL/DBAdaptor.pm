@@ -106,8 +106,18 @@ sub new {
   #given assembly version.
 
   #Set type to funcgen if not set?
-  #We really need to catch this before the SUPER new above, to allow the regsitry to catch the group
+  #We really need to catch this before the SUPER new above, to allow the registry to catch the group
   #$self->group('funcgen') if ! defined $self->group;
+
+
+  if( ! defined $self->species){
+	
+	#Can't do list_value_by_key as this depends on species, so we get a circular reference
+	#Need to do this as part of new
+	
+	($self->{'_species'}) = @{$self->get_MetaContainer->list_value_by_key('species.ensembl_latin_name')}
+  }
+
 
 
   my ( $dnadb_host, $dnadb_user, $dnadb_port, $dnadb_pass, $dnadb_assm)
@@ -592,7 +602,6 @@ sub set_dnadb_by_assembly_version{
   throw('Must provide and assembly version to set the dnadb') if ! defined $assm_ver;
   my $reg_lspecies = $reg->get_alias($self->species());
 
-
   #The registry has incremented the species as we have recreated the efg DB
   #possibly using a different schema_build
   #This set true lspecies to allow dnadb detection
@@ -601,7 +610,7 @@ sub set_dnadb_by_assembly_version{
   $lspecies =~ s/[0-9]+$// if($lspecies =~ /[0-9]$/);
 
 
-  throw('Either specify a species to set dnadb automatically or pass a dnadb parameter?') if $lspecies eq 'default';
+  throw('Either specify a species parameter or set species.ensembl_latin_name in the meta table to set dnadb automatically, alternatively pass a dnadb parameter') if $lspecies eq 'default';
 	
   #So we use params first
   #else registry params
@@ -678,6 +687,8 @@ sub set_dnadb_by_assembly_version{
   
   return $db;
 }
+
+
 
 
 #Group methods, as not adaptor/class for Group(used in ExperimentAdaptor at present)
