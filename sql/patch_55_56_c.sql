@@ -89,7 +89,7 @@ update analysis_description ad, analysis a set ad.description='Transcript alignm
 
 
 
-update analysis_description 
+
 
 
 
