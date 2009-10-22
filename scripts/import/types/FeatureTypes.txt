@@ -1,8 +1,8 @@
 name	class	description
 CTCF	Insulator	CCCTC-binding factor
 DNase1	Open Chromatin	DNase1 Hypersensitive Site
-Gene Associated	Regulatory Feature	Gene like regulatory feature
-Gene Associated - Cell type specific	Regulatory Feature	Cell type specific gene like regulatory feature
+PolII	Polymerase 	RNA Polymerase II
+WCE	DNA	Whole Cell Extract
 H2AK5ac	Histone	Histone 2A Lysine 5 Acetylation
 H2AK9ac	Histone	Histone 2A Lysine 9 Acetylation
 H2AZ	Histone	Histone 2A variant Z
@@ -53,3 +53,5 @@ Promoter Associated - Cell type specific	Regulatory Feature	Cell type specific p
 RegulatoryFeature	Regulatory Feature	Ensembl regulatory feature
 Unclassified	Regulatory Feature	Unclassified regulatory feature
 Unclassified - Cell type specific	Regulatory Feature	Cell type specific unclassified regulatory feature
+Gene Associated	Regulatory Feature	Gene like regulatory feature
+Gene Associated - Cell type specific	Regulatory Feature	Cell type specific gene like regulatory feature
