@@ -88,6 +88,14 @@ alias mysqlro='mysql $MYSQL_ARGS -u${EFG_READ_USER}'
 alias workdir="cd $EFG_DATA"
 alias scriptsdir="cd $SCRIPTSDIR"
 
+
+#Copied from efg.env
+#Can be removed when properly merged
+
+#Only used for monitor, need to pass password on env init!
+export PDB_SCRIPT_ARGS="-dbhost $EFG_HOST -dbuser $EFG_READ_USER -dbpass $EFG_WRITE_USER -dbname $PDBNAME -dbport $EFG_PORT"
+alias monitor='monitor $PDB_SCRIPT_ARGS -current -finished'
+
 #check for vars then suggest defaults or take stdin?
 
 echo "Welcome to eFG!"
@@ -490,7 +498,7 @@ ResetAnalysis() {
 
 Monitor(){
 
-    monitor -dbhost $EFG_HOST -dbport $EFG_PORT -dbuser $EFG_READ_USER -dbname $PDBNAME $*
+    monitor -dbhost $EFG_HOST -dbport $EFG_PORT -dbuser $EFG_READ_USER -dbname $PDBNAME -current -finished
 
 }
 
