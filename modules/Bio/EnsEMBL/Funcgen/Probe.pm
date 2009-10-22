@@ -409,6 +409,8 @@ sub get_probename {
     return $probename;
 }
 
+
+
 =head2 get_all_complete_names
 
   Args       : None
@@ -464,7 +466,7 @@ sub get_all_complete_names {
   Example    : my $compname = $probe->get_complete_name('Array-1');
   Description: For a given array, retrieve the complete name for this probe.
   Returntype : string
-  Exceptions : Throws if the array name is not known for this probe
+  Exceptions : Throws if the array name not specified or not known for this probe
   Caller     : General
   Status     : Medium Risk
 
@@ -474,7 +476,10 @@ sub get_complete_name {
     my $self = shift;
     my $arrayname = shift;
 
-    my $probename = $self->{'probenames'}->{$arrayname};
+
+	throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
+
+    my $probename = $self->get_probename($arrayname);
 
     if (!defined $probename) {
 		throw('Unknown array name');
@@ -483,10 +488,7 @@ sub get_complete_name {
 	my $probeset = $self->probeset()->name();
 	$probeset .= ':' if $probeset;
 
-	
-
-	
-    return "$arrayname:$probeset$probename";
+	return "$arrayname:$probeset$probename";
 }
 
 =head2 probeset
