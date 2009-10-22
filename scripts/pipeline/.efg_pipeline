@@ -338,7 +338,7 @@ CreateInputIds(){
         $_SUBMIT $OPTIONS; 
 
     if [ $? == 0 ]; then 
-        echo "Ready for Analysis"
+        echo "Ready for RunAnalysis"
     else 
         echo "An error occured while inserting input_ids. You may double check your"
         echo "analysis pipeline isn't configured properly (see WritePipelineConfig)"
