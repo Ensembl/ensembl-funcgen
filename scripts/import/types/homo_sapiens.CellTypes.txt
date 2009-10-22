@@ -1,9 +1,11 @@
 name	display_label	description
-HeLa	NULL	Human Epithelial Carcinoma Cells
-GM06990	NULL	Human B-Lymphocyte Cells
-U2OS	NULL	Human Bone Osteosarcoma Epithelial Cells
+HeLa	NULL	Human Epithelial Carcinoma Cell
+GM06990	NULL	Human B-Lymphocyte Cell
+U2OS	NULL	Human Bone Osteosarcoma Epithelial Cell
 CD4	NULL	Human CD4 T-Cells
 IMR90	NULL	Human Fetal Lung Fibroblast
-HL-60	NULL	Human Promyelotic Leukemia Cells
-HepG2	NULL	Human Hepatocellular Liver Carcinoma Cel
-Lymphoblastoid	NULL	Lymphoblastoid cells
+HL-60	NULL	Human Promyelotic Leukemia Cell
+HepG2	NULL	Human Hepatocellular Liver Carcinoma Cell
+Lymphoblastoid	NULL	Lymphoblastoid Cells
+CD133	NULL	Human CD133+ Hematopoietic Stem Cell
+CD36	NULL	Human CD36+ Erythrocyte Precursor Cell
