@@ -1,0 +1,9 @@
+name	display_label	description
+MEF	NULL	Mouse Embryonic Fibroblasts
+ES	NULL	Mouse Embryonic Stem Cells
+ESHyb	NULL	Mouse Embryonic Stem Cells (hybrid)
+NPC	NULL	Mouse Neural Progenitor Cells
+MCV6	NULL	MCV6 Mouse B Lymphocyte Cells (partially reprogrammed)
+MCV8	NULL	MCV8 Mouse B Lymphocyte Cells (partially reprogrammed)
+MCV81	NULL	MCV81 Mouse B Lymphocyte Cells (partially reprogrammed)
+BIV1	NULL	BIV1 Mouse B Lymphocyte Cells (partially reprogrammed)
