@@ -189,6 +189,7 @@ This is generally executed by the eFG array mapping environment
   -no_store           Not yet implemented	
 		 
  Other options:
+  -import_edb         Automatically imports the external_db record if not present
   -tee                Tees output to STDOUT
   -filename           Sets name to be used in output and logfile, default is xref_dbname_probe2transcript.log|out
   -help               Prints this POD documentation and exits
@@ -266,14 +267,13 @@ my ($species, $reg_file, $reg_host, $reg_user, $reg_pass, $reg_port);
 my ($transcript_multi_species, $xref_multi_species, $probe_multi_species) = (0,0,0);
 my ($transcript_species_id, $xref_species_id, $probe_species_id) = (1,1,1);
 
-
 # Default options
 my $transcript_port = 3306; 
 my $probe_port = 3306; 
 my $xref_port = 3306;
 my $max_mismatches = 1;
 my $sense_interrogation;
-my ($vendor, $format, $multi_species);
+my ($vendor, $format, $multi_species, $import_edb);
 
 my %array_config = (
 					probeset_arrays      => undef,
@@ -345,7 +345,8 @@ GetOptions(
 		   'max_transcripts=i'      => \$max_transcripts,
 		   'threshold=s'            => \$mapping_threshold,
 		   'arrays=s{,}'            => \@array_names, # this should take 1 or more space separate array names WARNING experimental feature!
-	
+		   'import_edb'           => \$import_edb,
+
 		   'delete'                 => \$delete,
 		   #'force_delete'           => \$force_delete,
 		   'no_triage'              => \$no_triage,
@@ -669,7 +670,14 @@ foreach my $row(@versions){
 if(! $transc_edb_id){
   $sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
 	"'${edb_name}', '${schema_build}', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')";
-  die("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
+
+  if(! $import_edb){
+	die("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
+  }
+  else{
+	$Helper->log("Importing external_db using: $sql");
+	$xref_db->dbc->db_handle->do($sql);
+  }
 }
 
 
