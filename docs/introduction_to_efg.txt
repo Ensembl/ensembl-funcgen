@@ -79,61 +79,65 @@ NOTE: It is not necessary to set up the eFG environment if you simply want to qu
 :: Configuration
 
 The eFG system uses a shell environments to set global variables and help perform common tasks. 
-The base 'efg' environment is split into two files, one containing functions and constants (efg.env) and another containing installation configuration (efg.config). To enable initialisation of the environment add the contents of the following file to the end of your .bashrsc:
-
-ensembl-functgenomics/scripts/environments/efg/efg.bashrc
+The base 'efg' environment is split into two files, one containing functions and constants (efg.env) and another containing installation configuration (efg.config). To enable initialsation of the efg environment carry out the following:
 
 
-You will also need to create the configuration file by copying the example file and editing accordingly:
 
-efg@bc-9-1-02>cd ensembl-functgenomics/scripts/environments/
-efg@bc-9-1-02>cp efg.config_example efg.config
-efg@bc-9-1-02>more efg.config
+1 Add the contents of the following file to the end of your .bashrsc:
 
-# Experimental group data
-export EFG_GROUP='eFG'                          
-export EFG_LOCATION='Hinxton, Cambridge'        
-export EFG_CONTACT='your@email.ac.uk'           
-
-#Code/Data Directories
-export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
-export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
-export EFG_DATA=$HOME/data/efg                  #Data directory.
-
-export EFG_PERL=/software/bin/perl              
-export PATH=$PATH:$EFG_SRC/scripts              #eFG scripts directory
-export PERL5LIB=$EFG_SRC/modules:$PERL5LIB      #Update PERL5LIB. EDIT add $SRC/ensembl and $SRC/Bio-Das-Proserver/lib  if required
+  ensembl-functgenomics/scripts/environments/efg/efg.bashrc
 
 
-#Your efg DB connection params
-export EFG_WRITE_USER="write_user"                  
-export EFG_READ_USER="read_user"                    
-export EFG_HOST='efg_host     '                     
-export EFG_PORT=3306                                
-export MYSQL_ARGS="-h${EFG_HOST} -P${EFG_PORT}"         
-#pass always supplied on cmd line e.g. mysqlw -p your password
+2 Create the configuration file by copying the example file and editing accordingly:
 
-#Your ensembl core DB connection params, read only
-export DNADB_USER='ensro'                        #EDIT if required e.g. anonymous
-export DNADB_HOST='ens-staging'                  #EDIT if required e.g. ensembldb.ensembl.org
-export DNADB_PORT=3306                           #EDIT if required
-export DNADB_SCRIPT_ARGS="-dnadb_host $DNADB_HOST -dnadb_user $DNADB_USER -dnadb_port $DNADB_PORT"
+  efg@bc-9-1-02>cd ensembl-functgenomics/scripts/environments/
+  efg@bc-9-1-02>cp efg.config_example efg.config
+  efg@bc-9-1-02>more efg.config
 
-#DAS params
-export EFG_DAS_CONFIG=$EFG_SRC/config/DAS       #DAS config dir where pid and config files are written
-export EFG_DAS_HOST=$(hostname -f)              #DAS sever host, set to $(hostname -f) or EDIT?
-export EFG_DAS_PORT=9876                        #Default DAS port
-export EFG_DAS_NAME=efg                         #DAS instance name, can redefine this and port dynamically to enable multiple servers
-export EFG_DAS_HOME=$SRC/Bio-Das-ProServer      #DAS code dir, must be ProServer!
+  # Experimental group data
+  export EFG_GROUP='eFG'                          
+  export EFG_LOCATION='Hinxton, Cambridge'        
+  export EFG_CONTACT='your@email.ac.uk'           
 
-#Default norm and analysis methods
-export NORM_METHOD='VSN_GLOG'                   #EDIT if required e.g. T.Biweight, Loess
+  #Code/Data Directories
+  export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
+  export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
+  export EFG_DATA=$HOME/data/efg                  #Data directory.
 
-#R config
-export R_LIBS=${R_LIBS:=$SRC/R-modules}
-export R_PATH=/software/bin/R-2.7.1-dev
-export R_FARM_PATH=/software/bin/R-2.7.1
-export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q bigmem"
+  export EFG_PERL=/software/bin/perl              
+  export PATH=$PATH:$EFG_SRC/scripts              #eFG scripts directory
+  export PERL5LIB=$EFG_SRC/modules:$PERL5LIB      #Update PERL5LIB. EDIT add $SRC/ensembl and $SRC/Bio-Das-Proserver/lib  if required
+
+
+  #Your efg DB connection params
+  export EFG_WRITE_USER="write_user"                  
+  export EFG_READ_USER="read_user"                    
+  export EFG_HOST='efg_host     '                     
+  export EFG_PORT=3306                                
+  export MYSQL_ARGS="-h${EFG_HOST} -P${EFG_PORT}"         
+  #pass always supplied on cmd line e.g. mysqlw -p your password
+
+  #Your ensembl core DB connection params, read only
+  export DNADB_USER='ensro'                        #EDIT if required e.g. anonymous
+  export DNADB_HOST='ens-staging'                  #EDIT if required e.g. ensembldb.ensembl.org
+  export DNADB_PORT=3306                           #EDIT if required
+  export DNADB_SCRIPT_ARGS="-dnadb_host $DNADB_HOST -dnadb_user $DNADB_USER -dnadb_port $DNADB_PORT"
+
+  #DAS params
+  export EFG_DAS_CONFIG=$EFG_SRC/config/DAS       #DAS config dir where pid and config files are written
+  export EFG_DAS_HOST=$(hostname -f)              #DAS sever host, set to $(hostname -f) or EDIT?
+  export EFG_DAS_PORT=9876                        #Default DAS port
+  export EFG_DAS_NAME=efg                         #DAS instance name, can redefine this and port dynamically to enable multiple servers
+  export EFG_DAS_HOME=$SRC/Bio-Das-ProServer      #DAS code dir, must be ProServer!
+
+  #Default norm and analysis methods
+  export NORM_METHOD='VSN_GLOG'                   #EDIT if required e.g. T.Biweight, Loess
+
+  #R config
+  export R_LIBS=${R_LIBS:=$SRC/R-modules}
+  export R_PATH=/software/bin/R-2.7.1-dev
+  export R_FARM_PATH=/software/bin/R-2.7.1
+  export R_BSUB_OPTIONS="-R'select[type==X86_64 && mem>6000] rusage[mem=6000]' -q bigmem"
 
 
 :: Initialisation
