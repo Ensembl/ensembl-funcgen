@@ -579,7 +579,8 @@ ArchiveData()
 			
 			#-essh only necessary for remote archiving
 			#This may cause data clashes, so we need to make sure paths are different?
-			rsync -essh -Wav $filedir $archive_filedir
+			echo "rsync -essh -Wav $filedir $archive_filedir"
+			rsync -essh -Wav $filedir $archive_filedir/
 		fi
 	done
 }
@@ -632,7 +633,8 @@ DistributeData(){
 			
 			#-essh only necessary for remote archiving
 			#This may cause data clashes, so we need to make sure paths are different?
-			rsync -essh -Wav $filedir $data_filedir
+			echo "rsync -essh -Wav $filedir $data_filedir"
+			rsync -essh -Wav $filedir $data_filedir/
 		fi
 	done
 
