@@ -31,7 +31,8 @@ _FALSE=!$_
 
 
 #could set BACKUP_DIR here too?
-export ARCHIVE_DIR=/warehouse/ensembl02/nj1/data
+#Note: Using sym links for these DIR vars means the patch in the functions should also be symlinks!
+export ARCHIVE_DIR=$HOME/warehouse/data
 #Problems with which dir to use as EFG_DATA contains efg, so we can't sub that off the path
 #This require DATA_DIR (similar to SRC?)
 #Can now keep this outside of efg.env/config
@@ -525,27 +526,39 @@ BackUpFile(){
 
 ################################################################################
 # Func      : ArchiveData() 
-# Desc      : rsyncs directory of files to archive dir
+# Desc      : rsyncs(-essh -Wav) directory of files to archive dir. Mirrors 
+#             directory structure between $DATA_DIR AND $ARCHIVE_DIR
 # Args [n]  : List of files and/or directories
 # Return    : none
-# Exception : 
+# Exception : Returns if $ARCHIVE_DIR or $DATA_DIR not set
 ################################################################################
+
+#We are still having problems with sym links on these funcs
+#Need ls to return deref'd path somehow
+#Also, we are no handling hosts in these path yet, so -essh is redundant at present
 
 ArchiveData()
 {
 	#could do with a delete source flag?
+	#Add getopts here?
 
 	error=$(CheckVariables ARCHIVE_DIR DATA_DIR)
 
 	if [ $? -ne 0 ]; then
 		echo $error
 		return 1;
+		#Should exit? If we ever use this in a script, or catch return in caller?
 	fi
 	
 	for filedir in $*; do
 		#now we need to generate the full path as we may not be in the working dir
 		#This will collapse any relative paths to the full concise path
-		filedir=$(ls -d $PWD/$filedir)
+		#Make sure we have a full path
+
+		if [[ $filedir != /* ]]; then
+			filedir=$(ls -d $PWD/$filedir)
+		fi
+
 
 		#Need to match $DATA_DIR here or skip with warning
 		if [[ ! $filedir = $DATA_DIR* ]]; then
@@ -560,14 +573,73 @@ ArchiveData()
 			archive_dir=$(GetDir $archive_filedir)
 			
 			if [ ! -d $archive_dir ]; then
-				echo -e "Making archive directory:\t$arhcive_dir"
+				echo -e "Making archive directory:\t$archive_dir"
 				mkdir -p $archive_dir
 			fi
 			
+			#-essh only necessary for remote archiving
+			#This may cause data clashes, so we need to make sure paths are different?
 			rsync -essh -Wav $filedir $archive_filedir
 		fi
 	done
 }
+
+DistributeData(){
+	#Keep this to data dir only
+	#Or can we specify an optional destination dir?
+	#Currently just mirror ArchiveData func
+
+
+	error=$(CheckVariables ARCHIVE_DIR DATA_DIR)
+
+	if [ $? -ne 0 ]; then
+		echo $error
+		return 1;
+		#Should exit? If we ever use this in a script, or catch return in caller?
+	fi
+
+
+	for filedir in $*; do
+	
+		#Make sure we have a full path
+		if [[ $filedir != /* ]]; then
+			filedir=$(ls -d $PWD/$filedir)
+		fi
+
+		#This does not work if full path already defined!
+
+		#Problem with this expanding links and not matching ARCHIVE_DIR
+		#Could resolve by not using sym link for DIR vars?
+
+
+		#Need to match $DATA_DIR here or skip with warning
+		if [[ ! $filedir = $ARCHIVE_DIR* ]]; then
+			echo -e "Skipping non archive file/directory:\t$filedir"
+			echo -e "Source needs to be in \$ARCHIVE_DIR:\t$ARCHIVE_DIR"
+		else
+			
+			#Use ' instead of / due to / in path
+			data_filedir=$(echo $filedir | sed -r "s'^${ARCHIVE_DIR}''")
+			data_filedir="$DATA_DIR/$data_filedir"
+
+		    #Need to mkdir in the arhcive?
+			data_dir=$(GetDir $data_filedir)
+			
+			if [ ! -d $data_dir ]; then
+				echo -e "Making data directory:\t$data_dir"
+				mkdir -p $data_dir
+			fi
+			
+			#-essh only necessary for remote archiving
+			#This may cause data clashes, so we need to make sure paths are different?
+			rsync -essh -Wav $filedir $data_filedir
+		fi
+	done
+
+
+}
+
+
 
 
 
