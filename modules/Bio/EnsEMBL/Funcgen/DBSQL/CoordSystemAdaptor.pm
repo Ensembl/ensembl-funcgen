@@ -125,6 +125,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Funcgen::CoordSystem;
+my %cs_warnings;
 
 use vars qw(@ISA);
 
@@ -1234,7 +1235,8 @@ sub validate_and_store_coord_system{
 	
 	eval {  $fg_cs = $self->store($fg_cs) };
 	
-	if($@){
+	if($@ && (! exists $cs_warnings{$fg_cs->name.':'.$fg_cs->version})){
+	  $cs_warnings{$fg_cs->name.':'.$fg_cs->version} = 1;
 	  warning("$@\nYou do not have permisson to store the CoordSystem for schema_build $sbuild\n".
 		"Using comparable CoordSystem:\t".$fg_cs->name.':'.$fg_cs->version."\n");
 	}
