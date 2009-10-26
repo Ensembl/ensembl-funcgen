@@ -81,6 +81,14 @@ sub generic_fetch {
   #build seq_region cache here once for entire query
   #Using default schema_build here
   #So would need to set dnadb appropriately
+  #This is cleaning tmp cache values such that
+  #nested feature fetches cause failure e.g. when regfeats retrieve their reg_attrs
+  #We need a way of always generating the tmp cache, or having it persist?
+  #This is because we haven't built the tmp cache in non_slice based methods i.e. we haven't run get_seq_region_id_by_Slice
+  #This is the same for all non-Slice based methods
+  #And the is no way around it as we are not providing that info about the new DB by passing a slice!
+  #The only way to get around this is to make the tmp_cache persistant
+  
   $self->build_seq_region_cache();
 
   return $self->SUPER::generic_fetch(@_);
@@ -265,10 +273,6 @@ sub build_seq_region_cache{
   #No as this then restricts us to one coord_system
   #where as we want to cover all from one DB/schema_build
 
-  
-  
-
-
   if(defined $slice){
 	throw('Optional argument must be a Bio::EnsEMBL::Slice') if(! ( ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
   }
@@ -352,7 +356,6 @@ sub get_seq_region_id_by_Slice{
 	throw('You must provide a valid Bio::EnsEMBL::Slice');
   }
 
-
   #We really need to validate the schema_build of the slice to make sure it
   #present in the current default coord_system i.e. the one which was used to 
   #generate the seq_region_cache
@@ -388,6 +391,7 @@ sub get_seq_region_id_by_Slice{
 	$fg_sr_id = $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id};
   }
 
+
   if(! $fg_sr_id && ref($fg_cs)){
 	#This is used to store new seq_region info along side previous stored seq_regions of the same version
 	
@@ -413,9 +417,11 @@ sub get_seq_region_id_by_Slice{
 	#This only works if there is a comparable slice
 	#If we are dealing with a new assembly, then no $fg_sr_id will be returned
 	#So need to catch this in the caller
-		
+	
+	#Can we remove this now the cache is persistant?
+	#i.e. Cache is not regenerated everytime, hence we don't lose the data?
+	
 	if($fg_sr_id){
-
 	  $self->{'_tmp_core_seq_region_cache'}{$self->cache_key} = {(
 																  $fg_sr_id => $core_sr_id
 																 )};
@@ -474,10 +480,36 @@ sub get_core_seq_region_id{
 	#Do we need to test the cache_key here, might it have changed since get_seq_region_id_by_Slice?
 	#Or will build_seq_region_cache handle this?
 	
+	#Why do we reset this in the main cache here if we are returning the value
+	#Is this not corrupting the main cache? But we always want this value?
 	$self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
-	#Delete here so we don't have schema_build specific sr_ids hanging around for another query
-	delete  $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
+
+	#Delete here so we don't have schema_build specific sr_ids hanging around for another query?
+	#delete  $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
+
+	#These are valid values and would most likely be required for subsequent queries.
+	#Cache key is now also schema_build specific so this is no longer a problem
+	#Removed this as this causes RegFeat retrieval to fail
+	#As all non slice based methods would fail due to the lack of info about unstored DB i.e. we need a slice
+	
+
 	$core_sr_id = $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
+
+  }
+  elsif(! defined $core_sr_id){#No cache entry, so get from dnadb
+
+	my $sql = "select distinct(name) from seq_region where seq_region_id=$fg_sr_id";
+	my $slice_name = $self->db->dbc->db_handle->selectall_arrayref($sql);
+	($slice_name) = @{$slice_name->[0]};
+
+	#if(scalar(@names) != 1){#This should never happen
+
+	#We should really grab the coord sys name above too.
+	my $slice_adaptor = $self->db->dnadb->get_SliceAdaptor;
+	$core_sr_id = $slice_adaptor->get_seq_region_id($slice_adaptor->fetch_by_region(undef, $slice_name));
+
+	#Set this in the cache so we don't have to retrieve it again
+	$self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id} = $core_sr_id;
   }
 
   return $core_sr_id;
@@ -550,8 +582,6 @@ sub _pre_store {
 	#at some point in the future we have mappings between different levels.
 
 	
-	#warn "orig ".$feature->feature_Slice->name;
-
 	my @segments = @{$feature->feature_Slice->project($slice->coord_system->name, $new_assembly)};
   # do some sanity checks on the projection results:
     # discard the projected feature if
@@ -752,6 +782,7 @@ sub _slice_fetch {
 
 
       if($max_len) {
+		
         my $min_start = $slice_start - $max_len;
         $constraint .=
           " AND ${tab_syn}.seq_region_start >= $min_start";
