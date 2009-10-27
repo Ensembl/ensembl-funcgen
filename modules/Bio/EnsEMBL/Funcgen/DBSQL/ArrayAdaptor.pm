@@ -442,6 +442,30 @@ sub list_dbIDs {
 }
 
 
+=head2 fetch_probe_count_by_Array
+
+  Args       : None
+  Example    : my $probe_count = @{$array_adaptor->fetch_probe_count_by_Array($array)};
+  Description: Counts probes on given array
+  Returntype : ints
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_probe_count_by_Array{
+  my ($self, $array) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
+
+  my ($count) = @{$self->dbc->db_handle->selectrow_arrayref('select count(*) from array_chip ac, probe p where ac.array_id='.$array->dbID.' and ac.array_chip_id=p.array_chip_id')};
+
+  return $count;
+}
+
+
+
 #New Funcgen methods
 #fetch_all_by_group?
 #fetch_by_channel_id?
