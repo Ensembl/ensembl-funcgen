@@ -536,6 +536,8 @@ BackUpFile(){
 #We are still having problems with sym links on these funcs
 #Need ls to return deref'd path somehow
 #Also, we are no handling hosts in these path yet, so -essh is redundant at present
+#Could also make sub of the directory substitution, then we can use this in arrays.env for testing
+#if we have an archived version of the arraysdir and distributing
 
 ArchiveData()
 {
@@ -564,6 +566,7 @@ ArchiveData()
 		if [[ ! $filedir = $DATA_DIR* ]]; then
 			echo -e "Skipping non data file/directory:\t$filedir"
 			echo -e "Source needs to be in \$DATA_DIR:\t$DATA_DIR"
+			return 1
 		else
 			#Use ' instead of / due to / in path
 			archive_filedir=$(echo $filedir | sed -r "s'^${DATA_DIR}''")
@@ -617,6 +620,7 @@ DistributeData(){
 		if [[ ! $filedir = $ARCHIVE_DIR* ]]; then
 			echo -e "Skipping non archive file/directory:\t$filedir"
 			echo -e "Source needs to be in \$ARCHIVE_DIR:\t$ARCHIVE_DIR"
+			return 1
 		else
 			
 			#Use ' instead of / due to / in path
