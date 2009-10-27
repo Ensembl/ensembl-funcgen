@@ -416,6 +416,30 @@ sub description {
   return $self->{'description'};
 }
 
+=head2 probe_count
+
+  Example    : my $num_probes = $array->probe_count();
+  Description: Return number of probes on array
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub probe_count {
+  my ($self)  = @_;
+  #Do we want a distinct flag here?
+
+  if(! defined $self->{'probe_count'}){
+	$self->{'probe_count'} = $self->adaptor->fetch_probe_count_by_Array($self);
+  }
+  
+  return $self->{'probe_count'};
+}
+
+
+
 =head2 get_ArrayChips
 
   Example    : my @achips = @{$array->get_ArrayChips()};
