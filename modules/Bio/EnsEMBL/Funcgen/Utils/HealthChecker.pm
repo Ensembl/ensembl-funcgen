@@ -180,8 +180,15 @@ sub update_db_for_release{
 }
 
 sub validate_new_seq_regions{
-  my ($self, $force) = @_;
+  my ($self, $force,) = @_;
   
+
+  #We need to add some functionality to handle non-standard schema_build progression here
+  #This should be used before any data is loaded
+  #It should also warn if there any duplicates if it is not run before coord_systems are duplicated
+  #Should this just be handled in the BaseFeatureAdaptor/CoordSystemAdaptor?
+  
+
   
   
   #do we need to add the none default levels here?
@@ -193,10 +200,12 @@ sub validate_new_seq_regions{
   #use BaseFeatureAdaptor::_pre_store with and array of pseudo feature on each top level slice
 
   #Validate the efgdb and dnadb schema version are the same first
-  
+  #This is because we expect the schem_build to be the same for a release
+  #However, this will autoset the dnadb if no defined, so will always match!
+
   if(! $force){
 	my $efgdb_sm = join('_', @{$self->get_schema_and_build($self->{'dbname'})});
-	my $dnadb_sm = join('_', @{$self->get_schema_and_build($self->{'dbname'})});
+	my $dnadb_sm = join('_', @{$self->get_schema_and_build($self->db->dnadb->dbc->dbname)});
 	
 	if($efgdb_sm ne $dnadb_sm){
 	  $self->report("WARNING Skipped validate_new_seq_regions as schema_versions are mismatched:\t".
@@ -480,7 +489,7 @@ sub update_meta_coord{
 
 
 sub check_meta_species{
-  my $self = @_;
+  my ($self) = @_;
 
   $self->log_header('Checking meta species.ensembl_latin_name');
 
@@ -488,7 +497,7 @@ sub check_meta_species{
   my @latin_names = @{$mc->list_value_by_key('species.ensembl_latin_name')};
   
   my $dbname_species = $self->db->dbc->dbname;
-  $dbname_species =~ s/^.*funcgen_//;
+  $dbname_species =~ s/_funcgen_.*//;
   
   if(scalar(@latin_names) > 1){
 	$self->report("FAIL:\tFound more than one species.ensembl_latin_name in meta:\t".join(", ", @latin_names));
@@ -496,7 +505,7 @@ sub check_meta_species{
   elsif(scalar(@latin_names) == 1 && ($latin_names[0] ne $dbname_species)){
 	$self->report("FAIL:\tFound mismatch between meta species.ensembl_latin_name and dbname:\t".$latin_names[0]." vs $dbname_species");
   }
-  else{
+  elsif(scalar(@latin_names) == 0){
 	$self->report("WARNING:\tFound no meta species.ensembl_latin_name setting as:\t$dbname_species");
 	$self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, 'species.ensembl_latin_name', '$dbname_species')");
   }
