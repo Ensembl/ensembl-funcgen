@@ -249,6 +249,7 @@ my $reg = 'Bio::EnsEMBL::Registry';
 #declared here to avoid single usage warning
 $main::_log_file = undef;
 $main::_tee      = 0;    #tee the output of this scripts
+my $debug = 0;
 
 
 my ($transcript_host, $transcript_user, $transcript_pass, $transcript_dbname,
@@ -361,6 +362,7 @@ GetOptions(
 		   'slice=s'                => \$test_slice,#Only for testing purposes!
 		   'transcript=s'           => \$test_transcript_sid,
 		   'no_delete'              => \$no_delete,
+		   'debug'                  => \$debug,
 
 		   #Helper params
 		   'tee'                    => \$main::_tee,
@@ -812,7 +814,7 @@ for my $end('3', '5'){
 
 #Can't use both default unannotated UTRs and calculate
 if($unannotated_utrs{5} && $unannotated_utrs{3} && $calc_utrs){
-  die('You cannot set both -unannotated_5/3utr values and -calc_utrs');
+  die('You cannot set both -unannotated_5/3utr values and -calculate_utrs');
 }
 
 
@@ -858,7 +860,8 @@ if($test_slice){
 }
 elsif($test_transcript_sid){
   $Helper->log("Running test mode with transcript:\t$test_transcript_sid\n".
-			   "WARNING:\tPromiscuous probeset will not be caught!");
+			   "WARNING:\tPromiscuous probeset will not be caught!\n".
+			   "WARNING:\t--calc_utrs will not work");
 
   @transcripts = ($transcript_adaptor->fetch_by_stable_id($test_transcript_sid));
 }
@@ -1015,6 +1018,7 @@ foreach my $transcript (@transcripts) {
   last if ($test_transcripts && $i >= $test_transcripts);
   $transcript_sid = $transcript->stable_id();
 
+  $Helper->log("DEBUG:\tTranscript $transcript_sid") if $debug;
    
   #Handle UTR extensions
   #The UTRs themselves are already included in the transcript/exons!!
@@ -1047,7 +1051,11 @@ foreach my $transcript (@transcripts) {
   }
   
   $transcript_slice = $transcript->feature_Slice();
+  $Helper->log("DEBUG:\tTranscript Slice ".$transcript_slice->name) if $debug;
   $slice            = $transcript_slice->expand($flanks{5}, $flanks{3}) if $flanks{5} || $flanks{3};
+  
+  
+
 
   #TODO as $slice is undefined if the above statement does not run!
   #$slice           ||= $transcript_slice;
@@ -1057,6 +1065,8 @@ foreach my $transcript (@transcripts) {
 	$slice = $transcript_slice;
   }
 
+  $Helper->log("DEBUG:\tExtended Slice ".$slice->name) if $debug;
+  
 
   #We currently don't account for extension of next transcript!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   #We need to do this in a slice context, looking ahead at the next transcript to see
@@ -1113,6 +1123,9 @@ foreach my $transcript (@transcripts) {
   #i.e. if a probe set is present on different arrays, their probes are identical.
   $probe_features = $probe_feature_adaptor->fetch_all_by_Slice_Arrays($slice, [values(%arrays)]);
   my %probe_feature_xrefs;
+
+
+  $Helper->log("DEBUG:\tProbeFeatures ".scalar(@$probe_features).' for '.join("\t", (map $_->name, values(%arrays)))) if $debug;
 
   foreach my $feature (@$probe_features) {
 	$probe          = $feature->probe;
@@ -1646,7 +1659,7 @@ if ((! $no_triage) && @unmapped_objects) {
   #$Helper->log("Uploading ".scalar(@unmapped_objects)." remaining unmapped objects to the xref DB", 0, 'append_date');
   $unmapped_object_adaptor->store(@unmapped_objects);
   $um_cnt += scalar(@unmapped_objects);
-  $Helper->log("Loaded a total of $um_cnt UnmappedObjects to xref DB");
+  $Helper->log("UnmappedObjects loaded:\t\t\t$um_cnt");
 }
 
 #Can we do this with some SQL to save memory here?
@@ -1686,7 +1699,7 @@ my @xo_counts = sort { $b <=> $a } values %transcripts_per_object;
 my $num_ids = scalar(@xo_counts);
 
 for my $i(0..4){
-  $Helper->log("$xo_ids[$i] mapped $xo_counts[$i] times");
+  $Helper->log("dbid $xo_ids[$i] mapped $xo_counts[$i] times");
 }
 
 
@@ -1698,7 +1711,7 @@ $num_ids = $num_ids - scalar(@xo_counts);
 splice(@xo_ids, 0, $num_ids);
 
 for my $i(0..4){
-  $Helper->log("$xo_ids[$i] mapped $xo_counts[$i] times");
+  $Helper->log("dbid $xo_ids[$i] mapped $xo_counts[$i] times");
 }
 
 $Helper->log_header("Completed Transcript $xref_object annotation for @array_names", 0, 'append_date');
