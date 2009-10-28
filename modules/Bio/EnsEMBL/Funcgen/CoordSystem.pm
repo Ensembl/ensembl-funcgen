@@ -63,6 +63,8 @@ use vars qw(@ISA);
 
 @ISA = qw(Bio::EnsEMBL::Storable);
 
+my %warnings;
+
 
 =head2 new
 
@@ -447,10 +449,15 @@ sub equals {
 	#els
 
 
-	#Change this so we only get the warn once
-
 	if (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor()))) {
-	  warn 'You are using a schema_build('.$self->adaptor->db->_get_schema_build($cs->adaptor()).') which has no CoordSystem stored for '.$cs->version.'. Defaulting to closest name version match.\n";
+
+	  #Only warn first time this is seen
+	  my $warning_key = $self->adaptor->db->_get_schema_build($cs->adaptor()).':'.$self->name().':'.$self->version;
+
+	  if(! exists $warnings{$warning_key}){
+		warn 'You are using a schema_build('.$self->adaptor->db->_get_schema_build($cs->adaptor()).') which has no CoordSystem stored for '.$cs->version.". Defaulting to closest name version match.\n";
+		$warnings{$warning_key} = 1;
+	  }
 	}
     return 1;
   }
