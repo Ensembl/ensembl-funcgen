@@ -97,27 +97,25 @@ my $reg = "Bio::EnsEMBL::Registry";
 sub new {
   my ( $class, @args ) = @_;
 
-
-  #Can we add defaults to start of @args?
-
-  my $self = $class->SUPER::new(@args);
+  #Force group to be funcgen as this is the only valid group.
+  my $self = $class->SUPER::new(@args, '-group', 'funcgen');
+ 
   #Currently only uses dnadb params to auto select
-  #If attached dnadb or default reg dnadb does not match 
-  #given assembly version.
+  #If attached dnadb or default reg dnadb does not match given assembly version.
 
-  #Set type to funcgen if not set?
-  #We really need to catch this before the SUPER new above, to allow the registry to catch the group
-  #$self->group('funcgen') if ! defined $self->group;
-
-
-  if( ! defined $self->species){
+  if($self->species eq 'DEFAULT'){  #Auto set species if not set
 	
 	#Can't do list_value_by_key as this depends on species, so we get a circular reference
-	#Need to do this as part of new
-	
-	($self->{'_species'}) = @{$self->get_MetaContainer->list_value_by_key('species.ensembl_latin_name')}
-  }
+	#This has already been set in the registry in SUPER::new above as DEFAULT!
+	#So we need to reset this in the registry here?
 
+	$self->{'_species'} = ${$self->get_MetaContainer->list_value_by_key('species.ensembl_latin_name')}[0] || 'DEFAULT';
+
+	if($self->species ne 'DEFAULT'){ #Reset this in the registry to the correct species
+	  $self = Bio::EnsEMBL::Utils::ConfigRegistry::gen_load($self);
+	  #This causes duplicate software vs DB release warnings
+	}
+  }
 
 
   my ( $dnadb_host, $dnadb_user, $dnadb_port, $dnadb_pass, $dnadb_assm)
@@ -177,8 +175,6 @@ sub new {
 
   return $self;
 } 
-
-
 
 
 =head2 is_stored_and_valid
