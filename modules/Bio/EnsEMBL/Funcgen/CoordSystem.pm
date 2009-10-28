@@ -279,6 +279,12 @@ sub add_core_coord_system_info {
     throw('The RANK argument must be a positive integer');
   }
 
+
+  #We can add unstored coord systems here
+  #But will these ever have valid entries in the seq_region cache
+  #Initialising this cache key turning off the warning in equals about
+  #Using the nearest coord_system
+
   $self->{'core_cache'}{$sbuild} = {(
 									 RANK                 => $rank,
 									 SEQUENCE_LEVEL       => $sequence_level,
@@ -397,15 +403,14 @@ sub equals {
   if(!$cs || !ref($cs) || 
 	 (! $cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')  && 
 	  ! $cs->isa('Bio::EnsEMBL::CoordSystem'))){
-	throw('Argument must be a Bio::EnsEMBL[::Funcgen]::CoordSystem');
+	throw('Argument must be a Bio::EnsEMBL::Funcgen::CoordSystem');
   }
   
   
   #need to add check on schema_build here
   #all schema_builds should have been added by BaseFeatureAdaptor during import
 
-  #warn $self->{'version'}." eq ".$cs->version()." && ".$self->{'name'}." eq ".$cs->name();#." && ".$self->adaptor->db->_get_schema_build($cs->adaptor())." eq ".$self->schema_build()."\n"; 
-
+  
  #this fails if we are using two different versions with the same cs's
   
 
@@ -440,8 +445,12 @@ sub equals {
 	#  return 1;
 	#}
 	#els
-	  if (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor()))) {
-	  warn 'You are using a schema_build which has no CoordSystem stored for '.$cs->version.'. Defaulting to closest name version match';
+
+
+	#Change this so we only get the warn once
+
+	if (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor()))) {
+	  warn 'You are using a schema_build('.$self->adaptor->db->_get_schema_build($cs->adaptor()).') which has no CoordSystem stored for '.$cs->version.'. Defaulting to closest name version match.\n";
 	}
     return 1;
   }
