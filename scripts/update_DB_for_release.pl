@@ -6,7 +6,7 @@ use Bio::EnsEMBL::Funcgen::Utils::HealthChecker;
 use Pod::Usage;
 use Getopt::Long;
 
-my ($pass, $species, $schema_build, $skip_meta_coord, $from_ensdb, $dnadb, $check_displayable);
+my ($pass, $species, $schema_build, $skip_meta_coord, $dnadb_host, $dnadb, $check_displayable);
 my ($help, $man, $dbname);
 my $user = 'ensadmin';
 my $port = 3306;
@@ -21,12 +21,13 @@ GetOptions(
 		   'dbname=s'         => \$dbname,
 		   'species|d=s'      => \$species,
 		   'data_versions=s' => \$schema_build,#mandatory as default ensembldb will not exist
-		   'from_ensembldb'   => \$from_ensdb,
+		   'dnadb_host=s'     => \$dnadb_host,
 		   'skip_meta_coord'  => \$skip_meta_coord,
 		   'check_displayable' => \$check_displayable,
 		   'help|?'             => \$help,
 		   'man|m'              => \$man,
 		   'log_file=s'        => \$main::_log_file,
+		   'tee'               => \$main::_tee,
 		   #'slice=s'          => \$test_slice,
 		   #skip dumps?
 		   #force update
@@ -34,7 +35,7 @@ GetOptions(
 		  ) or pod2usage(
 						 -exitval => 1,
 						 -message => "Params are:\t@tmp_args"
-						);;
+						);
 
 pod2usage(0) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -46,10 +47,10 @@ $dbname = "${species}_funcgen_${schema_build}" if ! defined $dbname;
 $main::_log_file ||= $ENV{'HOME'}."/logs/update_DB_for_release.$dbname.$$.log";
 print "Writing log to:\t".$main::_log_file."\n";
 
-if(! $from_ensdb){
+if($dnadb_host){
   $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 											   -dbname  => "${species}_core_${schema_build}",
-											   -host    => 'ens-staging',
+											   -host    => $dnadb_host,
 											   #-host => 'ensdb-1-13',
 											   #-port => 5307,
 											   -port    => 3306,
