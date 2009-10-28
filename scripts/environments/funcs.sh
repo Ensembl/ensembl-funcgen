@@ -194,6 +194,8 @@ jobWait()
 
 	#Test for valid job first?
 	
+	echo -n "Sleep interval is $secs secs"
+
 
 	while [ ! $complete ]; do
 
@@ -213,7 +215,7 @@ jobWait()
 		elif [[ $status = 'DONE' ]]; then
 			complete=0
 		else
-			echo sleeping for $secs secs
+			echo -n '.'
 			sleep $secs
 		fi
 	done
