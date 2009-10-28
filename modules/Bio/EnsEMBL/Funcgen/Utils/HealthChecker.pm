@@ -165,6 +165,7 @@ sub update_db_for_release{
   $self->validate_new_seq_regions;#($force_srs);
   $self->update_meta_schema_version;
   $self->check_meta_strings;
+  $self->check_meta_species;
   $self->analyse_and_optimise_tables;
   $self->set_current_coord_system;
   $self->update_meta_coord;
@@ -478,6 +479,33 @@ sub update_meta_coord{
 }
 
 
+sub check_meta_species{
+  my $self = @_;
+
+  $self->log_header('Checking meta species.ensembl_latin_name');
+
+  my $mc = $self->db->get_MetaContainer;
+  my @latin_names = @{$mc->list_value_by_key('species.ensembl_latin_name')};
+  
+  my $dbname_species = $self->db->dbc->dbname;
+  $dbname_species =~ s/^.*funcgen_//;
+  
+  if(scalar(@latin_names) > 1){
+	$self->report("FAIL:\tFound more than one species.ensembl_latin_name in meta:\t".join(", ", @latin_names));
+  }
+  elsif(scalar(@latin_names) == 1 && ($latin_names[0] ne $dbname_species)){
+	$self->report("FAIL:\tFound mismatch between meta species.ensembl_latin_name and dbname:\t".$latin_names[0]." vs $dbname_species");
+  }
+  else{
+	$self->report("WARNING:\tFound no meta species.ensembl_latin_name setting as:\t$dbname_species");
+	$self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, 'species.ensembl_latin_name', '$dbname_species')");
+  }
+
+  #else is okay
+
+  return;
+}
+
 sub check_meta_strings{
   my ($self, $all_builds) = @_;
   
@@ -593,7 +621,7 @@ sub check_meta_strings{
 
 		if(! defined $ftype_string){
 		  $self->log("Updating $ftype_string_key to:\t$new_ftype_string");
-		  $self->db->dbc->db_handle->do("INSERT into meta values(NULL, '$ftype_string_key', '$new_ftype_string')");
+		  $self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, '$ftype_string_key', '$new_ftype_string')");
 		}
 		elsif($ftype_fail){
 		  $self->report("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
