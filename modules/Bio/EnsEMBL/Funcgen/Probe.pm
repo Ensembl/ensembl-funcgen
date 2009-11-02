@@ -373,6 +373,7 @@ sub get_all_probenames {
 sub get_probename {
     my ($self, $arrayname) = @_;
 
+
 	my $probename;
 
     if (! $arrayname){
@@ -389,7 +390,13 @@ sub get_probename {
     }
 
 	
+	#Need to check if this exists before derefing
+	#Warn here?
+	return if(! exists ${$self->{'probenames'}}{$arrayname});
+
+
 	my @names = @{$self->{'probenames'}->{$arrayname}};
+	
 
 	if(scalar(@names) > 1){
 	  my $p_info;
