@@ -35,7 +35,7 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::Storable;
 
 
-
+use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Storable;
@@ -230,14 +230,16 @@ sub is_displayable{
 
 =cut
 
-#change the to ensembl_core when we implement Gene/Transcript/Protein|Translation links on the same external_db
+#Need to add optional Transcript/Gene param so we can filter
+#Filter here or would be better to restrict in sql query ni DBEntryAdaptor?
 
 sub get_all_Gene_DBEntries {
   my $self = shift;
 
 
   #We wouldn't need this if we made the xref schema multi species
-  my $species = $self->adaptor->db->species;
+  #my $species = $self->adaptor->db->species;
+  my $species = Bio::EnsEMBL::Registry->get_alias($self->adaptor->db->species);
 
   if(!$species){
 	throw('You must specify a DBAdaptor -species to retrieve DBEntries based on the external_db.db_name');
@@ -253,6 +255,7 @@ sub get_all_Gene_DBEntries {
 
 =head2 get_all_Transcript_DBEntries
 
+  Arg[0]     : optional - Bio::EnsEMBL::Transcript to filter DBEntries on.
   Example    : my @transc_dbentries = @{ $set_feature->get_all_Transcript_DBEntries };
   Description: Retrieves ensembl Transcript DBEntries (xrefs) for this Storable.  
                This does _not_ include the corresponding translations 
@@ -272,20 +275,69 @@ sub get_all_Gene_DBEntries {
 #change the to ensembl_core when we implement Gene/Transcript/Protein|Translation links on the same external_db
 
 sub get_all_Transcript_DBEntries {
-  my $self = shift;
+  my ($self, $transcript) = @_;
 
   #We wouldn't need this if we made the xref schema multi species
-  my $species = $self->adaptor->db->species;
+  my $species = Bio::EnsEMBL::Registry->get_alias($self->adaptor->db->species);
+  #Need to make sure this is latin name
+  
 
   if(!$species){
 	throw('You must specify a DBAdaptor -species to retrieve DBEntries based on the external_db.db_name');
   }
   
   #safety in case we get Homo sapiens
-  ($species = lc($species)) =~ s/ /_/;
+  #($species = lc($species)) =~ s/ /_/;
   
+  my $dbes = $self->get_all_DBEntries($species.'_core_Transcript');
 
-  return $self->get_all_DBEntries($species.'_core_Transcript');
+  #This needs to be moved to the DBEntryAdaptor and restrict the query using the
+  #dbprimary_acc
+
+  if($transcript){
+	my $sid = $transcript->stable_id;
+
+	#Test for sid here?
+
+	if(ref($transcript) && $transcript->isa('Bio::EnsEMBL::Transcript')){
+	  my @dbes;
+
+	  foreach my $dbe(@$dbes){
+		if($dbe->primary_id eq $sid){
+		  push @dbes, $dbe;
+		}
+	  }
+	  $dbes = \@dbes;
+	}
+	else{
+	  throw('Transcript argument must be a valid Bio::EnsEMBL::Transcript');
+	}
+  }
+
+
+  return $dbes;
+}
+
+
+=head2 get_all_UnmappedObjects
+
+  Example    : my @uos = @{$storable->get_all_UnmappedObjects };
+  Description: Retrieves UnamappedObjects for this Storable.
+  Returntype : arrayref of Bio::EnsEMBL::UnmappedObject objects
+  Exceptions : none
+  Caller     : general
+  Status     : At risk - move to Bio::Ensembl::Storable?
+
+=cut
+
+sub get_all_UnmappedObjects{
+  my $self = shift;
+  #Do we want to add external_db or analysis param here?
+
+  my $class = ref($self);
+  $class =~ s/.*:://;
+
+  return $self->adaptor->db->get_UnmappedObjectAdaptor->fetch_all_by_object_type_id($class, $self->dbID);
 }
 
 
