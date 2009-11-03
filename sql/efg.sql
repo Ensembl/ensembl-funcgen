@@ -79,6 +79,8 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_versio
 # NOTE: at beginning of release cycle, remove patch entries from last release
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_b.sql|uo.object_type_id_key');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_c.sql|uo.object_type_enum');
+
 
 
 --
@@ -231,7 +233,7 @@ CREATE TABLE object_xref (
 DROP TABLE IF EXISTS `unmapped_object`;
 CREATE TABLE `unmapped_object` (
   `unmapped_object_id` int(10) unsigned NOT NULL auto_increment,
-  `type` enum('xref', 'probe2transcript') NOT NULL,
+  `type` enum('xref', 'probe2transcript', 'array_mapping') NOT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `external_db_id` smallint(5) unsigned default NULL,
   `identifier` varchar(255) NOT NULL,
