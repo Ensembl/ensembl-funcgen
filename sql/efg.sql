@@ -72,6 +72,15 @@ CREATE TABLE `meta` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
+# Auto add schema version to database
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "57");
+
+# patches included in this schema file
+# NOTE: at beginning of release cycle, remove patch entries from last release
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_b.sql|uo.object_type_id_key');
+
+
 --
 -- Table structure for table `meta_coord`
 --
@@ -233,6 +242,7 @@ CREATE TABLE `unmapped_object` (
   `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe', 'ProbeSet', 'ProbeFeature') NOT NULL,
   `parent` varchar(255) default NULL,
   PRIMARY KEY  (`unmapped_object_id`),
+  KEY `object_type_idx` (`ensembl_object_type`,`ensembl_id`),
   KEY `id_idx` (`identifier`),
   KEY `anal_idx` (`analysis_id`),
   KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`)
