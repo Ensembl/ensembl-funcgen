@@ -19,8 +19,6 @@ Affy array MOE430A, on the chromosome 2:26771920:26789448
 
 Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
 
-=head1 METHODS
-
 =cut
 
 # Remember to add the ensembl and ensembl-functgenomics packages to your PERL5LIB
@@ -38,17 +36,19 @@ use Data::Dumper;
 
 my $registry = "Bio::EnsEMBL::Registry";
 $registry->load_registry_from_db(
-								 -host => 'ensembldb.ensembl.org',
-								 -user => 'anonymous',
-								 -db_version => 56,
+								 -host => 'ens-staging2',#'ensembldb.ensembl.org',
+								 -user => 'ensro',#'anonymous',
+#								 -db_version => 56,
 				 );
-print "Using api: ",$registry->software_version,"\n";
+
+#print "Using api: ",$registry->software_version,"\n";
 
 my $slice_adaptor = $registry->get_adaptor("mus musculus","core","Slice");
 my $pfa           = $registry->get_adaptor("mus musculus","funcgen","ProbeFeature");
 my $aa            = $registry->get_adaptor("mus musculus","funcgen","Array");
 my $pba           = $registry->get_adaptor("mus musculus","funcgen","ProbeSet");
 my $tx_adaptor    = $registry->get_adaptor("mus musculus","core","Transcript");
+my $gene_adaptor  = $registry->get_adaptor("mus musculus","core","Gene");
 
 #####################################################
 # Get the slice from chr 20, start 400000, end 500000
@@ -163,6 +163,54 @@ foreach my $dbe (@trans_dbentries){
   my $tx = $tx_adaptor->fetch_by_stable_id($dbe->primary_id);
   my $dbe_info = $dbe->linkage_annotation;
 
-  print "\t".$dbe->db_display_name.' '.$dbe->primary_id.' at '.$tx->feature_Slice->name." with Probe hits $dbe_info\n";
+  #Grab the gene using the transcript stable ID stored in the DBEntry primary ID
+  my $gene_sid = $gene_adaptor->fetch_by_transcript_stable_id($dbe->primary_id)->stable_id;
+
+  print "\t".$dbe->db_display_name.' '.$dbe->primary_id."($gene_sid) at ".$tx->feature_Slice->name." with Probe hits $dbe_info\n";
  
+}
+
+
+
+##########################################
+# Get details of unmapped objects
+##########################################
+
+print "\nUnmapped objects\n";
+my $uo_adaptor = $registry->get_adaptor("mus musculus","funcgen","UnmappedObject");
+
+foreach my $ps_name('1437721_at', '1435628_x_at', '1418625_s_at'){
+  my $ps = $pba->fetch_by_array_probeset_name($array->name, $ps_name);
+
+  print "\n\tUnmappedObjects for ProbeSet $ps_name are:\n";
+  &list_uos($ps->get_all_UnmappedObjects);
+
+  foreach my $probe(@{$ps->get_all_Probes}){
+	my $pname = $probe->get_complete_name($array->name);
+	my @uos = @{$probe->get_all_UnmappedObjects};
+	
+	if(@uos){
+	  	print "\tUnmappedObjects for Probe $pname are:\n";
+		&list_uos(\@uos);
+	  }
+
+	foreach my $pf(@{$probe->get_all_ProbeFeatures}){
+	  my $pname = $pf->probe->get_complete_name($array->name);
+	  @uos = @{$pf->get_all_UnmappedObjects};
+	
+	  if(@uos){
+		print "\tUnmappedObjects for ProbeFeature $pname ".$pf->feature_Slice->name.":\n";
+		&list_uos(\@uos);
+	  }
+	}
+  }
+}
+
+sub list_uos{
+  my ($uos) = @_;
+
+  foreach my $uo(@$uos){
+	print "\t".$uo->identifier."\t".$uo->description."\n";
+
+  }
 }
