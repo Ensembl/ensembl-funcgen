@@ -30,7 +30,7 @@ CREATE TABLE `analysis` (
   `program` varchar(80) default NULL,
   `program_version` varchar(40) default NULL,
   `program_file` varchar(80) default NULL,
-  `parameters` varchar(255) default NULL,
+  `parameters` text,
   `module` varchar(80) default NULL,
   `module_version` varchar(40) default NULL,
   `gff_source` varchar(40) default NULL,
