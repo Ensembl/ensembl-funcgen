@@ -841,7 +841,7 @@ DROP TABLE IF EXISTS `feature_set`;
 CREATE TABLE `feature_set` (
    `feature_set_id` int(10) unsigned NOT NULL auto_increment,
    `feature_type_id` int(10) unsigned NOT NULL,
-   `analysis_id`  smallint(5) unsigned default NULL,
+   `analysis_id` smallint(5) unsigned NOT NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `name` varchar(100) default NULL,
    `type` enum('annotated', 'regulatory', 'external') default NULL,
