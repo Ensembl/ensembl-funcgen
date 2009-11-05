@@ -721,7 +721,7 @@ CREATE TABLE `result_feature` (
 DROP TABLE IF EXISTS `result_set`;
 CREATE TABLE `result_set` (
    `result_set_id` int(10) unsigned NOT NULL auto_increment,
-   `analysis_id` smallint(5) unsigned default NULL,
+   `analysis_id` smallint(5) unsigned NOT NULL,
    `name` varchar(100) default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
