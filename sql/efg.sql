@@ -49,7 +49,7 @@ DROP TABLE IF EXISTS `analysis_description`;
 CREATE TABLE `analysis_description` (
   `analysis_id` smallint(5) unsigned NOT NULL,
   `description` text,
-  `display_label` varchar(255) default NULL,
+  `display_label` varchar(255) NOT NULL,
   `displayable` BOOLEAN NOT NULL default '1',
   `web_data` text,	
   UNIQUE KEY `analysis_idx` (`analysis_id`)
