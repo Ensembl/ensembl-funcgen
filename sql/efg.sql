@@ -705,7 +705,7 @@ CREATE TABLE `result_feature` (
   `seq_region_strand` tinyint(4) NOT NULL,
   `window_size` smallint(5) unsigned NOT NULL,
   `score` double default NULL,
-  KEY  (`result_feature_id`),
+  KEY `result_feature_idx` (`result_feature_id`),
   KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=50
  PARTITION BY KEY (`window_size`)
