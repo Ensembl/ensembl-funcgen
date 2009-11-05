@@ -714,6 +714,7 @@ CREATE TABLE `result_feature` (
 -- Partitions is set to number of windows here
 -- Should set this on a per species basis dependant on the number
 -- of seq_regions * window sizes in result_feature
+-- No primary key to do with partitions?
 
 -- Table structure for `result_set`
 
@@ -888,12 +889,12 @@ CREATE TABLE `regulatory_feature` (
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
-  `bound_seq_region_start` int(10) unsigned NOT NULL,	
-  `bound_seq_region_end` int(10) unsigned NOT NULL,
   `display_label` varchar(80) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id`	int(10) unsigned default NULL,
   `stable_id` mediumint(8) unsigned default NULL,
+  `bound_seq_region_start` int(10) unsigned NOT NULL,	
+  `bound_seq_region_end` int(10) unsigned NOT NULL,
   PRIMARY KEY  (`regulatory_feature_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
