@@ -61,6 +61,9 @@ my @tables = @true_tables;
 
 =cut
 
+#This does not currently capture on plate replicate probes with different names
+#Only returns the record corresponding to the given name and not the other replicate name
+
 sub fetch_by_array_probe_probeset_name {
 	my ($self, $array_name, $probe_name, $probeset_name) = @_;
 	
@@ -69,25 +72,45 @@ sub fetch_by_array_probe_probeset_name {
 	}
 
 	#Extend query
-	push @tables, (['array', 'a'], ['array_chip', 'ac']);
-	my $constraint = 'a.name = ? AND a.array_id=ac.array_id AND ac.array_chip_id=p.array_chip_id AND p.name= ?' ;
-	$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
-	$self->bind_param_generic_fetch($probe_name,SQL_VARCHAR);
+	#push @tables, (['array', 'a'], ['array_chip', 'ac']);
+	#my $constraint = 'a.name = ? AND a.array_id=ac.array_id AND ac.array_chip_id=p.array_chip_id AND p.name= ?' ;
+	#$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
+	#$self->bind_param_generic_fetch($probe_name,SQL_VARCHAR);
 
 	#Add probeset clause
-	if(defined $probeset_name){
-	  $constraint .= ' AND p.probe_set_id = ps.probe_set_id AND ps.name = ?';
-	  push @tables, ['probe_set', 'ps'];
-	  $self->bind_param_generic_fetch($probeset_name,SQL_VARCHAR);
-	}
+	#if(defined $probeset_name){
+	#  $constraint .= ' AND p.probe_set_id = ps.probe_set_id AND ps.name = ?';
+	#  push @tables, ['probe_set', 'ps'];
+	#  $self->bind_param_generic_fetch($probeset_name,SQL_VARCHAR);
+	#}
 
 	#Have to group by primary key!
-	$constraint .= ' GROUP by p.probe_id, p.name, p.array_chip_id';	
-	my $probe =  $self->generic_fetch($constraint)->[0];
-		
+	#$constraint .= ' GROUP by p.probe_id, p.name, p.array_chip_id';	
+
+	#To work around the on plate replicate problem we really
+	#need to just fetch the dbID here and then fetch_db_dbID
+	#my $probe =  $self->generic_fetch($constraint)->[0];		
 	#Reset tables
-	@tables = @true_tables; 
-	return $probe;
+	#@tables = @true_tables; 
+	#return $probe;
+
+	my $tables = 'probe p, array_chip ac, array a';
+	$tables .= ', probe_set ps' if defined $probeset_name;
+
+	my $sql = "SELECT distinct(p.probe_id) FROM $tables WHERE a.name=? and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.name=?";
+	$sql .= ' AND p.probe_set_id=ps.probe_set_id and ps.name=?' if defined $probeset_name;
+	my $sth = $self->db->dbc->prepare($sql);
+	$sth->bind_param(1, $array_name,    SQL_VARCHAR);
+	$sth->bind_param(2, $probe_name,    SQL_VARCHAR);
+	$sth->bind_param(3, $probeset_name, SQL_VARCHAR) if defined $probeset_name;
+	$sth->execute;
+
+	#This should only return one result
+	#The only possible way this would not return one result
+	#is if an identically named array(:probeset):probe which had a different sequence
+	#As Import array would separate these based on the sequence hash
+	
+	return $self->fetch_by_dbID($sth->fetchrow_array);
 }
 
 
