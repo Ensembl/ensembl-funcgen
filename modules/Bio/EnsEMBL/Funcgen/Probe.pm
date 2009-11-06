@@ -405,7 +405,7 @@ sub get_probename {
 		$p_info = " probeset ".$self->probeset->name;
 	  }
 
-	  warn("Found replicate probes with different names for array ${arrayname}${p_info}:\t@names\nReturning comma separated string list\n");
+	  warn("Found replicate probes with different names for array ${arrayname}${p_info}.Returning comma separated string list:\t".join(',', @names)."\n");
 	  return join(',', @names);
 	  
 	}
