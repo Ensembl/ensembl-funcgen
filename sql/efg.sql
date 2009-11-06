@@ -714,7 +714,8 @@ CREATE TABLE `result_feature` (
 -- Partitions is set to number of windows here
 -- Should set this on a per species basis dependant on the number
 -- of seq_regions * window sizes in result_feature
--- No primary key to do with partitions?
+-- No primary key as we need to parition on window_size, which is not 
+-- would not be part of the primary key
 
 -- Table structure for `result_set`
 
