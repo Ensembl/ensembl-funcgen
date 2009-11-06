@@ -399,7 +399,7 @@ sub get_probename {
 	
 
 	if(scalar(@names) > 1){
-	  my $p_info;
+	  my $p_info = '';
 
 	  if($self->probeset){
 		$p_info = " probeset ".$self->probeset->name;
