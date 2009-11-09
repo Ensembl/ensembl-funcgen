@@ -52,7 +52,7 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra sourc
     --maintainer      email of DAS server admin
     --maxclients      Maximum DAS clients, default is 20
     --region          Region for feature capability test (default = 17:35640000,35650000)
-    --coord_system    Name of coordinate system e.g. GRCh37 (default = default CoordSsystem in dnadb) 
+    --assemblies      Names of coordinate system e.g. GRCh37 (default = default CoordSystem in dnadb)
 
     DNA DB parameters, default is to use ensembldb.ensembl.org
     --dnadb_host  Core DB host name, default is $DNADB_HOST
@@ -633,8 +633,6 @@ if(! $headers_only){
 	  my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
 	  $source_name = 'eFG_'.$type."s:$cs_version:".$source_name;
 				
-	  #We need to set dnadb params here!
-
 		
 		print OUT "\n[${source_name}]
 state           = on\n".
