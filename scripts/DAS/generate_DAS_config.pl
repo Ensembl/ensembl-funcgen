@@ -136,8 +136,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my ($set_type, $dnadb, $set_name, $das_name, @source_types, $hydra_instance);
-my (@adaptor_names, $no_headers, $headers_only, $link_region, $cs_version);
-my ($set_colour, $set_plot, $set_display_name, $location, $maintainer);
+my (@adaptor_names, $no_headers, $headers_only, $link_region, $cs_version, @cs_versions);
+my ($set_colour, $set_plot, $set_display_name, $location, $maintainer, $coords);
 
 #ENV DEFAULTS
 
@@ -320,7 +320,7 @@ GetOptions(
 		 		   
 		   #Coord system config
 		   'features_region=s' => \$features_region,
-		   'assembly=s'    => \$cs_version,
+		   'assemblies=s{,}'   => \@cs_versions,
 
 		   #'default_colour=s' => \$default_colour,
 
@@ -400,7 +400,6 @@ chomp $hostname;
 if($hostname ne $das_host){
   warn "WARNING:\t You have specified the das_host $das_host but appear to be running from $hostname
 WARNING:\tMaybe you want to reset change the das_host or run this from a different host?\n";
-
 }
 
 
@@ -520,6 +519,13 @@ my ($sources_file, $html_file, $type);
 
 
 
+#Potential to want to use two different dnadbs for the same efg db if we have 
+#More than one coord system
+#This would require building two config files for each cs and dnadb
+#Naming these differently so we don't overwrite
+#Leave this for now as we can do it by just editing manually the config
+#And it is most likely that both CSs will be in the same DB if it is Mouse, Rat or Human
+
 if(! $headers_only){
  
   $ini_password = "\npassword          = $dbpass" if $dbpass;
@@ -528,13 +534,14 @@ if(! $headers_only){
 
   # Set DBs & Adaptors
   if($dnadb_name){
-	
+	$dnadb_pass ||= $dbpass;#used in config
+
 	$dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 	  (
 	   -host    => $dnadb_host  || $dbhost,
 	   -user    => $dnadb_user  || $dbuser,
 	   -dbname  => $dnadb_name,
-	   -pass    => $dnadb_pass  || $dbpass,
+	   -pass    => $dnadb_pass,
 	   -port    => $dnadb_port  || 3306,
 	   -species => $species,
 	   -group   => 'core',
@@ -560,26 +567,31 @@ if(! $headers_only){
   $das_species =~ s/_/ /;
   
   
-  if($cs_version){#validate
-	my $found_cs = 0;
+  if(@cs_versions){#validate
 	
-	foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
-	  $found_cs = 1 if $cs_version eq $cs->version;
-	}
+	foreach my $cs_version(@cs_versions){
+
+	  my $found_cs = 0;
 	
-	if(! $found_cs){
-	  die("Could not find the CoordSystem $cs_version in the dnadb $dnadb_name");
+	  foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
+		$found_cs = 1 if $cs_version eq $cs->version;
+	  }
+	
+	  if(! $found_cs){
+		die("Could not find the CoordSystem $cs_version in the dnadb $dnadb_name");
+	  }
 	}
   }
   else{#get default
 	
 	foreach my $cs (@{$db->dnadb->get_CoordSystemAdaptor->fetch_all_by_name('chromosome')}){
-	  $cs_version = $cs->version if $cs->is_default;
+	  
+	  @cs_versions = ($cs->version) if $cs->is_default;
 	}
   }
   
-  $cs_version =~ s/([0-9]+)/_$1/;
-  
+  map $_ =~ s/([0-9]+)/_$1/, @cs_versions;
+
   
   if(! $not_hydra){
 
@@ -603,19 +615,31 @@ if(! $headers_only){
 	  #Move the table away from the DB OR implement some status checking?
 	  #This info will however be visible to user!!!
 
-	  #Do we want to be able to change this prefix?
-	  #Or can we drop it all together?
-	  my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
-	  $source_name = 'eFG_'.$type.'s:'.$source_name;
-
+	
 	  #Do we need separate hydra/adaptor classes for bed/feature_set/result_set?
 
 	  #basename is tables hydra dbi looks for in DB using mysql like "$basename%"
 
-	  print OUT "\n[${source_name}]
+
+
+	  foreach my $cs_version(@cs_versions){
+		$coords = "$cs_version,Chromosome,$das_species -> $features_region; $coords"
+	  }
+		
+	  #Do we want to be able to change this prefix?
+	  #Or can we drop it all together?
+	  
+	  #$cs_version =~ s/([0-9]+)/_$1/;
+	  my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
+	  $source_name = 'eFG_'.$type."s:$cs_version:".$source_name;
+				
+	  #We need to set dnadb params here!
+
+		
+		print OUT "\n[${source_name}]
 state           = on\n".
-$types{$type}{basename}.
-"adaptor         = ".$types{$type}->{'adaptor'}."
+  $types{$type}{basename}.
+	"adaptor         = ".$types{$type}->{'adaptor'}."
 hydra           = ".$types{$type}->{'hydra'}."
 transport       = ".$types{$type}->{'transport'}."
 set_type        = $type
@@ -624,8 +648,13 @@ port            = $dbport
 species         = $species
 username        = ${dbuser}${ini_password}
 dbname          = $dbname
+dnadb_host      = ".$dnadb->dbc->host."
+dnadb_port      = ".$dnadb->dbc->host->port."
+dnadb_user      = ".$dnadb->dbc->username."
+dnadb_pass      = ".$dnadb->pass."
+dnadb_name      = ".$dnadb->dbc->dbname."
 autodisconnect  = no
-coordinates     = $cs_version,Chromosome,$das_species -> $features_region
+coordinates     = $coords
 \n\n";
 
 #;skip_registry = 1
@@ -633,8 +662,8 @@ coordinates     = $cs_version,Chromosome,$das_species -> $features_region
 #;method        = Solexa 1G	
 #;basename      = 
 
+	  
 	}
-
 	close(OUT);
 
   }
@@ -729,10 +758,11 @@ coordinates     = $cs_version,Chromosome,$das_species -> $features_region
 		#Speak to James/Andy about necessary elements for species, coordinate system
 		
 		
-		warn "coordinates are hardcoded for GRCh_37,Chromosome,Homo sapiens -> X:1000000,2000000\n";
 		warn "Need to set dnadb opt here if specified";
 		
-		print OUT "\n[${display_name}.${species}]
+		foreach my $cs_version(@cs_versions){
+
+		  print OUT "\n[${display_name}.${species}]
 state             = on
 adaptor        = ".$types{$aname}->{'adaptor'}."
 transport      = ".$types{$aname}->{'transport'}."
@@ -746,10 +776,10 @@ description       = $desc
 set_name          = $name
 set_id            = ".$set->dbID."
 coordinates     = $cs_version,Chromosome,$das_species -> $features_region";
-
+		
 #source            = SOURCE
 #category          = CATEGORY
-	
+		}
 		#feature_query     = $location
 		#What is CATEGORY, SOURCE and TYPE? TYPE was set_type for feature_set
 		#Are these das style sheet config options?
