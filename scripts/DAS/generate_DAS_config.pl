@@ -137,7 +137,8 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my ($set_type, $dnadb, $set_name, $das_name, @source_types, $hydra_instance);
 my (@adaptor_names, $no_headers, $headers_only, $link_region, $cs_version, @cs_versions);
-my ($set_colour, $set_plot, $set_display_name, $location, $maintainer, $coords);
+my ($set_colour, $set_plot, $set_display_name, $location, $maintainer);
+my $coords = '';
 
 #ENV DEFAULTS
 
@@ -561,6 +562,7 @@ if(! $headers_only){
      );
 
   $db->dbc->db_handle;#Test connection
+  
 
   #Set DAS species name and default assembly
   my $das_species = ucfirst($species);
@@ -625,16 +627,14 @@ if(! $headers_only){
 	  foreach my $cs_version(@cs_versions){
 		$coords = "$cs_version,Chromosome,$das_species -> $features_region; $coords"
 	  }
-		
+
 	  #Do we want to be able to change this prefix?
 	  #Or can we drop it all together?
 	  
-	  #$cs_version =~ s/([0-9]+)/_$1/;
 	  my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
-	  $source_name = 'eFG_'.$type."s:$cs_version:".$source_name;
-				
-		
-		print OUT "\n[${source_name}]
+	  $source_name = 'eFG_'.$type."s:".$source_name;
+	 	  
+	  print OUT "\n[${source_name}]
 state           = on\n".
   $types{$type}{basename}.
 	"adaptor         = ".$types{$type}->{'adaptor'}."
@@ -646,11 +646,11 @@ port            = $dbport
 species         = $species
 username        = ${dbuser}${ini_password}
 dbname          = $dbname
-dnadb_host      = ".$dnadb->dbc->host."
-dnadb_port      = ".$dnadb->dbc->host->port."
-dnadb_user      = ".$dnadb->dbc->username."
-dnadb_pass      = ".$dnadb->pass."
-dnadb_name      = ".$dnadb->dbc->dbname."
+dnadb_host      = ".$db->dnadb->dbc->host."
+dnadb_port      = ".$db->dnadb->dbc->port."
+dnadb_user      = ".$db->dnadb->dbc->username."
+dnadb_pass      = ".$db->dnadb->dbc->password."
+dnadb_name      = ".$db->dnadb->dbc->dbname."
 autodisconnect  = no
 coordinates     = $coords
 \n\n";
