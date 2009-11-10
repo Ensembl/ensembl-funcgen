@@ -61,13 +61,35 @@ sub init
 	if($self->hydra){
 	  my $hydraname = $self->config->{'hydraname'};
 	  ($set_name = $self->dsn) =~ s/${hydraname}_//;
-	}
+	  
+	  #Trim and reset the coordinates according to the set name	 
+	  my ($cs_level, $set_coords, $cs_version);
+	  ($set_name, $cs_version) = split ':', $set_name;
+
+	  foreach my $coords(split ';', $self->config->{'coordinates'}){
+
+		($cs_level              = $coords) =~ s/\s*,.*//;
+		$cs_level               =~ s/_//;
+
+		if($cs_level eq $cs_version){
+		  $set_coords = $coords;
+		}
+	  }
+	  $self->config->{'coordinates'} = $set_coords;
+	  $self->coord_system_version($cs_version);
+
+
+ 	}
 
 	#Then explicitly fetch the set using the name
 	$self->{'set'} = $self->transport->fetch_set($set_name);
 
-
+	#Can we have duplciate names for the same set on different assemblies?
+	#cs version would be in the description?
+	
 	$self->{'title'} = 	$self->config->{'title'} || $self->set->name;
+
+
 
 	#Will this be valid for result_sets?
 
@@ -95,6 +117,18 @@ sub set{
 }
 
 
+sub coord_system_version{
+  my ($self, $version) = @_;
+
+  if (! defined $version){
+	$self->{'_coord_system_version'} = $version;
+  }
+
+  return $self->{'_coord_system_version'};
+}
+
+
+
 sub build_features{
   my ( $self, $args ) = @_;
   print Dumper $args if ($self->{'debug'});
@@ -109,22 +143,27 @@ sub build_features{
   }
   
   my $build_method = 'build_'.$self->config->{'set_type'}.'_set_features';
-  return $self->$build_method($segment, $start, $end);
+
+  my $dnadb = $self->transport->adaptor->dnadb;
+  my $slice = $dnadb->get_SliceAdaptor->fetch_by_region('chromosome', $segment, $start, $end, undef, $self->coord_system_version);
+  print Dumper $slice if ($self->{'debug'});
+
+  return $self->$build_method($slice);
 }
 
 
 sub build_result_set_features{
-  my ($self, $segment, $start, $end) = @_;
+  my ($self, $slice) = @_;
 
   my ($id, $label, %score, @features);
-  my $slice        = $self->transport->chromosome_by_region($segment, $start, $end);
-  print Dumper $slice if ($self->{'debug'});
   my $features     = $self->set->get_ResultFeatures_by_Slice($slice);
   print "Number of features: ".scalar(@{$features})."\n" if ($self->{'debug'});
 
   my $type     = $self->config()->{'type'} || 'default';
-  my $source   =  $self->config()->{'source'} || $self->set->analysis->display_label;
-  my $type_cat =  $self->config()->{'typecategory'} || 'result_set';
+  my $source   = $self->config()->{'source'} || $self->set->analysis->display_label;
+  my $type_cat = $self->config()->{'typecategory'} || 'result_set';
+  my $start    = $slice->start; 
+  my $segment  = $slice->seq_region_name;
 
   foreach my $ft(@{$features}){
  
@@ -161,15 +200,14 @@ sub build_result_set_features{
 
 
 sub build_feature_set_features{
-  my ($self, $segment, $start, $end) = @_;
+  my ($self, $slice) = @_;
 
   my ($id, $label, %score, @features);
-  my $slice        = $self->transport->chromosome_by_region($segment, $start, $end);
-  print Dumper $slice if ($self->{'debug'});
   my $features     = $self->set->get_Features_by_Slice($slice);
   print "Number of features: ".scalar(@{$features})."\n" if ($self->{'debug'});
   my $set_type = $self->config->{'set_type'};
-
+  my $start    = $slice->start;
+  my $segment  = $slice->seq_region_name;
 
   my $type = $self->config->{'type'}         || 'peak';
   #Need a way of setting this to DNA met, or even reg feats!
