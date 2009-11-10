@@ -314,10 +314,10 @@ sub has_stored_status{
   Example    : $status_a->store_status('IMPORTED', $array_chip);
   Description: Sets a state for a given object
   Returntype : None
-  Exceptions : Warns if state already set
+  Exceptions : Warns if state already set(not necessarily stored)
                Throws is status name is not already stored.
   Caller     : general
-  Status     : At risk - Move to Status
+  Status     : At risk - Move to Status.pm?
 
 =cut
 
@@ -326,6 +326,8 @@ sub store_status{
   my ($self, $state, $obj) = @_;
 
   my $sql;
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $obj);
+
 
   if($self->has_stored_status($state, $obj)){
     warn("$obj with dbID ".$obj->dbID()." already has status $state set\n");
@@ -334,19 +336,23 @@ sub store_status{
 
     if(! $status_id){
       throw("$state is not a valid status_name for $obj:\t".$obj->dbID);
+
+	  #We should warn and create the status here as this is an easy post import fix
+	  #rather than failing after processing and import
+	  #warning should be added to post import summary for visibility
+	  #Can't add to log report from here!
+
       #$sql = "INSERT into status_name(name) values('$state')";
       #$self->db->dbc->do($sql);
       #$status_id = $self->_get_status_name_id($state);
     }
 
-    my $table = $self->_test_funcgen_table($obj);
-  
+	my $table = $self->_test_funcgen_table($obj);
+	$sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".$obj->dbID()."', '$table', '$status_id')";
+	$self->db->dbc->do($sql);
 
-    $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".$obj->dbID()."', '$table', '$status_id')";
-    $self->db->dbc->do($sql);
-
-	#Should we not be setting it in the obj here too?
-	#No becasue we should have already added to the object.
+	#Setting it in the obj if it is not already present.
+	$obj->add_status($state) if(! $obj->has_status($state, $obj));
   }
 
   return;
@@ -506,7 +512,6 @@ sub _get_status_name_id{
   #$self->_validate_status($status);
 
   my $sql = "SELECT status_name_id from status_name where name='$status'";
-
   my $ref = $self->db->dbc->db_handle->selectrow_arrayref($sql);
 
   my ($status_id) = @$ref if $ref;
@@ -555,7 +560,7 @@ sub _get_status_name_id{
 
 =cut
 
-#This might be mor eefficient if we wrote DBEntryAdaptor->fetch_all_by_
+#This might be more efficient if we wrote DBEntryAdaptor->fetch_all_by_
 
 sub fetch_all_by_external_name {
   my ( $self, $external_name, $external_db_name ) = @_;
@@ -579,7 +584,45 @@ sub fetch_all_by_external_name {
 }
 
 
+#Can we have method here to take a Gene, list the associated transcript_stable_ids and retrieve using those?
+#This is still not as quick as direct cross DB querying to get 'reversed' DBEntries from a gene based query
+#e.g. $gene->get_all_funcgen_DBLinks
 
+
+
+sub fetch_all_by_linked_transcript_Gene{
+   my ( $self, $gene ) = @_;
+
+   if(! $gene ||
+	  ! (ref($gene) && $gene->isa('Bio::EnsEMBL::Gene') && $gene->dbID)){
+	 throw('You must provide a valid stored Bio::EnsEMBL:Gene object');
+   }
+   
+
+   #Need to bindparams here to protect against injection
+   my @tx_sids = @{$gene->adaptor->db->dbc->db_handle->selectall_arrayref('select tsid.stable_id from transcript_stable_id tsid, transcript t where t.gene_id='.$gene->dbID.' and t.transcript_id=tsid.transcript_id')};
+   @tx_sids = map "@$_", @tx_sids;
+
+  my $entryAdaptor = $self->db->get_DBEntryAdaptor();
+  my (@ids, $type, $type_name);
+  ($type = ref($self)) =~ s/.*:://;
+  $type =~ s/Adaptor$//;
+  ($type_name = $type) =~ s/Feature$/_feature/;
+  my $xref_method = 'list_'.lc($type_name).'_ids_by_extid';
+
+  if(! $entryAdaptor->can($xref_method)){
+	warn "Does not yet accomodate $type external names";
+	return [];
+  }
+  else{
+
+	foreach my $tx_sid(@tx_sids){
+	  push @ids, $entryAdaptor->$xref_method($tx_sid, $self->db->species.'_core_Transcript');
+	}
+  }
+
+  return $self->fetch_all_by_dbID_list( \@ids );
+}
 
 
 1;
