@@ -85,6 +85,9 @@ use vars qw(@ISA);
                     -dbname Override for autogeneration of funcgen dbaname
                     -reg_config path to local registry config file (default = ~/ensembl.init || undef)
                     -design_type MGED term (default = binding_site_identification) get from meta/MAGE?
+
+                    #-use_defaults This changes some mandatory parameters to optional, instead using either DEFAULT or the input file name for the followinng options -name, -experimental_set, -feature_type, -cell_type etc ???
+
                     -verbose
  ReturnType  : Bio::EnsEMBL::Funcgen::Importer
  Example     : my $Exp = Bio::EnsEMBL::Importer->new(%params);
@@ -265,6 +268,10 @@ sub new{
   #Get the latest API version for the assembly we want to use
   #Then load the registry from that version
   #Then we can remove some of the dnadb setting code below?
+  #This may cause problems with API schema mismatches
+  #Can we just test whether the current default dnadb contains the assembly?
+  #Problem with this is that this will not have any other data e.g. genes etc 
+  #which may be required for some parsers
 
   #How does the registry pick up the schema version??
 
@@ -388,12 +395,7 @@ sub new{
 	  #Trap this and suggest using the -schema_version/release option
 	  #Can we autodetect this and reload the registry?
 	  #We want to reload the registry anyway with the right version corresponding to the dnadb
-
-	  #warn "reseting adaptor";
-
 	  #We could either test for the db in the regsitry or just pass the class.
-
-	
 
 	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $self->user, $pass,
 								  #'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
@@ -406,7 +408,7 @@ sub new{
 								 });
 
 
-	  #ConfigRegistry will try ans set this
+	  #ConfigRegistry will try and set this
 	  #This will fail if there is already one in the registry as it will try
 	  #and defined a new unique species so as not to overwrite the original
 	  #e.g. homo_sapiens1
@@ -2737,6 +2739,49 @@ sub tidy_duplicates{
   return;
 }
 
+=head2 set_imported_states_by_Set
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Set e.g. a FeatureSet or ResultSet
+  Example    : $self->set_imported_states_by_Set($set);
+  Description: Sets default states for imported Feature|ResultSets
+  Returntype : None
+  Exceptions : None
+  Caller     : Parsers
+  Status     : At risk - Move to Status.pm?
+
+=cut
+
+sub set_imported_states_by_Set{
+  my ($self, $set) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
+  #This should really be restricted to FeatureSet and ResultSet
+
+  #Store default states for FeatureSets
+  #DAS_DISPLAYABLE IMPORTED_'CSVERSION'
+  #These need to insert ignore as may already be present?
+  #Insert ignore may not catch an invalid status
+  #So add states and store states as this checks
+  $set->adaptor->store_status('DAS_DISPLAYABLE', $set);
+  
+
+  #To get assembly version here we need to
+  # 1 get the current default chromosome version
+  # or/and 
+  # 2 Use the assembly param to guess it from the coord_sys table
+  # #This may pose problems for DB names which use numbers in their genebuild version
+  # Would need to set this as a flag and/or specify the genebuild version too
+  # Currently dnadb is set to last dnadb with 'assembly' as default version
+  # We should match as test, just to make sure
+  
+  #Get default chromosome version for this dnadb
+  my $cs_version = $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version;
+
+  #Sanity check that it matches the assembly param?
+  #Woould need to do this if ever we loaded on a non-default cs version
+
+  $set->adaptor->store_status("IMPORTED_${cs_version}", $set);
+}
 
 
 1;
