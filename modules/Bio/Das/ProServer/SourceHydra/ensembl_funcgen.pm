@@ -37,6 +37,8 @@ Result/FeatureSets with status 'DAS_DISPLAYABLE'
 # 2 Change timeout?
 # 3 More debug stuff
 # 4 Docs
+# 5 Integrate ensembl_funcgen_reads, so we can set bed_ tables as DAS_DISPLAYABLE
+
 
 package Bio::Das::ProServer::SourceHydra::ensembl_funcgen;
 use strict;
@@ -47,12 +49,10 @@ use Data::Dumper;
 use Carp;
 use Readonly;
 
-our $VERSION       = do { my ($v) = (q$Revision: 1.2 $ =~ /\d+/mxg); $v; };
+our $VERSION       = do { my ($v) = (q$Revision: 1.3 $ =~ /\d+/mxg); $v; };
 Readonly::Scalar our $CACHE_TIMEOUT => 30;
 
-#########
-# the purpose of this module:
-#
+
 sub sources {
 	#warn "<<< hydra::sources >>>";
   my ($self)    = @_;
@@ -78,11 +78,39 @@ sub sources {
 	  my $adaptor_method = 'get_'.ucfirst($self->config->{'set_type'}).'SetAdaptor';
 	  my $adaptor = $self->transport->adaptor->$adaptor_method;
 
+	  #We need to get coord system here from source name and use this to bring back sets 
+	  #with IMPORTED_ASSEMBLY information
+	  #Need to do this for every coords version!
+
 	  #map is slow here?
-	  @{$self->{'_sources'}} = map {
-		$hydraname.'_'.$_->name;
+	#  @{$self->{'_sources'}} = map {
+		#We need to add CS version here to differentiate between the same set on different assemblies
+		#Let's do this only to those which are available on two versions?
+		#Or should we add this by default?
+	  #How will transport know which assembly to use?
+		#Can we see in Ensembl that a source is on a different assembly?
+	#	$hydraname.'_'.$_->name;
 	
-	  } @{$adaptor->fetch_all('DAS_DISPLAYABLE')};
+	  #} @{$adaptor->fetch_all('DAS_DISPLAYABLE')};
+
+	  #Add on both versions if status absent?
+
+
+	  my @cs_versions = split ';', $self->config->{'coordinates'};
+	  map { $_ =~ s/\s*,.*//} @cs_versions;
+	  map { $_ =~ s/_//} @cs_versions;
+
+	  foreach my $set(@{$adaptor->fetch_all('DAS_DISPLAYABLE')}){
+		
+		foreach my $cs_version(@cs_versions){
+
+		  if($set->has_status("IMPORTED_${cs_version}")){
+			#Have to add the version to the end of the source name?
+			push @{$self->{'_sources'}}, $hydraname.'_'.$set->name.':'.$cs_version;
+		  }
+		}
+	  }
+
       $self->{'debug'} and carp qq(@{[scalar @{$self->{'_sources'}}]} sources found);
       1;
 
