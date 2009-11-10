@@ -229,6 +229,7 @@ sub read_and_import_bed_data{
 		  $self->log("Found partially imported ExperimentalSubset(${filename})");
 		  $roll_back = 1;
 
+		  #remove roll_back from these tests?
 		  if ($self->recovery() && $roll_back) {
 			$self->log("Rolling back results for ExperimentalSubset:\t".$filename);
 			warn "Cannot yet rollback for just an ExperimentalSubset, rolling back entire set\n";
@@ -309,7 +310,10 @@ sub read_and_import_bed_data{
 		   }
 		   else{
 			 
-			 #this is throwing away the encode region which could be used for the probeset/family?	
+			 #This is currently only loading peaks?
+			 #We need to plug the collection code in here for reads?
+			 #Also need to optionally have as result set or feature sets dependant on bed_type = reads | peaks
+			 
 			 my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
 			   (
 				-START         => $start,
@@ -349,7 +353,9 @@ sub read_and_import_bed_data{
 	   }
     }
 
-    $self->log("No new data, skipping result parse") if ! keys %new_data && ! $roll_back;   
+	#Now store default states for FeatureSet
+	$self->set_imported_states_by_Set($fset);
+	$self->log("No new data, skipping result parse") if ! keys %new_data && ! $roll_back;   
     $self->log("Finished parsing and importing results");
 
 
