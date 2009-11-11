@@ -61,25 +61,34 @@ sub init
 	if($self->hydra){
 	  my $hydraname = $self->config->{'hydraname'};
 	  ($set_name = $self->dsn) =~ s/${hydraname}_//;
-	  
-	  #Trim and reset the coordinates according to the set name	 
 	  my ($cs_level, $set_coords, $cs_version);
 	  ($set_name, $cs_version) = split ':', $set_name;
-
-	  foreach my $coords(split ';', $self->config->{'coordinates'}){
-
-		($cs_level              = $coords) =~ s/\s*,.*//;
-		$cs_level               =~ s/_//;
-
-		if($cs_level eq $cs_version){
-		  $set_coords = $coords;
-		}
-	  }
-	  $self->config->{'coordinates'} = $set_coords;
+	  #At present we don't strictly need this as dnadb is automatically
+	  #set to db with cs_version as default
 	  $self->coord_system_version($cs_version);
 
+	  
+	  #Trim and reset the coordinates according to the set name
+	  #Can we put this in transport? As this is the only thing accessable from both the adaptors and the hydra
+	  #Maintain orig_coords for subsequent sources
+	  #If the config is a reference then this will just be reset to the last one?
+	  #Do we need to have separate config for each assembly? YES!
+	  #my $coords = $self->config->{'coordinates'};
+	  #There should only ever be one here now, which is also appended to the set name
+	  #$coords =~ s/;$//;
+	  #my @cs_versions = split /;\s*/, $coords;
+	  #We need orignal coord string here so can't use get_coord_system_versions
+	  #foreach my $coords(@cs_versions){
+	  #	($cs_level              = $coords) =~ s/\s*,.*//;
+	  #	$cs_level               =~ s/_//;
+	  #	if($cs_level eq $cs_version){
+	  #	  $set_coords = $coords;
+	  #	}
+	  #  }
+	}
 
- 	}
+	#No coord system version defined for non hydra as we expect dnadb to be configured correctly
+
 
 	#Then explicitly fetch the set using the name
 	$self->{'set'} = $self->transport->fetch_set($set_name);
@@ -87,7 +96,7 @@ sub init
 	#Can we have duplciate names for the same set on different assemblies?
 	#cs version would be in the description?
 	
-	$self->{'title'} = 	$self->config->{'title'} || $self->set->name;
+	$self->{'title'} = $self->config->{'title'} || $self->set->name;
 
 
 
@@ -95,6 +104,12 @@ sub init
 
 	$self->{'description'} = $self->config->{'description'} || 
 	  ($self->config->{'set_type'} eq 'result') ? $self->set->name.' tiling' : $self->set->display_label;
+
+	#Tweak title and description for hydra sources
+	if($self->hydra){
+	  $self->{'title'}       .= '('.$self->coord_system_version.')';
+	  $self->{'description'} .= '('.$self->coord_system_version.')';
+	}
 
 	return;
 }
@@ -120,7 +135,7 @@ sub set{
 sub coord_system_version{
   my ($self, $version) = @_;
 
-  if (! defined $version){
+  if (defined $version){
 	$self->{'_coord_system_version'} = $version;
   }
 

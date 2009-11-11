@@ -49,7 +49,7 @@ use Data::Dumper;
 use Carp;
 use Readonly;
 
-our $VERSION       = do { my ($v) = (q$Revision: 1.3 $ =~ /\d+/mxg); $v; };
+our $VERSION       = do { my ($v) = (q$Revision: 1.4 $ =~ /\d+/mxg); $v; };
 Readonly::Scalar our $CACHE_TIMEOUT => 30;
 
 
@@ -93,15 +93,14 @@ sub sources {
 	
 	  #} @{$adaptor->fetch_all('DAS_DISPLAYABLE')};
 
-	  #Add on both versions if status absent?
 
-
-	  my @cs_versions = split ';', $self->config->{'coordinates'};
-	  map { $_ =~ s/\s*,.*//} @cs_versions;
-	  map { $_ =~ s/_//} @cs_versions;
+	  #This should now only ever return one which should match the hydra source name
+	  #Can't have multiple coordinates entries unless all sources are present on both?
+	  #Would also need to support assembly in features query! 
+	  my @cs_versions = @{$self->transport->get_coord_system_versions};
 
 	  foreach my $set(@{$adaptor->fetch_all('DAS_DISPLAYABLE')}){
-		
+
 		foreach my $cs_version(@cs_versions){
 
 		  if($set->has_status("IMPORTED_${cs_version}")){
@@ -112,7 +111,7 @@ sub sources {
 	  }
 
       $self->{'debug'} and carp qq(@{[scalar @{$self->{'_sources'}}]} sources found);
-      1;
+	  1;#To make the eval return true
 
     } or do {
       carp "Error scanning database: $EVAL_ERROR";
