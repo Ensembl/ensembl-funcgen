@@ -594,7 +594,6 @@ if(! $headers_only){
   
   map $_ =~ s/([0-9]+)/_$1/, @cs_versions;
 
-  
   if(! $not_hydra){
 
 	warn "WARNING:\tCannot generate source attachment links for hydra sources\n";
@@ -603,10 +602,6 @@ if(! $headers_only){
 	$sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.hydra.sources";
 	print ":: Generating DAS @source_types ini sources:\t$sources_file\n";
 	open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
-
-
-
-
 
 	foreach my $type(@source_types){
 	  
@@ -620,21 +615,17 @@ if(! $headers_only){
 	
 	  #Do we need separate hydra/adaptor classes for bed/feature_set/result_set?
 
-	  #basename is tables hydra dbi looks for in DB using mysql like "$basename%"
-
-
-
-	  foreach my $cs_version(@cs_versions){
-		$coords = "$cs_version,Chromosome,$das_species -> $features_region; $coords"
-	  }
+	  #basename is tables hydra dbi looks for in DB using mysql like "$basename%"	
 
 	  #Do we want to be able to change this prefix?
 	  #Or can we drop it all together?
 	  
-	  my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
-	  $source_name = 'eFG_'.$type."s:".$source_name;
-	 	  
-	  print OUT "\n[${source_name}]
+	  foreach my $cs_version(@cs_versions){
+		
+		my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
+		$source_name = 'eFG_'.$type."s:$cs_version:".$source_name;
+		
+		print OUT "\n[${source_name}]
 state           = on\n".
   $types{$type}{basename}.
 	"adaptor         = ".$types{$type}->{'adaptor'}."
@@ -652,14 +643,14 @@ dnadb_user      = ".$db->dnadb->dbc->username."
 dnadb_pass      = ".$db->dnadb->dbc->password."
 dnadb_name      = ".$db->dnadb->dbc->dbname."
 autodisconnect  = no
-coordinates     = $coords
+coordinates     = $cs_version,Chromosome,$das_species -> $features_region;
 \n\n";
 
 #;skip_registry = 1
 #;category      = sequencing
 #;method        = Solexa 1G	
 #;basename      = 
-
+	  }
 	  
 	}
 	close(OUT);
