@@ -93,6 +93,7 @@ use strict;
 use warnings;
 use Pod::Usage;
 use Getopt::Long;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file);
 use DBI;
 
 my ($pass,$host,$user,$dbname,$prefix, $input_file, @files, @names);
@@ -207,11 +208,6 @@ my $dbh = DBI->connect("DBI:mysql:database=$dbname;host=$host;port=$port",
 #This should use the API
 if($assembly){  #Validate assembly
  
-  my $dbh = DBI->connect("DBI:mysql:database=$dbname;host=$host;port=$port",
-						 "$user", "$pass",
-						 {RaiseError => 1,
-						  mysql_auto_reconnect => 1});
-
   my ($chr_assm) = $dbh->selectrow_array("SELECT distinct(version) from coord_system where name='chromosome' and version='$assembly'");
 
   if($assembly ne $chr_assm){
@@ -241,14 +237,18 @@ if($profile && ! $profile_input){
 
   my $gzip = 1 if $compressed_data =~ /gzip/;
 
+  my $fh;
+
   if($gzip){
-	open(FILE, "gzip -dc $input_file |") or die ("Can't open compressed file:\t$input_file");
+	#open(FILE, "gzip -dc $input_file | sort -k 1,3 |") or die ("Can't open compressed file:\t$input_file");
+	$fh = open_file($input_file, "gzip -dc %s | sort -k 1,3 |");
   }
   elsif($compressed_data =~ /compressed/){
       die("This script only handles gzip compressed files, please uncompress $input_file manually before rerunning");
   }
   else{
-      open(FILE, $input_file) or die ("Cannot open file:$input_file");
+	#open(FILE, "sort -k 1,3 $input_file |") or die ("Cannot open file:$input_file");
+	$fh = open_file($input_file, "sort -k 1,3 $input_file |");
   }
 
 
@@ -285,7 +285,7 @@ if($profile && ! $profile_input){
 
 
 
-  while (<FILE>) {
+  while (<$fh>) {
     chomp;
     my @col = split("\t");
   
@@ -355,7 +355,7 @@ if($profile && ! $profile_input){
 
   &write_bins;
 
-  close FILE;
+  close($fh);
   close OUT;
 
 
