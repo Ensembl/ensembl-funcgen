@@ -40,6 +40,7 @@ NOTE: Does not yet support paired end data.
   --names         Optional space separated list of source names, must preferably end in valid 
                   feature type to enable automatic colour usage e.g. ES_DNase1
   --prefix        Optional prefix for source names
+  --assembly      Assembly version, default is current default chromosome version.
   
  Profile Options, only required if --profile specified
   --bin_size      Bin size to compute profile scores over
@@ -61,8 +62,7 @@ NOTE: Does not yet support paired end data.
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
-  For license details, please see
-mysqlro
+  For license details, please see:
     http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
@@ -86,7 +86,7 @@ mysqlro
 #How does this use maxbins?
 #Merge this with bsub script
 #Validate/warn last token of name wrt feature type colours in config ini.
-
+#Integrate with BED parser
 
 
 use strict;
@@ -97,7 +97,7 @@ use DBI;
 
 my ($pass,$host,$user,$dbname,$prefix, $input_file, @files, @names);
 my ($no_load, $bin_size, $frag_length, $profile_input, $source_name);
-my ($profile, $reads, %output_files);
+my ($profile, $reads, %output_files, $assembly);
 my $port = 3306;
 my $no_compress = 0;
 my $mysql_sort_buffer = 50331648;#6 * default 8388608  ~8GB >> ~47MB
@@ -120,15 +120,13 @@ GetOptions (
     'bin_size=i'       => \$bin_size,
     'no_load'          => \$no_load,
     'no_compress'      => \$no_compress,
+	'assembly=s'       => \$assembly,
     'frag_length=i'    => \$frag_length,
     'mysql_sort_buffer=s' => \$mysql_sort_buffer,
     'help|?'           => sub { pos2usage(-exitval => 0, -message => $params_msg);},
     'man|m'            => sub { pos2usage(-exitval => 0, -message => $params_msg, verbose => 2);},
-    ) or pod2usage ( -exitval => 1,
-		     -message => $params_msg
-    );
-
-
+		   ) or pod2usage ( -exitval => 1,
+							-message => $params_msg );
 
 if (@ARGV){
   pod2usage( -exitval =>1,
@@ -201,6 +199,29 @@ if(! -f $input_file){
   die("File does not exist:\t$input_file\nMust provide at least one file path to build a profile");
 }
 
+my $dbh = DBI->connect("DBI:mysql:database=$dbname;host=$host;port=$port",
+					   "$user", "$pass",
+					   {RaiseError => 1,
+						mysql_auto_reconnect => 1});
+
+#This should use the API
+if($assembly){  #Validate assembly
+ 
+  my $dbh = DBI->connect("DBI:mysql:database=$dbname;host=$host;port=$port",
+						 "$user", "$pass",
+						 {RaiseError => 1,
+						  mysql_auto_reconnect => 1});
+
+  my ($chr_assm) = $dbh->selectrow_array("SELECT distinct(version) from coord_system where name='chromosome' and version='$assembly'");
+
+  if($assembly ne $chr_assm){
+	die("The assembly you have specified($assembly) is not present in the $dbname");
+  }
+}
+else{#Get current default
+  ($assembly) = $dbh->selectrow_array("SELECT distinct(version) from coord_system where name='chromosome' and is_current=1");
+}
+
 
 my (@bin, $start_bin, $start_bin_start, $end_bin, $end_bin_start,
 	$seq, $read_start, $read_end, $read_length, $ori, $read_extend);
@@ -235,10 +256,22 @@ if($profile && ! $profile_input){
 
   #We need to validate this input file name
   #Let's not depend on _reads.bed
+
+
+  my $output_file = $input_file."_profile_${binsize}";
+  #Doing this will prevent us from having : in the filename
+  #Either we don't allow this or we always add the assembly?
+  #This is also growing the table name...we need another registry table to manage this
+  #This would be part of DAS subset of tables, why bother?  Let's just have them all and just use das table
+  #maybe have meta entry is_das_db? or is_only_das_db
+  #The only down side to this is that people won't be able to run script in isolation to create ensembl independant files
+  #Will have to use API to display. Maybe we could just have an option to produce non seq_region flat files?
+  #Would load direct into result_feature as result feature_set.
+  #Then we can just reimplement result_feature table as matrix files.
+  $output_file .= "_$assembly";# if $assembly;
   
-  my $output_file;
-  ($output_file = $input_file) =~ s/\.[gz]+$/./;
-  $output_file .= "profile_${binsize}";#.gz";
+  #Need to test if compressed here!
+
 
   #No need to compress file here as we are most likely just going to decompress it straight away to load
   #open(OUT, "| gzip -c > $output_file")
@@ -246,7 +279,12 @@ if($profile && ! $profile_input){
 
   open(OUT, "> $output_file") or throw ("Can't open out file $output_file");
 
-  
+
+  #Can we test size of file here?
+  #And print a progress counter?
+
+
+
   while (<FILE>) {
     chomp;
     my @col = split("\t");
@@ -336,10 +374,10 @@ if( ! $no_load){
 
   #warn("No Hydra source name prefix specified!\n") if (! $prefix);
 
-  my $dbh = DBI->connect("DBI:mysql:database=$dbname;host=$host;port=$port",
-						 "$user", "$pass",
-						 {RaiseError => 1,
-						  mysql_auto_reconnect => 1});
+  #my $dbh = DBI->connect("DBI:mysql:database=$dbname;host=$host;port=$port",
+  #						 "$user", "$pass",
+  #						 {RaiseError => 1,
+  #						  mysql_auto_reconnect => 1});
   
 
 
@@ -470,7 +508,7 @@ if( ! $no_load){
 #latin1_bin is case sensitive collation! Why do we need this?
 
   
-  #This needs to change to mysqlimport!!!
+  #This needs to change to mysqlimport! In case mysql server does not have access to local file
   
   if ($type eq 'reads') {
 	
