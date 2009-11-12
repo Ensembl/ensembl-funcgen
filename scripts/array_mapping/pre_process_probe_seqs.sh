@@ -55,7 +55,7 @@ elif [ $file_type = TXT ]; then
 	if [ $vendor = ILLUMINA ]; then
 		awk "BEGIN { FS = \"\t\" }; {if (\$1==\"Species\") probes=1;
 else if (\$1==\"[Controls]\") exit;
-else if (probes == 1) print \">${name}:\" \$14 \"\n\" \$18}" $file_path > ${file_path}.tmp
+else if (probes == 1) print \">${array_name}:\" \$14 \"\n\" \$18}" $file_path > ${file_path}.tmp
 
 	elif [ $vendor = CODELINK ]; then
 awk "{if (\$1==\"CUSTOMER_PROBE_NAME\") probes=1;
