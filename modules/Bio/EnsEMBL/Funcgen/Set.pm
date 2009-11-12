@@ -73,22 +73,23 @@ sub new {
   my $class = ref($caller) || $caller;
 	
   my $self = $class->SUPER::new(@_);
-	
+  
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($name, $anal, $ftype, $ctype)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
+  my ($name, $anal, $ftype, $ctype, $set_type)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'SET_TYPE'], @_);
   
   throw('Need to specify a name') if ! defined $name;
+
+  $self->set_type($set_type);
+  $self->{'name'} = $name;
+  $self->cell_type($ctype) if $ctype;
+  $self->feature_type($ftype) if $ftype;
 
   if(defined $anal){#Move this to child Sets, and just set anal here
 	$self->analysis($anal);
   }elsif($self->set_type ne 'experimental'){
 	throw('Must pass a valid -analysis parameter for a '.ref($self));
   }
-
-  $self->{'name'} = $name;
-  $self->cell_type($ctype) if $ctype;
-  $self->feature_type($ftype) if $ftype;
 
   #Set type here but don't validate, as this can be done selectively in the Child Sets, do this for analysis too?
   
@@ -246,13 +247,18 @@ sub display_label {
 =cut
 
 sub set_type {
-  my $self = shift;
+  my ($self, $set_type) = @_;
  
-  my $type;
-  my @namespace = split/\:\:/, ref($self);
-  ($type = lc($namespace[$#namespace])) =~ s/set//;
+  if(defined $set_type){
+	$self->{'_set_type'} = $set_type;
+  }
+  elsif(! defined $self->{'_set_type'}){
+	my $type;
+	my @namespace = split/\:\:/, ref($self);
+	($type = lc($namespace[$#namespace])) =~ s/set//;
+  }
 
-  return $type;
+  return $self->{'_set_type'};
 }
 
 1;
