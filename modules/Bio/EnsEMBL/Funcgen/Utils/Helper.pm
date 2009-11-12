@@ -845,7 +845,9 @@ sub define_and_validate_sets{
 	  #By simply not associating the supporting set until it has been loaded into the feature set?
 	  #This may cause even more tracking problems
 
-	  #Right then, simply warn and do not revoke IMPORTED to protect old data
+	  #Right then, simply warn and do not revoke feature_set IMPORTED to protect old data?
+	  #Parsers should identify supporting_sets(ExperimentalSets) which exist but do not have IMPORTED
+	  #status and fail, specifying -recover which will rollback_FeatureSet which will revoke the IMPORTED status
 	  
 	  $self->log("WARNING::\tAdding data to a extant FeatureSet(".$fset->name.')');
 	}
@@ -1684,9 +1686,6 @@ sub rollback_ArrayChips{
 	  if($mode ne 'ProbeTranscriptAlign'){
 		my $lname = "${class}_ProbeAlign";
 		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-
-	
-		print "$sql\n";
 		$row_cnt =  $db->dbc->do($sql);
 		$self->reset_table_autoinc('unmapped_object', 'unmapped_object_id', $db);
 		$row_cnt = 0 if $row_cnt eq '0E0';
