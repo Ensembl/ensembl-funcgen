@@ -32,21 +32,27 @@ An Array object represents a nucleotide (OLIGO, PCR etc.) microarray. The data
 in the array table.
 
 
+=head1 LICENSE
 
-=head1 AUTHOR
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-This module was created by Nathan Johnson, but is based on the
-OligoArray module written by Ian Sealy.
+  This software is distributed under a modified Apache license.
+  For license details, please see
 
-This module is part of the Ensembl project: http://www.ensembl.org/
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
+
 
 use strict;
 use warnings;
