@@ -248,14 +248,14 @@ sub display_label {
 
 sub set_type {
   my ($self, $set_type) = @_;
- 
+   
   if(defined $set_type){
 	$self->{'_set_type'} = $set_type;
   }
   elsif(! defined $self->{'_set_type'}){
-	my $type;
 	my @namespace = split/\:\:/, ref($self);
-	($type = lc($namespace[$#namespace])) =~ s/set//;
+	($self->{'_set_type'} = lc($namespace[$#namespace])) =~ s/set//;
+	
   }
 
   return $self->{'_set_type'};
