@@ -115,18 +115,18 @@ sub new {
 
 
 
-=head2 get_all_ProbeFeatures
+#=head2 get_all_ProbeFeatures
 
-  Args       : None
-  Example    : my $features = $probeset->get_all_ProbeFeatures();
-  Description: Get all features produced by this probeset. The probeset needs to be
-               database persistent.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
+#  Args       : None
+#  Example    : my $features = $probeset->get_all_ProbeFeatures();
+#  Description: Get all features produced by this probeset. The probeset needs to be
+#               database persistent.
+#  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
+#  Exceptions : None
+#  Caller     : General
+#  Status     : Medium Risk
 
-=cut
+#=cut
 
 sub get_all_ProbeFeatures {
 	my $self = shift;
