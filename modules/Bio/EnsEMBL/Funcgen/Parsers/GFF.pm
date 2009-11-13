@@ -42,7 +42,7 @@ use strict;
 
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::Simple);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::ExperimentalSet);
 
 =head2 new
 
@@ -157,8 +157,8 @@ sub set_config{
   return;
 }
 
-
-sub process_line{
+#Need to implement this!
+sub parse_line{
   my ($self, $line) = @_;
 
   #return if $line ~=

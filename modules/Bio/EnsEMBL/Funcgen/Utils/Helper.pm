@@ -670,11 +670,11 @@ sub define_and_validate_sets{
 				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY'], @_);
 
 
-  #This rollback flag should only really be used for ExperimentalSet import
+  #This rollback flag should only really be used for InputSet import
   #This is because we have to rollback the entire FeatureSet, where as we want to 
   #protect against deleting/overwriting other data by keeping rollback function separate 
   #to import
-  #No need for this here as we can handle the rollback separately in ExperimentalSet parser?
+  #No need for this here as we can handle the rollback separately in InputSet parser?
   #No no no, this is okay for FeatureSets in general?
   #We need an append flag to allow addition of Features to a pre-existing feature set
   #We should implement rearrange here, will this capture any ill-defined parameters
@@ -823,14 +823,14 @@ sub define_and_validate_sets{
 
 	  #Do we need to revoke IMPORTED here too?
 	  #This behaves differently dependant on the supporting set.
-	  #ExperimentalSet status refers to loading in FeatureSet, where as ResultSet status refers to loading into result table
+	  #InputSet status refers to loading in FeatureSet, where as ResultSet status refers to loading into result table
 	  #So we really want to revoke it
 	  #But this leaves us vulnerable to losing data if the import crashes after this point
 	  #because we have no way of assesing which is complete data and which is incomplete data
 	  #within a feature set.
-	  #This means we need a status on supporting_set, not ExperimentalSet or ResultSet
+	  #This means we need a status on supporting_set, not InputSet or ResultSet
 	  #as this has to be in the context of a dataset.
-	  #Grrr, this means we need a SupportingSet class which simply wraps the ExperimentalSet/ResultSet
+	  #Grrr, this means we need a SupportingSet class which simply wraps the InputSet/ResultSet
 	  #We also need a single dbID for the supporting_set table
 	  #Which means we will have to do some wierdity with the normal dbID implementation
 	  #i.e. Have supporting_set_id, so we can still access all the normal dbID method for the given Set class
@@ -846,10 +846,10 @@ sub define_and_validate_sets{
 	  #This may cause even more tracking problems
 
 	  #Right then, simply warn and do not revoke feature_set IMPORTED to protect old data?
-	  #Parsers should identify supporting_sets(ExperimentalSets) which exist but do not have IMPORTED
+	  #Parsers should identify supporting_sets(InputSets) which exist but do not have IMPORTED
 	  #status and fail, specifying -recover which will rollback_FeatureSet which will revoke the IMPORTED status
 	  
-	  $self->log("WARNING::\tAdding data to a extant FeatureSet(".$fset->name.')');
+	  $self->log("WARNING\t::\tAdding data to a extant FeatureSet:\t".$fset->name);
 	}
 	else{
 	  throw('Found extant FeatureSet '.$fset->name.'. Maybe you want to specify the rollback, append or recovery parameter or roll back the FeatureSet separately?');
@@ -889,6 +889,8 @@ sub define_and_validate_sets{
 	($dset) = @{$dset_adaptor->store($dset)};
   }
   
+  warn "returning $dset";
+
   return $dset;
 }
 
@@ -955,7 +957,6 @@ sub rollback_FeatureSet{
 
 
   #Check whether this is a supporting set for another data_set
-  
   my @dsets = @{$db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset)};
 
   if(@dsets){
@@ -1034,6 +1035,8 @@ sub rollback_FeatureSet{
   $self->reset_table_autoinc($table, "${table}_id", $db);
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt $table records");
+
+  warn "returning";
 
   return;
 }
@@ -1251,11 +1254,11 @@ sub rollback_ResultSet{
 
 
 
-=head2 rollback_ExperimentalSet
+=head2 rollback_InputSet
 
-  Arg[1]     : Bio::EnsEMBL::Funcgen::ExperimentalSet
-  Example    : $self->rollback_ExperimentalSet($eset);
-  Description: Deletes all status entries for this ExperimentalSet and it's ExperimentalSubSets
+  Arg[1]     : Bio::EnsEMBL::Funcgen::InputSet
+  Example    : $self->rollback_InputSet($eset);
+  Description: Deletes all status entries for this InputSet and it's Subsets
   Returntype : none
   Exceptions : Throws if any deletes fails or if db method unavailable
   Caller     : Importers and Parsers
@@ -1264,26 +1267,26 @@ sub rollback_ResultSet{
 =cut
 
 
-sub rollback_ExperimentalSet{
+sub rollback_InputSet{
   my ($self, $eset, $force_delete) = @_;
 
 
   #Need to implement force_delete!!!!!!!!!!!!!!!!!!!!!!
 
-  my $adaptor = $eset->adaptor || throw('ExperimentalSet must have an adaptor');
+  my $adaptor = $eset->adaptor || throw('InputSet must have an adaptor');
   my $db = $adaptor->db;
   
 
-  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalSet', $eset);
+  $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $eset);
 
   $self->log("Rolling back ExperimentSet:\t".$eset->name);
 
-  #ExperimentalSubSets
+  #SubSets
   foreach my $esset(@{$eset->get_subsets}){
 	$esset->adaptor->revoke_states($esset);
   }
 
-  #ExperimentalSet
+  #InputSet
   $eset->adaptor->revoke_states($eset);
 
   
