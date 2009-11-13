@@ -231,7 +231,7 @@ sub new{
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
   #$self->{'write_mage'} = $write_mage || 0;
   #$self->{'no_mage'} = $no_mage || 0;
-  $self->{'experimental_set_name'} = $eset_name if $eset_name;
+  #$self->{'input_set_name'} = $eset_name || $name; #Move this to InputSet?
   $self->{'old_dvd_format'} = $old_dvd_format || 0;
   $self->{'ucsc_coords'} = $ucsc_coords || 0;
   $self->{'verbose'} = $verbose || 0;
@@ -518,7 +518,9 @@ sub new{
   if(! -d $self->get_dir('input')){
 
 	if(@{$self->result_files}){
-	  $self->log("input_dir does not exist:\t"."\nProcessing files:\n\t".join("\n\t",@{$self->result_files})); 
+	  #This is really InputSet specific
+	  #Could go in init_experiment_import
+	  $self->log("Processing files:\n\t\t".join("\n\t\t",@{$self->result_files})); 
 	}
 	else{
 	  throw('input_dir is not defined or does not exist ('.$self->get_dir('input').')');
@@ -662,9 +664,10 @@ sub init_experiment_import{
   throw("No result_files defined.") if (! defined $self->result_files());
 
   #Log input files
-  if (@{$self->result_files()}) {
-    $self->log("Found result files arguments:\n\t".join("\n\t", @{$self->result_files()}));
-  }
+  #if (@{$self->result_files()}) {
+  #  $self->log("Found result files arguments:\n\t".join("\n\t", @{$self->result_files()}));
+  #}
+  #This is done in new
 
   #check for cell||feature and warn if no met file supplied?
 
@@ -856,32 +859,6 @@ sub create_output_dirs{
   
   return;
 }
-
-
-
-#move this to SolexaDefs/ExperimentalSetDefs?
-
-=head2 experimental_set_name
-  
-  Example    : my $esset_name = $imp->experimental_set_name();
-  Description: Getter/Setter for experimental_set_name
-  Arg [1]    : optional - ExperimentalSet name
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub experimental_set_name{
-  my $self = shift;
-
-  $self->{'experimental_set_name'} = shift if @_;
-
-  return $self->{'experimental_set_name'};
-}
-
-
 
 =head2 vendor
   
@@ -1700,6 +1677,10 @@ sub register_experiment{
 #	$self->validate_mage() if (! $self->{'skip_validate'});
 #  }
 
+
+
+  #This is too array specific!
+
   $self->read_data("probe");
   $self->read_data("results");  
   #Need to be able to run this separately, so we can normalise previously imported sets with different methods
@@ -2004,6 +1985,7 @@ sub get_probe_cache_by_Array{
 
 sub read_data{
   my($self, $data_type) = @_;
+
   map {my $method = "read_${_}_data"; $self->$method()} @{$self->get_config("${data_type}_data")};
   return;
 }
