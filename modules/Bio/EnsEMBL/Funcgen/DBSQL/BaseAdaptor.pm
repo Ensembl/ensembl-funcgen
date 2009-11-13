@@ -331,7 +331,9 @@ sub store_status{
 
   if($self->has_stored_status($state, $obj)){
     warn("$obj with dbID ".$obj->dbID()." already has status $state set\n");
-  }else{
+	#Commented this out as this can cause warnings when updating FeatureSets based on InputSets
+  }
+  else{
     my $status_id = $self->_get_status_name_id($state);
 
     if(! $status_id){
@@ -388,7 +390,7 @@ sub revoke_status{
   $table_name = 'experimental_subset' if $storable->isa('Bio::Ensembl::Funcgen:ExperimentalSubset');
  
 
-  if(! $self->has_store_status($state, $storable)){
+  if(! $self->has_stored_status($state, $storable)){
 	warn $storable.' '.$storable->dbID()." does not have status $state to revoke\n";
 	return;
   }
