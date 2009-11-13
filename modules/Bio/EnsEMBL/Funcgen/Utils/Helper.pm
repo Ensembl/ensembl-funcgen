@@ -54,14 +54,6 @@ Prints the manual page and exits.
 
 B<This program> performs several debugging and logging functions, aswell as providing several inheritable EFGUtils methods.
 
-=cut
-
-=head1 NOTES
-
-
-=head1 AUTHOR(S)
-
-Nathan Johnson, njohnson@ebi.ac.uk
 
 
 =cut
@@ -848,7 +840,20 @@ sub define_and_validate_sets{
 	  #Right then, simply warn and do not revoke feature_set IMPORTED to protect old data?
 	  #Parsers should identify supporting_sets(InputSets) which exist but do not have IMPORTED
 	  #status and fail, specifying -recover which will rollback_FeatureSet which will revoke the IMPORTED status
+
+	  #This can mean a failed import can leave a partially imported feature set with the IMPORTED status!!!
+
+	  #We just need to handle InputSets and ResultSets differently.
+	  #In parsers or here?
+	  #Probably best in the parsers as this is where the states are set.
 	  
+
+	  #Should we throw here for ResultSet?
+	  #Force rollback of FeatureSet first or create new one?
+	  #And throw for InputSet?
+	  #This again comes back to whether we will ever have more than one file 
+	  #for a give InputSet, currently not.
+
 	  $self->log("WARNING\t::\tAdding data to a extant FeatureSet:\t".$fset->name);
 	}
 	else{
@@ -888,8 +893,6 @@ sub define_and_validate_sets{
 											   );
 	($dset) = @{$dset_adaptor->store($dset)};
   }
-  
-  warn "returning $dset";
 
   return $dset;
 }
@@ -905,8 +908,9 @@ sub define_and_validate_sets{
 
 =head2 rollback_FeatureSet
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
-  Arg [2]    : boolean - Force delete flag
+  Arg [0]    : Bio::EnsEMBL::Funcgen::FeatureSet
+  Arg [1]    : boolean - Force delete flag
+  Arg [2]    : Bio::EnsEMBL::Slice - optional slice region to rollback
   Example    : $self->rollback_FeatureSet($fset);
   Description: Deletes all status and feature entries for this FeatureSet.
                Checks whether FeatureSet is a supporting set in any other DataSet.
@@ -973,9 +977,28 @@ sub rollback_FeatureSet{
   #Remove states
   if(! $slice){
 	$fset->adaptor->revoke_states($fset);
+	
+	#Revoke InputSet states here as this refers to whether
+	#they are imported in the FeatureSet
+	#Do this in FeatureSet->revoke_states?
+
+	my $dset = $db->get_DataSetAdaptor->fetch_by_product_FeatureSet($fset);
+
+	foreach my $sset(@{$dset->get_supporting_sets}){
+	  
+	  #Maybe skip this if we defined slice?
+	  warn "Revoking states on InputSet(".$sset->name.") for partial slice based rollback\n" if($slice);
+
+	  if($sset->isa('Bio::EnsEMBL::Funcgen::InputSet')){
+
+		foreach my $subset(@{$sset->get_subsets}){
+		  $sset->adaptor->revoke_states($subset);
+		}
+	  }
+	}
   }
   else{
-	$self->log('Skipping '.$fset->name.' revoke_states for partial Slice rollback, maybe revoke IMPORTED?');
+	$self->log('Skipping '.$fset->name.' revoke_states for partial Slice rollback, maybe revoke IMPORTED? ');
   }
 
   #should add some log statements here?
@@ -1036,8 +1059,6 @@ sub rollback_FeatureSet{
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt $table records");
 
-  warn "returning";
-
   return;
 }
 
@@ -1060,7 +1081,8 @@ sub rollback_FeatureSet{
 
 =cut
 
-
+#This need updating to remove $self->db
+#And use db from rset
 
 sub rollback_ResultSet{
   my ($self, $rset, $rollback_results) = @_;
