@@ -212,14 +212,25 @@ sub open_file{
 	
   $operator ||= '<';
 
+  if($operator !~ /%/){
+  $operator = "$operator $file";
+  }
+  else{
+  	#We have some pipeing to do
+  	$operator = sprintf($operator, $file);
+    }
+
   #Get dir here and create if not exists
   my $dir = dirname($file);  
   mkpath($dir, {verbose => 1, mode => 0750}) if(! -d $dir);
 
-  my $fh = new FileHandle "$operator $file";
-	
+  #my $fh = new FileHandle "$operator $file";
+  my $fh = new FileHandle "$operator";
+  
+
+
   if(! defined $fh){
-	croak("Failed to open $operator $file");
+	croak("Failed to open $operator");
   }
 
   return $fh;
