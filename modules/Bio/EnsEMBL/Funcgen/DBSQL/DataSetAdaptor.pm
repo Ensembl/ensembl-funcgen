@@ -306,15 +306,14 @@ sub fetch_all_by_supporting_set {
     if(! (ref($set) && 
 		  ( $set->isa("Bio::EnsEMBL::Funcgen::ResultSet") || 
 			$set->isa("Bio::EnsEMBL::Funcgen::FeatureSet") ||
-			$set->isa("Bio::EnsEMBL::Funcgen::ExperimentalSet")) 
+			$set->isa("Bio::EnsEMBL::Funcgen::InputSet")) 
 		  && $set->dbID())){
-      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet, FeatureSet or ExperimentalSet object");
+      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet, FeatureSet or InputSet object");
     }
 	
 	#self join here to make sure we get all linked result_sets
-    my $sql = ' ds.data_set_id IN (SELECT data_set_id from supporting_set where type="'.$set->set_type.'" and supporting_set_id='.$set->dbID().')';
-	#my $sql = 'ss.type="'.$set->set_type.'" AND ss.supporting_set_id='.$set->dbID();
-
+	my $sql = ' ds.data_set_id IN (SELECT data_set_id from supporting_set where type="'.$set->set_type.'" and supporting_set_id='.$set->dbID().')';
+	
     return $self->generic_fetch($sql);	
 }
 
@@ -497,13 +496,15 @@ sub _objs_from_sth {
   my %set_adaptors = (
 					  feature      => $self->db->get_FeatureSetAdaptor(),
 					  result       => $self->db->get_ResultSetAdaptor(),
-					  experimental => $self->db->get_ExperimentalSetAdaptor(),
+					  experimental => $self->db->get_InputSetAdaptor(),
 					 );
 
   $sth->bind_columns(\$dbID, \$fset_id, \$name, \$ss_type, \$ss_id);
   
   while ( $sth->fetch() ) {
+	
 
+	
     if((! $data_set) || ($data_set->dbID() != $dbID)){
 
 	  if($data_set){
