@@ -329,10 +329,10 @@ sub validate_files{
 
 	  if( $sub_set->has_status('IMPORTED') ){
 		$new_data{$filepath} = 0;
-		$self->log("InputSubset(${filename}) has already been imported");
+		$self->log("Found previously IMPORTED InputSubset:\t$filename");
 	  } 
 	  else{
-		$self->log("Found partially imported InputSubset:\t$filename");
+		$self->log("Found partially IMPORTED InputSubset:\t$filename");
 		$recover_unimported = 1;
 		$new_data{$filepath} = 1;
 		
@@ -372,7 +372,7 @@ sub validate_files{
 	}
   }
 
-  return (\%new_data);
+  return \%new_data;
 }
 
 
@@ -441,8 +441,9 @@ sub read_and_import_data{
   #If we can do these the other way araound we can get define_sets to rollback the FeatureSet
   #Cyclical dependency for the sets :|
   my ($eset) = @{$dset->get_supporting_sets};   
-  my ($new_data) = $self->validate_files;
-  
+  my $new_data = $self->validate_files;
+  my $seen_new_data = 0;
+
   ### READ AND IMPORT FILES ###
   foreach my $filepath(@{$self->result_files()}) {
 	chomp $filepath;
@@ -451,7 +452,8 @@ sub read_and_import_data{
 	#We're checking for recover here, as we have to reload all if just one has been screwed up.
 	
 	if( $new_data->{$filepath} ){
-	  
+	  $seen_new_data = 1;
+
 	  #Do standard gzip test first
 	  my $compressed_data =  `file -L $filepath` or die "Can't execute 'file -L $filepath'";
 	  $self->{'input_gzipped'} = 1 if $compressed_data =~ /gzip/;
@@ -468,9 +470,21 @@ sub read_and_import_data{
 	  #i.e. define open command
 	  $fh = open_file($filepath, $self->input_file_operator);
 
+	  #This my become way too large for some reads files
+	  #Currently no problems
 	  my @lines = <$fh>;
 	  close($fh);
 	  
+	  #Revoke FeatureSet IMPORTED state here incase we fail halfway through
+	  $fset->adaptor->revoke_status('IMPORTED', $fset);
+	  #What about IMPORTED_"CSVERSION"
+	  #This may leave us with an incomplete import which still has
+	  #an IMPORTED_CSVERSION state
+	  #We need to depend on IMPORTED for completeness of set
+	  #DAS currently only uses IMPORTED_CSVERSION
+	  #This is okayish but we also need to write HCs for any sets 
+	  #which do not have IMPORTED state!
+
 	 	  
 	  foreach my $line (@lines) {
 		#Generic line processing
@@ -512,9 +526,9 @@ sub read_and_import_data{
 				 $fset->name." features from:\t$filepath");
 
 	  #warn "Need to handle other counts in caller here?";
-
 	  $self->log("Counts:\n".Data::Dumper::Dumper($self->{'_counts'}));
 
+	  
 	  #foreach my $key (%{$self->counts}){
 	#	$self->log("Count $key:\t".$self->counts->{$key}."\n");
 	#  }
@@ -536,7 +550,7 @@ sub read_and_import_data{
   #Is there any point in setting it if we don't revoke it?
   #To allow consistent status handling across sets. Just need to be aware of fset status caveat.
 
-  $self->set_imported_states_by_Set($fset);
+  $self->set_imported_states_by_Set($fset) if $seen_new_data;
 
   $self->log("No new data, skipping result parse") if ! grep /1/,values %{$new_data};
   $self->log("Finished parsing and importing results");  
