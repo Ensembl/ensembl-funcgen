@@ -142,7 +142,8 @@ MAX_HUGE_MEM    - Maximum memory usage on huge memory host
 
 4 The Ensembl Pipeline
 
-See pipeline.txt for generic pipeline information and configuration.
+See pipeline.txt for generic pipeline information and configuration. Note: General.pm does not need 
+editing unless you want to specifically modify some of the General pipeline config.
 
 The ensembl-analysis code deals with the actual work of a given analysis, with modules being split
 into Runnables which perform the actual analysis and RunnableDBs which handle post processing and
