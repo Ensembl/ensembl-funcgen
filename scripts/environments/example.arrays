@@ -69,10 +69,10 @@ export DNADB_PASS=$2
 #MULTI_SPECIES=
 
 #Set to null to run on local machine
-#export BSUB_CMD='bsub -J ${SPECIES_COMMON}_${format}_probe2transcript -q long -R "select[mem>15000] rusage[mem=15000]" -M 15000000 -o ${DB_HOME}/mapper.out -e ${DB_HOME}/mapper.err'
+#export BSUB_CMD='bsub -J ${SPECIES}_${format}_probe2transcript -q long -R "select[mem>15000] rusage[mem=15000]" -M 15000000 -o ${DB_HOME}/mapper.out -e ${DB_HOME}/mapper.err'
 #For more/larger associated arrays
 #May require moving $WORKDIR to filesystem accessible from host i.e. /nfs/acari for hugemem
-#export BSUB_CMD='bsub -J ${SPECIES_COMMON}_${format}_probe2transcript -q hugemem -R "select[mem>30000] rusage[mem=30000]" -M 30000000 -o ${DB_HOME}/mapper.out -e ${DB_HOME}/mapper.err'
+#export BSUB_CMD='bsub -J ${SPECIES}_${format}_probe2transcript -q hugemem -R "select[mem>30000] rusage[mem=30000]" -M 30000000 -o ${DB_HOME}/mapper.out -e ${DB_HOME}/mapper.err'
 
 #See $EFG_SRC/scripts/array_mapping/probe2transcript.pl for other params
 #PROBE2TRANSCRIPT_PARAMS='--calculate_utrs --utr_multiplier 1'
