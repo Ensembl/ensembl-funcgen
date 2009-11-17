@@ -114,6 +114,7 @@ sub fetch_by_array_probe_probeset_name {
 }
 
 
+
 =head2 fetch_probe_cache_by_Experiment
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
@@ -183,8 +184,13 @@ sub fetch_probe_cache_by_Experiment{
 
   Arg [1]    : string - probe name
   Example    : my @probes = @{$opa->fetch_all_by_name('Probe1')};
-  Description: Returns an arrayref of all probes with this name. 
-               These may exist on different ArrayChips from different vendors.
+  Description: Convenience method to re-instate the functionality of
+               $core_dbentry_adpator->fetch_all_by_External_name('probe_name');
+               WARNING: This may not be the probe you are expecting as
+               probe names are not unqiue across arrays and vendors.
+               These should ideally be validated using the attached array
+               information or alternatively use fetch_by_array_probe_probeset_name
+               Returns a probe with the given name.
   Returntype : Arrayref
   Exceptions : Throws if name not passed
   Caller     : General
@@ -199,9 +205,9 @@ sub fetch_all_by_name{
 
   throw('Must provide a probe name argument') if ! defined $name;
 
-  my $constraint = "p.name='$name'";
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
 
-  return $self->generic_fetch($constraint);
+  return $self->generic_fetch('p.name=?');
 }
 
 
