@@ -90,6 +90,41 @@ sub fetch_by_array_probeset_name{
 
 }
 
+
+
+=head2 fetch_all_by_name
+
+  Arg [1]    : string - probe set name
+  Example    : my @probes = @{$pdaa->fetch_all_by_name('ProbeSet1')};
+  Description: Convenience method to re-instate the functionality of
+               $core_dbentry_adpator->fetch_all_by_external_name('probeset_name');
+               WARNING: This may not be the probeset you are expecting as
+               probeset names are not unqiue across arrays and vendors.
+               These should ideally be validated using the attached array
+               information or alternatively use fetch_by_array_probeset_name
+               Returns a probe with the given name.
+  Returntype : Arrayref
+  Exceptions : Throws if name not passed
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub fetch_all_by_name{
+  my ($self, $name) = @_;
+
+
+  throw('Must provide a probeset name argument') if ! defined $name;
+
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
+
+  return $self->generic_fetch('ps.name=?');
+}
+
+
+
+
 =head2 fetch_by_ProbeFeature
 
   Arg [1]    : Bio::EnsEMBL::ProbeFeature
