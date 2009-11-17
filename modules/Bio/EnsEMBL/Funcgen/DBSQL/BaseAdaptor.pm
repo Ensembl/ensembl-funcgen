@@ -591,6 +591,21 @@ sub fetch_all_by_external_name {
 #e.g. $gene->get_all_funcgen_DBLinks
 
 
+sub fetch_all_by_linked_Transcript{
+  my ($self, $tx) = @_;
+
+  if(! $tx ||
+	 ! (ref($tx) && $tx->isa('Bio::EnsEMBL::Transcript') && $tx->dbID)){
+	throw('You must provide a valid stored Bio::EnsEMBL:Transcript object');
+  }
+  
+  #This now assumes species is set to the correct lower_case latin name
+  #e.g. homo_sapiens
+  #This should be populated from meta or defined by user
+  my $species = Bio::EnsEMBL::Registry->get_alias($self->db->species);
+
+  return $self->fetch_all_by_external_name($tx->stable_id, $species.'_core_Transcript')
+}
 
 sub fetch_all_by_linked_transcript_Gene{
    my ( $self, $gene ) = @_;
