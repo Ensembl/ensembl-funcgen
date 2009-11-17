@@ -42,6 +42,9 @@ Bio::EnsEMBL::Funcgen::ProbeSet - A module to represent a probeset.
     print $tx->stable_id."\t".$probe_set->name.' '.$dbe->linkage_annotation."\n";
  }
 
+ #Alternatively these annotations are also available in a transcript centric manner
+ #using the ProbeSetAdaptor
+
 
 =head1 DESCRIPTION
 
@@ -61,6 +64,15 @@ DrosGenome1:AFFX-LysX-5_at:535:35; and Drosophila_2:AFFX-LysX-5_at:460:51;. In
 the database, these two probes will have the same probe_id. Thus the same
 Affy probe can have a number of different names and complete names depending on
 which array it is on.
+
+
+=head1 SEE ALSO
+
+  Bio::EnsEMBL::Funcgen::ProbeSetAdaptor
+  ensembl-functgenomics/scripts/examples/microarray_annotation_example.pl
+
+  Or for details on how to run the array mapping pipeline see:
+  ensembl-functgenomics/docs/array_mapping.txt
 
 =head1 LICENSE
 
