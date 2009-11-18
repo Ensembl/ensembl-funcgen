@@ -223,7 +223,7 @@ sub _test_funcgen_table{
 
   my ($table) = @{$tables[0]};
   #ExpreimetnalSubSet fix, as doesn't have own adaptor
-  $table = 'experimental_subset' if $obj->isa('Bio::EnsEMBL::Funcgen::ExperimentalSubset');
+  $table = 'experimental_subset' if $obj->isa('Bio::EnsEMBL::Funcgen::ExperimentalSubset') || $obj->isa('Bio::EnsEMBL::Funcgen::InputSubset');
 
 
   #my $table = ${$obj->adaptor->_tables()}[0];
@@ -253,7 +253,7 @@ sub fetch_all_states{
 
 
   my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' AND s.table_id='".$obj->dbID()."' and s.status_name_id=sn.status_name_id";
-
+  warn "Fetching all states with $sql";
 
   my @states = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
