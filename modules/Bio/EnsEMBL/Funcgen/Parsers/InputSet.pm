@@ -536,7 +536,7 @@ sub read_and_import_data{
 	  $self->log('Finished importing '.$self->counts('features').' '.
 				 $fset->name." features from:\t$filepath");
 	  
-	  foreach my $key (%{$self->counts}){
+	  foreach my $key (keys %{$self->counts}){
 		$self->log("Count $key:\t".$self->counts($key));
 	  }
 
