@@ -101,6 +101,7 @@ sub new{
 	{(
       #order of these method arrays is important!
 	  #remove method arrays and execute serially?
+	  #Just move these to individual Parser register_experiment methods
       array_data   => [],#['experiment'],
       probe_data   => [],#["probe"],
       results_data => ["and_import"],
@@ -201,9 +202,27 @@ sub pre_process_file{
 sub parse_line{
   my ($self, $line) = @_;
 
-  return if $line !~ /^chr/io;
 
-  my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\t/o, $line;				  
+  #Need to handle header here for bed is always $.?
+  #Also files which do not have chr prefix? i.e. Ensembl BED rather than UCSC Bed with is also half open coords
+
+
+  #Can we do this exclusively as a seperate routine so we don't have to do the header tests for every normal line?
+  #Separate sub with $fh passed and returned.
+  #Not much over head so leave here for now
+
+  #warn $INPUT_LINE_NUMBER;
+
+  if ($. == 1){
+	#sanity check here
+	return if($line =~ /track name/);
+	$self->log(":: WARNING ::\tBED file does not appear to have valid header. First line will be treated as data.");
+  }
+
+
+  #return if $line !~ /^chr/io;#This would ignore other prefixes e.g. scaffolds etc
+
+  my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;#Shoudl this not be \t?
   #my ($chr, $start, $end, $score) = split/\t/o, $line;#Mikkelson hack	
   #Validate variables types here beofre we get a nasty error from bind_param?
 
