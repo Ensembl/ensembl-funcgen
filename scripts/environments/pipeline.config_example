@@ -46,8 +46,8 @@ export ANALYSIS_SCRIPTS=$SRC/ensembl-analysis/scripts
 #Output DB
 
 #USERS are also set in efg.env but can be redefined here
-export DB_USER=ensadmin
-export DB_RO_USER=ensro
+#export DB_USER=ensadmin
+#export DB_RO_USER=ensro
 
 export DB_PASS=
 export DB_HOST=
