@@ -478,11 +478,14 @@ sub read_and_import_data{
 
 	  #This my become way too large for some reads files
 	  #Currently no problems
+	  #This is not working as we are sorting the file!
+	  #$self->parse_header($fh) if $self->can('parse_header');
+
 	  my @lines = <$fh>;
 	  close($fh);
 	  
 	  #Revoke FeatureSet IMPORTED state here incase we fail halfway through
-	  $fset->adaptor->revoke_status('IMPORTED', $fset);
+	  $fset->adaptor->revoke_status('IMPORTED', $fset) if $fset->has_status('IMPORTED');
 	  #What about IMPORTED_"CSVERSION"
 	  #This may leave us with an incomplete import which still has
 	  #an IMPORTED_CSVERSION state
@@ -498,6 +501,8 @@ sub read_and_import_data{
 		$line =~ s/\r*\n//o;
 		next if $line =~ /^\#/;	
 		next if $line =~ /^$/;
+
+		$self->count('Total lines');
 
 		#This has now been simplified to process_line method
 		#my @fields = split/\t/o, $line;
@@ -530,14 +535,10 @@ sub read_and_import_data{
 	  
 	  $self->log('Finished importing '.$self->counts('features').' '.
 				 $fset->name." features from:\t$filepath");
-
-	  #warn "Need to handle other counts in caller here?";
-	  $self->log("Counts:\n".Data::Dumper::Dumper($self->{'_counts'}));
-
 	  
-	  #foreach my $key (%{$self->counts}){
-	#	$self->log("Count $key:\t".$self->counts->{$key}."\n");
-	#  }
+	  foreach my $key (%{$self->counts}){
+		$self->log("Count $key:\t".$self->counts($key));
+	  }
 
 	  my $sub_set = $eset->get_subset_by_name($filename);
 	  $sub_set->adaptor->store_status('IMPORTED', $sub_set);
@@ -587,7 +588,7 @@ sub load_feature_and_xrefs{
 		  
   my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(%{$self->feature_params});
   ($feature) = @{$self->annotated_feature_adaptor->store($feature)};
-  $self->count('stored_features');
+  $self->count('features');
 
 
   ##This needs to be handled in caller as we are validating loci
