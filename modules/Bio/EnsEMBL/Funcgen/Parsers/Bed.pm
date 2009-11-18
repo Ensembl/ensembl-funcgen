@@ -157,12 +157,16 @@ sub pre_process_file{
   #Or do we just incorporate this as 0 size window in result_feature?
 
 
-  #Will these %'s be interpolated here and fail in openfile?
+  #We just need to parse the header first anyway?
+  #How are we going to skip this in the sorted file?
+  
+
 
   if($self->input_gzipped){
 	$self->input_file_operator("gzip -dc %s | sort -k 1,3 |");
   }
   else{
+	#This is really only required for read alignments
 	$self->input_file_operator("sort -k 1,3 %s |");
   }
 
@@ -199,6 +203,46 @@ sub pre_process_file{
 }
 
 
+sub parse_header{
+  my ($self, $fh) = @_;
+
+  #This will not work on a sroted file, so would have to
+  #store header and test match every line!
+  #just test for track name= for now
+
+
+  warn "PARSING HEADER";
+  my $nr = 0;
+
+  for my $line(<$fh>){
+	$nr++;
+
+	#my $nr = $fh->input_line_number();#This always return 3451? Length of file?
+	#This is not yet reliable here!!!!
+	#Is this because of the gzip sort?
+	#So let's depend on count?
+	#If we don't know when the header is supposed to finish (i.e. multi line header)
+	#We will need to decrement the seek position somehow
+
+	warn "INPUT LINE = $nr $line";
+
+	#exit;
+	if ($nr == 1){#$INPUT_LINE_NUMBER;
+	  #sanity check here
+	  return if($line =~ /track name=/o);
+	  $self->log(":: WARNING ::\tBED file does not appear to have valid header. First line($nr) will be treated as data:\t$line");
+	}
+
+	exit;
+
+  }
+
+
+  exit;
+
+ return;
+}
+
 sub parse_line{
   my ($self, $line) = @_;
 
@@ -206,18 +250,13 @@ sub parse_line{
   #Need to handle header here for bed is always $.?
   #Also files which do not have chr prefix? i.e. Ensembl BED rather than UCSC Bed with is also half open coords
 
+  #if ($. == 0){#$INPUT_LINE_NUMBER;
+  #	#sanity check here
 
-  #Can we do this exclusively as a seperate routine so we don't have to do the header tests for every normal line?
-  #Separate sub with $fh passed and returned.
-  #Not much over head so leave here for now
-
-  #warn $INPUT_LINE_NUMBER;
-
-  if ($. == 1){
-	#sanity check here
-	return if($line =~ /track name/);
-	$self->log(":: WARNING ::\tBED file does not appear to have valid header. First line will be treated as data.");
-  }
+  return if($line =~ /track name=/o);
+  
+  #	$self->log(":: WARNING ::\tBED file does not appear to have valid header. First line($.) will be treated as data:\t$line");
+  #  }
 
 
   #return if $line !~ /^chr/io;#This would ignore other prefixes e.g. scaffolds etc
