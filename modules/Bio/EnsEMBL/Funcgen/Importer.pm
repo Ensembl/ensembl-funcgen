@@ -1761,7 +1761,7 @@ sub cache_slice{
 
   throw("Need to define a region_name to cache a slice from") if ! $region_name;
 
-  $cs_name ||= 'chromosome';
+  $cs_name ||= 'toplevel';
   $self->{'slice_cache'} ||= {};
   $region_name =~ s/chr//;
   $region_name = "MT" if $region_name eq "M";
