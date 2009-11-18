@@ -339,11 +339,8 @@ sub validate_files{
 		if ( $self->recovery && $recover_unimported ) {
 		  $self->log("Rolling back results for InputSubset:\t".$filename);
 		  #Change these to logger->warn
-		  warn "Cannot yet rollback for just an InputSubset, rolling back entire set\n";
-		  warn "WARNING:: This may be deleting previously imported data which you are not re-importing..list?!!!\n";
-	  
-		  
-
+		  $self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set");
+		  $self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
 		  $self->rollback_FeatureSet($self->data_set->product_FeatureSet);
 		  $self->rollback_InputSet($eset);
 		  last;
@@ -408,7 +405,13 @@ sub dbentry_params{
 }
 
 sub counts{
-  my $self = shift;
+  my ($self, $count_type) = @_;
+
+  if($count_type){
+	$self->{'_counts'}{$count_type} ||=0;
+	return 	$self->{'_counts'}{$count_type};
+  }
+ 
   return $self->{'_counts'}
 }
 
@@ -422,8 +425,11 @@ sub count{
 
 
 sub input_file_operator{
+  my ($self, $op) = @_;
   #Should be set in format parser
-  return $_[0]->{'input_file_operator'};
+  $self->{'input_file_operator'} = $op if defined $op;
+
+  return $self->{'input_file_operator'};
 }
 
 sub input_gzipped{
@@ -521,8 +527,8 @@ sub read_and_import_data{
 	  #To speed things up we may need to also do file based import here with WRITE lock?
 	  #mysqlimport will write lock the table by default?
 	 
-		 
-	  $self->log('Finished importing '.$self->counts->{'features'}.' '.
+	  
+	  $self->log('Finished importing '.$self->counts('features').' '.
 				 $fset->name." features from:\t$filepath");
 
 	  #warn "Need to handle other counts in caller here?";
