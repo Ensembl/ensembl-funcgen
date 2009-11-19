@@ -657,6 +657,14 @@ specific ARRAY_PARAMS hash in:
 
 ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ImportArrays.pm 
 
+Due to the nature of probes being redundant across arrays of the same format, it will be necessary to
+rollback and re-run all the arrays for the given format e.g.
+
+>RollbackArrays -f YOUR_FORMAT -d
+>DropPipelineDB
+>RunAlignments -f YOUR_FORMAT
+etc..
+
 
 10.3 Tiling Arrays
 
