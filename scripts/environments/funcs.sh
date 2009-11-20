@@ -235,12 +235,22 @@ checkJob(){
 	job_name=$1
 	CheckVariables job_name
 
-	#This does not catch Job <gallus_gallus_transcripts.55_2m.fasta> is not found
-	JOB_ID=$(bjobs -J $job_name | grep -e "^[0-9]" | sed -r 's/([0-9]+)[[:space:]].*/\1/')
+	JOB_ID=
+	
+	if [[ "$QUEUE_MANAGER" = 'LSF' ]]; then
 
-	if [ $? -ne 0 ]; then
-		echo "Failed to access job information"
-		exit 1
+	#This does not catch Job <gallus_gallus_transcripts.55_2m.fasta> is not found
+		JOB_ID=$(bjobs -J $job_name | grep -e "^[0-9]" | sed -r 's/([0-9]+)[[:space:]].*/\1/')
+
+		if [ $? -ne 0 ]; then
+			echo "Failed to access job information"
+			exit 1
+		fi
+	elif [[ "$QUEUE_MANAGER" = 'LOCAL' ]]; then
+		echo -e "Skipping job check for LOCAL job:\t$job_name"
+	else
+		echo -e "funcs.sh does not support QUEUE_MANAGER:\t$QUEUE_MANAGER"
+		exit
 	fi
 
 
