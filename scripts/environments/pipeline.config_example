@@ -17,7 +17,7 @@ export HUGEMEM_QUEUE=hugemem
 export VLONG_QUEUE=basement
 #export VLONG_QUEUE=yesterday
 export NORMAL_QUEUE=normal
-
+export VALID_QUEUE_MANAGERS="LSF LOCAL"
 
 #Add more here from pipeline.env and potentially arrays.config?
 #Move some of this to .efg?
