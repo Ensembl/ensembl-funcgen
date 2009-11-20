@@ -586,25 +586,7 @@ Create your input data dir e.g.
 
 $EFG_DATA/HOMO_SAPIENS/NEW_FORMAT
 
-
-Edit ensembl-pipeline/modules/Bio/EnsEMBL/Pipeline/Config/BatchQueue.pm.efg_arrays
-
-Add the required QUEUE_CONFIG for the new import and alignment analyses with associated blank submit 
-analysis for each format and each required alignment type e.g.
-
-Import_NEW_FORMAT_Arrays
-Submit_Import_NEW_FORMAT_Arrays
-NEW_FORMAT_ProbeAlign
-Submit_NEW_FORMAT_ProbeAlign
-NEW_FORMAT_ProbeTranscriptAlign
-Submit_NEW_FORMAT_ProbeTranscriptAlign
-
-Use an existing set of format analyses as a template, ensuring the following
-environmental variables are used in the import analysis hash.
-
-	queue      => $ENV{'IMPORT_ARRAYS_QUEUE'},
-	resource   => $ENV{'IMPORT_ARRAYS_RESOURCE'},
-
+The pipeline BatchQueue.pm file is now configured dynamically and should not need editing.
 
 Edit ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ImportArrays.pm 
 
@@ -635,7 +617,9 @@ MAX_MISMATCHES       - Maximimum number of sequence mismatches allowed in an ali
 OPTIONS              - Exonerate options tuned with respect to probe length and MAX_MISMATCHES i.e.
                        seedrepeat = MAX_MISMATCHES + 1
                        dnawordlen = probe length/seedrepeat (rounded down)
-
+                       Alternatively for longer probes it may be better to set a -perc cutoff and tune
+                       the MAX_MISMATCHES parameters to ensure that all possible mismatches are caught
+                       for the longest probe in your array,
 
 Finally, add the format name to VALID_ARRAY_FORMATS in arrays.config.
 
