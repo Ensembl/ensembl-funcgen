@@ -333,9 +333,8 @@ SetUpPipeline   Creates pipeline DB and imports analyses and pipeline rule condi
 			    This may show some errors as the pipeline system expects all the analyses in 
 			    BatchQueue.pm to be configured in the DB, as we the efg environment has dynamic and 
 			    templated configuration this can be ignored. There may also be some errors refering 
-			    to the submit type analyses having no module, which can also be ignored.
-			    (There may also be some some messages about accumulators, which can be igored due to
-			    the way the arrays environment implements the pipeline)
+			    to the submit type analyses having no module, accumulator or input_ids not being 
+				present, these can also be ignored.
 			   
 ImportArrays    Invokes the pipeline to import all available arrays. Followed by ImportWait
 
