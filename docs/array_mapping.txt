@@ -41,7 +41,7 @@ Contents
 10.2 Adding A New Array
 10.3 Tiling Arrays
 10.4 Multi-Species Support
-10.5 Unsuitable Species Name Support (SPECIES_COMMON) 
+10.5 Multi Species Name Support (SPECIES_COMMON) 
 11   Known Issues/Caveats
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -723,7 +723,7 @@ $ARRAYS_HOME/GENOMICSEQS and $ARRAYS_HOME/TRANSCRIPTSEQS directories.
 See known issues for race condition problems which can occur when running
 multi-species databases from the Ensembl Bacteria project.
 
-10.5 Unsuitable Species Name Support (SPECIES_COMMON) 
+10.5 Multi Species Name Support (SPECIES_COMMON) 
 
 SPECIES_COMMON is an attribute which when set will be used for file names. This
 is not a specific multi-species support attribute but more support for
