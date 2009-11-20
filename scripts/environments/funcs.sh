@@ -184,7 +184,7 @@ jobWait()
 {
 	job_id=$1
 	secs=$2
-	secs=${secs:=280}
+	secs=${secs:=300}
 	
 	
 	CheckVariables job_id
@@ -252,42 +252,57 @@ submitJob(){
 
 	job_name=$1
 	shift
-	bsub_job=$*
+	bsub_params=$1
+	shift
+	job_cmd=$1
 
-	CheckVariables job_name bsub_job
-	checkJob $job_name
+	CheckVariables job_name bsub_params job_cmd
+
+
+	#Need to change this to take job_name bsub_params and job args
+
+	if [[ "$QUEUE_MANAGER" = 'LSF' ]]; then
+
+		checkJob $job_name
 
 	#We should test for more than one job here?
 	#jid will currently catch all ids
-	#altho retu
+
 	
-	if [ $JOB_ID ]; then
-		echo "Job($JOB_ID) $job_name already exists"
-	else
-		#echo through bash to avoid wierd resources parameter truncation
-
-		echo bsub -J $job_name $bsub_job
-		
-
-		JOB_ID=$(echo bsub -J $job_name $bsub_job | bash)
-
-		if [ $? -ne 0 ]; then
+		if [ $JOB_ID ]; then
+			echo "Job($JOB_ID) $job_name already exists"
+		else
+		#echo through bash to avoid weird resources parameter truncation
+			echo bsub -J $job_name $bsub_params $job_cmd
+			JOB_ID=$(echo bsub -J $job_name $bsub_params $job_cmd | bash)
+			
+			if [ $? -ne 0 ]; then
+				echo $JOB_ID
+				echo "Failed to submit job $job_name"
+				exit 1
+			fi
+			
 			echo $JOB_ID
-			echo "Failed to submit job $job_name"
-			exit 1
+			
+			JOB_ID=$(echo $JOB_ID | sed 's/Job <//')
+			JOB_ID=$(echo $JOB_ID | sed 's/>.*//')
 		fi
 
-		echo $JOB_ID
+	#To let LSF process the job
+		sleep 5
+		echo "To monitor job: bjobs -lJ $job_name"
+		bjobs -w $JOB_ID
+		
 
-		JOB_ID=$(echo $JOB_ID | sed 's/Job <//')
-		JOB_ID=$(echo $JOB_ID | sed 's/>.*//')
-
+	elif [[ "$QUEUE_MANAGER" = 'LOCAL' ]]; then
+		echo -e "Running LOCAL job:\t$job_cmd"
+		Execute $job_cmd
+	else
+		echo -e "funcs.sh does not support QUEUE_MANAGER:\t$QUEUE_MANAGER"
+		exit
 	fi
 
-	#To let LSF process the job
-	sleep 5
-	echo "To monitor job: bjobs -lJ $job_name"
-	bjobs -w $JOB_ID
+
 
 }
 
