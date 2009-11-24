@@ -113,12 +113,16 @@ sub fetch_all_by_stable_id_FeatureSets {
   #But it will always be RegulatoryFeature/Build
 
   throw('Must provide a stable ID') if ! defined $stable_id;
+
   $stable_id =~ s/ENSR0*|ENSMUSR0*//;
+
 
   #Need to test stable_id here as there is a chance that this argument has been omitted and we are dealing with 
   #a feature set object
 
-  my $constraint = 'rf.stable_id='.$stable_id;
+
+  $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
+  my $constraint = 'rf.stable_id=?';
 
 
   if(@fsets){#Get current
@@ -133,9 +137,19 @@ sub fetch_all_by_stable_id_FeatureSets {
 	  map { $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $_)} @fsets;
 		 
 	  if(scalar(@fsets) == 1){
-		$constraint .= ' and rf.feature_set_id='.$fsets[0]->dbID;
+		$constraint .= ' and rf.feature_set_id=?';
+		$self->bind_param_generic_fetch($fsets[0]->dbID, SQL_INTEGER);
 	  }else{
-		$constraint .= ' AND rf.feature_set_id IN ('.join(', ', (map $_->dbID, @fsets)).')';
+		#How can we bind param this?
+		
+		my @bind_slots;
+
+		foreach my $dbid(map $_->dbID, @fsets){
+		  push @bind_slots, '?';
+		  $self->bind_param_generic_fetch($dbid, SQL_INTEGER);
+		}
+
+		$constraint .= ' AND rf.feature_set_id IN ('.join(', ', @bind_slots).')';
 	  } 
 	}
   }
@@ -331,6 +345,7 @@ sub _objs_from_sth {
 		  $reg_feat->regulatory_attributes(\@reg_attrs);# if @reg_attrs;
 		  push @features, $reg_feat;
 		  undef @reg_attrs;
+
 		}
 
 		#Hack to get not NUL 0 autoinserted values to work
