@@ -282,7 +282,7 @@ if($profile && ! $profile_input){
 
   #Can we test size of file here?
   #And print a progress counter?
-
+  #This need to move to the Bed parser and use the collection code
 
 
   while (<$fh>) {
@@ -432,7 +432,7 @@ if( ! $no_load){
 	my $file = $output_files{$type};
 	
 
-	my $compressed_data =  `file -L $input_file` or die "Can't execute 'file -L $file'";  
+	my $compressed_data =  `file -L $file` or die "Can't execute 'file -L $file'";  
 	my $gzip = 1 if $compressed_data =~ /gzip/;
 
 	my $link;
@@ -555,6 +555,14 @@ if( ! $no_load){
 	}
 
 	$dbh->disconnect();
+
+
+	#Finally set IMPORTED_ASSEMBLY status
+
+	my $sql = "INSERT IGNORE into status_name(name) values('IMPORTED_${assembly}')";
+	$dbh->do($sql);
+	$sql =  "INSERT IGNORE into status(table_name, table_id, status_name_id) select '$table_name', 1, sn.status_name_id from status_name where sn.name='IMPORTED_${assembly}'";
+	$dbh->do($sql);
 
 	print ":: Finished loading:\t$file\n";
 
