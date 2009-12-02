@@ -60,6 +60,7 @@ sub init {
 	
 	#Should check transport here?
 
+	
 	if(defined $self->hydra){
 	  #Set title based on table name
  	  #This need to be generic for standard and hydra source
@@ -69,6 +70,38 @@ sub init {
 	  #Leave dsn as is?
 	  #Causes failure when querying
 	  ($self->{'title'} = $full_name) =~ s/${hydra_name}_//;
+	
+
+	  #Currently the DAS tables have no coordinates system info
+	  #So we don't need to set the coord_system attr
+	  #We just need to reset the coordinates?
+
+	  #No we need to use a status here IMPORTED_CSVERSION?
+	  #As with feature_sets? Needs to use standardised table name? i.e. result_set
+	  #For now I guess we can hack it using the 
+	  #This should be done in the hydra?
+	  #This needs to use ensembl_funcgen hydra not dbi
+
+	  #my ($cs_level, $cs_version, $set_coords);
+	  #(undef, $cs_version) = split ':', $full_name;
+
+	  #Trim and reset the coordinates according to the set name	  
+	  #	  foreach my $coords(split ';', $self->config->{'coordinates'}){
+	  
+	  #	  ($cs_level              = $coords) =~ s/\s*,.*//;
+	  #	  $cs_level               =~ s/_//;
+	  #	  
+	  #	  if($cs_level eq $cs_version){
+	  #		$set_coords = $coords;
+	  #	  }
+	  #	}
+	  #  $self->config->{'coordinates'} = $set_coords;
+	  #$self->coord_system_version($cs_version);
+	  #}
+	
+
+
+
 	  #reconstitute table name here
 	  $self->{'table_name'} = $self->config->{'basename'}.'_'.$self->{'title'};
 
@@ -99,6 +132,8 @@ sub init {
 	  #$self->{'title'} =~ s/${dtype}_//;
 	  #$self->{'description'} = $self->{'title'}.' '.$dtype;	
 	  #No? It seems we may not be able to display two track with the same name???
+
+
 
 
 	  #We need to be selective about the tables we use here
@@ -139,19 +174,12 @@ sub build_features {
 
     my $dsn           = $self->{'dsn'};
     my $dbtable       =  $self->{'table_name'};#$dsn;
-    #print Dumper $dbtable;
     
-    #########
-    # if this is a hydra-based source the table name contains the hydra name and needs to be switched out
-    #
-    #my $hydraname     = $self->config->{'hydraname'};
-    #if ($hydraname) {
-    #    my $basename = $self->config->{'basename'};
-    #    $dbtable =~ s/$hydraname/$basename/;
-    #}
+
+
+    	
   
-  
-    my $qsegment      = $self->transport->dbh->quote($segment);
+    my $qsegment      = $self->transport->adaptor->dbc->db_handle->quote($segment);
     my $qbounds       = qq(AND start <= '$gEnd' AND end >= '$gStart') if($gStart && $gEnd);
 	#feature_id | seq_region | start   | end     | name                   | score | strand | note
     my $query         = qq(SELECT * FROM $dbtable WHERE  seq_region = $qsegment $qbounds); # ORDER BY start);
@@ -218,6 +246,10 @@ sub das_stylesheet
 	#These need to use the same config as the reg feat panel
 	#There fore we need to encode the feature type in the file name
 
+	#HISTOGRAM was TILING
+	#   <!-- LABEL>no</LABEL> -->
+	#removed from histogram as was causing DAS validation error
+
     if ($self->{'dsn'} =~ m/_profile/) {
         return <<EOT;
 <!DOCTYPE DASSTYLE SYSTEM "http://www.biodas.org/dtd/dasstyle.dtd">
@@ -226,13 +258,13 @@ sub das_stylesheet
  <CATEGORY id="sequencing">
             <TYPE id="profile_read">
                 <GLYPH>
-                    <TILING>
+                    <HISTOGRAM>
                         <LABEL>no</LABEL>
                         <HEIGHT>30</HEIGHT>
                         <COLOR1>brown4</COLOR1>
                         <MIN>0</MIN>
                         <MAX>15</MAX>
-                    </TILING>
+                    </HISTOGRAM>
                 </GLYPH>
             </TYPE>
  </CATEGORY>
