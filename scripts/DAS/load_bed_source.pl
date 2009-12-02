@@ -561,7 +561,7 @@ if( ! $no_load){
 
 	my $sql = "INSERT IGNORE into status_name(name) values('IMPORTED_${assembly}')";
 	$dbh->do($sql);
-	$sql =  "INSERT IGNORE into status(table_name, table_id, status_name_id) select '$table_name', 1, sn.status_name_id from status_name where sn.name='IMPORTED_${assembly}'";
+	$sql =  "INSERT IGNORE into status(table_name, table_id, status_name_id) select '$table_name', 1, sn.status_name_id from status_name sn where sn.name='IMPORTED_${assembly}'";
 	$dbh->do($sql);
 
 	print ":: Finished loading:\t$file\n";
