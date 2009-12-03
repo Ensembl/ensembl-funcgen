@@ -167,6 +167,10 @@ sub build_features {
     my $gStart        = $opts->{'start'};
     my $gEnd          = $opts->{'end'};
 
+
+	#
+
+
     ### using max bins
     #if( $opts->{'maxbins'} && $gStart && $gEnd) {
     #    return $self->merge_features($opts);
@@ -174,56 +178,56 @@ sub build_features {
 
     my $dsn           = $self->{'dsn'};
     my $dbtable       =  $self->{'table_name'};#$dsn;
-    
-
-
-    	
-  
-    my $qsegment      = $self->transport->adaptor->dbc->db_handle->quote($segment);
+	my $qsegment      = $self->transport->adaptor->dbc->db_handle->quote($segment);
     my $qbounds       = qq(AND start <= '$gEnd' AND end >= '$gStart') if($gStart && $gEnd);
 	#feature_id | seq_region | start   | end     | name                   | score | strand | note
-    my $query         = qq(SELECT * FROM $dbtable WHERE  seq_region = $qsegment $qbounds); # ORDER BY start);
-    my $ref           = $self->transport->query($query);
-    my @features      = ();
-    
-    for my $row (@{$ref}) {
+    my $query         = qq(SELECT * FROM $dbtable WHERE seq_region = $qsegment $qbounds); # ORDER BY start);
+	#This need to be a range query! Can only do this with max length
 
-        my ($start, $end, $score) = ($row->{'start'}, $row->{'end'}, $row->{'score'});
-        my $type;
+    my $ref           = $self->transport->adaptor->dbc->db_handle->selectall_arrayref($query);
+    my ($feature_id, $start, $end, $type, $name, $score, $strand, @features, $seq_region, $note);
+  
+	my %type_ori = (
+					'-' => 'reverse',
+					0   => '0',
+					'+' => 'forward',
+				   );
+ 
 
-		#Can we change this to use ori instead?
-		#Remove type or use fill-in?
+    for my $row_ref (@$ref) {
+	  #Can't have undefs for seq_region and not in here because
+	  #Can't modify constant item in list assignment
+	  ($feature_id, $seq_region, $start, $end, $name, $score, $strand, $note) = @$row_ref;
+	  
+	  if ($self->{'display_type'} eq 'profile') {
+		$type = 'profile_read';
+	  } 
+	  elsif ($self->{'display_type'} eq 'read') {
+		$type = $type_ori{$strand};
+		$type .= '_read';
+		#$strand = 0;#???? Populating this leads to display on +/-ve strand, we want it just on the -ve strand
+	  }
 		
-        if ($self->{'display_type'} eq 'profile') {
-		  $type = 'profile_read';
-		} 
-		elsif ($self->{'display_type'} eq 'read') {
-		  $type = $row->{'strand'} eq '+' ? 'forward' : 'reverse';
-		  $type .= '_read';
-		  $row->{'strand'} = '';#???? Populating this leads to display on +/-ve strand, we want it just on the -ve strand
-        }
-		#Not used anymore
-		#else {
-        #    $type = ($score > 0) ? 'uniq' : 'non-uniq';y
-        #}
-		
+	  
+	  #The less data we push here the quicker the display.
+	  
+	  #Hardcoded for now for complaince
+	  #as not currently sotred in bed tables
+	  $strand = 0;
 
-		#The less data we push here the quicker the display.
-		#Omit method, label?
-
-		push @features, {
-            'id'          => $row->{'feature_id'},
-            'label'       => $row->{'name'} !~ m/^.$/ ? $row->{'name'} : $row->{'feature_id'},
-            #'method'      => $self->config->{'method'},
-            'type'        => $type,#$self->{'type'},
-            'typecategory'=> $self->config->{'category'} || 'sequencing',#required for style sheet
-            'start'       => $row->{'start'},
-            'end'         => $row->{'end'},
-            'ori'         => $row->{'strand'},#Can we just set this to ''?
-            'score'       => $row->{'score'},
-            #'note' => [],
-        };
-
+	  push @features, {
+					   'id'          => $feature_id,
+					   'label'       => $name !~ m/^.$/ ? $name : $feature_id,#WTF? WHy .? Dp we even need label?
+					   'method'      => 'bed_import',#No method data captured for these tables
+					   'type'        => $type,
+					   'phase'       => '-',
+					   'typecategory'=> $self->config->{'category'} || 'sequencing',#required for style sheet
+					   'start'       => $start,
+					   'end'         => $end,
+					   'ori'         => $strand,#Can we just set this to ''?
+					   'score'       => $score,
+					  };
+	  
     }    
    
     #warn "No. of features: ".scalar(@features)."\n";
