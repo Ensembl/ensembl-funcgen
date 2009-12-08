@@ -115,7 +115,8 @@ sub adaptor {
 	  $self->{'_adaptor'}->dbc->db_handle;
 
 	  #Set disconnect when inactive to 1 to enable autoreconnect
-	  $self->{'_adaptor'}->dbc->disconnect_when_inactive(1);;
+	  $self->{'_adaptor'}->dbc->disconnect_when_inactive(1);
+	  $self->{'_adaptor'}->dnadb->dbc->disconnect_when_inactive(1);
     }
   
   return $self->{'_adaptor'};	
@@ -223,6 +224,9 @@ sub fetch_set{
   
   return $set;
 }
+
+#Do we need to rewrite this to use the LAST_DAS_UPDATE status or meta entry?
+#Rather than checking the whole DB? This should be a lot faster and may avoid timeouts
 
 sub last_modified {
   my ($self) = @_;
