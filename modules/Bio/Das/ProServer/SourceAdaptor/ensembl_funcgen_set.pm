@@ -213,7 +213,7 @@ sub build_result_set_features{
 						 'label'       => $id,
 						 'start'       => $ft_start,
 						 'end'         => $ft_end,
-						 'ori'         => $ori{$feature->seq_region_strand},
+						 'ori'         => $ori{$ft->seq_region_strand},
 						 'score'       => $ft->score,
 						 'method'      => $source,
 						 'type'        => $type,
