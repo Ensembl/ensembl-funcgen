@@ -42,6 +42,7 @@ package Bio::Das::ProServer::SourceAdaptor::ensembl_funcgen_set;
 use warnings;
 use strict;
 use Data::Dumper;
+use Carp;
 
 use base qw(Bio::Das::ProServer::SourceAdaptor);
 
@@ -152,6 +153,8 @@ sub build_features{
   my $start   = $args->{'start'};
   my $end     = $args->{'end'};
   
+  #Need to implement maxbins here for result_set feature
+
   if(! ($segment && $start && $end)){
 	warn "Insufficient loci params:\t${segment}:${start}:${end}";
 	return;
@@ -179,11 +182,25 @@ sub build_result_set_features{
   my $type_cat = $self->config()->{'typecategory'} || 'result_set';
   my $start    = $slice->start; 
   my $segment  = $slice->seq_region_name;
+  my $method   = $self->config()->{'source'} || $self->set->analysis->display_label;
+
+  if(! defined $method){
+	croak('Cannot determine mandatory \'method\' attribute. Please set \'source\' in DAS config or analysis display_label');
+  }
+
+  my %ori = (
+			 -1 => '-',
+			 0  => '0',
+			 1  => '+',
+			);
+
 
   foreach my $ft(@{$features}){
- 
-        my $ft_start = $start+$ft->start();
-        my $ft_end = $start+$ft->end();
+	
+	#Set seq_region_start/end as we don't have direct access 
+	#using the current ResultFeature class
+	my $ft_start = $start + $ft->start();
+	my $ft_end   = $start + $ft->end();
 		
         my $id = sprintf( "%s:%s,%s",
                           $segment,
@@ -196,7 +213,7 @@ sub build_result_set_features{
 						 'label'       => $id,
 						 'start'       => $ft_start,
 						 'end'         => $ft_end,
-						 #'ori'         => 1,
+						 'ori'         => $ori{$ft->seq_region_strand},
 						 'score'       => $ft->score,
 						 'method'      => $source,
 						 'type'        => $type,
@@ -204,6 +221,10 @@ sub build_result_set_features{
 						 #'note'        => $note,
 						 #'link'        => '',
 						 #'linktxt'     => '',
+
+						 #Mandatory attrs
+						 'method' => $method,
+						 'phase'  => '-', 
 						 
 						}
 
@@ -229,8 +250,18 @@ sub build_feature_set_features{
 
   my $cat  = $self->config->{'typecategory'} ||  'feature_set';
   my $label_method = ($set_type eq 'regulatory') ? 'stable_id' : 'display_label';
-  my $source   =  $self->config()->{'source'} || $self->set->analysis->display_label;
+  my $source   =  $self->config()->{'source'} || $self->set->analysis->display_label;  
 
+  if(! defined $source){
+	croak('Cannot determine mandatory \'method\' attribute. Please set \'source\' in DAS config or analysis display_label');
+  }
+
+
+  my %ori = (
+			 -1 => '-',
+			 0  => '0',
+			 1  => '+',
+			);
 
   foreach my $ft (@{$features}) {
 
@@ -243,7 +274,6 @@ sub build_feature_set_features{
 	#because we don't want to pass empty score?
 	%score = ($set_type eq 'annotated') ? (score => $ft->score) : ();
 
-
 	push @features,
 	  {
 	   'id'          => $id,
@@ -251,8 +281,9 @@ sub build_feature_set_features{
 	   #'segment'     => $segment,#Does not return to DAS features test page???
 	   'start'       => $ft->seq_region_start,
 	   'end'         => $ft->seq_region_end,
-	   'ori'         => $ft->seq_region_strand,
+	   'ori'         => $ori{$ft->seq_region_strand},
 	   'method'      => $source,
+	   'phase'       => '-',
 	   #Can change this to be more informative? Have display label/feature_type here
 	   #And extended info(reg atts) in note?
 	   'type'        => $type,
