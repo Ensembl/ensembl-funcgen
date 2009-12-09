@@ -26,7 +26,9 @@ export DB_HOST=db_host
 export DB_NAME=your_funcgen_52_36n
 export DB_PORT=3306
 export SPECIES=mus_musculus
-export SCHEMA_BUILD=52_36n
+
+#Optional only required if dbname does not match standard nomenclature
+#export SCHEMA_BUILD=52_36n
 
 #These can be omited. You will be asked to use previously dumped files or whether you
 #want to create new dump files
