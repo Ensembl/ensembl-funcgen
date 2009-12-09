@@ -524,7 +524,7 @@ sub _get_status_name_id{
   #are stored in all DBs, else we could find ourselves with broken code
   #for sparsely populated DBs
 
-  throw("Status name $status is not valid.  Maybe you need to add it using update_status_name.pl?") if ! $status_id;
+  throw("Status name $status is not valid.  Maybe you need to add it to the status_name table?") if ! $status_id;
 
 
   return $status_id;
