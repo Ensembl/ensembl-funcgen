@@ -244,7 +244,7 @@ CREATE TABLE `unmapped_object` (
   `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe', 'ProbeSet', 'ProbeFeature') NOT NULL,
   `parent` varchar(255) default NULL,
   PRIMARY KEY  (`unmapped_object_id`),
-  KEY `object_type_idx` (`ensembl_object_type`,`ensembl_id`),
+  KEY `object_type_idx` (`ensembl_id`, `ensembl_object_type`),
   KEY `id_idx` (`identifier`),
   KEY `anal_idx` (`analysis_id`),
   KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`)
@@ -1116,11 +1116,13 @@ CREATE TABLE `experimental_variable` (
 DROP TABLE IF EXISTS `status`;
 CREATE TABLE `status` (
    `table_id` int(10) unsigned default NULL,
-   `table_name` varchar(20) default NULL,	
+   `table_name` varchar(32) default NULL,	
    `status_name_id` int(10) unsigned NOT NULL,
    PRIMARY KEY  (`table_id`, `table_name`, `status_name_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+
+-- 32 is max length for mysql table name
 
 --
 -- Table structure for table `status`
