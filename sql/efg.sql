@@ -1149,7 +1149,9 @@ INSERT into status_name(name) values ('T.Biweight');
 INSERT into status_name(name) values ('LOESS');
 INSERT into status_name(name) values ('MART_DISPLAYABLE');
 INSERT into status_name(name) values ('RESULT_FEATURE_SET');
-
+--These are now species specific and should be added like the feature/cell types 
+INSERT into status_name(name) values ('IMPORTED_NCBI36');
+INSERT into status_name(name) values ('IMPORTED_GRCh37');
 
 
 -- need to add more states, probably need to validate/insert required states in Importer
