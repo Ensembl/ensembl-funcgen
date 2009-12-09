@@ -1,14 +1,14 @@
 # patch_56_57_e.sql
 #
-# title: unmapped_object object_type key reorder
+# title: status.table_name length increase
 #
 # description:
-# Change order of key so ho highest cardinality field first
+# Increase max length of status.table_name to accomodate custom data tables
 
-ALTER TABLE unmapped_object DROP KEY object_type_idx;
-ALTER TABLE unmapped_object ADD KEY `object_type_idx` (`ensembl_id`, `ensembl_object_type`);
+
+ALTER TABLE status MODIFY `table_name` varchar(32) NOT NULL DEFAULT '';
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_e.sql|uo.object_type_id_key_reorder');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_e.sql|s.table_name_length');
 
 

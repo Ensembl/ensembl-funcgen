@@ -3,7 +3,7 @@
 # title: unmapped_object type enum 
 #
 # description:
-# Add a to uo.type enum
+# Add array_mapping to uo.type enum
 
 alter table unmapped_object modify `type` enum('xref','probe2transcript', 'array_mapping') NOT NULL;
 
