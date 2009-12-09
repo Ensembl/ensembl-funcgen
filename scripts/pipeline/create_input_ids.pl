@@ -64,6 +64,7 @@ $data_version = $ENV{DATA_VERSION};
 
 $exp_regex = '.*';
 
+
 GetOptions (
             'pass|p:s'         => \$pass,
             'port:i'           => \$port,
@@ -113,6 +114,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file);
 use Bio::EnsEMBL::Funcgen::Utils::Encode qw(get_encode_regions);
 
 # Get eFG database adaptor
+
 my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
      -host    => $ENV{CORE_HOST},
@@ -359,9 +361,11 @@ sub is_bed {
     if (scalar @line < 6) {
         warn("Infile '$file' does not have 6 or more columns. We expect bed format: CHROM START END NAME SCORE STRAND.");
         return 0;
-    } elsif ($line[0] !~ m/^((chr)?[MTXYNT_\d]+)$/) {
-        warn ("1st column must contain name of seq_region (e.g. chr1 or 1) in '$file'");
-        return 0;
+    #} elsif ($line[0] !~ m/^((chr)?[MTXYNT_\d]+)$/) {
+    #    warn ("1st column must contain name of seq_region (e.g. chr1 or 1) in '$file'");
+    #    return 0;
+		#Commented this out for now due to HSCHR_RANDOM seqs
+		#How does the webcode handle this?
     } elsif ($line[1] !~ m/^\d+$/ && $line[2] =~ m/^\d+$/) {
         warn ("2nd and 3rd column must contain start and end respectively in '$file'");
         return 0;
