@@ -61,6 +61,8 @@
 # 13.Collect warning into summary repoprt to list at very end.
 # 14 Reduce max_transcripts as this is never being hit due to alignment threshold
 # 15 Why can't we omit -arrays if we have -format?
+# 16 Add UTR only overlap  in range registry.
+# 17 Check for ProbeFeature xrefs and UOs in check_existing_and_exit?
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
@@ -1097,6 +1099,9 @@ foreach my $transcript (@transcripts) {
   #These should include the first and last exon also, otherwise we may omit features which lie on the
   #boundary between the EXON/UTR and the extension
  
+  #We really need to get UTR separately here
+  #As we have no way of knowing whether a probe is hitting the UTR or exon exclusively!!!!
+
  
   #Sub slice from the full slice so we don't have to worry about CoordSystem name
   #Just omit either three or five depending on flanks
@@ -2028,8 +2033,7 @@ sub delete_existing_xrefs {
 
 sub check_existing_and_exit {
   $Helper->log_header('Checking existing Xrefs');
-  warn "Need to add check for ProbeFeature xrefs or unmapped objects here to catch half done mapping";
-
+ 
   #We need to check for ProbeFeature xrefs and UnamppedObjects here
   #in case it has crashed half way through.
 
