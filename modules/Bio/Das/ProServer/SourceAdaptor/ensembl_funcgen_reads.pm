@@ -168,7 +168,7 @@ sub build_features {
     my $gEnd          = $opts->{'end'};
 
 
-	#
+	
 
 
     ### using max bins
@@ -177,7 +177,7 @@ sub build_features {
     #}
 
     my $dsn           = $self->{'dsn'};
-    my $dbtable       =  $self->{'table_name'};#$dsn;
+    my $dbtable       = $self->{'table_name'};#$dsn;
 	my $qsegment      = $self->transport->adaptor->dbc->db_handle->quote($segment);
     my $qbounds       = qq(AND start <= '$gEnd' AND end >= '$gStart') if($gStart && $gEnd);
 	#feature_id | seq_region | start   | end     | name                   | score | strand | note

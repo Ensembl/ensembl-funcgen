@@ -166,15 +166,20 @@ sub build_features{
   my $slice = $dnadb->get_SliceAdaptor->fetch_by_region('chromosome', $segment, $start, $end, undef, $self->coord_system_version);
   print Dumper $slice if ($self->{'debug'});
 
-  return $self->$build_method($slice);
+  return $self->$build_method($slice, $args);
 }
 
 
 sub build_result_set_features{
-  my ($self, $slice) = @_;
+  my ($self, $slice, $args) = @_;
 
   my ($id, $label, %score, @features);
-  my $features     = $self->set->get_ResultFeatures_by_Slice($slice);
+
+  #Need to pass maxbins here to adaptor
+
+  warn "max bins is ".$args->{'max_bins'};
+
+  my $features     = $self->set->get_ResultFeatures_by_Slice($slice, undef, undef, $args->{'max_bins'});
   print "Number of features: ".scalar(@{$features})."\n" if ($self->{'debug'});
 
   my $type     = $self->config()->{'type'} || 'default';
@@ -213,7 +218,7 @@ sub build_result_set_features{
 						 'label'       => $id,
 						 'start'       => $ft_start,
 						 'end'         => $ft_end,
-						 'ori'         => $ori{$ft->seq_region_strand},
+						 'ori'         => $ori{$ft->strand},#change this to seq_region_strand when we cahnge to hash feature?
 						 'score'       => $ft->score,
 						 'method'      => $source,
 						 'type'        => $type,
@@ -319,11 +324,11 @@ sub das_stylesheet{
         <CATEGORY id="result_set">
             <TYPE id="default">
                 <GLYPH>
-                    <TILING>
+                    <HISTOGRAM>
 <LABEL>no</LABEL>
                         <HEIGHT>30</HEIGHT>
                         <COLOR1>brown3</COLOR1>
-                    </TILING>
+                    </HISTOGRAM>
                 </GLYPH>
             </TYPE>
         </CATEGORY>
@@ -331,7 +336,7 @@ sub das_stylesheet{
 </DASSTYLE>
 EOT
   }
-  elsif ($self->set->name =~ m/_BR/) {
+  elsif ($self->set->name =~ m/_BR/) {#? Needs updating? to match FeatureSet?
 	return <<EOT;
 <!DOCTYPE DASSTYLE SYSTEM "http://www.biodas.org/dtd/dasstyle.dtd">
 <DASSTYLE>
