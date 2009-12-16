@@ -43,6 +43,7 @@ use Getopt::Long;
 my ($db_name, $db_host, $db_port, $db_user, $db_pass, $farm, $species);
 my ($dnadb_name, $dnadb_host, $dnadb_port, $dnadb_user, $dnadb_pass);
 my ($slice_name, $rset_name, $old_assm, $new_assm, $dnadb, @slices, @skip_slices);#, $delete
+my $output_dir;
 
 my @tmp_args = @ARGV;
 
@@ -89,25 +90,14 @@ GetOptions(
 						);
 
 
-
-
-#my $rset_name = 'Vienna MEFf H3K4me3';
-#my $species = 'mus_musculus';
-#my $schema_build = '51_37d';
-
-#my $rset_name = 'ctcf_ren_BR1_TR1';
-#my $species = 'homo_sapiens';
-#my $schema_build = '55_37';
-
-
-#my $port = 3306;
-#my $user = 'ensadmin';
-#my $host = 'ens-genomics1';
-
+if(@ARGV){
+  die("You have trailing arguments which are unrecognised:\t@ARGV\n");
+}
 
 if(! $farm && ! $slice_name){
-  die('To run with all slices you should specify the -farm option');
+  die("To run with all slices you should specify the -farm option, or to run locally specify one -slice.\n");
 }
+
 
 if($dnadb_name){
   $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
@@ -116,7 +106,7 @@ if($dnadb_name){
 											   -port    => $dnadb_port,
 											   -user    => $dnadb_user,
 											   -pass    => $dnadb_pass,
-												-species => $species,
+											   -species => $species,
 											   -type => 'core',
 											  );
 }
@@ -164,10 +154,14 @@ else{
 my ($rset) = @{$rset_adaptor->fetch_all_by_name($rset_name)};
 die("Could not fetch ResultSet using name:\t$rset_name") if ! $rset;
 
-
 #Set job parameters
 if($farm){
-  
+  $output_dir ||= $ENV{'EFG_DATA'}.'/result_features/'.$db_name;
+
+  if(! -d $output_dir){
+	system("mkdir -p $output_dir") == 0 || die("cannot make output directory:\t$output_dir\n$?");
+  }
+
   #We basically want to strip out farm, slice_name and skip slices
   #This would be easier with something hash based
   my $seen_opt = 0;
@@ -195,28 +189,26 @@ SLICE: foreach my $slice(@slices){
 	
   }
 
-  my $cmd = "perl $ENV{EFG_SRC}/scripts/populate_result_features.pl @tmp_args -slice_name ".$slice->name;
+  my $cmd = "perl $ENV{EFG_SRC}/scripts/import/populate_result_features.pl @tmp_args -slice_name ".$slice->name;
   
   if($farm){
     #hugemem -R "select[mem>20000] rusage[mem=20000] -M 20000000"
-  
-	my $bsub = 'bsub -q long -o $HOME/data/efg/result_features/result_features.'.$sr_name.'.out -e $HOME/data/efg/result_features/result_features.'.$sr_name.".err $cmd";
+
+	my $bsub = "bsub -q long -o $output_dir/result_features.${sr_name}.out -e $output_dir/result_features.${sr_name}.err $cmd";
 	
 	print "Submitting $bsub\n";
 	
-	system($bsub) || die("Failed to submit $bsub");
+	system($bsub) == 0 || die("Failed to submit $bsub\n$?");
 
 	warn "Need to wait here and add RESULT_FEATURE_SET status if no errors found";
 	#This is a pipeline thing, no?
 	warn "Need to kick of 2nd stage of project bin generation";
   }
   else{
-	
+	my %config = (-NEW_ASSEMBLY => $new_assm);
+
 	foreach my $slice(@slices){
-	  
-	  $rfeat_adaptor->store_window_bins_by_Slice_ResultSet(-slice => $slice, 
-														-result_set =>$rset, 
-														-NEW_ASSEMBLY => $new_assm);
+	  $rfeat_adaptor->store_window_bins_by_Slice_ResultSet($slice, $rset, %config);
 	}
   }
 }
