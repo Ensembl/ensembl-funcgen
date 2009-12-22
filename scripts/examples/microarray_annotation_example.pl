@@ -177,7 +177,6 @@ foreach my $dbe (@trans_dbentries){
 ##########################################
 
 print "\nUnmapped objects\n";
-my $uo_adaptor = $registry->get_adaptor("mus musculus","funcgen","UnmappedObject");
 
 foreach my $ps_name('1437721_at', '1435628_x_at', '1418625_s_at'){
   my $ps = $pba->fetch_by_array_probeset_name($array->name, $ps_name);
