@@ -119,7 +119,6 @@ sub new {
 #defined by experiment type i.e. time course would require timepoint in display label
 #deal with this dynamically or have display_label in table
 #Need call on type, or fetch all would
-
 #_get_ec_ids or contigsets?
 #this should now be an intrinsic part of this class/adaptor
 
@@ -467,7 +466,7 @@ sub display_label {
   Arg[1]     : Bio::EnsEMBL::Slice
   Arg[2]     : Boolean - with probe flag, will nest Probe object in ResultFeature 
   Example    : my @results = @{$ResultSet->get_all_displayable_ResultFeatures_by_Slice($slice)};
-  Description: Gets all the displayable ResultFeatures for a given Slice.
+  Description: Simple wrapper method for ResultFeatureAdaptor::fetch_all_by_Slice_ResultSet
   Returntype : Arrayref of ResultFeatures
   Exceptions : None
   Caller     : General
@@ -477,8 +476,8 @@ sub display_label {
 
 
 sub get_displayable_ResultFeatures_by_Slice{
-  my ($self, $slice, $with_probe) = @_;
-  return $self->get_ResultFeatures_by_Slice($slice, 'DISPLAYABLE', $with_probe);
+  my ($self, $slice, $with_probe, $max_bins, $window_size, $constraint) = @_;
+  return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, 'DISPLAYABLE', $with_probe, $max_bins, $window_size, $constraint);
 }
 
 
@@ -490,7 +489,7 @@ sub get_displayable_ResultFeatures_by_Slice{
   Arg[2]     : string - Status name e.g. 'DISPLAYABLE'
   Arg[3]     : Boolean - with probe flag, will nest Probe object in ResultFeature 
   Example    : my @rfs_with_rpobe = @{$ResultSet->get_all_ResultFeatures_by_Slice($slice, undef, 1)};
-  Description: Gets all the ResultFeatures for a given Slice.
+  Description: Simple wrapper method for ResultFeatureAdaptor::fetch_all_by_Slice_ResultSet
   Returntype : Arrayref of ResultFeatures
   Exceptions : None
   Caller     : General
@@ -499,9 +498,26 @@ sub get_displayable_ResultFeatures_by_Slice{
 =cut
 
 sub get_ResultFeatures_by_Slice{
-  my ($self, $slice, $status, $with_probe) = @_;
-  return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, $status, $with_probe);
+  my ($self, $slice, $status, $with_probe, $max_bins, $window_size, $constraint) = @_;
+  return $self->adaptor->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $self, $status, $with_probe, $max_bins, $window_size, $constraint);
 }
+
+
+
+#Floats unpack inaccurately so need 3 sigfiging
+#This should match the format in which they are originally stored
+#This is dependant on ResultSet type i.e. reads or intensity?
+#No format for reads!
+#Should this be set in the ResultSet instead?
+#It may be more efficient for the caller to test for format first rather than blindly printf'ing
+#even if there is no format?
+#This needs setting in new, so we don't have to eval for every score.
+
+sub score_format{
+  return '%.3f';
+}
+
+
 
 
 =head2 log_label
