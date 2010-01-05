@@ -54,6 +54,8 @@ our $MAX_SPLIT_QUERY_SEQ_REGIONS = 3;
 #Correct/Document methods!!!
 #Implement externaldb db_name version registry
 
+my %warnings;
+
 =head2 generic_fetch
 
   Arg [1]    : (optional) string $constraint
@@ -148,6 +150,7 @@ sub fetch_all_by_Slice_constraint {
 
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
+ 
   #if the logic name was invalid, undef was returned
   return [] if(!defined($constraint));
 
@@ -211,8 +214,8 @@ sub fetch_all_by_Slice_constraint {
     my $offset = $seg->from_start();
     my $seg_slice  = $seg->to_Slice();
 
-    my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
 
+    my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
 
 	# if this was a symlinked slice offset the feature coordinates as needed
     if($seg_slice->name() ne $slice->name()) {
@@ -457,9 +460,14 @@ sub get_seq_region_id_by_Slice{
 				"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
 		}
 	
-		warn 'Defaulting to previously store seq_region for: '.$core_cs->name.':'.
-		  $core_cs->version.':'.$slice->seq_region_name.
-			"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n";
+		#Only warn first time this is seen
+		my $warning_key = $core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name;
+
+		if(! exists $warnings{$warning_key}){
+		  warn 'Defaulting to previously store seq_region for: '.$warning_key.
+			  "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n";
+		  $warnings{$warning_key} = 1;
+	  }	
   }
 
   return $fg_sr_id;
@@ -581,6 +589,9 @@ sub _pre_store {
 	#Don't set this for old and new slice as
 	#at some point in the future we have mappings between different levels.
 
+
+	#warn "Projecting ".$feature->start.'-'.$feature->end." on "..$feature->slice->name." to $new_assembly";
+
 	
 	my @segments = @{$feature->feature_Slice->project($slice->coord_system->name, $new_assembly)};
   # do some sanity checks on the projection results:
@@ -642,6 +653,7 @@ sub _pre_store {
 
   #Need to do this for Funcgen DB
   my $mcc = $db->get_MetaCoordContainer();
+
   $mcc->add_feature_type($fg_cs, $tabname, $feature->length);
 
 
@@ -705,7 +717,6 @@ sub _slice_fetch {
   my $slice_cs     = $slice->coord_system();
   #my $slice_seq_region = $slice->seq_region_name();
 
-
   #We Need to translate the seq_regions IDs to efg seq_region_ids
   #we need to fetch the seq_region ID based on the coord_system id and the name
   #we don't want to poulate with the eFG seq_region_id, jsut the core one, as we need to maintain core info in the slice.
@@ -762,8 +773,7 @@ sub _slice_fetch {
 
     if($feat_cs->equals($slice_cs)) {
       # no mapping is required if this is the same coord system
-
-      my $max_len = $self->_max_feature_length() ||
+	  my $max_len = $self->_max_feature_length() ||
         $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
 
       my $constraint = $orig_constraint;
