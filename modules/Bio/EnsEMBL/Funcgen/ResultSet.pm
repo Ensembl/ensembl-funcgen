@@ -53,7 +53,7 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::ResultSet;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 use Bio::EnsEMBL::Funcgen::Set;
 
 use vars qw(@ISA);
@@ -89,8 +89,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   my ($table_name, $table_id, $rf_set)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULLT_FEATURE_SET'], @_);
-
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET'], @_);
 
   $self->{'table_id_hash'} = {};
 
@@ -99,12 +98,28 @@ sub new {
     throw("Need to pass the following arg:\t-table_name");
   }
 
- 
+  #sequencing type should be specified in InputSet
+  #This would leave only DataSet without a type attr/method...move to Set.pm?
+
+
+  #Don't have to specify this as we can set it automatically?
+  #Do we even need type here, as we can simply use table_name?
+
+
+  #if(! ($type && grep /^$type$/, ('sequencing', 'array'))){
+	#Should we genericise sequencing to input
+	#and specify sequencing at input_set level
+	#This would allow us to capture this for direct imports into a FeatureSet
+	#We would then have some overlap between input type here and input_set table_name?
+	
+  #	throw("You must define a valid FeatureSet type e.g. 'sequencing', 'array'");
+  # }
+
   
   #do we need some control of creating new objects with dbID and adding result_groups/feature_sets and them storing/updating them
   #potential for someone to create one from new using a duplicate dbID and then linking incorrect data to a pre-existing ResultGroup
   #we need to verify that each table_name/id in the set is from the same experiment
-
+  #$self->type($type);
   $self->table_name($table_name);
   $self->add_table_id($table_id) if $table_id;
   $self->result_feature_set($rf_set) if $rf_set;
@@ -141,6 +156,9 @@ sub new {
 #set ResultFeatures and PredictedFeatures in hash keyed by analysis_name?
 
 
+
+
+
 =head2 result_feature_set
 
   Arg [1]    : optional - boolean 0 or 1.
@@ -164,7 +182,7 @@ sub result_feature_set{
 
 =head2 table_name
 
-  Arg [1]    : (optional) string - table_name (experimental_chip or channel)
+  Arg [1]    : (optional) string - table_name (experimental_chip, channel or input_set)
   Example    : $result_set->experiment_id($exp_id);
   Description: Getter and setter for the table_name for this ResultSet.
   Returntype : string
@@ -181,7 +199,7 @@ sub table_name{
     if (@_){
       
       if($self->{'table_name'} && ($self->{'table_name'} ne $_[0])){
-	throw("Cannot mix  table name/types of a ResultSet");
+		throw("Cannot mix  table name/types of a ResultSet");
       }
 	
       $self->{'table_name'} = $_[0];
@@ -195,11 +213,12 @@ sub table_name{
 =head2 add_table_id
 
   Example    : $result_set->add_table_id($ec_id, $cc_id);
-  Description: Caches table_id chip_channel_id to the ResultSet.
-               The unique chip_channel_id is used to key into the result table,
-               it also reduces redundancy and enable mapping of results to chips
+  Description: Caches table_id result_set_input_id to the ResultSet. In the case of an 
+               array ResultSet, the unique result_set_input_id is used to key into the 
+               result table, it also reduces redundancy and enable mapping of results to chips
                rather than just the ResultSet.  This enables result retrieval
                based on chips in the same set which  have a differing status.
+               In the case of a sequencing ResultSet, this simply refers to the InputSet ids.
   Returntype : None
   Exceptions : Throws if no table_id defined
   Caller     : General
@@ -215,7 +234,7 @@ sub add_table_id {
   }else{
     
     if((exists $self->{'table_id_hash'}->{$table_id}) && (defined $self->{'table_id_hash'}->{$table_id})){
-      throw("You are attempting to redefine a chip_channel_id which is already defined");
+      throw("You are attempting to redefine a result_set_input_id which is already defined");
     }
     
     $self->{'table_id_hash'}->{$table_id} = $cc_id;    
@@ -243,10 +262,19 @@ sub table_ids {
   return [ keys %{$self->{'table_id_hash'}} ];
 }
 
-=head2 chip_channel_ids
 
-  Example    : my @rset_cc_ids = @{$result_set->chip_channel_ids()};
-  Description: Getter for the chip channel ids for this ResultSet.
+sub chip_channel_ids {
+  my $self = shift;
+
+  deprecate('ResultSet::chip_channel_ids is deprecated, please use result_set_input_ids');
+  
+  return $self->result_set_input_ids;
+}
+
+=head2 result_set_input_ids
+
+  Example    : my @rset_rsi_ids = @{$result_set->result_set_input_ids()};
+  Description: Getter for the input ids for this ResultSet.
   Returntype : arrayref
   Exceptions : None
   Caller     : General
@@ -254,11 +282,15 @@ sub table_ids {
 
 =cut
 
-sub chip_channel_ids {
+
+sub result_set_input_ids {
   my $self = shift;
   
   return [ values %{$self->{'table_id_hash'}} ];
 }
+
+
+
 
 =head2 contains
 
@@ -288,11 +320,11 @@ sub contains{
   return $contains;
 }
 
-=head2 get_chip_channel_id
+=head2 get_result_set_input_id
 
-  Arg [1]    : int - ExperimentalChip dbID
-  Example    : $result_set->get_chip_channel_id($ec_id);
-  Description: Retrieves a chip_channel_id from the cahce given an ExperimentalChip dbID
+  Arg [1]    : int - dbID (experimental_chip, channel or input_set)
+  Example    : $result_set->get_result_set_input_id($ec_id);
+  Description: Retrieves a result_set_input_id from the cache given a dbID
   Returntype : int
   Exceptions : none
   Caller     : General
@@ -300,11 +332,52 @@ sub contains{
 
 =cut
 
-sub get_chip_channel_id{
+sub get_result_set_input_id{
   my ($self, $table_id) = @_;
   
   return (exists $self->{'table_id_hash'}->{$table_id}) ?  $self->{'table_id_hash'}->{$table_id} : undef;
 }
+
+
+sub get_chip_channel_id{
+  my ($self, $table_id) = @_;
+  
+  deprecate('ResultSet::get_chip_channel_ids is dperecated, please us get_result_set_input_id');
+  return $self->get_result_set_input_ids($table_id);
+}
+
+
+
+=head2 get_InputSets
+
+  Example    : my @ecs = @{$result_set->get_ExperimentalChips()};
+  Description: Retrieves a chip_channel_id from the cahce given an ExperimentalChip dbID
+  Returntype : Listref of ExperimentalChip object
+  Exceptions : warns is not an experimental_chip ResultSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_InputSets{
+  my $self = shift;
+  
+  if($self->table_name ne 'input_set'){
+	warn 'Cannot get_InputSets for an array based ResultSet';
+	return;
+  }
+
+  if(! defined $self->{'inputs_sets'}){
+    my $is_adaptor = $self->adaptor->db->get_InputSetAdaptor();
+    
+	foreach my $is_id(@{$self->table_ids()}){
+	  push @{$self->{'input_sets'}}, $is_adaptor->fetch_by_dbID($is_id);
+	}
+  }
+
+  return $self->{'input_sets'};
+}
+
 
 =head2 get_ExperimentalChips
 
@@ -320,6 +393,11 @@ sub get_chip_channel_id{
 sub get_ExperimentalChips{
   my $self = shift;
   
+  if($self->table_name eq 'input_set'){
+	warn 'Cannot get_ExperimentalChips for an InputSet ResultSet';
+	return;
+  }
+
   if(! defined $self->{'experimental_chips'}){
     my $ec_adaptor = $self->adaptor->db->get_ExperimentalChipAdaptor();
     
@@ -350,10 +428,10 @@ sub get_ExperimentalChips{
 
 
 
-=head2 get_replicate_set_by_chip_channel_id
+=head2 get_replicate_set_by_result_set_input_id
 
   Arg[0]     : int - chip_channel_id
-  Example    : my $rep_set_name = $result_set->get_replicate_set_by_chip_channel_id($cc_id);
+  Example    : my $rep_set_name = $result_set->get_replicate_set_by_result_set_input_id($cc_id);
   Description: Retrieves the replicate set name defined by the corresponding ExperimentalChip
   Returntype : String - replicate set name
   Exceptions : 
@@ -362,8 +440,9 @@ sub get_ExperimentalChips{
 
 =cut
 
+#Where is this used?
 
-sub get_replicate_set_by_chip_channel_id{
+sub get_replicate_set_by_result_set_input_id{
   my ($self, $cc_id) = @_;
 
   if( ! defined $self->{'_replicate_cache'}){
@@ -373,7 +452,7 @@ sub get_replicate_set_by_chip_channel_id{
 
 	foreach my $ec (@{$self->get_ExperimentalChips()}){
 	  
-	  $self->{'_replicate_cache'}{$self->get_chip_channel_id($ec->dbID())} = $ec->replicate();
+	  $self->{'_replicate_cache'}{$self->get_result_set_input_id($ec->dbID())} = $ec->replicate();
 	  
 
 	}
@@ -386,37 +465,45 @@ sub get_replicate_set_by_chip_channel_id{
 
 }
 
-=head2 get_result_table
+sub get_replicate_set_by_chip_channel_id{
+  my ($self, $cc_id) = @_;
 
-  Example    : my $result_table = $rset->get_result_table();
-  Description: Getter for the federated result table name for this ResultSet.
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk - extend to use bins
-
-=cut
-
-sub get_result_table{
-  my $self = shift;
-
-  #This method should be extended to use bins if we pass a range
-  my $table;
-  
-  return 'result';
-
-  my @exp_ids = @{$self->get_experiment_ids()};
-
-  if($#exp_ids >0){
-	$table = 'result';
-  }
-  else{
-	#$table = 'experiment_'.$exp_ids[0].'_result';
-	$table ='result';
-  }
-
-  return $table;
+  deprecate('Please use get_replicate_set_by_result_set_input_id instead');
+  return $self->get_replicate_set_by_result_set_input_id($cc_id);
 }
+
+
+#=head2 get_result_table
+#
+#  Example    : my $result_table = $rset->get_result_table();
+#  Description: Getter for the federated result table name for this ResultSet.
+#  Returntype : String
+#  Exceptions : None
+#  Caller     : General
+#  Status     : At Risk - extend to use bins
+#
+#=cut
+
+#sub get_result_table{
+#  my $self = shift;
+
+#  #This method should be extended to use bins if we pass a range
+#  my $table;
+  
+#  return 'result';
+
+#  my @exp_ids = @{$self->get_experiment_ids()};
+
+#  if($#exp_ids >0){
+#	$table = 'result';
+#  }
+#  else{
+#	#$table = 'experiment_'.$exp_ids[0].'_result';
+#	$table ='result';
+#  }
+#
+#  return $table;
+#}
 
 
 =head2 display_label
@@ -439,7 +526,7 @@ sub display_label {
     
     #This should display some info about the chip set/duplicte set if there is more than one set of data for a feature_set!!!!!!!!!!!!!!!
     
-    #Some tomfoolery here to accomdate sets which we do not know the feature or cell type for.
+    #Some tomfoolery here to accomodate sets which we do not know the feature or cell type for.
     #should we make cell_type and feature_type mandatory?
 
     if(defined $self->feature_type()){
