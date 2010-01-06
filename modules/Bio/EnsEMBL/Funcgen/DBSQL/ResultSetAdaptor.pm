@@ -133,7 +133,7 @@ sub fetch_all_linked_by_ResultSet{
   $self->db->is_stored_an_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
 
-  my $constraint = ' cc.result_set_id in (SELECT distinct(result_set_id) from result_set_input where result_set_input_id in('.join(', ', @{$rset->chip_channel_ids}).') ';
+  my $constraint = ' cc.result_set_id in (SELECT distinct(result_set_id) from result_set_input where result_set_input_id in('.join(', ', @{$rset->result_set_input_ids}).') ';
   
   my @tmp = @{$self->generic_fetch($constraint)};
 
@@ -181,32 +181,41 @@ sub get_Experiment_join_clause{
     throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment");
   }
 
-  my @ecs = @{$exp->get_ExperimentalChips()};
-
-  
-
-  my $ec_ids = join(', ', (map $_->dbID, @ecs));#get ' separated list of ecids
-
-
-  my @chans = map @$_, (map $_->get_Channels(), @ecs);
-  my $chan_ids = join(', ', (map $_->dbID(), @chans));#get ' separated list of chanids
-  #These give empty strings which are defined
-
 
   my $constraint;
-  #This will not work for single IDs of 0, but this will never happen.
 
-  if($ec_ids && $chan_ids){
-	$constraint = '(((cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.
-	  ')) OR (cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.'))))';
-	#This could probably be sped up using UNION
-	#But result set is too small for cost of implementation
+  my @ecs = @{$exp->get_ExperimentalChips()};
+
+  if(@ecs){
+
+	my $ec_ids = join(', ', (map $_->dbID, @ecs));#get ' separated list of ecids
+	
+	
+	my @chans = map @$_, (map $_->get_Channels(), @ecs);
+	my $chan_ids = join(', ', (map $_->dbID(), @chans));#get ' separated list of chanids
+	#These give empty strings which are defined
+	#This will not work for single IDs of 0, but this will never happen.
+	
+	if($ec_ids && $chan_ids){
+	  $constraint = '(((rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.
+		')) OR (rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.'))))';
+	  #This could probably be sped up using UNION
+	  #But result set is too small for cost of implementation
+	}
+	elsif($ec_ids){
+	  $constraint = 'rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.')';
+	}
+	elsif($chan_ids){
+	  $constraint = 'rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.')';
+	}
   }
-  elsif($ec_ids){
-	$constraint = 'cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.')';
-  }
-  elsif($chan_ids){
-	$constraint = 'cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.')';
+  else{#Assume we have an InputSet Experiment?
+	#We could possibly have an expeirment with an array and an input set
+	#Currently nothing to stop this, but would most likely be loaded as separate experiments
+	my $input_setids = join(', ', (map $_->dbID, @{$exp->get_InputSets}));
+	warn "is ids are $input_setids";
+
+	$constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$input_setids.')';
   }
   
   return $constraint;
@@ -396,7 +405,7 @@ sub _columns {
 sub _default_where_clause {
   my $self = shift;
 	
-  return 'rs.result_set_id = cc.result_set_id';
+  return 'rs.result_set_id = rsi.result_set_id';
 }
 
 =head2 _final_clause
