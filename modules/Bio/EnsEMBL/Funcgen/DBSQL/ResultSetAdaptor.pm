@@ -213,7 +213,6 @@ sub get_Experiment_join_clause{
 	#We could possibly have an expeirment with an array and an input set
 	#Currently nothing to stop this, but would most likely be loaded as separate experiments
 	my $input_setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
-	warn "is ids are $input_setids";
 
 	$constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$input_setids.')';
   }
@@ -630,7 +629,7 @@ sub store_chip_channels{
 
   #Store and set all previously unstored table_ids
   foreach my $table_id(@{$rset->table_ids()}){
-    my $cc_id = $rset->get_chip_channel_id($table_id);
+    my $cc_id = $rset->get_result_set_input_id($table_id);
 
     if(! defined $cc_id){
       $sth->bind_param(1, $rset->dbID(),       SQL_INTEGER);
