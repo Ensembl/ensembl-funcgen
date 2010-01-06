@@ -92,7 +92,7 @@ sub new {
 	
   #Add set_type here to overwrite default ref parsing in Set::set_type
   #This need to stay like this until we patch the DB
-  my $self = $class->SUPER::new(@_, '-SET_TYPE', 'experimental');
+  my $self = $class->SUPER::new(@_);#, '-SET_TYPE', 'experimental');
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
   my ($exp, $format, $vendor)
