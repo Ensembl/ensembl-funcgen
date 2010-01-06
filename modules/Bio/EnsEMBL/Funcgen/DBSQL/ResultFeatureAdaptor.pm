@@ -1172,7 +1172,8 @@ sub fetch_all_by_Slice_ResultSet{
 
 
   $sql = 'SELECT STRAIGHT_JOIN r.score, pf.seq_region_start, pf.seq_region_end, pf.seq_region_strand, cc.chip_channel_id '.$pfields.
-	' FROM probe_feature pf, '.$rset->get_result_table().' r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '.
+	' FROM probe_feature pf, result r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '. $rset->dbID();
+	#' FROM probe_feature pf, '.$rset->get_result_table().' r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '.
 	  $rset->dbID();
 
   $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
