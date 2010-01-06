@@ -172,8 +172,8 @@ sub _tables {
   my $self = shift;
 	
   return (
-		  [ 'experimental_set',    'es' ],
-		  [ 'experimental_subset', 'ess' ],
+		  [ 'input_set',    'is' ],
+		  [ 'input_subset', 'iss' ],
 		 );
 }
 
@@ -194,11 +194,11 @@ sub _columns {
 	my $self = shift;
 
 	return qw(
-			  es.experimental_set_id  es.experiment_id
-			  es.feature_type_id      es.cell_type_id
-			  es.format               es.vendor
-			  es.name     			  ess.name
-			  ess.experimental_subset_id
+			  is.input_set_id    is.experiment_id
+			  is.feature_type_id is.cell_type_id
+			  is.format          is.vendor
+			  is.name     		 iss.name
+			  iss.input_subset_id
 		 );
 
 	
@@ -242,7 +242,7 @@ sub _columns {
 sub _left_join {
   my $self = shift;
 	
-  return (['experimental_subset', 'es.experimental_set_id = ess.experimental_set_id']);
+  return (['input_subset', 'is.input_set_id = iss.input_set_id']);
 }
 
 
@@ -339,7 +339,7 @@ sub store{
   
   
   
-  my $sth = $self->prepare('INSERT INTO experimental_set (experiment_id, feature_type_id, 
+  my $sth = $self->prepare('INSERT INTO input_set (experiment_id, feature_type_id, 
                                                        cell_type_id, format, vendor, name) 
                                                        VALUES (?, ?, ?, ?, ?, ?)');
   
@@ -402,8 +402,8 @@ sub store_InputSubsets{
   my ($self, $ssets) = @_;
   
   my $sth = $self->prepare("
-		INSERT INTO experimental_subset (
-			experimental_set_id, name
+		INSERT INTO input_subset (
+			input_set_id, name
 		) VALUES (?, ?)
 	");
 
