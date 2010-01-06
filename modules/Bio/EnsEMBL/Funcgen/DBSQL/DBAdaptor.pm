@@ -116,7 +116,9 @@ sub new {
 	  #This causes duplicate software vs DB release warnings
 	}
   }
-
+  #else should we redefine the species as the standard alias if it does not match?
+  #This would prevent external_db species name testing
+  #Maybe the solution is to make external_db multi_species
 
   my ( $dnadb_host, $dnadb_user, $dnadb_port, $dnadb_pass, $dnadb_assm)
     = rearrange( [ 'DNADB_HOST', 'DNADB_USER',
@@ -291,7 +293,6 @@ sub get_available_adaptors{
 			   'FeatureSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
 			   'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
 			   'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-			   'ExperimentalSet'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalSetAdaptor',
 			   'InputSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor',
 			   'ExternalFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
 			   'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
