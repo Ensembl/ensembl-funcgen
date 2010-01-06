@@ -133,7 +133,7 @@ sub fetch_all_linked_by_ResultSet{
   $self->db->is_stored_an_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
 
-  my $constraint = ' cc.result_set_id in (SELECT distinct(result_set_id) from chip_channel where chip_channel_id in('.join(', ', @{$rset->chip_channel_ids}).') ';
+  my $constraint = ' cc.result_set_id in (SELECT distinct(result_set_id) from result_set_input where result_set_input_id in('.join(', ', @{$rset->chip_channel_ids}).') ';
   
   my @tmp = @{$self->generic_fetch($constraint)};
 
@@ -199,6 +199,8 @@ sub get_Experiment_join_clause{
   if($ec_ids && $chan_ids){
 	$constraint = '(((cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.
 	  ')) OR (cc.table_name="channel" AND cc.table_id IN ('.$chan_ids.'))))';
+	#This could probably be sped up using UNION
+	#But result set is too small for cost of implementation
   }
   elsif($ec_ids){
 	$constraint = 'cc.table_name="experimental_chip" AND cc.table_id IN ('.$ec_ids.')';
@@ -340,7 +342,7 @@ sub _tables {
 	
   return (
 		  [ 'result_set',        'rs' ],
-		  [ 'chip_channel',      'cc' ],
+		  [ 'result_set_input',  'rsi' ],
 		  #[ 'experimental_chip', 'ec' ],
 		  #[ 'channel',           'c'  ],
 		  #This causes the N(no channelrecords) records to be returned when there is no linkable channel.
@@ -360,7 +362,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Medium Risk
 
 =cut
 
@@ -369,8 +371,8 @@ sub _columns {
 
 	return qw(
 			  rs.result_set_id    rs.analysis_id
-			  cc.table_name       cc.chip_channel_id
-			  cc.table_id         rs.name
+			  rsi.table_name      rsi.result_set_input_id
+			  rsi.table_id        rs.name
 			  rs.cell_type_id     rs.feature_type_id
 		 );
 
@@ -387,23 +389,14 @@ sub _columns {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Medium Risk
 
 =cut
 
 sub _default_where_clause {
   my $self = shift;
 	
-  #return 'rs.result_set_id = cc.result_set_id AND ((cc.table_name="experimental_chip" AND cc.table_id = ec.experimental_chip_id) OR (cc.table_name="channel" AND cc.table_id=c.channel_id AND ec.experimental_chip_id=c.experimental_chip_id))';
-
-  
-  #no need for complex join due to adding feature/cell_type columns to result_set
-  #This was done to allow separation of top level rset with same name but different
-  #cell or feature_types
   return 'rs.result_set_id = cc.result_set_id';
-
-  
-
 }
 
 =head2 _final_clause
@@ -417,14 +410,14 @@ sub _default_where_clause {
   Returntype : String
   Exceptions : None
   Caller     : generic_fetch
-  Status     : At Risk
+  Status     : Medium Risk
 
 =cut
 
 
 sub _final_clause {
   #do not mess with this!
-  return ' GROUP by cc.chip_channel_id, cc.result_set_id ORDER BY rs.result_set_id, rs.cell_type_id, rs.feature_type_id';
+  return ' GROUP by rsi.result_set_input_id, rsi.result_set_id ORDER BY rs.result_set_id, rs.cell_type_id, rs.feature_type_id';
 }
 
 
@@ -456,6 +449,8 @@ sub _objs_from_sth {
   
   #this fails if we delete entries from the joined tables
   #causes problems if we then try and store an rs which is already stored
+
+  #Need c/ftype cache here or rely on query cache?
 
   while ( $sth->fetch() ) {
 
@@ -612,14 +607,14 @@ sub store_chip_channels{
   }
   
   my $sth = $self->prepare("
-		INSERT INTO chip_channel (
+		INSERT INTO result_set_input (
 			result_set_id, table_id, table_name
 		) VALUES (?, ?, ?)
 	");
 
   my $sth1 = $self->prepare("
-		INSERT INTO chip_channel (
-			chip_channel_id, result_set_id, table_id, table_name
+		INSERT INTO result_set_input (
+			result_set_input_id, result_set_id, table_id, table_name
 		) VALUES (?, ?, ?, ?)
 	");
   
@@ -641,8 +636,8 @@ sub store_chip_channels{
 
 	  #this should only store if not already stored for this rset
 	  #this is because we may want to add chip_channels to a previously stored rset
-	  my $sql = 'SELECT chip_channel_id from chip_channel where result_set_id='.$rset->dbID().
-		" AND chip_channel_id=${cc_id}";
+	  my $sql = 'SELECT result_set_input_id from result_set_input where result_set_id='.$rset->dbID().
+		" AND result_set_input_id=${cc_id}";
 	  my ($loaded) = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
 	  if(! $loaded){
@@ -717,427 +712,15 @@ sub list_dbIDs {
 #We really want something that will give Probe and ResultFeature
 #Let's set the Probe as an optional ResultFeature attribute
 
+
 sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe) = @_;
   
-
-  #warn "Using ResultSetAdaptor";
+  
+  warn "Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor::fetch_ResultFeatures_by_Slice_ResultSEt is now deprecated, please use the ResultFeatureAdaptor directly";
 
   return $self->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $rset, $ec_status, $with_probe);
 
-
-  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
-	throw('You must pass a valid Bio::EnsEMBL::Slice');
-  }
-
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
-
-
-  if($rset->table_name eq 'channel'){
-	warn('Can only get ResultFeatures for an ExperimentalChip level ResultSet');
-	return;
-  }
-
-
-  my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
-  my ($biol_rep, $score, $start, $end, $cc_id, $old_start, $old_end, $probe_field);
-
-
-  my ($padaptor, $probe, $array,);
-  my ($probe_id, $probe_set_id, $pname, $plength, $arraychip_id, $pclass, $probeset);
-  my (%array_cache, %probe_set_cache, $ps_adaptor, $array_adaptor);
-
-  my $ptable_syn = '';
-  my $pjoin = '';
-  my $pfields = '';
-
-  if($with_probe){
-	#This would be in BaseAdaptor? or core DBAdaptor?
-	#This would work on assuming that the default foreign key would be the primary key unless specified
-	
-	#my($table_info, $fields, $adaptor) = @{$self->validate_and_get_join_fields('probe')};
-	$padaptor = $self->db->get_ProbeAdaptor;
-	$ps_adaptor = $self->db->get_ProbeSetAdaptor;
-	$array_adaptor = $self->db->get_ArrayAdaptor;
-
-
-	#This would return table and syn and syn.fields
-	#Would also need access to obj_from_sth_values
-	#could return code ref or adaptor
-	$ptable_syn = ', probe p';
-	
-	#Some of these will be redundant: probe_id
-	#Can we remove the foreign key from the returned fields?
-	#But we need it here as it isn't being returned
-	$pfields =  ', p.probe_id, p.probe_set_id, p.name, p.length, p.array_chip_id, p.class ';
-  
-	#will this make a difference if we join on pf instead of r?
-	$pjoin = ' AND r.probe_id = p.probe_id ';
-  }
-
-
-
-
-  
-  my @ids = @{$rset->table_ids()};
-  #should we do some more optimisation of method here if we know about presence or lack or replicates?
-
-  if($ec_status){
-    @filtered_ids = @{$self->status_filter($ec_status, 'experimental_chip', @ids)};
-
-    if(! @filtered_ids){
-
-      warn("No ExperimentalChips have the $ec_status status, No ResultFeatures retrieved");
-      return \@rfeatures;
-    }
-  }
-
-
-  #we need to build a hash of cc_id to biolrep value
-  #Then we use the biolrep as a key, and push all techrep values.
-  #this can then be resolved in the method below, using biolrep rather than cc_id
-
-
-  my $sql = "SELECT ec.biological_replicate, cc.chip_channel_id from experimental_chip ec, chip_channel cc 
-             WHERE cc.table_name='experimental_chip'
-             AND ec.experimental_chip_id=cc.table_id
-             AND cc.table_id IN(".join(', ', (map $_->dbID(), @{$rset->get_ExperimentalChips()})).")";
-
-  
-  my $sth = $self->prepare($sql);
-  $sth->execute();
-  $sth->bind_columns(\$biol_rep, \$cc_id);
-  #could maybe do a selecthashref here?
-
-  while($sth->fetch()){
-	$biol_rep ||= 'NO_REP_SET';
-
-	$biol_reps{$cc_id} = $biol_rep;
-  }
-
-  if(grep(/^NO_REP_SET$/, values %biol_reps)){
-	warn 'You have ExperimentalChips with no biological_replicate information, these will be all treated as one biological replicate';
-  }
-
-  #we don't need to account for strnadedness here as we're dealing with a double stranded feature
-  #need to be mindful if we ever consider expression
-  #we don't need X Y here, as X Y for probe will be unique for cc_id.
-  #any result with the same cc_id will automatically be treated as a tech rep
-
-
-  #This does not currently handle multiple CSs i.e. level mapping
-  my $mcc =  $self->db->get_MetaCoordContainer();
-  my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
-																$slice->coord_system->name(), 
-																$slice->coord_system->version()
-																);
-
-  my $max_len = $mcc->fetch_max_length_by_CoordSystem_feature_type($fg_cs, 'probe_feature');
-
-
- #This join between sr and pf is causing the slow down.  Need to select right join for this.
-  #just do two separate queries for now.
-
-  $sql = "SELECT seq_region_id from seq_region where core_seq_region_id=".$slice->get_seq_region_id().
-	" AND schema_build='".$self->db->_get_schema_build($slice->adaptor->db())."'";
-
-   my ($seq_region_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-
-
-
-
-  #Can we push the median calculation onto the server?
-  #group by pf.seq_region_start?
-  #will it always be a median?
-
-
-  $sql = 'SELECT STRAIGHT_JOIN r.score, pf.seq_region_start, pf.seq_region_end, cc.chip_channel_id '.$pfields.
-	' FROM probe_feature pf, '.$rset->get_result_table().' r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '.
-	  $rset->dbID();
-
-  $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
-
-
-  $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
-	' AND r.probe_id=pf.probe_id'.$pjoin.
-	  ' AND pf.seq_region_id='.$seq_region_id.
-		' AND pf.seq_region_start<='.$slice->end();
-  
-  if($max_len){
-	my $start = $slice->start - $max_len;
-	$start = 0 if $start < 0;
-	$sql .= ' AND pf.seq_region_start >= '.$start;
-  }
-
-  $sql .= ' AND pf.seq_region_end>='.$slice->start().
-	' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
-
-  #can we resolves replicates here by doing a median on the score and grouping by cc_id some how?
-  #what if a probe_id is present more than once, i.e. on plate replicates?
-
-  #To extend this to perform median calculation we'd have to group by probe_id, and ec.biological_replicate
-  #THen perform means across biol reps.  This would require nested selects 
-  #would this group correctly on NULL values if biol rep not set for a chip?
-  #This would require an extra join too. 
-
-
-  $sth = $self->prepare($sql);
-  $sth->execute();
-  
-  if($with_probe){
-	$sth->bind_columns(\$score, \$start, \$end, \$cc_id, \$probe_id, \$probe_set_id, 
-					   \$pname, \$plength, \$arraychip_id, \$pclass);
-  }
-  else{
-	$sth->bind_columns(\$score, \$start, \$end, \$cc_id);
-  }
-  my $position_mod = $slice->start() - 1;
-  
-
-  my $new_probe = 0;
-  my $first_record = 1;
-
-  while ( $sth->fetch() ) {
-
-    #we need to get best result here if start and end the same
-    #set start end for first result
-    $old_start ||= $start;
-    $old_end   ||= $end; 
-    
-
-	#This is assuming that a feature at the exact same locus is from the same probe
-	#This may not be correct and will collapse probes with same sequence into one ResultFeature
-	#This is okay for analysis purposes, but obscures the probe to result relationship
-	#we arguably need to implement r.probe_id check here for normal ResultFeatures
-
-    if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature?
-
-	  #only if with_probe(otherwise we have a genuine on plate replicate)
-	  #if probe_id is same then we're just getting the extra probe for a different array?
-	  #cc_id might be different for same probe_id?
-
-	  #How can we differentiate between an on plate replicate and just the extra probe records?
-	  #If array_chip_id is the same?  If it is then we have an on plate replicate (differing x/y vals in result)
-	  #Otherwise we know we're getting another probe record from a different Array/ArrayChip.
-	  #It is still possible for the extra probe record on a different ArrayChip to have a result, 
-	  #the cc_id would be different and would be captured?
-	  #This would still be the same probe tho, so still one RF
-
-	  #When do we want to split?
-	  #If probe_id is different...do we need to order by probe_id?	  
-	  #probe will never be defined without with_probe
-	  #so can omit from test
-
-	  if(defined $probe && ($probe->dbID != $probe_id)){
-		$new_probe = 1;
-	  }
-	  else{
-		push @{$rep_scores{$biol_reps{$cc_id}}}, $score;
-	  }
-    }
-	else{#Found new location
-	  $new_probe = 1;
-	}
-
-	if($new_probe){
-	  #store previous feature with best result from @scores
-		#Do not change arg order, this is an array object!!
-
-	  push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-		(
-		  ($old_start - $position_mod), 
-		  ($old_end - $position_mod), undef,#strand needs adding
-		  $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
-		  $probe,
-		 );
-	
-	 
-	  undef %rep_scores;
-	  $old_start = $start;
-      $old_end = $end;
-	  
-      #record new score
-
-	  @{$rep_scores{$biol_reps{$cc_id}}} = ($score);
-	}
-
-	if($with_probe){
-
-	  #This would be done via the ProbeAdaptor->obj_from_sth_values
-	  #We need away ti maintain the Array/ProbeSet caches in obj_from_sth fetch
-	  #Pulling into an array would increase memory usage over the fetch loop
-	  #Can we maintain an object level cache which we would then have to reset?
-	  #Wouldn't be the end of the world if it wasn't, but would use memory
-
-	  
-	  #This is recreating the Probe->_obj_frm_sth
-	  #We need to be mindful that we can get multiple records for a probe
-	  #So we need to check whether the probe_id is the same
-	  #It may be possible to get two of the same probes contiguously
-	  #So we would also have to check on seq_region_start
-
-	  #Do we really need to set these?
-	  #We are getting the advantage that we're cacheing
-	  #Rather than a fetch for each object
-	  #But maybe we don't need this information?
-	  #Can we have two mode for obj_from_sth?
-
-	  $array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
-
-	  if($probe_set_id){
-		$probeset = $probe_set_cache{$probe_set_id} || $self->db->get_ProbeSetAdaptor()->fetch_by_dbID($probe_set_id);
-	  }
-
-
-	  if($first_record || $new_probe){
-
-		$probe = Bio::EnsEMBL::Funcgen::Probe->new
-			  (
-			   -dbID          => $probe_id,
-			   -name          => $pname,
-			   -array_chip_id => $arraychip_id,
-			   -array         => $array,
-			   -probe_set     => $probeset,
-			   -length        => $plength,
-			   -class         => $pclass,
-			   -adaptor       => $padaptor,
-			);
-
-	  } 
-	  else {
-		# Extend existing probe
-		$probe->add_array_chip_probename($arraychip_id, $pname, $array);
-	  }
-	}
-
-	$new_probe = 0;
-	$first_record = 0;
-  }
-  
-  #store last feature  
-  #Do not change arg order, this is an array object!!
-  #only if found previosu results
-  if($old_start){
-    push @rfeatures, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast
-      (
-	   ($old_start - $position_mod), 
-	   ($old_end - $position_mod),
-	   $self->resolve_replicates_by_ResultSet(\%rep_scores, $rset),
-	   $probe
-	  );
-
-	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
-  }
-  
-  return \@rfeatures;
 }
-
-
-
-
-
-=head2 resolve_replicates_by_ResultSet
-
-  Arg[0]     : HASHREF - chip_channel_id => @scores pairs
-  #Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
-  Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSet($slice, $rset, 'DISPLAYABLE')};
-  Description: Gets a list of lightweight ResultFeatures from the ResultSet and Slice passed.
-               Replicates are combined using a median of biological replicates based on 
-               their mean techinical replicate scores
-  Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
-  Exceptions : None
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-
-#this may be done better inline rather than sub'd as we're going to have to rebuild the duplicate data each time?
-#Rset should return a hash of cc_ids keys with replicate name values.
-#these can then beused to build replicate name keys, with an array technical rep score values.
-#mean each value then give median of all.
-
-
-sub resolve_replicates_by_ResultSet{
-  my ($self, $rep_ref) = @_;#, $rset) = @_;
-
-  my ($score, @scores, $biol_rep);
-
-  #deal with simplest case first and fastest?
-  #can we front load this with the replicate set info, i.e. if we know we only have one then we don't' have to do all this testing and can do a mean
-
-  if(scalar(keys %{$rep_ref}) == 1){
-	
-	($biol_rep) = keys %{$rep_ref};
-
-	@scores = @{$rep_ref->{$biol_rep}};
-
-	if (scalar(@scores) == 1){
-	  $score = $scores[0];
-	}else{
-	  $score = mean(\@scores)
-	}
-  }else{#deal with biol replicates
-
-	foreach $biol_rep(keys %{$rep_ref}){
-	  push @scores, mean($rep_ref->{$biol_rep});
-	}
-
-	@scores = sort {$a<=>$b} @scores;
-
-	$score = median(\@scores);
-
-  }
-
-  return $score;
-}
-
-
-=head2 fetch_results_by_probe_id_ResultSet
-
-  Arg [1]    : int - probe dbID
-  Arg [2]    : Bio::EnsEMBL::Funcgen::ResultSet
-  Example    : my @probe_results = @{$ofa->fetch_results_by_ProbeFeature_ResultSet($pid, $result_set)};
-  Description: Gets result for a given probe in a ResultSet
-  Returntype : ARRAYREF
-  Exceptions : throws if args not valid
-  Caller     : General
-  Status     : At Risk - Change to take Probe?
-
-=cut
-
-sub fetch_results_by_probe_id_ResultSet{
-  my ($self, $probe_id, $rset) = @_;
-  
-  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ResultSet") if (! ($rset  &&
-									       $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet")
-									       && $rset->dbID()));
-  
-  throw('Must pass a probe dbID') if ! $probe_id;
-  
-  
-  
-  my $cc_ids = join(',', @{$rset->chip_channel_ids()});
-
-  my $query = "SELECT r.score from result r where r.probe_id ='${probe_id}'".
-    " AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
-
-  #without a left join this will return empty results for any probes which may have been remapped 
-  #to the a chromosome, but no result exist for a given set due to only importing a subset of
-  #a vendor specified mapping
-
-
-  #This converts no result to a 0!
-
-  my @results = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($query)};
-  
-
-  return \@results;
-}
-
-
-
-
-
 1;
 
