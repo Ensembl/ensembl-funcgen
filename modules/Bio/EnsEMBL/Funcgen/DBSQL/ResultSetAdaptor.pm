@@ -212,7 +212,7 @@ sub get_Experiment_join_clause{
   else{#Assume we have an InputSet Experiment?
 	#We could possibly have an expeirment with an array and an input set
 	#Currently nothing to stop this, but would most likely be loaded as separate experiments
-	my $input_setids = join(', ', (map $_->dbID, @{$exp->get_InputSets}));
+	my $input_setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
 	warn "is ids are $input_setids";
 
 	$constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$input_setids.')';
