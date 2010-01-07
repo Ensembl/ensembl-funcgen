@@ -86,7 +86,7 @@ use vars qw(@ISA);
                     -reg_config path to local registry config file (default = ~/ensembl.init || undef)
                     -design_type MGED term (default = binding_site_identification) get from meta/MAGE?
 
-                    #-use_defaults This changes some mandatory parameters to optional, instead using either DEFAULT or the input file name for the followinng options -name, -experimental_set, -feature_type, -cell_type etc ???
+                    #-use_defaults This changes some mandatory parameters to optional, instead using either DEFAULT or the input file name for the following options -name, -input_set, -feature_type, -cell_type etc ???
 
                     -verbose
  ReturnType  : Bio::EnsEMBL::Funcgen::Importer
@@ -109,7 +109,7 @@ sub new{
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $assm_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, $eset_name, 
+	  $farm, $ssh, $fasta, $recover, $reg_config, 
 	  $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, 
 	  $ucsc_coords, $verbose, $fset_desc, $release, $reg_host, $reg_port, $reg_user, $reg_pass)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
@@ -117,8 +117,7 @@ sub new{
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'ASSEMBLY', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
-				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 
-				 'EXPERIMENTAL_SET_NAME', 'NORM_METHOD', 'OLD_DVD_FORMAT',
+				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'NORM_METHOD', 'OLD_DVD_FORMAT',
 				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS', 'VERBOSE',
 				 'FEATURE_SET_DESCRIPTION', 'RELEASE', 'REGISTRY_HOST', 'REGISTRY_PORT',
 				'REGISTRY_USER', 'REGISTRY_PASS'], @_);
@@ -148,6 +147,7 @@ sub new{
 
   #Change this to be set and required/detected in the parse_and_import.pl script
   #Then we can have Importer.pm as the base class and get rid of this.
+  #as well as set_config methods?
   
 
   eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";};
@@ -2495,6 +2495,7 @@ sub get_import_ResultSet{
 		   -name       => $self->name()."_IMPORT",
 		   -feature_type => $self->feature_type(),
 		   -cell_type    => $self->cell_type(),
+		   -type         => 'array',
 		  );
 	
 		#These types should be set to NULL during the MAGE-XML validation if we have more than one type in an experiment
