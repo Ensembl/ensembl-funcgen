@@ -80,7 +80,7 @@ sub fetch_all_by_FeatureType {
     throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
   }
   
-  my $constraint = "es.feature_type_id =".$ftype->dbID();
+  my $constraint = "inp.feature_type_id =".$ftype->dbID();
 	
   return $self->generic_fetch($constraint);
 }
@@ -105,7 +105,7 @@ sub fetch_all_by_CellType {
     throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::CellType");
   }
 	
-  my $constraint = "es.cell_type_id =".$ctype->dbID();
+  my $constraint = "inp.cell_type_id =".$ctype->dbID();
 	
   return $self->generic_fetch($constraint);
 }
@@ -132,7 +132,7 @@ sub fetch_all_by_Experiment {
 	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
 		
-  return $self->generic_fetch('es.experiment_id = '.$exp->dbID());
+  return $self->generic_fetch('inp.experiment_id = '.$exp->dbID());
 }
 
 =head2 fetch_by_name
@@ -151,8 +151,9 @@ sub fetch_by_name {
   my ($self, $name) = @_;
 
   throw('Need to pass a name argument') if( ! defined $name);
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
 		
-  return $self->generic_fetch("es.name ='${name}'")->[0];
+  return $self->generic_fetch("inp.name = ?")->[0];
 }
 
 =head2 _tables
@@ -172,7 +173,7 @@ sub _tables {
   my $self = shift;
 	
   return (
-		  [ 'input_set',    'is' ],
+		  [ 'input_set',    'inp' ],
 		  [ 'input_subset', 'iss' ],
 		 );
 }
@@ -193,11 +194,12 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 
+	#can't have is as an alias as it is reserved
 	return qw(
-			  is.input_set_id    is.experiment_id
-			  is.feature_type_id is.cell_type_id
-			  is.format          is.vendor
-			  is.name     		 iss.name
+			  inp.input_set_id    inp.experiment_id
+			  inp.feature_type_id inp.cell_type_id
+			  inp.format          inp.vendor
+			  inp.name     		 iss.name
 			  iss.input_subset_id
 		 );
 
@@ -242,7 +244,7 @@ sub _columns {
 sub _left_join {
   my $self = shift;
 	
-  return (['input_subset', 'is.input_set_id = iss.input_set_id']);
+  return (['input_subset', 'inp.input_set_id = iss.input_set_id']);
 }
 
 
