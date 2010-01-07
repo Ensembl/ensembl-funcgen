@@ -818,6 +818,7 @@ sub write_validate_experiment_config{
 			   -TABLE_NAME   => 'experimental_chip',
 			   -FEATURE_TYPE => $feature_type,
 			   -CELL_TYPE    => $cell_type,
+			   -type         => 'array',
 			  );
 
 			#record cell and feature types
@@ -852,6 +853,7 @@ sub write_validate_experiment_config{
 			   -TABLE_NAME => 'experimental_chip',
 			   -FEATURE_TYPE => $tech_reps{$techrep}{'feature_type'},
 			   -CELL_TYPE    => $tech_reps{$techrep}{'cell_type'},
+			   -type         => 'array',
 			  );
 
 			$self->log("Created TechRep ResultSet:\t".$rsets{$techrep}->log_label);
@@ -953,6 +955,7 @@ sub write_validate_experiment_config{
 		 -TABLE_NAME => 'experimental_chip',
 		 -FEATURE_TYPE => $toplevel_sets{$ftype_name}{'feature_type'},
 		 -CELL_TYPE    => $toplevel_sets{$ftype_name}{$ctype_name}{'cell_type'},
+		 -type         => 'array',
 		);
 
 	  $self->log("Created toplevel ResultSet for:\t". $rsets{$self->experiment->name().'_'.$toplevel_cnt}->log_label);
