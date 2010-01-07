@@ -61,7 +61,7 @@ use base ('Bio::EnsEMBL::Feature');
 
 =head2 new_fast
 
-  Args       : Array with attributes start, end, strand, scores, probe, result_set_id, winow_size, slice  IN THAT ORDER.
+  Args       : Array with attributes start, end, strand, scores, probe, result_set_id, window_size, slice  IN THAT ORDER.
                WARNING: None of these are validated, hence can omit some where not needed
   Example    : none
   Description: Fast and list version of new. Only works if the code is very disciplined.
@@ -75,8 +75,17 @@ use base ('Bio::EnsEMBL::Feature');
 #To do
 # Re/Move probe to end?
 # turn back into hash as we are only ever returning one of these?
+# Except at 0 window size.
 # Then we can super new and get rid of most of these methods?
 # Just do with current implementation for now.
+# Can't use array based implementation for fetching on Y PAR regions
+# as this will result in the BaseFeatureAdptor returning the X slice
+# This results in trying to transfer the feature using direct hash access(for speed) 
+# rather than method calls. This direct is also used in _remap, which we have
+# already rewritten in the Funcgen BaseFeatureAdaptor to use method calls rather than hash access
+# Convert back to hash or convert hash access to method access to maintain speed at 0 wsize?
+# This is the same for the transfer method used in _pre_store, which is why we force
+# storage on a slice starting at 1.
 
 sub new_fast {
   my ($class, @args)  = @_;
@@ -97,6 +106,10 @@ sub new_fast {
 #Will we ever want to project these? Just project original features
 # and recompute collections?
 #What about projecting between levels rather than assemblies?
+
+#start/end are also setters to enable methodbased transfer in BaseFeatureAdaptor
+#the Feature::transfer method would fail for these as this methd 
+#also uses direct hash access.
 
 =head2 start
 
@@ -161,6 +174,7 @@ sub strand {  $_[0]->[2];}
 =cut
 
 sub scores {  $_[0]->[3];}
+
 
 
 =head2 probe
