@@ -161,59 +161,18 @@ sub _tables {
 
 =cut
 
-#sub _columns {
-#	my $self = shift;#
-#
-#	#This need to be dynamic dependent on whether result_set has 'result_feature' status.
-#
-#	#removed window as we don't want to return that really?
-#	#Could remove seq_region_id, but this may cause problems with attempts to map
-#
-#
-#	#Should add strand to this to enable stranded features
-#	
-#
-#	my @result_columns = qw (r.score            pf.seq_region_start 
-#							 pf.seq_region_end  pf.seq_region_strand 
-#							 cc.chip_channel_id);
-#
-#	if($_probe_extend){
-#	  #We can get this direct from the ProbeAdaptor
-#	  #Then we can use split/commodotised methods for generation of probe external to the ProbeAdaptor
-#
-#	   push @result_columns, qw(p.probe_id  p.probe_set_id
-#								p.name            p.length
-#								p.array_chip_id    p.class);
-#	}
-#
-#	#Can we remove result_feature_id, result_set_id and seq_region_id?
-#	#Need to dynamically add strand dependant on whether feature is stranded?rf.seq_region_strand
-#	#May need to add rf.seq_region_id  if we want to create Collections
-#	#Hve also left out window, as we don't need to know this.
-#	#warn "columns: probe_extend  $_probe_extend rfs $_result_feature_set";
-#
-#	return $_result_feature_set ? qw(rf.seq_region_start rf.seq_region_end rf.seq_region_strand rf.score rf.seq_region_id)
-#	  : @result_columns;
-#  }
-
-
 sub _columns {
 	my $self = shift;
 
-	#This need to be dynamic dependent on whether result_set has 'result_feature' status.
-
-	#removed window as we don't want to return that really?
-	#Could remove seq_region_id, but this may cause problems with attempts to map
-
-
-	#warn "Using new compressed columns method";
-
-	#Should add strand to this to enable stranded features
+	#This is dependent on whether result_set has 'result_feature' status.
 	
-
+	#No window_size as this is set as $_window_size
 	my @result_columns = qw (r.score            pf.seq_region_start 
 							 pf.seq_region_end  pf.seq_region_strand 
 							 rsi.result_set_input_id);
+
+	#Would need to re-add seq_region_id if we convert back to the standard hash based Feature
+
 
 	if($_probe_extend){
 	  #We can get this direct from the ProbeAdaptor
@@ -224,22 +183,12 @@ sub _columns {
 								p.array_chip_id    p.class);
 	}
 	elsif($_result_feature_set){
-	#Can we remove result_feature_id, result_set_id and seq_region_id?
-	#Need to dynamically add strand dependant on whether feature is stranded?rf.seq_region_strand
-	#May need to add rf.seq_region_id  if we want to create Collections
-	#Hve also left out window, as we don't need to know this.
-	#warn "columns: probe_extend  $_probe_extend rfs $_result_feature_set";
 
 	  @result_columns = ('rf.seq_region_start', 'rf.seq_region_end', 'rf.seq_region_strand', "$_scores_field");
-	  
-
-
 	}
-	#retrieve window_size here too or just set as private global var?
 
 	return @result_columns;
   }
-
 
 
 
@@ -261,26 +210,10 @@ sub _columns {
 sub _default_where_clause{
   my $self = shift;
 
-  #warn "where: probe_extend  $_probe_extend rfs $_result_feature_set";
-
   return 'r.probe_id = p.probe_id' if $_probe_extend && ! $_result_feature_set;
-
 }
 
-=head2 _final_clause
 
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns an ORDER BY clause. Sorting by oligo_feature_id would be
-			   enough to eliminate duplicates, but sorting by location might
-			   make fetching features on a slice faster.
-  Returntype : String
-  Exceptions : None
-  Caller     : generic_fetch
-  Status     : At Risk
-
-=cut
 
 =head2 _objs_from_sth
 
@@ -295,103 +228,6 @@ sub _default_where_clause{
   Status     : At Risk
 
 =cut
-
-#sub _objs_from_sth {
-#  my ($self, $sth) = @_;
-#  
-#  
-#  #Where is the substr for the 1st and last bin going to happen?
-#  #Here or in the query?
-#  #Would still need to know the start and end here to reset the the start and end of the final
-#  #feature. Compara code does not use BaseFeatureAdaptor methods
-#  #so no _obj_from sth tables etc.
-#  #We can mix substr and non-substr fields in the fetch
-#  #so we need to know whether it overlaps first?
-#  #Can't do this resonably so have to pull back all records and substr here! Doh!
-#  #blob substr in DB is a no go for data sets which multiple records!!
-#  #So we need to set temporary private vars defining seq_region_start and end?
-#
-#  #
-#
-#  my (@rfeats, $dbid, $rset_id, $seq_region_id, $sr_start, $sr_end, $sr_strand, $score, $sr_id);
-#  my ($sql);
-#
-#  #Test speed with no dbID and sr_id
-#  #Could dynamically define simple obj hash dependant on whether feauture is stranded and new_fast?
-#  #We never call _obj_from_sth for extended queries
-#  #This is only for result_feature table queries i.e. standard/new queries
-#
-#  $sth->bind_columns(\$sr_start, \$sr_end, \$sr_strand, \$score, \$sr_id);
-#  
-#
-#  #We could rmeove all the slice stuff if we can override the BaseFeature _remap stuff
-#  #And implement out own here based on the query slice
-#  my %slice_hash;
-#  my $slice_adaptor = $self->db->get_SliceAdaptor;
-#  
-#
-#  while ( $sth->fetch() ) {
-#
-#	#warn "Need to unpack score here!";
-#	#Leave packing for v51
-#	
-#	#get core seq_region_id
-#	my $csr_id = $self->get_core_seq_region_id($sr_id);
-#		
-#	if(! $csr_id){
-#	  warn "Cannot get slice for eFG seq_region_id $sr_id\n".
-#		"The region you are using is not present in the cuirrent dna DB";
-#	  next;
-#	}
-#
-#
-#	$slice_hash{$csr_id} ||= $slice_adaptor->fetch_by_seq_region_id($csr_id);
-#	
-#
-#
-#	push @rfeats, Bio::EnsEMBL::Funcgen::ResultFeature->new_fast($sr_start, $sr_end, $sr_strand, $score, undef, undef, undef, $slice_hash{$csr_id});
-#
-#
-#	#We never want the heavy object from the result_feature table method
-#	#In fact we never want the heavy object unless we create it from scratch to store it
-#	#Therefore we don't need to use create_feature at all unless we ever want to use
-#	#The collection to generate bins on the fly(rather than for storing)
-#	#We would only want this if we don't want to implement the object, just the array
-#	#Now we're back to considering the base collection array
-#	#'DBID', 'START', 'END', 'STRAND', 'SLICE'
-#	#we don't need dbID or slice for ResultFeature
-#	#But we do need a score
-#	#Stick with object implementation for now
-#
-#	  # Finally, create the new exon.
-#    #push( @exons,
-#    #      $self->_create_feature( 'Bio::EnsEMBL::Exon', {
-#	#													 '-start'     => $seq_region_start,
-#	#													 '-end'       => $seq_region_end,
-#	#													 '-strand'    => $seq_region_strand,
-#		#												 '-adaptor'   => $self,
-#	#													 '-slice'     => $slice,
-#	#													 '-dbID'      => $exon_id,
-#	#													 '-stable_id' => $stable_id,
-#	#													 '-version'   => $version,
-#	#													 '-created_date' => $created_date
-#	#													 || undef,
-#	#													 '-modified_date' => $modified_date
-#	#													 || undef,
-#	#													 '-phase'      => $phase,
-#	#													 '-end_phase'  => $end_phase,
-#	#													 '-is_current' => $is_current
-#	#													} ) );
-#
-#
-#
-#  }
-#
-#  #reset for safety, altho this will be reset in fetch method
-#  $_result_feature_set = 1;
-#
-#  return \@rfeats;
-#}
 
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
@@ -410,7 +246,6 @@ sub _objs_from_sth {
   
   my (@rfeats, $start, $end, $strand, $scores);
 
-  #Test speed with no dbID and sr_id
   #Could dynamically define simple obj hash dependant on whether feature is stranded and new_fast?
   #We never call _obj_from_sth for extended queries
   #This is only for result_feature table queries i.e. standard/new queries
@@ -477,11 +312,8 @@ sub _objs_from_sth {
 	$start_pad = 0;
 	$end_pad   = 0;
 
-
 	#This test only works as $_window_size is always set in fetch methods?
-	#undef if not sepcified (non-result_feature sets) or 0 for non
-	#collected ResultFeatures
-
+	#undef if not specified (non-result_feature sets) or 0 for non-collected ResultFeatures
 
 	if(! $_window_size || ! $_result_feature_set){
 	  #Standard array method
@@ -517,9 +349,6 @@ sub _objs_from_sth {
 	  #And this is normally done via store method
 	  #Don't really want to do this on the fly for display?
 
-
-	  #warn "$sr_start - $sr_end @scores";
-
 	  # If a destination slice was provided convert the coords
 	  # If the dest_slice starts at 1 and is foward strand, nothing needs doing
 	  # Need to do this for both single and multiple collections
@@ -552,14 +381,10 @@ sub _objs_from_sth {
 	  
 	  #$slice = $dest_slice;
 	  #}
-
-
-	  #push @rfeats, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast($start, $end, $strand, [@scores], undef, undef, undef, $dest_slice);
-
 	}
 	else{
 	  #No need to do this trimming now as we always bring back only those scores we want
-	  #What we actaully need to do is figure out the true start and end of the collection
+	  #What we actually need to do is figure out the true start and end of the collection
 	  #with relation to the dest slice
 	  $collection_cnt++;
 	  
@@ -589,6 +414,7 @@ sub _objs_from_sth {
 	  #These could be removed if we force only full length seq_region collections
 	  $_collection_start = $start if($_collection_start < $start);
 	  $_collection_end   = $end   if($_collection_end   > $end);
+	  
 	  #warn "col start now $_collection_start";
 	  #warn "col end   now $_collection_end";
 	  
@@ -618,84 +444,15 @@ sub _objs_from_sth {
 		next FEATURE;
 	  }
 	  
-
-	  #warn "Unpacking scores(".length($scores).") $scores\n with (".$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$_window_size)- $start_pad - $end_pad);
 	
 	@scores = unpack('('.$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$_window_size)- $start_pad - $end_pad), $scores);
-
-	  
-	  #warn scalar(@scores)." =  (($_collection_end - $_collection_start + 1)/$_window_size)) = ".(($_collection_end - $_collection_start + 1)/$_window_size);
-
-
-	  # push @rfeats, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast($start, $end, $strand, [@scores], undef, undef, undef, $dest_slice);
-
-
-	  #$collection_cnt++;
-	
-	  #Calculate total num bins
-	  #$num_bins = ($sr_start - $sr_end + 1)/$_window_size;
-	  #$unpack_template = '('.$self->pack_template.")${num_bins}";
-	  #push @scores, unpack($unpack_template, $scores);
-
-	  
-	  #if($collection_cnt == 1){	#Trim scores from 5' overhang
-	  #	$over_hang = $dest_slice->start - $sr_start;
-	  #	$num_bins = int($over_hang/$_window_size);
-	  #	@scores = splice(@scores, 0, $num_bins);#
-	  
-	  #	#Reset sr_start after bin trim
-	  #	$sr_start = $sr_start + ($num_bins * $_window_size);
-	  #}
-   	}
+	}
 
 	
 	push @rfeats, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast($start, $end, $strand, [@scores], undef, undef, $_window_size, $dest_slice);
 
   }
   
-  
-#  if(@scores && $_result_feature_set && $_window_size != 0){#Now trim off overhanging 3' scores and create collection
-#	$over_hang = $sr_end - $dest_slice->end;
-#	$num_bins = int($over_hang/$_window_size) * -1;
-#	@scores = splice(@scores, $num_bins);
-#
-#	#Reset sr_end after bin trim??
-#	#This might not be the case for a collection at the end of a slice!
-#	#But this would never overhang anyway.
-#	$sr_end = $sr_end - ($num_bins * $_window_size);
-#
-#
-#	#Now deal with dest_slice
-#	if($dest_slice_start != 1 || $dest_slice_strand != 1) {
-#	  if($dest_slice_strand == 1) {
-#		$sr_start = $sr_start - $dest_slice_start + 1;
-#		$sr_end   = $sr_end   - $dest_slice_start + 1;
-#	  } else {
-#		my $tmp_seq_region_start = $sr_start;
-#		$sr_start = $dest_slice_end - $sr_end + 1;
-#		$sr_end   = $dest_slice_end - $tmp_seq_region_start + 1;
-#		$sr_strand *= -1;
-#	  }
-#	  
-#	}
-#	
-#	#throw away features off the end of the requested slice or on different seq_region
-#	#if($sr_end < 1 || $sr_start > $dest_slice_length){# ||
-#	  #( $dest_slice_sr_id ne $seq_region_id )) {
-#	  #This would only happen if assembly mapper had placed it on a different seq_region
-#	  #Dynamically mapped features are not guaranteed to come back in correct order?
-#	  
-#	  #next FEATURE;
-#	#}
-#	  
-#	$slice = $dest_slice;
-#
-#
-  #	push @rfeats, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast($sr_start, $sr_end, $sr_strand, [@scores], undef, undef, undef, $slice);	
-  #}
-
-
-
   #reset for safety, altho this should be reset in fetch method
   $_result_feature_set = 1;
   
@@ -723,12 +480,8 @@ sub store{
   my ($self, $rfeats, $rset, $new_assembly) = @_;
 
   #We can't project collections to a new assembly after they have been generated 
-  #as this will mess up the standardised bins?
-  #Maybe we can just project the 0 window size and then rebuild using that?
-
-
-  #We can't set pack_size/template without knowing the type of ResultSet
-  #Take as argument
+  #as this will mess up the standardised bin bounds.
+  #Just project the 0 window size and then rebuild other window_sizes form there
 
   $self->set_collection_defs_by_ResultSet($rset);
   throw("Must provide a list of ResultFeature objects") if(scalar(@$rfeats == 0));
@@ -740,7 +493,7 @@ sub store{
 
 
   #We need to set $_result_feature_set here
-  #So _pre_store use the correct table name in meta_coord
+  #So _pre_store uses the correct table name in meta_coord
   $_result_feature_set = 1;
 
  FEATURE: foreach my $rfeat (@$rfeats) {
@@ -750,36 +503,18 @@ sub store{
     }
     
 	#This is the only validation! So all the validation must be done in the caller as we are simply dealing with ints?
-	#We can do some validation, all have to be scalars, except strand which can be undef(or 0).
-	#Not a lot of point in doing this.
-	#Just specify not null in table def
-
 	#Remove result_feature_set from result_set and set as status?
-
-	#warn "pack score into blob here";
-
 	
 	my $seq_region_id;
-
-	#Here we need to temporarily override the $_result_feature_set
-	#As when we are storing
-	#Or should we just change default?
-
 	($rfeat, $seq_region_id) = $self->_pre_store($rfeat, $new_assembly);
 
 	next if ! $rfeat;#No projection to new assembly
-	#Is there a way of loggin which ones don't make it?
+	#Is there a way of logging which ones don't make it?
 
 	#This captures non full length collections at end of seq_region
 	$pack_template = '('.$self->pack_template.')'.scalar(@{$rfeat->scores});
 	$packed_string = pack($pack_template, @{$rfeat->scores});	
 	
-
-	#warn "Packing scores:\t".join(',', @{$rfeat->scores});
-	#warn "Pack string using $pack_template is:\t".$packed_string;	
-	#warn "Unpacked string is:\t".join(',', unpack($pack_template, $packed_string));
-
-
 	$sth->bind_param(1, $rfeat->result_set_id, SQL_INTEGER);
 	$sth->bind_param(2, $seq_region_id,        SQL_INTEGER);
     $sth->bind_param(3, $rfeat->start,         SQL_INTEGER);
@@ -794,12 +529,12 @@ sub store{
   return $rfeats;
 }
 
-
+#This is next to useless in the context of ResultFeatures
 =head2 list_dbIDs
 
   Args       : None
   Example    : my @rsets_ids = @{$rsa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all ProbeFeature objects in
+  Description: Gets an array of internal IDs for all ResultFeature objects in
                the current database.
   Returntype : List of ints
   Exceptions : None
@@ -834,36 +569,6 @@ sub list_dbIDs {
 
 =cut
 
-
-#Could we also have an optional net size for grouping ResultFeature into  Nbp pseudo ResultFeatures?
-
-
-#This does not account for strandedness!!
-###???
-#Is this sensible?  Do we really want the full probe object alongside the ResultFeatures?
-#strandedness?
-#what about just the probe name?
-#we could simplt add the probe_id to the ResultFeature
-#This would prevent creating probe features for all of the features which do not have results for a given resultset
-#This will mean the probe will still have to be individually created
-#But we're only creating it for those which we require
-#and we're now creating the lightweight ResultFeature instead of the ProbeFeature
-#However, if we're dealing with >1 rset in a loop
-#Then we'll be recreating the same ResultFeatures and probes for each set.
-#We're already restricting the ProbeFeatures to those within the rset
-#What we want is to get the score along side the ProbeFeature?
-#But we want the probe name!!
-#We really want something that will give Probe and ResultFeature
-#Let's set the Probe as an optional ResultFeature attribute
-
-
-#should we pass params hash here?
-
-
-#Here we need to set the $_seq_region_start/end
-#and the pack attrs dependant on the ResultSet type.
-#We also need to alter the ResultSet to model ChipSeq file imports
-
 sub fetch_all_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe, $max_bins, $window_size, $constraint) = @_;
   #Change to params hash?
@@ -880,15 +585,11 @@ sub fetch_all_by_Slice_ResultSet{
   }
 
   #Set temp global private vars for use in _obj_from_sth
-  #$_query_slice        = $slice;
   $_result_feature_set = $rset->has_status('RESULT_FEATURE_SET');
   #We need to set this for all InputSets? Or just ID that it is an InputSet?
   $_probe_extend       = $with_probe if defined $with_probe;
   $_window_size        = $window_size;
 
-  #Work out window size here based on Slice length
-
-  #Keep working method here for now and just use generic fetch for simple result_feature table query
 
   #warn "hardcoding for result feature set = 0";#and wsize==0";
   #$_result_feature_set = 0;
@@ -896,8 +597,6 @@ sub fetch_all_by_Slice_ResultSet{
 
 
   if($_result_feature_set){
-	#warn "window size is $_window_size";
-
 	#Set the pack size and template for _obj_from_sth
 	$self->set_collection_defs_by_ResultSet($rset);
 
@@ -912,10 +611,10 @@ sub fetch_all_by_Slice_ResultSet{
 	  throw("Cannot retrieve Probe information with a result_feature_set query, try using ???");
 	}
 
-
-	if(! defined $window_size){
+ 
+	if(! defined $window_size){	  
+	  #Work out window size here based on Slice length
 	  $window_size = ($slice->length)/$max_bins;
-	  #warn "Optimum window_size is $window_size";
 	} 
 
 	my @sizes = @{$self->window_sizes};
@@ -923,8 +622,6 @@ sub fetch_all_by_Slice_ResultSet{
 	  
 	#Try and find the next biggest window
 	#As we don't want more bins than there are pixels
-	
-
 	for (my $i = 0; $i <= $#sizes; $i++) {
 	  
 
@@ -935,7 +632,6 @@ sub fetch_all_by_Slice_ResultSet{
 	  #Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
 
 	  if ($window_size <= $sizes[$i]){
-		#warn "($window_size <= $sizes[$i])";
 		$_window_size = $sizes[$i];
 		last;    
 	  }
@@ -963,29 +659,9 @@ sub fetch_all_by_Slice_ResultSet{
 		$_collection_start +=1;#Add 1 to the bin due to int rounding down
 	  }
 	  	  
-	  #$_collection_start = (($_collection_start -1) * $_window_size);#seq_region
-	  #We can't do this as this gives the potential for getting 0 first the first bin
 	  $_collection_start = ($_collection_start * $_window_size) - $_window_size + 1 ;#seq_region
 	  #Need to sub this?
-
-	  #Deal with slice start < 1
-	  #as the rest of the API supports this???
-	  #We are not dealing with end < 1 or start > seq_region length!!!!!!!!!!!!!!!!!!
-	  
-	  #if($_collection_start < 1){
-	#	warn $slice->start.' < '.$_collection_start;
-
-#		if($_collection_start == 0 || ($slice->start < $_collection_start)){
-#		  $_collection_start -= $_window_size;
-#		}
-
-
-#		$_collection_start += 1;#zero correction
-
-		
-#	  }
 	  #warn 'collection start is '.$_collection_start;
-
 
 	  $_collection_end   = int($slice->end/$_window_size) * $_window_size;#This will be <= $slice->end
 
@@ -1000,8 +676,7 @@ sub fetch_all_by_Slice_ResultSet{
 
  
 	  #Now correct for packed size
-	  #substring will return 2 bytes/position i.e ASCII char
-	  #No! substring on a blob returns bytes!!!???
+	  #Substring on a blob returns bytes not 2byte ascii chars!
 	  #start at the first char of the first bin
 	  my $sub_start = (((($_collection_start - 1)/$_window_size) * $self->packed_size) + 1);#add first char
 	  #Default to 1 as mysql substring starts < 1 do funny things
@@ -1015,26 +690,11 @@ sub fetch_all_by_Slice_ResultSet{
 
 	  #Finally set scores column for fetch
 	  $_scores_field = "substring(rf.scores, $sub_start, $sub_end)";
-	  #We could set pack template here with ($sub_end-$sub_start+1)/$self->packed_size
- 	  
+	  #We could set pack template here with ($sub_end-$sub_start+1)/$self->packed_size	  
 	  #warn $_scores_field;
-
 	}
 
 	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
-
-
-
-	#Conservation score method is to store all scores within a given window, by packing each individually
-	#Then 
-
-	#They also calc min and max and store in first ConservationScore
-	#Can we do this on the fly and return as separate values e.g.
-	#my ($rfs, $max_score, $min_score) = @{$rf_adaptor->fetch_all_by_Slice_ResultSet};
-	#maybe fetch_all_min_mix
-	#If we're not doing this on the fly then we can just provide external method
-	#This alters the standard design pattern :/
-
   }
 
 
@@ -1081,13 +741,9 @@ sub fetch_all_by_Slice_ResultSet{
 	$pjoin = ' AND r.probe_id = p.probe_id ';
   }
 
-
-
-
   
   my @ids = @{$rset->table_ids()};
   #should we do some more optimisation of method here if we know about presence or lack or replicates?
-
 
 
   if($ec_status){
