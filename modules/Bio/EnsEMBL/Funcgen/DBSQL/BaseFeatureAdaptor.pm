@@ -198,7 +198,6 @@ sub fetch_all_by_Slice_constraint {
                       'Bio::EnsEMBL::ProjectionSegment');
   push( @proj, $segment );
 
-
   # construct list of Hap/PAR boundaries for entire seq region
   my @bounds;
   my $ent_slice = $sa->fetch_by_seq_region_id($sr_id);
@@ -224,18 +223,28 @@ sub fetch_all_by_Slice_constraint {
       foreach my $f (@$features) {
         if($offset != 1) {
 
-          $f->{'start'} += $offset-1;
-          $f->{'end'}   += $offset-1;
+		  #eFG: Changed these to start/end method calls
+		  #from direct hash access to support array based ResultFeatures
+		  #This will only slow down transfer of HAP/PAR regions
+		  #Which we currently don't use in eFG
+
+          #$f->{'start'} += $offset-1;
+          #$f->{'end'}   += $offset-1;
+		  $f->start($f->start + $offset -1);
+		  $f->start($f->end   + $offset -1);
         }
 
         # discard boundary crossing features from symlinked regions
         foreach my $bound (@bounds) {
-          if($f->{'start'} < $bound && $f->{'end'} >= $bound) {
+          #if($f->{'start'} < $bound && $f->{'end'} >= $bound) {#eFG change
+		  if($f->start < $bound && $f->end >= $bound) {#eFG change
+		  
             next FEATURE;
           }
         }
 
-        $f->{'slice'} = $slice;
+        #$f->{'slice'} = $slice;
+		$f->slice($slice);
         push @result, $f;
       }
     }
@@ -529,12 +538,12 @@ sub get_core_seq_region_id{
   Example    : $fs = $a->fetch_all_by_Slice_constraint($slc, 'perc_ident > 5');
   Description: Helper function containing some common feature storing functionality
                Given a Feature this will return a copy (or the same feature if no changes 
-	       to the feature are needed) of the feature which is relative to the start
+	           to the feature are needed) of the feature which is relative to the start
                of the seq_region it is on. The seq_region_id of the seq_region it is on
                is also returned.  This method will also ensure that the database knows which coordinate
-               systems that this feature is stored in.  This supercedes teh core method, to trust the
+               systems that this feature is stored in.  This supercedes the core method, to trust the
                slice the feature has been generated on i.e. from the dnadb.  Also handles multi-coordsys
-               aspect, generating new coord_system_ids as appropriate
+               aspect, generating new coord_system_ids as appropriate and assembly projection.
   Returntype : Bio::EnsEMBL::Feature and the seq_region_id it is mapped to
   Exceptions : thrown if $slice is not defined
   Caller     : Bio::EnsEMBL::"Type"FeatureAdaptors
@@ -564,8 +573,10 @@ sub _pre_store {
 
   # make sure feature coords are relative to start of entire seq_region
   if($slice->start != 1 || $slice->strand != 1) {
-	  throw("You must generate your feature on a slice starting at 1 with strand 1");
-	  #Why have we removed this transfer here?
+	throw("You must generate your feature on a slice starting at 1 with strand 1");
+	  #We have remove this transfer as this method also uses direct hash access
+	  #Which will not work with array based ResultFeatures
+	  
 	  
 	  #move feature onto a slice of the entire seq_region
 	  #$slice = $slice_adaptor->fetch_by_region($slice->coord_system->name(),
@@ -888,6 +899,10 @@ sub _slice_fetch {
 # by looking at the first features slice.  If they are not then they are
 # converted and placed on the slice.
 #
+
+#We have to have this here as this is a sub not a method, hence the _remap
+#in the core BaseFeatureAdaptor is not available here
+
 sub _remap {
   my ($features, $mapper, $slice) = @_;
 
