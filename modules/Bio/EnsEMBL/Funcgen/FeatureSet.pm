@@ -85,20 +85,19 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($type, $desc, $dlabel)
-    = rearrange(['TYPE', 'DESCRIPTION', 'DISPLAY_LABEL'],@_);
+  my ($desc, $dlabel)
+    = rearrange(['DESCRIPTION', 'DISPLAY_LABEL'],@_);
 
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
 
   #explicit type check here to avoid invalid types being imported as NULL
   #subsequently throwing errors on retrieval
-
+  my $type = $self->type;
 
   if(! ($type && grep /$type/, ('annotated', 'external', 'regulatory'))){
 	throw("You must define a valid FeatureSet type e.g. 'annotated', 'external' or 'regulatory'");
   }
 
-  $self->type($type);
   $self->description($desc) if defined $desc;
   $self->display_label($dlabel) if defined $dlabel;
 
@@ -174,27 +173,6 @@ sub description {
   return $self->{'description'};
 }
 
-
-=head2 type
-
-  Example    : my $type = $fset->type('annotated');
-  Description: Getter/Setter for the type of this FeatureSet.
-               Valid values are 'annotated', 'regulatory' or 'external'.
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk 
-
-=cut
-
-sub type {
-  my $self = shift;
-     	
-  #add validation of enum here..or leave to DB
-  $self->{'type'} = shift if @_;
-
-  return $self->{'type'};
-}
 
 
 =head2 display_label
@@ -337,6 +315,10 @@ sub is_focus_set{
 
   return $self->{focus_set};
 }
+
+
+#No data_set method here as FeatureSet can be product or supporting set in data_set
+#Use DataSetAdaptor::fetch_by_product_FeatureSet or fetch_all_by_supporting_set
 
 
 1;

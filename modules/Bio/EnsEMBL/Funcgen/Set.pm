@@ -87,7 +87,7 @@ sub new {
 
   if(defined $anal){#Move this to child Sets, and just set anal here
 	$self->analysis($anal);
-  }elsif($self->set_type ne 'experimental'){
+  }elsif($self->set_type ne 'input'){
 	throw('Must pass a valid -analysis parameter for a '.ref($self));
   }
 
@@ -239,7 +239,7 @@ sub display_label {
 
   Example    : my $set_type = $set->set_type;
   Description: Getter for the Set type for this Set.
-  Returntype : string e.g. result, feature, data or experimental
+  Returntype : string e.g. result, feature, data, input
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -260,6 +260,32 @@ sub set_type {
 
   return $self->{'_set_type'};
 }
+
+=head2 type
+
+  Example    : my $type = $set->type;
+  Description: Getter for the type for this Set.
+               e.g. annotated, external, regulatory for FeatureSets
+                    or 
+                    array, sequencing for InputSets
+               Currently not applicable to DataSets or ResultSets
+  Exceptions : None
+  Returntype : string 
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub type {
+  my $self = shift;
+   
+  $self->{'_type'} = shift if @_;
+  
+  return $self->{'_type'};
+}
+
+
 
 1;
 
