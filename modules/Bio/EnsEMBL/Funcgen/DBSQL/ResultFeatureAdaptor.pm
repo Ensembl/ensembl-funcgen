@@ -213,7 +213,7 @@ sub _columns {
 
 	my @result_columns = qw (r.score            pf.seq_region_start 
 							 pf.seq_region_end  pf.seq_region_strand 
-							 cc.chip_channel_id);
+							 rsi.result_set_input_id);
 
 	if($_probe_extend){
 	  #We can get this direct from the ProbeAdaptor
@@ -1106,10 +1106,10 @@ sub fetch_all_by_Slice_ResultSet{
   #this can then be resolved in the method below, using biolrep rather than cc_id
 
 
-  my $sql = "SELECT ec.biological_replicate, cc.chip_channel_id from experimental_chip ec, chip_channel cc 
-             WHERE cc.table_name='experimental_chip'
-             AND ec.experimental_chip_id=cc.table_id
-             AND cc.table_id IN(".join(', ', (map $_->dbID(), @{$rset->get_ExperimentalChips()})).")";
+  my $sql = "SELECT ec.biological_replicate, rsi.result_set_input_id from experimental_chip ec, result_set_input rsi 
+             WHERE rsi.table_name='experimental_chip'
+             AND ec.experimental_chip_id=rsi.table_id
+             AND rsi.table_id IN(".join(', ', (map $_->dbID(), @{$rset->get_ExperimentalChips()})).")";
 
   
  # warn $sql;
@@ -1171,15 +1171,15 @@ sub fetch_all_by_Slice_ResultSet{
   #will it always be a median?
 
 
-  $sql = 'SELECT STRAIGHT_JOIN r.score, pf.seq_region_start, pf.seq_region_end, pf.seq_region_strand, cc.chip_channel_id '.$pfields.
-	' FROM probe_feature pf, result r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '. $rset->dbID();
+  $sql = 'SELECT STRAIGHT_JOIN r.score, pf.seq_region_start, pf.seq_region_end, pf.seq_region_strand, rsi.result_set_input_id '.$pfields.
+	' FROM probe_feature pf, result r, result_set_input rsi '.$ptable_syn.' WHERE rsi.result_set_id = '. $rset->dbID();
 	#' FROM probe_feature pf, '.$rset->get_result_table().' r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '.
 	  $rset->dbID();
 
-  $sql .= ' AND cc.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
+  $sql .= ' AND rsi.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
 
 
-  $sql .= ' AND cc.chip_channel_id = r.chip_channel_id'.
+  $sql .= ' AND rsi.result_set_input_id = r.result_set_input_id'.
 	' AND r.probe_id=pf.probe_id'.$pjoin.
 	  ' AND pf.seq_region_id='.$seq_region_id.
 		' AND pf.seq_region_start<='.$slice->end();
@@ -1365,7 +1365,7 @@ sub fetch_all_by_Slice_ResultSet{
 
 =head2 resolve_replicates_by_ResultSet
 
-  Arg[0]     : HASHREF - chip_channel_id => @scores pairs
+  Arg[0]     : HASHREF - result_set_input_id => @scores pairs
   #Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
   Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSet($slice, $rset, 'DISPLAYABLE')};
   Description: Gets a list of lightweight ResultFeatures from the ResultSet and Slice passed.
@@ -1444,10 +1444,10 @@ sub fetch_results_by_probe_id_ResultSet{
   
   
   
-  my $cc_ids = join(',', @{$rset->chip_channel_ids()});
+  my $cc_ids = join(',', @{$rset->result_set_input_ids()});
 
   my $query = "SELECT r.score from result r where r.probe_id ='${probe_id}'".
-    " AND r.chip_channel_id IN (${cc_ids}) order by r.score;";
+    " AND r.result_set_input_id IN (${cc_ids}) order by r.score;";
 
   #without a left join this will return empty results for any probes which may have been remapped 
   #to the a chromosome, but no result exist for a given set due to only importing a subset of
