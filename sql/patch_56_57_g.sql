@@ -32,6 +32,7 @@ CREATE TABLE `input_set` (
   `format` varchar(20) DEFAULT NULL,
   `vendor` varchar(40) DEFAULT NULL,
   `name` varchar(100) NOT NULL,
+  `type` enum('annotated', 'result') default NULL,
   PRIMARY KEY (`input_set_id`),
   UNIQUE KEY `name_idx` (`name`),
   KEY `experiment_idx` (`experiment_id`),
@@ -41,6 +42,9 @@ CREATE TABLE `input_set` (
 
 
 insert into input_set select * from experimental_set;
+
+#update all types to annotated.
+update input_set set type='annotated';
 
 # drop the old table
 DROP table experimental_set;
