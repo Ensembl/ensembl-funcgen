@@ -1,7 +1,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::Importer
+Bio::EnsEMBL::Funcgen::MAGE
   
 =head1 SYNOPSIS
 
@@ -11,9 +11,8 @@ $imp->register_experiment();
 
 =head1 DESCRIPTION
 
-B<This program> is the main class coordinating import of Arrays and experimental data.
-It utilises several underlying definitions classes specific to array vendor, array class and
-experimental group.  
+B<This program> is a base main class for all MAGE type array importers(e.g. Nimblegen).
+
 
 =head1 CONTACT
 
@@ -53,37 +52,9 @@ use vars qw(@ISA);
  Description : Constructor method
 
  Arg  [1]    : hash containing optional attributes:
-                    -name        Name of Experiment(dir) 
-                    -format      of array e.g. Tiled(default)
-                    -vendor      name of array vendor
-                    -description of the experiment
-                    -pass        DB password
-		            -host        DB host
-		            -user        DB user
-		            -port        DB port
-                    -ssh  Flag to set connection over ssh via forwarded port to localhost (default = 0); remove?
-                    -group    name of experimental/research group
-                    -location of experimental/research group
-                    -contact  e/mail address of primary contact for experimental group
-                    -species 
-                    -assembly Genome assembly version i.e. 36 for NCBI36
-                    -recover Recovery flag (default = 0)
-                    -data_dir  Root data directory (default = $ENV{'EFG_DATA'})
-                    -output_dir review these dirs ???????
-                    -input_dir  ?????????
-                    -import_dir  ???????
-                    -norm_dir    ??????
-                    -fasta dump FASTA flag (default =0)
-                    -array_set Flag to treat all chip designs as part of same array (default = 0)
-                    -array_name Name for array set
-                    -array_file Path of array file to import for sanger ENCODE array
-                    -result_set_name  Name to give the raw and normalised result sets (default uses experiment and analysis name)
-                    -norm_method  Normalisation method (Nimblegen default = VSN_GLOG or $ENV{'NORM_METHOD'})
-                    -dbname Override for autogeneration of funcgen dbaname
-                    -design_type MGED term (default = binding_site_identification) get from meta/MAGE?
-                    -verbose
- ReturnType  : Bio::EnsEMBL::Funcgen::Importer
- Example     : my $Exp = Bio::EnsEMBL::Importer->new(%params);
+
+ ReturnType  : Bio::EnsEMBL::Funcgen::MAGE
+ Example     : my $Exp = Bio::EnsEMBL::Nimblegen->new(%params);
  Exceptions  : throws if mandatory params are not set or DB connect fails
  Caller      : General
  Status      : Medium - potential for %params names to change, remove %attrdata?
@@ -818,7 +789,6 @@ sub write_validate_experiment_config{
 			   -TABLE_NAME   => 'experimental_chip',
 			   -FEATURE_TYPE => $feature_type,
 			   -CELL_TYPE    => $cell_type,
-			   -type         => 'array',
 			  );
 
 			#record cell and feature types
@@ -853,7 +823,6 @@ sub write_validate_experiment_config{
 			   -TABLE_NAME => 'experimental_chip',
 			   -FEATURE_TYPE => $tech_reps{$techrep}{'feature_type'},
 			   -CELL_TYPE    => $tech_reps{$techrep}{'cell_type'},
-			   -type         => 'array',
 			  );
 
 			$self->log("Created TechRep ResultSet:\t".$rsets{$techrep}->log_label);
@@ -955,7 +924,6 @@ sub write_validate_experiment_config{
 		 -TABLE_NAME => 'experimental_chip',
 		 -FEATURE_TYPE => $toplevel_sets{$ftype_name}{'feature_type'},
 		 -CELL_TYPE    => $toplevel_sets{$ftype_name}{$ctype_name}{'cell_type'},
-		 -type         => 'array',
 		);
 
 	  $self->log("Created toplevel ResultSet for:\t". $rsets{$self->experiment->name().'_'.$toplevel_cnt}->log_label);
