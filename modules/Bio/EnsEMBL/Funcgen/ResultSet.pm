@@ -17,7 +17,6 @@ my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
                                                        -analysis    => $analysis,
                                                        -table_name  => 'experimental_chip',
                                                        -table_id    => $ec_id,
-                                                       -type        => 'result',
 ); 
 
 
@@ -28,18 +27,23 @@ A ResultSet object provides access to a set raw results from an Experiment. A se
 contiguous chips to be treated as one set, with the same analysis. Duplicate sets will form a separate
 result set, as will the same raw data analysed or normalised in a different manner.
 
+head1 LICENSE
 
-=head1 AUTHOR
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-This module was created by Nathan Johnson.
+  This software is distributed under a modified Apache license.
+  For license details, please see
 
-This module is part of the Ensembl project: http://www.ensembl.org/
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =cut
 
@@ -97,30 +101,11 @@ sub new {
   if (! $table_name){
     throw("Need to pass the following arg:\t-table_name");
   }
-
-  #sequencing type should be specified in InputSet
-  #This would leave only DataSet without a type attr/method...move to Set.pm?
-
-
-  #Don't have to specify this as we can set it automatically?
-  #Do we even need type here, as we can simply use table_name?
-
-
-  #if(! ($type && grep /^$type$/, ('sequencing', 'array'))){
-	#Should we genericise sequencing to input
-	#and specify sequencing at input_set level
-	#This would allow us to capture this for direct imports into a FeatureSet
-	#We would then have some overlap between input type here and input_set table_name?
-	
-  #	throw("You must define a valid FeatureSet type e.g. 'sequencing', 'array'");
-  # }
-
   
   #do we need some control of creating new objects with dbID and adding result_groups/feature_sets and them storing/updating them
   #potential for someone to create one from new using a duplicate dbID and then linking incorrect data to a pre-existing ResultGroup
   #we need to verify that each table_name/id in the set is from the same experiment
-  #$self->type($type);
-  $self->table_name($table_name);
+   $self->table_name($table_name);
   $self->add_table_id($table_id) if $table_id;
   $self->result_feature_set($rf_set) if $rf_set;
 
@@ -155,6 +140,8 @@ sub new {
 #get_predicted_feature_analysis_name
 #set ResultFeatures and PredictedFeatures in hash keyed by analysis_name?
 
+#We had decided to remove type method this and use table_name
+#Move typed to input_set(Set.pm)!!!
 
 
 
@@ -343,7 +330,7 @@ sub get_chip_channel_id{
   my ($self, $table_id) = @_;
   
   deprecate('ResultSet::get_chip_channel_ids is dperecated, please us get_result_set_input_id');
-  return $self->get_result_set_input_ids($table_id);
+  return $self->get_result_set_input_id($table_id);
 }
 
 
