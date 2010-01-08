@@ -660,7 +660,7 @@ DROP TABLE IF EXISTS `supporting_set`;
 CREATE TABLE `supporting_set` (
    `data_set_id` int(10) unsigned NOT NULL,
    `supporting_set_id` int(10) unsigned NOT NULL,
-   `type` enum('result','feature','experimental') default NULL,
+   `type` enum('result','feature','input') default NULL,
    PRIMARY KEY  (`data_set_id`, `supporting_set_id`),
    KEY `type_idx` (`type`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -678,12 +678,12 @@ CREATE TABLE `result` (
    `result_id` int(10) unsigned NOT NULL auto_increment,
    `probe_id` int(10) unsigned default NULL,
    `score` double default NULL,
-   `chip_channel_id` int(10) unsigned NOT NULL,
+   `result_set_input_id` int(10) unsigned NOT NULL,
    `X` smallint(4) unsigned default NULL,
    `Y` smallint(4) unsigned default NULL,
    PRIMARY KEY  (`result_id`),
    KEY `probe_idx` (`probe_id`),
-   KEY `chip_channel_idx` (`chip_channel_id`)
+   KEY `result_set_input_idx` (`result_set_input_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 -- removed as not needed unless BLOB or TEXT present AVG_ROW_LENGTH=40;
@@ -704,18 +704,18 @@ CREATE TABLE `result_feature` (
   `seq_region_end` int(10) NOT NULL,
   `seq_region_strand` tinyint(4) NOT NULL,
   `window_size` smallint(5) unsigned NOT NULL,
-  `score` double default NULL,
+  `scores` longblob NOT NULL,
   KEY `result_feature_idx` (`result_feature_id`),
   KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=50
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
  PARTITION BY KEY (`window_size`)
  PARTITIONS 7;
 
 -- Partitions is set to number of windows here
 -- Should set this on a per species basis dependant on the number
 -- of seq_regions * window sizes in result_feature
--- No primary key as we need to parition on window_size, which is not 
--- would not be part of the primary key
+-- No primary key as we need to parition on window_size, which
+-- would not be the whole of the primary key?
 
 -- Table structure for `result_set`
 
@@ -750,13 +750,13 @@ CREATE TABLE `result_set` (
 
 
 
-DROP TABLE IF EXISTS `chip_channel`;
-CREATE TABLE `chip_channel` (
-   `chip_channel_id` int(10) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `result_set_input`;
+CREATE TABLE `result_set_input` (
+   `result_set_input_id` int(10) unsigned NOT NULL auto_increment,
    `result_set_id` int(10) unsigned NOT NULL,
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(20) NOT NULL,
-   PRIMARY KEY  (`chip_channel_id`, `result_set_id`),
+   PRIMARY KEY  (`result_set_input_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -964,31 +964,30 @@ CREATE TABLE `regulatory_attribute` (
 
 -- should we intercede 'file' into ther table names to make it more clear? 
 
-DROP TABLE IF EXISTS `experimental_set`;
-CREATE TABLE `experimental_set` (
-   `experimental_set_id` int(10) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `input_set`;
+CREATE TABLE `input_set` (
+   `input_set_id` int(10) unsigned NOT NULL auto_increment,
    `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
    `name` varchar(100) not NULL,
-   PRIMARY KEY  (`experimental_set_id`),
+   `type` enum('annotated', 'result') default NULL,
+   PRIMARY KEY  (`input_set_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `experiment_idx` (`experiment_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    KEY `cell_type_idx` (`cell_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
-
--- do we want a name field? 40 to coomodate exp_name plus BR /TR notation etc.
--- do we want a type field? 'SHORT_READ' or ????
--- format is type of short read, platform name? 
--- now where do we put the experimental type? Format? Vendor?
--- do we need an auxilliary table here akin to supporting set to remove redundancy of cell_type, feature_type
--- Do we need replicates if we are peak calling outside the DB?
--- keys on vendor/format?
-
+-- keys on vendor/format/type?
+-- type = annotated, result
+-- What about defining coverage? To determine if we don't want to load 0 window_size
+-- for high volume seq align sets? Just do this during import
+-- But we need to know whether a set has 0 or not for retreiving the ResultFeatures
+-- Do we have window_size table?
+-- Could also potentially have float scores in Input, so need to capture that too for unpacking?
 
 
 --
@@ -998,13 +997,13 @@ CREATE TABLE `experimental_set` (
 -- represents a file from a subset
 -- mainly used for tracking import and recovery 
 
-DROP TABLE IF EXISTS `experimental_subset`;
-CREATE TABLE `experimental_subset` (
-   `experimental_subset_id` int(10) unsigned NOT NULL auto_increment,
-   `experimental_set_id` int(10) unsigned NOT NULL,
+DROP TABLE IF EXISTS `input_subset`;
+CREATE TABLE `input_subset` (
+   `input_subset_id` int(10) unsigned NOT NULL auto_increment,
+   `input_set_id` int(10) unsigned NOT NULL,
    `name` varchar(100) NOT NULL, -- filename?	
-   PRIMARY KEY  (`experimental_subset_id`), 
-   UNIQUE KEY `set_name_dx` (`experimental_set_id`, `name`)
+   PRIMARY KEY  (`input_subset_id`), 
+   UNIQUE KEY `set_name_dx` (`input_set_id`, `name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
