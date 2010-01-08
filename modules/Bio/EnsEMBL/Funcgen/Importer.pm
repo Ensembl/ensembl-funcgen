@@ -2407,6 +2407,7 @@ sub R_norm{
 #also use result_set_name
 #would also clean all data for result set if recovery
 #return would be result_set
+#Can we extend this to incorporate InputSet parser define_sets?
 
 sub get_import_ResultSet{
   my ($self, $anal, $table_name) = @_;
@@ -2495,7 +2496,6 @@ sub get_import_ResultSet{
 		   -name       => $self->name()."_IMPORT",
 		   -feature_type => $self->feature_type(),
 		   -cell_type    => $self->cell_type(),
-		   -type         => 'array',
 		  );
 	
 		#These types should be set to NULL during the MAGE-XML validation if we have more than one type in an experiment
