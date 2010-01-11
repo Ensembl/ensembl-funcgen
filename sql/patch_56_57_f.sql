@@ -1,14 +1,19 @@
 # patch_56_57_f.sql
 #
-# title: status.table_name length increase
+# title: result_feature.scores
 #
 # description:
-# Increase max length of status.table_name to accomodate custom data tables
+# Change result_feature.score to long blob of scores
+
+#Cannot do this as we may have replicate reads
+#ALTER table result_feature DROP KEY `set_window_seq_region_idx`;
+#ALTER table result_feature ADD UNIQUE KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`);
 
 
-ALTER TABLE status MODIFY `table_name` varchar(32) NOT NULL DEFAULT '';
+ALTER TABLE result_feature CHANGE score scores longblob NOT NULL;
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_f.sql|s.table_name_length');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_f.sql|result_feature.scores');
 
 
+ 
