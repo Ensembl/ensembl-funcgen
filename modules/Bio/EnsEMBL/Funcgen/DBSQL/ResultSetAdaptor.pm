@@ -292,41 +292,51 @@ sub fetch_all_by_FeatureType {
 
 sub fetch_all_by_name_Analysis {
   my ($self, $name, $anal) = @_;
-
-  if( ! defined $name){
-    throw('Need to pass a ResultSet name');
-  }
-
-  if(!($anal && $anal->isa('Bio::EnsEMBL::Analysis') && $anal->dbID())){
-	throw('You must provide a valid, stored Bio::EnsEMBL::Analysis');
-  }
-	
-  my $constraint = "rs.name ='${name}' AND rs.analysis_id=".$anal->dbID();
-	
-  return $self->generic_fetch($constraint);
+  return $self->fetch_all_by_name($name, undef, undef, $anal);
 }
 
 =head2 fetch_all_by_name
 
-  Arg [1]    : string - ResultSet name
+  Arg [0]    : Mandatory string - ResultSet name
+  Arg [1]    : Optional Bio::EnsEMBL::Funcgen::FeatureType
+  Arg [2]    : Optional Bio::EnsEMBL::Funcgen::CellType
+  Arg [3]    : Optional Bio::EnsEMBL::Analysis
   Example    : ($rset) = @{$rseta->fetch_all_by_name($exp->name().'_IMPORT')};
   Description: Retrieves ResultSets based on the name attribute
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::ResultSet objects
-  Exceptions : Throws if no name provided
+  Exceptions : Throws if no name provided or optional arguments are not valid   
   Caller     : General
-  Status     : At Risk - remove all, there should only be one?
+  Status     : At Risk
 
 =cut
 
 sub fetch_all_by_name{
-  my ($self, $name) = @_;
+  my ($self, $name, $ftype, $ctype, $anal) = @_;
 
   if( ! defined $name){
     throw('Need to pass a ResultSet name');
   }
-
 	
-  my $constraint = "rs.name ='${name}'";
+  my $constraint = 'rs.name = ?';
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
+
+  if($ftype){
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',$ftype);
+	$constraint .= ' AND rs.feature_type_id=?';
+	$self->bind_param_generic_fetch($ftype->dbID, SQL_INTEGER);
+  }
+
+   if($ctype){
+	 $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',$ctype);
+	 $constraint .= ' AND rs.cell_type_id=?';
+	 $self->bind_param_generic_fetch($ctype->dbID, SQL_INTEGER);
+   }
+
+   if($anal){
+	 $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',$anal);
+	 $constraint .= ' AND rs.analysis_id=?';
+	 $self->bind_param_generic_fetch($anal->dbID, SQL_INTEGER);
+   }
 	
   return $self->generic_fetch($constraint);
 }
@@ -382,7 +392,7 @@ sub _columns {
 			  rsi.table_name      rsi.result_set_input_id
 			  rsi.table_id        rs.name
 			  rs.cell_type_id     rs.feature_type_id
-		 );
+			 );
 
 	
 }
