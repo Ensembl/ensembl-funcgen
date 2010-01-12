@@ -107,6 +107,26 @@ sub new {
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
   throw ('Must provide a CellType') if(! defined $self->cell_type);
 
+  my $type = $self->type;
+
+  #should type be feature type?
+  #i.e. result/annotated
+  #Or do we need something more specific to segregate sequencing and other non annotated 
+  #imports
+  #i.e. to tell us something about the amount of data, so 
+  #we can tell wether to import the 0 window_size or not
+  #Or should this just be left to import params
+  #Where are we capturing the differences between result InputSets
+  #Not that there are any at the moment
+
+  if(! ($type && grep /^$type$/, ('sequencing', 'feature'))){
+	#Should we genericise sequencing to input
+	#and specify sequencing at input_set level
+	#This would allow us to capture this for direct imports into a FeatureSet
+	#We would then have some overlap between input type here and input_set table_name?
+	
+  	throw("You must define a valid InputSet type e.g. 'sequencing' or 'feature'");
+  }
 
 
   #if(! defined $self->analysis){
