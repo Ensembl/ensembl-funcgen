@@ -991,7 +991,7 @@ CREATE TABLE `input_set` (
 
 
 --
--- Table structure for table `experimental_subset`
+-- Table structure for table `input_subset`
 --
 
 -- represents a file from a subset
@@ -1069,6 +1069,7 @@ CREATE TABLE `cell_type` (
    `name`  varchar(120) not NULL,
    `display_label` varchar(20) default NULL,
    `description` varchar(80) default NULL,
+   `gender` enum('male', 'female') default NULL,
    PRIMARY KEY  (`cell_type_id`),
    UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
