@@ -312,6 +312,9 @@ if($file){
 	chomp $line;
 
 	@values = split /\t/, $line;
+
+	#warn "values are ".join(' x ', @values);
+
 	
 	#This will clean all the old values
 	foreach my $param(keys %{$type_config{$type}{mandatory_params}}){
@@ -319,9 +322,24 @@ if($file){
 	  $type_config{$type}{mandatory_params}{$param} = ($values[$hposns->{$field}] eq 'NULL') ? undef : $values[$hposns->{$field}];
 	}
 	
+
 	foreach my $param(keys %{$type_config{$type}{optional_params}}){
 	  ($field = $param) =~ s/^-//;
-	  $type_config{$type}{optional_params}{$param} = ($values[$hposns->{$field}] eq 'NULL') ? undef : $values[$hposns->{$field}];
+
+
+	  if(defined $values[$hposns->{$field}]){
+
+		$type_config{$type}{optional_params}{$param} = ($values[$hposns->{$field}] eq 'NULL') ? undef : $values[$hposns->{$field}];
+	  }
+	  else{
+
+		if($type ne 'Analysis'){
+		  warn "WARNING:\t$field is not defined for ".$type_config{$type}{mandatory_params}{-name}."\n";
+		}
+		else{
+		  warn "WANRING:\t$field is not defined for ".$type_config{$type}{mandatory_params}{-logic_name}."\n";
+		}
+	  }
 	}
 		
 	&import_type;
