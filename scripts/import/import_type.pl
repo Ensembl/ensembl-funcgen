@@ -88,7 +88,7 @@ my ($pass, $dbname, $array_name, $line, $label, $dnadb_user, $dnadb_port);
 my ($clobber, $type, $desc, $file, $class, $logic_name, $name, $dnadb_host);
 my ($anal_db, $db_version, $db_file, $program, $program_version, $program_file);
 my ($gff_source, $gff_feature, $module, $module_version, $parameters, $created);
-my ($displayable, $web_data, $species);
+my ($displayable, $web_data, $species, $gender);
 
 #Need to change these to match EFG_USER EFG_HOST EFG_PORT
 #And then test
@@ -123,6 +123,7 @@ GetOptions (
 			"display_label=s" => \$label,
 			"name=s"          => \$name,
 			"description=s"   => \$desc,
+			"gender=s"        => \$gender,
 			#analysis opts
 			"logic_name=s"    => \$logic_name,
 			"db=s"            => \$anal_db,
@@ -166,9 +167,10 @@ my %type_config = (
 								   fetch_method     => 'fetch_by_name',
 								   fetch_arg       => '-name',
 								   mandatory_params => {(
-														 -name          => $name,
+														 -name          => $name,,
 														)},
 								   optional_params  => {(
+														 -gender        => $gender,
 														 -display_label => $label,
 														 -description   => $desc,
 														)},
