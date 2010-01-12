@@ -85,9 +85,12 @@ sub new {
   
 
   throw("Must supply a CellType name") if ! $name;
-  throw("Must supply a valid gender (e.g. male or female") if ! grep(/^$gender$/, ('male', 'female'));
 
-  $self->gender($gender);
+  if(defined $gender){
+	throw("Gender must be either male or female") if ! grep(/^$gender$/, ('male', 'female'));
+	$self->gender($gender);
+  }
+
   $self->name($name);
   $self->display_label($dlabel) if $dlabel;
   $self->description($desc) if $desc;
