@@ -635,7 +635,7 @@ sub get_schema_and_build{
 
   Arg [1]    : hash - set constructor parameters:
                             -dbadaptor    Bio::EnsEMBL::Funcgen::DBAdaptor
-                            -name         Data/FeatureSet name to create
+                            -name         Data/FeatureSet/ResultSet name to create
                             -feature_type Bio::EnsEMBL::Funcgen::FeatureType
                             -cell_type    Bio::EnsEMBL::Funcgen::CellType
                             -analysis     FeatureSet Bio::EnsEMBL::Analysis
@@ -644,9 +644,10 @@ sub get_schema_and_build{
                             -recovery     Allows definition of extant sets so long as they match
                             -append       Boolean - Forces import on top of previously imported data
                             -rollback     Rolls back product feature set.
-  Example    : my $fset = $self->define_and_validate_Set(%params);
-  Description: Checks whether set is already in DB based on set name, rolls back features 
-               if roll back flag set. Or creates new DB if not present.
+                            -supporting_sets Complete set of pre-stored supporting or input sets for this DataSet
+  Example    : my $dset = $self->define_and_validate_Set(%params);
+  Description: Checks whether set is already in DB based on set name, rolls back features
+               if roll back flag set. Or creates new DataSet and Feature|ResultSet if not present.
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
   Exceptions : Throws if DBAdaptor param not valid
   Caller     : Importers and Parsers
@@ -707,7 +708,7 @@ sub define_and_validate_sets{
   #We need to be able to run with both otherwise the import will not work
 
 
-  throw('Must provide a -type e.g. annotated, external or regulatory') if(! defined $type);
+  throw('Must provide a -type e.g. annotated, external, result or regulatory') if(! defined $type);
   #Check for annotated, external, regulatory etc here?
   #Should never be external as we don't have DataSets for external sets?
   
@@ -717,181 +718,295 @@ sub define_and_validate_sets{
 
   my $dset_adaptor = $db->get_DataSetAdaptor;
   my $fset_adaptor = $db->get_FeatureSetAdaptor;
+  my $rset_adaptor = $db->get_ResultSetAdaptor;
   
+  #DataSet centric definition to enable multiple DataSets
+  #to be generated from the same supporting sets
   my $dset = $dset_adaptor->fetch_by_name($name);
-  my ($fset);
+  my ($fset, $rset, @input_sets);
 
   #Validate stored vs passed set data 
 
   if(defined $dset){
 	$self->log('Found Stored DataSet '.$dset->name);
-	$fset = $dset->product_FeatureSet;
-	#Here we have the possiblity that a feature_set with a different name may have been associated with the DataSet
 
-	if(defined $fset){
-	  $self->log("Found associated product FeatureSet:\t".$fset->name);
+	if($type ne 'result'){#i.e. annotated
 	  
-	  #if(! $clobber && 
-	  if($fset->name ne $name){
-		throw('Invalid product FeatureSet name ('.$fset->name.') for DataSet ('.$name.'). Rollback will overwrite the FeatureSet and mismatched name will be retained.');
-		#Need to clobber both or give explicit name for datasets or rename dataset???
-		#Force this throw for now, make this fix manual as we may end up automatically overwriting data
-	  }  
-	}
+	  $fset = $dset->product_FeatureSet;
+	  #Here we have the possiblity that a feature_set with a different name may have 
+	  #been associated with the DataSet
 
-	#check supporting_sets here if defined
-	#We have the problem here of wanting to add ssets to a previously existing dset
-	#we may not know the original sset, or which of the ssets are new
-	#Hence there is a likelihood of a mismatch.
-	if(defined $ssets){
-	  
-	  my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$ssets};
-	  my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
-	  my $mismatch = 0;
-
-	  $mismatch = 1 if(scalar(@sorted_ssets) != scalar(@stored_ssets));
-
-	  if(! $mismatch){
+	  if(defined $fset){
+		$self->log("Found associated product FeatureSet:\t".$fset->name);
 		
-		for my $i(0..$#stored_ssets){
+		#if(! $clobber && 
+		if($fset->name ne $name){
+		  throw('Invalid product FeatureSet name ('.$fset->name.') for DataSet ('.$name.'). Rollback will overwrite the FeatureSet and mismatched name will be retained.');
+		  #Need to clobber both or give explicit name for datasets or rename dataset???
+		  #Force this throw for now, make this fix manual as we may end up automatically overwriting data
+		}  
+	  }
 
-		  if($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID){
-			$mismatch=1;
-			last;
+	  #This needs to be modified to support InputSets in ResultSets?
+	  
+	  #check supporting_sets here if defined
+	  #We have the problem here of wanting to add ssets to a previously existing dset
+	  #we may not know the original sset, or which of the ssets are new
+	  #Hence there is a likelihood of a mismatch.
+	  if(defined $ssets){
+		
+		my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$ssets};
+		my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
+		my $mismatch = 0;
+		
+		$mismatch = 1 if(scalar(@sorted_ssets) != scalar(@stored_ssets));
+		
+		if(! $mismatch){
+		  
+		  for my $i(0..$#stored_ssets){
+			
+			if($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID){
+			  $mismatch=1;
+			  last;
+			}
+		  }
+		}
+		
+		if($mismatch){
+		  #We're really print this names here which may hide the true cell/feature/anal type differences.
+		  my $mismatch = 'There is a (name/type/analysis) mismatch between the supplied supporting_sets and the'.
+			'supporting_sets in the DB for DataSet '.$dset->name."\nStored:\t"
+			  .join(', ', (map $_->name, @stored_ssets))."\nSupplied supporting_sets:\t"
+				.join(', ', (map $_->name, @sorted_ssets));
+		  
+		  if($append){
+			warn($mismatch."\nAppending supporting set data to unvalidated supporting sets");
+		  }
+		  else{
+			throw($mismatch);
 		  }
 		}
 	  }
-
-	  if($mismatch){
-		#We're really print this names here which may hide the true cell/feature/anal type differences.
-		my $mismatch = 'There is a (name/type/analysis) mismatch between the supplied supporting_sets and the'.
-		  'supporting_sets in the DB for DataSet '.$dset->name."\nStored:\t"
-				.join(', ', (map $_->name, @stored_ssets))."\nSupplied supporting_sets:\t"
-				.join(', ', (map $_->name, @sorted_ssets));
-
-		if($append){
-		  warn($mismatch."\nAppending supporting set data to unvalidated supporting sets");
-		}
-		else{
-		  throw($mismatch);
-		}
+	  else{
+		warn("No supporting sets defined, skipping supporting set validation for definition of DataSet:\t".$name);
 	  }
 	}
-	else{
-	  warn("Skipping validating of supporting sets for Data/FeatureSet definition:\t".$name);
+	else{#result_features from InputSet
+	  #There is the potential for more than one ResultSet to be associated with DataSet
+	  #But as we are using the same name, this restricts the number wrt the cardinality
+	  #of the name field. i.e. 1 name per analysis/cell_type/feature_type.
+	  #This now works slightly differently to the rest of this method as we
+	  #need to treat the ResultSet as we are currently treating the FeatureSet below.
+	  
+	  #However, the use case of this method is for one InputSet giving rise to one ResultSet
+	  #Hence just throw if we find more than one or have a name mismatch
+	  my @stored_sets = @{$dset->get_supporting_sets};
+
+	  if(scalar(@stored_sets) > 1){
+		throw('define_and_validate_sets does not yet support DataSets with multiple supporting ResultSets for result_features');
+	  }
+
+	  $rset = $stored_sets[0];
+
+	  if($rset->set_type ne 'result'){
+		throw("DataSet already contains a supporting set which is not a ResultSet:\t".$rset->set_type."\t".$stored_sets[0]->name);
+	  }
+	  
+	  @input_sets = @{$rset->get_InputSets};
 	}
   }
 
-  #Try and grab the fset just in case it has been orphaned somehow
-  if(! defined $fset){
-	$fset = $fset_adaptor->fetch_by_name($name);
 
+
+  if($type eq 'result'){
+	
+	#Validate the defined InputSets
+	if (scalar(@$ssets) > 1) {
+	  throw("define_and_validate_sets does not yet support multiple InputSets for defining a ResultSet:\t".$name);
+		
+	}
+
+	if ($ssets->[0]->set_type ne 'input') {
+	  throw("To define a ResultSet($name) containing result_features, you must provide and InputSet as a supporting set\nArray based ResultSets(i.e. experimental_chip/channel) are not defined using this method, see specific Import Parsers.");
+	}		
+	  
+	  
+	#Try and grab the rset just in case it has been orphaned somehow
+	if (! defined $rset) {
+	  $rset = $rset_adaptor->fetch_all_by_name($name, $ftype, $ctype, $anal)->[0];
+	  #Should only ever be one given all parts of unique key
+	  @input_sets = @{$rset->get_InputSets};
+		
+	}
+
+
+	if (defined $rset) {		#Validate stored InputSets
+
+	  if (scalar(@input_sets) != scalar(@$ssets)) {
+		throw('Found mismatch between number of previously stored InputSets('.scalar(@input_sets).') and defined InputSets('.scalar(@$ssets).'). You must provide a complete list of InputSets to define your ResultSet.');
+	  }
+		
+	  if ($input_sets[0]->dbID != $ssets->[0]->dbID) {
+		throw('Found dbID mismatch between previously stored InputSet('.$input_sets[0]->name.') and define InputSet('.$ssets->[0]->name.')');
+	  }
+
+	  #rollback ResultSet/InputSet here?
+	  if($rollback){
+		warn "rollback not yet fully implemented for Result/InputSets";
+		
+		#Does this need to be by slice?
+		#What about states if we are running in parallel?
+		$self->rollback_ResultSet($rset);
+
+	  }
+
+	} 
+	else{#define ResultSet
+	  ($rset) = @{$rset_adaptor->store(Bio::EnsEMBL::Funcgen::ResultSet->new
+									   (
+										-name => $name,
+										-feature_type => $ftype,
+										-cell_type => $ctype,
+										-table_name => 'input_set',
+										-table_id   => $ssets->[0]->dbID,
+										-analysis   => $anal
+									   )
+									  )};
+		
+	}
+  } 
+  else{#annotated/regulatory/external i.e. FeatureSet
+
+	#Try and grab the fset just in case it has been orphaned somehow
+	if(! defined $fset){
+	  $fset = $fset_adaptor->fetch_by_name($name);
+	  
+	  if(defined $fset){
+		#Now we need to test whether it is attached to a dset
+		#Will be incorrect dset if it is as we couldn't get it before
+		#else we test the types and rollback
+		$self->log("Found stored orphan FeatureSet:\t".$fset->name);
+		
+		my $stored_dset = $dset_adaptor->fetch_by_product_FeatureSet($fset);
+		
+		if(defined $stored_dset){
+		  throw('Found FeatureSet('.$name.') associated with incorrect DataSet('.$stored_dset->name.
+				").\nTry using another -name in the set parameters hash");
+		  
+		}
+	  }
+	}
+	
+	#Rollback or create FeatureSet
 	if(defined $fset){
-	  #Now we need to test whether it is attached to a dset
-	  #Will be incorrect dset if it is as we couldn't get it before
-	  #else we test the types and rollback
-	  $self->log("Found stored orphan FeatureSet:\t".$fset->name);
+	  
+	  if($rollback){
+		#Don't check for IMPORTED here as we want to rollback anyway
+		#Not forcing delete here as this may be used as a supporting set itself.
+		$self->rollback_FeatureSet($fset);
+	  } elsif ($append || $recovery) {
+		#This is only true if we have an sset mismatch
+		
+		#Do we need to revoke IMPORTED here too?
+		#This behaves differently dependant on the supporting set.
+		#InputSet status refers to loading in FeatureSet, where as ResultSet status refers to loading into result table
 
-	  my $stored_dset = $dset_adaptor->fetch_by_product_FeatureSet($fset);
+		#So we really want to revoke it
+		#But this leaves us vulnerable to losing data if the import crashes after this point
+		#because we have no way of assesing which is complete data and which is incomplete data
+		#within a feature set.
+		#This means we need a status on supporting_set, not InputSet or ResultSet
+		#as this has to be in the context of a dataset.
+		#Grrr, this means we need a SupportingSet class which simply wraps the InputSet/ResultSet
+		#We also need a single dbID for the supporting_set table
+		#Which means we will have to do some wierdity with the normal dbID implementation
+		#i.e. Have supporting_set_id, so we can still access all the normal dbID method for the given Set class
+		#This will have to be hardcoded into the state methods
+		#Also will need to specify when we want to store as supporting_status or normal set status.
 
-	  if(defined $stored_dset){
-		throw('Found FeatureSet('.$name.') associated with incorrect DataSet('.$stored_dset->name.
-			  ").\nTry using another -name in the set parameters hash");
+		#This is an awful lot to protect against vulnerability
+		#Also as there easy way to track what features came from which supporting set
+		#There isn't currently a viable way to rollback, hence will have to redo the whole set.
 
-	  }
-	}
-  }
+		#Maybe we can enforce this by procedure?
+		#By simply not associating the supporting set until it has been loaded into the feature set?
+		#This may cause even more tracking problems
 
-  #Rollback or create FeatureSet
-  if(defined $fset){
+		#Right then, simply warn and do not revoke feature_set IMPORTED to protect old data?
+		#Parsers should identify supporting_sets(InputSets) which exist but do not have IMPORTED
+		#status and fail, specifying -recover which will rollback_FeatureSet which will revoke the IMPORTED status
 
-	if($rollback){
-	  #Don't check for IMPORTED here as we want to rollback anyway
-	  #Not forcing delete here as this may be used as a supporting set itself.
-	  $self->rollback_FeatureSet($fset);
-	}
-	elsif($append || $recovery){
-	  #This is only true if we have an sset mismatch
+		#This can mean a failed import can leave a partially imported feature set with the IMPORTED status!!!
 
-	  #Do we need to revoke IMPORTED here too?
-	  #This behaves differently dependant on the supporting set.
-	  #InputSet status refers to loading in FeatureSet, where as ResultSet status refers to loading into result table
-	  #So we really want to revoke it
-	  #But this leaves us vulnerable to losing data if the import crashes after this point
-	  #because we have no way of assesing which is complete data and which is incomplete data
-	  #within a feature set.
-	  #This means we need a status on supporting_set, not InputSet or ResultSet
-	  #as this has to be in the context of a dataset.
-	  #Grrr, this means we need a SupportingSet class which simply wraps the InputSet/ResultSet
-	  #We also need a single dbID for the supporting_set table
-	  #Which means we will have to do some wierdity with the normal dbID implementation
-	  #i.e. Have supporting_set_id, so we can still access all the normal dbID method for the given Set class
-	  #This will have to be hardcoded into the state methods
-	  #Also will need to specify when we want to store as supporting_status or normal set status.
-
-	  #This is an awful lot to protect against vulnerability
-	  #Also as there easy way to track what features came from which supporting set
-	  #There isn't currently a viable way to rollback, hence will have to redo the whole set.
-
-	  #Maybe we can enforce this by procedure?
-	  #By simply not associating the supporting set until it has been loaded into the feature set?
-	  #This may cause even more tracking problems
-
-	  #Right then, simply warn and do not revoke feature_set IMPORTED to protect old data?
-	  #Parsers should identify supporting_sets(InputSets) which exist but do not have IMPORTED
-	  #status and fail, specifying -recover which will rollback_FeatureSet which will revoke the IMPORTED status
-
-	  #This can mean a failed import can leave a partially imported feature set with the IMPORTED status!!!
-
-	  #We just need to handle InputSets and ResultSets differently.
-	  #In parsers or here?
-	  #Probably best in the parsers as this is where the states are set.
+		#We just need to handle InputSets and ResultSets differently.
+		#In parsers or here?
+		#Probably best in the parsers as this is where the states are set.
 	  
 
-	  #Should we throw here for ResultSet?
-	  #Force rollback of FeatureSet first or create new one?
-	  #And throw for InputSet?
-	  #This again comes back to whether we will ever have more than one file 
-	  #for a give InputSet, currently not.
+		#Should we throw here for ResultSet?
+		#Force rollback of FeatureSet first or create new one?
+		#And throw for InputSet?
+		#This again comes back to whether we will ever have more than one file 
+		#for a give InputSet, currently not.
 
-	  $self->log("WARNING\t::\tAdding data to a extant FeatureSet:\t".$fset->name);
-	}
-	else{
-	  throw('Found extant FeatureSet '.$fset->name.'. Maybe you want to specify the rollback, append or recovery parameter or roll back the FeatureSet separately?');
+		$self->log("WARNING\t::\tAdding data to a extant FeatureSet:\t".$fset->name);
+	  } else {
+		throw('Found extant FeatureSet '.$fset->name.'. Maybe you want to specify the rollback, append or recovery parameter or roll back the FeatureSet separately?');
+	  }
+	} else {
+	  #create a new one
+	  $self->log("Creating new FeatureSet:\t".$name);
+
+	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+													 -name         => $name,
+													 -feature_type => $ftype,
+													 -cell_type    => $ctype,
+													 -analysis     => $anal,
+													 -type         => $type,
+													 -description  => $description,
+													);
+	  ($fset) = @{$fset_adaptor->store($fset)};
 	}
   }
-	else{
-	#create a new one
-	$self->log("Creating new FeatureSet:\t".$name);
-
-	$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-												   -name         => $name,
-												   -feature_type => $ftype,
-												   -cell_type    => $ctype,
-												   -analysis     => $anal,
-												   -type         => $type,
-												   -description  => $description,
-												  );
-	($fset) = @{$fset_adaptor->store($fset)};
-  }
-
 
   #Create/Update the DataSet
   if(defined $dset){
 	
-	if(! defined $dset->product_FeatureSet){
-	  $self->log("Updating DataSet with new product FeatureSet:\t".$fset->name);
-	  ($dset) = @{$dset_adaptor->store_updated_sets($dset->product_FeatureSet($fset))};
+	if($type ne 'result'){
+	  if(! defined $dset->product_FeatureSet){
+		$self->log("Updating DataSet with new product FeatureSet:\t".$fset->name);
+		($dset) = @{$dset_adaptor->store_updated_sets($dset->product_FeatureSet($fset))};
+	  }
+	}
+	else{
+	  #We may have the case where we have a DataSet(with a FeatureSet) but no ResultSet
+	  #i.e. Load result_features after peak calls
+	  #So update dset with ResultSet
+
+	  if(! @{$dset->get_supporting_sets}){
+		$self->log("Updating DataSet with new ResultSet:\t".$rset->name);
+		($dset) = @{$dset_adaptor->store_updated_sets($dset->add_supporting_sets([$rset]))};
+	  }
 	}
   }
   else{
-	$self->log("Creating new DataSet:\t".$name);
-	$dset = Bio::EnsEMBL::Funcgen::DataSet->new(
-												-name => $name,
-												-feature_set => $fset,
-												-supporting_sets => $ssets,
-											   );
-	($dset) = @{$dset_adaptor->store($dset)};
+	$self->log("Creating new ${type}_feature DataSet:\t".$name);
+
+	if($type ne 'result'){
+	  ($dset) = @{$dset_adaptor->store(Bio::EnsEMBL::Funcgen::DataSet->new
+									   (
+										-name => $name,
+										-feature_set => $fset,
+										-supporting_sets => $ssets,
+									   ))};
+	}
+	else{
+	  ($dset) = @{$dset_adaptor->store(Bio::EnsEMBL::Funcgen::DataSet->new
+									   (
+										-name => $name,
+										-supporting_sets => [$rset],
+									   ))};
+	}
   }
 
   return $dset;
@@ -1091,11 +1206,12 @@ sub rollback_ResultSet{
   if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
 	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
   }
-  
+ 
+ 
   #We're still validating against itself??
   #And reciprocating part of the test :|
   my $sql;
-  my $db = $rset->adaptor->db;
+  my $db = $rset->adaptor->db;#This needs to be tested
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
   $self->log("Rolling back ResultSet:\t".$rset->name);
   
@@ -1128,6 +1244,7 @@ sub rollback_ResultSet{
 	  }
 	  else{
 		#Found rset in dset, but not yet processed so can remove safely.
+		#This is really affecting the dset, so we need to change this?
 		$self->log("Removing supporting ResultSet from DataSet:\t".$dset->name."\tResultSet:".$rset->log_label);
 		$sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID.
 		  ' and type="result" and supporting_set_id='.$rset->dbID;
@@ -1135,7 +1252,7 @@ sub rollback_ResultSet{
 	  }
 	}
   }
-  
+   
 
   #Now do similar for all associated ResultSets
   if(! @skipped_sets){
@@ -1177,27 +1294,27 @@ sub rollback_ResultSet{
 		#RollBack result_feature table first
 		$self->rollback_result_features($rset);
 
-
 		#Now rollback other states
 		$rset->adaptor->revoke_states($rset);
 
 
 		#This also handles Echip status rollback
-		$self->rollback_results($rset->chip_channel_ids);
-		$self->log('Removing chip_channel entries from associated ResultSets');
+		$self->rollback_results($rset->result_set_input_ids) if $rset->table_name ne 'input_set';
+
+		$self->log('Removing result_set_input entries from associated ResultSets');
 		
 		#Now remove cc_ids from associated rsets.
 		foreach my $assoc_rset(@assoc_rsets){
-		  $sql = 'DELETE from chip_channel where result_set_id='.$assoc_rset->dbID.
-			' and chip_channel_id in('.join', ', @{$assoc_rset->chip_channel_ids}.')';
+		  $sql = 'DELETE from result_set_input where result_set_id='.$assoc_rset->dbID.
+			' and result_set_input_id in('.join', ', @{$assoc_rset->result_set_input_ids}.')';
 		  $db->dbc->do($sql);
 		  
 		  # we need to delete complete subsets from the result_set table.
 		  my $subset = 1;
 		  
-		  foreach my $cc_id(@{$assoc_rset->chip_channel_ids}){
+		  foreach my $cc_id(@{$assoc_rset->result_set_input_ids}){
 			
-			if(! grep/$cc_id/, @{$rset->chip_channel_ids}){
+			if(! grep/$cc_id/, @{$rset->result_set_input_ids}){
 			  $subset = 0;
 			  last;
 			}
@@ -1218,16 +1335,21 @@ sub rollback_ResultSet{
 
 
 		#Now warn about Echips in Experiments which may need removing.
-		my %experiment_chips;
-		
-		foreach my $echip(@{$rset->get_ExperimentalChips}){
-		  $experiment_chips{$echip->experiment->name}{$echip->unique_id} = undef;
+		if($rset->table_name ne 'input_set'){
+		  my %experiment_chips;
+		  
+		  foreach my $echip(@{$rset->get_ExperimentalChips}){
+			$experiment_chips{$echip->experiment->name}{$echip->unique_id} = undef;
+		  }
+		  
+		  foreach my $exp(keys %experiment_chips){
+			$self->log("Experiment $exp has had ".scalar(values %{$experiment_chips{$exp}}).
+					   " ExperimentalChips rolled back:\t".join('; ', values %{$experiment_chips{$exp}}).
+					   ".\nTo fully remove these, use the rollback_experiment.pl (with -chip_ids) script");
+		  }
 		}
-		
-		foreach my $exp(keys %experiment_chips){
-		  $self->log("Experiment $exp has had ".scalar(values %{$experiment_chips{$exp}}).
-					 " ExperimentalChips rolled back:\t".join('; ', values %{$experiment_chips{$exp}}).
-					 ".\nTo fully remove these, use the rollback_experiment.pl (with -chip_ids) script");
+		else{
+		  warn "Need to Handle InputSet status rollback here?";
 		}
 	  }
 	  else{
@@ -1258,9 +1380,9 @@ sub rollback_ResultSet{
 	}
 	
 	#Delete chip_channel and result_set records
-	$sql = 'DELETE from chip_channel where result_set_id='.$rset->dbID;
+	$sql = 'DELETE from result_set_input where result_set_id='.$rset->dbID;
 	$db->dbc->do($sql);
-	$self->reset_table_autoinc('chip_channel', 'chip_channel_id', $db);
+	$self->reset_table_autoinc('result_set_input', 'result_set_input_id', $db);
 
 	$sql = 'DELETE from result_set where result_set_id='.$rset->dbID;
 	$db->dbc->do($sql);
@@ -1342,25 +1464,25 @@ sub rollback_results{
 
 
   if(! scalar(@cc_ids) >0){
-	throw('Must pass an array ref of chip_channel ids to rollback');
+	throw('Must pass an array ref of result_set_input_ids to rollback');
   }
   
   #Rollback status entries
   #Cannot use revoke_states here?
   #We can if we retrieve the Chip or Channel first
   #Add to ResultSet adaptor
-  my $sql = 'DELETE s from status s, chip_channel cc WHERE cc.chip_channel_id IN ('.join(',', @cc_ids).
-	') AND cc.table_id=s.table_id AND cc.table_name=s.table_name';
+  my $sql = 'DELETE s from status s, result_set_input rsi WHERE rsi.result_set_input_id IN ('.join(',', @cc_ids).
+	') AND rsi.table_id=s.table_id AND rsi.table_name=s.table_name';
   
   if(! $self->db->dbc->do($sql)){
-	throw("Status rollback failed for chip_channel_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
+	throw("Status rollback failed for result_set_input_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
   }
 
 
   #Rollback result entries
-  $sql = 'DELETE from result where chip_channel_id in ('.join(',', @cc_ids).');';
+  $sql = 'DELETE from result where result_set_input_id in ('.join(',', @cc_ids).');';
   if(! $self->db->dbc->do($sql)){
-	throw("Results rollback failed for chip_channel_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
+	throw("Results rollback failed for result_set_input_ids:\t@cc_ids\n".$self->db->dbc->db_handle->errstr());
   }
 
   $self->reset_table_autoinc('result', 'result_id', $self->db);
@@ -1372,7 +1494,10 @@ sub rollback_results{
 
 =head2 rollback_ResultFeatures
 
-  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
+  Arg[0]     : Bio::EnsEMBL::Funcgen::ResultSet
+  Arg[1]     : Optional - Bio::EnsEMBL::Slice
+  Arg[2]     : Optional - no_revoke Boolean. This is only used when generating new windows
+               from a 0 window size which has been projected from a previous assembly.
   Example    : $self->rollback_result_features($rset);
   Description: Deletes all result_feature records for the given ResultSet.
                Also deletes 'RESULT_FEATURE_SET' status.
@@ -1387,31 +1512,49 @@ sub rollback_results{
 #Then we would need to add a force flag for creation to override the status check
 
 sub rollback_ResultFeatures{
-  my ($self, $rset) = @_;
+  my ($self, $rset, $slice, $no_revoke) = @_;
 
   #what about?
   if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
 	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
   }
   
+  if(! $slice && $no_revoke){
+	throw("Cannot rollback_ResultFeatures with no_reovke unless you specify a Slice");
+  }
+  #else warn if slice and no_revoke?
+
+  my ($slice_name, $slice_constraint);
+
+  if($slice){
+
+	if(ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')){
+	  $slice_name = "\t".$slice->name;
+	  $slice_constraint = ' and seq_region_id='.$rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
+	}
+	else{
+	  throw('slice argument must be a valid Bio::EnsEMBL::Slice');
+	}
+  }
+
   #We're still validating against itself??
   #And reciprocating part of the test :|
   my $db = $rset->adaptor->db;
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
-  $self->log("Rolling back result_features for ResultSet:\t".$rset->name);
+  $self->log("Rolling back result_features for ResultSet:\t".$rset->name.$slice_name);
 
 
   #Rollback status entry
-  $rset->adaptor->revoke_state('RESULT_FEATURE_SET');
+  $rset->adaptor->revoke_state('RESULT_FEATURE_SET') if ! $no_revoke;
 
 
   #Cannot use revoke_states here?
   #We can if we retrieve the Chip or Channel first
   #Add to ResultSet adaptor
-  my $sql = 'DELETE from result_feature where result_set_id='.$rset->dbID;
+  my $sql = 'DELETE from result_feature where result_set_id='.$rset->dbID.$slice_constraint;
   
   if(! $db->dbc->do($sql)){
-	throw("result_feature rollback failed for ResultSet:\t".$rset->name.'('.$rset->dbID.")\n".
+	throw("result_feature rollback failed:\t$sql\n".
 		  $db->dbc->db_handle->errstr());
   }
 
