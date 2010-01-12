@@ -199,8 +199,8 @@ sub _columns {
 			  inp.input_set_id    inp.experiment_id
 			  inp.feature_type_id inp.cell_type_id
 			  inp.format          inp.vendor
-			  inp.name     		 iss.name
-			  iss.input_subset_id
+			  inp.name            inp.type
+			  iss.name			  iss.input_subset_id
 		 );
 
 	
@@ -268,12 +268,12 @@ sub _left_join {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
   
-  my ($dbid, $exp_id, $ftype_id, $ctype_id, $format, $vendor, $name, $ess_name, $ess_id);
+  my ($dbid, $exp_id, $ftype_id, $ctype_id, $format, $vendor, $name, $ess_name, $ess_id, $type);
   my ($eset, @esets, $ftype, $ctype);
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
   my $exp_adaptor = $self->db->get_ExperimentAdaptor();
-  $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, \$vendor, \$name, \$ess_name, \$ess_id);
+  $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, \$vendor, \$name, \$type, \$ess_name, \$ess_id);
   
   #this fails if we delete entries from the joined tables
   #causes problems if we then try and store an rs which is already stored
@@ -287,15 +287,16 @@ sub _objs_from_sth {
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
 
       $eset = Bio::EnsEMBL::Funcgen::InputSet->new(
-														  -DBID         => $dbid,
-														  -EXPERIMENT   => $exp_adaptor->fetch_by_dbID($exp_id),
-														  -FORMAT       => $format,
-														  -VENDOR       => $vendor,
-														  -FEATURE_TYPE => $ftype,
-														  -CELL_TYPE    => $ctype,
-														  -ADAPTOR      => $self,
-														  -NAME         => $name,
-														 );
+												   -DBID         => $dbid,
+												   -EXPERIMENT   => $exp_adaptor->fetch_by_dbID($exp_id),
+												   -FORMAT       => $format,
+												   -VENDOR       => $vendor,
+												   -FEATURE_TYPE => $ftype,
+												   -CELL_TYPE    => $ctype,
+												   -TYPE         => $type,
+												   -ADAPTOR      => $self,
+												   -NAME         => $name,
+												  );
     }
     
     #This assumes logical association between chip from the same exp, confer in store method?????????????????
@@ -342,8 +343,8 @@ sub store{
   
   
   my $sth = $self->prepare('INSERT INTO input_set (experiment_id, feature_type_id, 
-                                                       cell_type_id, format, vendor, name) 
-                                                       VALUES (?, ?, ?, ?, ?, ?)');
+                                                       cell_type_id, format, vendor, name, type) 
+                                                       VALUES (?, ?, ?, ?, ?, ?, ?)');
   
   my $db = $self->db();
   
@@ -369,7 +370,8 @@ sub store{
   	$sth->bind_param(4, $set->format,                   SQL_VARCHAR);
   	$sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
 	$sth->bind_param(6, $set->name,                     SQL_VARCHAR);
-	
+	$sth->bind_param(7, $set->type,                     SQL_VARCHAR);
+
     
     $sth->execute();
     
@@ -422,7 +424,7 @@ sub store_InputSubsets{
 	
 
 	$sth->bind_param(1, $sset->input_set->dbID(), SQL_INTEGER);
-	$sth->bind_param(2, $sset->name(),                   SQL_VARCHAR);
+	$sth->bind_param(2, $sset->name(),            SQL_VARCHAR);
 	$sth->execute();
 
 	$sset->dbID($sth->{'mysql_insertid'});
