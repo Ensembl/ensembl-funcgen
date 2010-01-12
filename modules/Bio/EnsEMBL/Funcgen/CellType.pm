@@ -77,14 +77,17 @@ sub new {
       $name,
       $dlabel,
 	  $desc,
+	  $gender,
      ) = rearrange([
-		    'NAME', 'DISPLAY_LABEL', 'DESCRIPTION',
+		    'NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER'
 		   ], @_);
   
   
 
-  throw("Must supply a CellType name\n") if ! $name;
+  throw("Must supply a CellType name") if ! $name;
+  throw("Must supply a valid gender (e.g. male or female") if ! grep(/^$gender$/, ('male', 'female'));
 
+  $self->gender($gender);
   $self->name($name);
   $self->display_label($dlabel) if $dlabel;
   $self->description($desc) if $desc;
@@ -111,6 +114,25 @@ sub name {
     my $self = shift;
     $self->{'name'} = shift if @_;
     return $self->{'name'};
+}
+
+=head2 gender
+
+  Arg [1]    : string - gender e.g. male or female
+  Example    : my $gender = $ct->gender();
+  Description: Getter for the gender attribute for 
+               CellType objects
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Low Risk
+
+=cut
+
+sub gender {
+    my $self = shift;
+    $self->{'gender'} = shift if @_;
+    return $self->{'gender'};
 }
 
 =head2 description
