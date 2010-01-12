@@ -1,11 +1,11 @@
-name	display_label	description
-HeLa	NULL	Human Epithelial Carcinoma Cell
-GM06990	NULL	Human B-Lymphocyte Cell
-U2OS	NULL	Human Bone Osteosarcoma Epithelial Cell
-CD4	NULL	Human CD4 T-Cells
-IMR90	NULL	Human Fetal Lung Fibroblast
-HL-60	NULL	Human Promyelotic Leukemia Cell
-HepG2	NULL	Human Hepatocellular Liver Carcinoma Cell
-Lymphoblastoid	NULL	Lymphoblastoid Cells
-CD133	NULL	Human CD133+ Hematopoietic Stem Cell
-CD36	NULL	Human CD36+ Erythrocyte Precursor Cell
+name	display_label	description	gender	
+HeLa	NULL	Human Epithelial Carcinoma Cell	female
+GM06990	NULL	Human B-Lymphocyte Cell	female
+U2OS	NULL	Human Bone Osteosarcoma Epithelial Cell	female
+CD4	NULL	Human CD4 T-Cells	NULL
+IMR90	NULL	Human Fetal Lung Fibroblast	female
+HL-60	NULL	Human Promyelotic Leukemia Cell	female
+HepG2	NULL	Human Hepatocellular Liver Carcinoma Cell	male
+Lymphoblastoid	NULL	Lymphoblastoid Cells	NULL
+CD133	NULL	Human CD133+ Hematopoietic Stem Cell	NULL
+CD36	NULL	Human CD36+ Erythrocyte Precursor Cell	NULL
