@@ -658,9 +658,12 @@ sub get_schema_and_build{
 sub define_and_validate_sets{
   my $self = shift;
 
-  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery)
+
+  #change this to params hash
+
+  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery, $slice)
     = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'TYPE', 'APPEND',
-				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY'], @_);
+				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY', 'SLICE'], @_);
 
 
   #This rollback flag should only really be used for InputSet import
@@ -856,7 +859,8 @@ sub define_and_validate_sets{
 		
 		#Does this need to be by slice?
 		#What about states if we are running in parallel?
-		$self->rollback_ResultSet($rset);
+		#1 is result rollback flag
+		$self->rollback_ResultSet($rset, 1, $slice);
 
 	  }
 
@@ -903,7 +907,7 @@ sub define_and_validate_sets{
 	  if($rollback){
 		#Don't check for IMPORTED here as we want to rollback anyway
 		#Not forcing delete here as this may be used as a supporting set itself.
-		$self->rollback_FeatureSet($fset);
+		$self->rollback_FeatureSet($fset, undef, $slice);
 	  } elsif ($append || $recovery) {
 		#This is only true if we have an sset mismatch
 		
@@ -1186,9 +1190,7 @@ sub rollback_FeatureSet{
   Description: Deletes all status. chip_channel and result_set entries for this ResultSet.
                Will also rollback_results sets if rollback_results specified.  This will also
                update or delete associated ResultSets where appropriate.
-               If an associated
-               I
-  Returntype : Arrayref 
+  Returntype : Arrayref containing the ResultSet and associated DataSet which have not been rolled back
   Exceptions : Throws if ResultSet not valid
                Throws is result_rollback flag specified but associated product FeatureSet found.
   Caller     : General
@@ -1196,18 +1198,27 @@ sub rollback_FeatureSet{
 
 =cut
 
-#This need updating to remove $self->db
-#And use db from rset
+#Can we do this by Slice?
+#As with FeatureSet?
+#would need to pass slice to all relevant callers
+#e.g. define_and_validate_sets
+#Would need to pass explicit InputSubset to rollback?
+#For parellelised bjobs status should be set after all have finished
+#Then we don't get any conflicts
 
 sub rollback_ResultSet{
-  my ($self, $rset, $rollback_results) = @_;
+  my ($self, $rset, $rollback_results, $slice) = @_;
   
-  #what about?
   if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
 	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
   }
  
  
+
+  if($slice && $rset->table_name ne 'input_set'){
+	throw('Can only rollback_ResultSet by Slice if the ResultSet contains InputSets');	
+  }
+
   #We're still validating against itself??
   #And reciprocating part of the test :|
   my $sql;
@@ -1244,7 +1255,6 @@ sub rollback_ResultSet{
 	  }
 	  else{
 		#Found rset in dset, but not yet processed so can remove safely.
-		#This is really affecting the dset, so we need to change this?
 		$self->log("Removing supporting ResultSet from DataSet:\t".$dset->name."\tResultSet:".$rset->log_label);
 		$sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID.
 		  ' and type="result" and supporting_set_id='.$rset->dbID;
@@ -1292,7 +1302,7 @@ sub rollback_ResultSet{
 	  if(! $feature_supporting){
 
 		#RollBack result_feature table first
-		$self->rollback_result_features($rset);
+		$self->rollback_result_features($rset, $slice);
 
 		#Now rollback other states
 		$rset->adaptor->revoke_states($rset);
@@ -1303,33 +1313,37 @@ sub rollback_ResultSet{
 
 		$self->log('Removing result_set_input entries from associated ResultSets');
 		
-		#Now remove cc_ids from associated rsets.
-		foreach my $assoc_rset(@assoc_rsets){
-		  $sql = 'DELETE from result_set_input where result_set_id='.$assoc_rset->dbID.
-			' and result_set_input_id in('.join', ', @{$assoc_rset->result_set_input_ids}.')';
-		  $db->dbc->do($sql);
-		  
-		  # we need to delete complete subsets from the result_set table.
-		  my $subset = 1;
-		  
-		  foreach my $cc_id(@{$assoc_rset->result_set_input_ids}){
-			
-			if(! grep/$cc_id/, @{$rset->result_set_input_ids}){
-			  $subset = 0;
-			  last;
-			}
-		  }
-			
-		  #Found complete subset so can delete
-		  if($subset){
-			$self->log("Deleting associated subset ResultSet:\t".$assoc_rset->log_label);
-			
-			#Delete status entries first
-			$assoc_rset->adaptor->revoke_states($assoc_rset);
-			
-			#All cc records will have already been deleted
-			$sql = 'DELETE from result_set where result_set_id='.$assoc_rset->dbID;
+
+		if(! $slice){
+
+		  #Now remove cc_ids from associated rsets.
+		  foreach my $assoc_rset(@assoc_rsets){
+			$sql = 'DELETE from result_set_input where result_set_id='.$assoc_rset->dbID.
+			  ' and result_set_input_id in('.join', ', @{$assoc_rset->result_set_input_ids}.')';
 			$db->dbc->do($sql);
+			
+			# we need to delete complete subsets from the result_set table.
+			my $subset = 1;
+			
+			foreach my $cc_id(@{$assoc_rset->result_set_input_ids}){
+			  
+			  if(! grep/$cc_id/, @{$rset->result_set_input_ids}){
+				$subset = 0;
+				last;
+			  }
+			}
+		  
+			#Found complete subset so can delete
+			if($subset){
+			  $self->log("Deleting associated subset ResultSet:\t".$assoc_rset->log_label);
+			  
+			  #Delete status entries first
+			  $assoc_rset->adaptor->revoke_states($assoc_rset);
+			  
+			  #All cc records will have already been deleted
+			  $sql = 'DELETE from result_set where result_set_id='.$assoc_rset->dbID;
+			  $db->dbc->do($sql);
+			}
 		  }
 		}
 
@@ -1349,7 +1363,10 @@ sub rollback_ResultSet{
 		  }
 		}
 		else{
-		  warn "Need to Handle InputSet status rollback here?";
+		  #Should only be one to rollback
+		  foreach my $iset(@{$rset->get_InputSets}){
+			$self->rollback_InputSet($iset);
+		  }
 		}
 	  }
 	  else{
@@ -1380,15 +1397,15 @@ sub rollback_ResultSet{
 	}
 	
 	#Delete chip_channel and result_set records
-	$sql = 'DELETE from result_set_input where result_set_id='.$rset->dbID;
-	$db->dbc->do($sql);
-	$self->reset_table_autoinc('result_set_input', 'result_set_input_id', $db);
+	if(! $slice){
+	  $sql = 'DELETE from result_set_input where result_set_id='.$rset->dbID;
+	  $db->dbc->do($sql);
+	  $self->reset_table_autoinc('result_set_input', 'result_set_input_id', $db);
 
-	$sql = 'DELETE from result_set where result_set_id='.$rset->dbID;
-	$db->dbc->do($sql);
-	$self->reset_table_autoinc('result_set', 'result_set_id', $db);
-
-
+	  $sql = 'DELETE from result_set where result_set_id='.$rset->dbID;
+	  $db->dbc->do($sql);
+	  $self->reset_table_autoinc('result_set', 'result_set_id', $db);
+	}
   }
 
   return \@skipped_sets;
