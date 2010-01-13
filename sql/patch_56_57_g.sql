@@ -41,7 +41,7 @@ CREATE TABLE `input_set` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
-insert into input_set select * from experimental_set;
+insert into input_set(input_set_id, experiment_id, feature_type_id, cell_type_id, format, vendor, name) select * from experimental_set;
 
 #update all types to annotated.
 update input_set set type='annotated';
