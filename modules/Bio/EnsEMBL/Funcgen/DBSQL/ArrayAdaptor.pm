@@ -465,6 +465,18 @@ sub fetch_probe_count_by_Array{
 }
 
 
+sub check_status_by_class{
+  my ($self, $status, $class) = @_;
+
+  foreach my $array(@{$self->fetch_all_by_class($class)}){
+
+	if(! $array->has_status($status)){
+	  throw('Found '.$class.' Array '.$array->name." without $status status");
+	}
+  }
+
+  return;
+}
 
 #New Funcgen methods
 #fetch_all_by_group?
