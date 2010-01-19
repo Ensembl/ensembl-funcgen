@@ -56,6 +56,7 @@ export DB_NAME=
 export DB_PORT=
 export SPECIES=
 export SPECIES_COMMON=
+export DB_HOST_LSFNAME=
 
 #Pipeline DB
 #Defaults to output DB
@@ -76,6 +77,7 @@ export DNADB_HOST=
 export DNADB_NAME=
 export DNADB_PORT=
 export DNADB_PASS=
+export DNADB_HOST_LSFNAME=
 
 
 ### Clean only args! 
