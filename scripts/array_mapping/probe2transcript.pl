@@ -63,6 +63,12 @@
 # 15 Why can't we omit -arrays if we have -format?
 # 16 Add UTR only overlap  in range registry.
 # 17 Check for ProbeFeature xrefs and UOs in check_existing_and_exit?
+# 18 PostAlign/PreXref processing
+#    Remove duplicated ProbeFeatures(from ProbeTranscriptAlign) and redirect Xrefs
+#    Being careful to make sure cigarlines are valid for both.
+#    Remove ProbeTranscriptAlign ProbeFeaturess which have been called promiscuous 
+#    by ProbeAlign, and update to promiscuous if sum of ProbeAlign and 
+#    ProbeTranscriptAlign features render a Probe promiscuous
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
@@ -184,7 +190,7 @@ This is generally executed by the eFG array mapping environment
 
  Testing:
 
-  -test_transcripts   Number of transcripts to perform a test run on. No tyet implemented
+  -test_transcripts   Number of transcripts to perform a test run on.
   -slice              Name of test slice to perform a test run on 
   -transcript         Test transcript stable ID
   -no_delete          Skips delete/check_existing. 
@@ -263,6 +269,8 @@ my ($transcript_host, $transcript_user, $transcript_pass, $transcript_dbname,
 my ($probe_db, $xref_db, $transcript_db, %promiscuous_objects, %transcripts_per_object, @unmapped_objects, $um_obj,
 	%transcript_ids , %transcript_feature_info, %arrays_per_object, %probeset_sizes, @transcripts, %arrays,
    %array_xrefs, %transcript_xrefs, $test_transcript_sid, $clean_up, $parallelise, $filename, $sql, @array_names);
+
+
 
 my $reg_verbose = 0;
 my ($species, $reg_file, $reg_host, $reg_user, $reg_pass, $reg_port);
@@ -1020,7 +1028,7 @@ foreach my $transcript (@transcripts) {
   last if ($test_transcripts && $i >= $test_transcripts);
   $transcript_sid = $transcript->stable_id();
 
-  $Helper->log("DEBUG:\tTranscript $transcript_sid") if $debug;
+  $Helper->log("\nDEBUG:\tTranscript $transcript_sid") if $debug;
    
   #Handle UTR extensions
   #The UTRs themselves are already included in the transcript/exons!!
@@ -1202,15 +1210,31 @@ foreach my $transcript (@transcripts) {
 	}
 
 	my $cigar_line = $feature->cigar_string;
+	my ($mismatches);
+	my $mm_link_txt = '';
+	$mismatches = 1 if $feature->mismatchcount;
+	$mm_link_txt = ' ('. $feature->mismatchcount.' bp mismatch)' if $mismatches;
 
 	if($cigar_line =~ /D/){#ProbeTranscriptAlign
 	  #Do we skip this and just get all in one go by the external_id
 	  #e.g. the transcript ID?
 	  
-	  #my @xrefs = @{$dbentry_adaptor->fetch_all_by_Transcript($transcript)};
-	  #This will not return the ProbeFeature objects?
-	  #But we only need the probe ID to build the cache
-	  #so
+	  #This is now handled in ProbeTranscriptAlign
+	  #But we may want to capture transcript onlyu alignment in future
+	  #in which case we would prbably want to reflect this in the linkage annotation
+
+	  #my @uos = @{$unmapped_object_adaptor->fetch_all_by_object_type_id('Probe', $feature->probe_id)};
+
+	  #if(grep(/Promiscuous Probe/, (map $_->summary, @uos))){
+	  #print "ProbeTranscriptAlign ProbeFeature already called promiscuous by ProbeAlign for Probe dbID:\t".$feature->probe_id;
+	  #	#Need to cache these and delete update them at the end of the run?
+	  #	#This would mean the UnmappedObject would have more than one analysis_id?
+	  #	#Or do we just store an extra semi-redundant updated UO with the probe2transcript.pl analysis_id?
+	  #next;
+	  #}
+
+
+
 
 	  my @dbentries = @{$feature->get_all_Transcript_DBEntries};
 
@@ -1231,14 +1255,17 @@ foreach my $transcript (@transcripts) {
 			if ($array_config{probeset_arrays}) {
 			  
 			  if (! $transcript_feature_info{$transcript_key}{$probe_id}) {
-				$transcript_feature_info{$transcript_key}{$probe_id} = 1;
+				$transcript_feature_info{$transcript_key}{$probe_id} = [1, $mismatches];
 			  } else {
-				$transcript_feature_info{$transcript_key}{$probe_id}++;
+				$transcript_feature_info{$transcript_key}{$probe_id}->[0]++;
+				$transcript_feature_info{$transcript_key}{$probe_id}->[1] += $mismatches;
+
 			  }
 			} 
 			else {
-			  $transcript_feature_info{$transcript_key}{$probe_id} ||= ();
-			  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, 'exon-exon match';
+			  $transcript_feature_info{$transcript_key}{$probe_id} ||= [];
+			  #push @{$transcript_feature_info{$transcript_key}{$probe_id}}, 'exon-exon match';
+			  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, ["exon-exon match${mm_link_txt}", $mismatches];
 			}
 			
 			#No need to add an xref as we already have one
@@ -1345,25 +1372,36 @@ foreach my $transcript (@transcripts) {
 
 	 
 		if ($exon_overlap && $flank_overlap) {
-		  $linkage_annotation = "exon/${flank_end}' flank boundary";
+		  $linkage_annotation = "exon/${flank_end}' flank boundary${mm_link_txt}";
 		} elsif ($exon_overlap) {
-		  $linkage_annotation = 'exon';
+		  $linkage_annotation = "exon${mm_link_txt}";
 		} else {				#only flank over lap
-		  $linkage_annotation = "${flank_end}' flank";
+		  $linkage_annotation = "${flank_end}' flank${mm_link_txt}";
 		}
 
 		#Count the probe & add the ProbeFeature xref
+				
 		if ($array_config{probeset_arrays}) {
-		
+	 
 		  if (! $transcript_feature_info{$transcript_key}{$probe_id}) {
-			$transcript_feature_info{$transcript_key}{$probe_id} = 1;
+			
+			$transcript_feature_info{$transcript_key}{$probe_id} = [1, $mismatches];
 		  } else {
-			$transcript_feature_info{$transcript_key}{$probe_id}++;
+			$transcript_feature_info{$transcript_key}{$probe_id}->[0]++;
+			$transcript_feature_info{$transcript_key}{$probe_id}->[1] += $mismatches;
 		  }
 		} 
 		else {
-		  $transcript_feature_info{$transcript_key}{$probe_id} ||= ();
-		  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, $linkage_annotation;
+		  $transcript_feature_info{$transcript_key}{$probe_id} ||= [];
+		  #Don't really need mismatches here?
+		  #As we already have it in the linkage annotation
+		  
+		  #Do we ever use this linkage annotation
+		  #If there is more than one hit?
+		  #Don't need mistmaches for single hit
+		  #as we already have this encoded in the linkage txt
+		  push @{$transcript_feature_info{$transcript_key}{$probe_id}}, [$linkage_annotation, $mismatches];
+		  
 		}
 
 		add_xref($transcript_sid, $feature_id, 'ProbeFeature', $linkage_annotation);
@@ -1510,7 +1548,7 @@ foreach my $key (keys %transcript_feature_info) {
 
   my ($transcript_sid, $ensembl_id) = split (/:/, $key);
    
-  #ensembl_id pname can be either probeset or probe name
+  #ensembl_id can be either probeset or probe name
   my $probeset_size = $probeset_sizes{$ensembl_id};
   #This should always be 1 for non probeset_arrays
 
@@ -1520,8 +1558,31 @@ foreach my $key (keys %transcript_feature_info) {
   #i.e. probe could hit twice, do we need to handle this?
   #For non-probeset arrays the key in  %{transcript_feature_info{xref_object_id}}
   #Has will be the same as the xref_object_id i.e. a probe_id
-  my $hits = ($array_config{probeset_arrays}) ?  scalar(keys %{$transcript_feature_info{$key}}) 
-	: scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
+  #Also need to get probes with no_perfect matches
+
+  my ($hits);
+  my $num_mismatch_hits = 0;
+
+  if($array_config{probeset_arrays}){
+	$hits =  scalar(keys %{$transcript_feature_info{$key}});
+	#This is nr hits
+
+	#We want only those which do not also have a perfect match
+	#i.e. num of hits for individual probe is also the same as number of mismatched hits for that probe
+	
+	#This is just the number of hits and number of mismatch hits for the whole probeset.
+	map {$num_mismatch_hits += 1 if $_->[1] == $_->[0]}  values %{$transcript_feature_info{$key}};
+
+  }
+  else{
+	$hits = scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
+	#$num_mismatch_hits = grep(/1/, (map $_->[1], @{$transcript_feature_info{$key}{$ensembl_id}}));
+	map {$num_mismatch_hits +=1 if $_->[1] } @{$transcript_feature_info{$key}{$ensembl_id}};
+  }
+
+
+
+
   my $id_names = $ensembl_id.'('.join(',', @{$arrays_per_object{$ensembl_id}{names}}).')';
 
   if ((($hits / $probeset_size) >= $mapping_threshold) ||
@@ -1542,7 +1603,7 @@ foreach my $key (keys %transcript_feature_info) {
 	
 	
 	if ($transcripts_per_object{$ensembl_id} <= $max_transcripts) {
-	  
+	  my $link_txt = '';
 	  #So we're passing these tests for xrefs of the opposite strand
 	  
 	  #Can we annotate the type of Probe match? e.g. exon, exon-exon, exon-utr, utr-exon
@@ -1558,9 +1619,16 @@ foreach my $key (keys %transcript_feature_info) {
 	  #This gives slight redundancy between the ProbeFeature and Probe/ProbeSet xrefs
 	  #Would need to tweak the data model to handle this properly.
 
-
 	  if($xref_object eq 'ProbeSet'){
-		$linkage_annotation = "${hits}/${probeset_size} in ProbeSet";
+		if ($num_mismatch_hits){
+		  if ($num_mismatch_hits == 1){
+			$link_txt = "(with 1 mismatched probe)";
+		  }
+		  else{
+			$link_txt = "(with $num_mismatch_hits mismatched probes)";
+		  }
+		}
+		$linkage_annotation = "${hits}/${probeset_size} in probeset${link_txt}";
 	  }
 	  else{
 
@@ -1569,15 +1637,33 @@ foreach my $key (keys %transcript_feature_info) {
 		#Therefore for non-probeset arrays this will always be 1?
 
 		if($hits > 1){
-		  #Remove this?
-		  $linkage_annotation = "Probe matches $hits times";
+		  #We want mismatch info in here
+
+		  $link_txt = " ($num_mismatch_hits times with mismatches)" if $num_mismatch_hits;
+
+		  $linkage_annotation = "Matches $hits times${link_txt}";
 		}
 		else{
-		  $linkage_annotation = 'Probe matches '.$transcript_feature_info{$key}{$ensembl_id}->[0];
+		  $linkage_annotation = 'Matches '.$transcript_feature_info{$key}{$ensembl_id}->[0]->[0];
 		}
 	  }
 
-	  add_xref($transcript_sid, $ensembl_id, $xref_object, $linkage_annotation);
+	  #Add number of other transcripts mapped in the link text here
+	  if($transcripts_per_object{$ensembl_id} > 1){
+		$link_txt = ". Matches $transcripts_per_object{$ensembl_id} other transcripts";
+	  }
+	  else{
+		$link_txt = ". Maps uniquely to this transcript";
+	  }
+
+
+	  #Could we also add info here on where these other transcript mapping are perfect or mismatched?
+	  #Position of mismatches is important here!
+	  #i.e. length of perfect match correlates with binding(http://www.biomedcentral.com/1471-2164/9/317)
+	  
+
+
+	  add_xref($transcript_sid, $ensembl_id, $xref_object, $linkage_annotation.$link_txt);
 	  print OUT "$id_names\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
 	  
 	}
@@ -1925,8 +2011,6 @@ sub pc {
 sub add_xref {
 
   my ($transcript_sid, $ensembl_id, $object_type, $linkage_annotation) = @_;
-  #Maybe add linkage_type here?
-
  
   #Some counts
   #Add key on type of xref?
@@ -1965,7 +2049,6 @@ sub add_xref {
 	 #And should be actual version transcript sid?
 
 	 #object_xref data
-	 #-info_type            => "Transcript",
 	 -info_type => 'MISC',
 	 -info_text            => 'TRANSCRIPT',#?
 	 -linkage_annotation   => $linkage_annotation,
