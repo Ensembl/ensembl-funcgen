@@ -496,7 +496,7 @@ sub _objs_from_sth {
   my %set_adaptors = (
 					  feature      => $self->db->get_FeatureSetAdaptor(),
 					  result       => $self->db->get_ResultSetAdaptor(),
-					  experimental => $self->db->get_InputSetAdaptor(),
+					  input        => $self->db->get_InputSetAdaptor(),
 					 );
 
   $sth->bind_columns(\$dbID, \$fset_id, \$name, \$ss_type, \$ss_id);
@@ -619,7 +619,7 @@ sub store{
 
 	  $sth2->bind_param(1, $dset->dbID(),                SQL_INTEGER);
 	  $sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
-	  $sth2->bind_param(3, $sset->set_type(),                SQL_VARCHAR);#enum feature/result/experimental
+	  $sth2->bind_param(3, $sset->set_type(),            SQL_VARCHAR);#enum feature/result/experimental
 	  $sth2->execute();
 	}
   }
