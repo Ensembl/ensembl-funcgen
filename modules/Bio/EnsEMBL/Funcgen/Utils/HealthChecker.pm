@@ -491,23 +491,23 @@ sub update_meta_coord{
 sub check_meta_species{
   my ($self) = @_;
 
-  $self->log_header('Checking meta species.ensembl_latin_name');
+  $self->log_header('Checking meta species.system_name');
 
   my $mc = $self->db->get_MetaContainer;
-  my @latin_names = @{$mc->list_value_by_key('species.ensembl_latin_name')};
+  my @latin_names = @{$mc->list_value_by_key('species.system_name')};
   
   my $dbname_species = $self->db->dbc->dbname;
   $dbname_species =~ s/_funcgen_.*//;
   
   if(scalar(@latin_names) > 1){
-	$self->report("FAIL:\tFound more than one species.ensembl_latin_name in meta:\t".join(", ", @latin_names));
+	$self->report("FAIL:\tFound more than one species.system_name in meta:\t".join(", ", @latin_names));
   }
   elsif(scalar(@latin_names) == 1 && ($latin_names[0] ne $dbname_species)){
-	$self->report("FAIL:\tFound mismatch between meta species.ensembl_latin_name and dbname:\t".$latin_names[0]." vs $dbname_species");
+	$self->report("FAIL:\tFound mismatch between meta species.system_name and dbname:\t".$latin_names[0]." vs $dbname_species");
   }
   elsif(scalar(@latin_names) == 0){
-	$self->report("WARNING:\tFound no meta species.ensembl_latin_name setting as:\t$dbname_species");
-	$self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, 'species.ensembl_latin_name', '$dbname_species')");
+	$self->report("WARNING:\tFound no meta species.system_name setting as:\t$dbname_species");
+	$self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, 'species.system_name', '$dbname_species')");
   }
 
   #else is okay
