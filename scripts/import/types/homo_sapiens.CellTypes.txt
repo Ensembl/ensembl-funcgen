@@ -9,3 +9,4 @@ HepG2	NULL	Human Hepatocellular Liver Carcinoma Cell	male
 Lymphoblastoid	NULL	Lymphoblastoid Cells	NULL
 CD133	NULL	Human CD133+ Hematopoietic Stem Cell	NULL
 CD36	NULL	Human CD36+ Erythrocyte Precursor Cell	NULL
+K562	NULL	Human Mylogenous Leukaemia Line	female
