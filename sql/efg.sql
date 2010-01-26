@@ -730,84 +730,22 @@ CREATE TABLE `result_set` (
    UNIQUE KEY `unique_idx` (`name`,`analysis_id`,`feature_type_id`,`cell_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- This is still v hard to impose unique constraints without key's of every combination of 2 :(
--- should we just go for NR table
--- chip_channel_id ID's a unique analysis instance of a physical chip or channel, used to key into results, needs to be autoinc really :(
--- Have in separate table 
 
-
--- WE STILL NEED A TABLE SET ID i.e. to differentiate results by chip, otherwise we cannot deal with result within a result_set on a chip by chip basis
--- table_set_id should be unique?
--- table_set_id table_name table_id and analysis_id shoudl also be unique
--- result_set_id and table_set_id should be unique
-
--- we could have another table here: table_set otherwise, table_name, analysis_id, result_set_id become redundant
--- table/chip_set: table_set_id, table_id, result_set_id
-
--- this is basically using the table_set_id to provide a link to the table_name to deconvolute the table_name/id relationship
--- we want one id in the result table to denote the chip/channel, analysis.
-
-
-
+--
+-- Table structure for table `result_set_input`
+--
 
 DROP TABLE IF EXISTS `result_set_input`;
 CREATE TABLE `result_set_input` (
    `result_set_input_id` int(10) unsigned NOT NULL auto_increment,
    `result_set_id` int(10) unsigned NOT NULL,
    `table_id` int(10) unsigned NOT NULL,
-   `table_name` varchar(20) NOT NULL,
+   `table_name` enum('experimental_chip','channel','input_set') DEFAULT NULL,
    PRIMARY KEY  (`result_set_input_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- unique key is required? can we make the api check this to reduce size
--- unqiue key does not provide access from table_id/name side
--- should we just have table_name here, as it's more to do with the chip_channel than the result set
--- would introduce some redundancy, but low volume table so not a problem.
 
--- Do we need to remove result_set_id too, so we can have an expermental_set in it's own right iwthout the associated results?
--- We could then defined channel level relationship from these sets rather than storing these too
--- However we still need to store the channel results which will require a experimental_set_id
--- This currently is redundant with respect to physical sets due to the possibility of differeing analyses on the same raw data.
-
--- So two problems:
--- Need to represent channel->result relstionship, can we set all both chsnnels across multiple chips in set?
--- Need to represent single set, and potentially multiple instance of this set through differing analyses
--- Need to register these sets before we can record raw results. May not know which chips are in same set to begin with.
-
--- 3 solutions:
--- 1 Big redundant result_set table and hang the individual experimental_sets? Have unique table_set_id key'd to result
--- We would have to update result appropriately or insist on chip sets being known in advance
--- REDUNDANT
--- No access to chip sets without accessing previous result_set or same ec ids?  OR could have chip_set_id in experimental_chip
--- TABLE LIGHT
--- 2 Midway solution, Have experimental/analysis_set table which represent
--- LESS REDUNDANT
--- Same problems as above
--- 3 Have experimental_set to represent the physical unique set, also have analysis_set table to link between result_set and experimental_set
--- result would have analysis_set_id
--- Would have same probs as above but would haave uniquely accessible chip/experimental sets and NR all round.
--- NON_REDUNDANT
--- Access to chip sets
--- TABLE HEAVY
--- Would still have update problem
-
--- This is just replicating what we have in experiment or channel, too complicated, result_set will be low volume so just deal with redundancy
--- Can we still maintain unique result_set id and have a link result_table_entries, this will simply contain the individual table_id's, so call it chip_channel_result?
-
-
--- we could drop this table and just keep the index for e! prd
-
-
--- THe problem is only link features to chip sets, not individual chips, therefore result_group_id needs to be NR with respect to ec's within same set. Analysis_id delineates result_groups of the chip_set(tablename/id)
--- More keys?  Above key only defines uniqueness and linking from result_set, do we need exp > result_group query?
-
--- > 1 chip set i.e. duplicates are linked to one(or many) result sets(feature_sets)
--- but each can have a displayable status set, but only in it's own context i.e. you can have it displayed in one set and not in another.
--- Now we have problem of channel result sets:
---	chip set values still valid
---     would be nice to be able to extract chip_set to it's own table/experimental_chip
---     move chip_set_id to experimental_chip? result_group_id effectively denotes chip set, but needs to use ec.chip_set_id as reference
 
 
 --
