@@ -56,6 +56,14 @@ update supporting_set set type='input' where type='experimental';
 ALTER TABLE supporting_set modify `type` enum('result','feature','input') DEFAULT NULL;
 
 
+#Also update status table 
+update status set table_name='input_subset' where table_name='experimental_subset';
+update status set table_name='input_set' where table_name='experimental_set';
+
+
+
+
+
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_g.sql|rename_experimentalset_tables');
 
