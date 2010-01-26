@@ -119,13 +119,19 @@ sub new {
   #Where are we capturing the differences between result InputSets
   #Not that there are any at the moment
 
-  if(! ($type && grep /^$type$/, ('sequencing', 'feature'))){
+  if(! ($type && grep /^$type$/, ('annotated', 'result'))){
 	#Should we genericise sequencing to input
 	#and specify sequencing at input_set level
 	#This would allow us to capture this for direct imports into a FeatureSet
 	#We would then have some overlap between input type here and input_set table_name?
 	
-  	throw("You must define a valid InputSet type e.g. 'sequencing' or 'feature'");
+  	throw("You must define a valid InputSet feature type e.g. 'annotated' or 'result'");
+  }
+
+  if(($type eq 'result') &&
+	 ($format ne 'SEQUENCING')){
+	throw('InputSet does not yet support a result type InputSet which does not have the \'SEQUENCING\' format');
+	
   }
 
 
