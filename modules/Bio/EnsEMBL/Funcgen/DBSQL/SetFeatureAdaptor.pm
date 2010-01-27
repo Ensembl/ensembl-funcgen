@@ -92,6 +92,13 @@ sub fetch_all_by_FeatureType_FeatureSets {
 
   my $fs_ids = join(',', @fs_ids) if scalar(@fs_ids >1);
 
+  #Need to restrict to the current default cs's
+  #This requires separate query or query extension
+  #Need to make @tables and @true_tables exported?
+  #Or just attrs?
+  #Set table to true_tables in new?
+  
+
   my ($table_name, $table_syn) = @{$self->_main_table};
   my $constraint = $table_syn.'.feature_set_id = fs.feature_set_id AND '.
 	$table_syn.'.feature_type_id='.$ftype->dbID.' AND '.$table_syn.'.feature_set_id '; 
@@ -114,9 +121,9 @@ sub fetch_all_by_FeatureType_FeatureSets {
 	  #We are not bringing back different class of feature i.e. AnnotatedFeatures and ExternalFeatures
 	  #Let's not catch this, but let it silently fail so peaople.
 
-	  next if $table_name ne lc($fset->type).'_feature';
+	  next if $table_name ne lc($fset->feature_class).'_feature';
 
-	  my $sql = 'SELECT feature_id from associated_feature_type where feature_table="'.$fset->type.'" and feature_type_id='.$ftype->dbID;
+	  my $sql = 'SELECT feature_id from associated_feature_type where feature_table="'.$fset->feature_class.'" and feature_type_id='.$ftype->dbID;
 
 	  my @dbids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
 
@@ -188,7 +195,7 @@ sub fetch_all_by_Feature_associated_feature_types {
 	my $ftype_ids = join(', ', (map $_->dbID, @assoc_ftypes));
   
 	#Now we need to restrict the Features based on the FeatureSet of the original Feature, we could make this optional.
-	$sql = "SELECT feature_id from associated_feature_type aft, $table_name $table_syn where aft.feature_table='".$fset->type."' and aft.feature_type_id in ($ftype_ids) and aft.feature_id=${table_syn}.${table_name}_id and ${table_syn}.feature_set_id=".$fset->dbID;
+	$sql = "SELECT feature_id from associated_feature_type aft, $table_name $table_syn where aft.feature_table='".$fset->feature_class."' and aft.feature_type_id in ($ftype_ids) and aft.feature_id=${table_syn}.${table_name}_id and ${table_syn}.feature_set_id=".$fset->dbID;
 	#This just sets each value to a key with an undef value
 	
 	map {$dbIDs{"@$_"} = undef} @{$self->dbc->db_handle->selectall_arrayref($sql)};
@@ -249,7 +256,7 @@ sub fetch_all_by_Slice_FeatureType {
   Returntype : Listref of Bio::EnsEMBL::SetFeature objects
   Exceptions : Throws if list provided does not contain FeatureSets or if none provided
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - Maybe not sensible to fetch all data in one call.
 
 =cut
 
@@ -447,7 +454,7 @@ sub store_associated_feature_types {
   #Could be undef or empty
   return if ! defined $assoc_ftypes || scalar(@$assoc_ftypes) == 0;
 
-  my $type = $set_feature->feature_set->type;
+  my $type = $set_feature->feature_set->feature_class;
   my $feature_id = $set_feature->dbID;
 
   my $sql = 'INSERT into associated_feature_type(feature_id, feature_table, feature_type_id) values (?,?,?)';
