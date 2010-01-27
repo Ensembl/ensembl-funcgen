@@ -239,8 +239,8 @@ sub _set_bounds_by_xref_FeatureSets{
   foreach my $fset(@$fsets){
 	$self->efgdb->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 	
-	$feature_set_types{$fset->type} ||= [];
-	push @{$feature_set_types{$fset->type}}, $fset;
+	$feature_set_types{$fset->feature_class} ||= [];
+	push @{$feature_set_types{$fset->feature_class}}, $fset;
   }
 
 

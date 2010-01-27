@@ -293,7 +293,7 @@ sub _objs_from_sth {
 												   -VENDOR       => $vendor,
 												   -FEATURE_TYPE => $ftype,
 												   -CELL_TYPE    => $ctype,
-												   -TYPE         => $type,
+												   -FEATURE_CLASS=> $type,
 												   -ADAPTOR      => $self,
 												   -NAME         => $name,
 												  );
@@ -370,7 +370,7 @@ sub store{
   	$sth->bind_param(4, $set->format,                   SQL_VARCHAR);
   	$sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
 	$sth->bind_param(6, $set->name,                     SQL_VARCHAR);
-	$sth->bind_param(7, $set->type,                     SQL_VARCHAR);
+	$sth->bind_param(7, $set->feature_class,            SQL_VARCHAR);
 
     
     $sth->execute();

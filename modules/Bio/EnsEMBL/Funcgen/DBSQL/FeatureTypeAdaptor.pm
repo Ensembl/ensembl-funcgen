@@ -138,7 +138,7 @@ sub fetch_all_by_associated_SetFeature{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::SetFeature', $sfeat);
   
   push @tables, ['associated_feature_type', 'aft'];
-  my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.feature_table="'.$sfeat->feature_set->type.'" AND aft.feature_id='.$sfeat->dbID;
+  my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.feature_table="'.$sfeat->feature_set->feature_class.'" AND aft.feature_id='.$sfeat->dbID;
 
 
   my $feature_types =  $self->generic_fetch($constraint);
