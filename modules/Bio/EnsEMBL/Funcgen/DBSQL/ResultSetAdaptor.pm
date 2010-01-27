@@ -118,8 +118,9 @@ use vars qw(@ISA);
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::ResultSet
   Arg [2]    : Bio::EnsEMBL::Analysis
-  Example    : my @rsets = @{$rset_adaptor->fetch_all_by_Experiment_Analysis($exp, $anal)};
-  Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets with the given Analysis from the Experiment
+  Example    : my @rsets = @{$rset_adaptor->fetch_all_linked_by_ResultSet($rset)};
+  Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets which are linked
+               to the supplied ResultSet (i.e. replicate relationships/import sets)
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
   Exceptions : Throws if ResultSet not valid or stored
   Caller     : general
@@ -133,7 +134,7 @@ sub fetch_all_linked_by_ResultSet{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
 
-  my $constraint = ' cc.result_set_id in (SELECT distinct(result_set_id) from result_set_input where result_set_input_id in('.join(', ', @{$rset->result_set_input_ids}).') ';
+  my $constraint = ' cc.result_set_id in (SELECT distinct(result_set_id) from result_set_input where result_set_input_id in('.join(', ', @{$rset->result_set_input_ids}).')) ';
   
   my @tmp = @{$self->generic_fetch($constraint)};
 
