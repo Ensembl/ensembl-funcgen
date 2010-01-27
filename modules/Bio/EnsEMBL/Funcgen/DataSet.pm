@@ -159,19 +159,11 @@ sub new {
     throw("You must use the DataSetAdaptor to generate DataSets with dbID i.e. from the DB, as this module accomodates updating which may cause incorrect data if the object is not generated from the DB");
   }
   
-  #warn("Need to handle single or multiple experiment and feature_group ids");
   
   $self->{'supporting_sets'} ||= {};
-  
-
-  #change this to add_FeatureSet and add_ResultSet
-  #both need to check whether feature or cell predefined.
-  #then check names
-  #add_featureSet must thro if already defined.
-
-  #Is this really required now, what was the need for this?
-  throw("Must specify at least one Result/FeatureSet") if((! $sets) && (! $fset));
-  #is this right? we could be passing an empty array which would be true?
+  #throw("Must specify at least one Result/FeatureSet") if((! $sets) && (! $fset));
+  #removed this to allow generation of DataSets without feature sets
+  #could reimplement this if we change the DataSetAdaptor::_obj_from_sth
 
   $self->add_supporting_sets($sets) if $sets;
   $self->product_FeatureSet($fset)   if $fset;	
