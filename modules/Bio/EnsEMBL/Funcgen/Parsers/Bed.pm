@@ -86,14 +86,6 @@ sub new{
 
   my $self = $class->SUPER::new(@_);
   
-
-  #Bed specific params
-  my ($bed_reads) = rearrange(['BED_READS'], @_);
-
-  #This should be annotated or result which can then be used in define_and_validate_sets in Helper
-
-  $self->{'set_feature_type'} = 'result' if $bed_reads;
-
   throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") 
 	if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
   
@@ -179,7 +171,7 @@ sub pre_process_file{
 
 
   
-  if(! defined  $self->output_file && $self->set_feature_type eq 'result'){
+  if(! defined  $self->output_file && $self->input_feature_class eq 'result'){
 	#output_file is currently only required for read mysqlimport loading
 	#This could also be used by SAM/BAM so put in InputSet
 
@@ -203,49 +195,52 @@ sub pre_process_file{
 }
 
 
-sub parse_header{
-  my ($self, $fh) = @_;
+#sub parse_header{
+#  my ($self, $fh) = @_;
+#
+#
+#  #This will not work on a sorted file, so would have to
+#  #store header and test match every line!
+#  #just test for track name= for now
+#
+#
+#  warn "PARSING HEADER";
+#  my $nr = 0;
+#
+#  for my $line(<$fh>){
+#	$nr++;
+#
+#	#my $nr = $fh->input_line_number();#This always return 3451? Length of file?
+#	#This is not yet reliable here!!!!
+#	#Is this because of the gzip sort?
+#	#So let's depend on count?
+#	#If we don't know when the header is supposed to finish (i.e. multi line header)
+#	#We will need to decrement the seek position somehow
+#
+#	warn "INPUT LINE = $nr $line";
+#
+#	#exit;
+#	if ($nr == 1){#$INPUT_LINE_NUMBER;
+#	  #sanity check here
+#	  return if($line =~ /track name=/o);
+#	  $self->log(":: WARNING ::\tBED file does not appear to have valid header. First line($nr) will be treated as data:\t$line");
+#	}
+#
+#	exit;
+#
+#  }
+#
+#
+#  exit;
+#
+# return;
+#}
 
-  #This will not work on a sroted file, so would have to
-  #store header and test match every line!
-  #just test for track name= for now
 
-
-  warn "PARSING HEADER";
-  my $nr = 0;
-
-  for my $line(<$fh>){
-	$nr++;
-
-	#my $nr = $fh->input_line_number();#This always return 3451? Length of file?
-	#This is not yet reliable here!!!!
-	#Is this because of the gzip sort?
-	#So let's depend on count?
-	#If we don't know when the header is supposed to finish (i.e. multi line header)
-	#We will need to decrement the seek position somehow
-
-	warn "INPUT LINE = $nr $line";
-
-	#exit;
-	if ($nr == 1){#$INPUT_LINE_NUMBER;
-	  #sanity check here
-	  return if($line =~ /track name=/o);
-	  $self->log(":: WARNING ::\tBED file does not appear to have valid header. First line($nr) will be treated as data:\t$line");
-	}
-
-	exit;
-
-  }
-
-
-  exit;
-
- return;
-}
+#This should skip all entries which are not part of slices if slices defined
 
 sub parse_line{
   my ($self, $line) = @_;
-
 
   #Need to handle header here for bed is always $.?
   #Also files which do not have chr prefix? i.e. Ensembl BED rather than UCSC Bed with is also half open coords
@@ -253,15 +248,11 @@ sub parse_line{
   #if ($. == 0){#$INPUT_LINE_NUMBER;
   #	#sanity check here
 
-  return if($line =~ /track name=/o);
+  return 0 if($line =~ /track name=/o);
   
-  #	$self->log(":: WARNING ::\tBED file does not appear to have valid header. First line($.) will be treated as data:\t$line");
-  #  }
-
-
-  #return if $line !~ /^chr/io;#This would ignore other prefixes e.g. scaffolds etc
 
   my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;#Shoudl this not be \t?
+  #Should we define minimum fields or microbed format with no naqme and just score?
   #my ($chr, $start, $end, $score) = split/\t/o, $line;#Mikkelson hack	
   #Validate variables types here beofre we get a nasty error from bind_param?
 
@@ -281,18 +272,31 @@ sub parse_line{
 		   
   if(!  $self->cache_slice($chr)){
 	warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
+	return 0;
   }
   else{
 	
+
+	#This should really be in the InputSet Parser
+	#With the cache slice call
+	#so parse line should return params which InputSet Parser
+	#can use to determine whether the feature is to be stored
+	#plus the full params hash
+	#This this can also create the feature if required
+	#Moving all the rest of this method to the InputSet parser
+	#But this may prove problematic for any complex data types
+	#Which may require cacheing or multiple feature storage
+
+	if(@{$self->{seq_region_names}}){
+
+	  if(! grep(/^$chr$/, @{$self->{seq_region_names}})){
+		#not on required slice
+		return 0;
+	  }
+	}
+
 	#This is generic count handled in InputSet 
 	$self->count('features');
-		 
-	#This is currently only loading peaks?
-	#We need to plug the collection code in here for reads?
-	#Also need to optionally have as result set or feature sets dependant on bed_type = reads | peaks
-	
-	#Need to convert all of this to use InputSet parser methods
-	#This is single line format, so we don't need to use $self->feature_params or record_separator
 
 	my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
 	  (
@@ -318,7 +322,124 @@ sub parse_line{
 	#}
   }
   
-  return;
+  return 1;
+}
+
+
+#For the purposes of creating ResultFeature Collections
+#Dependancy on creating features is overkill
+#altho not critical as this is never used for display
+
+sub parse_Features_by_Slice{
+  my ($self, $slice) = @_;
+
+  #Slice should have been checked by now in caller
+
+  #we need access to file handle here
+  
+  if($slice->strand != 1){
+	throw("Bed Parser does not support parsing features by non +ve/forward strand Slices\n".
+		  'This is to speed up generation of ResultFeature Collections for large sequencing data sets');
+  }
+
+
+  my $slice_chr = $slice->seq_region_name;
+
+  #This method assumes that method calls will walk through a seq_region
+  #using adjacent slices
+  
+  #We need to maintain a feature cache, which contains all the features which over hang
+  #the current slice, such that we can include them in the next batch of features returned
+
+ 
+  my @features;
+  my $slice_end   = $slice->seq_region_end;
+  my $slice_start = $slice->start;
+  my $last_slice_end  = ($self->last_slice) ? $self->last_slice->end : ($slice_start - 1);  
+  my $last_slice_name = ($self->last_slice) ? $self->last_slice->seq_region_name : $slice->seq_region_name; 
+  my $rset_id = $self->result_set->dbID;
+
+  
+  if(! ($slice_start != ($last_slice_end + 1) &&
+		($slice->seq_region_name ne $last_slice_name))){
+	throw("Bed parser does not yet support parsing features from successive non-adjacent Slices\n".
+		  "Last slice end - Next slice start:\t$last_slice_name:${last_slice_end} - ".
+		  $slice->seq_region_name.':'.$slice_start);
+  }
+	
+  
+  #Deal with 5' overhang first
+   foreach my $feature(@{$self->overhang_features}){	#reslice feature here
+	$feature = $feature->transfer($slice);
+	push @features, $feature if $feature;
+  }
+
+  #reset overhang features
+  $self->overhang_features([]);
+	 
+
+  #Can we assign the file handle outside of the loop
+  #Then we don't have an additional method call for each record
+  my $fh = $self->file_handle;
+  my ($line, $feature);
+  my $parse = 1;
+
+  #Add counts here, or leave to Collector?
+
+  while($parse){
+
+	if($self->last_line){#Deal with previous line first
+	  $line = $self->last_line;
+	  $self->last_line('');
+	}
+	else{
+	  $line = <$fh>;
+	}
+
+	#We could use a generic method to parse here
+	#But it is small enough and simple enough to have twice
+	my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;#Shoudl this not be \t?
+
+	if($slice_chr eq $chr){#Skim through the file until we find the slice
+
+	  if($end >= $slice_start){
+
+		if($start <= $slice_end){#feature is on slice
+		  #This is not accounting for -ve strand Slices yet
+		  #omit for speed
+	
+		  $feature =  Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
+			(
+			 ($start - $slice_start + 1),
+			 ($end - $slice_start + 1),
+			 $strand,
+			 [$score],
+			 undef,#probe info
+			 $rset_id,
+			 0,#wsize
+			 $slice,
+			);
+
+		  push @features, $feature;
+		
+		  if($end > $slice_end){
+			#This will also capture last feature which may not be part of current slice
+			$self->overhang_features($feature);
+		  }
+		}
+		else{#feature is past end of current slice
+		  $parse = 0;
+		  $self->last_line($line);
+		}
+	  }
+	}
+  }
+  
+  $self->last_slice($slice);
+
+  return \@features;
+  
+
 }
 
 1;
