@@ -1,9 +1,3 @@
-#!/software/bin/perl -w
-
-
-####!/opt/local/bin/perl -w
-
-
 =head1 NAME
 
 ensembl-efg convert_htilist_to_features.pl
@@ -111,7 +105,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DataSet;
-use Bio::EnsEMBL::Funcgen::PredictedFeature;
+use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Analysis;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -123,7 +117,7 @@ my ($format, $set_name, $data_version, $clobber, $is_ucsc, $ctype, $ftype);
 my $data_dir = $ENV{'EFG_DATA'};
 my $user = $ENV{'EFG_WRITE_USER'};
 my $host = $ENV{'EFG_HOST'};
-my $port = $NEV{'EFG_PORT'};
+my $port = $ENV{'EFG_PORT'};
 
 #Definitely need some sort of Defs modules for each array?
 
@@ -195,7 +189,7 @@ my $anal_a = $db->get_AnalysisAdaptor();
 my $ft_adaptor = $db->get_FeatureTypeAdaptor();
 my $ct_adaptor = $db->get_CellTypeAdaptor();
 my $slice_a = $db->get_SliceAdaptor();
-my $pfa = $db->get_PredictedFeatureAdaptor();
+my $pfa = $db->get_AnnotatedFeatureAdaptor();
 
 my @fsets = @{$fset_a->fetch_all_by_name($set_name)};
 throw ("Found more than one FeatureSet with name:\t$set_name") if (scalar(@fsets) >1 );
@@ -279,7 +273,7 @@ if($fset && ! $clobber){
 												 -analysis     => $anal,
 												 -feature_type => $ftype,
 												 -cell_type    => $ctype,
-												 -type         => 'annotated',
+												 -feature_class=> 'annotated',
 												);
 
   ($fset) = @{$fset_a->store($fset)};
@@ -313,7 +307,7 @@ my $cnt = 0;
 
 close($infile);
 
-print "Finished loading $cnt $ftname PredictedFeatures into FeatureSet $set_name\n";
+print "Finished loading $cnt $ftname AnnotatedFeatures into FeatureSet $set_name\n";
 
 
 sub parse_Wiggle{
@@ -382,7 +376,7 @@ sub build_and_store_feature{
   }
 
 
-  my $pf = Bio::EnsEMBL::Funcgen::PredictedFeature->new(
+  my $pf = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
 														-feature_set => $fset,
 														-strand      => 0,
 														-start       => $start,
