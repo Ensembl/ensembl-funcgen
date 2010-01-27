@@ -701,7 +701,7 @@ sub log_data_sets{
 
 	  map { my $type = ref($_);
 			$type =~ s/.*://;			
-			$type .= '('.$_->type.')' if($type eq 'FeatureSet');
+			$type .= '('.$_->feature_class.')' if($type eq 'FeatureSet');
 			#Need to sprintf $type here to fixed width
 			$self->log_set($type.":\t", $_)} @supporting_sets;
 	}
