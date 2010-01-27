@@ -75,12 +75,13 @@ sub new {
   my $self = $class->SUPER::new(@_);
   
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($name, $anal, $ftype, $ctype, $set_type)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'SET_TYPE'], @_);
+  my ($name, $anal, $ftype, $ctype, $set_type, $fclass)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'SET_TYPE', 'FEATURE_CLASS'], @_);
   
   throw('Need to specify a name') if ! defined $name;
 
   $self->set_type($set_type);
+  $self->feature_class($fclass);
   $self->{'name'} = $name;
   $self->cell_type($ctype) if $ctype;
   $self->feature_type($ftype) if $ftype;
@@ -170,6 +171,39 @@ sub feature_type {
   		  
   return $self->{'feature_type'};
 }
+
+
+=head2 feature_class
+
+  Arg[0]     : string - feature class e.g. result, annotated, regulatory or external.
+  Example    : my $fclass = $dset->feature_class;
+  Description: Getter for the feature_type for this Set.
+  Returntype : string 
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+#Supercededs type method in FeatureSet
+
+sub feature_class {
+  my ($self, $fclass) = @_;
+   
+  if(defined $fclass){
+
+	#Leave this an implement in inheritants
+	#if(! grep /^${fclass}$/, ('annotated', 'result', 'external', 'regulatory')){
+	#  throw("You have no supplied a valid feature class:\t$fclass");
+	#}
+
+	$self->{'feature_class'} = $fclass;
+  }
+
+  return $self->{'feature_class'};
+}
+
+
 
 =head2 analysis
 
@@ -280,9 +314,13 @@ sub set_type {
 sub type {
   my $self = shift;
    
-  $self->{'_type'} = shift if @_;
+  deprecate("Please use feature_class instead");
   
-  return $self->{'_type'};
+  return $self->feature_class(@_);
+
+  #$self->{'feature_class'} = shift if @_;
+  
+  #return $self->{'feature_class'};
 }
 
 
