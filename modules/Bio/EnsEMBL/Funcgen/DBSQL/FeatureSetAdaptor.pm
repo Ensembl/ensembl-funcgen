@@ -354,7 +354,7 @@ sub _objs_from_sth {
 		   -analysis      => $analysis_hash{$analysis_id},
 		   -cell_type     => $ctype_hash{$ctype_id},
 		   -name          => $name,
-		   -type          => $type,
+		   -feature_class => $type,
 		   -display_label => $display_label,
 		   -description   => $desc,
 		  );
@@ -411,7 +411,7 @@ sub store {
 		  $sth->bind_param(2, $fset->analysis->dbID,     SQL_INTEGER);
 		  $sth->bind_param(3, $ctype_id,                 SQL_INTEGER);
 		  $sth->bind_param(4, $fset->name,               SQL_VARCHAR);
-		  $sth->bind_param(5, $fset->type,               SQL_VARCHAR);
+		  $sth->bind_param(5, $fset->feature_class,      SQL_VARCHAR);
 		  $sth->bind_param(6, $fset->description,        SQL_VARCHAR);
 		  $sth->bind_param(7, $fset->display_label,      SQL_VARCHAR);
 		  		  
