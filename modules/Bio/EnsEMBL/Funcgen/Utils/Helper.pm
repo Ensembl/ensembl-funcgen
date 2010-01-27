@@ -639,12 +639,13 @@ sub get_schema_and_build{
                             -feature_type Bio::EnsEMBL::Funcgen::FeatureType
                             -cell_type    Bio::EnsEMBL::Funcgen::CellType
                             -analysis     FeatureSet Bio::EnsEMBL::Analysis
-                            -type         e.g. annotated or regulatory
+                            -feature_class e.g. annotated or regulatory
                             -description  FeatureSet description
                             -recovery     Allows definition of extant sets so long as they match
                             -append       Boolean - Forces import on top of previously imported data
                             -rollback     Rolls back product feature set.
                             -supporting_sets Complete set of pre-stored supporting or input sets for this DataSet
+                            -slices       ARRAYREF of Slices to rollback
   Example    : my $dset = $self->define_and_validate_Set(%params);
   Description: Checks whether set is already in DB based on set name, rolls back features
                if roll back flag set. Or creates new DataSet and Feature|ResultSet if not present.
@@ -660,12 +661,19 @@ sub define_and_validate_sets{
 
 
   #change this to params hash
+  #change slice to slices to support multi slice import from InputSet::define_sets
 
-  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery, $slice)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'TYPE', 'APPEND',
-				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY', 'SLICE'], @_);
+  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery, $slices)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'FEATURE_CLASS', 'APPEND',
+				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY', 'SLICES'], @_);
 
+  
+  if($slices && (ref($slices) ne 'ARRAY')){
+	throw('-slices param must be an ARRAYREF of Bio::EnsEMBL::Slice objects');
+	#Rest of validation done in other methods
+  }
 
+ 
   #This rollback flag should only really be used for InputSet import
   #This is because we have to rollback the entire FeatureSet, where as we want to 
   #protect against deleting/overwriting other data by keeping rollback function separate 
@@ -711,7 +719,7 @@ sub define_and_validate_sets{
   #We need to be able to run with both otherwise the import will not work
 
 
-  throw('Must provide a -type e.g. annotated, external, result or regulatory') if(! defined $type);
+  throw('Must provide a -feature_class e.g. annotated, external, result or regulatory') if(! defined $type);
   #Check for annotated, external, regulatory etc here?
   #Should never be external as we don't have DataSets for external sets?
   
@@ -860,7 +868,13 @@ sub define_and_validate_sets{
 		#Does this need to be by slice?
 		#What about states if we are running in parallel?
 		#1 is result rollback flag
-		$self->rollback_ResultSet($rset, 1, $slice);
+
+		if($slices){
+		  map $self->rollback_ResultSet($rset, 1, $_), @$slices;
+		}
+		else{
+		  $self->rollback_ResultSet($rset, 1);
+		}
 
 	  }
 
@@ -907,8 +921,14 @@ sub define_and_validate_sets{
 	  if($rollback){
 		#Don't check for IMPORTED here as we want to rollback anyway
 		#Not forcing delete here as this may be used as a supporting set itself.
-		$self->rollback_FeatureSet($fset, undef, $slice);
-	  } elsif ($append || $recovery) {
+
+		if($slices){
+		  map $self->rollback_FeatureSet($fset, undef, $_), @$slices;
+		}else{
+		  $self->rollback_FeatureSet($fset);
+		}
+	  } 
+	  elsif ($append || $recovery) {
 		#This is only true if we have an sset mismatch
 		
 		#Do we need to revoke IMPORTED here too?
@@ -966,7 +986,7 @@ sub define_and_validate_sets{
 													 -feature_type => $ftype,
 													 -cell_type    => $ctype,
 													 -analysis     => $anal,
-													 -type         => $type,
+													 -feature_class=> $type,
 													 -description  => $description,
 													);
 	  ($fset) = @{$fset_adaptor->store($fset)};
@@ -1053,14 +1073,14 @@ sub rollback_FeatureSet{
   #Because we might want to use the Helper to Log before we can create the DB?
   my ($sql, $slice_name);
   my $slice_join = '';
-  my $table = $fset->type.'_feature';
+  my $table = $fset->feature_class.'_feature';
   my $adaptor = $fset->adaptor || throw('FeatureSet must have an adaptor');
   my $db = $adaptor->db;
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 
 
 
-  $self->log_header('Rolling back '.$fset->type." FeatureSet:\t".$fset->name);
+  $self->log_header('Rolling back '.$fset->feature_class." FeatureSet:\t".$fset->name);
 
   if($slice){
    	throw("Must pass a valid Bio::EnsEMBL::Slice") if (! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
@@ -1125,7 +1145,7 @@ sub rollback_FeatureSet{
   my $row_cnt;
 
   #Rollback reg attributes
-  if($fset->type eq 'regulatory'){
+  if($fset->feature_class eq 'regulatory'){
 	$sql = "DELETE ra from regulatory_attributes ra, $table f where f.${table}_id=ra.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
 	$row_cnt = $db->dbc->do($sql);
 
@@ -1140,7 +1160,7 @@ sub rollback_FeatureSet{
 
   #Need to remove object xrefs here
   #Do not remove xrefs as these may be used by something else!
-  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".ucfirst($fset->type)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
+  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='".ucfirst($fset->feature_class)."Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
   $row_cnt = $db->dbc->do($sql);
   
   if(! $row_cnt){
@@ -1154,7 +1174,7 @@ sub rollback_FeatureSet{
   #Remove associated_feature_type records
   #Do not remove actual feature_type records as they may be used by something else.
 
-  $sql ="DELETE aft from associated_feature_type aft, $table f where f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.feature_id and aft.feature_table='".$fset->type."'".$slice_join;
+  $sql ="DELETE aft from associated_feature_type aft, $table f where f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.feature_id and aft.feature_table='".$fset->feature_class."'".$slice_join;
 
   $row_cnt = $db->dbc->do($sql);
   
@@ -1736,6 +1756,14 @@ sub rollback_ArrayChips{
 	$row_cnt = 0 if $row_cnt eq '0E0';
 	$self->log("Deleted $row_cnt probe2transcript ProbeFeature UnmappedObject records");
 	$self->log("Optimizing and Analyzing unmapped_object");	
+
+	
+	#swap optimize and analyze?
+	#Add check in here? (optimize also does the stats update that check does)
+	#Or just leave this for update_DB_for_release?
+	#Maybe we should post-pone these until we actually run the pipeline
+	#And just depend on update_DB_for_release if we don't run after a rollback?
+
 	$db->dbc->do('optimize table unmapped_object');
 	$db->dbc->do('analyze  table unmapped_object');
 	
