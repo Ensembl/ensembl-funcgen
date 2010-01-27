@@ -659,7 +659,7 @@ sub get_union_FeatureSet{
                  -analysis     => $anal,
                  -feature_type => $union_ftypes{$set_name},
                  -name         => $set_name,
-				 -type         => 'annotated',
+				 -feature_class=> 'annotated',
                  );
             
             

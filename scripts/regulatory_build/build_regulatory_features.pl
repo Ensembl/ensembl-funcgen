@@ -107,6 +107,10 @@ The following figure gives examples.
 
 # 4 Dump annotated_features using seq_name not seq_region_id
 
+# 5 Implement Helper::rollback_FeatureSet
+
+# 6 Need to check running jobs before resubmitting, otherwise we get duplicates at the end of a chr.
+#   As the second job deletes the early written features from the first job
 
 # SG: Need to double-check that feature_set and data_set are stored and have status "displayable" as well as 
 #     having supporting sets correctly associated with the data_set. In v52 there was still a problem.
@@ -319,6 +323,9 @@ map { $attrib_fsets{$_} = $focus_fsets{$_} } keys %focus_fsets;
 my $slice;
 
 if ($seq_region_name) {
+
+  #Why do we need eval here?
+
     eval {
         $slice = $sa->fetch_by_name($seq_region_name);
     };
@@ -341,6 +348,8 @@ if ($seq_region_name) {
 
 } elsif (defined $ENV{LSB_JOBINDEX}) {
   
+  #Remove all this LSB_JOBINDEX stuff
+
     warn "Performing whole genome analysis on toplevel slices using the farm (LSB_JOBINDEX: ".$ENV{LSB_JOBINDEX}.").\n";
     
     my @slices = ();
@@ -891,6 +900,10 @@ sub get_regulatory_FeatureSet{
     if ($rfset) {
 
         if ($write_features && $clobber) {
+
+
+		  #This should now use Helper::rollback_FeatureSet!
+
             
             my $sql = 
                 'DELETE ra FROM regulatory_attribute ra, regulatory_feature rf'.
@@ -934,7 +947,7 @@ sub get_regulatory_FeatureSet{
              -analysis     => $analysis,
              -feature_type => $ftype,
              -name         => 'RegulatoryFeatures',
-             -type         => 'regulatory'
+             -feature_class=> 'regulatory'
              );
 
         $rfset->add_status('DISPLAYABLE');

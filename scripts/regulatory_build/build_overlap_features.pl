@@ -836,7 +836,7 @@ sub get_FeatureSet{
 			   -analysis     => $analysis,
 			   -feature_type => $ftypes{$ftype_name},
 			   -name         => $fset_name,
-			   -type         => 'annotated',
+			   -feature_class=> 'annotated',
 			  );
             
             ($cooc_fsets{$fset_name}) = @{$fsa->store($cooc_fsets{$fset_name})};

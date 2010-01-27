@@ -65,6 +65,10 @@ high level functions.
 #3 Remove dump_annotated_feature func from build_regulatory_features and submit parallelised jobs
 #to farm using export_features script/Exporter.pm
 
+#4 Store data_set!?
+
+# 5 Check running jobs
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -76,7 +80,7 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 
 use Getopt::Long;
 
-my ($dbhost,$dbport,$dbuser,$dbpass,$dbname,$species, $fset, $outdir,
+my ($dbhost,$dbport,$dbuser,$dbpass,$dbname,$species, $fset, $outdir, $seq_region_name,
 	$cdbhost,$cdbport,$cdbuser,$cdbpass,$cdbname, $non_ref, $include_mt,
 	@focus_names, @attr_names, $cdb, $db, $jobs,$help,$man, $dump_afs);
 
@@ -103,6 +107,7 @@ GetOptions (
             "dnadb_user=s"      => \$cdbuser,
             "dnadb_pass=s"      => \$cdbpass,
 			'dnadb_name=s'   => \$cdbname,
+			'seq_region_name=s'   => \$seq_region_name,
 			'focus_sets=s{,}'     => \@focus_names, 
 			'attribute_sets=s{,}' => \@attr_names,
 
@@ -167,14 +172,37 @@ $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 
 my @slices = ();
 my $sa = $db->dnadb->get_SliceAdaptor();
-foreach my $s (sort {$a->name cmp $b->name} @{$sa->fetch_all('toplevel', undef, $non_ref)}){      
-  next if ($s->seq_region_name =~ m/^MT/ && ! $include_mt);
-  push @slices, $s;
+
+
+
+#Change this back it was a problem with the indices
+
+if($seq_region_name){
   
+
+  my $slice = $sa->fetch_by_name($seq_region_name);
+
+  if(! $slice){
+	die("You have specified a slice which is not in the db:\t$seq_region_name");
+  }
+  
+  @slices = ($slice);
+
+  print "Running with slice:\t".$slice->name."\n";
+}
+else{
+
+  foreach my $s (sort {$a->name cmp $b->name} @{$sa->fetch_all('toplevel', undef, $non_ref)}){
+	
+	next if ($s->seq_region_name eq 'MT' && (! $include_mt));
+	push @slices, $s;
+	
+  }
+  
+  $non_ref = "non_ref" if $non_ref;
+  print 'Running with '.scalar(@slices)." toplevel $non_ref slices\n"
 }
 
-
-print "There are ".scalar @slices." slices available to analyse.\n";
 
 #Don't need to batch this, there will probably be less than 30!
 #$jobs = '1-'.scalar(@slices) unless (defined $jobs);
