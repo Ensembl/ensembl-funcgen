@@ -202,7 +202,7 @@ if($fset && ! $clobber){
 												 -analysis     => $anal,
 												 -feature_type => $rset->feature_type(),
 												 -cell_type    => $rset->cell_type(),
-												 -type         => 'annotated',
+												 -feature_class=> 'annotated',
 												);
 
   ($fset) = @{$fset_a->store($fset)};
