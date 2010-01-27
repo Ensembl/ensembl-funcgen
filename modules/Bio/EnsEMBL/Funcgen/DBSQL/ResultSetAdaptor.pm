@@ -134,7 +134,7 @@ sub fetch_all_linked_by_ResultSet{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
 
-  my $constraint = ' cc.result_set_id in (SELECT distinct(result_set_id) from result_set_input where result_set_input_id in('.join(', ', @{$rset->result_set_input_ids}).')) ';
+  my $constraint = ' rsi.result_set_id in (SELECT distinct(result_set_id) from result_set_input where result_set_input_id in('.join(', ', @{$rset->result_set_input_ids}).')) ';
   
   my @tmp = @{$self->generic_fetch($constraint)};
 
