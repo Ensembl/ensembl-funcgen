@@ -70,12 +70,13 @@ sub new{
   my $class = ref($caller) || $caller;
   my $self  = $class->SUPER::new(@_);
   
-  ($self->{'input_set_name'}) = rearrange(['input_set_name'], @_);
+
+  ($self->{'input_set_name'}, $self->{'input_feature_class'}, $self->{'slices'}) = rearrange(['input_set_name', 'input_feature_class', 'slices'], @_);
 
   #No rollback flag yet to void losing old data which we are not reimporting
 
 
-  #Could potentially take fields params directly to define a custom format
+    #Could potentially take fields params directly to define a custom format
   #Take direct field mappings, plus special fields which needs parsing differently
   #i.e. default is tab delimited, and GFF would define Attrs field as compound field and provide special parsing and field mapping
   
@@ -98,7 +99,9 @@ sub new{
   $self->{'_dbentry_params'} = [];
   
   $self->{'counts'}   = {};
-  $self->{'set_feature_type'} = 'annotated'; 
+  $self->{'slices'}   = [];
+  $self->{'seq_region_names'} = [];#Used for slice based import
+
 
   return $self;
 }
@@ -109,13 +112,18 @@ sub new{
 #Over lots of records will make some difference
 #Only accessor as set in config for speed
 
-sub set_feature_type{
-  return $_[0]->{'set_feature_type'};
+sub input_feature_class{#annotated or result
+  return $_[0]->{'input_feature_class'};
 }
 
 sub annotated_feature_adaptor{
   return $_[0]->{'annotated_feature_adaptor'};
 }
+
+sub result_feature_adaptor{
+  return $_[0]->{'result_feature_adaptor'};
+}
+
 
 sub dbentry_adaptor{
   return $_[0]->{'dbentry_adaptor'};
@@ -180,6 +188,7 @@ sub output_file{
 sub set_config{
   my $self = shift;
 
+  #Move all this to new when we fix the inheritance in Importer
 
   #We could set input_set_name to experiment name
   #But we would have to make warning in define_and_validate_sets mention -input_set_name
@@ -191,6 +200,11 @@ sub set_config{
 	throw('Must define a -feature_analysis parameter for '.uc($self->vendor).' imports');
   }
 
+  if($self->input_feature_class ne 'result' && $self->input_feature_class ne 'annotated'){
+	throw('You must define a valid set_type (result or annotated) to import using '.ref($self));
+	#This will current print Importer but will reveal the correct parser when inheritance is fixed
+  }
+
 
   #We need to undef norm method as it has been set to the env var
   $self->{'config'}{'norm_method'} = undef;
@@ -199,11 +213,14 @@ sub set_config{
 
 
   #some convenience methods
-  $self->{'annotated_feature_adaptor'} = $self->db->get_AnnotatedFeatureAdaptor if $self->set_feature_type eq 'annotated';
-  $self->{'result_feature_adaptor'} = $self->db->get_ResultFeatureAdaptor if $self->set_feature_type eq 'result';#Is this the right adaptor?
+  $self->{'annotated_feature_adaptor'} = $self->db->get_AnnotatedFeatureAdaptor if $self->input_feature_class eq 'annotated';
+  $self->{'result_feature_adaptor'} = $self->db->get_ResultFeatureAdaptor if $self->input_feature_class eq 'result';#Is this the right adaptor?
   $self->{'dbentry_adaptor'}           = $self->db->get_DBEntryAdaptor;
   $self->{'input_set_adaptor'}  = $self->db->get_InputSetAdaptor();
   $self->{'slice_adaptor'} = $self->db->dnadb->get_SliceAdaptor;
+
+  $self->slices($self->{'slices'}) if defined $self->{'slices'};
+
   return;
 }
 
@@ -214,6 +231,9 @@ sub define_sets{
 
   my $eset = $self->db->get_InputSetAdaptor->fetch_by_name($self->input_set_name);
   
+
+  warn "input ftype is ".$self->input_feature_class;
+
   if(! defined $eset){
 	$eset = Bio::EnsEMBL::Funcgen::InputSet->new
 	  (
@@ -224,6 +244,7 @@ sub define_sets{
 	   -vendor       => $self->vendor(),
 	   -format       => $self->format(),
 	   -analysis     => $self->feature_analysis,
+	   -feature_class => $self->input_feature_class,
 	  );
 	($eset)  = @{$self->db->get_InputSetAdaptor->store($eset)};
 
@@ -232,7 +253,6 @@ sub define_sets{
   #Use define_and_validate with fetch/append as we may have a pre-existing set
   #This now needs to handle ResultSets based on InputSets
 
-  
 
   my $dset = $self->define_and_validate_sets
 	(
@@ -241,11 +261,12 @@ sub define_sets{
 	 -feature_type => $self->feature_type,
 	 -cell_type    => $self->cell_type,
 	 -analysis     => $self->feature_analysis,
-	 -type         => $self->set_feature_type, 
+	 -feature_class=> $self->input_feature_class, 
 	 -description  => $self->feature_set_description,
 	 #-append          => 1,#Omit append to ensure we only have this eset
 	 -recovery     => $self->recovery,
 	 -supporting_sets => [$eset],
+	 -slices        => $self->slices,
 	 #Can't set rollback here, as we don't know until we've validated the files
 	 #Can't validate the files until we have the sets.
 	 #So we're doing this manually in validate_files
@@ -272,7 +293,6 @@ sub define_sets{
 
 }
 
-
 sub data_set{
   my $self = shift;
   return $self->{'_data_set'};
@@ -291,7 +311,7 @@ sub validate_files{
   
   if (scalar(@{$self->result_files()}) >1) {
 	warn('Found more than one '.$self->vendor." file:\n".
-		 join("\n", @{$self->result_files()})."\nThe InputSet parser does not yet handle replicates.".
+		 join("\n", @{$self->result_files()})."\nThe InputSet parser does not yet handle multiple input files(e.g. replicates).".
 		 "  We need to resolve how we are going handle replicates with random cluster IDs");
 	#do we even need to?
   }
@@ -336,14 +356,31 @@ sub validate_files{
 		$recover_unimported = 1;
 		$new_data{$filepath} = 1;
 		
+
+		#InputSet may be peaks or reads so how are we going to rollback?
+		#Need to pass parameter to Importer for feature/set type
+		#Given an InputSet in isolation there is no way of determining where it's
+		#features are stored. Do we need to add set_type to input_set?
+
 		if ( $self->recovery && $recover_unimported ) {
 		  $self->log("Rolling back results for InputSubset:\t".$filename);
 		  #Change these to logger->warn
 		  $self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set");
 		  $self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
-		  $self->rollback_FeatureSet($self->data_set->product_FeatureSet);
-		  $self->rollback_InputSet($eset);
-		  last;
+
+		  if($self->input_feature_class eq 'annotated'){
+			$self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slice);
+			$self->rollback_InputSet($eset);
+			last;
+		  }			
+		  elsif($self->input_feature_class eq 'result'){
+			#Can we do this by slice for parallelisation?
+			#This will only ever be a single ResultSet due to Helper::define_and_validate_sets
+			$self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slice);
+		  }
+		  #else{#Deal with output set_type validation in new
+		  #	
+		  #  }
 		}
 		elsif( $recover_unimported ){
 		  throw("Found partially imported InputSubSet:\t$filepath\n".
@@ -372,6 +409,8 @@ sub validate_files{
   return \%new_data;
 }
 
+
+#Separate setter and getter for speed;
 
 sub set_feature_separator{
   my ($self, $separator) = @_;
@@ -415,6 +454,42 @@ sub counts{
   return $self->{'_counts'}
 }
 
+
+sub slices{
+  my ($self, $slices) = @_;
+
+  if(defined $slices){
+
+	if (ref($slices) ne 'ARRAY'){
+	  throw("-slices parameter must be an ARRAYREF of Bio::EnsEMBL::Slices (i.e. not $slices)");
+	}
+
+	foreach my $slice(@$slices){
+	  
+	  if(! ($slice && ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
+		throw("-slices parameter must be Bio::EnsEMBL::Slices (i.e. not $slice)");
+	  }
+	  
+
+	  my $full_slice = $self->cache_slice($slice->seq_region_name);
+
+	  if(($slice->start != 1) ||
+		 ($slice->end != $full_slice->end)){
+		throw("InputSet Parser does not yet accomodate partial Slice based import i.e. slice start > 1 or slice end < slice length:\t".$slice->name);
+		
+	  }
+
+	  push @{$self->{seq_region_names}}, $slice->seq_region_name;
+	  
+
+	}
+		$self->{'slices'} = $slices;
+  }
+
+  return $_[0]->{slices};
+}
+
+
 sub count{
   my ($self, $count_type) = @_;
 
@@ -440,13 +515,31 @@ sub read_and_import_data{
   my $self = shift;
     
   $self->log("Reading and importing ".$self->vendor()." data");
-  my ($filename, $fh, $f_out, %feature_params, @lines);
-  my $dset   = $self->define_sets;
-  my $fset   = $dset->product_FeatureSet;
+  my ($filename, $output_set, $fh, $f_out, %feature_params, @lines);
 
+
+  #This now needs to be dependant on the output Set type
+  #i.e. FeatureSet or ResultSet.
+  #We also need to account for bsub'd slice based import
+  #seq alignments loaded into a ResultSet
+  #Cannot have 0 window for ChIP Seq alignments
+  #As this would mean storing all the individual reads
+  #Hence we need to remap to a new assm before we import!
+  
+  my ($eset);
+  my $dset   = $self->define_sets;
+  
+  if ($self->input_feature_class eq 'annotated'){
+	$output_set = $dset->product_FeatureSet;
+	$eset =  $dset->get_supporting_sets->[0]; 
+  }
+  elsif($self->input_feature_class eq 'result'){
+	$output_set = $dset->get_supporting_sets->[0];
+	$eset = $output_set->get_InputSets->[0];
+  }
+  
   #If we can do these the other way araound we can get define_sets to rollback the FeatureSet
   #Cyclical dependency for the sets :|
-  my ($eset) = @{$dset->get_supporting_sets};   
   my $new_data = $self->validate_files;
   my $seen_new_data = 0;
 
@@ -481,68 +574,134 @@ sub read_and_import_data{
 	  #This is not working as we are sorting the file!
 	  #$self->parse_header($fh) if $self->can('parse_header');
 
-	  my @lines = <$fh>;
-	  close($fh);
+	
+	  if($self->input_feature_class eq 'result'){
+
+		#Use the ResultFeature Collector here
+		#Omiting the 0 wsize
+		#How are we going to omit 0 wsize when doing the fetch?
+		#simply check table name in ResultSet?
+
+		#Should we do this for multiple chrs?
+		#or fail here
+		# we need to pass self
+		#for access to get_Features_by_Slice
+		#which should be in the specific parser e.g Bed
+
+		#Will this not clash with standard ResultFeature::get_ResultFeatures_by_Slice?
+		#Could really do with separating the pure file parsers from the importer code, so these can be reused
+		#by other code. Then simply use Bed import parser for specific import functions and as wrapper to 
+		#Bed file parser
+		#So should really have
+		#Parsers::File::Bed
+		#and
+		#Parsers::Import::Bed
+		#This can probably wait until we update BioPerl and just grab the Bed parser from there?
+
+		my $slices = @{$self->slices};
+
+		#Should this be caught in new?
+		if(! @$slices){
+		  throw("You must define a slice to generate ResultFeature Collections from InputSet:\t".$eset->name);
+		}
+		
+
+		if(scalar(@$slices) > 1){
+		  throw("InputSet parser does not yet support multi-Slice import for ResultFeature collections\n"
+				."Please submit these to the farm as single slice jobs");
+		}
+
+		#restrict to just 1 slice as we don't yet support disk seeking
+		#if the slices are not in the same order as they appear in the file
+		#also we want to parallelise this
+		
+		#Set as attr for parse_Features_by_Slice in format sepcific Parsers
+		$self->file_handle(open_file($filepath, $self->input_file_operator));
+
+		foreach my $slice(@$slices){
+		  $self->result_feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self);
+		}  
+
+		warn "Need to update InputSubset status to IMPORTED after all slices have been loaded";
+		#Do we even need to set RESULT_FEATURE_SET for input_set ResultFeatures?
 	  
-	  #Revoke FeatureSet IMPORTED state here incase we fail halfway through
-	  $fset->adaptor->revoke_status('IMPORTED', $fset) if $fset->has_status('IMPORTED');
-	  #What about IMPORTED_"CSVERSION"
-	  #This may leave us with an incomplete import which still has
-	  #an IMPORTED_CSVERSION state
-	  #We need to depend on IMPORTED for completeness of set
-	  #DAS currently only uses IMPORTED_CSVERSION
-	  #This is okayish but we also need to write HCs for any sets 
-	  #which do not have IMPORTED state!
+	
+	  }
+	  else{
 
+		#This slurp may need to go if data gets to large
+		my @lines = <$fh>;
+		close($fh);
+	  
+	  
+		#Revoke FeatureSet IMPORTED state here incase we fail halfway through
+		$output_set->adaptor->revoke_status('IMPORTED', $output_set) if $output_set->has_status('IMPORTED');
+		#What about IMPORTED_"CSVERSION"
+		#This may leave us with an incomplete import which still has
+		#an IMPORTED_CSVERSION state
+		#We need to depend on IMPORTED for completeness of set
+		#DAS currently only uses IMPORTED_CSVERSION
+		#This is okayish but we also need to write HCs for any sets 
+		#which do not have IMPORTED state!
 	 	  
-	  foreach my $line (@lines) {
-		#Generic line processing
-		#Move these to parse_line?
-		$line =~ s/\r*\n//o;
-		next if $line =~ /^\#/;	
-		next if $line =~ /^$/;
+		foreach my $line (@lines) {
+		  #Generic line processing
+		  #Move these to parse_line?
+		  $line =~ s/\r*\n//o;
+		  next if $line =~ /^\#/;	
+		  next if $line =~ /^$/;
 
-		$self->count('Total lines');
-
-		#This has now been simplified to process_line method
-		#my @fields = split/\t/o, $line;
-		#start building parameters hash
-		#foreach my $field_index(@{$self->get_field_indices}){
-		#  my $field = $self->get_field_by_index($field_index);
-		#  $feature_params = ($field =~ /^-/) ? $fields[$field_index] : $self->$field($fields[$field_index]);
-		#  }	
+		  #This has now been simplified to process_line method
+		  #my @fields = split/\t/o, $line;
+		  #start building parameters hash
+		  #foreach my $field_index(@{$self->get_field_indices}){
+		  #  my $field = $self->get_field_by_index($field_index);
+		  #  $feature_params = ($field =~ /^-/) ? $fields[$field_index] : $self->$field($fields[$field_index]);
+		  #  }	
 
 
-		#We also need to enable different parse line methods if we have different file
-		#e.g. cisRED
-		#Code refs?
+		  #We also need to enable different parse line methods if we have different file
+		  #e.g. cisRED
+		  #Code refs?
 
-		$self->parse_line($line);		
+		  $self->count('Total lines') if $self->parse_line($line);		
 
-		#Here we depedant on whether we are parsing reads and using collection
-		#We need to pass a coderef to the collection somehow, so this can read the data
-		#either from a query or from a file
-		#
+		  #Here we depedant on whether we are parsing reads and using collection
+		  #We need to pass a coderef to the collection somehow, so this can read the data
+		  #either from a query or from a file
+		  #
+
+		}
+	 
+		#Now we need to deal with anything left in the read cache
+		$self->process_params if $self->can('process_params');
+	  
+		#To speed things up we may need to also do file based import here with WRITE lock?
+		#mysqlimport will write lock the table by default?
+
+		$self->log('Finished importing '.$self->counts('features').' '.
+				   $output_set->name." features from:\t$filepath");
+
+		
+		my $sub_set = $eset->get_subset_by_name($filename);
+		$sub_set->adaptor->store_status('IMPORTED', $sub_set);
 
 	  }
-	 
-	  #Now we need to deal with anything left in the read cache
-	  $self->process_params if $self->can('process_params');
 	  
-	  #To speed things up we may need to also do file based import here with WRITE lock?
-	  #mysqlimport will write lock the table by default?
-	 
-	  
+
+		
+
+
+	  #Need to tweak this for slice based import
 	  $self->log('Finished importing '.$self->counts('features').' '.
-				 $fset->name." features from:\t$filepath");
+				 $output_set->name." features from:\t$filepath");
+	  
+	
+	
 	  
 	  foreach my $key (keys %{$self->counts}){
 		$self->log("Count $key:\t".$self->counts($key));
-	  }
-
-	  my $sub_set = $eset->get_subset_by_name($filename);
-	  $sub_set->adaptor->store_status('IMPORTED', $sub_set);
-	  
+	  }	  
 	}
   }
 
@@ -557,7 +716,7 @@ sub read_and_import_data{
   #Is there any point in setting it if we don't revoke it?
   #To allow consistent status handling across sets. Just need to be aware of fset status caveat.
 
-  $self->set_imported_states_by_Set($fset) if $seen_new_data;
+  $self->set_imported_states_by_Set($output_set) if $seen_new_data;
 
   $self->log("No new data, skipping result parse") if ! grep /1/,values %{$new_data};
   $self->log("Finished parsing and importing results");  
@@ -655,6 +814,20 @@ sub set_strand{
   } 
 
   return 0;
+
+}
+
+
+#Currently only required for Bed::parse_Features_by_Slice
+
+#filehandle
+
+sub result_set{
+  my ($self, $rset) = @_;
+
+  #This is only ever populated internally
+  #so no need for validation?
+  
 
 }
 
