@@ -225,7 +225,7 @@ sub set_feature_sets{
 
 	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
 													 -name         => $fset_name,
-													 -type         => 'external',
+													 -feature_class=> 'external',
 													 -analysis     => $self->{'feature_sets'}{$fset_name}{'analysis'},
 													 -feature_type => ${$self->{'feature_sets'}{$fset_name}{'feature_type'}},
 													 -display_label => $display_name,

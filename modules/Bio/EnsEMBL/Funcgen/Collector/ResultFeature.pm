@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.1 2010-01-07 15:06:42 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.2 2010-01-27 10:55:36 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
@@ -43,12 +43,6 @@ $Bio::EnsEMBL::Funcgen::Collector::bin_model  = 'SIMPLE';
 
 
 
-
-#'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
-#We now get the ResultFeatureAdaptor to inherit from here
-
-#Had to put adaptor first as it wasn't finding new?
-#Wasn't transvering the package tree?
 
 #Can we write default SimpleCollection objects etc
 #So we don't need to write a collection for uncompressed/collected data
@@ -97,7 +91,7 @@ sub store_window_bins_by_Slice_ResultSet {
   #Or should we do this once in the caller
   #Then we can do tests here before calling super method
 
-  $self->set_type('result');#required by get_Feature_by_Slice   
+  $self->source_set_type('result');#required by get_Feature_by_Slice   
   $self->result_set($rset);#needed for get_Features_by_Slice wrapper method below
   $self->set_collection_defs_by_ResultSet($rset);
  
@@ -119,12 +113,41 @@ sub store_window_bins_by_Slice_ResultSet {
 #This is really more like store_window_bins_by_Slice_Importer
 #parser should have InputSet and ResultSet defined
 
-sub store_window_bins_by_Slice_Importer {
+sub store_window_bins_by_Slice_Parser{
   my ($self, $slice, $imp, %config) = @_;
 
   #Other params?
   #imp, which has had filehandle, ResultSet and InputSet already established
   #Need to bsub these slice jobs, so parse_and_import.pl needs to handle submitting to farm
+  #We also need to define window_sizes = 0
+  #If we are loading data on an old assembly
+  #Then run populate_result_features?
+  
+  #This depends on the density of the data!
+  #For ChIP-Seq alignments we don't want to load all the raw reads
+  #Hence we don't want 0 window_size
+  #and will need all the input remapped to the required assembly before
+  #we import here
+
+  #We need to test for new_assm if we have a reads result set and fail
+  #currently don't have access to new assm for validation?
+  #Can project to new_assm as this would require two passes storing initially on the 0 window level
+  #which we don't want to do
+  #throw if new_assm as we need to remap before running this
+  #This is done in Collector so why are we parsing it here?
+  #skip_zero window will always be set, so this would fail!!!
+
+  #test parse config here, will this strip it out of the hash before
+  #we pass it to the super method?
+  #Also need to test skip_zero_window or window_sizes dependant on result set type(sequencing, array)
+  #This needs to be defined when craeting the ResultSet in the Importer
+  #NEED TO CHANGE ALL ResultSet generation to add type!!!!!
+  
+  my ($wsize, $new_assm, $skip_zero_window) =
+    rearrange( [ 'WINDOW_SIZES', 'NEW_ASSEMBLY', 'SKIP_ZERO_WINDOW'], %config );
+
+
+  warn "config is now ".Data::Dumper::Dumper(\%config);
 
   #Can/should we think about pipelining this?
   #For a ChIP Seq set this would be two or three jobs with varying interdependencies
@@ -132,18 +155,21 @@ sub store_window_bins_by_Slice_Importer {
   #2 Load ResultFeatures (depends on 1)
   #3 Call peaks (depends on 1)
   
+  #There is no way of setting IMPORTED status for slice based jobs
+  #As we will need to wait for all to finish
+  
+  #We need the accumulator to set the IMPORTED status
+
+
+
   #Would need to turn parse_and_import into RunnableDB
   #To run these as slice jobs we would need to code to configure some slice based input ids
   
 
-  $self->set_type('input');#required by get_Feature_by_Slice   
-
  
-
-   
-  #$self->result_set($rset);#needed for get_Features_by_Slice wrapper method below
-  #$self->set_collection_defs_by_ResultSet($rset);
- 
+  $self->source_set_type('input');#required by get_Feature_by_Slice 
+  $self->set_collection_defs_by_ResultSet($imp->result_set);
+  $self->parser($imp);
   #Set all these defs directly here?
 
 
@@ -153,7 +179,7 @@ sub store_window_bins_by_Slice_Importer {
   #We could pass a ref to the wrapper method? But this is unlikely to enable direct usage 
   #of 3rd party parser method
   
-  $self->store_window_bins_by_Slice($slice, %config);#, (
+  $self->store_window_bins_by_Slice($slice, %config);
   
   return;
 }
@@ -177,6 +203,10 @@ sub rollback_Features_by_Slice{
   my ($self, $slice) = @_;
 
   #Point to Helper here
+  #This is already done in the InputSet importer for
+  #seq imports
+  #but not for array based imports
+  #Need to take account of wsizes
 
 
 }
@@ -208,22 +238,26 @@ sub get_Features_by_Slice{
   #Can we pass this as method ref to Collector, this would prvent the need to write
   #this wrapper for standard fetch_all_by_Slice based access
   my $features;
-  my $set_type = $self->set_type;
+  my $source_set_type = $self->source_set_type;
 
-  if ($set_type eq 'result'){
+  if ($source_set_type eq 'result'){
 	#Add more args here? status?
 	#Add default window size 0, if ResultSet is alread a RESULT_FEATURE_SET
 	#This may occur if you are projecting features from an old assembly to 
 	#0 window size before generating the other windows in a second pass
 	$features = $self->result_set->get_ResultFeatures_by_Slice($slice, undef, undef, undef, 0);
   }
-  elsif($set_type eq 'input'){
+  elsif($source_set_type eq 'input'){
 	$features = $self->parser->parse_Features_by_Slice($slice);
 
 	#This method assumes a sorted file handle
 	#Can we set markers for disk seeking on a sorted handle?
 	#Either we make it handle an slice passed
 	#Or we assume the next query slice will be after the last
+	#Just restrict to one slice at a time for now
+	
+	#Also needs to hold cache of long features
+	#Kind of reinventing the BaseFeatureAdaptor wheel here?
 
 
   }
@@ -430,20 +464,40 @@ sub set_collection_defs_by_ResultSet{
 
 	#Keep package vars for clarity?
 	
+	#This is called by fetch_all_by_Slice_ResultSet
+	#So we have to use $rset->table_name instead of source_set_type
+
 	
-	#if($rset->type eq 'array'){
+	if($rset->table_name eq 'experimental_chip'){#i.e. is normal ResultSet with float result
 	  $self->{'packed_size'}   = 4;
 	  $self->{'pack_template'} = 'f';
 	  $self->{'bin_method'}    = 'max_magnitude';#only used by collector
-	#}
-	#elsif($rset->type eq 'sequencing'){
-	#  $self->{'packed_size'}   = 2;
-	#  $self->{'pack_template'} = 'v';
-	#  $self->{'bin_method'}    = 'count';
-	#}
-	#else{
-	#  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->type);
-	#}		
+	}
+	elsif($rset->table_name eq 'input_set'){
+	  #Currently only expecting int from InputSet
+	  my @isets = @{$rset->get_InputSets};
+	  my @tmp_isets = grep(!/result/, (map $_->feature_class, @isets));
+	  
+	  if(@tmp_isets){
+		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports result type InputSets, not @tmp_isets types");
+	  }
+
+	  #We still have no way of encoding pack_type for result_feature InputSets
+	  #
+
+	  @tmp_isets = grep(!/SEQUENCING/, (map $_->format, @isets));
+	  
+	  if(@tmp_isets){
+		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports SEQUENCING format InputSets, not @tmp_isets formats");
+	  }
+
+	  $self->{'packed_size'}   = 2;
+	  $self->{'pack_template'} = 'v';
+	  $self->{'bin_method'}    = 'count';
+	}
+	else{
+	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
+	}		
   }
 
   return;
@@ -487,6 +541,46 @@ sub result_set{
   }
   
   return $self->{'result_set'};
+}
+
+
+=head2 parser
+
+  Args[0]    : optional Bio::EnsEMBL::Funcgen::Parsers::InputSet
+  Example    : $self->parser($parser);
+  Description: Getter/Setter for parser attribute if this ResultFeature Collector
+  Returntype : Bio::EnsEMBL::Funcgen::Parsers::InputSet
+  Exceptions : throws if arg is not valid
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub parser{
+  my ($self, $parser) = @_;
+ 
+  #Can't use is_stored_and_valid here
+
+  if($parser && ! (ref($parser) && $parser->isa('Bio::EnsEMBL::Funcgen::Parsers::InputSet'))){
+	throw('You must pass a valid Bio::EnsEMBL::Funcgen::Parsers::InputSet');
+  }
+  elsif($parser){
+  
+	$self->{'parser'} = $parser;
+  }
+  
+  return $self->{'parser'};
+}
+
+
+
+
+sub source_set_type{
+  my ($self, $type) = @_;
+
+  $self->{source_set_type} = $type if $type;
+
+  return $self->{source_set_type};
 }
 
 
