@@ -1,9 +1,3 @@
-#!/software/bin/perl -w
-
-
-####!/opt/local/bin/perl -w
-
-
 =head1 NAME
 
 ensembl-efg convert_htilist_to_features.pl
