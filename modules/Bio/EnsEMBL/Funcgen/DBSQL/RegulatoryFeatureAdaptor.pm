@@ -272,11 +272,7 @@ sub _objs_from_sth {
 						  #external?
 						 );
   
-
-  #Stable ID species prefix hack
-  #May not have species set so use dbname
-
-  my $species_code = ($self->db->dbc->dbname =~ /mus_musculus/) ? 'MUS' : '';
+  my $stable_id_prefix = $self->db->stable_id_prefix;
 
 	
 	my (
@@ -298,12 +294,6 @@ sub _objs_from_sth {
 					   \$stable_id,             \$attr_id,
 					   \$attr_type
 					  );
-
-
-	#This needs doing properly!!
-	#my $epsth = $self->prepare("SELECT experiment_id 
-    #                                FROM experiment_prediction 
-    #                                WHERE regulatory_feature_id = ?");
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name);
 	my ($asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
@@ -477,11 +467,9 @@ sub _objs_from_sth {
 			'feature_set'    => $fset_hash{$fset_id},
 			'feature_type'   => $ftype,
 			#'regulatory_attributes' => $reg_attrs,
-			'stable_id'      => $stable_id,
+			'stable_id'      => sprintf($stable_id_prefix."%011d", $stable_id),
 		   });
 
-		#Stable ID species code hack
-		$reg_feat->{'_species_code'} = $species_code;
 	  }
 	
   
