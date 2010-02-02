@@ -219,7 +219,7 @@ else{#Get current default
 }
 
 
-my (@bin, $start_bin, $start_bin_start, $end_bin, $end_bin_start,
+my (@bin, $start_bin, $start_bin_start, $end_bin, $end_bin_start, $curr_seq,
 	$seq, $read_start, $read_end, $read_length, $ori, $read_extend);
 
 if($profile && ! $profile_input){
@@ -286,20 +286,20 @@ if($profile && ! $profile_input){
 
 
   while (<$fh>) {
-    chomp;
-    my @col = split("\t");
-  
-    if (defined $seq && $seq ne $col[0]) {
+    chomp;#should be chump for windows safety?
+	
+	#undef is score
+	#Not dealing with any other trailing fields here
+	($seq, $read_start, $read_end, undef, $ori) = split/\t/, $_;
+	$read_length = $read_end-$read_start+1;
+
+	if (defined $curr_seq && ($curr_seq ne $seq)) {
 	  &write_bins();
 	  @bin = ();
 	}
-
-    $seq = $col[0];
-    $read_start = $col[1];
-    $read_end = $col[2];
-    $read_length = $read_end-$read_start+1;
-    $ori = $col[5];
-
+	
+	$curr_seq = $seq;
+    
     die("read is longer ($read_length) than specified fragment length ($frag_length)") if ($frag_length<$read_length);
 
 	$read_extend = $frag_length-$read_length;
