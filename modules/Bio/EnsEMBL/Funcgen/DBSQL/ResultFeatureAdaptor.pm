@@ -76,7 +76,9 @@ use vars qw(@ISA);
 
 #For max zoom out of 500kb, optimal size is 714, so we need a larger bin!
 #We have lost a bin here, but probably okay
-@Bio::EnsEMBL::Funcgen::Collector::window_sizes   = (0, 150, 300, 450, 600, 750);
+#@Bio::EnsEMBL::Funcgen::Collector::window_sizes   = (0, 150, 300, 450, 600, 750);
+#This is now set via set_collection_defs_by_ResultSet
+
 #Need to check how this looks
 
 #Are we going to hit performance here as we may have to unpack a lot more data than we actually need
@@ -449,14 +451,26 @@ sub _objs_from_sth {
 	}
 
 	
-	push @rfeats, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast($start, $end, $strand, [@scores], undef, undef, $_window_size, $dest_slice);
+	push @rfeats, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast({
+																			  start  => $start,
+																			  end    => $end, 
+																			  strand =>$strand, 
+																			  scores => [@scores], 
+																			  #undef, 
+																			  #undef, 
+																			  window_size => $_window_size, 
+																			  slice       => $dest_slice,
+																			 });
 
   }
   
   #reset for safety, altho this should be reset in fetch method
   $_result_feature_set = 1;
   
-	
+  #Need to return a params hash here:
+  #window size
+  #and ??? Caller should know all other 
+  #params required i.e. collection type/methods
   return \@rfeats;
 }
   
@@ -496,6 +510,10 @@ sub store{
   #So _pre_store uses the correct table name in meta_coord
   $_result_feature_set = 1;
 
+  #my @max_allowed_packet = $self->dbc->db_handle->selectrow_array('show variables like "max_allowed_packet"');
+  
+  #warn "@max_allowed_packet";
+
  FEATURE: foreach my $rfeat (@$rfeats) {
     
     if( ! (ref($rfeat) && $rfeat->isa('Bio::EnsEMBL::Funcgen::Collection::ResultFeature'))) {
@@ -513,7 +531,11 @@ sub store{
 
 	#This captures non full length collections at end of seq_region
 	$pack_template = '('.$self->pack_template.')'.scalar(@{$rfeat->scores});
+
 	$packed_string = pack($pack_template, @{$rfeat->scores});	
+
+	#use Devel::Size qw(size total_size);
+	#warn "Storing ".$rfeat->result_set_id,' '.$seq_region_id.' '.$rfeat->start.' '.$rfeat->end.' '.$rfeat->strand,' ',$rfeat->window_size."\nWith packed string size:\t".size($packed_string);
 	
 	$sth->bind_param(1, $rfeat->result_set_id, SQL_INTEGER);
 	$sth->bind_param(2, $seq_region_id,        SQL_INTEGER);
@@ -572,6 +594,7 @@ sub list_dbIDs {
 sub fetch_all_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe, $max_bins, $window_size, $constraint) = @_;
   #Change to params hash?
+  #add option to force probe_feature based retrieval?
 
   if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
 	throw('You must pass a valid Bio::EnsEMBL::Slice');
@@ -586,6 +609,8 @@ sub fetch_all_by_Slice_ResultSet{
 
   #Set temp global private vars for use in _obj_from_sth
   $_result_feature_set = $rset->has_status('RESULT_FEATURE_SET');
+  #Just test for table_name eq input_set too?
+  #This will save a query
   #We need to set this for all InputSets? Or just ID that it is an InputSet?
   $_probe_extend       = $with_probe if defined $with_probe;
   $_window_size        = $window_size;
@@ -597,6 +622,11 @@ sub fetch_all_by_Slice_ResultSet{
 
 
   if($_result_feature_set){
+
+	if($_probe_extend){
+	  throw("Cannot retrieve Probe information from a RESULT_FEATURE_SET query");
+	}
+
 	#Set the pack size and template for _obj_from_sth
 	$self->set_collection_defs_by_ResultSet($rset);
 
@@ -604,38 +634,63 @@ sub fetch_all_by_Slice_ResultSet{
 	  warn "Over-riding max_bins with specific window_size, omit window_size to calculate window_size using max_bins";
 	}
 
-	$max_bins ||= 700;#This is default size of display?
-
-
-	if($_probe_extend){
-	  throw("Cannot retrieve Probe information with a result_feature_set query, try using ???");
-	}
-
- 
-	if(! defined $window_size){	  
-	  #Work out window size here based on Slice length
-	  $window_size = ($slice->length)/$max_bins;
-	} 
-
 	my @sizes = @{$self->window_sizes};
-	$_window_size = $sizes[$#sizes];
-	  
-	#Try and find the next biggest window
-	#As we don't want more bins than there are pixels
-	for (my $i = 0; $i <= $#sizes; $i++) {
+	$max_bins ||= 700;#This is default size of display?
+	
+
+
+	#The speed of this track is directly proportional
+	#to the display size, unlike other tracks!
+	#e.g
+	#let's say we have 300000bp
+	#700  pixels will use 450 wsize > Faster but lower resolution
+	#2000 pixels will use 150 wsize > Slower but higher resolution
+
+
+	#Select 0 wsize if slice is small enough
+	#As loop will never pick 0
+	#probably half 150 max length for current wsize
+	#Will also be proportional to display size
+	#This depends on size ordered window sizes arrays
+	my $zero_wsize_limit = ($max_bins * $sizes[1])/2;
+
+	if($slice->length <= $zero_wsize_limit){
+	  $_window_size = 0;
+	}
+	else{
 	  
 
-	  #We have problems here if we want to define just one window size
-	  #In the store methods, this reset the wsizes so we can only pick from those
-	  #specified, hence we cannot force the use of 0
-	  #@sizes needs to always be the full range of valid windows sizes
-	  #Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
+	  if(! defined $window_size){	  
+		#Work out window size here based on Slice length
+		$window_size = ($slice->length)/$max_bins;
+	  } 
+	  
+	  
+	  
+	  #we need to remove wsize 0 if ResultSet was generated from high density seq reads
+	  #0 should always be first
+	  shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_set'));
 
-	  if ($window_size <= $sizes[$i]){
-		$_window_size = $sizes[$i];
-		last;    
+	  #default is maximum
+	  $_window_size = $sizes[$#sizes];
+
+	  #Try and find the next biggest window
+	  #As we don't want more bins than there are pixels
+	  for (my $i = 0; $i <= $#sizes; $i++) {
+		#We have problems here if we want to define just one window size
+		#In the store methods, this reset the wsizes so we can only pick from those
+		#specified, hence we cannot force the use of 0
+		#@sizes needs to always be the full range of valid windows sizes
+		#Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
+		
+		if ($window_size <= $sizes[$i]){
+		  $_window_size = $sizes[$i];
+		  last;    
+		}
 	  }
 	}
+
+	#warn "wsize is $_window_size";
 
 	$constraint .= ' AND ' if defined $constraint;
 	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='.$_window_size;
@@ -925,13 +980,15 @@ sub fetch_all_by_Slice_ResultSet{
 
 
 	  push @rfeatures, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
-		(
-		 ($old_start - $position_mod), 
-		 ($old_end - $position_mod),
-		 $old_strand,
-		 [$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)],
-		 $probe, undef, 0
-		);
+		({
+		  start  => ($old_start - $position_mod), 
+		  end    => ($old_end - $position_mod),
+		  strand => $old_strand,
+		  scores => [$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)],
+		  probe       => $probe, 
+		  #undef, 
+		  window_size => 0,
+		 });
 	
 	 
 	  undef %rep_scores;
@@ -1001,13 +1058,15 @@ sub fetch_all_by_Slice_ResultSet{
   #only if found previosu results
   if($old_start){
     push @rfeatures, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
-      (
-	   ($old_start - $position_mod), 
-	   ($old_end - $position_mod),
-	   $old_strand,
-	   [$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)],
-	   $probe, undef, 0
-	  );
+      ({
+		start  => ($old_start - $position_mod), 
+		end    => ($old_end - $position_mod),
+		strand => $old_strand,
+		scores => [$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)],
+		probe  => $probe, 
+		#undef, 
+		window_size => 0,
+	   });
 	
 	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   }
