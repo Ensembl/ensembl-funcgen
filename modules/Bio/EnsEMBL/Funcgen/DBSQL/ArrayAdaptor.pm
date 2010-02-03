@@ -73,10 +73,11 @@ sub fetch_by_array_chip_dbID {
   push @tables, (['array_chip', 'ac']);
   
   #Extend query and group
-  my $array = $self->generic_fetch('ac.array_chip_id='.$ac_dbid.' and ac.array_id=a.array_id GROUP by a.array_id')->[0];
-  
+  my $array = eval {$self->generic_fetch('ac.array_chip_id='.$ac_dbid.' and ac.array_id=a.array_id GROUP by a.array_id')->[0]};
+  my $error = $@;
   #Reset tables
   @tables = @true_tables;
+  throw("Cannot continue due to error: $error") if $error;
   
   return $array;
 }
@@ -203,10 +204,11 @@ sub fetch_all_by_Experiment{
   push @tables, (['array_chip', 'ac'], ['experimental_chip', 'ec']);
 
   #Extend query and group
-  my $arrays = $self->generic_fetch($exp->dbID.'=ec.experiment_id and ec.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
-
+  my $arrays = eval {$self->generic_fetch($exp->dbID.'=ec.experiment_id and ec.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id')};
+  my $error = $@;
   #Reset tables
   @tables = @true_tables;
+  throw("Cannot continue due to error: $error") if $error;
 	
   return $arrays;
 }
@@ -240,10 +242,11 @@ sub fetch_all_by_ProbeSet{
   push @tables, (['array_chip', 'ac'], ['probe', 'p']);
 
   #Extend query and group
-  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY  a.array_id');# ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
-
+  my $arrays =  eval{$self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY  a.array_id')};# ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
+  my $error =$@;
   #Reset tables
   @tables = @true_tables;
+  throw("Cannot continue due to error: $error") if $error;
   
   return $arrays;
 }

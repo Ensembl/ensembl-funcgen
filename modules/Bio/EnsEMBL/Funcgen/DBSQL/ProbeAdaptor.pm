@@ -83,10 +83,11 @@ sub fetch_by_array_probe_probeset_name {
 
 	#Have to group by primary key!
 	$constraint .= ' GROUP by p.probe_id, p.name, p.array_chip_id';	
-	my $probe =  $self->generic_fetch($constraint)->[0];
-		
+	my $probe =  eval{$self->generic_fetch($constraint)->[0]};
+	my $error = $@;
 	#Reset tables
-	@tables = @true_tables; 
+	@tables = @true_tables;
+	throw("Cannot continue due to error: $error") if $error; 
 	return $probe;
 }
 

@@ -81,10 +81,12 @@ sub fetch_by_array_probeset_name{
 	$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
 
 
-	my $pset =  $self->generic_fetch($constraint)->[0];
-	
+	my $pset  =  eval {$self->generic_fetch($constraint)->[0]};
+	my $error = $@;
 	#Reset tables
 	@tables = @true_tables;
+	
+	throw("Cannot continue due to error: $error") if $error;
   
 	return $pset;
 
@@ -122,10 +124,12 @@ sub fetch_by_ProbeFeature {
 	push @tables, (['probe', 'p']);
 	
 	#Extend query and group
-	my $pset =  $self->generic_fetch('p.probe_id='.$pfeature->probe_id.' and p.probe_set_id=ps.probe_set_id GROUP by ps.probe_set_id')->[0];
-
+	my $pset  = eval {$self->generic_fetch('p.probe_id='.$pfeature->probe_id.' and p.probe_set_id=ps.probe_set_id GROUP by ps.probe_set_id')->[0]};
+  my $error = $@;
 	#Reset tables
 	@tables = @true_tables;
+	
+	throw("Cannot continue due to error: $error") if $error;
   
 	return $pset;
 
