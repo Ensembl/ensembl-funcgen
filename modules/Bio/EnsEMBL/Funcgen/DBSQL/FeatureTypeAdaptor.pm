@@ -141,9 +141,11 @@ sub fetch_all_by_associated_SetFeature{
   my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.feature_table="'.$sfeat->feature_set->type.'" AND aft.feature_id='.$sfeat->dbID;
 
 
-  my $feature_types =  $self->generic_fetch($constraint);
+  my $feature_types = eval{$self->generic_fetch($constraint)};
+  my $error = $@;
   #Reset tables
-  @tables = @true_tables; 
+  @tables = @true_tables;
+  throw("Cannot continue due to error: $error") if $error;
 
   return $feature_types;
 }

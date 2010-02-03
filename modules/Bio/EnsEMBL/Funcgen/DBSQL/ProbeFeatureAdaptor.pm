@@ -114,9 +114,13 @@ sub fetch_all_by_probe_id {
   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
  	
   
-  my $features = $self->generic_fetch($constraint);
+  my $features = eval{$self->generic_fetch($constraint)};
+  my $error = $@;
+  
   @tables = @true_tables;
   $final_clause = $true_final_clause;
+  
+  throw("Cannot continue due to error: $error") if $error;
   
   return $features;
 }
@@ -154,9 +158,11 @@ sub fetch_all_by_probeset {
 
 	$self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
 	
-	my $features = $self->generic_fetch($constraint);
+	my $features = eval {$self->generic_fetch($constraint)};
+	my $error = $@;
 	@tables = @true_tables;
 	$final_clause = $true_final_clause;
+	throw("Cannot continue due to error: $error") if $error;
 
 	return $features;
 }
@@ -204,10 +210,11 @@ sub fetch_all_by_Slice_array_vendor {
 	$self->bind_param_generic_fetch($array,  SQL_VARCHAR);
 	$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
 	
-	my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+	my $features  = eval {$self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint)};
+	my $error = $@;
 	@tables       = @true_tables;
 	$final_clause = $true_final_clause;
-
+  throw("Cannot continue due to error: $error") if $error;
 	return $features;
 }
 
@@ -282,9 +289,11 @@ sub fetch_all_by_Slice_Array {
   #That would have to be removed for complex extension.
   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
   
-  my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  my $features  = eval {$self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint)};
+  my $error     = $@;
   @tables       = @true_tables;
   $final_clause = $true_final_clause;
+  throw("Cannot continue due to error: $error") if $error;
   
   return $features;
 }
@@ -327,9 +336,11 @@ sub fetch_all_by_Slice_Arrays{
   #We handle this in _objects_from_sth anyway.
   #That would have to be removed for complex extension.
   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;  
-  my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+  my $features  = eval {$self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name)};
+  my $error     = $@;
   @tables       = @true_tables;
   $final_clause = $true_final_clause;
+  throw("Cannot continue due to error: $error") if $error;
   
   return $features;
 }
