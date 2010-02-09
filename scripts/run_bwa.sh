@@ -40,7 +40,10 @@ resource='-R"select[mem>5000] rusage[mem=5000]" -M5000000'
 dir=
 clean=
 
-usage="Usage:\trun_bwa.sh  <options>
+usage="Usage:\t\trun_bwa.sh  <options>
+\nDescription:\tThis script will take either a fastq file or a directory as input, unzip cat/rename 
+\n\t\tand rezip as necessary to generate a single fastq file. The relevant bwa indexes will be validated 
+\n\t\tbefore submitting the bwa job to the farm.
 \nExample:\trun_bwa.sh -s homo_sapiens -d /your/fastq/data/dir -g male -a GRCh37
 \nMandatory options:
 \n\t-s(pecies e.g. homo_sapiens)
