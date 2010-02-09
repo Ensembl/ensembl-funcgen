@@ -40,7 +40,20 @@ resource='-R"select[mem>5000] rusage[mem=5000]" -M5000000'
 dir=
 clean=
 
-usage="usage:\trun_bwa.sh  -s(pecies e.g. homo_sapiens)  -g(ender e.g male|female)  -f(ile e.g. your_file.fastq)  -d(ir input dir containing fastq files) [ -p(aired default is single reads)  -i(ndex_home default=$index_home)  -r(esource default=$resource)  -a(ssembly default=$assembly) -c(lean away cat'd fastq file) -h(elp) ] " #-m(asked default is unmasked)
+usage="Usage:\trun_bwa.sh  <options>
+\nExample:\trun_bwa.sh -s homo_sapiens -d /your/fastq/data/dir -g male -a GRCh37
+\nMandatory options:
+\n\t-s(pecies e.g. homo_sapiens)
+\n\t-g(ender e.g male|female)
+\n\t-f(ile e.g. your_file.fastq)\tor\t-d(ir input dir containing fastq files)
+\nOther options:
+\n\t-a(ssembly default is $assembly)
+\n\t-p(aired default is single reads)
+\n\t-i(ndex_home default=$index_home)
+\n\t-r(esource default=$resource)
+\n\t-c(lean away cat'd fastq file)
+\n\t-h(elp)"
+ #-m(asked default is unmasked)
 #description='More wordy description here'
 
 
@@ -56,12 +69,12 @@ while getopts ":g:s:f:d:i:r:a:cph" opt; do
 		a  ) assembly=$OPTARG ;;
 	    p  ) align_type='sampe' ;;
         c  ) clean=1 ;;
-		h  ) echo -e $usage; return 0;;
+		h  ) echo -e $usage; exit 0;;
 		\? ) echo -e $usage; exit 1;;
 	esac 
 done
 
-#Paramter checks
+#Parameter checks
 CheckVariablesOrUsage "$usage" gender species index_home
 ValidateVariableOrUsage "$usage" gender VALID_GENDERS
 
