@@ -21,6 +21,8 @@ fi
 #Also is less visible? Need to fettle with Help to list funcs better?
 #As we have no structure to the functions, but at least we have a dir structure when we have separate scripts
 #add code to generate indexes if absent?
+#add outdir 
+#add inputdir option which will cat files fastq file, use dir name as input_name?
 
 
 #This makes sure we reset the getopts ind if we have used it previously
@@ -35,33 +37,96 @@ assembly=GRCh37
 mask='_unmasked'
 align_type='samse'
 resource='-R"select[mem>5000] rusage[mem=5000]" -M5000000'
+dir=
+clean=
 
-
-usage="usage:\trun_bwa.sh  -s(pecies e.g. homo_sapiens)  -g(ender e.g male|female)  -f(ile e.g. your_file.fastq)  [ -p(aired default is single reads)  -i(ndex_home default=$index_home)  -r(esource default=$resource)  -a(ssembly default=$assembly)  -h(elp) ] " #-m(asked default is unmasked)
+usage="usage:\trun_bwa.sh  -s(pecies e.g. homo_sapiens)  -g(ender e.g male|female)  -f(ile e.g. your_file.fastq)  -d(ir input dir containing fastq files) [ -p(aired default is single reads)  -i(ndex_home default=$index_home)  -r(esource default=$resource)  -a(ssembly default=$assembly) -c(lean away cat'd fastq file) -h(elp) ] " #-m(asked default is unmasked)
 #description='More wordy description here'
 
-#To do
-#add outdir 
-#add inputdir option which will cat files? Or just use GetOptArgs on individual files?
 
-while getopts ":g:s:f:i:r:a:ph" opt; do
+
+while getopts ":g:s:f:d:i:r:a:cph" opt; do
 	case $opt in 
 		g  ) gender=$OPTARG ;; 
 		s  ) species=$OPTARG ;;
         f  ) file=$OPTARG ;;
+        d  ) dir=$OPTARG ;;
 		i  ) index_file=$OPTARG ;;
         r  ) resource=$OPTARG ;;
 		a  ) assembly=$OPTARG ;;
 	    p  ) align_type='sampe' ;;
-        #m  ) mask='' ;;
+        c  ) clean=1 ;;
 		h  ) echo -e $usage; return 0;;
 		\? ) echo -e $usage; exit 1;;
 	esac 
 done
 
 #Paramter checks
-CheckVariablesOrUsage "$usage" file gender species index_home
+CheckVariablesOrUsage "$usage" gender species index_home
 ValidateVariableOrUsage "$usage" gender VALID_GENDERS
+
+if [[ ! $file ]] && [[ ! $dir ]]; then
+	echo "You must supply either a -f(ile) or -d(ir) parameter"
+	exit
+fi
+
+if [[ $dir ]]; then
+
+	#Do we not have a function for this?
+
+	#strip last dir name off for input
+	file_name=$(echo $dir | sed -r 's/\/$//')
+	file_name=$(echo $dir | sed -r 's/.*\///')
+	file="${dir}/${file_name}.fastq"
+
+
+
+
+	if [[ -f $file ]]; then
+
+		if [ $clean ]; then
+			echo -e "Removing old fastq file:\t${file}"
+			rm -f $file
+		else
+			echo -e "Using old cat'd fastq file:\t$file"
+		fi
+	fi
+
+	if [[ ! -f $file ]]; then
+		echo "Generating fastq file:\t$file"
+		#gfastq_files=($(ls ${dir}/*fastq.gz))
+		#Do it this way to avoid STDERR
+		fastq_files=($(ls ${dir}/*fastq*))
+		
+		if [[ ! $fastq_files ]]; then
+			echo -e "No fastq files found in input dir:\t$dir"
+		elif [[ ! -z $(echo ${fastq_files[*]} | grep '.fastq.gz') ]]; then
+			echo "Unzipping fastq files"
+			Execute gunzip $dir/*.fastq.gz
+		fi
+
+		fastq_files=$(ls ${dir}/*fastq)
+		echo -e "Using:\t"
+
+		for fastq_file in $fastq_files; do
+			fastq_file=$(echo $fastq_file | sed -r 's/.*\///')
+			echo -e "\t$fastq_file"
+		done
+
+
+		echo -e "Cat'ing files to:\t $file"
+		Execute cat ${dir}/*fastq > $file
+		echo "Gzipping all source fastq files"
+		Execute gzip $fastq_files		
+	fi
+
+	#Need to rezip here really
+	#echo "Gzipping all source fastq files"
+	#Execute gzip $fastq_files
+fi
+
+
+
 CheckFile $file
 
 if [[ $file != *fastq ]]; then
