@@ -150,7 +150,7 @@ for ext in amb ann bwt pac rbwt rpac rsa sa; do
 			echo -e "Then create the female file as follows:\n\tcat ${lc_species}_male_ASSEMBLY_unmasked.fasta | /nfs/users/nfs_d/dkeefe/bin/fastagrep -t -v -P -p 'chromosome:ASSEMBLY:Y' > ${lc_species}_female_ASSEMBLY_unmasked.fasta"
 		fi
 
-		echo -e "\nYou need to generate the bwa indexes using:\n\tbsub -J ${lc_species}_bwa_indexes -o ${lc_species}_bwa_indexes.out  -e ${lc_species}_bwa_indexes.err $resource bwa index -a bwtsw $fasta_file"
+		echo -e "\nYou need to generate the bwa indexes using:\n\tbsub -J ${index_name}_indexes -o ${index_name}_bwa_indexes.out  -e ${index_name}_bwa_indexes.err $resource bwa index -a bwtsw $fasta_file"
 		
 		exit
 	fi
@@ -160,10 +160,11 @@ done
 file_name=$(echo $file | sed 's/\.fastq$//')
 
 echo -e "Running bwa with following options:\n\tIndex name\t= $index_name\n\tInput file\t= $file\n\tAlignment type\t= $align_type\n"
-#This is again truncating the bsub cmd and failing?!
-#bjob_cmd="bsub -J bwa_${file_name} $resource -o ${file_name}.bwa.out -e ${file_name}.bwa.err 'bwa aln $index_home/${uc_species}/${index_name}  $file > ${file_name}.${align_type}.sai; bwa $align_type ${index_home}/${uc_species}/${index_name} ${file_name}.${align_type}.sai $file > ${file_name}.${align_type}.sam'"
 
-#Use submitJob
+#Is the index job still running?
+checkJob ${index_name}_indexes
+
+#Use submitJob to avoid truncation of bsub cmd
 job_name="bwa_${file_name}"
 bsub_cmd="$resource -o ${file_name}.bwa.out -e ${file_name}.bwa.err"
 job_cmd="'bwa aln $fasta_file  $file > ${file_name}.${align_type}.sai; bwa $align_type $fasta_file ${file_name}.${align_type}.sai $file > ${file_name}.${align_type}.sam'"
