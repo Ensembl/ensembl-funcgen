@@ -58,7 +58,7 @@ high level functions.
 
 #To do 
 #1 Integrate with build_regulator_features.pl and just have two modes, one to do the set validation, dumping
-#and submitting, and the other to actually run the jobs
+#and submitting, and the other to actually run the jobs??? Are these now sufficiently different ot keep separate?
 
 #2 Update to take standard pipeline.env params i.e. remove dataversion and define dnadb explicitly.
 
@@ -69,7 +69,7 @@ high level functions.
 
 #5 Check running jobs
 
-#6 Add archive function!
+#6 DONE Add archive function!
 
 use strict;
 use warnings;
@@ -93,8 +93,6 @@ $cdbhost ||= 'ens-staging';
 $cdbport ||= 3306;
 $cdbuser ||= 'ensro';
 
-# build specififc paramters
-#my $outdir = '/lustre/work1/ensembl/graef/RegBuild/v52';
 
 GetOptions (
 			#Use pipeline env db param names
@@ -130,10 +128,10 @@ GetOptions (
 
 ### check options ###
 
-throw("Must specify mandatory database hostname (-dbhost).\n") if ! defined $dbhost;
-throw("Must specify mandatory database username. (-dbuser)\n") if ! defined $dbuser;
-throw("Must specify mandatory database password (-dbpass).\n") if ! defined $dbpass;
-throw("Must specify mandatory database name (-dbname).\n") if ! defined $dbname;
+die("Must specify mandatory database hostname (-dbhost).\n") if ! defined $dbhost;
+die("Must specify mandatory database username. (-dbuser)\n") if ! defined $dbuser;
+die("Must specify mandatory database password (-dbpass).\n") if ! defined $dbpass;
+die("Must specify mandatory database name (-dbname).\n") if ! defined $dbname;
 
 #Need to validate whe have sets pass
 
@@ -176,7 +174,7 @@ $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 #Move this to Healthchecker for reuse in update_DB_for_release?
 
 if(! $version){
-  throw('To properly archive a previous regulatory build, you must provide the version number of the new build');
+  die('To properly archive a previous regulatory build, you must provide the version number of the new build');
 }
 
 my $old_version = $version -1;
@@ -191,7 +189,7 @@ my ($current_version) = @{$mc->list_value_by_key('regbuild.version')};
 
 if((! defined $current_version) && 
    ($version != 1)){
-  throw('Could not find regbuild.version meta entry, please correct manually');
+  die('Could not find regbuild.version meta entry, please correct manually');
 }
 
 #This is wrong as we may have already updated and just want to clobber
@@ -299,7 +297,7 @@ else{ #test old and new feature set here for sanity
 	  die("It appears that all the old RegulatoryBuild meta entries have been archived, but no archived feature set(v${old_version}) is present. Please correct manually.\n")
 	}
 
-	print "Old RegulatoryFeature set has previosul been archived\n";
+	print "Old RegulatoryFeature set has previously been archived\n";
 
   }
 }
@@ -358,7 +356,7 @@ my (%focus_fsets, %attrib_fsets);
 
 
 map { $fset = $fsa->fetch_by_name($_);
-      throw("Focus set $_ does not exist in the DB") 
+      die("Focus set $_ does not exist in the DB") 
           if (! defined $fset); 
       $focus_fsets{$fset->dbID} = $fset; 
   } @focus_names;
@@ -366,7 +364,7 @@ map { $fset = $fsa->fetch_by_name($_);
 
 map { 
     $fset = $fsa->fetch_by_name($_);
-    throw("Attribute set $_ does not exist in the DB") 
+    die("Attribute set $_ does not exist in the DB") 
         if (! defined $fset); 
     $attrib_fsets{$fset->dbID()} = $fset; 
 } @attr_names;
@@ -435,7 +433,7 @@ if (! $reg_string) {
     eval {
         $db->dbc->do($sql);
     };
-    throw("Couldn't store regbuild.feature_type_ids in meta table.") if ($@);
+    die("Couldn't store regbuild.feature_type_ids in meta table.") if ($@);
 
 } else {
  if($meta_value ne $reg_string){
