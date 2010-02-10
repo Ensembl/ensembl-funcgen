@@ -67,7 +67,9 @@ high level functions.
 
 #4 Store data_set!?
 
-# 5 Check running jobs
+#5 Check running jobs
+
+#6 Add archive function!
 
 use strict;
 use warnings;
@@ -81,7 +83,7 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Getopt::Long;
 
 my ($dbhost,$dbport,$dbuser,$dbpass,$dbname,$species, $fset, $outdir, $seq_region_name,
-	$cdbhost,$cdbport,$cdbuser,$cdbpass,$cdbname, $non_ref, $include_mt,
+	$cdbhost,$cdbport,$cdbuser,$cdbpass,$cdbname, $non_ref, $include_mt, $version,
 	@focus_names, @attr_names, $cdb, $db, $jobs,$help,$man, $dump_afs);
 
 $|=1;
@@ -110,9 +112,8 @@ GetOptions (
 			'seq_region_name=s'   => \$seq_region_name,
 			'focus_sets=s{,}'     => \@focus_names, 
 			'attribute_sets=s{,}' => \@attr_names,
-
+			'version=s'           => \$version,
 			'outdir=s'            => \$outdir,
-
 			'non_ref'             => \$non_ref,
 			'include_mt'          => \$include_mt,
 			'dump_annotated_features' => \$dump_afs,
@@ -153,6 +154,8 @@ if($cdbname){
      );
 }
 
+
+#Can we pass just dnadb_host here, to avoid having to sepcify name in run script?
 $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
      -host   => $dbhost,
@@ -164,6 +167,144 @@ $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -dnadb  => $cdb,
 	 -group => 'funcgen',
      );
+
+
+
+### CHECK ARCHIVED VERSIONS
+#so we don't clobber it before we have a chance to stable_id map
+#Or should we remove this facility of host more than one reg build and map between DBs?
+#Move this to Healthchecker for reuse in update_DB_for_release?
+
+if(! $version){
+  throw('To properly archive a previous regulatory build, you must provide the version number of the new build');
+}
+
+my $old_version = $version -1;
+my $mc = $db->get_MetaContainer;
+my $some_old_not_archived = 0;
+my $some_old_archived = 0;
+my $fsa = $db->get_FeatureSetAdaptor();
+my @meta_keys = ('regbuild.feature_set_ids', 'regbuild.initial_release_date', 'regbuild.feature_type_ids', 'regbuild.last_annotation_update');
+
+#Now check meta entries for old build
+my ($current_version) = @{$mc->list_value_by_key('regbuild.version')};
+
+if((! defined $current_version) && 
+   ($version != 1)){
+  throw('Could not find regbuild.version meta entry, please correct manually');
+}
+
+#This is wrong as we may have already updated and just want to clobber
+if(($current_version != $old_version) &&
+   ($current_version != $version)){
+  die("The regbuild version specified($version) is not the next or current version according to meta regbuild.version($current_version). Please correct manually\n");
+}
+
+
+for my $mkey(@meta_keys){
+  #Check both the current and the old versions just in csae we forgot to update the version when running
+
+  my ($mvalue) = @{$mc->list_value_by_key("${mkey}_v${version}")};
+
+  if($mvalue){
+	die("Found meta entry for:\t${mkey}_v${version}\t$mvalue\n".
+		"It appears that the regulatory build version you have specified($version) has already been at least partially archived. Maybe you want to set the version param = ".($current_version+1)."?\nPlease correct manually.\n");
+  }
+
+  if($version != 1){
+
+	($mvalue) = @{$mc->list_value_by_key("${mkey}_v${old_version}")};
+
+  
+	if(! $mvalue){
+	  $some_old_not_archived = 1;
+	  #print here as this
+	  print "Found no meta entry for:\t${mkey}_v${old_version}\n";
+	}
+	else{
+	  print "Found meta entry for:\t${mkey}_v${old_version}\t$mvalue\n";
+	  $some_old_archived = 1;
+	}
+  }
+  else{
+	$some_old_archived = 1;
+  }
+}
+
+
+if($some_old_archived && $some_old_not_archived){
+  die("Arching of the old RegulatoryFeature(v${old_version}) set has not be completed correctly.\n".
+	  "Please correct manually.\n");
+}
+else{ #test old and new feature set here for sanity
+  #So we aren't depending solely on the meta keys
+  my $fset = $fsa->fetch_by_name("RegulatoryFeatures_v${version}");
+
+  if($fset){
+	die("It appears that the new RegulatoryBuild feature set(v${version}) has already been archived, but no meta entries are present. Please correct manually.\n")
+  }
+
+  if($version != 1){
+	$fset = $fsa->fetch_by_name("RegulatoryFeatures_v${old_version}");
+  }
+ 
+  if($some_old_not_archived){#all old meta not archived
+	
+	if($fset){
+	  die("It appears that the old RegulatoryBuild feature set(v${old_version}) has already been archived, but no meta entries are present. Please correct manually.\n")
+	}
+
+	if($version != 1){
+	  print "Achiving old RegulatoryFeatures set\n";
+	 
+	
+	  #We shouldn't need to track this process with a status
+	  #As we have the exhaustive tests above.
+	  
+	  #Rollback all other older feature_sets?
+
+	  #rename feature_set
+	  my $sql = "update feature_set set name='RegulatoryFeatures_v${old_version}' where name='RegulatoryFeatures'";
+	  $db->dbc->db_handle->do($sql);
+
+	  #validate update and revoke states
+	  my $fset = $fsa->fetch_by_name("RegulatoryFeatures_v${old_version}");
+
+	  if(! $fset){
+		die("Failed to create archive FeatureSet:\tRegulatoryFeatures_v${old_version}\n");
+	  }
+	  
+	  $fset->adaptor->revoke_status('MART_DISPLAYABLE', $fset);
+	  $fset->adaptor->revoke_status('DISPLAYABLE', $fset);
+	  #Keep DAS_DISPLAYABLE status?
+
+	  #rename meta keys
+	  foreach my $mkey(@meta_keys){
+		$sql = "update meta set meta_key='${mkey}_v${old_version}' where meta_key='${mkey}'";
+		$db->dbc->db_handle->do($sql);
+	  }
+	  
+	  #Finally update regbuild.version
+	  $sql = "update meta set meta_value='${version}' where meta_key='regbuild.version'";
+	  $db->dbc->db_handle->do($sql);
+	  
+
+	}
+
+  }
+  else{# old has been archived
+	#Will never happen for version == 1
+	
+	if(!$fset){
+	  die("It appears that all the old RegulatoryBuild meta entries have been archived, but no archived feature set(v${old_version}) is present. Please correct manually.\n")
+	}
+
+	print "Old RegulatoryFeature set has previosul been archived\n";
+
+  }
+}
+
+
 
 # determine the number of toplevel slices we can analyze 
 # (excluding mitochondria sequences (MT)!!!)
@@ -183,7 +324,7 @@ if($seq_region_name){
   my $slice = $sa->fetch_by_name($seq_region_name);
 
   if(! $slice){
-	die("You have specified a slice which is not in the db:\t$seq_region_name");
+	die("You have specified a slice which is not in the db:\t$seq_region_name\n");
   }
   
   @slices = ($slice);
@@ -214,7 +355,7 @@ else{
 
 # parse both focus and attribute sets and check that they exist
 my (%focus_fsets, %attrib_fsets);
-my $fsa = $db->get_FeatureSetAdaptor();
+
 
 map { $fset = $fsa->fetch_by_name($_);
       throw("Focus set $_ does not exist in the DB") 
