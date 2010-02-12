@@ -36,6 +36,9 @@ edit the file ~dkeefe/dbs/ens_staging  to point at the latest ensembl core datab
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.5  2009-08-04 08:26:59  dkeefe
+ mods for farm2
+
  Revision 1.4  2009/06/03 10:18:20  dkeefe
  created separate tables for each RNA type
 
@@ -283,11 +286,13 @@ sub go_term_features{
     my($dbh,$dbu,$slim_table)=@_;
 
     &commentary("creating GO classified transcript features\n") if $verbose > 1;
+    die "The GO tables have changed this method needs updating";
 
     my @sql;
 
     my $temp1 = &new_temp();
     push @sql,"drop table if exists $temp1";
+
     push @sql,"create table $temp1 select x.dbprimary_acc as acc,t.transcript_id,t.translation_id,tm.id as term_id,tm.name as go_term,tm.term_type from  object_xref ox, xref x ,external_db ed,translation t,term tm where ox.xref_id = x.xref_id and ox.ensembl_object_type = 'Translation' and x.external_db_id = ed.external_db_id and ed.db_name = 'GO' and ox.ensembl_id = t.translation_id and tm.acc = x.dbprimary_acc";
     push @sql,"alter table $temp1 add index(transcript_id)";
     push @sql,"alter table $temp1 add index(acc)";
