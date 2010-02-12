@@ -1,17 +1,13 @@
 #!/usr/local/bin/bash
 
-
-
 #Test for eFG env
-
 if [  -z "$EFG_SRC" ] || [ ! -d $EFG_SRC ]; then
    echo ":: You have not yet initialised the eFG environment"
    return	
 fi
 
-
 #still have to source the funcs!
-#As not exported in env
+#As not exported in env?
 . $funcs_file
 
 
@@ -20,19 +16,15 @@ fi
 #This requires set up of a instance file and input dir
 #Also is less visible? Need to fettle with Help to list funcs better?
 #As we have no structure to the functions, but at least we have a dir structure when we have separate scripts
-#add code to generate indexes if absent?
-#add outdir 
-#add inputdir option which will cat files fastq file, use dir name as input_name?
+#add outdir ?
+#remove hardcoded fastagrep path
 
-
-#This makes sure we reset the getopts ind if we have used it previously
-OPTIND=1
+OPTIND=1    #Reset the getopts if we have used it previously
 VALID_GENDERS='male female'
 gender=
 species=
 file=
-#Set this in pipeline/efg.config?
-index_home=/lustre/scratch103/ensembl/funcgen/bwa_indexes
+index_home=/lustre/scratch103/ensembl/funcgen/bwa_indexes    #Set this in pipeline/efg.config?
 assembly=GRCh37
 mask='_unmasked'
 align_type='samse'
@@ -56,10 +48,6 @@ usage="Usage:\t\trun_bwa.sh  <options>
 \n\t-r(esource default=$resource)
 \n\t-c(lean away cat'd fastq file)
 \n\t-h(elp)"
- #-m(asked default is unmasked)
-#description='More wordy description here'
-
-
 
 while getopts ":g:s:f:d:i:r:a:cph" opt; do
 	case $opt in 
@@ -152,7 +140,7 @@ uc_species=$(echo $species | tr [a-z] [A-Z])
 index_name="${lc_species}_${gender}_${assembly}${mask}.fasta"
 fasta_file=${index_home}/${uc_species}/${index_name}
 
-#Check index files
+#Check index/fasta files
 for ext in amb ann bwt pac rbwt rpac rsa sa; do
 	error=$(CheckFile "${index_home}/${uc_species}/${index_name}.${ext}")
 
@@ -174,15 +162,15 @@ done
 
 
 file_name=$(echo $file | sed 's/\.fastq$//')
-
 echo -e "Running bwa with following options:\n\tIndex name\t= $index_name\n\tInput file\t= $file\n\tAlignment type\t= $align_type\n"
 
 #Is the index job still running?
 checkJob ${index_name}_indexes
 
 #Use submitJob to avoid truncation of bsub cmd
-job_name="bwa_${file_name}"
-bsub_cmd="$resource -o ${file_name}.bwa.out -e ${file_name}.bwa.err"
+job_name=$(echo $file_name | sed 's/.*\///')
+job_name="bwa_${align_type}_${job_name}"
+bsub_cmd="-q long $resource -o ${file_name}.bwa.out -e ${file_name}.bwa.err"
 job_cmd="'bwa aln $fasta_file  $file > ${file_name}.${align_type}.sai; bwa $align_type $fasta_file ${file_name}.${align_type}.sai $file > ${file_name}.${align_type}.sam'"
 
 #Add this so submitJob does not fail. Move to efg.config?
