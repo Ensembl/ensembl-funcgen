@@ -10,7 +10,7 @@ Bio::EnsEMBL::InputSet - A module to represent InputSet object.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::ExpeimentalSet;
+use Bio::EnsEMBL::Funcgen::InputSet;
 
 my $data_set = Bio::EnsEMBL::Funcgen::InputSet->new(
 	                                                      -DBID            => $dbID,
@@ -31,17 +31,24 @@ An InputSet object provides a generic container for any non-array based feature 
 allowing tracking of file import via the status table and integration into Data and FeatureSets to
 provide traceability to the source experiment from a given FeatureSet.
 
-=head1 AUTHOR
+=head1 LICENSE
 
-This module was created by Nathan Johnson.
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-This module is part of the Ensembl project: http://www.ensembl.org/
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
@@ -65,13 +72,14 @@ use vars qw(@ISA);
 
 
   Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSet->new(
-                                                                     -EXPERIMENT   => $exp,
-                                                                     -FEATURE_TYPE => $ftype,
-                                                                     -CELL_TYPE    => $ctype,
-                                                                     -FORMAT       => 'READ_FORMAT',
-                                                                     -VENDOR       => 'SOLEXA',
-                                                                     -NAME         => 'ExpSet1',
-                                                                     -ANALYSIS     => $anal,
+                                                                     -EXPERIMENT    => $exp,
+                                                                     -FEATURE_TYPE  => $ftype,
+                                                                     -CELL_TYPE     => $ctype,
+                                                                     -FORMAT        => 'READ_FORMAT',
+                                                                     -VENDOR        => 'SOLEXA',
+                                                                     -NAME          => 'ExpSet1',
+                                                                     -ANALYSIS      => $anal,
+                                                                     -FEATURE_CLASS => 'annotated',
                                                                      );
 
   Do we want to define subsets likes this or are we more likely to add them one by one?
@@ -92,9 +100,8 @@ sub new {
 	
   #Add set_type here to overwrite default ref parsing in Set::set_type
   #This need to stay like this until we patch the DB
-  my $self = $class->SUPER::new(@_);#, '-SET_TYPE', 'experimental');
-	
-  #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
+  my $self = $class->SUPER::new(@_);	
+ 
   my ($exp, $format, $vendor)
     = rearrange(['EXPERIMENT', 'FORMAT', 'VENDOR'], @_);
     
@@ -107,25 +114,10 @@ sub new {
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
   throw ('Must provide a CellType') if(! defined $self->cell_type);
 
-  my $type = $self->type;
+  my $type = $self->feature_class;
 
-  #should type be feature type?
-  #i.e. result/annotated
-  #Or do we need something more specific to segregate sequencing and other non annotated 
-  #imports
-  #i.e. to tell us something about the amount of data, so 
-  #we can tell wether to import the 0 window_size or not
-  #Or should this just be left to import params
-  #Where are we capturing the differences between result InputSets
-  #Not that there are any at the moment
-
-  if(! ($type && grep /^$type$/, ('annotated', 'result'))){
-	#Should we genericise sequencing to input
-	#and specify sequencing at input_set level
-	#This would allow us to capture this for direct imports into a FeatureSet
-	#We would then have some overlap between input type here and input_set table_name?
-	
-  	throw("You must define a valid InputSet feature type e.g. 'annotated' or 'result'");
+  if(! ($type && grep /^${type}$/, ('annotated', 'result'))){
+	throw("You must define a valid InputSet feature_class e.g. 'annotated' or 'result'");
   }
 
   if(($type eq 'result') &&
