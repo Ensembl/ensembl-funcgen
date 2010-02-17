@@ -74,14 +74,17 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
   
-  #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($name, $anal, $ftype, $ctype, $set_type, $fclass)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'SET_TYPE', 'FEATURE_CLASS'], @_);
+  #TYPE was never parsed here?
+  #Only in inheritants that used it i.e. FeatureSet
+
+  my ($name, $anal, $ftype, $ctype, $set_type, $fclass, $type)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'SET_TYPE', 'FEATURE_CLASS', 'TYPE'], @_);
   
   throw('Need to specify a name') if ! defined $name;
 
   $self->set_type($set_type);
   $self->feature_class($fclass);
+  $self->feature_class($type) if $type;#Remove this when fully implemented
   $self->{'name'} = $name;
   $self->cell_type($ctype) if $ctype;
   $self->feature_type($ftype) if $ftype;
