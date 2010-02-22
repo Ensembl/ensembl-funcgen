@@ -1,0 +1,32 @@
+#!/usr/local/bin/bash
+
+# This is deploymentwide configuration
+# Do not change these unless you intend to change the 
+# behaviour of all instances of the peak calling environment
+# To make instance specific changes you can override these defaults 
+# by setting them in your instance.env file
+
+# DO NOT REMOVE/COMMENT ANY OF THE VARIABLES
+# Or you may inherit unwanted variables from a 
+# previous environment.
+
+#Probably need to move some of these 'true' constants back to array.env?
+#Or maybe clean them all before sourcing this to prevent against deleting them from here
+#And inheriting from previous env?
+
+### Define constants ###
+
+#Formats must always be "VENDOR_FORMATTYPE"
+#Or can simply be "VENDOR"
+#This is used in RunTranscriptXrefs
+
+
+
+export VALID_INPUT_TYPES="slice file array"
+export VALID_RUNNABLES='SWEmbl'
+export SWEMBL_PARAMS="-R 0.0025 -f 150"
+#This is used as the base output dir for all the pipeline output
+export DATA_HOME=$HOME/scratch/peaks
+
+### Initialise/Reset Variables ###
+### Clean only args - Never set here!
