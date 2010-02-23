@@ -41,7 +41,7 @@ Nathan Johnson njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file);
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzip is_sam is_bed get_file_format strip_param_args generate_slices_from_names);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -207,9 +207,13 @@ sub mean{
 
 }
 
+#Should really extend this to detect previous file?
+#Or do in caller?
+
 sub open_file{
   my ($file, $operator) = @_;
 	
+
   $operator ||= '<';
 
   if($operator !~ /%/){
@@ -218,17 +222,13 @@ sub open_file{
   else{
   	#We have some pipeing to do
   	$operator = sprintf($operator, $file);
-    }
+  }
 
   #Get dir here and create if not exists
   my $dir = dirname($file);  
   mkpath($dir, {verbose => 1, mode => 0750}) if(! -d $dir);
-
-  #my $fh = new FileHandle "$operator $file";
   my $fh = new FileHandle "$operator";
   
-
-
   if(! defined $fh){
 	croak("Failed to open $operator");
   }
@@ -324,6 +324,155 @@ sub backup_file{
 
   return 1;
 
+}
+
+
+sub get_file_format{
+  my $file = shift;
+
+  my $format = &is_bed($file);
+
+  if(! $format){
+	$format =  &is_sam($file);
+
+	#Add more testes here
+  }
+  
+  
+  return $format;
+}
+
+sub is_gzip {
+  my $file = shift;
+
+  throw ("File does not exist:\t$file") if ! -e $file;
+
+  open(FILE, "file -L $file |")
+	or throw("Can't execute command 'file' on '$file'");
+  my $retval = <FILE>;
+  close FILE;
+
+  return ($retval =~ m/gzip compressed data/) ? 1 : 0;
+}
+
+sub is_sam{
+  my $file = shift;
+
+  warn "Only checking file suffix for is_sam";
+  #Could check for header here altho this is not mandatory!
+  #Can we use web format guessing code?
+
+  my $gz = (&is_gzip($file)) ? '.gz' : '';
+
+  return ($file =~ /.sam${gz}/) ? 'sam' : 0;
+}
+
+#need is bam here too!
+
+sub is_bed {
+  my ($file, $verbose) = @_;
+
+  #Use open_file here!
+  if(&is_gzip($file)){
+	open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
+  }
+  else{
+	open(FILE, $file) or throw("Can't open file:\t$file");
+  }
+
+  my @line;
+
+  while (<FILE>) {
+	chomp;
+	@line = split("\t", $_);
+	last;
+  }
+
+  close FILE;
+  
+    
+  if (scalar @line < 6) {
+        warn("Infile '$file' does not have 6 or more columns. We expect bed format: CHROM START END NAME SCORE STRAND.") if $verbose;
+        return 0;
+		#} elsif ($line[0] !~ m/^((chr)?[MTXYNT_\d]+)$/) {
+    #    warn ("1st column must contain name of seq_region (e.g. chr1 or 1) in '$file'");
+    #    return 0;
+		#Commented this out for now due to HSCHR_RANDOM seqs
+		#How does the webcode handle this?
+    } elsif ($line[1] !~ m/^\d+$/ && $line[2] =~ m/^\d+$/) {
+        warn ("2nd and 3rd column must contain start and end respectively in '$file'") if $verbose;
+        return 0;
+    } elsif ($line[5] !~ m/^[+-]$/) {
+        warn ("6th column must define strand (either '+' or '-') in '$file'") if $verbose;
+        return 0;
+    }
+
+    return 'bed';
+    
+}
+
+
+#These subs are useful for implementing
+#a farm mode in a run script, where a script can
+#submit itself to the farm as slice based jobs
+
+#strip cmd line params and associated arguments from a list 
+#should not be used to remove flag options i.e. no following args
+#as this may cause removal of any following @ARGV;
+#Can this be used on flattened args hash?
+
+sub strip_param_args{
+  my ($args, @strip_params) = @_;
+
+  my $param_name;
+  my $seen_opt = 0;
+
+  foreach my $i(0..$#{$args}){
+
+	if($args->[$i] =~ /^[-]+/){
+	  $seen_opt = 0;#Reset seen opt if we seen a new one
+	  
+	  ($param_name = $args->[$i]) =~ s/^[-]+//;
+
+	  if(grep/^${param_name}$/, @strip_params){
+		$seen_opt = 1;
+	  }
+	}
+
+	#$args->[$i] = '' if $args->[$i] =~ /^[-]+farm/;#Only remove current flag
+	#$seen_opt = 1 if $args->[$i] =~ /^[-]+skip_slices/;
+	#$seen_opt = 1 if $args->[$i] =~ /^[-]+slice/;#Don't have full param name incase we have just specified -slice
+	
+	$args->[$i] = '' if $seen_opt;#Remove option and args following option
+  }
+
+  return $args;
+}
+
+#Generates slices from names or optionally alll default top level nonref
+
+sub generate_slices_from_names{
+  my ($slice_adaptor, $slice_names, $toplevel, $non_ref) = @_;
+  
+  my (@slices, $slice);
+
+  if(@$slice_names){
+	
+	foreach my $name(@$slice_names){
+	  $slice = $slice_adaptor->fetch_by_name($name);
+	
+	  if(! $slice){
+		throw("Could not fetch slice:\t".$slice);
+	  }
+
+	  push @slices, $slice;
+	}
+  }
+  elsif($toplevel){
+	@slices = @{$slice_adaptor->fetch_all('toplevel', undef, $non_ref)};
+  }
+
+  return \@slices;
 }
 
 
