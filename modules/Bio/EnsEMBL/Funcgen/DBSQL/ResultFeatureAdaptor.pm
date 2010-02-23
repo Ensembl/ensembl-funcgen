@@ -37,17 +37,24 @@ my @result_features = @{$rfeature_adaptor->fetch_all_by_ResultSet_Slice($rset, $
 The ResultFeatureAdaptor is a database adaptor for storing and retrieving
 ResultFeature objects.
 
-=head1 AUTHOR
+=head1 LICENSE
 
-This module was created by Nathan Johnson.
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-This module is part of the Ensembl project: http://www.ensembl.org/
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
@@ -613,8 +620,7 @@ sub fetch_all_by_Slice_ResultSet{
   #This will save a query
   #We need to set this for all InputSets? Or just ID that it is an InputSet?
   $_probe_extend       = $with_probe if defined $with_probe;
-  $_window_size        = $window_size;
-
+  undef $_window_size; #Clean this from the last query 
 
   #warn "hardcoding for result feature set = 0";#and wsize==0";
   #$_result_feature_set = 0;
@@ -635,10 +641,11 @@ sub fetch_all_by_Slice_ResultSet{
 	}
 
 	my @sizes = @{$self->window_sizes};
+	#we need to remove wsize 0 if ResultSet was generated from high density seq reads
+	#0 should always be first
+	shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_set'));
 	$max_bins ||= 700;#This is default size of display?
 	
-
-
 	#The speed of this track is directly proportional
 	#to the display size, unlike other tracks!
 	#e.g
@@ -646,31 +653,39 @@ sub fetch_all_by_Slice_ResultSet{
 	#700  pixels will use 450 wsize > Faster but lower resolution
 	#2000 pixels will use 150 wsize > Slower but higher resolution
 
+	if(defined $window_size){
 
-	#Select 0 wsize if slice is small enough
-	#As loop will never pick 0
-	#probably half 150 max length for current wsize
-	#Will also be proportional to display size
-	#This depends on size ordered window sizes arrays
-	my $zero_wsize_limit = ($max_bins * $sizes[1])/2;
-
-	if($slice->length <= $zero_wsize_limit){
-	  $_window_size = 0;
+	  if(! grep(/^${window_size}$/, @sizes)){
+		warn "The ResultFeature window_size specifed($window_size) is not valid, the next largest will be chosen from:\t".join(', ', @sizes);
+	  }
+	  else{
+		$_window_size = $window_size;
+	  }
 	}
-	else{
+	else{#! defined $window_size
 	  
+	  #Work out window size here based on Slice length
+	  #Select 0 wsize if slice is small enough
+	  #As loop will never pick 0
+	  #probably half 150 max length for current wsize
+	  #Will also be proportional to display size
+	  #This depends on size ordered window sizes arrays
 
-	  if(! defined $window_size){	  
-		#Work out window size here based on Slice length
-		$window_size = ($slice->length)/$max_bins;
-	  } 
-	  
-	  
-	  
-	  #we need to remove wsize 0 if ResultSet was generated from high density seq reads
-	  #0 should always be first
-	  shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_set'));
+	  $window_size = ($slice->length)/$max_bins;
 
+	  if($rset->table_name ne 'input_set'){
+		my $zero_wsize_limit = ($max_bins * $sizes[1])/2;
+
+		if($slice->length <= $zero_wsize_limit){
+		  $_window_size = 0;
+		}
+	  }
+	} 
+	
+	#Let's try and avoid this loop if we have already grep'd or set to 0
+	#In the browser this is only ever likely to speed up the 0 window
+	
+	if(! defined $_window_size){
 	  #default is maximum
 	  $_window_size = $sizes[$#sizes];
 
@@ -682,7 +697,7 @@ sub fetch_all_by_Slice_ResultSet{
 		#specified, hence we cannot force the use of 0
 		#@sizes needs to always be the full range of valid windows sizes
 		#Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
-		
+	  
 		if ($window_size <= $sizes[$i]){
 		  $_window_size = $sizes[$i];
 		  last;    
@@ -749,7 +764,7 @@ sub fetch_all_by_Slice_ResultSet{
 	  #warn $_scores_field;
 	}
 
-	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
+	return [$self->fetch_all_by_Slice_constraint($slice, $constraint),  {window_size => $_window_size}];
   }
 
 
@@ -1071,7 +1086,7 @@ sub fetch_all_by_Slice_ResultSet{
 	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   }
   
-  return \@rfeatures;
+  return [\@rfeatures,  {window_size => 0}];
 }
 
 
