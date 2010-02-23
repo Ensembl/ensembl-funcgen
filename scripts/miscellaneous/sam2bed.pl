@@ -1,0 +1,111 @@
+#!/software/bin/perl -w
+
+
+=head1 NAME
+
+sam2bed.pl
+
+=head1 SYNOPSIS
+
+ sam2bed.pl [ file.sam[.gz] ]+
+
+=head1 DESCRIPTION
+
+This script loads converts sam(inc gzipped) format files to a bed format files.
+Unampped reads are filtered as appropriate and the MAPQ score is used as the bed score.
+
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see:
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
+
+=cut
+
+
+use warnings;
+use strict;
+use Pod::Usage;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_file_format is_gzip open_file);
+
+
+# To do
+# Utilise Bio::DB::Sam
+# Add GetOpt::long support:
+#     -No zip output?
+#     -submit to farm
+
+#It works using bwa output. Not sure if it is fully SAM compliant!
+#This does not use the Binary format!
+
+
+if (! @ARGV){
+  pod2usage( -exitval => 1,
+			 -message => "You must supply some sam filenames to convert");
+}
+
+
+foreach my $file(@ARGV){
+
+  if(&get_file_format($file) ne 'sam'){
+	 pod2usage( -exitval => 1,
+				-message => "Not a sam format file:\t$file");
+  }
+  
+  my $gz = (&is_gzip($file)) ? '.gz' : '';
+  my $file_operator = '';
+  $file_operator = "gzip -dc %s |"  if $gz;
+  
+  my $infile = open_file($file, $file_operator);
+  my $outfile = $file;
+  my $regex = ($gz) ? '\.sam\.gz' : '\.sam$';
+  $outfile =~ s/${regex}/\.bed/;
+  $outfile .= '.gz';
+  $outfile = open_file($outfile, '| gzip -c > %s');
+
+  print "Converting file to bed format:\t$file\n";
+  my @cache;
+
+  while(<$infile>){
+	next if(/^@/);#Skip header
+	chomp;
+	#(Query,flag,ref,pos,mapq,cigar,mrnm,mpos,isize,seq,quak,opt)
+	#my ($name, $flag, $slice_name, $pos, $mapq, $cigar, $mrnm, $mpos, $isize, $read, $quak, $opt) = split("\t");
+	my ($name, $flag, $slice_name, $pos, $mapq, undef, undef, undef, undef, $read) = split("\t");
+	next if $flag & 4;#Unmapped read. 
+	
+	#Query strand is in the 5th(index == 4) bit...  I'm assuming the reference strand never changes
+	#i.e. 2*4 = 16 bitwise 16 & 16 == 16 else 0
+	my $strand = ($flag & 16) ? '-' : '+';
+	my (undef, undef ,$seq_region_name) = split(":", $slice_name);
+	
+	#Can we put something better than 100 in score position?
+	#Do we really want the names in the bed file?
+	#SEQ_REGION_NAME, START, END, FEATURE_NAME, SCORE STRAND
+	print $outfile join("\t", ($seq_region_name, $pos, ($pos +length($read) -1), $name, $mapq, $strand));
+
+	if(scalar(@cache) == 1000){
+	  print $outfile join("\n", @cache)."\n";
+	  @cache = ();
+	}
+  }
+
+  print $outfile join("\n", @cache)."\n";
+
+  close $infile;
+  close $outfile;
+}
+1;
