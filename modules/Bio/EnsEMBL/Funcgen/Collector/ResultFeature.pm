@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.2 2010-01-27 10:55:36 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.3 2010-02-23 15:29:09 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
@@ -92,7 +92,6 @@ sub store_window_bins_by_Slice_ResultSet {
   #Then we can do tests here before calling super method
 
   $self->source_set_type('result');#required by get_Feature_by_Slice   
-  $self->result_set($rset);#needed for get_Features_by_Slice wrapper method below
   $self->set_collection_defs_by_ResultSet($rset);
  
   #When called this does not pass $self, so we would have to pass the result set explicitly
@@ -143,11 +142,9 @@ sub store_window_bins_by_Slice_Parser{
   #This needs to be defined when craeting the ResultSet in the Importer
   #NEED TO CHANGE ALL ResultSet generation to add type!!!!!
   
-  my ($wsize, $new_assm, $skip_zero_window) =
+  my ($wsizes, $new_assm, $skip_zero_window) =
     rearrange( [ 'WINDOW_SIZES', 'NEW_ASSEMBLY', 'SKIP_ZERO_WINDOW'], %config );
 
-
-  warn "config is now ".Data::Dumper::Dumper(\%config);
 
   #Can/should we think about pipelining this?
   #For a ChIP Seq set this would be two or three jobs with varying interdependencies
@@ -167,11 +164,21 @@ sub store_window_bins_by_Slice_Parser{
   
 
  
-  $self->source_set_type('input');#required by get_Feature_by_Slice 
+  $self->source_set_type('input');#required by get_Feature_by_Slice
   $self->set_collection_defs_by_ResultSet($imp->result_set);
   $self->parser($imp);
-  #Set all these defs directly here?
+ 
+  #For safety, set skip_zero window if we are using SEQUENCING data
+    
+  if(! $skip_zero_window){
+	#Assume we only have one set here(enforced in define_and_validate_sets)
+	my ($iset) = @{$imp->result_set->get_InputSets};
 
+	if($iset->format eq 'SEQUENCING'){
+	  $config{'-skip_zero_window'} = 1;
+	}
+  }
+ 
 
   #When called this does not pass $self, so we would have to pass the result set explicitly
   #Let's not pass a code ref, let's just write a wrapper instead
@@ -372,8 +379,12 @@ sub get_score_by_Feature{
 sub store_collection{
   my ($self, $wsize, $full_slice, $slice_start, $slice_end, $strand) =  @_;
 	  
+  #warn "Storing collection $wsize, $full_slice, $slice_start, $slice_end, $strand";
+
+
   my $sr_start = $slice_start;
   my $sr_end   = $slice_end;
+  $strand = 0 if ! defined $strand;
 
   #This happens if the last collection was already written in the loop
   #Handle this here so we don't have to set/test collection_start for every record
@@ -395,6 +406,7 @@ sub store_collection{
 
 
   ### Splice scores if collection overhang store slice
+  #We reassign this below to avoid any weird ref updating behaviour
   my $scores_ref = $self->score_cache($wsize);
 
   if($sr_end > $full_slice->end){
@@ -419,18 +431,22 @@ sub store_collection{
 
   }
  
+  print 'Storing '.scalar(@$scores_ref)." bins(window_size=$wsize) for:\t".$store_slice->name."\n";
 
-  $self->store([Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
-					($sr_start,
-					 $sr_end,
-					 $strand,
-					 $scores_ref,
-					 undef,#probe info
-					 $self->result_set->dbID,
-					 $wsize,
-					 $store_slice,
-					)], $self->result_set, $self->new_assembly);
+  $self->store([Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast({
+																			start  => $sr_start,
+																			end    => $sr_end,
+																			strand => $strand,
+																			scores => $scores_ref,
+																			#probe  => undef,
+																			result_set_id => $self->result_set->dbID,
+																			window_size   => $wsize,
+																			slice         => $store_slice,
+																		   }
+																		  )], $self->result_set, $self->new_assembly);
   
+  #Reassign/clean score_cache reference to avoid any reference updating problems
+ 
   $self->{'score_cache'}{$wsize} = [];
 
   #Set collection start, this is reset to the actual feature start for wsize == 0
@@ -458,6 +474,8 @@ sub store_collection{
 sub set_collection_defs_by_ResultSet{
   my ($self, $rset) = @_;
   
+  $self->result_set($rset);
+
   if(defined $rset){
 	#This is most likely already done in the caller
 	#$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
@@ -466,12 +484,12 @@ sub set_collection_defs_by_ResultSet{
 	
 	#This is called by fetch_all_by_Slice_ResultSet
 	#So we have to use $rset->table_name instead of source_set_type
-
 	
 	if($rset->table_name eq 'experimental_chip'){#i.e. is normal ResultSet with float result
 	  $self->{'packed_size'}   = 4;
 	  $self->{'pack_template'} = 'f';
 	  $self->{'bin_method'}    = 'max_magnitude';#only used by collector
+	  $self->{'window_sizes'}  = [0, 150, 300, 450, 600, 750];
 	}
 	elsif($rset->table_name eq 'input_set'){
 	  #Currently only expecting int from InputSet
@@ -494,13 +512,25 @@ sub set_collection_defs_by_ResultSet{
 	  $self->{'packed_size'}   = 2;
 	  $self->{'pack_template'} = 'v';
 	  $self->{'bin_method'}    = 'count';
+	  $self->{'window_sizes'}  = [50, 150, 300, 450, 600, 750];
 	}
 	else{
 	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
 	}		
   }
 
+  #Do we need to validate the smallest non-0 window size
+  #against the max pack size?
+  #This should be don in the Collector
+
+  #warn "Collection defs are:\n".
+#	"\tpacked_size:\t". $self->{'packed_size'}."\n".
+#	  	"\tpack_template:\t". $self->{'pack_template'}."\n".
+#		  "\tbin_method:\t". $self->{'bin_method'}."\n".
+#			"\twindow_sizes:\t". join(',', @{$self->{'window_sizes'}})."\n";
+
   return;
+
 }
 
 
@@ -534,7 +564,7 @@ sub result_set{
 	  #Retrieving ResultFeatures here would end up retrieving them from the result_feature table
 	  #which is where we want to store them
 	  #They are only retrived from the probe/result/probe_feature table if they do not have this status.
-	  #REMEMBER TO SET THIS IN THE CALLING SCRIPT!
+	  #REMEMBER TO SET THIS IN THE CALLING SCRIPT!?
 	#}
   
 	$self->{'result_set'} = $rset;

@@ -1,4 +1,4 @@
-# $Id: Collector.pm,v 1.1 2010-01-07 15:06:41 nj1 Exp $
+# $Id: Collector.pm,v 1.2 2010-02-23 15:30:11 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collector;
 #Move this to Bio::EnsEMBL::Utils::Collector for 58?
@@ -18,6 +18,17 @@ our ($pack_template, $packed_size, @window_sizes); #These get set in the Feature
 #Only really important for pack template and windows, maybe these if we are going to start
 #substr in mysql as we need be sure of the start/ends of what we will be fetching
 our $max_data_type_size = 16777216; #Default is 16MB for long blob
+#we need to deduct the size of the rest of the record here!
+#For a 2byte packet the smallest window size possible is:
+#(slice->length/(16777216/2)
+#so int(bin_size)+1
+#Obviously have to use the largest slice here, for human chr1:
+#249,250,621/(16777216/2) = 29.7???
+#
+#We may need to up this slightly to account for larger chrs?
+#Implications on memory usage? Is it 4 times for blob manipulation?
+#Does substr require this?
+
 our $max_view_width     = 500000;#Max width in Region In Detail;
 
 
@@ -44,7 +55,7 @@ our $max_view_width     = 500000;#Max width in Region In Detail;
 # Change adaptor to substr in DB based on known blob ranges/window size
 # and stitch together any which cross boundaries. This depends on speed of substr at end of large blob TEST!
 # Load with current code first and test this before making either change!
-
+# Delete empty (non-0) collections? i.e. For seq_regions which do not have any source features.
 
 #OLD notes
 
@@ -759,7 +770,7 @@ sub store_window_bins_by_Slice{
   #Other vars
   $self->new_assembly($new_assm);
 
-
+  #Need to validate slice here
 
   warn "temp hack for bin_method validation";
   $bin_method = $self->validate_bin_method($bin_method);
@@ -767,7 +778,7 @@ sub store_window_bins_by_Slice{
   ### Set window_sizes
   
   if($self->new_assembly){
-	warn 'Assembly projection may cause problems for large Collections, defaulting to window_sizes = (0)';
+	print "Assembly projection may cause problems for large Collections, defaulting to window_sizes = (0)\n";
 	#Then build the bins on the projected 0 level single ResultFeatures
 
 	#Test we haven't explicity set window_sizes to be soemthing else
@@ -775,7 +786,7 @@ sub store_window_bins_by_Slice{
 	if($window_sizes &&
 	   ! ( scalar(@$window_sizes) == 1 && $window_sizes[0] == 0)){
 
-	  throw("You have have set window_sizes config which are not safe when projecting to a new assembly($new_assm), please omit window_sizes config or set to 0");
+	  throw("You have set window_sizes config which are not safe when projecting to a new assembly($new_assm), please omit window_sizes config or set to 0");
 
 	}
 	$window_sizes = $self->window_sizes([0]);
@@ -807,7 +818,8 @@ sub store_window_bins_by_Slice{
 	$self->rollback_Features_by_Slice($slice);
   }
   else{
-	warn ref($self).' cannot rollback_Features_by_Slice. This may result in duplicate Collections being stored if there is pre-existing data';
+	#This is currently the only warn output we can't get rid off
+	warn ref($self)." cannot rollback_Features_by_Slice. This may result in duplicate Collections being stored if there is pre-existing data";
   }
 
 
@@ -815,7 +827,7 @@ sub store_window_bins_by_Slice{
   ### PROCESS CHUNKS
 
   #Not lightweight as we will be storing them
-  # Temporarily set the collection to be lightweight??? #Why?
+  # Temporarily set the collection to be lightweight???
   #my $old_value = $this->_lightweight();
   #if   ( defined($lightweight) ) { $this->_lightweight($lightweight) }
   #else                           { $this->_lightweight(1) }
@@ -980,6 +992,9 @@ sub store_window_bins_by_Slice{
 	  #We need to handle strandedness of slice!?	  
 	  
 	  #Store all normal features in result_feature
+
+
+	  
 	  if($store_natural){
 		
 		foreach my $feature(@$features){
@@ -1017,6 +1032,18 @@ sub store_window_bins_by_Slice{
 									$feature->strand,
 									$feature->scores,
 									);
+
+			#We can have problems here if the original score type
+			#does not match the collected score type
+			#For max magnitude this is not an issue
+			#as we take the larget value from the bin
+			#But for other methods this may not be true
+			#e.g. count
+			#Hence, if we want to preserve the 0 window
+			#We must account for this in the feature collector
+			#e.g. set_collection_defs_by_ResultSet_window_size?
+			#Just omit 0 window for reads
+
 		  }
 		}
 		
@@ -1152,9 +1179,10 @@ sub store_window_bins_by_Slice{
   
   foreach my $wsize(@{$self->window_sizes}){
 
-	next if $wsize == 0 && $store_natural == 0;
+	next if $wsize == 0 && ! $store_natural;
+	next if $wsize != 0 && $only_natural;
 
-	warn "Writing final $wsize window_size collection, this may result in slightly different bin numbers from counts due to removing overhanging bins past end of slice";
+	print "Writing final $wsize window_size collection, this may result in slightly different bin numbers from counts due to removing overhanging bins past end of slice\n";
 
 	$self->write_collection($wsize, $orig_slice);#store last collection
   }
@@ -1164,7 +1192,7 @@ sub store_window_bins_by_Slice{
   foreach my $wsize(sort (keys %counts)){
 	print "Generated ".$counts{$wsize}." bins for window size $wsize for ".$orig_slice->name."\n";
 	#Some may have failed to store if we are projecting to a new assembly
-	print "Need collection count here too, but would need methods for this?\n";
+	#Need collection count here too, but would need methods for this?
   }
 
   #Return this counts hash so we can print/log from the caller, hence we don't print in here?
@@ -1305,10 +1333,9 @@ sub _bin_features_by_window_sizes{
 #  }
  
   my $feature_index = 0;
-  my @bin_masks;
+  my ($bin_index, @bin_masks);
   #Also store local starts and ends as we currently calc this several times
-  my $lfeature_start;
-  my $lfeature_end;
+  
 
   #The following will remove the standardised coord windows
   #but should remove skew from bins. 
@@ -1378,20 +1405,23 @@ sub _bin_features_by_window_sizes{
 
 
 	  #reserve 0 for descendant defined method?
+	  if ( $method == 0 ) {
+		# ----------------------------------------------------------------
+		# For 'count' and 'density'.
+		
+		for ( $bin_index = $start_bin ;
+			  $bin_index <= $end_bin ;
+			  ++$bin_index ) {
+
+		  $bins{$wsize}->[$bin_index]++;
+
+		  #warn "setting $wsize bin $bin_index to ". $bins{$wsize}->[$bin_index];
+
+		}
+	  }
 
 =pod
 	
-	  if ( $method == 0 ) {
-		throw('Not implemented for method for count/density');
-		# ----------------------------------------------------------------
-		# For 'count' and 'density'.
-	  
-		for ( my $bin_index = $start_bin ;
-			  $bin_index <= $end_bin ;
-			  ++$bin_index ) {
-		  ++$bins[$bin_index];
-		}
-
 	  } elsif ( $method == 1 ) {
 		# ----------------------------------------------------------------
 		# For 'indices' and 'index'
@@ -1459,7 +1489,8 @@ sub _bin_features_by_window_sizes{
 		  
 		}						## end else [ if ( $start_bin == $end_bin)
 
-	  } elsif ( $method == 4 ) {
+	  } 
+	  elsif ( $method == 4 ) {
 		# ----------------------------------------------------------------
 		# For 'coverage'.
 		
@@ -1468,61 +1499,60 @@ sub _bin_features_by_window_sizes{
 		#Rather than coverage of feature as in fractional_count
 	  
 		
-		my $feature_start = $feature->[FEATURE_START] - $slice_start;
-		my $feature_end   = $feature->[FEATURE_END] - $slice_start;
-		
-		if ( !defined( $bin_masks[$start_bin] )
-			 || ( defined( $bin_masks[$start_bin] )
-				  && $bin_masks[$start_bin] != 1 ) ) {
-		  # Mask the $start_bin from the start of the feature to the end
-		  # of the bin, or to the end of the feature (whichever occurs
-		  # first).
-		  my $bin_start = int( $start_bin*$bin_length );
-		  my $bin_end = int( ( $start_bin + 1 )*$bin_length - 1 );
-		  for ( my $pos = $feature_start ;
-				$pos <= $bin_end && $pos <= $feature_end ;
-				++$pos ) {
-			$bin_masks[$start_bin][ $pos - $bin_start ] = 1;
-		  }
-		}
-		
-		for ( my $bin_index = $start_bin + 1 ;
-			  $bin_index <= $end_bin - 1 ;
-			  ++$bin_index ) {
-		  # Mark the middle bins between $start_bin and $end_bin as fully
-		  # masked out.
-		  $bin_masks[$bin_index] = 1;
-		}
-		
-		if ( $end_bin != $start_bin ) {
-		
-		  if ( !defined( $bin_masks[$end_bin] )
-			   || ( defined( $bin_masks[$end_bin] )
-					&& $bin_masks[$end_bin] != 1 ) ) {
-			# Mask the $end_bin from the start of the bin to the end of
-			# the feature, or to the end of the bin (whichever occurs
-			# first).
-			my $bin_start = int( $end_bin*$bin_length );
-			my $bin_end = int( ( $end_bin + 1 )*$bin_length - 1 );
-			for ( my $pos = $bin_start ;
-				  $pos <= $feature_end && $pos <= $bin_end ;
-				  ++$pos ) {
-			  $bin_masks[$end_bin][ $pos - $bin_start ] = 1;
-			}
-		  }
-		  
-		}
-		
-	  }							## end elsif ( $method == 4 )
+	#	my $feature_start = $feature->[FEATURE_START] - $slice_start;
+	#	my $feature_end   = $feature->[FEATURE_END] - $slice_start;
+	#	
+  	#	if ( !defined( $bin_masks[$start_bin] )
+	# 		 || ( defined( $bin_masks[$start_bin] )
+	#	 		  && $bin_masks[$start_bin] != 1 ) ) {
+ 	#	  # Mask the $start_bin from the start of the feature to the end
+ 	#	  # of the bin, or to the end of the feature (whichever occurs
+	#	  # first).
+ 	#	  my $bin_start = int( $start_bin*$bin_length );
+ 	#	  my $bin_end = int( ( $start_bin + 1 )*$bin_length - 1 ); 
+	#	  for ( my $pos = $feature_start;
+ 	#			$pos <= $bin_end && $pos <= $feature_end ;
+ 	#			++$pos ) {
+ 	#		$bin_masks[$start_bin][ $pos - $bin_start ] = 1;
+ 	#	  }
+ 	#	}
+ 	#	
+ 	#	for ( my $bin_index = $start_bin + 1 ;
+ 	#		  $bin_index <= $end_bin - 1 ;
+ 	#		  ++$bin_index ) {
+ 	#	  # Mark the middle bins between $start_bin and $end_bin as fully
+ 	#	  # masked out.
+ 	#	  $bin_masks[$bin_index] = 1;
+ 	#	}
+ 	#	
+ 	#	if ( $end_bin != $start_bin ) {
+ 	#	
+ 	#	  if ( !defined( $bin_masks[$end_bin] )
+ 	#		   || ( defined( $bin_masks[$end_bin] )
+ 	#				&& $bin_masks[$end_bin] != 1 ) ) {
+ 	#		# Mask the $end_bin from the start of the bin to the end of
+ 	#		# the feature, or to the end of the bin (whichever occurs
+ 	#		# first).
+ 	#		my $bin_start = int( $end_bin*$bin_length );
+ 	#		my $bin_end = int( ( $end_bin + 1 )*$bin_length - 1 );
+ 	#		for ( my $pos = $bin_start ;
+ 	#			  $pos <= $feature_end && $pos <= $bin_end ;
+ 	#			  ++$pos ) {
+ 	#		  $bin_masks[$end_bin][ $pos - $bin_start ] = 1;
+ 	#		}
+ 	#	  }
+  	#	}
+  	 # }							## end elsif ( $method == 4 )
 
 =cut
 
-	  if ( $method == 5 ) {
-		#average score
+	  
+		elsif ( $method == 5 ) {
+		  #average score
 		#This is simple an average of all the scores for features which overlap this bin
 		#No weighting with respect to the bin or the feature
 		
-		for ( my $bin_index = $start_bin ;
+		for ( $bin_index = $start_bin ;
 			  $bin_index <= $end_bin ;
 			  ++$bin_index ) {
 
@@ -1534,7 +1564,7 @@ sub _bin_features_by_window_sizes{
 	  elsif( $method == 6){
 		#Max magnitude
 		#Take the highest value +ve or -ve score
-		for ( my $bin_index = $start_bin ;
+		for ( $bin_index = $start_bin ;
 			  $bin_index <= $end_bin ;
 			  ++$bin_index ) {
 
@@ -1639,8 +1669,8 @@ sub _bin_features_by_window_sizes{
 	  }
 	}
   }
-  else{
-	throw('Only accomodates average_score method');
+  elsif($method != 0){#Do no post processing for count(0)
+	throw('Collector currently only accomodates average_score, count and max magnitude methods');
   }
 
 
@@ -1720,7 +1750,8 @@ sub validate_bin_method{
   my $class = ref($self);
   ${$class::VALID_BINNING_METHODS}{'average_score'} = 5;
   ${$class::VALID_BINNING_METHODS}{'max_magnitude'} = 6;
-
+  ${$class::VALID_BINNING_METHODS}{'count'} = 0;
+  
 
 
   
