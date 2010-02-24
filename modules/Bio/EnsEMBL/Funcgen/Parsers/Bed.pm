@@ -105,6 +105,7 @@ sub new{
 	  protocols => {()},
      )};
 	
+  $self->{'overhang_features'} = [];
 
   return $self;
 }
@@ -249,7 +250,8 @@ sub parse_line{
   #	#sanity check here
 
   return 0 if($line =~ /track name=/o);
-  
+  $line =~ s/\r*\n//o;#chump accounts for windows files
+
 
   my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;#Shoudl this not be \t?
   #Should we define minimum fields or microbed format with no naqme and just score?
@@ -330,6 +332,9 @@ sub parse_line{
 #Dependancy on creating features is overkill
 #altho not critical as this is never used for display
 
+#Should really move this to InputSet parser
+#Altho this would require an extra method call per line to parse the record
+
 sub parse_Features_by_Slice{
   my ($self, $slice) = @_;
 
@@ -353,15 +358,17 @@ sub parse_Features_by_Slice{
 
  
   my @features;
-  my $slice_end   = $slice->seq_region_end;
+  my $slice_end   = $slice->end;
   my $slice_start = $slice->start;
-  my $last_slice_end  = ($self->last_slice) ? $self->last_slice->end : ($slice_start - 1);  
-  my $last_slice_name = ($self->last_slice) ? $self->last_slice->seq_region_name : $slice->seq_region_name; 
+  my $last_slice  = $self->last_slice;
+  my $last_slice_end  = ($last_slice) ? $last_slice->end : ($slice_start - 1);  
+  my $last_slice_name = ($last_slice) ? $last_slice->seq_region_name : $slice->seq_region_name; 
   my $rset_id = $self->result_set->dbID;
 
   
-  if(! ($slice_start != ($last_slice_end + 1) &&
-		($slice->seq_region_name ne $last_slice_name))){
+  if(! ($slice_start == ($last_slice_end + 1) &&
+		($slice->seq_region_name eq $last_slice_name))){
+
 	throw("Bed parser does not yet support parsing features from successive non-adjacent Slices\n".
 		  "Last slice end - Next slice start:\t$last_slice_name:${last_slice_end} - ".
 		  $slice->seq_region_name.':'.$slice_start);
@@ -369,24 +376,20 @@ sub parse_Features_by_Slice{
 	
   
   #Deal with 5' overhang first
-   foreach my $feature(@{$self->overhang_features}){	#reslice feature here
+  foreach my $feature(@{$self->overhang_features}){	
 	$feature = $feature->transfer($slice);
-	push @features, $feature if $feature;
+	push @features, $feature if $feature;#This should always be true
   }
 
-  #reset overhang features
-  $self->overhang_features([]);
-	 
-
-  #Can we assign the file handle outside of the loop
-  #Then we don't have an additional method call for each record
+  $self->{'overhang_features'} = []; #reset overhang features
   my $fh = $self->file_handle;
   my ($line, $feature);
   my $parse = 1;
-
   #Add counts here, or leave to Collector?
 
-  while($parse){
+  while((defined ($line = <$fh>)) && $parse){
+	#This does not catch the end of the file!
+
 
 	if($self->last_line){#Deal with previous line first
 	  $line = $self->last_line;
@@ -396,11 +399,20 @@ sub parse_Features_by_Slice{
 	  $line = <$fh>;
 	}
 
+	#$line = <$fh>;
+	#Still need to chump here in case no other fields
+	$line =~ s/\r*\n//o;#chump accounts for windows files
+
+
+	die ("line undef") if ! $line;
+
 	#We could use a generic method to parse here
 	#But it is small enough and simple enough to have twice
 	my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;#Shoudl this not be \t?
 
 	if($slice_chr eq $chr){#Skim through the file until we find the slice
+	  #warn $line;
+	  
 
 	  if($end >= $slice_start){
 
@@ -409,16 +421,16 @@ sub parse_Features_by_Slice{
 		  #omit for speed
 	
 		  $feature =  Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
-			(
-			 ($start - $slice_start + 1),
-			 ($end - $slice_start + 1),
-			 $strand,
-			 [$score],
-			 undef,#probe info
-			 $rset_id,
-			 0,#wsize
-			 $slice,
-			);
+			({
+			  start         => ($start - $slice_start + 1),
+			  end           => ($end - $slice_start + 1),
+			  strand        => $strand,
+			  scores        => [$score],
+			  #undef,#probe info
+			  result_set_id => $rset_id,
+			  window_size   => 0,#wsize
+			  slice         => $slice,
+			 });
 
 		  push @features, $feature;
 		
@@ -429,7 +441,7 @@ sub parse_Features_by_Slice{
 		}
 		else{#feature is past end of current slice
 		  $parse = 0;
-		  $self->last_line($line);
+		  $self->last_line($line);#But maybe part of next slice chunk
 		}
 	  }
 	}
@@ -439,6 +451,34 @@ sub parse_Features_by_Slice{
 
   return \@features;
   
+
+}
+
+#Move some of these to InputSet Parser for use by other Parsers?
+
+
+sub last_line{
+ my ($self, $lline) = @_;
+
+ $self->{'last_line'} = $lline if defined $lline;
+ return  $self->{'last_line'};
+
+}
+
+sub last_slice{
+  my ($self, $lslice) = @_;
+
+  $self->{'last_slice'} = $lslice if $lslice;
+  return  $self->{'last_slice'};
+}
+
+
+sub overhang_features{
+  my ($self, $feature) = @_;
+
+  push @{$self->{'overhang_features'}}, $feature if $feature;
+
+  return $self->{'overhang_features'};
 
 }
 
