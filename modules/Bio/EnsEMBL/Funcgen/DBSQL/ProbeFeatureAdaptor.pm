@@ -534,6 +534,14 @@ sub _objs_from_sth {
 
 		if (!$slice) {
 			$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
+
+
+			if(! $slice){
+			  warn "Cannot get slice for seq_region_id $seq_region_id for probe_feature $probe_feature_id";
+			}
+
+
+
 			$slice_hash{'ID:'.$seq_region_id} = $slice;
 			$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
 			$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
