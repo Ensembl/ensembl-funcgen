@@ -1300,7 +1300,7 @@ sub rollback_ResultSet{
 	#Rollback results if required
 	if($rollback_results){
 
-	  $self->log("Rolling back result for ResultSet:\t".$rset->log_label);
+	  $self->log("Rolling back results for ResultSet:\t".$rset->log_label);
 
 	  #First we need to check whether these cc_ids are present in other result sets.
 	  #Get all associated data_sets
@@ -1338,11 +1338,13 @@ sub rollback_ResultSet{
 
 
 		#This also handles Echip status rollback
-		$self->rollback_results($rset->result_set_input_ids) if $rset->table_name ne 'input_set';
+		if ($rset->table_name ne 'input_set'){
+		  $self->log("Rolling back result table for ResultSet:\t".$rset->log_label);
+		  $self->rollback_results($rset->result_set_input_ids);
+		}
 
-		$self->log('Removing result_set_input entries from associated ResultSets');
+		$self->log('Removing result_set_input entries from associated ResultSets') if @assoc_rsets;
 		
-
 		if(! $slice){
 
 		  #Now remove cc_ids from associated rsets.
@@ -1594,7 +1596,10 @@ sub rollback_ResultFeatures{
   #And reciprocating part of the test :|
   my $db = $rset->adaptor->db;
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
-  $self->log("Rolling back result_features for ResultSet:\t".$rset->name.$slice_name);
+
+  #Do this conditionally on whether it is a result_feature_set?
+  #This may break if we have removed the status but not finished the rollback so no!
+  $self->log("Rolling back result_feature table for ResultSet:\t".$rset->name.$slice_name);
 
 
   #Rollback status entry
