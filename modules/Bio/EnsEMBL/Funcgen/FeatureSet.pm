@@ -61,13 +61,13 @@ use vars qw(@ISA);
 
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-                                                                    -dbid        => $dbid,
-                                                                    -analysis    => $analysis,
-                                                                    -feature_type => $ftype,
-                                                                    -cell_type => $ctype,
-                                                                    -name => $name,
-                                                                    -type => 'annotated',
-                                                                    -description => 'Release 3.1',
+                                                                    -dbid          => $dbid,
+                                                                    -analysis      => $analysis,
+                                                                    -feature_type  => $ftype,
+                                                                    -cell_type     => $ctype,
+                                                                    -name          => $name,
+                                                                    -feature_class => 'annotated',
+                                                                    -description   => 'Release 3.1',
                                                                     -display_label => 'Short name',
 			                                                       ); 
   Description: Constructor for FeatureSet objects.
@@ -92,7 +92,7 @@ sub new {
 
   #explicit type check here to avoid invalid types being imported as NULL
   #subsequently throwing errors on retrieval
-  my $type = $self->type;
+  my $type = $self->feature_class;
 
   if(! ($type && grep /$type/, ('annotated', 'external', 'regulatory'))){
 	throw("You must define a valid FeatureSet type e.g. 'annotated', 'external' or 'regulatory'");
@@ -214,7 +214,7 @@ sub display_label {
 
   Example    : 
   Description: Retrieves and caches FeatureAdaptor of feature_set type 
-  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::ucfirst($self->type())FeatureAdaptor
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::ucfirst($self->feature_class())FeatureAdaptor
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -236,7 +236,7 @@ sub get_FeatureAdaptor{
 							   )};
 
   }
-  return $self->{'adaptor_refs'}->{$self->type()};
+  return $self->{'adaptor_refs'}->{$self->feature_class()};
 
 }
 

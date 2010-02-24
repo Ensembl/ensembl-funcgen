@@ -354,10 +354,12 @@ sub get_InputSets{
 	return;
   }
 
-  if(! defined $self->{'inputs_sets'}){
+  
+
+  if(! defined $self->{'input_sets'}){
     my $is_adaptor = $self->adaptor->db->get_InputSetAdaptor();
     
-	foreach my $is_id(@{$self->table_ids()}){
+	foreach my $is_id(@{$self->table_ids()}){	
 	  push @{$self->{'input_sets'}}, $is_adaptor->fetch_by_dbID($is_id);
 	}
   }
