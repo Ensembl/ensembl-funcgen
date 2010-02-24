@@ -445,6 +445,8 @@ sub update_meta_coord{
 			  . " order by max desc limit 1";
 		
 		
+		$sql .= ' and t.window_size=0' if $table_name eq 'result_feature';
+
 		#warn $sql;
 		push @cs_lengths, [ $self->db->dbc->db_handle->selectrow_array($sql) ];
 	  }
