@@ -452,9 +452,9 @@ sub strip_param_args{
 #Generates slices from names or optionally alll default top level nonref
 
 sub generate_slices_from_names{
-  my ($slice_adaptor, $slice_names, $toplevel, $non_ref) = @_;
-  
-  my (@slices, $slice);
+  my ($slice_adaptor, $slice_names, $skip_slices, $toplevel, $non_ref) = @_;
+
+  my (@slices, $slice, $sr_name);
 
   if(@$slice_names){
 	
@@ -464,6 +464,10 @@ sub generate_slices_from_names{
 	  if(! $slice){
 		throw("Could not fetch slice:\t".$slice);
 	  }
+
+	  $sr_name = $slice->seq_region_name;
+
+	  next if(grep/^${sr_name}$/, @$skip_slices);
 
 	  push @slices, $slice;
 	}
