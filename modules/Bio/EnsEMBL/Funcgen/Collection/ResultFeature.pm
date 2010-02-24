@@ -76,6 +76,8 @@ use warnings;
 package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 use base ('Bio::EnsEMBL::Feature');#@ISA
 
+#This needs to inherit from Bio::EnsEMBL::Collection
+#Which can host some of the below methods
 
 #Reverted to hash implementation as we no longer deal with 
 #huge amounts of features due to collections.
@@ -153,6 +155,17 @@ sub result_set_id {
 
 sub window_size {  
   return $_[0]->{window_size};
+}
+
+
+sub get_min_max_scores{
+  
+  if(! defined $_[0]->{'min_max_scores'}){
+	my @sorted_scores = sort { $a <=> $b } @{$_[0]->{'scores'}};
+	$_[0]->{'min_max_scores'} = [$sorted_scores[0], $sorted_scores[$#sorted_scores]];
+  }
+
+  return $_[0]->{'min_max_scores'};
 }
 
 
