@@ -34,7 +34,8 @@
                      exist in the eFG DB. See ensembl-functgenomics/script/import/import_types.pl
   --exp_date         The date for the experiment.
   --result_files     Space separated list of result files paths (Used in InputSet imports e.g. Bed).
-  --slices           Space separated list of slice names to import(Only works for -input_set import)
+  --slices           Space separated list of slice names to import (only works for -input_set import)
+  --skip_slices      Space separated list of seq_region names to skip (only works for -input_set import)
 
  Experimental group (Mostly Mandatory)
   --format|f        Data format
@@ -153,12 +154,7 @@ my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $gr
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
 my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class);
-my ($parser, $fanal, $release, @result_files, @slices);
-
-#to be removed
-my ($import_dir);
-my $reg = "Bio::EnsEMBL::Registry";
-#?
+my ($parser, $fanal, $release, @result_files, @slices, @skip_slices);
 
 my $data_dir = $ENV{'EFG_DATA'};
 my $interactive = 1;
@@ -197,6 +193,7 @@ GetOptions (
 			"exp_date=s"         => \$exp_date,
 			'result_files=s{,}'  => \@result_files,
 			'slices=s{,}'        => \@slices,
+			'skip_slices=s{,}'   => \@skip_slices,
 
 
 			#Experimental group 
@@ -373,7 +370,8 @@ if(@slices || $input_feature_class eq 'result'){
 	print "No slices defined defaulting to current toplevel\n";
   }
 
-  @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, 1, 1)};
+  @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1)};
+
 }
 
 #farm behaves differently if slices not defined
