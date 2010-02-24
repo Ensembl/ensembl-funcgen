@@ -134,11 +134,6 @@ sub variation_feature_adaptor{
   return $self->{'variation_feature_adaptor'};
 }
 
-sub slice_adaptor{
- my $self = shift;
-  return $self->{'slice_adaptor'};
-}
-
 
 =head2 set_config
 
@@ -162,8 +157,8 @@ sub set_config{
   $self->{'variation_adaptor'} = $reg->get_adaptor($self->species, 'variation', 'Variation');
   $self->{'variation_feature_adaptor'} = $reg->get_adaptor($self->species, 'variation', 'VariationFeature');
   $self->{'gene_adaptor'} = $self->db->dnadb->get_GeneAdaptor;
-  $self->{'slice_adaptor'} = $self->db->dnadb->get_SliceAdaptor;
-  
+
+   
   my $species = $self->db->species;
   if(! $species){
 	throw('Must define a species to define the external_db');
@@ -182,8 +177,10 @@ sub pre_process_file{
   #$self->backup_file($file_name)
   #Let's just work with a copy rather than backing up.
 
-  my $new_path = $filepath.'.sorted';
 
+
+  #We could just do the sort on the fly as with gzip
+  my $new_path = $filepath.'.sorted';
   my $sort = 'sort -k 2 '.$filepath.' > '.$new_path;
   run_system_cmd($sort);
 
