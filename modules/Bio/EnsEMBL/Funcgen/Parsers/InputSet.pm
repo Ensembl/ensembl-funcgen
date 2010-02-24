@@ -231,9 +231,6 @@ sub define_sets{
 
   my $eset = $self->db->get_InputSetAdaptor->fetch_by_name($self->input_set_name);
   
-
-  warn "input ftype is ".$self->input_feature_class;
-
   if(! defined $eset){
 	$eset = Bio::EnsEMBL::Funcgen::InputSet->new
 	  (
@@ -326,10 +323,24 @@ sub validate_files{
   ### VALIDATE FILES ###
   #We need validate all the files first, so the import doesn't fall over half way through
   #Or if we come across a rollback halfway through
-  my (%new_data);
+  my (%new_data, $eset);
   my $recover_unimported = 0;
-  my ($eset) = @{$self->data_set->get_supporting_sets};
-  
+  my $dset = $self->data_set;
+   
+  if(scalar(@{$self->slices}) > 1){
+	throw('Validate files does not yet support multiple Slice rollback');
+  }
+
+  #This all assumes that there is only ever 1 InputSet
+
+  if ($self->input_feature_class eq 'annotated'){
+	$eset =  $dset->get_supporting_sets->[0]; 
+  }
+  elsif($self->input_feature_class eq 'result'){
+	$eset = $dset->get_supporting_sets->[0]->get_InputSets->[0];
+  }
+
+
   foreach my $filepath( @{$self->result_files} ) {
 	chomp $filepath;
 
@@ -369,14 +380,14 @@ sub validate_files{
 		  $self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
 
 		  if($self->input_feature_class eq 'annotated'){
-			$self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slice);
+			$self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
 			$self->rollback_InputSet($eset);
 			last;
 		  }			
 		  elsif($self->input_feature_class eq 'result'){
 			#Can we do this by slice for parallelisation?
 			#This will only ever be a single ResultSet due to Helper::define_and_validate_sets
-			$self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slice);
+			$self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0]);
 		  }
 		  #else{#Deal with output set_type validation in new
 		  #	
@@ -515,20 +526,16 @@ sub read_and_import_data{
   my $self = shift;
     
   $self->log("Reading and importing ".$self->vendor()." data");
-  my ($filename, $output_set, $fh, $f_out, %feature_params, @lines);
+  my ($eset, $filename, $output_set, $fh, $f_out, %feature_params, @lines);
+  my $dset   = $self->define_sets;
+  
 
-
-  #This now needs to be dependant on the output Set type
-  #i.e. FeatureSet or ResultSet.
   #We also need to account for bsub'd slice based import
   #seq alignments loaded into a ResultSet
   #Cannot have 0 window for ChIP Seq alignments
   #As this would mean storing all the individual reads
   #Hence we need to remap to a new assm before we import!
-  
-  my ($eset);
-  my $dset   = $self->define_sets;
-  
+    
   if ($self->input_feature_class eq 'annotated'){
 	$output_set = $dset->product_FeatureSet;
 	$eset =  $dset->get_supporting_sets->[0]; 
@@ -536,6 +543,7 @@ sub read_and_import_data{
   elsif($self->input_feature_class eq 'result'){
 	$output_set = $dset->get_supporting_sets->[0];
 	$eset = $output_set->get_InputSets->[0];
+	$self->result_set($output_set);#required for ResultFeature Collector and Bed Parser
   }
   
   #If we can do these the other way araound we can get define_sets to rollback the FeatureSet
@@ -598,7 +606,7 @@ sub read_and_import_data{
 		#Parsers::Import::Bed
 		#This can probably wait until we update BioPerl and just grab the Bed parser from there?
 
-		my $slices = @{$self->slices};
+		my $slices = $self->slices;
 
 		#Should this be caught in new?
 		if(! @$slices){
@@ -624,8 +632,14 @@ sub read_and_import_data{
 
 		warn "Need to update InputSubset status to IMPORTED after all slices have been loaded";
 		#Do we even need to set RESULT_FEATURE_SET for input_set ResultFeatures?
-	  
-	
+
+		
+		#Here we get an error from the sort
+		#as it is not closed, just the pipe
+		#Does this close call the overloaded method in FileHandle?
+		#close($fh);
+		warn "Closing $filename\nDisregard the following Broken pipe warning";
+		$fh->close;#Nope this doesn't catch it either
 	  }
 	  else{
 
@@ -822,13 +836,26 @@ sub set_strand{
 
 #filehandle
 
+
+sub file_handle{
+  my ($self, $fh) = @_;
+
+  #validate here?
+
+  $self->{'file_handle'} = $fh if defined $fh;
+
+  return $self->{'file_handle'};
+
+
+}
+
 sub result_set{
   my ($self, $rset) = @_;
 
-  #This is only ever populated internally
-  #so no need for validation?
+  #already tested/created by self
   
-
+  $self->{'result_set'} = $rset if $rset;
+  return $self->{'result_set'};
 }
 
 1;
