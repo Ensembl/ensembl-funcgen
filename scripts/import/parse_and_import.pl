@@ -13,8 +13,8 @@
 
  Options:
 
- Experiment (Mostly Mandatory)
-  --name|n           Instance/Experiment name. This will be used as the input/out_dir 
+ Experiment/Set (Mostly Mandatory)
+  --name|n           Instance/Experiment name. This will be used as the input/out_dir if applicable,
                      unless otherwise specified (--input_dir/--output_dir).
   --format|f         Format of experiment technology e.g. TILING.
   --vendor|v         Vendor of experiment technology e.g. NIMBLEGEN
@@ -23,15 +23,18 @@
   --parser           Selects the import parser to use e.g. NIMBLEGEN, Bed, Sanger.
   --array_name       Name of the set of array chips(Also see -array_set option)
   --result_set       Name to give the raw/normalised result set.
-  --experimental_set Name to give the ExperimentalSet for 
   --feature_type     The name of the FeatureType of the experiment e.g. H4K36me3.
+  --input_set        Defines the name of an InputSet import
+  --input_feature_class Defines the type of features being loaded via an InputSet(to be used 
+                     with -input_set e.g. result or annotated).
   --cell_type        The name of the CellType of the experiment.
   --feature_analysis The name of the Analysis used in the experiment.
   --norm|n           Normalisation method (default=vsn)
                      NOTE: FeatureType, CellType and Analysis(inc norm) entries must already 
                      exist in the eFG DB. See ensembl-functgenomics/script/import/import_types.pl
   --exp_date         The date for the experiment.
-  --result_files     Space separated list of result files paths (Used in Bed import).
+  --result_files     Space separated list of result files paths (Used in InputSet imports e.g. Bed).
+  --slices           Space separated list of slice names to import(Only works for -input_set import)
 
  Experimental group (Mostly Mandatory)
   --format|f        Data format
@@ -43,7 +46,8 @@
   --array_set       Flag to treat all chip designs as part of same array
   --ucsc_coords     Flag to define usage of UCSC coord system in source files (chr_start==0).
   --fasta           Fasta dump flag
-  --farm
+  --farm            Dependant on the import type, this either submits slice based import jobs or 
+                    array normalisation jobs to the farm
   --interactive
   --old_dvd_format  Flag to use the old NIMBLEGEN DVD format
   --recover         Flag to enable rollback and over-writing of previously imported data
@@ -83,9 +87,7 @@
   
  Other
   --tee             Outputs logs to STDOUT aswell as log file.
-  #--debug           Debug level (1-3). Not implemented
   --log_file        Defines the log file, default is $output_dir/"epxeriment_name".log
-  #--debug_file      Defines the debug file. Not implemented
   --help            Brief help message
   --man             Full documentation
   --verbose
@@ -140,6 +142,7 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Path;
 use Bio::EnsEMBL::Funcgen::Importer;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (strip_param_args generate_slices_from_names);
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
@@ -149,8 +152,8 @@ $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
-my ($reg_host, $reg_user, $reg_port, $reg_pass);
-my ($parser, $fanal, $release, @result_files);
+my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class);
+my ($parser, $fanal, $release, @result_files, @slices);
 
 #to be removed
 my ($import_dir);
@@ -165,6 +168,7 @@ my $host = 'localhost';
 my $port = '3306';
 my $fasta = 0;#Shouldn't this be on by default?
 my $verbose = 0;
+my $queue = 'long';
 
 #Definitely need some sort of Defs modules for each array?
 
@@ -184,13 +188,16 @@ GetOptions (
 			"parser=s"           => \$parser,
 			"array_name=s"       => \$array_name,
 			"result_set=s"       => \$rset_name,
-			"experimental_set=s" => \$exp_set,
+			"input_set=s"        => \$exp_set,
+			"input_feature_class=s" => \$input_feature_class,
 			"feature_type=s"     => \$ftype,
 			"feature_analysis=s" => \$fanal,
 			"cell_type=s"        => \$ctype,
 			"norm_method=s"      => \$nmethod,
 			"exp_date=s"         => \$exp_date,
 			'result_files=s{,}'  => \@result_files,
+			'slices=s{,}'        => \@slices,
+
 
 			#Experimental group 
 			"group|g=s"    => \$group,
@@ -199,12 +206,13 @@ GetOptions (
 
 			#Run modes
 			"fasta"          => \$fasta,
-			"farm=s"         => \$farm,
+			"farm"           => \$farm,
+			"queue=s"        => \$queue,
 			"recover|r"      => \$recover,
 			"old_dvd_format" => \$old_dvd_format,
 			"ucsc_coords"    => \$ucsc,
 			"interactive"    => \$interactive,
-			"array_set"          => \$array_set,
+			"array_set"      => \$array_set,
 
 			#MAGE
 			"write_mage"   => \$write_mage,
@@ -249,7 +257,7 @@ GetOptions (
 
 if (@ARGV){
   pod2usage( -exitval =>1,
-			 -message => "You have specified incomplete options:\t@tmp_args");
+			 -message => "You have specified unknown options/args:\t@ARGV");
 }
 
 throw("Nimblegen import does not support cmdline defined result files") if (@result_files && uc($vendor) eq "NIMBELGEN");
@@ -278,8 +286,12 @@ $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file)
 
 ### SET UP IMPORTER (FUNCGENDB/DNADB/EXPERIMENT) ###
 
+#If we have slices we need to submit these to the farm as individual jobs
+#We need to define the DBs here before we can generate the slices
+#Or can we just do the job submission in the InputSet?
+#No we really need all the args here.
 
-
+#Let's just deal with one slice for now.
 
 my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
   (
@@ -299,7 +311,8 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -ssh         =>  $ssh,
    -dbname      => $dbname,
    -array_set   => $array_set,
-   -experimental_set_name => $exp_set,
+   -input_set_name => $exp_set,
+   -input_feature_class => $input_feature_class,
    -array_name  => $array_name,
    -result_set_name => $rset_name, #not implemented yet
    -feature_type_name => $ftype,
@@ -331,7 +344,76 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
   );
 
 
-$Imp->register_experiment();
+#Need to think about how best to handle this job submission
+#Convert to pipeline?
+#Also need skip slices here
+#-top_level_slices
+#-farm
+#-no_farm
+
+#do not force farm here as people may not have access
+
+if($input_feature_class eq 'result' && 
+   ((! @slices) || (scalar(@slices) > 1)) 
+   && ! $farm){
+  die('ResultFeature Collections cannot be imported across all slices in one job.  It is more sensible to submit parallel jobs to the farm using the -farm option'); 
+}
+
+my $slice_adaptor = $Imp->slice_adaptor;
+
+
+
+if(@slices || $input_feature_class eq 'result'){
+
+  if($input_feature_class ne 'result'){
+	warn "You are setting slices for an input_feature_class which does not support slice based import:\t$input_feature_class\n";
+  }
+
+  if(! @slices){
+	print "No slices defined defaulting to current toplevel\n";
+  }
+
+  @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, 1, 1)};
+}
+
+#farm behaves differently if slices not defined
+#i.e. submit norm jobs to farm from within Importer
+#Will have to change this if we ever want to submit slice based 
+#jobs from within the Importer
+
+if(@slices && $farm){
+  #submit slice jobs to farm
+  #use Importer params to submit rather than @ARGV?
+  #Strip -farm and restrict to just one slice
+
+  #Can we put this in EFGUtils::bsub_by_Slice?
+  #Or just remove args?
+
+  my @args = @{&strip_param_args(\@tmp_args, ('slices'))};
+  my $args = "@args";
+  $args =~ s/ -farm( |$)//;
+  my $cmd = "perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl $args";
+  #qmy $lsf_out = $out_dir
+
+  foreach my $slice(@slices){
+	my $job_name = "parse_and_import_${name}_".$slice->name;
+
+	#-R "select[mem>20000] rusage[mem=20000] -M 20000000"? 
+	#Should probably use job arrays here as we already know how many jobs we are submitting, so we could use
+	#$LSB_JOBINDEX to pick out the correct slice from an ordered array
+
+	#Also need to redefine the log file as we will have many jobs writing to the same log file?
+	#Or can we just turn logging off and write to lsf outfile?
+	my $bsub_cmd="bsub -q $queue -J $job_name -o ${output_dir}/${job_name}.out -e ${output_dir}/${job_name}.err $cmd -slices ".$slice->name;
+
+	print "Submitting $job_name\n";
+	system($bsub_cmd) && die("Failed to submit job:\t$job_name\n$bsub_cmd");
+  }
+}
+else{
+  $Imp->slices(\@slices) if @slices;
+  $Imp->register_experiment();
+}
 
 
 1;
