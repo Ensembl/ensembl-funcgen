@@ -813,8 +813,16 @@ sub define_and_validate_sets{
 	  #Hence just throw if we find more than one or have a name mismatch
 	  my @stored_sets = @{$dset->get_supporting_sets};
 
+	  #THis assumes we will always have supporting sets
+	  #and is failing as we have removed this test in DataSet::new
+	  #But where are we storing it without the supporting set?
+
 	  if(scalar(@stored_sets) > 1){
 		throw('define_and_validate_sets does not yet support DataSets with multiple supporting ResultSets for result_features');
+	  }
+	  elsif(! @stored_sets){
+		throw("DataSet($name) does not have any stored supporting sets. These should have been defined when storing the DataSet");
+		#Or should we handle this?
 	  }
 
 	  $rset = $stored_sets[0];
@@ -846,7 +854,7 @@ sub define_and_validate_sets{
 	if (! defined $rset) {
 	  $rset = $rset_adaptor->fetch_all_by_name($name, $ftype, $ctype, $anal)->[0];
 	  #Should only ever be one given all parts of unique key
-	  @input_sets = @{$rset->get_InputSets};
+	  @input_sets = @{$rset->get_InputSets} if $rset;
 		
 	}
 
@@ -869,8 +877,10 @@ sub define_and_validate_sets{
 		#What about states if we are running in parallel?
 		#1 is result rollback flag
 
+		warn "slices is $slices";
+
 		if($slices){
-		  map $self->rollback_ResultSet($rset, 1, $_), @$slices;
+		  map {$self->rollback_ResultSet($rset, 1, $_)} @$slices;
 		}
 		else{
 		  $self->rollback_ResultSet($rset, 1);
@@ -1025,6 +1035,7 @@ sub define_and_validate_sets{
 									   ))};
 	}
 	else{
+	  warn "creating dataset $name with supporting set $rset";
 	  ($dset) = @{$dset_adaptor->store(Bio::EnsEMBL::Funcgen::DataSet->new
 									   (
 										-name => $name,
@@ -1083,6 +1094,7 @@ sub rollback_FeatureSet{
   $self->log_header('Rolling back '.$fset->feature_class." FeatureSet:\t".$fset->name);
 
   if($slice){
+
    	throw("Must pass a valid Bio::EnsEMBL::Slice") if (! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
 	$slice_name= "\t".$slice->name;
 	$self->log("Restricting to slice:\t".$slice_name);
@@ -1205,7 +1217,7 @@ sub rollback_FeatureSet{
 =head2 rollback_ResultSet
 
   Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
-  Arg[2]     : Boolean - optional flag to roll back IMPORT set results
+  Arg[2]     : Boolean - optional flag to roll back array results
   Example    : $self->rollback_ResultSet($rset);
   Description: Deletes all status. chip_channel and result_set entries for this ResultSet.
                Will also rollback_results sets if rollback_results specified.  This will also
@@ -1218,13 +1230,10 @@ sub rollback_FeatureSet{
 
 =cut
 
-#Can we do this by Slice?
-#As with FeatureSet?
-#would need to pass slice to all relevant callers
-#e.g. define_and_validate_sets
-#Would need to pass explicit InputSubset to rollback?
-#For parellelised bjobs status should be set after all have finished
-#Then we don't get any conflicts
+#Need to change slice to slices ref here
+#Need to add full rollback, which will specify to remove all sets
+#as well as results
+#These params need clarifying as their nature changes between input_set and array rsets
 
 sub rollback_ResultSet{
   my ($self, $rset, $rollback_results, $slice) = @_;
@@ -1273,7 +1282,7 @@ sub rollback_ResultSet{
 				"rollback_results argument if you simply want to redefine the ResultSet without loading any new data");
 		}
 	  }
-	  else{
+	  elsif(! defined $slice){
 		#Found rset in dset, but not yet processed so can remove safely.
 		$self->log("Removing supporting ResultSet from DataSet:\t".$dset->name."\tResultSet:".$rset->log_label);
 		$sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID.
@@ -1322,7 +1331,7 @@ sub rollback_ResultSet{
 	  if(! $feature_supporting){
 
 		#RollBack result_feature table first
-		$self->rollback_result_features($rset, $slice);
+		$self->rollback_ResultFeatures($rset, $slice);
 
 		#Now rollback other states
 		$rset->adaptor->revoke_states($rset);
@@ -1460,7 +1469,7 @@ sub rollback_InputSet{
 
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $eset);
 
-  $self->log("Rolling back ExperimentSet:\t".$eset->name);
+  $self->log("Rolling back InputSet:\t".$eset->name);
 
   #SubSets
   foreach my $esset(@{$eset->get_subsets}){
@@ -1468,9 +1477,6 @@ sub rollback_InputSet{
   }
 
   #InputSet
-  $eset->adaptor->revoke_states($eset);
-
-  
   $eset->adaptor->revoke_states($eset);
 
   return;
@@ -1566,6 +1572,16 @@ sub rollback_ResultFeatures{
   if($slice){
 
 	if(ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')){
+
+	  #Need to test for full slice here?
+	  my $full_slice = $slice->adaptor->fetch_by_region(undef, $slice->seq_region_name);
+
+	  if(($slice->start != 1) ||
+		 ($slice->end != $full_slice->end)){
+		throw("rollback_ResultFeatures does not yet support non-full length Slices:\t".$slice->name);
+	  }
+
+
 	  $slice_name = "\t".$slice->name;
 	  $slice_constraint = ' and seq_region_id='.$rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
 	}
@@ -1582,7 +1598,9 @@ sub rollback_ResultFeatures{
 
 
   #Rollback status entry
-  $rset->adaptor->revoke_state('RESULT_FEATURE_SET') if ! $no_revoke;
+  if($rset->has_status('RESULT_FEATURE_SET') && ! $no_revoke){
+	$rset->adaptor->revoke_status('RESULT_FEATURE_SET', $rset);
+  }
 
 
   #Cannot use revoke_states here?
@@ -1595,6 +1613,7 @@ sub rollback_ResultFeatures{
 		  $db->dbc->db_handle->errstr());
   }
 
+  #do we need to opt and analyze here?
   $self->reset_table_autoinc('result_feature', 'result_feature_id', $db);
 
   return;
