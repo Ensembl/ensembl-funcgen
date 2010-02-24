@@ -49,6 +49,7 @@
   --fasta           Fasta dump flag
   --farm            Dependant on the import type, this either submits slice based import jobs or 
                     array normalisation jobs to the farm
+  --no_log                 
   --interactive
   --old_dvd_format  Flag to use the old NIMBLEGEN DVD format
   --recover         Flag to enable rollback and over-writing of previously imported data
@@ -89,6 +90,7 @@
  Other
   --tee             Outputs logs to STDOUT aswell as log file.
   --log_file        Defines the log file, default is $output_dir/"epxeriment_name".log
+  --no_log          Prevents log file form being written, used to capture log in lsf out file.
   --help            Brief help message
   --man             Full documentation
   --verbose
@@ -239,6 +241,7 @@ GetOptions (
 			#Other params
 			"tee"          => \$main::_tee,
 			"log_file=s"   => \$main::_log_file,
+			"no_log"       => \$main::_no_log,
 			"debug_file=s" => \$main::_debug_file,
 			"debug=i"      => \$main::_debug_level,		
 			"help|?"       => \$help,
@@ -247,6 +250,9 @@ GetOptions (
 		   )   or pod2usage( -exitval => 1,
 							 -message => "Params are:\t@tmp_args"
 						   );
+
+
+print "parse_and_imports.pl @tmp_args\n";
 
 #Need to put these in an opt so we can test for the rest of ARGV i.e. we have missed an opt
 
@@ -278,8 +284,13 @@ chmod 0755, $output_dir;
 
 
 # pass as args?
-$main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
-$main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file);
+
+if(! $main::_no_log){
+  $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
+  $main::_debug_file = $output_dir."/${name}.dbg" if(! defined $main::_debug_file);
+}
+
+
 
 ### SET UP IMPORTER (FUNCGENDB/DNADB/EXPERIMENT) ###
 
@@ -367,11 +378,10 @@ if(@slices || $input_feature_class eq 'result'){
   }
 
   if(! @slices){
-	print "No slices defined defaulting to current toplevel\n";
+	$Imp->log("No slices defined defaulting to current toplevel");
   }
 
   @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1)};
-
 }
 
 #farm behaves differently if slices not defined
@@ -387,11 +397,13 @@ if(@slices && $farm){
   #Can we put this in EFGUtils::bsub_by_Slice?
   #Or just remove args?
 
-  my @args = @{&strip_param_args(\@tmp_args, ('slices'))};
+  my @args = @{&strip_param_args(\@tmp_args, ('slices', 'log_file', 'debug_file'))};
+  #Could have another one to strip param flags?
   my $args = "@args";
   $args =~ s/ -farm( |$)//;
   my $cmd = "perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl $args";
   #qmy $lsf_out = $out_dir
+
 
   foreach my $slice(@slices){
 	my $job_name = "parse_and_import_${name}_".$slice->name;
@@ -402,13 +414,21 @@ if(@slices && $farm){
 
 	#Also need to redefine the log file as we will have many jobs writing to the same log file?
 	#Or can we just turn logging off and write to lsf outfile?
-	my $bsub_cmd="bsub -q $queue -J $job_name -o ${output_dir}/${job_name}.out -e ${output_dir}/${job_name}.err $cmd -slices ".$slice->name;
+	
+	my $bsub_cmd="bsub -q $queue -J $job_name -o ${output_dir}/${job_name}.out -e ${output_dir}/${job_name}.err $cmd -no_log -slices ".$slice->name;
 
-	print "Submitting $job_name\n";
+	$Imp->log("Submitting $job_name");
 	system($bsub_cmd) && die("Failed to submit job:\t$job_name\n$bsub_cmd");
   }
 }
 else{
+
+  #If we have $LSB_INDEX here, we are running a slice based job array
+  #Do we really want to run an array?
+  #Will have less visibility of which job is running which slice?
+
+  #How can we detect if we are running on 
+  
   $Imp->slices(\@slices) if @slices;
   $Imp->register_experiment();
 }
