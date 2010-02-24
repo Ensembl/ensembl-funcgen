@@ -168,6 +168,27 @@ sub display_label {
 }
 
 
+=head2 is_focus_feature
+
+  Args       : None
+  Example    : if($feat->is_focus_feature){ ... }
+  Description: Returns true if AnnotatedFeature is part of a focus
+               set used in the RegulatoryBuild
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub is_focus_feature{
+  my $self = shift;
+
+  #Do we need to test for FeatureSet here?
+  
+  return $self->feature_set->is_focus_set;
+}
+
 
 1;
 
