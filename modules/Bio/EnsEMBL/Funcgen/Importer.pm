@@ -2707,49 +2707,4 @@ sub tidy_duplicates{
   return;
 }
 
-=head2 set_imported_states_by_Set
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Set e.g. a FeatureSet or ResultSet
-  Example    : $self->set_imported_states_by_Set($set);
-  Description: Sets default states for imported Feature|ResultSets
-  Returntype : None
-  Exceptions : None
-  Caller     : Parsers
-  Status     : At risk - Move to Status.pm?
-
-=cut
-
-sub set_imported_states_by_Set{
-  my ($self, $set) = @_;
-
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
-  #This should really be restricted to FeatureSet and ResultSet
-
-  #Store default states for FeatureSets
-  #DAS_DISPLAYABLE IMPORTED_'CSVERSION'
-  #These need to insert ignore as may already be present?
-  #Insert ignore may not catch an invalid status
-  #So add states and store states as this checks
-  $set->adaptor->store_status('DAS_DISPLAYABLE', $set);
-  
-
-  #To get assembly version here we need to
-  # 1 get the current default chromosome version
-  # or/and 
-  # 2 Use the assembly param to guess it from the coord_sys table
-  # #This may pose problems for DB names which use numbers in their genebuild version
-  # Would need to set this as a flag and/or specify the genebuild version too
-  # Currently dnadb is set to last dnadb with 'assembly' as default version
-  # We should match as test, just to make sure
-  
-  #Get default chromosome version for this dnadb
-  my $cs_version = $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version;
-
-  #Sanity check that it matches the assembly param?
-  #Woould need to do this if ever we loaded on a non-default cs version
-
-  $set->adaptor->store_status("IMPORTED_${cs_version}", $set);
-}
-
-
 1;
