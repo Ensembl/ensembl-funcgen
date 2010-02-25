@@ -41,7 +41,7 @@ Nathan Johnson njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzip is_sam is_bed get_file_format strip_param_args generate_slices_from_names);
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzipped is_sam is_bed get_file_format strip_param_args generate_slices_from_names);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -342,17 +342,29 @@ sub get_file_format{
   return $format;
 }
 
-sub is_gzip {
-  my $file = shift;
+sub is_gzipped {
+  my ($file, $fail_if_compressed) = @_;
 
   throw ("File does not exist:\t$file") if ! -e $file;
 
   open(FILE, "file -L $file |")
 	or throw("Can't execute command 'file' on '$file'");
-  my $retval = <FILE>;
+  my $file_info = <FILE>;
   close FILE;
 
-  return ($retval =~ m/gzip compressed data/) ? 1 : 0;
+  my $gzip = 0;
+
+  if($file_info =~ /compressed data/){
+
+	if($file_info =~ /gzip/){
+	  $gzip = 1;
+	}
+	else{
+	  throw("File is compressed but not with gzip, please unzip or gzip:\t$file_info");
+	}
+  }
+
+  return $gzip;
 }
 
 sub is_sam{
@@ -362,7 +374,7 @@ sub is_sam{
   #Could check for header here altho this is not mandatory!
   #Can we use web format guessing code?
 
-  my $gz = (&is_gzip($file)) ? '.gz' : '';
+  my $gz = (&is_gzip($file, 1)) ? '.gz' : '';
 
   return ($file =~ /.sam${gz}/) ? 'sam' : 0;
 }
@@ -373,7 +385,7 @@ sub is_bed {
   my ($file, $verbose) = @_;
 
   #Use open_file here!
-  if(&is_gzip($file)){
+  if(&is_gzip($file, 1)){
 	open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
   }
   else{
