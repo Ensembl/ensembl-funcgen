@@ -174,13 +174,11 @@ sub build_result_set_features{
   my ($self, $slice, $args) = @_;
 
   my ($id, $label, %score, @features);
+  my ($features, $params)     = @{$self->set->get_ResultFeatures_by_Slice($slice, undef, undef, $args->{'max_bins'})};
 
-  #Need to pass maxbins here to adaptor
+  warn "Max bins:\t".$args->{'max_bins'}."\nNumber of features: ".scalar(@{$features}).
+	"\nUsing bin size:\t".$params->{'window_size'}  if $self->{'debug'};
 
-  warn "max bins is ".$args->{'max_bins'};
-
-  my $features     = $self->set->get_ResultFeatures_by_Slice($slice, undef, undef, $args->{'max_bins'});
-  print "Number of features: ".scalar(@{$features})."\n" if ($self->{'debug'});
 
   my $type     = $self->config()->{'type'} || 'default';
   my $source   = $self->config()->{'source'} || $self->set->analysis->display_label;
@@ -200,40 +198,55 @@ sub build_result_set_features{
 			);
 
 
+  my $bin_size = $params->{'window_size'};
+
   foreach my $ft(@{$features}){
 	
 	#Set seq_region_start/end as we don't have direct access 
 	#using the current ResultFeature class
+
 	my $ft_start = $start + $ft->start();
-	my $ft_end   = $start + $ft->end();
+	my $true_end = $start + $ft->end();
+	my $ft_end   = $ft_start - 1;
 		
-        my $id = sprintf( "%s:%s,%s",
-                          $segment,
-                          $ft_start,
-                          $ft_end);
+	foreach my $score(@{$ft->scores}){
+
+	  if($bin_size == 0){
+		$ft_end = $true_end;
+	  }
+	  else{
+		$ft_end += $bin_size;
+	  }
+
+
+	  my $id = sprintf( "%s:%s,%s",
+						$segment,
+						$ft_start,
+						$ft_end);
        
-        push @features, {
-            
-						 'id'          => $id,
-						 'label'       => $id,
-						 'start'       => $ft_start,
-						 'end'         => $ft_end,
-						 'ori'         => $ori{$ft->strand},#change this to seq_region_strand when we cahnge to hash feature?
-						 'score'       => $ft->score,
-						 'method'      => $source,
-						 'type'        => $type,
-						 'typecategory'=> $type_cat,
-						 #'note'        => $note,
-						 #'link'        => '',
-						 #'linktxt'     => '',
-
-						 #Mandatory attrs
-						 'method' => $method,
-						 'phase'  => '-', 
-						 
-						}
-
-	  };
+	  push @features, {
+					   
+					   'id'          => $id,
+					   'label'       => $id,
+					   'start'       => $ft_start,
+					   'end'         => $ft_end,
+					   'ori'         => $ori{$ft->strand},#change this to seq_region_strand when we cahnge to hash feature?
+					   'score'       => $score,
+					   'method'      => $source,
+					   'type'        => $type,
+					   'typecategory'=> $type_cat,
+					   #'note'        => $note,
+					   #'link'        => '',
+					   #'linktxt'     => '',
+					   
+					   #Mandatory attrs
+					   'method' => $method,
+					   'phase'  => '-', 
+					  };					   
+		
+	  $ft_start += $bin_size;
+	}
+  }
 
   return @features;
 }
@@ -325,7 +338,7 @@ sub das_stylesheet{
             <TYPE id="default">
                 <GLYPH>
                     <HISTOGRAM>
-<LABEL>no</LABEL>
+                        <LABEL>no</LABEL>
                         <HEIGHT>30</HEIGHT>
                         <COLOR1>brown3</COLOR1>
                     </HISTOGRAM>
