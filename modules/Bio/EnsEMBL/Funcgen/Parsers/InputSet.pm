@@ -43,7 +43,7 @@ package Bio::EnsEMBL::Funcgen::Parsers::InputSet;
 
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file is_gzipped);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use strict;
@@ -376,7 +376,7 @@ sub validate_files{
 		if ( $self->recovery && $recover_unimported ) {
 		  $self->log("Rolling back results for InputSubset:\t".$filename);
 		  #Change these to logger->warn
-		  $self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set");
+		  $self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set? Unless slices defined");
 		  $self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
 
 		  if($self->input_feature_class eq 'annotated'){
@@ -560,15 +560,7 @@ sub read_and_import_data{
 	
 	if( $new_data->{$filepath} ){
 	  $seen_new_data = 1;
-
-	  #Do standard gzip test first
-	  my $compressed_data =  `file -L $filepath` or die "Can't execute 'file -L $filepath'";
-	  $self->{'input_gzipped'} = 1 if $compressed_data =~ /gzip/;
-	  if($compressed_data =~ /compressed/ && ! $self->input_gzipped){
-		throw("Bio::Ensembl::Funcgen::Parsers::ExternalSet only handles gzip compressed files, please uncompress $filepath manually before rerunning");
-	  }
-	  
-
+	  $self->{'input_gzipped'} = &is_gzipped($filepath);
 	  $filepath = $self->pre_process_file($filepath) if $self->can('pre_process_file');
 
 	  $self->log_header('Reading '.$self->vendor." file:\t".$filepath);
@@ -638,7 +630,7 @@ sub read_and_import_data{
 		#as it is not closed, just the pipe
 		#Does this close call the overloaded method in FileHandle?
 		#close($fh);
-		warn "Closing $filename\nDisregard the following Broken pipe warning";
+		warn "Closing $filename\nDisregard the following 'Broken pipe' warning";
 		$fh->close;#Nope this doesn't catch it either
 	  }
 	  else{
@@ -729,8 +721,9 @@ sub read_and_import_data{
   #see Helper::defined_and_validate_sets for more notes.
   #Is there any point in setting it if we don't revoke it?
   #To allow consistent status handling across sets. Just need to be aware of fset status caveat.
+  #Also currently happens with ResultFeatures loaded by slice jobs, as this may already be set by a parallel job
 
-  $self->set_imported_states_by_Set($output_set) if $seen_new_data;
+  $output_set->adaptor->set_imported_states_by_Set($output_set) if $seen_new_data;
 
   $self->log("No new data, skipping result parse") if ! grep /1/,values %{$new_data};
   $self->log("Finished parsing and importing results");  
