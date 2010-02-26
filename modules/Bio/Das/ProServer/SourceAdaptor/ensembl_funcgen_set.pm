@@ -147,7 +147,7 @@ sub coord_system_version{
 
 sub build_features{
   my ( $self, $args ) = @_;
-  print Dumper $args if ($self->{'debug'});
+  warn "build_features args are:\n".Dumper($args) if ($self->{'debug'});
   
   my $segment = $args->{'segment'};
   my $start   = $args->{'start'};
@@ -164,7 +164,7 @@ sub build_features{
 
   my $dnadb = $self->transport->adaptor->dnadb;
   my $slice = $dnadb->get_SliceAdaptor->fetch_by_region('chromosome', $segment, $start, $end, undef, $self->coord_system_version);
-  print Dumper $slice if ($self->{'debug'});
+  warn "Slice is:\t".$slice->name."\n" if ($self->{'debug'});
 
   return $self->$build_method($slice, $args);
 }
@@ -174,9 +174,9 @@ sub build_result_set_features{
   my ($self, $slice, $args) = @_;
 
   my ($id, $label, %score, @features);
-  my ($features, $params)     = @{$self->set->get_ResultFeatures_by_Slice($slice, undef, undef, $args->{'max_bins'})};
+  my ($features, $params)     = @{$self->set->get_ResultFeatures_by_Slice($slice, undef, undef, $args->{'maxbins'})};
 
-  warn "Max bins:\t".$args->{'max_bins'}."\nNumber of features: ".scalar(@{$features}).
+  warn "Max bins:\t".$args->{'maxbins'}."\nNumber of features: ".scalar(@{$features}).
 	"\nUsing bin size:\t".$params->{'window_size'}  if $self->{'debug'};
 
 
@@ -224,6 +224,9 @@ sub build_result_set_features{
 						$ft_start,
 						$ft_end);
        
+	  #warn "Got score $score";
+
+
 	  push @features, {
 					   
 					   'id'          => $id,
@@ -248,6 +251,8 @@ sub build_result_set_features{
 	}
   }
 
+  warn "Returning ".scalar(@features).' '.$self->set->name." ResultFeatures\n" if $self->{debug};
+
   return @features;
 }
 
@@ -269,6 +274,7 @@ sub build_feature_set_features{
   my $cat  = $self->config->{'typecategory'} ||  'feature_set';
   my $label_method = ($set_type eq 'regulatory') ? 'stable_id' : 'display_label';
   my $source   =  $self->config()->{'source'} || $self->set->analysis->display_label;  
+
 
   if(! defined $source){
 	croak('Cannot determine mandatory \'method\' attribute. Please set \'source\' in DAS config or analysis display_label');
@@ -313,6 +319,8 @@ sub build_feature_set_features{
 	  };
   }
   
+  warn "Returning ".scalar(@features).' '.$self->set->name." features\n" if $self->{debug};
+
   return @features;
 }
 
@@ -329,6 +337,10 @@ sub das_stylesheet{
   
   #print Dumper $self->{'set_name'};
   
+  #LABEL here is not in spec for HISTOGRAM/colour gradient
+  #Is used as Ensembl was adding labels by default which was not the correct behaviour
+  #hence this prevents DAS validation
+  #<LABEL>no</LABEL>
   if ($self->set->isa('Bio::EnsEMBL::Funcgen::ResultSet')){
 	return <<EOT;
 <!DOCTYPE DASSTYLE SYSTEM "http://www.biodas.org/dtd/dasstyle.dtd">
@@ -338,7 +350,6 @@ sub das_stylesheet{
             <TYPE id="default">
                 <GLYPH>
                     <HISTOGRAM>
-                        <LABEL>no</LABEL>
                         <HEIGHT>30</HEIGHT>
                         <COLOR1>brown3</COLOR1>
                     </HISTOGRAM>
