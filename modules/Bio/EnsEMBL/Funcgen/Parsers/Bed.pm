@@ -156,11 +156,11 @@ sub pre_process_file{
 
 
   if($self->input_gzipped){
-	$self->input_file_operator("gzip -dc %s | sort -k 1,3 |");
+	$self->input_file_operator("gzip -dc %s | sort -n -k 1,3 |");
   }
   else{
 	#This is really only required for read alignments
-	$self->input_file_operator("sort -k 1,3 %s |");
+	$self->input_file_operator("sort -n -k 1,3 %s |");
   }
 
   #We also need to set optional output filehandle here
@@ -404,7 +404,7 @@ sub parse_Features_by_Slice{
 	$line =~ s/\r*\n//o;#chump accounts for windows files
 
 
-	die ("line undef") if ! $line;
+	warn("Found empty line") if ! $line;
 
 	#We could use a generic method to parse here
 	#But it is small enough and simple enough to have twice
