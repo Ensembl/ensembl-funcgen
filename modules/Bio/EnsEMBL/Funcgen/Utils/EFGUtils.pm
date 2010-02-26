@@ -374,11 +374,7 @@ sub is_sam{
   #Could check for header here altho this is not mandatory!
   #Can we use web format guessing code?
 
-<<<<<<< EFGUtils.pm
   my $gz = (&is_gzipped($file, 1)) ? '.gz' : '';
-=======
-  my $gz = (&is_gzip($file, 1)) ? '.gz' : '';
->>>>>>> 1.16
 
   return ($file =~ /.sam${gz}/) ? 'sam' : 0;
 }
@@ -389,15 +385,10 @@ sub is_bed {
   my ($file, $verbose) = @_;
 
   #Use open_file here!
-<<<<<<< EFGUtils.pm
   if(&is_gzipped($file, 1)){
-=======
-  if(&is_gzip($file, 1)){
->>>>>>> 1.16
-	open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
-  }
-  else{
-	open(FILE, $file) or throw("Can't open file:\t$file");
+    open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
+  } else{
+    open(FILE, $file) or throw("Can't open file:\t$file");
   }
 
   my @line;
