@@ -188,8 +188,8 @@ my %types = (
 			 
 			 'bed'        => {(
 							   adaptor   => 'ensembl_funcgen_reads',
-							   hydra     => 'dbi',  
-							   transport => 'dbi',
+							   hydra     => 'ensembl_funcgen',  
+							   transport => 'ensembl_funcgen',
 							   basename  => "basename\t= bed\n",
 							   #This is used to fetch tables like "$basename"
 							   #So has to be mysql compliant wildcards?
@@ -531,8 +531,6 @@ if(! $headers_only){
  
   $ini_password = "\npassword          = $dbpass" if $dbpass;
 
- 
-
   # Set DBs & Adaptors
   if($dnadb_name){
 	$dnadb_pass ||= $dbpass;#used in config
@@ -593,6 +591,8 @@ if(! $headers_only){
   }
   
   map $_ =~ s/([0-9]+)/_$1/, @cs_versions;
+  my $coords = join(",Chromosome,$das_species -> $features_region; ", @cs_versions).
+		",Chromosome,$das_species -> $features_region;";
 
   if(! $not_hydra){
 
@@ -620,12 +620,12 @@ if(! $headers_only){
 	  #Do we want to be able to change this prefix?
 	  #Or can we drop it all together?
 	  
-	  foreach my $cs_version(@cs_versions){
+	  #foreach my $cs_version(@cs_versions){
 		
-		my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
-		$source_name = 'eFG_'.$type."s:$cs_version:".$source_name;
-		
-		print OUT "\n[${source_name}]
+	  my $source_name = $hydra_instance || $dbname.'@'.$dbhost.':'.$dbport;
+	  $source_name = 'eFG_'.$type."s:".$source_name;
+
+	  print OUT "\n[${source_name}]
 state           = on\n".
   $types{$type}{basename}.
 	"adaptor         = ".$types{$type}->{'adaptor'}."
@@ -643,14 +643,14 @@ dnadb_user      = ".$db->dnadb->dbc->username."
 dnadb_pass      = ".$db->dnadb->dbc->password."
 dnadb_name      = ".$db->dnadb->dbc->dbname."
 autodisconnect  = no
-coordinates     = $cs_version,Chromosome,$das_species -> $features_region;
+coordinates     = $coords
 \n\n";
 
 #;skip_registry = 1
 #;category      = sequencing
 #;method        = Solexa 1G	
 #;basename      = 
-	  }
+	  
 	  
 	}
 	close(OUT);
@@ -749,7 +749,7 @@ coordinates     = $cs_version,Chromosome,$das_species -> $features_region;
 		
 		warn "Need to set dnadb opt here if specified";
 		
-		foreach my $cs_version(@cs_versions){
+		#foreach my $cs_version(@cs_versions){
 
 		  print OUT "\n[${display_name}.${species}]
 state             = on
@@ -764,7 +764,8 @@ username          = ${dbuser}${ini_password}
 description       = $desc
 set_name          = $name
 set_id            = ".$set->dbID."
-coordinates     = $cs_version,Chromosome,$das_species -> $features_region";
+coordinates     = $coords
+";
 		
 #source            = SOURCE
 #category          = CATEGORY
@@ -818,7 +819,7 @@ coordinates     = $cs_version,Chromosome,$das_species -> $features_region";
 		#No need to set_config for individual set if defined
 		
 		
-	  }
+	#}
 	}
 	close(OUT);
 	close(HTML);
