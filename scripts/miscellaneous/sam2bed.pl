@@ -39,11 +39,12 @@ Unampped reads are filtered as appropriate and the MAPQ score is used as the bed
 use warnings;
 use strict;
 use Pod::Usage;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_file_format is_gzip open_file);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_file_format is_gzipped open_file);
 
 
 # To do
 # Utilise Bio::DB::Sam
+# Add filters on quality etc. See IDs code
 # Add GetOpt::long support:
 #     -No zip output?
 #     -submit to farm
@@ -65,7 +66,7 @@ foreach my $file(@ARGV){
 				-message => "Not a sam format file:\t$file");
   }
   
-  my $gz = (&is_gzip($file)) ? '.gz' : '';
+  my $gz = (&is_gzipped($file)) ? '.gz' : '';
   my $file_operator = '';
   $file_operator = "gzip -dc %s |"  if $gz;
   
@@ -95,7 +96,8 @@ foreach my $file(@ARGV){
 	#Can we put something better than 100 in score position?
 	#Do we really want the names in the bed file?
 	#SEQ_REGION_NAME, START, END, FEATURE_NAME, SCORE STRAND
-	print $outfile join("\t", ($seq_region_name, $pos, ($pos +length($read) -1), $name, $mapq, $strand));
+	push @cache, join("\t", ($seq_region_name, $pos, ($pos +length($read) -1), $name, $mapq, $strand));
+	#print $outfile join("\t", ($seq_region_name, $pos, ($pos +length($read) -1), $name, $mapq, $strand))."\n";
 
 	if(scalar(@cache) == 1000){
 	  print $outfile join("\n", @cache)."\n";
