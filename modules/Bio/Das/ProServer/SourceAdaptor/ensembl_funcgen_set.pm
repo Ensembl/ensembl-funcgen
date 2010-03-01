@@ -61,7 +61,7 @@ sub init
 	if($self->hydra){
 
 	  my $hydraname = $self->config->{'hydraname'};
-	  ($set_name = $self->dsn) =~ s/${hydraname}_//;
+	  ($set_name = $self->dsn) =~ s/${hydraname}://;
 	  my ($cs_level, $set_coords, $cs_version);
 	  ($set_name, $cs_version) = split ':', $set_name;
 	  #At present we don't strictly need this as dnadb is automatically
@@ -207,6 +207,10 @@ sub build_result_set_features{
 	my $ft_start = $start + $ft->start();
 	my $true_end = $start + $ft->end();
 	my $ft_end   = $ft_start - 1;
+
+	#Can we use seq_region_start/end here or do they have to be local to the slice?
+	#If not they we can change as ResultFeature is now hash based
+	#Can only do this for 0 wsize! So not much point
 		
 	foreach my $score(@{$ft->scores}){
 
