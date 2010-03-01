@@ -385,18 +385,11 @@ sub is_bed {
   my ($file, $verbose) = @_;
 
   #Use open_file here!
-<<<<<<< EFGUtils.pm
-  if(&is_gzipped($file, 1)){
-	open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
-  }
-  else{
-	open(FILE, $file) or throw("Can't open file:\t$file");
-=======
+  
   if(&is_gzipped($file, 1)){
     open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
   } else{
     open(FILE, $file) or throw("Can't open file:\t$file");
->>>>>>> 1.18
   }
 
   my @line;
