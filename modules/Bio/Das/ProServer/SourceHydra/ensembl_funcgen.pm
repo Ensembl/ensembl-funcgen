@@ -49,7 +49,7 @@ use Data::Dumper;
 use Carp;
 use Readonly;
 
-our $VERSION       = do { my ($v) = (q$Revision: 1.5 $ =~ /\d+/mxg); $v; };
+our $VERSION       = do { my ($v) = (q$Revision: 1.6 $ =~ /\d+/mxg); $v; };
 Readonly::Scalar our $CACHE_TIMEOUT => 30;
 
 
@@ -114,8 +114,15 @@ sub sources {
 			#Do we need to bind here to protext against injection from $basename and coordinates?
 			#Use default table_id of 1
 			my $sql = "select sn.name from status s, status_name sn where s.table_name='$table' and s.table_id=1 and s.status_name_id=sn.status_name_id and sn.name='IMPORTED_${cs_version}'";
+
 			my ($status_name) = $dbh->selectrow_array($sql);
 			push @{$self->{'_sources'}}, $hydraname.($table =~ /^.{$l}(.*)$/mx)[0] if $status_name;
+
+
+			#Remove all this and overload table anme with assm version!
+			#Then we can use this completely separately to rest of schema, what about DBAdaptor requirements?
+			#Do we need meta or anything?
+
 		  }
 		}
 		else{
@@ -150,14 +157,21 @@ sub sources {
 		#Would also need to support assembly in features query! 
 
 	
-	
 		foreach my $set(@{$adaptor->fetch_all('DAS_DISPLAYABLE')}){
-		 
+		  warn 'Found DAS_DISPLAYABLE '.ucfirst($self->config->{'set_type'})."Set:\t".$set->name."\n" if $self->{'debug'};
+
 		  foreach my $cs_version(@cs_versions){
 			
 			if($set->has_status("IMPORTED_${cs_version}")){
-			  #Have to add the version to the end of the source name?
-			  push @{$self->{'_sources'}}, $hydraname.'_'.$set->name.':'.$cs_version;
+			  warn "...has IMPORTED_${cs_version} status\n" if $self->{'debug'};
+ 			  #Have to add the version to the end of the source name?
+
+			  #Can we remove the assm version from the hydraname here?
+			  #Browsers does appear to filter based on coordinate_system_version(for bed?)
+			  #We also also have it in the set name
+			  #But we need to remove it from the display name
+
+			  push @{$self->{'_sources'}}, $hydraname.':'.$set->name.':'.$cs_version;
 			}
 		  }
 		}
