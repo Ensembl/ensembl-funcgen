@@ -1,8 +1,7 @@
-=pod
 
 =head1 NAME
 
-ensembl-efg rollback_experiment.pl
+ ensembl-efg rollback_experiment.pl
 
 =head1 SYNOPSIS
 
@@ -11,12 +10,13 @@ ensembl-efg rollback_experiment.pl
 =head1 OPTIONS
 
  Mandatory
-  -experiment|e    Experiment name
+  -experiment|e    Name of array based experiment
+  -feature_set     FeatureSet name
   -chip_ids|c      List of ExperimentalChip unique IDs (comma separated, no spaces)
   -pass|p          The MySQL password
   -dbname|n        Defines the eFG dbname if it is not standard
   -port            The port for the MySQL instance
-  -host|h          The MySQL host
+  -host            The MySQL host
   -user|u          The MySQL user name.
   -full_delete|f   Performs a full delete, removing 'non-complex' feature and result sets associated with this experiment.
   -force_delete|d  Forces a full delete of all experimental information, even if it is part of a combinved data set.
@@ -24,9 +24,6 @@ ensembl-efg rollback_experiment.pl
   -help            Brief help message
   -man             Full documentation
 
-=over 8
-
-=item B<-experiment|e>    Mandatory:  Name of the experiment to roll back.
 
 =head1 DESCRIPTION
 
@@ -47,56 +44,55 @@ use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::FeatureSet;
+use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 $| =1;
 
-my ($chips, $pass, $full_delete, @chips);
-my ($exp_name, $host, $dbname, $help, $man, $log_msg, $species, $force_delete);
-my ($port, $user);
+my ($chips, $pass, $full_delete, @chips, $fset_name);
+my ($exp_name, $host, $dbname, $log_msg, $species, $force_delete);
+my $port = $ENV{'EFG_PORT'};
+my $user = $ENV{'EFG_WRITE_USER'};
+
 my @tmp_args=@ARGV;
 
-die("This script needs to be updated and is currently unsafe");
+warn "@tmp_args";
 
 GetOptions (
 			"experiment|e=s"      => \$exp_name,
+			"feature_set=s"       => \$fset_name,
 			"chip_ids|c=s"        => \@chips,
 			"pass|p=s"            => \$pass,
 			"port=s"              => \$port,
 			"dbname|n=s"          => \$dbname,
-			"dbhost|h=s"          => \$host,
+			"host=s"              => \$host,
 			"species=s"           => \$species,
 			"user|u=s"            => \$user,
 			"full_delete|f"       => \$full_delete,
 			"force_delete|d"      => \$force_delete,
 			#"data_version|d=s"   => \$data_version,
-			"help|?"              => \$help,
-			"man|m"               => \$man,
+			"help|?"              => sub { pos2usage(-exitval => 0, 
+													 -message => "Params are:\t@tmp_args"); },
+			"man|m"               => sub { pos2usage(-exitval => 0, 
+													 -verbose => 2,
+													 -message => "Params are:\t@tmp_args"); },
 		   ) or pod2usage(
 							 -exitval => 1,
 							 -message => "Params are:\t@tmp_args"
 							);
 
-pod2usage(0) if $help;
-pod2usage(-exitstatus => 0, -verbose => 2) if $man;
-
-if(! $port){
-  $port = $ENV{'EFG_PORT'};
-  print "WARNING:\tDefaulting to port $port\n";
-}
-
-if(! $user){
-  $user = $ENV{'EFG_WRITE_USER'};
-  print "WARNING:\tDefaulting to user $user\n";
-}
-
-
-
+$port ||=3306;
+throw('Must define a -user paramter') if ! $user;
 throw('Must define a -dbname parameter') if ! $dbname;
-throw('Must define a -dbhost parameter') if ! $host;
+throw('Must define a -host parameter') if ! $host;
 throw('Must define a -pass parameter') if ! $pass;
-throw('Must define an -experiment_name parameter') if ! $exp_name;
+
+if($fset_name && $exp_name){
+  throw('Cannot sepcify -experiment and -feature_set, please choose one');
+}
+elsif(! ($fset_name || $exp_name)){
+  throw('Must define an -experiment|feature_set parameter');
+}
 
 $log_msg = "::\tRolling back experiment:\t$exp_name\n".
   "::\tOn:\t${host}:${port}:${dbname}\n";
@@ -122,14 +118,15 @@ print $log_msg;
 #do not delete data sets, just provide info about orphaned feature/data_sets?
 #we might not want to remove a feature set as it may be art of a combined experiment analysis
 
-my $dnadb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-												 -host => 'ens-staging',
-												 -dbname => 'homo_sapiens_core_55_37',
-												 -user => 'ensro',
-												 #-pass => $pass,
-												 -port => $port,
-												 -species => $species,
-												);
+#Need to add dnadb_host as parameter
+#my $dnadb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+#												 -host => 'ens-staging',
+#												 -dbname => 'homo_sapiens_core_55_37',
+#												 -user => 'ensro',
+#												 #-pass => $pass,
+#												 -port => $port,
+#												 -species => $species,
+#												);
 
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
@@ -139,7 +136,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -pass => $pass,
 						   						      -port => $port,
 													  -species => $species,
-													  -dnadb => $dnadb,
+													  #-dnadb => $dnadb,
 													 );
 
 
@@ -148,193 +145,211 @@ my $rset_a = $db->get_ResultSetAdaptor();
 my $dset_a = $db->get_DataSetAdaptor();
 my $ec_a = $db->get_ExperimentalChipAdaptor();
 my $fset_adaptor = $db->get_FeatureSetAdaptor();
+my $helper = Bio::EnsEMBL::Funcgen::Utils::Helper->new(
+													   no_log => 1,#default to STDOUT
+													  );
 
 
-my $exp = $exp_a->fetch_by_name($exp_name);
-throw("Experiment $exp_name does not exist in the database") if ! defined $exp;
+#Need to move this to Helper.pm
+if ($fset_name){
+  
+  my $fset = $fset_adaptor->fetch_by_name($fset_name);
 
-#do chips belong to experiment?
-if(@chips){
+  throw("Could not find FeatureSet $fset_name for rollback") if ! $fset;
+  
+  $helper->rollback_FeatureSet($fset, $force_delete, undef, $full_delete);
+  
+  #This currently just rollsback anntotated features, xrefs, states etc
+  #Full delete would remove records from feature_set? (supporting sets and experiment)
 
 
-  if($force_delete){
-	die "Cannot force delete when restricting to a chip list";
-  }
 
-  foreach my $chip(@chips){
-	
-	my $tmp_ec = $ec_a->fetch_by_unique_and_experiment_id($chip, $exp->dbID());
-
-	throw("ExperimentalChip $chip is not part of the Experiment $exp_name") if ! defined $tmp_ec;
-	#we could add a list of the ecs present here
-
-  }
 }
+else{#array experiment
+  die("This script needs to be updated and is currently unsafe for array experiment roll backs");
 
+  my $exp = $exp_a->fetch_by_name($exp_name);
+  throw("Experiment $exp_name does not exist in the database") if ! defined $exp;
+  
+  #do chips belong to experiment?
+  if(@chips){
+	
 
-# we also need to remove any result sets which are entirely consituted by the achips
-# also need to log which rsets have been removed
-
-my %table_syns = (
-				  channel => 'c',
-				  experimental_chip => 'ec',
-				 );
-
-#could maybe get all rsets first, get all ids, so we can compare to linked data_sets
-#skip delete data/feature_set if it is linked to another rset
-
-my @rsets = @{$rset_a->fetch_all_by_Experiment($exp)};
-my @rset_ids = map $_->dbID(), @rsets;
-my ($sql, %cc_ids, %no_delete_cc_ids, @simple_rsets, @rollback_rsets, %rollback_dsets);
-
-
-
-#The only way we can roll back just individual result_sets is to protect the IMPORT sets
-#then we can reconfigure other result_sets if we want to.
-#Not yet implemented
-
-#we need to check whether any of these rsets are used in combined data_sets using other experiment data
-#We then need log their cc_ids, skip the result delete and if we encounter these cc_ids in another rset, then we only delete the cc records pertaining to that rset.
-
-
-foreach my $rset(@rsets){
-
-  print "\n::\tChecking ResultSet:\t".$rset->name()."\n";
-  my $simple_rset = 1;
-
-  foreach my $dset(@{$dset_a->fetch_all_by_supporting_set($rset)}){
-	my @dsets;
-
-	foreach my $d_rset(@{$dset->get_supporting_sets()}){
-	  #implicit that this will always be a ResultSet
-
-	  my $rset_id = $d_rset->dbID();
-
-	  if(! grep/$rset_id/, @rset_ids){
-		#Contains other rset i.e. combined data set
-		push @dsets, $dset;
-	  }
+	if($force_delete){
+	  die "Cannot force delete when restricting to a chip list";
 	}
-
-
-	if (scalar(@dsets) == 0){
-	  #Not a complex dset, so can delete
-
-	  #But is this accounting for the specified chip_ids?
-	  #We need to filter these dsets based on the chip ids!!
-
-	  if(! exists $rollback_dsets{$dset->dbID}){
-		print "\n::\tIdentified DataSet for removal:\t".$dset->name()."\n";
-		$rollback_dsets{$dset->dbID} = $dset;
-	  }
+	
+	foreach my $chip(@chips){
+	  
+	  my $tmp_ec = $ec_a->fetch_by_unique_and_experiment_id($chip, $exp->dbID());
+	  
+	  throw("ExperimentalChip $chip is not part of the Experiment $exp_name") if ! defined $tmp_ec;
+	  #we could add a list of the ecs present here
+	  
 	}
-	else{
-	  #Found complex dset
+  }
+  
+  
+  # we also need to remove any result sets which are entirely consituted by the achips
+  # also need to log which rsets have been removed
+  
+  my %table_syns = (
+					channel => 'c',
+					experimental_chip => 'ec',
+				   );
+  
+  #could maybe get all rsets first, get all ids, so we can compare to linked data_sets
+  #skip delete data/feature_set if it is linked to another rset
+  
+  my @rsets = @{$rset_a->fetch_all_by_Experiment($exp)};
+  my @rset_ids = map $_->dbID(), @rsets;
+  my ($sql, %cc_ids, %no_delete_cc_ids, @simple_rsets, @rollback_rsets, %rollback_dsets);
+  
 
-	  if($force_delete){
-		die "force delete not yet implemented";
-		#Is this sensible to remove underlying data from a combined data set?
-		$simple_rset = 1;
-	  }
-	  else{
-		$simple_rset = 0;
 
-		print "::\tSkipping delete of ResultSet ".$rset->name." as it is used in the combined DataSets:\n\t"
-		  .join(', ', (map $_->name, @dsets))."\n";
+  #The only way we can roll back just individual result_sets is to protect the IMPORT sets
+  #then we can reconfigure other result_sets if we want to.
+  #Not yet implemented
+  
+  #we need to check whether any of these rsets are used in combined data_sets using other experiment data
+  #We then need log their cc_ids, skip the result delete and if we encounter these cc_ids in another rset, then we only delete the cc records pertaining to that rset.
+  
+  
+  foreach my $rset(@rsets){
+
+	print "\n::\tChecking ResultSet:\t".$rset->name()."\n";
+	my $simple_rset = 1;
+	
+	foreach my $dset(@{$dset_a->fetch_all_by_supporting_set($rset)}){
+	  my @dsets;
+	  
+	  foreach my $d_rset(@{$dset->get_supporting_sets()}){
+		#implicit that this will always be a ResultSet
 		
-		map {$no_delete_cc_ids{$_} = 1} @{$rset->chip_channel_ids};
+		my $rset_id = $d_rset->dbID();
+		
+		if(! grep/$rset_id/, @rset_ids){
+		  #Contains other rset i.e. combined data set
+		  push @dsets, $dset;
+		}
 	  }
-	}
-  }
-
-  #Have to do this here as we may not have a DataSet for a given ResultSet
-  push @simple_rsets, $rset if $simple_rset;
-}
-
-
-#Now we have an nr hash of data sets to remove, an nr list of result sets to remove and a nr hash of chip_channel_ids we don't want to remove from the result table
-#We haven't yet accunted for any user specified chip_ids
-
-#Now filter simple rsets for chip IDs
-my ($remove_rset, $remove_cc);
-
-foreach my $rset(@simple_rsets){
-  $remove_rset = 1;
-
-  foreach my $ec(@{$rset->get_ExperimentalChips()}){
-	$remove_cc = 1;
-	
-	#Is this working?
-	if(@chips){#delete only @chips
-	  my $uid = $ec->unique_id();
-
-	  if(! grep/$uid/, @chips){#other chips present, don't remove rset/cc
-		print "::\tResultSet contains other ExperimentalChip:\t".$ec->unique_id()."\n";
-		$remove_cc = 0;
-		$remove_rset = 0;
-	  }
-	}
-
-	if($remove_cc){
-	  #Need to filter here on no_delete_cc_ids
-	
-	  if($rset->table_name eq 'experimental_chip'){
-		$cc_ids{$rset->get_chip_channel_id($ec->dbID())} = $ec;
-	  }
-	  elsif($rset->table_name eq 'channel'){
-
-		foreach my $chan(@{$ec->get_Channels()}){
-		  $cc_ids{$rset->get_chip_channel_id($chan->dbID())} = $chan;
+	  
+	  
+	  if (scalar(@dsets) == 0){
+		#Not a complex dset, so can delete
+		
+		#But is this accounting for the specified chip_ids?
+		#We need to filter these dsets based on the chip ids!!
+		
+		if(! exists $rollback_dsets{$dset->dbID}){
+		  print "\n::\tIdentified DataSet for removal:\t".$dset->name()."\n";
+		  $rollback_dsets{$dset->dbID} = $dset;
 		}
 	  }
 	  else{
-		throw('rollback_experiment.pl does not yet accomodate non-chip roll backs');
-	  }
-   	}
-  }
-	
-  #clean result, chip_channel, experimental_chip and remove rset if required.
-  #do in staged delete, otherwise pseudo sets will fail as there will be no r with corresponding cc_id?
-  #do we have rsets on the pseuod level?  I think not?
-  #channels will be deleted by association with rsets ecs
-  #we may have an ec which is not part of an rset?
-  #so delete separately?
+		#Found complex dset
 
-
-  #Remove corresponding data_sets from hash if we are keeping this result_set
-  if(! $remove_rset){
-
-	foreach my $dset(@{$dset_a->fetch_all_by_supporting_set($rset)}){
-	  delete $rollback_dsets{$dset->dbID} if exists  $rollback_dsets{$dset->dbID};
-	}
-  }
-
-
-  if(! keys %cc_ids){
-	print "::\tResultSet does not contain specified ExperimentalChips\n";
-  }
-  else{#we have something to delete
-
-	if(! $remove_rset){
-	  print "::\tOther ExperimentalChips persist, skipping ResultSet delete for:\t".$rset->name()."\n";
-	}
-	else{
-	  push @rollback_rsets, $rset;
-	}
-  }
-}
-
-
-
-#Now remove filtered Features/DataSets
-if($full_delete){
-
-  foreach my $dset(values %rollback_dsets){
-	  
-	#delete feature_set first, so we don't ever have an orphaned feature_set
-	my $fset = $dset->product_FeatureSet();
+		if($force_delete){
+		  die "force delete not yet implemented";
+		  #Is this sensible to remove underlying data from a combined data set?
+		  $simple_rset = 1;
+		}
+		else{
+		  $simple_rset = 0;
 		  
-	if(defined $fset){
+		  print "::\tSkipping delete of ResultSet ".$rset->name." as it is used in the combined DataSets:\n\t"
+			.join(', ', (map $_->name, @dsets))."\n";
+		  
+		  map {$no_delete_cc_ids{$_} = 1} @{$rset->chip_channel_ids};
+		}
+	  }
+	}
+	
+	#Have to do this here as we may not have a DataSet for a given ResultSet
+	push @simple_rsets, $rset if $simple_rset;
+  }
+
+
+  
+  #Now we have an nr hash of data sets to remove, an nr list of result sets to remove and a nr hash of chip_channel_ids we don't want to remove from the result table
+  #We haven't yet accunted for any user specified chip_ids
+
+  #Now filter simple rsets for chip IDs
+  my ($remove_rset, $remove_cc);
+
+  foreach my $rset (@simple_rsets) {
+	$remove_rset = 1;
+
+	foreach my $ec (@{$rset->get_ExperimentalChips()}) {
+	  $remove_cc = 1;
+	
+	  #Is this working?
+	  if (@chips) {				#delete only @chips
+		my $uid = $ec->unique_id();
+
+		if (! grep/$uid/, @chips) {	#other chips present, don't remove rset/cc
+		  print "::\tResultSet contains other ExperimentalChip:\t".$ec->unique_id()."\n";
+		  $remove_cc = 0;
+		  $remove_rset = 0;
+		}
+	  }
+
+	  if ($remove_cc) {
+		#Need to filter here on no_delete_cc_ids
+	
+		if ($rset->table_name eq 'experimental_chip') {
+		  $cc_ids{$rset->get_chip_channel_id($ec->dbID())} = $ec;
+		} elsif ($rset->table_name eq 'channel') {
+
+		  foreach my $chan (@{$ec->get_Channels()}) {
+			$cc_ids{$rset->get_chip_channel_id($chan->dbID())} = $chan;
+		  }
+		} else {
+		  throw('rollback_experiment.pl does not yet accomodate non-chip roll backs');
+		}
+	  }
+	}
+	
+	#clean result, chip_channel, experimental_chip and remove rset if required.
+	#do in staged delete, otherwise pseudo sets will fail as there will be no r with corresponding cc_id?
+	#do we have rsets on the pseuod level?  I think not?
+	#channels will be deleted by association with rsets ecs
+	#we may have an ec which is not part of an rset?
+	#so delete separately?
+
+
+	#Remove corresponding data_sets from hash if we are keeping this result_set
+	if (! $remove_rset) {
+
+	  foreach my $dset (@{$dset_a->fetch_all_by_supporting_set($rset)}) {
+		delete $rollback_dsets{$dset->dbID} if exists  $rollback_dsets{$dset->dbID};
+	  }
+	}
+
+
+	if (! keys %cc_ids) {
+	  print "::\tResultSet does not contain specified ExperimentalChips\n";
+	} else {					#we have something to delete
+
+	  if (! $remove_rset) {
+		print "::\tOther ExperimentalChips persist, skipping ResultSet delete for:\t".$rset->name()."\n";
+	  } else {
+		push @rollback_rsets, $rset;
+	  }
+	}
+  }
+
+
+
+  #Now remove filtered Features/DataSets
+  if($full_delete){
+	
+	foreach my $dset(values %rollback_dsets){
+	  
+	  #delete feature_set first, so we don't ever have an orphaned feature_set
+	  my $fset = $dset->product_FeatureSet();
+	  
+	  if(defined $fset){
 	  print "::\tDeleting FeatureSet:\t".$fset->name()."\n";
 	  
 	  #delete status entries (should we do this first?)
@@ -443,4 +458,6 @@ if(! @{$exp->get_ExperimentalChips}){
   $db->dbc->do($sql) || throw("Failed to delete experimentl with dbID:\t".$exp->dbID);
 }else{
   print "::\tWARNING:\tSkipping full experiment delete as some data still persists.  The xml has not been changed to reflect the experimental chips you have deleted from this experiment\n::\tPlease update mage_xml manually\n";
+}
+
 }
