@@ -466,6 +466,8 @@ sub counts{
 }
 
 
+#Move this to Importer
+
 sub slices{
   my ($self, $slices) = @_;
 
@@ -481,8 +483,10 @@ sub slices{
 		throw("-slices parameter must be Bio::EnsEMBL::Slices (i.e. not $slice)");
 	  }
 	  
+	  #Removed cache_slice from here as this was
+	  #preventing us from identifying the seq_region in an input file
 
-	  my $full_slice = $self->cache_slice($slice->seq_region_name);
+	  my $full_slice = $self->slice_adaptor->fetch_by_name($slice->name);
 
 	  if(($slice->start != 1) ||
 		 ($slice->end != $full_slice->end)){
@@ -491,10 +495,8 @@ sub slices{
 	  }
 
 	  push @{$self->{seq_region_names}}, $slice->seq_region_name;
-	  
-
 	}
-		$self->{'slices'} = $slices;
+	$self->{'slices'} = $slices;
   }
 
   return $_[0]->{slices};
@@ -522,8 +524,14 @@ sub input_gzipped{
   return  $_[0]->{'input_gzipped'};
 }
 
+
+#sub preprocess_data{
+#  my $self = shift;
+#  $self->define_sets;
+#}
+
 sub read_and_import_data{
-  my $self = shift;
+  my ($self, $prepare) = @_;
     
   $self->log("Reading and importing ".$self->vendor()." data");
   my ($eset, $filename, $output_set, $fh, $f_out, %feature_params, @lines);
@@ -561,7 +569,7 @@ sub read_and_import_data{
 	if( $new_data->{$filepath} ){
 	  $seen_new_data = 1;
 	  $self->{'input_gzipped'} = &is_gzipped($filepath);
-	  $filepath = $self->pre_process_file($filepath) if $self->can('pre_process_file');
+	  $filepath = $self->pre_process_file($filepath, $prepare) if $self->can('pre_process_file');#&& ! $prepare?
 
 	  $self->log_header('Reading '.$self->vendor." file:\t".$filepath);
 
@@ -575,7 +583,8 @@ sub read_and_import_data{
 	  #$self->parse_header($fh) if $self->can('parse_header');
 
 	
-	  if($self->input_feature_class eq 'result'){
+	  if(($self->input_feature_class eq 'result') &&
+		! $prepare){
 
 		#Use the ResultFeature Collector here
 		#Omiting the 0 wsize
@@ -636,12 +645,11 @@ sub read_and_import_data{
 	  else{
 
 		#This slurp may need to go if data gets to large
-		my @lines = <$fh>;
-		close($fh);
-	  
+		  
 	  
 		#Revoke FeatureSet IMPORTED state here incase we fail halfway through
-		$output_set->adaptor->revoke_status('IMPORTED', $output_set) if $output_set->has_status('IMPORTED');
+		$output_set->adaptor->revoke_status('IMPORTED', $output_set) if ($output_set->has_status('IMPORTED') && (! $prepare));
+
 		#What about IMPORTED_"CSVERSION"
 		#This may leave us with an incomplete import which still has
 		#an IMPORTED_CSVERSION state
@@ -649,8 +657,9 @@ sub read_and_import_data{
 		#DAS currently only uses IMPORTED_CSVERSION
 		#This is okayish but we also need to write HCs for any sets 
 		#which do not have IMPORTED state!
-	 	  
-		foreach my $line (@lines) {
+		my $line;
+
+		while(defined ($line=<$fh>)){
 		  #Generic line processing
 		  #Move these to parse_line?
 		  $line =~ s/\r*\n//o;
@@ -670,7 +679,7 @@ sub read_and_import_data{
 		  #e.g. cisRED
 		  #Code refs?
 
-		  $self->count('Total lines') if $self->parse_line($line);		
+		  $self->count('Total lines') if $self->parse_line($line, $prepare);		
 
 		  #Here we depedant on whether we are parsing reads and using collection
 		  #We need to pass a coderef to the collection somehow, so this can read the data
@@ -679,30 +688,37 @@ sub read_and_import_data{
 
 		}
 	 
-		#Now we need to deal with anything left in the read cache
-		$self->process_params if $self->can('process_params');
+		close($fh);
+
+		if(! $prepare){
+		  #Now we need to deal with anything left in the read cache
+		  $self->process_params if $self->can('process_params');
 	  
-		#To speed things up we may need to also do file based import here with WRITE lock?
-		#mysqlimport will write lock the table by default?
-
-		$self->log('Finished importing '.$self->counts('features').' '.
-				   $output_set->name." features from:\t$filepath");
-
+		  #To speed things up we may need to also do file based import here with WRITE lock?
+		  #mysqlimport will write lock the table by default?
+		  
+		  $self->log('Finished importing '.$self->counts('features').' '.
+					 $output_set->name." features from:\t$filepath");
+		  
 		
-		my $sub_set = $eset->get_subset_by_name($filename);
-		$sub_set->adaptor->store_status('IMPORTED', $sub_set);
+		  my $sub_set = $eset->get_subset_by_name($filename);
+		  $sub_set->adaptor->store_status('IMPORTED', $sub_set);
 
+		}
 	  }
 	  
 
 		
 
-
-	  #Need to tweak this for slice based import
-	  $self->log('Finished importing '.$self->counts('features').' '.
-				 $output_set->name." features from:\t$filepath");
-	  
-	
+	  if($prepare){
+		$self->log("Finished preparing import from:\t$filepath");
+	  }
+	  else{
+		#Need to tweak this for slice based import
+		$self->log('Finished importing '.$self->counts('features').' '.
+				   $output_set->name." features from:\t$filepath");
+		
+	  }
 	
 	  
 	  foreach my $key (keys %{$self->counts}){
@@ -723,10 +739,11 @@ sub read_and_import_data{
   #To allow consistent status handling across sets. Just need to be aware of fset status caveat.
   #Also currently happens with ResultFeatures loaded by slice jobs, as this may already be set by a parallel job
 
-  $output_set->adaptor->set_imported_states_by_Set($output_set) if $seen_new_data;
-
-  $self->log("No new data, skipping result parse") if ! grep /1/,values %{$new_data};
-  $self->log("Finished parsing and importing results");  
+  if(! $prepare){
+	$output_set->adaptor->set_imported_states_by_Set($output_set) if $seen_new_data;
+	$self->log("No new data, skipping result parse") if ! grep /1/,values %{$new_data};
+	$self->log("Finished parsing and importing results");
+  }
     
   return;
 }
