@@ -41,7 +41,7 @@ Nathan Johnson njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzipped is_sam is_bed get_file_format strip_param_args generate_slices_from_names);
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzipped is_sam is_bed get_file_format strip_param_args generate_slices_from_names strip_param_flags);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -367,6 +367,8 @@ sub is_gzipped {
   return $gzip;
 }
 
+#Change these to also return the gz status
+
 sub is_sam{
   my $file = shift;
 
@@ -387,12 +389,16 @@ sub is_bed {
   #Use open_file here!
   
   if(&is_gzipped($file, 1)){
+	
     open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
-  } else{
+  } 
+  else{
     open(FILE, $file) or throw("Can't open file:\t$file");
   }
 
   my @line;
+
+ 
 
   while (<FILE>) {
 	chomp;
@@ -461,6 +467,19 @@ sub strip_param_args{
   return $args;
 }
 
+
+sub strip_param_flags{
+  my ($args, @strip_params) = @_;
+
+  my @args = @$args;
+
+  foreach my $flag(@strip_params){
+	@args = grep(!/[-]+${flag}$/, @args);
+  }
+
+  return \@args;
+}
+
 #Generates slices from names or optionally alll default top level nonref
 
 sub generate_slices_from_names{
@@ -474,7 +493,12 @@ sub generate_slices_from_names{
 	  $slice = $slice_adaptor->fetch_by_name($name);
 	
 	  if(! $slice){
-		throw("Could not fetch slice:\t".$slice);
+
+		$slice = $slice_adaptor->fetch_by_region(undef, $name);
+
+		if(! $slice){
+		  throw("Could not fetch slice:\t".$slice);
+		}
 	  }
 
 	  $sr_name = $slice->seq_region_name;
