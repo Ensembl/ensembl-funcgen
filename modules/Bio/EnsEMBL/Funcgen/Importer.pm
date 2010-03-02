@@ -1635,6 +1635,19 @@ sub get_config{
 =cut
 
 
+#Need to split this method?
+#Pre farm process
+#Define and store all sets, 
+#pre process input file once if required
+#How are we going to be able to tell wether this has been done successfully?
+#runner will catch error, therefore safe to assume that file is complete if farm job
+#unless we are not running with farm
+
+#farm specific processes
+#actually parse and store data
+
+#Can we separate these for different import types?
+
 sub register_experiment{
   my ($self) = shift;
   
@@ -1663,11 +1676,19 @@ sub register_experiment{
   $self->write_validate_experiment_config if $self->can('write_validate_experiment_config'); 
 
   #This is too array specific!
+  #Can we have an array of import_methods in the config?
+  #foreach my $method(@{$self->get_config{'import_methods'}}){
+  #$self->method;
+  #}
+  #We're already doing this in read_data for each of these data_types
 
-  $self->read_data("probe");
-  $self->read_data("results");  
   #Need to be able to run this separately, so we can normalise previously imported sets with different methods
   #should be able t do this without raw data files e.g. retrieve info from DB
+  #Is this implemented?
+  
+  $self->read_data("probe");
+  $self->read_data("results");
+
 
   my $norm_method = $self->norm_method();
   
@@ -1683,7 +1704,9 @@ sub register_experiment{
   return;
 }
 
-#Move array specific ones to Nimblegen.pm
+#Move array specific ones to Nimblegen.pm?
+#Also used by ArrayDesign and Sanger.pm
+#So need to create Array.pm baseclass, which is a Helper.
 
 =head2 store_set_probes_features
 
@@ -1761,7 +1784,7 @@ sub cache_slice{
 
   throw("Need to define a region_name to cache a slice from") if ! $region_name;
 
-  $cs_name ||= 'toplevel';
+  #$cs_name ||= 'toplevel';
   $self->{'slice_cache'} ||= {};
   $region_name =~ s/chr//;
   $region_name = "MT" if $region_name eq "M";
@@ -1770,10 +1793,33 @@ sub cache_slice{
   
   
   if (! exists $self->{'slice_cache'}->{$region_name}) {
-    $self->{'slice_cache'}->{$region_name} = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
-    warn("-- Could not generate a slice for ${cs_name}:$region_name\n") if ! defined $self->{'slice_cache'}->{$region_name};
+
+	my $slice = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
+
+	if(! $slice){
+	  $slice = $self->slice_adaptor->fetch_by_name($region_name);
+	}
+
+	
+	if(! $slice){
+	  warn("-- Could not generate a slice for ${cs_name}:$region_name\n");
+	}
+	else{
+	  my $sr_name = $slice->seq_region_name;
+
+	  if(@{$self->{seq_region_names}}){
+	 
+		if(! grep(/^${sr_name}$/, @{$self->{seq_region_names}})){
+		  #not on required slice
+		  return;
+		}
+	  }
+	  
+	}
+    
+	$self->{'slice_cache'}->{$region_name} = $slice;
   }
-  
+	
   return $self->{'slice_cache'}->{$region_name};
 }
 
