@@ -140,7 +140,7 @@ sub set_config{
 
 
 sub pre_process_file{
-  my ($self, $filepath) = @_;
+  my ($self, $filepath, $prepare) = @_;
 
   #We really just need to set file_operator here dependant on compression
 
@@ -153,14 +153,15 @@ sub pre_process_file{
   #We just need to parse the header first anyway?
   #How are we going to skip this in the sorted file?
   
-
+  my $sort = 'sort -n -k 1,3';
+  $sort = '' if $prepare;
 
   if($self->input_gzipped){
-	$self->input_file_operator("gzip -dc %s | sort -n -k 1,3 |");
+	$self->input_file_operator("gzip -dc %s | $sort |");
   }
   else{
 	#This is really only required for read alignments
-	$self->input_file_operator("sort -n -k 1,3 %s |");
+	$self->input_file_operator("$sort %s |");
   }
 
   #We also need to set optional output filehandle here
@@ -191,7 +192,6 @@ sub pre_process_file{
   }
 
 
-  #return $new_path;
   return $filepath;
 }
 
@@ -241,7 +241,7 @@ sub pre_process_file{
 #This should skip all entries which are not part of slices if slices defined
 
 sub parse_line{
-  my ($self, $line) = @_;
+  my ($self, $line, $cache_slice_only) = @_;
 
   #Need to handle header here for bed is always $.?
   #Also files which do not have chr prefix? i.e. Ensembl BED rather than UCSC Bed with is also half open coords
@@ -266,18 +266,13 @@ sub parse_line{
   # blockSizes - A comma-separated list of the block sizes. The number of items in this list should correspond to blockCount.
   # blockStarts - A comma-separated list of block starts. All of the blockStart positions should be calculated relative to chromStart. The number of items in this list should correspond to blockCount. 
   
-  $strand = $self->set_strand($strand);			   
 
-  if($self->ucsc_coords){
-	$start +=1;
-  }
-		   
   if(!  $self->cache_slice($chr)){
 	warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
 	return 0;
   }
   else{
-	
+	my $sr_name = $self->cache_slice($chr)->seq_region_name;
 
 	#This should really be in the InputSet Parser
 	#With the cache slice call
@@ -290,12 +285,20 @@ sub parse_line{
 	#Which may require cacheing or multiple feature storage
 
 	if(@{$self->{seq_region_names}}){
-
-	  if(! grep(/^$chr$/, @{$self->{seq_region_names}})){
+	 
+	  if(! grep(/^${sr_name}$/, @{$self->{seq_region_names}})){
 		#not on required slice
 		return 0;
 	  }
 	}
+
+
+	$strand = $self->set_strand($strand);			   
+
+	if($self->ucsc_coords){
+	  $start +=1;
+	}
+	
 
 	#This is generic count handled in InputSet 
 	$self->count('features');
@@ -420,6 +423,9 @@ sub parse_Features_by_Slice{
 		  #This is not accounting for -ve strand Slices yet
 		  #omit for speed
 	
+		  warn "pushing feature with score $score";
+
+
 		  $feature =  Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
 			({
 			  start         => ($start - $slice_start + 1),
