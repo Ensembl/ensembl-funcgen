@@ -18,9 +18,8 @@
                      unless otherwise specified (--input_dir/--output_dir).
   --format|f         Format of experiment technology e.g. TILING.
   --vendor|v         Vendor of experiment technology e.g. NIMBLEGEN
-                     This will be used to select the import parsers if the --parser
-                     is not defined.
-  --parser           Selects the import parser to use e.g. NIMBLEGEN, Bed, Sanger.
+                     This will be used to select the import parsers if --parser is not defined.
+  --parser           Selects the import parser to use e.g. Bed etc (Will override default vendor --parser)
   --array_name       Name of the set of array chips(Also see -array_set option)
   --result_set       Name to give the raw/normalised result set.
   --feature_type     The name of the FeatureType of the experiment e.g. H4K36me3.
@@ -34,7 +33,7 @@
                      exist in the eFG DB. See ensembl-functgenomics/script/import/import_types.pl
   --exp_date         The date for the experiment.
   --result_files     Space separated list of result files paths (Used in InputSet imports e.g. Bed).
-  --slices           Space separated list of slice names to import (only works for -input_set import)
+  --slices           Space separated list of slice names|seq_region_names to import (only works for -input_set import)
   --skip_slices      Space separated list of seq_region names to skip (only works for -input_set import)
 
  Experimental group (Mostly Mandatory)
@@ -72,6 +71,7 @@
   --species|s       Species name any standard e! species alias(will be reset to dbname/latin name e.g. "homo_sapiens")
  
   --ssh             Forces use of tcp protocol for using ssh forwarded ports from remote machine(remove and just specify 127.0.0.1 as host?)
+  --lsf_name        Name of host as monitored by lsf, default is host =~ s/-/_/ and prefixed with 'my' e.g. myensgenomics_1
 
  Core DB Connection (This will default to load from ensembldb.ensembl.org)
   --registry_host   Host to load registry from
@@ -145,7 +145,7 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Path;
 use Bio::EnsEMBL::Funcgen::Importer;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (strip_param_args generate_slices_from_names);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (strip_param_args generate_slices_from_names strip_param_flags);
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
@@ -155,7 +155,7 @@ $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
-my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class);
+my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host);
 my ($parser, $fanal, $release, @result_files, @slices, @skip_slices);
 
 my $data_dir = $ENV{'EFG_DATA'};
@@ -225,6 +225,7 @@ GetOptions (
 			"host|h=s"        => \$host,
 			"user|u=s"        => \$user,
 			"species|s=s"     => \$species,
+			"lsf_host=s"      => \$lsf_host,
 			"registry_user=s" => \$reg_user,
 			"registry_host=s" => \$reg_host,
 			"registry_pass=s" => \$reg_pass,
@@ -291,6 +292,54 @@ if(! $main::_no_log){
 }
 
 
+#Define import parser
+#This will override the default Vendor Parser type
+#Evals simply protect from messy errors if parser type not found
+my $parser_error;
+my $vendor_parser =  ucfirst(lc($vendor));
+
+eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";};
+ 
+if($@){
+  #Don't warn/throw yet as we might have a standard parser format
+  
+  $parser_error .= "There is no valid parser for the vendor your have specified:\t".$vendor.
+	"\nMaybe this is a typo or maybe you want to specify a default import format using the -parser option\n".$@;
+}
+
+if(defined $parser){
+  
+  #try normal case first
+  eval {require "Bio/EnsEMBL/Funcgen/Parsers/${parser}.pm";};
+  
+  if($@){
+	$parser = ucfirst(lc($parser));
+	
+	#Now eval the new parser
+	eval {require "Bio/EnsEMBL/Funcgen/Parsers/${parser}.pm";};
+	
+	if($@){
+	  my $txt = "There is no valid parser for the -parser format your have specified:\t".$parser."\n";
+	  
+	  if(! $parser_error){
+		$txt .= "Maybe this is a typo or maybe you want run with the default $vendor_parser parser\n";
+	  }
+		
+	  die($txt.$@);
+	}
+	
+	#warn about over riding vendor parser here
+	if(! $parser_error){
+	  #Can't log this as we haven't blessed the Helper yet
+	  warn("WARNING\t::\tYou are over-riding the default ".$vendor." parser with -parser ".$parser);
+	}
+  }
+}
+else{
+  die($parser_error) if $parser_error;
+  $parser = $vendor_parser;
+}
+
 
 ### SET UP IMPORTER (FUNCGENDB/DNADB/EXPERIMENT) ###
 
@@ -301,12 +350,16 @@ if(! $main::_no_log){
 
 #Let's just deal with one slice for now.
 
+#Only change this to $parser->new when we have implemented the changes in the parsers.
+#This involves changing the inheritance
+#and moving the set_defs methods into the new method
+
 my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
   (
    -name        => $name,
    -format      => $format,
    -vendor      => $vendor,
-   -parser      => $parser,
+   -parser      => $parser,##########################REMOVE THIS WHEN WE HAVE MADE THE CHANGES IN THE PARSER INHERITANCE
    -group       => $group,
    -pass        => $pass,
    -host        => $host,
@@ -362,14 +415,13 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
 #do not force farm here as people may not have access
 
 if($input_feature_class eq 'result' && 
-   ((! @slices) || (scalar(@slices) > 1)) 
-   && ! $farm){
+   ((! @slices) || (scalar(@slices) > 1)) && 
+   (! ($farm || $ENV{LSB_JOB_INDEX}))){
   die('ResultFeature Collections cannot be imported across all slices in one job.  It is more sensible to submit parallel jobs to the farm using the -farm option'); 
 }
 
+
 my $slice_adaptor = $Imp->slice_adaptor;
-
-
 
 if(@slices || $input_feature_class eq 'result'){
 
@@ -384,51 +436,78 @@ if(@slices || $input_feature_class eq 'result'){
   @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1)};
 }
 
-#farm behaves differently if slices not defined
+#-farm behaves differently if slices not defined
 #i.e. submit norm jobs to farm from within Importer
 #Will have to change this if we ever want to submit slice based 
 #jobs from within the Importer
 
-if(@slices && $farm){
-  #submit slice jobs to farm
-  #use Importer params to submit rather than @ARGV?
-  #Strip -farm and restrict to just one slice
+if(@slices && $farm && ! $ENV{LSB_JOBINDEX}){   #submit slice jobs to farm
+  #Strip -farm, set -no_log as we will use the lsf output and use job array to restrict to one slice
 
-  #Can we put this in EFGUtils::bsub_by_Slice?
-  #Or just remove args?
+  my @args = @{&strip_param_args(\@tmp_args, ('log_file', 'debug_file'))};
+  #@args = @{&strip_param_flags(\@tmp_args, ('farm'))};
+  my $cmd = "perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl @args";
 
-  my @args = @{&strip_param_args(\@tmp_args, ('slices', 'log_file', 'debug_file'))};
-  #Could have another one to strip param flags?
-  my $args = "@args";
-  $args =~ s/ -farm( |$)//;
-  my $cmd = "perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl $args";
-  #qmy $lsf_out = $out_dir
+  #We need to sort the file once here before submission
+  #As we are getting 'No space left on device' errors about /tmp space
+  #Was this dodgy formatted file?
+  #We could initialise the experiment before job submission, which would include any file sorts?
+  #Then pass a no sort flag? Which would skip the sort step of the file open.
+  #Currently all failures on NT contigs, so data is fine.
+  #Also sort fail wasn't captured?
+  #If we sort file first then we can also ID which slices we need to run by doing a cut | uniq on the sorted file.
+
+  #Define and store sets once here before setting off parallel farm jobs.
+  $Imp->slices(\@slices); #Set slices so we can preprocess the file
+  #This currently sets the slice cache
+  #But we want to trim this dependant on the input
+  $Imp->init_experiment_import;
+  $Imp->define_sets;
+  
+  #$Imp->read_and_import_data('prepare');
+  #This would require passing the names on the cmd line!
+  #Unless we want to read the file twice?
+  #Could just start parsing at the nth slice we encounter in the sorted file
+  #No, as we won't know the skip slices etc.
 
 
-  foreach my $slice(@slices){
-	my $job_name = "parse_and_import_${name}_".$slice->name;
+  #Set up batch job info
+  #Batches obnubilate the job info/output slightly as we don't know which slice is running
+  #@slices will be regenerated by each job, to avoid passing all slices names on cmd line
+  my $job_name = "parse_and_import_${name}";
 
-	#-R "select[mem>20000] rusage[mem=20000] -M 20000000"? 
-	#Should probably use job arrays here as we already know how many jobs we are submitting, so we could use
-	#$LSB_JOBINDEX to pick out the correct slice from an ordered array
-
-	#Also need to redefine the log file as we will have many jobs writing to the same log file?
-	#Or can we just turn logging off and write to lsf outfile?
-	
-	my $bsub_cmd="bsub -q $queue -J $job_name -o ${output_dir}/${job_name}.out -e ${output_dir}/${job_name}.err $cmd -no_log -slices ".$slice->name;
-
-	$Imp->log("Submitting $job_name");
-	system($bsub_cmd) && die("Failed to submit job:\t$job_name\n$bsub_cmd");
+  #This needs throttling as we are getting
+  #DBD::mysql::st execute failed: Out of resources when opening file './nj_mus_musculus_funcgen_57_37j/result_feature#P#p3.MYD' (Errcode: 24) at /nfs/users/nfs_n/nj1/src/ensembl-functgenomics/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultFeatureAdaptor.pm line 555, <GEN1> line 11801610.
+  #perror OS error code 24: Too many open files
+  
+  #This needs throttling!
+  if(! $lsf_host){
+	($lsf_host = 'my'.$host) =~ s/-/_/g;
   }
+  
+  #Load will only ever be 12 max, 1 for each connection and 10 for an active query
+  #Dropped duration to 5 as this only sets the interval at which LSF tries to submit jobs
+  #before using the select load level to submit any further jobs
+  
+  my $rusage = "-R \"select[($lsf_host<=700)] rusage[${lsf_host}=12:duration=5]\"";
+  my $bsub_cmd="bsub $rusage -q $queue -J \"${job_name}[1-".scalar(@slices)."]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err $cmd -no_log";
+  
+
+  $Imp->log("Submitting $job_name\n$bsub_cmd");
+  $Imp->log("Slices:\n\t".join("\n\t", (map $_->name, @slices))."\n");
+  system($bsub_cmd) && die("Failed to submit job:\t$job_name\n$bsub_cmd");
+
+  #	#-R "select[mem>20000] rusage[mem=20000] -M 20000000"? 
+  
+  
+  #Could wait here before:
+  #   checking job success
+  #   setting any extra slice specific status entries
+
+
 }
 else{
-
-  #If we have $LSB_INDEX here, we are running a slice based job array
-  #Do we really want to run an array?
-  #Will have less visibility of which job is running which slice?
-
-  #How can we detect if we are running on 
-  
+  @slices = ($slices[($ENV{LSB_JOBINDEX} - 1)]) if $ENV{LSB_JOBINDEX};
   $Imp->slices(\@slices) if @slices;
   $Imp->register_experiment();
 }
