@@ -75,6 +75,11 @@ use strict;
 use vars qw(@ISA);
 @ISA = qw(Bio::Root::Root);
 
+#List of valid rollback levels
+#To be used in conjunction with -full_delete
+my @rollback_tables = ('data_set', 'feature_set', 'result_set', 'input_set', 'experiment', 'array', 'array_chip', 'experimental_chip');
+
+
 ################################################################################
 
 =head2 new
@@ -1144,10 +1149,21 @@ sub rollback_FeatureSet{
 
 	foreach my $sset(@{$dset->get_supporting_sets}){	  
 	  #Maybe skip this if we defined slice?
-	  warn "Revoking states on InputSet(".$sset->name.") for partial slice based rollback\n" if($slice);
-	  $self->rollback_InputSet($sset) if $sset->isa('Bio::EnsEMBL::Funcgen::InputSet');
-	  $self->rollback_InputSet($sset);#add full delete here?
-	  #Do not want to rollback here for other type of sset
+
+	  #??? Do we want to do this?
+	  #This is dependant on the feature_class of the InputSet
+	  #result InputSets may have been imported as ResultFeatureCollections
+	  #So we want to leave those in place
+	  #annotated feature_class InputSets are directly imports, so the status of these refers
+	  #to the FeatureSet import status
+	  #Where is the imported status set for SWEmbl?
+
+	  if($sset->feature_class eq 'annotated'){
+		warn "Revoking states on InputSet(".$sset->name.") for partial slice based rollback\n" if($slice);
+		$self->rollback_InputSet($sset) if $sset->isa('Bio::EnsEMBL::Funcgen::InputSet');
+		$self->rollback_InputSet($sset);#add full delete here?
+		#Do not want to rollback here for other type of sset
+	  }
 	}
   }
   else{
@@ -1276,8 +1292,7 @@ sub rollback_ResultSet{
   if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
 	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
   }
- 
- 
+
 
   if($slice && $rset->table_name ne 'input_set'){
 	throw('Can only rollback_ResultSet by Slice if the ResultSet contains InputSets');	
