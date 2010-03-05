@@ -48,6 +48,7 @@
   --fasta           Fasta dump flag
   --farm            Dependant on the import type, this either submits slice based import jobs or 
                     array normalisation jobs to the farm
+  --queue           LSF queue to submit farm jobs to
   --no_log                 
   --interactive
   --old_dvd_format  Flag to use the old NIMBLEGEN DVD format
@@ -137,9 +138,6 @@ BEGIN{
 }
 	
 
-#use Bio::EnsEMBL::Root; #Only used for rearrange see pdocs
-#Roll own Root object to handle debug levels, logging, dumps etc.
-
 ### MODULES ###
 use Getopt::Long;
 use Pod::Usage;
@@ -155,27 +153,24 @@ $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
-my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host);
-my ($parser, $fanal, $release, @result_files, @slices, @skip_slices);
+my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host, $batch_job, $prepared);
+my ($parser, $fanal, $release, $format, @result_files, @slices, @skip_slices);
 
 my $data_dir = $ENV{'EFG_DATA'};
 my $interactive = 1;
-my $format = "tiled";
-my $user = "ensadmin";
+my $user = $ENV{'DB_USER'};
 my $host = 'localhost';
 my $port = '3306';
-my $fasta = 0;#Shouldn't this be on by default?
+my $fasta = 0;
 my $verbose = 0;
 my $queue = 'long';
 
-#Definitely need some sort of Defs modules for each array?
-
+#Helper config
 $main::_debug_level = 0;
 $main::_tee = 0;
+
+
 my @tmp_args = @ARGV;
-#Use some sort of DBDefs for now, but need  to integrate with Register, and have put SQL into (E)FGAdaptor?
-#Use ArrayDefs.pm module for some of these, class, vendor, format?
-#ArrayDefs would also contain paths to data and vendor specific parse methods?
 
 
 GetOptions (
@@ -197,15 +192,20 @@ GetOptions (
 			'slices=s{,}'        => \@slices,
 			'skip_slices=s{,}'   => \@skip_slices,
 
-
 			#Experimental group 
 			"group|g=s"    => \$group,
 			"location=s"   => \$loc,
 			"contact=s"    => \$contact,
 
 			#Run modes
-			"fasta"          => \$fasta,
-			"farm"           => \$farm,
+			'fasta'          => \$fasta,
+			'farm'           => \$farm,
+			'batch_job'      => \$batch_job, 
+			#Internal option to signify prepared batch job
+			'prepared'       => \$prepared, 
+			#Internal option to signify job has been previously prepared
+			#i.e. result_file name may differ from the original InputSubset name
+			#slightly different to batch_job as prepare may not always result in a changed file
 			"queue=s"        => \$queue,
 			"recover|r"      => \$recover,
 			"old_dvd_format" => \$old_dvd_format,
@@ -240,24 +240,28 @@ GetOptions (
 			"output_dir=s" => \$output_dir,
 		
 			#Other params
+			"help|?"       => \$help,
+			"man|m"        => \$man,
+			"verbose"      => \$verbose, # not implmented yet in Importer?
+			#Helper config
 			"tee"          => \$main::_tee,
 			"log_file=s"   => \$main::_log_file,
 			"no_log"       => \$main::_no_log,
 			"debug_file=s" => \$main::_debug_file,
 			"debug=i"      => \$main::_debug_level,		
-			"help|?"       => \$help,
-			"man|m"        => \$man,
-			"verbose"      => \$verbose, # not implmented yet in Importer?
-		   )   or pod2usage( -exitval => 1,
-							 -message => "Params are:\t@tmp_args"
-						   );
+		   )
+  or pod2usage( -exitval => 1,
+				-message => "Params are:\t@tmp_args"
+			  );
 
 
 print "parse_and_imports.pl @tmp_args\n";
 
-#Need to put these in an opt so we can test for the rest of ARGV i.e. we have missed an opt
 
-#my @result_files = @ARGV;
+if($batch_job && ! defined $ENV{'LSB_JOBINDEX'}){
+  throw('Your -batch_job is not running on the farm. Did you try and set this internal parameter manually?');
+}
+
 
 if (@ARGV){
   pod2usage( -exitval =>1,
@@ -282,9 +286,6 @@ die('Must provide a -species parameter') if ! defined $species;
 $output_dir  = $data_dir."/output/${species}/".uc($vendor)."/".$name;
 system("mkdir -p $output_dir -m 0755");
 chmod 0755, $output_dir;
-
-
-# pass as args?
 
 if(! $main::_no_log){
   $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
@@ -341,14 +342,18 @@ else{
 }
 
 
+if($input_feature_class eq 'result' && 
+   ((! @slices) || (scalar(@slices) > 1)) && #have more than one slice
+   (! ($farm || $batch_job))){
+  die('ResultFeature Collections cannot be imported across all slices in one job.  It is more sensible to submit parallel jobs to the farm using the -farm option'); 
+}
+
+if(@slices && ! $exp_set){
+  throw('-slices parameter is only valid for -input_set import');
+}
+
+
 ### SET UP IMPORTER (FUNCGENDB/DNADB/EXPERIMENT) ###
-
-#If we have slices we need to submit these to the farm as individual jobs
-#We need to define the DBs here before we can generate the slices
-#Or can we just do the job submission in the InputSet?
-#No we really need all the args here.
-
-#Let's just deal with one slice for now.
 
 #Only change this to $parser->new when we have implemented the changes in the parsers.
 #This involves changing the inheritance
@@ -390,6 +395,8 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -norm_method => $nmethod,
    -species     => $species,
    -farm        => $farm,
+   -batch_job   => $batch_job,
+   -prepared    => $prepared,
    -location    => $loc,
    -contact     => $contact,
    -verbose     => $verbose,
@@ -414,13 +421,6 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
 
 #do not force farm here as people may not have access
 
-if($input_feature_class eq 'result' && 
-   ((! @slices) || (scalar(@slices) > 1)) && 
-   (! ($farm || $ENV{LSB_JOB_INDEX}))){
-  die('ResultFeature Collections cannot be imported across all slices in one job.  It is more sensible to submit parallel jobs to the farm using the -farm option'); 
-}
-
-
 my $slice_adaptor = $Imp->slice_adaptor;
 
 if(@slices || $input_feature_class eq 'result'){
@@ -441,65 +441,78 @@ if(@slices || $input_feature_class eq 'result'){
 #Will have to change this if we ever want to submit slice based 
 #jobs from within the Importer
 
-if(@slices && $farm && ! $ENV{LSB_JOBINDEX}){   #submit slice jobs to farm
-  #Strip -farm, set -no_log as we will use the lsf output and use job array to restrict to one slice
-
-  my @args = @{&strip_param_args(\@tmp_args, ('log_file', 'debug_file'))};
-  #@args = @{&strip_param_flags(\@tmp_args, ('farm'))};
-  my $cmd = "perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl @args";
-
-  #We need to sort the file once here before submission
-  #As we are getting 'No space left on device' errors about /tmp space
-  #Was this dodgy formatted file?
-  #We could initialise the experiment before job submission, which would include any file sorts?
-  #Then pass a no sort flag? Which would skip the sort step of the file open.
-  #Currently all failures on NT contigs, so data is fine.
-  #Also sort fail wasn't captured?
-  #If we sort file first then we can also ID which slices we need to run by doing a cut | uniq on the sorted file.
-
+if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
+ 
   #Define and store sets once here before setting off parallel farm jobs.
   $Imp->slices(\@slices); #Set slices so we can preprocess the file
-  #This currently sets the slice cache
-  #But we want to trim this dependant on the input
   $Imp->init_experiment_import;
-  $Imp->define_sets;
+  $Imp->read_and_import_data('prepare');
+  #This sorts once to prevent 'No space left on device' errors about /tmp space
+  #Will actually parse and print the whole sorted file if required.
+  #So can take longer to run, but is cleaner and more likely to fail here instead
+  #of in mutiple batch jobs
+
+  #output-file is only set if data has been prepared in some way
+  my $prepared = ' -prepared ';
+  my $input_file;
+
+  if($input_file != $Imp->output_file){
+	$input_file = $result_files[0];
+	$prepared = '';
+  }
   
-  #$Imp->read_and_import_data('prepare');
-  #This would require passing the names on the cmd line!
-  #Unless we want to read the file twice?
-  #Could just start parsing at the nth slice we encounter in the sorted file
-  #No, as we won't know the skip slices etc.
+  
+  #strip slice params as we have already defined which slices to use
+  #strip log/debug_flie and set -no_log as we will use the lsf output
+  #redefine result file as prepared file
+  #set new slices as those which have been seen in the input
+  #so we don't have to run jobs for all toplevel seq_regions
+  my @args = @{&strip_param_args(\@tmp_args, ('log_file', 'debug_file', 'result_files', 'slices', 'skip_slices'))};
+  my $cmd = "time perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl -no_log -batch_job @args -result_files $input_file $prepared -slices ".join(' ', (map $_->seq_region_name, @slices));
+
+  #sub slices for keys in slice cache? This will lose any incomplete slice names?
+  #But we don't allow partial Slice imports yet!
+  #So it is fine to use the slice_cache keys
+  
+
 
 
   #Set up batch job info
   #Batches obnubilate the job info/output slightly as we don't know which slice is running
-  #@slices will be regenerated by each job, to avoid passing all slices names on cmd line
   my $job_name = "parse_and_import_${name}";
 
-  #This needs throttling as we are getting
-  #DBD::mysql::st execute failed: Out of resources when opening file './nj_mus_musculus_funcgen_57_37j/result_feature#P#p3.MYD' (Errcode: 24) at /nfs/users/nfs_n/nj1/src/ensembl-functgenomics/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultFeatureAdaptor.pm line 555, <GEN1> line 11801610.
-  #perror OS error code 24: Too many open files
-  
-  #This needs throttling!
-  if(! $lsf_host){
-	($lsf_host = 'my'.$host) =~ s/-/_/g;
-  }
-  
+  #Throttle
   #Load will only ever be 12 max, 1 for each connection and 10 for an active query
   #Dropped duration to 5 as this only sets the interval at which LSF tries to submit jobs
   #before using the select load level to submit any further jobs
+  #Is the load select too high or duration too low? We are getting a total load of 800-900 with ~130 jobs running
+  #Dropped to 600.
+
+  if(! $lsf_host){
+	($lsf_host = 'my'.$host) =~ s/-/_/g;
+  }
+  my $rusage = "-R \"select[($lsf_host<=600)] rusage[${lsf_host}=12:duration=5]\"";
+  #-R "select[mem>4000] rusage[mem=4000] -M 4000000"? 
+  my $bsub_cmd="bsub $rusage -q $queue -J \"${job_name}[1-".scalar(@slices)."]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err $cmd";
   
-  my $rusage = "-R \"select[($lsf_host<=700)] rusage[${lsf_host}=12:duration=5]\"";
-  my $bsub_cmd="bsub $rusage -q $queue -J \"${job_name}[1-".scalar(@slices)."]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err $cmd -no_log";
-  
+
+  #Still getting sort fail!!! Uncaught!!!!
+  #Need to be able to catch this
+  #Do we need to always prepare?
+  #Or at least always write sorted file, even if we are running in normal mode?
+
+
 
   $Imp->log("Submitting $job_name\n$bsub_cmd");
   $Imp->log("Slices:\n\t".join("\n\t", (map $_->name, @slices))."\n");
   system($bsub_cmd) && die("Failed to submit job:\t$job_name\n$bsub_cmd");
 
-  #	#-R "select[mem>20000] rusage[mem=20000] -M 20000000"? 
-  
-  
+   
+  warn "Can't set imported states for InputSubset and ResultSet until jobs have completed succesfully, please update manually for now.";
+  #Imported state may also be present even when we set a subset of slices!
+  #Hence wwe won't be able to import more slice data from the same file if we set it as IMPORTED!
+  #We currently get around this by never setting it, and always rolling back Slice based imports
+
   #Could wait here before:
   #   checking job success
   #   setting any extra slice specific status entries
@@ -507,7 +520,7 @@ if(@slices && $farm && ! $ENV{LSB_JOBINDEX}){   #submit slice jobs to farm
 
 }
 else{
-  @slices = ($slices[($ENV{LSB_JOBINDEX} - 1)]) if $ENV{LSB_JOBINDEX};
+  @slices = ($slices[($ENV{LSB_JOBINDEX} - 1)]) if $batch_job;
   $Imp->slices(\@slices) if @slices;
   $Imp->register_experiment();
 }
