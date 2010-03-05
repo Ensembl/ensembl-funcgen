@@ -86,6 +86,12 @@ use vars qw(@ISA);
                     -reg_config path to local registry config file (default = ~/ensembl.init || undef)
                     -design_type MGED term (default = binding_site_identification) get from meta/MAGE?
 
+                    -farm      Flag to submit jobs to farm e.g. normalisation jobs
+                    -batch_job Flag to signify that this Importer is running as a prepared batch/farm job
+                    -prepared  Flag to signify result files have been previously imported in prepare mode
+                               and file names will differ to those record in InputSubset
+
+
                     #-use_defaults This changes some mandatory parameters to optional, instead using either DEFAULT or the input file name for the following options -name, -input_set, -feature_type, -cell_type etc ???
 
                     -verbose
@@ -109,7 +115,7 @@ sub new{
 	  $array_name, $array_set, $array_file, $data_dir, $result_files,
 	  $ftype_name, $ctype_name, $exp_date, $desc, $user, $host, $port, 
 	  $pass, $dbname, $db, $assm_version, $design_type, $output_dir, $input_dir,
-	  $farm, $ssh, $fasta, $recover, $reg_config, 
+	  $batch_job, $farm, $prepared, $ssh, $fasta, $recover, $reg_config, 
 	  $norm_method, $old_dvd_format, $feature_analysis, $reg_db, $parser_type, 
 	  $ucsc_coords, $verbose, $fset_desc, $release, $reg_host, $reg_port, $reg_user, $reg_pass)
 	= rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 'SPECIES', 
@@ -117,10 +123,10 @@ sub new{
 				 'FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'EXPERIMENT_DATE', 'DESCRIPTION',
 				 'USER', 'HOST', 'PORT', 'PASS', 'DBNAME', 'DB', 'ASSEMBLY', 'DESIGN_TYPE',
 				 'OUTPUT_DIR', 'INPUT_DIR',	#to allow override of defaults
-				 'FARM', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 'NORM_METHOD', 'OLD_DVD_FORMAT',
-				 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 'UCSC_COORDS', 'VERBOSE',
-				 'FEATURE_SET_DESCRIPTION', 'RELEASE', 'REGISTRY_HOST', 'REGISTRY_PORT',
-				'REGISTRY_USER', 'REGISTRY_PASS'], @_);
+				 'BATCH_JOB', 'FARM', 'PREPARED', 'SSH', 'DUMP_FASTA', 'RECOVER', 'REG_CONFIG', 
+				 'NORM_METHOD', 'OLD_DVD_FORMAT', 'FEATURE_ANALYSIS', 'REGISTRY_DB', 'PARSER', 
+				 'UCSC_COORDS', 'VERBOSE', 'FEATURE_SET_DESCRIPTION', 'RELEASE', 'REGISTRY_HOST', 
+				 'REGISTRY_PORT', 'REGISTRY_USER', 'REGISTRY_PASS'], @_);
 
   
  
@@ -228,6 +234,8 @@ sub new{
   $self->{'output_dir'} = $output_dir if $output_dir; #config default override
   $self->{'input_dir'} = $input_dir if $input_dir; #config default override
   $self->farm($farm) if $farm;
+  $self->batch_job($batch_job);
+  $self->prepared($prepared);
   $self->{'ssh'} = $ssh || 0;
   $self->{'_dump_fasta'} = $fasta || 0;
   $self->{'recover'} = $recover || 0;
@@ -241,6 +249,7 @@ sub new{
   $self->{'verbose'} = $verbose || 0;
   $self->{'release'} = $release;
 
+  
  
   if($reg_host && $self->{'reg_config'}){
 	warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
@@ -1792,29 +1801,26 @@ sub cache_slice{
   #can we handle UN/random chromosomes here?
   
   
-  if (! exists $self->{'slice_cache'}->{$region_name}) {
-
+  if (! exists $self->{'seen_slice_cache'}->{$region_name}) {
 	my $slice = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
 
 	if(! $slice){
+	  #Incomplete slices may break things?
 	  $slice = $self->slice_adaptor->fetch_by_name($region_name);
 	}
 
+	$self->{seen_slice_cache}{$region_name} = $slice;
 	
+
 	if(! $slice){
 	  warn("-- Could not generate a slice for ${cs_name}:$region_name\n");
 	}
 	else{
-	  my $sr_name = $slice->seq_region_name;
+	  my $sr_name = $slice->seq_region_name; #In case we passed a slice name
 
 	  if(@{$self->{seq_region_names}}){
-	 
-		if(! grep(/^${sr_name}$/, @{$self->{seq_region_names}})){
-		  #not on required slice
-		  return;
-		}
+		return if ! grep(/^${sr_name}$/, @{$self->{seq_region_names}}); #not on required slice
 	  }
-	  
 	}
     
 	$self->{'slice_cache'}->{$region_name} = $slice;
@@ -2130,6 +2136,54 @@ sub farm{
 
   return $self->{'farm'};
 
+}
+
+=head2 batch_job
+  
+  Arg [1]    : Boolean
+  Example    : $importer->batch_job(1);
+  Description: Flag to turn on batch_job status
+  Returntype : Boolean
+  Exceptions : Throws is argument not a boolean
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+
+sub batch_job{
+  my ($self, $batch_job) = @_;
+
+  #$self->{'batch_job'} ||= undef;
+
+  if (defined $batch_job) {
+    throw("Argument to batch_job must be a boolean 1 or 0")  if(! ($batch_job == 1 || $batch_job == 0));
+    $self->{'batch_job'} = $batch_job;
+  }
+
+  return $self->{'batch_job'};
+
+}
+
+=head2 prepared
+  
+  Arg [1]    : Boolean
+  Example    : $importer->prepared(1);
+  Description: Flag to turn on prepared file status
+               This signifies that the files have been previously imported 
+               using prepare mode and may not match the InputSubset names
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+
+sub prepared{
+  my ($self, $prepared) = @_;
+  $self->{'prepared'} = $prepared if (defined $prepared);
+  return $self->{'prepared'};
 }
 
 
