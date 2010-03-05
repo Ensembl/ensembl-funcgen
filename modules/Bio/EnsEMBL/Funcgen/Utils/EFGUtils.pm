@@ -490,11 +490,11 @@ sub generate_slices_from_names{
   if(@$slice_names){
 	
 	foreach my $name(@$slice_names){
-	  $slice = $slice_adaptor->fetch_by_name($name);
+	  $slice = $slice_adaptor->fetch_by_region(undef, $name);
 	
 	  if(! $slice){
 
-		$slice = $slice_adaptor->fetch_by_region(undef, $name);
+		$slice = $slice_adaptor->fetch_by_name($name);
 
 		if(! $slice){
 		  throw("Could not fetch slice:\t".$slice);
