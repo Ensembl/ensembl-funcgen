@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Funcgen::Parsers::InputSet;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file is_bed);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use File::Basename;
@@ -142,20 +142,11 @@ sub set_config{
 sub pre_process_file{
   my ($self, $filepath, $prepare) = @_;
 
-  #We really just need to set file_operator here dependant on compression
-
-  #If we are loading the reads then we want to gunzip anyway?
-  #Not if we are using ensembl style table (i.e. does not match bed format)
-  #Therefore need to write another output file?
-  #Or do we just incorporate this as 0 size window in result_feature?
-
-
-  #We just need to parse the header first anyway?
-  #How are we going to skip this in the sorted file?
+  #Test file format
+  throw("Input file is not bed format:\t$filepath") if ! &is_bed($filepath);
   
-  my $sort = 'sort -n -k 1,3';
-  $sort = '' if $prepare;
-
+  my $sort = ($prepare || ! $self->prepared) ? 'sort -n -k 1,3' : '';
+  
   if($self->input_gzipped){
 	$self->input_file_operator("gzip -dc %s | $sort |");
   }
@@ -164,33 +155,33 @@ sub pre_process_file{
 	$self->input_file_operator("$sort %s |");
   }
 
-  #We also need to set optional output filehandle here
-  #So we can mysqlimport instead of using API to import
-  #This should be put in output_dir
-  #So we can point to an input file anywhere, and have our outputs in our own directory
-  #We should also create links to input files in input_dir!
-  #Let's just have one big file so there is no risk of having competing processes between imports
-
-
   
   if(! defined  $self->output_file && $self->input_feature_class eq 'result'){
-	#output_file is currently only required for read mysqlimport loading
-	#This could also be used by SAM/BAM so put in InputSet
-
-	#Or do we need a file for each discrete set?
-	#Each import consititutes one discrete data set
-	#So this is okay for replicates in a result set
-	#But not for different cell/feature types
-	#Use one file
-	#This is imposed case in INputSet::validate_files
 	my ($name) = fileparse($filepath);
-
 	$name =~ s/\.gz// if $self->input_gzipped;
-	#We can't pipe this to gzip as we need to mysqlimport it, which does not support gzip?
-	#gzip -dc file.sql | mysql would work but would be much slower due ti individual inserts
-   	$self->output_file($self->get_dir('output')."/result_feature.${name}.txt");
-  }
 
+	if($prepare){
+	  #This is also filtered for seq_region_name
+	  $self->output_file($self->get_dir('output')."/prepared.${name}.gz");
+	}
+	else{
+	  #Not currently used as we use direct import
+	  #via AnnotatedFeatures or ResultFeature Collections
+
+	  #output_file would only be used DAS read mysqlimport loading
+	  #This could also be used by SAM/BAM so put in InputSet
+
+	  #Or do we need a file for each discrete set?
+	  #Each import consititutes one discrete data set
+	  #So this is okay for replicates in a result set
+	  #But not for different cell/feature types
+	  #Use one file
+	  #This is imposed case in INputSet::validate_files
+	  #We can't pipe this to gzip as we need to mysqlimport it, which does not support gzip?
+	  #gzip -dc file.sql | mysql would work but would be much slower due ti individual inserts
+	  #$self->output_file($self->get_dir('output')."/result_feature.${name}.txt");
+	}
+  }
 
   return $filepath;
 }
@@ -238,10 +229,9 @@ sub pre_process_file{
 #}
 
 
-#This should skip all entries which are not part of slices if slices defined
 
 sub parse_line{
-  my ($self, $line, $cache_slice_only) = @_;
+  my ($self, $line, $prepare) = @_;
 
   #Need to handle header here for bed is always $.?
   #Also files which do not have chr prefix? i.e. Ensembl BED rather than UCSC Bed with is also half open coords
@@ -266,13 +256,14 @@ sub parse_line{
   # blockSizes - A comma-separated list of the block sizes. The number of items in this list should correspond to blockCount.
   # blockStarts - A comma-separated list of block starts. All of the blockStart positions should be calculated relative to chromStart. The number of items in this list should correspond to blockCount. 
   
+  my $slice = $self->cache_slice($chr);
 
-  if(!  $self->cache_slice($chr)){
+  if(!  $slice){
 	warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
 	return 0;
   }
   else{
-	my $sr_name = $self->cache_slice($chr)->seq_region_name;
+	my $sr_name = $slice->seq_region_name;
 
 	#This should really be in the InputSet Parser
 	#With the cache slice call
@@ -292,41 +283,46 @@ sub parse_line{
 	  }
 	}
 
+	#output sorted file if we are preparing
+	#or prior to seq_region filter?
 
-	$strand = $self->set_strand($strand);			   
+	if(! $prepare){
 
-	if($self->ucsc_coords){
-	  $start +=1;
-	}
+	  $strand = $self->set_strand($strand);			   
+
+	  if($self->ucsc_coords){
+		$start +=1;
+	  }
 	
 
-	#This is generic count handled in InputSet 
-	$self->count('features');
+	  #This is generic count handled in InputSet 
+	  $self->count('features');
+	  
+	  my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
+		(
+		 -START         => $start,
+		 -END           => $end,
+		 -STRAND        => $strand,
+		 -SLICE         => $self->cache_slice($chr),
+		 -ANALYSIS      => $self->data_set->product_FeatureSet->analysis,
+		 -SCORE         => $score,
+		 -DISPLAY_LABEL => $name,
+		 -FEATURE_SET   => $self->data_set->product_FeatureSet,
+		);
 
-	my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
-	  (
-	   -START         => $start,
-	   -END           => $end,
-	   -STRAND        => $strand,
-	   -SLICE         => $self->cache_slice($chr),
-	   -ANALYSIS      => $self->data_set->product_FeatureSet->analysis,
-	   -SCORE         => $score,
-	   -DISPLAY_LABEL => $name,
-	   -FEATURE_SET   => $self->data_set->product_FeatureSet,
-	  );
-
-					 
-	$self->annotated_feature_adaptor->store($feature);
-			 
-	#Unlikely we will ever need this
-	#dump fasta here
-	#if ($self->dump_fasta()){
-	#  #We need to prefix this with the dbID?
-	#  #And put the fasta in a host:port:dbname specfific dir?
-	#  $fasta .= '>'.$name."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
-	#}
+	  
+	  $self->annotated_feature_adaptor->store($feature);
+	  
+	  #Unlikely we will ever need this
+	  #dump fasta here
+	  #if ($self->dump_fasta()){
+	  #  #We need to prefix this with the dbID?
+	  #  #And put the fasta in a host:port:dbname specfific dir?
+	  #  $fasta .= '>'.$name."\n".$self->cache_slice($chr)->sub_Slice($start, $end, 1)->seq()."\n";
+	  #}
+	}
   }
-  
+
   return 1;
 }
 
