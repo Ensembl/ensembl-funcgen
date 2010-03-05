@@ -296,8 +296,7 @@ sub data_set{
 }
 
 sub validate_files{
-  my $self = shift;
-
+  my ($self, $prepare) = @_;
 
   #Get file
   if (! @{$self->result_files()}) {
@@ -305,8 +304,9 @@ sub validate_files{
 	my @rfiles = `$list`;
 	$self->result_files(\@rfiles);
   }
-  
-  if (scalar(@{$self->result_files()}) >1) {
+
+  #We don't yet support multiple files
+  if(scalar(@{$self->result_files()}) >1){
 	warn('Found more than one '.$self->vendor." file:\n".
 		 join("\n", @{$self->result_files()})."\nThe InputSet parser does not yet handle multiple input files(e.g. replicates).".
 		 "  We need to resolve how we are going handle replicates with random cluster IDs");
@@ -327,7 +327,8 @@ sub validate_files{
   my $recover_unimported = 0;
   my $dset = $self->data_set;
    
-  if(scalar(@{$self->slices}) > 1){
+  if((scalar(@{$self->slices}) > 1) &&
+	 ! $prepare){
 	throw('Validate files does not yet support multiple Slice rollback');
   }
 
@@ -340,6 +341,14 @@ sub validate_files{
 	$eset = $dset->get_supporting_sets->[0]->get_InputSets->[0];
   }
 
+  #IMPORTED status here may prevent
+  #futher slice based imports
+  #so we have wait to set this until we know all the slices 
+  #are loaded, unless we store slice based IMPORTED states
+  #We currently get around this be never settign IMPORTED for slice based jobs
+  #and always rolling back by slice before import
+  
+
 
   foreach my $filepath( @{$self->result_files} ) {
 	chomp $filepath;
@@ -350,9 +359,15 @@ sub validate_files{
 	$self->log('Validating '.$self->vendor." file:\t$filename");
 	throw("Cannot find ".$self->vendor." file:\t$filename") if(! -e $filepath);#Can deal with links
 	
-
+	#reset filename to that originally used to create the Inputsubsets
+	$filename =~ s/^prepared// if $self->prepared;
+	
 	if( $sub_set = $eset->get_subset_by_name($filename) ){
-	  
+	  #IMPORTED status here is just for the file
+	  #Any changes to analysis or cs would result in different Inputsubset/file
+	  #so we don't need to account for that.
+	  #Also will only ever be imported into one Feature|ResultSet
+
 	  if($recover_unimported){
 		$new_data{$filepath} = 1;
 		next;
@@ -367,39 +382,45 @@ sub validate_files{
 		$recover_unimported = 1;
 		$new_data{$filepath} = 1;
 		
+		if(! $prepare){
 
-		#InputSet may be peaks or reads so how are we going to rollback?
-		#Need to pass parameter to Importer for feature/set type
-		#Given an InputSet in isolation there is no way of determining where it's
-		#features are stored. Do we need to add set_type to input_set?
+		  #InputSet may be peaks or reads so how are we going to rollback?
+		  #Need to pass parameter to Importer for feature/set type
+		  #Given an InputSet in isolation there is no way of determining where it's
+		  #features are stored. Do we need to add set_type to input_set?
 
-		if ( $self->recovery && $recover_unimported ) {
-		  $self->log("Rolling back results for InputSubset:\t".$filename);
-		  #Change these to logger->warn
-		  $self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set? Unless slices defined");
-		  $self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
-
-		  if($self->input_feature_class eq 'annotated'){
-			$self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
-			$self->rollback_InputSet($eset);
-			last;
-		  }			
-		  elsif($self->input_feature_class eq 'result'){
-			#Can we do this by slice for parallelisation?
-			#This will only ever be a single ResultSet due to Helper::define_and_validate_sets
-			$self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0]);
+		  if ( $self->recovery && $recover_unimported ) {
+			$self->log("Rolling back results for InputSubset:\t".$filename);
+			#Change these to logger->warn
+			$self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set? Unless slices defined");
+			$self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
+			
+			if($self->input_feature_class eq 'annotated'){
+			  $self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
+			  $self->rollback_InputSet($eset);
+			  last;
+			}			
+			elsif($self->input_feature_class eq 'result'){
+			  #Can we do this by slice for parallelisation?
+			  #This will only ever be a single ResultSet due to Helper::define_and_validate_sets
+			  $self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0]);
+			}
+			#else{#Deal with output set_type validation in new
+			#	
+			#  }
 		  }
-		  #else{#Deal with output set_type validation in new
-		  #	
-		  #  }
-		}
-		elsif( $recover_unimported ){
-		  throw("Found partially imported InputSubSet:\t$filepath\n".
-				"You must specify -recover  to perform a full roll back for this InputSet:\t".$eset->name);
+		  elsif( $recover_unimported ){
+			throw("Found partially imported InputSubSet:\t$filepath\n".
+				  "You must specify -recover  to perform a full roll back for this InputSet:\t".$eset->name);
+		  }
 		}
 	  }
 	}
 	else{
+
+	  #This should never happed for prepared data
+	  throw("Should not have found new 'prepared' file:\t$filename") if $self->prepared;
+	  
 	  $self->log("Found new InputSubset:\t${filename}");
 	  $new_data{$filepath} = 1;
 	  $sub_set = $eset->add_new_subset($filename);
@@ -411,7 +432,6 @@ sub validate_files{
   if ($recover_unimported){
 
 	foreach my $esset(@{$eset->get_subsets}){
-	  #map $new_data{$_} = 1, keys %new_data if $recover_unimported;
 	  $new_data{$esset->name} = 1; 
 	  $eset->adaptor->revoke_states($esset);
 	}
@@ -524,20 +544,35 @@ sub input_gzipped{
   return  $_[0]->{'input_gzipped'};
 }
 
+# prepare boolean, simply stores the sets and preprocesses the file
+# so we don't get each batch job trying to sort etc
 
-#sub preprocess_data{
-#  my $self = shift;
-#  $self->define_sets;
-#}
+
+#Still need to implement prepare in other Parsers!!
 
 sub read_and_import_data{
   my ($self, $prepare) = @_;
-    
-  $self->log("Reading and importing ".$self->vendor()." data");
-  my ($eset, $filename, $output_set, $fh, $f_out, %feature_params, @lines);
-  my $dset   = $self->define_sets;
-  
 
+  my $action = ($prepare) ? 'preparing' : 'importing';
+
+  $self->log("Reading and $action ".$self->vendor()." data");
+  my ($eset, $filename, $output_set, $fh, $f_out, %feature_params, @lines);
+
+  if($prepare && ! $self->isa('Bio::EnsEMBL::Funcgen::Parsers::Bed')){
+	throw('prepare mode is only currently implemented for the Bed parser');
+  }
+  
+ 
+  #Test for conflicting run modes
+  if($prepare &&
+	 ($self->batch_job || $self->prepared)){
+	#prepare should be called once by the runner, not in each batch_job
+	#don't prepare if already prepared
+	throw('You cannot run read_and_import_data in prepare mode with a -batch_job or -prepared job');
+  }
+
+  my $dset = $self->define_sets;
+  
   #We also need to account for bsub'd slice based import
   #seq alignments loaded into a ResultSet
   #Cannot have 0 window for ChIP Seq alignments
@@ -556,9 +591,10 @@ sub read_and_import_data{
   
   #If we can do these the other way araound we can get define_sets to rollback the FeatureSet
   #Cyclical dependency for the sets :|
-  my $new_data = $self->validate_files;
+  my $new_data = $self->validate_files($prepare);
   my $seen_new_data = 0;
-
+ 
+  
   ### READ AND IMPORT FILES ###
   foreach my $filepath(@{$self->result_files()}) {
 	chomp $filepath;
@@ -569,9 +605,10 @@ sub read_and_import_data{
 	if( $new_data->{$filepath} ){
 	  $seen_new_data = 1;
 	  $self->{'input_gzipped'} = &is_gzipped($filepath);
-	  $filepath = $self->pre_process_file($filepath, $prepare) if $self->can('pre_process_file');#&& ! $prepare?
+	  
+	  $filepath = $self->pre_process_file($filepath, $prepare) if $self->can('pre_process_file');
 
-	  $self->log_header('Reading '.$self->vendor." file:\t".$filepath);
+	  $self->log_header(ucfirst($action).' '.$self->vendor." file:\t".$filepath);
 
 	  #We need to be able to optional open pipe to gzip | sort here
 	  #i.e. define open command
@@ -657,7 +694,14 @@ sub read_and_import_data{
 		#DAS currently only uses IMPORTED_CSVERSION
 		#This is okayish but we also need to write HCs for any sets 
 		#which do not have IMPORTED state!
-		my $line;
+		my ($line, @outlines, $out_fh);
+
+		if($prepare && ! $self->batch_job){
+		  #Assume we want gzipped output
+		  #filename is actull based on input, so may not have gz in file name
+		  $out_fh = open_file($self->output_file, "| gzip -c > %s");
+		}
+		
 
 		while(defined ($line=<$fh>)){
 		  #Generic line processing
@@ -679,16 +723,30 @@ sub read_and_import_data{
 		  #e.g. cisRED
 		  #Code refs?
 
-		  $self->count('Total lines') if $self->parse_line($line, $prepare);		
+		  
+		  if($self->parse_line($line, $prepare)){
+			$self->count('Total lines');
 
-		  #Here we depedant on whether we are parsing reads and using collection
-		  #We need to pass a coderef to the collection somehow, so this can read the data
-		  #either from a query or from a file
-		  #
+			#Cache or print to sorted file
+			if($prepare && ! $self->batch_job){
 
+			  if(scalar(@outlines) >1000){
+				print $out_fh join("\n", @outlines);
+			  }
+			  else{
+				push @outlines, $line;
+			  }
+			}
+		  }
 		}
 	 
 		close($fh);
+
+		#Print last of sorted file
+		if($prepare && ! $self->batch_job){
+		  print $out_fh join("\n", @outlines);
+		  close($out_fh);
+		}
 
 		if(! $prepare){
 		  #Now we need to deal with anything left in the read cache
@@ -700,10 +758,12 @@ sub read_and_import_data{
 		  $self->log('Finished importing '.$self->counts('features').' '.
 					 $output_set->name." features from:\t$filepath");
 		  
-		
-		  my $sub_set = $eset->get_subset_by_name($filename);
-		  $sub_set->adaptor->store_status('IMPORTED', $sub_set);
+		  
+		  #reset filename to that originally used to create the Inputsubsets
+		  $filename =~ s/^prepared// if $self->prepared;
 
+		  my $sub_set = $eset->get_subset_by_name($filename);
+		  $sub_set->adaptor->store_status('IMPORTED', $sub_set) if ! $self->batch_job;
 		}
 	  }
 	  
@@ -740,7 +800,7 @@ sub read_and_import_data{
   #Also currently happens with ResultFeatures loaded by slice jobs, as this may already be set by a parallel job
 
   if(! $prepare){
-	$output_set->adaptor->set_imported_states_by_Set($output_set) if $seen_new_data;
+	$output_set->adaptor->set_imported_states_by_Set($output_set) if $seen_new_data && ! $self->batch_job;
 	$self->log("No new data, skipping result parse") if ! grep /1/,values %{$new_data};
 	$self->log("Finished parsing and importing results");
   }
