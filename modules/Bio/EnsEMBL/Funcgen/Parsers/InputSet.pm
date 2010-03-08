@@ -360,7 +360,7 @@ sub validate_files{
 	throw("Cannot find ".$self->vendor." file:\t$filename") if(! -e $filepath);#Can deal with links
 	
 	#reset filename to that originally used to create the Inputsubsets
-	$filename =~ s/^prepared// if $self->prepared;
+	$filename =~ s/^prepared\.// if $self->prepared;
 	
 	if( $sub_set = $eset->get_subset_by_name($filename) ){
 	  #IMPORTED status here is just for the file
@@ -731,7 +731,8 @@ sub read_and_import_data{
 			if($prepare && ! $self->batch_job){
 
 			  if(scalar(@outlines) >1000){
-				print $out_fh join("\n", @outlines);
+				print $out_fh join("\n", @outlines)."\n";
+				@outlines = ();
 			  }
 			  else{
 				push @outlines, $line;
@@ -744,8 +745,9 @@ sub read_and_import_data{
 
 		#Print last of sorted file
 		if($prepare && ! $self->batch_job){
-		  print $out_fh join("\n", @outlines);
+		  print $out_fh join("\n", @outlines)."\n";
 		  close($out_fh);
+		  @outlines = ();
 		}
 
 		if(! $prepare){
@@ -760,7 +762,7 @@ sub read_and_import_data{
 		  
 		  
 		  #reset filename to that originally used to create the Inputsubsets
-		  $filename =~ s/^prepared// if $self->prepared;
+		  $filename =~ s/^prepared\.// if $self->prepared;
 
 		  my $sub_set = $eset->get_subset_by_name($filename);
 		  $sub_set->adaptor->store_status('IMPORTED', $sub_set) if ! $self->batch_job;
