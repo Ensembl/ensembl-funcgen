@@ -61,7 +61,10 @@ use vars qw(@ISA @EXPORT);
                                       logic_name => 'analysis.logic_name'
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $ofa->fetch_all_by_Slice_FeatureType($slice, $ft);
-  Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
+  Description: Retrieves a list of features on a given slice with main or associated FeatureType. 
+               This is mainly used by external FeatureSets which can sometimes have more 
+               than one associated FeatureType. NOTE: This is intended to work for FeatureTypes at the 
+               feature level, not the more generic FeatureSet level FeatureTypes.
   Returntype : Listref of Bio::EnsEMBL::SetFeature objects
   Exceptions : Throws if no FeatureType object provided
   Caller     : General
@@ -71,7 +74,10 @@ use vars qw(@ISA @EXPORT);
 
 sub fetch_all_by_FeatureType_FeatureSets {
   my ($self, $ftype, $fsets, $params) = @_;
-	
+
+  if ($self->_feature_class eq 'annotated'){
+	throw("This method is not appropriate for FeatureSets with feature_class 'annotated', please use standard fetch_Features_by_FeatureSets or get_Features on an individual FeatureSet");
+  }
 
   #How do we validate the parameters?
   #We can't catch typos as we don't know what might need passing on to other methods
@@ -81,32 +87,21 @@ sub fetch_all_by_FeatureType_FeatureSets {
   
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
 
-  my @fs_ids;
-
-  throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@{$fsets}) == 0;
-
-  foreach my $fset (@{$fsets}) {
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
-	push (@fs_ids, $fset->dbID());
-  }
-
-  my $fs_ids = join(',', @fs_ids) if scalar(@fs_ids >1);
-
+ 
   #Need to restrict to the current default cs's
   #This requires separate query or query extension
   #Need to make @tables and @true_tables exported?
   #Or just attrs?
   #Set table to true_tables in new?
-  
-
   my ($table_name, $table_syn) = @{$self->_main_table};
+
   my $constraint = $table_syn.'.feature_set_id = fs.feature_set_id AND '.
-	$table_syn.'.feature_type_id='.$ftype->dbID.' AND '.$table_syn.'.feature_set_id '; 
-  $constraint .= (scalar(@fs_ids) >1) ? "IN ($fs_ids)" : '='.$fs_ids[0];
+	$table_syn.'.feature_type_id='.$ftype->dbID.' AND '.$table_syn.".feature_set_id ".$self->_generate_feature_set_id_clause($fsets);
 
   #We should really pass the params hash on here
-
   $constraint = $self->_logic_name_to_constraint($constraint, $params->{logic_name});
+
+  warn $constraint;
 
   my @features = @{$self->generic_fetch($constraint)};
 
@@ -148,7 +143,7 @@ sub fetch_all_by_FeatureType_FeatureSets {
                                       -include_direct_links => 1, #Also return feature which are linked by Feature->feature_type
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $ofa->fetch_all_by_Slice_FeatureType($slice, $ft);
-  Description: Retrieves a list of all features linked via the associated FeatureTypes of the given Feature in the same FeatureSet
+  Description: Retrieves a list of all features linked via the associated FeatureTypes of                the given Feature in the same FeatureSet.  This is mainly used by external                FeatureSets which can sometimes have more than one associated FeatureType.
   Returntype : Listref of Bio::EnsEMBL::SetFeature objects
   Exceptions : Throws if SetFeature not stored and valid
   Caller     : General
@@ -263,28 +258,54 @@ sub fetch_all_by_Slice_FeatureType {
 sub fetch_all_by_FeatureSets {
   my ($self, $fsets, $logic_name) = @_;
 	
-  my @fs_ids;
-
-  throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@{$fsets}) == 0;
-
-  foreach my $fset (@{$fsets}) {
-	throw('Not a FeatureSet object') 
-	  if ! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"));
-	push (@fs_ids, $fset->dbID());
-  }
-
-  
-
-  my $fs_ids = join(',', @fs_ids) if scalar(@fs_ids >1);
-  my $constraint = $self->_main_table->[1].'.feature_set_id '; 
-  $constraint .= (scalar(@fs_ids) >1) ? "IN ($fs_ids)" : '='.$fs_ids[0];
-
+  my $constraint = $self->_main_table->[1].'.feature_set_id '.$self->_generate_feature_set_id_clause($fsets); 
   #could have individual logic_names for each annotated feature here?
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
   return $self->generic_fetch($constraint);
 }
 
+
+=head2 _generate_feature_set_id_clause
+
+  Arg [1]    : Arrayref of Bio::EnsEMBL::FeatureSet objects
+  Example    : my $fset_d_clause = $self->_generate_feature_set_id_clause($fsets);
+  Description: Build feature_set id clause for FeatureSet methods
+  Returntype : string
+  Exceptions : Throws if FeatureSets are passed
+               Throws if FeatureSet feature_class does not match adaptor feature_class
+               Throws if FeatureSet is not valid 
+  Caller     : Bio::EnsEMBL::DBSQL::SetFeatureAdaptor
+  Status     : At Risk
+
+=cut
+
+sub _generate_feature_set_id_clause{
+  my ($self, $fsets) = @_;
+
+  my @fs_ids;
+
+  throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@{$fsets}) == 0;
+
+  my $fclass = $self->_feature_class;
+  
+  foreach my $fset (@{$fsets}) {
+	
+	if (! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
+	  throw('Not a FeatureSet object');
+	}
+
+	if($fset->feature_class ne $fclass){
+	  throw('FeatureSet feature_class \''.$fclass.'\' does not match adaptor feature_class \''.$fset->feature_class.'\'');
+	}
+
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
+
+	push (@fs_ids, $fset->dbID());
+  }
+
+  return scalar(@fs_ids >1) ? 'IN ('.join(',', @fs_ids).')' : '= '.$fs_ids[0];
+}
 
 
 
@@ -306,22 +327,8 @@ sub fetch_all_by_FeatureSets {
 sub fetch_all_by_Slice_FeatureSets {
   my ($self, $slice, $fsets, $logic_name) = @_;
 	
-  my @fs_ids;
-
-
-  throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@{$fsets}) == 0;
-
-  foreach my $fset (@{$fsets}) {
-	throw('Not a FeatureSet object') 
-	  if ! ($fset && ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"));
-	push (@fs_ids, $fset->dbID());
-  }
-
-  
-
-  my $fs_ids = join(',', @fs_ids) if scalar(@fs_ids >1);
-  my $constraint = $self->_main_table->[1].'.feature_set_id '; 
-  $constraint .= (scalar(@fs_ids) >1) ? "IN ($fs_ids)" : '='.$fs_ids[0];
+  my $constraint = $self->_main_table->[1].'.feature_set_id '.
+	$self->_generate_feature_set_id_clause($fsets); 
 
   #could have individual logic_names for each annotated feature here?
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
@@ -505,7 +512,7 @@ sub list_dbIDs {
   Description: Convenience method to retrieve the main table or main table synonym for this adaptor
                Entirely dependent on ensembl convention of always having main table as first element
                of tables array.
-  Returntype : Arrayref
+  Returntype : Array ref
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -521,6 +528,25 @@ sub _main_table{
 }
 
 
+=head2 _feature_class
 
+  Example    : if($self->feature_class ne $fset->feature_class){ throw('some error'); }
+  Description: Convenience method to retrieve the feature class for this adaptor
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub _feature_class{
+  my $self = shift;
+
+  #use the first word of the table name as the class
+  my $fclass;
+  ($fclass = $self->_main_table->[0]) =~ s/_.*//;#use the first word of the table name as the class
+
+  return $fclass;
+}
 
 1;
