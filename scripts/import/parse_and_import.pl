@@ -146,7 +146,6 @@ use Bio::EnsEMBL::Funcgen::Importer;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (strip_param_args generate_slices_from_names strip_param_flags);
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-
 use strict;
 
 $| = 1;#autoflush
@@ -283,7 +282,7 @@ die('Must provide a -species parameter') if ! defined $species;
 
 
 #log/debug files fail in Helper without this
-$output_dir  = $data_dir."/output/${species}/".uc($vendor)."/".$name;
+$output_dir  = $data_dir."/output/${dbname}/".uc($vendor)."/".$name;
 system("mkdir -p $output_dir -m 0755");
 chmod 0755, $output_dir;
 
@@ -451,12 +450,25 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
   #Will actually parse and print the whole sorted file if required.
   #So can take longer to run, but is cleaner and more likely to fail here instead
   #of in mutiple batch jobs
+  #Could output to seq_region named files which would speed up 2nd stage parsing
+  #Delete immediately after use, or save and md5?
+  #Do we need to put these in a large file stripe dir?
+  #Same with mapping pipeline?
+
 
   #output-file is only set if data has been prepared in some way
   my $prepared = ' -prepared ';
   my $input_file;
 
-  if($input_file != $Imp->output_file){
+  if(! ($input_file = $Imp->output_file)){
+
+	#Die for now as we currently always expect a sorted file
+	#and we are not catching some failures here
+	#Is this to do with?
+	#gzip: stdout: Disk quota exceeded
+
+	die("Could not get prepared file for:\t".$result_files[0]);
+
 	$input_file = $result_files[0];
 	$prepared = '';
   }
@@ -491,6 +503,9 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
   if(! $lsf_host){
 	($lsf_host = 'my'.$host) =~ s/-/_/g;
   }
+
+  
+
   my $rusage = "-R \"select[($lsf_host<=600)] rusage[${lsf_host}=12:duration=5]\"";
   #-R "select[mem>4000] rusage[mem=4000] -M 4000000"? 
   my $bsub_cmd="bsub $rusage -q $queue -J \"${job_name}[1-".scalar(@slices)."]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err $cmd";
