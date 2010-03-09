@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.3 2010-02-23 15:29:09 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.4 2010-03-09 13:31:18 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
@@ -489,7 +489,7 @@ sub set_collection_defs_by_ResultSet{
 	  $self->{'packed_size'}   = 4;
 	  $self->{'pack_template'} = 'f';
 	  $self->{'bin_method'}    = 'max_magnitude';#only used by collector
-	  $self->{'window_sizes'}  = [0, 150, 300, 450, 600, 750];
+	  $self->{'window_sizes'}  = [0, 150, 300, 450, 600, 750, 900, 1150];
 	}
 	elsif($rset->table_name eq 'input_set'){
 	  #Currently only expecting int from InputSet
@@ -512,7 +512,7 @@ sub set_collection_defs_by_ResultSet{
 	  $self->{'packed_size'}   = 2;
 	  $self->{'pack_template'} = 'v';
 	  $self->{'bin_method'}    = 'count';
-	  $self->{'window_sizes'}  = [50, 150, 300, 450, 600, 750];
+	  $self->{'window_sizes'}  = [50, 150, 300, 450, 600, 750, 900, 1150];
 	}
 	else{
 	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
