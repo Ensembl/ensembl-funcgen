@@ -42,16 +42,16 @@ outdir=
 #Change this to $EFG_DATA
 scratch_dir=/lustre/scratch103/ensembl/funcgen
 
-usage="Usage:\t\trun_bwa.sh  <options> [ file1 file2 ]
-\nDescription:\tThis script will take either a fastq file or a directory as input, unzip cat/rename 
+usage="Usage:\t\trun_bwa.sh <options> [ file1 file2 ]
+\n\nDescription:\tThis script will take either a fastq file or a directory as input, unzip cat/rename 
 \n\t\tand rezip as necessary to generate a single fastq file. The relevant bwa indexes will be validated 
 \n\t\tbefore submitting the bwa job to the farm.
-\nExample:\trun_bwa.sh -s homo_sapiens -d /your/fastq/data/dir -g male -a GRCh37
-\nMandatory options:
+\n\nExample:\trun_bwa.sh  -g male -a GRCh37 -s homo_sapiens -e Stamatoyannopoulos_DNase1_EpiRoadmap_GSE18927  -n IMR90_DNase1 SRX01242*/*fastq*
+\n\nMandatory options:
 \n\t-s(pecies e.g. homo_sapiens)
 \n\t-g(ender e.g male|female)
 \n\t-n(set name i.e. CellType_FeatureType(_.*), in line with expected input for peaks.env)
-\nOther options:
+\n\nOther options:
 \n\t-e(xperiment name, required if input files are split over different directories)
 \n\t-o(utdir overrides default $scratch_dir/alignments/\$species/\$experiment_name)
 \n\t-a(ssembly default is $assembly)
