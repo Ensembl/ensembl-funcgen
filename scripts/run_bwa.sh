@@ -231,7 +231,7 @@ if [ ! "$tmp_files" ]; then
 fi
 
 #Cat if required and log inputs
-alignment_log="${output_dir}/${name}.alignment.log"
+alignment_log="${outdir}/${name}.alignment.log"
 
 #file up until now is the expected cat'd/cache fastq file 
 
@@ -296,22 +296,21 @@ for ext in amb ann bwt pac rbwt rpac rsa sa; do
 done
 
 
-file_name=$(echo $file | sed 's/\.fastq$//')
 run_txt="\nRunning bwa with following options:\n\tIndex name\t= $index_name\n\tInput file\t= $file\n\tAlignment type\t= $align_type\n\tOutput dir\t= $outdir\n"
-
 echo -e $run_txt
 echo -e $run_txt >> $alignment_log
 
 #Is the index job still running?
 checkJob ${index_name}_indexes exit_if_running
 
-
 #Use submitJob to avoid truncation of bsub cmd
 job_name="bwa_${align_type}_${experiment_name}_${name}";
-bsub_cmd="-q long $resource -o ${outdir}/${file_name}.bwa.out -e ${outdir}/${file_name}.bwa.err"
-job_cmd="'bwa aln $fasta_file  $file > ${outdir}/${file_name}.${align_type}.sai; bwa $align_type $fasta_file ${outdir}/${file_name}.${align_type}.sai $file > ${outdir}/${file_name}.${align_type}.sam'"
+bsub_cmd="-q long $resource -o ${outdir}/${job_name}.bwa.out -e ${outdir}/${job_name}.bwa.err"
+job_cmd="'bwa aln $fasta_file  $file > ${outdir}/${job_name}.${align_type}.sai; bwa $align_type $fasta_file ${outdir}/${job_name}.${align_type}.sai $file > ${outdir}/${job_name}.${align_type}.sam'"
 
 #echo $bsub_cmd $job_cmd
+
+echo "\n"
 
 submitJob "$job_name" "$bsub_cmd" "$job_cmd" 
 
