@@ -304,9 +304,11 @@ echo -e $run_txt >> $alignment_log
 checkJob ${index_name}_indexes exit_if_running
 
 #Use submitJob to avoid truncation of bsub cmd
-job_name="bwa_${align_type}_${experiment_name}_${name}";
-bsub_cmd="-q long $resource -o ${outdir}/${job_name}.bwa.out -e ${outdir}/${job_name}.bwa.err"
-job_cmd="'bwa aln $fasta_file  $file > ${outdir}/${job_name}.${align_type}.sai; bwa $align_type $fasta_file ${outdir}/${job_name}.${align_type}.sai $file > ${outdir}/${job_name}.${align_type}.sam'"
+#Could tidy up names a little here, no need 
+set_name="${experiment_name}_${name}"
+job_name="bwa_${align_type}_${set_name}";
+bsub_cmd="-q long $resource -o ${outdir}/${job_name}.out -e ${outdir}/${job_name}.err"
+job_cmd="'bwa aln $fasta_file  $file > ${outdir}/${set_name}.${align_type}.sai; bwa $align_type $fasta_file ${outdir}/${set_name}.${align_type}.sai $file > ${outdir}/${set_name}.${align_type}.sam'"
 
 #echo $bsub_cmd $job_cmd
 
