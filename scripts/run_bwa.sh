@@ -50,7 +50,7 @@ usage="Usage:\t\trun_bwa.sh  <options> [ file1 file2 ]
 \nMandatory options:
 \n\t-s(pecies e.g. homo_sapiens)
 \n\t-g(ender e.g male|female)
-\n\t-n(set name i.e. CELLTYPE_FEATURETYPE(_.*), in line with expected input for peaks.env)
+\n\t-n(set name i.e. CellType_FeatureType(_.*), in line with expected input for peaks.env)
 \nOther options:
 \n\t-e(xperiment name, required if input files are split over different directories)
 \n\t-o(utdir overrides default $scratch_dir/alignments/\$species/\$experiment_name)
