@@ -24,6 +24,8 @@ fi
 #6 DONE Finish files handling
 #7 DONE Add fastq.list file to log the true uncat'd input fastq file(s)  
 #8 Optionally wait for job success and remove cat'd file if present?
+#9 Use $EFG_DATA for scratch_dir.  Currently set to group rather than personal scratch dir
+#  Need to handle both $EFG_DATA and $EFG_GROUP_DATA?
 
 OPTIND=1    #Reset the getopts if we have used it previously
 VALID_GENDERS='male female'
@@ -308,7 +310,7 @@ checkJob ${index_name}_indexes exit_if_running
 set_name="${experiment_name}_${name}"
 job_name="bwa_${align_type}_${set_name}";
 bsub_cmd="-q long $resource -o ${outdir}/${job_name}.out -e ${outdir}/${job_name}.err"
-job_cmd="'bwa aln $fasta_file  $file > ${outdir}/${set_name}.${align_type}.sai; bwa $align_type $fasta_file ${outdir}/${set_name}.${align_type}.sai $file > ${outdir}/${set_name}.${align_type}.sam'"
+job_cmd="'bwa aln $fasta_file  $file > ${outdir}/${set_name}.${align_type}.sai; bwa $align_type $fasta_file ${outdir}/${name}.${align_type}.sai $file > ${outdir}/${name}.${align_type}.sam'"
 
 #echo $bsub_cmd $job_cmd
 
