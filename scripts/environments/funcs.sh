@@ -33,6 +33,7 @@ _FALSE=!$_
 #could set BACKUP_DIR here too?
 #Note: Using sym links for these DIR vars means the patch in the functions should also be symlinks!
 export ARCHIVE_DIR=$HOME/warehouse/data
+
 #Problems with which dir to use as EFG_DATA contains efg, so we can't sub that off the path
 #This require DATA_DIR (similar to SRC?)
 #Can now keep this outside of efg.env/config
@@ -227,13 +228,15 @@ jobWait()
 }
 
 
-# private method i.e. lcfirst
-# therefore do not need -h opt
-#Need to split this into checkJob
 
 checkJob(){
 	job_name=$1
+	exit=$2
+
 	CheckVariables job_name
+
+
+	echo -e "Checking for job:\t$job_name"
 
 	JOB_ID=
 	
@@ -245,9 +248,14 @@ checkJob(){
 		if [ $? -ne 0 ]; then
 			echo "Failed to access job information"
 			exit 1
+		elif [ $JOB_ID ]; then
+			echo "$job_name is still running"
+			exit
 		fi
-	elif [[ "$QUEUE_MANAGER" = 'LOCAL' ]]; then
-		echo -e "Skipping job check for LOCAL job:\t$job_name"
+		
+
+	elif [[ "$QUEUE_MANAGER" = 'Local' ]]; then
+		echo -e "Skipping job check for Local job:\t$job_name"
 	else
 		echo -e "funcs.sh does not support QUEUE_MANAGER:\t$QUEUE_MANAGER"
 		exit
@@ -265,6 +273,9 @@ submitJob(){
 	bsub_params=$1
 	shift
 	job_cmd=$1
+
+	#default to LSF
+	QUEUE_MANAGER=${QUEUE_MANAGER:=LSF}
 
 	CheckVariables job_name bsub_params job_cmd
 
@@ -304,8 +315,8 @@ submitJob(){
 		bjobs -w $JOB_ID
 		
 
-	elif [[ "$QUEUE_MANAGER" = 'LOCAL' ]]; then
-		echo -e "Running LOCAL job:\t$job_cmd"
+	elif [[ "$QUEUE_MANAGER" = 'Local' ]]; then
+		echo -e "Running Local job:\t$job_cmd"
 		Execute $job_cmd
 	else
 		echo -e "funcs.sh does not support QUEUE_MANAGER:\t$QUEUE_MANAGER"
@@ -565,6 +576,7 @@ BackUpFile(){
 #Also, we are no handling hosts in these path yet, so -essh is redundant at present
 #Could also make sub of the directory substitution, then we can use this in arrays.env for testing
 #if we have an archived version of the arraysdir and distributing
+#Need to extend this to support new group area
 
 ArchiveData()
 {
@@ -572,6 +584,9 @@ ArchiveData()
 	#Add getopts here?
 
 	error=$(CheckVariables ARCHIVE_DIR DATA_DIR)
+
+	#Need to test GROUP_ARCHIVE_DIR GROUP_DATA_DIR?
+	
 
 	if [ $? -ne 0 ]; then
 		echo $error
@@ -588,6 +603,8 @@ ArchiveData()
 			filedir=$(ls -d $PWD/$filedir)
 		fi
 
+
+		#We could magically detect which archive dir to use here
 
 		#Need to match $DATA_DIR here or skip with warning
 		if [[ ! $filedir = $DATA_DIR* ]]; then
@@ -619,6 +636,8 @@ DistributeData(){
 	#Keep this to data dir only
 	#Or can we specify an optional destination dir?
 	#Currently just mirror ArchiveData func
+
+
 
 
 	error=$(CheckVariables ARCHIVE_DIR DATA_DIR)
