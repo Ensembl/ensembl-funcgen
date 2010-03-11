@@ -42,7 +42,7 @@ export EFG_DAS_NAME=efg                          #DAS instance name EDIT
 export EFG_DAS_HOME=$SRC/Bio-Das-ProServer       #DAS code dir, must be ProServer!
 
 export QUEUE_MANAGER='LSF'                       #Set here rather that in pipeline as func.sh can use this
-
+                                                 #Can be set to Local for offline
 #But we need to be mindful of this growing for this unrelated processes
 #i.e. this will slow down other jobs as they will touch all this dirs on init(lsf!)
 #If these are set in your .bashrc then remove them from here
