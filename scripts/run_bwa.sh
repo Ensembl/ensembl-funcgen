@@ -262,9 +262,6 @@ if [[ $new_input = 1 ]]; then
 	fi
 
 	
-	echo -e "Unzipping..."	
-				Execute gunzip $f
-
 	if [ ! "$unzipped_files" ]; then
 		echo -e "ERROR:\tCould not find any valid input fastq files from list:\n${files[*]}"
 		exit
@@ -317,15 +314,15 @@ if [[ $new_input = 1 ]]; then
 
 		echo "Input fastq files for $experiment_name $name alignments:" > $alignment_log
 			
-			if [[ $new_input = 1 ]]; then
-				
-				for f in ${unzipped_files[*]}; do
-					echo "\t${f}" >> $alignment_log
-				done
+		for f in ${unzipped_files[*]}; do
+			echo "\t${f}" >> $alignment_log
+		done
+	
+		#Could maybe add a validation step here to wc -l the batches versus the input
 
-				echo "Gzipping all source fastq files"
-				Execute gzip ${unzipped_files[*]}
-			fi
+	
+		echo "Gzipping all source fastq files"
+		Execute gzip ${unzipped_files[*]}
 	fi
 fi
 
