@@ -26,12 +26,12 @@ fi
 #8 Optionally wait for job success and remove cat'd file if present?
 #9 Use $EFG_DATA for scratch_dir.  Currently set to group rather than personal scratch dir
 #  Need to handle both $EFG_DATA and $EFG_GROUP_DATA?
+#10 Integrate Daniel's batch code
 
 OPTIND=1    #Reset the getopts if we have used it previously
 VALID_GENDERS='male female'
 gender=
 species=
-file=
 index_home=/lustre/scratch103/ensembl/funcgen/bwa_indexes    #Set this in pipeline/efg.config?
 assembly=GRCh37
 mask='_unmasked'
@@ -40,7 +40,10 @@ resource='-R"select[mem>5000] rusage[mem=5000]" -M5000000'
 dir=
 clean=
 experiment_name=
+name=
 outdir=
+format=sam
+merge_only=0
 #Change this to $EFG_DATA
 scratch_dir=/lustre/scratch103/ensembl/funcgen
 
@@ -61,6 +64,8 @@ usage="Usage:\t\trun_bwa.sh <options> [ file1 file2 ]
 \n\t-i(ndex_home default=$index_home)
 \n\t-r(esource default=$resource)
 \n\t-c(lean away cat'd fastq file)
+\n\t-m(erge only, only submit the merge job if it has previously failed due to the absence of the same header)
+\n\t-b(am output default=sam)
 \n\t-h(elp)"
 
 
@@ -73,7 +78,7 @@ usage="Usage:\t\trun_bwa.sh <options> [ file1 file2 ]
 #remove file option and just have as args?
 
 
-while getopts ":g:s:e:n:d:o:i:r:a:cph" opt; do
+while getopts ":g:s:e:n:d:o:i:r:a:mbcph" opt; do
 	case $opt in 
 		g  ) gender=$OPTARG ;; 
 		s  ) species=$OPTARG ;;
@@ -86,6 +91,8 @@ while getopts ":g:s:e:n:d:o:i:r:a:cph" opt; do
 		a  ) assembly=$OPTARG ;;
 	    p  ) align_type='sampe' ;;
         c  ) clean=1 ;;
+        m  ) merge_only=1 ;;
+        b  ) format='bam' ;;
 		h  ) echo -e $usage; exit 0;;
 		\? ) echo -e $usage; exit 1;;
 	esac 
@@ -117,9 +124,12 @@ elif [[ "$files" ]] && [[ $dir ]]; then
 fi
 
 
+file_prefix=
+new_input=1
+unzipped_files=
+split_files=
 
-
-
+#Can probably merge these if else blocks
 
 if [ "$dir" ]; then
 	
@@ -140,25 +150,34 @@ if [ "$dir" ]; then
 	fi
 
 	
-	file="${outdir}/${name}.fastq"
+	#This is now first split file
+	file_prefix="${outdir}/${name}."
+	split_file="${file_prefix}1.fastq"
 
 	#Test for pre-cat'd file
-	if [[ -f $file ]]; then
+	if [[ -f $split_file ]]; then
+		
 
 		if [ $clean ]; then
-			echo -e "Removing previously fastq file:\t${file}"
-			rm -f $file
+			echo -e "Removing previously cached fastq files:\n\t"
+			ls ${file_prefix}[1-9]*.fastq
+			rm -f ${file_prefix}[1-9]*.fastq
 		else
-			echo -e "WARNING:\tUsing previously cat'd fastq file:\t$file"
+			new_input=0
+			split_files=($(ls ${file_prefix}[1-9]*.fastq))
+			tmp=$(echo "${split_files[*]}" | sed 's/ /\n\t/g')
+			echo -e "WARNING:\tUsing previously cached fastq files:\n\t${tmp}"
 			echo -e "Specify -c(lean) to override this behaviour"
-			files=($file)
 			sleep 10
 		fi
+	else
+		#Remove just incase we have other cached files hanging around
+		rm -f ${file_prefix}[1-9]*.fastq
 	fi
 
 
 	#Get files
-	if [[ ! -f $file ]]; then
+	if [[ $new_input = 1 ]]; then
 		files=($(ls ${dir}/*fastq*))
 
 		if [[ ! "$files" ]]; then
@@ -172,7 +191,7 @@ else  # files
 
 	#Test exp_name and set outdir and file
 	if [ ! "$experiment_name" ]; then
-		echo -e "ERROR:\tYou must explcitly set an -e(experiment name) when specify multiple file paths\n"
+		echo -e "ERROR:\tYou must explicitly set an -e(experiment name) when specify multiple file paths\n"
 		echo -e $usage
 		exit
 	fi
@@ -182,96 +201,144 @@ else  # files
 	fi
 
 	
-	file="${outdir}/${name}.fastq"
+	file_prefix="${outdir}/${name}."
+	split_file="${file_prefix}1.fastq"
 
 	#Test for pre-cat'd file
-	if [[ -f $file ]]; then
+	if [[ -f $split_file ]]; then
 
 	 	if [ $clean ]; then
-		 	echo -e "Removing previously cat'd fastq file:\t${file}"
-			rm -f $file
+		 	echo -e "Removing previously cached fastq files:\n\t"
+			ls ${file_prefix}[1-9]*.fastq
+			rm -f ${file_prefix}[1-9]*.fastq
 		else 
- 			echo -e "WARNING:\tUsing previously cat'd fastq file:\t$file"
+			new_input=0
+			split_files=($(ls ${file_prefix}[1-9]*.fastq))
+			tmp=$(echo "${split_files[*]}" | sed 's/ /\n\t/g')
+ 			echo -e "WARNING:\tUsing previously cached fastq files:\n\t${tmp}\n"
 			echo -e "Specify -c(lean) to override this behaviour"
-	 		files=($file)
 			sleep 10
 	 	fi
- 	fi
+ 	else
+		#Remove just incase we have other cached files hanging around
+		rm -f ${file_prefix}[1-9]*.fastq
+	fi
 fi
 
 
 #Do we not have a function for this unzipping/cating?
-tmp_files=
 
-for f in ${files[*]}; do
-	
-	if [[ $f != *fastq* ]]; then
-		echo -e "Ignoring non-fastq file:\t$f"
-	else
-		CheckFile $f
-		echo -e "Using fastq file:\t$f"
-		
-		funzipped=$f
-		
+if [[ $new_input = 1 ]]; then
+
+	for f in ${files[*]}; do
+		zipped_files=
+
+		if [[ $f != *fastq* ]]; then
+			echo -e "Ignoring non-fastq file:\t$f"
+		else
+			CheckFile $f
+			echo -e "Using fastq file:\t$f"
+			
+			funzipped=$f
+			
 	 	    #Unzip those which are zipped
-		if [[ $f =  *.gz ]]; then
-			echo -e "Unzipping..."
+			#would be nice to list to files first before unzipping, so we know what we are running with immediately
 
-			exit
 
-			Execute gunzip $f
-			funzipped=$(echo $f | sed 's/\.gz//')
-		fi 
-		
-		tmp_files=(${tmp_files[*]} $funzipped)
+			if [[ $f =  *.gz ]]; then
+				zipped_files=($f ${zipped_files[*]})
+				funzipped=$(echo $f | sed 's/\.gz//')
+			fi 
+			
+			unzipped_files=(${tmp_files[*]} $funzipped)
+		fi
+
+	done
+
+
+	if [ "$zipped_files" ]; then
+		echo -e "Unzipping files..."	
+		Execute gunzip ${zipped_files[*]}
 	fi
-done
 
-if [ ! "$tmp_files" ]; then
-	echo -e "Could not find any valid input fastq files from list:\n${files[*]}"
-	exit
+	
+	echo -e "Unzipping..."	
+				Execute gunzip $f
+
+	if [ ! "$unzipped_files" ]; then
+		echo -e "ERROR:\tCould not find any valid input fastq files from list:\n${files[*]}"
+		exit
+	fi
 fi
 
 #Cat if required and log inputs
 alignment_log="${outdir}/${name}.alignment.log"
+input_file="$file_prefix%I.fastq"
 
-#file up until now is the expected cat'd/cache fastq file 
 
-if [[ ${#tmp_files[*]} -gt 1 ]]; then
-	MakeDirs $outdir			
-	echo -e "Cat'ing files to:\t$file"
-	#This is not catching failure!
-	Execute cat ${tmp_files[*]} > $file
 
-	echo 'Input fastq files for $experiment_name $name alignments:' > $alignment_log
+if [[ $new_input = 1 ]]; then
+	split=1
+
+	#Run from single input file		
+	#Run from source if it is < 8000000 line long
+	#This will preserve space on device and prevent uneccessary cat | split
 	
-	for f in ${tmp_files[*]}; do
-		echo $f >> $alignment_log
-	done
+	if [[ ${#unzipped_files[*]} = 1 ]]; then
 
-	echo "Gzipping all source fastq files"
-	Execute gzip ${tmp_files[*]}
-else
-	#Run from single input file
-
-	#This may not be the full path? So match may fail
-	#need to ls full patch for comparison
-
-	if [[ ${tmp_files[0]} != $file ]]; then
-		#Only log input when we know
-		#we are not running with the cache file
-		#otherwise preserve original inputs
-		echo 'Input fastq file for $experiment_name $name alignments:' > $alignment_log
-		echo  ${tmp_files[0]} >> $alignment_log
+		if [[ $(cat ${unzipped_files[0]} | wc -l) -lt 8000000 ]]; then
+    		#cat | wc to avoid filename in output
+			echo "Skipping file batch as single input file is < 8000000 lines long"
+			split=0
+			echo "Input fastq file for $experiment_name $name alignments:" > $alignment_log
+			echo  "\t${unzipped_files[0]}" >> $alignment_log 
+			split_files=(${unzipped_files[0]})
+			input_file=${unzipped_files[0]}
+		fi
 	fi
 
-	file=${tmp_files[0]}
+
+	if [[ $split = 1 ]]; then
+		MakeDirs $outdir			
+		echo -e "Batching files to:\t${file_prefix}[1-9]\*\.fastq"
+	#This is not catching failure!
+		Execute cat ${unzipped_files[*]} | split -d -a 4 -l 8000000 - $file_prefix
+		
+	    #rename files to add suffix, remove leading 0s
+		#and +1 to the number to work with LSB_JOBINDEX values
+		
+		
+		ls $file_prefix[0-9][0-9][0-9][0-9] | while read f; do num=$(echo $f | sed -r "s/(${file_prefix})([0-9]+)$/\2/"); num=$(echo $num | sed -r 's/^[0]+([0-9][0-9]*)/\1/'); num=$(($num + 1)); mv $f "${file_prefix}${num}.fastq"; done
+
+		split_files=($(ls $file_prefix[1-9]*.fastq))
+
+		echo -e "Created ${#split_files[*]} batch files"
+
+
+		echo "Input fastq files for $experiment_name $name alignments:" > $alignment_log
+			
+			if [[ $new_input = 1 ]]; then
+				
+				for f in ${unzipped_files[*]}; do
+					echo "\t${f}" >> $alignment_log
+				done
+
+				echo "Gzipping all source fastq files"
+				Execute gzip ${unzipped_files[*]}
+			fi
+	fi
 fi
 
 
+#Should always have split_files by now
+#but let's test for sanity
+if [[ ! "$split_files" ]]; then
+	echo -e "ERROR:\tCould not identify split_files. Something is wrong with the script!"
+	exit
+fi
+
 
 #Could also log other run params here?
-
 lc_species=$(echo $species | tr [A-Z] [a-z])
 uc_species=$(echo $species | tr [a-z] [A-Z])
 index_name="${lc_species}_${gender}_${assembly}${mask}.fasta"
@@ -298,27 +365,90 @@ for ext in amb ann bwt pac rbwt rpac rsa sa; do
 done
 
 
-run_txt="\nRunning bwa with following options:\n\tIndex name\t= $index_name\n\tInput file\t= $file\n\tAlignment type\t= $align_type\n\tOutput dir\t= $outdir\n"
+
+### Submit jobs
+run_txt="\nRunning bwa with following options:\n\tIndex name\t= $index_name\n\tInput file\t= $file\n\tAlignment type\t= $align_type\n\tOutput dir\t= $outdir\n\tOutput format\t= $format\n"
 echo -e $run_txt
 echo -e $run_txt >> $alignment_log
 
 #Is the index job still running?
 checkJob ${index_name}_indexes exit_if_running
 
+
+
+### Run bwa and remove intermediate files...
 #Use submitJob to avoid truncation of bsub cmd
-#Could tidy up names a little here, no need 
-set_name="${experiment_name}_${name}"
-job_name="bwa_${align_type}_${set_name}";
-bsub_cmd="-q long $resource -o ${outdir}/${job_name}.out -e ${outdir}/${job_name}.err"
-job_cmd="'bwa aln $fasta_file  $file > ${outdir}/${set_name}.${align_type}.sai; bwa $align_type $fasta_file ${outdir}/${name}.${align_type}.sai $file > ${outdir}/${name}.${align_type}.sam'"
+	job_name="bwa_${align_type}_${experiment_name}_${name}";
+
+if [[ $merge_only = 1 ]]; then
+	echo -e "Skipping alignment job:\t$job_name"
+else
+
+	if [[ $new_data = 1 ]]; then
+		echo -e "ERROR:\tCannot skip alignment job as there is new data, please omit -m(erge only)"
+		exit;
+	fi
+
+	bsub_cmd="-q long $resource -o ${outdir}/${job_name}.%I.out -e ${outdir}/${job_name}.%I.err"
+	index_cmd="bwa aln $fasta_file  $input_file > ${file_prefix}%I.${align_type}.sai"
+	align_cmd="bwa $align_type $fasta_file ${file_prefix}%I.${align_type}.sai $file > ${file_prefix}%I.${align_type}.unsorted.sam"
+
+#This bam sort is a little redundant at the moment as
+#pipeline imports only take sam at present and always sorts before import.
+#However, needed for merging and bam sort should be faster
+#When we implement bam parsers, we can optionally remove the sam conversion
+#and also add a sorted flag to the imports
+	bam_cmd="samtools view -S -b $file_prefix%I.unsorted.sam > $file_prefix%I.unsorted.bam"
+#Could we pipe all of this to avoid intermediate files?
+	sort_cmd="samtools sort $file_prefix%I.unsorted.bam $file_prefix%I.sorted.bam"
+#Clean last in case we fail and want to rerun manually?
+	clean_cmd="rm -f ${file_prefix}%I.${align_type}.sai ${file_prefix}%I.${align_type}.unsorted.sam $file_prefix%I.unsorted.bam"
+	job_cmd="'$index_cmd; $align_cmd; $bam_cmd; $sort_cmd; $clean_cmd;'"
 
 #echo $bsub_cmd $job_cmd
 
-echo "\n"
+	echo "\n"
 
-submitJob "$job_name" "$bsub_cmd" "$job_cmd" 
+	submitJob "\"$job_name[1-${#split_files[*]}]\"" "$bsub_cmd" "$job_cmd" 
+fi
+
+#Now add merge and clean up job dependant on completion of first job
+sam_header="${index_home}/${uc_species}/${lc_species}_${gender}_${assembly}${mask}.header.sam"
+
+if [[ ! -f $sam_header ]]; then
+	echo -e "ERROR:\tCould not find sam header to mere with:\t$sam_header"
+	exit
+fi
+
+merge_cmd="samtools merge -h $sam_index ${file_prefix}bam ${file_prefix}[1-9]*.sorted.bam"
+
+merge_job_name="${job_name}_merge"
+bsub_cmd=" -o ${merge_job_name}.out -e ${merge_job_name}.err -w'done(${job_name})' "
+
+#Omiting this cat for now, as sometimes it's easier to spot errors in separate files due 
+#to different file sizes
+# cat ${dir}/*.bwa.out > ${file}.bwa_all.out; rm ${dir}/*.bwa.out; cat ${dir}/*.bwa.err > ${file}.bwa_all.err; rm ${dir}/*.bwa.err; 
+sam_cmd="samtools view -h ${file_prefix}.bam | gzip -c > ${file_prefix}_${align_type}.sam.gz"
+clean_cmd=
+
+if [[ $format = sam ]]; then
+	clean_cmd="$sam_cmd; rm -f ${file_prefix}.bam"
+fi
+
+clean_cmd="$clean_cmd; rm -f ${file_prefix}[1-9]*sorted.bam"
+job_cmd="'$merge_cmd; $clean_cmd;'"
+
+
+#sometimes there are problems and the final zip is empty... since I rm the original files, everything needs to be rerun...
+echo $bsub_cmd $job_cmd
+submitJob "$merge_job_name" "$bsub_cmd" "$job_cmd"
+
+
+
 
 #Could really do with submitting this to farm if we are waiting
+#for cat gzip split activity
 #Wait for job success here and remove cache file if present?
+#Could also filter and convert sam2bed
 
 echo -e "\nNOTE:\tNeed to remove the cat'd fastq file after the job has successfully completed"
