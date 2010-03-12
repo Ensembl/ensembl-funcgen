@@ -273,6 +273,8 @@ submitJob(){
 	bsub_params=$1
 	shift
 	job_cmd=$1
+	shift
+	eval_flag=$1
 
 	#default to LSF
 	QUEUE_MANAGER=${QUEUE_MANAGER:=LSF}
@@ -294,9 +296,24 @@ submitJob(){
 			echo "Job($JOB_ID) $job_name already exists"
 		else
 		#echo through bash to avoid weird resources parameter truncation
+
+			if [ $eval_flag ]; then
+				#We can get another level of interpolation here by evaling
+				#But this may reveal more env vars
+				#Trick is to not double quote things in the first place
+				job_cmd=$(eval "echo \"$job_cmd\"")
+			fi
+
 			echo bsub -J $job_name $bsub_params $job_cmd
-			JOB_ID=$(echo bsub -J $job_name $bsub_params $job_cmd | bash)
+
+			#exit;
+			#quote job cmd to avoid ; breaking bsub			
+			#quote job name to handle job arrays
+			JOB_ID=$(echo bsub -J "\"$job_name\"" $bsub_params "'$job_cmd'" | bash)
 			
+
+			#This is not catching some failures!!
+
 			if [ $? -ne 0 ]; then
 				echo $JOB_ID
 				echo "Failed to submit job $job_name"
