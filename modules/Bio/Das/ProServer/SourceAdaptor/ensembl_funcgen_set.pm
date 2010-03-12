@@ -76,7 +76,7 @@ sub init
 		($cs = $coord_sys) =~ s/_//;
 
 		if($cs =~ /${cs_version}\s*,/){
-		  warn "Setting coordinates to ".$coord_sys.' '.$css{$coord_sys} if $self->{debug};
+		  warn "Setting $set_name coordinates to ".$coord_sys.' '.$css{$coord_sys} if $self->{debug};
 		  $self->{'coordinates'} = { $coord_sys => $css{$coord_sys} };
 		  last;
 		}
