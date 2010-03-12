@@ -168,7 +168,7 @@ if [ "$dir" ]; then
 			tmp=$(echo "${split_files[*]}" | sed 's/ /\n\t/g')
 			echo -e "WARNING:\tUsing previously cached fastq files:\n\t${tmp}"
 			echo -e "Specify -c(lean) to override this behaviour"
-			sleep 10
+			sleep 5
 		fi
 	else
 		#Remove just incase we have other cached files hanging around
@@ -217,7 +217,7 @@ else  # files
 			tmp=$(echo "${split_files[*]}" | sed 's/ /\n\t/g')
  			echo -e "WARNING:\tUsing previously cached fastq files:\n\t${tmp}\n"
 			echo -e "Specify -c(lean) to override this behaviour"
-			sleep 10
+			sleep 5
 	 	fi
  	else
 		#Remove just incase we have other cached files hanging around
@@ -229,16 +229,15 @@ fi
 #Do we not have a function for this unzipping/cating?
 
 if [[ $new_input = 1 ]]; then
+	zipped_files=
 
 	for f in ${files[*]}; do
-		zipped_files=
-
+	
 		if [[ $f != *fastq* ]]; then
 			echo -e "Ignoring non-fastq file:\t$f"
 		else
 			CheckFile $f
 			echo -e "Using fastq file:\t$f"
-			
 			funzipped=$f
 			
 	 	    #Unzip those which are zipped
@@ -254,8 +253,7 @@ if [[ $new_input = 1 ]]; then
 		fi
 
 	done
-
-
+	
 	if [ "$zipped_files" ]; then
 		echo -e "Unzipping files..."	
 		Execute gunzip ${zipped_files[*]}
@@ -270,7 +268,7 @@ fi
 
 #Cat if required and log inputs
 alignment_log="${outdir}/${name}.alignment.log"
-input_file="$file_prefix%I.fastq"
+input_file="$file_prefix\$LSB_JOBINDEX.fastq"
 
 
 
@@ -303,15 +301,11 @@ if [[ $new_input = 1 ]]; then
 		
 	    #rename files to add suffix, remove leading 0s
 		#and +1 to the number to work with LSB_JOBINDEX values
-		
-		
-		ls $file_prefix[0-9][0-9][0-9][0-9] | while read f; do num=$(echo $f | sed -r "s/(${file_prefix})([0-9]+)$/\2/"); num=$(echo $num | sed -r 's/^[0]+([0-9][0-9]*)/\1/'); num=$(($num + 1)); mv $f "${file_prefix}${num}.fastq"; done
+
+		ls $file_prefix[0-9][0-9][0-9][0-9] | while read f; do num=$(echo $f | sed -r "s/.*\.([0-9]+)$/\1/"); num=$(echo $num | sed -r "s/^[0]+([0-9][0-9]*)/\1/"); num=$(($num + 1)); mv $f "${file_prefix}${num}.fastq"; done
 
 		split_files=($(ls $file_prefix[1-9]*.fastq))
-
 		echo -e "Created ${#split_files[*]} batch files"
-
-
 		echo "Input fastq files for $experiment_name $name alignments:" > $alignment_log
 			
 		for f in ${unzipped_files[*]}; do
@@ -320,7 +314,6 @@ if [[ $new_input = 1 ]]; then
 	
 		#Could maybe add a validation step here to wc -l the batches versus the input
 
-	
 		echo "Gzipping all source fastq files"
 		Execute gzip ${unzipped_files[*]}
 	fi
@@ -375,10 +368,11 @@ checkJob ${index_name}_indexes exit_if_running
 
 ### Run bwa and remove intermediate files...
 #Use submitJob to avoid truncation of bsub cmd
-	job_name="bwa_${align_type}_${experiment_name}_${name}";
+align_job_name="bwa_${align_type}_${experiment_name}_${name}";
+
 
 if [[ $merge_only = 1 ]]; then
-	echo -e "Skipping alignment job:\t$job_name"
+	echo -e "Skipping alignment job:\t$align_job_name"
 else
 
 	if [[ $new_data = 1 ]]; then
@@ -386,31 +380,39 @@ else
 		exit;
 	fi
 
-	bsub_cmd="-q long $resource -o ${outdir}/${job_name}.%I.out -e ${outdir}/${job_name}.%I.err"
-	index_cmd="bwa aln $fasta_file  $input_file > ${file_prefix}%I.${align_type}.sai"
-	align_cmd="bwa $align_type $fasta_file ${file_prefix}%I.${align_type}.sai $file > ${file_prefix}%I.${align_type}.unsorted.sam"
+
+	#we have problem with $LSB var being interpolated before they are set
+	#Solution is to interpolate in the environment?
+	#Do this passing '$job_cmd'
+	#Will this still not interpolate when submitting job?
+
+	bsub_cmd="-q long $resource -o ${outdir}/${align_job_name}.%J.%I.out -e ${outdir}/${align_job_name}.%J.%I.err"
+	index_cmd="bwa aln $fasta_file  $input_file > ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai"
+	align_cmd="bwa $align_type $fasta_file ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai $file > ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam"
 
 #This bam sort is a little redundant at the moment as
 #pipeline imports only take sam at present and always sorts before import.
 #However, needed for merging and bam sort should be faster
 #When we implement bam parsers, we can optionally remove the sam conversion
 #and also add a sorted flag to the imports
-	bam_cmd="samtools view -S -b $file_prefix%I.unsorted.sam > $file_prefix%I.unsorted.bam"
+	bam_cmd="samtools view -S -b $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.sam > $file_prefix\$LSB_JOBID\$LSB_JOBINDEX.unsorted.bam"
 #Could we pipe all of this to avoid intermediate files?
-	sort_cmd="samtools sort $file_prefix%I.unsorted.bam $file_prefix%I.sorted.bam"
+	sort_cmd="samtools sort $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.bam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.sorted.bam"
 #Clean last in case we fail and want to rerun manually?
-	clean_cmd="rm -f ${file_prefix}%I.${align_type}.sai ${file_prefix}%I.${align_type}.unsorted.sam $file_prefix%I.unsorted.bam"
-	job_cmd="'$index_cmd; $align_cmd; $bam_cmd; $sort_cmd; $clean_cmd;'"
+	clean_cmd="rm -f ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.bam"
+	
+	#Do no double quote vars containing LSB env vars here as we will interpolate too soon
+	align_job_cmd=$index_cmd'; '$align_cmd'; '$bam_cmd'; '$sort_cmd'; '$clean_cmd';'
 
-#echo $bsub_cmd $job_cmd
+	echo -e "\n"
 
-	echo "\n"
-
-	submitJob "\"$job_name[1-${#split_files[*]}]\"" "$bsub_cmd" "$job_cmd" 
+	submitJob "$align_job_name[1-${#split_files[*]}]" "$bsub_cmd" '$align_job_cmd' eval
 fi
 
 #Now add merge and clean up job dependant on completion of first job
 sam_header="${index_home}/${uc_species}/${lc_species}_${gender}_${assembly}${mask}.header.sam"
+
+
 
 if [[ ! -f $sam_header ]]; then
 	echo -e "ERROR:\tCould not find sam header to mere with:\t$sam_header"
@@ -419,25 +421,27 @@ fi
 
 merge_cmd="samtools merge -h $sam_index ${file_prefix}bam ${file_prefix}[1-9]*.sorted.bam"
 
-merge_job_name="${job_name}_merge"
-bsub_cmd=" -o ${merge_job_name}.out -e ${merge_job_name}.err -w'done(${job_name})' "
+merge_job_name="merge_${align_job_name}"
+bsub_cmd=" -o ${outdir}/${merge_job_name}.out -e ${outdir}/${merge_job_name}.err -w \"done(${job_name})\" "
+
 
 #Omiting this cat for now, as sometimes it's easier to spot errors in separate files due 
 #to different file sizes
 # cat ${dir}/*.bwa.out > ${file}.bwa_all.out; rm ${dir}/*.bwa.out; cat ${dir}/*.bwa.err > ${file}.bwa_all.err; rm ${dir}/*.bwa.err; 
-sam_cmd="samtools view -h ${file_prefix}.bam | gzip -c > ${file_prefix}_${align_type}.sam.gz"
+sam_cmd="samtools view -h ${file_prefix}bam | gzip -c > ${file_prefix}${align_type}.sam.gz"
 clean_cmd=
 
 if [[ $format = sam ]]; then
-	clean_cmd="$sam_cmd; rm -f ${file_prefix}.bam"
+	clean_cmd="$sam_cmd; rm -f ${file_prefix}bam"
 fi
 
 clean_cmd="$clean_cmd; rm -f ${file_prefix}[1-9]*sorted.bam"
-job_cmd="'$merge_cmd; $clean_cmd;'"
+job_cmd="$merge_cmd; $clean_cmd;"
 
 
 #sometimes there are problems and the final zip is empty... since I rm the original files, everything needs to be rerun...
-echo $bsub_cmd $job_cmd
+#echo $bsub_cmd $job_cmd
+echo -e "\n"
 submitJob "$merge_job_name" "$bsub_cmd" "$job_cmd"
 
 
