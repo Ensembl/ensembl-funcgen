@@ -55,3 +55,14 @@ Unclassified	Regulatory Feature	Unclassified regulatory feature
 Unclassified - Cell type specific	Regulatory Feature	Cell type specific unclassified regulatory feature
 Gene Associated	Regulatory Feature	Gene like regulatory feature
 Gene Associated - Cell type specific	Regulatory Feature	Cell type specific gene like regulatory feature
+Gabp	Transcription Factor	Gabp Transcription Factor Binding
+Nrsf	Transcription Factor	Nrsf Transcription Factor Binding
+Srf	Transcription Factor	Srf Transcription Factor Binding
+Cfos	Transcription Factor	Cfos Transcription Factor Binding
+Cjun	Transcription Factor	Cjun Transcription Factor Binding
+Jund	Transcription Factor	Jund Transcription Factor Binding
+Max	Transcription Factor	Max Transcription Factor Binding
+Nfe2	Transcription Factor	Nfe2 Transcription Factor Binding
+bGata1	Transcription Factor	bGata1 Transcription Factor Binding
+bZnf263	Transcription Factor	bZnf263 Transcription Factor Binding
+Cmyc	Transcription Factor	Cmyc Transcription Factor Binding
