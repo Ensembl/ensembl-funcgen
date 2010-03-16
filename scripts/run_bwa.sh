@@ -395,7 +395,7 @@ else
 #However, needed for merging and bam sort should be faster
 #When we implement bam parsers, we can optionally remove the sam conversion
 #and also add a sorted flag to the imports
-	bam_cmd="samtools view -S -b $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.sam > $file_prefix\$LSB_JOBID\$LSB_JOBINDEX.unsorted.bam"
+	bam_cmd="samtools view -S -b $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.sam > $file_prefix\$LSB_JOBID\.$LSB_JOBINDEX.unsorted.bam"
 #Could we pipe all of this to avoid intermediate files?
 	sort_cmd="samtools sort $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.bam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.sorted.bam"
 #Clean last in case we fail and want to rerun manually?
