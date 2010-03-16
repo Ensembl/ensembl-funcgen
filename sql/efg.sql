@@ -666,9 +666,6 @@ CREATE TABLE `supporting_set` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- primary key will always be unique as we will never 
--- have mixed supporting_set type e.g.(result/feature) in the same data_set
--- hence no possibilty of getting same id from different tables in same data_set
 
 
 -- Table structure for table `result`
@@ -686,12 +683,9 @@ CREATE TABLE `result` (
    KEY `result_set_input_idx` (`result_set_input_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
--- removed as not needed unless BLOB or TEXT present AVG_ROW_LENGTH=40;
 -- result_id needed as we may have replicate probe on same chip
-
 -- X Y here allows repicate probes on same ship
--- Allows storage of none raw values
--- Also needs to accommodate different normalisations 
+
 
 -- Table structure for result_feature
 
@@ -716,6 +710,7 @@ CREATE TABLE `result_feature` (
 -- of seq_regions * window sizes in result_feature
 -- No primary key as we need to parition on window_size, which
 -- would not be the whole of the primary key?
+-- Need to add AVG_ROW_LENGTH here
 
 -- Table structure for `result_set`
 
@@ -767,12 +762,8 @@ CREATE TABLE `annotated_feature` (
   KEY `feature_set_idx` (`feature_set_id`)	  
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
--- Need to be able to maintain link between prediction and source data i.e. experiment/s
--- Need to be able to have this table running completely from the persistent table
--- i.e. We want to be able to remove the experiment table data and still have access to all relevant data
--- e.g. primary design type, target_name/description 
--- Either make experiment->target 1:1 and have mixed persistent data in target(rm experiment_id and add target_id to experment)
--- Or add target_id to predicted_feature, may be redundant for non-tiling arrays?  How are we going to capture primary_design_type?
+-- Partition this by seq_region(hash)? but hardcode number of partitions to keep sensible.
+
 
 
 -- Table structure for `feature_set`
@@ -1087,7 +1078,7 @@ INSERT into status_name(name) values ('T.Biweight');
 INSERT into status_name(name) values ('LOESS');
 INSERT into status_name(name) values ('MART_DISPLAYABLE');
 INSERT into status_name(name) values ('RESULT_FEATURE_SET');
---These are now species specific and should be added like the feature/cell types 
+-- These are now species specific and should be added like the feature/cell types 
 INSERT into status_name(name) values ('IMPORTED_NCBI36');
 INSERT into status_name(name) values ('IMPORTED_GRCh37');
 
