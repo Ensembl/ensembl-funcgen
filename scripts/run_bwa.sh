@@ -395,7 +395,7 @@ else
 #However, needed for merging and bam sort should be faster
 #When we implement bam parsers, we can optionally remove the sam conversion
 #and also add a sorted flag to the imports
-	bam_cmd="samtools view -S -b $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.sam > $file_prefix\$LSB_JOBID\.$LSB_JOBINDEX.unsorted.bam"
+	bam_cmd="samtools view -S -b $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.sam > $file_prefix\$LSB_JOBID\.\$LSB_JOBINDEX.unsorted.bam"
 #Could we pipe all of this to avoid intermediate files?
 	sort_cmd="samtools sort $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.bam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.sorted.bam"
 #Clean last in case we fail and want to rerun manually?
@@ -419,7 +419,7 @@ if [[ ! -f $sam_header ]]; then
 	exit
 fi
 
-merge_cmd="samtools merge -h $sam_index ${file_prefix}bam ${file_prefix}[1-9]*.sorted.bam"
+merge_cmd="samtools merge -h $sam_index ${file_prefix}bam ${file_prefix}[0-9]*.[1-9]*.sorted.bam"
 
 merge_job_name="merge_${align_job_name}"
 bsub_cmd=" -o ${outdir}/${merge_job_name}.out -e ${outdir}/${merge_job_name}.err -w \"done(${job_name})\" "
@@ -435,7 +435,7 @@ if [[ $format = sam ]]; then
 	clean_cmd="$sam_cmd; rm -f ${file_prefix}bam"
 fi
 
-clean_cmd="$clean_cmd; rm -f ${file_prefix}[1-9]*sorted.bam"
+clean_cmd="$clean_cmd; rm -f ${file_prefix}[0-9]*.[1-9]*sorted.bam"
 job_cmd="$merge_cmd; $clean_cmd;"
 
 
