@@ -220,15 +220,20 @@ sub open_file{
   $operator = "$operator $file";
   }
   else{
-  	#We have some pipeing to do
+  	#We have some piping to do
   	$operator = sprintf($operator, $file);
   }
+
+  #warn "operator is $operator";
 
   #Get dir here and create if not exists
   my $dir = dirname($file);  
   mkpath($dir, {verbose => 1, mode => 0750}) if(! -d $dir);
   my $fh = new FileHandle "$operator";
-  
+
+
+  #This does not catch incorrectly defined named pipes
+
   if(! defined $fh){
 	croak("Failed to open $operator");
   }
@@ -510,6 +515,11 @@ sub generate_slices_from_names{
   }
   elsif($toplevel){
 	@slices = @{$slice_adaptor->fetch_all('toplevel', undef, $non_ref)};
+  }
+
+
+  if(! @slices){
+	throw("You have specified slice_names and skip_slices paramters which have generated no slices.\nslice_names:\t".join(' ',@$slice_names)."\n".join(' ', @$skip_slices));
   }
 
   return \@slices;
