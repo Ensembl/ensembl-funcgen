@@ -26,7 +26,9 @@ fi
 #8 Optionally wait for job success and remove cat'd file if present?
 #9 Use $EFG_DATA for scratch_dir.  Currently set to group rather than personal scratch dir
 #  Need to handle both $EFG_DATA and $EFG_GROUP_DATA?
-#10 Integrate Daniel's batch code
+#10 DONE Integrate Daniel's batch code
+#11 Wrap bsub cmd to catch errors and exit properly
+#12 Add no clean up flag to keep intermediate files? 
 
 OPTIND=1    #Reset the getopts if we have used it previously
 VALID_GENDERS='male female'
@@ -421,11 +423,17 @@ if [[ ! -f $sam_header ]]; then
 	exit
 fi
 
-merge_cmd="samtools merge -h $sam_header ${file_prefix}bam ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam"
+merge_cmd="samtools merge -h $sam_header ${file_prefix}${align_type}.bam ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam"
 
 merge_job_name="merge_${align_job_name}"
-bsub_cmd=" -o ${outdir}/${merge_job_name}.out -e ${outdir}/${merge_job_name}.err -w 'done(${align_job_name}[1-${#split_files[*]}])' "
 
+
+
+bsub_cmd=" -o ${outdir}/${merge_job_name}.%J.out -e ${outdir}/${merge_job_name}.%J.err"
+
+if [[ $merge_only != 1 ]]; then
+	bsub_cmd="$bsub_cmd -w 'done(${align_job_name}[1-${#split_files[*]}])' "
+fi
 
 #Omiting this cat for now, as sometimes it's easier to spot errors in separate files due 
 #to different file sizes
@@ -433,12 +441,15 @@ bsub_cmd=" -o ${outdir}/${merge_job_name}.out -e ${outdir}/${merge_job_name}.err
 sam_cmd="samtools view -h ${file_prefix}${align_type}.bam | gzip -c > ${file_prefix}${align_type}.sam.gz"
 clean_cmd=
 
+
+echo "format is $format"
+
 if [[ $format = sam ]]; then
 	clean_cmd="$sam_cmd; rm -f ${file_prefix}${align_type}.bam"
 fi
 
 clean_cmd="$clean_cmd; rm -f ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam"
-job_cmd="$merge_cmd;" # $clean_cmd;"
+job_cmd="$merge_cmd; $clean_cmd;"
 
 
 #sometimes there are problems and the final zip is empty... since I rm the original files, everything needs to be rerun...
