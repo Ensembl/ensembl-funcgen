@@ -357,23 +357,23 @@ done
 
 
 ### Submit jobs
-run_txt="\nRunning bwa with following options:\n\tIndex name\t= $index_name\n\tInput file\t= $file\n\tAlignment type\t= $align_type\n\tOutput dir\t= $outdir\n\tOutput format\t= $format\n"
+run_txt="\nRunning bwa with following options:\n\tIndex name\t= $index_name\n\tAlignment type\t= $align_type\n\tOutput dir\t= $outdir\n\tOutput format\t= $format\n"
 echo -e $run_txt
 echo -e $run_txt >> $alignment_log
-
-#Is the index job still running?
-checkJob ${index_name}_indexes exit_if_running
-
 
 
 ### Run bwa and remove intermediate files...
 #Use submitJob to avoid truncation of bsub cmd
 align_job_name="bwa_${align_type}_${experiment_name}_${name}";
-
+clean_cmd=
 
 if [[ $merge_only = 1 ]]; then
 	echo -e "Skipping alignment job:\t$align_job_name"
 else
+
+    #Is the index job still running?
+	checkJob ${index_name}_indexes exit_if_running
+
 
 	if [[ $new_data = 1 ]]; then
 		echo -e "ERROR:\tCannot skip alignment job as there is new data, please omit -m(erge only)"
@@ -388,21 +388,23 @@ else
 
 	bsub_cmd="-q long $resource -o ${outdir}/${align_job_name}.%J.%I.out -e ${outdir}/${align_job_name}.%J.%I.err"
 	index_cmd="bwa aln $fasta_file  $input_file > ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai"
-	align_cmd="bwa $align_type $fasta_file ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai $file > ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam"
+	align_cmd="bwa $align_type $fasta_file ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai  $input_file > ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam"
 
 #This bam sort is a little redundant at the moment as
 #pipeline imports only take sam at present and always sorts before import.
 #However, needed for merging and bam sort should be faster
 #When we implement bam parsers, we can optionally remove the sam conversion
 #and also add a sorted flag to the imports
-	bam_cmd="samtools view -S -b $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.sam > $file_prefix\$LSB_JOBID\.\$LSB_JOBINDEX.unsorted.bam"
+	bam_cmd="samtools view -S -b $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam > $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.bam"
 #Could we pipe all of this to avoid intermediate files?
-	sort_cmd="samtools sort $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.bam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.sorted.bam"
+	sort_cmd="samtools sort $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.bam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sorted" #.bam get's added
+#Move this to final clean cmd
 #Clean last in case we fail and want to rerun manually?
-	clean_cmd="rm -f ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.unsorted.bam"
+	
+	#clean_cmd="${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.bam"
 	
 	#Do no double quote vars containing LSB env vars here as we will interpolate too soon
-	align_job_cmd=$index_cmd'; '$align_cmd'; '$bam_cmd'; '$sort_cmd'; '$clean_cmd';'
+	align_job_cmd=$index_cmd'; '$align_cmd'; '$bam_cmd'; '$sort_cmd';' # '$clean_cmd';'
 
 	echo -e "\n"
 
@@ -419,29 +421,31 @@ if [[ ! -f $sam_header ]]; then
 	exit
 fi
 
-merge_cmd="samtools merge -h $sam_index ${file_prefix}bam ${file_prefix}[0-9]*.[1-9]*.sorted.bam"
+merge_cmd="samtools merge -h $sam_header ${file_prefix}bam ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam"
 
 merge_job_name="merge_${align_job_name}"
-bsub_cmd=" -o ${outdir}/${merge_job_name}.out -e ${outdir}/${merge_job_name}.err -w \"done(${job_name})\" "
+bsub_cmd=" -o ${outdir}/${merge_job_name}.out -e ${outdir}/${merge_job_name}.err -w 'done(${align_job_name}[1-${#split_files[*]}])' "
 
 
 #Omiting this cat for now, as sometimes it's easier to spot errors in separate files due 
 #to different file sizes
 # cat ${dir}/*.bwa.out > ${file}.bwa_all.out; rm ${dir}/*.bwa.out; cat ${dir}/*.bwa.err > ${file}.bwa_all.err; rm ${dir}/*.bwa.err; 
-sam_cmd="samtools view -h ${file_prefix}bam | gzip -c > ${file_prefix}${align_type}.sam.gz"
+sam_cmd="samtools view -h ${file_prefix}${align_type}.bam | gzip -c > ${file_prefix}${align_type}.sam.gz"
 clean_cmd=
 
 if [[ $format = sam ]]; then
-	clean_cmd="$sam_cmd; rm -f ${file_prefix}bam"
+	clean_cmd="$sam_cmd; rm -f ${file_prefix}${align_type}.bam"
 fi
 
-clean_cmd="$clean_cmd; rm -f ${file_prefix}[0-9]*.[1-9]*sorted.bam"
-job_cmd="$merge_cmd; $clean_cmd;"
+clean_cmd="$clean_cmd; rm -f ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam"
+job_cmd="$merge_cmd;" # $clean_cmd;"
 
 
 #sometimes there are problems and the final zip is empty... since I rm the original files, everything needs to be rerun...
 #echo $bsub_cmd $job_cmd
 echo -e "\n"
+
+
 submitJob "$merge_job_name" "$bsub_cmd" "$job_cmd"
 
 
