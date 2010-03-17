@@ -145,8 +145,14 @@ sub pre_process_file{
   #Test file format
   throw("Input file is not bed format:\t$filepath") if ! &is_bed($filepath);
   
-  my $sort = ($prepare || ! $self->prepared) ? 'sort -n -k 1,3' : '';
+
+  #separate sort keys stop lexical sorting of start/end
+  #when faced with a non numerical seq_region_name
+  my $sort = ($prepare || ! $self->prepared) ? 'sort -n -k 1 -k 2,3' : '';
   
+  #my $sort_txt = ($sort) ? " with sort $sort" : '';
+  #$self->log("Opening input file${sort_txt}:\t$filepath");
+
   if($self->input_gzipped){
 	$self->input_file_operator("gzip -dc %s | $sort |");
   }
@@ -274,6 +280,8 @@ sub parse_line{
 	#Moving all the rest of this method to the InputSet parser
 	#But this may prove problematic for any complex data types
 	#Which may require cacheing or multiple feature storage
+
+	#Would be quicker to test slice cache here first as is hash
 
 	if(@{$self->{seq_region_names}}){
 	 
@@ -419,8 +427,6 @@ sub parse_Features_by_Slice{
 		  #This is not accounting for -ve strand Slices yet
 		  #omit for speed
 	
-		  warn "pushing feature with score $score";
-
 
 		  $feature =  Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
 			({
