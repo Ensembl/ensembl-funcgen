@@ -109,7 +109,7 @@ sub new {
 	#This has already been set in the registry in SUPER::new above as DEFAULT!
 	#So we need to reset this in the registry here?
 
-	$self->{'_species'} = ${$self->get_MetaContainer->list_value_by_key('species.system_name')}[0] || 'DEFAULT';
+	$self->{'_species'} = ${$self->get_MetaContainer->list_value_by_key('species.production_name')}[0] || 'DEFAULT';
 
 	if($self->species ne 'DEFAULT'){ #Reset this in the registry to the correct species
 	  $self = Bio::EnsEMBL::Utils::ConfigRegistry::gen_load($self);
@@ -608,7 +608,7 @@ sub set_dnadb_by_assembly_version{
   $lspecies =~ s/[0-9]+$// if($lspecies =~ /[0-9]$/);
 
 
-  throw('Either specify a species parameter or set species.system_name in the meta table to set dnadb automatically, alternatively pass a dnadb parameter') if $lspecies eq 'default';
+  throw('Either specify a species parameter or set species.production_name in the meta table to set dnadb automatically, alternatively pass a dnadb parameter') if $lspecies eq 'default';
 	
   #So we use params first
   #else registry params
