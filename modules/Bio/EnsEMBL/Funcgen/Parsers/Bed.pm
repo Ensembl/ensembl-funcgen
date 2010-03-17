@@ -148,13 +148,14 @@ sub pre_process_file{
 
   #separate sort keys stop lexical sorting of start/end
   #when faced with a non numerical seq_region_name
-  my $sort = ($prepare || ! $self->prepared) ? 'sort -n -k 1 -k 2,3' : '';
+  my $sort = ($prepare || ! $self->prepared) ? 'sort -n -k 1 -k 2,3 ' : '';
   
-  #my $sort_txt = ($sort) ? " with sort $sort" : '';
-  #$self->log("Opening input file${sort_txt}:\t$filepath");
+ # my $sort_txt = ($sort) ? " with sort $sort" : ' without sort';
+ # $self->log("Opening input file${sort_txt}:\t$filepath");
 
   if($self->input_gzipped){
-	$self->input_file_operator("gzip -dc %s | $sort |");
+	$sort .= '|' if $sort;
+	$self->input_file_operator("gzip -dc %s | $sort ");
   }
   else{
 	#This is really only required for read alignments
@@ -264,8 +265,7 @@ sub parse_line{
   
   my $slice = $self->cache_slice($chr);
 
-  if(!  $slice){
-	warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
+  if(! $slice){
 	return 0;
   }
   else{
@@ -409,8 +409,6 @@ sub parse_Features_by_Slice{
 	#$line = <$fh>;
 	#Still need to chump here in case no other fields
 	$line =~ s/\r*\n//o;#chump accounts for windows files
-
-
 	warn("Found empty line") if ! $line;
 
 	#We could use a generic method to parse here
