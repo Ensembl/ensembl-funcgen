@@ -86,6 +86,10 @@ Requires the presence of a table rf_stats in the database
 List of space separated FeatureSet names to be considered. Names with spaces must be quoted.
 When not specified all features are considered
 
+=item B<-all_seq_regions>
+
+Processes all available seq_regions, by default only uses chromosomes.
+
 =back
 
 
@@ -96,7 +100,7 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Copyright (c) 1999-2010 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -127,8 +131,9 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 # 6 Handle output better lsf/R out? Use optional run name for file naming?
 # 7 Use RMySQL to pull the data directly into R rather than dumping
 # 8 Move to sub dir
-# 9 Restrict plots to main chromosomes (do NT contigs in a seaprate plot)
+# 9 DONE Restrict plots to main chromosomes (do NT contigs in a seaprate plot)
 # 10 Show all chr names in plot axis
+# 11 DONE Correct sql to prevent pruoduct with nr seq_region entries
 
 use strict;
 use warnings;
@@ -138,7 +143,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Data::Dumper;
 
-my ($species, $dnadbhost, $dnadbuser, $dnadbport, $dnadbpass, $dnadbname, $host, $user, $port, $pass, $dbname, $help, $R, $nodump, $compare, $regstats);
+my ($species, $dnadbhost, $dnadbuser, $dnadbport, $dnadbpass, $dnadbname, $host, $user, $port, $pass, $dbname, $help, $R, $nodump, $compare, $regstats, $all_seq_regions);
 
 $host = $ENV{DB_HOST};
 $port = $ENV{DB_PORT};
@@ -172,6 +177,7 @@ GetOptions (
 			"nodump"             => \$nodump,
 			"compare"            => \$compare,
 			"regstats"           => \$regstats,
+			"all_seq_regions"    => \$all_seq_regions,
 			"feature_sets=s{,}"  => \@fset_names,
 		   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
@@ -223,13 +229,32 @@ if(scalar(@fset_names)==0){
 
 #print the data of each set to individual files (maybe put all in one file??)
 #give other saving options (e.g. clean-up, backup?)
+
+
+my @sr_types = ('chromosome');
+push @sr_types, 'non_chromosome' if $all_seq_regions;
+
+
+my %sr_type_clauses = (
+					'chromosome' => , "='chromosome'",
+				   'non_chromosome' => , "!='chromosome'",
+				   );
+
 if(!$nodump){
   print "::Dumping Datasets\n";
   foreach my $fset (@fset_names){
-    my $query ="SELECT s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM annotated_feature f, seq_region s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name='$fset';";
-    my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "-p$pass" : "")." $dbname > ${fset}_data.txt";
-    #print $cmd."\n";
-    system($cmd);
+
+	#This was not accounting for nr sr_ids
+	foreach my $sr_type(@sr_types){
+
+	  my $query ="SELECT s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM annotated_feature f, (select distinct(seq_region_id), sr.name from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and cs.name".$sr_type_clauses{$sr_type}.") s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name='$fset';";
+
+	  #warn $query;
+
+	  my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "-p$pass" : "")." $dbname > ${fset}_data.${sr_type}.txt";
+	  #print $cmd."\n";
+	  system($cmd);
+	}
   }
 
   if($regstats){
@@ -266,19 +291,29 @@ if (defined $R) {
   foreach my $fset (@fset_names){
     #This will not work in R if the name has characters like ':'
     my $safename = $safenames{$fset};
-    print FO "$safename <- read.table(\"${fset}_data.txt\",header=TRUE)\n";
-    #the if is to avoid errors printing empty sets...
-    print FO "if (length(".$safename."\$length) > 0) barplot(unlist(lapply(split(".$safename.",".$safename."\$region),function(x) length(x\$length))),main=\"".$fset."\",xlab=\"region\",ylab=\"number of peaks\")\n";
-    print FO "if (length(".$safename."\$length) > 0) boxplot(lapply(split(".$safename.",".$safename."\$region),function(x) x\$length),main=\"".$fset."\",xlab=\"region\",ylab=\"Peak length\")\n";
+
+	foreach my $sr_type(@sr_types){
+	  my $data_name = "${safename}_${sr_type}";
+		
+	  print FO "$data_name <- read.table(\"${fset}_data..${sr_type}.txt\",header=TRUE)\n";
+	  #the if is to avoid errors printing empty sets...
+	  print FO "if (length(".$data_name."\$length) > 0) barplot(unlist(lapply(split(".$data_name.",".$data_name."\$region),function(x) length(x\$length))),main=\"".$fset."\",xlab=\"region\",ylab=\"number of peaks\")\n";
+	  print FO "if (length(".$data_name."\$length) > 0) boxplot(lapply(split(".$data_name.",".$data_name."\$region),function(x) x\$length),main=\"".$fset."\",xlab=\"region\",ylab=\"Peak length\")\n";
+	}
   }
 
-  if($compare){
-    #Maybe do some more analysis here?
-    my @safe; foreach my $fset (@fset_names){ push(@safe, $safenames{$fset}); }
-    print FO "barplot(c(length(".join("\$length),length(",@safe)."\$length)),main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"number of peaks\",col=rainbow(".scalar(@safe)."))\n";
-    print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
-    print FO "boxplot(".join("\$length,",@safe)."\$length,main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"Peak length\",col=rainbow(".scalar(@safe)."))\n";
-    print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
+  if($compare){ 
+	#Maybe do some more analysis here?
+	my @safe; 
+	
+	#For brevity only compare true chromosomes
+	map { push @safe, $safenames{$_}.'_chromosome' } @fset_names;
+	
+	print FO "barplot(c(length(".join("\$length),length(",@safe)."\$length)),main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"number of peaks\",col=rainbow(".scalar(@safe)."))\n";
+	print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
+	print FO "boxplot(".join("\$length,",@safe)."\$length,main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"Peak length\",col=rainbow(".scalar(@safe)."))\n";
+	print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
+	
   }
 
 
