@@ -143,6 +143,8 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 # 14 CHange axis labels to real numbers
 # 15 Move comparison legend outside of plot as it obscures view of data
 # 16 DONE Implement report name
+# 17 These are rather large, can we compress the data some how by using different plots styles?
+# 18 FeatureSet names/colour do not appear on last graph axis/plot
 
 use strict;
 use warnings;
@@ -335,7 +337,7 @@ if (defined $R) {
 
   close FO;
   #This submits to yesterday by default
-  system "R CMD BATCH --slave peaks_report.R";
+  system "R CMD BATCH --slave ${name}.R";
 }
 
 __END__
