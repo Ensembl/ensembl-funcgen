@@ -116,7 +116,7 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 
 =head1 CVS
 
-  $log: $
+  $log$
 
 =cut
 
