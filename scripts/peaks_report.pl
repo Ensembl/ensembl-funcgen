@@ -116,7 +116,7 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 
 =head1 CVS
 
-  $log$
+  $Log: not supported by cvs2svn $
 
 =cut
 
@@ -130,6 +130,8 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 # 6 Handle output better lsf/R out? Use optional run name for file naming?
 # 7 Use RMySQL to pull the data directly into R rather than dumping
 # 8 Move to sub dir
+# 9 Restrict plots to main chromosomes (do NT contigs in a seaprate plot)
+# 10 Show all chr names in plot axis
 
 use strict;
 use warnings;
