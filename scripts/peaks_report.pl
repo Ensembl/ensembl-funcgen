@@ -6,7 +6,7 @@ peaks_report.pl -- generate R plots for generic properties of feature sets
 
 =head1 SYNOPSIS
 
-peaks_report.pl -species [-dbhost ($DB_HOST) -dbuser ($DB_USER) -dbport ($DB_PORT) -dbpass ("") -dbname ($DB_NAME) -R -nodump -feature_sets fsetA,fsetB,... ]
+peaks_report.pl [-dbhost ($DB_HOST) -dbuser ($DB_USER) -dbport ($DB_PORT) -dbpass ("") -dbname ($DB_NAME) -species -R -nodump -feature_sets fsetA,fsetB,... ]
 
 =head1 DESCRIPTION
 
@@ -83,19 +83,27 @@ Requires the presence of a table rf_stats in the database
 
 =item B<feature_sets>
 
-Set of feature names to be considered  (separated by ',')
+List of space separated FeatureSet names to be considered. Names with spaces must be quoted.
 When not specified all features are considered
 
 =back
 
-=head1 LICENCE
 
-This code is distributed under an Apache style licence. Please see
-http://www.ensembl.org/info/about/code_licence.html for details.
+=head1 SEE ALSO
 
-=head1 AUTHOR
+ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 
-Ensembl Functional Genomics
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
 
 =head1 CONTACT
 
@@ -105,7 +113,23 @@ Ensembl Functional Genomics
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
 
+
+=head1 CVS
+
+  $log: $
+
 =cut
+
+
+# To do
+# 1 Move reg stats code in here and allow reg_stats mode only
+# 2 Tighten up parameter checking
+# 3 Change -feature_sets all sets behaviour?
+# 4 Add outdir
+# 5 Catch absent files (sugest removal of -no_dump?)
+# 6 Handle output better lsf/R out? Use optional run name for file naming?
+# 7 Use RMySQL to pull the data directly into R rather than dumping
+# 8 Move to sub dir
 
 use strict;
 use warnings;
@@ -130,28 +154,35 @@ $dnadbuser = $ENV{DNADB_USER};
 
 my (@fset_names);
 
-GetOptions (
-	    'species=s'          => \$species,
-	    'dnadbhost=s'        => \$dnadbhost,
-	    'dnadbuser=s'        => \$dnadbuser,
-	    'dnadbport=i'        => \$dnadbport,
-	    'dnadbpass=s'        => \$dnadbpass,
-	    'dnadbname=s'        => \$dnadbname,
-	    'dbhost=s'           => \$host,
-	    'dbuser=s'           => \$user,
-	    'dbport=i'           => \$port,
-	    'dbpass=s'           => \$pass,
-	    'dbname=s'           => \$dbname,
-	    "help|h"             => \$help,
-	    "R"                  => \$R,
-	    "nodump"             => \$nodump,
-	    "compare"            => \$compare,
-	    "regstats"           => \$regstats,
-	    "feature_sets=s{,}"  => \@fset_names,
-             );
+print "peaks_report.pl @ARGV\n";
 
+GetOptions (
+			'species=s'          => \$species,
+			'dnadbhost=s'        => \$dnadbhost,
+			'dnadbuser=s'        => \$dnadbuser,
+			'dnadbport=i'        => \$dnadbport,
+			'dnadbpass=s'        => \$dnadbpass,
+			'dnadbname=s'        => \$dnadbname,
+			'dbhost=s'           => \$host,
+			'dbuser=s'           => \$user,
+			'dbport=i'           => \$port,
+			'dbpass=s'           => \$pass,
+			'dbname=s'           => \$dbname,
+			"help|h"             => \$help,
+			"R"                  => \$R,
+			"nodump"             => \$nodump,
+			"compare"            => \$compare,
+			"regstats"           => \$regstats,
+			"feature_sets=s{,}"  => \@fset_names,
+		   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
 pod2usage(1) if ($help);
+
+
+# TO DO Need to validate vars here
+# and fail nicely
+
+
 
 #Check database connections
 my $coredba;
@@ -253,6 +284,7 @@ if (defined $R) {
 
 
   close FO;
+  #This submits to yesterday by default
   system "R CMD BATCH --slave peaks_report.R";
 }
 
