@@ -114,9 +114,6 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
   <helpdesk@ensembl.org>.
 
 
-=head1 CVS
-
-  $Log: not supported by cvs2svn $
 
 =cut
 
