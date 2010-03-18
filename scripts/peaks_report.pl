@@ -22,7 +22,7 @@ Give short help
 
 =item B<species>
 
-Mandatory: Species of the database (e.g. homo_sapiens)
+Species of the database (e.g. homo_sapiens)
 
 =item B<dbhost>
 
@@ -90,6 +90,10 @@ When not specified all features are considered
 
 Processes all available seq_regions, by default only uses chromosomes.
 
+=item B<-name>
+
+Name for this report, default is 'peaks_report'
+
 =back
 
 
@@ -129,11 +133,16 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 # 4 Add outdir
 # 5 Catch absent files (sugest removal of -no_dump?)
 # 6 Handle output better lsf/R out? Use optional run name for file naming?
-# 7 Use RMySQL to pull the data directly into R rather than dumping
+# 7 Use RMySQL to pull the data directly into R rather than dumping(use optional r workspace save to save data within R?)
 # 8 Move to sub dir
-# 9 DONE Restrict plots to main chromosomes (do NT contigs in a seaprate plot)
+# 9 DONE Restrict plots to main chromosomes (do NT contigs in a seaprate plot)..much quicker to view now
 # 10 Show all chr names in plot axis
 # 11 DONE Correct sql to prevent pruoduct with nr seq_region entries
+# 12 Add -farm option or just do this in the run script as is only needed when dumping?
+# 13 Order chromosome numerically rather than lexically
+# 14 CHange axis labels to real numbers
+# 15 Move comparison legend outside of plot as it obscures view of data
+# 16 DONE Implement report name
 
 use strict;
 use warnings;
@@ -143,16 +152,22 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Data::Dumper;
 
-my ($species, $dnadbhost, $dnadbuser, $dnadbport, $dnadbpass, $dnadbname, $host, $user, $port, $pass, $dbname, $help, $R, $nodump, $compare, $regstats, $all_seq_regions);
+my ($species, $help, $R, $nodump, $compare, $regstats, $all_seq_regions);
 
-$host = $ENV{DB_HOST};
-$port = $ENV{DB_PORT};
-$user = $ENV{DB_READ_USER};
-$pass='';
-$dbname = $ENV{DB_NAME};
-$dnadbhost = $ENV{DNADB_HOST};
-$dnadbport = $ENV{DNADB_PORT};
-$dnadbuser = $ENV{DNADB_USER};
+
+my $name = 'peaks_report';
+my $host = $ENV{DB_HOST};
+my $port = $ENV{DB_PORT};
+my $user = $ENV{DB_READ_USER};
+my $pass = $ENV{DB_PASS};
+my $dbname = $ENV{DB_NAME};
+my $dnadbhost = $ENV{DNADB_HOST};
+my $dnadbport = $ENV{DNADB_PORT};
+my $dnadbuser = $ENV{DNADB_USER};
+my $dnadbname =  $ENV{DNADB_NAME};
+my $dnadbpass =  $ENV{DNADB_PASS};
+
+
 
 #get command line options
 
@@ -179,6 +194,7 @@ GetOptions (
 			"regstats"           => \$regstats,
 			"all_seq_regions"    => \$all_seq_regions,
 			"feature_sets=s{,}"  => \@fset_names,
+			"name=s"             => \$name,
 		   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
 pod2usage(1) if ($help);
@@ -270,9 +286,9 @@ if(!$nodump){
 #Check which parameters one might want...
 if (defined $R) {
   print "::Generating the R plots\n";
-  open(FO,">peaks_report.R");
+  open(FO,">${name}.R");
   print FO "require(graphics)\n";
-  print FO "pdf(file=\"peaks_report.pdf\")\n";
+  print FO "pdf(file=\"${name}.pdf\")\n";
   print FO "par(cex=0.7,cex.main=1.5)\n";
 
   if($regstats){ 
@@ -295,7 +311,7 @@ if (defined $R) {
 	foreach my $sr_type(@sr_types){
 	  my $data_name = "${safename}_${sr_type}";
 		
-	  print FO "$data_name <- read.table(\"${fset}_data..${sr_type}.txt\",header=TRUE)\n";
+	  print FO "$data_name <- read.table(\"${fset}_data.${sr_type}.txt\",header=TRUE)\n";
 	  #the if is to avoid errors printing empty sets...
 	  print FO "if (length(".$data_name."\$length) > 0) barplot(unlist(lapply(split(".$data_name.",".$data_name."\$region),function(x) length(x\$length))),main=\"".$fset."\",xlab=\"region\",ylab=\"number of peaks\")\n";
 	  print FO "if (length(".$data_name."\$length) > 0) boxplot(lapply(split(".$data_name.",".$data_name."\$region),function(x) x\$length),main=\"".$fset."\",xlab=\"region\",ylab=\"Peak length\")\n";
