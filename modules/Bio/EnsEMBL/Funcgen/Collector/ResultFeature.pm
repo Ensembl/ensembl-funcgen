@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.4 2010-03-09 13:31:18 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.5 2010-03-18 10:21:28 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
@@ -385,6 +385,10 @@ sub store_collection{
   my $sr_start = $slice_start;
   my $sr_end   = $slice_end;
   $strand = 0 if ! defined $strand;
+  #Overwriting strand value with 0 
+  #As we have collected features from both strands?
+  $strand = 0 if $wsize != 0;
+
 
   #This happens if the last collection was already written in the loop
   #Handle this here so we don't have to set/test collection_start for every record
