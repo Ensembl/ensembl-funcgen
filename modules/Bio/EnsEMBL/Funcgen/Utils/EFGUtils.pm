@@ -519,7 +519,7 @@ sub generate_slices_from_names{
 
 
   if(! @slices){
-	throw("You have specified slice_names and skip_slices paramters which have generated no slices.\nslice_names:\t".join(' ',@$slice_names)."\n".join(' ', @$skip_slices));
+	throw("You have specified slice_names and skip_slices paramters which have generated no slices.\nslice_names:\t".join(' ',@$slice_names)."\nskip_slices:\t".join(' ', @$skip_slices));
   }
 
   return \@slices;
