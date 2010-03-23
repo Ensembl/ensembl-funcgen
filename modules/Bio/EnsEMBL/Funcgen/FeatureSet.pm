@@ -196,7 +196,7 @@ sub display_label {
   if(! $self->{'display_label'}){
 
 	if($self->feature_type->class() eq 'Regulatory Feature'){
-	  $self->{'display_label'} = 'Regulatory Features';
+	  $self->{'display_label'} = $self->name;
 	}
 	else{
 	  #This still fails here if we don't have a class or a cell_type set
@@ -265,7 +265,9 @@ sub get_Features_by_Slice{
   Arg[0]     : Bio::EnsEMBL::Funcgen::FeatureType
   Example    : my @features = @{$FeatureSet->get_Features_by_FeatureType($ftype)};
   Description: Retrieves all Features for this FeatureSet for a given FeatureType
-  Returntype : ARRAYRE
+               or associated FeatureType. This is mainly used by external FeatureSets
+               which can sometimes have more than one associated FeatureType.
+  Returntype : ARRAYREF
   Exceptions : None
   Caller     : General
   Status     : At Risk
