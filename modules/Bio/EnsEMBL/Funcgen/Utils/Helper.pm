@@ -672,8 +672,7 @@ sub define_and_validate_sets{
   #change this to params hash
   #change slice to slices to support multi slice import from InputSet::define_sets
 
-  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery, $slices)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'FEATURE_CLASS', 'APPEND',
+  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery, $slices) = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'FEATURE_CLASS', 'APPEND',
 				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY', 'SLICES'], @_);
 
   
@@ -681,8 +680,9 @@ sub define_and_validate_sets{
 	throw('-slices param must be an ARRAYREF of Bio::EnsEMBL::Slice objects');
 	#Rest of validation done in other methods
   }
+  
 
- 
+  
   #This rollback flag should only really be used for InputSet import
   #This is because we have to rollback the entire FeatureSet, where as we want to 
   #protect against deleting/overwriting other data by keeping rollback function separate 
@@ -1158,7 +1158,9 @@ sub rollback_FeatureSet{
 	  #to the FeatureSet import status
 	  #Where is the imported status set for SWEmbl?
 
-	  if($sset->feature_class eq 'annotated'){
+	  if(($sset->feature_class eq 'annotated') &&
+		$sset->isa('Bio::EnsEMBL::Funcgne::InputSet')){
+
 		warn "Revoking states on InputSet(".$sset->name.") for partial slice based rollback\n" if($slice);
 		$self->rollback_InputSet($sset) if $sset->isa('Bio::EnsEMBL::Funcgen::InputSet');
 		$self->rollback_InputSet($sset);#add full delete here?
