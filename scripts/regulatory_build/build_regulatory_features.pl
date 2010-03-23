@@ -140,9 +140,7 @@ The following figure gives examples.
 
 # 18 ONGOING Improve debug output
 
-# 19 Change load rusage for bsub, jobs don't take very long so 10 min maybe too much?
-
-# 20 MT is always getting submitted?
+# 19 MT is always getting submitted?
 
 use strict;
 use warnings;
@@ -669,6 +667,12 @@ else {
   print "Using previously dumped annotated features:\t$af_file\n";
 }
 
+
+if(! -f $af_file){
+  print "AnnotatedFeature dump produced no data for ".$slice->name."\n";
+  exit;
+}
+
 my $fh = open_file($af_file);
 
 
@@ -874,7 +878,7 @@ sub dump_annotated_features () {
   unlink($outdir."/annotated_features.".$slice->seq_region_name.".dat");
   
   #This was appending without removing previous dumps!!!!
-  #This will not create a file with no data so have to create above
+  #This will not create a file with no data
   my $command = "echo \"$sql\" ".
 	" | mysql -quick -N -h".$host." -P".$port." -u".$user." -p".$pass." ".$dbname.
 	  #" | gawk '{if (\$7==".join("||\$7==", @fset_ids).") print }'".
