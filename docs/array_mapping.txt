@@ -425,9 +425,14 @@ The default settings for the probe2transcript.pl script are set using the PROBE2
 
 export PROBE2TRANSCRIPT_PARAMS='--calculate_utrs --utr_multiplier 1'
 
-These parameters can be set and changed in the instance file, dependant or the requirements for a given species(i.e. no 
-utr extension for bacteria) or a given array format(which might not be recognised by probe2transcript and therefore 
-require extra configuration).
+By default, this script requires at least 50% of probes in a given probeset to match with a maximum of 1bp overlap 
+mismatch.  These parameters can be set and changed in the instance file, dependant or the requirements for a given 
+species(i.e. no utr extension for bacteria) or a given array format(which might not be recognised by probe2transcript 
+and therefore require extra configuration). To see the full range of parameters available run: 
+
+ensembl-functgenomics/scripts/array_mapping/probe2transcript.pl -help
+or
+perldoc ensembl-functgenomics/scripts/array_mapping/probe2transcript.pl
 
 This step can also be done by running the probe2transcript.pl script directly on a format by format basis.
 However, this will not perform the healthchecks and back ups which are part of the RunTranscriptXrefs function.
