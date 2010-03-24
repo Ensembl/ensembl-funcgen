@@ -698,19 +698,19 @@ sub store_updated_sets{
 	map {$stored_dbids{$_->dbID} = undef} @{$stored_dset->get_supporting_sets()};
 
 	foreach my $sset(@{$dset->get_supporting_sets()}){		
-	  my $dbid = $sset->dbid;
+	  my $dbid = $sset->dbID;
 
 	  if(! grep(/^${dbid}$/, keys %stored_dbids)){
 		throw("All supporting sets must be stored previously.".
 			  " Use store_updated_sets method if your DataSet has been stored") if(! $sset->is_stored($db));
 
-
+		#This causes problems when we want to re-run by slice
+		#Currently need
 		throw('You are trying to update supporting sets for a data set which already has a product FeatureSet('.$stored_fset->name.').  You must rollback the FeatureSet before adding more supporting sets.') if defined $stored_fset;
 
 		$sth->bind_param(1, $dset->dbID,            SQL_INTEGER);
 		$sth->bind_param(2, $sset->dbID,            SQL_INTEGER);
-		$sth->bind_param(2, $sset->set_type,        SQL_VARCHAR);
-		
+		$sth->bind_param(3, $sset->set_type,        SQL_VARCHAR);
 		$sth->execute();
 	  }
 	}
