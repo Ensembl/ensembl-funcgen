@@ -20,71 +20,75 @@ take a set of hits in bed files and generate R plots of the lengths
 
 Give short help
 
-=item B<species>
+=item B<-species>
 
 Species of the database (e.g. homo_sapiens)
 
-=item B<dbhost>
+=item B<-dbhost>
 
 Host where the database is (defaults to $DB_HOST)
 
-=item B<dbuser>
+=item B<-dbuser>
 
 User of the database (defaults to $DB_READ_USER)
 
-=item B<dbpass>
+=item B<-dbpass>
 
 Password for the database user (defaults to "")
 
-=item B<dbport>
+=item B<-dbport>
 
 Port of the host where the database is (defaults to $DB_PORT)
 
-=item B<dbname>
+=item B<-dbname>
 
 Name of the database (defaults to $DB_NAME)
 
-=item B<dbhost>
+=item B<-dnadbhost>
 
 Host of the specific core database to use (defaults to $DNADB_HOST)
 
-=item B<dbuser>
+=item B<-dnadbuser>
 
 User of the specific core database (defaults to $DNADB_USER)
 
-=item B<dbpass>
+=item B<-dnadbpass>
 
 Password for the specific core database user (defaults to "")
 
-=item B<dbport>
+=item B<-dnadbport>
 
 Port of the host where the specific core database to use is (defaults to $DNADB_PORT)
 
-=item B<dbname>
+=item B<-dnadbname>
 
 Name of the specific core database to use
 
-=item B<R>
+=item B<-R>
 
 When specified runs the R code to generate plots of the data.
 
-=item B<nodump>
+=item B<-nodump>
 
 When specified it will skip dumping the data (e.g. for reusing old dumps)
 
-=item B<compare>
+=item B<-compare>
 
 Will generate graphs comparing all datasets (if not specified, only set-specific graphs will be generated)
 
-=item B<regstats>
+=item B<-regstats>
 
 When specified it generate and plot statistics regarding the regulatory build present in the database
 Requires the presence of a table rf_stats in the database
 
-=item B<feature_sets>
+=item B<-feature_sets>
 
 List of space separated FeatureSet names to be considered. Names with spaces must be quoted.
 When not specified all features are considered
+
+=item B<-no_outliers>
+
+When specified, the outliers are not drawn in the plots (by default, outliers are drawn)
 
 =item B<-all_seq_regions>
 
@@ -154,7 +158,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Data::Dumper;
 
-my ($species, $help, $R, $nodump, $compare, $regstats, $all_seq_regions);
+my ($species, $help, $R, $nodump, $compare, $regstats, $all_seq_regions, $no_outliers);
 
 
 my $name = 'peaks_report';
@@ -192,6 +196,7 @@ GetOptions (
 			"help|h"             => \$help,
 			"R"                  => \$R,
 			"nodump"             => \$nodump,
+	                "no_outliers"        => \$no_outliers,
 			"compare"            => \$compare,
 			"regstats"           => \$regstats,
 			"all_seq_regions"    => \$all_seq_regions,
@@ -316,7 +321,9 @@ if (defined $R) {
 	  print FO "$data_name <- read.table(\"${fset}_data.${sr_type}.txt\",header=TRUE)\n";
 	  #the if is to avoid errors printing empty sets...
 	  print FO "if (length(".$data_name."\$length) > 0) barplot(unlist(lapply(split(".$data_name.",".$data_name."\$region),function(x) length(x\$length))),main=\"".$fset."\",xlab=\"region\",ylab=\"number of peaks\")\n";
-	  print FO "if (length(".$data_name."\$length) > 0) boxplot(lapply(split(".$data_name.",".$data_name."\$region),function(x) x\$length),main=\"".$fset."\",xlab=\"region\",ylab=\"Peak length\")\n";
+	  print FO "if (length(".$data_name."\$length) > 0) boxplot(lapply(split(".$data_name.",".$data_name."\$region),function(x) x\$length),main=\"".$fset."\",xlab=\"region\",ylab=\"Peak length\"";
+	  if($no_outliers){ print FO ",outline=FALSE"; }
+	  print FO ")\n";
 	}
   }
 
@@ -329,7 +336,9 @@ if (defined $R) {
 	
 	print FO "barplot(c(length(".join("\$length),length(",@safe)."\$length)),main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"number of peaks\",col=rainbow(".scalar(@safe)."))\n";
 	print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
-	print FO "boxplot(".join("\$length,",@safe)."\$length,main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"Peak length\",col=rainbow(".scalar(@safe)."))\n";
+	print FO "boxplot(".join("\$length,",@safe)."\$length,main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"Peak length\",col=rainbow(".scalar(@safe).")";
+	if($no_outliers){ print FO ",outline=FALSE"; }
+	print FO ")\n";
 	print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
 	
   }
