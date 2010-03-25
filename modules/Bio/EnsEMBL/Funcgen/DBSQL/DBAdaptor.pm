@@ -548,7 +548,6 @@ sub dnadb {
 	  foreach my $cs(@{$dnadb->get_CoordSystemAdaptor->fetch_all_by_attrib('default_version')}){
 		push @cs_names, $cs->name;
 	  }
-	  $dnadb->dbc()->disconnect_when_inactive();
 	}
 
 
@@ -556,7 +555,6 @@ sub dnadb {
 
 	  my $cs;
 	  eval { $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name)};
-	  $dnadb->dbc()->disconnect_when_inactive();
 	  my $error = $@;
 	  
 	  if($error){
