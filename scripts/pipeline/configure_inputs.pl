@@ -133,7 +133,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info stack_trace_dum
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file get_file_format is_gzip);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file get_file_format is_gzipped);
 use Bio::EnsEMBL::Funcgen::Utils::Encode qw(get_encode_regions);#move to EFGUtils
 
 # Get eFG database adaptor
@@ -303,13 +303,13 @@ if ($slice_type) {
     foreach my $f (sort @files) {
 
 	  next if (! -f "$dir/$f");
-
+	  print "$f\t";
 	  my $format = &get_file_format("$dir/$f");  #Maybe we can use some of the web code for this?
 	  throw("File '$dir/$f' format is not a reconized format (e.g. bed|sam)") if ! $format;	  
-	  print "\t$format file:\t$f\n";
+	  print "\t$format file\n";
 
 	  ### Check that files are gzipped
-	  if(! &is_gzip("$dir/$f")){
+	  if(! &is_gzipped("$dir/$f")){
 		
 		if($zip){
 		  my $cmd = "gzip $dir/$f";
@@ -323,8 +323,13 @@ if ($slice_type) {
 		}
 	  }
 
+	  
+	  #why is this not matching CD4_DNase1.bed?
+	  ###This always expects something like this ctype_ftype.SOMETHING.format.gz
+	  #The SOMETHING is currently not being integrated into the exp name!
 	  (my $experiment_name = $f) =~ s,(.*/)?([^/_]+_[^/_]+)\..*\.$format\.gz,$2,;
 	  
+
 		#This sets the last two tokens of the file name to the experiment name
 	  #Should take this from the dir name? Or just set this manually 
 	  #Could be based on the dir AUTHOR_PMID, but do this in the env and not here, so we can override
