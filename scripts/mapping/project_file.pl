@@ -220,7 +220,7 @@ my $failed = 0;
 
 foreach my $chr(keys %counts){
   print "Projected features on chromsome $chr:\t".$counts{$chr}{mapped}."\n";
-  print "Failed feature projections on chromsome $chr:\t".$counts{$chr}{fail}."\n";
+  print "Failed feature projections on chromsome $chr:\t".($counts{$chr}{fail} || 0)."\n";
   $mapped += $counts{$chr}{mapped};
   $failed += $counts{$chr}{fail};
 }
