@@ -15,7 +15,9 @@ dkeefe@ebi.ac.uk
 
 set the current regulatory database in file ~/dbs/current_funcgen
 
-reg_feats_4_classification.pl -e dk_reg_feat_classify_49
+run the script gen_feats_for_classification.pl
+
+reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4
     
 =head1 EXAMPLES
 
@@ -31,6 +33,9 @@ reg_feats_4_classification.pl -e dk_reg_feat_classify_49
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2009-07-30 11:36:11  dkeefe
+ updates for farm2, latest mysqldump and dumping from ensdb-archive
+
  Revision 1.1  2008/08/20 07:20:13  dkeefe
  moved from parent directory
  added couple more tables
@@ -74,12 +79,12 @@ my $verbose = 0;
 my $jump_label = '';
 my $filtered_features_table = 'regulatory_features_filtered';
 my $gene_filter = 0;
-
+my $cell_name = '';
 
 my %opt;
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('v:u:p:s:H:h:e:J:P:G', \%opt) || die ;
+&Getopt::Std::getopts('c:v:u:p:s:H:h:e:J:P:G', \%opt) || die ;
 }else{
 &help_text; 
 }
@@ -177,7 +182,12 @@ push @sql, "alter table regulatory_feature add index(feature_set_id)";
 @sql = ();
 
 # remove all but the current set of features
-my $feature_set_id = $dbu->get_count("select feature_set_id from feature_set where name = 'RegulatoryFeatures'") or die "failed to get feature_set_id for regulatory features"; 
+my $feature_set_name ='RegulatoryFeatures';
+if($cell_name){
+    $feature_set_name .= ':'.$cell_name;
+} 
+
+my $feature_set_id = $dbu->get_count("select feature_set_id from feature_set where name = '$feature_set_name'") or die "failed to get feature_set_id for regulatory features"; 
 push @sql,"delete  from regulatory_feature where feature_set_id != $feature_set_id";
 push @sql, "alter table regulatory_feature add index(regulatory_feature_id)";
 push @sql, "alter table regulatory_feature add index(seq_region_start)";
@@ -498,6 +508,9 @@ sub process_arguments{
         &help_text;
     }
 
+    if (exists $opt{c}){
+        $cell_name = $opt{c}; 
+    }
 
 
     if (exists $opt{H}){
@@ -552,6 +565,7 @@ sub help_text{
     print STDERR <<"END_OF_TEXT";
 
     .pl [-h] for help
+                  [-c] <cell_name> name as found in the cell_type table
                   [-e] use a particular local encode catalog
                   [-H] <host machine> default ens-genomics2
                   [-u] <database user>
