@@ -29,6 +29,63 @@ regulatory_features_classified table
 This table contains the final result. The original regulatory features have been classified using the patterns in the _assoc and _not_assoc tables and then assigned the appropriate feature_type_id derived from the original funcgen database. This facilitates adding the classification to the original funcgen database regulatory_feature table with a single update statement.
 
 
+Description of classification procedure
+---------------------------------------
+
+Regulatory Features (regfeats) are classified by considering their
+position on the genome in relation to other classes of feature on the
+genome (eg genes, repeats, intergenic regions) together with the
+combination of regulatory attributes they posess as coded in their
+display_label. A set of randomly distributed features (mockfeats)
+corresponding to the regfeats in terms of length and chromosome are
+also generated so that we can judge if the placement of regfeats in
+relation to the genomic features is non-random.
+
+The first step in the procedure is to determine which genomic features
+(genfeats) each regfeat overlaps. A single common basepair is
+sufficient to consider two features overlapping. We do the same with
+the mockfeats. (Strictly speaking this is not the first step, as we
+know from experience that certain regulatory features are most
+probably artefacts and that others contain no useable information so
+these are filtered out before this script is used and the mockfeats
+correspond to only the filtered set of regfeats).
+
+Next we create a set of patterns of attributes we wish to
+evaluate. Currently this is all possible combinations of 4 bits set
+which can be created from the n bits in the display label.
+
+For each pattern, we look at all the regulatory features which have
+the same or more bits set. If there are more than 100 such regfeats we
+count the number of times these features overlap each class of
+genfeat. We do the same count with the set of mockfeats which
+correspond to the regfeats. If 70% of the regfeats overlap a
+particular class of genfeat and the chi-squared calculated using the
+mockfeat count as the 'expected' value is >8.0 (P0.005) we record that
+this pattern is associated with this class of genfeat.
+
+If the pattern IS associated with a genfeat and has less than 4 bits
+set we collect a second set of patterns which have this pattern's PLUS
+any other bits set. For each of these patterns we look at all the
+regulatory features which have the same or more bits set and we count
+the number of times these features overlap each class of genfeat. If
+less than 50% of the regfeats overlap we record that this second
+pattern is not associated with the class of genfeat involved.
+
+Having determined all the associated and not-associated patterns for
+each class of genfeat, we look at all the regfeats and use the
+'associated' and then 'not-associated' patterns to set or unset a flag
+indicating whether the particular regfeat is associated with a
+particular class of genfeat. During this process it is possible for a
+given regfeat to be associated with more than one class of genfeat and
+some of these can be contradictory. This is particularly the case
+where all or nearly all the bits are set.
+
+Finally, for the purposes of the regulatory build, there is a set of
+rules which 1. resolve conflicts amongst the above flags and 2. assign
+a regulatory feature_type to the regfeat.
+
+
+
 
 =head1 AUTHOR(S)
 
@@ -48,7 +105,7 @@ mock_reg_feat_gen.pl -e dk_funcgen_classify_51_3 -i regulatory_features_filtered
 
 then
 
-reg_feat_gen_feat_overlaps.pl -e dk_genomic_features_36k -v1 -c /lustre/work1/ensembl/dkeefe/func_gen/reg_feat_gen_feat_conf.1    
+reg_feat_gen_feat_overlaps.pl -e dk_funcgen_classify_55_1 -v1 -c reg_feat_gen_feat_conf.1    
 
 =head1 EXAMPLES
 
@@ -60,11 +117,15 @@ reg_feat_gen_feat_overlaps.pl -e dk_genomic_features_36k -v1 -c /lustre/work1/en
 
  Tidy Up
  POD
- Finish off.
+ 
 
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2009/03/12 15:31:23  dkeefe
+ moved from parent directory
+ various mods and hacks so it will also work with mouse
+
  Revision 1.2  2008/05/23 12:36:02  dkeefe
  added additional column to regulatory_features_classified
 
@@ -82,7 +143,7 @@ use Env;
 use Getopt::Std;
 use IO::Handle;
 use IO::File;
-use lib '/nfs/acari/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
+use lib '/nfs/users/nfs_d/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
 use DBSQL::Utils;
 use DBSQL::DBS; # to use databases listed in ~/dbs.
 
@@ -92,10 +153,10 @@ $| = 1; #no output buffer
 
 my($user, $password, $driver, $host, $port);
 my @temp_tables;
-my $scratch_dir = "/lustre/scratch1/ensembl/dkeefe/overlap_db1"."/";
+my $scratch_dir = "/lustre/scratch103/ensembl/dkeefe/overlap_$$"."/";
 
 
-my $sp='mus_musculus';
+my $sp='homo_sapiens';
 my $infile;
 my $verbose = 0;
 my $jump_label = '';
@@ -106,8 +167,8 @@ my $overlaps_table = 'reg_feat_gen_feat_overlaps';
 my $mock_olaps_table = 'mock_feat_gen_feat_overlaps';
 my $flags_table = 'regulatory_feature_association_flags';
 my $types_table = 'regulatory_features_classified';
-#my $pat_bits = 50;
-my $pat_bits = 20;
+my $pat_bits;
+#my $pat_bits = 19;
 my $patt_count_thresh = 100;
 my $assoc_thresh = 70;
 my $second_thresh = 50;
@@ -131,6 +192,14 @@ my $enc_db = 'dk_genomic_features_36k';# default, can be overridden by args
 # hook up with the server
 my $dbh = &make_contact($enc_db);
 my $dbu = DBSQL::Utils->new($dbh);
+
+
+
+#    my @pats = &sub_pats($dbh,$reg_feat_table,$pat_bits);
+#    my $n_pats = scalar(@pats);
+#    print "n_pats = $n_pats\n";
+#print join("\n",@pats)."\n";
+#exit;
 
 
 
@@ -200,7 +269,7 @@ close($mock_ofh);
 &load_results($dbh,$dbu,$mock_results_file,$mock_olaps_table,$mock_reg_table,\@gen_feats);
 
 
-
+$pat_bits = $dbu->get_count("select length(display_label) from regulatory_features_filtered limit 1");
 
 # get the patterns we wish to investigate
 my @pats;
@@ -217,12 +286,16 @@ if($rerun){
 
 }else{
     &commentary("generating bit patterns\n") if $verbose;
-    @pats = &combos_of_n_from_m($dbh,$dbu,$combination_bits,
-                                $pat_bits,$overlaps_table);
+#    @pats = &combos_of_n_from_m($dbh,$dbu,$combination_bits,$pat_bits,$overlaps_table);
     my $n_pats = scalar(@pats);
     # the only valid regfeats with just one bit set are the focus feature only ones
     # we know these are not associated with any particular genomic feature
-    @pats = @pats[$pat_bits..($n_pats-1)];
+ #   @pats = @pats[$pat_bits..($n_pats-1)];
+
+
+   @pats = &sub_pats($dbh,$reg_feat_table,$pat_bits);
+    $n_pats = scalar(@pats);
+    &commentary( "n_pats = $n_pats\n");
 }
 
 
@@ -293,6 +366,35 @@ exit;
 
  
 ###################################################################
+sub sub_pats{
+    my($dbh,$reg_feat_table)=@_;
+
+    my $aref = $dbh->selectcol_arrayref("select display_label from regulatory_features_filtered group by display_label having count(*)  > 1 ");
+    
+    my %pats;
+    foreach my $orig (@$aref){
+	my $zero_count = $orig =~ tr/0/_/;
+        if($zero_count >= $pat_bits-2){next}#dont want pats with only one mark 
+	my @ch = split('',$orig);
+
+        for(my $i = 0;$i<@ch;$i++){
+	    if($ch[$i] eq '1'){
+		$ch[$i]='_';
+		$pats{(join('',@ch))} = 1;
+		$ch[$i] = 1;
+
+	    }
+	    $pats{$orig} = 1;
+	}
+
+    }
+
+
+    return keys(%pats);
+
+}
+
+
 sub create_types_table{
     my($dbh,$dbu,$flags_table,$types_table)=@_;
 
@@ -300,16 +402,36 @@ sub create_types_table{
 
     my @sql;
 
-    # hack for v51 which has no intergenic_2500 associations
+    # hack for human v51 which has no intergenic_2500 associations
+    # and mouse 54 which has no protein_coding_intron1 associations
     unless($dbu->column_exists($flags_table,'intergenic_2500')){
 	push @sql, "alter table $flags_table add column intergenic_2500 int(1) default 0";
+	#push @sql, "alter table $flags_table add column protein_coding_intron1  int(1) default 0";
     }
+    unless($dbu->column_exists($flags_table,'protein_coding_gene_body')){
+	push @sql, "alter table $flags_table add column protein_coding_gene_body int(1) default 0";
+
+    }
+    unless($dbu->column_exists($flags_table,'protein_coding_exon1_plus_enhancer')){
+	push @sql, "alter table $flags_table add column protein_coding_exon1_plus_enhancer int(1) default 0";
+
+    }
+
+    unless($dbu->column_exists($flags_table,'protein_coding_intron1')){
+	push @sql, "alter table $flags_table add column protein_coding_intron1 int(1) default 0";
+
+    }
+
+
+
+
+################## add all cols? as above
 
 
     push @sql, "drop table if exists $types_table";
 #    push @sql, "create table $types_table select regulatory_feature_id,display_label,if(gm06990+cd4+imr90 = 1,1,0) as cell_type_specific,protein_coding_exon1_plus_enhancer as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
     if($sp eq 'homo_sapiens'){
-        push @sql, "create table $types_table select regulatory_feature_id,display_label,if(gm06990+cd4+imr90 = 1,1,0) as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
+        push @sql, "create table $types_table select regulatory_feature_id,display_label,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
     }else{
         push @sql, "create table $types_table select regulatory_feature_id,display_label,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
     }
@@ -331,14 +453,17 @@ sub create_types_table{
     # add the feature_type_id column
     @sql = ();
     push @sql, "alter table $types_table add column feature_type_id int(10) unsigned";
+
+    # now that we have moved to single cell line classification there are
+    # no Cell type specific classifications
     foreach my $ft ('Gene Associated',
-                    'Gene Associated - Cell type specific',
+#                    'Gene Associated - Cell type specific',
                     'Non-Gene Associated',
-                    'Non-Gene Associated - Cell type specific',
+#                    'Non-Gene Associated - Cell type specific',
                     'Promoter Associated',
-                    'Promoter Associated - Cell type specific',
+#                    'Promoter Associated - Cell type specific',
                     'Unclassified',
-                    'Unclassified - Cell type specific',
+#                    'Unclassified - Cell type specific',
 		    ){
 
 	my $ftid = $dbu->get_count("select feature_type_id from feature_type where name = '$ft' and class = 'Regulatory Feature'");
@@ -432,13 +557,13 @@ sub create_flags_table{
 
 
     if($sp eq 'homo_sapiens'){
-    # add cell type flags 
+    # add cell type flags NO longer as classification is cell type specific 
     @sql = ();
-    push @sql, "alter table $flags_table add column cd4 int(1) default 0";
-    push @sql, "update $flags_table set cd4 = 1 where display_label like '1%'";
-    push @sql, "update $flags_table set cd4 = 1 where display_label like '_1%'";    push @sql, "alter table $flags_table add column gm06990 int(1) default 0";      push @sql, "update $flags_table set gm06990 = 1 where display_label like '__________________________________________1%'";  
-    push @sql, "alter table $flags_table add column imr90 int(1) default 0"; 
-    push @sql, "update $flags_table set imr90 = 1 where display_label like   '___________________________________________1%'";
+#    push @sql, "alter table $flags_table add column cd4 int(1) default 0";
+#    push @sql, "update $flags_table set cd4 = 1 where display_label like '1%'";
+#    push @sql, "update $flags_table set cd4 = 1 where display_label like '_1%'";    push @sql, "alter table $flags_table add column gm06990 int(1) default 0";      push @sql, "update $flags_table set gm06990 = 1 where display_label like '__________________________________________1%'";  
+ #   push @sql, "alter table $flags_table add column imr90 int(1) default 0"; 
+ #   push @sql, "update $flags_table set imr90 = 1 where display_label like   '___________________________________________1%'";
     push @sql, "alter table $flags_table add index(regulatory_feature_id)";
     &execute($dbh,@sql) or die;
     }
@@ -594,6 +719,15 @@ sub association_tables{
 		    &execute($dbh,"insert into $zero_one_table values('$zero_one')") or die;
 		}
 	    }
+
+
+	    @sql=();
+	    push @sql,"drop table if exists temp_$$";
+	    push @sql,"create table temp_$$ select distinct * from $assoc_table";
+	    push @sql,"drop table $assoc_table";
+	    push @sql,"alter table temp_$$ rename as $assoc_table";
+            push @sql,"alter table $assoc_table add index(pattern)";
+            &execute($dbh,@sql);
 	}
 
 	@sql = ();
@@ -601,7 +735,7 @@ sub association_tables{
         # the assoc_thresh and the second_thresh
 	push @sql,"delete from $assoc_table where $feat < $assoc_thresh";
 	# distinct assoc table
-	# **** and add the two gene bits to the patterns ****
+	# **** and add back the two gene bits to the patterns ****
 	push @sql,"drop table if exists temp_$$";
 	push @sql,"create table  temp_$$ select distinct * from $assoc_table";
 	push @sql,"drop table $assoc_table";
@@ -1218,6 +1352,11 @@ sub process_arguments{
 
     if  (exists $opt{r}){
         $rerun = 1;
+    } 
+
+
+    if  (exists $opt{s}){
+#        $scratch_dir = $opt{s};
     } 
 
 } 
