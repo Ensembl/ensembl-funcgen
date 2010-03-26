@@ -61,6 +61,8 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;#replace logger or inherit from logger?
 
+#This is quite useful, lists params defined
+#Summarises num wanring runtime, complete time and memusage at end.
 # parse configuration and commandline arguments
 my $conf = new Bio::EnsEMBL::Utils::ConfParser(
   -SERVERROOT => "$Bin/../../..",
@@ -88,7 +90,7 @@ $conf->parse_options
    'slice=s' => 0,
    'species=s' => 0,
    'ignore_length' => 0,
-   'force_store' => 1,
+   #'force_store' => 1,
    'feature_set=s' => 1,
    'old_assembly=s' => 1,
    'new_assembly=s' => 1,
@@ -96,8 +98,8 @@ $conf->parse_options
    'associations'      => 0,
   );
 
-$main::_no_log = 1;
-$main::_tee    = 1;#Isn't this set by default if no log i set?
+#$main::_no_log = 1;
+#$main::_tee    = 1;#Isn't this set by default if no log i set?
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;
 
 #assign assemblies for regex embedding
@@ -125,15 +127,19 @@ $logger->init_log($conf->list_param_values);
 #and so would not be easily accessable via the new DB
 #we would have to somehow get all non toplevel regions which are not 
 #included in the new assembly.
-#We are only
+#But they would not be present in the new DB
+#We don't actually have this cross level mapping anyway, so can remove
+#And only use new DB!
+
+#Need to expose old_db params here!
 
 my $old_cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
   (
-   -host   => 'ensembldb',
-   -user   => 'anonymous',
+   -host   => 'ensdb-archive',
+   -user   => 'ensro',
    -dbname => $conf->param('old_cdbname'),
    -group  => 'core',
-   -port   => 5306,
+   -port   => 5304,
   );
 
 my ($new_cdb);
@@ -154,6 +160,7 @@ if(defined $conf->param('cdbname') || defined $conf->param('cdbhost') || defined
 }elsif(! defined  $conf->param('species')){
 
   ##????????????????????????
+  #This is now handled by the DBAdaptor and is not necessary if we have the latin species name in meta
   throw('Must provide a species name if no core DB has been defined');
 }
 
