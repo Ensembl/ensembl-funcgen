@@ -402,36 +402,33 @@ sub is_bed {
   }
 
   my @line;
+  #$verbose =1;
 
- 
 
   while (<FILE>) {
 	chomp;
 	@line = split("\t", $_);
 	last;
   }
-
   close FILE;
   
-    
   if (scalar @line < 6) {
-        warn("Infile '$file' does not have 6 or more columns. We expect bed format: CHROM START END NAME SCORE STRAND.") if $verbose;
-        return 0;
-		#} elsif ($line[0] !~ m/^((chr)?[MTXYNT_\d]+)$/) {
-    #    warn ("1st column must contain name of seq_region (e.g. chr1 or 1) in '$file'");
-    #    return 0;
-		#Commented this out for now due to HSCHR_RANDOM seqs
-		#How does the webcode handle this?
-    } elsif ($line[1] !~ m/^\d+$/ && $line[2] =~ m/^\d+$/) {
-        warn ("2nd and 3rd column must contain start and end respectively in '$file'") if $verbose;
-        return 0;
-    } elsif ($line[5] !~ m/^[+-]$/) {
-        warn ("6th column must define strand (either '+' or '-') in '$file'") if $verbose;
-        return 0;
-    }
+	warn("Infile '$file' does not have 6 or more columns. We expect bed format: CHROM START END NAME SCORE STRAND.") if $verbose;
+	return 0;
+	#} elsif ($line[0] !~ m/^((chr)?[MTXYNT_\d]+)$/) {
+	#    warn ("1st column must contain name of seq_region (e.g. chr1 or 1) in '$file'");
+	#    return 0;
+	#Commented this out for now due to HSCHR_RANDOM seqs
+	#How does the webcode handle this?
+  } elsif ($line[1] !~ m/^\d+$/ && $line[2] =~ m/^\d+$/) {
+	warn ("2nd and 3rd column must contain start and end respectively in '$file'") if $verbose;
+	return 0;
+  } elsif ($line[5] !~ m/^[+-]$/) {
+	warn ("6th column must define strand (either '+' or '-') in '$file'") if $verbose;
+	return 0;
+  }
 
-    return 'bed';
-    
+  return 'bed';    
 }
 
 
@@ -488,7 +485,7 @@ sub strip_param_flags{
 #Generates slices from names or optionally alll default top level nonref
 
 sub generate_slices_from_names{
-  my ($slice_adaptor, $slice_names, $skip_slices, $toplevel, $non_ref) = @_;
+  my ($slice_adaptor, $slice_names, $skip_slices, $toplevel, $non_ref, $inc_dups) = @_;
 
   my (@slices, $slice, $sr_name);
 
@@ -498,6 +495,8 @@ sub generate_slices_from_names{
 	  $slice = $slice_adaptor->fetch_by_region(undef, $name);
 	
 	  if(! $slice){
+
+		#Need to eval this as it will break with incorrect formating
 
 		$slice = $slice_adaptor->fetch_by_name($name);
 
@@ -509,12 +508,22 @@ sub generate_slices_from_names{
 	  $sr_name = $slice->seq_region_name;
 
 	  next if(grep/^${sr_name}$/, @$skip_slices);
-
 	  push @slices, $slice;
 	}
   }
   elsif($toplevel){
-	@slices = @{$slice_adaptor->fetch_all('toplevel', undef, $non_ref)};
+	my @tmp_slices = @{$slice_adaptor->fetch_all('toplevel', undef, $non_ref, $inc_dups)};
+
+	if(@$skip_slices){
+
+	  foreach $slice(@tmp_slices){
+		$sr_name = $slice->seq_region_name;
+		push @slices, $slice if ! grep/^${sr_name}$/, @$skip_slices;
+	  }
+	}
+	else{
+	  @slices = @tmp_slices;
+	}
   }
 
 
