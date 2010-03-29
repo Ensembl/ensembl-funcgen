@@ -38,9 +38,7 @@ Options:
     -clobber
     -dump_annotated_features
     -dump_regulatory_features
-
-    -stats
-
+    -tee We are already loggin
     -help              Print this message and exits
 
 
@@ -142,6 +140,12 @@ The following figure gives examples.
 
 # 19 MT is always getting submitted?
 
+# 20 Remove dumps completely and slurp straight into perl, max is about 20 MB of data?
+
+# 21 Check 'removed' focus features are actually being added as attributes?
+
+# 22 Log to file and implement tee
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -153,22 +157,20 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file strip_param_flags strip_param_args generate_slices_from_names);
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
-
-
 $|=1;
 
 my ($pass,$port,$host,$user,$dbname, $help,
 	$dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
     $outdir,$do_intersect,$write_features, $cdb,
-    $dump_annotated_features,$dump_regulatory_features, $include_mt,
+    $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
     $clobber,$focus_max_length, @slices, @skip_slices, $non_ref,
-    $focus_extend, $dump,$gene_signature,$stats, $prepared,
+    $focus_extend, $dump,$gene_signature,
     $debug_start, $debug_end, $version, @focus_names, @attr_names, $local);
 
 my @tmp_args = @ARGV;
 
 #Need to change all print to use Helper log?
-my $helper = Bio::EnsEMBL::Funcgen::Utils::Helper->new(-no_log => 1); ###Turn log file output off for now
+my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper(no_log => 1); ###Turn log file output off for now
 
 print "build_regulatory_features.pl @tmp_args\n";
 
@@ -196,18 +198,17 @@ GetOptions (
 			"outdir|o=s"     => \$outdir,
             "do_intersect|i=s" => \$do_intersect,
             "write_features|w" => \$write_features,
-            "dump_annotated_features"  => \$dump_annotated_features,
+            "no_dump_annotated_features"  => \$no_dump_annotated_features,
             "dump_regulatory_features"  => \$dump_regulatory_features,
 			"rollback" => \$clobber,
 			"focus_max_length=i" => \$focus_max_length,
             "focus_extend=i" => \$focus_extend,
 			"dump" => \$dump,
             "gene_signature" => \$gene_signature,
-            "stats" => \$stats,
 			"debug_start=i" => \$debug_start,
             "debug_end=i" => \$debug_end, #Defaults to slice end if not set
 
-			#params from run_build_regulatory_features.pl
+			
 			'skip_slices=s{,}'    => \@skip_slices,
 			'slices=s{,}'         => \@slices,
 			'focus_sets=s{,}'     => \@focus_names, 
@@ -216,14 +217,13 @@ GetOptions (
 			'include_mt'          => \$include_mt,
 			'version=s'           => \$version,
 			'local'               => \$local,
-			#'prepared'            => \$prepared, #Skip archive  etc
-			
-
-
+	
 			'help|?'         => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
 		   ) or pod2usage( -exitval => 1);
 
 die('focus_extend may not safe, check update_attributes') if $focus_extend;
+
+
 #Allow comma separated quoted names containing spaces
 @focus_names = split(/,/,join(',',@focus_names));
 @attr_names = split(/,/,join(',',@attr_names));
@@ -310,17 +310,17 @@ my $ga = $db->dnadb->get_GeneAdaptor();
 
 # parse focus and attribute sets and check that they exist
 my (%focus_fsets, %attrib_fsets);
-map { my $fset = $fsa->fetch_by_name($_);
-      die("Focus set $_ does not exist in the DB") 
-		if (! defined $fset); 
+map { my $fset = $fsa->fetch_by_name($_); 
+	  warn "Fetching focus set:\t$_\n" if $debug_start;
+      die("Focus set $_ does not exist in the DB") if (! defined $fset); 
       $focus_fsets{$fset->dbID} = $fset; 
 	} @focus_names;
 #print Dumper %focus_fsets;
 
 map { 
   my $fset = $fsa->fetch_by_name($_);
-  die("Attribute set $_ does not exist in the DB") 
-	if (! defined $fset); 
+   warn "Fetching attribute set:\t$_\n" if $debug_start;
+  die("Attribute set $_ does not exist in the DB") if (! defined $fset); 
   $attrib_fsets{$fset->dbID()} = $fset; 
 } @attr_names;
 
@@ -331,7 +331,7 @@ map {
 #Define CellTypes sets
 
 my %cell_types;
-my %fset_cell_types;
+my %fset_cell_types;#Do we need thsi, can we not jsut dump feature_type_id?
 
 foreach my $fset (values(%focus_fsets)) {
   $cell_types{$fset->cell_type->name} = $fset->cell_type;
@@ -529,28 +529,44 @@ else{
 	  print "Old RegulatoryFeature set has previously been archived\n";
 	}
   }
+  }
 }
-}
-
-
-
-### Print some details
-
-print
-  "\n# Focus set(s):\n", join(", ", map {$_->name.' ('.$_->dbID.')'}
-						   sort {$a->name cmp $b->name} values %focus_fsets), "\n",
-  "\n# Attribute set(s):\n", join(", ", map {$_->name.' ('.$_->dbID.')'} 
-							   sort {$a->name cmp $b->name}  values %attrib_fsets), "\n";
-print "\n# Slice:\t".$slices[0]."\n" if (scalar(@slices) == 1);
 
 
 # make sure that attribute sets also contain focus sets 
-map { $attrib_fsets{$_} = $focus_fsets{$_} } keys %focus_fsets;
+# and ctype_fsets contain core fsets
+my %ctype_fsets;
+map { 
+  $attrib_fsets{$_} = $focus_fsets{$_};
+  push @{$ctype_fsets{core}}, $focus_fsets{$_};
+} keys %focus_fsets;
+
+
 
 #Set name sorted fset arrays by ctype for bin strings
-my %ctype_fsets;
 map { push @{$ctype_fsets{$_->cell_type->name}}, $_ } values %attrib_fsets;
 map { @{$ctype_fsets{$_}} = sort {$a->name cmp $b->name} @{$ctype_fsets{$_}} } keys %ctype_fsets;
+
+### Print some details
+foreach my $ctype(keys %ctype_fsets){
+  next if $ctype eq 'core';
+
+  my $fset_txt = "\n\n# $ctype Focus Sets:\n";
+  my $attr_txt = "\n# $ctype Attribute Sets:\n";
+
+  foreach my $fset(@{$ctype_fsets{$ctype}}){
+	
+	if($focus_fsets{$fset->dbID}){
+	  $fset_txt .= $fset->name.'('.$fset->dbID.')  ';
+	}
+	else{
+	  $attr_txt .= $fset->name.'('.$fset->dbID.')  ';
+	}
+  }
+
+  print $fset_txt.$attr_txt;
+
+}
 
 
 ### Check whether analysis is already stored
@@ -602,13 +618,25 @@ if ( ! defined $ana ) {			# NEW
 $analysis = $aa->fetch_by_logic_name($logic_name);
 
 # Do this here before bsubing to avoid race condition
-my $rfsets = &get_regulatory_FeatureSets($analysis, keys(%cell_types));
-
+# This will rollback based on slices
+# However, we may get partial rollback and redefining of supporting sets!!
+# Can only warn about this?
 
 
 ### Define slices and run or bsub
+
+#We need to define rollback slices here
+#As rollback will fail for full delete otherwise?
+
 push @skip_slices, 'MT' if ! $include_mt;#Always skip MT by default
 @slices = @{&generate_slices_from_names($sa, \@slices, \@skip_slices, 'toplevel', $non_ref)};
+
+#Doing this here for all the slices before we batch will be faster
+my $rfsets = &get_regulatory_FeatureSets($analysis, \%cell_types);
+
+#This will get rolled back again unnecessarily for each slice job, 
+#but it should still be much quicker
+#Well, it will be when rollback_FeatureSet supports multiple slices
 
 if (! $local){ #BSUB!
   
@@ -621,8 +649,8 @@ if (! $local){ #BSUB!
   foreach my $slice(@slices){
 	my $sr_name = $slice->seq_region_name;
 
-	my $bsub = "bsub -o $outdir/RegulatoryBuild_$sr_name.out -e $outdir/RegulatoryBuild_$sr_name.err ".
-	  "-J 'RegulatoryBuild_$sr_name' -R 'select[my".$bsubhost."<80] rusage[my".$bsubhost."=10:duration=10]'";
+	my $bsub = "bsub -q long -o $outdir/RegulatoryBuild_$sr_name.out -e $outdir/RegulatoryBuild_$sr_name.err ".
+	  "-J 'RegulatoryBuild_$sr_name' -R 'select[my".$bsubhost."<80] rusage[my".$bsubhost."=10:duration=10]' -R 'select[mem>4000] rusage[mem=4000]' -M 4000000";
 	
 	my $cmd = "$ENV{EFG_SRC}/scripts/regulatory_build/build_regulatory_features.pl -local -slices $sr_name @tmp_args";
 	  
@@ -659,18 +687,13 @@ die("No eFG seq_region id defined for ".$slice->name." Almost certain there is n
 ### Dump AnnotatedFeatures
 my $af_file = $outdir.'/annotated_features.'.$slice->seq_region_name.'.dat';
 
-if (! -e $af_file  || $dump_annotated_features) {
+if ((! -f $af_file) ||
+	(! $no_dump_annotated_features)){
   print "Dumping annotated features for slice:\t".$slice->name."\n";
   &dump_annotated_features();
 } 
 else {
   print "Using previously dumped annotated features:\t$af_file\n";
-}
-
-
-if(! -f $af_file){
-  print "AnnotatedFeature dump produced no data for ".$slice->name."\n";
-  exit;
 }
 
 my $fh = open_file($af_file);
@@ -709,15 +732,31 @@ while (<$fh>) {
   print $_, "\t", $attrib_fsets{$fset_id}->name, "\n" if ($debug_start);
   my  $length = $end-$start+1;
   $ctype = $fset_cell_types{$fset_id};
+
+
+#  if ($fset_id == 20){##
+#
+#   if($ctype ne 'CD4'){##
+#
+#	 die("CD4 ctype is $ctype");
+#   }
+#  }
+
+
  
   # some stats
   $feature_count{fsets}{$fset_id}++;
   $feature_count{ctypes}{$ctype}++; #Need to report these
+	
 
-
+  #if(($ctype eq 'IMR90') ||
+  #	 ($ctype eq 'K562')){
+  #	print "Seen $ctype\n";
+  #  }
 
   if (exists $focus_fsets{$fset_id}) { ### Focus feature
-	
+	$feature_count{focus_ctypes}{$ctype}++;
+
 	#Where is the overlap check for this?
 	#Let's convert to multi-celltype first then fix
 	
@@ -729,15 +768,25 @@ while (<$fh>) {
 	  #focus has exceeded the max length?
 
 	  &add_feature();
+
+	  #We are not adding this as an attribute feature
+	  #Just removing it!!
+	  
+	  
 	  $removed_af{$fset_id}{$af_id} = 1;
+	  $removed_af{$ctype}++;
 	  # need to check overlaps with current focus_features
 	  next;
 	}
 	
+
 		
 	# focus feature overlaps w/  rf core (0° of separation)
 	if (@rf && 
 		($start <= $rf[$rf_size]->{focus_end})){
+
+
+	  
 
 	  my $update_attrs = 0;
 
@@ -755,6 +804,8 @@ while (<$fh>) {
 	  #Are these picked up in the %afs list?
 	}
 	
+	#die("focus CD4 ctype is $ctype") if $fset_id = 149;
+
 	&add_feature();
   } 
   else { ### Attribute feature
@@ -817,50 +868,81 @@ if ($dump_regulatory_features) {
 
 
 
+print "\n\n### RegulatoryBuild Report ###\n";
 
-my $feature_count;
-map {$feature_count+=$_} values %{$feature_count{fsets}};
-printf "# Number of read features: %10d\n", $feature_count;
-printf "# Number of reg. features: %10d\n", scalar(@rf);
+my $total_feature_count = 0;
 
-if ($stats) {
-  my (%rf_count);
-  map { 
-	foreach my $k (keys %{$_->{fsets}}) {
-	  #print join(" ", $k, $_->{fsets}->{$k}), "\n";
-	  $rf_count{$k} += $_->{fsets}->{$k};
-	}
-  } @rf;
-    
-  printf "# %-34s\t%8s\t%8s\t%8s\t%8s\n",
-    'Number of feature sets', 'total', 'included', 'distinct', 'removed';
-  map {
-	printf "# %29s (%d)\t%8d\t%8d\t%8d\t%8d\n", $_->name, $_->dbID, 
-	  $feature_count{fsets}->{$_->dbID} || 0, $rf_count{$_->dbID} || 0,
-		scalar(keys %{$seen_af{$_->dbID}}) || 0,
-		  scalar(keys %{$removed_af{$_->dbID}}) || 0
-		} values %attrib_fsets;
-	
 
-  #Need to add in cell type info here?
+#Do this in create_regulatory_seatures
+#my (%rf_count);
+#map { 
+#  foreach my $k (keys %{$_->{fsets}}) {
+#	#print join(" ", $k, $_->{fsets}->{$k}), "\n";
+#	$rf_count{$k} += $_->{fsets}->{$k};
+#  }
+#} @rf;
+
+my $die = 0;
+
+foreach my $ctype(keys %ctype_fsets){
+  next if $ctype eq 'core';
+
+  printf "\n\n#$ctype FeatureSets %80s\t%8s\t%8s\t%8s\n",'Total', 'Included', 'Distinct', 'Removed';
   
+
+  foreach my $set(@{$ctype_fsets{$ctype}}){
+	my $set_feature_cnt = $feature_count{fsets}{$set->dbID} ||= 0;
+	$total_feature_count += $set_feature_cnt;
+	
+  printf "#%80s(%d)\t%8d\t%8d\t%8d\t%8d\n", $set->name, $set->dbID, 
+	$set_feature_cnt, #Total
+	  $feature_count{regfeats}{$set->dbID} || 0, #Included
+		scalar(keys %{$seen_af{$set->dbID}}) || 0, #Distinct
+		  scalar(keys %{$removed_af{$set->dbID}}) || 0; #Removed
+  }
+
+   my $total = $feature_count{ctypes}->{$ctype} || 0;
+  my $focus = $feature_count{focus_ctypes}->{$ctype} || 0;
+
+  print "\n# Total $ctype features seen:\t$total\n";
+  print "# Focus $ctype feature seen:\t$focus\n";
+
+  if (($total < $focus) ||
+	  $focus == 0){
+	warn("Found inconsistenty between Total and Focus $ctype features\n");
+	$die = 1;
+  }
+
+  #This number should be the Focus - those focus which have been removed
+  my $regfs =  $feature_count{regfeats}{$ctype} || 0;
+  print "# Total $ctype RegulatoryFeatures:\t$regfs\n";
+  $removed_af{$ctype} ||= 0;
+  my $expected_regfs = $regfs - $removed_af{$ctype};
+
+
+  if( ($focus > $regfs) ||
+	  ($expected_regfs != $regfs) ||
+	  ($regfs == 0)){
+	warn("Found inconsistency between Focus and true or expected($expected_regfs) RegulatoryFeature $ctype features\n");
+	$die = 1;
+  }
+  
+
 }
+
+
+printf "# Total number of read features: %10d\n", $total_feature_count;
+printf "\n# Total number of RegulatoryFeatures: %10d\n", scalar(@rf);
+
+die("ERROR:\tInconsistencies were found between some of your focus sets and the resultant RegulatoryFeatures, see above.\n") if $die;
 
 ###############################################################################
 # dump annotated features for given seq_region to file
 sub dump_annotated_features () {
+  #To do, remove this and just slurp directly into perl!
 
   my @fset_ids = keys %attrib_fsets;
-  #print Dumper @fset_ids; 
-
-  print "# Dumping annotated features from database to file.\n";
-
-	
-
-
-  print "# This will delete existing file dumps of that data version!\n";
-    
-  print "# Output goes to ", $outdir, "\n";
+  print "# Dumping ".scalar(@fset_ids)." AnnotatedFeature Sets for slice:\t".$slice->name."\n";
 
   my $sql = 'select annotated_feature_id, af.seq_region_id, sr.name,'.
 	'seq_region_start, seq_region_end, seq_region_strand, score, feature_set_id '.
@@ -872,7 +954,7 @@ sub dump_annotated_features () {
 			"and af.feature_set_id in (".join(',', @fset_ids).") order by seq_region_start, seq_region_end";
 	
   #Do we really need the join to sr, can we not just dump the sr_ids instead of the names?
-  #We use the core_sr_id to beuild the slices anyway
+  #We use the core_sr_id to build the slices anyway
 		  
   #Delete previous dumps
   unlink($outdir."/annotated_features.".$slice->seq_region_name.".dat");
@@ -908,6 +990,12 @@ sub dump_annotated_features () {
 sub add_focus{
   print "\nNew $ctype focus\n" if ($debug_start);
 
+
+
+  #if($ctype eq 'CD4'){
+#	warn "CD4 $start $end";
+#	#exit;
+#  }
 
   push @rf, {
 			 'focus_start' => $start,
@@ -1109,6 +1197,11 @@ sub create_regulatory_features{
 	#Now build each ctype RegFeat
 	foreach my $ct (keys %{$rf->{fsets}}) {
 
+	  #Only count this is it is a true regf and not a scaffold projection
+	  $feature_count{regfeats}{$ct}++;
+	  
+	  map $feature_count{regfeats}{$_} += $rf->{fsets}{$ct}{$_}, keys %{$rf->{fsets}{$ct}};#$_ is fset_id
+
 	  #Build attr cache dependant on presence of attrs
 	  my $attr_cache;
 
@@ -1168,89 +1261,60 @@ sub create_regulatory_features{
 
 
 sub get_regulatory_FeatureSets{
-  my ($analysis, @cell_types) = @_;
+  my ($analysis, $ctypes) = @_;
   warn "Need to implement Helper::define_and_validate_sets here";
   #Can we not use Helper::define_and_validate_sets for this?
   #Just hack for now!
   my %rf_sets;
   
-  foreach my $ctype (@cell_types) {
-		
-	my $fset_name = ($ctype eq 'core') ? 'RegulatoryFeatures' : "RegulatoryFeatures:${ctype}";
-	my $rfset = $fsa->fetch_by_name($fset_name);
-		
-	if ($rfset) {				#Rollback or die
+  my $ftype = $fta->fetch_by_name('RegulatoryFeature');
 	
-	  print "Fetched $fset_name FeatureSet:\t$rfset\n" if $debug_start;
-
-
-	  if ($write_features && $clobber) {
-		$helper->rollback_FeatureSet($rfset, undef, $slice);
-	  } elsif ($write_features) {
-		die("Their is a pre-existing FeatureSet with the name 'RegulatoryFeatures'\n".
-			'You must specify clobber if you want to delete and overwrite all'.
-			' pre-existing RegulatoryFeatures');
-	  }
-	} else {					#generate new fset
+  if (! $ftype) {
 	  
-	  my $ftype = $fta->fetch_by_name('RegulatoryFeature');
+	$ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
+	  (
+	   -name        => 'RegulatoryFeature',
+	   -description => 'Ensembl Regulatory Feature',
+	   -class       => 'Regulatory Feature',
+	  );
 	
-	  if (! $ftype) {
-	  
-		$ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
-		  (
-		   -name        => 'RegulatoryFeature',
-		   -description => 'Ensembl Regulatory Feature',
-		   -class       => 'Regulatory Feature',
-		  );
-		
-		$ftype = @{$fta->store($ftype)} if ($write_features);
-	  }
-	  
-	  $rfset = Bio::EnsEMBL::Funcgen::FeatureSet->new
-		(
-		 -analysis     => $analysis,
-		 -feature_type => $ftype,
-		 -cell_type    => $cell_types{$ctype},
-		 -name         => $fset_name,
-		 -feature_class=> 'regulatory'
-		);
-	  
+	($ftype) = @{$fta->store($ftype)} if ($write_features);
+  }
+	
 
-	  print "Created $ctype $fset_name FeatureSet:\t$rfset\n" if $debug_start;
-
-	  #Need controller script to wait for success and add IMPORTED status?
-	  #Or just add here anyway as we always rollback?
-
-	  $rfset->add_status('DISPLAYABLE');
-	  ($rfset) = @{$fsa->store($rfset)} if ($write_features);
+  foreach my $ctype (keys %{$ctypes}) {	
+	my ($desc, $fset_name);
+	
+	if($ctype eq 'core'){
+	  $fset_name = 'RegulatoryFeatures';
+	  $desc = 'Generic RegulatoryFeature focus regions';
 	}
-		
-	$rf_sets{$ctype} = $rfset;
+	else{
+	  $fset_name = "RegulatoryFeatures:$ctype";
+	  $desc = "$ctype specific RegulatoryFeatures";
 	  
-	
-	
-	#Need to validate data_set separately!
-
-	my $dset = $dsa->fetch_by_name($fset_name);
-	#Should really also test dset via fset as linked product_FeatureSet
-	#Maybe the dset has been archived already?
-	
-	if (! $dset) {
-
-	  my $dset = Bio::EnsEMBL::Funcgen::DataSet->new
-		(
-		 -feature_set => $rfset,
-		 -name        => $fset_name,
-		 -supporting_set_type => 'feature'
-		);
-	
-	  $dset->add_status('DISPLAYABLE');
-	  $dsa->store($dset) if ($write_features);
 	}
+
+	my $rollback = ($clobber) ? 'supporting_sets' : undef;
+
+	my $dset = $helper->define_and_validate_sets($fset_name, 
+												 $analysis, 
+												 $ftype, 
+												 $ctypes->{$ctype}, 
+												 'regulatory',
+												 undef,#append flag
+												 $db,
+												 $ctype_fsets{$ctype},#supporting sets
+												 $desc,#desc
+												 'sets',#rollback mode
+												 1,#recovery?
+												 \@slices);
+
+	$rf_sets{$ctype} = $dset->product_FeatureSet;
+
   }
     
-  print "Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets)."\n";
+  $helper->log("Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets)); 
   return \%rf_sets;
 }
 
