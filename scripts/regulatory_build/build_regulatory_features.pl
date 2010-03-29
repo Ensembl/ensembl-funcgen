@@ -146,6 +146,8 @@ The following figure gives examples.
 
 # 22 Log to file and implement tee
 
+# 23 Look at feature count validation, currently warning instead of warning
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -629,7 +631,9 @@ $analysis = $aa->fetch_by_logic_name($logic_name);
 #As rollback will fail for full delete otherwise?
 
 push @skip_slices, 'MT' if ! $include_mt;#Always skip MT by default
-@slices = @{&generate_slices_from_names($sa, \@slices, \@skip_slices, 'toplevel', $non_ref)};
+#Is this inc dups here 
+@slices = @{&generate_slices_from_names($sa, \@slices, \@skip_slices, 'toplevel', $non_ref, 'inc_dups')};
+
 
 #Doing this here for all the slices before we batch will be faster
 my $rfsets = &get_regulatory_FeatureSets($analysis, \%cell_types);
@@ -748,11 +752,6 @@ while (<$fh>) {
   $feature_count{fsets}{$fset_id}++;
   $feature_count{ctypes}{$ctype}++; #Need to report these
 	
-
-  #if(($ctype eq 'IMR90') ||
-  #	 ($ctype eq 'K562')){
-  #	print "Seen $ctype\n";
-  #  }
 
   if (exists $focus_fsets{$fset_id}) { ### Focus feature
 	$feature_count{focus_ctypes}{$ctype}++;
@@ -934,7 +933,7 @@ foreach my $ctype(keys %ctype_fsets){
 printf "# Total number of read features: %10d\n", $total_feature_count;
 printf "\n# Total number of RegulatoryFeatures: %10d\n", scalar(@rf);
 
-die("ERROR:\tInconsistencies were found between some of your focus sets and the resultant RegulatoryFeatures, see above.\n") if $die;
+warn("ERROR:\tInconsistencies were found between some of your focus sets and the resultant RegulatoryFeatures, see above.\n") if $die;
 
 ###############################################################################
 # dump annotated features for given seq_region to file
