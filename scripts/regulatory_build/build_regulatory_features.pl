@@ -695,6 +695,11 @@ if ((! -f $af_file) ||
 	(! $no_dump_annotated_features)){
   print "Dumping annotated features for slice:\t".$slice->name."\n";
   &dump_annotated_features();
+
+  if(! -f $af_file){
+	warn "No annotated_features present, aborting build\n";
+	exit;
+  }
 } 
 else {
   print "Using previously dumped annotated features:\t$af_file\n";
