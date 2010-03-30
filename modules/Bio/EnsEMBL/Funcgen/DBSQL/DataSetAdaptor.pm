@@ -643,25 +643,23 @@ sub store{
 
 =cut
 
+#This needs to cahnge to an arrayref of dset and an overwrite flag
+
 
 sub store_updated_sets{
-  my ($self, @dsets) = @_;
+  my ($self, $dsets, $overwrite) = @_;
 
-  throw('Must pass a list of DataSet objects to store') if(! @dsets || $#dsets < 0);
-
-
+  throw('Must pass a list of DataSet objects to store') if(! @$dsets || $#{$dsets} < 0);
+  my ($sql);
+  my $db = $self->db();
   my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) 
                             VALUES (?, ?, ?)");
 
-  my $db = $self->db();
-
-  foreach my $dset (@dsets) {
-
+  foreach my $dset (@$dsets) {
 	throw('Must pass a DataSet object to update') if( ! ( ref $dset && 
 														 $dset->isa('Bio::EnsEMBL::Funcgen::DataSet')));
-
+	
 	throw('DataSet [' . $dset->dbID() . '] must be previous stored in the database') if (! $dset->is_stored($db) );
-
 	my $stored_dset = $self->fetch_by_name($dset->name);
 
 
@@ -681,43 +679,148 @@ sub store_updated_sets{
 	  }else{
 		#validate sets
 		if($fset->dbID != $stored_fset->dbID){
-		  throw('Found product FeatureSet mismatch whilst updating DataSet('.$dset->name.
-				"):\tStored:".$stored_fset->name."\tUpdate:".$fset->name);
+		  my $msg = 'Found product FeatureSet mismatch whilst updating DataSet('.$dset->name.
+			"):\tStored:".$stored_fset->name."\tUpdate:".$fset->name;
+		  throw($msg) if ! $overwrite;
+		  warn $msg;
 		}
 	  }
-	}else{
+	}
+	else{
 	  #update data_set table
-	  my $sql = 'update data_set set feature_set_id='.$fset->dbID.' where data_set_id='.$dset->dbID;
+	  $sql = 'update data_set set feature_set_id='.$fset->dbID.' where data_set_id='.$dset->dbID;
 	  $self->dbc->do($sql);
 	}
 
+	my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
+	my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$stored_dset->get_supporting_sets};
+	my $mismatch = 0;
+	
+	$mismatch = 1 if(scalar(@sorted_ssets) != scalar(@stored_ssets));
+	
+	if(! $mismatch){
+	  
+	  for my $i(0..$#stored_ssets){
+		
+		if($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID){
+		  $mismatch=1;
+		  last;
+		}
+	  }
+	}
+
+	#Delete old supporting_sets
+	#We really only want to do this if there is a difference
+	#batched jobs cause race condition here
+	#unless updated once before submission	
+	if($mismatch &&
+	   $overwrite){
+	  $sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID;
+	  eval { $self->db->dbc->do($sql) };
+	  throw("Couldn\'t delete supporting_sets for DataSet:\t".$stored_dset->name."\n$@") if $@;
+	  @stored_ssets = ();
+	}
 
 
 	#Update supporting sets
 	my %stored_dbids;
-	map {$stored_dbids{$_->dbID} = undef} @{$stored_dset->get_supporting_sets()};
+	map {$stored_dbids{$_->dbID} = undef} @stored_ssets if @stored_ssets;
 
-	foreach my $sset(@{$dset->get_supporting_sets()}){		
-	  my $dbid = $sset->dbID;
+	foreach my $sset(@sorted_ssets){	
+	my $dbid = $sset->dbID;
 
-	  if(! grep(/^${dbid}$/, keys %stored_dbids)){
-		throw("All supporting sets must be stored previously.".
-			  " Use store_updated_sets method if your DataSet has been stored") if(! $sset->is_stored($db));
+	  if(! grep(/^${dbid}$/, keys %stored_dbids)){		
+		throw("All supporting sets must be stored previously.") if(! $sset->is_stored($db));
 
 		#This causes problems when we want to re-run by slice
 		#Currently need
-		throw('You are trying to update supporting sets for a data set which already has a product FeatureSet('.$stored_fset->name.').  You must rollback the FeatureSet before adding more supporting sets.') if defined $stored_fset;
+		#warn "temporarily suspended throw for existing feature_set";
+		throw('You are trying to update supporting sets for a data set which already has a product FeatureSet('.$stored_fset->name.').  Either rollback the FeatureSet before adding more supporting sets or specify the overwrite flag.') if defined $stored_fset && ! $overwrite;
 
 		$sth->bind_param(1, $dset->dbID,            SQL_INTEGER);
 		$sth->bind_param(2, $sset->dbID,            SQL_INTEGER);
 		$sth->bind_param(3, $sset->set_type,        SQL_VARCHAR);
+		#How is this failing?
+		#Is the index not being updated after the delete
 		$sth->execute();
 	  }
 	}
   }
       
-  return \@dsets
+  return $dsets
 }
+
+
+
+#fset_id/ftype_id string
+#version done in build_reg_features
+#what about dates? Do this in build script too, with predicted release month param
+
+sub store_regbuild_meta_strings{
+  my ($self, $dset, $overwrite) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::DataSet', $dset);
+  my ($sql, $meta_value, $reg_string, $cmd, $msg);
+  my $fset = $dset->product_FeatureSet;
+
+  if(! defined $fset ||
+	 $fset->feature_class ne 'regulatory'){
+	throw('You must provide a DataSet with an associated \'regulatory\' product FeatureSet');
+  }
+
+  my @ssets = @{$dset->get_supporting_sets};
+
+  if(! @ssets){
+	throw('You must provide a DataSet with associated supporting sets');
+  }
+
+
+  my $ctype = (defined $fset->cell_type) ?  $fset->cell_type->name : 'core';
+
+  ### build and import regbuild strings by feature_set_id and feature_type_id
+
+  my $sth = $self->db->dbc->prepare("select meta_value from meta where meta_key='regbuild.${ctype}.feature_set_ids'");
+  $sth->execute();
+  ($meta_value) = map "@$_", @{$sth->fetchall_arrayref};
+  $reg_string = join(',', map {$_->dbID} sort {$a->name cmp $b->name} @ssets);
+
+  my %reg_strings = 
+	(
+	 "regbuild.${ctype}.feature_set_ids" => join(',', map {
+	   $_->dbID} sort {$a->name cmp $b->name
+					 } @ssets),
+	 "regbuild.${ctype}.feature_type_ids" => join(',', map {
+	   $_->feature_type->dbID} sort {$a->name cmp $b->name
+								   } @ssets),
+	);
+
+  foreach my $meta_key(keys %reg_strings){
+	my $sth = $self->db->dbc->prepare("select meta_value from meta where meta_key='${meta_key}'");
+	$sth->execute();
+	($meta_value) = map "@$_", @{$sth->fetchall_arrayref};
+
+	if (! $meta_value) {
+	  $sql = "insert into meta (meta_key, meta_value) values ('${meta_key}', '$reg_strings{${meta_key}}')";
+	
+	  eval { $self->db->dbc->do($sql) };
+	  throw("Couldn't store $meta_key in meta table.\n$@") if $@;
+	} 
+	else {
+
+	  if($meta_value ne $reg_strings{$meta_key}){
+		$msg = "$meta_key already exists and does not match\nOld\t$meta_value\nNew\t$reg_strings{${meta_key}}\nPlease archive previous RegulatoryBuild.\n";
+		die $msg if(! $overwrite);
+		warn $msg;
+	  }
+	  else{  
+		warn "Found matching $meta_key meta entry, do you need to archive a previous Regulatorybuild?\n" if ! $overwrite;
+	  }
+	}
+  }
+  
+  return \%reg_strings;
+}
+
 
 =head2 list_dbIDs
 
