@@ -834,10 +834,11 @@ sub define_and_validate_sets{
 	  #We have the problem here of wanting to add ssets to a previously existing dset
 	  #we may not know the original sset, or which of the ssets are new
 	  #Hence there is a likelihood of a mismatch.
+
+	  #Much of this is replicated in store_udpated sets
+	  
+
 	  if(defined $ssets){
-		
-
-
 		my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$ssets};
 		my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
 		my $mismatch = 0;
@@ -855,6 +856,9 @@ sub define_and_validate_sets{
 		  }
 		}
 		
+		
+		
+
 		if($mismatch){
 		  #We're really print this names here which may hide the true cell/feature/anal type differences.
 		  my $mismatch = 'There is a (name/type/analysis) mismatch between the supplied supporting_sets and the'.
@@ -875,21 +879,21 @@ sub define_and_validate_sets{
 
 			#Remove supporting_set entries
 			#This should be in a rollback_DataSet method
-			#Currently in rollback experiment?
-			my $sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID;
-			my $row_cnt = $db->dbc->do($sql);
+			#This has moved to DataSetAdaptor::store_update_sets
+				
+			warn "reset supporting sets ".@sorted_ssets;
 
-			if(! $row_cnt){
-			  throw("Failed to rollback supporting_sets for DataSet:\t".$dset->name.'(dbID:'.$dset->dbID.')');
-			}
-			
 			#Reset supporting sets
+			$dset->{'supporting_sets'} = undef;
 			$dset->add_supporting_sets(\@sorted_ssets);
 			#Move this to last block?
 			#This will currently fail as it test for product_FeatureSet
 			#How do we get around this? Remove IMPORTED status and only throw if fset has IMPORTED status?
 
-			($dset) = @{$dset_adaptor->store_updated_sets($dset)};
+			#warn "pre store sset ".@{$dset->get_supporting_sets};
+
+			#($dset) = @{$dset_adaptor->store_updated_sets([$dset], $rollback_level)};
+			#$dset->adaptor->store_regbuild_meta_strings($dset, $rollback_level) if $type eq 'regulatory';
 		  }
 		  else{
 			throw($mismatch);
@@ -914,6 +918,8 @@ sub define_and_validate_sets{
 	  #However, the use case of this method is for one InputSet giving rise to one ResultSet
 	  #Hence just throw if we find more than one or have a name mismatch???
 	  my @stored_sets = @{$dset->get_supporting_sets};
+
+
 
 	  #THis assumes we will always have supporting sets
 	  #and is failing as we have removed this test in DataSet::new
@@ -1120,8 +1126,12 @@ sub define_and_validate_sets{
 	  if(! defined $dset->product_FeatureSet){
 		$self->log("Updating DataSet with new product FeatureSet:\t".$fset->name);
 		$dset->product_FeatureSet($fset);
-		($dset) = @{$dset_adaptor->store_updated_sets($dset)};
 	  }
+
+	  warn "storing updated ".@{$dset->get_supporting_sets}." ".@$ssets." sets with rollback level $rollback_level";
+		
+	  $dset = $dset_adaptor->store_updated_sets([$dset], $rollback_level)->[0];
+	  $dset->adaptor->store_regbuild_meta_strings($dset, $rollback_level) if $type eq 'regulatory';
 	}
 	else{
 	  #We may have the case where we have a DataSet(with a FeatureSet) but no ResultSet
@@ -1131,7 +1141,7 @@ sub define_and_validate_sets{
 	  if(! @{$dset->get_supporting_sets}){
 		$self->log("Updating DataSet with new ResultSet:\t".$rset->name);
 		$dset->add_supporting_sets([$rset]);
-		($dset) = @{$dset_adaptor->store_updated_sets($dset)};
+		$dset = $dset_adaptor->store_updated_sets([$dset], $rollback_level)->[0];
 	  }
 	}
   }
@@ -1145,6 +1155,7 @@ sub define_and_validate_sets{
 										-feature_set => $fset,
 										-supporting_sets => $ssets,
 									   ))};
+	  $dset->adaptor->store_regbuild_meta_strings($dset, $rollback_level) if $type eq 'regulatory';
 	}
 	else{
 	  warn "creating dataset $name with supporting set $rset";
@@ -1213,7 +1224,6 @@ sub rollback_FeatureSet{
 
    	map { throw("Must pass a valid Bio::EnsEMBL::Slice") if (! (ref($_) && $_->isa('Bio::EnsEMBL::Slice'))) } @$slices;
 	$self->log("Restricting to slices:\n\t\t".join("\n\t\t", map($_->name, @$slices)));
-	
 	#Allow subslice rollback only for one slice at a time
 	my $subslice = (scalar(@$slices) == 1) ? 1 : 0;
 	my @sr_ids;
@@ -1226,11 +1236,12 @@ sub rollback_FeatureSet{
 	  }else{
 
 		if(! $subslice){#Test is not subslice
-		  my $full_slice_end = $slice->adaptor->fetch_by_region(undef, $slice->seq_region_name)->end;
+		  my $full_slice = $slice->adaptor->fetch_by_region(undef, $slice->seq_region_name);
 
 		  if(($slice->start != 1) ||
-			 ($full_slice_end != $slice->end)){
-			throw('Can only rollback subslices one at a time');
+			 ($full_slice->end != $slice->end)){
+			throw("Can only rollback subslices one at a time:\nRollback slice:\t"
+				  .$slice->name."\nFull slice:\t".$full_slice->name);
 		  }
 		}
 
@@ -2077,7 +2088,7 @@ sub rollback_table{
   my ($self, $sql, $table, $id_field, $db) = @_;
 
   my $row_cnt;
-  eval { $db->dbc->do($sql) };
+  eval { $row_cnt = $db->dbc->do($sql) };
   
   if($@){
   	throw("Failed to rollback table $table using sql:\t$sql\n$@");
