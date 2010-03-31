@@ -687,7 +687,7 @@ if (! $local){ #BSUB!
 
   foreach my $slice(@slices){
 	my $sr_name = $slice->seq_region_name;
-	my $bsub = "bsub -q long -o $outdir/RegulatoryBuild_$sr_name.out -e $outdir/RegulatoryBuild_$sr_name.err ".
+	my $bsub = "bsub -q normal -o $outdir/RegulatoryBuild_$sr_name.out -e $outdir/RegulatoryBuild_$sr_name.err ".
 	  "-J 'RegulatoryBuild_${sr_name}_${dbname}' -R 'select[my".$bsubhost."<80] rusage[my".$bsubhost."=10:duration=10]' -R 'select[mem>4000] rusage[mem=4000]' -M 4000000";
 	
 	my $cmd = "$ENV{EFG_SRC}/scripts/regulatory_build/build_regulatory_features.pl -local -slices $sr_name @tmp_args";
