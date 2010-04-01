@@ -93,7 +93,7 @@ dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
-create a database for overlap analysis at the mysql command line
+create a database for overlap analysis at the mysql command line (ideally on ens-genomics2 as this is the default server)
 
 set up the database for overlap analysis using scripts
 reg_feats_4_classification.pl
@@ -122,6 +122,10 @@ reg_feat_gen_feat_overlaps.pl -e dk_funcgen_classify_55_1 -v1 -c reg_feat_gen_fe
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2010-03-26 10:19:04  dkeefe
+ Added new sub_pats() method for generating the bit patterns we investigate.
+ Modified for single cell line classification.
+
  Revision 1.1  2009/03/12 15:31:23  dkeefe
  moved from parent directory
  various mods and hacks so it will also work with mouse
@@ -171,7 +175,9 @@ my $pat_bits;
 #my $pat_bits = 19;
 my $patt_count_thresh = 100;
 my $assoc_thresh = 70;
+$assoc_thresh = 51;
 my $second_thresh = 50;
+#$second_thresh = 49; 
 my $rerun = 0;
 my $combination_bits = 4;
 my %opt;
@@ -192,14 +198,6 @@ my $enc_db = 'dk_genomic_features_36k';# default, can be overridden by args
 # hook up with the server
 my $dbh = &make_contact($enc_db);
 my $dbu = DBSQL::Utils->new($dbh);
-
-
-
-#    my @pats = &sub_pats($dbh,$reg_feat_table,$pat_bits);
-#    my $n_pats = scalar(@pats);
-#    print "n_pats = $n_pats\n";
-#print join("\n",@pats)."\n";
-#exit;
 
 
 
@@ -507,6 +505,40 @@ sub create_types_table{
     &commentary("unclassified and not cell_type_specific            $res\n");
 
 }
+
+
+sub qc{
+
+#create table promoter_associated_temp select seq_region_name,seq_region_start,seq_region_end from regulatory_feature rf, regulatory_features_classified rfc where rfc.promoter_associated and rfc.regulatory_feature_id =rf.regulatory_feature_id order by seq_region_name;
+#alter table promoter_associated_temp add index(seq_region_name);
+
+#create table promoter_features select * from protein_coding_intron1;
+ #insert into promoter_features select * from protein_coding_exon1_plus_enhancer; 
+#insert into promoter_features select * from RNA_gene_exon1_plus_enhancer;
+# alter table promoter_features add index(seq_region_name);
+
+#select count( distinct pa.seq_region_name,pa.seq_region_start ) from promoter_associated_temp pa, promoter_features e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start; 
+
+#select count( distinct pa.seq_region_name,pa.seq_region_start ) from promoter_associated_temp pa, protein_coding_gene_body e wherepa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start; 
+
+#select count( distinct pa.seq_region_name,pa.seq_region_start ) from promoter_associated_temp pa, intergenic_2500 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start > e.feature_start and pa.seq_region_end < e.feature_end;
+#select count( distinct pa.seq_region_name,pa.seq_region_start ) from promoter_associated_temp pa, pseudogene_exon1_plus_enhancer ewhere pa.seq_region_name=e.seq_region_name and pa.seq_region_start > e.feature_start and pa.seq_region_end < e.feature_end;
+
+
+#create table gene_associated_temp select seq_region_name,seq_region_start,seq_region_end from regulatory_feature rf, regulatory_features_classified rfc where rfc.gene_associated and rfc.regulatory_feature_id =rf.regulatory_feature_id order by seq_region_name;   
+
+#alter table gene_associated_temp add index(seq_region_name);
+
+#select count( distinct pa.seq_region_name,pa.seq_region_start ) from gene_associated_temp pa, protein_coding_gene e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start; 
+
+#select count( distinct pa.seq_region_name,pa.seq_region_start ) from gene_associated_temp pa, RNA_gene e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start;  
+
+#select count( distinct pa.seq_region_name,pa.seq_region_start ) from gene_associated_temp pa, intergenic_2500 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start;
+
+
+
+}
+
 
 
 sub create_flags_table{
