@@ -13,15 +13,16 @@ dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
-set the current regulatory database in file ~/dbs/current_funcgen
+set the current regulatory database in file ~/dbs/current_funcgen or ~/dbs/current_mouse_funcgen
 
 run the script gen_feats_for_classification.pl
 
-reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4
+reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4 -s mus_musculus
     
 =head1 EXAMPLES
 
- reg_feats_4_classification.pl -e dk_funcgen_classify_51_1  -v2 
+ reg_feats_4_classification.pl -e dk_funcgen_classify_51_1 -v2 -s mus_musculus -c CD4
+
           
 =head1 SEE ALSO
 
@@ -33,6 +34,9 @@ reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.3  2010-03-26 10:05:04  dkeefe
+ added -c <cell_type> option to allow cell specific classification
+
  Revision 1.2  2009-07-30 11:36:11  dkeefe
  updates for farm2, latest mysqldump and dumping from ensdb-archive
 
@@ -84,7 +88,7 @@ my $cell_name = '';
 my %opt;
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('c:v:u:p:s:H:h:e:J:P:G', \%opt) || die ;
+&Getopt::Std::getopts('c:d:v:u:p:s:H:h:e:J:P:G', \%opt) || die ;
 }else{
 &help_text; 
 }
@@ -102,7 +106,10 @@ my $dbu = DBSQL::Utils->new($dbh);
 
 
 # we need access to the latest ensembl funcgen
-my $source_dbs = DBSQL::DBS->new('current_funcgen');
+my $func_spec = 'current_funcgen';
+if($sp eq 'mus_musculus'){$func_spec = 'current_mouse_funcgen'}
+
+my $source_dbs =  DBSQL::DBS->new($func_spec);
 my $source_dbh = $source_dbs->connect();
 my $source_dbu = DBSQL::Utils->new($source_dbh);
 
@@ -162,6 +169,7 @@ foreach my $table (@core_tables){
 &copy_with_rename($source_dbh,'seq_region',$dbh,'func_seq_region');
 
 
+
 POST_IMPORT:
     my @sql;
 my $temp1 = &new_temp();
@@ -175,6 +183,13 @@ push @sql, "drop table regulatory_feature";
 push @sql, "alter table $temp1 rename as regulatory_feature";
 
 push @sql, "alter table regulatory_feature add index(feature_set_id)";
+
+
+# experimental hack
+
+#push @sql, "update regulatory_feature set display_label = concat('1',display_label)";
+
+
 
 
 &execute($dbh,@sql) or die;
@@ -302,7 +317,7 @@ push @sql,"alter table $filtered_features_table modify column feature_type varch
 
 
 &clean_temp();
-unlink($dump_dir);
+&backtick("rm -rf $dump_dir");
 $dbh->disconnect;
 $source_dbh->disconnect;
 exit;
@@ -512,6 +527,10 @@ sub process_arguments{
         $cell_name = $opt{c}; 
     }
 
+    if (exists $opt{d}){
+        $dump_dir = $opt{d}; 
+    }
+
 
     if (exists $opt{H}){
         $host = $opt{H}; 
@@ -576,7 +595,7 @@ sub help_text{
                   [-s] <species> eg -smus_musculus, default = homo_sapiens
                   [-v] <integer> verbosity level 0,1 or 2 
                   [-G] flag - remove features which overlap protein coding genes
-                  [-] 
+                  [-d] <dir_name> a scratch directory for temp files 
                   [-] <> 
                   [-] <> 
 
