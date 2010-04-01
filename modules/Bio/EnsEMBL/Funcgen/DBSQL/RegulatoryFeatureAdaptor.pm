@@ -63,6 +63,15 @@ sub _get_current_FeatureSet{
 
   my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
 
+  #We need to be able to retrieve all sets
+  #Also restrict to just the core set
+  
+  #This would be done by fethcing all FeatureSets of type 'regulatory'
+  #But this would currently also bring back old RegulatoryBuilds
+  #if the stable_id_mapper can work between DBs then we can just remove the old sets completely
+  
+  
+
   if(! defined $fset){
 	warn('Could not retrieve current RegulatoryFeatures FeatureSet');
   }
@@ -452,6 +461,9 @@ sub _objs_from_sth {
 		  $ftype = $ft_adaptor->fetch_by_dbID($ftype_id);
 		}
 		
+		#This stops un init warning when sid is absent for sid mapping
+		my $sid = (defined $stable_id) ? sprintf($stable_id_prefix."%011d", $stable_id) : undef;
+
 		$reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
 		  ({
 			'start'          => $seq_region_start,
@@ -467,7 +479,7 @@ sub _objs_from_sth {
 			'feature_set'    => $fset_hash{$fset_id},
 			'feature_type'   => $ftype,
 			#'regulatory_attributes' => $reg_attrs,
-			'stable_id'      => sprintf($stable_id_prefix."%011d", $stable_id),
+			'stable_id'      => $sid,
 		   });
 
 	  }
