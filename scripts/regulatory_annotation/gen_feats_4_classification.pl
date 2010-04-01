@@ -17,9 +17,9 @@ At the mysql command prompt, create a database for the classification run.
 
   create database dk_reg_feat_classify_49
 
-edit the file ~dkeefe/dbs/ens_staging  to point at the latest ensembl core database
+edit the file ~dkeefe/dbs/current_core or  ~dkeefe/dbs/current_mouse_core to point at the latest ensembl core database
 
-  gen_feats_4_classification.pl -e dk_reg_feat_classify_49
+  gen_feats_4_classification.pl -e dk_reg_feat_classify_49 -s mus_musculus
 
 
 =head1 EXAMPLES
@@ -36,6 +36,9 @@ edit the file ~dkeefe/dbs/ens_staging  to point at the latest ensembl core datab
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.6  2010-02-12 10:29:53  dkeefe
+ check in test
+
  Revision 1.5  2009-08-04 08:26:59  dkeefe
  mods for farm2
 
@@ -81,7 +84,7 @@ my @temp_tables;
 my $dump_dir = "/lustre/scratch103/ensembl/dkeefe/gen_feat_junk_$$/";
 my $slim_table = 'goslim_goa_acc_list';
 my $id_list;
-my $sp;
+my $sp = 'homo_sapiens';
 my $jump_label = '';
 my $verbose = 2;
 my $do_go = 0;
@@ -90,7 +93,7 @@ my $do_repeats = 0;
 my %opt;
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('v:j:u:p:s:H:h:e:P:gr', \%opt) || die ;
+&Getopt::Std::getopts('v:j:u:p:s:H:h:e:P:gr', \%opt) || die "option problem" ;
 }else{
 &help_text; 
 }
@@ -107,9 +110,14 @@ my $enc_db = 'dk_funcgen_classify_55_1';# default, can be overridden by args
 my $dbh = &make_contact($enc_db);
 my $dbu = DBSQL::Utils->new($dbh);
 
-
 #we need access to the latest ensembl core
-my $core_dbs = DBSQL::DBS->new('ens_staging');
+#my $core_spec = 'ens_staging'; 
+my $core_spec = 'current_core';
+if($sp eq 'mus_musculus'){$core_spec = 'current_mouse_core'}
+my $core_dbs = DBSQL::DBS->new($core_spec);
+
+
+
 my $core_dbh = $core_dbs->connect();
 my $core_dbu = DBSQL::Utils->new($core_dbh);
 # we also want data from the corresponding GO database which is on same server
@@ -219,8 +227,8 @@ POST_IMPORT:
 
 
 #POST_IMPORT:
-#&repeat_features($dbh,$dbu,$do_repeats);
-&repeat_features_old_version($dbh,$dbu,$do_repeats);
+&repeat_features($dbh,$dbu,$do_repeats);
+#&repeat_features_old_version($dbh,$dbu,$do_repeats); # for contig coords
 
 
 if($dbu->table_exists('de_ferrari_gene_classification')){
@@ -234,7 +242,7 @@ if($dbu->table_exists('de_ferrari_gene_classification')){
 POST_EXON:
 
 &intergenic_features($dbh,$dbu);
-&cage_ditag_transcript_tss($dbh,$dbu);
+#&cage_ditag_transcript_tss($dbh,$dbu);
 POST_DITAG:
 &karyotype_features($dbh,$dbu);
 POST_KARYOTYPE:
@@ -244,12 +252,13 @@ POST_KARYOTYPE:
 
 #POST_IMPORT:
 
-#&cpg_features($dbh,$dbu);
-&cpg_features_old_version($dbh,$dbu);
+&cpg_features($dbh,$dbu);
+#&cpg_features_old_version($dbh,$dbu); # for contig coords
+
 if($dbu->table_exists($slim_table) && $do_go){
     &go_term_features($dbh,$dbu,$slim_table);
 }else{
-    &commentary("Can't create go features cos $slim_table is not in database\n");
+    &commentary("Can't create go features cos $slim_table is not in database\n This is only needed for research purposes\n");
 }
 
 
@@ -408,6 +417,8 @@ sub karyotype_features{
 
 }
 
+
+#for repeats on top level sequence
 sub repeat_features{
     my($dbh,$dbu,$all_repeats)=@_;
 
@@ -476,7 +487,7 @@ and f.seq_region_id = asm_sr.seq_region_id ";
 }
 
 
-
+# for repeats on contigs
 sub repeat_features_old_version{
     my($dbh,$dbu)=@_;
 
@@ -1280,7 +1291,7 @@ sub make_contact{
     if ($dbh){
         print STDERR ("connected to $db\n");
     }else{
-        &err("failed to connect to database $db");
+        &err("failed to connect to database $db using\n$dsn $user $password");
         exit(1);
  
     }   
