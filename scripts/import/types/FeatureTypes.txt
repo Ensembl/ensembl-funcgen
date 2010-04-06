@@ -63,6 +63,6 @@ Cjun	Transcription Factor	Cjun Transcription Factor Binding
 Jund	Transcription Factor	Jund Transcription Factor Binding
 Max	Transcription Factor	Max Transcription Factor Binding
 Nfe2	Transcription Factor	Nfe2 Transcription Factor Binding
-bGata1	Transcription Factor	bGata1 Transcription Factor Binding
-bZnf263	Transcription Factor	bZnf263 Transcription Factor Binding
+Gata1	Transcription Factor	Gata1 Transcription Factor Binding
+Znf263	Transcription Factor	Znf263 Transcription Factor Binding
 Cmyc	Transcription Factor	Cmyc Transcription Factor Binding
