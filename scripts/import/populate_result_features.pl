@@ -229,7 +229,7 @@ SLICE: foreach my $slice(@slices){
 	
   }
 
-  my $cmd = "perl $ENV{EFG_SRC}/scripts/import/populate_result_features.pl @tmp_args -slice_name ".$slice->name;
+  my $cmd = "perl $ENV{EFG_SRC}/scripts/import/populate_result_features.pl @tmp_args -slices ".$slice->name;
   
   if($farm){
     #hugemem -R "select[mem>20000] rusage[mem=20000] -M 20000000"
