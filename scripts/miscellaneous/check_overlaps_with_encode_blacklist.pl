@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-check_overlaps_with_blacklist.pl - For all the human annotated features, checks how they overlap with a set of locations defined as being problematic by the ENCODE project (so called blacklist)
+check_overlaps_with_blacklist.pl - For all the human annotated features, checks how they overlap with a set of locations defined as being problematic by the ENCODE project (so called blacklist). Produces log files of the overlap analysis.
 
 =head1 SYNOPSIS
 
@@ -27,6 +27,98 @@ Options:
     -coredb_name         Name of Core DB [$DNADB_NAME]
     -remove              When specified it removes the overlapping features from the database 
     -output              File to store results of analysis  [overlaps.txt]
+    -all                 When specified all sets are considered
+
+=head1 DESCRIPTION
+
+Downloads datasets in the data tracking database. Updates their download status.
+
+=head1 OPTIONS
+
+=over
+
+=item B<help>
+
+Gives this help menu
+
+=item B<-all>
+
+When specified, all sets are considered
+
+=item B<-remove>
+
+When specified, it removes features overlapping with encode blacklisted regions (requires database user with write privileges)
+
+=item B<-output>
+
+Name of output file to create (defaults to output.txt)
+
+=item B<-coredbhost>
+
+Host where the core database is (defaults to $DNADB_HOST)
+
+=item B<-coredbuser>
+
+User of the core database (defaults to $DNADB_USER)
+
+=item B<-coredbpass>
+
+Password for the core database user (defaults to $DNADB_PASS)
+
+=item B<-coredbport>
+
+Port of the host where the core database is (defaults to $DNADB_PORT)
+
+=item B<-coredbname>
+
+Name of the data tracking database (defaults to "efg_data_tracking")
+
+=item B<-efgdbhost>
+
+Host where the EFG database is (defaults to $DB_HOST)
+
+=item B<-efgdbuser>
+
+User of the EFG database (defaults to $DB_USER)
+
+=item B<-efgdbpass>
+
+Password for the EFG database user (defaults to $DB_PASS)
+
+=item B<-efgdbport>
+
+Port of the host where the EFG database is (defaults to $DB_PORT)
+
+=item B<-efgdbname>
+
+Name of the data tracking database (defaults to "efg_data_tracking")
+
+=back
+
+
+=head1 SEE ALSO
+
+ensembl-functgenomics/scripts/data_tracking/add_new_dataset.pl
+
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2010 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =cut
 
@@ -36,6 +128,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Data::Dumper;
 use Getopt::Long;
+use Pod::Usage;
 use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning info);
 
 #Variables from the EFG and pipeline environments
@@ -52,7 +145,9 @@ my $coredb_name = $ENV{DNADB_NAME};
 
 my $species = 'homo_sapiens';
 my $output = "overlaps.txt";
+my $all;
 my $remove;
+my $help;
 my @feature_sets;
 
 GetOptions ("output=s"      => \$output,
@@ -65,10 +160,13 @@ GetOptions ("output=s"      => \$output,
             "coredb_host=s" => \$coredb_host,
             "coredb_user=s" => \$coredb_user,
             "coredb_name=s" => \$coredb_name,
+	    "all"           => \$all,
             "remove"        => \$remove,
-            "feature_sets=s{,}"  => \@feature_sets);
+            "feature_sets=s{,}"  => \@feature_sets,
+	    "help|h"              => \$help,
+	   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
-if(scalar(@feature_sets)==0){ throw("Must specify feature set(s) name with -feature_sets option"); exit 1; }
+pod2usage(1) if ($help);
 
 #Get db adaptors: 
 
@@ -82,6 +180,8 @@ my $coredba = Bio::EnsEMBL::DBSQL::DBAdaptor->new
      -group   => 'core',
      );
 
+if(!$coredba){ warn "Could not connect to core database..."; exit 1; }
+
 my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
      -host   => $efgdb_host,
@@ -94,12 +194,17 @@ my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -group  => 'funcgen',
      );
 
+if(!$efgdba){ warn "Could not connect to EFG database..."; exit 1; }
+
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 my $afa = $efgdba->get_AnnotatedFeatureAdaptor();
 #my $cta = $efgdba->get_CellTypeAdaptor();
 #my $K562 = $cta->fetch_by_name("K562");
 #This doesn't seem to be working very well... TODO: check why...
 #my @fsets = $fsa->fetch_all_by_CellType($K562);
+
+if((scalar(@feature_sets)>0) && $all){ warn " Only specified feature sets will be considered. -all is being ignored."; }
+
 
 #my @fsets = @{$fsa->fetch_all_by_type('annotated')};
 my @fsets;
@@ -109,12 +214,20 @@ foreach my $feature_set (@feature_sets){
     push(@fsets, $fsa->fetch_by_name($feature_set)); 
   } else { warn "Could not find Feature Set $feature_set"; }
 }
-if(scalar(@fsets)==0){ warn "No Feature Sets found"; exit 1; }
+if(scalar(@fsets)==0){
+  if($all){ 
+    warn "All feature sets being used... this may take a while!";
+    @fsets = @{$fsa->fetch_all()};
+  } else { warn "No Feature Sets found. Use -feature_sets or -all"; exit 1; }
+}
 #my @fsets = @{$fsa->fetch_all_by_type('external')};
 #my @fsets = @{$fsa->fetch_all()};
 #print scalar(@fsets)."\n"; 
 
+my %ids_to_remove;
+my %blacklist;
 open(FO,">".$output);
+print FO "set_name\tset_count\tset_overlap_count\tset_length\tset_overlap_length\n";
 foreach my $fset (@fsets){
   print $fset->name."\n";
   #print Dumper $fset;
@@ -131,7 +244,7 @@ foreach my $fset (@fsets){
       $set_count++;
       $set_length += $feature->feature_Slice()->length();
       
-      #This assumes the encode_excluded regions are non-overlapping with each other
+      #This assumes that encode_excluded regions are non-overlapping with each other
       foreach my $region (@excluded_regions ) {
 	if(($feature->start() >= $region->end()) || 
 	   ($feature->end() <= $region->start()) ){ next; } else { 
@@ -139,22 +252,17 @@ foreach my $fset (@fsets){
 	     # This has the disadvantage that overlap counts may be more than the features... 
 	     $set_overlap_count++;
 
+	     #potential memory hog... there could be many features... but should be ok.
+	     $ids_to_remove{$feature->dbID()} = 1;
+
 	     my $start = $region->start();
 	     my $end = $region->end();
 	     if($start<$feature->start()){ $start = $feature->start();  }
 	     if($end>$feature->end()){ $end = $feature->end();  }
 	     $set_overlap_length += ($end-$start+1);
 
-             if($remove){
-	       eval{ 
-		 #print "Removing Feature with DB ID ".$feature->dbID()."\n";
-		 my $sql = "DELETE FROM annotated_feature WHERE annotated_feature_id=".$feature->dbID().";";
-		 $efgdba->dbc->do($sql);		 
-	       };
-	       if($@) { warn $@->getErrorMessage(); }
-	       last; #pass to the next feature... 
-	       #overlap counts will be more accurate but overlap length may not be accurate in this case...
-	     } 
+	     #The same feature set can overlap several times with the same blacklist region...
+	     $blacklist{$chromosome_slice->seq_region_name()."_".$region->start()."_".$region->end()}{$fset->name} = 1;
 
 	   }	
       }
@@ -163,6 +271,26 @@ foreach my $fset (@fsets){
   print FO $fset->name."\t".$set_count."\t".$set_overlap_count."\t".$set_length."\t".$set_overlap_length."\n";
 }
 close FO;
+
+
+open(FOB,">".$output.".blacklist");
+foreach my $region (sort keys %blacklist){
+  print FOB $region;
+  foreach my $set (keys %{$blacklist{$region}}){ print FOB "\t".$set; }
+  print FOB "\n";
+}
+close FOB;
+
+if($remove){
+  #TODO Batch remove features!
+  foreach my $fID (keys %ids_to_remove){
+    eval{ 
+      my $sql = "DELETE FROM annotated_feature WHERE annotated_feature_id=".$fID.";";
+      $efgdba->dbc->do($sql);		 
+    };
+    if($@) { warn $@->getErrorMessage(); }
+  }
+} 
 
 exit 0;
 
