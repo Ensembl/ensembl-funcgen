@@ -1,4 +1,4 @@
-# $Id: Collector.pm,v 1.2 2010-02-23 15:30:11 nj1 Exp $
+# $Id: Collector.pm,v 1.3 2010-04-06 10:27:48 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collector;
 #Move this to Bio::EnsEMBL::Utils::Collector for 58?
@@ -747,7 +747,7 @@ sub store_window_bins_by_Slice{
 	  $max_data_type_size, $pack_template, $packed_size, $bin_model, $new_assm, $skip_zero_window) =
     rearrange( [ 'WINDOW_SIZES', 'LOGIC_NAME', 'BIN_METHOD', 'FETCH_METHOD_REF', 'MAX_VIEW_WIDTH', 'MAX_DATA_TYPE_SIZE', 'PACK_TEMPLATE', 'PACKED_SIZE', 'BIN_MODEL', 'NEW_ASSEMBLY', 'SKIP_ZERO_WINDOW'], %config );
 
-  warn "Need to be careful here about cleaning start end strand caches between serailly run slices";
+  warn "Need to be careful here about cleaning start end strand caches between serially run slices";
 
 
 
@@ -918,34 +918,39 @@ sub store_window_bins_by_Slice{
 		$in_slice = 0;
 	  }
 	  
-
 	
 	  $slice = $slice->adaptor->fetch_by_region($region, $seq_region_name, ($sub_start + $orig_start -1), ($sub_end + $orig_start - 1), $strand, $version);
-
 	  #Can't subslice as this will not clip if we go over the length of the slice, unlike normal slice fetching
 	  #hence we cannot rely on this
 	  #$slice = $orig_slice->sub_Slice($sub_start, $sub_end, $orig_slice->strand);
 	  #warn "got sub slice $slice as $sub_start - $sub_end from ".$orig_slice->name;
 
-
-
-
-
-	  #This needs to be set in the caller or passed as a code ref
-	  #$features = $this->fetch_all_by_Slice_ResultSet($slice, $rset);
-	  #This can simply be a ref to fetch_all_by_Slice
-	  #or a wrapper in the Collection module to add required args?
-	  #This may not know about the rset?
-	  #For flat files this would open a given file and slurp in the records for this slice
-	  #What about unsorted/sortable files?
-	  #Would need to pre-process these! Can't expect this to handle unsorted input
-	  #But what about files which are sorted but order doesn't match toplevel order
-	  #Can we optionally slurp whole file first and set slice names/order depending on file
-	  #This would be done in the caller to set the slice, altho we may have to decrement the input_line number or array index
-	  #As we will have to peak at the first/next line to set the slice.
 	  
 	  ### Grab features and shift chunk coords
 	  $features = $self->get_Features_by_Slice($slice);
+
+
+	  #features may already be a 0 wsize collection if we have projected from an old assembly
+	  #e.g. [ $features, \%config ]
+
+	  if( (scalar(@$features) == 2 ) &&
+		  (ref($features->[0]) eq 'ARRAY') &&
+		  (ref($features->[0]->[0]) =~ /Bio::EnsEMBL::Funcgen::Collection/) ){#Change to isa 'Bio::EnsEMBL::Collection
+		
+		if($features->[1]->{'window_size'} != 0){
+		  throw("You are trying to generated Collections from a non-zero window sized Collection:\t".$features->[1]->{'window_size'});
+		} 
+
+		#This should never happen
+		if(! $skip_zero_window){
+		  throw('You have retrieved data from a Collection which without using -skip_zero_window i.e. you are trying to generate overwrite the data you are generating the Collections from');
+		}
+
+		#Reassign the features
+		$features = $features->[0];
+	  }
+
+
 
 	  #Set collection start here for 0 window_size
 	  if(@$features && $store_natural && ! defined $self->collection_start(0)){
@@ -957,8 +962,6 @@ sub store_window_bins_by_Slice{
 	  $start_adj = $chunk_length if($in_slice);
 	  	  
 	  #next if scalar(@$features) == 0;#We want to store values for all windows
-
-	  #warn "got ".scalar(@$features)." features with scores:\t";
 
 	  #foreach my $f(@$features){
 	  #	warn $f->window_size.':'.$f->start.' - '.$f->end;
@@ -1074,7 +1077,8 @@ sub store_window_bins_by_Slice{
 								  $orig_slice,
 								  #$sub_start,
 								  $sub_end,
-								  $orig_slice->strand,#This is most likely 0
+								  $orig_slice->strand,#This is most likely 1!
+								  #Override this woth 0 in descendant Colelctor if required.
 								  $bins->{$wsize},
 								 );
 
@@ -1357,6 +1361,9 @@ sub _bin_features_by_window_sizes{
 
   foreach my $feature ( @{$features} ) {
 	#Set up the bins for each window size
+
+	#Test for Feature here?
+
 
 	foreach my $wsize (@$window_sizes) {
 	
