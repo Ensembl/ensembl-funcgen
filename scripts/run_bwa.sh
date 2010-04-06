@@ -82,21 +82,21 @@ usage="Usage:\t\trun_bwa.sh <options> [ file1 file2 ]
 
 while getopts ":g:s:e:n:d:o:i:r:a:mbcph" opt; do
 	case $opt in 
-		g  ) gender=$OPTARG ;; 
-		s  ) species=$OPTARG ;;
-		e  ) experiment_name=$OPTARG ;;
-		n  ) name=$OPTARG ;;
-		d  ) dir=$OPTARG ;;
-        o  ) outdir=$OPTARG ;;
-		i  ) index_file=$OPTARG ;;
-        r  ) resource=$OPTARG ;;
-		a  ) assembly=$OPTARG ;;
+	    g  ) gender=$OPTARG ;; 
+	    s  ) species=$OPTARG ;;
+	    e  ) experiment_name=$OPTARG ;;
+	    n  ) name=$OPTARG ;;
+	    d  ) dir=$OPTARG ;;
+	    o  ) outdir=$OPTARG ;;
+	    i  ) index_file=$OPTARG ;;
+	    r  ) resource=$OPTARG ;;
+	    a  ) assembly=$OPTARG ;;
 	    p  ) align_type='sampe' ;;
-        c  ) clean=1 ;;
-        m  ) merge_only=1 ;;
-        b  ) format='bam' ;;
-		h  ) echo -e $usage; exit 0;;
-		\? ) echo -e $usage; exit 1;;
+	    c  ) clean=1 ;;
+	    m  ) merge_only=1 ;;
+	    b  ) format='bam' ;;
+	    h  ) echo -e $usage; exit 0;;
+	    \? ) echo -e $usage; exit 1;;
 	esac 
 done
 
@@ -131,102 +131,65 @@ new_input=1
 unzipped_files=
 split_files=
 
-#Can probably merge these if else blocks
 
-if [ "$dir" ]; then
-	
-	if [ ! -d $dir ]; then
-		echo "-d $dir is not a valid directory"
-		exit
-	fi
-
-    #Set outdir and experiment_name if not defined
-	if [ ! "$experiment_name" ]; then
-	    #Get exp name from dir name
-		experiment_name=$(echo $dir | sed -r 's/\/$//')
-		experiment_name=$(echo $experiment_name | sed -r 's/.*\///')
-	fi
-
-	if [ ! "$outdir" ]; then
-		outdir="${scratch_dir}/alignments/${species}/${assembly}/${experiment_name}"
-	fi
-
-	
-	#This is now first split file
-	file_prefix="${outdir}/${name}."
-	split_file="${file_prefix}1.fastq"
-
-	#Test for pre-cat'd file
-	if [[ -f $split_file ]]; then
-		
-
-		if [ $clean ]; then
-			echo -e "Removing previously cached fastq files:\n\t"
-			ls ${file_prefix}[1-9]*.fastq
-			rm -f ${file_prefix}[1-9]*.fastq
-		else
-			new_input=0
-			split_files=($(ls ${file_prefix}[1-9]*.fastq))
-			tmp=$(echo "${split_files[*]}" | sed 's/ /\n\t/g')
-			echo -e "WARNING:\tUsing previously cached fastq files:\n\t${tmp}"
-			echo -e "Specify -c(lean) to override this behaviour"
-			sleep 5
-		fi
-	else
-		#Remove just incase we have other cached files hanging around
-		rm -f ${file_prefix}[1-9]*.fastq
-	fi
-
-
-	#Get files
-	if [[ $new_input = 1 ]]; then
-		files=($(ls ${dir}/*fastq*))
-
-		if [[ ! "$files" ]]; then
-			echo -e "ERROR:\tNo fastq files found in input dir:\t$dir\n"
-			echo -e $usage
-			exit
-		fi
-	fi
-
-else  # files
-
-	#Test exp_name and set outdir and file
-	if [ ! "$experiment_name" ]; then
-		echo -e "ERROR:\tYou must explicitly set an -e(experiment name) when specify multiple file paths\n"
-		echo -e $usage
-		exit
-	fi
-
-	if [ ! "$outdir" ]; then
-		outdir="${scratch_dir}/alignments/${species}/${assembly}/${experiment_name}"
-	fi
-
-	
-	file_prefix="${outdir}/${name}."
-	split_file="${file_prefix}1.fastq"
-
-	#Test for pre-cat'd file
-	if [[ -f $split_file ]]; then
-
-	 	if [ $clean ]; then
-		 	echo -e "Removing previously cached fastq files:\n\t"
-			ls ${file_prefix}[1-9]*.fastq
-			rm -f ${file_prefix}[1-9]*.fastq
-		else 
-			new_input=0
-			split_files=($(ls ${file_prefix}[1-9]*.fastq))
-			tmp=$(echo "${split_files[*]}" | sed 's/ /\n\t/g')
- 			echo -e "WARNING:\tUsing previously cached fastq files:\n\t${tmp}\n"
-			echo -e "Specify -c(lean) to override this behaviour"
-			sleep 5
-	 	fi
- 	else
-		#Remove just incase we have other cached files hanging around
-		rm -f ${file_prefix}[1-9]*.fastq
-	fi
+if [[ $dir ]] && [[ ! -d $dir ]]; then
+    echo "-d $dir is not a valid directory"
+    exit
 fi
 
+if [ ! "$experiment_name" ]; then
+    if [[ "$files" ]]; then
+	echo -e "ERROR:\tYou must explicitly set an -e(experiment name) when specify multiple file paths\n"
+	echo -e $usage
+	exit
+    fi
+    
+    if [ ! "$dir" ]; then
+	#Get exp name from dir name
+	experiment_name=$(echo $dir | sed -r 's/\/$//')
+	experiment_name=$(echo $experiment_name | sed -r 's/.*\///')
+    fi
+    
+fi
+
+if [ ! "$outdir" ]; then
+    outdir="${scratch_dir}/alignments/${species}/${assembly}/${experiment_name}"
+fi
+
+file_prefix="${outdir}/${name}."
+split_file="${file_prefix}1.fastq"
+
+#Test for pre-cat'd file
+if [[ -f $split_file ]]; then
+    
+    if [ $clean ]; then
+	echo -e "Removing previously cached fastq files:\n\t"
+	ls ${file_prefix}[1-9]*.fastq
+	rm -f ${file_prefix}[1-9]*.fastq
+    else 
+	new_input=0
+	split_files=($(ls ${file_prefix}[1-9]*.fastq))
+	tmp=$(echo "${split_files[*]}" | sed 's/ /\n\t/g')
+	echo -e "WARNING:\tUsing previously cached fastq files:\n\t${tmp}\n"
+	echo -e "Specify -c(lean) to override this behaviour"
+	sleep 5
+    fi
+else
+    #Remove just incase we have other cached files hanging around
+    rm -f ${file_prefix}[1-9]*.fastq
+fi
+
+
+#Get files
+if [[ $new_input = 1 ]] && [[ $dir ]]; then
+    files=($(ls ${dir}/*fastq*))
+    
+    if [[ ! "$files" ]]; then
+	echo -e "ERROR:\tNo fastq files found in input dir:\t$dir\n"
+	echo -e $usage
+	exit
+    fi
+fi
 
 #Do we not have a function for this unzipping/cating?
 
@@ -242,7 +205,7 @@ if [[ $new_input = 1 ]]; then
 			echo -e "Using fastq file:\t$f"
 			funzipped=$f
 			
-	 	    #Unzip those which are zipped
+	 	        #Unzip those which are zipped
 			#would be nice to list to files first before unzipping, so we know what we are running with immediately
 
 
@@ -251,7 +214,7 @@ if [[ $new_input = 1 ]]; then
 				funzipped=$(echo $f | sed 's/\.gz//')
 			fi 
 			
-			unzipped_files=(${tmp_files[*]} $funzipped)
+			unzipped_files=(${unzipped_files[*]} $funzipped)
 		fi
 
 	done
@@ -266,6 +229,8 @@ if [[ $new_input = 1 ]]; then
 		echo -e "ERROR:\tCould not find any valid input fastq files from list:\n${files[*]}"
 		exit
 	fi
+
+
 fi
 
 #Cat if required and log inputs
@@ -275,50 +240,50 @@ input_file="$file_prefix\$LSB_JOBINDEX.fastq"
 
 
 if [[ $new_input = 1 ]]; then
-	split=1
-
-	#Run from single input file		
-	#Run from source if it is < 8000000 line long
-	#This will preserve space on device and prevent uneccessary cat | split
+    split=1
+    
+    #Run from single input file		
+    #Run from source if it is < 8000000 line long
+    #This will preserve space on device and prevent uneccessary cat | split
 	
-	if [[ ${#unzipped_files[*]} = 1 ]]; then
+    if [[ ${#unzipped_files[*]} = 1 ]]; then
+		    
+       if [[ $(cat ${unzipped_files[0]} | wc -l) -lt 8000000 ]]; then
+    	  #cat | wc to avoid filename in output
+	  echo "Skipping file batch as single input file is < 8000000 lines long"
+	  split=0
+	  echo "Input fastq file for $experiment_name $name alignments:" > $alignment_log
+	  echo  "\t${unzipped_files[0]}" >> $alignment_log 
+	  split_files=(${unzipped_files[0]})
+	  input_file=${unzipped_files[0]}
+       fi
+    fi
 
-		if [[ $(cat ${unzipped_files[0]} | wc -l) -lt 8000000 ]]; then
-    		#cat | wc to avoid filename in output
-			echo "Skipping file batch as single input file is < 8000000 lines long"
-			split=0
-			echo "Input fastq file for $experiment_name $name alignments:" > $alignment_log
-			echo  "\t${unzipped_files[0]}" >> $alignment_log 
-			split_files=(${unzipped_files[0]})
-			input_file=${unzipped_files[0]}
-		fi
-	fi
 
-
-	if [[ $split = 1 ]]; then
-		MakeDirs $outdir			
-		echo -e "Batching files to:\t${file_prefix}[1-9]\*\.fastq"
+    if [[ $split = 1 ]]; then
+	MakeDirs $outdir			
+	echo -e "Batching files to:\t${file_prefix}[1-9]\*\.fastq"
 	#This is not catching failure!
-		Execute cat ${unzipped_files[*]} | split -d -a 4 -l 8000000 - $file_prefix
-		
-	    #rename files to add suffix, remove leading 0s
-		#and +1 to the number to work with LSB_JOBINDEX values
-
-		ls $file_prefix[0-9][0-9][0-9][0-9] | while read f; do num=$(echo $f | sed -r "s/.*\.([0-9]+)$/\1/"); num=$(echo $num | sed -r "s/^[0]+([0-9][0-9]*)/\1/"); num=$(($num + 1)); mv $f "${file_prefix}${num}.fastq"; done
-
-		split_files=($(ls $file_prefix[1-9]*.fastq))
-		echo -e "Created ${#split_files[*]} batch files"
-		echo "Input fastq files for $experiment_name $name alignments:" > $alignment_log
-			
-		for f in ${unzipped_files[*]}; do
-			echo "\t${f}" >> $alignment_log
-		done
+	Execute cat ${unzipped_files[*]} | split -d -a 4 -l 8000000 - $file_prefix
+	
+	#rename files to add suffix, remove leading 0s
+	#and +1 to the number to work with LSB_JOBINDEX values
+	
+	ls $file_prefix[0-9][0-9][0-9][0-9] | while read f; do num=$(echo $f | sed -r "s/.*\.([0-9]+)$/\1/"); num=$(echo $num | sed -r "s/^[0]+([0-9][0-9]*)/\1/"); num=$(($num + 1)); mv $f "${file_prefix}${num}.fastq"; done
+	
+	split_files=($(ls $file_prefix[1-9]*.fastq))
+	echo -e "Created ${#split_files[*]} batch files"
+	echo "Input fastq files for $experiment_name $name alignments:" > $alignment_log
+	
+	for f in ${unzipped_files[*]}; do
+	    echo "\t${f}" >> $alignment_log
+	done
 	
 		#Could maybe add a validation step here to wc -l the batches versus the input
-
-		echo "Gzipping all source fastq files"
-		Execute gzip ${unzipped_files[*]}
-	fi
+	
+	echo "Gzipping all source fastq files"
+	Execute gzip ${unzipped_files[*]}
+    fi
 fi
 
 
