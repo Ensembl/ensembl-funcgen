@@ -16,7 +16,6 @@ Optional
 
 =head1 TO DO
 
-Write run_populate_result_features.sh
 Handle pre-release dnadbs
 POD
 
@@ -30,11 +29,20 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 
 =cut
 
+# InputSet/result_feature population
+# Now we have two potantial ways of importing InputSets
+# 1 Direct to feature_sets using the Importer.pm
+# 2 Via this script if we add support for generating InputSets
+# We need to incorporate/mirror some of this code into the Importer
+# So we can take advantage of the Bed parser. Can we disentangle this from 
+# the rest of the import parser code , so we can use it in isolation? (flat file output)
+# 3 Add rollback level?
 
 
 use strict;
 use Data::Dumper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (strip_param_args strip_param_flags generate_slices_from_names);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Pod::Usage;
 use Getopt::Long;
@@ -42,10 +50,13 @@ use Getopt::Long;
 
 my ($db_name, $db_host, $db_port, $db_user, $db_pass, $farm, $species);
 my ($dnadb_name, $dnadb_host, $dnadb_port, $dnadb_user, $dnadb_pass, $force);
-my ($slice_name, $rset_name, $old_assm, $new_assm, $dnadb, @slices, @skip_slices);#, $delete
+my ($rset_name, $old_assm, $new_assm, $dnadb, @slices, @skip_slices);#, $delete
 my ($output_dir, $skip_zero_window, @window_sizes);
 
 my @tmp_args = @ARGV;
+
+print "populate_result_features.pl @tmp_args\n";
+
 
 GetOptions(
 		   #Mandatory
@@ -55,7 +66,6 @@ GetOptions(
            'db_pass=s'        => \$db_pass,
            'db_name=s'        => \$db_name,
 		   'result_set=s'     => \$rset_name,
-		   'slice_name=s'     => \$slice_name,
 		   'farm'             => \$farm,
 		   'force'            => \$force,#force continue, stop jobs hanging on farm if RESULT_FEATURE_SET
            #'transcript_species_id=i' => \$transcript_species_id, #See probe2transcript.pl for how to implement multi species support
@@ -72,6 +82,7 @@ GetOptions(
 		   'old_assm=s'       => \$old_assm,
 		   'new_assm=s'       => \$new_assm, 
 		   'skip_slices=s{,}' => \@skip_slices,
+		   'slices=s{,}'      => \@slices,
 		   'skip_zero_window' => \$skip_zero_window,
 		   'window_sizes=s{,}' => \@window_sizes,
 		   #Do we need window_sizes here for projected windows?
@@ -97,7 +108,7 @@ if(@ARGV){
   die("You have trailing arguments which are unrecognised:\t@ARGV\n");
 }
 
-if(! $farm && ! $slice_name){
+if(! $farm && ! @slices){
   die("To run with all slices you should specify the -farm option, or to run locally specify one -slice.\n");
 }
 
@@ -142,22 +153,8 @@ $dnadb->dbc->db_handle;
 my $rset_adaptor  = $efg_db->get_ResultSetAdaptor;
 my $rfeat_adaptor = $efg_db->get_ResultFeatureAdaptor;
 my $slice_adaptor = $efg_db->get_SliceAdaptor;
+@slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1, 1, $old_assm)};#Top level, non ref, inc dups
 
-#generate slice/s
-if($slice_name){
-  @slices = ($slice_adaptor->fetch_by_name($slice_name));
-  die("Could not generate valid slice from slice name:\t$slice_name") if ! defined $slices[0];#This should already be done in the runner
-}
-else{
-  #We are not handling top level here!
-  #This is okay as unassembled seq_regions are the same between assemblies
-  #And should inherit the old features
-  #This may not be quite true if we have different version of supercontigs
-  #but these *should* be named differently in the DB
-  #Will not catch contig/supercontig > chromosome assembly projection
-  #But the assembly projection does not yet support this anyway
-  @slices = @{$slice_adaptor->fetch_all('chromosome', $old_assm)};
-}
 
 #grab result_set
 #should provide some default options which do this automatically for every rset which is displayable, but doesn't have RESULT_FEATURE_SET status.
@@ -215,20 +212,8 @@ if($farm){
 	system("mkdir -p $output_dir") == 0 || die("cannot make output directory:\t$output_dir\n$?");
   }
 
-  #We basically want to strip out farm, slice_name and skip_slices
-  #This would be easier with something hash based
-  my $seen_opt = 0;
-
-  foreach my $i(0..$#tmp_args){
-	$seen_opt = 0 if $tmp_args[$i] =~ /^[-]+/;#Reset seen opt if we seen a new one
-
-	$tmp_args[$i] = '' if $tmp_args[$i] =~ /^[-]+farm/;#Only remove current flag
-	$seen_opt = 1 if $tmp_args[$i] =~ /^[-]+skip_slices/;
-	$seen_opt = 1 if $tmp_args[$i] =~ /^[-]+slice/;#Don't have full param name incase we have just specified -slice
-	
-	$tmp_args[$i] = '' if $seen_opt;#Remove args following option
-  }
-
+  @tmp_args = @{&strip_param_args(\@tmp_args, ('slices', 'skip_slices'))};
+  @tmp_args = @{&strip_param_flags(\@tmp_args, ('farm'))}; 
 }
 
 
@@ -276,7 +261,7 @@ SLICE: foreach my $slice(@slices){
 }
 
 if($farm){
-  warn "You must manually check all jobs have run correctly before setting RESULT_FEATURE_SET status for ".$rset->name."\n";
+  warn "You must manually check all jobs have run correctly before setting RESULT_FEATURE_SET status for ".$rset->name."\n" if ! $rset->has_status('RESULT_FEATURE_SET');
 
   if($new_assm){
 	warn "To generate the remaning window sizes your must now resubmit the jobs with -skip_zero_window\n";
