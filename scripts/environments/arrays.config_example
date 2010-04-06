@@ -54,9 +54,9 @@ export IMPORT_MEM_BASE=2500
 
 #Do not change!! XREF_MEM_FACTOR=11
 export XREF_MEM_FACTOR=11
-#Changed to 1500 as seeing failures for all????
-export XREF_MEM_BASE=1500
-#export XREF_MEM_BASE=1000
+#Upped to 2500 to handle Human AFFYs
+export XREF_MEM_BASE=2500
+
 
 
 #XREF actual figures
