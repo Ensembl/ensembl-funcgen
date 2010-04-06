@@ -517,8 +517,7 @@ sub store{
   #So _pre_store uses the correct table name in meta_coord
   $_result_feature_set = 1;
 
-  #my @max_allowed_packet = $self->dbc->db_handle->selectrow_array('show variables like "max_allowed_packet"');
-  
+  #my @max_allowed_packet = $self->dbc->db_handle->selectrow_array('show variables like "max_allowed_packet"'); 
   #warn "@max_allowed_packet";
 
  FEATURE: foreach my $rfeat (@$rfeats) {
@@ -776,7 +775,7 @@ sub fetch_all_by_Slice_ResultSet{
 	  #warn $_scores_field;
 	}
 
-	return [$self->fetch_all_by_Slice_constraint($slice, $constraint),  {window_size => $_window_size}];
+	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
   }
 
 
@@ -1098,7 +1097,7 @@ sub fetch_all_by_Slice_ResultSet{
 	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
   }
   
-  return [\@rfeatures,  {window_size => 0}];
+  return \@rfeatures;
 }
 
 
