@@ -254,7 +254,7 @@ GetOptions (
 			  );
 
 
-print "parse_and_imports.pl @tmp_args\n";
+print "parse_and_import.pl @tmp_args\n";
 
 
 if($batch_job && ! defined $ENV{'LSB_JOBINDEX'}){
@@ -432,7 +432,9 @@ if(@slices || $input_feature_class eq 'result'){
 	$Imp->log("No slices defined defaulting to current toplevel");
   }
 
-  @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1)};
+  @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1, 1)};#toplevel, nonref, incdups
+  #inc dups here for now for loading Y
+  #Until we support PAR/HAP regions properly
 }
 
 #-farm behaves differently if slices not defined
@@ -440,8 +442,12 @@ if(@slices || $input_feature_class eq 'result'){
 #Will have to change this if we ever want to submit slice based 
 #jobs from within the Importer
 
+
 if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
  
+  #Could skip prepare here if we only have one slice?
+  #Would save time in case where we only run with one slice.
+
   #Define and store sets once here before setting off parallel farm jobs.
   $Imp->slices(\@slices); #Set slices so we can preprocess the file
   $Imp->init_experiment_import;
