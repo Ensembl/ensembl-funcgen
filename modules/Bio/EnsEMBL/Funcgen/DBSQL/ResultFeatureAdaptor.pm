@@ -539,6 +539,18 @@ sub store{
 	#This captures non full length collections at end of seq_region
 	$pack_template = '('.$self->pack_template.')'.scalar(@{$rfeat->scores});
 
+
+	#Check that we have non-0 values
+	#my @tmp = grep(/[^0]/, @{$rfeat->scores});
+	#warn "non zero vals @tmp[0..10]";
+
+	#Sanity check
+	if(! grep(/[^0]/, @{$rfeat->scores})){
+	  warn('Collection contains '.scalar(@{$rfeat->scores}).' 0 scores. Skipping store for '.$rfeat->slice->name.' '.$rfeat->window_size." window_size\n");
+	  next;
+	}
+
+	
 	$packed_string = pack($pack_template, @{$rfeat->scores});	
 
 	#use Devel::Size qw(size total_size);
@@ -559,6 +571,7 @@ sub store{
 }
 
 #This is next to useless in the context of ResultFeatures
+
 =head2 list_dbIDs
 
   Args       : None
@@ -615,9 +628,8 @@ sub fetch_all_by_Slice_ResultSet{
   }
 
   #Set temp global private vars for use in _obj_from_sth
-  $_result_feature_set = $rset->has_status('RESULT_FEATURE_SET');
-  #Just test for table_name eq input_set too?
-  #This will save a query
+  $_result_feature_set = ($rset->table_name eq 'input_set') || $rset->has_status('RESULT_FEATURE_SET');
+
   #We need to set this for all InputSets? Or just ID that it is an InputSet?
   $_probe_extend       = $with_probe if defined $with_probe;
   undef $_window_size; #Clean this from the last query 
