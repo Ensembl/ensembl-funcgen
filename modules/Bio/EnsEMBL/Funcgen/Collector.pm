@@ -1,4 +1,4 @@
-# $Id: Collector.pm,v 1.3 2010-04-06 10:27:48 nj1 Exp $
+# $Id: Collector.pm,v 1.4 2010-04-06 10:52:39 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collector;
 #Move this to Bio::EnsEMBL::Utils::Collector for 58?
@@ -927,27 +927,41 @@ sub store_window_bins_by_Slice{
 
 	  
 	  ### Grab features and shift chunk coords
-	  $features = $self->get_Features_by_Slice($slice);
-
-
 	  #features may already be a 0 wsize collection if we have projected from an old assembly
 	  #e.g. [ $features, \%config ]
+	  $features = $self->get_Features_by_Slice($slice);
 
 	  if( (scalar(@$features) == 2 ) &&
 		  (ref($features->[0]) eq 'ARRAY') &&
-		  (ref($features->[0]->[0]) =~ /Bio::EnsEMBL::Funcgen::Collection/) ){#Change to isa 'Bio::EnsEMBL::Collection
+		  (ref($features->[1]) eq 'HASH') ){ 
 		
-		if($features->[1]->{'window_size'} != 0){
-		  throw("You are trying to generated Collections from a non-zero window sized Collection:\t".$features->[1]->{'window_size'});
-		} 
-
-		#This should never happen
-		if(! $skip_zero_window){
-		  throw('You have retrieved data from a Collection which without using -skip_zero_window i.e. you are trying to generate overwrite the data you are generating the Collections from');
+		warn "In collection test block";
+		  
+		#Could have empty features ref so test config
+		#if( ref($features->[0]->[0]) =~ /Bio::EnsEMBL::Funcgen::Collection/){#Change to isa 'Bio::EnsEMBL::Collection
+		
+		if(exists $features->[1]->{'window_size'}){
+		  
+		  if($features->[1]->{'window_size'} != 0){
+			throw("You are trying to generated Collections from a non-zero window sized Collection:\t".$features->[1]->{'window_size'});
+		  }
+		  
+		  #This should never happen
+		  if(! $skip_zero_window){ 
+			throw('You have retrieved data from a Collection which without using -skip_zero_window i.e. you are trying to generate overwrite the data you are generating the Collections from');
+		  }
+		  
+		  #Reassign the features
+		  $features = $features->[0];
 		}
-
-		#Reassign the features
-		$features = $features->[0];
+		else{#not sure what this is
+		  throw('You have a Collection which does not have any window_size config');
+		}
+		
+		#This is an inherant problem with Collections i.e. it's hard to test for them when they have no features
+		#Should we integrate config within each Bio::EnsEMBL::Feature::Collection?
+		#This will be massively redundant for interpretting 0 wsize Collections?
+		#Or could the calling code simple access the first Collection wsize and assume the same for the rest?
 	  }
 
 
