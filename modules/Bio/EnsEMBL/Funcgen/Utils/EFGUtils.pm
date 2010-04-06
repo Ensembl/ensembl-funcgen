@@ -485,14 +485,14 @@ sub strip_param_flags{
 #Generates slices from names or optionally alll default top level nonref
 
 sub generate_slices_from_names{
-  my ($slice_adaptor, $slice_names, $skip_slices, $toplevel, $non_ref, $inc_dups) = @_;
+  my ($slice_adaptor, $slice_names, $skip_slices, $toplevel, $non_ref, $inc_dups, $assembly) = @_;
 
   my (@slices, $slice, $sr_name);
 
   if(@$slice_names){
 	
 	foreach my $name(@$slice_names){
-	  $slice = $slice_adaptor->fetch_by_region(undef, $name);
+	  $slice = $slice_adaptor->fetch_by_region(undef, $name, undef, undef, undef, $assembly);
 	
 	  if(! $slice){
 
