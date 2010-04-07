@@ -10,7 +10,9 @@
 # result_feature collections.
 
 
- CREATE TABLE `list_result_feature` (
+DROP table if exists list_result_feature;
+
+CREATE TABLE `list_result_feature` (
   `result_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `result_set_id` int(10) unsigned NOT NULL,
   `seq_region_id` int(10) unsigned NOT NULL,
@@ -32,15 +34,16 @@ PARTITION BY LIST (window_size)
  PARTITION p750 VALUES IN (750),
  PARTITION p900 VALUES IN (900),	
  PARTITION p1150 VALUES IN (1150)
-)
+);
 
 
 -- Will we get failures with the large blobs here?
+
 INSERT into list_result_feature select * from result_feature;
 
 DROP table result_feature;
 
-RENAME table list_result_deature to result_feature;
+RENAME table list_result_feature to result_feature;
 
 	
 -- 0 to capture natural resolution for tiling arrays (omited for seq data)
