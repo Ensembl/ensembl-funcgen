@@ -10,8 +10,60 @@ Lymphoblastoid	NULL	Lymphoblastoid Cells	NULL
 CD133	NULL	Human CD133+ Hematopoietic Stem Cell	NULL
 CD36	NULL	Human CD36+ Erythrocyte Precursor Cell	NULL
 K562	NULL	Human Mylogenous Leukaemia Line	female
-HeLaS3	NULL	Human Epithelial Carcinoma Cell	female
 MCF7	NULL	Breast Cancert	female
 HUVEC	NULL	Human Umbilical Vein Endothelial Cell	NULL
 NHEK	NULL	Normal Human Epidermal Keratinocytes	female
 H1ESC	NULL	Human Embryonic Stem Cells	NULL
+GM12878	NULL	Lymphoblastoid	female
+HMEC	NULL	Human Mammary Epithelial Cells	NULL
+HSMM	NULL	Human Skeletal Muscle Myoblasts	NULL
+NHLF	NULL	Normal Human Long Fibroblasts	NULL
+HEK293	NULL	Embryonic Kidney	NULL
+HCT116	NULL	Colorectal Carcinoma	male
+NB4	NULL	Acute Promyelocytic Leukemia Cell Line	NULL
+NT2	NULL	Malignant Pluripotent Embryonical Carcinoma	male
+GM12891	NULL	B-Lymphocyte	male
+GM12892	NULL	B-Lymphocyte	female
+GM19238	NULL	B-Lymphocyte	female
+GM19239	NULL	B-Lymphocyte	male
+GM19240	NULL	B-Lymphocyte	female
+Chorion	NULL	Chorion Cells	NULL
+GM18507	NULL	Lymphoblastoid	male
+H9ESC	NULL	Human Embryonic Stem Cells	female
+Medullo	NULL	Medulloblastoma	NULL
+LHSR	NULL	Human Prostate Epthelial Cells	female	
+BJ	NULL	Skin Fibroblast	male
+Caco	NULL	Colorectal Adenocarcinoma	male
+CMK	NULL	Human Acute Megakaryocytic Leukemia Cells	female
+AG04449	NULL	Fetal thigh fibroblast	male
+AG04450	NULL	Fetal lung fibroblast	male
+AG09309	NULL	Adult human toe fibroblast	female
+AG09319	NULL	Adult human gum tissue fibroblast	female
+H7ESC	NULL	Undifferentiated Human Embryonic Stem Cells	NULL
+HAE	NULL	Human Amniotic Epthelial Cells	NULL
+HCF	NULL	Human Cardiac Fibroblasts	NULL
+HCM	NULL	Human Cardiac Myocytes	NULL
+HCPE	NULL	Human Choroid Plexus Epithelial Cells	NULL
+HEE	NULL	Human Esophageal Epithelial Cells	NULL
+HGF	NULL	Human Gingival Fibroblasts	NULL
+HIPE	NULL	Human Iris Pigment Epithelial Cells	NULL
+HNPCE	NULL	Human Non-Pignment Ciliary Epithelial Cells	NULL
+HRCE	NULL	Human Renal Cortical Epithelial Cells	NULL
+HRE	NULL	Human Renal Epithelial Cells	NULL
+HRPE	NULL	Human Retinal Pigment Epithelial Cells	NULL
+Jurkat	NULL	T Lymphoblastoid	male
+NHDF	NULL	Neonatal Human Dermal Fibroblasts	NULL
+Panc1	NULL	Pancreatic Carcinoma	NULL
+SAEC	NULL	Small Airway Epithelial Cells	NULL
+SKNShra	NULL	Neuroblastoma Cell Line Differentiated with Retinoic acid	female
+SKMC	NULL	Human Skeletal Muscle Cells	NULL
+Th1	NULL	Primary Human Th1 T Cells	NULL
+Th2	NULL	Primary Human Th2 T Cells	NULL
+GM12801	NULL	B-Lymphocyte	male
+GM12864	NULL	B-Lymphocyte	male
+GM12865	NULL	B-Lymphocyte	female
+GM12872	NULL	B-Lymphocyte	male
+GM12873	NULL	B-Lymphocyte	female
+GM12874	NULL	B-Lymphocyte	male
+GM12875	NULL	B-Lymphocyte	female
+WeriRb1	NULL	Retinoblastoma	male
