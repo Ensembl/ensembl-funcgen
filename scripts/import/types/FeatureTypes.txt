@@ -66,3 +66,24 @@ Nfe2	Transcription Factor	Nfe2 Transcription Factor Binding
 Gata1	Transcription Factor	Gata1 Transcription Factor Binding
 Znf263	Transcription Factor	Znf263 Transcription Factor Binding
 Cmyc	Transcription Factor	Cmyc Transcription Factor Binding
+PolIII	Polymerase	RNA Polymerase III Binding
+Tcf4	Transcription Factor	Tcf4 Transcription Factor Binding
+Ap2alpha	Transcription Factor	Ap2alpha Transcription Factor Binding
+Ap2gamma	Transcription Factor	Ap2gamma Transcription Factor Binding
+E2F4	Transcription Factor	E2F4 Transcription Factor Binding
+E2F1	Transcription Factor	E2F1 Transcription Factor Binding
+E2F6	Transcription Factor	E2F6 Transcription Factor Binding
+Tr4	Transcription Factor	Tr4 Transcription Factor Binding
+SRebp1	Transcription Factor	SRebp1 Transcription Factor Binding
+SRebp2	Transcription Factor	SRebp2 Transcription Factor Binding
+Bdp1	Transcription Factor	Bdp1 Transcription Factor Binding
+Brf1	Transcription Factor	Brf1 Transcription Factor Binding
+Nfya	Transcription Factor	Nfya Transcription Factor Binding
+Nfyb	Transcription Factor	Nfyb Transcription Factor Binding
+Rad21	Transcription Factor	Rad21 Transcription Factor Binding
+Sirt6	Transcription Factor	Sirt6 Transcription Factor Binding
+Xrrc4	Transcription Factor	Xrrc4 Transcription Factor Binding
+Gata2	Transcription Factor	Gata2 Transcription Factor Binding
+SETDB1	Transcription Factor	SETDB1 Transcription Factor Binding
+Yy1	Transcription Factor	Yy1 Transcription Factor Binding
+Suz12	Transcription Factor	Suz12 Transcription Factor Binding
