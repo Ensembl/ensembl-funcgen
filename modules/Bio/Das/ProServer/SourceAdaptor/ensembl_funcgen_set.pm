@@ -76,7 +76,6 @@ sub init
 		($cs = $coord_sys) =~ s/_//;
 
 		if($cs =~ /${cs_version}\s*,/){
-		  warn "Setting coordinates to ".$coord_sys.' '.$css{$coord_sys} if $self->{debug};
 		  $self->{'coordinates'} = { $coord_sys => $css{$coord_sys} };
 		  last;
 		}
@@ -85,31 +84,20 @@ sub init
 
 	#No coord system stuff for non hydra as we expect dnadb to be configured correctly
 	
-
-
 	#Then explicitly fetch the set using the name
 	$self->{'set'} = $self->transport->fetch_set($set_name);
 
-	#Can we have duplciate names for the same set on different assemblies?
-	#cs version would be in the description?
-	
+	#Assembly version used in full source name
+	#Description is used for display, so small as possible
 	$self->{'title'} = $self->config->{'title'} || $self->set->name;
 
 
-
-	#Will this be valid for result_sets?
-
+	#Will this be valid for all result_sets?
 	$self->{'description'} = $self->config->{'description'} || 
 	  ($self->config->{'set_type'} eq 'result') ? $self->set->name.' wiggle' : $self->set->display_label;
 
-	#Tweak title and description for hydra sources
-	#if($self->hydra){
-	#  #No need for this now?
-	#  #as browser filters correctly
-	#  #is in dsn anyway
-	#  $self->{'title'}       .= '('.$self->coord_system_version.')';
-	#  $self->{'description'} .= '('.$self->coord_system_version.')';
-	#}
+
+	print $self->{'description'}." coords are ".join(', ', keys(%{$self->{'coordinates'}}))."\n" if $self->{debug};
 
 	return;
 }
@@ -173,88 +161,98 @@ sub build_result_set_features{
   my ($self, $slice, $args) = @_;
 
   my ($id, $label, %score, @features);
-  my ($features, $params)     = @{$self->set->get_ResultFeatures_by_Slice($slice, undef, undef, $args->{'maxbins'})};
+  my $features = $self->set->get_ResultFeatures_by_Slice($slice, undef, undef, $args->{'maxbins'});
 
-  warn "Max bins:\t".$args->{'maxbins'}."\nNumber of features: ".scalar(@{$features}).
-	"\nUsing bin size:\t".$params->{'window_size'}  if $self->{'debug'};
+  
 
-
-  my $type     = $self->config()->{'type'} || 'default';
-  my $source   = $self->config()->{'source'} || $self->set->analysis->display_label;
-  my $type_cat = $self->config()->{'typecategory'} || 'result_set';
-  my $start    = $slice->start; 
-  my $segment  = $slice->seq_region_name;
-  my $method   = $self->config()->{'source'} || $self->set->analysis->display_label;
-
-  if(! defined $method){
-	croak('Cannot determine mandatory \'method\' attribute. Please set \'source\' in DAS config or analysis display_label');
-  }
-
-  my %ori = (
-			 -1 => '-',
-			 0  => '0',
-			 1  => '+',
-			);
+  warn "Max bins:\t".$args->{'maxbins'}."\nNumber of features: ".scalar(@{$features});
 
 
-  my $bin_size = $params->{'window_size'};
+  if(@$features){
+	my $bin_size = $features->[0]->window_size;
+	warn "Using bin size:\t$bin_size"  if $self->{'debug'};
 
-  foreach my $ft(@{$features}){
+
+	my $type     = $self->config()->{'type'} || 'default';
+	my $source   = $self->config()->{'source'} || $self->set->analysis->display_label;
+	my $type_cat = $self->config()->{'typecategory'} || 'result_set';
+	my $start    = $slice->start; 
+	my $segment  = $slice->seq_region_name;
+	my $method   = $self->config()->{'source'} || $self->set->analysis->display_label;
 	
-	#Set seq_region_start/end as we don't have direct access 
-	#using the current ResultFeature class
+	if(! defined $method){
+	  croak('Cannot determine mandatory \'method\' attribute. Please set \'source\' in DAS config or analysis display_label');
+	}
 
-	my $ft_start = $start + $ft->start();
-	my $true_end = $start + $ft->end();
-	my $ft_end   = $ft_start - 1;
 
-	#Can we use seq_region_start/end here or do they have to be local to the slice?
-	#If not they we can change as ResultFeature is now hash based
-	#Can only do this for 0 wsize! So not much point
+	#We are currently storing everything as 1(+)
+	#We should store actual orientation but
+	#set to 0 here to get the display on the same strand as the peaks?
+	
+	my %ori = (
+			   -1 => '-',
+			   0  => '0',
+			   1  => '+',
+			  );
+
 		
-	foreach my $score(@{$ft->scores}){
-
-	  if($bin_size == 0){
-		$ft_end = $true_end;
-	  }
-	  else{
-		$ft_end += $bin_size;
-	  }
-
-
-	  my $id = sprintf( "%s:%s,%s",
-						$segment,
-						$ft_start,
-						$ft_end);
-       
-	  #warn "Got score $score";
-
-
-	  push @features, {
-					   
-					   'id'          => $id,
-					   'label'       => $id,
-					   'start'       => $ft_start,
-					   'end'         => $ft_end,
-					   'ori'         => $ori{$ft->strand},#change this to seq_region_strand when we cahnge to hash feature?
-					   'score'       => $score,
-					   'method'      => $source,
-					   'type'        => $type,
-					   'typecategory'=> $type_cat,
-					   #'note'        => $note,
-					   #'link'        => '',
-					   #'linktxt'     => '',
-					   
-					   #Mandatory attrs
-					   'method' => $method,
-					   'phase'  => '-', 
-					  };					   
+	foreach my $ft(@{$features}){
+	  
+	  #Set seq_region_start/end as we don't have direct access 
+	  #using the current ResultFeature class
+	  
+	  my $ft_start = $start + $ft->start();
+	  my $true_end = $start + $ft->end();
+	  my $ft_end   = $ft_start - 1;
+	  
+	  #Can we use seq_region_start/end here or do they have to be local to the slice?
+	  #If not they we can change as ResultFeature is now hash based
+	  #Can only do this for 0 wsize! So not much point
 		
-	  $ft_start += $bin_size;
+	  foreach my $score(@{$ft->scores}){
+
+		if($bin_size == 0){
+		  $ft_end = $true_end;
+		}
+		else{
+		  $ft_end += $bin_size;
+		}
+		
+		
+		my $id = sprintf( "%s:%s,%s",
+						  $segment,
+						  $ft_start,
+						  $ft_end);
+		
+		#warn "Got score $score";
+		
+		
+		push @features, {
+						 
+						 'id'          => $id,
+						 'label'       => $id,
+						 'start'       => $ft_start,
+						 'end'         => $ft_end,
+						 'ori'         => $ori{$ft->strand},#change this to seq_region_strand when we cahnge to hash feature?
+						 'score'       => $score,
+						 'method'      => $source,
+						 'type'        => $type,
+						 'typecategory'=> $type_cat,
+						 #'note'        => $note,
+						 #'link'        => '',
+						 #'linktxt'     => '',
+						 
+						 #Mandatory attrs
+						 'method' => $method,
+						 'phase'  => '-', 
+						};					   
+		
+		$ft_start += $bin_size;
+	  }
 	}
   }
 
-  warn "Returning ".scalar(@features).' '.$self->set->name." ResultFeatures\n" if $self->{debug};
+  print "Returning ".scalar(@features).' '.$self->set->name." ResultFeatures\n" if $self->{debug};
 
   return @features;
 }
