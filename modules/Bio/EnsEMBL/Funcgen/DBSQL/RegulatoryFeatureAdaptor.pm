@@ -123,7 +123,7 @@ sub fetch_all_by_stable_id_FeatureSets {
 
   throw('Must provide a stable ID') if ! defined $stable_id;
 
-  $stable_id =~ s/ENSR0*|ENSMUSR0*//;
+  $stable_id =~ s/ENS[A-Z]*R0*//;
 
 
   #Need to test stable_id here as there is a chance that this argument has been omitted and we are dealing with 
@@ -606,11 +606,13 @@ sub store{
 	#reflect all the combined analyses.  Maybe just the one which contributed most?
 	
 	
-	my $seq_region_id;
+	my ($sid, $seq_region_id);
 	($rf, $seq_region_id) = $self->_pre_store($rf);
 	$rf->adaptor($self);#Set adaptor first to allow attr feature retreival for bounds
 	#This is only required when storing, 
-	
+	($sid = $rf->stable_id) =~ s/ENS[A-Z]*R0*//;
+
+
 	$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
 	$sth->bind_param(2, $rf->start(),               SQL_INTEGER);
 	$sth->bind_param(3, $rf->end(),                 SQL_INTEGER);
@@ -620,7 +622,7 @@ sub store{
 	$sth->bind_param(7, $rf->{'display_label'},     SQL_VARCHAR);#Direct access so we always store the binary string
 	$sth->bind_param(8, $rf->feature_type->dbID(),  SQL_INTEGER);
 	$sth->bind_param(9, $rf->feature_set->dbID(),   SQL_INTEGER);
-	$sth->bind_param(10, $rf->{'stable_id'},        SQL_INTEGER);
+	$sth->bind_param(10, $sid,                      SQL_INTEGER);
 	
 	$sth->execute();
 	$rf->dbID( $sth->{'mysql_insertid'} );
