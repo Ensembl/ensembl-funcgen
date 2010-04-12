@@ -1181,9 +1181,6 @@ sub fetch_by_display_label {
   my $self = shift;
   my $label = shift;
 
-  my @tables = $self->_tables();
-  #my $syn = $tables[0]->[1];
-
   my $constraint = "x.display_label = '$label'";# AND ${syn}.is_current = 1";
   my ($feature) = @{ $self->generic_fetch($constraint) };
 
@@ -1192,14 +1189,12 @@ sub fetch_by_display_label {
 
 =head2 _get_coord_system_ids
 
-  Arg [1]    : arrayref of Bio::EnsEMBL::Funcgen::CoordSystem objects
-  Example    : my $feat = $adaptor->fetch_by_display_label("BRCA2");
-  Description: Returns the feature which has the given display label or
-               undef if there is none. If there are more than 1, only the first
-               is reported.
-  Returntype : Bio::EnsEMBL::Funcgen::Feature
-  Exceptions : none
-  Caller     : general
+  Arg [1]    : optional - ARRAYREF of Bio::EnsEMBL::Funcgen::CoordSystem objects
+  Example    : my $cs_ids = $self->_get_coord_system_ids([$cs1, $cs2], ...);
+  Description: Returns the IDs of the CoordSystems specified or all default CoordSystems.
+  Returntype : ARRAYREF
+  Exceptions : Throws if CoordSystem object are not stored and valid
+  Caller     : BaseFeatureAdaptor.pm
   Status     : At risk
 
 =cut
@@ -1241,8 +1236,30 @@ sub _get_coord_system_ids{
   return \@cs_ids;
 }
 
+#This does not assume one record per feature
+#But does assume primary key if ${table_name}_id
 
+sub count_features_by_field_id{
+  my ($self, $count_field, $count_id) = @_;
+  #Any other params here?
 
+  if(! ($count_field && $count_id)){
+	throw('You must provide a count name and a count id to count by');
+  }
+
+  my ($table_name, $table_syn);
+  my @tables =  $self->_tables;
+  ($table_name, $table_syn) = @{$tables[0]};
+  my $table_id   = "${table_name}_id";
+  my @cs_ids     = @{$self->_get_coord_system_ids};
+  my $sql = "SELECT count(distinct($table_id)) from $table_name $table_syn, seq_region sr where ${table_syn}.${count_field}=? and ${table_syn}.seq_region_id in(select distinct(seq_region_id) from seq_region where coord_system_id in(".join(',', @cs_ids).'))';
+  my $sth = $self->prepare($sql);
+
+  $sth->bind_param(1, $count_id, SQL_INTEGER);
+  $sth->execute;
+  
+  return $sth->fetchrow_array;
+}
 
 1;
 
