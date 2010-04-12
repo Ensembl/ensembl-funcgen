@@ -761,6 +761,9 @@ sub reassign_feature_to_probe{
 
 =cut
 
+
+#This does not rollback associated xrefs!
+
 sub delete_features{
 	my ($self, $fids_ref) = @_;
 	
@@ -778,17 +781,7 @@ sub delete_features{
 sub count_probe_features_by_probe_id{
   my ($self, $probe_id) = @_;
 
-  if (! defined $probe_id){
-	throw('Must provide a probe_id to count it\'s probe_feature records');
-  }
-
-  my $sth = $self->prepare('SELECT count(*) from probe_feature where probe_id=?');
-  $sth->bind_param(1, $probe_id, SQL_INTEGER);
-  $sth->execute;
-
-  return $sth->fetchrow_array;
-
-
+  return $self->count_features_by_field_id('probe_id', $probe_id);
 }
 
 
