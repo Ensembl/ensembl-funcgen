@@ -433,51 +433,33 @@ sub update_meta_coord{
 	  
 	  my @sr_ids = @{$self->db->dbc->db_handle->selectcol_arrayref($sql)};
 	  
-	  foreach my $sr_id(@sr_ids){
 
+	  #Get longest feature for all seq_regions
+	  foreach my $sr_id(@sr_ids){
 		$sql = "SELECT (t.seq_region_end - t.seq_region_start + 1 ) as max, t.${table_name}_id "
 		  . "FROM $table_name t "
-			. "WHERE t.seq_region_id = $sr_id "
-			  . " order by max desc limit 1";
-		
-		
+			. "WHERE t.seq_region_id = $sr_id ";
 		$sql .= ' and t.window_size=0' if $table_name eq 'result_feature';
-
-		#warn $sql;
-		push @cs_lengths, [ $self->db->dbc->db_handle->selectrow_array($sql) ];
+		$sql .= " order by max desc limit 1";
+		
+		my ($cs_length, $table_id);
+		($cs_length, $table_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+		push @cs_lengths, [$cs_length, $table_id] if $cs_length;
 	  }
 
-	  #This will now contain a list of arrays refs contain the max length and feature id for 
-	  #each seq_region in this coord_system
-	  #Now sort to get the longest
-	  #Can't sort on 2 day array in the normal way
-	  #One list list lists, the comparatee is no longer a list but a reference
-	  @cs_lengths = sort { $b->[0] <=> $a->[0] } @cs_lengths;
-	  
-  	  #@info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-	  #Convert one multi element array_ref into array
-	  #@info = @{$info[0]};
-	  #$self->log(join("\t\t", @info));
-	  $self->log(join("\t\t", ($cs_id, @{$cs_lengths[0]})));
 
-	  $sql = "INSERT INTO meta_coord values('${table_name}', $cs_id, ".$cs_lengths[0][0].')';
-
-
-	  #$sql = "INSERT INTO meta_coord "
-	  #. "SELECT '$table_name', s.coord_system_id, "
-	  #	. "MAX( t.seq_region_end - t.seq_region_start + 1 ) "
-	  #	  . "FROM $table_name t, seq_region s "
-	  #		. "WHERE t.seq_region_id = s.seq_region_id "
-	  #		  . "GROUP BY s.coord_system_id";
-	  
-	  $self->db->dbc->db_handle->do($sql);
+	  if(@cs_lengths){
+		#This will now contain a list of arrays refs contain the max length and feature id for 
+		#each seq_region in this coord_system
+		#Now sort to get the longest
+		#Can't sort on 2 day array in the normal way
+		#One list list lists, the comparatee is no longer a list but a reference
+		@cs_lengths = sort { $b->[0] <=> $a->[0] } @cs_lengths;
+		$self->log(join("\t\t", ($cs_id, @{$cs_lengths[0]})));
+		$sql = "INSERT INTO meta_coord values('${table_name}', $cs_id, ".$cs_lengths[0][0].')';
+		$self->db->dbc->db_handle->do($sql);
+	  }
 	}
-
-	#$self->log("New max_lengths for $table_name are:");
-  
-	#@info = @{$self->db->dbc->db_handle->selectall_arrayref($sql1)};
-	
-	#map {$self->log(join("\t", @{$_})."\n")} @info;
   }  
   
   $self->log("Finished updating meta_coord max_lengths\n");
