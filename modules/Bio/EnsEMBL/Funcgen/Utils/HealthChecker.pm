@@ -83,6 +83,7 @@ use vars qw(@ISA);
 #TO DO
 # 1 DONE Print all fails and warnings in summary at end of script.
 # 2 validate_RegulatoryFeature_Sets
+# 3 Some of these can be migrated to java HCs?
 
 
 ################################################################################
@@ -93,8 +94,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
     
   #validate and set type, analysis and feature_set here
-  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables, $skip_xrefs, $methods) = 
-	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES', 'SKIP_XREF_CLEANUP', 'METHODS'], @_);
+  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables, $skip_xrefs) = 
+	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES', 'SKIP_XREF_CLEANUP'], @_);
   
   
   if (! ($db && ref($db) &&
@@ -124,21 +125,6 @@ sub new {
 	}
 
 	@{$self->{'meta_coord_tables'}} = @$meta_coord_tables;
-  }
-
-  
-
-  if(@$methods){
-
-	foreach my $method(@$methods){
-
-	  if(! $self->can($method)){
-		throw("You have passed an invalid method:t\$method");
-	  }
-
-	  $self->$method;
-	  
-	}
   }
 
   return $self;
@@ -500,7 +486,7 @@ sub update_meta_coord{
 }
 
 
-#Move to java HC
+
 
 sub check_meta_species{
   my ($self) = @_;
@@ -534,12 +520,12 @@ sub check_meta_species{
 #Move to Java HC? Or update if update flag specified
 #Using same code used by build_reg_feats!
 sub check_meta_strings{
-  my ($self, $all_builds) = @_;
+  my ($self, $update) = @_;
   
 
   $self->log_header('Checking meta strings');
 
-  warn "Need to check/update rebuild.version and regbuild.initial_release_date";
+  warn "Need to check/update rebuild.version and regbuild.initial_release_date regbuild.last_annotation_update";
 
   #update flag?
 
@@ -548,39 +534,32 @@ sub check_meta_strings{
   my $fset_a = $self->db->get_FeatureSetAdaptor;
   my $mc = $self->db->get_MetaContainer;
   my $regf_a = $self->db->get_RegulatoryFeatureAdaptor;
-
-  if($all_builds){
-	@regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
-  }else{
-	my $fset = $fset_a->fetch_by_name('RegulatoryFeatures');
-	push @regf_fsets, $fset if defined $fset;
-  }
+  #We now want to chek all build
+  @regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
+ 
   
-  #Need to remove/implement this
-  my @meta_keys = ('reguild.feature_set_ids', 'regbuild.feature_type_ids');
-
-  #What about anchor/seed sets?
-
   if(scalar(@regf_fsets) == 0){
 	$self->report("WARNING: Found no regulatory FeatureSets for check_meta_strings");
   }
   else{
 
-	$self->log_header("Validating meta entries for FeatureSets:\t".join("\t", (map $_->name, @regf_fsets)));
-	
-	
 	#How do we validate this?
 	#Check all feature_sets exist
 	#Pull back some features from a test slice and check the number of bits match.
-  #Check the feature_type string exists and matches else create.
+	#Check the feature_type string exists and matches else create.
 	
 	
 	foreach my $fset(@regf_fsets){
-	#get version number of build
-	  my (undef, $build_version) = split/v/, $fset->name;
-	  $build_version = (defined $build_version) ? '_v'.$build_version : '';
-	  my $fset_string_key = 'regbuild.feature_set_ids'.$build_version;
-	  my $ftype_string_key = 'regbuild.feature_type_ids'.$build_version;
+	  $self->log_header("Validating meta entries for FeatureSets:\t".$fset->name);
+		
+	  #Fail for old versions as we want to remove these
+	  if( $fset->name =~ /_v[0-9]+$/){
+		$self->report("FAIL:\t".$fset->name." is an old RegulatoryFeature set, please remove!");
+	  }
+
+	  my $cell_type = (defined $fset->cell_type) ? $fset->cell_type->name : 'core';
+	  my $fset_string_key  = "regbuild.${cell_type}.feature_set_ids";
+	  my $ftype_string_key = "regbuild.${cell_type}.feature_type_ids";
 	  my $fset_string = $mc->list_value_by_key($fset_string_key)->[0];
 	  my $ftype_string = $mc->list_value_by_key($ftype_string_key)->[0];
 
