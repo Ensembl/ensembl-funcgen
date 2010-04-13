@@ -462,14 +462,12 @@ CREATE TABLE `probe` (
    `array_chip_id` int(10) unsigned NOT NULL,
    `class` varchar(20) default NULL,
     PRIMARY KEY  (`probe_id`, `name`, `array_chip_id`),
-    KEY `probe_set_idx` (`probe_set_id`),
-    KEY `array_chip_idx` (`array_chip_id`)
+    KEY `probe_set_idx`  (`probe_set_id`),
+    KEY `array_chip_idx` (`array_chip_id`),
+	KEY `name_idx`       (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- Add X & Y coords
--- remove array_id and link through probe_set, can't if we're not populating probe_set for sets of 1.
--- name (for Affy) at least is array_chip to probe relationship, probeset is optional for some formats 
 -- remove? class = control, experimental etc... naming clash with array.class, different class types.
 -- pair_index aka nimblegen match_index, id to connect paired probes (same as id/name for single probes).
 -- 
