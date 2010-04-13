@@ -72,15 +72,6 @@ CREATE TABLE `meta` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-# Auto add schema version to database
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "57");
-
-# patches included in this schema file
-# NOTE: at beginning of release cycle, remove patch entries from last release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_b.sql|uo.object_type_id_key');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_56_57_c.sql|uo.object_type_enum');
-
 
 
 --
