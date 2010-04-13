@@ -6,27 +6,35 @@ This document details the various stages of the eFG release cycle.
 
 :: Internal handovers and DB naming conventions
 
-During a release cycle a controlled DB naming convention is used in line with the informal handovers 
-we have throughout the regulatory build process.
+During the release cycle a controlled DB naming convention is used in line with the informal 
+handovers we have throughout the regulatory build process. These do not necessarily fall in line with
+the main release cycle handover deadlines, hence their order with respect to the main deadlines may 
+change from release to release.
+
 
 1	Dev		e.g. dev_homo_sapiens_funcgen_55_37
 
-Any pre reg build production data, including array mapping, annotated_feature or external data 
-updates. If no regulatory build is required for a given species, then this will be the only DB name
-used before the final prd DB name.
+This is the working development DB. All work will be performed on this DB including any pre reg build 
+production data, array mapping, annotated_feature or external data updates. The following DB names are used
+for back up instances at the given points in the release cycle. Each back up can be removed once the next
+back up has been created and validated.
 
 
-2	Build	e.g. build_homo_sapiens_funcgen_55_37
+2   Prebuild e.g. prebuild_homo_sapiens_funcgen_55_37
 
-This should be used only for DBs which have a full healthchecked version of the regulatory feature structures.
+This is the backup name before the build is performed. All reg build supporting sets should be called and validated.
+
+3	Build	e.g. build_homo_sapiens_funcgen_55_37
+
+This is the backup name once the reg build has been created.
 
 
-3	Annot 	e.g. annot_homo_sapiens_funcgen_55_37
+4	Annot 	e.g. annot_homo_sapiens_funcgen_55_37
 
 Reg feature annotation updated and validated.
 
 
-4   Production e.g. homo_sapiens_funcgen_55_37
+5   Production e.g. homo_sapiens_funcgen_55_37
 
 The unprefixed DB naming convention will be explicitly reserved for the final production version.
 
@@ -49,33 +57,113 @@ This list should contains items which are more than likely going to make the nex
 	Major Schema changes
 
 
+Explicitly notify web team of any planned web functionality development. For significant developments this should ideally be notified as soon as it is clear which release 
 
 
 :::: Pre Genebuild Handover
 
-Load any supporting/attribute sets
-Update external sets
-Array mapping, genomic alignments? Can we do this now we are storing unmapped objects i.e. can we migrate?
+Load available supporting/attribute sets
+Update/Load any external data sets which require gene/transcript xrefs? They are never going to be in sync, so load with original DB instead, i.e. the one which the external_features were annotated with.
+
+
+
+Array mapping:
+	  Import new arrays
+	  Genomic alignments for species which will not have a new assembly
+	  
 
 Regulatory Build (separate doc?)
 Regulatory Annotation
+Remove old RegFeats set?
+Remove any old assembly feature sets?
+Assembly map feature_sets? 
+Patch seq_regions for DBs with non standard dbnames(fly & c elegans)? Is this required anymore?
 
 
 
 
 :::: Post Genebuild Handover
 
+Start assembly dependant array mapping for species which have a new assembly e.g. ProbeAlign
+Start transcript dependant array mapping steps e.g ProbeTranscriptAlign, RunTranscriptXrefs
 
 
 
 
 
 
+:::: Focus set handover (1 week before Variation handover)
+
+All new focus sets to be included in the RegulatoryBuild must be peak called, reports generated and ResultFeatures loaded.  
+This will enable QC and visual inspection of focus sets which define the structure of the RegulatoryFeature core regions. 
+It is these core regions which are required by the variants for calling consequence types.
 
 
 
-:::: Post eFG Handover
+:::: Post focus set handover
 
+Run build_regulatory_features.pl. Generate reports and validate output.  Investigate long RFs?
+Validate meta data
+Other QC?
+Stable ID mapping (no annotation required yet) - scripts/run_stable_id_mapper.sh ? This can be done last before final handover?
+
+
+
+
+:::: Pre eFG Variation Handover
+
+
+Run build_regulatory_features.pl. Generate reports and validate output.  Investigate long RFs?
+Copy version of DBs to staging servers to enable visualisation. (Might not be possible to work on these due to ongoing jobs on ens-genomics1)
+Alternatively, can we get the staging website to point at the dev DBs on ens-genomics1?
+
+
+
+
+:::: Pre All but compara handoffs
+
+
+Patch DBs				- scripts/run_schema_patch.sh
+Update DBs for release	- scripts/run_update_DB_for_release.sh
+						  Add more status checking here
+
+Stable ID mapping (no annotation required yet) - scripts/run_stable_id_mapper.sh ? This can be done last before final handover?
+
+
+Reg Annotation 
+
+Remove old fsets (old assembly/old reg builds)
+
+
+
+
+
+Create master_funcgen_schema_NN DBs on both staging servers for HCs:
+	   
+	   >cd $EFG_SRC/sql
+	   >mysqlstaging  -uensadmin -pPASSWORD -e 'drop database master_schema_funcgen_OLD'
+ 	   >mysqlstaging  -uensadmin -pPASSWORD -e 'create database master_schema_funcgen_NEW'
+	   >mysqlstaging  -uensadmin -pPASSWORD master_schema_funcgen_58 <efg.sql
+	   >mysqlstaging  -uensadmin -pPASSWORD -e 'drop database master_schema_funcgen_OLD'
+	   >mysqlstaging2 -uensadmin -pPASSWORD -e 'create database master_schema_funcgen_NEW'
+	   >mysqlstaging2 -uensadmin -pPASSWORD master_schema_funcgen_58 <efg.sql
+
+Run and/or check HCs on cmdline/interface
+
+
+
+:::: Post All but compara handoffs (2days)
+
+Further data QC
+Check visualisations in browser (is webserver running yet?)
+Notify web of any late/emerging requirements
+
+
+
+:: Post handover to mart/Compara pre hand over (9 days)
+
+
+:: Post handover to web (9 days)
 
 :: Dynamic Content
 
@@ -106,3 +194,17 @@ There are several static content pages which may need updating if the eFG data o
 
 
 :: Last minute declarations/news items/announcements?
+
+
+:: Pre API branch
+
+cvs diff API
+cvs ci 
+
+:: Post API branch
+
+cvs ci branch-ensembl-VERSION and HEAD!
+
+
+
+:::: Release!
