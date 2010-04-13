@@ -244,33 +244,6 @@ sub product_FeatureSet {
 }
 
 
-
-
-=head2 add_ResultSet
-
-  Arg [1]    : Bio::EnsEMBL::ResultSet
-  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : $dset->add_ResultSet($rset);
-  Description: Adds ResultSets to the DataSet
-  Returntype : none
-  Exceptions : Throws if CellType or FeatureType do not match 
-               or if member_set_type is not 'result'
-  Caller     : General
-  Status     : At Risk - to be removed
-
-=cut
-
-sub add_ResultSet {
-  my ($self, $rset, $displayable) = @_;
-	
-
-  deprecate('add_ResultSet is deprecated, Please use add_supporting_sets()');
-
-  		
-  return $self->add_supporting_sets([$rset]);
-}
-
-
 =head2 add_supporting_sets
 
   Arg [1]    : Array of Bio::EnsEMBL::Feature/ResultSet object
@@ -372,28 +345,6 @@ sub _validate_and_set_types{
 }
 
 
-=head2 get_ResultSets_by_Analysis
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen:Analysis
-  Arg [2]    : (optional) status - e.g 'DISPLAYABLE'
-  Example    : my $anal_sets = @{$result_set->get_ResultSets_by_Analysis($analysis)};
-  Description: Getter for the ResultSet of given Analysis for this DataSet.
-  Returntype : Arrayref
-  Exceptions : Throws if arg is not a valid stored Bio::EnsEMBL::Anaylsis
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub get_ResultSets_by_Analysis {
-  my $self = shift;
-
-  deprecate('Use get_supporting_sets_by_Analysis instead');
-
-  return $self->get_supporting_sets_by_Analysis(@_);
-  
-}
-
 
 =head2 get_supporting_sets_by_Analysis
 
@@ -458,26 +409,6 @@ sub get_supporting_sets_by_Analysis {
 
 
 
-=head2 get_ResultSets
-
-  Arg [1]    : (optional) status - e.g 'DISPLAYABLE'
-  Example    : my @status_sets = @{$result_set->get_ResultSets($status)};
-  Description: Getter for the ResultSets for this DataSet.
-  Returntype : Arrayref
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub get_ResultSets{
-  my $self = shift;
-
-  deprecate('Use get_supporting_sets instead');
-  $self->get_supporting_sets(@_);
-
-}
-
 =head2 get_supporting_sets
 
   Arg [1]    : (optional) status - e.g 'DISPLAYABLE'
@@ -491,43 +422,40 @@ sub get_ResultSets{
 =cut
 
 sub get_supporting_sets{
-  my ($self, $status)  = @_;
+  my ($self, $status, $set_type)  = @_;
 
-  my @rsets;
+  #Add analysis here and make above method wrapper
+
+  #Validate type here
+  if($set_type &&
+	 ($set_type ne 'result' &&
+	  $set_type ne 'feature' &&
+	  $set_type ne 'input')){
+	throw("You have specified an invalid supporting set type:\t$set_type");
+  }
+
+
+  my @ssets;
 
   foreach my $anal_id(keys %{$self->{'supporting_sets'}}){
     
-    foreach my $rset(@{$self->{'supporting_sets'}->{$anal_id}}){
+    foreach my $sset(@{$self->{'supporting_sets'}->{$anal_id}}){
 
-      if(! defined $status){
-		push @rsets , $rset;
-      }elsif($rset->has_status($status)){
-		push @rsets, $rset;
-      }
+	  if(defined $status && 
+		 (! $sset->has_status($status))){
+		next
+	  }
+
+	  if(defined $set_type &&
+		 ($sset->set_type ne $set_type)){
+		next;
+	  }
+
+	  push @ssets, $sset;
     }
   }
 
-  return \@rsets;
-}
-
-
-=head2 get_displayable_ResultSets
-
-  Example    : my @displayable_rsets = @{$result_set->get_displayable_ResultSets()};
-  Description: Convenience method for web display
-  Returntype : Arrayref
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk - to be removed
-
-=cut
-
-sub get_displayable_ResultSets{
-  my $self = shift;
-
-  deprecate('Use get_displayable_supporting_sets instead');
-
-  return $self->get_supporting_sets('DISPLAYABLE');
+  return \@ssets;
 }
 
 
@@ -545,9 +473,9 @@ sub get_displayable_ResultSets{
 =cut
 
 sub get_displayable_supporting_sets{
-  my $self = shift;
+  my ($self, $set_type) = @_;
 
-  return $self->get_supporting_sets('DISPLAYABLE');
+  return $self->get_supporting_sets('DISPLAYABLE', $set_type);
 }
 
 
@@ -571,22 +499,6 @@ sub get_displayable_product_FeatureSet{
 
 
 
-=head2 result_set_ids
-
-  Description: Getter for the result_set_ids for this DataSet.
-           
-  Returntype : LIST
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-#sub result_set_ids {
-#    my $self = shift;
-	
-    #return [keys %{$self->{'result_sets'}}];
-#}
 
 
 =head2 name
@@ -609,26 +521,6 @@ sub name {
 }
 
 
-=head2 supporting_set_type
-
-  Example    : my $dset->supporting_set_type('feature');
-  Description: Getter/Setter for the supporting_set type of this DataSet i.e. feature or result.
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub supporting_set_type {
-  my $self = shift;
-     	
-  throw('This method is deprecated as DataSets can have different supporting set types');
-
-  $self->{'supporting_set_type'} = shift if @_;
-
-  return $self->{'supporting_set_type'};
-}
 
 
 #The following attributes are generated dynamically from the consituent Result/FeatureSets
