@@ -45,8 +45,9 @@ See Bio::EnsEMBL::Funcgen::Utils::HealthChecker for more details.
   #-skip_xref_cleanup 
   -check_displayable Forces log_data_sets to only use DISPLAYABLE sets
   -methods           Over-rides defaults behaviour and only run specified methods (see above)
-  #-tee              Tees output to STDOUT(not yet implemented)
+  -tee               Tees output to STDOUT
   -log_file           
+  -no_log            No log file, but turns on tee
   -help              Prints a short help page
   -man               Prints the entire POD documentation
 
@@ -80,6 +81,10 @@ Bio:EnsEMBL::Funcgen::Utils::HealthChecker
 
 =cut
 
+#To do
+# 1 Add method param, such that we can call just one method but with argments e.g. check_meta_strings update
+
+
 use strict;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -88,7 +93,7 @@ use Pod::Usage;
 use Getopt::Long;
 
 my ($pass, $species, $schema_build, $skip_meta_coord, $dnadb_host, $dnadb, $check_displayable);
-my ($help, $man, $dbname, @methods);
+my ($help, $man, $dbname, @methods, @method_params);
 my $user = 'ensadmin';
 my $port = 3306;
 my $host = 'ens-genomics1';
@@ -109,9 +114,11 @@ GetOptions(
 		   'skip_meta_coord'   => \$skip_meta_coord,
 		   'check_displayable' => \$check_displayable,
 		   'methods=s{,}'      => \@methods,
+		   'method_params=s{,}'=> \@method_params,
 		   'help|?'            => \$help,
 		   'man|m'             => \$man,
 		   'log_file=s'        => \$main::_log_file,
+		   'no_log'            => \$main::_no_log,
 		   'tee'               => \$main::_tee,
 		   #'slice=s'          => \$test_slice,
 		   #skip dumps?
@@ -129,8 +136,11 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 my @builds = @ARGV;
 
 $dbname = "${species}_funcgen_${schema_build}" if ! defined $dbname;
-$main::_log_file ||= $ENV{'HOME'}."/logs/update_DB_for_release.$dbname.$$.log";
-print "Writing log to:\t".$main::_log_file."\n";
+
+if(! $main::_no_log){
+  $main::_log_file ||= $ENV{'HOME'}."/logs/update_DB_for_release.$dbname.$$.log";
+  print "Writing log to:\t".$main::_log_file."\n";
+}
 
 if($dnadb_host){
   $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
@@ -171,13 +181,36 @@ my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
 																#-force_update
 																#skip_dumps
 																-check_displayable => $check_displayable,
-																-methods => \@methods,
 															   );
 
 
 
-if(! @methods){
-  $hchecker->update_db_for_release();
+
+
+
+if(@methods){
+  foreach my $method(@methods){
+
+	if(! $hchecker->can($method)){
+	  die("You have passed an invalid method:t\$method");
+	}
+
+	$hchecker->$method;  
+  }
+}
+elsif(@method_params){
+  my ($method, @params);
+  ($method, @params) = @method_params;
+
+  if(! $hchecker->can($method)){
+	die("You have passed an invalid method:t\$method");
+  }
+
+  $hchecker->$method(@params); 
+}
+else{
+ $hchecker->update_db_for_release();
   $hchecker->log_data_sets();
   $hchecker->check_stable_ids;
 }
+
