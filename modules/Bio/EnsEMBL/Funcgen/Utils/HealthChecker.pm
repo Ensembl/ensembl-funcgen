@@ -93,8 +93,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
     
   #validate and set type, analysis and feature_set here
-  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables, $skip_xrefs) = 
-	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES', 'SKIP_XREF_CLEANUP'], @_);
+  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables, $skip_xrefs, $methods) = 
+	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES', 'SKIP_XREF_CLEANUP', 'METHODS'], @_);
   
   
   if (! ($db && ref($db) &&
@@ -112,6 +112,8 @@ sub new {
   $self->{'builds'} = (scalar(@$builds)>0) ? $builds : [];
   $self->{'skip_meta_coord'} = $skip_mc;
   $self->{'skip_xrefs'} = $skip_xrefs;
+  $self->{'skip_analyse'} = $skip_analyse;
+  $self->{'check_displayable'} = $check_displayable;
   
   if(defined $meta_coord_tables){
 
@@ -124,12 +126,20 @@ sub new {
 	@{$self->{'meta_coord_tables'}} = @$meta_coord_tables;
   }
 
-  $self->{'skip_analyse'} = $skip_analyse;
-  $self->{'check_displayable'} = $check_displayable;
   
 
-  #$self->log_header(
+  if(@$methods){
 
+	foreach my $method(@$methods){
+
+	  if(! $self->can($method)){
+		throw("You have passed an invalid method:t\$method");
+	  }
+
+	  $self->$method;
+	  
+	}
+  }
 
   return $self;
 }
@@ -180,7 +190,7 @@ sub update_db_for_release{
 }
 
 sub validate_new_seq_regions{
-  my ($self, $force,) = @_;
+  my ($self, $force) = @_;
   
 
   #We need to add some functionality to handle non-standard schema_build progression here
@@ -490,6 +500,8 @@ sub update_meta_coord{
 }
 
 
+#Move to java HC
+
 sub check_meta_species{
   my ($self) = @_;
 
@@ -517,6 +529,10 @@ sub check_meta_species{
   return;
 }
 
+
+
+#Move to Java HC? Or update if update flag specified
+#Using same code used by build_reg_feats!
 sub check_meta_strings{
   my ($self, $all_builds) = @_;
   
