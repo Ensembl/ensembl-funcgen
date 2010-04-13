@@ -72,7 +72,7 @@ CREATE TABLE `meta` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-
+-- Add empty schema_version entry for patches to update
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", NULL);
 
 
