@@ -73,6 +73,10 @@ CREATE TABLE `meta` (
 
 
 
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", NULL);
+
+
+
 
 --
 -- Table structure for table `meta_coord`
