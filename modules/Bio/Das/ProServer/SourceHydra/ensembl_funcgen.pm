@@ -49,8 +49,8 @@ use Data::Dumper;
 use Carp;
 use Readonly;
 
-our $VERSION       = do { my ($v) = (q$Revision: 1.6 $ =~ /\d+/mxg); $v; };
-Readonly::Scalar our $CACHE_TIMEOUT => 30;
+our $VERSION       = do { my ($v) = (q$Revision: 1.7 $ =~ /\d+/mxg); $v; };
+Readonly::Scalar our $CACHE_TIMEOUT => 1800;#30 mins in seconds
 
 
 sub sources {
@@ -64,12 +64,29 @@ sub sources {
   # flush the table cache *at most* once every $CACHE_TIMEOUT
   # This may need signal triggering to have immediate support
   #
-  if($now > ($self->{'_sourcecache_timestamp'} || 0)+$CACHE_TIMEOUT) {
+
+  #Could also test for meta das_states_updated = 1
+  #And then reset?
+  #But this would slow down normal response which may be failing due to large numbers of sources
+  #Restart server to pick up new sources
+
+  #warn "$now > (".($self->config->{'_efg_sourcecache_timestamp'} || 0)." + $CACHE_TIMEOUT)";
+
+  #Can we change this to use $self->config->{'_sourcecache_timestamp'}
+  #The problem here is this SourceHydra is not persistant, so every time the server 
+  #receives a new sources request it init's a new SourceHydra with a timestamp of 0.
+  #This is also not persistant!!!
+
+  #If we can cache the time stamp, how are we going to cache the actual sources?
+  #Is this not true for standard sources also?
+
+
+  if($now > ($self->config->{'_efg_sourcecache_timestamp'} || 0)+$CACHE_TIMEOUT) {
     $self->{'debug'} and carp qq(Flushing table-cache for $hydraname);
     delete $self->{'_sources'};
-    $self->{'_sourcecache_timestamp'} = $now;
+    $self->config->{'_efg_sourcecache_timestamp'} = $now;
   }
-  
+   
 
   #Add support for basename eq bed and nothing else
 
@@ -184,6 +201,9 @@ sub sources {
       carp "Error scanning database: $EVAL_ERROR";
       delete $self->{'_sources'};
     };
+  }
+  else{
+	$self->{'debug'} and carp qq(Using table-cache for $hydraname);
   }
 
   return @{$self->{'_sources'} || []};
