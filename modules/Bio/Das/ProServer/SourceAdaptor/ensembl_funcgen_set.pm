@@ -56,7 +56,7 @@ sub init
         };
 	
 	#Set the set name here if hydra
-	my $set_name;
+	my $set_name =  $self->config->{set_name};
 
 	if($self->hydra){
 
@@ -81,6 +81,10 @@ sub init
 		}
 	  }
 	}
+	  
+
+
+	#warn Data::Dumper::Dumper($self->coordinates);
 
 	#No coord system stuff for non hydra as we expect dnadb to be configured correctly
 	
@@ -88,16 +92,17 @@ sub init
 	$self->{'set'} = $self->transport->fetch_set($set_name);
 
 	#Assembly version used in full source name
-	#Description is used for display, so small as possible
-	$self->{'title'} = $self->config->{'title'} || $self->set->name;
+	#Title is used for display
+	#Preferable that start of title should be enough to discriminate between sets.
+	$self->{'title'} = $self->config->{'title'} || $set_name;
+	#This is not picked up by SourceAdaptor::das_sourcedata hence we get warning about undef in sprintf!
 
+	#More word humanly readable description
+	#only shown on sources page
+	$self->{'description'} = $self->config->{'description'} ||  $self->set->display_label;
 
-	#Will this be valid for all result_sets?
-	$self->{'description'} = $self->config->{'description'} || 
-	  ($self->config->{'set_type'} eq 'result') ? $self->set->name.' wiggle' : $self->set->display_label;
-
-
-	print $self->{'description'}." coords are ".join(', ', keys(%{$self->{'coordinates'}}))."\n" if $self->{debug};
+	#warn "config coord are ".join(', ', keys(%{$self->config->{'coordinates'}}));
+	warn $self->{'description'}." coords are ".join(', ', keys(%{$self->{'coordinates'}}))."\n" if $self->{debug};
 
 	return;
 }
@@ -165,7 +170,7 @@ sub build_result_set_features{
 
   
 
-  warn "Max bins:\t".$args->{'maxbins'}."\nNumber of features: ".scalar(@{$features});
+  warn "Max bins:\t".$args->{'maxbins'}."\nNumber of features: ".scalar(@{$features}) if $self->{debug};
 
 
   if(@$features){
