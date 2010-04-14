@@ -137,7 +137,10 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my ($set_type, $dnadb, $set_name, $das_name, @source_types, $hydra_instance);
 my (@adaptor_names, $no_headers, $headers_only, $link_region, $cs_version, @cs_versions);
-my ($set_colour, $set_plot, $set_display_name, $location, $maintainer);
+my ($set_colour, $set_plot, $set_display_name, $location);
+
+
+my $maintainer = 'your.email@ddress.co.uk';
 my $coords = '';
 
 #ENV DEFAULTS
@@ -447,7 +450,7 @@ if(! $no_headers){
 
   my $prefork = int($max_clients/2);
   my $das_instance="${das_name}.${das_host}.${das_port}";
-  $maintainer = (defined $maintainer) ? "maintainer   = $maintainer\n" : '';
+  $maintainer = "maintainer   = $maintainer\n";
 
   my $header_file = $das_config."/${das_instance}.config.header";
   print ":: Generating DAS ini header:\t$header_file\n";
@@ -660,8 +663,8 @@ coordinates     = $coords
 
 
 	my %adaptors = (
-					result_set  => $db->get_ResultSetAdaptor,
-					feature_set => $db->get_FeatureSetAdaptor,
+					result     => $db->get_ResultSetAdaptor,
+					feature    => $db->get_FeatureSetAdaptor,
 					#experimental => $db->get_ExperimentalSetAdaptor,
 					#We need this to point to one file or a blob in the db
 					#Need to extend the schema/API to handle this?
@@ -673,12 +676,12 @@ coordinates     = $coords
 	
 	#Generate sources file for each type
 
-	  $sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.standard.sources";
-	  print ":: Generating DAS $set_class ini sources:\t$sources_file\n";
-	  open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
+	$sources_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.standard.sources";
+	print ":: Generating DAS ini sources:\t$sources_file\n";
+	open (OUT, ">$sources_file") || die("Cannot open sources file:\t$sources_file");
 	  
 	  $html_file = $das_config."/${das_name}.${dbhost}.${dbport}.${dbname}.standard.html";
-	  print ":: Generating DAS $set_class source links:\t$html_file\n";
+	  print ":: Generating DAS source links:\t$html_file\n";
 	  open (HTML, ">$html_file") || die("Cannot open html file:\t$html_file");
 
 
@@ -714,7 +717,7 @@ coordinates     = $coords
 		  #Need to eval this
 		  eval { $set->adaptor->store_status('DAS_DISPLAYABLE', $set); };
 		  
-		  warn "Failed to store DAS_DISPLAYABLE status for $aname:\t$name\n" if $@;
+		  warn "Failed to store DAS_DISPLAYABLE status for $set_class:\t$name\n" if $@;
 		}
 		
 	  
@@ -747,11 +750,11 @@ coordinates     = $coords
 		#Speak to James/Andy about necessary elements for species, coordinate system
 		
 		
-		warn "Need to set dnadb opt here if specified";
-		
+   		#Need to test each set for DISPLAYABLE_CSVERSION
+
 		#foreach my $cs_version(@cs_versions){
 
-		  print OUT "\n[${display_name}.${species}]
+		  print OUT "\n[${display_name}]
 state             = on
 adaptor        = ".$types{$aname}->{'adaptor'}."
 transport      = ".$types{$aname}->{'transport'}."
@@ -759,11 +762,16 @@ host              = $dbhost
 port              = $dbport
 dbname            = $dbname
 species           = $species
-set_type          = ".$set->type."
-username          = ${dbuser}${ini_password}
-description       = $desc
-set_name          = $name
+set_type          = $aname
+username          = ${dbuser}${ini_password}\n".#description       = $desc #Now handled by adaptor
+#remove set_name an just use set_id and dsn?
+"set_name          = $name
 set_id            = ".$set->dbID."
+dnadb_host      = ".$db->dnadb->dbc->host."
+dnadb_port      = ".$db->dnadb->dbc->port."
+dnadb_user      = ".$db->dnadb->dbc->username."
+dnadb_pass      = ".$db->dnadb->dbc->password."
+dnadb_name      = ".$db->dnadb->dbc->dbname."
 coordinates     = $coords
 ";
 		
@@ -804,16 +812,16 @@ coordinates     = $coords
 
 
 		#This is currently not working!
-		print HTML '<p><a href="'.
-		  'http://www.ensembl.org/'.$species.
-			'/contigview?'.$location.';'.
-			  'add_das_source=(name='.$display_name.'+url=http://'.$das_host.':'.$das_port.
-				'/das+dsn='.$display_name.
-				  '+type=ensembl_location_chromosome'.
-					$plot.
-					  '+color='.$colour.'+strand=r+labelflag=n'.
-						'+group=n+'.$display_params{$set_class}.'active=1)">'.
-						  $desc.'</a></p>'."\n";
+	  #print HTML '<p><a href="'.
+	#	'http://www.ensembl.org/'.$species.
+	#	  '/contigview?'.$location.';'.
+	#		'add_das_source=(name='.$display_name.'+url=http://'.$das_host.':'.$das_port.
+	#		  '/das+dsn='.$display_name.
+	#			'+type=ensembl_location_chromosome'.
+	#			  $plot.
+	#				'+color='.$colour.'+strand=r+labelflag=n'.
+	#				  '+group=n+'.$display_params{$set_class}.'active=1)">'.
+	#					$desc.'</a></p>'."\n";
 		
 		
 		#No need to set_config for individual set if defined
