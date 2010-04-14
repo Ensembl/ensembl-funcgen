@@ -495,47 +495,6 @@ sub get_replicate_set_by_chip_channel_id{
 #}
 
 
-=head2 display_label
-
-  Example    : print $rset->display_label();
-  Description: Getter for the display_label attribute for this ResultSet.
-               This is more appropriate for teh predicted_features of the set.
-               Use the individual display_labels for each raw result set.
-  Returntype : str
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub display_label {
-  my $self = shift;
-  
-  if(! $self->{'display_label'}){
-    
-    #This should display some info about the chip set/duplicte set if there is more than one set of data for a feature_set!!!!!!!!!!!!!!!
-    
-    #Some tomfoolery here to accomodate sets which we do not know the feature or cell type for.
-    #should we make cell_type and feature_type mandatory?
-
-    if(defined $self->feature_type()){
-      $self->{'display_label'} = $self->feature_type->name()." - ";
-    }else{
-       $self->{'display_label'} = "FEATURE TYPE NOT KNOWN - ";
-    }
-
-    if(defined $self->cell_type()){
-      $self->{'display_label'} .= ($self->cell_type()->display_label()) ? $self->cell_type->display_label() : $self->cell_type->name();
-    }else{
-      $self->{'display_label'} .= "CELL TYPE NOT KNOWN";
-    }
-
-    $self->{'display_label'} .= " Enriched Sites";
-  }
-  
-  return $self->{'display_label'};
-}
-
 
 =head2 get_displayable_ResultFeatures_by_Slice
 
