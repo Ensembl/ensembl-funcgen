@@ -503,7 +503,7 @@ sub get_complete_name {
   Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::ProbeSet
   Example    : my $probe_set = $probe->probeset();
   Description: Getter and setter of probe_set attribute for Probe objects.
-  Returntype : string
+  Returntype : Bio::EnsEMBL::Funcgen::ProbeSet
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
