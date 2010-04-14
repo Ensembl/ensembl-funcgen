@@ -259,12 +259,21 @@ sub display_label {
 	#}
 	#else{
 
-	  $self->{'display_label'} = $self->feature_type->name()." -";
-	  $self->{'display_label'} .= " ".($self->cell_type->display_label() || 
-									   $self->cell_type->description()   ||
-									   $self->cell_type()->name());
-	  $self->{'display_label'} .= " Enriched Sites";
-	#}
+	#This only works for annotated/regulatory_feature sets and result sets
+	#Move to other Set classes?
+
+	$self->{'display_label'} = $self->feature_type->name()." -";
+	$self->{'display_label'} .= " ".($self->cell_type->display_label() || 
+									 $self->cell_type->description()   ||
+									 $self->cell_type()->name());
+	
+
+	if($self->set_type eq 'result'){
+	  $self->{'display_label'} .= " wiggle";#change this to trace/signal/coverage?
+	}
+	else{
+	  $self->{'display_label'} .= " enriched sites";
+	}
   }
  
   return $self->{'display_label'};
