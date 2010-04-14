@@ -109,7 +109,7 @@ sub adaptor {
 		 #Need to add dnadbname here!
 		);
 
-	  print Dumper $self->{'_adaptor'} if ($self->{'debug'});
+	  #print Dumper $self->{'_adaptor'} if ($self->{'debug'});
 
 	  #Test the connection
 	  $self->{'_adaptor'}->dbc->db_handle;
@@ -122,6 +122,12 @@ sub adaptor {
   return $self->{'_adaptor'};	
 }
 
+
+#To support dbi hydra
+sub dbh{
+  my $self = shift;
+  return $self->adaptor->dbc->db_handle;
+}
 
 #Do we even really need this?
 #Ensembl API replaces what should be in here
@@ -208,7 +214,7 @@ sub fetch_set{
 	}
 	else{
 	  #we have a set_id in the ini
-	  $set = $self->adaptor->get_FeatureSetAdaptor->fetch_by_dbID($self->config->{'set_id'});
+	  $set = $self->adaptor->get_ResultSetAdaptor->fetch_by_dbID($self->config->{'set_id'});
 	}
   }
   else{
