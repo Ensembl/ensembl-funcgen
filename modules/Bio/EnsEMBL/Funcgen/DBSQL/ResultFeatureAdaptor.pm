@@ -125,7 +125,8 @@ use vars qw(@ISA);
 #start and end bins. These need to be set in each fetch method?
 #Cannot depend on $dest_slice_start/end in _objs_from_sth
 #As _collection_start/end are adjusted to the nearest bin
-my ($_window_size, $_scores_field, $_collection_start, $_collection_end);
+my ($_scores_field, $_collection_start, $_collection_end);
+#my ($_window_size);#Need to be a method as it is used by the BaseFeatureAdaptor. or our?
 #probe query extension flag - can only do extension with probe/result/feature queries
 my $_probe_extend = 0;
 #Default is 1 so meta_coords get updated properly in _pre_store
@@ -321,10 +322,11 @@ sub _objs_from_sth {
 	$start_pad = 0;
 	$end_pad   = 0;
 
+	warn "in fetch loop";
 	#This test only works as $_window_size is always set in fetch methods?
 	#undef if not specified (non-result_feature sets) or 0 for non-collected ResultFeatures
 
-	if(! $_window_size || ! $_result_feature_set){
+	if(! $self->_window_size || ! $_result_feature_set){
 	  #Standard array method
 	  #Change this to use Bio::EnsEMBL::Funcgen::Collection::ResultFeature
 	  #With just 1 score in $scores
@@ -454,7 +456,7 @@ sub _objs_from_sth {
 	  }
 	  
 	
-	@scores = unpack('('.$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$_window_size)- $start_pad - $end_pad), $scores);
+	@scores = unpack('('.$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$self->_window_size)- $start_pad - $end_pad), $scores);
 	}
 
 	
@@ -465,7 +467,7 @@ sub _objs_from_sth {
 																			  scores => [@scores], 
 																			  #undef, 
 																			  #undef, 
-																			  window_size => $_window_size, 
+																			  window_size => $self->_window_size,
 																			  slice       => $dest_slice,
 																			 });
 
@@ -591,6 +593,25 @@ sub list_dbIDs {
 }
 
 
+=head2 _window_size
+
+  Args       : None
+  Example    : my $wsize = $self->_window_size
+  Description: Gets the window_size of the current ResultFeature query
+  Returntype : int
+  Exceptions : None
+  Caller     : self
+  Status     : At risk
+
+=cut
+
+
+sub _window_size{
+  my $self = shift;
+
+  return $self->{'window_size'};
+}
+
 
 =head2 fetch_all_by_Slice_ResultSet
 
@@ -631,7 +652,7 @@ sub fetch_all_by_Slice_ResultSet{
 
   #We need to set this for all InputSets? Or just ID that it is an InputSet?
   $_probe_extend       = $with_probe if defined $with_probe;
-  undef $_window_size; #Clean this from the last query 
+  $self->{window_size} = undef;
 
   #warn "hardcoding for result feature set = 0";#and wsize==0";
   #$_result_feature_set = 0;
@@ -670,7 +691,7 @@ sub fetch_all_by_Slice_ResultSet{
 		warn "The ResultFeature window_size specifed($window_size) is not valid, the next largest will be chosen from:\t".join(', ', @sizes);
 	  }
 	  else{
-		$_window_size = $window_size;
+		 $self->{window_size} = $window_size;
 	  }
 	}
 	else{#! defined $window_size
@@ -688,7 +709,7 @@ sub fetch_all_by_Slice_ResultSet{
 		my $zero_wsize_limit = ($max_bins * $sizes[1])/2;
 
 		if($slice->length <= $zero_wsize_limit){
-		  $_window_size = 0;
+		   $self->{window_size} = 0;
 		}
 	  }
 	} 
@@ -696,9 +717,9 @@ sub fetch_all_by_Slice_ResultSet{
 	#Let's try and avoid this loop if we have already grep'd or set to 0
 	#In the browser this is only ever likely to speed up the 0 window
 	
-	if(! defined $_window_size){
+	if(! defined  $self->{window_size}){
 	  #default is maximum
-	  $_window_size = $sizes[$#sizes];
+	   $self->{window_size} = $sizes[$#sizes];
 
 	  #Try and find the next biggest window
 	  #As we don't want more bins than there are pixels
@@ -710,20 +731,22 @@ sub fetch_all_by_Slice_ResultSet{
 		#Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
 	  
 		if ($window_size <= $sizes[$i]){
-		  $_window_size = $sizes[$i];
+		   $self->{window_size} = $sizes[$i];
 		  last;    
 		}
 	  }
 	}
-
+	
+	#reassign from here on to avoid has access
+	$window_size =  $self->{window_size};
 	#warn "wsize is $_window_size";
 
 	$constraint .= ' AND ' if defined $constraint;
-	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='.$_window_size;
+	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='. $window_size;
 
 
 	#Finally set scores field
-	if($_window_size == 0){
+	if( $window_size == 0){
 	  $_scores_field = 'rf.scores';
 	}else{
 	  #We want a substring of a whole seq_region collection
@@ -733,23 +756,23 @@ sub fetch_all_by_Slice_ResultSet{
 	  #down if +ve or up if -ve
 	  #This causes problems with setting start as we round up to zero
 
-	  my $start_bin      = $slice->start/$_window_size;
-	  $_collection_start = int($slice->start/$_window_size);
+	  my $start_bin      = $slice->start/$window_size;
+	  $_collection_start = int($slice->start/$window_size);
 
 	  if($_collection_start < $start_bin){
 		$_collection_start +=1;#Add 1 to the bin due to int rounding down
 	  }
 	  	  
-	  $_collection_start = ($_collection_start * $_window_size) - $_window_size + 1 ;#seq_region
+	  $_collection_start = ($_collection_start * $window_size) - $window_size + 1 ;#seq_region
 	  #Need to sub this?
 	  #warn 'collection start is '.$_collection_start;
 
-	  $_collection_end   = int($slice->end/$_window_size) * $_window_size;#This will be <= $slice->end
+	  $_collection_end   = int($slice->end/$window_size) * $window_size;#This will be <= $slice->end
 
 	  #Add another window if the end doesn't meet the end of the slice
 	  if(($_collection_end > 0) &&
 		 ($_collection_end < $slice->end)){
-		$_collection_end += $_window_size;
+		$_collection_end += $window_size;
 	  }
 	  #warn "collection end = $_collection_end";
 	
@@ -759,14 +782,14 @@ sub fetch_all_by_Slice_ResultSet{
 	  #Now correct for packed size
 	  #Substring on a blob returns bytes not 2byte ascii chars!
 	  #start at the first char of the first bin
-	  my $sub_start = (((($_collection_start - 1)/$_window_size) * $self->packed_size) + 1);#add first char
+	  my $sub_start = (((($_collection_start - 1)/$window_size) * $self->packed_size) + 1);#add first char
 	  #Default to 1 as mysql substring starts < 1 do funny things
 	  $sub_start = 1 if $sub_start < 1;
 	  
 	  #Don't need to handle end overhang as substring automatically trims
 	  #my $sub_end = $_collection_end;
 	  #if($_collection_end > $slice->adaptor->fetch_by_name(undef, $slice->seq_region_name)->end){
-	  my $sub_end   = (($_collection_end/$_window_size) * ($self->packed_size));
+	  my $sub_end   = (($_collection_end/$window_size) * ($self->packed_size));
 	  
 
 	  #Finally set scores column for fetch
@@ -774,6 +797,8 @@ sub fetch_all_by_Slice_ResultSet{
 	  #We could set pack template here with ($sub_end-$sub_start+1)/$self->packed_size	  
 	  #warn $_scores_field;
 	}
+
+	#warn "constraint is $constraint";
 
 	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
   }
