@@ -784,8 +784,20 @@ sub _slice_fetch {
 
     if($feat_cs->equals($slice_cs)) {
       # no mapping is required if this is the same coord system
-	  my $max_len = $self->_max_feature_length() ||
+
+
+	  #eFG change 
+	  #We want to set this to undef if we are dealing with result_features which
+	  #are not wsize==0!
+	  #This is only required if we load array data at the natural resolution!
+	  #This test will effect ever single feature query, can we omit this somehow?
+	  my $max_len;
+
+	  if(! (($self->can('_window_size') &&
+			 $self->_window_size))){
+		  $max_len = $self->_max_feature_length() ||
         $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
+	  }
 
       my $constraint = $orig_constraint;
 	  my $sr_id = $self->get_seq_region_id_by_Slice($slice, $feat_cs);
