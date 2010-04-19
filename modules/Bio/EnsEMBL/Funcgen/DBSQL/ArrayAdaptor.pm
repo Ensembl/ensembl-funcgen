@@ -465,10 +465,10 @@ sub fetch_probe_count_by_Array{
 }
 
 
-=head2 get_Probe_dbIDs_by_Array
+=head2 fetch_Probe_dbIDs_by_Array
 
 Arg [1]    : Bio::EnsEMBL::Funcgen::Array
-Example    : my @dbids = @{$array_adaptor->get_Probe_dbIDs_by_Array($array)}
+Example    : my @dbids = @{$array_adaptor->fetch_Probe_dbIDs_by_Array($array)}
 Description: Fetches a arrayref of Probe dbIDs for a given Array
 Returntype : arrayref of Probe dbIDs
 Exceptions : None
@@ -477,11 +477,9 @@ Status     : at risk
 
 =cut
 
-sub get_Probe_dbIDs_by_Array{
+sub fetch_Probe_dbIDs_by_Array{
   my ($self, $array) = @_;
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
-
-
 
   my $sql = sprintf(qq/
 SELECT distinct p.probe_id
@@ -491,8 +489,7 @@ WHERE  array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
 	my $sth = $self->prepare( $sql );
   $sth->execute || die ($sth->errstr);
   my @dbids =  map{$_->[0]} @{$sth->fetchall_arrayref};
-  
-  
+
   return \@dbids;
 }
 
