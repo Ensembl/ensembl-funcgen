@@ -493,6 +493,34 @@ WHERE  array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
   return \@dbids;
 }
 
+=head2 fetch_Probe_name2dbID_by_Array
+
+Arg [1]    : Bio::EnsEMBL::Funcgen::Array
+Example    : my %name2dbid = %{$array_adaptor->fetch_Probe_name2dbID_by_Array($array)}
+Description: Fetches a hashref of Probe dbIDs keyed by probe name
+             for all Probes of a given Array
+Returntype : Hashref for Probe dbIDs keyed by probe name
+Exceptions : None
+Caller     : General
+Status     : at risk
+
+=cut
+
+sub fetch_Probe_name2dbID_by_Array{
+  my ($self, $array) = @_;
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
+
+  my $sql = sprintf(qq/
+SELECT p.name, p.probe_id
+FROM   probe p
+WHERE  array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
+
+  my $sth = $self->prepare( $sql );
+  $sth->execute || die ($sth->errstr);
+  my %mapping;
+  map{$mapping{$_->[0]}=$_->[1]} @{$sth->fetchall_arrayref};
+  return \%mapping;
+}
 
 
 
