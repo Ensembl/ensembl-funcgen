@@ -482,19 +482,18 @@ sub get_Probe_dbIDs_by_Array{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
 
 
-  if(! $self->{'probe_dbids'}){
 
-	my $sql = sprintf(qq/
+  my $sql = sprintf(qq/
 SELECT distinct p.probe_id
 FROM   probe p
 WHERE  array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
-
-	my $sth = $self->prepare( $sql );
-	$sth->execute || die ($sth->errstr);
-	$self->{'probe_dbids'} = [ map{$_->[0]} @{$sth->fetchall_arrayref} ],
-  }
   
-  return  $self->{'probe_dbids'};
+	my $sth = $self->prepare( $sql );
+  $sth->execute || die ($sth->errstr);
+  my @dbids =  map{$_->[0]} @{$sth->fetchall_arrayref};
+  
+  
+  return \@dbids;
 }
 
 
