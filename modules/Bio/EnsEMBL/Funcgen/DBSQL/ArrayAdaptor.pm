@@ -459,7 +459,7 @@ sub fetch_probe_count_by_Array{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
 
-  my ($count) = @{$self->dbc->db_handle->selectrow_arrayref('select count(*) from array_chip ac, probe p where ac.array_id='.$array->dbID.' and ac.array_chip_id=p.array_chip_id')};
+  my ($count) = @{$self->dbc->db_handle->selectrow_arrayref('select count(distinct probe_id) from array_chip ac, probe p where ac.array_id='.$array->dbID.' and ac.array_chip_id=p.array_chip_id')};
 
   return $count;
 }
