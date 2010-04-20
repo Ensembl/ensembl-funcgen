@@ -19,11 +19,6 @@ export VLONG_QUEUE=basement
 export NORMAL_QUEUE=normal
 export VALID_QUEUE_MANAGERS="LSF Local"
 
-#Add more here from pipeline.env and potentially arrays.config?
-#Move some of this to .efg?
-#Do we need this? Can't we assume standard perl is the correct/required one?
-export EFG_PERL=/software/bin/perl
-
 export SRC=$HOME/src
 #We are now writing config dynamically
 #export CONFIG=${SRC}/config
