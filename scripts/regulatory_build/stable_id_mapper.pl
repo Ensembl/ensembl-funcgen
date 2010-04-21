@@ -244,7 +244,7 @@ we need to factor this into the schema
 #  Should get same results due to chaining, but need to check
 #6 Verbose level logging?
 #7 Blast based mapping for none assembly mapped regions?
-
+#8 Do we rollback new stable IDs when rerunning i.e. are we reusing new stable IDs?
 
 BEGIN{
   if (! defined $ENV{'EFG_DATA'}) {
@@ -275,7 +275,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor;
 use strict;
 
 $| = 1;							#autoflush
-my ($dbname, $help, $man, @slice_names, $clobber, $no_load, $odb, $recover);
+my ($dbname, $help, $man, @slice_names, @skip_slices, $clobber, $no_load, $odb, $recover);
 my ($odbname, $ndbname, $npass, $nuser, $ohost, $oport, $from_file, $stable_id, $assign_nulls);
 my ($dnadb_name, $dnadb_pass, $dnadb_user, $dnadb_host, $dnadb_port, $old_assm, $new_assm);
 my $reg = "Bio::EnsEMBL::Registry";
@@ -329,7 +329,8 @@ GetOptions (
 			#this slice/stable_id may or may not have an effect on the mapping.
 			
 			'assign_all_nulls'   => \$assign_nulls,
-			'slice_names=s{,}'   => \@slice_names,
+			'slices=s{,}'        => \@slice_names,
+			'skip_slices=s{,}'   => \@skip_slices,
 			"stable_id=s"        => \$stable_id,
 			"out_dir=s"          => \$out_dir,
 			#"update"            => \$update,
@@ -417,7 +418,7 @@ else{
 
 
 my ($next_stable_id, $new_reg_feat_handle, $split_id);
-my ($new_id_handle, $stable_id_handle, %dbid_mappings, @slices);
+my ($new_id_handle, $stable_id_handle, %dbid_mappings);
 my (%mapping_cache, %obj_cache, $mappings, $new_mappings);#%new_id_cache?
 my $total_stable_ids = 0;
 my $total_new_stable_ids = 0;
@@ -553,7 +554,9 @@ if($old_assm || $new_assm){
 
 
 #Grab the old slices
-my (@top_level_slices, %new_slices);
+my (@top_level_slices, @slices, %new_slices);
+
+#Need to implemente EFGUtils::generate_slices_from_names here
 
 if(@slice_names){
   $helper->log("Running only on slices:\t".join(', ', @slice_names));
@@ -565,13 +568,24 @@ if(@slice_names){
 	  die("You must map from an old slice($old_assm) if you wish to map between assemblies:\t$slice_name");
 	}
 
-	my $slice = $obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_by_name($slice_name);
+
+	#Try region first
+	my $slice;
+
+	
+	$slice = $obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_by_region(undef, $slice_name);
 	
 	if(! $slice){
-	  die("You have specified a slice name which cannot be found in the database:\t".$slice_name);
+	  eval{ $slice = $obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_by_name($slice_name) };
+	  warn "Caught Exception:\n$@" if $@;
 	}
 	
-	push @slices, $obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_by_name($slice_name);
+	if(! $slice){
+	  warn("You have specified a slice name which cannot be found in the database:\t".$slice_name);
+	}
+	else{
+	  push @slices, $slice;
+	}
   }
 }
 elsif($stable_id){
@@ -604,7 +618,8 @@ else{
 	}
   }
 
-  %new_slices = map {$new_slices{$_->name} = $_} @{$obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', undef, 1)};
+
+  map $new_slices{$_->name} = $_, @{$obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', undef, 1)};
 
 }
 
@@ -729,7 +744,7 @@ foreach my $slice (@slices){
 
 	  my $source_dbID; #The source dbID this feature was fetched from, set to null for start feature.
 	  #($stable_id = $reg_feat->display_label()) =~ s/\:.*//;
-	  $stable_id = $reg_feat->{'stable_id'};
+	  $stable_id = $reg_feat->stable_id;
 	  next if exists $mapping_cache{$stable_id};
 	  
 	  #keep building transition whilst we have a 3' overhanging feature returned
@@ -888,7 +903,11 @@ foreach my $slice (@slices){
 											   $f->display_label, $obj_cache{'NEW'}{'FSET'}->dbID, $f->stable_id))."\n";
 	  }else{
 		#access stable ID directly to avoid padding with ENSR0*
-		$cmd = 'UPDATE regulatory_feature set stable_id='.$f->{'stable_id'}.' where regulatory_feature_id='.$f->dbID();
+	
+		#Strip prefix
+		(my $sid = $f->{'stable_id'}) =~ s/ENS[A-Z]*0*//;
+
+		$cmd = 'UPDATE regulatory_feature set stable_id='.$sid.' where regulatory_feature_id='.$f->dbID();
 		$ndb->dbc->db_handle->do($cmd);
 	  }
 
@@ -1644,8 +1663,8 @@ sub assign_stable_ids{
 		  if(exists $mapping_cache{$orphan_id}){
 
 			if(! ($split_id && ($i == $num_trans))){
-			  die("Have found duplicate mappings non very 5' feature in a transition chain for $orphan_id: previous "
-				  .join(',', @{$mapping_cache{$orphan_id}}))." new $child_id";
+			  die("Have found duplicate mappings non very 5' feature in a transition chain for $orphan_id: previous ".
+				  join(',', @{$mapping_cache{$orphan_id}})." new $child_id");
 			}
 
 			#This is because chain has been split and this transition knows nothing about
