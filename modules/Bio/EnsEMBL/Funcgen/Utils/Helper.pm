@@ -1127,8 +1127,6 @@ sub define_and_validate_sets{
 		$self->log("Updating DataSet with new product FeatureSet:\t".$fset->name);
 		$dset->product_FeatureSet($fset);
 	  }
-
-	  warn "storing updated ".@{$dset->get_supporting_sets}." ".@$ssets." sets with rollback level $rollback_level";
 		
 	  $dset = $dset_adaptor->store_updated_sets([$dset], $rollback_level)->[0];
 	  $dset->adaptor->store_regbuild_meta_strings($dset, $rollback_level) if $type eq 'regulatory';
@@ -1794,8 +1792,12 @@ sub rollback_ResultFeatures{
 #So IMPORTED status should be tied to CS id and Analysis id?
 
 sub rollback_ArrayChips{
-  my ($self, $acs, $mode, $force, $keep_xrefs) = @_;
-  
+  my ($self, $acs, $mode, $force, $keep_xrefs, $no_clean_up, $force_clean_up) = @_;
+ 
+  #no_clean_up and force_clean_up allow analyze/optimize to be skipped until the last rollback
+  #We could get around this by specifying all ArrayChips for all formats at the same time?
+  #Need to implement in RollbackArrays
+ 
   $mode ||= 'probe';
   
   if($mode && ($mode ne 'probe' &&
@@ -1829,18 +1831,23 @@ sub rollback_ArrayChips{
 
 
 
-  my ($adaptor, $db, $class);
+  my ($adaptor, $db, %classes);
 
   foreach my $ac(@$acs){
 	$adaptor ||= $ac->adaptor || throw('ArrayChip must have an adaptor');
 	$db      ||= $adaptor->db;
 	$db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $ac);
 
-	$class ||=  $ac->get_Array->class;
-
-	if($class && ($class ne $ac->get_Array->class)){
-	  throw('You can only rollback_ArrayChips for ArrayChips with the same class');
+	if(! $ac->get_Array->class){
+	  throw('The ArrayChip you are trying to rollback does not have a class attribute');
 	}
+
+
+	$classes{$ac->get_Array->class} = undef;
+
+	#if($class && ($class ne $ac->get_Array->class)){
+	#  throw('You can only rollback_ArrayChips for ArrayChips with the same class');
+	#}
   }
 
 
@@ -1917,29 +1924,17 @@ sub rollback_ArrayChips{
   if($mode eq 'probe2transcript' ||
 	 $force){
 	
-	$self->log("Deleting probe2transcript ProbeFeature UnmappedObjects");
-
 	#Delete ProbeFeature UnmappedObjects	  
+	$self->log("Deleting probe2transcript ProbeFeature UnmappedObjects");
 	$sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
-	$self->rollback_table($sql, 'unmapped_object', 'unmapped_object_id', $db);
+	$self->rollback_table($sql, 'unmapped_object', 'unmapped_object_id', $db, $no_clean_up);
 	
-	#swap optimize and analyze?
-	#Add check in here? (optimize also does the stats update that check does)
-	#Or just leave this for update_DB_for_release?
-	#Maybe we should post-pone these until we actually run the pipeline
-	#And just depend on update_DB_for_release if we don't run after a rollback?
 
-	$db->dbc->do('optimize table unmapped_object');
-	$db->dbc->do('analyze  table unmapped_object');
-	
-	  	
-
-	 #Delete ProbeFeature Xrefs/DBEntries
-		
+	#Delete ProbeFeature Xrefs/DBEntries
 	$self->log("Deleting probe2transcript ProbeFeature Xrefs");
-
 	$sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id IN($ac_ids)";
-	$self->rollback_table($sql, 'object_xref', 'object_xref_id', $db);
+	$self->rollback_table($sql, 'object_xref', 'object_xref_id', $db, $no_clean_up);
+
 
 	#Probe/Set specific entries
 	for my $xref_object('Probe', 'ProbeSet'){
@@ -1951,12 +1946,12 @@ sub rollback_ArrayChips{
 	 
 	  $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
 	  #.' and edb.db_release="'.$schema_build.'"'; 
-	  $self->rollback_table($sql, 'unmapped_object', 'unmapped_object_id', $db);
+	  $self->rollback_table($sql, 'unmapped_object', 'unmapped_object_id', $db, $no_clean_up);
 
 	  #Delete Probe/Set Xrefs/DBEntries
 	  $sql = "DELETE ox FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id IN($ac_ids)";
 	  $self->log("Deleting probe2transcript $xref_object xref records");
-	  $self->rollback_table($sql, 'object_xref', 'object_xref_id', $db);
+	  $self->rollback_table($sql, 'object_xref', 'object_xref_id', $db, $no_clean_up);
 	}
   }
   elsif(! $keep_xrefs){#Need to check for existing xrefs if not force
@@ -2002,37 +1997,40 @@ sub rollback_ArrayChips{
 	  #@anal_ids = map {$_= "@$_"} @anal_ids;
 	
 	  if($mode ne 'ProbeAlign'){
-		my $lname = "${class}_ProbeTranscriptAlign";
+		my $lnames = join(', ', (map "'${_}_ProbeTranscriptAlign'", keys(%classes)));
+
 		$sql = "DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-		$self->log("Deleting $lname ProbeFeature Xref/DBEntry records");
-		$self->rollback_table($sql, 'object_xref', 'object_xref_id', $db);
+		$self->log("Deleting ProbeFeature Xref/DBEntry records for:\t$lnames");
+		$self->rollback_table($sql, 'object_xref', 'object_xref_id', $db, $no_clean_up);
 
 
 		#Can't include uo.type='ProbeTranscriptAlign' in these deletes yet as uo.type is enum'd to xref or probe2transcript
 		#will have to join to analysis and do a like "%ProbeTranscriptAlign" on the the logic name?
 		#or/and ur.summary_description='Promiscuous probe'?
 
-		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name in (${lnames}) AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 	
-		$self->log("Deleting $lname UnmappedObjects");
-		$self->rollback_table($sql, 'unmapped_object', 'unmapped_object_id', $db);
+		$self->log("Deleting UnmappedObjects for:\t${lnames}");
+		$self->rollback_table($sql, 'unmapped_object', 'unmapped_object_id', $db, $no_clean_up);
 
 
 		#Now the actual ProbeFeatures		
-		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-		$self->log("Deleting $lname ProbeFeatures");
-		$self->rollback_table($sql, 'probe_feature', 'probe_feature_id', $db);
+		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name in(${lnames}) AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+		$self->log("Deleting ProbeFeatures for:\t${lnames}");
+		$self->rollback_table($sql, 'probe_feature', 'probe_feature_id', $db, $no_clean_up);
 	  }
 
 	  if($mode ne 'ProbeTranscriptAlign'){
-		my $lname = "${class}_ProbeAlign";
-		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name='${lname}' AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-		$self->log("Deleting $lname ProbeFeatures");
-		$self->rollback_table($sql, 'unmapped_object', 'unmapped_object_id', $db);
+		my $lnames = join(', ', (map "'${_}_ProbeAlign'", keys(%classes)));
+
+		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name=(${lnames}) AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+		$self->log("Deleting UnmappedObjects for:\t${lnames}");
+		$self->rollback_table($sql, 'unmapped_object', 'unmapped_object_id', $db, $no_clean_up);
 		
 
-		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name='${lname}' AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-		$self->rollback_table($sql, 'probe_feature', 'probe_feature_id', $db);
+		$sql = "DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name in(${lnames}) AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+		$self->log("Deleting ProbeFeatures for:\t${lnames}");
+		$self->rollback_table($sql, 'probe_feature', 'probe_feature_id', $db, $no_clean_up);
 	  }
 	}
 	else{
@@ -2065,11 +2063,11 @@ sub rollback_ArrayChips{
 	  
 	  #ProbeSets
 	  $sql = "DELETE ps from probe p, probe_set ps where p.array_chip_id IN($ac_ids) and p.probe_set_id=ps.probe_set_id";
-	  $self->rollback_table($sql, 'probe_set', 'probe_set_id', $db);
+	  $self->rollback_table($sql, 'probe_set', 'probe_set_id', $db, $no_clean_up);
 
 	  #Probes
 	  $sql = "DELETE from probe where array_chip_id IN($ac_ids)";  
-	  $self->rollback_table($sql, 'probe', 'probe_id', $db);	  
+	  $self->rollback_table($sql, 'probe', 'probe_id', $db, $no_clean_up);	  
 	}
   }
   
@@ -2085,7 +2083,7 @@ sub rollback_ArrayChips{
 
 
 sub rollback_table{
-  my ($self, $sql, $table, $id_field, $db) = @_;
+  my ($self, $sql, $table, $id_field, $db, $no_clean_up, $force_clean_up) = @_;
 
   my $row_cnt;
   eval { $row_cnt = $db->dbc->do($sql) };
@@ -2099,9 +2097,17 @@ sub rollback_table{
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt $table records");
   
-  if($row_cnt){
+  if($force_clean_up ||
+	 ($row_cnt && ! $no_clean_up)){
 	$self->reset_table_autoinc($table, $id_field, $db) if $id_field;
 	$self->log("Optimizing and Analyzing $table");	
+
+	#swap optimize and analyze?
+	#Add check in here? (optimize also does the stats update that check does)
+	#Or just leave this for update_DB_for_release?
+	#Maybe we should post-pone these until we actually run the pipeline
+	#And just depend on update_DB_for_release if we don't run after a rollback?
+
 	$db->dbc->do("optimize table $table");
 	$db->dbc->do("analyze  table $table");
   }
