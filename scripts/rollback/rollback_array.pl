@@ -22,12 +22,14 @@ Mandatory
   -species         Latin name e.g. homo_sapiens
   -force|f         Performs a full delete, removing all records upto the specified level.  This is to specifically force the rollback of probe2transcript entries, as these can be associated with more than one array i.e. you may be deleting annotations which also belong to another array.
   -keep_xrefs      Flag to keep xrefs, even if we are deleting probe_features. Used when xrefs are external import i.e. not probe2transcript.
+  #-no_clean_up     Skip optimize and and AUTO_INCREMENT reset. Useful if you want to save time when rolling 
+                   back multiple sets of arrays.
   -help            Brief help message
   -man             Full documentation
 
 =head1 DESCRIPTION
 
-B<This program> removes all the imported probe, probe_feature and/or probe2transcript annotation data given set of Arrays or ArrayChips.
+B<This program> removes all the imported probe, probe_feature and/or probe2transcript annotation data given set of Arrays or ArrayChips. This is not design to rollback arrays for which experimental data is present i.e. Nimblegen tiling arrays.
 
 =cut
 
@@ -120,8 +122,12 @@ my @arrays;
 
 
 foreach my $aname(@array_names){
-  my $array = $array_adaptor->fetch_by_name_vendor($aname, $vendor);
+  my $array;
+
+  $array = $array_adaptor->fetch_by_name_vendor($aname, $vendor);
+
   die ("Could not retrieve $vendor $aname Array") if ! $array;
+
   push @arrays, $array;
 }
 
