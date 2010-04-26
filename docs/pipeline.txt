@@ -95,6 +95,13 @@ should be run on the farm. A template file should be available for the efg analy
 specific analysis documentation e.g. arrays.txt). It may be necessary to alter some of the general 
 pipeline configuration. 
 
+NOTE: There is most likely an efg version of the files above which will dynamically configure themselves
+using the relevant environment.  However, you may find problems with the Blast.pm config not being found.  
+This is due to some hardcoding withint the ensembl-pipline code and can be circumvented by simply mv'ing
+the relevant file e.g.
+
+mv ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/Blast.pm.example ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/Blast.pm
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
