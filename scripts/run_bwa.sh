@@ -161,7 +161,7 @@ split_file="${file_prefix}1.fastq"
 
 #Test for pre-cat'd file
 if [[ -f $split_file ]]; then
-    
+
     if [ $clean ]; then
 	echo -e "Removing previously cached fastq files:\n\t"
 	ls ${file_prefix}[1-9]*.fastq
@@ -274,12 +274,14 @@ if [[ $new_input = 1 ]]; then
 	split_files=($(ls $file_prefix[1-9]*.fastq))
 	echo -e "Created ${#split_files[*]} batch files"
 	echo "Input fastq files for $experiment_name $name alignments:" > $alignment_log
-	
+
 	for f in ${unzipped_files[*]}; do
 	    echo "\t${f}" >> $alignment_log
 	done
 	
-		#Could maybe add a validation step here to wc -l the batches versus the input
+        #Could maybe add a validation step here to wc -l the batches versus the input
+        echo -e "Total reads in fastq files" >> $alignment_log
+        echo -e $(expr $(cat ${unzipped_files[*]} | wc -l) / 4)  >> $alignment_log
 	
 	echo "Gzipping all source fastq files"
 	Execute gzip ${unzipped_files[*]}
@@ -326,8 +328,6 @@ done
 ### Submit jobs
 run_txt="\nRunning bwa with following options:\n\tIndex name\t= $index_name\n\tAlignment type\t= $align_type\n\tOutput dir\t= $outdir\n\tOutput format\t= $format\n"
 echo -e $run_txt
-echo -e $run_txt >> $alignment_log
-
 
 ### Run bwa and remove intermediate files...
 #Use submitJob to avoid truncation of bsub cmd
@@ -355,10 +355,8 @@ else
 
 	bsub_cmd="-q long $resource -o ${outdir}/${align_job_name}.%J.%I.out -e ${outdir}/${align_job_name}.%J.%I.err"
 	align_job_cmd="bwa aln $fasta_file  $input_file | "
-	#index_cmd="bwa aln $fasta_file  $input_file > ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai"
 
 	align_job_cmd="$align_job_cmd bwa $align_type $fasta_file - $input_file | "
-	#align_cmd="bwa $align_type $fasta_file ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai  $input_file > ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam"
 
 #This bam sort is a little redundant at the moment as
 #pipeline imports only take sam at present and always sorts before import.
@@ -367,35 +365,21 @@ else
 #and also add a sorted flag to the imports
 
 	align_job_cmd="$align_job_cmd samtools view -uS - | "
-	#bam_cmd="samtools view -S -b $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam > $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.bam"
-#Could we pipe all of this to avoid intermediate files?
 
 	align_job_cmd="$align_job_cmd samtools sort - $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sorted" 
-	#sort_cmd="samtools sort $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.bam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sorted" #.bam get's added
-#Move this to final clean cmd
-#Clean last in case we fail and want to rerun manually?
 	
-	#clean_cmd="${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.sai ${file_prefix}\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.sam $file_prefix\$LSB_JOBID.\$LSB_JOBINDEX.${align_type}.unsorted.bam"
-	
-	#Do no double quote vars containing LSB env vars here as we will interpolate too soon
-	#align_job_cmd=$index_cmd'; '$align_cmd'; '$bam_cmd'; '$sort_cmd';' # '$clean_cmd';'
-
 	echo -e "\n"
 
 	submitJob "$align_job_name[1-${#split_files[*]}]" "$bsub_cmd" '$align_job_cmd' eval
 fi
 
-#Now add merge and clean up job dependant on completion of first job
+#Now add merge and clean up job dependent on completion of first job
 sam_header="${index_home}/${uc_species}/${lc_species}_${gender}_${assembly}${mask}.header.sam"
-
-
 
 if [[ ! -f $sam_header ]]; then
 	echo -e "ERROR:\tCould not find sam header to mere with:\t$sam_header"
 	exit
 fi
-
-#merge_cmd="samtools merge -h $sam_header ${file_prefix}${align_type}.bam ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam"
 
 merge_cmd="samtools merge -h $sam_header - ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam | "
 
@@ -407,11 +391,6 @@ if [[ $merge_only != 1 ]]; then
 	bsub_cmd="$bsub_cmd -w 'done(${align_job_name}[1-${#split_files[*]}])' "
 fi
 
-#Omiting this cat for now, as sometimes it's easier to spot errors in separate files due 
-#to different file sizes
-# cat ${dir}/*.bwa.out > ${file}.bwa_all.out; rm ${dir}/*.bwa.out; cat ${dir}/*.bwa.err > ${file}.bwa_all.err; rm ${dir}/*.bwa.err; 
-#sam_cmd="samtools view -h ${file_prefix}${align_type}.bam | gzip -c > ${file_prefix}${align_type}.sam.gz"
-
 merge_cmd="$merge_cmd samtools view -h - | gzip -c > ${file_prefix}${align_type}.sam.gz"
 
 clean_cmd=
@@ -419,24 +398,25 @@ clean_cmd=
 
 echo "format is $format"
 
-if [[ $format = sam ]]; then
-	#clean_cmd="$sam_cmd; rm -f ${file_prefix}${align_type}.bam"
-    clean_cmd="rm -f ${file_prefix}${align_type}.bam"
-fi
+clean_cmd="rm -f ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam"
 
-clean_cmd="$clean_cmd; rm -f ${file_prefix}[0-9]*.[1-9]*.${align_type}.sorted.bam"
-job_cmd="$merge_cmd; $clean_cmd;"
+# ouput some statistics
+#possibly need to add the sam index (.fai file equivalent to header...)
+#sam_index="${index_home}/${uc_species}/${lc_species}_${gender}_${assembly}${mask}.fa.fai"
+log_cmd="echo \"Alignment QC - total reads as input: \" >> ${alignment_log}"
+log_cmd="${log_cmd}; samtools view -uS ${file_prefix}${align_type}.sam.gz | samtools flagstat - | head -n 1 >> ${alignment_log}"
+log_cmd="${log_cmd}; echo \"Alignment QC - mapped reads: \" >> ${alignment_log} "
+log_cmd="${log_cmd}; samtools view -uS -F 4 ${file_prefix}${align_type}.sam.gz | samtools flagstat - | head -n 1 >> ${alignment_log}"
+log_cmd="${log_cmd}; echo \"Alignment QC - reliably aligned reads (mapping quality >= 1): \" >> ${alignment_log}"
+log_cmd="${log_cmd}; samtools view -uS -F 4 -q 1 ${file_prefix}${align_type}.sam.gz | samtools flagstat - | head -n 1 >> ${alignment_log}"
+# Maybe do some percentages?
 
+job_cmd="$merge_cmd; $clean_cmd; $log_cmd;"
+#job_cmd="$merge_cmd; $clean_cmd;"
 
-#sometimes there are problems and the final zip is empty... since I rm the original files, everything needs to be rerun...
-#echo $bsub_cmd $job_cmd
 echo -e "\n"
 
-
 submitJob "$merge_job_name" "$bsub_cmd" "$job_cmd"
-
-
-
 
 #Could really do with submitting this to farm if we are waiting
 #for cat gzip split activity
