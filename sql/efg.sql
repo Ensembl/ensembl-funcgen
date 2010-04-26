@@ -695,8 +695,17 @@ CREATE TABLE `result_feature` (
   KEY `result_feature_idx` (`result_feature_id`),
   KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1
- PARTITION BY KEY (`window_size`)
- PARTITIONS 7;
+ PARTITION BY LIST (window_size)
+ (PARTITION p0 VALUES IN (0),
+ PARTITION p50 VALUES IN (50),
+ PARTITION p150 VALUES IN (150), 
+ PARTITION p300 VALUES IN (300), 
+ PARTITION p450 VALUES IN (450), 
+ PARTITION p600 VALUES IN (600), 
+ PARTITION p750 VALUES IN (750),
+ PARTITION p900 VALUES IN (900),	
+ PARTITION p1150 VALUES IN (1150)
+);
 
 -- Partitions is set to number of windows here
 -- Should set this on a per species basis dependant on the number
