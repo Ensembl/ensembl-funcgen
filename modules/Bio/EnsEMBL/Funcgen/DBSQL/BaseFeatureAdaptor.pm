@@ -1175,29 +1175,35 @@ sub fetch_all_by_Transcript_FeatureSets{
 
 
 
-=head2 fetch_by_display_label
+=head2 fetch_all_by_display_label
 
   Arg [1]    : String $label - display label of feature to fetch
-  Example    : my $feat = $adaptor->fetch_by_display_label("BRCA2");
-  Description: Returns the feature which has the given display label or
-               undef if there is none. If there are more than 1, only the first
-               is reported.
-  Returntype : Bio::EnsEMBL::Funcgen::Feature
+  Example    : my $feat = $adaptor->fetch_all_by_display_label('abd-A_dpp:REDFLY:TF000092');
+  Description: Returns the features with the given display label.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Feature objects
   Exceptions : none
   Caller     : general
   Status     : At risk
 
 =cut
 
-sub fetch_by_display_label {
-  my $self = shift;
-  my $label = shift;
+sub fetch_all_by_display_label {
+  my ($self, $label) = @_;
 
-  my $constraint = "x.display_label = '$label'";# AND ${syn}.is_current = 1";
-  my ($feature) = @{ $self->generic_fetch($constraint) };
+  throw('You must defined a display_label argument') if ! defined $label;
 
-  return $feature;
+  my ($table_name, $table_syn);
+  my @tables =  $self->_tables;
+  ($table_name, $table_syn) = @{$tables[0]};
+
+  my $constraint = "${table_syn}.display_label = ?";
+  $self->bind_param_generic_fetch($label, SQL_VARCHAR);
+
+  return $self->generic_fetch($constraint);
 }
+
+
+
 
 =head2 _get_coord_system_ids
 
@@ -1248,8 +1254,23 @@ sub _get_coord_system_ids{
   return \@cs_ids;
 }
 
+
+=head2 count_features_by_field_id
+
+  Arg [1]    : string     - table field to count 
+  Arg [2]    : string/int - id to count
+  Example    : my $probe_feature_count = $pfa->count_feature_by_field_id('probe_id', $probe_id);
+  Description: Returns a count of the features with the acciated field id
+  Returntype : string/int - count of features
+  Exceptions : Throws args are not set
+  Caller     : FeatureAdaptors
+  Status     : At risk
+
+=cut
+
 #This does not assume one record per feature
 #But does assume primary key if ${table_name}_id
+#Can't move to core due to cs issues, but could mirror implementation.
 
 sub count_features_by_field_id{
   my ($self, $count_field, $count_id) = @_;
@@ -1272,6 +1293,10 @@ sub count_features_by_field_id{
   
   return $sth->fetchrow_array;
 }
+
+
+
+
 
 1;
 
