@@ -399,13 +399,14 @@ print "Writing log to:\t".$main::_log_file."\n";
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;
 
 
-if(! ($odbname && $ohost && $oport)){
+if(! ($odbname)){
+  #Should test for any old vars set in case we have forgotten to specify ohost
   $helper->log("Setting old DB to new DB");
   $odb = $ndb;
 }
 else{
   $odb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-														 -host   => $ohost,
+														 -host   => $ohost || $nhost,
 														 -user   => $ouser,
 														 -pass   => $opass,
 														 -port   => $oport,
@@ -649,6 +650,11 @@ my $total_failed_proj  = 0;
 my $total_new_feats    = 0;
 my $total_mapped_feats = 0;
 
+
+#warn "OLD FSET is ".$obj_cache{'OLD'}{'FSET'}->name.' from '. $obj_cache{'OLD'}{'FSET'}->adaptor->db->dbc->dbname;
+#warn "NEW FSET is ".$obj_cache{'NEW'}{'FSET'}->name.' from '. $obj_cache{'NEW'}{'FSET'}->adaptor->db->dbc->dbname;
+
+
 #Process each top level seq_region
 foreach my $slice (@slices){
 
@@ -739,8 +745,11 @@ foreach my $slice (@slices){
 	  #Can we change this to an array as it's only containing transitions array and the orignal stable_id
 	  #my $transitions = []; #this has to be ref due to implementation in while
 
-	  $helper->log_header("Starting new feature chain with old regulatory feature ".$reg_feat->stable_id());
+	  if(! defined $reg_feat->stable_id){
+		die("Found OLD RegulatoryFeature without a stable_id, dbID is ".$reg_feat->dbID);
+	  }
 
+	  $helper->log_header("Starting new feature chain with old regulatory feature ".$reg_feat->stable_id());
 
 	  my $source_dbID; #The source dbID this feature was fetched from, set to null for start feature.
 	  #($stable_id = $reg_feat->display_label()) =~ s/\:.*//;
