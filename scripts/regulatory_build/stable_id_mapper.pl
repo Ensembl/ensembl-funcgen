@@ -277,11 +277,10 @@ use strict;
 $| = 1;							#autoflush
 my ($dbname, $help, $man, @slice_names, @skip_slices, $clobber, $no_load, $odb, $recover);
 my ($odbname, $ndbname, $npass, $nuser, $ohost, $oport, $from_file, $stable_id, $assign_nulls);
-my ($dnadb_name, $dnadb_pass, $dnadb_user, $dnadb_host, $dnadb_port, $old_assm, $new_assm);
+my ($dnadb_name, $dnadb_pass, $dnadb_user, $dnadb_host, $dnadb_port, $old_assm, $new_assm, $species);
 my $reg = "Bio::EnsEMBL::Registry";
 
 my $ouser  = 'ensro';
-my $species = 'homo_sapiens';
 my $opass = '';
 my $nhost = 'ens-genomics1';
 my $old_fset_name = 'RegulatoryFeatures';
@@ -406,13 +405,13 @@ if(! ($odbname)){
 }
 else{
   $odb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-														 -host   => $ohost || $nhost,
-														 -user   => $ouser,
-														 -pass   => $opass,
-														 -port   => $oport,
-														 -dbname => $odbname,
-														 -species => $species,
-														);
+													  -host   => $ohost || $nhost,
+													  -user   => $ouser,
+													  -pass   => $opass,
+													  -port   => $oport,
+													  -dbname => $odbname,
+													  -species => $species,
+													 );
 
   $odb->dbc();#Test connection, eval this?
 }
@@ -503,11 +502,9 @@ die("Could not find NEW RegulatoryFeature FeatureSet:\t$new_fset_name") if ! $ob
 
 
 
-
-
 ###Need this to store new features?
-my $rf_adaptor = $ndb->get_RegulatoryFeatureAdaptor();
-
+my $nrf_adaptor = $ndb->get_RegulatoryFeatureAdaptor();
+my $orf_adaptor = $odb->get_RegulatoryFeatureAdaptor();
 ##Set start stable_id
 #This looks accross all reg feat sets to avoid using a previously retired stable ID
 #Or duplicating if we are running in recovery mode and some have already been assigned for the new set
@@ -644,7 +641,8 @@ $helper->log("Number of slice to map:\t".scalar(@slices));
 
 
 #Need to explicitly build seq_region cache as were using the 'private' seq_region methods out of context
-$rf_adaptor->build_seq_region_cache();
+$nrf_adaptor->build_seq_region_cache();
+$orf_adaptor->build_seq_region_cache();
 my $total_old_feats    = 0;
 my $total_failed_proj  = 0;
 my $total_new_feats    = 0;
@@ -685,24 +683,21 @@ foreach my $slice (@slices){
 
   #Check for mapped features and clobber
   $cmd = 'select count(regulatory_feature_id) from regulatory_feature where feature_set_id='.
-	$obj_cache{'OLD'}{'FSET'}->dbID().' and seq_region_id='.$rf_adaptor->get_seq_region_id_by_Slice($slice);
+	$obj_cache{'OLD'}{'FSET'}->dbID().' and seq_region_id='.$orf_adaptor->get_seq_region_id_by_Slice($slice);
 
   my $failed_proj_cnt = 0;
-  my ($old_feat_cnt)   = $ndb->dbc->db_handle->selectrow_array($cmd);
+  my ($old_feat_cnt)   = $odb->dbc->db_handle->selectrow_array($cmd);
   $total_old_feats   += $old_feat_cnt;
   
   $cmd = 'select count(regulatory_feature_id) from regulatory_feature where feature_set_id='.$obj_cache{'NEW'}{'FSET'}->dbID().
-	' and seq_region_id='.$rf_adaptor->get_seq_region_id_by_Slice($slice).' and stable_id is not NULL';
-  
-  my ($mapped_feature_cnt) = @{$ndb->dbc->db_handle->selectrow_arrayref($cmd)};
-  
+	' and seq_region_id='.$nrf_adaptor->get_seq_region_id_by_Slice($new_slices{$slice->name}).' and stable_id is not NULL';
  
+  my ($mapped_feature_cnt) = @{$ndb->dbc->db_handle->selectrow_arrayref($cmd)}; 
   $helper->log_header("Processing slice $seq_name with $mapped_feature_cnt mapped features from a total of $old_feat_cnt");
 
- 
+  
   if($mapped_feature_cnt != 0){
 	
-
 	if($mapped_feature_cnt == $old_feat_cnt){
 	  $helper->log("All RegulatoryFeatures have already been stable ID mapped for $seq_name") if($mapped_feature_cnt == $old_feat_cnt);
 
