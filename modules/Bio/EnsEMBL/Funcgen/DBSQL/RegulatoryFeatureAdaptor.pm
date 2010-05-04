@@ -54,7 +54,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
   Exceptions : Throws is FeatureSet is not available
   Caller     : general
-  Status     : at risk
+  Status     : at risk - change to _get_core_FeatureSet?
 
 =cut
 
@@ -98,6 +98,9 @@ sub fetch_by_stable_id {
 
   $fset ||= $self->_get_current_FeatureSet; 
 
+
+  #remove this ternary operatory when changes to fetch_all_by_stable_id_FeatureSets done?
+  #No, this should not die when no data is present!
   return (defined $fset) ? $self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)->[0] : undef;
 }
 
@@ -118,6 +121,8 @@ sub fetch_by_stable_id {
 sub fetch_all_by_stable_id_FeatureSets {
   my ($self, $stable_id, @fsets) = @_;
 
+  #Change this to arrayref of fsets
+
   #Standard implementation exposes logic name as a parameter
   #But it will always be RegulatoryFeature/Build
 
@@ -133,6 +138,8 @@ sub fetch_all_by_stable_id_FeatureSets {
   $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
   my $constraint = 'rf.stable_id=?';
 
+
+  #Change this to use _generate_feature_set_id_clause
 
   if(@fsets){#Get current
 	
@@ -516,7 +523,7 @@ sub _objs_from_sth {
 
   #handle last record
   if($reg_feat){
-	$reg_feat->regulatory_attributes(\@reg_attrs);# if(@reg_attrs);
+	$reg_feat->regulatory_attributes(\@reg_attrs);
 	push @features, $reg_feat;
   }
   
@@ -661,11 +668,15 @@ sub store{
 =cut
 
 sub fetch_all_by_Slice {
-  my ($self, $slice) = @_;
-	
-  my $fset = $self->_get_current_FeatureSet;
-
-  return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$self->_get_current_FeatureSet]) : undef;
+  my ($self, $slice, $fset) = @_;
+  #CellTypes id'd by fetching regulatory fsets, so take these as args instead of CellTypes
+  #Slight overlap with SetFeatureAdaptor::fetch_all_by_Slice_FeatureSets
+  #Let's maintain expected/standard method name here
+  
+  $fset ||= $self->_get_current_FeatureSet;
+  
+  #Ternary operator essential here,as we don't want to die if there is no data!
+  return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]) : undef;
 }
 
 
