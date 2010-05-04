@@ -68,3 +68,4 @@ GM12873	NULL	B-Lymphocyte	female
 GM12874	NULL	B-Lymphocyte	male
 GM12875	NULL	B-Lymphocyte	female
 WeriRb1	NULL	Retinoblastoma	male
+MultiCell	NULL	Multiple CellTypes used in core RegulatoryFeature set	NULL					
