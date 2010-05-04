@@ -1,7 +1,16 @@
-# $Id: Collector.pm,v 1.5 2010-04-06 11:31:40 nj1 Exp $
+# $Id: Collector.pm,v 1.6 2010-05-04 16:18:09 nj1 Exp $
+
+
+#Your Bio::Ensembl::Collection::Feature defs module should inherit from here
+#This could be a local defs file which you have created and require'd into your script
+
+#If your collections defs module refers to a Bio::EnsEMBL::Feature, 
+#then it's adaptor should inherit from the collections defs module
+
+
 
 package Bio::EnsEMBL::Funcgen::Collector;
-#Move this to Bio::EnsEMBL::Utils::Collector for 58?
+#Move this to Bio::EnsEMBL::Utils::Collector for 59?
 
 
 use strict;
@@ -11,12 +20,13 @@ use Bio::EnsEMBL::Utils::Argument  ('rearrange');
 use Bio::EnsEMBL::Utils::Exception ('throw');
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 
-use base('Bio::EnsEMBL::Collection');#ISA
+#use base('Bio::EnsEMBL::Collection');#ISA
 
 our ($pack_template, $packed_size, @window_sizes); #These get set in the FeatureAdaptor
 #Make these constants and remove setter functionality in methods?
 #Only really important for pack template and windows, maybe these if we are going to start
-#substr in mysql as we need be sure of the start/ends of what we will be fetching
+
+
 our $max_data_type_size = 16777216; #Default is 16MB for long blob
 #we need to deduct the size of the rest of the record here!
 #For a 2byte packet the smallest window size possible is:
@@ -24,29 +34,31 @@ our $max_data_type_size = 16777216; #Default is 16MB for long blob
 #so int(bin_size)+1
 #Obviously have to use the largest slice here, for human chr1:
 #249,250,621/(16777216/2) = 29.7???
-#
 #We may need to up this slightly to account for larger chrs?
 #Implications on memory usage? Is it 4 times for blob manipulation?
-#Does substr require this?
+#Does substr require this manipulation?
+#This max_allowed_packet_size does not seem to translate directly to the size of the
+#data being stored e.g. quite a bit more is needed.  ISG haven't got to the bottom of this yet.
+#But have simply upped the config to 67108864 to handle the largest human chr.
 
 our $max_view_width     = 500000;#Max width in Region In Detail;
 
 
-#Your Bio::Ensembl::Collection::Feature defs module should inherit from here
-#This could be a local defs file which you have created and require'd into your script
+#our %VALID_BINNING_METHODS
+#Remove this in favour of can->('calculate_.$method) and coderefs?
 
-#If your collections defs module refers to a Bio::EnsEMBL::Feature, 
-#then it's adaptor should inherit from the collections defs module
+
+
 
 #To do
-# Merge in Collection code
-# Test with BED input
-# Separate store method so we can simply get, then wrap store around this
-# Test get method with slice adjusts
-# separate set_config? 
-# optimise generate_bin_chunks to handle just one window size for display?
-# Handle packed_size pack_template as methods  constants
-# Provide override method in basefeature adaptor which will use package constant in feature adaptor
+# 1 DONE Merge in Collection code, (no need to do this, removed inheritance)
+# 2 Write simple BED input to flat file output.
+# 3 Separate store method so we can simply get, then wrap store around this
+# 4 Test get method with slice adjusts
+# 5 separate set_config? 
+# 6 optimise generate_bin_chunks to handle just one window size for display?
+# 7 Handle packed_size pack_template as methods  constants
+# 8 Provide override method in basefeature adaptor which will use package constant in feature adaptor
 # This is because these are really adaptor config, the collector only needs to know the
 # packed_size, and in the absence of an feature adaptor also provides the default methods for both.
 # If we substr in the API then we need to set sensible limits on blob size, otherwise we will have to unpack a lot of data
@@ -56,34 +68,9 @@ our $max_view_width     = 500000;#Max width in Region In Detail;
 # and stitch together any which cross boundaries. This depends on speed of substr at end of large blob TEST!
 # Load with current code first and test this before making either change!
 # Delete empty (non-0) collections? i.e. For seq_regions which do not have any source features.
+#
+# 9 Handle PAR/HAP regions using fetch_normalised_slice_projections This has to be done in the feature adaptor! Then restrict  to non_dup regions in calling script
 
-#OLD notes
-
-#Using standard object generation methods for ResultFeature
-#We never want the heavy object from the result_feature table method
-#In fact we never want the heavy object unless we create it from scratch to store it
-#Therefore we don't need to use create_feature at all unless we ever want to use
-#The collection to generate bins on the fly(rather than for storing)
-#We would only want this if we don't want to implement the object, just the array
-#Now we're back to considering the base collection array
-#'DBID', 'START', 'END', 'STRAND', 'SLICE'
-#we don't need dbID or slice for ResultFeature
-#But we do need a score
-#Stick with object implementation for now i.e. dont use create_feature methods
-
-
-
-#Issues
-#As we define the windows by the start of the features
-#we get some skew in the data to the right as we generally have 
-#overhanging 3' features and no overhanging 5' features
-#Also when dealing with window sets we are not resetting the start 
-#of the bins when we reach a gap, hence we will then get 5' skew
-#but only for gaps within a chunk, not at the start.
-#Solution, set start and end values for each bin dynamically
-#to the start or end of a feature if there are not boundary spanning features
-#This should remove skew completely, but also prevent ability to store as collections
-#with standardised start/ends
 
 
 =head2 new
@@ -194,6 +181,7 @@ sub bin_method{
 
 	if($method){
 	  $self->{'bin_method'} = $method;
+	  #should test can here? or validate versus hash?
 	}
 	elsif(! $self->{'bin_method'}){
 	  
@@ -203,7 +191,7 @@ sub bin_method{
 	  
 	  $self->{'bin_method'} = $Bio::EnsEMBL::Funcgen::Collector::bin_method;
 	}
-	warn("validate method with can here?");
+
 	#or current validate method if we are keeping the method in the if/else block
 	
 
@@ -928,8 +916,11 @@ sub store_window_bins_by_Slice{
 	  
 	  ### Grab features and shift chunk coords
 	  #features may already be a 0 wsize collection if we have projected from an old assembly
+	  #Could move this check to get_Features_by_Slice?
+	  
 	  #e.g. [ $features, \%config ]
 	  $features = $self->get_Features_by_Slice($slice);
+	  #next if scalar(@$features) == 0;#We want to store values for all windows
 
 	  if( (@$features) &&
 		  (ref($features->[0]) =~ /Bio::EnsEMBL::Funcgen::Collection/) ){#Change to isa 'Bio::EnsEMBL::Collection
@@ -963,12 +954,7 @@ sub store_window_bins_by_Slice{
 
 	  $start_adj = $chunk_length if($in_slice);
 	  	  
-	  #next if scalar(@$features) == 0;#We want to store values for all windows
-
-	  #foreach my $f(@$features){
-	  #	warn $f->window_size.':'.$f->start.' - '.$f->end;
-	  #	warn $f->scores->[0];
-	  #  }
+	
 	  
 	  #This should return a hash of window size => bin array pairs
 	  if(! $only_natural){
@@ -1080,7 +1066,7 @@ sub store_window_bins_by_Slice{
 								  #$sub_start,
 								  $sub_end,
 								  $orig_slice->strand,#This is most likely 1!
-								  #Override this woth 0 in descendant Colelctor if required.
+								  #Override this woth 0 in descendant Collector if required.
 								  $bins->{$wsize},
 								 );
 
@@ -1230,25 +1216,25 @@ sub store_window_bins_by_Slice{
 
 
 #To do
-# We need to genericse this so we don't assume the features are bio ensembl features
-# i.e. we don't use defined method, but probably an array defined in the descendant Collector
-# Will this slow things down to much?
-# We would have to use the accessors anyway, but now we are just passing them in a array ref
-# would have extra hash access and array access in this method
-# Can we cut this by removing the hash config and just having a standard order in the feature array?
-# start, end, score(score2, score3 for non SIMPLE bin models?)
-# Is there a way we can skip the object generation in the adaptor completely and just pass the values
-# we need.
-# Then we can remove the feature dependancy from here and associated method calls
-# which may speed things up quite a bit
-# Either do this to completely genericies this code, or move to BaseFeatureAdaptor
-# And descendant Collector code to appropriate feature adaptors?
-# Need to separate method, so we can define custom methods in descendants?
-# As a work around for non-Feature based collection, we could simply generate a 
-# barebones Bio::EnsEMBL::Feature on the fly
-# Bin clipping? To remove skew from end of bins? Is this worth it?
-# Complex binning methods e.g. SNP bins
-
+# 1 Remove Bio::EnsEMBL::Feature dependancy? Or just create Features for non adaptor Collectors.
+#   Is there a way we can skip the object generation in the adaptor completely and just 
+#   pass the values we need?
+# 2 Separate methods, so we can define custom methods in descendants?
+# 3 Expand %bins model to optionally be one of
+#   the following dependant on binning method
+#   Simple:  fixed width containing arrays of scores for each window
+#   Multi:   fixed width containing multiple arrays of scores for each window
+#   Non-simple?: Separate aggregated features, either fixed width or not, not BLOB!
+#   Clipped: default fixed width with option to clip start and end.  Needs start/end attrs
+#         Can't store this in a blob due to non-standard start ends?
+#         Most likely want more than one score here? Count/Density SNPs?
+#         Removes data skew from standard window bins, would need to store each bin and post
+#         process. Or do in line to avoid 2nd post-processing loop,requires awareness of when 
+#         we have moved to a new bin between features.  This holds for overlapping and 
+#         non-overlapping features. Once we have observed a gap we need to clip the end of the
+#         last bin and clip the start of the new bin. This requires knowing the greatest end 
+#         values from the last bin's feature. what if two overlapping features had the same 
+#         start and different end, would we see the longest last? Check default slice_fetch sort
 
 sub _bin_features_by_window_sizes{
   my $this = shift;
@@ -1256,8 +1242,8 @@ sub _bin_features_by_window_sizes{
     rearrange( [ 'SLICE', 'WINDOW_SIZES', 'BIN_METHOD', 'FEATURES' ], @_ );
 
   
-  #Need generate empty_bins flag?
-  #Or should we do this in the caller?
+  #Do this conditional on the Collection type
+  #i.e. is collection seq_region blob then no else yes
   #if ( !defined($features) || !@{$features} ) { return {} }
 
   #warn 'Processing '.scalar(@$features).' features for window sizes '.join(', ',@$window_sizes).' for slice '.$slice->name."\n";	 
@@ -1266,44 +1252,35 @@ sub _bin_features_by_window_sizes{
   my (%bins, %nbins, %bin_counts);
   my $slice_start = $slice->start();
 
-  #Expand %bins model to optionally be one of
-  #the following dependant on binning method
-  #Simple:  fixed width containing arrays of scores for each window
-  #Multi:   fixed width containing multiple arrays of scores for each window
-  #Clipped: default fixed width with option to clip start and end.  Needs start/end attrs
-  #         Can't store this in a blob due to non-standard start ends?
-  #         Most likely want more than one score here? Count/Density SNPs?
-  #
-  #Default handlers for 
-
-
+   #Default handlers for
   #my($first_bin);
   #if ( $method == 0 ||    # 'count' or 'density'
   #     $method == 3 ||    # 'fractional_count' or 'weight'
   #     $method == 4       # 'coverage'
   #  ){
   #  # For binning methods where each bin contain numerical values.
-#	$first_bin = 0;
-#  } 
-#  else {
-#	# For binning methods where each bin does not contain numerical
- #   # values.
-#
-#	#Remove this
-#	$first_bin = undef;
-#  }
+  #	$first_bin = 0;
+  #  } 
+  #  else {
+  #	# For binning methods where each bin does not contain numerical
+  #   # values.
+  #
+  #	#Remove this
+  #	$first_bin = undef;
+  #  }
+
 
   #Set up some bin data for the windows
-
   my $slice_length = $slice->length;
 
   foreach my $wsize (@$window_sizes) {
+	#TO DO: Need to modify this block if default 0's are undesirable for collection type
+	#i.e. should it be undef instead? May have prolbems representing undef in blob
 
-	$nbins{$wsize}         = int($slice_length / $wsize);
-	#no as int always rounds down
-	#So nbins is actually the index of the bin not the 'number'
+	$nbins{$wsize}         = int($slice_length / $wsize); #int rounds down
+	#nbins is actually the index of the bin not the 'number'
 	#Unless slice_Length is a multiple!
-	$nbins{$wsize}-- if(! ($slice_length % $wsize));#nested to force operators
+	$nbins{$wsize}-- if(! ($slice_length % $wsize));
 
 	#Create default bins with 0
 	@{$bins{$wsize}} = ();
@@ -1311,12 +1288,6 @@ sub _bin_features_by_window_sizes{
 	
 	#Set bin counts to 0 for each bin
 	@{$bin_counts{$wsize}}    = ();
-
-	#Huh this is doing the same thing?
-	#We don't want to do this as this implies we have seen a 0 value
-	#When we have not seen any value at all!
-	#Need to set to undef? Or not set at all?
-	#Can we pack an undef into an small int template?
 
 	#This is adding an undef to the start of the array!?
     map { $bin_counts{$wsize}->[($_)] = 0 } @{$bins{$wsize}};
@@ -1327,45 +1298,15 @@ sub _bin_features_by_window_sizes{
   }
 
   #warn "bin_counts are :\n".Data::Dumper::Dumper(\%bin_counts);
-    
-  #This failes for slices which are smaller than the chunk length;
-  #Just do a little sanity test here to make sure the bin_lengths == wsizes
-  #Then remove
-  #foreach my $wsize (keys %bin_lengths) {
-#	warn "wsize is $wsize with bin_length ".$bin_lengths{$wsize};
-
-#	throw('Oh no, these should be the same') if($wsize != $bin_lengths{$wsize});
-
-#  }
- 
+  #This fails for slices which are smaller than the chunk length; 
   my $feature_index = 0;
   my ($bin_index, @bin_masks);
-  #Also store local starts and ends as we currently calc this several times
-  
-
-  #The following will remove the standardised coord windows
-  #but should remove skew from bins. 
-  #clip the start and end if they do not have overlapping features.
-  #So we need to store features in each bin and post process.
-  #This would be easiest, but 2nd loop would slow it down.
-  #Not so bad for storage, but let's try and keep it quick
-  #So in line bin clipping requires awareness of when we have moved to a new bin
-  #between features.  This holds for overlapping and non-overlapping features.
-  #Once we have observed a gap we need to clip the end of the last bin and clip the start of the new bin.
-  #This requires knowing the greatest end values from the last bin's feature.
-  #what if two overlapping features had the same start and different end, would we see the longest last?
-  #Check default slice_fetch sort
-
-
-  #These need to be swapped as we are getting no bins returned
-  #When we have no features, but we just want empty bins?
-
-
+ 
   foreach my $feature ( @{$features} ) {
 	#Set up the bins for each window size
 
-	#Test for Feature here?
-
+	#Omit test for Bio::EnsEMBL::Feature here for speed
+	#Only needs start/end methods
 
 	foreach my $wsize (@$window_sizes) {
 	
@@ -1377,43 +1318,31 @@ sub _bin_features_by_window_sizes{
 	  #as this is already known by the caller
 	  #and we always build on top level so we don't need to remap
 
-	  #We do however need the slice to store?
-	  #Do we?
-	  #Yes, as we only store local starts when generating
+	  #We do however need the slice to store, as we only store local starts when generating
 	  #We need a store by Slice method?
 	  #This will remove the need to inherit from Feature.
 	  #These will need to be regenerated everytime we import a new build
 	  #As we do with the probe_features themselves
 	  #This also mean the result_feature status has to be associated with a coord_system_id
 	  
-
-
-
-
 	  #Which bins do the start and end lie in for this feature?
 	  #Already dealing with local starts, so no slice subtraction
+	  #Could wrap these start/end methods via the descendant Collector
+	  #to remove the Feature dependancy? Or just create Features when parsing in the caller
 	  my $start_bin =  int(($feature->start ) / $wsize);
 	  my $end_bin   =  int(($feature->end) / $wsize );
    	  $end_bin = $nbins{$wsize} if $end_bin > $nbins{$wsize};
 
 
 
-	  #Slightly obfuscated code here
-	  #Altho this should speed up generation
+	  #Slightly obfuscated code to match method number(faster)
 	  #by avoiding string comparisons.
-	
-	  #We should do default count processing for all methods as this is required for all no?
-	  #No, just weight, coverage and average_score
-	
-
-	  #Call method directly
-	  #Accessor slow things down?
-	  #But will be liner compared to if tests here
-
-	  
-
+	  #Could call methods directly using coderef set in validate_bin_method
+	  #Accessor may slow things down, but should be uniform for all methods
+	  #rather than being dependant on position in if/else block below
 
 	  #reserve 0 for descendant defined method?
+	  #There fore always fastest in this block, or use coderefs?
 	  if ( $method == 0 ) {
 		# ----------------------------------------------------------------
 		# For 'count' and 'density'.
@@ -1556,8 +1485,11 @@ sub _bin_features_by_window_sizes{
 =cut
 
 	  
-		elsif ( $method == 5 ) {
-		  #average score
+	  elsif ( $method == 5 ) {
+		#$self->$method($bin_index, $start_bin, $end_bin, $wsize, \%bins, \%bin_counts);
+
+
+		#average score
 		#This is simple an average of all the scores for features which overlap this bin
 		#No weighting with respect to the bin or the feature
 		
@@ -1609,6 +1541,7 @@ sub _bin_features_by_window_sizes{
 
 
   #Now do post processing of bins
+
 =pod
 
   if ( $method == 4 ) {
@@ -1618,7 +1551,7 @@ sub _bin_features_by_window_sizes{
     # and sum up the arrays.
 
     for ( my $bin_index = 0 ; $bin_index < $nbins ; ++$bin_index ) {
-      if ( defined( $bin_masks[$bin_index] ) ) {
+       if ( defined( $bin_masks[$bin_index] ) ) {
         if ( !ref( $bin_masks[$bin_index] ) ) {
           $bins[$bin_index] = 1;
         } else {
@@ -1694,6 +1627,13 @@ sub _bin_features_by_window_sizes{
 
 =pod
 
+#These could potentially be used as code refs to avoid having the if else block
+#This way we can also define new methods in the descendant Collector?
+#Would have to have pass args and refs to bin hashes
+#This would slow things down over direct access here
+#But speed is no longer that critical as we do not use the Collector for display
+#purposes, only to build the Collections which are then used for display directly.
+
 sub calculate_average_score{
   my $self = shift;
 
@@ -1716,7 +1656,11 @@ sub calculate_average_score{
 
 }
 	
-#=cut
+
+sub post_process_average_score{
+
+}
+
 
 sub calculate_max_magnitude{
   my $self = shift;
@@ -1740,8 +1684,10 @@ sub calculate_max_magnitude{
 	  $bins{$wsize}->[$bin_index]->[1] = $score;
 	}
   }
+}
 
-  
+
+sub post_process_max_magnitude{
 
 }
 
@@ -1755,6 +1701,23 @@ sub calculate_max_magnitude{
 sub validate_bin_method{
   my ($self, $method) = @_;
 
+
+  #change this to set the coderefs
+  #Just set anonymous sub to immediately return for non post processed methods
+  #No need for coderef, just set the method name?
+
+  #if(! $self->can('calculate_'.$method)){
+  #throw("$method method does not have a valid calculate_${method} method");
+  #}
+
+  #if($self->can('post_process_'.$method)){
+  ##set post process flag?
+  #or simply do this can in line in the _bin_features sub?
+  #}
+  
+
+
+
   #Add average_score to avoid changing Collection.pm
   my $class = ref($self);
   ${$class::VALID_BINNING_METHODS}{'average_score'} = 5;
@@ -1763,10 +1726,7 @@ sub validate_bin_method{
   
 
 
-  
-  #warn "Still can't access VALID_BINNING_METHODS";
-
-  #foreach my $method_name(keys %{$class::VALID_BINNING_METHODS}){
+    #foreach my $method_name(keys %{$class::VALID_BINNING_METHODS}){
 #	warn "valid method is $method name";
 #  }
 
@@ -1776,7 +1736,7 @@ sub validate_bin_method{
 		  sprintf(
 				  "Invalid binning method '%s', valid methods are:\n\t%s\n",
 				  $method,
-				  join( "\n\t", sort( keys(%{$self::VALID_BINNING_METHODS}) ) ) ) );
+				  join( "\n\t", sort( keys(%{$class::VALID_BINNING_METHODS}) ) ) ) );
   }
   else{
 	#warn "found valid method $method with index ".${$class::VALID_BINNING_METHODS}{$method};
