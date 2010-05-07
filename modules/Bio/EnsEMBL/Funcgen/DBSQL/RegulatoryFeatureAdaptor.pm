@@ -679,6 +679,81 @@ sub fetch_all_by_Slice {
   return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]) : undef;
 }
 
+=head2 fetch_all_by_stable_ID
+
+  Arg [1]    : string - stable ID e.g. ENSR00000000001
+  Example    : my @cell_type_regfs = @{$regf_adaptor->fetch_all_by_stable_ID('ENSR00000000001');
+  Description: Retrieves a list of RegulatoryFeatures with associated stable ID. One for each CellType or 
+               'core' RegulatoryFeature set which contains the specified stable ID.
+  Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_stable_ID {
+  my ($self, $stable_id) = @_;
+  throw('You must provide a stable_id argument') if ! $stable_id;
+  $stable_id =~ s/[A-Z0]+//;
+
+  $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
+  return $self->generic_fetch('rf.stable_id=?');
+}
+
+=head2 fetch_type_config_by_RegulatoryFeatures
+
+  Arg [1]    : 
+  Example    : my $config = $regf_adaptor->fetch_type_config_by_RegualtoryFeature($rf);
+  Description: Retrieves a config hash of CellType and FeatureType names and dbIDs supporting 
+               the given RegualtoryFeature
+  Returntype : HASHREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub fetch_type_config_by_RegulatoryFeature{
+  my ($self, $rf) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::RegulatoryFeature', $rf);
+
+
+  my $sql = 'SELECT ft.name, ft.feature_type_id from '.
+	'feature_type ft, feature_set fs, regulatory_attribute ra, annotated_feature af '.
+	  'WHERE ft.feature_type_id=fs.feature_type_id AND fs.feature_set_id=af.feature_set_id AND '.
+		'af.annotated_feature_id=ra.attribute_feature_id and ra.attribute_feature_table="annotated" AND '.
+		  'ra.regulatory_feature_id=? group by ft.name order by ft.name';
+
+  my $sth =  $self->prepare($sql);
+  $sth->bind_param(1, $rf->dbID, SQL_INTEGER);
+  $sth->execute;
+  my @ftype_config = @{$sth->fetchall_arrayref};
+  $sth->finish;
+
+
+  #Don't need cell type query here if we have a cell type sepcific set
+  #What is quicker here?
+
+  $sql = 'SELECT ct.name, ct.cell_type_id from '.
+	'cell_type ct, feature_set fs, regulatory_attribute ra, annotated_feature af '.
+	  'WHERE ct.cell_type_id=fs.cell_type_id AND fs.feature_set_id=af.feature_set_id AND '.
+		'af.annotated_feature_id=ra.attribute_feature_id and ra.attribute_feature_table="annotated" AND '.
+		  'ra.regulatory_feature_id=? group by ct.name order by ct.name';
+
+  $sth =  $self->prepare($sql);
+  $sth->bind_param(1, $rf->dbID, SQL_INTEGER);
+  $sth->execute;
+  my @ctype_config = @{$sth->fetchall_arrayref};
+  $sth->finish;
+
+  return {
+		  feature_types => \@ftype_config,
+		  cell_types    => \@ctype_config,
+		 };
+}
 
 
 1;
