@@ -307,10 +307,12 @@ sub is_focus_set{
 	}
 
 	#list_value_by_key caches, so we don't need to implement this in the adaptor
-	my ($focus_ids) = @{$self->adaptor->db->get_MetaContainer->list_value_by_key( 'regbuild.'.$self->cell_type->name.'.focus_feature_set_ids' )};
+	my $meta_key =  'regbuild.'.$self->cell_type->name.'.focus_feature_set_ids';
+
+	my ($focus_ids) = @{$self->adaptor->db->get_MetaContainer->list_value_by_key($meta_key)};
 
 	if(! $focus_ids){
-	  throw('Cannot detect focus set as meta table does not contain regbuild.focus_feature_set_ids');
+	  throw("Cannot detect focus set as meta table does not contain $meta_key");
 	}
 
 
