@@ -33,11 +33,11 @@ ALTER table annotated_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_reg
 ALTER table array_chip ADD FOREIGN KEY (array_id) REFERENCES array(array_id);
 
 ALTER table associated_feature_type ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
--- Can we add complex foreign keys here?
+-- Not, does not reflect denormalised table_name/id key
 
 ALTER table channel ADD FOREIGN KEY (experimental_chip_id) REFERENCES experimental_chip(experimental_chip_id);
 
-ALTER table chip_channel ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
+ALTER table result_set_input ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
 
 ALTER table data_set ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
 
@@ -53,11 +53,11 @@ ALTER table experimental_chip ADD FOREIGN KEY (cell_type_id) REFERENCES cell_typ
 
 -- Dropping experimental_design
 
-ALTER table experimental_set ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
-ALTER table experimental_set ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER table experimental_set ADD FOREIGN KEY (cell_type_id) REFERENCES cell_type(cell_type_id);
+ALTER table input_set ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
+ALTER table input_set ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
+ALTER table input_set ADD FOREIGN KEY (cell_type_id) REFERENCES cell_type(cell_type_id);
 
-ALTER table experimental_subset ADD FOREIGN KEY (experimental_set_id) REFERENCES experimental_set(experimental_set_id);
+ALTER table input_subset ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
 
 -- Dropping experimental_variable
 
