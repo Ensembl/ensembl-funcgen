@@ -303,23 +303,11 @@ sub is_focus_set{
 
 	if(! defined $self->cell_type){
 	  warn "FeatureSet without an associated CellType cannot be a focus set:\t".$self->name;
-	  return;
+	  $self->{focus_set} = 0;
 	}
-
-	#list_value_by_key caches, so we don't need to implement this in the adaptor
-	my $meta_key =  'regbuild.'.$self->cell_type->name.'.focus_feature_set_ids';
-
-	my ($focus_ids) = @{$self->adaptor->db->get_MetaContainer->list_value_by_key($meta_key)};
-
-	if(! $focus_ids){
-	  throw("Cannot detect focus set as meta table does not contain $meta_key");
-	}
-
-
-	my @focus_ids = split ',', $focus_ids;
-	my $dbID = $self->dbID;
-
-	$self->{focus_set} = grep /^${dbID}$/, @focus_ids;
+	else{
+	   $self->{focus_set} = $self->adaptor->fetch_focus_set_config_by_FeatureSet($self);
+	 }
   }
 
   return $self->{focus_set};
