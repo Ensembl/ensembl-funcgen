@@ -448,6 +448,49 @@ sub list_dbIDs {
 }
 
 
+=head2 fetch_focus_set_config_by_dbID
+
+  Args       : Bio::EnsEMBL::Funcgen::FeatureSet
+  Example    : $self->{'focus_set'} = $self->adaptor->fetch_focus_set_config_by_FeatureSet($self);
+  Description: Caches and returns focus set config for a given FeatureSet
+  Returntype : Boolean
+  Exceptions : Throws if meta entry not present
+  Caller     : Bio::EnsEMBL::Funcgen::FeatureSet::is_focus_set
+  Status     : At Risk
+
+=cut
+
+sub fetch_focus_set_config_by_FeatureSet{
+    my ($self, $fset) = @_;
+
+	#omit for speed as only called by FEatureSet
+	#$self->db->is_stored_and_valid($fset, 'Bio::EnsEMBL::Funcgen::FeatureSet');
+
+	if(! defined $self->{focus_set_config}){
+	  $self->{focus_set_config}= {};
+
+	  #list_value_by_key caches, so we don't need to implement this in the adaptor
+	  my $meta_key =  'regbuild.'.$fset->cell_type->name.'.focus_feature_set_ids';
+
+	  my ($focus_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
+
+	  if(! $focus_ids){
+		throw("Cannot detect focus set as meta table does not contain $meta_key");
+	  }
+
+	  foreach my $fid(split ',', $focus_ids){
+		$self->{focus_set_config}->{$fid} = 1;
+	  }
+	}
+
+	#Could just do straight return here without exists as would init undef value
+	#But may cause uninit warnings?
+    return (exists ${$self->{focus_set_config}}{$fset->dbID}) ? 1 : 0;
+}
+
+
+
+
 
 1;
 
