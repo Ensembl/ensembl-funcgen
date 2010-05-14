@@ -147,7 +147,7 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 # 14 CHange axis labels to real numbers
 # 15 Move comparison legend outside of plot as it obscures view of data
 # 16 DONE Implement report name
-# 17 These are rather large, can we compress the data some how by using different plots styles?
+# 17 DONE These are rather large, can we compress the data some how by using different plots styles? -no_outliers
 # 18 FeatureSet names/colour do not appear on last graph axis/plot
 
 use strict;
@@ -211,7 +211,6 @@ pod2usage(1) if ($help);
 # and fail nicely
 
 
-
 #Check database connections
 my $coredba;
 if($dnadbname){
@@ -227,17 +226,21 @@ if($dnadbname){
     );
 }
 
-my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-  (
-   -host    => $host,
-   -port    => $port,
-   -user    => $user,
-   -pass    => $pass,
-   -dbname  => $dbname,
-   -species => $species,
-   -group   => 'funcgen',
-   -dnadb   => $coredba, #Assumes that new will accept undef as parameter for this...
-  );
+my $efgdba;
+if($dbname){
+  $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+    (
+     -host    => $host,
+     -port    => $port,
+     -user    => $user,
+     -pass    => $pass,
+     -dbname  => $dbname,
+     -species => $species,
+     -group   => 'funcgen',
+     -dnadb   => $coredba, #Assumes that new will accept undef as parameter for this...
+    );
+}
+if(!$efgdba){ print "Couldn't connect to EFG database\n"; pod2usage(1); }
 
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 
