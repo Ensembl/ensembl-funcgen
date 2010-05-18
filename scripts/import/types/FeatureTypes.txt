@@ -87,3 +87,15 @@ Gata2	Transcription Factor	Gata2 Transcription Factor Binding
 SETDB1	Transcription Factor	SETDB1 Transcription Factor Binding
 Yy1	Transcription Factor	Yy1 Transcription Factor Binding
 Suz12	Transcription Factor	Suz12 Transcription Factor Binding
+Nanog	Transcription Factor	Nanog Transcription Factor Binding
+Oct4	Transcription Factor	Oct4 Transcription Factor Binding
+Sox2	Transcription Factor	Sox2 Transcription Factor Binding
+Smad1	Transcription Factor	Smad1 Transcription Factor Binding
+Tcfcp2I1	Transcription Factor	Tcfcp2I1 Transcription Factor Binding
+Zfx	Transcription Factor	Zfx Transcription Factor Binding
+STAT3	Transcription Factor	STAT3 Transcription Factor Binding
+Klf4	Transcription Factor	Klf4 Transcription Factor Binding
+Esrrb	Transcription Factor	Esrrb Transcription Factor Binding
+nMyc	Transcription Factor	nMyc Transcription Factor Binding
+GFP	DNA	GFP Control
+p300	Transcription Factor	p300 Transcription Factor Binding
