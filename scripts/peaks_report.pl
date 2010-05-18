@@ -86,6 +86,10 @@ Requires the presence of a table rf_stats in the database
 List of space separated FeatureSet names to be considered. Names with spaces must be quoted.
 When not specified all features are considered
 
+=item B<-feature_table>
+
+Type of the feature: annotated or regulatory (default is annotated)
+
 =item B<-no_outliers>
 
 When specified, the outliers are not drawn in the plots (by default, outliers are drawn)
@@ -160,7 +164,7 @@ use Data::Dumper;
 
 my ($species, $help, $R, $nodump, $compare, $regstats, $all_seq_regions, $no_outliers);
 
-
+my $feature_table='annotated';
 my $name = 'peaks_report';
 my $host = $ENV{DB_HOST};
 my $port = $ENV{DB_PORT};
@@ -201,6 +205,7 @@ GetOptions (
 			"regstats"           => \$regstats,
 			"all_seq_regions"    => \$all_seq_regions,
 			"feature_sets=s{,}"  => \@fset_names,
+	                "feature_table=s",   => \$feature_table,
 			"name=s"             => \$name,
 		   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
@@ -273,7 +278,7 @@ if(!$nodump){
 	#This was not accounting for nr sr_ids
 	foreach my $sr_type(@sr_types){
 
-	  my $query ="SELECT s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM annotated_feature f, (select distinct(seq_region_id), sr.name from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and cs.name".$sr_type_clauses{$sr_type}.") s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name='$fset';";
+	  my $query ="SELECT s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM ${feature_table}_feature f, (select distinct(seq_region_id), sr.name from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and cs.name".$sr_type_clauses{$sr_type}.") s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name='$fset';";
 
 	  #warn $query;
 
@@ -337,9 +342,9 @@ if (defined $R) {
 	#For brevity only compare true chromosomes
 	map { push @safe, $safenames{$_}.'_chromosome' } @fset_names;
 	
-	print FO "barplot(c(length(".join("\$length),length(",@safe)."\$length)),main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"number of peaks\",col=rainbow(".scalar(@safe)."))\n";
+	print FO "barplot(c(length(".join("\$length),length(",@safe)."\$length)),main=\"Comparison of ${feature_table} Features\",xlab=\"Feature set\",ylab=\"number of peaks\",col=rainbow(".scalar(@safe)."))\n";
 	print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
-	print FO "boxplot(".join("\$length,",@safe)."\$length,main=\"Comparison of Annotated Features\",xlab=\"Feature set\",ylab=\"Peak length\",col=rainbow(".scalar(@safe).")";
+	print FO "boxplot(".join("\$length,",@safe)."\$length,main=\"Comparison of ${feature_table} Features\",xlab=\"Feature set\",ylab=\"Peak length\",col=rainbow(".scalar(@safe).")";
 	if($no_outliers){ print FO ",outline=FALSE"; }
 	print FO ")\n";
 	print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
