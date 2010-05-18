@@ -6,12 +6,14 @@ CD4	NULL	Human CD4 T-Cells	NULL
 IMR90	NULL	Human Fetal Lung Fibroblast	female
 HL-60	NULL	Human Promyelotic Leukemia Cell	female
 HepG2	NULL	Human Hepatocellular Liver Carcinoma Cell	male
+HepG2b	NULL	Human Hepatocellular Liver Carcinoma Cell (alternative)	male
 Lymphoblastoid	NULL	Lymphoblastoid Cells	NULL
 CD133	NULL	Human CD133+ Hematopoietic Stem Cell	NULL
 CD36	NULL	Human CD36+ Erythrocyte Precursor Cell	NULL
-K562	NULL	Human Mylogenous Leukaemia Line	female
 MCF7	NULL	Breast Cancert	female
 HUVEC	NULL	Human Umbilical Vein Endothelial Cell	NULL
+K562	NULL	Human Mylogenous Leukaemia Line	female
+K562b	NULL	Human Mylogenous Leukaemia Line (alternative)	female
 NHEK	NULL	Normal Human Epidermal Keratinocytes	female
 H1ESC	NULL	Human Embryonic Stem Cells	NULL
 GM12878	NULL	Lymphoblastoid	female
