@@ -47,6 +47,7 @@ outdir=
 format=sam
 merge_only=0
 #Change this to $EFG_DATA
+
 scratch_dir=/lustre/scratch103/ensembl/funcgen
 
 usage="Usage:\t\trun_bwa.sh <options> [ file1 file2 ]
@@ -280,8 +281,8 @@ if [[ $new_input = 1 ]]; then
 	done
 	
         #Could maybe add a validation step here to wc -l the batches versus the input
-        echo -e "Total reads in fastq files" >> $alignment_log
-        echo -e $(expr $(cat ${unzipped_files[*]} | wc -l) / 4)  >> $alignment_log
+        #echo -e "Total reads in fastq files" >> $alignment_log
+        #echo -e $(expr $(cat ${unzipped_files[*]} | wc -l) / 4)  >> $alignment_log
 	
 	echo "Gzipping all source fastq files"
 	Execute gzip ${unzipped_files[*]}
@@ -328,6 +329,7 @@ done
 ### Submit jobs
 run_txt="\nRunning bwa with following options:\n\tIndex name\t= $index_name\n\tAlignment type\t= $align_type\n\tOutput dir\t= $outdir\n\tOutput format\t= $format\n"
 echo -e $run_txt
+echo -e $run_txt >> $alignment_log
 
 ### Run bwa and remove intermediate files...
 #Use submitJob to avoid truncation of bsub cmd
@@ -390,6 +392,9 @@ bsub_cmd=" -o ${outdir}/${merge_job_name}.%J.out -e ${outdir}/${merge_job_name}.
 if [[ $merge_only != 1 ]]; then
 	bsub_cmd="$bsub_cmd -w 'done(${align_job_name}[1-${#split_files[*]}])' "
 fi
+
+# Consider removing duplicates...
+#merge_cmd="$merge_cmd samtools rmdup -s - | " 
 
 merge_cmd="$merge_cmd samtools view -h - | gzip -c > ${file_prefix}${align_type}.sam.gz"
 
