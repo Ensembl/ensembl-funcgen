@@ -162,10 +162,10 @@ sub update_db_for_release{
   $self->update_meta_schema_version;
   $self->check_meta_strings;
   $self->check_meta_species;
-  $self->analyse_and_optimise_tables;
   $self->set_current_coord_system;
   $self->update_meta_coord;
   $self->clean_xrefs;
+  $self->analyse_and_optimise_tables;#ALWAYS LAST!!
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
   $self->log_header("??? Have you diff'd the sql for each species vs. a fresh schema ???");
@@ -640,7 +640,8 @@ sub check_meta_strings{
 
 
 #Change this to log sets and incorporate RegFeat FeatureSet as standard
-
+#Grab all reg fsets
+#grab all displayable data sets which aren't reg sets?
 
 sub log_data_sets{
   my $self = shift;
@@ -686,12 +687,6 @@ sub log_data_sets{
 	}
 	$self->log();
   }
-
-  #$self->log_header('Checking Regulatory FeatureSets');
-
-  
-  
-  
 
   return;
 }
@@ -781,17 +776,131 @@ sub set_current_coord_system{
   return;
 }
 
-sub validate_RegulatoryFeature_Sets{
-
+sub validate_DataSets{
+  my $self = shift;
   
-  #checks feature data and supporting sets
-  #links between DatSet and FeatureSet, i.e. correct naming, not linking to old set
-  #Displayable
-  
+  $self->log_header('Validating DataSets');
+
+
+  #checks regualtory feature data and supporting sets
+  #links between DataSet and FeatureSet, i.e. correct naming, not linking to old set
+  #Displayable, DAS_DISPLAYABLE, IMPORTED_ASSM, MART_DISPLAYABLE
+  #Naming of result_set should match data/feature_set
+  #warn non-attr feature/result sets which are DISPLAYABL
+  #warn about DISPLAYABLE sets which do not have displayable set in analysis_description.web_data
+
+
+  my $fset_a = $self->db->get_FeatureSetAdaptor;
+  my $dset_a = $self->db->get_DataSetAdaptor;
+  my $cs_a   = $self->db->dnadb->get_CoordSystemAdaptor;
+
+  my $imp_cs_status = 'IMPORTED_'.$cs_a->fetch_by_name('chromosome')->version;
+  #What about non-chromosome assemblies?
+  #top level will not return version...why not?
 
 
 
+  my @dset_states = ('DISPLAYABLE');
+  my @rset_states = (@dset_states, 'DAS_DISPLAYABLE', $imp_cs_status);
+  my @fset_states = (@rset_states, 'MART_DISPLAYABLE');
+
+
+  my %rf_fsets;
+  my %set_states;
+
+ RF_FSET: foreach my $rf_fset(@{$fset_a->fetch_all_by_type('regulatory')}){
+	my $rf_fset_name = $rf_fset->name;
+
+	$self->log("Validating $rf_fset_name");
+
+
+	$rf_fsets{$rf_fset_name} = $rf_fset;#Do we only need the name for checking the dsets independantly?
+
+	if($rf_fset_name =~ /_v[0-9]+$/){
+	  $self->report("FAIL:\tFound archived regulatory FeatureSet:\t$rf_fset_name");
+	  next RF_FSET;
+	}
+	
+	foreach my $state(@fset_states){
+	  
+	  if(! $rf_fset->has_status($state)){
+		#Can we just update and warn here?
+		#Or do this separately in case we want some control over this?
+		$self->report("FAIL:\tFeatureSet $rf_fset_name does not have status $state");
+	  }
+	}
+
+	#Do we need to warn about other states?
+		
+
+
+	my $rf_dset = $dset_a->fetch_by_product_FeatureSet($rf_fset);
+
+	if($rf_fset_name ne $rf_dset->name){
+	  $self->report("FAIL:\tFound Feature/DataSet name mismatch:\t$rf_fset_name vs ".$rf_dset->name);
+	  next RF_FSET;
+	}
+
+	
+	foreach my $state(@dset_states){
+	  
+	  if(! $rf_dset->has_status($state)){
+		#Can we just update and warn here?
+		#Or do this separately in case we want some control over this?
+		$self->report("FAIL:\tDataSet $rf_fset_name does not have status $state");
+	  }
+	}
+
+
+
+	#We should check fset ctype matches all attr_set ctypes?
+	#May have problems if we want to merge two lines into the same ctype build
+
+
+
+	foreach my $ra_fset(@{$rf_dset->get_supporting_sets}){
+	
+	  foreach my $state(@fset_states){
+	  
+		if(! $ra_fset->has_status($state)){
+		  #Can we just update and warn here?
+		  #Or do this separately in case we want some control over this?
+		  $self->report("FAIL:\tFeatureSet ".$ra_fset->name." does not have status $state");
+		}
+	  }
+
+
+
+	  my $ra_dset = $dset_a->fetch_by_product_FeatureSet($ra_fset);
+
+
+	  my @sset = @{$ra_dset->get_displayable_supporting_sets('result')};
+	  
+	  if(scalar(@sset) > 1){#There should only be one
+		$self->report("FAIL:\tThere should only be one DISPLAYABLE supporting ResultSet for DataSet:\t".$ra_dset->name);
+	  }
+	  elsif(scalar(@sset) == 0){
+		$self->report("FAIL:\tThere are no DISPLAYABLE supporting ResultSet for DataSet:\t".$ra_dset->name);
+	  }
+
+	  my $ra_rset = $sset[0];
+	
+	  foreach my $state(@rset_states){
+	  
+		if(! $ra_rset->has_status($state)){
+		  #Can we just update and warn here?
+		  #Or do this separately in case we want some control over this?
+		  $self->report("FAIL:\tResultSet ".$ra_rset->name." does not have status $state");
+		}
+	  }
+	}
+  }
 }
+
+
+
+
+
 
 sub analyse_and_optimise_tables{
   my $self = shift;
@@ -817,6 +926,9 @@ sub analyse_and_optimise_tables{
   foreach my $table(@tables){
 	$self->log("Analysing and optimising $table");
 
+
+
+	#Remove analyse as optimise does everything this does
 	my @anal_info = @{$self->db->dbc->db_handle->selectall_arrayref($analyse_sql.$table)};
 
 	foreach my $line_ref(@anal_info){
