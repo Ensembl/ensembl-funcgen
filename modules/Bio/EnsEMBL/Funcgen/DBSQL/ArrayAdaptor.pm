@@ -86,11 +86,12 @@ sub fetch_by_array_chip_dbID {
 =head2 fetch_by_name_vendor
 
   Arg [1]    : string - name of an array
-  Arg [2]    : string - name of vendor e.g. NIMBLEGEN
+  Arg [2]    : string - optional name of vendor e.g. NIMBLEGEN
   Example    : my $array = $oaa->fetch_by_name('Array-1');
   Description: Retrieves a named Array object from the database.
   Returntype : Bio::EnsEMBL::Funcgen::Array
-  Exceptions : None
+  Exceptions : Throws is name argument not defined
+               Throws if vendor argument not defined and more than one arrays is found        
   Caller     : General
   Status     : At Risk
 
@@ -99,12 +100,24 @@ sub fetch_by_array_chip_dbID {
 sub fetch_by_name_vendor {
     my ($self, $name, $vendor) = @_;
     
-    throw("Must provide and array and vendor name") if (! ($name && $vendor));
+    throw("Must provide and name") if (! $name);
+	my @arrays;
 
-    #unique key means this only returns one element
-    #my ($result) = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};	
-    return $self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")->[0];
+	if(! $vendor){
+	  @arrays = @{$self->generic_fetch("a.name = '$name'")};
+
+	  if(scalar(@arrays) > 1){
+		throw("There is more than one array with this name please specify a vendor argument as one of:\t".join(' ', (map $_->vendor, @arrays)));
+	  }
+	}
+	else{
+	  #unique key means this only returns one element
+	  @arrays = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};	
+	}
+
+    return $arrays[0];
 }
+
 
 =head2 fetch_by_name_class
 
