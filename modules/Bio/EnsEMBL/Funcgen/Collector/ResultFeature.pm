@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.5 2010-03-18 10:21:28 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.6 2010-05-19 11:43:10 nj1 Exp $
 
 package Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
@@ -211,7 +211,7 @@ sub rollback_Features_by_Slice{
 
   #Point to Helper here
   #This is already done in the InputSet importer for
-  #seq imports
+  #bed/sam seq imports
   #but not for array based imports
   #Need to take account of wsizes
 
@@ -489,11 +489,14 @@ sub set_collection_defs_by_ResultSet{
 	#This is called by fetch_all_by_Slice_ResultSet
 	#So we have to use $rset->table_name instead of source_set_type
 	
+	$self->{'window_sizes'}  = [0, 150, 300, 450, 600, 750, 900, 1150];
+
+	
 	if($rset->table_name eq 'experimental_chip'){#i.e. is normal ResultSet with float result
 	  $self->{'packed_size'}   = 4;
 	  $self->{'pack_template'} = 'f';
 	  $self->{'bin_method'}    = 'max_magnitude';#only used by collector
-	  $self->{'window_sizes'}  = [0, 150, 300, 450, 600, 750, 900, 1150];
+	  #$self->{'window_sizes'}  = [0, 150, 300, 450, 600, 750, 900, 1150];
 	}
 	elsif($rset->table_name eq 'input_set'){
 	  #Currently only expecting int from InputSet
@@ -516,7 +519,8 @@ sub set_collection_defs_by_ResultSet{
 	  $self->{'packed_size'}   = 2;
 	  $self->{'pack_template'} = 'v';
 	  $self->{'bin_method'}    = 'count';
-	  $self->{'window_sizes'}  = [50, 150, 300, 450, 600, 750, 900, 1150];
+	  #redefine 0 as 50 as we can't store natural res for HD seq data due to BLOB size
+	  $self->{'window_sizes'}->[0] = 50;
 	}
 	else{
 	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
