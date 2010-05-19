@@ -1801,13 +1801,14 @@ sub cache_slice{
   #can we handle UN/random chromosomes here?
   
   
-  if (! exists $self->{'seen_slice_cache'}->{$region_name}) {
+  if (! exists ${$self->{'seen_slice_cache'}}{$region_name}) {
 	my $slice = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
 
-	if(! $slice){
-	  #Incomplete slices may break things?
-	  $slice = $self->slice_adaptor->fetch_by_name($region_name);
-	}
+	#if(! $slice){
+	#  #Try slice name? Malformed names may break this here
+	#  #Absent contigs will be tried here and fail
+	#  $slice = $self->slice_adaptor->fetch_by_name($region_name);
+	#}
 
 	$self->{seen_slice_cache}{$region_name} = $slice;
 	
@@ -1826,6 +1827,7 @@ sub cache_slice{
 	$self->{'slice_cache'}->{$region_name} = $slice;
   }
 	
+
   return $self->{'slice_cache'}->{$region_name};
 }
 
