@@ -9,16 +9,16 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
+#To do
+# 1 Integrate into Exporter
+# 2 Genericise this to dump_features, use various format parsers for output
+# 3 enable different set dumps, i.e. incorporate get_data.pl
+
 $| =1;
 
 my ($file, $ofile, $pass, $line, $fset_name);
 my ($exp_name, $help, $pids, $man, @features, $chr, $not_status);
-
-my $dbhost = $ENV{'EFG_HOST'};
-my $port = $ENV{'EFG_PORT'};
-my $user = $ENV{'EFG_READ_USER'};
-my $dbname = $ENV{'EFG_DBNAME'};
-my $cdbname = $ENV{'CORE_DBNAME'};
+my ($dbhost, $port, $user, $dbname, $cdbname, $cdb, $species);
 my $no_zip = 0;
 
 my $anal_name = 'Nessie';
@@ -27,7 +27,9 @@ my $out_dir = ".";
 GetOptions (
 			"feature_set=s"    => \$fset_name,
 			"pass=s"           => \$pass,
+			'user=s'           => \$user,
 			"port=s"           => \$port,
+			'species=s'        => \$species,
             "dbname=s"         => \$dbname,
 			"dbhost=s"         => \$dbhost,
             "cdbname=s"        => \$cdbname,
@@ -43,8 +45,8 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 ### Set up adaptors and FeatureSet 
 
-if(! $cdbname  || ! $dbname ){
-  throw("You must provide a funcgen(-dbname) and a core(-cdbname) dbname");
+if(! $dbname ){
+  throw("You must provide a funcgen -dbname paramter");
 }
 throw("Must define your funcgen dbhost -dbhost") if ! $dbhost;
 #throw("Must supply an input file with -file") if ! $file;
@@ -54,20 +56,20 @@ throw("Must pass a feature_set name via -feature_set, i.e. 'RegulatoryFeatures'"
 
 #this need genericising for ensembldb/ens-livemirror
 
-my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-											  -host => "ens-staging",
-											  -dbname => $cdbname,
-											  #-species => "homo_sapiens",
-											  -user => $user,
-											  -pass => "",
-											  -group => 'core',
-											  -port => 3306,
-											 );
+#$cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+#											  -host => "ens-staging",
+#											  -dbname => $cdbname,
+#											  #-species => "homo_sapiens",
+#											  -user => $user,
+#											  -pass => "",
+#											  -group => 'core',
+#											  -port => 3306,
+#											 );
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -host => $dbhost,
 													  -dbname => $dbname,
-													  #-species => "homo_sapiens",
+													  -species => $species,
 													  -user => $user,
 													  -pass => $pass,
 													  -dnadb => $cdb,
@@ -76,8 +78,8 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 
 
 #Check DB connections
-$cdb->dbc->db_handle;
 $db->dbc->db_handle;
+$db->dnadb->dbc->db_handle;
 
 #Check out_dir
 #Use Helper!
@@ -89,17 +91,26 @@ system('mkdir -p '.$out_dir) if(! -d $out_dir);
 my $slice_a = $db->get_SliceAdaptor();
 my $fset_a = $db->get_FeatureSetAdaptor();
 my $fset = $fset_a->fetch_by_name($fset_name);
-my ($outline, @output);
-my $fset_ftype = ucfirst($fset->type).'Feature';
 
-foreach my $slice(@{$slice_a->fetch_all('toplevel')}){
+if(! defined $fset){
+  die("Could not fetch FeatureSet with name:\t$fset_name");
+}
+
+my ($outline, @output);
+my $fset_ftype = ucfirst($fset->feature_class).'Feature';
+
+foreach my $slice(@{$slice_a->fetch_all('toplevel', undef, 1)}){
   my $cnt = 0;
 
   print "Dumping slice ".$slice->name."\n";
 
-  my $chr_name = 'Chr'.$slice->seq_region_name();
+  my $seq_name = $slice->seq_region_name();
 
-  my $ofile = $out_dir."/".$fset_name.'.'.$chr_name.'.gff';
+  if($slice->coord_system->name eq 'chromosome'){
+	$seq_name = 'Chr'.$seq_name;
+  }
+
+  my $ofile = $out_dir."/".$fset_name.'.'.$seq_name.'.gff';
   
   open (OUT, ">$ofile") || die ("Can't open $ofile for writing");
 
@@ -111,13 +122,14 @@ foreach my $slice(@{$slice_a->fetch_all('toplevel')}){
 	#Let's push this onto an array here and only print OUT every 5000 lines to save I/O?
 	#We are no handling strand here
 
-	$outline = join("\t", ($chr_name, $dbname, $fset_ftype, $feature->start(), $feature->end(), '.', '.', '.', 'Name='.$feature->feature_type->name.';'));
+	$outline = join("\t", ($seq_name, $dbname, $fset_ftype, $feature->start(), $feature->end(), '.', '.', '.', 'Name='.$feature->feature_type->name.';'));
 
 	#associated_feature_types?
 	#http://www.sequenceontology.org/gff3.shtml
 
 	if($fset_ftype eq 'RegulatoryFeature'){
-	  $outline .= join('; ', (' ID='.$feature->stable_id(), 'Note=Consists of following features: '.join(',', map {join(':', $_->feature_type->name, $_->cell_type->name)}@{$feature->regulatory_attributes()})));
+	  $outline .= join('; ', (' ID='.$feature->stable_id(), 'bound_start='.$feature->bound_start, 'bound_end='.$feature->bound_end, 'Note=Consists of following features: '.join(',', map {join(':', $_->feature_type->name, $_->cell_type->name)}@{$feature->regulatory_attributes()})));
+	  #Need to add bound_start/end here
 
 	}
 	#elsif($fset_ftype eq 'AnnotatedFeature'){
