@@ -618,10 +618,18 @@ sub read_and_import_data{
 	  #Currently no problems
 	  #This is not working as we are sorting the file!
 	  #$self->parse_header($fh) if $self->can('parse_header');
+	  
+	  #For result features some times we want to run 
+	  #locally and just sort without dumping
+	  #i.e if we are not a batch job
+	  #as there is no need to dump if it is a single process
+	  
 
-	
-	  if(($self->input_feature_class eq 'result') &&
-		! $prepare){
+	  #Should this be prepared?
+
+	  if((($self->input_feature_class eq 'result') && ! $prepare)){
+		#(($self->input_feature_class eq 'result') && (! $self->batch_job))){   #Local run on just 1 chr
+		#
 
 		#Use the ResultFeature Collector here
 		#Omiting the 0 wsize
@@ -662,6 +670,8 @@ sub read_and_import_data{
 		#also we want to parallelise this
 		
 		#Set as attr for parse_Features_by_Slice in format sepcific Parsers
+
+	
 		$self->file_handle(open_file($filepath, $self->input_file_operator));
 
 		foreach my $slice(@$slices){
@@ -696,6 +706,7 @@ sub read_and_import_data{
 		#which do not have IMPORTED state!
 		my ($line, @outlines, $out_fh);
 
+		
 		if($prepare && ! $self->batch_job){
 		  #Assume we want gzipped output
 		  #filename is actull based on input, so may not have gz in file name
@@ -783,6 +794,8 @@ sub read_and_import_data{
 	  }
 	
 	  
+	  #This currently fails here if the uncaught file sort was not successful
+
 	  foreach my $key (keys %{$self->counts}){
 		$self->log("Count $key:\t".$self->counts($key));
 	  }	  
@@ -912,13 +925,8 @@ sub set_strand{
 sub file_handle{
   my ($self, $fh) = @_;
 
-  #validate here?
-
   $self->{'file_handle'} = $fh if defined $fh;
-
   return $self->{'file_handle'};
-
-
 }
 
 sub result_set{
