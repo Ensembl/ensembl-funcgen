@@ -67,6 +67,20 @@ Update/Load any external data sets which require gene/transcript xrefs? They are
 
 
 
+External Features:
+
+	Drosophila
+
+	REDfly CRMs/TFBSs	http://redfly.ccr.buffalo.edu
+						Contact: Steve Gallo <smgallo@ccr.buffalo.edu>
+								 Casey Bergman <casey.bergman@manchester.ac.uk>
+								 Marc S. Halfon <mshalfon@buffalo.edu>
+
+
+	BioTiffin			Contact: Thomas Down <thomas.down@gurdon.cam.ac.uk>		 							 
+								 
+
+
 Array mapping:
 	  Import new arrays
 	  Genomic alignments for species which will not have a new assembly
@@ -188,10 +202,13 @@ There are several static content pages which may need updating if the eFG data o
 
 	public-plugins/ensembl/htdocs/info/docs/funcgen/index.html
 	Update if any part of the Regulatory Build has been redone.
+	Now to be done semi automatically using the efg 'production' database.
 
 	public-plugins/ensembl/htdocs/info/docs/microarray_probe_set_mapping.html
 	Update if array mapping strategy has changed.
 
+	RegFeat quick links from species pages need to be checked to see if they still exist.
+	This could be done by a script using a curated file, but manual okay for now with just 2 species.
 
 :: Last minute declarations/news items/announcements?
 
