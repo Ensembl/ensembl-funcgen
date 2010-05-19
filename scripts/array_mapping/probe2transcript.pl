@@ -267,7 +267,7 @@ my ($transcript_host, $transcript_user, $transcript_pass, $transcript_dbname,
 #$annotated_utrs);
 
 my ($probe_db, $xref_db, $transcript_db, %promiscuous_objects, %transcripts_per_object, @unmapped_objects, $um_obj,
-	%transcript_ids , %transcript_feature_info, %arrays_per_object, %probeset_sizes, @transcripts, %arrays,
+	%transcript_ids , %transcript_feature_info, %arrays_per_object, %probeset_sizes, @transcripts, %arrays, %xref_objs_per_array,
    %array_xrefs, %transcript_xrefs, $test_transcript_sid, $clean_up, $parallelise, $filename, $sql, @array_names);
 
 
@@ -1572,7 +1572,7 @@ foreach my $key (keys %transcript_feature_info) {
 	
 	#This is just the number of hits and number of mismatch hits for the whole probeset.
 	map {$num_mismatch_hits += 1 if $_->[1] == $_->[0]}  values %{$transcript_feature_info{$key}};
-
+	
   }
   else{
 	$hits = scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
@@ -1756,7 +1756,8 @@ if ((! $no_triage) && @unmapped_objects) {
 #Can we do this with some SQL to save memory here?
 
 foreach my $aname(keys %array_xrefs){
-  $Helper->log($aname." total xrefs mapped:\t".$array_xrefs{$aname});
+  $Helper->log($aname." distinct $xref_object xrefs mapped(total xrefs):\t". 
+			   scalar(keys %{$array_xrefs{$aname}{probesets}}).'/'.$xref_objs_per_array{$aname}.'('.$array_xrefs{$aname}{total}.')');
 }
 
 $Helper->log('Mapped '. scalar(keys(%transcript_xrefs))."/$total transcripts ", 0, 'append_date');
@@ -1960,9 +1961,10 @@ sub cache_arrays_per_object {
 	  }
 	
 	  push @arrays, $array;
-	  $first_record = 0;
+	  $first_record       = 0;
 	  $last_probeset_size = $probeset_size;
 	  $last_object_id     = $object_id;
+	  $xref_objs_per_array{$array}++;
 	} 
 	else {
 	  #Populate last entry
@@ -1970,9 +1972,11 @@ sub cache_arrays_per_object {
 	  @{$arrays_per_object{$last_object_id}{names}}  = @names;
 	  $probeset_sizes{ $last_object_id }             = $last_probeset_size;
 	  
+
 	  #Start new entry
 	  $last_probeset_size = $probeset_size;
 	  $last_object_id     = $object_id;
+	  $xref_objs_per_array{$array}++;
 	  @arrays = ($array);
 	  @names  = ($object_name);
     }
@@ -2020,24 +2024,22 @@ sub add_xref {
   
   #Here the key is not the ensembl_id!
   #The key is probe/setdbID:name|MULTI_NAME
+  #This defines the value as undef if the key doesn't exist
 
-  #This defines the value as undef is the key doesn't exist
-  #Were counting all xrefs here not just Probe/ProbeSet xrefs
-  #But also ProbeFeature xrefs which is why we're getting probe feature ids in 
-  #what was initially a probe/probeset cache
-
-  #We don't need to count the ProbeFeature xrefs
-  #We are capturing this info in UnmappedObjects
 
   if($object_type ne 'ProbeFeature'){
 	
 	foreach my $array(@{$arrays_per_object{$ensembl_id}{arrays}}){
-	  $array_xrefs{$array}++;
+	  #Total xrefs
+	  $array_xrefs{$array}{total}++;
+	  
+	  #Num probesets xrefs
+	  #This will increase memory requirements
+	  $array_xrefs{$array}{probesets}{$ensembl_id} = undef;
 	}
   }
 
-  #$transcript_xrefs{$transcript_sid}{$object_type}++;
-  #Only count ProbeSet xrefs
+  #Only count Probe/Set xrefs
   $transcript_xrefs{$transcript_sid}++ if $object_type eq $xref_object;
 
   my $dbe = new Bio::EnsEMBL::DBEntry
