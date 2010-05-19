@@ -322,7 +322,6 @@ sub _objs_from_sth {
 	$start_pad = 0;
 	$end_pad   = 0;
 
-	warn "in fetch loop";
 	#This test only works as $_window_size is always set in fetch methods?
 	#undef if not specified (non-result_feature sets) or 0 for non-collected ResultFeatures
 
@@ -344,13 +343,10 @@ sub _objs_from_sth {
 		#Is for loop faster here?
 		#map $_=sprintf('%.3f', $_), @scores;
 
-		#warn "sprintingf '%.3f' scores, this should be done in the caller, so we don't have to loop twice";
-
 		#Yes, when modifying in place
 		foreach my $score(@scores){
 		  $score = sprintf('%.3f', $score);
 		}
-
 	  }
 	 
 	  #We need to modify the start ends here based on the query_slice!
