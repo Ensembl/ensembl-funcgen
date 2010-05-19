@@ -28,6 +28,7 @@ foreach my $dset(@data_sets){
     $cell_info = ' in '.$ctype->name.' '.$ctype->description;
   }
 
-  print $dset->name.' contains '.$dset->feature_type->name.' features'.$cell_info.' from supporting set type '.ucfirst($dset->supporting_set_type)."Set\n";
+  print $dset->name.' contains '.$dset->feature_type->name.' features'.$cell_info."\n";
+  #' from supporting set type '.ucfirst($dset->supporting_set_type)."Set\n";
 
 } 
