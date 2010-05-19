@@ -306,7 +306,6 @@ sub build_seq_region_cache{
   #Check we have not already got the right cache
   my $cache_key = join(':', @args);
 
-
   #Do we already have a valid cache?
   return if($self->cache_key eq $cache_key);
 	
@@ -388,8 +387,9 @@ sub get_seq_region_id_by_Slice{
 	$core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
   } 
   else {
-	$core_sr_id = $self->db()->get_SliceAdaptor()->get_seq_region_id($slice);
+	$core_sr_id = $self->db->dnadb->get_SliceAdaptor()->get_seq_region_id($slice);
   }
+
 
   #This does not work!! When updating for a new schema_build we get the first
   #seq_region stored, than for each subsequent one, it arbitrarily assigns a value from the hash even tho the 
@@ -398,7 +398,6 @@ sub get_seq_region_id_by_Slice{
   #Can't replicate this using a normal hash
 
   #This cache has been built based on the schema_build
-  
   if (exists $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id}){
 	$fg_sr_id = $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id};
   }
