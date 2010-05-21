@@ -523,6 +523,9 @@ sub get_displayable_ResultFeatures_by_Slice{
   Arg[1]     : Bio::EnsEMBL::Slice
   Arg[2]     : string - Status name e.g. 'DISPLAYABLE'
   Arg[3]     : Boolean - with probe flag, will nest Probe object in ResultFeature 
+  Arg[4]     : int - Max bins i.e. pixel width of display
+  Arg[5]     : int - window_size
+  Arg[6]     : string - constraint
   Example    : my @rfs_with_rpobe = @{$ResultSet->get_all_ResultFeatures_by_Slice($slice, undef, 1)};
   Description: Simple wrapper method for ResultFeatureAdaptor::fetch_all_by_Slice_ResultSet
   Returntype : Arrayref of ResultFeatures
