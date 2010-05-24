@@ -67,12 +67,27 @@ Extra blank lines in pfm files cause the error :-
 
 rm -f bsub* ; bsub -q long -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 /nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa examples/data/matrix/JASPAR_CORE_2008/*.pfm
 
+/nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g short_seqs.fa -a GRCh37 -o /lustre/scratch103/ensembl/dkeefe/jaspar_pwm_genome_map.out -t transfac examples/data/matrix/transfac32/matrix.dat 
+
+bsub -q normal -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 /nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o JASPAR_CORE_2_GRCh37_all.tab /nfs/users/nfs_d/dkeefe/src/moods/MOODS/examples/data/matrix/JASPAR_CORE_2008/*.pfm
+
+bsub -q normal -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 /nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o transfac32_v_GRCh37_all.tab  -t transfac /nfs/users/nfs_d/dkeefe/src/moods/MOODS/examples/data/matrix/transfac32/matrix.dat
+
 =head1 SEE ALSO
 
+mysql -u ensadmin -p -hens-genomics2 -P3306 -BN -e"select name from feature_type where class = 'Transcription Factor'" dev_homo_sapiens_funcgen_58_37c
+
+# to get peak coords
+
+select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '58_37c' and fs.cell_type_id = ct.cell_type_id and ft.name = 'Srf' ;
 
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2010-05-18 12:00:02  dkeefe
+ PWM to genome mapper for routine use by Funcgen. First draft works on
+ only JASPAR pfm files so far
+
 
 =head1 TO DO
 
@@ -152,16 +167,25 @@ elsif($pwm_type eq 'transfac'){
     # format and create a matrix_list.txt file. Put new PWM files etc. in 
     # working directory
     # Transfac matrixes all come in a single file 
+    if(@ARGV > 1){
+	die "Transfac matrices should all be in a single file, not ".
+             join("\n",@ARGV)."\n";
+    }
+
+    my @pwm_files = &parse_matrixdat_2_pfm($ARGV[0],$work_dir);
+
+    foreach my $file (@pwm_files){
+	&rev_comp_matrix($file,$work_dir);
+    }
 
 
-
-
-    die "Can only handle Jaspar format at present\n";
+   
 
 }
 else{
-    die "Can only handle Jaspar format at present\n";
+    die "Can only handle Jaspar and Transfac formats at present\n";
 }
+
 
 
 # we need to explode the genome.fasta file into individual sequences.
@@ -178,7 +202,7 @@ foreach my $chr_file (@chr_files){
     my $tab=my $out=$chr_file;
     $tab =~ s/fa/tab/;
     $out =~ s/fa/out/;
-    my $command = "$moods_mapper $thresh $chr_file $work_dir"."*.pfm > $out";
+    my $command = "$moods_mapper -f  $thresh $chr_file $work_dir"."*.pfm > $out";
     #print $command."\n";
     &backtick("$command");
     &parse_out_2_tab($out,$tab,$work_dir."matrix_list.txt");
@@ -201,6 +225,75 @@ exit;
 
  
 ###################################################################
+sub parse_matrixdat_2_pfm{
+    my($tf_file,$work_dir)=@_;
+
+    my $ifh;
+    open($ifh,"$tf_file") or die "failed to open file $tf_file";
+
+    my $list_file = $work_dir.'matrix_list.txt';
+    my $ofh;
+    open($ofh,"> $list_file") or die "failed to open file $list_file";
+
+    my $ac;
+    my $name;
+    my @files;
+    while(my $line = <$ifh>){
+	chop $line;
+
+	if($line =~ /^AC/){($ac) = $line =~ /AC  (M[0-9]+)/; }
+        if($line =~ /^NA/){($name) = $line =~ /NA  (.+)/; }
+	if($line =~ /^P0/){
+	my $pfm =    &process_matrix($ifh,$ofh,$ac,$name,$work_dir);
+	push @files, $pfm;
+	}
+
+    }
+
+	close($ifh);
+	close($ofh);
+    return @files;
+}
+
+sub process_matrix{
+    my($ifh,$ofh,$ac,$name,$work_dir)=@_;
+
+    $ac =~ s/M0/MA/;
+
+    # print to list_file
+    print $ofh $ac."\t0.0\t ".$name."\n";
+
+    open(OUT,">".$work_dir.$ac.'.pfm') 
+        or die "failed to open ".$work_dir.$ac.'.pfm';
+
+    my @mat;
+    while(my $line = <$ifh>){
+	chop $line;
+	if($line =~ /^XX/){
+	    my $cols = scalar(@mat);
+	    for(my $i=0;$i<4;$i++){
+		for(my $j=0;$j<$cols;$j++){
+		    print OUT $mat[$j][$i];
+		    unless($j == $cols-1){print OUT ' '}
+		}
+		print OUT "\n";
+	    }
+
+	    close(OUT);
+	    return($work_dir.$ac.'.pfm');
+	}else{
+	    my @field = split(/\s+/,$line);
+	    my @arr = @field[1..4];
+	    push @mat, \@arr;
+	}
+
+    }
+
+}
+
+
+
+
 sub parse_out_2_tab{
     my($out,$tab,$matrix_file)=@_;
 
@@ -246,7 +339,8 @@ sub parse_out_2_tab{
         else{
 	    my($start,$score)= split("\t",$line);
 	    print OUT join("\t",$chr,($start+1),($start+$addn),$tf_name,
-                                $score,$strand)."\n";
+                                $score,$strand)."\n" or 
+                                die "failed to print to $tab" ;
 	}
     }
     close(IN);
@@ -516,7 +610,6 @@ sub help_text{
                    -g  <file_name> genome fasta file
                    -o  <output file> - name of a file for output
                   [-i] <input file> - name of a file for input
-                  [-n] <gene_name> ensembl stable gene id eg ENSG00000079974
                   [-v] <integer> verbosity level
                   [-s] <species> eg -smus_musculus, default = homo_sapiens  
                   [-w] <dir_name> path of a (spacious) working directory  
