@@ -153,6 +153,7 @@ ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
 # 16 DONE Implement report name
 # 17 DONE These are rather large, can we compress the data some how by using different plots styles? -no_outliers
 # 18 FeatureSet names/colour do not appear on last graph axis/plot
+# 19 Add support for comparison of sets between DBs. Dump from both DBs | cat | sort. Append dbname to fset names in plots?
 
 use strict;
 use warnings;
