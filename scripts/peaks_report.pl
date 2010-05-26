@@ -212,9 +212,8 @@ GetOptions (
 pod2usage(1) if ($help);
 
 
-# TO DO Need to validate vars here
-# and fail nicely
-
+# Sould be failing a little nicer now... 
+# but if there are environment variables available, it may fail... not so nicely
 
 #Check database connections
 my $coredba;
@@ -254,7 +253,7 @@ if(scalar(@fset_names)==0){
    #this returns the result of a generic query, which is a list inside a list... so the actual list is in [0]
    #TODO -> CHANGE THE API code?
    #TODO pass type as parameter??
-   my @fsets = $fsa->fetch_all_by_type('annotated');
+   my @fsets = $fsa->fetch_all_by_type($feature_table);
    foreach my $fset (@{$fsets[0]}){ push(@fset_names, $fset->name);  } 
 }
 
@@ -267,94 +266,104 @@ push @sr_types, 'non_chromosome' if $all_seq_regions;
 
 
 my %sr_type_clauses = (
-					'chromosome' => , "='chromosome'",
-				   'non_chromosome' => , "!='chromosome'",
-				   );
+		       'chromosome' => , "='chromosome'",
+		       'non_chromosome' => , "!='chromosome'",
+		      );
 
 if(!$nodump){
   print "::Dumping Datasets\n";
-  foreach my $fset (@fset_names){
-
-	#This was not accounting for nr sr_ids
-	foreach my $sr_type(@sr_types){
-
-	  my $query ="SELECT s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM ${feature_table}_feature f, (select distinct(seq_region_id), sr.name from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and cs.name".$sr_type_clauses{$sr_type}.") s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name='$fset';";
-
-	  #warn $query;
-
-	  my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "-p$pass" : "")." $dbname > ${fset}_data.${sr_type}.txt";
-	  #print $cmd."\n";
-	  system($cmd);
-	}
+  
+  #This was not accounting for nr sr_ids
+  foreach my $sr_type(@sr_types){
+    
+    #Save to only one file... though it may be big...
+    my $query ="SELECT fs.name as 'name' , s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM ${feature_table}_feature f, (select distinct(seq_region_id), sr.name from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and cs.name".$sr_type_clauses{$sr_type}.") s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name IN (' ".join("','",@fset_names)."');";
+    
+    my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "-p$pass" : "")." $dbname >${name}.data.${sr_type}.txt";
+    #print $cmd."\n";
+    system($cmd);
   }
-
+  
   if($regstats){
     my $query = "SELECT * from rf_stats";
     system("mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "-p$pass" : "")." $dbname > regstats.txt");
   }
 
-
 }
 
-#Todo add names without spaces and strange characters...
 #print R file with analysis
 #Check which parameters one might want...
 if (defined $R) {
+  
   print "::Generating the R plots\n";
   open(FO,">${name}.R");
   print FO "require(graphics)\n";
   print FO "pdf(file=\"${name}.pdf\")\n";
-  print FO "par(cex=0.7,cex.main=1.5)\n";
-
+  print FO "par(cex=0.7,cex.main=1)\n";
+  
   if($regstats){ 
      print FO "require(gplots);\n";
      print FO "regstats <- read.table(\"regstats.txt\",row.names=1,header=TRUE);\n"; 
      print FO "textplot(regstats,halign=\"left\")\n";
   }
-
-  my %safenames;
-  foreach my $fset (@fset_names){
-    my $safename = $fset;
-    $safename =~ s/\W/_/g;
-    $safenames{$fset}=$safename;
-  }
   
-  foreach my $fset (@fset_names){
-    #This will not work in R if the name has characters like ':'
-    my $safename = $safenames{$fset};
+  foreach my $sr_type(@sr_types){
+    
+    #Load the data
+    print FO "data_${sr_type} <- read.table(\"${name}.data.${sr_type}.txt\",header=TRUE)\n";
+    
+    #Give a little space for the legend... outside the graph... (test how much space... and the size of text in lengend)
+    print FO "par(xpd=T, mar=par()\$mar+c(0,0,0,5))\n";
+      
+    #Print individual graphs
+    print FO "for (subset in split(data_${sr_type},data_${sr_type}\$name)){\n";
+    print FO "    subdata <- lapply(split(subset, subset\$region),function(x) x\$length)\n";
+    print FO "    barplot(sapply(subdata, function(x) length(x)), main=subset\$name[1], xlab=\"region\",ylab=\"Number of Peaks\", col=rainbow(length(subdata)))\n";
+    print FO "    legend('topright', inset=c(-0.1,0), legend=levels(subset\$region),fill=rainbow(length(subdata)), cex=0.8)\n";
+    print FO "    boxplot(subdata,main=subset\$name[1],xlab='region',ylab='Peak length', col=rainbow(length(subdata))";
+    if($no_outliers){ print FO ",outline=FALSE"; }
+    print FO ")\n"; 
+    print FO "    legend('topright',inset=c(-0.1,0),legend=levels(subset\$region), fill=rainbow(length(subdata)), cex=0.8)\n";    
+    print FO "}\n";
 
-	foreach my $sr_type(@sr_types){
-	  my $data_name = "${safename}_${sr_type}";
-		
-	  print FO "$data_name <- read.table(\"${fset}_data.${sr_type}.txt\",header=TRUE)\n";
-	  #the if is to avoid errors printing empty sets...
-	  print FO "if (length(".$data_name."\$length) > 0) barplot(unlist(lapply(split(".$data_name.",".$data_name."\$region),function(x) length(x\$length))),main=\"".$fset."\",xlab=\"region\",ylab=\"number of peaks\")\n";
-	  print FO "if (length(".$data_name."\$length) > 0) boxplot(lapply(split(".$data_name.",".$data_name."\$region),function(x) x\$length),main=\"".$fset."\",xlab=\"region\",ylab=\"Peak length\"";
-	  if($no_outliers){ print FO ",outline=FALSE"; }
-	  print FO ")\n";
-	}
   }
 
   if($compare){ 
-	#Maybe do some more analysis here?
-	my @safe; 
-	
-	#For brevity only compare true chromosomes
-	map { push @safe, $safenames{$_}.'_chromosome' } @fset_names;
-	
-	print FO "barplot(c(length(".join("\$length),length(",@safe)."\$length)),main=\"Comparison of ${feature_table} Features\",xlab=\"Feature set\",ylab=\"number of peaks\",col=rainbow(".scalar(@safe)."))\n";
-	print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
-	print FO "boxplot(".join("\$length,",@safe)."\$length,main=\"Comparison of ${feature_table} Features\",xlab=\"Feature set\",ylab=\"Peak length\",col=rainbow(".scalar(@safe).")";
-	if($no_outliers){ print FO ",outline=FALSE"; }
-	print FO ")\n";
-	print FO "legend(\"topright\",legend=c(\"".join("\",\"",@fset_names)."\"),fill=rainbow(".scalar(@fset_names)."))\n";
-	
+    
+    #For brevity only compare true chromosomes
+    print FO "par(xpd=T, mar=par()\$mar+c(0,0,0,10))\n";
+
+    #Global overview comparison
+    print FO "data_region <-lapply(split(data_chromosome, data_chromosome\$name), function(x) x\$length)\n";
+    print FO "barplot(sapply(data_region, function(x) length(x)),main='Number of Peaks per Set', xlab='Set',ylab='Number of Peaks', col=rainbow(length(data_region)), xaxt='n')\n";
+    print FO "legend('topright', inset=c(-1,0),legend=levels(data_chromosome\$name),fill=rainbow(length(data_region)), cex=0.8)\n";  
+    #print FO "axis(1, labels=FALSE, at=1:length(data_region), tick=TRUE)\n";
+    print FO "boxplot(data_region,main='Peak Length per Dataset',xlab=\"Set\",ylab=\"Peaks Length\", col=rainbow(length(data_region)), xaxt='n'";
+    if($no_outliers){ print FO ",outline=FALSE"; }
+    print FO ")\n";
+    print FO "legend('topright',inset=c(-1,0),legend=levels(data_chromosome\$name),fill=rainbow(length(data_region)), cex=0.8)\n";    
+    print FO "axis(1, labels=FALSE, at=1:length(data_region), tick=TRUE)\n";
+
+    #Print Comparative graphs by Region
+    print FO "for (subset in split(data_chromosome,data_chromosome\$region)){\n";
+    print FO "    subdata <- lapply(split(subset, subset\$name),function(x) x\$length)\n";
+    print FO "    barplot(unlist(lapply(subdata, function(x) length(x))), main=subset\$region[1], xlab=\"region\",ylab=\"Number of Peaks\", col=rainbow(length(subdata)), xaxt='n')\n";
+    print FO "    legend('topright',inset=c(-1,0),legend=levels(subset\$name),fill=rainbow(length(subdata)), cex=0.8)\n";
+    #print FO "    axis(1, labels=FALSE, at=1:length(subdata), tick=TRUE)\n";
+
+    print FO "    boxplot(subdata,main=subset\$region[1],xlab='Set',ylab='Peak length', col=rainbow(length(subdata)), xaxt='n'";
+    if($no_outliers){ print FO ",outline=FALSE"; }
+    print FO ")\n"; 
+    print FO "    legend('topright',inset=c(-1,0),legend=levels(subset\$name),fill=rainbow(length(subdata)), cex=0.8)\n";    
+    print FO "    axis(1, labels=FALSE, at=1:length(subdata), tick=TRUE)\n";
+    print FO "}\n";
+    
   }
-
-
+    
+   
   close FO;
-  #This submits to yesterday by default
-  system "R CMD BATCH --slave ${name}.R";
+  #This submits to the yesterday queue by default
+  #system "R CMD BATCH --slave ${name}.R";
 }
 
 __END__
