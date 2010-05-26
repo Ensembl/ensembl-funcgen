@@ -363,7 +363,7 @@ if (defined $R) {
    
   close FO;
   #This submits to the yesterday queue by default
-  #system "R CMD BATCH --slave ${name}.R";
+  system "R CMD BATCH --slave ${name}.R";
 }
 
 __END__
