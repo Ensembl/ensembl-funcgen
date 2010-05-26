@@ -463,15 +463,14 @@ sub list_dbIDs {
 sub fetch_focus_set_config_by_FeatureSet{
     my ($self, $fset) = @_;
 
-	#omit for speed as only called by FEatureSet
+	#omit for speed as only called by FeatureSet
 	#$self->db->is_stored_and_valid($fset, 'Bio::EnsEMBL::Funcgen::FeatureSet');
+	$self->{focus_set_config} ||= {};
 
-	if(! defined $self->{focus_set_config}){
-	  $self->{focus_set_config}= {};
-
-	  #list_value_by_key caches, so we don't need to implement this in the adaptor
+	if(! defined $self->{focus_set_config}->{$fset->dbID}){
 	  my $meta_key =  'regbuild.'.$fset->cell_type->name.'.focus_feature_set_ids';
 
+	  #list_value_by_key caches, so we don't need to implement this in the adaptor
 	  my ($focus_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
 
 	  if(! $focus_ids){
@@ -483,10 +482,9 @@ sub fetch_focus_set_config_by_FeatureSet{
 	  }
 	}
 
-	#Could just do straight return here without exists as would init undef value
-	#But may cause uninit warnings?
+	
     return (exists ${$self->{focus_set_config}}{$fset->dbID}) ? 1 : 0;
-}
+  }
 
 
 
