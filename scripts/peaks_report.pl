@@ -172,7 +172,7 @@ my %feature_tables = (
 					 );
 
 my $feature_table='annotated';
-my $name = 'peaks_report';
+my $name = 'peaks_report_'.$$;#Add PID to avoid overwriting previous reports
 my $host = $ENV{DB_HOST};
 my $port = $ENV{DB_PORT};
 my $user = $ENV{DB_READ_USER};
