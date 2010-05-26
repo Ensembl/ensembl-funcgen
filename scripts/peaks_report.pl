@@ -164,6 +164,13 @@ use Data::Dumper;
 
 my ($species, $help, $R, $nodump, $compare, $regstats, $all_seq_regions, $no_outliers);
 
+
+my %feature_tables = (
+					  annotated  => 1,#values?
+					  regulatory => 1,
+					  #external   => 1,
+					 );
+
 my $feature_table='annotated';
 my $name = 'peaks_report';
 my $host = $ENV{DB_HOST};
@@ -215,6 +222,11 @@ pod2usage(1) if ($help);
 # Sould be failing a little nicer now... 
 # but if there are environment variables available, it may fail... not so nicely
 
+
+if(! $feature_tables{$feature_table}){
+  die("You have specified an invalid -feature_table. Must be one of:\t".join("\t", (keys %feature_tables)));
+}
+
 #Check database connections
 my $coredba;
 if($dnadbname){
@@ -245,8 +257,9 @@ if($dbname){
     );
 }
 
-#Test connection
+#Test connections
 $efgdba->dbc->db_handle;
+$efgdba->dnadb->db_handle;
 
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 
