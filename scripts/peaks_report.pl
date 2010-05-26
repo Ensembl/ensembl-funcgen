@@ -244,7 +244,9 @@ if($dbname){
      -dnadb   => $coredba, #Assumes that new will accept undef as parameter for this...
     );
 }
-if(!$efgdba){ print "Couldn't connect to EFG database\n"; pod2usage(1); }
+
+#Test connection
+$efgdba->dbc->db_handle;
 
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 
