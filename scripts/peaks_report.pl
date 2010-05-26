@@ -259,7 +259,7 @@ if($dbname){
 
 #Test connections
 $efgdba->dbc->db_handle;
-$efgdba->dnadb->db_handle;
+$efgdba->dnadb->dbc->db_handle;
 
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 
