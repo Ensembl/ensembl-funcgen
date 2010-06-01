@@ -159,6 +159,7 @@ sub _columns {
 			af.seq_region_start      af.seq_region_end
 			af.seq_region_strand     af.feature_set_id
 			af.display_label         af.score
+			af.summit
 	   );
 }
 
@@ -205,14 +206,16 @@ sub _objs_from_sth {
 	    $annotated_feature_id,  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $fset_id,
-		$display_label,         $score
+		$display_label,         $score, 
+		$summit
 	);
 
 	$sth->bind_columns(
 					   \$annotated_feature_id,  \$efg_seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
 					   \$seq_region_strand,     \$fset_id,
-					   \$display_label,         \$score
+					   \$display_label,         \$score,
+					   \$summit
 					  );
 
 
@@ -257,9 +260,8 @@ sub _objs_from_sth {
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 	  
 	  #get core seq_region_id
-	  #There is the potential to fail here
-	  #If we have set the dnadb to be the current db
-	  #and then retrieve features from an old feature set.
+	  #This fails if we are using a 'comparable' CoordSystem as we don't have a cache
+	  #for the new DB. Wasn't this fixed with the tmp seq_region_cache?
 	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 		
 	  if(! $seq_region_id){
@@ -340,6 +342,7 @@ sub _objs_from_sth {
 										   'adaptor'        => $self,
 										   'dbID'           => $annotated_feature_id,
 										   'score'          => $score,
+										   'summit'         => $summit,
 										   'display_label'  => $display_label,
 										   'feature_set'    => $fset_hash{$fset_id},
 										  } );
@@ -393,8 +396,8 @@ sub store{
 		INSERT INTO annotated_feature (
 			seq_region_id,   seq_region_start,
 			seq_region_end,  seq_region_strand,
-            feature_set_id,  display_label, score
-		) VALUES (?, ?, ?, ?, ?, ?, ?)
+            feature_set_id,  display_label, score, summit
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
 	
 	#my $epsth = $self->prepare("INSERT INTO experiment_prediction (
@@ -453,7 +456,8 @@ sub store{
 		$sth->bind_param(5, $pf->feature_set->dbID(),   SQL_INTEGER);
 		$sth->bind_param(6, $pf->display_label(),       SQL_VARCHAR);
 		$sth->bind_param(7, $pf->score(),                SQL_DOUBLE);
-		
+		$sth->bind_param(8, $pf->summit,                SQL_INTEGER);
+
 		$sth->execute();
 		$pf->dbID( $sth->{'mysql_insertid'} );
 
@@ -468,8 +472,5 @@ sub store{
 
   return \@pfs;
 }
-
-
-
 
 1;
