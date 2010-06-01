@@ -346,7 +346,7 @@ sub _tables {
 sub _columns {
   my $self = shift;
 
-  return qw( p.probe_id p.probe_set_id p.name p.length p.array_chip_id p.class);
+  return qw( p.probe_id p.probe_set_id p.name p.length p.array_chip_id p.class p.description);
 
 }
 
@@ -367,10 +367,10 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $current_dbid, $arraychip_id, $probe_id, $array_id, $probe_set_id, $name, $class, $probelength);
+	my (@result, $current_dbid, $arraychip_id, $probe_id, $array_id, $probe_set_id, $name, $class, $probelength, $desc);
 	my ($array, %array_cache, %probe_set_cache);
 	
-	$sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class);
+	$sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, $desc);
 
 
 	#Complex query extension
@@ -470,6 +470,7 @@ sub _objs_from_sth {
 			   -probe_set     => $probeset,
 			   -length        => $probelength,
 			   -class         => $class,
+			   -description   => $desc,
 			   -adaptor       => $self,
 			);
 			push @result, $probe;
@@ -542,18 +543,17 @@ sub store {
 	  foreach my $name(@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}){
 
 		if (defined $dbID) {  # Already stored
-		  #we want to import design attrs bsed on ac_id..and cs id or design attr?
-		
-		
+					
 		  $sth = $self->prepare
-			("INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class )
-			  VALUES (?, ?, ?, ?, ?, ?)");
-		  $sth->bind_param(1, $dbID,            SQL_INTEGER);
-		  $sth->bind_param(2, $ps_id,           SQL_INTEGER);
-		  $sth->bind_param(3, $name,            SQL_VARCHAR);
-		  $sth->bind_param(4, $probe->length(), SQL_INTEGER);
-		  $sth->bind_param(5, $ac_id,           SQL_INTEGER);
-		  $sth->bind_param(6, $probe->class(),  SQL_VARCHAR);
+			("INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description )
+			  VALUES (?, ?, ?, ?, ?, ?, ?)");
+		  $sth->bind_param(1, $dbID,               SQL_INTEGER);
+		  $sth->bind_param(2, $ps_id,              SQL_INTEGER);
+		  $sth->bind_param(3, $name,               SQL_VARCHAR);
+		  $sth->bind_param(4, $probe->length(),    SQL_INTEGER);
+		  $sth->bind_param(5, $ac_id,              SQL_INTEGER);
+		  $sth->bind_param(6, $probe->class(),     SQL_VARCHAR);
+		  $sth->bind_param(7, $probe->description, SQL_VARCHAR);
 		  $sth->execute();
 		}
 		else {
@@ -561,11 +561,12 @@ sub store {
 		  $sth = $self->prepare
 			("INSERT INTO probe( probe_set_id, name, length, array_chip_id, class )
 			VALUES (?, ?, ?, ?, ?)");
-		  $sth->bind_param(1, $ps_id,           SQL_INTEGER);
-		  $sth->bind_param(2, $name,            SQL_VARCHAR);
-		  $sth->bind_param(3, $probe->length(), SQL_INTEGER);
-		  $sth->bind_param(4, $ac_id,           SQL_INTEGER);
-		  $sth->bind_param(5, $probe->class(),  SQL_VARCHAR);
+		  $sth->bind_param(1, $ps_id,              SQL_INTEGER);
+		  $sth->bind_param(2, $name,               SQL_VARCHAR);
+		  $sth->bind_param(3, $probe->length(),    SQL_INTEGER);
+		  $sth->bind_param(4, $ac_id,              SQL_INTEGER);
+		  $sth->bind_param(5, $probe->class(),     SQL_VARCHAR);
+		  $sth->bind_param(6, $probe->description, SQL_VARCHAR);
 		  $sth->execute();
 		  $dbID = $sth->{'mysql_insertid'};
 		  $probe->dbID($dbID);
