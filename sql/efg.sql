@@ -759,6 +759,7 @@ CREATE TABLE `annotated_feature` (
   `display_label` varchar(60) default NULL,
   `score` double default NULL,
   `feature_set_id` int(10) unsigned NOT NULL,
+  `summit` int(10) unsigned default NULL,
   PRIMARY KEY  (`annotated_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `feature_set_idx` (`feature_set_id`)	  
