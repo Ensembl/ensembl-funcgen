@@ -193,7 +193,8 @@ Region in detail
 	cisRED/miRanda/VISTA
 	Only for Human and Mouse???	
 	
-
+Mart
+	Check sets/cell_types(feature_types) are correct in filters
 
 
 :: Static Content
