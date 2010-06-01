@@ -88,6 +88,7 @@ use vars qw(@ISA);
   Arg [-CLASS]          : string - probe class e.g. CONTROL, EXPERIMENTAL
         Will be the same for all probes if same probe is on
 		multiple arrays.
+  Arg [-DESCRIPTION]    : (optional) string - description 
 
 
   Example    : my $probe = Bio::EnsEMBL::Probe->new(
@@ -97,6 +98,7 @@ use vars qw(@ISA);
                    -ARRAY_CHIP_ID => $array_chip_id,
 				   -LENGTH        => 25,
                    -CLASS         => 'EXPERIMENTAL',
+                   -DESCRIPTION   => 'Some useful description',
       
                );
   Description: Creates a new Bio::EnsEMBL::Probe object.
@@ -119,13 +121,13 @@ sub new {
       $array_chip_ids, $array_chip_id,
       $arrays,         $array,
       $probeset,       $aclass,
-      $length
+      $length,         $desc
      ) = rearrange([
 		    'NAMES',          'NAME',
 		    'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
 		    'ARRAYS',         'ARRAY',
 		    'PROBE_SET',      'CLASS',
-		    'LENGTH'
+		    'LENGTH',         'DESCRIPTION'
 		   ], @_);
   
 	
@@ -170,6 +172,8 @@ sub new {
   $self->probeset($probeset) if defined $probeset;
   $self->class($aclass)      if defined $aclass;
   $self->length($length)     if defined $length;
+  $self->description($desc)  if defined $desc;
+  
   return $self;
 }
 
@@ -555,6 +559,26 @@ sub length {
     return $self->{'length'};
 }
 
+=head2 description
+
+  Arg [1]    : (optional) string - description
+  Example    : my $pdesc = $probe->description();
+  Description: Getter and setter of description attribute for Probe
+               objects.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub description {
+  my $self = shift;
+  $self->{'description'} = shift if @_;
+  return $self->{'description'};
+}
+
+
 =head2 feature_count
 
   Arg[0]     : recount flag
@@ -583,13 +607,6 @@ sub feature_count{
 
 
 ### ARRAY DESIGN SPECIFIC METHODS
-### Sould really split this into BaseProbeDesign and eFGProbeDesign wrapper class?
-### Quick implementation for now
-### These analyses are just the core Analysis classes representing
-### the output from a RunnableDB ensembl-analysis.
-### Note scores added to previously stored probes may never make it into the DB?
-### May also get duplicate record for previously stored probes?
-### This will only happen if we're Collapsing or we fully implemnt the nr probe id to seq theory
 
 =head2 add_Analysis_score
 
