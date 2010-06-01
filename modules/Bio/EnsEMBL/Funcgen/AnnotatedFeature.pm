@@ -129,6 +129,25 @@ sub score {
     return $self->{'score'};
 }
 
+=head2 summit
+
+  Arg [1]    : (optional) int - summit postition
+  Example    : my $peak_summit = $feature->summit;
+  Description: Getter and setter for the summit attribute for this feature. 
+  Returntype : int
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub summit {
+  my $self = shift;
+  
+  $self->{'summit'} = shift if @_;
+  
+  return $self->{'summit'};
+}
 
 
 =head2 display_label
