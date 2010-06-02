@@ -839,24 +839,8 @@ CREATE TABLE `regulatory_feature` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
--- Do we want trigger to generate bound values?
--- Do we want index on bound values
-
+-- Index on bound values?
 -- stable_id is not unique, may have several instances across different cell_types/feature_sets
-
--- Cell specific build:
--- This should eventually be made NR for stable_id by moving the feature_set_id into the regulatory attributes table
--- and defining a common start end across all cell lines. YES! But how do we accurately define the start 
--- and end of the core region, given the technology and the fact that there are not distinct signals as with genes etc.
- 
--- This will cause problem for query on cell_line?  Is this a right join, we don't want any reg_feat which don't have 
--- attrs with the corresponding feature_set_id.
--- this is tricky as we may want a generic all feats query (noo attrs required)and one where we only get records for those athat a re present in the attrs table
-
-
--- we need an nr link to cell_type
--- regulatory_feature_set or can we use feature_set?
--- this would also provide link to all contributing feature_sets
 
 
 --
