@@ -81,6 +81,8 @@ use vars qw(@ISA);
   Arg [-END] : int -The end coordinate of this feature relative to the start of the slice
 	       it is sitting on. Coordinates start at 1 and are inclusive.
   Arg [-DISPLAY_LABEL]: string - Display label for this feature
+  Arg [-BINARY_STRING]: string - Regulatory Build binary string
+  Arg [-PROJECTED]    : boolean - Flag to specify whether this feature has been projected or not
   Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
   Arg [-FEATURE_SET]  : Bio::EnsEMBL::Funcgen::FeatureSet - Regulatory Feature set
   Arg [-FEATURE_TYPE] : Bio::EnsEMBL::Funcgen::FeatureType - Regulatory Feature sub type
@@ -115,13 +117,14 @@ sub new {
   
   my $self = $class->SUPER::new(@_);
   
-  my ($stable_id, $reg_attrs, $attr_cache)
-    = rearrange(['STABLE_ID', 'REGULATORY_ATTRIBUTES', '_ATTRIBUTE_CACHE'], @_);
+  my ($stable_id, $reg_attrs, $attr_cache, $bin_string, $projected)
+    = rearrange(['STABLE_ID', 'REGULATORY_ATTRIBUTES', '_ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED'], @_);
   
   #moved to set feature, but not mandatory?
   #throw("Must provide a FeatureType") if ! $reg_type;
 
-
+  $self->is_projected($projected) if defined $projected;
+  $self->binary_string($bin_string) if defined $bin_string;
   $self->stable_id($stable_id) if $stable_id;
   $self->regulatory_attributes($reg_attrs) if $reg_attrs;
   $self->_attribute_cache($attr_cache) if $attr_cache;
