@@ -169,6 +169,26 @@ sub display_label {
     return $display_label;
 }
 
+=head2 binary_string
+
+  Arg [1]    : optional string - binary string from regualtory build
+  Example    : my $bin_string = $feature->binary_string();
+  Description: Getter and setter for the binary_string for this feature.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk - May change to BLOB
+
+=cut
+
+sub binary_string{
+  my ($self, $bin_string) = @_;
+	
+  $self->{'binary_string'} = $bin_string if defined $bin_string;
+  return $self->{'binary_string'};
+}
+
+
 
 =head2 stable_id
 
@@ -421,6 +441,27 @@ sub bound_end {
 
   return $self->{'bound_end'};
 }
+
+=head2 is_projected
+
+  Arg [1]    : optional - boolean
+  Example    : if($regf->is_projected){ #do something different here }
+  Description: Getter/Setter for the projected attribute.
+  Returntype : boolean
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub is_projected {
+  my ($self, $projected) = @_;
+	
+  $self->{projected} = $projected if defined $projected;
+  return $self->{'projected'};
+}
+
+
 
 =head2 _generate_underlying_structure
 
