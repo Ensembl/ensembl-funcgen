@@ -19,19 +19,35 @@ my $features = $afa->fetch_all_by_Slice($slice);
 The RegulatoryFeatureAdaptor is a database adaptor for storing and retrieving
 RegulatoryFeature objects.
 
-=head1 AUTHOR
+=head1 LICENSE
 
-This module was created by Nathan Johnson.
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-This module is part of the Ensembl project: http://www.ensembl.org/
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 METHODS
 
+The rest of the documentation details each of the object methods. Internal
+methods are usually preceded with a _
+
+
 =cut
+
+
+
 
 use strict;
 use warnings;
@@ -221,7 +237,8 @@ sub _columns {
 			rf.seq_region_strand     rf.bound_seq_region_start
 			rf.bound_seq_region_end  rf.display_label
 			rf.feature_type_id       rf.feature_set_id
-			rf.stable_id             ra.attribute_feature_id
+			rf.stable_id             rf.binary_string
+			rf.projected             ra.attribute_feature_id
 			ra.attribute_feature_table
 	   );
 }
@@ -295,10 +312,11 @@ sub _objs_from_sth {
 	    $dbID,                  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $bound_seq_region_start,
-		$bound_seq_region_end,             $display_label,
+		$bound_seq_region_end,  $display_label,
 		$ftype_id,              $fset_id,
 		$stable_id,             $attr_id,
-		$attr_type
+		$attr_type,             $bin_string,
+		$projected
 	);
 
 	$sth->bind_columns(
@@ -307,7 +325,8 @@ sub _objs_from_sth {
 					   \$seq_region_strand,     \$bound_seq_region_start,
 					   \$bound_seq_region_end,  \$display_label,
 					   \$ftype_id,              \$fset_id,
-					   \$stable_id,             \$attr_id,
+					   \$stable_id,             \$bin_string,
+					   \$projected,             \$attr_id,
 					   \$attr_type
 					  );
 
@@ -483,6 +502,8 @@ sub _objs_from_sth {
 			'adaptor'        => $self,
 			'dbID'           => $dbID,
 			'display_label'  => $display_label,
+			'binary_string'  => $bin_string,
+			'projected'      => $projected,
 			'feature_set'    => $fset_hash{$fset_id},
 			'feature_type'   => $ftype,
 			#'regulatory_attributes' => $reg_attrs,
@@ -563,8 +584,9 @@ sub store{
 			seq_region_end,        bound_seq_region_start,
 			bound_seq_region_end,  seq_region_strand,
             display_label,         feature_type_id,
-            feature_set_id,        stable_id
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            feature_set_id,        stable_id,
+            binary_string,         projected
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
   
   my $sth2 = $self->prepare("
 		INSERT INTO regulatory_attribute (
@@ -630,7 +652,9 @@ sub store{
 	$sth->bind_param(8, $rf->feature_type->dbID(),  SQL_INTEGER);
 	$sth->bind_param(9, $rf->feature_set->dbID(),   SQL_INTEGER);
 	$sth->bind_param(10, $sid,                      SQL_INTEGER);
-	
+	$sth->bind_param(11, $rf->binary_string,        SQL_VARCHAR);
+	$sth->bind_param(12, $rf->is_projected,         SQL_BOOLEAN);
+
 	$sth->execute();
 	$rf->dbID( $sth->{'mysql_insertid'} );
 
@@ -727,7 +751,7 @@ sub fetch_type_config_by_RegulatoryFeature{
 		'af.annotated_feature_id=ra.attribute_feature_id and ra.attribute_feature_table="annotated" AND '.
 		  'ra.regulatory_feature_id=? group by ft.name order by ft.name';
 
-  my $sth =  $self->prepare($sql);
+  my $sth = $self->prepare($sql);
   $sth->bind_param(1, $rf->dbID, SQL_INTEGER);
   $sth->execute;
   my @ftype_config = @{$sth->fetchall_arrayref};
@@ -743,7 +767,7 @@ sub fetch_type_config_by_RegulatoryFeature{
 		'af.annotated_feature_id=ra.attribute_feature_id and ra.attribute_feature_table="annotated" AND '.
 		  'ra.regulatory_feature_id=? group by ct.name order by ct.name';
 
-  $sth =  $self->prepare($sql);
+  $sth = $self->prepare($sql);
   $sth->bind_param(1, $rf->dbID, SQL_INTEGER);
   $sth->execute;
   my @ctype_config = @{$sth->fetchall_arrayref};
