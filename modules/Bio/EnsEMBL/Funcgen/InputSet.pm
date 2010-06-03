@@ -208,10 +208,19 @@ sub get_Experiment{
 }
 
 
-=head2 get_subsets
 
-  Example    : my @subsets = @{$exp_set->get_subsets()};
-  Description: Getter for the subsets for this InputSet.
+sub get_subsets{
+  my ($self)  = shift;
+
+  deprecate('Please use the get_InputSubsets method');
+
+  return $self->get_InputSubsets;
+}
+
+=head2 get_InputSubsets
+
+  Example    : my @subsets = @{$exp_set->get_InputSubsets()};
+  Description: Getter for the InputSubsets for this InputSet.
   Returntype : Arrayref
   Exceptions : None
   Caller     : General
@@ -219,11 +228,14 @@ sub get_Experiment{
 
 =cut
 
-sub get_subsets{
+sub get_InputSubsets{
   my ($self)  = shift;
 
   return [ values %{$self->{'subsets'}} ];
 }
+
+
+
 
 =head2 get_subset_by_name
 
@@ -241,6 +253,7 @@ sub get_subset_by_name{
 
   return (exists $self->{'subsets'}{$name}) ? $self->{'subsets'}{$name} : undef;
 }
+
 
 =head2 get_subset_names
 
