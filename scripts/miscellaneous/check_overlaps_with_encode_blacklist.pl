@@ -71,7 +71,7 @@ Port of the host where the core database is (defaults to $DNADB_PORT)
 
 =item B<-coredb_name>
 
-Name of the data tracking database (defaults to $DNADB_NAME)
+Name of the Core database (defaults to $DNADB_NAME)
 
 =item B<-efgdb_host>
 
@@ -91,14 +91,9 @@ Port of the host where the EFG database is (defaults to $DB_PORT)
 
 =item B<-efgd_bname>
 
-Name of the data tracking database (defaults to $DB_NAME)
+Name of the EFG database (defaults to $DB_NAME)
 
 =back
-
-
-=head1 SEE ALSO
-
-ensembl-functgenomics/scripts/data_tracking/add_new_dataset.pl
 
 
 =head1 LICENSE
