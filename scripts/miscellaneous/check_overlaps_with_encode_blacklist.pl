@@ -53,45 +53,45 @@ When specified, it removes features overlapping with encode blacklisted regions 
 
 Name of output file to create (defaults to output.txt)
 
-=item B<-coredbhost>
+=item B<-coredb_host>
 
 Host where the core database is (defaults to $DNADB_HOST)
 
-=item B<-coredbuser>
+=item B<-coredb_user>
 
 User of the core database (defaults to $DNADB_USER)
 
-=item B<-coredbpass>
+=item B<-coredb_pass>
 
 Password for the core database user (defaults to $DNADB_PASS)
 
-=item B<-coredbport>
+=item B<-coredb_port>
 
 Port of the host where the core database is (defaults to $DNADB_PORT)
 
-=item B<-coredbname>
+=item B<-coredb_name>
 
-Name of the data tracking database (defaults to "efg_data_tracking")
+Name of the data tracking database (defaults to $DNADB_NAME)
 
-=item B<-efgdbhost>
+=item B<-efgdb_host>
 
 Host where the EFG database is (defaults to $DB_HOST)
 
-=item B<-efgdbuser>
+=item B<-efgdb_user>
 
 User of the EFG database (defaults to $DB_USER)
 
-=item B<-efgdbpass>
+=item B<-efgdb_pass>
 
 Password for the EFG database user (defaults to $DB_PASS)
 
-=item B<-efgdbport>
+=item B<-efgdb_port>
 
 Port of the host where the EFG database is (defaults to $DB_PORT)
 
-=item B<-efgdbname>
+=item B<-efgd_bname>
 
-Name of the data tracking database (defaults to "efg_data_tracking")
+Name of the data tracking database (defaults to $DB_NAME)
 
 =back
 
