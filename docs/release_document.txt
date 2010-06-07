@@ -57,7 +57,9 @@ This list should contains items which are more than likely going to make the nex
 	Major Schema changes
 
 
-Explicitly notify web team of any planned web functionality development. For significant developments this should ideally be notified as soon as it is clear which release 
+Explicitly notify web team of any planned web functionality development. For significant developments, this should ideally be notified as soon as it is clear which is the target release.
+
+NOTE: Any further late changes/declarations which may affect Ensembl Genomes (e.g patches, API devs) must also be communicated directly to the EG team. If these are major changes, then EG must notified asap.
 
 
 :::: Pre Genebuild Handover
