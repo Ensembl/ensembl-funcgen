@@ -74,7 +74,7 @@ CREATE TABLE `meta` (
 
 -- Add empty schema_version entry for patches to update
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "");
-
+INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 
 
