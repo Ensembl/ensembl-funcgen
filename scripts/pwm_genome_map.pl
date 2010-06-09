@@ -11,13 +11,6 @@ Input comprises a fasta file of DNA sequences and a list of jaspar format pfm fi
 Output is a bed style, tab separated file but with 1-based rather than 0 based coordinates.
 
 
-Just under 1h for chr1 with thresh 0.005
-561,015,360 mappings in total
-
-5340884 mappings for MA0003
- 442082 using my own method
-
-1561940 with thresh 0.001
 
 =head1 AUTHOR(S)
 
@@ -57,7 +50,7 @@ in the output.
 The amount of memory required by find_pssm_dna depends on the number of mappings which will be generated. Initially this is unpredictable, so it is wise to allow plenty of memory. Trial and error suggests that 15G is sufficient for chr1 and several hundred PWMs at a probability threshold of 0.001.
 
 
-Extra blank lines in pfm files cause the error :-
+Extra blank lines or trailing tabs in pfm files cause the error :-
 
 "Matrix XXX.pfm has wrong alphabet size. Omitting"
 
@@ -67,11 +60,11 @@ Extra blank lines in pfm files cause the error :-
 
 rm -f bsub* ; bsub -q long -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 /nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa examples/data/matrix/JASPAR_CORE_2008/*.pfm
 
-/nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g short_seqs.fa -a GRCh37 -o /lustre/scratch103/ensembl/dkeefe/jaspar_pwm_genome_map.out -t transfac examples/data/matrix/transfac32/matrix.dat 
+pwm_genome_map.pl -g short_seqs.fa -a GRCh37 -o /lustre/scratch103/ensembl/dkeefe/jaspar_pwm_genome_map.out -t transfac examples/data/matrix/transfac32/matrix.dat 
 
-bsub -q normal -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 /nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o JASPAR_CORE_2_GRCh37_all.tab /nfs/users/nfs_d/dkeefe/src/moods/MOODS/examples/data/matrix/JASPAR_CORE_2008/*.pfm
+bsub -q normal -o bsub_out_jasp -e bsub_err_jasp -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o JASPAR_CORE_v_GRCh37_all.tab -p 0.001 /data/blastdb/Ensembl/funcgen/pwm/JASPAR_CORE_Oct2009/vertebrates/*.pfm
 
-bsub -q normal -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 /nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o transfac32_v_GRCh37_all.tab  -t transfac /nfs/users/nfs_d/dkeefe/src/moods/MOODS/examples/data/matrix/transfac32/matrix.dat
+bsub -q normal -o bsub_out_tfac -e bsub_err_tfac -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o transfac32_v_GRCh37_all.tab -p 0.001  -t transfac /nfs/users/nfs_d/dkeefe/src/moods/MOODS/examples/data/matrix/transfac32/matrix.dat
 
 =head1 SEE ALSO
 
@@ -84,6 +77,9 @@ select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name fr
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2010-05-24 13:30:54  dkeefe
+ added option to use PWMs from Transfac matrix.dat file.
+
  Revision 1.1  2010-05-18 12:00:02  dkeefe
  PWM to genome mapper for routine use by Funcgen. First draft works on
  only JASPAR pfm files so far
@@ -91,11 +87,7 @@ select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name fr
 
 =head1 TO DO
 
-deal with TRANSFAC data
-
 add perl implementation of fastaexplode
-
-add name from matrix_list.txt to bed file
 
 remove unused code
 
@@ -118,6 +110,7 @@ my $sp;
 my $verbose = 0;
 my $pwm_type = 'jaspar';
 my $work_dir = "/lustre/scratch103/ensembl/dkeefe/pwm_genome_map_$$/";
+
 my $genome_file;
 my $moods_mapper = '~dkeefe/bin/find_pssm_dna';
 my $thresh = 0.001;
@@ -126,7 +119,8 @@ my $assembly;
 my %opt;
 
 if ($ARGV[0]){
-    &Getopt::Std::getopts('a:s:t:g:h:v:o:i:', \%opt) || die ;
+    &commentary(join(' ',@ARGV)."\n");
+    &Getopt::Std::getopts('a:s:t:g:h:v:o:i:p:', \%opt) || die ;
 }else{
     &help_text; 
 }
@@ -145,6 +139,7 @@ my @pwm_files = @ARGV;
 
 
 # irrespective of pwm_type we need to create the rev-comp matrices and put all the matrices in a working directory - along with a composite matrix_list.txt file
+my %file_max_score;
 my $matrix_file;
 if($pwm_type eq 'jaspar'){
 
@@ -155,10 +150,13 @@ if($pwm_type eq 'jaspar'){
     &backtick("cp $matrix_file $work_dir");
 
     # we move the PWM files to the working dir and create rev-comp files
-    # there too, making additions to the matrix_file in working dir as we go
+    # there too, making additions to the matrix_list in working dir as we go
     foreach my $file (@pwm_files){
         &backtick("cp $file $work_dir"); 
 	&rev_comp_matrix($file,$work_dir,$matrix_file);
+	my($min,$max)= &matrix_min_max($file,$work_dir);
+	print basename($file)."\t$min\t$max\n" if $verbose > 1;
+	$file_max_score{ basename($file) } = $max;
     }
 
 }
@@ -176,17 +174,16 @@ elsif($pwm_type eq 'transfac'){
 
     foreach my $file (@pwm_files){
 	&rev_comp_matrix($file,$work_dir);
+	my($min,$max)= &matrix_min_max($file,$work_dir);
+	print basename($file)."\t$min\t$max\n";
+	$file_max_score{ basename($file) } = $max;
     }
-
-
-   
-
 }
 else{
     die "Can only handle Jaspar and Transfac formats at present\n";
 }
 
-
+#exit;
 
 # we need to explode the genome.fasta file into individual sequences.
 # and if abbreviated chr names have been requested change the file names
@@ -205,7 +202,7 @@ foreach my $chr_file (@chr_files){
     my $command = "$moods_mapper -f  $thresh $chr_file $work_dir"."*.pfm > $out";
     #print $command."\n";
     &backtick("$command");
-    &parse_out_2_tab($out,$tab,$work_dir."matrix_list.txt");
+    &parse_out_2_tab($out,$tab,$work_dir."matrix_list.txt",\%file_max_score);
     &backtick("rm -f $out");
     &backtick("rm -f $chr_file");
 }
@@ -217,6 +214,8 @@ foreach my $chr_file (@chr_files){
 my $command = "cat $work_dir/genome/*.tab > $outfile ";
 &backtick($command);
 
+$command = "cut -f4 $outfile | sort| uniq -c > $work_dir"."pwm_mapping_counts_".$pwm_type;
+&backtick($command);
 
 
 #`rm -rf $work_dir`;
@@ -225,6 +224,108 @@ exit;
 
  
 ###################################################################
+sub matrix_min_max{
+    my($file,$work_dir,$matrix_file)=@_;
+
+    open(IN,$file) or die "failed to open $file";
+
+    my %swap =( 0 => 3,
+                1 => 2,
+                2 => 1,
+                3 => 0
+	       );
+
+    my @mat;
+    my $rows = 0;
+    my $cols;
+    my $sum; # we assume each col has the same sum, so just calc first
+    while(my $line = <IN>){
+	chop $line;
+	unless($line =~ /[0-9]/){next}
+        $line =~ s/^\s+(.*)/$1/; # remove leading whitespace
+        $line =~ s/[\[\]]//g; #remove brackets if any
+	my @field = split(/\s+/,$line); # split on white space
+	#print join("\t",@field)."\n";
+	#print join("~",@field)."\n";
+	#my @rev= reverse(@field); # to get rev comp
+	#$mat[$swap{$rows}] = \@rev;# to get rev comp
+	#print join("\t",reverse(@field))."\n";
+	$mat[$rows] = \@field;
+        $rows++;
+	$sum += $field[0];
+    }
+    if($rows > 4){ die "too many rows in file $file" }
+    close(IN); 
+
+    my $cols = scalar(@{$mat[0]});
+    # convert to probabilities and transpose to facilitate get_max_add()
+    my @new_mat;
+    for(my $i = 0;$i<$rows;$i++){
+	for(my $j=0;$j<$cols;$j++){
+	    $new_mat[$j][$i] = ($mat[$i]->[$j])/$sum;
+	}
+    }
+
+
+    # jaspar IDs can be MA for core, CN for CNE and PF for PHYLOFACTS
+    # our own PWM IDs are FG
+    my($matrix_id) = $file =~ /.*([MPCF][AFNG][0-9]+).pfm/;
+    #print $file."\n".$matrix_id."\n";
+
+
+    my($min_pos,@sums) = &get_max_add(@new_mat);
+    return($min_pos,$sums[0]);
+
+}
+
+sub get_max_add{
+    my @mat = @_;
+
+    my $len = scalar(@mat);
+    #print $len."\n";
+
+    my @maxes;
+    my $min_sum;
+    for(my $i=0;$i <= $#mat;$i++){
+	my @list = sort {$b <=> $a} @{$mat[$i]}; # max is element 0
+	#$maxes[$i] = ((($list[0])+0.01)/1.04)/0.25;
+	#$maxes[$i] = &log2($maxes[$i]);
+	#$min_sum += &log2( ((($list[3])+0.01)/1.04)/0.25 );
+
+	#$maxes[$i] = $list[0]/0.25;
+	#$maxes[$i] = &log2($maxes[$i]);
+	#$min_sum += &log2( $list[3]/0.25 );
+
+	$maxes[$i] = ((($list[0])+0.002)/1.008)/0.25;
+	$maxes[$i] = &log2($maxes[$i]);
+	$min_sum += &log2( ((($list[3])+0.002)/1.008)/0.25 );
+
+    }
+ 
+    # last element contains bit score for its own most frequent letter
+    # second last contains bit score for its own most frequent letter +last 
+    # etc.   
+    my @sums;
+    $sums[$len] = 0;
+    for(my $i=$#mat;$i >= 0;$i--){
+        $sums[$i] = $maxes[$i]+$sums[$i+1];
+    }
+
+    #print join(" ",@maxes)."\n";
+    #print join(" ",@sums)."\n";
+
+    return($min_sum,@sums);
+}
+
+sub log2{
+    my $n = shift;
+
+    return log($n);#/log(2.0);
+
+}
+
+
+# converts a single transfac matrix.dat file to multiple jaspar pfm files
 sub parse_matrixdat_2_pfm{
     my($tf_file,$work_dir)=@_;
 
@@ -244,7 +345,7 @@ sub parse_matrixdat_2_pfm{
 	if($line =~ /^AC/){($ac) = $line =~ /AC  (M[0-9]+)/; }
         if($line =~ /^NA/){($name) = $line =~ /NA  (.+)/; }
 	if($line =~ /^P0/){
-	my $pfm =    &process_matrix($ifh,$ofh,$ac,$name,$work_dir);
+	my $pfm = &process_matrix($ifh,$ofh,$ac,$name,$work_dir);
 	push @files, $pfm;
 	}
 
@@ -255,11 +356,13 @@ sub parse_matrixdat_2_pfm{
     return @files;
 }
 
+# reads in a transfac matrix, transposes it and outputs it into a jaspar pfm
+# file 
 sub process_matrix{
     my($ifh,$ofh,$ac,$name,$work_dir)=@_;
 
     $ac =~ s/M0/MA/;
-
+    $ac .= '.1'; # all files are give version 1
     # print to list_file
     print $ofh $ac."\t0.0\t ".$name."\n";
 
@@ -295,7 +398,7 @@ sub process_matrix{
 
 
 sub parse_out_2_tab{
-    my($out,$tab,$matrix_file)=@_;
+    my($out,$tab,$matrix_file,$max_scores_ref)=@_;
 
     open(IN,$out) or die "couldn't open file $out ";
     open(OUT,">$tab") or die "couldn't open file $tab ";
@@ -307,6 +410,7 @@ sub parse_out_2_tab{
     my $id;
     my $addn;
     my $tf_name;
+    my $score_thresh;
     while(my $line = <IN>){
 	chop $line;
 	if($line eq ''){
@@ -328,19 +432,20 @@ sub parse_out_2_tab{
 		$strand = '-1';
 		$id =~ s/rc//;
 	    }
+	    $score_thresh = $max_scores_ref->{$id.'.pfm'} * 0.7; # 70% of max
+	    $score_thresh = 0;
+	    &commentary( $max_scores_ref->{$id.'.pfm'} ." = max score for $id $tf_name\n") if $verbose;
+
 	    $line = <IN>;
 	    ($addn) = $line =~ /.*Length:([0-9]+)/;
 	}
-#        elsif($line =~ /^H/){
-#            # find_pssm_dna outputs 0 based coord
-#	    ($addn) = $line =~ /.*Length:([0-9]+)/;
-#	    
-#	}
         else{
 	    my($start,$score)= split("\t",$line);
-	    print OUT join("\t",$chr,($start+1),($start+$addn),$tf_name,
-                                $score,$strand)."\n" or 
+	    if($score > $score_thresh){
+	        print OUT join("\t",$chr,($start+1),($start+$addn),$tf_name,
+                                $score,$strand,$id)."\n" or 
                                 die "failed to print to $tab" ;
+	    }
 	}
     }
     close(IN);
@@ -430,13 +535,14 @@ sub rev_comp_matrix{
 
     # jaspar IDs can be MA for core, CN for CNE and PF for PHYLOFACTS
     # our own PWM IDs are FG
-    my($matrix_id) = $file =~ /.*([MPCF][AFNG][0-9]+).pfm/;
-    #print $file."\n".$matrix_id."\n";
+    #my($matrix_id) = $file =~ /.*([MPCF][AFNG][0-9]+).pfm/;
+    my($matrix_id,$version) = $file =~ /.*([MPCF][AFNG][0-9]+).([0-9]*).pfm/;
+    print $file."\n".$matrix_id." $version\n";
 
  
 
-    my $rc_file = $work_dir.$matrix_id.'rc.pfm';
-#    print $rc_file."\n";
+    my $rc_file = $work_dir.$matrix_id.'rc.'.$version.'.pfm';
+    print $rc_file."\n";
     open(OUT,"> $rc_file") or die "failed to open file $rc_file";
 
     for(my $i=0;$i<$rows;$i++){
@@ -446,17 +552,22 @@ sub rev_comp_matrix{
     close(OUT);
 
     # get the relevant line from the matrix_list.txt file
-    # by grepping for the id followed by a tab
+    # by grepping for the id at the start of the line
     # add rc to the ID and append the line to matrix_list.txt
-    my $res = &backtick("grep '^$matrix_id	' $work_dir".
+    my $res = &backtick("grep '^$matrix_id.$version' $work_dir".
                         "matrix_list.txt");
  #   print $res;
     chop($res);
     my @field = split("\t",$res);
-    $field[0] .= 'rc';
+    #$field[0] .= 'rc';
+    $field[0] = $matrix_id.'rc.'.$version;
     $res = join("\t",@field);
-#    print $res."\n";
-    &backtick("echo '$res' >> $work_dir"."matrix_list.txt");
+    print $res."\n";
+    open(OUT, ">> $work_dir"."matrix_list.txt") or 
+        die "failed to open $work_dir"."matrix_list.txt for appending";
+    print OUT $res."\n" or die "failed to write to  $work_dir".
+                               "matrix_list.txt";
+    close(OUT);
 
 
 }
@@ -548,7 +659,7 @@ sub process_arguments{
     }
 
     if (exists $opt{p}){
-        $password = $opt{p}; 
+        $thresh = $opt{p}; 
     }
 
     if (exists $opt{P}){
@@ -607,6 +718,7 @@ sub help_text{
                   [-h] for help
                   [-a] <assembly_version> eg GCRh37 as used in full chr. name
                   [-t] <pwm_type> 'jaspar'=default, 'transfac' 
+                  [-p] <probability> threshold for moods mapper default=0.0001
                    -g  <file_name> genome fasta file
                    -o  <output file> - name of a file for output
                   [-i] <input file> - name of a file for input
