@@ -34,7 +34,9 @@ CREATE TABLE `result_feature` (
 
 -- Also Added UNIQUE key here
 
+-- Now clean status entries
 
+DELETE s from status s, status_name sn where sn.name='RESULT_FEATURE_SET' and s.status_name_id=sn.status_name_id;
 
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_58_59_e.sql|result_feature.partitions');
