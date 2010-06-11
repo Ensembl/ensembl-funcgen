@@ -1650,7 +1650,7 @@ foreach my $key (keys %transcript_feature_info) {
 
 	  #Add number of other transcripts mapped in the link text here
 	  if($transcripts_per_object{$ensembl_id} > 1){
-		$link_txt = ". Matches $transcripts_per_object{$ensembl_id} other transcripts";
+		$link_txt = ". Matches ".($transcripts_per_object{$ensembl_id}-1)." other transcripts";
 	  }
 	  else{
 		$link_txt = ". Maps uniquely to this transcript";
