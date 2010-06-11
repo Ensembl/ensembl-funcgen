@@ -154,8 +154,11 @@ my $rset_adaptor  = $efg_db->get_ResultSetAdaptor;
 my $rfeat_adaptor = $efg_db->get_ResultFeatureAdaptor;
 my $slice_adaptor = $efg_db->get_SliceAdaptor;
 @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1, 1, $old_assm)};#Top level, non ref, inc dups
+#non_dup here will load full chr collections for all hap/par regions!
+#Need to implement fetch_normalised slice_projections in collection feature adaptors?
 
 
+ 
 #grab result_set
 #should provide some default options which do this automatically for every rset which is displayable, but doesn't have RESULT_FEATURE_SET status.
 my ($rset) = @{$rset_adaptor->fetch_all_by_name($rset_name)};
@@ -248,10 +251,12 @@ SLICE: foreach my $slice(@slices){
   }
   else{
 
+	my %wsize_conf = (@window_sizes) ? (-WINDOW_SIZES => \@window_sizes) : ();
+
 	#Expose more config through the options?
 	my %config = (-NEW_ASSEMBLY => $new_assm, 
 				  -SKIP_ZERO_WINDOW => $skip_zero_window,
-				  -WINDOW_SIZES => \@window_sizes
+				  %wsize_conf
 				 );
 
 	foreach my $slice(@slices){
