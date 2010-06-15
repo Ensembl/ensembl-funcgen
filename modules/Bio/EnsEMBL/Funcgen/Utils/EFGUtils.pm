@@ -41,7 +41,7 @@ Nathan Johnson njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzipped is_sam is_bed get_file_format strip_param_args generate_slices_from_names strip_param_flags get_diploid_genome_length_by_gender);
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzipped is_sam is_bed get_file_format strip_param_args generate_slices_from_names strip_param_flags);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
