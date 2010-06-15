@@ -14,15 +14,23 @@ $imp->register_experiment();
 B<This program> is the main class coordinating import of tiling array design and experimental data.
 It utilises several underlying parser classes specific to array vendor or import file type.
 
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
 =head1 CONTACT
 
-Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-
-=head1 AUTHOR(S)
-
-Nathan Johnson, njohnson@ebi.ac.uk
-
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 
 =cut
@@ -346,23 +354,19 @@ sub new{
 	  $self->throw('-db must be a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
 	}
   }
-  else{
-	#define eFG DB from params or registry
+  else{ #define eFG DB from params or registry
 
 	if($reg_db){#load eFG DB from reg
 
-	  #we should throw here if db params are set
-	  #How do we handle passwords within the reg config?
-	  #Do we still need to pass this when loading?
+	  if($dbname){
+		throw("You cannot specify DB params($dbname) and load from the registry at the same time.");
+	  }
 
 	  $self->log('WARNING: Loading eFG DB from Registry');
 	  $db = $reg->get_DBAdaptor($self->species(), 'funcgen');
 	  throw("Unable to retrieve ".$self->species." funcgen DB from the registry") if ! $db;
 	}
-	else{#from params
-	  #This resets the eFG DB in the custom or generic registry
-
-	  #Need to check for mandatory params here
+	else{#resets the eFG DB in the custom or generic registry
 
 	  $dbname || throw('Must provide a -dbname if not using default custom registry config');
 	  #$user || throw('Must provide a -user parameter');#make this default to EFG_WRITE_USER?
