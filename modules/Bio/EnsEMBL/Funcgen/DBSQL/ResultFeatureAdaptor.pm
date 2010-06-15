@@ -537,14 +537,14 @@ sub store{
 	$pack_template = '('.$self->pack_template.')'.scalar(@{$rfeat->scores});
 
 
-	#Check that we have non-0 values
-	#my @tmp = grep(/[^0]/, @{$rfeat->scores});
-	#warn "non zero vals @tmp[0..10]";
-
-	#Sanity check
-	if(! grep(/[^0]/, @{$rfeat->scores})){
-	  warn('Collection contains '.scalar(@{$rfeat->scores}).' 0 scores. Skipping store for '.$rfeat->slice->name.' '.$rfeat->window_size." window_size\n");
-	  next;
+	#Check that we have non-0 values in compressed collections
+	if($rfeat->window_size != 0){
+	
+	  if(! grep(/[^0]/, @{$rfeat->scores})){
+		warn('Collection contains no non-0 scores. Skipping store for '.
+			 $rfeat->slice->name.' '.$rfeat->window_size." window_size\n");
+		next;
+	  }
 	}
 
 	
@@ -560,7 +560,6 @@ sub store{
 	$sth->bind_param(5, $rfeat->strand,        SQL_INTEGER);
 	$sth->bind_param(6, $rfeat->window_size,   SQL_INTEGER);
 	$sth->bind_param(7, $packed_string,        SQL_BLOB);
-	#$sth->bind_param(7, pack($self->pack_template, @{$rfeat->scores}), SQL_BLOB);
 	$sth->execute();
   }
   
