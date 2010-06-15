@@ -1,4 +1,27 @@
-# $Id: ResultFeature.pm,v 1.6 2010-05-19 11:43:10 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.7 2010-06-15 10:14:39 nj1 Exp $
+
+
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
+=cut
+
 
 package Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
@@ -9,124 +32,63 @@ use Bio::EnsEMBL::Utils::Argument  ('rearrange');
 use Bio::EnsEMBL::Utils::Exception ('throw');
 use Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
-use base( 'Bio::EnsEMBL::Funcgen::Collector');#ISA
-
-#Removed these as we now set_collection_def_by_ResultSet
-#$Bio::EnsEMBL::Funcgen::Collector::intensity_bin_method = 'max_magnitude';
-#$Bio::EnsEMBL::Funcgen::Collector::read_bin_method = 'count';
-
-#Read Coverage i.e. small integers(little endian)
-#$Bio::EnsEMBL::Funcgen::Collector::read_packed_size   = 2;#per score
-#$Bio::EnsEMBL::Funcgen::Collector::read_pack_template = 'v';#per score
-
-#Array Intensities i.e. single float(native)
-#$Bio::EnsEMBL::Funcgen::Collector::intensity_packed_size = 4;#per score
-#$Bio::EnsEMBL::Funcgen::Collector::intensity_template    = 'f';#per score
-#This is only true for int values i.e. read coverage
-#For array value we need a single float
-#perl only offers native endian order for floats
-#Good summary here about this:
-#http://www.perlmonks.org/?node_id=629530
+use base( 'Bio::EnsEMBL::Utils::Collector');#ISA
 
 
+### Global config variables
+# See associated Collector methods for more info
 
-$Bio::EnsEMBL::Funcgen::Collector::bin_model  = 'SIMPLE';
-#Only the packed size is required in the collector
-#Packing done in storing object(e.g.adaptor)
-#Define here if this is the storing object
-#Otherwise in the adaptor as package cars or methods to override those in base Collector
-#$super_class::pack_template = 'v';#per score #Move to Collection::ResultFeature?
-#$super_class::packed_size   = '2';#per score
-#$super_class::window_sizes  = [0, 150, 250, 350, 450, 550, 650];#Can remove this from ResultFeatureAdaptor?
-#Window sizes are actually used in the adaptor, so another case
-#where we have an adaptor override. Only specify this if you are not using an adaptor
+$Bio::EnsEMBL::Utils::Collector::bin_model  = 'SIMPLE';
 
+#Default is for read coverage, array intensity config defined in set_collection_defs_by_ResultSet
+#Kept here as example of basic package config
+$Bio::EnsEMBL::Utils::Collector::window_sizes = [30, 65, 130, 260, 450, 648, 950, 1296];
 
+#May need to drop 30 here due to RPKM float value doubling packed size
 
+# Tuning 900(Most used display size) - 172(non-drawable area) = 772 pixels/bins
+# Optimal window sizes over zoom levels
+# 1kb 5kb 10kb 50kb 100kb 200kb 500kb 1mb
+# 2   7   13   65   130   260   648   1296
+#Theoretical max for default 16MB max_allowed_packet_size is 30(~23kb) - sufficient min for read coverage.
+#0 will be used for array intensies until 65 is more appropriate(see adaptor)
+#450 and 950 added to handle middle ground, but are these really needed?
+#New windows will use more memory due to smaller window sizes
+#But we have dropped a window size from the mid-upper range
+#Largest size is essential so we aren't retrieving/drawing more features than pixels
+#Smaller sizes are desirable as more resolution required when zoomed in.
 
-#Can we write default SimpleCollection objects etc
-#So we don't need to write a collection for uncompressed/collected data
-#This will need generic methods in base Collector?
-#Would also need to put default config in adaptor
-
-#Using standard object generation methods for ResultFeature
-#We never want the heavy object from the result_feature table method
-#In fact we never want the heavy object unless we create it from scratch to store it
-#Therefore we don't need to use create_feature at all unless we ever want to use
-#The collection to generate bins on the fly(rather than for storing)
-#We would only want this if we don't want to implement the object, just the array
-#Now we're back to considering the base collection array
-#'DBID', 'START', 'END', 'STRAND', 'SLICE'
-#we don't need dbID or slice for ResultFeature
-#But we do need a score
-#Stick with object implementation for now i.e. dont use create_feature methods
+$Bio::EnsEMBL::Utils::Collector::bin_method   = 'RPKM';#'count';#only used by collector
+#small integers(little endian)
+#RPKM is now float(native)
+$Bio::EnsEMBL::Utils::Collector::packed_size   = 4;#2;#per score
+$Bio::EnsEMBL::Utils::Collector::pack_template = 'f';#'v';#per score
 
 
-#TO DO
-#Had to change ResultFeature to inherit from Feature, so can use Feature methods
-#Is this going to cause problem mixing and array based object with hash based object?
-#Not is we implement the mandatory methods here.
-#seq_region start etc?
-
-#Issues
-#As we define the windows by the start of the features
-#we get some skew in the data to the right as we generally have 
-#overhanging 3' features and no overhanging 5' features
-#Also when dealing with window sets we are not resetting the start 
-#of the bins when we reach a gap, hence we will then get 5' skew
-#but only for gaps within a chunk, not at the start.
-#Solution, set start and end values for each bin dynamically
-#to the start or end of a feature if there are not boundary spanning features
-#This should remove skew completely
+### Mandatory methods required by the base Collector
 
 
-### These first methods are used in the Collector and are required unless otherwise stated
 
-# You must have a method like this to perform the store
+
+# You must have a methods like this to perform the store
 
 sub store_window_bins_by_Slice_ResultSet {
   my ($self, $slice, $rset, %config) = @_;
 
-  #Need to 'set_config' in caller
-  #Or should we do this once in the caller
-  #Then we can do tests here before calling super method
-
   $self->source_set_type('result');#required by get_Feature_by_Slice   
-  $self->set_collection_defs_by_ResultSet($rset);
- 
-  #When called this does not pass $self, so we would have to pass the result set explicitly
-  #Let's not pass a code ref, let's just write a wrapper instead
-  #my $fetch_method_ref = $rset->can('get_ResultFeatures_by_Slice');
-  #We could pass a ref to the wrapper method? But this is unlikely to enable direct usage 
-  #of 3rd party parser method
-  
-  $self->store_window_bins_by_Slice($slice, %config);#, (
+  $self->set_collection_defs_by_ResultSet($rset);  
+  $self->set_config(%config);
+
+  $self->store_window_bins_by_Slice($slice);
   
   return;
 }
 
-#This will be called by the Importer
-#From the Bed parser. Which will contain the methods to access the features
-#Hence will need to pass the Bed parser itself to provide access to the parse methods
 
-#This is really more like store_window_bins_by_Slice_Importer
-#parser should have InputSet and ResultSet defined
 
 sub store_window_bins_by_Slice_Parser{
   my ($self, $slice, $imp, %config) = @_;
 
-  #Other params?
-  #imp, which has had filehandle, ResultSet and InputSet already established
-  #Need to bsub these slice jobs, so parse_and_import.pl needs to handle submitting to farm
-  #We also need to define window_sizes = 0
-  #If we are loading data on an old assembly
-  #Then run populate_result_features?
-  
-  #This depends on the density of the data!
-  #For ChIP-Seq alignments we don't want to load all the raw reads
-  #Hence we don't want 0 window_size
-  #and will need all the input remapped to the required assembly before
-  #we import here
 
   #We need to test for new_assm if we have a reads result set and fail
   #currently don't have access to new assm for validation?
@@ -142,26 +104,15 @@ sub store_window_bins_by_Slice_Parser{
   #This needs to be defined when craeting the ResultSet in the Importer
   #NEED TO CHANGE ALL ResultSet generation to add type!!!!!
   
-  my ($wsizes, $new_assm, $skip_zero_window) =
-    rearrange( [ 'WINDOW_SIZES', 'NEW_ASSEMBLY', 'SKIP_ZERO_WINDOW'], %config );
+  my ($skip_zero_window) = rearrange( [ 'SKIP_ZERO_WINDOW'], %config );
 
 
-  #Can/should we think about pipelining this?
-  #For a ChIP Seq set this would be two or three jobs with varying interdependencies
-  #1 Align to genome (bwa/maq/bowtie)
-  #2 Load ResultFeatures (depends on 1)
-  #3 Call peaks (depends on 1)
-  
+
   #There is no way of setting IMPORTED status for slice based jobs
-  #As we will need to wait for all to finish
-  
-  #We need the accumulator to set the IMPORTED status
-
-
-
-  #Would need to turn parse_and_import into RunnableDB
+  #We need the accumulator to set the IMPORTED/RESULT_FEATURE_SET status
+  #Would need to turn parse_and_import into RunnableDB?
   #To run these as slice jobs we would need to code to configure some slice based input ids
-  
+
 
  
   $self->source_set_type('input');#required by get_Feature_by_Slice
@@ -180,13 +131,14 @@ sub store_window_bins_by_Slice_Parser{
   }
  
 
-  #When called this does not pass $self, so we would have to pass the result set explicitly
-  #Let's not pass a code ref, let's just write a wrapper instead
-  #my $fetch_method_ref = $rset->can('get_ResultFeatures_by_Slice');
-  #We could pass a ref to the wrapper method? But this is unlikely to enable direct usage 
-  #of 3rd party parser method
-  
-  $self->store_window_bins_by_Slice($slice, %config);
+  $self->set_config(%config, (-method_config => {
+												 -dnadb          => $imp->db->dnadb,
+												 -total_features => $imp->total_features,
+												 -gender         => $imp->cell_type->gender,
+												}
+							 ));
+
+  $self->store_window_bins_by_Slice($slice);
   
   return;
 }
@@ -199,7 +151,7 @@ sub store_window_bins_by_Slice_Parser{
   Description: Wrapper method to fetch input features for building the Collections
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Collection::ResultFeatures
   Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::Collector::store_window_bins_by_Slice
+  Caller     : Bio::EnsEMBL::Utils::Collector::store_window_bins_by_Slice
   Status     : At Risk
 
 =cut
@@ -227,7 +179,7 @@ sub rollback_Features_by_Slice{
   Description: Wrapper method to fetch input features for building the Collections
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Collection::ResultFeatures
   Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::Collector::store_window_bins_by_Slice
+  Caller     : Bio::EnsEMBL::Utils::Collector::store_window_bins_by_Slice
   Status     : At Risk
 
 =cut
@@ -293,7 +245,7 @@ sub get_Features_by_Slice{
                and Slice are passed.
   Returntype : None
   Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::Collector::store_window_bins_by_Slice
+  Caller     : Bio::EnsEMBL::Utils::Collector::store_window_bins_by_Slice
   Status     : At Risk
 
 =cut
@@ -340,6 +292,7 @@ sub write_collection{
 
 }
 
+#Not required for count/density based collections
 
 sub get_score_by_Feature{
   my ($self, $feature) = @_;
@@ -369,7 +322,7 @@ sub get_score_by_Feature{
                if collection exceeds storage slice. Resets score cache and next collection_start.
   Returntype : None
   Exceptions : None
-  Caller     : write_collection and Bio::EnsEMBL::Funcgen::Collector::store_window_bins_by_Slice
+  Caller     : write_collection and Bio::EnsEMBL::Utils::Collector::store_window_bins_by_Slice
   Status     : At Risk
 
 =cut
@@ -488,15 +441,14 @@ sub set_collection_defs_by_ResultSet{
 	
 	#This is called by fetch_all_by_Slice_ResultSet
 	#So we have to use $rset->table_name instead of source_set_type
+   
 	
-	$self->{'window_sizes'}  = [0, 150, 300, 450, 600, 750, 900, 1150];
-
-	
-	if($rset->table_name eq 'experimental_chip'){#i.e. is normal ResultSet with float result
-	  $self->{'packed_size'}   = 4;
-	  $self->{'pack_template'} = 'f';
-	  $self->{'bin_method'}    = 'max_magnitude';#only used by collector
-	  #$self->{'window_sizes'}  = [0, 150, 300, 450, 600, 750, 900, 1150];
+	if($rset->table_name eq 'experimental_chip'){ #Array Intensities i.e. single float
+	  #perl only offers native endian order for floats (http://www.perlmonks.org/?node_id=629530)
+	  $Bio::EnsEMBL::Utils::Collector::packed_size       = 4;#per score
+	  $Bio::EnsEMBL::Utils::Collector::pack_template     = 'f';#per score
+	  $Bio::EnsEMBL::Utils::Collector::bin_method        = 'max_magnitude';#only used by collector
+	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 0;#Can have natural resolution for low density array data
 	}
 	elsif($rset->table_name eq 'input_set'){
 	  #Currently only expecting int from InputSet
@@ -508,19 +460,12 @@ sub set_collection_defs_by_ResultSet{
 	  }
 
 	  #We still have no way of encoding pack_type for result_feature InputSets
-	  #
 
 	  @tmp_isets = grep(!/SEQUENCING/, (map $_->format, @isets));
 	  
 	  if(@tmp_isets){
 		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports SEQUENCING format InputSets, not @tmp_isets formats");
 	  }
-
-	  $self->{'packed_size'}   = 2;
-	  $self->{'pack_template'} = 'v';
-	  $self->{'bin_method'}    = 'count';
-	  #redefine 0 as 50 as we can't store natural res for HD seq data due to BLOB size
-	  $self->{'window_sizes'}->[0] = 50;
 	}
 	else{
 	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
@@ -529,7 +474,7 @@ sub set_collection_defs_by_ResultSet{
 
   #Do we need to validate the smallest non-0 window size
   #against the max pack size?
-  #This should be don in the Collector
+  #This should be done in the Collector
 
   #warn "Collection defs are:\n".
 #	"\tpacked_size:\t". $self->{'packed_size'}."\n".
