@@ -19,20 +19,22 @@ CREATE TABLE `result_feature` (
   `window_size` smallint(5) unsigned NOT NULL,
   `scores` longblob NOT NULL,
   KEY `result_feature_idx` (`result_feature_id`),
-  UNIQUE KEY `set_window_seq_region_idx` (`result_set_id`,`window_size`,`seq_region_id`,`seq_region_start`)
+  KEY `set_window_seq_region_idx` (`result_set_id`,`window_size`,`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1
  PARTITION BY LIST (window_size)
  (PARTITION p0 VALUES IN (0),
- PARTITION p50 VALUES IN (30),
- PARTITION p150 VALUES IN (130), 
- PARTITION p300 VALUES IN (260), 
+ PARTITION p30 VALUES IN (30),
+ PARTITION p130 VALUES IN (130), 
+ PARTITION p260 VALUES IN (260), 
  PARTITION p450 VALUES IN (450), 
- PARTITION p600 VALUES IN (648), 
- PARTITION p750 VALUES IN (950),
- PARTITION p900 VALUES IN (1296)
+ PARTITION p648 VALUES IN (648), 
+ PARTITION p950 VALUES IN (950),
+ PARTITION p1296 VALUES IN (1296)
 );
 
--- Also Added UNIQUE key here
+-- set_window_region_idx can't be UNIQUE as there may be duplicates in the 0 wsize collections
+-- i.e. two or more probe features with the same start, originating from replicate probes
+-- or a probe seq which is a substr of another probe.
 
 -- Now clean status entries
 
