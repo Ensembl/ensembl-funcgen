@@ -1399,16 +1399,28 @@ sub rollback_FeatureSet{
 
 #Need to change slice to slices ref here
 #Need to add full rollback, which will specify to remove all sets
-#as well as results
+#as well as results and 
 #These params need clarifying as their nature changes between input_set and array rsets
+#Don't we always want to rollback_results?
+#force should only really be used to rollback InputSet ResultFeature sets
+#i.e. Read collections which are not used as direct input for the linked product FeatureSet
+#This should fail with array data associated with a product feature set
+
+#Do we want to separate ResultFeature rollback from result rollback?
+#Currently the array based collection rollback is done by hand
+#Could be done via the ResultFeature Collector, but should probably use this method.
+
+
+#rollback_results is only used in the MAGE parser to identify sets which have an 
+#associated product fset.
+#Can't really separate due to integrated functionality
 
 sub rollback_ResultSet{
-  my ($self, $rset, $rollback_results, $slice) = @_;
+  my ($self, $rset, $rollback_results, $slice, $force, $full_delete) = @_;
   
   if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
 	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
   }
-
 
   if($slice && $rset->table_name ne 'input_set'){
 	throw('Can only rollback_ResultSet by Slice if the ResultSet contains InputSets');	
@@ -1420,21 +1432,18 @@ sub rollback_ResultSet{
   my $db = $rset->adaptor->db;#This needs to be tested
   $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
   $self->log("Rolling back ResultSet:\t".$rset->name);
-  
-  #Is this ResultSet used in a DataSet?
   my $dset_adaptor = $self->db->get_DataSetAdaptor;
   my $rset_adaptor = $self->db->get_ResultSetAdaptor;
   my @skipped_sets;
   
+  ### Check if this ResultSet is part of a DataSet with a product feature set
+
   foreach my $dset(@{$dset_adaptor->fetch_all_by_supporting_set($rset)}){
 	
 	if (defined $dset){
 	  $self->log('Found linked DataSet('.$dset->name.") for ResultSet:\t".$rset->log_label);
 	  
 	  if(my $fset = $dset->product_FeatureSet){
-		$self->log('Skipping rollback. Found product FeatureSet('.$fset->name.") for supporting ResultSet:\t".$rset->log_label);
-		warn('Add more info on logs here on which script to use to edit the DataSet');
-		
 		@skipped_sets = ($rset,$dset);
 
 		#What impact does this have on result_rollback?
@@ -1443,17 +1452,32 @@ sub rollback_ResultSet{
 		#We should throw here as we can't perform the rollback
 		
 		if($rollback_results){
-		  throw("Could not rollback supporting ResultSet and results for:\t".$rset->log_label.
-				"\nManually resolve the supporting/feature set relationship or omit the ".
-				"rollback_results argument if you simply want to redefine the ResultSet without loading any new data");
+
+		  if($rset->table_name ne 'input_set' ||
+			(! $force)){#is an input_set/reads collection
+			#This will always throws for non-input_set ResultSets
+
+			throw("Could not rollback supporting ResultSet and results for:\t".$rset->log_label.
+				  "\nEither manually resolve the supporting/feature set relationship or set the 'force' flag.\n");
+			#  ."Alternatively omit the rollback_results argument if you simply want to redefine the ResultSet without loading any new data");
+			#This last bit is no longer true
+			#Remove rollback_results?
+		  }
+		  else{
+			@skipped_sets = ();
+			$self->log("Forcing results rollback for InputSet based ResultSet:\t".$rset->log_label);
+		  }
 		}
+
+		if(@skipped_sets){
+		  $self->log('Skipping rollback. Found product FeatureSet('.$fset->name.") for supporting ResultSet:\t".$rset->log_label);
+		}
+
 	  }
-	  elsif(! defined $slice){
+	  elsif((! defined $slice) &&
+			$full_delete){
 		#Found rset in dset, but not yet processed so can remove safely.
-		$self->log("Removing supporting ResultSet from DataSet:\t".$dset->name."\tResultSet:".$rset->log_label);
-		$sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID.
-		  ' and type="result" and supporting_set_id='.$rset->dbID;
-		$db->dbc->do($sql);
+		$self->unlink_ResultSet_DataSet($rset, $dset);
 	  }
 	}
   }
@@ -1467,28 +1491,24 @@ sub rollback_ResultSet{
 	if($rollback_results){
 
 	  $self->log("Rolling back results for ResultSet:\t".$rset->log_label);
-
-	  #First we need to check whether these cc_ids are present in other result sets.
-	  #Get all associated data_sets
-	  #checking for other product_FeatureSets for given cc_ids
-	  #If we are rolling back results then we delete the cc_ids from 
-	  #associated result_sets and dompletely delete any ResultSets 
-	  #which are a subset of this one
-	  #Warn if we delete an off target set
-	  #Warn if we don't rollback results due associated supporting ResultSet
-	  #which has been used to produce a product FeatureSet.
-		
+	  #Check result_set_input_ids are present in other result sets.
 	  my @assoc_rsets = @{$rset_adaptor->fetch_all_linked_by_ResultSet($rset)};
 	  my $feature_supporting = 0;
 	  
 	  foreach my $assoc_rset(@assoc_rsets){
 		
 		foreach my $dset(@{$dset_adaptor->fetch_all_by_supporting_set($assoc_rset)}){
-		  
+		 
+		  #Check for other product_FeatureSets
 		  if(my $fset = $dset->product_FeatureSet){
 			$feature_supporting++;
 			$self->log('Found product FeatureSet('.$fset->name.
 					   ") for associated supporting ResultSet:\t".$rset->log_label);
+
+			if($rset->table_name ne 'input_set' ||
+			   (! $force)){#is an input_set/reads collection
+			  $feature_supporting++;
+			}
 		  }
 		}					
 	  }
@@ -1511,9 +1531,10 @@ sub rollback_ResultSet{
 
 		$self->log('Removing result_set_input entries from associated ResultSets') if @assoc_rsets;
 		
-		if(! $slice){
+		if((! $slice) &&
+		   $full_delete){
 
-		  #Now remove cc_ids from associated rsets.
+		  #Now remove result_set_input_ids from associated rsets.
 		  foreach my $assoc_rset(@assoc_rsets){
 			$sql = 'DELETE from result_set_input where result_set_id='.$assoc_rset->dbID.
 			  ' and result_set_input_id in('.join', ', @{$assoc_rset->result_set_input_ids}.')';
@@ -1530,7 +1551,9 @@ sub rollback_ResultSet{
 			  }
 			}
 		  
-			#Found complete subset so can delete
+			#$assoc_rset is complete subset of $rset so can delete
+			#We know this does not have an assoicated product feature set
+			#Only if it is not derived from an input_set
 			if($subset){
 			  $self->log("Deleting associated subset ResultSet:\t".$assoc_rset->log_label);
 			  
@@ -1594,10 +1617,11 @@ sub rollback_ResultSet{
 	}
 	
 	#Delete chip_channel and result_set records
-	if(! $slice){
+	#This should only be done with full delete
+	if((! $slice) &&
+	  $full_delete){
 	  $sql = 'DELETE from result_set_input where result_set_id='.$rset->dbID;
 	  $self->rollback_table($sql, 'result_set_input', 'result_set_input_id', $db);
-
 
 	  $sql = 'DELETE from result_set where result_set_id='.$rset->dbID;
 	  $db->dbc->do($sql);
@@ -1610,7 +1634,35 @@ sub rollback_ResultSet{
 
 
 
+sub unlink_ResultSet_DataSet{
+  my ($self, $rset, $dset, $new_name) = @_;
 
+  #validate set vars
+
+  my $db = $rset->adaptor->db;
+
+  $self->log("Removing supporting ResultSet from DataSet:\t".$dset->name."\tResultSet:".$rset->log_label);
+  my $sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID.
+	' and type="result" and supporting_set_id='.$rset->dbID;
+  
+  warn "Removing ".$rset->log_label." as a supporting set to DataSet:\t".$dset->name.
+	"\nThis may result in a DataSet with no supporting sets";
+  $db->dbc->do($sql);
+
+  if($new_name){
+	#We risk overwriting any previously renamed result sets.
+	#Should use datestamp?
+	$sql = 'UPDATE result_set set name="OLD_'.$rset->name.'" where result_set_id='.$rset->dbID;
+	$self->db->dbc->do($sql);
+
+	if($dset->product_FeatureSet){
+	  $self->log('Associated DataSet('.$dset->name.') has already been processed. It is not wise to replace a supporting set without first rolling back the FeatureSet, as there may be additional supporting data');
+	  warn 'Associated DataSet('.$dset->name.') has already been processed. It is not wise to replace a supporting set without first rolling back the FeatureSet, as there may be additional supporting data';
+	}
+  }
+
+  return;
+}
 
 =head2 rollback_InputSet
 
@@ -1626,10 +1678,11 @@ sub rollback_ResultSet{
 
 
 sub rollback_InputSet{
-  my ($self, $eset, $force_delete) = @_;
+  my ($self, $eset, $force_delete, $full_delete) = @_;
 
 
   #Need to implement force_delete!!!!!!!!!!!!!!!!!!!!!!
+  #Need to check this is not used in a DataSet/ResultSet
 
   my $adaptor = $eset->adaptor || throw('InputSet must have an adaptor');
   my $db = $adaptor->db;
