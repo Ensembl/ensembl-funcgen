@@ -966,14 +966,16 @@ sub write_validate_experiment_config{
   map {push @previous_rep_sets, $_ if $_->name !~ /_IMPORT$/} 
 	@{$rset_adaptor->fetch_all_by_Experiment_Analysis($self->experiment, $chip_anal)};
  
-
-  #rollback_ResultSet if possible
+	  
+  #rollback_ResultSet if possible?
+	  #This is just checking if they are supporting, not actually rolling them back
   if(@previous_rep_sets){
 	$self->log('Found previously stored ResultSets');
 
 	foreach my $prev_rset(@previous_rep_sets){
-	  #THis is pushing undef array?
-	  #But surely this should do nothing?
+	  #This should not rollback anything, just return skipped sets
+	  #i.e. sets which have a product feature set
+	  #It also used to delete the supporting set records which maybe important for redefining the DataSet below
 	  my $rset_dset = $self->rollback_ResultSet($prev_rset);
 	  push @supporting_rset_dsets, $rset_dset if @$rset_dset;
 	}
@@ -995,18 +997,12 @@ sub write_validate_experiment_config{
 	  my ($pset, $dset) = @$prs;
 
 	  if($pset->log_label eq $new_rset->log_label){
-		$self->log("Found update supporting ResultSet clash, renaming to:\tOLD_".$rset->log_label);
+		my $new_name = "OLD_".$rset->log_label;
+		$self->log("Found update supporting ResultSet clash, renaming to:\t${new_name}");
+		$self->unlink_ResultSet_DataSet($rset, $dset, $new_name);
 
-		#We risk overwriting any previously renamed result sets.
-		#Should use datestamp
-		my $sql = 'UPDATE result_set set name="OLD_'.$rset->name.'" where result_set_id='.$pset->dbID;
-		$self->db->dbc->do($sql);
-
-		if($dset->product_FeatureSet){
-		  $self->log('Associated DataSet('.$dset->name.') has already been processed. It is not wise to replace a supporting set without first rolling back the FeatureSet, as there may be additional supporting data');
-		  warn 'Associated DataSet('.$dset->name.') has already been processed. It is not wise to replace a supporting set without first rolling back the FeatureSet, as there may be additional supporting data';
-		}
-		
+		#This pset dbID has already been removed
+		#Will get updated with new rset dbID when updating DataSet
 		$replace_txt = 'Proposed ResultSet(dbID) replacement for DataSet('.$dset->name."):\t".$pset->dbID.' > ';
 	  }
 	}
@@ -1027,11 +1023,7 @@ sub write_validate_experiment_config{
   close($xml_file);
 
   $self->experiment($self->db->get_ExperimentAdaptor->update_mage_xml_by_Experiment($self->experiment()));
-  
-
-
-
-	}
+  	}
   }
   
   return;
