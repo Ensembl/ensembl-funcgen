@@ -26,6 +26,8 @@
   --input_set        Defines the name of an InputSet import
   --input_feature_class Defines the type of features being loaded via an InputSet(to be used 
                      with -input_set e.g. result or annotated).
+  --_total_features  Specifies the total numbers of feature in the InputSet for calculating RPKM.
+                     This is normally handled by the prepare stage and never has to specified by the user.
   --cell_type        The name of the CellType of the experiment.
   --feature_analysis The name of the Analysis used in the experiment.
   --norm|n           Normalisation method (default=vsn)
@@ -152,7 +154,7 @@ $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
-my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host, $batch_job, $prepared);
+my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host, $batch_job, $prepared, $total_features);
 my ($parser, $fanal, $release, $format, @result_files, @slices, @skip_slices);
 
 my $data_dir = $ENV{'EFG_DATA'};
@@ -190,6 +192,7 @@ GetOptions (
 			'result_files=s{,}'  => \@result_files,
 			'slices=s{,}'        => \@slices,
 			'skip_slices=s{,}'   => \@skip_slices,
+			'_total_features=i'   => \$total_features,
 
 			#Experimental group 
 			"group|g=s"    => \$group,
@@ -201,7 +204,7 @@ GetOptions (
 			'farm'           => \$farm,
 			'batch_job'      => \$batch_job, 
 			#Internal option to signify prepared batch job
-			'prepared'       => \$prepared, 
+			'_prepared'       => \$prepared, 
 			#Internal option to signify job has been previously prepared
 			#i.e. result_file name may differ from the original InputSubset name
 			#slightly different to batch_job as prepare may not always result in a changed file
@@ -401,7 +404,8 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -verbose     => $verbose,
    -input_dir   => $input_dir,
    -exp_date     => $exp_date,
-   -result_files => \@result_files,
+   -result_files   => \@result_files,
+   -total_features => $total_features,
    -old_dvd_format => $old_dvd_format,
    -ucsc_coords => $ucsc,
    -release => $release,
@@ -463,7 +467,7 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
 
 
   #output-file is only set if data has been prepared in some way
-  my $prepared = ' -prepared ';
+  my $prepared = ' -_prepared ';
   my $input_file;
 
   if(! ($input_file = $Imp->output_file)){
@@ -479,6 +483,13 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
 	$prepared = '';
   }
   
+  #Grab total features count as prepared file may have been fitlered for specified slices
+  my $total_features = $Imp->total_features;
+
+  if(! $total_features){
+	die("Could not get 'total_features' from InputSet Parser");
+  }
+
   
   #strip slice params as we have already defined which slices to use
   #strip log/debug_flie and set -no_log as we will use the lsf output
@@ -486,7 +497,7 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
   #set new slices as those which have been seen in the input
   #so we don't have to run jobs for all toplevel seq_regions
   my @args = @{&strip_param_args(\@tmp_args, ('log_file', 'debug_file', 'result_files', 'slices', 'skip_slices'))};
-  my $cmd = "time perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl -no_log -batch_job @args -result_files $input_file $prepared -slices ".join(' ', (map $_->seq_region_name, @slices));
+  my $cmd = "time perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl -no_log -batch_job @args -result_files $input_file $prepared -_total_features $total_features -slices ".join(' ', (map $_->seq_region_name, @slices));
 
   #sub slices for keys in slice cache? This will lose any incomplete slice names?
   #But we don't allow partial Slice imports yet!
