@@ -485,7 +485,7 @@ sub strip_param_flags{
 #Generates slices from names or optionally alll default top level nonref
 
 sub generate_slices_from_names{
-  my ($slice_adaptor, $slice_names, $skip_slices, $toplevel, $non_ref, $inc_dups, $assembly) = @_;
+  my ($slice_adaptor, $slice_names, $skip_slices, $highestlevel, $non_ref, $inc_dups, $assembly) = @_;
 
   #Test if $assembly is old?
 
@@ -514,7 +514,7 @@ sub generate_slices_from_names{
 	  push @slices, $slice;
 	}
   }
-  elsif($toplevel){
+  elsif($highestlevel){
 
 	my $level = 'toplevel';
 
