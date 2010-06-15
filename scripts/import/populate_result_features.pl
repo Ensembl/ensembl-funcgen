@@ -26,6 +26,9 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.6  2010-06-11 10:47:25  nj1
+ Now selectively passes window_size conf to avoid resetting window_sizes to empty array
+
 
 =cut
 
@@ -141,7 +144,7 @@ my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 														  -user    => $db_user,
 														  -pass    => $db_pass,
 														  -species => $species,
-														  -type => 'funcgen',
+														  -type    => 'funcgen',
 														  -dnadb   => $dnadb,
 														 );
 
@@ -156,7 +159,7 @@ my $slice_adaptor = $efg_db->get_SliceAdaptor;
 @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1, 1, $old_assm)};#Top level, non ref, inc dups
 #non_dup here will load full chr collections for all hap/par regions!
 #Need to implement fetch_normalised slice_projections in collection feature adaptors?
-
+#This will fail for old assembly as we can have toplevel
 
  
 #grab result_set
@@ -206,10 +209,9 @@ elsif($skip_zero_window && $rset->has_status('RESULT_FEATURE_SET')){
   }
 }
 
-
 #Set job parameters
 if($farm){
-  $output_dir ||= $ENV{'EFG_DATA'}.'/result_features/'.$db_name;
+  $output_dir ||= $ENV{'EFG_DATA'}."/output/${db_name}/result_features/${rset_name}/;
 
   if(! -d $output_dir){
 	system("mkdir -p $output_dir") == 0 || die("cannot make output directory:\t$output_dir\n$?");
@@ -218,6 +220,7 @@ if($farm){
   @tmp_args = @{&strip_param_args(\@tmp_args, ('slices', 'skip_slices'))};
   @tmp_args = @{&strip_param_flags(\@tmp_args, ('farm'))}; 
 }
+
 
 
 SLICE: foreach my $slice(@slices){
@@ -266,7 +269,13 @@ SLICE: foreach my $slice(@slices){
 }
 
 if($farm){
-  warn "You must manually check all jobs have run correctly before setting RESULT_FEATURE_SET status for ".$rset->name."\n" if ! $rset->has_status('RESULT_FEATURE_SET');
+
+  #Just get current assm for this warn
+  if(! $new_assm){
+	$new_assm = $slice_adaptor->fetch_by_region('chromosome', 1)->coord_system->version;
+  }
+
+  warn "You must manually check all jobs have run correctly before setting RESULT_FEATURE_SET, DAS_DISPLAYABLE, IMPORTED_${new_assm} states for ".$rset->name."\n" if ! $rset->has_status('RESULT_FEATURE_SET');
 
   if($new_assm){
 	warn "To generate the remaning window sizes your must now resubmit the jobs with -skip_zero_window\n";
