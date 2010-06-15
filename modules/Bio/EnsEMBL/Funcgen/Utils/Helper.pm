@@ -1175,8 +1175,11 @@ sub define_and_validate_sets{
 =head2 rollback_FeatureSet
 
   Arg [0]    : Bio::EnsEMBL::Funcgen::FeatureSet
-  Arg [1]    : boolean - Force delete flag
-  Arg [2]    : Bio::EnsEMBL::Slice - optional slice region to rollback
+  Arg [1]    : optional - boolean force delete flag, if this FeatureSet is use as a support 
+               for another DataSet.
+  Arg [2]    : optional - arrayref of Bio::EnsEMBL::Slice objects to rollback
+  Arg [3]    : optional - boolean flag to perform full rollback i.e. default will just remove feature
+               specifying this with also delete the feature_set record
   Example    : $self->rollback_FeatureSet($fset);
   Description: Deletes all status and feature entries for this FeatureSet.
                Checks whether FeatureSet is a supporting set in any other DataSet.
@@ -1361,11 +1364,17 @@ sub rollback_FeatureSet{
   $sql = "DELETE f from $table f where f.feature_set_id=".$fset->dbID.$slice_join;
   $self->rollback_table($sql, $table, "${table}_id", $db);
 
-  if($full_delete){ #Also delete feature_set record.
+  if($full_delete){ #Also delete feature/data_set record.
 	
 	$sql = "DELETE from feature_set where feature_set_id=".$fset->dbID;
 	$self->rollback_table($sql, 'feature_set', 'feature_set_id', $db);
 	$self->log("Deleted feature_set entry for:\t".$fset->name);
+
+
+	#swap these around?
+	$sql = "DELETE from data_set where feature_set_id=".$fset->dbID;
+	$self->rollback_table($sql, 'data_set', 'data_set_id', $db);
+	$self->log("Deleted associated data_set entry for:\t".$fset->name);
   }
 
   return;
