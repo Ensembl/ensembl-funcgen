@@ -41,7 +41,7 @@ Nathan Johnson njohnson@ebi.ac.uk
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzipped is_sam is_bed get_file_format strip_param_args generate_slices_from_names strip_param_flags);
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzipped is_sam is_bed get_file_format strip_param_args generate_slices_from_names strip_param_flags get_diploid_genome_length_by_gender);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -487,6 +487,9 @@ sub strip_param_flags{
 sub generate_slices_from_names{
   my ($slice_adaptor, $slice_names, $skip_slices, $toplevel, $non_ref, $inc_dups, $assembly) = @_;
 
+  #Test if $assembly is old?
+
+
   my (@slices, $slice, $sr_name);
 
   if(@$slice_names){
@@ -512,7 +515,20 @@ sub generate_slices_from_names{
 	}
   }
   elsif($toplevel){
-	my @tmp_slices = @{$slice_adaptor->fetch_all('toplevel', undef, $non_ref, $inc_dups)};
+
+	my $level = 'toplevel';
+
+	if($assembly){
+	  $level = 'chromosome';
+	  warn "Cannot get toplevel for old assembly version $assembly, defaulting to 'chromosome' level";
+	  #Would ignore old assembly and just fetch current assembly otherwise as there is no toplevel for old assemblies
+	  #No need for projection on non-ref unassembled seqs as these will/should be identical
+	  #Only need need to project assembled seq i.e. haps(lrgs?).
+	  #Only rollback toplevel data when cleaning after projection, otherwise we may lose some data.
+	  #Change default delete to use all toplevel ref seqs (and non-ref with cs version e.g. haps but not lrgs)
+	}
+
+	my @tmp_slices = @{$slice_adaptor->fetch_all($level, $assembly, $non_ref, $inc_dups)};
 
 	if(@$skip_slices){
 
@@ -525,6 +541,9 @@ sub generate_slices_from_names{
 	  @slices = @tmp_slices;
 	}
   }
+  else{
+	throw('You must either pass an arrayref of slice names or specify the toplevel flag');
+  }
 
 
   if(! @slices){
@@ -533,6 +552,7 @@ sub generate_slices_from_names{
 
   return \@slices;
 }
+
 
 
 1;
