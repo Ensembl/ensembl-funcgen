@@ -1693,7 +1693,7 @@ sub rollback_InputSet{
   $self->log("Rolling back InputSet:\t".$eset->name);
 
   #SubSets
-  foreach my $esset(@{$eset->get_subsets}){
+  foreach my $esset(@{$eset->get_InputSubsets}){
 	$esset->adaptor->revoke_states($esset);
   }
 
