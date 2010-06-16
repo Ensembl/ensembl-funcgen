@@ -26,6 +26,10 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.7  2010-06-15 10:33:07  nj1
+ changed output dir to new dbname centric format
+ update warn message re states
+
  Revision 1.6  2010-06-11 10:47:25  nj1
  Now selectively passes window_size conf to avoid resetting window_sizes to empty array
 
@@ -80,8 +84,7 @@ GetOptions(
 		   'dnadb_port=i'     => \$dnadb_port,
            'dnadb_pass=s'     => \$dnadb_pass,
 		   'dnadb_name=s'     => \$dnadb_name,
-		   #'probe_species_id=i' => \$probe_species_id,
-		   #'probe_multi_species' => \$probe_multi_species,
+		   'output_dir=s'     => \$output_dir,
 		   'old_assm=s'       => \$old_assm,
 		   'new_assm=s'       => \$new_assm, 
 		   'skip_slices=s{,}' => \@skip_slices,
@@ -211,7 +214,7 @@ elsif($skip_zero_window && $rset->has_status('RESULT_FEATURE_SET')){
 
 #Set job parameters
 if($farm){
-  $output_dir ||= $ENV{'EFG_DATA'}."/output/${db_name}/result_features/${rset_name}/;
+  $output_dir ||= $ENV{'EFG_DATA'}."/output/${db_name}/result_features/${rset_name}";
 
   if(! -d $output_dir){
 	system("mkdir -p $output_dir") == 0 || die("cannot make output directory:\t$output_dir\n$?");
