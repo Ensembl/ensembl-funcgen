@@ -20,11 +20,23 @@ normally set by the Importer as the parent class.  Bed contains meta
 data and methods specific to data in bed format, to aid 
 parsing and importing of experimental data.
 
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
 =head1 CONTACT
 
-Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =cut
 
@@ -150,8 +162,8 @@ sub pre_process_file{
   #when faced with a non numerical seq_region_name
   my $sort = ($prepare || ! $self->prepared) ? 'sort -n -k 1 -k 2,3 ' : '';
   
- # my $sort_txt = ($sort) ? " with sort $sort" : ' without sort';
- # $self->log("Opening input file${sort_txt}:\t$filepath");
+  # my $sort_txt = ($sort) ? " with sort $sort" : ' without sort';
+  # $self->log("Opening input file${sort_txt}:\t$filepath");
 
   if($self->input_gzipped){
 	$sort .= '|' if $sort;
@@ -168,7 +180,7 @@ sub pre_process_file{
 	$name =~ s/\.gz// if $self->input_gzipped;
 
 	if($prepare){
-	  #This is also filtered for seq_region_name
+	  #This will be filtered for seq_region_name
 	  $self->output_file($self->get_dir('output')."/prepared.${name}.gz");
 	}
 	else{
@@ -271,6 +283,21 @@ sub parse_line{
   else{
 	my $sr_name = $slice->seq_region_name;
 
+
+	#Filter based on all non-ref slices excluding duplicated regions e.g. hap and lrgs?
+	#Depedant on alignment strategy, which will upweight the alignment on the duplicated regions
+	#Such that there is no signal depletion
+	#For simplicity ignore counting total from duplicate regions for now as impact is minimal
+	#Still need to process these
+	#Extract this method to EFGUtils
+
+	#Count all features here for RPKM
+	my $slice_name = $slice->name;
+
+	#if($slice->is
+	$self->count('total_features');
+
+
 	#This should really be in the InputSet Parser
 	#With the cache slice call
 	#so parse line should return params which InputSet Parser
@@ -345,10 +372,7 @@ sub parse_line{
 sub parse_Features_by_Slice{
   my ($self, $slice) = @_;
 
-  #Slice should have been checked by now in caller
-
-  #we need access to file handle here
-  
+  #Slice should have been checked by now in caller  
   if($slice->strand != 1){
 	throw("Bed Parser does not support parsing features by non +ve/forward strand Slices\n".
 		  'This is to speed up generation of ResultFeature Collections for large sequencing data sets');
@@ -363,7 +387,6 @@ sub parse_Features_by_Slice{
   #We need to maintain a feature cache, which contains all the features which over hang
   #the current slice, such that we can include them in the next batch of features returned
 
- 
   my @features;
   my $slice_end   = $slice->end;
   my $slice_start = $slice->start;
@@ -371,10 +394,17 @@ sub parse_Features_by_Slice{
   my $last_slice_end  = ($last_slice) ? $last_slice->end : ($slice_start - 1);  
   my $last_slice_name = ($last_slice) ? $last_slice->seq_region_name : $slice->seq_region_name; 
   my $rset_id = $self->result_set->dbID;
-
   
   if(! ($slice_start == ($last_slice_end + 1) &&
 		($slice->seq_region_name eq $last_slice_name))){
+
+	warn "bed list slice is ".$last_slice->name;
+
+	#Need to reopen the file as we are doing a second pass over the same data
+	#This is not guaranteed to work for re-reading sets of slices
+	#This would also not be caught by this test
+
+	#To be safe we need to reset the file handle from the caller context
 
 	throw("Bed parser does not yet support parsing features from successive non-adjacent Slices\n".
 		  "Last slice end - Next slice start:\t$last_slice_name:${last_slice_end} - ".
@@ -406,10 +436,13 @@ sub parse_Features_by_Slice{
 	  $line = <$fh>;
 	}
 
-	#$line = <$fh>;
 	#Still need to chump here in case no other fields
-	$line =~ s/\r*\n//o;#chump accounts for windows files
-	warn("Found empty line") if ! $line;
+	$line =~ s/\r*\n//o if $line;#chump accounts for windows files
+
+	if(! $line){
+	  warn("Skipping empty line");
+	  next;
+	}
 
 	#We could use a generic method to parse here
 	#But it is small enough and simple enough to have twice
@@ -460,7 +493,7 @@ sub parse_Features_by_Slice{
 
 }
 
-#Move some of these to InputSet Parser for use by other Parsers?
+#Move these potentially generic methods to InputSet Parser for use by other Parsers
 
 
 sub last_line{
