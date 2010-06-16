@@ -155,7 +155,7 @@ my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $gr
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
 my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host, $batch_job, $prepared, $total_features);
-my ($parser, $fanal, $release, $format, @result_files, @slices, @skip_slices);
+my ($parser, $fanal, $release, $format, $on_farm, @result_files, @slices, @skip_slices);
 
 my $data_dir = $ENV{'EFG_DATA'};
 my $interactive = 1;
@@ -202,8 +202,9 @@ GetOptions (
 			#Run modes
 			'fasta'          => \$fasta,
 			'farm'           => \$farm,
-			'batch_job'      => \$batch_job, 
-			#Internal option to signify prepared batch job
+			#Internal run modes
+			'_batch_job'      => \$batch_job,
+			'_on_farm'        => \$on_farm,
 			'_prepared'       => \$prepared, 
 			#Internal option to signify job has been previously prepared
 			#i.e. result_file name may differ from the original InputSubset name
@@ -261,7 +262,7 @@ print "parse_and_import.pl @tmp_args\n";
 
 
 if($batch_job && ! defined $ENV{'LSB_JOBINDEX'}){
-  throw('Your -batch_job is not running on the farm. Did you try and set this internal parameter manually?');
+  throw('Your -_batch_job is not running on the farm. Did you try and set this internal parameter manually?');
 }
 
 
@@ -414,6 +415,8 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    #other than efg dir structure
   );
 
+print "The log files and output can be found here:\t".$Imp->get_dir('output')."\n";
+
 
 #Need to think about how best to handle this job submission
 #Convert to pipeline?
@@ -441,34 +444,46 @@ if(@slices || $input_feature_class eq 'result'){
   #Until we support PAR/HAP regions properly
 }
 
-#-farm behaves differently if slices not defined
-#i.e. submit norm jobs to farm from within Importer
-#Will have to change this if we ever want to submit slice based 
-#jobs from within the Importer
 
 
-if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
- 
-  #Could skip prepare here if we only have one slice?
-  #Would save time in case where we only run with one slice.
+### PREPARE
 
-  #Define and store sets once here before setting off parallel farm jobs.
-  $Imp->slices(\@slices); #Set slices so we can preprocess the file
-  $Imp->init_experiment_import;
+my $input_file  = '';
+my $total_feats = '';
+
+# Only need to prepare for result input_sets
+# which have not been previously prepared
+# We always need to prepare now as RPKM requires total_feature count
+
+if((defined $input_feature_class) &&
+   ($input_feature_class eq 'result') &&
+   (! $prepared)){
+  
+  #Sanity checks
+  if($batch_job){
+	die('You should prepare prior to submitting a -_batch_job. Have you set this private param manually?');
+  }
+
+  if($total_features){
+	die("-total_feature is already specified($total_features), did you set this manually? This should be set by the 'prepare' step.");
+  }
+
+    
+  $Imp->slices(\@slices);       #Set slices so we can preprocess the file
+  $Imp->init_experiment_import; #Define and store sets once here before setting off parallel farm jobs.
+
+  print "Preparing data...\n";
   $Imp->read_and_import_data('prepare');
-  #This sorts once to prevent 'No space left on device' errors about /tmp space
-  #Will actually parse and print the whole sorted file if required.
-  #So can take longer to run, but is cleaner and more likely to fail here instead
-  #of in mutiple batch jobs
+  $prepared = ' -_prepared ';
+
+  #This prevents 'No space left on device' errors about /tmp space
+  #Parses, filters and sorts input to tmp file
+  #Slight overhead in certain circumstances, But is cleaner and more likely to 
+  #fail here instead of in mutiple batch jobs
   #Could output to seq_region named files which would speed up 2nd stage parsing
   #Delete immediately after use, or save and md5?
   #Do we need to put these in a large file stripe dir?
   #Same with mapping pipeline?
-
-
-  #output-file is only set if data has been prepared in some way
-  my $prepared = ' -_prepared ';
-  my $input_file;
 
   if(! ($input_file = $Imp->output_file)){
 
@@ -479,25 +494,67 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
 
 	die("Could not get prepared file for:\t".$result_files[0]);
 
-	$input_file = $result_files[0];
-	$prepared = '';
+	#$input_file = $result_files[0];
+	#$prepared = '';
   }
-  
-  #Grab total features count as prepared file may have been fitlered for specified slices
-  my $total_features = $Imp->total_features;
 
-  if(! $total_features){
+  #Grab total features count as prepared file may have been filtered for specified slices
+  $total_feats = $Imp->counts('total_features');
+
+  if(! $total_feats){
 	die("Could not get 'total_features' from InputSet Parser");
   }
 
+  #Re/set attrs/params appropriately for local/farm job
+  if($farm){
+	$total_feats = "-_total_features $total_feats";
+	$input_file = "-result_files $input_file";
+  }
+  else{
+	#re/set Imp attrs if we are running locally
+	$Imp->total_features($total_feats);
+	$Imp->prepared(1);
+	$Imp->result_files([$input_file]);
+  }
+}
+else{
+  #Need to format vars as above
+
+  #Logically these may never be needed in the farm submission
+  #but define in case we change the logic
+  $total_feats = "-_total_features $total_features" if $total_features;
+  $input_file  = "-result_files @result_files" if @result_files;
   
+}
+
+### SUBMIT/RUN JOB(S) 
+
+if($farm &&           ###BSUB JOBS
+   (! $batch_job) &&
+   (! $on_farm)){
+  
+  #We don't strip farm from args, so this will currently loop
+  #we use farm and batch_job in importer
+  my $slices    = '';
+  my $batch_job = '';
+  
+  if(@slices){
+	$slices    = '-slices '.join(' ', (map $_->seq_region_name, @slices));
+	$batch_job = '-_batch_job';
+  }
+
+
+  #STRIP ARGS
   #strip slice params as we have already defined which slices to use
   #strip log/debug_flie and set -no_log as we will use the lsf output
   #redefine result file as prepared file
   #set new slices as those which have been seen in the input
   #so we don't have to run jobs for all toplevel seq_regions
   my @args = @{&strip_param_args(\@tmp_args, ('log_file', 'debug_file', 'result_files', 'slices', 'skip_slices'))};
-  my $cmd = "time perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl -no_log -batch_job @args -result_files $input_file $prepared -_total_features $total_features -slices ".join(' ', (map $_->seq_region_name, @slices));
+  #no log to avoid overwriting log file
+  #output in lsf files
+  #should probably change this by setting log dependant on batch_job in Importer
+  my $cmd = "time perl $ENV{EFG_SRC}/scripts/import/parse_and_import.pl -_on_farm -no_log $batch_job @args $input_file $prepared $total_feats $slices";
 
   #sub slices for keys in slice cache? This will lose any incomplete slice names?
   #But we don't allow partial Slice imports yet!
@@ -508,9 +565,10 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
 
   #Set up batch job info
   #Batches obnubilate the job info/output slightly as we don't know which slice is running
+
   my $job_name = "parse_and_import_${name}";
 
-  #Throttle
+  #THROTTLE
   #Load will only ever be 12 max, 1 for each connection and 10 for an active query
   #Dropped duration to 5 as this only sets the interval at which LSF tries to submit jobs
   #before using the select load level to submit any further jobs
@@ -525,18 +583,21 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
 
   my $rusage = "-R \"select[($lsf_host<=600)] rusage[${lsf_host}=12:duration=5]\"";
   #-R "select[mem>4000] rusage[mem=4000] -M 4000000"? 
-  my $bsub_cmd="bsub $rusage -q $queue -J \"${job_name}[1-".scalar(@slices)."]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err $cmd";
-  
+
+  my $bsub_cmd;
+
+  if(@slices){
+	$bsub_cmd="bsub $rusage -q $queue -J \"${job_name}[1-".scalar(@slices)."]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err $cmd";
+  }
+  else{
+	$bsub_cmd="bsub $rusage -q $queue -J \"${job_name}\" -o ${output_dir}/${job_name}.out -e ${output_dir}/${job_name}.err $cmd";
+  }
 
   #Still getting sort fail!!! Uncaught!!!!
   #Need to be able to catch this
-  #Do we need to always prepare?
-  #Or at least always write sorted file, even if we are running in normal mode?
-
-
 
   $Imp->log("Submitting $job_name\n$bsub_cmd");
-  $Imp->log("Slices:\n\t".join("\n\t", (map $_->name, @slices))."\n");
+  $Imp->log("Slices:\n\t".join("\n\t", (map $_->name, @slices))."\n") if @slices;
   system($bsub_cmd) && die("Failed to submit job:\t$job_name\n$bsub_cmd");
 
    
@@ -545,17 +606,20 @@ if(@slices && $farm && ! $batch_job){   #submit slice jobs to farm
   #Hence wwe won't be able to import more slice data from the same file if we set it as IMPORTED!
   #We currently get around this by never setting it, and always rolling back Slice based imports
 
-  #Could wait here before:
+  #Wait here before:
   #   checking job success
   #   setting any extra slice specific status entries
 
 
 }
-else{
+else{ ### DO THE IMPORT
+  print "Importing data...\n";
+
   @slices = ($slices[($ENV{LSB_JOBINDEX} - 1)]) if $batch_job;
   $Imp->slices(\@slices) if @slices;
   $Imp->register_experiment();
 }
 
+print "Done\n";
 
 1;
