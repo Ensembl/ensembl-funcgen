@@ -19,16 +19,23 @@ set to the parser type i.e. the file format.  The generic read_and_import_simple
 a one line per feature format, other format need there own read_and_import_format_data method, 
 which will need defining in the result_data config element.
 
+=head1 LICENSE
 
-=head1 AUTHOR
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-This module was created by Nathan Johnson.
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post questions to the EnsEMBL development list ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =cut
 
@@ -71,12 +78,10 @@ sub new{
   my $self  = $class->SUPER::new(@_);
   
 
-  ($self->{'input_set_name'}, $self->{'input_feature_class'}, $self->{'slices'}) = rearrange(['input_set_name', 'input_feature_class', 'slices'], @_);
-
-  #No rollback flag yet to void losing old data which we are not reimporting
+  ($self->{'input_set_name'}, $self->{'input_feature_class'}, $self->{'slices'}, $self->{total_features}) = rearrange(['input_set_name', 'input_feature_class', 'slices', 'total_features'], @_);
 
 
-    #Could potentially take fields params directly to define a custom format
+  #Could potentially take fields params directly to define a custom format
   #Take direct field mappings, plus special fields which needs parsing differently
   #i.e. default is tab delimited, and GFF would define Attrs field as compound field and provide special parsing and field mapping
   
@@ -171,6 +176,14 @@ sub output_file{
   $self->{'output_file'} = $output_file if $output_file;
   return $self->{'output_file'};
 }
+
+sub input_file{
+  my ($self, $input_file) = @_;
+
+  $self->{'input_file'} = $input_file if $input_file;
+  return $self->{'input_file'};
+}
+
 
 
 =head2 set_config
@@ -357,7 +370,7 @@ sub validate_files{
 	($filename = $filepath) =~ s/.*\///;
 	my $sub_set;
 	$self->log('Validating '.$self->vendor." file:\t$filename");
-	throw("Cannot find ".$self->vendor." file:\t$filename") if(! -e $filepath);#Can deal with links
+	throw("Cannot find ".$self->vendor." file:\t$filepath") if(! -e $filepath);#Can deal with links
 	
 	#reset filename to that originally used to create the Inputsubsets
 	$filename =~ s/^prepared\.// if $self->prepared;
@@ -403,11 +416,9 @@ sub validate_files{
 			elsif($self->input_feature_class eq 'result'){
 			  #Can we do this by slice for parallelisation?
 			  #This will only ever be a single ResultSet due to Helper::define_and_validate_sets
-			  $self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0]);
+			  #flags are rollback_results and force(as this won't be a direct input to the product feature set)
+			  $self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0], 1);
 			}
-			#else{#Deal with output set_type validation in new
-			#	
-			#  }
 		  }
 		  elsif( $recover_unimported ){
 			throw("Found partially imported InputSubSet:\t$filepath\n".
@@ -431,7 +442,7 @@ sub validate_files{
   #Set all the new if we have rolled back due to a recovery.
   if ($recover_unimported){
 
-	foreach my $esset(@{$eset->get_subsets}){
+	foreach my $esset(@{$eset->get_InputSubsets}){
 	  $new_data{$esset->name} = 1; 
 	  $eset->adaptor->revoke_states($esset);
 	}
@@ -473,6 +484,7 @@ sub dbentry_params{
   my $self = shift;
   return $self->{'_dbentry_params'};
 }
+
 
 sub counts{
   my ($self, $count_type) = @_;
@@ -600,6 +612,10 @@ sub read_and_import_data{
 	chomp $filepath;
 	($filename = $filepath) =~ s/.*\///;
 
+	$self->input_file($filepath);
+	#This is only used by Collector::ResultFeature::reinitialise_input method
+
+
 	#We're checking for recover here, as we have to reload all if just one has been screwed up.
 	
 	if( $new_data->{$filepath} ){
@@ -607,7 +623,7 @@ sub read_and_import_data{
 	  $self->{'input_gzipped'} = &is_gzipped($filepath);
 	  
 	  $filepath = $self->pre_process_file($filepath, $prepare) if $self->can('pre_process_file');
-
+	  
 	  $self->log_header(ucfirst($action).' '.$self->vendor." file:\t".$filepath);
 
 	  #We need to be able to optional open pipe to gzip | sort here
@@ -673,7 +689,8 @@ sub read_and_import_data{
 
 	
 		$self->file_handle(open_file($filepath, $self->input_file_operator));
-
+		
+		
 		foreach my $slice(@$slices){
 		  $self->result_feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self);
 		}  
@@ -684,8 +701,7 @@ sub read_and_import_data{
 		
 		#Here we get an error from the sort
 		#as it is not closed, just the pipe
-		#Does this close call the overloaded method in FileHandle?
-		#close($fh);
+
 		warn "Closing $filename\nDisregard the following 'Broken pipe' warning";
 		$fh->close;#Nope this doesn't catch it either
 	  }
@@ -736,7 +752,7 @@ sub read_and_import_data{
 
 		  
 		  if($self->parse_line($line, $prepare)){
-			$self->count('Total lines');
+			$self->count('total parsed lines');
 
 			#Cache or print to sorted file
 			if($prepare && ! $self->batch_job){
@@ -916,6 +932,12 @@ sub set_strand{
 
 }
 
+sub total_features{
+  my ($self, $total) = @_;
+
+  $self->{'total_features'} = $total if defined $total;
+  return $self->{'total_features'};
+}
 
 #Currently only required for Bed::parse_Features_by_Slice
 
