@@ -39,6 +39,7 @@ Unampped reads are filtered as appropriate and the MAPQ score is used as the bed
 use warnings;
 use strict;
 use Pod::Usage;
+use Getopt::Long;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_file_format is_gzipped open_file);
 
 
@@ -52,20 +53,51 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_file_format is_gzipped open_fi
 #It works using bwa output. Not sure if it is fully SAM compliant!
 #This does not use the Binary format!
 
+my ($on_farm, @files);
 
-if (! @ARGV){
+my @tmp_args = @ARGV;
+
+GetOptions (
+			"on_farm"    => \$on_farm,
+			"files=s{,}" => \@files,
+			'man'        => sub { pos2usage(-exitval => 0, -verbose => 2); },
+			'help'       => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
+		   ) or pod2usage( -exitval => 1,
+						   -message => "Params are:\t@tmp_args"
+						 );
+
+
+print "sam2bed.pl @tmp_args\n" if $on_farm;
+
+#Not implemented option functions yet
+
+if (! @files){
   pod2usage( -exitval => 1,
 			 -message => "You must supply some sam filenames to convert");
 }
 
 
-foreach my $file(@ARGV){
+if((scalar(@files) > 1) &&
+   ! $on_farm){
+  die("You must supply the -on_farm flag if you want to run on more than one file");
+  
+}
 
+foreach my $file(@files){
+  
+  if($on_farm){
+	my $bsub_cmd = "bsub -q normal -J sam2bed:$file ".$ENV{'EFG_SRC'}."/scripts/miscellaneous/sam2bed.pl -files $file";
+	system($bsub_cmd);
+	next;
+  }
+
+ 
   if(&get_file_format($file) ne 'sam'){
 	 pod2usage( -exitval => 1,
 				-message => "Not a sam format file:\t$file");
   }
   
+ 
   my $gz = (&is_gzipped($file)) ? '.gz' : '';
   my $file_operator = '';
   $file_operator = "gzip -dc %s |"  if $gz;
