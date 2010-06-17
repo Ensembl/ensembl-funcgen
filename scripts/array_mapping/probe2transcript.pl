@@ -1806,6 +1806,14 @@ for my $i(0..4){
   $Helper->log("dbid $xo_ids[$i] mapped $xo_counts[$i] times");
 }
 
+
+
+#Finally add MART_DISPLAYABLE status
+$sql="INSERT IGNORE into status select a.array_id, 'array' sn.status_name_id from array a, status_name sn where a.name in (".
+  join(',', @array_names).") a.vendor='${vendor}' and sn.name in ('MART_DISPLAYABLE')";#DISPLAYABLE should be set during ImportArrays
+$Helper->log_header("Adding MART_DISPLAYABLE status entries");
+$xref_db->dbc->do($sql);
+
 $Helper->log_header("Completed Transcript $xref_object annotation for @array_names", 0, 'append_date');
 
 
