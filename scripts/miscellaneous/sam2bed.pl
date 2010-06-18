@@ -86,7 +86,9 @@ if((scalar(@files) > 1) &&
 foreach my $file(@files){
   
   if($on_farm){
-	my $bsub_cmd = "bsub -q normal -J sam2bed:$file ".$ENV{'EFG_SRC'}."/scripts/miscellaneous/sam2bed.pl -files $file";
+	
+
+	my $bsub_cmd = "bsub -q normal -J sam2bed:$file -o ${file}.sam2bed.out -e ${file}.sam2bed.err ".$ENV{'EFG_SRC'}."/scripts/miscellaneous/sam2bed.pl -files $file";
 	system($bsub_cmd);
 	next;
   }
