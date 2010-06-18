@@ -23,11 +23,11 @@ if [ ! "$PASS" ]; then
 	exit
 fi
 
-sam_dir=$1
+input_dir=$1
 shift
 
-if [[ ! -d "$sam_dir" ]]; then
-	echo -e "ERROR:\tYou must provide a valid sam_dir argument.\n\n$usage"
+if [[ ! -d "$input_dir" ]]; then
+	echo -e "ERROR:\tYou must provide a valid input_dir argument.\n\n$usage"
 	exit
 fi
 
@@ -37,7 +37,7 @@ suffix=${suffix:='samse.bed.gz'};
 
 
 #Get full path
-sam_dir=$(readlink -f $sam_dir)
+bed_dir=$(readlink -f $bed_dir)
 
 
 #Vendor is only appropriate for input with vendor specific formats
@@ -53,10 +53,10 @@ dbname="dev_${species}_funcgen_59_37d"
 #more experiment_group/set InputSet suffix
 
 
-project=$(echo $sam_dir  | sed 's/\/$//')
+project=$(echo $input_dir  | sed 's/\/$//')
 project=$(echo $project | sed 's/.*\///')
 
-for filepath in $(ls $sam_dir/*$suffix); do
+for filepath in $(ls $input_dir/*$suffix); do
 
 	file=$(echo $filepath | sed 's/.*\///')
 		
@@ -124,7 +124,7 @@ for filepath in $(ls $sam_dir/*$suffix); do
 			-feature_type $feature_type\
 			-feature_analysis bwa_samse\
 			-recover\
-			-result_files $sam_dir/$file\
+			-result_files $input_dir/$file\
 			-data_root $data_dir\
 			-farm\
              $@ 
