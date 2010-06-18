@@ -140,7 +140,6 @@ sub new{
     }
 
 
-
 	$self->{'_tee'} = 1 if $self->{'_no_log'};
 	#should we undef log_file here too?
 	#This currently only turns off default logging
@@ -171,7 +170,8 @@ sub new{
         $self->debug(1,"Debugging started ".localtime()." on $0 at level ".$self->{_debug_level}." ...");
     }
 
-
+	my $log_file;
+	
 	# LOG OUTPUT
 	if (defined $self->{_log_file}){
 
@@ -180,12 +180,13 @@ sub new{
 
 	  $main::_log_file = $self->{_log_file};
 		
-	  my $log_file = '>>'.$self->{'_log_file'};
-
 	  #we need to implment tee here
 	  if($self->{'_tee'}){
 	    #we're not resetting $main::_tee here, we only use it once.
 	    $log_file = '| tee -a '.$self->{_log_file};
+	  }
+	  else{
+		$log_file = '>>'.$self->{'_log_file'};
 	  }
 
 	  open(LOGFILE, $log_file)
@@ -208,18 +209,19 @@ sub new{
 
 		$self->run_system_cmd('mkdir '.$self->{_default_log_dir}) if(! -e $self->{_default_log_dir});
 		$self->{'_log_file'} = $self->{_default_log_dir}.'/'.$file.'.'.$$.'.log';
-		my $log_file = '>>'.$self->{'_log_file'};
 		warn "No log file defined, defaulting to:\t".$self->{'_log_file'}."\n";
 
 		#we should still tee here
 		if($self->{'_tee'}){
 		  #we're not resetting $main::_tee here, we only use it once.
-		  $log_file = '| tee -a '.$log_file;
+		  $log_file = '| tee -a '.$self->{'_log_file'};
+		} else{
+		  $log_file = '>>'.$self->{'_log_file'};
 		}
 
 		open(LOGFILE,  $log_file)
 		  or throw("Failed to open log file : $log_file\nError: $!");
-
+		
 	  }
 	  else{
 		open(LOGFILE,">&STDOUT");
@@ -1772,6 +1774,7 @@ sub rollback_results{
 sub rollback_ResultFeatures{
   my ($self, $rset, $slice, $no_revoke) = @_;
 
+
   #what about?
   if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
 	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
@@ -1782,7 +1785,7 @@ sub rollback_ResultFeatures{
   }
   #else warn if slice and no_revoke?
 
-  my ($slice_name, $slice_constraint);
+  my ($sql, $slice_name, $slice_constraint);
 
   if($slice){
 
@@ -1790,15 +1793,21 @@ sub rollback_ResultFeatures{
 
 	  #Need to test for full slice here?
 	  my $full_slice = $slice->adaptor->fetch_by_region(undef, $slice->seq_region_name);
+	  $slice_name = "\t".$slice->name;
+	  $slice_constraint = ' and seq_region_id='.$rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
+	  #my $slice_srid = $rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
+	  $slice_constraint = ' and seq_region_id='.$rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
 
 	  if(($slice->start != 1) ||
 		 ($slice->end != $full_slice->end)){
-		throw("rollback_ResultFeatures does not yet support non-full length Slices:\t".$slice->name);
+
+		#Need to test whether we have non-0 wsize collections without the exact seq_region values
+		$sql='SELECT window_size from result_feature where result_feature_id='.$rset->dbID.
+		  ' and window_size!=0 and seq_region_start!='.$slice->start.' and seq_region_end!='.$slice->end.$slice_constraint;
+		
+		throw("rollback_ResultFeatures does not yet support non-full length Slices:\t".$slice_name);
 	  }
 
-
-	  $slice_name = "\t".$slice->name;
-	  $slice_constraint = ' and seq_region_id='.$rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
 	}
 	else{
 	  throw('slice argument must be a valid Bio::EnsEMBL::Slice');
@@ -1824,7 +1833,7 @@ sub rollback_ResultFeatures{
   #Cannot use revoke_states here?
   #We can if we retrieve the Chip or Channel first
   #Add to ResultSet adaptor
-  my $sql = 'DELETE from result_feature where result_set_id='.$rset->dbID.$slice_constraint;
+  $sql = 'DELETE from result_feature where result_set_id='.$rset->dbID.$slice_constraint;
   $self->rollback_table($sql, 'result_feature', 'result_feature_id', $db);
 
   return;
