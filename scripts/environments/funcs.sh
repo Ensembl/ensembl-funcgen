@@ -250,7 +250,6 @@ checkJob(){
 			exit 1
 		elif [ $JOB_ID ]; then
 			echo "$job_name is still running"
-			exit
 		fi
 		
 
