@@ -241,6 +241,7 @@ GetOptions (
 		   ) or pod2usage( -exitval => 1);
 
 
+
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
 $helper->log("build_regulatory_features.pl @tmp_args");
 
@@ -321,11 +322,12 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 my $fsa = $db->get_FeatureSetAdaptor();
 my $dsa = $db->get_DataSetAdaptor();
 my $fta = $db->get_FeatureTypeAdaptor();
+my $cta = $db->get_CellTypeAdaptor();
 my $afa = $db->get_AnnotatedFeatureAdaptor();
 my $rfa = $db->get_RegulatoryFeatureAdaptor();
-my $sa = $db->dnadb->get_SliceAdaptor();
-my $aa = $db->get_AnalysisAdaptor();
-my $ga = $db->dnadb->get_GeneAdaptor();
+my $sa  = $db->dnadb->get_SliceAdaptor();
+my $aa  = $db->get_AnalysisAdaptor();
+my $ga  = $db->dnadb->get_GeneAdaptor();
 
 
 
@@ -360,8 +362,10 @@ foreach my $fset (values(%focus_fsets)) {
   $fset_cell_types{$fset->dbID} = $fset->cell_type->name;
 }
 
-
-$cell_types{core} = undef;
+#Add special MultiCell ctype
+my $mc_ctype = $cta->fetch_by_name('MultiCell');
+die ('Your DB does not contain the required MultiCell CellType') if ! $mc_ctype;
+$cell_types{MultiCell} = $mc_ctype;
 
 #Validate we don't have any attr set cell types which are 
 #not represented in the focus sets
@@ -464,7 +468,7 @@ else{
   else{ #test old and new feature/data set here for sanity
 	#So we aren't depending solely on the meta keys
 
-	my $set_name = ($ctype eq 'core') ? 'RegulatoryFeatures' : "RegulatoryFeatures:$ctype";
+	my $set_name = ($ctype eq 'MultiCell') ? 'RegulatoryFeatures' : "RegulatoryFeatures:$ctype";
 	my $archd_set_name = "${set_name}_v${version}";
 	my $old_archd_set_name = "${set_name}_v${old_version}";
 	my $sql;
@@ -566,7 +570,7 @@ else{
 my %ctype_fsets;
 map { 
   $attrib_fsets{$_} = $focus_fsets{$_};
-  push @{$ctype_fsets{core}}, $focus_fsets{$_};
+  push @{$ctype_fsets{MultiCell}}, $focus_fsets{$_};
 } keys %focus_fsets;
 
 
@@ -577,7 +581,7 @@ map { @{$ctype_fsets{$_}} = sort {$a->name cmp $b->name} @{$ctype_fsets{$_}} } k
 
 ### Print some details
 foreach my $ctype(keys %ctype_fsets){
-  next if $ctype eq 'core';
+  next if $ctype eq 'MultiCell';
 
   my $fset_txt = "\n\n# $ctype Focus Sets:\n";
   my $attr_txt = "\n# $ctype Attribute Sets:\n";
@@ -765,10 +769,14 @@ while (<$fh>) {
   if ($debug_start) {
 	next if ($start < $debug_start);
 	last if ($start > $debug_end);
+
+	print "\nNEW ".$attrib_fsets{$fset_id}->cell_type->name.':'.$attrib_fsets{$fset_id}->feature_type->name."\t${start}\t${end}\n";
+
   }
     
-  # Quick hack for 2nd/3rd version of reg. build. Need to disregard ChIPseq 
-  # features below a certain threshold defined hardcoded in ChIPseq_cutoff hash.
+  #132832790-132833336
+
+  #Peak filtering
   #next if (exists $ChIPseq_cutoff{$attrib_fsets{$fset_id}->name()} 
   #         && $score < $ChIPseq_cutoff{$attrib_fsets{$fset_id}->name()});
   
@@ -875,6 +883,7 @@ while (<$fh>) {
 
 	  
 	}
+
 	&add_feature();
   }
 }
@@ -923,7 +932,7 @@ my $total_feature_count = 0;
 my $die = 0;
 
 foreach my $ctype(keys %ctype_fsets){
-  next if $ctype eq 'core';
+  next if $ctype eq 'MultiCell';
 
   printf "\n\n#$ctype FeatureSets %80s\t%8s\t%8s\t%8s\n",'Total', 'Included', 'Distinct', 'Removed';
   
@@ -968,13 +977,14 @@ foreach my $ctype(keys %ctype_fsets){
   
 
   if( ($focus > $t_regfs) ||
-	  ($expected_regfs != $t_regfs) ||
-	  ($t_regfs == 0)){
-	warn("Found inconsistency between Focus and true or expected($expected_regfs) RegulatoryFeature $ctype features\n");
+	  ($expected_regfs != $t_regfs)){
+	warn("WARNING:\tFound inconsistency between Focus and true or expected($expected_regfs) RegulatoryFeature $ctype features\n");
 	$die = 1;
   }
-  
-
+  elsif($t_regfs == 0){
+	warn("WARNING:\tFound no features for $ctype\n");
+	$die = 1;
+  }
 }
 
 
@@ -1044,10 +1054,10 @@ sub add_focus{
 			 'attribute_end' => { $ctype => $end },
 			 'focus' => { 
 						 $ctype => { $af_id => undef },
-						 core   => { $af_id => undef },
+						 MultiCell   => { $af_id => undef },
 						},
 			 'fsets' => {
-						 core => {$fset_id => 1},
+						 MultiCell => {$fset_id => 1},
 						 $ctype => {$fset_id => 1},
 						}
 			};
@@ -1057,7 +1067,7 @@ sub add_focus{
 
   if($ctype_projection){   #Set ctype projected attr start/ends
 	foreach my $ct(keys %cell_types){
-	  next if $ct eq 'core';
+	  next if $ct eq 'MultiCell';
 	  next if $ct eq $ctype;
 	  print "Initialising $ct projection attr start/end:\t$start - $end\n" if $debug_start;
 	  $rf[$rf_size]{attribute_start}{$ct} = $start;
@@ -1083,18 +1093,28 @@ sub update_focus{
   $rf[$rf_size]{focus_end} = $end if ($end > $rf[$rf_size]{focus_end});
 
  
-  #Was always resetting attr end here, but we may have a longer feature already
+  #Reset attr end for all ctypes if required
+  #This prevents bound_seq_region_end < seq_region_end bug
+  #which is not visible in the browser
+   
+  foreach my $rf_ctype(keys %{$rf[$rf_size]{fsets}}){
 
-  #Only set if previous cell_type attr was shorter
-  if ($rf[$rf_size]{attribute_end}{$ctype} < $end) {
-	print "Resetting $ctype attr end to:\t$end\n" if $debug_start;
-	$rf[$rf_size]{attribute_end}{$ctype} = $end;
+	next if $rf_ctype eq 'MultiCell';	#no attrs for multi cell
+
+	if(exists $rf[$rf_size]{attribute_end}{$rf_ctype}){
+
+	  if($end   > $rf[$rf_size]{attribute_end}{$rf_ctype}){
+		$rf[$rf_size]{attribute_end}{$rf_ctype}   = $end;
+		print "Resetting $rf_ctype attr end to new $ctype focus end:\t$end\n" if $debug_start;
+	  }
+	}
   }
 
-  $rf[$rf_size]{fsets}{core}{$fset_id}++;
+
+  $rf[$rf_size]{fsets}{MultiCell}{$fset_id}++;
   $rf[$rf_size]{fsets}{$ctype}{$fset_id}++;
   $rf[$rf_size]{focus}{$ctype}{$af_id} = undef;
-  $rf[$rf_size]{focus}{core}{$af_id} = undef;
+  $rf[$rf_size]{focus}{MultiCell}{$af_id} = undef;
   
   
   #Do we need to alter this to be celltype aware?
@@ -1117,13 +1137,14 @@ sub update_attributes{
 
 
   for my $ct(@cts){
-	next if $ct eq 'core';
+	next if $ct eq 'MultiCell';
 	print "\tUpdating $ct attributes\n" if ($debug_start);
 	my $updated = 0;
 
+
 	for (my $i=0; $i<=$#{$afs{$ct}}; $i++) {
 	  
-	  if ($afs{$ct}->[$i]{end} >= $start) {
+	  if ($afs{$ct}->[$i]{end} >= $rf[$rf_size]{focus_start}) {
 		$updated = 1;
 		# FIRST update attribute start of the regulatory feature...
 		#Why is focus extend not being used here?
@@ -1180,7 +1201,7 @@ sub update_attributes{
 
 sub add_feature{
   
-  #print "Adding $ctype feature($af_id) to attribute feature_list\n" if $debug_start;
+  print "Adding $ctype feature($af_id) to attribute feature_list\n" if $debug_start;
 
 
   push(@{$afs{$ctype}}, 
@@ -1257,7 +1278,7 @@ sub create_regulatory_features{
 
 	  if($debug_start){
 
-		if($ct eq 'core'){
+		if($ct eq 'MultiCell'){
 		  $rf->{attribute_start}{$ct} = $rf->{focus_start};
 		  $rf->{attribute_end}{$ct}   = $rf->{focus_end};
 		}
@@ -1290,7 +1311,9 @@ sub create_regulatory_features{
 		$attr_cache = $rf->{annotated}->{$ct};
 	  }
 
-	  #print "\nBuilding $ct RegulatoryFeature with attribute cache:\n".Data::Dumper::Dumper($attr_cache)."\n" if $debug_start;#level 3?
+	  print "\nBuilding $ct RegulatoryFeature with attribute cache:\n".Data::Dumper::Dumper($attr_cache)."\n" if $debug_start;#level 3?
+
+	  
 
 	  my $reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
 		(
@@ -1300,8 +1323,9 @@ sub create_regulatory_features{
 		 -strand           => 0,
 		 -display_label    => &build_binstring($rf, $ct),
 		 -feature_set      => $rfsets->{$ct},
-		 -feature_type     => $rfsets->{$ct}->feature_type,#Could change this to projected feature type for rf_stats.pl?
+		 -feature_type     => $rfsets->{$ct}->feature_type,
 		 -_attribute_cache => {'annotated_feature' => $attr_cache },
+		 #need to add projected attr here?
 		);
 	  
 	  if ($write_features) {	#Store
@@ -1311,7 +1335,7 @@ sub create_regulatory_features{
 		#Sanity check bound here to make sure we have built correctly
 		#Can only test bounds if adaptors are set
 
-		if($ct ne 'core'){#Only have bound for non-core features
+		if($ct ne 'MultiCell'){#Only have bound for non-core features
 
 		  if (($reg_feat->bound_start != $rf->{attribute_start}->{$ct}) ||
 			  ($reg_feat->bound_end != $rf->{attribute_end}->{$ct})) {
@@ -1357,7 +1381,7 @@ sub get_regulatory_FeatureSets{
   foreach my $ctype (keys %{$ctypes}) {	
 	my ($desc, $fset_name);
 	
-	if($ctype eq 'core'){
+	if($ctype eq 'MultiCell'){
 	  $fset_name = 'RegulatoryFeatures';
 	  $desc = 'Generic RegulatoryFeature focus regions';
 	}
@@ -1368,6 +1392,8 @@ sub get_regulatory_FeatureSets{
 	}
 
 	my $rollback = ($clobber) ? 'supporting_sets' : undef;
+	
+	warn "defining $fset_name";
 
 	my $dset = $helper->define_and_validate_sets($fset_name, 
 												 $analysis, 
@@ -1386,8 +1412,9 @@ sub get_regulatory_FeatureSets{
 
   }
     
-  $helper->log("Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets)); 
+  $helper->log("Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets));
   return \%rf_sets;
+
 }
 
 1;
