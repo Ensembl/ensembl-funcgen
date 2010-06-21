@@ -49,8 +49,9 @@ use Data::Dumper;
 use Carp;
 use Readonly;
 
-our $VERSION       = do { my ($v) = (q$Revision: 1.7 $ =~ /\d+/mxg); $v; };
-Readonly::Scalar our $CACHE_TIMEOUT => 1800;#30 mins in seconds
+our $VERSION       = do { my ($v) = (q$Revision: 1.8 $ =~ /\d+/mxg); $v; };
+Readonly::Scalar our $CACHE_TIMEOUT   => 1800;#30 mins in seconds
+Readonly::Scalar our $LASTMOD_TIMEOUT => 30;
 
 
 sub sources {
@@ -80,8 +81,10 @@ sub sources {
   #If we can cache the time stamp, how are we going to cache the actual sources?
   #Is this not true for standard sources also?
 
-
-  if($now > ($self->config->{'_efg_sourcecache_timestamp'} || 0)+$CACHE_TIMEOUT) {
+  #Init this to avoid warning in + operation
+  $self->config->{'_efg_sourcecache_timestamp'} ||= 0;
+    
+  if($now > ($self->config->{'_efg_sourcecache_timestamp'} || 0) + $CACHE_TIMEOUT) {
     $self->{'debug'} and carp qq(Flushing table-cache for $hydraname);
     delete $self->{'_sources'};
     $self->config->{'_efg_sourcecache_timestamp'} = $now;
@@ -90,10 +93,8 @@ sub sources {
 
   #Add support for basename eq bed and nothing else
 
-
-
   # Use the configured query to find the names of the sources
-  if(!exists $self->{'_sources'}) {
+  if(! exists $self->{'_sources'}) {
     $self->{'_sources'} = [];
     eval {
 
@@ -207,6 +208,43 @@ sub sources {
   }
 
   return @{$self->{'_sources'} || []};
+}
+
+
+
+#Add source_exists method? Based on dsn hash rather than looping through dsns?
+#See if Config cache works first.
+
+sub last_modified {
+  my ($self) = @_;
+ 
+  my $now = time;
+
+  if($now > ($self->config->{'_efg_lastmod_timestamp'} || 0) + $LASTMOD_TIMEOUT) {
+	
+    $self->{'debug'} and carp('Flushing last_modified cache for '.$self->{'dsn'});
+
+	my $dbc = $self->transport->adaptor()->dbc();
+	my $sth = $dbc->prepare("SHOW TABLE STATUS where name in('result_set', 'feature_set')");
+	#Now checks only relevant tables, can't check one or other as we would have to have separate hydras
+	#What if we have turned off some sets in the status table?
+	
+	$sth->execute();
+	my $server_text = [sort { $b cmp $a } ## no critic
+					   keys %{ $sth->fetchall_hashref('Update_time') }
+					  ]->[0]; # server local time
+	$sth->finish();
+	$sth = $dbc->prepare(q(SELECT UNIX_TIMESTAMP(?) as 'unix'));
+	$sth->execute($server_text); # sec since epoch
+	my $server_unix = $sth->fetchrow_arrayref()->[0];
+	$sth->finish();
+	
+	$self->{_last_modified} = $server_unix;
+	$self->config->{'_efg_lastmod_timestamp'} = $now;
+  }
+	
+
+  return $self->config->{'_last_modified'};
 }
 
 1;
