@@ -231,30 +231,39 @@ if(! $feature_tables{$feature_table}){
 #Check database connections
 my $coredba;
 if($dnadbname){
+  
+  my $dnadbpass = {-pass => $dnadbpass};
+	  
   my $coredba = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
      -host => $dnadbhost,
      -port => $dnadbport,
      -user => $dnadbuser,
-     -pass => $dnadbpass,
      -dbname => $dnadbname,
      -species => $species,
-     -group   => 'core',
+	 -group   => 'core',
+	 %$dnadbpass
     );
 }
 
-my $efgdba;
+my ($efgdba, $apass);
 if($dbname){
+
+  if ($pass){
+	$apass = {-pass => $pass};
+	$pass = "-p $pass";
+  }
+
+
   $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
      -host    => $host,
      -port    => $port,
      -user    => $user,
-     -pass    => $pass,
      -dbname  => $dbname,
      -species => $species,
-     -group   => 'funcgen',
      -dnadb   => $coredba, #Assumes that new will accept undef as parameter for this...
+	 %$apass
     );
 }
 
@@ -303,10 +312,12 @@ if(!$nodump){
   foreach my $sr_type(@sr_types){
     
     #Save to only one file... though it may be big...
-    my $query ="SELECT fs.name as 'name' , s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM ${feature_table}_feature f, (select distinct(seq_region_id), sr.name from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and cs.name".$sr_type_clauses{$sr_type}." and cs.is_current is TRUE) s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name IN ('".join("','",@fset_names)."');";
+    my $query ="SELECT fs.name as 'name', s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM ${feature_table}_feature f, (select distinct(seq_region_id), sr.name from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and cs.name".$sr_type_clauses{$sr_type}." and cs.is_current is TRUE) s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name IN ('".join("','",@fset_names)."');";
     
-    my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "-p$pass" : "")." $dbname >${name}.data.${sr_type}.txt";
+    my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "$pass" : "")." $dbname >${name}.data.${sr_type}.txt";
     print $cmd."\n";
+
+	exit;
     system($cmd);
   }
   
