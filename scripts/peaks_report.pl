@@ -316,8 +316,6 @@ if(!$nodump){
     
     my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "$pass" : "")." $dbname >${name}.data.${sr_type}.txt";
     print $cmd."\n";
-
-	exit;
     system($cmd);
   }
   
