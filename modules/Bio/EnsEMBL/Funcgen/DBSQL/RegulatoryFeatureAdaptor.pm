@@ -301,8 +301,8 @@ sub _objs_from_sth {
   my $skip_feature = 0;
   
   my %feature_adaptors = (
-						  'annotated' => $self->db->get_AnnotatedFeatureAdaptor(),
-						  #external?
+						  'annotated' => $self->db->get_AnnotatedFeatureAdaptor,
+						  'external'  => $self->db->get_ExternalFeatureAdaptor,
 						 );
   
   my $stable_id_prefix = $self->db->stable_id_prefix;
@@ -521,8 +521,11 @@ sub _objs_from_sth {
 		#otherwise the bounds may get messed up
 
 		my $attr = $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
+		#No $attr here means the supporting attribute features have been removed
+		#Should never happen in release DB.
 
-		#now need to reset start and ends for the current slice
+
+		#reset start and ends for the current slice
 		#This is not redefining the slice, so we may get minus start values
 		#grab the seq_region_start/ends here first
 		#as resetting directly causes problems
@@ -638,8 +641,10 @@ sub store{
 	my ($sid, $seq_region_id);
 	($rf, $seq_region_id) = $self->_pre_store($rf);
 	$rf->adaptor($self);#Set adaptor first to allow attr feature retreival for bounds
-	#This is only required when storing, 
-	($sid = $rf->stable_id) =~ s/ENS[A-Z]*R0*//;
+	#This is only required when storing
+	#Actually never happens, as we always assign stable_ids after storing
+
+	($sid = $rf->stable_id) =~ s/ENS[A-Z]*R0*// if defined $rf->stable_id;
 
 
 	$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
