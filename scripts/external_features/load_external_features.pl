@@ -22,23 +22,30 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 use Getopt::Long;
 
-my ($host, $user, $dnadb_host, $dnadb_user, $pass, $port, $dbname, $dnadb_name);
+my ($host, $user, $dnadb_host, $dnadb_user, $pass, $port, $dbname, $dnadb_name, $dnadb_port);
 my ($species, $clobber, $type, $old_assembly, $new_assembly, $archive);
 
-GetOptions( "host=s",       =>  \$host,
-			"dnadb_host=s"  =>  \$dnadb_host,
-			"user=s",       =>  \$user,
-			"dnadb_user=s", =>  \$dnadb_user,
-			"species=s",    =>  \$species,
-			"pass=s",       =>  \$pass,
-			"port=i",       =>  \$port,
-			"dbname=s",     =>  \$dbname,
-			"dnadb_name=s",    =>  \$dnadb_name,
-			"type=s",       =>  \$type,
-			#"file=s",     =>    \$file,
-			"archive=s",    =>  \$archive,
-			"clobber",      =>  \$clobber,#This is not behaving like a boolean flag??
-			"help",         =>  \&usage,
+#$main Helper params
+#Set here to avoid used once error
+$main::_tee     = 0;
+$main::_log_file = undef;
+
+GetOptions( "host=s",       => \$host,
+			"dnadb_host=s"  => \$dnadb_host,
+			"user=s",       => \$user,
+			"dnadb_user=s", => \$dnadb_user,
+			"species=s",    => \$species,
+			"pass=s",       => \$pass,
+			"port=i",       => \$port,
+			"dbname=s",     => \$dbname,
+			"dnadb_name=s", => \$dnadb_name,
+			"dnadb_port=s"  => \$dnadb_port,
+			"type=s",       => \$type,
+			"tee",          => \$main::_tee,
+			"logfile=s"     => \$main::_log_file, 
+			"archive=s",    => \$archive,
+			"clobber",      => \$clobber,#This is not behaving like a boolean flag??
+			"help",         => \&usage,
 			"old_assembly=s", => \$old_assembly,
 			"new_assembly=s", => \$new_assembly
 	  );
@@ -51,15 +58,20 @@ usage() if (!$host || !$user || !$dbname || !$type);
 
 #only do this if cdbname is specified
 #But we need to allow for other options for port/user/pass too
-my $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-											  -host   => $dnadb_host || 'ens-staging',
-											  -port   => $port,
-											  -user   => $dnadb_user,
-											  #-pass   => $pass,
-											  -species => $species,
-											  -group  => 'core',
-											  -dbname => $dnadb_name,
-											 );
+
+my $cdb;
+
+if($dnadb_name){
+  $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+											 -host   => $dnadb_host || 'ens-staging',
+											 -port   => $dnadb_port || '3306',
+											 -user   => $dnadb_user || 'ensro',
+											 #-pass   => $pass,
+											 -species => $species,
+											 -group  => 'core',
+											 -dbname => $dnadb_name,
+											);
+}
 
 
 my $db_adaptor = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
@@ -71,6 +83,7 @@ my $db_adaptor = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
 															 -group  => 'funcgen',
 															 -dbname => $dbname,
 															 -dnadb  => $cdb,
+															 #pass other dnadb params here(not name)m to auto aqcuire
 															);
 
 #test db connections
