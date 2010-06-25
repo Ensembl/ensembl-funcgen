@@ -276,7 +276,7 @@ use strict;
 
 $| = 1;							#autoflush
 my ($dbname, $help, $man, @slice_names, @skip_slices, $clobber, $no_load, $odb, $recover);
-my ($odbname, $ndbname, $npass, $nuser, $ohost, $oport, $from_file, $stable_id, $assign_nulls);
+my ($odbname, $ndbname, $npass, $nuser, $ohost, $oport, $from_file, $stable_id, $next_stable_id, $assign_nulls);
 my ($dnadb_name, $dnadb_pass, $dnadb_user, $dnadb_host, $dnadb_port, $old_assm, $new_assm, $species);
 my $reg = "Bio::EnsEMBL::Registry";
 
@@ -330,6 +330,7 @@ GetOptions (
 			'assign_all_nulls'   => \$assign_nulls,
 			'slices=s{,}'        => \@slice_names,
 			'skip_slices=s{,}'   => \@skip_slices,
+			'next_stable_id=i'   => \$next_stable_id,
 			"stable_id=s"        => \$stable_id,
 			"out_dir=s"          => \$out_dir,
 			#"update"            => \$update,
@@ -364,19 +365,28 @@ if(! ($nhost && $nuser && $npass && $ndbname)){
 #}
 
 
+if((@slice_names || @skip_slices) &&
+   ! $next_stable_id){
+  die("To run with slice subsets you must specify the next_stable_id, as there is currently no way to tell whether this should come form the old or new DB");
+}
+
 
 #This should always be the handover db on staging
 #Do we need to add old dnadb too?
 #Too account for unversioned slices which are not present in the new DB?
 
-my $cdb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-											   -host    => $dnadb_host || 'ens-staging',
-											   -user    => $dnadb_user || 'ensro',
-											   -pass    => $dnadb_pass || undef,
-											   -port    => $dnadb_port || 3306,
-											   -dbname  => $dnadb_name,
-											   -species => $species,
-											  );
+my $cdb;
+
+if($dnadb_name){
+  $cdb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+											  -host    => $dnadb_host || 'ens-staging',
+											  -user    => $dnadb_user || 'ensro',
+											  -pass    => $dnadb_pass || undef,
+											  -port    => $dnadb_port || 3306,
+											  -dbname  => $dnadb_name,
+											  -species => $species,
+											 );
+}
 
 
 my $ndb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
@@ -417,7 +427,7 @@ else{
 }
 
 
-my ($next_stable_id, $new_reg_feat_handle, $split_id);
+my ($new_reg_feat_handle, $split_id);
 my ($new_id_handle, $stable_id_handle, %dbid_mappings);
 my (%mapping_cache, %obj_cache, $mappings, $new_mappings);#%new_id_cache?
 my $total_stable_ids = 0;
@@ -514,11 +524,22 @@ my $orf_adaptor = $odb->get_RegulatoryFeatureAdaptor();
 
 warn "Need to implement clobber/recover in next_stable_id lookup\n";
 
-my $cmd = 'SELECT stable_id from regulatory_feature rf where feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by stable_id desc limit 1';
-($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref($cmd)};
-$next_stable_id ++;
+my ($cmd, $on_sid, $nn_sid);
 
-$helper->log("Next stable id is $next_stable_id");
+if($next_stable_id){#check it is valid
+  $helper->log("Using specified next stable:\t$next_stable_id");
+  #Test both dbs else fail
+  #should we rollback the stable_ids before we do this?
+  #Yes! Otherwise we may end up skipping lot's of stable_ids
+
+}else{
+  warn "WARNING:\tFetching next_stable_id from old DB\n";
+
+  $cmd = 'SELECT stable_id from regulatory_feature rf where feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by stable_id desc limit 1';
+  ($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref($cmd)};
+  $next_stable_id ++;
+  $helper->log("Next stable id:\t$next_stable_id");
+}
 
 
 die('Cannot specify both a slice and a stable_id to test run on') if($stable_id && @slice_names);
