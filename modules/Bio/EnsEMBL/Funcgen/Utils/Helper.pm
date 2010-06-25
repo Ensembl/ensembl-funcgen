@@ -883,8 +883,6 @@ sub define_and_validate_sets{
 			#This should be in a rollback_DataSet method
 			#This has moved to DataSetAdaptor::store_update_sets
 				
-			warn "reset supporting sets ".@sorted_ssets;
-
 			#Reset supporting sets
 			$dset->{'supporting_sets'} = undef;
 			$dset->add_supporting_sets(\@sorted_ssets);
@@ -1288,23 +1286,33 @@ sub rollback_FeatureSet{
 
 	my $dset = $db->get_DataSetAdaptor->fetch_by_product_FeatureSet($fset);
 
-	foreach my $sset(@{$dset->get_supporting_sets}){	  
-	  #Maybe skip this if we defined slice?
+	#Account for absent dset if we have an external_feature set
 
-	  #??? Do we want to do this?
-	  #This is dependant on the feature_class of the InputSet
-	  #result InputSets may have been imported as ResultFeatureCollections
-	  #So we want to leave those in place
-	  #annotated feature_class InputSets are directly imports, so the status of these refers
-	  #to the FeatureSet import status
-	  #Where is the imported status set for SWEmbl?
+	if((! defined $dset) &&
+	   $fset->feature_class ne 'external'){
+	  warn "WARNING:\tFeatureSet ".$fset->name." does not have an associated DataSet. Rollback may be incomplete";
+	}
 
- 	  if(($sset->feature_class eq 'annotated') &&
-		$sset->isa('Bio::EnsEMBL::Funcgne::InputSet')){
-
-		$self->rollback_InputSet($sset) if $sset->isa('Bio::EnsEMBL::Funcgen::InputSet');
-		$self->rollback_InputSet($sset);#add full delete here?
-		#Do not want to rollback here for other type of sset
+	if($dset){
+	  	
+	  foreach my $sset(@{$dset->get_supporting_sets}){	  
+		#Maybe skip this if we defined slice?
+		
+		#??? Do we want to do this?
+		#This is dependant on the feature_class of the InputSet
+		#result InputSets may have been imported as ResultFeatureCollections
+		#So we want to leave those in place
+		#annotated feature_class InputSets are directly imports, so the status of these refers
+		#to the FeatureSet import status
+		#Where is the imported status set for SWEmbl?
+		
+		if(($sset->feature_class eq 'annotated') &&
+		   $sset->isa('Bio::EnsEMBL::Funcgen::InputSet')){
+		  
+		  $self->rollback_InputSet($sset) if $sset->isa('Bio::EnsEMBL::Funcgen::InputSet');
+		  $self->rollback_InputSet($sset);#add full delete here?
+		  #Do not want to rollback here for other type of sset
+		}
 	  }
 	}
   }
