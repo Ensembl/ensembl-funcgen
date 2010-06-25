@@ -117,58 +117,18 @@ sub set_feature_sets{
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
   
   foreach my $fset_name(@{$self->import_sets}){
-	warn "Setting $fset_name";
 
-
-	#check feature_type is validated?
+	$self->log("Defining FeatureSet:\t$fset_name");  
 	my $fset = $fset_adaptor->fetch_by_name($fset_name);
 
-	#what about data sets?
-	#we don't need data sets for external_sets!
+	#we don't need data sets for external_feature sets!
 
 	if(defined $fset){
 	  $self->log("Found previous FeatureSet $fset_name");
 
 	  if($self->{'clobber'}){
 
-		warn "Implement rollback_FeatureSet here, need option to leave feature_set entry?";
-
-		#Need to clobber any DBEntries first!!!
-		if(exists $self->{'feature_sets'}{$fset_name}{'xrefs'} &&
-		   $self->{'feature_sets'}{$fset_name}{'xrefs'}){
-
-
-		  my @ext_feat_ids =  map @{$_}, @{$self->db->dbc->db_handle->selectall_arrayref('select external_feature_id from external_feature where feature_set_id='.$fset->dbID)};
-		  
-		  if(@ext_feat_ids){
-			
-			#Why only core xrefs?
-			#my ($core_ext_dbid) = $self->db->dbc->db_handle->selectrow_array('select external_db_id from external_db where db_name="core"');
-			
-			my $core_ext_dbid;
-
-			if($core_ext_dbid){
-			  #double table delete?
-
-			  throw('This xref delete is wrong');
-
-			  my $sql = "delete x, ox from object_xref ox, xref x where ox.ensembl_object_type='ExternalFeature' and x.external_db_id=$core_ext_dbid and ox.xref_id=x.xref_id and ensembl_id in(".join(', ', @ext_feat_ids).')';
-
-			  #should be something like
-			  #delete ox from object_xref ox, external_feature ef where ox.ensembl_object_type='ExternalFeature' and ox.ensembl_id=ef.external_feature_id and ef.feature_set_id in(64,65);
-
-			  $self->log("Clobbering xrefs for $fset_name");
-			  
-			  throw("xref delete is wrong :$sql");
-
-			  #$self->db->dbc->do($sql);
-			}
-		  }
-		}
-		
-		$self->log("Clobbering old features for external feature_set:\t$fset_name");
-		my $sql = 'delete from external_feature where feature_set_id='.$fset->dbID;
-		$self->db->dbc->do($sql);
+		$self->rollback_FeatureSet($fset);#Need to pass \@slices here?
 	  }
 	  elsif($self->{'archive'}){
 		my $archive_fset =  $fset_adaptor->fetch_by_name($fset_name."_v".$self->{'archive'});
@@ -185,43 +145,27 @@ sub set_feature_sets{
 	  }
 	}
 
-	if(!defined $fset){
+	if(! defined $fset){
 	  #don't need to use RNAFeatureType here as this is the setwide generic feature_type
 	  #or do we have separate tables for external_feature and external_rna_feature?
 
 	  #validate analysis first
 	  my $analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'});
+
 	  if(! defined $analysis){
 		
 		$self->log('Analysis '.$self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'}.
-		  " not found, storing from config hash");
-		
-
-
-		#warn Data::Dumper::Dumper({$self->{'feature_sets'}{$fset_name}{'analysis'}});
-		#Why does this no work the first time??
-
-
-		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new
-								 (
-								  %{$self->{'feature_sets'}{$fset_name}{'analysis'}}
-								  #-logic_name    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'},
-								  #-description   => $self->{'feature_sets'}{$fset_name}{'analysis'}{'-description'},
-								  #-display_label => $self->{'feature_sets'}{$fset_name}{'analysis'}{'-display_label'},
-								  #-diplayable    => $self->{'feature_sets'}{$fset_name}{'analysis'}{'-displayable'},
-								 )
-								);
-		
+		  " not found, storing from config hash");		
+		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new(%{$self->{'feature_sets'}{$fset_name}{'analysis'}}));
 		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'});
 	  }
-
-
-	  #warn "analysis is $analysis";
 
 	  #replace hash config with object
 	  $self->{'feature_sets'}{$fset_name}{'analysis'} = $analysis;
 
 	  my $display_name = (exists $self->{'feature_sets'}{$fset_name}{'display_label'}) ? $self->{'feature_sets'}{$fset_name}{'display_label'} : $fset_name;
+
+	  
 
 	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
 													 -name         => $fset_name,
@@ -292,6 +236,7 @@ sub validate_and_store_feature_types{
 	my $ftype_config = ${$self->{'feature_sets'}{$import_set}{'feature_type'}};
 	my $ftype = $ftype_adaptor->fetch_by_name($ftype_config->{'name'});
 
+	$self->log("Validating $import_set FeatureType:\t".$ftype_config->{'name'});
 
 	if(! defined $ftype){
 	  $self->log("FeatureType '".$ftype_config->{'name'}."' for external feature_set ".$self->{'type'}." not present");
@@ -314,78 +259,6 @@ sub validate_and_store_feature_types{
 
 
 
-#Moved these to Helper
-#
-#
-#=head2 get_display_name_by_stable_id
-#
-#  Args [0]   : stable ID from core DB.
-#  Args [1]   : stable feature type e.g. gene, transcript, translation
-#  Example    : $self->validate_and_store_feature_types;
-#  Description: Builds a cache of stable ID to display names.
-#  Returntype : string - display name
-#  Exceptions : Throws is type is not valid.
-#  Caller     : General
-#  Status     : At risk
-#
-#=cut
-#
-## --------------------------------------------------------------------------------
-## Build a cache of ensembl stable ID -> display_name
-## Return hashref keyed on {$type}{$stable_id}
-##Need to update cache if we're doing more than one 'type' at a time
-## as it will never get loaded for the new type!
-#
-#sub get_display_name_by_stable_id{
-#  my ($self, $stable_id, $type) = @_;
-#
-#  $type = lc($type);
-#
-#  if($type !~ /(gene|transcript|translation)/){
-#	throw("Cannot get display_name for stable_id $stable_id with type $type");
-#  }
-#  
-#  if(! exists $self->{'display_name_cache'}->{$stable_id}){
-#	($self->{'display_name_cache'}->{$stable_id}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT x.display_label FROM ${type}_stable_id s, $type t, xref x where t.display_xref_id=x.xref_id and s.${type}_id=t.gene_id and s.stable_id='${stable_id}'");
-#  }
-#
-#  return $self->{'display_name_cache'}->{$stable_id};
-#}
-#
-#
-#=head2 get_stable_id_by_display_name
-#
-#  Args [0]   : display name (e.g. from core DB or GNC name)
-#  Example    : 
-#  Description: Builds a cache of stable ID to display names.
-#  Returntype : string - gene stable ID
-#  Exceptions : None
-#  Caller     : General
-#  Status     : At risk
-#
-#=cut
-#
-## --------------------------------------------------------------------------------
-## Build a cache of ensembl stable ID -> display_name
-## Return hashref keyed on {$type}{$stable_id}
-##Need to update cache if we're doing more than one 'type' at a time
-## as it will never get loaded for the new type!
-#
-#sub get_stable_id_by_display_name{
-#  my ($self, $display_name) = @_;
-#
-#  #if($type !~ /(gene|transcript|translation)/){
-##	throw("Cannot get display_name for stable_id $stable_id with type $type");
-##  }
-#  
-#  if(! exists $self->{'stable_id_cache'}->{$display_name}){
-#	($self->{'stable_id_cache'}->{$display_name}) = $self->db->dnadb->dbc->db_handle->selectrow_array("SELECT s.stable_id FROM gene_stable_id s, gene g, xref x where g.display_xref_id=x.xref_id and s.gene_id=g.gene_id and x.display_label='${display_name}'");
-#  }
-#
-#  return $self->{'stable_id_cache'}->{$display_name};
-#}
-
-
 =head2 project_feature
 
   Args [0]   : Bio::EnsEMBL::Feature
@@ -395,7 +268,7 @@ sub validate_and_store_feature_types{
   Returntype : Bio::EnsEMBL::Feature
   Exceptions : Throws is type is not valid.
   Caller     : General
-  Status     : At risk - is this in core API? Move to Utils?
+  Status     : At risk - is this in core API? Move to Utils::Helper?
 
 =cut
 
@@ -408,10 +281,17 @@ sub project_feature {
 
   # project feature to new assembly
   my $feat_slice = $feat->feature_Slice;
+
+
+  if(! $feat_slice){
+	throw('Cannot get Feature Slice for '.$feat->start.':'.$feat->end.':'.$feat->strand.' on seq_region '.$feat->slice->name);
+  }
+
   my @segments = @{ $feat_slice->project('chromosome', $new_assembly) };
 
   if(! @segments){
 	$self->log("Failed to project feature:\t".$feat->display_label);
+	return;
   }
   elsif(scalar(@segments) >1){
 	$self->log("Failed to project feature to distinct location:\t".$feat->display_label);
@@ -419,7 +299,7 @@ sub project_feature {
   }
 
   my $proj_slice = $segments[0]->to_Slice;
-
+  
   if($feat_slice->length != $proj_slice->length){
 	$self->log("Failed to project feature to comparable length region:\t".$feat->display_label);
 	return;
