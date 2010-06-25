@@ -53,16 +53,17 @@ sub new {
 
   #Set default feature_type and feature_set config
   $self->{'feature_types'} = {
-							  'miRanda'   => {
+							  'miRanda Target'   => {
 											  name        => 'miRanda Target',
 											  class       => 'RNA',
 											  description => 'miRanda microRNA target',
 											 },
 							 };
+
   $self->{feature_sets} = {
 						   'miRanda miRNA targets' => 
 						   {
-							feature_type      => \$self->{'feature_types'}{'miRanda'},
+							feature_type      => \$self->{'feature_types'}{'miRanda Target'},
 							display_name      => 'miRanda Targets',
 							analysis          => 
 							{ 
@@ -88,11 +89,10 @@ sub new {
 
 
 sub parse_and_load{
+  my ($self, $files, $old_assembly, $new_assembly) = @_;
 
-  my ($self, $file, $old_assembly, $new_assembly) = @_;
-
-  $self->log_header("Parsing miRanda data from:\t$file");
-
+  my $file = $files->[0];
+  $self->log_header("Parsing miRanda data from:\t$file");  
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   my $ftype_adaptor    = $self->db->get_FeatureTypeAdaptor();
   my $extf_adaptor     = $self->db->get_ExternalFeatureAdaptor;
@@ -115,8 +115,8 @@ sub parse_and_load{
 
   open (FILE, "<$file") || die "Can't open $file";
 
-  while (<FILE>) {
-	next if ($_ =~ /^\s*\#/o || $_ =~ /^\s*$/o);
+ LINE: while (<FILE>) {
+	next LINE if ($_ =~ /^\s*\#/o || $_ =~ /^\s*$/o);
 
 	#Sanger
 	##GROUP SEQ     METHOD  FEATURE CHR     START   END     STRAND  PHASE   SCORE   PVALUE_OG       TRANSCRIPT_ID   EXTERNAL_NAME
@@ -135,7 +135,7 @@ sub parse_and_load{
     ##my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
 	my $id = $ens_id.':'.$seq;
 
-	if(! exists $slice_cache{$chr}){
+	if(! defined $slice_cache{$chr}){
 	
 	  if($old_assembly){
 		$slice_cache{$chr} = $self->slice_adaptor->fetch_by_region('chromosome', 
@@ -148,10 +148,10 @@ sub parse_and_load{
 		$slice_cache{$chr} = $self->slice_adaptor->fetch_by_region('chromosome', $chr);
 	  }
 
-	  if(! defined 	$slice_cache{$chr}){
+	  if(! defined $slice_cache{$chr}){
 		warn "Can't get slice $chr for sequence $id\n";
 		$skipped++;
-		next;
+		next LINE;
 	  }
 	}
 
@@ -187,11 +187,11 @@ sub parse_and_load{
 	   -end           => $end,
 	   -strand        => $strand,
 	   -feature_type  => $features_by_name{$seq},
-	   -feature_set   => $self->{'feature_sets'}{'miRanda miRNA'},
+	   -feature_set   => $self->{'feature_sets'}{'miRanda miRNA targets'},
 	   -slice         => $slice_cache{$chr},
 	  );
 
-
+	
 
     # project if necessary
     if ($new_assembly) {
@@ -230,9 +230,10 @@ sub parse_and_load{
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
 											 -dbname                 => $species.'_core_Transcript',
 											 #-release                => $self->db->dnadb->dbc->dbname,
+											 -release => '46_36h', #Hard coded due to schema to old to use with API
+											 #-release => '46_36g',
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
-											 #-db_display_name        => $self->db->dnadb->dbc->dbname,
 											 -db_display_name        => 'EnsemblTranscript',
 											 -type                   => 'MISC',
 											 -primary_id             => $ens_id,
