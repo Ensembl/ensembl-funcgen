@@ -370,7 +370,7 @@ sub _objs_from_sth {
 	my (@result, $current_dbid, $arraychip_id, $probe_id, $array_id, $probe_set_id, $name, $class, $probelength, $desc);
 	my ($array, %array_cache, %probe_set_cache);
 	
-	$sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, $desc);
+	$sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, \$desc);
 
 
 	#Complex query extension
