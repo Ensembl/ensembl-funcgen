@@ -14,6 +14,10 @@ dkeefe@ebi.ac.uk
 
 =head1 EXAMPLES
 
+ reg_feat_class_prep.pl -e dev_homo_sapiens_funcgen_59_37d -H ens-genomics1 -s homo_sapiens
+
+reg_feat_class_prep.pl -e dev_mus_musculus_funcgen_59_37l -H ens-genomics1 -s mus_musculus
+
 =head1 SEE ALSO
 
 mysql -u ensro -P3306 -hens-genomics2 -BN -e"select display_label from regulatory_feature " dk_funcgen_classify_58_ES | tr -d 0 | awk '{print length($1)}' | sort | uniq -c
@@ -21,6 +25,9 @@ mysql -u ensro -P3306 -hens-genomics2 -BN -e"select display_label from regulator
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2010-04-01 11:55:50  dkeefe
+ Looks at a specified func_gen database determines which cell lines need an annotation run and prints out helpful stuff for whoever is running the classification analyses.
+
 
 
 
@@ -48,7 +55,7 @@ my $id_list;
 my $sp;
 my $verbose = 0;
 my @temp_tables;
-my $release = 58;
+my $release = 59;
 
 my %opt;
 
@@ -73,15 +80,15 @@ my @sql;
 &execute($dbh,@sql);
 
 #my $cells_ref = $dbh->selectcol_arrayref("select name from cell_type;");
-my $reg_sets_aaref = $dbh->selectall_arrayref("select name, feature_set_id from feature_set where  type = 'regulatory' and name like '%:%'");
+my $reg_sets_aaref = $dbh->selectall_arrayref("select name, feature_set_id from feature_set where  type = 'regulatory' and name like '%:%' and name not like '%_v%' and name not like '%MultiCell%'");
 my @good_sets;
 
 foreach my $set_ref (@$reg_sets_aaref){
 
-    my $label_length = $dbu->get_count("select length(display_label) from regulatory_feature where feature_set_id = ".$set_ref->[1]);
+    my $label_length = $dbu->get_count("select length(binary_string) from regulatory_feature where feature_set_id = ".$set_ref->[1]);
 
     my $cell;
-    if($label_length > 3){
+    if($label_length > 2){
 	($cell) = $set_ref->[0] =~ /RegulatoryFeatures:(.*)/;
 	push @good_sets,$cell;
     }
@@ -99,7 +106,7 @@ if($sp eq 'mus_musculus'){$common = '_mouse'}
 
 print "\n Now edit ~/dbs/current".$common."_funcgen to point to $func_db on $host\n";
 print "\n and ~/dbs/current".$common."_core to point to latest species_core\n";
-print "\n and copy reg_feat_gen_feat_conf.1 to the v$release dir \n\n";
+print "\n and copy reg_feat_gen_feat_conf.2 to the v$release dir \n\n";
 
 
 
@@ -108,14 +115,20 @@ foreach my $cell (@good_sets){
     print "mkdir db$cell\n";
     print "cd db$cell\n";
     print "gen_feats_4_classification.pl -e $work_db -v2 -s $sp > & log1  \n";
-    print "reg_feats_4_classification.pl -e $work_db -v2 -c $cell -s $sp > & log2  \n";
+    print "reg_feats_4_classification.pl -e $work_db -v2 -c $cell -s $sp  > & log2  \n";
     print "mock_reg_feat_gen.pl -e $work_db -i regulatory_features_filtered -o mockreg_features_filtered >& log3 \n";
-    print "reg_feat_gen_feat_overlaps.pl -e $work_db -v1 -c ../reg_feat_gen_feat_conf.1 > & log4 &\n";
-
-    print "\n";
+    print "reg_feat_gen_feat_overlaps.pl -e $work_db -v1 -c ../reg_feat_gen_feat_conf.2 > & log4 \n";
+    print "grep -v Ex log4 | tail -22 | grep -v 'and cell_type_specific' > summary1\n";
+    print "cd ..\n\n";
 
 }
 
+
+foreach my $cell (@good_sets){
+    my $work_db =  "dk_funcgen_classify_$release"."_$cell";
+
+    #print "alter table $work_db".".regulatory_features_classified rename as $work_db".".regulatory_features_classified_1 ; \n";
+}
 
 $dbh->disconnect;
 exit;
