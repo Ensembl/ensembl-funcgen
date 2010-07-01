@@ -36,10 +36,14 @@ Regulatory Features (regfeats) are classified by considering their
 position on the genome in relation to other classes of feature on the
 genome (eg genes, repeats, intergenic regions) together with the
 combination of regulatory attributes they posess as coded in their
-display_label. A set of randomly distributed features (mockfeats)
-corresponding to the regfeats in terms of length and chromosome are
-also generated so that we can judge if the placement of regfeats in
-relation to the genomic features is non-random.
+binary_string. The display label is a binary string with each position
+corresponding to a particular focus or attribute feature and a value
+of 1 indicating that the regulatory feature overlaps this particular
+type of focus or attribute feature. A set of randomly distributed
+features (mockfeats) corresponding to the regfeats in terms of length
+and chromosome are also generated so that we can judge if the
+placement of regfeats in relation to the genomic features is
+non-random.
 
 The first step in the procedure is to determine which genomic features
 (genfeats) each regfeat overlaps. A single common basepair is
@@ -47,29 +51,30 @@ sufficient to consider two features overlapping. We do the same with
 the mockfeats. (Strictly speaking this is not the first step, as we
 know from experience that certain regulatory features are most
 probably artefacts and that others contain no useable information so
-these are filtered out before this script is used and the mockfeats
+these are filtered out before the procedure begins and the mockfeats
 correspond to only the filtered set of regfeats).
 
 Next we create a set of patterns of attributes we wish to
-evaluate. Currently this is all possible combinations of 4 bits set
-which can be created from the n bits in the display label.
+evaluate. Currently this is all the patterns which occur in the
+display labels more than once, plus all the patterns which can be
+created by re-setting one bit of the existing patterns from 1 to 0.
 
 For each pattern, we look at all the regulatory features which have
 the same or more bits set. If there are more than 100 such regfeats we
 count the number of times these features overlap each class of
 genfeat. We do the same count with the set of mockfeats which
-correspond to the regfeats. If 70% of the regfeats overlap a
+correspond to the regfeats. If >50% of the regfeats overlap a
 particular class of genfeat and the chi-squared calculated using the
 mockfeat count as the 'expected' value is >8.0 (P0.005) we record that
 this pattern is associated with this class of genfeat.
 
-If the pattern IS associated with a genfeat and has less than 4 bits
-set we collect a second set of patterns which have this pattern's PLUS
-any other bits set. For each of these patterns we look at all the
-regulatory features which have the same or more bits set and we count
-the number of times these features overlap each class of genfeat. If
-less than 50% of the regfeats overlap we record that this second
-pattern is not associated with the class of genfeat involved.
+If the pattern IS associated with a genfeat we collect a second set of
+patterns which have this pattern's PLUS any other bits set. For each
+of these patterns we look at all the regulatory features which have
+the same or more bits set and we count the number of times these
+features overlap each class of genfeat. If less than 50% of the
+regfeats overlap we record that this second pattern is not associated
+with the class of genfeat involved.
 
 Having determined all the associated and not-associated patterns for
 each class of genfeat, we look at all the regfeats and use the
@@ -122,6 +127,9 @@ reg_feat_gen_feat_overlaps.pl -e dk_funcgen_classify_55_1 -v1 -c reg_feat_gen_fe
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.3  2010-04-01 13:48:18  dkeefe
+ changed value of assoc_thresh to 51
+
  Revision 1.2  2010-03-26 10:19:04  dkeefe
  Added new sub_pats() method for generating the bit patterns we investigate.
  Modified for single cell line classification.
@@ -267,7 +275,7 @@ close($mock_ofh);
 &load_results($dbh,$dbu,$mock_results_file,$mock_olaps_table,$mock_reg_table,\@gen_feats);
 
 
-$pat_bits = $dbu->get_count("select length(display_label) from regulatory_features_filtered limit 1");
+$pat_bits = $dbu->get_count("select length(binary_string) from regulatory_features_filtered limit 1");
 
 # get the patterns we wish to investigate
 my @pats;
@@ -365,9 +373,48 @@ exit;
  
 ###################################################################
 sub sub_pats{
+    my($dbh,$reg_feat_table,$pat_bits)=@_;
+
+    my $aref = $dbh->selectcol_arrayref("select binary_string from regulatory_features_filtered group by binary_string having count(*)  > 1 ");
+    unless(defined $aref && @$aref >0){ die "no binary strings found with query :- \n select binary_string from regulatory_features_filtered group by binary_string having count(*)  > 1"}
+
+    my %pats;
+    foreach my $orig (@$aref){
+        my $zero_count = $orig =~ tr/0/_/;
+        #if($zero_count >= $pat_bits-2){next}#dont want pats with only one mark
+        # following the introduction of projected builds and the use of TFBS 
+        # as focus features, patterns with only one mark are not necessarily
+        # just a focus feature. we therefore want to analyse them
+        if($zero_count == $pat_bits){next}
+        if($zero_count == $pat_bits - 1){ # just one bit set
+            $pats{$orig} = 1;
+            next;
+        }
+ 
+        my @ch = split('',$orig);
+        # we create the set of all patterns which comprise the original but 
+        # with one of the set bits made into '_' 
+        for(my $i = 0;$i<@ch;$i++){
+            if($ch[$i] eq '1'){
+                $ch[$i]='_';
+                $pats{(join('',@ch))} = 1;
+                $ch[$i] = 1;
+
+            }
+            $pats{$orig} = 1;
+        }
+    }
+
+    return keys(%pats);
+
+}
+
+
+
+sub sub_pats_old{
     my($dbh,$reg_feat_table)=@_;
 
-    my $aref = $dbh->selectcol_arrayref("select display_label from regulatory_features_filtered group by display_label having count(*)  > 1 ");
+    my $aref = $dbh->selectcol_arrayref("select binary_string from regulatory_features_filtered group by binary_string having count(*)  > 1 ");
     
     my %pats;
     foreach my $orig (@$aref){
@@ -421,21 +468,28 @@ sub create_types_table{
     }
 
 
+    unless($dbu->column_exists($flags_table,'tss_centred_5000')){
+	push @sql, "alter table $flags_table add column tss_centred_5000  int(1) default 0";
 
+    }
 
 ################## add all cols? as above
 
 
     push @sql, "drop table if exists $types_table";
-#    push @sql, "create table $types_table select regulatory_feature_id,display_label,if(gm06990+cd4+imr90 = 1,1,0) as cell_type_specific,protein_coding_exon1_plus_enhancer as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
+#    push @sql, "create table $types_table select regulatory_feature_id,binary_string,if(gm06990+cd4+imr90 = 1,1,0) as cell_type_specific,protein_coding_exon1_plus_enhancer as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
     if($sp eq 'homo_sapiens'){
-        push @sql, "create table $types_table select regulatory_feature_id,display_label,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
+        #push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";# as used in v58
+
+        push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,tss_centred_5000 as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
+
     }else{
-        push @sql, "create table $types_table select regulatory_feature_id,display_label,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
+        push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
     }
 
     # apply arbitrary rules to resolve conflicts
-    push @sql, "update $types_table set promoter_associated = 0 where promoter_associated and gene_associated";
+    push @sql, "update $types_table set promoter_associated = 0 where promoter_associated and gene_associated"; # as used for v58
+    #push @sql, "update $types_table set gene_associated = 0 where promoter_associated and gene_associated"; #
     # use unclassified col to flag conflicts
     push @sql, "update $types_table set unclassified = 1 where promoter_associated and non_gene_associated";
     push @sql, "update $types_table set unclassified = 1 where gene_associated and non_gene_associated";
@@ -504,38 +558,69 @@ sub create_types_table{
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where unclassified and not cell_type_specific");
     &commentary("unclassified and not cell_type_specific            $res\n");
 
+    &qc($dbh,$dbu,);
+
 }
 
 
 sub qc{
+    my($dbh,$dbu) = @_;
 
-#create table promoter_associated_temp select seq_region_name,seq_region_start,seq_region_end from regulatory_feature rf, regulatory_features_classified rfc where rfc.promoter_associated and rfc.regulatory_feature_id =rf.regulatory_feature_id order by seq_region_name;
-#alter table promoter_associated_temp add index(seq_region_name);
+    my @sql;
+    #goto GENE_ASSOC;
+    push @sql, "drop table if exists promoter_associated_temp";
+    push @sql, "create table promoter_associated_temp select rfc.regulatory_feature_id, seq_region_name,seq_region_start,seq_region_end,rfc.binary_string from regulatory_feature rf, regulatory_features_classified rfc where rfc.promoter_associated and rfc.regulatory_feature_id =rf.regulatory_feature_id order by seq_region_name;";
+    push @sql, "alter table promoter_associated_temp add index(seq_region_name)";
+    push @sql, "drop table if exists promoter_features";
+    push @sql, "create table promoter_features select * from protein_coding_exon1_plus_enhancer ";
+    #push @sql, "insert into promoter_features select * from  protein_coding_intron1";
+    push @sql, "insert into promoter_features select * from RNA_gene_exon1_plus_enhancer";
+    push @sql, " alter table promoter_features add index(seq_region_name)";
 
-#create table promoter_features select * from protein_coding_intron1;
- #insert into promoter_features select * from protein_coding_exon1_plus_enhancer; 
-#insert into promoter_features select * from RNA_gene_exon1_plus_enhancer;
-# alter table promoter_features add index(seq_region_name);
+    &execute($dbh,@sql) or die;
 
-#select count( distinct pa.seq_region_name,pa.seq_region_start ) from promoter_associated_temp pa, promoter_features e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start; 
+    my $res;
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, promoter_features e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start"); 
+    &commentary("promoter_associated features\n");
+    &commentary("$res overlap an exon1_plus_2.5kb (both RNA and prot_cod)\n");
 
-#select count( distinct pa.seq_region_name,pa.seq_region_start ) from promoter_associated_temp pa, protein_coding_gene_body e wherepa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start; 
-
-#select count( distinct pa.seq_region_name,pa.seq_region_start ) from promoter_associated_temp pa, intergenic_2500 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start > e.feature_start and pa.seq_region_end < e.feature_end;
-#select count( distinct pa.seq_region_name,pa.seq_region_start ) from promoter_associated_temp pa, pseudogene_exon1_plus_enhancer ewhere pa.seq_region_name=e.seq_region_name and pa.seq_region_start > e.feature_start and pa.seq_region_end < e.feature_end;
-
-
-#create table gene_associated_temp select seq_region_name,seq_region_start,seq_region_end from regulatory_feature rf, regulatory_features_classified rfc where rfc.gene_associated and rfc.regulatory_feature_id =rf.regulatory_feature_id order by seq_region_name;   
-
-#alter table gene_associated_temp add index(seq_region_name);
-
-#select count( distinct pa.seq_region_name,pa.seq_region_start ) from gene_associated_temp pa, protein_coding_gene e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start; 
-
-#select count( distinct pa.seq_region_name,pa.seq_region_start ) from gene_associated_temp pa, RNA_gene e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start;  
-
-#select count( distinct pa.seq_region_name,pa.seq_region_start ) from gene_associated_temp pa, intergenic_2500 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start;
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, protein_coding_intron1 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start"); 
+   
+    &commentary("$res overlap a protein coding intron1\n");
 
 
+
+
+
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, protein_coding_gene_body e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start");
+    &commentary("$res overlap a protein coding gene body\n");
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, intergenic_2500 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start > e.feature_start and pa.seq_region_end < e.feature_end");
+    &commentary("$res are at least 2500bp from any part of a protein coding gene\n");
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, pseudogene_exon1_plus_enhancer e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start > e.feature_start and pa.seq_region_end < e.feature_end");
+    &commentary("$res overlap a pseudogene exon1_plus_2.5kb \n");
+    @sql=();
+    push @sql, "drop table if exists gene_associated_temp";
+    push @sql, "create table gene_associated_temp select rfc.regulatory_feature_id, seq_region_name,seq_region_start,seq_region_end from regulatory_feature rf, regulatory_features_classified rfc where rfc.gene_associated and rfc.regulatory_feature_id =rf.regulatory_feature_id order by seq_region_name";
+
+    push @sql, "alter table gene_associated_temp add index(seq_region_name)";
+    &execute($dbh,@sql) or die;
+
+GENE_ASSOC:
+
+    &commentary("gene_associated features\n");
+    #&commentary("$res overlap an intron1 or an exon1_plus_2.5kb (both RNA and prot_cod)\n");
+
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from gene_associated_temp pa, protein_coding_gene e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start");
+    &commentary("$res overlap some part of a protein coding gene\n");
+
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from gene_associated_temp pa, RNA_gene e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start");
+    &commentary("$res overlap some part of an RNA gene\n");
+
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from gene_associated_temp pa, intergenic_2500 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start > e.feature_start and pa.seq_region_end < e.feature_end");
+    &commentary("$res are at least 2500bp from any part of a protein coding gene\n");
+
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from gene_associated_temp pa, pseudogene_transcript e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start");
+    &commentary("$res overlap some part of a pseudogene\n");
 
 }
 
@@ -546,9 +631,9 @@ sub create_flags_table{
 
     my @sql;
     push @sql,"drop table if exists $flags_table";
-    #push @sql, "create table $flags_table select regulatory_feature_id,display_label, 1 as cell_type_specific from regulatory_feature";
-    push @sql, "create table $flags_table select regulatory_feature_id,display_label from regulatory_feature";
-    push @sql, "alter table $flags_table add index(display_label)";
+    #push @sql, "create table $flags_table select regulatory_feature_id,binary_string, 1 as cell_type_specific from regulatory_feature";
+    push @sql, "create table $flags_table select regulatory_feature_id,binary_string from regulatory_feature";
+    push @sql, "alter table $flags_table add index(binary_string)";
     &execute($dbh,@sql) or die;
     @sql = ();
     foreach my $feat (@$gen_feat_ref){
@@ -565,10 +650,10 @@ sub create_flags_table{
         my $pat_ref = $dbh->selectcol_arrayref($q);
 	unless(defined $pat_ref){die "failed on \n$q\n".$dbh->errstr}
         foreach my $pat (@$pat_ref){
-	    push @sql, "update $flags_table set $feat = 1 where display_label like '$pat'";
+	    push @sql, "update $flags_table set $feat = 1 where binary_string like '$pat'";
             #if( ! &cell_type_specific_pattern($pat)){
             #    print "not specific\n";
-            #    push @sql, "update $flags_table set cell_type_specific = 0 where display_label like '$pat'";
+            #    push @sql, "update $flags_table set cell_type_specific = 0 where binary_string like '$pat'";
 	    #}
 
 	}
@@ -578,8 +663,8 @@ sub create_flags_table{
         $pat_ref = $dbh->selectcol_arrayref($q);
 	unless(defined $pat_ref){die "failed on \n$q\n".$dbh->errstr}
         foreach my $pat (@$pat_ref){
-	    push @sql, "update $flags_table set $feat = 0 where display_label like '$pat'";
-            #push @sql, "update $flags_table set cell_type_specific = 1 where display_label like '$pat'";
+	    push @sql, "update $flags_table set $feat = 0 where binary_string like '$pat'";
+            #push @sql, "update $flags_table set cell_type_specific = 1 where binary_string like '$pat'";
 
 	}
 
@@ -592,10 +677,10 @@ sub create_flags_table{
     # add cell type flags NO longer as classification is cell type specific 
     @sql = ();
 #    push @sql, "alter table $flags_table add column cd4 int(1) default 0";
-#    push @sql, "update $flags_table set cd4 = 1 where display_label like '1%'";
-#    push @sql, "update $flags_table set cd4 = 1 where display_label like '_1%'";    push @sql, "alter table $flags_table add column gm06990 int(1) default 0";      push @sql, "update $flags_table set gm06990 = 1 where display_label like '__________________________________________1%'";  
+#    push @sql, "update $flags_table set cd4 = 1 where binary_string like '1%'";
+#    push @sql, "update $flags_table set cd4 = 1 where binary_string like '_1%'";    push @sql, "alter table $flags_table add column gm06990 int(1) default 0";      push @sql, "update $flags_table set gm06990 = 1 where binary_string like '__________________________________________1%'";  
  #   push @sql, "alter table $flags_table add column imr90 int(1) default 0"; 
- #   push @sql, "update $flags_table set imr90 = 1 where display_label like   '___________________________________________1%'";
+ #   push @sql, "update $flags_table set imr90 = 1 where binary_string like   '___________________________________________1%'";
     push @sql, "alter table $flags_table add index(regulatory_feature_id)";
     &execute($dbh,@sql) or die;
     }
@@ -612,8 +697,8 @@ sub create_flags_table_pre51{
 
     my @sql;
     push @sql,"drop table if exists $flags_table";
-    push @sql, "create table $flags_table select regulatory_feature_id,display_label, 1 as cell_type_specific from regulatory_feature";
-    push @sql, "alter table $flags_table add index(display_label)";
+    push @sql, "create table $flags_table select regulatory_feature_id,binary_string, 1 as cell_type_specific from regulatory_feature";
+    push @sql, "alter table $flags_table add index(binary_string)";
     &execute($dbh,@sql) or die;
     @sql = ();
     foreach my $feat (@$gen_feat_ref){
@@ -630,10 +715,10 @@ sub create_flags_table_pre51{
         my $pat_ref = $dbh->selectcol_arrayref($q);
 	unless(defined $pat_ref){die "failed on \n$q\n".$dbh->errstr}
         foreach my $pat (@$pat_ref){
-	    push @sql, "update $flags_table set $feat = 1 where display_label like '$pat'";
+	    push @sql, "update $flags_table set $feat = 1 where binary_string like '$pat'";
             if( ! &cell_type_specific_pattern($pat)){
                 print "not specific\n";
-                push @sql, "update $flags_table set cell_type_specific = 0 where display_label like '$pat'";
+                push @sql, "update $flags_table set cell_type_specific = 0 where binary_string like '$pat'";
 	    }
 
 	}
@@ -643,8 +728,8 @@ sub create_flags_table_pre51{
         $pat_ref = $dbh->selectcol_arrayref($q);
 	unless(defined $pat_ref){die "failed on \n$q\n".$dbh->errstr}
         foreach my $pat (@$pat_ref){
-	    push @sql, "update $flags_table set $feat = 0 where display_label like '$pat'";
-            push @sql, "update $flags_table set cell_type_specific = 1 where display_label like '$pat'";
+	    push @sql, "update $flags_table set $feat = 0 where binary_string like '$pat'";
+            push @sql, "update $flags_table set cell_type_specific = 1 where binary_string like '$pat'";
 
 	}
 
@@ -655,10 +740,10 @@ sub create_flags_table_pre51{
     # add cell type flags 
     @sql = ();
     push @sql, "alter table $flags_table add column cd4 int(1) default 0";
-    push @sql, "update $flags_table set cd4 = 1 where display_label like '1%'";
-    push @sql, "update $flags_table set cd4 = 1 where display_label like '_1%'";    push @sql, "alter table $flags_table add column gm06990 int(1) default 0";      push @sql, "update $flags_table set gm06990 = 1 where display_label like '________________________1%'";  
+    push @sql, "update $flags_table set cd4 = 1 where binary_string like '1%'";
+    push @sql, "update $flags_table set cd4 = 1 where binary_string like '_1%'";    push @sql, "alter table $flags_table add column gm06990 int(1) default 0";      push @sql, "update $flags_table set gm06990 = 1 where binary_string like '________________________1%'";  
     push @sql, "alter table $flags_table add column imr90 int(1) default 0"; 
-    push @sql, "update $flags_table set imr90 = 1 where display_label like   '_________________________1%'";
+    push @sql, "update $flags_table set imr90 = 1 where binary_string like   '_________________________1%'";
     push @sql, "alter table $flags_table add index(regulatory_feature_id)";
     &execute($dbh,@sql) or die;
 
@@ -1028,9 +1113,9 @@ sub load_results{
     my $temp1 = &new_temp();
     push @sql,"drop table if exists $temp1";
     #******************* Cuts end off pattern *******************************
-    #push @sql,"create table $temp1 select o.*,substring(r.display_label,1,32) as pattern from $reg_feat_table r, $overlaps_table o where o.regulatory_feature_id = r.regulatory_feature_id";
+    #push @sql,"create table $temp1 select o.*,substring(r.binary_string,1,32) as pattern from $reg_feat_table r, $overlaps_table o where o.regulatory_feature_id = r.regulatory_feature_id";
 
-    push @sql,"create table $temp1 select o.*,r.display_label as pattern from $reg_feat_table r, $overlaps_table o where o.regulatory_feature_id = r.regulatory_feature_id";
+    push @sql,"create table $temp1 select o.*,r.binary_string as pattern from $reg_feat_table r, $overlaps_table o where o.regulatory_feature_id = r.regulatory_feature_id";
     push @sql,"drop table $overlaps_table";
     push @sql,"alter table $temp1 rename as $overlaps_table ";
     
@@ -1405,7 +1490,7 @@ sub help_text{
 
     reg_feat_gen_feat_overlaps.pl [-h] for help
                   [-e] <db_name> the classification database
-                  [-a] <integer> association threshold;  default 70
+                  [-a] <integer> association threshold;  default 51
                   [-b] <integer> bits to use in combinatorial pattern making
                   [-H] <host machine> eg ecs2
                   [-u] <database user>
