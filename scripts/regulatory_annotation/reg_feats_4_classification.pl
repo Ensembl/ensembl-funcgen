@@ -34,6 +34,9 @@ reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4 -s mus_musculus
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.4  2010-04-01 12:27:04  dkeefe
+ added -d option to specify a scratch/dump directory
+
  Revision 1.3  2010-03-26 10:05:04  dkeefe
  added -c <cell_type> option to allow cell specific classification
 
@@ -187,7 +190,7 @@ push @sql, "alter table regulatory_feature add index(feature_set_id)";
 
 # experimental hack
 
-#push @sql, "update regulatory_feature set display_label = concat('1',display_label)";
+#push @sql, "update regulatory_feature set binary_string = concat('1',binary_string)";
 
 
 
@@ -234,7 +237,7 @@ push @sql,"drop table if exists $temp3";
 
 push @sql,"create table $temp3 select ra.regulatory_feature_id , af.* from regulatory_attribute ra, annotated_feature af where ra.attribute_feature_id = af.annotated_feature_id";
 
-push @sql,"create table $temp2 select j.regulatory_feature_id,count(*) as n_attribs,count(distinct j.feature_set_id) as n_attrib_types,max(j.seq_region_end)-min(j.seq_region_start) as len,min(j.seq_region_start)as attribs_start,max(j.seq_region_end) as attribs_end,rf.display_label from $temp3 j, $filtered_features_table rf where j.regulatory_feature_id=rf.regulatory_feature_id group by regulatory_feature_id ";
+push @sql,"create table $temp2 select j.regulatory_feature_id,count(*) as n_attribs,count(distinct j.feature_set_id) as n_attrib_types,max(j.seq_region_end)-min(j.seq_region_start) as len,min(j.seq_region_start)as attribs_start,max(j.seq_region_end) as attribs_end,rf.binary_string from $temp3 j, $filtered_features_table rf where j.regulatory_feature_id=rf.regulatory_feature_id group by regulatory_feature_id ";
 push @sql,"alter table $temp2 add index(regulatory_feature_id)";
 push @sql,"alter table $temp2 add index(attribs_start)";
 push @sql,"alter table $temp2 add index(attribs_end)";
@@ -243,7 +246,7 @@ push @sql,"alter table $temp2 add index(attribs_end)";
 push @sql,"delete r from $filtered_features_table r, $temp2 t2 where r.regulatory_feature_id = t2.regulatory_feature_id and t2.len > 5000";
 
 # we also remove any reg_features which only contain a single type of attribute
-push @sql,"delete r from $filtered_features_table r, $temp2 t2 where r.regulatory_feature_id = t2.regulatory_feature_id and t2.n_attrib_types < 2";
+#push @sql,"delete r from $filtered_features_table r, $temp2 t2 where r.regulatory_feature_id = t2.regulatory_feature_id and t2.n_attrib_types < 2";
 
 
 push @sql, "alter table $filtered_features_table add index(seq_region_name)";
@@ -252,10 +255,10 @@ push @sql, "alter table $filtered_features_table add index(feature_set_id)";
 push @sql, "alter table $filtered_features_table add index(regulatory_feature_id)";
 push @sql, "alter table $filtered_features_table add index(seq_region_start)";
 push @sql, "alter table $filtered_features_table add index(seq_region_end)";
-push @sql, "alter table $filtered_features_table add index(display_label)";
+push @sql, "alter table $filtered_features_table add index(binary_string)";
 # we want to remove features which occur in the same place and have the same
 # attributes as one another, leaving only one representative
-push @sql, "delete b from $filtered_features_table a, $filtered_features_table b, $temp2 t2a, $temp2 t2b where a.seq_region_name=b.seq_region_name and b.display_label = a.display_label and a.regulatory_feature_id < b.regulatory_feature_id and a.regulatory_feature_id = t2a.regulatory_feature_id and b.regulatory_feature_id = t2b.regulatory_feature_id and t2a.attribs_start=t2b.attribs_start and t2a.attribs_end = t2b.attribs_end";
+push @sql, "delete b from $filtered_features_table a, $filtered_features_table b, $temp2 t2a, $temp2 t2b where a.seq_region_name=b.seq_region_name and b.binary_string = a.binary_string and a.regulatory_feature_id < b.regulatory_feature_id and a.regulatory_feature_id = t2a.regulatory_feature_id and b.regulatory_feature_id = t2b.regulatory_feature_id and t2a.attribs_start=t2b.attribs_start and t2a.attribs_end = t2b.attribs_end";
 
 
 
@@ -276,8 +279,6 @@ push @sql,"drop table if exists $temp3";
 
 push @sql,"create table $temp3 select f.regulatory_feature_id from $filtered_features_table f, Satellite_repeat s where s.seq_region_name = f.seq_region_name and s.feature_end >= f.seq_region_start and s.feature_start <= f.seq_region_end";
 push @sql,"delete f from $filtered_features_table f,$temp3 t where f.regulatory_feature_id = t.regulatory_feature_id";
-
-
 
 
 # reg feats on the mitochondrial DNA are unlikely to use the same
