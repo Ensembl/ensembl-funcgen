@@ -1793,34 +1793,24 @@ sub store_set_probes_features{
 =cut
 
 sub cache_slice{
-  my ($self, $region_name, $cs_name) = @_;
+  my ($self, $region_name, $cs_name, $total_count) = @_;
 
   throw("Need to define a region_name to cache a slice from") if ! $region_name;
-
-  #$cs_name ||= 'toplevel';
   $self->{'slice_cache'} ||= {};
   $region_name =~ s/chr//;
   $region_name = "MT" if $region_name eq "M";
   
-  #can we handle UN/random chromosomes here?
-  
-  
   if (! exists ${$self->{'seen_slice_cache'}}{$region_name}) {
 	my $slice = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
 
-	#if(! $slice){
-	#  #Try slice name? Malformed names may break this here
-	#  #Absent contigs will be tried here and fail
-	#  $slice = $self->slice_adaptor->fetch_by_name($region_name);
-	#}
-
+	#Set seen cache so we don't try this again
 	$self->{seen_slice_cache}{$region_name} = $slice;
 	
-
 	if(! $slice){
 	  warn("-- Could not generate a slice for ${cs_name}:$region_name\n");
 	}
 	else{
+
 	  my $sr_name = $slice->seq_region_name; #In case we passed a slice name
 
 	  if(@{$self->{seq_region_names}}){
@@ -1830,10 +1820,37 @@ sub cache_slice{
     
 	$self->{'slice_cache'}->{$region_name} = $slice;
   }
-	
 
-  return $self->{'slice_cache'}->{$region_name};
+  if($total_count && exists ${$self->{'seen_slice_cache'}}{$region_name}){
+	#This is an InputSet specific method
+	$self->count('total_features') if $self->can('count');
+  }
+
+  #Only return if exists to avoid creating hash key
+  return (exists $self->{'slice_cache'}->{$region_name}) ? $self->{'slice_cache'}->{$region_name} : undef;
 }
+
+=head2 slice_cache
+
+  Example    : my @seen_slices = values(%{$self->slice_cache});;
+  Description: Returns the slice cache i.e. all the Slices seen in the data filtered 
+               by the defined slices. This method can be used to run only the appropriate 
+               slice jobs after a prepare stage.
+  Returntype : Hashref of seq_region name Bio::EnsEMBL::Slice pairs
+  Exceptions : None
+  Caller     : self
+  Status     : At risk
+
+=cut
+
+
+sub slice_cache{
+  my $self = shift;
+  
+  return $self->{'slice_cache'};
+}
+
+
 
 
 =head2 cache_probe_info
