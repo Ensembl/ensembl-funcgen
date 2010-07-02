@@ -295,6 +295,9 @@ $main::_debug_level = 0;#???
 $main::_tee = 1;
 
 
+
+print "Args are:\t@ARGV\n";
+
 GetOptions (
 			"odbpass=s"          => \$opass,
 			"odbport=s"          => \$oport,
@@ -426,7 +429,6 @@ else{
   $odb->dbc();#Test connection, eval this?
 }
 
-
 my ($new_reg_feat_handle, $split_id);
 my ($new_id_handle, $stable_id_handle, %dbid_mappings);
 my (%mapping_cache, %obj_cache, $mappings, $new_mappings);#%new_id_cache?
@@ -502,6 +504,11 @@ $obj_cache{'OLD'}{'SLICE_ADAPTOR'} = $odb->get_SliceAdaptor();
 $obj_cache{'NEW'}{'SLICE_ADAPTOR'} = $ndb->get_SliceAdaptor();
 $obj_cache{'NEW'}{'FSET'}          = $ndb->get_FeatureSetAdaptor->fetch_by_name($new_fset_name);
 die("Could not find NEW RegulatoryFeature FeatureSet:\t$new_fset_name") if ! $obj_cache{'NEW'}{'FSET'};
+
+
+$helper->log("Old FeatureSet:\t".$odb->dbc->dbname.':'.$old_fset_name);
+$helper->log("New FeatureSet:\t".$ndb->dbc->dbname.':'.$new_fset_name);
+
 
 
 #Now we need to test the CoordSystem versions if they have been specified
@@ -615,7 +622,9 @@ elsif($stable_id){
 else{
   #fetch top_level, including non-ref
   #This could actually be the new toplevel if we have set the olddb to the newdb
-  #But we're only using this for the unversioned slices
+  #But we're only using this for the unversioned slices, which will will have to be present in the new DB
+  #to be able to map them. This approach may miss logging of stable IDs present on old/expired seqs
+  #Hence why we should force usage of old dna DB when projecting between assemblies
   @top_level_slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', undef, 1)};
   
   #Fetch old assembled level
@@ -623,28 +632,75 @@ else{
   #These would not be caught below
   @slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all($cs_level, $old_assm)};
 
-  #Now add all unversioned toplevel nonref slices
+  #Add all toplevel nonref slices
   #So we have the old toplevel approximately(new non versioned slices may have been added/removed)
-  #But no mapping available for slices which are not present in both DBs
+  #No mapping available for slices which are not present in both DBs
   #Would have to do this with blast
-  #Also, are we missing some non-versioned slices which would be present in an old DB
-  #as they may have been removed from the new DB, which will only represent the old slices which have beem mapped
 
+  #Non-ref seqs may have version(haps, mouse NT supercontigs?)
+  #Only reference seqs are assembly mapped i.e. chromosomes(not inc haps)
+  #some supercontigs have assembly versions, but can assume they are the same if they 
+  #have the same name and have the same length. Should really have a name change if they are different.
+  
+  
   foreach my $slice(@top_level_slices){
-	
-	if(! $slice->coord_system->version){
+
+	#supercontigs can be reference!
+	#But how can they be reference if they are not versioned?
+	my $cs_name = $slice->coord_system->name;
+
+	if(($cs_name ne 'chromosome') ||
+	   ! $slice->is_reference){
+
+	  #Move these test to loop below
+	  #So we can log the unmapped stable IDs in the cache
+
+	  if($old_assm){
+		#Validate old seq is same as new seq or has mapping
+
+		my $sr_name = $slice->seq_region_name;
+
+		if($cs_name ne 'lrg'){
+		  #lrgs never change assembly
+
+		  my $new_slice = $obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_by_region($cs_name, $sr_name, undef, undef, undef, $old_assm);
+
+		  if(! defined $new_slice){
+			#Do we add this to the array and let the rest of the do the logging 
+			#of the unmappable stable IDs?
+			warn "Could not find new Slice for old seq_region:\t".$slice->name."\n";
+			next;
+		  }
+		  elsif(($cs_name eq 'supercontig') ||
+				($cs_name eq 'chromosome'))	{
+			#Do we have a new supercontig/hap of same name & length?
+			
+			if($slice->length ne $new_slice->length){
+			  warn "Found different lengths for ${cs_name}:${old_assm}:${sr_name} and ${cs_name}:${new_assm}:${sr_name}.\n".
+				"Skipping mapping for ${cs_name}:${old_assm}:${sr_name} as no assembly projection available\n";
+			  next;
+			  #Should we next here or will this be handled by the code?
+			  #i.e. can we include this so we get the logs
+			}
+		  }
+		  else{
+			warn "Cannot handle assembly differences/projection for ${cs_name}:${sr_name}";
+			next;
+		  }
+		}
+	  }
+	  
 	  push @slices, $slice;
 	}
   }
 
 
   map $new_slices{$_->name} = $_, @{$obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', undef, 1)};
-
 }
 
 
-if(! %new_slices){
-  #Just have one test slice
+
+if(! %new_slices){ #Just have one test slice(s)
 
   if($assign_nulls){
 	%new_slices  = map {$new_slices{$_->name} = $_} @{$obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', undef, 1)};
@@ -670,11 +726,16 @@ my $total_new_feats    = 0;
 my $total_mapped_feats = 0;
 
 
-#warn "OLD FSET is ".$obj_cache{'OLD'}{'FSET'}->name.' from '. $obj_cache{'OLD'}{'FSET'}->adaptor->db->dbc->dbname;
-#warn "NEW FSET is ".$obj_cache{'NEW'}{'FSET'}->name.' from '. $obj_cache{'NEW'}{'FSET'}->adaptor->db->dbc->dbname;
+#Set disconnect_when_inactive on old DB if not the same as new DB
+#This should stop server timeouts from causing uncaught lost connections
 
+#if($ndb ne $odb){
+  #Test obj ref to ensure this is the same connection
+  $helper->log("Setting disconnect_when_inactive on old DB:\t".$odb->dbc->dbname);
+  $odb->dbc->disconnect_when_inactive(1);
+#}
 
-#Process each top level seq_region
+#Process each top level old seq_region
 foreach my $slice (@slices){
 
   #Need to change this to slice_name
@@ -700,9 +761,8 @@ foreach my $slice (@slices){
   #old_id4  old_id3       old_id2 old_id5         #merge/death
   #old_id5  old_id3       old_id2 old_id4         #merge/death
   #old_id7                                        #death
-  
 
-  #Check for mapped features and clobber
+
   $cmd = 'select count(regulatory_feature_id) from regulatory_feature where feature_set_id='.
 	$obj_cache{'OLD'}{'FSET'}->dbID().' and seq_region_id='.$orf_adaptor->get_seq_region_id_by_Slice($slice);
 
@@ -754,7 +814,25 @@ foreach my $slice (@slices){
 
 	$helper->log("Fetching old ".$obj_cache{'OLD'}{'FSET'}->name." features for slice:\t".$slice->name);
 
-	REGFEAT: foreach my $reg_feat(@{$obj_cache{'OLD'}{'FSET'}->get_Features_by_Slice($slice)}){
+
+	warn "Connected status is ".	$odb->dnadb->dbc->connected;
+
+	my @old_reg_feats = @{$obj_cache{'OLD'}{'FSET'}->get_Features_by_Slice($slice)};
+
+	warn "Disconnecting";
+
+	$odb->dnadb->dbc->disconnect_if_idle();
+	warn "Connected status is now ".	$odb->dnadb->dbc->connected;
+	#This should called automatically bby the fetch above, but does not seem to work
+
+
+	#If new_assm, test if we can project or exists in new DB
+	#if not we need to log the unmappable stable_ids
+	#Can we project whole chromosomes like this?
+	
+
+
+  REGFEAT: foreach my $reg_feat(@old_reg_feats){
 	  my $from_db = 'OLD';
 	  my $feature = $reg_feat;
 	  my $use_next_child = 0;
@@ -765,7 +843,7 @@ foreach my $slice (@slices){
 		die("Found OLD RegulatoryFeature without a stable_id, dbID is ".$reg_feat->dbID);
 	  }
 
-	  $helper->log_header("Starting new feature chain with old regulatory feature ".$reg_feat->stable_id());
+	  #$helper->log_header("Starting new feature chain with old regulatory feature ".$reg_feat->stable_id());
 
 	  my $source_dbID; #The source dbID this feature was fetched from, set to null for start feature.
 	  #($stable_id = $reg_feat->display_label()) =~ s/\:.*//;
@@ -778,7 +856,7 @@ foreach my $slice (@slices){
 		#can we not have this all in one hash and just test for the feature hash element?
 
 		#Assembly map feature first if required
-		if($new_assm && $feature->slice->coord_system->version){
+		if($new_assm && $feature->slice->is_reference){
 		  my $fail;
 
 		  my @segments = @{$feature->project($cs_level, $new_assm)};
@@ -815,7 +893,7 @@ foreach my $slice (@slices){
 		  }
 
 		  if($fail){
-			$helper->log("No assembly mapping possible for:\t".$feature->stable_id());
+			#$helper->log("No assembly mapping possible for:\t".$feature->stable_id());
 			$mapping_cache{$feature->stable_id()} = [];
 			#Do we need anythign else in here?
 			next REGFEAT;
@@ -865,6 +943,8 @@ foreach my $slice (@slices){
 	#This may be a case for assembly/stable_id mapping using blast
 
 	my $new_slice;
+
+
 
 	if($slice->coord_system->version){
 	  #Default version will be new assembly
@@ -991,6 +1071,10 @@ foreach my $slice_name(keys %new_slices){
 	  "\nMaybe we need to implement blast based mapping?";
   }
   else{
+
+	#This is currently happening for mouse NT contigs
+
+
 
 	#This should now only happen if we are assembly mapping and 
 	#we have a new seq_region in the new assembly
@@ -1123,7 +1207,7 @@ sub build_transitions{
 	
 	#This is the first old to new mapping which has failed
 	if (! defined $source_dbID) {
-	  $helper->log("No $to_db mapping possible for:\t".$feature->stable_id());
+	  #$helper->log("No $to_db mapping possible for:\t".$feature->stable_id());
 	  $mapping_cache{$feature->stable_id()} = [];
 
 
@@ -1158,7 +1242,7 @@ sub build_transitions{
 	  
 	  $id = (defined $nreg_feats[$i]->stable_id()) ? $nreg_feats[$i]->stable_id() : '';
 	  
-	  $helper->log("Found $to_db feature ".$nreg_feats[$i]->dbID().":".$id);
+	  #$helper->log("Found $to_db feature ".$nreg_feats[$i]->dbID().":".$id);
 	  
 	  #set a few more local vars
 	  my $nfstart = $nreg_feats[$i]->seq_region_start();
@@ -1553,7 +1637,7 @@ sub assign_stable_ids{
   #Set child to 1, so avoid use previous at transition end e.g. 1 to 1 mapping
   my $child = 1;
 
-  $helper->log("Assigning stable IDs to ".($num_trans+1)." transitions");
+  #$helper->log("Assigning stable IDs to ".($num_trans+1)." transitions");
   warn "split chain!!" if $split_chain;
   warn "previous split_id of $split_id\n" if $split_id;
   
@@ -1634,7 +1718,7 @@ sub assign_stable_ids{
 	  $child_id = $transitions->[$i]->{'overlap_features'}->[$child]->{'stable_id'};
 	  $feature_id = $transitions->[$i]->{'feature'}->dbID();
 	  
-	  $helper->log("Assigning IDs by Inheritance. Source is NEW dbID $feature_id stable ID $child_id from child $child");
+	  #$helper->log("Assigning IDs by Inheritance. Source is NEW dbID $feature_id stable ID $child_id from child $child");
 
 
 	  #This should be true as will be using previous if last transition projected to this feature
@@ -1654,7 +1738,7 @@ sub assign_stable_ids{
 	  #warn "Assign stable id $child_id to dbID $feature_id";
 	  $transitions->[$i]->{'feature'}->stable_id($child_id);
 	  $dbid_mappings{$feature_id} = $transitions->[$i]->{'feature'};
-	  $helper->log("Assigned dbid_mapping $feature_id => ".$transitions->[$i]->{'feature'}->stable_id());
+	  #$helper->log("Assigned dbid_mapping $feature_id => ".$transitions->[$i]->{'feature'}->stable_id());
 	  
 	  #record all stable_id splits
 	  foreach my $orphan_cnt(0..$last_orphan){#these are stable_ids!
@@ -1726,7 +1810,7 @@ sub assign_stable_ids{
 	  $child_id = $transitions->[$i]->{'overlap_features'}->[$child]->dbID();
 	  $feature_id = $transitions->[$i]->{'feature'}->{'stable_id'};
 
-	  $helper->log("Assigning IDs by Projection. Source is OLD stable id $feature_id to child dbID $child_id");
+	  #$helper->log("Assigning IDs by Projection. Source is OLD stable id $feature_id to child dbID $child_id");
 
 	  #my $outline = $mapping_info{'transitions'}[$i]{'source_id'};	  #stable_id
 	  #o -a--- -d---
@@ -1997,7 +2081,7 @@ sub assign_stable_ids{
 	  @{$mapping_cache{$feature_id}} = @new_stable_ids;
 
 	  #warn "keys are now ".join(',', keys %dbid_mappings);
-	  warn "Mapping cache for $feature_id is @new_stable_ids\n";
+	  #warn "Mapping cache for $feature_id is @new_stable_ids\n";
 
 	}
   }
