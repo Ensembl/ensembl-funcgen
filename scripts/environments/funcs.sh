@@ -33,12 +33,14 @@ _FALSE=!$_
 #could set BACKUP_DIR here too?
 #Note: Using sym links for these DIR vars means the patch in the functions should also be symlinks!
 export ARCHIVE_DIR=$HOME/warehouse/data
+export GROUP_ARCHIVE_DIR=/warehouse/ensembl02/funcgen
 
 #Problems with which dir to use as EFG_DATA contains efg, so we can't sub that off the path
 #This require DATA_DIR (similar to SRC?)
 #Can now keep this outside of efg.env/config
 #Keep config in here for now, or move to .bashrc or funcs.config?
 export DATA_DIR=$HOME/scratch
+export GROUP_DATA_DIR=/lustre/scratch103/ensembl/funcgen  
 
 _setOptArgArray(){
 
@@ -599,9 +601,13 @@ ArchiveData()
 	#could do with a delete source flag?
 	#Add getopts here?
 
-	error=$(CheckVariables ARCHIVE_DIR DATA_DIR)
+	#error=$(CheckVariables ARCHIVE_DIR DATA_DIR)
+	#We need to be able to have both of these optionally defined
+	TARGET_ROOT=
+	TARGET_ROOT_NAME=
+	SOURCE_ROOT=
 
-	#Need to test GROUP_ARCHIVE_DIR GROUP_DATA_DIR?
+
 	
 
 	if [ $? -ne 0 ]; then
@@ -620,17 +626,35 @@ ArchiveData()
 		fi
 
 
-		#We could magically detect which archive dir to use here
+		#Detect source data dir
 
+		if [[ -d $DATA_DIR ]] && [[ $filedir = $DATA_DIR* ]]; then
+			TARGET_ROOT=$ARCHIVE_DIR
+			TARGET_ROOT_NAME=ARCHIVE_DIR
+			SOURCE_ROOT=$DATA_DIR
+		elif [[ -d $GROUP_DATA_DIR ]] && [[ $filedir = $GROUP_DATA_DIR* ]]; then
+			TARGET_ROOT=$GROUP_ARCHIVE_DIR
+			TARGET_ROOT_NAME=GROUP_ARCHIVE_DIR
+			SOURCE_ROOT=$GROUP_DATA_DIR
+		else
+			echo -e "Could not identify target root dir from:\t$filedir"
+			echo -e "Source needs to be in either:\n\t$DATA_DIR\t=\t$DATA_DIR\nor\n\t$GROUP_DATA_DIR\t=\t$GROUP_DATA_DIR"
+			return 1
+		fi
+
+
+		
 		#Need to match $DATA_DIR here or skip with warning
-		if [[ ! $filedir = $DATA_DIR* ]]; then
-			echo -e "Skipping non data file/directory:\t$filedir"
-			echo -e "Source needs to be in \$DATA_DIR:\t$DATA_DIR"
+		if [[ ! -d $TARGET_ROOT ]]; then
+			echo -e "Target archive dir not set or valid:$TARGET_ROOT_NAME\t=\t$TARGET_ROOT"
 			return 1
 		else
 			#Use ' instead of / due to / in path
-			archive_filedir=$(echo $filedir | sed -r "s'^${DATA_DIR}''")
-			archive_filedir="$ARCHIVE_DIR/$archive_filedir"
+			echo source $SOURCE_ROOT
+			echo target $TARGET_ROOT
+
+			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
+			archive_filedir="$TARGET_ROOT/$archive_filedir"
 
 		    #Need to mkdir in the arhcive?
 			archive_dir=$(GetDir $archive_filedir)
