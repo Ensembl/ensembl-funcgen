@@ -589,12 +589,7 @@ BackUpFile(){
 # Exception : Returns if $ARCHIVE_DIR or $DATA_DIR not set
 ################################################################################
 
-#We are still having problems with sym links on these funcs
-#Need ls to return deref'd path somehow
-#Also, we are no handling hosts in these path yet, so -essh is redundant at present
-#Could also make sub of the directory substitution, then we can use this in arrays.env for testing
-#if we have an archived version of the arraysdir and distributing
-#Need to extend this to support new group area
+#Not handling hosts in these paths yet, so -essh is redundant at present
 
 ArchiveData()
 {
