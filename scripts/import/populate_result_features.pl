@@ -26,6 +26,9 @@ Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.u
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.8  2010-06-16 08:09:10  nj1
+ added output dir param to override default
+
  Revision 1.7  2010-06-15 10:33:07  nj1
  changed output dir to new dbname centric format
  update warn message re states
@@ -226,6 +229,8 @@ if($farm){
 
 
 
+
+
 SLICE: foreach my $slice(@slices){
   my $sr_name = $slice->seq_region_name;
     
@@ -243,7 +248,7 @@ SLICE: foreach my $slice(@slices){
   if($farm){
     #hugemem -R "select[mem>20000] rusage[mem=20000] -M 20000000"
 
-	my $bsub = "bsub -q long -o $output_dir/result_features.${sr_name}.out -e $output_dir/result_features.${sr_name}.err $cmd";
+	my $bsub = "bsub -q long -J populate_result_features:${rset_name}:${sr_name} -o $output_dir/result_features.${sr_name}.out -e $output_dir/result_features.${sr_name}.err $cmd";
 	
 	print "Submitting $bsub\n";
 	
@@ -251,8 +256,6 @@ SLICE: foreach my $slice(@slices){
 
 	warn "Need to wait here and add RESULT_FEATURE_SET status if no errors found";
 	#This is a pipeline thing, no?
-	warn "Need to kick of 2nd stage of project bin generation";
-	#We need to manually check output and 
 
   }
   else{
