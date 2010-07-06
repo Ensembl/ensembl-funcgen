@@ -212,8 +212,6 @@ sub fetch_all_by_Slice_constraint {
   foreach my $seg (@proj) {
     my $offset = $seg->from_start();
     my $seg_slice  = $seg->to_Slice();
-
-
     my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
 
 	# if this was a symlinked slice offset the feature coordinates as needed
@@ -225,13 +223,10 @@ sub fetch_all_by_Slice_constraint {
 
 		  #eFG: Changed these to start/end method calls
 		  #from direct hash access to support array based ResultFeatures
-		  #This will only slow down transfer of HAP/PAR regions
-		  #Which we currently don't use in eFG
-
-          #$f->{'start'} += $offset-1;
+		  #$f->{'start'} += $offset-1;
           #$f->{'end'}   += $offset-1;
 		  $f->start($f->start + $offset -1);
-		  $f->start($f->end   + $offset -1);
+		  $f->end($f->end   + $offset -1);
         }
 
         # discard boundary crossing features from symlinked regions
