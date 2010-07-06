@@ -130,6 +130,7 @@ while(<FILE>){
 
 	#1 as the last argument to ignore Gene release
 	$dbentry_adaptor->store( $dbentry, $ft->dbID, 'FeatureType', 1);
-	     
 	
 }
+
+close FILE;
