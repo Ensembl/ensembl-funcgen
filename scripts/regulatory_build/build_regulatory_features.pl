@@ -1736,9 +1736,10 @@ sub get_regulatory_FeatureSets{
 	
 
   foreach my $ctype (keys %{$ctypes}) {	
-	my ($desc, $fset_name);
+	my ($desc, $dlabel, $fset_name);
 	
 	$fset_name = "RegulatoryFeatures:$ctype";
+	$dlabel    = "Reg.Feats $ctype";
 
 	if($ctype eq 'MultiCell'){
 	  $desc = 'Generic RegulatoryFeature focus regions';
@@ -1763,7 +1764,7 @@ sub get_regulatory_FeatureSets{
 												 $desc,#desc
 												 'sets',#rollback mode
 												 1,#recovery?
-												 \@slices);
+												 \@slices, $dlabel);
 
 	$rf_sets{$ctype} = $dset->product_FeatureSet;
 
