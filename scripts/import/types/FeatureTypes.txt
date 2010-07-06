@@ -91,7 +91,7 @@ Nanog	Transcription Factor	Nanog Transcription Factor Binding
 Oct4	Transcription Factor	Oct4 Transcription Factor Binding
 Sox2	Transcription Factor	Sox2 Transcription Factor Binding
 Smad1	Transcription Factor	Smad1 Transcription Factor Binding
-Tcfcp2I1	Transcription Factor	Tcfcp2I1 Transcription Factor Binding
+Tcfcp2l1	Transcription Factor	Tcfcp2l1 Transcription Factor Binding
 Zfx	Transcription Factor	Zfx Transcription Factor Binding
 STAT3	Transcription Factor	STAT3 Transcription Factor Binding
 Klf4	Transcription Factor	Klf4 Transcription Factor Binding
