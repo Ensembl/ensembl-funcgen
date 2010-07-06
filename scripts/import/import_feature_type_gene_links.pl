@@ -11,16 +11,23 @@ import_feature_type_gene_links.pl [options]
 Options:
 
 Mandatory
+
   -species|s       Species name
+
   -dbpass|p        The password for the EFG DB
+
   -dbname          Defines the eFG dbname
   
 Optional
+
   -dbhost|h        Defines the eFG db host [ens-genomics1]
+
   -dbport|l        Defines the eFG db port [3306]
+
   -dbuser|u        Defines the eFG db user [ensadmin]
 
   -help            Brief help message
+
   -man             Full documentation
 
 =head1 OPTIONS
