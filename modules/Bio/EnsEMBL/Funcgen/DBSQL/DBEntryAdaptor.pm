@@ -47,6 +47,36 @@ use strict;
 @ISA = qw( Bio::EnsEMBL::DBSQL::DBEntryAdaptor Bio::EnsEMBL::DBSQL::BaseAdaptor);
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
+=head2 fetch_all_by_FeatureType
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType $feature_type 
+               (The feature type to retrieve DBEntries for)
+  Arg [2]    : optional external database name
+  Arg [3]    : optional external_db type 
+  Example    : @db_entries = @{$db_entry_adaptor->fetch_by_FeatureType($feature_type)};
+  Description: This returns a list of DBEntries associated with this gene.
+               Note that this method was changed in release 15.  Previously
+               it set the DBLinks attribute of the gene passed in to contain
+               all of the gene, transcript, and translation xrefs associated
+               with this gene.
+  Returntype : listref of Bio::EnsEMBL::DBEntries; may be of type IdentityXref if
+               there is mapping data, or GoXref if there is linkage data.
+  Exceptions : throws if feature type object not passed
+  Caller     : Bio::EnsEMBL::Funcgen::FeatureType
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_FeatureType {
+  my ( $self, $feature_type, $ex_db_reg, $exdb_type ) = @_;
+
+  if(!ref($feature_type) || !$feature_type->isa('Bio::EnsEMBL::Funcgen::FeatureType')) {
+    throw("Bio::EnsEMBL::Funcgen::FeatureType argument expected.");
+  }
+
+  return $self->_fetch_by_object_type($feature_type->dbID(), 'FeatureType', $ex_db_reg, $exdb_type);
+}
+
 
 =head2 list_feature_type_ids_by_extid
 
@@ -250,6 +280,9 @@ sub _type_by_external_id {
 
   if ( defined $extraType ) {
 
+	
+	#Use the Core behavior in this case? No, because we are not on the core DB!!
+	#return $self->SUPER::_type_by_external_id($name, $ensType, $extraType, $external_db_name);
 	throw('Extra types not accomodated in eFG xref schema');
 
     if ( lc($extraType) eq 'translation' ) {
