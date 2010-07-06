@@ -70,6 +70,7 @@ use strict;
 use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::DBEntry;
+use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
@@ -104,33 +105,41 @@ my $efg_dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 my $fta	= $efg_dba->get_FeatureTypeAdaptor();     
 my $dbentry_adaptor = $efg_dba->get_DBEntryAdaptor();
 
+my $helper = Bio::EnsEMBL::Funcgen::Utils::Helper->new(
+													   no_log => 1,#default to STDOUT
+													  );
+
 open(FILE,"types/".$species.".FeatureType_Genes.txt");
 <FILE>; #Title
 while(<FILE>){
 	chomp;
 	my ($feature_type, $gene_stable_id, $release) = split(/\t/);
-	my $ft = $fta->fetch_by_name($feature_type);
-	if(!$ft){ warn $feature_type." does not exist"; next; }
-	
-	#Ignoring gene release for the moment...
-	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-		-dbname             => $species.'_core_Gene',
-		#-release            => $release,
-		-status             => 'KNOWNXREF',
-		#-display_label_linkable => 1,
-    	-db_display_name    => 'EnsemblGene',
-		-type               => 'MISC', 
-		-primary_id         => $gene_stable_id,
-		-display_id         => $ft->name,
-		-info_type          => 'MISC',
-		-info_text          => 'GENE',
-		-linkage_annotation => 'ENSEMBL Manual Curation',
-		-description        => 'ENSEMBL Gene Associated to Feature Type',
-	);
+		
+	eval{	
+		my $ft = $fta->fetch_by_name($feature_type);
+		if(!$ft){ warn $feature_type." does not exist"; next; }
 
-	#1 as the last argument to ignore Gene release
-	$dbentry_adaptor->store( $dbentry, $ft->dbID, 'FeatureType', 1);
-	
+		my $gene_name = $helper->get_core_display_name_by_stable_id($efg_dba->dnadb(),$gene_stable_id,'Gene');
+
+		my $dbentry = Bio::EnsEMBL::DBEntry->new(
+			-dbname             => $species.'_core_Gene',
+			-release            => $release,
+			-status             => 'KNOWNXREF',
+			#-display_label_linkable => 1,
+	   	 	-db_display_name    => 'EnsemblGene',
+			-type               => 'MISC', 
+			-primary_id         => $gene_stable_id,
+			-display_id         => $gene_name,
+			-info_type          => 'MISC',
+			-info_text          => 'GENE',
+			-linkage_annotation => 'ENSEMBL Manual Curation',
+			-description        => 'ENSEMBL Gene associated to Feature Type',
+		);
+
+		#1 as the last argument to ignore Gene release
+		$dbentry_adaptor->store( $dbentry, $ft->dbID, 'FeatureType');
+	};
+	if($@){ warn $@; };
 }
 
 close FILE;
