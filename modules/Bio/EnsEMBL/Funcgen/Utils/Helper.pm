@@ -681,8 +681,8 @@ sub define_and_validate_sets{
   #Can't do full rollback in slice mode
   #This may not be safe in slice mode as we will then have mixed inputs/outputs
 
-  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery, $slices) = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'FEATURE_CLASS', 'APPEND',
-				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY', 'SLICES'], @_);
+  my ($name, $anal, $ftype, $ctype, $type, $append, $db, $ssets, $description, $rollback, $recovery, $slices, $display_label) = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'FEATURE_CLASS', 'APPEND',
+				 'DBADAPTOR', 'SUPPORTING_SETS', 'DESCRIPTION', 'ROLLBACK', 'RECOVERY', 'SLICES', 'DISPLAY_LABEL'], @_);
 
 
   #VALIDATE CONFIG HASH
@@ -1105,12 +1105,13 @@ sub define_and_validate_sets{
 	  $self->log("Creating new FeatureSet:\t".$name);
 
 	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-													 -name         => $name,
-													 -feature_type => $ftype,
-													 -cell_type    => $ctype,
-													 -analysis     => $anal,
-													 -feature_class=> $type,
-													 -description  => $description,
+													 -name          => $name,
+													 -feature_type  => $ftype,
+													 -cell_type     => $ctype,
+													 -analysis      => $anal,
+													 -feature_class => $type,
+													 -description   => $description,
+													 -display_label => $display_label,
 													);
 	  ($fset) = @{$fset_adaptor->store($fset)};
 	}
@@ -2169,30 +2170,40 @@ sub rollback_table{
   
   if($@){
   	throw("Failed to rollback table $table using sql:\t$sql\n$@");
-		  #$self->db->dbc->db_handle->errstr());
   }
 
+  warn "HARCODING no_clean_up in rollback_table";
+  $no_clean_up=1;
 
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt $table records");
   
   if($force_clean_up ||
 	 ($row_cnt && ! $no_clean_up)){
-	$self->reset_table_autoinc($table, $id_field, $db) if $id_field;
-	$self->log("Optimizing and Analyzing $table");	
-
-	#swap optimize and analyze?
-	#Add check in here? (optimize also does the stats update that check does)
-	#Or just leave this for update_DB_for_release?
-	#Maybe we should post-pone these until we actually run the pipeline
-	#And just depend on update_DB_for_release if we don't run after a rollback?
-
-	$db->dbc->do("optimize table $table");
-	$db->dbc->do("analyze  table $table");
+	$self->refresh_table($table, $id_field, $db);
   }
 
   return;
 }
+
+#Now separated so that we can do this once at the end of a rollback of many Sets
+
+sub refresh_table{
+  my ($self, $table, $id_field, $db) = @_;
+
+  #This only works if the new calue is available
+  #i.e. do not need lock for this to be safe
+  $self->reset_table_autoinc($table, $id_field, $db) if $id_field;
+  
+  $self->log("Optimizing and Analyzing $table");	
+  
+  $db->dbc->do("optimize table $table");#defrag data, sorts indices, updates table stats
+  $db->dbc->do("analyze  table $table");#analyses key distribution
+  
+  return;
+}
+
+
 
 sub reset_table_autoinc{
   #Is this called elsewhere or can we merge with
