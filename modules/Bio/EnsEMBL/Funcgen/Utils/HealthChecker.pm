@@ -625,7 +625,7 @@ sub check_meta_strings{
 		  $self->report("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
 		}
 		else{
-		  my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->{'display_label'};#Direct access to avoid feature type
+		  my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->binary_string;
 		  
 		  if(length($rf_string) != scalar(@fset_ids)){
 			$self->report("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
