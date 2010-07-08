@@ -77,7 +77,7 @@ use vars qw(@ISA);
 sub _get_current_FeatureSet{
   my $self = shift;
 
-  my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures');
+  my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures:MultiCell');
 
   #We need to be able to retrieve all sets
   #Also restrict to just the core set
@@ -306,7 +306,6 @@ sub _objs_from_sth {
 						 );
   
   my $stable_id_prefix = $self->db->stable_id_prefix;
-
 	
 	my (
 	    $dbID,                  $efg_seq_region_id,
@@ -353,13 +352,14 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-	
   my $slice;
 	
+
   FEATURE: while ( $sth->fetch() ) {
 
 	  if(! $reg_feat || ($reg_feat->dbID != $dbID)){
 	
+
 		if($skip_feature){
 		  undef $reg_feat;#so we don't duplicate the push for the feature previous to the skip feature
 		  $skip_feature = 0;
@@ -468,7 +468,7 @@ sub _objs_from_sth {
 			  $seq_region_strand      *= -1;
 			}
 	      }
-	      
+
 	      # Throw away features off the end of the requested slice
 		  #Do not account for bounds here.
 	      if ($seq_region_end < 1 || $seq_region_start > $dest_slice_length
@@ -550,7 +550,6 @@ sub _objs_from_sth {
 	$reg_feat->regulatory_attributes(\@reg_attrs);
 	push @features, $reg_feat;
   }
-  
 
   return \@features;
 }
