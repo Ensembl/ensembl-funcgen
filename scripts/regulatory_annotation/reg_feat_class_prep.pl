@@ -25,6 +25,9 @@ mysql -u ensro -P3306 -hens-genomics2 -BN -e"select display_label from regulator
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2010-07-01 14:54:10  dkeefe
+ refined SQL for cell line selection
+
  Revision 1.1  2010-04-01 11:55:50  dkeefe
  Looks at a specified func_gen database determines which cell lines need an annotation run and prints out helpful stuff for whoever is running the classification analyses.
 
@@ -80,7 +83,7 @@ my @sql;
 &execute($dbh,@sql);
 
 #my $cells_ref = $dbh->selectcol_arrayref("select name from cell_type;");
-my $reg_sets_aaref = $dbh->selectall_arrayref("select name, feature_set_id from feature_set where  type = 'regulatory' and name like '%:%' and name not like '%_v%' and name not like '%MultiCell%'");
+my $reg_sets_aaref = $dbh->selectall_arrayref("select name, feature_set_id from feature_set where  type = 'regulatory' and name like '%:%' and name not like '%\_v%' and name not like '%MultiCell%'");
 my @good_sets;
 
 foreach my $set_ref (@$reg_sets_aaref){
