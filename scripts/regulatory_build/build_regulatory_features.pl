@@ -1589,7 +1589,8 @@ sub create_regulatory_features{
 			  undef $last_tfbs_line;
 			  
 			  if(defined $tfbs_line){
-				
+				chomp $tfbs_line;
+
 				my ($chr, $tstart, $tend, $tname, $log_odds_score, $strand, $pwm_id) = split/\t/, $tfbs_line;
 				
 				#We need it entirely overlapping the core region
