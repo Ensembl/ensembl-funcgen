@@ -265,6 +265,11 @@ sub DESTROY{
 
     if($self->{_log_file}){
         $self->log("Logging complete ".localtime().".");
+		$self->log('Virtual Memory '.`ps -p $$ -o vsz |tail -1`);
+		$self->log('Resident Memory '.`ps -p $$ -o rss |tail -1`);
+		
+		
+				   
 
 		#       close LOGFILE;  # if inherited object then cannot close filehandle !!!
     }
@@ -1130,7 +1135,9 @@ sub define_and_validate_sets{
 	  }
 		
 	  $dset = $dset_adaptor->store_updated_sets([$dset], $rollback_level)->[0];
-	  $dset->adaptor->store_regbuild_meta_strings($dset, $rollback_level) if $type eq 'regulatory';
+	  #This cannot store the focus sets as we don't know which are which yet
+	  #Only the script knows this
+	  # $dset->adaptor->store_regbuild_meta_strings($dset, $rollback_level) if $type eq 'regulatory';
 	}
 	else{
 	  #We may have the case where we have a DataSet(with a FeatureSet) but no ResultSet
@@ -1154,7 +1161,7 @@ sub define_and_validate_sets{
 										-feature_set => $fset,
 										-supporting_sets => $ssets,
 									   ))};
-	  $dset->adaptor->store_regbuild_meta_strings($dset, $rollback_level) if $type eq 'regulatory';
+	  #$dset->adaptor->store_regbuild_meta_strings($dset, $rollback_level) if $type eq 'regulatory';
 	}
 	else{
 	  warn "creating dataset $name with supporting set $rset";
