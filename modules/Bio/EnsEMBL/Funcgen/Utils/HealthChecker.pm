@@ -5,49 +5,8 @@ Bio::EnsEMBL::Funcgen::Utils::Helper
 =head1 SYNOPSIS
 
 
- e.g. 
 
 
- my $object = Bio::EnsEMBL::Object->new
- (
-     logging     => 1,
-     log_file    => "/tmp/Misc.log",
-     debug_level => 2,
-     debug_file  => "/tmp/Misc.dbg",
- );
-
- $object->log("This is a log message.");
- $object->debug(1,"This is a debug message.");
- $object->system("rmdir /tmp/test");
-
-
- ----------------------------------------------------------------------------
-
-
-=head1 OPTIONS
-
-=over 8
-
-
-=item B<-debug>
-
-Turns on and defines the verbosity of debugging output, 1-3, default = 0 = off
-
-=over 8
-
-=item B<-log_file|l>
-
-Defines the log file, default = "${instance}.log"
-
-=item B<-help>
-
-Print a brief help message and exits.
-
-=item B<-man>
-
-Prints the manual page and exits.
-
-=back
 
 =head1 DESCRIPTION
 
@@ -83,7 +42,7 @@ use vars qw(@ISA);
 #TO DO
 # 1 DONE Print all fails and warnings in summary at end of script.
 # 2 validate_RegulatoryFeature_Sets
-# 3 Some of these can be migrated to java HCs?
+# 3 Some of these can be migrated or mirrored in java HCs for safety
 
 
 ################################################################################
@@ -169,7 +128,6 @@ sub update_db_for_release{
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
   $self->log_header("??? Have you diff'd the sql for each species vs. a fresh schema ???");
-  $self->log_header('Need to implement check meta string check');
 
   #Log footer? Pass optional counts hash?
   $self->log('Finished updating '.$self->{'dbname'}." for release\n\n");
@@ -694,10 +652,6 @@ sub log_data_sets{
 sub log_set{
   my ($self, $text, $set) = @_;
   
-  #if(! $set->isa('Bio::EnsEMBL::Funcgen::DataSet')){
-#	$text .= $set->set_type.":\t";
-#  }
- 
   $text .= $set->display_label.'('.$set->name.')';
   $text .= "\tDISPLAYABLE" if($set->is_displayable);
   $self->log($text);
@@ -714,40 +668,43 @@ sub check_stable_ids{
   $self->log_header('Checking stable IDs');
 
   my $fset_a = $self->db->get_FeatureSetAdaptor;
-  my $fset = $fset_a->fetch_by_name('RegulatoryFeatures');
 
+  my @regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
 
-  if(! $fset){
-	$self->report('WARNING: No RegulatoryFeatures FeatureSet found');
+  if(!@regf_fsets){
+	$self->report('WARNING: No regulatory FeatureSets found');
   }
   else{
 
-	#Can't count NULL field, so have to count regulatory_ffeature_id!!!
-	my $sql = "select count(rf.regulatory_feature_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.stable_id is NULL and rf.seq_region_id = sr.seq_region_id and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.feature_set_id=".$fset->dbID;
-	
-	#warn "sql is $sql";
-
-	my ($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
-	
-	if($null_sids){
-	  $self->report("FAIL: Found a total of $null_sids NULL stable IDs");
-	
-	  my $slice_a = $self->db->get_SliceAdaptor;
+	foreach my $fset(@regf_fsets){
 	  
-	  if(! @slices){
-		@slices = @{$slice_a->fetch_all('toplevel', 1)};
-	  }
+	  #Can't count NULL field, so have to count regulatory_feature_id!!!
+	  my $sql = "select count(rf.regulatory_feature_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.stable_id is NULL and rf.seq_region_id = sr.seq_region_id and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.feature_set_id=".$fset->dbID;
 	  
-	  foreach my $slice(@slices){
-		my $sr_name=$slice->seq_region_name;
-		$sql = 'select count(rf.stable_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.seq_region_id=sr.seq_region_id and sr.name="'.$sr_name.'" and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.stable_id is NULL and rf.feature_set_id='.$fset->dbID;
-		($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
+	  
+	  
+	  my ($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
+	  
+	  if($null_sids){
+		$self->report("FAIL: Found a total of $null_sids NULL stable IDs for ".$fset->name);
 		
-		$self->log('Slice '.$slice->name." has $null_sids NULL stable IDs");
+		my $slice_a = $self->db->get_SliceAdaptor;
+		
+		if(! @slices){
+		  @slices = @{$slice_a->fetch_all('toplevel', 1)};
+		}
+		
+		foreach my $slice(@slices){
+		  my $sr_name=$slice->seq_region_name;
+		  $sql = 'select count(rf.stable_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.seq_region_id=sr.seq_region_id and sr.name="'.$sr_name.'" and sr.coord_system_id = cs.coord_system_id and cs.species_id = '.$species_id.' and rf.stable_id is NULL and rf.feature_set_id='.$fset->dbID;
+		  ($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
+		  
+		  $self->log($fset->name.":\t$null_sids NULL stable IDs on ".$slice->name);
+		}
 	  }
-	}
-	else{
-	  $self->log('No NULL stable IDs found');
+	  else{
+		$self->log($fset->name.":\tNo NULL stable IDs found");
+	  }
 	}
   }
 
@@ -756,7 +713,7 @@ sub check_stable_ids{
 }
 
 
-#This is really just for mart to enable them to join to the seq_region table without
+#This is for mart to enable them to join to the seq_region table without
 #creating a product from all the reundant seq_region entries for each schema_build
 
 sub set_current_coord_system{
@@ -807,9 +764,11 @@ sub validate_DataSets{
 
   my %rf_fsets;
   my %set_states;
+  my $sql;
 
  RF_FSET: foreach my $rf_fset(@{$fset_a->fetch_all_by_type('regulatory')}){
 	my $rf_fset_name = $rf_fset->name;
+	
 
 	$self->log("Validating $rf_fset_name");
 
@@ -824,9 +783,11 @@ sub validate_DataSets{
 	foreach my $state(@fset_states){
 	  
 	  if(! $rf_fset->has_status($state)){
-		#Can we just update and warn here?
-		#Or do this separately in case we want some control over this?
-		$self->report("FAIL:\tFeatureSet $rf_fset_name does not have status $state");
+		$self->report("WARNING:\tUpdating FeatureSet $rf_fset_name with status $state");
+		
+		$sql = 'INSERT into status(table_name, table_id, status_name_id) values select "feature_set", '.
+		  $rf_fset->dbID.", status_name_id from status_name where name='$state'";
+		$self->db->dbc->db_handle->do($sql);
 	  }
 	}
 
@@ -847,7 +808,11 @@ sub validate_DataSets{
 	  if(! $rf_dset->has_status($state)){
 		#Can we just update and warn here?
 		#Or do this separately in case we want some control over this?
-		$self->report("FAIL:\tDataSet $rf_fset_name does not have status $state");
+		$self->report("WARNING:\tUpdating DataSet $rf_fset_name with status $state");
+
+		$sql = 'INSERT into status(table_name, table_id, status_name_id) values select "data_set", '.
+		  $rf_dset->dbID.", status_name_id from status_name where name='$state'";
+		$self->db->dbc->db_handle->do($sql);
 	  }
 	}
 
@@ -865,7 +830,12 @@ sub validate_DataSets{
 		if(! $ra_fset->has_status($state)){
 		  #Can we just update and warn here?
 		  #Or do this separately in case we want some control over this?
-		  $self->report("FAIL:\tFeatureSet ".$ra_fset->name." does not have status $state");
+		  $self->report("WARNING:\tUpdating FeatureSet ".$ra_fset->name." with status $state");
+
+		  $sql = 'INSERT into status(table_name, table_id, status_name_id) values select "feature_set", '.
+			$ra_fset->dbID.", status_name_id from status_name where name='$state'";
+		  $self->db->dbc->db_handle->do($sql);
+
 		}
 	  }
 
@@ -890,12 +860,18 @@ sub validate_DataSets{
 		if(! $ra_rset->has_status($state)){
 		  #Can we just update and warn here?
 		  #Or do this separately in case we want some control over this?
-		  $self->report("FAIL:\tResultSet ".$ra_rset->name." does not have status $state");
+		  $self->report("WARNING:\tUpdating ResultSet ".$ra_rset->name." with status $state");
+
+		  $sql = 'INSERT into status(table_name, table_id, status_name_id) values select "result_set", '.
+			$ra_rset->dbID.", status_name_id from status_name where name='$state'";
+		  $self->db->dbc->db_handle->do($sql);
 		}
 	  }
 	}
   }
-}
+
+  return;
+} # End of validate_DataSets
 
 
 
@@ -947,7 +923,7 @@ sub analyse_and_optimise_tables{
   }
 
   return;
-}
+}# end of analyse_and_optimise_tables
 
 
 sub clean_xrefs{
