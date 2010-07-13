@@ -1343,7 +1343,7 @@ sub rollback_FeatureSet{
 	  #Now delete meta entries
 	  #This is messy as we use the following meta_key nomencalture
 	  #which do not match the fset names
-	#regbuild.feature_set_ids_v5
+	  #regbuild.feature_set_ids_v5
 	  #regbuild.feature_type_ids_v5
 	  #regbuild.focus_feature_set_ids 
 	  #regbuild.initial_release_date_v6
@@ -1356,10 +1356,24 @@ sub rollback_FeatureSet{
 	  warn "Need to revise meta table entries before we add a delete here, remove manually for now for:\t".$fset->name;
 	  
 	  #We would only remove meta entries if we are performing a full rollback
+	  my $version;
+	  ($version = $fset->name) =~ s/.*_v([0-9]+)$/$1/;
+	  $version = ($version eq  $fset->name) ? '' : "_v${version}";
 
-	  
-	  #my $version =~ /
-	  #$sql = "DELETE from meta where meta_key like "
+	  #These are versionless meta_keys and apply to all sets
+	  #handle these in reg build script
+	  #'regbuild.initial_release_date',
+	  #'regbuild.last_annotation_update'
+	  #'regbuild.version'
+
+	  foreach my  $mkey('regbuild.%s.feature_set_ids',
+						'regbuild.%s.feature_type_ids', 
+						'regbuild.%s.focus_feature_set_ids'){
+		
+		my $meta_key = sprintf($mkey, $fset->cell_type->name).$version;
+		$sql = "DELETE from meta where meta_key='${meta_key}'";
+		$self->rollback_table($sql, 'meta', undef, $db);
+	  }
 	}
   }
 
@@ -1382,14 +1396,13 @@ sub rollback_FeatureSet{
   $sql = "DELETE f from $table f where f.feature_set_id=".$fset->dbID.$slice_join;
   $self->rollback_table($sql, $table, "${table}_id", $db);
 
-  if($full_delete){ #Also delete feature/data_set record.
+  if($full_delete){ #Also delete feature/data_set records
 	
 	$sql = "DELETE from feature_set where feature_set_id=".$fset->dbID;
 	$self->rollback_table($sql, 'feature_set', 'feature_set_id', $db);
 	$self->log("Deleted feature_set entry for:\t".$fset->name);
 
 
-	#swap these around?
 	$sql = "DELETE from data_set where feature_set_id=".$fset->dbID;
 	$self->rollback_table($sql, 'data_set', 'data_set_id', $db);
 	$self->log("Deleted associated data_set entry for:\t".$fset->name);
@@ -2178,9 +2191,6 @@ sub rollback_table{
   if($@){
   	throw("Failed to rollback table $table using sql:\t$sql\n$@");
   }
-
-  warn "HARCODING no_clean_up in rollback_table";
-  $no_clean_up=1;
 
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt $table records");
