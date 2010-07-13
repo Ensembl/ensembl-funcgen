@@ -751,77 +751,6 @@ sub store_updated_sets{
 }
 
 
-
-#fset_id/ftype_id string
-#version done in build_reg_features
-#what about dates? Do this in build script too, with predicted release month param
-
-sub store_regbuild_meta_strings{
-  my ($self, $dset, $overwrite) = @_;
-
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::DataSet', $dset);
-  my ($sql, $meta_value, $reg_string, $cmd, $msg);
-  my $fset = $dset->product_FeatureSet;
-
-  if(! defined $fset ||
-	 $fset->feature_class ne 'regulatory'){
-	throw('You must provide a DataSet with an associated \'regulatory\' product FeatureSet');
-  }
-
-  my @ssets = @{$dset->get_supporting_sets};
-
-  if(! @ssets){
-	throw('You must provide a DataSet with associated supporting sets');
-  }
-
-
-  my $ctype = (defined $fset->cell_type) ?  $fset->cell_type->name : 'core';
-
-  ### build and import regbuild strings by feature_set_id and feature_type_id
-
-  my $sth = $self->db->dbc->prepare("select meta_value from meta where meta_key='regbuild.${ctype}.feature_set_ids'");
-  $sth->execute();
-  ($meta_value) = map "@$_", @{$sth->fetchall_arrayref};
-  $reg_string = join(',', map {$_->dbID} sort {$a->name cmp $b->name} @ssets);
-
-  my %reg_strings = 
-	(
-	 "regbuild.${ctype}.feature_set_ids" => join(',', map {
-	   $_->dbID} sort {$a->name cmp $b->name
-					 } @ssets),
-	 "regbuild.${ctype}.feature_type_ids" => join(',', map {
-	   $_->feature_type->dbID} sort {$a->name cmp $b->name
-								   } @ssets),
-	);
-
-  foreach my $meta_key(keys %reg_strings){
-	my $sth = $self->db->dbc->prepare("select meta_value from meta where meta_key='${meta_key}'");
-	$sth->execute();
-	($meta_value) = map "@$_", @{$sth->fetchall_arrayref};
-
-	if (! $meta_value) {
-	  $sql = "insert into meta (meta_key, meta_value) values ('${meta_key}', '$reg_strings{${meta_key}}')";
-	
-	  eval { $self->db->dbc->do($sql) };
-	  throw("Couldn't store $meta_key in meta table.\n$@") if $@;
-	} 
-	else {
-
-	  if($meta_value ne $reg_strings{$meta_key}){
-		$msg = "$meta_key already exists and does not match\nOld\t$meta_value\nNew\t$reg_strings{${meta_key}}\nPlease archive previous RegulatoryBuild.\n";
-		die $msg if(! $overwrite);
-		warn $msg;
-	  }
-	  else{  
-		warn "Found matching $meta_key meta entry, do you need to archive a previous Regulatorybuild?\n" if ! $overwrite;
-	  }
-	}
-  }
-  
-  return \%reg_strings;
-}
-
-
 =head2 list_dbIDs
 
   Args       : None
@@ -840,10 +769,6 @@ sub list_dbIDs {
 	
 	return $self->_list_dbIDs('data_set');
 }
-
-
-# method by analysis and experiment/al_chip
-
 
 1;
 
