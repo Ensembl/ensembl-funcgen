@@ -387,8 +387,6 @@ if($tfbs_file){
 
   foreach my $tf_name(keys %{$ftype_pwm_names{$species}}){
 
-	#
-
 	my $tf_ftype = $fta->fetch_by_name($tf_name);
 	
 	if(! defined $tf_ftype){
@@ -466,7 +464,7 @@ my $old_version = $version - 1;
 my $mc = $db->get_MetaContainer;
 my $some_old_not_archived = 0;
 my $some_old_archived = 0;
-my @meta_keys = ('regbuild.%s.feature_set_ids', 'regbuild.initial_release_date', 'regbuild.%s.feature_type_ids', 'regbuild.last_annotation_update');
+my @meta_keys = ('regbuild.%s.feature_set_ids', 'regbuild.initial_release_date', 'regbuild.%s.feature_type_ids', 'regbuild.%s.focus_feature_set_ids', 'regbuild.last_annotation_update');
 
 ### Validate regbuild version
 my ($current_version) = @{$mc->list_value_by_key('regbuild.version')};
@@ -1109,7 +1107,7 @@ $helper->log_header("RegulatoryBuild Report");
 my $total_feature_count = 0;
 
 
-#Do this in create_regulatory_seatures
+#Do this in create_regulatory_features
 #my (%rf_count);
 #map { 
 #  foreach my $k (keys %{$_->{fsets}}) {
@@ -1767,13 +1765,101 @@ sub get_regulatory_FeatureSets{
 												 1,#recovery?
 												 \@slices, $dlabel);
 
-	$rf_sets{$ctype} = $dset->product_FeatureSet;
 
+	#Always overwrite in case we have redefined the sets
+	$dset->adaptor->store_regbuild_meta_strings($dset, 1);
+	$rf_sets{$ctype} = $dset->product_FeatureSet;
   }
     
   $helper->log("Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets));
   return \%rf_sets;
 
 }
+
+
+#This could move to DataSetAdaptor and be called from define_and_validate_sets
+#If focus set info was stored in data set
+
+sub store_regbuild_meta_strings{
+  my ($self, $dset, $overwrite) = @_;
+
+  my $ds_adaptor = $dset->adaptor;
+  $ds_adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::DataSet', $dset);
+  my ($sql, $meta_value, $reg_string, $cmd, $msg);
+  my $fset = $dset->product_FeatureSet;
+
+  if(! defined $fset ||
+	 $fset->feature_class ne 'regulatory'){
+	die('You must provide a DataSet with an associated \'regulatory\' product FeatureSet');
+  }
+
+  my @ssets = @{$dset->get_supporting_sets};
+
+  if(! @ssets){
+	throw('You must provide a DataSet with associated supporting sets');
+  }
+
+
+  my $ctype = (defined $fset->cell_type) ?  $fset->cell_type->name : 'core';
+
+  ### build and import regbuild strings by feature_set_id and feature_type_id
+
+  my $sth = $ds_adaptor->db->dbc->prepare("select meta_value from meta where meta_key='regbuild.${ctype}.feature_set_ids'");
+  $sth->execute();
+  ($meta_value) = map "@$_", @{$sth->fetchall_arrayref};
+  $reg_string = join(',', map {$_->dbID} sort {$a->name cmp $b->name} @ssets);
+
+  my %reg_strings = 
+	(
+	 "regbuild.${ctype}.feature_set_ids" => join(',', map {
+	   $_->dbID} sort {$a->name cmp $b->name
+					 } @ssets),
+	 "regbuild.${ctype}.feature_type_ids" => join(',', map {
+	   $_->feature_type->dbID} sort {$a->name cmp $b->name
+								   } @ssets),
+	);
+
+  
+  my @ffset_ids;
+
+  foreach my $ffset_id(values %focus_fsets){
+
+	if ($focus_fsets{$ffset_id}->cell_type->name eq $dset->cell_type->name){
+	  push @ffset_ids, $ffset_id;
+	}
+  }
+
+  $reg_strings{"regbuild.${ctype}.focus_feature_set_ids"} = join(', ', @ffset_ids);
+
+
+
+  foreach my $meta_key(keys %reg_strings){
+	my $sth = $ds_adaptor->db->dbc->prepare("select meta_value from meta where meta_key='${meta_key}'");
+	$sth->execute();
+	($meta_value) = map "@$_", @{$sth->fetchall_arrayref};
+
+	if (! $meta_value) {
+	  $sql = "insert into meta (meta_key, meta_value) values ('${meta_key}', '$reg_strings{${meta_key}}')";
+	
+	  eval { $ds_adaptor->db->dbc->do($sql) };
+	  die("Couldn't store $meta_key in meta table.\n$@") if $@;
+	} 
+	else {
+
+	  if($meta_value ne $reg_strings{$meta_key}){
+		$msg = "$meta_key already exists and does not match\nOld\t$meta_value\nNew\t$reg_strings{${meta_key}}\nPlease archive previous RegulatoryBuild.\n";
+		die $msg if(! $overwrite);
+		warn $msg;
+	  }
+	  else{  
+		warn "Found matching $meta_key meta entry, do you need to archive a previous Regulatorybuild?\n" if ! $overwrite;
+	  }
+	}
+  }
+  
+  return \%reg_strings;
+}
+
+
 
 1;
