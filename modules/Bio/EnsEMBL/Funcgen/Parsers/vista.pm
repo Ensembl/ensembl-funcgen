@@ -102,7 +102,7 @@ sub parse_and_load{
 
   my $feature_positive = $self->{'feature_types'}{'VISTA Enhancer'};
   my $feature_negative = $self->{'feature_types'}{'VISTA Target - Negative'};
-
+  my $set              = $self->{'feature_sets'}{'VISTA enhancer set'}; 
 
 
   #we should separate this into rna_feature_type for cisRED?
@@ -177,7 +177,7 @@ sub parse_and_load{
 	   -feature_type  => $posneg eq 'positive' ? $feature_positive : $feature_negative,
 	   -slice         => $self->slice_adaptor->fetch_by_region('chromosome', $chr, undef, undef, $strand, $old_assembly),
 	   -display_label => "LBNL-$element_number",
-	   -feature_set   => $self->{'feature_sets'}{'VISTA enhancer set'},
+	   -feature_set   => $set,
 	  );
 	
 
@@ -203,6 +203,12 @@ sub parse_and_load{
   $self->log('Parsed '.($cnt+$skipped).' features');
   $self->log("Loaded $cnt features");
   $self->log("Skipped $skipped features");
+
+  #Now set states
+  foreach my $status(qw(DISPLAYABLE MART_DISPLAYABLE)){
+	$set->adaptor->store_status($status, $set);
+  }
+  
 
   return;
 
