@@ -69,7 +69,7 @@ sub new {
 							{ 
 							 -logic_name    => 'miRanda',
 							 #-description   => 'miRanda microRNA target prediction (http://www.microrna.org)',
-							 -description => 'miRanda microRNA target prediction (http://microrna.sanger.ac.uk/targets)',
+							 -description => 'miRanda microRNA target prediction (http://www.ebi.ac.uk/enright-srv/microcosm/htdocs/targets/)',
 							 -display_label => 'miRanda Target',
 							 -displayable   => 1,
 							},
@@ -77,7 +77,7 @@ sub new {
 						   },						   
 						  };
 
- 
+  
  
   $self->validate_and_store_feature_types;
   $self->set_feature_sets;
@@ -96,7 +96,8 @@ sub parse_and_load{
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   my $ftype_adaptor    = $self->db->get_FeatureTypeAdaptor();
   my $extf_adaptor     = $self->db->get_ExternalFeatureAdaptor;
-  my $dbentry_adaptor     = $self->db->get_DBEntryAdaptor; 
+  my $dbentry_adaptor  = $self->db->get_DBEntryAdaptor; 
+  my $set              = $self->{'feature_sets'}{'miRanda miRNA targets'};
   my %features_by_name; # name -> feature_type
   my %slice_cache;
   # this object is only used for projection
@@ -187,7 +188,7 @@ sub parse_and_load{
 	   -end           => $end,
 	   -strand        => $strand,
 	   -feature_type  => $features_by_name{$seq},
-	   -feature_set   => $self->{'feature_sets'}{'miRanda miRNA targets'},
+	   -feature_set   => $set,
 	   -slice         => $slice_cache{$chr},
 	  );
 
@@ -243,6 +244,7 @@ sub parse_and_load{
 											 #-linkage_annotation     => 'miRanda miRNA negative influence',
 											 -linkage_annotation     => 'miRanda target - negative influence',
 											 #could have version here if we use the correct dnadb to build the cache
+											 -analysis  =>  $self->{'feature_sets'}{'miRanda miRNA targets'}{analysis},
 											);
 
 	$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag  
@@ -253,6 +255,12 @@ sub parse_and_load{
   $self->log("Stored $cnt miRanda miRNA ExternalFeatures");
   $self->log("Skipped $skipped miRanda miRNA imports");
   $self->log("Skipped an additional $skipped_xref DBEntry imports");
+
+
+  #Now set states
+  foreach my $status(qw(DISPLAYABLE MART_DISPLAYABLE)){
+	$set->adaptor->store_status($status, $set);
+  }
 
   return;
 }
