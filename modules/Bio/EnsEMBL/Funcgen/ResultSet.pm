@@ -90,7 +90,7 @@ sub new {
 	
   my $class = ref($caller) || $caller;
 	
-  my $self = $class->SUPER::new(@_);
+  my $self = $class->SUPER::new(@_, ('-feature_class' => 'result'));
 	
   my ($table_name, $table_id, $rf_set)
     = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET'], @_);
