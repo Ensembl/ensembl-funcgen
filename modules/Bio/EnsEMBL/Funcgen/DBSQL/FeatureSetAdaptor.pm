@@ -102,6 +102,29 @@ sub fetch_all_by_type {
     my $type = shift;
     my $status = shift;
     
+	
+	
+    return $self->fetch_all_by_feature_class($type, $status);	
+}
+
+=head2 fetch_all_by_feature_class
+
+  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory' or 'supporting'
+  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Example    : my @fsets = $fs_adaptopr->fetch_all_by_feature_class('annotated');
+  Description: Retrieves FeatureSet objects from the database based on feature_set type.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : Throws if type not defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_feature_class {
+    my $self = shift;
+    my $type = shift;
+    my $status = shift;
+    
     throw('Must provide a feature_set type') if(! defined $type);
 	
     my $sql = "fs.type = '".$type."'";
@@ -113,6 +136,8 @@ sub fetch_all_by_type {
 
     return $self->generic_fetch($sql);	
 }
+
+
 
 =head2 fetch_all_displayable_by_type
 
