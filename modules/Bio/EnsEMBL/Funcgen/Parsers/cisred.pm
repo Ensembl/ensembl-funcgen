@@ -151,7 +151,7 @@ sub parse_and_load {
   my $skipped_xref = 0;
   #my $coords_changed = 0;
   my $cnt = 0;
-	
+  my $set = $self->{'feature_sets'}{'cisRED motifs'};
   
   open (FILE, "<$motif_file") || die "Can't open $motif_file";
   <FILE>; # skip header
@@ -248,7 +248,7 @@ sub parse_and_load {
 	   -strand        => $strand,
 	   #-feature_type  => $ftype,
 	   -associated_feature_types => \@group_names,
-	   -feature_set   => $self->{'feature_sets'}{'cisRED motifs'},
+	   -feature_set   => $set,
 	   -slice         => $slice_cache{$chromosome},
 	  );
 
@@ -311,6 +311,13 @@ sub parse_and_load {
  $self->log("Skipped $skipped cisRED ExternalFeature motif imports");
  $self->log("Skipped an additional $skipped_xref DBEntry imports");
 
+  #Now store states
+  foreach my $status(qw(DISPLAYABLE MART_DISPLAYABLE)){
+	$set->adaptor->store_status($status, $set);
+  }
+  
+
+
   # ----------------------------------------
   # Search regions 
   # read search_regions.txt from same location as $file
@@ -322,7 +329,8 @@ sub parse_and_load {
   $skipped = 0;
   $cnt = 0;
   $skipped_xref = 0;
-	
+  $set = $self->{'feature_sets'}{'cisRED search regions'};
+
   $self->log_header("Parsing cisRED search regions from $search_file");
   open (SEARCH_REGIONS, "<$search_file") || die "Can't open $search_file";
   <SEARCH_REGIONS>; # skip header
@@ -418,6 +426,10 @@ sub parse_and_load {
   $self->log("Skipped $skipped cisRED search region ExternalFeatures");
   $self->log("Skipped an additional $skipped_xref cisRED search region DBEntry imports");
 
+  #No MART_DISPLAYABLE here
+  $set->adaptor->store_status('DISPLAYABLE', $set);
+
+  
   #print "$coords_changed features had their co-ordinates changed as a result of assembly mapping.\n" if ($new_assembly);
 
   return;
