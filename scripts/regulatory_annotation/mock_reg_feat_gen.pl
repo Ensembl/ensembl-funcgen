@@ -14,6 +14,8 @@ dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
+run after reg_feats_4_classification.pl
+
 =head1 EXAMPLES
 
   mock_reg_feat_gen.pl -e dk_genomic_features_36k -i regulatory_features_filtered -o mockreg_features_filtered
@@ -30,6 +32,10 @@ create features which lie inside introns but not in repeats
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2009/06/03 09:51:57  dkeefe
+ moved from parent dir.
+ updated use lib path
+
  Revision 1.1  2008/04/11 09:54:54  dkeefe
  Used to create a set of randomly placed mock regulatory features which are used for chi square calculation in the regulatory feature classification script reg_feat_gen_feat_overlaps.pl
 
@@ -165,7 +171,7 @@ push @sql, "create table temp_$$ (regulatory_feature_id int(10) unsigned,seq_reg
 push @sql,@res;
 
 push @sql, "drop table if exists $outtable";
-push @sql, "create table $outtable select t.*,o.display_label from temp_$$ t, $originals_table o where t.regulatory_feature_id = o.regulatory_feature_id"; # select f.seq_region_name, f.feature_type,f.feature_start,f.feature_end ,f.feature_strand from temp f";
+push @sql, "create table $outtable select t.*,o.binary_string from temp_$$ t, $originals_table o where t.regulatory_feature_id = o.regulatory_feature_id"; # select f.seq_region_name, f.feature_type,f.feature_start,f.feature_end ,f.feature_strand from temp f";
 
 push @sql, "alter table $outtable add index(regulatory_feature_id)";
 push @sql, "alter table $outtable add index(seq_region_name)";
