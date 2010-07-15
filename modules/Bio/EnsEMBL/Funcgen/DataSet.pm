@@ -601,6 +601,15 @@ sub display_label {
 }
 
 
+#sub get_type_config{
+#  my ($self) = @_;
+#
+#  if (! defined $self->{type_config}){
+#	$self->{type_config} = $self->adaptor->fetch_type_config_by_DataSet($self);
+#  }
+#
+#  return $self->{type_config};
+#}
 
 
 
