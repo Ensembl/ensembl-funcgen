@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.7 2010-06-15 10:14:39 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.8 2010-07-15 11:49:38 nj1 Exp $
 
 
 
@@ -30,9 +30,10 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Argument  ('rearrange');
 use Bio::EnsEMBL::Utils::Exception ('throw');
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file);
 use Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
-use base( 'Bio::EnsEMBL::Utils::Collector');#ISA
+use base('Bio::EnsEMBL::Utils::Collector');#ISA
 
 
 ### Global config variables
@@ -43,6 +44,7 @@ $Bio::EnsEMBL::Utils::Collector::bin_model  = 'SIMPLE';
 #Default is for read coverage, array intensity config defined in set_collection_defs_by_ResultSet
 #Kept here as example of basic package config
 $Bio::EnsEMBL::Utils::Collector::window_sizes = [30, 65, 130, 260, 450, 648, 950, 1296];
+
 
 #May need to drop 30 here due to RPKM float value doubling packed size
 
@@ -130,8 +132,8 @@ sub store_window_bins_by_Slice_Parser{
 	}
   }
  
-
   $self->set_config(%config, (-method_config => {
+												 #RPKM method config
 												 -dnadb          => $imp->db->dnadb,
 												 -total_features => $imp->total_features,
 												 -gender         => $imp->cell_type->gender,
@@ -265,15 +267,24 @@ sub write_collection{
 	#This loop is very similar to the _obj_from_sth loop
 	#We need to set the slice and modify the start end appropriately
 	
-	if(($new_cps >= $self->max_data_type_size) ||
-	  $wsize == 0){
+	
+	if($new_cps >= $self->max_data_type_size){
+	  warn("Have found $wsize collection larger that max_data_type_size(16MB). Need to implement cross collection querying");
+	  #Via a union of two substr queries
+	  #This is no set to 64MB, but this does not directly translate to the maximum size allowed in a single insert
+	}
+	  
+
+
+	if($wsize == 0){
 	  #We need to 0 wsize collections to be projected as single features
 	  #Other wise the assembly projection will not work
 	  #Then use the 0 wsize ResultFeatures to generate
 
-	  if($new_cps >= $self->max_data_type_size){
-		warn('Have found collection larger that max_data_type_size(16MB). Need to implement cross collection querying');
-	  }
+	  #if($new_cps >= $self->max_data_type_size){
+	  #	warn('Have found collection larger that max_data_type_size(16MB). Need to implement cross collection querying');
+	  #	#Via a union of two substr queries
+	  #  }
 	  
 
 	  #Need to cache current score for 0 window
@@ -292,6 +303,11 @@ sub write_collection{
 
 }
 
+=head2 get_score_by_Feature
+
+
+=cut 
+
 #Not required for count/density based collections
 
 sub get_score_by_Feature{
@@ -304,10 +320,43 @@ sub get_score_by_Feature{
 
 }
 
+
+
+=head2 reinitialise_input 
+
+
+=cut 
+
+#optional method - resets file handle for iterative slice parsing for different chunk length sets
+
+sub reinitialise_input{
+  my $self = shift;
+
+  #No need to do this for DB queries
+  return if $self->source_set_type eq 'result';
+
+  #This will make all the parser counts go screwy
+  #as we are potentially counting the same features again
+
+
+  #Move this to parser method
+  $self->parser->file_handle->close;
+  $self->parser->file_handle( open_file($self->parser->input_file, $self->parser->input_file_operator) );
+
+  #Reset caches 
+  $self->parser->{'last_slice'} = undef;
+  $self->parser->{'overhang_features'} = [];
+  $self->parser->last_line('');
+  return;
+}
+
+
 ##############################################################
 ### Following methods are not mandatory for a Collector
 ### but support above methods for this ResultFeature Collector
 ##############################################################
+
+
 
 
 =head2 store_collection
