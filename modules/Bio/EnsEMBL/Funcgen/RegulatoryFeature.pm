@@ -226,9 +226,6 @@ sub stable_id {
 
 =cut
 
-
-#change to store attrs in type hash?
-
 sub regulatory_attributes{
   my ($self, $attrs) = @_;
   
@@ -237,7 +234,7 @@ sub regulatory_attributes{
   #This is causing errors when we have not yet set the adaptor
   my %adaptors = (
 				  'annotated_feature' => $self->adaptor->db->get_AnnotatedFeatureAdaptor(),
-#				  #'external_feature' => $self->adaptor->db->get_ExternalFeatureAdaptor(),
+				  'external_feature' => $self->adaptor->db->get_ExternalFeatureAdaptor(),
 				 );
 
   #my %attr_class_tables = (
