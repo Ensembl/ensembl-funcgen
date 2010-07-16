@@ -3,7 +3,7 @@
 PASS=$1
 shift
 
-$EFG_SRC/scripts/import/parse_and_import.pl\
+perl $EFG_SRC/scripts/import/parse_and_import.pl\
 	-name 'DVD_OR_EXPERIMENT_NAME'\
 	-format tiled\
 	-location Hinxton\
@@ -18,7 +18,6 @@ $EFG_SRC/scripts/import/parse_and_import.pl\
 	-array_name 'DESIGN_NAME'\
 	-group efg\
 	-assembly 36\
-	-verbose\
 	-tee\
 	-pass $PASS\
 	-recover
