@@ -160,10 +160,8 @@ sub pre_process_file{
 
   #separate sort keys stop lexical sorting of start/end
   #when faced with a non numerical seq_region_name
-  my $sort = ($prepare || ! $self->prepared) ? 'sort -n -k 1 -k 2,3 ' : '';
-  
-  # my $sort_txt = ($sort) ? " with sort $sort" : ' without sort';
-  # $self->log("Opening input file${sort_txt}:\t$filepath");
+  my $sort = ($prepare || ! $self->prepared) ? 'sort -k1,1 -k2,2n -k3,3n ' : '';
+
 
   if($self->input_gzipped){
 	$sort .= '|' if $sort;
@@ -275,51 +273,17 @@ sub parse_line{
   # blockSizes - A comma-separated list of the block sizes. The number of items in this list should correspond to blockCount.
   # blockStarts - A comma-separated list of block starts. All of the blockStart positions should be calculated relative to chromStart. The number of items in this list should correspond to blockCount. 
   
-  my $slice = $self->cache_slice($chr);
+  my $slice = $self->cache_slice($chr, undef, $prepare);
+  #prepare counts total features for RPKM
+  #This also filter slices for those defined
 
   if(! $slice){
 	return 0;
   }
   else{
 	my $sr_name = $slice->seq_region_name;
-
-
-	#Filter based on all non-ref slices excluding duplicated regions e.g. hap and lrgs?
-	#Depedant on alignment strategy, which will upweight the alignment on the duplicated regions
-	#Such that there is no signal depletion
-	#For simplicity ignore counting total from duplicate regions for now as impact is minimal
-	#Still need to process these
-	#Extract this method to EFGUtils
-
-	#Count all features here for RPKM
 	my $slice_name = $slice->name;
 
-	#if($slice->is
-	$self->count('total_features');
-
-
-	#This should really be in the InputSet Parser
-	#With the cache slice call
-	#so parse line should return params which InputSet Parser
-	#can use to determine whether the feature is to be stored
-	#plus the full params hash
-	#This this can also create the feature if required
-	#Moving all the rest of this method to the InputSet parser
-	#But this may prove problematic for any complex data types
-	#Which may require cacheing or multiple feature storage
-
-	#Would be quicker to test slice cache here first as is hash
-
-	if(@{$self->{seq_region_names}}){
-	 
-	  if(! grep(/^${sr_name}$/, @{$self->{seq_region_names}})){
-		#not on required slice
-		return 0;
-	  }
-	}
-
-	#output sorted file if we are preparing
-	#or prior to seq_region filter?
 
 	if(! $prepare){
 
@@ -378,7 +342,6 @@ sub parse_Features_by_Slice{
 		  'This is to speed up generation of ResultFeature Collections for large sequencing data sets');
   }
 
-
   my $slice_chr = $slice->seq_region_name;
 
   #This method assumes that method calls will walk through a seq_region
@@ -397,9 +360,6 @@ sub parse_Features_by_Slice{
   
   if(! ($slice_start == ($last_slice_end + 1) &&
 		($slice->seq_region_name eq $last_slice_name))){
-
-	warn "bed list slice is ".$last_slice->name;
-
 	#Need to reopen the file as we are doing a second pass over the same data
 	#This is not guaranteed to work for re-reading sets of slices
 	#This would also not be caught by this test
@@ -423,6 +383,9 @@ sub parse_Features_by_Slice{
   my ($line, $feature);
   my $parse = 1;
   #Add counts here, or leave to Collector?
+  my $seen_chr = 0;
+
+  #This currently parses the rest of the file once we have seen the data we want
 
   while((defined ($line = <$fh>)) && $parse){
 	#This does not catch the end of the file!
@@ -449,31 +412,24 @@ sub parse_Features_by_Slice{
 	my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;#Shoudl this not be \t?
 
 	if($slice_chr eq $chr){#Skim through the file until we find the slice
-	  #warn $line;
-	  
-
+	  $seen_chr = 1;
 	  if($end >= $slice_start){
 
 		if($start <= $slice_end){#feature is on slice
-		  #This is not accounting for -ve strand Slices yet
-		  #omit for speed
-	
-
+		 		
 		  $feature =  Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
 			({
 			  start         => ($start - $slice_start + 1),
 			  end           => ($end - $slice_start + 1),
 			  strand        => $strand,
 			  scores        => [$score],
-			  #undef,#probe info
 			  result_set_id => $rset_id,
 			  window_size   => 0,#wsize
 			  slice         => $slice,
 			 });
-
 		  push @features, $feature;
 		
-		  if($end > $slice_end){
+			  if($end > $slice_end){
 			#This will also capture last feature which may not be part of current slice
 			$self->overhang_features($feature);
 		  }
@@ -484,13 +440,16 @@ sub parse_Features_by_Slice{
 		}
 	  }
 	}
+	elsif($seen_chr){
+	  #We have reached the end of the chromsome!
+	  $self->last_line($line);#in case we are parsing slice serially
+	  $parse = 0;
+	}
   }
-  
+
   $self->last_slice($slice);
 
   return \@features;
-  
-
 }
 
 #Move these potentially generic methods to InputSet Parser for use by other Parsers
