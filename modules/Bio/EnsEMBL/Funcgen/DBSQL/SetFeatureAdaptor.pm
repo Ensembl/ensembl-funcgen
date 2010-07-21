@@ -156,8 +156,10 @@ sub fetch_all_by_FeatureType_FeatureSets {
                                       -logic_name => 'analysis.logic_name'
                                       -include_direct_links => 1, #Also return feature which are linked by Feature->feature_type
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_all_by_Slice_FeatureType($slice, $ft);
-  Description: Retrieves a list of all features linked via the associated FeatureTypes of                the given Feature in the same FeatureSet.  This is mainly used by external                FeatureSets which can sometimes have more than one associated FeatureType.
+               my $features = $sfa->fetch_all_by_Feature_associated_feature_types($feature);
+  Description: Retrieves a list of all features linked via the associated FeatureTypes of 
+               the given Feature in the same FeatureSet.  This is mainly used by external
+               FeatureSets which can sometimes have more than one associated FeatureType.
   Returntype : Listref of Bio::EnsEMBL::SetFeature objects
   Exceptions : Throws if SetFeature not stored and valid
   Caller     : General
