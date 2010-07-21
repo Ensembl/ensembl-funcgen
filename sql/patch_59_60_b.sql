@@ -17,7 +17,7 @@ CREATE TABLE `motif_feature` (
   `feature_type_id` int(10) unsigned NOT NULL,
   PRIMARY KEY  (`motif_feature_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
-  KEY `feature_type_idx` (`feature_type_id`),
+  KEY `feature_type_idx` (`feature_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
