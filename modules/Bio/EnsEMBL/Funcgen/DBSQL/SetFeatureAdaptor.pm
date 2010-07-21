@@ -160,7 +160,7 @@ sub fetch_all_by_FeatureType_FeatureSets {
   Description: Retrieves a list of all features linked via the associated FeatureTypes of 
                the given Feature in the same FeatureSet.  This is mainly used by external
                FeatureSets which can sometimes have more than one associated FeatureType.
-  Returntype : Listref of Bio::EnsEMBL::SetFeature objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::SetFeature objects
   Exceptions : Throws if SetFeature not stored and valid
   Caller     : General
   Status     : At Risk
