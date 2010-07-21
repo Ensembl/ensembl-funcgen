@@ -558,7 +558,7 @@ sub _main_table{
 sub _feature_class{
   my $self = shift;
 
-n  #use the first word of the table name as the class
+  #use the first word of the table name as the class
   my $fclass;
   ($fclass = $self->_main_table->[0]) =~ s/_.*//;#use the first word of the table name as the class
 
