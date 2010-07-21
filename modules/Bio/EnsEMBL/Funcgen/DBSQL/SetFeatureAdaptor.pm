@@ -21,19 +21,34 @@ The SetFeatureAdaptor is a base adaptor for all SetFeature adaptors.
 e.g. SetFeature, AnnotatedFeature etc.  It provides common methods
 across all feature types.
 
-=head1 AUTHOR
 
-This module was created by Nathan Johnson.
 
-This module is part of the Ensembl project: http://www.ensembl.org/
+=head1 SEE ALSO
+
+Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor
+
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
+
 
 use strict;
 use warnings;
@@ -46,7 +61,8 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 
 use vars qw(@ISA @EXPORT);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});#required for child adaptor's store and _obj_from_sth methods
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
+#required for child adaptor's store and _obj_from_sth methods
 
 
 
@@ -101,7 +117,6 @@ sub fetch_all_by_FeatureType_FeatureSets {
   #We should really pass the params hash on here
   $constraint = $self->_logic_name_to_constraint($constraint, $params->{logic_name});
 
-  warn $constraint;
 
   my @features = @{$self->generic_fetch($constraint)};
 
@@ -137,8 +152,7 @@ sub fetch_all_by_FeatureType_FeatureSets {
 =head2 fetch_all_by_Feature_associated_feature_types
 
   Arg [1]    : Bio::EnsEMBL::SetFeature
-  Arg []    : (optional) string - analysis logic name
-  Arg [4]    : (optional) hashref - params hash, all entries optional
+  Arg [2]    : (optional) hashref - params hash, all entries optional
                                       -logic_name => 'analysis.logic_name'
                                       -include_direct_links => 1, #Also return feature which are linked by Feature->feature_type
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
@@ -491,7 +505,7 @@ sub store_associated_feature_types {
 
   Args       : None
   Example    : my @feature_ids = @{$ofa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all OligoFeature objects in
+  Description: Gets an array of internal IDs for all SetFeature objects in
                the current database.
   Returntype : List of ints
   Exceptions : None
@@ -542,7 +556,7 @@ sub _main_table{
 sub _feature_class{
   my $self = shift;
 
-  #use the first word of the table name as the class
+n  #use the first word of the table name as the class
   my $fclass;
   ($fclass = $self->_main_table->[0]) =~ s/_.*//;#use the first word of the table name as the class
 
