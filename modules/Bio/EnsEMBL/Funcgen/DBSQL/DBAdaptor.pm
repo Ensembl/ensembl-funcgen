@@ -317,8 +317,7 @@ sub get_available_adaptors{
 			   'Slice'              => 'Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor',
 			   'ResultFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
 			   
-			   #New collections
-			   'ResultFeatureCollection' => 'Bio::EnsEMBL::Funcgen::Collection::ResultFeature',
+			 
 
 	 	       
 	       #add required EnsEMBL(core) adaptors here
