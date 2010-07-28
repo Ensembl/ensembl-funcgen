@@ -479,7 +479,7 @@ sub list_dbIDs {
   Example    : $self->{'focus_set'} = $self->adaptor->fetch_focus_set_config_by_FeatureSet($self);
   Description: Caches and returns focus set config for a given FeatureSet
   Returntype : Boolean
-  Exceptions : Throws if meta entry not present
+  Exceptions : Warns if meta entry not present
   Caller     : Bio::EnsEMBL::Funcgen::FeatureSet::is_focus_set
   Status     : At Risk
 
@@ -488,11 +488,10 @@ sub list_dbIDs {
 sub fetch_focus_set_config_by_FeatureSet{
     my ($self, $fset) = @_;
 
-	#omit for speed as only called by FeatureSet
-	#$self->db->is_stored_and_valid($fset, 'Bio::EnsEMBL::Funcgen::FeatureSet');
 	$self->{focus_set_config} ||= {};
 
 	if(! defined $self->{focus_set_config}->{$fset->dbID}){
+	  $self->{focus_set_config}->{$fset->dbID} = 0;  #set cache default
 	  my $meta_key =  'regbuild.'.$fset->cell_type->name.'.focus_feature_set_ids';
 
 	  #list_value_by_key caches, so we don't need to implement this in the adaptor
@@ -500,7 +499,6 @@ sub fetch_focus_set_config_by_FeatureSet{
 
 	  if(! $focus_ids){
 		warn("Cannot detect focus set as meta table does not contain $meta_key");
-		return 0;
 	  }
 	  else{
 
@@ -510,8 +508,7 @@ sub fetch_focus_set_config_by_FeatureSet{
 	  }
 	}
 
-	
-    return (exists ${$self->{focus_set_config}}{$fset->dbID}) ? 1 : 0;
+    return $self->{focus_set_config}->{$fset->dbID};
   }
 
 
