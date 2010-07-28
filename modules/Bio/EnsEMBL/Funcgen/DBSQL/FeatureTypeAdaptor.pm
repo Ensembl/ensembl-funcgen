@@ -232,7 +232,7 @@ sub _objs_from_sth {
                called once per array because no checks are made for duplicates.
 			   Sets dbID and adaptor on the objects that it stores.
   Returntype : None
-  Exceptions : None
+  Exceptions : Throws if FeatureTYpe not valid
   Caller     : General
   Status     : At Risk
 
@@ -251,9 +251,9 @@ sub store {
   
   
   foreach my $ft (@args) {
-    if ( ! $ft->isa('Bio::EnsEMBL::Funcgen::FeatureType') ) {
-      warning('Can only store FeatureType objects, skipping $ft');
-      next;
+
+    if ( ! (ref($ft) && $ft->isa('Bio::EnsEMBL::Funcgen::FeatureType') )) {
+      throw('Can only store FeatureType objects, skipping $ft');
     }
     
     if (!( $ft->dbID() && $ft->adaptor() == $self )){
