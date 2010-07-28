@@ -121,7 +121,7 @@ sub fetch_all_by_class{
 
 =head2 fetch_all_by_associated_SetFeature
 
-  Arg [1]    : Bio::EnsEMBL:SetFeature
+  Arg [1]    : Bio::EnsEMBL::Funcgen::SetFeature
   Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
   Description: Fetches all associated FeatureTypes for a given SetFeature. Note: The main FeatureType for
                a SetFeature is accessible via the feature_type method.
