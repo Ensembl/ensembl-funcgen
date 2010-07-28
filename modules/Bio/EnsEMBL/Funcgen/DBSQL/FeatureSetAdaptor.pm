@@ -499,11 +499,14 @@ sub fetch_focus_set_config_by_FeatureSet{
 	  my ($focus_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
 
 	  if(! $focus_ids){
-		throw("Cannot detect focus set as meta table does not contain $meta_key");
+		warn("Cannot detect focus set as meta table does not contain $meta_key");
+		return 0;
 	  }
+	  else{
 
-	  foreach my $fid(split ',', $focus_ids){
-		$self->{focus_set_config}->{$fid} = 1;
+		foreach my $fid(split ',', $focus_ids){
+		  $self->{focus_set_config}->{$fid} = 1;
+		}
 	  }
 	}
 
