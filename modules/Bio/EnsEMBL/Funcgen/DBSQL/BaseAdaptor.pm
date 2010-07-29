@@ -33,7 +33,9 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use DBI qw(:sql_types);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
+our (@tables, @true_tables);
+@EXPORT    = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '@tables', '@true_tables');
+
 
 
 #do we want to keep the IMPORTED_CS status for feature_sets/array_chips?
@@ -713,7 +715,7 @@ sub store_associated_feature_types {
   #Could be undef or empty
   return if ! defined $assoc_ftypes || scalar(@$assoc_ftypes) == 0;
 
-  my $table_name = $storable->adaptor->_tables->[0][0];
+  my $table_name = $storable->adaptor->_main_table->[0];
   my $dbid = $storable->dbID;
 
   my $sql = 'INSERT into associated_feature_type(table_id, table_name, feature_type_id) values (?,?,?)';
@@ -735,7 +737,58 @@ sub store_associated_feature_types {
 } 
 
 
+=head2 fetch_all_by_associated_FeatureType
 
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
+  Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
+  Description: Fetches all objects which have associated FeatureType. 
+               Note this is not the main FeatureType for this object.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
+  Exceptions : Throws if FeatureType not valid or stored
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+
+sub fetch_all_by_associated_FeatureType{
+  my ($self, $ftype) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
+  my ($table_name, $table_syn) = @{$self->_main_table};
+
+  push @tables, ['associated_feature_type', 'aft'];
+  my $constraint = "aft.feature_type_id=? AND aft.table_name='${table_name}' AND aft.table_id=${table_syn}.${table_name}_id";
+
+  $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
+  my $objs = $self->generic_fetch($constraint);
+  #  #Reset tables
+  @tables = @true_tables;
+
+  return $objs;
+}
+
+
+=head2 _main_table
+
+  Example    : my $syn = $adaptor->_main_table->[1];
+  Description: Convenience method to retrieve the main table or main table synonym for this adaptor
+               Entirely dependent on ensembl convention of always having main table as first element
+               of tables array.
+  Returntype : Array ref
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub _main_table{
+  my $self = shift;
+
+  #Need to do this to put it in list context to avoid just returning the last value
+  my @tables = $self->_tables();
+  return $tables[0];
+}
 
 1;
 
