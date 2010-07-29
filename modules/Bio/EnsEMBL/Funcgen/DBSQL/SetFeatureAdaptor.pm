@@ -133,7 +133,7 @@ sub fetch_all_by_FeatureType_FeatureSets {
 
 	  next if $table_name ne lc($fset->feature_class).'_feature';
 
-	  my $sql = 'SELECT feature_id from associated_feature_type where feature_table="'.$fset->feature_class.'" and feature_type_id='.$ftype->dbID;
+	  my $sql = 'SELECT table_id from associated_feature_type where table_name="'.$table_name.'" and feature_type_id='.$ftype->dbID;
 
 	  my @dbids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
 
@@ -206,7 +206,7 @@ sub fetch_all_by_Feature_associated_feature_types {
 	my $ftype_ids = join(', ', (map $_->dbID, @assoc_ftypes));
   
 	#Now we need to restrict the Features based on the FeatureSet of the original Feature, we could make this optional.
-	$sql = "SELECT feature_id from associated_feature_type aft, $table_name $table_syn where aft.feature_table='".$fset->feature_class."' and aft.feature_type_id in ($ftype_ids) and aft.feature_id=${table_syn}.${table_name}_id and ${table_syn}.feature_set_id=".$fset->dbID;
+	$sql = "SELECT table_id from associated_feature_type aft, $table_name $table_syn where aft.table_name='".$fset->feature_class."_feature' and aft.feature_type_id in ($ftype_ids) and aft.table_id=${table_syn}.${table_name}_id and ${table_syn}.feature_set_id=".$fset->dbID;
 	#This just sets each value to a key with an undef value
 	
 	map {$dbIDs{"@$_"} = undef} @{$self->dbc->db_handle->selectall_arrayref($sql)};
@@ -464,7 +464,7 @@ sub fetch_all_by_logic_name {
   Returntype  : arrayref of Bio::EnsEMBL::SetFeatures
   Exceptions  : thrown if $logic_name not defined
   Caller      : General 
-  Status      : At risk
+  Status      : At risk - Move to BaseAdaptor
 
 =cut 
 
@@ -480,7 +480,7 @@ sub store_associated_feature_types {
   my $type = $set_feature->feature_set->feature_class;
   my $feature_id = $set_feature->dbID;
 
-  my $sql = 'INSERT into associated_feature_type(feature_id, feature_table, feature_type_id) values (?,?,?)';
+  my $sql = 'INSERT into associated_feature_type(table_id, table_name, feature_type_id) values (?,?,?)';
 
   foreach my $ftype(@$assoc_ftypes){
 
