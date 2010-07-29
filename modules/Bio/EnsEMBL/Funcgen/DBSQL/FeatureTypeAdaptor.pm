@@ -138,7 +138,39 @@ sub fetch_all_by_associated_SetFeature{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::SetFeature', $sfeat);
   
   push @tables, ['associated_feature_type', 'aft'];
-  my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.feature_table="'.$sfeat->feature_set->feature_class.'" AND aft.feature_id='.$sfeat->dbID;
+  my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.table_name="'.$sfeat->feature_set->feature_class.'" AND aft.table_id='.$sfeat->dbID;
+
+
+  my $feature_types =  $self->generic_fetch($constraint);
+  #Reset tables
+  @tables = @true_tables; 
+
+  return $feature_types;
+}
+
+=head2 fetch_all_by_association
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::SetFeature 
+  Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
+  Description: Fetches all associated FeatureTypes for a given SetFeature. Note: The main FeatureType for
+               a SetFeature is accessible via the feature_type method.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_associated_association{
+  my ($self, $storable) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $storable);
+  
+  push @tables, ['associated_feature_type', 'aft'];
+
+  my $table_name = $storable->adaptor->_tables->[0][0];
+
+  my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.table_name="'.$table_name.'" AND aft.table_id='.$sfeat->dbID;
 
 
   my $feature_types =  $self->generic_fetch($constraint);
