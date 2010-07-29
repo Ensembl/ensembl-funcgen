@@ -691,5 +691,51 @@ sub fetch_all_by_linked_transcript_Gene{
 }
 
 
+
+=head2 store_associated_feature_types
+
+  Arg [1]     : Bio::EnsEMBL::Funcgen::Sotrable
+  Example     : $ext_feat_adaptor->store_associated_feature_type($ext_feat);
+  Description : Store FeatureTypes assoicated with a given Storable
+  Returntype  : None
+  Exceptions  : Throws if FeatureTypes are not valid or stored
+  Caller      : Adaptors
+  Status      : At risk
+
+=cut 
+
+sub store_associated_feature_types { 
+  my ($self, $storable) = @_;
+
+  #Direct access to avoid lazy loading with an unstored SetFeature
+  my $assoc_ftypes = $storable->{'associated_feature_types'};
+
+  #Could be undef or empty
+  return if ! defined $assoc_ftypes || scalar(@$assoc_ftypes) == 0;
+
+  my $table_name = $storable->adaptor->_tables->[0][0];
+  my $dbid = $storable->dbID;
+
+  my $sql = 'INSERT into associated_feature_type(table_id, table_name, feature_type_id) values (?,?,?)';
+
+  foreach my $ftype(@$assoc_ftypes){
+
+	#We have already tested the class but not whether it is stored
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
+
+	my $sth = $self->prepare($sql);
+	$sth->bind_param(1, $dbid,        SQL_INTEGER);
+	$sth->bind_param(2, $table_name,  SQL_VARCHAR);
+	$sth->bind_param(3, $ftype->dbID, SQL_INTEGER);
+	$sth->execute();
+  }	
+
+
+  return;
+} 
+
+
+
+
 1;
 
