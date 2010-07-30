@@ -75,8 +75,9 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-my @true_tables = (['probe_set', 'ps']);
-my @tables = @true_tables;
+#Exported from BaseAdaptor
+$true_tables{probe_set} = [['probe_set', 'ps']];
+@{$tables{probe_set}} = @{$true_tables{probe_set}};
 
 
 =head2 fetch_by_array_probeset_name
@@ -103,7 +104,7 @@ sub fetch_by_array_probeset_name{
 	
 
 	#Extend query tables
-	push @tables, (['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']);
+	push @{$tables{probe_set}}, (['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']);
 	
 	#Extend query and group
 	#This needs generic_fetch_bind_param
@@ -116,9 +117,8 @@ sub fetch_by_array_probeset_name{
 
 
 	my $pset =  $self->generic_fetch($constraint)->[0];
-	
 	#Reset tables
-	@tables = @true_tables;
+	@{$tables{probe_set}} = @{$true_tables{probe_set}};
   
 	return $pset;
 
@@ -188,17 +188,16 @@ sub fetch_by_ProbeFeature {
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeFeature', $pfeature);
 
 	#Extend query tables
-	push @tables, (['probe', 'p']);
+	push @{$tables{probe_set}}, (['probe', 'p']);
 	
 	#Extend query and group
 	my $pset =  $self->generic_fetch('p.probe_id='.$pfeature->probe_id.' and p.probe_set_id=ps.probe_set_id GROUP by ps.probe_set_id')->[0];
 
 	#Reset tables
-	@tables = @true_tables;
+	@{$tables{probe_set}} = @{$true_tables{probe_set}};
+  
   
 	return $pset;
-
-
 }
 
 =head2 fetch_all_by_Array
@@ -249,7 +248,7 @@ sub fetch_all_by_Array {
 sub _tables {
 	my $self = shift;
 
-  	return @tables;
+  	return @{$tables{probe_set}};
 }
 
 =head2 _columns
@@ -406,24 +405,7 @@ sub store {
 	return \@probesets;
 }
 
-=head2 list_dbIDs
 
-  Arg [1]    : none
-  Example    : my @ps_ids = @{$opa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all ProbeSet objects in the
-               current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
-
-=cut
-
-sub list_dbIDs {
-	my ($self) = @_;
-
-	return $self->_list_dbIDs('probe_set');
-}
 
 1;
 
