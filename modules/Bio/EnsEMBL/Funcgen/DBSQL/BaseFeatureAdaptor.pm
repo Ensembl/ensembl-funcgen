@@ -42,7 +42,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
 
 #Remove these?
 our $SLICE_FEATURE_CACHE_SIZE = 4;
@@ -143,10 +143,7 @@ sub fetch_all_by_Slice_constraint {
  
   #build seq_region cache here once for entire query
   $self->build_seq_region_cache($slice);
-
-
-  my @tables = $self->_tables;
-  my (undef, $syn) = @{$tables[0]};
+  my $syn = $self->_main_table->[1];
 
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
@@ -652,8 +649,7 @@ sub _pre_store {
   my $csa = $self->db->get_FGCoordSystemAdaptor();#had to call it FG as we were getting the core adaptor
   my $fg_cs = $csa->validate_and_store_coord_system($cs);
   $fg_cs = $csa->fetch_by_name($cs->name(), $cs->version());#Why are we refetching this?
-  my ($tab) = $self->_tables();
-  my $tabname = $tab->[0];
+  my $tabname = $self->_main_tables->[0];
 
 
   #Need to do this for Funcgen DB
@@ -746,8 +742,7 @@ sub _slice_fetch {
   #my $slice_seq_region_id = $slice->get_seq_region_id();
 
   #get the synonym and name of the primary_table
-  my @tabs = $self->_tables;
-  my ($tab_name, $tab_syn) = @{$tabs[0]};
+  my ($tab_name, $tab_syn) = @{$self->_main_table};
 
   #find out what coordinate systems the features are in
   my $mcc = $self->db->get_MetaCoordContainer();
@@ -1186,10 +1181,7 @@ sub fetch_all_by_display_label {
 
   throw('You must defined a display_label argument') if ! defined $label;
 
-  my ($table_name, $table_syn);
-  my @tables =  $self->_tables;
-  ($table_name, $table_syn) = @{$tables[0]};
-
+  my $table_syn = $self->_main_table->[1];
   my $constraint = "${table_syn}.display_label = ?";
   $self->bind_param_generic_fetch($label, SQL_VARCHAR);
 
@@ -1274,9 +1266,7 @@ sub count_features_by_field_id{
 	throw('You must provide a count name and a count id to count by');
   }
 
-  my ($table_name, $table_syn);
-  my @tables =  $self->_tables;
-  ($table_name, $table_syn) = @{$tables[0]};
+  my ($table_name, $table_syn) = @{$self->_main_table};
   my $table_id   = "${table_name}_id";
   my @cs_ids     = @{$self->_get_coord_system_ids};
   my $sql = "SELECT count(distinct($table_id)) from $table_name $table_syn, seq_region sr where ${table_syn}.${count_field}=? and ${table_syn}.seq_region_id in(select distinct(seq_region_id) from seq_region where coord_system_id in(".join(',', @cs_ids).'))';
