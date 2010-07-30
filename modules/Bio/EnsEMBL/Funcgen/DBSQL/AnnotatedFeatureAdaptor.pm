@@ -473,4 +473,38 @@ sub store{
   return \@pfs;
 }
 
+
+=head2 fetch_all_by_associated_MotifFeature
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
+  Example    : my $assoc_afs = $af_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
+  Description: Fetches all associated AnnotatedFeatures for a given MotifFeature. 
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::AnnotatedFeature objects
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : General
+  Status     : At risk - move to TranscriptionFactorFeatureAdaptor
+
+=cut
+
+sub fetch_all_by_associated_MotifFeature{
+  my ($self, $mf) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
+  
+  push @{$tables{feature_type}}, ['associated_motif_feature', 'amf'];
+
+  my $table_name = $mf->adaptor->_main_table->[0];
+
+  my $constraint = 'amf.annotated_feature_id=af.annotated_feature_id AND amf.motif_feature_id= ?';
+  $self->bind_param_generic_fetch($mf->dbID, SQL_INTEGER);
+
+  my $afs =  $self->generic_fetch($constraint);
+  #Reset tables
+  @{$tables{feature_type}} = @{$true_tables{feature_type}}; 
+
+  return $afs;
+}
+
+
+
 1;
