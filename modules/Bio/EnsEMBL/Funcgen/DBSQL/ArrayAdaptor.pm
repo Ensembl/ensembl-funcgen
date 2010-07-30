@@ -21,11 +21,28 @@ The ArrayAdaptor is a database adaptor for storing and retrieving
 Funcgen Array objects.
 
 
+=head1 SEE ALSO
+
+Bio::EnsEMBL::Funcgen::Array
+Bio::EnsEMBL::Funcgen::ArrayChip
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =cut
 
@@ -39,14 +56,11 @@ use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
-
-
-#May need to our this?
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-
-my @true_tables = (['array', 'a']);
-my @tables = @true_tables;
+#Exported from BaseAdaptor
+$true_tables{array} = [['array', 'a']];
+@{$tables{array}} = @{$true_tables{array}};
 
 =head2 fetch_by_array_chip_dbID
 
@@ -70,13 +84,13 @@ sub fetch_by_array_chip_dbID {
   throw('Must provide an ArrayChip dbID') if ! $ac_dbid;
   
   #Extend query tables
-  push @tables, (['array_chip', 'ac']);
+  push @{$tables{array}}, (['array_chip', 'ac']);
   
   #Extend query and group
   my $array = $self->generic_fetch('ac.array_chip_id='.$ac_dbid.' and ac.array_id=a.array_id GROUP by a.array_id')->[0];
   
   #Reset tables
-  @tables = @true_tables;
+  @{$tables{array}} = @{$true_tables{array}};
   
   return $array;
 }
@@ -213,13 +227,13 @@ sub fetch_all_by_Experiment{
  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
   
   #Extend query tables
-  push @tables, (['array_chip', 'ac'], ['experimental_chip', 'ec']);
+  push @{$tables{array}}, (['array_chip', 'ac'], ['experimental_chip', 'ec']);
 
   #Extend query and group
   my $arrays = $self->generic_fetch($exp->dbID.'=ec.experiment_id and ec.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
 
   #Reset tables
-  @tables = @true_tables;
+  @{$tables{array}} = @{$true_tables{array}};
 	
   return $arrays;
 }
@@ -250,13 +264,13 @@ sub fetch_all_by_ProbeSet{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
 
   #Extend query tables
-  push @tables, (['array_chip', 'ac'], ['probe', 'p']);
+  push @{$tables{array}}, (['array_chip', 'ac'], ['probe', 'p']);
 
   #Extend query and group
   my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY  a.array_id');# ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
 
   #Reset tables
-  @tables = @true_tables;
+  @{$tables{array}} = @{$true_tables{array}};
   
   return $arrays;
 }
@@ -299,7 +313,7 @@ sub fetch_attributes {
 sub _tables {
 	my $self = shift;
 	
-	return @tables;
+	return @{$tables{array}};
 }
 
 =head2 _columns
@@ -435,26 +449,6 @@ sub store {
 
 
 
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @array_ids = @{$oaa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all Array objects in the
-               current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
-
-=cut
-
-sub list_dbIDs {
-    my ($self) = @_;
-	
-    return $self->_list_dbIDs('array');
-}
-
-
 =head2 fetch_probe_count_by_Array
 
   Args       : None
@@ -553,12 +547,6 @@ sub check_status_by_class{
   return;
 }
 
-#New Funcgen methods
-#fetch_all_by_group?
-#fetch_by_channel_id?
-#fetch_by_chip_id?
-#fetch_by_probe_id
-#fetch_by_probe_set_id
 
 
 1;
