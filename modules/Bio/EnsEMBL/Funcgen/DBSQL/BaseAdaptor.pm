@@ -19,7 +19,29 @@ $adaptor->store_states($storable);
 This is a simple wrapper class to hold common methods to all Funcgen StorableAdaptors.
 Includes status methods.
 
-Post questions to the EnsEMBL developer mailing list: <ensembl-dev@ebi.ac.uk>
+=head1 SEE ALSO
+
+Bio::EnsEMBL::DBSQL::BaseAdaptor
+
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
@@ -33,8 +55,12 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use DBI qw(:sql_types);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
-our (@tables, @true_tables);
-@EXPORT    = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '@tables', '@true_tables');
+
+#Declare table registers for query extentions
+#May need to add final clause register too
+our (%tables, %true_tables);
+
+@EXPORT    = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
 
 
 
@@ -757,14 +783,13 @@ sub fetch_all_by_associated_FeatureType{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
   my ($table_name, $table_syn) = @{$self->_main_table};
 
-  push @tables, ['associated_feature_type', 'aft'];
+  push @{$tables{$self->_main_table->[0]}}, ['associated_feature_type', 'aft'];
   my $constraint = "aft.feature_type_id=? AND aft.table_name='${table_name}' AND aft.table_id=${table_syn}.${table_name}_id";
 
   $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
   my $objs = $self->generic_fetch($constraint);
-  #  #Reset tables
-  @tables = @true_tables;
-
+  #  #Reset tables  
+  @{$tables{$self->_main_table->[0]}} = @{$true_tables{$self->_main_table->[0]}};
   return $objs;
 }
 
@@ -789,6 +814,26 @@ sub _main_table{
   my @tables = $self->_tables();
   return $tables[0];
 }
+
+
+=head2 list_dbIDs
+
+  Args       : None
+  Example    : my @feature_ids = @{$ofa->list_dbIDs()};
+  Description: Gets an array of internal IDs for all objects in
+               the main table of this class.
+  Returntype : List of ints
+  Exceptions : None
+  Caller     : ?
+  Status     : Medium Risk
+
+=cut
+
+sub list_dbIDs {
+	my $self = shift;	
+	return $self->_list_dbIDs($self->_main_table->[0]);
+}
+
 
 1;
 
