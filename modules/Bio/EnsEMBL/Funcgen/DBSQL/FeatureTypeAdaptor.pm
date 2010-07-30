@@ -20,17 +20,29 @@ my $feature_type = $ft_adaptor->fetch_by_name("H3K4me3");
 The FeatureTypeAdaptor is a database adaptor for storing and retrieving
 Funcgen FeatureType objects.
 
-=head1 AUTHOR
+=head1 SEE ALSO
 
-This module was created by Nathan Johnson.
+Bio::EnsEMBL::Funcgen::FeatureType
 
-This module is part of the Ensembl project: http://www.ensembl.org/
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
@@ -46,8 +58,10 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-my @true_tables =(['feature_type', 'ft']);
-my @tables = @true_tables; 
+#Exported from BaseAdaptor
+$true_tables{feature_type} = [['feature_type', 'ft']];
+#deref so we don't modify the true tables
+@{$tables{feature_type}}   = @{$true_tables{feature_type}};
 
 =head2 fetch_by_name
 
@@ -125,10 +139,11 @@ sub fetch_all_by_associated_SetFeature{
 
 =head2 fetch_all_by_association
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::SetFeature 
-  Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
-  Description: Fetches all associated FeatureTypes for a given SetFeature. Note: The main FeatureType for
-               a SetFeature is accessible via the feature_type method.
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
+  Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_association($ext_feature);
+  Description: Fetches all associated FeatureTypes for a given Storable. 
+               Note: Where appropriate, the main FeatureType for a Storable is 
+               accessible via the feature_type method.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
   Exceptions : Throws if arg is not valid or stored
   Caller     : General
@@ -141,7 +156,7 @@ sub fetch_all_by_association{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $storable);
   
-  push @tables, ['associated_feature_type', 'aft'];
+  push @{$tables{feature_type}}, ['associated_feature_type', 'aft'];
 
   my $table_name = $storable->adaptor->_main_table->[0];
 
@@ -150,7 +165,7 @@ sub fetch_all_by_association{
 
   my $feature_types =  $self->generic_fetch($constraint);
   #Reset tables
-  @tables = @true_tables; 
+  @{$tables{feature_type}} = @{$true_tables{feature_type}}; 
 
   return $feature_types;
 }
@@ -171,7 +186,7 @@ sub fetch_all_by_association{
 sub _tables {
   my $self = shift;
 	
-  return @tables;
+  return @{$tables{feature_type}};
 }
 
 =head2 _columns
