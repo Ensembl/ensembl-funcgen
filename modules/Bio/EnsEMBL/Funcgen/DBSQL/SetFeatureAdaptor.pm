@@ -25,7 +25,7 @@ across all feature types.
 
 =head1 SEE ALSO
 
-Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor
+Bio::EnsEMBL::Funcgen::SetFeature
 
 
 =head1 LICENSE
@@ -61,12 +61,8 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 
 use vars qw(@ISA @EXPORT);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
 #required for child adaptor's store and _obj_from_sth methods
-
-
-
-
 
 =head2 fetch_all_by_FeatureType_FeatureSets
 
@@ -455,54 +451,6 @@ sub fetch_all_by_logic_name {
 } 
 
 
-=head2 store_associated_feature_types
-
-  Arg [1]     : string $logic_name the logic name of the analysis of features to obtain 
-  Example     : $fs = $a->fetch_all_by_logic_name('foobar'); 
-  Description : Returns an arrayref of features created from the database. only 
-                features with an analysis of type $logic_name will be returned. 
-  Returntype  : arrayref of Bio::EnsEMBL::SetFeatures
-  Exceptions  : thrown if $logic_name not defined
-  Caller      : General 
-  Status      : At risk - Move to BaseAdaptor
-
-=cut 
-
-sub store_associated_feature_types { 
-  my ($self, $set_feature) = @_;
-
-  #Direct access to avoid lazy loading with an unstored SetFeature
-  my $assoc_ftypes = $set_feature->{'associated_feature_types'};
-
-  #Could be undef or empty
-  return if ! defined $assoc_ftypes || scalar(@$assoc_ftypes) == 0;
-
-  my $type = $set_feature->feature_set->feature_class;
-  my $feature_id = $set_feature->dbID;
-
-  my $sql = 'INSERT into associated_feature_type(table_id, table_name, feature_type_id) values (?,?,?)';
-
-  foreach my $ftype(@$assoc_ftypes){
-
-	#We have already tested the class but not whether it is stored
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
-
-	my $sth = $self->prepare($sql);
-	$sth->bind_param(1, $feature_id,  SQL_INTEGER);
-	$sth->bind_param(2, $type,        SQL_VARCHAR);
-	$sth->bind_param(3, $ftype->dbID, SQL_INTEGER);
-
-	$sth->execute();
-  }	
-
-
-  return;
-} 
-
-
-
-
-
 =head2 list_dbIDs
 
   Args       : None
@@ -520,27 +468,6 @@ sub list_dbIDs {
 	my $self = shift;
 	
 	return $self->_list_dbIDs($self->_main_table->[0]);
-}
-
-=head2 _main_table
-
-  Example    : my $syn = $adaptor->_main_table->[1];
-  Description: Convenience method to retrieve the main table or main table synonym for this adaptor
-               Entirely dependent on ensembl convention of always having main table as first element
-               of tables array.
-  Returntype : Array ref
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub _main_table{
-  my $self = shift;
-
-  #Need to do this to put it in list context to avoid just returning the last value
-  my @tables = $self->_tables();
-  return $tables[0];
 }
 
 
