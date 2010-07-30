@@ -20,17 +20,29 @@ $features = $ofa->fetch_all_by_Slice_arrayname($slice, 'Array-1', 'Array-2');
 The ProbeFeatureAdaptor is a database adaptor for storing and retrieving
 ProbeFeature objects.
 
-=head1 AUTHOR
+=head1 SEE ALSO
 
-This module was created by Nathan Johnson.
+Bio::EnsEMBL::Funcgen::ProbeFeature
 
-This module is part of the Ensembl project: http://www.ensembl.org/
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
@@ -50,10 +62,9 @@ use warnings;
 
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-my @true_tables = (	[ 'probe_feature', 'pf' ], [ 'probe',   'p' ]);
-#Include probe as we are always going to need this for querying
-#And will most likely need probe.name and/or probe.probe_set_id
-my @tables = @true_tables;
+#Exported from BaseAdaptor
+$true_tables{probe_feature} = [	[ 'probe_feature', 'pf' ], [ 'probe',   'p' ]];
+@{$tables{probe_feature}} = @{$true_tables{probe_feature}};
 
 my $true_final_clause = ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';
 #Do we really need this probe_feature_id in the order by?
@@ -107,7 +118,7 @@ sub fetch_all_by_probe_id {
   }
   
   my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
-  push @tables, (['seq_region', 'sr']);
+  push @{$tables{probe_feature}}, (['seq_region', 'sr']);
 
   my $cs_ids = join(', ', @cs_ids);
   my $constraint = " pf.probe_id=$pid AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
@@ -115,7 +126,7 @@ sub fetch_all_by_probe_id {
  	
   
   my $features = $self->generic_fetch($constraint);
-  @tables = @true_tables;
+  @{$tables{probe_feature}} = @{$true_tables{probe_feature}};
   $final_clause = $true_final_clause;
   
   return $features;
@@ -145,7 +156,7 @@ sub fetch_all_by_probeset {
 	#Restrict to default coord_systems
 	#Can we remove the need for this by restricting the sr cache to default entries?
 	my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
-	push @tables, (['probe_set', 'ps'], ['seq_region', 'sr']);
+	push @{$tables{probe_feature}}, (['probe_set', 'ps'], ['seq_region', 'sr']);
 
 	#Need to protect against SQL injection here due to text params
 	my $cs_ids = join(', ', @cs_ids);
@@ -155,7 +166,7 @@ sub fetch_all_by_probeset {
 	$self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
 	
 	my $features = $self->generic_fetch($constraint);
-	@tables = @true_tables;
+	@{$tables{probe_feature}} = @{$true_tables{probe_feature}};
 	$final_clause = $true_final_clause;
 
 	return $features;
@@ -190,7 +201,7 @@ sub fetch_all_by_Slice_array_vendor {
 	}
 
 	
-	push @tables, (['array', 'a'], ['array_chip', 'ac']);
+	push @{$tables{probe_feature}}, (['array', 'a'], ['array_chip', 'ac']);
 
 
 	#Need to protect against SQL injection here due to text params
@@ -205,7 +216,7 @@ sub fetch_all_by_Slice_array_vendor {
 	$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
 	
 	my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-	@tables       = @true_tables;
+	@{$tables{probe_feature}}       = @{$true_tables{probe_feature}};
 	$final_clause = $true_final_clause;
 
 	return $features;
@@ -273,7 +284,7 @@ sub fetch_all_by_Slice_Array {
   throw("Need pass a valid stored Bio::EnsEMBL::Funcgen::Array object") 
 	if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::Array") && $array->dbID));
   
-  push @tables, (['array_chip', 'ac']);  
+  push @{$tables{probe_feature}}, (['array_chip', 'ac']);  
   my $constraint = ' ac.array_id='.$array->dbID.' and ac.array_chip_id=p.array_chip_id ';
 
   #Do we need this group by?
@@ -283,7 +294,7 @@ sub fetch_all_by_Slice_Array {
   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
   
   my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-  @tables       = @true_tables;
+  @{$tables{probe_feature}}       = @{$true_tables{probe_feature}};
   $final_clause = $true_final_clause;
   
   return $features;
@@ -319,7 +330,7 @@ sub fetch_all_by_Slice_Arrays{
 
   my $array_ids = join(',', (map $_->dbID, @$arrays));
 
-  push @tables, (['array_chip', 'ac']);  
+  push @{$tables{probe_feature}}, (['array_chip', 'ac']);  
   my $constraint = " ac.array_id IN ($array_ids) and ac.array_chip_id=p.array_chip_id ";
 
   #Do we need this group by?
@@ -328,7 +339,7 @@ sub fetch_all_by_Slice_Arrays{
   #That would have to be removed for complex extension.
   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;  
   my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
-  @tables       = @true_tables;
+  @{$tables{probe_feature}}       = @{$true_tables{probe_feature}};
   $final_clause = $true_final_clause;
   
   return $features;
@@ -351,7 +362,7 @@ sub fetch_all_by_Slice_Arrays{
 sub _tables {
 	my $self = shift;
 	
-	return @tables;
+	return @{$tables{probe_feature}};
   }
 
 =head2 _columns
@@ -416,7 +427,7 @@ sub _default_where_clause {
 
 
 sub _final_clause {
-	return $final_clause; #' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';
+	return $final_clause;
 }
 
 
