@@ -41,13 +41,15 @@ package Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
-
 use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);# Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
-#why is baseadaptor req'd? can we remove this?
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
+
+#Exported from BaseAdaptor
+$true_tables{annotated_feature} = [['annotated_feature', 'af'], ['feature_set', 'fs']];
+@{$tables{annotated_feature}} = @{$true_tables{annotated_feature}};
 
 
 
@@ -131,11 +133,7 @@ sub fetch_all_by_Slice_FeatureSet {
 sub _tables {
   my $self = shift;
 	
-  return (
-		  [ 'annotated_feature', 'af' ],
-		  [ 'feature_set', 'fs'],#this is required for fetching on analysis or cell_type or feature_type
-		 );
-			#target?
+  return @{$tables{annotated_feature}};
 }
 
 =head2 _columns
@@ -491,7 +489,7 @@ sub fetch_all_by_associated_MotifFeature{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
   
-  push @{$tables{feature_type}}, ['associated_motif_feature', 'amf'];
+  push @{$tables{annotated_feature}}, ['associated_motif_feature', 'amf'];
 
   my $table_name = $mf->adaptor->_main_table->[0];
 
@@ -500,7 +498,7 @@ sub fetch_all_by_associated_MotifFeature{
 
   my $afs =  $self->generic_fetch($constraint);
   #Reset tables
-  @{$tables{feature_type}} = @{$true_tables{feature_type}}; 
+  @{$tables{annotated_feature}} = @{$true_tables{annotated_feature}}; 
 
   return $afs;
 }
