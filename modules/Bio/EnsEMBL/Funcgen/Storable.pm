@@ -19,13 +19,28 @@ This is a simple wrapper class to provide convenience methods for the StorableAd
 Only get type methods have been implemented here to avoid obfuscating DB writes which 
 should only be done by the specific 'Storable'Adaptors.
 
-=head1 AUTHOR - Nathan Johnson
+=head1 SEE ALSO
+
+Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
 
 =head1 CONTACT
 
-Post questions to the Ensembl development list B<ensembl-dev@ebi.ac.uk>
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-=head1 METHODS
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
@@ -65,7 +80,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
 
 
-  my ($states) = rearrange(['STATES'],@_);
+  my ($states, $assoc_ftypes) = rearrange(['STATES', 'ASSOCIATED_FEATURE_TYPES'] ,@_);
 
   if ($self->adaptor() && (! $self->adaptor->isa("Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor"))){
     throw("Adaptor muct be a valid Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor");
@@ -75,7 +90,8 @@ sub new {
   #THerefore ResultFeature, Probe and ProbeFeature should not be Funcgen::Storables
 
   @{$self->{'states'}} = @$states if $states;
-
+  $self->associated_feature_types($assoc_ftypes) if(defined $assoc_ftypes);
+  
   return $self;
 }
 
@@ -389,10 +405,8 @@ sub get_all_DBEntries {
   #This means that further more specific queries will make another query and not use the cache
 
 
-  my @tables = $self->adaptor->_tables;
-
-  if(!defined $self->{$cache_name} && $self->adaptor()) {
-
+  if( (! defined $self->{$cache_name}) && $self->adaptor() ){
+  
 	my @tables = $self->adaptor->_tables;
 	@tables = split/_/, $tables[0]->[0];#split annotated_feature
 	my $object_type = join('', (map ucfirst($_), @tables));#change to AnnotatedFeature
@@ -400,6 +414,10 @@ sub get_all_DBEntries {
     $self->{$cache_name} = 
       $self->adaptor->db->get_DBEntryAdaptor->_fetch_by_object_type($self->dbID(), $object_type, $ex_db_exp, $ex_db_type);
   }
+  elsif( ! defined $self->{$cache_name} ){
+	throw('You must have set and adaptor to be able to get_all_DBEntries');
+  }
+
 
   $self->{$cache_name} ||= [];
 
@@ -433,6 +451,62 @@ sub add_DBEntry {
 
   $self->{'dbentries'} ||= [];
   push @{$self->{'dbentries'}}, $dbe;
+}
+
+
+=head2 associated_feature_types
+
+  Example    : my @associated_ftypes = @{$feature->associated_feature_types()};
+  Description: Getter/Setter for other associated FeatureTypes.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen:FeatureType objects
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub associated_feature_types{
+  my ($self, $ftypes) = @_;
+  
+  #Lazy load as we don't want to have to do a join on all features when most will not have any
+
+ 
+  if(defined $ftypes){
+
+	if(ref($ftypes) eq 'ARRAY'){
+
+	  foreach my $ftype(@$ftypes){
+	
+		if( ! $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType') ){
+		  throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::FeatureType objects');
+		}
+		#test is stored in adaptor
+	  }
+
+	  if(defined $self->{'associated_feature_types'}){
+		warn('You are overwriting associated feature types');
+		#we could simply add the new ones and make them NR.
+	  }
+
+	  $self->{'associated_feature_types'} = $ftypes;
+	}
+	else{
+	  throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::FeatureType objects');
+	}
+  }
+
+
+  if(! defined $self->{'associated_feature_types'}){
+	#This will fail if we have not stored yet
+
+	if(defined $self->adaptor){
+	  $self->{'associated_feature_types'} = $self->adaptor->db->get_FeatureTypeAdaptor->fetch_all_by_association($self);
+	}
+
+  }
+
+  #This has the potential to return undef, or an arrayref which may be empty.
+  return $self->{'associated_feature_types'};
 }
 
 
