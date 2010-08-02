@@ -184,7 +184,7 @@ sub fetch_all_by_Slice_BindingMatrix {
 }
 
 
-=head2 fetch_all_by_Slice_FeatureSet
+=head2 fetch_all_by_Slice_FeatureSets
 
   Arg [1]    : Bio::EnsEMBL::Slice
   Arg [2]    : arrayref of Bio::EnsEMBL::Funcgen::FeatureSet objects
@@ -210,7 +210,7 @@ sub fetch_all_by_Slice_FeatureSets {
   push @{$tables{motif_feature}}, (['associated_motif_feature', 'amf'], ['annotated_feature', 'af']);
 
   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND '.
-	'amf.annotated_feature_id=af.annotated_feature_id and af.feature_set_id IN=('.join(',', (map $_->dbID, @$fsets)).')';
+	'amf.annotated_feature_id=af.annotated_feature_id and af.feature_set_id IN('.join(',', (map $_->dbID, @$fsets)).')';
   #Can't bind_param in lists
 
   #Group here as the mf may be linked to multiple afs across fsets
@@ -224,6 +224,8 @@ sub fetch_all_by_Slice_FeatureSets {
 
   return $mfs;
 }
+
+
 =head2 _final_clause
 
   Args       : None
@@ -525,8 +527,6 @@ sub store{
 
 	  #Don't store assoicated AF/TFF here
 	  #do this explicitly in the caller via store_associated_AnnotatedFeature
-
-
 	}
 
   return \@mfs;
@@ -540,8 +540,8 @@ sub store{
   Example    : $esa->store_AnnotatedFeature_association($mf, $af);
   Description: Store link between AnnotatedFeatures representing TF peaks 
                and MotifFeatures
-  Returntype : None
-  Exceptions : Throws if args are not valid
+  Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
+  Exceptions : Throws if args are not valid, warns if association already exists
   Caller     : General
   Status     : At Risk - likely to change to TranscriptFactorFeature
 
@@ -553,7 +553,7 @@ sub store{
 
 #Where will these be stored?
 #reciprocal methods here and in AF/TFF?
-#Just un MF for now untill we write TFF
+#Just in MF for now untill we write TFF
 
 #When loading MFs, need a wayway to identify if 
 #it has already been loaded for a previous set
@@ -570,10 +570,22 @@ sub store{
 
 sub store_associated_AnnotatedFeature{
   my ($self, $mf, $af) = @_;
- 
+
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $af);
   
+  
+  #Check for existing association
+  
+  foreach my $existing_af(@{$mf->associated_annotated_features}){
+	
+	if( $existing_af->dbID == $af->dbID ){
+	  warn "You are trying to store a pre-exiting AnnotatedFeature association";
+	  return;
+	}
+  }
+
+
   my $sth = $self->prepare("
 		INSERT INTO associated_motif_feature (
 			annotated_feature_id, motif_feature_id
@@ -584,28 +596,13 @@ sub store_associated_AnnotatedFeature{
   $sth->bind_param(2, $mf->dbID, SQL_INTEGER);
   $sth->execute();
 
-  return;
+
+  push @{$mf->{associated_annotated_features}}, $af;
+
+  return $mf;
 }
 
 
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @feature_ids = @{$ofa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all MotifFeature objects in
-               the current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
-
-=cut
-
-sub list_dbIDs {
-	my $self = shift;
-	
-	return $self->_list_dbIDs('motif_feature');
-}
 
 
 
