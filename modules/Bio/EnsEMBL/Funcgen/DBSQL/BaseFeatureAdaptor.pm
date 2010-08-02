@@ -564,23 +564,24 @@ sub _pre_store {
 
   # make sure feature coords are relative to start of entire seq_region
   if($slice->start != 1 || $slice->strand != 1) {
-	throw("You must generate your feature on a slice starting at 1 with strand 1");
-	  #We have remove this transfer as this method also uses direct hash access
-	  #Which will not work with array based ResultFeatures
+
+	#throw("You must generate your feature on a slice starting at 1 with strand 1");
+	#We did remove this transfer it uses direct hash access which 
+	#did not work with old array based ResultFeatures
 	  
-	  
-	  #move feature onto a slice of the entire seq_region
-	  #$slice = $slice_adaptor->fetch_by_region($slice->coord_system->name(),
-	  #                                         $slice->seq_region_name(),
-	  #                                         undef, #start
-	  #                                         undef, #end
-	  #                                         undef, #strand
-	  #                                         $slice->coord_system->version());
-	  #$feature = $feature->transfer($slice);
-	  #if(!$feature) {
-	  #  throw('Could not transfer Feature to slice of ' .
-	  #        'entire seq_region prior to storing');
-	  #}
+	#move feature onto a slice of the entire seq_region
+	$slice = $slice->adaptor->fetch_by_region($slice->coord_system->name(),
+											  $slice->seq_region_name(),
+											  undef, #start
+											 undef, #end
+											  undef, #strand
+											  $slice->coord_system->version());
+	$feature = $feature->transfer($slice);
+	
+	if(!$feature) {
+	  throw('Could not transfer Feature to slice of ' .
+			'entire seq_region prior to storing');
+	}
   }
   
 
@@ -649,7 +650,7 @@ sub _pre_store {
   my $csa = $self->db->get_FGCoordSystemAdaptor();#had to call it FG as we were getting the core adaptor
   my $fg_cs = $csa->validate_and_store_coord_system($cs);
   $fg_cs = $csa->fetch_by_name($cs->name(), $cs->version());#Why are we refetching this?
-  my $tabname = $self->_main_tables->[0];
+  my $tabname = $self->_main_table->[0];
 
 
   #Need to do this for Funcgen DB
