@@ -102,7 +102,7 @@ sub new {
   
   my ( $name, $type, $freq, $desc, $ftype, $assoc_ftypes ) = rearrange
 	( [
-	   'NAME', 'TYPE', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE', 'ASSOCIATED_FEATURE_TYPES'
+	   'NAME', 'TYPE', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE',
 	  ], @_);
   
   
@@ -119,7 +119,6 @@ sub new {
 	#leave is stored test to adaptor
   }
 
-  $self->associated_feature_types($assoc_ftypes) if(defined $assoc_ftypes);
   $self->name($name);
   $self->type($type);
   $self->{feature_type} = $ftype;
