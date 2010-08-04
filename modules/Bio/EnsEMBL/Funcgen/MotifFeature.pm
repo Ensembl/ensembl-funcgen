@@ -206,7 +206,8 @@ sub display_label {
 	$self->{'display_label'} = $dlabel;
   }
   elsif(! defined $self->{'display_label'}){
-	$self->{'display_label'} = $self->binding_matrix->name()." motif";
+	$self->{'display_label'} = $self->binding_matrix->feature_type->name.':'
+	  .$self->binding_matrix->name();
   }
   
   return $self->{'display_label'};
@@ -267,6 +268,9 @@ sub associated_annotated_features{
   #This has the potential to return undef, or an arrayref which may be empty.
   return $self->{'associated_annotated_features'};
 }
+
+
+
 
 
 
