@@ -70,7 +70,7 @@ $true_tables{motif_feature} = [['motif_feature', 'mf']];
 @{$tables{motif_feature}} = @{$true_tables{motif_feature}};
 
 
-my $true_final_clause = undef;
+my $true_final_clause = ''; # To avoid use of undef warning from BaseAdaptor
 my $final_clause = $true_final_clause;
 
 
@@ -584,6 +584,15 @@ sub store_associated_AnnotatedFeature{
 	  return;
 	}
   }
+
+
+  #Validate MotifFeature is entirely contained within the AnnotatedFeature
+
+  #if(! (( $mf->seq_region_start <= $af->seq_region_end)  &&
+  #( $mf->seq_region_end   >= $af->seq_region_start))){
+  #
+  #	throw('MotifFeature is not entirely contained within associated AnnotatedFeature');
+  #  }
 
 
   my $sth = $self->prepare("
