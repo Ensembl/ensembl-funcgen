@@ -54,6 +54,23 @@ Prints the manual page and exits.
 
 B<This program> performs several debugging and logging functions, aswell as providing several inheritable EFGUtils methods.
 
+=head1 LICENSE
+
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 
 =cut
@@ -61,7 +78,7 @@ B<This program> performs several debugging and logging functions, aswell as prov
 ################################################################################
 
 package Bio::EnsEMBL::Funcgen::Utils::Helper;
-#put in Utils?
+
 use Bio::Root::Root;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::Exception qw (throw stack_trace);
