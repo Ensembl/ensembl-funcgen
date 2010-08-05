@@ -88,6 +88,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (get_date);
 use Carp;#? Can't use unless we can get it to redirect
 use File::Basename;
 
+
 use strict;
 use vars qw(@ISA);
 @ISA = qw(Bio::Root::Root);
@@ -96,6 +97,8 @@ use vars qw(@ISA);
 #To be used in conjunction with -full_delete
 my @rollback_tables = ('data_set', 'feature_set', 'result_set', 'input_set', 'experiment', 'array', 'array_chip', 'experimental_chip');
 
+#Some local filevars to avoid assigning to package typeglobs
+my ($DBGFILE, $LOGFILE);
 
 ################################################################################
 
@@ -129,7 +132,7 @@ my @rollback_tables = ('data_set', 'feature_set', 'result_set', 'input_set', 'ex
 sub new{
     my ($caller, %args) = @_;
 
-    my ($self,%attrdata,$attrname,$argname);
+    my ($self, %attrdata, $argname);
     my $class = ref($caller) || $caller;
 
     #Create object from parent class
@@ -151,7 +154,7 @@ sub new{
 		);
 
     # set each class attribute using passed value or default value
-    foreach $attrname (keys %attrdata){
+    foreach my $attrname (keys %attrdata){
 	  ($argname = $attrname) =~ s/^_//; # remove leading underscore
 	  $self->{$attrname} = (exists $args{$argname}) ? $args{$argname} : $attrdata{$attrname};
     }
@@ -167,46 +170,49 @@ sub new{
 
 
     # DEBUG OUTPUT & STDERR
+
+	#should default to lowest or highest debug level here!
+
     if(defined $self->{_debug_level} && $self->{_debug_level}){
         $main::_debug_level = $self->{_debug_level};
 		
         if(defined $self->{_debug_file}){
 			$main::_debug_file = $self->{_debug_file};
 			  			  
-            open(DBGFILE,">>".$self->{_debug_file})
+            open($DBGFILE, '>>', $self->{_debug_file})
 			  or throw("Failed to open debug file : $!");
 
 			#open (DBGFILE, "<STDERR | tee -a ".$self->{_debug_file});#Mirrors STDERR to debug file
         }
         else{
-            open(DBGFILE,">&STDERR");
+            open($DBGFILE, '>', '&STDERR');
         }
 
-        select DBGFILE; $| = 1;  # make debug file unbuffered
+        select $DBGFILE; $| = 1;  # make debug file unbuffered
 
         $self->debug(1,"Debugging started ".localtime()." on $0 at level ".$self->{_debug_level}." ...");
     }
 
-	my $log_file;
+	my $log_file =  $self->{_log_file};
+	my $output_op = '>';
 	
 	# LOG OUTPUT
 	if (defined $self->{_log_file}){
 
 	  #This causes print on unopened file as we try and log in the DESTROY
 	  throw('You have specified mutually exclusive parameters log_file and no_log') if($self->{'_no_log'});
-
 	  $main::_log_file = $self->{_log_file};
-		
+	
 	  #we need to implment tee here
 	  if($self->{'_tee'}){
 	    #we're not resetting $main::_tee here, we only use it once.
-	    $log_file = '| tee -a '.$self->{_log_file};
+	    $log_file = '| tee -a '.$log_file;
 	  }
 	  else{
-		$log_file = '>>'.$self->{'_log_file'};
+		$output_op = '>>'
 	  }
 
-	  open(LOGFILE, $log_file)
+	  open($LOGFILE, $output_op, $log_file)
 	    or throw("Failed to open log file : $log_file\nError: $!");
 	}
 	else{
@@ -231,21 +237,21 @@ sub new{
 		#we should still tee here
 		if($self->{'_tee'}){
 		  #we're not resetting $main::_tee here, we only use it once.
-		  $log_file = '| tee -a '.$self->{'_log_file'};
+		  $log_file = '| tee -a '.$log_file;
 		} else{
-		  $log_file = '>>'.$self->{'_log_file'};
+		  $output_op = '>>'
 		}
 
-		open(LOGFILE,  $log_file)
+		open($LOGFILE, $output_op, $log_file)
 		  or throw("Failed to open log file : $log_file\nError: $!");
 		
 	  }
 	  else{
-		open(LOGFILE,">&STDOUT");
+		open($LOGFILE, $output_op, '&STDOUT');
 	  }
 	}
 
-	select LOGFILE; $| = 1;  # make log file unbuffered
+	select $LOGFILE; $| = 1;  # make log file unbuffered
 
 	$self->log("\n\nLogging started at ".localtime()."...");
 
@@ -355,7 +361,7 @@ sub log{
 
   $message .= "\n" if ! $no_return;
 
-  print LOGFILE "::\t$message";
+  print $LOGFILE "::\t$message";
 
   # Add to debug file if not printing to STDERR?
   # only if verbose?
@@ -390,8 +396,8 @@ sub report{
 	push @{$self->{'_report'}}, $message;
   }
   elsif(scalar(@{$self->{'_report'}})){
-	print LOGFILE "\n::\tSUMMARY REPORT\t::\n";
-	print LOGFILE join("\n", @{$self->{'_report'}})."\n";
+	print $LOGFILE "\n::\tSUMMARY REPORT\t::\n";
+	print $LOGFILE join("\n", @{$self->{'_report'}})."\n";
 
 	$self->{'_report'} = [];
   }
@@ -422,9 +428,9 @@ sub report{
 sub log_header{
   my ($self, $message, $mem, $date) = @_;
 
-  print LOGFILE "\n\n";
+  print $LOGFILE "\n\n";
   $self->log("::\t$message\t::\t::", $mem, $date);
-  print LOGFILE "\n";
+  print $LOGFILE "\n";
 }
 
 
@@ -478,7 +484,7 @@ sub debug{
         }
            
 		#This still attempts to print if file not opened
-        print DBGFILE "debug $message\t: [$$ - $prog_name:$prog_line  $call_name:$call_line]\n";
+        print $DBGFILE "debug $message\t: [$$ - $prog_name:$prog_line  $call_name:$call_line]\n";
 
 		#carp("carping $message");
     }
@@ -510,7 +516,7 @@ sub debug_hash{
     
     # if debug on at the requested level then output the passed hash
     if (defined $self->{_debug_level} && $level <= $self->{_debug_level}){
-		print DBGFILE Data::Dumper::Dumper(\$hashref)."\n";
+		print $DBGFILE Data::Dumper::Dumper(\$hashref)."\n";
 	}
 }
 
