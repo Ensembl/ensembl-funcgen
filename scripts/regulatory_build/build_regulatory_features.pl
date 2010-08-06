@@ -178,7 +178,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file strip_param_flags strip_param_args generate_slices_from_names);
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
-$|=1;
+local $|=1;
 
 my ($pass,$port,$host,$user,$dbname, $help,
 	$dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
@@ -1191,7 +1191,7 @@ warn("ERROR:\tInconsistencies were found between some of your focus sets and the
 
 ###############################################################################
 # dump annotated features for given seq_region to file
-sub dump_annotated_features () {
+sub dump_annotated_features{
   #To do, remove this and just slurp directly into perl!
 
   my @fset_ids = keys %attrib_fsets;
@@ -1231,6 +1231,8 @@ sub dump_annotated_features () {
 
   system($command) && die ("Can't dump data to file in $outdir");
     
+
+  return;
 }
 
 ###############################################################################
@@ -1277,6 +1279,8 @@ sub add_focus{
   }
 
   $seen_af{$fset_id}{$af_id} = 1;
+
+  return;
 }
 
 sub update_focus{
@@ -1323,7 +1327,7 @@ sub update_focus{
   $seen_af{$fset_id}{$af_id} = 1;
 
   #print Dumper @rf if ($debug_start);
-  
+  return;
 }
 
 sub update_attributes{
@@ -1381,7 +1385,7 @@ sub update_attributes{
 			
 			print "\tUpdating overlapping attribute feature:\t(".$attrib_fsets{$_->{fset_id}}->feature_type->name.":".$_->{af_id}.")\t".$_->{start}.' - '.$_->{end}."\n" if $debug_start;
 			
-			$rf[$rf_size]{annotated}{$ct}{$_->{af_id}} = $_->{fset_id},
+			$rf[$rf_size]{annotated}{$ct}{$_->{af_id}} = $_->{fset_id};
 			$rf[$rf_size]{fsets}{$ct}{$_->{fset_id}}++;
 			
 			#Reset the attr end
@@ -1405,6 +1409,8 @@ sub update_attributes{
 	print "$ct updated coords:\t\t\t\t\t\t".$rf[$rf_size]{attribute_start}{$ct}.' - '.$rf[$rf_size]{attribute_end}{$ct}."\n" if $debug_start;
 	print "No upstream $ct features found\n" if $debug_start && (! $updated);
   }
+
+  return;
 }
 
 
@@ -1424,6 +1430,8 @@ sub add_feature{
 		score => $score,
 		fset_id => $fset_id
 	   });
+
+  return;
 }
 
 sub build_binstring{
