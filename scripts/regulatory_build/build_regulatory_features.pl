@@ -190,33 +190,33 @@ my ($pass,$port,$host,$user,$dbname, $help,
 
 
 
-my %ftype_pwm_names = ( homo_sapiens => {
-										 CTCF  => 'CTCF',
-										 Cfos  => 'AP1',
-										 Cjun  => 'AP1',
-										 Cmyc  => 'Myc',
-										 Gabp  => 'GABPA',
-										 Gata1 => 'Gata1',
-										 Jund  => 'Ap1',
-										 Max   => 'MAX',
-										 Nfe2  => 'NFE2l2',
-										 Nrsf  => 'NRSF',
-										 Srf   => 'SRF',
-										},
-
-						mus_musculus => {										 
-										 Cmyc     => 'Myc',
-										 CTCF     => 'CTCT',
-										 E2F1     => 'E2F1',
-										 Esrrb    => 'Esrrb',
-										 Klf4     => 'Klf4',
-										 nMyc     => 'Mycn',
-										 #Oct4     => 'Oct4',
-										 Stat3    => 'STAT3',
-										 Tcfcp2l1 => 'Tcfcp2l1',
-										 Zfx      => 'Zfx',
-										},
-					  );
+#my %ftype_pwm_names = ( homo_sapiens => {
+#										 CTCF  => 'CTCF',
+#										 Cfos  => 'AP1',
+#										 Cjun  => 'AP1',
+#										 Cmyc  => 'Myc',
+#										 Gabp  => 'GABPA',
+#										 Gata1 => 'Gata1',
+#										 Jund  => 'Ap1',
+#										 Max   => 'MAX',
+#										 Nfe2  => 'NFE2l2',
+#										 Nrsf  => 'NRSF',
+#										 Srf   => 'SRF',
+#										},
+#
+#						mus_musculus => {										 
+#										 Cmyc     => 'Myc',
+#										 CTCF     => 'CTCT',
+#										 E2F1     => 'E2F1',
+#										 Esrrb    => 'Esrrb',
+#										 Klf4     => 'Klf4',
+#										 nMyc     => 'Mycn',
+#										 #Oct4     => 'Oct4',
+#										 Stat3    => 'STAT3',
+#										 Tcfcp2l1 => 'Tcfcp2l1',
+#										 Zfx      => 'Zfx',
+#										},
+#					  );
 
 #Declare to avoid only used once warnings;
 $main::_tee      = undef;
@@ -242,7 +242,7 @@ GetOptions (
             "dnadb_user|u=s" => \$dnadb_user,
             "dnadb_name|d=s" => \$dnadb_name,
 		       
-			"tfbs_file=s"    => \$tfbs_file,
+			#"tfbs_file=s"    => \$tfbs_file,
 			"outdir|o=s"     => \$outdir,
             "do_intersect|i=s" => \$do_intersect,
             "write_features|w" => \$write_features,
@@ -312,10 +312,10 @@ if (defined $outdir && ! -d $outdir) {
 $outdir =~ s/\/$//;
 
 
-if($tfbs_file && 
-   (! -f $tfbs_file)){
-  die("-tfbs_file is not a valid file:\t${tfbs_file}");
-}
+#if($tfbs_file && 
+#   (! -f $tfbs_file)){
+#  die("-tfbs_file is not a valid file:\t${tfbs_file}");
+#}
 
 
 #use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
@@ -378,22 +378,22 @@ my $ga  = $db->dnadb->get_GeneAdaptor();
 
 #Test we have all the TF represented in the DB
 
-if($tfbs_file){
-
-  if(! exists $ftype_pwm_names{$species}){
-	die("No FeatureType PWM name config present for $species. Please populate the \%ftype_pwm_names hash accordingly");
-	#Move this to separate config file
-  }
-
-  foreach my $tf_name(keys %{$ftype_pwm_names{$species}}){
-
-	my $tf_ftype = $fta->fetch_by_name($tf_name);
-	
-	if(! defined $tf_ftype){
-	  die("Could not find FeatureType for $tf_name TF. Please remove from hash or rename in hash and tfbs file accordingly");
-	}
-  }
-}
+#if($tfbs_file){
+#
+#  if(! exists $ftype_pwm_names{$species}){
+#	die("No FeatureType PWM name config present for $species. Please populate the \%ftype_pwm_names hash accordingly");
+#	#Move this to separate config file
+#  }
+#
+#  foreach my $tf_name(keys %{$ftype_pwm_names{$species}}){
+#
+#	my $tf_ftype = $fta->fetch_by_name($tf_name);
+#	
+#	if(! defined $tf_ftype){
+#	  die("Could not find FeatureType for $tf_name TF. Please remove from hash or rename in hash and tfbs file accordingly");
+#	}
+#  }
+#}
 
 
 ### Validate Focus/Attribute FeatureSets
@@ -652,14 +652,14 @@ map {
 
 
 #Set up some more caches for all of the fsets
-my %pwm_ftype_names;
+#my %pwm_ftype_names;
 
 foreach my $fset(values %attrib_fsets){
   my $ft_name = $fset->feature_type->name;
 
-  if(exists $ftype_pwm_names{$species}{$ft_name}){
-	$pwm_ftype_names{$ftype_pwm_names{$species}{$ft_name}} = $ft_name;
-  }
+  #if(exists $ftype_pwm_names{$species}{$ft_name}){
+  #	$pwm_ftype_names{$ftype_pwm_names{$species}{$ft_name}} = $ft_name;
+  #  }
 
   $fset_feature_types{$fset->dbID}          = $ft_name;
   $feature_types{$ft_name}                  = $fset->feature_type;
@@ -1557,106 +1557,106 @@ sub create_regulatory_features{
 	  #whole of the core region
 	  #This will require cacheing much like the reg build as we can have overlapping focus peaks
 
-	  if($tfbs_file){
-		#set current FeatureType names
-		my @ft_names = map $attrib_fsets{$_}->feature_type->name, values %{$attr_cache};
-
-		#Filter to pwm names
-		my @pwm_names;
-
-		foreach my $ft_name(@ft_names){
-		  push @pwm_names, $ftype_pwm_names{$species}{$ft_name} if exists $ftype_pwm_names{$species}{$ft_name};
-		}
-
-		if($ct eq 'MultiCell'){
-		  		  
-		  if(@pwm_names){
-			
-			my $before_end = 1;
-			
-		  TFBS: while($before_end){
-			  
-			  #Need to handle last tfbs here
-			  if(defined $last_tfbs_line){
-				$tfbs_line = $last_tfbs_line;
-			  }
-			  else{
-				$tfbs_line = <$tfbs_handle>;
-			  }
-			  
-			  undef $last_tfbs_line;
-			  
-			  if(defined $tfbs_line){
-				chomp $tfbs_line;
-
-				my ($chr, $tstart, $tend, $tname, $log_odds_score, $strand, $pwm_id) = split/\t/, $tfbs_line;
-				
-				#We need it entirely overlapping the core region
-				next TFBS if $chr ne $sr_name;
-			
-				next TFBS if $tstart < $focus_start;
-				
-				#We need to filter here for ftypes which are not in the build
-				#Could do this in the %ftype_pwm_names config hash
-				next TFBS if ! exists $pwm_ftype_names{$tname};
-
-
-				if ($tend   <= $focus_end){
-				  #TFBS is entirely contain within core region
-				  
-				  #Store external_feature if represented in current feature
-				  
-				  next TFBS if ! grep/^$tname$/, @pwm_names;
-			  
-				  my $tfbs_ef = Bio::EnsEMBL::Funcgen::ExternalFeature->new
-					(
-					 -display_label => $tname.':'.$pwm_id,
-					 -start         => $tstart,
-					 -end           => $tend,
-					 -strand        => $strand,
-					 -feature_type  => $feature_types{$pwm_ftype_names{$tname}},
-					 #change this to pwm ftype?
-					 #and set actual ftyp as associated feature type
-					 -feature_set   => $tfbs_set,
-					 -slice         => $slice,
-					);
-				 
-
-				  
-
-				  #xref to gene should already have been stored at the ftype level
-				  
-				  ($tfbs_ef) = @{$efa->store($tfbs_ef)};# if $write_features; #This will break attr_cache generation
-				  
-				  #add to tfbs cache attribute
-				  push @tfbs_cache, $tfbs_ef;
-				}
-				else{
-				  $last_tfbs_line = $tfbs_line;
-				  $before_end = 0;
-				}
-			  }
-			  else{
-				$before_end = 0;
-			  }
-			}
-		  }
-		}
-	  
-
-		#Now add appropriate tfbs's dependant on cell type
-		undef %ef_cache;
-
-		foreach my $tfbs_ef(@tfbs_cache){
-		  my $tfbs_name = $tfbs_ef->feature_type->name;#could be ftype name?
-
-		  if(grep /^$tfbs_name$/, @pwm_names){
-			#Add as attribute
-			$feature_count{tfbs}{$ct}++ if $ct ne 'MultiCell';
-			$ef_cache{$tfbs_ef->dbID} = undef;#Could pass actual ef here
-		  }
-		}
-	  }
+	  #if($tfbs_file){
+	#	#set current FeatureType names
+	#	my @ft_names = map $attrib_fsets{$_}->feature_type->name, values %{$attr_cache};
+#
+#		#Filter to pwm names
+#		my @pwm_names;
+#
+#		foreach my $ft_name(@ft_names){
+#		  push @pwm_names, $ftype_pwm_names{$species}{$ft_name} if exists $ftype_pwm_names{$species}{$ft_name};
+#		}
+#
+#		if($ct eq 'MultiCell'){
+#		  		  
+#		  if(@pwm_names){
+#			
+#			my $before_end = 1;
+#			
+#		  TFBS: while($before_end){
+#			  
+#			  #Need to handle last tfbs here
+#			  if(defined $last_tfbs_line){
+#				$tfbs_line = $last_tfbs_line;
+#			  }
+#			  else{
+#				$tfbs_line = <$tfbs_handle>;
+#			  }
+#			  
+#			  undef $last_tfbs_line;
+#			  
+#			  if(defined $tfbs_line){
+#				chomp $tfbs_line;
+#
+#				my ($chr, $tstart, $tend, $tname, $log_odds_score, $strand, $pwm_id) = split/\t/, $tfbs_line;
+#				
+#				#We need it entirely overlapping the core region
+#				next TFBS if $chr ne $sr_name;
+#			
+#				next TFBS if $tstart < $focus_start;
+#				
+#				#We need to filter here for ftypes which are not in the build
+#				#Could do this in the %ftype_pwm_names config hash
+#				next TFBS if ! exists $pwm_ftype_names{$tname};
+#
+#
+#				if ($tend   <= $focus_end){
+#				  #TFBS is entirely contain within core region
+#				  
+#				  #Store external_feature if represented in current feature
+#				  
+#				  next TFBS if ! grep/^$tname$/, @pwm_names;
+#			  
+#				  my $tfbs_ef = Bio::EnsEMBL::Funcgen::ExternalFeature->new
+#					(
+#					 -display_label => $tname.':'.$pwm_id,
+#					 -start         => $tstart,
+#					 -end           => $tend,
+#					 -strand        => $strand,
+#					 -feature_type  => $feature_types{$pwm_ftype_names{$tname}},
+#					 #change this to pwm ftype?
+#					 #and set actual ftyp as associated feature type
+#					 -feature_set   => $tfbs_set,
+#					 -slice         => $slice,
+#					);
+#				 
+#
+#				  
+#
+#				  #xref to gene should already have been stored at the ftype level
+#				  
+#				  ($tfbs_ef) = @{$efa->store($tfbs_ef)};# if $write_features; #This will break attr_cache generation
+#				  
+#				  #add to tfbs cache attribute
+#				  push @tfbs_cache, $tfbs_ef;
+#				}
+#				else{
+#				  $last_tfbs_line = $tfbs_line;
+#				  $before_end = 0;
+#				}
+#			  }
+#			  else{
+#				$before_end = 0;
+#			  }
+#			}
+#		  }
+#		}
+#	  
+#
+#		#Now add appropriate tfbs's dependant on cell type
+#		undef %ef_cache;
+#
+#		foreach my $tfbs_ef(@tfbs_cache){
+#		  my $tfbs_name = $tfbs_ef->feature_type->name;#could be ftype name?
+#
+#		  if(grep /^$tfbs_name$/, @pwm_names){
+#			#Add as attribute
+#			$feature_count{tfbs}{$ct}++ if $ct ne 'MultiCell';
+#			$ef_cache{$tfbs_ef->dbID} = undef;#Could pass actual ef here
+#		  }
+#		}
+#	  }
 
 
 	  #We now need to clean the fset_id values from the attrs cache
@@ -1676,7 +1676,7 @@ sub create_regulatory_features{
 		 -binary_string    => &build_binstring($rf, $ct),
 		 -feature_set      => $rfsets->{$ct},
 		 -feature_type     => $rfsets->{$ct}->feature_type,
-		 -_attribute_cache => {'annotated_feature' => $attr_cache, 'external_feature' => \%ef_cache},
+		 -_attribute_cache => {'annotated_feature' => $attr_cache},# 'external_feature' => \%ef_cache},
 		 -projected        => $projected,
 		);
 	  
