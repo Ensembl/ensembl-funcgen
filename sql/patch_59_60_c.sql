@@ -59,14 +59,11 @@ CREATE  TABLE `binding_matrix` (
 
 -- Need to add AVG_ROW_LENGTH here for free text/blob field.
 -- frequencies to be recast as blob
--- change type to enum?
-
-
--- update associated_feature_type to handle binding_matrix
-ALTER table associated_feature_type MODIFY `feature_table` enum('annotated','external','regulatory', 'binding_matrix');
+-- change type to analysis_id to avoid enum limitations
+-- Then have wrappers for Jaspar/Inferred?
 
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_59_60_b.sql|motif_feature_binding_matrix');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_59_60_c.sql|motif_feature_binding_matrix');
 
 
