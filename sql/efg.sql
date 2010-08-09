@@ -317,10 +317,10 @@ CREATE TABLE `seq_region` (
 
 DROP TABLE IF EXISTS `associated_feature_type`;
 CREATE TABLE `associated_feature_type` (
-   `feature_id` int(10) unsigned NOT NULL,
-   `feature_table` enum('annotated', 'external', 'regulatory') default NULL,
+   `table_id` int(10) unsigned NOT NULL,
+   `table_name` enum('annotated_feature', 'external_feature', 'regulatory_feature', 'binding_matrix') default NULL,
    `feature_type_id` int(10) unsigned NOT NULL,
-   PRIMARY KEY  (`feature_id`, `feature_table`, `feature_type_id`),
+   PRIMARY KEY  (`table_id`, `table_name`, `feature_type_id`),
    KEY `feature_type_index` (`feature_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -406,21 +406,6 @@ CREATE TABLE `probe_feature` (
    KEY `seq_region_idx` (`seq_region_id`, `seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- do we need to add probe_id to the en dof the seq_region_idx?
--- we should also append range query based on the seq_region start and feature max length?
--- This will facilitate the ResultFeature query
-
-
--- remove mismatches?
--- Do jointindex on seq region local start? ADD COORD_SYSTEM to joint index?
--- Currently use chr data in here rather than true seq_regions, Need to map all probe global values to seq_regions.
--- build_id currently set to freeze date, can go when we incorporate build mapping into the import API
--- Would not capture true probe seq if there were any mismatches in mapping.
--- Mismatches in mapping, should default be NULL?  Mismatch for nimblegen here would denote MM of PM/MM probe pair
--- Cigarline(from alignment) shows mismatches, would normally be "probe.length"M, would need original probe seq for alignment, not currently stored with seq_region style tables.  See comments below probe table re: seq storage.
--- Joint index on seq_region_id and local start? 
-
-
 
 --
 -- Table structure for table `probe_set`
@@ -436,12 +421,9 @@ CREATE TABLE `probe_set` (
 	KEY `name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- Now ancillary/optional table
--- joint key on probe_set_id and array_id?
--- aka feature for nimblegen(optional, therefore some probes = their featureset/probeset)
--- Can we omit probe_sets for sets of size == 1?
+
 -- family= ENCODE REGIONS, RANDOM etc, generic descriptor for probes, can have multiple families on one chip
--- xref_id = encode region name, removed!!!!  Generate real xref entries.
+
 
 
 --
@@ -767,8 +749,56 @@ CREATE TABLE `annotated_feature` (
   KEY `feature_set_idx` (`feature_set_id`)	  
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
--- Partition this by seq_region(hash)? but hardcode number of partitions to keep sensible.
 
+
+--
+-- Table structure for table `motif_feature`
+--
+
+CREATE TABLE `motif_feature` (
+  `motif_feature_id` int(10) unsigned NOT NULL auto_increment,
+  `binding_matrix_id` INT(10) unsigned NOT NULL,
+  `seq_region_id` int(10) unsigned NOT NULL,
+  `seq_region_start` int(10) unsigned NOT NULL,
+  `seq_region_end` int(10) unsigned NOT NULL,
+  `seq_region_strand` tinyint(1) NOT NULL,
+  `display_label` varchar(60) default NULL,
+  `score` double default NULL,
+  PRIMARY KEY  (`motif_feature_id`),
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
+  KEY `binding_matrix_idx` (`binding_matrix_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `associated_motif_feature`
+--
+
+CREATE TABLE `associated_motif_feature` (
+   `annotated_feature_id` int(10) unsigned NOT NULL,
+   `motif_feature_id` int(10) unsigned NOT NULL,
+   PRIMARY KEY  (`annotated_feature_id`, `motif_feature_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+--
+-- Table structure for table `binding_matrix`
+--
+
+CREATE  TABLE `binding_matrix` (
+ `binding_matrix_id` INT(10) unsigned NOT NULL auto_increment,
+ `name` VARCHAR(45) NOT NULL,
+ `type` VARCHAR(45) NOT NULL,
+ `feature_type_id` int(10) unsigned NOT NULL,
+ `frequencies` TEXT NOT NULL,
+ `description` VARCHAR(255) NULL,
+ PRIMARY KEY (`binding_matrix_id`) ,
+ KEY `name_type_idx` (`name`, `type`),
+ KEY `feature_type_idx` (`feature_type_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+-- change frequencies to blob
 
 
 -- Table structure for `feature_set`
