@@ -203,8 +203,10 @@ sub fetch_all_by_Slice_FeatureSets {
   my ($self, $slice, $fsets, $type) = @_;
 	
   #could add logic_name here for motif mapper analysis, motif source analysis 
-  $self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fsets);
-  
+  #$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fsets);
+  foreach my $fset (@$fsets){
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
+  }
 
   #Extend query tables
   push @{$tables{motif_feature}}, (['associated_motif_feature', 'amf'], ['annotated_feature', 'af']);
