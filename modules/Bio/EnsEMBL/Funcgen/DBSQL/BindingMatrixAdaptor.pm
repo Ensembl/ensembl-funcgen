@@ -63,12 +63,11 @@ $true_tables{binding_matrix} = [['binding_matrix', 'bm']];
 #deref to avoid modifying the true tables
 @{$tables{binding_matrix}} = @{$true_tables{binding_matrix}};
 
-=head2 fetch_all_by_name_FeatureType
+=head2 fetch_all_by_name
 
   Arg [1]    : string - name of Matrix
-  Arg [2]    : Bio::EnsEMBL::Funcgen::FeatureType
-  Arg [3]    : string - (optional) type of Matrix (e.g. 'Jaspar')
-  Example    : my $matrix = $matrix_adaptor->fetch_by_name('MA0122.1');
+  Arg [2]    : string - (optional) type of Matrix (e.g. 'Jaspar')
+  Example    : my $matrix = $matrix_adaptor->fetch_all_by_name('MA0122.1');
   Description: Fetches matrix objects given a name and an optional type.
                If both are specified, only one unique BindingMatrix will be returned
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
@@ -78,12 +77,39 @@ $true_tables{binding_matrix} = [['binding_matrix', 'bm']];
 
 =cut
 
+sub fetch_all_by_name{
+  my ($self, $name, $type) = @_;
+
+  throw("Must specify a BindingMatrix name") if(! $name);
+
+  my $constraint = " bm.name = ? ";
+  $constraint .= " AND bm.type = ?" if $type;
+  
+  $self->bind_param_generic_fetch($name,         SQL_VARCHAR);
+  $self->bind_param_generic_fetch($type,         SQL_VARCHAR) if $type;
+
+  return $self->generic_fetch($constraint);
+}
+
+=head2 fetch_all_by_name_FeatureType
+
+  Arg [1]    : string - name of Matrix
+  Arg [2]    : Bio::EnsEMBL::Funcgen::FeatureType
+  Arg [3]    : string - (optional) type of Matrix (e.g. 'Jaspar')
+  Description: Fetches matrix objects given a name and an optional type.
+               If both are specified, only one unique BindingMatrix will be returned
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
+  Exceptions : Throws if no name if defined
+  Caller     : General
+  Status     : At risk
+
+=cut
+
 sub fetch_all_by_name_FeatureType{
   my ($self, $name, $ftype, $type) = @_;
 
   throw("Must specify a BindingMatrix name") if(! $name);
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
-  
+  #$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
 
   my $constraint = " bm.name = ? and bm.feature_type_id = ?";
   $constraint .= " AND bm.type = ?" if $type;
