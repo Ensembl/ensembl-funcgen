@@ -225,7 +225,35 @@ sub is_stored_and_valid{
   return;
 }
 
+=head2 are_stored_and_valid
 
+  Arg [1]    : string - class namespace
+  Arg [1]    : ARRAYREF os Bio::EnsEMBL::Funcgen::Storable objects e.g. ResultSet 
+  Example    : $db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', \@rsets);
+  DESCRIPTION: Wrapper for is_Stored_and_valid
+  Returntype : none
+  Exceptions : Throws if object list is not an ARRAY with at least one element
+  Caller     : general 
+  Status     : At risk
+
+=cut
+
+
+
+sub are_stored_and_valid{
+  my ($self, $class, $obj_list) = @_;
+
+  if( (ref($obj_list) ne 'ARRAY') ||
+	  (scalar(@$obj_list) <=0) ){
+	throw('You must provide an ARRAYREF of objects to validate');
+  }
+
+  foreach my $obj(@$obj_list){
+	$self->is_stored_and_valid($class, $obj);
+  }
+
+  return;
+}
 
 
 
