@@ -24,7 +24,7 @@ Probe objects.
 Bio::EnsEMBL::Funcgen::Probe
 
 
-=head1 LICENSE
+=head1 LICENSE AND COPYRIGHT
 
   Copyright (c) 1999-2009 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -45,18 +45,16 @@ Bio::EnsEMBL::Funcgen::Probe
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor;
+
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Probe;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use Tie::File;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use Base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
 
 #Exported from BaseAdaptor
 $true_tables{probe} = [['probe', 'p']];
@@ -127,8 +125,9 @@ sub fetch_by_array_probe_probeset_name {
 	#The only possible way this would not return one result
 	#is if an identically named array(:probeset):probe which had a different sequence
 	#As Import array would separate these based on the sequence hash
-	
-	return $self->fetch_by_dbID($sth->fetchrow_array);
+	my ($dbid) = $sth->fetchrow_array;
+
+	return (defined $dbid) ? $self->fetch_by_dbID($dbid) : undef;
 }
 
 
@@ -385,7 +384,7 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $current_dbid, $arraychip_id, $probe_id, $array_id, $probe_set_id, $name, $class, $probelength, $desc);
+	my (@result, $current_dbid, $arraychip_id, $probe_id, $probe_set_id, $name, $class, $probelength, $desc);
 	my ($array, %array_cache, %probe_set_cache);
 	
 	$sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, \$desc);
@@ -519,7 +518,7 @@ sub _objs_from_sth {
 sub store {
   my ($self, @probes) = @_;
   
-  my ($ac_id, $sth, $dbID, @panals, $pd_sth);
+  my (sth, $dbID, @panals, $pd_sth);
   my $pd_sql = "INSERT IGNORE into probe_design(probe_id, analysis_id, score, coord_system_id) values(?, ?, ?, ?)";
   my $db = $self->db();
   throw('Must call store with a list of Probe objects') if (scalar @probes == 0);
@@ -543,7 +542,7 @@ sub store {
     # Get all the arrays this probe is on and check they're all in the database
     my %array_hashes;
     
-    foreach $ac_id (keys %{$probe->{'arrays'}}) {
+    foreach my $ac_id (keys %{$probe->{'arrays'}}) {
             
       if (defined ${$probe->{'arrays'}}{$ac_id}->dbID()) {
       #Will this ever work as generally we're creating from scratch and direct access to keys above by passes DB fetch
@@ -555,16 +554,19 @@ sub store {
 	
     # Insert separate entry (with same oligo_probe_id) in oligo_probe
     # for each array/array_chip the probe is on
-    foreach $ac_id (keys %array_hashes) {			
+    foreach my $ac_id (keys %array_hashes) {
       my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
-      
+	  
 	  foreach my $name(@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}){
 
 		if (defined $dbID) {  # Already stored
 					
 		  $sth = $self->prepare
-			("INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description )
-			  VALUES (?, ?, ?, ?, ?, ?, ?)");
+			(
+			 "INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description )".
+			 ."VALUES (?, ?, ?, ?, ?, ?, ?)"
+			);
+
 		  $sth->bind_param(1, $dbID,               SQL_INTEGER);
 		  $sth->bind_param(2, $ps_id,              SQL_INTEGER);
 		  $sth->bind_param(3, $name,               SQL_VARCHAR);
@@ -577,8 +579,11 @@ sub store {
 		else {
 		  # New probe
 		  $sth = $self->prepare
-			("INSERT INTO probe( probe_set_id, name, length, array_chip_id, class )
-			VALUES (?, ?, ?, ?, ?)");
+			(
+			 "INSERT INTO probe( probe_set_id, name, length, array_chip_id, class )".
+			 "VALUES (?, ?, ?, ?, ?)"
+			);
+
 		  $sth->bind_param(1, $ps_id,              SQL_INTEGER);
 		  $sth->bind_param(2, $name,               SQL_VARCHAR);
 		  $sth->bind_param(3, $probe->length(),    SQL_INTEGER);
