@@ -246,6 +246,26 @@ sub frequencies {
   return $self->{'frequencies'};
 }
 
+=head2 frequencies_revcomp
+
+  Example    : $matrix->frequencies_revcomp();
+  Description: Getter for the reverse complement frequencies attribute
+
+  The attribute represents the reverse complement of frequencies
+  
+  Returntype : string
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub frequencies_revcomp {
+  my $self = shift;
+ 
+  return $self->{'frequencies_revcomp'};
+}
+
+
 =head2 compare_to_optimal_site
 
   Arg [1]    : string - Binding Site Sequence
@@ -312,7 +332,9 @@ sub _weights {
  	#TODO allow for it to be passed as parameters?
   	my $frequencies = shift if @_; 
   	if($frequencies){
-  		$frequencies =~ s/^>.*?\n//;
+  		$frequencies =~ s/^(>.*?\n)//;
+		my $header = $1;
+
   		my ($a,$c,$g,$t) = split(/\n/,$frequencies);
   		my @As = split(/\s+/,_parse_matrix_line('[A\[\]]',$a));
   		my @Cs = split(/\s+/,_parse_matrix_line('[C\[\]]',$c));
@@ -320,7 +342,20 @@ sub _weights {
   		my @Ts = split(/\s+/,_parse_matrix_line('[T\[\]]',$t));
 		if((scalar(@As)!=scalar(@Cs)) || (scalar(@As)!=scalar(@Gs)) || (scalar(@As)!=scalar(@Ts)) ){
 			throw "Frequencies provided are not a valid frequency matrix"		
-		}	
+		}
+		
+		#Create the reverse complement
+		my @revT = reverse(@As);
+		my @revA = reverse(@Ts);
+		my @revC = reverse(@Gs);
+		my @revG = reverse(@Cs);
+		my $revcomp = $header;
+		$revcomp.= "A [ ".join("\t",@revA)." ]\n";
+		$revcomp.= "C [ ".join("\t",@revC)." ]\n";
+		$revcomp.= "G [ ".join("\t",@revG)." ]\n";
+		$revcomp.= "T [ ".join("\t",@revT)." ]\n";
+		$self->{'frequencies_revcomp'} = $revcomp;
+
   		my @totals;
   		for(my $i=0;$i<scalar(@As);$i++){ 
   			$totals[$i]=$As[$i]+$Cs[$i]+$Gs[$i]+$Ts[$i];
