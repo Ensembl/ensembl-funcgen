@@ -52,9 +52,11 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Probe;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#Have to use here to import @EXPORT
 use Tie::File;
 
-use Base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
+
 
 #Exported from BaseAdaptor
 $true_tables{probe} = [['probe', 'p']];
@@ -518,7 +520,7 @@ sub _objs_from_sth {
 sub store {
   my ($self, @probes) = @_;
   
-  my (sth, $dbID, @panals, $pd_sth);
+  my ($sth, $dbID, @panals, $pd_sth);
   my $pd_sql = "INSERT IGNORE into probe_design(probe_id, analysis_id, score, coord_system_id) values(?, ?, ?, ?)";
   my $db = $self->db();
   throw('Must call store with a list of Probe objects') if (scalar @probes == 0);
@@ -564,7 +566,7 @@ sub store {
 		  $sth = $self->prepare
 			(
 			 "INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description )".
-			 ."VALUES (?, ?, ?, ?, ?, ?, ?)"
+			 "VALUES (?, ?, ?, ?, ?, ?, ?)"
 			);
 
 		  $sth->bind_param(1, $dbID,               SQL_INTEGER);
