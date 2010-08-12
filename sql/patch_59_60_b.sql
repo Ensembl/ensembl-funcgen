@@ -8,7 +8,7 @@
 DROP TABLE IF EXISTS `new_associated_feature_type`;
 CREATE TABLE `new_associated_feature_type` (
   `table_id` int(10) unsigned NOT NULL,
-  `table_name` enum('annotated_feature','external_feature','regulatory_feature', 'binding_matrix') NOT NULL,
+  `table_name` enum('annotated_feature','external_feature','regulatory_feature', 'feature_type') NOT NULL,
   `feature_type_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`table_id`,`table_name`,`feature_type_id`),
   KEY `feature_type_index` (`feature_type_id`)
@@ -25,7 +25,7 @@ DROP table associated_feature_type;
 
 CREATE TABLE `associated_feature_type` (
   `table_id` int(10) unsigned NOT NULL,
-  `table_name` enum('annotated_feature','external_feature','regulatory_feature', 'binding_matrix') NOT NULL,
+  `table_name` enum('annotated_feature','external_feature','regulatory_feature', 'feature_type') NOT NULL,
   `feature_type_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`table_id`,`table_name`,`feature_type_id`),
   KEY `feature_type_index` (`feature_type_id`)
