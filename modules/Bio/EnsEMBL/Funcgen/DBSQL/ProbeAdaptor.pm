@@ -582,8 +582,8 @@ sub store {
 		  # New probe
 		  $sth = $self->prepare
 			(
-			 "INSERT INTO probe( probe_set_id, name, length, array_chip_id, class )".
-			 "VALUES (?, ?, ?, ?, ?)"
+			 "INSERT INTO probe( probe_set_id, name, length, array_chip_id, class, description)".
+			 "VALUES (?, ?, ?, ?, ?, ?)"
 			);
 
 		  $sth->bind_param(1, $ps_id,              SQL_INTEGER);
