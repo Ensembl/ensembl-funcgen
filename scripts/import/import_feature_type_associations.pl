@@ -132,6 +132,11 @@ foreach my $ft (keys %fts){
   eval{
     $ft_obj->associated_feature_types(\@afts);
     $fta->store_associated_feature_types($ft_obj);
+    #Do the reverse association...
+    map{
+      $_->associated_feature_types([ $ft_obj ]);
+      $fta->store_associated_feature_types($_);
+    } @afts;
   };
   if($@){ warn $@; };
 }
