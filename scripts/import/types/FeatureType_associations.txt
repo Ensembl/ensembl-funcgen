@@ -1,0 +1,15 @@
+Base_Feature	Associated_Feature
+mxl-1::mdl-1	Max
+mxl-1::mdl-1	MDL
+RXR::RAR_DR5	RXRA
+RXR::RAR_DR5	RARA
+Tal1::Gata1	Tal1
+Tal1::Gata1	Gata1
+RNR1H2::RXRA	RXRA
+RNR1H2::RXRA	NR1H2
+AP1	Cfos
+AP1	Cjun
+RXRA::VDR	RXRA
+RXRA::VDR	VDR
+PPARG::RXRA	RXRA
+PPARG::RXRA	PPARG
