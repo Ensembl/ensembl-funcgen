@@ -560,7 +560,7 @@ sub store {
 		  # New probe
 		  $sth = $self->prepare
 			("INSERT INTO probe( probe_set_id, name, length, array_chip_id, class )
-			VALUES (?, ?, ?, ?, ?)");
+			VALUES (?, ?, ?, ?, ?, ?)");
 		  $sth->bind_param(1, $ps_id,              SQL_INTEGER);
 		  $sth->bind_param(2, $name,               SQL_VARCHAR);
 		  $sth->bind_param(3, $probe->length(),    SQL_INTEGER);
