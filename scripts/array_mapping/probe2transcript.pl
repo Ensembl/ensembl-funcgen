@@ -621,6 +621,12 @@ $probe_db->dbc->db_handle;
 #Registry was doing the species increment trick.
 
 
+warn "Setting disconnect_when_inactive to true";
+$probe_db->dbc->disconnect_when_inactive(1);
+$transcript_db->dbc->disconnect_when_inactive(1);
+$xref_db->dbc->disconnect_when_inactive(1);
+
+
 
 #Grab species ID for healtcheck delete and check
 my $species_id = 1;
@@ -1809,8 +1815,8 @@ for my $i(0..4){
 
 
 #Finally add MART_DISPLAYABLE status
-$sql="INSERT IGNORE into status select a.array_id, 'array' sn.status_name_id from array a, status_name sn where a.name in (".
-  join(',', @array_names).") a.vendor='${vendor}' and sn.name in ('MART_DISPLAYABLE')";#DISPLAYABLE should be set during ImportArrays
+$sql="INSERT IGNORE into status select a.array_id, 'array', sn.status_name_id from array a, status_name sn where a.name in (".
+  join(',', @array_names).") and a.vendor='${vendor}' and sn.name in ('MART_DISPLAYABLE')";#DISPLAYABLE should be set during ImportArrays
 $Helper->log_header("Adding MART_DISPLAYABLE status entries");
 $xref_db->dbc->do($sql);
 
@@ -1874,7 +1880,7 @@ sub log_orphan_probes {
 	  my $names = join(',', @{$arrays_per_object{$ensembl_id}{names}});
 
 	  #Do we need to add dbID here in case of redundant unlined probe/set names?
-      print OUT "$ensembl_id($names)\tNo transcript mappings\n";
+      print OUT "$xref_object $ensembl_id($names)\tNo transcript mappings\n";
 
       if (!$no_triage){
 		
