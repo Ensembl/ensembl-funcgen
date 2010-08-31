@@ -594,29 +594,48 @@ BackUpFile(){
 ArchiveData()
 {
 	#could do with a delete source flag?
+	#and compress flag
 	#Add getopts here?
+	OPTIND=1
 
-	#error=$(CheckVariables ARCHIVE_DIR DATA_DIR)
-	#We need to be able to have both of these optionally defined
+	compress=
+	delete_source=
+	usage='usage: ArchiveData [ -c(compress) -d(elete source) -h(elp) ] FILES|DIRS'
+
+	while getopts ":dhc" opt; do
+		case $opt in 
+	        d  ) delete_source=1 ;; 
+            c  ) compress=1 ;;
+			h  ) echo $usage; return 0;;
+			\? ) echo $usage; exit 1;;
+		esac 
+	done
+
+
+	i=1
+
+	while [ $i -lt $OPTIND ]; do
+		shift
+		let i+=1
+	done
+
+	filedirs=$*
+
+
 	TARGET_ROOT=
 	TARGET_ROOT_NAME=
 	SOURCE_ROOT=
 
-
 	
-
-	if [ $? -ne 0 ]; then
-		echo $error
-		return 1;
-		#Should exit? If we ever use this in a script, or catch return in caller?
-	fi
-	
-	for filedir in $*; do
+	for filedir in "$filedirs"; do
 		#now we need to generate the full path as we may not be in the working dir
 		#This will collapse any relative paths to the full concise path
 		#Make sure we have a full path
 
+		#Test filedir exists
+
 		if [[ $filedir != /* ]]; then
+			#We never need to specify /* as this would just be the same as listing the dir path
 			filedir=$(ls -d $PWD/$filedir)
 		fi
 
@@ -638,7 +657,7 @@ ArchiveData()
 		fi
 
 
-		
+			
 		#Need to match $DATA_DIR here or skip with warning
 		if [[ ! -d $TARGET_ROOT ]]; then
 			echo -e "Target archive dir not set or valid:$TARGET_ROOT_NAME\t=\t$TARGET_ROOT"
@@ -649,14 +668,23 @@ ArchiveData()
 			echo target $TARGET_ROOT
 
 			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
-			archive_filedir="$TARGET_ROOT/$archive_filedir"
+			archive_filedir="$TARGET_ROOT/$archive_filedir"	
 
-		    #Need to mkdir in the arhcive?
-			archive_dir=$(GetDir $archive_filedir)
+
+			if [ -d $filedir ]; then
+				#rsync will create dir for us
+				#But we need to remove the last dir name				
+				archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
+				archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
+			else
+
+		        #mkdir in the archive
+				archive_dir=$(GetDir $archive_filedir)
 			
-			if [ ! -d $archive_dir ]; then
-				echo -e "Making archive directory:\t$archive_dir"
-				mkdir -p $archive_dir
+				if [ ! -d $archive_dir ]; then
+					echo -e "Making archive directory:\t$archive_dir"
+					mkdir -p $archive_dir
+				fi
 			fi
 			
 			#-essh only necessary for remote archiving
