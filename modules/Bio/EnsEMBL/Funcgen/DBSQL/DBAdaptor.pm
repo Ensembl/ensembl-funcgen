@@ -564,6 +564,7 @@ sub dnadb {
 	  foreach my $cs(@{$dnadb->get_CoordSystemAdaptor->fetch_all_by_attrib('default_version')}){
 		push @cs_names, $cs->name;
 	  }
+	  $dnadb->dbc()->disconnect_if_idle();
 	}
 
 
@@ -571,6 +572,7 @@ sub dnadb {
 
 	  my $cs;
 	  eval { $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name)};
+	  $dnadb->dbc()->disconnect_if_idle();
 	  my $error = $@;
 	  
 	  if($error){
@@ -591,6 +593,8 @@ sub dnadb {
 	  #This can result in coord_system entries being written
 	  #unknowingly if you are using the efg DB with a write user/pass
 	  $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
+	  $dnadb->dbc()->disconnect_if_idle();  
+	  $self->dbc()->disconnect_if_idle();
 	}
   }
 
