@@ -247,12 +247,13 @@ sub new{
 		
 	  }
 	  else{
-		open($LOGFILE, $output_op, '&STDOUT');
+		#Have to include STD filehandles in operator
+		$output_op = '>&STDOUT';
+		open($LOGFILE, $output_op);
 	  }
 	}
 
 	select $LOGFILE; $| = 1;  # make log file unbuffered
-
 	$self->log("\n\nLogging started at ".localtime()."...");
 
     # RESET STDOUT TO DEFAULT
@@ -893,8 +894,8 @@ sub define_and_validate_sets{
 		  #We're really print this names here which may hide the true cell/feature/anal type differences.
 		  my $mismatch = 'There is a (name/type/analysis) mismatch between the supplied supporting_sets and the'.
 			' supporting_sets in the DB for DataSet '.$dset->name."\n\nStored:\n"
-			  .join(', ', (map $_->name, @stored_ssets))."\n\nSupplied supporting_sets:\n"
-				.join(', ', (map $_->name, @sorted_ssets));
+			  .join(', ', (map { $_->name } @stored_ssets))."\n\nSupplied supporting_sets:\n"
+				.join(', ', (map { $_->name } @sorted_ssets));
 		  
 
 		  if($append){
@@ -971,7 +972,8 @@ sub define_and_validate_sets{
 
 		#Just test we have the same supplied ssets if it is defined
 		if(scalar(@$ssets) != 1){
-		  throw("ResultFeature data sets currently only support one supporting ResultSet.\nSupproting sets:\t".join(', ', (map $_->name.'('.$_->set_type, @$ssets)));
+		  throw("ResultFeature data sets currently only support one supporting ResultSet.\nSupproting sets:\t".
+				join(', ', (map { $_->name.'('.$_->set_type } @$ssets)));
 		}
 		elsif(! ($rset->dbID == $ssets->[0]->dbID) && 
 			  ($ssets->[0]->set_type eq 'result')){
@@ -1255,7 +1257,7 @@ sub rollback_FeatureSet{
 	}
 
    	map { throw("Must pass a valid Bio::EnsEMBL::Slice") if (! (ref($_) && $_->isa('Bio::EnsEMBL::Slice'))) } @$slices;
-	$self->log("Restricting to slices:\n\t\t".join("\n\t\t", map($_->name, @$slices)));
+	$self->log("Restricting to slices:\n\t\t".join("\n\t\t", (map { $_->name } @$slices)) );
 	#Allow subslice rollback only for one slice at a time
 	my $subslice = (scalar(@$slices) == 1) ? 1 : 0;
 	my @sr_ids;
@@ -1599,7 +1601,7 @@ sub rollback_ResultSet{
 			
 			foreach my $cc_id(@{$assoc_rset->result_set_input_ids}){
 			  
-			  if(! grep/$cc_id/, @{$rset->result_set_input_ids}){
+			  if(! grep { /$cc_id/ } @{$rset->result_set_input_ids}){
 				$subset = 0;
 				last;
 			  }
@@ -1995,9 +1997,9 @@ sub rollback_ArrayChips{
 #		  "\nFound Dependent Experimental Data:\n".$txt);
 #  }
  
-
-  my $ac_names = join(', ', (map $_->name, @$acs));
-  my $ac_ids   = join(', ', (map $_->dbID, @$acs));
+  
+  my $ac_names = join(', ', (map { $_->name } @$acs));
+  my $ac_ids   = join(', ', (map { $_->dbID } @$acs));
 
 
   $self->log("Rolling back ArrayChips $mode entries:\t$ac_names");
@@ -2120,7 +2122,7 @@ sub rollback_ArrayChips{
 	  #@anal_ids = map {$_= "@$_"} @anal_ids;
 	
 	  if($mode ne 'ProbeAlign'){
-		my $lnames = join(', ', (map "'${_}_ProbeTranscriptAlign'", keys(%classes)));
+		my $lnames = join(', ', (map { "'${_}_ProbeTranscriptAlign'" } keys(%classes)));
 
 		$sql = "DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 		$self->log("Deleting ProbeFeature Xref/DBEntry records for:\t$lnames");
@@ -2144,7 +2146,7 @@ sub rollback_ArrayChips{
 	  }
 
 	  if($mode ne 'ProbeTranscriptAlign'){
-		my $lnames = join(', ', (map "'${_}_ProbeAlign'", keys(%classes)));
+		my $lnames = join(', ', (map { "'${_}_ProbeAlign'" } keys(%classes)));
 
 		$sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name=(${lnames}) AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
 		$self->log("Deleting UnmappedObjects for:\t${lnames}");
