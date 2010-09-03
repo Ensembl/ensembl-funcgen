@@ -9,7 +9,8 @@ This document details the various stages of the eFG release cycle.
 During the release cycle a controlled DB naming convention is used in line with the informal 
 handovers we have throughout the regulatory build process. These do not necessarily fall in line with
 the main release cycle handover deadlines, hence their order with respect to the main deadlines may 
-change from release to release.
+change from release to release. NOTE: Back ups do not account for array mapping, so if a rollback/patch
+is necessary, then array mapping data will have to be taken into account.
 
 
 1	Dev		e.g. dev_homo_sapiens_funcgen_55_37
@@ -22,23 +23,28 @@ back up has been created and validated.
 
 2   Prebuild e.g. prebuild_homo_sapiens_funcgen_55_37
 
-This is the backup name before the build is performed. All reg build supporting sets should be called and validated.
+This is the backup name before the build is performed. All reg build supporting sets should be called and 
+validated, but not black list filtered. This should be kept until the subsequent release incase the black list changes.
+(This is not maintainble, as we would have to maintain pre DBs for every release where we load new data).
+
+
 
 3	Build	e.g. build_homo_sapiens_funcgen_55_37
 
-This is the backup name once the reg build has been created.
+This is the backup name once the reg build has been created. Annotation to be performed on dev DB before migration to 
+final production version.
 
 
-4	Annot 	e.g. annot_homo_sapiens_funcgen_55_37
-
-Reg feature annotation updated and validated.
-
-
-5   Production e.g. homo_sapiens_funcgen_55_37
+4   Production e.g. homo_sapiens_funcgen_55_37
 
 The unprefixed DB naming convention will be explicitly reserved for the final production version.
 
 
+
+:: Database copying
+
+To facilitate early access to the dev DBs, copies direct from livemirror using the nomenclature above. 
+This can be done before the new relco has copied to the staging servers.
 
 
 
@@ -197,6 +203,7 @@ Region in detail
 	
 Mart
 	Check sets/cell_types(feature_types) are correct in filters
+	FeatureTypes for annotated_features should now be generated via sql. 
 
 
 :: Static Content
@@ -220,6 +227,7 @@ There are several static content pages which may need updating if the eFG data o
 
 cvs diff API
 cvs ci 
+unit tests
 
 :: Post API branch
 
