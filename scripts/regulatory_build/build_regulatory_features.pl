@@ -35,7 +35,6 @@ Options:
     -gene_signature 
     -cell_type_projection      This builds on core regions for all cell types, regardless of
                                whether a focus feature is present for that cell_type.
-    -tfbs_file         File path of TFBS mapping to integrate as regualtory_attributes
     -write_features|w
     -rollback
     -dump_annotated_features
@@ -180,43 +179,15 @@ use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 local $|=1;
 
-my ($pass,$port,$host,$user,$dbname, $help,
+my ($pass,$port,$host,$user,$dbname,
 	$dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
-    $outdir,$do_intersect,$write_features, $cdb,
+    $outdir, $write_features, $cdb,
     $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
     $clobber,$focus_max_length, @slices, @skip_slices, $non_ref,
-    $focus_extend, $dump,$gene_signature, $ctype_projection, $tfbs_file,
+    $focus_extend, $dump,$gene_signature, $ctype_projection, 
     $debug_start, $debug_end, $version, @focus_names, @attr_names, $local);
 
 
-
-#my %ftype_pwm_names = ( homo_sapiens => {
-#										 CTCF  => 'CTCF',
-#										 Cfos  => 'AP1',
-#										 Cjun  => 'AP1',
-#										 Cmyc  => 'Myc',
-#										 Gabp  => 'GABPA',
-#										 Gata1 => 'Gata1',
-#										 Jund  => 'Ap1',
-#										 Max   => 'MAX',
-#										 Nfe2  => 'NFE2l2',
-#										 Nrsf  => 'NRSF',
-#										 Srf   => 'SRF',
-#										},
-#
-#						mus_musculus => {										 
-#										 Cmyc     => 'Myc',
-#										 CTCF     => 'CTCT',
-#										 E2F1     => 'E2F1',
-#										 Esrrb    => 'Esrrb',
-#										 Klf4     => 'Klf4',
-#										 nMyc     => 'Mycn',
-#										 #Oct4     => 'Oct4',
-#										 Stat3    => 'STAT3',
-#										 Tcfcp2l1 => 'Tcfcp2l1',
-#										 Zfx      => 'Zfx',
-#										},
-#					  );
 
 #Declare to avoid only used once warnings;
 $main::_tee      = undef;
@@ -242,9 +213,8 @@ GetOptions (
             "dnadb_user|u=s" => \$dnadb_user,
             "dnadb_name|d=s" => \$dnadb_name,
 		       
-			#"tfbs_file=s"    => \$tfbs_file,
 			"outdir|o=s"     => \$outdir,
-            "do_intersect|i=s" => \$do_intersect,
+            #"do_intersect|i=s" => \$do_intersect,
             "write_features|w" => \$write_features,
             "no_dump_annotated_features"  => \$no_dump_annotated_features,
             "dump_regulatory_features"  => \$dump_regulatory_features,
@@ -281,8 +251,8 @@ die('focus_extend may not safe, check update_attributes') if $focus_extend;
 
 
 #Allow comma separated quoted names containing spaces
-@focus_names = split(/,/,join(',',@focus_names));
-@attr_names = split(/,/,join(',',@attr_names));
+@focus_names = split(/,/o, join(',',@focus_names));
+@attr_names  = split(/,/o, join(',',@attr_names));
 
 ### defaults ###
 $port ||= 3306;
@@ -309,13 +279,11 @@ $focus_extend = 2000 if (! defined $focus_extend);
 if (defined $outdir && ! -d $outdir) {
   system("mkdir -p $outdir");
 }
-$outdir =~ s/\/$//;
+
+$outdir =~ s/\/$//o;
 
 
-#if($tfbs_file && 
-#   (! -f $tfbs_file)){
-#  die("-tfbs_file is not a valid file:\t${tfbs_file}");
-#}
+
 
 
 #use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
@@ -349,7 +317,7 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
    -pass   => $pass,
    -port   => $port,
    -dnadb  => $cdb,
-   -group  => 'funcgen',		#Should be set as default in adaptor new method
+   -group  => 'funcgen',#Should be set as default in adaptor new method
   );
 
 
@@ -364,6 +332,7 @@ if(! defined $species){
   die("Could not get a valid species from $dbname, please check the meta species.production_name");
 }
 
+
 my $fsa = $db->get_FeatureSetAdaptor();
 my $dsa = $db->get_DataSetAdaptor();
 my $fta = $db->get_FeatureTypeAdaptor();
@@ -376,42 +345,26 @@ my $aa  = $db->get_AnalysisAdaptor();
 my $ga  = $db->dnadb->get_GeneAdaptor();
 
 
-#Test we have all the TF represented in the DB
-
-#if($tfbs_file){
-#
-#  if(! exists $ftype_pwm_names{$species}){
-#	die("No FeatureType PWM name config present for $species. Please populate the \%ftype_pwm_names hash accordingly");
-#	#Move this to separate config file
-#  }
-#
-#  foreach my $tf_name(keys %{$ftype_pwm_names{$species}}){
-#
-#	my $tf_ftype = $fta->fetch_by_name($tf_name);
-#	
-#	if(! defined $tf_ftype){
-#	  die("Could not find FeatureType for $tf_name TF. Please remove from hash or rename in hash and tfbs file accordingly");
-#	}
-#  }
-#}
 
 
 ### Validate Focus/Attribute FeatureSets
 
 # parse focus and attribute sets and check that they exist
-  my (%focus_fsets, %attrib_fsets);
-map { my $fset = $fsa->fetch_by_name($_); 
-	  warn "Fetching focus set:\t$_\n" if $debug_start;
-      die("Focus set $_ does not exist in the DB") if (! defined $fset); 
-      $focus_fsets{$fset->dbID} = $fset; 
-	} @focus_names;
+my (%focus_fsets, %attrib_fsets);
+
+foreach my $fname(@focus_names){
+  my $fset = $fsa->fetch_by_name($fname); 
+  warn "Fetching focus set:\t$fname\n" if $debug_start;
+  die("Focus set $fname does not exist in the DB") if (! defined $fset); 
+  $focus_fsets{$fset->dbID} = $fset; 
+}
   
-map { 
-  my $fset = $fsa->fetch_by_name($_);
-   warn "Fetching attribute set:\t$_\n" if $debug_start;
-  die("Attribute set $_ does not exist in the DB") if (! defined $fset); 
+foreach my $aname(@attr_names){ 
+  my $fset = $fsa->fetch_by_name($aname);
+  warn "Fetching attribute set:\t$aname\n" if $debug_start;
+  die("Attribute set $aname does not exist in the DB") if (! defined $fset); 
   $attrib_fsets{$fset->dbID()} = $fset; 
-} @attr_names;
+}
 
 
 
@@ -494,7 +447,7 @@ else{
 
   foreach my $ctype(keys %cell_types){
 
-	for my $mkey(@meta_keys){
+	foreach my $mkey(@meta_keys){
 	  #Check both the current and the old versions just in csae we forgot to update the version when running
 	  
 	  my $meta_key = sprintf($mkey, $ctype);
@@ -601,7 +554,7 @@ else{
 			$db->dbc->db_handle->do($sql);
 			
 			#validate update and revoke states
-			my $fset = $fsa->fetch_by_name($old_archd_set_name);
+			$fset = $fsa->fetch_by_name($old_archd_set_name);
 			
 			if (! $fset) {
 			  die("Failed to create archive FeatureSet:\t${old_archd_set_name}\n");
@@ -645,14 +598,14 @@ else{
 # make sure that attribute sets also contain focus sets 
 # and ctype_fsets contain core fsets
 my %ctype_fsets;
-map { 
-  $attrib_fsets{$_} = $focus_fsets{$_};
-  push @{$ctype_fsets{MultiCell}}, $focus_fsets{$_};
-} keys %focus_fsets;
+
+for my $fset_id(keys %focus_fsets){
+  $attrib_fsets{$fset_id}        = $focus_fsets{$fset_id};
+  push @{$ctype_fsets{MultiCell}}, $focus_fsets{$fset_id};
+}
 
 
 #Set up some more caches for all of the fsets
-#my %pwm_ftype_names;
 
 foreach my $fset(values %attrib_fsets){
   my $ft_name = $fset->feature_type->name;
@@ -668,7 +621,11 @@ foreach my $fset(values %attrib_fsets){
 
 
 #Set name sorted fset arrays by ctype for bin strings
-map { @{$ctype_fsets{$_}} = sort {$a->name cmp $b->name} @{$ctype_fsets{$_}} } keys %ctype_fsets;
+foreach my $ctype_name(keys %ctype_fsets){
+  @{$ctype_fsets{$ctype_name}} = sort {$a->name cmp $b->name} @{$ctype_fsets{$ctype_name}};
+};
+
+
 
 ### Print some details
 foreach my $ctype(keys %ctype_fsets){
@@ -796,7 +753,6 @@ if (! $local){ #BSUB!
   $helper->log("Output can be found here:\t$outdir");
   warn "We need a to put this in a Runnable so we can easily monitor which jobs have failed";
 
-  exit;
 }
 elsif(scalar(@slices) > 1){
   die("Cannot run in local mode with more than one slice. Please omit -local or specify a single slice name.\n");
@@ -837,96 +793,7 @@ else {
 }
 
 my $fh = open_file($af_file);
-my ($tfbs_handle, $tfbs_set);
 
-if($tfbs_file){
-  
-  #Create/Rollback external_feature set?
-  
-  #Only ever have one of these sets
-  #So rollback/update may corrupt the reg_attrs from a previous build
-  #This shoudln't affect rollback of old RegFeat set
-  my $tfbs_set_name = 'RegulatoryBuild TFBS Motifs';
-
-
-  $helper->log("Defining $tfbs_set_name using:\t$tfbs_file");
-
-  $tfbs_set = $fsa->fetch_by_name($tfbs_set_name);
-
-  if(defined $tfbs_set){
-	$helper->rollback_FeatureSet($tfbs_set, 1, [$slice]);
-	#Force delete here as this may be a supporting_set for the RegFeats we are trying to regenerate
-  }
-  else{
-
-	#Get analysis
-	my $tfbs_analysis = $aa->fetch_by_logic_name($tfbs_set_name);
-
-	if(! defined $tfbs_analysis){
-
-	  $tfbs_analysis = Bio::EnsEMBL::Analysis->new
-		(
-		 -logic_name      => $tfbs_set_name,
-		 -db              => 'NULL',
-		 -db_version      => 'NULL',
-		 -db_file         => 'NULL',
-		 -program         => 'NULL',
-		 -program_version => 'NULL',
-		 -program_file    => 'NULL',
-		 -gff_source      => 'NULL',
-		 -gff_feature     => 'NULL',
-		 -module          => 'NULL',
-		 -module_version  => 'NULL',
-		 -parameters      => 'NULL',
-		 -created         => 'NULL',
-		 -description     => 'Filtered subset of Jaspar and Transfac TFBS PWM mappings',
-		 -display_label   => 'TFBS Motifs',
-		 -displayable     => 1,
-		);
-
-	  $aa->store($tfbs_analysis);
-
-	  $tfbs_analysis = $aa->fetch_by_logic_name($tfbs_set_name);
-	}
-
-	my $tfbs_ftype = $fta->fetch_by_name('TFBS Motif');
-
-	if(! defined $tfbs_ftype){
-
-	  $tfbs_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
-		(
-		 -name        => 'TFBS Motif',
-		 -class       => 'Transcription Factor',
-		 -description => 'Transcription factor binding site motif',
-		);
-
-	  ($tfbs_ftype) = @{$fta->store($tfbs_ftype)};
-	}
-
-	#Should this really be an external feature set?
-	#This should really also be added as a supporting_set
-
-	$tfbs_set = Bio::EnsEMBL::Funcgen::FeatureSet->new
-	  (	 
-	   -name         => $tfbs_set_name,
-	   -feature_class=> 'external',
-	   -analysis     => $tfbs_analysis,
-	   -feature_type => $tfbs_ftype,
-	   -display_label => 'TFBS Motifs',
-	  );
-
-	($tfbs_set) = @{$fsa->store($tfbs_set)};
-  }
-
-  #Now need to set as supporting_set
-  #This may screw up the reg build string generation
-  #as these are not included in the binary_string
-
-
-
-  #currently assuming this is sorted correctly
-  $tfbs_handle = open_file($tfbs_file);
-}
 
 ### Parse and build RegulatoryFeatures
 if($debug_start && ! $debug_end){ #Set debug_end if not set
@@ -934,7 +801,7 @@ if($debug_start && ! $debug_end){ #Set debug_end if not set
 }
 
 #Some variables which are used in subs
-my (%afs, @rf, $ctype, $af_id, $sr_id, $start, $end, $strand, $score, $fset_id);
+my (%afs, @rf, $ctype, $af_id, $sr_id, $start, $end, $strand, $score, $fset_id, $mf_ids);
 my (%feature_count, %seen_af, %removed_ff);#Stats
 my $rf_size = -1;
 
@@ -945,14 +812,25 @@ while (<$fh>) {
   # Read from file and process sequentially in sorted by start, end order. Each 
   # new feature is checked if it overlaps with the preceeding already seen 
   # features. If yes we just carry on with the next one. Otherwise
-  next if (/^\#/);
+  next if (/^\#/o);
   chomp; 
 
   #This assumes the correct seq_region as we dump out separate file
-  ($af_id, $sr_id, undef, $start, $end, $strand, $score, $fset_id) = split (/\s+/, $_);
+  #+----------------------+---------------+------+------------------+----------------+-------------------+------------+----------------+----------------+
+  #| annotated_feature_id | seq_region_id | name | seq_region_start | seq_region_end | seq_region_strand | score      | feature_set_id | mf_ids         |
+  #+----------------------+---------------+------+------------------+----------------+-------------------+------------+----------------+----------------+
+  #|              1164424 |           210 | 1    |          4841882 |        4842334 |                 0 |   15.83493 |            112 | 8773,8774      |
+
+  ($af_id, $sr_id, undef, $start, $end, $strand, $score, $fset_id, $mf_ids) = split (/\s+/o, $_);
   
   #Skip non debug regions
   #Warning, this may not build accurately!!!
+
+  #This will not run with a subslice properly
+  
+  
+
+
   if ($debug_start) {
 	next if ($start < $debug_start);
 	last if ($start > $debug_end);
@@ -1088,13 +966,14 @@ if ($dump_regulatory_features) {
   my $outfile  = $outdir.'/regulatory_features_'.$slice->seq_region_name.'.dat';
   my $out = open_file($outfile, ">");
     
-  map {
+  foreach my $regf(@rf){
+	
 	printf $out "%d\t%s\t%d\t%d\t%d\t%d\t%s\t%s\n", 
 	  $fg_sr_id, $slice->seq_region_name, 
-		$_->{focus_start}, $_->{focus_end},
-		  $_->{attribute_start}, $_->{attribute_end}, 
-			$_->{binstring}, join(",", sort {$a<=>$b} keys %{$_->{annotated}});
-  } @rf;
+		$regf->{focus_start}, $regf->{focus_end},
+		  $regf->{attribute_start}, $regf->{attribute_end}, 
+			$regf->{binstring}, join(",", sort {$a<=>$b} keys %{$regf->{annotated}});
+  };
   
   $helper->log(sprintf "# Regulatory features written to ".$outfile);
   
@@ -1148,11 +1027,11 @@ foreach my $ctype(keys %ctype_fsets){
   }
 
   #This number should be the Focus - those focus which have been removed
-  my $f_regfs  = $feature_count{regfeats}{$ctype} || 0; #Non-projected
-  my $t_regfs  = $feature_count{total_regfeats}{$ctype} || 0; #Inc projected
-  my $tfbss    = $feature_count{tfbs}{$ctype}  || 0;
+  my $f_regfs  = $feature_count{regfeats}{$ctype}           || 0; #Non-projected
+  my $t_regfs  = $feature_count{total_regfeats}{$ctype}     || 0; #Inc projected
+  my $mfs      = $feature_count{motif_features}{$ctype}     || 0;
   my $p_regfs  = $feature_count{projected_regfeats}{$ctype} || 0;
-  my $fp_regfs = $feature_count{failed_projected}{$ctype} || 0; 
+  my $fp_regfs = $feature_count{failed_projected}{$ctype}   || 0; 
 
   if($ctype_projection){
 	$helper->log("# Projected $ctype RegulatoryFeatures:\t$p_regfs");
@@ -1165,9 +1044,9 @@ foreach my $ctype(keys %ctype_fsets){
   }
 
 
-  $helper->log("# Focus     $ctype RegulatoryFeatures:\t$f_regfs");
-  $helper->log("# Total     $ctype RegulatoryFeatures:\t$t_regfs");
-  $helper->log("# TFBSs     $ctype inclusions:        \t$tfbss");
+  $helper->log("# Focus        $ctype RegulatoryFeatures:\t$f_regfs");
+  $helper->log("# Total        $ctype RegulatoryFeatures:\t$t_regfs");
+  $helper->log("# MotifFeature $ctype inclusions:        \t$mfs");
   $helper->log("\n\n");
   $removed_ff{$ctype} ||= 0;
   my $max_regfs = $focus - $removed_ff{$ctype};
@@ -1194,18 +1073,25 @@ warn("ERROR:\tInconsistencies were found between some of your focus sets and the
 sub dump_annotated_features{
   #To do, remove this and just slurp directly into perl!
 
+
   my @fset_ids = keys %attrib_fsets;
   $helper->log("Dumping ".scalar(@fset_ids)." AnnotatedFeature Sets for slice:\t".$slice_name);
 
-  my $sql = 'select annotated_feature_id, af.seq_region_id, sr.name,'.
-	'seq_region_start, seq_region_end, seq_region_strand, score, feature_set_id '.
-	  'from annotated_feature af, '.
-		'(select distinct(seq_region_id), name from seq_region where seq_region_id='.$fg_sr_id.') sr '.
-		  'where sr.seq_region_id=af.seq_region_id '.
-			#"and schema_build='$schema_build' ".#This to stops the seq_region nr product
-			#"and sr.name='".$slice->seq_region_name."' ".
-			"and af.feature_set_id in (".join(',', @fset_ids).") order by seq_region_start, seq_region_end";
+  my $sql = 'SELECT af.annotated_feature_id, af.seq_region_id, sr.name, '.
+	                'seq_region_start, seq_region_end, seq_region_strand, score, '.
+	                'feature_set_id, mf.mf_ids '.
+	          "FROM (select distinct(seq_region_id), name from seq_region where seq_region_id='${fg_sr_id}') sr, ".
+				    'annotated_feature af '.
+		 'LEFT JOIN (SELECT amf.annotated_feature_id, group_concat(mf1.motif_feature_id) as mf_ids '.
+		             'FROM  motif_feature mf1, associated_motif_feature amf '.
+			         'WHERE amf.motif_feature_id=mf1.motif_feature_id GROUP by amf.annotated_feature_id) mf '.
+				'ON mf.annotated_feature_id=af.annotated_feature_id '.
+			 'WHERE sr.seq_region_id=af.seq_region_id '.
+			   'AND af.feature_set_id in ('.join(',', @fset_ids).') order by seq_region_start, seq_region_end';
 	
+
+
+
   #Do we really need the join to sr, can we not just dump the sr_ids instead of the names?
   #We use the core_sr_id to build the slices anyway
 		  
@@ -1246,22 +1132,37 @@ sub add_focus{
   print "\nNew $ctype focus:\t$start-$end\n" if ($debug_start);
 
   push @rf, {
-			 'focus_start' => $start,
-			 'focus_end' => $end,
-			 'attribute_start' => { $ctype => $start },
-			 'attribute_end' => { $ctype => $end },
-			 'focus' => { 
-						 $ctype => { $af_id => $fset_id },
-						 MultiCell   => { $af_id => $fset_id },
-						},
-			 'fsets' => {
-						 MultiCell => {$fset_id => 1},
-						 $ctype => {$fset_id => 1},
-						}
+			 focus_start       => $start,
+			 focus_end         => $end,
+			 attribute_start   => { $ctype => $start },
+			 attribute_end     => { $ctype => $end },
+			 focus             => { 
+								   $ctype    => { $af_id => $fset_id },
+								   MultiCell => { $af_id => $fset_id },
+								  },
+			 fsets             => {
+								   MultiCell => {$fset_id => 1},
+								   $ctype    => {$fset_id => 1},
+								  },
+			 motif_feature_ids => {},
 			};
   
   #Do this here so we don't have to call $# multiple times.
   $rf_size +=1; 
+  
+
+  if(defined $mf_ids){  #Cache MotifFeature ids - don't project
+	my @motif_feature_ids = split/,/, $mf_ids;
+	
+	$rf[$rf_size]->{motif_feature_ids}{$ctype}    ||= [];
+	$rf[$rf_size]->{motif_feature_ids}{MultiCell} ||= [];
+	#$feature_count{motif_features}{MultiCell}      += scalar(@motif_feature_ids);
+	$feature_count{motif_features}{$ctype}         += scalar(@motif_feature_ids);
+	
+	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @motif_feature_ids;
+	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @motif_feature_ids;
+  }
+
 
   if($ctype_projection){   #Set ctype projected attr start/ends
 	foreach my $ct(keys %cell_types){
@@ -1305,7 +1206,7 @@ sub update_focus{
    
   foreach my $rf_ctype(keys %{$rf[$rf_size]{fsets}}){
 
-	next if $rf_ctype eq 'MultiCell';	#no attrs for multi cell
+	next if $rf_ctype eq 'MultiCell';    #no attrs for multi cell
 
 	if(exists $rf[$rf_size]{attribute_end}{$rf_ctype}){
 
@@ -1317,11 +1218,25 @@ sub update_focus{
   }
 
 
+  if(defined $mf_ids){  #Cache MotifFeature ids - don't project
+	my @motif_feature_ids = split/,/, $mf_ids;
+	
+	$rf[$rf_size]->{motif_feature_ids}{$ctype}    ||= [];
+	$rf[$rf_size]->{motif_feature_ids}{MultiCell} ||= [];
+	#	$feature_count{motif_features}{MultiCell}      += scalar(@motif_feature_ids);
+	$feature_count{motif_features}{$ctype}         += scalar(@motif_feature_ids);
+	
+	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @motif_feature_ids;
+	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @motif_feature_ids;
+  }
+
   $rf[$rf_size]{fsets}{MultiCell}{$fset_id}++;
   $rf[$rf_size]{fsets}{$ctype}{$fset_id}++;
   $rf[$rf_size]{focus}{$ctype}{$af_id} = $fset_id;
   $rf[$rf_size]{focus}{MultiCell}{$af_id} = $fset_id;
   
+
+
   
   #Do we need to alter this to be celltype aware?
   $seen_af{$fset_id}{$af_id} = 1;
@@ -1342,7 +1257,7 @@ sub update_attributes{
   # look upstream for all features overlapping focus feature
 
 
-  for my $ct(@cts){
+  foreach my $ct(@cts){
 	next if $ct eq 'MultiCell';
 	print "\tUpdating $ct attributes\n" if ($debug_start);
 	my $updated = 0;
@@ -1379,28 +1294,30 @@ sub update_attributes{
 		splice(@{$afs{$ct}}, 0, ($i));
 			 
 		# NOW add the remaining overlapping attribute features and set att end
-		map {
-		  if ($_->{end} >= $start ||
-			  ( $_->{start} >= ($rf[$rf_size]{focus_start} - $focus_extend) )) {
+		foreach my $af(@{$afs{$ct}}) {
+		  
+		  if ($af->{end} >= $start ||
+			  ( $af->{start} >= ($rf[$rf_size]{focus_start} - $focus_extend) )) {
 			
-			print "\tUpdating overlapping attribute feature:\t(".$attrib_fsets{$_->{fset_id}}->feature_type->name.":".$_->{af_id}.")\t".$_->{start}.' - '.$_->{end}."\n" if $debug_start;
+			if ($debug_start){
+			  print "\tUpdating overlapping attribute feature:\t(".
+				$attrib_fsets{$af->{fset_id}}->feature_type->name.
+				  ":".$af->{af_id}.")\t".$af->{start}.' - '.$af->{end}."\n";
+			}
 			
-			$rf[$rf_size]{annotated}{$ct}{$_->{af_id}} = $_->{fset_id};
-			$rf[$rf_size]{fsets}{$ct}{$_->{fset_id}}++;
+			$rf[$rf_size]{annotated}{$ct}{$af->{af_id}} = $af->{fset_id};
+			$rf[$rf_size]{fsets}{$ct}{$af->{fset_id}}++;
 			
 			#Reset the attr end
-			if ($_->{end}   > $rf[$rf_size]{attribute_end}{$ct}) {
-			  print "\tUpdating attribute end to:\t\t".$_->{end}.' (> '.$_->{end}.")\n" if $debug_start;
-			  $rf[$rf_size]{attribute_end}{$ct} = $_->{end};
+			if ($af->{end}   > $rf[$rf_size]{attribute_end}{$ct}) {
+			  print "\tUpdating attribute end to:\t\t".$af->{end}.' (> '.$af->{end}.")\n" if $debug_start;
+			  $rf[$rf_size]{attribute_end}{$ct} = $af->{end};
 			}
 			# could also test for demoted focus features here!
 			
-			
-
-
 			$seen_af{$fset_id}{$af_id} = 1;
 		  }
-		} @{$afs{$ct}};
+		}
 		
 		last;
 	  }
@@ -1479,13 +1396,14 @@ sub build_binstring{
 
 sub create_regulatory_features{
   my $rfs = shift;
-  my (@reg_feats, $tfbs_line, $last_tfbs_line);
+
+  my @reg_feats;
   print "\n\nCreating ".scalar(@$rfs)." RegulatoryFeatures\n" if $debug_start;
 
 
-  foreach my $rf (@$rfs) {
+  foreach my $rf (@{$rfs}) {
 	print "\nCreating RegulatoryFeature:\t\t\t ".$rf->{focus_start}.' - '.$rf->{focus_end}."\n" if $debug_start;
-	my (@tfbs_cache, $attr_cache, %ef_cache);
+	my $attr_cache;
 
 
 	if ($slice->start != 1 || $slice->strand != 1) {
@@ -1503,9 +1421,9 @@ sub create_regulatory_features{
 	#order cell type so we deal with MultCell first
 	#This way we can be sure to catch & cache all the tfbs
 	#for inclusion in the other cell types
-
-	my @ctypes = grep/[^(MultiCell)]/, keys %{$rf->{fsets}};
-	unshift @ctypes, 'MultiCell';										
+	#Remove this now we handle MFs differently.
+	#my @ctypes = grep { /[^(MultiCell)]/ } keys %{$rf->{fsets}};
+	#unshift @ctypes, 'MultiCell';										
 	
 	foreach my $ct (@ctypes) {
 	  my $projected = 0;
@@ -1524,7 +1442,9 @@ sub create_regulatory_features{
 	  $feature_count{total_regfeats}{$ct}++;
 	  
 	  #Recording all fset features here, no split on projected
-	  map $feature_count{regfeats}{$_} += $rf->{fsets}{$ct}{$_}, keys %{$rf->{fsets}{$ct}};#$_ is fset_id
+	  foreach my $fset_id(keys %{$rf->{fsets}{$ct}}){
+		$feature_count{regfeats}{$fset_id} += $rf->{fsets}{$ct}{$fset_id};
+	  }
 
 	  #Build attr cache dependant on presence of attrs
 	  #We may not have focus data here if we are doing a ctype_projection build
@@ -1535,21 +1455,21 @@ sub create_regulatory_features{
 
 		$feature_count{regfeats}{$ct}++;
 		$attr_cache = {
-					   %{$rf->{focus}->{$ct}},
-					   %{$rf->{annotated}->{$ct}},
+					   annotated => [keys %{$rf->{focus}->{$ct}},
+									 keys %{$rf->{annotated}->{$ct}}],
 					  };
 	  }
 	  elsif( exists $rf->{focus}->{$ct}){
 		print "Found focus attrs only\n" if $debug_start;
 		#MultiCell and focus only
 		$feature_count{regfeats}{$ct}++;
-		$attr_cache = $rf->{focus}->{$ct};
+		$attr_cache = { annotated => [keys %{$rf->{focus}->{$ct}}] };
 	  }
 	  elsif(exists $rf->{annotated}->{$ct}){
 		print "Found projected annotated attrs only\n" if $debug_start;
 		$projected = 1;
 		$feature_count{projected_regfeats}{$ct}++;
-		$attr_cache = $rf->{annotated}->{$ct};
+		$attr_cache =  { annotated => [keys %{$rf->{annotated}->{$ct}}] };
 	  }
 	  else{
 		#No attrs - This is a failed projection!
@@ -1559,121 +1479,13 @@ sub create_regulatory_features{
 	  }
 
 
-	  #This needs to be done for MultiCell first outside the loop
-	  #other wise we will miss data
-	  #Needs to move to be focus peak specific rather than for the 
-	  #whole of the core region
-	  #This will require cacheing much like the reg build as we can have overlapping focus peaks
-
-	  #if($tfbs_file){
-	#	#set current FeatureType names
-	#	my @ft_names = map $attrib_fsets{$_}->feature_type->name, values %{$attr_cache};
-#
-#		#Filter to pwm names
-#		my @pwm_names;
-#
-#		foreach my $ft_name(@ft_names){
-#		  push @pwm_names, $ftype_pwm_names{$species}{$ft_name} if exists $ftype_pwm_names{$species}{$ft_name};
-#		}
-#
-#		if($ct eq 'MultiCell'){
-#		  		  
-#		  if(@pwm_names){
-#			
-#			my $before_end = 1;
-#			
-#		  TFBS: while($before_end){
-#			  
-#			  #Need to handle last tfbs here
-#			  if(defined $last_tfbs_line){
-#				$tfbs_line = $last_tfbs_line;
-#			  }
-#			  else{
-#				$tfbs_line = <$tfbs_handle>;
-#			  }
-#			  
-#			  undef $last_tfbs_line;
-#			  
-#			  if(defined $tfbs_line){
-#				chomp $tfbs_line;
-#
-#				my ($chr, $tstart, $tend, $tname, $log_odds_score, $strand, $pwm_id) = split/\t/, $tfbs_line;
-#				
-#				#We need it entirely overlapping the core region
-#				next TFBS if $chr ne $sr_name;
-#			
-#				next TFBS if $tstart < $focus_start;
-#				
-#				#We need to filter here for ftypes which are not in the build
-#				#Could do this in the %ftype_pwm_names config hash
-#				next TFBS if ! exists $pwm_ftype_names{$tname};
-#
-#
-#				if ($tend   <= $focus_end){
-#				  #TFBS is entirely contain within core region
-#				  
-#				  #Store external_feature if represented in current feature
-#				  
-#				  next TFBS if ! grep/^$tname$/, @pwm_names;
-#			  
-#				  my $tfbs_ef = Bio::EnsEMBL::Funcgen::ExternalFeature->new
-#					(
-#					 -display_label => $tname.':'.$pwm_id,
-#					 -start         => $tstart,
-#					 -end           => $tend,
-#					 -strand        => $strand,
-#					 -feature_type  => $feature_types{$pwm_ftype_names{$tname}},
-#					 #change this to pwm ftype?
-#					 #and set actual ftyp as associated feature type
-#					 -feature_set   => $tfbs_set,
-#					 -slice         => $slice,
-#					);
-#				 
-#
-#				  
-#
-#				  #xref to gene should already have been stored at the ftype level
-#				  
-#				  ($tfbs_ef) = @{$efa->store($tfbs_ef)};# if $write_features; #This will break attr_cache generation
-#				  
-#				  #add to tfbs cache attribute
-#				  push @tfbs_cache, $tfbs_ef;
-#				}
-#				else{
-#				  $last_tfbs_line = $tfbs_line;
-#				  $before_end = 0;
-#				}
-#			  }
-#			  else{
-#				$before_end = 0;
-#			  }
-#			}
-#		  }
-#		}
-#	  
-#
-#		#Now add appropriate tfbs's dependant on cell type
-#		undef %ef_cache;
-#
-#		foreach my $tfbs_ef(@tfbs_cache){
-#		  my $tfbs_name = $tfbs_ef->feature_type->name;#could be ftype name?
-#
-#		  if(grep /^$tfbs_name$/, @pwm_names){
-#			#Add as attribute
-#			$feature_count{tfbs}{$ct}++ if $ct ne 'MultiCell';
-#			$ef_cache{$tfbs_ef->dbID} = undef;#Could pass actual ef here
-#		  }
-#		}
-#	  }
-
-
+	  #Add MotifFeatures as attrs
+	  $attr_cache->{motif} = $rf->{motif_feature_ids}{$ctype};
+		  
 	  #We now need to clean the fset_id values from the attrs cache
-	  map $attr_cache->{$_} = undef, keys %$attr_cache; 
-
+	  #map { $attr_cache->{$_} = undef } keys %$attr_cache; 
 
 	  print "Creating $ct RegulatoryFeature with attribute cache:\n".Data::Dumper::Dumper($attr_cache)."\n" if $debug_start;#level 3?
-
-	  
 
 	  my $reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
 		(
@@ -1684,7 +1496,7 @@ sub create_regulatory_features{
 		 -binary_string    => &build_binstring($rf, $ct),
 		 -feature_set      => $rfsets->{$ct},
 		 -feature_type     => $rfsets->{$ct}->feature_type,
-		 -_attribute_cache => {'annotated_feature' => $attr_cache},# 'external_feature' => \%ef_cache},
+		 -attribute_cache  => $attr_cache,
 		 -projected        => $projected,
 		);
 	  
@@ -1701,11 +1513,26 @@ sub create_regulatory_features{
 		  #How do we account for long 'removed' features, which are added as attrs but do not contribute to bounds/core
 
 
+		  #This is fetching all attribute features from DB!
+		  
 
 		  if ((($reg_feat->bound_start != $rf->{attribute_start}->{$ct}) && ($reg_feat->bound_start != $reg_feat->start)) ||
 			  ($reg_feat->bound_end != $rf->{attribute_end}->{$ct}) && ($reg_feat->bound_end != $reg_feat->end)){
 			
-			warn "$ct attributes:\n\t".join("\t\n",  (map $_->cell_type->name.':'.$_->feature_type->name.':'.$_->start.':'.$_->end,@{$reg_feat->regulatory_attributes}))."\n";
+			warn "$ct attributes:\n\t".
+			  join("\t\n",  (
+							 map { $_->cell_type->name.':'.$_->feature_type->name.':'.$_->start.':'.$_->end }
+							 @{$reg_feat->regulatory_attributes('annotated')} 
+							)
+				  )."\t\n".
+					join("\t\n",  (
+								   map { $_->display_label.':'.$_->start.':'.$_->end }
+								   @{$reg_feat->regulatory_attributes('motif')}
+								  ))
+					  ."\n";
+
+				   
+
 			warn "$ct bound_start ".$reg_feat->bound_start.' != seen attr '.$rf->{attribute_start}->{$ct}."\n";
 			warn "$ct bound_end   ".$reg_feat->bound_end .' != seen attr '.$rf->{attribute_end}->{$ct}."\n";
 			warn "$ct start end   ".$reg_feat->start.' - '.$reg_feat->end."\n";
@@ -1775,7 +1602,7 @@ sub get_regulatory_FeatureSets{
 
 
 	#Always overwrite in case we have redefined the sets
-	$dset->adaptor->store_regbuild_meta_strings($dset, 1);
+	&store_regbuild_meta_strings($dset, 1);
 	$rf_sets{$ctype} = $dset->product_FeatureSet;
   }
     
@@ -1789,7 +1616,7 @@ sub get_regulatory_FeatureSets{
 #If focus set info was stored in data set
 
 sub store_regbuild_meta_strings{
-  my ($self, $dset, $overwrite) = @_;
+  my ($dset, $overwrite) = @_;
 
   my $ds_adaptor = $dset->adaptor;
   $ds_adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::DataSet', $dset);
@@ -1814,7 +1641,7 @@ sub store_regbuild_meta_strings{
 
   my $sth = $ds_adaptor->db->dbc->prepare("select meta_value from meta where meta_key='regbuild.${ctype}.feature_set_ids'");
   $sth->execute();
-  ($meta_value) = map "@$_", @{$sth->fetchall_arrayref};
+  ($meta_value) = map { "@$_" } @{$sth->fetchall_arrayref};
   $reg_string = join(',', map {$_->dbID} sort {$a->name cmp $b->name} @ssets);
 
   my %reg_strings = 
@@ -1830,7 +1657,7 @@ sub store_regbuild_meta_strings{
   
   my @ffset_ids;
 
-  foreach my $ffset_id(values %focus_fsets){
+  foreach my $ffset_id(keys %focus_fsets){
 
 	if ($focus_fsets{$ffset_id}->cell_type->name eq $dset->cell_type->name){
 	  push @ffset_ids, $ffset_id;
@@ -1838,15 +1665,19 @@ sub store_regbuild_meta_strings{
   }
 
   $reg_strings{"regbuild.${ctype}.focus_feature_set_ids"} = join(', ', @ffset_ids);
-
+  
 
 
   foreach my $meta_key(keys %reg_strings){
 	my $sth = $ds_adaptor->db->dbc->prepare("select meta_value from meta where meta_key='${meta_key}'");
 	$sth->execute();
-	($meta_value) = map "@$_", @{$sth->fetchall_arrayref};
+	($meta_value) = map { "@$_" } @{$sth->fetchall_arrayref};
 
-	if (! $meta_value) {
+
+	warn "meta value for $meta_key is $meta_value";
+
+
+	if (! defined $meta_value) {
 	  $sql = "insert into meta (meta_key, meta_value) values ('${meta_key}', '$reg_strings{${meta_key}}')";
 	
 	  eval { $ds_adaptor->db->dbc->do($sql) };
