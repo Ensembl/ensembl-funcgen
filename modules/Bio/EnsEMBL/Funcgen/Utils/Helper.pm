@@ -1406,7 +1406,7 @@ sub rollback_FeatureSet{
   #Remove associated_feature_type records
   #Do not remove actual feature_type records as they may be used by something else.
 
-  $sql ="DELETE aft from associated_feature_type aft, $table f where f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.feature_id and aft.feature_table='".$fset->feature_class."'".$slice_join;
+  $sql ="DELETE aft from associated_feature_type aft, $table f where f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.table_id and aft.table_name='".$fset->feature_class."_feature'".$slice_join;
   $self->rollback_table($sql, 'associated_feature_type', undef, $db);
 
 
