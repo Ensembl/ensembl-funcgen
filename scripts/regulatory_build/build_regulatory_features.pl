@@ -1425,7 +1425,7 @@ sub create_regulatory_features{
 	#my @ctypes = grep { /[^(MultiCell)]/ } keys %{$rf->{fsets}};
 	#unshift @ctypes, 'MultiCell';										
 	
-	foreach my $ct (@ctypes) {
+	foreach my $ct (keys %{$rf->{fsets}}){#(@ctypes) {
 	  my $projected = 0;
 
 	  if($debug_start){
