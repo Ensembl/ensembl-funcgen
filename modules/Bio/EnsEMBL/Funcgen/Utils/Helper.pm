@@ -166,8 +166,7 @@ sub new{
 
 	$self->{_default_log_dir} ||= $ENV{'HOME'}.'/logs';
 	$self->{'_report'} = [];
-
-
+	
 
     # DEBUG OUTPUT & STDERR
 
@@ -185,7 +184,7 @@ sub new{
 			#open (DBGFILE, "<STDERR | tee -a ".$self->{_debug_file});#Mirrors STDERR to debug file
         }
         else{
-            open($DBGFILE, '>', '&STDERR');
+            open($DBGFILE, '>&STDERR');
         }
 
         select $DBGFILE; $| = 1;  # make debug file unbuffered
@@ -194,7 +193,7 @@ sub new{
     }
 
 	my $log_file =  $self->{_log_file};
-	my $output_op = '>';
+
 	
 	# LOG OUTPUT
 	if (defined $self->{_log_file}){
@@ -202,24 +201,22 @@ sub new{
 	  #This causes print on unopened file as we try and log in the DESTROY
 	  throw('You have specified mutually exclusive parameters log_file and no_log') if($self->{'_no_log'});
 	  $main::_log_file = $self->{_log_file};
-	
+	  
 	  #we need to implment tee here
 	  if($self->{'_tee'}){
-	    #we're not resetting $main::_tee here, we only use it once.
-	    $log_file = '| tee -a '.$log_file;
+	    open($LOGFILE, ' | tee -a '.$log_file);
 	  }
 	  else{
-		$output_op = '>>'
+		open($LOGFILE, '>>', $log_file)
+		  or throw("Failed to open log file : $log_file\nError: $!");
 	  }
-
-	  open($LOGFILE, $output_op, $log_file)
-	    or throw("Failed to open log file : $log_file\nError: $!");
 	}
 	else{
 	  #Change this to get the name of the control script and append with PID.out
 	  #This is to ensure that we always capture output
 	  #We need to also log params
 	  #We will have to call this from the child class.
+	  
 
 	  #Only do this if we don't have supress default logs set
 	  #To avoid loads of loags during testing
@@ -236,20 +233,17 @@ sub new{
 
 		#we should still tee here
 		if($self->{'_tee'}){
-		  #we're not resetting $main::_tee here, we only use it once.
-		  $log_file = '| tee -a '.$log_file;
-		} else{
-		  $output_op = '>>'
+		  open($LOGFILE, '| tee -a '.$self->{'_log_file'});
 		}
-
-		open($LOGFILE, $output_op, $log_file)
-		  or throw("Failed to open log file : $log_file\nError: $!");
+		else{
+		  open($LOGFILE, '>', $log_file)
+			or throw("Failed to open log file : $log_file\nError: $!");
+		}
 		
 	  }
 	  else{
 		#Have to include STD filehandles in operator
-		$output_op = '>&STDOUT';
-		open($LOGFILE, $output_op);
+		open($LOGFILE, '>&STDOUT');
 	  }
 	}
 
@@ -261,7 +255,7 @@ sub new{
 
     $self->debug(2,"Helper class instance created.");
 
-    return ($self);
+    return $self;
 }
 
 
