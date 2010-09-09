@@ -70,7 +70,9 @@ $true_tables{motif_feature} = [['motif_feature', 'mf']];
 @{$tables{motif_feature}} = @{$true_tables{motif_feature}};
 
 
-my $true_final_clause = ''; # To avoid use of undef warning from BaseAdaptor
+my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq_region_end'; 
+# ORDER by required by fetch_all_by_dbID_list when fetching as regulatory_attributes
+# was '' to avoid use of undef warning from BaseAdaptor
 my $final_clause = $true_final_clause;
 
 
