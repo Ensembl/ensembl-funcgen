@@ -625,8 +625,7 @@ warn "Setting disconnect_when_inactive to true";
 $probe_db->dbc->disconnect_when_inactive(1);
 $transcript_db->dbc->disconnect_when_inactive(1);
 $xref_db->dbc->disconnect_when_inactive(1);
-
-
+#This is turned off after we have done the processing.
 
 #Grab species ID for healtcheck delete and check
 my $species_id = 1;
@@ -1549,10 +1548,26 @@ my $um_cnt = 0;
 
 # now loop over all the mappings and add xrefs for those that have a suitable number of matches
 #values can be a simple count or an array of annotations depending on probeset_arrays
+my ($last_transcript_sid, @transcript_xrefs);
+my $link_txt = '';
+
+warn "Setting disconnect_when_inactive to false for xref DB";
+$xref_db->dbc->disconnect_when_inactive(0);
+
 
 foreach my $key (keys %transcript_feature_info) {
 
   my ($transcript_sid, $ensembl_id) = split (/:/, $key);
+
+  if($last_transcript_sid && 
+	($last_transcript_sid ne $transcript_sid) ){
+	#Load hits now that we know how many transcripts this probe/set really hits.
+	&add_transcript_xrefs(\@transcript_xrefs);
+	@transcript_xrefs = ();
+  }
+
+  $last_transcript_sid = $transcript_sid;
+
    
   #ensembl_id can be either probeset or probe name
   my $probeset_size = $probeset_sizes{$ensembl_id};
@@ -1582,7 +1597,6 @@ foreach my $key (keys %transcript_feature_info) {
   }
   else{
 	$hits = scalar(@{$transcript_feature_info{$key}{$ensembl_id}});
-	#$num_mismatch_hits = grep(/1/, (map $_->[1], @{$transcript_feature_info{$key}{$ensembl_id}}));
 	map {$num_mismatch_hits +=1 if $_->[1] } @{$transcript_feature_info{$key}{$ensembl_id}};
   }
 
@@ -1609,7 +1623,7 @@ foreach my $key (keys %transcript_feature_info) {
 	
 	
 	if ($transcripts_per_object{$ensembl_id} <= $max_transcripts) {
-	  my $link_txt = '';
+	  $link_txt = '';
 	  #So we're passing these tests for xrefs of the opposite strand
 	  
 	  #Can we annotate the type of Probe match? e.g. exon, exon-exon, exon-utr, utr-exon
@@ -1634,6 +1648,7 @@ foreach my $key (keys %transcript_feature_info) {
 			$link_txt = "(with $num_mismatch_hits mismatched probes)";
 		  }
 		}
+
 		$linkage_annotation = "${hits}/${probeset_size} in probeset${link_txt}";
 	  }
 	  else{
@@ -1644,9 +1659,7 @@ foreach my $key (keys %transcript_feature_info) {
 
 		if($hits > 1){
 		  #We want mismatch info in here
-
 		  $link_txt = " ($num_mismatch_hits times with mismatches)" if $num_mismatch_hits;
-
 		  $linkage_annotation = "Matches $hits times${link_txt}";
 		}
 		else{
@@ -1654,22 +1667,10 @@ foreach my $key (keys %transcript_feature_info) {
 		}
 	  }
 
-	  #Add number of other transcripts mapped in the link text here
-	  if($transcripts_per_object{$ensembl_id} > 1){
-		$link_txt = ". Matches ".($transcripts_per_object{$ensembl_id}-1)." other transcripts";
-	  }
-	  else{
-		$link_txt = ". Maps uniquely to this transcript";
-	  }
-
-
 	  #Could we also add info here on where these other transcript mapping are perfect or mismatched?
 	  #Position of mismatches is important here!
 	  #i.e. length of perfect match correlates with binding(http://www.biomedcentral.com/1471-2164/9/317)
-	  
-
-
-	  add_xref($transcript_sid, $ensembl_id, $xref_object, $linkage_annotation.$link_txt);
+	  push @transcript_xrefs, [$transcript_sid, $ensembl_id, $xref_object, $linkage_annotation];
 	  print OUT "$id_names\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
 	  
 	}
@@ -1703,9 +1704,35 @@ foreach my $key (keys %transcript_feature_info) {
 	  &cache_and_load_unmapped_objects($um_obj);
 	}
   }
-  # }
 }
 
+#Add final transcript xrefs
+&add_transcript_xrefs(\@transcript_xrefs);
+
+
+
+#Adds transcript_xrefs once we know how many other xref there are.
+
+sub add_transcript_xrefs{
+  my $txrefs_ref = shift;
+
+  my $num_hits = scalar(@$txrefs_ref);
+  
+  #Add number of other transcripts mapped in the link text here
+  if($num_hits > 1){
+	$link_txt = ". Matches ".($num_hits-1)." other transcripts";
+  }
+  else{
+	$link_txt = ". Maps uniquely to this transcript";
+  }
+
+  foreach my $txref(@$txrefs_ref){
+	$txref->[$#{$txref}] .= $link_txt;
+	add_xref(@$txref);
+  }
+
+  return;
+}
 
 
 
@@ -1745,8 +1772,6 @@ foreach my $object_id(keys %promiscuous_objects){
   warn 'Do we need to modify %transcript_xrefs here so we dont summary report mappings which have been deleted';
 
 }
-
-
 
 close (OUT);
 
@@ -1815,9 +1840,9 @@ for my $i(0..4){
 
 
 #Finally add MART_DISPLAYABLE status
-$sql="INSERT IGNORE into status select a.array_id, 'array', sn.status_name_id from array a, status_name sn where a.name in (".
-  join(',', @array_names).") and a.vendor='${vendor}' and sn.name in ('MART_DISPLAYABLE')";#DISPLAYABLE should be set during ImportArrays
-$Helper->log_header("Adding MART_DISPLAYABLE status entries");
+$sql='INSERT IGNORE into status select a.array_id, "array", sn.status_name_id from array a, status_name sn where a.name in ("'.
+  join('", "', @array_names)."\") and a.vendor='${vendor}' and sn.name in ('MART_DISPLAYABLE')";#DISPLAYABLE should be set during ImportArrays
+$Helper->log_header('Adding MART_DISPLAYABLE status entries');
 $xref_db->dbc->do($sql);
 
 $Helper->log_header("Completed Transcript $xref_object annotation for @array_names", 0, 'append_date');
