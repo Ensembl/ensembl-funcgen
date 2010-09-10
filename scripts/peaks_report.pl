@@ -26,39 +26,39 @@ Species of the database (e.g. homo_sapiens)
 
 =item B<-dbhost>
 
-Host where the database is (defaults to $DB_HOST)
+Host where the database is
 
 =item B<-dbuser>
 
-User of the database (defaults to $DB_READ_USER)
+User of the database 
 
 =item B<-dbpass>
 
-Password for the database user (defaults to "")
+Password for the database user 
 
 =item B<-dbport>
 
-Port of the host where the database is (defaults to $DB_PORT)
+Port of the host where the database is 
 
 =item B<-dbname>
 
-Name of the database (defaults to $DB_NAME)
+Name of the database 
 
 =item B<-dnadbhost>
 
-Host of the specific core database to use (defaults to $DNADB_HOST)
+Host of the specific core database to use 
 
 =item B<-dnadbuser>
 
-User of the specific core database (defaults to $DNADB_USER)
+User of the specific core database 
 
 =item B<-dnadbpass>
 
-Password for the specific core database user (defaults to "")
+Password for the specific core database user 
 
 =item B<-dnadbport>
 
-Port of the host where the specific core database to use is (defaults to $DNADB_PORT)
+Port of the host where the specific core database to use is
 
 =item B<-dnadbname>
 
@@ -70,7 +70,7 @@ When specified runs the R code to generate plots of the data.
 
 =item B<-nodump>
 
-When specified it will skip dumping the data (e.g. for reusing old dumps)
+When specified it will skip dumping the data 
 
 =item B<-compare>
 
@@ -172,20 +172,19 @@ my %feature_tables = (
 					  #external   => 1,
 					 );
 
-my $feature_table='annotated';
+#my $feature_table='annotated';
 my $name = 'peaks_report_'.$$;#Add PID to avoid overwriting previous reports
-my $host = $ENV{DB_HOST};
-my $port = $ENV{DB_PORT};
-my $user = $ENV{DB_READ_USER};
-my $pass = $ENV{DB_PASS};
-my $dbname = $ENV{DB_NAME};
-my $dnadbhost = $ENV{DNADB_HOST};
-my $dnadbport = $ENV{DNADB_PORT};
-my $dnadbuser = $ENV{DNADB_USER};
-my $dnadbname =  $ENV{DNADB_NAME};
-my $dnadbpass =  $ENV{DNADB_PASS};
-
-
+#my $host = $ENV{DB_HOST};
+#my $port = $ENV{DB_PORT};
+#my $user = $ENV{DB_READ_USER};
+#my $pass = $ENV{DB_PASS};
+#my $dbname = $ENV{DB_NAME};
+#my $dnadbhost = $ENV{DNADB_HOST};
+#my $dnadbport = $ENV{DNADB_PORT};
+#my $dnadbuser = $ENV{DNADB_USER};
+#my $dnadbname =  $ENV{DNADB_NAME};
+#my $dnadbpass =  $ENV{DNADB_PASS};
+my ($feature_table, $host, $port, $user, $pass, $dbname, $dnadbhost, $dnadbport, $dnadbuser, $dnadbname, $dnadbpass);
 
 #get command line options
 
@@ -221,8 +220,8 @@ pod2usage(1) if ($help);
 
 
 # Sould be failing a little nicer now... 
-# but if there are environment variables available, it may fail... not so nicely
-
+if(!$feature_table) { print "Missing Type of Feature: annotated or regulatory\n"; exit 0; }
+if(!$host || !$port || !$user || !$dbname || !$feature_table) {  print "Missing connection parameters\n"; exit 0; }
 
 if(! $feature_tables{$feature_table}){
   die("You have specified an invalid -feature_table. Must be one of:\t".join("\t", (keys %feature_tables)));
@@ -241,8 +240,8 @@ if($dnadbname){
      -user => $dnadbuser,
      -dbname => $dnadbname,
      -species => $species,
-	 -group   => 'core',
-	 %$dnadbpass
+     -group   => 'core',
+     %$dnadbpass
     );
 }
 
@@ -263,7 +262,7 @@ if($dbname){
      -dbname  => $dbname,
      -species => $species,
      -dnadb   => $coredba, #Assumes that new will accept undef as parameter for this...
-	 %$apass
+     %$apass
     );
 }
 
@@ -345,7 +344,7 @@ if (defined $R) {
   foreach my $sr_type(@sr_types){
     
     #Load the data
-    print FO "data_${sr_type} <- read.table(\"${name}.data.${sr_type}.txt\",header=TRUE)\n";
+    print FO "data_${sr_type} <- read.table(\"${name}.data.${sr_type}.txt\",header=TRUE,sep=\"\\t\")\n";
     
     #Give a little space for the legend... outside the graph... (test how much space... and the size of text in lengend)
     print FO "par(xpd=T, mar=par()\$mar+c(0,0,0,5))\n";
