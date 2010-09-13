@@ -53,9 +53,8 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Probe;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#Have to use here to import @EXPORT
-use Tie::File;
 
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
 
 
 #Exported from BaseAdaptor
@@ -130,70 +129,6 @@ sub fetch_by_array_probe_probeset_name {
 	my ($dbid) = $sth->fetchrow_array;
 
 	return (defined $dbid) ? $self->fetch_by_dbID($dbid) : undef;
-}
-
-
-
-=head2 fetch_probe_cache_by_Experiment
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
-  Example    : my $probe_cache = $opa->fetch_probe_cache_by_Experiment($exp);
-  Description: Returns a hashref with key value pairs as probe name and id respectively.
-               This is intended as a quick and dirty method for experimental data import
-  Returntype : Hashref
-  Exceptions : Throws if arg is not valid and stored
-  Caller     : General
-  Status     : At Risk - move to Importer
-
-=cut
-
-
-sub fetch_probe_cache_by_Experiment{
-  my ($self, $exp) = @_;
-
-  my @tie_cache;
-  throw('Need to fetch the probe cache by Array not Experiment');
-
-  #where are we going to get the file path from?
-  my $cache_file = $ENV{'EFG_DATA'}.'/output/'.$exp->name().'/'.$exp->name().'.probe_cache';
-
-
-  #do we want to use a previously generated cache?
-  #could validate length versus count of probes in DB.
-  #cache could be corrupt, i.e. missing X Y vals?
-  #should be okay, but we may encounter problem if we try and overwrite the cache with new vals
-  
-
-  if(! ($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
-    throw("Must proved a valid stored Bio::EnsEMBL::Funcgen::Experiment");
-  }
-
-  my @achip_ids;
-  
-  foreach my $echip(@{$exp->get_ExperimentalChips()}){
-    push @achip_ids, $echip->array_chip_id();
-  }
-
-
-  #need to validate probe_cache here by check keys against probe count ;)
-
-  if(@achip_ids){
-
-    my $sql = 'SELECT name, probe_id from probe where array_chip_id IN ('.join(',', @achip_ids).');';
-
-    warn 'fetch_probe_cache will break if we have duplicated names within the Experimental set';
-	#Will this handle multiple name probes?
-
-	my $cmd = 'mysql '.$self->db->connect_string()." -e \"$sql\" >".$cache_file;
-
-
-    #%cache = @{$self->db->dbc->db_handle->selectcol_arrayref($sql, { Columns =>[1, 2]})};
-  }
-  
-
-  tie @tie_cache, 'Tie::File', $cache_file or throw('Failed to tie probe_cache file');
-
-  return \@tie_cache;
 }
 
 
@@ -275,7 +210,7 @@ sub fetch_all_by_Array {
 
   #get all array_chip_ids, for array and do a multiple OR statement with generic fetch
   
-  return $self->generic_fetch("p.array_chip_id IN (".join(",", @{$array->get_array_chip_ids()}).")");
+  return $self->generic_fetch('p.array_chip_id IN ('.join(',', @{$array->get_array_chip_ids()}).')');
 }
 
 =head2 fetch_all_by_ArrayChip
@@ -610,7 +545,7 @@ sub store {
 	  $pd_sth ||= $self->prepare($pd_sql);
 	  
 	  foreach my $probe_analysis(@panals){
-		my ($analysis_id, $score, $cs_id) = @$probe_analysis;
+		my ($analysis_id, $score, $cs_id) = @{$probe_analysis};
 		$cs_id ||=0;#NULL
 		
 		$pd_sth->bind_param(1, $probe->dbID(),  SQL_INTEGER);
@@ -648,7 +583,7 @@ sub fetch_all_design_scores{
   }
 
   my $sql = 'SELECT analysis_id, score, coord_system_id from probe_design WHERE probe_id='.$probe->dbID.';';
-  return @{$self->db->dbc->db_hanle->selectall_arrayref($sql)};
+  return @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 }
 
 
