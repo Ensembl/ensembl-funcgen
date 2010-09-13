@@ -54,8 +54,8 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Probe;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#Have to use here to import @EXPORT
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
-
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
+#change to parent with perl 5.10
 
 #Exported from BaseAdaptor
 $true_tables{probe} = [['probe', 'p']];
