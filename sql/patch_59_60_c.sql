@@ -1,4 +1,4 @@
-# patch_59_60_b.sql
+# patch_59_60_c.sql
 #
 # title: add motif_feature and binding_matrix
 #
