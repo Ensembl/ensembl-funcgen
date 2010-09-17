@@ -400,10 +400,10 @@ CREATE TABLE `probe_feature` (
    `probe_id` int(10) unsigned NOT NULL,
    `analysis_id` smallint(5) unsigned NOT NULL,	
    `mismatches` tinyint(4) NOT NULL,
-   `cigar_line` text,
+   `cigar_line` varchar(50) default NULL,
    PRIMARY KEY  (`probe_feature_id`),
    KEY `probe_idx` (`probe_id`),
-   KEY `seq_region_idx` (`seq_region_id`, `seq_region_start`)
+   KEY `seq_region_probe_probe_feature_idx` (`seq_region_id`,`seq_region_start`, `seq_region_end`, `probe_id`, `probe_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -790,7 +790,7 @@ CREATE  TABLE `binding_matrix` (
  `name` VARCHAR(45) NOT NULL,
  `type` VARCHAR(45) NOT NULL,
  `feature_type_id` int(10) unsigned NOT NULL,
- `frequencies` TEXT NOT NULL,
+ `frequencies` VARCHAR(1000) NOT NULL,
  `description` VARCHAR(255) NULL,
  PRIMARY KEY (`binding_matrix_id`) ,
  KEY `name_type_idx` (`name`, `type`),
@@ -882,9 +882,9 @@ DROP TABLE IF EXISTS `regulatory_attribute`;
 CREATE TABLE `regulatory_attribute` (
   `regulatory_feature_id` int(10) unsigned NOT NULL,
   `attribute_feature_id` int(10) unsigned NOT NULL,
-  `attribute_feature_table` enum('annotated', 'external') default NULL,
+  `attribute_feature_table` enum('annotated', 'external', 'motif') default NULL,
   PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=17;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
 -- Cell specific build:
