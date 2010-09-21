@@ -266,13 +266,14 @@ sub frequencies_revcomp {
 }
 
 
-=head2 compare_to_optimal_site
+=head2 relative_affinity
 
   Arg [1]    : string - Binding Site Sequence
-  Example    : $matrix->compare_to_optimal_site($sequence);
+  Example    : $matrix->relative_affinity($sequence);
   Description: Calculates the binding affinity of a given sequence
-	relative to the optimal site for the matrix (from 0 to 1)
+	relative to the optimal site for the matrix
 	The site is taken as if it were in the proper orientation
+        Considers a purely random background p(A)=p(C)=p(G)=p(T)
   Returntype : double
   Exceptions : Throws if the sequence length does not have the matrix length
   or if the sequence has unclear bases (N is not accepted)
@@ -281,36 +282,52 @@ sub frequencies_revcomp {
 
 =cut
 
-sub compare_to_optimal_site {
+sub relative_affinity {
   my $self = shift;
- 
- my $sequence = shift;
- $sequence =~ s/^\s+//;
- $sequence =~ s/\s+$//;
- 
- throw "No sequence given" if !$sequence;
- $sequence = uc($sequence);
- if($sequence =~ /[^ACGT]/){
- 	throw "Sequence $sequence contains invalid characters: Only Aa Cc Gg Tt accepted";	
- }
- 
- my $weight_matrix = $self->_weights;
- my $matrix_length = scalar(@{$weight_matrix->{'A'}});
- if(length($sequence) != $matrix_length){
- 	throw "Sequence $sequence does not have length $matrix_length";
- }
- 
- my $log_odds = 0;
- my @bases = split(//,$sequence);
- for(my $i=0;$i<$matrix_length;$i++){
-	 $log_odds += $weight_matrix->{$bases[$i]}->[$i];	
- }
- my $binding_affinity = exp($log_odds)/($self->_delta); 
-
- return $binding_affinity;
+  
+  my $sequence = shift;
+  $sequence =~ s/^\s+//;
+  $sequence =~ s/\s+$//;
+  
+  throw "No sequence given" if !$sequence;
+  $sequence = uc($sequence);
+  if($sequence =~ /[^ACGT]/){
+    throw "Sequence $sequence contains invalid characters: Only Aa Cc Gg Tt accepted";	
+  }
+  
+  my $weight_matrix = $self->_weights;
+  my $matrix_length = scalar(@{$weight_matrix->{'A'}});
+  if(length($sequence) != $matrix_length){
+    throw "Sequence $sequence does not have length $matrix_length";
+  }
+  
+  my $log_odds = 0;
+  my @bases = split(//,$sequence);
+  for(my $i=0;$i<$matrix_length;$i++){
+    $log_odds += $weight_matrix->{$bases[$i]}->[$i];	
+  }
+  
+  return $log_odds / $self->_max_bind;
 }
 
+=head2 length
 
+  Example    : $bm->length();
+  Description: Returns the length of the the matrix (e.g. 19bp long)
+  Returntype : int with the length of this binding matrix 
+  Exceptions : none
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub length {
+  my $self = shift;
+
+  my $weight_matrix = $self->_weights;
+
+  return scalar(@{$weight_matrix->{'A'}});
+}
 
 =head2 _weights
 
@@ -362,14 +379,16 @@ sub _weights {
   		}
   		
 		my %weights;			
-		#We can allow distinct background per nucleotide, instead of 0.25 for all...
-		my @was; for(my $i=0;$i<scalar(@As);$i++){ $was[$i] = log((($As[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
+		#We can allow distinct background per nucleotide, instead of 0.25 for all... pass as parameter
+		#But if the matrix was obtained using in-vivo data, it shouldn't matter the organism nucleotide bias..
+		#We're using 0.1 as pseudo-count... the matrix cannot have very few elements... (e.g. <30 not good)
+		my @was; for(my $i=0;$i<scalar(@As);$i++){ $was[$i] = log((($As[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };
 		$weights{'A'} = \@was;
-		my @wcs; for(my $i=0;$i<scalar(@Cs);$i++){ $wcs[$i] = log((($Cs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
+		my @wcs; for(my $i=0;$i<scalar(@Cs);$i++){ $wcs[$i] = log((($Cs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };
 		$weights{'C'} = \@wcs;
-		my @wgs; for(my $i=0;$i<scalar(@Gs);$i++){ $wgs[$i] = log((($Gs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
+		my @wgs; for(my $i=0;$i<scalar(@Gs);$i++){ $wgs[$i] = log((($Gs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };
 		$weights{'G'} = \@wgs;
-		my @wts; for(my $i=0;$i<scalar(@Ts);$i++){ $wts[$i] = log((($Ts[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };		
+		my @wts; for(my $i=0;$i<scalar(@Ts);$i++){ $wts[$i] = log((($Ts[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };		
 		$weights{'T'} = \@wts;
 	
 		$self->{'weights'} = \%weights;
@@ -381,7 +400,8 @@ sub _weights {
 			$max += _max($col);
 		}
 
-		$self->_delta(exp($max) - exp($min));
+		#Log scale
+		$self->_max_bind($max);
 		
 	}
 	
@@ -407,25 +427,24 @@ sub _min_max {
 }
 
 
-=head2 _delta
+=head2 _max_bind
 
-  Arg [1]    : (optional) double - delta
-  Example    : $matrix->_delta(10.2);
-  Description: Private Getter and setter of delta attribute (not to be called directly)
-  Returntype : float with the delta (max-min) binding affinity of the matrix 
+  Arg [1]    : (optional) double - maximum binding affinity
+  Example    : $matrix->_max_bind(10.2);
+  Description: Private Getter and setter of max_bind attribute (not to be called directly)
+  Returntype : float with the maximum binding affinity of the matrix 
   Exceptions : None
   Caller     : Self
   Status     : At Risk
 
 =cut
 
-sub _delta {
+sub _max_bind {
   my $self = shift;
   
-  $self->{'delta'} = shift if @_;
+  $self->{'max_bind'} = shift if @_;
 
-  return $self->{'delta'};
+  return $self->{'max_bind'};
 }
-
 
 1;
