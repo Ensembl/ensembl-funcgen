@@ -307,7 +307,9 @@ sub relative_affinity {
     $log_odds += $weight_matrix->{$bases[$i]}->[$i];	
   }
   
-  return $log_odds / $self->_max_bind;
+  return ($log_odds - $self->_min_bind) / ($self->_max_bind - $self->_min_bind);
+  #return $log_odds / $self->_max_bind;
+  #return $log_odds;
 }
 
 =head2 length
@@ -402,7 +404,7 @@ sub _weights {
 
 		#Log scale
 		$self->_max_bind($max);
-		
+		$self->_min_bind($min);
 	}
 	
 	return $self->{'weights'};	
@@ -445,6 +447,26 @@ sub _max_bind {
   $self->{'max_bind'} = shift if @_;
 
   return $self->{'max_bind'};
+}
+
+=head2 _min_bind
+
+  Arg [1]    : (optional) double - minimum binding affinity
+  Example    : $matrix->_min_bind(-10.2);
+  Description: Private Getter and setter of min_bind attribute (not to be called directly)
+  Returntype : float with the minimum binding affinity of the matrix 
+  Exceptions : None
+  Caller     : Self
+  Status     : At Risk
+
+=cut
+
+sub _min_bind {
+  my $self = shift;
+  
+  $self->{'min_bind'} = shift if @_;
+
+  return $self->{'min_bind'};
 }
 
 1;
