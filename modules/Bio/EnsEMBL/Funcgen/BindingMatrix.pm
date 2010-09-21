@@ -307,8 +307,13 @@ sub relative_affinity {
     $log_odds += $weight_matrix->{$bases[$i]}->[$i];	
   }
   
+  #This log scale may be quite unrealistic... but usefull just for comparisons...
   return ($log_odds - $self->_min_bind) / ($self->_max_bind - $self->_min_bind);
+  #Linearizing it may be too strict, on the other hand...
+  #return (exp($log_odds) - exp($self->_min_bind)) / (exp($self->_max_bind) - exp($self->_min_bind));
+  #Comparing just to maximum may be useful...
   #return $log_odds / $self->_max_bind;
+  #Otherwise return just the raw result
   #return $log_odds;
 }
 
