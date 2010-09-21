@@ -170,15 +170,15 @@ CREATE TABLE external_db (
 
 
 --
--- Table structure for table 'go_xref'
+-- Table structure for table 'ontology_xref'
 --
 
-DROP TABLE if EXISTS go_xref;
-CREATE TABLE go_xref (
+DROP TABLE if EXISTS ontology_xref;
+CREATE TABLE ontology_xref (
   object_xref_id          INT(10) UNSIGNED DEFAULT '0' NOT NULL,
+  source_xref_id          INT(10) UNSIGNED DEFAULT NULL,
   linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 
 		               'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL,
-  source_xref_id          INT(10) UNSIGNED DEFAULT NULL,
   KEY (object_xref_id),
   KEY (source_xref_id),
   UNIQUE (object_xref_id, source_xref_id, linkage_type)
