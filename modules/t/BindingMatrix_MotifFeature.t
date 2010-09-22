@@ -124,8 +124,8 @@ G  [ 4  5  7  0 24  0 18 12  5 ]
 T  [ 9 14  3  0  0 24  0  2  3 ]");
 
 #Test  22 & 23
-ok ( $matrix->compare_to_optimal_site("TGGCCACCA") eq '3.90079276657717e-11' );
-ok ( $matrix->compare_to_optimal_site("CTCAGTGGA") eq '0.0655146380337265' );
+ok ( $matrix->relative_affinity("TGGCCACCA") eq '0.209170634168983' );
+ok ( $matrix->relative_affinity("CTCAGTGGA",1) eq '0.0655146380336576' );
 
 #Now store second BindingMatrix
 $bma->store($matrix);
