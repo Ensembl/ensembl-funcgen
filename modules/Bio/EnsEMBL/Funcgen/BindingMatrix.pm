@@ -392,13 +392,13 @@ sub _weights {
 		#We can allow distinct background per nucleotide, instead of 0.25 for all... pass as parameter
 		#But if the matrix was obtained using in-vivo data, it shouldn't matter the organism nucleotide bias..
 		#We're using 0.1 as pseudo-count... the matrix cannot have very few elements... (e.g. <30 not good)
-		my @was; for(my $i=0;$i<scalar(@As);$i++){ $was[$i] = log((($As[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };
+		my @was; for(my $i=0;$i<scalar(@As);$i++){ $was[$i] = log((($As[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
 		$weights{'A'} = \@was;
-		my @wcs; for(my $i=0;$i<scalar(@Cs);$i++){ $wcs[$i] = log((($Cs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };
+		my @wcs; for(my $i=0;$i<scalar(@Cs);$i++){ $wcs[$i] = log((($Cs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
 		$weights{'C'} = \@wcs;
-		my @wgs; for(my $i=0;$i<scalar(@Gs);$i++){ $wgs[$i] = log((($Gs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };
+		my @wgs; for(my $i=0;$i<scalar(@Gs);$i++){ $wgs[$i] = log((($Gs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
 		$weights{'G'} = \@wgs;
-		my @wts; for(my $i=0;$i<scalar(@Ts);$i++){ $wts[$i] = log((($Ts[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };	     
+		my @wts; for(my $i=0;$i<scalar(@Ts);$i++){ $wts[$i] = log((($Ts[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };	     
 		$weights{'T'} = \@wts;
 	
 		$self->{'weights'} = \%weights;
