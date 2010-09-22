@@ -269,6 +269,7 @@ sub frequencies_revcomp {
 =head2 relative_affinity
 
   Arg [1]    : string - Binding Site Sequence
+  Arg [2]    : (optional) boolean - 1 if results are to be in linear scale (default is log scale)
   Example    : $matrix->relative_affinity($sequence);
   Description: Calculates the binding affinity of a given sequence
 	relative to the optimal site for the matrix
@@ -283,9 +284,7 @@ sub frequencies_revcomp {
 =cut
 
 sub relative_affinity {
-  my $self = shift;
-  
-  my $sequence = shift;
+  my ($self, $sequence, $linear) = (shift, shift, shift);
   $sequence =~ s/^\s+//;
   $sequence =~ s/\s+$//;
   
@@ -308,7 +307,11 @@ sub relative_affinity {
   }
   
   #This log scale may be quite unrealistic... but usefull just for comparisons...
-  return ($log_odds - $self->_min_bind) / ($self->_max_bind - $self->_min_bind);
+  if(!$linear){
+    return ($log_odds - $self->_min_bind) / ($self->_max_bind - $self->_min_bind);
+  } else {
+    return (exp($log_odds) - exp($self->_min_bind)) / (exp($self->_max_bind) - exp($self->_min_bind));
+  }
   #Linearizing it may be too strict, on the other hand...
   #return (exp($log_odds) - exp($self->_min_bind)) / (exp($self->_max_bind) - exp($self->_min_bind));
   #Comparing just to maximum may be useful...
@@ -395,7 +398,7 @@ sub _weights {
 		$weights{'C'} = \@wcs;
 		my @wgs; for(my $i=0;$i<scalar(@Gs);$i++){ $wgs[$i] = log((($Gs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };
 		$weights{'G'} = \@wgs;
-		my @wts; for(my $i=0;$i<scalar(@Ts);$i++){ $wts[$i] = log((($Ts[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };		
+		my @wts; for(my $i=0;$i<scalar(@Ts);$i++){ $wts[$i] = log((($Ts[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25) / log(2); };	     
 		$weights{'T'} = \@wts;
 	
 		$self->{'weights'} = \%weights;
