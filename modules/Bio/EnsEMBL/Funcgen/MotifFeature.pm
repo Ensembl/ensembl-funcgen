@@ -271,13 +271,19 @@ sub associated_annotated_features{
 
   Arg [1]    : Bio::EnsEMBL::Variation::VariationFeature
   Arg [2]    : boolean - 1 if results in linear scale (default is log scale)
-  Example    : my $bmatrix_name = $mfeat->binding_matrix->name;
+  Example    : my $vfs = $vf_adaptor->fetch_all_by_Slice($slice_adaptor->fetch_by_region('toplevel',$mf->seq_region_name,$mf->start,$mf->end,$mf->strand));
+               foreach my $vf (@{$vfs}){
+                   print $mf->infer_variation_consequence($vf)."\n";
+               }
+
   Description: Calculates the potential influence of a given variation in a motif feature.
-               Returns a value between -1 (lost) and +1 (gain) indicating the difference 
-               in strength between the motif in the reference and after the variation
+               Returns a value between -100% (lost) and +100% (gain) indicating the difference 
+               in strength between the motif in the reference and after the variation.
+
+               The variation feature slice needs to be the motif feature, including the strand
   Returntype : float
   Exceptions : throws if argument is not a  Bio::EnsEMBL::Variation::VariationFeature
-               throws if the variation feature does not overlap the motif feature
+               throws if the variation feature is not contained in the motif feature
   Caller     : General
   Status     : At risk
 
@@ -299,31 +305,29 @@ sub infer_variation_consequence{
   #if(!(($vf->start >= $self->start) && ($vf->end <= $self->end ))){
   #  throw "Variation should be entirely contained in the Motif";
   #}
+
   if( ($vf->start < 1) || ($vf->end > $self->binding_matrix->length)){ throw "Variation not entirely contained in the motif feature"; }
 
-  if(!($vf->allele_string =~ /[ACTG]\/[ACTG]/)){ throw "Currently only SNPs are supported"; }
+  if(!($vf->allele_string =~ /^[ACTG]\/[ACTG]$/)){ throw "Currently only SNPs are supported"; }
 
-  my $ref_seq = $self->slice->subseq($self->start, $self->end, $vf->strand);
+  my $ref_seq = $self->seq;
+
   my $variant = $vf->allele_string;
   $variant =~ s/^.*\///;
   $variant =~ s/\s*$//;
 
   my ($vf_start,$vf_end) = ($vf->start, $vf->end);
-  if(($self->strand==1) && ($vf->strand==-1)){ $vf_start++; $vf_end++; }
-  my $var_seq = substr($ref_seq,0, $vf_start - 1).$variant.substr($ref_seq, $vf_end);
-  if($vf->strand ne $self->strand){
-    $ref_seq = uc(reverse($ref_seq));
-    $ref_seq =~ tr/ACGT/TGCA/;
-    $var_seq = uc(reverse($var_seq));
-    $var_seq =~ tr/ACGT/TGCA/;
+  if($vf->strand == -1){
+    #Needed for insertions
+    $variant = reverse($variant);
+    $variant =~ tr/ACGT/TGCA/;
   }
+  my $var_seq = substr($ref_seq,0, $vf_start - 1).$variant.substr($ref_seq, $vf_start+length($variant)-1);
 
   my $bm = $self->{'binding_matrix'};
   return 100 * ($bm->relative_affinity($var_seq,$linear) - $bm->relative_affinity($ref_seq,$linear));
   
 }
-
-
 
 1;
 
