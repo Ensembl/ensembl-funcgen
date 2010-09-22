@@ -76,33 +76,32 @@ use vars qw(@ISA);
 =head2 new
 
  
-  Arg [-SCORE]        : (optional) int - Score assigned by analysis pipeline
-  Arg [-SLICE]        : Bio::EnsEMBL::Slice - The slice on which this feature is.
-  Arg [-START]        : int - The start coordinate of this feature relative to the start of the slice
+  Arg [-SCORE]          : (optional) int - Score assigned by analysis pipeline
+  Arg [-SLICE]          : Bio::EnsEMBL::Slice - The slice on which this feature is.
+  Arg [-BINDING_MATRIX] : Bio::EnsEMBL::Funcgen::BindingMatrix - Binding Matrix associated to this feature.
+  Arg [-START]          : int - The start coordinate of this feature relative to the start of the slice
 		                it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-END]          : int -The end coordinate of this feature relative to the start of the slice
+  Arg [-END]            : int -The end coordinate of this feature relative to the start of the slice
 	                    it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-DISPLAY_LABEL]: string - Display label for this feature
-  Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
-  Arg [-FEATURE_TYPE] : Bio::EnsEMBL::Funcgen::FeatureType - The feature type corresponding to the
-                        gene associated with thie given motif.
-  Arg [-dbID]         : (optional) int - Internal database ID.
-  Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
+  Arg [-DISPLAY_LABEL]  : string - Display label for this feature
+  Arg [-STRAND]         : int - The orientation of this feature. Valid values are 1, -1 and 0.
+  Arg [-dbID]           : (optional) int - Internal database ID.
+  Arg [-ADAPTOR]        : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
 
-  Example    : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
-										                                  -SLICE         => $chr_1_slice,
-									                                      -START         => 1_000_000,
-									                                      -END           => 1_000_024,
-									                                      -STRAND        => -1,
-									                                      -DISPLAY_LABEL => $text,
-									                                      -SCORE         => $score,
-                                                                          -FEATURE_TYPE  => $ftype,
+  Example    : my $feature = Bio::EnsEMBL::Funcgen::MotifFeature->new(
+									  -SLICE          => $chr_1_slice,
+									  -START          => 1_000_000,
+									  -END            => 1_000_024,
+									  -STRAND         => -1,
+									  -BINDING_MATRIX => $bm,
+									  -DISPLAY_LABEL  => $text,
+									  -SCORE          => $score,
                                                                          );
 
 
-  Description: Constructor for AnnotatedFeature objects.
-  Returntype : Bio::EnsEMBL::Funcgen::AnnotatedFeature
-  Exceptions : Throws if FeatureType not valid
+  Description: Constructor for MotifFeature objects.
+  Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
+  Exceptions : Throws if BindingMatrix not valid
   Caller     : General
   Status     : Medium Risk
 
@@ -123,8 +122,6 @@ sub new {
   $self->{'binding_matrix'} = $bmatrix;
   $self->{'score'}          = $score  if $score;
   $self->display_label($dlabel) if $dlabel;
-  
-
 
   return $self;
 }
@@ -270,7 +267,61 @@ sub associated_annotated_features{
 }
 
 
+=head2 infer_variation_consequence
 
+  Arg [1]    : Bio::EnsEMBL::Variation::VariationFeature
+  Arg [2]    : boolean - 1 if results in linear scale (default is log scale)
+  Example    : my $bmatrix_name = $mfeat->binding_matrix->name;
+  Description: Calculates the potential influence of a given variation in a motif feature.
+               Returns a value between -1 (lost) and +1 (gain) indicating the difference 
+               in strength between the motif in the reference and after the variation
+  Returntype : float
+  Exceptions : throws if argument is not a  Bio::EnsEMBL::Variation::VariationFeature
+               throws if the variation feature does not overlap the motif feature
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub infer_variation_consequence{
+  my ($self, $vf, $linear) = (shift, shift, shift);
+
+  if(! $vf->isa('Bio::EnsEMBL::Variation::VariationFeature')){
+    throw "We expect a Bio::EnsEMBL::Variation::VariationFeature object, not a ".$vf->class;
+  }
+
+  #See if these checks are required or if there are more efficient ways to do the checks...
+  #if(($self->slice->seq_region_name ne $vf->slice->seq_region_name) ||
+  #   ($self->slice->start != $vf->slice->start) || 
+  #   ($self->slice->end != $vf->slice->end) ){
+  #  throw "Variation and Motif are on distinct slices";
+  #}
+  #if(!(($vf->start >= $self->start) && ($vf->end <= $self->end ))){
+  #  throw "Variation should be entirely contained in the Motif";
+  #}
+  if( ($vf->start < 1) || ($vf->end > $self->binding_matrix->length)){ throw "Variation not entirely contained in the motif feature"; }
+
+  if(!($vf->allele_string =~ /[ACTG]\/[ACTG]/)){ throw "Currently only SNPs are supported"; }
+
+  my $ref_seq = $self->slice->subseq($self->start, $self->end, $vf->strand);
+  my $variant = $vf->allele_string;
+  $variant =~ s/^.*\///;
+  $variant =~ s/\s*$//;
+
+  my ($vf_start,$vf_end) = ($vf->start, $vf->end);
+  if(($self->strand==1) && ($vf->strand==-1)){ $vf_start++; $vf_end++; }
+  my $var_seq = substr($ref_seq,0, $vf_start - 1).$variant.substr($ref_seq, $vf_end);
+  if($vf->strand ne $self->strand){
+    $ref_seq = uc(reverse($ref_seq));
+    $ref_seq =~ tr/ACGT/TGCA/;
+    $var_seq = uc(reverse($var_seq));
+    $var_seq =~ tr/ACGT/TGCA/;
+  }
+
+  my $bm = $self->{'binding_matrix'};
+  return 100 * ($bm->relative_affinity($var_seq,$linear) - $bm->relative_affinity($ref_seq,$linear));
+  
+}
 
 
 
