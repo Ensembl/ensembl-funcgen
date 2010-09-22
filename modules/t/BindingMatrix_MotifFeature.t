@@ -94,12 +94,12 @@ ok( $matrix->description eq 'Jaspar Matrix' );
 
 #numeric tests do not work with decimals?
 #Test 16
-ok ( $matrix->_delta eq '72583253.4125366' );
-ok ( $matrix->compare_to_optimal_site("TGGCCACCAGGGGGCGCTA") == 1);
-ok ( $matrix->compare_to_optimal_site("TGGCCACGAGGGGGCGCTA") eq '0.11105980143154');
-ok ( $matrix->compare_to_optimal_site("TGGCCACCAGGGGGCGCCA") eq '0.813178490280233');
-ok ( $matrix->compare_to_optimal_site("TGGCCACCAGGGGGCACTA") eq '0.733780319463616');
-ok ( $matrix->compare_to_optimal_site("TGGCCACCAGGGAGCGCTA") eq '0.0135939782046961');
+ok ( $matrix->_max_bind eq '18.100244783938' );
+ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCGCTA") == 1);
+ok ( $matrix->relative_affinity("TGGCCACGAGGGGGCGCTA") eq '0.972088876164933');
+ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCGCCA") eq '0.997373533384315');
+ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCACTA") eq '0.99606869981799');
+ok ( $matrix->relative_affinity("TGGCCACCAGGGAGCGCTA") eq '0.94541278085573');
 #End of test 21
 
 #This is faked data to test duplicate names with different types.
