@@ -25,6 +25,9 @@ mysql -u ensro -P3306 -hens-genomics2 -BN -e"select display_label from regulator
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.3  2010-07-09 08:52:38  dkeefe
+ corrected SQL for cell line selection
+
  Revision 1.2  2010-07-01 14:54:10  dkeefe
  refined SQL for cell line selection
 
@@ -72,18 +75,20 @@ if ($ARGV[0]){
 # get configuration from environment variables
 &config; # this may fail but config can be on command line
 
-my $func_db = 'dk_encode_catalog_21_34d';# default, can be overridden by args
+my $func_db = '';# default, can be overridden by args
 &process_arguments;
+
+$release = &get_release_from_dbname($func_db);
 
 # hook up with the server
 my $dbh = &make_contact($func_db);
 my $dbu = DBSQL::Utils->new($dbh);
 
 my @sql;
-&execute($dbh,@sql);
+#&execute($dbh,@sql);
 
 #my $cells_ref = $dbh->selectcol_arrayref("select name from cell_type;");
-my $reg_sets_aaref = $dbh->selectall_arrayref("select name, feature_set_id from feature_set where  type = 'regulatory' and name like '%:%' and name not like '%\_v%' and name not like '%MultiCell%'");
+my $reg_sets_aaref = $dbh->selectall_arrayref("select name, feature_set_id from feature_set where  type = 'regulatory' and name like '%:%' and name not like '%\\_v%' and name not like '%MultiCell%'");
 my @good_sets;
 
 foreach my $set_ref (@$reg_sets_aaref){
@@ -91,7 +96,7 @@ foreach my $set_ref (@$reg_sets_aaref){
     my $label_length = $dbu->get_count("select length(binary_string) from regulatory_feature where feature_set_id = ".$set_ref->[1]);
 
     my $cell;
-    if($label_length > 2){
+    if($label_length >= 2){
 	($cell) = $set_ref->[0] =~ /RegulatoryFeatures:(.*)/;
 	push @good_sets,$cell;
     }
@@ -127,6 +132,7 @@ foreach my $cell (@good_sets){
 }
 
 
+# just in case anything else needs doing
 foreach my $cell (@good_sets){
     my $work_db =  "dk_funcgen_classify_$release"."_$cell";
 
@@ -139,6 +145,15 @@ exit;
 
  
 ###################################################################
+sub get_release_from_dbname{
+    my ($name) = @_;
+
+    my @field = split('_',$name);
+
+    return $field[($#field -1)];
+}
+
+
 
 sub backtick{
     my $command = shift;
@@ -248,11 +263,11 @@ sub get_names_from_file{
 
 sub config{
  
-($user =     $ENV{'ENSMARTUSER'}) or return(0); # ecs1dadmin
-($password = $ENV{'ENSMARTPWD'}) or return(0); #
-($host   =   $ENV{'ENSMARTHOST'}) or return(0); #localhost
-($port =     $ENV{'ENSMARTPORT'}) or return(0); #3360
-($driver  =  $ENV{'ENSMARTDRIVER'}) or return(0); #mysql
+($user =     $ENV{'ENSFGUSER'}) or return(0); # ecs1dadmin
+($password = $ENV{'ENSFGPWD'}) or return(0); #
+($host   =   $ENV{'ENSFGHOST'}) or return(0); #localhost
+($port =     $ENV{'ENSFGPORT'}) or return(0); #3360
+($driver  =  $ENV{'ENSFGDRIVER'}) or return(0); #mysql
  
 }
    
