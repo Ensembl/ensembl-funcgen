@@ -1,4 +1,4 @@
-#!/usr/local/ensembl/bin/perl
+#!/usr/local/ensembl/bin/perl -w
 
 =head1 DESCRIPTION
 
@@ -6,7 +6,7 @@ PWM to genome mapper for routine use by Funcgen.
 
 Uses (a slightly modified) find_pssm_dna C++ program from the MOODS suite as the search engine.
 
-Input comprises a fasta file of DNA sequences and a list of jaspar format pfm files and their associated matrix_list.txt file.
+Input comprises a fasta file of DNA sequences and a list of jaspar format pfm files and their associated matrix_list.txt file. The input file is split using the fastaexplode program from the Exonerate suite (http://www.ebi.ac.uk/~guy/exonerate/).
 
 Output is a bed style, tab separated file but with 1-based rather than 0 based coordinates.
 
@@ -47,7 +47,7 @@ in the output.
 
 
 
-The amount of memory required by find_pssm_dna depends on the number of mappings which will be generated. Initially this is unpredictable, so it is wise to allow plenty of memory. Trial and error suggests that 15G is sufficient for chr1 and several hundred PWMs at a probability threshold of 0.001.
+The amount of memory required by find_pssm_dna depends on the number of mappings which will be generated. Initially this is unpredictable, so it is wise to allow plenty of memory. Trial and error suggests that 15G is sufficient for the human genome and several hundred PWMs at a probability threshold of 0.001.
 
 
 Extra blank lines or trailing tabs in pfm files cause the error :-
@@ -62,21 +62,40 @@ rm -f bsub* ; bsub -q long -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[
 
 pwm_genome_map.pl -g short_seqs.fa -a GRCh37 -o /lustre/scratch103/ensembl/dkeefe/jaspar_pwm_genome_map.out -t transfac examples/data/matrix/transfac32/matrix.dat 
 
-bsub -q normal -o bsub_out_jasp -e bsub_err_jasp -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o JASPAR_CORE_v_GRCh37_all.tab -p 0.001 /data/blastdb/Ensembl/funcgen/pwm/JASPAR_CORE_Oct2009/vertebrates/*.pfm
+bsub -q normal -o bsub_out_jasp -e bsub_err_jasp -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked.fasta -a GRCh37 -o JASPAR_CORE_v_GRCh37_all.tab -p 0.001 /data/blastdb/Ensembl/funcgen/pwm/JASPAR_CORE_Oct2009/vertebrates/*.pfm
 
-bsub -q normal -o bsub_out_tfac -e bsub_err_tfac -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o transfac32_v_GRCh37_all.tab -p 0.001  -t transfac /nfs/users/nfs_d/dkeefe/src/moods/MOODS/examples/data/matrix/transfac32/matrix.dat
+bsub -q normal -o bsub_out_tfac -e bsub_err_tfac -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa -a GRCh37 -o transfac32_v_GRCh37_all.tab -p 0.001  -t transfac /data/blastdb/Ensembl/funcgen/pwm/transfac32/matrix.dat
+
+
+    bsub -q normal -o bsub_out_tfac -e bsub_err_tfac -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 pwm_genome_map.pl -g /lustre/scratch103/ensembl/funcgen/bwa_indexes/MUS_MUSCULUS/mus_musculus_male_NCBIM37_unmasked.fasta -a NCBIM37 -o transfac32_v_NCBIM37_all.tab  -p 0.001  -t transfac /data/blastdb/Ensembl/funcgen/pwm/transfac32/matrix.dat
+
+
+
 
 =head1 SEE ALSO
+    
+mysql -u ensro -hens-genomics2 -P3306 -BN -e"select name from feature_type where class in( 'Transcription Factor','Insulator')" dev_homo_sapiens_funcgen_58_37c
 
-mysql -u ensadmin -p -hens-genomics2 -P3306 -BN -e"select name from feature_type where class = 'Transcription Factor'" dev_homo_sapiens_funcgen_58_37c
+mysql -u ensro -hens-genomics1 -P3306 -BN -e"select name from feature_type where class in( 'Transcription Factor','Insulator') " dev_mus_musculus_funcgen_59_37l
+
+
 
 # to get peak coords
 
-select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '58_37c' and fs.cell_type_id = ct.cell_type_id and ft.name = 'Srf' ;
+mysql -u ensro -hens-genomics2 -P3306 -BN -e"select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '58_37c' and fs.cell_type_id = ct.cell_type_id and ft.name = 'Srf'" dev_homo_sapiens_funcgen_58_37c 
+
+
+mysql -u ensro -hens-genomics1 -P3306 -BN -e"select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '58_37k' and fs.cell_type_id = ct.cell_type_id and ft.name = 'Cmyc'" dev_mus_musculus_funcgen_59_37l
+
+
+
 
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.3  2010-06-09 13:37:18  dkeefe
+ updated to use jaspar filenames with version numbers
+
  Revision 1.2  2010-05-24 13:30:54  dkeefe
  added option to use PWMs from Transfac matrix.dat file.
 
@@ -90,6 +109,8 @@ select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name fr
 add perl implementation of fastaexplode
 
 remove unused code
+
+maybe collate output into one file per PWM
 
 =cut
 
@@ -183,15 +204,17 @@ else{
     die "Can only handle Jaspar and Transfac formats at present\n";
 }
 
-#exit;
+
 
 # we need to explode the genome.fasta file into individual sequences.
 # and if abbreviated chr names have been requested change the file names
 # as these are used in the output file
-$verbose = 2;
+# also if the sequences contain characters other than [acgtnACGTN] they need
+# to be converted to N otherwise find_pssm_dna outputs the wrong coords.
+#$verbose = 2;
 my @chr_files = &explode_genome_fasta($genome_file,$work_dir.'genome',$assembly);
 
-
+exit;
 
 # now we map all the PWMs to each genomic sequence
 foreach my $chr_file (@chr_files){
@@ -203,22 +226,21 @@ foreach my $chr_file (@chr_files){
     #print $command."\n";
     &backtick("$command");
     &parse_out_2_tab($out,$tab,$work_dir."matrix_list.txt",\%file_max_score);
-    &backtick("rm -f $out");
-    &backtick("rm -f $chr_file");
+    #&backtick("rm -f $out");
+    #&backtick("rm -f $chr_file");
 }
 
 
 # collate individual .tab files into the specified output file
-# optionally reduce chromosome name to chr_name as in ensemble db
-
 my $command = "cat $work_dir/genome/*.tab > $outfile ";
 &backtick($command);
 
-$command = "cut -f4 $outfile | sort| uniq -c > $work_dir"."pwm_mapping_counts_".$pwm_type;
-&backtick($command);
+# count how many mappings we got for each matrix
+#$command = "cut -f4 $outfile | sort| uniq -c > $work_dir"."pwm_mapping_counts_".$pwm_type;
+#&backtick($command);
 
-
-#`rm -rf $work_dir`;
+# tidy up
+`rm -rf $work_dir`;
 exit;
 
 
@@ -267,17 +289,21 @@ sub matrix_min_max{
     }
 
 
-    # jaspar IDs can be MA for core, CN for CNE and PF for PHYLOFACTS
+    # jaspar IDs can be MA for core, CN for CNE and PB and PF for PHYLOFACTS 
     # our own PWM IDs are FG
-    my($matrix_id) = $file =~ /.*([MPCF][AFNG][0-9]+).pfm/;
-    #print $file."\n".$matrix_id."\n";
-
+    my($matrix_id) = $file =~ /.*([MPCF][AFNGBHL][0-9]+).[1-9].pfm/;
+    print $file."\n".$matrix_id."\n";
+    unless($matrix_id){die "problem parsing matrix name $file"}
 
     my($min_pos,@sums) = &get_max_add(@new_mat);
     return($min_pos,$sums[0]);
 
 }
 
+
+
+# this doesn't do exactly the same as find_pssm_dna cos the latter does some
+# approximating to allow the use of integer arithmetic.
 sub get_max_add{
     my @mat = @_;
 
@@ -455,12 +481,19 @@ sub parse_out_2_tab{
 
 # get the individual sequences from the genome file and put them in files
 # which have the fasta id as their name and an extension of .fa
+# optionally reduce chromosome name to chr_name as in ensembl databases
 # returns the list of files produced or dies
 sub explode_genome_fasta{
     my($genome_file,$target_dir,$assembly) = @_;
     &commentary("exploding $genome_file to $target_dir") if $verbose;
 
-    my $res = &backtick("which fastaexplode");
+
+    my $res = &backtick("which fastaclean");
+    if($res =~ 'not found'){
+	die "Need to implement fastaclean functionality here";
+    }
+
+    $res = &backtick("which fastaexplode");
     if($res =~ 'not found'){
 	die "Need to implement fastaexplode functionality here";
     }else{
@@ -488,11 +521,21 @@ sub explode_genome_fasta{
 	    $name =~ s/:[0-9:]*//;
 	    my $path = dirname $file_path;
 	    my $new = $path.'/'.$name;
-	    my $command = "mv $file_path $new";
+	    my $command = "fastaclean -a -f $file_path > $new ; rm -f $file_path";
 	    &backtick($command);
 	    push @short_names, $new;
 	}
 	return @short_names;
+    }else{
+	foreach my $file_path (@lines){
+        # just do fastaclean
+	    my $path = dirname $file_path;
+	    my $new = $path.'/tmp';
+	    my $command = "fastaclean -a -f $file_path > $new ;".
+                      " rm -f $file_path ;mv $new $file_path";
+	    &backtick($command);
+	}
+
     }
 
 
@@ -533,12 +576,12 @@ sub rev_comp_matrix{
     if($rows > 4){ die "too many rows in file $file" }
     close(IN); 
 
-    # jaspar IDs can be MA for core, CN for CNE and PF for PHYLOFACTS
+    # jaspar IDs can be MA for core, CN for CNE, PB, PH and PF for PHYLOFACTS
     # our own PWM IDs are FG
     #my($matrix_id) = $file =~ /.*([MPCF][AFNG][0-9]+).pfm/;
-    my($matrix_id,$version) = $file =~ /.*([MPCF][AFNG][0-9]+).([0-9]*).pfm/;
+    my($matrix_id,$version) = $file =~ /.*([MPCF][AFNGBHL][0-9]+).([0-9]*).pfm/;
     print $file."\n".$matrix_id." $version\n";
-
+    unless($matrix_id){die "problem parsing matrix name $file"}
  
 
     my $rc_file = $work_dir.$matrix_id.'rc.'.$version.'.pfm';
@@ -562,7 +605,7 @@ sub rev_comp_matrix{
     #$field[0] .= 'rc';
     $field[0] = $matrix_id.'rc.'.$version;
     $res = join("\t",@field);
-    print $res."\n";
+    #print $res."\n";
     open(OUT, ">> $work_dir"."matrix_list.txt") or 
         die "failed to open $work_dir"."matrix_list.txt for appending";
     print OUT $res."\n" or die "failed to write to  $work_dir".
@@ -600,6 +643,8 @@ sub find_matrix_txt{
 }
 
 
+# makes shell execute command and checks for errors
+# returns the output of the command unprocessed
 sub backtick{
     my $command = shift;
 
@@ -685,8 +730,11 @@ sub process_arguments{
 
     if (exists $opt{g}){
         $genome_file = $opt{g};
-    }  
-
+    } 
+ 
+    if (exists $opt{i}){
+        $infile = $opt{i};
+    }
 
     if (exists $opt{t}){
         $pwm_type = lc( $opt{t} );
@@ -718,10 +766,9 @@ sub help_text{
                   [-h] for help
                   [-a] <assembly_version> eg GCRh37 as used in full chr. name
                   [-t] <pwm_type> 'jaspar'=default, 'transfac' 
-                  [-p] <probability> threshold for moods mapper default=0.0001
+                  [-p] <probability> threshold for moods mapper default=0.001
                    -g  <file_name> genome fasta file
                    -o  <output file> - name of a file for output
-                  [-i] <input file> - name of a file for input
                   [-v] <integer> verbosity level
                   [-s] <species> eg -smus_musculus, default = homo_sapiens  
                   [-w] <dir_name> path of a (spacious) working directory  
@@ -731,7 +778,7 @@ sub help_text{
 
 
 END_OF_TEXT
-
+#                  [-i] <input file> - list of TFs with thresholds
 
     if($msg){
         exit(1);
