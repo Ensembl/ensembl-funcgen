@@ -1,15 +1,7 @@
-# EnsEMBL External object reference reading writing adaptor for mySQL
-#
-# Copyright EMBL-EBI 2001
-#
-# Author: Arne Stabenau
-# 
-# Date : 06.03.2001
-#
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::DBEntryAdaptor -
+Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor -
 MySQL Database queries to load and store external object references.
 
 =head1 SYNOPSIS
@@ -36,8 +28,8 @@ use Bio::EnsEMBL::DBSQL::DBEntryAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 
 use Bio::EnsEMBL::DBEntry;
-use Bio::EnsEMBL::IdentityXref;
-use Bio::EnsEMBL::GoXref;
+#use Bio::EnsEMBL::IdentityXref;
+#use Bio::EnsEMBL::OntologyXref;
 
 use Bio::EnsEMBL::Utils::Exception qw(deprecate throw warning);
 
@@ -47,7 +39,9 @@ use strict;
 @ISA = qw( Bio::EnsEMBL::DBSQL::DBEntryAdaptor Bio::EnsEMBL::DBSQL::BaseAdaptor);
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
+
 =head2 fetch_all_by_FeatureType
+
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType $feature_type 
                (The feature type to retrieve DBEntries for)
@@ -76,6 +70,11 @@ sub fetch_all_by_FeatureType {
 
   return $self->_fetch_by_object_type($feature_type->dbID(), 'FeatureType', $ex_db_reg, $exdb_type);
 }
+
+
+#Change these to take arrayref of external_names?
+#This would allow gene based queries to retrieve all
+#associated transcript xref'd DBEntries at the same time
 
 
 =head2 list_feature_type_ids_by_extid
@@ -547,6 +546,46 @@ sub _type_by_external_db_id{
     }
   }
   return @result;
+}
+
+#Placeholders to catch error from inherited methods
+#These now work in reverse as the Gene/Transcript/Translation 
+#is the xref not the ensembl_object as with the core code
+
+sub fetch_all_by_Gene {
+  my ( $self, $gene) = @_;
+ 
+  if(! (ref($gene) && $gene->isa('Bio::EnsEMBL::Gene'))) {
+    throw("Bio::EnsEMBL::Gene argument expected.");
+  }
+
+  throw('Not yet implemented for eFG,  maybe you want the core DBEntryAdaptor?');
+  
+
+  #This is going to be a bit of a work around as we should really have a separate fetch method
+  #fetch_all_by_external_name_object_type?
+  #No!! Because this simply pulls back the xrefs, not the object xrefs!!
+  #This is the same for the fetch_by_dbID method???
+
+  #_fetch_by_external_id
+  #The problem here is that we want to return ox info aswell.
+  #Just rewrite _fetch_by_object_type?
+}
+
+
+sub fetch_all_by_Transcript {
+  my ( $self, $trans) = @_;
+
+  throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');
+
+  return;
+}
+sub fetch_all_by_Translation {
+  my ( $self, $trans) = @_;
+  
+  throw('Not implemented in eFG, maybe you want the core DBEntryAdaptor?');
+  
+  return;
 }
 
 
