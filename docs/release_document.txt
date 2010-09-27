@@ -28,7 +28,6 @@ validated, but not black list filtered. This should be kept until the subsequent
 (This is not maintainble, as we would have to maintain pre DBs for every release where we load new data).
 
 
-
 3	Build	e.g. build_homo_sapiens_funcgen_55_37
 
 This is the backup name once the reg build has been created. Annotation to be performed on dev DB before migration to 
@@ -127,6 +126,9 @@ It is these core regions which are required by the variants for calling conseque
 Run build_regulatory_features.pl. Generate reports and validate output.  Investigate long RFs?
 Validate meta data
 Other QC?
+
+
+Create 'build' back up before stable ID mapping.
 Stable ID mapping (no annotation required yet) - scripts/run_stable_id_mapper.sh ? This can be done last before final handover?
 
 
