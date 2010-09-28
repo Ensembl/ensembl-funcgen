@@ -1,6 +1,6 @@
 # patch_59_60_h.sql
 #
-# Title: annotated_motif_feature.index_tweaks
+# Title: af_amf.index_tweaks
 #   
 #
 # Description:
@@ -16,4 +16,4 @@ OPTIMIZE TABLE annotated_feature;
 
 # Insert patch identifier.
 INSERT INTO meta (species_id, meta_key, meta_value)
-  VALUES (NULL, 'patch', 'patch_59_60_h.sql|annotated_motif_feature.index_tweaks');
+  VALUES (NULL, 'patch', 'patch_59_60_h.sql|af_amf.index_tweaks');
