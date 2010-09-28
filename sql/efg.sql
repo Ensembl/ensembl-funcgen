@@ -745,9 +745,9 @@ CREATE TABLE `annotated_feature` (
   `feature_set_id` int(10) unsigned NOT NULL,
   `summit` int(10) unsigned default NULL,
   PRIMARY KEY  (`annotated_feature_id`),
-  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
+  UNIQUE KEY `seq_region_feature_set_idx` (`seq_region_id`,`seq_region_start`,`feature_set_id`),
   KEY `feature_set_idx` (`feature_set_id`)	  
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
 
@@ -777,7 +777,8 @@ CREATE TABLE `motif_feature` (
 CREATE TABLE `associated_motif_feature` (
    `annotated_feature_id` int(10) unsigned NOT NULL,
    `motif_feature_id` int(10) unsigned NOT NULL,
-   PRIMARY KEY  (`annotated_feature_id`, `motif_feature_id`)
+   PRIMARY KEY  (`annotated_feature_id`, `motif_feature_id`),
+   KEY `motif_feature_idx` (`motif_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
