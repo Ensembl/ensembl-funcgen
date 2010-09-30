@@ -41,27 +41,22 @@ RegulatoryFeature objects.
 =head1 METHODS
 
 The rest of the documentation details each of the object methods. Internal
-methods are usually preceded with a _
+methods are preceded with an underscore e.g. _method
 
 
 =cut
 
 
-
+package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor;
 
 use strict;
 use warnings;
-
-package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
-
-
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor); #@ISA
+#change to parent with perl 5.10
 
 =head2 _get_current_FeatureSet
 
@@ -296,13 +291,14 @@ sub _objs_from_sth {
   #Hence it should always be on the same coord system
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-  my (@features, @reg_attrs, $seq_region_id);
+  my (@features, $seq_region_id);
   my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
   my $skip_feature = 0;
   
   my %feature_adaptors = (
 						  'annotated' => $self->db->get_AnnotatedFeatureAdaptor,
-						  'external'  => $self->db->get_ExternalFeatureAdaptor,
+						  'motif'     => $self->db->get_MotifFeatureAdaptor,
+						  #external
 						 );
   
   my $stable_id_prefix = $self->db->stable_id_prefix;
@@ -353,38 +349,40 @@ sub _objs_from_sth {
 	}
 
   my $slice;
-	
+  my %reg_attrs = (
+				   annotated => [],
+				   motif     => [],
+				   #external
+				  );
+
+  #Change this to use attr_cache instead so we are not loading the attrs until we absolutely need them.
 
   FEATURE: while ( $sth->fetch() ) {
 
 	  if(! $reg_feat || ($reg_feat->dbID != $dbID)){
-	
-
+		
 		if($skip_feature){
 		  undef $reg_feat;#so we don't duplicate the push for the feature previous to the skip feature
 		  $skip_feature = 0;
 		}
 
-		if($reg_feat){
-		  
-		  $reg_feat->regulatory_attributes(\@reg_attrs);# if @reg_attrs;
+		
+
+		if($reg_feat){   #Set the previous attr cache and reset
+		  $reg_feat->attribute_cache(\%reg_attrs);
 		  push @features, $reg_feat;
-		  undef @reg_attrs;
 
+		  %reg_attrs = (
+						annotated => [],
+						motif     => [],
+						#external
+					   );
 		}
-
-		#Hack to get not NUL 0 autoinserted values to work
-		$bound_seq_region_start = undef if ! $bound_seq_region_start;
-		$bound_seq_region_end   = undef if ! $bound_seq_region_end;
-
-
-	    #Need to build a slice adaptor cache here?
-	    #Would only ever want to do this if we enable mapping between assemblies??
-	    #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
+	
+	    #Would need to build a slice adaptor cache here to enable mapping between assemblies
+	    #Or if mapping between cs systems for a given schema_build
+		#which would have to be handled by the core api
 	    
-		#this should only be done once for each regulatory_feature_id
-		
-		
 		#get core seq_region_id
 		$seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 
@@ -456,7 +454,6 @@ sub _objs_from_sth {
 			  #if as we never have a seq_region start of 0;
 			  $bound_seq_region_start = $bound_seq_region_start - $dest_slice_start + 1 if $bound_seq_region_start;
 			  $bound_seq_region_end   = $bound_seq_region_end   - $dest_slice_start + 1 if $bound_seq_region_end;
-			  
 			} 
 			else {
 			  my $tmp_seq_region_start       = $seq_region_start;
@@ -516,11 +513,18 @@ sub _objs_from_sth {
 	  #populate attributes array
 	  if(defined $attr_id  && ! $skip_feature){
 
+		push @{$reg_attrs{$attr_type}}, $attr_id;
+
+
+		### MOVE THIS TO RegualtoryFeature::regulatory_attributes
+		# This reslicing is now all done by passing the slice to fetch_all_by_dbID_list 
+		# when lazy loading
+
 		#These will all be fetched on their native slice, not necessarily the slice we have fetched this
 		#reg feature on, hence we need to map the features to the current slice
 		#otherwise the bounds may get messed up
 
-		my $attr = $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
+		#my $attr = $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
 		#No $attr here means the supporting attribute features have been removed
 		#Should never happen in release DB.
 
@@ -529,25 +533,26 @@ sub _objs_from_sth {
 		#This is not redefining the slice, so we may get minus start values
 		#grab the seq_region_start/ends here first
 		#as resetting directly causes problems
-		my $attr_sr_start = $attr->seq_region_start;
-		my $attr_sr_end = $attr->seq_region_end;
- 		$attr->slice($slice);
+		#my $attr_sr_start = $attr->seq_region_start;
+		#my $attr_sr_end = $attr->seq_region_end;
+ 		#$attr->slice($slice);
 
-		if($slice->strand ==1){
-		  $attr->start($attr_sr_start - $slice->start +1);
-		  $attr->end($attr_sr_end - $slice->start +1);	
-		}else{
-		  $attr->start($slice->end - $attr_sr_end +1);
-		  $attr->end($slice->end - $attr_sr_start +1);	
-		}
+		#if($slice->strand ==1){
+		#  $attr->start($attr_sr_start - $slice->start +1);
+		#  $attr->end($attr_sr_end - $slice->start +1);	
+		#}else{
+		#  $attr->start($slice->end - $attr_sr_end +1);
+		#  $attr->end($slice->end - $attr_sr_start +1);	
+		#}
 		
-		push @reg_attrs, $attr;
+		#push @reg_attrs, $attr;
 	  }
 	}
 
   #handle last record
   if($reg_feat){
-	$reg_feat->regulatory_attributes(\@reg_attrs);
+
+	$reg_feat->attribute_cache(\%reg_attrs);
 	push @features, $reg_feat;
   }
 
@@ -641,10 +646,10 @@ sub store{
 	($rf, $seq_region_id) = $self->_pre_store($rf);
 	$rf->adaptor($self);#Set adaptor first to allow attr feature retreival for bounds
 	#This is only required when storing
+
+
 	#Actually never happens, as we always assign stable_ids after storing
-
 	($sid = $rf->stable_id) =~ s/ENS[A-Z]*R0*// if defined $rf->stable_id;
-
 
 	$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
 	$sth->bind_param(2, $rf->start(),               SQL_INTEGER);
@@ -659,19 +664,20 @@ sub store{
 	$sth->bind_param(11, $rf->binary_string,        SQL_VARCHAR);
 	$sth->bind_param(12, $rf->is_projected,         SQL_BOOLEAN);
 
+	#Store and set dbID
 	$sth->execute();
 	$rf->dbID( $sth->{'mysql_insertid'} );
 
-	my $table_type;
-	my %attrs = %{$rf->_attribute_cache()};
 
-	foreach my $table(keys %attrs){
-	  ($table_type = $table)  =~ s/_feature//;
+	#Store regulatory_attributes
+	my %attrs = %{$rf->attribute_cache};
 
-	  foreach my $id(keys %{$attrs{$table}}){
+	foreach my $fclass(keys %attrs){
+	
+	  foreach my $feat(@{$attrs{$fclass}}){
 		$sth2->bind_param(1, $rf->dbID,   SQL_INTEGER);
-		$sth2->bind_param(2, $id,         SQL_INTEGER);
-		$sth2->bind_param(3, $table_type, SQL_VARCHAR);
+		$sth2->bind_param(2, $feat->dbID, SQL_INTEGER);
+		$sth2->bind_param(3, $fclass,     SQL_VARCHAR);
 		$sth2->execute();
 	  }
 	}
