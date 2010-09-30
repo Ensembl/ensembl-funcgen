@@ -473,7 +473,7 @@ sub list_dbIDs {
 }
 
 
-=head2 fetch_focus_set_config_by_dbID
+=head2 fetch_focus_set_config_by_FeatureSet
 
   Args       : Bio::EnsEMBL::Funcgen::FeatureSet
   Example    : $self->{'focus_set'} = $self->adaptor->fetch_focus_set_config_by_FeatureSet($self);
@@ -497,7 +497,7 @@ sub fetch_focus_set_config_by_FeatureSet{
 	  #list_value_by_key caches, so we don't need to implement this in the adaptor
 	  my ($focus_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
 
-	  if(! $focus_ids){
+	  if(! defined $focus_ids){
 		warn("Cannot detect focus set as meta table does not contain $meta_key");
 	  }
 	  else{
