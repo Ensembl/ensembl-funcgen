@@ -220,5 +220,65 @@ sub is_focus_feature{
 }
 
 
+=head2 get_underlying_structure
+
+  Example    : my @loci = @{ $af->get_underlying_structure() };
+  Description: Returns and array of loci consisting of:
+                  (start, (motif_feature_start, motif_feature_end)*, end)
+  Returntype : ARRAYREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk - This is TFBS specific and could move to TranscriptionFactorFeature
+
+=cut
+
+#This should really be precomputed and stored in the DB to avoid the MF attr fetch
+#Need to be aware of projecting here, as these will expire if we project after this method is called
+
+sub get_underlying_structure{
+  my $self = shift;
+
+  if(! defined $self->{underlying_structure}){
+	my @loci = ($self->start);
+	
+	foreach my $mf(@{$self->get_associated_MotifFeatures}){
+	  push @loci, ($mf->start, $mf->end);
+	}
+
+	push @loci, $self->end;
+	
+	$self->{underlying_structure} = \@loci;
+  }
+
+  return $self->{underlying_structure};
+}
+
+=head2 get_associated_MotifFeatures
+
+  Example    : my @assoc_mfs = @{ $af->get_associated_MotifFEatures };
+  Description: Returns and array associated MotifFeature i.e. MotifFeatures
+               representing a relevanting PWM/BindingMatrix
+  Returntype : ARRAYREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk - This is TFBS specific and could move to TranscriptionFactorFeature
+
+=cut
+
+sub get_associated_MotifFeatures{
+  my ($self) = @_;
+
+  if(! defined $self->{'assoc_motif_features'}){
+	my $mf_adaptor = $self->adaptor->db->get_MotifFeatureAdaptor;
+	
+	#These need reslicing!
+	
+	$self->{'assoc_motif_features'} = $mf_adaptor->fetch_all_by_AnnotatedFeature($self, $self->slice);
+  }
+
+  return $self->{'assoc_motif_features'};
+}
+
+
 1;
 
