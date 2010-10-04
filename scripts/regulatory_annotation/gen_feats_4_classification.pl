@@ -36,6 +36,9 @@ edit the file ~dkeefe/dbs/current_core or  ~dkeefe/dbs/current_mouse_core to poi
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.7  2010-04-01 12:29:57  dkeefe
+ updates for use with species other than human
+
  Revision 1.6  2010-02-12 10:29:53  dkeefe
  check in test
 
@@ -220,15 +223,16 @@ if($do_go){
 
 
 
-POST_IMPORT:
+#POST_IMPORT:
 
 # create transcript-based feature tables
 &transcript_features($dbh);
 
 
-#POST_IMPORT:
+POST_IMPORT:
 &repeat_features($dbh,$dbu,$do_repeats);
 #&repeat_features_old_version($dbh,$dbu,$do_repeats); # for contig coords
+
 
 
 if($dbu->table_exists('de_ferrari_gene_classification')){
@@ -237,12 +241,17 @@ if($dbu->table_exists('de_ferrari_gene_classification')){
 
 #POST_IMPORT:
 &gene_features($dbh);
+&PolIII_features($dbh);
+
+ 
+
 &exon_features($dbh);
+
 
 POST_EXON:
 
 &intergenic_features($dbh,$dbu);
-#&cage_ditag_transcript_tss($dbh,$dbu);
+&cage_ditag_transcript_tss($dbh,$dbu);
 POST_DITAG:
 &karyotype_features($dbh,$dbu);
 POST_KARYOTYPE:
@@ -272,6 +281,28 @@ exit;
 
  
 ###################################################################
+
+# ensembl doesn't have tRNAs as genes so we have to get them from the 
+# repeat_features, plus a few other things
+sub PolIII_features{
+    my($dbh) = @_;
+
+    my @sql;
+    push @sql, "insert into PolIII_transcribed_gene select * from all_repeats where feature_type = 'PolIII_transcribed_repeat'";
+    push @sql, "insert into PolIII_transcribed_gene select * from all_repeats where feature_type = 'tRNA_repeat'";
+
+
+    push @sql, "drop table if exists PolIII_transcribed_gene_plus_enhancer";
+    push @sql, "create table PolIII_transcribed_gene_plus_enhancer select  seq_region_id, seq_region_name,feature_id, 'PolIII_transcribed_gene_plus_enhancer' as feature_type,if(feature_strand = 1,feature_start-2500,feature_start) as feature_start, if(feature_strand = 1,feature_end,feature_end +2500) as feature_end, feature_strand from PolIII_transcribed_gene";
+
+#push @sql, "create table PolIII_transcribed_gene_plus_enhancer select  seq_region_id, seq_region_name,feature_id, feature_type as feature_type,if(feature_strand = 1,feature_start-2500,feature_start) as feature_start, if(feature_strand = 1,feature_end,feature_end +2500) as feature_end, feature_strand from PolIII_transcribed_gene";
+
+    push @sql,&col_types_and_indices('PolIII_transcribed_gene_plus_enhancer');
+
+
+    &execute($dbh,@sql) or die;
+}
+
 sub make_sources_table{
     my($dbh,$core_db) = @_;
 
@@ -452,7 +483,14 @@ and f.seq_region_id = asm_sr.seq_region_id ";
         # now add the repeat type 
         push @sql,"drop table if exists all_repeats";
         push @sql,"create table all_repeats select t1.chromosome_id as seq_region_id,t1.chr_name as seq_region_name,repeat_feature_id as feature_id,concat(rc.repeat_class,'_repeat') as feature_type,chr_start as feature_start,chr_end as feature_end , 0 as feature_strand from $temp1 t1, repeat_consensus rc where rc.repeat_consensus_id = t1.repeat_consensus_id ";
+        # we want the U6 snRNA, 5S rRNA, 7SLRNA etc separately for pol3 transcribed regions
+        push @sql,"insert into all_repeats select t1.chromosome_id as seq_region_id,t1.chr_name as seq_region_name,repeat_feature_id as feature_id,'PolIII_transcribed_repeat' as feature_type,chr_start as feature_start,chr_end as feature_end , 0 as feature_strand from $temp1 t1, repeat_consensus rc where rc.repeat_consensus_id = t1.repeat_consensus_id and rc.repeat_name in ('U6','5S','7SLRNA','7SK') ";
+
+
 	push @sql, "alter table all_repeats add index(feature_type)";
+
+
+
         #push @sql,&col_types_and_indices("all_repeats");
         push @sql,"drop table $temp1";
 
@@ -468,13 +506,15 @@ and f.seq_region_id = asm_sr.seq_region_id ";
     }
 
 
-    unless($all_repeats){$aref = ['Satellite_repeat','Satellite/centr_repeat'] }
+    unless($all_repeats){$aref = ['Satellite_repeat','Satellite/centr_repeat','LTR/ERV1_repeat','LTR/MaLR_repeat','SINE/Alu_repeat' ] }
 
     @sql = ();
     foreach my $type (@$aref){
         @sql = ();
 	my $table = $type;
 	$table =~ tr/\//_/;
+	$table =~ tr/-/_/;
+	$table =~ tr/?/_/;
 	push @sql,"drop table if exists $table";
 	push @sql,"create table $table select * from all_repeats where feature_type = '$type'";
 	push @sql,"update $table set feature_type = '$table'";
@@ -908,7 +948,10 @@ sub cage_ditag_transcript_tss{
     push @sql, "drop table if exists $temp1";
     push @sql, "create table $temp1 select f.seq_region_id,sr.name as seq_region_name,if(f.seq_region_strand = 1,f.seq_region_start,f.seq_region_end) as feature_start,f.seq_region_strand as feature_strand from transcript f , seq_region sr where sr.seq_region_id = f.seq_region_id and f.biotype not like '%pseudogene%' and f.biotype not in('repeat','retrotransposed')";
 
-    push @sql, "insert into $temp1  select f.seq_region_id,sr.name as seq_region_name,if(f.seq_region_strand = 1,f.seq_region_start,f.seq_region_end) as feature_start,f.seq_region_strand from ditag_feature f , seq_region sr where sr.seq_region_id = f.seq_region_id";
+
+    if($dbu->table_exists("ditag_feature")){
+        push @sql, "insert into $temp1  select f.seq_region_id,sr.name as seq_region_name,if(f.seq_region_strand = 1,f.seq_region_start,f.seq_region_end) as feature_start,f.seq_region_strand from ditag_feature f , seq_region sr where sr.seq_region_id = f.seq_region_id";
+    }
 
     my $temp2 = &new_temp();
     push @sql, "drop table if exists $temp2";
@@ -934,6 +977,14 @@ push @sql,"alter table tss_downstream_500 add column feature_id int(10) not null
     push @sql, "create table tss_centred_500 select seq_region_id,seq_region_name,feature_start-250 as feature_start,feature_start+250 as feature_end,feature_strand,'tss_centred_500' as feature_type from $temp2";
 push @sql,"alter table tss_centred_500 add column feature_id int(10) not null auto_increment primary key";
     push @sql,&col_types_and_indices("tss_centred_500");
+
+
+
+    push @sql, "drop table if exists tss_centred_5000";
+    push @sql, "create table tss_centred_5000 select seq_region_id,seq_region_name,feature_start-2500 as feature_start,feature_start+2500 as feature_end,feature_strand,'tss_centred_5000' as feature_type from $temp2";
+push @sql,"alter table tss_centred_5000 add column feature_id int(10) not null auto_increment primary key";
+    push @sql,&col_types_and_indices("tss_centred_5000");
+
 
 
     # 
@@ -1116,9 +1167,24 @@ sub gene_features{
     push @sql,"alter table RNA_pseudogene add index(seq_region_id)";
 
 
+    push @sql,"drop table if exists lincRNA_gene";
+    push @sql,"create table lincRNA_gene select sr.seq_region_id,sr.name as seq_region_name,gene_id as feature_id,concat(biotype,'_gene') as feature_type, t.seq_region_start as feature_start,t.seq_region_end as feature_end, t.seq_region_strand as feature_strand from gene t, seq_region sr where t.seq_region_id = sr.seq_region_id and t.biotype = 'lincRNA' ";
+    push @sql,"alter table lincRNA_gene add index(seq_region_name)";
+    push @sql,"alter table lincRNA_gene add index(seq_region_id)";
+
 
     &execute($dbh,@sql) or die;
+    @sql=();
+    push @sql,"drop table if exists PolIII_transcribed_gene";
+    push @sql,"create table PolIII_transcribed_gene select * from lincRNA_gene where 1=0"; # make empty table
 
+    foreach my $desc ('Nuclear RNase P','RNase MRP','Vault','Y RNA','5S ribosomal RNA','7SK RNA',){
+	push @sql,"insert into PolIII_transcribed_gene select sr.seq_region_id,sr.name as seq_region_name,gene_id as feature_id, '$desc' as feature_type, t.seq_region_start as feature_start,t.seq_region_end as feature_end, t.seq_region_strand as feature_strand from gene t, seq_region sr where t.seq_region_id = sr.seq_region_id and t.description like '$desc".'%'."'";
+    }
+    push @sql,"alter table PolIII_transcribed_gene add index(seq_region_name)";
+    push @sql,"alter table PolIII_transcribed_gene add index(seq_region_id)";
+
+    &execute($dbh,@sql) or die;
 
 }
 
