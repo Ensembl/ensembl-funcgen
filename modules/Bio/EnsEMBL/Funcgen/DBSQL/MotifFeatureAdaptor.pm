@@ -79,6 +79,7 @@ my $final_clause = $true_final_clause;
 =head2 fetch_all_by_AnnotatedFeature
 
   Arg [1]    : Bio::EnsEMBL::AnnotatedFeature
+  Arg [2]    : optional - Bio::EnsEMBL::Slice
   Example    : my $features = $ofa->fetch_all_by_AnnotatedFeature($af);
   Description: Retrieves a list of all MotifFeatures linked to the given
                AnnotatedFeature
@@ -90,7 +91,7 @@ my $final_clause = $true_final_clause;
 =cut
 
 sub fetch_all_by_AnnotatedFeature {
-  my ($self, $feature) = @_;
+  my ($self, $feature, $slice) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $feature);
 
@@ -100,7 +101,7 @@ sub fetch_all_by_AnnotatedFeature {
   #No need for group here as we are restricting to one af
 
   $self->bind_param_generic_fetch($feature->dbID, SQL_INTEGER);
-  my $mfs = $self->generic_fetch($constraint);
+  my $mfs = $self->generic_fetch($constraint, undef, $slice);
 
   #Reset tables
   @{$tables{motif_feature}} = @{$true_tables{motif_feature}};
