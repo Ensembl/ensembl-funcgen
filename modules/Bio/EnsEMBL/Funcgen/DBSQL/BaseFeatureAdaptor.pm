@@ -811,13 +811,15 @@ sub _slice_fetch {
           " AND ${tab_syn}.seq_region_start >= $min_start";
       }
 
+
       my $fs = $self->generic_fetch($constraint,undef,$slice);
 
+	  
       # features may still have to have coordinates made relative to slice
       # start
-      $fs = _remap($fs, $mapper, $slice);
 
-      push @features, @$fs;
+      $fs = $self->_remap($fs, $mapper, $slice);
+	  push @features, @$fs;
     } 
 
 	#can't do remapping yet as AssemblyMapper expects a core CS
@@ -905,8 +907,9 @@ sub _slice_fetch {
 #We have to have this here as this is a sub not a method, hence the _remap
 #in the core BaseFeatureAdaptor is not available here
 
+
 sub _remap {
-  my ($features, $mapper, $slice) = @_;
+  my ($self, $features, $mapper, $slice) = @_;
 
   #check if any remapping is actually needed
   if(@$features && (!$features->[0]->isa('Bio::EnsEMBL::Feature') ||
@@ -973,8 +976,6 @@ sub _remap {
 
   return \@out;
 }
-
-
 
 
 =head2 fetch_all_by_stable_Feature_FeatureSets
