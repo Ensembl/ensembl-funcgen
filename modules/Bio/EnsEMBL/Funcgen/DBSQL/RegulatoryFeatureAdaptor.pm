@@ -350,8 +350,8 @@ sub _objs_from_sth {
 
   my $slice;
   my %reg_attrs = (
-				   annotated => [],
-				   motif     => [],
+				   annotated => {},
+				   motif     => {},
 				   #external
 				  );
 
@@ -373,8 +373,8 @@ sub _objs_from_sth {
 		  push @features, $reg_feat;
 
 		  %reg_attrs = (
-						annotated => [],
-						motif     => [],
+						annotated => {},
+						motif     => {},
 						#external
 					   );
 		}
@@ -513,7 +513,7 @@ sub _objs_from_sth {
 	  #populate attributes array
 	  if(defined $attr_id  && ! $skip_feature){
 
-		push @{$reg_attrs{$attr_type}}, $attr_id;
+		$reg_attrs{$attr_type}->{$attr_id} = undef;
 
 
 		### MOVE THIS TO RegualtoryFeature::regulatory_attributes
@@ -674,7 +674,7 @@ sub store{
 
 	foreach my $fclass(keys %attrs){
 	
-	  foreach my $feat(@{$attrs{$fclass}}){
+	  foreach my $feat(values %{$attrs{$fclass}}){
 		$sth2->bind_param(1, $rf->dbID,   SQL_INTEGER);
 		$sth2->bind_param(2, $feat->dbID, SQL_INTEGER);
 		$sth2->bind_param(3, $fclass,     SQL_VARCHAR);
