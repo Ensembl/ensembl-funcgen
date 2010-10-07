@@ -208,17 +208,13 @@ sub regulatory_attributes{
   #But will speed up display of the RegFeat image including the MFs
   #Redefine the cache to have class keys e.g. TFBS, OpenChromatin, Histone Mods
   #Can't do this as we need the table key to be able to fetch the features
-  #We really want something to be able to draw the image first, then create the zmenu details later.
+  #Really need something to be able to draw the image first, then create the zmenu details later.
 
   my %adaptors = (
 				  'annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
 				  'motif'     => $self->adaptor->db->get_MotifFeatureAdaptor,
 				  #external
 				 );
-
-
-  #Need to keep this unless we pass the actual features in the attr cache from build_regulatory_features.pl
-  #Currently only have dbID at time of build
 
   my @fclasses;
 
@@ -236,36 +232,57 @@ sub regulatory_attributes{
 	@fclasses = keys %adaptors;
   }
 
-
-  my $reg_attrs = $self->{'regulatory_attributes'};
-
   foreach my $fclass(@fclasses){
 
-	if( ( scalar(@{$self->{'regulatory_attributes'}{$fclass}}) > 0 ) && !
-		( ref($self->{'regulatory_attributes'}{$fclass}->[0])  &&
-		  ref($self->{'regulatory_attributes'}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )){
+	#Now structured as hash to facilitate faster has_attribute method
+	#Very little difference to array based cache
 
-	  #This uses generic_fetch and so should use _final_clause
-	  #This is currently only specified in the MotifFeatureAdaptor
-	  #as these are required to be sorted to relate to the structure string
+	my @attr_dbIDs = keys %{$self->{'regulatory_attributes'}{$fclass}};
 
-	  $self->{'regulatory_attributes'}{$fclass} =  $adaptors{$fclass}->fetch_all_by_dbID_list
-		($self->{'regulatory_attributes'}{$fclass}, $self->slice);
+	if(scalar(@attr_dbIDs) > 0){
+	  
+	  if( ! ( ref($self->{'regulatory_attributes'}{$fclass}->{$attr_dbIDs[0]})  &&
+			  ref($self->{'regulatory_attributes'}{$fclass}->{$attr_dbIDs[0]})->isa('Bio::EnsEMBL::Feature') )){
 
-	  #warn "We need to alter the start/end according to the RegF slice!!!"; 
-	  #foreach my $dbID(keys %{$self->{'regulatory_attributes'}{$fclass}}){
-	  # 
-	  #	if(! defined $self->{'regulatory_attributes'}{$table}{$dbID}){
-	  #	  $self->{'regulatory_attributes'}{$table}{$dbID} = $adaptors{$table}->fetch_by_dbID($dbID);
-	  #	#This was much faster than the fetch_all_by_dbID_list approach
-	  #	}
-	  #  }
+		my $fclass_attrs = $adaptors{$fclass}->fetch_all_by_dbID_list(\@attr_dbIDs, $self->slice);
+		#This method transfers to the query slice, do not use fetch_by_dbID
+		#It also should use _final_clause
+		#This is currently only specified in the MotifFeatureAdaptor
+		#as these are required to be sorted to relate to the structure string
+
+				
+		foreach my $attr(@{$fclass_attrs}){
+		  $self->{'regulatory_attributes'}{$fclass}{$attr->dbID} = $attr;
+		}
+	  }
 	}
   }
 
-  return [ map { @{$self->{'regulatory_attributes'}{$_}} } @fclasses ];
+  return [ map { values %{$self->{'regulatory_attributes'}{$_}} } @fclasses ];
 }
 
+=head2 has_attribute
+
+  Arg [1]    : Attribute Feature dbID
+  Arg [2]    : Attribute Feature class e.g. motif or annotated
+  Example    : if($regf->has_attribute($af->dbID, 'annotated'){ #do something here }
+  Description: Identifies whether this RegualtoryFeature has a given attribute
+  Returntype : Boolean
+  Exceptions : Throws if args are not defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub has_attribute{
+  my ($self, $dbID, $fclass) = @_;
+
+  throw('Must provide a dbID and a Feature class argument') if ! $dbID && $fclass;
+
+  return exists ${$self->attribute_cache}{$fclass}{$dbID};
+
+}
 
 =head2 get_focus_attributes
 
