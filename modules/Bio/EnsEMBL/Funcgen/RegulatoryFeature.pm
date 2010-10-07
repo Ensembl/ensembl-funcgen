@@ -252,8 +252,6 @@ sub regulatory_attributes{
 	  $self->{'regulatory_attributes'}{$fclass} =  $adaptors{$fclass}->fetch_all_by_dbID_list
 		($self->{'regulatory_attributes'}{$fclass}, $self->slice);
 
-
-
 	  #warn "We need to alter the start/end according to the RegF slice!!!"; 
 	  #foreach my $dbID(keys %{$self->{'regulatory_attributes'}{$fclass}}){
 	  # 
@@ -329,7 +327,8 @@ sub _sort_attributes{
 
   foreach my $attrf(@{$self->regulatory_attributes}){
 
-	if($attrf->feature_set->is_focus_set){
+	if($attrf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') ||
+	   $attrf->feature_set->is_focus_set){
 	  push @{$self->{'focus_attributes'}}, $attrf;
 	}
 	else{
@@ -456,6 +455,7 @@ sub is_projected {
 =cut
 
 #This should really be precomputed and stored in the DB to avoid the MF attr fetch
+#Need to be aware of projecting here, as these will expire if we project after this method is called
 
 sub get_underlying_structure{
   my $self = shift;
@@ -465,7 +465,7 @@ sub get_underlying_structure{
 	my @attrs = @{$self->regulatory_attributes()};
 
 	if(! @attrs){
-	  throw('No underlying regulatory_attribute features to get_underlying_structure');
+	  throw('No underlying regulatory_attribute features to get_underlying_structure for dbID '.$self->dbID);
 	  #This should never happen even with a projection build
 	}
 	else{
