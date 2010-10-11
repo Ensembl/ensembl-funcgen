@@ -46,16 +46,15 @@ Bio::EnsEMBL::Funcgen::ProbeFeature
 
 =cut
 
-use strict;
-use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor;
 
-use DBI;
+#use DBI;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+
 use vars qw(@ISA);
 use strict;
 use warnings;
@@ -67,7 +66,11 @@ $true_tables{probe_feature} = [	[ 'probe_feature', 'pf' ], [ 'probe',   'p' ]];
 @{$tables{probe_feature}} = @{$true_tables{probe_feature}};
 
 my $true_final_clause = ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';
-#Do we really need this probe_feature_id in the order by?
+#This is the original core order clause
+#Change probe_feature_id to seq_region_end or omit?
+#POD shows original docs
+#The group by is causing a default sort on the probe_feature_id, which cannot be done via the index???
+#hence the filesort
 
 my $final_clause = $true_final_clause;
 
