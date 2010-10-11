@@ -58,11 +58,10 @@ ResultFeature objects.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
@@ -194,7 +193,8 @@ sub _columns {
 	}
 	elsif($_result_feature_set){
 
-	  @result_columns = ('rf.seq_region_start', 'rf.seq_region_end', 'rf.seq_region_strand', "$_scores_field");
+	  @result_columns = ('rf.seq_region_start', 'rf.seq_region_end', 'rf.seq_region_strand', 
+						 "$_scores_field", 'rf.result_set_id', 'rf.window_size');
 	}
 
 	return @result_columns;
@@ -220,7 +220,7 @@ sub _columns {
 sub _default_where_clause{
   my $self = shift;
 
-  return 'r.probe_id = p.probe_id' if $_probe_extend && ! $_result_feature_set;
+  return ($_probe_extend && ! $_result_feature_set) ? 'r.probe_id = p.probe_id' : undef;
 }
 
 
@@ -241,11 +241,7 @@ sub _default_where_clause{
 
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
-  
-  #Is $dest_slice always $_query_slice?
-  #dest_slice is only ever passed for Slice based queries so yes?
-
-
+ 
   if(! $dest_slice){
 	throw('ResultFeatureAdaptor always requires a dest_slice argument');
 	#Is this correct?
@@ -254,13 +250,13 @@ sub _objs_from_sth {
 	#Never have non-Slice based fetchs, so will always have dest_slice and seq_region info.
   }
   
-  my (@rfeats, $start, $end, $strand, $scores);
+  my (%rfeats, $start, $end, $strand, $scores, $rset_id, $window_size);
 
   #Could dynamically define simple obj hash dependant on whether feature is stranded and new_fast?
   #We never call _obj_from_sth for extended queries
   #This is only for result_feature table queries i.e. standard/new queries
 
-  $sth->bind_columns(\$start, \$end, \$strand, \$scores);
+  $sth->bind_columns(\$start, \$end, \$strand, \$scores, \$rset_id, \$window_size);
 
   
 
@@ -282,10 +278,9 @@ sub _objs_from_sth {
   #my $cmp_cs_name;
 
   if($mapper) {
-	throw('Cannot dynamically assembly map Collections yet?');
+	throw('Cannot dynamically assembly map Collections yet');
 
 	#This would require extra code from the GeneAdaptor
-
 	#Actually maybe we can, so long as they map cleanly?
 
     #$asm_cs = $mapper->assembled_CoordSystem();
@@ -304,6 +299,7 @@ sub _objs_from_sth {
   my $dest_slice_sr_id;
 
   #if($dest_slice) {
+  #all methods are slice fetches
     $dest_slice_start  = $dest_slice->start();
     $dest_slice_end    = $dest_slice->end();
     $dest_slice_strand = $dest_slice->strand();
@@ -313,48 +309,40 @@ sub _objs_from_sth {
   #}
 
   
-  my $collection_cnt = 0;
-  my (@scores, $unpack_template, $over_hang, $num_bins);
-  my ($slice, $start_pad, $end_pad, $tmp_pad);
+  #my $collection_cnt = 0;
+  my (@scores, $slice, $start_pad, $end_pad);
   
+  #Set up the %rfeats arrays here to prevent having to test in loop
+  #This will speed up 0 wsize, but most likely slow others?
   
-  while ( $sth->fetch() ) {
+ FEATURE: while ( $sth->fetch() ) {
 	$start_pad = 0;
 	$end_pad   = 0;
 
-	#This test only works as $_window_size is always set in fetch methods?
-	#undef if not specified (non-result_feature sets) or 0 for non-collected ResultFeatures
+	#warn "In parse with $start, $end, $strand, $scores, $rset_id, $window_size";;
 
-	if(! $self->_window_size || ! $_result_feature_set){
+	if(($window_size == 0) || 
+	   ! $_result_feature_set){
 	  #Standard array method
-	  #Change this to use Bio::EnsEMBL::Funcgen::Collection::ResultFeature
 	  #With just 1 score in $scores
-	  #0 wsize records are always have 1 score as we have the original start/ends
-
+	
 
 	  if($_result_feature_set){
 		@scores = unpack($self->pack_template, $scores);
 
 		#For array/intensity values here we need to convert them to
 		#rounded up 3sigfig i.e. the same as the original was stored in
-		#sprintf"%.3f",
-		#this is somewhat costly :/
+		#for loop is faster than map when modifying in place
 
-		#Is for loop faster here?
-		#map $_=sprintf('%.3f', $_), @scores;
-
-		#Yes, when modifying in place
 		foreach my $score(@scores){
 		  $score = sprintf('%.3f', $score);
 		}
 	  }
 	 
-	  #We need to modify the start ends here based on the query_slice!
-	  #Is this not just dest slice?
-	  #Maybe no if we are projecting
+	  #We need to modify the start ends here based on the dest/query_slice
 	  #Would only ever want to project 0 window level collections!
-	  #And this is normally done via store method
-	  #Don't really want to do this on the fly for display?
+	  #Normally done via store method
+	  #Don't really want to do this on the fly for display
 
 	  # If a destination slice was provided convert the coords
 	  # If the dest_slice starts at 1 and is foward strand, nothing needs doing
@@ -362,7 +350,7 @@ sub _objs_from_sth {
 	
 	  #What about 0 strand slice?
 
-	  #if($dest_slice) {#No Slice based methods
+	  #if($dest_slice) {#No non-Slice based methods
 	  if($dest_slice_start != 1 || $dest_slice_strand != 1) {
 		if($dest_slice_strand == 1) {
 		  
@@ -393,13 +381,14 @@ sub _objs_from_sth {
 	  #No need to do this trimming now as we always bring back only those scores we want
 	  #What we actually need to do is figure out the true start and end of the collection
 	  #with relation to the dest slice
-	  $collection_cnt++;
 	  
-	  if($collection_cnt > 1){
-		throw('ResultFeatureAdaptor does not support cross collection queries');
-		#No way to determine correct $_collection_start/end if record does not begin at 1
-		#fetch query also only specifies seq_region_id i.e. no seq_region_start/end clause
-	  }
+	  #$collection_cnt++;
+	  
+	  #if($collection_cnt > 1){
+	#	throw('ResultFeatureAdaptor does not support cross collection queries');
+	#	#No way to determine correct $_collection_start/end if record does not begin at 1
+	#	#fetch query also only specifies seq_region_id i.e. no seq_region_start/end clause
+	#  }
 
 	  #Cannot have a collection which does not start at 1
 	  #As we cannot compute the bin start/ends correctly?
@@ -452,31 +441,28 @@ sub _objs_from_sth {
 	  }
 	  
 	
-	@scores = unpack('('.$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$self->_window_size)- $start_pad - $end_pad), $scores);
+	@scores = unpack('('.$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$window_size)- $start_pad - $end_pad), $scores);
 	}
 
-	
-	push @rfeats, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast({
+
+	push @{$rfeats{$rset_id}}, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast({
 																			  start  => $start,
 																			  end    => $end, 
 																			  strand =>$strand, 
 																			  scores => [@scores], 
 																			  #undef, 
 																			  #undef, 
-																			  window_size => $self->_window_size,
+																			  window_size => $window_size,
 																			  slice       => $dest_slice,
 																			 });
 
   }
   
+
   #reset for safety, altho this should be reset in fetch method
   $_result_feature_set = 1;
   
-  #Need to return a params hash here:
-  #window size
-  #and ??? Caller should know all other 
-  #params required i.e. collection type/methods
-  return \@rfeats;
+  return \%rfeats;
 }
   
 
@@ -540,7 +526,7 @@ sub store{
 	#Check that we have non-0 values in compressed collections
 	if($rfeat->window_size != 0){
 	
-	  if(! grep(/[^0]/, @{$rfeat->scores})){
+	  if(! grep { /[^0]/ } @{$rfeat->scores} ){
 		warn('Collection contains no non-0 scores. Skipping store for '.
 			 $rfeat->slice->name.' '.$rfeat->window_size." window_size\n");
 		next;
@@ -563,6 +549,9 @@ sub store{
 	$sth->execute();
   }
   
+
+
+
   return $rfeats;
 }
 
@@ -592,11 +581,13 @@ sub list_dbIDs {
 
   Args       : None
   Example    : my $wsize = $self->_window_size
-  Description: Gets the window_size of the current ResultFeature query
+  Description: Gets the window_size of the current ResultFeature query.
+               This needs to be a method rather than just a private variable
+               as it is used by the BaseFeatureAdaptor.
   Returntype : int
   Exceptions : None
-  Caller     : self
-  Status     : At risk
+  Caller     : Bio::EnsEMBL::BaseFeatureAdaptor
+  Status     : At risk - ??? Is this required anymore
 
 =cut
 
@@ -606,6 +597,83 @@ sub _window_size{
 
   return $self->{'window_size'};
 }
+
+
+
+
+
+
+=head2 fetch_all_by_Slice_ResultSets
+
+  Arg[0]     : Bio::EnsEMBL::Slice - Slice to retrieve results from
+  Arg[1]     : ARRAYREF of Bio::EnsEMBL::Funcgen::ResultSets - ResultSet to retrieve results from
+  Arg[2]     : optional string - STATUS e.g. 'DIPLAYABLE'
+
+  
+
+  Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSets($slice, [@rsets], 'DISPLAYABLE')};
+  Description: Gets a list of lightweight ResultFeature collection for the ResultSets and Slice passed.
+               NOTE: This method cannot yet support a window_size of 0
+  Returntype : HASHREF of ResultSet keys with a LISTREF of ResultFeature collection values
+  Exceptions : Throws if ResultSet window_size is 0 ????????????
+               Warns and skips ResultSets which are not RESULT_FEATURE_SETS.
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_Slice_ResultSets{
+  my ($self, $slice, $rsets, $max_bins, $window_size, $orig_constraint) = @_;
+  
+  $_result_feature_set = 1;
+  $orig_constraint .= (defined $orig_constraint) ? ' AND ' : '';
+  my $conf = $self->set_collection_config_by_Slice_ResultSets($slice, $rsets, $max_bins, $window_size);
+
+   
+  #Handling this all in one go may increase the memory footprint 
+  #but should be faster due to less trips to the DB
+
+  my (%rset_rfs, $constraint);
+
+  #Loop through each wsize build constraint set private vars and query
+
+  foreach my $wsize(keys(%{$conf})){
+
+	$self->{'_window_size'} = $wsize;
+	$_scores_field          = $conf->{$wsize}->{scores_field};
+	$constraint = 'rf.result_set_id IN ('.join(', ', keys(%{$conf->{$wsize}->{result_sets}})).')'.
+	  " AND rf.window_size=$wsize";
+
+	if ($wsize != 0){
+	  $_collection_start = $conf->{$wsize}->{collection_start};
+	  $_collection_end   = $conf->{$wsize}->{collection_end};
+	}
+
+	my ($rset_results) = @{$self->fetch_all_by_Slice_constraint($slice, $orig_constraint.$constraint)};
+
+
+	#Will this work for wsize split queries?
+	#We are not setting values for empty queries
+	#Which is causing errors on deref
+
+	%rset_rfs = (%rset_rfs,
+				 %{$rset_results});
+
+  }
+
+
+  foreach my $rset(@{$rsets}){
+
+	if(! exists $rset_rfs{$rset->dbID}){
+	  $rset_rfs{$rset->dbID} = [];
+	}
+  }
+
+  return \%rset_rfs;
+}
+
+
+
 
 
 =head2 fetch_all_by_Slice_ResultSet
@@ -671,7 +739,8 @@ sub fetch_all_by_Slice_ResultSet{
 	#we need to remove wsize 0 if ResultSet was generated from high density seq reads
 	#0 should always be first
 	shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_set'));
-	$max_bins ||= 700;#This is default size of display?
+	$max_bins ||= 772;#This is number of drawable pixels for a 900 pixel width display
+	#This should be passed by the webcode!
 	
 	#The speed of this track is directly proportional
 	#to the display size, unlike other tracks!
@@ -682,7 +751,7 @@ sub fetch_all_by_Slice_ResultSet{
 
 	if(defined $window_size){
 
-	  if(! grep(/^${window_size}$/, @sizes)){
+	  if(! grep { /^${window_size}$/ } @sizes ){
 		warn "The ResultFeature window_size specifed($window_size) is not valid, the next largest will be chosen from:\t".join(', ', @sizes);
 	  }
 	  else{
@@ -714,7 +783,7 @@ sub fetch_all_by_Slice_ResultSet{
 	
 	if(! defined  $self->{window_size}){
 	  #default is maximum
-	   $self->{window_size} = $sizes[$#sizes];
+	  $self->{window_size} = $sizes[-1];   #Final element
 
 	  #Try and find the next biggest window
 	  #As we don't want more bins than there are pixels
@@ -734,7 +803,6 @@ sub fetch_all_by_Slice_ResultSet{
 	
 	#reassign from here on to avoid has access
 	$window_size =  $self->{window_size};
-	#warn "wsize is $_window_size";
 
 	$constraint .= ' AND ' if defined $constraint;
 	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='. $window_size;
@@ -793,9 +861,11 @@ sub fetch_all_by_Slice_ResultSet{
 	  #warn $_scores_field;
 	}
 
-	#warn "constraint is $constraint";
+	#Account for hash return here
+	my ($tmp_ref) = @{$self->fetch_all_by_Slice_constraint($slice, $constraint)};
+	return $tmp_ref->{$rset->dbID} || [];
 
-	return $self->fetch_all_by_Slice_constraint($slice, $constraint);
+	#return $self->fetch_all_by_Slice_constraint($slice, $constraint)->{$rset->dbID};
   }
 
 
@@ -805,8 +875,8 @@ sub fetch_all_by_Slice_ResultSet{
 
  
   my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
-  my ($biol_rep, $score, $start, $end, $strand, $cc_id, $old_start, $old_end, $probe_field, $old_strand);
-
+  my ($biol_rep, $score, $start, $end, $strand, $cc_id, $old_start, $old_end, $old_strand);
+  
 
   my ($padaptor, $probe, $array,);
   my ($probe_id, $probe_set_id, $pname, $plength, $arraychip_id, $pclass, $probeset);
@@ -863,10 +933,10 @@ sub fetch_all_by_Slice_ResultSet{
   #this can then be resolved in the method below, using biolrep rather than cc_id
 
 
-  my $sql = "SELECT ec.biological_replicate, rsi.result_set_input_id from experimental_chip ec, result_set_input rsi 
-             WHERE rsi.table_name='experimental_chip'
-             AND ec.experimental_chip_id=rsi.table_id
-             AND rsi.table_id IN(".join(', ', (map $_->dbID(), @{$rset->get_ExperimentalChips()})).")";
+  my $sql = 'SELECT ec.biological_replicate, rsi.result_set_input_id from experimental_chip ec, result_set_input rsi '.
+	'WHERE rsi.table_name="experimental_chip"'.
+	  'AND ec.experimental_chip_id=rsi.table_id'.
+		'AND rsi.table_id IN('.join(', ', (map { $_->dbID() } @{$rset->get_ExperimentalChips()} )).')';
 
   
  # warn $sql;
@@ -880,8 +950,8 @@ sub fetch_all_by_Slice_ResultSet{
 
 	$biol_reps{$cc_id} = $biol_rep;
   }
-
-  if(grep(/^NO_REP_SET$/, values %biol_reps)){
+  
+  if(grep { /^NO_REP_SET$/ } values %biol_reps){
 	warn 'You have ExperimentalChips with no biological_replicate information, these will be all treated as one biological replicate';
   }
 
@@ -942,9 +1012,9 @@ sub fetch_all_by_Slice_ResultSet{
 		' AND pf.seq_region_start<='.$slice->end();
   
   if($max_len){
-	my $start = $slice->start - $max_len;
-	$start = 0 if $start < 0;
-	$sql .= ' AND pf.seq_region_start >= '.$start;
+	my $start_range = $slice->start - $max_len;
+	$start_range = 0 if $start_range < 0;
+	$sql .= ' AND pf.seq_region_start >= '.$start_range;
   }
 
   $sql .= ' AND pf.seq_region_end>='.$slice->start().
@@ -1167,7 +1237,7 @@ sub resolve_replicates_by_ResultSet{
 	}
   }else{#deal with biol replicates
 
-	foreach $biol_rep(keys %{$rep_ref}){
+	foreach my $biol_rep(keys %{$rep_ref}){
 	  push @scores, mean($rep_ref->{$biol_rep});
 	}
 
@@ -1216,12 +1286,369 @@ sub fetch_results_by_probe_id_ResultSet{
 
 
   #This converts no result to a 0!
-
-  my @results = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($query)};
+  
+  my @results = map { "@$_" } @{$self->dbc->db_handle->selectall_arrayref($query)};
   
 
   return \@results;
 }
+
+
+
+
+=head2 set_collection_config_by_Slice_ResultSets
+
+  Args[0]    : Bio::EnsEMBL::Slice
+  Args[1]    : ARRAYREF of Bio::EnsEMBL::Funcgen::ResultSet object
+  Args[2]    : int - Maximum number of bins required i.e. number of pixels in drawable region
+  Example    : $self->set_collection_defss_by_ResultSet([$rset]);
+  Description: Similar to set_collection_defs_by_ResultSet, but used
+               to set a config hash used for multi-ResultSet fetches.
+  Returntype : None
+  Exceptions : throws is args are not valid
+               throws if supporting InputSet is not of type result (i.e. short reads import)
+               throws if supporting InputSet format is not SEQUENCING (i.e. short reads import)
+               throws if ResultSet is not and input_set or experimental_chip based ResultSet (i.e. channel etc)
+  Caller     : ResultFeatureAdaptor::fetch_all_by_Slice_ResultSets
+  Status     : At Risk
+
+=cut
+
+#Should really be in the Collector
+#All these $_ package vars will need into methods
+#Or keep this here? Will this breaksthe standard collector implementation
+#Can we just merge the ResultFeatureAdaptor and the ResultFeature Collector?
+
+sub set_collection_config_by_Slice_ResultSets{
+  my ($self, $slice, $rsets, $max_bins, $window_size) = @_;
+
+  if(ref($rsets) ne 'ARRAY'){
+	throw('You must pass an ARRAYREF of Bio::EnsEMBL::ResultSet objects.');
+  }
+  
+  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
+	throw('You must pass a valid Bio::EnsEMBL::Slice');
+  }
+
+  my ($wsize, $window_element, @rsets, %wsize_config);
+  my ($scores_field, $collection_start, $collection_end);
+
+  if($window_size && $max_bins){
+	warn "Over-riding max_bins with specific window_size, omit window_size to calculate window_size using max_bins";
+  }
+
+
+  foreach my $rset(@{$rsets}){
+
+
+	### VALIDATE ResultSet
+
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+
+	if(! (
+		  $rset->table_name eq 'input_set' ||
+		  $rset->has_status('RESULT_FEATURE_SET')
+		 )){
+	  warn("Skipping non-ResultFeature ResultSet:\t".$rset->name);
+	  next;
+	}
+
+	push @rsets, $rset;
+
+	#NOTE:
+	#Don't need to check for packed_size and packed_template differences as they are now the
+	#same for all collections i.e. float. These would need to be separate queries otherwise.
+	#This method makes assumptions about the window_sizes array structure
+	#If this is to change more the the 0 - 30 bp change below then the config hash generation
+	#needs to be reviewed
+	
+   	if($rset->table_name eq 'experimental_chip'){ #Array Intensities i.e. single float
+	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 0;#Can have natural resolution for low density array data
+	}
+	elsif($rset->table_name eq 'input_set'){
+ 	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 30;
+
+	  #Currently only expecting int from InputSet
+	  my @isets = @{$rset->get_InputSets};
+	  my @tmp_isets = grep { !/result/ } (map { $_->feature_class } @isets );
+	  
+	  if(@tmp_isets){
+		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports result type InputSets, not @tmp_isets types");
+	  }
+
+	  #We still have no way of encoding pack_type for result_feature InputSets
+
+	  @tmp_isets = grep { !/SEQUENCING/ } (map { $_->format } @isets);
+	  
+	  if(@tmp_isets){
+		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports SEQUENCING format InputSets, not @tmp_isets formats");
+	  }
+	}
+	else{
+	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
+	}
+
+
+
+	
+	### SET ResultSet CONFIG BASED ON OPTIMAL WINDOW SIZE
+
+	if( (defined $window_element ) &&
+		exists $wsize_config{$Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element]} ){
+	  $wsize_config{$Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element]}{'result_sets'}{$rset->dbID} = $rset;
+	}
+	else{ #We have not seen this wsize before
+
+
+	  #This is currently entirely based on the position of the first wsize.
+	  #We can't strictly rely that the same window_element will be optimal for each collection
+	  #However this will work if they are size ordered and only the first element changes e.g. 0 || 30
+	  #Will need to do for each set if window_sizes change
+	  
+	  if(! defined $window_element){
+			
+		my @sizes = @{$self->window_sizes};
+		#we need to remove wsize 0 if ResultSet was generated from high density seq reads
+		#0 should always be first
+
+		### ???? Why?
+
+
+		shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_set'));
+		$max_bins ||= 700;#This is default size of display?
+		
+		#The speed of this track is directly proportional
+		#to the display size, unlike other tracks!
+		#e.g
+		#let's say we have 300000bp
+		#700  pixels will use 450 wsize > Faster but lower resolution
+		#2000 pixels will use 150 wsize > Slower but higher resolution
+		
+		if(defined $window_size){
+		
+		  if(! grep { /^${window_size}$/ } @sizes){
+			warn "The ResultFeature window_size specifed($window_size) is not valid, the next largest will be chosen from:\t".join(', ', @sizes);
+		  }
+		  else{
+			$wsize = $window_size;
+		  }
+		}
+		else{#! defined $window_size
+		
+		  #Work out window size here based on Slice length
+		  #Select 0 wsize if slice is small enough
+		  #As loop will never pick 0
+		  #probably half 150 max length for current wsize
+		  #Will also be proportional to display size
+		  #This depends on size ordered window sizes arrays
+		  
+		  $window_size = ($slice->length)/$max_bins;
+		
+		  if($Bio::EnsEMBL::Utils::Collector::window_sizes->[0] == 0){
+			
+			my $zero_wsize_limit = ($max_bins * $sizes[1])/2;
+			
+			if($slice->length <= $zero_wsize_limit){
+			  $wsize = 0;
+			  $window_element = 0;
+			}
+		  }
+		}
+  
+		#Let's try and avoid this loop if we have already grep'd or set to 0
+		#In the browser this is only ever likely to speed up the 0 window
+		
+		if (! defined  $wsize) {
+		  #default is maximum
+		  $wsize = $sizes[-1];  #Last element
+		  
+		  #Try and find the next biggest window
+		  #As we don't want more bins than there are pixels
+
+		  for (my $i = 0; $i <= $#sizes; $i++) {
+			#We have problems here if we want to define just one window size
+			#In the store methods, this resets the wsizes so we can only pick from those
+			#specified, hence we cannot force the use of 0
+			#@sizes needs to always be the full range of valid windows sizes
+			#Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
+		  
+			if ($window_size <= $sizes[$i]) {
+			  $window_element = $i;
+			  $wsize = $sizes[$i];
+			  last;    
+			}
+		  }
+		}
+	  }
+	  else{   #ASSUME the same window_element has the optimal window_size
+		$wsize = $Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element];
+	  }
+	  
+	  
+	  
+	  #Set scores field & collection_start/end config
+
+	  if ( $wsize == 0) {
+		$scores_field = 'rf.scores';
+		#No need to set start end config here as these are normal features
+	  } else {
+		#We want a substring of a whole seq_region collection
+	  
+		#Correct to the nearest bin bounds	  
+		#int rounds towards 0, not always down!
+		#down if +ve or up if -ve
+		#This causes problems with setting start as we round up to zero
+		
+		my $start_bin      = $slice->start/$wsize;
+		$collection_start = int($slice->start/$wsize);
+		
+		if ($collection_start < $start_bin) {
+		  $collection_start +=1;	#Add 1 to the bin due to int rounding down
+		}
+		
+		$collection_start = ($collection_start * $wsize) - $wsize + 1 ; #seq_region
+		#Need to sub this?
+		#warn 'collection start is '.$collection_start;
+		
+		$collection_end   = int($slice->end/$wsize) * $wsize; #This will be <= $slice->end
+		
+		#Add another window if the end doesn't meet the end of the slice
+		if (($collection_end > 0) &&
+			($collection_end < $slice->end)) {
+		  $collection_end += $wsize;
+		}
+	
+		#Now correct for packed size
+		#Substring on a blob returns bytes not 2byte ascii chars!
+		#start at the first char of the first bin
+		my $sub_start = (((($collection_start - 1)/$wsize) * $self->packed_size) + 1); #add first char
+		#Default to 1 as mysql substring starts < 1 do funny things
+		$sub_start = 1 if $sub_start < 1;
+		my $sub_end   = (($collection_end/$wsize) * ($self->packed_size));
+		
+		#Finally set scores column for fetch
+		$scores_field = "substring(rf.scores, $sub_start, $sub_end)";
+
+		#Set start end config for collections
+		$wsize_config{$wsize}{collection_start}         = $collection_start;
+		$wsize_config{$wsize}{collection_end}           = $collection_end;
+	  }
+
+
+	  #Set the result_set and scores field config
+	  #Would also need to set pack template here if this 
+	  #were to change between collections
+  	  $wsize_config{$wsize}{result_sets}{$rset->dbID} = $rset;
+	  $wsize_config{$wsize}{scores_field}             = $scores_field;
+	}
+  }
+
+  $self->{'_collection_config'} = \%wsize_config;
+
+  return $self->{'_collection_config'};
+}
+
+
+#sub fetch_all_by_Slice_CellType_FeatureTypes
+#problem here is that we don't have the ResultSets
+#to define the collection defs (window_size etc)
+#Sould do this if we standardise the window_sizes an dpack templates
+#This is almost true apart from 0-30bp wsize for array vs reads data
+
+
+
+
+
+#
+# Given a list of features checks if they are in the correct coord system
+# by looking at the first features slice.  If they are not then they are
+# converted and placed on the slice.
+#
+
+#Features hash based _remap
+#This assumes that naive code(base classes _slice_fetch) does not do anything 
+#other than pass the reference onto code which knows about the 'non-standard' 
+#return type i.e. the object adaptor
+
+sub _remap {
+  my ($self, $features_ref, $mapper, $slice) = @_;
+
+  #check if any remapping is actually needed
+
+  foreach my $features_key(keys %{$features_ref}){
+	my $features = $features_ref->{$features_key};
+	
+	if(@$features && (!$features->[0]->isa('Bio::EnsEMBL::Feature') ||
+					  $features->[0]->slice == $slice)) {
+	  #Assume that all other features for all ResultSets will also be on the same slice
+	  last;
+	}
+
+
+	#remapping has not been done, we have to do our own conversion from
+	#to slice coords
+	
+	my @out;
+	
+	my $slice_start = $slice->start();
+	my $slice_end   = $slice->end();
+	my $slice_strand = $slice->strand();
+	my $slice_cs    = $slice->coord_system();
+	
+	my ($seq_region, $start, $end, $strand);
+	
+	#my $slice_seq_region_id = $slice->get_seq_region_id();
+	my $slice_seq_region = $slice->seq_region_name();
+	
+	foreach my $f (@$features) {
+	  #since feats were obtained in contig coords, attached seq is a contig
+	  my $fslice = $f->slice();
+	  
+	  if(!$fslice) {
+		throw("Feature does not have attached slice.\n");
+	  }
+	  my $fseq_region = $fslice->seq_region_name();
+	  my $fseq_region_id = $fslice->get_seq_region_id();
+	  my $fcs = $fslice->coord_system();
+	  
+	  if(!$slice_cs->equals($fcs)) {
+		#slice of feature in different coord system, mapping required
+		
+		($seq_region, $start, $end, $strand) =
+		  $mapper->fastmap($fseq_region_id,$f->start(),$f->end(),$f->strand(),$fcs);
+		
+		# undefined start means gap
+		next if(!defined $start);
+	  } else {
+		$start      = $f->start();
+		$end        = $f->end();
+		$strand     = $f->strand();
+		$seq_region = $f->slice->seq_region_name();
+	  }
+	  
+	  # maps to region outside desired area
+	  next if ($start > $slice_end) || ($end < $slice_start) || 
+		($slice_seq_region ne $seq_region);
+	  
+	  #shift the feature start, end and strand in one call
+	  if($slice_strand == -1) {
+		$f->move( $slice_end - $end + 1, $slice_end - $start + 1, $strand * -1 );
+	  } else {
+		$f->move( $start - $slice_start + 1, $end - $slice_start + 1, $strand );
+	  }
+
+	  $f->slice($slice);
+
+	  push @out,$f;
+	}
+	
+	$features_ref->{$features_key} = \@out;
+  }
+
+
+  return [ $features_ref ];
+}
+
 
 
 
