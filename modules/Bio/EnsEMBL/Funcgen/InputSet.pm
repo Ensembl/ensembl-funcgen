@@ -61,7 +61,7 @@ use Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
 use Bio::EnsEMBL::Funcgen::Set;
-
+use Bio::EnsEMBL::Analysis;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);#change to Set once we have implemented analysis properly
@@ -132,10 +132,10 @@ sub new {
   ##Set directly to avoid dbID boolean check
   #This is to support supporting_set cache in data_set?
   $self->{'analysis'} = Bio::EnsEMBL::Analysis->new(-logic_name => 'external',
-													-id       => 0,#??someone needs to rewrite analysis
-												   );
+  						    -id       => 0,#??someone needs to rewrite analysis
+  						   );
   #}
-
+  
   $self->format($format) if defined $format;
   $self->vendor($vendor) if defined $vendor;
   $self->{'experiment'} = $exp;
