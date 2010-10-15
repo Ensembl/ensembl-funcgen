@@ -157,12 +157,14 @@ my $isa = $efgdba->get_InputSetAdaptor();
 my $dsa = $efgdba->get_DataSetAdaptor();
 
 #get all datasets from efg_data_tracking where release not NULL
-my $sth = $dbc->prepare("SELECT `experiment_name`, cell_type, `feature_type`, `release` from `dataset` where `species`='$species' AND `release` is not null;");
+my $sth = $dbc->prepare("SELECT `experiment_name`, cell_type, `feature_type`, `release`, efgdb_set_name  from `dataset` where `species`='$species' AND `release` is not null;");
 $sth->execute();
-while(my ($exp, $ct, $ft, $rel) = $sth->fetchrow_array()){
+while(my ($exp, $ct, $ft, $rel, $exp_name) = $sth->fetchrow_array()){
   if($release){ next if $rel != $release; }
   if($cell_type){ next if lc($cell_type) ne lc($ct); }
-  my $exp_name = $ct."_".$ft."_".$exp;
+  #my $exp_name = $ct."_".$ft."_".$exp;
+  if(!$exp_name){ warn "Set for $species $ct $ft $exp does not seem to be in efgdb"; next; } 
+
   my $exp_obj = $ea->fetch_by_name($exp_name);
   if(!$exp_obj){ 
     warn $exp_name." not found"; 
