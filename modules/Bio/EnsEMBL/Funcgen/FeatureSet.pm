@@ -282,6 +282,26 @@ sub get_Features_by_FeatureType{
 }
 
 
+=head2 get_all_Features
+
+  Arg[0]     : Bio::EnsEMBL::Funcgen::FeatureType
+  Example    : my @features = @{$FeatureSet->get_all_Features_by_FeatureType($ftype)};
+  Description: Retrieves all Features for this FeatureSet
+  Returntype : ARRAYREF
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub get_all_Features{
+  my $self = shift;
+
+  return $self->get_FeatureAdaptor->fetch_all_by_FeatureSets([$self]);
+}
+
+
 
 
 =head2 is_focus_set
