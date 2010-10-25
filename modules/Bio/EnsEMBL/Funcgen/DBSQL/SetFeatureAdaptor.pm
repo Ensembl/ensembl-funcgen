@@ -88,7 +88,12 @@ sub fetch_all_by_FeatureType_FeatureSets {
   my ($self, $ftype, $fsets, $params) = @_;
 
   if ($self->_feature_class eq 'annotated'){
-	throw("This method is not appropriate for FeatureSets with feature_class 'annotated', please use standard fetch_Features_by_FeatureSets or get_Features on an individual FeatureSet");
+	throw("This method is not appropriate for FeatureSets with feature_class 'annotated', please use standard fetch_all_by_FeatureSets or get_all_Features on an individual FeatureSet");
+
+
+	#Why is this not appropriate? #As there is not feature_type_id in annotated_feature?
+	
+
   }
 
   #How do we validate the parameters?
