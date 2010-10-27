@@ -92,7 +92,8 @@ use Bio::EnsEMBL::Funcgen::Utils::HealthChecker;
 use Pod::Usage;
 use Getopt::Long;
 
-my ($pass, $species, $schema_build, $skip_meta_coord, $dnadb_host, $dnadb, $check_displayable);
+my ($pass, $species, $schema_build, $skip_meta_coord, $dnadb_host, $dnadb_user, $dnadb_pass);
+my ($dnadb_port, $check_displayable);
 my ($help, $man, $dbname, $skip_xref_cleanup, $skip_analyse, @methods, @method_params);
 my $user = 'ensadmin';
 my $port = 3306;
@@ -111,6 +112,9 @@ GetOptions(
 		   'species|d=s'       => \$species,
 		   'data_versions=s'   => \$schema_build,#mandatory as default ensembldb will not exist
 		   'dnadb_host=s'      => \$dnadb_host,
+		   'dnadb_user=s'      => \$dnadb_user,
+		   'dnadb_pass=s'      => \$dnadb_pass,
+		   'dnadb_port=s'      => \$dnadb_port,
 		   'skip_meta_coord'   => \$skip_meta_coord,
 		   'skip_analyse'      => \$skip_analyse,
            'skip_xref_cleanup' => \$skip_xref_cleanup,
@@ -144,19 +148,19 @@ if(! $main::_no_log){
   print "Writing log to:\t".$main::_log_file."\n";
 }
 
-if($dnadb_host){
-  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-											   -dbname  => "${species}_core_${schema_build}",
-											   -host    => $dnadb_host,
-											   #-host => 'ensdb-1-13',
-											   #-port => 5307,
-											   #-port    => 3306,
-											   -user    =>  'ensro',
-											   #-pass    => $pass,
-											   -species => $species,
-											   -group   => 'core',
-											   );
-}
+#if($dnadb_host){
+#  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+#											   -dbname  => "${species}_core_${schema_build}",
+#											   -host    => $dnadb_host,
+#											   #-host => 'ensdb-1-13',
+#											   #-port => 5307,
+#											   #-port    => 3306,
+#											   -user    =>  'ensro',
+#											   #-pass    => $pass,
+#											   -species => $species,
+#											   -group   => 'core',
+#											   );
+#}
 
 
 #This will add the default chromosome CS, but not any other levels
@@ -167,7 +171,11 @@ my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 														  -user    => $user,
 														  -pass    => $pass,
 														  -species => $species,
-														  -dnadb   => $dnadb,
+														  -dnadb_host => $dnadb_host,
+														  -dnadb_user => $dnadb_user,
+														  -dnadb_pass => $dnadb_pass,
+														  -dnadb_port => $dnadb_port,
+														  #-dnadb   => $dnadb,
 														 );
 
 
@@ -175,6 +183,7 @@ my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 #Test the db connections
 $efg_db->dbc->db_handle;
 $efg_db->dnadb->dbc->db_handle;
+
 
 my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
 																-db                => $efg_db,
@@ -213,6 +222,5 @@ elsif(@method_params){
 else{
  $hchecker->update_db_for_release();
   $hchecker->log_data_sets();
-  $hchecker->check_stable_ids;
 }
 
