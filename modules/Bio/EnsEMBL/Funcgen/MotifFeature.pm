@@ -12,7 +12,7 @@ on a binding matrix e.g position weight matrix
 
 use Bio::EnsEMBL::Funcgen::MotifFeature;
 
-my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
+my $feature = Bio::EnsEMBL::Funcgen::MotifFeature->new(
 	-SLICE         => $chr_1_slice,
 	-START         => 1_000_000,
 	-END           => 1_000_024,
