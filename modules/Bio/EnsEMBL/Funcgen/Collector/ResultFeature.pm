@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.8 2010-07-15 11:49:38 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.8.8.1 2010-11-02 09:52:21 nj1 Exp $
 
 
 
@@ -466,11 +466,13 @@ sub store_collection{
 =head2 set_collection_defs_by_ResultSet
 
   Args[0]    : Bio::EnsEMBL::Funcgen::ResultSet
-  Example    : $self->set_collection_defs($rset);
+  Example    : $self->set_collection_defs_by_ResultSet($rset);
   Description: Sets the packed_size and pack_template and bin_method dependant on the 
                ResultSet type(reads/array)
   Returntype : None
-  Exceptions : None
+  Exceptions : throws if supporting InputSet is not of type result (i.e. short reads import)
+               throws if supporting InputSet format is not SEQUENCING (i.e. short reads import)
+               throws if ResultSet is not and input_set or experimental_chip based ResultSet (i.e. channel etc)
   Caller     : store_window_bins_by_Slice_ResultSet
                Bio::EnsEMBL::Funcgen:DBSQL::ResultFeatureAdaptor::fetch_all_by_Slice_ResultSet
   Status     : At Risk
@@ -479,27 +481,26 @@ sub store_collection{
 
 sub set_collection_defs_by_ResultSet{
   my ($self, $rset) = @_;
-  
+   
   $self->result_set($rset);
 
   if(defined $rset){
 	#This is most likely already done in the caller
 	#$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
-
-	#Keep package vars for clarity?
-	
-	#This is called by fetch_all_by_Slice_ResultSet
-	#So we have to use $rset->table_name instead of source_set_type
-   
 	
 	if($rset->table_name eq 'experimental_chip'){ #Array Intensities i.e. single float
 	  #perl only offers native endian order for floats (http://www.perlmonks.org/?node_id=629530)
-	  $Bio::EnsEMBL::Utils::Collector::packed_size       = 4;#per score
-	  $Bio::EnsEMBL::Utils::Collector::pack_template     = 'f';#per score
+	  #$Bio::EnsEMBL::Utils::Collector::packed_size       = 4;#per score
+	  #$Bio::EnsEMBL::Utils::Collector::pack_template     = 'f';#per score
+	  #Use defaults for these now
+
 	  $Bio::EnsEMBL::Utils::Collector::bin_method        = 'max_magnitude';#only used by collector
 	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 0;#Can have natural resolution for low density array data
 	}
 	elsif($rset->table_name eq 'input_set'){
+	  #Need to reset this as we may be doing serial queries.
+	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 30;
+
 	  #Currently only expecting int from InputSet
 	  my @isets = @{$rset->get_InputSets};
 	  my @tmp_isets = grep(!/result/, (map $_->feature_class, @isets));
@@ -518,7 +519,7 @@ sub set_collection_defs_by_ResultSet{
 	}
 	else{
 	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
-	}		
+	}
   }
 
   #Do we need to validate the smallest non-0 window size
