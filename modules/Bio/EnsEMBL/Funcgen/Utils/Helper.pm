@@ -236,8 +236,8 @@ sub new{
 		  open($LOGFILE, '| tee -a '.$self->{'_log_file'});
 		}
 		else{
-		  open($LOGFILE, '>', $log_file)
-			or throw("Failed to open log file : $log_file\nError: $!");
+		  open($LOGFILE, '>', $self->{'_log_file'})
+			or throw('Failed to open log file : '.$self->{'_log_file'}."\nError: $!");
 		}
 		
 	  }
