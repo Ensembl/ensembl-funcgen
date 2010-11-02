@@ -20,16 +20,24 @@ This module collates a variety of miscellaneous methods.
   &Utils::send_mail($to_address, $title, $message);
 
 
-=head2 FILES
+=head1 LICENSE
 
+  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-=head2 NOTES
+  This software is distributed under a modified Apache license.
+  For license details, please see
 
+    http://www.ensembl.org/info/about/code_licence.html
 
+=head1 CONTACT
 
-=head2 AUTHOR(S)
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-Nathan Johnson njohnson@ebi.ac.uk
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =cut
 
@@ -490,17 +498,20 @@ sub generate_slices_from_names{
   #Test if $assembly is old?
 
 
+
   my (@slices, $slice, $sr_name);
 
   if(@$slice_names){
 	
 	foreach my $name(@$slice_names){
 	  $slice = $slice_adaptor->fetch_by_region(undef, $name, undef, undef, undef, $assembly);
+
+	  #WHy is this failing for hap regions?
 	
 	  if(! $slice){
 
 		#Need to eval this as it will break with incorrect formating
-
+		
 		$slice = $slice_adaptor->fetch_by_name($name);
 
 		if(! $slice){
