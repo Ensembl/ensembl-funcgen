@@ -45,6 +45,7 @@ H2AK9ac	Histone	Histone 2A Lysine 9 Acetylation
 H2AZ	Histone	Histone 2A variant Z
 H2BK120ac	Histone	Histone 2B Lysine 120 Acetylation
 H2BK12ac	Histone	Histone 2B Lysine 12 Acetylation
+H2BK15ac	Histone	Histone 2B Lysine 15 Acetylation
 H2BK20ac	Histone	Histone 2B Lysine 20 Acetylation
 H2BK5ac	Histone	Histone 2B Lysine 5 Acetylation
 H2BK5me1	Histone	Histone 2B Lysine 5 mono-methylation
@@ -64,6 +65,7 @@ H3K4ac	Histone	Histone 3 Lysine 4 Acetylation
 H3K4me1	Histone	Histone 3 Lysine 4 Mono-Methylation
 H3K4me2	Histone	Histone 3 Lysine 4 Di-Methylation
 H3K4me3	Histone	Histone 3 Lysine 4 Tri-Methylation
+H3K56ac	Histone	Histone 3 Lysine 56 Acetylation
 H3K79me1	Histone	Histone 3 Lysine 79 mono-methylation
 H3K79me2	Histone	Histone 3 Lysine 79 di-methylation
 H3K79me3	Histone	Histone 3 Lysine 79 Tri-Methylation
