@@ -1,6 +1,6 @@
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::Utils::Helper
+Bio::EnsEMBL::Funcgen::Utils::HealthChecker
   
 =head1 SYNOPSIS
 
@@ -124,6 +124,8 @@ sub update_db_for_release{
   $self->set_current_coord_system;
   $self->update_meta_coord;
   $self->clean_xrefs;
+  $self->validate_DataSets;
+  $self->check_stable_ids;
   $self->analyse_and_optimise_tables;#ALWAYS LAST!!
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
@@ -375,8 +377,6 @@ sub update_meta_coord{
 
 	$self->log("New max_lengths for $table_name are:");
 	
-	#wtf?
-	#map {$self->log(join("\t", @{$_}))} ['coord_system_id', 'max_length', 'longest record dbID'];
 	$self->log(join("\t", ('coord_system_id', 'max_length', 'longest record dbID')));
 
 	foreach my $cs_id(@cs_ids){
@@ -400,6 +400,11 @@ sub update_meta_coord{
 		$sql .= ' and t.window_size=0' if $table_name eq 'result_feature';
 		$sql .= " order by max desc limit 1";
 		
+
+		#Problem here is that DBs without 0 wsize result_feture entries will not get a meta_coord entry
+		#We need to implement this in the _pre_store method too?
+
+
 		my ($cs_length, $table_id);
 		($cs_length, $table_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 		push @cs_lengths, [$cs_length, $table_id] if $cs_length;
@@ -459,13 +464,14 @@ sub check_meta_species{
 
 #Move to Java HC? Or update if update flag specified
 #Using same code used by build_reg_feats!
+
 sub check_meta_strings{
   my ($self, $update) = @_;
   
 
   $self->log_header('Checking meta strings');
 
-  warn "Need to check/update rebuild.version and regbuild.initial_release_date regbuild.last_annotation_update";
+  warn "Need to check/update regbuild.version and regbuild.initial_release_date regbuild.last_annotation_update";
 
   #update flag?
 
@@ -482,6 +488,9 @@ sub check_meta_strings{
 	$self->report("WARNING: Found no regulatory FeatureSets for check_meta_strings");
   }
   else{
+	
+	warn "Need to check/update regbuild.version and regbuild.initial_release_date regbuild.last_annotation_update";
+  
 
 	#How do we validate this?
 	#Check all feature_sets exist
@@ -677,6 +686,11 @@ sub check_stable_ids{
   else{
 
 	foreach my $fset(@regf_fsets){
+
+	  if($fset->name =~ /_v[0-9]$/){
+		$self->log("Skipping stable_id test on archived set:\t".$fset->name);
+		next;
+	  }
 	  
 	  #Can't count NULL field, so have to count regulatory_feature_id!!!
 	  my $sql = "select count(rf.regulatory_feature_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.stable_id is NULL and rf.seq_region_id = sr.seq_region_id and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.feature_set_id=".$fset->dbID;
@@ -699,7 +713,9 @@ sub check_stable_ids{
 		  $sql = 'select count(rf.stable_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.seq_region_id=sr.seq_region_id and sr.name="'.$sr_name.'" and sr.coord_system_id = cs.coord_system_id and cs.species_id = '.$species_id.' and rf.stable_id is NULL and rf.feature_set_id='.$fset->dbID;
 		  ($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
 		  
-		  $self->log($fset->name.":\t$null_sids NULL stable IDs on ".$slice->name);
+		  #This is not reporting properly.
+
+		  $self->log($fset->name.":\t$null_sids NULL stable IDs on ".$slice->name) if $null_sids;
 		}
 	  }
 	  else{
@@ -785,8 +801,9 @@ sub validate_DataSets{
 	  if(! $rf_fset->has_status($state)){
 		$self->report("WARNING:\tUpdating FeatureSet $rf_fset_name with status $state");
 		
-		$sql = 'INSERT into status(table_name, table_id, status_name_id) values select "feature_set", '.
-		  $rf_fset->dbID.", status_name_id from status_name where name='$state'";
+		$sql = 'INSERT into status select '. $rf_fset->dbID.
+		  ", 'feature_set', status_name_id from status_name where name='$state'";
+
 		$self->db->dbc->db_handle->do($sql);
 	  }
 	}
@@ -810,8 +827,8 @@ sub validate_DataSets{
 		#Or do this separately in case we want some control over this?
 		$self->report("WARNING:\tUpdating DataSet $rf_fset_name with status $state");
 
-		$sql = 'INSERT into status(table_name, table_id, status_name_id) values select "data_set", '.
-		  $rf_dset->dbID.", status_name_id from status_name where name='$state'";
+		$sql = 'INSERT into status select '.$rf_dset->dbID.
+		  ", 'data_set', status_name_id from status_name where name='$state'";
 		$self->db->dbc->db_handle->do($sql);
 	  }
 	}
@@ -832,8 +849,8 @@ sub validate_DataSets{
 		  #Or do this separately in case we want some control over this?
 		  $self->report("WARNING:\tUpdating FeatureSet ".$ra_fset->name." with status $state");
 
-		  $sql = 'INSERT into status(table_name, table_id, status_name_id) values select "feature_set", '.
-			$ra_fset->dbID.", status_name_id from status_name where name='$state'";
+		  $sql = 'INSERT into status select '.$ra_fset->dbID.
+			", 'feature_set', status_name_id from status_name where name='$state'";
 		  $self->db->dbc->db_handle->do($sql);
 
 		}
@@ -851,6 +868,7 @@ sub validate_DataSets{
 	  }
 	  elsif(scalar(@sset) == 0){
 		$self->report("FAIL:\tThere are no DISPLAYABLE supporting ResultSet for DataSet:\t".$ra_dset->name);
+		next; #$ra_fset
 	  }
 
 	  my $ra_rset = $sset[0];
@@ -862,8 +880,8 @@ sub validate_DataSets{
 		  #Or do this separately in case we want some control over this?
 		  $self->report("WARNING:\tUpdating ResultSet ".$ra_rset->name." with status $state");
 
-		  $sql = 'INSERT into status(table_name, table_id, status_name_id) values select "result_set", '.
-			$ra_rset->dbID.", status_name_id from status_name where name='$state'";
+		  $sql = 'INSERT into status select '.$ra_rset->dbID.
+			", 'result_set', status_name_id from status_name where name='$state'";
 		  $self->db->dbc->db_handle->do($sql);
 		}
 	  }
