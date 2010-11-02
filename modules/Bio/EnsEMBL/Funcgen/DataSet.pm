@@ -443,7 +443,7 @@ sub get_supporting_sets{
 
 	  if(defined $status && 
 		 (! $sset->has_status($status))){
-		next
+		next;
 	  }
 
 	  if(defined $set_type &&
