@@ -105,6 +105,8 @@ if(! defined $fset){
   die("Could not fetch FeatureSet with name:\t$fset_name");
 }
 
+print "Dumping GFF features for FeatureSet:\t$fset_name\n";
+
 my ($outline, @output);
 my $fset_ftype = ucfirst($fset->feature_class).'Feature';
 
@@ -113,6 +115,14 @@ my $fset_ftype = ucfirst($fset->feature_class).'Feature';
 if(! @slices){
   print "No slices defined defaulting to current toplevel\n";
 }
+else{
+  print "Restricting to slices:\t\t\t".join(', ', @slices)."\n";
+}
+
+if(@skip_slices){
+  print "Skipping slices:\t\t\t".join(', ', @skip_slices)."\n";
+}
+
 
 @slices = @{&generate_slices_from_names($slice_a, \@slices, \@skip_slices, 1)};#toplevel flag
 
@@ -120,7 +130,7 @@ if(! @slices){
 foreach my $slice(@slices){
   my $cnt = 0;
 
-  print "Dumping slice ".$slice->name."\n";
+  print "\nDumping:\t\t\t\t".$slice->name."\n";
 
   my $seq_name = $slice->seq_region_name();
 
@@ -136,7 +146,8 @@ foreach my $slice(@slices){
 	$ofile_name =~ s/\:/_/go;
   }
 
-  my $ofile = open_file($out_dir.'/'.$ofile_name, '>', 0775);
+  $ofile_name = $out_dir.'/'.$ofile_name;
+  my $ofile = open_file($ofile_name, '>', 0775);
 
   foreach my $feature(@{$fset->get_Features_by_Slice($slice)}){
 	$cnt++;
@@ -162,13 +173,24 @@ foreach my $slice(@slices){
 		  my $attr_name = $reg_attr->feature_type->name;
 		  $attr_name .= ':'.$reg_attr->cell_type->name if $fset->cell_type->name eq 'MultiCell';
 
+
+		  #We should add MotifFeatures here so they have there AF context.
+		  my @pwm_names;
+
+		  foreach my $assoc_mf(@{$reg_attr->get_associated_MotifFeatures()}){
+			#mf display_label or binding_matrix id/name here?
+			push @pwm_names, $assoc_mf->binding_matrix->name;
+		  }
+
+		  if(@pwm_names){
+			$attr_name .= '('.join(',', @pwm_names).')';
+		  }
+
 		  push @attrs, $attr_name;
 		}
-		elsif($reg_attr->isa('Bio::EnsEMBL::Funcgen::MotifFeature')){
-		  #Need to account for MotifFeatures here.
-		}
-		else{
+		elsif(! $reg_attr->isa('Bio::EnsEMBL::Funcgen::MotifFeature')){
 		  #warn we have an unsupported ftype
+		  warn "Found unsupported RegulatoryFeature attribute Feature type:\t".ref($reg_attr);
 		}
 	  }
 
@@ -176,10 +198,20 @@ foreach my $slice(@slices){
 							  'bound_end='.$feature->bound_end, 'Note=Consists of following features: '.
 							  join(',', @attrs)));
 	}
-	#elsif($fset_ftype eq 'AnnotatedFeature'){
-	#  #feature_type->name
-	#  
-	#}				
+	elsif($fset_ftype eq 'AnnotatedFeature'){
+	  #Add peak summit here?
+
+	  my @pwm_names;
+	  
+	  foreach my $assoc_mf(@{$feature->get_associated_MotifFeatures()}){
+		#mf display_label or binding_matrix id/name here?
+		push @pwm_names, $assoc_mf->binding_matrix->name;
+	  }
+
+	  if(@pwm_names){
+		$outline .= 'Note=Contains the following PWMs:'.join(',', @pwm_names);
+	  }
+	}				
 	elsif($fset_ftype eq 'ExternalFeature'){
 	  #It may be more appropriate to have this as the Name for external_features?
 	  $outline .= ' Alias='.$feature->display_label;
@@ -201,15 +233,15 @@ foreach my $slice(@slices){
 
   #Remove empty files and zip
 
-  if(-z $ofile){
+  if(-z $ofile_name){
 	print "No features found\n";
-	unlink $ofile;
+	unlink $ofile_name;
   }
   else{
-	print "Found $cnt features\n";
+	print "Features dumped:\t\t\t\t$cnt\n";
 
 	if(! $no_zip){
-	  system("gzip $ofile");
+	  system("gzip -f $ofile_name");
 	}
   }
 }
