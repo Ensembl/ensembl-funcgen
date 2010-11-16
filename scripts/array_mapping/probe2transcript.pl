@@ -387,8 +387,6 @@ GetOptions(
 
 
 
-
-
 #exit if unkown options specified? TEST!
 
 #change this to just @ARGV?
@@ -465,6 +463,13 @@ my %array_format_config = (
 									  linked_arrays     => 1,
 									  sense_interrogation => 0,
 									 },
+
+						   STEMPLE_LAB_SANGER => {
+												  probeset_arrays        => 0,
+												  linked_arrays     => 1,
+												  sense_interrogation => 0,
+												 },
+						   
 
 
 						  );
@@ -626,6 +631,8 @@ $probe_db->dbc->disconnect_when_inactive(1);
 $transcript_db->dbc->disconnect_when_inactive(1);
 $xref_db->dbc->disconnect_when_inactive(1);
 #This is turned off after we have done the processing.
+#This was done as we were getting connection timeout which weren't
+#caught by DBI
 
 #Grab species ID for healtcheck delete and check
 my $species_id = 1;
@@ -1548,7 +1555,7 @@ my $um_cnt = 0;
 
 # now loop over all the mappings and add xrefs for those that have a suitable number of matches
 #values can be a simple count or an array of annotations depending on probeset_arrays
-my ($last_transcript_sid, @transcript_xrefs);
+#my ($last_transcript_sid, @transcript_xrefs);
 my $link_txt = '';
 
 warn "Setting disconnect_when_inactive to false for xref DB";
@@ -1559,14 +1566,14 @@ foreach my $key (keys %transcript_feature_info) {
 
   my ($transcript_sid, $ensembl_id) = split (/:/, $key);
 
-  if($last_transcript_sid && 
-	($last_transcript_sid ne $transcript_sid) ){
-	#Load hits now that we know how many transcripts this probe/set really hits.
-	&add_transcript_xrefs(\@transcript_xrefs);
-	@transcript_xrefs = ();
-  }
+  #if($last_transcript_sid && 
+  #($last_transcript_sid ne $transcript_sid) ){
+  
+  #	&add_transcript_xrefs(\@transcript_xrefs);
+  #	@transcript_xrefs = ();
+  #  }
 
-  $last_transcript_sid = $transcript_sid;
+  #$last_transcript_sid = $transcript_sid;
 
    
   #ensembl_id can be either probeset or probe name
@@ -1670,12 +1677,13 @@ foreach my $key (keys %transcript_feature_info) {
 	  #Could we also add info here on where these other transcript mapping are perfect or mismatched?
 	  #Position of mismatches is important here!
 	  #i.e. length of perfect match correlates with binding(http://www.biomedcentral.com/1471-2164/9/317)
-	  push @transcript_xrefs, [$transcript_sid, $ensembl_id, $xref_object, $linkage_annotation];
+	  #push @transcript_xrefs, [$transcript_sid, $ensembl_id, $xref_object, $linkage_annotation];
+	  add_xref($transcript_sid, $ensembl_id, $xref_object, $linkage_annotation);
 	  print OUT "$id_names\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
 	  
 	}
 	else {
-	  #Change this to print at end so we can add the reall total number of transcripts
+	  #Change this to print at end so we can add the recall total number of transcripts
 	  print OUT "$id_names\t$transcript_sid\tpromiscuous\t${hits}/$probeset_size\tCurrentTranscripts".$transcripts_per_object{$ensembl_id}."\n";
 	  push @{$promiscuous_objects{$ensembl_id}}, $transcript_sid;
 	}
@@ -1707,32 +1715,52 @@ foreach my $key (keys %transcript_feature_info) {
 }
 
 #Add final transcript xrefs
-&add_transcript_xrefs(\@transcript_xrefs);
+#&add_transcript_xrefs(\@transcript_xrefs);
 
+
+
+#Now update linkage annotation as we know how many transcript we have hit
+foreach my $ensembl_id(keys %transcripts_per_object){
+
+  if(! exists $promiscuous_objects{$ensembl_id}){
+	
+	#Update the ox.linkage annotation!
+	my $other_hits = $transcripts_per_object{$ensembl_id} - 1;
+	my $link_txt;
+	
+	if($other_hits >= 1){
+	  
+	  my $plural = ($other_hits == 1) ? '' : 's';
+	  $link_txt = ". Matches $other_hits other transcript${plural}";
+	}
+	else{
+	  $link_txt = ". Maps uniquely to this transcript";
+	}
+	
+	#Now do update based on ensembl_id and ensembl_object_type and analysis_id
+	$sql = "UPDATE object_xref set linkage_annotation=concat(linkage_annotation, '${link_txt}')".
+	  " WHERE ensembl_object_type='${xref_object}' and ensembl_id=${ensembl_id} and analysis_id=".$analysis->dbID;
+
+	$xref_db->dbc()->do($sql);
+
+  }
+}
 
 
 #Adds transcript_xrefs once we know how many other xref there are.
 
-sub add_transcript_xrefs{
-  my $txrefs_ref = shift;
 
-  my $num_hits = scalar(@$txrefs_ref);
-  
-  #Add number of other transcripts mapped in the link text here
-  if($num_hits > 1){
-	$link_txt = ". Matches ".($num_hits-1)." other transcripts";
-  }
-  else{
-	$link_txt = ". Maps uniquely to this transcript";
-  }
+#sub add_transcript_xrefs{
+#  my $txrefs_ref = shift;
+#  #[$transcript_sid, $ensembl_id, $xref_object, $linkage_annotation];
 
-  foreach my $txref(@$txrefs_ref){
-	$txref->[$#{$txref}] .= $link_txt;
-	add_xref(@$txref);
-  }
-
-  return;
-}
+#  foreach my $txref(@$txrefs_ref){
+#	$txref->[$#{$txref}] .= $link_txt;
+#	add_xref(@$txref);
+#  }
+#
+#  return;
+#}
 
 
 
