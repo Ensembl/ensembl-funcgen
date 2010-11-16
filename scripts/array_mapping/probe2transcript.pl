@@ -359,9 +359,7 @@ GetOptions(
 		   'import_edb'           => \$import_edb,
 
 		   'delete'                 => \$delete,
-		   #'force_delete'           => \$force_delete,
 		   'no_triage'              => \$no_triage,
-		   #'health_check'           => \$health_check,
 		   'parallelise'            => \$parallelise,
 		   'clean_up'               => \$clean_up,
   'linked_arrays=i'          => \$array_config{linked_arrays},
@@ -385,21 +383,6 @@ GetOptions(
 						 -message => "Params are:\t@tmp_args"
 						);
 
-
-
-#exit if unkown options specified? TEST!
-
-#change this to just @ARGV?
-#@arrays = split(/,/,join(',',@arrays));#?
-
-# Have default setting flags handled here which will not override other param
-# in default 'set'
-
-
-
-#Make arrays mandatory?
-#Not sensible to AFFY AFFY_ST and ILLUMINA at same time!
-
 #Set log type so we are no over writing to the same files for different 
 #format, or custom formats
 my $log_type = $format || $$;
@@ -415,10 +398,9 @@ $Helper->log("Params are:\t@tmp_args");
 die("It is not wise to run all available arrays at the same time\nYou must supply a list of array names using -arrays, i.e. for all or a subset of a given array format(e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG)") if(! @array_names);
 
 
-#OTHER MANDATORY PARAMS HERE?
-
-#Now set some array config
-#Need to import this from ini?
+#ARRAY FORMAT CONFIG
+#Change this to include import from ini?
+#This could also be used in pipeline config
 
 my %array_format_config = (
 						   AFFY_UTR => {
@@ -505,11 +487,8 @@ foreach my $key(keys %array_config){
 my $xref_object = ($array_config{probeset_arrays}) ? 'ProbeSet' : 'Probe';
 
 
-#we need to do a check here on utr_length and unannotated_utr_length
+### PARAM VALIDATION & SET UP
 
-#Let's just have one species!?
-#What if we want to use different DBs for the xref, and probe DB?
-#Then we'll just have to use the old method and specify different dbnames
 
 if(! $species){
   die("Must provide a -species");
@@ -612,10 +591,6 @@ else{#load dbs from params
   }
 }
 
-
-
-
-
 #Test the DBs here before starting
 $transcript_db->dbc->db_handle;
 #print $transcript_db->species."\n";
@@ -649,29 +624,16 @@ if($xref_db->is_multispecies){
 }
 
 
-#Check for external_db records for species DBs
-
-my $schema_build = $xref_db->_get_schema_build($transcript_db);
-#Should we allow a param to over ride this?
 #This should be used in all the DBEntry and UnmappedObject records
+my $schema_build = $xref_db->_get_schema_build($transcript_db);
+
+#Check for external_db records for species DBs
 my ($edb_name, $transc_edb_name, $transc_edb_id, $transc_edb_display_name, $edb_display);
-
-#for my $edb_type('Transcript', 'Species'){
-#  my $found_edb_id = 0;
-
-#  if($edb_type eq 'Transcript'){
 $edb_name                = "${species}_core_Transcript";
 $transc_edb_name         = $edb_name;
 $transc_edb_display_name = "EnsemblTranscript";
 $edb_display             = $transc_edb_display_name;
 	
-#  }else{
-#	#This is used for storing completely Unmapped probes
-#	$edb_name = 'ensembl_core_Species';
-#	$edb_display = 'Ensembl Species';
-#  }
-
-
 $sql = "SELECT external_db_id, db_release from external_db where db_name='$edb_name'";
 my @versions = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
 $sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
@@ -686,10 +648,7 @@ foreach my $row(@versions){
 	$transc_edb_id  = $edb_id;
 	last;
   }
-  #$transc_edb_id  = $edb_id if($edb_type eq 'Transcript');
-  #$species_edb_id = $edb_if if($edb_type eq 'Species');
 }
-
 
 if(! $transc_edb_id){
   $sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
@@ -705,20 +664,8 @@ if(! $transc_edb_id){
 }
 
 
-
-
-#Can we make this account for ArrayChips
-#So we can do a staged run and not have to delete all previous xrefs
-#if we subsequently get some for a previously unavailable array_chip
-
-#This validates arrays
-#Why would we ever want to write the xrefs to a different DB?
-#my %array_name_cache =  %{&validate_arrays($probe_db, $xref_db)};
-
 #Validate array names
 my $array_adaptor = $xref_db->get_ArrayAdaptor;
-
-
 my $array_format;
 
 foreach my $name(@array_names){
@@ -737,14 +684,10 @@ foreach my $name(@array_names){
 	#This is really to keep the run time/mem usage down for a given process
   }
 
-
-
   $arrays{$name} = $array;
 }
 
 
-
-#$delete = $force_delete if $force_delete;
 
 #Merge these as they are related and we need to force unmapped check first
 
@@ -761,17 +704,8 @@ else{
   warn "You are running with the -no_delete option. This may cause duplicate entries";
 }
 
+#Check existing probe_feature analysis info
 
-#if ($health_check){
-#  $Helper->log('Have you migrated your probe_features from a different DB?\n'.
-#			   "If yes, check meta_coord entries and of.analysis_id=a.analysis_id\n".
-#			   "Current probe_feature analyses are:\nanalysis_id\tlogic_name");
-  
-  #This can happen if you have simply migrated the tables from another DB
-  #also use Healtchecker for meta_coord update.
-  #Need to re-write the Migrate function in arrays.env
-  
-  
 $sql = 'SELECT distinct pf.analysis_id, a.logic_name from probe_feature pf left join analysis a on pf.analysis_id=a.analysis_id';
 my @analysis_info = @{$probe_db->dbc->db_handle->selectall_arrayref($sql)};
 
@@ -782,10 +716,6 @@ foreach my $record(@analysis_info){
   if(! $lname){
 	die("Found probe_feature analysis without a corresponding analysis entry:\t$lname");
   }
-	
-#  if(! ($lname =~ /_ProbeAlign/ || $lname =~ /_ProbeTranscriptAlign/)){
-#	die("Found unexpected/mismatched analysis entry in probe_feature table:\t$lname");
-  #}
 }
 
 
@@ -1555,7 +1485,6 @@ my $um_cnt = 0;
 
 # now loop over all the mappings and add xrefs for those that have a suitable number of matches
 #values can be a simple count or an array of annotations depending on probeset_arrays
-#my ($last_transcript_sid, @transcript_xrefs);
 my $link_txt = '';
 
 warn "Setting disconnect_when_inactive to false for xref DB";
@@ -1565,23 +1494,11 @@ $xref_db->dbc->disconnect_when_inactive(0);
 foreach my $key (keys %transcript_feature_info) {
 
   my ($transcript_sid, $ensembl_id) = split (/:/, $key);
-
-  #if($last_transcript_sid && 
-  #($last_transcript_sid ne $transcript_sid) ){
-  
-  #	&add_transcript_xrefs(\@transcript_xrefs);
-  #	@transcript_xrefs = ();
-  #  }
-
-  #$last_transcript_sid = $transcript_sid;
-
    
   #ensembl_id can be either probeset or probe name
   my $probeset_size = $probeset_sizes{$ensembl_id};
   #This should always be 1 for non probeset_arrays
-
-
-  
+ 
   #This is the distinct number of probes, not features!
   #i.e. probe could hit twice, do we need to handle this?
   #For non-probeset arrays the key in  %{transcript_feature_info{xref_object_id}}
@@ -1677,7 +1594,6 @@ foreach my $key (keys %transcript_feature_info) {
 	  #Could we also add info here on where these other transcript mapping are perfect or mismatched?
 	  #Position of mismatches is important here!
 	  #i.e. length of perfect match correlates with binding(http://www.biomedcentral.com/1471-2164/9/317)
-	  #push @transcript_xrefs, [$transcript_sid, $ensembl_id, $xref_object, $linkage_annotation];
 	  add_xref($transcript_sid, $ensembl_id, $xref_object, $linkage_annotation);
 	  print OUT "$id_names\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
 	  
@@ -1714,10 +1630,6 @@ foreach my $key (keys %transcript_feature_info) {
   }
 }
 
-#Add final transcript xrefs
-#&add_transcript_xrefs(\@transcript_xrefs);
-
-
 
 #Now update linkage annotation as we know how many transcript we have hit
 foreach my $ensembl_id(keys %transcripts_per_object){
@@ -1745,22 +1657,6 @@ foreach my $ensembl_id(keys %transcripts_per_object){
 
   }
 }
-
-
-#Adds transcript_xrefs once we know how many other xref there are.
-
-
-#sub add_transcript_xrefs{
-#  my $txrefs_ref = shift;
-#  #[$transcript_sid, $ensembl_id, $xref_object, $linkage_annotation];
-
-#  foreach my $txref(@$txrefs_ref){
-#	$txref->[$#{$txref}] .= $link_txt;
-#	add_xref(@$txref);
-#  }
-#
-#  return;
-#}
 
 
 
