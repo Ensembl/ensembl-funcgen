@@ -15,6 +15,7 @@ T.Biweight	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL
 SupervisedHMM	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	Supervised Hidden Markov Model	SupervisedHMM	1	NULL
 WindowInterval	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	Window Interval	WindowInterval	1	NULL
 DEFAULT	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	Default analysis	1	NULL
+Jaspar	jaspar.genereg.net	JASPAR_2010	all_data/matrix_only/matrix_only.txt	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	Import from Jaspar	Jaspar	1	NULL
 
 #This file is for import analyses only
 #Pipeline analyses should be loaded from pipeline(i.e. arrays or peaks)
