@@ -18,18 +18,17 @@ my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
                                                         -description => "Nkx3-2 Jaspar Matrix",
                                                        );
 $matrix->frequencies("A  [ 4  1 13 24  0  0  6  4  9 ]
-C  [ 7  4  1  0  0  0  0  6  7 ]
-G  [ 4  5  7  0 24  0 18 12  5 ]
-T  [ 9 14  3  0  0 24  0  2  3 ]");
+                      C  [ 7  4  1  0  0  0  0  6  7 ]
+                      G  [ 4  5  7  0 24  0 18 12  5 ]
+                      T  [ 9 14  3  0  0 24  0  2  3 ]");
 
 print $matrix->compare_to_optimal_site("TGGCCACCA")."\n";
-                                                                
+
+
 =head1 DESCRIPTION
 
-This is a simple class to represent information about a BindingMatrix, containing the name 
-(e.g. the Jaspar ID, or an internal name), its type ('Jaspar' or 'Inferred')
-
- and description. 
+This class represents information about a BindingMatrix, containing the name 
+(e.g. the Jaspar ID, or an internal name), its type ('Jaspar' or 'Inferred') and description. 
 
 =head1 SEE ALSO
 
@@ -69,21 +68,15 @@ use Bio::EnsEMBL::Funcgen::Storable;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 
-#SOME CONSTANTS
-my %available_matrix_types = (
-							  jaspar   => 'Jaspar',
-							  inferred => 'Inferred',
-							 );
-
 =head2 new
 
   Arg [-name]: string - name of Matrix
-  Arg [-type]: string - type of Matrix ('Jaspar' or 'Inferred')
+  Arg [-analysis]: Bio::EnsEMBL::Analysis - analysis describing how the matrix was obtained
   Arg [-frequencies]: (optional) string - frequencies representing the binding affinities of a Matrix
   Arg [-description]: (optional) string - descriptiom of Matrix
   Example    : my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
                                                                -name  => "MA0122.1",
-                                                               -type => "Jaspar",
+                                                               -analysis => $analysis,
                                                                -description => "Jaspar Matrix",
                                                                 );
   Description: Constructor method for BindingMatrix class
@@ -100,9 +93,9 @@ sub new {
   my $obj_class = ref($caller) || $caller;
   my $self = $obj_class->SUPER::new(@_);
   
-  my ( $name, $type, $freq, $desc, $ftype, $assoc_ftypes ) = rearrange
+  my ( $name, $analysis, $freq, $desc, $ftype, $assoc_ftypes ) = rearrange
 	( [
-	   'NAME', 'TYPE', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE',
+	   'NAME', 'ANALYSIS', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE',
 	  ], @_);
   
   
@@ -110,8 +103,9 @@ sub new {
     throw("Must supply a name\n");
   }
 
-  if(! defined $type){
-    throw("Must supply a type\n");
+  if(! ((ref $analysis) && $analysis->isa('Bio::EnsEMBL::Analysis') )){
+    throw("You must define a valid Bio::EnsEMBL::Analysis");
+    #leave is stored test to adaptor
   }
   
   if(! (ref($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType'))){
@@ -120,7 +114,7 @@ sub new {
   }
 
   $self->name($name);
-  $self->type($type);
+  $self->{analysis} = $analysis;
   $self->{feature_type} = $ftype;
   $self->frequencies($freq) if $freq;
   $self->description($desc) if $desc;
@@ -129,11 +123,10 @@ sub new {
 }
 
 
-
 =head2 feature_type
 
-  Example    : my $ft_name = $efeature->feature_type()->name();
-  Description: Getter for the feature_type attribute for this feature.
+  Example    : my $ft_name = $matrix->feature_type()->name();
+  Description: Getter for the feature_type attribute for this matrix.
   Returntype : Bio::EnsEMBL::Funcgen:FeatureType
   Exceptions : None
   Caller     : General
@@ -185,32 +178,68 @@ sub description {
 }
 
 
-=head2 type
+=head2 analysis
+  Example    : $matrix->analysis()->logic_name();
+  Description: Getter for the feature_type attribute for this matrix.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
 
-  Arg [1]    : (optional) string - type
-  Example    : $matrix->type('Jaspar');
-  Description: Getter and setter of type attribute
-  Returntype : string
-  Exceptions : Throws if type not present in %available_matrix_types
+=cut
+
+sub analysis {
+  my $self = shift;
+
+  return $self->{'analysis'};
+}
+
+=head2 feature_set
+
+  Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::FeatureSet - feature_set
+  Example    : my $fset = $matrix->feature_set;
+  Description: Getter and setter of feature_set attribute
+  Associates a matrix to a specific feature set (only makes sense for inferred matrices)
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
+  Exceptions : Warns if matrix is not inferred
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub type {
-  my ($self, $type) = @_;
-  
-  if(defined $type){
-	
-  	if(exists $available_matrix_types{lc($type)}){ 
-	  $self->{'type'} =  $available_matrix_types{lc($type)};
-  	} else {
-	  throw("$type is not a valid type: ".join(', ', values(%available_matrix_types)));	
-  	}
-  }
+sub feature_set {
+    my ($self, $fset) = (shift, shift);
 
-  return $self->{'type'};
+    if(lc($self->type) ne 'inferred'){ warn "Matrix Feature Set only makes sense for inferred matrices"; }
+
+    if(! (ref($fset) && $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet'))){
+      throw("You must define a valid Bio::EnsEMBL::Funcgen::FeatureSet");
+    }
+    
+    $self->{'feature_set'} = $fset;
+    return $self->{'feature_set'};
 }
+
+
+=head2 inferred_quality
+
+  Arg [1]    : (optional) float - inferred_quality
+  Example    : my $quality = $matrix->inferred_quality;
+  Description: Getter and setter of inferred_quality attribute (only makes sense for inferred matrices)
+  Returntype : float
+  Exceptions : Warns if matrix is not inferred
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub inferred_quality {
+    my $self = shift;
+    if(lc($self->type) ne 'inferred'){ warn "Matrix quality only makes sense for inferred matrices"; }
+    $self->{'inferred_quality'} = shift if @_;
+    return $self->{'inferred_quality'};
+}
+
 
 
 =head2 frequencies
@@ -312,12 +341,7 @@ sub relative_affinity {
   } else {
     return (exp($log_odds) - exp($self->_min_bind)) / (exp($self->_max_bind) - exp($self->_min_bind));
   }
-  #Linearizing it may be too strict, on the other hand...
-  #return (exp($log_odds) - exp($self->_min_bind)) / (exp($self->_max_bind) - exp($self->_min_bind));
-  #Comparing just to maximum may be useful...
-  #return $log_odds / $self->_max_bind;
-  #Otherwise return just the raw result
-  #return $log_odds;
+
 }
 
 =head2 length
