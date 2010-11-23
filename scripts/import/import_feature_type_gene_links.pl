@@ -139,8 +139,8 @@ while(<FILE>){
 			-display_id         => $gene_name,
 			-info_type          => 'MISC',
 			-info_text          => 'GENE',
-			-linkage_annotation => 'ENSEMBL Manual Curation',
-			-description        => 'ENSEMBL Gene associated to Feature Type',
+			-linkage_annotation => 'Ensembl Manual Curation',
+			#-description        => 'Ensembl Gene associated to Feature Type',
 		);
 
 		#1 as the last argument to ignore Gene release
