@@ -3,7 +3,7 @@
 # title:  add binding_matrix.analysis_id and drop binding_matrix.type
 #
 # description:
-# Add analysis_id field to probe table and drop type field
+# Add analysis_id field to binding_matrix table and drop type field
 
 
 ALTER table binding_matrix ADD `analysis_id` int(10) unsigned NOT NULL;
