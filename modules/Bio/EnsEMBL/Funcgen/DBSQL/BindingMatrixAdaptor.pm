@@ -284,7 +284,7 @@ sub store {
     if (!( $matrix->dbID() && $matrix->adaptor() == $self )){
       
       #Check for previously stored BindingMatrix
-      ($s_matrix) = @{$self->fetch_all_by_name_FeatureType($matrix->name(), $matrix->feature_type, $matrix->type())};
+      ($s_matrix) = @{$self->fetch_all_by_name_FeatureType($matrix->name(), $matrix->feature_type, $matrix->analysis())};
 	
       if(! $s_matrix){
       	
