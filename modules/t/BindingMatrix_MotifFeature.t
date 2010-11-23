@@ -46,12 +46,15 @@ T [459	187	134	36	2	91	11	324	18	3	9	341	8	71	67	17	37	396	59 ] ";
 my $ftype_a = $db->get_FeatureTypeAdaptor;
 my $ftype   = $ftype_a->fetch_by_name('CTCF');
 
+my $analysis_a = $db->get_AnalysisAdaptor;
+my $analysis   = $analysis_a->fetch_by_logic_name('Jaspar');
+
 #3
 ok ($ftype);
 
 my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
 													   -name         => 'CTCF',
-													   -type         => 'Jaspar',
+													   -analysis     => $analysis,
 													   -feature_type => $ftype,
 													   -description  => 'Jaspar Matrix',
 													   -frequencies  => $ctcf_mat
@@ -70,48 +73,47 @@ ok( ref( $matrix ) && $matrix->isa( "Bio::EnsEMBL::Funcgen::BindingMatrix" ));
 # What arrays should be able to do
 # Temporarily set some new attributes
 
-#5-9 Test
+#5-8 Test
 ok( test_getter_setter( $matrix, "dbID", 2 ));
 ok( test_getter_setter( $matrix, "adaptor", undef ));
 ok( test_getter_setter( $matrix, "name", "CTCF_TEST" ));
-ok( test_getter_setter( $matrix, "type", "Inferred")); 
 ok( test_getter_setter( $matrix, "description", "test description"));
-# End of test 10
-
+# End of test 8
 
 #Now hide tables for storage test
 $multi->hide('funcgen', 'binding_matrix', 'associated_feature_type', 'motif_feature', 'associated_motif_feature');
 $bma->store($matrix);
 ($matrix) = @{$bma->fetch_all_by_name("CTCF")}; #We know there is only one stored
-#10
+#9
 ok ( ref($matrix) && $matrix->isa('Bio::EnsEMBL::Funcgen::BindingMatrix') );
 
 #Now test stored values
-#11-14
-#Test 12
+#10-13
 ok( $matrix->name eq 'CTCF' );
-ok( $matrix->type eq 'Jaspar' );
+ok( $matrix->analysis->logic_name eq 'Jaspar' );
 ok( $matrix->feature_type->name eq 'CTCF' );
 ok( $matrix->description eq 'Jaspar Matrix' );
-#End of test 15
+#End of test 13
 
 #Need to write tests for these
 #warn Data::Dumper::Dumper $matrix->_weights;
 #warn $matrix->frequencies;
 
 #numeric tests do not work with decimals?
-#15-20
+#14-19
 ok ( $matrix->_max_bind eq '18.100244783938' );
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCGCTA") == 1);
 ok ( $matrix->relative_affinity("TGGCCACGAGGGGGCGCTA") eq '0.972088876164933');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCGCCA") eq '0.997373533384315');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCACTA") eq '0.99606869981799');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGAGCGCTA") eq '0.94541278085573');
-#End of test 21
+#End of test 19
+
+$analysis   = $analysis_a->fetch_by_logic_name('bwa_samse');
 
 $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
 													-name  => 'CTCF',
-													-type => 'Inferred',
+											  	        -analysis => $analysis,
 													-description => 'Nkx3-2 Jaspar Matrix',
 													-feature_type => $ftype,
 
@@ -124,8 +126,7 @@ C  [ 7  4  1  0  0  0  0  6  7 ]
 G  [ 4  5  7  0 24  0 18 12  5 ]
 T  [ 9 14  3  0  0 24  0  2  3 ]");
 
-#Test  22 & 23
-#21-23
+#20-22
 ok ( $matrix->relative_affinity("TGGCCACCA") eq '0.209170634168983' );
 ok ( $matrix->relative_affinity("CTCAGTGGA",1) eq '0.0655146380336576' );
 ok( $matrix->length == 9);
@@ -140,7 +141,7 @@ my @bms = @{$bma->fetch_all_by_name('CTCF')};
 ok (scalar (@bms) == 2);
 ok (scalar (@{$bma->list_dbIDs}) == 2);
 
-@bms = @{$bma->fetch_all_by_name('CTCF', 'inferred')};
+@bms = @{$bma->fetch_all_by_name('CTCF', $analysis)};
 #26
 ok (scalar (@bms) == 1);
 
@@ -151,7 +152,7 @@ ok (scalar (@bms) == 2);
 #Now test stored values
 #28-31
 ok( $matrix->name eq 'CTCF' );
-ok( $matrix->type eq 'Inferred' );
+ok( $matrix->analysis->logic_name eq 'bwa_samse' );
 ok( $matrix->feature_type->name eq 'CTCF' );
 ok( $matrix->description eq 'Nkx3-2 Jaspar Matrix' );
 
@@ -223,10 +224,9 @@ ok( $mf->associated_annotated_features->[0]->dbID == $af1->dbID );
 my @mfs = @{$mf_a->fetch_all_by_AnnotatedFeature($af1)};
 #42
 ok( (scalar(@mfs) == 1) && ($mfs[0]->associated_annotated_features->[0]->dbID == $af1->dbID) );
-
-ok($mf2->seq eq 'TGGACGCGG');
+ok($mf2->seq eq 'GACGCGGTA');
 ok(length($mf2->seq) ==  $matrix->length);
-ok($mf2->binding_matrix->relative_affinity($mf2->seq) eq '0.393642051097555');
+ok($mf2->binding_matrix->relative_affinity($mf2->seq) eq '0.207063599824673');
 my $mf_slice = $db->get_SliceAdaptor()->fetch_by_region('toplevel',$mf2->seq_region_name,$mf2->start,$mf2->end,$mf2->strand);
 ok($mf2->seq eq $mf_slice->seq);
 
@@ -235,14 +235,14 @@ my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
   -start => 4,
   -end => 4,
   -slice => $mf->slice,       # the variation must be attached to a slice
-  -allele_string => 'T/G',    # the first allele should be the reference allele
+  -allele_string => 'G/T',    # the first allele should be the reference allele
   -strand => -1,
   #-map_weight => 1,
   #-adaptor => $vfa,           # we must attach a variation feature adaptor
   -variation_name => 'newSNP',
 );
 
-ok($mf2->infer_variation_consequence($new_vf) eq '-18.0977682274379');
+ok($mf2->infer_variation_consequence($new_vf) eq '18.0977682274379');
 
 my %fsets;
 
