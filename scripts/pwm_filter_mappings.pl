@@ -19,7 +19,7 @@ grep '>'  /data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked
 
 =head1 EXAMPLES
 
-pwm_filter_mappings.pl -i list -e dev_homo_sapiens_funcgen_58_37c -H ens-genomics1 
+pwm_filter_mappings.pl -i list -e dev_homo_sapiens_funcgen_58_37c -H ens-genomics1 -g /data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked.id_lines
 
 pwm_filter_mappings.pl -i list -e dev_homo_sapiens_funcgen_60_37e -H ens-genomics1 -P 3306 -u ensadmin -p big_secret -o thresholds 
 
@@ -27,6 +27,7 @@ pwm_filter_mappings.pl -i list -e dev_homo_sapiens_funcgen_60_37e -H ens-genomic
 
 ensembl-functgenomics/scripts/pwm_filter_mappings.pl
 ensembl-functgenomics/scripts/pwm_genome_map.pl
+ensembl-functgenomics/scripts/pwm_make_bed_mock_set.pl
 
 =head1 TO DO
 
@@ -35,6 +36,9 @@ add the functionality from pwm_filter_mappings.pl to the end of this script
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2010-11-23 14:16:43  dkeefe
+ Determines the log odds score threshold for filtering PWM mappings to be incorporated into the functional genomics databases.
+
 
 
 =cut
@@ -53,21 +57,15 @@ use constant  NO_ROWS => '0E0';
 my($user, $password, $driver, $host, $port);
 my $outfile='';
 my $infile='';
-my $id_list;
-my $sp;
 my $verbose = 2;
-my @temp_tables;
 my $perc_thresh = 5; # FDR
-
+my $genome_descriptor_file;# = "/data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked.id_lines";
 my %opt;
-
-my $h;
-
 
 $| = 1; #no output buffer
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('u:p:s:e:H:h:o:i:P:', \%opt) || die ;
+&Getopt::Std::getopts('u:p:e:H:h:o:i:P:g:', \%opt) || &help_text("Invalid Argument") ;
 }else{
 &help_text; 
 }
@@ -136,10 +134,10 @@ while(my($mat,$tf)=each(%matrix_tf_pairs)){
 
 
     my $mock_file = $tf.".mock_peaks";
-    my $command = "make_bed_mock_set.pl -g /data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked.id_lines  -i $peaks_file > $mock_file";
+    my $command = "pwm_make_bed_mock_set.pl -g $genome_descriptor_file  -i $peaks_file > $mock_file";
     &backtick($command);
 
-
+   
     my $real_olaps_file = $tf."_real_peaks_$mat".".olaps";
     $command = "cooccur.pl -o ".$real_olaps_file." $peaks_file $mappings_file " ;
 
@@ -263,26 +261,6 @@ sub backtick{
     return $res;
 }
 
-
-# uses global array @temp_tables
-sub new_temp{
-
-    my $nom = 'temp_'.$$.'_'.scalar(@temp_tables);
-    push @temp_tables,$nom;
-    return $nom;
-
-}
-
-# uses global array @temp_tables
-sub clean_temp{
-
-    my @sql;
-    foreach my $table (@temp_tables){
-	push @sql,"drop table if exists $table";
-    }
-
-    &execute($dbh,@sql) or die;
-}
 
 
 # execute
@@ -429,12 +407,6 @@ sub process_arguments{
         $user = $opt{u}; 
     }
 
-    $sp = 'homo_sapiens';
-    if (exists $opt{s}){
-        $sp = lc($opt{s});
-    }
-
-
     if (exists $opt{o}){
         $outfile = $opt{o};
     }  
@@ -445,12 +417,8 @@ sub process_arguments{
     }  
 
 
-    if (exists $opt{n}){
-        $id_list = $opt{n};
-    }
-
-    if (exists $opt{N}){
-	$infile = $opt{N};
+    if (exists $opt{g}){
+	$genome_descriptor_file = $opt{g};
     }
 
     if  (exists $opt{e}){
@@ -469,19 +437,16 @@ sub help_text{
 
     print STDERR <<"END_OF_TEXT";
 
-    .pl [-h] for help
-                  [-e] ensembl funcgen database name
+    pwm_filter_mappings.pl [-h] for help
+                  [-e] <db_name> ensembl funcgen database name
                   [-H] <host machine> eg ens-genomics1
                   [-u] <database user> 
                   [-o] <output file> - name of a file for output of thresholds
-                  [-i] <input file> - name of a file for input
+                  [-i] <input file> - list of TF_name=>pfm_file pairings
                   [-p] <mysql password> 
                   [-P] <mysql port> 
-                  [-s] <species> eg -smus_musculus, default = homo_sapiens  
-                  [-] 
-                  [-] 
-                  [-] <> 
-                  [-] <> 
+                  [-g] <input file> - containing fasta ID lines for the genome 
+
 
 
 END_OF_TEXT
