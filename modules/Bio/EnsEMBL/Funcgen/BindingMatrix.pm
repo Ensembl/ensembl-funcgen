@@ -22,7 +22,7 @@ $matrix->frequencies("A  [ 4  1 13 24  0  0  6  4  9 ]
                       G  [ 4  5  7  0 24  0 18 12  5 ]
                       T  [ 9 14  3  0  0 24  0  2  3 ]");
 
-print $matrix->compare_to_optimal_site("TGGCCACCA")."\n";
+print $matrix->relative_affinity("TGGCCACCA")."\n";
 
 
 =head1 DESCRIPTION
