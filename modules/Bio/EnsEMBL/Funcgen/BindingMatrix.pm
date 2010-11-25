@@ -28,7 +28,9 @@ print $matrix->compare_to_optimal_site("TGGCCACCA")."\n";
 =head1 DESCRIPTION
 
 This class represents information about a BindingMatrix, containing the name 
-(e.g. the Jaspar ID, or an internal name), its type ('Jaspar' or 'Inferred') and description. 
+(e.g. the Jaspar ID, or an internal name), and description. A BindingMatrix 
+is always associated to an Analysis (indicating the origin of the matrix e.g. 
+Jaspar) and a FeatureType (the binding factor).   
 
 =head1 SEE ALSO
 
