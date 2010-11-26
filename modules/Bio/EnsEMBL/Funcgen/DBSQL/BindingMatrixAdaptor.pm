@@ -68,7 +68,7 @@ $true_tables{binding_matrix} = [['binding_matrix', 'bm']];
   Arg [1]    : string - name of Matrix
   Arg [2]    : Bio::EnsEMBL::Analysis (optional) Analysis indicating Matrix origin
   Example    : my @matrices = @{$matrix_adaptor->fetch_all_by_name('MA0122.1')};
-  Description: Fetches matrix objects given a name and an optional type.
+  Description: Fetches matrix objects given a name and an optional Analysis object.
                If both are specified, only one unique BindingMatrix will be returned
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
   Exceptions : Throws if no name if defined
@@ -96,8 +96,7 @@ sub fetch_all_by_name{
   Arg [1]    : string - name of Matrix
   Arg [2]    : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [3]    : Bio::EnsEMBL::Analysis (optional) Analysis indicating Matrix origin
-  Description: Fetches matrix objects given a name and an optional type.
-               If both are specified, only one unique BindingMatrix will be returned
+  Description: Fetches matrix objects given a name and a FeatureType.
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
   Exceptions : Throws if no name if defined or if FeatureType is not valid
   Caller     : General
@@ -319,9 +318,9 @@ sub store {
   Args       : None
   Example    : my @matrix_ids = @{$matrix_adaptor->list_dbIDs()};
   Description: Gets an array of internal IDs for all Matrix objects in the current database.
-  Returntype : List of ints
+  Returntype : ArrayRef of BindingMatrix
   Exceptions : None
-  Caller     : ?
+  Caller     : General
   Status     : At risk
 
 =cut
