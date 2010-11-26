@@ -11,12 +11,12 @@ storing Funcgen BindingMatrix objects.
 =head1 SYNOPSIS
 
 my $matrix_adaptor = $db->get_BindingMatrixAdaptor();
-my $matrix = $matrix_adaptor->fetch_by_name("MA0122.1");
+my @matrix = @{$matrix_adaptor->fetch_all_by_name("MA0122.1")};
 
 =head1 DESCRIPTION
 
 The BindingMatrixAdaptor is a database adaptor for storing and retrieving
-Funcgen Matrix objects.
+Funcgen BindingMatrix objects.
 
 
 =head1 SEE ALSO
