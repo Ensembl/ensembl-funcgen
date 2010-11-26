@@ -59,7 +59,7 @@ $true_tables{annotated_feature} = [['annotated_feature', 'af'], ['feature_set', 
   Arg [2]    : Bio::EnsEMBL::Funcgen::Experiment
   Arg [3]    : (optional) string - logic name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_experiment_id($slice, $exp);
+               my $features = $ofa->fetch__all_by_Slice_Experiment($slice, $exp);
   Description: Retrieves a list of features on a given slice, specific for a given experiment.
   Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
   Exceptions : Throws if no Experiment object defined
@@ -90,13 +90,13 @@ sub fetch_all_by_Slice_Experiment {
 =head2 fetch_all_by_Slice_FeatureSet
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Experiment
+  Arg [2]    : Bio::EnsEMBL::Funcgen::FeatureSet
   Arg [3]    : (optional) string - logic name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_experiment_id($slice, $exp);
-  Description: Retrieves a list of features on a given slice, specific for a given experiment.
+               my $features = $ofa->fetch_by_Slice_FeatureSet($slice, $fset);
+  Description: Retrieves a list of features on a given slice, specific for a given feature set.
   Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
-  Exceptions : Throws if no Experiment object defined
+  Exceptions : Throws if no valid FeatureSet object defined
   Caller     : General
   Status     : At Risk
 
@@ -475,12 +475,12 @@ sub store{
 =head2 fetch_all_by_associated_MotifFeature
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
-  Example    : my $assoc_afs = $af_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
+  Example    : my $assoc_afs = $af_adaptor->fetch_all_by_associated_MotifFeature($ext_feature);
   Description: Fetches all associated AnnotatedFeatures for a given MotifFeature. 
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::AnnotatedFeature objects
   Exceptions : Throws if arg is not valid or stored
   Caller     : General
-  Status     : At risk - move to TranscriptionFactorFeatureAdaptor
+  Status     : At risk
 
 =cut
 
