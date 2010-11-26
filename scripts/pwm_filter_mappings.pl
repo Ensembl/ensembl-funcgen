@@ -36,6 +36,10 @@ add the functionality from pwm_filter_mappings.pl to the end of this script
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2010-11-24 10:41:13  dkeefe
+ Generally tidied up, added more POD and converted hard codded
+ variables to command line options.
+
  Revision 1.1  2010-11-23 14:16:43  dkeefe
  Determines the log odds score threshold for filtering PWM mappings to be incorporated into the functional genomics databases.
 
@@ -129,9 +133,11 @@ while(my($mat,$tf)=each(%matrix_tf_pairs)){
        
     }
     close(OUT);
-    # WE NEED TO SINGLE LINKAGE CLUSTER THESE real PEAKS
+    # We single linkage cluster the real peaks
     # before we create the mock peaks    
-
+    &backtick("slink.pl -o temp_$$ -U $peaks_file ");
+    &backtick("rm -f $peaks_file ");
+    &backtick("mv temp_$$ $peaks_file ");
 
     my $mock_file = $tf.".mock_peaks";
     my $command = "pwm_make_bed_mock_set.pl -g $genome_descriptor_file  -i $peaks_file > $mock_file";
@@ -147,7 +153,7 @@ while(my($mat,$tf)=each(%matrix_tf_pairs)){
     $command = "cooccur.pl -o ".$mock_olaps_file."  $mock_file $mappings_file ";
     &backtick($command);
 
-    my $max = &backtick("cut -f 11 $real_olaps_file | sort -g -u | tail -1");
+    my $max = &backtick("cut -f 8 $real_olaps_file | sort -g -u | tail -1");
     chop $max;
     my $n_peaks =  &backtick("cat $peaks_file |wc -l");
     chop $n_peaks;
@@ -209,7 +215,7 @@ sub mock_perc_score_thresh{
 
             if($aref->[3] >= $thresh){
 	        my $peak = join('~',$aref->[0],$aref->[1],$aref->[2]);
-		    #print $peak." ".$field[$pos]."\n";
+	#	    print $peak." ".$aref->[3]." $thresh\n";
 	  	$peaks{$peak}++;
 
 	    }
