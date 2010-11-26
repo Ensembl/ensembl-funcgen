@@ -475,7 +475,7 @@ sub store{
 =head2 fetch_all_by_associated_MotifFeature
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
-  Example    : my $assoc_afs = $af_adaptor->fetch_all_by_associated_MotifFeature($ext_feature);
+  Example    : my $assoc_afs = $af_adaptor->fetch_all_by_associated_MotifFeature($motif_feature);
   Description: Fetches all associated AnnotatedFeatures for a given MotifFeature. 
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::AnnotatedFeature objects
   Exceptions : Throws if arg is not valid or stored
