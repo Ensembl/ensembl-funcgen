@@ -10,10 +10,9 @@ storing Funcgen CellType objects.
 
 =head1 SYNOPSIS
 
-my $ct_adaptor = $db->get_CellTypeAdaptor();
+my $ct_adaptor = $efgdba->get_CellTypeAdaptor();
 
-my $cell_type = $ct_adaptor->fetch_by_name("U2OS");
-#my @cell_types = $st_adaptor->fetch_all_by_type("TISSUE");
+my $cell_type = $ct_adaptor->fetch_by_name("HeLa");
 
 
 =head1 DESCRIPTION
@@ -54,7 +53,7 @@ use vars qw(@ISA);
 
   Arg [1]    : string - name of CellType
   Arg [1]    : optional string - class of CellType
-  Example    : my $ct = $ct_adaptor->fetch_by_name('U2OS');
+  Example    : my $ct = $ct_adaptor->fetch_by_name('HeLa');
   Description: Retrieves CellType objects by name.
   Returntype : Bio::EnsEMBL::Funcgen::CellType object
   Exceptions : Throws no name given
