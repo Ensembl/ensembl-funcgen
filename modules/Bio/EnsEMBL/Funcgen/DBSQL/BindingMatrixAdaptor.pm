@@ -11,7 +11,7 @@ storing Funcgen BindingMatrix objects.
 =head1 SYNOPSIS
 
 my $matrix_adaptor = $db->get_BindingMatrixAdaptor();
-my @matrix = @{$matrix_adaptor->fetch_all_by_name("MA0122.1")};
+my @matrices = @{$matrix_adaptor->fetch_all_by_name("MA0122.1")};
 
 =head1 DESCRIPTION
 
@@ -67,7 +67,7 @@ $true_tables{binding_matrix} = [['binding_matrix', 'bm']];
 
   Arg [1]    : string - name of Matrix
   Arg [2]    : Bio::EnsEMBL::Analysis (optional) Analysis indicating Matrix origin
-  Example    : my $matrix = $matrix_adaptor->fetch_all_by_name('MA0122.1');
+  Example    : my @matrices = @{$matrix_adaptor->fetch_all_by_name('MA0122.1')};
   Description: Fetches matrix objects given a name and an optional type.
                If both are specified, only one unique BindingMatrix will be returned
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
@@ -126,7 +126,7 @@ sub fetch_all_by_name_FeatureType{
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [2]    : Bio::EnsEMBL::Analysis (optional) Analysis indicating Matrix origin
-  Example    : my $matrix = $matrix_adaptor->fetch_by_FeatureType($ftype);
+  Example    : my @matrices = @{$matrix_adaptor->fetch_all_by_FeatureType($ftype)};
   Description: Fetches BindingMatrix objects given it's FeatureType
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
   Exceptions : Throws if FeatureType is not valid
