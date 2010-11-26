@@ -15,12 +15,12 @@ use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
 	-SLICE         => $chr_1_slice,
 	-START         => 1_000_000,
-    -SUMMIT        => 1_000_019,
+        -SUMMIT        => 1_000_019,
 	-END           => 1_000_024,
 	-STRAND        => -1,
-    -DISPLAY_LABEL => $text,
-    -SCORE         => $score,
-    -FEATURE_SET   => $fset,
+        -DISPLAY_LABEL => $text,
+        -SCORE         => $score,
+        -FEATURE_SET   => $fset,
 ); 
 
 
@@ -87,13 +87,13 @@ use vars qw(@ISA);
   Arg [-dbID]         : (optional) int - Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
   Example    : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
-										                                  -SLICE         => $chr_1_slice,
-									                                      -START         => 1_000_000,
-									                                      -END           => 1_000_024,
+									  -SLICE         => $chr_1_slice,
+									  -START         => 1_000_000,
+									  -END           => 1_000_024,
                                                                           -SUMMIT        => 1_000_019,
-									                                      -STRAND        => -1,
-									                                      -DISPLAY_LABEL => $text,
-									                                      -SCORE         => $score,
+									  -STRAND        => -1,
+									  -DISPLAY_LABEL => $text,
+									  -SCORE         => $score,
                                                                           -FEATURE_SET   => $fset,
                                                                          );
 
@@ -255,7 +255,7 @@ sub get_underlying_structure{
 
 =head2 get_associated_MotifFeatures
 
-  Example    : my @assoc_mfs = @{ $af->get_associated_MotifFEatures };
+  Example    : my @assoc_mfs = @{ $af->get_associated_MotifFeatures };
   Description: Returns and array associated MotifFeature i.e. MotifFeatures
                representing a relevanting PWM/BindingMatrix
   Returntype : ARRAYREF
