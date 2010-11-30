@@ -434,7 +434,7 @@ DROP TABLE IF EXISTS `probe`;
 CREATE TABLE `probe` (
    `probe_id` int(10) unsigned NOT NULL auto_increment,
    `probe_set_id` int(10) unsigned default NULL,
-   `name` varchar(40) NOT NULL,
+   `name` varchar(100) NOT NULL,
    `length` smallint(6) unsigned NOT NULL,
    `array_chip_id` int(10) unsigned NOT NULL,
    `class` varchar(20) default NULL,
@@ -789,7 +789,7 @@ CREATE TABLE `associated_motif_feature` (
 CREATE  TABLE `binding_matrix` (
  `binding_matrix_id` INT(10) unsigned NOT NULL auto_increment,
  `name` VARCHAR(45) NOT NULL,
- `type` VARCHAR(45) NOT NULL,
+ `analysis_id` int(10) unsigned NOT NULL,
  `feature_type_id` int(10) unsigned NOT NULL,
  `frequencies` VARCHAR(1000) NOT NULL,
  `description` VARCHAR(255) NULL,
