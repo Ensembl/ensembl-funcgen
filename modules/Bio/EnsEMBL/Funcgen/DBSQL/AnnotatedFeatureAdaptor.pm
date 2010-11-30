@@ -64,7 +64,7 @@ $true_tables{annotated_feature} = [['annotated_feature', 'af'], ['feature_set', 
   Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
   Exceptions : Throws if no Experiment object defined
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk: Currently NOT working
 
 =cut
 
@@ -109,9 +109,11 @@ sub fetch_all_by_Slice_FeatureSet {
   if (! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
     throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet");
   }
-    
-  my $constraint = qq( af.feature_set_id ='$fset->dbID()' );
   
+  my $id = $fset->dbID();
+  my $constraint = qq( af.feature_set_id='$id' );
+
+  print $constraint."\n";
   
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
