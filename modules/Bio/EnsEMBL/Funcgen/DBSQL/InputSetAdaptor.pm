@@ -66,8 +66,8 @@ use vars qw(@ISA);
   Example    : 
   Description: Retrieves a list of features on a given slice that are created
                by probes from the specified type of array.
-  Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
-  Exceptions : Throws if no array type is provided
+  Returntype : Listref of Bio::EnsEMBL::InputSet objects
+  Exceptions : Throws if no valid FeatureType type is provided
   Caller     : General
   Status     : At Risk
 
@@ -138,8 +138,8 @@ sub fetch_all_by_Experiment {
 =head2 fetch_by_name
 
   Arg [1]    : string - InputSet name
-  Example    : $exp_set = $eseta->fetch_by_Experiment('exp_set_1');
-  Description: Retrieves a InputSet based on the ExperimetnalSet name
+  Example    : $exp_set = $eseta->fetch_by_name('exp_set_1');
+  Description: Retrieves a InputSet based on the ExperimentalSet name
   Returntype : Bio::EnsEMBL::Funcgen::InputSet
   Exceptions : Throws if no name provided
   Caller     : General
