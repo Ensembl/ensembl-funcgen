@@ -4,6 +4,7 @@
 #   Modify the indexes of the object_xref tables.
 #
 # Description:
+# eFG change: Altered old index names accordingly
 # The object_xref_id field of the object_xref table was found to for
 # some reason not be a primary key.  This field is always unique, so why
 # not add it as the primary key?  Also re-jig the other indexes while we
@@ -23,7 +24,7 @@ ALTER TABLE object_xref
 # cases that we have in the API.
 
 ALTER TABLE object_xref
-  DROP INDEX object_type_idx,
+  DROP INDEX ensembl_object_type,
   DROP INDEX oxref_idx,
   DROP INDEX xref_idx,
   ADD UNIQUE INDEX
