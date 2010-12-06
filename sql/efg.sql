@@ -213,11 +213,11 @@ CREATE TABLE object_xref (
   xref_id                     INT UNSIGNED NOT NULL,
   linkage_annotation          VARCHAR(255) DEFAULT NULL,
   analysis_id                 SMALLINT(5) UNSIGNED NOT NULL,
-  UNIQUE (ensembl_object_type, ensembl_id, xref_id),
-  KEY oxref_idx (object_xref_id, xref_id, ensembl_object_type, ensembl_id),
-  KEY xref_idx (xref_id, ensembl_object_type),
-  KEY `analysis_idx` (`analysis_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40;
+  PRIMARY KEY (`object_xref_id`),
+  UNIQUE KEY `xref_idx` (`xref_id`,`ensembl_object_type`,`ensembl_id`,`analysis_id`),
+  KEY `analysis_idx` (`analysis_id`),
+  KEY `ensembl_idx` (`ensembl_object_type`,`ensembl_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Note we use case correct versions of object name to allow easy adaptor generation
 
@@ -794,7 +794,7 @@ CREATE  TABLE `binding_matrix` (
  `frequencies` VARCHAR(1000) NOT NULL,
  `description` VARCHAR(255) NULL,
  PRIMARY KEY (`binding_matrix_id`) ,
- KEY `name_type_idx` (`name`, `type`),
+ KEY `name_analysis_idx` (`name`, `analysis_id`),
  KEY `feature_type_idx` (`feature_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
