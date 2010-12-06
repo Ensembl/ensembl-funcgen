@@ -127,6 +127,10 @@ reg_feat_gen_feat_overlaps.pl -e dk_funcgen_classify_55_1 -v1 -c reg_feat_gen_fe
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.4  2010-07-01 14:45:18  dkeefe
+ removed the constraint that patterns considered must have more than
+ one bit set.
+
  Revision 1.3  2010-04-01 13:48:18  dkeefe
  changed value of assoc_thresh to 51
 
@@ -351,13 +355,12 @@ ASSOC:
 &commentary("creating association tables\n") if $verbose;
 &association_tables($dbh,$dbu,\@gen_feats,'pattern_overlap_summary','pattern_overlap_summary_chi',$assoc_thresh,$second_thresh);
 
-#exit;
 
 
 FLAGS:
 &create_flags_table($dbh,$dbu,$flags_table,\@gen_feats);
 
-
+exit;
 
 TYPES:
 &create_types_table($dbh,$dbu,$flags_table,$types_table);
@@ -481,7 +484,7 @@ sub create_types_table{
     if($sp eq 'homo_sapiens'){
         #push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";# as used in v58
 
-        push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,tss_centred_5000 as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
+        push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,tss_centred_5000 as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified, PolIII_transcribed_gene_plus_enhancer as poliii_transcription_associated from $flags_table";
 
     }else{
         push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
@@ -490,14 +493,24 @@ sub create_types_table{
     # apply arbitrary rules to resolve conflicts
     push @sql, "update $types_table set promoter_associated = 0 where promoter_associated and gene_associated"; # as used for v58
     #push @sql, "update $types_table set gene_associated = 0 where promoter_associated and gene_associated"; #
+
+    push @sql, "update $types_table set gene_associated = 0 where poliii_transcription_associated and gene_associated";
+    push @sql, "update $types_table set non_gene_associated = 0 where poliii_transcription_associated and non_gene_associated";
+    push @sql, "update $types_table set poliii_transcription_associated = 0 where poliii_transcription_associated and promoter_associated";
+
+
+
     # use unclassified col to flag conflicts
     push @sql, "update $types_table set unclassified = 1 where promoter_associated and non_gene_associated";
     push @sql, "update $types_table set unclassified = 1 where gene_associated and non_gene_associated";
     # set both of the conflicting cols to 0 where there is a conflict
     push @sql, "update $types_table set promoter_associated = 0 where unclassified";
     push @sql, "update $types_table set gene_associated = 0 where unclassified";    push @sql, "update $types_table set non_gene_associated = 0 where unclassified";
+
+
+
     # set unclassified for rows with no flags
-   push @sql, "update $types_table set unclassified = 1 where gene_associated + non_gene_associated + promoter_associated = 0";
+   push @sql, "update $types_table set unclassified = 1 where gene_associated + non_gene_associated + promoter_associated+poliii_transcription_associated = 0";
 
 
     &execute($dbh,@sql) or die;
@@ -506,6 +519,9 @@ sub create_types_table{
     @sql = ();
     push @sql, "alter table $types_table add column feature_type_id int(10) unsigned";
 
+
+
+    # set the type_id 
     # now that we have moved to single cell line classification there are
     # no Cell type specific classifications
     foreach my $ft ('Gene Associated',
@@ -516,6 +532,7 @@ sub create_types_table{
 #                    'Promoter Associated - Cell type specific',
                     'Unclassified',
 #                    'Unclassified - Cell type specific',
+                    'PolIII Transcription Associated',
 		    ){
 
 	my $ftid = $dbu->get_count("select feature_type_id from feature_type where name = '$ft' and class = 'Regulatory Feature'");
@@ -539,24 +556,30 @@ sub create_types_table{
     }
     &execute($dbh,@sql) or die;
 
+    # summary report
 
     my $res = $dbu->get_count("select count(*) from  regulatory_features_classified where promoter_associated and cell_type_specific");
-    &commentary("promoter_associated and cell_type_specific         $res\n");
-    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where promoter_associated and not cell_type_specific");
-    &commentary("promoter_associated and not cell_type_specific     $res\n");
+#    &commentary("promoter_associated and cell_type_specific         $res\n");
+    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where promoter_associated and not cell_type_specific ");
+    &commentary("promoter_associated     $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where gene_associated and cell_type_specific");
-    &commentary("gene_associated and cell_type_specific             $res\n");
+#    &commentary("gene_associated and cell_type_specific             $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where gene_associated and not cell_type_specific");
-    &commentary("gene_associated and not cell_type_specific         $res\n");
+    &commentary("gene_associated         $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where non_gene_associated and cell_type_specific");
-    &commentary("non_gene_associated and cell_type_specific         $res\n");
+#    &commentary("non_gene_associated and cell_type_specific         $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where non_gene_associated and not cell_type_specific");
-    &commentary("non_gene_associated and not cell_type_specific     $res\n");
+    &commentary("non_gene_associated     $res\n");
+
+    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where poliii_transcription_associated and not cell_type_specific");
+    &commentary("PolIII_transcription_associated     $res\n");
+
+
 
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where unclassified and cell_type_specific");
-    &commentary("unclassified and cell_type_specific                $res\n");
+#    &commentary("unclassified and cell_type_specific                $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where unclassified and not cell_type_specific");
-    &commentary("unclassified and not cell_type_specific            $res\n");
+    &commentary("unclassified            $res\n");
 
     &qc($dbh,$dbu,);
 
@@ -584,10 +607,11 @@ sub qc{
     &commentary("promoter_associated features\n");
     &commentary("$res overlap an exon1_plus_2.5kb (both RNA and prot_cod)\n");
 
-    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, protein_coding_intron1 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start"); 
-   
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, protein_coding_intron1 e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start");   
     &commentary("$res overlap a protein coding intron1\n");
 
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, processed_transcript e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= if(e.feature_strand = -1 ,e.feature_end+2500,e.feature_end)  and pa.seq_region_end >= if(e.feature_strand = -1 ,e.feature_start,e.feature_start - 2500)");
+    &commentary("$res overlap a 'processed transcript'\n");
 
 
 
@@ -599,6 +623,9 @@ sub qc{
     $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from promoter_associated_temp pa, pseudogene_exon1_plus_enhancer e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start > e.feature_start and pa.seq_region_end < e.feature_end");
     &commentary("$res overlap a pseudogene exon1_plus_2.5kb \n");
     @sql=();
+
+
+
     push @sql, "drop table if exists gene_associated_temp";
     push @sql, "create table gene_associated_temp select rfc.regulatory_feature_id, seq_region_name,seq_region_start,seq_region_end from regulatory_feature rf, regulatory_features_classified rfc where rfc.gene_associated and rfc.regulatory_feature_id =rf.regulatory_feature_id order by seq_region_name";
 
@@ -620,8 +647,11 @@ GENE_ASSOC:
     &commentary("$res are at least 2500bp from any part of a protein coding gene\n");
 
     $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from gene_associated_temp pa, pseudogene_transcript e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start");
+
     &commentary("$res overlap some part of a pseudogene\n");
 
+    $res = $dbu->get_count("select count( distinct pa.regulatory_feature_id ) from gene_associated_temp pa, processed_transcript e where pa.seq_region_name=e.seq_region_name and pa.seq_region_start <= e.feature_end and pa.seq_region_end >= e.feature_start");
+    &commentary("$res overlap some part of a 'processed_transcript'\n");
 }
 
 
@@ -921,7 +951,9 @@ sub create_pattern_results_tables{
 	$q .= ",$gen int(10)";
 	$q1 .= ",$gen float";
         $q2 .= ",100* $gen".'_real/total_reg_feats '."as $gen";
-$q3 .= ",($gen"."_real- $gen"."_mock)*($gen"."_real- $gen"."_mock)/ $gen"."_mock as $gen"
+        #$q3 .= ",($gen"."_real- $gen"."_mock)*($gen"."_real- $gen"."_mock)/ $gen"."_mock as $gen"
+
+        $q3 .= ",($gen"."_real- $gen"."_mock)*($gen"."_real- $gen"."_mock)/ if($gen"."_mock,$gen"."_mock,1) as $gen"
     }
     $q .= ")";
     $q1 .= ")";
