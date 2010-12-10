@@ -161,7 +161,7 @@ GetOptions ("output=s"      => \$output,
 	    "help|h"              => \$help,
 	   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
-pod2usage(1) if ($help);
+pod2usage(1) if ($help || !$efgdb_name);
 
 #Get db adaptors: 
 
@@ -230,10 +230,22 @@ foreach my $fset (@fsets){
   my $set_overlap_count = 0;
   my $set_length = 0;
   my $set_overlap_length = 0;
+
+  warn "Adding the Y PAR regions to the blacklist";
+  my @all_regions = @{ $coredba->get_SliceAdaptor()->fetch_all('toplevel') };
+  push @all_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',10001,2649521);
+  push @all_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',59034050);
+
+
   foreach my $chromosome_slice (@{ $coredba->get_SliceAdaptor()->fetch_all('chromosome') }){
     #print "Chromosome\t".$chromosome_slice->seq_region_name()."\n";
     my @set_features = @{$fset->get_Features_by_Slice($chromosome_slice)};
     my @excluded_regions = @{$chromosome_slice->get_all_MiscFeatures('encode_excluded')}; 
+
+    if($chromosome_slice->seq_region_name eq 'Y'){
+      push @excluded_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',10001,2649521);
+      push @excluded_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',59034050);
+    }
 
     foreach my $feature (@set_features){
       $set_count++;
