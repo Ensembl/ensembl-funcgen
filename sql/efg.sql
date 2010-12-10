@@ -754,7 +754,7 @@ CREATE TABLE `annotated_feature` (
 --
 -- Table structure for table `motif_feature`
 --
-
+DROP TABLE IF EXISTS `motif_feature`;
 CREATE TABLE `motif_feature` (
   `motif_feature_id` int(10) unsigned NOT NULL auto_increment,
   `binding_matrix_id` INT(10) unsigned NOT NULL,
@@ -773,7 +773,7 @@ CREATE TABLE `motif_feature` (
 --
 -- Table structure for table `associated_motif_feature`
 --
-
+DROP TABLE IF EXISTS `associated_motif_feature`;
 CREATE TABLE `associated_motif_feature` (
    `annotated_feature_id` int(10) unsigned NOT NULL,
    `motif_feature_id` int(10) unsigned NOT NULL,
@@ -785,7 +785,7 @@ CREATE TABLE `associated_motif_feature` (
 --
 -- Table structure for table `binding_matrix`
 --
-
+DROP TABLE IF EXISTS `binding_matrix`;
 CREATE  TABLE `binding_matrix` (
  `binding_matrix_id` INT(10) unsigned NOT NULL auto_increment,
  `name` VARCHAR(45) NOT NULL,
