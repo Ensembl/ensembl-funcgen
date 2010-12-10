@@ -789,10 +789,10 @@ CREATE TABLE `associated_motif_feature` (
 CREATE  TABLE `binding_matrix` (
  `binding_matrix_id` INT(10) unsigned NOT NULL auto_increment,
  `name` VARCHAR(45) NOT NULL,
- `analysis_id` int(10) unsigned NOT NULL,
  `feature_type_id` int(10) unsigned NOT NULL,
  `frequencies` VARCHAR(1000) NOT NULL,
  `description` VARCHAR(255) NULL,
+ `analysis_id` int(10) unsigned NOT NULL,
  PRIMARY KEY (`binding_matrix_id`) ,
  KEY `name_analysis_idx` (`name`, `analysis_id`),
  KEY `feature_type_idx` (`feature_type_id`)
