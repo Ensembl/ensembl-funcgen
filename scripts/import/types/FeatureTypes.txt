@@ -112,6 +112,7 @@ Pax5	Transcription Factor	Pax5 Transcription Factor Binding
 Pbx3	Transcription Factor	Pbx3 Transcription Factor Binding
 PGC1A	Transcription Factor	PGC1A Transcription Factor Binding
 PolIII	Polymerase	RNA Polymerase III Binding
+PolIII Transcription Associated	Regulatory Feature	PolIII transcribed RNA Gene associated regulatory feature
 PolII	Polymerase 	RNA Polymerase II
 POU2F2	Transcription Factor	POU2F2 Transcription Factor Binding
 Promoter Associated - Cell type specific	Regulatory Feature	Cell type specific promoter like regulatory feature
