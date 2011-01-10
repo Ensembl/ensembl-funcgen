@@ -1,18 +1,6 @@
-=pod
-
-=head1 NAME
-
-Bio::Das::ProServer::SourceHydra::ensembl_funcgen
-
-=head1 DESCRIPTION
-
-Dynamic source adaptor broker, serves hydra source adaptors from 
-Result/FeatureSets with status 'DAS_DISPLAYABLE'
-
-
 =head1 LICENSE
 
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -28,6 +16,16 @@ Result/FeatureSets with status 'DAS_DISPLAYABLE'
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
 
+=pod
+
+=head1 NAME
+
+Bio::Das::ProServer::SourceHydra::ensembl_funcgen
+
+=head1 DESCRIPTION
+
+Dynamic source adaptor broker, serves hydra source adaptors from 
+Result/FeatureSets with status 'DAS_DISPLAYABLE'
 
 =cut
 
@@ -49,7 +47,7 @@ use Data::Dumper;
 use Carp;
 use Readonly;
 
-our $VERSION       = do { my ($v) = (q$Revision: 1.8 $ =~ /\d+/mxg); $v; };
+our $VERSION       = do { my ($v) = (q$Revision: 1.9 $ =~ /\d+/mxg); $v; };
 Readonly::Scalar our $CACHE_TIMEOUT   => 1800;#30 mins in seconds
 Readonly::Scalar our $LASTMOD_TIMEOUT => 30;
 

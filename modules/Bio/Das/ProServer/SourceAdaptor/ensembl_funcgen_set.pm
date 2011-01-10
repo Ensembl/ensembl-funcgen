@@ -1,18 +1,6 @@
-=head1 NAME
-
-ensembl_funcgen_set.pm
-
-=head1 SYNOPSIS
-
-
-=head1 DESCRIPTION
-
-Proserver module to access an ensembl funcgen Result/FeatureSet as a DAS source.
-Supports both standard and hydra implementation using the GenerateDASConfig function of the eFG environment.
-
 =head1 LICENSE
 
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -27,6 +15,18 @@ Supports both standard and hydra implementation using the GenerateDASConfig func
 
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
+
+=head1 NAME
+
+ensembl_funcgen_set.pm
+
+=head1 SYNOPSIS
+
+
+=head1 DESCRIPTION
+
+Proserver module to access an ensembl funcgen Result/FeatureSet as a DAS source.
+Supports both standard and hydra implementation using the GenerateDASConfig function of the eFG environment.
 
 =cut
 

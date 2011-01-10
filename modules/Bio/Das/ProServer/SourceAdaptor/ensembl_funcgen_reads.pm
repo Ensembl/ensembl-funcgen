@@ -1,16 +1,6 @@
-=head1 NAME
-
-Bio::Das::ProServer::SourceAdaptor::ensembl_funcgen_reads
-
-=head1 DESCRIPTION
-
-This is a SourceAdaptor module to retrieve raw read alignments and profiles.
-Supports both standard and hydra implementation using the GenerateDASConfig function of the eFG environment.
-
-
 =head1 LICENSE
 
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -26,6 +16,14 @@ Supports both standard and hydra implementation using the GenerateDASConfig func
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
 
+=head1 NAME
+
+Bio::Das::ProServer::SourceAdaptor::ensembl_funcgen_reads
+
+=head1 DESCRIPTION
+
+This is a SourceAdaptor module to retrieve raw read alignments and profiles.
+Supports both standard and hydra implementation using the GenerateDASConfig function of the eFG environment.
 
 =cut
 

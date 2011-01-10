@@ -1,90 +1,20 @@
-#Nath
+=head1 LICENSE
 
-#Done
-#Remove median & get_date and implement EFGUtils when migrating to eFG
-#Implemented strand check and unmapped object for anti-sense mapping
-#Changed transcript_probeset_count cache to use dbID instead of complete name
-#Renamed check_names_match to validate_arrays and extended to perform probeset warning, external_db name guess and returns cache, user array param validation and association check
-#Merged delete_unampped objects into delete_existing_xrefs due to dependency. Now throws if arrays param set until force_delete specified, deletes using IN list
-#cache_arrays_per_probeset now uses arrays param to reduce size of cache
-#removed unmapped_object dbID = 2000>
-#Change all probe specific unmapped object to reeflect the individual probe rather than the probeset
-#Updated logs
-#Updated docs
-#Added control of promiscuous probesets and unmapped objects
-#Added array level stats
-#added slice and transcript test modes
-#Fix extension to only extend if there are no UTRs!!! Now much more flexible!
-# Handle UTR/Extension overlap bug, wasn't catch feature across the UTR>extension border
-# Remove Anti-sense UnmappedObjects?
-# Test for external_dbs in healtcheck and force insert manually or prompt to change species name
-#Implement Helper for logs etc.
-# Handle non-probeset probes
-# Add Probe level DBEntries to enable ProbeSet view? No just add ProbeFeature IDs to linkage annotation?
-# Or just leave out, altho it will not be obvious exactly which ones will have been used in the mapping
-# No we need to do both, so we can identify exactly which feature mapped
-# But also know how many times a probe might have mapped to another transcript, to give a quality score!
-# Pod::Usage for help
-#Species specific check existing and delete based on external_db_name
-#Change docs to Pod
-#Can remove object_name and object_key from caches if we disable logs and just depend on xref/unmapped objects.
-#Else we need to maintain them so we have names rather than dbIDs in the logs
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
 
-#To do
+  This software is distributed under a modified Apache license.
+  For license details, please see
 
-# 1. Reimpliment validate arrays, see old script?
-# 2. Add unannotated UTR clipping dependant on nearest neighbour
-# 3. Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, 
-#    then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs 
-#    in the neighbour.
-# 4. Separate UTR multipliers for 3' and 5'?
-# 5. Implement incremental update from list of stable IDs. Consider unmapped probe changes etc. 
-# 6. Parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide 
-#    counts for a given probeset. Calc UTRs then submit chunks jobs to farm
-#    Chunk by retrieving all probesets and sorting an array of probeset names, then splice the array 
-#    according to the number of chunks. We're still going to have retrieve all the transcripts and retrieve 
-#    all probes for each, so we are really not gaining anything!! The only gain we can make is by chunking 
-#    by slice, but then we need to know how many times something has mapped. Can we do some clean up afterwards? 
-#    Let's add a clean up mode which simply deletes all probe sets which map too many times. We would need to 
-#    ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run 
-#    clean up.
-# 7. There is no reason to have separate probe and xref DBs???
-# 8. Validate array format against arrays specified? May want to just use an array format as a template???
-# 9. Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and 
-#    annotation
-# 10.Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the 
-#    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total 
-#    sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
-# 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and 
-#    we won't get duplication should the job fail halfway through. This is because hceck existing only check oxs, not uos.
-# 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
-# 13.Collect warning into summary repoprt to list at very end.
-# 14 Reduce max_transcripts as this is never being hit due to alignment threshold
-# 15 Why can't we omit -arrays if we have -format?
-# 16 Add UTR only overlap  in range registry.
-# 17 Check for ProbeFeature xrefs and UOs in check_existing_and_exit?
-# 18 PostAlign/PreXref processing
-#    Remove duplicated ProbeFeatures(from ProbeTranscriptAlign) and redirect Xrefs
-#    Being careful to make sure cigarlines are valid for both.
-#    Remove ProbeTranscriptAlign ProbeFeaturess which have been called promiscuous 
-#    by ProbeAlign, and update to promiscuous if sum of ProbeAlign and 
-#    ProbeTranscriptAlign features render a Probe promiscuous
+    http://www.ensembl.org/info/about/code_licence.html
 
-#Ensembl Genomes stuff
-# TEST Registry usage required as species will come from same DB
-# In which case we need to take a species param for each of the transcript, array and xref DBs
-# Also need to have -no_delete option, which will allow running of pipeline with previous xrefs stored?
-# Or can we force delete to be species specific? We would need to do this anyway to support updating of species asynchronously
-# We probably need to think about this for the 1st stage too, 
-# but will be easy as we just need to dump the correct top level sequence
-# Validate species against registry alias and use this to generate species_core_Gene DB rather than ensembl_core_Gene
-# patch other efg DBs and alter External parsers accordingly.
-# Can't rely on Registry as species aliases may not be present or loaded
+=head1 CONTACT
 
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
 
-# Issues
-# Cannot account for running non-linked arrays which may use the same probe/set name.  This may cause failure if the probeset sizes are different. Xrefs and counts should be unaffected as we base these on the probe_set_ids not the names. This is not really an issue as unlinked arrays should not be run together
-# Cannot currently handle probesets with different sizes between arrays, defaults to lowest probeset size to be permissive. See todo 12.
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 
 =head1 NAME
@@ -210,26 +140,95 @@ This is generally executed by the eFG array mapping environment
 
 ensembl-functgenomics/scripts/environments/arrays.env
 
-=head1 LICENSE
-
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
-
-  This software is distributed under a modified Apache license.
-  For license details, please see
-
-    http://www.ensembl.org/info/about/code_licence.html
-
-=head1 CONTACT
-
-  Please email comments or questions to the public Ensembl
-  developers list at <ensembl-dev@ebi.ac.uk>.
-
-  Questions may also be sent to the Ensembl help desk at
-  <helpdesk@ensembl.org>.
-
-
 =cut
+
+#Nath
+
+#Done
+#Remove median & get_date and implement EFGUtils when migrating to eFG
+#Implemented strand check and unmapped object for anti-sense mapping
+#Changed transcript_probeset_count cache to use dbID instead of complete name
+#Renamed check_names_match to validate_arrays and extended to perform probeset warning, external_db name guess and returns cache, user array param validation and association check
+#Merged delete_unampped objects into delete_existing_xrefs due to dependency. Now throws if arrays param set until force_delete specified, deletes using IN list
+#cache_arrays_per_probeset now uses arrays param to reduce size of cache
+#removed unmapped_object dbID = 2000>
+#Change all probe specific unmapped object to reeflect the individual probe rather than the probeset
+#Updated logs
+#Updated docs
+#Added control of promiscuous probesets and unmapped objects
+#Added array level stats
+#added slice and transcript test modes
+#Fix extension to only extend if there are no UTRs!!! Now much more flexible!
+# Handle UTR/Extension overlap bug, wasn't catch feature across the UTR>extension border
+# Remove Anti-sense UnmappedObjects?
+# Test for external_dbs in healtcheck and force insert manually or prompt to change species name
+#Implement Helper for logs etc.
+# Handle non-probeset probes
+# Add Probe level DBEntries to enable ProbeSet view? No just add ProbeFeature IDs to linkage annotation?
+# Or just leave out, altho it will not be obvious exactly which ones will have been used in the mapping
+# No we need to do both, so we can identify exactly which feature mapped
+# But also know how many times a probe might have mapped to another transcript, to give a quality score!
+# Pod::Usage for help
+#Species specific check existing and delete based on external_db_name
+#Change docs to Pod
+#Can remove object_name and object_key from caches if we disable logs and just depend on xref/unmapped objects.
+#Else we need to maintain them so we have names rather than dbIDs in the logs
+
+#To do
+
+# 1. Reimpliment validate arrays, see old script?
+# 2. Add unannotated UTR clipping dependant on nearest neighbour
+# 3. Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, 
+#    then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs 
+#    in the neighbour.
+# 4. Separate UTR multipliers for 3' and 5'?
+# 5. Implement incremental update from list of stable IDs. Consider unmapped probe changes etc. 
+# 6. Parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide 
+#    counts for a given probeset. Calc UTRs then submit chunks jobs to farm
+#    Chunk by retrieving all probesets and sorting an array of probeset names, then splice the array 
+#    according to the number of chunks. We're still going to have retrieve all the transcripts and retrieve 
+#    all probes for each, so we are really not gaining anything!! The only gain we can make is by chunking 
+#    by slice, but then we need to know how many times something has mapped. Can we do some clean up afterwards? 
+#    Let's add a clean up mode which simply deletes all probe sets which map too many times. We would need to 
+#    ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run 
+#    clean up.
+# 7. There is no reason to have separate probe and xref DBs???
+# 8. Validate array format against arrays specified? May want to just use an array format as a template???
+# 9. Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and 
+#    annotation
+# 10.Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the 
+#    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total 
+#    sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
+# 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and 
+#    we won't get duplication should the job fail halfway through. This is because hceck existing only check oxs, not uos.
+# 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
+# 13.Collect warning into summary repoprt to list at very end.
+# 14 Reduce max_transcripts as this is never being hit due to alignment threshold
+# 15 Why can't we omit -arrays if we have -format?
+# 16 Add UTR only overlap  in range registry.
+# 17 Check for ProbeFeature xrefs and UOs in check_existing_and_exit?
+# 18 PostAlign/PreXref processing
+#    Remove duplicated ProbeFeatures(from ProbeTranscriptAlign) and redirect Xrefs
+#    Being careful to make sure cigarlines are valid for both.
+#    Remove ProbeTranscriptAlign ProbeFeaturess which have been called promiscuous 
+#    by ProbeAlign, and update to promiscuous if sum of ProbeAlign and 
+#    ProbeTranscriptAlign features render a Probe promiscuous
+
+#Ensembl Genomes stuff
+# TEST Registry usage required as species will come from same DB
+# In which case we need to take a species param for each of the transcript, array and xref DBs
+# Also need to have -no_delete option, which will allow running of pipeline with previous xrefs stored?
+# Or can we force delete to be species specific? We would need to do this anyway to support updating of species asynchronously
+# We probably need to think about this for the 1st stage too, 
+# but will be easy as we just need to dump the correct top level sequence
+# Validate species against registry alias and use this to generate species_core_Gene DB rather than ensembl_core_Gene
+# patch other efg DBs and alter External parsers accordingly.
+# Can't rely on Registry as species aliases may not be present or loaded
+
+
+# Issues
+# Cannot account for running non-linked arrays which may use the same probe/set name.  This may cause failure if the probeset sizes are different. Xrefs and counts should be unaffected as we base these on the probe_set_ids not the names. This is not really an issue as unlinked arrays should not be run together
+# Cannot currently handle probesets with different sizes between arrays, defaults to lowest probeset size to be permissive. See todo 12.
 
 
 
