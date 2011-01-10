@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -42,6 +45,9 @@ create features which lie inside introns but not in repeats
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.3  2011-01-10 13:32:23  nj1
+ updated boiler plate
+
  Revision 1.2  2010-07-15 14:29:53  dkeefe
  changed display_label to binary_string
 

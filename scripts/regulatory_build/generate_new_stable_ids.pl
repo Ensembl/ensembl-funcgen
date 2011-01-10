@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.

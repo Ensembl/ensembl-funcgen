@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -38,6 +41,9 @@ mysql -u ensro -P3306 -hens-genomics2 -BN -e"select display_label from regulator
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.5  2011-01-10 13:32:23  nj1
+ updated boiler plate
+
  Revision 1.4  2010-09-24 09:44:26  dkeefe
  corrected sql for cell line selection properly!
 

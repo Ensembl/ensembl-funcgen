@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -34,6 +37,9 @@ Optional
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.10  2011-01-10 13:23:12  nj1
+ updated boiler plate
+
  Revision 1.9  2010-07-06 09:27:10  nj1
  added jobname for farm jobs
 

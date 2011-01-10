@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -46,6 +49,9 @@ reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4 -s mus_musculus
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.6  2011-01-10 13:32:23  nj1
+ updated boiler plate
+
  Revision 1.5  2010-07-01 14:42:32  dkeefe
  removed the constraint that features used must have more than one attribute.
 

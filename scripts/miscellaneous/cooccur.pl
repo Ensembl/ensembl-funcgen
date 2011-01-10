@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -97,6 +100,9 @@ The above may take a minute or so to run.
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2011-01-10 13:27:29  nj1
+ updated boiler plate
+
  Revision 1.1  2010-12-08 11:43:20  dkeefe
  moved from dkeefe personal.
  used for PWM mapping and filtering

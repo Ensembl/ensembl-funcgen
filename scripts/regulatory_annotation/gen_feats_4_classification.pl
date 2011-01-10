@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -48,6 +51,9 @@ edit the file ~dkeefe/dbs/current_core or  ~dkeefe/dbs/current_mouse_core to poi
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.9  2011-01-10 13:32:23  nj1
+ updated boiler plate
+
  Revision 1.8  2010-10-04 14:39:51  dkeefe
  added a pol3 transcribed gene class of elements
 
