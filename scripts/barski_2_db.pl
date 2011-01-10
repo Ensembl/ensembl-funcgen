@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
@@ -5,6 +7,10 @@
 
   This software is distributed under a modified Apache license.
   For license details, please see
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
 
     http://www.ensembl.org/info/about/code_licence.html
 
@@ -27,6 +33,9 @@
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2011-01-10 13:40:37  nj1
+ updated boiler plate
+
  Revision 1.1  2008-07-10 07:51:41  dkeefe
  gets bed_file formatted reads data for the Zhao lab CD4 acetylation
  set into db tables.

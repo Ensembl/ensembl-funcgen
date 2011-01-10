@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -103,6 +106,9 @@ mysql -u ensro -hens-genomics1 -P3306 -BN -e"select sr.name,af.seq_region_start,
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.5  2011-01-10 13:40:37  nj1
+ updated boiler plate
+
  Revision 1.4  2010-09-27 15:06:20  dkeefe
  added a fastaclean step on the genomic sequences because the MOODS
  mapper handles ambiguity symbols incorrectly and generates invalid mappings.

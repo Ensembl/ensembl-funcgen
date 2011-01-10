@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
+
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
@@ -15,7 +18,6 @@
 
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
-
 
 =head1 DESCRIPTION
 
@@ -47,6 +49,9 @@ ensembl-functgenomics/scripts/pwm_mapping_notes
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.2  2011-01-10 13:40:37  nj1
+ updated boiler plate
+
  Revision 1.1  2010-11-25 15:16:38  dkeefe
  Little utility for filtering PWM mappings using the output of pwm_filter_mappings.pl
 

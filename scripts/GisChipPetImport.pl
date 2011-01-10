@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 =head1 LICENSE
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
@@ -16,18 +18,18 @@
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
 
-
 =head1 CVS
 
   $Log: not supported by cvs2svn $
+  Revision 1.2  2011-01-10 13:40:37  nj1
+  updated boiler plate
+
   Revision 1.1  2008-07-01 13:39:43  dkeefe
   quick hack demonstrating the wrong way to add annotated features to
   the funcgen database.
 
 =cut
 
-
-###!/opt/local/bin/perl -w
 
 BEGIN{
     if($ENV{SHELL} eq 'bash'){
