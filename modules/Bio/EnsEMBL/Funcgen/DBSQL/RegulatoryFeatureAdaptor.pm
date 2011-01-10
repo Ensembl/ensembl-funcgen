@@ -1,27 +1,10 @@
 #
 # Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor
 #
-# You may distribute this module under the same terms as Perl itself
-
-=head1 NAME
-
-Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor - A database adaptor for fetching and
-storing RegulatoryFeature objects.
-
-=head1 SYNOPSIS
-
-my $afa = $db->get_RegulatoryFeatureAdaptor();
-
-my $features = $afa->fetch_all_by_Slice($slice);
-
-=head1 DESCRIPTION
-
-The RegulatoryFeatureAdaptor is a database adaptor for storing and retrieving
-RegulatoryFeature objects.
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -38,11 +21,21 @@ RegulatoryFeature objects.
   <helpdesk@ensembl.org>.
 
 
-=head1 METHODS
+=head1 NAME
 
-The rest of the documentation details each of the object methods. Internal
-methods are preceded with an underscore e.g. _method
+Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor - A database adaptor for fetching and
+storing RegulatoryFeature objects.
 
+=head1 SYNOPSIS
+
+my $afa = $db->get_RegulatoryFeatureAdaptor();
+
+my $features = $afa->fetch_all_by_Slice($slice);
+
+=head1 DESCRIPTION
+
+The RegulatoryFeatureAdaptor is a database adaptor for storing and retrieving
+RegulatoryFeature objects.
 
 =cut
 

@@ -1,10 +1,8 @@
-# $Id: ResultFeature.pm,v 1.9 2010-11-02 09:52:07 nj1 Exp $
-
-
+# $Id: ResultFeature.pm,v 1.10 2011-01-10 11:49:11 nj1 Exp $
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.

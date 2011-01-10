@@ -1,45 +1,10 @@
 #
 # Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::ResultFeatureAdaptor
 #
-# You may distribute this module under the same terms as Perl itself
-
-=head1 NAME
-
-Bio::EnsEMBL::DBSQL::Funcgen::ResultFeatureAdaptor - A hybrid/chimaeric database adaptor for fetching and
-storing ResultFeature objects.  This will automatically query the web optimised result_feature
-table if a data is present, else it will query the underlying raw data tables.
-
-How are we going to track the association between these two result sets?  We could use the supporting_set table and DataSets, but this would require hijacking the product feature set field for a result set??!!
-
-This is not really a DataSet, but two associated result sets.
-Add type to result_set, result and result_feature.  This would simply be a replicate pointing to the same cc_ids, but we can then simply test for the type and use a different table if possible.
-We can healtcheck the two sets to make sure they have the same cc_ids, analysis, feaure and cell types.
-How do we make the association? Query using the name, analysis, cell/feature types and different result_set type. Or we could add a parent_result_set_id
-
-This could utilise a Binner object which would do the necessary DB compaction based on the association Feature Collection methods.  
-
-Are we going to binary pack the scores?
-
-We should just add another table result_feature_set.
-Need to left join on this table as might not be present.
-Would need update_result_feature_set method?
-
-
-=head1 SYNOPSIS
-
-my $rfeature_adaptor = $db->get_ResultFeatureAdaptor();
-
-my @result_features = @{$rfeature_adaptor->fetch_all_by_ResultSet_Slice($rset, $slice)};
-
-
-=head1 DESCRIPTION
-
-The ResultFeatureAdaptor is a database adaptor for storing and retrieving
-ResultFeature objects.
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -56,7 +21,36 @@ ResultFeature objects.
   <helpdesk@ensembl.org>.
 
 
+=head1 NAME
+
+Bio::EnsEMBL::DBSQL::Funcgen::ResultFeatureAdaptor 
+
+=head1 SYNOPSIS
+
+my $rfeature_adaptor = $db->get_ResultFeatureAdaptor();
+
+my @result_features = @{$rfeature_adaptor->fetch_all_by_ResultSet_Slice($rset, $slice)};
+
+
+=head1 DESCRIPTION
+
+The ResultFeatureAdaptor is a database adaptor for storing and retrieving
+ResultFeature objects. This will automatically query the web optimised result_feature
+table if a data is present, else it will query the underlying raw data tables.
+
 =cut
+
+#How are we going to track the association between these two result sets?  We could use the supporting_set table and DataSets, but this would require hijacking the product feature set field for a result set??!!
+
+#Add type to result_set, result and result_feature.  This would simply be a replicate pointing to the same cc_ids, but we can then simply test for the type and use a different table if possible.
+##This is not really a DataSet, but two associated result sets.
+#We can healtcheck the two sets to make sure they have the same cc_ids, analysis, feaure and cell types.
+#How do we make the association? Query using the name, analysis, cell/feature types and different result_set type. Or we could add a parent_result_set_id
+
+#We should just add another table result_feature_set.
+#Need to left join on this table as might not be present.
+#Would need update_result_feature_set method?
+
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor;
 

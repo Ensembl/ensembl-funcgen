@@ -1,4 +1,22 @@
 
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor -
@@ -12,13 +30,6 @@ $db_entry = $db_entry_adaptor->fetch_by_dbID($id);
 my $gene = $db_adaptor->get_GeneAdaptor->fetch_by_stable_id('ENSG00000101367');
 @db_entries = @{$db_entry_adaptor->fetch_all_by_Gene($gene)};
 @gene_ids = $db_entry_adaptor->list_gene_ids_by_extids('BAB15482');
-
-
-=head1 CONTACT
-
-Post questions to the EnsEMBL developer list <ensembl-dev@ebi.ac.uk>
-
-=head1 METHODS
 
 =cut
 

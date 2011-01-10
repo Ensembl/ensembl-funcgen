@@ -2,6 +2,24 @@
 # EnsEMBL module for Bio::EnsEMBL::Funcgen::Parsers::InputSet
 #
 
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::Parsers::InputSet
@@ -18,24 +36,6 @@ This is a base class to support simple file format parsers. For simple imports t
 set to the parser type i.e. the file format.  The generic read_and_import_simple_data assumes
 a one line per feature format, other format need there own read_and_import_format_data method, 
 which will need defining in the result_data config element.
-
-=head1 LICENSE
-
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
-
-  This software is distributed under a modified Apache license.
-  For license details, please see
-
-    http://www.ensembl.org/info/about/code_licence.html
-
-=head1 CONTACT
-
-  Please email comments or questions to the public Ensembl
-  developers list at <ensembl-dev@ebi.ac.uk>.
-
-  Questions may also be sent to the Ensembl help desk at
-  <helpdesk@ensembl.org>.
 
 =cut
 
