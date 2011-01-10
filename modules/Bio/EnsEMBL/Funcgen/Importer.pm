@@ -1,22 +1,7 @@
 
-=head1 NAME
-
-Bio::EnsEMBL::Funcgen::Importer
-  
-=head1 SYNOPSIS
-
-my $imp = Bio::EnsEMBL::Funcgen::Importer->new(%params);
-$imp->register_experiment();
-
-
-=head1 DESCRIPTION
-
-B<This program> is the main class coordinating import of tiling array design and experimental data.
-It utilises several underlying parser classes specific to array vendor or import file type.
-
 =head1 LICENSE
 
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -32,6 +17,20 @@ It utilises several underlying parser classes specific to array vendor or import
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
 
+=head1 NAME
+
+Bio::EnsEMBL::Funcgen::Importer
+  
+=head1 SYNOPSIS
+
+my $imp = Bio::EnsEMBL::Funcgen::Importer->new(%params);
+$imp->register_experiment();
+
+
+=head1 DESCRIPTION
+
+B<This program> is the main class coordinating import of tiling array design and experimental data.
+It utilises several underlying parser classes specific to array vendor or import file type.
 
 =cut
 

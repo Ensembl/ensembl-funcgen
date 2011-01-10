@@ -3,6 +3,26 @@
 #
 # You may distribute this module under the same terms as Perl itself
 
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
+
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::DataSet - A module to represent DataSet object.
@@ -35,49 +55,6 @@ experiment may have different cell lines, features or time points, these would r
 May have duplicates for raw data but only one predicted features track??
 The data in this class is kept as lightweight as possible with data being loaded dynamically.
 
-
-SOME IMPORTANT ISSUES/DEFINITIONS
-
-This class current only accomodates the following relationships:
-
-
-SIMPLE - feature_set to result_set(s) relationships.  This is one feature_set/type with a supporting 
-result_set or sets from the same experiment.
-
-COMPOUND - feature_set to result_sets relationship.  Where we have one feature_set/type supported by
-numerous result_sets which may have different analyses from different experiments.
-
-
-Both SIMPLE and COMPOUND also assume all other variables are the same e.g. cell_type, time_point etc.
-
-This class does not accomodate the following:
-
-COMPLEX - Multiple feature_types, feature classes, cell_types etc... Where the only assumtion
-is that their is one constant variable which can be keyed on.  This could potentially capture any experiment design.
-
-e.g. A combined promoter and histone tiling experiment which has features and results for promoter and all modifications,
-but using the same cell line and conditions.  
-
-e.g. Looking at the same histone modifications across multiple cell_types
-
-e.g. Looking at time points within an experiment
-
-
-Final goal of visualisation will be a track of regulons/functional features supported by a network of
-feature_types/classes from different cell_types, some relationships may be indirect. 
-
-
-=head1 AUTHOR
-
-This module was created by Nathan Johnson.
-
-This module is part of the Ensembl project: http://www.ensembl.org/
-
-=head1 CONTACT
-
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
-
-=head1 METHODS
 
 =cut
 

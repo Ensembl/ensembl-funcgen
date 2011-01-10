@@ -1,7 +1,25 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::FeatureSet
 #
-# You may distribute this module under the same terms as Perl itself
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 NAME
 
@@ -23,19 +41,6 @@ my $result_set = Bio::EnsEMBL::Funcgen::FeatureSet->new(
 A FeatureSet object provides access to a set of feature predictions and their details, which may have been generated from a 
 single or multiple Experiments with potentially differing analyses.  The FeatureSet itself will only have a single analysis 
 which may be one or a combination of programs but will be represented by one analysis record.
-
-
-=head1 AUTHOR
-
-This module was created by Nathan Johnson.
-
-This module is part of the Ensembl project: http://www.ensembl.org/
-
-=head1 CONTACT
-
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
-
-=head1 METHODS
 
 =cut
 

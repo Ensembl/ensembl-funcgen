@@ -1,7 +1,26 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::Probe
 #
-# You may distribute this module under the same terms as Perl itself
+
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 NAME
 
@@ -34,19 +53,6 @@ DrosGenome1:AFFX-LysX-5_at:535:35; and Drosophila_2:AFFX-LysX-5_at:460:51;. In
 the database, these two probes will have the same oligo_probe_id. Thus the same
 Affy probe can have a number of different names and complete names depending on
 which array it is on.
-
-=head1 AUTHOR
-
-This module was created by Nathan Johnson, but is almost entirely based on the
-Affy/OligoProbe module written by Arne Stabenau and Ian Sealy.
-
-This module is part of the Ensembl project: http://www.ensembl.org/
-
-=head1 CONTACT
-
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
-
-=head1 METHODS
 
 =cut
 

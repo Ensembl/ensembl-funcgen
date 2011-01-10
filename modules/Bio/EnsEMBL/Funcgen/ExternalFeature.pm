@@ -1,7 +1,26 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::ExternalFeature
 #
-# You may distribute this module under the same terms as Perl itself
+
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 NAME
 
@@ -28,18 +47,6 @@ my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new(
 
 An ExternalFeature object represents the genomic placement of an externally curated
 feature from and DB external to Ensembl.
-
-=head1 AUTHOR
-
-This module was created by Nathan Johnson.
-
-This module is part of the Ensembl project: http://www.ensembl.org/
-
-=head1 CONTACT
-
-Post comments or questions to the Ensembl development list: ensembl-dev@ebi.ac.uk
-
-=head1 METHODS
 
 =cut
 

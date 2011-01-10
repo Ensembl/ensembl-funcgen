@@ -1,7 +1,24 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::InputSet
 #
-# You may distribute this module under the same terms as Perl itself
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 NAME
 
@@ -30,25 +47,6 @@ my $data_set = Bio::EnsEMBL::Funcgen::InputSet->new(
 An InputSet object provides a generic container for any non-array based feature import, 
 allowing tracking of file import via the status table and integration into Data and FeatureSets to
 provide traceability to the source experiment from a given FeatureSet.
-
-=head1 LICENSE
-
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
-
-  This software is distributed under a modified Apache license.
-  For license details, please see
-
-    http://www.ensembl.org/info/about/code_licence.html
-
-=head1 CONTACT
-
-  Please email comments or questions to the public Ensembl
-  developers list at <ensembl-dev@ebi.ac.uk>.
-
-  Questions may also be sent to the Ensembl help desk at
-  <helpdesk@ensembl.org>.
-
 
 =cut
 

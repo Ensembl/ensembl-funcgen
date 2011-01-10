@@ -1,5 +1,25 @@
-# $Id: Collector.pm,v 1.6 2010-05-04 16:18:09 nj1 Exp $
+# $Id: Collector.pm,v 1.7 2011-01-10 11:27:34 nj1 Exp $
 
+
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
+=cut
 
 #Your Bio::Ensembl::Collection::Feature defs module should inherit from here
 #This could be a local defs file which you have created and require'd into your script
