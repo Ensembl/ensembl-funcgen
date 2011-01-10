@@ -1,13 +1,25 @@
-#!/software/bin/perl
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 DESCRIPTION
 
 Determines the log odds score threshold for filtering PWM mappings to be incorporated into the functional genomics databases.
-
-
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
@@ -36,6 +48,9 @@ add the functionality from pwm_filter_mappings.pl to the end of this script
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.3  2010-11-26 15:56:07  dkeefe
+ added a single linkage clustering of the peaks step
+
  Revision 1.2  2010-11-24 10:41:13  dkeefe
  Generally tidied up, added more POD and converted hard codded
  variables to command line options.

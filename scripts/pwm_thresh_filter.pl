@@ -1,4 +1,21 @@
-#!/usr/local/ensembl/bin/perl -w
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 DESCRIPTION
 
@@ -12,9 +29,6 @@ Output files have names like MA0012.1.pwm_map and are written to the directory s
 
 
 
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
@@ -33,6 +47,9 @@ ensembl-functgenomics/scripts/pwm_mapping_notes
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2010-11-25 15:16:38  dkeefe
+ Little utility for filtering PWM mappings using the output of pwm_filter_mappings.pl
+
 
 
 =cut

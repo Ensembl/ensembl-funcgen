@@ -1,4 +1,20 @@
-#!/usr/local/ensembl/bin/perl -w
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 DESCRIPTION
 
@@ -6,10 +22,6 @@ Copies the reg_feature data needed for the overlap analysis into a
 specified database. Does a bit of denormalising and quite a lot of
 filtering/QC. Final product is a table in the same format as the
 genomic features called regulatory_features_filtered.
-
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
@@ -34,6 +46,9 @@ reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4 -s mus_musculus
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.5  2010-07-01 14:42:32  dkeefe
+ removed the constraint that features used must have more than one attribute.
+
  Revision 1.4  2010-04-01 12:27:04  dkeefe
  added -d option to specify a scratch/dump directory
 

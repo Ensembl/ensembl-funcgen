@@ -1,4 +1,20 @@
-#!/usr/local/ensembl/bin/perl -w
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 DESCRIPTION
 
@@ -89,13 +105,6 @@ Finally, for the purposes of the regulatory build, there is a set of
 rules which 1. resolve conflicts amongst the above flags and 2. assign
 a regulatory feature_type to the regfeat.
 
-
-
-
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
-
 =head1 USAGE
 
 create a database for overlap analysis at the mysql command line (ideally on ens-genomics2 as this is the default server)
@@ -127,6 +136,9 @@ reg_feat_gen_feat_overlaps.pl -e dk_funcgen_classify_55_1 -v1 -c reg_feat_gen_fe
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.5  2010-12-06 14:09:26  dkeefe
+ added updates for PolIII transcription associated regulatory class.
+
  Revision 1.4  2010-07-01 14:45:18  dkeefe
  removed the constraint that patterns considered must have more than
  one bit set.

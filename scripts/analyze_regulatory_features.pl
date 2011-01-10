@@ -1,5 +1,21 @@
-#!/usr/bin/perl
-###!/software/bin/perl
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 NAME
 
@@ -26,20 +42,6 @@ analyze_regulatory_features.pl \
 reads in regulatory features from file and performs Chi-square tests based 
 counted data by given pattern(s) (for binary string) and signature(s) 
 (currently gene proximity only).
-
-=head1 LICENCE
-
-This code is distributed under an Apache style licence. Please see
-http://www.ensembl.org/info/about/code_licence.html for details.
-
-=head1 AUTHOR
-
-Stefan Graf, Ensembl Functional Genomics
-
-=head1 CONTACT
-
-Please post comments/questions to the Ensembl development list
-<ensembl-dev@ebi.ac.uk>
 
 =cut
 

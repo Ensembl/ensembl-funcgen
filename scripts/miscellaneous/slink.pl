@@ -1,6 +1,20 @@
-#!/software/bin/perl -w
+=head1 LICENSE
 
-#!/sw/arch/bin/perl5.8.7 -w
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 DESCRIPTION
 
@@ -13,10 +27,6 @@ By default output is to STDOUT but an output file can be specified on the comman
 On request a distribution of the element lengths is printed to a separate file.
 
 By default expects 0-based half-open UCSC convention coordinates but can work with 1 based coords if the -u flag is used.
-
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
@@ -37,6 +47,10 @@ slink.pl -1 -o junk -d distrib -M4000 -m max all_dnase
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2010-12-08 11:46:01  dkeefe
+  moved from dkeefe personal.
+  used for PWM mapping and filtering
+
  Revision 1.1  2009-10-14 14:19:54  dkeefe
  Takes the elements from an arbitrary number of .bed files, as specified on the command line or as a list in a file, and clusters them into larger elements which are output in three column bed format. Optionally splits long elements into shorter ones.
 

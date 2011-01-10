@@ -1,14 +1,26 @@
-#!/usr/local/ensembl/bin/perl -w
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 DESCRIPTION
 
 Copies, via dumps to a scratch directory, and then denormalises data from an ensembl core database and creates tables of genomic features in a second database for use in classifying regulatory features.
 
 Tables all have a standard set of columns.
-
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
@@ -36,6 +48,9 @@ edit the file ~dkeefe/dbs/current_core or  ~dkeefe/dbs/current_mouse_core to poi
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.8  2010-10-04 14:39:51  dkeefe
+ added a pol3 transcribed gene class of elements
+
  Revision 1.7  2010-04-01 12:29:57  dkeefe
  updates for use with species other than human
 

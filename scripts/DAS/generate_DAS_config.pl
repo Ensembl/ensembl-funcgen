@@ -1,4 +1,21 @@
-#!/software/bin/perl
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 NAME
 
@@ -85,27 +102,6 @@ This script writes DAS configuration for all DAS_DISPLAYABLE sets or Hydra sourc
  Other:
    --help Prints a short help message and exits
    --man  Prints the man page and exits
-
-
-
-=head1 LICENSE
-
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
-
-  This software is distributed under a modified Apache license.
-  For license details, please see
-
-    http://www.ensembl.org/info/about/code_licence.html
-
-=head1 CONTACT
-
-  Please email comments or questions to the public Ensembl
-  developers list at <ensembl-dev@ebi.ac.uk>.
-
-  Questions may also be sent to the Ensembl help desk at
-  <helpdesk@ensembl.org>.
-
 
 =cut
 

@@ -1,4 +1,20 @@
-#!/usr/local/ensembl/bin/perl -w
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 DESCRIPTION
 
@@ -9,12 +25,6 @@ Uses (a slightly modified) find_pssm_dna C++ program from the MOODS suite as the
 Input comprises a fasta file of DNA sequences and a list of jaspar format pfm files and their associated matrix_list.txt file. The input file is split using the fastaexplode program from the Exonerate suite (http://www.ebi.ac.uk/~guy/exonerate/).
 
 Output is a bed style, tab separated file but with 1-based rather than 0 based coordinates.
-
-
-
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
 
 =head1 USAGE
 
@@ -93,6 +103,10 @@ mysql -u ensro -hens-genomics1 -P3306 -BN -e"select sr.name,af.seq_region_start,
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.4  2010-09-27 15:06:20  dkeefe
+ added a fastaclean step on the genomic sequences because the MOODS
+ mapper handles ambiguity symbols incorrectly and generates invalid mappings.
+
  Revision 1.3  2010-06-09 13:37:18  dkeefe
  updated to use jaspar filenames with version numbers
 

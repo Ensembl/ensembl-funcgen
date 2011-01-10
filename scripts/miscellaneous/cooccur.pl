@@ -1,6 +1,21 @@
-#!/software/bin/perl
+=head1 LICENSE
 
-#!/sw/arch/bin/perl5.8.7
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 DESCRIPTION
 
@@ -43,10 +58,6 @@ Then use the -m flag with cooccur.pl to indicate that the sort utility can simpl
 
 If you are dealing with .bed files or other files which use the UCSC half-open coordinate convention (ie sequence start = 0) then specify this with the -u flag. Both files need to use the same coordinate convention.
 
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
-
 =head1 USAGE
 
 =head1 EXAMPLES
@@ -85,9 +96,11 @@ The above may take a minute or so to run.
 
 =head1 CVS
 
-
-
  $Log: not supported by cvs2svn $
+ Revision 1.1  2010-12-08 11:43:20  dkeefe
+ moved from dkeefe personal.
+ used for PWM mapping and filtering
+
  Revision 1.7  2010-11-18 11:39:43  dkeefe
  altered temp filenames so it plays nicely on the farm
 

@@ -1,4 +1,20 @@
-#!/usr/local/bin/perl
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 NAME
 
@@ -12,8 +28,6 @@
 
 dump_genes.pl dumps all the genes in a database.
 #It\'s a stripped down version of gene2flat.???
-
-=head1 OPTIONS
 
 =cut
 

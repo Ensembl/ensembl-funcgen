@@ -1,12 +1,28 @@
-#!/software/bin/perl -w
+=head1 LICENSE
+
+  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 CVS
 
   $Log: not supported by cvs2svn $
-
-=head1 AUTHOR
-
-  Damian Keefe dkeefe@ebi.ac.uk
+  Revision 1.1  2008-07-01 13:39:43  dkeefe
+  quick hack demonstrating the wrong way to add annotated features to
+  the funcgen database.
 
 =cut
 
