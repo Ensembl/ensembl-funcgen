@@ -498,7 +498,7 @@ sub counts{
 }
 
 
-#Move this to Importer
+#Move this to Importer?
 
 sub slices{
   my ($self, $slices) = @_;

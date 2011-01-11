@@ -197,6 +197,9 @@ sub parse_and_load{
 															  -class => 'RNA',
 															  -description => $method.' '.$feature,
 															 ))};
+
+		#Need to add source gene xref here to enable target conequences implied by source variation
+
 	  }
 	}
 
