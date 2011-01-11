@@ -518,6 +518,44 @@ sub fetch_focus_set_config_by_FeatureSet{
   }
 
 
+=head2 fetch_attribute_set_config_by_FeatureSet
+
+  Args       : Bio::EnsEMBL::Funcgen::FeatureSet
+  Example    : $self->{'attribute_set'} = $self->adaptor->fetch_attribute_set_config_by_FeatureSet($self);
+  Description: Caches and returns attribute set config for a given FeatureSet
+  Returntype : Boolean
+  Exceptions : Warns if meta entry not present
+  Caller     : Bio::EnsEMBL::Funcgen::FeatureSet::is_attribute_set
+  Status     : At Risk
+
+=cut
+
+sub fetch_attribute_set_config_by_FeatureSet{
+    my ($self, $fset) = @_;
+
+	$self->{attribute_set_config} ||= {};
+
+	if(! defined $self->{attribute_set_config}->{$fset->dbID}){
+	  $self->{attribute_set_config}->{$fset->dbID} = 0;  #set cache default
+	  my $meta_key =  'regbuild.'.$fset->cell_type->name.'.feature_set_ids';
+
+	  #list_value_by_key caches, so we don't need to implement this in the adaptor
+	  my ($attr_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
+
+	  if(! defined $attr_ids){
+		warn("Cannot detect attribute set as meta table does not contain $meta_key");
+	  }
+	  else{
+
+		foreach my $aid(split ',', $attr_ids){
+		  $self->{attribute_set_config}->{$aid} = 1;
+		}
+	  }
+	}
+
+    return $self->{attribute_set_config}->{$fset->dbID};
+  }
+
 
 
 
