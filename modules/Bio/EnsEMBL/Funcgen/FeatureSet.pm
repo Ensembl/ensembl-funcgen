@@ -338,6 +338,34 @@ sub is_focus_set{
   return $self->{focus_set};
 }
 
+=head2 is_attribute_set
+
+  Args       : None
+  Example    : if($fset->is_attribute_set){ ... }
+  Description: Returns true if FeatureSet is a supporting/attribute(focus or not) set used in the RegulatoryBuild
+  Returntype : Boolean
+  Exceptions : Throws if meta entry not present
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub is_attribute_set{
+  my $self = shift;
+
+  if(! defined $self->{attribute_set}){
+
+	if(! defined $self->cell_type){
+	  warn "FeatureSet without an associated CellType cannot be a attribute set:\t".$self->name;
+	  $self->{attribute_set} = 0;
+	}
+	else{
+	   $self->{attribute_set} = $self->adaptor->fetch_attribute_set_config_by_FeatureSet($self);
+	 }
+  }
+
+  return $self->{attribute_set};
+}
 
 #No data_set method here as FeatureSet can be product or supporting set in data_set
 #Use DataSetAdaptor::fetch_by_product_FeatureSet or fetch_all_by_supporting_set
