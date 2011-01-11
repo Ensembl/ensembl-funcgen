@@ -2,7 +2,6 @@
 
 =head1 LICENSE
 
-
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
@@ -1708,6 +1707,14 @@ if ((! $no_triage) && @unmapped_objects) {
   $unmapped_object_adaptor->store(@unmapped_objects);
   $um_cnt += scalar(@unmapped_objects);
   $Helper->log("UnmappedObjects loaded:\t\t\t$um_cnt");
+
+
+  #more detailed logging here, i.e. counts for each ur:
+  #select count(*) as 'count', ur.summary_description, ur.full_description from analysis a, unmapped_object uo, unmapped_reason ur where uo.unmapped_reason_id=ur.unmapped_reason_id and uo.analysis_id=a.analysis_id and a.logic_name='probe2transcript' group by uo.unmapped_reason_id order by count desc;
+  #But use in script iterators to avoid array-probe_set/feature joins
+
+
+
 }
 
 #Can we do this with some SQL to save memory here?

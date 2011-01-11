@@ -2,7 +2,6 @@
 
 =head1 LICENSE
 
-
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
@@ -25,7 +24,7 @@ sam2bed.pl
 
 =head1 SYNOPSIS
 
- sam2bed.pl [ file.sam[.gz] ]+
+ sam2bed.pl [ -on_farm -man -help ] -files  (file.sam[.gz])+
 
 =head1 DESCRIPTION
 
@@ -59,8 +58,8 @@ my @tmp_args = @ARGV;
 GetOptions (
 			"on_farm"    => \$on_farm,
 			"files=s{,}" => \@files,
-			'man'        => sub { pos2usage(-exitval => 0, -verbose => 2); },
-			'help'       => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
+			'man'        => sub { pod2usage(-exitval => 0, -verbose => 2); },
+			'help'       => sub { pod2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
 		   ) or pod2usage( -exitval => 1,
 						   -message => "Params are:\t@tmp_args"
 						 );
