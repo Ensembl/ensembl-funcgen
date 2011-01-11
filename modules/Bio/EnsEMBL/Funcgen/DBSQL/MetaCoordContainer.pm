@@ -17,7 +17,7 @@
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
  
- =cut
+=cut
  
  package Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer;
 
