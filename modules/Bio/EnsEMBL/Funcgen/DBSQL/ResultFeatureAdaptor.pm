@@ -439,9 +439,8 @@ sub _objs_from_sth {
 		
 		next FEATURE;
 	  }
-	  
 	
-	@scores = unpack('('.$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$window_size)- $start_pad - $end_pad), $scores);
+	  @scores = unpack('('.$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$window_size)- $start_pad - $end_pad), $scores);
 	}
 
 
@@ -856,16 +855,12 @@ sub fetch_all_by_Slice_ResultSet{
 	  
 
 	  #Finally set scores column for fetch
-	  $_scores_field = "substring(rf.scores, $sub_start, $sub_end)";
-	  #We could set pack template here with ($sub_end-$sub_start+1)/$self->packed_size	  
-	  #warn $_scores_field;
+	  $_scores_field = "substring(rf.scores, $sub_start, ".($sub_end - $sub_start + 1).")";
 	}
 
 	#Account for hash return here
 	my ($tmp_ref) = @{$self->fetch_all_by_Slice_constraint($slice, $constraint)};
 	return $tmp_ref->{$rset->dbID} || [];
-
-	#return $self->fetch_all_by_Slice_constraint($slice, $constraint)->{$rset->dbID};
   }
 
 
@@ -1527,8 +1522,8 @@ sub set_collection_config_by_Slice_ResultSets{
 		my $sub_end   = (($collection_end/$wsize) * ($self->packed_size));
 		
 		#Finally set scores column for fetch
-		$scores_field = "substring(rf.scores, $sub_start, $sub_end)";
-
+		$scores_field = "substring(rf.scores, $sub_start, ".($sub_end - $sub_start + 1).')';
+			
 		#Set start end config for collections
 		$wsize_config{$wsize}{collection_start}         = $collection_start;
 		$wsize_config{$wsize}{collection_end}           = $collection_end;
