@@ -365,6 +365,7 @@ sub _objs_from_sth {
 		  $reg_feat->attribute_cache(\%reg_attrs);
 		  push @features, $reg_feat;
 
+
 		  %reg_attrs = (
 						annotated => {},
 						motif     => {},
@@ -503,42 +504,10 @@ sub _objs_from_sth {
 	  }
 	
   
-	  #populate attributes array
+	  #populate attributes cache
 	  if(defined $attr_id  && ! $skip_feature){
 
 		$reg_attrs{$attr_type}->{$attr_id} = undef;
-
-
-		### MOVE THIS TO RegualtoryFeature::regulatory_attributes
-		# This reslicing is now all done by passing the slice to fetch_all_by_dbID_list 
-		# when lazy loading
-
-		#These will all be fetched on their native slice, not necessarily the slice we have fetched this
-		#reg feature on, hence we need to map the features to the current slice
-		#otherwise the bounds may get messed up
-
-		#my $attr = $feature_adaptors{$attr_type}->fetch_by_dbID($attr_id);
-		#No $attr here means the supporting attribute features have been removed
-		#Should never happen in release DB.
-
-
-		#reset start and ends for the current slice
-		#This is not redefining the slice, so we may get minus start values
-		#grab the seq_region_start/ends here first
-		#as resetting directly causes problems
-		#my $attr_sr_start = $attr->seq_region_start;
-		#my $attr_sr_end = $attr->seq_region_end;
- 		#$attr->slice($slice);
-
-		#if($slice->strand ==1){
-		#  $attr->start($attr_sr_start - $slice->start +1);
-		#  $attr->end($attr_sr_end - $slice->start +1);	
-		#}else{
-		#  $attr->start($slice->end - $attr_sr_end +1);
-		#  $attr->end($slice->end - $attr_sr_start +1);	
-		#}
-		
-		#push @reg_attrs, $attr;
 	  }
 	}
 
@@ -663,13 +632,15 @@ sub store{
 
 
 	#Store regulatory_attributes
+	#Attr cache now only holds dbids not objs
+
 	my %attrs = %{$rf->attribute_cache};
 
 	foreach my $fclass(keys %attrs){
 	
-	  foreach my $feat(values %{$attrs{$fclass}}){
+	  foreach my $attr_id(keys %{$attrs{$fclass}}){
 		$sth2->bind_param(1, $rf->dbID,   SQL_INTEGER);
-		$sth2->bind_param(2, $feat->dbID, SQL_INTEGER);
+		$sth2->bind_param(2, $attr_id, SQL_INTEGER);
 		$sth2->bind_param(3, $fclass,     SQL_VARCHAR);
 		$sth2->execute();
 	  }
