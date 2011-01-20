@@ -76,7 +76,6 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature); #@ISA
   Arg [-DISPLAY_LABEL]     : string - Display label for this feature
   Arg [-BINARY_STRING]     : string - Regulatory Build binary string
   Arg [-PROJECTED]         : boolean - Flag to specify whether this feature has been projected or not
-  Arg [-STRAND]            : int - The orientation of this feature. Valid values are 1, -1 and 0.
   Arg [-FEATURE_SET]       : Bio::EnsEMBL::Funcgen::FeatureSet - Regulatory Feature set
   Arg [-FEATURE_TYPE]      : Bio::EnsEMBL::Funcgen::FeatureType - Regulatory Feature sub type
   Arg [-ATTRIBUTE_CACHE]   : HASHREF of feature class dbID|Object lists
@@ -87,7 +86,6 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature); #@ISA
 										                                  -SLICE         => $chr_1_slice,
 									                                      -START         => 1_000_000,
 									                                      -END           => 1_000_024,
-									                                      -STRAND        => 0,
 									                                      -DISPLAY_LABEL => $text,
 									                                      -FEATURE_SET   => $fset,
                                                                           -FEATURE_TYPE  => $reg_ftype,
@@ -106,7 +104,8 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature); #@ISA
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-  my $self = $class->SUPER::new(@_);
+  #hardcode strand as always 0
+  my $self = $class->SUPER::new(@_, -strand => 0);
 
   my ($stable_id, $attr_cache, $bin_string, $projected)
     = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED'], @_);
@@ -238,28 +237,39 @@ sub regulatory_attributes{
 	#Now structured as hash to facilitate faster has_attribute method
 	#Very little difference to array based cache
 
-	my @attr_dbIDs = keys %{$self->{'regulatory_attributes'}{$fclass}};
+	my @attr_dbIDs = keys %{$self->{'attribute_cache'}{$fclass}};
 
 	if(scalar(@attr_dbIDs) > 0){
 	  
-	  if( ! ( ref($self->{'regulatory_attributes'}{$fclass}->{$attr_dbIDs[0]})  &&
-			  ref($self->{'regulatory_attributes'}{$fclass}->{$attr_dbIDs[0]})->isa('Bio::EnsEMBL::Feature') )){
+	  if( ! ( ref($self->{'regulatory_attributes'}{$fclass}->[0])  &&
+			  ref($self->{'regulatory_attributes'}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )){
 
-		my $fclass_attrs = $adaptors{$fclass}->fetch_all_by_dbID_list(\@attr_dbIDs, $self->slice);
+		$self->{'regulatory_attributes'}{$fclass} = $adaptors{$fclass}->fetch_all_by_dbID_list(\@attr_dbIDs, $self->slice);
 		#This method transfers to the query slice, do not use fetch_by_dbID
 		#It also should use _final_clause
 		#This is currently only specified in the MotifFeatureAdaptor
 		#as these are required to be sorted to relate to the structure string
 
+		#but we are stll storing in has where order is not preserved!!
+		#so this will not match order of underlying strcture!
+
+		#separate so we can have ordered array returned
+		#do we need redundant caches?
+		#defo need db id cache for 'has' methods
+		
+
 				
-		foreach my $attr(@{$fclass_attrs}){
-		  $self->{'regulatory_attributes'}{$fclass}{$attr->dbID} = $attr;
-		}
+		#foreach my $attr(@{$fclass_attrs}){
+		#  $self->{'regulatory_attributes'}{$fclass}{$attr->dbID} = $attr;
+		#}
 	  }
+	}
+	else{
+	  $self->{'regulatory_attributes'}{$fclass} = [];
 	}
   }
 
-  return [ map { values %{$self->{'regulatory_attributes'}{$_}} } @fclasses ];
+  return [ map { @{$self->{'regulatory_attributes'}{$_}} } @fclasses ];
 }
 
 =head2 has_attribute
@@ -367,7 +377,7 @@ sub _sort_attributes{
   Description: Setter for the regulatory_attribute cache for this feature. This is a short cut method used by the 
                regulatory build and the webcode to avoid unnecessary fetching and enable enable lazy loading 
   Returntype : HASHREF
-  Exceptions : Throws if trying to overwrite exiting cache
+  Exceptions : Throws if trying to overwrite existing cache
   Caller     : RegulatoryFeatureAdaptor.pm and build_regulatory_features.pl
   Status     : At Risk
 
@@ -377,23 +387,27 @@ sub _sort_attributes{
 sub attribute_cache{
   my ($self, $attr_hash) = @_;
 
-  if(! defined $attr_hash){
-	$self->regulatory_attributes; #Fetch the attrs
-  }
-  else{
+#  if(! defined $attr_hash){
+#	$self->regulatory_attributes; #Fetch the attrs?
+#
+#
+#	#Do we need to do this now we have separated the caches?
+#
+#  }
+  if(defined $attr_hash){
 
 	foreach my $fclass(keys %{$attr_hash}){
 
-	  if(exists $self->{'regulatory_attributes'}{$fclass}){
+	  if(exists $self->{'attribute_cache'}{$fclass}){
 		throw("You are trying to overwrite a pre-existing regulatory attribute cache entry for feature class:\t$fclass");
 	  }
 	  else{
-		$self->{'regulatory_attributes'}{$fclass} = $attr_hash->{$fclass};
+		$self->{'attribute_cache'}{$fclass} = $attr_hash->{$fclass};
 	  }
 	}
   }
 
-  return $self->{'regulatory_attributes'} || {};
+  return $self->{'attribute_cache'} || {};
 }
 
 
@@ -453,7 +467,7 @@ sub bound_end {
 
 sub is_projected {
   my $self           = shift;
-  $self->{projected} = shift if defined @_;
+  $self->{projected} = shift if @_;
 
   return $self->{'projected'};
 }
