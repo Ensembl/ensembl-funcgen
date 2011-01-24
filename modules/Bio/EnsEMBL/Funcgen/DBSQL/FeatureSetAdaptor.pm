@@ -83,7 +83,7 @@ sub fetch_all_by_FeatureType {
 
     if($status){
       my $constraint = $self->status_to_constraint($status);
-      $sql = (defined $constraint) ? $sql." ".$constraint : undef;
+      $sql = (defined $constraint) ? $sql." AND ".$constraint : undef;
     }
 
     return $self->generic_fetch($sql);	
