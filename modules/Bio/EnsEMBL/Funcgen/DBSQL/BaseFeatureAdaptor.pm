@@ -217,6 +217,7 @@ sub fetch_all_by_Slice_constraint {
   
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
+
     my $offset = $seg->from_start();
     my $seg_slice  = $seg->to_Slice();
     my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
@@ -723,6 +724,7 @@ sub _slice_fetch {
   my $slice = shift;
   my $orig_constraint = shift;
 
+
   my $slice_start  = $slice->start();
   my $slice_end    = $slice->end();
   my $slice_strand = $slice->strand();
@@ -772,6 +774,7 @@ sub _slice_fetch {
   my $asma = $self->db->get_AssemblyMapperAdaptor();
   my @features;
 
+
   # fetch the features from each coordinate system they are stored in
  COORD_SYSTEM: foreach my $feat_cs (@feat_css) {
 
@@ -793,12 +796,13 @@ sub _slice_fetch {
 	  #This test will effect ever single feature query, can we omit this somehow?
 	  my $max_len;
 
+
 	  if(! (($self->can('_window_size') &&
 			 $self->_window_size))){
 		  $max_len = $self->_max_feature_length() ||
         $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
 	  }
-
+	
       my $constraint = $orig_constraint;
 	  my $sr_id = $self->get_seq_region_id_by_Slice($slice, $feat_cs);
 
@@ -821,10 +825,7 @@ sub _slice_fetch {
           " AND ${tab_syn}.seq_region_start >= $min_start";
       }
 
-
       my $fs = $self->generic_fetch($constraint,undef,$slice);
-
-	  
       # features may still have to have coordinates made relative to slice
       # start
 
@@ -1228,7 +1229,7 @@ sub _get_coord_system_ids{
 	   (scalar(@$coord_systems) >0)){
 	  
 	  foreach my $cs(@$coord_systems){
-		$self->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
+		$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
 		push @cs_ids, $cs->dbID;
 	  }
 	}
