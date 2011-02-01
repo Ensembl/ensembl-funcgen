@@ -88,7 +88,7 @@ export HUGEMEM_HOME=$HOME/huge_array_mapping
 #Cannot interpolate directly in EXONERATE_PATH as
 #pipeline tries to locate the exectuable and fails somehow
 #This is not ideal as we are now using the arch of the submitter node to run all the farm jobs
-export ARCH=`arch`
+export ARCH=`uname -m`
 export EXONERATE_PATH="/lustre/work1/ensembl/gs2/local/${ARCH}/bin/exonerate"
 export EXONERATE_VERSION='2.2.0'
 export PROBE2TRANSCRIPT_PARAMS='--calculate_utrs --utr_multiplier 1'
