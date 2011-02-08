@@ -1,4 +1,4 @@
-# patch_61_62_s.sql
+# patch_61_62_d.sql
 #
 # title:  add experimental_group.description
 #
