@@ -574,6 +574,8 @@ CREATE TABLE `feature_type` (
    `name` varchar(40) NOT NULL,
    `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo', 'Open Chromatin', 'Search Region', 'Association Locus') default NULL,
    `description`  varchar(255) default NULL,
+	`so_accession` varchar(64) DEFAULT NULL,
+ 	`so_name` varchar(255) DEFAULT NULL,
    PRIMARY KEY  (`feature_type_id`),
    UNIQUE KEY `name_class_idx` (`name`, `class`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -765,7 +767,9 @@ CREATE TABLE `motif_feature` (
   `seq_region_strand` tinyint(1) NOT NULL,
   `display_label` varchar(60) default NULL,
   `score` double default NULL,
+	`stable_id` mediumint(8) unsigned DEFAULT NULL,
   PRIMARY KEY  (`motif_feature_id`),
+	UNIQUE KEY `stable_id_idx` (`stable_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `binding_matrix_idx` (`binding_matrix_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
