@@ -92,8 +92,8 @@ sub new {
 	
   my $self = $class->SUPER::new(@_, ('-feature_class' => 'result'));
 	
-  my ($table_name, $table_id, $rf_set)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET'], @_);
+  my ($table_name, $table_id, $rf_set, $dbfile_data_dir)
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 'DBFILE_DATA_DIR'], @_);
 
   $self->{'table_id_hash'} = {};
 
@@ -108,41 +108,66 @@ sub new {
    $self->table_name($table_name);
   $self->add_table_id($table_id) if $table_id;
   $self->result_feature_set($rf_set) if $rf_set;
+  $self->dbfile_data_dir($dbfile_data_dir) if $dbfile_data_dir;
 
   return $self;
 }
 
 
+#These are CollectionContainer? methods
+#For a core track the would probably be in the Analysis
+#All other collection methods are in ResultFeatureAdaptor(and parents)
 
-#methods
-#set wide display label(predicted_feature) + more wordy label for wiggle tracks?
-#defined by experiment type i.e. time course would require timepoint in display label
-#deal with this dynamically or have display_label in table
-#Need call on type, or fetch all would
-#_get_ec_ids or contigsets?
-#this should now be an intrinsic part of this class/adaptor
+=head2 get_dbfile_path_by_window_size
 
-#cell line
-#feature_type
-#displayable...should have one for the whole set and one for each raw and predicted?
+  Arg[1]     : int - window size
+  Arg[2]     : OPTIONAL Bio::EnsEMBL::Slice Used when generating individual seq_region Collections
+  Example    : my $filepath = $self->get_dbfile_path_by_ResultSet_window_size($rset, $wsize);
+  Description: Generates the default dbfile path for a given ResultSet and window_size
+  Returntype : string
+  Exceptions : Throws if Slice is not valid
+  Caller     : general
+  Status     : At risk
 
-#have analysis as arg? Or do we get all analysis sets?
-#we need to be able to set analyses for ResultSets dynamically from DB
-#pick up all ResultSets 
-#displayable field in ResultSets also?
+=cut
 
-#If we have mixed types in the same experiment then we could get promoter features and histone wiggle tracks displayed togeter
-#Not v.good for display purposes?  We may want to separate the promoter and histone tracks, or we may want ll the experiment data together but of mixed types.
-#We need to be able to pull back the experiment type for each set, therefore this needs setting on an ec level, not an experiment level.
-#This is also v.reliant on putting contig set info in place, otherwise we may get mixed chip types in same set.
+sub get_dbfile_path_by_window_size{
+  my ($self, $window_size, $slice) = @_;
 
-#get_raw_analysis_name
-#get_predicted_feature_analysis_name
-#set ResultFeatures and PredictedFeatures in hash keyed by analysis_name?
+  if($slice){
+   
+	if(! (ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
+	  throw('You must provide a valid Bio::EnsEMBL::Slice');
+	}
 
-#We had decided to remove type method this and use table_name
-#Move typed to input_set(Set.pm)!!!
+	$window_size .= '.'.$slice->seq_region_name;
+  }
 
+  return $self->dbfile_data_dir.'/result_features.'.$self->name.'.'.$window_size.'.col';
+}
+
+
+=head2 dbfile_data_dir
+
+  Arg[1]     : OPTIONAL string - data directory for this ResultSet
+  Example    : my $dbfile_data_dir = $self->dbfile_data_dir;
+  Description: Getter/Setter for the root dbfile data directory for this ResultSet
+  Returntype : string
+  Exceptions : None
+  Caller     : self
+  Status     : at risk
+
+=cut
+
+
+
+sub dbfile_data_dir{
+  my ($self, $data_dir) = @_;
+
+  $self->{'dbfile_data_dir'} = $data_dir if defined $data_dir;
+
+  return $self->{'dbfile_data_dir'};
+}
 
 
 
@@ -460,40 +485,6 @@ sub get_replicate_set_by_chip_channel_id{
   deprecate('Please use get_replicate_set_by_result_set_input_id instead');
   return $self->get_replicate_set_by_result_set_input_id($cc_id);
 }
-
-
-#=head2 get_result_table
-#
-#  Example    : my $result_table = $rset->get_result_table();
-#  Description: Getter for the federated result table name for this ResultSet.
-#  Returntype : String
-#  Exceptions : None
-#  Caller     : General
-#  Status     : At Risk - extend to use bins
-#
-#=cut
-
-#sub get_result_table{
-#  my $self = shift;
-
-#  #This method should be extended to use bins if we pass a range
-#  my $table;
-  
-#  return 'result';
-
-#  my @exp_ids = @{$self->get_experiment_ids()};
-
-#  if($#exp_ids >0){
-#	$table = 'result';
-#  }
-#  else{
-#	#$table = 'experiment_'.$exp_ids[0].'_result';
-#	$table ='result';
-#  }
-#
-#  return $table;
-#}
-
 
 
 =head2 get_displayable_ResultFeatures_by_Slice
