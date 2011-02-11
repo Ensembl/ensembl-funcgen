@@ -524,7 +524,7 @@ sub store{
 
 	  my $dlabel = $mf->display_label;
 
-	  if(! defined $mf->dlabel){
+	  if(! defined $dlabel){
 		$dlabel = $mf->binding_matrix->feature_type->name.':'
 		  .$mf->binding_matrix->name();
 	  }
