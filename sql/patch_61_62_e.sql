@@ -15,7 +15,7 @@
 
 
 DROP TABLE IF EXISTS `dbfile_registry`;
-CREATE TABLE `status` (
+CREATE TABLE `dbfile_registry` (
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(32)NOT NULL,	
    `path` varchar(255) NOT NULL,
