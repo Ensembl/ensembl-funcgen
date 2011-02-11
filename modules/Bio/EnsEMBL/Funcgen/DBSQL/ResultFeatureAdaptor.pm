@@ -100,6 +100,7 @@ sub _tables {
 	: @result_tables;
 }
 
+
 =head2 _columns
 
   Args       : None
@@ -889,14 +890,16 @@ sub _fetch_from_file_by_Slice_ResultSet{
   #  }
 
 
-  my $filepath = $self->get_dbfile_path_by_ResultSet_window_size($rset, $window_size);
   my $efg_sr_id = $self->get_seq_region_id_by_Slice($slice);
-  my $packed_scores =  $self->read_collection_blob(
-												   $filepath,
-												   $efg_sr_id,
-												   $conf->{$window_size}{'byte_offset'},
-												   $conf->{$window_size}{'byte_length'},
-												  );
+  my $packed_scores =  $self->read_collection_blob
+	(
+	 $rset->get_dbfile_path_by_window_size($window_size),
+	 #Would be in analysis object for unique analysis tracks/data
+	 $efg_sr_id,
+	 $conf->{$window_size}{'byte_offset'},
+	 $conf->{$window_size}{'byte_length'},
+	);
+
   my ($start, $end, $rf, @scores);
 
 
@@ -930,34 +933,62 @@ sub _fetch_from_file_by_Slice_ResultSet{
 }
 
 
-=head2 get_dbfile_path_by_ResultSet_window_size
+#MOVE THIS TO the ResultFeature Collector?
+#Is this really required at all now as we can pass these params to generate and then use the db after that
+#Move this out of here as it knows too much about the db
+#We area also moving away from proscribed filepaths towards a registry
+#Would still be a utility method for creating the files?
 
-  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
-  Arg[2]     : int - window size
-  Arg[3]     : OPTIONAL Bio::EnsEMBL::Slice Used when generating individual seq_region Collections
-  Example    : my $filepath = $self->get_dbfile_path_by_ResultSet_window_size($rset, $wsize);
-  Description: Generates the default dbfile path for a given ResultSet and window_size
+=head2 dbfile_data_root
+
+  Arg[1]     : OPTIONAL string - data root
+  Example    : my $dbfile_data_root = $self->dbfile_data_root;
+  Description: Getter/Setter for the root dbfile data directory for this class
   Returntype : string
-  Exceptions : Throws if Slice is not valid
-  Caller     : general
-  Status     : At risk
+  Exceptions : throws if dbfile_data_root entry is not found in meta table
+  Caller     : Descendant FileAdaptors
+  Status     : at risk
 
 =cut
 
-sub get_dbfile_path_by_ResultSet_window_size{
-  my ($self, $rset, $window_size, $slice) = @_;
+#Don't dynamically add dbname, as this will mean we will have to create softlinks
+#when using a non-standard dbname name
+#Also dangers of over-writing/deleting data whilst using other dbs
 
-  if($slice){
-   
-	if(! (ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
-	  throw('You must provide a valid Bio::EnsEMBL::Slice');
+
+sub dbfile_data_root{
+  my ($self, $data_root) = @_;
+
+  $self->{'data_root'} = $data_root if defined $data_root;
+
+  if(! defined $self->{'data_root'}){
+	#Grab to data_root from meta
+	($self->{'data_root'}) = @{$self->db->get_MetaContainer->list_value_by_key('dbfile.data_root')};
+
+	if(! defined $self->{'data_root'}){
+	  throw('Could not find dbfile.data_root meta entry');
 	}
 
-	$window_size .= '.'.$slice->seq_region_name;
+	#Set default dir dynamically by class name
+	my $class =  ref($self);
+	$class    =~ s/Adaptor$//;
+
+	#remove this? Just have ResultFeature instead of result_feature?
+
+	while($class =~ /([A-Z])([a-z]+)/){ 
+	  my ($ucf, $lcrest) = ($1, $2);
+	  my $lcf = lc($ucf); 
+	  $class =~ s/${ucf}${lcrest}/${lcf}${lcrest}_/;
+	}
+
+	$class =~ s/_$//;
+
+	$self->{'data_root'} .= "/${class}/";
   }
 
-  return $self->dbfile_data_root.$rset->name.'/result_features.'.$rset->name.'.'.$window_size.'.col';
+  return $self->{'data_root'};
 }
+
 
 
 =head2 fetch_all_by_Slice_ResultSet
