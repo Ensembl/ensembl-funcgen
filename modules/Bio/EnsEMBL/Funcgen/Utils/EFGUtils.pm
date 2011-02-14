@@ -46,7 +46,11 @@ This module collates a variety of miscellaneous methods.
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num open_file median mean run_system_cmd backup_file is_gzipped is_sam is_bed get_file_format strip_param_args generate_slices_from_names strip_param_flags);
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num 
+				open_file median mean run_system_cmd backup_file 
+				is_gzipped is_sam is_bed get_file_format strip_param_args 
+				generate_slices_from_names strip_param_flags
+				get_current_focus_set_names get_current_non_focus_set_names);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -218,6 +222,8 @@ sub mean{
 sub open_file{
   my ($file, $operator, $file_permissions) = @_;
 	
+  warn "EFGUtils open_file $file, $operator, $file_permissions";
+
   my $dir_permissions = $file_permissions || 0755;
 
   $operator ||= '<';
@@ -578,6 +584,34 @@ sub generate_slices_from_names{
   }
 
   return \@slices;
+}
+
+
+# Tracking DB methods
+#Move to DBAdaptor? Can we add this as a separate package in the same module?
+
+sub get_current_focus_set_names{
+  my ($tdb) = shift;
+
+  #Validate is production
+
+  my $sql = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$tdb->species.'"';
+  
+  my @names = @{$tdb->dbc->db_handle->selectall_arrayref($sql)};
+  return map "@$_", @names;
+}
+
+
+sub get_current_non_focus_set_names{
+  my ($tdb) = shift;
+	
+  #Validate is production
+
+  #0 rather than false so we don't get NULLs
+  my $sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$tdb->species.'"';
+  
+  my @names = @{$tdb->dbc->db_handle->selectall_arrayref($sql)};
+  return map "@$_", @names;
 }
 
 
