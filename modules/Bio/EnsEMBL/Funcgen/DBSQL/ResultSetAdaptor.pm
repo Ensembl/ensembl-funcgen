@@ -1,6 +1,7 @@
 #
 # Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::ResultSetAdaptor
 #
+
 =head1 LICENSE
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
@@ -32,14 +33,16 @@ my $rset_adaptor = $db->get_ResultSetAdaptor();
 my @rsets = @{$rset_adaptor->fetch_all_ResultSets_by_Experiment()};
 #my @displayable_rsets = @{$rset_adaptor->fetch_all_displayable_ResultSets()};
 
-#Other methods?
-#by FeatureType, CellType all with displayable flag?
+
 
 
 =head1 DESCRIPTION
 
 The ResultSetAdaptor is a database adaptor for storing and retrieving
-ResultSet objects.
+ResultSet objects which encapsulate ResultFeatures defining individual points of 
+experimental 'signal' data. This can be raw signal(Channel) or 
+normalised(ExperimentalChip) data from an Array Experiment. A ResultSet can also 
+encapsulate processed signal/read data(InputSet) from a sequencing Experiment e.g RPKM.
 
 =cut
 
@@ -53,11 +56,7 @@ use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
-
-use vars qw(@ISA);
-
-
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
 
 #Generates ResultSet contains info about ResultSet content
 #and actual results for channel or for chips in contig set?
@@ -366,16 +365,31 @@ sub _tables {
 	
   return (
 		  [ 'result_set',        'rs' ],
-		  [ 'result_set_input',  'rsi' ],
-		  #[ 'experimental_chip', 'ec' ],
-		  #[ 'channel',           'c'  ],
-		  #This causes the N(no channelrecords) records to be returned when there is no linkable channel.
-		  #solution is to create dummy channels for chip level import e.g. Sanger
-		  #we can have channel here, but only if we make the link in the default where, otherwise we'll get spurious results
-		  #must also make all the fetch methods use an OR constraint dependent on the table name
-		  #this would also be in default where
+		  [ 'result_set_input',  'rsi'],
+		  [ 'dbfile_registry',   'dr' ], 
 		 );
 }
+
+
+=head2 _left_join
+
+  Args       : None
+  Example    : None
+  Description: PROTECTED implementation of superclass abstract method.
+               Returns the left join clasnames and aliases of the tables to use for queries.
+  Returntype : List of listrefs of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _left_join {
+  #my $self = shift;
+
+  return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")']);
+}
+
 
 =head2 _columns
 
@@ -398,6 +412,7 @@ sub _columns {
 			  rsi.table_name      rsi.result_set_input_id
 			  rsi.table_id        rs.name
 			  rs.cell_type_id     rs.feature_type_id
+              dr.path
 			 );
 
 	
@@ -464,16 +479,14 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
   
   my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id, $name);
-  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set);
+  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set, $dbfile_dir);
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, 
-					 \$table_id, \$name, \$ctype_id, \$ftype_id);
+					 \$table_id, \$name, \$ctype_id, \$ftype_id, \$dbfile_dir);
   
-  #this fails if we delete entries from the joined tables
-  #causes problems if we then try and store an rs which is already stored
-
+  
   #Need c/ftype cache here or rely on query cache?
 
   while ( $sth->fetch() ) {
@@ -495,8 +508,8 @@ sub _objs_from_sth {
 													-TABLE_NAME   => $table_name,
 													-FEATURE_TYPE => $ftype,
 													-CELL_TYPE    => $ctype,
-													#-RESULT_FEATURE_SET => $rf_set,#Change to add_status
 													-ADAPTOR      => $self,
+													-DBFILE_DATA_DIR => $dbfile_dir,
 												   );
     }
     
