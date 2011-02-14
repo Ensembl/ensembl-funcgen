@@ -221,9 +221,7 @@ sub mean{
 
 sub open_file{
   my ($file, $operator, $file_permissions) = @_;
-	
-  warn "EFGUtils open_file $file, $operator, $file_permissions";
-
+  
   my $dir_permissions = $file_permissions || 0755;
 
   $operator ||= '<';

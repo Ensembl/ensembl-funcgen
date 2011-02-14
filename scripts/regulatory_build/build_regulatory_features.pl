@@ -832,7 +832,6 @@ else {
   $helper->log("Using previously dumped annotated features:\t$af_file");
 }
 
-warn "opening $af_file";
 
 my $fh = open_file($af_file);
 
