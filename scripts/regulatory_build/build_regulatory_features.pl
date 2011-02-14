@@ -165,7 +165,7 @@ The following figure gives examples.
 # 29 Don't build on cell type with only spare focus features and no other attrs i.e. only DNase
 #    Min of N different focus features if no attrs? Just include in core set.
 
-
+# 30 Fix WARNING:        Found more RegFeats(16) than included focus features(0) for MEF fopr cell_type projections
 
 use strict;
 use warnings;
@@ -833,6 +833,15 @@ else {
 }
 
 
+
+#Test whether file is empty here and exit and rm
+
+#if(-z $af_file){
+#  $helper->log("THERE ARE NO SUPPORTING FEATURES! Removing empty dump file:\t$af_file");
+#  unlink($af_file) or warn "Could not remove file:\t$af_file";
+#  exit;
+#}
+
 my $fh = open_file($af_file);
 
 
@@ -848,20 +857,22 @@ my $rf_size = -1;
 
 $helper->log("Processing slice:\t".$slice_name);
 
+#This currently still reads one null line if the file is empty!
 
-while (<$fh>) {
+
+while (my $line = <$fh>) {
  
  # Read from file and process sequentially in sorted by start, end order. Each 
   # new feature is checked if it overlaps with the preceeding already seen 
   # features. If yes we just carry on with the next one. Otherwise
-  next if (/^\#/o);
-  chomp; 
+  next if ($line =~ /^\#/o);
+  chomp $line; 
  
   #This assumes the correct seq_region as we dump out separate file
   #removed seq_region_id and name as we are dealing with slice based dumps
   #removed strand as all features are strandless
 
-  ($af_id, $start, $end, $score, $fset_id, @mf_ids) = split (/\s+/o, $_);
+  ($af_id, $start, $end, $score, $fset_id, @mf_ids) = split (/\s+/o, $line);
 
   #removed NULLs here (or in awk)
   @mf_ids = grep /[^(NULL)]/, @mf_ids;
@@ -1178,14 +1189,20 @@ sub dump_annotated_features{
 
 
   #This was appending without removing previous dumps!!!!
-  #This will not create a file with no data
+  #This will not create a file with no data!!!!!!!!!!!!!!
   #Now merges lines based on annotaed_feature_id, concating mf_ids
 
   my $command = "echo \"$sql\" ".
 	" | mysql -quick -N -h".$host." -P".$port." -u".$user." -p".$pass." ".$dbname.
-	" | gawk '{ if(last_id == 0){ last_id=\$1; start=\$2; end=\$3; score=\$4; fset_id=\$5; mf_ids=\$6;}; if(\$1 != last_id){ print last_id \"\t\" start \"\t\" end \"\t\" score \"\t\" fset_id \"\t\" mf_ids; last_id=\$1; start=\$2; end=\$3; score=\$4; fset_id=\$5; mf_ids=\$6;} else{ mf_ids=mf_ids \" \" \$6;}} END {print last_id \"\t\" start \"\t\" end \"\t\" score \"\t\" fset_id \"\t\" mf_ids; }'".
-        " | gawk '{ print >> \"".$outdir."/annotated_features.".$slice->seq_region_name.".dat\" }'";
-    
+	" | gawk '{ if(last_id == 0){ last_id=\$1; start=\$2; end=\$3; score=\$4; fset_id=\$5; mf_ids=\$6;}; ".
+	  "if((\$1 != last_id) && \$1){ ".
+		"print last_id \"\t\" start \"\t\" end \"\t\" score \"\t\" fset_id \"\t\" mf_ids; ".
+		  "last_id=\$1; start=\$2; end=\$3; score=\$4; fset_id=\$5; mf_ids=\$6;".
+			"} else{ mf_ids=mf_ids \" \" \$6;}".
+			  "} END {if(last_id){ print last_id \"\t\" start \"\t\" end \"\t\" score \"\t\" fset_id \"\t\" mf_ids; }}'".
+				" | gawk '{ print >> \"".$outdir."/annotated_features.".$slice->seq_region_name.".dat\" }'";
+
+
   $helper->log("# Execute: $command");
 
   # need to remove existing dump files, since we append to the file
