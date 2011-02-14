@@ -1,9 +1,8 @@
-# patch_61_62_c.sql
-#
-# title:  add feature_type sequence_ontology fields
-#
-# description:
-# Add so_id, so_name and ensembl_ontology_id fields
+/** 
+@header patch_61_62_c.sql - feature_type.sequence_ontology
+@desc   Add so_accession and so_name and fields
+*/
+
 
 #Or generic associated_ontology table?
 

@@ -1,9 +1,8 @@
-# patch_61_62_d.sql
-#
-# title:  add experimental_group.description
-#
-# description:
-# Add description field to experimental_group table
+/** 
+@header patch_61_62_d.sql - experimental_group.description
+@desc   Add description field to experimental_group table
+*/
+
 
 ALTER table experimental_group ADD `description` varchar(255) default NULL;
 

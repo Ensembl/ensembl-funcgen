@@ -1,9 +1,7 @@
-# patch_61_62_a.sql
-#
-# title: update schema version
-#
-# description:
-# Update schema_version in meta table to 62
+/** 
+@header patch_61_62_a.sql - schema version
+@desc   Update schema_version in meta table to 62
+*/
 
 UPDATE meta SET meta_value='62' WHERE meta_key='schema_version';
 

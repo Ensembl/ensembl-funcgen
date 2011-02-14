@@ -1,10 +1,9 @@
-# patch_61_62_b.sql
-#
-# title:  add motif_feature.stable_id
-#
-# description:
-# Required for inter-DB linking without using internal db ids
-# i.e variation consequences
+/** 
+@header patch_61_62_c.sql - motif_feature.stable_id
+@desc   Add 'internal' motif_feature stable_ids.  
+        Required for inter-DB linking without using internal db ids
+        i.e variation consequences
+*/
 
 
 ALTER table motif_feature ADD `stable_id` mediumint(8) unsigned DEFAULT NULL;
