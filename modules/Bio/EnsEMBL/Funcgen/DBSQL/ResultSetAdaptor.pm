@@ -608,11 +608,66 @@ sub store{
     
 	$self->store_states($rset);
     $self->store_chip_channels($rset);
-	
-    
+	$self->store_dbfile_data_dir($rset) if $rset->dbfile_data_dir;
   }
   
   return \@rsets;
+}
+
+=head2 store_dbfile_data_dir
+
+  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
+  Example    : $rset_adaptor->store_dbfile_data_dir;
+  Description: Updater/Setter for the root dbfile data directory for this ResultSet
+  Returntype : None
+  Exceptions : Throws if ResultSet is not stored and valid
+               Throws if dbfile_dat_dir not defined
+  Caller     : Bio::EnsEMBL::Funcgen::Collector::ResultFeature
+  Status     : at risk
+
+=cut
+
+
+
+sub store_dbfile_data_dir{
+  my ($self, $rset) = @_;
+
+
+  if ( ! $rset->is_stored($self->db()) ) {
+    throw('ResultSet must be stored in the database before storing chip_channel entries');
+  }
+
+  my $data_dir = $rset->dbfile_data_dir;
+
+  if(! $data_dir){
+	throw('You need to pass a dbfile_data_dir argument to update the ResultSet');
+  }
+  
+  #Check we have a record
+  my $sql = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
+  my $sth = $self->prepare($sql);
+  $sth->bind_param(1, $data_dir, SQL_VARCHAR);
+  $sth->execute;
+
+  my ($db_dir) = $sth->fetch();
+
+  if($db_dir &&
+	 ($db_dir ne $data_dir)){#UPDATE
+	$sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=?';
+	$sth = $self->prepare($sql);
+	$sth->bind_param(1, $data_dir,   SQL_VARCHAR);
+	$sth->bind_param(2, $rset->dbID, SQL_INTEGER);
+	$sth->execute;
+  }
+  elsif(! $db_dir){#STORE
+	$sql = 'INSERT INTO  dbfile_registry(table_id, table_name, path) values(?, "result_set", ?)';
+	$sth = $self->prepare($sql);
+	$sth->bind_param(1, $data_dir,   SQL_VARCHAR);
+	$sth->bind_param(2, $rset->dbID, SQL_INTEGER);
+	$sth->execute;
+  }
+  
+  return;
 }
 
 
