@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.10 2011-01-10 11:49:11 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.11 2011-02-18 14:35:41 nj1 Exp $
 
 =head1 LICENSE
 
@@ -30,8 +30,10 @@ use Bio::EnsEMBL::Utils::Argument  ('rearrange');
 use Bio::EnsEMBL::Utils::Exception ('throw');
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file);
 use Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
+use Bio::EnsEMBL::Funcgen::ProbeFeature; #Only used for _pre_storing slice/seq_region details
+#use POSIX;#ceil
 
-use base('Bio::EnsEMBL::Utils::Collector');#ISA
+use base qw(Bio::EnsEMBL::Utils::Collector Bio::EnsEMBL::DBFile::CollectionAdaptor);#@ISA
 
 
 ### Global config variables
@@ -65,6 +67,11 @@ $Bio::EnsEMBL::Utils::Collector::packed_size   = 4;#2;#per score
 $Bio::EnsEMBL::Utils::Collector::pack_template = 'f';#'v';#per score
 
 
+#Length is completely unreliable here
+#returns 2 for single v and 5 for single f?
+
+#Does appear to be 4 from read bytes
+
 ### Mandatory methods required by the base Collector
 
 
@@ -78,6 +85,9 @@ sub store_window_bins_by_Slice_ResultSet {
   $self->source_set_type('result');#required by get_Feature_by_Slice   
   $self->set_collection_defs_by_ResultSet($rset);  
   $self->set_config(%config);
+
+
+  #Need to test for existing collection
 
   $self->store_window_bins_by_Slice($slice);
   
@@ -104,7 +114,7 @@ sub store_window_bins_by_Slice_Parser{
   #This needs to be defined when craeting the ResultSet in the Importer
   #NEED TO CHANGE ALL ResultSet generation to add type!!!!!
   
-  my ($skip_zero_window) = rearrange( [ 'SKIP_ZERO_WINDOW'], %config );
+  my ($skip_zero_window, $force) = rearrange( [ 'SKIP_ZERO_WINDOW',  'FORCE'], %config );
 
 
 
@@ -114,9 +124,9 @@ sub store_window_bins_by_Slice_Parser{
   #To run these as slice jobs we would need to code to configure some slice based input ids
 
 
- 
   $self->source_set_type('input');#required by get_Feature_by_Slice
   $self->set_collection_defs_by_ResultSet($imp->result_set);
+
   $self->parser($imp);
  
   #For safety, set skip_zero window if we are using SEQUENCING data
@@ -135,11 +145,68 @@ sub store_window_bins_by_Slice_Parser{
 												 -dnadb          => $imp->db->dnadb,
 												 -total_features => $imp->total_features,
 												 -gender         => $imp->cell_type->gender,
+												 -window_sizes   => $self->window_sizes,
+												 #pass here as Collector is currently 'readding' 0 wsize
 												}
 							 ));
 
-  $self->store_window_bins_by_Slice($slice);
+ 
+  ### Check for existing dbfile dir/files
+  my $rset_dir        = $self->result_set->dbfile_data_dir;
+  my $dbfile_data_dir = $imp->get_dir('output');
+
+  if((! $force ) &&
+	 $rset_dir   &&
+	 ($rset_dir ne $dbfile_data_dir)){
+	throw("ResultSet dbfile_data_dir($rset_dir) and -output_dir($dbfile_data_dir) do not match. Please rectify or specify -force to update");
+  }
   
+  #Update/set ResultSet dbfile_data_dir
+  if( (! $rset_dir) ||
+	  ( $rset_dir                       &&
+		($rset_dir ne $dbfile_data_dir) &&
+		$force ) ){
+	$self->result_set->dbfile_data_dir($dbfile_data_dir);
+	$self->result_set->adaptor->store_dbfile_data_dir($self->result_set);
+  }
+ 
+  if((! defined $dbfile_data_dir) ||
+	 (! -d $dbfile_data_dir)){
+	throw('Your -dbfile_data_dir is either not set or not a valid directory');
+  }
+
+
+  #Check and open each window_size file
+  for my $wsize(@{$self->window_sizes}){
+
+	if($wsize == 0){
+	  #Would not normally happen
+	  warn ("Need to fix 0bp window_size re-adding in Collector?");
+	  next;
+	}
+	else{
+	  my $col_file_name = $self->result_set->get_dbfile_path_by_window_size($wsize, $slice);
+
+	  if(-e $col_file_name && $force){
+		unlink($col_file_name) or warn("Failed to remove exisiting col file:\t$col_file_name\n$!");
+		#no throw as file will be over-written anyway
+	  }
+
+	  #Generate and cache filhandle here to avoid failing after data has been generated
+	  my $fh = $self->get_filehandle($col_file_name, {-file_operator => '>'});
+	  
+	  if(! defined $fh){
+		throw("Could not get_filehandle for >${col_file_name}");
+	  }
+	  
+	  #Set AUTOFLUSH to enable validate_file_length in store_collection
+	  $fh->autoflush;
+	}
+  }
+
+  $self->store_window_bins_by_Slice($slice);
+
+  #Index creation and merging done in post-processing script
   return;
 }
 
@@ -166,7 +233,7 @@ sub rollback_Features_by_Slice{
   #bed/sam seq imports
   #but not for array based imports
   #Need to take account of wsizes
-
+  
 
 }
 
@@ -301,6 +368,13 @@ sub write_collection{
 
 }
 
+
+#To get this to print to file, we need to set up a slice/window specific file handle
+#Doing this on a slice basis would also reduce the initial seek time
+#at the expense of the number of open file handles (similar to partitions)
+#Hence need to cat together slices for same window in defined order in a post processing step
+
+
 =head2 get_score_by_Feature
 
 
@@ -338,6 +412,7 @@ sub reinitialise_input{
 
 
   #Move this to parser method
+  #change to seek fh, 0, 0
   $self->parser->file_handle->close;
   $self->parser->file_handle( open_file($self->parser->input_file, $self->parser->input_file_operator) );
 
@@ -365,7 +440,7 @@ sub reinitialise_input{
   Args[3]    : int : Feature end
   Args[4]    : int : Feature strand
   Example    : $self->store_collection($wsize, $slice, $self->collection_start($wsize), $self->collection_end($wsize), $self->collection_strand($wsize));
-  Description: Collection storage method. Resets seq_regios_Start/end and scores appropriately
+  Description: Collection storage method. Resets seq_regios_start/end and scores appropriately
                if collection exceeds storage slice. Resets score cache and next collection_start.
   Returntype : None
   Exceptions : None
@@ -374,13 +449,10 @@ sub reinitialise_input{
 
 =cut
 
-#Or could print to file
-
 sub store_collection{
   my ($self, $wsize, $full_slice, $slice_start, $slice_end, $strand) =  @_;
 	  
-  #warn "Storing collection $wsize, $full_slice, $slice_start, $slice_end, $strand";
-
+  warn "Storing collection $wsize, $full_slice, $slice_start, $slice_end, $strand";
 
   my $sr_start = $slice_start;
   my $sr_end   = $slice_end;
@@ -408,7 +480,7 @@ sub store_collection{
 	$store_slice = $store_slice->adaptor->fetch_by_region(undef, $store_slice->seq_region_name);
   }
 
-
+  
   ### Splice scores if collection overhang store slice
   #We reassign this below to avoid any weird ref updating behaviour
   my $scores_ref = $self->score_cache($wsize);
@@ -437,17 +509,59 @@ sub store_collection{
  
   print 'Storing '.scalar(@$scores_ref)." bins(window_size=$wsize) for:\t".$store_slice->name."\n";
 
-  $self->store([Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast({
-																			start  => $sr_start,
-																			end    => $sr_end,
-																			strand => $strand,
-																			scores => $scores_ref,
-																			#probe  => undef,
-																			result_set_id => $self->result_set->dbID,
-																			window_size   => $wsize,
-																			slice         => $store_slice,
-																		   }
-																		  )], $self->result_set, $self->new_assembly);
+
+  if($wsize == 0){
+
+	$self->store([Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
+				  ({
+					start  => $sr_start,
+					end    => $sr_end,
+					strand => $strand,
+					scores => $scores_ref,
+					#probe  => undef,
+					result_set_id => $self->result_set->dbID,
+					window_size   => $wsize,
+					slice         => $store_slice,#Full slice
+				   }
+				  )], $self->result_set, $self->new_assembly);
+  }
+  else{  #Write to col file!
+   	#This needs moving to ResultFeatureAdaptor::write_to_file?
+
+	#store slice should always be the full length slice here
+	#and sr_start should always ==1
+	#and sr_end should always >= slice->end/length
+
+	my $col_file_name = $self->result_set->get_dbfile_path_by_window_size($wsize, $store_slice);
+	my $fh = $self->get_filehandle($col_file_name);
+	#, {-file_operator => '>'});#not strictly needed here as it should be open for writing.
+	
+
+	# STORE SEQ_REGION
+	if(! $self->get_seq_region_id_by_Slice($store_slice)){
+	  $self->_pre_store(Bio::EnsEMBL::Funcgen::ProbeFeature->new
+						(
+						 -slice => $store_slice,
+						 -start => 1,
+						 -end   => 1,
+						 -strand => 0,
+						)
+					   );	
+	}
+	
+	# PACK AND PRINT
+	my $pack_template = '('.$self->pack_template.')'.scalar(@{$scores_ref});
+	warn "Pack template is $pack_template";
+	
+	print $fh pack($pack_template, @{$scores_ref});
+	  
+	# VALIDATE
+   	my $total_packed_size = $self->get_total_packed_size($sr_start, $sr_end, $wsize);
+	#This will only work due to autoflush set when opening in store_window_bins_by_Slice_Parser{
+	#This will never be true is the collection end does not match the slice end?
+	#This effectively validates the pack template
+	$self->validate_file_length($col_file_name, $total_packed_size, 1);#1 is binmode;
+  }
   
   #Reassign/clean score_cache reference to avoid any reference updating problems
  
@@ -458,6 +572,30 @@ sub store_collection{
  
   return;
 }
+
+
+
+
+sub get_total_packed_size{
+  my ($self, $sr_start, $sr_end, $wsize) = @_;
+
+  #Can afford to validate here as this is not for fetch purposes
+  my $start_bin = ($sr_start + $wsize - 1) / $wsize;
+  my $end_bin   = $sr_end / $wsize;
+
+  if(($start_bin != int($start_bin)) ||
+	 ($end_bin != int($end_bin))){
+	throw("The seq_region_start/end($sr_start/$sr_end) are not valid bin bounds for window_size $wsize");
+  }
+
+  my $bin_count = ($sr_end - $sr_start +1) / $wsize;
+  #Could use POSIX::ceil here
+  my $tmp_bc      = int($bin_count);
+  $bin_count    = $tmp_bc + 1  if $tmp_bc != $bin_count;
+  
+  return ($bin_count * $self->packed_size);
+}
+
 
 
 
@@ -476,6 +614,8 @@ sub store_collection{
   Status     : At Risk
 
 =cut
+
+#This needs merging with set_collection_config_by_ResultSets
 
 sub set_collection_defs_by_ResultSet{
   my ($self, $rset) = @_;
@@ -520,18 +660,12 @@ sub set_collection_defs_by_ResultSet{
 	}
   }
 
+  
   #Do we need to validate the smallest non-0 window size
   #against the max pack size?
   #This should be done in the Collector
 
-  #warn "Collection defs are:\n".
-#	"\tpacked_size:\t". $self->{'packed_size'}."\n".
-#	  	"\tpack_template:\t". $self->{'pack_template'}."\n".
-#		  "\tbin_method:\t". $self->{'bin_method'}."\n".
-#			"\twindow_sizes:\t". join(',', @{$self->{'window_sizes'}})."\n";
-
   return;
-
 }
 
 
