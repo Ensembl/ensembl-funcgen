@@ -889,46 +889,50 @@ sub _fetch_from_file_by_Slice_ResultSet{
   #		  "Or set the RESULT_FEATURE_FILE_SET status and window_size correctly.");
   #  }
 
-
+  my $rf;
   my $efg_sr_id = $self->get_seq_region_id_by_Slice($slice);
-  my $packed_scores =  $self->read_collection_blob
-	(
-	 $rset->get_dbfile_path_by_window_size($window_size),
-	 #Would be in analysis object for unique analysis tracks/data
-	 $efg_sr_id,
-	 $conf->{$window_size}{'byte_offset'},
-	 $conf->{$window_size}{'byte_length'},
-	);
 
-  my ($start, $end, $rf, @scores);
+  if($efg_sr_id){
+	
+	my $packed_scores =  $self->read_collection_blob
+	  (
+	   $rset->get_dbfile_path_by_window_size($window_size),
+	   #Would be in analysis object for unique analysis tracks/data
+	   $efg_sr_id,
+	   $conf->{$window_size}{'byte_offset'},
+	   $conf->{$window_size}{'byte_length'},
+	  );
 
-
-  if(defined $packed_scores){
-	($start, $end) = ($conf->{$window_size}{collection_start}, 
-					  $conf->{$window_size}{collection_end});
+	my ($start, $end, @scores);
 	
 
-	#Need to capture unpack failure here and undef the fh?
-	#i.e. pack/unpack repeat count overflow 
-
-	@scores = unpack('('.$self->pack_template.')'.(($end - $start + 1)/$window_size),
-					 $packed_scores);
-	
-	#could validate scores size here
-	#will only ever be <= than expected value
-	#as unpack will discard excess
-	#better validate length of $packed_scores
-	
-	$rf =  Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
-	  ({
-		start  => $start,
-		end    => $end,
-		strand => 0,           #These are strandless features
-		scores => [@scores],
-		window_size => $window_size,
-	   });
+	if(defined $packed_scores){
+	  ($start, $end) = ($conf->{$window_size}{collection_start}, 
+						$conf->{$window_size}{collection_end});
+	  
+	  
+	  #Need to capture unpack failure here and undef the fh?
+	  #i.e. pack/unpack repeat count overflow 
+	  
+	  @scores = unpack('('.$self->pack_template.')'.(($end - $start + 1)/$window_size),
+					   $packed_scores);
+	  
+	  #could validate scores size here
+	  #will only ever be <= than expected value
+	  #as unpack will discard excess
+	  #better validate length of $packed_scores
+	  
+	  $rf =  Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
+		({
+		  start  => $start,
+		  end    => $end,
+		  strand => 0,           #These are strandless features
+		  scores => [@scores],
+		  window_size => $window_size,
+		 });
+	}
   }
-
+	
   return $rf;
 }
 
@@ -939,55 +943,6 @@ sub _fetch_from_file_by_Slice_ResultSet{
 #We area also moving away from proscribed filepaths towards a registry
 #Would still be a utility method for creating the files?
 
-=head2 dbfile_data_root
-
-  Arg[1]     : OPTIONAL string - data root
-  Example    : my $dbfile_data_root = $self->dbfile_data_root;
-  Description: Getter/Setter for the root dbfile data directory for this class
-  Returntype : string
-  Exceptions : throws if dbfile_data_root entry is not found in meta table
-  Caller     : Descendant FileAdaptors
-  Status     : at risk
-
-=cut
-
-#Don't dynamically add dbname, as this will mean we will have to create softlinks
-#when using a non-standard dbname name
-#Also dangers of over-writing/deleting data whilst using other dbs
-
-
-sub dbfile_data_root{
-  my ($self, $data_root) = @_;
-
-  $self->{'data_root'} = $data_root if defined $data_root;
-
-  if(! defined $self->{'data_root'}){
-	#Grab to data_root from meta
-	($self->{'data_root'}) = @{$self->db->get_MetaContainer->list_value_by_key('dbfile.data_root')};
-
-	if(! defined $self->{'data_root'}){
-	  throw('Could not find dbfile.data_root meta entry');
-	}
-
-	#Set default dir dynamically by class name
-	my $class =  ref($self);
-	$class    =~ s/Adaptor$//;
-
-	#remove this? Just have ResultFeature instead of result_feature?
-
-	while($class =~ /([A-Z])([a-z]+)/){ 
-	  my ($ucf, $lcrest) = ($1, $2);
-	  my $lcf = lc($ucf); 
-	  $class =~ s/${ucf}${lcrest}/${lcf}${lcrest}_/;
-	}
-
-	$class =~ s/_$//;
-
-	$self->{'data_root'} .= "/${class}/";
-  }
-
-  return $self->{'data_root'};
-}
 
 
 
