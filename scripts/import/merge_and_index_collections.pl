@@ -38,10 +38,10 @@
   --dbpass          
   --dbport            
   --dbhost            
-  --result_set_name The name of the corresponding ResultSet
   --data_dir        The data dir of the input seq_region .col files
 
  Optional params:
+  --result_set_name The name of the corresponding ResultSet. Default is --data_dir name.
   #--output_dir      
   --force           Forces over-writing of existing output files
   --packed_size     Default is 4bytes i.e. perl pack f(loat) encoding.
