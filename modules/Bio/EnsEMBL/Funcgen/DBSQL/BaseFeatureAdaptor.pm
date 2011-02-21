@@ -447,14 +447,15 @@ sub get_seq_region_id_by_Slice{
 		my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
 		my $core_cs = $slice->coord_system;
 	
-		#This is basically avoiding the mapping of core to efg seq_region_ids 
+		#Avoids mapping of core to efg seq_region_ids 
 		#via schema_build(of the new core db) as we are matching directly to the seq_name
 	
 		my $sql = 'select distinct(seq_region_id) from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and sr.name=? and cs.name =?';
 		my @args = ($slice->seq_region_name(), $core_cs->name());
-		if($core_cs->is_top_level()) {
-			$sql.= ' and cs.version =?';
-			push(@args, $core_cs->version());
+
+		if($core_cs->version()) {
+		  $sql.= ' and cs.version =?';
+		  push(@args, $core_cs->version());
 		}
 		if($self->is_multispecies()) {
 			$sql.=' and cs.species_id=?';
@@ -467,8 +468,9 @@ sub get_seq_region_id_by_Slice{
 		$sth->finish();
 	
 		if(! $fg_sr_id){
-		  throw('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
-				"\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
+		  #Warn instead of throw so we can catch absent seq_region without eval
+		  warn('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
+			   "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
 		}
 	
 		#Only warn first time this is seen
