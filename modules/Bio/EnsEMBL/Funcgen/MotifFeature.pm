@@ -97,7 +97,7 @@ use vars qw(@ISA);
                                 									  -BINDING_MATRIX => $bm,
 								                                	  -DISPLAY_LABEL  => $text,
                                   									  -SCORE          => $score,
-                                                                      -_STABLE_ID     => 1,
+                                                                      -INTERDB_STABLE_ID     => 1,
                                                                      );
 
 
@@ -115,7 +115,7 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
   my $bmatrix;
-  ($self->{'score'}, $bmatrix,   $self->{'display_label'}, $self->{'_stable_id'}) 
+  ($self->{'score'}, $bmatrix,   $self->{'display_label'}, $self->{'interdb_stable_id'}) 
 	= rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', '_STABLE_ID'], @_);
     
 
@@ -316,7 +316,7 @@ sub infer_variation_consequence{
   
 }
 
-=head2 _stable_id
+=head2 interdb_stable_id
 
   Arg [1]    : (optional) int - stable_id e.g 1
   Example    : my $stable_id = $feature->_stable_id();
@@ -329,8 +329,8 @@ sub infer_variation_consequence{
 
 =cut
 
-sub _stable_id {
-  return $_[0]->{'_stable_id'};
+sub interdb_stable_id {
+  return $_[0]->{'interdb_stable_id'};
 }
 
 
