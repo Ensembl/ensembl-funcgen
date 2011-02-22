@@ -50,7 +50,7 @@ require Exporter;
 				open_file median mean run_system_cmd backup_file 
 				is_gzipped is_sam is_bed get_file_format strip_param_args 
 				generate_slices_from_names strip_param_flags
-				get_current_focus_set_names get_current_non_focus_set_names);
+				get_current_regulatory_input_names);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -588,30 +588,50 @@ sub generate_slices_from_names{
 # Tracking DB methods
 #Move to DBAdaptor? Can we add this as a separate package in the same module?
 
-sub get_current_focus_set_names{
-  my ($tdb) = shift;
+sub get_current_regulatory_input_names{
+  my ($tdb, $efg_db, $focus) = @_;
 
-  #Validate is production
+  #Validate is production?
 
-  my $sql = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$tdb->species.'"';
+  $focus = (defined $focus) ? 'Focus' : 'Non-focus';
+
+  my $sql;
+
+  if($focus){
+	$sql = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$tdb->species.'"';
+  }
+  else{
+	#0 rather than false so we don't get NULLs
+	$sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$tdb->species.'"';
+  }
   
-  my @names = @{$tdb->dbc->db_handle->selectall_arrayref($sql)};
-  return map "@$_", @names;
+  my @prd_names = @{$tdb->dbc->db_handle->selectall_arrayref($sql)};
+  my @names;
+  my @failed_sets;
+
+  foreach my $prd_name(@prd_names){
+	$prd_name = "@$prd_name";
+	$sql = "SELECT name from feature_set where name like '${prd_name}%'";
+	my @tmp_names =  @{$efg_db->dbc->db_handle->selectall_arrayref($sql)};
+
+	#Do this via InputSets(using query extension?) instead of using like?
+
+	if(scalar(@tmp_names) != 1){
+	  push @failed_sets, @{$tmp_names[0]};
+	}
+	else{
+	  push @names, @{$tmp_names[0]};
+	}
+
+  }
+
+  if(@failed_sets){
+	throw("Failed to find unique $focus FeatureSets for production dataset names:\n\t".
+		  join("\n\t", @failed_sets)."\n");
+  }
+
+  return @names;
 }
-
-
-sub get_current_non_focus_set_names{
-  my ($tdb) = shift;
-	
-  #Validate is production
-
-  #0 rather than false so we don't get NULLs
-  my $sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$tdb->species.'"';
-  
-  my @names = @{$tdb->dbc->db_handle->selectall_arrayref($sql)};
-  return map "@$_", @names;
-}
-
 
 
 1;
