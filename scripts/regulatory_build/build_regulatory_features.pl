@@ -177,8 +177,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose warning info);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file strip_param_flags strip_param_args 
-											  generate_slices_from_names get_current_focus_set_names 
-											  get_current_non_focus_set_names);
+											  generate_slices_from_names get_current_regulatory_input_names);
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 local $|=1;
@@ -319,14 +318,16 @@ if(! defined $species){
 
 
 if(! $use_tracking_db){
-  die("Must specify mandatory focus sets (-focus_sets).\n")         if ! @focus_names;
-  die("Must specify mandatory attribute sets (-attribute_sets).\n") if ! @attr_names;
+  die("Must specify mandatory -focus sets or -use_tracking_db\n")     if ! @focus_names;
+  die("Must specify mandatory -attribute_sets or -use_tracking_db\n") if ! @attr_names;
 }
 else{
   
   if(@focus_names || @attr_names){
 	die('You have specified -use_tracking_db and -attribute_sets and/or -focus_sets, tracking and sets params are mutually exlusive');
   }
+
+  print "Fetching current focus/non-focus set names from production DB\n";
 
 
   #Create tracking DB
@@ -345,9 +346,15 @@ else{
 	);
 
 
-  @focus_names = &get_current_focus_set_names($tdb);
-  @attr_names  = &get_current_non_focus_set_names($tdb);
+  @focus_names = &get_current_regulatory_input_names($tdb, $db, 'focus_flag');
+  @attr_names  = &get_current_regulatory_input_names($tdb, $db);
 }
+
+
+#Log focus names here for clarity
+print "Focus Sets(".scalar(@focus_names)."):\n\t".join("\n\t", @focus_names)."\n\n";
+print "Non-Focus Sets(".scalar(@attr_names)."):\n\t".join("\n\t", @attr_names)."\n\n";
+
 
 
 
@@ -390,25 +397,33 @@ my $ga  = $db->dnadb->get_GeneAdaptor();
 
 
 ### Validate Focus/Attribute FeatureSets
-
-# parse focus and attribute sets and check that they exist
+# parse focus and attribute names and check that they exist
 my (%focus_fsets, %attrib_fsets);
+my @failed_sets;
 
 foreach my $fname(@focus_names){
   my $fset = $fsa->fetch_by_name($fname); 
-  warn "Fetching focus set:\t$fname\n" if $debug_start;
-  die("Focus set $fname does not exist in the DB") if (! defined $fset); 
-  $focus_fsets{$fset->dbID} = $fset; 
+  
+  if( ! defined $fset){
+	push @failed_sets, $fname;
+  }else{
+	$focus_fsets{$fset->dbID} = $fset; 
+  }
 }
   
 foreach my $aname(@attr_names){ 
   my $fset = $fsa->fetch_by_name($aname);
-  warn "Fetching attribute set:\t$aname\n" if $debug_start;
-  die("Attribute set $aname does not exist in the DB") if (! defined $fset); 
-  $attrib_fsets{$fset->dbID()} = $fset; 
+
+  if( ! defined $fset){
+	push @failed_sets, $aname;
+  }else{
+	$attrib_fsets{$fset->dbID()} = $fset; 
+  }
 }
 
-
+if(@failed_sets){
+  die("Failed to find following sets:\n\t".join("\n\t", @failed_sets)."\n");
+}
 
 #This should all be done before the storing(archiving) of the new set
 #And before the jobs are submitted to the farm
