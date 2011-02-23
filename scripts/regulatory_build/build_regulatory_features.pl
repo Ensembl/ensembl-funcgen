@@ -54,7 +54,8 @@ Options:
     -cell_type_projection      This builds on core regions for all cell types, regardless of
                                whether a focus feature is present for that cell_type.
     -write_features|w
-    -rollback
+    -rollback                  Remove all Features, Sets and meta entries
+    -update                    Update existing Features, Sets and meta entries
     -dump_annotated_features
     -dump_regulatory_features
     -logfile                  Defines path to log file
@@ -101,11 +102,11 @@ The following figure gives examples.
 #   job index to select a chromosome from an array.  As this does not necessarily map to the job name it's 
 #   Could also separate the STDERR and STDOUT, not-essential.
 
-# 2 Need to run using non-ref toplevel, currently just using toplevel
+# 2 REVERTED to re only. Need to run using non-ref toplevel, currently just using toplevel
 
-# 3 Remove LSBJOBINDEX stuff? Easier to ID output files by slice
+# 3 DONE Remove LSBJOBINDEX stuff? Easier to ID output files by slice
 
-# 4 Dump annotated_features using seq_name not seq_region_id
+# 4 DONE Dump annotated_features using seq_name not seq_region_id
 
 # 5 DONE Implement Helper::rollback_FeatureSet
 
@@ -127,7 +128,7 @@ The following figure gives examples.
 
 # 12 DONE Fixed AnnotatedFeatures dump bug
 
-# 13 Populate DataSet supporting sets!
+# 13 DONE Populate DataSet supporting sets!
 
 # 14 Having absent RFs where there is a core RF may obfuscate the data
 #    Is it not better to have a redundant core RF here?
@@ -148,17 +149,17 @@ The following figure gives examples.
 
 # 22 DONE Log to file and implement tee
 
-# 23 Look at feature count validation, currently warning instead of warning
+# 23 Look at feature count validation?
 
 # 24 Handle no available features better, die for chromosomes, exit for non chromosomes?
 
-# 25 Fix archiving see ~ line 491. dset can't be true due to previous throw
+# 25 DONE Fix archiving see ~ line 491. dset can't be true due to previous throw
 
-# 26 meta keys still not being stored? Where should this go? Here, define_and_validate_set or DataSetAdaptor?
+# 26 DONE meta keys still not being stored? Where should this go? Here, define_and_validate_set or DataSetAdaptor?
 #    Now done in DataSetAdaptor, but we currently can't set focus string as this doesn't know about them
 #    Set focus/attribute status for feature sets? Overkill? Move back here?
 
-# 27 Build on core regions projected to cell lines which do not have core data.
+# 27 DONE Build on core regions projected to cell lines which do not have core data.
 
 # 28 Add attribute method
 
@@ -166,6 +167,14 @@ The following figure gives examples.
 #    Min of N different focus features if no attrs? Just include in core set.
 
 # 30 Fix WARNING:        Found more RegFeats(16) than included focus features(0) for MEF fopr cell_type projections
+
+# 31 Update bsub to use new load params?
+
+# 32 DONE Only bsub jobs which have data!
+
+# 33 DONE sub all the set up redundancies between local mode and bsubing slices, e.g. slice checking etc.
+
+# 34 Move all HAP/PAR handling code to EFGUtils?
 
 use strict;
 use warnings;
@@ -186,23 +195,19 @@ my ($pass,$port,$host,$user,$dbname, $tdb,
 	$dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
     $outdir, $write_features, $cdb,
     $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
-    $clobber,$focus_max_length, @slices, @skip_slices, $non_ref, $preserve_sets,
-    $focus_extend, $dump,$gene_signature, $ctype_projection, $use_tracking_db, 
+    $clobber,$focus_max_length, @slices, @skip_slices, $non_ref, $update,
+    $focus_extend, $gene_signature, $ctype_projection, $use_tracking_db, 
     $debug_start, $debug_end, $version, @focus_names, @attr_names, $local);
 
 
+### DEFAULT PARAMS
+my $cytpe_projection = 1;
 
 #Declare to avoid only used once warnings;
 $main::_tee      = undef;
 $main::_log_file = undef;
+$main::_no_log   = undef;
 my @tmp_args = @ARGV;
-
-#remove these defaults?
-$host = $ENV{EFG_HOST};
-$port = $ENV{EFG_PORT};
-$user = $ENV{EFG_WRITE_USER};
-$dbname = $ENV{EFG_DBNAME};
-#$species = $ENV{SPECIES};
 
 GetOptions (
             "pass|p=s"       => \$pass,
@@ -215,39 +220,56 @@ GetOptions (
             "dnadb_host|h=s" => \$dnadb_host,
             "dnadb_user|u=s" => \$dnadb_user,
             "dnadb_name|d=s" => \$dnadb_name,
-		       
 			"outdir|o=s"     => \$outdir,
-            #"do_intersect|i=s" => \$do_intersect,
-            "write_features|w" => \$write_features,
-            "no_dump_annotated_features"  => \$no_dump_annotated_features,
-            "dump_regulatory_features"  => \$dump_regulatory_features,
-			"rollback"      => \$clobber,
-			'preserve_sets' => \$preserve_sets, 
-			"focus_max_length=i" => \$focus_max_length,
-            "focus_extend=i" => \$focus_extend,
-			"dump" => \$dump,
-            "gene_signature" => \$gene_signature,
-			"debug_start=i" => \$debug_start,
-            "debug_end=i" => \$debug_end, #Defaults to slice end if not set
+			
+			#Build params
+			"focus_max_length=i"     => \$focus_max_length,
+            "focus_extend=i"         => \$focus_extend,
+            "gene_signature"         => \$gene_signature,
+			'cell_type_projection=i' => \$ctype_projection,
+			
 
-			'cell_type_projection'=> \$ctype_projection,
+			#Slice params
 			'skip_slices=s{,}'    => \@skip_slices,
 			'slices=s{,}'         => \@slices,
-			'focus_sets=s{,}'     => \@focus_names, 
-			'attribute_sets=s{,}' => \@attr_names,
 			'non_ref'             => \$non_ref,
 			'include_mt'          => \$include_mt,
-			'version=s'           => \$version,
-			'local'               => \$local,
+
+			#Set params
 			'use_tracking_db'     => \$use_tracking_db,
+			'focus_sets=s{,}'     => \@focus_names, 
+			'attribute_sets=s{,}' => \@attr_names,
+			'version=s'           => \$version,
+		
+			#Run modes
+			#"do_intersect|i=s" => \$do_intersect,
+			"write_features|w"           => \$write_features,
+            "no_dump_annotated_features" => \$no_dump_annotated_features,
+            "dump_regulatory_features"   => \$dump_regulatory_features,
+			'rollback'                   => \$clobber,
+			'update'                     => \$update,
+			'local'               => \$local,
+		
+			#Other
+			"debug_start=i" => \$debug_start,
+            "debug_end=i"   => \$debug_end, #Defaults to slice end if not set
+			'tee'           => \$main::_tee,
+			'logfile'       => \$main::_log_file,
+			'no_log'        => \$main::_no_log,
+			'help|?'        => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
+		   )
+  or pod2usage( -exitval => 1);
 
-			'tee'                 => \$main::_tee,
-			'logfile'             => \$main::_log_file,
-	
-			'help|?'         => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
-		   ) or pod2usage( -exitval => 1);
 
+#Make outdir first to prevent bjob log file fail
+$outdir =~ s/\/$//o;
+if (defined $outdir && ! -d $outdir) {
+  system("mkdir -p $outdir");
+}
 
+if(! $main::_log_file){
+  $main::_no_log = 1 if ! defined $main::_no_log;
+}
 
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
 $helper->log("build_regulatory_features.pl @tmp_args");
@@ -260,8 +282,6 @@ die('focus_extend may not safe, check update_attributes') if $focus_extend;
 @attr_names  = split(/,/o, join(',',@attr_names));
 
 ### defaults ###
-$port ||= 3306;
-
 $dnadb_port ||= $port;
 $dnadb_host ||= $host;
 $dnadb_user ||= $user;
@@ -276,9 +296,8 @@ die("Must specify mandatory -dbname\n") if ! defined $dbname;
 die("Must specify mandatory output directory (-outdir).\n")       if ! $outdir;
 
 
+#Set DBs
 
-# use ensembldb as we may want to use an old version?
-#NJ Default should be staging, but add params for overriding
 if ($dnadb_name){
   $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 	(
@@ -351,22 +370,9 @@ else{
 }
 
 
-#Log focus names here for clarity
-print "Focus Sets(".scalar(@focus_names)."):\n\t".join("\n\t", @focus_names)."\n\n";
-print "Non-Focus Sets(".scalar(@attr_names)."):\n\t".join("\n\t", @attr_names)."\n\n";
-
-
-
-
 $focus_max_length = 2000 if (! defined $focus_max_length);
 $focus_extend = 2000 if (! defined $focus_extend);
 
-#die("No output directory specified! Use -o option.") if (!$outdir);
-if (defined $outdir && ! -d $outdir) {
-  system("mkdir -p $outdir");
-}
-
-$outdir =~ s/\/$//o;
 
 
 
@@ -491,16 +497,33 @@ if(($current_version != $old_version) &&
 
 
 ### ARCHIVE PREVIOUS META/FEATURE/DATASETS
-#Move this to EFGUtils::archive_RegulatoryFeatureSet?
+#Move this to Helper/EFGUtils::archive_RegulatoryFeatureSet?
 
 if($current_version == $version){#Only archive if version is different to current version
-  #Do we need to do some rollback here or maybe in build_reg_features
 
-  #This will always happen for a batch job
+  #This will always happen for a batch job as we have prep'd in the submitter
+  #Need to use -preserve_sets here somehow
 
-  if(! $clobber){
-	die("A RegulatoryFeatures set already exists with version $version\nPlease update your -version or specify -rollback to overwrite\n");
+  if(! ($clobber || $update)){
+	die("A RegulatoryFeatures set already exists with version $version\n".
+		"Please update your -version or specify -rollback to remove completely or -update existing sets\n");
   }
+
+
+  #No need to validate existing meta keys here as they are always over-written
+  #via get_Regulatory_FeatureSets
+  #Are supporting sets also updated?
+
+
+  #Is this sensible as we may over-write existing meta keys for old build
+  
+  #Need to handle for local jobs, i.e. keep sets and meta entries
+  #So we need to set two level of -full_rollback and -rollback_features
+  #The later also overwrites existing meta and supporting set info?
+  #specifying -overwrite with -local will cause duplicate features if there are already 
+  #some present. Check and fail for each slice?
+
+
 }
 else{
 
@@ -690,21 +713,35 @@ foreach my $ctype_name(keys %ctype_fsets){
 foreach my $ctype(keys %ctype_fsets){
   next if $ctype eq 'MultiCell';
 
-  my $fset_txt = "\n\n# $ctype Focus Sets:\n";
-  my $attr_txt = "\n# $ctype Attribute Sets:\n";
+  my ($fset_txt, $attr_txt);
+  my $focus_cnt    = 0;
+  my $nonfocus_cnt = 0;
 
   foreach my $fset(@{$ctype_fsets{$ctype}}){
 	
 	if($focus_fsets{$fset->dbID}){
-	  $fset_txt .= $fset->name.'('.$fset->dbID.')  ';
+	  $focus_cnt++;
+	  $fset_txt .= "\t".$fset->name.'('.$fset->dbID.")\n";
 	}
 	else{
-	  $attr_txt .= $fset->name.'('.$fset->dbID.')  ';
+	  $nonfocus_cnt++;
+	  $attr_txt .= "\t".$fset->name.'('.$fset->dbID.")\n";
 	}
   }
-  $helper->log($fset_txt);
-  $helper->log($attr_txt);
 
+  if($fset_txt){
+	$fset_txt = "\n\n# $ctype Focus Sets($focus_cnt):\n".$fset_txt;
+  } else{
+	$fset_txt = "\n\n# $ctype has no Focus Sets\n";
+  }
+  $helper->log($fset_txt);
+
+  if($attr_txt){
+	$attr_txt = "\n# $ctype Attribute Sets($nonfocus_cnt):\n".$attr_txt;
+  }else{
+	$attr_txt = "\n# $ctype has no Attribute Sets\n";
+  }
+  $helper->log($attr_txt);
 }
 
 
@@ -780,7 +817,7 @@ my $rfsets = &get_regulatory_FeatureSets($analysis, \%cell_types);
 #This will get rolled back again unnecessarily for each slice job, 
 #but it should still be much quicker
 #Well, it will be when rollback_FeatureSet supports multiple slices
-my $sr_name;
+my ($sr_name, $is_non_par, $sr_file_name, $slice_name, $core_sr_id, $fg_sr_id);
 
 if (! $local){ #BSUB!
   
@@ -792,16 +829,18 @@ if (! $local){ #BSUB!
 
 
   foreach my $slice(@slices){
-	$sr_name = $slice->seq_region_name;
-	my $bsub = "bsub -q long -o $outdir/RegulatoryBuild_$sr_name.out -e $outdir/RegulatoryBuild_$sr_name.err ".
-	  "-J 'RegulatoryBuild_${sr_name}_${dbname}' -R 'select[my".$bsubhost."<80] rusage[my".$bsubhost."=10:duration=10]' -R 'select[mem>4000] rusage[mem=4000]' -M 4000000";
-	
-	my $cmd = "$ENV{EFG_SRC}/scripts/regulatory_build/build_regulatory_features.pl -preserve_sets -local -slices $sr_name @tmp_args";
+	next if ! &validate_Slice($slice);
+
+	#Update this to use new load params
+	my $bsub = "bsub -q long -o $outdir/RegulatoryBuild_${sr_file_name}.$$.out -e $outdir/RegulatoryBuild_${sr_file_name}.$$.err ".
+	  "-J 'RegulatoryBuild_${sr_file_name}_${dbname}' -R 'select[my".$bsubhost."<80] rusage[my".$bsubhost."=10:duration=10]' -R 'select[mem>4000] rusage[mem=4000]' -M 4000000"; 
+
+
+	my $cmd = "$ENV{EFG_SRC}/scripts/regulatory_build/build_regulatory_features.pl -no_log -update -local -slices $sr_file_name @tmp_args";
 	  
-	$helper->log("Submitting job for slice:\t".$sr_name);
+	$helper->log("Submitting job for slice:\t".$sr_file_name);
 	$helper->log("$bsub $cmd");
 	system("$bsub $cmd") && die("Can't submit job array to farm");#Is this failure getting caught properly?
-
   }
   
   $helper->log("Output can be found here:\t$outdir");
@@ -810,37 +849,111 @@ if (! $local){ #BSUB!
 
 }
 elsif(scalar(@slices) > 1){
-  die("Cannot run in local mode with more than one slice:\t@slices\nPlease omit -local or specify a single slice name.\n");
+  die("Cannot run in local mode with more than one slice:\t".
+	  join(', ', (map $_->seq_region_name, @slices)).
+	  "\nPlease omit -local or specify a single slice name.\n");
 }
 
 
 ### Run slice job locally
 my $slice = $slices[0];
-$sr_name = $slice->seq_region_name;
+if(! &validate_Slice($slice)){
+  exit 1;#as we have already logged the error
+}
 
-# get core and fg seq_region_id for slice
-my ($core_sr_id, $fg_sr_id);
-$core_sr_id = $slice->get_seq_region_id;
+#Move at least some of this to EFGUtils?
 
-# need to build cache first
-$afa->build_seq_region_cache();
-$fg_sr_id = $afa->get_seq_region_id_by_Slice($slice);
-my $slice_name = $slice->name;
+sub validate_Slice{
+  my $slice = shift;
+
+  my $has_features = 1;
+  $sr_name = $sr_file_name = $slice->seq_region_name;
+  $slice_name = $slice->name;
+  $core_sr_id = $slice->get_seq_region_id;
+  $afa->build_seq_region_cache(); # need to build cache first
+  $fg_sr_id = $afa->get_seq_region_id_by_Slice($slice);
+
+  #Check here that we aren't running with Y PARs) in local mode
+  if(my @projs = @{$sa->fetch_PAR_projections_by_Slice($slice)}){
+
+	#Generate non-PARs
+	#my $full_slice = $sa->fetch_by_seq_region($slice->get_seq_region_id);
+	my @non_pars;
+	my @pars;
+
+	#Everything is in local coords here
+	my $last_end = 0;
+
+
+	foreach my $proj(@projs){
+	  
+	  my $pstart = $proj->from_start;
+
+
+	  if($pstart > 1){#Create non-PAR Slice
+		push @non_pars, $slice->sub_Slice(($last_end +1), ($pstart-1));
+	  }
+
+	  $last_end = $proj->from_end;
+	  
+	  push @pars,  $slice->sub_Slice($proj->from_start, $proj->from_end);
+	}
+
+
+	#Now handle the last non_par
+	if($last_end != $slice->length){
+	  push @non_pars, $slice->sub_Slice(($last_end +1), ($slice->length));
+	}
+	
+	die("Slice $slice_name has PAR region(s):\n\t".
+		join("\n\t", (map { $_->name } @pars)).
+		"\nPlease specify a non-PAR Slices to prevent duplication of features:\n\t".
+	   	join("\n\t", (map { $_->name } @non_pars))."\n");
+  }
+  
+  #Handle non-PARs
+  $is_non_par = 0;
+  my $full_slice = $sa->fetch_by_seq_region_id($slice->get_seq_region_id);
+
+  if(@{$sa->fetch_PAR_projections_by_Slice($full_slice)}){
+	$is_non_par = 1;
+	$sr_file_name = $slice_name;
+  }
+
+  #Check for features before bsub
+  my $sql   = 'SELECT count(*) from annotated_feature where feature_set_id in('.
+	join(',',  keys %attrib_fsets).') and seq_region_id='.$fg_sr_id;
+  my ($cnt) = @{$db->dbc->db_handle->selectrow_arrayref($sql)}; 
+  
+  if(! $cnt){
+	$helper->log("$sr_file_name has no supporting features");
+	$has_features = 0;
+  }
+
+  return $has_features;
+}
+
+
+#Does rollback resstrict to slice coords?!
+#Other wise we are going to get rollback between jobs
+
+
+#May still happen in local mode
 die("No eFG seq_region id defined for ".$slice_name." Almost certain there is no data".
 	"available on this slice. You might want to run_update_DB_for_release.pl") 
   if ! defined $fg_sr_id;
 
 
 ### Dump AnnotatedFeatures
-my $af_file = $outdir.'/annotated_features.'.$slice->seq_region_name.'.dat';
+my $af_file = $outdir.'/annotated_features.'.$sr_file_name.'.dat';
 
 if ((! -f $af_file) ||
 	(! $no_dump_annotated_features)){
   &dump_annotated_features();
 
+  #This should only happen with local due to data check before bsub
   if(! -f $af_file){
-	warn "No annotated_features present, aborting build\n";
-	exit;
+	die("No annotated_features present, aborting build\n");
   }
 } 
 else {
@@ -1150,6 +1263,11 @@ sub dump_annotated_features{
   #To do, remove this and just slurp directly into perl!
 
 
+  #Need to account for non-PAR regions
+  
+
+
+
   my @fset_ids = keys %attrib_fsets;
   $helper->log("Dumping ".scalar(@fset_ids)." AnnotatedFeature Sets for slice:\t".$slice_name);
 
@@ -1172,12 +1290,25 @@ sub dump_annotated_features{
 					'mf.motif_feature_id '.
 			'FROM    annotated_feature af '.
 			'LEFT JOIN (associated_motif_feature amf '.
-			           'JOIN motif_feature mf USING (motif_feature_id))'.
+			           'JOIN motif_feature mf USING (motif_feature_id)) '.
 			'USING (annotated_feature_id) '.
-            "WHERE   af.seq_region_id = ${fg_sr_id} ".
-			#"AND   mf.seq_region_id = ${fg_sr_id} ".#This borks the left join for some reason
-			'AND   af.feature_set_id IN ('.join(',', @fset_ids).')'.
+            "WHERE   af.seq_region_id = ${fg_sr_id} ";
+
+  #Handle non-PARs for Y
+  if($is_non_par){
+	$sql .=  'AND af.seq_region_start <= '.$slice->end.
+	  ' AND af.seq_region_end >= '.$slice->start;
+  }
+	
+
+  $sql .=	' AND   af.feature_set_id IN ('.join(',', @fset_ids).') '.
 			'ORDER BY af.seq_region_start, af.seq_region_end, af.annotated_feature_id';
+
+
+
+
+  #"AND   mf.seq_region_id = ${fg_sr_id} ".#This borks the left join for some reason
+
 
   #add feature_set_id to index to remove need for filesort for feature_set_id?
   #didn't work, but did reduce size of rows slightly
@@ -1197,7 +1328,7 @@ sub dump_annotated_features{
 
 		  
   #Delete previous dumps
-  unlink($outdir."/annotated_features.".$slice->seq_region_name.".dat");
+  unlink($af_file);
    #af.annotated_feature_id, af.seq_region_start, '.
    #               	'af.seq_region_end, af.score, af.feature_set_id, '.
 
@@ -1215,7 +1346,7 @@ sub dump_annotated_features{
 		  "last_id=\$1; start=\$2; end=\$3; score=\$4; fset_id=\$5; mf_ids=\$6;".
 			"} else{ mf_ids=mf_ids \" \" \$6;}".
 			  "} END {if(last_id){ print last_id \"\t\" start \"\t\" end \"\t\" score \"\t\" fset_id \"\t\" mf_ids; }}'".
-				" | gawk '{ print >> \"".$outdir."/annotated_features.".$slice->seq_region_name.".dat\" }'";
+				" | gawk '{ print >> \"$af_file\" }'";
 
 
   $helper->log("# Execute: $command");
@@ -1731,22 +1862,17 @@ sub get_regulatory_FeatureSets{
 
 
 	if($clobber){
-	  $rollback_mode = ($preserve_sets) ? 'product_features' : 'sets';
+	  $rollback_mode = ($update) ? 'product_features' : 'sets';
 	}
 
 
-	#we rollback in one go in the submitter to prevent race conditions?
+	#we rollback in one go in the submitter to prevent race conditions
 	#Is there any harm in performing redundant rollback in batch job?
 
-	#In batch job we aren't really rolling back, we just not failing
-	#when we find sets. Actually would rollback slice if it wasn't in the submitter
-
-	#What if we define -rollback and -preserve_sets for the first run?
-	#Nothing as it won't be present!
-
-	
 	$helper->log("Defining FeatureSet:\t$fset_name");
 
+
+	#This updates supporting_sets if there is a difference
 	my $dset = $helper->define_and_validate_sets($fset_name, 
 												 $analysis, 
 												 $ftype, 
