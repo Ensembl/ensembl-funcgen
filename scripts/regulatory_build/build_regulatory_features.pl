@@ -176,6 +176,8 @@ The following figure gives examples.
 
 # 34 Move all HAP/PAR handling code to EFGUtils?
 
+# 35 Pass all vars and encapsulate main block to prevent wrong vars being used and not caught
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -1017,8 +1019,9 @@ while (my $line = <$fh>) {
 	next if ($start < $debug_start);
 	last if ($start > $debug_end);
 
-	print "\nNEW ".$attrib_fsets{$fset_id}->cell_type->name.':'.$attrib_fsets{$fset_id}->feature_type->name."\t${start}\t${end}\n";
-
+	print "\nNEW ".$attrib_fsets{$fset_id}->cell_type->name.':'.
+	  $attrib_fsets{$fset_id}->feature_type->name."\t\t\t\t\t".
+		join("\t", $af_id, $start.' - '.$end, @mf_ids)."\n";
   }
 
   #132832790-132833336
@@ -1027,7 +1030,7 @@ while (my $line = <$fh>) {
   #next if (exists $ChIPseq_cutoff{$attrib_fsets{$fset_id}->name()} 
   #         && $score < $ChIPseq_cutoff{$attrib_fsets{$fset_id}->name()});
   
-  $helper->log($_, "\t", $attrib_fsets{$fset_id}->name) if ($debug_start);
+  #$helper->log($_, "\t", $attrib_fsets{$fset_id}->name) if ($debug_start);
   my  $length = $end-$start+1;
   $ctype = $fset_cell_types{$fset_id};
  
@@ -1115,7 +1118,7 @@ while (my $line = <$fh>) {
 		#What about completely abset attrs
 		#Need to set bound_end/start in create_regualtory_features?
 	
-		print "Adding fully contained $ctype feature(".$af_id.")\n" if ($debug_start);
+		print "\tAdding fully contained $ctype feature(".$af_id.")\n" if ($debug_start);
 		
 		# add annot. feature id to reg. feature
 		$rf[$rf_size]{annotated}{$ctype}{$af_id} = $fset_id;
@@ -1372,7 +1375,7 @@ sub dump_annotated_features{
 #We can do this by decoding the fset_ids
 
 sub add_focus{
-  print "\nNew $ctype focus:\t$start-$end\n" if ($debug_start);
+  print "\n\n# New $ctype focus:\t$start-$end\n" if ($debug_start);
 
   push @rf, {
 			 focus_start       => $start,
@@ -1400,6 +1403,8 @@ sub add_focus{
 	#$feature_count{motif_features}{MultiCell}      += scalar(@mf_ids);
 	$feature_count{motif_features}{$ctype}         += scalar(@mf_ids);
 	
+	print "\tAdding MotifFeatures IDs to new $ctype and MultiCell:\t@mf_ids\n" if $debug_start;
+
 	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @mf_ids;
 	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @mf_ids;
   }
@@ -1434,7 +1439,8 @@ sub update_focus{
 	#Account for previous focus start
 	$rf[$rf_size]{attribute_start}{$ctype} = $rf[$rf_size]{focus_start};
 	$rf[$rf_size]{attribute_end}{$ctype}   = ($end > $rf[$rf_size]{focus_end}) ? $end : $rf[$rf_size]{focus_end};
-	print "Setting $ctype attr start/end to:\t".$rf[$rf_size]{attribute_start}{$ctype}.' - '.$rf[$rf_size]{attribute_end}{$ctype}."\n" if $debug_start;
+	print "\tSetting $ctype attr start/end to:\t\t\t\t".$rf[$rf_size]{attribute_start}{$ctype}.
+	  ' - '.$rf[$rf_size]{attribute_end}{$ctype}."\n" if $debug_start;
   }
 
 
@@ -1453,7 +1459,7 @@ sub update_focus{
 
 	  if($end   > $rf[$rf_size]{attribute_end}{$rf_ctype}){
 		$rf[$rf_size]{attribute_end}{$rf_ctype}   = $end;
-		print "Resetting $rf_ctype attr end to new $ctype focus end:\t$end\n" if $debug_start;
+		print "\tResetting $rf_ctype attr end to new $ctype focus end:\t$end\n" if $debug_start;
 	  }
 	}
   }
@@ -1465,7 +1471,8 @@ sub update_focus{
 	$rf[$rf_size]->{motif_feature_ids}{MultiCell} ||= [];
 	#	$feature_count{motif_features}{MultiCell}      += scalar(@mf_ids);
 	$feature_count{motif_features}{$ctype}         += scalar(@mf_ids);
-	
+	print "\tAdding MotifFeatures IDs existing $ctype and MultiCell:\t@mf_ids\n" if $debug_start;
+
 	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @mf_ids;
 	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @mf_ids;
   }
@@ -1474,10 +1481,7 @@ sub update_focus{
   $rf[$rf_size]{fsets}{$ctype}{$fset_id}++;
   $rf[$rf_size]{focus}{$ctype}{$af_id} = $fset_id;
   $rf[$rf_size]{focus}{MultiCell}{$af_id} = $fset_id;
-  
-
-
-  
+    
   #Do we need to alter this to be celltype aware?
   $seen_af{$fset_id}{$af_id} = 1;
 
@@ -1563,8 +1567,8 @@ sub update_attributes{
 	  }
 	}
 
-	print "$ct updated coords:\t\t\t\t\t\t".$rf[$rf_size]{attribute_start}{$ct}.' - '.$rf[$rf_size]{attribute_end}{$ct}."\n" if $debug_start;
-	print "No upstream $ct features found\n" if $debug_start && (! $updated);
+	print "\t$ct updated coords:\t\t\t\t\t\t".$rf[$rf_size]{attribute_start}{$ct}.' - '.$rf[$rf_size]{attribute_end}{$ct}."\n" if $debug_start;
+	print "\tNo upstream $ct features found\n" if $debug_start && (! $updated);
   }
 
   return;
@@ -1575,7 +1579,7 @@ sub update_attributes{
 
 sub add_feature{
   
-  print "Adding $ctype feature($af_id) to attribute feature_list\n" if $debug_start;
+  print "\tAdding $ctype feature($af_id) to attribute feature_list\n" if $debug_start;
 
 
   push(@{$afs{$ctype}}, 
@@ -1737,7 +1741,7 @@ sub create_regulatory_features{
 
 
 	  #Add MotifFeatures as attrs
-	  $attr_cache->{motif} = $rf->{motif_feature_ids}{$ctype} || [];
+	  $attr_cache->{motif} = $rf->{motif_feature_ids}{$ct} || [];
 		  
 	  #We now need to clean the fset_id values from the attrs cache
 	  #map { $attr_cache->{$_} = undef } keys %$attr_cache; 
@@ -1844,9 +1848,20 @@ sub get_regulatory_FeatureSets{
   }
 	
 
+  my $num_ctypes     = scalar(keys %{$ctypes});
+  my $ctype_cnt      = 0;
+  my $force_clean_up = 0;
+  my $no_clean_up    = 1;
+
   foreach my $ctype (keys %{$ctypes}) {	
+	$ctype_cnt++;
 	my ($desc, $dlabel, $fset_name);
-	
+
+	if ($ctype_cnt == $num_ctypes){
+	  $force_clean_up = 1;
+	  $no_clean_up    = 0;
+	}
+
 	$fset_name = "RegulatoryFeatures:$ctype";
 	$dlabel    = "Reg.Feats $ctype";
 
@@ -1868,9 +1883,9 @@ sub get_regulatory_FeatureSets{
 
 	#we rollback in one go in the submitter to prevent race conditions
 	#Is there any harm in performing redundant rollback in batch job?
-
-	$helper->log("Defining FeatureSet:\t$fset_name");
+	$helper->log_header("Defining FeatureSet:\t$fset_name");
 	
+
 	#This updates supporting_sets if there is a difference
 	my $dset = $helper->define_and_validate_sets($fset_name, 
 												 $analysis, 
@@ -1883,7 +1898,7 @@ sub get_regulatory_FeatureSets{
 												 $desc,#desc
 												 $rollback_mode,
 												 1,#recovery?
-												 \@slices, $dlabel);
+												 \@slices, $dlabel, $no_clean_up, $force_clean_up);
 
 
 	#Always overwrite in case we have redefined the sets
