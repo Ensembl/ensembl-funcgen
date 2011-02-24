@@ -1861,7 +1861,7 @@ sub get_regulatory_FeatureSets{
 	my $rollback_mode;
 
 
-	if($clobber){
+	if($clobber || $update){
 	  $rollback_mode = ($update) ? 'product_features' : 'sets';
 	}
 
@@ -1870,8 +1870,7 @@ sub get_regulatory_FeatureSets{
 	#Is there any harm in performing redundant rollback in batch job?
 
 	$helper->log("Defining FeatureSet:\t$fset_name");
-
-
+	
 	#This updates supporting_sets if there is a difference
 	my $dset = $helper->define_and_validate_sets($fset_name, 
 												 $analysis, 
