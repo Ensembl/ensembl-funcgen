@@ -168,19 +168,12 @@ my %feature_tables = (
 					  #external   => 1,
 					 );
 
-#my $feature_table='annotated';
+
+my $root_data_dir = $ENV{'EFG_DATA'};
 my $name = 'peaks_report_'.$$;#Add PID to avoid overwriting previous reports
-#my $host = $ENV{DB_HOST};
-#my $port = $ENV{DB_PORT};
-#my $user = $ENV{DB_READ_USER};
-#my $pass = $ENV{DB_PASS};
-#my $dbname = $ENV{DB_NAME};
-#my $dnadbhost = $ENV{DNADB_HOST};
-#my $dnadbport = $ENV{DNADB_PORT};
-#my $dnadbuser = $ENV{DNADB_USER};
-#my $dnadbname =  $ENV{DNADB_NAME};
-#my $dnadbpass =  $ENV{DNADB_PASS};
-my ($feature_table, $host, $port, $user, $pass, $dbname, $dnadbhost, $dnadbport, $dnadbuser, $dnadbname, $dnadbpass);
+my ($feature_table, $host, $port, $pass, $dbname, $dnadbhost, 
+	$dnadbport, $dnadbuser, $dnadbname, $dnadbpass, $outdir);
+my $user = 'ensro';
 
 #get command line options
 
@@ -200,35 +193,70 @@ GetOptions (
 			'dbport=i'           => \$port,
 			'dbpass=s'           => \$pass,
 			'dbname=s'           => \$dbname,
+			'outdir=s'           => \$outdir,
 			"help|h"             => \$help,
 			"R"                  => \$R,
 			"nodump"             => \$nodump,
-	                "no_outliers"        => \$no_outliers,
+			"no_outliers"        => \$no_outliers,
 			"compare"            => \$compare,
 			"regstats"           => \$regstats,
 			"all_seq_regions"    => \$all_seq_regions,
 			"feature_sets=s{,}"  => \@fset_names,
-	                "feature_table=s",   => \$feature_table,
+			"feature_table=s",   => \$feature_table,
 			"name=s"             => \$name,
 		   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
 pod2usage(1) if ($help);
 
+#Reset to undef so we don't try with empty string
+#$pass      ||= undef;
+#$dnadbpass ||= undef;
 
 # Sould be failing a little nicer now... 
 if(!$feature_table) { print "Missing Type of Feature: annotated or regulatory\n"; exit 0; }
-if(!$host || !$port || !$user || !$dbname || !$feature_table) {  print "Missing connection parameters\n"; exit 0; }
 
+if(! ($host && 
+	  $dbname && 
+	  $feature_table) ){
+  die("Missing mandatory parameters:\n\t".join("\n\t", ("-dbhost $host", 
+														"-dbname $dbname",
+														"-feature_table $feature_table")));
+}
+   
 if(! $feature_tables{$feature_table}){
   die("You have specified an invalid -feature_table. Must be one of:\t".join("\t", (keys %feature_tables)));
 }
 
+if(! $outdir){
+
+  if(! -d $root_data_dir){
+	die('You have not specifed a valid an -outdir. No default can be set as env var $EFG_DATA is not set');
+  }
+  else{
+	$outdir = $root_data_dir.'/output/'.$dbname.'/regulatory_features';
+	print "Setting default output directory to:\t".$outdir;
+
+	if(! -d $outdir){
+	  system("mkdir -p $outdir") == 0 or 
+		die("Could not make deafult output directory:\t".$outdir);
+	}
+  }
+}
+elsif(! -d $outdir){
+  die("Specified -outdir does not exist:\t".$outdir);
+}
+
+
+
+
+
+#warn "dbpass is x${pass}x";
+#warn "dnadbpass is x${dnadbpass}";
+
 #Check database connections
-my $coredba;
+my ($coredba, $efgdba);;
 if($dnadbname){
   
-  my $dnadbpass = {-pass => $dnadbpass};
-	  
   my $coredba = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
      -host => $dnadbhost,
@@ -237,30 +265,22 @@ if($dnadbname){
      -dbname => $dnadbname,
      -species => $species,
      -group   => 'core',
-     %$dnadbpass
+	 -pass    => $dnadbpass,
     );
 }
 
-my ($efgdba, $apass);
-if($dbname){
+ 
+$efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+  (
+   -host    => $host,
+   -port    => $port,
+   -user    => $user,
+   -dbname  => $dbname,
+   -species => $species, #Not strictly necessary
+   -dnadb   => $coredba, 
+   -pass    => $pass,
+  );
 
-  if ($pass){
-	$apass = {-pass => $pass};
-	$pass = "-p $pass";
-  }
-
-
-  $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-    (
-     -host    => $host,
-     -port    => $port,
-     -user    => $user,
-     -dbname  => $dbname,
-     -species => $species,
-     -dnadb   => $coredba, #Assumes that new will accept undef as parameter for this...
-     %$apass
-    );
-}
 
 #Test connections
 $efgdba->dbc->db_handle;
@@ -269,12 +289,7 @@ $efgdba->dnadb->dbc->db_handle;
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 
 if(scalar(@fset_names)==0){
-   # @fset_names = "all feature sets"
-   #this returns the result of a generic query, which is a list inside a list... so the actual list is in [0]
-   #TODO -> CHANGE THE API code?
-   #TODO pass type as parameter??
-   my @fsets = $fsa->fetch_all_by_type($feature_table);
-   foreach my $fset (@{$fsets[0]}){ push(@fset_names, $fset->name);  } 
+  map { push @fset_names, $_->name } @{$fsa->fetch_all_by_type($feature_table)};
 }
 else{#Validate fset names
   
@@ -301,7 +316,7 @@ my %sr_type_clauses = (
 		      );
 
 if(!$nodump){
-  print "::Dumping Datasets\n";
+  print "\n\n::Dumping Datasets\n";
   
   #This was not accounting for nr sr_ids
   foreach my $sr_type(@sr_types){
