@@ -592,19 +592,21 @@ sub get_current_regulatory_input_names{
   my ($tdb, $efg_db, $focus) = @_;
 
   #Validate is production?
-
-  $focus = (defined $focus) ? 'Focus' : 'Non-focus';
-
   my $sql;
 
   if($focus){
-	$sql = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$tdb->species.'"';
+	$focus = 'Focus';
+	$sql   = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$tdb->species.'"';
   }
   else{
+	$focus = 'Non-focus';
 	#0 rather than false so we don't get NULLs
 	$sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$tdb->species.'"';
   }
   
+  
+
+
   my @prd_names = @{$tdb->dbc->db_handle->selectall_arrayref($sql)};
   my @names;
   my @failed_sets;
