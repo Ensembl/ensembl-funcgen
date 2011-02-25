@@ -198,12 +198,12 @@ my ($pass,$port,$host,$user,$dbname, $tdb,
     $outdir, $write_features, $cdb,
     $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
     $clobber,$focus_max_length, @slices, @skip_slices, $non_ref, $update,
-    $focus_extend, $gene_signature, $ctype_projection, $use_tracking_db, 
+    $focus_extend, $gene_signature, $use_tracking_db, 
     $debug_start, $debug_end, $version, @focus_names, @attr_names, $local);
 
 
 ### DEFAULT PARAMS
-my $cytpe_projection = 1;
+my $ctype_projection = 1;
 
 #Declare to avoid only used once warnings;
 $main::_tee      = undef;
@@ -276,6 +276,16 @@ if(! $main::_log_file){
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
 $helper->log("build_regulatory_features.pl @tmp_args");
 
+
+
+#Need to log params better here to account for defaults
+$helper->log("CellType Projection is:\t".$ctype_projection);
+
+if($clobber && $update){
+  die('You can only specify one of -update or -rollback');
+}
+
+#This is now only used for bound encapsulated but non-focus overlapping attrs
 die('focus_extend may not safe, check update_attributes') if $focus_extend;
 
 
@@ -284,10 +294,12 @@ die('focus_extend may not safe, check update_attributes') if $focus_extend;
 @attr_names  = split(/,/o, join(',',@attr_names));
 
 ### defaults ###
-$dnadb_port ||= $port;
-$dnadb_host ||= $host;
-$dnadb_user ||= $user;
-$dnadb_pass ||= $pass;
+#Assume we are running on ens-livemirror
+$dnadb_host ||= 'ens-livemirror';
+$dnadb_user ||= 'ensro';
+$focus_max_length = 2000 if (! defined $focus_max_length);
+$focus_extend = 2000 if (! defined $focus_extend);
+
 						
 ### check options ###
 
@@ -303,12 +315,12 @@ die("Must specify mandatory output directory (-outdir).\n")       if ! $outdir;
 if ($dnadb_name){
   $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 	(
-	 -host => $dnadb_host,
-	 -port => $dnadb_port,
-	 -user => $dnadb_user,
-	 -pass => $dnadb_pass,
+	 -host   => $dnadb_host,
+	 -port   => $dnadb_port,
+	 -user   => $dnadb_user,
+	 -pass   => $dnadb_pass,
 	 -dbname => $dnadb_name,
-	 -group   => 'core',
+	 -group  => 'core',
 	);
 }
 
@@ -371,9 +383,6 @@ else{
   @attr_names  = &get_current_regulatory_input_names($tdb, $db);
 }
 
-
-$focus_max_length = 2000 if (! defined $focus_max_length);
-$focus_extend = 2000 if (! defined $focus_extend);
 
 
 
@@ -731,6 +740,11 @@ foreach my $ctype(keys %ctype_fsets){
 	}
   }
 
+
+  #Need to handle no focus/non-focus better here
+  #We already die if we have no-focus and ! $ctype_projection
+  #But we should warn here anyway?
+
   if($fset_txt){
 	$fset_txt = "\n\n# $ctype Focus Sets($focus_cnt):\n".$fset_txt;
   } else{
@@ -916,7 +930,7 @@ sub validate_Slice{
   #Handle non-PARs
   $is_non_par = 0;
   my $full_slice = $sa->fetch_by_seq_region_id($slice->get_seq_region_id);
-
+  
   if(@{$sa->fetch_PAR_projections_by_Slice($full_slice)}){
 	$is_non_par = 1;
 	$sr_file_name = $slice_name;
@@ -1114,6 +1128,10 @@ while (my $line = <$fh>) {
 	  elsif( ($end <= $rf[$rf_size]{attribute_end}{$ctype}) &&
 			 ($start <= ($rf[$rf_size]{focus_end} + $focus_extend)) ){	
 		
+		#||||||||||||---------------------------------|
+		#                               |||||
+		#           |-<$focus_extend----|
+
 		#Do we not need to account for unset attr ends in here too
 		#What about completely abset attrs
 		#Need to set bound_end/start in create_regualtory_features?
@@ -1512,6 +1530,11 @@ sub update_attributes{
 	  if ($afs{$ct}->[$i]{end} >= $rf[$rf_size]{focus_start}) {
 		$updated = 1;
 
+		#Current RF       |-----||||||||||||
+		#Old AF          ?????||||||||
+		#Old AF                   ||||||?????
+	
+
 		if(scalar(keys %{$rf[$rf_size]{focus}{$ctype}}) == 0){
 		  print "Updating projected feature\n" if $debug_start;
 		  #exit;
@@ -1521,6 +1544,10 @@ sub update_attributes{
 		# FIRST update attribute start of the regulatory feature...
 		
 		if ($afs{$ct}->[$i]{start} < $rf[$rf_size]{attribute_start}{$ct}) {
+
+		  #Current RF              |-------------||||||
+		  #Old AF            ||||||||||||||||||||||????
+
 		  #This is always the case the first feature
 		  #If there is one, it will always be upstream or start at the same location as the new focus
 		  #And we process the rest in this block so no real need for this test???
@@ -1542,6 +1569,16 @@ sub update_attributes{
 		  
 		  if ($af->{end} >= $start ||
 			  ( $af->{start} >= ($rf[$rf_size]{focus_start} - $focus_extend) )) {
+
+			
+			#Old AF             ||||||||||
+			#New AF                |||||???
+
+			#Current RF    |-------------------------|||
+			#Old AF                  ???????????????????
+			#                        |-<focus_extend-|
+			
+
 			
 			if ($debug_start){
 			  print "\tUpdating overlapping attribute feature:\t(".
@@ -1554,6 +1591,11 @@ sub update_attributes{
 			
 			#Reset the attr end
 			if ($af->{end}   > $rf[$rf_size]{attribute_end}{$ct}) {
+
+			  #Current RF   ||||||||||----------|
+			  #Old RF       ??????????????????????||
+
+
 			  print "\tUpdating attribute end to:\t\t".$af->{end}.' (> '.$af->{end}.")\n" if $debug_start;
 			  $rf[$rf_size]{attribute_end}{$ct} = $af->{end};
 			}
@@ -1880,9 +1922,9 @@ sub get_regulatory_FeatureSets{
 	  $rollback_mode = ($update) ? 'product_features' : 'sets';
 	}
 
-
 	#we rollback in one go in the submitter to prevent race conditions
 	#Is there any harm in performing redundant rollback in batch job?
+	#Should optionally remove -rollback/update from bsub?
 	$helper->log_header("Defining FeatureSet:\t$fset_name");
 	
 
