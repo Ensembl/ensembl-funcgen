@@ -157,7 +157,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Data::Dumper;
+use Cwd;
 
 my ($species, $help, $R, $nodump, $compare, $regstats, $all_seq_regions, $no_outliers);
 
@@ -324,38 +324,39 @@ if(!$nodump){
     #Save to only one file... though it may be big...
     my $query ="SELECT fs.name as 'name', s.name as 'region', (f.seq_region_end - f.seq_region_start) as 'length' FROM ${feature_table}_feature f, (select distinct(seq_region_id), sr.name from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and cs.name".$sr_type_clauses{$sr_type}." and cs.is_current is TRUE) s, feature_set fs WHERE f.feature_set_id=fs.feature_set_id AND f.seq_region_id=s.seq_region_id AND fs.name IN ('".join("','",@fset_names)."');";
     
-    my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "$pass" : "")." $dbname >${name}.data.${sr_type}.txt";
+    my $cmd = "mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "$pass" : "")." $dbname >${outdir}/${name}.data.${sr_type}.txt";
     print $cmd."\n";
     system($cmd);
   }
   
   if($regstats){
     my $query = "SELECT * from rf_stats";
-    system("mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "-p$pass" : "")." $dbname > regstats.txt");
+    system("mysql -e \"".$query."\" -quick -h$host -P$port -u$user ".(($pass)? "-p$pass" : "")." $dbname > ${outdir}/regstats.txt");
   }
 
 }
 
+my $dir = getcwd;
 #print R file with analysis
 #Check which parameters one might want...
 if (defined $R) {
   
   print "::Generating the R plots\n";
-  open(FO,">${name}.R");
+  open(FO,">${outdir}/${name}.R");
   print FO "require(graphics)\n";
-  print FO "pdf(file=\"${name}.pdf\")\n";
+  print FO "pdf(file=\"${outdir}/${name}.pdf\")\n";
   print FO "par(cex=0.7,cex.main=1)\n";
   
   if($regstats){ 
      print FO "require(gplots);\n";
-     print FO "regstats <- read.table(\"regstats.txt\",row.names=1,header=TRUE);\n"; 
+     print FO "regstats <- read.table(\"${outdir}/regstats.txt\",row.names=1,header=TRUE);\n"; 
      print FO "textplot(regstats,halign=\"left\")\n";
   }
   
   foreach my $sr_type(@sr_types){
     
     #Load the data
-    print FO "data_${sr_type} <- read.table(\"${name}.data.${sr_type}.txt\",header=TRUE,sep=\"\\t\")\n";
+    print FO "data_${sr_type} <- read.table(\"${outdir}/${name}.data.${sr_type}.txt\",header=TRUE,sep=\"\\t\")\n";
     
     #Give a little space for the legend... outside the graph... (test how much space... and the size of text in lengend)
     print FO "par(xpd=T, mar=par()\$mar+c(0,0,0,5))\n";
@@ -407,9 +408,12 @@ if (defined $R) {
     
    
   close FO;
+  chdir($outdir);
   #This submits to the yesterday queue by default
   system "R CMD BATCH --slave ${name}.R";
 }
+
+chdir($dir);
 
 __END__
 
