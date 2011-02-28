@@ -141,7 +141,7 @@ CREATE TABLE xref (
 DROP TABLE IF EXISTS external_synonym;
 CREATE TABLE external_synonym (
   xref_id                     INT(10) UNSIGNED NOT NULL,
-  synonym                     VARCHAR(40) NOT NULL, 
+  synonym                     VARCHAR(100) NOT NULL, 
   PRIMARY KEY (xref_id, synonym),
   KEY name_index (synonym)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=20;
@@ -158,14 +158,14 @@ CREATE TABLE external_db (
   db_release                  VARCHAR(255),
   status                      ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL,
   dbprimary_acc_linkable      BOOLEAN DEFAULT 1 NOT NULL,
-  display_label_linkable      BOOLEAN DEFAULT 0 NOT NULL,
   priority                    INT NOT NULL,
   db_display_name             VARCHAR(255),
   type                        ENUM('ARRAY', 'ALT_TRANS', 'MISC', 'LIT', 'PRIMARY_DB_SYNONYM', 'ENSEMBL') default NULL,
   secondary_db_name           VARCHAR(255) DEFAULT NULL,
   secondary_db_table          VARCHAR(255) DEFAULT NULL,
   description                 TEXT,
-  PRIMARY KEY (external_db_id) 
+  PRIMARY KEY (external_db_id) ,
+  UNIQUE KEY db_name_release_idx (db_name, db_release);	
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
 
 
@@ -326,10 +326,19 @@ CREATE TABLE `associated_feature_type` (
 
 
 
+/**
+@table  experiemntal_group
 
---
--- Table structure for table `experimental_group`
---
+@desc   Contains experimental group info i.e. who produced data sets
+
+@column experimental_group_id  Primary key: Internal id
+@column name                   Unique key:  Name of group
+@column location               Geographic location of group
+@column contact                Contact details e.g. email
+@column description            Text description
+
+@see    @link experiment table
+*/
 
 DROP TABLE IF EXISTS `experimental_group`;
 CREATE TABLE `experimental_group` (
@@ -565,26 +574,38 @@ CREATE TABLE `design_type` (
 -- Handles design_types other than the primary experimental.primary_design_type
 
 
+/** 
+@table  feature_type
 
--- Table structure for table `feature_type`
+@desc   Contains information about different types/classes of feature e.g. Brno nomenclature, Transcription Factor names etc
+
+@column feature_type_id   Primary key, internal id
+@column name              Name of feature_type
+@column class             Class of feature_type
+@column description       Text description
+@column so_accession      Sequence ontology accession
+@column so_name           Key, Sequence ontology name
+
+@see @link associated_feature_type
+*/
 
 DROP TABLE IF EXISTS `feature_type`;
 CREATE TABLE `feature_type` (
-   `feature_type_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(40) NOT NULL,
-   `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo', 'Open Chromatin', 'Search Region', 'Association Locus') default NULL,
-   `description`  varchar(255) default NULL,
+	`feature_type_id` int(10) unsigned NOT NULL auto_increment,
+	`name` varchar(40) NOT NULL,
+	`class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 
+				'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 
+				'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo', 
+				'Open Chromatin', 'Search Region', 'Association Locus') default NULL,
+	`description`  varchar(255) default NULL,
 	`so_accession` varchar(64) DEFAULT NULL,
  	`so_name` varchar(255) DEFAULT NULL,
    PRIMARY KEY  (`feature_type_id`),
-   UNIQUE KEY `name_class_idx` (`name`, `class`)
+   UNIQUE KEY `name_class_idx` (`name`, `class`),
+   KEY `so_accession_idx` (`so_accession`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- Table to contain Brno nomenclature (modification ontology?) etc.
--- enum on class? HISTONE, PROMOTER
--- Have ontology name in field?
--- Have load ontology tool script?
 
 
 -- Table structure for table `data_set`
@@ -705,14 +726,14 @@ CREATE TABLE `result_feature` (
 @table  dbfile_registry
 
 @desc   This generic table contains a simple registry of paths to support 
-        flat file(DBFile) access. This should be left joined from the
+        flat file (DBFile) access. This should be left joined from the
         relevant adaptor e.g. ResultSetAdaptor
 
-@column table_id   Primary key of linked dbfile entity e.g. result_set or 
-        analysis
+@column table_id   Primary key of linked dbfile entity e.g. @link result_set or @link analysis
 @column table_name Name of linked table
-@column path       Either a full filepath or a directory which the API will 
-                   use to build the filepath
+@column path       Either a full filepath or a directory which the API will use to build the filepath
+
+@see @link result_set
 */
 
 
@@ -779,9 +800,26 @@ CREATE TABLE `annotated_feature` (
 
 
 
---
--- Table structure for table `motif_feature`
---
+
+/**
+@table  motif_feature
+
+@desc   The table contains genomic alignments of @link binding_matrix PWMs
+
+@column motif_feature_id    Primary key, internal id 
+@column binding_matrix_id   Foreign key to @link binding_matrix table
+@column seq_region_id       Foreign key to @link seq_region table
+@column seq_region_start    Start position of this feature
+@column seq_region_end      End position of this feature
+@column seq_region_strand   Strand orientation of this feature
+@column display_label       Text display label 
+@column score               Score derived from alignment software (e.g.MOODS)
+@column interdb_stable_id   Unique key, provides linkability between DBs       
+
+@see @link associated_motif_feature, @link regulatory_attribute
+*/
+
+
 DROP TABLE IF EXISTS `motif_feature`;
 CREATE TABLE `motif_feature` (
   `motif_feature_id` int(10) unsigned NOT NULL auto_increment,
@@ -791,8 +829,8 @@ CREATE TABLE `motif_feature` (
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
   `display_label` varchar(60) default NULL,
-  `score` double default NULL,
-	`stable_id` mediumint(8) unsigned DEFAULT NULL,
+  `score` double default NULL,	
+  `interdb_stable_id` mediumint(8) unsigned DEFAULT NULL,
   PRIMARY KEY  (`motif_feature_id`),
 	UNIQUE KEY `stable_id_idx` (`stable_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
@@ -850,9 +888,21 @@ CREATE TABLE `feature_set` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
---
--- Table structure for table `external_feature`
---
+
+/**
+@table  external_feature
+
+@desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc
+
+@column eternal_feature_id  Primary key, internal id 
+@column seq_region_id       Foreign key to @link seq_region table
+@column seq_region_start    Start position of this feature
+@column seq_region_end      End position of this feature
+@column seq_region_strand   Strand orientation of this feature
+@column display_label       Text display label 
+@column feature_type_id     Foreign key to @link feature_type table
+@column feature_set_id      Foreign key to @link feature_set table
+*/
 
 DROP TABLE IF EXISTS `external_feature`;
 CREATE TABLE `external_feature` (
