@@ -96,6 +96,7 @@ sub _columns {
 			ef.seq_region_start      ef.seq_region_end
 			ef.seq_region_strand     ef.display_label
 			ef.feature_type_id       ef.feature_set_id
+			ef.interdb_stable_id
 	   );
 }
 
@@ -130,7 +131,8 @@ sub _objs_from_sth {
 	    $external_feature_id,  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $fset_id,
-		$display_label,         $ftype_id
+		$display_label,         $ftype_id,
+		$interdb_stable_id
 	   );
 
 	$sth->bind_columns(
@@ -138,6 +140,7 @@ sub _objs_from_sth {
 					   \$seq_region_start,      \$seq_region_end,
 					   \$seq_region_strand,     \$display_label,         
 					   \$ftype_id,              \$fset_id,
+					   \$interdb_stable_id
 					  );
 
 
@@ -253,6 +256,7 @@ sub _objs_from_sth {
 		  'display_label'  => $display_label,
 		  'feature_set'    => $fset_hash{$fset_id},
 		  'feature_type'   => $ftype_hash{$ftype_id},
+		  'interdb_stable_id',    => $interdb_stable_id,
 		 });
 	  }
 	

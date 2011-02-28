@@ -101,14 +101,33 @@ use vars qw(@ISA);
 sub new {
   my $caller = shift;
 	
-
-  #Can remove this?
-
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
+
+  #Remove this method if we interdb_stable_id to SetFeature
+  ($self->{'interdb_stable_id'}) = rearrange(['INTERDB_STABLE_ID'], @_);
  		
   return $self;
 }
+
+=head2 interdb_stable_id
+
+  Arg [1]    : (optional) int - stable_id e.g 1
+  Example    : my $idb_sid = $feature->interdb_stable_id();
+  Description: Getter for the interdb_stable_id attribute for this feature.
+               This is simply to avoid using internal db IDs for inter DB linking
+  Returntype : int
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub interdb_stable_id {
+  return $_[0]->{'interdb_stable_id'};
+}
+
+
 
 
 =head2 display_label

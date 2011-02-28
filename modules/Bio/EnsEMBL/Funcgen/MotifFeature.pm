@@ -20,7 +20,7 @@ my $feature = Bio::EnsEMBL::Funcgen::MotifFeature->new(
     -DISPLAY_LABEL => $text,
     -SCORE         => $score,
     -FEATURE_TYPE  => $ftype,
-    -_STABLE_ID    => 1,
+    -INTERDB_STABLE_ID    => 1,
 ); 
 
 
@@ -116,7 +116,7 @@ sub new {
   my $self = $class->SUPER::new(@_);
   my $bmatrix;
   ($self->{'score'}, $bmatrix,   $self->{'display_label'}, $self->{'interdb_stable_id'}) 
-	= rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', '_STABLE_ID'], @_);
+	= rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', 'INTERDB_STABLE_ID'], @_);
     
 
   if(! (ref($bmatrix) && $bmatrix->isa('Bio::EnsEMBL::Funcgen::BindingMatrix'))){
@@ -319,8 +319,8 @@ sub infer_variation_consequence{
 =head2 interdb_stable_id
 
   Arg [1]    : (optional) int - stable_id e.g 1
-  Example    : my $stable_id = $feature->_stable_id();
-  Description: Getter for the _stable_id attribute for this feature.
+  Example    : my $idb_sid = $feature->interdb_stable_id();
+  Description: Getter for the interdb_stable_id attribute for this feature.
                This is simply to avoid using internal db IDs for inter DB linking
   Returntype : int
   Exceptions : None
