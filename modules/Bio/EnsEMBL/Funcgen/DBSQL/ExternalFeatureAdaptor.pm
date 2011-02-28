@@ -341,5 +341,25 @@ sub store{
   return \@efs;
 }
 
+=head2 fetch_by_interdb_stable_id
+
+  Arg [1]    : Integer $stable_id - The 'interdb stable id' of the ExternalFeature to retrieve
+  Example    : my $rf = $rf_adaptor->fetch_by_interdb_stable_id(1);
+  Description: Retrieves a ExternalFeature via its interdb_stable id. This is really an internal
+               method to facilitate inter DB linking. 
+  Returntype : Bio::EnsEMBL::Funcgen::ExternalFeature
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_by_interdb_stable_id {
+  my ($self, $stable_id) = @_;
+
+  $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
+
+  return $self->generic_fetch('ef.interdb_stable_id=?')->[0];
+}
 
 1;
