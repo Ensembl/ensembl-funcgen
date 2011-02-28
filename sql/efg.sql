@@ -165,7 +165,7 @@ CREATE TABLE external_db (
   secondary_db_table          VARCHAR(255) DEFAULT NULL,
   description                 TEXT,
   PRIMARY KEY (external_db_id) ,
-  UNIQUE KEY db_name_release_idx (db_name, db_release);	
+  UNIQUE KEY db_name_release_idx (db_name, db_release)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
 
 
@@ -832,7 +832,7 @@ CREATE TABLE `motif_feature` (
   `score` double default NULL,	
   `interdb_stable_id` mediumint(8) unsigned DEFAULT NULL,
   PRIMARY KEY  (`motif_feature_id`),
-	UNIQUE KEY `stable_id_idx` (`stable_id`),
+  UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `binding_matrix_idx` (`binding_matrix_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
