@@ -2074,8 +2074,20 @@ sub delete_existing_xrefs {
 
   #can we pass an arrayref of ArrayChips here instead of doing it once foreach?
   
+  my $num_arrays     = scalar(values(%arrays));
+  my $no_clean_up    = 1;
+  my $force_clean_up = 0;
+  my $array_cnt      =0;
+
   foreach my $array(values(%arrays)){
-	$Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript');
+	$array_cnt++;
+
+	if($array_cnt == $num_arrays){
+	  $no_clean_up    = 0;
+	  $force_clean_up = 1;
+	}
+
+	$Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, $no_clean_up, $force_clean_up);
   }
 
   return;
