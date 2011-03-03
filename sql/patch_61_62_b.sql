@@ -37,7 +37,7 @@ ALTER table external_feature ADD UNIQUE KEY `interdb_stable_id_idx` (`interdb_st
 
 
 analyze table external_feature;
-optimize table external_feature
+optimize table external_feature;
 
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_61_62_b.sql|interdb_stable_id');
