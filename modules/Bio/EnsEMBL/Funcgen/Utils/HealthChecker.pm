@@ -130,6 +130,7 @@ sub update_db_for_release{
   $self->clean_xrefs;
   $self->validate_DataSets;
   $self->check_stable_ids;
+    $self->log_data_sets();
   $self->analyse_and_optimise_tables;#ALWAYS LAST!!
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
@@ -589,13 +590,13 @@ sub check_meta_strings{
 
 		#Finally validate versus a reg feat
 		#Need to change this to ftype string rather than fset string?
+		my $id_row_ref = $self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1');
 
-		my ($regf_dbID) = @{$self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1')};
-	  
-		if(! defined $regf_dbID){
+		if(! defined $id_row_ref){
 		  $self->report("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
 		}
 		else{
+		  my ($regf_dbID) = @$id_row_ref;
 		  my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->binary_string;
 		  
 		  if(length($rf_string) != scalar(@fset_ids)){
@@ -697,6 +698,8 @@ sub check_stable_ids{
 	  }
 	  
 	  #Can't count NULL field, so have to count regulatory_feature_id!!!
+
+	  #getting SR product here!!
 	  my $sql = "select count(rf.regulatory_feature_id) from regulatory_feature rf, seq_region sr, coord_system cs where rf.stable_id is NULL and rf.seq_region_id = sr.seq_region_id and sr.coord_system_id = cs.coord_system_id and cs.species_id = $species_id and rf.feature_set_id=".$fset->dbID;
 	  
 	  
@@ -817,6 +820,13 @@ sub validate_DataSets{
 
 
 	my $rf_dset = $dset_a->fetch_by_product_FeatureSet($rf_fset);
+
+	if(! $rf_dset){
+	    $self->report("FAIL:\tNo DataSet for FeatureSet:\t$rf_fset_name");
+	  next RF_FSET;
+	}
+
+	
 
 	if($rf_fset_name ne $rf_dset->name){
 	  $self->report("FAIL:\tFound Feature/DataSet name mismatch:\t$rf_fset_name vs ".$rf_dset->name);
@@ -958,13 +968,36 @@ sub clean_xrefs{
 
   $self->log_header("Cleaning unlinked xref records");
  
-  my $sql = 'DELETE x from xref x where x.xref_id not in (select xref_id from object_xref)';
+  my $sql = 'DELETE x from FROM xref x LEFT JOIN object_xref ox ON ox.xref_id = x.xref_id WHERE ox.xref_id IS NULL';
+  #Should this also take accoumt of unmapped_objects?
+  #No, as unmapped_object doesn't use xref, but probably should
 
-  my $row_cnt = $self->db->dbc->do($sql);
+   my $row_cnt = $self->db->dbc->do($sql);
 
   $self->reset_table_autoinc('xref', 'xref_id', $self->db);
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt unlinked xref records");
+
+
+  #Now remove old edbs
+  $self->log_header("Cleaning unlinked external_db records");
+
+  #Need to account for xref and unmapped_object here
+  $sql = 'DELETE edb from FROM external_db edb '.
+	'LEFT JOIN xref x ON x.external_db_id = edb.external_db_id '.
+	  'LEFT JOIN  unmapped_object uo ON uo.external_db_id=edb.external_db_id '.
+		'WHERE x.external_db_id IS NULL and uo.external_db_id is NULL';
+  $row_cnt = $self->db->dbc->do($sql);
+
+  $self->reset_table_autoinc('extenal_db', 'exteranal_db_id', $self->db);
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt unlinked external_db records");
+
+
+  #Shouldn't clean orphaned oxs here as this means a rollback been done underneath the ox data
+  #or we have xref_id=0!
+  #Leave this to HC?
+
 
   return;
 }
