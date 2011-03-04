@@ -968,7 +968,7 @@ sub clean_xrefs{
 
   $self->log_header("Cleaning unlinked xref records");
  
-  my $sql = 'DELETE x from FROM xref x LEFT JOIN object_xref ox ON ox.xref_id = x.xref_id WHERE ox.xref_id IS NULL';
+  my $sql = 'DELETE x FROM xref x LEFT JOIN object_xref ox ON ox.xref_id = x.xref_id WHERE ox.xref_id IS NULL';
   #Should this also take accoumt of unmapped_objects?
   #No, as unmapped_object doesn't use xref, but probably should
 
@@ -983,7 +983,7 @@ sub clean_xrefs{
   $self->log_header("Cleaning unlinked external_db records");
 
   #Need to account for xref and unmapped_object here
-  $sql = 'DELETE edb from FROM external_db edb '.
+  $sql = 'DELETE edb FROM external_db edb '.
 	'LEFT JOIN xref x ON x.external_db_id = edb.external_db_id '.
 	  'LEFT JOIN  unmapped_object uo ON uo.external_db_id=edb.external_db_id '.
 		'WHERE x.external_db_id IS NULL and uo.external_db_id is NULL';
