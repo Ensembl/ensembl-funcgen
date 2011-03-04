@@ -64,7 +64,7 @@ DROP TABLE IF EXISTS `meta`;
 CREATE TABLE `meta` (
   `meta_id` int(10) NOT NULL auto_increment,
   `species_id` int(10) unsigned default '1',
-  `meta_key` varchar(40) NOT NULL,
+  `meta_key` varchar(46) NOT NULL,
   `meta_value` varchar(950) NOT NULL,
   PRIMARY KEY  (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
