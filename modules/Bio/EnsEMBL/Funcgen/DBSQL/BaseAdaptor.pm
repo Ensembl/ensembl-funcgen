@@ -242,11 +242,8 @@ sub _test_funcgen_table{
   my @tables = $obj->adaptor->_tables;
 
   my ($table) = @{$tables[0]};
-  #ExpreimetnalSubSet fix, as doesn't have own adaptor
-  $table = 'experimental_subset' if $obj->isa('Bio::EnsEMBL::Funcgen::ExperimentalSubset') || $obj->isa('Bio::EnsEMBL::Funcgen::InputSubset');
-
-
-  #my $table = ${$obj->adaptor->_tables()}[0];
+  #InputSubSet fix, as doesn't have own adaptor
+  $table = 'input_subset' if $obj->isa('Bio::EnsEMBL::Funcgen::InputSubset');
 
   return $table || $self->throw("Cannot identify table name from $obj adaptor");
 }
