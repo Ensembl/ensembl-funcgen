@@ -531,7 +531,7 @@ workdir		- cd's to working database dir
 configdir	- cd's to analysis config dir
 configmacs	- Opens xemacs in configdir
 arraysdir	- cd's to the root array formats dir for a given species
-mysqlefg	- Connects to the output DB
+			   mysqlefg	- Connects to the output DB
 mysqlpipe	- Connects to the pipeline DB
 mysqlcore   - Connects to the core/dna DB
 monitor		- Prints a summary of the pipeline status. Initialise a fresh environment to track a running 
@@ -539,8 +539,9 @@ monitor		- Prints a summary of the pipeline status. Initialise a fresh environme
 
 This section could also be called 'What to do when things go wrong'.  Inevitably there will be times 
 when jobs fail. It is important to understand what has happened during the failure to take the 
-correct course of action before restarting the pipeline, i.e. has any output been written? The import 
-stage will fail if an array had already been recorded as imported, which is a sign that you either 
+correct course of action before restarting the pipeline, i.e. has any output been written? 
+
+The import stage will fail if an array had already been recorded as IMPORTED, which is a sign that you either 
 need to rollback or consider whether you actually need to import it. The alignment stage is not able
 to record import success for individual chunks, so it is very important that you are sure a 
 particular job has not written any output. The job output and error files should be able to provide
@@ -553,7 +554,27 @@ objects or other otuput has been written, simply search for the following:
 		UnmappedObject
 		Writing ProbeFeatures
 
-If these are not present then it is safe to resubmit this job without rolling back.
+If these are not present then it is safe to resubmit this job without rolling back(see below).
+
+ProbeAlignReport
+
+Running this shell function will generate alignment reports for each of your array formats. Output
+can be found here:
+	
+	$WORK_DIR/ProbeAlign.'ARRAY_FORMAT'.report
+
+
+probe2transcript.pl output
+
+See section 8.2
+
+
+UnmappedObjects
+
+These are stored at various points throughout the array mapping pipeline to capture details 
+of failed mappings. Investigating the unmapped_object and unmapped_reason tables can often
+reveal information about why the alignments or transcript annotations failed.
+
 
 RollbackArrays
 
@@ -578,6 +599,7 @@ Use the -h option for more information.
 
 Dependant on the nature of the job failure, it may also be necessary to perform some job clean up 
 using the functions listed in pipeline.txt.
+
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
