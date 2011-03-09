@@ -551,15 +551,11 @@ sub set_collection_config_by_Slice_ResultSets{
 	  next;
 	}
 
-
 	#Eventually will want to completely remove DB sets?
 	#Depends on how we handle 0bp window sets, BigWig?
 	#Leave 0bp sets in DB for v62 which means we need an extra status
-	$rf_source = $rset->has_status('DBFILE_SET') ? 'file' : 'db';
+	$rf_source =  $rset->table_name eq 'input_set' ? 'file' : 'db';
 
-
-	warn "HARDCODING rf_source to file";
-	$rf_source = 'file';
 
 	#NOTE:
 	#Don't need to check for packed_size and packed_template differences as they are now the
