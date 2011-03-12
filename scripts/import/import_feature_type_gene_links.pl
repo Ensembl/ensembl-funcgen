@@ -132,6 +132,9 @@ my $efg_dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 my $fta	= $efg_dba->get_FeatureTypeAdaptor();     
 my $dbentry_adaptor = $efg_dba->get_DBEntryAdaptor();
 
+my $analysis_adaptor = $efg_dba->get_AnalysisAdaptor();
+my $analysis = $analysis_adaptor->fetch_by_logic_name("Ensembl Manual Annotation");
+if(!$analysis){ throw "Analysis 'Ensembl Manual Annotation' not found"; }
 my $helper = Bio::EnsEMBL::Funcgen::Utils::Helper->new(
 													   no_log => 1,#default to STDOUT
 													  );
@@ -160,6 +163,7 @@ while(<FILE>){
 			-info_type          => 'MISC',
 			-info_text          => 'GENE',
 			-linkage_annotation => 'Ensembl Manual Curation',
+			-analysis           => $analysis,
 			#-description        => 'Ensembl Gene associated to Feature Type',
 		);
 
