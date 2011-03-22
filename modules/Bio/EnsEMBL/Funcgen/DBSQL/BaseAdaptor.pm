@@ -325,8 +325,7 @@ sub has_stored_status{
   Example    : $status_a->store_status('IMPORTED', $array_chip);
   Description: Sets a state for a given object
   Returntype : None
-  Exceptions : Warns if state already set(not necessarily stored)
-               Throws is status name is not already stored.
+  Exceptions : None
   Caller     : general
   Status     : At risk - Move to Status.pm?
 
