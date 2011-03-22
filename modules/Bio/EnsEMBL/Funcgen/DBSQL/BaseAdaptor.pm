@@ -339,11 +339,7 @@ sub store_status{
   my $sql;
   my $table = $self->_test_funcgen_table($obj);
 
-  if($self->has_stored_status($state, $obj)){
-    warn("$obj with dbID ".$obj->dbID()." already has status $state set\n");
-	#Commented this out as this can cause warnings when updating FeatureSets based on InputSets
-  }
-  else{
+  if(! $self->has_stored_status($state, $obj)){
     my $status_id = $self->_get_status_name_id($state);
 
     if(! $status_id){
