@@ -54,8 +54,7 @@ Options:
     -cell_type_projection      This builds on core regions for all cell types, regardless of
                                whether a focus feature is present for that cell_type.
     -write_features|w
-    -rollback                  Remove all Features, Sets and meta entries
-    -update                    Update existing Features, Sets and meta entries
+    -rollback
     -dump_annotated_features
     -dump_regulatory_features
     -logfile                  Defines path to log file
@@ -102,11 +101,11 @@ The following figure gives examples.
 #   job index to select a chromosome from an array.  As this does not necessarily map to the job name it's 
 #   Could also separate the STDERR and STDOUT, not-essential.
 
-# 2 REVERTED to re only. Need to run using non-ref toplevel, currently just using toplevel
+# 2 Need to run using non-ref toplevel, currently just using toplevel
 
-# 3 DONE Remove LSBJOBINDEX stuff? Easier to ID output files by slice
+# 3 Remove LSBJOBINDEX stuff? Easier to ID output files by slice
 
-# 4 DONE Dump annotated_features using seq_name not seq_region_id
+# 4 Dump annotated_features using seq_name not seq_region_id
 
 # 5 DONE Implement Helper::rollback_FeatureSet
 
@@ -128,7 +127,7 @@ The following figure gives examples.
 
 # 12 DONE Fixed AnnotatedFeatures dump bug
 
-# 13 DONE Populate DataSet supporting sets!
+# 13 Populate DataSet supporting sets!
 
 # 14 Having absent RFs where there is a core RF may obfuscate the data
 #    Is it not better to have a redundant core RF here?
@@ -149,34 +148,22 @@ The following figure gives examples.
 
 # 22 DONE Log to file and implement tee
 
-# 23 Look at feature count validation?
+# 23 Look at feature count validation, currently warning instead of warning
 
 # 24 Handle no available features better, die for chromosomes, exit for non chromosomes?
 
-# 25 DONE Fix archiving see ~ line 491. dset can't be true due to previous throw
+# 25 Fix archiving see ~ line 491. dset can't be true due to previous throw
 
-# 26 DONE meta keys still not being stored? Where should this go? Here, define_and_validate_set or DataSetAdaptor?
+# 26 meta keys still not being stored? Where should this go? Here, define_and_validate_set or DataSetAdaptor?
 #    Now done in DataSetAdaptor, but we currently can't set focus string as this doesn't know about them
 #    Set focus/attribute status for feature sets? Overkill? Move back here?
 
-# 27 DONE Build on core regions projected to cell lines which do not have core data.
+# 27 Build on core regions projected to cell lines which do not have core data.
 
 # 28 Add attribute method
 
 # 29 Don't build on cell type with only spare focus features and no other attrs i.e. only DNase
 #    Min of N different focus features if no attrs? Just include in core set.
-
-# 30 Fix WARNING:        Found more RegFeats(16) than included focus features(0) for MEF fopr cell_type projections
-
-# 31 Update bsub to use new load params?
-
-# 32 DONE Only bsub jobs which have data!
-
-# 33 DONE sub all the set up redundancies between local mode and bsubing slices, e.g. slice checking etc.
-
-# 34 Move all HAP/PAR handling code to EFGUtils?
-
-# 35 Pass all vars and encapsulate main block to prevent wrong vars being used and not caught
 
 use strict;
 use warnings;
@@ -187,29 +174,32 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Exception qw(verbose warning info);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file strip_param_flags strip_param_args 
-											  generate_slices_from_names get_current_regulatory_input_names);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file strip_param_flags strip_param_args generate_slices_from_names);
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 local $|=1;
 
-my ($pass,$port,$host,$user,$dbname, $tdb,
+my ($pass,$port,$host,$user,$dbname,
 	$dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
     $outdir, $write_features, $cdb,
     $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
-    $clobber,$focus_max_length, @slices, @skip_slices, $non_ref, $update,
-    $focus_extend, $gene_signature, $use_tracking_db, 
+    $clobber,$focus_max_length, @slices, @skip_slices, $non_ref,
+    $focus_extend, $dump,$gene_signature, $ctype_projection, 
     $debug_start, $debug_end, $version, @focus_names, @attr_names, $local);
 
 
-### DEFAULT PARAMS
-my $ctype_projection = 1;
 
 #Declare to avoid only used once warnings;
 $main::_tee      = undef;
 $main::_log_file = undef;
-$main::_no_log   = undef;
 my @tmp_args = @ARGV;
+
+#remove these defaults?
+$host = $ENV{EFG_HOST};
+$port = $ENV{EFG_PORT};
+$user = $ENV{EFG_WRITE_USER};
+$dbname = $ENV{EFG_DBNAME};
+#$species = $ENV{SPECIES};
 
 GetOptions (
             "pass|p=s"       => \$pass,
@@ -222,70 +212,41 @@ GetOptions (
             "dnadb_host|h=s" => \$dnadb_host,
             "dnadb_user|u=s" => \$dnadb_user,
             "dnadb_name|d=s" => \$dnadb_name,
+		       
 			"outdir|o=s"     => \$outdir,
-			
-			#Build params
-			"focus_max_length=i"     => \$focus_max_length,
-            "focus_extend=i"         => \$focus_extend,
-            "gene_signature"         => \$gene_signature,
-			'cell_type_projection=i' => \$ctype_projection,
-			
+            #"do_intersect|i=s" => \$do_intersect,
+            "write_features|w" => \$write_features,
+            "no_dump_annotated_features"  => \$no_dump_annotated_features,
+            "dump_regulatory_features"  => \$dump_regulatory_features,
+			"rollback" => \$clobber,
+			"focus_max_length=i" => \$focus_max_length,
+            "focus_extend=i" => \$focus_extend,
+			"dump" => \$dump,
+            "gene_signature" => \$gene_signature,
+			"debug_start=i" => \$debug_start,
+            "debug_end=i" => \$debug_end, #Defaults to slice end if not set
 
-			#Slice params
+			'cell_type_projection'=> \$ctype_projection,
 			'skip_slices=s{,}'    => \@skip_slices,
 			'slices=s{,}'         => \@slices,
-			'non_ref'             => \$non_ref,
-			'include_mt'          => \$include_mt,
-
-			#Set params
-			'use_tracking_db'     => \$use_tracking_db,
 			'focus_sets=s{,}'     => \@focus_names, 
 			'attribute_sets=s{,}' => \@attr_names,
+			'non_ref'             => \$non_ref,
+			'include_mt'          => \$include_mt,
 			'version=s'           => \$version,
-		
-			#Run modes
-			#"do_intersect|i=s" => \$do_intersect,
-			"write_features|w"           => \$write_features,
-            "no_dump_annotated_features" => \$no_dump_annotated_features,
-            "dump_regulatory_features"   => \$dump_regulatory_features,
-			'rollback'                   => \$clobber,
-			'update'                     => \$update,
 			'local'               => \$local,
-		
-			#Other
-			"debug_start=i" => \$debug_start,
-            "debug_end=i"   => \$debug_end, #Defaults to slice end if not set
-			'tee'           => \$main::_tee,
-			'logfile'       => \$main::_log_file,
-			'no_log'        => \$main::_no_log,
-			'help|?'        => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
-		   )
-  or pod2usage( -exitval => 1);
+
+			'tee'                 => \$main::_tee,
+			'logfile'             => \$main::_log_file,
+	
+			'help|?'         => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
+		   ) or pod2usage( -exitval => 1);
 
 
-#Make outdir first to prevent bjob log file fail
-$outdir =~ s/\/$//o;
-if (defined $outdir && ! -d $outdir) {
-  system("mkdir -p $outdir");
-}
-
-if(! $main::_log_file){
-  $main::_no_log = 1 if ! defined $main::_no_log;
-}
 
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
 $helper->log("build_regulatory_features.pl @tmp_args");
 
-
-
-#Need to log params better here to account for defaults
-$helper->log("CellType Projection is:\t".$ctype_projection);
-
-if($clobber && $update){
-  die('You can only specify one of -update or -rollback');
-}
-
-#This is now only used for bound encapsulated but non-focus overlapping attrs
 die('focus_extend may not safe, check update_attributes') if $focus_extend;
 
 
@@ -294,12 +255,12 @@ die('focus_extend may not safe, check update_attributes') if $focus_extend;
 @attr_names  = split(/,/o, join(',',@attr_names));
 
 ### defaults ###
-#Assume we are running on ens-livemirror
-$dnadb_host ||= 'ens-livemirror';
-$dnadb_user ||= 'ensro';
-$focus_max_length = 2000 if (! defined $focus_max_length);
-$focus_extend = 2000 if (! defined $focus_extend);
+$port ||= 3306;
 
+$dnadb_port ||= $port;
+$dnadb_host ||= $host;
+$dnadb_user ||= $user;
+$dnadb_pass ||= $pass;
 						
 ### check options ###
 
@@ -308,22 +269,42 @@ die("Must specify mandatory -user\n") if ! defined $user;
 die("Must specify mandatory -pass\n") if ! defined $pass;
 die("Must specify mandatory -dbname\n") if ! defined $dbname;
 die("Must specify mandatory output directory (-outdir).\n")       if ! $outdir;
+die("Must specify mandatory focus sets (-focus_sets).\n")         if ! @focus_names;
+die("Must specify mandatory attribute sets (-attribute_sets).\n") if ! @attr_names;
+
+$focus_max_length = 2000 if (! defined $focus_max_length);
+$focus_extend = 2000 if (! defined $focus_extend);
+
+#die("No output directory specified! Use -o option.") if (!$outdir);
+if (defined $outdir && ! -d $outdir) {
+  system("mkdir -p $outdir");
+}
+
+$outdir =~ s/\/$//o;
 
 
-#Set DBs
 
+#use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
+#NJ what was this being used for and can we use the RangeRegistry?
+
+
+# use ensembldb as we may want to use an old version?
+#NJ Default should be staging, but add params for overriding
 if ($dnadb_name){
   $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
 	(
-	 -host   => $dnadb_host,
-	 -port   => $dnadb_port,
-	 -user   => $dnadb_user,
-	 -pass   => $dnadb_pass,
+	 -host => $dnadb_host,
+	 -port => $dnadb_port,
+	 -user => $dnadb_user,
+	 -pass => $dnadb_pass,
 	 -dbname => $dnadb_name,
-	 -group  => 'core',
+	 -group   => 'core',
 	);
 }
 
+if($gene_signature){
+  warn "You need to check that the schema_build of your efg and dnadb match "
+}
 
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
@@ -350,55 +331,6 @@ if(! defined $species){
 }
 
 
-if(! $use_tracking_db){
-  die("Must specify mandatory -focus sets or -use_tracking_db\n")     if ! @focus_names;
-  die("Must specify mandatory -attribute_sets or -use_tracking_db\n") if ! @attr_names;
-}
-else{
-  
-  if(@focus_names || @attr_names){
-	die('You have specified -use_tracking_db and -attribute_sets and/or -focus_sets, tracking and sets params are mutually exlusive');
-  }
-
-  print "Fetching current focus/non-focus set names from production DB\n";
-
-
-  #Create tracking DB
-  #Can we change this to a DBConnection?
-  #Can't put these in Funcgen DBAdaptor due to dnadb setting code
-  $tdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-	(
-	 -host    => $host,
-	 -port    => $port,
-	 -user    => $user,
-	 -pass    => $pass,
-	 -dbname  => 'ensembl_funcgen_production',
-	 -species => $species,
-	 -group   => 'production', #Will this do any production specific stuff? 
-	 #Will this over-ride funcgen setting in DBAdaptor?
-	);
-
-
-  @focus_names = &get_current_regulatory_input_names($tdb, $db, 'focus_flag');
-  @attr_names  = &get_current_regulatory_input_names($tdb, $db);
-}
-
-
-
-
-
-
-
-#use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuild qw(is_overlap);
-#NJ what was this being used for and can we use the RangeRegistry?
-
-
-
-if($gene_signature){
-  warn "You need to check that the schema_build of your efg and dnadb match "
-}
-
-
 my $fsa = $db->get_FeatureSetAdaptor();
 my $dsa = $db->get_DataSetAdaptor();
 my $fta = $db->get_FeatureTypeAdaptor();
@@ -412,35 +344,33 @@ my $ga  = $db->dnadb->get_GeneAdaptor();
 
 
 
+#Is this true across all supporting and reg sets?
+#Do we want to handle the rsets here?
+my ($dset_states, $rset_states, $fset_states) = $helper->get_regbuild_set_states($db);
+
+
+
 
 ### Validate Focus/Attribute FeatureSets
-# parse focus and attribute names and check that they exist
+
+# parse focus and attribute sets and check that they exist
 my (%focus_fsets, %attrib_fsets);
-my @failed_sets;
 
 foreach my $fname(@focus_names){
   my $fset = $fsa->fetch_by_name($fname); 
-  
-  if( ! defined $fset){
-	push @failed_sets, $fname;
-  }else{
-	$focus_fsets{$fset->dbID} = $fset; 
-  }
+  warn "Fetching focus set:\t$fname\n" if $debug_start;
+  die("Focus set $fname does not exist in the DB") if (! defined $fset); 
+  $focus_fsets{$fset->dbID} = $fset; 
 }
   
 foreach my $aname(@attr_names){ 
   my $fset = $fsa->fetch_by_name($aname);
-
-  if( ! defined $fset){
-	push @failed_sets, $aname;
-  }else{
-	$attrib_fsets{$fset->dbID()} = $fset; 
-  }
+  warn "Fetching attribute set:\t$aname\n" if $debug_start;
+  die("Attribute set $aname does not exist in the DB") if (! defined $fset); 
+  $attrib_fsets{$fset->dbID()} = $fset; 
 }
 
-if(@failed_sets){
-  die("Failed to find following sets:\n\t".join("\n\t", @failed_sets)."\n");
-}
+
 
 #This should all be done before the storing(archiving) of the new set
 #And before the jobs are submitted to the farm
@@ -508,33 +438,14 @@ if(($current_version != $old_version) &&
 
 
 ### ARCHIVE PREVIOUS META/FEATURE/DATASETS
-#Move this to Helper/EFGUtils::archive_RegulatoryFeatureSet?
+#Move this to EFGUtils::archive_RegulatoryFeatureSet?
 
 if($current_version == $version){#Only archive if version is different to current version
+  #Do we need to do some rollback here or maybe in build_reg_features
 
-  #This will always happen for a batch job as we have prep'd in the submitter
-  #Need to use -preserve_sets here somehow
-
-  if(! ($clobber || $update)){
-	die("A RegulatoryFeatures set already exists with version $version\n".
-		"Please update your -version or specify -rollback to remove completely or -update existing sets\n");
+  if(! $clobber){
+	die("A RegulatoryFeatures set already exists with version $version\nPlease update your -version or specify -rollback to overwrite\n");
   }
-
-
-  #No need to validate existing meta keys here as they are always over-written
-  #via get_Regulatory_FeatureSets
-  #Are supporting sets also updated?
-
-
-  #Is this sensible as we may over-write existing meta keys for old build
-  
-  #Need to handle for local jobs, i.e. keep sets and meta entries
-  #So we need to set two level of -full_rollback and -rollback_features
-  #The later also overwrites existing meta and supporting set info?
-  #specifying -overwrite with -local will cause duplicate features if there are already 
-  #some present. Check and fail for each slice?
-
-
 }
 else{
 
@@ -724,40 +635,21 @@ foreach my $ctype_name(keys %ctype_fsets){
 foreach my $ctype(keys %ctype_fsets){
   next if $ctype eq 'MultiCell';
 
-  my ($fset_txt, $attr_txt);
-  my $focus_cnt    = 0;
-  my $nonfocus_cnt = 0;
+  my $fset_txt = "\n\n# $ctype Focus Sets:\n";
+  my $attr_txt = "\n# $ctype Attribute Sets:\n";
 
   foreach my $fset(@{$ctype_fsets{$ctype}}){
 	
 	if($focus_fsets{$fset->dbID}){
-	  $focus_cnt++;
-	  $fset_txt .= "\t".$fset->name.'('.$fset->dbID.")\n";
+	  $fset_txt .= $fset->name.'('.$fset->dbID.')  ';
 	}
 	else{
-	  $nonfocus_cnt++;
-	  $attr_txt .= "\t".$fset->name.'('.$fset->dbID.")\n";
+	  $attr_txt .= $fset->name.'('.$fset->dbID.')  ';
 	}
   }
-
-
-  #Need to handle no focus/non-focus better here
-  #We already die if we have no-focus and ! $ctype_projection
-  #But we should warn here anyway?
-
-  if($fset_txt){
-	$fset_txt = "\n\n# $ctype Focus Sets($focus_cnt):\n".$fset_txt;
-  } else{
-	$fset_txt = "\n\n# $ctype has no Focus Sets\n";
-  }
   $helper->log($fset_txt);
-
-  if($attr_txt){
-	$attr_txt = "\n# $ctype Attribute Sets($nonfocus_cnt):\n".$attr_txt;
-  }else{
-	$attr_txt = "\n# $ctype has no Attribute Sets\n";
-  }
   $helper->log($attr_txt);
+
 }
 
 
@@ -809,7 +701,6 @@ if ( ! defined $ana ) {			# NEW
 
 $analysis = $aa->fetch_by_logic_name($logic_name);
 
-
 # Do this here before bsubing to avoid race condition
 # This will rollback based on slices
 # However, we may get partial rollback and redefining of supporting sets!!
@@ -823,8 +714,17 @@ $analysis = $aa->fetch_by_logic_name($logic_name);
 
 push @skip_slices, 'MT' if ! $include_mt;#Always skip MT by default
 #Is this inc dups here 
+@slices = @{&generate_slices_from_names($sa, \@slices, \@skip_slices, 'toplevel', $non_ref, 'inc_dups')};
 
-@slices = @{&generate_slices_from_names($sa, \@slices, \@skip_slices, 'toplevel', $non_ref)};#, 'inc_dups')};
+
+#Hack to update dset stored without reg string
+#foreach my $ctype(keys %cell_types){
+#  warn $ctype;
+#  my $dset_name = ($ctype eq 'core') ? 'RegulatoryFeatures' : "RegulatoryFeatures:{$ctype}";
+#  my $dset = $db->get_DataSetAdaptor->fetch_by_name($dset_name);
+#  warn "got $dset";
+#}
+#exit;
 
 #Doing this here for all the slices before we batch will be faster
 my $rfsets = &get_regulatory_FeatureSets($analysis, \%cell_types);
@@ -833,158 +733,68 @@ my $rfsets = &get_regulatory_FeatureSets($analysis, \%cell_types);
 #This will get rolled back again unnecessarily for each slice job, 
 #but it should still be much quicker
 #Well, it will be when rollback_FeatureSet supports multiple slices
-my ($sr_name, $is_non_par, $sr_file_name, $slice_name, $core_sr_id, $fg_sr_id);
+my $sr_name;
 
 if (! $local){ #BSUB!
   
   @tmp_args = @{&strip_param_flags(\@tmp_args, ('local', 'non_ref', 'include_mt'))};
-  @tmp_args = @{&strip_param_args(\@tmp_args, ('slices', 'slice', 'skip_slices'))};
-
-
+  @tmp_args = @{strip_param_args(\@tmp_args, ('slices', 'skip_slices'))};
   (my $bsubhost = $host) =~ s/-/_/g;
 
 
   foreach my $slice(@slices){
-	next if ! &validate_Slice($slice);
-
-	#Update this to use new load params
-	my $bsub = "bsub -q long -o $outdir/RegulatoryBuild_${sr_file_name}.$$.out -e $outdir/RegulatoryBuild_${sr_file_name}.$$.err ".
-	  "-J 'RegulatoryBuild_${sr_file_name}_${dbname}' -R 'select[my".$bsubhost."<80] rusage[my".$bsubhost."=10:duration=10]' -R 'select[mem>4000] rusage[mem=4000]' -M 4000000"; 
-
-
-	my $cmd = "$ENV{EFG_SRC}/scripts/regulatory_build/build_regulatory_features.pl -no_log -update -local -slices $sr_file_name @tmp_args";
+	$sr_name = $slice->seq_region_name;
+	my $bsub = "bsub -q normal -o $outdir/RegulatoryBuild_$sr_name.out -e $outdir/RegulatoryBuild_$sr_name.err ".
+	  "-J 'RegulatoryBuild_${sr_name}_${dbname}' -R 'select[my".$bsubhost."<80] rusage[my".$bsubhost."=10:duration=10]' -R 'select[mem>4000] rusage[mem=4000]' -M 4000000";
+	
+	my $cmd = "$ENV{EFG_SRC}/scripts/regulatory_build/build_regulatory_features.pl -local -slices $sr_name @tmp_args";
 	  
-	$helper->log("Submitting job for slice:\t".$sr_file_name);
-	$helper->log("$bsub $cmd");
+	$helper->log("Submitting job for slice:\t".$sr_name);
 	system("$bsub $cmd") && die("Can't submit job array to farm");#Is this failure getting caught properly?
+
   }
   
   $helper->log("Output can be found here:\t$outdir");
   warn "We need a to put this in a Runnable so we can easily monitor which jobs have failed";
-  exit;
 
 }
 elsif(scalar(@slices) > 1){
-  die("Cannot run in local mode with more than one slice:\t".
-	  join(', ', (map $_->seq_region_name, @slices)).
-	  "\nPlease omit -local or specify a single slice name.\n");
+  die("Cannot run in local mode with more than one slice. Please omit -local or specify a single slice name.\n");
 }
 
 
 ### Run slice job locally
 my $slice = $slices[0];
-if(! &validate_Slice($slice)){
-  exit 1;#as we have already logged the error
-}
+$sr_name = $slice->seq_region_name;
 
-#Move at least some of this to EFGUtils?
+# get core and fg seq_region_id for slice
+my ($core_sr_id, $fg_sr_id);
+$core_sr_id = $slice->get_seq_region_id;
 
-sub validate_Slice{
-  my $slice = shift;
-
-  my $has_features = 1;
-  $sr_name = $sr_file_name = $slice->seq_region_name;
-  $slice_name = $slice->name;
-  $core_sr_id = $slice->get_seq_region_id;
-  $afa->build_seq_region_cache(); # need to build cache first
-  $fg_sr_id = $afa->get_seq_region_id_by_Slice($slice);
-
-  #Check here that we aren't running with Y PARs) in local mode
-  if(my @projs = @{$sa->fetch_PAR_projections_by_Slice($slice)}){
-
-	#Generate non-PARs
-	#my $full_slice = $sa->fetch_by_seq_region($slice->get_seq_region_id);
-	my @non_pars;
-	my @pars;
-
-	#Everything is in local coords here
-	my $last_end = 0;
-
-
-	foreach my $proj(@projs){
-	  
-	  my $pstart = $proj->from_start;
-
-
-	  if($pstart > 1){#Create non-PAR Slice
-		push @non_pars, $slice->sub_Slice(($last_end +1), ($pstart-1));
-	  }
-
-	  $last_end = $proj->from_end;
-	  
-	  push @pars,  $slice->sub_Slice($proj->from_start, $proj->from_end);
-	}
-
-
-	#Now handle the last non_par
-	if($last_end != $slice->length){
-	  push @non_pars, $slice->sub_Slice(($last_end +1), ($slice->length));
-	}
-	
-	die("Slice $slice_name has PAR region(s):\n\t".
-		join("\n\t", (map { $_->name } @pars)).
-		"\nPlease specify a non-PAR Slices to prevent duplication of features:\n\t".
-	   	join("\n\t", (map { $_->name } @non_pars))."\n");
-  }
-  
-  #Handle non-PARs
-  $is_non_par = 0;
-  my $full_slice = $sa->fetch_by_seq_region_id($slice->get_seq_region_id);
-  
-  if(@{$sa->fetch_PAR_projections_by_Slice($full_slice)}){
-	$is_non_par = 1;
-	$sr_file_name = $slice_name;
-  }
-
-  #Check for features before bsub
-  my $sql   = 'SELECT count(*) from annotated_feature where feature_set_id in('.
-	join(',',  keys %attrib_fsets).') and seq_region_id='.$fg_sr_id;
-  my ($cnt) = @{$db->dbc->db_handle->selectrow_arrayref($sql)}; 
-  
-  if(! $cnt){
-	$helper->log("$sr_file_name has no supporting features");
-	$has_features = 0;
-  }
-
-  return $has_features;
-}
-
-
-#Does rollback resstrict to slice coords?!
-#Other wise we are going to get rollback between jobs
-
-
-#May still happen in local mode
+# need to build cache first
+$afa->build_seq_region_cache();
+$fg_sr_id = $afa->get_seq_region_id_by_Slice($slice);
+my $slice_name = $slice->name;
 die("No eFG seq_region id defined for ".$slice_name." Almost certain there is no data".
 	"available on this slice. You might want to run_update_DB_for_release.pl") 
   if ! defined $fg_sr_id;
 
 
 ### Dump AnnotatedFeatures
-my $af_file = $outdir.'/annotated_features.'.$sr_file_name.'.dat';
+my $af_file = $outdir.'/annotated_features.'.$slice->seq_region_name.'.dat';
 
 if ((! -f $af_file) ||
 	(! $no_dump_annotated_features)){
   &dump_annotated_features();
 
-  #This should only happen with local due to data check before bsub
   if(! -f $af_file){
-	die("No annotated_features present, aborting build\n");
+	warn "No annotated_features present, aborting build\n";
+	exit;
   }
 } 
 else {
   $helper->log("Using previously dumped annotated features:\t$af_file");
 }
-
-
-
-#Test whether file is empty here and exit and rm
-
-#if(-z $af_file){
-#  $helper->log("THERE ARE NO SUPPORTING FEATURES! Removing empty dump file:\t$af_file");
-#  unlink($af_file) or warn "Could not remove file:\t$af_file";
-#  exit;
-#}
 
 my $fh = open_file($af_file);
 
@@ -995,31 +805,27 @@ if($debug_start && ! $debug_end){ #Set debug_end if not set
 }
 
 #Some variables which are used in subs
-my (%afs, @rf, @mf_ids, $ctype, $af_id, $start, $end, $strand, $score, $fset_id);
+my (%afs, @rf, $ctype, $af_id, $sr_id, $start, $end, $strand, $score, $fset_id, $mf_ids);
 my (%feature_count, %seen_af, %removed_ff);#Stats
 my $rf_size = -1;
 
 $helper->log("Processing slice:\t".$slice_name);
 
-#This currently still reads one null line if the file is empty!
 
-
-while (my $line = <$fh>) {
- 
- # Read from file and process sequentially in sorted by start, end order. Each 
+while (<$fh>) {
+  # Read from file and process sequentially in sorted by start, end order. Each 
   # new feature is checked if it overlaps with the preceeding already seen 
   # features. If yes we just carry on with the next one. Otherwise
-  next if ($line =~ /^\#/o);
-  chomp $line; 
- 
+  next if (/^\#/o);
+  chomp; 
+
   #This assumes the correct seq_region as we dump out separate file
-  #removed seq_region_id and name as we are dealing with slice based dumps
-  #removed strand as all features are strandless
+  #+----------------------+---------------+------+------------------+----------------+-------------------+------------+----------------+----------------+
+  #| annotated_feature_id | seq_region_id | name | seq_region_start | seq_region_end | seq_region_strand | score      | feature_set_id | mf_ids         |
+  #+----------------------+---------------+------+------------------+----------------+-------------------+------------+----------------+----------------+
+  #|              1164424 |           210 | 1    |          4841882 |        4842334 |                 0 |   15.83493 |            112 | 8773,8774      |
 
-  ($af_id, $start, $end, $score, $fset_id, @mf_ids) = split (/\s+/o, $line);
-
-  #removed NULLs here (or in awk)
-  @mf_ids = grep /[^(NULL)]/, @mf_ids;
+  ($af_id, $sr_id, undef, $start, $end, $strand, $score, $fset_id, $mf_ids) = split (/\s+/o, $_);
   
   #Skip non debug regions
   #Warning, this may not build accurately!!!
@@ -1027,24 +833,23 @@ while (my $line = <$fh>) {
   #This will not run with a subslice properly
   
   
-  
+
 
   if ($debug_start) {
 	next if ($start < $debug_start);
 	last if ($start > $debug_end);
 
-	print "\nNEW ".$attrib_fsets{$fset_id}->cell_type->name.':'.
-	  $attrib_fsets{$fset_id}->feature_type->name."\t\t\t\t\t".
-		join("\t", $af_id, $start.' - '.$end, @mf_ids)."\n";
-  }
+	print "\nNEW ".$attrib_fsets{$fset_id}->cell_type->name.':'.$attrib_fsets{$fset_id}->feature_type->name."\t${start}\t${end}\n";
 
+  }
+    
   #132832790-132833336
 
   #Peak filtering
   #next if (exists $ChIPseq_cutoff{$attrib_fsets{$fset_id}->name()} 
   #         && $score < $ChIPseq_cutoff{$attrib_fsets{$fset_id}->name()});
   
-  #$helper->log($_, "\t", $attrib_fsets{$fset_id}->name) if ($debug_start);
+  $helper->log($_, "\t", $attrib_fsets{$fset_id}->name) if ($debug_start);
   my  $length = $end-$start+1;
   $ctype = $fset_cell_types{$fset_id};
  
@@ -1128,15 +933,11 @@ while (my $line = <$fh>) {
 	  elsif( ($end <= $rf[$rf_size]{attribute_end}{$ctype}) &&
 			 ($start <= ($rf[$rf_size]{focus_end} + $focus_extend)) ){	
 		
-		#||||||||||||---------------------------------|
-		#                               |||||
-		#           |-<$focus_extend----|
-
 		#Do we not need to account for unset attr ends in here too
 		#What about completely abset attrs
 		#Need to set bound_end/start in create_regualtory_features?
 	
-		print "\tAdding fully contained $ctype feature(".$af_id.")\n" if ($debug_start);
+		print "Adding fully contained $ctype feature(".$af_id.")\n" if ($debug_start);
 		
 		# add annot. feature id to reg. feature
 		$rf[$rf_size]{annotated}{$ctype}{$af_id} = $fset_id;
@@ -1223,17 +1024,10 @@ foreach my $ctype(keys %ctype_fsets){
   $helper->log("# Total $ctype features seen:\t$total");
   $helper->log("# Focus $ctype feature seen:\t$focus");
 
-
-  if(! $ctype_projection){
-
-	if ($total < $focus){
-	  warn("Found inconsistenty between $ctype Total and Focus features\n");
-	  $die = 1;
-	}
-	elsif($focus == 0){
-	  warn("Found no $ctype Focus features\n");
-	  $die = 1;
-	}
+  if ((($total < $focus) || ($focus == 0)) &&
+	 ! $ctype_projection){
+	warn("Found inconsistenty between Total and Focus $ctype features\n");
+	$die = 1;
   }
 
   #This number should be the Focus - those focus which have been removed
@@ -1276,7 +1070,7 @@ foreach my $ctype(keys %ctype_fsets){
 $helper->log(sprintf "# Total number of read features: %10d", $total_feature_count);
 $helper->log(sprintf "# Total number of RegulatoryFeatures: %10d", scalar(@rf));
 
-die("ERROR:\tInconsistencies were found between some of your focus sets and the resultant RegulatoryFeatures, see above.\n") if $die;
+warn("ERROR:\tInconsistencies were found between some of your focus sets and the resultant RegulatoryFeatures, see above.\n") if $die;
 
 ###############################################################################
 # dump annotated features for given seq_region to file
@@ -1284,92 +1078,38 @@ sub dump_annotated_features{
   #To do, remove this and just slurp directly into perl!
 
 
-  #Need to account for non-PAR regions
-  
-
-
-
   my @fset_ids = keys %attrib_fsets;
   $helper->log("Dumping ".scalar(@fset_ids)." AnnotatedFeature Sets for slice:\t".$slice_name);
 
-  #This dump sql can truncate the group_concat and is not optimised
-  #and is taking ages!
-
-  #my $sql = 'SELECT af.annotated_feature_id, seq_region_start, seq_region_end, seq_region_strand, score, '.
-#	                'feature_set_id, mf.mf_ids '.
-#	          'FROM annotated_feature af '.
-#		 'LEFT JOIN (SELECT amf.annotated_feature_id, group_concat(mf1.motif_feature_id) as mf_ids '.
-#		             'FROM  motif_feature mf1, associated_motif_feature amf '.
-#			         "WHERE amf.motif_feature_id=mf1.motif_feature_id AND mf1.seq_region_id=${fg_sr_id} ".
-#					 'GROUP by amf.annotated_feature_id) mf ON mf.annotated_feature_id=af.annotated_feature_id '.
-#			 "WHERE af.seq_region_id=${fg_sr_id} ".
-#			   'AND af.feature_set_id in ('.join(',', @fset_ids).') order by seq_region_start, seq_region_end';
-
-  
-  my $sql = 'SELECT  af.annotated_feature_id, af.seq_region_start, '.
-                  	'af.seq_region_end, af.score, af.feature_set_id, '.
-					'mf.motif_feature_id '.
-			'FROM    annotated_feature af '.
-			'LEFT JOIN (associated_motif_feature amf '.
-			           'JOIN motif_feature mf USING (motif_feature_id)) '.
-			'USING (annotated_feature_id) '.
-            "WHERE   af.seq_region_id = ${fg_sr_id} ";
-
-  #Handle non-PARs for Y
-  if($is_non_par){
-	$sql .=  'AND af.seq_region_start <= '.$slice->end.
-	  ' AND af.seq_region_end >= '.$slice->start;
-  }
+  my $sql = 'SELECT af.annotated_feature_id, af.seq_region_id, sr.name, '.
+	                'seq_region_start, seq_region_end, seq_region_strand, score, '.
+	                'feature_set_id, mf.mf_ids '.
+	          "FROM (select distinct(seq_region_id), name from seq_region where seq_region_id='${fg_sr_id}') sr, ".
+				    'annotated_feature af '.
+		 'LEFT JOIN (SELECT amf.annotated_feature_id, group_concat(mf1.motif_feature_id) as mf_ids '.
+		             'FROM  motif_feature mf1, associated_motif_feature amf '.
+			         'WHERE amf.motif_feature_id=mf1.motif_feature_id GROUP by amf.annotated_feature_id) mf '.
+				'ON mf.annotated_feature_id=af.annotated_feature_id '.
+			 'WHERE sr.seq_region_id=af.seq_region_id '.
+			   'AND af.feature_set_id in ('.join(',', @fset_ids).') order by seq_region_start, seq_region_end';
 	
 
-  $sql .=	' AND   af.feature_set_id IN ('.join(',', @fset_ids).') '.
-			'ORDER BY af.seq_region_start, af.seq_region_end, af.annotated_feature_id';
 
 
-
-
-  #"AND   mf.seq_region_id = ${fg_sr_id} ".#This borks the left join for some reason
-
-
-  #add feature_set_id to index to remove need for filesort for feature_set_id?
-  #didn't work, but did reduce size of rows slightly
-
-  #Adding mf.seq_region_id reduced size of derived table with no index by 10!
-  #Could probablly still do more here?
-  #filesort using temp is probably happening because this exceeds the index sort buffer?
-  #JOINS rather than sub select are optimised much better
-  #removed group_concat, can't set session var due to cmdlind dump?
-  #concat now done by gawk as group_concat can truncate default 1024 in utf8 (3bytes/char)) is 341
-  #couldn't SET [GLOBAL | SESSION] group_concat_max_len = val due to cmdline
-  #removed strand too as all features are strandless
-  #has to remove mf_seq_region_id where as it borked the left join.
-
-  #May still need to dump on a fset basis, then merge and sort afterwards?
-
-
+  #Do we really need the join to sr, can we not just dump the sr_ids instead of the names?
+  #We use the core_sr_id to build the slices anyway
 		  
   #Delete previous dumps
-  unlink($af_file);
-   #af.annotated_feature_id, af.seq_region_start, '.
-   #               	'af.seq_region_end, af.score, af.feature_set_id, '.
-
-
-
+  unlink($outdir."/annotated_features.".$slice->seq_region_name.".dat");
+  
   #This was appending without removing previous dumps!!!!
-  #This will not create a file with no data!!!!!!!!!!!!!!
-  #Now merges lines based on annotaed_feature_id, concating mf_ids
-
+  #This will not create a file with no data
   my $command = "echo \"$sql\" ".
 	" | mysql -quick -N -h".$host." -P".$port." -u".$user." -p".$pass." ".$dbname.
-	" | gawk '{ if(last_id == 0){ last_id=\$1; start=\$2; end=\$3; score=\$4; fset_id=\$5; mf_ids=\$6;}; ".
-	  "if((\$1 != last_id) && \$1){ ".
-		"print last_id \"\t\" start \"\t\" end \"\t\" score \"\t\" fset_id \"\t\" mf_ids; ".
-		  "last_id=\$1; start=\$2; end=\$3; score=\$4; fset_id=\$5; mf_ids=\$6;".
-			"} else{ mf_ids=mf_ids \" \" \$6;}".
-			  "} END {if(last_id){ print last_id \"\t\" start \"\t\" end \"\t\" score \"\t\" fset_id \"\t\" mf_ids; }}'".
-				" | gawk '{ print >> \"$af_file\" }'";
-
-
+	  #" | gawk '{if (\$7==".join("||\$7==", @fset_ids).") print }'".
+	  #	  " | sort -k3,3 -k4,5n".
+        " | gawk '{ print >> \"".$outdir."/annotated_features.".$slice->seq_region_name.".dat\" }'";
+    
   $helper->log("# Execute: $command");
 
   # need to remove existing dump files, since we append to the file
@@ -1393,7 +1133,7 @@ sub dump_annotated_features{
 #We can do this by decoding the fset_ids
 
 sub add_focus{
-  print "\n\n# New $ctype focus:\t$start-$end\n" if ($debug_start);
+  print "\nNew $ctype focus:\t$start-$end\n" if ($debug_start);
 
   push @rf, {
 			 focus_start       => $start,
@@ -1415,16 +1155,16 @@ sub add_focus{
   $rf_size +=1; 
   
 
-  if(@mf_ids){  #Cache MotifFeature ids - don't project
+  if(defined $mf_ids){  #Cache MotifFeature ids - don't project
+	my @motif_feature_ids = split/,/, $mf_ids;
+	
 	$rf[$rf_size]->{motif_feature_ids}{$ctype}    ||= [];
 	$rf[$rf_size]->{motif_feature_ids}{MultiCell} ||= [];
-	#$feature_count{motif_features}{MultiCell}      += scalar(@mf_ids);
-	$feature_count{motif_features}{$ctype}         += scalar(@mf_ids);
+	#$feature_count{motif_features}{MultiCell}      += scalar(@motif_feature_ids);
+	$feature_count{motif_features}{$ctype}         += scalar(@motif_feature_ids);
 	
-	print "\tAdding MotifFeatures IDs to new $ctype and MultiCell:\t@mf_ids\n" if $debug_start;
-
-	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @mf_ids;
-	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @mf_ids;
+	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @motif_feature_ids;
+	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @motif_feature_ids;
   }
 
 
@@ -1457,8 +1197,7 @@ sub update_focus{
 	#Account for previous focus start
 	$rf[$rf_size]{attribute_start}{$ctype} = $rf[$rf_size]{focus_start};
 	$rf[$rf_size]{attribute_end}{$ctype}   = ($end > $rf[$rf_size]{focus_end}) ? $end : $rf[$rf_size]{focus_end};
-	print "\tSetting $ctype attr start/end to:\t\t\t\t".$rf[$rf_size]{attribute_start}{$ctype}.
-	  ' - '.$rf[$rf_size]{attribute_end}{$ctype}."\n" if $debug_start;
+	print "Setting $ctype attr start/end to:\t".$rf[$rf_size]{attribute_start}{$ctype}.' - '.$rf[$rf_size]{attribute_end}{$ctype}."\n" if $debug_start;
   }
 
 
@@ -1477,29 +1216,32 @@ sub update_focus{
 
 	  if($end   > $rf[$rf_size]{attribute_end}{$rf_ctype}){
 		$rf[$rf_size]{attribute_end}{$rf_ctype}   = $end;
-		print "\tResetting $rf_ctype attr end to new $ctype focus end:\t$end\n" if $debug_start;
+		print "Resetting $rf_ctype attr end to new $ctype focus end:\t$end\n" if $debug_start;
 	  }
 	}
   }
 
 
-  if(@mf_ids){  #Cache MotifFeature ids - don't project
+  if(defined $mf_ids){  #Cache MotifFeature ids - don't project
+	my @motif_feature_ids = split/,/, $mf_ids;
 	
 	$rf[$rf_size]->{motif_feature_ids}{$ctype}    ||= [];
 	$rf[$rf_size]->{motif_feature_ids}{MultiCell} ||= [];
-	#	$feature_count{motif_features}{MultiCell}      += scalar(@mf_ids);
-	$feature_count{motif_features}{$ctype}         += scalar(@mf_ids);
-	print "\tAdding MotifFeatures IDs existing $ctype and MultiCell:\t@mf_ids\n" if $debug_start;
-
-	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @mf_ids;
-	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @mf_ids;
+	#	$feature_count{motif_features}{MultiCell}      += scalar(@motif_feature_ids);
+	$feature_count{motif_features}{$ctype}         += scalar(@motif_feature_ids);
+	
+	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @motif_feature_ids;
+	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @motif_feature_ids;
   }
 
   $rf[$rf_size]{fsets}{MultiCell}{$fset_id}++;
   $rf[$rf_size]{fsets}{$ctype}{$fset_id}++;
   $rf[$rf_size]{focus}{$ctype}{$af_id} = $fset_id;
   $rf[$rf_size]{focus}{MultiCell}{$af_id} = $fset_id;
-    
+  
+
+
+  
   #Do we need to alter this to be celltype aware?
   $seen_af{$fset_id}{$af_id} = 1;
 
@@ -1530,24 +1272,15 @@ sub update_attributes{
 	  if ($afs{$ct}->[$i]{end} >= $rf[$rf_size]{focus_start}) {
 		$updated = 1;
 
-		#Current RF       |-----||||||||||||
-		#Old AF          ?????||||||||
-		#Old AF                   ||||||?????
-	
-
 		if(scalar(keys %{$rf[$rf_size]{focus}{$ctype}}) == 0){
 		  print "Updating projected feature\n" if $debug_start;
-		  #exit;
+		  exit;
 		}
 
 
 		# FIRST update attribute start of the regulatory feature...
 		
 		if ($afs{$ct}->[$i]{start} < $rf[$rf_size]{attribute_start}{$ct}) {
-
-		  #Current RF              |-------------||||||
-		  #Old AF            ||||||||||||||||||||||????
-
 		  #This is always the case the first feature
 		  #If there is one, it will always be upstream or start at the same location as the new focus
 		  #And we process the rest in this block so no real need for this test???
@@ -1569,16 +1302,6 @@ sub update_attributes{
 		  
 		  if ($af->{end} >= $start ||
 			  ( $af->{start} >= ($rf[$rf_size]{focus_start} - $focus_extend) )) {
-
-			
-			#Old AF             ||||||||||
-			#New AF                |||||???
-
-			#Current RF    |-------------------------|||
-			#Old AF                  ???????????????????
-			#                        |-<focus_extend-|
-			
-
 			
 			if ($debug_start){
 			  print "\tUpdating overlapping attribute feature:\t(".
@@ -1591,11 +1314,6 @@ sub update_attributes{
 			
 			#Reset the attr end
 			if ($af->{end}   > $rf[$rf_size]{attribute_end}{$ct}) {
-
-			  #Current RF   ||||||||||----------|
-			  #Old RF       ??????????????????????||
-
-
 			  print "\tUpdating attribute end to:\t\t".$af->{end}.' (> '.$af->{end}.")\n" if $debug_start;
 			  $rf[$rf_size]{attribute_end}{$ct} = $af->{end};
 			}
@@ -1609,8 +1327,8 @@ sub update_attributes{
 	  }
 	}
 
-	print "\t$ct updated coords:\t\t\t\t\t\t".$rf[$rf_size]{attribute_start}{$ct}.' - '.$rf[$rf_size]{attribute_end}{$ct}."\n" if $debug_start;
-	print "\tNo upstream $ct features found\n" if $debug_start && (! $updated);
+	print "$ct updated coords:\t\t\t\t\t\t".$rf[$rf_size]{attribute_start}{$ct}.' - '.$rf[$rf_size]{attribute_end}{$ct}."\n" if $debug_start;
+	print "No upstream $ct features found\n" if $debug_start && (! $updated);
   }
 
   return;
@@ -1621,7 +1339,7 @@ sub update_attributes{
 
 sub add_feature{
   
-  print "\tAdding $ctype feature($af_id) to attribute feature_list\n" if $debug_start;
+  print "Adding $ctype feature($af_id) to attribute feature_list\n" if $debug_start;
 
 
   push(@{$afs{$ctype}}, 
@@ -1685,23 +1403,6 @@ sub create_regulatory_features{
 
   my @reg_feats;
   print "\n\nCreating ".scalar(@$rfs)." RegulatoryFeatures\n" if $debug_start;
-
-
-
-  my $unc_ftype = $fta->fetch_by_name('RegulatoryFeature');
-  
-  if (! $unc_ftype) {
-	
-	$unc_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
-	  (
-	   -name        => 'Unclassified',
-	   -description => 'Unclassified Regulatory Feature',
-	   -class       => 'Regulatory Feature',
-	  );
-	
-	($unc_ftype) = @{$fta->store($unc_ftype)} if ($write_features);
-  }
-	
 
 
   foreach my $rf (@{$rfs}) {
@@ -1783,22 +1484,10 @@ sub create_regulatory_features{
 
 
 	  #Add MotifFeatures as attrs
-	  $attr_cache->{motif} = $rf->{motif_feature_ids}{$ct} || [];
+	  $attr_cache->{motif} = $rf->{motif_feature_ids}{$ctype};
 		  
 	  #We now need to clean the fset_id values from the attrs cache
 	  #map { $attr_cache->{$_} = undef } keys %$attr_cache; 
-
-	  #CAST HACK
-	  #Covert cache to dbID hash here 
-	  foreach my $fclass(keys %{$attr_cache}){
-
-		my @dbids = @{$attr_cache->{$fclass}};
-		$attr_cache->{$fclass} = {};
-
-		foreach my $dbid(@dbids){
-		  $attr_cache->{$fclass}{$dbid} = undef;
-		}
-	  }
 
 	  print "Creating $ct RegulatoryFeature with attribute cache:\n".Data::Dumper::Dumper($attr_cache)."\n" if $debug_start;#level 3?
 
@@ -1807,9 +1496,10 @@ sub create_regulatory_features{
 		 -slice            => $slice,
 		 -start            => $focus_start,
 		 -end              => $focus_end,
+		 -strand           => 0,
 		 -binary_string    => &build_binstring($rf, $ct),
 		 -feature_set      => $rfsets->{$ct},
-		 -feature_type     => $unc_ftype,
+		 -feature_type     => $rfsets->{$ct}->feature_type,
 		 -attribute_cache  => $attr_cache,
 		 -projected        => $projected,
 		);
@@ -1817,6 +1507,7 @@ sub create_regulatory_features{
 	  if ($write_features) {	#Store
 		  
 		($reg_feat) = @{$rfa->store($reg_feat)};
+		  
 		#Sanity check bound here to make sure we have built correctly
 		#Can only test bounds if adaptors are set
 
@@ -1855,21 +1546,12 @@ sub create_regulatory_features{
 	  }
 		
 	  push @reg_feats, $reg_feat;
-
-	#  if($projected &&
-	#	 (keys %{$attr_cache->{motif}})){
-	#	warn "found projected with nmfs";
-	#	last;
-	#  }
-
-
 	}
   }
 
   return \@reg_feats;
 }
   
-
 
 
 sub get_regulatory_FeatureSets{
@@ -1888,22 +1570,13 @@ sub get_regulatory_FeatureSets{
 	
 	($ftype) = @{$fta->store($ftype)} if ($write_features);
   }
+  
+  my (@dsets, @fsets);
 	
 
-  my $num_ctypes     = scalar(keys %{$ctypes});
-  my $ctype_cnt      = 0;
-  my $force_clean_up = 0;
-  my $no_clean_up    = 1;
-
   foreach my $ctype (keys %{$ctypes}) {	
-	$ctype_cnt++;
 	my ($desc, $dlabel, $fset_name);
-
-	if ($ctype_cnt == $num_ctypes){
-	  $force_clean_up = 1;
-	  $no_clean_up    = 0;
-	}
-
+	
 	$fset_name = "RegulatoryFeatures:$ctype";
 	$dlabel    = "Reg.Feats $ctype";
 
@@ -1915,20 +1588,10 @@ sub get_regulatory_FeatureSets{
 	  
 	}
 
-	my $rollback_mode;
-
-
-	if($clobber || $update){
-	  $rollback_mode = ($update) ? 'product_features' : 'sets';
-	}
-
-	#we rollback in one go in the submitter to prevent race conditions
-	#Is there any harm in performing redundant rollback in batch job?
-	#Should optionally remove -rollback/update from bsub?
-	$helper->log_header("Defining FeatureSet:\t$fset_name");
+	my $rollback = ($clobber) ? 'supporting_sets' : undef;
 	
+	$helper->log("Defining FeatureSet:\t$fset_name");
 
-	#This updates supporting_sets if there is a difference
 	my $dset = $helper->define_and_validate_sets($fset_name, 
 												 $analysis, 
 												 $ftype, 
@@ -1938,16 +1601,47 @@ sub get_regulatory_FeatureSets{
 												 $db,
 												 $ctype_fsets{$ctype},#supporting sets
 												 $desc,#desc
-												 $rollback_mode,
+												 'sets',#rollback mode
 												 1,#recovery?
-												 \@slices, $dlabel, $no_clean_up, $force_clean_up);
-
+												 \@slices, $dlabel);
 
 	#Always overwrite in case we have redefined the sets
 	&store_regbuild_meta_strings($dset, 1);
 	$rf_sets{$ctype} = $dset->product_FeatureSet;
+
+	#Set states
+	#Move to Utils/RegBuilder.pm?
+   
+	push @dsets, $dset;
+
+	foreach my $fset(@{$ctype_fsets{$ctype}}){
+	  my $ss_dset = $dsa->fetch_by_product_FeatureSet($fset);
+
+	  if(! $ss_dset){
+		die("Could not find DataSet for FeatureSet:\t".$fset->name);
+	  }
+	  
+	  push @dsets, $ss_dset;
+	}
+
+	push @fsets, ($dset->product_FeatureSet, @{$ctype_fsets{$ctype}});	
+  }
+
+  #Set states
+  #Move to Utils/RegBuilder.pm?
+  foreach my $dset(@dsets){
+	foreach my $ds_state(@{$dset_states}){
+	  $dsa->store_status($ds_state, $dset);
+	}
   }
     
+  foreach my $fset(@fsets){
+	foreach my $fs_state(@{$fset_states}){
+	  $fsa->store_status($fs_state, $fset);
+	}
+  }
+
+
   $helper->log("Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets));
   return \%rf_sets;
 
@@ -2004,12 +1698,9 @@ sub store_regbuild_meta_strings{
 	if ($focus_fsets{$ffset_id}->cell_type->name eq $dset->cell_type->name){
 	  push @ffset_ids, $ffset_id;
 	}
-	elsif($dset->cell_type->name eq 'MultiCell'){
-	  push @ffset_ids, $ffset_id;
-	}
   }
 
-  $reg_strings{"regbuild.${ctype}.focus_feature_set_ids"} = join(',', sort { $a <=> $b } @ffset_ids);
+  $reg_strings{"regbuild.${ctype}.focus_feature_set_ids"} = join(', ', @ffset_ids);
   
 
 
@@ -2017,6 +1708,10 @@ sub store_regbuild_meta_strings{
 	my $sth = $ds_adaptor->db->dbc->prepare("select meta_value from meta where meta_key='${meta_key}'");
 	$sth->execute();
 	($meta_value) = map { "@$_" } @{$sth->fetchall_arrayref};
+
+
+	warn "meta value for $meta_key is $meta_value";
+
 
 	if (! defined $meta_value) {
 	  $sql = "insert into meta (meta_key, meta_value) values ('${meta_key}', '$reg_strings{${meta_key}}')";
@@ -2026,27 +1721,14 @@ sub store_regbuild_meta_strings{
 	} 
 	else {
 
-	  if($meta_key eq "regbuild.${ctype}.focus_feature_set_ids"){
-		#split and reorder just in case we have found an un-ordered key
-		$meta_value = join(',', (sort {$a <=> $b } (split ',', $meta_value)));
-	  }
-
 	  if($meta_value ne $reg_strings{$meta_key}){
-		
-		if(! $overwrite){
-		  die "$meta_key already exists and does not match\nOld\t$meta_value\nNew\t$reg_strings{${meta_key}}\nPlease archive previous RegulatoryBuild.\n";
-		}
+		$msg = "$meta_key already exists and does not match\nOld\t$meta_value\nNew\t$reg_strings{${meta_key}}\nPlease archive previous RegulatoryBuild.\n";
+		die $msg if(! $overwrite);
+		warn $msg;
 	  }
-	  else{
-		#Do we need this?
-		warn "Found matching $meta_key meta entry, has the archive missed this key?\n" if ! $overwrite;
+	  else{  
+		warn "Found matching $meta_key meta entry, do you need to archive a previous Regulatorybuild?\n" if ! $overwrite;
 	  }
-
-	  #Update anyway in case we are replacing an unsorted value.
-	  $sql = "UPDATE meta set meta_value='$reg_strings{${meta_key}}' where meta_key='${meta_key}'";
-	  eval { $ds_adaptor->db->dbc->do($sql) };
-	  die("Couldn't update $meta_key in meta table.\n$@") if $@;
-
 	}
   }
   
