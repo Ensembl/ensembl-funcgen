@@ -540,7 +540,8 @@ sub set_collection_config_by_Slice_ResultSets{
 	warn "Over-riding max_bins with specific window_size, omit window_size to calculate window_size using max_bins";
   }
 
-  my ($is_rf_set, $rf_source);
+  my ($is_rf_set);
+  my $rf_source = 'file';
 
   foreach my $rset(@{$rsets}){
 	$is_rf_set      = $rset->has_status('RESULT_FEATURE_SET')      || 0;
@@ -554,8 +555,7 @@ sub set_collection_config_by_Slice_ResultSets{
 	#Eventually will want to completely remove DB sets?
 	#Depends on how we handle 0bp window sets, BigWig?
 	#Leave 0bp sets in DB for v62 which means we need an extra status
-	$rf_source =  $rset->table_name eq 'input_set' ? 'file' : 'db';
-
+	#Assume all input_set rsets are file based
 
 	#NOTE:
 	#Don't need to check for packed_size and packed_template differences as they are now the
@@ -594,7 +594,10 @@ sub set_collection_config_by_Slice_ResultSets{
 
 	
 	### SET ResultSet CONFIG BASED ON OPTIMAL WINDOW SIZE
-
+	# This sets all based on $rf_source=file
+	# For wsize==0 (experimental_chip), the rf_source is fixed after this loop
+	# This is done to prevent cyclical dependancy and improve cache checking speed
+ 
 	if( (defined $window_element ) &&
 		exists $wsize_config{$rf_source}{$Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element]} ){
 	  $wsize_config{$rf_source}{$Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element]}{'result_sets'}{$rset->dbID} = $rset;
@@ -753,8 +756,18 @@ sub set_collection_config_by_Slice_ResultSets{
 	}
   }
 
-  $self->{'_collection_config'} = \%wsize_config;
+  #Fix the 0 wsize source as will be set to 'file' but should be 'db'
+  
+  if(exists $wsize_config{'file'}{0}){
+	$wsize_config{'db'}{0} = $wsize_config{'file'}{0};
+	delete $wsize_config{'file'}{0};
 
+	if(keys(%{$wsize_config{'file'}}) == 0){
+	  delete $wsize_config{'file'};
+	}
+  }
+
+  $self->{'_collection_config'} = \%wsize_config;
   return $self->{'_collection_config'};
 }
 
