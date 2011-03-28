@@ -487,6 +487,8 @@ sub _objs_from_sth {
 					 \$table_id, \$name, \$ctype_id, \$ftype_id, \$dbfile_dir);
   
   
+  my $dbfile_data_root = $self->dbfile_data_root;
+
   #Need c/ftype cache here or rely on query cache?
 
   while ( $sth->fetch() ) {
@@ -499,8 +501,10 @@ sub _objs_from_sth {
       $anal = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-           
 
+	  $dbfile_dir = (defined $dbfile_dir) ? $dbfile_data_root.'/'.$dbfile_dir : undef;
+
+           
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
 													-DBID         => $dbid,
 													-NAME         => $name,
@@ -613,6 +617,50 @@ sub store{
   
   return \@rsets;
 }
+
+
+
+
+
+=head2 dbfile_data_root
+
+  Arg[1]     : Optional String: Root path of dbfile data directory
+  Example    : $rset_adaptor->dbfile_data_dir('/over-ride/path);
+  Description: This allows the root path to be over-ride. THe default path
+               is stored in the meta table as 'dbfile.data_root'. This can be
+               over-ridden by the webcode by setting this variable
+  Returntype : String
+  Exceptions : Throws if no param passed and cannot find dbfile_data_root meta_key
+  Caller     : Bio::EnsEMBL::Funcgen::DBAdaptor::ResultSet
+               Webcode
+  Status     : at risk
+
+=cut
+
+sub dbfile_data_root{
+  my ($self, $root) = @_;
+
+  if($root){
+	$self->{dbfile_data_root} = $root;
+  }
+  elsif(! defined $self->{dbfile_data_root}){
+	$self->{dbfile_data_root} = $self->db->get_MetaContainer->list_value_by_key('dbfile.data_root')->[0];
+	
+	if(! $self->{dbfile_data_root}){
+	  throw('Could not find dbfile.data_root meta entry');
+	}
+
+	#Add -d check?
+
+  }
+	
+
+  return $self->{dbfile_data_root};
+}
+
+
+
+
 
 =head2 store_dbfile_data_dir
 
