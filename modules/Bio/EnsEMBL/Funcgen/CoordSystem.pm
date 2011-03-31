@@ -425,43 +425,13 @@ sub equals {
   
   #need to add check on schema_build here
   #all schema_builds should have been added by BaseFeatureAdaptor during import
-
+  #fails if we are using two different versions with the same cs's
   
- #this fails if we are using two different versions with the same cs's
-  
-
-  #can we just restrict it to name and version here, then check for schema_build and add if not present?
-  #where is equals being called?
-
   if(($self->version() eq $cs->version()) &&
 	 ($self->name() eq $cs->name())){
 
-
 	#we need to make sure these are default CS, otherwise we can get into trouble with
 	#re-used or mismatched seq_region_ids between DB wih different default assemblies
-
-
-	#if(! $cs->is_default()){
-	  #This is warning during assmebly mapping
-	  #But isn't this now okay now we have introduced the cache_key?
-	  #Where is this being called and why is it not failing?
-	  #This is simply returning no features instead of failing.
-	  #Surely this is okay as the cache is loaded on a schema_build basis
-	  #and deals with internal ids across both default and non default sr's on the same level.
-	  #This is happening when we are using a new core DB but trying to access features
-	  #using the old now non-default level
-	  
-	  #warn 'You are trying to use a non-default CoordSystem '.$cs->version().' which will have different seq_region_ids to a default CoordSystem of the same version';
-
-	  #However, does this matter for other usage?
-	  #Where else is equals used?
-
-	#
-
-	#  return 1;
-	#}
-	#els
-
 
 	if (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor()))) {
 
