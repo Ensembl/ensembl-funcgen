@@ -383,7 +383,7 @@ sub store{
     $set->dbID( $sth->{'mysql_insertid'} );
     $set->adaptor($self);
 
-    
+    #This should never happen as InputSubset now tests for stored InputSet first
     $self->store_InputSubsets($set->get_subsets()) if @{$set->get_subsets()};
   }
   
