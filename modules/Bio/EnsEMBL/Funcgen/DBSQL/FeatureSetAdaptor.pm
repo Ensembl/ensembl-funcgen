@@ -92,7 +92,7 @@ sub fetch_all_by_FeatureType {
 
 =head2 fetch_all_by_type
 
-  Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
+  Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'external'
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
   Description: Retrieves FeatureSet objects from the database based on feature_set type.
@@ -115,7 +115,7 @@ sub fetch_all_by_type {
 
 =head2 fetch_all_by_feature_class
 
-  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory' or 'supporting'
+  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory' or 'external'
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_feature_class('annotated');
   Description: Retrieves FeatureSet objects from the database based on feature_set type.

@@ -219,7 +219,7 @@ sub fetch_all_by_product_FeatureSet_type {
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
   Example    : my @dsets = $fs_adaptopr->fetch_by_product_FeatureSet($fset);
   Description: Retrieves DataSet objects from the database based on the FeatureSet.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DataSet objects
+  Returntype : Bio::EnsEMBL::Funcgen::DataSet
   Exceptions : Throws if arg is not a valid FeatureSet
   Caller     : General
   Status     : Deprecated - use fetch_all_by_product_FeatureSet

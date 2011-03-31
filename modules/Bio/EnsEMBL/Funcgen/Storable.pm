@@ -91,6 +91,7 @@ sub new {
   @{$self->{'states'}} = @$states if $states;
   $self->associated_feature_types($assoc_ftypes) if(defined $assoc_ftypes);
   
+
   return $self;
 }
 
@@ -428,9 +429,9 @@ sub get_all_DBEntries {
 
   Arg [1]    : Bio::EnsEMBL::DBEntry $dbe
                The dbEntry to be added
-  Example    : my $dbe = Bio::EnsEMBL::DBEntery->new(...);
+  Example    : my $dbe = Bio::EnsEMBL::DBEntry->new(...);
                $transcript->add_DBEntry($dbe);
-  Description: Associates a DBEntry with this transcript. Note that adding
+  Description: Associates a DBEntry with this object. Note that adding
                DBEntries will prevent future lazy-loading of DBEntries for this
                storable (see get_all_DBEntries).
   Returntype : none
@@ -503,6 +504,7 @@ sub associated_feature_types{
 	}
 
   }
+
 
   #This has the potential to return undef, or an arrayref which may be empty.
   return $self->{'associated_feature_types'};
