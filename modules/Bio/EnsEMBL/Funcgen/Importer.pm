@@ -848,9 +848,8 @@ sub validate_group{
 sub create_output_dirs{
   my ($self, @dirnames) = @_;
 	
-
-  #unshift @dirnames, "";#create base output dir
-  #now done in control script due to log being generated first
+  #output dir created in control script
+  #avoids errors when logs generated first
 
 
   foreach my $name (@dirnames) {
