@@ -289,8 +289,7 @@ sub get_Features_by_FeatureType{
 
 =head2 get_all_Features
 
-  Arg[0]     : Bio::EnsEMBL::Funcgen::FeatureType
-  Example    : my @features = @{$FeatureSet->get_all_Features_by_FeatureType($ftype)};
+  Example    : my @features = @{$FeatureSet->get_all_Features};
   Description: Retrieves all Features for this FeatureSet
   Returntype : ARRAYREF
   Exceptions : None
