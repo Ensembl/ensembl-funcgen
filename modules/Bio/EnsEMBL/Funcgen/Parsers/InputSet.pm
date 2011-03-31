@@ -35,7 +35,8 @@ Bio::EnsEMBL::Funcgen::Parsers::InputSet
 This is a base class to support simple file format parsers. For simple imports the vendor is
 set to the parser type i.e. the file format.  The generic read_and_import_simple_data assumes
 a one line per feature format, other format need there own read_and_import_format_data method, 
-which will need defining in the result_data config element.
+which will need defining in the result_data config element. Features are stored either as 
+ResultFeature collections or AnnotatedFeatures dependan ton the input feature class.
 
 =cut
 
@@ -77,9 +78,19 @@ sub new{
   my $class = ref($caller) || $caller;
   my $self  = $class->SUPER::new(@_);
   
+  #Defaults
+  #$self->{dbfile_data_root} = $self->get_dir('output');
 
-  ($self->{'input_set_name'}, $self->{'input_feature_class'}, $self->{'slices'}, $self->{total_features}) = rearrange(['input_set_name', 'input_feature_class', 'slices', 'total_features'], @_);
+  ($self->{'input_set_name'}, 
+   $self->{'input_feature_class'}, 
+   $self->{'slices'}, 
+   $self->{total_features}, 
+   $self->{force},#Is this generic enough to go in Importer? Similar to recover?
+   $self->{dbfile_data_root}, #only appropriate for result input_feature_class
+  ) = rearrange(['input_set_name', 'input_feature_class', 'slices', 'total_features', 'force', 'dbfile_data_root'], @_);
 
+
+  
 
   #Could potentially take fields params directly to define a custom format
   #Take direct field mappings, plus special fields which needs parsing differently
@@ -222,8 +233,8 @@ sub set_config{
   #We need to undef norm method as it has been set to the env var
   $self->{'config'}{'norm_method'} = undef;
 
-  #dir are not set in config to enable generic get_dir method access
-
+  #dirs are not set in config to enable generic get_dir method access
+  $self->{dbfile_data_root} ||= $self->get_dir('output');#Required for Collector
 
   #some convenience methods
   $self->{'annotated_feature_adaptor'} = $self->db->get_AnnotatedFeatureAdaptor if $self->input_feature_class eq 'annotated';
@@ -692,18 +703,43 @@ sub read_and_import_data{
 		
 		
 		foreach my $slice(@$slices){
-		  $self->result_feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self);
+		  $self->result_feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self, 
+																		   (
+																			-force            => $self->{force},
+																			-dbfile_data_root => $self->{dbfile_data_root},
+																		   ));
 		}  
 
 		warn "Need to update InputSubset status to IMPORTED after all slices have been loaded";
 		#Do we even need to set RESULT_FEATURE_SET for input_set ResultFeatures?
 
 		
-		#Here we get an error from the sort
-		#as it is not closed, just the pipe
 
 		warn "Closing $filename\nDisregard the following 'Broken pipe' warning";
-		$fh->close;#Nope this doesn't catch it either
+
+		#Closing the read end of a pipe before the process writing to it at the other end 
+		#is done writing results in the writer receiving a SIGPIPE. If the other end can't 
+		#handle that, be sure to read all the data before closing the pipe.
+		#This suggests the gzip pipe has not finished reading, but it *should* be at the end of the file?
+		#$SIG{PIPE} = 'IGNORE'; #Catch with subref and warn instead?
+		#Or maybe an eval will catch the STDERR better?
+		#sub catch_SIGPIPE{
+		#  my $sig = shift @_;
+		#  print " Caught SIGPIPE: $sig $1 \n";
+		#  return;
+		#  
+		#}
+		#$SIG{PIPE} = \&catch_SIGPIPE;
+		#my $retval =  eval { no warnings 'all'; $fh->close };
+		#if($@){
+		#  warn "after eval with error $@\nretval is $retval";
+		#}
+		#Neither of these catch gzip: stdout: Broken pipe
+		
+		#IO::UnCompress::Gunzip?
+
+
+		$fh->close;
 	  }
 	  else{
 
