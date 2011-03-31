@@ -104,6 +104,9 @@ my $reg = "Bio::EnsEMBL::Registry";
 sub new {
   my ( $class, @args ) = @_;
 
+  #Can't do this here yet due to auto-dnadb setting
+  #$group ||= 'funcgen';#could pass production here, but would also require species to be passed and is_multi!?
+
   #Force group to be funcgen as this is the only valid group.
   my $self = $class->SUPER::new(@args, '-group', 'funcgen');
  
@@ -136,6 +139,7 @@ sub new {
 
   my $default_dnadb = $self->SUPER::dnadb;
   my ($default_host, $default_port, $default_user, $default_pass, $default_assm, $efg_assm, $dnadb_defined);
+
 
   if($default_dnadb->group eq 'core'){
 	#This means you have loaded a registry or pass a dnadb to the efg DBAdaptor
@@ -186,6 +190,8 @@ sub new {
 } 
 
 
+#Move these stored method to BaseAdaptor?
+
 =head2 is_stored_and_valid
 
   Arg [1]    : string - class namespace
@@ -208,7 +214,7 @@ sub is_stored_and_valid{
   my ($self, $class, $obj) = @_;
 
   if(! (ref($obj) && $obj->isa($class) && $obj->is_stored($self))){
-	#throw or warn and return boolean?
+	#is_stored checks adaptor params and dbID, but not whether the adaptor matches the class
 	throw('Must provide a valid stored '.$class."\nParameter provided was:\t$obj");
   }
 
@@ -563,6 +569,7 @@ sub dnadb {
 	  return $self->set_dnadb_by_assembly_version($self->dnadb_assembly);
 	}
 	
+	
 	$self->SUPER::dnadb($dnadb); 
 
 	#set default coordsystem here
@@ -573,13 +580,12 @@ sub dnadb {
 	#This will also enable people to query using clone/contig/supercontig level slices
 	#How will this work? Where will the mapping between CSs be done?
 	
-
 	my @cs_names;
 	@cs_names = ($cs_name) if $cs_name;
 	#$cs_name ||= 'chromosome';
 
 	if(! $cs_name){
-	  
+  
 	  foreach my $cs(@{$dnadb->get_CoordSystemAdaptor->fetch_all_by_attrib('default_version')}){
 		push @cs_names, $cs->name;
 	  }
@@ -633,9 +639,9 @@ sub set_dnadb_by_assembly_version{
   my ($self, $assm_ver) = @_;
 
   throw('Must provide and assembly version to set the dnadb') if ! defined $assm_ver;
-  my $reg_lspecies = $reg->get_alias($self->species());
 
-  #The registry has incremented the species as we have recreated the efg DB
+  my $reg_lspecies = $reg->get_alias($self->species());
+   #The registry has incremented the species as we have recreated the efg DB
   #possibly using a different schema_build
   #This set true lspecies to allow dnadb detection
   #in multi DB environments e.g. DAS server
@@ -716,8 +722,6 @@ sub set_dnadb_by_assembly_version{
   my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames], $self->dnadb_host, $host_port, $self->dnadb_user, $self->dnadb_pass);
   
   $self->dnadb($db);
-
-  
   return $db;
 }
 
