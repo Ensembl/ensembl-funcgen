@@ -603,10 +603,7 @@ sub get_current_regulatory_input_names{
 	#0 rather than false so we don't get NULLs
 	$sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$tdb->species.'"';
   }
-  
-  
-
-
+ 
   my @prd_names = @{$tdb->dbc->db_handle->selectall_arrayref($sql)};
   my @names;
   my @failed_sets;

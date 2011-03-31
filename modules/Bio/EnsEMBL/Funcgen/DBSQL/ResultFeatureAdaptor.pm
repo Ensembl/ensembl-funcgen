@@ -544,7 +544,7 @@ sub set_collection_config_by_Slice_ResultSets{
   my $rf_source = 'file';
 
   foreach my $rset(@{$rsets}){
-	$is_rf_set      = $rset->has_status('RESULT_FEATURE_SET')      || 0;
+	$is_rf_set      = $rset->has_status('RESULT_FEATURE_SET') || 0;
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
 	if(! ($rset->table_name eq 'input_set' || $is_rf_set)){
