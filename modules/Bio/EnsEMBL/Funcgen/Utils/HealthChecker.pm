@@ -772,18 +772,8 @@ sub validate_DataSets{
 
   my $fset_a = $self->db->get_FeatureSetAdaptor;
   my $dset_a = $self->db->get_DataSetAdaptor;
-  my $cs_a   = $self->db->dnadb->get_CoordSystemAdaptor;
-
-  my $imp_cs_status = 'IMPORTED_'.$cs_a->fetch_by_name('chromosome')->version;
-  #What about non-chromosome assemblies?
-  #top level will not return version...why not?
-
-
-
-  my @dset_states = ('DISPLAYABLE');
-  my @rset_states = (@dset_states, 'DAS_DISPLAYABLE', $imp_cs_status);
-  my @fset_states = (@rset_states, 'MART_DISPLAYABLE');
-
+  my (@dset_states, @rset_states, @fset_states);
+  (\@dset_states, \@rset_states, \@fset_states) = $self->get_regbuild_set_states($self->db);
 
   my %rf_fsets;
   my %set_states;
@@ -989,7 +979,7 @@ sub clean_xrefs{
 		'WHERE x.external_db_id IS NULL and uo.external_db_id is NULL';
   $row_cnt = $self->db->dbc->do($sql);
 
-  $self->reset_table_autoinc('extenal_db', 'exteranal_db_id', $self->db);
+  $self->reset_table_autoinc('external_db', 'external_db_id', $self->db);
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt unlinked external_db records");
 
