@@ -5,7 +5,7 @@
 
 # Conventions:
 #  - use lower case and underscores
-#  - internal ids are integers named tablename_id
+#  - internal IDs are integers named tablename_id
 #  - same name is given in foreign key relations
 
 # DO NOT use '---' as a comment, this breaks in macosx mysql?!
@@ -24,15 +24,15 @@
 @table  regulatory_feature
 @desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc
 
-@column regulatory_feature_id	Primary Key: Internal id 
-@column seq_region_id       	Key: @link seq_region table id
+@column regulatory_feature_id	Internal ID 
+@column seq_region_id       	@link seq_region table ID
 @column seq_region_start    	Start position of this feature
 @column seq_region_end      	End position of this feature
 @column seq_region_strand   	Strand orientation of this feature
 @column display_label       	Text display label 
-@column feature_type_id     	Key: @link feature_type table id
-@column feature_set_id      	Key: @link feature_set table id
-@column stable_id		      	Key: Integer stable id without ENSR prefix
+@column feature_type_id     	@link feature_type table ID
+@column feature_set_id      	@link feature_set table ID
+@column stable_id		      	Integer stable ID without ENSR prefix
 @column bound_seq_region_start  Bound start position of this feature
 @column bound_seq_region_end    Bound end position of this feature
 @column binary_string			Binary representation for the underlying feature sets/types 
@@ -69,9 +69,9 @@ CREATE TABLE `regulatory_feature` (
 @table  regulatory_attribute
 @desc   Denormalised table defining links between a @link regulatory_feature and it's constituent 'attribute' features
 
-@column regulatory_feature_id	Primary Key: Internal id 
-@column attribute_feature_id	Primary Key: table id of attribute feature 
-@column attribute_feature_table	Primary Key: table name of attribute feature
+@column regulatory_feature_id	Internal ID 
+@column attribute_feature_id	Table ID of attribute feature 
+@column attribute_feature_table	Table name of attribute feature
 
 
 @see @link annotated_feature; @link motif_feature
@@ -92,14 +92,14 @@ CREATE TABLE `regulatory_attribute` (
 @table  annotated_feature
 @desc   Represents a genomic feature as the result of an analysis i.e. a ChIP or DNase1 peak call
 
-@column annotated_feature_id	Primary key: internal id 
-@column seq_region_id   	   	Key: @link seq_region table id
+@column annotated_feature_id	Internal ID 
+@column seq_region_id   	   	@link seq_region table ID
 @column seq_region_start   		Start position of this feature
 @column seq_region_end      	End position of this feature
 @column seq_region_strand   	Strand orientation of this feature
 @column display_label       	Text display label 
 @column score               	Score derived from software
-@column feature_set_id 	 		Key: @link feature_set table id
+@column feature_set_id 	 		@link feature_set table ID
 @column summit					Represents peak summit for those analyses which provide it (e.g. Swembl)
 
 @see @link seq_region; @link feature_set
@@ -128,7 +128,7 @@ CREATE TABLE `annotated_feature` (
 @table  motif_feature
 @desc   The table contains genomic alignments of @link binding_matrix PWMs
 
-@column motif_feature_id    Primary key, internal id 
+@column motif_feature_id    Primary key, internal ID 
 @column binding_matrix_id   Foreign key to @link binding_matrix table
 @column seq_region_id       Foreign key to @link seq_region table
 @column seq_region_start    Start position of this feature
@@ -164,8 +164,8 @@ CREATE TABLE `motif_feature` (
 @table  associated_motif_feature
 @desc   The table provides links between motif_features and annotated_features representing peaks of the relevant transcription factor
 
-@column annotated_feature_id    Primary key: @link annotated_feature table id
-@column motif_feature_id    	Primary key: @link motif_feature table id
+@column annotated_feature_id    @link annotated_feature table ID
+@column motif_feature_id    	@link motif_feature table ID
 
 @see @link associated_motif_feature; @link regulatory_attribute
 */
@@ -183,12 +183,12 @@ CREATE TABLE `associated_motif_feature` (
 @table  binding_matrix
 @desc   Contains information defining a specific binding matrix(PWM) as defined by the linked analysis e.g. Jaspar
 
-@column binding_matrix_id	Primary Key:  Internal table id
-@column name				Key: Name of PWM
-@column feature_type_id		Key: @link feature_type table id.
+@column binding_matrix_id	Internal table ID
+@column name				Name of PWM
+@column feature_type_id		@link feature_type table ID.
 @column frequencies			Matrix defining frequencing for each base at each position
 @column description			Text description
-@column analysis_id			Key: @link analysis table id
+@column analysis_id			@link analysis table ID
 
 
 @see @link motif_feature; @link feature_type, @link analysis
@@ -214,14 +214,14 @@ CREATE  TABLE `binding_matrix` (
 @table  external_feature
 @desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc
 
-@column external_feature_id		Primary Key: internal id 
-@column seq_region_id			Key: @link seq_region table id
+@column external_feature_id		Internal ID 
+@column seq_region_id			@link seq_region table ID
 @column seq_region_start 		Start position of this feature
 @column seq_region_end      	End position of this feature
 @column seq_region_strand   	Strand orientation of this feature
 @column display_label       	Text display label 
-@column feature_type_id     	Key: @link feature_type table id
-@column feature_set_id      	Key: @link feature_set table id
+@column feature_type_id     	@link feature_type table ID
+@column feature_set_id      	@link feature_set table ID
 
 @see @link seq_region; @link feature_set; @link feature_type
 */
@@ -250,8 +250,8 @@ CREATE TABLE `external_feature` (
 			1 Data compression by collection into different sized windows or bins
 			2 For array data it also provides an optimised view of a @link probe_feature and associated @link result
 			
-@column result_feature_id	Primary Key: Internal ID
-@column result_set_id		Key: @link result_set table id 
+@column result_feature_id	Internal ID
+@column result_set_id		@link result_set table ID 
 @column seq_region_id       Foreign key to @link seq_region table
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
@@ -312,7 +312,7 @@ CREATE TABLE `result_feature` (
 
 
 DROP TABLE IF EXISTS `dbfile_registry`;
-CREATE TABLE `status` (
+CREATE TABLE `dbfile_registry` (
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(32)NOT NULL,	
    `path` varchar(255) NOT NULL,
@@ -324,13 +324,13 @@ CREATE TABLE `status` (
 @table  probe_feature
 @desc   The table contains genomic alignments @link probe entries
 
-@column probe_feature_id	Primary key: internal id 
+@column probe_feature_id	Internal ID 
 @column seq_region_id       Foreign key to @link seq_region table
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
 @column seq_region_strand   Strand orientation of this feature
-@column probe_id			Key: @link probe table id
-@column analysis_id			@link analysis table id
+@column probe_id			@link probe table ID
+@column analysis_id			@link analysis table ID
 @column mismatches			Integer, the number of bp matches for this alignment
 @column cigar_line			Extended cigar line format representation of the alignment as defined here http://samtools.sourceforge.net/SAM-1.3.pdf. In summary: = Seq/Alignment Match; M Alignment match/Seq mismatch; X Seq/Alignment mismatch; D Deletion; S Soft clipping, used for overhanging cdna alignments where genomic seq is unknown  
 
@@ -366,8 +366,8 @@ CREATE TABLE `probe_feature` (
 @table  data_set
 @desc   Defines highest level data container for associating the result of an analysis and the input data to that analysis e.g. Seq alignments(Input/ResultSet) and peak calls (FeatureSet)
 
-@column data_set_id		Primary Key: Internal ID
-@column feature_set_id	Key: Product @link feature_set table id
+@column data_set_id		Internal ID
+@column feature_set_id	Product @link feature_set table ID
 @column name            Name of data set
 
 @see @link feature_set; @link supporting_set
@@ -389,8 +389,8 @@ CREATE TABLE `data_set` (
 @table  supporting_set
 @desc   Defines association between @link data_set and underlying/supporting data
 
-@column data_set_id			Primary Key: Internal ID
-@column suppoorting_set_id	Primary Key: table id of supporting set
+@column data_set_id			Internal ID
+@column supporting_set_id	Table ID of supporting set
 @column type				Type of supporting set e.g. result, feature or input set.
 
 @see @link data_set; @link result_set; @link feature_set; @link input_set
@@ -411,11 +411,11 @@ CREATE TABLE `supporting_set` (
 @table  feature_set
 @desc   Container for genomic features defined by the result of an analysis e.g. peaks calls or regulatory features
 
-@column feature_set_id		Primary Key: Internal ID
-@column feature_type_id		Key: table id for @link feature_type
-@column analysis_id			Key: table id for @link analysis
-@column cell_type_id		table id for @link cell_type
-@column name				Unique Key: Name for this feature set
+@column feature_set_id		Internal ID
+@column feature_type_id		Table ID for @link feature_type
+@column analysis_id			Table ID for @link analysis
+@column cell_type_id		Table ID for @link cell_type
+@column name				Name for this feature set
 @column type				Type of features contained e.g. annotated, external or regualtory
 @column description			Text description
 @column display_label		Shorter more readable version of name
@@ -445,11 +445,11 @@ CREATE TABLE `feature_set` (
 @table  result_set
 @desc   Container for raw/signal data, used as input to an analysis or for visualisation of the raw signal i.e. a wiggle track.
 
-@column result_set_id		Primary Key: Internal ID
-@column analysis_id			Key: table id for @link analysis
-@column name				Key: Name for this feature set
-@column feature_type_id		Key: table id for @link feature_type
-@column cell_type_id		Key: table id for @link cell_type
+@column result_set_id		Internal ID
+@column analysis_id			Table ID for @link analysis
+@column name				Name for this feature set
+@column feature_type_id		Table ID for @link feature_type
+@column cell_type_id		Table ID for @link cell_type
 
 @see @link result_set_input; @link cell_type; @link feature_type; @link analysis; @link supporting_set; @link dbfile_registry
 */
@@ -470,10 +470,10 @@ CREATE TABLE `result_set` (
 @table  result_set_input
 @desc   Link table between @link result_set and it's contstituents which can vary between an array experiment (@link experimental_chip/@link channel) and a sequencing experiment (@link input_set). Note the joint primary key as inputs can be re-used between result sets.
 
-@column result_set_input_id		Primary Key: Internal ID
-@cloum  result_set_id			Primary Key: @link result_set table id 
-@column table_id				Key: table id for input 
-@column table_name				Key: table name for input e.g. @link input_set, @link experimental_chip, @link channel
+@column result_set_input_id		Internal ID
+@column result_set_id			@link result_set table ID 
+@column table_id				Table ID for input 
+@column table_name				Table name for input e.g. @link input_set, @link experimental_chip, @link channel
 
 @see @link result_set; @link input_set; @link experimental_chip; @link channel
 */
@@ -494,13 +494,13 @@ CREATE TABLE `result_set_input` (
 @table  input_set
 @desc   Defines a distinct set input data which is not imported into the DB, but used for some analysis e.g. a BAM file
 
-@column input_set_id		Primary Key: Internal ID
-@column experiment_id		Key: table id for @link experiment
-@column feature_type_id		Key: table id for @link feature_type
-@column cell_type_id		Key: table id for @link cell_type
+@column input_set_id		Internal ID
+@column experiment_id		Table ID for @link experiment
+@column feature_type_id		Table ID for @link feature_type
+@column cell_type_id		Table ID for @link cell_type
 @column format				Format of the experiment e.g. SEQUENCING
 @column vendor				Name of technology vendor if appropriate
-@column name				Unique Key: Name of input_set
+@column name				Name of input_set
 @column type				Type of feature imported as result of analysis e.g. result, annotated
 
 @see @link experiment; @link cell_type; @link feature_type; @link result_set_input; @link supporting_set
@@ -529,9 +529,9 @@ CREATE TABLE `input_set` (
 @table  input_subset
 @desc   Defines a file from an input_set, required for import tracking and recovery
 
-@column input_subset_id		Primary Key: Internal ID
-@column input_set_id		Key: @link input_set table ID
-@column name				Key: Name of input_subset e.g. file path
+@column input_subset_id		Internal ID
+@column input_set_id		@link input_set table ID
+@column name				Name of input_subset e.g. file path
 
 @see @link input_set
 */
@@ -556,10 +556,10 @@ CREATE TABLE `input_subset` (
 @table  array
 @desc   Contains information defining an array or array set
 
-@column array_id	Primary key: 	Internal id
-@column name     	Unique key:  	Name of array
+@column array_id	Internal ID
+@column name     	Name of array
 @column format      Format of array e.g. EXPRESSION, TILED
-@column vendor		Composite Key:	Name of array vendor e.g. AFFY
+@column vendor		Name of array vendor e.g. AFFY
 @column description Text description
 @column type		Array type e.g. OLIGO, PCR
 @column class		Array class e.g. AFFY_ST, ILLUMINA_INFINIUM  
@@ -588,9 +588,9 @@ CREATE TABLE `array` (
 @table  array_chip
 @desc   Represents the individual array chip design as part of an array or array set
 
-@column array_chip_id	Primary key: 	Internal id
-@column design_id  	    Composite key:	ID/Accession defined by vendor
-@column array_id		Composite key:  table_id from @link array
+@column array_chip_id	Internal ID
+@column design_id  	    ID/Accession defined by vendor
+@column array_id		Table ID from @link array
 @column name     		Name of array_chip
 
 @see    @link array; @link probe; @link experimental_chip
@@ -613,7 +613,7 @@ CREATE TABLE `array_chip` (
 @table  probe_set
 @desc   The table contains information about probe sets.
 
-@column probe_set_id		Primary key: internal id 
+@column probe_set_id		Internal ID 
 @column name				Name of the probe set
 @column size				Integer size of the probe set i.e. how many probe is contains
 @column family				Generic descriptor for probe_set e.g. ENCODE_REGIONS, RANDOM etc. Currently not used
@@ -639,12 +639,12 @@ CREATE TABLE `probe_set` (
 @table  probe
 @desc   Defines individual probe designs across one or more array_chips. Note: The probe sequence is not stored. 
 
-@column probe_id			Primary key: internal id 
-@column probe_set_id		Key: @link probe_set table_id
+@column probe_id			Tnternal ID 
+@column probe_set_id		@link probe_set table_id
 @column name				Name of the probe set
 @column length				Integer bp length of the probe
-@column array_chip_id		Key: @link array_chip table_id
-@column name				Class of the probe e.g. CONTROL, EXPERIMENTAL etc.
+@column array_chip_id		@link array_chip table_id
+@column class				Class of the probe e.g. CONTROL, EXPERIMENTAL etc.
 @column description			Text description
 
 @see @link probe_feature; @link probe_set; @link array_chip 
@@ -670,9 +670,9 @@ CREATE TABLE `probe` (
 @table  probe_design
 @desc   Stores data from array design analyses
 
-@column probe_id			Primary key: internal id 
-@column analysis_id			Primary key: @link analysis table id
-@column coord_system_id		Primary key: @link coord_system table id
+@column probe_id			Internal ID 
+@column analysis_id			@link analysis table ID
+@column coord_system_id		@link coord_system table ID
 @column score				Double analysis score value
 
 @see @link probe; @link analysis; @see coord_system
@@ -700,12 +700,13 @@ CREATE TABLE `probe_design` (
 @table  experiment
 @desc   Stores data high level meta data about individual experiments
 
-@column experiment_id			Primary key: internal id 
-@column experimental_group_id	Key: @link experimental_group table id
+@column experiment_id			Internal ID 
+@column name					Name of experiment
+@column experimental_group_id	@link experimental_group table ID
 @column date					Date of experiment
 @column primary_design_type		e.g. binding_site_identification, preferably EFO term
 @column description				Text description
-@column	mage_xml_id				Key: @link mage_xml table_id for array experiments
+@column	mage_xml_id				@link mage_xml table_id for array experiments
 
 @see @link experimental_group; @link mage_xml; @link experimental_chip; @link input_set 
 */
@@ -735,8 +736,8 @@ CREATE TABLE `experiment` (
 
 @desc   Contains experimental group info i.e. who produced data sets
 
-@column experimental_group_id  Primary key: Internal id
-@column name                   Unique key:  Name of group
+@column experimental_group_id  Internal ID
+@column name                   Name of group
 @column location               Geographic location of group
 @column contact                Contact details e.g. email
 @column description            Text description
@@ -761,8 +762,8 @@ CREATE TABLE `experimental_group` (
 @table  mage_xml
 @desc   Contains MAGE-XML for array based experiments
 
-@column mage_xml_iddesign_type_id	Primary key: Internal table id
-@column xml							XML text field
+@column mage_xml_id		Internal table ID
+@column xml				XML text field
 
 @see @link experiment
 */
@@ -779,12 +780,12 @@ CREATE TABLE `mage_xml` (
 @table  experimental_chip
 @desc   Represents the physical instance of an @link array_chip used in an @link experiment
 
-@column experimental_chip_id	Primary key: 	Internal id
-@column unique_id 		 	    Key: Unique ID assigned by vendor
-@column experiment_id			Key: @link experiment table id
-@column array_chip_id     		@link array_chip table id
-@column feature_type_id    		Key: @link feature_type table id
-@column cell_type_id     		Key: @link cell_type table id
+@column experimental_chip_id	Internal ID
+@column unique_id 		 	    Unique ID assigned by vendor
+@column experiment_id			@link experiment table ID
+@column array_chip_id     		@link array_chip table ID
+@column feature_type_id    		@link feature_type table ID
+@column cell_type_id     		@link cell_type table ID
 @column biological_replicate	Name of biological replicate
 @column technical_replicate		Name of technical replicate
 
@@ -815,8 +816,8 @@ CREATE TABLE `experimental_chip` (
 @table  channel
 @desc   Represents an individual channel from an @link experimental_chip
 
-@column channel_id				Primary key: 	Internal id
-@column experimental_chip_id	Key: @link external_chip table id
+@column channel_id				Internal ID
+@column experimental_chip_id	@link external_chip table ID
 @column sample_id 		 	    Sample ID
 @column dye						Name of dye used for this channel e.g. Cy3, Cy5
 @column type					Type of channel i.e. EXPERIMENTAL or TOTAL (input)
@@ -840,10 +841,10 @@ CREATE TABLE `channel` (
 @table  result
 @desc   Contains a score or intensity value for an associated probe location on a particular @experimental_chip.
 
-@column result_id				Primary Key: Internal ID
-@column probe_id				Key: @link probe table id 
+@column result_id				Internal ID
+@column probe_id				@link probe table ID 
 @column score					Intensity value (raw or normalised)
-@column result_set_input_id		Key: @link result_set_input table id 
+@column result_set_input_id		@link result_set_input table ID 
 @column X						X coordinate of probe location on experimental_chip
 @column Y						Y coordinate of probe location on experimental_chip
 
@@ -880,12 +881,12 @@ CREATE TABLE `result` (
 
 @desc   Contains information about different types/classes of feature e.g. Brno nomenclature, Transcription Factor names etc
 
-@column feature_type_id   Primary key, internal id
+@column feature_type_id   Primary key, internal ID
 @column name              Name of feature_type
 @column class             Class of feature_type
 @column description       Text description
 @column so_accession      Sequence ontology accession
-@column so_name           Key, Sequence ontology name
+@column so_name           Sequence ontology name
 
 @see @link associated_feature_type; @link feature_set;  @link result_set; @link input_set; @link experimental_chip; @link regulatory_Feature; @link external_feature
 */
@@ -936,7 +937,7 @@ CREATE TABLE `associated_feature_type` (
 
 @desc   Contains information about cell/tissue types
 
-@column cell_type_id	Primary key: Internal id
+@column cell_type_id	Internal ID
 @column name        	Name of cell/tissue
 @column display_label	Short display label
 @column description 	Text description
@@ -963,9 +964,9 @@ CREATE TABLE `cell_type` (
 @table  experimental_design
 @desc   Denormalised link table to allow many to many design_type associations
 
-@column design_type_id			Primary key: design_type table id
-@column table_name				Primary key: name of linked table
-@column table_id				Primary key: table id of linked record
+@column design_type_id			@link design_type table ID
+@column table_name				Name of linked table
+@column table_id				Table ID of linked record
 
 @see @link design_type
 */
@@ -985,8 +986,8 @@ CREATE TABLE `experimental_design` (
 @table  design_type
 @desc   Contains extra information about experimental designs, preferably ontology terms. 
 
-@column design_type_id	Primary key: Internal id
-@column name			Key: name of design type
+@column design_type_id	Internal ID
+@column name			Name of design type
 
 @see @link experimental_design
 */
@@ -1008,9 +1009,9 @@ CREATE TABLE `design_type` (
 @table  status
 @desc   Denormalised table associating funcgen records with a status
 
-@column table_id		Primary key: table id of associated record
-@column table name		Primary key: table name of associated record
-@column status_name_id	Primary key: @link status_name table id
+@column table_id		Table ID of associated record
+@column table_name		Table name of associated record
+@column status_name_id	@link status_name table ID
 
 
 @see @link status_name
@@ -1031,8 +1032,8 @@ CREATE TABLE `status` (
 @table  status_name
 @desc   Denormalised table associating funcgen records with a status
 
-@column status_name_id	Primary key: @link status_name table id
-@column name			Unique key: Name of status e.g. IMPORTED, DISPLAYBLE etc.
+@column status_name_id	Internal ID
+@column name			Name of status e.g. IMPORTED, DISPLAYBLE etc.
 
 @see @link status_name
 */
@@ -1084,7 +1085,7 @@ Each feature is marked with an analysis_id. The most important column is logic_n
 Logic_name is also used in the pipeline to identify the analysis which has to run in a given status of the pipeline.
 The module column tells the pipeline which Perl module does the whole analysis, typically a RunnableDB module.
 
-@column analysis_id                 Primary key, internal identifier.
+@column analysis_id                 Internal ID
 @column created                     Date to distinguish newer and older versions off the same analysis.
 @column logic_name                  String to identify the analysis. Used mainly inside pipeline.
 @column db                          Database name.
@@ -1130,7 +1131,7 @@ CREATE TABLE `analysis` (
 @table analysis_description
 @desc Allows the storage of a textual description of the analysis, as well as a "display label", primarily for the EnsEMBL web site.
 
-@column analysis_id            Primary key, internal identifier. Foreign key references to the @link analysis table.
+@column analysis_id            Foreign key references to the @link analysis table.
 @column description            Textual description of the analysis.
 @column display_label          Display label for the EnsEMBL web site.
 @column displayable            Flag indicating if the analysis description is to be displayed on the EnsEMBL web site.
@@ -1158,7 +1159,7 @@ CREATE TABLE `analysis_description` (
 . The default species_id, and the only species_id value allowed in single-species databases, is 1.
 
 
-@column meta_id                    Primary key, internal identifier.
+@column meta_id                    Internal identifier.
 @column species_id                 Indentifies the species for multi-species databases.
 @column meta_key                   Name of the meta entry, e.g. "schema_version".
 @column meta_value                 Corresponding value of the key, e.g. "61".
@@ -1190,7 +1191,7 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 @desc Describes which co-ordinate systems the different feature tables use.
 
 @column table_name              Ensembl database table name.
-@column coord_system_id         Foreign key references to the @link coord_system table.    
+@column coord_system_id         Table ID for @link coord_system
 @column max_length              Longest sequence length.    
 
 @see @link coord_system
@@ -1210,7 +1211,7 @@ CREATE TABLE `meta_coord` (
 @table identity_xref
 @desc Describes how well a particular xref object matches the EnsEMBL object.
 
-@column object_xref_id        Primary key, internal identifier. Foreign key references to the @link object_xref table.
+@column object_xref_id        Foreign key references to the @link object_xref table.
 @column xref_identity         Percentage identity.
 @column ensembl_identity      Percentage identity.
 @column xref_start            Xref sequence start.
@@ -1247,7 +1248,7 @@ CREATE TABLE identity_xref (
 @table external_synonym
 @desc Some xref objects can be referred to by more than one name. This table relates names to xref IDs.
 
-@column xref_id           Primary key, internal identifier.
+@column xref_id           Foreign key references @link xref table
 @column synonym           Synonym
 
 @see @link xref
@@ -1268,7 +1269,7 @@ CREATE TABLE external_synonym (
 @table external_db
 @desc Stores data about the external databases in which the objects described in the xref table are stored.
 
-@column external_db_id              Primary key, internal identifier.
+@column external_db_id              Internal identifier.
 @column db_name                     Database name.     
 @column db_release                  Database release.      
 @column status                      Status, e.g. 'KNOWNXREF','KNOWN','XREF','PRED','ORTH','PSEUDO'. 
@@ -1309,9 +1310,9 @@ CREATE TABLE external_db (
 @table ontology_xref
 @desc This table associates ontology terms/accessions to Ensembl objects (primarily EFO/SO). NOTE: Currently not in use
 
-@column object_xref_id          Composite key. Foreign key references to the @link object_xref table.
-@column source_xref_id          Composite key. Foreign key references to the @link xref table.
-@column linkage_type            Composite key.
+@column object_xref_id          Foreign key references to the @link object_xref table.
+@column source_xref_id          Foreign key references to the @link xref table.
+@column linkage_type            Defines type of linkage
 
 @see object_xref
 
@@ -1335,7 +1336,7 @@ CREATE TABLE ontology_xref (
 @table unmapped_reason
 @desc Describes the reason why a mapping failed.
 
-@column unmapped_reason_id           Primary key, internal identifier.
+@column unmapped_reason_id           Internal identifier.
 @column summary_description          Summarised description.
 @column full_description             Full description.
 
@@ -1363,7 +1364,7 @@ CREATE TABLE `unmapped_reason` (
 @desc Holds data about objects which are external to EnsEMBL, but need to be associated with EnsEMBL objects.
 Information about the database that the external object is stored in is held in the external_db table entry referred to by the external_db column.
 
-@column xref_id                 Primary key, internal identifier.
+@column xref_id                 Internal identifier.
 @column external_db_id          Foreign key references to the @link external_db table.
 @column dbprimary_acc           Primary accession number.
 @column display_label           Display label for the EnsEMBL web site.
@@ -1397,7 +1398,7 @@ CREATE TABLE xref (
 @table object_xref
 @desc Describes links between Ensembl objects and objects held in external databases.  The Ensembl object can be one of several types; the type is held in the ensembl_object_type column.  The ID of the particular Ensembl gene, translation or whatever is given in the ensembl_id column.  The xref_id points to the entry in the xref table that holds data about the external object.  Each Ensembl object can be associated with zero or more xrefs. An xref object can be associated with one or more Ensembl objects.
 
-@column object_xref_id            Primary key, internal identifier.
+@column object_xref_id            Internal identifier.
 @column ensembl_id                Foreign key references to the ensembl_object_type table e.g. @link probe_set
 @column ensembl_object_type       Ensembl object type e.g ProbeSet etc.
 @column xref_id                   Foreign key references to the @link xref table.
@@ -1430,7 +1431,7 @@ CREATE TABLE object_xref (
 @table unmapped_object
 @desc Describes why a particular external entity was not mapped to an ensembl one.
 
-@column unmapped_object_id         Primary key, internal identifier.
+@column unmapped_object_id         Internal identifier.
 @column type                       UnmappedObject type e.g. probe2transcript
 @column analysis_id                Foreign key references to the @link analysis table.
 @column external_db_id             Foreign key references to the @link external_db table.
@@ -1473,7 +1474,7 @@ CREATE TABLE `unmapped_object` (
 For each species, there must be one co-ordinate system that has the attribute "top_level" and one that has the attribute "sequence_level". 
 NOTE: This has been extended from the core implementation to support multiple assemblies by referencing multiple core DBs.
 
-@column coord_system_id      Primary key, internal identifier
+@column coord_system_id      Internal identifier
 @column name                 Co-oridinate system name, e.g. 'chromosome', 'contig', 'scaffold' etc. 
 @column version              Assembly
 @column rank                 Co-oridinate system rank
@@ -1512,7 +1513,7 @@ CREATE TABLE `coord_system` (
 @table seq_region
 @desc Stores information about sequence regions from various core DBs.
 
-@column seq_region_id            Primary key, internal identifier.
+@column seq_region_id            Internal identifier.
 @column name                     Sequence region name.  
 @column coord_system_id          Foreign key references to the @link coord_system table.   
 @column core_seq_region_id       Table ID of the seq_region in the source core DB
