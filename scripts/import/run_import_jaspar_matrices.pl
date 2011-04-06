@@ -256,10 +256,8 @@ if($file){
 
 foreach my $matrix (sort keys %matrix_genes){
   my @m_genes = @{$matrix_genes{$matrix}};
-  print $matrix."\t".join("\t",@m_genes)."\n";
   foreach my $ft (sort keys %feature_type_genes){
     my @ft_genes = @{$feature_type_genes{$ft}};
-    print "\t".$ft."\t".join("\t",@ft_genes)."\n";
     #Only import if ALL genes are the same between matrix and TF
     next if(scalar(@m_genes)!=scalar(@ft_genes));
     #I have the feeling there is an easier way of doing this!!
