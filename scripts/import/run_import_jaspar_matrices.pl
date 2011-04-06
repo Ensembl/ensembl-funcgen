@@ -205,16 +205,17 @@ foreach my $tf (@tfs){
   my @assoc_tfs =  @{$fta->fetch_all_by_association($tf)};
   push @assoc_tfs, $tf;
   my @genes;
-  map{
+  foreach my $assoc_tf (@assoc_tfs){
     #Assume all dbentries associated to feature type are genes?? otherwise force checking
-    my @db_entries = @{$dbea->fetch_all_by_FeatureType($_)};
+    my @db_entries = @{$dbea->fetch_all_by_FeatureType($assoc_tf)};
     next if(scalar(@db_entries)==0);
     if(scalar(@db_entries)>1){ 
       warn "Dubious association to gene in TF ".$tf->name." in ".$_->name; 
       next; 
     }
     push @genes, $db_entries[0]->primary_id;
-  } @assoc_tfs;
+  }
+  next if(scalar(@genes)==0);
   $feature_type_genes{$tf->name} = \@genes;
 }
 
@@ -246,28 +247,29 @@ if($file){
       if(scalar(@genes)>1){ warn $acc." associated to more than one gene... ambiguous reference ignored"; }
       if(scalar(@genes)==1){ push @gene_ids, $genes[0]->stable_id; }
     }
+    next if(scalar(@gene_ids)==0);
     $matrix_genes{$matrix} = \@gene_ids;
   }
   close FILE;
   
 }
 
-foreach my $matrix (keys %matrix_genes){
+foreach my $matrix (sort keys %matrix_genes){
   my @m_genes = @{$matrix_genes{$matrix}};
-  foreach my $ft (keys %feature_type_genes){
+  print $matrix."\t".join("\t",@m_genes)."\n";
+  foreach my $ft (sort keys %feature_type_genes){
     my @ft_genes = @{$feature_type_genes{$ft}};
+    print "\t".$ft."\t".join("\t",@ft_genes)."\n";
     #Only import if ALL genes are the same between matrix and TF
     next if(scalar(@m_genes)!=scalar(@ft_genes));
     #I have the feeling there is an easier way of doing this!!
     my $not_found=0; 
     foreach my $g1 (@m_genes){ 
+      my $found=0;
       foreach my $g2 (@ft_genes){ 
-	if($g1 ne $g2){ 
-	  $not_found=1; 
-	  last; 
-	} 
+	if($g1 eq $g2){ $found=1; last; } 
       }
-      last if($not_found==1); 
+      if($found==0){ $not_found=1; last; }
     }
     next if($not_found==1);
 
