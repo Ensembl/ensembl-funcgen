@@ -1,4 +1,5 @@
 name	class	description
+AP1	Transcription Factor Complex	AP1 Binding
 Ap2alpha	Transcription Factor	Ap2alpha Transcription Factor Binding
 Ap2gamma	Transcription Factor	Ap2gamma Transcription Factor Binding
 ATF3	Transcription Factor	ATF3 Transcription Factor Binding
@@ -10,15 +11,14 @@ BCL3	Transcription Factor	BCL3 Transcription Factor Binding
 Bdp1	Transcription Factor	Bdp1 Transcription Factor Binding
 BHLHE40	Transcription Factor	BHLHE40 Transcription Factor Binding
 Brf1	Transcription Factor	Brf1 Transcription Factor Binding
-BRF1	Transcription Factor	BRF1 Transcription Factor Binding
 Brf2	Transcription Factor	Brf2 Transcription Factor Binding
-BRF2	Transcription Factor	BRF2 Transcription Factor Binding
 Brg1	Transcription Factor	Brg1 Transcription Factor Binding
 CEBP	Transcription Factor	CEBP Transcription Factor Binding
 CEBPB	Transcription Factor	CEBPB Transcription Factor Binding
 Cfos	Transcription Factor	Cfos Transcription Factor Binding
 Cjun	Transcription Factor	Cjun Transcription Factor Binding
 Cmyc	Transcription Factor	Cmyc Transcription Factor Binding
+cMyb	Transcription Factor	cMyb Transcription Factor Binding
 CTCF	Insulator	CCCTC-binding factor
 DNase1	Open Chromatin	DNase1 Hypersensitive Site
 E2F1	Transcription Factor	E2F1 Transcription Factor Binding
@@ -35,7 +35,6 @@ FOXP2	Transcription Factor	FOXP2 Transcription Factor Binding
 Gabp	Transcription Factor	Gabp Transcription Factor Binding
 Gata1	Transcription Factor	Gata1 Transcription Factor Binding
 Gata2	Transcription Factor	Gata2 Transcription Factor Binding
-Gene Associated - Cell type specific	Regulatory Feature	Cell type specific gene like regulatory feature
 Gene Associated	Regulatory Feature	Gene like regulatory feature
 GFP	DNA	GFP Control
 GRp20	Transcription Factor	GRp20 Transcription Factor Binding
@@ -95,6 +94,8 @@ IRF4	Transcription Factor	IRF4 Transcription Factor Binding
 Jund	Transcription Factor	Jund Transcription Factor Binding
 Klf4	Transcription Factor	Klf4 Transcription Factor Binding
 Max	Transcription Factor	Max Transcription Factor Binding
+MDL	Transcription Factor	Mad-Like Transcription Factor Binding
+mxl-1::mdl-1	Transcription Factor Complex	mxl-1::mdl-1 Binding
 Nanog	Transcription Factor	Nanog Transcription Factor Binding
 NELFe	Transcription Factor	Jund Transcription Factor Binding
 Nfe2	Transcription Factor	Nfe2 Transcription Factor Binding
@@ -102,8 +103,8 @@ NFKB	Transcription Factor	NFKB Transcription Factor Binding
 Nfya	Transcription Factor	Nfya Transcription Factor Binding
 Nfyb	Transcription Factor	Nfyb Transcription Factor Binding
 nMyc	Transcription Factor	nMyc Transcription Factor Binding
-Non-Gene Associated - Cell type specific	Regulatory Feature	Cell type specific non-gene like regulatory feature
 Non-Gene Associated	Regulatory Feature	Non-Gene like regulatory feature
+NR1H2	 Transcription Factor	   NR1H2 Transcription Factor Binding
 Nrf1	Transcription Factor	Nrf1 Transcription Factor Binding
 Nrsf	Transcription Factor	Nrsf Transcription Factor Binding
 Oct4	Transcription Factor	Oct4 Transcription Factor Binding
@@ -115,13 +116,18 @@ PolIII	Polymerase	RNA Polymerase III Binding
 PolIII Transcription Associated	Regulatory Feature	PolIII transcribed RNA Gene associated regulatory feature
 PolII	Polymerase 	RNA Polymerase II
 POU2F2	Transcription Factor	POU2F2 Transcription Factor Binding
-Promoter Associated - Cell type specific	Regulatory Feature	Cell type specific promoter like regulatory feature
+PPARG	Transcription Factor	PPARG Transcription Factor Binding
+PPARG::RXRA	Transcription Factor Complex	PPARG::RXRA Binding
 Promoter Associated	Regulatory Feature	Promoter like regulatory feature
 PU1	Transcription Factor	PU1 Transcription Factor Binding
 Rad21	Transcription Factor	Rad21 Transcription Factor Binding
 RegulatoryFeature	Regulatory Feature	Ensembl regulatory feature
+RARA	Transcription Factor	RARA Transcription Factor Binding
+RNR1H2::RXRA	Transcription Factor Complex	RNR1H2::VDR Binding
 RPC155	Transcription Factor	RPC155 Transcription Factor Binding
+RXR::RAR_DR5	Transcription Factor Complex	RXR::RAR_DR5 Binding
 RXRA	Transcription Factor	RXRA Transcription Factor Binding
+RXRA::VDR	Transcription Factor Complex	RXRA::VDR Binding
 SETDB1	Transcription Factor	SETDB1 Transcription Factor Binding
 Sin3Ak20	Transcription Factor	Sin3Ak20 Transcription Factor Binding
 Sirt6	Transcription Factor	Sirt6 Transcription Factor Binding
@@ -137,14 +143,19 @@ STAT2	Transcription Factor	STAT1 Transcription Factor Binding
 STAT3	Transcription Factor	STAT3 Transcription Factor Binding
 Suz12	Transcription Factor	Suz12 Transcription Factor Binding
 TAF1	Transcription Factor	TAF1 Transcription Factor Binding
+Tal1::Gata1	Transcription Factor Complex	Tal1::Gata1 Binding
+Tal1	Transcription Factor	Tal1 Transcription Factor Binding
 Tcf4	Transcription Factor	Tcf4 Transcription Factor Binding
 Tcf12	Transcription Factor	Tcf12 Transcription Factor Binding
 Tcfcp2l1	Transcription Factor	Tcfcp2l1 Transcription Factor Binding
+TFBS Motif	Transcription Factor	Transcription factor binding site motif
 TFIIIC-110	Transcription Factor	TFIIIC-110 Transcription Factor Binding
 Tr4	Transcription Factor	Tr4 Transcription Factor Binding
 Unclassified - Cell type specific	Regulatory Feature	Cell type specific unclassified regulatory feature
 Unclassified	Regulatory Feature	Unclassified regulatory feature
 USF1	Transcription Factor	USF1 Transcription Factor Binding
+USF2	Transcription Factor	USF2 Transcription Factor Binding
+VDR	Transcription Factor	VDR Transcription Factor Binding
 WCE	DNA	Whole Cell Extract
 XRCC4	Transcription Factor	XRCC4 Transcription Factor Binding
 Yy1	Transcription Factor	Yy1 Transcription Factor Binding
