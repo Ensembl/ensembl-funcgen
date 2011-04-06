@@ -50,7 +50,7 @@ require Exporter;
 				open_file median mean run_system_cmd backup_file 
 				is_gzipped is_sam is_bed get_file_format strip_param_args 
 				generate_slices_from_names strip_param_flags
-				get_current_regulatory_input_names);
+				get_current_regulatory_input_names, add_external_db);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -632,5 +632,18 @@ sub get_current_regulatory_input_names{
   return @names;
 }
 
+#Handy function to add an external_db entry when needed
+sub add_external_db{
+  my ($efg_db, $db_name,$db_release,$db_display_name) = @_;
+  my $sql = "select external_db_id from external_db where db_name='$db_name' and db_release='$db_release'";
+  my ($db_id) =  $efg_db->dbc->db_handle->selectrow_array($sql);
+  if($db_id){ 
+    warn "External DB $db_name $db_release already exists in db with db_id $db_id";
+  } else {
+    #TODO check if it there was a failure
+    $efg_db->dbc->do("insert into external_db (db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('$db_name', '$db_release', 'KNOWNXREF', '1', '5', '$db_display_name', 'MISC')");
+  }
+
+}
 
 1;
