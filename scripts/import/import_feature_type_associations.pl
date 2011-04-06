@@ -33,17 +33,19 @@ Mandatory
 
   -species|s       Species name
 
-  -dbpass|p        The password for the EFG DB
+  -pass|p        The password for the EFG DB
 
   -dbname          Defines the eFG dbname
+
+  -file            File containing the associations
   
 Optional
 
-  -dbhost|h        Defines the eFG db host [ens-genomics1]
+  -host|h        Defines the eFG db host [ens-genomics1]
 
-  -dbport|l        Defines the eFG db port [3306]
+  -port|l        Defines the eFG db port [3306]
 
-  -dbuser|u        Defines the eFG db user [ensadmin]
+  -user|u        Defines the eFG db user [ensadmin]
 
   -help            Brief help message
 
@@ -57,7 +59,7 @@ Optional
 
 Species name
 
-=item B<-dbpass|p>
+=item B<-pass|p>
 
 Database password
 
@@ -65,17 +67,33 @@ Database password
 
 Database name
 
-=item B<-dbhost|h>
+=item B<-host|h>
 
 Database host (defaults to ens-genomics1)
 
-=item B<-dbport|l>
+=item B<-port|l>
 
 Database port (defaults to 3306)
 
-=item B<-dbuser|u>
+=item B<-user|u>
 
 Database user (defaults to 'ensadmin')
+
+=item B<-dnadb_host>
+
+Core Database host (defaults to ens-livemirror)
+
+=item B<-dnadb_port>
+
+Core Database port (defaults to 3306)
+
+=item B<-dnadb_user>
+
+Core Database user (defaults to 'ensro')
+
+=item B<-file>
+
+Input file with data
 
 =item B<-help>
 
@@ -98,24 +116,30 @@ use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
-my ($pass,$port,$host,$user,$dbname,$species,$help);
+my ($dnadb_host,$dnadb_port,$dnadb_user);
+my ($pass,$port,$host,$user,$dbname,$species,$file,$help);
 $port = 3306;
 $host='ens-genomics1';
 $user='ensadmin';
 
 GetOptions (
-	    "dbpass|p=s"   => \$pass,
-	    "dbport|l=s"   => \$port,
-	    "dbhost|h=s"   => \$host,
-	    "dbuser|u=s"   => \$user,
+	    "dnadb_host=s" => \$dnadb_host,
+	    "dnadb_port=s" => \$dnadb_port,
+	    "dnadb_user=s" => \$dnadb_user,
+	    "pass|p=s"     => \$pass,
+	    "port|l=s"     => \$port,
+	    "host|h=s"     => \$host,
+	    "user|u=s"     => \$user,
 	    "dbname=s"     => \$dbname,
 	    "species|s=s"  => \$species, 
+	    "file|f=s"     => \$file, 
 	    "help|?"       => \$help,
 	   );
 pod2usage(1) if $help;
 pod2usage(0) if !defined($species);
 pod2usage(0) if !defined($dbname);
 pod2usage(0) if !defined($pass);
+pod2usage(0) if !defined($file);
 
 my $efg_dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
@@ -124,12 +148,18 @@ my $efg_dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -dbname  => $dbname,
      -species => $species,  
      -port    => $port,
-     -pass	  => $pass,
+     -pass    => $pass,
+     -dnadb_host => $dnadb_host,
+     -dnadb_port => $dnadb_port,
+     -dnadb_user => $dnadb_user,
      );
+$efg_dba->dbc->db_handle;
+
+print ":: Loading FeatureType Associations from file $file\n";
 my $fta	= $efg_dba->get_FeatureTypeAdaptor();     
 
 my %fts;
-open(FILE,"types/FeatureType_associations.txt");
+open(FILE,$file);
 <FILE>; #title
 while(<FILE>){
 	chomp;
