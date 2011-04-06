@@ -22,7 +22,7 @@ Mandatory
   
 Optional
 
-  -input_file|f    File manually linking matrix to genes
+  -file|f    File manually linking matrix to genes
 
   -dbhost|h        Defines the eFG db host [ens-genomics1]
 
