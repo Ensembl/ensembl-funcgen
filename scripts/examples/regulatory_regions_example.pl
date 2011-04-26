@@ -53,6 +53,11 @@ foreach my $cell_rf (@{$rfs}){
 	}	
 }
 
+# Get all Regulatory Feature Sets
+my $fset_adaptor = $registry->get_adaptor('Human', 'funcgen', 'featureset');
+my @reg_fsets = @{$fset_adaptor->fetch_all_by_type('regulatory')};
+print "Regulatory Feature Sets\n";
+foreach my $fset (@reg_fsets) { print "\t".$fset->name."\n"; }
 
 sub print_feature {
 	my $feature = shift;
