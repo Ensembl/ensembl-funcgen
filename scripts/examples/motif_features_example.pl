@@ -29,13 +29,6 @@ foreach my $motif_feature (@motif_features) {
 	}
 }
 
-sub print_feature {
-	my $feature = shift;
-	print 	$feature->display_label. 	
-	 	"\t(".$feature->seq_region_name.":".
-		$feature->seq_region_start."-".$feature->seq_region_end.")\n";
-}
-
 #We can also get motifs via the annotated features.
 $rf = $regfeat_adaptor->fetch_by_stable_id('ENSR00000354060'); 
 my @annotated_features = @{$rf->regulatory_attributes('annotated')};
@@ -46,4 +39,12 @@ foreach my $annot_feat (@annotated_features){
 		print "Annotated Feature with motif feature(s) - ";
 		print_feature($annot_feat);
 	}
+}
+
+
+sub print_feature {
+	my $feature = shift;
+	print 	$feature->display_label. 	
+	 	"\t(".$feature->seq_region_name.":".
+		$feature->seq_region_start."-".$feature->seq_region_end.")\n";
 }
