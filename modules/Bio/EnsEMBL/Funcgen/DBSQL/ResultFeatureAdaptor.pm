@@ -955,6 +955,10 @@ sub _fetch_from_file_by_Slice_ResultSet{
 
 
 
+
+
+#
+
 =head2 fetch_all_by_Slice_ResultSet
 
   Arg[0]     : Bio::EnsEMBL::Slice - Slice to retrieve results from
@@ -1653,6 +1657,83 @@ sub _remap {
 }
 
 
+
+# Over-ride generic methods
+
+
+=head2 fetch_all
+
+  Description: Disables generic fetch_all method
+  Exceptions : Warns
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub fetch_all{
+  warn 'The fetch_all method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+  return;
+}
+
+=head2 fetch_by_dbID
+
+  Description: Disables generic fetch_by_dbID method
+  Exceptions : Warns
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub fetch_by_dbID{
+  warn 'The fetch_by_dbID method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+  #Could use it for 0 wsize DB based data, but not useful.
+  return;
+}
+
+=head2 fetch_all_by_dbID_list
+
+  Description: Disables generic fetch_all_by_dbID_list method
+  Exceptions : Warns
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_dbID_list {
+  warn 'The fetch_all_by_dbID_list method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+  #Could use it for 0 wsize DB based data, but not useful.
+  return;
+}
+
+=head2 fetch_all_by_logic_name
+
+  Description: Disables generic fetch_all_by_logic_name method
+  Exceptions : Warns
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_logic_name {
+  warn 'The fetch_all_by_logic_name method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+  #Could use it for 0 wsize DB based data, but not useful.
+  return;
+}
+
+=head2 _list_seq_region_ids
+
+  Description: Disables generic _list_seq_region_ids method
+  Exceptions : Warns
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub _list_seq_region_ids{
+ warn 'The _list_seq_region_ids method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+ #Could use it for 0 wsize DB based data, but not useful.
+ return
+}
 
 
 
