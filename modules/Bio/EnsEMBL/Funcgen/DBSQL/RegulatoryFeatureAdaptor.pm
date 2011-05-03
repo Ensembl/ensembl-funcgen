@@ -51,6 +51,37 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor); #@ISA
 #change to parent with perl 5.10
 
+=head2 fetch_all
+
+  Arg [1]    : optional - Bio::EnsEMBL::FeatureSet
+  Example    : my $rfs = $rf_adaptor->fetch_all();
+  Description: Over-ride generic featch_all method to return only MultiCell features by default.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
+  Exceptions : none
+  Caller     : general
+  Status     : At risk 
+
+=cut
+
+#Change to Iterator?
+
+sub fetch_all{
+  my ($self, $fset) = @_;
+
+  if($fset){
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset)
+  }else{
+	$fset = $self->_get_current_FeatureSet;
+  }
+
+  my $constraint = ' rf.feature_set_id='.$fset->dbID; 
+
+
+  return $self->fetch_all($constraint);
+}
+
+
+
 =head2 _get_current_FeatureSet
 
   Example    : my $regf_featureset = $self->_get_current_FeatureSet;
@@ -137,8 +168,6 @@ sub fetch_all_by_stable_id_FeatureSets {
 
   #Need to test stable_id here as there is a chance that this argument has been omitted and we are dealing with 
   #a feature set object
-
-
   $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
   my $constraint = 'rf.stable_id=?';
 
@@ -670,7 +699,9 @@ sub fetch_all_by_Slice {
   #CellTypes id'd by fetching regulatory fsets, so take these as args instead of CellTypes
   #Slight overlap with SetFeatureAdaptor::fetch_all_by_Slice_FeatureSets
   #Let's maintain expected/standard method name here
-  
+  #Can remove the fset args, as we can use fetch_all_by_Slice_FeatureSets
+
+
   $fset ||= $self->_get_current_FeatureSet;
   
   #Ternary operator essential here,as we don't want to die if there is no data!
