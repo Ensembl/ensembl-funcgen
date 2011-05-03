@@ -991,12 +991,9 @@ sub _remap {
 }
 
 
-=head2 fetch_all_by_stable_Feature_FeatureSets
+=head2 fetch_all_by_stable_Storable_FeatureSets
 
-  Arg [1]    : string - seq_region_name i.e. chromosome name.
-  Arg [2]    : string - seq_region_start of current slice bound
-  Arg [3]    : string - seq_region_end of current slice bound.
-  Arg [4]    : Bio::EnsEMBL::Gene|Transcript|Translation
+  Arg [1]    : Bio::EnsEMBL::Storable
   Arg [5]    : arrayref - Bio::EnsEMBL::Funcgen::FeatureSet
   Example    : ($start, $end) = $self->_set_bounds_by_regulatory_feature_xref
                               ($trans_chr, $start, $end, $transcript, $fsets);
