@@ -19,7 +19,7 @@ Cfos	Transcription Factor	Cfos Transcription Factor Binding
 Cjun	Transcription Factor	Cjun Transcription Factor Binding
 Cmyc	Transcription Factor	Cmyc Transcription Factor Binding
 cMyb	Transcription Factor	cMyb Transcription Factor Binding
-CTCF	Insulator	CCCTC-binding factor
+CTCF	Transcription Factor	CCCTC-binding factor
 DNase1	Open Chromatin	DNase1 Hypersensitive Site
 E2F1	Transcription Factor	E2F1 Transcription Factor Binding
 E2F1HA	Transcription Factor	E2F1HA Transcription Factor Binding
@@ -97,6 +97,7 @@ Max	Transcription Factor	Max Transcription Factor Binding
 MDL	Transcription Factor	Mad-Like Transcription Factor Binding
 mxl-1::mdl-1	Transcription Factor Complex	mxl-1::mdl-1 Binding
 Nanog	Transcription Factor	Nanog Transcription Factor Binding
+negative	DNA	negative library
 NELFe	Transcription Factor	Jund Transcription Factor Binding
 Nfe2	Transcription Factor	Nfe2 Transcription Factor Binding
 NFKB	Transcription Factor	NFKB Transcription Factor Binding
@@ -123,6 +124,7 @@ PU1	Transcription Factor	PU1 Transcription Factor Binding
 Rad21	Transcription Factor	Rad21 Transcription Factor Binding
 RegulatoryFeature	Regulatory Feature	Ensembl regulatory feature
 RARA	Transcription Factor	RARA Transcription Factor Binding
+Rbbp5	Transcription Factor	Rbbp5 Transcription Factor Binding
 RNR1H2::RXRA	Transcription Factor Complex	RNR1H2::VDR Binding
 RPC155	Transcription Factor	RPC155 Transcription Factor Binding
 RXR::RAR_DR5	Transcription Factor Complex	RXR::RAR_DR5 Binding
@@ -157,6 +159,8 @@ USF1	Transcription Factor	USF1 Transcription Factor Binding
 USF2	Transcription Factor	USF2 Transcription Factor Binding
 VDR	Transcription Factor	VDR Transcription Factor Binding
 WCE	DNA	Whole Cell Extract
+Wdr5	Transcription Factor	Wdr5 Transcription Factor Binding
+Wdr5_FL	Transcription Factor	Wdr5 Transcription Factor Binding
 XRCC4	Transcription Factor	XRCC4 Transcription Factor Binding
 Yy1	Transcription Factor	Yy1 Transcription Factor Binding
 ZBTB33	Transcription Factor	ZBTB33 Transcription Factor Binding
