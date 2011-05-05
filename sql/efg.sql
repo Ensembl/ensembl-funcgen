@@ -183,13 +183,13 @@ CREATE TABLE `associated_motif_feature` (
 @table  binding_matrix
 @desc   Contains information defining a specific binding matrix(PWM) as defined by the linked analysis e.g. Jaspar
 
-@column binding_matrix_id	Internal table ID
-@column name				Name of PWM
-@column feature_type_id		@link feature_type table ID.
+@column binding_matrix_id			Internal table ID
+@column name			Name of PWM
+@column feature_type_id			@link feature_type table ID.
 @column frequencies			Matrix defining frequencing for each base at each position
 @column description			Text description
 @column analysis_id			@link analysis table ID
-
+@column threshold			Minimum score for Motif Features for this matrix
 
 @see @link motif_feature; @link feature_type, @link analysis
 */
@@ -202,6 +202,7 @@ CREATE  TABLE `binding_matrix` (
  `frequencies` VARCHAR(1000) NOT NULL,
  `description` VARCHAR(255) NULL,
  `analysis_id` int(10) unsigned NOT NULL,
+ `threshold` double default NULL,
  PRIMARY KEY (`binding_matrix_id`) ,
  KEY `name_analysis_idx` (`name`, `analysis_id`),
  KEY `feature_type_idx` (`feature_type_id`)
