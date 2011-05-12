@@ -51,6 +51,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Utils::Iterator;
 
 use vars qw(@ISA);
 use strict;
@@ -63,11 +64,8 @@ $true_tables{probe_feature} = [	[ 'probe_feature', 'pf' ], [ 'probe',   'p' ]];
 @{$tables{probe_feature}} = @{$true_tables{probe_feature}};
 
 my $true_final_clause = ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';
-#This is the original core order clause
-#Change probe_feature_id to seq_region_end or omit?
-#POD shows original docs
-#The group by is causing a default sort on the probe_feature_id, which cannot be done via the index???
-#hence the filesort
+#Could drop pf.probe_feature_id from the ORDER as is implicit from the group?
+#still uses filesort for ac clause
 
 my $final_clause = $true_final_clause;
 
@@ -173,22 +171,18 @@ sub fetch_all_by_probeset {
 }
 
 
-#Need to add:
-#fetch_all_by_Slice_Experiment
-#fetch_all_by_Slice_experimentname ? name not unique enough?
-
-
 =head2 fetch_all_by_Slice_array_vendor
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2...] : List of strings - array name(s)
+  Arg [2]    : string - array name e.g. HG-U133A
+  Arg [3]    : string - vendor e.g. AFFY
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_arrayname($slice, '');
+               my $features = $ofa->fetch_by_Slice_array_vendor($slice, $array_name, $vendor_name);
   Description: Retrieves a list of features on a given slice that are created
-               by probes from the specified arrays.
+               by probes from the specified array.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
   Exceptions : Throws if no array name is provided
-  Caller     : Slice->get_all_ProbesFeatures()
+  #Caller     : Slice->get_all_ProbesFeatures()
   Status     : At Risk
 
 =cut
@@ -230,13 +224,12 @@ sub fetch_all_by_Slice_array_vendor {
 =head2 fetch_all_by_Slice_ExperimentalChips
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2...] : listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_arrayname($slice, $exp);
+  Arg [2]    : ARRAY ref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
+  Example    : my $features = $pfa->fetch_all_by_Slice_ExperimentalChips($slice, \@echips);
   Description: Retrieves a list of features on a given slice that are created
-               by probes from the given ExperimentalChip.
+               by probes from the given ExperimentalChips.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
-  Exceptions : Throws if no array name is provided
+  Exceptions : Throws if args not valid
   Caller     : 
   Status     : At Risk
 
@@ -266,9 +259,9 @@ sub fetch_all_by_Slice_ExperimentalChips {
 =head2 fetch_all_by_Slice_Array
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2] : Bio::EnsEMBL::Funcgen::Array
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Array
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $pfa->fetch_all_by_Slice_Array($slice, $exp);
+               my $features = $pfa->fetch_all_by_Slice_Array($slice, $array);
   Description: Retrieves a list of features on a given slice that are created
                by probes from the given Array.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
@@ -307,11 +300,11 @@ sub fetch_all_by_Slice_Array {
   Arg [2]    : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
   Arg [3]    : HASHREF - optional params hash e.g. {logic_name => 'AFFY_ProbeTranscriptAlign'}
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $pfa->fetch_all_by_Slice_Array($slice, $exp);
+               my $features = $pfa->fetch_all_by_Slice_Arrays($slice, \@arrays);
   Description: Retrieves a list of features on a given slice that are created
-               by probes from the given Array.
+               by probes from the given Arrays.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
-  Exceptions : Throws if ARRAYREF if arrays is not provided
+  Exceptions : Throws if ARRAYREF of arrays is not provided
   Caller     : 
   Status     : At Risk
 
@@ -344,6 +337,38 @@ sub fetch_all_by_Slice_Arrays{
   
   return $features;
 }
+
+
+=head2 fetch_Iterator_by_Slice_Arrays
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
+  Arg [3]    : HASHREF - optional params hash e.g. {logic_name => 'AFFY_ProbeTranscriptAlign'}
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $pfa->fetch_Iterator_by_Slice_Arrays($slice, \@arrays);
+  Description: Retrieves a list of features on a given slice that are created
+               by probes from the given Array.
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : Throws if ARRAYREF of arrays is not provided
+  Caller     : 
+  Status     : At Risk
+
+=cut
+
+sub fetch_Iterator_by_Slice_Arrays{
+  my ($self, $slice, $arrays, $params) = @_;
+
+
+  return Bio::EnsEMBL::Utils::Iterator->new
+	($self->can('fetch_all_by_Slice_Arrays'),
+	 $self,
+	 [$slice, $arrays, $params],
+	 0,#Slice idx
+	 #500 #chunk length
+	);
+}
+
+
 
 
 =head2 _tables
