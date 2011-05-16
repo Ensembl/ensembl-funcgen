@@ -59,9 +59,9 @@ use Bio::EnsEMBL::Utils::Iterator;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file strip_param_args generate_slices_from_names);
-
-
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file strip_param_args strip_param_flags generate_slices_from_names);
+use Cwd;
+ 
 #To do
 # 1 Integrate into Exporter module
 # 2 Genericise this to dump_features, use various format parsers for output
@@ -69,7 +69,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file strip_param_args genera
 # 4 Add -contig_to_un mode which cats all contigs to one 'Un' file
 # 5 Imlement Iterators for other features?
 # 6 Add options to dump sets/arrays into separate files?
-
+# Use logger?
 
 # I guess the last issue is bloating the class rather than having a separate Exporter
 # which knows how to translate various features to each format. But this is necessary if we want to 
@@ -80,22 +80,24 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file strip_param_args genera
 
 $| =1;
 
-my ($pass, @fset_names, $array, $vendor, $dump_name);
-my ($exp_name, $help, $pids, $man, @features, $chr, $not_status, $half_open);
-my ($dbhost, $port, $user, $dbname, $cdbname, $species, @slices, @skip_slices);
-my ($dnadb_pass, $dnadb_user, $dnadb_name, $dnadb_port, $dnadb_host);
+my ($pass, @fset_names, @rset_names, $array, $vendor, $dump_name, $queue, $on_farm, $merged_dump);
+my ($exp_name, $help, $pids, $man, @features, $chr, $not_status, $half_open, $farm, $cat_dumps);
+my ($dbhost, $port, $user, $dbname, $cdbname, $species, @slices, @skip_slices, $out_root);
+my ($dnadb_pass, $dnadb_user, $dnadb_name, $dnadb_port, $dnadb_host, $with_headers, $force_local);
+my ($no_clean, $cat_files);
 my $format = 'GFF';
-my $no_zip = 0;
+my $zip = 0;
 my $out_dir = ".";
 my $keep_colons = 0;
 my @tmp_args = @ARGV;
 
-
+warn "$0 @tmp_args";
 
 
 GetOptions 
   (
-   "feature_sets=s{,}"    => \@fset_names,
+   'feature_sets=s{,}' => \@fset_names,
+   'result_sets=s{,}'  => \@rset_names,
    #Change this to feature_sets to allow merged dumps from same feature class.
    'array=s'          => \$array,#Change this to \@arrays?
    'vendor=s'         => \$vendor,
@@ -115,13 +117,29 @@ GetOptions
    "dnadb_name=s"     => \$dnadb_name,
    "dnadb_host=s"     => \$dnadb_host,
    
-   "outdir=s"         => \$out_dir,
+   "out_root=s"       => \$out_root,
    'dump_name=s'      => \$dump_name, #default to feature_set or array name, mandatory for multi set dump
    'slices=s{,}'      => \@slices,
    'skip_slices=s{,}' => \@skip_slices,
-   'no_zip|z'         => \$no_zip,
+ 
+
+   'force_local'      => \$force_local,
+   'farm'             => \$farm,  
+   '_on_farm'         => \$on_farm,
+   'with_headers=i'   => \$with_headers,
+   'merged_dump'      => \$merged_dump,
+   'cat_files'        => \$cat_files,
+   'no_clean'         => \$no_clean,#doen't remove files
+
+   #merged dump i.e. sets or slices in same file
+   #i.e. split into set or slice jobs but not both
+
+   'queue=s'          => \$queue,
+   'zip|z'            => \$zip,
    #'no_cat_un'        => \$no_cat_un,
    'keep_colons'      => \$keep_colons,
+   
+
    "help|?"           => \$help,
    "man|m"            => \$man,
   ) 
@@ -141,8 +159,6 @@ if(! $dbname ){
 }
 
 throw("Must define your funcgen -dbhost") if ! $dbhost;
-#throw("Must define your funcgen DB -pass") if ! $pass;
-
 
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
@@ -166,12 +182,12 @@ $db->dnadb->dbc->db_handle;
 
 #Check out_dir
 #Use Helper!
-system('mkdir -p '.$out_dir) if(! -d $out_dir);
 
 my $slice_a  = $db->get_SliceAdaptor;
 my $fset_a   = $db->get_FeatureSetAdaptor;
 my $array_a  = $db->get_ArrayAdaptor;
-my ($feature_class, @fsets, @fetch_params, @output_names);
+my ($feature_class, @fsets, @fetch_params, @header_params, @output_names);
+
 
 if(@fset_names && 
    ($array || $vendor)){
@@ -190,9 +206,10 @@ if(! @fset_names){
 	die("Could not fetch array:\t$vendor\t$array\n");
   }
 
-  $dump_name ||= $vendor.'_'.$array->name;
+  $dump_name ||= $array->vendor.'_'.$array->name;
   $feature_class = 'ProbeFeature';
   @fetch_params = ([$array]);
+  @header_params = ($vendor, $array);#arrays?
 }
 else{
  
@@ -220,16 +237,33 @@ else{
   }
 
   $feature_class = ucfirst($feature_class).'Feature';
-  @fetch_params = (\@fsets);
-  @output_names = @fset_names;
+  @fetch_params  = (\@fsets);
+  @header_params = ();#?
+  @output_names  = @fset_names;
 }
 
 
+
+#Need some format config here
+#i.e. do we print headers for slice files or not?
+
+#This enables correct naming of dump dir and lsf files for slice jobs
+
+if($on_farm){
+  $out_dir = $out_root;
+}else{
+  $out_dir = $out_root.'/'.$dump_name.'/';
+  system('mkdir -p '.$out_dir) if(! -d $out_dir);
+}
+
+
+#This mean lsf out will be in the parent directory
 
 $format = uc($format); #validation done via introspection on Feature object
 #This ducktyping could be replaced with a Role if we were using a more recent version of PERL
 print "Dumping $format ${feature_class}s for:\t".join("\t", @output_names)."\n";
 print "Output directory:\t$out_dir\n";
+
 
 
 if(! @slices){
@@ -245,7 +279,113 @@ if(@skip_slices){
 
 
 @slices = @{&generate_slices_from_names($slice_a, \@slices, \@skip_slices, 1)};#toplevel flag
+
+
+
+
+#Don't run multi slice in local mode unless we are cating?
+
+#Need to hoik this out into Utils::submit_Slice_jobs?
+
+
+#Add merge mode?
+#Chrom files first in merge file?
+
+#Need to turn headers on for local dump, but only if not farmed!!???
+#This is format specific! So need config has for formats
+#This should go in generic export config
+
+
+
+my %format_config = (
+					 bed => {
+							 slice_headers => 0,
+							},
+
+					 wig => {
+							 slice_headers => 1, #?
+							},
+					);
+
+
+#Need to tidy this up to allow over-write of config
+#i.e. undef params should use config
+if(! $on_farm && ! defined $with_headers){
+  $with_headers = 1;
+}
+
+
+
+if(! $farm){
+  
+  if(scalar(@slices) !=1){
+	
+	if(! $force_local){
+	  die("You are running with multiple Slices, maybe you want to specify -farm or -force_local\n");
+	}
+	
+	#Turn headers off here where appropriate
+	$with_headers = 0 if ! $format_config{$format}{slice_headers};
+  }
+}
+else{
+
+  if($cat_files){
+	die("-cat_files should not be run in -farm mode. Please correct you parameters");
+  }
+
+  $queue ||= 'normal';
+  
+  #need to strip params here
+
+  #Do this as job array or with slice names?
+  
+
+  #"-job_name $job_name"
+  print "Submitting parallel ".scalar(@slices)." parallel Slice jobs\n";
+
+  #$0 is name of script file
+  my ($script_dir, $script_name) = ($0 =~ /(^.*\/)(.*$)/);
+  my @args = @{&strip_param_args(\@tmp_args, ('slices', 'skip_slices', 'dump_name', 'out_dir'))};
+  @args = @{&strip_param_flags(\@tmp_args, ('farm'))};
+
+   
+
+  #Need to handle feature_set and arrays here? wrt merged dumps
+  if(@fsets){
+	
+  }
+  else{#array
+	
+  }
+
+
+  my $cmd = " ${script_dir}/${script_name} @args -out_root $out_dir -_on_farm";
+ 
+  foreach my $slice(@slices){
+
+	
+	my $job_name = $dump_name.':'.$slice->seq_region_name;
+	#my $bsub_cmd="bsub -q $queue -J \"${job_name}[1-${num_jobs}]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err";
+	my $bsub_cmd="bsub -q $queue -J \"${job_name}\" -o ${out_dir}/${job_name}.".'%J'.".out -e ${out_dir}/${job_name}.".'%J'.".err";
+
+	my $cmd_args = " -dump_name $job_name -slices ".$slice->seq_region_name;
+
+	print $bsub_cmd.$cmd.$cmd_args."\n";
+
+	system($bsub_cmd.$cmd.$cmd_args) == 0 or die("Failed to submit job:\t$job_name\n$bsub_cmd\n${cmd}${cmd_args}");
+  }
+
+  exit;
+
+}
+
+#Should not fail after here but before loop to avoid unnecessary fail on the farm
+
+
+
 my $format_method = "get_${feature_class}_${format}";
+#my $header_method = $format_method.'_header';
 
 
 #Define code refs in hash
@@ -266,12 +406,19 @@ my %format_subs = (
 				   'get_AnnotatedFeature_GFF'  => \&get_AnnotatedFeature_GFF,
 				   'get_AnnotatedFeature_BED'  => \&get_AnnotatedFeature_BED,
 				   'get_ExternalFeature_GFF'   => \&get_ExternalFeature_GFF,
+				   'get_ProbeFeature_BED_header'      => \&get_ProbeFeature_BED_header,
+				   #'get_RegulatoryFeature_GFF_header' => \&get_RegulatoryFeature_GFF_header,
+				   #'get_AnnotatedFeature_GFF_header'  => \&get_AnnotatedFeature_GFF_header,
+				   'get_AnnotatedFeature_BED_header'  => \&get_AnnotatedFeature_BED_header,
+				   #'get_ExternalFeature_GFF_header'   => \&get_ExternalFeature_GFF_header,		   
 				  );
+
+#Change all of these to Slice Iterators to avoid high mem usage
+#and allow parallel dumps
 
 my %fetch_methods = (
 					 'ProbeFeature'      => 'fetch_Iterator_by_Slice_Arrays',
 					 #'ProbeFeature'      => 'fetch_all_by_Slice_Arrays',
-					 'SetFeature'        => 'fetch_all_by_Slice_FeatureSets',
 					 'AnnotatedFeature'  => 'fetch_all_by_Slice_FeatureSets',
 					 'ExternalFeature'   => 'fetch_all_by_Slice_FeatureSets',
 					 'RegulatoryFeature' => 'fetch_all_by_Slice_FeatureSets',
@@ -300,27 +447,78 @@ my %bed_strand = ( 0  => '',
 				   -1 => '-',
 				 );
 
+
+#How are we going to handle merged dumps with headers?
+#-no_headers on farmed slice dumps?
+#Then run in -merge mode to cat and create correct header for complete file?
+#Make -no_headers over-ridable
+my (@dump_files, $ofile_name);
+
+
 foreach my $slice(@slices){
 
-  print "\nDumping:\t\t\t\t".$slice->name."\n";
-  my $cnt = 0;
+  #Build file name
   $seq_name = $slice->seq_region_name();
+
+  if($on_farm){
+	#We have already changed the dump name to include the slice
+	$ofile_name = $dump_name.'.'.lc($format);
+  }
+  else{
+	$ofile_name = $dump_name.'.'.$seq_name.'.'.lc($format);
+  }
+
 
   if($slice->coord_system->name eq 'chromosome'){
 	$seq_name = 'chr'.$seq_name;
   }
 
-  my $ofile_name = $dump_name.'.'.$seq_name.'.'.lc($format);
-  
+
   if(! $keep_colons){
 	#Remove colons from file patch which can cause problems
 	#with scp
 	$ofile_name =~ s/\:/_/go;
   }
 
-  $ofile_name = $out_dir.'/'.$ofile_name;
-  my $ofile = open_file($ofile_name, '>', 0775);
+  my $ofile_path = $out_dir.'/'.$ofile_name;
 
+  
+  #Cat files
+  if($cat_files){
+
+
+	if(! -e $ofile_path){
+	  die("Could not find input for -cat_files merge:\t${ofile_path}");
+	}
+	elsif(-z $ofile_path){
+	  print "Omitting empty file from file merge:\t${ofile_name}\n";
+	  
+	  if(! $no_clean){
+		unlink $ofile_path;
+	  }
+	}
+	else{
+	  push @dump_files, $ofile_name;
+	}
+	
+	next;
+  }
+
+  #Dump to file
+  print "\nDumping:\t\t\t\t".$slice->name."\n";
+  my $cnt = 0;
+
+
+
+  my $ofile = open_file($ofile_path, '>', 0775);
+
+  if($with_headers){
+	print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
+  }
+
+
+  #Need to handle dumping header here
+  
 
   #Use Iterator method here to avoid chunking
   #warn "Fetching ".ref($adaptors{$feature_class})."->$fetch_method($slice, @fetch_params)\n";
@@ -364,19 +562,55 @@ foreach my $slice(@slices){
   close($ofile);
 
   #Remove empty files and zip
-  if(-z $ofile_name){
+  if(-z $ofile_path){
 	print "No features found\n";
-	unlink $ofile_name;
+	#unlink $ofile_name; #Move this to cat_files?
   }
   else{
 	print "Features dumped:\t\t\t$cnt\n";
 
-	if(! $no_zip){
-	  system("gzip -f $ofile_name");
+	if($zip){
+	  system("gzip -f $ofile_name") == 0 or die("Could not gzip file:\t$ofile_name");
 	}
   }
 }
 
+
+# CAT File mode and tidy up
+
+if($cat_files){
+  #do all this in the out dir to avoid long cat cmd
+  my $cwd =  Cwd::cwd();
+  chdir($out_dir);
+  my $ofile_path =  $out_dir.'/'.$dump_name.'.'.lc($format);
+  
+  if(-e $ofile_path){
+	#fail?
+  }
+
+  my $hfile = open_file($ofile_path.'.header', '>', 0775);
+  print $hfile $format_subs{$format_method.'_header'}->(@header_params);
+  close($hfile);
+
+  unshift @dump_files, $ofile_path.'.header';
+
+  my $cmd = "cat @dump_files > $ofile_path";
+
+  system($cmd) == 0 or die("Cannot cat files:\n$cmd\n$!");
+
+
+  if($zip){
+	system("gzip -f $ofile_path") == 0 or die("Could not gzip file:\t$ofile_path");
+	#gzip removes source file so no need to add to @dump_files
+  }
+  
+  if(! $no_clean){
+	$cmd = "rm -f @dump_files";
+	system($cmd) == 0 or die("Failed to remove files:\n$cmd\n");
+  }
+
+  chdir($cwd);
+}
 
 
 
@@ -479,6 +713,19 @@ sub get_AnnotatedFeature_BED{
 }
 
 
+#Header methods should optionally take Slice arg
+#so we can support slice dump and full genome dump
+
+sub get_ProbeFeature_BED_header{
+  my ($vendor, $array) = @_;
+  #   track name=pairedReads description="Clone Paired Reads" useScore=1
+ 
+  #use dump name instead of vendor array here?
+  #this may have been polluted with seq_region_name
+ 
+  return "track name=$dump_name description=\"Ensembl ".$array->vendor.':'.$array->name." mappings\" useScore=0\n";
+}
+
 sub get_ProbeFeature_BED{
    my ($feature) = @_;
    my $bed = &get_BED(@_);
@@ -562,4 +809,6 @@ sub get_BED{
 
   return \@bed;
 }
+
+
 
