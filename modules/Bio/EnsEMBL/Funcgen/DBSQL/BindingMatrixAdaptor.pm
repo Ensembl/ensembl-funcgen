@@ -186,7 +186,7 @@ sub _tables {
 sub _columns {
   my $self = shift;
 	
-  return qw( bm.binding_matrix_id bm.name bm.analysis_id bm.frequencies bm.description bm.feature_type_id);
+  return qw( bm.binding_matrix_id bm.name bm.analysis_id bm.frequencies bm.description bm.feature_type_id bm.threshold);
 }
 
 =head2 _objs_from_sth
@@ -205,8 +205,8 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $matrix_id, $name, $analysis_id, $freq, $desc, $ftype_id);
-	$sth->bind_columns(\$matrix_id, \$name, \$analysis_id, \$freq, \$desc, \$ftype_id);
+	my (@result, $matrix_id, $name, $analysis_id, $freq, $desc, $ftype_id, $thresh);
+	$sth->bind_columns(\$matrix_id, \$name, \$analysis_id, \$freq, \$desc, \$ftype_id, \$thresh);
 
 	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
 	my %ftype_cache;
@@ -232,6 +232,7 @@ sub _objs_from_sth {
 		 -FREQUENCIES  => $freq,
 		 -DESCRIPTION  => $desc,
 		 -FEATURE_TYPE => $ftype_cache{$ftype_id},
+		 -THRESHOLD    => $thresh,
 		 -ADAPTOR      => $self,
 		);
 	  
@@ -261,11 +262,10 @@ sub store {
   my $self = shift;
   my @args = @_;
   
-  
   my $sth = $self->prepare("
 			INSERT INTO binding_matrix
-			(name, analysis_id, frequencies, description, feature_type_id)
-			VALUES (?, ?, ?, ?, ?)");
+			(name, analysis_id, frequencies, description, feature_type_id, threshold)
+			VALUES (?, ?, ?, ?, ?, ?)");
     
   my $s_matrix;
   
@@ -291,6 +291,7 @@ sub store {
 		$sth->bind_param(3, $matrix->frequencies(),        SQL_LONGVARCHAR);
 		$sth->bind_param(4, $matrix->description(),        SQL_VARCHAR);
 		$sth->bind_param(5, $matrix->feature_type->dbID(), SQL_INTEGER);
+		$sth->bind_param(6, $matrix->threshold(),          SQL_DOUBLE);
 				
 		$sth->execute();
 		my $dbID = $sth->{'mysql_insertid'};
@@ -302,7 +303,6 @@ sub store {
       else{
 		$matrix = $s_matrix;
 		warn("Using previously stored Matrix:\t".$matrix->name()."\n");
-		
 		#Could update associated FeatureTypes here
       }
     }
