@@ -43,6 +43,7 @@ $matrix->frequencies("A  [ 4  1 13 24  0  0  6  4  9 ]
 
 print $matrix->relative_affinity("TGGCCACCA")."\n";
 
+print $matrix->threshold."\n";
 
 =head1 DESCRIPTION
 
@@ -75,6 +76,7 @@ use vars qw(@ISA);
   Arg [-name]: string - name of Matrix
   Arg [-analysis]: Bio::EnsEMBL::Analysis - analysis describing how the matrix was obtained
   Arg [-frequencies]: (optional) string - frequencies representing the binding affinities of a Matrix
+  Arg [-threshold]: (optional) float - minimum relative affinity for binding sites of this matrix
   Arg [-description]: (optional) string - descriptiom of Matrix
   Example    : my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
                                                                -name  => "MA0122.1",
@@ -95,9 +97,9 @@ sub new {
   my $obj_class = ref($caller) || $caller;
   my $self = $obj_class->SUPER::new(@_);
   
-  my ( $name, $analysis, $freq, $desc, $ftype, $assoc_ftypes ) = rearrange
+  my ( $name, $analysis, $freq, $desc, $ftype, $thresh ) = rearrange
 	( [
-	   'NAME', 'ANALYSIS', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE',
+	   'NAME', 'ANALYSIS', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE', 'THRESHOLD'
 	  ], @_);
   
   
@@ -120,6 +122,7 @@ sub new {
   $self->{feature_type} = $ftype;
   $self->frequencies($freq) if $freq;
   $self->description($desc) if $desc;
+  $self->threshold($thresh) if $thresh;
 
   return $self;
 }
@@ -179,6 +182,24 @@ sub description {
     return $self->{'description'};
 }
 
+=head2 threshold
+
+  Arg [1]    : (optional) float - threshold
+  Example    : my $thresh = $matrix->threshold();
+  Description: Getter and setter of threshold attribute 
+  Returntype : float
+  Exceptions : None
+  Caller     : General
+  Status     : Low Risk
+
+=cut
+
+sub threshold {
+    my $self = shift;
+    $self->{'threshold'} = shift if @_;
+    return $self->{'threshold'};
+}
+
 
 =head2 analysis
   Example    : $matrix->analysis()->logic_name();
@@ -195,53 +216,6 @@ sub analysis {
 
   return $self->{'analysis'};
 }
-
-=head2 feature_set
-
-  Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::FeatureSet - feature_set
-  Example    : my $fset = $matrix->feature_set;
-  Description: Getter and setter of feature_set attribute
-  Associates a matrix to a specific feature set (only makes sense for inferred matrices)
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
-  Exceptions : Warns if matrix is not inferred
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub feature_set {
-    my ($self, $fset) = (shift, shift);
-
-    if(lc($self->type) ne 'inferred'){ warn "Matrix Feature Set only makes sense for inferred matrices"; }
-
-    if(! (ref($fset) && $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet'))){
-      throw("You must define a valid Bio::EnsEMBL::Funcgen::FeatureSet");
-    }
-    
-    $self->{'feature_set'} = $fset;
-    return $self->{'feature_set'};
-}
-
-
-=head2 inferred_quality
-
-  Arg [1]    : (optional) float - inferred_quality
-  Example    : my $quality = $matrix->inferred_quality;
-  Description: Getter and setter of inferred_quality attribute (only makes sense for inferred matrices)
-  Returntype : float
-  Exceptions : Warns if matrix is not inferred
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub inferred_quality {
-    my $self = shift;
-    if(lc($self->type) ne 'inferred'){ warn "Matrix quality only makes sense for inferred matrices"; }
-    $self->{'inferred_quality'} = shift if @_;
-    return $self->{'inferred_quality'};
-}
-
 
 
 =head2 frequencies
@@ -266,8 +240,6 @@ sub inferred_quality {
 
 sub frequencies {
   my $self = shift;
- 
-  #TODO Make Base Backgroung more realistic than equiprobability
  
   my $frequencies = shift if @_; 
   if($frequencies){
