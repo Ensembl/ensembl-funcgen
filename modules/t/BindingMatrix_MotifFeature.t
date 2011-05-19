@@ -12,7 +12,7 @@ use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 46;
+	plan tests => 50;
 }
 
 # switch on the debug prints
@@ -73,41 +73,43 @@ ok( ref( $matrix ) && $matrix->isa( "Bio::EnsEMBL::Funcgen::BindingMatrix" ));
 # What arrays should be able to do
 # Temporarily set some new attributes
 
-#5-8 Test
+#5-9 Test
 ok( test_getter_setter( $matrix, "dbID", 2 ));
 ok( test_getter_setter( $matrix, "adaptor", undef ));
 ok( test_getter_setter( $matrix, "name", "CTCF_TEST" ));
 ok( test_getter_setter( $matrix, "description", "test description"));
-# End of test 8
+ok( test_getter_setter( $matrix, "threshold", 0.9));
+# End of test 9
 
 #Now hide tables for storage test
 $multi->hide('funcgen', 'binding_matrix', 'associated_feature_type', 'motif_feature', 'associated_motif_feature');
 $bma->store($matrix);
 ($matrix) = @{$bma->fetch_all_by_name("CTCF")}; #We know there is only one stored
-#9
+#10
 ok ( ref($matrix) && $matrix->isa('Bio::EnsEMBL::Funcgen::BindingMatrix') );
 
 #Now test stored values
-#10-13
+#11-15
 ok( $matrix->name eq 'CTCF' );
 ok( $matrix->analysis->logic_name eq 'Jaspar' );
 ok( $matrix->feature_type->name eq 'CTCF' );
 ok( $matrix->description eq 'Jaspar Matrix' );
-#End of test 13
+ok( !defined($matrix->threshold()) );
+#End of test 15
 
 #Need to write tests for these
 #warn Data::Dumper::Dumper $matrix->_weights;
 #warn $matrix->frequencies;
 
 #numeric tests do not work with decimals?
-#14-19
+#16-21
 ok ( $matrix->_max_bind eq '18.100244783938' );
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCGCTA") == 1);
 ok ( $matrix->relative_affinity("TGGCCACGAGGGGGCGCTA") eq '0.972088876164933');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCGCCA") eq '0.997373533384315');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCACTA") eq '0.99606869981799');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGAGCGCTA") eq '0.94541278085573');
-#End of test 19
+#End of test 21
 
 $analysis   = $analysis_a->fetch_by_logic_name('bwa_samse');
 
@@ -126,10 +128,11 @@ C  [ 7  4  1  0  0  0  0  6  7 ]
 G  [ 4  5  7  0 24  0 18 12  5 ]
 T  [ 9 14  3  0  0 24  0  2  3 ]");
 
-#20-22
+$matrix->threshold(0.81);
+
+#22-23
 ok ( $matrix->relative_affinity("TGGCCACCA") eq '0.209170634168983' );
 ok ( $matrix->relative_affinity("CTCAGTGGA",1) eq '0.0655146380336576' );
-ok( $matrix->length == 9);
 
 #Now store second BindingMatrix
 $bma->store($matrix);
@@ -150,15 +153,16 @@ ok (scalar (@bms) == 1);
 ok (scalar (@bms) == 2);
 
 #Now test stored values
-#28-31
+#28-33
 ok( $matrix->name eq 'CTCF' );
 ok( $matrix->analysis->logic_name eq 'bwa_samse' );
 ok( $matrix->feature_type->name eq 'CTCF' );
 ok( $matrix->description eq 'Nkx3-2 Jaspar Matrix' );
+ok( $matrix->threshold == 0.81 );
+ok( $matrix->length == 9);
 
-
-#Grab some random AFs for association
-my $slice = $db->get_SliceAdaptor->fetch_by_region('chromosome', 1, 0, 2000000);
+#Grab some random AFs for association... avoid areas close to the edge!
+my $slice = $db->get_SliceAdaptor->fetch_by_region('chromosome', 1, 100000, 2000000);
 my ($af1, $af2)   = @{$db->get_AnnotatedFeatureAdaptor->fetch_all_by_Slice_FeatureType($slice, $ftype)};#CTCF
 
 #Should really store these to avoid this
@@ -169,18 +173,20 @@ die('Test slice does not return enough AnnotatedFeatures, please change test set
 
 my $mf = Bio::EnsEMBL::Funcgen::MotifFeature->new(
 												  -binding_matrix => $matrix,
-												  -score          => 10.1,
+												  -score          => 0.9,
 												  -start          => $af1->start,
 												  -end            => $af1->end,
 												  -slice          => $af1->slice,
 												  -strand         => 1,
 												 );
-#32-35
+#34-35
 ok( ref($mf) && $mf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') );
 #Now test the getter/setters
-ok( test_getter_setter( $mf, 'display_label', 'test') );
+#display_label is only a getter method
+#ok( test_getter_setter( $mf, 'display_label', 'test') );
 ok( test_getter_setter( $mf, 'adaptor',       undef ) );
-ok( test_getter_setter( $mf, 'score',            1.5) );
+#score is not only a getter method
+#ok( test_getter_setter( $mf, 'score', 0.93) );
 
    
 #Now simple store and fetch tests
@@ -194,7 +200,7 @@ $mf = $mf_a->fetch_by_dbID($mf->dbID);
 ok( ref($mf) && $mf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') );
 # Test the existing and default attrs
 ok( $mf->binding_matrix->dbID ==  $matrix->dbID );
-ok( $mf->score                ==           10.1 );
+ok( $mf->score                ==           0.9 );
 ok( $mf->display_label  =~ /CTCF/ );
 
 
@@ -202,7 +208,7 @@ ok( $mf->display_label  =~ /CTCF/ );
 
 my $mf2 = Bio::EnsEMBL::Funcgen::MotifFeature->new(
 												   -binding_matrix => $matrix,
-												   -score          => 10.2,
+												   -score          => 0.2,
 												   -start          => $af2->start+1000,
 												   -end            => $af2->start+1000+$matrix->length-1,
 												   -slice          => $af2->slice,
@@ -222,12 +228,12 @@ ok( $mf->associated_annotated_features->[0]->dbID == $af1->dbID );
 #Test other fetch methods
 
 my @mfs = @{$mf_a->fetch_all_by_AnnotatedFeature($af1)};
-#42
+#42-46
 ok( (scalar(@mfs) == 1) && ($mfs[0]->associated_annotated_features->[0]->dbID == $af1->dbID) );
-ok($mf2->seq eq 'GACGCGGTA');
+ok($mf2->seq eq 'TCTAGAGCA');
 ok(length($mf2->seq) ==  $matrix->length);
-ok($mf2->binding_matrix->relative_affinity($mf2->seq) eq '0.207063599824673');
-my $mf_slice = $db->get_SliceAdaptor()->fetch_by_region('toplevel',$mf2->seq_region_name,$mf2->start,$mf2->end,$mf2->strand);
+ok($mf2->binding_matrix->relative_affinity($mf2->seq) eq '0.708111569818395');
+my $mf_slice = $db->dnadb->get_SliceAdaptor()->fetch_by_region('toplevel',$mf2->seq_region_name,$mf2->start,$mf2->end,$mf2->strand);
 ok($mf2->seq eq $mf_slice->seq);
 
 #Add a variation object
@@ -235,14 +241,14 @@ my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
   -start => 4,
   -end => 4,
   -slice => $mf->slice,       # the variation must be attached to a slice
-  -allele_string => 'G/T',    # the first allele should be the reference allele
+  -allele_string => 'T/A',    # the first allele should be the reference allele
   -strand => -1,
-  #-map_weight => 1,
-  #-adaptor => $vfa,           # we must attach a variation feature adaptor
+#  #-map_weight => 1,
+#  #-adaptor => $vfa,           # we must attach a variation feature adaptor
   -variation_name => 'newSNP',
 );
-
-ok($mf2->infer_variation_consequence($new_vf) eq '18.0977682274379');
+#47
+ok($mf2->infer_variation_consequence($new_vf) eq '-18.0977682274379');
 
 my %fsets;
 
@@ -251,14 +257,13 @@ foreach my $af($af1, $af2){
 }
 
 @mfs = @{$mf_a->fetch_all_by_Slice_FeatureSets($slice, [values %fsets])};
-#43
+#48
 ok( scalar(@mfs) == 2 );
 
 
 @mfs = @{$mf_a->fetch_all_by_Slice_BindingMatrix($slice, $matrix)};
-#44
+#49
 ok( scalar(@mfs) == 2 );
-
 
 my $ctype_id = $af1->cell_type->dbID;
 my $ctype_count = 0;
@@ -268,12 +273,12 @@ foreach my $af($af1, $af2){
 }
 
 @mfs = @{$mf_a->fetch_all_by_Slice_CellType($slice, $af1->cell_type)};
-#45
+#50
 ok( scalar(@mfs) == $ctype_count );
 
 
 #list dbIDs
-#46
+#51
 ok( scalar(@{$mf_a->list_dbIDs}) == 2 );
 
 #Restore table
