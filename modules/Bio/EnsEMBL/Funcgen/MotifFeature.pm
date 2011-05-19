@@ -164,10 +164,9 @@ sub binding_matrix{
 
 =head2 score
 
-  Arg [1]    : (optional) int - score
   Example    : my $score = $feature->score();
-  Description: Getter/Setter for the score attribute for this feature. 
-  Returntype : int
+  Description: Getter for the score attribute for this feature. 
+  Returntype : double
   Exceptions : None
   Caller     : General
   Status     : Low Risk
@@ -272,7 +271,7 @@ sub associated_annotated_features{
   Exceptions : throws if argument is not a  Bio::EnsEMBL::Variation::VariationFeature
                throws if the variation feature is not contained in the motif feature
   Caller     : General
-  Status     : At risk
+  Status     : At High risk
 
 =cut
 
