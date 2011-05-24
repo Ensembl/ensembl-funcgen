@@ -59,6 +59,7 @@ my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
 													   -description  => 'Jaspar Matrix',
 													   -frequencies  => $ctcf_mat
 													  );
+my $m_ctcf = $matrix;
    
 #frequencies should be turned into _matrix 'blob'
 #Maintain both methods:
@@ -73,43 +74,45 @@ ok( ref( $matrix ) && $matrix->isa( "Bio::EnsEMBL::Funcgen::BindingMatrix" ));
 # What arrays should be able to do
 # Temporarily set some new attributes
 
-#5-9 Test
+#5-11 Test
 ok( test_getter_setter( $matrix, "dbID", 2 ));
 ok( test_getter_setter( $matrix, "adaptor", undef ));
 ok( test_getter_setter( $matrix, "name", "CTCF_TEST" ));
 ok( test_getter_setter( $matrix, "description", "test description"));
 ok( test_getter_setter( $matrix, "threshold", 0.9));
-# End of test 9
+ok( $matrix->is_position_informative(5));
+ok( !$matrix->is_position_informative(19));
+# End of test 11
 
 #Now hide tables for storage test
 $multi->hide('funcgen', 'binding_matrix', 'associated_feature_type', 'motif_feature', 'associated_motif_feature');
 $bma->store($matrix);
 ($matrix) = @{$bma->fetch_all_by_name("CTCF")}; #We know there is only one stored
-#10
+#12
 ok ( ref($matrix) && $matrix->isa('Bio::EnsEMBL::Funcgen::BindingMatrix') );
 
 #Now test stored values
-#11-15
+#13-17
 ok( $matrix->name eq 'CTCF' );
 ok( $matrix->analysis->logic_name eq 'Jaspar' );
 ok( $matrix->feature_type->name eq 'CTCF' );
 ok( $matrix->description eq 'Jaspar Matrix' );
 ok( !defined($matrix->threshold()) );
-#End of test 15
+#End of test 17
 
 #Need to write tests for these
 #warn Data::Dumper::Dumper $matrix->_weights;
 #warn $matrix->frequencies;
 
 #numeric tests do not work with decimals?
-#16-21
+#18-23
 ok ( $matrix->_max_bind eq '18.100244783938' );
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCGCTA") == 1);
 ok ( $matrix->relative_affinity("TGGCCACGAGGGGGCGCTA") eq '0.972088876164933');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCGCCA") eq '0.997373533384315');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGGGCACTA") eq '0.99606869981799');
 ok ( $matrix->relative_affinity("TGGCCACCAGGGAGCGCTA") eq '0.94541278085573');
-#End of test 21
+#End of test 23
 
 $analysis   = $analysis_a->fetch_by_logic_name('bwa_samse');
 
@@ -130,7 +133,7 @@ T  [ 9 14  3  0  0 24  0  2  3 ]");
 
 $matrix->threshold(0.81);
 
-#22-23
+#24-25
 ok ( $matrix->relative_affinity("TGGCCACCA") eq '0.209170634168983' );
 ok ( $matrix->relative_affinity("CTCAGTGGA",1) eq '0.0655146380336576' );
 
@@ -140,26 +143,28 @@ $bma->store($matrix);
 #Test fetch methods
 my @bms = @{$bma->fetch_all_by_name('CTCF')};
 
-#24-25
+#26-27
 ok (scalar (@bms) == 2);
 ok (scalar (@{$bma->list_dbIDs}) == 2);
 
 @bms = @{$bma->fetch_all_by_name('CTCF', $analysis)};
-#26
+#28
 ok (scalar (@bms) == 1);
 
 @bms = @{$bma->fetch_all_by_FeatureType($ftype)};
-#27
+#29
 ok (scalar (@bms) == 2);
 
 #Now test stored values
-#28-33
+#30-37
 ok( $matrix->name eq 'CTCF' );
 ok( $matrix->analysis->logic_name eq 'bwa_samse' );
 ok( $matrix->feature_type->name eq 'CTCF' );
 ok( $matrix->description eq 'Nkx3-2 Jaspar Matrix' );
 ok( $matrix->threshold == 0.81 );
 ok( $matrix->length == 9);
+ok( $matrix->is_position_informative(5));
+ok( !$matrix->is_position_informative(1));
 
 #Grab some random AFs for association... avoid areas close to the edge!
 my $slice = $db->get_SliceAdaptor->fetch_by_region('chromosome', 1, 100000, 2000000);
@@ -167,7 +172,6 @@ my ($af1, $af2)   = @{$db->get_AnnotatedFeatureAdaptor->fetch_all_by_Slice_Featu
 
 #Should really store these to avoid this
 die('Test slice does not return enough AnnotatedFeatures, please change test set up') if (! ($af1 && $af2));
-
 
 #Now let's test the MotifFeatures
 
@@ -179,30 +183,31 @@ my $mf = Bio::EnsEMBL::Funcgen::MotifFeature->new(
 												  -slice          => $af1->slice,
 												  -strand         => 1,
 												 );
-#34-35
+#38-39
 ok( ref($mf) && $mf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') );
 #Now test the getter/setters
 #display_label is only a getter method
 #ok( test_getter_setter( $mf, 'display_label', 'test') );
 ok( test_getter_setter( $mf, 'adaptor',       undef ) );
-#score is not only a getter method
+#score is only a getter method
 #ok( test_getter_setter( $mf, 'score', 0.93) );
 
    
 #Now simple store and fetch tests
 ($mf) = @{$mf_a->store($mf)};
 
-#36
+#40
 ok( ref($mf) && $mf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') );
 
 $mf = $mf_a->fetch_by_dbID($mf->dbID);
-#37-40
+#41-46
 ok( ref($mf) && $mf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') );
 # Test the existing and default attrs
 ok( $mf->binding_matrix->dbID ==  $matrix->dbID );
-ok( $mf->score                ==           0.9 );
+ok( $mf->score ==  0.9 );
 ok( $mf->display_label  =~ /CTCF/ );
-
+ok( $mf->is_position_informative(5));
+ok( !$mf->is_position_informative(1));
 
 #Now store another MF and make associations
 
@@ -225,16 +230,43 @@ $mf2 = $mf_a->store_associated_AnnotatedFeature($mf2, $af2);
 ok( $mf->associated_annotated_features->[0]->dbID == $af1->dbID );
 
 
+
+my $mf3 = Bio::EnsEMBL::Funcgen::MotifFeature->new(
+												   -binding_matrix => $m_ctcf,
+												   -score          => 0.2,
+												   -start          => $af2->start+1000,
+												   -end            => $af2->start+1000+$m_ctcf->length-1,
+												   -slice          => $af2->slice,
+												   -strand         => 1,
+												 );
+my $mf4 = Bio::EnsEMBL::Funcgen::MotifFeature->new(
+												   -binding_matrix => $m_ctcf,
+												   -score          => 0.2,
+												   -start          => $af2->start+1000,
+												   -end            => $af2->start+1000+$m_ctcf->length-1,
+												   -slice          => $af2->slice,
+												   -strand         => -1,
+												 );
+
+
 #Test other fetch methods
 
 my @mfs = @{$mf_a->fetch_all_by_AnnotatedFeature($af1)};
-#42-46
+#47-53
 ok( (scalar(@mfs) == 1) && ($mfs[0]->associated_annotated_features->[0]->dbID == $af1->dbID) );
 ok($mf2->seq eq 'TCTAGAGCA');
 ok(length($mf2->seq) ==  $matrix->length);
 ok($mf2->binding_matrix->relative_affinity($mf2->seq) eq '0.708111569818395');
 my $mf_slice = $db->dnadb->get_SliceAdaptor()->fetch_by_region('toplevel',$mf2->seq_region_name,$mf2->start,$mf2->end,$mf2->strand);
 ok($mf2->seq eq $mf_slice->seq);
+ok( $mf2->is_position_informative(6));
+ok( !$mf2->is_position_informative(9));
+
+ok( $mf3->is_position_informative(5));
+ok( !$mf4->is_position_informative(5));
+ok( $mf3->is_position_informative(13));
+ok( $mf4->is_position_informative(7));
+ok( !$mf4->is_position_informative(8));
 
 #Add a variation object
 my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
