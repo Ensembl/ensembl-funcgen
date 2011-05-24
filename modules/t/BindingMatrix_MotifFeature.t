@@ -12,7 +12,7 @@ use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 50;
+	plan tests => 64;
 }
 
 # switch on the debug prints
@@ -226,7 +226,7 @@ my $mf2 = Bio::EnsEMBL::Funcgen::MotifFeature->new(
 $mf  = $mf_a->store_associated_AnnotatedFeature($mf,  $af1);
 $mf2 = $mf_a->store_associated_AnnotatedFeature($mf2, $af2);
 
-#41
+#47
 ok( $mf->associated_annotated_features->[0]->dbID == $af1->dbID );
 
 
@@ -252,7 +252,7 @@ my $mf4 = Bio::EnsEMBL::Funcgen::MotifFeature->new(
 #Test other fetch methods
 
 my @mfs = @{$mf_a->fetch_all_by_AnnotatedFeature($af1)};
-#47-53
+#48-59
 ok( (scalar(@mfs) == 1) && ($mfs[0]->associated_annotated_features->[0]->dbID == $af1->dbID) );
 ok($mf2->seq eq 'TCTAGAGCA');
 ok(length($mf2->seq) ==  $matrix->length);
@@ -261,7 +261,6 @@ my $mf_slice = $db->dnadb->get_SliceAdaptor()->fetch_by_region('toplevel',$mf2->
 ok($mf2->seq eq $mf_slice->seq);
 ok( $mf2->is_position_informative(6));
 ok( !$mf2->is_position_informative(9));
-
 ok( $mf3->is_position_informative(5));
 ok( !$mf4->is_position_informative(5));
 ok( $mf3->is_position_informative(13));
@@ -279,7 +278,7 @@ my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
 #  #-adaptor => $vfa,           # we must attach a variation feature adaptor
   -variation_name => 'newSNP',
 );
-#47
+#60
 ok($mf2->infer_variation_consequence($new_vf) eq '-18.0977682274379');
 
 my %fsets;
@@ -289,12 +288,12 @@ foreach my $af($af1, $af2){
 }
 
 @mfs = @{$mf_a->fetch_all_by_Slice_FeatureSets($slice, [values %fsets])};
-#48
+#61
 ok( scalar(@mfs) == 2 );
 
 
 @mfs = @{$mf_a->fetch_all_by_Slice_BindingMatrix($slice, $matrix)};
-#49
+#62
 ok( scalar(@mfs) == 2 );
 
 my $ctype_id = $af1->cell_type->dbID;
@@ -305,12 +304,12 @@ foreach my $af($af1, $af2){
 }
 
 @mfs = @{$mf_a->fetch_all_by_Slice_CellType($slice, $af1->cell_type)};
-#50
+#63
 ok( scalar(@mfs) == $ctype_count );
 
 
 #list dbIDs
-#51
+#64
 ok( scalar(@{$mf_a->list_dbIDs}) == 2 );
 
 #Restore table
