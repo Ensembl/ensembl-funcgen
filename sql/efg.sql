@@ -16,13 +16,13 @@
 
 /** 
 @header  Main feature tables
-@desc    These define the various genomics features and their relevant associated tables
+@desc    These define the various genomics features and their relevant associated tables.
 */
 
 
 /**
 @table  regulatory_feature
-@desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc
+@desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc.
 
 @column regulatory_feature_id	Internal ID 
 @column seq_region_id       	@link seq_region table ID
@@ -38,7 +38,9 @@
 @column binary_string			Binary representation for the underlying feature sets/types 
 @column projected				Boolean, defines whether reg feat structure has been projected to this cell type 
 
-@see @link seq_region; @link feature_set; @link feature_type
+@see seq_region
+@see feature_set
+@see feature_type
 */
 
 DROP TABLE IF EXISTS `regulatory_feature`;
@@ -67,14 +69,14 @@ CREATE TABLE `regulatory_feature` (
 
 /**
 @table  regulatory_attribute
-@desc   Denormalised table defining links between a @link regulatory_feature and it's constituent 'attribute' features
+@desc   Denormalised table defining links between a @link regulatory_feature and it's constituent 'attribute' features.
 
 @column regulatory_feature_id	Internal ID 
 @column attribute_feature_id	Table ID of attribute feature 
 @column attribute_feature_table	Table name of attribute feature
 
-
-@see @link annotated_feature; @link motif_feature
+@see annotated_feature
+@see motif_feature
 */
 
 DROP TABLE IF EXISTS `regulatory_attribute`;
@@ -90,7 +92,7 @@ CREATE TABLE `regulatory_attribute` (
 
 /**
 @table  annotated_feature
-@desc   Represents a genomic feature as the result of an analysis i.e. a ChIP or DNase1 peak call
+@desc   Represents a genomic feature as the result of an analysis i.e. a ChIP or DNase1 peak call.
 
 @column annotated_feature_id	Internal ID 
 @column seq_region_id   	   	@link seq_region table ID
@@ -102,7 +104,8 @@ CREATE TABLE `regulatory_attribute` (
 @column feature_set_id 	 		@link feature_set table ID
 @column summit					Represents peak summit for those analyses which provide it (e.g. Swembl)
 
-@see @link seq_region; @link feature_set
+@see seq_region
+@see feature_set
 */
 
 DROP TABLE IF EXISTS `annotated_feature`;
@@ -126,7 +129,7 @@ CREATE TABLE `annotated_feature` (
 
 /**
 @table  motif_feature
-@desc   The table contains genomic alignments of @link binding_matrix PWMs
+@desc   The table contains genomic alignments of @link binding_matrix PWMs.
 
 @column motif_feature_id    Primary key, internal ID 
 @column binding_matrix_id   Foreign key to @link binding_matrix table
@@ -138,7 +141,8 @@ CREATE TABLE `annotated_feature` (
 @column score               Score derived from alignment software (e.g.MOODS)
 @column interdb_stable_id   Unique key, provides linkability between DBs       
 
-@see @link associated_motif_feature; @link regulatory_attribute
+@see associated_motif_feature
+@see regulatory_attribute
 */
 
 
@@ -162,13 +166,15 @@ CREATE TABLE `motif_feature` (
 
 /**
 @table  associated_motif_feature
-@desc   The table provides links between motif_features and annotated_features representing peaks of the relevant transcription factor
+@desc   The table provides links between motif_features and annotated_features representing peaks of the relevant transcription factor.
 
 @column annotated_feature_id    @link annotated_feature table ID
 @column motif_feature_id    	@link motif_feature table ID
 
-@see @link associated_motif_feature; @link regulatory_attribute
+@see associated_motif_feature
+@see regulatory_attribute
 */
+
 
 DROP TABLE IF EXISTS `associated_motif_feature`;
 CREATE TABLE `associated_motif_feature` (
@@ -181,7 +187,7 @@ CREATE TABLE `associated_motif_feature` (
 
 /**
 @table  binding_matrix
-@desc   Contains information defining a specific binding matrix(PWM) as defined by the linked analysis e.g. Jaspar
+@desc   Contains information defining a specific binding matrix(PWM) as defined by the linked analysis e.g. Jaspar.
 
 @column binding_matrix_id			Internal table ID
 @column name			Name of PWM
@@ -191,7 +197,9 @@ CREATE TABLE `associated_motif_feature` (
 @column analysis_id			@link analysis table ID
 @column threshold			Minimum score for Motif Features for this matrix
 
-@see @link motif_feature; @link feature_type, @link analysis
+@see motif_feature
+@see feature_type
+@see analysis
 */
 
 DROP TABLE IF EXISTS `binding_matrix`;
@@ -201,8 +209,12 @@ CREATE  TABLE `binding_matrix` (
  `feature_type_id` int(10) unsigned NOT NULL,
  `frequencies` VARCHAR(1000) NOT NULL,
  `description` VARCHAR(255) NULL,
+<<<<<<< efg.sql
+ `analysis_id` smallint(5) unsigned NOT NULL,
+=======
  `analysis_id` int(10) unsigned NOT NULL,
  `threshold` double default NULL,
+>>>>>>> 1.153
  PRIMARY KEY (`binding_matrix_id`) ,
  KEY `name_analysis_idx` (`name`, `analysis_id`),
  KEY `feature_type_idx` (`feature_type_id`)
@@ -213,7 +225,7 @@ CREATE  TABLE `binding_matrix` (
 
 /**
 @table  external_feature
-@desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc
+@desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc.
 
 @column external_feature_id		Internal ID 
 @column seq_region_id			@link seq_region table ID
@@ -224,7 +236,9 @@ CREATE  TABLE `binding_matrix` (
 @column feature_type_id     	@link feature_type table ID
 @column feature_set_id      	@link feature_set table ID
 
-@see @link seq_region; @link feature_set; @link feature_type
+@see seq_region
+@see feature_set
+@see feature_type
 */
 
 DROP TABLE IF EXISTS `external_feature`;
@@ -247,9 +261,9 @@ CREATE TABLE `external_feature` (
 /** 
 @table  result_feature
 @desc   Represents the mapping of a raw/normalised signal. This is optimised for the web display
-		in two ways:
-			1 Data compression by collection into different sized windows or bins
-			2 For array data it also provides an optimised view of a @link probe_feature and associated @link result
+		in two ways:<br>
+	&nbsp;&nbsp;&nbsp;&nbsp;1 Data compression by collection into different sized windows or bins.<br><br>
+	&nbsp;&nbsp;&nbsp;&nbsp;2 For array data it also provides an optimised view of a @link probe_feature and associated @link result.
 			
 @column result_feature_id	Internal ID
 @column result_set_id		@link result_set table ID 
@@ -260,7 +274,8 @@ CREATE TABLE `external_feature` (
 @column window_size			Size of window in base pairs
 @column scores				BLOB of window scores for this region 
 
-@see @link result_set; @link seq_region
+@see result_set
+@see seq_region
 */
 
 DROP TABLE IF EXISTS `result_feature`;
@@ -297,33 +312,10 @@ CREATE TABLE `result_feature` (
 -- Remove partitions and limit to 0 window_size data, as others are now in DBFiles
 
 
-/**
-@table  dbfile_registry
-
-@desc   This generic table contains a simple registry of paths to support 
-        flat file (DBFile) access. This should be left joined from the
-        relevant adaptor e.g. ResultSetAdaptor
-
-@column table_id   Primary key of linked dbfile entity e.g. @link result_set or @link analysis
-@column table_name Name of linked table
-@column path       Either a full filepath or a directory which the API will use to build the filepath
-
-@see @link result_set
-*/
-
-
-DROP TABLE IF EXISTS `dbfile_registry`;
-CREATE TABLE `dbfile_registry` (
-   `table_id` int(10) unsigned NOT NULL,
-   `table_name` varchar(32)NOT NULL,	
-   `path` varchar(255) NOT NULL,
-   PRIMARY KEY  (`table_id`, `table_name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
 
 /**
 @table  probe_feature
-@desc   The table contains genomic alignments @link probe entries
+@desc   The table contains genomic alignments @link probe entries.
 
 @column probe_feature_id	Internal ID 
 @column seq_region_id       Foreign key to @link seq_region table
@@ -333,9 +325,16 @@ CREATE TABLE `dbfile_registry` (
 @column probe_id			@link probe table ID
 @column analysis_id			@link analysis table ID
 @column mismatches			Integer, the number of bp matches for this alignment
-@column cigar_line			Extended cigar line format representation of the alignment as defined here http://samtools.sourceforge.net/SAM-1.3.pdf. In summary: = Seq/Alignment Match; M Alignment match/Seq mismatch; X Seq/Alignment mismatch; D Deletion; S Soft clipping, used for overhanging cdna alignments where genomic seq is unknown  
+@column cigar_line			Extended cigar line format representation of the alignment as defined here http://samtools.sourceforge.net/SAM-1.3.pdf.<br>In summary:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;= Seq/Alignment Match
+<br>&nbsp;&nbsp;&nbsp;&nbsp;M Alignment match/Seq mismatch
+<br>&nbsp;&nbsp;&nbsp;&nbsp;X Seq/Alignment mismatch
+<br>&nbsp;&nbsp;&nbsp;&nbsp;D Deletion
+<br>&nbsp;&nbsp;&nbsp;&nbsp;S Soft clipping, used for overhanging cdna alignments where genomic seq is unknown  
 
-@see @link probe
+@see probe
+@see seq_region
+@see analysis
 */
 
 DROP TABLE IF EXISTS `probe_feature`;
@@ -371,7 +370,8 @@ CREATE TABLE `probe_feature` (
 @column feature_set_id	Product @link feature_set table ID
 @column name            Name of data set
 
-@see @link feature_set; @link supporting_set
+@see feature_set
+@see supporting_set
 */
 
 DROP TABLE IF EXISTS `data_set`;
@@ -388,13 +388,16 @@ CREATE TABLE `data_set` (
 
 /** 
 @table  supporting_set
-@desc   Defines association between @link data_set and underlying/supporting data
+@desc   Defines association between @link data_set and underlying/supporting data.
 
 @column data_set_id			Internal ID
 @column supporting_set_id	Table ID of supporting set
 @column type				Type of supporting set e.g. result, feature or input set.
 
-@see @link data_set; @link result_set; @link feature_set; @link input_set
+@see data_set
+@see result_set
+@see feature_set
+@see input_set
 */
 
 
@@ -410,7 +413,7 @@ CREATE TABLE `supporting_set` (
 
 /** 
 @table  feature_set
-@desc   Container for genomic features defined by the result of an analysis e.g. peaks calls or regulatory features
+@desc   Container for genomic features defined by the result of an analysis e.g. peaks calls or regulatory features.
 
 @column feature_set_id		Internal ID
 @column feature_type_id		Table ID for @link feature_type
@@ -421,7 +424,13 @@ CREATE TABLE `supporting_set` (
 @column description			Text description
 @column display_label		Shorter more readable version of name
 
-@see @link data_set; @link cell_type; @link feature_type; @link analysis; @link annotated_feature; @link regulatory_feature; @link external_feature
+@see data_set
+@see cell_type
+@see feature_type
+@see analysis
+@see annotated_feature
+@see regulatory_feature
+@see external_feature
 */
 
 -- Table structure for `feature_set`
@@ -452,7 +461,12 @@ CREATE TABLE `feature_set` (
 @column feature_type_id		Table ID for @link feature_type
 @column cell_type_id		Table ID for @link cell_type
 
-@see @link result_set_input; @link cell_type; @link feature_type; @link analysis; @link supporting_set; @link dbfile_registry
+@see result_set_input 
+@see cell_type
+@see feature_type
+@see analysis
+@see supporting_set
+@see dbfile_registry
 */
 
 DROP TABLE IF EXISTS `result_set`;
@@ -476,7 +490,10 @@ CREATE TABLE `result_set` (
 @column table_id				Table ID for input 
 @column table_name				Table name for input e.g. @link input_set, @link experimental_chip, @link channel
 
-@see @link result_set; @link input_set; @link experimental_chip; @link channel
+@see result_set
+@see input_set
+@see experimental_chip
+@see channel
 */
 
 DROP TABLE IF EXISTS `result_set_input`;
@@ -491,9 +508,34 @@ CREATE TABLE `result_set_input` (
 
 
 
+/**
+@table  dbfile_registry
+
+@desc   This generic table contains a simple registry of paths to support 
+        flat file (DBFile) access. This should be left joined from the
+        relevant adaptor e.g. ResultSetAdaptor.
+
+@column table_id   Primary key of linked dbfile entity e.g. @link result_set or @link analysis
+@column table_name Name of linked table
+@column path       Either a full filepath or a directory which the API will use to build the filepath
+
+@see result_set
+*/
+
+
+DROP TABLE IF EXISTS `dbfile_registry`;
+CREATE TABLE `dbfile_registry` (
+   `table_id` int(10) unsigned NOT NULL,
+   `table_name` varchar(32)NOT NULL,	
+   `path` varchar(255) NOT NULL,
+   PRIMARY KEY  (`table_id`, `table_name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+
 /** 
 @table  input_set
-@desc   Defines a distinct set input data which is not imported into the DB, but used for some analysis e.g. a BAM file
+@desc   Defines a distinct set input data which is not imported into the DB, but used for some analysis e.g. a BAM file.
 
 @column input_set_id		Internal ID
 @column experiment_id		Table ID for @link experiment
@@ -504,7 +546,11 @@ CREATE TABLE `result_set_input` (
 @column name				Name of input_set
 @column type				Type of feature imported as result of analysis e.g. result, annotated
 
-@see @link experiment; @link cell_type; @link feature_type; @link result_set_input; @link supporting_set
+@see experiment
+@see cell_type
+@see feature_type
+@see result_set_input
+@see supporting_set
 */
 
 DROP TABLE IF EXISTS `input_set`;
@@ -528,13 +574,13 @@ CREATE TABLE `input_set` (
 
 /** 
 @table  input_subset
-@desc   Defines a file from an input_set, required for import tracking and recovery
+@desc   Defines a file from an input_set, required for import tracking and recovery.
 
 @column input_subset_id		Internal ID
 @column input_set_id		@link input_set table ID
 @column name				Name of input_subset e.g. file path
 
-@see @link input_set
+@see input_set
 */
 
 DROP TABLE IF EXISTS `input_subset`;
@@ -555,7 +601,7 @@ CREATE TABLE `input_subset` (
 
 /**
 @table  array
-@desc   Contains information defining an array or array set
+@desc   Contains information defining an array or array set.
 
 @column array_id	Internal ID
 @column name     	Name of array
@@ -565,7 +611,7 @@ CREATE TABLE `input_subset` (
 @column type		Array type e.g. OLIGO, PCR
 @column class		Array class e.g. AFFY_ST, ILLUMINA_INFINIUM  
 
-@see    @link array_chip
+@see    array_chip
 */
 
 DROP TABLE IF EXISTS `array`;
@@ -587,14 +633,16 @@ CREATE TABLE `array` (
 
 /**
 @table  array_chip
-@desc   Represents the individual array chip design as part of an array or array set
+@desc   Represents the individual array chip design as part of an array or array set.
 
 @column array_chip_id	Internal ID
 @column design_id  	    ID/Accession defined by vendor
 @column array_id		Table ID from @link array
 @column name     		Name of array_chip
 
-@see    @link array; @link probe; @link experimental_chip
+@see array
+@see probe
+@see experimental_chip
 */
 
 DROP TABLE IF EXISTS `array_chip`;
@@ -619,7 +667,7 @@ CREATE TABLE `array_chip` (
 @column size				Integer size of the probe set i.e. how many probe is contains
 @column family				Generic descriptor for probe_set e.g. ENCODE_REGIONS, RANDOM etc. Currently not used
 
-@see @link probe
+@see probe
 */
 
 DROP TABLE IF EXISTS `probe_set`;
@@ -648,7 +696,9 @@ CREATE TABLE `probe_set` (
 @column class				Class of the probe e.g. CONTROL, EXPERIMENTAL etc.
 @column description			Text description
 
-@see @link probe_feature; @link probe_set; @link array_chip 
+@see probe_feature
+@see probe_set
+@see array_chip 
 */
 
 DROP TABLE IF EXISTS `probe`;
@@ -669,14 +719,16 @@ CREATE TABLE `probe` (
 
 /**
 @table  probe_design
-@desc   Stores data from array design analyses
+@desc   Stores data from array design analyses.
 
 @column probe_id			Internal ID 
 @column analysis_id			@link analysis table ID
 @column coord_system_id		@link coord_system table ID
 @column score				Double analysis score value
 
-@see @link probe; @link analysis; @see coord_system
+@see probe
+@see analysis
+@see coord_system
 */
 
 DROP TABLE IF EXISTS `probe_design`;
@@ -693,7 +745,7 @@ CREATE TABLE `probe_design` (
 
 /** 
 @header	Experiment tables
-@desc	These define the experimental meta and raw data 
+@desc	These define the experimental meta and raw data .
 */
 
 
@@ -709,7 +761,10 @@ CREATE TABLE `probe_design` (
 @column description				Text description
 @column	mage_xml_id				@link mage_xml table_id for array experiments
 
-@see @link experimental_group; @link mage_xml; @link experimental_chip; @link input_set 
+@see experimental_group
+@see mage_xml
+@see experimental_chip
+@see input_set 
 */
 
 DROP TABLE IF EXISTS `experiment`;
@@ -735,7 +790,7 @@ CREATE TABLE `experiment` (
 /**
 @table  experimental_group
 
-@desc   Contains experimental group info i.e. who produced data sets
+@desc   Contains experimental group info i.e. who produced data sets.
 
 @column experimental_group_id  Internal ID
 @column name                   Name of group
@@ -743,7 +798,7 @@ CREATE TABLE `experiment` (
 @column contact                Contact details e.g. email
 @column description            Text description
 
-@see    @link experiment
+@see experiment
 */
 
 DROP TABLE IF EXISTS `experimental_group`;
@@ -761,12 +816,12 @@ CREATE TABLE `experimental_group` (
 
 /**
 @table  mage_xml
-@desc   Contains MAGE-XML for array based experiments
+@desc   Contains MAGE-XML for array based experiments.
 
 @column mage_xml_id		Internal table ID
 @column xml				XML text field
 
-@see @link experiment
+@see experiment
 */
 
 DROP TABLE IF EXISTS `mage_xml`;
@@ -779,7 +834,7 @@ CREATE TABLE `mage_xml` (
 
 /**
 @table  experimental_chip
-@desc   Represents the physical instance of an @link array_chip used in an @link experiment
+@desc   Represents the physical instance of an @link array_chip used in an @link experiment.
 
 @column experimental_chip_id	Internal ID
 @column unique_id 		 	    Unique ID assigned by vendor
@@ -790,7 +845,12 @@ CREATE TABLE `mage_xml` (
 @column biological_replicate	Name of biological replicate
 @column technical_replicate		Name of technical replicate
 
-@see    @link array_chip; @link experiment; @link result_set_input; @link channel; @link feature_type; @link cell_type
+@see array_chip 
+@see experiment 
+@see result_set_input 
+@see channel 
+@see feature_type
+@see cell_type
 */
 
 DROP TABLE IF EXISTS `experimental_chip`;
@@ -815,7 +875,7 @@ CREATE TABLE `experimental_chip` (
 
 /**
 @table  channel
-@desc   Represents an individual channel from an @link experimental_chip
+@desc   Represents an individual channel from an @link experimental_chip.
 
 @column channel_id				Internal ID
 @column experimental_chip_id	@link external_chip table ID
@@ -823,7 +883,7 @@ CREATE TABLE `experimental_chip` (
 @column dye						Name of dye used for this channel e.g. Cy3, Cy5
 @column type					Type of channel i.e. EXPERIMENTAL or TOTAL (input)
 
-@see    @link experimental_chip
+@see  experimental_chip
 */
 
 DROP TABLE IF EXISTS `channel`;
@@ -849,7 +909,8 @@ CREATE TABLE `channel` (
 @column X						X coordinate of probe location on experimental_chip
 @column Y						Y coordinate of probe location on experimental_chip
 
-@see @link probe; @link result_set_input
+@see probe
+@see result_set_input
 */
 
 DROP TABLE IF EXISTS `result`;
@@ -880,7 +941,7 @@ CREATE TABLE `result` (
 /** 
 @table  feature_type
 
-@desc   Contains information about different types/classes of feature e.g. Brno nomenclature, Transcription Factor names etc
+@desc   Contains information about different types/classes of feature e.g. Brno nomenclature, Transcription Factor names etc.
 
 @column feature_type_id   Primary key, internal ID
 @column name              Name of feature_type
@@ -889,7 +950,13 @@ CREATE TABLE `result` (
 @column so_accession      Sequence ontology accession
 @column so_name           Sequence ontology name
 
-@see @link associated_feature_type; @link feature_set;  @link result_set; @link input_set; @link experimental_chip; @link regulatory_Feature; @link external_feature
+@see associated_feature_type 
+@see feature_set 
+@see result_set 
+@see input_set 
+@see experimental_chip 
+@see regulatory_feature 
+@see external_feature
 */
 
 DROP TABLE IF EXISTS `feature_type`;
@@ -911,13 +978,13 @@ CREATE TABLE `feature_type` (
 
 /**
 @table  associated_feature_type
-@desc   Link table providing many to many mapping for @link feature_type entries
+@desc   Link table providing many to many mapping for @link feature_type entries.
 
 @column table_id			Internal table_id of linked table
 @column table_name     	 	Name of linked table
 @column feature_type_id		Internal table_id of linked @link feature_type
 
-@see    @link feature_type
+@see  feature_type
 */
 
 
@@ -936,7 +1003,7 @@ CREATE TABLE `associated_feature_type` (
 /** 
 @table  cell_type
 
-@desc   Contains information about cell/tissue types
+@desc   Contains information about cell/tissue types.
 
 @column cell_type_id	Internal ID
 @column name        	Name of cell/tissue
@@ -944,7 +1011,10 @@ CREATE TABLE `associated_feature_type` (
 @column description 	Text description
 @column gender			Gender i.e. male or female
 
-@see @link feature_set;  @link result_set;  @link input_set; @link experimental_chip
+@see feature_set
+@see result_set
+@see input_set
+@see experimental_chip
 */
 
 DROP TABLE IF EXISTS `cell_type`;
@@ -963,13 +1033,13 @@ CREATE TABLE `cell_type` (
 
 /**
 @table  experimental_design
-@desc   Denormalised link table to allow many to many design_type associations
+@desc   Denormalised link table to allow many to many design_type associations.
 
 @column design_type_id			@link design_type table ID
 @column table_name				Name of linked table
 @column table_id				Table ID of linked record
 
-@see @link design_type
+@see design_type
 */
 
 DROP TABLE IF EXISTS `experimental_design`;
@@ -990,7 +1060,7 @@ CREATE TABLE `experimental_design` (
 @column design_type_id	Internal ID
 @column name			Name of design type
 
-@see @link experimental_design
+@see experimental_design
 */
 
 -- extend to support ontologies properly or remove
@@ -1008,14 +1078,14 @@ CREATE TABLE `design_type` (
 
 /**
 @table  status
-@desc   Denormalised table associating funcgen records with a status
+@desc   Denormalised table associating funcgen records with a status.
 
 @column table_id		Table ID of associated record
 @column table_name		Table name of associated record
 @column status_name_id	@link status_name table ID
 
 
-@see @link status_name
+@see status_name
 */
 
 DROP TABLE IF EXISTS `status`;
@@ -1031,12 +1101,12 @@ CREATE TABLE `status` (
 
 /**
 @table  status_name
-@desc   Denormalised table associating funcgen records with a status
+@desc   Simple table to predefine name of status.
 
 @column status_name_id	Internal ID
 @column name			Name of status e.g. IMPORTED, DISPLAYBLE etc.
 
-@see @link status_name
+@see status
 */
 
 DROP TABLE IF EXISTS `status_name`;
@@ -1074,7 +1144,7 @@ INSERT into status_name(name) values ('IMPORTED_GRCh37');
 /** 
 
 @header  Core tables
-@desc    These are exact clones of the corresponding core schema tables. See <a href=''>core schema docs</a> for more details.
+@desc    These are exact clones of the corresponding core schema tables. See <a href='../core/core_schema.html'>core schema docs</a> for more details.
 
 */
 
@@ -1101,7 +1171,7 @@ The module column tells the pipeline which Perl module does the whole analysis, 
 @column gff_source                  How to make a gff dump from features with this analysis.
 @column gff_feature                 How to make a gff dump from features with this analysis.
 
-@see @link analysis_description
+@see analysis_description
 
 */
 
@@ -1138,7 +1208,7 @@ CREATE TABLE `analysis` (
 @column displayable            Flag indicating if the analysis description is to be displayed on the EnsEMBL web site.
 @column web_data               Other data used by the EnsEMBL web site.
 
-@see @link analysis
+@see analysis
 
 */
 
@@ -1195,7 +1265,7 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 @column coord_system_id         Table ID for @link coord_system
 @column max_length              Longest sequence length.    
 
-@see @link coord_system
+@see coord_system
 
 */
 
@@ -1252,7 +1322,7 @@ CREATE TABLE identity_xref (
 @column xref_id           Foreign key references @link xref table
 @column synonym           Synonym
 
-@see @link xref
+@see xref
 
 */
 
@@ -1283,7 +1353,8 @@ CREATE TABLE external_synonym (
 @column description                 Description.
 
 
-@see @link xref; @link unmapped_object
+@see xref
+@see unmapped_object
 
 */
 
@@ -1341,7 +1412,7 @@ CREATE TABLE ontology_xref (
 @column summary_description          Summarised description.
 @column full_description             Full description.
 
-@see @link unmapped_object
+@see unmapped_object
 */
 
 DROP TABLE if EXISTS unmapped_reason;
@@ -1374,7 +1445,10 @@ Information about the database that the external object is stored in is held in 
 @column info_type               Class of the xref information e.g. CODING
 @column info_text               Text
 
-@see @link external_db; @link external_synonym; @link xref
+@see 
+@see external_db
+@see external_synonym
+@see xref
 
 */
 
@@ -1406,7 +1480,8 @@ CREATE TABLE xref (
 @column linkage_annotation        Additional annotation on the linkage.
 @column analysis_id               Foreign key references to the @link analysis table.
 
-@see @link xref; @link identity_xref
+@see xref
+@see identity_xref
 
 */
 
@@ -1444,6 +1519,9 @@ CREATE TABLE object_xref (
 @column ensembl_object_type        Ensembl object type e.g. ProbeSet
 @column parent                     Foreign key references to the @link dependent_xref table, in case the unmapped object is dependent on a primary external reference which wasn't mapped to an ensembl one. Not currently used for efg.
 
+@see unmapped_reason
+@see external_db
+@see analysis
 */
 
 
@@ -1485,7 +1563,8 @@ NOTE: This has been extended from the core implementation to support multiple as
 @column species_id           Indentifies the species for multi-species databases       
 @column is_current           This flags which coord_system entries are current with respect to mart(/website)
 
-@see @link seq_region; @link meta_coord;
+@see seq_region
+@see meta_coord
 
 */
 
@@ -1520,7 +1599,7 @@ CREATE TABLE `coord_system` (
 @column core_seq_region_id       Table ID of the seq_region in the source core DB
 @column schema_build             Indentifies the schema_build version for the source core DB       
 
-@see @link coord_system
+@see coord_system
 */
 
 
