@@ -318,6 +318,30 @@ sub relative_affinity {
 
 }
 
+=head2 is_position_informative
+
+  Arg [1]    : int - 1-based position withing the matrix
+  Arg [2]    : (optional) double - threshold [0-2] for information content [default is 1.5]
+  Example    : $matrix->is_position_informative($pos);
+  Description: Returns true if position information content is over threshold
+  Returntype : boolean
+  Exceptions : Throws if position or threshold out of bounds
+  Caller     : General
+  Status     : At High Risk
+
+=cut
+
+sub is_position_informative {
+  my ($self,$position,$threshold) = (shift,shift,shift);
+  throw "Need a position" if(!defined($position));
+  throw "Position out of bounds" if(($position<1) || ($position > $self->length));
+  if(!defined($threshold)){ $threshold = 1.5; }
+  throw "Threshold out of bounds" if(($threshold<0) || ($threshold>2));
+  return ($self->{'ic'}->[$position-1] >= $threshold);
+}
+
+
+
 =head2 length
 
   Example    : $bm->length();
@@ -354,6 +378,8 @@ sub _weights {
 	my $self = shift;
 	
  	#for the moment use equiprobability and constant pseudo-count
+	my $pseudo = 0.1;
+
  	#TODO allow for it to be passed as parameters?
   	my $frequencies = shift if @_; 
   	if($frequencies){
@@ -368,7 +394,8 @@ sub _weights {
 		if((scalar(@As)!=scalar(@Cs)) || (scalar(@As)!=scalar(@Gs)) || (scalar(@As)!=scalar(@Ts)) ){
 			throw "Frequencies provided are not a valid frequency matrix"		
 		}
-		
+		$self->_calc_ic(\@As,\@Cs,\@Gs,\@Ts,$pseudo);
+
 		#Create the reverse complement
 		my @revT = reverse(@As);
 		my @revA = reverse(@Ts);
@@ -390,13 +417,13 @@ sub _weights {
 		#We can allow distinct background per nucleotide, instead of 0.25 for all... pass as parameter
 		#But if the matrix was obtained using in-vivo data, it shouldn't matter the organism nucleotide bias..
 		#We're using 0.1 as pseudo-count... the matrix cannot have very few elements... (e.g. <30 not good)
-		my @was; for(my $i=0;$i<scalar(@As);$i++){ $was[$i] = log((($As[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
+		my @was; for(my $i=0;$i<scalar(@As);$i++){ $was[$i] = log((($As[$i] + $pseudo) / ($totals[$i]+(4*$pseudo))) / 0.25); };
 		$weights{'A'} = \@was;
-		my @wcs; for(my $i=0;$i<scalar(@Cs);$i++){ $wcs[$i] = log((($Cs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
+		my @wcs; for(my $i=0;$i<scalar(@Cs);$i++){ $wcs[$i] = log((($Cs[$i] + $pseudo) / ($totals[$i]+(4*$pseudo))) / 0.25); };
 		$weights{'C'} = \@wcs;
-		my @wgs; for(my $i=0;$i<scalar(@Gs);$i++){ $wgs[$i] = log((($Gs[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };
+		my @wgs; for(my $i=0;$i<scalar(@Gs);$i++){ $wgs[$i] = log((($Gs[$i] + $pseudo) / ($totals[$i]+(4*$pseudo))) / 0.25); };
 		$weights{'G'} = \@wgs;
-		my @wts; for(my $i=0;$i<scalar(@Ts);$i++){ $wts[$i] = log((($Ts[$i] + 0.1) / ($totals[$i]+0.4)) / 0.25); };	     
+		my @wts; for(my $i=0;$i<scalar(@Ts);$i++){ $wts[$i] = log((($Ts[$i] + $pseudo) / ($totals[$i]+(4*$pseudo))) / 0.25); };	     
 		$weights{'T'} = \@wts;
 	
 		$self->{'weights'} = \%weights;
@@ -415,6 +442,30 @@ sub _weights {
 	
 	return $self->{'weights'};	
 
+}
+
+=head2 _calc_ic
+
+  Example    : _calc_ic($as,$cs,$gs,$ts,$pseudo);
+  Description: Private function to calculate the matrix information content per position
+  Caller     : self
+  Status     : At Risk
+
+=cut
+
+sub _calc_ic {
+  my ($self,$as, $cs, $gs, $ts,$pseudo) = (shift,shift, shift, shift, shift, shift);
+  my @ic = ();
+  for (my $i=0;$i<scalar(@$as);$i++){
+    my $total_i = $as->[$i] + $cs->[$i] + $gs->[$i] + $ts->[$i] + (4*$pseudo);
+    my $fas = ($as->[$i] + $pseudo) / $total_i;
+    my $fcs = ($cs->[$i] + $pseudo) / $total_i;
+    my $fgs = ($gs->[$i] + $pseudo) / $total_i;
+    my $fts = ($ts->[$i] + $pseudo) / $total_i;    
+    my $ic_i = 2 + ($fas * log($fas)/log(2)) + ($fcs * log($fcs)/log(2)) + ($fgs * log($fgs)/log(2)) + ($fts * log($fts)/log(2));
+    push @ic, $ic_i;
+  }
+  $self->{'ic'} = \@ic;
 }
 
 sub _parse_matrix_line {

@@ -253,6 +253,28 @@ sub associated_annotated_features{
 }
 
 
+=head2 is_position_informative
+
+  Arg [1]    : int - 1-based position within the Motif
+  Example    : $mf->is_position_informative($pos);
+  Description: Indicates if a given position within the motif is highly informative
+  Returntype : boolean
+  Exceptions : throws if position out of bounds ( < 1 or > length of motif)
+  Caller     : General
+  Status     : At High risk
+
+=cut
+
+sub is_position_informative {
+  my ($self,$position) = (shift,shift);
+  throw "Need a position" if(!defined($position));
+  throw "Position out of bounds" if(($position<1) || ($position>$self->binding_matrix->length));
+  #if on the opposite strand, then need to reverse complement the position
+  if($self->strand < 0){ $position = $self->binding_matrix->length - $position + 1; }
+  return $self->binding_matrix->is_position_informative($position);
+}
+
+
 =head2 infer_variation_consequence
 
   Arg [1]    : Bio::EnsEMBL::Variation::VariationFeature
