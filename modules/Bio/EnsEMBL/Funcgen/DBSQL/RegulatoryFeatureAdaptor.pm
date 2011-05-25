@@ -55,7 +55,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor); #@ISA
 
   Arg [1]    : optional - Bio::EnsEMBL::FeatureSet
   Example    : my $rfs = $rf_adaptor->fetch_all();
-  Description: Over-ride generic featch_all method to return only MultiCell features by default.
+  Description: Over-ride generic fetch_all method to return only MultiCell features by default.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
   Exceptions : none
   Caller     : general
