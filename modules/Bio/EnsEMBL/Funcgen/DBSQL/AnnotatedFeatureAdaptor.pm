@@ -202,8 +202,6 @@ sub _objs_from_sth {
  
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
 	#Hence it should always be on the same coord system
-	#my $aa = $self->db->get_AnalysisAdaptor();
-	#my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
 	my @features;
 	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
@@ -224,11 +222,6 @@ sub _objs_from_sth {
 					   \$summit
 					  );
 
-
-	#This needs doing properly!!
-	#my $epsth = $self->prepare("SELECT experiment_id 
-    #                                FROM experiment_prediction 
-    #                                WHERE annotated_feature_id = ?");
 
 	my $asm_cs;
 	my $cmp_cs;
@@ -258,9 +251,8 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-
+	
   FEATURE: while ( $sth->fetch() ) {
-
 	  #Need to build a slice adaptor cache here?
 	  #Would only ever want to do this if we enable mapping between assemblies??
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
@@ -331,11 +323,16 @@ sub _objs_from_sth {
 	      }
 	      
 	      # Throw away features off the end of the requested slice
-	      next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
-		|| ( $dest_slice_sr_name ne $sr_name );
-	      
-	      $slice = $dest_slice;
-	    }
+		  if(! $self->force_reslice){
+			#force_reslice set by RegulatoryFeature::regulatory_attributes
+			#so we don't lose attrs which are not on the dest_slice
+			
+			next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
+			  || ( $dest_slice_sr_name ne $sr_name );
+			
+			$slice = $dest_slice;
+		  }
+		}
 	    
 
 	  
