@@ -1297,6 +1297,23 @@ sub count_features_by_field_id{
   return $sth->fetchrow_array;
 }
 
+
+
+=head2 force_reslice
+
+  Arg [1]    : Optional - Boolean
+  Example    : if($self->force_reslice){ 
+                    # Reslice features past ends of destination Slice
+               }
+  Description: Sets/Returns force_reslice boolean
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : FeatureAdaptors::_objs_from_sth
+  Status     : At risk
+
+=cut
+
+
 sub force_reslice{
   my ($self, $force) = @_;
 
