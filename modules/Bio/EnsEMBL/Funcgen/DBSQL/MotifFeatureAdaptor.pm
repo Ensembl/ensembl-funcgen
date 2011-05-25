@@ -346,6 +346,7 @@ sub _objs_from_sth {
 	my $asm_cs_vers;
 	my $cmp_cs_name;
 	my $cmp_cs_vers;
+
 	if ($mapper) {
 		$asm_cs      = $mapper->assembled_CoordSystem();
 		$cmp_cs      = $mapper->component_CoordSystem();
@@ -360,6 +361,7 @@ sub _objs_from_sth {
 	my $dest_slice_strand;
 	my $dest_slice_length;
 	my $dest_slice_sr_name;
+
 	if ($dest_slice) {
 		$dest_slice_start   = $dest_slice->start();
 		$dest_slice_end     = $dest_slice->end();
@@ -368,7 +370,7 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-
+	
   FEATURE: while ( $sth->fetch() ) {
 
 	  #Build a slice adaptor cache here if we want to enable mapping between assemblies??
@@ -408,43 +410,49 @@ sub _objs_from_sth {
 		
 		throw("Not yet implmented mapper, check equals are Funcgen calls too!");
 		
-	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
+		($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
+		  = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
 	      
-	      # Skip features that map to gaps or coord system boundaries
-	      next FEATURE if !defined $sr_name;
+		# Skip features that map to gaps or coord system boundaries
+		next FEATURE if !defined $sr_name;
 	      
-	      # Get a slice in the coord system we just mapped to
-	      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
-		$slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
-		  ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
-	      } else {
-		$slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
-		  ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
-	      }
-	    }
-	    
-	    # If a destination slice was provided convert the coords
-	    # If the destination slice starts at 1 and is forward strand, nothing needs doing
-	    if ($dest_slice) {
-	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-		if ($dest_slice_strand == 1) {
-		  $seq_region_start = $seq_region_start - $dest_slice_start + 1;
-		  $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+		# Get a slice in the coord system we just mapped to
+		if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
+		  $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
+			||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
 		} else {
-		  my $tmp_seq_region_start = $seq_region_start;
-		  $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-		  $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-		  $seq_region_strand      *= -1;
+		  $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
+			||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
 		}
-	      }
+	  }
+	    
+	  # If a destination slice was provided convert the coords
+	  # If the destination slice starts at 1 and is forward strand, nothing needs doing
+	  if ($dest_slice) {
+		
+		unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
+		  if ($dest_slice_strand == 1) {
+			$seq_region_start = $seq_region_start - $dest_slice_start + 1;
+			$seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+		  } else {
+			my $tmp_seq_region_start = $seq_region_start;
+			$seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
+			$seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+			$seq_region_strand      *= -1;
+		  }
+		}
 	      
-	      # Throw away features off the end of the requested slice
-	      next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
-		|| ( $dest_slice_sr_name ne $sr_name );
+		# Throw away features off the end of the requested slice
+		if(! $self->force_reslice){
+		  #force_reslice set by RegulatoryFeature::regulatory_attributes
+		  #so we don't lose attrs which are not on the dest_slice
+		  
+		  next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
+			|| ( $dest_slice_sr_name ne $sr_name );
+		}
 	      
-	      $slice = $dest_slice;
-	    }
+		$slice = $dest_slice;
+	  }
 	  
 
 	  
@@ -462,7 +470,7 @@ sub _objs_from_sth {
 			'interdb_stable_id',    => $stable_id,
 		   } );
 	}
-	
+
 	return \@features;
 }
 
