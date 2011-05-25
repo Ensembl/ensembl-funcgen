@@ -52,11 +52,8 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
 
-#Remove these?
-our $SLICE_FEATURE_CACHE_SIZE = 4;
-our $MAX_SPLIT_QUERY_SEQ_REGIONS = 3;
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
 
 ### To do ###
 #Add Translation method for fetch by FeatureSets methods?
@@ -127,6 +124,8 @@ sub generic_fetch {
   Status     : Stable
 
 =cut
+
+#Remove this now we don't have array based ResultFeatures?
 
 sub fetch_all_by_Slice_constraint {
   my($self, $slice, $constraint, $logic_name) = @_;
@@ -228,26 +227,19 @@ sub fetch_all_by_Slice_constraint {
     FEATURE:
       foreach my $f (@$features) {
         if($offset != 1) {
-
-		  #eFG: Changed these to start/end method calls
-		  #from direct hash access to support array based ResultFeatures
-		  #$f->{'start'} += $offset-1;
-          #$f->{'end'}   += $offset-1;
-		  $f->start($f->start + $offset -1);
-		  $f->end($f->end   + $offset -1);
-        }
+		  $f->{'start'} += $offset-1;
+          $f->{'end'}   += $offset-1;
+		}
 
         # discard boundary crossing features from symlinked regions
         foreach my $bound (@bounds) {
-          #if($f->{'start'} < $bound && $f->{'end'} >= $bound) {#eFG change
-		  if($f->start < $bound && $f->end >= $bound) {#eFG change
-		  
+          if($f->{'start'} < $bound && $f->{'end'} >= $bound) {
+			
             next FEATURE;
           }
         }
 
-        #$f->{'slice'} = $slice;
-		$f->slice($slice);
+        $f->{'slice'} = $slice;
         push @result, $f;
       }
     }
@@ -720,6 +712,8 @@ sub _pre_store {
 
 
 #This is causing problems with remapping
+#Need to merge this back into the core code, subbing out the relevant parts
+#required for funcgen support
 
 sub _slice_fetch {
   my $self = shift;
@@ -827,19 +821,23 @@ sub _slice_fetch {
           " AND ${tab_syn}.seq_region_start >= $min_start";
       }
 
+	
       my $fs = $self->generic_fetch($constraint,undef,$slice);
       # features may still have to have coordinates made relative to slice
       # start
 
+	  
+	  
+
       $fs = $self->_remap($fs, $mapper, $slice);
 	  push @features, @$fs;
     } 
-
-	#can't do remapping yet as AssemblyMapper expects a core CS
-	#change AssemblyMapper
-	#or do we just create a core CS just for the remap and convert back when done
-
-	#else {
+	else {
+	  #Table contains some feature on a CS that differs from the Slice CS
+	  #can't do CS remapping yet as AssemblyMapper expects a core CS
+	  #change AssemblyMapper?
+	  #or do we just create a core CS just for the remap and convert back when done?
+	  
     #  $mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
 
    #   next unless defined $mapper;
@@ -902,7 +900,7 @@ sub _slice_fetch {
 #          push @features, @$fs;
     #    }
     #  }
-  ###  }
+    }
   } #COORD system loop
 
   return \@features;
@@ -919,6 +917,11 @@ sub _slice_fetch {
 
 #We have to have this here as this is a sub not a method, hence the _remap
 #in the core BaseFeatureAdaptor is not available here
+
+#Need to over-ride this for Iterator and remap per feature?
+#Can we skip this altogether if the check test is done before hand?
+#Would have to account for each CS set of features
+#but we are currently only handling the query slice CS, so we can skip this completely for now
 
 
 sub _remap {
@@ -991,12 +994,9 @@ sub _remap {
 }
 
 
-=head2 fetch_all_by_stable_Feature_FeatureSets
+=head2 fetch_all_by_stable_Storable_FeatureSets
 
-  Arg [1]    : string - seq_region_name i.e. chromosome name.
-  Arg [2]    : string - seq_region_start of current slice bound
-  Arg [3]    : string - seq_region_end of current slice bound.
-  Arg [4]    : Bio::EnsEMBL::Gene|Transcript|Translation
+  Arg [1]    : Bio::EnsEMBL::Storable
   Arg [5]    : arrayref - Bio::EnsEMBL::Funcgen::FeatureSet
   Example    : ($start, $end) = $self->_set_bounds_by_regulatory_feature_xref
                               ($trans_chr, $start, $end, $transcript, $fsets);
@@ -1191,6 +1191,10 @@ sub fetch_all_by_Transcript_FeatureSets{
 
 =cut
 
+#There is no result_feature.display_label attribute.
+#Move this to individual feature adaptors to avoid over-riding?
+
+
 sub fetch_all_by_display_label {
   my ($self, $label) = @_;
 
@@ -1294,6 +1298,32 @@ sub count_features_by_field_id{
 }
 
 
+
+=head2 force_reslice
+
+  Arg [1]    : Optional - Boolean
+  Example    : if($self->force_reslice){ 
+                    # Reslice features past ends of destination Slice
+               }
+  Description: Sets/Returns force_reslice boolean
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : FeatureAdaptors::_objs_from_sth
+  Status     : At risk
+
+=cut
+
+
+sub force_reslice{
+  my ($self, $force) = @_;
+
+  
+  if(defined $force){
+	$self->{force_reslice} = $force;
+  }
+
+  return $self->{force_reslice};
+}
 
 
 

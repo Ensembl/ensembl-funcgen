@@ -233,18 +233,28 @@ sub regulatory_attributes{
   }
 
   foreach my $fclass(@fclasses){
-
 	#Now structured as hash to facilitate faster has_attribute method
 	#Very little difference to array based cache
 
 	my @attr_dbIDs = keys %{$self->{'attribute_cache'}{$fclass}};
 
+	
 	if(scalar(@attr_dbIDs) > 0){
 	  
 	  if( ! ( ref($self->{'regulatory_attributes'}{$fclass}->[0])  &&
 			  ref($self->{'regulatory_attributes'}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )){
 
+		$adaptors{$fclass}->force_reslice(1);	#So we don't lose attrs which aren't on the slice
 		$self->{'regulatory_attributes'}{$fclass} = $adaptors{$fclass}->fetch_all_by_dbID_list(\@attr_dbIDs, $self->slice);
+		$adaptors{$fclass}->force_reslice(0);
+
+		#Problems here with attrs not being returning when they do not lie on dest slice
+		#i.e. core projected to cell line, but dest slice only over laps a region of the core which
+		#actually has no attrs.
+		#either use the feature_Slice and reslice everthing to the dest slice
+		#or skip test in attr obj_frm_sth?
+		#
+
 		#This method transfers to the query slice, do not use fetch_by_dbID
 		#It also should use _final_clause
 		#This is currently only specified in the MotifFeatureAdaptor
@@ -257,8 +267,6 @@ sub regulatory_attributes{
 		#do we need redundant caches?
 		#defo need db id cache for 'has' methods
 		
-
-				
 		#foreach my $attr(@{$fclass_attrs}){
 		#  $self->{'regulatory_attributes'}{$fclass}{$attr->dbID} = $attr;
 		#}
