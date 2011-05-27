@@ -22,7 +22,7 @@
 
 /**
 @table  regulatory_feature
-@desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc.
+@desc   The table contains the features resulting from the regulatory build process.
 
 @column regulatory_feature_id	Internal ID 
 @column seq_region_id       	@link seq_region table ID
@@ -69,7 +69,7 @@ CREATE TABLE `regulatory_feature` (
 
 /**
 @table  regulatory_attribute
-@desc   Denormalised table defining links between a @link regulatory_feature and it's constituent 'attribute' features.
+@desc   Denormalised table defining links between a regulatory_feature and it's constituent 'attribute' features.
 
 @column regulatory_feature_id	Internal ID 
 @column attribute_feature_id	Table ID of attribute feature 
@@ -129,7 +129,7 @@ CREATE TABLE `annotated_feature` (
 
 /**
 @table  motif_feature
-@desc   The table contains genomic alignments of @link binding_matrix PWMs.
+@desc   The table contains genomic alignments of binding_matrix PWMs.
 
 @column motif_feature_id    Primary key, internal ID 
 @column binding_matrix_id   Foreign key to @link binding_matrix table
@@ -263,7 +263,7 @@ CREATE TABLE `external_feature` (
 @desc   Represents the mapping of a raw/normalised signal. This is optimised for the web display
 		in two ways:<br>
 	&nbsp;&nbsp;&nbsp;&nbsp;1 Data compression by collection into different sized windows or bins.<br><br>
-	&nbsp;&nbsp;&nbsp;&nbsp;2 For array data it also provides an optimised view of a @link probe_feature and associated @link result.
+	&nbsp;&nbsp;&nbsp;&nbsp;2 For array data it also provides an optimised view of a probe_feature and associated result.
 			
 @column result_feature_id	Internal ID
 @column result_set_id		@link result_set table ID 
@@ -483,7 +483,7 @@ CREATE TABLE `result_set` (
 
 /** 
 @table  result_set_input
-@desc   Link table between @link result_set and it's contstituents which can vary between an array experiment (@link experimental_chip/@link channel) and a sequencing experiment (@link input_set). Note the joint primary key as inputs can be re-used between result sets.
+@desc   Link table between @link result_set and it's contstituents which can vary between an array experiment (experimental_chip / channel) and a sequencing experiment (input_set). Note the joint primary key as inputs can be re-used between result sets.
 
 @column result_set_input_id		Internal ID
 @column result_set_id			@link result_set table ID 
@@ -875,7 +875,7 @@ CREATE TABLE `experimental_chip` (
 
 /**
 @table  channel
-@desc   Represents an individual channel from an @link experimental_chip.
+@desc   Represents an individual channel from an experimental_chip.
 
 @column channel_id				Internal ID
 @column experimental_chip_id	@link external_chip table ID
@@ -900,7 +900,7 @@ CREATE TABLE `channel` (
 
 /** 
 @table  result
-@desc   Contains a score or intensity value for an associated probe location on a particular @experimental_chip.
+@desc   Contains a score or intensity value for an associated probe location on a particular experimental_chip.
 
 @column result_id				Internal ID
 @column probe_id				@link probe table ID 
@@ -978,7 +978,7 @@ CREATE TABLE `feature_type` (
 
 /**
 @table  associated_feature_type
-@desc   Link table providing many to many mapping for @link feature_type entries.
+@desc   Link table providing many to many mapping for feature_type entries.
 
 @column table_id			Internal table_id of linked table
 @column table_name     	 	Name of linked table
