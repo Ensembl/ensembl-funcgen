@@ -228,7 +228,7 @@ sub feature_type{
 
   Example    : my $analysis = $efeature->feature_type()->name();
   Description: Getter for the type attribute for this feature.
-  Returntype : Bio:EnsEMBL::Funcgen::FeatureType
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : Throws if analysis passed is not a valid Bio::EnsEMBL::Analysis
   Caller     : General
   Status     : At risk
