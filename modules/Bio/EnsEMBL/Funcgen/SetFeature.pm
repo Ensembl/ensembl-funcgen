@@ -189,7 +189,7 @@ sub feature_set {
   Example    : my $cell_name = $efeature->cell_type()->name();
   Description: Getter for the cell_type attribute for this feature.
                May not always be set for ExternalFeatures.
-  Returntype : Bio::EnsEMBL::Funcgen:CellType
+  Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
   Status     : At risk
@@ -206,7 +206,7 @@ sub cell_type{
 
   Example    : my $ft_name = $efeature->feature_type()->name();
   Description: Getter for the feature_type attribute for this feature.
-  Returntype : Bio::EnsEMBL::Funcgen:FeatureType
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None
   Caller     : General
   Status     : At risk
