@@ -134,7 +134,6 @@ sub update_db_for_release{
   $self->analyse_and_optimise_tables;#ALWAYS LAST!!
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
-  $self->log_header("??? Have you diff'd the sql for each species vs. a fresh schema ???");
 
   #Log footer? Pass optional counts hash?
   $self->log('Finished updating '.$self->{'dbname'}." for release\n\n");
@@ -745,7 +744,6 @@ sub set_current_coord_system{
 
 
   my $schema_build = $self->db->_get_schema_build($self->db->dnadb);
-
   $self->log_header("Setting current coord_system on $schema_build");
 
   my $sql = "update coord_system set is_current=False where schema_build !='$schema_build'";
@@ -772,8 +770,7 @@ sub validate_DataSets{
 
   my $fset_a = $self->db->get_FeatureSetAdaptor;
   my $dset_a = $self->db->get_DataSetAdaptor;
-  my (@dset_states, @rset_states, @fset_states);
-  (\@dset_states, \@rset_states, \@fset_states) = $self->get_regbuild_set_states($self->db);
+  my ($dset_states, $rset_states, $fset_states) = $self->get_regbuild_set_states($self->db);
 
   my %rf_fsets;
   my %set_states;
@@ -793,7 +790,7 @@ sub validate_DataSets{
 	  next RF_FSET;
 	}
 	
-	foreach my $state(@fset_states){
+	foreach my $state(@$fset_states){
 	  
 	  if(! $rf_fset->has_status($state)){
 		$self->report("WARNING:\tUpdating FeatureSet $rf_fset_name with status $state");
@@ -824,7 +821,7 @@ sub validate_DataSets{
 	}
 
 	
-	foreach my $state(@dset_states){
+	foreach my $state(@$dset_states){
 	  
 	  if(! $rf_dset->has_status($state)){
 		#Can we just update and warn here?
@@ -846,7 +843,7 @@ sub validate_DataSets{
 
 	foreach my $ra_fset(@{$rf_dset->get_supporting_sets}){
 	
-	  foreach my $state(@fset_states){
+	  foreach my $state(@$fset_states){
 	  
 		if(! $ra_fset->has_status($state)){
 		  #Can we just update and warn here?
@@ -877,7 +874,7 @@ sub validate_DataSets{
 
 	  my $ra_rset = $sset[0];
 	
-	  foreach my $state(@rset_states){
+	  foreach my $state(@$rset_states){
 	  
 		if(! $ra_rset->has_status($state)){
 		  #Can we just update and warn here?
@@ -987,6 +984,9 @@ sub clean_xrefs{
   #Shouldn't clean orphaned oxs here as this means a rollback been done underneath the ox data
   #or we have xref_id=0!
   #Leave this to HC?
+
+  
+
 
 
   return;
