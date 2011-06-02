@@ -669,6 +669,47 @@ sub get_schema_and_build{
   return [$dbname[($#dbname -1)], $dbname[($#dbname )]];
 }
 
+=head2 get_regbuild_set_states
+
+  Arg [1]    : Bio::EnsEMBL::DBAdaptor
+  Example    : my ($dset_states, $rset_states, $fset_states) = $helper->get_regbuild_set_states($db);
+  Description: Returns Array refs of appropriate states for sets use din the regulatory build
+  Returntype : Array
+  Exceptions : Warns if cannot find chromosome CoordSystem
+  Caller     : HealthChecker & regulatory build code
+  Status     : At risk
+
+=cut
+
+
+sub get_regbuild_set_states{
+  my ($self, $db) = @_;
+  
+  my $cs_a = $db->get_CoordSystemAdaptor;
+
+  #These states need to be mirrored in RegulatorySets.java
+
+  my $chrom_cs = $cs_a->fetch_by_name('chromosome');
+  my (@dset_states, @rset_states, @fset_states);
+
+  if(! defined $chrom_cs){
+	#This species most likely does not have a regbuild
+	#really just need to get the 'highest' level here
+	warn "Could not find Chromosome CoordSystem. ".$db->dbc->dbname.". most likely does not contain a RegulatoryBuild";
+  }
+  else{
+	my $imp_cs_status = 'IMPORTED_'.$cs_a->fetch_by_name('chromosome')->version;
+		
+	#What about non-chromosome assemblies?
+	#top level will not return version...why not?
+	@dset_states = ('DISPLAYABLE');
+	@rset_states = (@dset_states, 'DAS_DISPLAYABLE', $imp_cs_status);
+	@fset_states = (@rset_states, 'MART_DISPLAYABLE');
+  }
+
+  return (\@dset_states, \@rset_states, \@fset_states);
+}
+
 
 
 =head2 define_and_validate_sets
