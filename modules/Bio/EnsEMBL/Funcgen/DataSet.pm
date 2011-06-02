@@ -83,11 +83,6 @@ use vars qw(@ISA);
                                                              -NAME            => 'DATASET1',
 			                                                 );
 
-#for COMPLEX DataSet could use this, where 1 and 2 are the positions they are to be returned in
-#Would also need to record what the display type would be for each set, so the webcode can do it dynamically.
-#This would allow any config of display based on what is defined in the DB.
-
-
   Description: Constructor for DataSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
   Exceptions : Throws if no experiment_id defined
