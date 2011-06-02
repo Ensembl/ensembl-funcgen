@@ -55,7 +55,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
@@ -64,8 +64,10 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor 
-			Bio::EnsEMBL::Funcgen::Collector::ResultFeature);#@ISA
+			Bio::EnsEMBL::Funcgen::Collector::ResultFeature
+			Bio::EnsEMBL::DBFile::BigWigAdaptor);#@ISA
 
+warn "hardcoded inc BigWigAdaptor";
 
 #Private vars to used to maintain simple implementation of Collector
 #Should be set in each method to enable trimmingof  the start and end bins. 
@@ -73,9 +75,6 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 #As _collection_start/end are adjusted to the nearest bin
 my ($_scores_field, $_collection_start, $_collection_end);
 #my ($_window_size);#Need to be a method as it is used by the BaseFeatureAdaptor. or our?
-my $_probe_extend = 0;
-my $_result_feature_set = 1;  #This should be reset for every fetch method
-#Default is 1 so meta_coords get updated properly in _pre_store
 
 =head2 _tables
 
@@ -93,11 +92,7 @@ my $_result_feature_set = 1;  #This should be reset for every fetch method
 sub _tables {
   my $self = shift;
 
-  my @result_tables = ( ['result', 'r'], ['probe_feature', 'pf'] );
-  push @result_tables, ( ['probe', 'p'] ) if $_probe_extend;
-	
-  return $_result_feature_set ? ( [ 'result_feature', 'rf' ] )
-	: @result_tables;
+  return ([ 'result_feature', 'rf' ]);
 }
 
 
@@ -115,57 +110,12 @@ sub _tables {
 =cut
 
 sub _columns {
-	my $self = shift;
-
-	#This is dependent on whether result_set has 'RESULT_FEATURE_SET' status.
-	
-	#No window_size as this is set as $_window_size
-	my @result_columns = qw (r.score            pf.seq_region_start 
-							 pf.seq_region_end  pf.seq_region_strand 
-							 rsi.result_set_input_id);
-
-	#Would need to re-add seq_region_id if we convert back to the standard hash based Feature
-
-
-	if($_probe_extend){
-	  #We can get this direct from the ProbeAdaptor
-	  #Then we can use split/commodotised methods for generation of probe external to the ProbeAdaptor
-
-	   push @result_columns, qw(p.probe_id  p.probe_set_id
-								p.name            p.length
-								p.array_chip_id    p.class);
-	}
-	elsif($_result_feature_set){
-
-	  @result_columns = ('rf.seq_region_start', 'rf.seq_region_end', 'rf.seq_region_strand', 
-						 "$_scores_field", 'rf.result_set_id', 'rf.window_size');
-	}
-
-	return @result_columns;
-  }
-
-
-
-
-=head2 _default_where_clause
-
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns an additional table joining constraint to use for
-			   queries.
-  Returntype : List of strings
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-sub _default_where_clause{
   my $self = shift;
 
-  return ($_probe_extend && ! $_result_feature_set) ? 'r.probe_id = p.probe_id' : undef;
+  return  ('rf.seq_region_start', 'rf.seq_region_end', 'rf.seq_region_strand', 
+		   "$_scores_field", 'rf.result_set_id', 'rf.window_size');
 }
+
 
 
 
@@ -179,7 +129,7 @@ sub _default_where_clause{
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : At Risk - Moving to DBFile implementation
 
 =cut
 
@@ -236,61 +186,8 @@ sub _objs_from_sth {
   
  FEATURE: while ( $sth->fetch() ) {
 
-	#what are these used for now? Test and remove!
-	$start_pad = 0;
-	$end_pad   = 0;
-
-	if(($window_size == 0) || 
-	   ! $_result_feature_set){
-	  #Standard array method
-	  #With just 1 score in $scores
-	
-
-	  if($_result_feature_set){
-		@scores = unpack($self->pack_template, $scores);
-
-		#For array/intensity values here we need to convert them to
-		#rounded up 3sigfig i.e. the same as the original was stored in
-		#for loop is faster than map when modifying in place
-
-		foreach my $score(@scores){
-		  $score = sprintf('%.3f', $score);
-		}
-	  }
-	 
-	  #We need to modify the start ends here based on the dest/query_slice
-	  #Would only ever want to project 0 window level collections!
-	  #Normally done via store method
-	  #Don't really want to do this on the fly for display
-
-	  # If a destination slice was provided convert the coords
-	  # If the dest_slice starts at 1 and is foward strand, nothing needs doing
-	  # Need to do this for both single and multiple collections
-	
-	  #What about 0 strand slice?
-
-	  #if($dest_slice) {#No non-Slice based methods
-	  if($dest_slice_start != 1 || $dest_slice_strand != 1) {
-		if($dest_slice_strand == 1) {
-		  
-		  $start = $start - $dest_slice_start + 1;
-		  $end   = $end   - $dest_slice_start + 1;
-		} else {
-		  my $tmp_seq_region_start = $start;
-		  $start = $dest_slice_end - $end + 1;
-		  $end   = $dest_slice_end - $tmp_seq_region_start + 1;
-		  $strand *= -1;
-		}	  
-	  }
-	
-	
-	  #throw away features off the end of the requested slice or on different seq_region
-	  if($end < 1 || $start > $dest_slice_length){# ||
-		#( $dest_slice_sr_id ne $seq_region_id )) {
-		#This would only happen if assembly mapper had placed it on a different seq_region
-		#Dynamically mapped features are not guaranteed to come back in correct order?
-		next FEATURE;
-	  }
+	if($window_size == 0){
+	  warn "0bp window size array based collections are no longer supported";
 	}
 	else{
 
@@ -344,7 +241,7 @@ sub _objs_from_sth {
 		next FEATURE;
 	  }
 	
-	  @scores = unpack('('.$self->pack_template.')'.((($_collection_end - $_collection_start + 1)/$window_size) - $start_pad - $end_pad), $scores);
+	  @scores = unpack('('.$self->pack_template.')'.(($_collection_end - $_collection_start + 1)/$window_size ), $scores);
 	}
 
 
@@ -362,8 +259,6 @@ sub _objs_from_sth {
   }
   
 
-  #reset for safety, altho this should be reset in fetch method
-  $_result_feature_set = 1;
   
   return \%rfeats;
 }
@@ -380,7 +275,7 @@ sub _objs_from_sth {
   Exceptions : Throws if a List of ResultFeature objects is not provided or if
                any of the attributes are not set or valid.
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - Moving to DBFile implementation
 
 =cut
 
@@ -400,10 +295,7 @@ sub store{
   my ($pack_template, $packed_string);
 
 
-  #We need to set $_result_feature_set here
-  #So _pre_store uses the correct table name in meta_coord
-  $_result_feature_set = 1;
-
+ 
   #my @max_allowed_packet = $self->dbc->db_handle->selectrow_array('show variables like "max_allowed_packet"'); 
   #warn "@max_allowed_packet";
 
@@ -458,7 +350,7 @@ sub store{
   return $rfeats;
 }
 
-#This is next to useless in the context of ResultFeatures
+#This is no applicable to ResultFeatures
 
 =head2 list_dbIDs
 
@@ -782,6 +674,7 @@ sub set_collection_config_by_Slice_ResultSets{
   Arg[3]     : OPTIONAL int    - max bins, maximum number of scores required
   Arg[4]     : OPTIONAL int    - window size, size of bin/window size in base pirs
   Arg[5]     : OPTIONAL string - sql contraint for use only with DB collections
+  Arg[6]     : OPTIONAL hasref - config hash
   Example    : my %rfeatures = %{$rsa->fetch_all_by_Slice_ResultSets($slice, [@rsets])};
   Description: Gets a list of lightweight ResultFeature collection(s) for the ResultSets and Slice passed.
   Returntype : HASHREF of ResultSet keys with a LISTREF of ResultFeature collection values
@@ -794,13 +687,16 @@ sub set_collection_config_by_Slice_ResultSets{
 sub fetch_all_by_Slice_ResultSets{
   my ($self, $slice, $rsets, $max_bins, $window_size, $orig_constraint) = @_;
   
-  $_result_feature_set = 1;
   $orig_constraint .= (defined $orig_constraint) ? ' AND ' : '';
   #currently does not accomodate raw experimental_chip ResultSets!
   my $conf = $self->set_collection_config_by_Slice_ResultSets($slice, $rsets, $max_bins, $window_size);
 
   #Loop through each wsize build constraint set private vars and query
   my (%rset_rfs, $constraint);
+
+
+  #Remove this block now we don't really support table based RFs
+
   my $rf_conf = $conf->{db};
   
   foreach my $wsize(keys(%{$rf_conf})){
@@ -946,519 +842,199 @@ sub _fetch_from_file_by_Slice_ResultSet{
 }
 
 
-#MOVE THIS TO the ResultFeature Collector?
-#Is this really required at all now as we can pass these params to generate and then use the db after that
-#Move this out of here as it knows too much about the db
-#We area also moving away from proscribed filepaths towards a registry
-#Would still be a utility method for creating the files?
-
-
-
-
-
-
-#
 
 =head2 fetch_all_by_Slice_ResultSet
 
-  Arg[0]     : Bio::EnsEMBL::Slice - Slice to retrieve results from
-  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
-  Arg[2]     : optional string - ExperimentalChip status e.g. 'DIPLAYABLE'
-  Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSet($slice, $rset, 'DISPLAYABLE')};
-  Description: Gets a list of lightweight ResultFeatures from the ResultSet and Slice passed.
-               Replicates are combined using a median of biological replicates based on 
-               their mean techinical replicate scores
-  Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
-  Exceptions : Warns if not experimental_chip ResultSet
-               Throws if no Slice passed
-               Warns if 
+  Arg[1]     : Bio::EnsEMBL::Slice - Slice to retrieve results from
+  Arg[2]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
+  Arg[3]     : OPTIONAL int    - max bins, maximum number of scores required
+  Arg[4]     : OPTIONAL int    - window size, size of bin/window size in base pirs
+  Arg[5]     : OPTIONAL string - sql contraint for use only with DB collections
+  Arg[6]     : OPTIONAL hasref - config hash
+  Example    : my %rfeatures = %{$rsa->fetch_all_by_Slice_ResultSets($slice, [@rsets])};
+  Description: Gets a list of lightweight Collection of ResultFeatures  for the ResultSet and Slice passed.
+               NOTE: ExperimentalChip/Channel based ResultFeatures was removed in version 63.
+  Returntype : Bio::EnsEMBL::Funcgen::Collection::ResultFeature
+  Exceptions : None
   Caller     : general
-  Status     : At risk - To be removed/renamed
+  Status     : At risk
 
 =cut
 
 
+
+#To do 
+#remove Bio::EnsEMBL::Funcgen::ResultFeature in favour of Collection::ResultFeature?
+
 sub fetch_all_by_Slice_ResultSet{
-  my ($self, $slice, $rset, $ec_status, $with_probe, $max_bins, $window_size, $constraint) = @_;
-  #Change to params hash?
-  #add option to force probe_feature based retrieval?
+  my ($self, $slice, $rset, $max_bins, $window_size, $orig_constraint) = @_;
 
-  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
-	throw('You must pass a valid Bio::EnsEMBL::Slice');
-  }
+  #Do this first to avoid double validation of rset
+  my $rf_hashref = $self->fetch_all_by_Slice_ResultSets($slice, [$rset], $max_bins, $window_size, $orig_constraint);
 
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
-
-  if($rset->table_name eq 'channel'){
-	warn('Can only get ResultFeatures for an ExperimentalChip level ResultSet');
-	return;
-  }
-
-  #Set temp global private vars for use in _obj_from_sth
-  $_result_feature_set = ($rset->table_name eq 'input_set') || $rset->has_status('RESULT_FEATURE_SET');
-
-  #We need to set this for all InputSets? Or just ID that it is an InputSet?
-  $_probe_extend       = $with_probe if defined $with_probe;
-  $self->{window_size} = undef;
-
- 
-  #Remove all of this RESULT_FEATURE_SET code
-
-
-  if($_result_feature_set){
-
-	if($_probe_extend){
-	  throw("Cannot retrieve Probe information from a RESULT_FEATURE_SET query");
-	}
-
-	#Set the pack size and template for _obj_from_sth
-	$self->set_collection_defs_by_ResultSet($rset);
-
-	if($window_size && $max_bins){
-	  warn "Over-riding max_bins with specific window_size, omit window_size to calculate window_size using max_bins";
-	}
-
-	my @sizes = @{$self->window_sizes};
-	#we need to remove wsize 0 if ResultSet was generated from high density seq reads
-	#0 should always be first
-	shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_set'));
-	$max_bins ||= 772;#This is number of drawable pixels for a 900 pixel width display
-	#This should be passed by the webcode!
-	
-	#The speed of this track is directly proportional
-	#to the display size, unlike other tracks!
-	#e.g
-	#let's say we have 300000bp
-	#700  pixels will use 450 wsize > Faster but lower resolution
-	#2000 pixels will use 150 wsize > Slower but higher resolution
-
-	if(defined $window_size){
-
-	  if(! grep { /^${window_size}$/ } @sizes ){
-		warn "The ResultFeature window_size specifed($window_size) is not valid, the next largest will be chosen from:\t".join(', ', @sizes);
-	  }
-	  else{
-		 $self->{window_size} = $window_size;
-	  }
-	}
-	else{#! defined $window_size
-	  
-	  #Work out window size here based on Slice length
-	  #Select 0 wsize if slice is small enough
-	  #As loop will never pick 0
-	  #probably half 150 max length for current wsize
-	  #Will also be proportional to display size
-	  #This depends on size ordered window sizes arrays
-
-	  $window_size = ($slice->length)/$max_bins;
-
-	  if($rset->table_name ne 'input_set'){
-		my $zero_wsize_limit = ($max_bins * $sizes[1])/2;
-
-		if($slice->length <= $zero_wsize_limit){
-		   $self->{window_size} = 0;
-		}
-	  }
-	} 
-	
-	#Let's try and avoid this loop if we have already grep'd or set to 0
-	#In the browser this is only ever likely to speed up the 0 window
-	
-	if(! defined  $self->{window_size}){
-	  #default is maximum
-	  $self->{window_size} = $sizes[-1];   #Final element
-
-	  #Try and find the next biggest window
-	  #As we don't want more bins than there are pixels
-	  for (my $i = 0; $i <= $#sizes; $i++) {
-		#We have problems here if we want to define just one window size
-		#In the store methods, this reset the wsizes so we can only pick from those
-		#specified, hence we cannot force the use of 0
-		#@sizes needs to always be the full range of valid windows sizes
-		#Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
-	  
-		if ($window_size <= $sizes[$i]){
-		   $self->{window_size} = $sizes[$i];
-		  last;    
-		}
-	  }
-	}
-	
-	#reassign from here on to avoid has access
-	$window_size =  $self->{window_size};
-
-	$constraint .= ' AND ' if defined $constraint;
-	$constraint .= 'rf.result_set_id='.$rset->dbID.' and rf.window_size='. $window_size;
-
-
-	#Finally set scores field
-	if( $window_size == 0){
-	  $_scores_field = 'rf.scores';
-	}else{
-
-	  #sub this?
-
-	  #Correct to the nearest bin bounds	  
-	  #int rounds towards 0, not always down!
-	  #down if +ve or up if -ve
-	  #This causes problems with setting start as we round up to zero
-
-	  my $start_bin      = $slice->start/$window_size;
-	  $_collection_start = int($slice->start/$window_size);
-
-	  if($_collection_start < $start_bin){
-		$_collection_start +=1;#Add 1 to the bin due to int rounding down
-	  }
-	  	
-	  $_collection_start = ($_collection_start * $window_size) - $window_size + 1 ;#seq_region
-	  #Need to sub this?
-	  #warn 'collection start is '.$_collection_start;
-
-	  $_collection_end   = int($slice->end/$window_size) * $window_size;#This will be <= $slice->end
-
-	  #Add another window if the end doesn't meet the end of the slice
-	  if(($_collection_end > 0) &&
-		 ($_collection_end < $slice->end)){
-		$_collection_end += $window_size;
-	  }
-	  #warn "collection end = $_collection_end";
-	
-
-
- 
-	  #Now correct for packed size
-	  #Substring on a blob returns bytes not 2byte ascii chars!
-	  #start at the first char of the first bin
-	  my $sub_start = (((($_collection_start - 1)/$window_size) * $self->packed_size) + 1);#add first char
-	  #Default to 1 as mysql substring starts < 1 do funny things
-	  $sub_start = 1 if $sub_start < 1;
-	  my $sub_end   = (($_collection_end/$window_size) * ($self->packed_size));
-	  
-
-	  #Finally set scores column for fetch
-	  $_scores_field = "substring(rf.scores, $sub_start, ".($sub_end - $sub_start + 1).")";
-	}
-
-	#Account for hash return here
-	my ($tmp_ref) = @{$self->fetch_all_by_Slice_constraint($slice, $constraint)};
-	return $tmp_ref->{$rset->dbID} || [];
-  }
-
-
-  #This is the old method from ResultSetAdaptor
-  #warn "Using non-RESULT_FEATURE_SET probe/result method";
-
-
- 
-  my (@rfeatures, %biol_reps, %rep_scores, @filtered_ids);
-  my ($biol_rep, $score, $start, $end, $strand, $cc_id, $old_start, $old_end, $old_strand);
-  
-
-  my ($padaptor, $probe, $array,);
-  my ($probe_id, $probe_set_id, $pname, $plength, $arraychip_id, $pclass, $probeset);
-  my (%array_cache, %probe_set_cache, $ps_adaptor, $array_adaptor);
-
-  my $ptable_syn = '';
-  my $pjoin = '';
-  my $pfields = '';
-
-  #This with probe function should now needs to be limited to the lowest window size
-
-  if($with_probe){
-	#This would be in BaseAdaptor? or core DBAdaptor?
-	#This would work on assuming that the default foreign key would be the primary key unless specified
-	
-	#my($table_info, $fields, $adaptor) = @{$self->validate_and_get_join_fields('probe')};
-	$padaptor = $self->db->get_ProbeAdaptor;
-	$ps_adaptor = $self->db->get_ProbeSetAdaptor;
-	$array_adaptor = $self->db->get_ArrayAdaptor;
-
-
-	#This would return table and syn and syn.fields
-	#Would also need access to obj_from_sth_values
-	#could return code ref or adaptor
-	$ptable_syn = ', probe p';
-	
-	#Some of these will be redundant: probe_id
-	#Can we remove the foreign key from the returned fields?
-	#But we need it here as it isn't being returned
-	$pfields =  ', p.probe_id, p.probe_set_id, p.name, p.length, p.array_chip_id, p.class ';
-  
-	#will this make a difference if we join on pf instead of r?
-	$pjoin = ' AND r.probe_id = p.probe_id ';
-  }
-
-  
-  my @ids = @{$rset->table_ids()};
-  #should we do some more optimisation of method here if we know about presence or lack or replicates?
-
-
-  if($ec_status){
-    @filtered_ids = @{$self->status_filter($ec_status, 'experimental_chip', @ids)};
-
-    if(! @filtered_ids){
-
-      warn("No ExperimentalChips have the $ec_status status, No ResultFeatures retrieved");
-      return \@rfeatures;
-    }
-  }
-
-
-  #we need to build a hash of cc_id to biolrep value
-  #Then we use the biolrep as a key, and push all techrep values.
-  #this can then be resolved in the method below, using biolrep rather than cc_id
-
-
-  my $sql = 'SELECT ec.biological_replicate, rsi.result_set_input_id from experimental_chip ec, result_set_input rsi '.
-	'WHERE rsi.table_name="experimental_chip"'.
-	  'AND ec.experimental_chip_id=rsi.table_id'.
-		'AND rsi.table_id IN('.join(', ', (map { $_->dbID() } @{$rset->get_ExperimentalChips()} )).')';
-
-  
- # warn $sql;
-  my $sth = $self->prepare($sql);
-  $sth->execute();
-  $sth->bind_columns(\$biol_rep, \$cc_id);
-  #could maybe do a selecthashref here?
-
-  while($sth->fetch()){
-	$biol_rep ||= 'NO_REP_SET';
-
-	$biol_reps{$cc_id} = $biol_rep;
-  }
-  
-  if(grep { /^NO_REP_SET$/ } values %biol_reps){
-	warn 'You have ExperimentalChips with no biological_replicate information, these will be all treated as one biological replicate';
-  }
-
-  #we don't need to account for strnadedness here as we're dealing with a double stranded feature
-  #need to be mindful if we ever consider expression
-  #we don't need X Y here, as X Y for probe will be unique for cc_id.
-  #any result with the same cc_id will automatically be treated as a tech rep
-
- 
-  #This does not currently handle multiple CSs i.e. level mapping
-  my $mcc =  $self->db->get_MetaCoordContainer();
-  my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
-																$slice->coord_system->name(), 
-																$slice->coord_system->version()
-																);
-
-  my $max_len = $mcc->fetch_max_length_by_CoordSystem_feature_type($fg_cs, 'probe_feature');
-
- 
-  
-  #This by passes fetch_all_by_Slice_constraint
-  #So we need to build the seq_region_cache here explicitly.
-  $self->build_seq_region_cache($slice);
-  my $seq_region_id = $self->get_seq_region_id_by_Slice($slice);
-
-
-  if(! $seq_region_id){
-	#We have tried to access a slice which has not been stored in the funcgen DB
-	return [];
-  }
-
-  #push the median calculation onto the server?
-  #Not straight forward without creating tmp table
- 
-
-
-  $sql = 'SELECT STRAIGHT_JOIN r.score, pf.seq_region_start, pf.seq_region_end, pf.seq_region_strand, rsi.result_set_input_id '.$pfields.
-	' FROM probe_feature pf, result r, result_set_input rsi '.$ptable_syn.' WHERE rsi.result_set_id = '. $rset->dbID();
-	#' FROM probe_feature pf, '.$rset->get_result_table().' r, chip_channel cc '.$ptable_syn.' WHERE cc.result_set_id = '.
-	  $rset->dbID();
-
-  $sql .= ' AND rsi.table_id IN ('.join(' ,', @filtered_ids).')' if ((@filtered_ids != @ids) && $ec_status);
-
-
-  $sql .= ' AND rsi.result_set_input_id = r.result_set_input_id'.
-	' AND r.probe_id=pf.probe_id'.$pjoin.
-	  ' AND pf.seq_region_id='.$seq_region_id.
-		' AND pf.seq_region_start<='.$slice->end();
-  
-  if($max_len){
-	my $start_range = $slice->start - $max_len;
-	$start_range = 0 if $start_range < 0;
-	$sql .= ' AND pf.seq_region_start >= '.$start_range;
-  }
-
-  $sql .= ' AND pf.seq_region_end>='.$slice->start().
-	' ORDER by pf.seq_region_start'; #do we need to add probe_id here as we may have probes which start at the same place
-
-  #can we resolves replicates here by doing a median on the score and grouping by cc_id some how?
-  #what if a probe_id is present more than once, i.e. on plate replicates?
-
-  #To extend this to perform median calculation we'd have to group by probe_id, and ec.biological_replicate
-  #THen perform means across biol reps.  This would require nested selects 
-  #would this group correctly on NULL values if biol rep not set for a chip?
-  #This would require an extra join too. 
-
-  #warn "$sql";
-
-  $sth = $self->prepare($sql);
-  $sth->execute();
-  
-  if($with_probe){
-	$sth->bind_columns(\$score, \$start, \$end, \$strand, \$cc_id, \$probe_id, \$probe_set_id, 
-					   \$pname, \$plength, \$arraychip_id, \$pclass);
-  }
-  else{
-	$sth->bind_columns(\$score, \$start, \$end, \$strand, \$cc_id);
-  }
-  my $position_mod = $slice->start() - 1;
-  
-
-  my $new_probe = 0;
-  my $first_record = 1;
-
-
-  while ( $sth->fetch() ) {
-
-    #we need to get best result here if start and end the same
-    #set start end for first result
-    $old_start ||= $start;
-    $old_end   ||= $end;
-	$old_strand||= $strand;
-    
-
-	#This is assuming that a feature at the exact same locus is from the same probe
-	#This may not be correct and will collapse probes with same sequence into one ResultFeature
-	#This is okay for analysis purposes, but obscures the probe to result relationship
-	#we arguably need to implement r.probe_id check here for normal ResultFeatures
-
-    if(($start == $old_start) && ($end == $old_end)){#First result and duplicate result for same feature?
-
-	  #only if with_probe(otherwise we have a genuine on plate replicate)
-	  #if probe_id is same then we're just getting the extra probe for a different array?
-	  #cc_id might be different for same probe_id?
-
-	  #How can we differentiate between an on plate replicate and just the extra probe records?
-	  #If array_chip_id is the same?  If it is then we have an on plate replicate (differing x/y vals in result)
-	  #Otherwise we know we're getting another probe record from a different Array/ArrayChip.
-	  #It is still possible for the extra probe record on a different ArrayChip to have a result, 
-	  #the cc_id would be different and would be captured?
-	  #This would still be the same probe tho, so still one RF
-
-	  #When do we want to split?
-	  #If probe_id is different...do we need to order by probe_id?	  
-	  #probe will never be defined without with_probe
-	  #so can omit from test
-
-	  if(defined $probe && ($probe->dbID != $probe_id)){
-		$new_probe = 1;
-	  }
-	  else{
-		push @{$rep_scores{$biol_reps{$cc_id}}}, $score;
-	  }
-    }
-	else{#Found new location
-	  $new_probe = 1;
-	}
-
-	if($new_probe){
-	  #store previous feature with best result from @scores
-		#Do not change arg order, this is an array object!!
-
-
-	  push @rfeatures, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
-		({
-		  start  => ($old_start - $position_mod), 
-		  end    => ($old_end - $position_mod),
-		  strand => $old_strand,
-		  scores => [$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)],
-		  probe       => $probe, 
-		  #undef, 
-		  window_size => 0,
-		 });
-	
-	 
-	  undef %rep_scores;
-	  $old_start = $start;
-      $old_end = $end;
-	  
-      #record new score
-
-	  @{$rep_scores{$biol_reps{$cc_id}}} = ($score);
-	}
-
-	if($with_probe){
-
-	  #This would be done via the ProbeAdaptor->obj_from_sth_values
-	  #We need away ti maintain the Array/ProbeSet caches in obj_from_sth fetch
-	  #Pulling into an array would increase memory usage over the fetch loop
-	  #Can we maintain an object level cache which we would then have to reset?
-	  #Wouldn't be the end of the world if it wasn't, but would use memory
-
-	  
-	  #This is recreating the Probe->_obj_frm_sth
-	  #We need to be mindful that we can get multiple records for a probe
-	  #So we need to check whether the probe_id is the same
-	  #It may be possible to get two of the same probes contiguously
-	  #So we would also have to check on seq_region_start
-
-	  #Do we really need to set these?
-	  #We are getting the advantage that we're cacheing
-	  #Rather than a fetch for each object
-	  #But maybe we don't need this information?
-	  #Can we have two mode for obj_from_sth?
-
-	  $array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
-
-	  if($probe_set_id){
-		$probeset = $probe_set_cache{$probe_set_id} || $self->db->get_ProbeSetAdaptor()->fetch_by_dbID($probe_set_id);
-	  }
-
-
-	  if($first_record || $new_probe){
-
-		$probe = Bio::EnsEMBL::Funcgen::Probe->new
-			  (
-			   -dbID          => $probe_id,
-			   -name          => $pname,
-			   -array_chip_id => $arraychip_id,
-			   -array         => $array,
-			   -probe_set     => $probeset,
-			   -length        => $plength,
-			   -class         => $pclass,
-			   -adaptor       => $padaptor,
-			);
-
-	  } 
-	  else {
-		# Extend existing probe
-		$probe->add_array_chip_probename($arraychip_id, $pname, $array);
-	  }
-	}
-
-	$new_probe = 0;
-	$first_record = 0;
-  }
-  
-  #store last feature  
-  #Do not change arg order, this is an array object!!
-  #only if found previosu results
-  if($old_start){
-    push @rfeatures, Bio::EnsEMBL::Funcgen::Collection::ResultFeature->new_fast
-      ({
-		start  => ($old_start - $position_mod), 
-		end    => ($old_end - $position_mod),
-		strand => $old_strand,
-		scores => [$self->resolve_replicates_by_ResultSet(\%rep_scores, $rset)],
-		probe  => $probe, 
-		#undef, 
-		window_size => 0,
-	   });
-	
-	#(scalar(@scores) == 0) ? $scores[0] : $self->_get_best_result(\@scores)]);
-  }
-  
-  return \@rfeatures;
+  return $rf_hashref->{$rset->dbID};
 }
 
 
 
+sub fetch_Iterator_by_Slice_ResultSet{
+  my ($self, $slice, $rset, $max_bins, $window_size, $constraint, $chunk_size) = @_;
 
+  return $self->fetch_collection_Iterator_by_Slice_method
+	($self->can('fetch_all_by_Slice_ResultSet'),
+	 [$slice, $rset, $max_bins, $window_size, $constraint],
+	 0,#Slice idx
+	 $chunk_size #Iterator chunk length
+	);
+
+}
+
+=head2 fetch_collection_Iterator_by_Slice_method
+
+  Arg [1]    : CODE ref of Slice fetch method
+  Arg [2]    : ARRAY ref of parameters for Slice fetch method
+  Arg [3]    : Optional int: Slice index in parameters array
+  Arg [4]    : Optional int: Slice chunk size. Default=500000
+  Example    : my $slice_iter = $feature_adaptor->fetch_Iterator_by_Slice_method
+                               	      ($feature_adaptor->can('fetch_all_by_Slice_Arrays'),
+	                                   \@fetch_method_params,
+	                                   0,#Slice idx
+	                                   #500 #chunk length
+	                                  );
+
+               while(my $feature = $slice_iter->next && defined $feature){
+                 #Do something here
+               }
+
+  Description: Creates an Iterator which chunks the query Slice to facilitate
+               large Slice queries which would have previously run out of memory
+  Returntype : Bio::EnsEMBL::Utils::Iterator
+  Exceptions : Throws if mandatory params not valid
+  Caller     : general
+  Status     : at risk - move to core BaseFeatureAdaptor
+
+=cut
+
+
+#Essentially the only difference here we have one feature with an array of 'scores'
+
+sub fetch_collection_Iterator_by_Slice_method{
+  my ($self, $slice_method_ref, $params_ref, $slice_idx, $chunk_size) = @_;
+
+  if(! ( defined $slice_method_ref &&
+		 ref($slice_method_ref) eq 'CODE')
+	){
+	throw('Must pass a valid Slice fetch method CODE ref');
+  }
+
+  if (! ($params_ref && 
+		 ref($params_ref) eq 'ARRAY')) {
+	#Don't need to check size here so long as we have valid Slice
+	throw('You must pass a method params ARRAYREF');
+  }
+  
+  $slice_idx    = 0 if(! defined $slice_idx);
+  my $slice     = $params_ref->[$slice_idx];
+  $chunk_size ||= 1000000;
+		
+  my $collection;
+  my $finished     = 0;
+  my $start        = 1;	#local coord for sub slice
+  my $end          = $slice->length;
+  my $overlap      = 0;
+  
+  my $coderef = 
+	sub {
+	  my $collection;
+
+	  if(! $finished) {
+		
+		my $new_end = ($start + $chunk_size - 1);
+		
+		if ($new_end >= $end) {
+		  # this is our last chunk
+		  $new_end = $end;
+		  $finished = 1;  
+		}
+		
+		#Chunk by sub slicing
+		my $sub_slice             = $slice->sub_Slice($start, $new_end);
+		$params_ref->[$slice_idx] = $sub_slice;
+		($collection) = @{ $slice_method_ref->($self, @$params_ref)};
+		
+		
+		if(! $collection){
+		  $finished = 1;
+		}
+		else{
+		  
+		  #Trim score and start if overlapping found
+		  #Will only ever be on overlapping 'score'
+		  if($overlap){
+			shift @{$collection->scores};
+			$collection->{start} = $collection->start +  $collection->window_size;
+			$overlap = 0;
+		  }
+		  
+		  
+		  if ( $collection->end > $sub_slice->end ){
+			$overlap = 1;
+		  }
+		  
+		  $start = $new_end + 1;
+		}
+	  }
+	  
+	  return $collection;
+	};
+
+  return Bio::EnsEMBL::Utils::Iterator->new($coderef);
+}
+
+
+
+# Over-ride/deprecate generic methods
+# which do not work with ResultFeature Collections
+
+sub fetch_all{
+  deprecate('The fetch_all method has been disabled as it is not appropriate for the ResultFeatureAdaptor');
+  return;
+}
+
+sub fetch_by_dbID{
+  warn 'The fetch_by_dbID method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+  #Could use it for 0 wsize DB based data, but not useful.
+  return;
+}
+
+sub fetch_all_by_dbID_list {
+  warn 'The fetch_all_by_dbID_list method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+  #Could use it for 0 wsize DB based data, but not useful.
+  return;
+}
+
+sub fetch_all_by_logic_name {
+  warn 'The fetch_all_by_logic_name method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+  #Could use it for 0 wsize DB based data, but not useful.
+  return;
+}
+
+sub _list_seq_region_ids{
+ warn 'The _list_seq_region_ids method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
+ #Could use it for 0 wsize DB based data, but not useful.
+ return
+}
+
+#Over-ride fetch_all_by_display_label? Or move this to the individual FeatureAdaptors?
+#Same with fetch_all_by_stable_Storable_FeatureSEts and wrappers (fetch_all_by_external_name)?
+#Basically this is not a DBAdaptor anymore so should inherit from somewhere else. 
+#Need to separate the common utility methods and have co-inheritance e.g.
+#DBFile::Adaptor    Utils::FeatureAdaptor
+#DBAdaptor::Adaptor Utils::FeatureAdaptor
+
+
+
+#Deprecated/Removed
 
 =head2 resolve_replicates_by_ResultSet
 
@@ -1471,49 +1047,13 @@ sub fetch_all_by_Slice_ResultSet{
   Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
   Exceptions : None
   Caller     : general
-  Status     : At risk
+  Status     : deprecated
 
 =cut
 
 
-#this may be done better inline rather than sub'd as we're going to have to rebuild the duplicate data each time?
-#Rset should return a hash of cc_ids keys with replicate name values.
-#these can then beused to build replicate name keys, with an array technical rep score values.
-#mean each value then give median of all.
-
-
 sub resolve_replicates_by_ResultSet{
-  my ($self, $rep_ref) = @_;#, $rset) = @_;
-
-  my ($score, @scores, $biol_rep);
-
-  #deal with simplest case first and fastest?
-  #can we front load this with the replicate set info, i.e. if we know we only have one then we don't' have to do all this testing and can do a mean
-
-  if(scalar(keys %{$rep_ref}) == 1){
-	
-	($biol_rep) = keys %{$rep_ref};
-
-	@scores = @{$rep_ref->{$biol_rep}};
-
-	if (scalar(@scores) == 1){
-	  $score = $scores[0];
-	}else{
-	  $score = mean(\@scores)
-	}
-  }else{#deal with biol replicates
-
-	foreach my $biol_rep(keys %{$rep_ref}){
-	  push @scores, mean($rep_ref->{$biol_rep});
-	}
-
-	@scores = sort {$a<=>$b} @scores;
-
-	$score = median(\@scores);
-
-  }
-
-  return $score;
+  die('ExperimentalChip/Channel based ResultFeature support was removed in version 63');
 }
 
 
@@ -1526,213 +1066,12 @@ sub resolve_replicates_by_ResultSet{
   Returntype : ARRAYREF
   Exceptions : throws if args not valid
   Caller     : General
-  Status     : At Risk - Change to take Probe?
+  Status     : deprecated
 
 =cut
 
 sub fetch_results_by_probe_id_ResultSet{
-  my ($self, $probe_id, $rset) = @_;
-  
-  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ResultSet") if (! ($rset  &&
-									       $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet")
-									       && $rset->dbID()));
-  
-  throw('Must pass a probe dbID') if ! $probe_id;
-  
-  
-  
-  my $cc_ids = join(',', @{$rset->result_set_input_ids()});
-
-  my $query = "SELECT r.score from result r where r.probe_id ='${probe_id}'".
-    " AND r.result_set_input_id IN (${cc_ids}) order by r.score;";
-
-  #without a left join this will return empty results for any probes which may have been remapped 
-  #to the a chromosome, but no result exist for a given set due to only importing a subset of
-  #a vendor specified mapping
-
-
-  #This converts no result to a 0!
-  
-  my @results = map { "@$_" } @{$self->dbc->db_handle->selectall_arrayref($query)};
-  
-
-  return \@results;
-}
-
-
-
-
-
-
-#
-# Given a list of features checks if they are in the correct coord system
-# by looking at the first features slice.  If they are not then they are
-# converted and placed on the slice.
-#
-
-#Features hash based _remap
-#This assumes that naive code(base classes _slice_fetch) does not do anything 
-#other than pass the reference onto code which knows about the 'non-standard' 
-#return type i.e. the object adaptor
-
-#Remove this when we revert back to non-hash based method?
-
-sub _remap {
-  my ($self, $features_ref, $mapper, $slice) = @_;
-
-  #check if any remapping is actually needed
-
-  foreach my $features_key(keys %{$features_ref}){
-	my $features = $features_ref->{$features_key};
-	
-	if(@$features && (!$features->[0]->isa('Bio::EnsEMBL::Feature') ||
-					  $features->[0]->slice == $slice)) {
-	  #Assume that all other features for all ResultSets will also be on the same slice
-	  last;
-	}
-
-
-	#remapping has not been done, we have to do our own conversion from
-	#to slice coords
-	
-	my @out;
-	
-	my $slice_start = $slice->start();
-	my $slice_end   = $slice->end();
-	my $slice_strand = $slice->strand();
-	my $slice_cs    = $slice->coord_system();
-	
-	my ($seq_region, $start, $end, $strand);
-	
-	#my $slice_seq_region_id = $slice->get_seq_region_id();
-	my $slice_seq_region = $slice->seq_region_name();
-	
-	foreach my $f (@$features) {
-	  #since feats were obtained in contig coords, attached seq is a contig
-	  my $fslice = $f->slice();
-	  
-	  if(!$fslice) {
-		throw("Feature does not have attached slice.\n");
-	  }
-	  my $fseq_region = $fslice->seq_region_name();
-	  my $fseq_region_id = $fslice->get_seq_region_id();
-	  my $fcs = $fslice->coord_system();
-	  
-	  if(!$slice_cs->equals($fcs)) {
-		#slice of feature in different coord system, mapping required
-		
-		($seq_region, $start, $end, $strand) =
-		  $mapper->fastmap($fseq_region_id,$f->start(),$f->end(),$f->strand(),$fcs);
-		
-		# undefined start means gap
-		next if(!defined $start);
-	  } else {
-		$start      = $f->start();
-		$end        = $f->end();
-		$strand     = $f->strand();
-		$seq_region = $f->slice->seq_region_name();
-	  }
-	  
-	  # maps to region outside desired area
-	  next if ($start > $slice_end) || ($end < $slice_start) || 
-		($slice_seq_region ne $seq_region);
-	  
-	  #shift the feature start, end and strand in one call
-	  if($slice_strand == -1) {
-		$f->move( $slice_end - $end + 1, $slice_end - $start + 1, $strand * -1 );
-	  } else {
-		$f->move( $start - $slice_start + 1, $end - $slice_start + 1, $strand );
-	  }
-
-	  $f->slice($slice);
-
-	  push @out,$f;
-	}
-	
-	$features_ref->{$features_key} = \@out;
-  }
-
-
-  return [ $features_ref ];
-}
-
-
-
-# Over-ride generic methods
-
-
-=head2 fetch_all
-
-  Description: Disables generic fetch_all method
-  Exceptions : Warns
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub fetch_all{
-  warn 'The fetch_all method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
-  return;
-}
-
-=head2 fetch_by_dbID
-
-  Description: Disables generic fetch_by_dbID method
-  Exceptions : Warns
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub fetch_by_dbID{
-  warn 'The fetch_by_dbID method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
-  #Could use it for 0 wsize DB based data, but not useful.
-  return;
-}
-
-=head2 fetch_all_by_dbID_list
-
-  Description: Disables generic fetch_all_by_dbID_list method
-  Exceptions : Warns
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub fetch_all_by_dbID_list {
-  warn 'The fetch_all_by_dbID_list method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
-  #Could use it for 0 wsize DB based data, but not useful.
-  return;
-}
-
-=head2 fetch_all_by_logic_name
-
-  Description: Disables generic fetch_all_by_logic_name method
-  Exceptions : Warns
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub fetch_all_by_logic_name {
-  warn 'The fetch_all_by_logic_name method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
-  #Could use it for 0 wsize DB based data, but not useful.
-  return;
-}
-
-=head2 _list_seq_region_ids
-
-  Description: Disables generic _list_seq_region_ids method
-  Exceptions : Warns
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub _list_seq_region_ids{
- warn 'The _list_seq_region_ids method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
- #Could use it for 0 wsize DB based data, but not useful.
- return
+  die('ExperimentalChip/Channel based ResultFeature support was removed in version 63');
 }
 
 
