@@ -50,7 +50,7 @@ require Exporter;
 				open_file median mean run_system_cmd backup_file 
 				is_gzipped is_sam is_bed get_file_format strip_param_args 
 				generate_slices_from_names strip_param_flags
-				get_current_regulatory_input_names, add_external_db);
+				get_current_regulatory_input_names add_external_db);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
