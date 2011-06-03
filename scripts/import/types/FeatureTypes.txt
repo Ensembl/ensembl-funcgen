@@ -13,6 +13,7 @@ BHLHE40	Transcription Factor	BHLHE40 Transcription Factor Binding
 Brf1	Transcription Factor	Brf1 Transcription Factor Binding
 Brf2	Transcription Factor	Brf2 Transcription Factor Binding
 Brg1	Transcription Factor	Brg1 Transcription Factor Binding
+CBP	Transcription Factor	CBP Transcription Factor Binding
 CEBP	Transcription Factor	CEBP Transcription Factor Binding
 CEBPB	Transcription Factor	CEBPB Transcription Factor Binding
 Cfos	Transcription Factor	Cfos Transcription Factor Binding
@@ -37,6 +38,7 @@ Gata1	Transcription Factor	Gata1 Transcription Factor Binding
 Gata2	Transcription Factor	Gata2 Transcription Factor Binding
 Gene Associated	Regulatory Feature	Gene like regulatory feature
 GFP	DNA	GFP Control
+Goat-IgG	DNA	Control
 GRp20	Transcription Factor	GRp20 Transcription Factor Binding
 GTF2B	Transcription Factor	Jund Transcription Factor Binding
 H2AK5ac	Histone	Histone 2A Lysine 5 Acetylation
@@ -85,6 +87,10 @@ H4K8ac	Histone	Histone 4 Lysine 8 Acetylation
 H4K91ac	Histone	Histone 4 Lysine 91 Acetylation
 H4R3me2	Histone	Histone 4 Arginine 3 di-methylation
 HA-F2F1	Transcription Factor	HA-F2F1 Transcription Factor Binding
+HDAC6	Transcription Factor	HDAC6 Transcription Factor Binding
+HDAC3	Transcription Factor	HDAC3 Transcription Factor Binding
+HDAC2	Transcription Factor	HDAC2 Transcription Factor Binding
+HDAC1	Transcription Factor	HDAC1 Transcription Factor Binding
 HEY1	Transcription Factor	HEY1 Transcription Factor Binding
 HNF4	Transcription Factor	HNF4 Transcription Factor Binding
 HNF4A	Transcription Factor	HNF4A Transcription Factor Binding
@@ -94,6 +100,7 @@ IRF4	Transcription Factor	IRF4 Transcription Factor Binding
 Jund	Transcription Factor	Jund Transcription Factor Binding
 Klf4	Transcription Factor	Klf4 Transcription Factor Binding
 Max	Transcription Factor	Max Transcription Factor Binding
+MOF	Transcription Factor	MOF Transcription Factor Binding
 MDL	Transcription Factor	Mad-Like Transcription Factor Binding
 mxl-1::mdl-1	Transcription Factor Complex	mxl-1::mdl-1 Binding
 Nanog	Transcription Factor	Nanog Transcription Factor Binding
@@ -112,6 +119,7 @@ Oct4	Transcription Factor	Oct4 Transcription Factor Binding
 p300	Transcription Factor	p300 Transcription Factor Binding
 Pax5	Transcription Factor	Pax5 Transcription Factor Binding
 Pbx3	Transcription Factor	Pbx3 Transcription Factor Binding
+PCAF	Transcription Factor	PCAF Transcription Factor Binding
 PGC1A	Transcription Factor	PGC1A Transcription Factor Binding
 PolIII	Polymerase	RNA Polymerase III Binding
 PolIII Transcription Associated	Regulatory Feature	PolIII transcribed RNA Gene associated regulatory feature
@@ -123,6 +131,7 @@ Promoter Associated	Regulatory Feature	Promoter like regulatory feature
 PU1	Transcription Factor	PU1 Transcription Factor Binding
 Rad21	Transcription Factor	Rad21 Transcription Factor Binding
 RegulatoryFeature	Regulatory Feature	Ensembl regulatory feature
+Rabbit-IgG	DNA	Control
 RARA	Transcription Factor	RARA Transcription Factor Binding
 Rbbp5	Transcription Factor	Rbbp5 Transcription Factor Binding
 RNR1H2::RXRA	Transcription Factor Complex	RNR1H2::VDR Binding
@@ -152,6 +161,7 @@ Tcf12	Transcription Factor	Tcf12 Transcription Factor Binding
 Tcfcp2l1	Transcription Factor	Tcfcp2l1 Transcription Factor Binding
 TFBS Motif	Transcription Factor	Transcription factor binding site motif
 TFIIIC-110	Transcription Factor	TFIIIC-110 Transcription Factor Binding
+Tip60	Transcription Factor	Tip60 Transcription Factor Binding
 Tr4	Transcription Factor	Tr4 Transcription Factor Binding
 Unclassified - Cell type specific	Regulatory Feature	Cell type specific unclassified regulatory feature
 Unclassified	Regulatory Feature	Unclassified regulatory feature
