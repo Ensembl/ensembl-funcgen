@@ -64,10 +64,8 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor 
-			Bio::EnsEMBL::Funcgen::Collector::ResultFeature
-			Bio::EnsEMBL::DBFile::BigWigAdaptor);#@ISA
-
-warn "hardcoded inc BigWigAdaptor";
+			Bio::EnsEMBL::Funcgen::Collector::ResultFeature);
+		
 
 #Private vars to used to maintain simple implementation of Collector
 #Should be set in each method to enable trimmingof  the start and end bins. 
