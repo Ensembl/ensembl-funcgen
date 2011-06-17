@@ -195,18 +195,18 @@ sub display_label {
 }
 
 
-=head2 class
-
-  Arg [1]    : (optional) string - class
-  Example    : $ft->class('HISTONE');
-  Description: Getter and setter of description attribute for FeatureType
-               objects.
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Low Risk
-
-=cut
+#=head2 class
+#
+#  Arg [1]    : (optional) string - class
+#  Example    : $ft->class('HISTONE');
+#  Description: Getter and setter of description attribute for FeatureType
+#               objects.
+#  Returntype : string
+#  Exceptions : None
+#  Caller     : General
+#  Status     : Low Risk
+#
+#=cut
 
 #sub class{
 #  my $self = shift;

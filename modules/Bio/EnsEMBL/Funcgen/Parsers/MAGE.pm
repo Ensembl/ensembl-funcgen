@@ -259,17 +259,17 @@ sub hybridisation_fields{
 
 
 
-=head2 register_experiment
-  
-  Example    : $imp->register_experiment()
-  Description: General control method, performs all data import and normalisations
-  Arg [1]    : optional - dnadb DBAdaptor
-  Returntype : none
-  Exceptions : throws if arg is not Bio::EnsEMBL::DBSQL::DBAdaptor
-  Caller     : general
-  Status     : Medium
-
-=cut
+#=head2 register_experiment
+#  
+#  Example    : $imp->register_experiment()
+#  Description: General control method, performs all data import and normalisations
+#  Arg [1]    : optional - dnadb DBAdaptor
+#  Returntype : none
+#  Exceptions : throws if arg is not Bio::EnsEMBL::DBSQL::DBAdaptor
+#  Caller     : general
+#  Status     : Medium
+#
+#=cut
 
 #write/validate_mage
 

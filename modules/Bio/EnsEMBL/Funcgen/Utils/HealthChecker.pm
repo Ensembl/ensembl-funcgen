@@ -101,7 +101,7 @@ sub db{
 
 
 
-=head2
+=head2 update_db_for_release
 
   Arg[0]     : 
   Example    : 

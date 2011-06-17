@@ -200,19 +200,19 @@ sub _columns {
 	
 }
 
-=head2 _default_where_clause
-
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns an additional table joining constraint to use for
-			   queries.
-  Returntype : List of strings
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
+#=head2 _default_where_clause
+#
+#  Args       : None
+#  Example    : None
+#  Description: PROTECTED implementation of superclass abstract method.
+#               Returns an additional table joining constraint to use for
+#			   queries.
+#  Returntype : List of strings
+#  Exceptions : None
+#  Caller     : Internal
+#  Status     : At Risk
+#
+#=cut
 
 #sub _default_where_clause {
 #  my $self = shift;

@@ -126,7 +126,7 @@ sub fetch_all {
 
 
 
-=head2 fetch_all_diplayable
+=head2 fetch_all_displayable
 
   Example    : my @displayable_dset = @{$dsa->fetch_all_displayable()};
   Description: Gets all displayable DataSets

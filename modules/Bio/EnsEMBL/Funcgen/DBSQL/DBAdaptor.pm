@@ -386,18 +386,18 @@ sub _get_schema_build{
   return $schema_build;
 }
 
-=head2 get_SliceAdaptor
-
-  Arg [1]    : (optional) int - coord_system_id
-  Example    : my $slice_adaptor = $db->get_SliceAdaptor($cs->dbID());
-  DESCRIPTION: Retrieves a slice adaptor from the dnadb corresponding 
-               to the coord_system_id, or retrieves from the default dnadb
-  Returntype : Bio::EnsEMBL::DBSQL::SLiceAdaptor
-  Exceptions : Throws if arguments not supplied
-  Caller     : general
-  Status     : At risk - remove and add this to BaseFeatureAdaptor->fetch_all_by_Slice_constraint
-
-=cut
+#=head2 get_SliceAdaptor
+#
+#  Arg [1]    : (optional) int - coord_system_id
+#  Example    : my $slice_adaptor = $db->get_SliceAdaptor($cs->dbID());
+#  DESCRIPTION: Retrieves a slice adaptor from the dnadb corresponding 
+#               to the coord_system_id, or retrieves from the default dnadb
+#  Returntype : Bio::EnsEMBL::DBSQL::SLiceAdaptor
+#  Exceptions : Throws if arguments not supplied
+#  Caller     : general
+#  Status     : At risk - remove and add this to BaseFeatureAdaptor->fetch_all_by_Slice_constraint
+#
+#=cut
 
 #Funcgen specific, get's Adaptor from dnadb, or validates/autogenerates from coord_system_id
 #Only imlpmented in _obj_from_sth, rely on feature_slice elsewhere

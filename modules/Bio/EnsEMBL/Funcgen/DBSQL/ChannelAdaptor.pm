@@ -84,7 +84,7 @@ sub fetch_by_type_experimental_chip_id {
   }
 
 
-=head2 fetch_by_dye_experimental_chip_id
+=head2 fetch_by_dye_experimental_chip_dbID
 
   Arg [1]    : string - dye
   Arg [1]    : int - dbID of Experiment

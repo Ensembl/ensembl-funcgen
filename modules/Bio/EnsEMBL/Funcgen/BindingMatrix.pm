@@ -132,14 +132,14 @@ sub new {
 
   Example    : my $ft_name = $matrix->feature_type()->name();
   Description: Getter for the feature_type attribute for this matrix.
-  Returntype : Bio::EnsEMBL::Funcgen:FeatureType
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None
   Caller     : General
   Status     : At risk
 
 =cut
 
-sub feature_type{
+sub feature_type {
   my $self = shift;
   
   return $self->{'feature_type'};

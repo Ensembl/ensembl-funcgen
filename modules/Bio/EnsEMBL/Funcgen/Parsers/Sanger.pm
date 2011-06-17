@@ -403,9 +403,9 @@ sub read_array_probe_data{
   return;
 }
 
-=head2 read_sanger_result_data
+=head2 read_and_import_result_data
 
-  Example    : $imp->read_sanger_result_data();
+  Example    : $imp->read_and_import_result_data();
   Description: Parses and imports result for the sanger PCR array platform
   Returntype : none
   Exceptions : none

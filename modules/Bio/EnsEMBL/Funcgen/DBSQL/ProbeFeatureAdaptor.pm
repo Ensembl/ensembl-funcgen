@@ -759,7 +759,7 @@ sub list_dbIDs {
 
 #Probe cache methods?
 
-=head2 reassign_features_to_probe
+=head2 reassign_feature_to_probe
 
   Arg[0]     : ARRAYREF - feature dbIDs to reassign
   Arg[1]     : int - probe dbID to reassign to
@@ -814,7 +814,7 @@ sub delete_features{
 }
 
 
-=head2 count_features_by_probe_id
+=head2 count_probe_features_by_probe_id
 
   Arg [1]    : string/int - id to count
   Example    : my $probe_feature_count = $pfa->count_features_by_probe_id($probe_id);
@@ -827,7 +827,7 @@ sub delete_features{
 =cut
 
 
-sub count_probe_features_by_probe_id{
+sub count_probe_features_by_probe_id {
   my ($self, $probe_id) = @_;
 
   return $self->count_features_by_field_id('probe_id', $probe_id);

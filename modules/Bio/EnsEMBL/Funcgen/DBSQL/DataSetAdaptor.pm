@@ -466,20 +466,20 @@ sub _left_join {
 }
 
 
-=head2 _final_clause
-
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns an ORDER BY clause. Sorting by oligo_feature_id would be
-			   enough to eliminate duplicates, but sorting by location might
-			   make fetching features on a slice faster.
-  Returntype : String
-  Exceptions : None
-  Caller     : generic_fetch
-  Status     : At Risk
-
-=cut
+#=head2 _final_clause
+#
+#  Args       : None
+#  Example    : None
+#  Description: PROTECTED implementation of superclass abstract method.
+#               Returns an ORDER BY clause. Sorting by oligo_feature_id would be
+#			   enough to eliminate duplicates, but sorting by location might
+#			   make fetching features on a slice faster.
+#  Returntype : String
+#  Exceptions : None
+#  Caller     : generic_fetch
+#  Status     : At Risk
+#
+#=cut
 
 
 #this should be another left join? on feature_set and a join on feature_type so we can sort lexically on class, name

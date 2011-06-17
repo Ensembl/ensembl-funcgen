@@ -51,7 +51,7 @@ This was aimed primarily at easing access to data via the web API by creating
 a wrapper class with convenience methods.  The focus of this class is to contain raw and
 associated processed/analysed data to be displayed as a set within the browser i.e. an 
 experiment may have different cell lines, features or time points, these would require different DataSets.
-#However a DataSet may contain mixed data types i.e. promoter & histone???? No give separate sets?
+# However a DataSet may contain mixed data types i.e. promoter & histone???? No give separate sets?
 May have duplicates for raw data but only one predicted features track??
 The data in this class is kept as lightweight as possible with data being loaded dynamically.
 
