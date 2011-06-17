@@ -209,12 +209,8 @@ CREATE  TABLE `binding_matrix` (
  `feature_type_id` int(10) unsigned NOT NULL,
  `frequencies` VARCHAR(1000) NOT NULL,
  `description` VARCHAR(255) NULL,
-<<<<<<< efg.sql
  `analysis_id` smallint(5) unsigned NOT NULL,
-=======
- `analysis_id` int(10) unsigned NOT NULL,
  `threshold` double default NULL,
->>>>>>> 1.153
  PRIMARY KEY (`binding_matrix_id`) ,
  KEY `name_analysis_idx` (`name`, `analysis_id`),
  KEY `feature_type_idx` (`feature_type_id`)
