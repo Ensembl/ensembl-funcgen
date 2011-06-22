@@ -275,7 +275,7 @@ sub display_label {
 	
 
 	if($self->set_type eq 'result'){
-	  $self->{'display_label'} .= " wiggle";#change this to trace/signal/coverage?
+	  $self->{'display_label'} .= " signal";
 	}
 	else{
 	  $self->{'display_label'} .= " enriched sites";
