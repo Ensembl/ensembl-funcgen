@@ -1,6 +1,7 @@
 #
 # Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::SetFeatureAdaptor
 #
+
 =head1 LICENSE
 
   Copyright (c) 1999-2011 The European Bioinformatics Institute and
@@ -329,7 +330,7 @@ sub _generate_feature_set_id_clause{
   Arg [2]    : Arrayref of Bio::EnsEMBL::FeatureSet objects
   Arg [3]    : optional - analysis.logic_name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_FeatureSets($slice, @fsets);
+               my $features = $ofa->fetch_by_Slice_FeatureSets($slice, \@fsets);
   Description: Retrieves a list of features on a given slice, specific for a given list of FeatureSets.
   Returntype : Listref of Bio::EnsEMBL::SetFeature objects
   Exceptions : Throws if list provided does not contain FeatureSets or if none provided
@@ -349,6 +350,37 @@ sub fetch_all_by_Slice_FeatureSets {
 
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
+
+=head2 fetch_Iterator_by_Slice_FeatureSets
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : Arrayref of Bio::EnsEMBL::FeatureSet objects
+  Arg [3]    : optional - analysis.logic_name
+  Arg [4]    : optional - iterator chunk length. Default is 1MB
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $iter = $ofa->fetch_Iterator_by_Slice_FeatureSets($slice, \@fsets);
+
+           
+  Description: Simple Iterator wrapper method for fetch_all_by_Slice_FeatureSets
+  Returntype : Listref of Bio::EnsEMBL::SetFeature objects
+  Exceptions : Throws if list provided does not contain FeatureSets or if none provided
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub fetch_Iterator_by_Slice_FeatureSets{
+  my ($self, $slice, $fsets, $logic_name, $chunk_length) = @_;
+
+  return $self->fetch_Iterator_by_Slice_method
+	($self->can('fetch_all_by_Slice_FeatureSets'),
+	 [$slice, $fsets, $logic_name],
+	 0,#Slice idx
+	 $chunk_length #default is 1000000
+	);
+}
+
 
 
 
