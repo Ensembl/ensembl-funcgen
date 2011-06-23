@@ -53,8 +53,12 @@ use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
-#Exported from BaseAdaptor
+#Query extension stuff
+#Hashes exported from BaseAdaptor
+
 $true_tables{annotated_feature} = [['annotated_feature', 'af'], ['feature_set', 'fs']];
+#SetFeatureAdaptor::_default_where_clause specifies join to fs table
+
 @{$tables{annotated_feature}} = @{$true_tables{annotated_feature}};
 
 
@@ -92,38 +96,6 @@ sub fetch_all_by_Slice_Experiment {
   
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
-
-=head2 fetch_all_by_Slice_FeatureSet
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Bio::EnsEMBL::Funcgen::FeatureSet
-  Arg [3]    : (optional) string - logic name
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_FeatureSet($slice, $fset);
-  Description: Retrieves a list of features on a given slice, specific for a given feature set.
-  Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
-  Exceptions : Throws if no valid FeatureSet object defined
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Slice_FeatureSet {
-  my ($self, $slice, $fset) = @_;
-	
-
-  if (! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
-    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet");
-  }
-  
-  my $id = $fset->dbID();
-  my $constraint = qq( af.feature_set_id='$id' );
-
-  print $constraint."\n";
-  
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-}
-
 
 =head2 _tables
 
@@ -508,6 +480,13 @@ sub fetch_all_by_associated_MotifFeature{
   return $afs;
 }
 
+#DEPRECATED
 
-
+sub fetch_all_by_Slice_FeatureSet {
+  my ($self, $slice, $fset) = @_;
+	
+  deprecate('Please use generic method SetFeatureAdaptor::fetch_all_by_Slice_FeatureSets');
+  
+  return $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]);
+}
 1;
