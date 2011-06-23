@@ -59,11 +59,7 @@ use strict;
   Arg [2]    : optional external database name
   Arg [3]    : optional external_db type 
   Example    : @db_entries = @{$db_entry_adaptor->fetch_by_FeatureType($feature_type)};
-  Description: This returns a list of DBEntries associated with this gene.
-               Note that this method was changed in release 15.  Previously
-               it set the DBLinks attribute of the gene passed in to contain
-               all of the gene, transcript, and translation xrefs associated
-               with this gene.
+  Description: This returns a list of DBEntries associated with this feature type.
   Returntype : listref of Bio::EnsEMBL::DBEntries; may be of type IdentityXref if
                there is mapping data, or GoXref if there is linkage data.
   Exceptions : throws if feature type object not passed
@@ -83,17 +79,12 @@ sub fetch_all_by_FeatureType {
 }
 
 
-#Change these to take arrayref of external_names?
-#This would allow gene based queries to retrieve all
-#associated transcript xref'd DBEntries at the same time
-
-
 =head2 list_feature_type_ids_by_extid
 
   Arg [1]    : string $external_name
   Arg [2]    : (optional) string $external_db_name
   Example    : @tr_ids = $dbea->list_feature_type_ids_by_extid('BEAF-32');
-  Description: Gets a list of regulatory_feature IDs by external display IDs
+  Description: Gets a list of feature type IDs by external display ID
   Returntype : list of Ints
   Exceptions : none
   Caller     : unknown
@@ -109,13 +100,34 @@ sub list_feature_type_ids_by_extid {
 }
 
 
+=head2 list_feature_type_ids_by_extids
+
+  Arg [1]    : ARRAYREF of external name strings
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_feature_type_ids_by_extids(['ENST00012398371', ...]);
+  Description: Gets a list of feature type IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+
+sub list_feature_type_ids_by_extids {
+  my ( $self, $external_names, $external_db_name ) = @_;
+
+  return $self->_type_by_external_ids( $external_names, 'FeatureType', 
+									  undef, $external_db_name );
+}
+
 
 =head2 list_regulatory_feature_ids_by_extid
 
   Arg [1]    : string $external_name
   Arg [2]    : (optional) string $external_db_name
   Example    : @tr_ids = $dbea->list_regulatory_feature_ids_by_extid('GO:0004835');
-  Description: Gets a list of regulatory_feature IDs by external display IDs
+  Description: Gets a list of regulatory_feature IDs by external display ID
   Returntype : list of Ints
   Exceptions : none
   Caller     : unknown
@@ -131,12 +143,36 @@ sub list_regulatory_feature_ids_by_extid {
 									  undef, $external_db_name );
 }
 
+
+=head2 list_regulatory_feature_ids_by_extids
+
+  Arg [1]    : ARRAYREF of external name strings
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_regulatory_feature_ids_by_extids(['ENSG00283757289', ...]);
+  Description: Gets a list of regulatory_feature IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+
+sub list_regulatory_feature_ids_by_extids {
+  my ( $self, $external_names, $external_db_name ) = @_;
+
+ 
+  return $self->_type_by_external_ids( $external_names, 'RegulatoryFeature', 
+									  undef, $external_db_name );
+}
+
+
 =head2 list_external_feature_ids_by_extid
 
   Arg [1]    : string $external_name
   Arg [2]    : (optional) string $external_db_name
   Example    : @tr_ids = $dbea->list_external_feature_ids_by_extid('GO:0004835');
-  Description: Gets a list of external_feature IDs by external display IDs
+  Description: Gets a list of external_feature IDs by external display ID
   Returntype : list of Ints
   Exceptions : none
   Caller     : unknown
@@ -151,6 +187,30 @@ sub list_external_feature_ids_by_extid {
     $self->_type_by_external_id( $external_name, 'ExternalFeature', undef,
                                  $external_db_name );
 }
+
+
+=head2 list_external_feature_ids_by_extids
+
+  Arg [1]    : ARRAYREF of external name strings
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_external_feature_ids_by_extids('ENSG00085672387',...]);
+  Description: Gets a list of external_feature IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+
+sub list_external_feature_ids_by_extids {
+  my ( $self, $external_names, $external_db_name ) = @_;
+
+  return
+    $self->_type_by_external_ids( $external_names, 'ExternalFeature', undef,
+                                 $external_db_name );
+}
+
 
 =head2 list_annotated_feature_ids_by_extid
 
@@ -173,12 +233,37 @@ sub list_annotated_feature_ids_by_extid {
                                  $external_db_name );
 }
 
+
+=head2 list_annotated_feature_ids_by_extids
+
+  Arg [1]    : ARRAYREF of external name strings
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_annotated_feature_ids_by_extids('ENSG00023847582', ...]);
+  Description: Gets a list of annotated_feature IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+
+sub list_annotated_feature_ids_by_extids{
+  my ( $self, $external_names, $external_db_name ) = @_;
+
+  return
+    $self->_type_by_external_ids( $external_names, 'AnnotatedFeature', undef,
+                                 $external_db_name );
+}
+
+
+
 =head2 list_probe_feature_ids_by_extid
 
   Arg [1]    : string $external_name
   Arg [2]    : (optional) string $external_db_name
   Example    : @tr_ids = $dbea->list_annotated_feature_ids_by_extid('ENST000000000001');
-  Description: Gets a list of annotated_feature IDs by external display IDs
+  Description: Gets a list of annotated_feature IDs by external display ID
   Returntype : list of Ints
   Exceptions : none
   Caller     : unknown
@@ -190,16 +275,41 @@ sub list_probe_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
   return
-    $self->_type_by_external_id( $external_name, 'ProbeFeature', undef,
+    $self->_type_by_external_idold( $external_name, 'ProbeFeature', undef,
                                  $external_db_name );
 }
+
+
+=head2 list_probe_feature_ids_by_extids
+
+  Arg [1]    : ARRAYREF of external name strings
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_annotated_feature_ids_by_extids(['ENST000000000001', ...]);
+  Description: Gets a list of annotated_feature IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+sub list_probe_feature_ids_by_extids {
+  my ( $self, $external_names, $external_db_name ) = @_;
+
+  return
+    $self->_type_by_external_ids( $external_names, 'ProbeFeature', undef,
+                                 $external_db_name );
+}
+
+
+
 
 =head2 list_probe_ids_by_extid
 
   Arg [1]    : string $external_name
   Arg [2]    : (optional) string $external_db_name
   Example    : @tr_ids = $dbea->list_probe_id_by_extid('ENST000000000001');
-  Description: Gets a list of probe IDs by external display IDs
+  Description: Gets a list of probe IDs by external display ID
   Returntype : list of Ints
   Exceptions : none
   Caller     : unknown
@@ -216,12 +326,33 @@ sub list_probe_ids_by_extid {
 }
 
 
+=head2 list_probe_ids_by_extids
+
+  Arg [1]    : ARRAYREF of external name strings
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_probe_id_by_extids(['ENST000000000001'], ...);
+  Description: Gets a list of probe IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+sub list_probe_ids_by_extids {
+  my ( $self, $external_names, $external_db_name ) = @_;
+
+  return
+    $self->_type_by_external_ids( $external_names, 'Probe', undef,
+                                 $external_db_name );
+}
+
 =head2 list_probeset_ids_by_extid
 
   Arg [1]    : string $external_name
   Arg [2]    : (optional) string $external_db_name
   Example    : @tr_ids = $dbea->list_probeset_ids_by_extid('ENST000000000001');
-  Description: Gets a list of probeset IDs by external display IDs
+  Description: Gets a list of probeset IDs by external display ID
   Returntype : list of Ints
   Exceptions : none
   Caller     : unknown
@@ -236,6 +367,28 @@ sub list_probeset_ids_by_extid {
     $self->_type_by_external_id( $external_name, 'ProbeSet', undef,
                                  $external_db_name );
 }
+
+=head2 list_probeset_ids_by_extids
+
+  Arg [1]    : ARRAYREF of external name strings
+  Arg [2]    : (optional) string $external_db_name
+  Example    : @tr_ids = $dbea->list_probeset_ids_by_extids(['ENST000000000001'], ...);
+  Description: Gets a list of probeset IDs by external display IDs
+  Returntype : list of Ints
+  Exceptions : none
+  Caller     : unknown
+  Status     : At risk
+
+=cut
+
+sub list_probeset_ids_by_extids {
+  my ( $self, $external_names, $external_db_name ) = @_;
+
+  return
+    $self->_type_by_external_ids( $external_names, 'ProbeSet', undef,
+                                 $external_db_name );
+}
+
 
 
 =head2 list_regulatory_feature_ids_by_external_db_id
@@ -284,89 +437,71 @@ sub list_regulatory_feature_ids_by_external_db_id{
 sub _type_by_external_id {
   my ( $self, $name, $ensType, $extraType, $external_db_name ) = @_;
 
+  #Can't deprecate/remove this as it is part of the core API interface
+
+  return $self->_type_by_external_ids([$name], $ensType, $extraType, $external_db_name);
+} ## end sub _type_by_external_id
+
+
+
+
+
+
+sub _type_by_external_ids {
+  my ( $self, $names, $ensType, $extraType, $external_db_name ) = @_;
+
   my $from_sql  = '';
   my $where_sql = '';
   my $ID_sql    = "oxr.ensembl_id";
 
   if ( defined $extraType ) {
-
-	
-	#Use the Core behavior in this case? No, because we are not on the core DB!!
-	#return $self->SUPER::_type_by_external_id($name, $ensType, $extraType, $external_db_name);
+	#This was DBLinks query? We could do this for ProbeSet->Probe->ProbeFeature?
+	#See core method for missing code
 	throw('Extra types not accomodated in eFG xref schema');
-
-    if ( lc($extraType) eq 'translation' ) {
-      $ID_sql = "tl.translation_id";
-    } else {
-      $ID_sql = "t.${extraType}_id";
-    }
-
-    if ( lc($ensType) eq 'translation' ) {
-      $from_sql  = 'transcript t, translation tl, ';
-      $where_sql = qq(
-          t.transcript_id = tl.transcript_id AND
-          tl.translation_id = oxr.ensembl_id AND
-          t.is_current = 1 AND
-      );
-    } else {
-      $from_sql  = 'transcript t, ';
-      $where_sql = 't.'
-        . lc($ensType)
-        . '_id = oxr.ensembl_id AND '
-        . 't.is_current = 1 AND ';
-    }
   }
 
-  #if ( lc($ensType) eq 'gene' ) {
-  #  $from_sql  = 'gene g, ';
-  #  $where_sql = 'g.gene_id = oxr.ensembl_id AND g.is_current = 1 AND ';
-  #} elsif ( lc($ensType) eq 'transcript' ) {
-  #  $from_sql = 'transcript t, ';
-  #  $where_sql =
-  #    't.transcript_id = oxr.ensembl_id AND t.is_current = 1 AND ';
-  #} elsif ( lc($ensType) eq 'translation' ) {
-  #  $from_sql  = 'transcript t, translation tl, ';
-  #  $where_sql = qq(
-  #      t.transcript_id = tl.transcript_id AND
-  #      tl.translation_id = oxr.ensembl_id AND
-  #      t.is_current = 1 AND
-  #  );
-  #}
-  #
 
 
-  if(lc($ensType) eq 'regulatoryfeature'){
-	$from_sql  = 'regulatory_feature rf, ';
-	$where_sql = qq( rf.regulatory_feature_id = oxr.ensembl_id AND );
-  }
-  elsif(lc($ensType) eq 'externalfeature'){
-	$from_sql  = 'external_feature ef, ';
-	$where_sql = qq( ef.external_feature_id = oxr.ensembl_id AND );
-  } 
-  elsif(lc($ensType) eq 'annotatedfeature'){
-	$from_sql  = 'annotated_feature af, ';
-	$where_sql = qq( af.annotated_feature_id = oxr.ensembl_id AND );
-  }
-  elsif(lc($ensType) eq 'featuretype'){
-	$from_sql  = 'feature_type ft, ';
-	$where_sql = qq( ft.feature_type_id = oxr.ensembl_id AND );
-  }
-  elsif(lc($ensType) eq 'probefeature'){
-	$from_sql  = 'probe_feature pf, ';
-	$where_sql = qq( pf.probe_feature_id = oxr.ensembl_id AND );
-  }
-  elsif(lc($ensType) eq 'probe'){
-	$from_sql  = 'probe p, ';
-	$where_sql = qq( p.probe_id = oxr.ensembl_id AND );
-  }
-  elsif(lc($ensType) eq 'probeset'){
-	$from_sql  = 'probe_set ps, ';
-	$where_sql = qq( ps.probe_set_id = oxr.ensembl_id AND );
-  }
-  else{
-	throw("ensembl_object_type $ensType is not accommodated");
-  }
-  
+
+  #These were specifying is_current for transcript/gene joins
+  #Also ensure no old/orphaned DBEntries are returned
+  #HCs ensure these are now removed
+  #Would need to re-instate these for any status filtering or query extension
+  #i.e. direct restrieval of nested ensembl objects
+
+
+#  if(lc($ensType) eq 'regulatoryfeature'){
+#  $from_sql  = 'regulatory_feature rf, ';
+#  	$where_sql = qq( rf.regulatory_feature_id = oxr.ensembl_id AND );
+#  }
+#  elsif(lc($ensType) eq 'externalfeature'){
+#  	$from_sql  = 'external_feature ef, ';
+#  	$where_sql = qq( ef.external_feature_id = oxr.ensembl_id AND );
+#    } 
+#    elsif(lc($ensType) eq 'annotatedfeature'){
+#  	$from_sql  = 'annotated_feature af, ';
+#  	$where_sql = qq( af.annotated_feature_id = oxr.ensembl_id AND );
+#    }
+#    elsif(lc($ensType) eq 'featuretype'){
+#  	$from_sql  = 'feature_type ft, ';
+#  	$where_sql = qq( ft.feature_type_id = oxr.ensembl_id AND );
+#    }
+#    elsif(lc($ensType) eq 'probefeature'){
+#  	$from_sql  = 'probe_feature pf, ';
+#  	$where_sql = qq( pf.probe_feature_id = oxr.ensembl_id AND );
+#    }
+#    elsif(lc($ensType) eq 'probe'){
+#  	$from_sql  = 'probe p, ';
+#  	$where_sql = qq( p.probe_id = oxr.ensembl_id AND );
+#    }
+#   elsif(lc($ensType) eq 'probeset'){
+#  $from_sql  = 'probe_set ps, ';
+#  	$where_sql = qq( ps.probe_set_id = oxr.ensembl_id AND );
+#    }
+#    else{
+#  	throw("ensembl_object_type $ensType is not accommodated");
+#    }
+
 
   if ( defined($external_db_name) ) {
     # Involve the 'external_db' table to limit the hits to a particular
@@ -379,17 +514,24 @@ sub _type_by_external_id {
       . ' AND xdb.external_db_id = x.external_db_id AND';
   }
 
+
+  my $in_clause = '('.join(', ', (map $self->db->dbc->db_handle->quote($_), @$names)).')';
+  #For use with use selectcol_arrayref 
+
+  #my $in_clause = '('.join(', ', (('?') x scalar(@$names))).')';
+  #For use with fetchall_hashref
+
   my @queries = (
     "SELECT $ID_sql
        FROM $from_sql xref x, object_xref oxr
-      WHERE $where_sql x.dbprimary_acc = ? AND
+      WHERE $where_sql x.dbprimary_acc IN $in_clause AND
              x.xref_id = oxr.xref_id AND
-             oxr.ensembl_object_type= ?",
+             oxr.ensembl_object_type= '${ensType}'",
     "SELECT $ID_sql 
        FROM $from_sql xref x, object_xref oxr
-      WHERE $where_sql x.display_label = ? AND
+      WHERE $where_sql x.display_label IN $in_clause AND
              x.xref_id = oxr.xref_id AND
-             oxr.ensembl_object_type= ?"
+             oxr.ensembl_object_type= '${ensType}'"
   );
 
   if ( defined $external_db_name ) {
@@ -398,9 +540,9 @@ sub _type_by_external_id {
 
     push @queries, "SELECT $ID_sql
        FROM $from_sql xref x, object_xref oxr, external_synonym syn
-      WHERE $where_sql syn.synonym = ? AND
+      WHERE $where_sql syn.synonym IN $in_clause AND
              x.xref_id = oxr.xref_id AND
-             oxr.ensembl_object_type= ? AND
+             oxr.ensembl_object_type= '${ensType}' AND
              syn.xref_id = oxr.xref_id";
   } else {
     # If we weren't given an external database name, we can get away
@@ -408,34 +550,23 @@ sub _type_by_external_id {
 
     push @queries, "SELECT $ID_sql
        FROM $from_sql object_xref oxr, external_synonym syn
-      WHERE $where_sql syn.synonym = ? AND
-             oxr.ensembl_object_type= ? AND
+      WHERE $where_sql syn.synonym IN $in_clause AND
+             oxr.ensembl_object_type= '${ensType}' AND
              syn.xref_id = oxr.xref_id";
   }
 
   # Increase speed of query by splitting the OR in query into three
-  # separate queries.  This is because the 'or' statments render the
+  # separate queries.  This is because the 'or' statments renders the
   # index useless because MySQL can't use any fields in it.
 
-  my %hash   = ();
-  my @result = ();
+  # Changed this to a UNION and grab the col arrayref directly
 
-  foreach (@queries) {
-    my $sth = $self->prepare($_);
-    $sth->bind_param( 1, "$name",  SQL_VARCHAR );
-    $sth->bind_param( 2, $ensType, SQL_VARCHAR );
-    $sth->execute();
-
-    while ( my $r = $sth->fetchrow_array() ) {
-      if ( !exists $hash{$r} ) {
-        $hash{$r} = 1;
-        push( @result, $r );
-      }
-    }
-  }
-
-  return @result;
+  return @{$self->db->dbc->db_handle->selectcol_arrayref(join(' UNION ', @queries))};
+ 
 } ## end sub _type_by_external_id
+
+
+
 
 =head2 _type_by_external_db_id
 
@@ -462,43 +593,10 @@ sub _type_by_external_db_id{
   my $ID_sql = "oxr.ensembl_id";
 
   if (defined $extraType) {
-
+	#See core method for missing code
 	throw('Extra types not accomodated in eFG xref schema');
-
-    if (lc($extraType) eq 'translation') {
-      $ID_sql = "tl.translation_id";
-    } else {
-      $ID_sql = "t.${extraType}_id";
-    }
-
-    if (lc($ensType) eq 'translation') {
-      $from_sql = 'transcript t, translation tl, ';
-      $where_sql = qq(
-          t.transcript_id = tl.transcript_id AND
-          tl.translation_id = oxr.ensembl_id AND
-          t.is_current = 1 AND
-      );
-    } else {
-      $from_sql = 'transcript t, ';
-      $where_sql = 't.'.lc($ensType).'_id = oxr.ensembl_id AND '.
-          't.is_current = 1 AND ';
-    }
   }
 
- # if (lc($ensType) eq 'gene') {
- #   $from_sql = 'gene g, ';
- #   $where_sql = 'g.gene_id = oxr.ensembl_id AND g.is_current = 1 AND ';
- # } elsif (lc($ensType) eq 'transcript') {
- #   $from_sql = 'transcript t, ';
- #   $where_sql = 't.transcript_id = oxr.ensembl_id AND t.is_current = 1 AND ';
- # } elsif (lc($ensType) eq 'translation') {
- #   $from_sql = 'transcript t, translation tl, ';
-  #   $where_sql = qq(
-  #       t.transcript_id = tl.transcript_id AND
-  #       tl.translation_id = oxr.ensembl_id AND
-  #       t.is_current = 1 AND
-  #   );
- # }els
 
   if(lc($ensType) eq 'regulatoryfeature'){
 	$from_sql  = 'regulatory_feature rf, ';
