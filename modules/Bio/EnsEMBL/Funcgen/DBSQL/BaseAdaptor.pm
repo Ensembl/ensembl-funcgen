@@ -585,8 +585,8 @@ sub _get_status_name_id{
   Example    : my @features =
                   @{ $adaptor->fetch_all_by_external_name( 'NP_065811.1') };
   Description: Retrieves all features which are associated with
-               an external identifier such as a GO term, Swissprot
-               identifer, etc.  Usually there will only be a single
+               an external identifier such as an Ensembl Gene or Transcript
+               stable ID etc.  Usually there will only be a single
                feature returned in the list reference, but not
                always.  Features are returned in their native
                coordinate system, i.e. the coordinate system in which
@@ -597,17 +597,15 @@ sub _get_status_name_id{
                a reference to an empty list is returned.
   Returntype : arrayref of Bio::EnsEMBL::Funcgen::Storable objects
                Maybe any Feature, FeatureType, Probe or ProbeSet
-  Exceptions : none
+  Exceptions : Warns if method not available for given object adaptor
   Caller     : general
   Status     : at risk
 
 =cut
 
-#This might be more efficient if we wrote DBEntryAdaptor->fetch_all_by_
-
 sub fetch_all_by_external_name {
   my ( $self, $external_name, $external_db_name ) = @_;
-
+  
   my $entryAdaptor = $self->db->get_DBEntryAdaptor();
   my (@ids, $type, $type_name);
   ($type = ref($self)) =~ s/.*:://;
@@ -619,18 +617,75 @@ sub fetch_all_by_external_name {
 	warn "Does not yet accomodate $type external names";
 	return [];
   }
-  else{
-	@ids = $entryAdaptor->$xref_method($external_name, $external_db_name);
-  }
-
-  return $self->fetch_all_by_dbID_list( \@ids );
+ 
+  #Would be better if _list_ method returned and arrayref
+  return $self->fetch_all_by_dbID_list([$entryAdaptor->$xref_method($external_name, $external_db_name)]);
 }
 
 
-#Can we have method here to take a Gene, list the associated transcript_stable_ids and retrieve using those?
-#This is still not as quick as direct cross DB querying to get 'reversed' DBEntries from a gene based query
-#e.g. $gene->get_all_funcgen_DBLinks
+=head2 fetch_all_by_external_names
 
+  Arg [1]    : ARRAYREF of strings. External identifiers of the features to be obtained
+  Arg [2]    : (optional) String $external_db_name
+               The name of the external database from which the
+               identifier originates.
+  Example    : my @features =
+                  @{ $adaptor->fetch_all_by_external_names(['ENST00003548913', ...])};
+  Description: Retrieves all features which are associated with
+               the external identifiers such as a Ensembl gene or transcript 
+               stable IDs, etc.  Features are returned in their native
+               coordinate system, i.e. the coordinate system in which
+               they are stored in the database.  If they are required
+               in another coordinate system the Feature::transfer or
+               Feature::transform method can be used to convert them.
+               If no features with the external identifier are found,
+               a reference to an empty list is returned.
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Storable objects
+               Maybe any Feature, FeatureType, Probe or ProbeSet
+  Exceptions : Warns if xref method not available for given object adaptor
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub fetch_all_by_external_names{
+  my ( $self, $external_names, $external_db_name ) = @_;
+
+  my $entryAdaptor = $self->db->get_DBEntryAdaptor();
+  my ($type, $type_name);
+  ($type = ref($self)) =~ s/.*:://;
+  $type =~ s/Adaptor$//;
+  ($type_name = $type) =~ s/Feature$/_feature/;
+  my $xref_method = 'list_'.lc($type_name).'_ids_by_extids';
+  
+
+  if(! $entryAdaptor->can($xref_method)){
+	warn "Does not yet accomodate $type external names";
+	return [];
+  }
+  
+ 
+  #Would be better if _list_ method returned and arrayref
+  my @ids = $entryAdaptor->$xref_method($external_names, $external_db_name);
+
+  return $self->fetch_all_by_dbID_list(\@ids);
+}
+
+
+=head2 fetch_all_by_linked_Transcript
+
+  Arg [1]    : Bio::EnsEMBL::Transcript
+  Example    : my @psets =
+                  @{ $probe_set_adaptor->fetch_all_by_linked_Transcript($tx_obj);
+  Description: Retrieves all features which are associated with
+               the given Ensembl Transcript.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
+               Maybe any Feature, FeatureType, Probe or ProbeSet
+  Exceptions : Throws if arguments not valid
+  Caller     : general
+  Status     : at risk
+
+=cut
 
 sub fetch_all_by_linked_Transcript{
   my ($self, $tx) = @_;
@@ -640,13 +695,24 @@ sub fetch_all_by_linked_Transcript{
 	throw('You must provide a valid stored Bio::EnsEMBL:Transcript object');
   }
   
-  #This now assumes species is set to the correct lower_case latin name
-  #e.g. homo_sapiens
-  #This should be populated from meta or defined by user
-  my $species = Bio::EnsEMBL::Registry->get_alias($self->db->species);
-
-  return $self->fetch_all_by_external_name($tx->stable_id, $species.'_core_Transcript')
+  return $self->fetch_all_by_external_name($tx->stable_id, $self->db->species.'_core_Transcript')
 }
+
+=head2 fetch_all_by_linked_transcript_Gene
+
+  Arg [1]    : Bio::EnsEMBL::Gene
+  Example    : my @psets =
+                  @{ $probe_set_adaptor->fetch_all_by_linked_transcript_Gene($gene_obj);
+  Description: Retrieves all features which are indirectly associated with
+               the given Ensembl Gene, through it's Transcripts.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
+               Maybe any Feature, FeatureType, Probe or ProbeSet
+  Exceptions : Throws if arguments not valid
+  Caller     : general
+  Status     : at risk
+
+=cut
+
 
 sub fetch_all_by_linked_transcript_Gene{
    my ( $self, $gene ) = @_;
@@ -655,31 +721,10 @@ sub fetch_all_by_linked_transcript_Gene{
 	  ! (ref($gene) && $gene->isa('Bio::EnsEMBL::Gene') && $gene->dbID)){
 	 throw('You must provide a valid stored Bio::EnsEMBL:Gene object');
    }
+   #No need to quote param here as this is a known int from the DB.
+   my $tx_sids = $gene->adaptor->db->dbc->db_handle->selectcol_arrayref('select tsid.stable_id from transcript_stable_id tsid, transcript t where t.gene_id='.$gene->dbID.' and t.transcript_id=tsid.transcript_id');
    
-
-   #Need to bindparams here to protect against injection
-   my @tx_sids = @{$gene->adaptor->db->dbc->db_handle->selectall_arrayref('select tsid.stable_id from transcript_stable_id tsid, transcript t where t.gene_id='.$gene->dbID.' and t.transcript_id=tsid.transcript_id')};
-   @tx_sids = map "@$_", @tx_sids;
-
-  my $entryAdaptor = $self->db->get_DBEntryAdaptor();
-  my (@ids, $type, $type_name);
-  ($type = ref($self)) =~ s/.*:://;
-  $type =~ s/Adaptor$//;
-  ($type_name = $type) =~ s/Feature$/_feature/;
-  my $xref_method = 'list_'.lc($type_name).'_ids_by_extid';
-
-  if(! $entryAdaptor->can($xref_method)){
-	warn "Does not yet accomodate $type external names";
-	return [];
-  }
-  else{
-
-	foreach my $tx_sid(@tx_sids){
-	  push @ids, $entryAdaptor->$xref_method($tx_sid, $self->db->species.'_core_Transcript');
-	}
-  }
-
-  return $self->fetch_all_by_dbID_list( \@ids );
+   return $self->fetch_all_by_external_names($tx_sids, $self->db->species.'_core_Transcript');
 }
 
 
