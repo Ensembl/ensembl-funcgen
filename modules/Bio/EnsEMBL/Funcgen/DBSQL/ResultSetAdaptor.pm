@@ -644,8 +644,24 @@ sub dbfile_data_root{
 	$self->{dbfile_data_root} = $root;
   }
   elsif(! defined $self->{dbfile_data_root}){
-	$self->{dbfile_data_root} = $self->db->get_MetaContainer->list_value_by_key('dbfile.data_root')->[0];
-	
+
+
+	#This is slighty dirty as it means anyone with a webcode checkout may get
+	#pointed to the wrong location if they are trying to use the API in a non
+	#webcode context
+
+
+
+	#eval{ 
+	#  my $species_defs = EnsEMBL::Web::SpeciesDefs->new(); 
+	#  $self->{dbfile_data_root} = $species_defs->REGULATION_FILE_PATH;	
+	#}
+	  
+	#  if(! defined $self->{dbfile_data_root}){
+	  
+		$self->{dbfile_data_root} = $self->db->get_MetaContainer->list_value_by_key('dbfile.data_root')->[0];
+	#  }
+
 	if(! $self->{dbfile_data_root}){
 	  throw('Could not find dbfile.data_root meta entry');
 	}
