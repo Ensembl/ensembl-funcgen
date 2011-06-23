@@ -51,7 +51,6 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Utils::Iterator;
 
 use vars qw(@ISA);
 use strict;
@@ -359,9 +358,8 @@ sub fetch_Iterator_by_Slice_Arrays{
   my ($self, $slice, $arrays, $params) = @_;
 
 
-  return Bio::EnsEMBL::Utils::Iterator->new
+  return $self->fetch_Iterator_by_Slice_method
 	($self->can('fetch_all_by_Slice_Arrays'),
-	 $self,
 	 [$slice, $arrays, $params],
 	 0,#Slice idx
 	 #500 #chunk length
