@@ -8,3 +8,4 @@ MCV8	NULL	MCV8 Mouse B Lymphocyte Cells (partially reprogrammed)	NULL
 MCV81	NULL	MCV81 Mouse B Lymphocyte Cells (partially reprogrammed)	NULL
 BIV1	NULL	BIV1 Mouse B Lymphocyte Cells (partially reprogrammed)	NULL
 MultiCell	NULL	Multiple CellTypes used in core RegulatoryFeature set	NULL
+MEL	NULL	Mouse Erythroleukemia	male
