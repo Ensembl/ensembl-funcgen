@@ -61,6 +61,22 @@ $true_tables{feature_type} = [['feature_type', 'ft']];
 #deref so we don't modify the true tables
 @{$tables{feature_type}}   = @{$true_tables{feature_type}};
 
+
+my $core_name      = 'Open chromatin & TFBS';
+my $hist_pols_name = 'Histones & polymerases';
+my $core_label      = 'DNase1 & TFBS';
+my $hist_pols_label = 'Hists & Pols';  
+
+my %regulatory_evidence_info = 
+  (
+   'Transcription Factor'         => { label => $core_label, name=> $core_name },
+   'Transcription Factor Complex' => { label => $core_label, name=> $core_name },
+   'Open Chromatin'               => { label => $core_label, name=> $core_name },
+   'Polymerase'                   => { label => $hist_pols_label, name => $hist_pols_name},
+   'Histone'                      => { label => $hist_pols_label, name => $hist_pols_name},
+  );
+
+
 =head2 fetch_by_name
 
   Arg [1]    : string - name of FeatureType
@@ -301,26 +317,28 @@ sub store {
   return \@args;
 }
 
-
-=head2 list_dbIDs
+=head2 list_regulatory_evidence_classes
 
   Args       : None
-  Example    : my @array_ids = @{$ec_a->list_dbIDs()};
-  Description: Gets an array of internal IDs for all ExperimentalChip objects in the
-               current database.
-  Returntype : List of ints
+  Example    : 
+  Description: 
+  Returntype : Array of Strings
   Exceptions : None
-  Caller     : ?
+  Caller     : web code
   Status     : At risk
 
 =cut
 
-sub list_dbIDs {
+sub list_regulatory_evidence_classes {
     my ($self) = @_;
 	
-    return $self->_list_dbIDs('feature_type');
+    return keys(%regulatory_evidence_info);
 }
 
+
+#Deprecated
+
+#list_dbIDs now uses inherited BaseAdaptor::list_dbIDs
 
 
 1;
