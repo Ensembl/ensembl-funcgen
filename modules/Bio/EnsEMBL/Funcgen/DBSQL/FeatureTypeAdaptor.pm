@@ -62,12 +62,12 @@ $true_tables{feature_type} = [['feature_type', 'ft']];
 @{$tables{feature_type}}   = @{$true_tables{feature_type}};
 
 
-my $core_name      = 'Open chromatin & TFBS';
-my $hist_pols_name = 'Histones & polymerases';
+my $core_name       = 'Open chromatin & TFBS';
+my $hist_pols_name  = 'Histones & polymerases';
 my $core_label      = 'DNase1 & TFBS';
 my $hist_pols_label = 'Hists & Pols';  
 
-my %regulatory_evidence_info = 
+our %regulatory_evidence_info = 
   (
    'Transcription Factor'         => { label => $core_label, name=> $core_name },
    'Transcription Factor Complex' => { label => $core_label, name=> $core_name },
