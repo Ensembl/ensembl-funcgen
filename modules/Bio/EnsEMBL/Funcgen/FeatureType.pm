@@ -176,24 +176,10 @@ sub class{
 sub evidence_type_label{
   my $self = shift;
 
-  #Having these here enables tweaking after handover
-  #Also reduces uneeded schema complexity
-  my $core_label      = 'DNase1 & TFBS';
-  my $hist_pols_label = 'Hists & Pols';
-
-  my %labels = 
-	(
-	 'Transcription Factor'         => $core_label,
-	 'Transcription Factor Complex' => $core_label,
-	 'Open Chromatin'               => $core_label,
-	 'Polymerase'                   => $hist_pols_label,
-	 'Histone'                      => $hist_pols_label,
-	);
-
   #Could get undef key warn here
   #But only used in webcode so omit for speed
 
-  return $labels{$self->class};
+  return $Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor::regulatory_evidence_info{$self->class}->{label};
 }
 
 =head2 evidence_type_name
@@ -210,25 +196,10 @@ sub evidence_type_label{
 sub evidence_type_name{
   my $self = shift;
 
-  #Having these here enables tweaking after handover
-  #Also reduces uneeded schema complexity
-  #These should match the config panel menu items
-  my $core_label      = 'Open chromatin & TFBS';
-  my $hist_pols_label = 'Histones & polymerases';
-  
-  my %labels = 
-	(
-	 'Transcription Factor'         => $core_label,
-	 'Transcription Factor Complex' => $core_label,
-	 'Open Chromatin'               => $core_label,
-	 'Polymerase'                   => $hist_pols_label,
-	 'Histone'                      => $hist_pols_label,
-	);
-
   #Could get undef key warn here
   #But only used in webcode so omit for speed
 
-  return $labels{$self->class};
+  return $Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor::regulatory_evidence_info{$self->class}->{name};
 }
 
 
