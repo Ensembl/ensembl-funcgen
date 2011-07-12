@@ -1006,6 +1006,7 @@ CREATE TABLE `associated_feature_type` (
 @column display_label	Short display label
 @column description 	Text description
 @column gender			Gender i.e. male or female
+@column efo_id          Experimental Factor Ontology ID
 
 @see feature_set
 @see result_set
@@ -1020,8 +1021,10 @@ CREATE TABLE `cell_type` (
    `display_label` varchar(20) default NULL,
    `description` varchar(80) default NULL,
    `gender` enum('male', 'female') default NULL,
+   `efo_id` varchar(20) DEFAULT NULL,
    PRIMARY KEY  (`cell_type_id`),
-   UNIQUE KEY `name_idx` (`name`)
+   UNIQUE KEY `name_idx` (`name`),
+   UNIQUE KEY `efo_idx` (`efo_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- xref to coriell
