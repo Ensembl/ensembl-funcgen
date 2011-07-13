@@ -30,7 +30,7 @@ storing Funcgen CellType objects.
 
 my $ct_adaptor = $efgdba->get_CellTypeAdaptor();
 
-my $cell_type = $ct_adaptor->fetch_by_name("HeLa");
+my $cell_type = $ct_adaptor->fetch_by_name("HeLa-S3");
 
 
 =head1 DESCRIPTION
@@ -82,7 +82,7 @@ sub fetch_by_name{
 }
 
 
-
+#fetch_all_by_efo_id
 
 =head2 _tables
 
@@ -121,7 +121,8 @@ sub _tables {
 sub _columns {
   my $self = shift;
 	
-  return qw( ct.cell_type_id ct.name ct.display_label ct.description ct.gender);#ct.type/class
+  return qw( ct.cell_type_id ct.name ct.display_label ct.description ct.gender ct.efo_id);
+  #type/class = enum cell, cell line, tissue
 }
 
 =head2 _objs_from_sth
@@ -141,7 +142,7 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $ct_id, $name, $dlabel, $desc, $gender);
+	my (@result, $ct_id, $name, $dlabel, $desc, $gender, $efo_id);
 	
 	$sth->bind_columns(\$ct_id, \$name, \$dlabel, \$desc, \$gender);
 	
@@ -152,6 +153,7 @@ sub _objs_from_sth {
 														 -DISPLAY_LABEL => $dlabel,
 														 -DESCRIPTION   => $desc,
 														 -GENDER        => $gender,
+														 -EFO_ID        => $efo_id,
 														 -ADAPTOR       => $self,
 														);
 	  
@@ -182,8 +184,8 @@ sub store {
   
   my $sth = $self->prepare("
 			INSERT INTO cell_type
-			(name, display_label, description, gender)
-			VALUES (?, ?, ?, ?)");
+			(name, display_label, description, gender, efo_id)
+			VALUES (?, ?, ?, ?, ?)");
     
   
   
@@ -199,10 +201,12 @@ sub store {
 	  }
 	  
 	  
-	  $sth->bind_param(1, $ct->name(),           SQL_VARCHAR);
-	  $sth->bind_param(2, $ct->display_label(),  SQL_VARCHAR);
-	  $sth->bind_param(3, $ct->description(),    SQL_VARCHAR);
-	  $sth->bind_param(4, $ct->gender(),         SQL_VARCHAR);
+	  $sth->bind_param(1, $ct->name,           SQL_VARCHAR);
+	  $sth->bind_param(2, $ct->display_label,  SQL_VARCHAR);
+	  $sth->bind_param(3, $ct->description,    SQL_VARCHAR);
+	  $sth->bind_param(4, $ct->gender,         SQL_VARCHAR);
+	  $sth->bind_param(5, $ct->efo_id,         SQL_VARCHAR);
+	  
 	  
 	  
 	  $sth->execute();

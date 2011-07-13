@@ -35,8 +35,8 @@ use Bio::EnsEMBL::Funcgen::CellType;
 
 =head1 DESCRIPTION
 
-This is a simple class to represent information about a CellType.  This may represent an individual cell line or a more
-generic tissue type.
+This is a simple class to represent information about a CellType.  
+This may represent harvested cells, a cell line or a more generic tissue type.
 
 
 =cut
@@ -56,24 +56,31 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-name]          : string - name of CellType
-  Arg [-display_label] : string - display label of CellType
-  #Arg [-type]          : string - type of cell i.e.  ???? or Tissue, LINE?? enum?
-  ?? xref to coriell ??
-  Example              : my $ct = Bio::EnsEMBL::Funcgen::CellType->new(
-                                                               -name          => "U2OS",
-                                                               -display_label => "",#?
-                                                               -description   => "Human Bone Osteosarcoma Epithelial Cells",
-                                                               #-type/class => "TISSUE", enum?
-                                                               #xref/coriell id?
-                                                                );
+  Arg [1]    : String - name of CellType
+  Arg [2]    : String - display label of CellType
+  Arg [3]    : String - description of CellType
+  Arg [4]    : String - gender e.g. male, female or NULL
+  Arg [5]    : String - Experimental Factor Ontology ID e.g. EFO_0002869
+ 
+  Example              : my $ct = Bio::EnsEMBL::Funcgen::CellType->new
+                                    (
+                                     -name          => "U2OS",
+                                     -display_label => "U20S",
+                                     -description   => "Human Bone Osteosarcoma Epithelial Cells",
+                                     -gender        => 'female',
+                                     -efo_id        => 'EFO_0002869',
+                                    );
+
   Description: Constructor method for CellType class
   Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : Throws if name and type not defined.
+  Exceptions : Throws if name not defined.
   Caller     : General
-  Status     : At risk
+  Status     : Stable
 
 =cut
+
+#-type/class => "TISSUE", enum? Mandatory.
+#remove display label?
 
 sub new {
   my $caller = shift;
@@ -88,8 +95,9 @@ sub new {
       $dlabel,
 	  $desc,
 	  $gender,
+	  $efo_id
      ) = rearrange([
-		    'NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER'
+		    'NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'EFO_ID'
 		   ], @_);
   
   
@@ -97,13 +105,15 @@ sub new {
   throw("Must supply a CellType name") if ! $name;
 
   if(defined $gender){
+	#enum will not force this so validate here
 	throw("Gender must be either male or female") if ! grep(/^$gender$/, ('male', 'female'));
 	$self->gender($gender);
   }
 
-  $self->name($name);
-  $self->display_label($dlabel) if $dlabel;
-  $self->description($desc) if $desc;
+  $self->{'name'} = $name; #Set directly as mandatory, to enable getter only method
+  $self->display_label($dlabel) if defined $dlabel;
+  $self->description($desc)     if defined $desc;
+  $self->efo_id($efo_id)        if defined $efo_id;
 
   return $self;
 }
@@ -112,9 +122,9 @@ sub new {
 
 =head2 name
 
-  Arg [1]    : string - name
+  Arg [1]    : String - name
   Example    : my $name = $ct->name();
-  Description: Getter and setter of name attribute for CellType
+  Description: Getter  of name attribute for CellType
                objects
   Returntype : string
   Exceptions : None
@@ -125,13 +135,12 @@ sub new {
 
 sub name {
     my $self = shift;
-    $self->{'name'} = shift if @_;
     return $self->{'name'};
 }
 
 =head2 gender
 
-  Arg [1]    : string - gender e.g. male or female
+  Arg [1]    : String (optional) - gender e.g. male or female
   Example    : my $gender = $ct->gender();
   Description: Getter for the gender attribute for 
                CellType objects
@@ -150,14 +159,14 @@ sub gender {
 
 =head2 description
 
-  Arg [1]    : string - description
+  Arg [1]    : String (optional) - description
   Example    : my $desc = $ct->description();
   Description: Getter and setter of description attribute for CellType
                objects
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Stable
 
 =cut
 
@@ -184,34 +193,26 @@ sub description {
 sub display_label {
     my $self = shift;
     $self->{'display_label'} = shift if @_;
-
-
-	#This may result in very long dispay_labels
-	#if(! defined $self->{'display_label'}){
-	#	$self->{'display_label'} = (defined $self->{'desciption'}) ? $self->description()." (".$self->name().")" : $self->name();
-	#}
-
     return $self->{'display_label'};
 }
 
 
-#=head2 class
-#
-#  Arg [1]    : (optional) string - class
-#  Example    : $ft->class('HISTONE');
-#  Description: Getter and setter of description attribute for FeatureType
-#               objects.
-#  Returntype : string
-#  Exceptions : None
-#  Caller     : General
-#  Status     : Low Risk
-#
-#=cut
+=head2 efo_id
 
-#sub class{
-#  my $self = shift;
-# $self->{'class'} = shift if @_;
-#  return $self->{'class'};
-#}
+  Arg [1]    : (optional) String - Experimental Factor Ontology ID
+  Example    : $ft->efo_id('EFO_0001196');
+  Description: Getter and setter of the Experimental Factor Ontology ID
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub efo_id{
+  my $self = shift;
+  $self->{'efo_id'} = shift if @_;
+  return $self->{'efo_id'};
+}
 1;
 
