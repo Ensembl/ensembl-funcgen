@@ -51,6 +51,9 @@ add the functionality from pwm_filter_mappings.pl to the end of this script
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.5  2011-01-10 14:25:54  nj1
+ added generic #!/usr/bin/env perl
+
  Revision 1.4  2011-01-10 13:40:37  nj1
  updated boiler plate
 
@@ -85,12 +88,13 @@ my $infile='';
 my $verbose = 2;
 my $perc_thresh = 5; # FDR
 my $genome_descriptor_file;# = "/data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked.id_lines";
+my $schema_build;
 my %opt;
 
 $| = 1; #no output buffer
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('u:p:e:H:h:o:i:P:g:', \%opt) || &help_text("Invalid Argument") ;
+&Getopt::Std::getopts('u:p:e:H:h:o:i:P:g:s:', \%opt) || &help_text("Invalid Argument") ;
 }else{
 &help_text; 
 }
@@ -114,7 +118,8 @@ if($outfile){
 
 
 # hook up with the server
-
+#Hardcode this for the moment...
+$driver="mysql";
 my $dbh = &make_contact($enc_db);
 
 my %matrix_tf_pairs= &get_list_from_file($infile);
@@ -135,9 +140,17 @@ while(my($mat,$tf)=each(%matrix_tf_pairs)){
     unless( -e $mappings_file ){
 	my $command = "grep $mat all_mappings.tab > $mappings_file";
 	&backtick($command);
+
+	#Hack to deal with a special case that messes things up!
+	if($mat eq ' PB0182.1'){
+	  &backtick("awk '\$5 > 9' < PB0182.1.mappings > PB0182.1.mappings.filtered"); 
+	  &backtick("mv PB0182.1.mappings.filtered PB0182.1.mappings");
+	}
     }
 
-    my ($schema_build) = $enc_db =~ /.*funcgen_(.*)/;
+    #my ($schema_build) = $enc_db =~ /.*funcgen_(.*)/;
+    if(!defined($schema_build)){ die "Need a schema build!"; }
+    #schema build better passed as input as db may not hve been "transformed"
     my $q = "select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '$schema_build' and fs.cell_type_id = ct.cell_type_id and ft.name = '$tf'";
     &commentary( "executing :-\n$q\n");
     my $aaref = $dbh->selectall_arrayref($q);
@@ -451,6 +464,10 @@ sub process_arguments{
     if  (exists $opt{e}){
         $enc_db = $opt{e};
     } 
+
+    if  (exists $opt{s}){
+        $schema_build = $opt{s};
+    }
 
 } 
 

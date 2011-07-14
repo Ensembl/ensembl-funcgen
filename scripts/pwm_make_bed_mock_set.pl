@@ -29,6 +29,9 @@ ls -1 ES* | xargs -I {} echo make_bed_mock_set.pl~ -g~ /data/blastdb/Ensembl/fun
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.1  2011-01-20 17:02:38  dkeefe
+ used for determining log odds score threshold for funcgen PWM mappings
+
 
 
 =cut
@@ -109,6 +112,16 @@ close(IN);
 foreach my $aref (@orig){
     #print join("\t",@$aref)."\n";
     my $len = $aref->[2] - $aref->[1] +1;
+
+    ##### HACK HACK DS Test
+    #If the length of feature is greater than genome region where it is we can ignore this one... ?
+    # This region is most likely atrefactual and should be eliminated...
+    if($len >= $chrom{$aref->[0]}->{max}){
+      print STDERR "Length of feature greater than lenght of genome region!\n";
+      next;
+    }
+    ### END OF HACK
+
     my $new_end = 0;
     my $tries = 0;
     while($new_end < $len){ # should also consider chrom start coord here

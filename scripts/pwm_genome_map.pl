@@ -106,6 +106,9 @@ mysql -u ensro -hens-genomics1 -P3306 -BN -e"select sr.name,af.seq_region_start,
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.6  2011-01-10 14:25:54  nj1
+ added generic #!/usr/bin/env perl
+
  Revision 1.5  2011-01-10 13:40:37  nj1
  updated boiler plate
 
@@ -151,9 +154,12 @@ my $sp;
 my $verbose = 0;
 my $pwm_type = 'jaspar';
 my $work_dir = "/lustre/scratch103/ensembl/dkeefe/pwm_genome_map_$$/";
+#my $work_dir = "/lustre/scratch101/ensembl/ds19/tmp/";
 
 my $genome_file;
-my $moods_mapper = '~dkeefe/bin/find_pssm_dna';
+#Changed DS
+my $moods_mapper = '/software/ensembl/funcgen/find_pssm_dna';
+#my $moods_mapper = '~dkeefe/bin/find_pssm_dna';
 my $thresh = 0.001;
 my $assembly;
 
@@ -161,11 +167,10 @@ my %opt;
 
 if ($ARGV[0]){
     &commentary(join(' ',@ARGV)."\n");
-    &Getopt::Std::getopts('a:s:t:g:h:v:o:i:p:', \%opt) || die ;
+    &Getopt::Std::getopts('a:s:t:g:h:v:o:i:p:w:', \%opt) || die ;
 }else{
     &help_text; 
 }
-
 
 # get configuration from environment variables
 #&config; # this may fail but config can be on command line
@@ -233,8 +238,6 @@ else{
 # to be converted to N otherwise find_pssm_dna outputs the wrong coords.
 #$verbose = 2;
 my @chr_files = &explode_genome_fasta($genome_file,$work_dir.'genome',$assembly);
-
-exit;
 
 # now we map all the PWMs to each genomic sequence
 foreach my $chr_file (@chr_files){
