@@ -144,7 +144,7 @@ sub _objs_from_sth {
 	
 	my (@result, $ct_id, $name, $dlabel, $desc, $gender, $efo_id);
 	
-	$sth->bind_columns(\$ct_id, \$name, \$dlabel, \$desc, \$gender);
+	$sth->bind_columns(\$ct_id, \$name, \$dlabel, \$desc, \$gender, \$efo_id);
 	
 	while ( $sth->fetch() ) {
 		my $ctype = Bio::EnsEMBL::Funcgen::CellType->new(
