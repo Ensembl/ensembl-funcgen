@@ -138,7 +138,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #maybe also cross-check bm_name with $bm->name?
     if($bm->name ne $bm_name){ warn "Entry is for $bm_name, not for ".$bm->name." : entry ignored"; next; }
     $data{$sr}{$start}{$end}{$strand}{'score'} = $score;
-    #Carefull there may be duplicates. Myabe turn into an array instead
+    #Carefull there may be duplicates. Maybe turn into an array instead
     $data{$sr}{$start}{$end}{$strand}{'assoc_feats'}{$af_id}=1;
     
   }
@@ -148,12 +148,19 @@ sub run {   # Check parameters and do appropriate database/file operations...
   # and storing all associated annotated features...
   #Carefull the score may need to be the relative_affinity...
 
-
+  #Keep the threshold;
+  my $min_relative_affinity=1; 
   foreach my $sr (keys %data){
     my $slice = $slice_cache{$sr};
     foreach my $start (keys %{$data{$sr}}){
       foreach my $end (keys %{$data{$sr}{$start}}){
 	foreach my $strand (keys %{$data{$sr}{$start}{$end}}){
+	  
+	  my $motif_slice =  $sa->fetch_by_region('toplevel',$sr, $start, $end, $strand);
+	  my $relative_affinity = $bm->relative_affinity($motif_slice->seq);
+	  if($relative_affinity < $min_relative_affinity){ 
+	    $min_relative_affinity = $relative_affinity;  
+	  }
 	  my $mf = Bio::EnsEMBL::Funcgen::MotifFeature->new
 	    (
 	     -slice          => $slice,
@@ -161,7 +168,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
 	     -end            => $end,
 	     -strand         => $strand,
 	     -binding_matrix => $bm,
-	     -score          => $data{$sr}{$start}{$end}{$strand}{'score'},
+	     #-score          => $data{$sr}{$start}{$end}{$strand}{'score'},
+	     #Only round on the MotifFeature, not the BindingMatrix
+	     -score          => sprintf("%.3f", $relative_affinity),
 	    );
 	  if($mf){
 	    $mfa->store($mf); #($mf) = store gives null? 
@@ -178,6 +187,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
   }
   
+  #Update the matrix threshold (need to do it directly in SQL?)  
+  my $sql = "UPDATE binding_matrix set threshold=".$min_relative_affinity." where binding_matrix_id=".$bm->dbID;
+  $self->param('dba')->dbc->do($sql);
+
   return 1;
 }
 
