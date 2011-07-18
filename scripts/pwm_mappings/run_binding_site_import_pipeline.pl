@@ -154,7 +154,7 @@ foreach my $file (@files){
   $efgdb->dbc->do("delete from associated_motif_feature where motif_feature_id in (select motif_feature_id from motif_feature where binding_matrix_id=".$bm->dbID." )");
   $efgdb->dbc->do("delete from motif_feature where binding_matrix_id=".$bm->dbID);
 
-  system("init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ImportMotifFeatures_conf -dnadbhost $dnadbhost -dnadbport $dnadbport -dnadbuser $dnadbuser -dnadbname $dnadbname -host $host -port $port -user $user -pass $pass -dbname $dbname -file ${workdir}/${file} -matrix $matrix ".($first ? '' : " -job_topup"));
+  system("init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ImportMotifFeatures_conf -dnadbhost $dnadbhost -dnadbport $dnadbport -dnadbuser $dnadbuser -dnadbname $dnadbname -host $host -port $port -user $user -pass $pass -dbname $dbname -efg_src $ENV{SRC}/ensembl-functgenomics/ -file ${workdir}/${file} -matrix $matrix ".($first ? '' : " -job_topup"));
 
 
   $first = 0;
