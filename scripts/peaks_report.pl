@@ -62,23 +62,23 @@ Port of the host where the database is
 
 Name of the database 
 
-=item B<-dnadbhost>
+=item B<-coredb_host>
 
 Host of the specific core database to use 
 
-=item B<-dnadbuser>
+=item B<-coredb_user>
 
 User of the specific core database 
 
-=item B<-dnadbpass>
+=item B<-coredb_pass>
 
 Password for the specific core database user 
 
-=item B<-dnadbport>
+=item B<-coredb_port>
 
 Port of the host where the specific core database to use is
 
-=item B<-dnadbname>
+=item B<-coredb_name>
 
 Name of the specific core database to use
 
@@ -212,11 +212,11 @@ print "peaks_report.pl @ARGV\n";
 
 GetOptions (
 			'species=s'          => \$species,
-			'dnadbhost=s'        => \$dnadbhost,
-			'dnadbuser=s'        => \$dnadbuser,
-			'dnadbport=i'        => \$dnadbport,
-			'dnadbpass=s'        => \$dnadbpass,
-			'dnadbname=s'        => \$dnadbname,
+			'coredb_host=s'      => \$dnadbhost,
+			'coredb_user=s'      => \$dnadbuser,
+			'coredb_port=i'      => \$dnadbport,
+			'coredb_pass=s'      => \$dnadbpass,
+			'coredb_name=s'      => \$dnadbname,
 			'dbhost=s'           => \$host,
 			'dbuser=s'           => \$user,
 			'dbport=i'           => \$port,
