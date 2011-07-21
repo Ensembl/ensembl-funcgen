@@ -395,28 +395,27 @@ sub fetch_all_displayable_by_feature_type_class {
 }
 
 
- 
 =head2 _tables
 
   Args       : None
   Example    : None
- Description: PROTECTED implementation of superclass abstract method.
+  Description: PROTECTED implementation of superclass abstract method.
   Returns the names and aliases of the tables to use for queries.
   Returntype : List
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
 
-  =cut
+=cut
 
-  sub _tables {
-	my $self = shift;
-	
-	return (
-			[ 'data_set',    'ds' ],
-			[ 'supporting_set', 'ss'],
-		   );
-  }
+sub _tables {
+  my $self = shift;
+  
+  return (
+		  [ 'data_set',    'ds' ],
+		  [ 'supporting_set', 'ss'],
+		 );
+}
 
 =head2 _columns
 
