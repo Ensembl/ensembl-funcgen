@@ -53,7 +53,7 @@ use vars qw(@ISA);
 use strict;
 use warnings;
 
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);#do we need this?
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #do we need this?
 #we can't pass the slice through the BaseAdaptor
 #So we either don't use it, or use the slice on all the DataSet calls?
 
@@ -137,7 +137,7 @@ sub fetch_by_name {
   
   my $sql = "ds.name='".$name."'";
   
-  if($status){
+  if ($status) {
     my $constraint = $self->status_to_constraint($status) if $status;
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
@@ -166,7 +166,7 @@ sub fetch_all_by_supporting_set_type {
   
   my $sql = "ss.type='".$type."'";
   
-  if($status){
+  if ($status) {
     my $constraint = $self->status_to_constraint($status) if $status;
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
@@ -204,7 +204,7 @@ sub fetch_all_by_product_FeatureSet_type {
   
   my $sql = "ss.type='".$type."'";
   
-  if($status){
+  if ($status) {
     my $constraint = $self->status_to_constraint($status) if $status;
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
@@ -253,18 +253,18 @@ sub fetch_all_by_FeatureSet {
 #Supporting sets could also be FeatureSets!!!  Confusion!
 
 sub fetch_by_product_FeatureSet {
-    my $self = shift;
-    my $fset = shift;
+  my $self = shift;
+  my $fset = shift;
 
     
-    if(! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet") && $fset->dbID())){
-      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet object");
-    }
+  if (! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet") && $fset->dbID())) {
+	throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet object");
+  }
 	
-    my $sql = "ds.feature_set_id = '".$fset->dbID()."'";
+  my $sql = "ds.feature_set_id = '".$fset->dbID()."'";
 
 
-    return $self->generic_fetch($sql)->[0];	
+  return $self->generic_fetch($sql)->[0];	
 }
 
 
@@ -281,24 +281,24 @@ sub fetch_by_product_FeatureSet {
 =cut
 
 sub fetch_all_by_ResultSet {
-    my $self = shift;
-    my $rset = shift;
+  my $self = shift;
+  my $rset = shift;
 
-	deprecate('Use fetch_all_by_supporting_set');
+  deprecate('Use fetch_all_by_supporting_set');
 
-	return $self->fetch_all_by_supporting_set($rset);
+  return $self->fetch_all_by_supporting_set($rset);
 
 
-    #if(! ($rset && $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $rset->dbID())){
-    #  throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet object");
-    #}
+  #if(! ($rset && $rset->isa("Bio::EnsEMBL::Funcgen::ResultSet") && $rset->dbID())){
+  #  throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet object");
+  #}
 	
 
-	##self join here to make sure we get all linked result_sets
-    #my $sql = 'ds.data_set_id IN (SELECT ds.data_set_id from data_set ds where result_set_id='.$rset->dbID().')';
+  ##self join here to make sure we get all linked result_sets
+  #my $sql = 'ds.data_set_id IN (SELECT ds.data_set_id from data_set ds where result_set_id='.$rset->dbID().')';
 
 
-    #return $self->generic_fetch($sql);	
+  #return $self->generic_fetch($sql);	
 }
 
 
@@ -317,21 +317,21 @@ sub fetch_all_by_ResultSet {
 =cut
 
 sub fetch_all_by_supporting_set {
-    my $self = shift;
-    my $set = shift;
+  my $self = shift;
+  my $set = shift;
 
-    if(! (ref($set) && 
-		  ( $set->isa("Bio::EnsEMBL::Funcgen::ResultSet") || 
-			$set->isa("Bio::EnsEMBL::Funcgen::FeatureSet") ||
-			$set->isa("Bio::EnsEMBL::Funcgen::InputSet")) 
-		  && $set->dbID())){
-      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet, FeatureSet or InputSet object");
-    }
+  if (! (ref($set) && 
+		 ( $set->isa("Bio::EnsEMBL::Funcgen::ResultSet") || 
+		   $set->isa("Bio::EnsEMBL::Funcgen::FeatureSet") ||
+		   $set->isa("Bio::EnsEMBL::Funcgen::InputSet")) 
+		 && $set->dbID())) {
+	throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet, FeatureSet or InputSet object");
+  }
 	
-	#self join here to make sure we get all linked result_sets
-	my $sql = ' ds.data_set_id IN (SELECT data_set_id from supporting_set where type="'.$set->set_type.'" and supporting_set_id='.$set->dbID().')';
+  #self join here to make sure we get all linked result_sets
+  my $sql = ' ds.data_set_id IN (SELECT data_set_id from supporting_set where type="'.$set->set_type.'" and supporting_set_id='.$set->dbID().')';
 	
-    return $self->generic_fetch($sql);	
+  return $self->generic_fetch($sql);	
 }
 
 
@@ -352,28 +352,28 @@ sub fetch_all_by_supporting_set {
 =cut
 
 sub fetch_all_by_feature_type_class {
-    my ($self, $class, $status) = @_;
+  my ($self, $class, $status) = @_;
   
-	throw ('Must provide a FeatureType class to retrieve DataSets') if ! defined $class;
+  throw ('Must provide a FeatureType class to retrieve DataSets') if ! defined $class;
   
-	my ($constraint, @dsets);
+  my ($constraint, @dsets);
 
-	if($status){
-	  $constraint = $self->status_to_constraint($status) if $status;
-    }
+  if ($status) {
+	$constraint = $self->status_to_constraint($status) if $status;
+  }
 
 
-	#This is fetching all feature sets!
-	#we need to left join this?
-	#we can't do it for class
-	#but we can do it for product feature_set type
+  #This is fetching all feature sets!
+  #we need to left join this?
+  #we can't do it for class
+  #but we can do it for product feature_set type
 
-	foreach my $dset(@{$self->generic_fetch($constraint)}){
-	  #uc both here to avoid case sensitivities
-	  push @dsets, $dset if uc($dset->product_FeatureSet->feature_type->class()) eq uc($class);
-	}
+  foreach my $dset (@{$self->generic_fetch($constraint)}) {
+	#uc both here to avoid case sensitivities
+	push @dsets, $dset if uc($dset->product_FeatureSet->feature_type->class()) eq uc($class);
+  }
 
-	return \@dsets;	
+  return \@dsets;	
 }
 
 =head2 fetch_all_displayable_by_feature_type_class
@@ -389,9 +389,9 @@ sub fetch_all_by_feature_type_class {
 =cut
 
 sub fetch_all_displayable_by_feature_type_class {
-    my ($self, $class) = @_;
+  my ($self, $class) = @_;
   
-	return $self->fetch_all_by_feature_type_class($class, 'DISPLAYABLE');	
+  return $self->fetch_all_by_feature_type_class($class, 'DISPLAYABLE');	
 }
 
 
@@ -400,23 +400,23 @@ sub fetch_all_displayable_by_feature_type_class {
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+ Description: PROTECTED implementation of superclass abstract method.
+  Returns the names and aliases of the tables to use for queries.
   Returntype : List
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
 
-=cut
+  =cut
 
-sub _tables {
-  my $self = shift;
+  sub _tables {
+	my $self = shift;
 	
-  return (
-		  [ 'data_set',    'ds' ],
-		  [ 'supporting_set', 'ss'],
-		 );
-}
+	return (
+			[ 'data_set',    'ds' ],
+			[ 'supporting_set', 'ss'],
+		   );
+  }
 
 =head2 _columns
 
@@ -520,11 +520,9 @@ sub _objs_from_sth {
   
   while ( $sth->fetch() ) {
 	
+    if ((! $data_set) || ($data_set->dbID() != $dbID)) {
 
-	
-    if((! $data_set) || ($data_set->dbID() != $dbID)){
-
-	  if($data_set){
+	  if ($data_set) {
 		$data_set->add_supporting_sets(\@supporting_sets);
 		push @data_sets, $data_set;
 		#do not set to empty array as this will cause failure of check in DataSet->new
@@ -542,40 +540,45 @@ sub _objs_from_sth {
 													 );
 
 	}
-	#need to change keys on data_set!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-	#only pushes supporting set if defined, 0's return for no data_set_member records?
-	push @supporting_sets, $set_adaptors{$ss_type}->fetch_by_dbID($ss_id) if $ss_id;
+	
+	if ($ss_id) {	  
+	  my $sset = $set_adaptors{$ss_type}->fetch_by_dbID($ss_id);
+	  
+	  if (! $sset) {
+		throw("Could not find supporting $ss_type set with dbID $ss_id");
+	  }
+	  
+	  push @supporting_sets, $sset;
+	}
   }
 
-  #we could do the sort on cell and types here
-  #we can't do a default sort as some may have feature_set or result_sets absent
   
   #handle last set
-  if($data_set){
+  if ($data_set) {
+	#	warn "ssets are @supporting_sets";
 	$data_set->add_supporting_sets(\@supporting_sets);
 	push @data_sets, $data_set;
   }
 
 
-  #As we're not (quite) constraining how DataSets are associated
-  #it's valid to have a combined exp, i.e. Promoter plus Histone features and results?
-  #It can be valid to have several feature_types in the same set?
-  #This is entirely dependent on sensible experimental design and how we want to view the data.
-  #We could then have multiple cell types too? Getting too many dimensions to display sensibly within e!  
-  #Logically we need one constant to key on, cell_type, feature_type, but also allow support combined info 
-  #i.e. all Histone mods for one cell_type, but also have promoter data too?
-  #This is getting close to a 'regulon', as we're incorporating all sorts of supporting data
-  #There should be an order of display for and within each feature class 
-  #(or if we have same feature across several cell types then we order alphabetically?)
-  #Other possible variables to order on:  
-  #analysis_id, this would also separate the features as we can't base a feature on mutliple analyses of the same data
-  #So we either accomodate everything, where the only contraint is that we have one constant in the set
-  #Or we restrict the Set to handle just one feature_set and it's supporting result_sets
-  #Start simple, let's just take the one feature/data set problem first
+	#As we're not (quite) constraining how DataSets are associated
+	#it's valid to have a combined exp, i.e. Promoter plus Histone features and results?
+	#It can be valid to have several feature_types in the same set?
+	#This is entirely dependent on sensible experimental design and how we want to view the data.
+	#We could then have multiple cell types too? Getting too many dimensions to display sensibly within e!  
+	#Logically we need one constant to key on, cell_type, feature_type, but also allow support combined info 
+	#i.e. all Histone mods for one cell_type, but also have promoter data too?
+	#This is getting close to a 'regulon', as we're incorporating all sorts of supporting data
+	#There should be an order of display for and within each feature class 
+	#(or if we have same feature across several cell types then we order alphabetically?)
+	#Other possible variables to order on:  
+	#analysis_id, this would also separate the features as we can't base a feature on mutliple analyses of the same data
+	#So we either accomodate everything, where the only contraint is that we have one constant in the set
+	#Or we restrict the Set to handle just one feature_set and it's supporting result_sets
+	#Start simple, let's just take the one feature/data set problem first
  
-   return \@data_sets;
-}
+	return \@data_sets;
+  }
 
 
 =head2 store
@@ -593,56 +596,56 @@ sub _objs_from_sth {
 
 =cut
 
-sub store{
-  my ($self, @dsets) = @_;
+  sub store{
+	my ($self, @dsets) = @_;
 
-  throw('Must pass a list of DataSet objects to store') if(! @dsets || $#dsets < 0);
+	throw('Must pass a list of DataSet objects to store') if(! @dsets || $#dsets < 0);
 
 
-  my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, name) 
+	my $sth = $self->prepare("INSERT INTO data_set (feature_set_id, name) 
                             VALUES (?, ?)");
-  my $sth2 = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) 
+	my $sth2 = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) 
                             VALUES (?, ?, ?)");
 
-  my ($fset_id);
+	my ($fset_id);
 
-  my $db = $self->db();
+	my $db = $self->db();
 
 
-  foreach my $dset (@dsets) {
+	foreach my $dset (@dsets) {
 
-	throw('Must pass a DataSet object to store') if( ! ( ref $dset && 
-														 $dset->isa('Bio::EnsEMBL::Funcgen::DataSet')));
+	  throw('Must pass a DataSet object to store') if( ! ( ref $dset && 
+														   $dset->isa('Bio::EnsEMBL::Funcgen::DataSet')));
 
-    if ( $dset->is_stored($db) ) {
-      throw('DataSet [' . $dset->dbID() . '] is already stored in the database,'.
-			'use store_updated_sets method to add new supporting sets in this DataSet');
-    }
+	  if ( $dset->is_stored($db) ) {
+		throw('DataSet [' . $dset->dbID() . '] is already stored in the database,'.
+			  'use store_updated_sets method to add new supporting sets in this DataSet');
+	  }
 		
-    $fset_id = (defined $dset->product_FeatureSet()) ? $dset->product_FeatureSet->dbID() : 0;
+	  $fset_id = (defined $dset->product_FeatureSet()) ? $dset->product_FeatureSet->dbID() : 0;
 	
-	$sth->bind_param(1, $fset_id,                     SQL_INTEGER);
-	$sth->bind_param(2, $dset->name(),                SQL_VARCHAR);
-	$sth->execute();
-	$dset->dbID( $sth->{'mysql_insertid'} );
-	$dset->adaptor($self);
+	  $sth->bind_param(1, $fset_id,                     SQL_INTEGER);
+	  $sth->bind_param(2, $dset->name(),                SQL_VARCHAR);
+	  $sth->execute();
+	  $dset->dbID( $sth->{'mysql_insertid'} );
+	  $dset->adaptor($self);
 	
 
     
-	foreach my $sset (@{$dset->get_supporting_sets()}){
+	  foreach my $sset (@{$dset->get_supporting_sets()}) {
 		
-	  throw("All supporting Feature and ResultSets must be stored previously.".
-			" Use store_updated_sets method if your DataSet has been stored") if(! $sset->is_stored($db));
+		throw("All supporting Feature and ResultSets must be stored previously.".
+			  " Use store_updated_sets method if your DataSet has been stored") if(! $sset->is_stored($db));
 
-	  $sth2->bind_param(1, $dset->dbID(),                SQL_INTEGER);
-	  $sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
-	  $sth2->bind_param(3, $sset->set_type(),            SQL_VARCHAR);#enum feature/result/experimental
-	  $sth2->execute();
+		$sth2->bind_param(1, $dset->dbID(),                SQL_INTEGER);
+		$sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
+		$sth2->bind_param(3, $sset->set_type(),            SQL_VARCHAR); #enum feature/result/experimental
+		$sth2->execute();
+	  }
 	}
-  }
       
-  return \@dsets
-}
+	return \@dsets
+  }
 
 
 =head2 store_updated_sets
@@ -660,112 +663,111 @@ sub store{
 
 =cut
 
-#This needs to cahnge to an arrayref of dset and an overwrite flag
+  #This needs to cahnge to an arrayref of dset and an overwrite flag
 
 
-sub store_updated_sets{
-  my ($self, $dsets, $overwrite) = @_;
+  sub store_updated_sets{
+	my ($self, $dsets, $overwrite) = @_;
 
-  throw('Must pass a list of DataSet objects to store') if(! @$dsets || $#{$dsets} < 0);
-  my ($sql);
-  my $db = $self->db();
-  my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) 
+	throw('Must pass a list of DataSet objects to store') if(! @$dsets || $#{$dsets} < 0);
+	my ($sql);
+	my $db = $self->db();
+	my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) 
                             VALUES (?, ?, ?)");
 
-  foreach my $dset (@$dsets) {
-	throw('Must pass a DataSet object to update') if( ! ( ref $dset && 
-														 $dset->isa('Bio::EnsEMBL::Funcgen::DataSet')));
+	foreach my $dset (@$dsets) {
+	  throw('Must pass a DataSet object to update') if( ! ( ref $dset && 
+															$dset->isa('Bio::EnsEMBL::Funcgen::DataSet')));
 	
-	throw('DataSet [' . $dset->dbID() . '] must be previous stored in the database') if (! $dset->is_stored($db) );
-	my $stored_dset = $self->fetch_by_name($dset->name);
+	  throw('DataSet [' . $dset->dbID() . '] must be previous stored in the database') if (! $dset->is_stored($db) );
+	  my $stored_dset = $self->fetch_by_name($dset->name);
 
 
-	#Update product FeatureSet
-	#We need to do this first so we cacn check wether we're updated supporting_sets
-	#for a data set which has already got a product FeatureSet...not wise
+	  #Update product FeatureSet
+	  #We need to do this first so we cacn check wether we're updated supporting_sets
+	  #for a data set which has already got a product FeatureSet...not wise
 
-	my $fset = $dset->product_FeatureSet;
-	my $stored_fset = $stored_dset->product_FeatureSet;
-	#This fset check is slight overkill, as you have to severly mangle a dataset to fail this validation
+	  my $fset = $dset->product_FeatureSet;
+	  my $stored_fset = $stored_dset->product_FeatureSet;
+	  #This fset check is slight overkill, as you have to severly mangle a dataset to fail this validation
 
-	if(defined $stored_fset){
+	  if (defined $stored_fset) {
 
-	  if(! defined $fset){
-		#How will this have ever happened?
-		warn("Populating absent product FeatureSet from DB for DataSet:\t".$dset->name);
-	  }else{
-		#validate sets
-		if($fset->dbID != $stored_fset->dbID){
-		  my $msg = 'Found product FeatureSet mismatch whilst updating DataSet('.$dset->name.
-			"):\tStored:".$stored_fset->name."\tUpdate:".$fset->name;
-		  throw($msg) if ! $overwrite;
-		  warn $msg;
+		if (! defined $fset) {
+		  #How will this have ever happened?
+		  warn("Populating absent product FeatureSet from DB for DataSet:\t".$dset->name);
+		} else {
+		  #validate sets
+		  if ($fset->dbID != $stored_fset->dbID) {
+			my $msg = 'Found product FeatureSet mismatch whilst updating DataSet('.$dset->name.
+			  "):\tStored:".$stored_fset->name."\tUpdate:".$fset->name;
+			throw($msg) if ! $overwrite;
+			warn $msg;
+		  }
 		}
+	  } else {
+		#update data_set table
+		$sql = 'update data_set set feature_set_id='.$fset->dbID.' where data_set_id='.$dset->dbID;
+		$self->dbc->do($sql);
 	  }
-	}
-	else{
-	  #update data_set table
-	  $sql = 'update data_set set feature_set_id='.$fset->dbID.' where data_set_id='.$dset->dbID;
-	  $self->dbc->do($sql);
-	}
 
-	my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
-	my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$stored_dset->get_supporting_sets};
-	my $mismatch = 0;
+	  my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
+	  my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$stored_dset->get_supporting_sets};
+	  my $mismatch = 0;
 	
-	$mismatch = 1 if(scalar(@sorted_ssets) != scalar(@stored_ssets));
+	  $mismatch = 1 if(scalar(@sorted_ssets) != scalar(@stored_ssets));
 	
-	if(! $mismatch){
+	  if (! $mismatch) {
 	  
-	  for my $i(0..$#stored_ssets){
+		for my $i (0..$#stored_ssets) {
 		
-		if($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID){
-		  $mismatch=1;
-		  last;
+		  if ($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID) {
+			$mismatch=1;
+			last;
+		  }
+		}
+	  }
+
+	  #Delete old supporting_sets
+	  #We really only want to do this if there is a difference
+	  #batched jobs cause race condition here
+	  #unless updated once before submission	
+	  if ($mismatch &&
+		  $overwrite) {
+		$sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID;
+		eval { $self->db->dbc->do($sql) };
+		throw("Couldn\'t delete supporting_sets for DataSet:\t".$stored_dset->name."\n$@") if $@;
+		@stored_ssets = ();
+	  }
+
+
+	  #Update supporting sets
+	  my %stored_dbids;
+	  map {$stored_dbids{$_->dbID} = undef} @stored_ssets if @stored_ssets;
+
+	  foreach my $sset (@sorted_ssets) {	
+		my $dbid = $sset->dbID;
+
+		if (! grep(/^${dbid}$/, keys %stored_dbids)) {		
+		  throw("All supporting sets must be stored previously.") if(! $sset->is_stored($db));
+
+		  #This causes problems when we want to re-run by slice
+		  #Currently need
+		  #warn "temporarily suspended throw for existing feature_set";
+		  throw('You are trying to update supporting sets for a data set which already has a product FeatureSet('.$stored_fset->name.').  Either rollback the FeatureSet before adding more supporting sets or specify the overwrite flag.') if defined $stored_fset && ! $overwrite;
+
+		  $sth->bind_param(1, $dset->dbID,            SQL_INTEGER);
+		  $sth->bind_param(2, $sset->dbID,            SQL_INTEGER);
+		  $sth->bind_param(3, $sset->set_type,        SQL_VARCHAR);
+		  #How is this failing?
+		  #Is the index not being updated after the delete
+		  $sth->execute();
 		}
 	  }
 	}
-
-	#Delete old supporting_sets
-	#We really only want to do this if there is a difference
-	#batched jobs cause race condition here
-	#unless updated once before submission	
-	if($mismatch &&
-	   $overwrite){
-	  $sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID;
-	  eval { $self->db->dbc->do($sql) };
-	  throw("Couldn\'t delete supporting_sets for DataSet:\t".$stored_dset->name."\n$@") if $@;
-	  @stored_ssets = ();
-	}
-
-
-	#Update supporting sets
-	my %stored_dbids;
-	map {$stored_dbids{$_->dbID} = undef} @stored_ssets if @stored_ssets;
-
-	foreach my $sset(@sorted_ssets){	
-	my $dbid = $sset->dbID;
-
-	  if(! grep(/^${dbid}$/, keys %stored_dbids)){		
-		throw("All supporting sets must be stored previously.") if(! $sset->is_stored($db));
-
-		#This causes problems when we want to re-run by slice
-		#Currently need
-		#warn "temporarily suspended throw for existing feature_set";
-		throw('You are trying to update supporting sets for a data set which already has a product FeatureSet('.$stored_fset->name.').  Either rollback the FeatureSet before adding more supporting sets or specify the overwrite flag.') if defined $stored_fset && ! $overwrite;
-
-		$sth->bind_param(1, $dset->dbID,            SQL_INTEGER);
-		$sth->bind_param(2, $sset->dbID,            SQL_INTEGER);
-		$sth->bind_param(3, $sset->set_type,        SQL_VARCHAR);
-		#How is this failing?
-		#Is the index not being updated after the delete
-		$sth->execute();
-	  }
-	}
-  }
       
-  return $dsets
-}
+	return $dsets
+  }
 
 
 =head2 list_dbIDs
@@ -781,11 +783,11 @@ sub store_updated_sets{
 
 =cut
 
-sub list_dbIDs {
+  sub list_dbIDs {
 	my $self = shift;
 	
 	return $self->_list_dbIDs('data_set');
-}
+  }
 
-1;
+  1;
 
