@@ -12,7 +12,8 @@ Bio::EnsEMBL::Hive::RunnableDB::Funcgen::ImportMotifFeatures
 
 package Bio::EnsEMBL::Funcgen::RunnableDB::ImportMotifFeatures;
 
-use base ('Bio::EnsEMBL::Hive::ProcessWithParams');
+use base ('Bio::EnsEMBL::Hive::Process');
+#use base ('Bio::EnsEMBL::Hive::ProcessWithParams');
 
 use warnings;
 use strict;
