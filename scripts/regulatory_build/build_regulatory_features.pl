@@ -43,7 +43,8 @@ Options:
     
     -focus|f           Focus features
     -attrib|a          Attribute features
-    
+    OR
+    -use_tracking_db   Use tracking DB flag, gets input sets from tracking DB
 
   Optional
     -port              Port for eFG DB, default is 3306
@@ -165,6 +166,10 @@ The following figure gives examples.
 # 29 Don't build on cell type with only spare focus features and no other attrs i.e. only DNase
 #    Min of N different focus features if no attrs? Just include in core set.
 
+# 30 Archive can get very messy if it fails half way through as it is non-recoverable i.e.
+#    Next run will not try and archive and will treat everything as current.
+
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -174,7 +179,7 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Exception qw(verbose warning info);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file strip_param_flags strip_param_args generate_slices_from_names);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_current_regulatory_input_names open_file strip_param_flags strip_param_args generate_slices_from_names);
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 local $|=1;
@@ -184,7 +189,7 @@ my ($pass,$port,$host,$user,$dbname,
     $outdir, $write_features, $cdb,
     $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
     $clobber,$focus_max_length, @slices, @skip_slices, $non_ref,
-    $focus_extend, $dump,$gene_signature, $ctype_projection, 
+    $focus_extend, $dump,$gene_signature, $ctype_projection, $use_tracking,
     $debug_start, $debug_end, $version, @focus_names, @attr_names, $local);
 
 
@@ -231,17 +236,16 @@ GetOptions (
 			'slices=s{,}'         => \@slices,
 			'focus_sets=s{,}'     => \@focus_names, 
 			'attribute_sets=s{,}' => \@attr_names,
+			'use_tracking_db'     => \$use_tracking,
 			'non_ref'             => \$non_ref,
 			'include_mt'          => \$include_mt,
 			'version=s'           => \$version,
 			'local'               => \$local,
-
 			'tee'                 => \$main::_tee,
-			'logfile'             => \$main::_log_file,
+			'logfile=s'             => \$main::_log_file,
 	
 			'help|?'         => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
 		   ) or pod2usage( -exitval => 1);
-
 
 
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
@@ -269,8 +273,8 @@ die("Must specify mandatory -user\n") if ! defined $user;
 die("Must specify mandatory -pass\n") if ! defined $pass;
 die("Must specify mandatory -dbname\n") if ! defined $dbname;
 die("Must specify mandatory output directory (-outdir).\n")       if ! $outdir;
-die("Must specify mandatory focus sets (-focus_sets).\n")         if ! @focus_names;
-die("Must specify mandatory attribute sets (-attribute_sets).\n") if ! @attr_names;
+
+
 
 $focus_max_length = 2000 if (! defined $focus_max_length);
 $focus_extend = 2000 if (! defined $focus_extend);
@@ -328,6 +332,32 @@ my $species = $db->species;
 
 if(! defined $species){
   die("Could not get a valid species from $dbname, please check the meta species.production_name");
+}
+
+
+if(! $use_tracking){
+  die("Must specify mandatory focus sets (-focus_sets).\n")         if ! @focus_names;
+  die("Must specify mandatory attribute sets (-attribute_sets).\n") if ! @attr_names;
+}
+elsif(@focus_names || @attr_names){
+  die('Please specify either -use_tracking or -focus_sets and -attribute_sets');
+}
+else{#Use Tracking
+
+  #Change this to Funcgen when we implement full funcgen schema
+
+  my $tdb = Bio::EnsEMBL::DBSQL::DBConnection->new
+	(
+	 -host => 'ens-genomics1',
+	 #-port => $dnadb_port,
+	 -user => 'ensro',
+	 #-pass => $dnadb_pass,
+	 -dbname => 'efg_data_tracking',
+	 #-group   => 'core',
+	);
+
+  @focus_names = get_current_regulatory_input_names($tdb, $db, 1);#Focus flag
+  @attr_names = get_current_regulatory_input_names($tdb, $db);
 }
 
 
@@ -448,6 +478,14 @@ if($current_version == $version){#Only archive if version is different to curren
   }
 }
 else{
+
+
+  #This is failing to rollback regbuild.NPC.feature_set_ids?
+  #But only happens once as next run will be caught above
+  #Is this due to a fail half way through a archive?
+  #Need to make this recoverable or stop here is there are any partial archive sets found
+  #do we can stop and correct before any more mess is made.
+  
 
   foreach my $ctype(keys %cell_types){
 
@@ -737,7 +775,7 @@ my $sr_name;
 
 if (! $local){ #BSUB!
   
-  @tmp_args = @{&strip_param_flags(\@tmp_args, ('local', 'non_ref', 'include_mt'))};
+  @tmp_args = @{&strip_param_flags(\@tmp_args, ('local', 'non_ref', 'include_mt', 'tee'))};
   @tmp_args = @{strip_param_args(\@tmp_args, ('slices', 'skip_slices'))};
   (my $bsubhost = $host) =~ s/-/_/g;
 
@@ -756,6 +794,7 @@ if (! $local){ #BSUB!
   
   $helper->log("Output can be found here:\t$outdir");
   warn "We need a to put this in a Runnable so we can easily monitor which jobs have failed";
+  exit;
 
 }
 elsif(scalar(@slices) > 1){
@@ -1026,7 +1065,7 @@ foreach my $ctype(keys %ctype_fsets){
 
   if ((($total < $focus) || ($focus == 0)) &&
 	 ! $ctype_projection){
-	warn("Found inconsistenty between Total and Focus $ctype features\n");
+	warn("Found inconsistenty between Total($total) and Focus($focus) $ctype features\n");
 	$die = 1;
   }
 
@@ -1057,6 +1096,7 @@ foreach my $ctype(keys %ctype_fsets){
 
   
   if($t_regfs > $max_regfs){
+	#Change this to log if ctype_projection?
 	warn("WARNING:\tFound more RegFeats($t_regfs) than included focus features($max_regfs) for $ctype\n");
 	$die = 1 if ! $ctype_projection;
   }
@@ -1710,7 +1750,7 @@ sub store_regbuild_meta_strings{
 	($meta_value) = map { "@$_" } @{$sth->fetchall_arrayref};
 
 
-	warn "meta value for $meta_key is $meta_value";
+	#warn "meta value for $meta_key is $meta_value";
 
 
 	if (! defined $meta_value) {
