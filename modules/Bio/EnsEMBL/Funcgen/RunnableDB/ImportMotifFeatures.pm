@@ -13,7 +13,7 @@ Bio::EnsEMBL::Hive::RunnableDB::Funcgen::ImportMotifFeatures
 package Bio::EnsEMBL::Funcgen::RunnableDB::ImportMotifFeatures;
 
 use base ('Bio::EnsEMBL::Hive::Process');
-#use base ('Bio::EnsEMBL::Hive::ProcessWithParams');
+
 
 use warnings;
 use strict;
@@ -93,7 +93,7 @@ sub fetch_input {   # fetch parameters...
     " annotated_feature af, seq_region sr where af.seq_region_id=sr.seq_region_id and ".
       " feature_set_id in (".join(",",@fsets).")";
   my $cmd = "mysql -e \"".$query."\" -quick -h".$self->param('host')." -P".$self->param('port').
-    " -u".$self->param('dnadbuser')." ".$self->param('dbname')." >".$output_file_name;
+    " -u".$self->param('user')." -p".$self->param('pass').' '.$self->param('dbname')." >".$output_file_name;
 
   print $cmd."\n";
 
