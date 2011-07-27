@@ -17,6 +17,10 @@ WindowInterval	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	
 DEFAULT	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0000-00-00 00:00:00	NULL	NULL	Default analysis	1	NULL
 Manual Antibody-Gene Annotation	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	Manual Annotation	Manual Annotation	1	NULL
 Jaspar	jaspar.genereg.net	JASPAR_2010	all_data/matrix_only/matrix_only.txt	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	Import from Jaspar	Jaspar	1	NULL
+bwa_samse	NULL	NULL	NULL	bwa	NULL	bwa	NULL	NULL	NULL	NULL	NULL	NULL	BWA single read alignment	BWA	1	NULL
+SWEMBL_R0025	NULL	NULL	NULL	SWEMBL	3.3	SWEmbl	-f 150 -R 0.0025	NULL	NULL	NULL	NULL	NULL	SWEMBL Peak Caller	SWEMBL	1	NULL
+SWEMBL_R015	NULL	NULL	NULL	SWEMBL	3.3	SWEmbl	-f 150 -R  0.015	NULL	NULL	NULL	NULL	NULL	SWEMBL Peak Caller	SWEMBL	1	NULL
+CCAT_HISTONE	NULL	NULL	NULL	CCAT	3.0	CCAT	config_histone.txt	NULL	NULL	NULL	NULL	NULL	CCAT Peak Caller	CCAT	1	NULL
 
 #This file is for import analyses only
 #Pipeline analyses should be loaded from pipeline(i.e. arrays or peaks)
