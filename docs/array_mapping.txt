@@ -322,12 +322,9 @@ The arrays environment specifies several functions(not all documented here) avai
 line, these can generally be invoked with a -h option to print a help or usage message.
 
 
-8.1 Probe Alignment 
+8.1 Array import and Probe alignment 
 
 There are basically 5 main steps to running the probe alignment element of the pipeline:
-
-BuildFastas     Looks in the each array format directory and updates a cat'd file of all available 
-			    fasta.
 
 SetUpPipeline   Creates pipeline DB and imports analyses and pipeline rule conditions and goals.
 			    This may show some errors as the pipeline system expects all the analyses in 
@@ -335,8 +332,16 @@ SetUpPipeline   Creates pipeline DB and imports analyses and pipeline rule condi
 			    templated configuration this can be ignored. There may also be some errors refering 
 			    to the submit type analyses having no module, accumulator or input_ids not being 
 				present, these can also be ignored.
+
+BuildFastas     Looks in the each array format directory and updates a cat'd file of all available 
+			    fasta.
 			   
 ImportArrays    Invokes the pipeline to import all available arrays. Followed by ImportWait
+
+BuildFastas & ImportArrays can be skipped if you have already imported the array design during a 
+previous release cycle i.e. you have used the RollbackArrays function (see section 9),  However, it 
+will be necessary to copy the relevant arrays_nr.FORMAT.fasta files from the original import as these
+ are required for the following steps.
 
 CreateAlignIDs  Creates ProbeAlign job/chunk IDs to enable parallel processing of the non-redundant 
                 fasta output of ImportArrays.
