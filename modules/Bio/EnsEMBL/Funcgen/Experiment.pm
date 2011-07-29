@@ -74,8 +74,8 @@ use vars qw(@ISA);
   Arg [-DATE]: string - the date of the experiment (format?)
   Arg [-PRIMARY_DESIGN_TYPE]: string - MGED term for the primary design of teh experiment e.g. binding_site_identification
   Arg [-DESCRIPTION]: string - of the experiment
-  Arg [-ACCESSION_ID]: string - Public Repository (ENA) experiment accession id
-  Arg [-DATA_URL]: string - Public URL of the data (used if the accession_id is not present)
+  Arg [-ARCHIVE_ID]: string - Public Repository (ENA) experiment accession e.g. SRX00124818
+  Arg [-DATA_URL]: string - Public URL of the data (used if the archive_id is not present)
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
 								  -NAME                => $name,
@@ -83,7 +83,7 @@ use vars qw(@ISA);
 								  -DATE                => $date,
 								  -PRIMARY_DESIGN_TYPE => $p_design_type,
 								  -DESCRIPTION         => $description,
-								  -ACESSION_ID         => $accession_id,
+								  -ARCHIVE_ID         => $archive_id,
                                                  		 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Experiment object.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
@@ -104,7 +104,7 @@ sub new {
 
 	my $self = $class->SUPER::new(@_);
 
-	my ($name, $group, $date, $p_dtype, $desc, $access_id, $data_url, $xml_id, $xml)
+	my ($name, $group, $date, $p_dtype, $desc, $archive_id, $data_url, $xml_id, $xml)
 		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 'DESCRIPTION','ACCESSION_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
 	
 	$self->name($name)          if defined $name;
@@ -112,7 +112,7 @@ sub new {
 	$self->date($date)          if defined $date;
 	$self->primary_design_type($p_dtype)    if defined $p_dtype;
 	$self->description($desc)   if defined $desc;
-	$self->accession_id($access_id)   if defined $access_id;
+	$self->archive_id($archive_id)   if defined $archive_id;
 	$self->data_url($data_url)   if defined $data_url;
 	$self->mage_xml_id($xml_id) if defined $xml_id;
 	$self->mage_xml($xml)       if defined $xml;
@@ -314,22 +314,22 @@ sub description{
   return $self->{'description'};
 }
 
-=head2 accession_id
+=head2 archive_id
 
-  Arg [1]: string - Accesson ID to a public repository (ENA)
-  Example: $accession_id = $exp->accession_id();
+  Arg [1]    : String - Archive ID to a public repository (ENA) e.g. SRX00381237
+  Example    : $archive_id = $exp->archive_id();
   Description: Getter/Setter for the experiment accession id
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : At risk
 
 =cut
 
-sub accession_id{
+sub archive_id{
   my $self = shift;
-  $self->{'accession_id'} = shift if(@_);
-  return $self->{'accession_id'};
+  $self->{'archive_id'} = shift if(@_);
+  return $self->{'archive_id'};
 }
 
 
