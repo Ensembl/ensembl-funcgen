@@ -29,10 +29,11 @@ use Bio::EnsEMBL::Funcgen::Experiment;
 my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
 						   -ADAPTOR             => $self,
 						   -NAME                => $name,
-					       -GROUP               => $group,
+					           -EXPERIMENTAL_GROUP  => $experimental_group,
 						   -DATE                => $date,
 						   -PRIMARY_DESIGN_TYPE => $p_design_type,
 						   -DESCRIPTION         => $description,
+						   -ACCESSION_ID        => $accession_id,
                                                    );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
@@ -69,18 +70,20 @@ use vars qw(@ISA);
 =head2 new
 
   Arg [-NAME]: string - the name of this experiment
-  Arg [-GROUP]: string - the name of the experimental group
-  Arg [-GROUP_ID]: int - the dbID of the experimental group
+  Arg [-EXPERIMENTAL_GROUP]: ExperimentalGroup associated to this experiment
   Arg [-DATE]: string - the date of the experiment (format?)
   Arg [-PRIMARY_DESIGN_TYPE]: string - MGED term for the primary design of teh experiment e.g. binding_site_identification
   Arg [-DESCRIPTION]: string - of the experiment
+  Arg [-ACCESSION_ID]: string - Public Repository (ENA) experiment accession id
+  Arg [-DATA_URL]: string - Public URL of the data (used if the accession_id is not present)
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
 								  -NAME                => $name,
-								  -GROUP               => $group,
+								  -EXPERIMENTAL_GROUP  => $group,
 								  -DATE                => $date,
 								  -PRIMARY_DESIGN_TYPE => $p_design_type,
 								  -DESCRIPTION         => $description,
+								  -ACESSION_ID         => $accession_id,
                                                  		 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Experiment object.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
@@ -101,15 +104,16 @@ sub new {
 
 	my $self = $class->SUPER::new(@_);
 
-	my ($name, $group_id, $group, $date, $p_dtype, $desc, $xml_id, $xml)
-		= rearrange( ['NAME', 'GROUP_ID', 'GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
+	my ($name, $group, $date, $p_dtype, $desc, $access_id, $data_url, $xml_id, $xml)
+		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 'DESCRIPTION','ACCESSION_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
 	
 	$self->name($name)          if defined $name;
-	$self->group_id($group_id)  if defined $group_id;
-	$self->group($group)        if defined $group;
+	$self->experimental_group($group)        if defined $group;
 	$self->date($date)          if defined $date;
 	$self->primary_design_type($p_dtype)    if defined $p_dtype;
 	$self->description($desc)   if defined $desc;
+	$self->accession_id($access_id)   if defined $access_id;
+	$self->data_url($data_url)   if defined $data_url;
 	$self->mage_xml_id($xml_id) if defined $xml_id;
 	$self->mage_xml($xml)       if defined $xml;
 
@@ -146,13 +150,12 @@ sub name{
 
 =head2 group_id
 
-  Arg [1]: int - the group dbID corresponding to this experiment
-  Example: $exp->group_db_id('1');
+  Example: gid = $exp->group_id();
   Description: Getter/Setter for the group_db_id
   Returntype : int
-  Exceptions : None
+  Exceptions : 
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 
@@ -161,9 +164,9 @@ sub name{
 sub group_id{
 	my ($self) = shift;	
 
-	$self->{'group_id'} = shift if(@_);
-
-	return $self->{'group_id'};
+	warn "exp->group_id is deprecated. Use exp->group->dbID instead";
+	warn "cannot set group id manually, ignoring parameter..." if(@_);
+	return $self->experimental_group()->dbID;
 }
 
 =head2 mage_xml
@@ -221,29 +224,54 @@ sub mage_xml_id{
 
 =head2 group
 
-  Arg [1]: optional - Bio::EnsEMBL::Funcgen::Group
-  Example: my $exp_group_name = $exp->group->name();
-  Description: Getter/Setter for the group
-  Returntype : Bio::EnsEMBL::Funcgen::Group
-  Exceptions : None
+  Example: my $exp_group_name = $exp->experimental_group->name();
+  Description: Getter for the group name
+  Returntype : string
+  Exceptions : 
+  Caller     : General
+  Status     : Deprecated
+
+=cut
+
+
+sub group{
+  my $self = shift;	
+
+  warn "exp->group is deprecated. Use exp->experimental_group->name instead";
+  warn "cannot set group name manually, ignoring parameter..." if(@_);
+  return $self->experimental_group()->name;
+
+}
+
+=head2 experimental_group
+
+  Arg [1]: optional - Bio::EnsEMBL::Funcgen::ExperimentalGroup
+  Example: my $exp_group_name = $exp->experimental_group()->name();
+  Description: Getter/Setter for the experimental group
+  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalGroup
+  Exceptions : Throws if not a valid ExperimentalGroup object
   Caller     : General
   Status     : At risk
 
 =cut
 
 
-sub group{
-  my ($self) = shift;	
+sub experimental_group{
+  my ($self, $group) = (shift, shift);	
 
-  if(@_){
-    $self->{'group'} = shift;
-  }elsif(! exists $self->{'group'}){
-    #this should be group_adaptor->fetch_by_dbID($self->group_id());
-    throw("Not yet implemented group adaptor");
+  if($group){
+
+    throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalGroup object") 
+      if(! $group->isa("Bio::EnsEMBL::Funcgen::ExperimentalGroup") || ! $group->dbID());
+
+    $self->{'group'} = $group;
+
   }
 
   return $self->{'group'};
+
 }
+
 
 =head2 date
 
@@ -284,6 +312,43 @@ sub description{
   my $self = shift;
   $self->{'description'} = shift if(@_);
   return $self->{'description'};
+}
+
+=head2 accession_id
+
+  Arg [1]: string - Accesson ID to a public repository (ENA)
+  Example: $accession_id = $exp->accession_id();
+  Description: Getter/Setter for the experiment accession id
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub accession_id{
+  my $self = shift;
+  $self->{'accession_id'} = shift if(@_);
+  return $self->{'accession_id'};
+}
+
+
+=head2 data_url
+
+  Arg [1]: string - an url for the experiment data
+  Example: $url = $exp->data_url();
+  Description: Getter/Setter for the experiment data url
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub data_url{
+  my $self = shift;
+  $self->{'data_url'} = shift if(@_);
+  return $self->{'data_url'};
 }
 
 =head2 primary_design_type
