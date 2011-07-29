@@ -29,7 +29,7 @@ storing Funcgen Experiment objects.
 =head1 SYNOPSIS
 
 my $exp_a = $db->get_ExperimentAdaptor();
-my $exp = $exp_a->fetch_by_name($name);
+my $exp   = $exp_a->fetch_by_name($name);
 
 
 =head1 DESCRIPTION
@@ -54,39 +54,6 @@ use vars qw(@ISA);
 #May need to our this?
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#=head2 fetch_all_by_group
-#
-#  Arg [1]    : int - dbID of array_chip
-#  Example    : my $array = $oaa->fetch_by_array_chip_dbID($ac_dbid);
-#  Description: Retrieves a named Array object from the database.
-#  Returntype : listref of Bio::EnsEMBL::Funcgen::Experiment objects
-#  Exceptions : None
-#  Caller     : General
-#  Status     : At risk
-#
-#=cut
-#
-#sub fetch_all_by_group {
-#    my $self = shift;
-#
-#    throw("Not yet implemented");
-#
-#    my $ac_dbid = shift;
-#    my $sth = $self->prepare("
-#		SELECT a.array_id
-#		FROM array a, array_chip ac
-#		WHERE a.array_id = ac.array_id
-#		AND ac.array_chip_id = $ac_dbid
-#	");
-#
-#
-#    $sth->execute();
-#    my ($array_id) = $sth->fetchrow();
-#    
-#    return $self->fetch_by_dbID($array_id);
-#}
-
-
 
 =head2 fetch_by_name
 
@@ -96,7 +63,7 @@ use vars qw(@ISA);
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
   Exceptions : Throws if no name defined or if more than one returned
   Caller     : General
-  Status     : At Risk -replace with fetch_all_by_name and fetch_by_name_group
+  Status     : Medium risk
 
 =cut
 
@@ -105,8 +72,9 @@ sub fetch_by_name {
   my $name = shift;
   
   throw("Need to specify and experiment name argument") if (! defined $name);
-
-  my $result = $self->generic_fetch("e.name = '$name'");
+  
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
+  my $result = $self->generic_fetch("e.name = ?");
   
   if (scalar @$result > 1) {
     throw("Experiment $name is not unique in the database, but only one result has been returned");
@@ -114,6 +82,32 @@ sub fetch_by_name {
   } 
   return $result->[0];
 }
+
+
+=head2 fetch_by_archive_id
+
+  Arg [1]    : String - Archive ID to a public repository (ENA) e.g. SRX00381237
+  Example    : my $exp = $exp_a->fetch_by_archive_id('SRX00381237');
+  Description: Retrieves an Experiment via it's archive ID.
+  Returntype : Bio::EnsEMBL::Funcgen::Experiment
+  Exceptions : Throws if archive ID not defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_by_archive_id {
+  my $self = shift;
+  my $id = shift;
+  
+  throw("Need to specify and archive id argument") if (! defined $id);
+
+  $self->bind_param_generic_fetch($id, SQL_VARCHAR);
+  my $result = $self->generic_fetch("e.archive_id = ?");
+ 
+  return $result->[0];
+}
+
 
 =head2 get_all_experiment_names
 
@@ -123,7 +117,7 @@ sub fetch_by_name {
   Returntype : ARRAYREF
   Exceptions : none
   Caller     : General
-  Status     : At Risk -rename fetch?
+  Status     : At Risk - rename fetch?
 
 =cut
 
@@ -134,66 +128,9 @@ sub get_all_experiment_names{
   my ($constraint);
 
   my $sql = "SELECT e.name FROM experiment e";
-  my @names = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-
   $sql .= ", status s WHERE e.experiment_id =\"s.table_id\" AND s.table_name=\"experiment\" AND s.state=\"DISPLAYABLE\"" if($displayable);
   
-
-
-  #can we do return [map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)}];
-  return \@names;
-}
-
-#fetch_by_name_group
-
-
-#=head2 fetch_all_by_design_type
-#
-#  Arg [1]    : List of strings - type(s) (e.g. AFFY or OLIGO)
-#  Example    : my @arrays = @{$oaa->fetch_all_by_type('OLIGO')};
-#  Description: Fetch all arrays of a particular type.
-#  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
-#  Exceptions : Throws if no type is provided
-#  Caller     : General
-#  Status     : Medium Risk
-
-#=cut
-
-#sub fetch_all_by_design_type {
-#	my ($self, @types) = @_;
-	
-#	throw('Need type as parameter') if !@types;
-	
-#	my $constraint;
-#	if (scalar @types == 1) {
-#		$constraint = qq( oa.type = '$types[0]' );
-#	} else {
-#		$constraint = join q(','), @types;
-#		$constraint = qq( oa.type IN ('$constraint') );
-#	}
-
-#	return $self->generic_fetch($constraint);
-#}
-
-=head2 fetch_attributes
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment - array to fetch attributes for
-  Example    : None
-  Description: This function is solely intended to lazy load attributes into
-               empty Experiment objects. You should not need to call this.
-  Returntype : None
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::Experiment getters
-  Status     : Medium Risk
-
-=cut
-
-sub fetch_attributes {
-    my $self = shift;
-    my $array = shift;
-
-    my $tmp_array = $self->fetch_by_dbID( $array->dbID() );
-    %$array = %$tmp_array;
+  return $self->db->dbc->db_handle->selectcol_arrayref($sql);
 }
 
 =head2 _tables
@@ -212,8 +149,6 @@ sub fetch_attributes {
 sub _tables {
 	my $self = shift;
 	
-	#should we add group, target, design_type, experimental_variable?
-
 	return ['experiment', 'e'];
 }
 
@@ -233,7 +168,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw(e.experiment_id e.name e.experimental_group_id e.date e.primary_design_type e.description e.accession_id e.data_url e.mage_xml_id);
+	return qw(e.experiment_id e.name e.experimental_group_id e.date e.primary_design_type e.description e.archive_id e.data_url e.mage_xml_id);
 }
 
 =head2 _objs_from_sth
@@ -253,15 +188,16 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $exp_id, $name, $group_id, $p_design_type, $date, $description, $accession_id, $data_url, $xml_id);
+	my (@result, $exp_id, $name, $group_id, $p_design_type, $date, $description, $archive_id, $data_url, $xml_id);
 	
 	my $eg_adaptor = $self->db->get_ExperimentalGroupAdaptor();
 
-	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, \$description, \$accession_id, \$data_url, \$xml_id);
+	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, \$description, \$archive_id, \$data_url, \$xml_id);
 	
+
 	while ( $sth->fetch() ) {
 
-	  my $group = $eg_adaptor->fetch_by_dbID($group_id);
+	  my $group = $eg_adaptor->fetch_by_dbID($group_id);#cache these in ExperimentalGroupAdaptor
 
 	  my $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
 							   -DBID                => $exp_id,
@@ -271,7 +207,7 @@ sub _objs_from_sth {
 							   -DATE                => $date,
 							   -PRIMARY_DESIGN_TYPE => $p_design_type,
 							   -DESCRIPTION         => $description,
-							   -ACCESSION_ID        => $accession_id,
+							   -ARCHIVE_ID        => $archive_id,
 							   -DATA_URL            => $data_url,
 							   -MAGE_XML_ID         => $xml_id,
 													  );
@@ -306,7 +242,7 @@ sub store {
 	my ($s_exp);
    	
 	my $sth = $self->prepare('INSERT INTO experiment
-                                 (name, experimental_group_id, date, primary_design_type, description, accession_id, data_url, mage_xml_id)
+                                 (name, experimental_group_id, date, primary_design_type, description, archive_id, data_url, mage_xml_id)
                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
 
     foreach my $exp (@args) {
@@ -331,7 +267,7 @@ sub store {
 		$sth->bind_param(3, $exp->date(),                     SQL_VARCHAR);#date?
 		$sth->bind_param(4, $exp->primary_design_type(),      SQL_VARCHAR);
 		$sth->bind_param(5, $exp->description(),              SQL_VARCHAR);
-		$sth->bind_param(6, $exp->accession_id(),             SQL_VARCHAR);
+		$sth->bind_param(6, $exp->archive_id(),               SQL_VARCHAR);
 		$sth->bind_param(7, $exp->data_url(),                 SQL_VARCHAR);
 		$sth->bind_param(8, $exp->mage_xml_id(),              SQL_INTEGER);
 		
@@ -339,22 +275,16 @@ sub store {
 		$exp->dbID($sth->{'mysql_insertid'});
 		$exp->adaptor($self);
 		
-			
-			#do we need to set egroup, target, design_type, experimentall_variable here?
-			#}
-			#else{
-			#	warn("Experiment already exists in DB, using previously stored Experiment\n");
-			#	$exp = $s_exp;
-			#}
-		}else{
-			#assume we want to update the states
-			warn('You may want to use $exp->adaptor->store_states($exp)');
-			$self->store_states($exp);
-		}
+	  }
+	  else{
+		#assume we want to update the states
+		warn('You may want to use $exp->adaptor->store_states($exp)');
+		$self->store_states($exp);
+	  }
 	}
-		
+	
     return \@args;
-}
+  }
 
 =head2 fetch_mage_xml_by_Experiment
 
@@ -470,10 +400,6 @@ sub list_dbIDs {
     return $self->_list_dbIDs('experiment');
 }
 
-
-#Need to add lazy load methods
-#experimental_variables
-#group
 
 
 1;
