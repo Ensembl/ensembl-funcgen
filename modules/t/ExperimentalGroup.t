@@ -9,7 +9,7 @@ use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN { $| = 1;
 	use Test;
-	plan tests => 18;
+	plan tests => 35;
 }
 
 # switch on the debug prints
@@ -42,6 +42,7 @@ my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
 							   -name         => 'ebi_test',
 							   -location     => 'location',
 							   -contact      => 'contact',
+							   -url          => 'http://www.ebi.ac.uk/',
 							   -description  => 'Just a test group',
 							 );
    
@@ -49,12 +50,13 @@ my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
 #5
 ok( ref( $group ) && $group->isa( "Bio::EnsEMBL::Funcgen::ExperimentalGroup" ));
 
-#6-11 Test
+#6-12 Test
 ok( test_getter_setter( $group, "dbID", 2 ));
 ok( test_getter_setter( $group, "adaptor", undef ));
 ok( test_getter_setter( $group, "name", "test name" ));
 ok( test_getter_setter( $group, "location", "test location" ));
 ok( test_getter_setter( $group, "contact", "test contact" ));
+ok( test_getter_setter( $group, "url", "test url" ));
 ok( test_getter_setter( $group, "description", "test description"));
 
 #Prepare table for store tests....
@@ -62,26 +64,52 @@ $multi->hide('funcgen', 'experimental_group', 'experiment');
 $ega->store($group);
 
 $group = $ega->fetch_by_name("ebi_test");
-#12-15 Test
+#13-17 Test
 ok( $group->name eq 'ebi_test' );
 ok( $group->location eq 'location' );
 ok( $group->contact eq 'contact' );
+ok( $group->url =~ /www.ebi/ );
 ok( $group->description =~ /^Just/ );
 
 my $exp = Bio::EnsEMBL::Funcgen::Experiment->new
       (
-       -NAME => 'test_experiment',
-       -EXPERIMENTAL_GROUP => $group,
+       -NAME                => 'test_experiment',
+       -EXPERIMENTAL_GROUP  => $group,
+       -DATE                => "2011-01-01",
+       -PRIMARY_DESIGN_TYPE => "test design",
+       -ACCESSION_ID	    => "GSEXXX",
+       -DATA_URL	    => "http://",
+       -DESCRIPTION         => "test description",     
       );
+
+
+#18
+ok( ref( $exp ) && $exp->isa( "Bio::EnsEMBL::Funcgen::Experiment" ));
+
+#19-26 Test
+ok( test_getter_setter( $exp, "dbID", 2 ));
+ok( test_getter_setter( $exp, "adaptor", undef ));
+ok( test_getter_setter( $exp, "experimental_group", $efg_group ));
+ok( test_getter_setter( $exp, "date", "1999-01-01" ));
+ok( test_getter_setter( $exp, "primary_design_type", "another test" ));
+ok( test_getter_setter( $exp, "accession_id", "test id" ));
+ok( test_getter_setter( $exp, "data_url", "test url" ));
+ok( test_getter_setter( $exp, "description", "another description"));
 
 $ea->store($exp);
 
 $exp = $ea->fetch_by_name('test_experiment');
 
-#16-18 Test
+#27-35 Test
 ok( $exp->name eq 'test_experiment' );
 ok( $exp->experimental_group->name eq 'ebi_test' );
 ok( $exp->experimental_group->description =~ /^Just/ );
+ok( $exp->experimental_group->url =~ /www.ebi/ );
+ok( $exp->date eq '2011-01-01' );
+ok( $exp->primary_design_type eq 'test design' );
+ok( $exp->accession_id eq 'GSEXXX' );
+ok( $exp->data_url eq 'http://' );
+ok( $exp->description eq 'test description' );
 
 #Restore table
 $multi->restore();
