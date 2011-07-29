@@ -54,37 +54,37 @@ use vars qw(@ISA);
 #May need to our this?
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-=head2 fetch_all_by_group
-
-  Arg [1]    : int - dbID of array_chip
-  Example    : my $array = $oaa->fetch_by_array_chip_dbID($ac_dbid);
-  Description: Retrieves a named Array object from the database.
-  Returntype : listref of Bio::EnsEMBL::Funcgen::Experiment objects
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub fetch_all_by_group {
-    my $self = shift;
-
-    throw("Not yet implemented");
-
-    my $ac_dbid = shift;
-    my $sth = $self->prepare("
-		SELECT a.array_id
-		FROM array a, array_chip ac
-		WHERE a.array_id = ac.array_id
-		AND ac.array_chip_id = $ac_dbid
-	");
-
-
-    $sth->execute();
-    my ($array_id) = $sth->fetchrow();
-    
-    return $self->fetch_by_dbID($array_id);
-}
+#=head2 fetch_all_by_group
+#
+#  Arg [1]    : int - dbID of array_chip
+#  Example    : my $array = $oaa->fetch_by_array_chip_dbID($ac_dbid);
+#  Description: Retrieves a named Array object from the database.
+#  Returntype : listref of Bio::EnsEMBL::Funcgen::Experiment objects
+#  Exceptions : None
+#  Caller     : General
+#  Status     : At risk
+#
+#=cut
+#
+#sub fetch_all_by_group {
+#    my $self = shift;
+#
+#    throw("Not yet implemented");
+#
+#    my $ac_dbid = shift;
+#    my $sth = $self->prepare("
+#		SELECT a.array_id
+#		FROM array a, array_chip ac
+#		WHERE a.array_id = ac.array_id
+#		AND ac.array_chip_id = $ac_dbid
+#	");
+#
+#
+#    $sth->execute();
+#    my ($array_id) = $sth->fetchrow();
+#    
+#    return $self->fetch_by_dbID($array_id);
+#}
 
 
 
@@ -233,7 +233,7 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( e.experiment_id e.name e.experimental_group_id e.date e.primary_design_type e.description e.mage_xml_id);
+	return qw(e.experiment_id e.name e.experimental_group_id e.date e.primary_design_type e.description e.accession_id e.data_url e.mage_xml_id);
 }
 
 =head2 _objs_from_sth
@@ -253,20 +253,27 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $exp_id, $name, $group_id, $p_design_type, $date, $description, $xml_id);
+	my (@result, $exp_id, $name, $group_id, $p_design_type, $date, $description, $accession_id, $data_url, $xml_id);
 	
-	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, \$description, \$xml_id);
+	my $eg_adaptor = $self->db->get_ExperimentalGroupAdaptor();
+
+	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, \$description, \$accession_id, \$data_url, \$xml_id);
 	
 	while ( $sth->fetch() ) {
+
+	  my $group = $eg_adaptor->fetch_by_dbID($group_id);
+
 	  my $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
-													   -DBID                => $exp_id,
-													   -ADAPTOR             => $self,
-													   -NAME                => $name,
-													   -GROUP_ID            => $group_id,
-													   -DATE                => $date,
-													   -PRIMARY_DESIGN_TYPE => $p_design_type,
-													   -DESCRIPTION         => $description,
-													   -MAGE_XML_ID         => $xml_id,
+							   -DBID                => $exp_id,
+							   -ADAPTOR             => $self,
+							   -NAME                => $name,
+							   -EXPERIMENTAL_GROUP  => $group,
+							   -DATE                => $date,
+							   -PRIMARY_DESIGN_TYPE => $p_design_type,
+							   -DESCRIPTION         => $description,
+							   -ACCESSION_ID        => $accession_id,
+							   -DATA_URL            => $data_url,
+							   -MAGE_XML_ID         => $xml_id,
 													  );
 	  
 	  push @result, $exp;
@@ -299,8 +306,8 @@ sub store {
 	my ($s_exp);
    	
 	my $sth = $self->prepare('INSERT INTO experiment
-                                 (name, experimental_group_id, date, primary_design_type, description, mage_xml_id)
-                                 VALUES (?, ?, ?, ?, ?, ?)');
+                                 (name, experimental_group_id, date, primary_design_type, description, accession_id, data_url, mage_xml_id)
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
 
     foreach my $exp (@args) {
 	  throw('Can only store Experiment objects') 	if ( ! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'));
@@ -308,8 +315,8 @@ sub store {
 	  if (!( $exp->dbID() && $exp->adaptor() == $self )){
 		
 		
-		my ($g_dbid) = $self->db->fetch_group_details($exp->group());
-		throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
+		#my ($g_dbid) = $self->db->fetch_group_details($exp->group());
+		#throw("Group specified does, not exist.  Use Importer(group, location, contact)") if(! $g_dbid);
 		
 		$s_exp = $self->fetch_by_name($exp->name());#validate on group too!
 		throw("Experimental already exists in the database with dbID:".$s_exp->dbID().
@@ -319,12 +326,14 @@ sub store {
 		
 		$exp = $self->update_mage_xml_by_Experiment($exp) if(defined $exp->mage_xml());
 			
-		$sth->bind_param(1, $exp->name(),                SQL_VARCHAR);
-		$sth->bind_param(2, $g_dbid,                     SQL_INTEGER);
-		$sth->bind_param(3, $exp->date(),                SQL_VARCHAR);#date?
-		$sth->bind_param(4, $exp->primary_design_type(), SQL_VARCHAR);
-		$sth->bind_param(5, $exp->description(),         SQL_VARCHAR);
-		$sth->bind_param(6, $exp->mage_xml_id(),         SQL_INTEGER);
+		$sth->bind_param(1, $exp->name(),                     SQL_VARCHAR);
+		$sth->bind_param(2, $exp->experimental_group()->dbID, SQL_INTEGER);
+		$sth->bind_param(3, $exp->date(),                     SQL_VARCHAR);#date?
+		$sth->bind_param(4, $exp->primary_design_type(),      SQL_VARCHAR);
+		$sth->bind_param(5, $exp->description(),              SQL_VARCHAR);
+		$sth->bind_param(6, $exp->accession_id(),             SQL_VARCHAR);
+		$sth->bind_param(7, $exp->data_url(),                 SQL_VARCHAR);
+		$sth->bind_param(8, $exp->mage_xml_id(),              SQL_INTEGER);
 		
 		$sth->execute();
 		$exp->dbID($sth->{'mysql_insertid'});
