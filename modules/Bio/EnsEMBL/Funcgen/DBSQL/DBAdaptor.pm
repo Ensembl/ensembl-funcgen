@@ -327,6 +327,7 @@ sub get_available_adaptors{
 			   'AnnotatedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
 			   'RegulatoryFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
 			   'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+			   'ExperimentalGroup'  => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
 			   'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
 			   'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
 			   'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG to override core adaptor?
