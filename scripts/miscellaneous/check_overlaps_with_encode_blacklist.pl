@@ -210,7 +210,8 @@ foreach my $feature_set (@feature_sets){
 }
 if(scalar(@fsets)==0){
   if($all){ 
-    warn "All feature sets being used... this may take a while!";
+    warn "All feature sets are being used... this may take a while!";
+    warn "Features for external or regulatory sets overlapping blacklis are not removed, only counts are reported!"
     @fsets = @{$fsa->fetch_all()};
   } else { warn "No Feature Sets found. Use -feature_sets or -all"; exit 1; }
 }
@@ -230,18 +231,16 @@ foreach my $fset (@fsets){
   my $set_length = 0;
   my $set_overlap_length = 0;
 
-  warn "Adding the Y PAR regions to the blacklist";
-  my @all_regions = @{ $coredba->get_SliceAdaptor()->fetch_all('toplevel') };
-  push @all_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',10001,2649521);
-  push @all_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',59034050);
 
-
-  foreach my $chromosome_slice (@{ $coredba->get_SliceAdaptor()->fetch_all('chromosome') }){
+  #foreach my $chromosome_slice (@{ $coredba->get_SliceAdaptor()->fetch_all('chromosome') }){
+  #Include duplicate regions...
+  foreach my $chromosome_slice (@{ $coredba->get_SliceAdaptor()->fetch_all('toplevel', undef, 0, 1) }){
     #print "Chromosome\t".$chromosome_slice->seq_region_name()."\n";
     my @set_features = @{$fset->get_Features_by_Slice($chromosome_slice)};
     my @excluded_regions = @{$chromosome_slice->get_all_MiscFeatures('encode_excluded')}; 
 
     if($chromosome_slice->seq_region_name eq 'Y'){
+      warn "Adding the Y PAR regions to the blacklist";
       push @excluded_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',10001,2649521);
       push @excluded_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',59034050);
     }
