@@ -211,7 +211,7 @@ foreach my $feature_set (@feature_sets){
 if(scalar(@fsets)==0){
   if($all){ 
     warn "All feature sets are being used... this may take a while!";
-    warn "Features for external or regulatory sets overlapping blacklis are not removed, only counts are reported!"
+    warn "Features for external or regulatory sets overlapping blacklis are not removed, only counts are reported!";
     @fsets = @{$fsa->fetch_all()};
   } else { warn "No Feature Sets found. Use -feature_sets or -all"; exit 1; }
 }
