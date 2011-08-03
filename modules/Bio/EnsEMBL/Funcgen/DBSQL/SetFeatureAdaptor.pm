@@ -300,7 +300,10 @@ sub _generate_feature_set_id_clause{
 
   my @fs_ids;
 
-  throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects') if scalar(@{$fsets}) == 0;
+  if(! ( (ref($fsets) eq 'ARRAY') &&
+		 scalar(@{$fsets}) > 0) ){
+	throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects');
+  }
 
   my $fclass = $self->_feature_class;
   
