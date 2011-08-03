@@ -116,6 +116,12 @@ Name of the EFG database (defaults to $DB_NAME)
 
 =cut
 
+
+#To do
+# 1 Set BLACKLIST_FILTERED status?
+# 2 add -slices -skip_slices support
+
+
 use warnings;
 use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -154,7 +160,10 @@ GetOptions ("output=s"      => \$output,
             "coredb_host=s" => \$coredb_host,
             "coredb_user=s" => \$coredb_user,
             "coredb_name=s" => \$coredb_name,
-	    "all"           => \$all,
+			"all"           => \$all,
+			#"class"         => \$feature_class,
+			#Can't implement other classses here as they have xrefs etc
+			#would have to use Helper to rollback feature methods
             "remove"        => \$remove,
             "feature_sets=s{,}"  => \@feature_sets,
 	    "help|h"              => \$help,
@@ -192,89 +201,159 @@ if(!$efgdba){ warn "Could not connect to EFG database..."; exit 1; }
 
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 my $afa = $efgdba->get_AnnotatedFeatureAdaptor();
+
 #my $cta = $efgdba->get_CellTypeAdaptor();
 #my $K562 = $cta->fetch_by_name("K562");
 #This doesn't seem to be working very well... TODO: check why...
 #my @fsets = $fsa->fetch_all_by_CellType($K562);
 
+
+#Currently only handles annotated FeatureSets!
+
 if((scalar(@feature_sets)>0) && $all){ warn " Only specified feature sets will be considered. -all is being ignored."; }
 
-
-#my @fsets = @{$fsa->fetch_all_by_type('annotated')};
 my @fsets;
-foreach my $feature_set (@feature_sets){ 
-  my $fset = $fsa->fetch_by_name($feature_set);
-  if($fset) { 
-    push(@fsets, $fsa->fetch_by_name($feature_set)); 
-  } else { warn "Could not find Feature Set $feature_set"; }
-}
-if(scalar(@fsets)==0){
-  if($all){ 
-    warn "All feature sets are being used... this may take a while!";
-    warn "Features for external or regulatory sets overlapping blacklis are not removed, only counts are reported!";
-    @fsets = @{$fsa->fetch_all()};
-  } else { warn "No Feature Sets found. Use -feature_sets or -all"; exit 1; }
-}
-#my @fsets = @{$fsa->fetch_all_by_type('external')};
-#my @fsets = @{$fsa->fetch_all()};
-#print scalar(@fsets)."\n"; 
 
-my %ids_to_remove;
-my %blacklist;
-open(FO,">".$output);
-print FO "set_name\tset_count\tset_overlap_count\tset_length\tset_overlap_length\n";
-foreach my $fset (@fsets){
-  print $fset->name."\n";
-  #print Dumper $fset;
-  my $set_count = 0;
-  my $set_overlap_count = 0;
-  my $set_length = 0;
-  my $set_overlap_length = 0;
-
-
-  #foreach my $chromosome_slice (@{ $coredba->get_SliceAdaptor()->fetch_all('chromosome') }){
-  #Include duplicate regions...
-  foreach my $chromosome_slice (@{ $coredba->get_SliceAdaptor()->fetch_all('toplevel', undef, 0, 1) }){
-    #print "Chromosome\t".$chromosome_slice->seq_region_name()."\n";
-    my @set_features = @{$fset->get_Features_by_Slice($chromosome_slice)};
-    my @excluded_regions = @{$chromosome_slice->get_all_MiscFeatures('encode_excluded')}; 
-
-    if($chromosome_slice->seq_region_name eq 'Y'){
-      warn "Adding the Y PAR regions to the blacklist";
-      push @excluded_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',10001,2649521);
-      push @excluded_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',59034050);
-    }
-
-    foreach my $feature (@set_features){
-      $set_count++;
-      $set_length += $feature->feature_Slice()->length();
-      
-      #This assumes that encode_excluded regions are non-overlapping with each other
-      foreach my $region (@excluded_regions ) {
-	if(($feature->start() >= $region->end()) || 
-	   ($feature->end() <= $region->start()) ){ next; } else { 
-	     #There is an overlap
-	     # This has the disadvantage that overlap counts may be more than the features... 
-	     $set_overlap_count++;
-
-	     #potential memory hog... there could be many features... but should be ok.
-	     $ids_to_remove{$feature->dbID()} = 1;
-
-	     my $start = $region->start();
-	     my $end = $region->end();
-	     if($start<$feature->start()){ $start = $feature->start();  }
-	     if($end>$feature->end()){ $end = $feature->end();  }
-	     $set_overlap_length += ($end-$start+1);
-
-	     #The same feature set can overlap several times with the same blacklist region...
-	     $blacklist{$chromosome_slice->seq_region_name()."_".$region->start()."_".$region->end()}{$fset->name} = 1;
-
-	   }	
-      }
-    }
+if(! $all){
+  foreach my $feature_set (@feature_sets){ 
+	my $fset = $fsa->fetch_by_name($feature_set);
+	
+	if($fset) { 
+	  push(@fsets, $fsa->fetch_by_name($feature_set)); 
+	} 
+	else { warn "Could not find Feature Set $feature_set"; }
   }
-  print FO $fset->name."\t".$set_count."\t".$set_overlap_count."\t".$set_length."\t".$set_overlap_length."\n";
 }
+else{
+  
+  #warn "Features for external or regulatory sets overlapping blacklist are not removed, only counts are reported!";
+  #@fsets = @{$fsa->fetch_all()};
+  #removed this as it was throwing errors when trying to fetch via the specific feature adaptor
+  #would have to specify correct feature adaptors
+
+  @fsets = @{$fsa->fetch_all_by_type('annotated')};
+  warn "All Annotated FeatureSets(".(scalar(@fsets)).") are being used... this may take a while!";
+  
+}
+
+
+if(scalar(@fsets) ==0){
+  die("No Feature Sets found. Use -feature_sets or -all");
+}
+
+my %blacklist;
+open(FO,">".$output) || die("Cannot open:\t$output");
+my @count_keys = ('count', 'total_feature_length', 'cumulative_region_coverage');
+print FO "FeatureSet\t".join("\t", @count_keys)."\n";
+
+
+#add global counts here?
+my %global_counts;
+my $slice_a = $coredba->get_SliceAdaptor();
+#Include duplicate regions...
+
+foreach my $chromosome_slice (@{ $slice_a->fetch_all('toplevel', undef, 0, 1) }){
+  
+
+  #my @set_features = @{$fset->get_Features_by_Slice($chromosome_slice)};
+  #Do we really want to do this set wise here or use af_a->fetch_all_by_Slice_FeatureSets
+
+  
+  my @excluded_regions = map $_->feature_Slice, 
+	@{$chromosome_slice->get_all_MiscFeatures('encode_excluded')}; 
+  
+  if ($chromosome_slice->seq_region_name eq 'Y') {
+	print "Adding the Y PAR regions to the blacklist\n";
+	#We need to add them at the beginning so that these large regions will be tested first... 
+	unshift @excluded_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',10001,2649521);
+	unshift @excluded_regions, $coredba->get_SliceAdaptor()->fetch_by_region('chromosome','Y',59034050);
+  }
+
+
+  foreach my $region (@excluded_regions) {
+	my @ids_to_remove;
+	my %counts;
+
+	#could probably do with some global counts too.
+
+
+	print "Fetching features from black list region:\t\t\t\t".$region->name."\n";
+	#my @set_features = @{$fset->get_Features_by_Slice($regions)};
+	my @set_features = @{$afa->fetch_all_by_Slice_FeatureSets($region, \@fsets)};
+	
+	
+	#Could use has_par here to set sr_id_test flag
+	#do we even need the feature loop?
+	#Yes, if we want to maintain the overlap stats and %blacklist
+	my $has_par = ($region->seq_region_name eq 'Y') ? 1 : 0;
+	
+	#Need to overhaul stats/logs here
+	#but should work
+
+	foreach my $feature (@set_features) {
+		
+	  #Firstly avoid PAR regions which have been projected via the slice fetch code
+	  if($has_par){
+		my $query_sr_id = $slice_a->get_seq_region_id($region);
+		my $sql = 'select seq_region_id from annotated_feature where annotated_feature_id='.$feature->dbID;
+		my ($db_sr_id) = $efgdba->dbc->db_handle->selectrow_array($sql);
+		next if $query_sr_id != $db_sr_id;
+	  }
+
+	  $global_counts{$feature->feature_set->name}{count} ++;
+	  $counts{$feature->feature_set->name}{count} ++;
+	  $counts{$feature->feature_set->name}{total_feature_length} += $feature->feature_Slice()->length();
+
+
+	  
+	  #This assumes that encode_excluded regions are non-overlapping with each other
+	  #There is an overlap
+	  # This has the disadvantage that overlap counts may be more than the features... 
+	  #$set_overlap_count++;  
+	  push @ids_to_remove, $feature->dbID();
+
+	  my $start = $region->start();
+	  my $end = $region->end();
+	  
+	  if ($start<$feature->start()) { 
+		$start = $feature->start();  
+	  }
+		
+	  if ($end>$feature->end()) { 
+		$end = $feature->end();  
+	  }
+		
+	  $counts{$feature->feature_set->name}{cumulative_region_coverage} += ($end-$start+1);
+
+		
+	  #The same feature set can overlap several times with the same blacklist region...
+	  #Can probably update this or integrate with other log?
+
+	  #What is this for?
+
+	  $blacklist{$region->name}{$feature->feature_set->name} = 1;
+	  
+	}
+  
+
+	foreach my $fset_name(keys %counts){
+
+	  print FO "${fset_name}\t".join("\t", (map $counts{$fset_name}{$_}, @count_keys))."\n";
+	}
+    
+	&remove_features($region, \@ids_to_remove);
+  }
+}
+
+
+print FO "\n\nTotal counts\n";
+
+foreach my $fset_name(keys %global_counts){
+
+  print FO "${fset_name}\t".$global_counts{$fset_name}."\n";
+}
+
+
 close FO;
 
 
@@ -286,17 +365,45 @@ foreach my $region (sort keys %blacklist){
 }
 close FOB;
 
-if($remove){
-  #TODO Batch remove features!
-  foreach my $fID (keys %ids_to_remove){
-    eval{ 
-      my $sql = "DELETE FROM annotated_feature WHERE annotated_feature_id=".$fID.";";
-      $efgdba->dbc->do($sql);		 
-    };
-    if($@) { warn $@->getErrorMessage(); }
-  }
-} 
 
-exit 0;
+sub remove_features{
+  my ($region, $db_ids, $counts) = @_;
+
+  
+  
+  if(scalar(@$db_ids) == 0){
+	print "No AnnotatedFeatures for blacklist region:\t".$region->name."\n";
+  }
+  elsif($remove){
+	#TODO Batch remove features!
+		print "Deleting ".scalar(@$db_ids).
+		  " AnnotatedFeatures for blacklist region:\t".$region->name."\n";
+
+	my $sql = "DELETE FROM annotated_feature WHERE annotated_feature_id in (".join(', ', @$db_ids).')';
+	
+	eval{ $efgdba->dbc->do($sql);	};
+	
+	if($@){ 
+	  die("Could not delete ".scalar(@$db_ids).
+		  " AnnotatedFeatures for blacklist region:\t".$region->name."\n$@");
+	}
+	
+	# foreach my $fID (keys %ids_to_remove){
+	#   eval{ 
+	#     my $sql = "DELETE FROM annotated_feature WHERE annotated_feature_id=".$fID.";";
+	#     $efgdba->dbc->do($sql);		 
+	#   };
+	#   if($@) { warn $@->getErrorMessage(); }
+  }
+  else{
+	print "Skipping deletion of ".scalar(@$db_ids).
+	  " AnnotatedFeatures for blacklist region:\t".$region->name."\n";
+  }
+}
+
+
+
+
+1;
 
 
