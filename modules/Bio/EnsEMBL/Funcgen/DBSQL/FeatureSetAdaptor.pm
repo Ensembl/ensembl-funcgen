@@ -86,7 +86,7 @@ sub fetch_all_by_FeatureType {
       $sql = (defined $constraint) ? $sql." AND ".$constraint : undef;
     }
 
-    return $self->generic_fetch($sql);	
+    return (defined $sql) ? $self->generic_fetch($sql) : [];	
 }
 
 
@@ -132,15 +132,16 @@ sub fetch_all_by_feature_class {
     my $status = shift;
     
     throw('Must provide a feature_set type') if(! defined $type);
-	
+    
     my $sql = "fs.type = '".$type."'";
-
+    
     if($status){
       my $constraint = $self->status_to_constraint($status);
       $sql = (defined $constraint) ? $sql." AND ".$constraint : undef;
     }
 
-    return $self->generic_fetch($sql);	
+
+    return (defined $sql) ? $self->generic_fetch($sql): [];	
 }
 
 
@@ -161,7 +162,7 @@ sub fetch_all_displayable_by_type {
     my $self = shift;
     my $type = shift;
   
-	$self->fetch_all_by_type($type, 'DISPLAYABLE');
+    $self->fetch_all_by_type($type, 'DISPLAYABLE');
 }
 
 
@@ -194,7 +195,7 @@ sub fetch_all_by_CellType {
       $sql = (defined $constraint) ? $sql." ".$constraint : undef;
     }
 
-    return $self->generic_fetch($sql);	
+    return (defined $sql) ? $self->generic_fetch($sql): [];	
 }
 
 
@@ -269,7 +270,7 @@ sub fetch_by_name {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
-  return $self->generic_fetch($sql)->[0];
+  return (defined $sql) ? $self->generic_fetch($sql)->[0]: [];	
   
 }
 

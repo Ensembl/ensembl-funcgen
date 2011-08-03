@@ -142,7 +142,7 @@ sub fetch_by_name {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
-  return $self->generic_fetch($sql)->[0];
+  return  (defined $sql) ? $self->generic_fetch($sql)->[0]  : [];
   
 }
 
@@ -171,7 +171,7 @@ sub fetch_all_by_supporting_set_type {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
-  return $self->generic_fetch($sql);
+  return  (defined $sql) ? $self->generic_fetch($sql): [];
   
 }
 
@@ -209,7 +209,7 @@ sub fetch_all_by_product_FeatureSet_type {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
-  return $self->generic_fetch($sql);
+  return  (defined $sql) ? $self->generic_fetch($sql): [];
   
 }
 
@@ -352,28 +352,25 @@ sub fetch_all_by_supporting_set {
 =cut
 
 sub fetch_all_by_feature_type_class {
-    my ($self, $class, $status) = @_;
+  my ($self, $class, $status) = @_;
   
-	throw ('Must provide a FeatureType class to retrieve DataSets') if ! defined $class;
+  throw ('Must provide a FeatureType class to retrieve DataSets') if ! defined $class;
   
-	my ($constraint, @dsets);
-
-	if($status){
-	  $constraint = $self->status_to_constraint($status) if $status;
-    }
-
-
-	#This is fetching all feature sets!
-	#we need to left join this?
-	#we can't do it for class
-	#but we can do it for product feature_set type
-
-	foreach my $dset(@{$self->generic_fetch($constraint)}){
-	  #uc both here to avoid case sensitivities
-	  push @dsets, $dset if uc($dset->product_FeatureSet->feature_type->class()) eq uc($class);
-	}
-
-	return \@dsets;	
+  my ($constraint, @dsets);
+  
+  if($status){
+    $constraint = $self->status_to_constraint($status) if $status;
+    return [] if ! defined $constraint;
+  }
+  
+  
+  
+  foreach my $dset(@{$self->generic_fetch($constraint)}){
+    #uc both here to avoid case sensitivities
+    push @dsets, $dset if uc($dset->product_FeatureSet->feature_type->class()) eq uc($class);
+  }
+  
+  return \@dsets;	
 }
 
 =head2 fetch_all_displayable_by_feature_type_class
