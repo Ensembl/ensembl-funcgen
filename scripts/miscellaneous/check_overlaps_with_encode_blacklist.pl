@@ -120,7 +120,8 @@ Name of the EFG database (defaults to $DB_NAME)
 #To do
 # 1 Set BLACKLIST_FILTERED status?
 # 2 add -slices -skip_slices support
-
+# 3 Probably want to implement this in a module so it can be re-used in the pipeline
+# 4 refine log output
 
 use warnings;
 use strict;
