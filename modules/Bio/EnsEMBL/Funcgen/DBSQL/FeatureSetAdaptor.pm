@@ -86,7 +86,7 @@ sub fetch_all_by_FeatureType {
       $sql = (defined $constraint) ? $sql." AND ".$constraint : undef;
     }
 
-    return $self->generic_fetch($sql);	
+    return (defined $sql) ? $self->generic_fetch($sql) : [];	
 }
 
 
@@ -140,7 +140,7 @@ sub fetch_all_by_feature_class {
       $sql = (defined $constraint) ? $sql." AND ".$constraint : undef;
     }
 
-    return $self->generic_fetch($sql);	
+    return (defined $sql) ? $self->generic_fetch($sql) : [];	
 }
 
 
@@ -194,7 +194,7 @@ sub fetch_all_by_CellType {
       $sql = (defined $constraint) ? $sql." ".$constraint : undef;
     }
 
-    return $self->generic_fetch($sql);	
+    return (defined $sql) ? $self->generic_fetch($sql) : [];
 }
 
 
@@ -269,7 +269,7 @@ sub fetch_by_name {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
-  return $self->generic_fetch($sql)->[0];
+  return (defined $sql) ? $self->generic_fetch($sql)->[0] : [];
   
 }
 

@@ -142,7 +142,7 @@ sub fetch_by_name {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
-  return $self->generic_fetch($sql)->[0];
+  return (defined $sql) ? $self->generic_fetch($sql)->[0] : [];
   
 }
 
@@ -171,7 +171,7 @@ sub fetch_all_by_supporting_set_type {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
-  return $self->generic_fetch($sql);
+  return (defined $sql) ? $self->generic_fetch($sql) : [];
   
 }
 
@@ -209,7 +209,7 @@ sub fetch_all_by_product_FeatureSet_type {
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
-  return $self->generic_fetch($sql);
+  return (defined $sql) ? $self->generic_fetch($sql) : [];
   
 }
 
@@ -360,6 +360,7 @@ sub fetch_all_by_feature_type_class {
 
   if ($status) {
 	$constraint = $self->status_to_constraint($status) if $status;
+	return [] if ! defined $constraint;
   }
 
 
