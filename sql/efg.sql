@@ -812,6 +812,7 @@ CREATE TABLE `experimental_group` (
    `contact` varchar(40) default NULL,
    `url` varchar(255) default NULL,
    `description` varchar(255) default NULL,
+   `is_project` boolean default False,
    PRIMARY KEY  (`experimental_group_id`),
    UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
