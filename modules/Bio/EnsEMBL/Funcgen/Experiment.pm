@@ -33,7 +33,7 @@ my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
 						   -DATE                => $date,
 						   -PRIMARY_DESIGN_TYPE => $p_design_type,
 						   -DESCRIPTION         => $description,
-						   -ACCESSION_ID        => $accession_id,
+						   -ARCHIVE_ID          => $archive_id,
                                                    );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
@@ -83,7 +83,7 @@ use vars qw(@ISA);
 								  -DATE                => $date,
 								  -PRIMARY_DESIGN_TYPE => $p_design_type,
 								  -DESCRIPTION         => $description,
-								  -ARCHIVE_ID         => $archive_id,
+								  -ARCHIVE_ID          => $archive_id,
                                                  		 );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Experiment object.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
@@ -105,7 +105,7 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 
 	my ($name, $group, $date, $p_dtype, $desc, $archive_id, $data_url, $xml_id, $xml)
-		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 'DESCRIPTION','ACCESSION_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
+		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 'DESCRIPTION','ARCHIVE_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
 	
 	$self->name($name)          if defined $name;
 	$self->experimental_group($group)        if defined $group;
