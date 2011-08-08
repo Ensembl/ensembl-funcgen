@@ -756,7 +756,7 @@ CREATE TABLE `probe_design` (
 @column experimental_group_id			@link experimental_group table ID
 @column date			Date of experiment
 @column primary_design_type			e.g. binding_site_identification, preferably EFO term
-@column accession_id			ENA experiment identifier enabling access to specific raw data
+@column archive_id			ENA experiment identifier enabling access to specific raw data
 @column data_url			When no accession_id exists, an alternative url to get the data 
 @column description			Text description
 @column	mage_xml_id			@link mage_xml table_id for array experiments
@@ -775,7 +775,7 @@ CREATE TABLE `experiment` (
    `date` date default '0000-00-00',
    `primary_design_type` varchar(30) default NULL, 
    `description`  varchar(255) default NULL,
-   `accession_id` varchar(20) default NULL, 
+   `archive_id` varchar(20) default NULL, 
    `data_url` varchar(255) default NULL, 
    `mage_xml_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`experiment_id`),
