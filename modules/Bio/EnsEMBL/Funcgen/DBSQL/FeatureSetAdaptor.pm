@@ -361,7 +361,7 @@ sub _objs_from_sth {
 	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	$ctype_hash{'NULL'} = undef;
 
-	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name, \$type, \$desc, \$display_label, $exp_id);
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name, \$type, \$desc, \$display_label, \$exp_id);
 	
 	while ( $sth->fetch()) {
 
@@ -397,7 +397,6 @@ sub _objs_from_sth {
 
 	return \@fsets;
 }
-
 
 
 
