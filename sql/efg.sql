@@ -441,8 +441,10 @@ CREATE TABLE `feature_set` (
    `type` enum('annotated', 'regulatory', 'external') default NULL,
    `description` varchar(80) default NULL,
    `display_label` varchar(80) default NULL,
+   `experiment_id` int(10) unsigned default '0',
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
+   KEY `experiment_idx` (`experiment_id`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1033,8 +1035,7 @@ CREATE TABLE `cell_type` (
    UNIQUE KEY `efo_idx` (`efo_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- xref to coriell
-
+-- bto?
 
 /**
 @table  experimental_design
