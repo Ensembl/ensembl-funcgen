@@ -76,6 +76,10 @@ Name of the specific core database to use
 
 Folder where the data is found
 
+=item B<-slices>
+
+List of slices to be imported, separated by ; eg. 1;2;X;23
+
 =back
 
 =cut
@@ -88,7 +92,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my ($host, $port, $user, $pass, $dbname);
 my ($dnadbhost, $dnadbport, $dnadbuser, $dnadbname);
-my ($help, $workdir);
+my ($help, $workdir, @slices);
 
 #get command line options
 print "run_binding_site_import.pl @ARGV\n";
@@ -104,6 +108,7 @@ GetOptions (
 	    'dbpass=s'           => \$pass,
 	    'dbname=s'           => \$dbname,
 	    'workdir=s'          => \$workdir,
+	    'slices=s{,}'        => \@slices,
 	    "help|h"             => \$help,
 	   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
@@ -150,12 +155,17 @@ foreach my $file (@files){
 
   my $bm = $bms[0];
 
+  my $mf_sql =  "motif_feature where binding_matrix_id=".$bm->dbID;
+  if(scalar(@slices)>0){
+    warn "Restricting to requested ".scalar(@slices)." slices";
+    $mf_sql = $mf_sql." and seq_region_id in (select seq_region_id from seq_region where name in ('".join("','",@slices)."'))";
+  }
+
   warn "Deleting previous data for $matrix with matrix id ".$bm->dbID." - this will likely imply that a new regulatory build is needed";
-  $efgdb->dbc->do("delete from associated_motif_feature where motif_feature_id in (select motif_feature_id from motif_feature where binding_matrix_id=".$bm->dbID." )");
-  $efgdb->dbc->do("delete from motif_feature where binding_matrix_id=".$bm->dbID);
+  $efgdb->dbc->do("delete from associated_motif_feature where motif_feature_id in (select motif_feature_id from ".$mf_sql." )");
+  $efgdb->dbc->do("delete from ".$mf_sql);
 
-  system("init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ImportMotifFeatures_conf -dnadbhost $dnadbhost -dnadbport $dnadbport -dnadbuser $dnadbuser -dnadbname $dnadbname -host $host -port $port -user $user -pass $pass -dbname $dbname -efg_src $ENV{SRC}/ensembl-functgenomics/ -file ${workdir}/${file} -matrix $matrix ".($first ? '' : " -job_topup"));
-
+  system("init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ImportMotifFeatures_conf -dnadbhost $dnadbhost -dnadbport $dnadbport -dnadbuser $dnadbuser -dnadbname $dnadbname -host $host -port $port -user $user -pass $pass -dbname $dbname -efg_src $ENV{SRC}/ensembl-functgenomics/ -file ${workdir}/${file} -matrix $matrix ".($first ? '' : " -job_topup").(scalar(@slices)>0 ? " -slices ".join(",",@slices) : ""));
 
   $first = 0;
 

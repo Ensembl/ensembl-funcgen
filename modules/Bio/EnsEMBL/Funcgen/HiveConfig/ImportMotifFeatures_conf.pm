@@ -66,10 +66,12 @@ sub default_options {
 	  		    -port   => $self->o('port'),
 	  		    -user   => $self->o('user'),
 	  		    -pass   => $self->o('pass'),                       
-	  		    -dbname => $ENV{'USER'}.'_motif_feature_import_'.$self->o('dbname'),
+	  		    #-dbname => $ENV{'USER'}.'_motif_feature_import_'.$self->o('dbname'),
+			    -dbname => $ENV{'USER'}.'_mf_import_'.$self->o('dbname'),
 	  		   },
 
-	  'data_dir' => '/lustre/scratch103/ensembl/funcgen',
+	  'data_dir'   => '/lustre/scratch103/ensembl/funcgen',
+	  'slices'     => '',
 
 	 };
 }
@@ -117,12 +119,14 @@ sub pipeline_wide_parameters {
 	  'pass'   => $self->o('pass'),                       
 	  'dbname' => $self->o('dbname'),
 
-	  'dnadbhost'   => $self->o('dnadbhost'),
-	  'dnadbport'   => $self->o('dnadbport'),
-	  'dnadbuser'   => $self->o('dnadbuser'),
-	  'dnadbname'   => $self->o('dnadbname'),
+	  'dnadbhost'  => $self->o('dnadbhost'),
+	  'dnadbport'  => $self->o('dnadbport'),
+	  'dnadbuser'  => $self->o('dnadbuser'),
+	  'dnadbname'  => $self->o('dnadbname'),
 
-	  'efg_src'     => $self->o('efg_src'),
+	  'efg_src'    => $self->o('efg_src'),
+
+	  'slices'     => $self->o('slices'),
 
 	 };
 }

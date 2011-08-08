@@ -50,6 +50,8 @@ sub fetch_input {   # fetch parameters...
 							-dnadb_host => $self->param('dnadb_host'),
 							-dnadb_dbname => $self->param('dnadb_dbname'),
 						       );
+
+
   #test db connections
   $db->dbc->db_handle;
   
@@ -73,9 +75,10 @@ sub fetch_input {   # fetch parameters...
   my $bm = $bms[0];
   $self->param('matrix', $bm);
 
-  #check if there is already data for this matrix stored... if there is, throw an error...
+  #check if there is already data for this matrix stored... if there is, throw an error...  
+  #TODO test specifically for data in slices...
   my $count = $db->dbc->db_handle->selectrow_array("select count(1) from motif_feature where binding_matrix_id=".$bm->dbID);
-  if($count>0){ throw "Data for ".$bm->name." already exists! Remove it first"; }
+  if(($count>0) && !($self->param('slices'))){ throw "Data for ".$bm->name." already exists! Remove it first"; }
 
   my $ft = $bm->feature_type;
   my @fts = ($ft);
@@ -112,9 +115,16 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   my $bm = $self->param('matrix');
 
+  
+
   my $results = $self->param('output_dir')."/overlaps_".$bm->name.".tab";
   my $cmd = "perl ".$self->param('efg_src')."/scripts/miscellaneous/cooccur.pl ".$self->param('file')." ".$self->param('output_file_name')." > ".$results;
   system($cmd) && throw "Error executing coocur: $cmd";
+
+  my @slices;
+  if($self->param('slices')){
+    @slices = split(/,/,$self->param('slices'));
+  }
 
   my %data;
   my %slice_cache;
@@ -125,6 +135,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
     # only include those completely included in the annotated feature
     next if ($start < $start_af);
     next if ($end > $end_af);
+    
+    #Quick hack to only import specific slices...
+    my $filter = 0;
+    if(scalar(@slices)>0){
+      $filter=1;
+      foreach my $slice (@slices){ 
+	if($slice eq $sr){ $filter = 0; }
+      }
+    }
+
+    next if($filter);
 
     if(!defined($slice_cache{$sr})){
       my $slice = $sa->fetch_by_region('toplevel',$sr);
