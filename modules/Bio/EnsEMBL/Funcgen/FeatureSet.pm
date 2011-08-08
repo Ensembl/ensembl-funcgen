@@ -74,6 +74,7 @@ use vars qw(@ISA);
                                                                     -feature_class => 'annotated',
                                                                     -description   => 'Release 3.1',
                                                                     -display_label => 'Short name',
+                                                                    -experiment_id => $exp_id,
 			                                                       ); 
   Description: Constructor for FeatureSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
@@ -90,8 +91,8 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($desc, $dlabel)
-    = rearrange(['DESCRIPTION', 'DISPLAY_LABEL'],@_);
+  my ($desc, $dlabel, $exp_id)
+    = rearrange(['DESCRIPTION', 'DISPLAY_LABEL', 'EXPERIMENT_ID'],@_);
 
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
 
@@ -105,7 +106,8 @@ sub new {
 
   $self->description($desc) if defined $desc;
   $self->display_label($dlabel) if defined $dlabel;
-
+  $self->{'experiment_id'} = $exp_id if defined $exp_id;  #No method for this as it is only used during object creation
+ 
   return $self;
 }
 
@@ -128,36 +130,6 @@ sub new_fast {
    return bless ($hashref, $class);
 }
 
-
-
-
-
-#methods
-#set wide display label(predicted_feature) + more wordy label for wiggle tracks?
-#defined by experiment type i.e. time course would require timepoint in display label
-#deal with this dynamically or have display_label in table
-#Need call on type, or fetch all would
-
-#_get_ec_ids or contigsets?
-#this should now be an intrinsic part of this class/adaptor
-
-#cell line
-#feature_type
-#displayable...should have one for the whole set and one for each raw and predicted?
-
-#have analysis as arg? Or do we get all analysis sets?
-#we need to be able to set analyses for FeatureSets dynamically from DB
-#pick up all FeatureSets 
-#displayable field in FeatureSets also?
-
-#If we have mixed types in the same experiment then we could get promoter features and histone wiggle tracks displayed togeter
-#Not v.good for display purposes?  We may want to separate the promoter and histone tracks, or we may want ll the experiment data together but of mixed types.
-#We need to be able to pull back the experiment type for each set, therefore this needs setting on an ec level, not an experiment level.
-#This is also v.reliant on putting contig set info in place, otherwise we may get mixed chip types in same set.
-
-#get_raw_analysis_name
-#get_predicted_feature_analysis_name
-#set ResultFeatures and AnnotatedFeatures in hash keyed by analysis_name?
 
 =head2 description
 
@@ -365,6 +337,36 @@ sub is_attribute_set{
 
   return $self->{attribute_set};
 }
+
+
+=head2 get_Experiment
+
+  Example    : my $exp = $FeatureSet->get_Experiment;
+  Description: Retrieves the Experiment for this FeatureSet
+  Returntype : Bio::EnsEMBL::Funcgen::Experiment
+  Exceptions : throws if experiment_id not defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub get_Experiment{
+  my $self = shift;
+
+  if(! defined $self->{'experiment'}){
+
+	if(! defined $self->{'experiment_id'}){
+	  throw("Cannot fetch Experiment, experiment_id not defined for FeatureSet:\t".$self->name);
+	}
+
+	$self->{'experiment'} = $self->get_ExperimentAdaptor->fetch_by_dbID($self->{experiment_id});
+  }
+
+  return $self->{'experiment'};
+}
+
+
 
 #No data_set method here as FeatureSet can be product or supporting set in data_set
 #Use DataSetAdaptor::fetch_by_product_FeatureSet or fetch_all_by_supporting_set
