@@ -360,7 +360,7 @@ sub get_Experiment{
 	  throw("Cannot fetch Experiment, experiment_id not defined for FeatureSet:\t".$self->name);
 	}
 
-	$self->{'experiment'} = $self->get_ExperimentAdaptor->fetch_by_dbID($self->{experiment_id});
+	$self->{'experiment'} = $self->adaptor->db->get_ExperimentAdaptor->fetch_by_dbID($self->{experiment_id});
   }
 
   return $self->{'experiment'};
