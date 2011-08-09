@@ -58,13 +58,16 @@ use vars qw(@ISA);
   Arg [-name]: string - name of ExperimentalGroup
   Arg [-location]: (optional) string - location of ExperimentalGroup
   Arg [-contact]: (optional) string - contact of ExperimentalGroup
+  Arg [-url]: (optional) string - url containing information for the ExperimentalGroup
   Arg [-description]: (optional) string - descriptiom of ExperimentalGroup
+  Arg [-project]: (optional) boolean - True if this is part of a large project (eg. ENCODE)
   Example    : my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
                                                                -name  => "EBI",
                                                                -location  => "Hinxton",
                                                                -contact  => "dev@ensembl.org",
                                                                -url  => "http://www.ebi.ac.uk/",
                                                                -description => "European Bioinformatics Institute",
+                                                               -is_project => 0,
                                                              );
   Description: Constructor method for ExperimentalGroup class
   Returntype : Bio::EnsEMBL::Funcgen::ExperimentalGroup
@@ -86,8 +89,9 @@ sub new {
       $contact,
       $url,
       $desc,
+      $is_project
      ) = rearrange([
-		    'NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION',
+		    'NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION', "IS_PROJECT"
 		   ], @_);
   
   
@@ -100,6 +104,7 @@ sub new {
   $self->contact($contact) if $contact;
   $self->url($url) if $url;
   $self->description($desc) if $desc;
+  $self->is_project($is_project) if $is_project;
 
   return $self;
 }
@@ -196,6 +201,24 @@ sub url {
     my $self = shift;
     $self->{'url'} = shift if @_;
     return $self->{'url'};
+}
+
+=head2 is_project
+
+  Arg [1]    : (optional) boolean - is_project
+  Example    : $group->is_project();
+  Description: Getter and setter of is_project attribute for ExperimentalGroup objects.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : High Risk
+
+=cut
+
+sub is_project {
+    my $self = shift;
+    $self->{'is_project'} = shift if @_;
+    return $self->{'is_project'};
 }
 
 1;
