@@ -494,30 +494,25 @@ sub list_dbIDs {
 =cut
 
 sub fetch_focus_set_config_by_FeatureSet{
-    my ($self, $fset) = @_;
-
-	$self->{focus_set_config} ||= {};
-
-	if(! defined $self->{focus_set_config}->{$fset->dbID}){
-	  $self->{focus_set_config}->{$fset->dbID} = 0;  #set cache default
-	  my $meta_key =  'regbuild.'.$fset->cell_type->name.'.focus_feature_set_ids';
-
-	  #list_value_by_key caches, so we don't need to implement this in the adaptor
-	  my ($focus_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
-
-	  if(! defined $focus_ids){
-		warn("Cannot detect focus set as meta table does not contain $meta_key");
-	  }
-	  else{
-
-		foreach my $fid(split ',', $focus_ids){
-		  $self->{focus_set_config}->{$fid} = 1;
-		}
+  my ($self, $fset) = @_;
+  
+  $self->{focus_set_config} ||= {};
+  
+  if(! defined $self->{focus_set_config}->{$fset->dbID}){
+	
+	#Is is an attribute set?
+	if($self->fetch_attribute_set_config_by_FeatureSets($fset)){
+	  
+	  #Need to define these as RegBuild config
+	  if( ($fset->feature_type->class eq 'Transcription Factor') ||
+		  ($fset->feature_type->class eq 'Open Chromatin') ){
+		$self->{focus_set_config}->{$fset->dbID} = 1;
 	  }
 	}
-
-    return $self->{focus_set_config}->{$fset->dbID};
   }
+	
+  return $self->{focus_set_config}->{$fset->dbID};
+}
 
 
 =head2 fetch_attribute_set_config_by_FeatureSet
@@ -549,7 +544,7 @@ sub fetch_attribute_set_config_by_FeatureSet{
 	  }
 	  else{
 
-		foreach my $aid(split ',', $attr_ids){
+		foreach my $aid(split/,\s*/, $attr_ids){
 		  $self->{attribute_set_config}->{$aid} = 1;
 		}
 	  }
