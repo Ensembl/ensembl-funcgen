@@ -501,7 +501,7 @@ sub fetch_focus_set_config_by_FeatureSet{
   if(! defined $self->{focus_set_config}->{$fset->dbID}){
 	
 	#Is is an attribute set?
-	if($self->fetch_attribute_set_config_by_FeatureSets($fset)){
+	if($self->fetch_attribute_set_config_by_FeatureSet($fset)){
 	  
 	  #Need to define these as RegBuild config
 	  if( ($fset->feature_type->class eq 'Transcription Factor') ||
