@@ -246,7 +246,9 @@ CREATE TABLE `external_feature` (
   `display_label` varchar(60) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id` int(10) unsigned NOT NULL,
+  `interdb_stable_id` mediumint(8) unsigned DEFAULT NULL,	
   PRIMARY KEY  (`external_feature_id`),
+  UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
