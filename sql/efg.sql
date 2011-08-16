@@ -59,9 +59,8 @@ CREATE TABLE `regulatory_feature` (
   `binary_string` varchar(255) default NULL,
   `projected` boolean default FALSE,	
   PRIMARY KEY  (`regulatory_feature_id`),
+  UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`),
   KEY `feature_type_idx` (`feature_type_id`),
-  KEY `feature_set_idx` (`feature_set_id`),
-  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
