@@ -1549,10 +1549,10 @@ CREATE TABLE `unmapped_object` (
   `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe', 'ProbeSet', 'ProbeFeature') NOT NULL,
   `parent` varchar(255) default NULL,
   PRIMARY KEY  (`unmapped_object_id`),
-  KEY `object_type_idx` (`ensembl_id`, `ensembl_object_type`),
-  KEY `id_idx` (`identifier`),
-  KEY `anal_idx` (`analysis_id`),
-  KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`)
+  UNIQUE KEY `unique_unmapped_obj_idx` (`identifier`,`ensembl_id`,`parent`,`unmapped_reason_id`,`ensembl_object_type`,`external_db_id`),
+  KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`),
+  KEY `id_idx` (`identifier`(50)),
+  KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
