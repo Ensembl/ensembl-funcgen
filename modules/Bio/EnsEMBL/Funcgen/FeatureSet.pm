@@ -367,6 +367,52 @@ sub get_Experiment{
 }
 
 
+=head2 source_label
+
+  Example    : my $source_label = $fset->source_label;
+  Description: Retrieves the source label this FeatureSet, used in zmenus
+  Returntype : String
+  Exceptions : None
+  Caller     : Webcode
+  Status     : At Risk
+
+=cut
+
+
+sub source_label{
+  my $self = shift;
+
+
+  if(! defined $self->{'source_label'}){
+	my $exp          = $self->get_Experiment;
+	my $source_label;
+
+	if($exp){
+
+	  $source_label = $exp->archive_id;
+	  
+	  my $exp_group = $exp->experimental_group;
+	
+	  if($exp_group && 
+		 $exp_group->is_project){
+		
+		if($source_label){
+		  $source_label .= ' '.$exp_group->name;
+		}
+		else{
+		  $source_label = $exp_group->name;
+		}
+	  }
+	}
+
+	$self->{'source_label'} = $source_label || '';
+  }
+
+  return $self->{'source_label'};
+}
+
+
+
 
 #No data_set method here as FeatureSet can be product or supporting set in data_set
 #Use DataSetAdaptor::fetch_by_product_FeatureSet or fetch_all_by_supporting_set
