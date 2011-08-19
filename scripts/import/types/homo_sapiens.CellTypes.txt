@@ -45,7 +45,7 @@ HCT116	NULL	Colorectal Carcinoma	male
 HEEpiC	NULL	Human Esophageal Epithelial Cells	NULL
 HEK293b	NULL	Embryonic Kidney (Variant)	NULL
 HEK293	NULL	Embryonic Kidney	NULL
-HeLa	NULL	Human Epithelial Carcinoma Cell	female
+HeLa-S	NULL	Human Epithelial Carcinoma Cell	female
 HepG2b	NULL	Human Hepatocellular Liver Carcinoma Cell (alternative)	male
 HepG2	NULL	Human Hepatocellular Liver Carcinoma Cell	male
 HGF	NULL	Human Gingival Fibroblasts	NULL
@@ -85,3 +85,12 @@ Th1	NULL	Primary Human Th1 T Cells	NULL
 Th2	NULL	Primary Human Th2 T Cells	NULL
 U2OS	NULL	Human Bone Osteosarcoma Epithelial Cell	female
 WERIRB1	NULL	Retinoblastoma	male
+RPTEC	
+ProgFib	
+HSMMtube		
+Osteobl			
+MCF10A-Er-Src	
+HPAEpiC			
+NH-A			
+Fibrobl			
+GM12878-XiMat	
