@@ -45,7 +45,7 @@ HCT116	NULL	Colorectal Carcinoma	male
 HEEpiC	NULL	Human Esophageal Epithelial Cells	NULL
 HEK293b	NULL	Embryonic Kidney (Variant)	NULL
 HEK293	NULL	Embryonic Kidney	NULL
-HeLa-S	NULL	Human Epithelial Carcinoma Cell	female
+HeLa-S3	NULL	Human Epithelial Carcinoma Cell	female
 HepG2b	NULL	Human Hepatocellular Liver Carcinoma Cell (alternative)	male
 HepG2	NULL	Human Hepatocellular Liver Carcinoma Cell	male
 HGF	NULL	Human Gingival Fibroblasts	NULL
