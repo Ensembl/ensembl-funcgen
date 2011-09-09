@@ -51,6 +51,9 @@ edit the file ~dkeefe/dbs/current_core or  ~dkeefe/dbs/current_mouse_core to poi
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.11  2011-09-09 09:44:59  ds19
+ Added a dump_dir parameter
+
  Revision 1.10  2011-01-10 14:01:13  nj1
  added generic #!/usr/bin/env perl
 
@@ -1477,10 +1480,8 @@ sub help_text{
                   [-P] <mysql port> 
                   [-s] <species> eg -smus_musculus, default = homo_sapiens 
                   [-v] <integer> verbosity level 0,1 or 2; default=0 
-                  [-] 
-                  [-] 
-                  [-] <> 
-                  [-] <> 
+                  [-v] <integer> verbosity level 0,1 or 2; default=0 
+                  [-d] <folder> dump folder (by default is ./gen_feat_junk_$$)
 
 
 END_OF_TEXT
