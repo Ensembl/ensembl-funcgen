@@ -67,10 +67,10 @@ sub default_options {
 	  		    -user   => $self->o('user'),
 	  		    -pass   => $self->o('pass'),                       
 	  		    #-dbname => $ENV{'USER'}.'_motif_feature_import_'.$self->o('dbname'),
-			    -dbname => $ENV{'USER'}.'_mf_import_'.$self->o('dbname'),
+			    -dbname => $ENV{'USER'}.'_motif_import_'.$self->o('dbname'),
 	  		   },
 
-	  'data_dir'   => '/lustre/scratch103/ensembl/funcgen',
+	  'output_dir' => '/lustre/scratch103/ensembl/funcgen/output/'.$self->o('dbname'),
 	  'slices'     => '',
 
 	 };
@@ -110,8 +110,8 @@ sub pipeline_wide_parameters {
   return {
 	  
 	  'pipeline_name'   => $self->o('pipeline_db', '-dbname'),  # name used by the beekeeper to prefix job names on the farm
-	  'hive_output_dir' => $self->o('data_dir')."/output/".$self->o('dbname')."/motif_features/hive_output",
-	  'output_dir' => $self->o('data_dir')."/output/".$self->o('dbname')."/motif_features/results",
+	  'hive_output_dir' => $self->o('output_dir')."/motif_features/hive_output",
+	  'output_dir' => $self->o('output_dir')."/motif_features/results",
 
 	  'host'   => $self->o('host'),
 	  'port'   => $self->o('port'),
@@ -119,10 +119,10 @@ sub pipeline_wide_parameters {
 	  'pass'   => $self->o('pass'),                       
 	  'dbname' => $self->o('dbname'),
 
-	  'dnadbhost'  => $self->o('dnadbhost'),
-	  'dnadbport'  => $self->o('dnadbport'),
-	  'dnadbuser'  => $self->o('dnadbuser'),
-	  'dnadbname'  => $self->o('dnadbname'),
+	  'dnadb_host'  => $self->o('dnadb_host'),
+	  'dnadb_port'  => $self->o('dnadb_port'),
+	  'dnadb_user'  => $self->o('dnadb_user'),
+	  'dnadb_name'  => $self->o('dnadb_name'),
 
 	  'efg_src'    => $self->o('efg_src'),
 
@@ -159,8 +159,8 @@ sub pipeline_create_commands {
 
 
 	  #Create hive output folders as required
-	  'mkdir -p '.$self->o('data_dir')."/output/".$self->o('dbname')."/motif_features/hive_output",
-	  'mkdir -p '.$self->o('data_dir')."/output/".$self->o('dbname')."/motif_features/results",
+	  'mkdir -p '.$self->o('output_dir')."/motif_features/hive_output",
+	  'mkdir -p '.$self->o('output_dir')."/motif_features/results",
 
 	 ];
 }

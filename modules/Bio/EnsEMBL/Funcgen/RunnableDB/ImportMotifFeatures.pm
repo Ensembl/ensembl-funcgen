@@ -38,6 +38,14 @@ sub fetch_input {   # fetch parameters...
   my $file_name =  $self->param('file');
     
   ### Create DB connections
+  my $coredb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+						   -user => $self->param('dnadb_user'),
+						   -port => $self->param('dnadb_port'),
+						   -host => $self->param('dnadb_host'),
+						   -dbname => $self->param('dnadb_name'),
+						  );
+
+
   ### Create DB connections
   my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 							-dbname  => $self->param('dbname'),
@@ -45,10 +53,7 @@ sub fetch_input {   # fetch parameters...
 							-pass    => $self->param('pass'),
 							-host    => $self->param('host'),
 							-user    => $self->param('user'),
-							-dnadb_user => $self->param('dnadb_user'),
-							-dnadb_port => $self->param('dnadb_port'),
-							-dnadb_host => $self->param('dnadb_host'),
-							-dnadb_dbname => $self->param('dnadb_dbname'),
+							-dnadb   => $coredb,
 						       );
 
 
@@ -83,7 +88,7 @@ sub fetch_input {   # fetch parameters...
   my $ft = $bm->feature_type;
   my @fts = ($ft);
 
-  #Should we be dong this?
+  #Should we be doing this?
   push @fts, @{$fta->fetch_all_by_association($ft)};
 
   my @fsets;
