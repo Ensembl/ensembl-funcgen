@@ -60,23 +60,23 @@ Port of the host where the database is
 
 Name of the database 
 
-=item B<-dnadbhost>
+=item B<-dnadb_host>
 
 Host of the specific core database to use 
 
-=item B<-dnadbuser>
+=item B<-dnadb_user>
 
 User of the specific core database 
 
-=item B<-dnadbpass>
+=item B<-dnadb_pass>
 
 Password for the specific core database user 
 
-=item B<-dnadbport>
+=item B<-dnadb_port>
 
 Port of the host where the specific core database to use is
 
-=item B<-dnadbname>
+=item B<-dnadb_name>
 
 Name of the specific core database to use
 
@@ -118,7 +118,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning stack_trace_dump);
 
 my ($host, $port, $user, $pass, $dbname);
-my ($dnadbhost, $dnadbport, $dnadbuser, $dnadbpass, $dnadbname);
+my ($dnadb_host, $dnadb_port, $dnadb_user, $dnadb_pass, $dnadb_name);
 my ($help, $workdir, $outputdir, $species, $assembly, $schema);
 
 
@@ -131,11 +131,11 @@ print "run_pwm_mapping_pipeline.pl @ARGV\n";
 #Maybe pass these to our bin folder?
 # /usr/local/ensembl/bin/fastaexplode & fastaclean
 GetOptions (
-	    'dnadbhost=s'        => \$dnadbhost,
-	    'dnadbuser=s'        => \$dnadbuser,
-	    'dnadbport=i'        => \$dnadbport,
-	    'dnadbpass=s'        => \$dnadbpass,
-	    'dnadbname=s'        => \$dnadbname,
+	    'dnadb_host=s'        => \$dnadb_host,
+	    'dnadb_user=s'        => \$dnadb_user,
+	    'dnadb_port=i'        => \$dnadb_port,
+	    'dnadb_pass=s'        => \$dnadb_pass,
+	    'dnadb_name=s'        => \$dnadb_name,
 	    'dbhost=s'           => \$host,
 	    'dbuser=s'           => \$user,
 	    'dbport=i'           => \$port,
@@ -160,19 +160,19 @@ if(!$species || !$assembly || !$schema) {  print "Need species and assembly info
 
 #Check database connections
 my $coredba;
-if($dnadbname){
+if($dnadb_name){
   
-  my $dnadbpass = {-pass => $dnadbpass};
+  my $dnadb_pass = {-pass => $dnadb_pass};
 	  
   my $coredba = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
-     -host => $dnadbhost,
-     -port => $dnadbport,
-     -user => $dnadbuser,
-     -dbname => $dnadbname,
+     -host => $dnadb_host,
+     -port => $dnadb_port,
+     -user => $dnadb_user,
+     -dbname => $dnadb_name,
      -species => $species,
      -group   => 'core',
-     %$dnadbpass
+     %$dnadb_pass
     );
 }
 
@@ -205,6 +205,7 @@ my $fta = $efgdba->get_FeatureTypeAdaptor();
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 my $bma = $efgdba->get_BindingMatrixAdaptor();
 my $dbea = $efgdba->get_DBEntryAdaptor();
+
 
 system("mkdir ${outputdir}/matrices") && die "Error creating matrices folder";
 open(FO,">".$outputdir."/matrix_list");
