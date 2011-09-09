@@ -57,7 +57,7 @@ Jaspar Id of the matrix to be uploaded (e.g. 'MA0139.1')
 Feature Type to be associated to the matrix (e.g. 'CTCF')
 This feature type needs to exist in the database
 
-=item B<-pass|p>
+=item B<-dbpass|p>
 
 Database password
 
@@ -65,15 +65,15 @@ Database password
 
 Database name
 
-=item B<-host|h>
+=item B<-dbhost|h>
 
 Database host (defaults to ens-genomics1)
 
-=item B<-port|l>
+=item B<-dbport|l>
 
 Database port (defaults to 3306)
 
-=item B<-user|u>
+=item B<-dbuser|u>
 
 Database user (defaults to 'ensadmin')
 
@@ -111,7 +111,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::BindingMatrix;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
-my ($dnadb_host,$dnadb_port,$dnadb_user);
+my ($dnadb_host,$dnadb_port,$dnadb_user, $dnadb_name);
 my ($pass,$port,$host,$user,$dbname,$species,$matrix_data_dir,$matrix_id,$feature_type,$help);
 $port = 3306;
 $host='ens-genomics1';
@@ -121,10 +121,11 @@ GetOptions (
 	    "dnadb_host=s" => \$dnadb_host,
 	    "dnadb_port=s" => \$dnadb_port,
 	    "dnadb_user=s" => \$dnadb_user,
-	    "pass|p=s"    => \$pass,
-	    "port|l=s"    => \$port,
-	    "host|h=s"    => \$host,
-	    "user|u=s"    => \$user,
+	    "dnadb_name=s" => \$dnadb_name,
+	    "dbpass|p=s"    => \$pass,
+	    "dbport|l=s"    => \$port,
+	    "dbhost|h=s"    => \$host,
+	    "dbuser|u=s"    => \$user,
 	    "dbname=s"      => \$dbname,
 	    "species|s=s"   => \$species, 
 	    "matrix_id|m=s" => \$matrix_id,
