@@ -139,6 +139,9 @@ reg_feat_gen_feat_overlaps.pl -e dk_funcgen_classify_55_1 -v1 -c reg_feat_gen_fe
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.7  2011-01-10 14:01:16  nj1
+ added generic #!/usr/bin/env perl
+
  Revision 1.6  2011-01-10 13:32:23  nj1
  updated boiler plate
 
@@ -187,7 +190,7 @@ $| = 1; #no output buffer
 
 my($user, $password, $driver, $host, $port);
 my @temp_tables;
-my $scratch_dir = "/lustre/scratch103/ensembl/dkeefe/overlap_$$"."/";
+my $scratch_dir = "overlap_$$"."/";
 
 
 my $sp='homo_sapiens';
@@ -213,7 +216,7 @@ my $combination_bits = 4;
 my %opt;
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('v:u:p:S:s:H:he:j:P:c:ra:b:', \%opt) || die ;
+&Getopt::Std::getopts('v:u:p:S:s:H:he:j:P:c:ra:d:b:', \%opt) || die ;
 }else{
 &help_text; 
 }
@@ -378,8 +381,6 @@ ASSOC:
 FLAGS:
 &create_flags_table($dbh,$dbu,$flags_table,\@gen_feats);
 
-exit;
-
 TYPES:
 &create_types_table($dbh,$dbu,$flags_table,$types_table);
 
@@ -488,21 +489,36 @@ sub create_types_table{
 
     }
 
-
     unless($dbu->column_exists($flags_table,'tss_centred_5000')){
 	push @sql, "alter table $flags_table add column tss_centred_5000  int(1) default 0";
 
     }
 
+    unless($dbu->column_exists($flags_table,'tss_centred_5000_expressing')){
+	push @sql, "alter table $flags_table add column tss_centred_5000_expressing  int(1) default 0";
+
+    }
+
+    unless($dbu->column_exists($flags_table,'tss_centred_5000_non_expressing')){
+	push @sql, "alter table $flags_table add column tss_centred_5000_non_expressing  int(1) default 0";
+
+    }
+
+    unless($dbu->column_exists($flags_table,'PolIII_transcribed_gene_plus_enhancer')){
+      push @sql, "alter table $flags_table add column PolIII_transcribed_gene_plus_enhancer  int(1) default 0";
+    }
+
 ################## add all cols? as above
 
-
+    
     push @sql, "drop table if exists $types_table";
 #    push @sql, "create table $types_table select regulatory_feature_id,binary_string,if(gm06990+cd4+imr90 = 1,1,0) as cell_type_specific,protein_coding_exon1_plus_enhancer as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
     if($sp eq 'homo_sapiens'){
         #push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";# as used in v58
 
-        push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,tss_centred_5000 as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified, PolIII_transcribed_gene_plus_enhancer as poliii_transcription_associated from $flags_table";
+        push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,tss_centred_5000 as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified, PolIII_transcribed_gene_plus_enhancer as poliii_transcription_associated, tss_centred_5000_expressing as Expressing_gene_promoter_associated, tss_centred_5000_non_expressing as Non_expressing_gene_promoter_associated from $flags_table";
+
+
 
     }else{
         push @sql, "create table $types_table select regulatory_feature_id,binary_string,0 as cell_type_specific,if(protein_coding_exon1_plus_enhancer+protein_coding_intron1 > 0, 1,0) as promoter_associated,protein_coding_gene_body as gene_associated, intergenic_2500 as non_gene_associated,0 as unclassified from $flags_table";
@@ -511,6 +527,8 @@ sub create_types_table{
     # apply arbitrary rules to resolve conflicts
     push @sql, "update $types_table set promoter_associated = 0 where promoter_associated and gene_associated"; # as used for v58
     #push @sql, "update $types_table set gene_associated = 0 where promoter_associated and gene_associated"; #
+    push @sql, "update $types_table set promoter_associated = 0 where promoter_associated and expressing_gene_promoter_associated";
+    push @sql, "update $types_table set promoter_associated = 0 where promoter_associated and non_expressing_gene_promoter_associated";
 
     push @sql, "update $types_table set gene_associated = 0 where poliii_transcription_associated and gene_associated";
     push @sql, "update $types_table set non_gene_associated = 0 where poliii_transcription_associated and non_gene_associated";
@@ -520,15 +538,22 @@ sub create_types_table{
 
     # use unclassified col to flag conflicts
     push @sql, "update $types_table set unclassified = 1 where promoter_associated and non_gene_associated";
+    push @sql, "update $types_table set unclassified = 1 where expressing_gene_promoter_associated and non_gene_associated";
+    push @sql, "update $types_table set unclassified = 1 where expressing_gene_promoter_associated and non_expressing_gene_promoter_associated";
+    push @sql, "update $types_table set unclassified = 1 where non_expressing_gene_promoter_associated and non_gene_associated";
+
     push @sql, "update $types_table set unclassified = 1 where gene_associated and non_gene_associated";
     # set both of the conflicting cols to 0 where there is a conflict
-    push @sql, "update $types_table set promoter_associated = 0 where unclassified";
-    push @sql, "update $types_table set gene_associated = 0 where unclassified";    push @sql, "update $types_table set non_gene_associated = 0 where unclassified";
+    push @sql, "update $types_table set promoter_associated = 0 where unclassified=1";
+    push @sql, "update $types_table set expressing_gene_promoter_associated = 0 where unclassified=1";
+    push @sql, "update $types_table set non_expressing_gene_promoter_associated = 0 where unclassified=1";
+    push @sql, "update $types_table set gene_associated = 0 where unclassified=1";    
+    push @sql, "update $types_table set non_gene_associated = 0 where unclassified=1";
 
 
 
     # set unclassified for rows with no flags
-   push @sql, "update $types_table set unclassified = 1 where gene_associated + non_gene_associated + promoter_associated+poliii_transcription_associated = 0";
+   push @sql, "update $types_table set unclassified = 1 where gene_associated + non_gene_associated + promoter_associated+poliii_transcription_associated + expressing_gene_promoter_associated + non_expressing_gene_promoter_associated = 0";
 
 
     &execute($dbh,@sql) or die;
@@ -551,6 +576,8 @@ sub create_types_table{
                     'Unclassified',
 #                    'Unclassified - Cell type specific',
                     'PolIII Transcription Associated',
+                    'Expressing Gene Promoter Associated',
+                    'Non-Expressing Gene Promoter Associated',
 		    ){
 
 	my $ftid = $dbu->get_count("select feature_type_id from feature_type where name = '$ft' and class = 'Regulatory Feature'");
@@ -576,15 +603,16 @@ sub create_types_table{
 
     # summary report
 
-    my $res = $dbu->get_count("select count(*) from  regulatory_features_classified where promoter_associated and cell_type_specific");
+    #Cell type specific doesn't make sense anymore...
+    my $res; #= $dbu->get_count("select count(*) from  regulatory_features_classified where promoter_associated and cell_type_specific");
 #    &commentary("promoter_associated and cell_type_specific         $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where promoter_associated and not cell_type_specific ");
     &commentary("promoter_associated     $res\n");
-    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where gene_associated and cell_type_specific");
+    #$res = $dbu->get_count(" select count(*) from  regulatory_features_classified where gene_associated and cell_type_specific");
 #    &commentary("gene_associated and cell_type_specific             $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where gene_associated and not cell_type_specific");
     &commentary("gene_associated         $res\n");
-    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where non_gene_associated and cell_type_specific");
+    #$res = $dbu->get_count(" select count(*) from  regulatory_features_classified where non_gene_associated and cell_type_specific");
 #    &commentary("non_gene_associated and cell_type_specific         $res\n");
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where non_gene_associated and not cell_type_specific");
     &commentary("non_gene_associated     $res\n");
@@ -592,7 +620,11 @@ sub create_types_table{
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where poliii_transcription_associated and not cell_type_specific");
     &commentary("PolIII_transcription_associated     $res\n");
 
+    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where expressing_gene_promoter_associated and not cell_type_specific");
+    &commentary("Expressing_gene_promoter_associated     $res\n");
 
+    $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where non_expressing_gene_promoter_associated and not cell_type_specific");
+    &commentary("Non_expressing_gene_promoter_associated     $res\n");
 
     $res = $dbu->get_count(" select count(*) from  regulatory_features_classified where unclassified and cell_type_specific");
 #    &commentary("unclassified and cell_type_specific                $res\n");
@@ -1522,10 +1554,6 @@ sub process_arguments{
     } 
 
 
-    if  (exists $opt{s}){
-#        $scratch_dir = $opt{s};
-    } 
-
 } 
 
 
@@ -1547,7 +1575,7 @@ sub help_text{
                   [-j] <label> jump to label then start execution
                   [-p] <mysql password> 
                   [-P] <mysql port> 
-                  [-s] <dir_name> scratch directory
+                  [-s] <dir_name> scratch directory (defaults to ./overlap_$$)
                   [-S] <species_name> default: homo_sapiens
                   [-v] <integer> verbosity level 0,1 or 2 
                   [-c] <filename> list of genomic feature tables
@@ -1564,7 +1592,7 @@ END_OF_TEXT
 
     if($msg){
         exit(1);
-    }else{
+     }else{
         exit(0);
     }
 }
