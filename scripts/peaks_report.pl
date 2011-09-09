@@ -62,23 +62,23 @@ Port of the host where the database is
 
 Name of the database 
 
-=item B<-coredb_host>
+=item B<-dnadb_host>
 
 Host of the specific core database to use 
 
-=item B<-coredb_user>
+=item B<-dnadb_user>
 
 User of the specific core database 
 
-=item B<-coredb_pass>
+=item B<-dnadbdb_pass>
 
 Password for the specific core database user 
 
-=item B<-coredb_port>
+=item B<-dnadb_port>
 
 Port of the host where the specific core database to use is
 
-=item B<-coredb_name>
+=item B<-dnadb_name>
 
 Name of the specific core database to use
 
@@ -132,7 +132,7 @@ Depends on number of cell types.
 
 =item B<-outdir>
 
-Base folder for output. Defaults to $EFG_DATA
+Base folder for output. Defaults to $WORK_DIR/output/$DB_NAME
 
 =back
 
@@ -202,21 +202,21 @@ $inset_main=0.1;
 $inset_compare=0.5;
 $user = 'ensro';
 $name = 'peaks_report_'.$$;#Add PID to avoid overwriting previous reports
-$outdir = $ENV{'EFG_DATA'};
+$outdir = $ENV{'EFG_DATA'}."/output/".$ENV{DB_NAME};
 
 #get command line options
 
-my (@fset_names);
+my (@fset_names_tmp);
 
 print "peaks_report.pl @ARGV\n";
 
 GetOptions (
 			'species=s'          => \$species,
-			'coredb_host=s'      => \$dnadbhost,
-			'coredb_user=s'      => \$dnadbuser,
-			'coredb_port=i'      => \$dnadbport,
-			'coredb_pass=s'      => \$dnadbpass,
-			'coredb_name=s'      => \$dnadbname,
+			'dnadb_host=s'       => \$dnadbhost,
+			'dnadb_user=s'       => \$dnadbuser,
+			'dnadb_port=i'       => \$dnadbport,
+			'dnadb_pass=s'       => \$dnadbpass,
+			'dnadb_name=s'       => \$dnadbname,
 			'dbhost=s'           => \$host,
 			'dbuser=s'           => \$user,
 			'dbport=i'           => \$port,
@@ -230,7 +230,7 @@ GetOptions (
 			"compare"            => \$compare,
 			"regstats"           => \$regstats,
 			"all_seq_regions"    => \$all_seq_regions,
-			"feature_sets=s{,}"  => \@fset_names,
+			"feature_sets=s{,}"  => \@fset_names_tmp,
 	                "feature_table=s",   => \$feature_table,
 	                "inset_main=s",      => \$inset_main,
 	                "inset_compare=s",   => \$inset_compare,
@@ -256,7 +256,6 @@ if(! -d $outdir){
   die("Error: $outdir is not a valid output folder");
 } else{
   
-  $outdir .= '/output/'.$dbname.'/regulatory_features';
   print "Setting default output directory to:\t".$outdir;
   
   if(! -d $outdir){
@@ -303,16 +302,20 @@ $efgdba->dnadb->dbc->db_handle;
 
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 
-if(scalar(@fset_names)==0){
+my @fset_names;
+
+if(scalar(@fset_names_tmp)==0){
   map { push @fset_names, $_->name } @{$fsa->fetch_all_by_type($feature_table)};
 }
 else{#Validate fset names
   
-  foreach my $fsname(@fset_names){
+  foreach my $fsname(@fset_names_tmp){
 	my $fset = $fsa->fetch_by_name($fsname);
 	
-	if(! $fset){
-	  die("Could not fetch FeatureSet:\t$fsname");
+	if($fset){
+	  push @fset_names, $fset->name;
+	} else {
+	  warn("Could not fetch FeatureSet:\t$fsname ... Skipping");
 	}
   }
 }
