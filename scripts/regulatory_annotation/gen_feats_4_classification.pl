@@ -51,6 +51,9 @@ edit the file ~dkeefe/dbs/current_core or  ~dkeefe/dbs/current_mouse_core to poi
 
 
  $Log: not supported by cvs2svn $
+ Revision 1.10  2011-01-10 14:01:13  nj1
+ added generic #!/usr/bin/env perl
+
  Revision 1.9  2011-01-10 13:32:23  nj1
  updated boiler plate
 
@@ -105,7 +108,7 @@ use constant  NO_ROWS => '0E0';
 
 my($user, $password, $driver, $host, $port);
 my @temp_tables;
-my $dump_dir = "/lustre/scratch103/ensembl/dkeefe/gen_feat_junk_$$/";
+my $dump_dir = "gen_feat_junk_$$/";
 my $slim_table = 'goslim_goa_acc_list';
 my $id_list;
 my $sp = 'homo_sapiens';
@@ -117,7 +120,7 @@ my $do_repeats = 0;
 my %opt;
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('v:j:u:p:s:H:h:e:P:gr', \%opt) || die "option problem" ;
+&Getopt::Std::getopts('v:j:u:p:s:H:h:e:P:d:gr', \%opt) || die "option problem" ;
 }else{
 &help_text; 
 }
@@ -906,7 +909,9 @@ sub split_by_biotype{
 
     my @sql;
 
-    my $prots = "'protein_coding_$feat_name', 'IG_V_gene_$feat_name', 'IG_C_gene_$feat_name', 'IG_J_gene_$feat_name', 'IG_D_gene_$feat_name'";
+    my $prots = "'protein_coding_$feat_name', 'IG_V_gene_$feat_name', 'IG_C_gene_$feat_name', 'IG_J_gene_$feat_name', 'IG_D_gene_$feat_name','TR_V_gene_$feat_name','TR_C_gene_$feat_name','TR_J_gene_$feat_name'";
+
+
     push @sql,"drop table if exists protein_coding_$feat_name";
     push @sql,"create table protein_coding_$feat_name select * from $feat_name where feature_type in ($prots)";
     push @sql,"update protein_coding_$feat_name set feature_type = 'protein_coding_$feat_name'"; 
@@ -1182,6 +1187,11 @@ sub gene_features{
     push @sql,"alter table RNA_gene add index(seq_region_id)";
 
 
+    push @sql,"drop table if exists processed_transcript"; # used for QC
+    push @sql,"create table processed_transcript select sr.seq_region_id,sr.name as seq_region_name,gene_id as feature_id,concat(biotype,'_gene') as feature_type, t.seq_region_start as feature_start,t.seq_region_end as feature_end, t.seq_region_strand as feature_strand from gene t, seq_region sr where t.seq_region_id = sr.seq_region_id and t.biotype in ('processed_transcript')";
+    push @sql,"alter table processed_transcript add index(seq_region_name)";
+    push @sql,"alter table processed_transcript add index(seq_region_id)"; 
+
     push @sql,"drop table if exists RNA_pseudogene";
     push @sql,"create table RNA_pseudogene select sr.seq_region_id,sr.name as seq_region_name,gene_id as feature_id,concat(biotype,'_gene') as feature_type, t.seq_region_start as feature_start,t.seq_region_end as feature_end, t.seq_region_strand as feature_strand from gene t, seq_region sr where t.seq_region_id = sr.seq_region_id and t.biotype like '%RNA%' and t.biotype like '%pseudogene%'";
     push @sql,"alter table RNA_pseudogene add index(seq_region_name)";
@@ -1437,6 +1447,10 @@ sub process_arguments{
 
     if  (exists $opt{e}){
         $enc_db = $opt{e};
+    } 
+
+    if  (exists $opt{d}){
+        $dump_dir = $opt{d};
     } 
 
 } 
