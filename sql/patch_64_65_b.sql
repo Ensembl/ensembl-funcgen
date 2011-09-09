@@ -7,7 +7,13 @@ ALTER table feature_type ADD `analysis_id` smallint(5) unsigned default NULL AFT
 ALTER table feature_type DROP KEY `name_class_idx`;
 ALTER table feature_type ADD UNIQUE KEY `name_class_analysis_idx` (`name`,`class`, `analysis_id`);
 
-# Is actually only 11 chars long
+
+#Need to alter enum here too
+ALTER table feature_type MODIFY  `class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo', 'Open Chromatin', 'Search Region', 'Association Locus', 'Segmentation State') default NULL;
+
+analyze table feature_type;
+optimize table feature_type;
+
 
 
 # patch identifier
