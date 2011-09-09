@@ -82,15 +82,15 @@ Database user (defaults to 'ensadmin')
 
 =item B<-dnadb_host>
 
-Core Database host (defaults to ens-livemirror)
+Core Database host
 
 =item B<-dnadb_port>
 
-Core Database port (defaults to 3306)
+Core Database port
 
 =item B<-dnadb_user>
 
-Core Database user (defaults to 'ensro')
+Core Database user
 
 
 =item B<-file|f>
