@@ -83,6 +83,8 @@ use vars qw(@ISA);
 =head2 new
 
   Arg [-FEATURE_SET]  : Bio::EnsEMBL::Funcgen::FeatureSet
+  Arg [-FEATURE_TYPE] : optional Bio::EnsEMBL::Funcgen::FeatureType. 
+                        Defaults to FeatureSet FeatureType
   Arg [-ANALYSIS]     : Bio::EnsEMBL::Analysis 
   Arg [-SLICE]        : Bio::EnsEMBL::Slice - The slice on which this feature is.
   Arg [-START]        : int - The start coordinate of this feature relative to the start of the slice
@@ -93,15 +95,15 @@ use vars qw(@ISA);
   Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
   Arg [-dbID]         : (optional) int - Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
-  Example             : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
-										                                  -SLICE         => $chr_1_slice,
-									                                      -START         => 1_000_000,
-                      				                                      -END           => 1_000_024,
-									                                    http://www.hinxton.wellcome.ac.uk/onsite/menus/index.html  -STRAND        => -1,
-									                                      -DISPLAY_LABEL => $text,
-									                                      -FEATURE_SET   => $fset,
-                                                                                  );
-
+  Example             : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
+                              (
+                               -SLICE         => $chr_1_slice,
+                               -START         => 1_000_000,
+                               -END           => 1_000_024,
+                               -STRAND        => -1,
+							   -DISPLAY_LABEL => $text,
+							   -FEATURE_SET   => $fset,
+                              );
 
   Description: Constructor for SetFeature objects. Should never be called directly, only by children.
   Returntype : Bio::EnsEMBL::Funcgen::SetFeature
@@ -120,26 +122,25 @@ sub new {
   
   my ($display_label, $fset, $ftype)
     = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE'], @_);
-
+  
 
   if($ftype){
-
-	if(! (ref($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType'))){
-	  throw('feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType');
+	
+	if(ref($ftype) ne 'Bio::EnsEMBL::Funcgen::FeatureType'){
+	throw('feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType');
 	}
-
+  
 	$self->{'feature_type'} = $ftype;
   }
-
-  if(! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
+  
+  if(ref($fset) ne 'Bio::EnsEMBL::Funcgen::FeatureSet'){
 	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
   }
 
 
-  $self->{'feature_set'}= $fset;
-
-  #Do not move this as it depends on the above being set
-  $self->display_label($display_label) if $display_label;
+  $self->{'feature_set'}   = $fset;
+  $self->{'display_label'} = $display_label if defined $display_label;
+  #This removes the need for setter code in child classes
  	
   return $self;
 }
@@ -156,6 +157,8 @@ sub new {
   Status     : At Risk
 
 =cut
+
+#new_fast should be at highest level? remove?
 
 sub new_fast {
   return bless ($_[1], $_[0]);
@@ -176,12 +179,8 @@ sub new_fast {
 
 sub feature_set {
   my $self = shift;
-
   return $self->{'feature_set'};
 }
-
-
-
 
 
 =head2 cell_type
@@ -196,9 +195,9 @@ sub feature_set {
 
 =cut
 
-sub cell_type{
+sub 
+cell_type{
 	my $self = shift;
-
 	return $self->feature_set->cell_type();
 }
 
@@ -214,11 +213,7 @@ sub cell_type{
 =cut
 
 sub feature_type{
-  my $self = shift;
-  
-  #why is this not a setter?
-  #this should only be set in new
-
+  my $self = shift; 
   return (defined $self->{'feature_type'}) ?  $self->{'feature_type'} : $self->feature_set->feature_type();
 }
 
@@ -251,6 +246,25 @@ sub analysis{
   }
 
   return (defined $self->{'analysis'}) ? $self->{'analysis'} : $self->feature_set->analysis();
+}
+
+
+=head2 display_label
+
+  Example    : my $label = $feature->display_label();
+  Description: Getter for the display label of this feature.
+               This will most likely be over-ridden by child class
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub display_label{
+  my $self = shift;
+
+  return $self->{'display_label'};
 }
 
 
