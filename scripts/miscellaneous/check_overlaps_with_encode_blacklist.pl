@@ -25,8 +25,8 @@ check_overlaps_with_blacklist.pl - For all the human annotated features, checks 
 
 =head1 SYNOPSIS
 
-check_overlaps_with_blacklist.pl -efgdb_host dbhost -efgdb_port dbport -efgdb_user dbuser -efgdb_name dbname\
-    -coredb_host dnadbhost -coredb_port dnadbport -coredb_user dnadbuser -coredb_name dnadbname\
+check_overlaps_with_blacklist.pl -dbhost dbhost -dbport dbport -dbuser dbuser -dbname dbname\
+    -dnadb_host dnadbhost -dnadb_port dnadbport -dnadb_user dnadbuser -dnadb_name dnadbname\
     -remove -output overlaps.txt -feature_set fset1 fset2 ...
 
 Options:
@@ -35,18 +35,18 @@ Options:
     -feature_sets        Space-separated list of names of feature sets for which to check the overlap
 
   Optional:
-    -efgdb_host          Host for eFG DB [$DB_HOST]
-    -efgdb_port          Port for eFG DB [$DB_PORT]
-    -efgdb_user          User for eFG DB [$DB_USER]
-    -efgdb_name          Name of eFG DB [$DB_NAME]
-    -efgdb_pass          Password fof the eFG DB
-    -coredb_host         Host for Core DB [$DNADB_HOST]
-    -coredb_port         Port for Core DB [$DNADB_PORT]
-    -coredb_user         User for Core DB [$DNADB_USER]
-    -coredb_name         Name of Core DB [$DNADB_NAME]
-    -remove              When specified it removes the overlapping features from the database 
-    -output              File to store results of analysis  [overlaps.txt]
-    -all                 When specified all sets are considered
+    -dbhost          Host for eFG DB [$DB_HOST]
+    -dbport          Port for eFG DB [$DB_PORT]
+    -dbuser          User for eFG DB [$DB_USER]
+    -dbname          Name of eFG DB [$DB_NAME]
+    -dbpass          Password fof the eFG DB
+    -dnadb_host      Host for Core DB [$DNADB_HOST]
+    -dnadb_port      Port for Core DB [$DNADB_PORT]
+    -dnadb_user      User for Core DB [$DNADB_USER]
+    -dnadb_name      Name of Core DB [$DNADB_NAME]
+    -remove          When specified it removes the overlapping features from the database 
+    -output          File to store results of analysis  [overlaps.txt]
+    -all             When specified all sets are considered
 
 =head1 DESCRIPTION
 
@@ -72,43 +72,43 @@ When specified, it removes features overlapping with encode blacklisted regions 
 
 Name of output file to create (defaults to output.txt)
 
-=item B<-coredb_host>
+=item B<-dnadb_host>
 
 Host where the core database is (defaults to $DNADB_HOST)
 
-=item B<-coredb_user>
+=item B<-dnadb_user>
 
 User of the core database (defaults to $DNADB_USER)
 
-=item B<-coredb_pass>
+=item B<-dnadb_pass>
 
 Password for the core database user (defaults to $DNADB_PASS)
 
-=item B<-coredb_port>
+=item B<-dnadb_port>
 
 Port of the host where the core database is (defaults to $DNADB_PORT)
 
-=item B<-coredb_name>
+=item B<-dnadb_name>
 
 Name of the Core database (defaults to $DNADB_NAME)
 
-=item B<-efgdb_host>
+=item B<-dbhost>
 
 Host where the EFG database is (defaults to $DB_HOST)
 
-=item B<-efgdb_user>
+=item B<-dbuser>
 
 User of the EFG database (defaults to $DB_USER)
 
-=item B<-efgdb_pass>
+=item B<-dbpass>
 
 Password for the EFG database user (defaults to $DB_PASS)
 
-=item B<-efgdb_port>
+=item B<-dbport>
 
 Port of the host where the EFG database is (defaults to $DB_PORT)
 
-=item B<-efgd_bname>
+=item B<-dbname>
 
 Name of the EFG database (defaults to $DB_NAME)
 
@@ -151,20 +151,20 @@ my $remove;
 my $help;
 my @feature_sets;
 
-GetOptions ("output=s"      => \$output,
-	    "efgdb_port=s"  => \$efgdb_port,
-            "efgdb_host=s"  => \$efgdb_host,
-            "efgdb_user=s"  => \$efgdb_user,
-            "efgdb_name=s"  => \$efgdb_name,
-            "efgdb_pass=s" => \$efgdb_pass,
-            "coredb_port=s" => \$coredb_port,
-            "coredb_host=s" => \$coredb_host,
-            "coredb_user=s" => \$coredb_user,
-            "coredb_name=s" => \$coredb_name,
-			"all"           => \$all,
-			#"class"         => \$feature_class,
-			#Can't implement other classses here as they have xrefs etc
-			#would have to use Helper to rollback feature methods
+GetOptions ("output=s"     => \$output,
+	    "dbport=s"     => \$efgdb_port,
+            "dbhost=s"     => \$efgdb_host,
+            "dbuser=s"     => \$efgdb_user,
+            "dbname=s"     => \$efgdb_name,
+            "dbpass=s"     => \$efgdb_pass,
+            "dnadb_port=s" => \$coredb_port,
+            "dnadb_host=s" => \$coredb_host,
+            "dnadb_user=s" => \$coredb_user,
+            "dnadb_name=s" => \$coredb_name,
+	    "all"          => \$all,
+	    #"class"       => \$feature_class,
+	    #Can't implement other classses here as they have xrefs etc
+	    #would have to use Helper to rollback feature methods
             "remove"        => \$remove,
             "feature_sets=s{,}"  => \@feature_sets,
 	    "help|h"              => \$help,
