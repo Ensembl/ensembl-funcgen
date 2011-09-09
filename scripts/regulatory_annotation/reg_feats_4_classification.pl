@@ -49,6 +49,9 @@ reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4 -s mus_musculus
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.7  2011-01-10 14:01:18  nj1
+ added generic #!/usr/bin/env perl
+
  Revision 1.6  2011-01-10 13:32:23  nj1
  updated boiler plate
 
@@ -100,7 +103,7 @@ use constant  NO_ROWS => '0E0';
 
 my($user, $password, $driver, $host, $port);
 my @temp_tables;
-my $dump_dir = "/lustre/scratch103/ensembl/dkeefe/reg_feats_junk_$$/";
+my $dump_dir = "reg_feats_junk_$$/";
 my $id_list;
 my $sp;
 my $verbose = 0;
