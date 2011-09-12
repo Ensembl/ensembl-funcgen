@@ -57,7 +57,7 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Storable;
 
 
@@ -69,33 +69,32 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-NAME]: string - the name of this experiment
-  Arg [-EXPERIMENTAL_GROUP]: ExperimentalGroup associated to this experiment
-  Arg [-DATE]: string - the date of the experiment (format?)
-  Arg [-PRIMARY_DESIGN_TYPE]: string - MGED term for the primary design of teh experiment e.g. binding_site_identification
-  Arg [-DESCRIPTION]: string - of the experiment
-  Arg [-ARCHIVE_ID]: string - Public Repository (ENA) experiment accession e.g. SRX00124818
-  Arg [-DATA_URL]: string - Public URL of the data (used if the archive_id is not present)
+  Arg [-NAME]                : String - experiment name
+  Arg [-EXPERIMENTAL_GROUP]  : Bio::EnsEMBL::Funcgen ExperimentalGroup associated with this experiment
+  Arg [-DATE]                : String - Date of the experiment (YYYY-MM-DD)
+  Arg [-PRIMARY_DESIGN_TYPE] : String - MGED term for the primary design of teh experiment e.g. binding_site_identification
+  Arg [-DESCRIPTION]         : String
+  Arg [-ARCHIVE_ID]          : String - Public repository (ENA) experiment accession e.g. SRX00124818
+  Arg [-DATA_URL]            : String - Public URL of the data (used if the archive_id is not present)
 
-  Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
-								  -NAME                => $name,
-								  -EXPERIMENTAL_GROUP  => $group,
-								  -DATE                => $date,
-								  -PRIMARY_DESIGN_TYPE => $p_design_type,
-								  -DESCRIPTION         => $description,
-								  -ARCHIVE_ID          => $archive_id,
-                                                 		 );
+  Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new
+                              (
+							   -NAME                => $name,
+							   -EXPERIMENTAL_GROUP  => $group,
+							   -DATE                => $date,
+							   -PRIMARY_DESIGN_TYPE => $p_design_type,
+							   -DESCRIPTION         => $description,
+							   -ARCHIVE_ID          => $archive_id,
+                              );
+
   Description: Creates a new Bio::EnsEMBL::Funcgen::Experiment object.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
-  Exceptions : None ? Should throw if mandatory params not set
+  Exceptions : Throws if name not defined
+               Throws if ExperimentalGroup not valid
   Caller     : General
   Status     : Medium Risk
 
 =cut
-
-#experimental_variables?
-#design_type
-#target(s)?
 
 sub new {
 	my $caller = shift;
@@ -105,83 +104,187 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 
 	my ($name, $group, $date, $p_dtype, $desc, $archive_id, $data_url, $xml_id, $xml)
-		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 'DESCRIPTION','ARCHIVE_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
+		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 
+					  'DESCRIPTION','ARCHIVE_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
 	
-	$self->name($name)          if defined $name;
-	$self->experimental_group($group)        if defined $group;
-	$self->date($date)          if defined $date;
-	$self->primary_design_type($p_dtype)    if defined $p_dtype;
-	$self->description($desc)   if defined $desc;
-	$self->archive_id($archive_id)   if defined $archive_id;
-	$self->data_url($data_url)   if defined $data_url;
+	#Mandatory attr checks
+
+	if(ref($group) ne 'Bio::EnsEMBL::Funcgen::ExperimentalGroup'){
+	  throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalGroup object");
+	}
+
+	if(! defined $name){
+	  throw('You must provide a name parameter');
+	}
+
+	#test date format here?
+
+
+	#Direct assignment here so we avoid setter test in methods
+	$self->{name}                = $name;
+	$self->{group}               = $group;
+	$self->{date}                = $date       if defined $date;
+	$self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
+	$self->{description}         = $desc       if defined $desc;
+	$self->{archive_id}          = $archive_id if defined $archive_id;
+	$self->{data_url}            = $data_url   if defined $data_url;
+
+	#Maintain setter funcs here as these are populated after initialisation
 	$self->mage_xml_id($xml_id) if defined $xml_id;
 	$self->mage_xml($xml)       if defined $xml;
-
-
-	#Need to add mandatory params check here!!
-	#name, group or group_id
 	
-
 	return $self;
 }
 
 
-### GENERIC ACCESSOR METHODS ###
+### ACCESSOR METHODS ###
 
 =head2 name
 
-  Arg [1]: string - the name of this experiment
-  Example: $exp->name('Experiment-1');
-  Description: Getter/Setter for the experiment name
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
+  Example     : my $exp_name = $exp->name;
+  Description : Getter for the experiment name
+  Returntype  : String
+  Exceptions  : None
+  Caller      : General
+  Status      : Stable
 
 =cut
 
 sub name{
-	my ($self) = shift;	
-
-	$self->{'name'} = shift if(@_);
-
-	return $self->{'name'};
+  return $_[0]->{'name'};
 }
 
-=head2 group_id
 
-  Example: gid = $exp->group_id();
-  Description: Getter/Setter for the group_db_id
-  Returntype : int
-  Exceptions : 
-  Caller     : General
-  Status     : Deprecated
+=head2 experimental_group
+
+  Example     : my $exp_group_name = $exp->experimental_group()->name();
+  Description : Getter for the experimental group
+  Returntype  : Bio::EnsEMBL::Funcgen::ExperimentalGroup
+  Exceptions  : None
+  Caller      : General
+  Status      : At risk
 
 =cut
 
-
-
-sub group_id{
-	my ($self) = shift;	
-
-	warn "exp->group_id is deprecated. Use exp->group->dbID instead";
-	warn "cannot set group id manually, ignoring parameter..." if(@_);
-	return $self->experimental_group()->dbID;
+sub experimental_group{
+  return $_[0]->{'group'};
 }
+
+
+=head2 date
+
+  Example     : my $exp_date = $exp->date;
+  Description : Getter for the date
+  Returntype  : String
+  Exceptions  : None
+  Caller      : General
+  Status      : Stable
+
+=cut
+
+sub date{
+  return $_[0]->{'date'};
+}
+
+
+=head2 description
+
+  Example     : my $exp_desc = $exp->description
+  Description : Getter for the experiment description
+  Returntype  : String
+  Exceptions  : None
+  Caller      : General
+  Status      : At risk - Not used, was stable until v64
+
+=cut
+
+sub description{
+  return $_[0]->{'description'};
+}
+
+
+
+
+#=head2 source_label
+#
+#  Example    : my $source_label = $exp->source_label;
+#  Description: Getter for the experiment source label
+#  Returntype : string
+#  Exceptions : None
+#  Caller     : General
+#  Status     : At risk
+#
+#=cut
+
+#sub source_label{
+#  my $self = shift;
+#
+#  return $self->{'archive_id'};
+#}
+
+
+
+=head2 archive_id
+
+  Example     : $archive_id = $exp->archive_id();
+  Description : Getter for the experiment archive id
+  Returntype  : string
+  Exceptions  : None
+  Caller      : General
+  Status      : At risk
+
+=cut
+
+sub archive_id{
+  return $_[0]->{'archive_id'};
+}
+
+
+=head2 data_url
+
+  Example     : $url = $exp->data_url();
+  Description : Getter for the experiment data url
+  Returntype  : string
+  Exceptions  : None
+  Caller      : General
+  Status      : Stable
+
+=cut
+
+sub data_url{
+  return $_[0]->{'data_url'};
+}
+
+
+=head2 primary_design_type
+
+  Example     : my $pdt = $exp->primary_design_type;
+  Description : Getter for the primary design type
+  Returntype  : String - MGED term
+  Exceptions  : None
+  Caller      : General
+  Status      : At risk
+
+=cut
+
+sub primary_design_type{
+  return $_[0]->{'primary_design_type'};
+}
+
+
+# Accessor/Setter methods
 
 =head2 mage_xml
 
-  Arg [1]: string(optional) - MAGE XML
-  Example: my $xml = $exp->mage_xml();
-  Description: Getter/Setter for the mage_xml attribute
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : at risk
+  Arg [1]     : string(optional) - MAGE XML
+  Example     : my $xml = $exp->mage_xml();
+  Description : Getter/Setter for the mage_xml attribute
+  Returntype  : String
+  Exceptions  : None
+  Caller      : General
+  Status      : at risk
 
 =cut
-
-
 
 sub mage_xml{
   my ($self) = shift;	
@@ -196,19 +299,18 @@ sub mage_xml{
   return (exists $self->{'mage_xml'}) ? $self->{'mage_xml'} : undef;
 }
 
+
 =head2 mage_xml_id
 
-  Arg [1]: int (optional) - mage_xml_id
-  Example: $exp->group_db_id('1');
-  Description: Getter/Setter for the mage_xml attribute
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : at risk
+  Arg [1]     : int (optional) - mage_xml_id
+  Example     : $exp->group_db_id('1');
+  Description : Getter/Setter for the mage_xml attribute
+  Returntype  : String
+  Exceptions  : None
+  Caller      : General
+  Status      : at risk
 
 =cut
-
-
 
 sub mage_xml_id{
   my $self = shift;	
@@ -222,169 +324,17 @@ sub mage_xml_id{
 
 
 
-=head2 group
-
-  Example: my $exp_group_name = $exp->experimental_group->name();
-  Description: Getter for the group name
-  Returntype : string
-  Exceptions : 
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-
-sub group{
-  my $self = shift;	
-
-  warn "exp->group is deprecated. Use exp->experimental_group->name instead";
-  warn "cannot set group name manually, ignoring parameter..." if(@_);
-  return $self->experimental_group()->name;
-
-}
-
-=head2 experimental_group
-
-  Arg [1]: optional - Bio::EnsEMBL::Funcgen::ExperimentalGroup
-  Example: my $exp_group_name = $exp->experimental_group()->name();
-  Description: Getter/Setter for the experimental group
-  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalGroup
-  Exceptions : Throws if not a valid ExperimentalGroup object
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-
-sub experimental_group{
-  my ($self, $group) = (shift, shift);	
-
-  if($group){
-
-    throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalGroup object") 
-      if(! $group->isa("Bio::EnsEMBL::Funcgen::ExperimentalGroup") || ! $group->dbID());
-
-    $self->{'group'} = $group;
-
-  }
-
-  return $self->{'group'};
-
-}
-
-
-=head2 date
-
-  Arg [1]: optional - date, format yyyy-mm-dd
-  Example: $exp->date('2006-06-09');
-  Description: Getter/Setter for the date
-  Returntype : date string
-  Exceptions : None ? should throw/warn if format not correct
-  Caller     : General
-  Status     : Medium
-
-=cut
-
-sub date{
-  my $self = shift;
-  
-  if(@_){
-    #Need to validate format here
-    $self->{'date'} = shift;
-  }
-
-  return $self->{'date'};
-}
-
-=head2 description
-
-  Arg [1]: string - the experiment description
-  Example: $exp->description("Human chromosome X TFBS identification");
-  Description: Getter/Setter for the experiment description
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub description{
-  my $self = shift;
-  $self->{'description'} = shift if(@_);
-  return $self->{'description'};
-}
-
-=head2 archive_id
-
-  Arg [1]    : String - Archive ID to a public repository (ENA) e.g. SRX00381237
-  Example    : $archive_id = $exp->archive_id();
-  Description: Getter/Setter for the experiment accession id
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub archive_id{
-  my $self = shift;
-  $self->{'archive_id'} = shift if(@_);
-  return $self->{'archive_id'};
-}
-
-
-=head2 data_url
-
-  Arg [1]: string - an url for the experiment data
-  Example: $url = $exp->data_url();
-  Description: Getter/Setter for the experiment data url
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub data_url{
-  my $self = shift;
-  $self->{'data_url'} = shift if(@_);
-  return $self->{'data_url'};
-}
-
-=head2 primary_design_type
-
-  Arg [1]: string - MGED term for primary design type
-  Example: $exp->primary_design_type('binding_site_identification');
-  Description: Getter/Setter for the primary design type
-  Returntype : string
-  Exceptions : None ? should throw if not MGED term
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub primary_design_type{
-  my ($self) = shift;
-	
-  if(@_){
-    #warn "Need to validate design_types against MGED";
-    $self->{'primary_design_type'} = shift;
-  }
-  return $self->{'primary_design_type'};
-}
-
-
 
 #These convenience methods are to provide a registry for the experimental chips of the experiment
 
 =head2 get_ExperimentalChips
 
-  Example: my $exp_chips = @{$exp->get_ExperimentalChips()}
-  Description: Retrieves all ExperiemntalChips
-  Returntype : Listref of ExperimentalChips
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
+  Example     : my $exp_chips = @{$exp->get_ExperimentalChips()}
+  Description : Retrieves all ExperiemntalChips
+  Returntype  : Listref of ExperimentalChips
+  Exceptions  : None
+  Caller      : General
+  Status      : At risk
 
 =cut
 
@@ -446,12 +396,12 @@ sub add_ExperimentalChip{
 
 =head2 get_ExperimentalChip_by_unique_id
 
-  Example: $exp_chip = $exp->add_ExperimentalChip($exp_chip)
-  Description: Adds and stores an ExperiemntalChip for this Experiment
-  Returntype : Bio::EnsEMBL::Funcgen::ExperimentalChip
-  Exceptions : Throws if no uid supplied
-  Caller     : General
-  Status     : At risk
+  Example     : $exp_chip = $exp->add_ExperimentalChip($exp_chip)
+  Description : Adds and stores an ExperiemntalChip for this Experiment
+  Returntype  : Bio::EnsEMBL::Funcgen::ExperimentalChip
+  Exceptions  : Throws if no uid supplied
+  Caller      : General
+  Status      : At risk
 
 =cut
 
@@ -475,12 +425,12 @@ sub get_ExperimentalChip_by_unique_id{
 
 =head2 get_ExperimentalChip_unique_ids
 
-  Example:     foreach my $uid(@{$self->experiment->get_ExperimentalChip_unique_ids()}){ ... }
-  Description: retrieves all ExperimentalChip unique_ids
-  Returntype : ListRef
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
+  Example     : foreach my $uid(@{$self->experiment->get_ExperimentalChip_unique_ids()}){ ... }
+  Description : retrieves all ExperimentalChip unique_ids
+  Returntype  : ListRef
+  Exceptions  : None
+  Caller      : General
+  Status      : At risk
 
 =cut
 
@@ -494,14 +444,26 @@ sub get_ExperimentalChip_unique_ids{
 
 
 
-#should we add a methods to return just the 
+
+### Deprecated methods ###
 
 
-#methods?
-#lazy load design_types and exp_variables
-#target?  Is this a one to one?
+sub group{
+  my $self = shift;	
+  
+  deprecate("group is deprecated experimental_group instead");
+  throw("You are trying to set a experimental group name using a deprecated method") if @_;
+  return $self->experimental_group()->name;
+}
 
 
+
+sub group_id{
+	my ($self) = shift;	
+	
+	deprecate("Experiment->group_id is deprecated. Use exp->experimental_group->dbID instead");
+	return $self->experimental_group()->dbID;
+}
 
 1;
 
