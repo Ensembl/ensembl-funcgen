@@ -21,20 +21,21 @@
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::Experiment
-  
+
 =head1 SYNOPSIS
 
 use Bio::EnsEMBL::Funcgen::Experiment;
 
-my $array = Bio::EnsEMBL::Funcgen::Experiment->new(
-						   -ADAPTOR             => $self,
-						   -NAME                => $name,
-					           -EXPERIMENTAL_GROUP  => $experimental_group,
-						   -DATE                => $date,
-						   -PRIMARY_DESIGN_TYPE => $p_design_type,
-						   -DESCRIPTION         => $description,
-						   -ARCHIVE_ID          => $archive_id,
-                                                   );
+my $exp = Bio::EnsEMBL::Funcgen::Experiment->new
+               (
+				-ADAPTOR             => $self,
+				-NAME                => $name,
+				-EXPERIMENTAL_GROUP  => $experimental_group,
+				-DATE                => $date,
+				-PRIMARY_DESIGN_TYPE => 'binding_site_indentification',
+				-DESCRIPTION         => $description,
+				-ARCHIVE_ID          => $archive_id,
+               );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
 my $exp_adaptor = $db_adaptor->get_ExperimentAdaptor();
@@ -42,9 +43,7 @@ my $exp = $exp_adaptor->fetch_by_name($exp_name)
 
 =head1 DESCRIPTION
 
-An Experiment object represents an experiment instance . The data
-are stored in the experiment, egroup, target, design_type and 
-experimental_variable tables.
+The Experiment class represents an instance of an experiment i.e. a discrete set of data
 
 =cut
 
@@ -59,8 +58,6 @@ use strict;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Storable;
-
-
 use vars qw(@ISA);
 
 @ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
