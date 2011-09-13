@@ -177,7 +177,7 @@ sub set_feature_sets{
 		$self->log('Analysis '.$self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'}.
 		  " not found, storing from config hash");		
 		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new(%{$self->{'feature_sets'}{$fset_name}{'analysis'}}));
-		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'});
+		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{analysis}{-logic_name});
 	  }
 
 	  #replace hash config with object
