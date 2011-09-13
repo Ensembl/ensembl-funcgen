@@ -463,7 +463,7 @@ sub store {
 		  $sth->bind_param(5, $fset->feature_class,          SQL_VARCHAR);
 		  $sth->bind_param(6, $fset->description,            SQL_VARCHAR);
 		  $sth->bind_param(7, $fset->display_label,          SQL_VARCHAR);
-		  $sth->bind_param(8, $fset->get_Experiment->dbID(), SQL_INTEGER);
+		  $sth->bind_param(8, $exp_id,                       SQL_INTEGER);
 		  
 		  		  
 		  $sth->execute();
