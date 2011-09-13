@@ -5,16 +5,23 @@
 PASS=$1
 shift
 
-input_files=$@
+input_files="$@"
 
-#Now check is defined
-#Importer currently only handles 1 file/import
-
-if [[]]; then
+if [[ -z $input_files ]]; then
+	echo $usage
+	exit 1
 fi
 
+#Support multiple files here
+#importer most likely only supports 1
 
-
+for ifile in $input_files; do
+	
+	if [[ ! -e $ifile ]]; then
+		echo -e "Could not find input file:\t$ifile"
+		exit 1;
+	fi
+done
 
 
 
@@ -25,7 +32,7 @@ fi
 
 # The cell_type, feature_type and analysis must all be predefined in the DB.
 # See scripts/run_import_type.sh. Analysis entries are currently imported manually
-# or via the CreateDB function which imports scripts/imports/typee/Analysis.txt
+# or via the CreateDB function which imports scripts/imports/types/Analysis.txt
 
 
 name=MyExperiment1             #Name of experiment
@@ -35,19 +42,19 @@ location=Hinxton               #Location of experimental_group
 contact=njohnson@ebi.ac.uk     #contact for experimental_group
 species=homo_sapiens
 input_set=MyExperiment1        #Name of the input_set
-input_set_feature_class=annotated  #Type of feature
+input_set_fclass=annotated     #Type of feature
 reg_dbhost=reg_mysql_host      #Can alternatively defined dnadb params directly
 reg_dbuser=reg_mysql_user      #params directly. See below
 dbhost=mysql_host
 dbname=my_homo_sapiens_funcgen_65_37
-dbpot=3306
+dbport=3306
 ctype=CD4
 ftype=H3K4ac
 analysis=MyPeakAnalysis
 parser=Bed
+vendor=TechVendor
 
 #Optional
-#vendor=' -vendor Illumina '   # Defaults to parser format
 #assembly=' -assembly 37 '   # Defaults to current
 ucsc_coords=' -ucsc_coords ' # accounts for half open format
 tee=' -tee '                 # tees all log output to STDOUT
@@ -67,6 +74,7 @@ perl $EFG_SRC/scripts/import/parse_and_import.pl\
 	-group            $group\
 	-species          $species\
 	-input_set        $input_set\
+	-input_feature_class $input_set_fclass\
 	-registry_host    $reg_dbhost\
 	-registry_user    $reg_dbuser\
 	-port             $dbport\
@@ -76,8 +84,8 @@ perl $EFG_SRC/scripts/import/parse_and_import.pl\
 	-feature_type     $ftype\
 	-feature_analysis $analysis\
 	-parser           $parser\
+	-vendor           $vendor\
 	-pass             $PASS\
-	$vendor\
 	$assembly\
 	$ucsc_coords\
 	$tee\
