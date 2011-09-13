@@ -426,17 +426,35 @@ sub store {
                                  (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label, experiment_id)
                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 
-
+	my $db = $self->db;
 	my ($sql, $edb_id, %edb_hash);
 	
     foreach my $fset (@fsets) {
 		throw('Can only store FeatureSet objects, skipping $fset')	if ( ! $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet'));
 		
-		if (!( $fset->dbID() && $fset->adaptor() == $self )){#use is_stored?
+		if (! $fset->is_stored($db) ) {
 
-		  throw("FeatureSet must have a stored FeatureType") if (! $fset->feature_type->is_stored($self->db));
+		  # Check FeatureType and Analysis
+		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fset->feature_type);
+		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $fset->analysis);
 			 
-		  my $ctype_id = (defined $fset->cell_type) ? $fset->cell_type->dbID : undef;
+
+		  # Check optional Experiment and CellType
+		  my $ctype_id;
+		  my $ctype = $fset->cell_type;
+
+		  if($ctype){
+			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
+			$ctype_id = $ctype->dbID;
+		  }
+
+		  my $exp_id;
+		  my $exp =  $fset->get_Experiment; 
+
+		  if($exp){
+			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
+			$exp_id = $exp->dbID;
+		  }
 		  
 		  $sth->bind_param(1, $fset->feature_type->dbID,     SQL_INTEGER);
 		  $sth->bind_param(2, $fset->analysis->dbID,         SQL_INTEGER);
