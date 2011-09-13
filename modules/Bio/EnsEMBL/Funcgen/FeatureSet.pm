@@ -344,7 +344,7 @@ sub is_attribute_set{
   Example    : my $exp = $FeatureSet->get_Experiment;
   Description: Retrieves the Experiment for this FeatureSet
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
-  Exceptions : throws if experiment_id not defined
+  Exceptions : None
   Caller     : General
   Status     : At Risk
 
@@ -354,12 +354,8 @@ sub is_attribute_set{
 sub get_Experiment{
   my $self = shift;
 
-  if(! defined $self->{'experiment'}){
-
-	if(! defined $self->{'experiment_id'}){
-	  throw("Cannot fetch Experiment, experiment_id not defined for FeatureSet:\t".$self->name);
-	}
-
+  if( (! defined $self->{'experiment'}) &&
+	  (defined $self->{'experiment_id'}) ){
 	$self->{'experiment'} = $self->adaptor->db->get_ExperimentAdaptor->fetch_by_dbID($self->{experiment_id});
   }
 
