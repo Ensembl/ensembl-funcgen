@@ -176,8 +176,9 @@ sub new {
 	#Do we need to consider reg_config here?
 	#We could potentially have two version of the core DB in the config
 	#But we would expect the user to handle predefining the dnadb correctly in this case
-	warn ':: WARNING: Unable to match assembly version between the dnadb name ('.$self->dnadb->dbc->dbname.') and the specified -dnadb_assm '.$self->dnadb_assembly.
-	  "\nMaybe you need to rename your DBs according to the Ensembl naming convention e.g. myprefix_homo_sapiens_55_37";
+	warn ':: WARNING: Unable to match assembly version between the dnadb name ('.
+	  $self->dnadb->dbc->dbname.') and the specified -dnadb_assm '.$self->dnadb_assembly.
+		"\nMaybe you need to rename your DBs according to the Ensembl naming convention e.g. myprefix_homo_sapiens_55_37";
 
 	if($dnadb_defined && $dnadb_host){
 	  warn ":: Over-riding pre-defined dnadb host values(reg/-dnadb arg) with dnadb params:\t".
@@ -692,11 +693,14 @@ sub set_dnadb_by_assembly_version{
 						$self->dnadb_user, 
 						$self->dnadb_pass, 
 						{'RaiseError' => 1});
-	#should we eval this?
-	#}
-	
 
-	@dbnames = map {$_ = "@$_"} @{$dbh->selectall_arrayref($sql)};
+	eval { @dbnames = map {$_ = "@$_"} @{$dbh->selectall_arrayref($sql)}; };
+
+	if($@){
+	  throw('Failed to fetch dna DB names from '.$self->dnadb_host.":${port}"."\n$@");
+	}
+
+
 
 	#sort and filter out non-core DBs
 	#This will always take the latest release, not the latest genebuild version
@@ -728,55 +732,6 @@ sub set_dnadb_by_assembly_version{
 
 
 
-
-#Group methods, as not adaptor/class for Group(used in ExperimentAdaptor at present)
-#will disppear when Group and GroupAdaptor written
-
-=head2 fetch_group_details
-
-  Args       : string - group name
-  Example    : my $group =  $db->fetch_group_details('EBI');
-  Description: Gets group information for a given name
-  Returntype : ARRAYREF
-  Exceptions : Throws if no group name defined
-  Caller     : general
-  Status     : At risk - Move to GroupAdaptor
-
-=cut
-
-sub fetch_group_details{
-	my ($self, $gname) = @_;
-
-	throw("Need to specify a group name") if ! $gname;
-	my $sql = "SELECT * from experimental_group where name=\"$gname\"";
-	return $self->dbc->db_handle->selectrow_array($sql);
-}
-
-=head2 import_group
-
-  Arg [1]    : string - group name
-  Arg [2]    : string - group location
-  Arg [3]    : string - group contact (email or address)
-  Example    : $db->import_group('EBI', 'Hinxton', 'njohnson@ebi.ac.uk');
-  Description: Imports group information to the database
-  Returntype : none
-  Exceptions : Throws if arguments not supplied
-  Caller     : general
-  Status     : At risk - Move to GroupAdaptor
-
-=cut
-
-sub import_group{
-	my ($self, $gname, $loc, $contact) = @_;
-
-	throw("Need to supply a group name, location and contact") if (!($gname && $loc && $contact));
-
-	my $sql = "INSERT INTO experimental_group(name, location, contact) VALUES(\"$gname\", \"$loc\", \"$contact\")";
-	$self->dbc->do($sql);
-
-	#$self->dbc->db_handle->last_insert_id(undef, undef, undef, undef);	
-	return;#return last insert id here?
-}
 
 
 #General Status methods
@@ -904,6 +859,28 @@ sub connect_string{
   return '-h'.$self->dbc->host().' -u'.$self->dbc->username().' -p'.$self->dbc->password()
 	.' -P'.$self->dbc->port().' '.$self->dbc->dbname();
 }
+
+
+
+# DEPRECATED METHODS #
+
+sub fetch_group_details{
+  my ($self, $gname) = @_;
+
+  deprecate("Please use ExperimentalGroupAdaptor");
+
+  throw("Need to specify a group name") if ! $gname;
+  my $sql = "SELECT * from experimental_group where name=\"$gname\"";
+  return $self->dbc->db_handle->selectrow_array($sql);
+}
+
+sub import_group{
+  my ($self, $gname, $loc, $contact) = @_;
+
+  deprecate('Please use ExperimentalGroup/Adaptor to import experimental_group info');
+  throw('import_group no longer supported');
+}
+
 
 1;
 
