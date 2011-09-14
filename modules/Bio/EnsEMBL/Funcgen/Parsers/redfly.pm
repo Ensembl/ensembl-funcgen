@@ -109,14 +109,14 @@ sub new {
   #Move xref flag here?
   $self->{config} =  {
 					  'REDfly CRMs' => {
-										file  => $ENV{'EFG_DATA'}.'/input/REDFLY/crm_dump.gff',
+										file  => $ENV{'EFG_DATA'}.'/input/REDFLY/redfly_crm.gff',
 										gff_attrs => {
 													  'ID' => 1,
 													 },
 									   },
 					  
 					  'REDfly TFBSs' => {
-										 file  => $ENV{'EFG_DATA'}.'/input/REDFLY/tbfs_dump.gff',
+										 file  => $ENV{'EFG_DATA'}.'/input/REDFLY/redfly_tfbs.gff',
 										 gff_attrs => {
 													   'ID' => 1,
 													   'Factor' => 1,
@@ -172,7 +172,7 @@ sub parse_and_load {
   my ($fset_name, $old_assembly, $new_assembly, $file) = rearrange(['FEATURE_SET', 'OLD_ASSEMBLY', 'NEW_ASSEMBLY', 'FILE'], @_);
 
 
-  warn "params not yet fully implemented, loading defaults import sets";
+  warn "file arg not yet fully supported, loading defaults import sets";
 
   #if(! defined $fset_name && defined $file){
 #	throw("Cannot specify a file to parse if no -feature_set parameter provided");
@@ -185,7 +185,6 @@ sub parse_and_load {
 
   #just do for each in import_sets here for now?
 
-   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   my %slice_cache;
   my $extf_adaptor  = $self->db->get_ExternalFeatureAdaptor;
   my $dbentry_adaptor = $self->db->get_DBEntryAdaptor;
@@ -219,7 +218,7 @@ sub parse_and_load {
 	my $feature_cnt = 0;
 	my $feature_target_cnt = 0;
 	
-	open (FILE, "<$file") || die "Can't open $file";
+	open (FILE, "<$file") || die("Can't open $file\n$!\n");
 	<FILE>; # skip header
 
 	LINE: while (my $line = <FILE>) {
@@ -256,7 +255,7 @@ sub parse_and_load {
 		}
 	  }
 	
-  
+   
 	  #For TFBS
 	  #Factor = coding gene name display_label
 	  #Target = Target gene?
@@ -333,7 +332,7 @@ sub parse_and_load {
 			#Handle release/version in xref version as stable_id version?
 			
 			if(! defined $stable_id){
-			  warn "Could not generate CODING xref for feature_type:\t". $attr_cache{'Factor'};
+			  warn "Could not generate CODING xref for feature_type:\t". $attr_cache{'Factor'}."\n";
 			}else{
 			
 			  #warn "got $stable_id for ".$attr_cache{'Factor'};
@@ -351,6 +350,7 @@ sub parse_and_load {
 													   -info_type              => 'MISC',
 													   -into_text              => 'GENE',
 													   -linkage_annotation     => 'REDfly Coding'
+													   -analysis               => $self->{'feature_sets'}{$import_set}->analysis,
 
 													   #-description            => 'cisRED motif gene xref',#This is now generic and no longer resitricted to REDfly
 													   #could have version here if we use the correct dnadb to build the cache
@@ -407,7 +407,7 @@ sub parse_and_load {
 
 
 	  if(! defined $stable_id){
-		warn "Could not generate TARGET xref for feature:\t". $attr_cache{'ID'} if $target ne 'Unspecified';
+		warn "Could not generate TARGET xref for feature:\t". $attr_cache{'ID'}."\n" if $target ne 'Unspecified';
 	  }
 	  else{
 		#Handle release/version in xref version as stable_id version?
@@ -424,7 +424,9 @@ sub parse_and_load {
 												 -display_id             => $target,
 												 -info_type              => 'MISC',
 												 -info_text              => 'GENE',
-												 -linkage_annotation      => $fset->feature_type->name.' Target', 
+												 -linkage_annotation     => $fset->feature_type->name.' Target',
+												 -analysis               => $self->{'feature_sets'}{$import_set}->analysis,
+
 												 #could have version here if we use the correct dnadb to build the cache
 											);
 
