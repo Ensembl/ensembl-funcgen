@@ -157,7 +157,7 @@ sub fetch_by_name_class {
 =head2 fetch_all_by_class
 
   Arg [1]    : string - class
-  Example    : my $array = $oaa->fetch_all_by_class(''AFFY_ST');
+  Example    : my $array = $oaa->fetch_all_by_class('AFFY_ST');
   Description: Retrieves Array object from the database based class.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : Throws if nor class passed
