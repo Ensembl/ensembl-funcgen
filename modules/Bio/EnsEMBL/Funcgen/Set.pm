@@ -95,14 +95,14 @@ sub new {
   $self->cell_type($ctype) if $ctype;
   $self->feature_type($ftype) if $ftype;
 
-  if(defined $anal){#Move this to child Sets, and just set anal here
+  if(defined $anal){
 	$self->analysis($anal);
   }elsif($self->set_type ne 'input'){
+	#Could move this to child Sets and just set analysis here
+	#As with ftype
 	throw('Must pass a valid -analysis parameter for a '.ref($self));
   }
 
-  #Set type here but don't validate, as this can be done selectively in the Child Sets, do this for analysis too?
-  
   return $self;
 }
 
