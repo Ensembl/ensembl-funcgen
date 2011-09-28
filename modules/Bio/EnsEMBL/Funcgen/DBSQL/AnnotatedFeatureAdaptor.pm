@@ -308,41 +308,22 @@ sub _objs_from_sth {
 	    
 
 	  
-	    push @features, $self->_new_fast( {
-										   'start'          => $seq_region_start,
-										   'end'            => $seq_region_end,
-										   'strand'         => $seq_region_strand,
-										   'slice'          => $slice,
-										   'analysis'       => $fset_hash{$fset_id}->analysis(),
-										   'adaptor'        => $self,
-										   'dbID'           => $annotated_feature_id,
-										   'score'          => $score,
-										   'summit'         => $summit,
-										   'display_label'  => $display_label,
-										   'feature_set'    => $fset_hash{$fset_id},
-										  } );
+	    push @features, Bio::EnsEMBL::Funcgen::AnnotatedFeature->new_fast
+		  ({
+			'start'          => $seq_region_start,
+			'end'            => $seq_region_end,
+			'strand'         => $seq_region_strand,
+			'slice'          => $slice,
+			'adaptor'        => $self,
+			'dbID'           => $annotated_feature_id,
+			'score'          => $score,
+			'summit'         => $summit,
+			'display_label'  => $display_label,
+			'feature_set'    => $fset_hash{$fset_id},
+		   });
 	}
 	
 	return \@features;
-}
-
-=head2 _new_fast
-
-  Args       : Hashref to be passed to AnnotatedFeature->new_fast()
-  Example    : None
-  Description: Construct a AnnotatedFeature object using quick and dirty new_fast.
-  Returntype : Bio::EnsEMBL::Funcgen::AnnotatedFeature
-  Exceptions : None
-  Caller     : _objs_from_sth
-  Status     : At Risk
-
-=cut
-
-sub _new_fast {
-	my $self = shift;
-	
-	my $hash_ref = shift;
-	return Bio::EnsEMBL::Funcgen::AnnotatedFeature->new_fast($hash_ref);
 }
 
 =head2 store
@@ -375,12 +356,8 @@ sub store{
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
 	
-	#my $epsth = $self->prepare("INSERT INTO experiment_prediction (
-	#experiment_id, annotated_feature_id)
-    #                          VALUES (?, ?)");
 	
 	my $db = $self->db();
-	#my $analysis_adaptor = $db->get_AnalysisAdaptor();
 	
   FEATURE: foreach my $pf (@pfs) {
 		
@@ -395,31 +372,12 @@ sub store{
 		}
 		
 		
-		
-		#Have to do this for Analysis separately due to inheritance, removed defined as constrained in Feature->new
-		#Redundancy with Analysis in FeatureSet
-		if ( ! $pf->analysis->is_stored($db)) {
-			throw('A stored Bio::EnsEMBL::Analysis must be attached to the AnnotatedFeature objects to be stored.');
-		}
-		
+		#Only need to check FeatureSet here, as FeatureSet store will check analysis
+
 		if (! $pf->feature_set->is_stored($db)) {
 			throw('A stored Bio::EnsEMBL::Funcgen::FeatureSet must be attached to the AnnotatedFeature objects to be stored.');
 		}
 
-		#sanity check analysis matches feature_set analysis
-		if($pf->analysis->dbID() != $pf->feature_set->analysis->dbID()){
-			throw("AnnotatedFeature analysis(".$pf->analysis->logic_name().") does not match FeatureSet analysis(".$pf->feature_set->analysis->logic_name().")\n".
-				  "Cannot store mixed analysis sets");
-		}
-		#Complex analysis to be stored as one in analysis table, or have feature_set_prediciton link table?
-		#Or only have single analysis feature which can contribute to multi analysis "regulons"
-		#Or can we have multiple entries in feature_set with the same id but different analyses?
-		#This would still not be specific for each feature, nor would the annotated_feature analysis_id
-		#reflect all the combined analyses.  Maybe just the one which contributed most?
-
-		# Store the analysis if it has not been stored yet
-		#$analysis_adaptor->store( $pf->analysis()) if ( !$pf->analysis->is_stored($db) );
-		#could this potentially store the same on multiple times?
 
 		my $seq_region_id;
 		($pf, $seq_region_id) = $self->_pre_store($pf);
@@ -434,14 +392,7 @@ sub store{
 		$sth->bind_param(8, $pf->summit,                SQL_INTEGER);
 
 		$sth->execute();
-		$pf->dbID( $sth->{'mysql_insertid'} );
-
-		#foreach my $exp_id(@{$pf->experiment_ids()}){
-		#  $epsth->bind_param(1, $exp_id);
-		#  $epsth->bind_param(2, $original->dbID());
-		#  $epsth->execute();
-		#}
-		
+		$pf->dbID( $sth->{'mysql_insertid'} );		
 		$pf->adaptor($self);
 	}
 
