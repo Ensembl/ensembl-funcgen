@@ -344,11 +344,11 @@ sub get_available_adaptors{
 			   'ResultFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
 			   'MotifFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
 			   'BindingMatrix'      => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
+			   'SegmentationFeature'=> 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
+			   
 			 
-
-	 	       
-	       #add required EnsEMBL(core) adaptors here
-	       #Should write/retrieve from efg not dna db
+			   #add required EnsEMBL(core) adaptors here
+			   #Should write/retrieve from efg not dna db
 			   'UnmappedObject'     => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
 			   'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
 			   "MetaContainer"      => 'Bio::EnsEMBL::DBSQL::MetaContainer',
