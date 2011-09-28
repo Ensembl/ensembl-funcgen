@@ -114,7 +114,7 @@ sub new {
 
   my $type = $self->feature_class;
 
-  if(! ($type && grep /^${type}$/, ('annotated', 'result'))){
+  if(! ($type && grep /^${type}$/, ('annotated', 'result', 'segmentation'))){
 	throw("You must define a valid InputSet feature_class e.g. 'annotated' or 'result'");
   }
 
