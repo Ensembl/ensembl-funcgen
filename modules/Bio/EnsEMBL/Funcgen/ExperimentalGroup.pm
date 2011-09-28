@@ -91,8 +91,8 @@ sub new {
       $desc,
       $is_project
      ) = rearrange([
-		    'NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION', "IS_PROJECT"
-		   ], @_);
+					'NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION', 'IS_PROJECT'
+				   ], @_);
   
   
   if($name){
@@ -205,7 +205,7 @@ sub url {
 
 =head2 is_project
 
-  Arg [1]    : (optional) boolean - is_project
+  Arg [1]    : (optional) Boolean - is_project
   Example    : $group->is_project();
   Description: Getter and setter of is_project attribute for ExperimentalGroup objects.
   Returntype : string
