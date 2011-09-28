@@ -132,22 +132,19 @@ sub interdb_stable_id {
 
 =head2 display_label
 
-  Arg [1]    : string - display label
   Example    : my $label = $feature->display_label();
-  Description: Getter and setter for the display label of this feature.
-  Returntype : str
+  Description: Getter for the display label of this feature.
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk - move to SetFeature?
+  Status     : Medium risk
 
 =cut
 
 sub display_label {
   my $self = shift;
-	
-  $self->{'display_label'} = shift if @_;
-    
-  if(! $self->{'display_label'}  && $self->adaptor()){
+	    
+  if(! $self->{'display_label'}  && $self->adaptor){
 	
 	$self->{'display_label'} = $self->feature_set->feature_type->name().' - ';
 	$self->{'display_label'} .= $self->cell_type->name() if $self->cell_type();
