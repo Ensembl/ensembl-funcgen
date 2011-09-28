@@ -240,7 +240,7 @@ sub add_supporting_sets {
   throw("Supporting sets need to be a reference to an ARRAY:\t".$sets) if ref($sets) ne 'ARRAY';
 
   foreach my $set(@$sets){
-	
+
 	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->set_type ne 'data' && $set->dbID)){
 	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet:\t$set");
 	}
@@ -395,6 +395,7 @@ sub get_supporting_sets_by_Analysis {
 
 sub get_supporting_sets{
   my ($self, $status, $set_type)  = @_;
+  #swap the args here
 
   #Add analysis here and make above method wrapper
 
@@ -556,7 +557,10 @@ sub display_label {
 
   if(! $self->{'display_label'}){
 
-	if($self->product_FeatureSet->feature_type->class() eq 'Regulatory Feature'){
+	#This does not account for DataSet without a product FeatureSet
+	my $fset = $self->product_FeatureSet;
+
+	if($fset && ($fset->feature_type->class() eq 'Regulatory Feature')){
 	  $self->{'display_label'} = 'Regulatory Features';
 	}
 	else{
