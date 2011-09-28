@@ -31,16 +31,17 @@ predicted by the eFG pipeline.
 
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
-my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
+my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
+   (
 	-SLICE         => $chr_1_slice,
 	-START         => 1_000_000,
-        -SUMMIT        => 1_000_019,
+    -SUMMIT        => 1_000_019,
 	-END           => 1_000_024,
 	-STRAND        => -1,
-        -DISPLAY_LABEL => $text,
-        -SCORE         => $score,
-        -FEATURE_SET   => $fset,
-); 
+    -DISPLAY_LABEL => $text,
+    -SCORE         => $score,
+    -FEATURE_SET   => $fset,
+   ); 
 
 
 
@@ -68,7 +69,6 @@ package Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::SetFeature;
-use Bio::EnsEMBL::Funcgen::FeatureType;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::SetFeature);
@@ -76,29 +76,28 @@ use vars qw(@ISA);
 
 =head2 new
 
- 
-  Arg [-SCORE]        : (optional) int - Score assigned by analysis pipeline
-  Arg [-ANALYSIS]     : Bio::EnsEMBL::Analysis 
   Arg [-SLICE]        : Bio::EnsEMBL::Slice - The slice on which this feature is.
   Arg [-START]        : int - The start coordinate of this feature relative to the start of the slice
 		                it is sitting on. Coordinates start at 1 and are inclusive.
   Arg [-END]          : int -The end coordinate of this feature relative to the start of the slice
-	                    it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-SUMMIT]       : (optional) int - seq_region peak summit position
-  Arg [-DISPLAY_LABEL]: string - Display label for this feature
   Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
-  Arg [-dbID]         : (optional) int - Internal database ID.
-  Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
-  Example    : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
-									  -SLICE         => $chr_1_slice,
-									  -START         => 1_000_000,
-									  -END           => 1_000_024,
-                                                                          -SUMMIT        => 1_000_019,
-									  -STRAND        => -1,
-									  -DISPLAY_LABEL => $text,
-									  -SCORE         => $score,
-                                                                          -FEATURE_SET   => $fset,
-                                                                         );
+	                    it is sitting on. Coordinates start at 1 and are inclusive.
+  Arg [-DISPLAY_LABEL]: string - Display label for this feature
+  Arg [-SUMMIT]       : optional int - seq_region peak summit position
+  Arg [-SCORE]        : optional int - Score assigned by analysis pipeline
+  Arg [-dbID]         : optional int - Internal database ID.
+  Arg [-ADAPTOR]      : optional Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
+  Example    : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
+                                 (
+								  -SLICE         => $chr_1_slice,
+								  -START         => 1_000_000,
+								  -END           => 1_000_024,
+                                  -STRAND        => -1,
+                                  -FEATURE_SET   => $fset,
+								  -DISPLAY_LABEL => $text,
+								  -SCORE         => $score,
+                                  -SUMMIT        => 1_000_019,   
+                                 );
 
 
   Description: Constructor for AnnotatedFeature objects.
@@ -114,10 +113,13 @@ sub new {
 	
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
+  #Hard code strand => 0 here? And remove from input params?
   my ($score, $summit) = rearrange(['SCORE', 'SUMMIT'], @_);
     
-  $self->score($score)   if $score;
-  $self->summit($summit) if $summit;
+  #Direct assingment here removes need for set arg test in method
+
+  $self->{'score'}  = $score  if defined $score;
+  $self->{'summit'} = $summit if defined $summit;
 	
   return $self;
 }
@@ -127,7 +129,7 @@ sub new {
 
   Arg [1]    : (optional) int - score
   Example    : my $score = $feature->score();
-  Description: Getter and setter for the score attribute for this feature. 
+  Description: Getter for the score attribute for this feature. 
   Returntype : int
   Exceptions : None
   Caller     : General
@@ -137,9 +139,6 @@ sub new {
 
 sub score {
     my $self = shift;
-	
-    $self->{'score'} = shift if @_;
-		
     return $self->{'score'};
 }
 
@@ -147,7 +146,7 @@ sub score {
 
   Arg [1]    : (optional) int - summit postition
   Example    : my $peak_summit = $feature->summit;
-  Description: Getter and setter for the summit attribute for this feature. 
+  Description: Getter for the summit attribute for this feature. 
   Returntype : int
   Exceptions : None
   Caller     : General
@@ -157,43 +156,30 @@ sub score {
 
 sub summit {
   my $self = shift;
-  
-  $self->{'summit'} = shift if @_;
-  
   return $self->{'summit'};
 }
 
 
 =head2 display_label
 
-  Arg [1]    : string - display label
   Example    : my $label = $feature->display_label();
-  Description: Getter and setter for the display label of this feature.
-  Returntype : str
+  Description: Getter for the display label of this feature.
+  Returntype : String
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
 
 =cut
 
-#Can This be mirrored in AnnotatedFeatureSet?
-#this will over ride individual display_label for annotated features.
-#set label could be used as track name and feature label used in zmenu?
-#These should therefore be called track_label and display_label
-
-
 sub display_label {
     my $self = shift;
-	
-    $self->{'display_label'} = shift if @_;
-
 
     #auto generate here if not set in table
     #need to go with one or other, or can we have both, split into diplay_name and display_label?
     
-    if(! $self->{'display_label'}  && $self->adaptor()){
+    if(! $self->{'display_label'}  && $self->adaptor){
       $self->{'display_label'} = $self->feature_type->name()." -";
-      $self->{'display_label'} .= " ".$self->cell_type->name();# if $self->cell_type->display_name();
+      $self->{'display_label'} .= " ".$self->cell_type->name();
       $self->{'display_label'} .= " Enriched Site";
     }
 	
