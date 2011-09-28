@@ -56,19 +56,28 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-name]: string - name of FeatureType
-  Arg [-class]: string - class of FeatureType
-  Arg [-description]: string - descriptiom of FeatureType
-  Example    : my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
-                                                               -name  => "H3K9Me",
-                                                               -class => "HISTONE",
-                                                               -description => "Generalised methylation of Histone 3 Lysine 9",
-                                                                );
+  Arg [-name]         : String - name of FeatureType
+  Arg [-class]        : String - class of FeatureType
+  Arg [-description]  : String - descriptiom of FeatureType
+  Arg [-analysis]     : optional Bio::EnsEMBL::Analysis used to generate FeatureType
+  Arg [-so_accession] : optional String - Sequence ontology accession
+  Arg [-so_name]      : optional String - Sequence ontology name
+
+  Example    : my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
+                           (
+                            -name  => "H3K9Me",
+                            -class => "HISTONE",
+                            -description => "Generalised methylation of Histone 3 Lysine 9",
+                            -analysis => $analysis,
+                            -so_name  => $so_name,
+                            -so_accession => $so_accession
+                           );
   Description: Constructor method for FeatureType class
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : Throws if name not defined ? and class
+  Exceptions : Throws if name or class not defined
+               Throws if analysis is defined but not valid
   Caller     : General
-  Status     : Medium risk
+  Status     : Stable
 
 =cut
 
@@ -78,25 +87,31 @@ sub new {
   my $obj_class = ref($caller) || $caller;
   my $self = $obj_class->SUPER::new(@_);
   
-  my (
-      $name,
-      $desc,
-      $class,
-     ) = rearrange([
-		    'NAME', 'DESCRIPTION', 'CLASS',
-		   ], @_);
+  my ($name, $desc, $class, $analysis, $so_acc, $so_name) = 
+	rearrange(['NAME', 'DESCRIPTION', 'CLASS', 'ANALYSIS', 'SO_ACCESSION', 'SO_NAME'], @_);
   
-  
-  if($name){
-    $self->name($name);
-  }else{
-    throw("Must supply a FeatureType name\n");
-  }
-
-
+  throw("Must supply a FeatureType name\n") if ! defined $name;
+  throw("Must supply a FeatureType class\n") if ! defined $class;
+ 
+  #Direct assignments here prevent set arg test in getter only method
+  $self->{name}  = $name;
+  $self->{class} = $class;
   #add test for class and enum? Validate names against Brno etc?
-  $self->class($class) if $class;
-  $self->description($desc) if $desc;
+
+  $self->{description}  = $desc    if defined $desc;
+  $self->{so_name}      = $so_name if defined $so_name;
+  $self->{so_accession} = $so_acc  if defined $so_acc;
+
+  if($analysis){
+	
+	if(ref($analysis) ne 'Bio::EnsEMBL::Analysis'){
+	  throw('Optional Analysis parameter must be a valid Bio::EnsEMBL::Analysis');
+	  #is_stored checks done in other fetch and store methods
+	}
+
+	$self->{'analysis'} = $analysis;
+	#Direct assignment prevents arg test in getter only method
+  }
 
   return $self;
 }
@@ -105,62 +120,95 @@ sub new {
 
 =head2 name
 
-  Arg [1]    : string - name
-  Example    : my $name = $ft->name();
-  Description: Getter and setter of name attribute for FeatureType
-               objects
-  Returntype : string
+  Example    : my $name = $ft->name;
+  Description: Getter of name attribute for FeatureType objects
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Stable
 
 =cut
 
 sub name {
-    my $self = shift;
-    $self->{'name'} = shift if @_;
-    return $self->{'name'};
+  return $_[0]->{'name'};
 }
 
 =head2 description
 
-  Arg [1]    : (optional) string - description
-  Example    : my $desc = $ft->description();
-  Description: Getter and setter of description attribute for FeatureType
-               objects.
-  Returntype : string
+  Example    : my $desc = $ft->description;
+  Description: Getter of description attribute for FeatureType objects.
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Stable
 
 =cut
 
 sub description {
-    my $self = shift;
-    $self->{'description'} = shift if @_;
-    return $self->{'description'};
+  return $_[0]->{'description'};
 }
 
 
 =head2 class
 
-  Arg [1]    : (optional) string - class
-  Example    : $ft->class('HISTONE');
-  Description: Getter and setter of description attribute for FeatureType
-               objects.
-  Returntype : string
+  Example    : my $ft_class = $ft->class;
+  Description: Getter of class attribute for FeatureType objects.
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Stable
 
 =cut
 
 sub class{
-  my $self = shift;
-  $self->{'class'} = shift if @_;
-  return $self->{'class'};
+  return $_[0]->{'class'};
 }
 
+=head2 so_accession
+
+  Example    : my $ft_class = $ft->class;
+  Description: Getter of sequence ontoloy accession for FeatureType objects.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub so_accession{
+  return $_[0]->{'so_accession'};
+}
+
+=head2 so_name
+
+  Example    : my $so_name = $ft->so_name;
+  Description: Getter of sequence ontology name  for FeatureType objects.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub so_name{
+  return $_[0]->{'so_name'};
+}
+
+=head2 analysis
+
+  Example    : my $ft_anal = $ft->analysis;
+  Description: Getter of the Analysis for FeatureType objects.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub analysis{
+  my $self = shift;
+  return $self->{'analysis'};
+}
 
 =head2 evidence_type_label
 
@@ -202,8 +250,64 @@ sub evidence_type_name{
   return $Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor::regulatory_evidence_info{$self->class}->{name};
 }
 
+=head2 compare
+
+  Arg[1]     : Bio::EnsEMBL::Func
+               The analysis to compare to
+  Example    : none
+  Description: returns 1 if this FeatureType is the same
+               returns 0 if there is a mistmatch apart from the dbID/DB/Adaptor
+  Returntype : Boolean
+  Exceptions : Throws if arg is not valid
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+#simplified version of Analysis:compare
+#move to storable and take method args
+
+sub compare{
+  my ($self, $ftype) = @_;
+
+  if(ref($ftype) ne 'Bio::EnsEMBL::Funcgen::FeatureType'){ 
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType to compare');
+  }
+
+  my $same = 1;
+
+  foreach my $methodName ( 'name', 'class', 'so_accession','so_name','description'){
+	
+    if( defined $self->$methodName() && ! $ftype->can($methodName )) {
+      $same = 0;
+	  last;
+    }
+    if( defined $self->$methodName() && ! defined $ftype->$methodName() ) {
+      $same = 0;
+	  last;
+    }
+	
+    if( defined($ftype->$methodName()) && defined($self->$methodName()) &&
+        ( $ftype->$methodName() ne $ftype->$methodName() )) {
+      $same = 0;
+	  last;
+    }
+  }
 
 
+  #This would be in a wrapper method
+  if($self->analysis && $ftype->analysis){
 
+	if($self->analysis->compare($ftype->analysis)){
+	  #analysis compare returns the opposite of what you expect
+	  $same = 0;
+	}
+  }
+  elsif( ! ((! $self->analysis) && (! $ftype->analysis)) ){#Only one has analysis
+	$same = 0;
+  }
+  
+  return $same;
+}
 1;
 
