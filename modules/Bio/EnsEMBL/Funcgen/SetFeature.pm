@@ -118,11 +118,18 @@ sub new {
 	
   my $class = ref($caller) || $caller;
 
-  my $self = $class->SUPER::new(@_);
-  
   my ($display_label, $fset, $ftype)
     = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE'], @_);
   
+
+  #Grab FeatureSet first so we can pass analysis to base Feature class
+  if(ref($fset) ne 'Bio::EnsEMBL::Funcgen::FeatureSet'){
+	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
+  }
+
+  my $self = $class->SUPER::new(@_, -analysis => $fset->analysis);
+  
+   
 
   if($ftype){
 	
@@ -133,10 +140,6 @@ sub new {
 	$self->{'feature_type'} = $ftype;
   }
   
-  if(ref($fset) ne 'Bio::EnsEMBL::Funcgen::FeatureSet'){
-	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
-  }
-
 
   $self->{'feature_set'}   = $fset;
   $self->{'display_label'} = $display_label if defined $display_label;
@@ -221,10 +224,10 @@ sub feature_type{
 
 =head2 analysis
 
-  Example    : my $analysis = $efeature->feature_type()->name();
-  Description: Getter for the type attribute for this feature.
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : Throws if analysis passed is not a valid Bio::EnsEMBL::Analysis
+  Example    : my $analysis = $setfeature->analysis);
+  Description: Getter for the Analysis attribute for this feature.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
   Caller     : General
   Status     : At risk
 
@@ -232,18 +235,6 @@ sub feature_type{
 
 sub analysis{
   my $self = shift;
-
-
-  #this is to allow multi analysis sets, but the adaptor currently  throws if they are not the same on store
-  if(@_){
-
-    if($_[0]->isa("Bio::EnsEMBL::Analysis")){
-      $self->{'analysis'} = $_[0];
-    }else{
-      throw("Must pass a valid Bio::EnsEMBL::Analysis");
-    }
-    
-  }
 
   return (defined $self->{'analysis'}) ? $self->{'analysis'} : $self->feature_set->analysis();
 }
