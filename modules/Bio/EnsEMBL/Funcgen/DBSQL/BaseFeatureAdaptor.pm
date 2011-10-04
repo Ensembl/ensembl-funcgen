@@ -164,21 +164,21 @@ sub fetch_all_by_Slice_constraint {
 
   #Added schema_build to feature cache for EFG
 
-  my $bind_params = $self->bind_param_generic_fetch();
-  my $key = uc(join(':', $slice->name, $constraint, $self->db->_get_schema_build($slice->adaptor->db())));
-
-  if ( defined($bind_params) ) {
-    $key .= ':'
-      . join( ':', map { $_->[0] . '/' . $_->[1] } @{$bind_params} );
-  }
-
-  # Will only use feature_cache if hasn't been no_cache attribute set
-  if ( !defined $self->db->no_cache() || !$self->db->no_cache() ) {
-	if(exists($self->{'_slice_feature_cache'}->{$key})){
-
-	  $self->{'_bind_param_generic_fetch'} = ();
-	  return $self->{'_slice_feature_cache'}->{$key};
-	}
+  my $key;
+  my $cache;
+  if ( !$self->db->no_cache() ) {
+    my $bind_params = $self->bind_param_generic_fetch();
+    $key = uc(join(':', $slice->name, $constraint, $self->db->_get_schema_build($slice->adaptor->db())));
+  
+    if ( defined($bind_params) ) {
+      $key .= ':'
+        . join( ':', map { $_->[0] . '/' . $_->[1] } @{$bind_params} );
+    }
+    $cache = $self->_slice_feature_cache();
+    if(exists($cache->{$key})){
+      $self->{'_bind_param_generic_fetch'} = ();
+      return $cache->{$key};
+    }
   }
 
   my $sa = $slice->adaptor();
@@ -248,7 +248,9 @@ sub fetch_all_by_Slice_constraint {
     }
   }
 
-  $self->{'_slice_feature_cache'}->{$key} = \@result;
+  if(defined $key) {
+    $cache->{$key} = \@result;
+  }
 
   return \@result;
 }
