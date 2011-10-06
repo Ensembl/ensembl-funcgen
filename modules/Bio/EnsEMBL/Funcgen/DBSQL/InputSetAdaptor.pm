@@ -289,7 +289,11 @@ sub _objs_from_sth {
       
       push @esets, $eset if $eset;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
+	  throw("Could not fetch FeatureType with dbID $ftype_id for InputSet $name") if ! $ftype;
+
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
+	  throw("Could not fetch CellType with dbID $ctype_id for InputSet $name") if ! $ctype;
+
 
       $eset = Bio::EnsEMBL::Funcgen::InputSet->new(
 												   -DBID         => $dbid,
@@ -369,6 +373,9 @@ sub store{
 	my $ct_id = (defined $set->cell_type()) ? $set->cell_type->dbID() : undef;
 	my $ft_id = (defined $set->feature_type()) ? $set->feature_type->dbID() : undef;
 
+
+
+
     $sth->bind_param(1, $set->get_Experiment->dbID(),   SQL_INTEGER);
 	$sth->bind_param(2, $ft_id,                         SQL_INTEGER);
 	$sth->bind_param(3, $ct_id,                         SQL_INTEGER);
@@ -384,7 +391,7 @@ sub store{
     $set->adaptor($self);
 
     #This should never happen as InputSubset now tests for stored InputSet first
-    $self->store_InputSubsets($set->get_subsets()) if @{$set->get_subsets()};
+    $self->store_InputSubsets($set->get_InputSubsets()) if @{$set->get_InputSubsets()};
   }
   
   return \@exp_sets;
