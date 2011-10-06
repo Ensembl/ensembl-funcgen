@@ -422,21 +422,44 @@ sub store {
 
 	throw('Must supply a list of FeatureSets to store') if(scalar(@fsets) == 0);
 
-	my $sth = $self->prepare("INSERT INTO feature_set
-                                 (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label, experiment_id)
-                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+	my $sth = $self->prepare
+	  (
+	   "INSERT INTO feature_set
+        (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label, experiment_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	  );
 
-
+	my $db = $self->db;
 	my ($sql, $edb_id, %edb_hash);
 	
     foreach my $fset (@fsets) {
 		throw('Can only store FeatureSet objects, skipping $fset')	if ( ! $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet'));
 		
-		if (!( $fset->dbID() && $fset->adaptor() == $self )){#use is_stored?
+	
+		if (! $fset->is_stored($db) ) {
 
-		  throw("FeatureSet must have a stored FeatureType") if (! $fset->feature_type->is_stored($self->db));
+		  # Check FeatureType and Analysis
+		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fset->feature_type);
+		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $fset->analysis);
 			 
-		  my $ctype_id = (defined $fset->cell_type) ? $fset->cell_type->dbID : undef;
+
+		  # Check optional Experiment and CellType
+		  my $ctype_id;
+		  my $ctype = $fset->cell_type;
+
+		  if($ctype){
+			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
+			$ctype_id = $ctype->dbID;
+		  }
+
+		  my $exp_id;
+		  my $exp =  $fset->get_Experiment; 
+
+		  if($exp){
+			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
+			$exp_id = $exp->dbID;
+		  }
+
 		  
 		  $sth->bind_param(1, $fset->feature_type->dbID,     SQL_INTEGER);
 		  $sth->bind_param(2, $fset->analysis->dbID,         SQL_INTEGER);
@@ -445,16 +468,14 @@ sub store {
 		  $sth->bind_param(5, $fset->feature_class,          SQL_VARCHAR);
 		  $sth->bind_param(6, $fset->description,            SQL_VARCHAR);
 		  $sth->bind_param(7, $fset->display_label,          SQL_VARCHAR);
-		  $sth->bind_param(8, $fset->get_Experiment->dbID(), SQL_INTEGER);
+		  $sth->bind_param(8, $exp_id,                       SQL_INTEGER);
 		  
-		  		  
 		  $sth->execute();
 		  $fset->dbID($sth->{'mysql_insertid'});
 		  $fset->adaptor($self);
 		}
 		else{
-			#assume we want to update the states
-			warn('You may want to use $fset->adaptor->store_states($fset)');
+			warn('FeatureSet '.$fset->name.'is already stored, updating status entries');
 			$self->store_states($fset);
 		}
 	}
