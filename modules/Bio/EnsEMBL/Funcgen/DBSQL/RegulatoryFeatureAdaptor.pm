@@ -601,36 +601,11 @@ sub store{
 	
 	if ( $rf->is_stored($db) ) {
 	  #does not accomodate adding Feature to >1 feature_set
-	  warning('RegulatoryFeature [' . $rf->dbID() . '] is already stored in the database');
+	  warning('Skipping RegulatoryFeature [' . $rf->dbID() . '] as it is already stored in the database');
 	  next;
 	}
 	
-	#Have to do this for Analysis separately due to inheritance
-	if ( ! $rf->analysis->is_stored($db)) {
-	  throw('A stored Bio::EnsEMBL::Analysis must be attached to the RegulatoryFeature objects to be stored.');
-	}
-	
-	if (! $rf->feature_set->is_stored($db)) {
-	  throw('A stored Bio::EnsEMBL::Funcgen::FeatureSet must be attached to the RegulatoryFeature objects to be stored.');
-	}
-	
-	if (! $rf->feature_type->is_stored($db)) {
-	  throw('A stored Bio::EnsEMBL::Funcgen::FeatureType must be attached to the RegulatoryFeature objects to be stored.');
-	}
-	  
-
-
-	#sanity check analysis matches feature_set analysis
-	if($rf->analysis->dbID() != $rf->feature_set->analysis->dbID()){
-	  throw("RegulatoryFeature analysis(".$rf->analysis->logic_name().") does not match FeatureSet analysis(".$rf->feature_set->analysis->logic_name().")\n".
-			"Cannot store mixed analysis sets");
-	}
-
-	#Complex analysis to be stored as one in analysis table, or have feature_set_prediciton link table?
-	#Or only have single analysis feature which can contribute to multi analysis "regulons"
-	#Or can we have multiple entries in feature_set with the same id but different analyses?
-	#This would still not be specific for each feature, nor would the regulatory_feature analysis_id
-	#reflect all the combined analyses.  Maybe just the one which contributed most?
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $rf->feature_set);
 	
 	
 	my ($sid, $seq_region_id);
@@ -668,9 +643,9 @@ sub store{
 	foreach my $fclass(keys %attrs){
 	
 	  foreach my $attr_id(keys %{$attrs{$fclass}}){
-		$sth2->bind_param(1, $rf->dbID,   SQL_INTEGER);
-		$sth2->bind_param(2, $attr_id, SQL_INTEGER);
-		$sth2->bind_param(3, $fclass,     SQL_VARCHAR);
+		$sth2->bind_param(1, $rf->dbID, SQL_INTEGER);
+		$sth2->bind_param(2, $attr_id,  SQL_INTEGER);
+		$sth2->bind_param(3, $fclass,   SQL_VARCHAR);
 		$sth2->execute();
 	  }
 	}
