@@ -50,15 +50,27 @@ ResultFeature collections or AnnotatedFeatures dependan ton the input feature cl
 package Bio::EnsEMBL::Funcgen::Parsers::InputSet;
 
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
+use Bio::EnsEMBL::Funcgen::SegmentationFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file is_gzipped);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use strict;
 
+#config stuff, move to BaseImporter?
+use Bio::EnsEMBL::Analysis;
+use Bio::EnsEMBL::Funcgen::FeatureType;
+
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
+
+my %valid_types = (
+				   result       => undef,
+				   annotated    => undef,
+				   segmentation => undef,
+				  );
+
 
 =head2 new
 
@@ -78,19 +90,20 @@ sub new{
   my $class = ref($caller) || $caller;
   my $self  = $class->SUPER::new(@_);
   
-  #Defaults
-  #$self->{dbfile_data_root} = $self->get_dir('output');
+  my $config_file;
+  
 
   ($self->{'input_set_name'}, 
    $self->{'input_feature_class'}, 
    $self->{'slices'}, 
    $self->{total_features}, 
-   $self->{force},#Is this generic enough to go in Importer? Similar to recover?
+   $self->{force},            #Is this generic enough to go in Importer? Similar to recover?
    $self->{dbfile_data_root}, #only appropriate for result input_feature_class
-  ) = rearrange(['input_set_name', 'input_feature_class', 'slices', 'total_features', 'force', 'dbfile_data_root'], @_);
+   $config_file,              #User defined config hash file
+  ) = rearrange(['input_set_name', 'input_feature_class', 
+				 'slices', 'total_features', 'force', 
+				 'dbfile_data_root', 'config_file'], @_);
 
-
-  
 
   #Could potentially take fields params directly to define a custom format
   #Take direct field mappings, plus special fields which needs parsing differently
@@ -119,66 +132,40 @@ sub new{
   $self->{'seq_region_names'} = [];#Used for slice based import
 
 
+   # USER CONFIG #
+  #Here we need to read config based on external file
+  #Should do something similar to set_feature_sets
+  #and validate_and_store_feature_types in BaseExternalParser
+  #but we are using define and validate sets instead
+
+  #BaseExternalParser and BaseImporter really need to be merged
+  #After we have stripped out all the array/experiment specific stuff
+
+  #Do dev here so we are not developing more stuff in the Importer which will need migrating
+  #to the BaseImporter
+
+ if($config_file){
+	my $config;
+
+	$self->log("Reading config file:\t".$config_file);
+
+	if(! ($config = do "$config_file")){
+	  throw("Couldn't parse config file:\t$config_file:\n$@") if $@;
+	  throw("Couldn't do config:\t$config_file\n$!")          if ! defined $config;
+	  throw("Couldn't compile config_file:\t$config_file")    if ! $config;
+	}
+
+	#At least check it is hash
+	if(ref($config) ne 'HASH'){
+	  throw("Config file does not define a valid HASH:\t$config_file");
+	}
+	
+	$self->{user_config} = $config;	
+  }
+
+ 
   return $self;
 }
-
-#These can be called for each record
-#So we want to trim the access time as much as possible
-#Should be slightly faster than using the reg
-#Over lots of records will make some difference
-#Only accessor as set in config for speed
-
-sub input_feature_class{#annotated or result
-  return $_[0]->{'input_feature_class'};
-}
-
-sub annotated_feature_adaptor{
-  return $_[0]->{'annotated_feature_adaptor'};
-}
-
-sub result_feature_adaptor{
-  return $_[0]->{'result_feature_adaptor'};
-}
-
-
-sub dbentry_adaptor{
-  return $_[0]->{'dbentry_adaptor'};
-}
-
-sub input_set_adaptor{
-  return $_[0]->{'input_set_adaptor'};
-}
-
-#This is either feature or result set
-#Should be set in define sets
-sub set{
-  return $_[0]->{'set'};
-}
-
-
-sub slice_adaptor{
- my $self = shift;
-  return $self->{'slice_adaptor'};
-}
-
-
-=head2 input_set_name
-  
-  Example    : my $input_set_name = $imp->input_set_name();
-  Description: Getter for InputSet name
-  Arg [1]    : optional - InputSet name
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub input_set_name{
-  #Set in new
-  return $_[0]->{'input_set_name'};
-}
-
 
 
 sub output_file{
@@ -224,10 +211,13 @@ sub set_config{
 	throw('Must define a -feature_analysis parameter for '.uc($self->vendor).' imports');
   }
 
-  if($self->input_feature_class ne 'result' && $self->input_feature_class ne 'annotated'){
-	throw('You must define a valid set_type (result or annotated) to import using '.ref($self));
-	#This will current print Importer but will reveal the correct parser when inheritance is fixed
+
+  if(! exists $valid_types{$self->input_feature_class}){
+	throw("You must define a valid input_feature_class:\t".
+		  join(', ', keys %valid_types));
   }
+
+  $self->{'feature_class'} = 'Bio::EnsEMBL::Funcgen::'.ucfirst($self->input_feature_class).'Feature';
 
 
   #We need to undef norm method as it has been set to the env var
@@ -237,17 +227,228 @@ sub set_config{
   $self->{dbfile_data_root} ||= $self->get_dir('output');#Required for Collector
 
   #some convenience methods
-  $self->{'annotated_feature_adaptor'} = $self->db->get_AnnotatedFeatureAdaptor if $self->input_feature_class eq 'annotated';
-  $self->{'result_feature_adaptor'} = $self->db->get_ResultFeatureAdaptor if $self->input_feature_class eq 'result';#Is this the right adaptor?
-  $self->{'dbentry_adaptor'}           = $self->db->get_DBEntryAdaptor;
-  $self->{'input_set_adaptor'}  = $self->db->get_InputSetAdaptor();
-  $self->{'slice_adaptor'} = $self->db->dnadb->get_SliceAdaptor;
+  my $adaptor_method           = 'get_'.ucfirst($self->input_feature_class).'FeatureAdaptor';
+  $self->{'feature_adaptor'}   =  $self->db->$adaptor_method;
+  $self->{'dbentry_adaptor'}   = $self->db->get_DBEntryAdaptor;
+  $self->{'input_set_adaptor'} = $self->db->get_InputSetAdaptor;
+  $self->{'slice_adaptor'}     = $self->db->dnadb->get_SliceAdaptor;
 
+  #Validate slices
   $self->slices($self->{'slices'}) if defined $self->{'slices'};
+
+  #Move to new when we sort out inheritance
+  $self->validate_and_store_config($self->name);
+  #Could use input_set_name here?
+  #This was to support >1 input set per experiment (name)
 
   return;
 }
 
+
+=head2 validate_and_store_config
+
+  Args       : None
+  Example    : $self->validate_and_store_feature_types;
+  Description: Imports feature types defined by import_sets.
+  Returntype : None
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk - Move this to (Base)Importer.pm and rename
+
+=cut
+
+#Validate and store config?
+
+sub validate_and_store_config{
+  my ($self, @fset_names) = @_;
+
+  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
+
+
+  #We need to define analysis here too
+  #which is normally done in set_feature_sets
+  #But we want to use define_and_validate_sets
+  #define_and_validate_sets will need to omit 
+  #dataset generation for external sets
+
+  #We should do this before validate and define sets
+  #access config via name
+ 
+  #default config file should be require'd
+  #similar to batch_queue.pm
+
+  #How will this work with the production DB?
+
+  #Need to think about config format
+  #Do we want to key it on the feature set name?
+  
+  #This may result in redundant config for various ftypes/analysis
+  #Will also mean that full and valid ftype and analysis config
+  #will be required?
+
+  #Just specify undef value to default to the DB version?
+  #This isn't possible if we are using they key as a reference to the input file
+  
+  #Require full definition for now.
+
+  if(! exists ${$self}{user_config}){
+	warn "No user config found";
+  }
+  else{
+
+	foreach my $import_set(@fset_names){
+	  
+	  my $fset_config = $self->{user_config}{feature_sets}{$import_set};
+
+	  if(! $fset_config){
+		throw("Could not find user defined config for:\t$import_set");
+	  }
+
+	  $self->log("Validating and storing config for:\t$import_set");
+
+	  
+
+	  #Do analysis import/comparison first
+	  #as this maybe required for the feature type
+
+	  #Can self ref config if do will work with %config, specified as the last line
+	  #i.e.
+	  #feature_types keys are what is seen in the file?
+	  #else feature_type name?
+	  #Might cause conflict if we have name redundancy?
+	  #Could over come this by simply changing the key for the non-file ftypes
+	  #as they would only be used for reference within the config itself
+
+	  #my %config = ( feature_types => { F => { ftype hash }, fset_ftype => {fset_hash}} );
+	  #$config{feature_sets} = ( fset1 => { name => name, feature_type => $config{feature_types}{fset_ftype}} );
+	  
+	  #Don't compare against cache here as we need to check actual attr vals
+
+	  #Merge this two loops
+
+	  if(exists ${$fset_config}{'analyses'}){
+
+		foreach my $logic_name(keys %{$fset_config->{'analyses'}}){
+		  #do we need to pass/validate the key too?
+
+		  #Check we have some data in the hash
+		  if( (ref($fset_config->{'analyses'}{$logic_name}) ne 'HASH') ||
+			  (! keys %{$fset_config->{'analyses'}{$logic_name}}) ){
+			throw("You have specifed and undefined value in your feature_sets config for analysis $logic_name");
+		  }
+
+		  $fset_config->{'analyses'}{$logic_name} =
+			$self->validate_and_store_analysis($fset_config->{'analyses'}{$logic_name});
+		}
+	  }
+
+	  if(exists ${$fset_config}{'feature_types'}){
+
+		foreach my $ftype_key(keys %{$fset_config->{'feature_types'}}){
+		  
+		  #Check we have some data in the hash
+		  if( (ref($fset_config->{'feature_types'}{$ftype_key}) ne 'HASH') ||
+			  (! keys %{$fset_config->{'feature_types'}{$ftype_key}}) ){
+			throw("You have specifed and undefined value in your feature_sets config for feature type $ftype_key");
+		  }
+
+
+		  $fset_config->{'feature_types'}{$ftype_key} = 
+			$self->validate_and_store_feature_type($fset_config->{'feature_types'}{$ftype_key});
+		}
+	  }
+
+	   if(exists ${$fset_config}{'feature_set'}){
+		 
+		foreach my $ftype_key(keys %{$fset_config->{'feature_set'}}){
+		  #do we need to pass the key too?
+		  #$self->validate_and_store_feature_sets($fset_config->{'feature_sets'}{$ftype_key});
+		  #? Do we want to call define_sets here
+
+		  #This is only required when we merge with the BaseExternalParser
+		  #as that does not use define_set
+		  throw("InputSet does not yet support feature_set param config. This is done automatically.\n".
+				"Please ensure you have the correct analyses and feature_types set and remove the\n".
+				"following hash from your config:\n\tfeature_sets => $import_set => feature_set => {}");
+
+
+		}
+	  }
+	}
+  }
+
+  return;
+}
+
+
+
+sub validate_and_store_analysis{
+  my ($self, $analysis_params) = @_;
+
+   my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
+  my $logic_name       = $analysis_params->{'-logic_name'};
+  my $analysis         = $analysis_adaptor->fetch_by_logic_name($logic_name);
+  my $config_anal      = Bio::EnsEMBL::Analysis->new(%{$analysis_params});
+
+
+  if(! defined $analysis){
+	
+	$self->log('Analysis '.$logic_name." not found in DB, storing from config");		
+	$analysis_adaptor->store($config_anal);
+	$analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);	
+  }
+  else{
+	
+	my $not_same = $analysis->compare($config_anal);
+	#Analysis::compare returns the opposite of what you expect!
+
+	if($not_same){
+	  throw('There is a param mismatch between the '.$logic_name.
+			' Analysis in the DB and config. Please rectify or define a new logic_name');
+	}
+  }
+  
+  return $analysis;
+}
+
+sub validate_and_store_feature_type{
+  my ($self, $ftype_params) = @_;
+
+
+
+  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
+  my $name          = $ftype_params->{-name};
+  my $class         = $ftype_params->{-class}; 
+  my $analysis;  #Need to define analysis so we don't declare hash key when pass as arg
+
+  if(exists ${$ftype_params}{'-analysis'}){
+	#This is slightly redundant as we may have already validated this analysis
+	$ftype_params->{'-analysis'} = $self->validate_and_store_analysis($ftype_params->{'-analysis'});
+	$analysis = $ftype_params->{'-analysis'};
+  }
+  
+  my $config_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(%{$ftype_params});
+  my $ftype        = $ftype_adaptor->fetch_by_name($name, $class, $analysis);
+  
+
+
+  if($ftype){
+
+	if(! $ftype->compare($config_ftype)){
+	  my $label = $name."($class";
+	  $label .= (defined $analysis) ? ' '.$analysis->logic_name.')' : ')';
+	  
+	  throw('There is a param mismatch between the '.$name.
+			' FeatureType in the DB and config. Please rectify in the config.');
+	}
+  }
+  else{
+	$self->log('FeatureType '.$name." not found in DB, storing from config");		
+	($ftype) = $ftype_adaptor->store($config_ftype);
+  }
+
+  return $ftype;
+}
 
 
 sub define_sets{
@@ -278,7 +479,7 @@ sub define_sets{
   my $dset = $self->define_and_validate_sets
 	(
 	 -dbadaptor    => $self->db,
-	 -name         => $self->input_set_name,
+	 -name         => $self->input_set_name,#or name?
 	 -feature_type => $self->feature_type,
 	 -cell_type    => $self->cell_type,
 	 -analysis     => $self->feature_analysis,
@@ -310,14 +511,9 @@ sub define_sets{
 
   $self->{'_data_set'} = $dset;
  
-  return $self->{'_data_set'};
-
+  return $dset;
 }
 
-sub data_set{
-  my $self = shift;
-  return $self->{'_data_set'};
-}
 
 sub validate_files{
   my ($self, $prepare) = @_;
@@ -357,13 +553,14 @@ sub validate_files{
   }
 
   #This all assumes that there is only ever 1 InputSet
-
-  if ($self->input_feature_class eq 'annotated'){
-	$eset =  $dset->get_supporting_sets->[0]; 
-  }
-  elsif($self->input_feature_class eq 'result'){
+  
+  if($self->input_feature_class eq 'result'){
 	$eset = $dset->get_supporting_sets->[0]->get_InputSets->[0];
   }
+  else{#annoated/segmentation
+	$eset =  $dset->get_supporting_sets->[0]; 
+  }
+
 
   #IMPORTED status here may prevent
   #futher slice based imports
@@ -419,17 +616,18 @@ sub validate_files{
 			$self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set? Unless slices defined");
 			$self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
 			
-			if($self->input_feature_class eq 'annotated'){
-			  $self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
-			  $self->rollback_InputSet($eset);
-			  last;
-			}			
-			elsif($self->input_feature_class eq 'result'){
+			if($self->input_feature_class eq 'result'){
 			  #Can we do this by slice for parallelisation?
 			  #This will only ever be a single ResultSet due to Helper::define_and_validate_sets
 			  #flags are rollback_results and force(as this won't be a direct input to the product feature set)
 			  $self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0], 1);
 			}
+			else{#annotated/segmentation
+			  $self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
+			  $self->rollback_InputSet($eset);
+			  last;
+			}			
+
 		  }
 		  elsif( $recover_unimported ){
 			throw("Found partially imported InputSubSet:\t$filepath\n".
@@ -463,7 +661,7 @@ sub validate_files{
 }
 
 
-#Separate setter and getter for speed;
+
 
 sub set_feature_separator{
   my ($self, $separator) = @_;
@@ -479,22 +677,33 @@ sub set_feature_separator{
 
 }
 
-sub feature_separator{
-  my $self = shift;
-  return $self->{'_feature_separator'};
-}
+# SIMPLE ACCESSORS
+# Some of these can be called for each record
+# Trim the access time as much as possible
 
-#getter only
-sub feature_params{
-  my $self = shift;
-  return $self->{'_feature_params'};
-}
+sub input_feature_class{ return $_[0]->{'input_feature_class'}; }
 
-#getter only
-sub dbentry_params{
-  my $self = shift;
-  return $self->{'_dbentry_params'};
-}
+sub input_set_name{      return $_[0]->{'input_set_name'}; }  #Set in new
+
+sub feature_adaptor{     return $_[0]->{'feature_adaptor'}; }
+
+sub dbentry_adaptor{     return $_[0]->{'dbentry_adaptor'}; }
+
+sub input_set_adaptor{   return $_[0]->{'input_set_adaptor'}; }
+
+sub set{                 return $_[0]->{'set'}; } #Feature or Result, set in define_sets
+
+sub slice_adaptor{       return $_[0]->{'slice_adaptor'}; }
+
+sub data_set{            return $_[0]->{'_data_set'}; }
+
+sub feature_separator{   return $_[0]->{'_feature_separator'}; }
+
+sub feature_params{      return $_[0]->{'_feature_params'}; }
+
+sub dbentry_params{      return $_[0]->{'_dbentry_params'}; }
+
+sub input_gzipped{       return $_[0]->{'input_gzipped'}; }
 
 
 sub counts{
@@ -563,10 +772,6 @@ sub input_file_operator{
   return $self->{'input_file_operator'};
 }
 
-sub input_gzipped{
-  return  $_[0]->{'input_gzipped'};
-}
-
 # prepare boolean, simply stores the sets and preprocesses the file
 # so we don't get each batch job trying to sort etc
 
@@ -602,15 +807,16 @@ sub read_and_import_data{
   #As this would mean storing all the individual reads
   #Hence we need to remap to a new assm before we import!
     
-  if ($self->input_feature_class eq 'annotated'){
-	$output_set = $dset->product_FeatureSet;
-	$eset =  $dset->get_supporting_sets->[0]; 
-  }
-  elsif($self->input_feature_class eq 'result'){
+  if($self->input_feature_class eq 'result'){
 	$output_set = $dset->get_supporting_sets->[0];
-	$eset = $output_set->get_InputSets->[0];
+	$eset       = $output_set->get_InputSets->[0];
 	$self->result_set($output_set);#required for ResultFeature Collector and Bed Parser
   }
+  else{#annotated/segmentation
+	$output_set = $dset->product_FeatureSet;
+	$eset       =  $dset->get_supporting_sets->[0]; 
+  }
+
   
   #If we can do these the other way araound we can get define_sets to rollback the FeatureSet
   #Cyclical dependency for the sets :|
@@ -703,11 +909,11 @@ sub read_and_import_data{
 		
 		
 		foreach my $slice(@$slices){
-		  $self->result_feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self, 
-																		   (
-																			-force            => $self->{force},
-																			-dbfile_data_root => $self->{dbfile_data_root},
-																		   ));
+		  $self->feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self, 
+																	(
+																	 -force            => $self->{force},
+																	 -dbfile_data_root => $self->{dbfile_data_root},
+																	));
 		}  
 
 		warn "Need to update InputSubset status to IMPORTED after all slices have been loaded";
@@ -877,6 +1083,7 @@ sub read_and_import_data{
   
 
 #Should be called from format parser e.g. BED, GFF, eQTL etc
+#Why don't we pass feature_params and dbentry_params directly?
 
 sub load_feature_and_xrefs{
   my $self = shift;
@@ -895,9 +1102,14 @@ sub load_feature_and_xrefs{
 #	}
 #  }
 		  
-		  
-  my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(%{$self->feature_params});
-  ($feature) = @{$self->annotated_feature_adaptor->store($feature)};
+
+  #new rather than new fast here as we want to validate the import
+  my $feature = $self->{feature_class}->new(%{$self->feature_params});
+
+   warn "Loading ".($self->{_counts}{features}+1).' '.$feature->feature_type->name."\n";
+
+
+  ($feature) = @{$self->feature_adaptor->store($feature)};
   $self->count('features');
 
 
@@ -953,19 +1165,28 @@ sub load_feature_and_xrefs{
 sub set_strand{
   my ($self, $strand) = @_;
 
+  my $ens_strand = 0;
 
-  if(! defined $strand){
-	return 0;
+  my %strand_vals = (
+					 '1'  => 1,
+					 '0'  => 0,
+					 '-1' => -1,
+					 '+'  => 1,
+					 '-'  => -1,
+					 '.'  => 0,
+					);
+
+  if($strand){
+	
+	if(exists $strand_vals{$strand}){
+	  $ens_strand = $strand_vals{$strand};
+	}
+	else{
+	  throw("Could not identify strand value for $strand");
+	}
   }
-  elsif($strand eq '+'){
-	return 1;
-  }
-  elsif($strand eq '-'){
-	return -1;
-  } 
 
-  return 0;
-
+  return $ens_strand;
 }
 
 sub total_features{
