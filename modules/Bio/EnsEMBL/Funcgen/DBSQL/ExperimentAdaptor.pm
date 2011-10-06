@@ -252,10 +252,8 @@ sub store {
 		
 		
 		my $exp_group = $exp->experimental_group;
+		$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $exp_group);
 
-		if(! $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $exp_group)){
-		  throw("Need to set  a valid and stored ExperimentalGroup");
-		}
 		
 		$s_exp = $self->fetch_by_name($exp->name());#validate on group too!
 		throw("Experimental already exists in the database with dbID:".$s_exp->dbID().
