@@ -63,6 +63,8 @@ $true_tables{feature_type} = [['feature_type', 'ft']];
 
 
 my $core_name       = 'Open chromatin & TFBS';
+#We need a way to have an even longer description here
+#e.g Open chromatin & Transcription Factor Binding Sites
 my $hist_pols_name  = 'Histones & polymerases';
 my $core_label      = 'DNase1 & TFBS';
 my $hist_pols_label = 'Hists & Pols';  
@@ -80,34 +82,46 @@ our %regulatory_evidence_info =
 =head2 fetch_by_name
 
   Arg [1]    : string - name of FeatureType
-  Arg [1]    : optional string - class of FeatureType
+  Arg [2]    : optional string - class of FeatureType
+  Arg [3]    : optional Bio::EnsEMBL::Analysis - Analysis used to generate FeatureType
   Example    : my $ft = $ft_adaptor->fetch_by_name('H3K4me2');
   Description: Does what it says on the tin
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType object
-  Exceptions : Throws if more than one FeatureType for a given name found
+  Exceptions : Throws if more than one FeatureType for a given name found.
+               Throws if Analysis is defined but not valid.
   Caller     : General
   Status     : At risk
 
 =cut
 
 sub fetch_by_name{
-  my ($self, $name, $class) = @_;
+  my ($self, $name, $class, $analysis) = @_;
 
   throw("Must specify a FeatureType name") if(! $name);
 
 
-  my $constraint = " name = ?";
+  my $constraint = ' name = ? ';
 
-  $constraint .= " AND class = ?" if $class;
+  $constraint .= ' AND class = ? ' if $class;
+
+  if($analysis){
+	
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis);
+	$constraint .= ' AND analysis_id = ? ';
+  }
 
 
-  $self->bind_param_generic_fetch($name,   SQL_VARCHAR);
-  $self->bind_param_generic_fetch($class,  SQL_VARCHAR) if $class;
+
+  $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
+  $self->bind_param_generic_fetch($class,          SQL_VARCHAR) if $class;
+  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
+  
 
   my @fts = @{$self->generic_fetch($constraint)};
   
 
-  #This should never happen?
+  #This can happen if using a redundant name between classes or analyses
+  #remove?
   if(scalar @fts >1){
     $class ||= "";
     throw("Found more than one FeatureType:$class $name");
@@ -117,13 +131,39 @@ sub fetch_by_name{
   return $fts[0];
 }
 
+
+=head2 fetch_all_by_Analysis
+
+  Arg [1]    : Bio::EnsEMBL::Analysis
+  Example    : my @fts = @{$ft_adaptor->fetch_all_by_Analysis($analysis);
+  Description: Fetches all FeatureTypes for a given Analysis.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
+  Exceptions : Throws if Analysis not valid
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_Analysis{
+  my ($self, $analysis) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis);
+  my $constraint = ' analysis_id = ? ';
+
+  #Use bind param method to avoid injection
+  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER);
+
+  return $self->generic_fetch($constraint);
+}
+
+
 =head2 fetch_all_by_class
 
   Arg [1]    : string - class of FeatureType
-  Example    : my $ft = $ft_adaptor->fetch_all_by_class('Histone');
+  Example    : my @fts = @{$ft_adaptor->fetch_all_by_class('Histone')};
   Description: Fetches all FeatureTypes of a given class.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
-  Exceptions : None
+  Exceptions : Throws if class not defined
   Caller     : General
   Status     : At risk
 
@@ -143,6 +183,9 @@ sub fetch_all_by_class{
 
   return $self->generic_fetch($constraint);
 }
+
+
+
 
 
 sub fetch_all_by_associated_SetFeature{
@@ -219,7 +262,7 @@ sub _tables {
 sub _columns {
   my $self = shift;
 	
-  return qw( ft.feature_type_id ft.name ft.class ft.description);
+  return qw( ft.feature_type_id ft.name ft.class ft.analysis_id ft.description ft.so_accession ft.so_name);
 }
 
 =head2 _objs_from_sth
@@ -239,22 +282,36 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
-	my (@result, $ft_id, $name, $class, $desc);
+	my (@result, $ft_id, $name, $class, $anal_id, $desc, $so_acc, $so_name, %analysis_hash);
+	my $anal_a = $self->db->get_AnalysisAdaptor;
 	
-	$sth->bind_columns(\$ft_id, \$name, \$class, \$desc);
+	$sth->bind_columns(\$ft_id, \$name, \$class, \$anal_id, \$desc, \$so_acc, \$so_name);
 	
-	while ( $sth->fetch() ) {
-	  my $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(
-							     -dbID        => $ft_id,
-							     -NAME        => $name,
-							     -CLASS       => $class,
-							     -DESCRIPTION => $desc,
-							     -ADAPTOR     => $self,
-							    );
+	$analysis_hash{0} = undef;
+
+	  while ( $sth->fetch() ) {
+
+	  $anal_id ||= 0;
+	  
+	  if (! exists $analysis_hash{$anal_id}){
+		$analysis_hash{$anal_id} = $anal_a->fetch_by_dbID($anal_id);
+	  }
+	  
+	  my $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
+		(
+		 -dbID         => $ft_id,
+		 -NAME         => $name,
+		 -CLASS        => $class,
+		 -ANALYSIS     => $analysis_hash{$anal_id},
+		 -DESCRIPTION  => $desc,
+		 -SO_ACCESSION => $so_acc,
+		 -SO_NAME      => $so_name,
+		 -ADAPTOR      => $self
+		);
 	  
 	  push @result, $ftype;
-	  
 	}
+
 	return \@result;
 }
 
@@ -268,7 +325,8 @@ sub _objs_from_sth {
                called once per array because no checks are made for duplicates.
 			   Sets dbID and adaptor on the objects that it stores.
   Returntype : None
-  Exceptions : Throws if FeatureTYpe not valid
+  Exceptions : Throws if FeatureType not valid
+               Throws if Analysis defined but not valid
   Caller     : General
   Status     : At Risk
 
@@ -281,8 +339,8 @@ sub store {
   
   my $sth = $self->prepare("
 			INSERT INTO feature_type
-			(name, class, description)
-			VALUES (?, ?, ?)");
+			(name, class, analysis_id, description, so_accession, so_name)
+			VALUES (?, ?, ?, ?, ?, ?)");
     
   
   
@@ -291,25 +349,41 @@ sub store {
     if ( ! (ref($ft) && $ft->isa('Bio::EnsEMBL::Funcgen::FeatureType') )) {
       throw('Can only store FeatureType objects, skipping $ft');
     }
-    
-    if (!( $ft->dbID() && $ft->adaptor() == $self )){
+
+    my $anal_id;
+	my $analysis = $ft->analysis;
+	
+	if($analysis){	
+	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis);
+	  $anal_id = $analysis->dbID;
+	}
+
+
+
+    if (! ( $ft->dbID && 
+			( $ft->adaptor == $self) )
+	   ){
       
       #Check for previously stored FeatureType
-      my $s_ft = $self->fetch_by_name($ft->name(), $ft->class());
+      my $s_ft = $self->fetch_by_name($ft->name, $ft->class, $ft->analysis);
 	
       if(! $s_ft){
-	$sth->bind_param(1, $ft->name(),           SQL_VARCHAR);
-	$sth->bind_param(2, $ft->class(),          SQL_VARCHAR);
-	$sth->bind_param(3, $ft->description(),    SQL_VARCHAR);
-	
-	$sth->execute();
-	my $dbID = $sth->{'mysql_insertid'};
-	$ft->dbID($dbID);
-	$ft->adaptor($self);
+		$sth->bind_param(1, $ft->name,          SQL_VARCHAR);
+		$sth->bind_param(2, $ft->class,         SQL_VARCHAR);
+		$sth->bind_param(3, $anal_id,           SQL_INTEGER);
+		$sth->bind_param(4, $ft->description,   SQL_VARCHAR);
+		$sth->bind_param(5, $ft->so_accession,  SQL_VARCHAR);
+		$sth->bind_param(6, $ft->so_name,       SQL_VARCHAR);
+		
+		
+		$sth->execute();
+		my $dbID = $sth->{'mysql_insertid'};
+		$ft->dbID($dbID);
+		$ft->adaptor($self);
       }
       else{
 		$ft = $s_ft;
-		warn("Using previously stored FeatureType:\t".$ft->name()."\n"); 
+		warn("Using previously stored FeatureType:\t".$ft->name."\n"); 
       }
     }
   }
