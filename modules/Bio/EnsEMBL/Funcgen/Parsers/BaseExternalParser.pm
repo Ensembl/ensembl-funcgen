@@ -127,6 +127,8 @@ sub import_sets{
 
 =cut
 
+#This is done after validate and store feature_types
+
 sub set_feature_sets{
   my $self = shift;
 
@@ -176,12 +178,16 @@ sub set_feature_sets{
 		
 		$self->log('Analysis '.$self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'}.
 		  " not found, storing from config hash");		
-		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new(%{$self->{'feature_sets'}{$fset_name}{'analysis'}}));
-		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'});
+		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new(%{$self->{'feature_sets'}{$fset_name}{analysis}}));
+		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{analysis}{-logic_name});
+		warn "fetched sotre analysis $analysis";
 	  }
 
 	  #replace hash config with object
 	  $self->{'feature_sets'}{$fset_name}{'analysis'} = $analysis;
+
+	  warn "analysis is $analysis ".$analysis->dbID;
+
 
 	  my $display_name = (exists $self->{'feature_sets'}{$fset_name}{'display_label'}) ? $self->{'feature_sets'}{$fset_name}{'display_label'} : $fset_name;
 
@@ -214,7 +220,7 @@ sub set_feature_sets{
   Returntype : None
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Medium Risk - Move this to (Base)Importer.pm
 
 =cut
 
