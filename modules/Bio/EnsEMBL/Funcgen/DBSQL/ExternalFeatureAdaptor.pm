@@ -307,19 +307,8 @@ sub store{
 		warning('ExternalFeature [' . $ef->dbID() . '] is already stored in the database');
 		next FEATURE;
 	  }
-		
-		
-		
-	  #Have to do this for Analysis separately due to inheritance, removed defined as constrained in Feature->new
-	  #Redundancy with Analysis in FeatureSet
-	  if ( ! $ef->analysis->is_stored($db)) {
-		throw('A stored Bio::EnsEMBL::Analysis must be attached to the ExternalFeature objects to be stored.');
-	  }
-		
-	  #won't this implicitly check for stored analysis? Not at present, we should probably do this
-	  if (! $ef->feature_set->is_stored($db)) {
-		throw('A stored Bio::EnsEMBL::Funcgen::FeatureSet must be attached to the ExternalFeature objects to be stored.');
-	  }
+	  
+	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $ef->feature_set);
 
 	  my $seq_region_id;
 	  ($ef, $seq_region_id) = $self->_pre_store($ef);
