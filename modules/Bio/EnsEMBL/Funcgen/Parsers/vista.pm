@@ -185,12 +185,8 @@ sub parse_and_load{
     # Assume these are all on the positive strand? Is this correct?
     my $strand = 1;
 
-
-	#build feature here, but don't store?
 	my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
-	   #-dbID          => $feature_internal_id++,
-	   #-analysis      => $self->analysis,
 	   -start         => $start,#is this in UCSC coords?
 	   -end           => $end,  #is this in UCSC coords?
 	   -strand        => $strand,
