@@ -470,6 +470,59 @@ sub bound_end {
 }
 
 
+=head2 bound_seq_region_start
+
+  Example    : my $bound_sr_start = $feature->bound_seq_region_start;
+  Description: Getter for the seq_region bound_start attribute for this feature.
+               Gives the 5' most start value of the underlying attribute
+               features.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub bound_seq_region_start {
+  my $self = shift;
+
+  if(! defined $self->{bound_seq_region_start}){
+	 $self->{bound_seq_region_start} = $self->feature_Slice->start + $self->bound_start - 1;
+   }
+
+  return $self->{bound_seq_region_start};
+}
+
+
+=head2 bound_seq_region_end
+
+  Example    : my $bound_sr_end = $feature->bound_seq_region_end;
+  Description: Getter for the seq_region bound_end attribute for this feature.
+               Gives the 3' most end value of the underlying attribute
+               features.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub bound_seq_region_end {
+  my $self = shift;
+
+  if(! defined $self->{bound_seq_region_end}){
+	 $self->{bound_seq_region_end} = $self->feature_Slice->start + $self->bound_end - 1;
+   }
+
+  return $self->{bound_seq_region_end};
+}
+
+
+
+
+
+
 =head2 is_projected
 
   Arg [1]    : optional - boolean
