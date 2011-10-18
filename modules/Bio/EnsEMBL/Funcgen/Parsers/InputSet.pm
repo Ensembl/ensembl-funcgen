@@ -385,7 +385,7 @@ sub validate_and_store_config{
 sub validate_and_store_analysis{
   my ($self, $analysis_params) = @_;
 
-   my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
+  my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
   my $logic_name       = $analysis_params->{'-logic_name'};
   my $analysis         = $analysis_adaptor->fetch_by_logic_name($logic_name);
   my $config_anal      = Bio::EnsEMBL::Analysis->new(%{$analysis_params});
@@ -414,8 +414,6 @@ sub validate_and_store_analysis{
 sub validate_and_store_feature_type{
   my ($self, $ftype_params) = @_;
 
-
-
   my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
   my $name          = $ftype_params->{-name};
   my $class         = $ftype_params->{-class}; 
@@ -431,7 +429,6 @@ sub validate_and_store_feature_type{
   my $ftype        = $ftype_adaptor->fetch_by_name($name, $class, $analysis);
   
 
-
   if($ftype){
 
 	if(! $ftype->compare($config_ftype)){
@@ -444,7 +441,7 @@ sub validate_and_store_feature_type{
   }
   else{
 	$self->log('FeatureType '.$name." not found in DB, storing from config");		
-	($ftype) = $ftype_adaptor->store($config_ftype);
+	($ftype) = @{$ftype_adaptor->store($config_ftype)};
   }
 
   return $ftype;
@@ -1025,11 +1022,7 @@ sub read_and_import_data{
 	  
 		  #To speed things up we may need to also do file based import here with WRITE lock?
 		  #mysqlimport will write lock the table by default?
-		  
-		  $self->log('Finished importing '.$self->counts('features').' '.
-					 $output_set->name." features from:\t$filepath");
-		  
-		  
+		 		  
 		  #reset filename to that originally used to create the Inputsubsets
 		  $filename =~ s/^prepared\.// if $self->prepared;
 
@@ -1037,10 +1030,8 @@ sub read_and_import_data{
 		  $sub_set->adaptor->store_status('IMPORTED', $sub_set) if ! $self->batch_job;
 		}
 	  }
+
 	  
-
-		
-
 	  if($prepare){
 		$self->log("Finished preparing import from:\t$filepath");
 	  }
@@ -1087,33 +1078,21 @@ sub read_and_import_data{
 
 sub load_feature_and_xrefs{
   my $self = shift;
-
-  my $seq;
-
-  #grab seq if dump fasta and available
-  #if($self->dump_fasta){
-	
-  #if(exists $self->feature_params->{'sequence'}){
-#	  $seq = $self->feature_params->{'sequence'};
-#	  delete $self->feature_params->{'sequence'};
-#	}
-#	else{
-#	  $self->log('No fasta sequence available for '.$self->feature_params->display_label);
-#	}
-#  }
 		  
+  #warn "Loading ".($self->{_counts}{features}+1).' '.$self->feature_params->{-FEATURE_TYPE}->name."\n";
+  #This now only fails once on the first run and then
+  #Need to count based on feature_type?
 
   #new rather than new fast here as we want to validate the import
   my $feature = $self->{feature_class}->new(%{$self->feature_params});
-
-   warn "Loading ".($self->{_counts}{features}+1).' '.$feature->feature_type->name."\n";
-
-
   ($feature) = @{$self->feature_adaptor->store($feature)};
   $self->count('features');
 
+  #Add count based on FeatureType, should be ftype name and analysis to reflect unique ftype key?
 
-  ##This needs to be handled in caller as we are validating loci
+
+
+  ##This needs to be handled in caller as we are validating loci?
   #if($self->ucsc_coords){
   #	$start += 1;
   #	$end   += 1;
@@ -1124,24 +1103,24 @@ sub load_feature_and_xrefs{
   #  warn "Skipping AnnotatedFeature import, cound non standard chromosome: $chr";
   #}
   #else{
-		  
-		  
+  #grab seq if dump fasta and available		  
+  #my $seq;
+  #if(exists $self->feature_params->{'sequence'}){
+  #	  $seq = $self->feature_params->{'sequence'};
+  #	  delete $self->feature_params->{'sequence'};
+  #	}
+  #	else{
+  #	  $self->log('No fasta sequence available for '.$self->feature_params->display_label);
+  #	}
+  #  }
+	  
   #dump fasta here
   #if ($self->dump_fasta){
   #	$self->{'_fasta'} .= $self->generate_fasta_header($feature)."\n$seq\n";
   #  }
   
-  #Now we need to store the xrefs
-  
-  #my $edb_ref = $self->db->dbc->db_handle->selectrow_arrayref('select db_name from external_db where db_name="ensembl_variation_Variation"');
-
-  #if(! defined $edb_ref){
-#	throw('Could not find external_db ensembl_variation_Variation');
-#  }
-
- # my ($edbname) = @{$edb_ref};
-
-
+  #Store the xrefs
+ 
   foreach my $dbentry_hash(@{$self->{'_dbentry_params'}}){
 	my $ftype = $dbentry_hash->{feature_type};
 	delete $dbentry_hash->{feature_type};
