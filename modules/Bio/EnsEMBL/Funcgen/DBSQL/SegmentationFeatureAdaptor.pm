@@ -268,21 +268,21 @@ sub _objs_from_sth {
 	    
 
 	  
-	    push @features, Bio::EnsEMBL::Funcgen::SegmentationFeature::_new_fast
-		  ( {
-			 start          => $seq_region_start,
-			 end            => $seq_region_end,
-			 strand         => $seq_region_strand,
-			 slice          => $slice,
-			 #'analysis'       => $fset_hash{$fset_id}->analysis(),
-			 #Need to pass this to keep Feature.pm happy
-			 #Let's grab this from the FeatureSet in SetFeature new and pass 
-			 score          => $score,
-			 adaptor        => $self,
-			 dbID           => $segmentation_feature_id,
-			 display_label  => $display_label,
-			 feature_set    => $fset_hash{$fset_id},
-			} );
+	  push @features, Bio::EnsEMBL::Funcgen::SegmentationFeature->new_fast
+		( {
+		   start          => $seq_region_start,
+		   end            => $seq_region_end,
+		   strand         => $seq_region_strand,
+		   slice          => $slice,
+		   #'analysis'       => $fset_hash{$fset_id}->analysis(),
+		   #Need to pass this to keep Feature.pm happy
+		   #Let's grab this from the FeatureSet in SetFeature new and pass 
+		   score          => $score,
+		   adaptor        => $self,
+		   dbID           => $segmentation_feature_id,
+		   display_label  => $display_label,
+		   feature_set    => $fset_hash{$fset_id},
+		  } );
 	}
 	
 	return \@features;
