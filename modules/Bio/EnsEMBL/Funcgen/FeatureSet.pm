@@ -218,13 +218,20 @@ sub get_FeatureAdaptor{
 
 	#can we code ref this?
 
-	$self->{'adaptor_refs'} = {(
-								annotated  => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
-								regulatory => $self->adaptor->db->get_RegulatoryFeatureAdaptor,
-								external   => $self->adaptor->db->get_ExternalFeatureAdaptor,
-							   )};
 
+	foreach my $valid_class(keys %valid_classes){
+	  my $method = 'get_'.ucfirst($valid_class).'FeatureAdaptor';
+
+	  $self->{'adaptor_refs'}{$valid_class} =  $self->adaptor->db->$method;
+	}
+	#$self->{'adaptor_refs'} = {(
+	#							annotated    => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
+	#							regulatory   => $self->adaptor->db->get_RegulatoryFeatureAdaptor,
+	#							external     => $self->adaptor->db->get_ExternalFeatureAdaptor,
+	#							segmentation => $self->adaptor->db->get_SegmentationFeatureAdaptor,
+	#						   )};
   }
+  
   return $self->{'adaptor_refs'}->{$self->feature_class()};
 
 }
