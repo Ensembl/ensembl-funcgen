@@ -227,12 +227,17 @@ sub evidence_type_label{
   #Could get undef key warn here
   #But only used in webcode so omit for speed
 
-  return $Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor::regulatory_evidence_info{$self->class}->{label};
+  
+  if(! exists $self->{evidence_type_label}){
+	$self->{evidence_type_label} = $self->adaptor->get_regulatory_evidence_info->{$self->class}->{label};
+  }
+
+  return $self->{evidence_type_label};
 }
 
 =head2 evidence_type_name
 
-  Example    : my $long_name = $fsets[0]->feature_type->evidence_type_name;
+  Example    : my $name = $fsets[0]->feature_type->evidence_type_name;
   Description: Getter for evidence type name used in browser.
   Returntype : string
   Exceptions : None
@@ -246,9 +251,37 @@ sub evidence_type_name{
 
   #Could get undef key warn here
   #But only used in webcode so omit for speed
+  if(! exists $self->{evidence_type_name}){
+	$self->{evidence_type_name} = $self->adaptor->get_regulatory_evidence_info($self->class)->{name};
+  }
 
-  return $Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor::regulatory_evidence_info{$self->class}->{name};
+  return $self->{evidence_type_name};
 }
+
+=head2 evidence_type_long_name
+
+  Example    : my $long_name = $fsets[0]->feature_type->evidence_type_long_name;
+  Description: Getter for evidence type name used in browser.
+  Returntype : string
+  Exceptions : None
+  Caller     : Web code
+  Status     : At risk
+
+=cut
+
+sub evidence_type_long_name{
+  my $self = shift;
+
+  #Could get undef key warn here
+  #But only used in webcode so omit for speed
+  if(! exists $self->{evidence_type_long_name}){
+	$self->{evidence_type_long_name} = $self->adaptor->get_regulatory_evidence_info($self->class)->{long_name};
+  }
+
+  return $self->{evidence_type_long_name};
+}
+
+
 
 =head2 compare
 

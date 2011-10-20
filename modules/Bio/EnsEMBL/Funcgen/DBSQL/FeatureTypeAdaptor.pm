@@ -62,21 +62,39 @@ $true_tables{feature_type} = [['feature_type', 'ft']];
 @{$tables{feature_type}}   = @{$true_tables{feature_type}};
 
 
-my $core_name       = 'Open chromatin & TFBS';
-#We need a way to have an even longer description here
-#e.g Open chromatin & Transcription Factor Binding Sites
-my $hist_pols_name  = 'Histones & polymerases';
-my $core_label      = 'DNase1 & TFBS';
-my $hist_pols_label = 'Hists & Pols';  
 
-our %regulatory_evidence_info = 
+#Regulatory evidence feature type information
+
+my $core_label = 'DNase1 & TFBS';
+my $attr_label = 'Hists & Pols';
+
+my %regulatory_evidence_labels = 
   (
-   'Transcription Factor'         => { label => $core_label, name=> $core_name },
-   'Transcription Factor Complex' => { label => $core_label, name=> $core_name },
-   'Open Chromatin'               => { label => $core_label, name=> $core_name },
-   'Polymerase'                   => { label => $hist_pols_label, name => $hist_pols_name},
-   'Histone'                      => { label => $hist_pols_label, name => $hist_pols_name},
+   $core_label => {
+				   name      => 'Open chromatin & TFBS',
+				   long_name => 'Open chromatin & Transcription factor binding sites',
+				   label     => $core_label,
+				  },
+   
+   
+   $attr_label  => {
+					name      => 'Histones & polymerases',
+					long_name => 'Histone modifications & RNA polymerases',
+					label     => $attr_label,
+				   }
   );
+
+
+my %regulatory_evidence_info = 
+  (
+   'Transcription Factor'         => $regulatory_evidence_labels{$core_label},
+   'Transcription Factor Complex' => $regulatory_evidence_labels{$core_label},
+   'Open Chromatin'               => $regulatory_evidence_labels{$core_label},
+   'Polymerase'                   => $regulatory_evidence_labels{$attr_label},
+   'Histone'                      => $regulatory_evidence_labels{$attr_label},
+  );
+
+#
 
 
 =head2 fetch_by_name
@@ -399,14 +417,48 @@ sub store {
   Returntype : Array of Strings
   Exceptions : None
   Caller     : web code
-  Status     : At risk
+  Status     : At risk - remove in favour of get_regulatory_evidence_info
 
 =cut
 
 sub list_regulatory_evidence_classes {
     my ($self) = @_;
 	
+	#change this to return the whole hash
+
     return keys(%regulatory_evidence_info);
+}
+
+=head2 get_regulatory_evidence_labels
+
+  Args       : None
+  Example    : 
+  Description: 
+  Returntype : HASREF
+  Exceptions : None
+  Caller     : web code
+  Status     : At risk
+
+=cut
+
+sub get_regulatory_evidence_labels{
+  return \%regulatory_evidence_labels;
+}
+
+=head2 get_regulatory_evidence_info
+
+  Args       : None
+  Example    : 
+  Description: Returns all regulatory evidence info keyed on feature type class
+  Returntype : HASHREF
+  Exceptions : None
+  Caller     : web code
+  Status     : At risk
+
+=cut
+
+sub get_regulatory_evidence_info{
+  return \%regulatory_evidence_info;
 }
 
 
