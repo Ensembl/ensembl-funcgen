@@ -202,22 +202,42 @@ sub description{
 
 
 
-#=head2 source_label
-#
-#  Example    : my $source_label = $exp->source_label;
-#  Description: Getter for the experiment source label
-#  Returntype : string
-#  Exceptions : None
-#  Caller     : General
-#  Status     : At risk
-#
-#=cut
+=head2 source_info
 
-#sub source_label{
-#  my $self = shift;
-#
-#  return $self->{'archive_id'};
-#}
+  Example    : my $source_info = $exp->source_info;
+  Description: Getter for the experiment source info i.e. [ $label, $url ]
+  Returntype : Listref
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub source_info{
+  my $self = shift;
+
+  if(! defined $self->{source_label}){
+
+	#could have data_url as highest priority here
+	#but we need to ensure removal when adding archive ids
+	#so we link to the archive and not the old data url
+
+	if( $self->{archive_id} ){
+	  $self->{source_label} = $self->{archive_id};
+	  $self->{source_link}   = undef;
+	  #source_link can be undef here
+	  #arhcive links overrides data url
+	  #undef links will automatically go to the SRA
+	}
+	elsif($self->experimental_group->is_project){
+	  $self->{source_label}  = $self->experimental_group->name;
+	  $self->{source_link}   = $self->{data_url}; 
+	  $self->{source_link} ||= $self->experimental_group->url;
+	}
+  }
+
+  return [$self->{'source_label'}, $self->{source_link}];
+}
 
 
 
