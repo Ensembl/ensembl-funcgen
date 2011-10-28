@@ -133,9 +133,10 @@ sub _objs_from_sth {
  
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
 	#Hence it should always be on the same coord system
-	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
+	my $fset_adaptor  = $self->db->get_FeatureSetAdaptor;
+	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
 	my @features;
-	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
+	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
 
 	my (
 	    $segmentation_feature_id, $efg_seq_region_id,
@@ -202,7 +203,8 @@ sub _objs_from_sth {
 	  }
 
 	  #Get the FeatureSet object
-	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
+	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if ! exists $fset_hash{$fset_id};
+	  $ftype_hash{$ftype_id} = $ftype_adaptor->fetch_by_dbID($ftype_id) if ! exists $fset_hash{$ftype_id};
 	  
    
 	  # Get the slice object
@@ -282,6 +284,7 @@ sub _objs_from_sth {
 		   dbID           => $segmentation_feature_id,
 		   display_label  => $display_label,
 		   feature_set    => $fset_hash{$fset_id},
+		   feature_type   =>  $ftype_hash{$ftype_id},
 		  } );
 	}
 	
