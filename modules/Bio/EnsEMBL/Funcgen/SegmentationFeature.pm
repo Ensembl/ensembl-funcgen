@@ -69,7 +69,6 @@ use Bio::EnsEMBL::Funcgen::SetFeature;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
-
 =head2 new
 
   Arg [-SLICE]        : Bio::EnsEMBL::Slice - The slice on which this feature is.
@@ -117,7 +116,8 @@ sub new {
   #test ftype as SetFeature method defaults to feature_set->feature_type
   throw('You must pass a valid FeatureType') if ! defined $ftype;
 
-  $self->{'score'} = $score if $score;
+  $self->{score} = $score if $score;
+  $self->{feature_type} = $ftype;
 	
   return $self;
 }
