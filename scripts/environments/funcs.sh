@@ -626,13 +626,17 @@ ArchiveData()
 	TARGET_ROOT_NAME=
 	SOURCE_ROOT=
 
+
+	#This loop doesn't work on multiple dirs yer
 	
-	for filedir in "$filedirs"; do
+	for filedir in $filedirs; do
 		#now we need to generate the full path as we may not be in the working dir
 		#This will collapse any relative paths to the full concise path
 		#Make sure we have a full path
 
 		#Test filedir exists
+
+		echo $filedir
 
 		if [[ $filedir != /* ]]; then
 			#We never need to specify /* as this would just be the same as listing the dir path
