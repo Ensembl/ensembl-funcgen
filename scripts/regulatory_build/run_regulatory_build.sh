@@ -17,6 +17,11 @@ fi
 DBNAME=your_db_name
 OUTDIR="$EFG_DATA/reg_build/${DBNAME}"
 
+if [ ! -d $OUTDIR ]; then
+	mkdir -p $OUTDIR
+fi
+
+
 # Old params superceded by -use_tracking
 #Comma or space separated list of focus and attribute sets
 #Sets with spaces in names must be comma separated and quoted appropriate
@@ -51,6 +56,7 @@ $EFG_SRC/scripts/regulatory_build/build_regulatory_features.pl\
 	-bsub_mem 10000\
 	-rollback\
 	-tee\
+	-logfile $OUTDIR/RegulatoryBuild.log\
 	$ARGS
 
 #Only required if current assembly is not on ensembldb
