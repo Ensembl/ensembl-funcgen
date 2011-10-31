@@ -52,7 +52,7 @@ update_regulatory_classifications.pl
 
 
 #To do
-# 1 Use logger warn and tee to logs
+# 1 Add new/old DB support. To enable reports when old/archived feature sets have been overwritten/removed in the dev DB
 
 use strict;
 
@@ -73,7 +73,7 @@ $main::_tee      = 0;    #tee the output of this scripts
 
 my ($host, $user, $port, $pass, $dbname, $species,
 	$dnadb_host, $dnadb_user, $dnadb_port, $dnadb_pass, $dnadb_name,
-	$dbprefix, $overwrite, $report_only);
+	$dbprefix, $overwrite, $report_only, $skip_report);
 
 
 my @tmp_args = @ARGV;
@@ -92,7 +92,8 @@ GetOptions(
            'species=s'    => \$species,
 		   'dbprefix=s'   => \$dbprefix,
 		   'overwrite'    => \$overwrite,
-		   'report_only'  => \$report_only,
+		   'report_only'  => \$report_only,#In case we have already updated
+		   'skip_report'  => \$skip_report,#In case of no stable IDs
 
 		   #cell_types
 		   #skip_cell_types
@@ -118,7 +119,11 @@ $Helper->log("Params are:\t@tmp_args");
 
 
 
-# TEST MANDATORY PARAMS 
+# TEST MANDATORY PARAMS
+
+if($skip_report && $report_only){
+  die('You have specified mutually exclusive parameter -skip_report and -report_only. Please chose one or the other');
+}
 
 
 $dbprefix ||= 'annotation_'.$dbname;
@@ -225,31 +230,21 @@ foreach my $fset_name(keys %fsets){
 
 	if($count){
 
-	  #build fail report unless overwrite
-
-	  $Helper->log("Found $count existing classifications");
-	  
 	  if(! $overwrite){
-		$Helper->log('Skipping update and report');
+		$Helper->log("Found $count existing classifications");
+		$Helper->log('Skipping '.$nfset->name.' update');
 
-		
-
-		push @fail_report, 'Failed to update/report '.$nfset->name.
+		push @fail_report, 'Failed to update '.$nfset->name.
 		  " due to $count existing classifications\nPlease specify -overwrite";
-		delete $fsets{$fset_name};
-
-
-		#Do we really want to skip the report?
-
+		#delete $fsets{$fset_name}; Don't skip the report as we have logged to fail report
 		next;
+	  }
+	  else{
+		$Helper->log("Overwriting $count existing classifications");
 	  }
 	}
 
-	#${annot_db}.regulatory_features_classified
-	#This table may not exist yet
-
-	#Need to test and catch error
-
+	#Test for regulatory_features_classified table
 	$sql = "use $annot_db";
 	$db->dbc->do($sql);
 	$sql = "show tables like 'regulatory_features_classified'";
@@ -294,25 +289,29 @@ foreach my $fset_name(keys %fsets){
 
 
 #Now do reports
-
-
-$Helper->log_header("Analyzing/Optimizing tables");
-
-#old vs new annotation can only be done if stable ID mapping has been performed.
-foreach my $table(qw(regulatory_feature feature_type feature_set)){
-  $Helper->log("\t$table");
-
-  $sql = "ANALYZE table $table";
-  $db->dbc->do($sql);
-  $sql = "OPTIMIZE table $table";
-  $db->dbc->do($sql);
+if($skip_report){
+  $Helper->log_header("Skipping classification report");
 }
+else{
 
-$Helper->log("\n");
-
-$sql = "DROP TABLE IF EXISTS tmp_new_vs_old_reg_feature_types";
-$db->dbc->do($sql);
-$sql = "CREATE table tmp_new_vs_old_reg_feature_types(
+  
+  $Helper->log_header("Analyzing/Optimizing tables");
+  
+  #old vs new annotation can only be done if stable ID mapping has been performed.
+  foreach my $table(qw(regulatory_feature feature_type feature_set)){
+	$Helper->log("\t$table");
+	
+	$sql = "ANALYZE table $table";
+	$db->dbc->do($sql);
+	$sql = "OPTIMIZE table $table";
+	$db->dbc->do($sql);
+  }
+  
+  $Helper->log("\n");
+  
+  $sql = "DROP TABLE IF EXISTS tmp_new_vs_old_reg_feature_types";
+  $db->dbc->do($sql);
+  $sql = "CREATE table tmp_new_vs_old_reg_feature_types(
 	`stable_id` mediumint(8) unsigned DEFAULT NULL,
 	`old_feature_type_name`  varchar(100) DEFAULT NULL,
 	`new_feature_type_name`  varchar(100) DEFAULT NULL,
@@ -322,112 +321,102 @@ $sql = "CREATE table tmp_new_vs_old_reg_feature_types(
     KEY old_feature_type_name (`old_feature_type_name`),
   KEY new_feature_type_name (`new_feature_type_name`)
 )  ENGINE=MyISAM DEFAULT CHARSET=latin1;";
-$db->dbc->do($sql);
-
-#Do we need to add keys for feature_types?
-#We are going to group by feature_set.name, old_feature_type_name, new_feature_type_name
-
-
-
-foreach my $fset_name(keys %fsets){
-  my $nfset = $fsets{$fset_name}{new};
-  my $ofset = $fsets{$fset_name}{old};
-
-  if(! $ofset){
-	warn 'Archive set not found for '.$nfset->name.". Skipping report\n";
-	next;
-  }
-
-  #Test for NULL stable IDs!
-
-  $sql = 'SELECT count(*) from regulatory_feature where feature_set_id='.
-	$nfset->dbID.' AND stable_id is NULL';
-  my ($count) = $db->dbc->db_handle->selectrow_array($sql);
-
-  if($count){
-	my $msg = "Found $count $fset_name entries with no stable IDs";
-	$Helper->log_error($msg);
-	push @fail_report, $msg."\nSkipping report for ".$nfset->name;
-	next;
-  }
-  
-
-  $Helper->log('Building report info for '.$nfset->name);
-
-  #Store new feature_set_id with old annotattion
-  $sql = 'INSERT into tmp_new_vs_old_reg_feature_types SELECT stable_id, ft.name, NULL, '.
-	$nfset->dbID.' from regulatory_feature rf, feature_type ft '.
-	  ' WHERE rf.feature_type_id=ft.feature_type_id AND feature_set_id='.$ofset->dbID;
   $db->dbc->do($sql);
 
-  #Update the old reg feat records
-
-  #This is not working!
-  #Or is this a stable id mapping issue?
-  #Yes we need to make another copy of the DB?
-  #No, stable IDs don't match logs!!!
   
-  $sql = 'UPDATE tmp_new_vs_old_reg_feature_types t, regulatory_feature rf, feature_type ft set t.new_feature_type_name=ft.name '.
-	' WHERE rf.feature_type_id=ft.feature_type_id AND rf.stable_id=t.stable_id and rf.feature_set_id=t.feature_set_id '.
-	  ' and rf.feature_set_id='.$nfset->dbID;
-  $db->dbc->do($sql);
-  
-  #Add the new reg feat records
-  $sql = 'INSERT IGNORE into tmp_new_vs_old_reg_feature_types SELECT stable_id, NULL, ft.name, '.
-	$nfset->dbID.' from regulatory_feature rf, feature_type ft where rf.feature_type_id=ft.feature_type_id AND feature_set_id='.$nfset->dbID;
-  $db->dbc->do($sql);
 
-
-  #Check for NULL feature_type names here?
-  #No these may be valid new/deleted features
-
-}
-
-#Now do the report
-$sql = 'SELECT fs.name, t.old_feature_type_name, t.new_feature_type_name, count(*) from tmp_new_vs_old_reg_feature_types t, feature_set fs '.
-  ' WHERE t.feature_set_id=fs.feature_set_id '.
-  ' GROUP by fs.name, t.old_feature_type_name, t.new_feature_type_name';
-#warn $sql;
-@rows = @{$db->dbc->db_handle->selectall_arrayref($sql)};
-
-
-$sql = "DROP TABLE tmp_new_vs_old_reg_feature_types";
-$db->dbc->do($sql);
-
-
-my $header = ['FeatureSet', 'Old FeatureType', 'New FeatureType', 'Count'];
-unshift @rows, $header;
-
-
-$Helper->log_header('RegulatoryFeature Classification Report');
-
-foreach my $row(@rows){
-  
-  my $count = pop @$row;
-
-  my $line = '';
-
-  foreach my $i(0..$#{$row}){
-   
-	if(! defined $row->[$i]){
-
-	  if($i == 1){
-		$row->[$i] = 'New';
-	  }
-	  elsif($i == 2){
-		$row->[$i] = 'Deleted';
-	  }
-	  else{
-		die("Cannot have NULL value for field ".$header->[$i]."\n");
-	  }
+  foreach my $fset_name(keys %fsets){
+	my $nfset = $fsets{$fset_name}{new};
+	my $ofset = $fsets{$fset_name}{old};
+	
+	if(! $ofset){
+	  warn 'Archive set not found for '.$nfset->name.". Skipping report\n";
+	  next;
 	}
-
-	$line .= sprintf ('%-40s', $row->[$i]);
+	
+	#Test for NULL stable IDs!
+	$sql = 'SELECT count(*) from regulatory_feature where feature_set_id='.
+	$nfset->dbID.' AND stable_id is NULL';
+	my ($count) = $db->dbc->db_handle->selectrow_array($sql);
+	
+	if($count){
+	  my $msg = "Found $count $fset_name entries with no stable IDs";
+	  $Helper->log_error($msg);
+	  push @fail_report, $msg."\nSkipping report for ".$nfset->name;
+	  next;
+	}
+	
+	
+	$Helper->log('Building report info for '.$nfset->name);
+	
+	#Store new feature_set_id with old annotattion
+	$sql = 'INSERT into tmp_new_vs_old_reg_feature_types SELECT stable_id, ft.name, NULL, '.
+	  $nfset->dbID.' from regulatory_feature rf, feature_type ft '.
+		' WHERE rf.feature_type_id=ft.feature_type_id AND feature_set_id='.$ofset->dbID;
+	$db->dbc->do($sql);
+	
+	#Update the old reg feat records
+	$sql = 'UPDATE tmp_new_vs_old_reg_feature_types t, regulatory_feature rf, feature_type ft set t.new_feature_type_name=ft.name '.
+	  ' WHERE rf.feature_type_id=ft.feature_type_id AND rf.stable_id=t.stable_id and rf.feature_set_id=t.feature_set_id '.
+		' and rf.feature_set_id='.$nfset->dbID;
+	$db->dbc->do($sql);
+	
+	#Add the new reg feat records
+	$sql = 'INSERT IGNORE into tmp_new_vs_old_reg_feature_types SELECT stable_id, NULL, ft.name, '.
+	  $nfset->dbID.' from regulatory_feature rf, feature_type ft where rf.feature_type_id=ft.feature_type_id AND feature_set_id='.$nfset->dbID;
+	$db->dbc->do($sql);
+	
+	
+	#Check for NULL feature_type names here?
+	#No these may be valid new/deleted features
+	
   }
 
-  $Helper->log($line.sprintf ('%-8s', $count));
-}
+  #Now do the report
+  $sql = 'SELECT fs.name, t.old_feature_type_name, t.new_feature_type_name, count(*) from tmp_new_vs_old_reg_feature_types t, feature_set fs '.
+  ' WHERE t.feature_set_id=fs.feature_set_id '.
+	' GROUP by fs.name, t.old_feature_type_name, t.new_feature_type_name';
+  #warn $sql;#May need to explain this if it is not performant
+  @rows = @{$db->dbc->db_handle->selectall_arrayref($sql)};
+  
 
+  $sql = "DROP TABLE tmp_new_vs_old_reg_feature_types";
+  $db->dbc->do($sql);
+  
+  
+  my $header = ['FeatureSet', 'Old FeatureType', 'New FeatureType', 'Count'];
+  unshift @rows, $header;
+
+
+  $Helper->log_header('RegulatoryFeature Classification Report');
+  
+  foreach my $row(@rows){
+	
+	my $count = pop @$row;
+	
+	my $line = '';
+	
+	foreach my $i(0..$#{$row}){
+	  
+	  if(! defined $row->[$i]){
+		
+		if($i == 1){
+		  $row->[$i] = 'New';
+		}
+		elsif($i == 2){
+		  $row->[$i] = 'Deleted';
+		}
+		else{
+		  die("Cannot have NULL value for field ".$header->[$i]."\n");
+		}
+	  }
+	  
+	  $line .= sprintf ('%-40s', $row->[$i]);
+	}
+	
+	$Helper->log($line.sprintf ('%-8s', $count));
+  }
+}
 
 if(@fail_report){
   $Helper->log_header('Failure Report');
