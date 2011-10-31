@@ -17,24 +17,26 @@ fi
 DBNAME=your_db_name
 OUTDIR="$EFG_DATA/reg_build/${DBNAME}"
 
+# Old params superceded by -use_tracking
 #Comma or space separated list of focus and attribute sets
 #Sets with spaces in names must be comma separated and quoted appropriate
-FOCUS="\
-FOCUS_SET1,\
-FOCUS_SET2,\
-FOCUS_SET2"
+#FOCUS="\
+#FOCUS_SET1,\
+#FOCUS_SET2,\
+#FOCUS_SET2"
 
 #ATTRIBUTE sets must only reflect CellTypes present in FOCUS sets
-ATTRIBUTE="\
-ATTR_SET1,\
-ATTR_SET2,\
-ATTR_SET3,\
-ATTR_SET4,\
-ATTR_SET5,\
-ATTR_SET6,\
-ATTR_SET7,\
-ATTR_SET8"
+#ATTRIBUTE="\
+#ATTR_SET1,\
+#ATTR_SET2,\
+#ATTR_SET3,\
+#ATTR_SET4,\
+#ATTR_SET5,\
+#ATTR_SET6,\
+#ATTR_SET7,\
+#ATTR_SET8"
 
+VERSION=your_incremented_version_number
 
 $EFG_SRC/scripts/regulatory_build/build_regulatory_features.pl\
     -host $HOST \
@@ -42,19 +44,24 @@ $EFG_SRC/scripts/regulatory_build/build_regulatory_features.pl\
 	-user $USER \
 	-pass $PASS \
 	-dbname $DBNAME \
-	-focus_sets $FOCUS \
-	-attribute_sets $ATTRIBUTE \
+	-use_tracking\
 	-outdir $OUTDIR \
-	-version 7\
-	-stats\
-	-dump_annotated_features\
+	-version $VERSION\
 	-write_features\
+	-bsub_mem 10000\
+	-rollback\
+	-tee\
 	$ARGS
 
 #Only required if current assembly is not on ensembldb
 #or if -gene_signature is specified
 #  -dnadb_name your_dnadb_name\
 #  -dnadb_host your_dnadb_host\
+
+# Old params superceded by -use_tracking
+#	-focus_sets $FOCUS \
+#	-attribute_sets $ATTRIBUTE \
+
 
 #For more help use:
 #build_regulatory_features.pl -help
