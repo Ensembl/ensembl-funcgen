@@ -267,6 +267,10 @@ we need to factor this into the schema
 #8 Do we rollback new stable IDs when rerunning i.e. are we reusing new stable IDs?
 #9 Add mapping reason to output
 #10 Copy stable_ids to other feature_sets no ending in _v[0-9]+
+#11 Fix problems running with Y PAR! Currently we just clobber those assigned 
+#   via the X mapping uneccesarily increments the new stable ID number. 
+#12 DONE Need to log which slices are left when throwing
+
 
 BEGIN{
   if (! defined $ENV{'EFG_DATA'}) {
@@ -377,7 +381,8 @@ pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 
 #check mandatory params here
-die("You cannot specify load '-from_file' in conjunction with '-no_load'\n") if($no_load && $from_file);
+die('-from_file and -no_load are mutually exclusive, please spevify one or the other') if $no_load && $from_file;
+die('-clobber and -recover are mutually exclusive, please specify one or ther other') if $clobber && $recover;
 
 
 #we need to resolve odb ndb relationship, defulat to same if only one specified?
@@ -438,6 +443,7 @@ if(! ($odbname)){
   #Should test for any old vars set in case we have forgotten to specify ohost
   $helper->log("Setting old DB to new DB");
   $odb = $ndb;
+  $odbname = $ndbname; #Used in sql HCs at end
 }
 else{
   $odb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
@@ -552,7 +558,6 @@ my $orf_adaptor = $odb->get_RegulatoryFeatureAdaptor();
 
 #This is dependent on clobber or recover.
 
-warn "Need to implement clobber/recover in next_stable_id lookup\n";
 
 my ($cmd, $on_sid, $nn_sid);
 
@@ -564,6 +569,12 @@ if($next_stable_id){#check it is valid
 
 }else{
   warn "WARNING:\tFetching next_stable_id from old DB\n";
+
+  if(@slice_names || @skip_slices){
+	warn "Next stable ID lookup does not yet account for -clobber or -recover when using -slices\n";
+	#This is already caught in the param checks
+  }
+
 
   $cmd = 'SELECT stable_id from regulatory_feature rf where feature_set_id='.$obj_cache{'OLD'}{'FSET'}->dbID().' order by stable_id desc limit 1';
   ($next_stable_id) = @{$odb->dbc->db_handle->selectrow_arrayref($cmd)};
@@ -644,12 +655,16 @@ elsif($stable_id){
   $helper->log("Running only on $stable_id ".$slices[0]->name);
 }  
 else{
-  #fetch top_level, including non-ref
+  #fetch top_level
   #This could actually be the new toplevel if we have set the olddb to the newdb
   #But we're only using this for the unversioned slices, which will will have to be present in the new DB
   #to be able to map them. This approach may miss logging of stable IDs present on old/expired seqs
   #Hence why we should force usage of old dna DB when projecting between assemblies
-  @top_level_slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', undef, 1)};
+
+  @top_level_slices = @{$obj_cache{'OLD'}{'SLICE_ADAPTOR'}->fetch_all('toplevel')};
+  #, undef, 1)};#Don't include non-ref anymore
+  #This was causing some issues with regf getting mapped to patches
+  #and assigning new IDs for successfully mapped features
   
   #Fetch old assembled level
   #What about > 1 assembled/versioned level?
@@ -730,12 +745,16 @@ if(! %new_slices){ #Running with subset of slices
 	#should really have force_assign_nulls here
 
 	if(@slice_names){
+	  #This is always the case?
 	  die("It is currently unsafe to -assign_all_nulls when running with a subset of slices");
 	}
 
-	%new_slices  = map {$new_slices{$_->name} = $_} @{$obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_all('toplevel', undef, 1)};
+	%new_slices  = map {$new_slices{$_->name} = $_} @{$obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_all('toplevel')};#
+	#, undef, 1)};removed non_ref due to re-assignment of mapped features when projected to hap regions.
   }
   else{
+	#This will not catch new slices which are not present in the old DB
+	#Okay as we are not assigning null here
 
 	foreach my $slice(@slices){
 	  $new_slices{$slice->name} = $obj_cache{'NEW'}{'SLICE_ADAPTOR'}->fetch_by_region($slice->coord_system->name, $slice->seq_region_name);
@@ -773,11 +792,10 @@ $ndb->dnadb->dbc->disconnect_when_inactive(1);
 
 #Process each top level old seq_region
 
-
-
+my @remaining_slices = map $_->name, @slices;
 
 foreach my $slice (@slices){
-
+ 
   #Need to change this to slice_name
   my $seq_name = $slice->name();
 
@@ -841,20 +859,23 @@ foreach my $slice (@slices){
   if($mapped_feature_cnt != 0){
 	
 	if($mapped_feature_cnt == $old_feat_cnt){
-	  $helper->log("All RegulatoryFeatures have already been stable ID mapped for $seq_name") 
-		if($mapped_feature_cnt == $old_feat_cnt);
 
+	  $helper->log("All RegulatoryFeatures have already been stable ID mapped for $seq_name");
+	  
 	  if($recover){
-		die("Skipping $seq_name in recover mode\n");#??? surely warn?
-		next;
+		warn("Skipping $seq_name in recover mode\n");
+   		next; #slice
 	  }
 	}
 
 	if(! $clobber){
-	  die("$mapped_feature_cnt/$old_feat_cnt RegulatoryFeatures have already been stable ID mapped for $seq_name, specify -clobber to overwrite");
+	  die("$mapped_feature_cnt/$old_feat_cnt RegulatoryFeatures have already been stable ID mapped for $seq_name.\n".
+		  "Specify -clobber to overwrite (or -recover without -slices)\n".
+		  'Remaining -slices '.join(' ', @remaining_slices));
 	}
 	elsif($no_load){
-	  $helper->log("There are features which have already been stable ID mapped for $seq_name in the DB, you have chosen leave these and dump a summary of the new ones");
+	  $helper->log("There are features which have already been stable ID mapped for $seq_name in the DB\n".
+				   "You have chosen to leave these and dump a summary of the new ones");
 	}
   }
   
@@ -895,7 +916,8 @@ foreach my $slice (@slices){
 	  #my $transitions = []; #this has to be ref due to implementation in while
 
 	  if(! defined $reg_feat->stable_id){
-		die("Found OLD RegulatoryFeature without a stable_id, dbID is ".$reg_feat->dbID);
+		die("Found OLD RegulatoryFeature without a stable_id, dbID is ".$reg_feat->dbID."\n".
+			'Remaining -slices '.join(' ', @remaining_slices));
 	  }
 
 
@@ -968,7 +990,7 @@ foreach my $slice (@slices){
 	  }
 	}
 
-	$helper->log_header("Mapped $mappings old stable IDs from toplevel seq_region $seq_name");
+	#$helper->log_header("Mapped $mappings old stable IDs from toplevel seq_region $seq_name");
 	
 
 	if($new_assm){
@@ -1052,10 +1074,10 @@ foreach my $slice (@slices){
 
 
 	if(! defined $action){
-	  $helper->log('Skipping dump/load RegulatoryFeatures for Slice '.$seq_name);
+	  $helper->log("Skipping dump/load RegulatoryFeatures for:\t$seq_name");
 	}
 	else{
-	  $helper->log($action.' RegulatoryFeatures for Slice '.$seq_name);
+	  $helper->log("$action RegulatoryFeatures for:\t$seq_name");
 	  
 	  my $sql_file    =  $out_dir.'/stable_id_patch.'.$seq_name.'.sql';
 	  my $update_file = open_file($sql_file, '>');
@@ -1076,18 +1098,11 @@ foreach my $slice (@slices){
 		#Strip prefix
 		(my $sid = $f->{'stable_id'}) =~ s/ENS[A-Z]*0*//;
 
-		#Appear to be much faster to dump the sql to file and run on cmdline
-		#Also have patch log of mapping
-		#DB connections(with discnnect_when_inactive_set) versus perl IO & cmdline patch
-		#$cmd = 'UPDATE regulatory_feature set stable_id='.$sid.' where regulatory_feature_id='.$f->dbID();
-		#$ndb->dbc->db_handle->do($cmd);
 
-
+		#Much faster to dump sql and do via cmd line
+		#also have patch log
 		push @io_buffer, 'UPDATE regulatory_feature set stable_id='.$sid.' where regulatory_feature_id='.$f->dbID().";\n";
-		#Can we do this directly using a print join map
-		#rather than using an io_buffer?
-		#io_buffer will take less memory but more IO
-
+	
 		if(scalar(@io_buffer) >5000){
 		  print $update_file join('', @io_buffer);
 		  @io_buffer = ();
@@ -1104,7 +1119,6 @@ foreach my $slice (@slices){
 
 	  #Update stable IDs via cmdline
 	  if(! $no_load){
-		$helper->log($action.' RegulatoryFeatures for Slice '.$seq_name);
 		my $cmd = "mysql -u${nuser} -P${nport} -h${nhost} -p${npass} ${ndbname}<".$sql_file;
 		run_system_cmd($cmd);#will exit on fail
 	  }
@@ -1134,7 +1148,8 @@ foreach my $slice (@slices){
 	}
   }
 
-  $helper->log("Finished mapping stable IDs for:\t".$slice->name."\n");
+  $helper->log("Finished mapping stable IDs for:\t".$slice->name, undef, 1);#date flag
+  shift @remaining_slices;#Or do this at end as we will want to rerun the current slice
 }
 
 
@@ -1189,11 +1204,21 @@ foreach my $slice_name(keys %new_slices){
 
 	my (undef, undef, $sr_name, $sr_start, $sr_end) = split/:/, $slice_name;
 
-	$helper->log("Found a $new_assm slice which was not present in $old_assm:\t".$slice_name);
+
+	$helper->log("Found a new slice which was not present in the old DB:\t".$slice_name);
+	#How can this be for human 64_37 to 65_37
+	#using the same 65_37 core DB for the mapping?
+
+
 
 	#This is only counting the core regions, will this be different from the mapping process?
 	
-	my $sql = "select count(stable_id) from regulatory_feature rf, seq_region sr where rf.seq_region_start <= $sr_start and rf.seq_region_end >= $sr_end and feature_set_id=".$obj_cache{'NEW'}{'FSET'}->dbID.' and stable_id is NULL';
+	#This takes an age as we don't speficiy a seq_region_id, so it can't use the index!
+
+	my $sql = 'SELECT count(stable_id) from regulatory_feature rf, seq_region sr '.
+	  'WHERE rf.seq_region_start <= $sr_start and rf.seq_region_end >= $sr_end and rf.seq_region_id='.
+		$obj_cache{'NEW'}{'SLICE_ADAPTOR'}->get_seq_region_id($new_slices{$slice_name}).
+		  ' AND feature_set_id='.$obj_cache{'NEW'}{'FSET'}->dbID.' and stable_id is NULL';
 	my ($null_count) = $ndb->dbc->db_handle->selectrow_array($sql);
 	
 	
@@ -1221,6 +1246,11 @@ foreach my $slice_name(keys %new_slices){
 
 $total_new_stable_ids += $new_mappings;
 
+
+
+
+
+
 if( ! $from_file){
   $helper->log_header("Total slices mapped(inc new & old):\t".(scalar(@slices) + $new_slice_cnt));
   $helper->log("Total failed to project:\t\t\t${total_failed_proj}/${total_old_feats}") if $new_assm;
@@ -1228,6 +1258,62 @@ if( ! $from_file){
   $helper->log("Total new stable IDs:\t\t\t${total_new_stable_ids}/${total_new_feats}");
   $helper->log("Total stable IDs(inc new & mapped):\t$total_stable_ids");
 }
+
+#Do stable ID HC and update non-MultiCell sets here
+
+my $sql = "select count(*) from ${odbname}.feature_set fs, ${ndbname}.feature_set fs1, ${odbname}.regulatory_feature rf, ${ndbname}.regulatory_feature rf1 where rf1.seq_region_id=rf.seq_region_id and rf1.seq_region_start=rf.seq_region_start and rf1.seq_region_end=rf.seq_region_id and rf.feature_set_id=fs.feature_set_id and fs.name rlike 'RegulatoryFeatures:MultiCell_v[0-9]+' and rf1.feature_set_id=fs1.feature_set_id and fs1.name='RegulatoryFeatures:MultiCell' and rf.stable_id!=rf1.stable_id";
+
+#Check ndb and odb are on same instance
+#Could just do a $ndb != $odb
+#but we can do this across DBs on the same instance
+my $skip_update = 0;
+my $count;
+
+if(! (($ndb->dbc->host eq $odb->dbc->host) &&
+	  ($ndb->dbc->port eq $odb->dbc->port))){
+  $helper->log_error("Cannot perform stable ID HC as old and new DBs are not on the same instance. Copy to same instance to perform:\n$sql");
+  $skip_update = 1;
+}
+else{
+  
+  ($count) = $ndb->dbc->db_handle->selectrow_array($sql);
+  
+  if($count){
+	$sql =  "select rf.stable_id, rf1.stable_id, rf.bound_seq_region_start, rf.seq_region_start, rf.seq_region_end, rf.bound_seq_region_end, rf1.bound_seq_region_start, rf1.seq_region_start, rf1.seq_region_end, rf1.bound_seq_region_end from ${odbname}.feature_set fs, ${ndbname}.feature_set fs1, ${odbname}.regulatory_feature rf, ${ndbname}.regulatory_feature rf1 where rf1.seq_region_id=rf.seq_region_id and rf1.seq_region_start=rf.seq_region_start and rf1.seq_region_end=rf.seq_region_id and rf.feature_set_id=fs.feature_set_id and fs.name rlike 'RegulatoryFeatures:MultiCell_v[0-9]+' and rf1.feature_set_id=fs1.feature_set_id and fs1.name='RegulatoryFeatures:MultiCell' and rf.stable_id!=rf1.stable_id";
+	
+	$helper->log_error("Found identical regulatory features with different stable IDs:\t$count");
+	$helper->log_error("Investigate using:\n$sql");
+	$skip_update = 1;
+  }
+}
+
+
+#Test for MultiCell null here?
+#Test for existing stable IDs and clobber?
+#Resitrcti to seq_region_ids?
+
+
+if ($skip_update){
+  $helper->log("Skipping stable ID propogation");
+}
+else{
+  $sql = "update regulatory_feature rf, regulatory_feature rf1 left join feature_set fs1 on rf1.feature_set_id=fs1.feature_set_id set rf1.stable_id=rf.stable_id where rf.seq_region_start=rf1.seq_region_start and rf.seq_region_id=rf1.seq_region_id and rf.feature_set_id=(select feature_set_id from feature_set where name='RegulatoryFeatures:MultiCell') and fs1.name not rlike '.*_v[0-9]+' and fs1.name!='RegulatoryFeatures:MultiCell'";
+  $helper->log("Propogating stable IDs to non-MultiCell FeatureSets");
+  
+  $count = $ndb->dbc->do($sql);
+  $helper->log("$count regulatory_feature stable_id fields updated");
+  
+  
+  #test NULLs here
+  $sql = "select fs.name, count(distinct rf.regulatory_feature_id) from regulatory_feature rf, feature_set fs where fs.feature_set_id=rf.feature_set_id and fs.name not rlike '.*_v[0-9]+' and stable_id is NULL group by fs.feature_set_id";
+  
+  my @rows = @{$ndb->dbc->db_handle->selectall_arrayref($sql)};
+
+  if(scalar(@rows) != 0){
+	$helper->log_error("Found NULL stable IDs:\n\t".join("\n\t", (map $_->[0]."\t".$_->[1], @rows)));
+  }
+}
+
 
 
 
@@ -1605,8 +1691,10 @@ sub build_transitions{
 
 	  $split_id = &assign_stable_ids(\@transitions, $split_chain, $split_id);
 	  
-	  #this should never happen
-	  die("split chain and id with id $split_id with no new feature") if $split_id || $split_chain;
+	  if ( $split_id || $split_chain ){   #this should never happen
+		die("split chain and id with id $split_id with no new feature\n".
+			'Remaining -slices '.join(' ', @remaining_slices));
+	  }
 
 	  #split chain will always be false here
 	}
@@ -1833,7 +1921,7 @@ sub assign_stable_ids{
 	  #This should be true as will be using previous if last transition projected to this feature
 	  if(exists $dbid_mappings{$feature_id}){
 		die("Found duplicate inheritance:\tdbID ".$feature_id." > ".
-			  $dbid_mappings{$feature_id}->{'stable_id'}." & $child_id");
+			$dbid_mappings{$feature_id}->{'stable_id'}." & $child_id\n".'Remaining -slices '.join(' ', @remaining_slices));
 	  }
 	  
 	  
@@ -1882,7 +1970,8 @@ sub assign_stable_ids{
 
 			if(! ($split_id && ($i == $num_trans))){
 			  die("Have found duplicate mappings on very 5' feature in a transition chain for $orphan_id: previous ".
-				  join(',', @{$mapping_cache{$orphan_id}})." new $child_id");
+				  join(',', @{$mapping_cache{$orphan_id}})." new $child_id".
+				  'Remaining -slices '.join(' ', @remaining_slices));
 
 
 		
@@ -1986,9 +2075,13 @@ sub assign_stable_ids{
 	  #do we need to revise this in light of encountering a twin?	  
 	  if(exists $dbid_mappings{$child_id}){
 		die("Found duplicate projection:\tdbID $child_id < stable_ids ".$feature_id.
-			  " & ".$dbid_mappings{$child_id}->stable_id());
+			" & ".$dbid_mappings{$child_id}->stable_id()."\n".
+			'Remaining -slices '.join(' ', @remaining_slices));
 	  }
 	  
+
+
+
 	  #record dbID mapping first only done to check for duplicate inheritance
 	  #$dbid_mappings{$child_id} = $mapping_info{'transitions'}[$i]{'source_id'};
 	  #can't do this here as we're testing for it in the loop
@@ -2080,7 +2173,10 @@ sub assign_stable_ids{
 				#this is mid chain overlap which should either be the child
 				#or this is the last transition and it is a split chain 
 
-				die('Found mid chain overlapping orphan!') if($i != $num_trans);
+				if($i != $num_trans){	
+				  die("Found mid chain overlapping orphan!\n".
+					  'Remaining -slices '.join(' ', @remaining_slices));
+				}
 
 				#split_chain
 				#so we need to wait for inheritance in next assinment and then populate 
@@ -2107,7 +2203,8 @@ sub assign_stable_ids{
 			  }
 			  else{
 				die("Failed to find split_merge_cache for old $last_stable_id ".
-					  "when updating with linking new feature ".$orphan->stable_id());
+					  "when updating with linking new feature ".$orphan->stable_id().
+					"\nRemaining -slices ".join(' ', @remaining_slices));
 			  }
 			}
 		  }
@@ -2224,7 +2321,8 @@ sub assign_and_log_new_stable_id{
   my $new_reg_feat = shift;
 
   if(! (ref($new_reg_feat) && $new_reg_feat->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature'))){
-	die('You must provide a valid Bio::EnsEMBL::Funcgen::RegulatoryFeature');
+	die("You must provide a valid Bio::EnsEMBL::Funcgen::RegulatoryFeature\n"
+		.'Remaining -slices '.join(' ', @remaining_slices));
   }
 
   #Need to add species intrafix here
