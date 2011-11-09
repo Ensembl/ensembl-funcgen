@@ -92,7 +92,7 @@ sub fetch_all_by_FeatureType {
 
 =head2 fetch_all_by_type
 
-  Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'external'
+  Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory', 'segmentation' or 'external'
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
   Description: Retrieves FeatureSet objects from the database based on feature_set type.
@@ -108,15 +108,16 @@ sub fetch_all_by_type {
     my $type = shift;
     my $status = shift;
     
-	
+	#deprecate this?
 	
     return $self->fetch_all_by_feature_class($type, $status);	
 }
 
 =head2 fetch_all_by_feature_class
 
-  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory' or 'external'
-  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
+  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation' or 'external'
+  Arg [2]    : String (optional) - status e.g. 'DISPLAYABLE'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::CellType (optional)
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_feature_class('annotated');
   Description: Retrieves FeatureSet objects from the database based on feature_set type.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
@@ -127,12 +128,9 @@ sub fetch_all_by_type {
 =cut
 
 sub fetch_all_by_feature_class {
-    my $self = shift;
-    my $type = shift;
-    my $status = shift;
+    my ($self, $type, $status, $ctype) = @_;
     
-    throw('Must provide a feature_set type') if(! defined $type);
-	
+    throw('Must provide a feature_set type') if(! defined $type);	
     my $sql = "fs.type = '".$type."'";
 
     if($status){
@@ -140,14 +138,22 @@ sub fetch_all_by_feature_class {
       $sql = (defined $constraint) ? $sql." AND ".$constraint : undef;
     }
 
+	if($ctype){
+	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
+	  $sql .= " AND fs.cell_type_id = '".$ctype->dbID()."'";
+	}
+	
     return (defined $sql) ? $self->generic_fetch($sql) : [];	
 }
+
+
 
 
 
 =head2 fetch_all_displayable_by_type
 
   Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::CellType (optional)
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
   Description: Wrapper method for fetch_all_by_type
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
@@ -158,10 +164,9 @@ sub fetch_all_by_feature_class {
 =cut
 
 sub fetch_all_displayable_by_type {
-    my $self = shift;
-    my $type = shift;
+    my ($self, $type, $ctype) = @_;
   
-	$self->fetch_all_by_type($type, 'DISPLAYABLE');
+	$self->fetch_all_by_feature_class($type, 'DISPLAYABLE', $ctype);
 }
 
 
