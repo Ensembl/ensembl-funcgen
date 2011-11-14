@@ -76,6 +76,7 @@ sub default_options {
 	  'skip_control' => 0,
 	  'control_feature' => 'WCE',
 	  'bin_dir' => '/software/ensembl/funcgen',
+	  'control_file' => ''
 
 	 };
 }
@@ -198,7 +199,7 @@ sub pipeline_analyses {
 	   -parameters => {},
 	   -input_ids => [
 			  # No initial input_ids... these will be added as needed by init_pipeline -job_topup
-			  { 'cell_type' => $self->o('cell_type'), 'feature_type' => $self->o('feature_type'), 'experiment_name' => $self->o('experiment_name'), 'file_type' => $self->o('file_type'), 'analysis' => $self->o('analysis'), 'skip_control' => $self->o('skip_control'),  'control_feature' => $self->o('control_feature') },
+			  { 'cell_type' => $self->o('cell_type'), 'feature_type' => $self->o('feature_type'), 'experiment_name' => $self->o('experiment_name'), 'file_type' => $self->o('file_type'), 'analysis' => $self->o('analysis'), 'skip_control' => $self->o('skip_control'),  'control_feature' => $self->o('control_feature'), 'control_file' => $self->o('control_file') },
 # , 'control_file' =>$self->o('cell_type')."_".$self->o('control_feature')."_".$self->o('experiment_name').".samse.".$self->o('file_type').".gz" },
 			 ],
 	   -flow_into => {
