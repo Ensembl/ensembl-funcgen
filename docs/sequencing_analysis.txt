@@ -86,6 +86,7 @@ Cumulative read counts are imported as RPKMs (Mortazavi et al. 2008), for displa
 To enable faster access, these are stored as files. 
 
 This step uses the output of the peaks pipeline, where some filtering of the mappings occur.
+This should be run as soon as possible, before the Regulatory Build.
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -129,9 +130,9 @@ Initialise the environment and run the alignments and annotation (section 7):
 >FilterBlacklist 
 (currently only in case of Human)
 >PeaksReport
->CalculateMotifFeatures
+>RunMotifMatch -f $TF
 (only relevant if there are TF datasets, and matrices are in the db)
->ImportMotifFeatures
+>ImportMotifMatch
 >SetupReadCounts
 ... wait for file conversions to finish
 >SubmitReadCounts
@@ -215,6 +216,8 @@ The pipeline is quite demanding in disk space, as it creates large temporary fil
 Usually consider reserving at least the triple amount of space as required for the raw reads.
 
 /tmp space may be an issue in very large sets, but it can be readjusted in job requirements
+Use [tmp=xxx] in the job requirements in the eHive conf files to set this.
+If you have a pipeline running already, you can set this in the appropriate entry in the pipeline db
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -380,6 +383,7 @@ eg. $DATA_HOME/fastq/homo_sapiens/ENCODE/H1ESC_CTCF/1/*.fastq.gz
 eg. $DATA_HOME/fastq/homo_sapiens/ENCODE/H1ESC_CTCF/2/*.fastq.gz
 
 Unfortunately, directory structure is case sensitive so use featuretype names exactly as in the efg db
+Ideally this step should be performed by a script that interacts with a data tracking db
 
 Numbered folders are for biological replicates, although currently replicates are simply pooled
 If there are no replicates, just add all fastq files into a single folder named '1'
@@ -393,6 +397,8 @@ AddAlignmentSets  Creates a Read Alignment eHive pipeline DB ("alignments") and 
 			   
 e.g.: > AddAlignmentSets -I ${DATA_HOME}/fastq/${SPECIES}/experiment
 Where folder experiment contains a set of celltype_featuretype subfolders with fastq files
+*All* folders will be used so make sure all appropriate cell types and feature types exist
+Otherwise remove folders that you do not wish to align
 
 SubmitAlignments  Submits the read alignment jobs with the eHive.
 		  It will enter in a loop until the pipeline finishes.
@@ -420,6 +426,9 @@ AddPeakSets       Creates a eHive Peak Calling pipeline DB ("peaks") and peak ca
 
 e.g.: > AddPeakSets -a analysis -I ${DATA_HOME}/alignments/${SPECIES}/experiment
 Where folder experiment contains a set of celltype_featuretype*.samse.sam.gz sam files
+      
+      Analysis must be one of SWEMBL_R015, SWEMBL_R0025 or CCAT_HISTONE
+
 			   
 SubmitPeaks       Submits peak calling jobs with the eHive.
 		  It will enter in a loop until the pipeline finishes.
@@ -437,6 +446,7 @@ PeaksReport	  Generates reports for peaks as pdf.
 		  Runs ${EFG_SRC}/scripts/peaks_report.pl
 		  Generates a pdf with barplot of peak numbers and peak length
 		  Currently it prints reports for all sets in the DB
+		  Use -i to only print the ones that have been generated in this session
 
 6.3 Motif Annotation
 
@@ -445,9 +455,12 @@ All matrices need to be loaded in the eFG and associated to the proper FeatureTy
 
 RunMotifMatch	  Creates the Filtered set of Genomic motifs
 		  Runs in a single job, currently run on the farm
+		  - Memory problems may occur with low information matrices generating many hits
+		  - You may need to manually set up the $SCHEMA_BUILD (usually to the previous release)
   
-RunImportMotifs	  Imports Motifs into the eFG DB (only those overlapping annotated features)
+ImportMotifMatch  Imports Motifs into the eFG DB (only those overlapping annotated features)
 		  Creates a eHive pipeline "motif_import" to do this. Deletes previous data from eFG
+		  Can also be used to partial imports (eg. only one chromosome)
 
 To rollback the data written in test cases or if the alignments fail for some reason and require some clean up,
 use the Rollback function. There are also various administrations functions which can be used (see section 7). 
@@ -463,6 +476,7 @@ For efficiency, read counts are now stored as compressed binary files.
 
 SetupReadCounts	Sets a eHive pipeline "read_counts". Needs to be run after the peaks pipeline
 		Will generate a set of file conversion jobs to convert sam to bed if needed
+		Can only start the next step ONLY after conversion jobs have all finished
 
 SubmitReadCounts This Creates ResultSets and external file to display read count plots
 		 Runs a previously created eHive "read_counts" pipeline
@@ -494,12 +508,14 @@ mysqlreadspipe	- Connects to the Read Counts pipeline DB
 
 :: Adding new Feature Type, Cell Type or Analysis
 Use the script ${EFG_SRC}/scripts/import/import_type.pl
+E.g.:
+perl $EFG_SRC/scripts/import/import_type.pl -type FeatureType -s mus_musculus -dbname $DB_NAME -pass $DB_PASS -name Rbbp5 -class 'Transcription Factor' -description 'Rbbp5 Transcription Factor Binding'
 
 New entries should be added to the files:
 ${EFG_SRC}/scripts/import/types/${SPECIES}.CellTypes.txt
 ${EFG_SRC}/scripts/import/types/FeatureTypes.txt
 
-This way all will be reentered next time you start a db from scratch
+This way all will be entered when you start a db from scratch
 
 :: Create complex Feature Types
 Some Feature Types are actually complexes composed of other Feature Types (eg. dimers)
@@ -606,13 +622,19 @@ This conversion must be done by yourself but the usage of it is automatic
 
 8 Known Issues/Caveats 
 
-- Hardcoded perl and naming conventions
+- Heavy tmp usage may make some jobs to fail
+You can tweak the analysis resources parameters [tmp>xxxx] in appropriate eHive _conf files
+This can particularly affect the ReadCounts pipeline, where jobs can fail that are not caught.
+In the case jobs fail you may need to restart everything from scratch for the sets that failed.
 
+- Hardcoded perl and naming conventions
 Some of the scripts contain hardcoded perl paths and name structures which may need to be edited.
 To use the pipeline, you need to comply to a rather strict file name convention 
+File Paths are case sensitive, regarding cell type and feature type names
 
 - Some Metadata may be assumed to preexist in the eFG DB
 Some data may need to preentered in eFG by hand, like experimental groups, XRef databases, etc...
+There are some scripts to help you do this. See Administrative Functions
 
 - The same SCHEMA_BUILD is assumed between the core and the efg dbs.
 Errors may occur if this is not the case. E.g. When running the motif matching job RunMotifMatch
