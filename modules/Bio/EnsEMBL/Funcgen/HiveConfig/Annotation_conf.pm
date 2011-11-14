@@ -106,7 +106,7 @@ sub pipeline_wide_parameters {
 	    #This could be inferred from the db, but it's probably safer(?) to pass as parameter...
 	    "species"      => $self->o('species'),
 
-	    "release"      => $self->o('release'),
+	    #"release"      => $self->o('release'),
 
 	  
     };
