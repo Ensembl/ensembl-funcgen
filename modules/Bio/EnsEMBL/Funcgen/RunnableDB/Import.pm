@@ -169,12 +169,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
     
   } else {
     
-    eval {
+    #eval {
       #This eval is because a few will crash because the slice is not in the sequence!!
       #Check that this is working as it should!...
       $Imp->register_experiment();
-    };
-    if($@){ warn "Carefull with possible failure in import: $@"; }
+    #};
+    #if($@){ warn "Carefull with possible failure in import: $@"; }
   }
 
   return 1;
