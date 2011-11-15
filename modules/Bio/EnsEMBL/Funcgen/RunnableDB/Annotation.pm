@@ -67,8 +67,9 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
   my $species = $self->param('species') || throw "No species defined";
   $self->_species($species);
 
-  my $release = $self->param('release') || throw "Release number not specified";
-  $self->_release($release);
+  #Not is use, currently...
+  #my $release = $self->param('release') || throw "Release number not specified";
+  #$self->_release($release);
 
   my $work_dir = $self->param('work_dir') || throw "'work_dir' is a required parameter"; 
   $self->_work_dir($work_dir);
