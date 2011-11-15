@@ -381,7 +381,6 @@ sub update_mage_xml_by_Experiment{
 }
 
 
-
 =head2 list_dbIDs
 
   Args       : None
@@ -401,6 +400,77 @@ sub list_dbIDs {
     return $self->_list_dbIDs('experiment');
 }
 
+
+sub fetch_experiment_filter_counts{
+  my $self = shift;
+
+   my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, ct.name, ct.description '.
+	'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, cell_type ct, '.
+	  'status s, status_name sn '.
+		'WHERE fs.experiment_id=e.experiment_id AND e.experimental_group_id=eg.experimental_group_id '.
+		  'AND fs.feature_type_id=ft.feature_type_id AND fs.cell_type_id=ct.cell_type_id '.
+			'AND fs.feature_set_id=s.table_id AND fs.type="annotated" AND s.table_name="feature_set" '.
+			  'AND s.status_name_id=sn.status_name_id and sn.name="DISPLAYABLE" '.
+				'GROUP BY eg.name, eg.is_project, ft.class, ct.name';
+
+  my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+  my $ftype_info = $self->db->get_FeatureTypeAdaptor->get_regulatory_evidence_info;
+
+  my %filter_info = ( 
+					 All => { count       => 0,
+							  type        => 'All',
+							  description => 'All experiments',
+							}
+					);
+  
+  foreach my $row(@rows){
+
+	my ($count, $project, $proj_desc, $is_proj, $ft_class, $ct_name, $ct_desc) = @$row;
+
+	#All counts
+	$filter_info{All}{count} += $count;
+
+	#Project counts
+	if($is_proj){
+
+	  if(! exists $filter_info{$project}){
+		$filter_info{$project} = { count       => 0,
+								   type        => 'Project',
+								   description => $proj_desc,
+								 };
+	  }
+
+	  $filter_info{$project}{count} += $count;
+	}
+
+	#Cell/Tissue counts
+	if(! exists $filter_info{$ct_name}){
+	  $filter_info{$ct_name} = { count       => 0,
+								 type        => 'Cell/Tissue',
+								 description => $ct_desc,
+							   };
+	}	
+	$filter_info{$ct_name}{count} += $count;
+	
+	#Evidence class counts
+	#Do we want to split this into ft.class
+	#i.e. split 'DNase1 & TFBS'
+	my $ft_class_label = $ftype_info->{$ft_class}{label};
+
+	if(! exists $filter_info{$ft_class_label}){
+	  $filter_info{$ft_class_label} = { count       => 0,
+									   type        => 'Evidence type',
+									   description => $ftype_info->{$ft_class}{long_name},
+									 };
+	}
+	$filter_info{$ft_class_label}{count} += $count;
+  }
+
+  return \%filter_info;
+
+  #Do we need to add an 'in_build' filter /data field?
+
+}
 
 
 1;
