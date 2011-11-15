@@ -1129,7 +1129,8 @@ sub _create_pattern_results_tables{
     my @sql;
     push @sql,"drop table if exists raw_overlap_results";
 
-    my $q = "create table raw_overlap_results (pattern varchar(60),total_reg_feats int(10)";
+    my $bitsize=255;
+    my $q = "create table raw_overlap_results (pattern varchar(${bitsize}),total_reg_feats int(10)";
     foreach my $gen (@$gen_feats_ref){
 	$q .= ",$gen"."_real int(10), $gen"."_mock int(10)";
     }
@@ -1140,8 +1141,8 @@ sub _create_pattern_results_tables{
 
     push @sql,"drop table if exists pattern_overlap_summary";
     push @sql,"drop table if exists pattern_overlap_summary_chi";
-    $q = "create table pattern_overlap_summary (pattern varchar(60)";
-    my $q1 = "create table pattern_overlap_summary_chi (pattern varchar(60)"; 
+    $q = "create table pattern_overlap_summary (pattern varchar(${bitsize})";
+    my $q1 = "create table pattern_overlap_summary_chi (pattern varchar(${bitsize})"; 
     my $q2 = "insert into pattern_overlap_summary select pattern";
     my $q3 = "insert into pattern_overlap_summary_chi select pattern";
     foreach my $gen (@$gen_feats_ref){
