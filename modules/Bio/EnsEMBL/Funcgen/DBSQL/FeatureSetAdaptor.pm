@@ -50,12 +50,115 @@ use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
-
-
-#May need to our this?
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
+#Exported from BaseAdaptor
+$true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
+@{$tables{feature_set}} = @{$true_tables{feature_set}};
+#No need for true_final_clause
 
+
+	
+#No longer using coderefs(can) in here, so we can move this to head
+
+my %constraint_config = 
+  (
+   #Need to bind param these as they come from URL parameters and are not tested
+		 
+   project => {
+			   tables    => (['experiment', 'e']),
+			   #['experimental_group', 'eg']),
+			   #contraint => ' fs.experiment_id=e.experiment_id AND '.
+			   #'e.experiment_id=eg.experiment_id AND eg.is_project=1 AND '.
+			   #' eg.name=? ',
+					 
+			   #validate_method => $self->can('is_stored_and_valid'),
+			   #Need to test is project here too? Or do this in sql?
+					 
+			   #Need to define validte method params and arg postion for filter arg
+			   #validate_params => ['Bio::EnsEMBL::Funcgen::ExperimentalGroup', undef],
+			   #validate_arg_idx => 1,
+			   compose_constraint => sub 
+			   { my ($self, $eg) = @_;
+				 $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $eg);
+					   
+				 if (! $eg->is_project) {
+				   throw("You have passed an ExperimentalGroup which is not a project:\t".$eg->name);
+				 }
+					 
+				 return ' fs.experiment_id=e.experiment_id AND '.
+				   'e.experimental_group_id='.$eg->dbID; #constraint;
+			   },
+			  },
+					 
+	
+   evidence_type => 
+   {
+	tables     => (['feature_type', 'ft']),
+	#constraint => ' fs.feature_type_id=ft.feature_type_id '.
+	#' AND ft.class IN (?',
+	#in_values  => {
+	#				 'DNase1 & TFBS' => ['Open Chromatin', 
+	#									 'Transcription Factor', 
+	#									 'Transcription Factor Complex'],
+	#				 
+	#				 'Hists & Pols'  => ['Histone',
+	#									 'Polymerase'],
+	#				},
+
+	compose_constraint => sub { 
+	  my ($self, $etype) = @_;
+			
+	  #Does this need to return the in_values
+	  #As this is part of the validation
+	  #Conflating validation and arg setting here?
+
+	  #contraint need to move in here too?
+	  #or can we still build this generically
+			
+	  #either bind param or build in sub
+	  #as handling string encaspusulation
+	  #will be a pain
+
+	  #Handle in sub
+			
+	  my %in_values = 
+		(
+		 'DNase1 & TFBS' => ['Open Chromatin', 
+							 'Transcription Factor', 
+							 'Transcription Factor Complex'],
+			   
+		 'Hists & Pols'  => ['Histone',
+							 'Polymerase'],
+		);
+
+	  if (! exists $in_values{$etype}) {
+		throw("You have passed an invalid evidence type filter argument($etype)\n".
+			  "Please use one of the following:\t".join(' ,', keys(%in_values)));
+	  }
+
+	  return ' fs.feature_type_id=ft.feature_type_id AND ft.class IN ("'.
+		join('", "', @{$in_values{$etype}}).'")'; #constraint
+	},
+   },
+
+		 
+   cell_type    => 
+   {
+	#tables => (['cell_type', 'ct']),
+	#constraint => ' fs.cell_type_id=ct.cell_type_id AND ct.name=? ',
+	#No need to extend if we are passing the obj as a param
+
+	compose_constraint => sub 
+	{ my ($self, $ct) = @_;
+	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ct);
+	  return ' fs.cell_type_id='.$ct->dbID; #constraint
+	},
+		  
+   },
+  );
+	  
+	  
 
 =head2 fetch_all_by_FeatureType
 
@@ -113,6 +216,102 @@ sub fetch_all_by_type {
     return $self->fetch_all_by_feature_class($type, $status);	
 }
 
+
+
+sub compose_constraint_query{
+  my ($self, $params) = @_;
+
+  #should we have this top level $params constraints key?
+  #This will allow other params to be passed
+  #But won't all be *constraints*
+  #Can't throw if defined but constraints not present as this $params
+  #may be for something else
+  
+  #Developed for Experiment view filters, but generally applicable by all methods
+  #May need to allow >1 contraint
+  my @constraints;
+
+  if( (ref($params) eq 'HASH') &&
+	  exists ${$params}{constraints}){
+	
+	#Options:
+	# 1 composable adaptor i.e. query extension just for filter
+	# 2 fetch all and filter in here? This is just recreating what the web code is currently doing
+	# 3 ExperimentAdaptor method to pull back the individual values, and bypasses all the object generation
+	#   Too complex/error probe with xrefs and MFs
+	
+	# Let's do 1
+	
+	
+	# Should we be passing objects here instead?
+	# Evidence type is not an object
+	# We have some redundancy between cell type arg and filter
+	# Change these to require objects where possible?
+	# This would simplify the contraints a little and allow validation of objects
+	# This would prevent need to bind_param
+
+	
+	my @filter_names = keys (%{$params->{constraints}});
+
+	#if (scalar(@filter_names) != 1) {
+	#  throw("Filter params passed but not defined or more than one:\t@filter_names");
+	#}
+
+	foreach my $constraint_key(keys (%{$params->{constraints}})){
+
+	  if (! exists $constraint_config{$constraint_key}) {
+		throw($constraint_key." is not a valid filter please specify values for one of:\t".
+			  join(', ', keys(%constraint_config)));
+	  }
+
+	  my $c_arg = $params->{constraints}{$constraint_key};
+
+	  #if(ref($c_arg) ne 'SCALAR'){
+	  #throw("Constraint value must be a defined SCALAR, not:\t$c_arg");
+	  #}
+		 
+
+	  #if (scalar(@filter_args) != 1) {
+	  #	throw('Can only specify one '.$filter_names[0]." filter argument, not:\t@filter_args");
+	  #  }
+	  
+	  my $c_config = $constraint_config{$constraint_key};
+
+
+	  if (exists ${$c_config}{tables}) {
+		push @{$tables{feature_set}}, $c_config->{tables};
+	  }
+
+	  push @constraints, $c_config->{compose_constraint}->($self, $c_arg).' ';
+
+
+	  ##Set IN clause values
+	  #if(exists ${$fconfig}{in_values}){
+	  #	#Validate arg value type here?
+	  #	@filter_args = @{$fconfig->{in_values}{$filter_args[0]}};
+	  #  }
+	  
+	  
+	  # $self->bind_param_generic_fetch($filter_args[0]);
+	  # shift @filter_vals;
+	  
+	  # #Deal with IN clause
+	  # if(@filter_vals){
+	  
+	  #	foreach my $arg(@filter_args){
+	  #	  $self->bind_param_generic_fetch($args);
+	  #	  $sql .= ', ?';
+	  #	}
+	  #  
+	  #	$sql .= ')';
+	  #  }
+	} # END OF CONSTRAINTS
+  }	# END OF $PARAMS				
+
+  return join(' AND ', @constraints) || '';
+}
+
+
 =head2 fetch_all_by_feature_class
 
   Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation' or 'external'
@@ -123,27 +322,51 @@ sub fetch_all_by_type {
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
   Exceptions : Throws if type not defined
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - Move status to params hash
 
 =cut
 
 sub fetch_all_by_feature_class {
-    my ($self, $type, $status, $ctype) = @_;
+    my ($self, $type, $status, $ctype, $params) = @_;
     
-    throw('Must provide a feature_set type') if(! defined $type);	
+	throw('Must provide a feature_set type') if(! defined $type);	
     my $sql = "fs.type = '".$type."'";
 
+
+	#Some redundancy over $ctype arg and $params cell_type
+	
+	if(defined $ctype){
+
+	  if((ref($params) eq 'HASH') &&
+		 exists ${$params}{cell_type}){
+		throw('You have specified both a CellType arg and a cell_type value in the \$params hash, please use one or the other');
+	  }
+	  
+	  $params->{constraints}{cell_type} = $ctype;
+	}
+
+	my $constraint = $self->compose_constraint_query($params);
+	$sql .=  " AND $constraint " if $constraint;
+
+
+	#STATUS clause - integrate this into compose_query_constraint
     if($status){
-      my $constraint = $self->status_to_constraint($status);
-      $sql = (defined $constraint) ? $sql." AND ".$constraint : undef;
+	  #Could replace this with query extension now we are doing it for the filters
+      $constraint = $self->status_to_constraint($status);
+      $sql .= (defined $constraint) ? " AND ".$constraint : '';
     }
 
-	if($ctype){
-	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
-	  $sql .= " AND fs.cell_type_id = '".$ctype->dbID()."'";
-	}
-	
-    return (defined $sql) ? $self->generic_fetch($sql) : [];	
+	#CELLTYPE clause
+	#if($ctype){
+	#  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
+	#  $sql .= " AND fs.cell_type_id = '".$ctype->dbID()."'";
+	#}
+
+	#Get result and reset true tables
+	my $result = (defined $sql) ? $self->generic_fetch($sql) : [];
+	@{$tables{feature_set}} = @{$true_tables{feature_set}};
+
+    return $result;
 }
 
 
@@ -154,6 +377,7 @@ sub fetch_all_by_feature_class {
 
   Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
   Arg [2]    : Bio::EnsEMBL::Funcgen::CellType (optional)
+  Arg [3]    : Hashref - params hash (optional)
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
   Description: Wrapper method for fetch_all_by_type
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
@@ -164,9 +388,10 @@ sub fetch_all_by_feature_class {
 =cut
 
 sub fetch_all_displayable_by_type {
-    my ($self, $type, $ctype) = @_;
+    my ($self, $type, $ctype, $params) = @_;
   
-	$self->fetch_all_by_feature_class($type, 'DISPLAYABLE', $ctype);
+	#Move status to config hash
+	$self->fetch_all_by_feature_class($type, 'DISPLAYABLE', $ctype, $params);
 }
 
 
@@ -315,8 +540,8 @@ sub fetch_attributes {
 
 sub _tables {
 	my $self = shift;
-	
-	return (['feature_set',     'fs']);
+
+	return @{$tables{feature_set}};
 }
 
 =head2 _columns
@@ -335,7 +560,11 @@ sub _tables {
 sub _columns {
 	my $self = shift;
 	
-	return qw( fs.feature_set_id fs.feature_type_id fs.analysis_id fs.cell_type_id fs.name fs.type fs.description fs.display_label fs.experiment_id);
+	return qw( fs.feature_set_id fs.feature_type_id 
+			   fs.analysis_id fs.cell_type_id 
+			   fs.name fs.type 
+			   fs.description fs.display_label 
+			   fs.experiment_id);
 }
 
 
@@ -578,7 +807,6 @@ sub fetch_attribute_set_config_by_FeatureSet{
 
     return $self->{attribute_set_config}->{$fset->dbID};
   }
-
 
 
 
