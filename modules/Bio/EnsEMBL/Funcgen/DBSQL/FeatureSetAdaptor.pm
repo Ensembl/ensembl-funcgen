@@ -197,7 +197,16 @@ $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
 	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ft);
 	  return ' fs.feature_type_id='.$ft->dbID;
 	},
-   }
+   },
+
+   analysis =>
+   {
+	compose_constraint => sub 
+	{ my ($self, $anal) = @_;
+	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $anal);
+	  return ' fs.analysis_id='.$anal->dbID;
+	},
+   },
   );
 	  
 	  
@@ -284,17 +293,18 @@ sub fetch_all_by_feature_class {
   if(defined $params){ 	#Some redundancy over $ctype arg and $params cell_type
 
 	if( ref($params) eq 'Bio::EnsEMBL::Funcgen::CellType'){
-	  #my $ctype = $params;
-	  $params = {constraints => {cell_type => $params}}; 
+	  $params = {constraints => {cell_type => $params}};
 	}
 	elsif(ref($params) ne 'HASH'){
 	  throw('Argument must be a Bio::EnsEMBL::Funcgen::CellType or a params HASH');
 	}
-
-    if($status){
-	  $params->{constraints}{status} = $status;
-    }
   }
+
+
+  if($status){
+	$params->{constraints}{status} = $status;
+  }
+  
 
   #Deal with params constraints
 	my $constraint = $self->compose_constraint_query($params);
@@ -380,33 +390,44 @@ sub fetch_all_by_CellType {
 =cut
 
 sub fetch_all_by_FeatureType_Analysis {
-    my ($self, $ftype, $anal, $ctype) = @_;
-    
-
-	my $sql = '';
-
-    if(! ($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())){
-      throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureType object");
-    }
-	
-	if(! ($anal && $anal->isa("Bio::EnsEMBL::Analysis") && $anal->dbID())){
-      throw("Must provide a valid stored Bio::EnsEMBL::Analysis object");
-    }
-
-	if($ctype){
-
-	  if(! ($ctype->isa("Bio::EnsEMBL::Funcgen::CellType") && $ctype->dbID())){
-		throw("Argument must be a valid stored Bio::EnsEMBL::Funcgen::CellType object");
-	  }
-	  
-	  $sql = ' AND fs.cell_type_id='.$ctype->dbID();
-	}
-
-
-    $sql = 'fs.feature_type_id ='.$ftype->dbID().' AND fs.analysis_id='.$anal->dbID().$sql;
+  my ($self, $ftype, $anal, $ctype) = @_;
+  
+  my $params = {constraints => 
+				{
+				 feature_type => $ftype,
+				 analysis     => $anal,
+				}
+			   };
+  $params->{constraints}{cell_type} = $ctype if $ctype;
 
   
-    return $self->generic_fetch($sql);	
+
+  
+  my $sql = '';
+  
+  #if(! ($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())){
+  #	throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureType object");
+  #  }
+	
+  if(! ($anal && $anal->isa("Bio::EnsEMBL::Analysis") && $anal->dbID())){
+	throw("Must provide a valid stored Bio::EnsEMBL::Analysis object");
+  }
+
+  #if($ctype){
+
+#	if(! ($ctype->isa("Bio::EnsEMBL::Funcgen::CellType") && $ctype->dbID())){
+#	  throw("Argument must be a valid stored Bio::EnsEMBL::Funcgen::CellType object");
+#	}
+#	
+#	$sql = ' AND fs.cell_type_id='.$ctype->dbID();
+#  }
+
+
+  #$sql = 'fs.feature_type_id ='.$ftype->dbID().' AND fs.analysis_id='.$anal->dbID().$sql;
+
+  #No need to reset tables for these
+  return $self->generic_fetch($self->compose_constraint_query($params));	
+  #return $self->generic_fetch($sql);	
 }
 
 =head2 fetch_by_name
