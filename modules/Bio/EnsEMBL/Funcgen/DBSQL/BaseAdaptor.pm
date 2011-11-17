@@ -54,14 +54,70 @@ use DBI qw(:sql_types);
 
 #Declare table registers for query extentions
 #May need to add final clause register too
-our (%tables, %true_tables);
+our (%tables, %true_tables, %constraint_config);
 
-@EXPORT    = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables', '%constraint_config');
 
 
 
-#do we want to keep the IMPORTED_CS status for feature_sets/array_chips?
-#rename to MAPPED_CS_N?
+=head2 compose_constraint_query
+
+  Arg [1]    : Hash - Params hash containing 'constraints' key value pairs
+  Example    : my @fsets = $fs_adaptopr->fetch_all_by_FeatureType($type);
+  Description: Retrieves FeatureSet objects from the database based on feature_type id.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : Throws if arg is not a valid FeatureType
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+#Add support for final_clause
+
+sub compose_constraint_query{
+  my ($self, $params) = @_;
+
+  #Top level constraints key to allow other params to be passed
+  #Hence can't throw if defined but constraints not present as maybe for something else
+  #Won't all params be constraints?
+  
+  #Other options for Experiment view were:
+  # 2 fetch all and filter in here? This is just recreating what the web code is currently doing
+  # 3 ExperimentAdaptor method to pull back the individual values, and bypasses all the object generation
+  #   Too complex/error probe with xrefs and MFs
+  
+  my @constraints;
+
+  if( (ref($params) eq 'HASH') &&
+	  exists ${$params}{constraints}){
+		
+	my @filter_names = keys (%{$params->{constraints}});
+
+	foreach my $constraint_key(keys (%{$params->{constraints}})){
+
+	  if (! exists $constraint_config{$constraint_key}) {
+		throw($constraint_key." is not a valid filter please specify values for one of:\t".
+			  join(', ', keys(%constraint_config)));
+	  }
+
+	  #Get contraint arg and config
+	  my $c_arg = $params->{constraints}{$constraint_key};
+	  my $c_config = $constraint_config{$constraint_key};
+
+	  #Add tables as required
+	  if (exists ${$c_config}{tables}) {
+		push @{$tables{feature_set}}, $c_config->{tables};
+	  }
+
+	  #Build constraints
+	  push @constraints, $c_config->{compose_constraint}->($self, $c_arg).' ';
+	  
+	} # END OF CONSTRAINTS
+  }	# END OF $PARAMS				
+
+  return join(' AND ', @constraints) || '';
+}
+
 
 
 =head2 store_states
@@ -76,6 +132,8 @@ our (%tables, %true_tables);
 
 =cut
 
+#do we want to keep the IMPORTED_CS status for feature_sets/array_chips?
+#rename to MAPPED_CS_N?
 
 sub store_states{
   my ($self, $storable) = @_;
@@ -184,18 +242,15 @@ sub fetch_all_by_status{
 sub status_to_constraint{
   my ($self, $status) = @_;
   
+  #This is now supported in compose_constraint_query
+  #Which avoid some of the problems below
+
   my $constraint;
 
   #This will throw if status not valid, but still may be absent
   my $status_id = $self->_get_status_name_id($status);
 
-  
-  #THIS DOES NOT ACCOMODATE THE EXPEIRMENTAL_SUBSET ISSUE!!
-
-  #NO we need to handle this better
-  #can't just return as we'd then simply ignore the contraint
-  #can't throw??
-  
+    
   return if (! $status_id);
   
   my @tables = $self->_tables;
@@ -210,9 +265,7 @@ sub status_to_constraint{
   #Hence we return nothing
 
   $constraint = " $syn.${table_name}_id IN (".join(',', @status_ids).")" if @status_ids;
-  
   return $constraint;
-
 }
 
 
@@ -452,7 +505,7 @@ sub revoke_states{
   Returntype : None
   Exceptions : None
   Caller     : Import parsers and RunnableDBs
-  Status     : At risk
+  Status     : At risk - move to BaseImporter
 
 =cut
 
