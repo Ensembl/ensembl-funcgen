@@ -225,20 +225,24 @@ sub is_stored_and_valid{
 =head2 are_stored_and_valid
 
   Arg [1]    : string - class namespace
-  Arg [1]    : ARRAYREF os Bio::EnsEMBL::Funcgen::Storable objects e.g. ResultSet 
+  Arg [2]    : ARRAYREF os Bio::EnsEMBL::Funcgen::Storable objects e.g. ResultSet 
+  Arg [3]    : String : return value method name
   Example    : $db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', \@rsets);
-  DESCRIPTION: Wrapper for is_Stored_and_valid
-  Returntype : none
+  DESCRIPTION: Wrapper for is_stored_and_valid. Will optionally return array of values
+               defined by calling method name arg on each object passed 
+  Returntype : ARRAYREF - contents defined by optional method name arg
   Exceptions : Throws if object list is not an ARRAY with at least one element
   Caller     : general 
   Status     : At risk
 
 =cut
 
-
+#Add method params?
 
 sub are_stored_and_valid{
-  my ($self, $class, $obj_list) = @_;
+  my ($self, $class, $obj_list, $method_name) = @_;
+
+  my @return_vals;
 
   if( (ref($obj_list) ne 'ARRAY') ||
 	  (scalar(@$obj_list) <=0) ){
@@ -247,9 +251,14 @@ sub are_stored_and_valid{
 
   foreach my $obj(@$obj_list){
 	$self->is_stored_and_valid($class, $obj);
+
+	if($method_name){
+	  #test can method here?
+	  push @return_vals, $obj->$method_name;
+	}
   }
 
-  return;
+  return \@return_vals;
 }
 
 
