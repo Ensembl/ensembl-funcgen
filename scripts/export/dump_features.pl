@@ -51,6 +51,8 @@
 #Unless we put all the dump method in the Feature class and always use Bio::EnsEMBL::Funcgen::ProbeFeature->$data_method?
 #other data methods would have to be subs 
 
+# Do we need to support seq_region and local coords?
+
 use warnings;
 use strict;
 use Getopt::Long;
@@ -109,7 +111,6 @@ GetOptions
    'feature_sets=s{,}' => \@fset_names,
    'result_sets=s{,}'  => \@rset_names,
    'window_size=s'     => \$window_size,
-   #@rset_ids?
    #Change this to feature_sets to allow merged dumps from same feature class.
    'array=s'          => \$array,#Change this to \@arrays?
    'vendor=s'         => \$vendor,
@@ -204,6 +205,7 @@ my $slice_a  = $db->get_SliceAdaptor;
 my $fset_a   = $db->get_FeatureSetAdaptor;
 my $rset_a   = $db->get_ResultSetAdaptor;
 my $array_a  = $db->get_ArrayAdaptor;
+my $mf_a     = $db->get_MotifFeatureAdaptor;
 
 # VALIDATE input types
 my $input_type_cnt = 0;
@@ -211,33 +213,41 @@ map {$input_type_cnt++ if $_ } (scalar(@fset_names), $array, scalar(@rset_names)
 
 if( (! $input_type_cnt) || ($input_type_cnt > 1) ){
   die("You have specify dump type params from one of the following:\n".
-	  "\t-array and -vendor\n\t-feature_sets\n\t-result_sets\n");
+	  "\t-array and -vendor\n\t-feature_sets\n\t-result_sets\n\t-motif_features");
 }
 
 
 #Handle merged regulation evidence dumps
 #These should have been specified: -feature_sets AnnotatedFeatures
+my $dump_mfs;
 
-if(@fset_names && 
-   ($fset_names[0] eq 'AnnotatedFeatures')){
+if(@fset_names){
+
+  if($fset_names[0] eq 'AnnotatedFeatures'){
   
-  #Could do this via meta strings?
-  my %fset_names;
-  my $dset_a = $db->get_DataSetAdaptor;
-
-  foreach my $rf_fset(@{$fset_a->fetch_all_by_feature_class('regulatory')}){
-
-	if($rf_fset->name =~ /v[0-9]+$/){
-	  warn "Skipping archived set:\t".$rf_fset->name.
-		"\nThis should be removed before release\n";
-	  next;
+	#Could do this via meta strings?
+	my %fset_names;
+	my $dset_a = $db->get_DataSetAdaptor;
+	
+	foreach my $rf_fset(@{$fset_a->fetch_all_by_feature_class('regulatory')}){
+	  
+	  if($rf_fset->name =~ /v[0-9]+$/){
+		warn "Skipping archived set:\t".$rf_fset->name.
+		  "\nThis should be removed before release\n";
+		next;
+	  }
+	  
+	  map {$fset_names{$_->name} = undef} 
+		@{$dset_a->fetch_by_product_FeatureSet($rf_fset)->get_supporting_sets};
 	}
-
-	map {$fset_names{$_->name} = undef} 
-	  @{$dset_a->fetch_by_product_FeatureSet($rf_fset)->get_supporting_sets};
+	
+	@fset_names = keys %fset_names;
+	
   }
-
-  @fset_names = keys %fset_names;
+  elsif($fset_names[0] eq 'MotifFeatures'){
+	$dump_mfs = 1;
+	@fset_names = ();
+  }
 }
   
 
@@ -356,7 +366,7 @@ elsif(@fset_names){
   @output_names     = @fset_names;
   $feature_adaptor	= $fsets[0]->get_FeatureAdaptor;
 }
-else{ #@rset_names
+elsif(@rset_names){
   #can't do merged dump 
   #do this must farm by slice and result set!
   
@@ -413,6 +423,16 @@ else{ #@rset_names
   #This also assumes we chdir so paths are local
   $compression_args = " -clip ${file_name}.wig ${file_name}.chrom.sizes ${file_name}.bigwig";
 }
+elsif($dump_mfs){
+  $feature_class = 'MotifFeature';
+  #$dump_name = ?;
+  $file_name       = $dump_name;
+  @fetch_params     = ();
+  @header_params    = ();#?
+  @output_names     = ();# @fset_names;#?
+  $feature_adaptor	= $mf_a;
+}
+
 
 
 my $lsf_dir;
@@ -537,6 +557,7 @@ my %format_subs = (
 				   'get_RegulatoryFeature_GFF' => \&get_RegulatoryFeature_GFF,
 				   'get_AnnotatedFeature_GFF'  => \&get_AnnotatedFeature_GFF,
 				   'get_AnnotatedFeature_BED'  => \&get_AnnotatedFeature_BED,
+				   'get_MotifFeature_GFF'   => \&get_MotifFeature_GFF,
 				   'get_ExternalFeature_GFF'   => \&get_ExternalFeature_GFF,
 				   'get_ResultFeature_WIG'        => \&get_ResultFeature_WIG,
 				   'get_ResultFeature_WIG_header' => \&get_ResultFeature_WIG_header,
@@ -556,6 +577,7 @@ my %fetch_methods = (
 					 'AnnotatedFeature'  => 'fetch_Iterator_by_Slice_FeatureSets',
 					 'ExternalFeature'   => 'fetch_Iterator_by_Slice_FeatureSets',
 					 'RegulatoryFeature' => 'fetch_Iterator_by_Slice_FeatureSets',
+					 'MotifFeature'      => 'fetch_Iterator_by_Slice',
 					);
 
 
@@ -618,7 +640,7 @@ foreach my $slice(@slices){
 	#Do this after feature fetch to avoid creating empty file
 	if($feats->has_next){
 	  $seen_feats = 1;
-	  $ofile = open_file($ofile_path, '>', 0775);
+	  $ofile = open_file($ofile_path, '>');
   
 	  if($conf_ref->{has_header}){
 		print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
@@ -635,7 +657,7 @@ foreach my $slice(@slices){
 	#Do this after feature fetch to avoid creating empty file
 	if(scalar(@$feats)){
 	  $seen_feats = 1;
-	  $ofile = open_file($ofile_path, '>', 0775);
+	  $ofile = open_file($ofile_path, '>');
 	  
 	  if($conf_ref->{has_header}){
 		print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
@@ -735,7 +757,7 @@ if($post_process){
 	}
   }
 
-  my $hfile = open_file($ofile_path.'.header', '>', 0775);
+  my $hfile = open_file($ofile_path.'.header', '>');
 
   #This need to include the global file header and omit slice header params
   $write_sr_header = 0;
@@ -812,7 +834,8 @@ sub get_RegulatoryFeature_GFF{
   
   return join("\t", (@{$gff}, 
 					 join('; ', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id(), 
-								 'bound_start='.$feature->bound_start, 'bound_end='.$feature->bound_end, 
+								 'bound_start='.$feature->bound_seq_region_start, 
+								 'bound_end='.$feature->bound_seq_region_end, 
 								 'Note=Consists of following features: '.join(' ', @attrs)))))
 	."\n";
 
@@ -844,6 +867,9 @@ sub get_AnnotatedFeature_GFF{
   return join("\t", @$gff)."\n"; 
 }
 
+
+
+
 sub get_associated_MotifFeature_GFF_attributes{
   my ($mf_assocd_feature) = @_;
 
@@ -863,6 +889,15 @@ sub get_associated_MotifFeature_GFF_attributes{
   #Just return arrayref?
   return $pwm_names;
 }
+
+sub get_MotifFeature_GFF{
+  my ($feature) = @_;
+  my $gff = &get_GFF(@_);
+
+  #display_label gives ftype_name:pwm_name
+  return join("\t", @$gff)."\tName=".$feature->display_label."\n";
+}
+
 
 
 sub get_ExternalFeature_GFF{
@@ -939,7 +974,7 @@ sub get_GFF{
   #DNA Binding site?
   #Histone Modification etc
 
-  my @gff = ($seq_name, $dbname, $feature_class, $feature->start, $feature->end, 
+  my @gff = ($seq_name, $dbname, $feature_class, $feature->seq_region_start, $feature->seq_region_end, 
 			 '.', $conf_ref->{strand}->{$feature->seq_region_strand}, '.');
 
   #Set size to mandatory fields
