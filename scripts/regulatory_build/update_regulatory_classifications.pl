@@ -26,8 +26,12 @@ update_regulatory_classifications.pl
 =head1 SYNOPSIS
 
 
+
 =head1 DESCRIPTION
 
+This script update the regulatory_feature feature_type_id values based on the output of the 
+regulatory classification pipeline. It also produces a simple report which counts the transitions
+of feature_types between the previous and current builds.
 
 =head1 OPTIONS
 
@@ -53,6 +57,7 @@ update_regulatory_classifications.pl
 
 #To do
 # 1 Add new/old DB support. To enable reports when old/archived feature sets have been overwritten/removed in the dev DB
+# 2 Add -cell_types -skip_cell_types params
 
 use strict;
 

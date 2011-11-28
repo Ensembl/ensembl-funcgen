@@ -190,12 +190,13 @@ my ($pass,$port,$host,$user,$dbname,
     $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
     $clobber,$focus_max_length, @slices, @skip_slices, $non_ref,
     $focus_extend, $dump,$gene_signature, $ctype_projection, $use_tracking,
-    $debug_start, $debug_end, $version, @focus_names, @attr_names, $local);
+    $debug_start, $debug_end, $version, @focus_names, @attr_names, $local, $on_farm);
 
 
-
+my $bsub_mem = '';
 #Declare to avoid only used once warnings;
 $main::_tee      = undef;
+$main::_no_log   = undef;
 $main::_log_file = undef;
 my @tmp_args = @ARGV;
 
@@ -241,8 +242,11 @@ GetOptions (
 			'include_mt'          => \$include_mt,
 			'version=s'           => \$version,
 			'local'               => \$local,
+			'bsub_mem=i'          => \$bsub_mem,
+			'_on_farm'            => \$on_farm,
 			'tee'                 => \$main::_tee,
-			'logfile=s'             => \$main::_log_file,
+			'logfile=s'           => \$main::_log_file,
+			'no_log'              => \$main::_no_log,  
 	
 			'help|?'         => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
 		   ) or pod2usage( -exitval => 1);
@@ -252,7 +256,6 @@ my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
 $helper->log("build_regulatory_features.pl @tmp_args");
 
 die('focus_extend may not safe, check update_attributes') if $focus_extend;
-
 
 #Allow comma separated quoted names containing spaces
 @focus_names = split(/,/o, join(',',@focus_names));
@@ -386,18 +389,20 @@ my ($dset_states, $rset_states, $fset_states) = $helper->get_regbuild_set_states
 # parse focus and attribute sets and check that they exist
 my (%focus_fsets, %attrib_fsets);
 
+$helper->log_header("Fetching ".scalar(@focus_names)." input focus FeatureSets");
+
+
 foreach my $fname(@focus_names){
-  my $fset = $fsa->fetch_by_name($fname); 
-  warn "Fetching focus set:\t$fname\n" if $debug_start;
+  my $fset = $fsa->fetch_by_name($fname);
   die("Focus set $fname does not exist in the DB") if (! defined $fset); 
-  $focus_fsets{$fset->dbID} = $fset; 
+  $focus_fsets{$fset->dbID} = $fset;
 }
-  
-foreach my $aname(@attr_names){ 
+
+$helper->log_header("Fetching ".scalar(@attr_names)." input non-focus FeatureSets");
+foreach my $aname(@attr_names){
   my $fset = $fsa->fetch_by_name($aname);
-  warn "Fetching attribute set:\t$aname\n" if $debug_start;
-  die("Attribute set $aname does not exist in the DB") if (! defined $fset); 
-  $attrib_fsets{$fset->dbID()} = $fset; 
+  die("Non-focus set $aname does not exist in the DB") if (! defined $fset); 
+  $attrib_fsets{$fset->dbID()} = $fset;
 }
 
 
@@ -517,7 +522,7 @@ else{
 		$some_old_archived = 1;
 	  }
 	}
-
+	
 	
 	if($some_old_archived && $some_old_not_archived){
 	  die("Archiving of the old RegulatoryFeature(v${old_version}) set has not be completed correctly.\n".
@@ -751,9 +756,9 @@ $analysis = $aa->fetch_by_logic_name($logic_name);
 #As rollback will fail for full delete otherwise?
 
 push @skip_slices, 'MT' if ! $include_mt;#Always skip MT by default
-#Is this inc dups here 
+#We currently include duplciations here as we assume that all the input data has been 
+#filtered appropriately i.e. we won't get data on Y PAR.
 @slices = @{&generate_slices_from_names($sa, \@slices, \@skip_slices, 'toplevel', $non_ref, 'inc_dups')};
-
 
 #Hack to update dset stored without reg string
 #foreach my $ctype(keys %cell_types){
@@ -773,23 +778,70 @@ my $rfsets = &get_regulatory_FeatureSets($analysis, \%cell_types);
 #Well, it will be when rollback_FeatureSet supports multiple slices
 my $sr_name;
 
-if (! $local){ #BSUB!
+
+#Create temp table to speed up AnnotatedFeature dumps
+
+#if( ((! $on_farm ) && (! $no_dump_annotated_features)) ||
+#	(! $on_farm) ){
+
+if( ! ($on_farm || $no_dump_annotated_features) ){
+
+  my $sql = 'DROP TABLE IF EXISTS `temp_annotated_motif_features`;';
+  $db->dbc->db_handle->do($sql);
+
+  $sql ='CREATE TABLE `temp_annotated_motif_features` ('.
+	'`annotated_feature_id` int(10) unsigned NOT NULL,'.
+		'`mf_ids` varchar(1000) NOT NULL,'.
+		  'PRIMARY KEY  (`annotated_feature_id`)'.
+			') ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000';
+  $db->dbc->db_handle->do($sql);
+  #mf_ids sets very long to avoid possible truncations
+  #wont group concat encounter truncations here anyway?
+  #| group_concat_max_len       | 1024  |
+  #max length for mouse is 363
   
+    
+  $sql = 'insert into temp_annotated_motif_features select amf.annotated_feature_id, group_concat(mf1.motif_feature_id) FROM  motif_feature mf1, associated_motif_feature amf WHERE amf.motif_feature_id=mf1.motif_feature_id GROUP by amf.annotated_feature_id ORDER BY NULL;';
+  #ORDER BY NULL statement after GROUP_BY avoids unnecessary sorting with filesort
+  #leave this to optimize/analyze
+  $db->dbc->db_handle->do($sql);
+  $sql = 'analyze table temp_annotated_motif_features;';
+  $db->dbc->db_handle->do($sql);
+  $sql = 'optimize table temp_annotated_motif_features;';  
+  $db->dbc->db_handle->do($sql)
+}
+
+if ( (! $local) &&
+	 (! $on_farm) ){ #BSUB!
+  
+  #Strip out some bsub params/flags
   @tmp_args = @{&strip_param_flags(\@tmp_args, ('local', 'non_ref', 'include_mt', 'tee'))};
-  @tmp_args = @{strip_param_args(\@tmp_args, ('slices', 'skip_slices'))};
+  @tmp_args = @{strip_param_args(\@tmp_args, ('slices', 'slice', 'skip_slice', 'skip_slices', 'logfile', 'bsub_mem'))};
+  #added a few option substrings in here to avoid duplication of params
   (my $bsubhost = $host) =~ s/-/_/g;
 
 
+  if($bsub_mem ne ''){
+	my $bsub_kb = $bsub_mem * 1000;
+	$bsub_mem = "-R 'select[mem>$bsub_mem] rusage[mem=$bsub_mem]' -M $bsub_kb";
+  }
+
+
+  #Submit slice jobs
+
   foreach my $slice(@slices){
 	$sr_name = $slice->seq_region_name;
-	my $bsub = "bsub -q normal -o $outdir/RegulatoryBuild_$sr_name.out -e $outdir/RegulatoryBuild_$sr_name.err ".
-	  "-J 'RegulatoryBuild_${sr_name}_${dbname}' -R 'select[my".$bsubhost."<80] rusage[my".$bsubhost."=10:duration=10]' -R 'select[mem>4000] rusage[mem=4000]' -M 4000000";
+
+	#Currently not handling PARs at this level
+	#All data should be pre filtered
+
+	my $bsub = "bsub -q long -o $outdir/RegulatoryBuild_$sr_name.$$.out -e $outdir/RegulatoryBuild_$sr_name.$$.err ".
+	  "-J 'RegulatoryBuild_${sr_name}_${dbname}' -R 'select[my".$bsubhost."<800] rusage[my".$bsubhost."=10:duration=10]' $bsub_mem";
 	
-	my $cmd = "$ENV{EFG_SRC}/scripts/regulatory_build/build_regulatory_features.pl -local -slices $sr_name @tmp_args";
+	my $cmd = "$ENV{EFG_SRC}/scripts/regulatory_build/build_regulatory_features.pl -_on_farm -no_log -slices $sr_name @tmp_args";
 	  
 	$helper->log("Submitting job for slice:\t".$sr_name);
 	system("$bsub $cmd") && die("Can't submit job array to farm");#Is this failure getting caught properly?
-
   }
   
   $helper->log("Output can be found here:\t$outdir");
@@ -872,7 +924,7 @@ while (<$fh>) {
   #This will not run with a subslice properly
   
   
-
+  warn $_ if $start == 234161;
 
   if ($debug_start) {
 	next if ($start < $debug_start);
@@ -1115,26 +1167,52 @@ warn("ERROR:\tInconsistencies were found between some of your focus sets and the
 ###############################################################################
 # dump annotated features for given seq_region to file
 sub dump_annotated_features{
-  #To do, remove this and just slurp directly into perl!
+ 
+
 
 
   my @fset_ids = keys %attrib_fsets;
   $helper->log("Dumping ".scalar(@fset_ids)." AnnotatedFeature Sets for slice:\t".$slice_name);
+  
+
+#SELECT af.annotated_feature_id, af.seq_region_id, 4 as 'name', seq_region_start, seq_region_end, seq_region_strand, score, feature_set_id, mf.mf_ids FROM annotated_feature af LEFT JOIN temp_annotated_motif_features mf ON mf.annotated_feature_id=af.annotated_feature_id WHERE af.seq_region_id=222 AND af.feature_set_id in (90,99,116,88,141,144,100,110,147,83,95,115,109,112,92,103,145,89,151,148,140,113,150,104,152,155,142,91,143,93,154,106,105,149,85,97,146,153,81,98,117,86) order by seq_region_start, seq_region_end;
+
 
   my $sql = 'SELECT af.annotated_feature_id, af.seq_region_id, sr.name, '.
 	                'seq_region_start, seq_region_end, seq_region_strand, score, '.
 	                'feature_set_id, mf.mf_ids '.
 	          "FROM (select distinct(seq_region_id), name from seq_region where seq_region_id='${fg_sr_id}') sr, ".
 				    'annotated_feature af '.
-		 'LEFT JOIN (SELECT amf.annotated_feature_id, group_concat(mf1.motif_feature_id) as mf_ids '.
-		             'FROM  motif_feature mf1, associated_motif_feature amf '.
-			         'WHERE amf.motif_feature_id=mf1.motif_feature_id GROUP by amf.annotated_feature_id) mf '.
+		 'LEFT JOIN temp_annotated_motif_features mf '.
 				'ON mf.annotated_feature_id=af.annotated_feature_id '.
 			 'WHERE sr.seq_region_id=af.seq_region_id '.
-			   'AND af.feature_set_id in ('.join(',', @fset_ids).') order by seq_region_start, seq_region_end';
+  		   'AND af.feature_set_id in ('.join(',', @fset_ids).') order by seq_region_start, seq_region_end';
+
+  #Now uses temp table with indexes
+  #Still uses Using where; Using filesort
+  #File sort triggered by the ORDER by statement
+  #As most likely exceeds the sort | sort_buffer_size        | 8388608    |
+  #Could tweak this on a per session basis to avoid filesort?
+  #Setting to 4GB appears to have no impact
+  #Issue is that the seq_region_end are not in the index, so we can sort them in the index
+  #removing seq_region_end from the sort would fix this, but would this break the build?
+
+  #Originally tried with a tmp view, but still not using keys on derived tables.
+
+
+  #my $sql = 'SELECT af.annotated_feature_id, af.seq_region_id, sr.name, '.
+#	                'seq_region_start, seq_region_end, seq_region_strand, score, '.
+#	                'feature_set_id, mf.mf_ids '.
+#	          "FROM (select distinct(seq_region_id), name from seq_region where seq_region_id='${fg_sr_id}') sr, ".
+#				    'annotated_feature af '.
+#		 'LEFT JOIN (SELECT amf.annotated_feature_id, group_concat(mf1.motif_feature_id) as mf_ids '.
+#		             'FROM  motif_feature mf1, associated_motif_feature amf '.
+#			         'WHERE amf.motif_feature_id=mf1.motif_feature_id GROUP by amf.annotated_feature_id) mf '.
+#				'ON mf.annotated_feature_id=af.annotated_feature_id '.
+#			 'WHERE sr.seq_region_id=af.seq_region_id '.
+#  		   'AND af.feature_set_id in ('.join(',', @fset_ids).') order by seq_region_start, seq_region_end';
 	
-
-
+  #This was taking ages due to derived tables being created as tmp tables with no indices
 
   #Do we really need the join to sr, can we not just dump the sr_ids instead of the names?
   #We use the core_sr_id to build the slices anyway
@@ -1195,7 +1273,9 @@ sub add_focus{
   $rf_size +=1; 
   
 
-  if(defined $mf_ids){  #Cache MotifFeature ids - don't project
+  if( defined $mf_ids &&
+	  ($mf_ids ne 'NULL') ){  #Cache MotifFeature ids - don't project
+
 	my @motif_feature_ids = split/,/, $mf_ids;
 	
 	$rf[$rf_size]->{motif_feature_ids}{$ctype}    ||= [];
@@ -1262,7 +1342,8 @@ sub update_focus{
   }
 
 
-  if(defined $mf_ids){  #Cache MotifFeature ids - don't project
+  if(defined $mf_ids &&
+	 ($mf_ids ne 'NULL') ){  #Cache MotifFeature ids - don't project
 	my @motif_feature_ids = split/,/, $mf_ids;
 	
 	$rf[$rf_size]->{motif_feature_ids}{$ctype}    ||= [];
@@ -1446,7 +1527,7 @@ sub create_regulatory_features{
 
 
   foreach my $rf (@{$rfs}) {
-	print "\nCreating RegulatoryFeature:\t\t\t ".$rf->{focus_start}.' - '.$rf->{focus_end}."\n" if $debug_start;
+	print "\nCreating RegulatoryFeature:\t\t\t\t\t\t\t\t".$rf->{focus_start}.' - '.$rf->{focus_end}."\n" if $debug_start;
 	my $attr_cache;
 
 
@@ -1493,27 +1574,35 @@ sub create_regulatory_features{
 	  #Build attr cache dependant on presence of attrs
 	  #We may not have focus data here if we are doing a ctype_projection build
 	  #attr cache is af_id fset_id pairs
+	  
 
 	  if(exists $rf->{annotated}->{$ct} && exists $rf->{focus}->{$ct}){
 		print "Found annotated and focus attrs\n" if $debug_start;
 
 		$feature_count{regfeats}{$ct}++;
 		$attr_cache = {
-					   annotated => [keys %{$rf->{focus}->{$ct}},
-									 keys %{$rf->{annotated}->{$ct}}],
+					   #annotated => [keys %{$rf->{focus}->{$ct}},
+					#				 keys %{$rf->{annotated}->{$ct}}],
+
+					   annotated => {
+									 %{$rf->{focus}->{$ct}},
+									 %{$rf->{annotated}->{$ct}}
+									},
+
+
 					  };
 	  }
 	  elsif( exists $rf->{focus}->{$ct}){
 		print "Found focus attrs only\n" if $debug_start;
 		#MultiCell and focus only
 		$feature_count{regfeats}{$ct}++;
-		$attr_cache = { annotated => [keys %{$rf->{focus}->{$ct}}] };
+		$attr_cache = { annotated => {%{$rf->{focus}->{$ct}}} };
 	  }
 	  elsif(exists $rf->{annotated}->{$ct}){
 		print "Found projected annotated attrs only\n" if $debug_start;
 		$projected = 1;
 		$feature_count{projected_regfeats}{$ct}++;
-		$attr_cache =  { annotated => [keys %{$rf->{annotated}->{$ct}}] };
+		$attr_cache =  { annotated => { %{$rf->{annotated}->{$ct}}} };
 	  }
 	  else{
 		#No attrs - This is a failed projection!
@@ -1524,7 +1613,11 @@ sub create_regulatory_features{
 
 
 	  #Add MotifFeatures as attrs
-	  $attr_cache->{motif} = $rf->{motif_feature_ids}{$ctype};
+	  #convert to hash 
+	  foreach my $mfid(@{$rf->{motif_feature_ids}{$ctype}}){
+		$attr_cache->{motif}{$mfid} = undef;
+	  }		
+	  #$attr_cache->{motif} = $rf->{motif_feature_ids}{$ctype};
 		  
 	  #We now need to clean the fset_id values from the attrs cache
 	  #map { $attr_cache->{$_} = undef } keys %$attr_cache; 
@@ -1563,24 +1656,32 @@ sub create_regulatory_features{
 		  if ((($reg_feat->bound_start != $rf->{attribute_start}->{$ct}) && ($reg_feat->bound_start != $reg_feat->start)) ||
 			  ($reg_feat->bound_end != $rf->{attribute_end}->{$ct}) && ($reg_feat->bound_end != $reg_feat->end)){
 			
-			warn "$ct attributes:\n\t".
-			  join("\t\n",  (
-							 map { $_->cell_type->name.':'.$_->feature_type->name.':'.$_->start.':'.$_->end }
-							 @{$reg_feat->regulatory_attributes('annotated')} 
-							)
-				  )."\t\n".
-					join("\t\n",  (
-								   map { $_->display_label.':'.$_->start.':'.$_->end }
-								   @{$reg_feat->regulatory_attributes('motif')}
-								  ))
-					  ."\n";
+			
+			foreach my $attr(@{$reg_feat->regulatory_attributes}){
+			  warn "$attr ".$attr->dbID."\t".$attr->start."\t".$attr->end."\n";
+			}
 
-				   
 
-			warn "$ct bound_start ".$reg_feat->bound_start.' != seen attr '.$rf->{attribute_start}->{$ct}."\n";
-			warn "$ct bound_end   ".$reg_feat->bound_end .' != seen attr '.$rf->{attribute_end}->{$ct}."\n";
-			warn "$ct start end   ".$reg_feat->start.' - '.$reg_feat->end."\n";
-			die('Calculated attribute_start/end values do not match bound_start/end/focus values');
+			warn "Have the Y PAR features been filtered?\n";
+
+			die("Calculated attribute_start/end values do not match bound_start/end/focus values:\n".
+				"\t$ct bound_start ".$reg_feat->bound_start.' != seen attr '.$rf->{attribute_start}->{$ct}."\n".
+				"\t$ct bound_end   ".$reg_feat->bound_end .' != seen attr '.$rf->{attribute_end}->{$ct}."\n".
+				"\t$ct start end   ".$reg_feat->start.' - '.$reg_feat->end."\n");
+
+
+			#Having problems here if we are trying to project between Y PAR and X
+			#Current dest_slice mapping code simply changes the start end values assuming the slice is correct
+			#currently no test for seq_region name match
+			
+			#where are current check made on dest slice?
+			
+			#solution would be to extract fetch_normalised_slice_projection code to separate method
+			#then match them to dest_slice if seq_region_name doesn't match
+			
+			#We hadn't seen this before as the PAR region data was filtered
+
+			#Also project_to_slice doesn't handle this PAR mapping, need to add normalised slice support there?
 		  }
 		}
 	  }
@@ -1691,6 +1792,10 @@ sub get_regulatory_FeatureSets{
 #This could move to DataSetAdaptor and be called from define_and_validate_sets
 #If focus set info was stored in data set
 
+
+#Thsi needs to be made available to the Helper for HC/Updating
+#in case of archive failure
+
 sub store_regbuild_meta_strings{
   my ($dset, $overwrite) = @_;
 
@@ -1715,10 +1820,8 @@ sub store_regbuild_meta_strings{
 
   ### build and import regbuild strings by feature_set_id and feature_type_id
 
-  my $sth = $ds_adaptor->db->dbc->prepare("select meta_value from meta where meta_key='regbuild.${ctype}.feature_set_ids'");
-  $sth->execute();
-  ($meta_value) = map { "@$_" } @{$sth->fetchall_arrayref};
-  $reg_string = join(',', map {$_->dbID} sort {$a->name cmp $b->name} @ssets);
+  #($meta_value) = $ds_adaptor->db->dbc->db_handle->selectrow_array("select meta_value from meta where meta_key='regbuild.${ctype}.feature_set_ids'");
+  #$reg_string = join(',', map {$_->dbID} sort {$a->name cmp $b->name} @ssets);
 
   my %reg_strings = 
 	(
@@ -1740,15 +1843,13 @@ sub store_regbuild_meta_strings{
 	}
   }
 
+  #this should be sorted to avoid string mismatches with the same contents.
   $reg_strings{"regbuild.${ctype}.focus_feature_set_ids"} = join(', ', @ffset_ids);
   
 
 
   foreach my $meta_key(keys %reg_strings){
-	my $sth = $ds_adaptor->db->dbc->prepare("select meta_value from meta where meta_key='${meta_key}'");
-	$sth->execute();
-	($meta_value) = map { "@$_" } @{$sth->fetchall_arrayref};
-
+	($meta_value) = $ds_adaptor->db->dbc->db_handle->selectrow_array("select meta_value from meta where meta_key='${meta_key}'");
 
 	#warn "meta value for $meta_key is $meta_value";
 

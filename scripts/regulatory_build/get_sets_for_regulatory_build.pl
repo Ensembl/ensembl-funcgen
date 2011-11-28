@@ -98,7 +98,7 @@ use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Getopt::Long;
 use Pod::Usage;
-print "get_sets_for_regulatory_build.pl @ARGV\n";
+print "$0 @ARGV\n";
 
 my ($species,$cell_type,$type,$release,$help);
 my $trackdbhost = 'ens-genomics1';
@@ -157,31 +157,52 @@ my $isa = $efgdba->get_InputSetAdaptor();
 my $dsa = $efgdba->get_DataSetAdaptor();
 
 #get all datasets from efg_data_tracking where release not NULL
-my $sth = $dbc->prepare("SELECT `experiment_name`, cell_type, `feature_type`, `release`, efgdb_set_name  from `dataset` where `species`='$species' AND `release` is not null;");
+my $sth = $dbc->prepare("SELECT `experiment_name`, cell_type, `feature_type`, `release_version`, efgdb_set_name  from `dataset` where `species`='$species' AND `release_version` is not null;");
 $sth->execute();
 while(my ($exp, $ct, $ft, $rel, $exp_name) = $sth->fetchrow_array()){
+
+  #warn "$exp, $ct, $ft, $rel, $exp_name\n";
+  #These vars are all badly named!
+
+
   if($release){ next if $rel != $release; }
   if($cell_type){ next if lc($cell_type) ne lc($ct); }
-  #my $exp_name = $ct."_".$ft."_".$exp;
-  if(!$exp_name){ warn "Set for $species $ct $ft $exp does not seem to be in efgdb"; next; } 
+  
+  #hack to get around efgdb_set_name bug
+  #Need to fix this.
+  my $exp_name = $ct."_".$ft."_".$exp;
+
+  if(!$exp_name){ warn "Set for $species $ct $ft $exp does not seem to be in efgdb\n"; next; } 
 
   my $exp_obj = $ea->fetch_by_name($exp_name);
   if(!$exp_obj){ 
-    warn $exp_name." not found"; 
-  } else {
+    warn "Experiment not found:\t$exp_name\n"; 
+  } 
+  else {
     my $found = 0;
-    foreach my $is ( @{$isa->fetch_all_by_Experiment($exp_obj)} ){
-      foreach my $ds (@{$dsa->fetch_all_by_supporting_set($is)}){
-	my $fs = $ds->product_FeatureSet();
-	if($fs){
-	  $found = 1;
-	  if($type){
-	    last if $fs->is_focus_set ? ($type eq 'non_focus') : ($type eq 'focus') ;
-	  }
-	  print $fs->name."\n";
-	} else {
-	  warn "No Feature Set found\n";
-	}
+    
+	foreach my $is ( @{$isa->fetch_all_by_Experiment($exp_obj)} ){
+    
+	  foreach my $ds (@{$dsa->fetch_all_by_supporting_set($is)}){
+		my $fs = $ds->product_FeatureSet();
+	
+		if($fs){
+		  $found = 1;
+
+
+		  #This only works with the previous imported focus sets
+		  #Not new sets from the tracking DB!!
+
+
+		  if($type){
+			last if $fs->is_focus_set ? ($type eq 'non_focus') : ($type eq 'focus') ;
+		  }
+
+		  print $fs->name."\n";
+		} 
+		else {
+		  warn "No Feature Set found\n";
+		}
       }
     }
     if(!$found){ warn $exp_name." not found"; }
