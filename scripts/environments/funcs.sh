@@ -636,8 +636,6 @@ ArchiveData()
 
 		#Test filedir exists
 
-		echo $filedir
-
 		if [[ $filedir != /* ]]; then
 			#We never need to specify /* as this would just be the same as listing the dir path
 			filedir=$(ls -d $PWD/$filedir)
@@ -675,6 +673,8 @@ ArchiveData()
 			archive_filedir="$TARGET_ROOT/$archive_filedir"	
 
 
+			#Need to compress here.
+
 			if [ -d $filedir ]; then
 				#rsync will create dir for us
 				#But we need to remove the last dir name				
@@ -695,6 +695,11 @@ ArchiveData()
 			#This may cause data clashes, so we need to make sure paths are different?
 			echo "rsync -essh -Wav $filedir $archive_filedir"
 			rsync -essh -Wav $filedir $archive_filedir/
+
+			if [[ $delete_source ]]; then
+				rm -rf $filedir
+			fi
+
 		fi
 	done
 }
