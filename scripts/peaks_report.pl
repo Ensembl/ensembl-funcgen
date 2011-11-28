@@ -417,8 +417,13 @@ if (defined $R) {
 
     print FO "    boxplot(subdata,main=subset\$region[1],xlab='Set',ylab='Peak length', col=rainbow(length(subdata)), xaxt='n'";
     if($no_outliers){ print FO ",outline=FALSE"; }
+<<<<<<< peaks_report.pl
+    print FO ")\n";
+    print FO "    legend('topright',inset=c(-1,0),legend=levels(subset\$name),fill=rainbow(length(subdata)), cex=0.8)\n";    
+=======
     print FO ")\n"; 
     print FO "    legend('topright',inset=c(-".$inset_compare.",0),legend=levels(subset\$name),fill=rainbow(length(subdata)), cex=0.8)\n";    
+>>>>>>> 1.28
     print FO "    axis(1, labels=FALSE, at=1:length(subdata), tick=TRUE)\n";
     print FO "}\n";
     
