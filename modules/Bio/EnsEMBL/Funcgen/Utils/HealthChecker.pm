@@ -130,7 +130,7 @@ sub update_db_for_release{
   $self->clean_xrefs;
   $self->validate_DataSets;
   $self->check_stable_ids;
-    $self->log_data_sets();
+  $self->log_data_sets();
   $self->analyse_and_optimise_tables;#ALWAYS LAST!!
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
@@ -470,14 +470,11 @@ sub check_meta_species{
 #Using same code used by build_reg_feats!
 
 sub check_meta_strings{
-  my ($self, $update) = @_;
+  my ($self) = @_;
   
+  #Removed $update arg as we would always want to do this manually
 
   $self->log_header('Checking meta strings');
-
-  warn "Need to check/update regbuild.version and regbuild.initial_release_date regbuild.last_annotation_update";
-
-  #update flag?
 
   my @regf_fsets;
   my $passed = 1;
@@ -508,36 +505,138 @@ sub check_meta_strings{
 	  #Fail for old versions as we want to remove these
 	  if( $fset->name =~ /_v[0-9]+$/){
 		$self->report("FAIL:\t".$fset->name." is an old RegulatoryFeature set, please remove!");
+		next;
 	  }
 
 	  my $cell_type = (defined $fset->cell_type) ? $fset->cell_type->name : 'core';
+	
+	  #This has been lifted from build_regulatory_features.pl store_regbuild_strings
+	  #Need to move this to a RegulatoryBuilder module
+	  my $dset = $self->db->get_DataSetAdaptor->fetch_by_product_FeatureSet($fset);
+	    
+	  my @ssets = @{$dset->get_supporting_sets};
+	  
+	  if(! @ssets){
+		throw('You must provide a DataSet with associated supporting sets');
+	  }
+
+
+
+	  my %reg_strings = 
+		(
+		 "regbuild.${cell_type}.feature_set_ids" => join(',', map {
+		   $_->dbID} sort {$a->name cmp $b->name
+						 } @ssets),
+		 "regbuild.${cell_type}.feature_type_ids" => join(',', map {
+		   $_->feature_type->dbID} sort {$a->name cmp $b->name
+									   } @ssets),
+		);
+
+	  my @ffset_ids;
+	  
+	  #Skip this now as we use the ftype classes for defining the focus sets
+	  #foreach my $fset(@ssets){
+
+
+	#	#This might fail if soem TFs haven't been included as focus i.e. are part of PolII/III
+	#	#e.g. TFIIIC-110
+##
+#		if( ($fset->feature_type->class eq 'Transcription Factor') ||
+#			($fset->feature_type->class eq 'Open Chromatin') ){
+#		  push @ffset_ids, $fset->dbID;
+#		}
+#	  }
+
+	 
+#	  #this should be sorted to avoid string mismatches with the same contents.
+#	  $reg_strings{"regbuild.${cell_type}.focus_feature_set_ids"} = join(', ', @ffset_ids);
+	  
+	  my $sql;
+	  
+	  my %db_reg_string;
+
+	  foreach my $meta_key(keys %reg_strings){
+		my ($meta_value)= $self->db->dbc->db_handle->selectrow_array("select meta_value from meta where meta_key='${meta_key}'");
+		
+		if (! defined $meta_value) {
+		  
+		  $sql = "insert into meta (meta_key, meta_value) values ('${meta_key}', '$reg_strings{${meta_key}}');";
+		  $self->report("FAIL:\tNo $meta_key found in meta table:\t${meta_value}\n\tUpdate using:\t$sql");
+		  #eval { $ds_adaptor->db->dbc->do($sql) };
+		  #die("Couldn't store $meta_key in meta table.\n$@") if $@;
+		} 
+		else {
+
+		  #Some of these are not order dependant
+		  #But we should order them to enable easier comparison
+
+		  #Does this mean we have patch the mouse incorrectly
+		  #This should be exactly the same as the build apart from maybe the focus sets
+		  #which are not order dependant
+
+
+		  if($meta_value ne $reg_strings{$meta_key}){
+			#my $fail = 1;
+
+#			if($meta_key =~ /focus_feature_set_ids/o){
+#			  $fail = 0;
+
+#			  #Not order dependant so compare contents
+#			  my %meta_ffset_ids = map {$_ => undef} (split/,\s*/, $meta_value);
+#			  my %queried_ffset_ids = map {$_ => undef} (split/,\s*/,  $reg_strings{$meta_key});
+			  
+		
+#			  foreach my $ffset_id(keys %meta_ffset_ids){
+#
+#				if (! exists $queried_ffset_ids{$ffset_id}){
+#				  $self->report("FAIL:\t$meta_key $ffset_id found in meta table but not in supporting sets");
+#				  $fail = 1;
+#				}
+#			  }
+
+#			  foreach my $ffset_id(keys %queried_ffset_ids){#
+
+#				if (! exists $meta_ffset_ids{$ffset_id}){
+#				  $self->report("FAIL:\t$meta_key $ffset_id found in supporting sets but not in meta table");
+#				  $fail = 1;
+#				}
+#			  }
+
+			  
+#			}
+
+#			if($fail){
+			  $sql = "update meta set meta_value='".$reg_strings{$meta_key}."' where meta_key='${meta_key}';";
+			  $self->report("FAIL:\tMismatched $meta_key found in meta table:\t${meta_value}\n\tUpdate using:\t$sql");
+			  warn $sql;
+
+#			}
+		  }
+
+		  $db_reg_string{$meta_key} = $meta_value;
+		}
+	  }
+
+
+	  #Now need to tidy this block wrt new code added above
 	  my $fset_string_key  = "regbuild.${cell_type}.feature_set_ids";
 	  my $ftype_string_key = "regbuild.${cell_type}.feature_type_ids";
-	  my $fset_string = $mc->list_value_by_key($fset_string_key)->[0];
-	  my $ftype_string = $mc->list_value_by_key($ftype_string_key)->[0];
+	  my $fset_string  = $db_reg_string{$fset_string_key};
+	  my $ftype_string = $db_reg_string{$ftype_string_key};
 
-	  $self->log('Validating '.$fset->name.":\n\t$fset_string_key($fset_string) vs $ftype_string_key($ftype_string)");
-
-	  #Test fset vs ftype string
-	  if(! defined $fset_string && ! defined $ftype_string){
-		$self->report("FAIL:\tNo $fset_string_key or $ftype_string_key found in meta table");
-	  }
-	  elsif(! defined $fset_string){
-		$self->report("FAIL:\tNo $fset_string_key found in meta table");
+	  if(! ($fset_string && $ftype_string)){
+		$self->report("FAIL:\tSkipping fset vs ftype string test for $cell_type")
 	  }
 	  else{
-		my @fset_ids = split/,/, $fset_string;
-		my @ftype_ids;
+
+		#This is now effectively handled by the loop above
+
+		$self->log("Validating :\t$fset_string_key vs $ftype_string_key");
+
+		my @fset_ids  = split/,/, $fset_string;
+		my @ftype_ids = split/,/, $ftype_string;
 		my @new_ftype_ids;
 		my $ftype_fail = 0;
-		
-		if(defined $ftype_string){
-		  @ftype_ids = split/,/, $ftype_string;
-		}
-		else{
-		  $self->report("WARNING:\tNo $ftype_string_key found in meta table, will update using $fset_string_key");
-		}
-	  
 		
 		#Now need to work backwards through ftypes to remove pseudo ftypes before validating
 		#New string should be A,A,A;S,S,S,S,S,S;P,P,P
@@ -547,7 +646,7 @@ sub check_meta_strings{
 		
 
 		if(scalar(@fset_ids) != scalar(@ftype_ids)){
-		  $self->report("FAIL:\tLength mismatch between $fset_string_key and $ftype_string_key");
+		  $self->report("FAIL:\tLength mismatch between:\n\t$fset_string_key:\t$fset_string\n\tAND\n\t$ftype_string_key\t$fset_string");
 		}
 		
 		foreach my $i(0..$#fset_ids){
@@ -860,19 +959,43 @@ sub validate_DataSets{
 
 
 	  my $ra_dset = $dset_a->fetch_by_product_FeatureSet($ra_fset);
+	  my @ssets = @{$ra_dset->get_supporting_sets(undef, 'result')};
+	  my @displayable_sets;
 
-
-	  my @sset = @{$ra_dset->get_displayable_supporting_sets('result')};
+	  foreach my $sset(@ssets){
+	
+		if($sset->has_status('DISPLAYABLE')){
+		  push @displayable_sets, $sset;
+		}
+	  }
+	  #Change this to get all then check status
+	  #else print update sql
 	  
-	  if(scalar(@sset) > 1){#There should only be one
+	  if(scalar(@displayable_sets) > 1){#There should only be one
 		$self->report("FAIL:\tThere should only be one DISPLAYABLE supporting ResultSet for DataSet:\t".$ra_dset->name);
 	  }
-	  elsif(scalar(@sset) == 0){
-		$self->report("FAIL:\tThere are no DISPLAYABLE supporting ResultSet for DataSet:\t".$ra_dset->name);
+	  elsif(scalar(@displayable_sets) == 0){
+
+		my $msg;
+		
+		if(scalar(@ssets) == 1){
+		  $msg = "Found unique non-DISPLAYABLE ResultSet:\t".$ssets[0]->name.
+			"\n\tinsert into status select ".$ssets[0]->dbID.
+			  ", 'result_set', status_name_id from status_name where name='DISPLAYABLE';";
+		}
+		else{
+		  $msg = "Found ".scalar(@ssets)." ResultSets ".join("\t", map($_->name, @ssets));
+		}
+
+		$self->report("FAIL:\tThere are no DISPLAYABLE supporting ResultSets for DataSet:\t".
+					  $ra_dset->name."\n$msg");
+
+		
+
 		next; #$ra_fset
 	  }
 
-	  my $ra_rset = $sset[0];
+	  my $ra_rset = $ssets[0];
 	
 	  foreach my $state(@$rset_states){
 	  
