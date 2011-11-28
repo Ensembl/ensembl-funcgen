@@ -287,10 +287,6 @@ sub open_file{
 
 ################################################################################
 
-
-#Move most of this to EFGUtils.pm
-#Maintain wrapper here with throws, only warn in EFGUtils
-
 sub run_system_cmd{
   my ($command, $no_exit) = @_;
 
@@ -417,7 +413,7 @@ sub is_sam{
 #need is bam here too!
 
 sub is_bed {
-  my ($file, $verbose) = @_;
+  my $file = shift;
 
   #Use open_file here!
   
@@ -441,22 +437,25 @@ sub is_bed {
   close FILE;
   
   if (scalar @line < 6) {
-	warn("Infile '$file' does not have 6 or more columns. We expect bed format: CHROM START END NAME SCORE STRAND.") if $verbose;
+	warn "Infile '$file' does not have 6 or more columns. We expect bed format:\t".
+	  "CHROM START END NAME SCORE STRAND.\n";
 	return 0;
 	#} elsif ($line[0] !~ m/^((chr)?[MTXYNT_\d]+)$/) {
 	#    warn ("1st column must contain name of seq_region (e.g. chr1 or 1) in '$file'");
 	#    return 0;
 	#Commented this out for now due to HSCHR_RANDOM seqs
 	#How does the webcode handle this?
-  } elsif ($line[1] !~ m/^\d+$/ && $line[2] =~ m/^\d+$/) {
-	warn ("2nd and 3rd column must contain start and end respectively in '$file'") if $verbose;
+  } 
+  elsif ($line[1] !~ m/^\d+$/ && $line[2] =~ m/^\d+$/) {
+	warn "2nd and 3rd column must contain start and end respectively in '$file'\n";
 	return 0;
-  } elsif ($line[5] !~ m/^[+-]$/) {
-	warn ("6th column must define strand (either '+' or '-') in '$file'") if $verbose;
+  } 
+  elsif ($line[5] !~ m/^[+-\.]$/) {
+	warn "6th column must define strand (either +, - or .) in '$file'\n";
 	return 0;
   }
 
-  return 'bed';    
+  return 'bed';
 }
 
 
@@ -532,10 +531,10 @@ sub generate_slices_from_names{
 
 		#Need to eval this as it will break with incorrect formating
 		
-		$slice = $slice_adaptor->fetch_by_name($name);
+		eval { $slice = $slice_adaptor->fetch_by_name($name) };
 
 		if(! $slice){
-		  throw("Could not fetch slice:\t".$slice);
+		  throw("Could not fetch slice by region or name:\t".$name);
 		}
 	  }
 
@@ -586,7 +585,7 @@ sub generate_slices_from_names{
 
 
 # Tracking DB methods
-#Move to DBAdaptor? Can we add this as a separate package in the same module?
+# Move to DBAdaptor? Can we add this as a separate package in the same module?
 
 sub get_current_regulatory_input_names{
   my ($tdb, $efg_db, $focus) = @_;
@@ -594,32 +593,54 @@ sub get_current_regulatory_input_names{
   #Validate is production?
   my $sql;
 
+  
+
   if($focus){
 	$focus = 'Focus';
-	$sql   = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$tdb->species.'"';
+	$sql   = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$efg_db->species.'"';
   }
   else{
 	$focus = 'Non-focus';
 	#0 rather than false so we don't get NULLs
-	$sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$tdb->species.'"';
+	$sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$efg_db->species.'"';
   }
  
-  my @prd_names = @{$tdb->dbc->db_handle->selectall_arrayref($sql)};
+
+  #Currently efgdb_set_name can either be data_set or feature_set name!
+  #Need to standardise this
+
+  my @prd_names = @{$tdb->db_handle->selectcol_arrayref($sql)};
   my @names;
   my @failed_sets;
 
   foreach my $prd_name(@prd_names){
-	$prd_name = "@$prd_name";
+
 	$sql = "SELECT name from feature_set where name like '${prd_name}%'";
-	my @tmp_names =  @{$efg_db->dbc->db_handle->selectall_arrayref($sql)};
+	my @tmp_names =  @{$efg_db->dbc->db_handle->selectcol_arrayref($sql)};
+
+	#This is causing problems with multiple feature sets with differing analyses
 
 	#Do this via InputSets(using query extension?) instead of using like?
 
-	if(scalar(@tmp_names) != 1){
-	  push @failed_sets, @{$tmp_names[0]};
+	#This is very hacky right now to get it to work
+	#Need to standardise and review tracking db data.
+
+	if(scalar(@tmp_names) > 1){
+
+	  $sql = "SELECT name from feature_set where name ='${prd_name}_ccat_histone'";
+	  @tmp_names =  @{$efg_db->dbc->db_handle->selectcol_arrayref($sql)};
+
+	  if(scalar(@tmp_names) == 1){
+		push @names, $tmp_names[0];
+	  }else{
+		push @failed_sets, $prd_name;
+	  }
+	}
+	elsif(scalar(@tmp_names) == 0){
+	  push @failed_sets, $prd_name;
 	}
 	else{
-	  push @names, @{$tmp_names[0]};
+	  push @names, $tmp_names[0];
 	}
 
   }
