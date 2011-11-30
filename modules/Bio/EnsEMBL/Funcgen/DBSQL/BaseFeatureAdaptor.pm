@@ -463,8 +463,8 @@ sub get_seq_region_id_by_Slice{
 	
 		if(! $fg_sr_id){
 		  #Warn instead of throw so we can catch absent seq_region without eval
-		  warn('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
-			   "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
+		  #warn('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
+	#		   "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
 		}
 	
 		#Only warn first time this is seen
