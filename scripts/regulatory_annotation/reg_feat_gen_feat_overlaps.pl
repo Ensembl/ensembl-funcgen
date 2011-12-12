@@ -139,6 +139,9 @@ reg_feat_gen_feat_overlaps.pl -e dk_funcgen_classify_55_1 -v1 -c reg_feat_gen_fe
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.8  2011-09-09 09:57:18  ds19
+ Small update to usage info
+
  Revision 1.7  2011-01-10 14:01:16  nj1
  added generic #!/usr/bin/env perl
 
@@ -981,7 +984,9 @@ sub create_pattern_results_tables{
     my @sql;
     push @sql,"drop table if exists raw_overlap_results";
 
-    my $q = "create table raw_overlap_results (pattern varchar(60),total_reg_feats int(10)";
+    my $lim=255;
+
+    my $q = "create table raw_overlap_results (pattern varchar(${lim}),total_reg_feats int(10)";
     foreach my $gen (@$gen_feats_ref){
 	$q .= ",$gen"."_real int(10), $gen"."_mock int(10)";
     }
@@ -990,10 +995,11 @@ sub create_pattern_results_tables{
     push @sql, "load data local infile '$overlap_results_file' into table raw_overlap_results";
 
 
+
     push @sql,"drop table if exists pattern_overlap_summary";
     push @sql,"drop table if exists pattern_overlap_summary_chi";
-    $q = "create table pattern_overlap_summary (pattern varchar(60)";
-    my $q1 = "create table pattern_overlap_summary_chi (pattern varchar(60)"; 
+    $q = "create table pattern_overlap_summary (pattern varchar(${lim})";
+    my $q1 = "create table pattern_overlap_summary_chi (pattern varchar(${lim})"; 
     my $q2 = "insert into pattern_overlap_summary select pattern";
     my $q3 = "insert into pattern_overlap_summary_chi select pattern";
     foreach my $gen (@$gen_feats_ref){
