@@ -156,12 +156,17 @@ ALTER table associated_feature_type ADD FOREIGN KEY (feature_type_id) REFERENCES
 -- Dropping design_type
 
 -- Dropping experimental_design
-
+-- + complex denormalised
 
 -- status
 
 ALTER table status ADD FOREIGN KEY (status_name_id) REFERENCES status_name(status_name_id);
 -- + complex denormalised
+
+-- cell_type_lineage
+ALTER table cell_type_lineage ADD FOREIGN KEY (cell_type_id) REFERENCES cell_type(cell_type_id);
+ALTER table cell_type_lineage ADD FOREIGN KEY (lineage_id) REFERENCES lineage(lineage_id);
+
 
 
 ### Core FKs

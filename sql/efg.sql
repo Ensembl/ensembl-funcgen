@@ -777,9 +777,9 @@ CREATE TABLE `array` (
 DROP TABLE IF EXISTS `array_chip`;
 CREATE TABLE `array_chip` (
    `array_chip_id` int(10) unsigned NOT NULL auto_increment,
-   `design_id` varchar(20) default NULL,
+   `design_id` varchar(100) default NULL,
    `array_id` int(10) unsigned NOT NULL,
-   `name` varchar(40) default NULL,
+   `name` varchar(100) default NULL,
     PRIMARY KEY  (`array_chip_id`),
    UNIQUE KEY `array_design_idx` (`array_id`, `design_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1115,12 +1115,74 @@ CREATE TABLE `cell_type` (
    `description` varchar(80) default NULL,
    `gender` enum('male', 'female', 'hermaphrodite') default NULL,
    `efo_id` varchar(20) DEFAULT NULL,
+   `tissue` varchar(50) default NULL,
    PRIMARY KEY  (`cell_type_id`),
    UNIQUE KEY `name_idx` (`name`),
    UNIQUE KEY `efo_idx` (`efo_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- bto?
+
+
+/** 
+@table  cell_type_lineage
+@desc   Links cell_types to lineage terms
+@colour  #808000
+
+@column cell_type_id	Internal ID
+@column lineage_id      Internal ID
+@column most_specific   Denotes most specific term for this cell_type
+
+@see cell_type
+@see lineage
+*/
+
+
+DROP TABLE IF EXISTS `cell_type_lineage`;
+CREATE TABLE `cell_type_lineage` (
+   `cell_type_id` int(10) unsigned NOT NULL,
+   `lineage_id` int(10) unsigned NOT NULL,
+   `most_specific` boolean default NULL,
+   PRIMARY KEY  (`cell_type_id`, `lineage_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- most_specific could be infered from lineage chain
+-- add description?
+-- most_specific here as this may be dependant on the cell_type
+
+
+/** 
+@table  lineage
+@desc   Contains cell lineage information
+@colour  #808000
+
+@column cell_type_id	  Internal ID
+@column name              Lineage name
+@column efo_id            Experimental Factor Ontology ID
+@column parent_lineage_id Internal ID of immediate parent term
+
+@see cell_type_lineage
+@see cell_type
+*/
+
+
+DROP TABLE IF EXISTS `lineage`;
+CREATE TABLE `lineage` (
+   `lineage_id` int(10) unsigned NOT NULL auto_increment,
+   `name` varchar(100) not NULL,
+   `efo_id` varchar(20) DEFAULT NULL,
+   `parent_lineage_id` int(10) unsigned DEFAULT NULL,
+   PRIMARY KEY  (`lineage_id`),
+   UNIQUE KEY `name_idx` (`name`),
+   UNIQUE KEY `efo_idx` (`efo_id`),
+   KEY `parent_linage_idx`(`parent_lineage_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- EFO and CL ontology (and hence ensembl_ontology DB) do not handle lineage
+-- very well, so model here for now.
+-- If parent_lineage_id is 0, then is effectively root lineage term.
+
+
+
 
 /**
 @table  experimental_design
