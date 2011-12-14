@@ -31,13 +31,28 @@ Bio::EnsEMBL::Funcgen::CellType - A module to represent a CellType.
 
 use Bio::EnsEMBL::Funcgen::CellType;
 
+#Fetch from adaptor
+my $ctype = $cell_type_adaptor->fetch_by_name($ctype_name);
+
+#Create from new
+my $ctype = Bio::EnsEMBL::Funcgen::CellType->new
+                                    (
+                                     -name          => 'H1-ESC',
+                                     -display_label => 'H1-ESC',
+                                     -description   => 'Human Embryonic Stem Cell',
+                                     -efo_id        => 'efo:EFO_0003042',
+                                     -tissue        => 'embryonic stem cell',
+                                    );
+
+print $ctype->name.' is a '.$ctype->description."\n";
+
+#H1-ESC is a Human Embryonic Stem Cell
 
 
 =head1 DESCRIPTION
 
-This is a simple class to represent information about a CellType.  
-This may represent harvested cells, a cell line or a more generic tissue type.
-
+This is a simple class to represent information about a cell type.  This may represent 
+harvested cells, a cell line or a more generic tissue type.
 
 =cut
 
@@ -53,11 +68,16 @@ use Bio::EnsEMBL::Storable;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Storable);
 
+my %valid_genders = (
+					 male   => 1,
+					 female => 1,
+					 hermaphrodite => 1,
+					);
 
 =head2 new
 
   Arg [1]    : String - name of CellType
-  Arg [2]    : String - display label of CellType
+  Arg [2]    : String - display label of CellType. Defaults to name
   Arg [3]    : String - description of CellType
   Arg [4]    : String - gender e.g. male, female or NULL
   Arg [5]    : String - Experimental Factor Ontology ID e.g. EFO_0002869
@@ -84,48 +104,37 @@ use vars qw(@ISA);
 
 sub new {
   my $caller = shift;
-
   my $class = ref($caller) || $caller;
-
   my $self = $class->SUPER::new(@_);
+    
+  my ($name, $dlabel, $desc, $gender, $efo_id, $tissue) = rearrange
+	(['NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'EFO_ID', 'TISSUE'], @_);
   
+  throw("Must supply a CellType name") if ! defined $name;
   
-  my (
-      $name,
-      $dlabel,
-	  $desc,
-	  $gender,
-	  $efo_id
-     ) = rearrange([
-		    'NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'EFO_ID'
-		   ], @_);
-  
-  
-
-  throw("Must supply a CellType name") if ! $name;
-
   if(defined $gender){
-	#enum will not force this so validate here
-	throw("Gender must be either male or female") if ! grep(/^$gender$/, ('male', 'female'));
-	$self->gender($gender);
+
+	if( ! exists $valid_genders{lc($gender)} ){	  #enum will not force this so validate here
+	  throw("Gender not valid, must be one of:\t".join(' ', keys %valid_genders));
+	}
+
+	$self->{gender} = $gender;
   }
 
-  $self->{'name'} = $name; #Set directly as mandatory, to enable getter only method
-  $self->display_label($dlabel) if defined $dlabel;
-  $self->description($desc)     if defined $desc;
-  $self->efo_id($efo_id)        if defined $efo_id;
-
+  #Set explicitly to enable faster getter only methods
+  $self->{name}          = $name;
+  $self->{display_label} = $dlabel || $name;
+  $self->{description}   = $desc   if defined $desc;
+  $self->{efo_id}        = $efo_id if defined $efo_id;
+  $self->{tissue}        = $tissue if defined $tissue;
   return $self;
 }
 
 
-
 =head2 name
 
-  Arg [1]    : String - name
   Example    : my $name = $ct->name();
-  Description: Getter  of name attribute for CellType
-               objects
+  Description: Getter  of name attribute for CellType objects
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -134,16 +143,14 @@ sub new {
 =cut
 
 sub name {
-    my $self = shift;
-    return $self->{'name'};
+  return $_[0]->{'name'};
 }
+
 
 =head2 gender
 
-  Arg [1]    : String (optional) - gender e.g. male or female
   Example    : my $gender = $ct->gender();
-  Description: Getter for the gender attribute for 
-               CellType objects
+  Description: Getter for the gender attribute for CellType objects
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -157,12 +164,11 @@ sub gender {
     return $self->{'gender'};
 }
 
+
 =head2 description
 
-  Arg [1]    : String (optional) - description
   Example    : my $desc = $ct->description();
-  Description: Getter and setter of description attribute for CellType
-               objects
+  Description: Getter of description attribute for CellType objects
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -171,18 +177,14 @@ sub gender {
 =cut
 
 sub description {
-    my $self = shift;
-    $self->{'description'} = shift if @_;
-    return $self->{'description'};
+  return $_[0]->{'description'};
 }
 
 
 =head2 display_label
 
-  Arg [1]    : (optional) string - description
   Example    : my $display_label = $ct->display_label();
-  Description: Getter and setter of display_label attribute for CellType
-               objects.
+  Description: Getter of display_label attribute for CellType objects.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -191,17 +193,14 @@ sub description {
 =cut
 
 sub display_label {
-    my $self = shift;
-    $self->{'display_label'} = shift if @_;
-    return $self->{'display_label'};
+  return $_[0]->{'display_label'};
 }
 
 
 =head2 efo_id
 
-  Arg [1]    : (optional) String - Experimental Factor Ontology ID
-  Example    : $ft->efo_id('EFO_0001196');
-  Description: Getter and setter of the Experimental Factor Ontology ID
+  Example    : my $efo_id = $ft->efo_id;
+  Description: Getter of the Experimental Factor Ontology ID
   Returntype : String
   Exceptions : None
   Caller     : General
@@ -210,9 +209,24 @@ sub display_label {
 =cut
 
 sub efo_id{
-  my $self = shift;
-  $self->{'efo_id'} = shift if @_;
-  return $self->{'efo_id'};
+  return $_[0]->{'efo_id'};
 }
+
+
+=head2 tissue
+
+  Example    : my $tissue = $ft->tissue;
+  Description: Getter of the tissue attribute for a given cell type
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub tissue{
+  return $_[0]->{'tissue'};
+}
+
 1;
 
