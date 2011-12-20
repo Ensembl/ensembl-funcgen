@@ -28,12 +28,13 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Analysis;
-use Bio::EnsEMBL::Funcgen::Utils::Helper;
-use vars qw(@ISA);
+#use Bio::EnsEMBL::Funcgen::Parsers::BaseImporter;
+#use vars qw(@ISA)
+#@ISA = ('Bio::EnsEMBL::Funcgen::Utils::Helper');
+
+use base qw(Bio::EnsEMBL::Funcgen::Parsers::BaseImporter); #@ISA change to parent with perl 5.10
 
 
-
-@ISA = ('Bio::EnsEMBL::Funcgen::Utils::Helper');
 
 # Base functionality for external_feature parsers
 
@@ -111,7 +112,7 @@ sub db{
 sub import_sets{
   my $self = shift;
 
-  return $self->{'import_sets'} || [keys %{$self->{'feature_sets'}}];
+  return $self->{'import_sets'} || [keys %{$self->{static_config}{feature_sets}}];
 }
 
 
@@ -128,11 +129,12 @@ sub import_sets{
 =cut
 
 #This is done after validate and store feature_types
+#Updating this will require making all external parsers use 'static_config'
 
 sub set_feature_sets{
   my $self = shift;
 
-  throw('Must provide a set feature_set config hash') if ! defined $self->{'feature_sets'};
+  throw('Must provide a set feature_set config hash') if ! defined $self->{static_config}{feature_sets};
 
 
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor;
@@ -144,6 +146,7 @@ sub set_feature_sets{
 	my $fset = $fset_adaptor->fetch_by_name($fset_name);
 
 	#we don't need data sets for external_feature sets!
+	#Compare against config after we have merged with defined_anld_validate etc
 
 	if(defined $fset){
 	  $self->log("Found previous FeatureSet $fset_name");
@@ -167,121 +170,112 @@ sub set_feature_sets{
 	  }
 	}
 
+	#Assume using static config for now
+	#Will need to resolve this when it become generic
+	#Maybe we set outside of config!
+	#simply as analyses, feature_sets and feature_types?
+	my $fset_config = 	$self->{static_config}{feature_sets}{$fset_name}{feature_set};
+
+
 	if(! defined $fset){
-	  #don't need to use RNAFeatureType here as this is the setwide generic feature_type
-	  #or do we have separate tables for external_feature and external_rna_feature?
-
-	  #validate analysis first
-	  my $analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'});
-
-	  if(! defined $analysis){
-		
-		$self->log('Analysis '.$self->{'feature_sets'}{$fset_name}{'analysis'}{'-logic_name'}.
-		  " not found, storing from config hash");		
-		$analysis_adaptor->store(Bio::EnsEMBL::Analysis->new(%{$self->{'feature_sets'}{$fset_name}{analysis}}));
-		$analysis = $analysis_adaptor->fetch_by_logic_name($self->{'feature_sets'}{$fset_name}{analysis}{-logic_name});
-		warn "fetched sotre analysis $analysis";
-	  }
-
-	  #replace hash config with object
-	  $self->{'feature_sets'}{$fset_name}{'analysis'} = $analysis;
-
-	  warn "analysis is $analysis ".$analysis->dbID;
-
-
-	  my $display_name = (exists $self->{'feature_sets'}{$fset_name}{'display_label'}) ? $self->{'feature_sets'}{$fset_name}{'display_label'} : $fset_name;
-
+	  my ($name, $analysis, $ftype, $display_label, $desc);	  
+	  my $fset_analysis_key = (exists ${$fset_config}{-analysis})      ? '-analysis'      : '-ANALYSIS';
+	  my $fset_name_key     = (exists ${$fset_config}{-name})          ? '-name'          : '-NAME';
+	  my $fset_ftype_key    = (exists ${$fset_config}{-feature_type})  ? '-feature_type'  : '-FEATURE_TYPE';
+	  my $fset_dlabel_key   = (exists ${$fset_config}{-display_label}) ? '-display_label' : '-DISPLAY_LABEL';
+	  my $fset_desc_key     = (exists ${$fset_config}{-description})   ? '-description'   : '-DESCRIPTION';
+	  my $display_name      = (exists ${$fset_config}{$fset_dlabel_key}) ? $fset_config->{$fset_dlabel_key} : $fset_name;
+	  #fset config name be different from key name
+	  my $fs_name           = (exists ${$fset_config}{$fset_name_key}) ? $fset_config->{$fset_name_key} : $fset_name;
+	  #warn if they are different?
 	  
-
+	  
+	  #Can't just deref config hash here as we need to deref the nested feature_type and analysis attrs
+	  
 	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-													 -name         => $fset_name,
+													 -name         => $fs_name,
 													 -feature_class=> 'external',
-													 -analysis     => $self->{'feature_sets'}{$fset_name}{'analysis'},
-													 -feature_type => ${$self->{'feature_sets'}{$fset_name}{'feature_type'}},
+													 -analysis     => ${$fset_config->{$fset_analysis_key}},
+													 -feature_type => ${$fset_config->{$fset_ftype_key}},
 													 -display_label => $display_name,
+													 -description   => $fset_config->{$fset_desc_key}
 													);
 
 	  ($fset) = @{$self->db->get_FeatureSetAdaptor->store($fset)};
 	}
 
 	#Now replace config hash with object
-	$self->{feature_sets}{$fset_name} = $fset;
+	#Will this reset in hash or just locally?
+	#$fset_config = $fset;
+	$self->{static_config}{feature_sets}{$fset_name}{feature_set} = $fset;
   }
 
   return;
 }
 
+#Can't use this anymore as we have to use static_config for all parsers which use set_feature_sets
 
-=head2 validate_and_store_feature_types
+#
+#=head2 validate_and_store_feature_types
+#
+#  Args       : None
+#  Example    : $self->validate_and_store_feature_types;
+#  Description: Imports feature types defined by import_sets.
+#  Returntype : None
+#  Exceptions : None
+#  Caller     : General
+#  Status     : High Risk - Now using BaseImporter::validate_and_store_config for vista
+#
+#=cut
+#
+##Change all external parsers to use BaseImporter::validate_and_store_config
+#
+#sub validate_and_store_feature_types{
+#  my $self = shift;
+#
+#  #This currently only stores ftype associated with the feature_sets
+#  #Havent't we done this already in the InputSet parser
+#  #Need to write BaseImporter and inherit from there.
+#
+#  #InputSet does all loading, but depends on 'user_config'
+#  #Where as we are using hardcoded config here
+#  #Which are import_sets currently defaults to feature_sets keys
+#
+#  #we could simply call this static_config and let user_config over-write static config with warnings?
+#  #on an key by key basis? (top level only?)
+#
+#
+#  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
+#
+#  foreach my $import_set(@{$self->import_sets}){
+#
+#	my $ftype_config = ${$self->{static_config}{feature_sets}{$import_set}{feature_type}};
+#	my $ftype = $ftype_adaptor->fetch_by_name($ftype_config->{'name'});
+#
+#	$self->log("Validating $import_set FeatureType:\t".$ftype_config->{'name'});
+#
+#	if(! defined $ftype){
+#	  $self->log("FeatureType '".$ftype_config->{'name'}."' for external feature_set ".$self->{'type'}." not present");
+#	  $self->log("Storing using type hash definitions");
+#	
+#	  $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(
+#													   -name => $ftype_config->{'name'},
+#													   -class => $ftype_config->{'class'},
+#													   -description => $ftype_config->{'description'},
+#													  );
+#	  ($ftype) = @{$ftype_adaptor->store($ftype)};
+#	}
+#
+#	#Replace hash config with object
+#	$self->{static_config}{feature_types}{$ftype_config->{'name'}} = $ftype;
+#  }
+#
+#  return;
+#}
+#
 
-  Args       : None
-  Example    : $self->validate_and_store_feature_types;
-  Description: Imports feature types defined by import_sets.
-  Returntype : None
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk - Move this to (Base)Importer.pm
-
-=cut
-
-sub validate_and_store_feature_types{
-  my $self = shift;
-
-  # LBL enhancers have both positive and negative varieties
-
-  #feature type class/naming is logical but not intuitive
-  #+-----------------+-------------------------+----------+----------------------------------------------------+
-  #| feature_type_id | name                    | class    | description                                        |
-  #+-----------------+-------------------------+----------+----------------------------------------------------+
-  #|          398680 | VISTA Enhancer          | Enhancer | Enhancer identified by positive VISTA assay        |
-  #|          398681 | VISTA Target - Negative | Region   | Enhancer negative region identified by VISTA assay |
-  #+-----------------+-------------------------+----------+----------------------------------------------------+
 
 
-  #if (lc($type) eq 'VISTA') {
-  #  return (validate_type($db_adaptor, 'VISTA Enhancer') && validate_type($db_adaptor, 'VISTA Target - Negative'));
-  #}
-
-  #my $sth = $self->db->dbc->prepare("SELECT analysis_id FROM analysis WHERE logic_name=?");
-
-  
-
-  #remove lc as mysql doesn't care about case
-  #$sth->execute($type);
-  #if ($sth->fetchrow_array()) {
-  #  print "Type $type is valid\n";
-  #} else {
-  #  print "Type $type is not valid - is there an entry for $type in the analysis table?\n";
-  #  return 0;
-  #}
-
-  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
-
-  foreach my $import_set(@{$self->import_sets}){
-
-	my $ftype_config = ${$self->{'feature_sets'}{$import_set}{'feature_type'}};
-	my $ftype = $ftype_adaptor->fetch_by_name($ftype_config->{'name'});
-
-	$self->log("Validating $import_set FeatureType:\t".$ftype_config->{'name'});
-
-	if(! defined $ftype){
-	  $self->log("FeatureType '".$ftype_config->{'name'}."' for external feature_set ".$self->{'type'}." not present");
-	  $self->log("Storing using type hash definitions");
-	
-	  $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(
-													   -name => $ftype_config->{'name'},
-													   -class => $ftype_config->{'class'},
-													   -description => $ftype_config->{'description'},
-													  );
-	  ($ftype) = @{$ftype_adaptor->store($ftype)};
-	}
-
-	#Replace hash config with object
-	$self->{'feature_types'}{$ftype_config->{'name'}} = $ftype;
-  }
-
-  return;
-}
 
 
 
