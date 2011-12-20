@@ -54,7 +54,7 @@ use Bio::EnsEMBL::Funcgen::SegmentationFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file is_gzipped);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Utils::Helper;
+#use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use strict;
 
 #config stuff, move to BaseImporter?
@@ -62,8 +62,10 @@ use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
+use base qw(Bio::EnsEMBL::Funcgen::Parsers::BaseImporter); #@ISA change to parent with perl 5.10
+
+#use vars qw(@ISA);
+#@ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
 
 my %valid_types = (
 				   result       => undef,
@@ -90,19 +92,18 @@ sub new{
   my $class = ref($caller) || $caller;
   my $self  = $class->SUPER::new(@_);
   
-  my $config_file;
+  #  my $config_file;
   
 
   ($self->{'input_set_name'}, 
    $self->{'input_feature_class'}, 
-   $self->{'slices'}, 
+   #$self->{'slices'}, 
    $self->{total_features}, 
-   $self->{force},            #Is this generic enough to go in Importer? Similar to recover?
+   $self->{force},            #Is this generic enough to go in Importer? used by store_window_bins_by_Slice_Parser
    $self->{dbfile_data_root}, #only appropriate for result input_feature_class
-   $config_file,              #User defined config hash file
+ #  $config_file,              #User defined config hash file
   ) = rearrange(['input_set_name', 'input_feature_class', 
-				 'slices', 'total_features', 'force', 
-				 'dbfile_data_root', 'config_file'], @_);
+				 'total_features', 'force', 'dbfile_data_root'], @_);
 
 
   #Could potentially take fields params directly to define a custom format
@@ -127,9 +128,9 @@ sub new{
   $self->{'_feature_params'} = {};
   $self->{'_dbentry_params'} = [];
   
-  $self->{'counts'}   = {};
-  $self->{'slices'}   = [];
-  $self->{'seq_region_names'} = [];#Used for slice based import
+  #$self->{'counts'}   = {};
+  #$self->{'slices'}   = [];
+  #$self->{'seq_region_names'} = [];#Used for slice based import
 
 
    # USER CONFIG #
@@ -144,24 +145,24 @@ sub new{
   #Do dev here so we are not developing more stuff in the Importer which will need migrating
   #to the BaseImporter
 
- if($config_file){
-	my $config;
+  #if($config_file){
+#	my $config;
 
-	$self->log("Reading config file:\t".$config_file);
+#	$self->log("Reading config file:\t".$config_file);
 
-	if(! ($config = do "$config_file")){
-	  throw("Couldn't parse config file:\t$config_file:\n$@") if $@;
-	  throw("Couldn't do config:\t$config_file\n$!")          if ! defined $config;
-	  throw("Couldn't compile config_file:\t$config_file")    if ! $config;
-	}
+#	if(! ($config = do "$config_file")){
+#	  throw("Couldn't parse config file:\t$config_file:\n$@") if $@;
+#	  throw("Couldn't do config:\t$config_file\n$!")          if ! defined $config;
+#	  throw("Couldn't compile config_file:\t$config_file")    if ! $config;
+#	}
 
-	#At least check it is hash
-	if(ref($config) ne 'HASH'){
-	  throw("Config file does not define a valid HASH:\t$config_file");
-	}
-	
-	$self->{user_config} = $config;	
-  }
+#	#At least check it is hash
+#	if(ref($config) ne 'HASH'){
+#	  throw("Config file does not define a valid HASH:\t$config_file");
+#	}
+#	
+#	$self->{user_config} = $config;	
+#  }
 
  
   return $self;
@@ -237,7 +238,7 @@ sub set_config{
   $self->slices($self->{'slices'}) if defined $self->{'slices'};
 
   #Move to new when we sort out inheritance
-  $self->validate_and_store_config($self->name);
+  $self->validate_and_store_config([$self->name]);
   #Could use input_set_name here?
   #This was to support >1 input set per experiment (name)
 
@@ -253,16 +254,16 @@ sub set_config{
   Returntype : None
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk - Move this to (Base)Importer.pm and rename
+  Status     : High Risk - Moving this to (Base)Importer.pm
 
 =cut
 
 #Validate and store config?
 
-sub validate_and_store_config{
-  my ($self, @fset_names) = @_;
-
-  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
+#sub validate_and_store_config{
+#  my ($self, @fset_names) = @_;
+#
+#  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
 
 
   #We need to define analysis here too
@@ -291,161 +292,161 @@ sub validate_and_store_config{
   
   #Require full definition for now.
 
-  if(! exists ${$self}{user_config}){
-	warn "No user config found";
-  }
-  else{
-
-	foreach my $import_set(@fset_names){
-	  
-	  my $fset_config = $self->{user_config}{feature_sets}{$import_set};
-
-	  if(! $fset_config){
-		throw("Could not find user defined config for:\t$import_set");
-	  }
-
-	  $self->log("Validating and storing config for:\t$import_set");
-
-	  
-
-	  #Do analysis import/comparison first
-	  #as this maybe required for the feature type
-
-	  #Can self ref config if do will work with %config, specified as the last line
-	  #i.e.
-	  #feature_types keys are what is seen in the file?
-	  #else feature_type name?
-	  #Might cause conflict if we have name redundancy?
-	  #Could over come this by simply changing the key for the non-file ftypes
-	  #as they would only be used for reference within the config itself
-
-	  #my %config = ( feature_types => { F => { ftype hash }, fset_ftype => {fset_hash}} );
-	  #$config{feature_sets} = ( fset1 => { name => name, feature_type => $config{feature_types}{fset_ftype}} );
-	  
-	  #Don't compare against cache here as we need to check actual attr vals
-
-	  #Merge this two loops
-
-	  if(exists ${$fset_config}{'analyses'}){
-
-		foreach my $logic_name(keys %{$fset_config->{'analyses'}}){
-		  #do we need to pass/validate the key too?
-
-		  #Check we have some data in the hash
-		  if( (ref($fset_config->{'analyses'}{$logic_name}) ne 'HASH') ||
-			  (! keys %{$fset_config->{'analyses'}{$logic_name}}) ){
-			throw("You have specifed and undefined value in your feature_sets config for analysis $logic_name");
-		  }
-
-		  $fset_config->{'analyses'}{$logic_name} =
-			$self->validate_and_store_analysis($fset_config->{'analyses'}{$logic_name});
-		}
-	  }
-
-	  if(exists ${$fset_config}{'feature_types'}){
-
-		foreach my $ftype_key(keys %{$fset_config->{'feature_types'}}){
-		  
-		  #Check we have some data in the hash
-		  if( (ref($fset_config->{'feature_types'}{$ftype_key}) ne 'HASH') ||
-			  (! keys %{$fset_config->{'feature_types'}{$ftype_key}}) ){
-			throw("You have specifed and undefined value in your feature_sets config for feature type $ftype_key");
-		  }
-
-
-		  $fset_config->{'feature_types'}{$ftype_key} = 
-			$self->validate_and_store_feature_type($fset_config->{'feature_types'}{$ftype_key});
-		}
-	  }
-
-	   if(exists ${$fset_config}{'feature_set'}){
-		 
-		foreach my $ftype_key(keys %{$fset_config->{'feature_set'}}){
-		  #do we need to pass the key too?
-		  #$self->validate_and_store_feature_sets($fset_config->{'feature_sets'}{$ftype_key});
-		  #? Do we want to call define_sets here
-
-		  #This is only required when we merge with the BaseExternalParser
-		  #as that does not use define_set
-		  throw("InputSet does not yet support feature_set param config. This is done automatically.\n".
-				"Please ensure you have the correct analyses and feature_types set and remove the\n".
-				"following hash from your config:\n\tfeature_sets => $import_set => feature_set => {}");
-
-
-		}
-	  }
-	}
-  }
-
-  return;
-}
-
-
-
-sub validate_and_store_analysis{
-  my ($self, $analysis_params) = @_;
-
-  my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
-  my $logic_name       = $analysis_params->{'-logic_name'};
-  my $analysis         = $analysis_adaptor->fetch_by_logic_name($logic_name);
-  my $config_anal      = Bio::EnsEMBL::Analysis->new(%{$analysis_params});
+#  if(! exists ${$self}{user_config}){
+#	warn "No user config found";
+#  }
+#  else{#
+#
+#	foreach my $import_set(@fset_names){
+#	  
+#	  my $fset_config = $self->{user_config}{feature_sets}{$import_set};
+#
+#	  if(! $fset_config){
+#		throw("Could not find user defined config for:\t$import_set");
+#	  }
+#
+#	  $self->log("Validating and storing config for:\t$import_set");
+#
+#	  
+#
+#	  #Do analysis import/comparison first
+#	  #as this maybe required for the feature type
+#
+#	  #Can self ref config if do will work with %config, specified as the last line
+#	  #i.e.
+#	  #feature_types keys are what is seen in the file?
+#	  #else feature_type name?
+#	  #Might cause conflict if we have name redundancy?
+#	  #Could over come this by simply changing the key for the non-file ftypes
+#	  #as they would only be used for reference within the config itself
+#
+#	  #my %config = ( feature_types => { F => { ftype hash }, fset_ftype => {fset_hash}} );
+#	  #$config{feature_sets} = ( fset1 => { name => name, feature_type => $config{feature_types}{fset_ftype}} );
+#	  
+#	  #Don't compare against cache here as we need to check actual attr vals
+#
+#	  #Merge this two loops
+#
+#	  if(exists ${$fset_config}{'analyses'}){
+#
+#		foreach my $logic_name(keys %{$fset_config->{'analyses'}}){
+#		  #do we need to pass/validate the key too?
+#
+#		  #Check we have some data in the hash
+#		  if( (ref($fset_config->{'analyses'}{$logic_name}) ne 'HASH') ||
+#			  (! keys %{$fset_config->{'analyses'}{$logic_name}}) ){
+#			throw("You have specifed and undefined value in your feature_sets config for analysis $logic_name");
+#		  }
+#
+#		  $fset_config->{'analyses'}{$logic_name} =
+#			$self->validate_and_store_analysis($fset_config->{'analyses'}{$logic_name});
+#		}
+#	  }
+#
+#	  if(exists ${$fset_config}{'feature_types'}){
+#
+#		foreach my $ftype_key(keys %{$fset_config->{'feature_types'}}){
+#		  
+#		  #Check we have some data in the hash
+#		  if( (ref($fset_config->{'feature_types'}{$ftype_key}) ne 'HASH') ||
+#			  (! keys %{$fset_config->{'feature_types'}{$ftype_key}}) ){
+#			throw("You have specifed and undefined value in your feature_sets config for feature type $ftype_key");
+#		  }
+#
+#
+#		  $fset_config->{'feature_types'}{$ftype_key} = 
+#			$self->validate_and_store_feature_type($fset_config->{'feature_types'}{$ftype_key});
+#		}
+#	  }
+#
+#	   if(exists ${$fset_config}{'feature_set'}){
+#		 
+#		foreach my $ftype_key(keys %{$fset_config->{'feature_set'}}){
+#		  #do we need to pass the key too?
+#		  #$self->validate_and_store_feature_sets($fset_config->{'feature_sets'}{$ftype_key});
+#		  #? Do we want to call define_sets here
+#
+#		  #This is only required when we merge with the BaseExternalParser
+#		  #as that does not use define_set
+#		  throw("InputSet does not yet support feature_set param config. This is done automatically.\n".
+#				"Please ensure you have the correct analyses and feature_types set and remove the\n".
+#				"following hash from your config:\n\tfeature_sets => $import_set => feature_set => {}");
+#
+#
+#		}
+#	  }
+#	}
+#  }
+#
+#  return;
+#}
 
 
-  if(! defined $analysis){
-	
-	$self->log('Analysis '.$logic_name." not found in DB, storing from config");		
-	$analysis_adaptor->store($config_anal);
-	$analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);	
-  }
-  else{
-	
-	my $not_same = $analysis->compare($config_anal);
-	#Analysis::compare returns the opposite of what you expect!
 
-	if($not_same){
-	  throw('There is a param mismatch between the '.$logic_name.
-			' Analysis in the DB and config. Please rectify or define a new logic_name');
-	}
-  }
-  
-  return $analysis;
-}
+#sub validate_and_store_analysis{
+#  my ($self, $analysis_params) = @_;
+#
+#  my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
+#  my $logic_name       = $analysis_params->{'-logic_name'};
+#  my $analysis         = $analysis_adaptor->fetch_by_logic_name($logic_name);
+#  my $config_anal      = Bio::EnsEMBL::Analysis->new(%{$analysis_params});
 
-sub validate_and_store_feature_type{
-  my ($self, $ftype_params) = @_;
 
-  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
-  my $name          = $ftype_params->{-name};
-  my $class         = $ftype_params->{-class}; 
-  my $analysis;  #Need to define analysis so we don't declare hash key when pass as arg
-
-  if(exists ${$ftype_params}{'-analysis'}){
-	#This is slightly redundant as we may have already validated this analysis
-	$ftype_params->{'-analysis'} = $self->validate_and_store_analysis($ftype_params->{'-analysis'});
-	$analysis = $ftype_params->{'-analysis'};
-  }
-  
-  my $config_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(%{$ftype_params});
-  my $ftype        = $ftype_adaptor->fetch_by_name($name, $class, $analysis);
-  
-
-  if($ftype){
-
-	if(! $ftype->compare($config_ftype)){
-	  my $label = $name."($class";
-	  $label .= (defined $analysis) ? ' '.$analysis->logic_name.')' : ')';
-	  
-	  throw('There is a param mismatch between the '.$name.
-			' FeatureType in the DB and config. Please rectify in the config.');
-	}
-  }
-  else{
-	$self->log('FeatureType '.$name." not found in DB, storing from config");		
-	($ftype) = @{$ftype_adaptor->store($config_ftype)};
-  }
-
-  return $ftype;
-}
+#  if(! defined $analysis){
+#	
+#	$self->log('Analysis '.$logic_name." not found in DB, storing from config");		
+#	$analysis_adaptor->store($config_anal);
+#	$analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);	
+#  }
+#  else{
+#	
+#	my $not_same = $analysis->compare($config_anal);
+#	#Analysis::compare returns the opposite of what you expect!
+#
+#	if($not_same){
+#	  throw('There is a param mismatch between the '.$logic_name.
+#			' Analysis in the DB and config. Please rectify or define a new logic_name');
+#	}
+#  }
+#  
+#  return $analysis;
+#}
+#
+#sub validate_and_store_feature_type{
+#  my ($self, $ftype_params) = @_;
+#
+#  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
+#  my $name          = $ftype_params->{-name};
+#  my $class         = $ftype_params->{-class}; 
+#  my $analysis;  #Need to define analysis so we don't declare hash key when pass as arg
+#
+#  if(exists ${$ftype_params}{'-analysis'}){
+#	#This is slightly redundant as we may have already validated this analysis
+#	$ftype_params->{'-analysis'} = $self->validate_and_store_analysis($ftype_params->{'-analysis'});
+#	$analysis = $ftype_params->{'-analysis'};
+#  }
+#  
+#  my $config_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(%{$ftype_params});
+#  my $ftype        = $ftype_adaptor->fetch_by_name($name, $class, $analysis);
+#  
+#
+#  if($ftype){
+#
+#	if(! $ftype->compare($config_ftype)){
+#	  my $label = $name."($class";
+#	  $label .= (defined $analysis) ? ' '.$analysis->logic_name.')' : ')';
+#	  
+#	  throw('There is a param mismatch between the '.$name.
+#			' FeatureType in the DB and config. Please rectify in the config.');
+#	}
+#  }
+#  else{
+#	$self->log('FeatureType '.$name." not found in DB, storing from config");		
+#	($ftype) = @{$ftype_adaptor->store($config_ftype)};
+#  }
+#
+#  return $ftype;
+#}
 
 
 sub define_sets{
@@ -512,12 +513,16 @@ sub define_sets{
 }
 
 
+
+
+#we have rollback functionality incorporated here
+
 sub validate_files{
   my ($self, $prepare) = @_;
 
   #Get file
   if (! @{$self->result_files()}) {
-	my $list = "ls ".$self->get_dir('input').'/'.$self->input_set_name().'*.';#.lc($self->vendor);#could use vendor here? ACtually need suffix attr
+	my $list = "ls ".$self->get_dir('input').'/'.$self->input_set_name().'*.';#.lc($self->vendor);#could use vendor here? Actually need suffix attr
 	my @rfiles = `$list`;
 	$self->result_files(\@rfiles);
   }
@@ -541,7 +546,6 @@ sub validate_files{
   #We need validate all the files first, so the import doesn't fall over half way through
   #Or if we come across a rollback halfway through
   my (%new_data, $eset);
-  my $recover_unimported = 0;
   my $dset = $self->data_set;
    
   if((scalar(@{$self->slices}) > 1) &&
@@ -554,8 +558,8 @@ sub validate_files{
   if($self->input_feature_class eq 'result'){
 	$eset = $dset->get_supporting_sets->[0]->get_InputSets->[0];
   }
-  else{#annoated/segmentation
-	$eset =  $dset->get_supporting_sets->[0]; 
+  else{#annotated/segmentation
+	$eset =  $dset->get_supporting_sets->[0];
   }
 
 
@@ -565,92 +569,104 @@ sub validate_files{
   #are loaded, unless we store slice based IMPORTED states
   #We currently get around this be never settign IMPORTED for slice based jobs
   #and always rolling back by slice before import
-  
 
+  #This loop supports multiple files
+  my (@rollback_sets, %file_paths);
+  my $auto_rollback = ($self->rollback) ? 0 : 1;
 
   foreach my $filepath( @{$self->result_files} ) {
+	my ($filename, $sub_set);
 	chomp $filepath;
+   	($filename = $filepath) =~ s/.*\///;
+	$file_paths{$filename} = $filepath;			 
+	$filename =~ s/^prepared\.// if $self->prepared; 	#reset filename to that originally used to create the Inputsubsets
 
- 	my $filename;
-	($filename = $filepath) =~ s/.*\///;
-	my $sub_set;
 	$self->log('Validating '.$self->vendor." file:\t$filename");
 	throw("Cannot find ".$self->vendor." file:\t$filepath") if(! -e $filepath);#Can deal with links
-	
-	#reset filename to that originally used to create the Inputsubsets
-	$filename =~ s/^prepared\.// if $self->prepared;
-	
+		
 	if( $sub_set = $eset->get_subset_by_name($filename) ){
 	  #IMPORTED status here is just for the file
-	  #Any changes to analysis or cs would result in different Inputsubset/file
-	  #so we don't need to account for that.
-	  #Also will only ever be imported into one Feature|ResultSet
+	  #Any changes to analysis or coord_system should result in different InputSubset(file)
+	  #Will only ever be imported into one Feature|ResultSet
 
-	  if($recover_unimported){
-		$new_data{$filepath} = 1;
-		next;
-	  }
+	  #Currently conflating recover_unimported and rollback
+	  #as they serve the same purpose until we implement InputSubset level recovery
 
+	
 	  if( $sub_set->has_status('IMPORTED') ){
 		$new_data{$filepath} = 0;
 		$self->log("Found previously IMPORTED InputSubset:\t$filename");
 	  } 
 	  else{
-		$self->log("Found partially IMPORTED InputSubset:\t$filename");
-		$recover_unimported = 1;
-		$new_data{$filepath} = 1;
-		
-		if(! $prepare){
-
-		  #InputSet may be peaks or reads so how are we going to rollback?
-		  #Need to pass parameter to Importer for feature/set type
-		  #Given an InputSet in isolation there is no way of determining where it's
-		  #features are stored. Do we need to add set_type to input_set?
-
-		  if ( $self->recovery && $recover_unimported ) {
-			$self->log("Rolling back results for InputSubset:\t".$filename);
-			#Change these to logger->warn
-			$self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set? Unless slices defined");
-			$self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
-			
-			if($self->input_feature_class eq 'result'){
-			  #Can we do this by slice for parallelisation?
-			  #This will only ever be a single ResultSet due to Helper::define_and_validate_sets
-			  #flags are rollback_results and force(as this won't be a direct input to the product feature set)
-			  $self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0], 1);
-			}
-			else{#annotated/segmentation
-			  $self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
-			  $self->rollback_InputSet($eset);
-			  last;
-			}			
-
-		  }
-		  elsif( $recover_unimported ){
-			throw("Found partially imported InputSubSet:\t$filepath\n".
-				  "You must specify -recover  to perform a full roll back for this InputSet:\t".$eset->name);
-		  }
-		}
+		$self->log("Found existing InputSubset without IMPORTED status:\t$filename");
+		push @rollback_sets, $sub_set;
 	  }
 	}
 	else{
-
-	  #This should never happed for prepared data
-	  throw("Should not have found new 'prepared' file:\t$filename") if $self->prepared;
-	  
 	  $self->log("Found new InputSubset:\t${filename}");
+	  throw("Should not have found new 'prepared' file:\t$filename") if $self->prepared;	  
 	  $new_data{$filepath} = 1;
 	  $sub_set = $eset->add_new_subset($filename);
 	  $self->input_set_adaptor->store_InputSubsets([$sub_set]);
 	}
   }
 
-  #Set all the new if we have rolled back due to a recovery.
-  if ($recover_unimported){
 
-	foreach my $esset(@{$eset->get_InputSubsets}){
-	  $new_data{$esset->name} = 1; 
-	  $eset->adaptor->revoke_states($esset);
+  #Does -recover allow a single extra new file to be added to an existing InputSet?
+ 
+
+  if(@rollback_sets &&  #recoverable sets i.e. exists but not IMPORTED
+	 ( (! $self->recovery) && (! $self->rollback) ) ){
+	throw("Found partially imported InputSubsets:\n\t".join("\n\t", (map $_->name, @rollback_sets))."\n".
+		  "You must specify -recover or -rollback to perform a full rollback");
+
+	if($self->recovery){
+	  #Change these to logger->warn
+	  $self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set? Unless slices defined");
+	  $self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
+	}
+  }
+  
+  
+  if($self->rollback){
+	#Check we have all existing InputSubsets files before we do full rollback
+	#Can probably remove this if we support InputSubset(file/slice) level rollback
+	$self->log('Rolling back all InputSubsets');
+	@rollback_sets = @{$eset->get_InputSubsets};
+
+	foreach my $isset(@rollback_sets){
+	  
+	  if(! exists $file_paths{$isset->name}){
+		throw("You are attempting a multiple InputSubset rollback without specifying an existing InputSubset:\t".$isset->name.
+			  "\nAborting rollback as data will be lost. Please specifying all existing InputSubset file names");
+	  }
+	}
+  }
+
+
+
+  foreach my $esset(@rollback_sets){
+	#This needs to be mapped to the specified filepaths
+	$new_data{$file_paths{$esset->name}} = 1;
+	$self->log("Revoking states for InputSubset:\t".$esset->name);
+	$eset->adaptor->revoke_states($esset);
+
+	if(! $prepare){
+	  #This was to avoid redundant rollback in prepare step
+	  $self->log("Rolling back InputSubset:\t".$esset->name);
+	  
+	  if($self->input_feature_class eq 'result'){
+		#Can we do this by slice for parallelisation?
+		#This will only ever be a single ResultSet due to Helper::define_and_validate_sets
+		#flags are rollback_results and force(as this won't be a direct input to the product feature set)
+		$self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0], 1);
+		#why don't we need a rollback_InputSet here?
+	  }
+	  else{#annotated/segmentation
+		$self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
+		$self->rollback_InputSet($eset);
+		last;
+	  }			
 	}
   }
 
@@ -701,64 +717,6 @@ sub feature_params{      return $_[0]->{'_feature_params'}; }
 sub dbentry_params{      return $_[0]->{'_dbentry_params'}; }
 
 sub input_gzipped{       return $_[0]->{'input_gzipped'}; }
-
-
-sub counts{
-  my ($self, $count_type) = @_;
-
-  if($count_type){
-	$self->{'_counts'}{$count_type} ||=0;
-	return 	$self->{'_counts'}{$count_type};
-  }
- 
-  return $self->{'_counts'}
-}
-
-
-#Move this to Importer?
-
-sub slices{
-  my ($self, $slices) = @_;
-
-  if(defined $slices){
-
-	if (ref($slices) ne 'ARRAY'){
-	  throw("-slices parameter must be an ARRAYREF of Bio::EnsEMBL::Slices (i.e. not $slices)");
-	}
-
-	foreach my $slice(@$slices){
-	  
-	  if(! ($slice && ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
-		throw("-slices parameter must be Bio::EnsEMBL::Slices (i.e. not $slice)");
-	  }
-	  
-	  #Removed cache_slice from here as this was
-	  #preventing us from identifying the seq_region in an input file
-
-	  my $full_slice = $self->slice_adaptor->fetch_by_name($slice->name);
-
-	  if(($slice->start != 1) ||
-		 ($slice->end != $full_slice->end)){
-		throw("InputSet Parser does not yet accomodate partial Slice based import i.e. slice start > 1 or slice end < slice length:\t".$slice->name);
-		
-	  }
-
-	  push @{$self->{seq_region_names}}, $slice->seq_region_name;
-	}
-	$self->{'slices'} = $slices;
-  }
-
-  return $_[0]->{slices};
-}
-
-
-sub count{
-  my ($self, $count_type) = @_;
-
-  $self->{'_counts'}{$count_type} ||=0;
-  $self->{'_counts'}{$count_type}++;
-  return;
-}
 
 
 sub input_file_operator{
@@ -825,14 +783,9 @@ sub read_and_import_data{
   foreach my $filepath(@{$self->result_files()}) {
 	chomp $filepath;
 	($filename = $filepath) =~ s/.*\///;
-
-	$self->input_file($filepath);
-	#This is only used by Collector::ResultFeature::reinitialise_input method
-
-
-	#We're checking for recover here, as we have to reload all if just one has been screwed up.
+	$self->input_file($filepath); #This is only used by Collector::ResultFeature::reinitialise_input method
 	
-	if( $new_data->{$filepath} ){
+	if($new_data->{$filepath} ){
 	  $seen_new_data = 1;
 	  $self->{'input_gzipped'} = &is_gzipped($filepath);
 	  
@@ -945,8 +898,6 @@ sub read_and_import_data{
 		$fh->close;
 	  }
 	  else{
-
-		#This slurp may need to go if data gets to large
 		  
 	  
 		#Revoke FeatureSet IMPORTED state here incase we fail halfway through
