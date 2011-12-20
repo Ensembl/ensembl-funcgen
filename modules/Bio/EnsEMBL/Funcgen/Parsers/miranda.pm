@@ -22,33 +22,6 @@ package Bio::EnsEMBL::Funcgen::Parsers::miranda;
 
 use strict;
 
-#This was in the description
-#For MSKCC miRanda targets
-#Contact is Doron Betel (or maybe Mark Levenstien levenstm@mskcc.org)
-#http://www.microrna.org/microrna/getDownloads.do
-#Current Human/Mouse/Rat
-
-
-
-#This is what we have actually hosted
-#For Sanger miRanda targets
-#contact svd@sanger.ac.uk stijn van dongen
-#From our download page
-#http://microrna.sanger.ac.uk/cgi-bin/targets/v5/download.pl
-#and then
-#ftp://ftp.sanger.ac.uk/pub/mirbase/targets/v5/arch.v5.gff.homo_sapiens.zip
-
-
-
-#  #<GROUP>	<SEQ>	<METHOD>	<FEATURE>	<CHR>	<START>	<END>	<STRAND>	<PHASE>	<SCORE>	
-#  Similarity	hsa-miR-23b	miRanda	miRNA_target	1	919788	919807	+	.	69	transcript id "ENST00000310998"
-#  Similarity	hsa-miR-23a	miRanda	miRNA_target	1	919787	919807	+	.	71	transcript id "ENST00000310998"
-
-##GROUP SEQ     METHOD  FEATURE CHR     START   END     STRAND  PHASE   SCORE   PVALUE_OG       TRANSCRIPT_ID   EXTERNAL_NAME
-#Similarity      mmu-miR-707     miRanda miRNA_target    2       120824620       120824640       +       .       15.3548 2.796540e-02    ENST00000295228 INHBB
-
-#But we now want to host a reduced set from Anton
-
 use Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser;
 use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::Funcgen::ExternalFeature;
@@ -72,34 +45,44 @@ sub new {
   my $self = $class->SUPER::new(@_);
 
   #Set default feature_type and feature_set config
-  $self->{'feature_types'} = {
-							  'miRanda Target'   => {
-											  name        => 'miRanda Target',
-											  class       => 'RNA',
-											  description => 'miRanda microRNA target',
-											 },
-							 };
+  $self->{static_config}{feature_types} = 
+	{
+	 'miRanda Target'   => {
+							-name        => 'miRanda Target',
+							-class       => 'RNA',
+							-description => 'miRanda microRNA target',
+						   },
+	};
 
-  $self->{feature_sets} = {
-						   'miRanda miRNA targets' => 
-						   {
-							feature_type      => \$self->{'feature_types'}{'miRanda Target'},
-							display_name      => 'miRanda Targets',
-							analysis          => 
-							{ 
-							 -logic_name    => 'miRanda',
-							 #-description   => 'miRanda microRNA target prediction (http://www.microrna.org)',
-							 -description => 'miRanda microRNA target prediction (http://www.ebi.ac.uk/enright-srv/microcosm/htdocs/targets/)',
-							 -display_label => 'miRanda Target',
-							 -displayable   => 1,
-							},
-							xrefs => 1,
-						   },						   
-						  };
+  $self->{static_config}{analyses} =
+	{
+	 miRanda => { 
+				 -logic_name    => 'miRanda',
+				 -description   => '<a href="http://www.ebi.ac.uk/enright-srv/microcosm/htdocs/targets/v5/consset.html">miRanda microRNA target predictions</a>',
+				 -display_label => 'miRanda Targets',
+				 -displayable   => 1,
+				},
+	};
+
+  $self->{static_config}{feature_sets}{'miRanda miRNA targets'} = 
+	{
+	 #analyses      => $self->{static_config}{analyses},
+	 #feature_types => $self->{static_config}{feature_types},
+	 feature_set => 
+	 {
+	  -feature_type      => 'miRanda Target',
+	  -display_name      => 'miRanda Targets',
+	  -description       => $self->{static_config}{analyses}{miRanda}{-description},
+	  -analysis          => 'miRanda',
+	 },
+	 xrefs => 1,
+   }; 
+
 
   
  
-  $self->validate_and_store_feature_types;
+  #$self->validate_and_store_feature_types;
+  $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
   $self->set_feature_sets;
 
   return $self;
@@ -111,13 +94,19 @@ sub new {
 sub parse_and_load{
   my ($self, $files, $old_assembly, $new_assembly) = @_;
 
+  #Add num files to config and check this in BaseImporter(generically)
+  if(scalar(@$files) != 1){
+	 throw('You must currently define a single file to load miRanda features from:\t'.join(' ', @$files));
+  }
+
+
   my $file = $files->[0];
   $self->log_header("Parsing miRanda data from:\t$file");  
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   my $ftype_adaptor    = $self->db->get_FeatureTypeAdaptor();
   my $extf_adaptor     = $self->db->get_ExternalFeatureAdaptor;
   my $dbentry_adaptor  = $self->db->get_DBEntryAdaptor; 
-  my $set              = $self->{'feature_sets'}{'miRanda miRNA targets'};
+  my $set              = $self->{static_config}{feature_sets}{'miRanda miRNA targets'}{feature_set};
   my %features_by_name; # name -> feature_type
   my %slice_cache;
   # this object is only used for projection
@@ -144,13 +133,6 @@ sub parse_and_load{
 	#Similarity      mmu-miR-707     miRanda miRNA_target    2       120824620       120824640       +       .       15.3548 2.796540e-02    ENST00000295228 INHBB
 
 
-	#MSKCC
-	#UCSC ID	mRNA	Gene ID	miRNA acc	miRNA	miRNA align	alignment	gene align	align score	conservation	miRNA start	miRNA end	gene start	gene end	%ID	%Similar	energy	organism	prediction_date
-	#uc001abs.1	AK091100	LOC643837	MIMAT0000062	hsa-let-7a	uuGAUAUGUUGGAUGAUGGAGu	||:  || |:| ||:|||| 	guCUGCUCACCUUCCUGCCUCa	144	0.615759	2	21	396	417	63	78	0	9606	2008-05-16
-	#uc001afh.1	NM_001039577	CCNL2	MIMAT0000062	hsa-let-7a	uugauAUGUUGGAUGAUGGAGu	|::||||| ||:|||| 	cucacUGUAACCU-CUGCCUCc	147	0.767611	2	18	2290	2310	75	93	0	9606	2008-05-16
-
-
-
     my ($group, $seq, $method, $feature, $chr, $start, $end, $strand, undef, undef, undef, $ens_id, $display_name) = split;
     $strand = ($strand =~ /\+/o) ? 1 : -1;
     ##my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
@@ -172,6 +154,7 @@ sub parse_and_load{
 	  if(! defined $slice_cache{$chr}){
 		warn "Can't get slice $chr for sequence $id\n";
 		$skipped++;
+		#Add UnmappedObject here?
 		next LINE;
 	  }
 	}
@@ -251,25 +234,24 @@ sub parse_and_load{
 
 	#Handle release/version in xref version as stable_id version?
 
-	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => $species.'_core_Transcript',
-											 #-release                => $self->db->dnadb->dbc->dbname,
-											 -release => '46_36h', #Hard coded due to schema to old to use with API
-											 #-release => '46_36g',
-											 -status                 => 'KNOWNXREF',
-											 #-display_label_linkable => 1,
-											 -db_display_name        => 'EnsemblTranscript',
-											 -type                   => 'MISC',
-											 -primary_id             => $ens_id,
-											 -display_id             => $display_name,
-											 -info_type              => 'MISC',
-											 -info_text              => 'TRANSCRIPT',
-											 #-linkage_annotation     => 'miRanda miRNA negative influence',
-											 -linkage_annotation     => 'miRanda target - negative influence',
-											 #could have version here if we use the correct dnadb to build the cache
-											 -analysis  =>  $self->{'feature_sets'}{'miRanda miRNA targets'}{analysis},
-											);
-
+	my $dbentry = Bio::EnsEMBL::DBEntry->new
+	  (
+	   -dbname                 => $species.'_core_Transcript',
+	   -release                => $self->db->_get_schema_build($self->db->dnadb),
+	   #-release => '46_36h', #Hard coded due to schema to old to use with API
+	   -status                 => 'KNOWNXREF',
+	   #-display_label_linkable => 1,
+	   -db_display_name        => 'EnsemblTranscript',
+	   -type                   => 'MISC',
+	   -primary_id             => $ens_id,
+	   -display_id             => $display_name,
+	   -info_type              => 'MISC',
+	   -info_text              => 'TRANSCRIPT',
+	   -linkage_annotation     => 'miRanda target - negative influence',
+	   #could have version here if we use the correct dnadb to build the cache
+	   -analysis               =>  $set->analysis,
+	  );
+	
 	$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag  
   }
 

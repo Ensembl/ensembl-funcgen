@@ -56,26 +56,35 @@ sub new {
   #We need to capture version/release/data of external feature sets.
   #This can be nested in the description?  Need to add description to feature_set?
 
-  $self->{'feature_types'} = {
-			'BioTIFFIN Motif'   => {
-					name        => 'BioTIFFIN Motif',
-					class       => 'Regulatory Motif',
-					description => 'BioTIFFIN motif',
-			}
+  $self->{static_config}{feature_types} = 
+	{
+	 'BioTIFFIN Motif'   => {
+							 name        => 'BioTIFFIN Motif',
+							 class       => 'Regulatory Motif',
+							 description => 'BioTIFFIN motif',
+							}
 	};
   
-  $self->{feature_sets} = {
-			'BioTIFFIN Motif' => {
-					feature_type      => \$self->{'feature_types'}{'BioTIFFIN Motif'},
-					analysis          => 
-					{ 
-							-logic_name    => 'BioTIFFIN Motif',
-							-description   => 'BioTIFFIN regulatory motif database',
-							-display_label => 'BioTIFFIN motifs',
-							-displayable   => 1,
-					},
-					xrefs => 0,
-			}
+  $self->{static_config}{analyses} = 
+	{
+	 'BioTIFFIN Motif' => { 
+						   -logic_name    => 'BioTIFFIN Motif',
+						   -description   => 'BioTIFFIN regulatory motif database',
+						   -display_label => 'BioTIFFIN motifs',
+						   -displayable   => 1,
+						  },
+	};
+  
+  $self->{static_config}{feature_sets} = 
+	{
+	 'BioTIFFIN Motif' => 
+	 {
+	  feature_set => {
+					  -feature_type => 'BioTIFFIN Motif',
+					  -analysis     => 'BioTIFFIN Motif',
+					 },
+	  xrefs => 0,
+	 }
 	};
  
 
@@ -89,29 +98,7 @@ sub new {
 									   },					  
 					 };
   
-  
-  #Default feature_set names
-  if(! defined $self->import_sets){
-	@{$self->{'import_sets'}} = keys %{$self->{'feature_sets'}};
-  }
-  else{#validate
-
-	foreach my $import_fset(@{$self->import_sets}){
-	  
-	  if(! exists $self->{'feature_sets'}{$import_fset}){
-		throw("$import_fset is not a valid import feature set. Maybe you need to add this to the config in:\t".ref($self));
-	  }
-	}
-  }
-
-
-  #Need to change this so we can just (re)load the one set.
-  
-  #Change this so we only call it from parse_and_load?
-  #Should we validate all first, so we fail at the earliest possible moment?
-  #Or serially?
-
-  $self->validate_and_store_feature_types;
+  $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
   $self->set_feature_sets;
 
   return $self;
@@ -128,11 +115,12 @@ sub new {
 
 
 sub parse_and_load {
-  my $self = shift;
+  my ($self, $files, $old_assembly, $new_assembly) = @_;
 
-  my ($fset_name, $old_assembly, $new_assembly, $file) = rearrange(['FEATURE_SET', 'OLD_ASSEMBLY', 'NEW_ASSEMBLY', 'FILE'], @_);
+  if(scalar(@$files) != 1){
+	throw('You must provide a unique file path to load VISTA features from:\t'.join(' ', @$files));
+  }
 
-  warn "file arg not yet fully supported, loading defaults import sets";
 
   my %slice_cache;
   my $extf_adaptor  = $self->db->get_ExternalFeatureAdaptor;
@@ -147,30 +135,37 @@ sub parse_and_load {
   #Just to make sure we hav homo_sapiens and not Homo Sapiens
   ($species = lc($species)) =~ s/ /_/;
 
+  
+  if(scalar @{$self->import_sets} != 1){
+	throw('biotiffin parser currently only supports one import FeatureSet');
+  }
+
+  my ($import_set) = @{$self->import_sets};
 
 
-  foreach my $import_set(@{$self->import_sets}){
-	$self->log_header("Parsing $import_set data");
-
-	my %motif_cache; # name -> factor_id
-	my $config = $self->{'config'}{$import_set};
-	my $fset =  $self->{'feature_sets'}{$import_set};
-	my %gff_attrs =  %{$config->{'gff_attrs'}};
+  #foreach my $import_set(@{$self->import_sets}){
+  $self->log_header("Parsing $import_set data");
+  
+  my %motif_cache; # name -> factor_id
+  my $config = $self->{'config'}{$import_set};
+  my $fset =  $self->{static_config}{feature_sets}{$import_set}{feature_set};
+  my %gff_attrs =  %{$config->{'gff_attrs'}};
+  
+  
+  # Parse motifs.txt file
+  #my $file =  $config->{'file'};
+  my $file = $files->[0];
+  my $skipped = 0;
+  my $motif_cnt = 0;
+  my $factor_xref_cnt = 0;
+  my $feature_cnt = 0;
+  my $feature_target_cnt = 0;
 	
-	
-	# Parse motifs.txt file
-	my $file =  $config->{'file'};
-	my $skipped = 0;
-	my $motif_cnt = 0;
-	my $factor_xref_cnt = 0;
-	my $feature_cnt = 0;
-	my $feature_target_cnt = 0;
-	
-	open (FILE, "<$file") || die("Can't open $file\n$!\n");
+  open (FILE, "<$file") || die("Can't open $file\n$!\n");
 
-	LINE: while (my $line = <FILE>) {
+ LINE: while (my $line = <FILE>) {
 	  chomp $line;
-
+	  
 	  #GFF3
 		#3R      MotifScanner    TIFDMEM0000001  936391  936401  0.0     +       0
 		#3R      MotifScanner    TIFDMEM0000001  13455911        13455921        0.0     -       0
@@ -256,7 +251,7 @@ sub parse_and_load {
 	$self->log("$feature_cnt features");
 	$self->log("Skipped $skipped features");
 
-  }
+#}
 
   return;
 }

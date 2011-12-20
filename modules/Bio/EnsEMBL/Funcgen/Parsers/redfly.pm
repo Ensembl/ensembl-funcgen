@@ -65,58 +65,72 @@ sub new {
   #We need to capture version/release/data of external feature sets.
   #This can be nested in the description?  Need to add description to feature_set?
 
-  $self->{'feature_types'} = {
-							   'REDfly TFBS'   => {
-												   name        => 'REDfly TFBS',
-												   class       => 'Transcription Factor',
-												   description => 'REDfly transciption factor binding site',
-												  },
-							   'REDfly CRM' => {
-												name        => 'REDfly CRM',
-												class       => 'Regulatory Motif',
-												description => 'REDfly cis regulatory motif',
-											   },
-							 };
+  $self->{static_config}{feature_types} = 
+	{
+	 'REDfly TFBS'   => {
+						 -name        => 'REDfly TFBS',
+						 -class       => 'Transcription Factor',
+						 -description => 'REDfly transciption factor binding site',
+						},
+	 'REDfly CRM' => {
+					  -name        => 'REDfly CRM',
+					  -class       => 'Regulatory Motif',
+					  -description => 'REDfly cis regulatory motif',
+					 },
+	};
   
-  $self->{feature_sets} = {
-						   'REDfly TFBSs' => {
-											  feature_type      => \$self->{'feature_types'}{'REDfly TFBS'},
-											  #display_label     => 'REDfly TFBSs',#defaults to name
-											  analysis          => 
-											  { 
-											   -logic_name    => 'REDfly TFBS',
-											   -description   => 'REDfly transcription factor binding sites (http://redfly.ccr.buffalo.edu/)',
-											   -display_label => 'REDfly TFBS',
-											   -displayable   => 1,
-											  },
-											  xrefs => 1,
-											 },
-
-						   'REDfly CRMs' => {
-											 feature_type      => \$self->{'feature_types'}{'REDfly CRM'},
-											 analysis          => 
-											 { 
-											  -logic_name    => 'REDfly CRM',
-											  -description   => 'REDfly cis regulatory motif (http://redfly.ccr.buffalo.edu/)',
-											  -display_label => 'REDfly CRM',
-											  -displayable   => 1,
-											 },
-											 xrefs => 1,
-											},
-						  };
+  
+  $self->{static_config}{analyses} = 
+	{
+	 'REDfly TFBS' => { 
+					   -logic_name    => 'REDfly TFBS',
+					   -description   => 'REDfly transcription factor binding sites (http://redfly.ccr.buffalo.edu/)',
+					   -display_label => 'REDfly TFBS',
+					   -displayable   => 1,
+					  },
+	 
+	  'REDfly CRM' => { 
+					   -logic_name    => 'REDfly CRM',
+					   -description   => 'REDfly cis regulatory motif (http://redfly.ccr.buffalo.edu/)',
+					   -display_label => 'REDfly CRM',
+					   -displayable   => 1,
+					  },
+	};
+  
+  $self->{static_config}{feature_sets} = 
+	{
+	 'REDfly TFBSs' => {
+						feature_set =>
+						{
+						 -feature_type  => 'REDfly TFBS',
+						 -analysis      => 'REDfly TFBS',
+						},
+						xrefs => 1,
+					   },
+	 
+	 'REDfly CRMs' => {
+					   feature_set   =>
+					   {
+						-feature_type  => 'REDfly CRM',
+						-analysis      => 'REDfly CRM',
+					   },
+					   
+					   xrefs => 1,
+					  },
+	};
  
 
   #Move xref flag here?
   $self->{config} =  {
 					  'REDfly CRMs' => {
-										file  => $ENV{'EFG_DATA'}.'/input/REDFLY/redfly_crm.gff',
+										#file  => $ENV{'EFG_DATA'}.'/input/REDFLY/redfly_crm.gff',
 										gff_attrs => {
 													  'ID' => 1,
 													 },
 									   },
 					  
 					  'REDfly TFBSs' => {
-										 file  => $ENV{'EFG_DATA'}.'/input/REDFLY/redfly_tfbs.gff',
+										 #file  => $ENV{'EFG_DATA'}.'/input/REDFLY/redfly_tfbs.gff',
 										 gff_attrs => {
 													   'ID' => 1,
 													   'Factor' => 1,
@@ -127,30 +141,9 @@ sub new {
 					 };
   
   
-  #Default feature_set names
-  if(! defined $self->import_sets){
-	@{$self->{'import_sets'}} = keys %{$self->{'feature_sets'}};
-  }
-  else{#validate
-
-	foreach my $import_fset(@{$self->import_sets}){
-	  
-	  if(! exists $self->{'feature_sets'}{$import_fset}){
-		throw("$import_fset is not a valid import feature set. Maybe you need to add this to the config in:\t".ref($self));
-	  }
-	}
-  }
-
-
-  #Need to change this so we can just (re)load the one set.
-  
-  #Change this so we only call it from parse_and_load?
-  #Should we validate all first, so we fail at the earliest possible moment?
-  #Or serially?
-
-  $self->validate_and_store_feature_types;
+  $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
   $self->set_feature_sets;
-
+ 
   return $self;
 }
 
@@ -167,23 +160,15 @@ sub new {
 
 
 sub parse_and_load {
-  my $self = shift;
+  my ($self, $files, $old_assembly, $new_assembly) = @_;
 
-  my ($fset_name, $old_assembly, $new_assembly, $file) = rearrange(['FEATURE_SET', 'OLD_ASSEMBLY', 'NEW_ASSEMBLY', 'FILE'], @_);
+  if(scalar(@$files) != 2){
+	throw('You must currently define a crm and tfbs file to load redfly features from:\t'.join(' ', @$files));
+  }
 
-
-  warn "file arg not yet fully supported, loading defaults import sets";
-
-  #if(! defined $fset_name && defined $file){
-#	throw("Cannot specify a file to parse if no -feature_set parameter provided");
-#  }
-
-
-  #Use default file path? Make importer inherit from this?
-  #init_external import
-
-
-  #just do for each in import_sets here for now?
+  #More validation of files here?
+  $self->{config}{'REDfly CRMs'}{file}  = grep(/crm/,  @$files);
+  $self->{config}{'REDfly TFBSs'}{file} = grep(/tfbs/, @$files);
 
   my %slice_cache;
   my $extf_adaptor  = $self->db->get_ExternalFeatureAdaptor;
@@ -192,12 +177,13 @@ sub parse_and_load {
   # this object is only used for projection
   my $dummy_analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'REDflyProjection');#do we need this?
   my $species = $self->db->species;
+
   if(! $species){
 	throw('Must define a species to define the external_db');
   }
+
   #Just to make sure we hav homo_sapiens and not Homo Sapiens
   ($species = lc($species)) =~ s/ /_/;
-
 
 
   foreach my $import_set(@{$self->import_sets}){
@@ -206,7 +192,7 @@ sub parse_and_load {
 	my %factor_cache; # name -> factor_id
 	my %target_cache;
 	my $config = $self->{'config'}{$import_set};
-	my $fset =  $self->{'feature_sets'}{$import_set};
+	my $fset =  $self->{static_config}{feature_sets}{$import_set}{feature_set};
 	my %gff_attrs =  %{$config->{'gff_attrs'}};
 	
 	
@@ -322,11 +308,7 @@ sub parse_and_load {
 																			 ))};
 			
 			$feature_type = $factor_cache{$attr_cache{'Factor'}};
-
-			
 			$factor_cnt ++;
-
-
 			my $stable_id = $self->get_core_stable_id_by_display_name($self->db->dnadb, $attr_cache{'Factor'});
 			
 			#Handle release/version in xref version as stable_id version?
@@ -334,9 +316,7 @@ sub parse_and_load {
 			if(! defined $stable_id){
 			  warn "Could not generate CODING xref for feature_type:\t". $attr_cache{'Factor'}."\n";
 			}else{
-			
 			  #warn "got $stable_id for ".$attr_cache{'Factor'};
-
 			  my $dbentry = Bio::EnsEMBL::DBEntry->new(
 													   -dbname                 => $species.'_core_Gene',
 													   #-release                => $self->db->dnadb->dbc->dbname,
@@ -350,16 +330,14 @@ sub parse_and_load {
 													   -info_type              => 'MISC',
 													   -into_text              => 'GENE',
 													   -linkage_annotation     => 'REDfly Coding'
-													   -analysis               => $self->{'feature_sets'}{$import_set}->analysis,
+													   -analysis               => $fset->analysis,
 
 													   #-description            => 'cisRED motif gene xref',#This is now generic and no longer resitricted to REDfly
 													   #could have version here if we use the correct dnadb to build the cache
 													  );
 			  
 			  $dbentry_adaptor->store($dbentry, $factor_cache{$attr_cache{'Factor'}}->dbID, 'FeatureType', 1);#1 is ignore release flag
-
 			  $factor_xref_cnt ++;
-
 			}
 		  }
 		}
@@ -371,7 +349,6 @@ sub parse_and_load {
 
 
 	  #Now build actual feature
-
 	  $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
 	   -display_label => $attr_cache{'ID'},
@@ -382,7 +359,6 @@ sub parse_and_load {
 	   -feature_set   => $fset,
 	   -slice         => $slice_cache{$chromosome},
 	  );
-
 
 	  # project if necessary
 	  if ($new_assembly) {
@@ -397,7 +373,6 @@ sub parse_and_load {
 	  ($feature) = @{$extf_adaptor->store($feature)};
 	  $feature_cnt++;
 
-
 	  my $target = (exists $attr_cache{'Target'}) ?  $attr_cache{'Target'} : (split/_/, $attr_cache{'ID'})[0];
 	  my $stable_id;
 
@@ -410,8 +385,7 @@ sub parse_and_load {
 		warn "Could not generate TARGET xref for feature:\t". $attr_cache{'ID'}."\n" if $target ne 'Unspecified';
 	  }
 	  else{
-		#Handle release/version in xref version as stable_id version?
-		
+		#Handle release/version in xref version as stable_id version?		
 		my $dbentry = Bio::EnsEMBL::DBEntry->new(
 												 -dbname                 => $species.'_core_Gene',
 												 #-release                => $self->db->dnadb->dbc->dbname,
@@ -425,7 +399,7 @@ sub parse_and_load {
 												 -info_type              => 'MISC',
 												 -info_text              => 'GENE',
 												 -linkage_annotation     => $fset->feature_type->name.' Target',
-												 -analysis               => $self->{'feature_sets'}{$import_set}->analysis,
+												 -analysis               => $fset->analysis,
 
 												 #could have version here if we use the correct dnadb to build the cache
 											);

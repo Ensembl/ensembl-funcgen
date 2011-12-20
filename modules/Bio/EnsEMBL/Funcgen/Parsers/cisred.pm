@@ -74,47 +74,59 @@ sub new {
   my $self = $class->SUPER::new(@_);
 
   #Set default feature_type and feature_set config
-  $self->{'feature_types'} = {
-							   'cisRED Search Region'   => {
-															name        => 'cisRED Search Region',
-															class       => 'Search Region',
-															description => 'cisRED search region',
-												   },
-							   'cisRED Motif' => {
-												  name        => 'cisRED Motif',
-												  class       => 'Regulatory Motif',
-												  description => 'cisRED atomic motif',
-												 },
-							 };
+  $self->{static_config}{feature_types} = 
+	{
+	 'cisRED Search Region'   => {
+								  -name        => 'cisRED Search Region',
+								  -class       => 'Search Region',
+								  -description => 'cisRED search region',
+								 },
+	 'cisRED Motif' => {
+						-name        => 'cisRED Motif',
+						-class       => 'Regulatory Motif',
+						-description => 'cisRED atomic motif',
+					   },
+	};
   
-  $self->{feature_sets} = {
-						   'cisRED search regions' => {
-													   feature_type      => \$self->{'feature_types'}{'cisRED Search Region'},
-													   display_label     => 'cisRED searches',
-													   analysis          => 
-													   { 
-														-logic_name    => 'cisRED',
-														-description   => 'cisRED motif search (www.cisred.org)',
-														-display_label => 'cisRED',
-														-displayable   => 1,
-													   },
-													   xrefs => 1,
-													  },
-						   'cisRED motifs' => {
-													 feature_type      => \$self->{'feature_types'}{'cisRED Motif'},
-											   #display_label => 'cisRED motifs',#defaults to name
-													 analysis          => 
-													 { 
-													  -logic_name    => 'cisRED',
-													  -description   => 'cisRED motif search (www.cisred.org)',
-													  -display_label => 'cisRED',
-													  -displayable   => 1,
-													 },
-													 xrefs => 1,
-													},
-						  };
+  $self->{static_config}{analyses} =
+	{
+	 cisRED => { 
+				-logic_name    => 'cisRED',
+				-description   => 'cisRED motif search (www.cisred.org)',
+				-display_label => 'cisRED',
+				-displayable   => 1,
+			   },
+	};
+  
+  $self->{static_config}{feature_sets} = 
+	{
+	 'cisRED search regions' => 
+	 {
+	  analyses      => $self->{static_config}{analyses},
+	  feature_types => $self->{static_config}{feature_types},
+	  feature_set   => {
+						-feature_type  => $self->{static_config}{feature_types}{'cisRED Search Region'},
+						-display_label => 'cisRED searches',
+						-analysis      => $self->{static_config}{analyses}{cisRED},
+					   },
+	  xrefs => 1,
+	 },
+	 
+	 
+	 'cisRED motifs' => 
+	 {
+	  analyses      => $self->{static_config}{analyses},
+	  feature_types => $self->{static_config}{feature_types},
+	  feature_set => {
+					  -feature_type      => $self->{static_config}{feature_types}{'cisRED Motif'},
+					  -analysis          => $self->{static_config}{analyses}{cisRED},
+					 },
+	  xrefs => 1,
+	 },
+	};
  
-  $self->validate_and_store_feature_types;
+  #$self->validate_and_store_feature_types;
+  $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
   $self->set_feature_sets;
 
   return $self;
@@ -137,6 +149,11 @@ sub new {
 sub parse_and_load {
   my ($self, $files, $old_assembly, $new_assembly) = @_;
   $self->log_header("Parsing cisRED data");
+
+   if(scalar(@$files) != 2){
+	 throw('You must currently define a motif and search file to load cisRED features from:\t'.join(' ', @$files));
+  }
+
 
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   #my %features_by_group; # name -> factor_id
@@ -171,7 +188,7 @@ sub parse_and_load {
   my $skipped_xref = 0;
   #my $coords_changed = 0;
   my $cnt = 0;
-  my $set = $self->{'feature_sets'}{'cisRED motifs'};
+  my $set = $self->{static_config}{feature_sets}{'cisRED motifs'};
   
   open (FILE, "<$motif_file") || die "Can't open $motif_file";
   <FILE>; # skip header
@@ -349,7 +366,7 @@ sub parse_and_load {
   $skipped = 0;
   $cnt = 0;
   $skipped_xref = 0;
-  $set = $self->{'feature_sets'}{'cisRED search regions'};
+  $set = $self->{static_config}{feature_sets}{'cisRED search regions'};
 
   $self->log_header("Parsing cisRED search regions from $search_file");
   open (SEARCH_REGIONS, "<$search_file") || die "Can't open $search_file";
@@ -390,8 +407,7 @@ sub parse_and_load {
 	   -start         => $start,
 	   -end           => $end,
 	   -strand        => $strand,
-	   -feature_type  => $self->{'feature_sets'}{'cisRED search regions'}->feature_type,
-	   -feature_set   => $self->{'feature_sets'}{'cisRED search regions'},
+	   -feature_set   => $set,
 	   -slice         => $slice_cache{$chromosome},
 	  );
 																

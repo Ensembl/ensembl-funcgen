@@ -32,6 +32,7 @@ use strict;
 # acagag
 
 use Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser);
@@ -45,41 +46,65 @@ sub new {
   my $self = $class->SUPER::new(@_);
 
   #Set default feature_type and feature_set config
-  $self->{'feature_types'} = {(
-							   'VISTA Target'   => {
-													name        => 'VISTA Target', 
-													class       => 'Search Region',
-													description => 'VISTA target region',
-												   },
-							   'VISTA Enhancer' => {
-													name        => 'VISTA Enhancer', 
-													class       => 'Enhancer',
-													description => 'Enhancer identified by positive VISTA assay',
-												   },
-							   'VISTA Target - Negative' => {
-															 name        => 'VISTA Target - Negative', 
-															 class => 'Search Region',
-															 description => 'Enhancer negative region identified by VISTA assay',
-															},
-							  )};
+  $self->{static_config}{feature_types} = {(
+											'VISTA Target'   => {
+																 -name        => 'VISTA Target', 
+																 -class       => 'Search Region',
+																 -description => 'VISTA target region',
+																},
+											'VISTA Enhancer' => {
+																 -name        => 'VISTA Enhancer', 
+																 -class       => 'Enhancer',
+																 -description => 'Enhancer identified by positive VISTA assay',
+																},
+											'VISTA Target - Negative' => {
+																		  -name        => 'VISTA Target - Negative', 
+																		  -class => 'Search Region',
+																		  -description => 'Enhancer negative region identified by VISTA assay',
+																		 },
+										   )};
   
-  $self->{feature_sets} = {
-						   'VISTA enhancer set' => {
-													feature_type      => \$self->{'feature_types'}{'VISTA Target'},
-													display_label     => 'VISTA Enhancers',
-													analysis          => 
-													{ 
-													 -logic_name => 'VISTA',
-													 -description   => 'VISTA Enhancer Assay (http://enhancer.lbl.gov/)',
-													 -display_label => 'VISTA',
-													 -displayable   => 1,
-													},
-												   },
-						   };
+  $self->{static_config}{analyses} = {
+									  VISTA =>  { 
+												 -logic_name => 'VISTA',
+												 -description   => 'VISTA Enhancer Assay (http://enhancer.lbl.gov/)',
+												 -display_label => 'VISTA',
+												 -displayable   => 1,
+												},
+									 };
 
- 
- 
-						   $self->validate_and_store_feature_types;
+  #This is used as the entry point to store/validate
+  #So all of the above needs to be referenced in here
+  $self->{static_config}{feature_sets} = {
+										  'VISTA enhancer set' => 
+										  {
+										   #Stored in this order 
+
+										   #Entries here are flexible
+										   #Can be omited if defined in feature_set
+										   #top level analyses/feature_types definition required if no DB defaults available
+										   #These can be a ref to the whole or subset of the top level analyses/feature_types hash
+										   #A key with an empty hash or undef(with or without a matching key in the top level analyses/feature_types hash
+										   
+										   #analyses      => $self->{static_config}{analyses},
+										   feature_types => $self->{static_config}{feature_types},
+
+										   #feature_type and analysis values must be string key to top level hash
+										   #This wont work for feature_types as they are not unique by name!!!!!!
+										   #This is why we have top level hash where we can define a unique compound key name
+
+										   feature_set   => 
+										   {
+											-feature_type      => 'VISTA Target',#feature_types config key name not object
+											-display_label     => 'VISTA Enhancers',
+											-description       => 'Experimentally validated enhancers',
+											-analysis          => 'VISTA',#analyses config key name not object
+										   },
+										  }
+										 };
+  
+  #$self->validate_and_store_feature_types;
+  $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
   $self->set_feature_sets;
 
   return $self;
@@ -95,41 +120,38 @@ sub new {
 
 
 sub parse_and_load{
-  my ($self, $file, $old_assembly, $new_assembly) = @_;
-
-  my %result;
-
-
-  #we want to set up the new external_feature set here or in the caller?
-
+  my ($self, $files, $old_assembly, $new_assembly) = @_;
+  
+  if(scalar(@$files) != 1){
+	throw('You must provide a unique file path to load VISTA features from:\t'.join(' ', @$files));;
+  }
+  
+  my $file = $files->[0];
   $self->log_header("Parsing and loading LBNL VISTA enhancer data from:\t$file");
 
-  #my $feature_internal_id = ($self->find_max_id("external_feature")) + 1;
-  
-  #This is now feature_type
-  #but we don't want to just import a flat file for this, as we'd have to remove all the previous
-  #entries.  Either check each one, either via the API or by dumping to file and checking the sorted file?
-  #my $highest_factor_id = ($self->find_max_id("feature_type")) + 1;
-
   my $extfeat_adaptor = $self->db->get_ExternalFeatureAdaptor;
+  my $dummy_analysis   = new Bio::EnsEMBL::Analysis(-logic_name => 'EnhancerProjection');  # this object is only used for projection
+  my $fset_config      = $self->{static_config}{feature_sets}{'VISTA enhancer set'};
+  my $feature_positive = $fset_config->{'feature_types'}{'VISTA Enhancer'};
+  my $feature_negative = $fset_config->{'feature_types'}{'VISTA Target - Negative'};
+  my $set              = $fset_config->{feature_set};
 
-  my @features;
-  my %feature_objects;
-  my %anal;
+  use Bio::EnsEMBL::Registry;
+  my %id_prefixes = (
+					 homo_sapiens => 'hs',
+					 mus_musculus => 'mm',
+					);
+  
+  my $species = Bio::EnsEMBL::Registry->get_alias($self->db->species);
 
-  # this object is only used for projection
-  my $dummy_analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'EnhancerProjection');
+  if( (! defined $species) ||
+	  (! exists $id_prefixes{$species}) ){
+	throw("Failed to get a VISTA ID prefix for species alias:\t$species");
+  }
 
-  my $feature_positive = $self->{'feature_types'}{'VISTA Enhancer'};
-  my $feature_negative = $self->{'feature_types'}{'VISTA Target - Negative'};
-  my $set              = $self->{'feature_sets'}{'VISTA enhancer set'}; 
+  $species = $id_prefixes{$species};
 
-
-  #we should separate this into rna_feature_type for cisRED?
-  #The adaptor should then conditionally look up the rna_feature_type table instead of the feature_type table
-
-  # read file
-
+  ### Read file
   open (FILE, "<$file") || die "Can't open $file";
   my $cnt = 0;
   my $skipped = 0;
@@ -139,30 +161,24 @@ sub parse_and_load{
 
     next if ($_ !~ /^>/o); # only read headers
 
-    my %feature;
+    # OLD >chr16:84987588-84988227 | element 1 | positive  | neural tube[12/12] | hindbrain (rhombencephalon)[12/12] | limb[3/12] | cranial nerve[8/12]
+	# v66 >Mouse|chr12:112380949-112381824 | element 3 | positive  | neural tube[4/4] | hindbrain (rhombencephalon)[4/4] | forebrain[4/4]
 
-    # >chr16:84987588-84988227 | element 1 | positive  | neural tube[12/12] | hindbrain (rhombencephalon)[12/12] | limb[3/12] | cranial nerve[8/12]
-    my ($coords, $element, $posneg, @stuff) = split /\s+\|\s+/o;
+	#ID naming scheme change from LBNL-1 to hs1 or mm1
+	#But the flat file and url use two different naming schemes!
+	#VISTA URL is: where experiment id is element number and species_id 1 = human and 2 = mouse
+	#http://enhancer.lbl.gov/cgi-bin/imagedb3.pl?form=presentation&show=1&experiment_id=1&organism_id=1
 
-    # parse co-ordinates
+	#Add links to cell_type for tissues in @expression_pattern?
+	#This would be vista specific cell_type_annotation? Or we could just have associated_cell_type? (without annotation)
+	#Just link for now
+
+    my (undef, $coords, $element, $posneg, @expression_patterns) = split /\s*\|\s*/o;#was \s+
+    # parse co-ordinates & id
     my ($chr, $start, $end) = $coords =~ /chr([^:]+):(\d+)-(\d+)/o;
-
-    # parse element name
     my ($element_number) = $element =~ /\s*element\s*(\d+)/o;
 
-    # ----------------------------------------
-    # Feature name
-    #$feature{NAME} = "LBNL-$element_number";
-    # ----------------------------------------
-    # Analysis
-    #$feature{ANALYSIS_ID} = $posneg eq 'positive' ? $analysis_positive : $analysis_negative;
-	#Feature type
-	#$feature{FEATURE_TYPE_ID} = $posneg eq 'positive' ? $feature_positive_id : $feature_negative_id;
-
-
-    # ----------------------------------------
-    # Seq_region ID and co-ordinates
-
+    # seq_region ID and co-ordinates
     my $chr_slice;
 
     if ($old_assembly) {
@@ -179,11 +195,9 @@ sub parse_and_load{
     my $seq_region_id = $chr_slice->get_seq_region_id;
 	throw("Can't get seq_region_id for chromosome $chr") if (!$seq_region_id);
 
-
-    #$feature{SEQ_REGION_ID} = $seq_region_id;
-
     # Assume these are all on the positive strand? Is this correct?
     my $strand = 1;
+
 
 	my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
@@ -192,7 +206,7 @@ sub parse_and_load{
 	   -strand        => $strand,
 	   -feature_type  => $posneg eq 'positive' ? $feature_positive : $feature_negative,
 	   -slice         => $self->slice_adaptor->fetch_by_region('chromosome', $chr, undef, undef, $strand, $old_assembly),
-	   -display_label => "LBNL-$element_number",
+	   -display_label => $species.$element_number,#"LBNL-$element_number",
 	   -feature_set   => $set,
 	  );
 	
@@ -213,8 +227,6 @@ sub parse_and_load{
   }
 
   close FILE;
-
-  #$result{FEATURES} = \@features;
 
   $self->log('Parsed '.($cnt+$skipped).' features');
   $self->log("Loaded $cnt features");
