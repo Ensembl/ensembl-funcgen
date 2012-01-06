@@ -144,6 +144,24 @@ sub display_label {
   return  $self->{'display_label'};
 }
 
+=head2 display_id
+
+  Example    : print $feature->display_id();
+  Description: This method returns a string that is considered to be
+               the 'display' identifier. In this case the stable Id is
+               preferred
+  Returntype : String
+  Exceptions : none
+  Caller     : web drawing code, Region Report tool
+  Status     : Stable
+
+=cut
+
+sub display_id {
+  my $self = shift;
+  return $self->{'stable_id'};
+}
+
 
 =head2 binary_string
 
@@ -614,7 +632,6 @@ sub get_underlying_structure{
 
   return $self->{underlying_structure};
 }
-
 
 1;
 
