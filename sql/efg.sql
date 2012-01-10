@@ -1412,11 +1412,19 @@ CREATE TABLE `meta` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- Add empty schema_version entry for patches to update
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "");
+-- Add necessary meta values
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
--- Also need to add the current release patch entries here?
+-- Update these for each release to avoid erroneous patching
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "66");
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_b.sql|cell_type.tissue_and_lineage');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_c.sql|array_chip.name_design');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_d.sql|unmapped_object.reorder_unmapped_obj_index');
+
+
+
+
 
 
 /**
@@ -1714,7 +1722,7 @@ CREATE TABLE `unmapped_object` (
   `ensembl_object_type` enum('RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType', 'Probe', 'ProbeSet', 'ProbeFeature') NOT NULL,
   `parent` varchar(255) default NULL,
   PRIMARY KEY  (`unmapped_object_id`),
-  UNIQUE KEY `unique_unmapped_obj_idx` (`identifier`,`ensembl_id`,`parent`,`unmapped_reason_id`,`ensembl_object_type`,`external_db_id`),
+  UNIQUE INDEX unique_unmapped_obj_idx (ensembl_id, ensembl_object_type, identifier, unmapped_reason_id, parent, external_db_id),
   KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`),
   KEY `id_idx` (`identifier`(50)),
   KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
