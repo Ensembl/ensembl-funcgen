@@ -1294,7 +1294,31 @@ INSERT into status_name(name) values ('IMPORTED_GRCh37');
 -- would need to get CoordSys objects and set IMPORTED_CS_"cs_id" for relevant data_version
 
 
+/**
+@table  regbuild_string
+@desc   Simple table to contain long id strings related to the regulatory build
+@colour  #808000
 
+@column regbuild_string_id	Internal ID
+@column name			    Name of the string e.g. regbuild.GM12878.feature_type_ids
+@column species_id          Indentifies the species for multi-species databases.
+@column string              Comma separated list of internal IDs
+
+@see    feature_set
+*/
+
+DROP TABLE IF EXISTS regbuild_string;
+CREATE TABLE `regbuild_string` (
+  `regbuild_string_id` int(10) NOT NULL auto_increment,
+  `name` varchar(60) NOT NULL,
+  `species_id` int(10) unsigned default '1',	
+  `string` text NOT NULL,
+  PRIMARY KEY  (`regbuild_string_id`),
+  UNIQUE KEY `name_species_idx` (`species_id`, `name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- very small table with varying string sizes, so no need to set max_rows/avg_row_length for text
+-- potentially remove and build/cache in FeatureSetAdaptor
 
 
 
@@ -1415,7 +1439,7 @@ CREATE TABLE `meta` (
 -- Add necessary meta values
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
--- Update these for each release to avoid erroneous patching
+-- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "66");
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_b.sql|cell_type.tissue_and_lineage');
