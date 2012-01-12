@@ -1445,7 +1445,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_b.sql|cell_type.tissue_and_lineage');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_c.sql|array_chip.name_design');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_d.sql|unmapped_object.reorder_unmapped_obj_index');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_e.sql|add_regbuild_string_table');
 
 
 
