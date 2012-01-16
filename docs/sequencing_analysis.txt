@@ -436,7 +436,7 @@ Where folder experiment contains a set of celltype_featuretype*.samse.sam.gz sam
 
 			   SWEMBL_R015		- Peaky histones & transcriptions factors
 			   SWEMBL_R0025		- Dnase1
-			   CCAT_HISTONE		- Broad histone peaks e.g. H3K27/36
+			   CCAT_HISTONE		- Broad histone peaks e.g. H3K27/36me
 
 			   
 SubmitPeaks       Submits peak calling jobs with the eHive.
