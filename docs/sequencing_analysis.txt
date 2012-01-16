@@ -238,10 +238,10 @@ The pipelines should work with the latest eHive version.
 Nonetheless, to guarantee that pipelines work, use a specific version: lg4_post_rel63_20110712
 
 eg:
-> cvs -d $CVSROOT checkout -r lg4_mid_rel60_20100923 -d ensembl-hive_lg4_mid_rel60_20100923 ensembl-hive
+> cvs -d $CVSROOT checkout -r lg4_post_rel63_20110712 -d ensembl-hive_lg4_post_rel63_20110712 ensembl-hive
 
 You need to have an ensembl-hive folder, so use a soft link:
-ln -l ensembl-hive_lg4_mid_rel60_20100923 ensembl-hive
+ln -l ensembl-hive_lg4_post_rel63_20110712 ensembl-hive
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -432,7 +432,11 @@ AddPeakSets       Creates a eHive Peak Calling pipeline DB ("peaks") and peak ca
 e.g.: > AddPeakSets -a analysis -I ${DATA_HOME}/alignments/${SPECIES}/experiment
 Where folder experiment contains a set of celltype_featuretype*.samse.sam.gz sam files
       
-      Analysis must be one of SWEMBL_R015, SWEMBL_R0025 or CCAT_HISTONE
+      Analysis must be one of:
+
+			   SWEMBL_R015		- Peaky histones & transcriptions factors
+			   SWEMBL_R0025		- Dnase1
+			   CCAT_HISTONE		- Broad histone peaks e.g. H3K27/36
 
 			   
 SubmitPeaks       Submits peak calling jobs with the eHive.
