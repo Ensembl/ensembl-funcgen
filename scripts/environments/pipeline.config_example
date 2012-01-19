@@ -75,6 +75,10 @@ export DNADB_PASS=
 export DNADB_HOST_LSFNAME=
 
 
+export REGISTRY_HOST=
+export REGISTRY_VERSION=
+
+
 ### Clean only args! 
 #Never set here!
 export DNADB_MYSQL_ARGS=
