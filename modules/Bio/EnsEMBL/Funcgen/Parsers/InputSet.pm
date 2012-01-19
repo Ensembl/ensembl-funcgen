@@ -232,7 +232,7 @@ sub set_config{
   $self->{'feature_adaptor'}   =  $self->db->$adaptor_method;
   $self->{'dbentry_adaptor'}   = $self->db->get_DBEntryAdaptor;
   $self->{'input_set_adaptor'} = $self->db->get_InputSetAdaptor;
-  $self->{'slice_adaptor'}     = $self->db->dnadb->get_SliceAdaptor;
+  ##$self->{'slice_adaptor'}     = $self->db->dnadb->get_SliceAdaptor;
 
   #Validate slices
   $self->slices($self->{'slices'}) if defined $self->{'slices'};
@@ -241,6 +241,12 @@ sub set_config{
   $self->validate_and_store_config([$self->name]);
   #Could use input_set_name here?
   #This was to support >1 input set per experiment (name)
+
+  #This current breaks for no config imports
+  #i.e. standard Bed import e.g. result_feature collections
+  #segmentation imports use Bed and config
+  #allow no config imports in BaseImporter?
+  #or ultimately set the params as part of the user_config?
 
   return;
 }
@@ -648,19 +654,19 @@ sub validate_files{
   foreach my $esset(@rollback_sets){
 	#This needs to be mapped to the specified filepaths
 	$new_data{$file_paths{$esset->name}} = 1;
-	$self->log("Revoking states for InputSubset:\t".$esset->name);
+	$self->log("Revoking states for InputSubset:\t\t\t".$esset->name);
 	$eset->adaptor->revoke_states($esset);
 
 	if(! $prepare){
 	  #This was to avoid redundant rollback in prepare step
-	  $self->log("Rolling back InputSubset:\t".$esset->name);
+	  $self->log("Rolling back InputSubset:\t\t\t\t".$esset->name);
 	  
 	  if($self->input_feature_class eq 'result'){
 		#Can we do this by slice for parallelisation?
 		#This will only ever be a single ResultSet due to Helper::define_and_validate_sets
 		#flags are rollback_results and force(as this won't be a direct input to the product feature set)
 		$self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0], 1);
-		#why don't we need a rollback_InputSet here?
+		#Do no have rollback_InputSet here as we may have parallel Slice based imports running
 	  }
 	  else{#annotated/segmentation
 		$self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
@@ -706,7 +712,7 @@ sub input_set_adaptor{   return $_[0]->{'input_set_adaptor'}; }
 
 sub set{                 return $_[0]->{'set'}; } #Feature or Result, set in define_sets
 
-sub slice_adaptor{       return $_[0]->{'slice_adaptor'}; }
+##sub slice_adaptor{       return $_[0]->{'slice_adaptor'}; }
 
 sub data_set{            return $_[0]->{'_data_set'}; }
 
@@ -1016,7 +1022,7 @@ sub read_and_import_data{
 
   if(! $prepare){
 	$output_set->adaptor->set_imported_states_by_Set($output_set) if $seen_new_data && ! $self->batch_job;
-	$self->log("No new data, skipping result parse") if ! grep /1/,values %{$new_data};
+	$self->log("No new data, skipping result parse") if ! grep /^1$/o, values %{$new_data};
 	$self->log("Finished parsing and importing results");
   }
     
