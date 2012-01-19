@@ -55,6 +55,7 @@
   --result_files     Space separated list of result files paths (Used in InputSet imports e.g. Bed).
   --slices           Space separated list of slice names|seq_region_names to import (only works for -input_set import)
   --skip_slices      Space separated list of seq_region names to skip (only works for -input_set import)
+  --config_file      User defned config file (see import_config.pm.example)
 
  Experimental group (Mostly Mandatory)
   --format|f        Data format
@@ -153,7 +154,7 @@ my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $gr
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
 my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host, $batch_job, $prepared, $total_features);
-my ($parser, $fanal, $release, $format, $on_farm, @result_files, @slices, @skip_slices);
+my ($parser, $fanal, $release, $format, $on_farm, @result_files, @slices, @skip_slices, $config_file);
 
 my $data_dir = $ENV{'EFG_DATA'};
 my $interactive = 1;
@@ -241,6 +242,7 @@ GetOptions (
 			"output_dir=s"      => \$output_dir,
 
 			#Other params
+			'config_file=s' => \$config_file,
 			"help|?"       => \$help,
 			"man|m"        => \$man,
 			"verbose"      => \$verbose, # not implmented yet in Importer?
@@ -408,6 +410,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -old_dvd_format => $old_dvd_format,
    -ucsc_coords => $ucsc,
    -release => $release,
+   -config_file => $config_file,
    #Exp does not build input dir, but could
    #This allows input dir to be somewhere 
    #other than efg dir structure
