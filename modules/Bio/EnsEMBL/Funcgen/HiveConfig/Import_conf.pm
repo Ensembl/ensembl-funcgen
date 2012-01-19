@@ -83,7 +83,7 @@ sub default_options {
 	  'registry_host' => 'ens-livemirror',
 	  'registry_port' => 3306,
 	  'registry_user' => 'ensro',
-	  'assembly' => 37,
+	  #'assembly' => 37,
 	  
 	  'host' => 'ens-genomics1',
 	  'port' => 3306,
@@ -159,6 +159,7 @@ sub pipeline_wide_parameters {
 	  'registry_host' => $self->o('registry_host'),
 	  'registry_port' => $self->o('registry_port'),
 	  'registry_user' => $self->o('registry_user'),
+		  'registry_version' => $self->o('registry_version'),
 	  'assembly' => $self->o('assembly'),
 	  
 	  'host' => $self->o('host'),
@@ -241,6 +242,8 @@ sub pipeline_analyses {
 			 },
 	   -hive_capacity => 10,	   
 	   -rc_id => 0,
+	   #this really need revising as this is sorting the bed files
+	   #Need to change resource to reserve tmp space
 	  },
 	  
 	  {   
