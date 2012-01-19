@@ -61,6 +61,7 @@ sub fetch_input {   # fetch parameters...
      -registry_host => $self->param('registry_host'),
      -registry_user => $self->param('registry_user'),
      -registry_port => $self->param('registry_port'),
+	 -release       => $self->param('registry_version'),
      #   -ssh         =>  $ssh,
      -group       => $self->param('group'),
      -location    => $self->param('location'),
