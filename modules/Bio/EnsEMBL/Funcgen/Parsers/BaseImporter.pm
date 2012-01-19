@@ -43,15 +43,391 @@ use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
-#use Bio::EnsEMBL::Funcgen::Utils::Helper;
-#use vars qw(@ISA);
-#@ISA = ('Bio::EnsEMBL::Funcgen::Utils::Helper');
+use Bio::EnsEMBL::Registry;
+
 
 use base qw(Bio::EnsEMBL::Funcgen::Utils::Helper); #@ISA change to parent with perl 5.10
 
 
+# Need:
+#  Parser::Experiment? All but external
+#  Parser::ArrayExperiment (Inherits from ArrayDesign?) Or Nimblegen?
+
 #new
 #edb_release over-ride, to enable loading of old data.
+#How do we handle set rollback? (with force for associated sets)
+#
+
+#Force was actually specific to store_window_bin_by_Slice_Parser
+#
+
+=head2 new
+
+  Arg [1]    : HASH containing attributes:
+                  -rollback    Performs full rollback of imported features.
+                  -recover     Performs rollback of features/sets which do 
+                               not have an associated Imported status.
+           
+                  -config_file Path to file containing config hash.
+             
+                  -
+  Example    : my $self = $class->SUPER::new(@_);
+  Description: Constructor method for Bed class
+  Returntype : Bio::EnsEMBL::Funcgen::Parsers::Simple
+  Exceptions : throws if caller is not Importer
+  Caller     : Bio::EnsEMBL::Funcgen::Parsers:Simple
+  Status     : at risk
+
+=cut
+
+
+
+#Remove rollback/clobber from here
+#The idea being we completely separate the script which runs the import/rollback
+#so we never accidentally rollback a set with a stray -rollback flag.
+#Implement this at the script level? Then we can re-use the methods to perform the rollback?
+#This means all the rollback function will be tied up with all the import pre-reqs
+#want to rollback by filepath(InputSubset name)/InputSet name
+
+#Would just need to revoke states before calling validate_files
+#Can do this manually before import
+
+
+#Inheritance fix
+#Can we move Importer new to here? ISA dodgyness and alter the scripts accordingly?
+#The we can move all the set_config stuff the the parser new methods and remove set_config
+#Issues :
+#1 Non-generic params
+#2 How will Importer methods be inherited if we remove it from ISA like this
+#  Either make Inheritance Parser->Importer->BaseImporter until we remove the Importer
+#  Or fix in one go.
+#  Or just move DB creation stuff here such that we can maintain current broken inheritance
+#  But allow removal of set_config
+#  So how much of the DB creation stuff can we add here without clashing with BaseExternalParser?
+#  BaseExternalParser has DB passed, whilst Importer allows both params and DB to be passed.
+
+
+sub new{
+  my $caller = shift;
+  
+  my $class = ref($caller) || $caller;
+  my $self  = $class->SUPER::new(@_);
+
+  my $reg = "Bio::EnsEMBL::Registry"; 
+  my ($config_file, $clobber, $rollback, $species, $fset_desc,
+	  $user, $host, $port, $pass, $dbname, $db, $ssh,
+	  $assm_version, $release, $reg_config, $verbose, $slices,
+	  $reg_db, $reg_host, $reg_port, $reg_user, $reg_pass,
+	  $ftype_name, $ctype_name, $feature_analysis, $no_disconnect);
+  
+
+  #Set some directly here to allow faster accessor only methods
+
+  ($ftype_name,       $ctype_name,          $feature_analysis,    $self->{feature_set_desc},
+   $species,          $db,                  $user,                $host,
+   $port,             $pass,                $dbname,              $assm_version, $ssh,
+   $release,          $reg_config,          $reg_db,              $reg_host,
+   $reg_port,         $reg_user,            $reg_pass,            $verbose,
+   $slices,           $self->{recover},     $clobber,             $rollback,
+   $config_file,      $self->{ucsc_coords}, $self->{_dump_fasta}, $no_disconnect,
+  ) = rearrange
+	(['FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'FEATURE_ANALYSIS', 'FEATURE_SET_DESCRIPTION',
+	  'species',           'db',             'user',             'host',
+	  'PORT',              'PASS',           'DBNAME',           'ASSEMBLY',      'SSH',
+	  'RELEASE',           'REG_CONFIG',     'REGISTRY_DB',      'REGISTRY_HOST',
+	  'REGISTRY_PORT',     'REGISTRY_USER',  'REGISTRY_PASS',    'VERBOSE',
+	  'slices',            'recover',        'clobber',          'rollback',
+	  'config_file',       'ucsc_coords',    'DUMP_FASTA',       'no_disconnect'],
+	 @_);
+  
+
+  
+
+  #Other stuff to bring in here:
+  #  dirs
+  #  prepared/batch/farm
+  #  analysis/cell/feature_type/feature_set_description
+  #    This is redundant wrt config leave for now and catch
+
+
+  #Need to compare these to BaseExternalParser
+
+  $species || throw('Mandatory param -species not met');
+  #$self->{'user'} = $user || $ENV{'EFG_WRITE_USER'};
+
+
+  #change slices to local var as we have to validate?
+
+  # Registry and DB handling - move to separate method?
+  
+  if($reg_host && $self->{'reg_config'}){
+	warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
+	  "\nOver-riding config file with specified paramters:\t${reg_user}@${reg_host}:$reg_port";
+  }
+
+
+  #### Set up DBs and load and reconfig registry
+
+  # Load Registry using assembly version
+  # Then just redefine the efg DB
+
+  #We have problems here if we try and load on a dev version, where no dev DBs are available on ensembldb
+  #Get the latest API version for the assembly we want to use
+  #Then load the registry from that version
+  #Then we can remove some of the dnadb setting code below?
+  #This may cause problems with API schema mismatches
+  #Can we just test whether the current default dnadb contains the assembly?
+  #Problem with this is that this will not have any other data e.g. genes etc 
+  #which may be required for some parsers
+
+  #How does the registry pick up the schema version??
+
+  #We should really load the registry first given the dnadb assembly version
+  #Then reset the eFG DB as appropriate
+  $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
+
+  if ($reg_host || ! defined $self->{'_reg_config'}) {
+	#defaults to current ensembl DBs
+	$reg_host ||= 'ensembldb.ensembl.org';
+	$reg_user ||= 'anonymous';
+
+	#Default to the most recent port for ensdb
+	if( (! $reg_port) && 
+		($reg_host eq 'ensdb-archive') ){
+	  $reg_port = 5304;
+	}
+
+	#This will try and load the dev DBs if we are using v49 schema or API?
+	#Need to be mindful about this when developing
+	#we need to tip all this on it's head and load the reg from the dnadb version!!!!!!!
+
+	my $version= $self->{'release'} || $reg->software_version;
+	$self->log("Loading v${version} registry from $reg_user".'@'.$reg_host);
+
+	#Note this defaults API version, hence running with head code
+	#And not specifying a release version will find not head version
+	#DBs on ensembldb, resulting in an exception from reset_DBAdaptor below
+	my $num_dbs = $reg->load_registry_from_db
+	  (
+	   -host       => $reg_host,
+	   -user       => $reg_user,
+	   -port       => $reg_port,
+	   -pass       => $reg_pass,
+	   -db_version => $release,
+	   -verbose    => $verbose,
+	  );
+
+	if(! $num_dbs){
+	  throw("Failed to load any DBs from $reg_user".'@'.$reg_host." for release $version.\n".
+			"This will result in a failure to validate the species.\n".
+			"Please define a valid -release for the registry and/or registry params/config\n".
+			"Or select a -registry_host which matches the API version:\t".$reg->software_version);
+	}
+
+	if ((! $dbname) && (! $db)){
+	  throw('Not sensible to set the import DB as the default eFG DB from '
+			.$reg_host.', please define db params');
+	}
+  }
+  else{
+	$self->log("Loading registry from:\t".$self->{'_reg_config'});
+	$reg->load_all($self->{'_reg_config'}, 1);
+  }
+
+
+  #Need to test the DBs here, as we may not have loaded any!
+  #get_alias will fail otherwise
+  #This is a cyclical dependancy as we need alias to get species which we use to grab the DB
+  #alias is dependant on core DB being loaded with relevant meta entries.
+  #revise this when we split the Importer
+
+  #Validate species
+  my $alias = $reg->get_alias($species) || throw("Could not find valid species alias for $species");
+  #You might want to clean up:\t".$self->get_dir('output'));
+  $self->{species} = $alias;
+  $self->{'param_species'} = $species; #Only used for dir generation
+  
+
+
+  #SET UP DBs
+  if($db){
+	#db will have been defined before reg loaded, so will be present in reg
+
+	if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
+	  $self->throw('-db must be a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+	}
+  }
+  else{ #define eFG DB from params or registry
+
+	if($reg_db){#load eFG DB from reg
+
+	  if($dbname){
+		throw("You cannot specify DB params($dbname) and load from the registry at the same time.");
+	  }
+
+	  $self->log('WARNING: Loading eFG DB from Registry');
+	  $db = $reg->get_DBAdaptor($self->species(), 'funcgen');
+	  throw("Unable to retrieve ".$self->species." funcgen DB from the registry") if ! $db;
+	}
+	else{#resets the eFG DB in the custom or generic registry
+
+	  $dbname || throw('Must provide a -dbname if not using default custom registry config');
+	  $pass   || throw('Must provide a -pass parameter');
+	 
+	  #remove this and throw?
+	  if(! defined $host){
+		$self->log('WARNING: Defaulting to localhost');
+		$host = 'localhost';
+	  }
+	  
+	  $port ||= 3306;
+	  my $host_ip = '127.0.0.1';#is this valid for all localhosts?
+	  
+	  if ($ssh) {
+		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
+		#will this always be the same?
+		
+		if (! (exists $ENV{'EFG_HOST_IP'})) {
+		  warn "Environment variable EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
+		} else {
+		  $host_ip = $ENV{'EFG_HOST_IP'};
+		}
+		
+		if ($self->host() ne 'localhost') {
+		  warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
+		}
+	  }
+	
+
+	  #data version is only used if we don't want to define the dbname
+	  #This should never be guessed so don't need data_version here
+	  #$dbname ||= $self->species()."_funcgen_".$self->data_version();
+
+
+	  #Remove block below when we can
+	  my $dbhost = ($ssh) ? $host_ip : $host;
+
+	  #This isn't set yet!?
+	  #When we try to load e.g. 49, when we only have 48 on ensembldb
+	  #This fails because there is not DB set for v49, as it is not on ensembl DB
+	  #In this case we need to load from the previous version
+	  #Trap this and suggest using the -schema_version/release option
+	  #Can we autodetect this and reload the registry?
+	  #We want to reload the registry anyway with the right version corresponding to the dnadb
+	  #We could either test for the db in the registry or just pass the class.
+
+	  $db = $reg->reset_DBAdaptor($self->species, 'funcgen', $dbname, $dbhost, $port, $user, $pass,
+								  {
+								   -dnadb_host => $reg_host,
+								   -dnadb_port => $reg_port,
+								   -dnadb_assembly => $assm_version,
+								   -dnadb_user => $reg_user,
+								   -dnadb_pass => $reg_pass,
+								  });
+	}
+  }
+
+
+  #Test connections
+  $self->{db} = $db; 
+  $db->dbc->db_handle;
+  $db->dnadb->dbc->db_handle;
+  #Set re/disconnect options
+
+  #These really need setting dependant on the import parser
+  $db->dbc->disconnect_when_inactive(1)        if ! $no_disconnect;
+  $db->dnadb->dbc->disconnect_when_inactive(1) if ! $no_disconnect;
+
+
+  
+  #Catch config clashes/redundancy
+  
+  if($self->feature_set_description  &&
+	 ($config_file || exists ${$self}{static_config}) ){
+	throw('You have specified a -feature_set_description alongside user/static_config. Please define this in the config');
+  }
+
+  if( ($feature_analysis || $ctype_name || $ftype_name) &&
+	  exists ${$self}{static_config} ){
+	throw('You have specified a analysis/cell/feature_type params alongside static_config. Please define this in the static_config');
+  }
+
+  #Catch no config here? Or can this be imported via Parser specific meta/config files
+
+
+  ### Check analyses/feature_type/cell_type
+  if($feature_analysis){
+	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
+ 	throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
+	$self->feature_analysis($fanal);
+
+	#This currently fails before the config gets loaded!
+	#Need to load config before this validation!
+  }
+
+  if($ctype_name){
+	my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
+ 	throw("The CellType $ctype_name does not exist in the database") if(!$ctype);
+	$self->cell_type($ctype);
+  }
+
+  if ($ftype_name) {
+    my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
+	throw("The FeatureType $ftype_name does not exist in the database") if(!$ftype);
+	$self->feature_type($ftype);
+  }
+
+
+
+  #Set some attrs to allow setter only methods
+  $self->{slice_adaptor} = $db->dnadb->get_SliceAdaptor;
+  $self->slices($slices) if $slices;
+  $self->{rollback}         = $rollback || $clobber;
+  $self->{counts}           = {};
+  $self->{seq_region_names} = [];#Used for slice based import
+
+
+  # USER CONFIG #
+  #Here we need to read config based on external file
+  #Should do something similar to set_feature_sets
+  #and validate_and_store_feature_types in BaseExternalParser
+  #but we are using define and validate sets instead
+
+  #BaseExternalParser and BaseImporter really need to be merged
+  #After we have stripped out all the array/experiment specific stuff
+
+
+  if($config_file){
+	my $config;
+
+	$self->log("Reading config file:\t".$config_file);
+
+	if(! ($config = do "$config_file")){
+	  throw("Couldn't parse config file:\t$config_file:\n$@") if $@;
+	  throw("Couldn't do config:\t$config_file\n$!")          if ! defined $config;
+	  throw("Couldn't compile config_file:\t$config_file")    if ! $config;
+	}
+
+	#At least check it is hash
+	if(ref($config) ne 'HASH'){
+	  throw("Config file does not define a valid HASH:\t$config_file");
+	}
+	
+	$self->{user_config} = $config;	
+
+	#Can call validate_and_store_config directly ehre once we have remove set_config stuff
+
+  }
+
+  #$self->debug(2, "BaseImporter class instance created.");
+  #$self->debug_hash(3, \$self);
+  
+  return $self;
+}
+
+
+
+
 
 
 
@@ -96,19 +472,20 @@ sub validate_and_store_config{
 
   my ($static_config, $user_config, $fset_config);
 
-  #Set here to avoid auto-vivying in tests below
+  #Set here to avoid auto-vivifying in tests below
   $user_config   = $self->{user_config} if exists ${$self}{user_config};
   $static_config = $self->{static_config} if exists ${$self}{static_config};
   my $config = $user_config || $static_config;
 
   if(! $config){
-	throw('No user or static config found');
+	#throw('No user or static config found');
+	warn('No user or static config found');
   }
   elsif($user_config && $static_config){
 	throw('BaseImporter does not yet support overriding static config with user config');
 	#Would need to over-ride on a key by key basis, account for extra config in either static or user config?
   }
-  
+  else{
   #Store config for each feature set
   #inc associated feature_types and analyses
   #add cell_types in here?
@@ -226,7 +603,7 @@ sub validate_and_store_config{
 	# Also need to consider InputSet::define_sets
 	#}
   }
-
+}
   return;
 }
 
@@ -466,6 +843,204 @@ sub validate_and_store_feature_type{
 
   return $ftype;
 }
+
+
+
+
+
+sub counts{
+  my ($self, $count_type) = @_;
+
+  if($count_type){
+	$self->{'_counts'}{$count_type} ||=0;
+	return 	$self->{'_counts'}{$count_type};
+  }
+ 
+  return $self->{'_counts'}
+}
+
+
+
+sub slices{
+  my ($self, $slices) = @_;
+
+  if(defined $slices){
+
+	if (ref($slices) ne 'ARRAY'){
+	  throw("-slices parameter must be an ARRAYREF of Bio::EnsEMBL::Slices (i.e. not $slices)");
+	}
+
+	foreach my $slice(@$slices){
+	  
+	  if(! ($slice && ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
+		throw("-slices parameter must be Bio::EnsEMBL::Slices (i.e. not $slice)");
+	  }
+	  
+	  #Removed cache_slice from here as this was
+	  #preventing us from identifying the seq_region in an input file
+
+	  my $full_slice = $self->slice_adaptor->fetch_by_name($slice->name);
+
+	  if(($slice->start != 1) ||
+		 ($slice->end != $full_slice->end)){
+		throw("InputSet Parser does not yet accomodate partial Slice based import i.e. slice start > 1 or slice end < slice length:\t".$slice->name);
+		
+	  }
+
+	  push @{$self->{seq_region_names}}, $slice->seq_region_name;
+	}
+	$self->{slices} = $slices;
+  }
+
+  return $self->{slices} || [];
+}
+
+
+sub count{
+  my ($self, $count_type) = @_;
+
+  $self->{'_counts'}{$count_type} ||=0;
+  $self->{'_counts'}{$count_type}++;
+  return;
+}
+
+
+sub rollback{ return $_[0]->{rollback}; }
+
+sub recovery{ return $_[0]->{'recover'}; }
+
+=head2 db
+  
+  Example    : my $db = $imp->db;
+  Description: Getter for the db attribute
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Exceptions : None
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub db{ return $_[0]->{db}; }
+
+
+=head2 species
+  
+  Example    : my $species = $imp->species;
+  Description: Getter for species attribute
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub species{ return $_[0]->{species}; }
+
+
+=head2 ucsc_coords
+  
+  Example    : $start += 1 if $self->ucsc_coords;
+  Description: Getter for UCSC coordinate usage flag
+  Returntype : Boolean
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub ucsc_coords{ return $_[0]->{ucsc_coords}; }
+
+
+=head2 dump_fasta
+  
+  Example    : if($self->dump_fasta()){...do fasta dump...}
+  Description: Getter for the dump_fasta flag
+  Returntype : Boolean
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub dump_fasta{ return $_[0]->{_dump_fasta}; }
+
+sub slice_adaptor{ return $_[0]->{slice_adaptor}; }
+
+
+=head2 feature_set_description
+  
+  Example    : $imp->description("ExperimentalSet description");
+  Description: Getter for the FeatureSet description
+  Returntype : String
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub feature_set_description{ return $_[0]->{feature_set_desc}; }
+
+
+
+
+=head2 project_feature
+
+  Args [0]   : Bio::EnsEMBL::Feature
+  Args [1]   : string - Assembly e.g. NCBI37
+  Example    : $self->project($feature, $new_assembly);
+  Description: Projects a feature to a new assembly via the AssemblyMapper
+  Returntype : Bio::EnsEMBL::Feature
+  Exceptions : Throws is type is not valid.
+  Caller     : General
+  Status     : At risk 
+
+=cut
+
+#Was in BaseExternalParser
+
+# --------------------------------------------------------------------------------
+# Project a feature from one slice to another
+sub project_feature {
+  my ($self, $feat, $new_assembly) = @_;
+
+  # project feature to new assembly
+  my $feat_slice = $feat->feature_Slice;
+
+
+  if(! $feat_slice){
+	throw('Cannot get Feature Slice for '.$feat->start.':'.$feat->end.':'.$feat->strand.' on seq_region '.$feat->slice->name);
+  }
+
+  my @segments = @{ $feat_slice->project('chromosome', $new_assembly) };
+
+  if(! @segments){
+	$self->log("Failed to project feature:\t".$feat->display_label);
+	return;
+  }
+  elsif(scalar(@segments) >1){
+	$self->log("Failed to project feature to distinct location:\t".$feat->display_label);
+	return;
+  }
+
+  my $proj_slice = $segments[0]->to_Slice;
+  
+  if($feat_slice->length != $proj_slice->length){
+	$self->log("Failed to project feature to comparable length region:\t".$feat->display_label);
+	return;
+  }
+
+
+  # everything looks fine, so adjust the coords of the feature
+  $feat->start($proj_slice->start);
+  $feat->end($proj_slice->end);
+  $feat->strand($proj_slice->strand);
+  my $slice_new_asm = $self->slice_adaptor->fetch_by_region('chromosome', $proj_slice->seq_region_name, undef, undef, undef, $new_assembly);
+  $feat->slice($slice_new_asm);
+
+  return $feat;
+
+}
+
 
 
 1;
