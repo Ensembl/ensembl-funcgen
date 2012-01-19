@@ -252,209 +252,6 @@ sub set_config{
 }
 
 
-=head2 validate_and_store_config
-
-  Args       : None
-  Example    : $self->validate_and_store_feature_types;
-  Description: Imports feature types defined by import_sets.
-  Returntype : None
-  Exceptions : None
-  Caller     : General
-  Status     : High Risk - Moving this to (Base)Importer.pm
-
-=cut
-
-#Validate and store config?
-
-#sub validate_and_store_config{
-#  my ($self, @fset_names) = @_;
-#
-#  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
-
-
-  #We need to define analysis here too
-  #which is normally done in set_feature_sets
-  #But we want to use define_and_validate_sets
-  #define_and_validate_sets will need to omit 
-  #dataset generation for external sets
-
-  #We should do this before validate and define sets
-  #access config via name
- 
-  #default config file should be require'd
-  #similar to batch_queue.pm
-
-  #How will this work with the production DB?
-
-  #Need to think about config format
-  #Do we want to key it on the feature set name?
-  
-  #This may result in redundant config for various ftypes/analysis
-  #Will also mean that full and valid ftype and analysis config
-  #will be required?
-
-  #Just specify undef value to default to the DB version?
-  #This isn't possible if we are using they key as a reference to the input file
-  
-  #Require full definition for now.
-
-#  if(! exists ${$self}{user_config}){
-#	warn "No user config found";
-#  }
-#  else{#
-#
-#	foreach my $import_set(@fset_names){
-#	  
-#	  my $fset_config = $self->{user_config}{feature_sets}{$import_set};
-#
-#	  if(! $fset_config){
-#		throw("Could not find user defined config for:\t$import_set");
-#	  }
-#
-#	  $self->log("Validating and storing config for:\t$import_set");
-#
-#	  
-#
-#	  #Do analysis import/comparison first
-#	  #as this maybe required for the feature type
-#
-#	  #Can self ref config if do will work with %config, specified as the last line
-#	  #i.e.
-#	  #feature_types keys are what is seen in the file?
-#	  #else feature_type name?
-#	  #Might cause conflict if we have name redundancy?
-#	  #Could over come this by simply changing the key for the non-file ftypes
-#	  #as they would only be used for reference within the config itself
-#
-#	  #my %config = ( feature_types => { F => { ftype hash }, fset_ftype => {fset_hash}} );
-#	  #$config{feature_sets} = ( fset1 => { name => name, feature_type => $config{feature_types}{fset_ftype}} );
-#	  
-#	  #Don't compare against cache here as we need to check actual attr vals
-#
-#	  #Merge this two loops
-#
-#	  if(exists ${$fset_config}{'analyses'}){
-#
-#		foreach my $logic_name(keys %{$fset_config->{'analyses'}}){
-#		  #do we need to pass/validate the key too?
-#
-#		  #Check we have some data in the hash
-#		  if( (ref($fset_config->{'analyses'}{$logic_name}) ne 'HASH') ||
-#			  (! keys %{$fset_config->{'analyses'}{$logic_name}}) ){
-#			throw("You have specifed and undefined value in your feature_sets config for analysis $logic_name");
-#		  }
-#
-#		  $fset_config->{'analyses'}{$logic_name} =
-#			$self->validate_and_store_analysis($fset_config->{'analyses'}{$logic_name});
-#		}
-#	  }
-#
-#	  if(exists ${$fset_config}{'feature_types'}){
-#
-#		foreach my $ftype_key(keys %{$fset_config->{'feature_types'}}){
-#		  
-#		  #Check we have some data in the hash
-#		  if( (ref($fset_config->{'feature_types'}{$ftype_key}) ne 'HASH') ||
-#			  (! keys %{$fset_config->{'feature_types'}{$ftype_key}}) ){
-#			throw("You have specifed and undefined value in your feature_sets config for feature type $ftype_key");
-#		  }
-#
-#
-#		  $fset_config->{'feature_types'}{$ftype_key} = 
-#			$self->validate_and_store_feature_type($fset_config->{'feature_types'}{$ftype_key});
-#		}
-#	  }
-#
-#	   if(exists ${$fset_config}{'feature_set'}){
-#		 
-#		foreach my $ftype_key(keys %{$fset_config->{'feature_set'}}){
-#		  #do we need to pass the key too?
-#		  #$self->validate_and_store_feature_sets($fset_config->{'feature_sets'}{$ftype_key});
-#		  #? Do we want to call define_sets here
-#
-#		  #This is only required when we merge with the BaseExternalParser
-#		  #as that does not use define_set
-#		  throw("InputSet does not yet support feature_set param config. This is done automatically.\n".
-#				"Please ensure you have the correct analyses and feature_types set and remove the\n".
-#				"following hash from your config:\n\tfeature_sets => $import_set => feature_set => {}");
-#
-#
-#		}
-#	  }
-#	}
-#  }
-#
-#  return;
-#}
-
-
-
-#sub validate_and_store_analysis{
-#  my ($self, $analysis_params) = @_;
-#
-#  my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
-#  my $logic_name       = $analysis_params->{'-logic_name'};
-#  my $analysis         = $analysis_adaptor->fetch_by_logic_name($logic_name);
-#  my $config_anal      = Bio::EnsEMBL::Analysis->new(%{$analysis_params});
-
-
-#  if(! defined $analysis){
-#	
-#	$self->log('Analysis '.$logic_name." not found in DB, storing from config");		
-#	$analysis_adaptor->store($config_anal);
-#	$analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);	
-#  }
-#  else{
-#	
-#	my $not_same = $analysis->compare($config_anal);
-#	#Analysis::compare returns the opposite of what you expect!
-#
-#	if($not_same){
-#	  throw('There is a param mismatch between the '.$logic_name.
-#			' Analysis in the DB and config. Please rectify or define a new logic_name');
-#	}
-#  }
-#  
-#  return $analysis;
-#}
-#
-#sub validate_and_store_feature_type{
-#  my ($self, $ftype_params) = @_;
-#
-#  my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
-#  my $name          = $ftype_params->{-name};
-#  my $class         = $ftype_params->{-class}; 
-#  my $analysis;  #Need to define analysis so we don't declare hash key when pass as arg
-#
-#  if(exists ${$ftype_params}{'-analysis'}){
-#	#This is slightly redundant as we may have already validated this analysis
-#	$ftype_params->{'-analysis'} = $self->validate_and_store_analysis($ftype_params->{'-analysis'});
-#	$analysis = $ftype_params->{'-analysis'};
-#  }
-#  
-#  my $config_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(%{$ftype_params});
-#  my $ftype        = $ftype_adaptor->fetch_by_name($name, $class, $analysis);
-#  
-#
-#  if($ftype){
-#
-#	if(! $ftype->compare($config_ftype)){
-#	  my $label = $name."($class";
-#	  $label .= (defined $analysis) ? ' '.$analysis->logic_name.')' : ')';
-#	  
-#	  throw('There is a param mismatch between the '.$name.
-#			' FeatureType in the DB and config. Please rectify in the config.');
-#	}
-#  }
-#  else{
-#	$self->log('FeatureType '.$name." not found in DB, storing from config");		
-#	($ftype) = @{$ftype_adaptor->store($config_ftype)};
-#  }
-#
-#  return $ftype;
-#}
-
-
 sub define_sets{
   my ($self) = @_;
 
@@ -620,7 +417,6 @@ sub validate_files{
 
   #Does -recover allow a single extra new file to be added to an existing InputSet?
  
-
   if(@rollback_sets &&  #recoverable sets i.e. exists but not IMPORTED
 	 ( (! $self->recovery) && (! $self->rollback) ) ){
 	throw("Found partially imported InputSubsets:\n\t".join("\n\t", (map $_->name, @rollback_sets))."\n".
@@ -650,10 +446,12 @@ sub validate_files{
   }
 
 
-
   foreach my $esset(@rollback_sets){
 	#This needs to be mapped to the specified filepaths
-	$new_data{$file_paths{$esset->name}} = 1;
+	my $fp_key = $esset->name;
+	$fp_key = 'prepared.'.$fp_key if $self->prepared;
+
+	$new_data{$file_paths{$fp_key}} = 1;
 	$self->log("Revoking states for InputSubset:\t\t\t".$esset->name);
 	$eset->adaptor->revoke_states($esset);
 
@@ -788,10 +586,11 @@ sub read_and_import_data{
   ### READ AND IMPORT FILES ###
   foreach my $filepath(@{$self->result_files()}) {
 	chomp $filepath;
+	
 	($filename = $filepath) =~ s/.*\///;
 	$self->input_file($filepath); #This is only used by Collector::ResultFeature::reinitialise_input method
 	
-	if($new_data->{$filepath} ){
+	if($new_data->{$filepath} ){	#This will currently autovivify!
 	  $seen_new_data = 1;
 	  $self->{'input_gzipped'} = &is_gzipped($filepath);
 	  
