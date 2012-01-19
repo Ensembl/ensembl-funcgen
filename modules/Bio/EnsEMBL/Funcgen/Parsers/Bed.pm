@@ -99,7 +99,7 @@ use vars qw(@ISA);
 sub new{
   my $caller = shift;
   my $class = ref($caller) || $caller;
-  my $self = $class->SUPER::new(@_);
+  my $self = $class->SUPER::new(@_, no_disconnect => 1);
   
   throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") 
 	if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
@@ -136,7 +136,7 @@ sub new{
   Returntype : None
   Exceptions : None
   Caller     : Bio::EnsEMBL::Funcgen::Importer
-  Status     : at risk
+  Status     : at risk -remove
 
 =cut
 
@@ -257,7 +257,6 @@ sub parse_line{
 
   #if ($. == 0){#$INPUT_LINE_NUMBER;
   #	#sanity check here
-
   return 0 if($line =~ /track name=/o);
   $line =~ s/\r*\n//o;#chump accounts for windows files
 
