@@ -725,13 +725,16 @@ sub fetch_attribute_set_config_by_FeatureSet{
 
 	if(! defined $self->{attribute_set_config}->{$fset->dbID}){
 	  $self->{attribute_set_config}->{$fset->dbID} = 0;  #set cache default
-	  my $meta_key =  'regbuild.'.$fset->cell_type->name.'.feature_set_ids';
+	  my $string_key =  'regbuild.'.$fset->cell_type->name.'.feature_set_ids';
 
 	  #list_value_by_key caches, so we don't need to implement this in the adaptor
-	  my ($attr_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
+	  #my ($attr_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
+
+	  my $species_id = $self->db->species_id;
+	  my ($attr_ids) = $self->db->dbc->db_handle->selectrow_array("SELECT string from regbuild_string where name='${string_key}' and species_id=$species_id");
 
 	  if(! defined $attr_ids){
-		warn("Cannot detect attribute set as meta table does not contain $meta_key");
+		warn("Cannot detect attribute set as regbuild_string table does not contain $string_key");
 	  }
 	  else{
 
