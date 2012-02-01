@@ -22,8 +22,8 @@ CREATE TABLE `regbuild_string` (
 
 INSERT into regbuild_string select NULL, meta_key, species_id, meta_value from meta where meta_key like "regbuild.%_ids";
 
---DELETE from meta where meta_key like "regbuild.%_ids";
---This would make this patch unrecoverable. Do this manually
+-- DELETE from meta where meta_key like "regbuild.%_ids";
+-- This would make this patch unrecoverable. Do this manually
 
 SELECT 'DELETE from meta where meta_key like "regbuild.%_ids"' as 'For safety do this part of the funcgen patch_65_66_e manually:';
 

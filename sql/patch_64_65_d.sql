@@ -22,8 +22,8 @@ CREATE TABLE `segmentation_feature` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
---score and display label are redundant here
---display label is only ever set for external_features!
+-- score and display label are redundant here
+-- display label is only ever set for external_features!
 
 -- Is this in the base SetFeature class?
 
