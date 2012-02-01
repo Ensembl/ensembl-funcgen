@@ -32,15 +32,18 @@ _FALSE=!$_
 
 #could set BACKUP_DIR here too?
 #Note: Using sym links for these DIR vars means the patch in the functions should also be symlinks!
-export ARCHIVE_DIR=$HOME/warehouse/data
-export GROUP_ARCHIVE_DIR=/warehouse/ensembl02/funcgen
+export ARCHIVE_DIR=$HOME/warehouse
+export GROUP_ARCHIVE_DIR=$HOME/warehouse_prd
+
+
 
 #Problems with which dir to use as EFG_DATA contains efg, so we can't sub that off the path
 #This require DATA_DIR (similar to SRC?)
 #Can now keep this outside of efg.env/config
 #Keep config in here for now, or move to .bashrc or funcs.config?
-export DATA_DIR=$HOME/scratch
-export GROUP_DATA_DIR=/lustre/scratch103/ensembl/funcgen  
+#readlink here to make ArchiveData path matching easier
+export DATA_DIR=$(readlink -e $HOME/scratch)
+export GROUP_DATA_DIR=$(readlink -e $HOME/scratch_prd)  
 
 _setOptArgArray(){
 
@@ -590,6 +593,7 @@ BackUpFile(){
 ################################################################################
 
 #Not handling hosts in these paths yet, so -essh is redundant at present
+#Could do with lsa func, which lists filedir in the archive?
 
 ArchiveData()
 {
@@ -632,13 +636,14 @@ ArchiveData()
 	for filedir in $filedirs; do
 		#now we need to generate the full path as we may not be in the working dir
 		#This will collapse any relative paths to the full concise path
-		#Make sure we have a full path
 
 		#Test filedir exists
 
 		if [[ $filedir != /* ]]; then
 			#We never need to specify /* as this would just be the same as listing the dir path
-			filedir=$(ls -d $PWD/$filedir)
+		#	filedir=$(ls -d $PWD/$filedir)
+			#Get the full dereferenced path
+			filedir=$(readlink -e $filedir)
 		fi
 
 
@@ -654,7 +659,7 @@ ArchiveData()
 			SOURCE_ROOT=$GROUP_DATA_DIR
 		else
 			echo -e "Could not identify target root dir from:\t$filedir"
-			echo -e "Source needs to be in either:\n\t$DATA_DIR\t=\t$DATA_DIR\nor\n\t$GROUP_DATA_DIR\t=\t$GROUP_DATA_DIR"
+			echo -e "Source needs to be in either:\n\t\$DATA_DIR\t=\t$DATA_DIR\nor\n\t\$GROUP_DATA_DIR\t=\t$GROUP_DATA_DIR"
 			return 1
 		fi
 
@@ -863,12 +868,14 @@ Execute()
 
     $*
 
+	
 
 	rtn=$? 
 
 
-	if [ $rtn -ne 0 ]
+	if [ $rtn != 0 ]
 	then 
+		echo -e "Failed to:\t$*"
 		exit $rtn 
 	fi
 
