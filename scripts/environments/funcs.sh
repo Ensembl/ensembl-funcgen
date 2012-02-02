@@ -36,7 +36,6 @@ export ARCHIVE_DIR=$HOME/warehouse
 export GROUP_ARCHIVE_DIR=$HOME/warehouse_prd
 
 
-
 #Problems with which dir to use as EFG_DATA contains efg, so we can't sub that off the path
 #This require DATA_DIR (similar to SRC?)
 #Can now keep this outside of efg.env/config
@@ -595,6 +594,9 @@ BackUpFile(){
 #Not handling hosts in these paths yet, so -essh is redundant at present
 #Could do with lsa func, which lists filedir in the archive?
 
+#Change this to ArchiveFileDir
+#Could add $HOME support, but shouldn't have archiveable data in their
+
 ArchiveData()
 {
 	#could do with a delete source flag?
@@ -604,17 +606,26 @@ ArchiveData()
 
 	compress=
 	delete_source=
-	usage='usage: ArchiveData [ -c(compress) -d(elete source) -h(elp) ] FILES|DIRS'
+	aname=
+	usage='usage: ArchiveData [ -c(compress, no name) -a(rchive name) -d(elete source) -h(elp) ] FILES|DIRS'
 
-	while getopts ":dhc" opt; do
+	while getopts ":dca:h" opt; do
 		case $opt in 
 	        d  ) delete_source=1 ;; 
             c  ) compress=1 ;;
+            a  ) aname=$OPTARG ;;
 			h  ) echo $usage; return 0;;
 			\? ) echo $usage; exit 1;;
 		esac 
 	done
 
+	if [ $aname ]; then
+		compress=1
+	fi
+   
+
+	#Need to take an optional compress name
+    #so we can append a description to the archive
 
 	i=1
 
@@ -639,11 +650,21 @@ ArchiveData()
 
 		#Test filedir exists
 
-		if [[ $filedir != /* ]]; then
-			#We never need to specify /* as this would just be the same as listing the dir path
-		#	filedir=$(ls -d $PWD/$filedir)
-			#Get the full dereferenced path
-			filedir=$(readlink -e $filedir)
+#		if [[ $filedir != /* ]]; then
+#			#Get the full dereferenced path
+#			#Also strips trailing /
+#			filedir=$(readlink -e $filedir)
+#		fi
+
+		
+    	#Get the full dereferenced path
+		#Also strips trailing /
+		#Need to capture readlink error here?
+		filedir=$(readlink -e $filedir)
+
+        if [[ ! -e $filedir ]]; then
+			echo "$filedir does not exist"
+			return 1
 		fi
 
 
@@ -670,21 +691,25 @@ ArchiveData()
 			echo -e "Target archive dir not set or valid:$TARGET_ROOT_NAME\t=\t$TARGET_ROOT"
 			return 1
 		else
-			#Use ' instead of / due to / in path
-			echo source $SOURCE_ROOT
-			echo target $TARGET_ROOT
+			#echo -e "SOURCE:\t $SOURCE_ROOT"
+			#echo -e "TARGET:\t $TARGET_ROOT"
 
+	        #Use ' instead of / due to / in path
 			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
 			archive_filedir="$TARGET_ROOT/$archive_filedir"	
 
 
-			#Need to compress here.
+			#Need to compress here or in archive?
+			#more performant on scratch, but may have space issues if we are trying to archive?
 
 			if [ -d $filedir ]; then
-				#rsync will create dir for us
-				#But we need to remove the last dir name				
-				archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
-				archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
+
+				if [ ! $compress ]; then
+					#rsync will create dir for us
+		    		#But we need to remove the last dir name				
+					archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
+					archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
+				fi
 			else
 
 		        #mkdir in the archive
@@ -695,13 +720,42 @@ ArchiveData()
 					mkdir -p $archive_dir
 				fi
 			fi
+		
+			archive_cmd=
 			
-			#-essh only necessary for remote archiving
-			#This may cause data clashes, so we need to make sure paths are different?
-			echo "rsync -essh -Wav $filedir $archive_filedir"
-			rsync -essh -Wav $filedir $archive_filedir/
+			if [ $compress ]; then
+
+				if [ $aname ]; then
+					aname=".${aname}"
+				fi	
+				#This overwrites existing files
+				archive_cmd="tar -cvzf $archive_filedir${aname}.tar.gz $filedir"
+			else
+				archive_cmd="rsync -essh -Wavm $filedir $archive_filedir/"
+	       		#-essh only necessary for remote archiving
+	       		#-a archive mode; equals -rlptgoD (no -H,-A,-X)
+	    		#-r recurse into directories
+	       		#-l copy symlinks as symlinks
+		     	#-p preserve permissions
+			    #-t preserve modification times
+    			#-g preserve group
+    			#-o preserve owner (super-user only)
+    			#-D same as:
+	    		#    --devices     preserve device files (super-user only)
+                #    --specials    preserve special files
+                #-m prune emtpy dirs
+                #-v verbose
+			fi	
+
+			echo $archive_cmd
+			Execute $archive_cmd
+
+			#Catch Execute exit here?
+	
+			echo -e "Finished:\t$archive_cmd"
 
 			if [[ $delete_source ]]; then
+				echo -e "Removing source:\t $filedir"
 				rm -rf $filedir
 			fi
 
@@ -877,6 +931,7 @@ Execute()
 	then 
 		echo -e "Failed to:\t$*"
 		exit $rtn 
+		#This will exit the shell if we are running on cmdline
 	fi
 
 	#Can we trap errors here somehow?
