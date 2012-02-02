@@ -1,0 +1,60 @@
+
+
+## SEE:
+
+http://www.ebi.ac.uk/seqdb/confluence/display/EnsGen
+/Ensembl+Functional+Genomics+Documentation
+
+
+
+
+## RUN PATCHING ROUGHLY SOMEHTING LIKE THIS...
+
+
+## Use the right perl
+source ~/setup-perl.sh
+
+## Set up the right perl libs
+PERL5LIB=/nfs/panda/ensemblgenomes/apis/bioperl/ensembl-stable
+PERL5LIB=$PERL5LIB:/nfs/panda/ensemblgenomes/perl/cpan/core/lib/perl5
+PERL5LIB=$PERL5LIB:../ensembl/modules
+PERL5LIB=$PERL5LIB:modules
+
+export PERL5LIB
+
+
+
+## Patch these databases...
+
+for f_db in \
+    arabidopsis_thaliana_funcgen_13_66_10 \
+    oryza_indica_funcgen_13_66_2 \
+    oryza_sativa_funcgen_13_66_6 \
+    populus_trichocarpa_funcgen_13_66_20 \
+    vitis_vinifera_funcgen_13_66_3;
+  do
+  
+  c_db=$(echo $f_db | sed s/_funcgen_/_core_/ )
+  species=$(echo $f_db | perl -ne 'print $1 if /^(\w+_\w+)_funcgen_(\d+_\d+)_\d+$/' )
+  version=$(echo $f_db | perl -ne 'print $2 if /^(\w+_\w+)_funcgen_(\d+_\d+)_\d+$/' )
+  
+  echo $f_db
+  echo $c_db
+  echo $species
+  echo $version
+  
+  perl scripts/release/update_DB_for_release.pl \
+      -host mysql-eg-staging-1 -port 4160 \
+      -user ensrw -pass scr1b3s1 \
+      -dbname $f_db \
+      -dnadb_host mysql-eg-staging-1 -dnadb_port 4160 \
+      -dnadb_user ensrw -dnadb_pass scr1b3s1 \
+      -species  $species\
+      -data_version $version \
+      -check_displayable \
+      && echo OK
+  
+  echo
+  
+done
+
