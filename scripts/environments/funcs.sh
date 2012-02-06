@@ -593,21 +593,20 @@ BackUpFile(){
 
 #Not handling hosts in these paths yet, so -essh is redundant at present
 #Could do with lsa func, which lists filedir in the archive?
-
 #Change this to ArchiveFileDir
 #Could add $HOME support, but shouldn't have archiveable data in their
 
 ArchiveData()
 {
-	#could do with a delete source flag?
-	#and compress flag
-	#Add getopts here?
 	OPTIND=1
 
 	compress=
 	delete_source=
 	aname=
-	usage='usage: ArchiveData [ -c(compress, no name) -a(rchive name) -d(elete source) -h(elp) ] FILES|DIRS'
+	usage='usage: ArchiveData [ -c(compress, no name) -a(rchive name, compress) -d(elete source) -h(elp) ] FILES|DIRS'
+	#add -l(ist) option here to see if we have already archived this in some form?
+	#or we could just test for target file first and AskQuestion to confirm?
+	#would need force flag to overwrite without AskQuestion
 
 	while getopts ":dca:h" opt; do
 		case $opt in 
@@ -623,10 +622,6 @@ ArchiveData()
 		compress=1
 	fi
    
-
-	#Need to take an optional compress name
-    #so we can append a description to the archive
-
 	i=1
 
 	while [ $i -lt $OPTIND ]; do
@@ -635,38 +630,22 @@ ArchiveData()
 	done
 
 	filedirs=$*
-
-
 	TARGET_ROOT=
 	TARGET_ROOT_NAME=
 	SOURCE_ROOT=
-
-
-	#This loop doesn't work on multiple dirs yer
 	
 	for filedir in $filedirs; do
-		#now we need to generate the full path as we may not be in the working dir
-		#This will collapse any relative paths to the full concise path
-
-		#Test filedir exists
-
-#		if [[ $filedir != /* ]]; then
-#			#Get the full dereferenced path
-#			#Also strips trailing /
-#			filedir=$(readlink -e $filedir)
-#		fi
-
-		
     	#Get the full dereferenced path
 		#Also strips trailing /
 		#Need to capture readlink error here?
-		filedir=$(readlink -e $filedir)
+		tmpfiledir=$(readlink -e $filedir)
 
         if [[ ! -e $filedir ]]; then
-			echo "$filedir does not exist"
+			echo -e "File/dir argument does not exist:\t$filedir"
 			return 1
 		fi
 
+		filedir=$tmpfiledir
 
 		#Detect source data dir
 
@@ -698,28 +677,32 @@ ArchiveData()
 			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
 			archive_filedir="$TARGET_ROOT/$archive_filedir"	
 
+			#mkdir in archive incase we are using tar or rsync using a file
+			#rsync will create dirs
 
-			#Need to compress here or in archive?
-			#more performant on scratch, but may have space issues if we are trying to archive?
-
-			if [ -d $filedir ]; then
-
-				if [ ! $compress ]; then
-					#rsync will create dir for us
-		    		#But we need to remove the last dir name				
-					archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
-					archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
-				fi
-			else
-
-		        #mkdir in the archive
-				archive_dir=$(GetDir $archive_filedir)
+			archive_dir=$(GetDir $archive_filedir)
 			
-				if [ ! -d $archive_dir ]; then
-					echo -e "Making archive directory:\t$archive_dir"
-					mkdir -p $archive_dir
-				fi
+			if [ ! -d $archive_dir ]; then
+				echo -e "Making archive directory:\t$archive_dir"
+				mkdir -p $archive_dir
 			fi
+
+
+
+			if [ -d $filedir ] && [ ! $compress ]; then
+		    	#Remove the last dir name				
+				archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
+				archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
+			fi
+
+		    #else   #mkdir in the archive
+		#		archive_dir=$(GetDir $archive_filedir)
+		#	
+		#		if [ ! -d $archive_dir ]; then
+		#			echo -e "Making archive directory:\t$archive_dir"
+		#			mkdir -p $archive_dir
+		#		fi
+		#	fi
 		
 			archive_cmd=
 			
@@ -749,9 +732,7 @@ ArchiveData()
 
 			echo $archive_cmd
 			Execute $archive_cmd
-
 			#Catch Execute exit here?
-	
 			echo -e "Finished:\t$archive_cmd"
 
 			if [[ $delete_source ]]; then
