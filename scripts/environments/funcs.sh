@@ -44,6 +44,7 @@ export GROUP_ARCHIVE_DIR=$HOME/warehouse_prd
 export DATA_DIR=$(readlink -e $HOME/scratch)
 export GROUP_DATA_DIR=$(readlink -e $HOME/scratch_prd)  
 
+
 _setOptArgArray(){
 
 	#Set var in sub
@@ -613,101 +614,74 @@ ArchiveData()
 	        d  ) delete_source=1 ;; 
             c  ) compress=1 ;;
             a  ) aname=$OPTARG ;;
-			h  ) echo $usage; return 0;;
-			\? ) echo $usage; exit 1;;
+            h  ) echo $usage; return 0;;
+            \? ) echo $usage; exit 1;;
 		esac 
 	done
 
 	if [ $aname ]; then
 		compress=1
 	fi
-   
-	i=1
 
+	i=1
+	
 	while [ $i -lt $OPTIND ]; do
 		shift
 		let i+=1
 	done
-
+	
 	filedirs=$*
 	TARGET_ROOT=
 	TARGET_ROOT_NAME=
 	SOURCE_ROOT=
-	
+
 	for filedir in $filedirs; do
     	#Get the full dereferenced path
 		#Also strips trailing /
 		#Need to capture readlink error here?
-		tmpfiledir=$(readlink -e $filedir)
-
-        if [[ ! -e $filedir ]]; then
-			echo -e "File/dir argument does not exist:\t$filedir"
-			return 1
+		
+		_SetTargetAndSourceRoot $filedir
+		#sets SOURCE_ROOT and return $derefd_filedir
+   		retval=$?
+		
+		if [ $retval -ne 0 ]; then
+			echo -e "Failed to archive:\t$filedir"
+			return $retval
 		fi
-
-		filedir=$tmpfiledir
-
-		#Detect source data dir
-
-		if [[ -d $DATA_DIR ]] && [[ $filedir = $DATA_DIR* ]]; then
-			TARGET_ROOT=$ARCHIVE_DIR
-			TARGET_ROOT_NAME=ARCHIVE_DIR
-			SOURCE_ROOT=$DATA_DIR
-		elif [[ -d $GROUP_DATA_DIR ]] && [[ $filedir = $GROUP_DATA_DIR* ]]; then
-			TARGET_ROOT=$GROUP_ARCHIVE_DIR
-			TARGET_ROOT_NAME=GROUP_ARCHIVE_DIR
-			SOURCE_ROOT=$GROUP_DATA_DIR
-		else
-			echo -e "Could not identify target root dir from:\t$filedir"
-			echo -e "Source needs to be in either:\n\t\$DATA_DIR\t=\t$DATA_DIR\nor\n\t\$GROUP_DATA_DIR\t=\t$GROUP_DATA_DIR"
-			return 1
-		fi
-
-
-			
+	
+		filedir=$derefd_filedir
+		
+				
 		#Need to match $DATA_DIR here or skip with warning
 		if [[ ! -d $TARGET_ROOT ]]; then
 			echo -e "Target archive dir not set or valid:$TARGET_ROOT_NAME\t=\t$TARGET_ROOT"
 			return 1
 		else
-			#echo -e "SOURCE:\t $SOURCE_ROOT"
-			#echo -e "TARGET:\t $TARGET_ROOT"
-
 	        #Use ' instead of / due to / in path
 			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
 			archive_filedir="$TARGET_ROOT/$archive_filedir"	
-
+			
 			#mkdir in archive incase we are using tar or rsync using a file
 			#rsync will create dirs
-
 			archive_dir=$(GetDir $archive_filedir)
 			
 			if [ ! -d $archive_dir ]; then
 				echo -e "Making archive directory:\t$archive_dir"
 				mkdir -p $archive_dir
 			fi
-
-
-
+			
+			
 			if [ -d $filedir ] && [ ! $compress ]; then
 		    	#Remove the last dir name				
 				archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
 				archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
 			fi
-
-		    #else   #mkdir in the archive
-		#		archive_dir=$(GetDir $archive_filedir)
-		#	
-		#		if [ ! -d $archive_dir ]; then
-		#			echo -e "Making archive directory:\t$archive_dir"
-		#			mkdir -p $archive_dir
-		#		fi
-		#	fi
-		
+			
+			
 			archive_cmd=
 			
 			if [ $compress ]; then
-
+				
 				if [ $aname ]; then
 					aname=".${aname}"
 				fi	
@@ -729,20 +703,340 @@ ArchiveData()
                 #-m prune emtpy dirs
                 #-v verbose
 			fi	
-
+			
 			echo $archive_cmd
 			Execute $archive_cmd
-			#Catch Execute exit here?
+			#assign Execute output here to catch exit and output, then return nicely?
 			echo -e "Finished:\t$archive_cmd"
-
+			
 			if [[ $delete_source ]]; then
 				echo -e "Removing source:\t $filedir"
 				rm -rf $filedir
 			fi
-
+			
 		fi
 	done
 }
+
+#Need to test for aliases before defining these
+#Was failing to compile as rm was already aliased
+
+rm(){
+	args=$*
+	seen_file=
+	i=0
+
+	files=$(echo $args | sed -r s'/^-[^[:space:]]+//') #deal with leading - i.e. not preceded
+	files=$(echo $files | sed -r s'/ -[^[:space:]]+//g') #deal with other opts
+	#This will not restrict opts to start of args
+
+	#echo files $files
+	opts=$(echo $args | sed "s'$files''");
+ 	opts=$(echo $opts | sed "s'-'-o '");
+ 	   
+	#echo del $opts $files
+	del $opts $files
+
+}
+
+#Enables fast removal of files by moving to .del filder in root of current path
+#Post-pones actual rm to cron job, based on files last mod'd more than N days
+
+#Was failing to compile as del was already aliased
+
+
+del(){
+	OPTIND=1
+	days=
+	del_verbose=
+	rm_opts=
+
+	usage='usage: del  [ -o(pt for rm)+ -d(ays, purge .del of files older than this value, at root defined by) ] FILES|DIRS'
+
+	while getopts ":d:o:vh" opt; do
+		case $opt in 
+	        d  ) days=$OPTARG ;;
+            o  ) rm_opts="$rm_opts -${OPTARG}" ;;
+			h  ) echo $usage; return 0;;
+			v  ) del_verbose=1 ;;
+			\? ) echo $usage; exit 1;;
+		esac 
+	done
+  
+	i=1
+	while [ $i -lt $OPTIND ]; do
+		shift
+		let i+=1
+	done
+
+	filedirs=$*
+
+	if [ ! $filedirs ]; then
+		echo -e "You must define at least one file or directory\n$usage";
+	fi
+
+
+	#test $days is +ve int to avoid -gt test failure later
+	if [ $days ] &&
+		! [[ $days =~ ^[0-9]+$ ]]; then
+		echo -e "Parameter -d must be an integer\t$usage"
+		return 1
+	fi
+
+	#Build error log rather than bailing out asap
+	error_log=
+
+	for filedir in $filedirs; do
+
+		_SetTargetAndSourceRoot -n $filedir
+		#sets SOURCE_ROOT and derefd_filedir
+		retval=$?
+
+
+		if [ $retval -ne 0 ]; then
+			#error="\nFailed to del:\t$filedir"
+			#echo -e $error
+			#error_log="${error_log}${error}\n"
+			#return $retval
+			#echo $(which rm) $rm_opts $filedir
+
+			$(which rm) -i $rm_opts $filedir
+			#-i is over-ridden by -f
+			continue
+
+			#Or do we want to enable a .del in /nfs home too?
+			#This would not work with _SetTargetAndSourceRoot
+		fi
+
+		filedir=$derefd_filedir
+		del_dir="${SOURCE_ROOT}/.del"
+
+		if [ ! -d $del_dir ]; then
+			mkdir -p $del_dir
+			retval=$?
+
+			if [ $retval -ne 0 ]; then
+				echo -e "Failed create .del dir:\t$del_dir"
+				return $retval
+			fi
+		fi
+
+
+		if [ $days ]; then # PURGE!
+		
+			#Test valid .del $filedir to purge
+			#No need to match trailing as readlink strips this
+			if [[ $filedir != $del_dir ]]; then
+				echo -e "You must supply a valid .del dir to purge e.g.\n\t$del_dir\n$usage"
+				return 1
+			fi 
+
+			#Use find instead of ls to allow for many files
+			#-mindepth ignores .del dir itself
+			#-depth processes dir contents before dir itself
+			#to prevent deleting dir before finding the next file which has already been deleted
+			for delfile in $(find "${del_dir}/" -mindepth 1 -depth); do
+
+				age=$(GetFileAge $delfile)
+				retval=$?
+			
+				if [ $retval -ne 0 ]; then
+					error="Failed to purge deleted file:\t$delfile"
+					echo -e $error
+					#return $retval
+					error_log="${error_log}${error}\n"
+					continue
+
+				fi
+
+				if [ $age -ge $days ]; then
+					rm_cmd="rm -rf $delfile"
+
+					if [ $del_verbose ]; then
+						echo $rm_cmd;
+					fi
+
+					$rm_cmd
+					retval=$?
+
+					if [ $retval -ne 0 ]; then
+						error="Failed to purge deleted file:\t$delfile"
+						echo -e $error
+						error_log="${error_log}${error}\n"
+						#return $retval
+						continue
+					fi
+				fi
+			done
+			
+		else               # MV ENTIRE PATH TO .DEL
+			del_path=$(echo $filedir | sed "s^${SOURCE_ROOT}^${del_dir}^")
+			#We need to strip one dir off the end if we are mv'ing a dir
+			 #del_path=$(echo $del_path | sed -r "s^/$^^")
+			#readlink does this for us
+			del_path=$(GetDir $del_path)
+
+			if [ ! -d $del_path ]; then
+				mkdir -p $del_path
+				#catch error?
+			fi
+
+			#Do we want to have interactive by default here and override with -f?
+
+			mv_cmd="mv $filedir $del_path/$file"
+			$mv_cmd
+			retval=$?
+
+			#mv'ing file updates last modified & changed date
+			
+
+
+			#Mirror the whole path under .del!
+			# - handle redundant naming
+			# - easier recovery/navigation
+			#This will require a recursive find when purging!
+
+			if [ $retval -ne 0 ]; then
+				error="Failed del file:\t$mv_cmd"
+				echo -e $error
+				error_log="${error_log}${error}\n"
+				#return $retval
+				continue
+			fi
+		fi
+	done
+
+	if [ $error_log ]; then
+		echo -e $error_log
+		return 1
+	fi
+
+
+	}
+
+
+#This works slightly differently for ArchiveData, Distribute and del
+#Do not subshell this as this will hide SOURCE/TARGET_ROOT/NAME
+#e.g. error_of_fildir=$(_SetTargetAndSourceRoot $file)
+
+_SetTargetAndSourceRoot(){
+	OPTIND=1
+	type=
+	dir_txt=
+	data_dir_txt="\n\t\$DATA_DIR\t=\t$DATA_DIR\nor\n\t\$GROUP_DATA_DIR\t=\t$GROUP_DATA_DIR"
+	archive_dir_txt="\n\t\$ARCHIVE_DIR\t=\t$ARCHIVE_DIR\nor\n\t\$GROUP_ARCHIVE_DIR\t=\t$GROUP_ARCHIVE_DIR"
+	derefd_filedir=
+	no_warnings=
+
+	#usage='usage: del  [ -d(ays, purge .del of files older than this value, at root defined by) ] FILES|DIRS'
+	#add -l(ist) option here to see if we have already archived this in some form?
+	#or we could just test for target file first and AskQuestion to confirm?
+	#would need force flag to overwrite without AskQuestion
+
+	while getopts ":adnh" opt; do
+		case $opt in 
+			a  ) type='ARCHIVE'; dir_text=$archive_dir_txt ;;
+	        d  ) type='DATA'; dir_txt=$data_dir_txt ;;
+            n  ) no_warnings=1 ;;
+			h  ) echo $usage; return 0;;
+			\? ) echo $usage; exit 1;;
+		esac 
+	done
+  
+	data_dir_txt="\n\t\$DATA_DIR\t=\t$DATA_DIR\nor\n\t\$GROUP_DATA_DIR\t=\t$GROUP_DATA_DIR"
+	archive_dir_txt="\n\t\$ARCHIVE_DIR\t=\t$ARCHIVE_DIR\nor\n\t\$GROUP_ARCHIVE_DIR\t=\t$GROUP_ARCHIVE_DIR"
+
+
+	if [ ! $type ]; then
+		type='BOTH'
+		dir_txt="${data_dir_txt}${archive_dir_txt}"
+	fi
+	
+	i=1
+
+	while [ $i -lt $OPTIND ]; do
+		shift
+		let i+=1
+	done
+
+	tmpfiledir1=$1
+
+	#Check for more args here?
+	TARGET_ROOT=
+	TARGET_ROOT_NAME=
+	SOURCE_ROOT=
+	
+	#text exists here
+	tmpfiledir=$(readlink -e $tmpfiledir1)
+
+	if [[ ! -e $tmpfiledir ]]; then
+		
+		if ! [ $no_warnings ]; then
+			echo -e "File/dir argument does not exist:\t$tmpfiledir1"
+		fi
+
+		return 1
+	fi
+
+	#do we have to export these?
+
+	if [[ -d $DATA_DIR ]] && [[ $tmpfiledir = $DATA_DIR* ]] && 
+		( [ $type == 'BOTH' ] || [ $type == 'DATA' ] ); then
+		TARGET_ROOT=$ARCHIVE_DIR
+		TARGET_ROOT_NAME=ARCHIVE_DIR
+		SOURCE_ROOT=$DATA_DIR
+	elif [[ -d $GROUP_DATA_DIR ]] && [[ $tmpfiledir = $GROUP_DATA_DIR* ]] &&
+		( [ $type == 'BOTH' ] || [ $type == 'DATA' ] ); then
+		TARGET_ROOT=$GROUP_ARCHIVE_DIR
+		TARGET_ROOT_NAME=GROUP_ARCHIVE_DIR
+		SOURCE_ROOT=$GROUP_DATA_DIR
+	elif [[ -d $GROUP_ARCHIVE_DIR ]] && [[ $tmpfiledir = $GROUP_ARCHIVE_DIR* ]] &&
+		( [ $type == 'BOTH' ] || [ $type == 'ARCHIVE' ] ); then
+		TARGET_ROOT=$GROUP_DATA_DIR
+		TARGET_ROOT_NAME=GROUP_DATA_DIR
+		SOURCE_ROOT=$GROUP_ARCHIVE_DIR
+	elif [[ -d $ARCHIVE_DIR ]] && [[ $tmpfiledir = $ARCHIVE_DIR* ]] &&
+		( [ $type == 'BOTH' ] || [ $type == 'ARCHIVE' ] ); then
+		TARGET_ROOT=$DATA_DIR
+		TARGET_ROOT_NAME=DATA_DIR
+		SOURCE_ROOT=$ARCHIVE_DIR
+	else
+		if ! [ $no_warnings ]; then
+			echo -e "Could not identify target/source root dir for:\t$filedir"
+			echo -e "Source needs to be in either:$dir_txt"
+		fi
+
+		return 1
+	fi
+
+	#Failure needs to be caught in caller using $?
+	derefd_filedir=$tmpfiledir
+}
+
+
+GetFileAge(){
+	filename=$1
+	#enable day and hours?
+	#enable last modified?
+	#apparently can't get created date from cmd line
+	#would have to use perl or similar?
+
+	day_factor=$((60 * 24))
+
+	#second since Epoch 
+	NOW=`date +%s`
+	OLD=`stat -c %Z $filename` 
+
+	if [ $? -ne 0 ]; then
+		echo -e "Failed to GetFileAge for:\t$filename"
+		return 1
+	fi
+
+	#This rounds down, which is what we want
+	echo $(( ($NOW - $OLD) / $day_factor))
+}
+
+#remove this?
 
 DistributeData(){
 	#Keep this to data dir only
@@ -892,6 +1186,8 @@ $usage_string"
 
 Execute()
 {
+	#No point in using this unless you want to exit
+	#Just test $? otherwise
 
 	#echo "Executing $*"
 	#We're having problems with perl -e, mysql -e and mysql < file!
@@ -902,9 +1198,6 @@ Execute()
 
 
     $*
-
-	
-
 	rtn=$? 
 
 
