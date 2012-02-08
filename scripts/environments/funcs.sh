@@ -735,7 +735,7 @@ rm(){
  	opts=$(echo $opts | sed "s'-'-o '");
  	   
 	#echo del $opts $files
-	del $opts $files
+	del -r $opts $files
 
 }
 
@@ -744,12 +744,15 @@ rm(){
 
 #Was failing to compile as del was already aliased
 
+#Probably want to hoik out delete > age code to separate func
+#so we can use it separately (for logs)
 
 del(){
 	OPTIND=1
 	days=
 	del_verbose=
 	rm_opts=
+	rm_caller=
 
 	usage='usage: del  [ -o(pt for rm)+ -d(ays, purge .del of files older than this value, at root defined by) ] FILES|DIRS'
 
@@ -757,12 +760,18 @@ del(){
 		case $opt in 
 	        d  ) days=$OPTARG ;;
             o  ) rm_opts="$rm_opts -${OPTARG}" ;;
-			h  ) echo $usage; return 0;;
+			r  ) rm_caller=1 ;;
 			v  ) del_verbose=1 ;;
+			h  ) echo $usage; return 0;;
 			\? ) echo $usage; exit 1;;
 		esac 
 	done
   
+	#Assume rm is okay if we have defined opt for rm
+	if [ $rm_opts ]; then
+		rm_caller=1
+	fi
+
 	i=1
 	while [ $i -lt $OPTIND ]; do
 		shift
@@ -800,12 +809,23 @@ del(){
 			#return $retval
 			#echo $(which rm) $rm_opts $filedir
 
-			$(which rm) -i $rm_opts $filedir
-			#-i is over-ridden by -f
-			continue
+			#Only rm if we are calling from rm func
+			#Not from del directly
+			
+			if [ $rm_caller ]; then
+				$(which rm) -i $rm_opts $filedir
+			    #-i is over-ridden by -f
+	
+			else
+				error="\nFailed to del as no .del dir available for:\t$filedir\nUse rm instead?"
+				#echo -e $error
+				error_log="${error_log}${error}\n"
+			fi
 
 			#Or do we want to enable a .del in /nfs home too?
 			#This would not work with _SetTargetAndSourceRoot
+
+			continue
 		fi
 
 		filedir=$derefd_filedir
@@ -842,7 +862,7 @@ del(){
 			
 				if [ $retval -ne 0 ]; then
 					error="Failed to purge deleted file:\t$delfile"
-					echo -e $error
+					#echo -e $error
 					#return $retval
 					error_log="${error_log}${error}\n"
 					continue
@@ -861,7 +881,7 @@ del(){
 
 					if [ $retval -ne 0 ]; then
 						error="Failed to purge deleted file:\t$delfile"
-						echo -e $error
+						#echo -e $error
 						error_log="${error_log}${error}\n"
 						#return $retval
 						continue
@@ -898,7 +918,7 @@ del(){
 
 			if [ $retval -ne 0 ]; then
 				error="Failed del file:\t$mv_cmd"
-				echo -e $error
+				#echo -e $error
 				error_log="${error_log}${error}\n"
 				#return $retval
 				continue
@@ -906,8 +926,9 @@ del(){
 		fi
 	done
 
-	if [ $error_log ]; then
-		echo -e $error_log
+
+	if [ "$error_log" ]; then
+		echo -e "Summary of errors:\n$error_log"
 		return 1
 	fi
 
