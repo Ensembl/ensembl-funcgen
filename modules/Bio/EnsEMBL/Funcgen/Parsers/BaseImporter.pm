@@ -140,7 +140,6 @@ sub new{
 	  'config_file',       'ucsc_coords',    'DUMP_FASTA',       'no_disconnect'],
 	 @_);
   
-
   
 
   #Other stuff to bring in here:
@@ -201,7 +200,7 @@ sub new{
 	#Need to be mindful about this when developing
 	#we need to tip all this on it's head and load the reg from the dnadb version!!!!!!!
 
-	my $version= $self->{'release'} || $reg->software_version;
+	my $version = $release || $reg->software_version;
 	$self->log("Loading v${version} registry from $reg_user".'@'.$reg_host);
 
 	#Note this defaults API version, hence running with head code
@@ -213,7 +212,7 @@ sub new{
 	   -user       => $reg_user,
 	   -port       => $reg_port,
 	   -pass       => $reg_pass,
-	   -db_version => $release,
+	   -db_version => $version,
 	   -verbose    => $verbose,
 	  );
 
@@ -907,7 +906,7 @@ sub count{
 
 sub rollback{ return $_[0]->{rollback}; }
 
-sub recovery{ return $_[0]->{'recover'}; }
+sub recovery{ return $_[0]->{recover}; }
 
 =head2 db
   
