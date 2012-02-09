@@ -23,19 +23,34 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor - A database adaptor for fetching and
-storing RegulatoryFeature objects.
+Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor
 
 =head1 SYNOPSIS
 
-my $afa = $db->get_RegulatoryFeatureAdaptor();
+use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 
-my $features = $afa->fetch_all_by_Slice($slice);
+my $reg = Bio::EnsEMBL::Registry->load_adaptors_from_db(-host    => 'ensembldb.ensembl.org',
+                                                        -user    => 'anonymous');
+
+my $regfeat_adaptor = $reg->get_adaptor($species, 'funcgen', 'RegulatoryFeature');
+
+
+#Fetch MultiCell RegulatoryFeatures
+my @features = @{$regfeat_adaptor->fetch_all_by_Slice($slice)};
+
+#Fetch cell type specific RegulatoryFeatures
+my @ctype_features = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, [$ctype_fset1, $ctype_fset2])};
+
+#Fetch all cell type RegulatoryFeatures for a given stable ID
+my @ctype_features = @{$regfeat_adaptor->fetch_all_by_stable_ID('ENSR00001348194')};
+
 
 =head1 DESCRIPTION
 
 The RegulatoryFeatureAdaptor is a database adaptor for storing and retrieving
-RegulatoryFeature objects.
+RegulatoryFeature objects. The FeatureSet class provides convenient wrapper
+methods to the Slice functionality within this adaptor.
 
 =cut
 
@@ -50,6 +65,11 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor); #@ISA
 #change to parent with perl 5.10
+
+my %valid_attribute_features = (
+								'Bio::EnsEMBL::Funcgen::MotifFeature' => 'motif',
+								'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
+							   );
 
 =head2 fetch_all
 
@@ -704,6 +724,43 @@ sub fetch_all_by_stable_ID {
   $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
   return $self->generic_fetch('rf.stable_id=?');
 }
+
+=head2 fetch_all_by_attribute_feature
+
+  Arg [1]    : Bio::Ensembl::Funcgen::AnnotatedFeature or MotifFeature
+  Example    : my @regfs = @{$regf_adaptor->fetch_all_by_attribute_feature($motif_feature)};
+  Description: Retrieves a list of RegulatoryFeatures which contain the givven attribute feature.
+  Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
+  Exceptions : Throws is argument not valid
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_attribute_feature {
+  my ($self, $attr_feat) = @_;
+  
+  my $attr_class = ref($attr_feat);
+
+  if(! $valid_attribute_features{$attr_class}){
+	#This assigns null to the hash value but we throw straight away
+	throw("Attribute feature must be one of:\n\t".join("\n\t", keys(%valid_attribute_features)));
+  }
+
+  $self->db->is_stored_and_valid($attr_class, $attr_feat);	  
+  my $attr_feat_table = $valid_attribute_features{$attr_class};
+  
+  #Do this as a simple subselect for now
+  #rather than implementing query extension/composable adaptor
+  #No need to bind_param_generic_fetch here as we have tested dbIDs with is_stored_and_valid
+  my $constraint = "rf.regulatory_feature_id in(".
+	"SELECT regulatory_feature_id from regulatory_attribute ".
+	  "WHERE attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID.')';
+  
+  return $self->generic_fetch($constraint);
+}
+
+
 
 =head2 fetch_type_config_by_RegulatoryFeatures
 
