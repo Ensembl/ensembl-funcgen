@@ -303,8 +303,8 @@ sub _validate_and_set_types{
 	  #Need to test isa here?  Why is this passing the defined test if not set?
 	  if($set->{$type}->name() ne $self->{$type}->name()){
 
-		throw(ref($set).' feature_type('.$set->{$type}->name().
-			  ") does not match DataSet feature_type(".$self->{$type}->name().")");
+		throw(ref($set)." $type(".$set->{$type}->name().
+			  ") does not match DataSet $type(".$self->{$type}->name().")");
 		
 	  }
 	}
