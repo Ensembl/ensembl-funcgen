@@ -47,22 +47,26 @@ sub new {
   my $self = $class->SUPER::new(@_);
 
   #validate and set type, analysis and feature_set here
-  my ($type, $db, $clobber, $archive, $import_fsets) = rearrange(['TYPE', 'DB', 'CLOBBER', 'ARCHIVE', 'IMPORT_SETS'], @_);
+  my ($type, $db, $archive, $import_fsets) = rearrange(['TYPE', 'DB', 'ARCHIVE', 'IMPORT_SETS'], @_);
+
+  #What is ExternalParser specific here?
+  #archive?
+  #type? is this even used?
+
   
-  throw('You must define a type of external_feature to import') if(! defined $type);
+  #throw('You must define a type of external_feature to import') if(! defined $type);
 
   if (! ($db && ref($db) &&
 		 $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
 	throw('You must provide a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
   }
 
-  throw('You can only specify either -clobber or -archive, but not both') if($clobber && $archive);
+  throw('You can only specify either -clobber|rollback or -archive, but not both') if($self->rollback && $archive);
 
-  $self->{'display_name_cache'} = {};
+  $self->{display_name_cache} = {};
   $self->{'db'} = $db;
-  $self->{type} = $type;
-  $self->{'clobber'} = $clobber if defined $clobber;
-  $self->{'archive'} = $archive if defined $archive;
+  #$self->{type} = $type;
+  $self->{archive} = $archive if defined $archive;
 
 
   #This is not fully implemented yet and need to be validated against the config feature_set
@@ -78,24 +82,6 @@ sub new {
 
 }
 
-
-=head2 db
-
-  Args       : None
-  Example    : my $feature_set_adaptor = $seld->db->get_FeatureSetAdaptor
-  Description: Getter for the DBAdaptor.
-  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub db{
-  my $self = shift;
-
-  return $self->{'db'};
-}
 
 =head2 import_sets
 
@@ -122,7 +108,7 @@ sub import_sets{
   Example    : $self->set_feature_sets;
   Description: Imports feature sets defined by import_sets.
   Returntype : None
-  Exceptions : Throws if feature set already present and clobber or archive not set
+  Exceptions : Throws if feature set already present and rollback or archive not set
   Caller     : General
   Status     : Medium Risk
 
@@ -151,7 +137,7 @@ sub set_feature_sets{
 	if(defined $fset){
 	  $self->log("Found previous FeatureSet $fset_name");
 
-	  if($self->{'clobber'}){
+	  if($self->rollback){
 
 		$self->rollback_FeatureSet($fset);#Need to pass \@slices here?
 	  }
@@ -166,7 +152,7 @@ sub set_feature_sets{
 		$self->db->dbc->do($sql);
 		undef $fset;
 	  }else{
-		throw("You are trying to create an external feature_set which already exists:\t$fset_name\nMaybe to want to clobber or archive?");
+		throw("You are trying to create an external feature_set which already exists:\t$fset_name\nMaybe to want to rollback or archive?");
 	  }
 	}
 
@@ -278,74 +264,6 @@ sub set_feature_sets{
 
 
 
-
-=head2 project_feature
-
-  Args [0]   : Bio::EnsEMBL::Feature
-  Args [1]   : string - Assembly e.g. NCBI37
-  Example    : $self->project($feature, $new_assembly);
-  Description: Projects a feature to a new assembly via the AssemblyMapper
-  Returntype : Bio::EnsEMBL::Feature
-  Exceptions : Throws is type is not valid.
-  Caller     : General
-  Status     : At risk - is this in core API? Move to Utils::Helper?
-
-=cut
-
-
-
-# --------------------------------------------------------------------------------
-# Project a feature from one slice to another
-sub project_feature {
-  my ($self, $feat, $new_assembly) = @_;
-
-  # project feature to new assembly
-  my $feat_slice = $feat->feature_Slice;
-
-
-  if(! $feat_slice){
-	throw('Cannot get Feature Slice for '.$feat->start.':'.$feat->end.':'.$feat->strand.' on seq_region '.$feat->slice->name);
-  }
-
-  my @segments = @{ $feat_slice->project('chromosome', $new_assembly) };
-
-  if(! @segments){
-	$self->log("Failed to project feature:\t".$feat->display_label);
-	return;
-  }
-  elsif(scalar(@segments) >1){
-	$self->log("Failed to project feature to distinct location:\t".$feat->display_label);
-	return;
-  }
-
-  my $proj_slice = $segments[0]->to_Slice;
-  
-  if($feat_slice->length != $proj_slice->length){
-	$self->log("Failed to project feature to comparable length region:\t".$feat->display_label);
-	return;
-  }
-
-
-  # everything looks fine, so adjust the coords of the feature
-  $feat->start($proj_slice->start);
-  $feat->end($proj_slice->end);
-  $feat->strand($proj_slice->strand);
-  my $slice_new_asm = $self->slice_adaptor->fetch_by_region('chromosome', $proj_slice->seq_region_name, undef, undef, undef, $new_assembly);
-  $feat->slice($slice_new_asm);
-
-  return $feat;
-
-}
-
-sub slice_adaptor{
-  my $self = shift;
-
-  if(! defined $self->{'slice_adaptor'}){
-	$self->{'slice_adaptor'} = $self->db->get_SliceAdaptor;
-  }
-  
-  return $self->{'slice_adaptor'};
-}
 
 
 1;
