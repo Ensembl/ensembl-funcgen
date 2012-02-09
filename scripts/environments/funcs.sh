@@ -1055,6 +1055,7 @@ _SetTargetAndSourceRoot(){
 
 
 GetFileAge(){
+	OPTIND=1
 	date_format=
 	usage= 
 	tmp_opts="$*"
@@ -1068,12 +1069,12 @@ GetFileAge(){
 			\? ) echo -e $usage; exit 1;;
 		esac 
 	done	
-
+	
+	i=1
 	while [ $i -lt $OPTIND ]; do
 		shift
 		let i+=1
 	done
-
 
 	filename=$1
 
@@ -1094,7 +1095,7 @@ GetFileAge(){
 
 	#second since Epoch 
 	NOW=`date +%s`
-	OLD=`stat -c %Z $filename` 
+	OLD=`stat -c $date_format $filename` 
 	#Do we want modified or changed?
 	#modified is actual content changed
 	#change can be file moved or perms changed
