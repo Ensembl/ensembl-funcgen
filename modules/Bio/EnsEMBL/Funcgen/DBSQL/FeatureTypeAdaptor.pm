@@ -104,7 +104,7 @@ my %regulatory_evidence_info =
   Arg [3]    : optional Bio::EnsEMBL::Analysis - Analysis used to generate FeatureType
   Example    : my $ft = $ft_adaptor->fetch_by_name('H3K4me2');
   Description: Does what it says on the tin
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType object
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType object (or ARRAY if called in ARRAY context)
   Exceptions : Throws if more than one FeatureType for a given name found.
                Throws if Analysis is defined but not valid.
   Caller     : General
@@ -112,11 +112,14 @@ my %regulatory_evidence_info =
 
 =cut
 
+#Should really change this to fetch_all_by_name
+#incorporating that functionality here will conditioanlly change the return type!!
+
+
 sub fetch_by_name{
   my ($self, $name, $class, $analysis) = @_;
 
   throw("Must specify a FeatureType name") if(! $name);
-
 
   my $constraint = ' name = ? ';
 
@@ -140,13 +143,12 @@ sub fetch_by_name{
 
   #This can happen if using a redundant name between classes or analyses
   #remove?
-  if(scalar @fts >1){
+  if( wantarray && (scalar @fts >1) ){
     $class ||= "";
     throw("Found more than one FeatureType:$class $name");
   }
 
-
-  return $fts[0];
+  return (wantarray) ? @fts : $fts[0];
 }
 
 
