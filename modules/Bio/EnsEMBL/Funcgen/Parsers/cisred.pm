@@ -71,7 +71,7 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
 
-  my $self = $class->SUPER::new(@_);
+  my $self = $class->SUPER::new(@_, type => 'cisRED');
 
   #Set default feature_type and feature_set config
   $self->{static_config}{feature_types} = 
