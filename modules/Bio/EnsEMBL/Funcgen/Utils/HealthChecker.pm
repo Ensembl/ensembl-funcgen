@@ -123,7 +123,7 @@ sub update_db_for_release{
   #hence avoiding redoing longer methods
   $self->validate_new_seq_regions;#($force_srs);
   $self->update_meta_schema_version;
-  $self->check_meta_strings;
+  $self->check_regbuild_strings;
   $self->check_meta_species;
   $self->set_current_coord_system;
   $self->update_meta_coord;
@@ -291,7 +291,7 @@ sub update_meta_schema_version{
 sub update_meta_coord{
   my ($self, @table_names) = @_;
   
-  my $species_id = $self->db()->species_id();
+  my $species_id = $self->db->species_id;
   
   if($self->{'skip_meta_coord'}){
 	$self->log("Skipping meta_coord update\n");
@@ -318,6 +318,7 @@ sub update_meta_coord{
 						external_feature
 						annotated_feature
 						result_feature
+						segmentation_feature
 					 );
 	}
   }
@@ -469,24 +470,26 @@ sub check_meta_species{
 #Move to Java HC? Or update if update flag specified
 #Using same code used by build_reg_feats!
 
-sub check_meta_strings{
+sub check_regbuild_strings{
   my ($self) = @_;
   
   #Removed $update arg as we would always want to do this manually
 
-  $self->log_header('Checking meta strings');
+  $self->log_header('Checking regbuild strings');
+  my $species_id = $self->db()->species_id();
+
 
   my @regf_fsets;
   my $passed = 1;
   my $fset_a = $self->db->get_FeatureSetAdaptor;
-  my $mc = $self->db->get_MetaContainer;
+  #my $mc = $self->db->get_MetaContainer;
   my $regf_a = $self->db->get_RegulatoryFeatureAdaptor;
   #We now want to chek all build
   @regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
  
   
   if(scalar(@regf_fsets) == 0){
-	$self->report("WARNING: Found no regulatory FeatureSets for check_meta_strings");
+	$self->report("WARNING: Found no regulatory FeatureSets for check_regbuild_strings");
   }
   else{
 	
@@ -500,7 +503,7 @@ sub check_meta_strings{
 	
 	
 	foreach my $fset(@regf_fsets){
-	  $self->log_header("Validating meta entries for FeatureSets:\t".$fset->name);
+	  $self->log_header("Validating regbuild_string entries for FeatureSets:\t".$fset->name);
 		
 	  #Fail for old versions as we want to remove these
 	  if( $fset->name =~ /_v[0-9]+$/){
@@ -555,13 +558,13 @@ sub check_meta_strings{
 	  
 	  my %db_reg_string;
 
-	  foreach my $meta_key(keys %reg_strings){
-		my ($meta_value)= $self->db->dbc->db_handle->selectrow_array("select meta_value from meta where meta_key='${meta_key}'");
+	  foreach my $string_key(keys %reg_strings){
+		my ($string)= $self->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${string_key}' and species_id=$species_id");
 		
-		if (! defined $meta_value) {
+		if (! defined $string) {
 		  
-		  $sql = "insert into meta (meta_key, meta_value) values ('${meta_key}', '$reg_strings{${meta_key}}');";
-		  $self->report("FAIL:\tNo $meta_key found in meta table:\t${meta_value}\n\tUpdate using:\t$sql");
+		  $sql = "insert into regbuild_string (species_id, name, string) values ($species_id, '${string_key}', '$reg_strings{${string_key}}');";
+		  $self->report("FAIL:\tNo $string_key found in regbuild_string table\n\tUpdate using:\t$sql");
 		  #eval { $ds_adaptor->db->dbc->do($sql) };
 		  #die("Couldn't store $meta_key in meta table.\n$@") if $@;
 		} 
@@ -575,7 +578,7 @@ sub check_meta_strings{
 		  #which are not order dependant
 
 
-		  if($meta_value ne $reg_strings{$meta_key}){
+		  if($string ne $reg_strings{$string_key}){
 			#my $fail = 1;
 
 #			if($meta_key =~ /focus_feature_set_ids/o){
@@ -606,14 +609,14 @@ sub check_meta_strings{
 #			}
 
 #			if($fail){
-			  $sql = "update meta set meta_value='".$reg_strings{$meta_key}."' where meta_key='${meta_key}';";
-			  $self->report("FAIL:\tMismatched $meta_key found in meta table:\t${meta_value}\n\tUpdate using:\t$sql");
-			  warn $sql;
-
-#			}
+			$sql = "update regbuild_string set string='".$reg_strings{$string_key}."' where name='${string_key}';";
+			$self->report("FAIL:\tMismatched $string_key found in regbuild_string table:\t${string}\n\tUpdate using:\t$sql");
+			warn $sql;
+			
+			#			}
 		  }
 
-		  $db_reg_string{$meta_key} = $meta_value;
+		  $db_reg_string{$string_key} = $string;
 		}
 	  }
 
@@ -646,7 +649,7 @@ sub check_meta_strings{
 		
 
 		if(scalar(@fset_ids) != scalar(@ftype_ids)){
-		  $self->report("FAIL:\tLength mismatch between:\n\t$fset_string_key:\t$fset_string\n\tAND\n\t$ftype_string_key\t$fset_string");
+		  $self->report("FAIL:\tLength mismatch between:\n\t$fset_string_key(".scalar(@fset_ids).")\t$fset_string\n\tAND\n\t$ftype_string_key(".scalar(@ftype_ids).")\t$ftype_string");
 		}
 		
 		foreach my $i(0..$#fset_ids){
@@ -679,7 +682,10 @@ sub check_meta_strings{
 
 		if(! defined $ftype_string){
 		  $self->log("Updating $ftype_string_key to:\t$new_ftype_string");
-		  $self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, '$ftype_string_key', '$new_ftype_string')");
+		  #$self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, '$ftype_string_key', '$new_ftype_string')");
+		  $self->db->dbc->db_handle->do("INSERT into regbuild_string(species_id, name, string) values($species_id, '$ftype_string_key', '$new_ftype_string')");
+		  
+
 		}
 		elsif($ftype_fail){
 		  $self->report("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
