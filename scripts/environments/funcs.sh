@@ -737,6 +737,8 @@ rm(){
 	#echo del $opts $files
 	del -r $opts $files
 
+	#Currently this is del'ing dirs from del roots
+	#even if -r isn't specified
 }
 
 #Enables fast removal of files by moving to .del filder in root of current path
@@ -747,23 +749,26 @@ rm(){
 #Probably want to hoik out delete > age code to separate func
 #so we can use it separately (for logs)
 
+
+
 del(){
 	OPTIND=1
 	days=
 	del_verbose=
 	rm_opts=
 	rm_caller=
-
+	
+	cmd_line="del $*"
 	usage='usage: del  [ -o(pt for rm)+ -d(ays, purge .del of files older than this value, at root defined by) ] FILES|DIRS'
 
-	while getopts ":d:o:vh" opt; do
+	while getopts ":d:o:vrh" opt; do
 		case $opt in 
 	        d  ) days=$OPTARG ;;
             o  ) rm_opts="$rm_opts -${OPTARG}" ;;
 			r  ) rm_caller=1 ;;
 			v  ) del_verbose=1 ;;
 			h  ) echo $usage; return 0;;
-			\? ) echo $usage; exit 1;;
+			\? ) echo -r "$cmd_line\n$usage"; exit 1;;
 		esac 
 	done
   
@@ -796,35 +801,40 @@ del(){
 	error_log=
 
 	for filedir in $filedirs; do
-
 		_SetTargetAndSourceRoot -n $filedir
 		#sets SOURCE_ROOT and derefd_filedir
 		retval=$?
 
-
-		if [ $retval -ne 0 ]; then
-			#error="\nFailed to del:\t$filedir"
-			#echo -e $error
-			#error_log="${error_log}${error}\n"
-			#return $retval
-			#echo $(which rm) $rm_opts $filedir
-
-			#Only rm if we are calling from rm func
-			#Not from del directly
-			
-			if [ $rm_caller ]; then
-				$(which rm) -i $rm_opts $filedir
-			    #-i is over-ridden by -f
 	
+		if [ ! $derefd_filedir ]; then
+			error_log="${error_log}File/directory does not exist:\t$filedir\n"
+			continue
+		fi
+
+	
+		if [ $retval -ne 0 ]; then
+				
+			if [ $rm_caller ]; then
+				#Only rm if we are calling from rm func
+			    #Not from del directly
+			    #-i is over-ridden by -f
+				rm_cmd="$(which rm) -i $rm_opts $filedir"
+
+				if [ $del_verbose ]; then
+					echo $rm_cmd;
+				fi
+
+				$rm_cmd
+
+				#capture $? here
+				#Need to capture error message too for summary report
+
 			else
-				error="\nFailed to del as no .del dir available for:\t$filedir\nUse rm instead?"
-				#echo -e $error
-				error_log="${error_log}${error}\n"
+				error_log="${error_log}Failed to del as no .del dir available for:\t$filedir\nUse rm instead?\n"
 			fi
 
-			#Or do we want to enable a .del in /nfs home too?
+			#Or enable a .del in /nfs home too?
 			#This would not work with _SetTargetAndSourceRoot
-
 			continue
 		fi
 
@@ -833,9 +843,8 @@ del(){
 
 		if [ ! -d $del_dir ]; then
 			mkdir -p $del_dir
-			retval=$?
-
-			if [ $retval -ne 0 ]; then
+	
+			if [ $? -ne 0 ]; then
 				echo -e "Failed create .del dir:\t$del_dir"
 				return $retval
 			fi
@@ -852,38 +861,55 @@ del(){
 			fi 
 
 			#Use find instead of ls to allow for many files
-			#-mindepth ignores .del dir itself
+			#-mindepth ignores $del_dir dir itself
 			#-depth processes dir contents before dir itself
 			#to prevent deleting dir before finding the next file which has already been deleted
-			for delfile in $(find "${del_dir}/" -mindepth 1 -depth); do
+			#However, this means we are doing many deletes rather than one on the parent dir
 
-				age=$(GetFileAge $delfile)
-				retval=$?
+			find_cmd="find ${del_dir}/ -mindepth 1 -depth"
+	
+     		#could -delete here if we can implement an age test in find
+			#could then remove for loop below
+			#-ctime $days ? This seems to be an = rather than a -ge
+			#we want changed age, so we don't delete moved but unmodified files straight away.
+
 			
-				if [ $retval -ne 0 ]; then
-					error="Failed to purge deleted file:\t$delfile"
-					#echo -e $error
-					#return $retval
-					error_log="${error_log}${error}\n"
-					continue
+			#This will currently delete files in subdirs
+			#and maintain the parent dir if another more recent file is del'd
+			#We want as the parent dir will keep getting refreshed and hence
+			#old data may accrue in subdirs
 
+			if [ $del_verbose ]; then
+				echo $find_cmd;
+			fi
+
+			for delfile in $($find_cmd); do
+
+				age=$(GetFileAge -c $delfile)
+					
+				if [ $? -ne 0 ]; then
+					#$age is error in this context
+					error_log="${error_log}${age}Failed to purge deleted file:\t$delfile\n"
+					continue
+				fi
+								
+
+				if [ $del_verbose ]; then
+					echo -e "$age days old:\t$delfile";
 				fi
 
+
 				if [ $age -ge $days ]; then
-					rm_cmd="rm -rf $delfile"
+					rm_cmd="$(which rm) -rf $delfile"
 
 					if [ $del_verbose ]; then
 						echo $rm_cmd;
 					fi
 
 					$rm_cmd
-					retval=$?
 
-					if [ $retval -ne 0 ]; then
-						error="Failed to purge deleted file:\t$delfile"
-						#echo -e $error
-						error_log="${error_log}${error}\n"
-						#return $retval
+					if [ $? -ne 0 ]; then
+						error_log="${error_log}Failed to purge deleted file:\t$delfile\n"
 						continue
 					fi
 				fi
@@ -891,9 +917,7 @@ del(){
 			
 		else               # MV ENTIRE PATH TO .DEL
 			del_path=$(echo $filedir | sed "s^${SOURCE_ROOT}^${del_dir}^")
-			#We need to strip one dir off the end if we are mv'ing a dir
-			 #del_path=$(echo $del_path | sed -r "s^/$^^")
-			#readlink does this for us
+			#readlink already stripped trailing / for dir mv
 			del_path=$(GetDir $del_path)
 
 			if [ ! -d $del_path ]; then
@@ -902,25 +926,21 @@ del(){
 			fi
 
 			#Do we want to have interactive by default here and override with -f?
-
 			mv_cmd="mv $filedir $del_path/$file"
-			$mv_cmd
-			retval=$?
 
-			#mv'ing file updates last modified & changed date
-			
+			if [ $del_verbose ]; then
+				echo $mv_cmd;
+			fi
 
-
+			$mv_cmd         	#mv'ing file updates last modified & changed date
+		
 			#Mirror the whole path under .del!
 			# - handle redundant naming
 			# - easier recovery/navigation
 			#This will require a recursive find when purging!
 
-			if [ $retval -ne 0 ]; then
-				error="Failed del file:\t$mv_cmd"
-				#echo -e $error
-				error_log="${error_log}${error}\n"
-				#return $retval
+			if [ $? -ne 0 ]; then
+				error_log="${error_log}Failed del file:\t$mv_cmd\n"
 				continue
 			fi
 		fi
@@ -928,7 +948,7 @@ del(){
 
 
 	if [ "$error_log" ]; then
-		echo -e "Summary of errors:\n$error_log"
+		echo -e "\nSummary of errors:\n$error_log"
 		return 1
 	fi
 
@@ -988,9 +1008,9 @@ _SetTargetAndSourceRoot(){
 	SOURCE_ROOT=
 	
 	#text exists here
-	tmpfiledir=$(readlink -e $tmpfiledir1)
+	derefd_filedir=$(readlink -e $tmpfiledir1)
 
-	if [[ ! -e $tmpfiledir ]]; then
+	if [[ ! -e $derefd_filedir ]]; then
 		
 		if ! [ $no_warnings ]; then
 			echo -e "File/dir argument does not exist:\t$tmpfiledir1"
@@ -999,31 +1019,31 @@ _SetTargetAndSourceRoot(){
 		return 1
 	fi
 
-	#do we have to export these?
+	#Could loop through array of var names and eval them to test
 
-	if [[ -d $DATA_DIR ]] && [[ $tmpfiledir = $DATA_DIR* ]] && 
+	if [[ -d $DATA_DIR ]] && [[ $derefd_filedir = $DATA_DIR* ]] && 
 		( [ $type == 'BOTH' ] || [ $type == 'DATA' ] ); then
 		TARGET_ROOT=$ARCHIVE_DIR
 		TARGET_ROOT_NAME=ARCHIVE_DIR
 		SOURCE_ROOT=$DATA_DIR
-	elif [[ -d $GROUP_DATA_DIR ]] && [[ $tmpfiledir = $GROUP_DATA_DIR* ]] &&
+	elif [[ -d $GROUP_DATA_DIR ]] && [[ $derefd_filedir = $GROUP_DATA_DIR* ]] &&
 		( [ $type == 'BOTH' ] || [ $type == 'DATA' ] ); then
 		TARGET_ROOT=$GROUP_ARCHIVE_DIR
 		TARGET_ROOT_NAME=GROUP_ARCHIVE_DIR
 		SOURCE_ROOT=$GROUP_DATA_DIR
-	elif [[ -d $GROUP_ARCHIVE_DIR ]] && [[ $tmpfiledir = $GROUP_ARCHIVE_DIR* ]] &&
+	elif [[ -d $GROUP_ARCHIVE_DIR ]] && [[ $derefd_filedir = $GROUP_ARCHIVE_DIR* ]] &&
 		( [ $type == 'BOTH' ] || [ $type == 'ARCHIVE' ] ); then
 		TARGET_ROOT=$GROUP_DATA_DIR
 		TARGET_ROOT_NAME=GROUP_DATA_DIR
 		SOURCE_ROOT=$GROUP_ARCHIVE_DIR
-	elif [[ -d $ARCHIVE_DIR ]] && [[ $tmpfiledir = $ARCHIVE_DIR* ]] &&
+	elif [[ -d $ARCHIVE_DIR ]] && [[ $derefd_filedir = $ARCHIVE_DIR* ]] &&
 		( [ $type == 'BOTH' ] || [ $type == 'ARCHIVE' ] ); then
 		TARGET_ROOT=$DATA_DIR
 		TARGET_ROOT_NAME=DATA_DIR
 		SOURCE_ROOT=$ARCHIVE_DIR
 	else
 		if ! [ $no_warnings ]; then
-			echo -e "Could not identify target/source root dir for:\t$filedir"
+			echo -e "Could not identify target/source root dir for:\t$tmpfiledir1"
 			echo -e "Source needs to be in either:$dir_txt"
 		fi
 
@@ -1031,22 +1051,57 @@ _SetTargetAndSourceRoot(){
 	fi
 
 	#Failure needs to be caught in caller using $?
-	derefd_filedir=$tmpfiledir
 }
 
 
 GetFileAge(){
+	date_format=
+	usage= 
+	tmp_opts="$*"
+	usage='usage:\t  GetFileAge -c(hanged age) || -m(odified age) file_or_dir_path'
+
+	while getopts ":cmh" opt; do
+		case $opt in 
+			c  ) date_format='%Z' ;;
+	        m  ) date_format='%Y' ;;
+			h  ) echo -e $usage; return 0;;
+			\? ) echo -e $usage; exit 1;;
+		esac 
+	done	
+
+	while [ $i -lt $OPTIND ]; do
+		shift
+		let i+=1
+	done
+
+
 	filename=$1
+
+
+	if [ ! $date_format ] ||
+		[ ! $filename ]; then
+		echo -e "Invalid options\t${tmp_opts}\n${usage}"
+		return 1
+	fi
+
+
 	#enable day and hours?
 	#enable last modified?
 	#apparently can't get created date from cmd line
 	#would have to use perl or similar?
 
-	day_factor=$((60 * 24))
+	day_factor=$((60 * 60 * 24))
 
 	#second since Epoch 
 	NOW=`date +%s`
 	OLD=`stat -c %Z $filename` 
+	#Do we want modified or changed?
+	#modified is actual content changed
+	#change can be file moved or perms changed
+	#So for del purge we want changed
+	#other wise unmodified files would be removed straight aways
+	
+
 
 	if [ $? -ne 0 ]; then
 		echo -e "Failed to GetFileAge for:\t$filename"
