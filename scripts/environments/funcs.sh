@@ -597,149 +597,151 @@ BackUpFile(){
 #Change this to ArchiveFileDir
 #Could add $HOME support, but shouldn't have archiveable data in their
 
-ArchiveData()
-{
-	OPTIND=1
-
-	compress=
-	delete_source=
-	aname=
-	usage='usage: ArchiveData [ -c(compress, no name) -a(rchive name, compress) -d(elete source) -h(elp) ] FILES|DIRS'
-	#add -l(ist) option here to see if we have already archived this in some form?
-	#or we could just test for target file first and AskQuestion to confirm?
-	#would need force flag to overwrite without AskQuestion
-
-	while getopts ":dca:h" opt; do
-		case $opt in 
-	        d  ) delete_source=1 ;; 
-            c  ) compress=1 ;;
-            a  ) aname=$OPTARG ;;
-            h  ) echo $usage; return 0;;
-            \? ) echo $usage; exit 1;;
-		esac 
-	done
-
-	if [ $aname ]; then
-		compress=1
-	fi
-
-	i=1
-	
-	while [ $i -lt $OPTIND ]; do
-		shift
-		let i+=1
-	done
-	
-	filedirs=$*
-	TARGET_ROOT=
-	TARGET_ROOT_NAME=
-	SOURCE_ROOT=
-
-	for filedir in $filedirs; do
-    	#Get the full dereferenced path
-		#Also strips trailing /
-		#Need to capture readlink error here?
-		
-		_SetTargetAndSourceRoot $filedir
-		#sets SOURCE_ROOT and return $derefd_filedir
-   		retval=$?
-		
-		if [ $retval -ne 0 ]; then
-			echo -e "Failed to archive:\t$filedir"
-			return $retval
-		fi
-	
-		filedir=$derefd_filedir
-		
-				
-		#Need to match $DATA_DIR here or skip with warning
-		if [[ ! -d $TARGET_ROOT ]]; then
-			echo -e "Target archive dir not set or valid:$TARGET_ROOT_NAME\t=\t$TARGET_ROOT"
-			return 1
-		else
-	        #Use ' instead of / due to / in path
-			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
-			archive_filedir="$TARGET_ROOT/$archive_filedir"	
-			
-			#mkdir in archive incase we are using tar or rsync using a file
-			#rsync will create dirs
-			archive_dir=$(GetDir $archive_filedir)
-			
-			if [ ! -d $archive_dir ]; then
-				echo -e "Making archive directory:\t$archive_dir"
-				mkdir -p $archive_dir
-			fi
-			
-			
-			if [ -d $filedir ] && [ ! $compress ]; then
-		    	#Remove the last dir name				
-				archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
-				archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
-			fi
-			
-			
-			archive_cmd=
-			
-			if [ $compress ]; then
-				
-				if [ $aname ]; then
-					aname=".${aname}"
-				fi	
-				#This overwrites existing files
-				archive_cmd="tar -cvzf $archive_filedir${aname}.tar.gz $filedir"
-			else
-				archive_cmd="rsync -essh -Wavm $filedir $archive_filedir/"
-	       		#-essh only necessary for remote archiving
-	       		#-a archive mode; equals -rlptgoD (no -H,-A,-X)
-	    		#-r recurse into directories
-	       		#-l copy symlinks as symlinks
-		     	#-p preserve permissions
-			    #-t preserve modification times
-    			#-g preserve group
-    			#-o preserve owner (super-user only)
-    			#-D same as:
-	    		#    --devices     preserve device files (super-user only)
-                #    --specials    preserve special files
-                #-m prune emtpy dirs
-                #-v verbose
-			fi	
-			
-			echo $archive_cmd
-			Execute $archive_cmd
-			#assign Execute output here to catch exit and output, then return nicely?
-			echo -e "Finished:\t$archive_cmd"
-			
-			if [[ $delete_source ]]; then
-				echo -e "Removing source:\t $filedir"
-				rm -rf $filedir
-			fi
-			
-		fi
-	done
-}
+#
+#
+#ArchiveData()
+#{
+#	OPTIND=1
+#
+#	compress=
+#	delete_source=
+#	aname=
+#	usage='usage: ArchiveData [ -c(compress, no name) -a(rchive name, compress) -d(elete source) -h(elp) ] FILES|DIRS'
+#	#add -l(ist) option here to see if we have already archived this in some form?
+#	#or we could just test for target file first and AskQuestion to confirm?
+#	#would need force flag to overwrite without AskQuestion
+#
+#	while getopts ":dca:h" opt; do
+#		case $opt in 
+#	        d  ) delete_source=1 ;; 
+#            c  ) compress=1 ;;
+#            a  ) aname=$OPTARG ;;
+#            h  ) echo $usage; return 0;;
+#            \? ) echo $usage; exit 1;;
+#		esac 
+#	done
+#
+#	if [ $aname ]; then
+#		compress=1
+#	fi
+#
+#	i=1
+#	
+#	while [ $i -lt $OPTIND ]; do
+#		shift
+#		let i+=1
+#	done
+#	
+#	filedirs=$*
+#	TARGET_ROOT=
+#	TARGET_ROOT_NAME=
+#	SOURCE_ROOT=
+#
+#	for filedir in $filedirs; do
+#    	#Get the full dereferenced path
+#		#Also strips trailing /
+#		#Need to capture readlink error here?
+#		
+#		_SetTargetAndSourceRoot $filedir
+#		#sets SOURCE_ROOT and return $derefd_filedir
+#   		retval=$?
+#		
+#		if [ $retval -ne 0 ]; then
+#			echo -e "Failed to archive:\t$filedir"
+#			return $retval
+#		fi
+#	
+#		filedir=$derefd_filedir
+#		
+#				
+#		#Need to match $DATA_DIR here or skip with warning
+#		if [[ ! -d $TARGET_ROOT ]]; then
+#			echo -e "Target archive dir not set or valid:$TARGET_ROOT_NAME\t=\t$TARGET_ROOT"
+#			return 1
+#		else
+#	        #Use ' instead of / due to / in path
+#			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
+#			archive_filedir="$TARGET_ROOT/$archive_filedir"	
+#			
+#			#mkdir in archive incase we are using tar or rsync using a file
+#			#rsync will create dirs
+#			archive_dir=$(GetDir $archive_filedir)
+#			
+#			if [ ! -d $archive_dir ]; then
+#				echo -e "Making archive directory:\t$archive_dir"
+#				mkdir -p $archive_dir
+#			fi
+#			
+#			
+#			if [ -d $filedir ] && [ ! $compress ]; then
+#		    	#Remove the last dir name				
+#				archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
+#				archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
+#			fi
+#			
+#			
+#			archive_cmd=
+#			
+#			if [ $compress ]; then
+#				
+#				if [ $aname ]; then
+#					aname=".${aname}"
+#				fi	
+#				#This overwrites existing files
+#				archive_cmd="tar -cvzf $archive_filedir${aname}.tar.gz $filedir"
+#			else
+#				archive_cmd="rsync -essh -Wavm $filedir $archive_filedir/"
+#	       		#-essh only necessary for remote archiving
+#	       		#-a archive mode; equals -rlptgoD (no -H,-A,-X)
+#	    		#-r recurse into directories
+#	       		#-l copy symlinks as symlinks
+#		     	#-p preserve permissions
+#			    #-t preserve modification times
+#    			#-g preserve group
+#    			#-o preserve owner (super-user only)
+#    			#-D same as:
+#	    		#    --devices     preserve device files (super-user only)
+#                #    --specials    preserve special files
+#                #-m prune emtpy dirs
+#                #-v verbose
+#			fi	
+#			
+#			echo $archive_cmd
+#			Execute $archive_cmd
+#			#assign Execute output here to catch exit and output, then return nicely?
+#			echo -e "Finished:\t$archive_cmd"
+#			
+#			if [[ $delete_source ]]; then
+#				echo -e "Removing source:\t $filedir"
+#				rm -rf $filedir
+#			fi
+#			
+#		fi
+#	done
+#}
 
 #Need to test for aliases before defining these
 #Was failing to compile as rm was already aliased
 
-rm(){
-	args=$*
-	seen_file=
-	i=0
+#rm(){
+#	args=$*
+#	seen_file=
+#	i=0
 
-	files=$(echo $args | sed -r s'/^-[^[:space:]]+//') #deal with leading - i.e. not preceded
-	files=$(echo $files | sed -r s'/ -[^[:space:]]+//g') #deal with other opts
+#	files=$(echo $args | sed -r s'/^-[^[:space:]]+//') #deal with leading - i.e. not preceded
+#	files=$(echo $files | sed -r s'/ -[^[:space:]]+//g') #deal with other opts
 	#This will not restrict opts to start of args
 
 	#echo files $files
-	opts=$(echo $args | sed "s'$files''");
- 	opts=$(echo $opts | sed "s'-'-o '");
+#	opts=$(echo $args | sed "s'$files''");
+# 	opts=$(echo $opts | sed "s'-'-o '");
  	   
 	#echo del $opts $files
-	del -r $opts $files
+#	del -r $opts $files
 
 	#Currently this is del'ing dirs from del roots
 	#even if -r isn't specified
-}
+#}
 
 #Enables fast removal of files by moving to .del filder in root of current path
 #Post-pones actual rm to cron job, based on files last mod'd more than N days
@@ -750,210 +752,210 @@ rm(){
 #so we can use it separately (for logs)
 
 
-
-del(){
-	OPTIND=1
-	days=
-	del_verbose=
-	rm_opts=
-	rm_caller=
-	
-	cmd_line="del $*"
-	usage='usage: del  [ -o(pt for rm)+ -d(ays, purge .del of files older than this value, at root defined by) ] FILES|DIRS'
-
-	while getopts ":d:o:vrh" opt; do
-		case $opt in 
-	        d  ) days=$OPTARG ;;
-            o  ) rm_opts="$rm_opts -${OPTARG}" ;;
-			r  ) rm_caller=1 ;;
-			v  ) del_verbose=1 ;;
-			h  ) echo $usage; return 0;;
-			\? ) echo -r "$cmd_line\n$usage"; exit 1;;
-		esac 
-	done
-  
-	#Assume rm is okay if we have defined opt for rm
-	if [ $rm_opts ]; then
-		rm_caller=1
-	fi
-
-	i=1
-	while [ $i -lt $OPTIND ]; do
-		shift
-		let i+=1
-	done
-
-	filedirs=$*
-
-	if [ ! $filedirs ]; then
-		echo -e "You must define at least one file or directory\n$usage";
-	fi
-
-
-	#test $days is +ve int to avoid -gt test failure later
-	if [ $days ] &&
-		! [[ $days =~ ^[0-9]+$ ]]; then
-		echo -e "Parameter -d must be an integer\t$usage"
-		return 1
-	fi
-
-	#Build error log rather than bailing out asap
-	error_log=
-
-	for filedir in $filedirs; do
-		_SetTargetAndSourceRoot -n $filedir
-		#sets SOURCE_ROOT and derefd_filedir
-		retval=$?
-
-	
-		if [ ! $derefd_filedir ]; then
-			error_log="${error_log}File/directory does not exist:\t$filedir\n"
-			continue
-		fi
-
-	
-		if [ $retval -ne 0 ]; then
-				
-			if [ $rm_caller ]; then
-				#Only rm if we are calling from rm func
-			    #Not from del directly
-			    #-i is over-ridden by -f
-				rm_cmd="$(which rm) -i $rm_opts $filedir"
-
-				if [ $del_verbose ]; then
-					echo $rm_cmd;
-				fi
-
-				$rm_cmd
-
-				#capture $? here
-				#Need to capture error message too for summary report
-
-			else
-				error_log="${error_log}Failed to del as no .del dir available for:\t$filedir\nUse rm instead?\n"
-			fi
-
-			#Or enable a .del in /nfs home too?
-			#This would not work with _SetTargetAndSourceRoot
-			continue
-		fi
-
-		filedir=$derefd_filedir
-		del_dir="${SOURCE_ROOT}/.del"
-
-		if [ ! -d $del_dir ]; then
-			mkdir -p $del_dir
-	
-			if [ $? -ne 0 ]; then
-				echo -e "Failed create .del dir:\t$del_dir"
-				return $retval
-			fi
-		fi
-
-
-		if [ $days ]; then # PURGE!
-		
-			#Test valid .del $filedir to purge
-			#No need to match trailing as readlink strips this
-			if [[ $filedir != $del_dir ]]; then
-				echo -e "You must supply a valid .del dir to purge e.g.\n\t$del_dir\n$usage"
-				return 1
-			fi 
-
-			#Use find instead of ls to allow for many files
-			#-mindepth ignores $del_dir dir itself
-			#-depth processes dir contents before dir itself
-			#to prevent deleting dir before finding the next file which has already been deleted
-			#However, this means we are doing many deletes rather than one on the parent dir
-
-			find_cmd="find ${del_dir}/ -mindepth 1 -depth"
-	
-     		#could -delete here if we can implement an age test in find
-			#could then remove for loop below
-			#-ctime $days ? This seems to be an = rather than a -ge
-			#we want changed age, so we don't delete moved but unmodified files straight away.
-
-			
-			#This will currently delete files in subdirs
-			#and maintain the parent dir if another more recent file is del'd
-			#We want as the parent dir will keep getting refreshed and hence
-			#old data may accrue in subdirs
-
-			if [ $del_verbose ]; then
-				echo $find_cmd;
-			fi
-
-			for delfile in $($find_cmd); do
-
-				age=$(GetFileAge -c $delfile)
-					
-				if [ $? -ne 0 ]; then
-					#$age is error in this context
-					error_log="${error_log}${age}Failed to purge deleted file:\t$delfile\n"
-					continue
-				fi
-								
-
-				if [ $del_verbose ]; then
-					echo -e "$age days old:\t$delfile";
-				fi
-
-
-				if [ $age -ge $days ]; then
-					rm_cmd="$(which rm) -rf $delfile"
-
-					if [ $del_verbose ]; then
-						echo $rm_cmd;
-					fi
-
-					$rm_cmd
-
-					if [ $? -ne 0 ]; then
-						error_log="${error_log}Failed to purge deleted file:\t$delfile\n"
-						continue
-					fi
-				fi
-			done
-			
-		else               # MV ENTIRE PATH TO .DEL
-			del_path=$(echo $filedir | sed "s^${SOURCE_ROOT}^${del_dir}^")
-			#readlink already stripped trailing / for dir mv
-			del_path=$(GetDir $del_path)
-
-			if [ ! -d $del_path ]; then
-				mkdir -p $del_path
-				#catch error?
-			fi
-
-			#Do we want to have interactive by default here and override with -f?
-			mv_cmd="mv $filedir $del_path/$file"
-
-			if [ $del_verbose ]; then
-				echo $mv_cmd;
-			fi
-
-			$mv_cmd         	#mv'ing file updates last modified & changed date
-		
-			#Mirror the whole path under .del!
-			# - handle redundant naming
-			# - easier recovery/navigation
-			#This will require a recursive find when purging!
-
-			if [ $? -ne 0 ]; then
-				error_log="${error_log}Failed del file:\t$mv_cmd\n"
-				continue
-			fi
-		fi
-	done
-
-
-	if [ "$error_log" ]; then
-		echo -e "\nSummary of errors:\n$error_log"
-		return 1
-	fi
-
-
-	}
+#
+#del(){
+#	OPTIND=1
+#	days=
+#	del_verbose=
+#	rm_opts=
+#	rm_caller=
+#	
+#	cmd_line="del $*"
+#	usage='usage: del  [ -o(pt for rm)+ -d(ays, purge .del of files older than this value, at root defined by) ] FILES|DIRS'
+#
+#	while getopts ":d:o:vrh" opt; do
+#		case $opt in 
+#	        d  ) days=$OPTARG ;;
+#            o  ) rm_opts="$rm_opts -${OPTARG}" ;;
+#			r  ) rm_caller=1 ;;
+#			v  ) del_verbose=1 ;;
+#			h  ) echo $usage; return 0;;
+#			\? ) echo -r "$cmd_line\n$usage"; exit 1;;
+#		esac 
+#	done
+#  
+#	#Assume rm is okay if we have defined opt for rm
+#	if [ $rm_opts ]; then
+#		rm_caller=1
+#	fi
+#
+#	i=1
+#	while [ $i -lt $OPTIND ]; do
+#		shift
+#		let i+=1
+#	done
+#
+#	filedirs=$*
+#
+#	if [ ! $filedirs ]; then
+#		echo -e "You must define at least one file or directory\n$usage";
+#	fi
+#
+#
+#	#test $days is +ve int to avoid -gt test failure later
+#	if [ $days ] &&
+#		! [[ $days =~ ^[0-9]+$ ]]; then
+#		echo -e "Parameter -d must be an integer\t$usage"
+#		return 1
+#	fi
+#
+#	#Build error log rather than bailing out asap
+#	error_log=
+#
+#	for filedir in $filedirs; do
+#		_SetTargetAndSourceRoot -n $filedir
+#		#sets SOURCE_ROOT and derefd_filedir
+#		retval=$?
+#
+#	
+#		if [ ! $derefd_filedir ]; then
+#			error_log="${error_log}File/directory does not exist:\t$filedir\n"
+#			continue
+#		fi
+#
+#	
+#		if [ $retval -ne 0 ]; then
+#				
+#			if [ $rm_caller ]; then
+#				#Only rm if we are calling from rm func
+#			    #Not from del directly
+#			    #-i is over-ridden by -f
+#				rm_cmd="$(which rm) -i $rm_opts $filedir"
+#
+#				if [ $del_verbose ]; then
+#					echo $rm_cmd;
+#				fi
+#
+#				$rm_cmd
+#
+#				#capture $? here
+#				#Need to capture error message too for summary report
+#
+#			else
+#				error_log="${error_log}Failed to del as no .del dir available for:\t$filedir\nUse rm instead?\n"
+#			fi
+#
+#			#Or enable a .del in /nfs home too?
+#			#This would not work with _SetTargetAndSourceRoot
+#			continue
+#		fi
+#
+#		filedir=$derefd_filedir
+#		del_dir="${SOURCE_ROOT}/.del"
+#
+#		if [ ! -d $del_dir ]; then
+#			mkdir -p $del_dir
+#	
+#			if [ $? -ne 0 ]; then
+#				echo -e "Failed create .del dir:\t$del_dir"
+#				return $retval
+#			fi
+#		fi
+#
+#
+#		if [ $days ]; then # PURGE!
+#		
+#			#Test valid .del $filedir to purge
+#			#No need to match trailing as readlink strips this
+#			if [[ $filedir != $del_dir ]]; then
+#				echo -e "You must supply a valid .del dir to purge e.g.\n\t$del_dir\n$usage"
+#				return 1
+#			fi 
+#
+#			#Use find instead of ls to allow for many files
+#			#-mindepth ignores $del_dir dir itself
+#			#-depth processes dir contents before dir itself
+#			#to prevent deleting dir before finding the next file which has already been deleted
+#			#However, this means we are doing many deletes rather than one on the parent dir
+#
+#			find_cmd="find ${del_dir}/ -mindepth 1 -depth"
+#	
+#     		#could -delete here if we can implement an age test in find
+#			#could then remove for loop below
+#			#-ctime $days ? This seems to be an = rather than a -ge
+#			#we want changed age, so we don't delete moved but unmodified files straight away.
+#
+#			
+#			#This will currently delete files in subdirs
+#			#and maintain the parent dir if another more recent file is del'd
+#			#We want as the parent dir will keep getting refreshed and hence
+#			#old data may accrue in subdirs
+#
+#			if [ $del_verbose ]; then
+#				echo $find_cmd;
+#			fi
+#
+#			for delfile in $($find_cmd); do
+#
+#				age=$(GetFileAge -c $delfile)
+#					
+#				if [ $? -ne 0 ]; then
+#					#$age is error in this context
+#					error_log="${error_log}${age}Failed to purge deleted file:\t$delfile\n"
+#					continue
+#				fi
+#								
+#
+#				if [ $del_verbose ]; then
+#					echo -e "$age days old:\t$delfile";
+#				fi
+#
+#
+#				if [ $age -ge $days ]; then
+#					rm_cmd="$(which rm) -rf $delfile"
+#
+#					if [ $del_verbose ]; then
+#						echo $rm_cmd;
+#					fi
+#
+#					$rm_cmd
+#
+#					if [ $? -ne 0 ]; then
+#						error_log="${error_log}Failed to purge deleted file:\t$delfile\n"
+#						continue
+#					fi
+#				fi
+#			done
+#			
+#		else               # MV ENTIRE PATH TO .DEL
+#			del_path=$(echo $filedir | sed "s^${SOURCE_ROOT}^${del_dir}^")
+#			#readlink already stripped trailing / for dir mv
+#			del_path=$(GetDir $del_path)
+#
+#			if [ ! -d $del_path ]; then
+#				mkdir -p $del_path
+#				#catch error?
+#			fi
+#
+#			#Do we want to have interactive by default here and override with -f?
+#			mv_cmd="mv $filedir $del_path/$file"
+#
+#			if [ $del_verbose ]; then
+#				echo $mv_cmd;
+#			fi
+#
+#			$mv_cmd         	#mv'ing file updates last modified & changed date
+#		
+#			#Mirror the whole path under .del!
+#			# - handle redundant naming
+#			# - easier recovery/navigation
+#			#This will require a recursive find when purging!
+#
+#			if [ $? -ne 0 ]; then
+#				error_log="${error_log}Failed del file:\t$mv_cmd\n"
+#				continue
+#			fi
+#		fi
+#	done
+#
+#
+#	if [ "$error_log" ]; then
+#		echo -e "\nSummary of errors:\n$error_log"
+#		return 1
+#	fi
+#
+#
+#	}
 
 
 #This works slightly differently for ArchiveData, Distribute and del
@@ -1093,7 +1095,7 @@ GetFileAge(){
 
 	day_factor=$((60 * 60 * 24))
 
-	#second since Epoch 
+	#seconds since Epoch 
 	NOW=`date +%s`
 	OLD=`stat -c $date_format $filename` 
 	#Do we want modified or changed?
