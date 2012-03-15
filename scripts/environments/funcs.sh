@@ -597,128 +597,128 @@ BackUpFile(){
 #Change this to ArchiveFileDir
 #Could add $HOME support, but shouldn't have archiveable data in their
 
-#
-#
-#ArchiveData()
-#{
-#	OPTIND=1
-#
-#	compress=
-#	delete_source=
-#	aname=
-#	usage='usage: ArchiveData [ -c(compress, no name) -a(rchive name, compress) -d(elete source) -h(elp) ] FILES|DIRS'
-#	#add -l(ist) option here to see if we have already archived this in some form?
-#	#or we could just test for target file first and AskQuestion to confirm?
-#	#would need force flag to overwrite without AskQuestion
-#
-#	while getopts ":dca:h" opt; do
-#		case $opt in 
-#	        d  ) delete_source=1 ;; 
-#            c  ) compress=1 ;;
-#            a  ) aname=$OPTARG ;;
-#            h  ) echo $usage; return 0;;
-#            \? ) echo $usage; exit 1;;
-#		esac 
-#	done
-#
-#	if [ $aname ]; then
-#		compress=1
-#	fi
-#
-#	i=1
-#	
-#	while [ $i -lt $OPTIND ]; do
-#		shift
-#		let i+=1
-#	done
-#	
-#	filedirs=$*
-#	TARGET_ROOT=
-#	TARGET_ROOT_NAME=
-#	SOURCE_ROOT=
-#
-#	for filedir in $filedirs; do
-#    	#Get the full dereferenced path
-#		#Also strips trailing /
-#		#Need to capture readlink error here?
-#		
-#		_SetTargetAndSourceRoot $filedir
-#		#sets SOURCE_ROOT and return $derefd_filedir
-#   		retval=$?
-#		
-#		if [ $retval -ne 0 ]; then
-#			echo -e "Failed to archive:\t$filedir"
-#			return $retval
-#		fi
-#	
-#		filedir=$derefd_filedir
-#		
-#				
-#		#Need to match $DATA_DIR here or skip with warning
-#		if [[ ! -d $TARGET_ROOT ]]; then
-#			echo -e "Target archive dir not set or valid:$TARGET_ROOT_NAME\t=\t$TARGET_ROOT"
-#			return 1
-#		else
-#	        #Use ' instead of / due to / in path
-#			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
-#			archive_filedir="$TARGET_ROOT/$archive_filedir"	
-#			
-#			#mkdir in archive incase we are using tar or rsync using a file
-#			#rsync will create dirs
-#			archive_dir=$(GetDir $archive_filedir)
-#			
-#			if [ ! -d $archive_dir ]; then
-#				echo -e "Making archive directory:\t$archive_dir"
-#				mkdir -p $archive_dir
-#			fi
-#			
-#			
-#			if [ -d $filedir ] && [ ! $compress ]; then
-#		    	#Remove the last dir name				
-#				archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
-#				archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
-#			fi
-#			
-#			
-#			archive_cmd=
-#			
-#			if [ $compress ]; then
-#				
-#				if [ $aname ]; then
-#					aname=".${aname}"
-#				fi	
-#				#This overwrites existing files
-#				archive_cmd="tar -cvzf $archive_filedir${aname}.tar.gz $filedir"
-#			else
-#				archive_cmd="rsync -essh -Wavm $filedir $archive_filedir/"
-#	       		#-essh only necessary for remote archiving
-#	       		#-a archive mode; equals -rlptgoD (no -H,-A,-X)
-#	    		#-r recurse into directories
-#	       		#-l copy symlinks as symlinks
-#		     	#-p preserve permissions
-#			    #-t preserve modification times
-#    			#-g preserve group
-#    			#-o preserve owner (super-user only)
-#    			#-D same as:
-#	    		#    --devices     preserve device files (super-user only)
-#                #    --specials    preserve special files
-#                #-m prune emtpy dirs
-#                #-v verbose
-#			fi	
-#			
-#			echo $archive_cmd
-#			Execute $archive_cmd
-#			#assign Execute output here to catch exit and output, then return nicely?
-#			echo -e "Finished:\t$archive_cmd"
-#			
-#			if [[ $delete_source ]]; then
-#				echo -e "Removing source:\t $filedir"
-#				rm -rf $filedir
-#			fi
-#			
-#		fi
-#	done
-#}
+
+
+ArchiveData()
+{
+	OPTIND=1
+
+	compress=
+	delete_source=
+	aname=
+	usage='usage: ArchiveData [ -c(compress, no name) -a(rchive name, compress) -d(elete source) -h(elp) ] FILES|DIRS'
+	#add -l(ist) option here to see if we have already archived this in some form?
+	#or we could just test for target file first and AskQuestion to confirm?
+	#would need force flag to overwrite without AskQuestion
+
+	while getopts ":dca:h" opt; do
+		case $opt in 
+	        d  ) delete_source=1 ;; 
+            c  ) compress=1 ;;
+            a  ) aname=$OPTARG ;;
+            h  ) echo $usage; return 0;;
+            \? ) echo $usage; exit 1;;
+		esac 
+	done
+
+	if [ $aname ]; then
+		compress=1
+	fi
+
+	i=1
+	
+	while [ $i -lt $OPTIND ]; do
+		shift
+		let i+=1
+	done
+	
+	filedirs=$*
+	TARGET_ROOT=
+	TARGET_ROOT_NAME=
+	SOURCE_ROOT=
+
+	for filedir in $filedirs; do
+    	#Get the full dereferenced path
+		#Also strips trailing /
+		#Need to capture readlink error here?
+		
+		_SetTargetAndSourceRoot $filedir
+		#sets SOURCE_ROOT and return $derefd_filedir
+   		retval=$?
+		
+		if [ $retval -ne 0 ]; then
+			echo -e "Failed to archive:\t$filedir"
+			return $retval
+		fi
+	
+		filedir=$derefd_filedir
+		
+				
+		#Need to match $DATA_DIR here or skip with warning
+		if [[ ! -d $TARGET_ROOT ]]; then
+			echo -e "Target archive dir not set or valid:$TARGET_ROOT_NAME\t=\t$TARGET_ROOT"
+			return 1
+		else
+	        #Use ' instead of / due to / in path
+			archive_filedir=$(echo $filedir | sed -r "s'^${SOURCE_ROOT}''")
+			archive_filedir="$TARGET_ROOT/$archive_filedir"	
+			
+			#mkdir in archive incase we are using tar or rsync using a file
+			#rsync will create dirs
+			archive_dir=$(GetDir $archive_filedir)
+			
+			if [ ! -d $archive_dir ]; then
+				echo -e "Making archive directory:\t$archive_dir"
+				mkdir -p $archive_dir
+			fi
+			
+			
+			if [ -d $filedir ] && [ ! $compress ]; then
+		    	#Remove the last dir name				
+				archive_filedir=$(echo $archive_filedir | sed -r 's/\/$//')
+				archive_filedir=$(echo $archive_filedir | sed -r 's/[^/]+$//')
+			fi
+			
+			
+			archive_cmd=
+			
+			if [ $compress ]; then
+				
+				if [ $aname ]; then
+					aname=".${aname}"
+				fi	
+				#This overwrites existing files
+				archive_cmd="tar -cvzf $archive_filedir${aname}.tar.gz $filedir"
+			else
+				archive_cmd="rsync -essh -Wavm $filedir $archive_filedir/"
+	       		#-essh only necessary for remote archiving
+	       		#-a archive mode; equals -rlptgoD (no -H,-A,-X)
+	    		#-r recurse into directories
+	       		#-l copy symlinks as symlinks
+		     	#-p preserve permissions
+			    #-t preserve modification times
+    			#-g preserve group
+    			#-o preserve owner (super-user only)
+    			#-D same as:
+	    		#    --devices     preserve device files (super-user only)
+                #    --specials    preserve special files
+                #-m prune emtpy dirs
+                #-v verbose
+			fi	
+			
+			echo $archive_cmd
+			Execute $archive_cmd
+			#assign Execute output here to catch exit and output, then return nicely?
+			echo -e "Finished:\t$archive_cmd"
+			
+			if [[ $delete_source ]]; then
+				echo -e "Removing source:\t $filedir"
+				rm -rf $filedir
+			fi
+			
+		fi
+	done
+}
 
 #Need to test for aliases before defining these
 #Was failing to compile as rm was already aliased
