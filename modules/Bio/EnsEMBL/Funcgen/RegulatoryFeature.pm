@@ -35,7 +35,6 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
 
 
  ### Creating/storing a RegulatoryFeature Set ###
-
  my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
      (
       -SLICE         => $chr_1_slice,
@@ -52,12 +51,10 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
 
 
  ### Fetching some RegualtoryFeatures
-
  my @regfeats = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, \@fsets)};
 
 
  ### Print the bound and core loci
-
  print join(' - ', ($reg_feat->bound_start,
                     $reg_feat->start,
                     $reg_feat->end,
@@ -65,7 +62,6 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
 
 
  ### Getting some supporting evidence for a RegualtoryFeatures
- 
  my @reg_attrs = @{$reg_feat->regulatory_attributes('annotated')};
 
 
@@ -99,25 +95,26 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature); #@ISA
 
 =head2 new
 
-  Arg [-SLICE]             : Bio::EnsEMBL::Slice - The slice on which this feature is.
+  Arg [-SLICE]             : Bio::EnsEMBL::Slice - The slice on which this feature is located.
   Arg [-START]             : int - The start coordinate of this feature relative to the start of the slice
                              it is sitting on. Coordinates start at 1 and are inclusive.
   Arg [-END]               : int -The end coordinate of this feature relative to the start of the slice
                     	     it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-DISPLAY_LABEL]     : string - Display label for this feature
-  Arg [-BINARY_STRING]     : string - Regulatory Build binary string
-  Arg [-PROJECTED]         : boolean - Flag to specify whether this feature has been projected or not
   Arg [-FEATURE_SET]       : Bio::EnsEMBL::Funcgen::FeatureSet - Regulatory Feature set
   Arg [-FEATURE_TYPE]      : Bio::EnsEMBL::Funcgen::FeatureType - Regulatory Feature sub type
-  Arg [-ATTRIBUTE_CACHE]   : HASHREF of feature class dbID|Object lists
+  Arg [-BINARY_STRING]     : (optional) string - Regulatory Build binary string
+  Arg [-STABLE_ID]         : (optional) string - Stable ID for this RegualtoryFeature e.g. ENSR00000000001
+  Arg [-DISPLAY_LABEL]     : (optional) string - Display label for this feature
+  Arg [-ATTRIBUTE_CACHE]   : (optional) HASHREF of feature class dbID|Object lists
+  Arg [-PROJECTED]         : (optional) boolean - Flag to specify whether this feature has been projected or not
   Arg [-dbID]              : (optional) int - Internal database ID.
   Arg [-ADAPTOR]           : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new(
 										                                  -SLICE         => $chr_1_slice,
-									                                      -START         => 1_000_000,
-									                                      -END           => 1_000_024,
-									                                      -DISPLAY_LABEL => $text,
+									                                      -START         => 1000000,
+									                                      -END           => 1000024,
+         -                                                                -DISPLAY_LABEL => $text,
 									                                      -FEATURE_SET   => $fset,
                                                                           -FEATURE_TYPE  => $reg_ftype,
                                                                           -ATTRIBUTE_CACHE => \%attr_cache,
@@ -128,23 +125,24 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature); #@ISA
   Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
-  #hardcode strand as always 0
-  my $self = $class->SUPER::new(@_, -strand => 0);
+  my $self = $class->SUPER::new(@_);
 
   my ($stable_id, $attr_cache, $bin_string, $projected)
     = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED'], @_);
 
+  #None of these are mandatory at creation
+  #under different use cases
+  $self->{binary_string} = $bin_string if defined $bin_string;
+  $self->{stable_id}     = $stable_id  if defined $stable_id;
   $self->is_projected($projected)      if defined $projected;
-  $self->binary_string($bin_string)    if defined $bin_string;
-  $self->stable_id($stable_id)         if $stable_id;
-  $self->attribute_cache($attr_cache) if $attr_cache;
+  $self->attribute_cache($attr_cache)  if $attr_cache;
 
   return $self;
 }
@@ -157,7 +155,7 @@ sub new {
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Stable
 
 =cut
 
@@ -172,7 +170,7 @@ sub display_label {
 	}
   }
 
-  return  $self->{'display_label'};
+  return  $self->{display_label};
 }
 
 =head2 display_id
@@ -188,10 +186,7 @@ sub display_label {
 
 =cut
 
-sub display_id {
-  my $self = shift;
-  return $self->{'stable_id'};
-}
+sub display_id {  return $_[0]->{stable_id}; }
 
 
 =head2 binary_string
@@ -202,15 +197,20 @@ sub display_id {
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk - May change to BLOB
+  Status     : At Risk - May change to BLOB, remove setter functionality
 
 =cut
 
 sub binary_string{
   my ($self, $bin_string)  = @_;
-  $self->{'binary_string'} = $bin_string if defined $bin_string;
 
-  return $self->{'binary_string'};
+  if (defined $bin_string){
+	#added v67
+	warn "RegualtoryFeature::binary_string setter functionality is being removed\n";
+	$self->{binary_string} = $bin_string;
+  }
+
+  return $self->{binary_string};
 }
 
 
@@ -222,15 +222,20 @@ sub binary_string{
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At risk - setter functionality to be removed
 
 =cut
 
 sub stable_id {
   my $self             = shift;
-  $self->{'stable_id'} = shift if @_;
 
-  return $self->{'stable_id'};
+  if (@_){
+	#added v67
+	warn "RegualtoryFeature::stable_id setter functionality is being removed\n";
+	$self->{'stable_id'} = shift;
+  }
+
+  return $self->{stable_id};
 }
 
 
@@ -289,9 +294,8 @@ sub regulatory_attributes{
 	  
 	  if( ! ( ref($self->{'regulatory_attributes'}{$fclass}->[0])  &&
 			  ref($self->{'regulatory_attributes'}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )){
-
-		$adaptors{$fclass}->force_reslice(1);	#So we don't lose attrs which aren't on the slice
-
+		
+		$adaptors{$fclass}->force_reslice(1);#So we don't lose attrs which aren't on the slice
 		$self->{'regulatory_attributes'}{$fclass} = $adaptors{$fclass}->fetch_all_by_dbID_list(\@attr_dbIDs, $self->slice);
 
 		#Having problems here if we are trying to project between Y PAR and X
@@ -347,7 +351,7 @@ sub regulatory_attributes{
   Returntype : Boolean
   Exceptions : Throws if args are not defined
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -358,7 +362,6 @@ sub has_attribute{
   throw('Must provide a dbID and a Feature class argument') if ! $dbID && $fclass;
 
   return exists ${$self->attribute_cache}{$fclass}{$dbID};
-
 }
 
 =head2 get_focus_attributes
@@ -369,7 +372,7 @@ sub has_attribute{
   Returntype : ARRAYREF
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -395,7 +398,7 @@ sub get_focus_attributes{
   Returntype : ARRAYREF
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -412,6 +415,7 @@ sub get_nonfocus_attributes{
   return $self->{'nonfocus_attributes'};
 }
 
+#Add pod here
 
 sub _sort_attributes{
   my $self = shift;
@@ -460,6 +464,7 @@ sub attribute_cache{
 #	#Do we need to do this now we have separated the caches?
 #
 #  }
+
   if(defined $attr_hash){
 
 	foreach my $fclass(keys %{$attr_hash}){
@@ -486,7 +491,7 @@ sub attribute_cache{
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -507,7 +512,7 @@ sub bound_start {
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -528,7 +533,7 @@ sub bound_end {
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -552,7 +557,7 @@ sub bound_seq_region_start {
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -580,14 +585,19 @@ sub bound_seq_region_end {
   Returntype : boolean
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At risk - remove setter functionality
 
 =cut
 
 sub is_projected {
-  my $self           = shift;
-  $self->{projected} = shift if @_;
-
+  my $self = shift;
+  
+  if(@_){
+	#added v67
+	warn "RegulatoryFeature::is_projected setter functionality is being removed\n";
+	$self->{'projected'} = shift;
+  }
+  
   return $self->{'projected'};
 }
 
