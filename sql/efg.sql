@@ -1428,18 +1428,11 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "67");
 
-#v66
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_b.sql|cell_type.tissue_and_lineage');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_c.sql|array_chip.name_design');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_d.sql|unmapped_object.reorder_unmapped_obj_index');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_e.sql|add_regbuild_string_table');
-
 #v67
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_b.sql|regulatory_attribute.attribute_feature_idx');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_c.sql|result_feature.remove_partitions');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_d.sql|regulatory_feature.binary_string_500');
 
 
 
