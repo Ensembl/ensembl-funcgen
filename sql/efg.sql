@@ -59,7 +59,7 @@ CREATE TABLE `regulatory_feature` (
   `stable_id` mediumint(8) unsigned default NULL,
   `bound_seq_region_start` int(10) unsigned NOT NULL,	
   `bound_seq_region_end` int(10) unsigned NOT NULL,
-  `binary_string` varchar(255) default NULL,
+  `binary_string` varchar(500) default NULL,
   `projected` boolean default FALSE,	
   PRIMARY KEY  (`regulatory_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`),
@@ -87,7 +87,8 @@ CREATE TABLE `regulatory_attribute` (
   `regulatory_feature_id` int(10) unsigned NOT NULL,
   `attribute_feature_id` int(10) unsigned NOT NULL,
   `attribute_feature_table` enum('annotated', 'motif') default NULL,
-  PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`)
+  PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`),
+  KEY attribute_feature_idx (`attribute_feature_id`, `attribute_feature_table`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
@@ -334,30 +335,13 @@ CREATE TABLE `result_feature` (
   `seq_region_start` int(10) NOT NULL,
   `seq_region_end` int(10) NOT NULL,
   `seq_region_strand` tinyint(4) NOT NULL,
-  `window_size` smallint(5) unsigned NOT NULL,
   `scores` longblob NOT NULL,
-  KEY `result_feature_idx` (`result_feature_id`),
-  KEY `set_window_seq_region_idx` (`result_set_id`, `window_size`,`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1
- PARTITION BY LIST (window_size)
- (PARTITION p0 VALUES IN (0),
- PARTITION p30 VALUES IN (30),
- PARTITION p65 VALUES IN (65),
- PARTITION p130 VALUES IN (130), 
- PARTITION p260 VALUES IN (260), 
- PARTITION p450 VALUES IN (450), 
- PARTITION p648 VALUES IN (648), 
- PARTITION p950 VALUES IN (950),
- PARTITION p1296 VALUES IN (1296)	
-);
+  PRIMARY KEY `result_feature_idx` (`result_feature_id`),
+  KEY `set_seq_region_idx` (`result_set_id`,`seq_region_id`,`seq_region_start`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- 0 window_size partition optimised for natural resolution of arrays
--- The rest are optimised for the default levels of zoom, plus a few intermediates 
--- No primary key as we need to parition on window_size, which would not be the whole of the primary key
--- set_window_region_idx can't be UNIQUE as there may be duplicates in the 0 wsize collections
--- i.e. two or more probe features with the same start, originating from replicate probes
--- or a probe seq which is a substr of another probe.
--- Remove partitions and limit to 0 window_size data, as others are now in DBFiles
+-- Partitions and window_size now removed as > 0 bp window_size hosted in col files
+
 
 
 
@@ -1317,8 +1301,10 @@ CREATE TABLE `regbuild_string` (
   UNIQUE KEY `name_species_idx` (`species_id`, `name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- very small table with varying string sizes, so no need to set max_rows/avg_row_length for text
--- potentially remove and build/cache in FeatureSetAdaptor
+-- This table is queried directly by the web code to define the regulation config
+-- Web must be consulted about impact if any changes are made
+-- i.e. Must maintain regbuild.MultiCell.focus_feature_set_ids
+-- even tho this is redundant wrt to feature_set_ids?
 
 
 
@@ -1440,12 +1426,19 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "66");
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "67");
+
+#v66
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_b.sql|cell_type.tissue_and_lineage');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_c.sql|array_chip.name_design');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_d.sql|unmapped_object.reorder_unmapped_obj_index');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_65_66_e.sql|add_regbuild_string_table');
+
+#v67
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_b.sql|regulatory_attribute.attribute_feature_idx');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_c.sql|result_feature.remove_partitions');
 
 
 
