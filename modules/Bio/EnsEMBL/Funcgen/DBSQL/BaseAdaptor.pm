@@ -174,7 +174,10 @@ sub fetch_all {
 
   
   if(defined $status && ! defined $constraint){
-	warn "You have specifed a status($status) which is not present in the DB";
+	my @tables = $self->_tables;
+	my ($table_name, undef) = @{$tables[0]};
+
+	warn "You are trying to fetch $table_name entries which have a $status status, which is not present in the DB";
 	return [];
   }
 
