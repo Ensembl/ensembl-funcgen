@@ -719,22 +719,29 @@ sub check_regbuild_strings{
 sub log_data_sets{
   my $self = shift;
   
+  my $dset_adaptor = $self->db->get_DataSetAdaptor;
   my ($status);
   my $txt = 'Checking ';
-
   $status = 'DISPLAYABLE' if($self->{'check_displayable'});
+  $txt.= $status.' ' if $status;
+  $txt .= 'DataSets';
+  $self->log_header($txt);
+  
+  #Check for status first to avoid warning from BaseAdaptor.
+  eval { $dset_adaptor->_get_status_name_id($status) };
+
+  if($@){
+	$self->report("FAIL: You have specified check_displayable, but the DISPLAYABLE status_name is not present in the DB");
+	return;
+  }
 
 	
   my @dsets;
-  my $dsets = $self->db->get_DataSetAdaptor->fetch_all($status);
+  my $dsets = $dset_adaptor->fetch_all($status);
   @dsets = @$dsets if defined $dsets;
-
-  $txt .= scalar(@dsets).' ';
-  $txt.= $status.' ' if($self->{'check_displayable'});
-
-  $txt .= 'DataSets';
-
-  $self->log_header($txt);
+  
+  
+  $self->log('Found '.scalar(@dsets).' DataSets');
   
   
   foreach my $dset(@dsets){
