@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -33,16 +33,12 @@ This script performs several updates to the eFG DBs as part of the release cycle
 
 =head1 DESCRIPTION
 
-This script use the Bio::EnsEMBL::Funcgen::Utils::Healthchecker modules to perform critical updates to efg DBs during the release cycle. By default this script calls the following methods:
-
-  update_db_for_release - Wrapper method for several standard updates/checks
-  log_data_sets         - Check and logs available DataSets dependant on -check_displayable
-  check_stable_ids      - Checks stable_ids for DBs which have a RegualtoryFeatures set
+This script uses the Bio::EnsEMBL::Funcgen::Utils::Healthchecker module to perform critical updates and checks on the funcgen DBs during the release cycle. 
 
 
-This default behaviour can be over-ridden by specifying a methods arrays e.g.
+This default behaviour can be over-ridden by specifying a space separated list of method names e.g.
 
-  -methods validate_new_seq_regions update_meta_schema_version check_meta_strings check_meta_species analyse_and_optimise_tables set_current_coord_system update_meta_coord clean_xrefs log_data_sets check_stable_ids
+  -methods validate_new_seq_regions update_meta_schema_version check_meta_strings analyse_and_optimise_tables set_current_coord_system update_meta_coord clean_xrefs log_data_sets check_stable_ids
 
 
 See Bio::EnsEMBL::Funcgen::Utils::HealthChecker for more details.
@@ -83,8 +79,6 @@ Bio:EnsEMBL::Funcgen::Utils::HealthChecker
 
 =cut
 
-#To do
-# 1 Add method param, such that we can call just one method but with argments e.g. check_meta_strings update
 
 
 use strict;
@@ -150,22 +144,7 @@ if(! $main::_no_log){
   print "Writing log to:\t".$main::_log_file."\n";
 }
 
-#if($dnadb_host){
-#  $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-#											   -dbname  => "${species}_core_${schema_build}",
-#											   -host    => $dnadb_host,
-#											   #-host => 'ensdb-1-13',
-#											   #-port => 5307,
-#											   #-port    => 3306,
-#											   -user    =>  'ensro',
-#											   #-pass    => $pass,
-#											   -species => $species,
-#											   -group   => 'core',
-#											   );
-#}
 
-
-#This will add the default chromosome CS, but not any other levels
 my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 														  -dbname  => $dbname,
 														  -host    => $host,
@@ -177,15 +156,11 @@ my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 														  -dnadb_user => $dnadb_user,
 														  -dnadb_pass => $dnadb_pass,
 														  -dnadb_port => $dnadb_port,
-														  #-dnadb   => $dnadb,
 														 );
-
-
 
 #Test the db connections
 $efg_db->dbc->db_handle;
 $efg_db->dnadb->dbc->db_handle;
-
 
 my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
 																-db                => $efg_db,
@@ -223,6 +198,6 @@ elsif(@method_params){
 }
 else{
  $hchecker->update_db_for_release();
-  $hchecker->log_data_sets();
+
 }
 
