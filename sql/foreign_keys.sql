@@ -25,7 +25,7 @@
 
 
 
--- Last updated for v65
+-- Last updated for v67
 
 
 
@@ -47,7 +47,7 @@ ALTER table regulatory_feature ADD FOREIGN KEY (feature_type_id) REFERENCES feat
 
 -- regulatory_attribute
 ALTER table regulatory_attribute ADD FOREIGN KEY (regulatory_feature_id) REFERENCES regulatory_feature(regulatory_feature_id);
--- add complex foreign keys
+-- add complex foreign keys?
 
 -- annotated_feature
 ALTER table annotated_feature ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
@@ -72,9 +72,9 @@ ALTER table external_feature ADD FOREIGN KEY (feature_type_id) REFERENCES featur
 ALTER table external_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
 -- result_feature
---ALTER table result_feature ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
---ALTER table result_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
---ERROR 1506 (HY000) at line 72: Foreign key clause is not yet supported in conjunction with partitioning
+ALTER table result_feature ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
+ALTER table result_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+
 
 
 -- dbfile_registry
@@ -166,6 +166,11 @@ ALTER table status ADD FOREIGN KEY (status_name_id) REFERENCES status_name(statu
 -- cell_type_lineage
 ALTER table cell_type_lineage ADD FOREIGN KEY (cell_type_id) REFERENCES cell_type(cell_type_id);
 ALTER table cell_type_lineage ADD FOREIGN KEY (lineage_id) REFERENCES lineage(lineage_id);
+
+
+
+--regbuild_string
+-- None
 
 
 
