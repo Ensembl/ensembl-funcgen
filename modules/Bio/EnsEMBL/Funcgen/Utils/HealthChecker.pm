@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -24,7 +24,20 @@ Bio::EnsEMBL::Funcgen::Utils::HealthChecker
 
 =head1 DESCRIPTION
 
-B<This program> performs several health check and update methods prior to release.
+B<This program> provides several methods to health check and update tables prior to 
+release. Using the updte_DB_for_release method runs the following:
+
+  validate_new_seq_regions    - _pre_stores seq_region & coord_system info from new core DB
+  check_regbuild_strings      - Validates or inserts regbuild_string entries
+  check_meta_species_version  - Validates meta species and version wrt dbname
+  set_current_coord_system    - Updates coord_system.is_current to 1 for current schema_build (required for mart)
+  update_meta_coord           - Regenerates meta_coord.max_length values (required for Slice range queries)
+  clean_xrefs                 - Removes old unused xref and external_db records
+  validate_DataSets           - Performs various checks on Data/Feature/ResultSets links and states
+  check_stable_ids            - Check for any NULL stable IDs
+  log_data_sets               - Logs all DISPLAYABLE DataSets
+  analyse_and_optimise_tables - Does what is says
+
 
 =cut
 
@@ -122,9 +135,9 @@ sub update_db_for_release{
   #do seq_region_update to validate dnadb first
   #hence avoiding redoing longer methods
   $self->validate_new_seq_regions;#($force_srs);
-  $self->update_meta_schema_version;
+  #$self->update_meta_schema_version;
   $self->check_regbuild_strings;
-  $self->check_meta_species;
+  $self->check_meta_species_version;
   $self->set_current_coord_system;
   $self->update_meta_coord;
   $self->clean_xrefs;
@@ -268,25 +281,6 @@ sub validate_new_seq_regions{
 
 
 
-sub update_meta_schema_version{
-  my ($self) = @_;
-  
-  my $schema_version = $self->get_schema_and_build($self->{'dbname'})->[0];
-  
-  
-
-  my $sql = 'DELETE from meta where meta_key="schema_version"';
-  $self->db->dbc->db_handle->do($sql);
-  $sql = "INSERT into meta(meta_key, species_id, meta_value) values ('schema_version', NULL, '$schema_version')";
- 
-  $self->db->dbc->db_handle->do($sql);
-
-  $self->log_header("Updated meta.schema_version to $schema_version");
-
-}
-
-
-
 
 sub update_meta_coord{
   my ($self, @table_names) = @_;
@@ -324,15 +318,10 @@ sub update_meta_coord{
   }
 
   #backup meta coord
-  #if(system("mysql -h$host -P$port -u$user -p$pass -N "
-#			. "-e 'SELECT * FROM meta_coord' ${species}_funcgen_${schema_build}"
-#			. "> ${species}_funcgen_${schema_build}.meta_coord.backup"
-#		   ) != 0 ){
-
   if(system($self->{'mysql_connect_string'}." -e 'SELECT * FROM meta_coord'"
 			. '> '.$self->{'dbname'}.'meta_coord.backup'
 		   ) != 0 ){
-
+	
 	throw("Can't dump the original meta_coord for back up");#will this get copied to log?
   } 
   else {
@@ -436,18 +425,27 @@ sub update_meta_coord{
 }
 
 
+#change this to check_meta_species_version
 
-
-sub check_meta_species{
+sub check_meta_species_version{
   my ($self) = @_;
 
-  $self->log_header('Checking meta species.production_name');
+  $self->log_header('Checking meta species.production_name and schema_version against dbname');
 
+  my $dbname = $self->db->dbc->dbname;
+  (my $dbname_species = $dbname) =~ s/_funcgen_.*//;
   my $mc = $self->db->get_MetaContainer;
+  my $schema_version = $mc->list_value_by_key('schema_version')->[0];
+
+  if(! defined $schema_version){
+	$self->report("FAIL:\tNo meta schema_version defined");
+  }
+  elsif($dbname !~ /funcgen_${schema_version}_/){
+	$self->report("FAIL:\tMeta schema_version ($schema_version) does not match the dbname ($dbname).");
+  }
+
+
   my @latin_names = @{$mc->list_value_by_key('species.production_name')};
-  
-  my $dbname_species = $self->db->dbc->dbname;
-  $dbname_species =~ s/_funcgen_.*//;
   
   if(scalar(@latin_names) > 1){
 	$self->report("FAIL:\tFound more than one species.production_name in meta:\t".join(", ", @latin_names));
@@ -459,7 +457,6 @@ sub check_meta_species{
 	$self->report("WARNING:\tFound no meta species.production_name setting as:\t$dbname_species");
 	$self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, 'species.production_name', '$dbname_species')");
   }
-
   #else is okay
 
   return;
