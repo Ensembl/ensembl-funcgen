@@ -114,7 +114,7 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature); #@ISA
 										                                  -SLICE         => $chr_1_slice,
 									                                      -START         => 1000000,
 									                                      -END           => 1000024,
-         -                                                                -DISPLAY_LABEL => $text,
+                                                                          -DISPLAY_LABEL => $text,
 									                                      -FEATURE_SET   => $fset,
                                                                           -FEATURE_TYPE  => $reg_ftype,
                                                                           -ATTRIBUTE_CACHE => \%attr_cache,
@@ -141,7 +141,7 @@ sub new {
   #under different use cases
   $self->{binary_string} = $bin_string if defined $bin_string;
   $self->{stable_id}     = $stable_id  if defined $stable_id;
-  $self->is_projected($projected)      if defined $projected;
+  $self->{projected}     = $projected  if defined $projected;
   $self->attribute_cache($attr_cache)  if $attr_cache;
 
   return $self;
@@ -541,8 +541,14 @@ sub bound_seq_region_start {
   my $self = shift;
 
   if(! defined $self->{bound_seq_region_start}){
-	 $self->{bound_seq_region_start} = $self->feature_Slice->start + $self->bound_start - 1;
-   }
+	
+	if($self->slice->strand == 1){
+	  $self->{bound_seq_region_start} = $self->slice->start + $self->bound_start - 1;
+	}
+	else{ #strand = -1
+	  $self->{bound_seq_region_start} = $self->slice->end - $self->bound_end + 1;
+	}
+  }
 
   return $self->{bound_seq_region_start};
 }
@@ -566,8 +572,14 @@ sub bound_seq_region_end {
   my $self = shift;
 
   if(! defined $self->{bound_seq_region_end}){
-	 $self->{bound_seq_region_end} = $self->feature_Slice->start + $self->bound_end - 1;
-   }
+	
+	if($self->slice->strand == 1){
+	  $self->{bound_seq_region_end} = $self->slice->start + $self->bound_end - 1;
+	}
+	else{ #strand = -1
+	  $self->{bound_seq_region_end} = $self->slice->end - $self->bound_start + 1;
+	}
+  }
 
   return $self->{bound_seq_region_end};
 }
