@@ -178,12 +178,35 @@ if($#assm_vers != 0){
 }
 
 my $assm = $assm_vers[0];
-my $rel_dir = $ftp_root."/release-${schema_version}/${species}/${assm}";
+my $rel_dir = $ftp_root."/release-${schema_version}/data_files/${species}/${assm}";
 
 
 if(! -d $rel_dir){
   system("mkdir -p $rel_dir") == 0 or die("Failed to create FTP release dir:\t$rel_dir");
 }
+
+#Now check we have top level data_file dir link to nfs
+
+my $df_dir_link = $ftp_root."/data_files/${species}/${assm}";
+
+if(! -l $df_dir_link){ #Let's create it
+  print "Top level data_files dir link does not exist:\t$df_dir_link\n";
+  
+
+  #Should grab dbfile_data_root here
+  my $dbfile_data_root    = $efgdb->get_MetaContainer->single_value_by_key('dbfile.data_root');
+ 
+  if(! ($dbfile_data_root &&
+		-d $dbfile_data_root) ){
+	die("Unable to find dbfile.data_root:\t$dbfile_data_root");
+  }
+  else{
+	my $cmd = "ln -s $dbfile_data_root $df_dir_link";
+	print "Creating top level data_files dir link:\t$cmd\n";
+	system($cmd) == 0 or die("Failed to create top level data_file dir link");
+  }
+}
+
 
 
 
@@ -213,17 +236,21 @@ foreach my $set_type(@set_types){
 
 	#This is ResultSet specific after here
 	($source_dir = $set->dbfile_data_dir) =~ s'/+'/'g;
-	
 	#Let's tidy up the source dir as we have numerous multiple slashes ///
 	
-
-
-
 	if( ! ($set->is_displayable &&
 		   $source_dir)){
 	  next;
 	}
 	 
+	#We don't actually want to link directly to the data files, but relatively to
+	#../../data_files/SPECIES/ASSEMBLY
+	#This should also contain links, but to /nfs/ensnfs-dev/staging
+	#This should already be in place but need to add check in here somewhere
+
+	
+
+
 
 	$feature_class = ($set->set_type eq 'result') ? 'result_feature' : $set->feature_class.'_feature';
   	my $fclass_dir = $rel_dir."/${feature_class}";
@@ -233,19 +260,32 @@ foreach my $set_type(@set_types){
 	}
 	
 	chdir($fclass_dir) || die("Failed to move to FTP release dir:\t${fclass_dir}");;
+
+
+	($target_dir = $source_dir) =~ s'/$'';
+	($target_dir = $target_dir) =~ s'/.*/'';
 	
+	#Now we need to redefine source_dir as link to data_files relative to target dir
+	$source_dir = "../../../../../data_files/${species}/${assm}/${feature_class}/${target_dir}";
+	
+
 	#SANITY CHECKING
 	
 	if(! -d $source_dir){ #Is is a directory?
-	  die("Source dbfile_data_dir doe not exist for ".$set->name."\t".$source_dir);
+	  #This will be a directory as the link is at the data_file level
+	  die("Source dbfile_data_dir does not exist for ".$set->name."\t".$source_dir);
 	}
 	else{                 #Does is contain any data?
-	  opendir(DirHandle, $source_dir);
+	  opendir(DirHandle, $source_dir) || die("Failed to open source dir:\t$source_dir");
+
+	  #Need to catch error here
+
 	  my $num_files = 0;
 
 	  while (readdir(DirHandle)) {
 		$num_files++;
 		#Could check for expected suffixes or non-empty files
+		#check for name match
 		#But we are verging on a HC here.
 	  }
 	  
@@ -254,10 +294,8 @@ foreach my $set_type(@set_types){
 	  if(! $num_files){
 		die("Found 0 files in source directory:\t${source_dir}");
 	  }
-	}
+	}	
 
-	($target_dir = $source_dir) =~ s'/$'';
-	($target_dir = $target_dir) =~ s'/.*/'';
 
 	if(-e $target_dir &&
 	   (! -l $target_dir) ){
@@ -277,4 +315,4 @@ foreach my $set_type(@set_types){
 chdir($dir);
 
 
-print "Now print command to send to webteam which will follow links and rsync to the ftp site?"
+print "Now print command to send to webteam which will follow links and rsync to the ftp dir\n";
