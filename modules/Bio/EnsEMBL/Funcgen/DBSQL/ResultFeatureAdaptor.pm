@@ -24,7 +24,7 @@ table if a data is present, else it will query the underlying raw data tables.
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -65,6 +65,9 @@ use Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor 
 			Bio::EnsEMBL::Funcgen::Collector::ResultFeature);
+		#	Bio::EnsEMBL::DBFile::BigWigAdaptor);#@ISA
+
+warn "removed hardcoded inc BigWigAdaptor"; 
 		
 
 #Private vars to used to maintain simple implementation of Collector
@@ -111,7 +114,7 @@ sub _columns {
   my $self = shift;
 
   return  ('rf.seq_region_start', 'rf.seq_region_end', 'rf.seq_region_strand', 
-		   "$_scores_field", 'rf.result_set_id', 'rf.window_size');
+		   "$_scores_field", 'rf.result_set_id');
 }
 
 
@@ -142,11 +145,13 @@ sub _objs_from_sth {
 	#Never have non-Slice based fetchs, so will always have dest_slice and seq_region info.
   }
   
-  my (%rfeats, $start, $end, $strand, $scores, $rset_id, $window_size);
+  my (%rfeats, $start, $end, $strand, $scores, $rset_id);
+  my $window_size = 0; #Always natural resolution from table
+
   #Could dynamically define simple obj hash dependant on whether feature is stranded and new_fast?
   #We never call _obj_from_sth for extended queries
   #This is only for result_feature table queries i.e. standard/new queries
-  $sth->bind_columns(\$start, \$end, \$strand, \$scores, \$rset_id, \$window_size);
+  $sth->bind_columns(\$start, \$end, \$strand, \$scores, \$rset_id);
 
 
   #Test slice is loaded in eFG?
@@ -185,7 +190,8 @@ sub _objs_from_sth {
  FEATURE: while ( $sth->fetch() ) {
 
 	if($window_size == 0){
-	  warn "0bp window size array based collections are no longer supported";
+	  warn "0bp window size array based result_features are no longer supported";
+	  #Remove completely or re-instate?
 	}
 	else{
 
@@ -288,7 +294,7 @@ sub store{
   throw("Must provide a list of ResultFeature objects") if(scalar(@$rfeats == 0));
  
   #These are in the order of the ResultFeature attr array(excluding probe_id, which is the result/probe_feature query only attr))
-  my $sth = $self->prepare('INSERT INTO result_feature (result_set_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, window_size, scores) VALUES (?, ?, ?, ?, ?, ?, ?)');  
+  my $sth = $self->prepare('INSERT INTO result_feature (result_set_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, scores) VALUES (?, ?, ?, ?, ?, ?)');  
   my $db = $self->db();
   my ($pack_template, $packed_string);
 
@@ -303,6 +309,11 @@ sub store{
       throw('Must be a Bio::EnsEMBL::Funcgen::Collection::ResultFeature object to store');
     }
     
+	if($rfeat->window_size == 0){
+	  throw('Non 0bp window_size ResultFeatures cannot be stored in the result_feature table, write a col file instead');
+	}
+
+
 	#This is the only validation! So all the validation must be done in the caller as we are simply dealing with ints?
 	#Remove result_feature_set from result_set and set as status?
 	
@@ -328,22 +339,15 @@ sub store{
 
 	
 	$packed_string = pack($pack_template, @{$rfeat->scores});	
-
-	#use Devel::Size qw(size total_size);
-	#warn "Storing ".$rfeat->result_set_id,' '.$seq_region_id.' '.$rfeat->start.' '.$rfeat->end.' '.$rfeat->strand,' ',$rfeat->window_size."\nWith packed string size:\t".size($packed_string);
 	
 	$sth->bind_param(1, $rfeat->result_set_id, SQL_INTEGER);
 	$sth->bind_param(2, $seq_region_id,        SQL_INTEGER);
     $sth->bind_param(3, $rfeat->start,         SQL_INTEGER);
     $sth->bind_param(4, $rfeat->end,           SQL_INTEGER);
 	$sth->bind_param(5, $rfeat->strand,        SQL_INTEGER);
-	$sth->bind_param(6, $rfeat->window_size,   SQL_INTEGER);
 	$sth->bind_param(7, $packed_string,        SQL_BLOB);
 	$sth->execute();
   }
-  
-
-
 
   return $rfeats;
 }
@@ -399,7 +403,7 @@ sub _window_size{
   Args[0]    : Bio::EnsEMBL::Slice
   Args[1]    : ARRAYREF of Bio::EnsEMBL::Funcgen::ResultSet object
   Args[2]    : int - Maximum number of bins required i.e. number of pixels in drawable region
-  Example    : $self->set_collection_defss_by_ResultSet([$rset]);
+  Example    : $self->set_collection_defs_by_ResultSet([$rset]);
   Description: Similar to set_collection_defs_by_ResultSet, but used
                to set a config hash used for multi-ResultSet fetches.
   Returntype : None
@@ -675,7 +679,7 @@ sub set_collection_config_by_Slice_ResultSets{
   Arg[6]     : OPTIONAL hasref - config hash
   Example    : my %rfeatures = %{$rsa->fetch_all_by_Slice_ResultSets($slice, [@rsets])};
   Description: Gets a list of lightweight ResultFeature collection(s) for the ResultSets and Slice passed.
-  Returntype : HASHREF of ResultSet keys with a LISTREF of ResultFeature collection values
+  Returntype : HASHREF of ResultSet dbID keys with a LISTREF of ResultFeature collection values
   Exceptions : Warns and skips ResultSets which are not RESULT_FEATURE_SETS.
   Caller     : general
   Status     : At risk
