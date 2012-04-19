@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -544,9 +544,8 @@ sub _objs_from_sth {
 			'display_label'  => $display_label,
 			'binary_string'  => $bin_string,
 			'projected'      => $projected,
-			'feature_set'    => $fset_hash{$fset_id},
+			'set'    => $fset_hash{$fset_id},
 			'feature_type'   => $ftype,
-			#'regulatory_attributes' => $reg_attrs,
 			'stable_id'      => $sid,
 		   });
 
