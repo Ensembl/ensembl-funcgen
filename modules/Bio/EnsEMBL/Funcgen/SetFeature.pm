@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -82,10 +82,9 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Arg [-FEATURE_SET]  : Bio::EnsEMBL::Funcgen::FeatureSet
-  Arg [-FEATURE_TYPE] : optional Bio::EnsEMBL::Funcgen::FeatureType. 
-                        Defaults to FeatureSet FeatureType
-  Arg [-ANALYSIS]     : Bio::EnsEMBL::Analysis 
+  Arg [-SET]          : Bio::EnsEMBL::Funcgen::ResultSet or FeatureSet.
+  Arg [-FEATURE_TYPE] : optional Bio::EnsEMBL::Funcgen::FeatureType. Defaults to Set FeatureType.
+  Arg [-ANALYSIS]     : Bio::EnsEMBL::Analysis. Defaults to Set Analysis.
   Arg [-SLICE]        : Bio::EnsEMBL::Slice - The slice on which this feature is.
   Arg [-START]        : int - The start coordinate of this feature relative to the start of the slice
 		                it is sitting on. Coordinates start at 1 and are inclusive.
@@ -95,21 +94,24 @@ use vars qw(@ISA);
   Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
   Arg [-dbID]         : (optional) int - Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
+
+  Arg [-FEATURE_SET]  : Bio::EnsEMBL::Funcgen::FeatureSet (Obsolete)
+
   Example             : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
                               (
                                -SLICE         => $chr_1_slice,
-                               -START         => 1_000_000,
-                               -END           => 1_000_024,
+                               -START         => 1000000,
+                               -END           => 1000024,
                                -STRAND        => -1,
 							   -DISPLAY_LABEL => $text,
-							   -FEATURE_SET   => $fset,
+							   -SET           => $fset,
                               );
 
   Description: Constructor for SetFeature objects. Should never be called directly, only by children.
   Returntype : Bio::EnsEMBL::Funcgen::SetFeature
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At Risk - FEATURE_SET arg replaced by SET in v67
 
 =cut
 
@@ -118,13 +120,17 @@ sub new {
 	
   my $class = ref($caller) || $caller;
 
-  my ($display_label, $fset, $ftype)
-    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE'], @_);
+  my ($display_label, $fset, $ftype, $set)
+    = rearrange(['DISPLAY_LABEL', 'FEATURE_SET', 'FEATURE_TYPE', 'SET'], @_);
   
+  #Don't test for set vs fset here as this will slow things down.
+  #We use new_fast from the adaptors to avoid this
+  $set ||= $fset;
 
   #Grab FeatureSet first so we can pass analysis to base Feature class
-  if(ref($fset) ne 'Bio::EnsEMBL::Funcgen::FeatureSet'){
-	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet object");
+  if( ( ref($set) ne 'Bio::EnsEMBL::Funcgen::FeatureSet') ||
+	  ( ref($set) ne 'Bio::EnsEMBL::Funcgen::ResultSet') ){
+	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet or ResultSet object");
   }
 
   my $self = $class->SUPER::new(@_, -analysis => $fset->analysis);
@@ -134,19 +140,22 @@ sub new {
   if($ftype){
 	
 	if(ref($ftype) ne 'Bio::EnsEMBL::Funcgen::FeatureType'){
-	throw('feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType');
+	  throw('feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType');
 	}
   
 	$self->{'feature_type'} = $ftype;
   }
-  
-
-  $self->{'feature_set'}   = $fset;
-  $self->{'display_label'} = $display_label if defined $display_label;
-  #This removes the need for setter code in child classes
+ 
+  #Setting attrs directly removes the need for setter code in methods
+  $self->{set}           = $set;
+  $self->{display_label} = $display_label if defined $display_label;
  	
   return $self;
 }
+
+
+
+#Usage of new fast in the adaptor means we can't deprecate and re-assign old args in new!
 
 =head2 new_fast
 
@@ -161,30 +170,44 @@ sub new {
 
 =cut
 
-#new_fast should be at highest level? remove?
+#Remove and use Bio::EnsEMBL::Feature::new_fast? - This 'weakens' adaptor
 
 sub new_fast {
   return bless ($_[1], $_[0]);
 }
 
 
+
 =head2 feature_set
 
-  Arg [1]    : (optional) Bio::EnsEMBL::FeatureSet 
-  Example    : $efeature->feature_set($fset);
-  Description: Getter for the FeatureSet attribute for this feature. 
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
+  Example    : my $set = $efeature->feature_set();
+  Description: WARNING: Can now also return ResultSet aswell as FeatureSet attribute for this feature.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet or ResultSet
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk - marked as to be removed in v67
+
+=cut
+
+sub feature_set {
+  return $_[0]->{'set'};
+}
+
+
+=head2 set
+
+  Example    : my $fset = $set_feature->set();
+  Description: Getter for the set attribute for this feature.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet or ResultSet
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub feature_set {
-  my $self = shift;
-  return $self->{'feature_set'};
+sub set {
+  return $_[0]->{'set'};
 }
-
 
 =head2 cell_type
 
@@ -198,10 +221,8 @@ sub feature_set {
 
 =cut
 
-sub 
-cell_type{
-	my $self = shift;
-	return $self->feature_set->cell_type();
+sub cell_type{
+	return $_[0]->set->cell_type();
 }
 
 =head2 feature_type
@@ -217,7 +238,7 @@ cell_type{
 
 sub feature_type{
   my $self = shift; 
-  return (defined $self->{'feature_type'}) ?  $self->{'feature_type'} : $self->feature_set->feature_type();
+  return (defined $self->{'feature_type'}) ?  $self->{'feature_type'} : $self->set->feature_type();
 }
 
 
@@ -235,8 +256,7 @@ sub feature_type{
 
 sub analysis{
   my $self = shift;
-
-  return (defined $self->{'analysis'}) ? $self->{'analysis'} : $self->feature_set->analysis();
+  return (defined $self->{'analysis'}) ? $self->{'analysis'} : $self->set->analysis();
 }
 
 
@@ -253,16 +273,8 @@ sub analysis{
 =cut
 
 sub display_label{
-  my $self = shift;
-
-  return $self->{'display_label'};
+  return $_[0]->{'display_label'};
 }
 
-
-#These DBEntry methods should really be in Funcgen::Storable to support FeatureType xrefs
-#However, eFG SetFeatures are not eFG Storables, rather they inherit directly from Ensembl::Feature
-#This causes inheritance problems, and we don't need the eFG Storable methods for Features.
-#Cater for FeatureTypes separately for now as we may remove DBEntries for these at some point.
-#And currently not used anywhere in the website??? Current xrefs are fly BioTIFFIN motif xrefs to FlyBase coding gene names?
 
 1;
