@@ -739,6 +739,8 @@ sub fetch_all_by_stable_ID {
 sub fetch_all_by_attribute_feature {
   my ($self, $attr_feat) = @_;
   
+  #add fsets here as optional arg
+
   my $attr_class = ref($attr_feat);
 
   if(! $valid_attribute_features{$attr_class}){
@@ -749,13 +751,20 @@ sub fetch_all_by_attribute_feature {
   $self->db->is_stored_and_valid($attr_class, $attr_feat);	  
   my $attr_feat_table = $valid_attribute_features{$attr_class};
   
-  #Do this as a simple subselect for now
-  #rather than implementing query extension/composable adaptor
-  #No need to bind_param_generic_fetch here as we have tested dbIDs with is_stored_and_valid
-  my $constraint = "rf.regulatory_feature_id in(".
-	"SELECT regulatory_feature_id from regulatory_attribute ".
-	  "WHERE attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID.')';
   
+  #$fsets ||= [ $self->_get_current_FeatureSet ];
+
+  #Don't retrict via existing left join as we want to get all 
+  #the reg_attrs not just those define by this query
+
+  #Was originally doing a subselect, but this was doing a filesort on ALL rf with no key!
+  #Separating the queries makes this a range query and uses the primary key
+  #still files sort, but just on exact number of rows rather than ALL( I guess because it can't do it in the buffer for some reason)
+  
+  my ($rf_ids) = $self->db->dbc->db_handle->selectrow_array("SELECT group_concat(regulatory_feature_id) from regulatory_attribute ".
+															 "WHERE attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID);
+  
+  my $constraint = "rf.regulatory_feature_id in(${rf_ids})";
   return $self->generic_fetch($constraint);
 }
 
