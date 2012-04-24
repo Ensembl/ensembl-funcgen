@@ -616,7 +616,7 @@ sub is_projected {
 
 =head2 get_underlying_structure
 
-  Example    :  $self->get_underlying_structure() if(! exists $self->{'bound_end'});
+  Example    : $self->get_underlying_structure() if(! exists $self->{'bound_end'});
   Description: Getter for the bound_end attribute for this feature.
                Gives the 3' most end value of the underlying attribute
                features.
@@ -685,6 +685,91 @@ sub get_underlying_structure{
 
   return $self->{underlying_structure};
 }
+
+
+=head2 is_unique_to_FeatureSets
+
+  Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
+                          Default is FeatureSet of given RegulatoryFeature, else need to be 
+                          defined explicitly.
+  Arg[2]     : optional - Boolean, include 'projected' features
+  Example    : if($reg_feat->is_unique_to_FeatureSets($fsets)}{  
+                   #then do some analysis here
+               }
+  Description: Identifies whether this RegualtoryFeature is unique to a set of FeatureSets.
+  Returntype : boolean
+  Exceptions : Throw is arguments not stored or valid.
+  Caller     : General
+  Status     : At risk
+
+=cut
+  
+sub is_unique_to_FeatureSets{
+  my ($self, $fsets, $include_projected) = @_;
+
+  $fsets ||= [$self->feature_set];
+  my @fset_ids;
+  
+  foreach my $fset(@$fsets){
+	#assume we have an adaptor set
+	$self->adaptor->db->is_stored_and_valid($fset, 'Bio::EnsEMBL::FeatureSet');
+	
+	if($fset->feature_class ne 'regulatory'){
+	  throw('Found non-regulatory FeatureSet');
+	}
+
+	push @fset_ids, $fset->dbID;
+  }
+  
+  my @other_fset_ids = @{$self->adaptor->_fetch_other_feature_set_ids_by_stable_feature_set_ids
+							($self->stable_id, \@fset_ids, $include_projected)};
+
+  return (@other_fset_ids) ? 1 : 0;
+}
+
+
+
+=head2 get_other_FeatureSets
+
+  Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
+                          Default is FeatureSet of given RegulatoryFeature, else need to be 
+                          defined explicitly.
+  Arg[2]     : optional - Boolean, include 'projected' features
+  Example    : my @other_fsets = @{$reg_feat->get_other_FeatureSets($fsets)};
+  Description: Get other FeatureSets this RegualtoryFeature is represented in.
+  Returntype : ARRAYREF of Bio::EnsEMBL::FeatureSet objects
+  Exceptions : Throw is arguments not stored or valid.
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub get_other_FeatureSets{
+  my ($self, $fsets, $include_projected) = @_;
+   
+  $fsets ||= [$self->feature_set];
+  my @fset_ids;
+  
+  foreach my $fset(@$fsets){
+	#assume we have an adaptor set
+	$self->adaptor->db->is_stored_and_valid($fset, 'Bio::EnsEMBL::FeatureSet');
+	
+	if($fset->feature_class ne 'regulatory'){
+	  throw('Found non-regulatory FeatureSet');
+	}
+
+	push @fset_ids, $fset->dbID;
+  }
+  
+  my @other_fsets_ids = @{$self->adaptor->_fetch_other_feature_set_ids_by_stable_feature_set_ids
+							($self->stable_id, \@fset_ids, $include_projected)};
+
+  return $self->adaptor->db->get_FeatureSetAdaptor->fetch_by_dbID_list(\@other_fsets_ids);
+
+
+}
+
+
 
 1;
 
