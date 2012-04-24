@@ -128,7 +128,7 @@ sub new {
   $set ||= $fset;
 
   #Grab FeatureSet first so we can pass analysis to base Feature class
-  if( ( ref($set) ne 'Bio::EnsEMBL::Funcgen::FeatureSet') ||
+  if( ( ref($set) ne 'Bio::EnsEMBL::Funcgen::FeatureSet') &&
 	  ( ref($set) ne 'Bio::EnsEMBL::Funcgen::ResultSet') ){
 	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet or ResultSet object");
   }
