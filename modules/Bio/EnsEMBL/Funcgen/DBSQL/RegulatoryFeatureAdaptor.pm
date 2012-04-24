@@ -761,11 +761,11 @@ sub fetch_all_by_attribute_feature {
   #Separating the queries makes this a range query and uses the primary key
   #still files sort, but just on exact number of rows rather than ALL( I guess because it can't do it in the buffer for some reason)
   
+
   my ($rf_ids) = $self->db->dbc->db_handle->selectrow_array("SELECT group_concat(regulatory_feature_id) from regulatory_attribute ".
 															 "WHERE attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID);
-  
-  my $constraint = "rf.regulatory_feature_id in(${rf_ids})";
-  return $self->generic_fetch($constraint);
+
+  return (defined $rf_ids) ? $self->generic_fetch("rf.regulatory_feature_id in(${rf_ids})") : [];
 }
 
 
