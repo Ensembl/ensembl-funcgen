@@ -190,23 +190,22 @@ sub new {
   $self->{'dnadb_name'} = $dnadb_name || $default_name || undef;
   ($efg_assm = (split/_/, $self->_get_schema_build($self))[1]) =~ s/[a-z]//;
   $self->{'dnadb_assm'} = $dnadb_assm || $default_assm || $efg_assm;
-
+  $dnadb_assm = $self->{'dnadb_assm'}; #reset here as we use below.
 
 
   #This only tries to _set_dnadb if we set some dnadb_params
   #or the dnadb_assm doesn't match the default/predefined dnadb
-
+  
   if($dnadb_params ||
 	 ($self->_get_schema_build($self->dnadb()) !~ /[0-9]+_${dnadb_assm}[a-z]*$/) ){
 	
-	if(! $dnadb_name){
+	if(! $dnadb_params){
 	  
 	  warn ':: WARNING: Unable to match assembly version between the dnadb name ('.
 		$self->dnadb->dbc->dbname.') and the specified -dnadb_assm '.$self->dnadb_assembly.
 		  "\nMaybe you need to rename your DBs according to the Ensembl naming convention e.g. myprefix_homo_sapiens_55_37";
 	}		
-	
-	if($dnadb_predefined && $dnadb_params){
+	elsif($dnadb_predefined){
 	  #No can't be dnadb as we throw if we have conflicting -dnadb and dnadb params
 	  warn ":: Over-riding pre-defined dnadb regsitry values with dnadb params:\t".
 		$self->dnadb_user.'@'.$self->dnadb_host.':'.$self->dnadb_port;
@@ -476,6 +475,7 @@ sub dnadb {
   
   #So we want a method in DBAdaptor to reset efg DB and dna DB in registry?
   #Or do we just let this happen
+
 
   if($dnadb || $self->SUPER::dnadb->group() ne 'core'){
 
