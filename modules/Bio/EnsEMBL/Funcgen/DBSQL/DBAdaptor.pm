@@ -463,20 +463,7 @@ sub dnadb_assembly{
 sub dnadb { 
   my ($self, $dnadb, $cs_name) = @_; 
 
-  #super dnadb automatically sets the current DBAdaptor as the dnadb
-  #this is the only way of checking whether it has been defined properly.
  
-  #This needs to use the same host as the registry, which may differ from the efg host!
-  #What if we pass a reg config file? with multiple hosts?
-  #We probably always want to use the host of the current dnadb?
-
-  #Automatically selects the current core DB from the reg and may be wrong!!
-  #How do we want to deal with this?
-  
-  #So we want a method in DBAdaptor to reset efg DB and dna DB in registry?
-  #Or do we just let this happen
-
-
   if($dnadb || $self->SUPER::dnadb->group() ne 'core'){
 
 	if(! $dnadb){#Guess/set dnadb by assembly or dnadb params
@@ -524,7 +511,7 @@ sub dnadb {
 	  
 	  #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
 	  
-	  #!!! This is a non-obious store behaviour !!!
+	  #!!! This is a non-obvious store behaviour !!!
 	  #This can result in coord_system entries being written unknowingly if you are using the efg DB with a write user
 	  $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
 	}
