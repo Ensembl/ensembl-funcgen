@@ -116,22 +116,16 @@ sub fetch_all{
 sub _get_current_FeatureSet{
   my $self = shift;
 
-  my $fset = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures:MultiCell');
 
-  #We need to be able to retrieve all sets
-  #Also restrict to just the core set
-  
-  #This would be done by fethcing all FeatureSets of type 'regulatory'
-  #But this would currently also bring back old RegulatoryBuilds
-  #if the stable_id_mapper can work between DBs then we can just remove the old sets completely
-  
-  
+  if(! $self->{'multicell_set'}){
+	$self->{'multicell_set'} = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures:MultiCell');
 
-  if(! defined $fset){
-	warn('Could not retrieve current RegulatoryFeatures FeatureSet');
+	if(! $self->{'multicell_set'}){
+	  warn('Could not retrieve current default RegulatoryFeatures:MuiltiCell FeatureSet');
+	}
   }
-  
-  return $fset;
+
+  return  $self->{'multicell_set'};
 }
 
 
@@ -173,6 +167,11 @@ sub fetch_by_stable_id {
 
 =cut
 
+
+#change this to fetch_all_by_stable_id and remove method of same name below or vice versa?
+#check usage of this method first
+
+
 sub fetch_all_by_stable_id_FeatureSets {
   my ($self, $stable_id, @fsets) = @_;
 
@@ -194,15 +193,16 @@ sub fetch_all_by_stable_id_FeatureSets {
 
   #Change this to use _generate_feature_set_id_clause
 
-  if(@fsets){#Get current
+  if(@fsets){
 	
-	#need to catch empty array an invalid FeatureSets
+	#need to catch empty array and invalid FeatureSets
 	if(scalar(@fsets == 0)){
 	  warning("You have not specified any FeatureSets to fetch the RegulatoryFeature from, defaulting to all");
 	}
 	else{
 
 	  #validate FeatureSets
+	  #Need to check $fset->feature_class eq 'regulatory' too?
 	  map { $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $_)} @fsets;
 		 
 	  if(scalar(@fsets) == 1){
@@ -246,9 +246,9 @@ sub _tables {
   my $self = shift;
 	
   return (
-		  [ 'regulatory_feature', 'rf' ],
-		  [ 'feature_set', 'fs'],
-		  [ 'regulatory_attribute', 'ra'],
+		  [ 'regulatory_feature',   'rf' ],
+		  [ 'feature_set',          'fs' ],
+		  [ 'regulatory_attribute', 'ra' ],
 		 );
 }
 
@@ -320,14 +320,12 @@ sub _left_join {
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
 
-  
   #For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
   #So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
   # This code is ugly because caching is used to improve speed
   	
   my ($sa, $reg_feat);#, $old_cs_id);
   $sa = ($dest_slice) ? $dest_slice->adaptor->db->get_SliceAdaptor() : $self->db->get_SliceAdaptor();
-  #don't really need this if we're using DNADBSliceAdaptor?
   
   #Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
   #Hence it should always be on the same coord system
@@ -397,19 +395,59 @@ sub _objs_from_sth {
 				   #external
 				  );
 
-  #Change this to use attr_cache instead so we are not loading the attrs until we absolutely need them.
+  #Set 'unique' set of feature_set_ids
+  my @fset_ids;
+  
+   if($self->{params_hash}{unique}){
+	#FeatureSet have been pre-validated in the fetch method
+	@fset_ids = map $_->dbID, @{$self->{params_hash}{feature_sets}};
+  }
+  
+  
+  my $skip_stable_id    = 0;#stable IDs are never 0
+  my $no_skip_stable_id = 0;
+  my @other_rf_ids;
 
   FEATURE: while ( $sth->fetch() ) {
+
+	  #Handle non-unique skipping first
+
+	  if($skip_stable_id == $stable_id){
+		#Faster for queries which need to skip if we have this first
+		next;
+	  }
+	  elsif(@fset_ids){
+		#have no_skip_stable_id too
+		#so we don't keep doing _fetch_other_feature_set_ids_by_stable_feature_set_ids
+		#for ID s we have already checked
+		
+		if($no_skip_stable_id != $stable_id){
+		  @other_rf_ids = @{$self->_fetch_other_dbIDs_by_stable_feature_set_ids
+							  ($stable_id, 
+							   \@fset_ids, 
+							   {include_projected => $self->{params_hash}{include_projected}})};
+		  
+		  if(@other_rf_ids){
+			$skip_stable_id = $stable_id;
+			#warn "skipping\n";
+			next;
+		  }
+		  else{
+			$no_skip_stable_id = $stable_id;
+		  }
+		}
+		#else don't skip this stable ID
+	  }
+
+
 
 	  if(! $reg_feat || ($reg_feat->dbID != $dbID)){
 		
 		if($skip_feature){
-		  undef $reg_feat;#so we don't duplicate the push for the feature previous to the skip feature
+		  undef $reg_feat; #so we don't duplicate the push for the feature previous to the skip feature
 		  $skip_feature = 0;
 		}
-
-		
-
+	  
 		if($reg_feat){   #Set the previous attr cache and reset
 		  $reg_feat->attribute_cache(\%reg_attrs);
 		  push @features, $reg_feat;
@@ -444,7 +482,9 @@ sub _objs_from_sth {
 		#Get the FeatureSet object
 		$fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
 		
-		
+		#Get the FeatureType object
+		$ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
+
 	    # Get the slice object
 	    $slice = $slice_hash{'ID:'.$seq_region_id};
 	    
@@ -520,13 +560,7 @@ sub _objs_from_sth {
 	      $slice = $dest_slice;
 	    }
 	    
-
-		my ($reg_type, $reg_attrs, $ftype);
-	   		
-		if(defined $ftype_id){
-		  $ftype = $ft_adaptor->fetch_by_dbID($ftype_id);
-		}
-		
+	   				
 		#This stops un init warning when sid is absent for sid mapping
 		my $sid = (defined $stable_id) ? sprintf($stable_id_prefix."%011d", $stable_id) : undef;
 
@@ -544,8 +578,8 @@ sub _objs_from_sth {
 			'display_label'  => $display_label,
 			'binary_string'  => $bin_string,
 			'projected'      => $projected,
-			'set'    => $fset_hash{$fset_id},
-			'feature_type'   => $ftype,
+			'set'            => $fset_hash{$fset_id},
+			'feature_type'   => $ftype_hash{$ftype_id},
 			'stable_id'      => $sid,
 		   });
 
@@ -565,6 +599,10 @@ sub _objs_from_sth {
 	$reg_feat->attribute_cache(\%reg_attrs);
 	push @features, $reg_feat;
   }
+
+
+  #reset params hash
+  $self->{params_hash} = undef;
 
   return \@features;
 }
@@ -674,9 +712,13 @@ sub store{
 }
 
 
+
+
+
 =head2 fetch_all_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : Bio::EnsEMBL::Slice
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $regf_adaptor->fetch_all_by_Slice($slice);
   Description: Retrieves a list of features on a given slice, specific for the current 
@@ -690,17 +732,130 @@ sub store{
 
 sub fetch_all_by_Slice {
   my ($self, $slice, $fset) = @_;
-  #CellTypes id'd by fetching regulatory fsets, so take these as args instead of CellTypes
-  #Slight overlap with SetFeatureAdaptor::fetch_all_by_Slice_FeatureSets
-  #Let's maintain expected/standard method name here
-  #Can remove the fset args, as we can use fetch_all_by_Slice_FeatureSets
 
+  $fset ||= $self->_get_current_FeatureSet; #This get the MultiCell sets
 
-  $fset ||= $self->_get_current_FeatureSet;
-  
-  #Ternary operator essential here,as we don't want to die if there is no data!
+  #Ternary operator essential here, as we don't want to die if there is no data!
   return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]) : undef;
 }
+
+
+=head2 fetch_all_by_Slice_FeatureSets
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : Arrayref of Bio::EnsEMBL::FeatureSet objects
+  Arg [3]    : optional HASHREF - params: 
+                   {
+                    unique            => 0|1, #Get RegulatoryFeatures unique to these FeatureSets
+                    include_projected => 0|1, #Consider projected features
+                   }
+  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+               my $features = $ofa->fetch_all_by_Slice_FeatureSets($slice, \@fsets);
+  Description: Simple wrapper to set unique flag.
+               Retrieves a list of features on a given slice, specific for a given list of FeatureSets.
+  Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
+  Exceptions : Throws if params hash is not valid or keys are not recognised
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+#These FeatureSets are not optional
+#otherwise could have just re-implemented fetch_all_by_Slice 
+#with extra optional fsets args
+
+#To implement unique flag, would either need to self join on stable ID to compare counts 
+#or set flag(would have to be array of fset IDs if we want more than one fset) 
+#to do look up in objs_from_sth method
+#Would need to add wrapper for fetch_all_by_Slice_FeatureSets here
+
+#This will slow down all regfeat fetches
+#how can we do this without impacting obj_from_sth performance?
+#is this worth worrying about? It's a fairly fast track anyway?
+#could have method vars/code refs in obj_from_sth, but still adding method call instead of var test.
+#impact likely negligable
+
+#Could pre_store this in DB? 'Impossible' for 1 fset without doing self join comparison?
+
+#We really need to expose the constraint here to enable more complex combined queries
+#i.e. projected, FeatureType filter etc
+
+#Need to do full re-implementation here rather than wrapper as we can't
+#pass a preformed constraint to a method which might be exposed directly by the website
+#as this may enable someone to inject SQL via a URL.
+#Also can't handle unique/include_projected in generic SetFeatureAdaptor method
+
+sub fetch_all_by_Slice_FeatureSets {
+  my ($self, $slice, $fsets, $params_hash) = @_;
+   
+  if($params_hash){
+
+	if(ref($params_hash) eq 'HASH'){
+	  #Really only need feature_sets as unique is implicit at present
+	  #define unique for clarify
+	  $self->{params_hash}{unique}            = $params_hash->{unique};
+	  $self->{params_hash}{feature_sets}      = $fsets;
+	  $self->{params_hash}{include_projected} = $params_hash->{include_projected};
+	  #include_projected as we also need to constrain
+	  #_fetch_other_dbIDs_by_stable_feature_set_ids
+	  #Waht happens when we have include_projected on it's own and set to 0
+	}
+	else{
+	  throw("The params_hash argument must be a valid HASHREF, not:\t".ref($params_hash));
+	}
+  }
+
+
+  my $constraint = 'rf.feature_set_id '.$self->_generate_feature_set_id_clause($fsets);
+  $params_hash ||= {}; #To avoid deref fail below
+  my $inc_proj = $params_hash->{include_projected};
+
+  if( ($params_hash->{unique} && ( ! $inc_proj))  ||
+	(defined $inc_proj && ($inc_proj == 0) )){
+	$constraint .= ' AND '. ' rf.projected=0 ';
+  }
+ 
+  #explicit super call, just in case we ever re-implement in here
+  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+}
+
+
+	
+
+sub _fetch_other_dbIDs_by_stable_feature_set_ids{
+  my ($self, $stable_id_int, $fset_ids, $params_hash) = @_;
+  #Args and originating objects have been prevalidated
+
+  #($stable_id = $stable_id) =~ s/^[A-Z0]+//;
+  #Do this in caller, as we already have the stripped ID from _objs_from_sth
+
+  my @fset_ids = @$fset_ids; #Deref here as we are pushing, and don't want modify in the caller
+  my $projected_constraint = '';
+
+  #This is internal, so we can assume $param_hash is a valid
+  #HASHREF if defined.
+  $params_hash ||= {};#quick way to prevent deref fail below
+  
+  if(! $params_hash->{include_projected}){
+	$projected_constraint = ' AND projected=0  ';
+  }
+
+  #Handle MultiCell set, as this will always be present
+  if(! $params_hash->{include_multicell}){
+	push @fset_ids, $self->_get_current_FeatureSet->dbID;
+  }
+
+
+  my @other_rf_ids = @{$self->db->dbc->db_handle->selectcol_arrayref
+						 ('SELECT regulatory_feature_id from regulatory_feature '.
+						  "WHERE stable_id=${stable_id_int} ".$projected_constraint.
+						  ' AND feature_set_id not in('.join(',', @fset_ids).')')};
+
+  return \@other_rf_ids;
+}
+
+
+
 
 =head2 fetch_all_by_stable_ID
 
@@ -717,6 +872,9 @@ sub fetch_all_by_Slice {
 
 sub fetch_all_by_stable_ID {
   my ($self, $stable_id) = @_;
+
+  #Add fsets here?
+
   throw('You must provide a stable_id argument') if ! $stable_id;
   $stable_id =~ s/[A-Z0]+//;
 
@@ -751,8 +909,6 @@ sub fetch_all_by_attribute_feature {
   $self->db->is_stored_and_valid($attr_class, $attr_feat);	  
   my $attr_feat_table = $valid_attribute_features{$attr_class};
   
-  
-  #$fsets ||= [ $self->_get_current_FeatureSet ];
 
   #Don't retrict via existing left join as we want to get all 
   #the reg_attrs not just those define by this query
