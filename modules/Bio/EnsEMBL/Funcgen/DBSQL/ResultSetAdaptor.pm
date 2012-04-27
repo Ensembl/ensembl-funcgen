@@ -385,8 +385,6 @@ sub _tables {
 =cut
 
 sub _left_join {
-  #my $self = shift;
-
   return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")']);
 }
 
@@ -626,14 +624,15 @@ sub store{
 
   Arg[1]     : Optional String: Root path of dbfile data directory
   Example    : $rset_adaptor->dbfile_data_dir('/over-ride/path);
-  Description: This allows the root path to be over-ride. THe default path
+  Description: This allows the root path to be over-ridden. The default path
                is stored in the meta table as 'dbfile.data_root'. This can be
-               over-ridden by the webcode by setting this variable
+               over-ridden by the webcode by setting REGULATION_FILE_PATH in
+               DEFAULTS.ini
   Returntype : String
   Exceptions : Throws if no param passed and cannot find dbfile_data_root meta_key
   Caller     : Bio::EnsEMBL::Funcgen::DBAdaptor::ResultSet
                Webcode
-  Status     : at risk
+  Status     : at risk - move this to SetAdaptor or DBAdaptor?
 
 =cut
 
@@ -645,31 +644,13 @@ sub dbfile_data_root{
   }
   elsif(! defined $self->{dbfile_data_root}){
 
-
-	#This is slighty dirty as it means anyone with a webcode checkout may get
-	#pointed to the wrong location if they are trying to use the API in a non
-	#webcode context
-
-
-
-	#eval{ 
-	#  my $species_defs = EnsEMBL::Web::SpeciesDefs->new(); 
-	#  $self->{dbfile_data_root} = $species_defs->REGULATION_FILE_PATH;	
-	#}
-	  
-	#  if(! defined $self->{dbfile_data_root}){
-	  
-		$self->{dbfile_data_root} = $self->db->get_MetaContainer->list_value_by_key('dbfile.data_root')->[0];
-	#  }
-
+	#Grab it from the meta table
+	$self->{dbfile_data_root} = $self->db->get_MetaContainer->single_value_by_key('dbfile.data_root');
+	
 	if(! $self->{dbfile_data_root}){
 	  throw('Could not find dbfile.data_root meta entry');
 	}
-
-	#Add -d check?
-
   }
-	
 
   return $self->{dbfile_data_root};
 }
@@ -871,9 +852,9 @@ sub list_dbIDs {
 
 sub fetch_ResultFeatures_by_Slice_ResultSet{
   my ($self, $slice, $rset, $ec_status, $with_probe) = @_;
-  
-  
-  warn "Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor::fetch_ResultFeatures_by_Slice_ResultSEt is now deprecated, please use the ResultFeatureAdaptor directly";
+
+  warn "Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor::fetch_ResultFeatures_by_Slice_ResultSet is now deprecated\n".
+	"Please use the ResultFeatureAdaptor directly";
 
   return $self->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $rset, $ec_status, $with_probe);
 
