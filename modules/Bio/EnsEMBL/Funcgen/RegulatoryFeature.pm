@@ -692,7 +692,10 @@ sub get_underlying_structure{
   Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
                           Default is FeatureSet of given RegulatoryFeature, else need to be 
                           defined explicitly.
-  Arg[2]     : optional - Boolean, include 'projected' features
+  Arg[2]     : optional - HASHREF Params hash: 
+                                    {
+                                     include_projected => 0|1, # Boolean, include 'projected' features
+                                    }
   Example    : if($reg_feat->is_unique_to_FeatureSets($fsets)}{  
                    #then do some analysis here
                }
@@ -703,16 +706,29 @@ sub get_underlying_structure{
   Status     : At risk
 
 =cut
-  
+
+#Probably want to add in an FeatureType constraint here
+#e.g. so we can compare active vs inactive or poised promoters
+
+#omit include_multi doesn't make sense here
+
 sub is_unique_to_FeatureSets{
-  my ($self, $fsets, $include_projected) = @_;
+  my ($self, $fsets, $params_hash) = @_;
 
   $fsets ||= [$self->feature_set];
   my @fset_ids;
   
+  
+  #define to avoid deref fails below.
+  $params_hash ||= {};
+  if(ref($params_hash) ne 'HASH'){
+	throw("The params hash argument must be a valid HASHREF:\t".ref($params_hash));
+  }
+
+
   foreach my $fset(@$fsets){
 	#assume we have an adaptor set
-	$self->adaptor->db->is_stored_and_valid($fset, 'Bio::EnsEMBL::FeatureSet');
+	$self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 	
 	if($fset->feature_class ne 'regulatory'){
 	  throw('Found non-regulatory FeatureSet');
@@ -721,38 +737,55 @@ sub is_unique_to_FeatureSets{
 	push @fset_ids, $fset->dbID;
   }
   
-  my @other_fset_ids = @{$self->adaptor->_fetch_other_feature_set_ids_by_stable_feature_set_ids
-							($self->stable_id, \@fset_ids, $include_projected)};
+  my $stable_id;
+  ($stable_id = $self->stable_id) =~ s/^[A-Z0]+//;
 
-  return (@other_fset_ids) ? 1 : 0;
+  
+  my @other_rf_ids = @{$self->adaptor->_fetch_other_dbIDs_by_stable_feature_set_ids
+						 ($stable_id, 
+							 \@fset_ids, 
+						  { include_projected => $params_hash->{include_projected}} )};
+  
+  return (@other_rf_ids) ? 0 : 1;
 }
 
 
 
-=head2 get_other_FeatureSets
+=head2 get_other_RegulatoryFeatures
 
   Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
                           Default is FeatureSet of given RegulatoryFeature, else need to be 
                           defined explicitly.
-  Arg[2]     : optional - Boolean, include 'projected' features
+  Arg[2]     : optional - HASHREF Params hash: 
+                                    {
+                                     include_projected => 0|1, # Boolean, include 'projected' features
+                                     include_multicell => 0|1, # Boolean, include MultiCell features
+                                    }
   Example    : my @other_fsets = @{$reg_feat->get_other_FeatureSets($fsets)};
-  Description: Get other FeatureSets this RegualtoryFeature is represented in.
-  Returntype : ARRAYREF of Bio::EnsEMBL::FeatureSet objects
+  Description: Gets other RegualtoryFeatures (linked via the stable ID) which are present in the 
+               specified list of FeatureSets.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
   Exceptions : Throw is arguments not stored or valid.
   Caller     : General
   Status     : At risk
 
 =cut
 
-sub get_other_FeatureSets{
-  my ($self, $fsets, $include_projected) = @_;
-   
+sub get_other_RegulatoryFeatures{
+  my ($self, $fsets, $params_hash) = @_;
+  
+  #define to avoid deref fails below.
+  $params_hash ||= {};
+  if(ref($params_hash) ne 'HASH'){
+	throw("The params hash argument must be a valid HASHREF:\t".ref($params_hash));
+  }
+
   $fsets ||= [$self->feature_set];
   my @fset_ids;
   
   foreach my $fset(@$fsets){
 	#assume we have an adaptor set
-	$self->adaptor->db->is_stored_and_valid($fset, 'Bio::EnsEMBL::FeatureSet');
+	$self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 	
 	if($fset->feature_class ne 'regulatory'){
 	  throw('Found non-regulatory FeatureSet');
@@ -760,13 +793,18 @@ sub get_other_FeatureSets{
 
 	push @fset_ids, $fset->dbID;
   }
-  
-  my @other_fsets_ids = @{$self->adaptor->_fetch_other_feature_set_ids_by_stable_feature_set_ids
-							($self->stable_id, \@fset_ids, $include_projected)};
+    
+  my $stable_id;
+  ($stable_id = $self->stable_id) =~ s/^[A-Z0]+//;
 
-  return $self->adaptor->db->get_FeatureSetAdaptor->fetch_by_dbID_list(\@other_fsets_ids);
+  my @other_fsets_ids = @{$self->adaptor->_fetch_other_dbIDs_by_stable_feature_set_ids
+							($stable_id, \@fset_ids, 
+							 {
+							  include_projected => $params_hash->{include_projected},
+							  include_multicell => $params_hash->{include_multicell},
+							 })};
 
-
+  return $self->adaptor->fetch_all_by_dbID_list(\@other_fsets_ids);
 }
 
 
