@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -47,11 +47,10 @@ Bio::EnsEMBL::Funcgen::SetFeature
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 
 use strict;
 use warnings;
-
-package Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::SetFeature;
@@ -87,33 +86,19 @@ sub fetch_all_by_FeatureType_FeatureSets {
 
   if ($self->_feature_class eq 'annotated'){
 	throw("This method is not appropriate for FeatureSets with feature_class 'annotated', please use standard fetch_all_by_FeatureSets or get_all_Features on an individual FeatureSet");
-
-
-	#Why is this not appropriate? #As there is not feature_type_id in annotated_feature?
-	
-
+	#There is feature_type_id in annotated_feature
+	#Could warn and redirect
   }
 
-  #How do we validate the parameters?
-  #We can't catch typos as we don't know what might need passing on to other methods
-  #Set all these so we can use them without exists
   $params->{'logic_name'} ||= undef;
   $params->{'associated'} ||= undef;
-  
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
-
- 
-  #Need to restrict to the current default cs's
-  #This requires separate query or query extension
-  #Need to make @tables and @true_tables exported?
-  #Or just attrs?
-  #Set table to true_tables in new?
   my ($table_name, $table_syn) = @{$self->_main_table};
 
   my $constraint = $table_syn.'.feature_set_id = fs.feature_set_id AND '.
 	$table_syn.'.feature_type_id='.$ftype->dbID.' AND '.$table_syn.".feature_set_id ".$self->_generate_feature_set_id_clause($fsets);
 
-  #We should really pass the params hash on here
+  #Should really pass the params hash on here
   $constraint = $self->_logic_name_to_constraint($constraint, $params->{logic_name});
 
 
@@ -122,7 +107,7 @@ sub fetch_all_by_FeatureType_FeatureSets {
 
   #This is an interim solution and really needs changing!
   #Can we genericise this as a lazy loader function?
-  #Isn't there already something liek this in core?
+  #Isn't there already something like this in core?
   if ($params->{'associated'}){
 
 	for my $fset(@{$fsets}){
@@ -144,7 +129,6 @@ sub fetch_all_by_FeatureType_FeatureSets {
   }
 
   return \@features;
-  #return $self->generic_fetch($constraint);
 }
 
 
@@ -173,12 +157,7 @@ sub fetch_all_by_Feature_associated_feature_types {
 
   #We always want associated!
   #Otherwise it would be just a normal fetch_all_by_FeatureType_FeatureSets query 
-  #Which is more efficient.
 
-
-  #How do we validate the parameters?
-  #We can't catch typos as we don't know what might need passing on to other methods
-  #Set all these so we can use them without exists
   $params->{'include_direct_links'} ||= undef;
   $params->{'logic_name'}           ||= undef;
 
@@ -221,7 +200,6 @@ sub fetch_all_by_Feature_associated_feature_types {
 
   return \@features;
 }
-
 
 
 
@@ -274,7 +252,6 @@ sub fetch_all_by_FeatureSets {
   my ($self, $fsets, $logic_name) = @_;
 	
   my $constraint = $self->_main_table->[1].'.feature_set_id '.$self->_generate_feature_set_id_clause($fsets); 
-  #could have individual logic_names for each annotated feature here?
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
   return $self->generic_fetch($constraint);
@@ -333,7 +310,7 @@ sub _generate_feature_set_id_clause{
   Arg [2]    : Arrayref of Bio::EnsEMBL::FeatureSet objects
   Arg [3]    : optional - analysis.logic_name
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_FeatureSets($slice, \@fsets);
+               my $features = $ofa->fetch_all_by_Slice_FeatureSets($slice, \@fsets);
   Description: Retrieves a list of features on a given slice, specific for a given list of FeatureSets.
   Returntype : Listref of Bio::EnsEMBL::SetFeature objects
   Exceptions : Throws if list provided does not contain FeatureSets or if none provided
@@ -344,15 +321,17 @@ sub _generate_feature_set_id_clause{
 
 sub fetch_all_by_Slice_FeatureSets {
   my ($self, $slice, $fsets, $logic_name) = @_;
-	
+
   my $constraint = $self->_main_table->[1].'.feature_set_id '.
 	$self->_generate_feature_set_id_clause($fsets); 
 
-  #could have individual logic_names for each annotated feature here?
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
+
+
+
 
 =head2 fetch_Iterator_by_Slice_FeatureSets
 
@@ -387,12 +366,8 @@ sub fetch_Iterator_by_Slice_FeatureSets{
 
 
 
-# Redefine BaseFeatureAdaptor method as analysis now abstracted to feature_set
-# Given a logic name and an existing constraint this will
-# add an analysis table constraint to the feature.  Note that if no
-# analysis_id exists in the columns of the primary table then no
-# constraint is added at all
-# DO WE HAVE TO CALL THIS EXPLICITLY in this adaptor, or will BaseAdaptor use redefined method?
+#This is all done at the level of the feature_set
+
 
 
 sub _logic_name_to_constraint {
@@ -440,6 +415,7 @@ sub _default_where_clause {
   return $self->_main_table->[1].'.feature_set_id = fs.feature_set_id';
 }
 
+
 =head2 _final_clause
 
   Args       : None
@@ -453,7 +429,6 @@ sub _default_where_clause {
 
 =cut
 
-
 sub _final_clause {
   my $self = shift;
   #return '';
@@ -461,9 +436,8 @@ sub _final_clause {
 }
 
 
-#re-written for non-standard feature table
 
-=head2 fetch_all_by_logic_name 
+=head2 fetch_all_by_logic_name
 
   Arg [1]     : string $logic_name the logic name of the analysis of features to obtain 
   Example     : $fs = $a->fetch_all_by_logic_name('foobar'); 
@@ -475,6 +449,8 @@ sub _final_clause {
   Status      : At risk
 
 =cut 
+
+#re-implemented for non-standard feature table i.e. points at feature_set
 
 sub fetch_all_by_logic_name { 
   my $self = shift; 
@@ -500,6 +476,8 @@ sub fetch_all_by_logic_name {
   Status     : Medium Risk
 
 =cut
+
+#Put this in the BaseAdaptor?
 
 sub list_dbIDs {
 	my $self = shift;
