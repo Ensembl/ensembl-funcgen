@@ -175,7 +175,7 @@ sub new {
 	  ($dnadb_name !~ /_${dnadb_assm}_/) ){
 	throw("You have specified conflicting -dnadb_name(${dnadb_name}) and -dnadb_assembly(${dnadb_assm}) parameters");
   }
-  else{ #Get dnadb_assm from name
+  elsif($dnadb_name){ #Get dnadb_assm from name
 	#This is not strictly required, but means we don't set is incorrectly below
 	($dnadb_assm = $dnadb_name) =~ s/.*_([0-9a-z]+)$/$1/;
   }
