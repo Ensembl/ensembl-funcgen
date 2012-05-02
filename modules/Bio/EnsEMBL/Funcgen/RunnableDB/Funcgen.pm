@@ -39,16 +39,40 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
   $self->_bin_dir($self->param('bin_dir'));
 
   my $dnadb_params = $self->param('dnadb') || throw "No parameters for Core DB";
-  eval{  $self->_dnadba(Bio::EnsEMBL::DBSQL::DBAdaptor->new(%{ $dnadb_params })); };
-  if($@) { throw "Error creating the Core DB Adaptor: $@";  }    
-  if(!$self->_dnadba()){ throw "Could not connect to Core DB"; }
+  
+  #For the Funcgen DBAdaptor, the keys for dnadb are different than core DBAdaptor
+  #hence change them here
+  
+  my %funcgen_dnadb_params;
+  
+  while (my ($key,$value) = each %{$dnadb_params})
+	{ 
+		if ($key eq '-dbname')
+		{
+		$funcgen_dnadb_params{-dnadb_name}=$value;
+		}
+		elsif ($key eq '-user')
+		{
+		$funcgen_dnadb_params{-dnadb_user}=$value;
+		}
+		elsif ($key eq '-host')
+		{
+		$funcgen_dnadb_params{-dnadb_host}=$value;
+		}
+	}
+
+  #eval{  $self->_dnadba(Bio::EnsEMBL::DBSQL::DBAdaptor->new(%{ $dnadb_params })); };
+  #if($@) { throw "Error creating the Core DB Adaptor: $@";  }    
+  #if(!$self->_dnadba()){ throw "Could not connect to Core DB"; }
   
   #Get efg connection, otherwise fail..
   my $efgdb_params = $self->param('efgdb') || throw "No parameters for EFG DB";
+  
   eval{
        $self->_efgdba(Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 								   %{ $efgdb_params },
-								   -dnadb => $self->_dnadba,
+								   #-dnadb => $self->_dnadba,
+								   %funcgen_dnadb_params,
 								  ));
   };
   if($@) { throw "Error creating the EFG DB Adaptor: $@";  }    
