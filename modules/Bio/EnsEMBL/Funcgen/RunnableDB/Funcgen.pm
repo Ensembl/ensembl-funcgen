@@ -39,92 +39,75 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
   $self->_bin_dir($self->param('bin_dir'));
 
   my $dnadb_params = $self->param('dnadb') || throw "No parameters for Core DB";
-  
-  #For the Funcgen DBAdaptor, the keys for dnadb are different than core DBAdaptor
-  #hence change them here
-  
-  my %funcgen_dnadb_params;
-  
-  while (my ($key,$value) = each %{$dnadb_params})
-	{ 
-		if ($key eq '-dbname')
-		{
-		$funcgen_dnadb_params{-dnadb_name}=$value;
-		}
-		elsif ($key eq '-user')
-		{
-		$funcgen_dnadb_params{-dnadb_user}=$value;
-		}
-		elsif ($key eq '-host')
-		{
-		$funcgen_dnadb_params{-dnadb_host}=$value;
-		}
-	}
-
-  #eval{  $self->_dnadba(Bio::EnsEMBL::DBSQL::DBAdaptor->new(%{ $dnadb_params })); };
-  #if($@) { throw "Error creating the Core DB Adaptor: $@";  }    
-  #if(!$self->_dnadba()){ throw "Could not connect to Core DB"; }
-  
-  #Get efg connection, otherwise fail..
   my $efgdb_params = $self->param('efgdb') || throw "No parameters for EFG DB";
   
+  #Get efg connection, otherwise fail..
   eval{
-       $self->_efgdba(Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-								   %{ $efgdb_params },
-								   #-dnadb => $self->_dnadba,
-								   %funcgen_dnadb_params,
-								  ));
+	$self->_efgdba(Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+				   (
+					   %{ $efgdb_params },
+					#let efg dba hanle dnadb
+					{
+					 -dnadb_name => $dnadb_params->{-dbname},
+					 -dnadb_user => $dnadb_params->{-user},
+					 -dnadb_host => $dnadb_params->{-host},
+					 -dnadb_port => $dnadb_params->{-port},
+					 -dnadb_pass => $dnadb_params->{-pass},
+					 
+					}
+				   ));
+	
+	#Actually test connections
+	$self->_efgdba->dbc->db_handle;
+	$self->_efgdba->dnadb->dbc->db_handle;
   };
-  if($@) { throw "Error creating the EFG DB Adaptor: $@";  }    
-  if(!$self->_efgdba()){ throw "Could not connect to EFG DB"; }
+  
+  if($@) { throw "Error creating the EFG DBAdaptor and/or dna DBAdaptor $@";  }    
 
-  my $cell_type = $self->param('cell_type') || throw "No cell type given";
-  my $feature_type = $self->param('feature_type') || throw "No feature type given";
-  my $experiment_name = $self->param('experiment_name') || throw "No experiment name given"; 
+  #Set some params
+  my $cell_type       = $self->param('cell_type')       || throw "No cell_type given";
+  my $feature_type    = $self->param('feature_type')    || throw "No feature_type given";
+  my $experiment_name = $self->param('experiment_name') || throw "No experiment_name given"; 
   $self->_experiment_name($experiment_name);
-
   my $set_name =  $self->param('set_name') || $cell_type."_".$feature_type."_".$experiment_name;
   $self->_set_name($set_name); 
-
-  #Get as parameter!
   my $group_name = $self->param('group') || 'efg';
+  my $species = $self->param('species') || throw "No species defined";
+  $self->_species($species);
+  my $assembly = $self->param('assembly') || throw "No assembly version given";
+  $self->_assembly($assembly);
+  my $file_type = $self->param('file_type') || throw "No file type given";
+  $self->_file_type($file_type);
+  my $work_dir = $self->param('work_dir') || throw "'work_dir' is a required parameter"; 
+  $self->_work_dir($work_dir);
 
+  
+
+  #Configure DBAdaptors
   my $efgdba = $self->_efgdba();
-  #To avoid farm issues... does not seem to have an effect??
+  #To avoid farm issues...
   $efgdba->dbc->disconnect_when_inactive(1);
   $efgdba->dnadb->dbc->disconnect_when_inactive(1);
-  #my $dnadba = $self->param('dnadb');
-  
-  my $cta = $efgdba->get_CellTypeAdaptor();
-  my $fta = $efgdba->get_FeatureTypeAdaptor();
-  
+ 
+  #Fetch & Set object params
+  #CellType
+  my $cta    = $efgdba->get_CellTypeAdaptor();
   my $ct_obj = $cta->fetch_by_name($cell_type);
   if(!$ct_obj){ throw "Cell type $cell_type does not exist in the database";  }
   $self->_cell_type($ct_obj);
 
+  #FeatureType
+  my $fta    = $efgdba->get_FeatureTypeAdaptor(); 
   my $ft_obj = $fta->fetch_by_name($feature_type);
   if(!$ft_obj){ throw "Feature type $feature_type does not exist in the database";  }
   $self->_feature_type($ft_obj);
 
+  #ExperimentalGroup
   my $ega = $efgdba->get_ExperimentalGroupAdaptor();
-  #Set group as constant for the moment...
   my $eg_obj = $ega->fetch_by_name($group_name);
   if(!$eg_obj){ throw "Experimental Group $group_name does not exist in the database";  }
   $self->_group($eg_obj);
 
-  ##Better pass this as a parameter... as sometimes the db does not return the species name... 
-  #my $species = $dnadba->species; $self->param('species', $species);
-  my $species = $self->param('species') || throw "No species defined";
-  $self->_species($species);
-
-  my $assembly = $self->param('assembly') || throw "No assembly version given";
-  $self->_assembly($assembly);
-
-  my $file_type = $self->param('file_type') || throw "No file type given";
-  $self->_file_type($file_type);
-
-  my $work_dir = $self->param('work_dir') || throw "'work_dir' is a required parameter"; 
-  $self->_work_dir($work_dir);
 
   if($file_type eq 'sam'){
     #Change the directory structure so it will agree with the rest, without the need to do uc()
