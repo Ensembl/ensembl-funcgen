@@ -254,7 +254,7 @@ sub _objs_from_sth {
 		  'adaptor'        => $self,
 		  'dbID'           => $external_feature_id,
 		  'display_label'  => $display_label,
-		  'feature_set'    => $fset_hash{$fset_id},
+		  'set'    => $fset_hash{$fset_id},
 		  'feature_type'   => $ftype_hash{$ftype_id},
 		  'interdb_stable_id',    => $interdb_stable_id,
 		 });
