@@ -34,7 +34,10 @@ CREATE PROCEDURE ApplyPatch(IN n INT)
 	ELSE
 	
 		DROP table if exists tmp_result_feature;
-
+		
+		-- removing window_size, but leaving scores as blob as
+		-- conversion of data connot be done in this patch
+		-- and this table will most likely be removed shortly
 
 		CREATE TABLE `tmp_result_feature` (
 			`result_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -43,13 +46,15 @@ CREATE PROCEDURE ApplyPatch(IN n INT)
 			`seq_region_start` int(10) NOT NULL,
 			`seq_region_end` int(10) NOT NULL,
 			`seq_region_strand` tinyint(4) NOT NULL,
-			`window_size` smallint(5) unsigned NOT NULL,
 			`scores` longblob NOT NULL,
-		  KEY `result_feature_idx` (`result_feature_id`),
-		  KEY `set_window_seq_region_idx` (`result_set_id`,`window_size`,`seq_region_id`,`seq_region_start`)
+		  PRIMARY KEY `result_feature_idx` (`result_feature_id`),
+		  KEY `set_seq_region_idx` (`result_set_id`,`seq_region_id`,`seq_region_start`)
 		) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-		INSERT into tmp_result_feature SELECT * from result_feature;
+		INSERT into tmp_result_feature 
+			SELECT result_feature_id, result_set_id, seq_region_id, seq_region_start,
+					 seq_region_end, seq_region_strand, scores
+			FROM result_feature;
 		DROP table result_feature;
 
 	    CREATE table result_feature like tmp_result_feature;
