@@ -10,76 +10,103 @@ $registry->load_registry_from_db(
     -user => 'anonymous'
 );
 
-my $regfeat_adaptor = $registry->get_adaptor('Mouse', 'funcgen', 'regulatoryfeature');
 
-# Regulatory Features: Cell-specific information
-# Obtain all the Mouse RegulatoryFeatures associated to the stable ID 'ENSMUSR00000233228' and print their properties
-# For each one print the cell type and feature type, and the properties of the evidence features supporting the regulatory feature
-# Compare the different cell types. How do you interpret the differences?
 
-my $reg_feature_sets = $regfeat_adaptor->fetch_all_by_stable_ID('ENSMUSR00000233228');
+# Regulatory Features: What RegulatoryFeatures are near the oncogene BRCA2?
+# Create a script which gets all the RegulatoryFeatures within 2KB of the 'BRCA2' gene.
+# Print out their stable IDs, bound_start/end and start/end values, name of the cell and feature types.
 
-foreach my $rf (@{$reg_feature_sets}){
+
+# HINT: Use fetch_all_by_external_name with 'BRCA2' to get the gene object.
+# HINT: Look at the argument for fetch_by_gene_stable_id or use the Gene->feature_Slice and Slice->expand methods.
+
+
+#Get the Gene and RegualtoryFeature adaptors
+my $gene_adaptor = $registry->get_adaptor('Human', 'core', 'gene');
+my $regfeat_adaptor = $registry->get_adaptor('Human', 'funcgen', 'regulatoryfeature');
+
+my $gene_name = 'BRCA2';
+
+my @genes = @{$gene_adaptor->fetch_all_by_external_name($gene_name)};
+print scalar(@genes)." human gene(s) named $gene_name\n";
+
+my $gene = $genes[0];
+my $slice = $registry->get_adaptor('human', 'core', 'slice')->fetch_by_gene_stable_id($gene->stable_id, 1000);
+
+#my $slice = $b->feature_Slice;
+#print "Slice corresponding to $gene_name: ".$slice->seq_region_name."\t".$slice->start."\t".$slice->end."\t".$slice->strand."\n";
+#$slice = $slice->expand(1000,1000);
+
+print "Slice 1Kb around $gene_name: ".$slice->seq_region_name."\t".$slice->start."\t".$slice->end."\t".$slice->strand."\n";
+
+my @reg_feats = @{$regfeat_adaptor->fetch_all_by_Slice($slice)};
+print scalar(@reg_feats)." Regulatory Features 1kb around $gene_name\n";
+
+
+foreach my $rf (@reg_feats){
 	print $rf->stable_id.": \n";
 	print "\t".$rf->seq_region_name.":".$rf->bound_start."..".$rf->start."-".$rf->end."..".$rf->bound_end."\n";
 	print "\tCell: ".$rf->cell_type->name."\n";
 	print "\tFeature Type: ".$rf->feature_type->name."\n";
-	print "\tEvidence Features: \n";
+	#print "\tEvidence Features: \n";
 
-	map { print_feature($_) } @{$rf->regulatory_attributes()};
+	#map { print_feature($_) } @{$rf->regulatory_attributes()};
 }
 
-sub print_feature {
-	my $af = shift;
-	print "\t\tDisplay Label: ".$af->display_label.";";
-	print " Position: ".$af->seq_region_name.":".$af->start."-".$af->end.";";
-	print "\n";
-}
+#sub print_feature {
+#	my $af = shift;
+#	print "\t\tDisplay Label: ".$af->display_label.";";
+#	print " Position: ".$af->seq_region_name.":".$af->start."-".$af->end.";";
+#	print "\n";
+#}
 
 __END__
 
->perl regulatory_features_3.pl
-
-ENSMUSR00000233228:
-        4:136390760..136391047-136393044..136393044
-        Cell: ESHyb
-        Feature Type: Promoter Associated
-        Evidence Features:
-                Display Label: H3K4me3 - ESHyb Enriched Site; Position: 4:136390760-136391346;
-                Display Label: Tcfcp2l1:MA0145.1; Position: 4:136392892-136392905;
-ENSMUSR00000233228:
-        4:136390453..136391047-136393044..136393044
-        Cell: MEF
-        Feature Type: Promoter Associated
-        Evidence Features:
-                Display Label: H3K4me3 - MEF Enriched Site; Position: 4:136390453-136391556;
-                Display Label: Tcfcp2l1:MA0145.1; Position: 4:136392892-136392905;
-ENSMUSR00000233228:
-        4:136391047..136391047-136393044..136393044
+>perl regulatory_features_3_new.pl
+1 human gene(s) named BRCA2
+Slice 1Kb around BRCA2: 13      32888611        32974805        1
+11 Regulatory Features 1kb around BRCA2
+ENSR00000054736: 
+        13:370..370-1921..1921
         Cell: MultiCell
         Feature Type: Unclassified
-        Evidence Features:
-                Display Label: DNase1 - ES Enriched Site; Position: 4:136391047-136392800;
-                Display Label: Tcfcp2l1 - ES Enriched Site; Position: 4:136392622-136393044;
-                Display Label: Tcfcp2l1:MA0145.1; Position: 4:136392892-136392905;
-ENSMUSR00000233228:
-        4:136391047..136391047-136393044..136393044
-        Cell: NPC
-        Feature Type: Promoter Associated
-        Evidence Features:
-                Display Label: H3K4me3 - NPC Enriched Site; Position: 4:136391056-136391320;
-                Display Label: Tcfcp2l1:MA0145.1; Position: 4:136392892-136392905;
-ENSMUSR00000233228:
-        4:136387850..136391047-136393044..136394750
-        Cell: ES
-        Feature Type: Promoter Associated
-        Evidence Features:
-                Display Label: H3K27me3 - ES Enriched Site; Position: 4:136387850-136394750;
-                Display Label: H3K4me2 - ES Enriched Site; Position: 4:136389904-136390241;
-                Display Label: H3K4me3 - ES Enriched Site; Position: 4:136390644-136391578;
-                Display Label: H3K4me2 - ES Enriched Site; Position: 4:136390701-136393074;
-                Display Label: H3K4me3 - ES Enriched Site; Position: 4:136390797-136392702;
-                Display Label: DNase1 - ES Enriched Site; Position: 4:136391047-136392800;
-                Display Label: H3K4me3 - ES Enriched Site; Position: 4:136392143-136392603;
-                Display Label: Tcfcp2l1 - ES Enriched Site; Position: 4:136392622-136393044;
-                Display Label: Tcfcp2l1:MA0145.1; Position: 4:136392892-136392905;
+ENSR00001036089: 
+        13:3636..3636-3911..3911
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00001508453: 
+        13:6120..6120-6449..6449
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00000513985: 
+        13:9391..9391-9889..9889
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00001508454: 
+        13:15917..15917-16386..16386
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00001036090: 
+        13:39644..39644-39987..39987
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00000274472: 
+        13:50507..50507-50664..50664
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00001508455: 
+        13:53399..53399-53568..53568
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00001508456: 
+        13:67051..67051-67514..67514
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00001036091: 
+        13:70251..70251-70573..70573
+        Cell: MultiCell
+        Feature Type: Unclassified
+ENSR00000513988: 
+        13:76809..76809-77091..77091
+        Cell: MultiCell
+        Feature Type: Unclassified
