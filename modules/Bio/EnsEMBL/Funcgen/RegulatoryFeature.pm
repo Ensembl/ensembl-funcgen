@@ -241,11 +241,11 @@ sub stable_id {
 
 =head2 regulatory_attributes
 
-  Arg [1]    : (optional) list of constituent features
+  Arg [1]    : String (optional) - Class of feature e.g. annotated or motif
   Example    : print "Regulatory Attributes:\n\t".join("\n\t", (map $_->feature_type->name, @{$feature->regulatory_attributes()}))."\n";
-  Description: Getter and setter for the regulatory_attributes for this feature. 
+  Description: Getter for the regulatory_attributes for this feature.
   Returntype : ARRAYREF
-  Exceptions : None
+  Exceptions : Throws if feature class not valid
   Caller     : General
   Status     : At Risk
 
