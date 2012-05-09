@@ -27,6 +27,12 @@ my $bm = $mf->binding_matrix;
 print "Relative affinity of the ".$bm->name." motif\t$seq :".$bm->relative_affinity($seq)."\n";
 print "Relative affinity of changed motif\tTGGTGTGCAGAGGGCATGA :".$bm->relative_affinity("TGGTGTGCAGAGGGCATGA")."\n";
 print "                                            ^\n";
+print "Relative affinity of changed motif\tTGGTCTGCGGAGGGCATGA :".$bm->relative_affinity("TGGTCTGCGGAGGGCATGA")."\n";
+print "                                                ^\n";
+
+
+
+
 #http://jaspar.genereg.net/cgi-bin/jaspar_db.pl?ID=MA0139.1&rm=present&collection=CORE
 
 
@@ -45,6 +51,9 @@ map { printf("%.3f\t", $_->diff_score); } @$scores;
 print "\n";
 print "                                ^\n";
 
+print $bm->frequencies;
+print "                  ^\n";
+print "                                  ^\n";
 
 __END__
 
@@ -54,6 +63,14 @@ __END__
 Relative affinity of the MA0139.1 motif TGGTCTGCAGAGGGCATGA :0.863462959414993
 Relative affinity of changed motif      TGGTGTGCAGAGGGCATGA :0.747783950261183
                                             ^
+Relative affinity of changed motif      TGGTCTGCGGAGGGCATGA :0.821835750551094
+                                                ^
 T       G       G       T       C       T       G       C       A       G       A       G       G       G       C       A       T       G       A
 2.650   2.650   2.650   1.520   2.650   1.450   1.970   2.850   0.292   0.950   1.380   2.850   0.940   2.850   2.850   1.670   2.850   3.020   3.110
                                 ^
+A  [ 87 167 281  56   8 744  40 107 851   5 333  54  12  56 104 372  82 117 402 ]
+C  [291 145  49 800 903  13 528 433  11   0   3  12   0   8 733  13 482 322 181 ]
+G  [ 76 414 449  21   0  65 334  48  32 903 566 504 890 775   5 507 307  73 266 ]
+T  [459 187 134  36   2  91  11 324  18   3   9 341   8  71  67  17  37 396  59 ]
+                  ^
+                                  ^
