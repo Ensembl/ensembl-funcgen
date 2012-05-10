@@ -121,8 +121,8 @@ use warnings;
 
   Arg [1]    : string - name of DataSet
   Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my $dsets = $dset_adaptor->fetch_by_name('data_set-1');
-  Description: Fetch all FeatureSets wit a given name
+  Example    : my $dset = $dset_adaptor->fetch_by_name('RegulatoryFeatures:MultiCell');
+  Description: Fetch DataSet with a given name
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
   Exceptions : Throws if no name passed 
   Caller     : General
