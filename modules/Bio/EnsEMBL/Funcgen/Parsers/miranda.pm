@@ -108,13 +108,18 @@ sub parse_and_load{
   my $dbentry_adaptor  = $self->db->get_DBEntryAdaptor; 
   my $set              = $self->{static_config}{feature_sets}{'miRanda miRNA targets'}{feature_set};
   my %features_by_name; # name -> feature_type
-  my %slice_cache;
+  my (%slice_cache, $ens_display_name);
   # this object is only used for projection
   my $dummy_analysis = new Bio::EnsEMBL::Analysis(-logic_name => 'miRandaProjection');
-  my $skipped = 0;
-  my $cnt = 0;
-  my $skipped_xref = 0;
+  #Can probably change all this to use the count methods
+  my $slice_skipped   = 0;
+  my $old_mid_skipped = 0;
+  my $sid_skipped     = 0;
+  my $cnt             = 0;
+  my $skipped_xref    = 0;
+  my $proj_skipped    = 0;
   my $species = $self->db->species;
+
   if(! $species){
 	throw('Must define a species to define the external_db');
   }
@@ -127,6 +132,8 @@ sub parse_and_load{
 
  LINE: while (<FILE>) {
 	next LINE if ($_ =~ /^\s*\#/o || $_ =~ /^\s*$/o);
+	
+	#Added next for old miRbase IDs.
 
 	#Sanger
 	##GROUP SEQ     METHOD  FEATURE CHR     START   END     STRAND  PHASE   SCORE   PVALUE_OG       TRANSCRIPT_ID   EXTERNAL_NAME
@@ -134,6 +141,16 @@ sub parse_and_load{
 
 
     my ($group, $seq, $method, $feature, $chr, $start, $end, $strand, undef, undef, undef, $ens_id, $display_name) = split;
+
+	#Added next for old miRbase IDs.
+	if ( $seq =~ /\*$/ ){
+	  $self->log("Skipping old miRbase ID:\t$feature");
+	  $old_mid_skipped ++;
+	  next LINE;
+	}
+	
+
+
     $strand = ($strand =~ /\+/o) ? 1 : -1;
     ##my $id = $ens_id =~ s/[\"\']//g;  # strip quotes
 	my $id = $ens_id.':'.$seq;
@@ -154,7 +171,7 @@ sub parse_and_load{
 
 	  if(! defined $slice_cache{$chr}){
 		warn "Can't get slice $chr for sequence $id\n";
-		$skipped++;
+		$slice_skipped++;
 		#Add UnmappedObject here?
 		next LINE;
 	  }
@@ -187,6 +204,45 @@ sub parse_and_load{
 	  }
 	}
 
+
+	#Make sure we have to target transcript before we store the feature
+	#Have to do this as we can't always run with the correct core DB
+	#as it may be too old. Hence we have to hard code the edb.release
+	
+	
+	#This should enever happen, as the search regions are defined by ens transcript
+	if (! $ens_id) {
+      warn("No xref available for miRNA $id\n");
+      $skipped_xref++;
+      next;
+    }
+
+
+	#use external_name first, else try and get it from the core DB
+	#should we just get it from the core DB anyway?
+
+	#Can't rely on external name from input, so we should validate this
+	#store external_name from input if their is a clash
+	#and warn, so we can update easily if required
+
+	
+	$ens_display_name = $self->get_core_display_name_by_stable_id($self->db->dnadb, $ens_id, 'transcript');
+	
+
+	if(! defined $ens_display_name){ # Transcript does not exist in current release
+	  $self->log("Skipped $id as stable ID is not longer current");
+	  $sid_skipped ++;
+	  next LINE;
+
+	}
+	elsif($display_name ne $ens_display_name){
+	  warn "Over-writing $ens_id display name($display_name) in with Ensembl display name($ens_display_name).\n";
+	}
+
+ 	$display_name = $ens_display_name;
+
+
+
    
 	$feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
 	  (
@@ -206,7 +262,7 @@ sub parse_and_load{
       $feature = $self->project_feature($feature, $new_assembly);
 
 	  if(! defined $feature){
-		$skipped ++;
+		$proj_skipped ++;
 		next;
 	  }
     }
@@ -217,29 +273,14 @@ sub parse_and_load{
  
 	#Build xref
 
-	#This should enever happen, as the search regions are defined by ens transcript
-	if (! $ens_id) {
-      warn("No xref available for miRNA $id\n");
-      $skipped_xref++;
-      next;
-    }
-
-
-	#use external_name first, else try and get it from the core DB
-	#should we just get it from the core DB anyway?
-
-	if(! defined $display_name){
-	  $display_name = $self->get_core_display_name_by_stable_id($self->db->dnadb, $ens_id, 'transcript');
-	}
-
 
 	#Handle release/version in xref version as stable_id version?
 
 	my $dbentry = Bio::EnsEMBL::DBEntry->new
 	  (
 	   -dbname                 => $species.'_core_Transcript',
-	   -release                => $self->db->_get_schema_build($self->db->dnadb),
-	   #-release => '46_36h', #Hard coded due to schema to old to use with API
+	   #-release                => $self->db->_get_schema_build($self->db->dnadb),
+	   -release => '46_36h', #Hard coded due to schema to old to use with API
 	   -status                 => 'KNOWNXREF',
 	   #-display_label_linkable => 1,
 	   -db_display_name        => 'EnsemblTranscript',
@@ -258,9 +299,15 @@ sub parse_and_load{
 
   close FILE;
 
-  $self->log("Stored $cnt miRanda miRNA ExternalFeatures");
-  $self->log("Skipped $skipped miRanda miRNA imports");
-  $self->log("Skipped an additional $skipped_xref DBEntry imports");
+  $self->log("Stored miRanda miRNA ExternalFeatures:\t\t$cnt");
+  $self->log("Features targeting old transcripts skipped:\t\t$sid_skipped");
+  $self->log("Old miRbase IDs skipped:\t\t\t$old_mid_skipped");
+  $self->log("Skipped due to absent Ensembl Transcript annotation:\t$skipped_xref");
+  $self->log("Skipped features on unknown slice:\t\t$slice_skipped");  
+  $self->log("Skipped due to failed assembly projections:\t$proj_skipped");
+  $self->log("Total skipped miRanda miRNA imports:\t".
+			 ($old_mid_skipped + $slice_skipped + $sid_skipped + $skipped_xref + $proj_skipped));
+
 
 
   #Now set states
