@@ -64,13 +64,13 @@ $true_tables{array} = [['array', 'a']];
 
 =head2 fetch_by_array_chip_dbID
 
-  Arg [1]    : int - dbID of array_chip
-  Example    : my $array = $oaa->fetch_by_array_chip_dbID($ac_dbid);
-  Description: Retrieves a named Array object from the database.
+  Arg [1]    : Int - dbID of an ArrayChip
+  Example    : my $array = $array_adaptor->fetch_by_array_chip_dbID($ac_dbid);
+  Description: Retrieves Array object based on one of it's constituent ArrayChip dbIDs
   Returntype : Bio::EnsEMBL::Funcgen::Array
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -96,18 +96,21 @@ sub fetch_by_array_chip_dbID {
 }
 
 
-
 =head2 fetch_by_name_vendor
 
-  Arg [1]    : string - name of an array
-  Arg [2]    : string - optional name of vendor e.g. NIMBLEGEN
-  Example    : my $array = $oaa->fetch_by_name('Array-1');
+  Arg [1]    : String - Name of an array e.g. MoGene-1_0-st-v1
+  Arg [2]    : String - (optional) Name of vendor e.g. AFFY
+  Example    : #You can list the possible array name and vendor values as follows
+               map print $_->vendor.' '.$_->name, @{$array_adaptor->fetch_all};
+
+	           #Use some of the above values with this method
+               my $array = $array_adaptor->fetch_by_name_vendor('MoGene-1_0-st-v1', 'AFFY');
   Description: Retrieves a named Array object from the database.
   Returntype : Bio::EnsEMBL::Funcgen::Array
   Exceptions : Throws is name argument not defined
-               Throws if vendor argument not defined and more than one arrays is found        
+               Throws if vendor argument not defined and more than one arrays is found
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -125,7 +128,7 @@ sub fetch_by_name_vendor {
 	  }
 	}
 	else{
-	  #unique key means this only returns one element
+	  #name vendor is unique key so will only ever return 1
 	  @arrays = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};	
 	}
 
@@ -135,29 +138,38 @@ sub fetch_by_name_vendor {
 
 =head2 fetch_by_name_class
 
-  Arg [1]    : string - name of an array
-  Arg [2]    : string - class of array e.g. AFFY_UTR
-  Example    : my $array = $oaa->fetch_by_name_class('HuGene_1_0_st_v1', 'AFFY_ST');
+  Arg [1]    : String - Name of an array
+  Arg [2]    : String - Class of array e.g. AFFY_UTR
+  Example    : #You can list the possible array name and class values as follows
+               map print $_->class.' '.$_->name, @{$array_adaptor->fetch_all};
+
+               #Use some of the above values with this method
+               my $array = $array_adaptor->fetch_by_name_class('HuGene_1_0_st_v1', 'AFFY_ST');
   Description: Retrieves Array object from the database based on name and class.
   Returntype : Bio::EnsEMBL::Funcgen::Array
   Exceptions : Throws is name and class not passed
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 sub fetch_by_name_class {
   my ($self, $name, $class) = @_;
   throw("Must provide and array and class e.g.'HuGene_1_0_st_v1', 'AFFY_ST'") if (! ($name && $class));
-  #my ($result) = @{$self->generic_fetch("a.name = '$name' and a.class='".uc($class)."'")};	
+
+  #name class is unique key so will only ever return 1
   return $self->generic_fetch("a.name = '$name' and a.class='".uc($class)."'")->[0];
 }
 
 
 =head2 fetch_all_by_class
 
-  Arg [1]    : string - class
-  Example    : my $array = $oaa->fetch_all_by_class('AFFY_ST');
+  Arg [1]    : String - Class e.g. ILLUMINA_WG
+  Example    : #You can list the possible array class values as follows
+               map print $_->class, @{$array_adaptor->fetch_all};
+
+               #Use some one the above values with this method
+               my $array = $array_adaptor->fetch_all_by_class('AFFY_ST');
   Description: Retrieves Array object from the database based class.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : Throws if nor class passed
@@ -168,7 +180,7 @@ sub fetch_by_name_class {
 
 sub fetch_all_by_class {
     my ($self, $class) = @_;
-    
+
     throw("Must provide and array class e.g.'AFFY_ST'") if (! defined $class);
     return $self->generic_fetch("a.class='".uc($class)."'");	
 }
@@ -177,14 +189,16 @@ sub fetch_all_by_class {
 =head2 fetch_all_by_type
 
   Arg [1]    : List of strings - type(s) (e.g. OLIGO, PCR)
-  Example    : my @arrays = @{$aa->fetch_all_by_type('OLIGO')};
+  Example    : my @arrays = @{$array_adaptor->fetch_all_by_type('OLIGO')};
   Description: Fetch all arrays of a particular type.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : Throws if no type is provided
   Caller     : General
-  Status     : at risk
+  Status     : at risk - needs deprecating and changing to fetch_all_by_types
 
 =cut
+
+#Is this used in the API anywhere?
 
 sub fetch_all_by_type {
   my ($self, @types) = @_;
@@ -206,14 +220,12 @@ sub fetch_all_by_type {
 =head2 fetch_all_by_Experiment
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
-  Example    : my @arrays = @{$aa->fetch_all_by_Experiment($exp)};
+  Example    : my @arrays = @{$array_adaptor->fetch_all_by_Experiment($exp)};
   Description: Fetch all arrays associated with a given Experiment
-               This is a convenience method to hide the 2 adaptors required 
-               for this call.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : none
   Caller     : General
-  Status     : at risk
+  Status     : Stable
 
 =cut
 
@@ -246,7 +258,7 @@ sub fetch_all_by_Experiment{
   Description: Fetch all arrays containing a given ProbeSet
                This is a convenience method to hide the 2 adaptors required 
                for this call.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : none
   Caller     : General
   Status     : at risk
@@ -267,7 +279,8 @@ sub fetch_all_by_ProbeSet{
   push @{$tables{array}}, (['array_chip', 'ac'], ['probe', 'p']);
 
   #Extend query and group
-  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY  a.array_id');# ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
+  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY a.array_id');
+  # ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
 
   #Reset tables
   @{$tables{array}} = @{$true_tables{array}};
@@ -275,27 +288,6 @@ sub fetch_all_by_ProbeSet{
   return $arrays;
 }
 
-
-=head2 fetch_attributes
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Array - array to fetch attributes for
-  Example    : None
-  Description: This function is solely intended to lazy load attributes into
-               empty Array objects. You should not need to call this.
-  Returntype : None
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::Array getters
-  Status     : Medium Risk
-
-=cut
-
-sub fetch_attributes {
-    my $self = shift;
-    my $array = shift;
-
-    my $tmp_array = $self->fetch_by_dbID( $array->dbID() );
-    %$array = %$tmp_array;
-}
 
 =head2 _tables
 
@@ -306,7 +298,7 @@ sub fetch_attributes {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -325,7 +317,7 @@ sub _tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
