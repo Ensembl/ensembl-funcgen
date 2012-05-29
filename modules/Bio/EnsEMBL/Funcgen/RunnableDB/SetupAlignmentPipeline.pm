@@ -1,4 +1,4 @@
-=pod 
+=pod
 
 =head1 NAME
 
@@ -17,17 +17,17 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::SetupAlignmentPipeline;
 use warnings;
 use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor; 
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning stack_trace_dump);
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(is_gzipped);
-#use Data::Dumper;
+use Data::Dumper;
 
 use base ('Bio::EnsEMBL::Funcgen::RunnableDB::Alignment');
 
 #TODO... Maybe use and update the tracking database...
 sub fetch_input {   # fetch parameters...
   my $self = shift @_;
-  
+
   $self->SUPER::fetch_input();
 
   #Magic default number...
@@ -37,7 +37,7 @@ sub fetch_input {   # fetch parameters...
 
   #Sets up the output dir for this experiment_name
   my $output_dir = $self->_output_dir();
-  if(! -d $output_dir){ 
+  if(! -d $output_dir){
     system("mkdir -p $output_dir") && throw("Couldn't create output directory $output_dir");
   }
 
@@ -48,8 +48,9 @@ sub fetch_input {   # fetch parameters...
   my @dirs = grep(/^\d/,readdir(DIR));
   closedir(DIR);
 
-  if(scalar(@dirs)==0){ throw "No replicates found in $input_dir"; } 
+  if(scalar(@dirs)==0){ throw "No replicates found in $input_dir"; }
 
+  my @input_files;
   my @replicates;
   foreach my $dir (@dirs){
     #TODO: maybe use some other code for replicates? (e.g. Rep\d )
@@ -60,76 +61,57 @@ sub fetch_input {   # fetch parameters...
       my @files = grep(/.fastq/,readdir(DIR));
       closedir(DIR);
 
-      my @replicate_files;
-      foreach my $file (@files){
-	#TODO: Check if there are "true" sequence files inside, not just by filename
-	if($file =~ /.fastq/){
-	  #TODO: Maybe use e.g. Bio::EnsEMBL::Funcgen::Utils::EFGUtils::is_gzipped
-	  if($file =~ /^(.*.fastq).gz$/){
-	    my $cmd = "gunzip ".$input_dir."/".$replicate."/".$file;
-	    $file = $1;    
-	    if(system($cmd) != 0){ warn "Problem occurred unzipping $file"; next; }
-	  }
-	  if($file =~ /^(.*.fastq).bz2$/){
-	    my $cmd = "bunzip2 ".$input_dir."/".$replicate."/".$file;
-	    $file = $1;    
-	    if(system($cmd) != 0){ warn "Problem occurred unzipping $file"; next; }
-	  }
+      if(scalar(@files)==0){ throw "No files for replicate $replicate"; }
 
-	  push(@replicate_files,$file);
-	} else { warn "File $file does not seem fastq"; }
+    my $file_count = 0;
+    for my $file (@files){
+    push @input_files, {
+      path => $input_dir."/".$replicate."/".$file,
+      replicate => $replicate,
+      file_index => $file_count++,
+    };
       }
 
-      if(scalar(@replicate_files)==0){ throw "No files for replicate $replicate"; } 
-      
-      push(@replicates, $replicate);
-
+    push @replicates, $replicate;
     } else { warn "Invalid replicate $dir ignored";   }
   }
 
+  $self->_input_files(\@input_files);
   $self->_replicates(\@replicates);
 
   return 1;
 }
 
-sub run {   
+sub run {
   my $self = shift @_;
 
   my $fastq_chunk_size = $self->_fastq_chunk_size();
 
-  my %output_ids;
+  my @output_ids;
   my $set_name = $self->_set_name();
-  foreach my $replicate (@{$self->_replicates()}){
-    my $rep_dir = $self->_input_dir()."/".$replicate;
-    #TODO: maybe pass the number of lines as parameter...
-    
-    my $split_cmd="cat ".$rep_dir."/*.fastq | split -d -a 4 -l $fastq_chunk_size - ".
-      $self->_output_dir()."/".$set_name.".".$replicate.".";
-    if(system($split_cmd) != 0){ throw "Problems running $split_cmd";  }
-    
-    #Need to remove tmp files from previous runs
-    #system('rm -f '.$self->_output_dir()."/${set_name}\.${replicate}\.".'*');
 
-    opendir(DIR,$self->_output_dir());
-    my @files = grep(/${set_name}\.${replicate}\./,readdir(DIR));
-    closedir(DIR);
-    
-    my @replicate_input_ids;
-    foreach my $file (@files){
-      #Need to add the specific file to the input_id...
-      my $new_input_id = eval($self->input_id);
-      $new_input_id->{"input_file"} = $file;
-      push(@replicate_input_ids, $new_input_id);
-    }
-    $output_ids{$replicate} = \@replicate_input_ids;
+  foreach my $file_info (@{$self->_input_files()}){
+  my $file = $file_info->{'path'};
+  my $replicate = $file_info->{'replicate'};
+  my $file_index = $file_info->{'file_index'};
 
-    #Rezip the original files
-    my $zip_cmd = "gzip ".$rep_dir."/*.fastq";
-    if(system($zip_cmd) != 0){ warn "There was a problem zipping back the source files";  }
+  my $cmd;
 
+  if($file =~ /^(.*.fastq).gz$/){
+      $cmd = "gunzip -c";
+  }
+  elsif($file =~ /^(.*.fastq).bz2$/){
+      $cmd = "bunzip2 -c"
+  }
+  else {
+    $cmd = "cat";
   }
 
-  $self->_output_ids(\%output_ids);
+  $cmd .= ' '.$file.' | split -d -a 4 -l '.$fastq_chunk_size.' - '. $self->_output_dir().'/'.$set_name."_".$replicate.'_'.$file_index.'_';
+
+    if(system($cmd) != 0){ throw "Problems running $cmd";  }
+  }
+
 
   return 1;
 }
@@ -138,23 +120,32 @@ sub run {
 sub write_output {  # Create the relevant job
   my $self = shift @_;
 
-  my %output_ids = %{$self->_output_ids()};
-  #TODO add the number of replicates as input so it will behave in a proper fashion!!
-  my $new_input_id = eval($self->input_id);
-  $new_input_id->{"nbr_replicates"} = scalar(keys %output_ids);
-  my ($converge_job_id) = @{ $self->dataflow_output_id($new_input_id, 3, { -semaphore_count => scalar(keys %output_ids) })  };
+  my $set_name = $self->_set_name;
 
-  foreach my $replicate (keys %output_ids){
-    my $new_input_id = eval($self->input_id);
-    $new_input_id->{"replicate"} = $replicate;
-    my $rep_out_ids = $output_ids{$replicate};
-    $new_input_id->{"nbr_subfiles"} = scalar(@$rep_out_ids);
-    #Carefull with the id: 1-run_alignmens; 2-wrap_up; 3-converge
-    #Add the number of files in each so it will behave appropriately...
-    my ($funnel_job_id) = @{ $self->dataflow_output_id($new_input_id, 2, { -semaphore_count => scalar(@$rep_out_ids),  -semaphored_job_id => $converge_job_id })  };
-    my $fan_job_ids = $self->dataflow_output_id($rep_out_ids, 1, { -semaphored_job_id => $funnel_job_id } );
+  my (@align_output_ids, @merge_output_ids);
+
+  opendir(DIR,$self->_output_dir());
+  for my $split_file ( grep(/^${set_name}_\d+_\d+_\d+$/,readdir(DIR)) ){
+  my $output = eval($self->input_id);
+  $output->{input_file} = $split_file;
+  push @align_output_ids, $output;
   }
-  
+  closedir(DIR);
+
+  # merge data for each replicate
+
+  for my $rep (@{$self->_replicates}){
+  my $output = eval($self->input_id);
+  $output->{replicate} = $rep;
+  push @merge_output_ids, $output;
+  }
+
+
+  # files to align
+  $self->dataflow_output_id(\@align_output_ids, 1);
+
+  # merge data acros replicates
+  $self->dataflow_output_id($self->input_id, 2);#input_id
   return 1;
 
 }
@@ -172,6 +163,10 @@ sub _output_ids {
 #Private getter / setter to the output_ids list
 sub _replicates {
   return $_[0]->_getter_setter('replicates',$_[1]);
+}
+
+sub _input_files {
+  return $_[0]->_getter_setter('input_files',$_[1]);
 }
 
 1;
