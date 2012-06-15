@@ -121,24 +121,26 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(add_external_db);
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
-my ($dnadb_host,$dnadb_port,$dnadb_user);
+my ($dnadb_host,$dnadb_port,$dnadb_user, $dnadb_name);
 my ($pass,$port,$host,$user,$dbname,$species,$help,$file);
 $port = 3306;
 $host='ens-genomics1';
 $user='ensadmin';
 
-GetOptions (
-	    "dnadb_host=s" => \$dnadb_host,
-	    "dnadb_port=s" => \$dnadb_port,
-	    "dnadb_user=s" => \$dnadb_user,
-	    "pass|p=s"     => \$pass,
-	    "port|l=s"     => \$port,
-	    "host|h=s"     => \$host,
-	    "user|u=s"     => \$user,
-	    "dbname=s"     => \$dbname,
-	    "species|s=s"  => \$species, 
-	    "file|f=s"     => \$file,
-	    "help|?"       => \$help,
+GetOptions 
+  (
+   "dnadb_host=s" => \$dnadb_host,
+   "dnadb_port=s" => \$dnadb_port,
+   "dnadb_user=s" => \$dnadb_user,
+   'dnadb_name=s' => \$dnadb_name,
+   "pass|p=s"     => \$pass,
+   "port|l=s"     => \$port,
+   "host|h=s"     => \$host,
+   "user|u=s"     => \$user,
+   "dbname=s"     => \$dbname,
+   "species|s=s"  => \$species, 
+   "file|f=s"     => \$file,
+   "help|?"       => \$help,
 	   );
 pod2usage(1) if $help;
 pod2usage(0) if !defined($species);
@@ -158,33 +160,38 @@ my $efg_dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
      -dnadb_host => $dnadb_host,
      -dnadb_port => $dnadb_port,
      -dnadb_user => $dnadb_user,
+     -dnadb_name => $dnadb_name,
      );
 $efg_dba->dbc->db_handle;
 
-print ":: Loading FeatureType Gene Links from file $file\n";
+print ":: Loading FeatureType Gene Links from:\t$file\n";
 
-my $fta	= $efg_dba->get_FeatureTypeAdaptor();     
-my $dbentry_adaptor = $efg_dba->get_DBEntryAdaptor();
+my $fta	= $efg_dba->get_FeatureTypeAdaptor;
+my $dbentry_adaptor = $efg_dba->get_DBEntryAdaptor;
 
-my $analysis_adaptor = $efg_dba->get_AnalysisAdaptor();
+my $analysis_adaptor = $efg_dba->get_AnalysisAdaptor;
 my $analysis = $analysis_adaptor->fetch_by_logic_name("Manual Antibody-Gene Annotation");
-if(!$analysis){ throw "Analysis 'Manual Antibody-Gene Annotation' not found"; }
-my $helper = Bio::EnsEMBL::Funcgen::Utils::Helper->new(
-						       no_log => 1,#default to STDOUT
-						      );
+
+if(! defined $analysis){ throw "Analysis 'Manual Antibody-Gene Annotation' not found"; }
+
+my $helper = Bio::EnsEMBL::Funcgen::Utils::Helper->new(no_log => 1); #default to STDOUT
+
 my %releases;
 open(FILE,$file);
-<FILE>; #Title
+<FILE>; #Throw away header
+
 while(<FILE>){
   chomp;
   my ($feature_type, $gene_stable_id, $release) = split(/\t/);
 
   eval{	
+    
     if(!defined($releases{$release})){
       #Try to create it...
       add_external_db($efg_dba,$species.'_core_Gene',$release,'EnsemblGene');
       $releases{$release}=1;
     }
+
     my $ft = $fta->fetch_by_name($feature_type);
     if(!$ft){ warn $feature_type." does not exist"; next; }
     
@@ -206,10 +213,17 @@ while(<FILE>){
 					     #-description        => 'Ensembl Gene associated to Feature Type',
 					    );
     
-    #1 as the last argument to ignore Gene release
+    #1 as the last argument to ignore Gene release (edb version)
     $dbentry_adaptor->store( $dbentry, $ft->dbID, 'FeatureType');
   };
-  if($@){ warn $@; };
+
+  if($@){ 
+    warn $@;
+  }
+  else{
+    #They may already have been present
+    print "Succesfully stored Gene:FeatureType xref: $gene_stable_id:$feature_type\n";
+  }
 }
 
 close FILE;
