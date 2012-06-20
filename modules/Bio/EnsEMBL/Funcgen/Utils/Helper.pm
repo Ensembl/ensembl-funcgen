@@ -20,7 +20,7 @@
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::Utils::Helper
-  
+ 
 =head1 SYNOPSIS
 
 
@@ -1856,14 +1856,10 @@ sub rollback_results{
 
 =cut
 
-#Need to implement this by slice?
-#Then we would need to add a force flag for creation to override the status check
 
 sub rollback_ResultFeatures{
   my ($self, $rset, $slice, $no_revoke) = @_;
 
-
-  #what about?
   if(! (ref($rset) && $rset->can('adaptor') && defined $rset->adaptor)){
 	throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
   }
@@ -1878,24 +1874,28 @@ sub rollback_ResultFeatures{
   if($slice){
 
 	if(ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')){
+	  my $sr_id = $rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
 
-	  #Need to test for full slice here?
-	  my $full_slice = $slice->adaptor->fetch_by_region(undef, $slice->seq_region_name);
-	  $slice_name = "\t".$slice->name;
-	  $slice_constraint = ' and seq_region_id='.$rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
-	  #my $slice_srid = $rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
-	  $slice_constraint = ' and seq_region_id='.$rset->adaptor->db->get_ResultFeatureAdaptor->get_seq_region_id_by_Slice($slice);
+	  if($sr_id){
 
-	  if(($slice->start != 1) ||
-		 ($slice->end != $full_slice->end)){
+		#Need to test for full slice here
+		my $full_slice = $slice->adaptor->fetch_by_region(undef, $slice->seq_region_name);
+		$slice_name = "\t".$slice->name;
+		$slice_constraint = ' and seq_region_id='.$sr_id;
+	  
+		if(($slice->start != 1) ||
+		   ($slice->end != $full_slice->end)){
+		  
+          throw("rollback_ResultFeatures does not yet support non-full length Slices:\t".$slice_name);
 
-		#Need to test whether we have non-0 wsize collections without the exact seq_region values
-		$sql='SELECT window_size from result_feature where result_feature_id='.$rset->dbID.
-		  ' and window_size!=0 and seq_region_start!='.$slice->start.' and seq_region_end!='.$slice->end.$slice_constraint;
-		
-		throw("rollback_ResultFeatures does not yet support non-full length Slices:\t".$slice_name);
+		  #Need to test whether we have non-0 wsize collections without the exact seq_region values
+		  #$sql='SELECT window_size from result_feature where result_feature_id='.$rset->dbID.
+          #	' and window_size!=0 and seq_region_start!='.$slice->start.' and seq_region_end!='.$slice->end.$slice_constraint;
+		}
 	  }
-
+	  else{#seq_region is not yet present in DB
+		return;
+	  }
 	}
 	else{
 	  throw('slice argument must be a valid Bio::EnsEMBL::Slice');
@@ -1911,12 +1911,10 @@ sub rollback_ResultFeatures{
   #This may break if we have removed the status but not finished the rollback so no!
   $self->log("Rolling back result_feature table for ResultSet:\t".$rset->name.$slice_name);
 
-
   #Rollback status entry
   if($rset->has_status('RESULT_FEATURE_SET') && ! $no_revoke){
 	$rset->adaptor->revoke_status('RESULT_FEATURE_SET', $rset);
   }
-
 
   #Cannot use revoke_states here?
   #We can if we retrieve the Chip or Channel first
