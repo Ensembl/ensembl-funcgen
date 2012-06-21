@@ -602,10 +602,10 @@ $probe_db->dbc->db_handle;
 #Registry was doing the species increment trick.
 
 
-warn "Setting disconnect_when_inactive to true";
-$probe_db->dbc->disconnect_when_inactive(1);
-$transcript_db->dbc->disconnect_when_inactive(1);
-$xref_db->dbc->disconnect_when_inactive(1);
+warn "OMITTED Setting disconnect_when_inactive to true";
+#$probe_db->dbc->disconnect_when_inactive(1);
+#$transcript_db->dbc->disconnect_when_inactive(1);
+#$xref_db->dbc->disconnect_when_inactive(1);
 #This is turned off after we have done the processing.
 #This was done as we were getting connection timeout which weren't
 #caught by DBI
@@ -955,6 +955,7 @@ my ($linkage_annotation, $pc, $transcript_slice, $slice);
 my (@exons, $num_exons, $first_exon, $last_exon, $probe_features, $probe, $probe_id, $feature_id);
 my ($probeset_id, $probeset_name, $transcript_key, $log_name, $transcript_sid, %utr_counts);
 my $failed_extend = 0;
+my $tx_version;
 
 $Helper->log("Performing overlap analysis. % Complete:");
 
@@ -970,6 +971,7 @@ foreach my $transcript (@transcripts) {
 
   last if ($test_transcripts && $i >= $test_transcripts);
   $transcript_sid = $transcript->stable_id();
+  $tx_version     = $transcript->version;
 
   $Helper->log("\nDEBUG:\tTranscript $transcript_sid") if $debug;
    
@@ -1216,10 +1218,16 @@ foreach my $transcript (@transcripts) {
 		  }
 		}
 		
+		
+
 		if(! $txref){
 		  print OUT "Unmapped Gapped ProbeFeature ".$log_name."\n";
 		  
-		  if (!$no_triage) {		
+		  if (!$no_triage) {	
+
+			#Probably want to change this only to report a uo if there is also no genomic xref/uo?
+			
+
 			$um_obj = new Bio::EnsEMBL::UnmappedObject(
 													   -type       => 'probe2transcript',
 													   -analysis   => $analysis,
@@ -1347,7 +1355,9 @@ foreach my $transcript (@transcripts) {
 		  
 		}
 
-		add_xref($transcript_sid, $feature_id, 'ProbeFeature', $linkage_annotation);
+
+		
+		add_xref($transcript_sid, $feature_id, 'ProbeFeature', $linkage_annotation, $tx_version);
 
 	  } 
 	  else {					# must be intronic, intron-exon, intron-first|lastexon, five_prime_flank, three_prime_flank
@@ -1482,7 +1492,7 @@ foreach my $end(5, 3){
 }
 
 $Helper->log_header("Writing @array_names Xrefs", 0, 'append_date');
-my $um_cnt = 0;
+my %um_cnts = { Total => 0 };
 
 # now loop over all the mappings and add xrefs for those that have a suitable number of matches
 #values can be a simple count or an array of annotations depending on probeset_arrays
@@ -1595,7 +1605,7 @@ foreach my $key (keys %transcript_feature_info) {
 	  #Could we also add info here on where these other transcript mapping are perfect or mismatched?
 	  #Position of mismatches is important here!
 	  #i.e. length of perfect match correlates with binding(http://www.biomedcentral.com/1471-2164/9/317)
-	  add_xref($transcript_sid, $ensembl_id, $xref_object, $linkage_annotation);
+	  add_xref($transcript_sid, $ensembl_id, $xref_object, $linkage_annotation, $tx_version);
 	  print OUT "$id_names\t$transcript_sid\tmapped\t${hits}/$probeset_size\n";
 	  
 	}
@@ -1705,16 +1715,24 @@ if ((! $no_triage) && @unmapped_objects) {
 
   #$Helper->log("Uploading ".scalar(@unmapped_objects)." remaining unmapped objects to the xref DB", 0, 'append_date');
   $unmapped_object_adaptor->store(@unmapped_objects);
-  $um_cnt += scalar(@unmapped_objects);
-  $Helper->log("UnmappedObjects loaded:\t\t\t$um_cnt");
+  $um_cnts{Total} += scalar(@unmapped_objects);
+  map { $um_cnts{$_->ensembl_object_type}{$_->summary} ||= 0;  $um_cnts{$_->ensembl_object_type}{$_->summary}++; } @unmapped_objects;
 
 
-  #more detailed logging here, i.e. counts for each ur:
-  #select count(*) as 'count', ur.summary_description, ur.full_description from analysis a, unmapped_object uo, unmapped_reason ur where uo.unmapped_reason_id=ur.unmapped_reason_id and uo.analysis_id=a.analysis_id and a.logic_name='probe2transcript' group by uo.unmapped_reason_id order by count desc;
-  #But use in script iterators to avoid array-probe_set/feature joins
+  #warn Data::Dumper::Dumper(\%um_cnts);
+  my $uo_string;
 
+  foreach my $obj_type(keys %um_cnts){
+	next if $obj_type eq 'Total';
 
+	foreach my $uo_label(keys %{$um_cnts{$obj_type}}){
+	  $uo_string .= "\t\t\t\t${obj_type}\t${uo_label}\t".$um_cnts{$obj_type}->{$uo_label}."\n";
+	}
+  }
+  
+  $uo_string .= "\t\t\t\tTotal\t".$um_cnts{Total}."\n";
 
+  $Helper->log("UnmappedObjects loaded:\n$uo_string");
 }
 
 #Can we do this with some SQL to save memory here?
@@ -1790,6 +1808,7 @@ sub cache_and_load_unmapped_objects{
   my @um_obj = @_;
 
   push @unmapped_objects, @um_obj;
+  map { $um_cnts{$_->ensembl_object_type}{$_->summary} ||= 0;  $um_cnts{$_->ensembl_object_type}{$_->summary}++; } @um_obj;
 
   if(scalar(@unmapped_objects) >10000){
 	#This is setting the dbID of the unmapped obj, not the unmapped reason
@@ -1804,7 +1823,8 @@ sub cache_and_load_unmapped_objects{
 	#  $first_cache = 0;
 	#}
 
-	$um_cnt += scalar(@unmapped_objects);
+	$um_cnts{Total} += scalar(@unmapped_objects);
+
 
 	$unmapped_object_adaptor->store(@unmapped_objects);
 	@unmapped_objects = ();
@@ -1986,13 +2006,12 @@ sub pc {
 
 sub add_xref {
 
-  my ($transcript_sid, $ensembl_id, $object_type, $linkage_annotation) = @_;
+  my ($transcript_sid, $ensembl_id, $object_type, $linkage_annotation, $tx_version) = @_;
  
   #Some counts
   #Add key on type of xref?
   #Will this warn as not defined?
-
-
+  
   
   #Here the key is not the ensembl_id!
   #The key is probe/setdbID:name|MULTI_NAME
@@ -2019,9 +2038,8 @@ sub add_xref {
 	 #xref data
 	 -primary_id           => $transcript_sid,
 	 -display_id           => $Helper->get_core_display_name_by_stable_id($transcript_db, $transcript_sid, 'transcript'),
-	 #-version              => $schema_build,#xref.version This is implied through release of of the edb
-	 #And should be actual version transcript sid?
-
+	 -version              => $tx_version,
+     
 	 #object_xref data
 	 -info_type => 'MISC',
 	 -info_text            => 'TRANSCRIPT',#?
@@ -2049,7 +2067,13 @@ sub add_xref {
 
   #This will enter blank entries if object_type does not enum!!
 
+
+  #We are still getting some xref_ids of 0
+  #This is a problem with the DBEntryAdaptor?
+
   $dbentry_adaptor->store($dbe, $ensembl_id, $object_type);
+
+
   
 }
 
