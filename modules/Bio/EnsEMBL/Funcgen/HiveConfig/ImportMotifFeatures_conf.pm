@@ -69,12 +69,10 @@ sub default_options {
       -port   => $self->o('port'),
       -user   => $self->o('user'),
       -pass   => $self->o('pass'),                       
-      #-dbname => $ENV{'USER'}.'_motif_feature_import_'.$self->o('dbname'),
       -dbname => $ENV{'USER'}.'_motif_import_'.$self->o('dbname'),
      },
 
-     #Need to change this to grab OUT_ROOT or something
-     #So we can 
+     #Need to change this to use $ENV{OUT_ROOT} so we can switch scratch usage easily
      'output_dir' => '/lustre/scratch103/ensembl/funcgen/output/'.$self->o('dbname'),
      'slices'     => '',
 
@@ -89,16 +87,17 @@ sub default_options {
 =cut
 
 sub resource_classes {
-    my ($self) = @_;
-    return {
-	    0 => { -desc => 'default',          'LSF' => '' },
-	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
-	    2 => { -desc => 'normal ens-genomics1',  'LSF' => '-M1000000 -R"select[myens_genomics1<1000 && mem>1000] rusage[myens_genomics1=10:duration=10:decay=1:mem=1000]"' },
-	    3 => { -desc => 'long ens-genomics1',    'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-	    4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },  
-	    5 => { -desc => 'long ens-genomics1 high memory',  'LSF' => '-q long -M4000000 -R"select[myens_genomics1<600 && mem>4000] rusage[myens_genomics1=12:duration=5:decay=1:mem=4000]"' },
-
-	   };
+  my ($self) = @_;
+  return 
+    {
+     0 => { -desc => 'default',          'LSF' => '' },
+     1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
+     2 => { -desc => 'normal ens-genomics1',  'LSF' => '-M1000000 -R"select[myens_genomics1<1000 && mem>1000] rusage[myens_genomics1=10:duration=10:decay=1:mem=1000]"' },
+     3 => { -desc => 'long ens-genomics1',    'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
+     4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },  
+     5 => { -desc => 'long ens-genomics1 high memory',  'LSF' => '-q long -M4000000 -R"select[myens_genomics1<600 && mem>4000] rusage[myens_genomics1=12:duration=5:decay=1:mem=4000]"' },
+     
+    };
 }
 
 
@@ -149,25 +148,21 @@ sub pipeline_wide_parameters {
 sub pipeline_create_commands {
  my ($self) = @_;
 
-
-  return [
-
-	  #HiveGeneric assumes ensembl-hive folder while if you use the stable version its ensembl-hive_stable!
-	  @{$self->SUPER::pipeline_create_commands},  
-	  # inheriting database and hive tables creation
-	  	 
-	  #'mysql '.$self->dbconn_2_mysql('pipeline_db', 0)." -e 'CREATE DATABASE ".$self->o('pipeline_db', '-dbname')."'",
-
-	  # standard eHive tables and procedures:	  
-	  #'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).' <'.$self->o('ensembl_cvs_root_dir').'/ensembl-hive/sql/tables.sql',
-	  #'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).' <'.$self->o('ensembl_cvs_root_dir').'/ensembl-hive/sql/procedures.mysql',
+  return 
+    [
+     #HiveGeneric assumes ensembl-hive folder while if you use the stable version its ensembl-hive_stable!
+     @{$self->SUPER::pipeline_create_commands},  
+     # inheriting database and hive tables creation rather than doing the following
+     #'mysql '.$self->dbconn_2_mysql('pipeline_db', 0)." -e 'CREATE DATABASE ".$self->o('pipeline_db', '-dbname')."'",
+     # standard eHive tables and procedures:	  
+     #'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).' <'.$self->o('ensembl_cvs_root_dir').'/ensembl-hive/sql/tables.sql',
+     #'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).' <'.$self->o('ensembl_cvs_root_dir').'/ensembl-hive/sql/procedures.mysql',
 
 
-	  #Create hive output folders as required
-	  'mkdir -p '.$self->o('output_dir')."/motif_features/hive_output",
-	  'mkdir -p '.$self->o('output_dir')."/motif_features/results",
-
-	 ];
+     #Create hive output folders as required
+     'mkdir -p '.$self->o('output_dir')."/motif_features/hive_output",
+     'mkdir -p '.$self->o('output_dir')."/motif_features/results",
+    ];
 }
 
 
@@ -182,23 +177,21 @@ sub pipeline_create_commands {
 sub pipeline_analyses {
   my ($self) = @_;
 
-  return [
-	  
-	  {   
-	   -logic_name    => 'run_import',
-	   -module        => 'Bio::EnsEMBL::Funcgen::RunnableDB::ImportMotifFeatures',
-	   -parameters    => { },
-	   -hive_capacity => 1,   # allow several workers to perform identical tasks in parallel
-	   -batch_size    => 1,
-	   -input_ids     => [
-			      #For the moment it only receives the matrix, and deduces feature_type(s) from there...
-			      { 'matrix' => $self->o('matrix'), 'file' => $self->o('file') } 
-			     ],
-	   -rc_id => 2,
-	  },
-	  
-
-	 ];
+  return 
+    [
+     {   
+      -logic_name    => 'run_import',
+      -module        => 'Bio::EnsEMBL::Funcgen::RunnableDB::ImportMotifFeatures',
+      -parameters    => { },
+      -hive_capacity => 1,   # allow several workers to perform identical tasks in parallel
+      -batch_size    => 1,
+      -input_ids     => [
+                         #For the moment it only receives the matrix, and deduces feature_type(s) from there...
+                         { 'matrix' => $self->o('matrix'), 'file' => $self->o('file') } 
+                        ],
+      -rc_id => 2,
+     },
+    ];
 }
 
 1;
