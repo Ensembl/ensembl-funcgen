@@ -58,20 +58,25 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 sub default_options {
   my ($self) = @_;
-  return {
-	  'ensembl_cvs_root_dir' => $ENV{'SRC'},                  # some Compara developers might prefer $ENV{'HOME'}.'/ensembl_main'  
+  return 
+    {
+     'ensembl_cvs_root_dir' => $ENV{'SRC'},                  
+     # some Compara developers might prefer $ENV{'HOME'}.'/ensembl_main'  
 	  
-	  'pipeline_db' => {                             
-	  		    -host   => $self->o('host'),
-	  		    -port   => $self->o('port'),
-	  		    -user   => $self->o('user'),
-	  		    -pass   => $self->o('pass'),                       
-	  		    #-dbname => $ENV{'USER'}.'_motif_feature_import_'.$self->o('dbname'),
-			    -dbname => $ENV{'USER'}.'_motif_import_'.$self->o('dbname'),
-	  		   },
+     'pipeline_db' => 
+     {                             
+      -host   => $self->o('host'),
+      -port   => $self->o('port'),
+      -user   => $self->o('user'),
+      -pass   => $self->o('pass'),                       
+      #-dbname => $ENV{'USER'}.'_motif_feature_import_'.$self->o('dbname'),
+      -dbname => $ENV{'USER'}.'_motif_import_'.$self->o('dbname'),
+     },
 
-	  'output_dir' => '/lustre/scratch103/ensembl/funcgen/output/'.$self->o('dbname'),
-	  'slices'     => '',
+     #Need to change this to grab OUT_ROOT or something
+     #So we can 
+     'output_dir' => '/lustre/scratch103/ensembl/funcgen/output/'.$self->o('dbname'),
+     'slices'     => '',
 
 	 };
 }
@@ -88,7 +93,7 @@ sub resource_classes {
     return {
 	    0 => { -desc => 'default',          'LSF' => '' },
 	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
-	    2 => { -desc => 'normal ens-genomics1',  'LSF' => '-R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
+	    2 => { -desc => 'normal ens-genomics1',  'LSF' => '-M1000000 -R"select[myens_genomics1<1000 && mem>1000] rusage[myens_genomics1=10:duration=10:decay=1:mem=1000]"' },
 	    3 => { -desc => 'long ens-genomics1',    'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
 	    4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },  
 	    5 => { -desc => 'long ens-genomics1 high memory',  'LSF' => '-q long -M4000000 -R"select[myens_genomics1<600 && mem>4000] rusage[myens_genomics1=12:duration=5:decay=1:mem=4000]"' },
