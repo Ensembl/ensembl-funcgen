@@ -188,11 +188,13 @@ my ($pass,$port,$host,$user,$dbname,
 	$dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
     $outdir, $write_features, $cdb,
     $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
-    $clobber,$focus_max_length, @slices, @skip_slices, $non_ref,
+    $clobber, @slices, @skip_slices, $non_ref,
     $focus_extend, $dump,$gene_signature, $ctype_projection, $use_tracking,
     $debug_start, $debug_end, $version, @focus_names, @attr_names, $local, $on_farm);
 
-
+#Defaults
+my $focus_max_length = 2000;
+#my $focus_extend = 0; #was 2000 until after 66;
 my $bsub_mem = '';
 #Declare to avoid only used once warnings;
 $main::_tee      = undef;
@@ -255,8 +257,11 @@ GetOptions (
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
 $helper->log("build_regulatory_features.pl @tmp_args");
 
-die('focus_extend may not safe, check update_attributes') if $focus_extend;
+die('Focus_extend may not safe, used for integrating non-focus overlapping, bound enclosed features') if $focus_extend;
+#This is use to incorporate non-core overlapping bound enclosed features!
+my $focus_extend = 2000 if ! defined $focus_extend;
 
+my $bsub_mem = '';
 #Allow comma separated quoted names containing spaces
 @focus_names = split(/,/o, join(',',@focus_names));
 @attr_names  = split(/,/o, join(',',@attr_names));
@@ -279,9 +284,6 @@ die("Must specify mandatory output directory (-outdir).\n")       if ! $outdir;
 
 
 
-$focus_max_length = 2000 if (! defined $focus_max_length);
-$focus_extend = 2000 if (! defined $focus_extend);
-
 #die("No output directory specified! Use -o option.") if (!$outdir);
 if (defined $outdir && ! -d $outdir) {
   system("mkdir -p $outdir");
@@ -295,20 +297,6 @@ $outdir =~ s/\/$//o;
 #NJ what was this being used for and can we use the RangeRegistry?
 
 
-# use ensembldb as we may want to use an old version?
-#NJ Default should be staging, but add params for overriding
-if ($dnadb_name){
-  $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-	(
-	 -host => $dnadb_host,
-	 -port => $dnadb_port,
-	 -user => $dnadb_user,
-	 -pass => $dnadb_pass,
-	 -dbname => $dnadb_name,
-	 -group   => 'core',
-	);
-}
-
 if($gene_signature){
   warn "You need to check that the schema_build of your efg and dnadb match "
 }
@@ -321,8 +309,13 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
    -dbname => $dbname,
    -pass   => $pass,
    -port   => $port,
-   -dnadb  => $cdb,
+   #-dnadb  => $cdb,
    -group  => 'funcgen',#Should be set as default in adaptor new method
+   -dnadb_host => $dnadb_host,
+	 -dnadb_port => $dnadb_port,
+	 -dnadb_user => $dnadb_user,
+	 -dnadb_pass => $dnadb_pass,
+	 -dnadb_name => $dnadb_name,
   );
 
 
