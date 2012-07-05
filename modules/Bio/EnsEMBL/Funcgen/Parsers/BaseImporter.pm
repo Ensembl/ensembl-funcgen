@@ -148,20 +148,23 @@ sub new{
   #  analysis/cell/feature_type/feature_set_description
   #    This is redundant wrt config leave for now and catch
 
+  #Can we move all of this DB/reg handling stuff out
+  #So it can be re-used by other modules/scripts?
 
   #Need to compare these to BaseExternalParser
 
+  if( (! $species) &&
+      $db ){
+    $species = $db->species;
+  }
+
   $species || throw('Mandatory param -species not met');
-  #$self->{'user'} = $user || $ENV{'EFG_WRITE_USER'};
-
-
-  #change slices to local var as we have to validate?
-
-  # Registry and DB handling - move to separate method?
+ 
+  # Registry and DB handling - re/move to separate method?
   
   if($reg_host && $self->{'reg_config'}){
-	warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
-	  "\nOver-riding config file with specified paramters:\t${reg_user}@${reg_host}:$reg_port";
+    warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
+      "\nOver-riding config file with specified paramters:\t${reg_user}@${reg_host}:$reg_port";
   }
 
 
@@ -198,7 +201,7 @@ sub new{
 
 	#This will try and load the dev DBs if we are using v49 schema or API?
 	#Need to be mindful about this when developing
-	#we need to tip all this on it's head and load the reg from the dnadb version!!!!!!!
+	#we need to tip all this on it's head and load the reg from the dnadb version
 
 	my $version = $release || $reg->software_version;
 	$self->log("Loading v${version} registry from $reg_user".'@'.$reg_host);
@@ -206,6 +209,14 @@ sub new{
 	#Note this defaults API version, hence running with head code
 	#And not specifying a release version will find not head version
 	#DBs on ensembldb, resulting in an exception from reset_DBAdaptor below
+   
+  #This currently loads from reg_host
+  #Which triggers the funcgen DB to try and _set_dnadb
+  #even if we have specified as db/dnadb already,as this is reset after this
+  #we probably just want to use the dnadb_host as the default reg_host
+  #This also need cleaning up wrt DBAdaptor behaviours
+  #Simply and/or remove
+
 	my $num_dbs = $reg->load_registry_from_db
 	  (
 	   -host       => $reg_host,
@@ -380,7 +391,7 @@ sub new{
 
   #Set some attrs to allow setter only methods
   $self->{slice_adaptor} = $db->dnadb->get_SliceAdaptor;
-  $self->slices($slices) if $slices;
+  $self->slices($slices) if defined $slices;
   $self->{rollback}         = $rollback || $clobber;
   $self->{counts}           = {};
   $self->{seq_region_names} = [];#Used for slice based import
@@ -864,21 +875,21 @@ sub slices{
   my ($self, $slices) = @_;
 
   if(defined $slices){
+    
+    if (ref($slices) ne 'ARRAY'){
+      throw("-slices parameter must be an ARRAYREF of Bio::EnsEMBL::Slices (i.e. not $slices)");
+    }
 
-	if (ref($slices) ne 'ARRAY'){
-	  throw("-slices parameter must be an ARRAYREF of Bio::EnsEMBL::Slices (i.e. not $slices)");
-	}
-
-	foreach my $slice(@$slices){
-	  
-	  if(! ($slice && ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
-		throw("-slices parameter must be Bio::EnsEMBL::Slices (i.e. not $slice)");
-	  }
-	  
-	  #Removed cache_slice from here as this was
-	  #preventing us from identifying the seq_region in an input file
-
-	  my $full_slice = $self->slice_adaptor->fetch_by_name($slice->name);
+    foreach my $slice(@$slices){
+      
+      if(! ($slice && ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
+        throw("-slices parameter must be Bio::EnsEMBL::Slices (i.e. not $slice)");
+      }
+      
+      #Removed cache_slice from here as this was
+      #preventing us from identifying the seq_region in an input file
+      
+      my $full_slice = $self->slice_adaptor->fetch_by_name($slice->name);
 
 	  if(($slice->start != 1) ||
 		 ($slice->end != $full_slice->end)){
