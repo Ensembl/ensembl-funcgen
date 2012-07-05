@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -28,7 +28,7 @@ storing Funcgen FeatureType objects.
 
 =head1 SYNOPSIS
 
-my $ft_adaptor = $db->get_FeatureTypeAdaptor();
+my $ft_adaptor = $db->get_FeatureTypeAdaptor;
 
 my $feature_type = $ft_adaptor->fetch_by_name("H3K4me3");
 
@@ -44,11 +44,10 @@ Bio::EnsEMBL::Funcgen::FeatureType
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( warning throw deprecate );
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
@@ -144,7 +143,7 @@ sub fetch_by_name{
   #This can happen if using a redundant name between classes or analyses
   #remove?
   if( wantarray && (scalar @fts >1) ){
-    $class ||= "";
+    $class ||= '';
     throw("Found more than one FeatureType:$class $name");
   }
 
@@ -236,7 +235,7 @@ sub fetch_all_by_association{
   push @{$tables{feature_type}}, ['associated_feature_type', 'aft'];
 
   my $table_name = $storable->adaptor->_main_table->[0];
-
+  
   my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.table_name="'.$table_name.
 	'" AND aft.table_id='.$storable->dbID;
 
@@ -353,57 +352,71 @@ sub _objs_from_sth {
 =cut
 
 sub store {
-  my $self = shift;
-  my @args = @_;
+  my ($self, @args) = @_;
+   
+  #Prepare once for all ftypes
+  my $sth = $self->prepare('INSERT INTO feature_type'.
+                           '(name, class, analysis_id, description, so_accession, so_name)'.
+                           'VALUES (?, ?, ?, ?, ?, ?)');
   
-  
-  my $sth = $self->prepare("
-			INSERT INTO feature_type
-			(name, class, analysis_id, description, so_accession, so_name)
-			VALUES (?, ?, ?, ?, ?, ?)");
-    
-  
-  
+  #Process each ftype
   foreach my $ft (@args) {
 
+    #Validate ftype
     if ( ! (ref($ft) && $ft->isa('Bio::EnsEMBL::Funcgen::FeatureType') )) {
       throw('Can only store FeatureType objects, skipping $ft');
     }
-
+    
+    #Validate analysis
     my $anal_id;
-	my $analysis = $ft->analysis;
-	
-	if($analysis){	
-	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis);
-	  $anal_id = $analysis->dbID;
-	}
+    my $analysis = $ft->analysis;
 
+    if($analysis){
+      $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis);
+      $anal_id = $analysis->dbID;
+    }
 
-
-    if (! ( $ft->dbID && 
-			( $ft->adaptor == $self) )
-	   ){
-      
+    #Is already stored?
+    if ( $ft->dbID && ( $ft->adaptor == $self) ) {
+      warn "Skipping previous stores FeatureType:\t".$ft->name.'('.$ft->dbID.")\n";
+    } else {
       #Check for previously stored FeatureType
       my $s_ft = $self->fetch_by_name($ft->name, $ft->class, $ft->analysis);
-	
-      if(! $s_ft){
-		$sth->bind_param(1, $ft->name,          SQL_VARCHAR);
-		$sth->bind_param(2, $ft->class,         SQL_VARCHAR);
-		$sth->bind_param(3, $anal_id,           SQL_INTEGER);
-		$sth->bind_param(4, $ft->description,   SQL_VARCHAR);
-		$sth->bind_param(5, $ft->so_accession,  SQL_VARCHAR);
-		$sth->bind_param(6, $ft->so_name,       SQL_VARCHAR);
-		
-		
-		$sth->execute();
-		my $dbID = $sth->{'mysql_insertid'};
-		$ft->dbID($dbID);
-		$ft->adaptor($self);
-      }
-      else{
-		$ft = $s_ft;
-		warn("Using previously stored FeatureType:\t".$ft->name."\n"); 
+      
+      if (! $s_ft) {
+        $sth->bind_param(1, $ft->name,          SQL_VARCHAR);
+        $sth->bind_param(2, $ft->class,         SQL_VARCHAR);
+        $sth->bind_param(3, $anal_id,           SQL_INTEGER);
+        $sth->bind_param(4, $ft->description,   SQL_VARCHAR);
+        $sth->bind_param(5, $ft->so_accession,  SQL_VARCHAR);
+        $sth->bind_param(6, $ft->so_name,       SQL_VARCHAR);
+        
+        
+        $sth->execute();
+        my $dbID = $sth->{mysql_insertid};
+        $ft->dbID($dbID);
+        $ft->adaptor($self);
+      } 
+      else {
+        $ft = $s_ft;
+        
+        #Check other fields match
+        my @failed_methods;
+        
+        for my $method (qw(description so_accession so_name)) {
+          #Allow nulls/undefs to match empty strings
+          my $ft_val   = $ft->$method   || '';
+          my $s_ft_val = $s_ft->$method || '';
+          
+          if ($ft_val ne $s_ft_val) {
+            push @failed_methods, "$method does not match between existing(${s_ft_val}) and new(${ft_val}) FeatureTypes";
+          }
+        }
+        
+        if (@failed_methods) {
+          #Could throw, but maybe easier to patch after import?
+          warn("Used existing FeatureType with disparities:\n\t".join("\n\t", @failed_methods));
+        }
       }
     }
   }
