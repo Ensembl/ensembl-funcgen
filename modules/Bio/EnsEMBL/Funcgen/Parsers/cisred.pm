@@ -105,9 +105,10 @@ sub new {
 	  analyses      => $self->{static_config}{analyses},
 	  feature_types => $self->{static_config}{feature_types},
 	  feature_set   => {
-						-feature_type  => $self->{static_config}{feature_types}{'cisRED Search Region'},
+                        #feature_type and analysis here are the keys from above
+                        -feature_type  => 'cisRED Search Region',
 						-display_label => 'cisRED searches',
-						-analysis      => $self->{static_config}{analyses}{cisRED},
+						-analysis      => 'cisRED',
 					   },
 	  xrefs => 1,
 	 },
@@ -118,8 +119,9 @@ sub new {
 	  analyses      => $self->{static_config}{analyses},
 	  feature_types => $self->{static_config}{feature_types},
 	  feature_set => {
-					  -feature_type      => $self->{static_config}{feature_types}{'cisRED Motif'},
-					  -analysis          => $self->{static_config}{analyses}{cisRED},
+                      #feature_type and analysis here are the keys from above
+					  -feature_type      => 'cisRED Motif',
+					  -analysis          => 'cisRED',
 					 },
 	  xrefs => 1,
 	 },
@@ -188,8 +190,10 @@ sub parse_and_load {
   my $skipped_xref = 0;
   #my $coords_changed = 0;
   my $cnt = 0;
-  my $set = $self->{static_config}{feature_sets}{'cisRED motifs'};
-  
+  my $set = $self->{static_config}{feature_sets}{'cisRED motifs'}{feature_set};
+
+
+   
   open (FILE, "<$motif_file") || die "Can't open $motif_file";
   <FILE>; # skip header
 
@@ -277,13 +281,13 @@ sub parse_and_load {
 	#my $ftype = (defined $features_by_group{$group_name}) ? $features_by_group{$group_name} : $self->{'feature_sets'}{'cisRED group motifs'}->feature_type;
 
 
-	my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
-	  (
+    my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
+      (
 	   -display_label => $motif_name,
 	   -start         => $start,
 	   -end           => $end,
 	   -strand        => $strand,
-	   #-feature_type  => $ftype,
+       #-feature_type  => $ftype,
 	   -associated_feature_types => \@group_names,
 	   -feature_set   => $set,
 	   -slice         => $slice_cache{$chromosome},
@@ -296,21 +300,22 @@ sub parse_and_load {
       $feature = $self->project_feature($feature, $new_assembly);
 
 	  if(! defined $feature){
-		$skipped ++;
-		next;
+      $skipped ++;
+      next;
 	  }
-
-
-      #$coords_changed++ if ($projected_feature->start() != $start || $projected_feature->end() != $end);
+      
     }
 
 	($feature) = @{$extf_adaptor->store($feature)};
 	$cnt++;
 
 
-	#need to validate gene_id here
-	#retrieve from db?
-	#could have version here if we use the correct dnadb to build the cache
+
+	#We don't care so much about loading features for retired Genes here
+	#as the Genes are only used to define the search regions
+	#Not a direct alignment as with the miRanda set
+
+	#However, adding an xref will create dead link in the browser
 	
 	#Build Xref here
 	if (! $gene_id) {
@@ -325,10 +330,11 @@ sub parse_and_load {
 
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
 											 -dbname                 => $species.'_core_Gene',
-											 #-release                => $self->db->dnadb->dbc->dbname,
+											 #-release                => $self->db->_get_schema_build($self->db->dnadb),
+											 #-release                => '49_36b',#harcoded for human
+                                             -release                => '49_37b', #hardcoded for mouse
 											 -status                 => 'KNOWNXREF',
 											 #-display_label_linkable => 1,
-											 -#db_display_name        => $self->db->dnadb->dbc->dbname,
 											 -db_display_name        => 'EnsemblGene',
 											 -type                   => 'MISC',#this is external_db.type
 											 -primary_id             => $gene_id,
@@ -366,7 +372,7 @@ sub parse_and_load {
   $skipped = 0;
   $cnt = 0;
   $skipped_xref = 0;
-  $set = $self->{static_config}{feature_sets}{'cisRED search regions'};
+  $set = $self->{static_config}{feature_sets}{'cisRED search regions'}{feature_set};
 
   $self->log_header("Parsing cisRED search regions from $search_file");
   open (SEARCH_REGIONS, "<$search_file") || die "Can't open $search_file";
@@ -401,15 +407,15 @@ sub parse_and_load {
 
 	
 
-	my $search_feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
-	  (
-	   -display_label => $name,
-	   -start         => $start,
-	   -end           => $end,
-	   -strand        => $strand,
-	   -feature_set   => $set,
-	   -slice         => $slice_cache{$chromosome},
-	  );
+    my $search_feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new
+      (
+       -display_label => $name,
+       -start         => $start,
+       -end           => $end,
+       -strand        => $strand,
+       -feature_set   => $set,
+       -slice         => $slice_cache{$chromosome},
+      );
 																
 
 
