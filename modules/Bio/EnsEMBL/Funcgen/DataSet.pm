@@ -128,7 +128,9 @@ sub new {
   #can we check wether caller is DataSetAdaptor if we have dbID?
   
   if($self->dbID() && $caller[0] ne "Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor"){
-    throw("You must use the DataSetAdaptor to generate DataSets with dbID i.e. from the DB, as this module accomodates updating which may cause incorrect data if the object is not generated from the DB");
+    throw('You must use the DataSetAdaptor to generate DataSets with dbID i.e. from the DB,'.
+          ' as this module accomodates updating which may cause incorrect data if the object'.
+          ' is not generated from the DB');
   }
   
   
