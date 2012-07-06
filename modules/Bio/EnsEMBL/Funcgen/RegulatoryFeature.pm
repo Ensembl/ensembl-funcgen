@@ -227,12 +227,12 @@ sub binary_string{
 =cut
 
 sub stable_id {
-  my $self             = shift;
+  my $self = shift;
 
   if (@_){
-	#added v67
-	warn "RegualtoryFeature::stable_id setter functionality is being removed\n";
-	$self->{'stable_id'} = shift;
+    #added v67
+    warn "RegualtoryFeature::stable_id setter functionality is being removed\n";
+    $self->{stable_id} = shift;
   }
 
   return $self->{stable_id};
