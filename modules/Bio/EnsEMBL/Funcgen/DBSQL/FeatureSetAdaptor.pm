@@ -30,7 +30,7 @@ storing Funcgen feature sets.
 
 my $fs_adaptor = $db->get_FeatureSetAdaptor();
 
-my @fsets = $fs_adaptor->fetch_all_by_Experiment($exp);
+
 my @displayable_fsets = @{$fs_adaptor->fetch_all_displayable()};
 
 =head1 DESCRIPTION
@@ -51,6 +51,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+#use base does not import!
 
 #Exported from BaseAdaptor
 $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
@@ -60,6 +61,19 @@ $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
 #No longer using coderefs(can) in here, so we can move this to head
 #Keeping config here means all sql and validation is done in one place
 #minimizing chance of errors
+
+
+#Could do with wrapping this in a sub, so we can have specific constraint POD for this
+#adaptor i.e. we don't have to add it to the POD of every method
+
+#Can only enable fetch_all with params_hash if we handle table reseting explitly
+#Just do this by default for fetch_all, and any others which extend tables
+
+#Issues around traceability here of errors are listed with the correct line number
+#but the strack trace give the throwing method as
+# Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor::__ANON__ 
+#extract these to individual subs and simply leave tables in here
+#or can we return these with the constraint?
 
 %constraint_config = 
   (
@@ -73,64 +87,62 @@ $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
    #Or implicit by location of contraint config, i.e. put it in the relevant 
    #parent adaptors
 
-   projects => {
-			   tables    => (['experiment', 'e']),
-			 
-			   compose_constraint => sub 
-			   { my ($self, $egs) = @_;
-				 
-
-				 if( (ref($egs) ne 'ARRAY') ||
-					 scalar(@$egs) == 0 ){
-				   throw('Must pass an arrayref of project names');
-				 }
-				 my @eg_ids;
-
-				 foreach my $eg(@$egs){
-				   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $eg);
-				   
-				   if (! $eg->is_project) {
-					 throw("You have passed an ExperimentalGroup which is not a project:\t".$eg->name);
-				   }
-				   
-				   push @eg_ids, $eg->dbID;
-				 }
-					 
-				 return ' fs.experiment_id=e.experiment_id AND '.
-				   'e.experimental_group_id IN ('.join(', ', @eg_ids).')';
-			   },
-			  },
-					 
+   projects =>
+   {
+    #enable query extension
+    tables    => [['input_set', 'inp'], ['experiment', 'e']],
+    
+    compose_constraint => sub {
+      my ($self, $egs) = @_;
+            
+      if ( (ref($egs) ne 'ARRAY') ||
+           scalar(@$egs) == 0 ) {
+        throw('Must pass an arrayref of project names');
+      }
+      my @eg_ids;
+      
+      foreach my $eg (@$egs) {
+        $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $eg);
+        
+        if (! $eg->is_project) {
+          throw("You have passed an ExperimentalGroup which is not a project:\t".$eg->name);
+        }
+        
+        push @eg_ids, $eg->dbID;
+      }
+      
+      #Don't need to bind param this as we validate above
+      return ' fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id AND '.
+        'e.experimental_group_id IN ('.join(', ', @eg_ids).')';
+    },
+   },
+  
 	
    evidence_types => 
    {
-	tables     => (['feature_type', 'ft']),
+	tables     => [['feature_type', 'ft']],
 
 	compose_constraint => sub { 
 	  my ($self, $etypes) = @_;
-						
+      
 	  my %in_values = 
 		(
 		 'DNase1 & TFBS' => ['Open Chromatin', 
 							 'Transcription Factor', 
 							 'Transcription Factor Complex'],
-			   
+         
 		 'Hists & Pols'  => ['Histone',
 							 'Polymerase'],
 		);
-
-
-	  my @ft_classes;
-
-	  if( (ref($etypes) ne 'ARRAY') ||
-		  scalar(@$etypes) == 0 ){
+      
+  	  my @ft_classes;
+      
+	  if ( (ref($etypes) ne 'ARRAY') ||
+           scalar(@$etypes) == 0 ) {
 		throw('Must pass an arrayref of evidence types');
 	  }
-
-
-	  #Don't need to bind param this as we validate here
-
-	  foreach my $etype(@$etypes){
+      
+	  foreach my $etype (@$etypes) {
 
 		if (! exists $in_values{$etype}) {
 		  throw("You have passed an invalid evidence type filter argument($etype)\n".
@@ -138,47 +150,40 @@ $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
 		}
 		push @ft_classes, @{$in_values{$etype}};
 	  }
-
+      
+      
+	  #Don't need to bind param this as we validate above
 	  return ' fs.feature_type_id=ft.feature_type_id AND ft.class IN ("'.
 		join('", "', @ft_classes).'")'; #constraint
 	},
    },
-
 		 
    cell_types    => 
    {
-	#tables => (['cell_type', 'ct']),
-	#constraint => ' fs.cell_type_id=ct.cell_type_id AND ct.name=? ',
-	#No need to extend if we are passing the obj as a param
-
 	compose_constraint => sub 
 	{ my ($self, $cts) = @_;
-
+      
 	  return ' fs.cell_type_id IN ('.
 		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
 			).')';
 	},
    },
-	#Add other fetch contraints in here
-	#fs.type
-	#sn.name
-	#FeatureType
-
-	#Consider final clause
-
+   
+   #Consider final clause
+   
    #This is generic and could be move to BaseAdaptor
    #based on using the first table name
 
    #This can't use IN without duplicating the result
    #Need to add a default_final_clause
-
+   
    status =>
    {
-	tables => (['status', 's']),#['status_name', 'sn']),
+	tables => [['status', 's']], #['status_name', 'sn']),
 	
 	compose_constraint => sub
 	{ my ($self, $state) = @_;
-
+      
 	  #This can't use IN without duplicating the result
 	  #Need to add a default_final_clause
 	  #my @sn_ids;
@@ -186,20 +191,20 @@ $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
 	  #scalar(@$states) == 0 ){
 	  #throw('Must pass an arrayref of status_names');
 	  #}
-	  #foreach my $sn(@$states){
+    #foreach my $sn(@$states){
 	  ##This will throw if status not valid, but still may be absent
 	  #	push @sn_ids, $self->_get_status_name_id($sn);
 	  #  }
-	   
+      
 	  
-
+      
 	  my @tables = $self->_tables;
 	  my ($table_name, $syn) = @{$tables[0]};
 	  
 	  return " $syn.${table_name}_id=s.table_id AND ".
 		"s.table_name='$table_name' AND s.status_name_id=".$self->_get_status_name_id($state);
-		#"s.table_name='$table_name' AND s.status_name_id IN (".join(', ', @sn_ids.')';
-
+      #"s.table_name='$table_name' AND s.status_name_id IN (".join(', ', @sn_ids.')';
+      
 	},
    },
 
@@ -207,7 +212,8 @@ $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
    {
 	compose_constraint => sub 
 	{ my ($self, $fts) = @_;
-
+      
+  	  #Don't need to bind param this as we validate
 	  return ' fs.feature_type_id IN ('.
 		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}
 			).')';
@@ -218,20 +224,22 @@ $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
    {
 	compose_constraint => sub 
 	{ my ($self, $anals) = @_;
-
+      
+	  #Don't need to bind param this as we validate above
 	  return ' fs.analysis_id IN ('.
 		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Analysis', $anals, 'dbID')}
 			).')';
-
+      
 	},
    },
+   
 
    # add other fetch args
    #type
    #name
   );
-	  
-	  
+
+
 
 =head2 fetch_all_by_FeatureType
 
@@ -291,9 +299,10 @@ sub fetch_all_by_type {
                                            ('annotated', 
                                              {'constraints' => 
                                                {
-                                               'cell_types'     => $ctype,
-                                               'projects'       => $experiment_group,
-                                               'evidence_types' => 'Hists & Pols',
+                                               cell_types     => [$cell_type], #Bio::EnsEMBL::Funcgen::CellType
+                                               projects       => ['ENCODE'],
+                                               evidence_types => ['Hists & Pols'],
+                                               feature_types  => [$ftype], #Bio::EnsEMBL::Funcgen::FeatureType
                                                } 
                                              });
 
@@ -328,17 +337,8 @@ sub fetch_all_by_feature_class {
   }
   
 
-  #warn 'PARAMS '.Data::Dumper::Dumper($params);
-  #my @tables = $self->_tables;
-  #warn 'Before compose '.Data::Dumper::Dumper(\@tables);
-
   #Deal with params constraints
   my $constraint = $self->compose_constraint_query($params);
-  #@tables = $self->_tables;
-  #warn 'AFTER compose '.Data::Dumper::Dumper(\@tables);
-  #warn $constraint;
-
-
   $sql .=  " AND $constraint " if $constraint;
 
 
@@ -425,9 +425,8 @@ sub fetch_all_by_FeatureType_Analysis {
 				 analyses     => [$anal],
 				}
 			   };
-  $params->{constraints}{cell_types} = [$ctype] if $ctype;
 
-  #No need to reset tables for these
+  $params->{constraints}{cell_types} = [$ctype] if $ctype;
   return $self->generic_fetch($self->compose_constraint_query($params));	
 
 }
@@ -500,7 +499,7 @@ sub _columns {
 			   fs.analysis_id fs.cell_type_id 
 			   fs.name fs.type 
 			   fs.description fs.display_label 
-			   fs.experiment_id);
+			   fs.input_set_id);
 }
 
 
@@ -524,14 +523,15 @@ sub _objs_from_sth {
 	my ($self, $sth) = @_;
 	
 	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type, $display_label, $desc);
-	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, $exp_id, %ftype_hash, %ctype_hash);
+	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, $input_set_id, %ftype_hash, %ctype_hash);
 	
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my $anal_adaptor = $self->db->get_AnalysisAdaptor();
 	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	$ctype_hash{'NULL'} = undef;
 
-	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, \$name, \$type, \$desc, \$display_label, \$exp_id);
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, 
+                       \$name, \$type, \$desc, \$display_label, \$input_set_id);
 	
 	while ( $sth->fetch()) {
 
@@ -558,7 +558,7 @@ sub _objs_from_sth {
 		   -feature_class => $type,
 		   -display_label => $display_label,
 		   -description   => $desc,
-		   -experiment_id => $exp_id,
+		   -input_set_id  => $input_set_id,
 		  );
 
 		push @fsets, $fset;
@@ -595,7 +595,7 @@ sub store {
 	my $sth = $self->prepare
 	  (
 	   "INSERT INTO feature_set
-        (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label, experiment_id)
+        (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label, input_set_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 	  );
 
@@ -613,7 +613,7 @@ sub store {
 		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $fset->analysis);
 			 
 
-		  # Check optional Experiment and CellType
+		  # Check optional InputSet and CellType
 		  my $ctype_id;
 		  my $ctype = $fset->cell_type;
 
@@ -622,12 +622,12 @@ sub store {
 			$ctype_id = $ctype->dbID;
 		  }
 
-		  my $exp_id;
-		  my $exp =  $fset->get_Experiment; 
+		  my $input_set_id;
+		  my $input_set =  $fset->get_InputSet; 
 
-		  if($exp){
-			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
-			$exp_id = $exp->dbID;
+		  if($input_set){
+			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $input_set);
+			$input_set_id = $input_set->dbID;
 		  }
 
 		  
@@ -638,7 +638,7 @@ sub store {
 		  $sth->bind_param(5, $fset->feature_class,          SQL_VARCHAR);
 		  $sth->bind_param(6, $fset->description,            SQL_VARCHAR);
 		  $sth->bind_param(7, $fset->display_label,          SQL_VARCHAR);
-		  $sth->bind_param(8, $exp_id,                       SQL_INTEGER);
+		  $sth->bind_param(8, $input_set_id,                 SQL_INTEGER);
 		  
 		  $sth->execute();
 		  $fset->dbID($sth->{'mysql_insertid'});
@@ -751,3 +751,8 @@ sub fetch_attribute_set_config_by_FeatureSet{
 
 1;
 
+__END__
+
+#Methods to add?
+
+#fetch_all_by_InputSet - would require input_set_id index
