@@ -77,6 +77,11 @@ our (%tables, %true_tables, %constraint_config);
 sub compose_constraint_query{
   my ($self, $params) = @_;
 
+  if($params &&
+	 (ref($params) ne 'HASH') ){
+	throw('You must pass a valid params HASHREF to compose_constraint_query');
+  }
+  
   #Top level constraints key to allow other params to be passed
   #Hence can't throw if defined but constraints not present as maybe for something else
   #Won't all params be constraints?
@@ -88,8 +93,7 @@ sub compose_constraint_query{
   
   my @constraints;
 
-  if( (ref($params) eq 'HASH') &&
-	  exists ${$params}{constraints}){
+  if( exists ${$params}{constraints}){
 		
 	my @filter_names = keys (%{$params->{constraints}});
 
