@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -24,28 +24,32 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::InputSet - A module to represent InputSubset object.
+Bio::EnsEMBL::InputSubset - A module to represent InputSubset object.
  
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::ExperimetnalSubset;
+use Bio::EnsEMBL::Funcgen::InputSubset;
 
-my $data_set = Bio::EnsEMBL::Funcgen::InputSubset->new(
-	                                                         -DBID             => $dbID,
-							 					             -ADAPTOR          => $self,
-                                                             -NAME             => $name,
-                                                             -EXPERIMENTAL_SET => $eset,
-                                                             );
+my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new
+                    (
+                     -DBID        => $dbID,
+                     -ADAPTOR     => $self,
+                     -NAME        => $name,
+                     -INPUT_SET   => $iset,
+                     -archive_id  => $archive_id,
+                     -display_url => $display_url,
+                     -replicate   => $iss_rep,
+                     -is_control  => $is_control,
+                    );
 
 
 
 =head1 DESCRIPTION
 
-An InputSubset object is a very simple skeleton class to enable storage of associated subset states. As such there
-are only very simple accessor methods for basic information, and there is no namesake adaptor, rather is is handled by the 
-InputSetAdaptor.
-
+An InputSubset object represents an individual distinct input within a given InputSet. This 
+normally translates to single file or replicate. There is no dedicated InputSubsetAdaptor,
+store and fetch functionality is embedded within the InputSetAdaptor.
 
 =cut
 
@@ -64,19 +68,23 @@ use vars qw(@ISA);
 
 =head2 new
 
-  Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSubset->new(
-                                                                        -DBID            => $dbID,
-							 					                        -ADAPTOR         => $self,
-                                                                        -NAME            => $name,
-                                                                        -EXPERIMENTAL_SET => $eset,
-                                                                        );
+  Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSubset->new
+                            (
+                             -DBID        => $dbID,
+                             -ADAPTOR     => $self,
+                             -NAME        => $name,
+                             -INPUT_SET   => $iset,
+                             -archive_id  => $archive_id,
+                             -display_url => $display_url,
+                             -replicate   => $iss_rep,
+                             -is_control  => $is_control,
+                            );
 
 
   Description: Constructor for InputSubset objects.
   Returntype : Bio::EnsEMBL::Funcgen::InputSubset
   Exceptions : Throws if no name defined
-               Throws if CellType or FeatureType are not valid or stored
-  Caller     : General
+  Caller     : InputSetAdaptor
   Status     : At risk
 
 =cut
@@ -89,8 +97,10 @@ sub new {
   my $self = $class->SUPER::new(@_);
 	
   #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($name, $eset)
-    = rearrange(['NAME', 'INPUT_SET'], @_);
+  my ($name, $eset, $archive_id,
+	 $display_url, $rep, $is_control)
+    = rearrange(['NAME', 'INPUT_SET', 'ARCHIVE_ID', 
+				 'DISPLAY_URL', 'REPLICATE', 'IS_CONTROL'], @_);
   
   
   throw('Must provide a name argument') if ! defined $name;
@@ -102,8 +112,12 @@ sub new {
   }
   
 
-  $self->{'name'} = $name;
-  $self->{'input_set'} = $eset;
+  $self->{name}        = $name;
+  $self->{input_set}   = $eset;
+  $self->{archive_id}  = $archive_id;
+  $self->{display_url} = $display_url;
+  $self->{replicate}   = $rep;
+  $self->{is_control}  = $is_control;
 
   return $self;
 }
@@ -113,21 +127,19 @@ sub new {
 
   Example    : my $name = $exp_sset->name();
   Description: Getter for the name of this InputSubset.
-  Returntype : string
+  Returntype : String
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub name {
-  my $self = shift;
-  return $self->{'name'};
-}
+sub name { return $_[0]->{name}; }
+
 
 =head2 input_set
 
-  Example    : my $eset = $exp_sset->input_set();
+  Example    : my $input_set = $input_sset->input_set;
   Description: Getter for the input_set attribute of this InputSubset.
   Returntype : Bio::EnsEMBL::Funcgen::InputSet
   Exceptions : None
@@ -136,12 +148,63 @@ sub name {
 
 =cut
 
-sub input_set {
-  my $self = shift;
-  return $self->{'input_set'};
-}
+sub input_set {  return $_[0]->{input_set}; }
 
 
+=head2 archive_id
+
+  Example    : my $archive_id = $inp_sset->archive_id;
+  Description: Getter for the archive of this InputSubset.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub archive_id { return $_[0]->{archive_id}; }
+
+
+=head2 display_url
+
+  Example    : my $url = $inp_sset->displau_url;
+  Description: Getter for the display_url of this InputSubset.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub display_url{ return $_[0]->{display_url}; }
+
+
+=head2 replicate
+
+  Example    : my $rep = $inp_sset->replicate;
+  Description: Getter for the replicate attribute of this InputSubset.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub replicate { return $_[0]->{replicate}; }
+
+
+=head2 is_control
+
+  Example    : if($input_sset->is_control){ # Do some control specific stuff here }
+  Description: Getter for the is_control attribute of this InputSubset.
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub is_control { return $_[0]->{is_control}; }
 
 1;
 
