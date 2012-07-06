@@ -315,6 +315,7 @@ sub run_system_cmd{
   my $status = system("$command $redirect");
   my $exit_code = $status >> 8; 
  
+
   if ($status == -1) {	
 	warn "Failed to execute: $!\n";
   }    
@@ -325,6 +326,8 @@ sub run_system_cmd{
 	warn sprintf("Child exited with value %d\nError:\t$!\n", $exit_code); #get the true exit code
   }
  
+  #We're not catchign error message here!
+
   if ($exit_code != 0){
 		  
     if (! $no_exit){
@@ -659,7 +662,7 @@ sub add_external_db{
   my $sql = "select external_db_id from external_db where db_name='$db_name' and db_release='$db_release'";
   my ($db_id) =  $efg_db->dbc->db_handle->selectrow_array($sql);
   if($db_id){ 
-    warn "External DB $db_name $db_release already exists in db with db_id $db_id";
+    warn "External DB $db_name $db_release already exists in db with db_id $db_id\n";
   } else {
     #TODO check if it there was a failure
     $efg_db->dbc->do("insert into external_db (db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('$db_name', '$db_release', 'KNOWNXREF', '1', '5', '$db_display_name', 'MISC')");
