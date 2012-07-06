@@ -71,8 +71,6 @@ use vars qw(@ISA);
   Arg [-DATE]                : String - Date of the experiment (YYYY-MM-DD)
   Arg [-PRIMARY_DESIGN_TYPE] : String - MGED term for the primary design of teh experiment e.g. binding_site_identification
   Arg [-DESCRIPTION]         : String
-  Arg [-ARCHIVE_ID]          : String - Public repository (ENA) experiment accession e.g. SRX00124818
-  Arg [-DATA_URL]            : String - Public URL of the data (used if the archive_id is not present)
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new
                               (
@@ -81,8 +79,7 @@ use vars qw(@ISA);
 							   -DATE                => $date,
 							   -PRIMARY_DESIGN_TYPE => $p_design_type,
 							   -DESCRIPTION         => $description,
-							   -ARCHIVE_ID          => $archive_id,
-                              );
+					          );
 
   Description: Creates a new Bio::EnsEMBL::Funcgen::Experiment object.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
@@ -104,6 +101,14 @@ sub new {
 		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 
 					  'DESCRIPTION','ARCHIVE_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
 	
+    
+    #Added in v68
+    #Remove in v69
+    if($data_url || $archive_id){
+      throw('The -data_url and -archive_id parameters have been moved to the InputSubSet class');
+    }
+
+
 	#Mandatory attr checks
 
 	if(ref($group) ne 'Bio::EnsEMBL::Funcgen::ExperimentalGroup'){
@@ -123,8 +128,6 @@ sub new {
 	$self->{date}                = $date       if defined $date;
 	$self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
 	$self->{description}         = $desc       if defined $desc;
-	$self->{archive_id}          = $archive_id if defined $archive_id;
-	$self->{data_url}            = $data_url   if defined $data_url;
 
 	#Maintain setter funcs here as these are populated after initialisation
 	$self->mage_xml_id($xml_id) if defined $xml_id;
