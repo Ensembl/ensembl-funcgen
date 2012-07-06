@@ -56,17 +56,15 @@ use Bio::EnsEMBL::Funcgen::Set;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
-my %valid_classes = (
-					 annotated    => undef,
-					 regulatory   => undef,
-					 external     => undef,
-					 segmentation => undef,
-					);
+my %valid_classes = ( annotated    => undef,
+                      regulatory   => undef,
+                      external     => undef,
+                      segmentation => undef, );
 
 =head2 new
 
-                           -name          => $name,
-                                                                    -feature_type  => $ftype,
+    -name          => $name,
+    -feature_type  => $ftype,
                                                                     -cell_type     => $ctype,
                                                                     -name          => $name,
               -description   => 'Release 3.1',
@@ -85,7 +83,7 @@ Arg [-ADAPTOR]
                                                                     -feature_class => 'annotated',
                                                                     -description   => 'Release 3.1',
                                                                     -display_label => 'Short name',
-                                                                    -experiment_id => $exp_id,
+                                                                    -input_set     => $iset,
 			                                                       ); 
   Description: Constructor for FeatureSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
@@ -97,40 +95,52 @@ Arg [-ADAPTOR]
 
 sub new {
   my $caller = shift;
-  my $class = ref($caller) || $caller;	
-  my $self = $class->SUPER::new(@_);
-	
-  my ($desc, $dlabel, $exp_id, $exp)
-    = rearrange(['DESCRIPTION', 'DISPLAY_LABEL', 'EXPERIMENT_ID', 'EXPERIMENT'],@_);
+  my $class  = ref($caller) || $caller;
+  my $self   = $class->SUPER::new(@_);
+
+  my ( $desc, $dlabel, $iset_id, $iset, $exp_id, $exp ) =
+    rearrange( [ 
+                'DESCRIPTION',   'DISPLAY_LABEL',
+                'INPUT_SET_ID', 'INPUT_SET', 'EXPERIMENT_ID', 'EXPERIMENT'
+               ],
+               @_ );
+
+
+  if($exp_id || $exp){
+    throw('Passing an Experiment or an experiment_id is now deprecated,'.
+          ' please use -input_set or -input_set_id instead');
+  }
 
   #Allow exp or exp_id to be passed to support storing and lazy loading
 
   #Mandatory params checks here (setting done in Set.pm)
-  throw ('Must provide a FeatureType') if(! defined $self->feature_type);
+  throw('Must provide a FeatureType')
+    if ( !defined $self->feature_type );
 
-  #explicit type check here to avoid invalid types being imported as NULL
-  #subsequently throwing errors on retrieval
+ #explicit type check here to avoid invalid types being imported as NULL
+ #subsequently throwing errors on retrieval
   my $type = $self->feature_class;
 
-  if(! ($type && exists $valid_classes{$type}) ){
-	throw('You must define a valid FeatureSet type e.g. '.
-		  join(', ', keys %valid_classes));
+  if ( !( $type && exists $valid_classes{$type} ) ) {
+    throw( 'You must define a valid FeatureSet type e.g. ' .
+           join( ', ', keys %valid_classes ) );
   }
 
   #Direct assignment to prevent need for set arg test in method
 
   $self->{'description'}   = $desc   if defined $desc;
   $self->{'display_label'} = $dlabel if defined $dlabel;
-  $self->{'experiment_id'} = $exp_id if defined $exp_id;
+  $self->{'input_set_id'} = $iset_id if defined $iset_id;
 
-  if(defined $exp){
-	#Exp obj is only passed during object storing
-	#so let the adaptor do is_stored_and_valid
-	$self->{'experiment'}    = $exp;
+  if ( defined $iset ) {
+    #Exp obj is only passed during object storing
+    #so let the adaptor do is_stored_and_valid
+    $self->{'input_set'} = $iset;
   }
-  
+
   return $self;
-}
+} ## end sub new
+
 
 
 =head2 new_fast
@@ -145,6 +155,7 @@ sub new {
   Status     : At Risk
 
 =cut
+
 
 sub new_fast {
   return bless ($_[1], $_[0]);
@@ -181,21 +192,24 @@ sub description {
 
 sub display_label {
   my $self = shift;
-  
-  if(! $self->{'display_label'}){
 
-	if($self->feature_type->class() eq 'Regulatory Feature'){
-	  $self->{'display_label'} = $self->name;
-	}
-	else{
-	  #This still fails here if we don't have a class or a cell_type set
-	  
-	  $self->{'display_label'} = $self->feature_type->name()." - ".$self->cell_type->name()." Enriched Sites";
-	}
+  if ( !$self->{'display_label'} ) {
+
+    if ( $self->feature_type->class() eq 'Regulatory Feature' ) {
+      $self->{'display_label'} = $self->name;
+    }
+    else {
+      #This still fails here if we don't have a class or a cell_type set
+
+      $self->{'display_label'} =
+        $self->feature_type->name() . " - " . $self->cell_type->name() .
+        " Enriched Sites";
+    }
   }
-	
+
   return $self->{'display_label'};
 }
+
 
 
 
@@ -349,35 +363,35 @@ sub is_attribute_set{
 }
 
 
-=head2 get_Experiment
+=head2 get_InputSet
 
-  Example    : my $exp = $FeatureSet->get_Experiment;
-  Description: Retrieves the Experiment for this FeatureSet
-  Returntype : Bio::EnsEMBL::Funcgen::Experiment
+  Example    : my $input_set = $FeatureSet->get_InputSet;
+  Description: Retrieves the InputSet for this FeatureSet
+  Returntype : Bio::EnsEMBL::Funcgen::InputSet
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub get_Experiment{
+sub get_InputSet{
   my $self = shift;
 
-  if( (! defined $self->{'experiment'}) &&
-	  (defined $self->{'experiment_id'}) ){
-	$self->{'experiment'} = $self->adaptor->db->get_ExperimentAdaptor->fetch_by_dbID($self->{experiment_id});
+  if( (! defined $self->{input_set}) &&
+	  (defined $self->{input_set_id}) ){
+	$self->{input_set} = $self->adaptor->db->get_InputSetAdaptor->fetch_by_dbID($self->{input_set_id});
   }
 
-
-  return $self->{'experiment'};
+  return $self->{input_set};
 }
+
 
 
 =head2 source_label
 
   Example    : my $source_label = $fset->source_label;
   Description: Retrieves the source label this FeatureSet, used in zmenus
-  Returntype : String
+  Returntype : Arrayref of Strings
   Exceptions : None
   Caller     : Webcode
   Status     : At Risk - remove, to be done by webcode?
@@ -389,31 +403,57 @@ sub source_label{
 
 
   if(! defined $self->{'source_label'}){
-	my $exp          = $self->get_Experiment;
-	my $source_label;
+	my $input_set = $self->get_InputSet;
+	my @source_labels;
 
-	if($exp){
+	if($input_set){
 
-	  $source_label = $exp->archive_id;
+	  @source_labels = map $_->archive_id, @{$input_set->get_InputSubsets};
+	  #Archive IDs e.g. SRX identifiers or undef.
 	  
-	  my $exp_group = $exp->experimental_group;
-	
+	  my $exp_group = $input_set->get_Experiment->experimental_group;
+	  
+ 
 	  if($exp_group && 
 		 $exp_group->is_project){
-		
-		if($source_label){
-		  $source_label .= ' '.$exp_group->name;
-		}
-		else{
-		  $source_label = $exp_group->name;
+	
+		foreach my $source_label(@source_labels){
+
+		  if($source_label){
+			#Append project name
+			$source_label .= ' '.$exp_group->name;
+		  }
+		  else{
+			$source_label = $exp_group->name;
+		  }
 		}
 	  }
 	}
 
-	$self->{'source_label'} = $source_label || '';
+	$self->{'source_label'} = \@source_labels;
   }
 
   return $self->{'source_label'};
+}
+
+
+
+
+### DEPRECATED ###
+
+=head2 get_Experiment
+#
+#  Example    : my $exp = $FeatureSet->get_Experiment;
+#  Description: Retrieves the Experiment for this FeatureSet
+#  Returntype : Bio::EnsEMBL::Funcgen::Experiment
+#  Exceptions : None
+#  Caller     : General
+  Status     : DEPRECATED
+
+=cut
+
+sub get_Experiment{
+  throw('FeatureSet::get_Experiment is not longer supported, please use FeatureSet::get_InputSet');
 }
 
 
