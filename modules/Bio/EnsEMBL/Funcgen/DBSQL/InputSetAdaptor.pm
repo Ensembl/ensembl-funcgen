@@ -95,7 +95,7 @@ use vars qw(@ISA);
 
    status => 
    {
-    tables => (['status', 's']),#['status_name', 'sn']),
+    tables => [['status', 's']],#['status_name', 'sn']),
     
     compose_constraint => sub
     { my ($self, $state) = @_;
@@ -585,6 +585,8 @@ sub fetch_input_set_filter_counts{
                 'GROUP BY eg.name, eg.is_project, ft.class, ct.name';
 
   #warn $sql;
+  #Need to write HC around this as we sometimes get less than expect. 
+  
 
   my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
   my $ftype_info = $self->db->get_FeatureTypeAdaptor->get_regulatory_evidence_info;
