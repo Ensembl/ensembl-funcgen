@@ -29,16 +29,25 @@ Bio::EnsEMBL::InputSet - A module to represent InputSet object.
 
 use Bio::EnsEMBL::Funcgen::InputSet;
 
-my $data_set = Bio::EnsEMBL::Funcgen::InputSet->new(
-	                                                      -DBID            => $dbID,
-							 					          -ADAPTOR         => $self,
-                                                          -EXPERIMENT   => $exp,
-                                                          -FEATURE_TYPE => $ftype,
-                                                          -CELL_TYPE    => $ctype,
-                                                          -FORMAT       => 'READ_FORMAT',
-                                                          -VENDOR       => 'SOLEXA',
-                                                          -NAME         => 'ExpSet1',
-                                                          );
+#Create an InputSet
+
+my $inp_set = Bio::EnsEMBL::Funcgen::InputSet->new
+                 (
+	              -DBID            => $dbID,
+                  -ADAPTOR         => $self,
+                  -EXPERIMENT      => $exp,
+                  -FEATURE_TYPE => $ftype,
+                  -CELL_TYPE    => $ctype,
+                  -FORMAT       => 'READ_FORMAT',
+                  -VENDOR       => 'SOLEXA',
+                  -NAME         => 'ExpSet1',
+                  -REPLICATE    => 1,
+                 );
+
+# Add some InputSubsets
+
+$inp_set->add_new_subsets($subset_name, $
+
 
 
 
@@ -100,8 +109,8 @@ sub new {
   #This need to stay like this until we patch the DB
   my $self = $class->SUPER::new(@_);	
  
-  my ($exp, $format, $vendor)
-    = rearrange(['EXPERIMENT', 'FORMAT', 'VENDOR'], @_);
+  my ($exp, $format, $vendor, $rep)
+    = rearrange(['EXPERIMENT', 'FORMAT', 'VENDOR', 'REPLICATE'], @_);
     
   if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
@@ -113,6 +122,8 @@ sub new {
   throw ('Must provide a CellType') if(! defined $self->cell_type);
 
   my $type = $self->feature_class;
+
+  #Need to move these types to config
 
   if(! ($type && grep /^${type}$/, ('annotated', 'result', 'segmentation'))){
 	throw("You must define a valid InputSet feature_class e.g. 'annotated' or 'result'");
@@ -129,15 +140,17 @@ sub new {
   ##default analysis hack for v47
   ##Set directly to avoid dbID boolean check
   #This is to support supporting_set cache in data_set?
-  $self->{'analysis'} = Bio::EnsEMBL::Analysis->new(-logic_name => 'external',
-  						    -id       => 0,#??someone needs to rewrite analysis
-  						   );
-  #}
+  $self->{'analysis'} = Bio::EnsEMBL::Analysis->new
+	(-logic_name => 'external',
+	 -id       => 0,#??someone needs to rewrite analysis
+	);
   
-  $self->format($format) if defined $format;
-  $self->vendor($vendor) if defined $vendor;
-  $self->{'experiment'} = $exp;
-  $self->{'subsets'} = {};
+  #Change to direct setting for speed
+  $self->{format}     = $format;
+  $self->{vendor}     = $vendor;
+  $self->{replicate}  = $rep;
+  $self->{experiment} = $exp;
+  $self->{subsets}    = {};
   
   return $self;
 }
@@ -146,6 +159,8 @@ sub new {
 =head2 add_new_subset
 
   Arg [1]    : string - sub set name e.g. the file name (not path as we're restricted to 30 chars)
+  Arg [2]    : Bio::EnsEMBL::Funcgen::InputSubset - optional
+               If not defined will create a sparse InputSubset based on the name
   Example    : $expset->add_new_subset($ss_name, $exp_subset);
   Description: Adds input_subset
   Returntype : none
@@ -156,11 +171,13 @@ sub new {
 
 =cut
 
+#Do we still use the optional subset function?
+
 sub add_new_subset {
   my ($self, $ss_name, $exp_sset) = @_;
 	
   #Need to test $ss_name here
-  if(! ($ss_name && ref(\$ss_name) eq 'SCALAR')){#ref to $exp_sset woulf be REF
+  if(! ($ss_name && ref(\$ss_name) eq 'SCALAR')){#ref($exp_sset) would be 'REF'
 	throw('You must pass a InputSubset name');
   }
 
@@ -177,14 +194,14 @@ sub add_new_subset {
   else{
 	
 	$exp_sset = Bio::EnsEMBL::Funcgen::InputSubset->new(
-															   -name => $ss_name,
-															   -input_set => $self,
-															  );
+														-name => $ss_name,
+														-input_set => $self,
+													   );
   }
 
-  $self->{'subsets'}{$ss_name} = $exp_sset;
+  $self->{subsets}{$ss_name} = $exp_sset;
 
-  return $self->{'subsets'}{$ss_name};
+  return $self->{subsets}{$ss_name};
 }
 
 
@@ -199,21 +216,8 @@ sub add_new_subset {
 
 =cut
 
-sub get_Experiment{
-  my $self = shift;
+sub get_Experiment{  return $_[0]->{experiment}; }
 
-  return $self->{'experiment'};  
-}
-
-
-
-sub get_subsets{
-  my ($self)  = shift;
-
-  deprecate('Please use the get_InputSubsets method');
-
-  return $self->get_InputSubsets;
-}
 
 =head2 get_InputSubsets
 
@@ -239,7 +243,7 @@ sub get_InputSubsets{
 
   Example    : my $subsets = $exp_set->get_subset_by_name('subset1');
   Description: Getter for the subset of a given name for this InputSet.
-  Returntype : Bio::EnsEMBL::Funcgen::ExpeirmentalSubset
+  Returntype : Bio::EnsEMBL::Funcgen::InputSubset
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -248,7 +252,6 @@ sub get_InputSubsets{
 
 sub get_subset_by_name{
   my ($self, $name) = @_;
-
   return (exists $self->{'subsets'}{$name}) ? $self->{'subsets'}{$name} : undef;
 }
 
@@ -266,7 +269,6 @@ sub get_subset_by_name{
 
 sub get_subset_names{
   my ($self) = shift;
-
   return [ keys %{$self->{'subsets'}} ];
 }
 
@@ -275,44 +277,49 @@ sub get_subset_names{
 
 =head2 vendor
 
-  Arg[1]     : string - vendor 
-  Example    : my $eset->vendor('SOLEXA');
-  Description: Getter/Setter for the vendor attribute of this DataSet.
-  Returntype : string
+  Arg[1]     : String - vendor e.g. ILLUMINA
+  Example    : my $iset_vendor = $iset->vendor;
+  Description: Getter for the vendor attribute of this InputSet.
+  Returntype : String
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub vendor {
-  my $self = shift;
-     	
-  $self->{'vendor'} = shift if @_;
-
-  return $self->{'vendor'};
-}
+sub vendor {  return $_[0]->{vendor}; }
 
 
 =head2 format
 
   Arg[1]     : string - format i.e. product type/format
-  Example    : my $eset->format('DATASET1');
-  Description: Getter/Setter for the format attribute of this InputSet.
-  Returntype : string
+  Example    : my $iset_format = $iset->format;
+  Description: Getter for the format attribute of this InputSet.
+  Returntype : String
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub format {
-  my $self = shift;
-     	
-  $self->{'format'} = shift if @_;
-  
-  return $self->{'format'};
-}
+sub format {  return $_[0]->{format}; }
+
+
+=head2 replicate
+
+  Arg[1]     : Integer - replicate 0 = merged or NA, >0 refers to individual replicate
+  Example    : if($iset->replicate){ #Do something replicate specific in here }
+  Description: Getter for the replicate attribute of this InputSet.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub replicate {  return $_[0]->{replicate}; }
+
+
 
 1;
 
