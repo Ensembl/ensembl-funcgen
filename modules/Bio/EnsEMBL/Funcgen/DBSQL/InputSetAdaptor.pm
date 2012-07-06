@@ -48,20 +48,18 @@ package Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::InputSet;
-use Bio::EnsEMBL::Funcgen::ResultFeature;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 #use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);# @ISA
-#use base does not import!
+#use base does not import! But we are not importing anything here?
 
 
 
-#Could do with wrapping this in a sub, so we can have specific constraint POD for this
+#Convert these to subs, so we can have specific constraint POD for this
 #adaptor i.e. we don't have to add it to the POD of every method
 
 
@@ -578,7 +576,7 @@ sub fetch_input_set_filter_counts{
 
    my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, ct.name, ct.description '.
     'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, cell_type ct, '.
-      'status s, status_name sn input_set inp'.
+      'status s, status_name sn, input_set inp '.
         'WHERE fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id '.
           'AND e.experimental_group_id=eg.experimental_group_id '.
           'AND fs.feature_type_id=ft.feature_type_id AND fs.cell_type_id=ct.cell_type_id '.
@@ -586,10 +584,7 @@ sub fetch_input_set_filter_counts{
               'AND s.status_name_id=sn.status_name_id and sn.name="DISPLAYABLE" '.
                 'GROUP BY eg.name, eg.is_project, ft.class, ct.name';
 
-
-#  SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, ct.name, ct.description FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, cell_type ct, status s, status_name sn WHERE fs.experiment_id=e.experiment_id AND e.experimental_group_id=eg.experimental_group_id AND fs.feature_type_id=ft.feature_type_id AND fs.cell_type_id=ct.cell_type_id AND fs.feature_set_id=s.table_id AND fs.type="annotated" AND s.table_name="feature_set" AND s.status_name_id=sn.status_name_id and sn.name="DISPLAYABLE" and fs.name like "%NHEK%" GROUP BY eg.name, eg.is_project, ft.class, ct.name;
-#This looks good, maybe the extra count are coming from below?
-
+  #warn $sql;
 
   my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
   my $ftype_info = $self->db->get_FeatureTypeAdaptor->get_regulatory_evidence_info;
