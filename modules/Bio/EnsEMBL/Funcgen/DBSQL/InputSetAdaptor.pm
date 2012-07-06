@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -23,7 +23,7 @@
 =head1 NAME
 
 Bio::EnsEMBL::DBSQL::Funcgen::InputSetAdaptor - A database adaptor for fetching and
-storing InputSet objects.  
+storing InputSet objects.
 
 =head1 SYNOPSIS
 
@@ -43,25 +43,156 @@ InputSet objects.
 
 =cut
 
-#To do
-# Change sql references from experimental to input in line with v58 patch
-
+package Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor;
 
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::InputSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
-
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
-
-
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+
+#use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);# @ISA
+#use base does not import!
+
+
+
+#Could do with wrapping this in a sub, so we can have specific constraint POD for this
+#adaptor i.e. we don't have to add it to the POD of every method
+
+
+%constraint_config = 
+  (
+   #Need to bind param these as they come from URL parameters and are not tested
+
+   #Can move a lot of these to the BaseAdaptor
+   #and reuse between adaptors if we use the _tables method to get the table syn
+   #This may mean contraints can be specified for classes which do not contain 
+   #the relevant fields.
+   #Allow this flexiblity or validate fields/constraint?
+   #Or implicit by location of contraint config, i.e. put it in the relevant 
+   #parent adaptors
+
+   cell_types    => 
+   {
+    compose_constraint => sub 
+    { my ($self, $cts) = @_;
+      #Don't need to bind param this as we validate
+      return ' inp.cell_type_id IN ('.
+        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
+            ).')';
+    },
+   },
+   
+
+   #states
+   #This can't use IN without duplicating the result
+   #Need to add a default_final_clause
+
+   #Need to bind_param this if the status name string ever comes direct from a URL
+
+   status => 
+   {
+    tables => (['status', 's']),#['status_name', 'sn']),
+    
+    compose_constraint => sub
+    { my ($self, $state) = @_;
+      #my @sn_ids;
+      #if( (ref($states) ne 'ARRAY') ||
+      #scalar(@$states) == 0 ){
+      #throw('Must pass an arrayref of status_names');
+      #}
+      #foreach my $sn(@$states){
+      ##This will throw if status not valid, but still may be absent
+      # push @sn_ids, $self->_get_status_name_id($sn);
+      #  }
+       
+      my @tables = $self->_tables;
+      my ($table_name, $syn) = @{$tables[0]};
+      
+      return " $syn.${table_name}_id=s.table_id AND ".
+        "s.table_name='$table_name' AND s.status_name_id=".$self->_get_status_name_id($state);
+        #"s.table_name='$table_name' AND s.status_name_id IN (".join(', ', @sn_ids.')';
+
+    },
+   },
+
+   feature_types =>
+   {
+    compose_constraint => sub 
+    { my ($self, $fts) = @_;
+      #Don't need to bind param this as we validate
+      return ' inp.feature_type_id IN ('.
+        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}
+            ).')';
+    },
+   },
+
+   experiments =>
+   {
+    compose_constraint => sub 
+    { my ($self, $exps) = @_;
+      #Don't need to bind param this as we validate
+      return ' inp.experiment_id IN ('.
+        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exps, 'dbID')}
+            ).')';
+    },
+   },
+
+
+   format =>
+   {
+    #Is not currently enum's so have to hardcode current values for now
+    #likely to change
+    #SEQUENCING EQTL
+    compose_constraint => sub 
+    { my ($self, $format) = @_;
+
+      my %valid_formats = (SEQUENCING=>1);
+      #SEGMENTATION?
+
+      if(! exists $valid_formats{uc($format)}){
+        throw("$format is not a valid InputSet format, please specify one of:\t".
+              join(', ', keys %valid_formats));
+      }
+
+      return ' inp.format="'.uc($format).'"';
+    },
+
+   }
+
+  );
+
+
+=head2 fetch_all
+
+  Arg [1]    : optional HASHREF - Parameter hash containing contraints config e.g.
+                  {'constraints' => 
+                    {
+                     cell_types     => [$cell_type, ...], #Bio::EnsEMBL::Funcgen::CellType
+                     feature_types  => [$ftype, ...],     #Bio::EnsEMBL::Funcgen::FeatureType
+                     experiments    => [$ecp, ...],       #Bio::EnsEMBL::Funcgen::Experiment
+                     status         => $status_name,      #String e.g. IMPORTED
+                     format         => $inpset_format,    #String e.g. SEQUENCING
+                    }
+                  } 
+  Example    : 
+  Description: Retrieves a list of InputSets. Optional paramters hash allows for flexible query terms.
+  Returntype : ARRAYREF of Bio::EnsEMBL::InputSet objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all{
+  my ($self, $params_hash) = @_;
+  $self->generic_fetch($self->compose_constraint_query($params_hash));
+}
 
 
 
@@ -80,14 +211,8 @@ use vars qw(@ISA);
 
 sub fetch_all_by_FeatureType {
   my ($self, $ftype) = @_;
-
-  if( !(ref($ftype) && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())){
-    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
-  }
-  
-  my $constraint = "inp.feature_type_id =".$ftype->dbID();
-	
-  return $self->generic_fetch($constraint);
+  my $params = {constraints => {feature_types => [$ftype]}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
 
@@ -105,14 +230,8 @@ sub fetch_all_by_FeatureType {
 
 sub fetch_all_by_CellType {
   my ($self, $ctype) = @_;
-
-  if( !(ref($ctype) && $ctype->isa("Bio::EnsEMBL::Funcgen::CellType") && $ctype->dbID())){
-    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::CellType");
-  }
-	
-  my $constraint = "inp.cell_type_id =".$ctype->dbID();
-	
-  return $self->generic_fetch($constraint);
+  my $params = {constraints => {cell_types => [$ctype]}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
 }
  
 
@@ -130,14 +249,8 @@ sub fetch_all_by_CellType {
 
 sub fetch_all_by_Experiment {
   my ($self, $exp) = @_;
-
-  if( ! ( ref($exp) &&
-		  $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') &&
-		  $exp->dbID())){
-	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment');
-  }
-		
-  return $self->generic_fetch('inp.experiment_id = '.$exp->dbID());
+  my $params = {constraints => {experiments => [$exp]}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
 =head2 fetch_by_name
@@ -157,7 +270,7 @@ sub fetch_by_name {
 
   throw('Need to pass a name argument') if( ! defined $name);
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
-		
+        
   return $self->generic_fetch("inp.name = ?")->[0];
 }
 
@@ -176,11 +289,11 @@ sub fetch_by_name {
 
 sub _tables {
   my $self = shift;
-	
+    
   return (
-		  [ 'input_set',    'inp' ],
-		  [ 'input_subset', 'iss' ],
-		 );
+          [ 'input_set',    'inp' ],
+          [ 'input_subset', 'iss' ],
+         );
 }
 
 =head2 _columns
@@ -197,40 +310,22 @@ sub _tables {
 =cut
 
 sub _columns {
-	my $self = shift;
+    my $self = shift;
 
-	#can't have is as an alias as it is reserved
-	return qw(
-			  inp.input_set_id    inp.experiment_id
-			  inp.feature_type_id inp.cell_type_id
-			  inp.format          inp.vendor
-			  inp.name            inp.type
-			  iss.name			  iss.input_subset_id
-		 );
+    #can't have 'is' as an alias as it is reserved
+    return qw(
+              inp.input_set_id    inp.experiment_id
+              inp.feature_type_id inp.cell_type_id
+              inp.format          inp.vendor
+              inp.name            inp.type
+              inp.replicate       iss.name
+              iss.input_subset_id iss.archive_id
+              iss.display_url     iss.replicate
+              iss.is_control
+         );
 
-	
+    
 }
-
-#=head2 _default_where_clause
-#
-#  Args       : None
-#  Example    : None
-#  Description: PROTECTED implementation of superclass abstract method.
-#               Returns an additional table joining constraint to use for
-#			   queries.
-#  Returntype : List of strings
-#  Exceptions : None
-#  Caller     : Internal
-#  Status     : At Risk
-#
-#=cut
-
-#sub _default_where_clause {
-#  my $self = shift;
-
-#  return 'es.experimental_set_id = ess.experimental_set_id';
-
-#}
 
 =head2 _left_join
 
@@ -238,7 +333,7 @@ sub _columns {
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
                Returns an additional table joining constraint to use for
-			   queries.
+               queries.
   Returntype : List
   Exceptions : None
   Caller     : Internal
@@ -246,9 +341,11 @@ sub _columns {
 
 =cut
 
+#rather than default_where so we still get back InputSets without InputSubsets
+
 sub _left_join {
   my $self = shift;
-	
+    
   return (['input_subset', 'inp.input_set_id = iss.input_set_id']);
 }
 
@@ -262,7 +359,7 @@ sub _left_join {
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
                Creates Array objects from an executed DBI statement
-			   handle.
+               handle.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
   Caller     : Internal
@@ -274,14 +371,14 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
   
   my ($dbid, $exp_id, $ftype_id, $ctype_id, $format, $vendor, $name, $ess_name, $ess_id, $type);
-  my ($eset, @esets, $ftype, $ctype);
+  my ($inp_rep, $eset, @esets, $ftype, $ctype, $archive_id, $display_url, $iss_rep, $is_control);
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
   my $exp_adaptor = $self->db->get_ExperimentAdaptor();
-  $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, \$vendor, \$name, \$type, \$ess_name, \$ess_id);
+  $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, 
+                     \$vendor, \$name, \$type, \$inp_rep, \$ess_name, \$ess_id,
+                     \$archive_id, \$display_url, \$iss_rep, \$is_control);
   
-  #this fails if we delete entries from the joined tables
-  #causes problems if we then try and store an rs which is already stored
 
   while ( $sth->fetch() ) {
 
@@ -289,39 +386,42 @@ sub _objs_from_sth {
       
       push @esets, $eset if $eset;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
-	  throw("Could not fetch FeatureType with dbID $ftype_id for InputSet $name") if ! $ftype;
+      throw("Could not fetch FeatureType with dbID $ftype_id for InputSet $name") if ! $ftype;
 
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-	  throw("Could not fetch CellType with dbID $ctype_id for InputSet $name") if ! $ctype;
+      throw("Could not fetch CellType with dbID $ctype_id for InputSet $name") if ! $ctype;
 
 
       $eset = Bio::EnsEMBL::Funcgen::InputSet->new(
-												   -DBID         => $dbid,
-												   -EXPERIMENT   => $exp_adaptor->fetch_by_dbID($exp_id),
-												   -FORMAT       => $format,
-												   -VENDOR       => $vendor,
-												   -FEATURE_TYPE => $ftype,
-												   -CELL_TYPE    => $ctype,
-												   -FEATURE_CLASS=> $type,
-												   -ADAPTOR      => $self,
-												   -NAME         => $name,
-												  );
-    }
+                                                   -DBID         => $dbid,
+                                                   -EXPERIMENT   => $exp_adaptor->fetch_by_dbID($exp_id),
+                                                   -FORMAT       => $format,
+                                                   -VENDOR       => $vendor,
+                                                   -FEATURE_TYPE => $ftype,
+                                                   -CELL_TYPE    => $ctype,
+                                                   -FEATURE_CLASS=> $type,
+                                                   -ADAPTOR      => $self,
+                                                   -NAME         => $name,
+                                                   -REPLICATE    => $inp_rep,
+                                                  );
+    }   
     
-    #This assumes logical association between chip from the same exp, confer in store method?????????????????
-	
-	
-	#we're not controlling ctype and ftype during creating new InputSets to store.
-	#we should change add_table_id to add_InputChip and check in that method
+
     if(defined $ess_name){
-	  
-	  $eset->add_new_subset($ess_name, Bio::EnsEMBL::Funcgen::InputSubset->new( -name    => $ess_name,
-																				   -dbID    => $ess_id,
-																				   -adaptor => $self,
-																				   -input_set => $eset,
-																				 ));
-	  
-	}
+      
+      $eset->add_new_subset($ess_name, 
+                            Bio::EnsEMBL::Funcgen::InputSubset->new( 
+                                                                    -name        => $ess_name,
+                                                                    -dbID        => $ess_id,
+                                                                    -adaptor     => $self,
+                                                                    -input_set   => $eset,
+                                                                    -archive_id  => $archive_id,
+                                                                    -display_url => $display_url,
+                                                                    -replicate   => $iss_rep,
+                                                                    -is_control  => $is_control,
+                                                                   )
+                           );
+    }
   }
   
   push @esets, $eset if $eset;
@@ -352,8 +452,8 @@ sub store{
   
   
   my $sth = $self->prepare('INSERT INTO input_set (experiment_id, feature_type_id, 
-                                                       cell_type_id, format, vendor, name, type) 
-                                                       VALUES (?, ?, ?, ?, ?, ?, ?)');
+                                                       cell_type_id, format, vendor, name, type, replicate)
+                                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   
   my $db = $self->db();
   
@@ -370,19 +470,20 @@ sub store{
     }
    
 
-	my $ct_id = (defined $set->cell_type()) ? $set->cell_type->dbID() : undef;
-	my $ft_id = (defined $set->feature_type()) ? $set->feature_type->dbID() : undef;
+    my $ct_id = (defined $set->cell_type()) ? $set->cell_type->dbID() : undef;
+    my $ft_id = (defined $set->feature_type()) ? $set->feature_type->dbID() : undef;
 
 
 
 
     $sth->bind_param(1, $set->get_Experiment->dbID(),   SQL_INTEGER);
-	$sth->bind_param(2, $ft_id,                         SQL_INTEGER);
-	$sth->bind_param(3, $ct_id,                         SQL_INTEGER);
-  	$sth->bind_param(4, $set->format,                   SQL_VARCHAR);
-  	$sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
-	$sth->bind_param(6, $set->name,                     SQL_VARCHAR);
-	$sth->bind_param(7, $set->feature_class,            SQL_VARCHAR);
+    $sth->bind_param(2, $ft_id,                         SQL_INTEGER);
+    $sth->bind_param(3, $ct_id,                         SQL_INTEGER);
+    $sth->bind_param(4, $set->format,                   SQL_VARCHAR);
+    $sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
+    $sth->bind_param(6, $set->name,                     SQL_VARCHAR);
+    $sth->bind_param(7, $set->feature_class,            SQL_VARCHAR);
+    $sth->bind_param(7, $set->replicate,                SQL_INTEGER);
 
     
     $sth->execute();
@@ -418,44 +519,36 @@ sub store_InputSubsets{
   my ($self, $ssets) = @_;
   
   my $sth = $self->prepare("
-		INSERT INTO input_subset (
-			input_set_id, name
-		) VALUES (?, ?)
-	");
+        INSERT INTO input_subset (
+            input_set_id, name, archive_id, display_url, replicate, is_control
+        ) VALUES (?, ?, ?, ? ,?, ?)
+    ");
 
   throw('Must provide at least one InputSubset') if(! @$ssets);
 
   #Store and set all previously unstored table_ids
   foreach my $sset(@$ssets){
-	
-	#use is_stored here?
-	if($sset->dbID()){
-	  warn "Skipping InputSubset ".$sset->name()." - already stored in the DB";
-	  next;
-	}
-	
+    
+    #use is_stored here?
+    if($sset->dbID()){
+      warn "Skipping InputSubset ".$sset->name()." - already stored in the DB";
+      next;
+    }
+    
 
-	$sth->bind_param(1, $sset->input_set->dbID(), SQL_INTEGER);
-	$sth->bind_param(2, $sset->name(),            SQL_VARCHAR);
-	$sth->execute();
+    $sth->bind_param(1, $sset->input_set->dbID, SQL_INTEGER);
+    $sth->bind_param(2, $sset->name,            SQL_VARCHAR);
+    $sth->bind_param(3, $sset->archive_id,      SQL_VARCHAR);
+    $sth->bind_param(4, $sset->display_url,     SQL_VARCHAR);
+    $sth->bind_param(5, $sset->replicate,       SQL_INTEGER);
+    $sth->bind_param(6, $sset->is_control,      SQL_INTEGER);
+    $sth->execute();
 
-	$sset->dbID($sth->{'mysql_insertid'});
-	$sset->adaptor($self);
-
-
-	#No need to set it as we're working on the hasref here, so should be updated in the class.
-	#add directly to avoid name clash warnings
-	#$exp_set->{'subsets'}{$sub_set_name} = Bio::EnsEMBL::Funcgen::InputSubset->new
-	#  (
-	#   -dbID    => $sth->{'mysql_insertid'},
-	#   -name    => $sub_set_name,
-	#   -adaptor => $self,
-	#   #-experimental_set_id?
-	#  );
-
+    $sset->dbID($sth->{'mysql_insertid'});
+    $sset->adaptor($self);
   }
   
-  #don't really need to return as we're passing the ref
+  #don't really need to return as we're working on a ref
   return $ssets;
 }
 
@@ -473,10 +566,95 @@ sub store_InputSubsets{
 =cut
 
 sub list_dbIDs {
-	my $self = shift;
-	
-	return $self->_list_dbIDs('result_set');
+    my $self = shift;
+    
+    return $self->_list_dbIDs('input_set');
 }
+
+
+
+sub fetch_input_set_filter_counts{
+  my $self = shift;
+
+   my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, ct.name, ct.description '.
+    'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, cell_type ct, '.
+      'status s, status_name sn input_set inp'.
+        'WHERE fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id '.
+          'AND e.experimental_group_id=eg.experimental_group_id '.
+          'AND fs.feature_type_id=ft.feature_type_id AND fs.cell_type_id=ct.cell_type_id '.
+            'AND fs.feature_set_id=s.table_id AND fs.type="annotated" AND s.table_name="feature_set" '.
+              'AND s.status_name_id=sn.status_name_id and sn.name="DISPLAYABLE" '.
+                'GROUP BY eg.name, eg.is_project, ft.class, ct.name';
+
+
+#  SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, ct.name, ct.description FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, cell_type ct, status s, status_name sn WHERE fs.experiment_id=e.experiment_id AND e.experimental_group_id=eg.experimental_group_id AND fs.feature_type_id=ft.feature_type_id AND fs.cell_type_id=ct.cell_type_id AND fs.feature_set_id=s.table_id AND fs.type="annotated" AND s.table_name="feature_set" AND s.status_name_id=sn.status_name_id and sn.name="DISPLAYABLE" and fs.name like "%NHEK%" GROUP BY eg.name, eg.is_project, ft.class, ct.name;
+#This looks good, maybe the extra count are coming from below?
+
+
+  my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+  my $ftype_info = $self->db->get_FeatureTypeAdaptor->get_regulatory_evidence_info;
+
+  my %filter_info = ( 
+                     #Project=> {},
+                     #'Cell/Tissue' => {},
+                     All =>
+                     { All =>{ count       => 0,
+                               description => 'All experiments',
+                             }
+                     }
+                     
+                    );
+  
+  foreach my $row(@rows){
+
+    my ($count, $project, $proj_desc, $is_proj, $ft_class, $ct_name, $ct_desc) = @$row;
+    
+    #All counts
+    $filter_info{All}{All}{count} += $count;
+  
+    #Project counts
+    if($is_proj){
+      
+      if(! exists $filter_info{Project}{$project}){
+        $filter_info{Project}{$project} = 
+          { count       => 0,
+            description => $proj_desc,
+          };
+      }
+
+      $filter_info{Project}{$project}{count} += $count;
+    }
+
+    #Cell/Tissue counts
+    if(! exists $filter_info{'Cell/Tissue'}{$ct_name}){
+      $filter_info{'Cell/Tissue'}{$ct_name} = 
+        { count       => 0,
+          description => $ct_desc,
+        };
+    }   
+    $filter_info{'Cell/Tissue'}{$ct_name}{count} += $count;
+    
+    #Evidence class counts
+    #Do we want to split this into ft.class
+    #i.e. split 'DNase1 & TFBS'
+    my $ft_class_label = $ftype_info->{$ft_class}{label};
+
+    if(! exists $filter_info{'Evidence type'}{$ft_class_label}){
+      $filter_info{'Evidence type'}{$ft_class_label} = 
+        { count       => 0,
+          description => $ftype_info->{$ft_class}{long_name},
+        };
+    }
+    $filter_info{'Evidence type'}{$ft_class_label}{count} += $count;
+  }
+
+  return \%filter_info;
+
+  #Do we need to add an 'in_build' filter /data field?
+
+}
+
+
 
 1;
 
