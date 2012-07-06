@@ -408,70 +408,70 @@ sub _objs_from_sth {
   my $no_skip_stable_id = 0;
   my @other_rf_ids;
 
-  FEATURE: while ( $sth->fetch() ) {
+ FEATURE: while ( $sth->fetch() ) {
 
 	  #Handle non-unique skipping first
 
-	  if($skip_stable_id == $stable_id){
-		#Faster for queries which need to skip if we have this first
-		next;
-	  }
-	  elsif(@fset_ids){
-		#have no_skip_stable_id too
-		#so we don't keep doing _fetch_other_feature_set_ids_by_stable_feature_set_ids
-		#for ID s we have already checked
+    if ( $stable_id &&
+         ($skip_stable_id == $stable_id) ) {
+      #Faster for queries which need to skip if we have this first
+      next;
+	  } elsif (@fset_ids) {
+      #have no_skip_stable_id too
+      #so we don't keep doing _fetch_other_feature_set_ids_by_stable_feature_set_ids
+      #for ID s we have already checked
 		
-		if($no_skip_stable_id != $stable_id){
-		  @other_rf_ids = @{$self->_fetch_other_dbIDs_by_stable_feature_set_ids
-							  ($stable_id, 
-							   \@fset_ids, 
-							   {include_projected => $self->{params_hash}{include_projected}})};
+      if ($no_skip_stable_id != $stable_id) {
+        @other_rf_ids = @{$self->_fetch_other_dbIDs_by_stable_feature_set_ids
+                            ($stable_id, 
+                             \@fset_ids, 
+                             {
+                              include_projected => $self->{params_hash}{include_projected}})};
 		  
-		  if(@other_rf_ids){
-			$skip_stable_id = $stable_id;
-			#warn "skipping\n";
-			next;
-		  }
-		  else{
-			$no_skip_stable_id = $stable_id;
-		  }
-		}
-		#else don't skip this stable ID
+        if (@other_rf_ids) {
+          $skip_stable_id = $stable_id;
+          #warn "skipping\n";
+          next;
+        } else {
+          $no_skip_stable_id = $stable_id;
+        }
+      }
+      #else don't skip this stable ID
 	  }
 
 
 
-	  if(! $reg_feat || ($reg_feat->dbID != $dbID)){
+	  if (! $reg_feat || ($reg_feat->dbID != $dbID)) {
 		
-		if($skip_feature){
-		  undef $reg_feat; #so we don't duplicate the push for the feature previous to the skip feature
-		  $skip_feature = 0;
-		}
+      if ($skip_feature) {
+        undef $reg_feat;        #so we don't duplicate the push for the feature previous to the skip feature
+        $skip_feature = 0;
+      }
 	  
-		if($reg_feat){   #Set the previous attr cache and reset
-		  $reg_feat->attribute_cache(\%reg_attrs);
-		  push @features, $reg_feat;
+      if ($reg_feat) {          #Set the previous attr cache and reset
+        $reg_feat->attribute_cache(\%reg_attrs);
+        push @features, $reg_feat;
 
-
-		  %reg_attrs = (
-						annotated => {},
-						motif     => {},
-						#external
-					   );
-		}
+        
+        %reg_attrs = (
+                      annotated => {},
+                      motif     => {},
+                      #external
+                     );
+      }
 	
 	    #Would need to build a slice adaptor cache here to enable mapping between assemblies
 	    #Or if mapping between cs systems for a given schema_build
-		#which would have to be handled by the core api
+      #which would have to be handled by the core api
 	    
-		#get core seq_region_id
-		$seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
+      #get core seq_region_id
+      $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 
-		if(! $seq_region_id){
-		  warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-			"The region you are using is not present in the current dna DB";
-		  next;
-		}
+      if (! $seq_region_id) {
+        warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
+          "The region you are using is not present in the current dna DB";
+        next;
+      }
 
 	    #if($old_cs_id && ($old_cs_id+ != $cs_id)){
 	    #  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
@@ -479,11 +479,11 @@ sub _objs_from_sth {
 	    #$old_cs_id = $cs_id;
 	    #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
 	    
-		#Get the FeatureSet object
-		$fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
+      #Get the FeatureSet object
+      $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
 		
-		#Get the FeatureType object
-		$ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
+      #Get the FeatureType object
+      $ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
 
 	    # Get the slice object
 	    $slice = $slice_hash{'ID:'.$seq_region_id};
@@ -504,21 +504,21 @@ sub _objs_from_sth {
 	      throw("Not yet implmented mapper, check equals are Funcgen calls too!");
 	      
 	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
+          = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
 	
 	      # Skip features that map to gaps or coord system boundaries
-		  if(! defined $sr_name){
-			$skip_feature = 1;
-			next FEATURE;
-		  }
+        if (! defined $sr_name) {
+          $skip_feature = 1;
+          next FEATURE;
+        }
 	      
 	      # Get a slice in the coord system we just mapped to
 	      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
-		$slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
-		  ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
+          $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
+            ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
 	      } else {
-		$slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
-		  ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
+          $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
+            ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
 	      }
 	    }
 	    
@@ -528,76 +528,75 @@ sub _objs_from_sth {
 
 	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
 			
-			#can remove the if $bound_seq_region_start/end once we have updated all reg feature entries and store API
+          #can remove the if $bound_seq_region_start/end once we have updated all reg feature entries and store API
 
-			if ($dest_slice_strand == 1) {
-			  $seq_region_start       = $seq_region_start - $dest_slice_start + 1;
-			  $seq_region_end         = $seq_region_end   - $dest_slice_start + 1;
+          if ($dest_slice_strand == 1) {
+            $seq_region_start       = $seq_region_start - $dest_slice_start + 1;
+            $seq_region_end         = $seq_region_end   - $dest_slice_start + 1;
 
-			  #if as we never have a seq_region start of 0;
-			  $bound_seq_region_start = $bound_seq_region_start - $dest_slice_start + 1 if $bound_seq_region_start;
-			  $bound_seq_region_end   = $bound_seq_region_end   - $dest_slice_start + 1 if $bound_seq_region_end;
-			} 
-			else {
-			  my $tmp_seq_region_start       = $seq_region_start;
-			  my $tmp_bound_seq_region_start = $bound_seq_region_start;
-			  $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-			  $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-			  $bound_seq_region_start  = $dest_slice_end - $bound_seq_region_end + 1 if $bound_seq_region_end;
-			  $bound_seq_region_end    = $dest_slice_end - $tmp_bound_seq_region_start + 1 if $bound_seq_region_start;
-			  $seq_region_strand      *= -1;
-			}
+            #if as we never have a seq_region start of 0;
+            $bound_seq_region_start = $bound_seq_region_start - $dest_slice_start + 1 if $bound_seq_region_start;
+            $bound_seq_region_end   = $bound_seq_region_end   - $dest_slice_start + 1 if $bound_seq_region_end;
+          } else {
+            my $tmp_seq_region_start       = $seq_region_start;
+            my $tmp_bound_seq_region_start = $bound_seq_region_start;
+            $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
+            $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+            $bound_seq_region_start  = $dest_slice_end - $bound_seq_region_end + 1 if $bound_seq_region_end;
+            $bound_seq_region_end    = $dest_slice_end - $tmp_bound_seq_region_start + 1 if $bound_seq_region_start;
+            $seq_region_strand      *= -1;
+          }
 	      }
 
 	      # Throw away features off the end of the requested slice
-		  #Do not account for bounds here.
+        #Do not account for bounds here.
 	      if ($seq_region_end < 1 || $seq_region_start > $dest_slice_length
-			  || ( $dest_slice_sr_name ne $sr_name )){
-			$skip_feature = 1;
-			next FEATURE;
-		  }
+            || ( $dest_slice_sr_name ne $sr_name )) {
+          $skip_feature = 1;
+          next FEATURE;
+        }
 	      
 	      $slice = $dest_slice;
 	    }
 	    
 	   				
-		#This stops un init warning when sid is absent for sid mapping
-		my $sid = (defined $stable_id) ? sprintf($stable_id_prefix."%011d", $stable_id) : undef;
+      #This stops un init warning when sid is absent for sid mapping
+      my $sid = (defined $stable_id) ? sprintf($stable_id_prefix."%011d", $stable_id) : undef;
 
-		$reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
-		  ({
-			'start'          => $seq_region_start,
-			'end'            => $seq_region_end,
-			'bound_start'    => $bound_seq_region_start,
-			'bound_end'      => $bound_seq_region_end,
-			'strand'         => $seq_region_strand,
-			'slice'          => $slice,
-			'analysis'       => $fset_hash{$fset_id}->analysis(),
-			'adaptor'        => $self,
-			'dbID'           => $dbID,
-			'display_label'  => $display_label,
-			'binary_string'  => $bin_string,
-			'projected'      => $projected,
-			'set'            => $fset_hash{$fset_id},
-			'feature_type'   => $ftype_hash{$ftype_id},
-			'stable_id'      => $sid,
-		   });
+      $reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
+        ({
+          'start'          => $seq_region_start,
+          'end'            => $seq_region_end,
+          'bound_start'    => $bound_seq_region_start,
+          'bound_end'      => $bound_seq_region_end,
+          'strand'         => $seq_region_strand,
+          'slice'          => $slice,
+          'analysis'       => $fset_hash{$fset_id}->analysis(),
+          'adaptor'        => $self,
+          'dbID'           => $dbID,
+          'display_label'  => $display_label,
+          'binary_string'  => $bin_string,
+          'projected'      => $projected,
+          'set'            => $fset_hash{$fset_id},
+          'feature_type'   => $ftype_hash{$ftype_id},
+          'stable_id'      => $sid,
+         });
 
 	  }
 	
   
 	  #populate attributes cache
-	  if(defined $attr_id  && ! $skip_feature){
+	  if (defined $attr_id  && ! $skip_feature) {
 
-		$reg_attrs{$attr_type}->{$attr_id} = undef;
+      $reg_attrs{$attr_type}->{$attr_id} = undef;
 	  }
 	}
 
   #handle last record
-  if($reg_feat){
+  if ($reg_feat) {
 
-	$reg_feat->attribute_cache(\%reg_attrs);
-	push @features, $reg_feat;
+    $reg_feat->attribute_cache(\%reg_attrs);
+    push @features, $reg_feat;
   }
 
 
@@ -662,6 +661,7 @@ sub store{
 	  next;
 	}
 	
+
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $rf->feature_set);
 	
 	
