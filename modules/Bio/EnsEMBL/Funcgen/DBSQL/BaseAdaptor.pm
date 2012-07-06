@@ -109,8 +109,9 @@ sub compose_constraint_query{
 	  my $c_config = $constraint_config{$constraint_key};
 
 	  #Add tables as required
+    
 	  if (exists ${$c_config}{tables}) {
-		push @{$tables{feature_set}}, $c_config->{tables};
+      push @{$tables{$self->_main_table->[0]}}, @{$c_config->{tables}};
 	  }
 
 	  #Build constraints
