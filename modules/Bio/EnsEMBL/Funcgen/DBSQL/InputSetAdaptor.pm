@@ -55,8 +55,11 @@ use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 #use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);# @ISA
-#use base does not import! But we are not importing anything here?
+#use base does not import default exports!
 
+#Exported from BaseAdaptor
+$true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' ] ];
+@{$tables{input_set}} = @{$true_tables{input_set}};
 
 
 #Convert these to subs, so we can have specific constraint POD for this
@@ -288,10 +291,7 @@ sub fetch_by_name {
 sub _tables {
   my $self = shift;
     
-  return (
-          [ 'input_set',    'inp' ],
-          [ 'input_subset', 'iss' ],
-         );
+  return @{$tables{input_set}};
 }
 
 =head2 _columns
