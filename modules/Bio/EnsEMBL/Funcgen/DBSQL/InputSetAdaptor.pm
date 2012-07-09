@@ -88,10 +88,8 @@ $true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' 
             ).')';
     },
    },
-   
-   #Need to bind_param this if the status name string ever comes direct from a URL
 
-   status => 
+   status => #Not currently used for input_sets
    {
     #states
     #This can't use IN without duplicating the result
@@ -153,7 +151,6 @@ $true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' 
     },
 
    }
-
   );
 
 
