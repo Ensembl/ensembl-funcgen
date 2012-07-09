@@ -55,103 +55,11 @@ use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 #use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);# @ISA
-#use base does not import default exports!
+#use base does not import default exports below!
 
 #Exported from BaseAdaptor
 $true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' ] ];
 @{$tables{input_set}} = @{$true_tables{input_set}};
-
-
-#Convert these to subs, so we can have specific constraint POD for this
-#adaptor i.e. we don't have to add it to the POD of every method
-
-
-%constraint_config = 
-  (
-   #Need to bind param these as they come from URL parameters and are not tested
-
-   #Can move a lot of these to the BaseAdaptor
-   #and reuse between adaptors if we use the _tables method to get the table syn
-   #This may mean contraints can be specified for classes which do not contain 
-   #the relevant fields.
-   #Allow this flexiblity or validate fields/constraint?
-   #Or implicit by location of contraint config, i.e. put it in the relevant 
-   #parent adaptors
-
-   cell_types    => 
-   {
-    compose_constraint => sub 
-    { my ($self, $cts) = @_;
-      #Don't need to bind param this as we validate
-      return ' inp.cell_type_id IN ('.
-        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
-            ).')';
-    },
-   },
-
-   status => #Not currently used for input_sets
-   {
-    #states
-    #This can't use IN without duplicating the result
-    #would need to add a default_final_clause
-    
-    tables => [['status', 's']],#['status_name', 'sn']),
-    
-    compose_constraint => sub
-    { my ($self, $state) = @_;
-         
-      my @tables = $self->_tables;
-      my ($table_name, $syn) = @{$tables[0]};
-      
-      return " $syn.${table_name}_id=s.table_id AND ".
-        "s.table_name='$table_name' AND s.status_name_id=".$self->_get_status_name_id($state);
-     },
-   },
-
-   feature_types =>
-   {
-    compose_constraint => sub 
-    { my ($self, $fts) = @_;
-      #Don't need to bind param this as we validate
-      return ' inp.feature_type_id IN ('.
-        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}
-            ).')';
-    },
-   },
-
-   experiments =>
-   {
-    compose_constraint => sub 
-    { my ($self, $exps) = @_;
-      #Don't need to bind param this as we validate
-      return ' inp.experiment_id IN ('.
-        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exps, 'dbID')}
-            ).')';
-    },
-   },
-
-
-   format =>
-   {
-    #Is not currently enum's so have to hardcode current values for now
-    #likely to change
-    #SEQUENCING EQTL
-    compose_constraint => sub 
-    { my ($self, $format) = @_;
-
-      my %valid_formats = (SEQUENCING=>1);
-      #SEGMENTATION?
-
-      if(! exists $valid_formats{uc($format)}){
-        throw("$format is not a valid InputSet format, please specify one of:\t".
-              join(', ', keys %valid_formats));
-      }
-
-      return ' inp.format="'.uc($format).'"';
-    },
-
-   }
-  );
 
 
 =head2 fetch_all
@@ -162,7 +70,6 @@ $true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' 
                      cell_types     => [$cell_type, ...], #Bio::EnsEMBL::Funcgen::CellType
                      feature_types  => [$ftype, ...],     #Bio::EnsEMBL::Funcgen::FeatureType
                      experiments    => [$ecp, ...],       #Bio::EnsEMBL::Funcgen::Experiment
-                     status         => $status_name,      #String e.g. IMPORTED
                      format         => $inpset_format,    #String e.g. SEQUENCING
                     }
                   } 
@@ -559,6 +466,74 @@ sub list_dbIDs {
 }
 
 
+
+
+#All these _constrain methods must return a valid constraint string, and a hashref of any other constraint config
+
+#Need to bind param any of these which come from URL parameters and are not tested
+
+
+sub _constrain_cell_types {
+  my ($self, $cts) = @_;
+
+  #Don't need to bind param this as we validate
+  my $constraint = ' inp.cell_type_id IN ('.
+    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}).')';
+
+  #{} = no further config
+  return ($constraint, {});
+}
+
+
+sub _constrain_feature_types {
+  my ($self, $fts) = @_;
+ 
+
+  my @tables = $self->_tables;
+  my (undef, $syn) = @{$tables[0]};
+
+  #Don't need to bind param this as we validate
+  my $constraint = " ${syn}.feature_type_id IN (".
+		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
+  
+  #{} = not futher constraint conf
+  return ($constraint, {});
+}
+
+
+sub _constrain_experiments {
+  my ($self, $exps) = @_;
+
+  #Don't need to bind param this as we validate
+  my $constraint = ' inp.experiment_id IN ('.
+    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exps, 'dbID')}).')';
+ 
+  #{} = not futher constraint conf
+  return ($constraint, {});
+}
+
+# remove format?
+
+sub _constrain_format {
+  my ($self, $format) = @_;
+  
+  #Is not currently enum'd so have to hardcode current values for now
+  #likely to change
+  #SEQUENCING EQTL
+  
+  my %valid_formats = (SEQUENCING=>1);
+  #SEGMENTATION?
+  
+  if (! exists $valid_formats{uc($format)}) {
+    throw("$format is not a valid InputSet format, please specify one of:\t".
+          join(', ', keys %valid_formats));
+  }
+  
+  my $constraint = ' inp.format="'.uc($format).'"';
+  
+  #{} = not futher constraint conf
+  return ($constraint, {});
+}
 
 
 1;
