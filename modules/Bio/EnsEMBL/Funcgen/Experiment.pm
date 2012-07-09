@@ -205,76 +205,6 @@ sub description{
 
 
 
-=head2 source_info
-
-  Example    : my $source_info = $exp->source_info;
-  Description: Getter for the experiment source info i.e. [ $label, $url ]
-  Returntype : Listref
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub source_info{
-  my $self = shift;
-
-  if(! defined $self->{source_label}){
-
-	#could have data_url as highest priority here
-	#but we need to ensure removal when adding archive ids
-	#so we link to the archive and not the old data url
-
-	if( $self->{archive_id} ){
-	  $self->{source_label} = $self->{archive_id};
-	  $self->{source_link}   = undef;
-	  #source_link can be undef here
-	  #arhcive links overrides data url
-	  #undef links will automatically go to the SRA
-	}
-	elsif($self->experimental_group->is_project){
-	  $self->{source_label}  = $self->experimental_group->name;
-	  $self->{source_link}   = $self->{data_url}; 
-	  $self->{source_link} ||= $self->experimental_group->url;
-	}
-  }
-
-  return [$self->{'source_label'}, $self->{source_link}];
-}
-
-
-
-=head2 archive_id
-
-  Example     : $archive_id = $exp->archive_id();
-  Description : Getter for the experiment archive id
-  Returntype  : string
-  Exceptions  : None
-  Caller      : General
-  Status      : At risk
-
-=cut
-
-sub archive_id{
-  return $_[0]->{'archive_id'};
-}
-
-
-=head2 data_url
-
-  Example     : $url = $exp->data_url();
-  Description : Getter for the experiment data url
-  Returntype  : string
-  Exceptions  : None
-  Caller      : General
-  Status      : Stable
-
-=cut
-
-sub data_url{
-  return $_[0]->{'data_url'};
-}
-
 
 =head2 primary_design_type
 
@@ -484,6 +414,26 @@ sub group_id{
 	deprecate("Experiment->group_id is deprecated. Use exp->experimental_group->dbID instead");
 	return $self->experimental_group()->dbID;
 }
+
+
+
+sub archive_id{ #deprecated in v68
+  #would deprecate, but no easy way of doing this reliably
+  throw("Use InputSubset->archive_id");
+}
+
+
+sub data_url{ #deprecated in v68
+  #would deprecate, but no easy way of doing this reliably
+  throw("Use InputSubset->display_url");
+}
+
+
+sub source_info{ #deprecated in v68
+  #would deprecate, but no easy way of doing this reliably
+  throw("Use InputSubset->source_info");
+}
+
 
 1;
 
