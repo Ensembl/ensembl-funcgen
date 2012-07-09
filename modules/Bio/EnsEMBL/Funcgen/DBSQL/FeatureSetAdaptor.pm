@@ -51,193 +51,55 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
-#use base does not import!
+#use base does not import %true_tables or %tables
+
+#use constant TRUE_TABLES => [ [ 'feature_set', 'fs' ] ];
 
 #Exported from BaseAdaptor
 $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
+
+#This derefs as we push onto tables
+#and we don't want to alter true table
 @{$tables{feature_set}} = @{$true_tables{feature_set}};
+
+#Hence we can't do this
+#$tables{feature_set} = TRUE_TABLES;
+#and this doesn't work
+#@{$tables{feature_set}} = @{TRUE_TABLES};
+
 #No need for true_final_clause
 	
-#No longer using coderefs(can) in here, so we can move this to head
-#Keeping config here means all sql and validation is done in one place
-#minimizing chance of errors
 
+=head2 fetch_all
 
-#Could do with wrapping this in a sub, so we can have specific constraint POD for this
-#adaptor i.e. we don't have to add it to the POD of every method
+  Arg [1]    : optional HASHREF - Parameter hash containing contraints config lists e.g.
+                  {'constraints' => 
+                    {
+                     cell_types     => [$cell_type, ...],     # Bio::EnsEMBL::Funcgen::CellType
+                     feature_types  => [$ftype, ...],         # Bio::EnsEMBL::Funcgen::FeatureType
+                     evidence_types => [$evidence_type, ...], # String e.g. 'DNase1 & TFBS' or 'Hists & Pols'
+                     status         => $status_name,          # String e.g. IMPORTED
+                     analyses       => [$analysis, ...]       # Bio::EnsEMBL::Analysis
+                     projects       => [$proj_name, ...]      # String (experimental_group.name is_project=1) e.g. ENCODE
+                    }
+                  } 
+  Example    : 
+  Description: Retrieves a list of FeatureSets. Optional parameters hash allows for flexible query terms.
+  Returntype : ARRAYREF of Bio::EnsEMBL::FeatureSet objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
 
-#Can only enable fetch_all with params_hash if we handle table reseting explitly
-#Just do this by default for fetch_all, and any others which extend tables
+=cut
 
-#Issues around traceability here of errors are listed with the correct line number
-#but the strack trace give the throwing method as
-# Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor::__ANON__ 
-#extract these to individual subs and simply leave tables in here
-#or can we return these with the constraint?
+sub fetch_all{
+  my ($self, $params_hash) = @_;
 
-%constraint_config = 
-  (
-   #Need to bind param these as they come from URL parameters and are not tested
+  my $results = $self->generic_fetch($self->compose_constraint_query($params_hash));
+	@{$tables{feature_set}} = @{$true_tables{feature_set}}; #in case we have added tables e.g. status
 
-   #Can move a lot of these to the BaseAdaptor
-   #and reuse between adaptors if we use the _tables method to get the table syn
-   #This may mean contraints can be specified for classes which do not contain 
-   #the relevant fields.
-   #Allow this flexiblity or validate fields/constraint?
-   #Or implicit by location of contraint config, i.e. put it in the relevant 
-   #parent adaptors
-
-   projects =>
-   {
-    #enable query extension
-    tables    => [['input_set', 'inp'], ['experiment', 'e']],
-    
-    compose_constraint => sub {
-      my ($self, $egs) = @_;
-            
-      if ( (ref($egs) ne 'ARRAY') ||
-           scalar(@$egs) == 0 ) {
-        throw('Must pass an arrayref of project names');
-      }
-      my @eg_ids;
-      
-      foreach my $eg (@$egs) {
-        $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $eg);
-        
-        if (! $eg->is_project) {
-          throw("You have passed an ExperimentalGroup which is not a project:\t".$eg->name);
-        }
-        
-        push @eg_ids, $eg->dbID;
-      }
-      
-      #Don't need to bind param this as we validate above
-      return ' fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id AND '.
-        'e.experimental_group_id IN ('.join(', ', @eg_ids).')';
-    },
-   },
-  
-	
-   evidence_types => 
-   {
-	tables     => [['feature_type', 'ft']],
-
-	compose_constraint => sub { 
-	  my ($self, $etypes) = @_;
-      
-	  my %in_values = 
-		(
-		 'DNase1 & TFBS' => ['Open Chromatin', 
-							 'Transcription Factor', 
-							 'Transcription Factor Complex'],
-         
-		 'Hists & Pols'  => ['Histone',
-							 'Polymerase'],
-		);
-      
-  	  my @ft_classes;
-      
-	  if ( (ref($etypes) ne 'ARRAY') ||
-           scalar(@$etypes) == 0 ) {
-		throw('Must pass an arrayref of evidence types');
-	  }
-      
-	  foreach my $etype (@$etypes) {
-
-		if (! exists $in_values{$etype}) {
-		  throw("You have passed an invalid evidence type filter argument($etype)\n".
-				"Please use one of the following:\t".join(' ,', keys(%in_values)));
-		}
-		push @ft_classes, @{$in_values{$etype}};
-	  }
-      
-      
-	  #Don't need to bind param this as we validate above
-	  return ' fs.feature_type_id=ft.feature_type_id AND ft.class IN ("'.
-		join('", "', @ft_classes).'")'; #constraint
-	},
-   },
-		 
-   cell_types    => 
-   {
-	compose_constraint => sub 
-	{ my ($self, $cts) = @_;
-      
-	  return ' fs.cell_type_id IN ('.
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
-			).')';
-	},
-   },
-   
-   #Consider final clause
-   
-   #This is generic and could be move to BaseAdaptor
-   #based on using the first table name
-
-   #This can't use IN without duplicating the result
-   #Need to add a default_final_clause
-   
-   status =>
-   {
-    tables => [['status', 's']], #['status_name', 'sn']),
-    
-    compose_constraint => sub
-    { my ($self, $state) = @_;
-      
-      #This can't use IN without duplicating the result
-      #Need to add a default_final_clause
-      #my @sn_ids;
-      #if( (ref($states) ne 'ARRAY') ||
-      #scalar(@$states) == 0 ){
-      #throw('Must pass an arrayref of status_names');
-	  #}
-    #foreach my $sn(@$states){
-	  ##This will throw if status not valid, but still may be absent
-	  #	push @sn_ids, $self->_get_status_name_id($sn);
-	  #  }
-      
-	  
-      
-	  my @tables = $self->_tables;
-	  my ($table_name, $syn) = @{$tables[0]};
-	  
-	  return " $syn.${table_name}_id=s.table_id AND ".
-		"s.table_name='$table_name' AND s.status_name_id=".$self->_get_status_name_id($state);
-      #"s.table_name='$table_name' AND s.status_name_id IN (".join(', ', @sn_ids.')';
-      
-	},
-   },
-
-   feature_types =>
-   {
-	compose_constraint => sub 
-	{ my ($self, $fts) = @_;
-      
-  	  #Don't need to bind param this as we validate
-	  return ' fs.feature_type_id IN ('.
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}
-			).')';
-	},
-   },
-
-   analyses =>
-   {
-	compose_constraint => sub 
-	{ my ($self, $anals) = @_;
-      
-	  #Don't need to bind param this as we validate above
-	  return ' fs.analysis_id IN ('.
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Analysis', $anals, 'dbID')}
-			).')';
-      
-	},
-   },
-   
-
-   # add other fetch args
-   #type
-   #name
-  );
+  return $results;
+}
 
 
 
@@ -333,7 +195,7 @@ sub fetch_all_by_feature_class {
 
 
   if($status){
-	$params->{constraints}{status} = $status;
+    $params->{constraints}{status} = $status;
   }
   
 
@@ -831,6 +693,173 @@ sub fetch_feature_set_filter_counts{
 }
 
 
+
+
+#Need to bind param these as they come from URL parameters and are not tested
+
+#Could move a lot of these to the BaseAdaptor if we have a valid_constraints config available
+#and we use generic main_table approach for building constraint
+
+#and reuse between adaptors if we use the _tables method to get the table syn
+#This may mean contraints can be specified for classes which do not contain 
+#the relevant fields.
+#Allow this flexiblity or validate fields/constraint?
+#Or implicit by location of contraint config, i.e. put it in the relevant 
+#parent adaptors
+
+
+#All these _constrain methods must return a valid constraint string, and a hashref of any other constraint config
+
+sub _constrain_projects{
+  my ($self, $egs) = @_;
+
+  #enable query extension
+  my $constraint_conf = {tables    => [['input_set', 'inp'], ['experiment', 'e']]};
+  
+  
+  if ( (ref($egs) ne 'ARRAY') ||
+       scalar(@$egs) == 0 ) {
+    throw('Must pass an arrayref of project names');
+  }
+  my @eg_ids;
+  
+  foreach my $eg (@$egs) {
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $eg);
+    
+    if (! $eg->is_project) {
+      throw("You have passed an ExperimentalGroup which is not a project:\t".$eg->name);
+    }
+    
+    push @eg_ids, $eg->dbID;
+  }
+  
+  #Don't need to bind param this as we validate above
+  my $constraint = ' fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id AND '.
+    'e.experimental_group_id IN ('.join(', ', @eg_ids).')';
+  
+  return ($constraint, $constraint_conf);
+}
+
+
+sub _constrain_evidence_types {
+  my ($self, $etypes) = @_;
+
+	my $constraint_conf = {tables     => [['feature_type', 'ft']]};
+     
+  my %in_values = 
+		(
+		 'DNase1 & TFBS' => ['Open Chromatin', 
+                         'Transcription Factor', 
+                         'Transcription Factor Complex'],
+     
+		 'Hists & Pols'  => ['Histone',
+                         'Polymerase'],
+		);
+      
+  my @ft_classes;
+      
+  if ( (ref($etypes) ne 'ARRAY') ||
+       scalar(@$etypes) == 0 ) {
+		throw('Must pass an arrayref of evidence types');
+  }
+      
+  foreach my $etype (@$etypes) {
+    
+		if (! exists $in_values{$etype}) {
+		  throw("You have passed an invalid evidence type filter argument($etype)\n".
+            "Please use one of the following:\t".join(' ,', keys(%in_values)));
+		}
+		push @ft_classes, @{$in_values{$etype}};
+  }
+
+  #Don't need to bind param this as we validate above
+  my $constraint = ' fs.feature_type_id=ft.feature_type_id AND ft.class IN ("'.
+		join('", "', @ft_classes).'")';
+  
+  return ($constraint, $constraint_conf);
+}
+
+
+
+sub _constrain_cell_types {
+  my ($self, $cts) = @_;
+
+  my $constraint = ' fs.cell_type_id IN ('.
+		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
+        ).')';
+     
+  #{} = no futher contraint config
+  return ($constraint, {});
+}
+
+
+#Generic, move to BaseAdaptor?
+
+sub _constrain_status {
+  my ($self, $state) = @_;
+  
+  my $constraint_conf = { tables => [['status', 's']]};  #,['status_name', 'sn']),
+    
+    #This can't use IN without duplicating the result
+    #Would need to add a default_final_clause to group
+
+    #my @sn_ids;
+    #if( (ref($states) ne 'ARRAY') ||
+    #scalar(@$states) == 0 ){
+    #throw('Must pass an arrayref of status_names');
+	  #}
+    #foreach my $sn(@$states){
+	  ##This will throw if status not valid, but still may be absent
+	  #	push @sn_ids, $self->_get_status_name_id($sn);
+	  #  }
+      
+	  
+      
+	  my @tables = $self->_tables;
+	  my ($table_name, $syn) = @{$tables[0]};
+	  
+      my $constraint = " $syn.${table_name}_id=s.table_id AND ".
+        "s.table_name='$table_name' AND s.status_name_id=".$self->_get_status_name_id($state);
+      #"s.table_name='$table_name' AND s.status_name_id IN (".join(', ', @sn_ids.')';
+
+      return ($constraint, $constraint_conf);
+   }
+
+
+sub _constrain_feature_types {
+  my ($self, $fts) = @_;
+ 
+
+  my @tables = $self->_tables;
+  my (undef, $syn) = @{$tables[0]};
+
+  #Don't need to bind param this as we validate
+  my $constraint = " ${syn}.feature_type_id IN (".
+		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
+  
+  #{} = not futher constraint conf
+  return ($constraint, {});
+}
+
+
+
+
+
+sub _constrain_analyses {
+  my ($self, $anals) = @_;
+  
+  #Don't need to bind param this as we validate
+  my $constraint = ' fs.analysis_id IN ('.
+    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Analysis', $anals, 'dbID')}).')';
+  
+  #{} = not futher constraint conf
+  return ($constraint, {});
+}
+
+  # add other fetch args
+  #type
+  #name
+  
 
 
 
