@@ -89,37 +89,25 @@ $true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' 
     },
    },
    
-
-   #states
-   #This can't use IN without duplicating the result
-   #Need to add a default_final_clause
-
    #Need to bind_param this if the status name string ever comes direct from a URL
 
    status => 
    {
+    #states
+    #This can't use IN without duplicating the result
+    #would need to add a default_final_clause
+    
     tables => [['status', 's']],#['status_name', 'sn']),
     
     compose_constraint => sub
     { my ($self, $state) = @_;
-      #my @sn_ids;
-      #if( (ref($states) ne 'ARRAY') ||
-      #scalar(@$states) == 0 ){
-      #throw('Must pass an arrayref of status_names');
-      #}
-      #foreach my $sn(@$states){
-      ##This will throw if status not valid, but still may be absent
-      # push @sn_ids, $self->_get_status_name_id($sn);
-      #  }
-       
+         
       my @tables = $self->_tables;
       my ($table_name, $syn) = @{$tables[0]};
       
       return " $syn.${table_name}_id=s.table_id AND ".
         "s.table_name='$table_name' AND s.status_name_id=".$self->_get_status_name_id($state);
-        #"s.table_name='$table_name' AND s.status_name_id IN (".join(', ', @sn_ids.')';
-
-    },
+     },
    },
 
    feature_types =>
@@ -192,7 +180,11 @@ $true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' 
 
 sub fetch_all{
   my ($self, $params_hash) = @_;
-  $self->generic_fetch($self->compose_constraint_query($params_hash));
+
+  my $results = $self->generic_fetch($self->compose_constraint_query($params));
+	@{$tables{input_set}} = @{$true_tables{input_set}}; #in case we have added tables e.g. status
+
+  return $results;
 }
 
 
