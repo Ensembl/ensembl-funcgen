@@ -393,47 +393,45 @@ sub get_InputSet{
   Description: Retrieves the source label this FeatureSet, used in zmenus
   Returntype : Arrayref of Strings
   Exceptions : None
-  Caller     : Webcode
+  Caller     : Webcode zmenus
   Status     : At Risk - remove, to be done by webcode?
 
 =cut
 
+#These are used to link through to the experiment view based on feature_set_id
+
 sub source_label{
   my $self = shift;
 
+  if (! defined $self->{source_label}) {
+    my $input_set = $self->get_InputSet;
+    my @source_labels;
 
-  if(! defined $self->{'source_label'}){
-	my $input_set = $self->get_InputSet;
-	my @source_labels;
+    if ($input_set) {
 
-	if($input_set){
 
-	  @source_labels = map $_->archive_id, @{$input_set->get_InputSubsets};
-	  #Archive IDs e.g. SRX identifiers or undef.
-	  
-	  my $exp_group = $input_set->get_Experiment->experimental_group;
-	  
+      foreach my $isset(@{$input_set->get_InputSubsets}){
+
+        if(defined $isset->archive_id){
+          push @source_labels, $isset->archive_id;
+        }
+        #Archive IDs e.g. SRX identifiers or undef.
+      }
+
+      #Append project name
+      my $exp_group = $input_set->get_Experiment->experimental_group;
+	   
+      if ($exp_group && 
+          $exp_group->is_project) {
+        push @source_labels, $exp_group->name;
+      }
+    }
+  
  
-	  if($exp_group && 
-		 $exp_group->is_project){
-	
-		foreach my $source_label(@source_labels){
-
-		  if($source_label){
-			#Append project name
-			$source_label .= ' '.$exp_group->name;
-		  }
-		  else{
-			$source_label = $exp_group->name;
-		  }
-		}
-	  }
-	}
-
-	$self->{'source_label'} = \@source_labels;
+    $self->{source_label} = join(' ', @source_labels);
   }
 
-  return $self->{'source_label'};
+  return $self->{source_label};
 }
 
 
