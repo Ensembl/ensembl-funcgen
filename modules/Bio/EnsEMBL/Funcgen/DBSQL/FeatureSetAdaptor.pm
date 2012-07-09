@@ -179,17 +179,17 @@ $true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
    
    status =>
    {
-	tables => [['status', 's']], #['status_name', 'sn']),
-	
-	compose_constraint => sub
-	{ my ($self, $state) = @_;
+    tables => [['status', 's']], #['status_name', 'sn']),
+    
+    compose_constraint => sub
+    { my ($self, $state) = @_;
       
-	  #This can't use IN without duplicating the result
-	  #Need to add a default_final_clause
-	  #my @sn_ids;
-	  #if( (ref($states) ne 'ARRAY') ||
-	  #scalar(@$states) == 0 ){
-	  #throw('Must pass an arrayref of status_names');
+      #This can't use IN without duplicating the result
+      #Need to add a default_final_clause
+      #my @sn_ids;
+      #if( (ref($states) ne 'ARRAY') ||
+      #scalar(@$states) == 0 ){
+      #throw('Must pass an arrayref of status_names');
 	  #}
     #foreach my $sn(@$states){
 	  ##This will throw if status not valid, but still may be absent
@@ -719,12 +719,12 @@ sub fetch_focus_set_config_by_FeatureSet{
 =cut
 
 sub fetch_attribute_set_config_by_FeatureSet{
-    my ($self, $fset) = @_;
+  my ($self, $fset) = @_;
 
 	$self->{attribute_set_config} ||= {};
 
-	if(! defined $self->{attribute_set_config}->{$fset->dbID}){
-	  $self->{attribute_set_config}->{$fset->dbID} = 0;  #set cache default
+	if (! defined $self->{attribute_set_config}->{$fset->dbID}) {
+	  $self->{attribute_set_config}->{$fset->dbID} = 0; #set cache default
 	  my $string_key =  'regbuild.'.$fset->cell_type->name.'.feature_set_ids';
 
 	  #list_value_by_key caches, so we don't need to implement this in the adaptor
@@ -733,19 +733,106 @@ sub fetch_attribute_set_config_by_FeatureSet{
 	  my $species_id = $self->db->species_id;
 	  my ($attr_ids) = $self->db->dbc->db_handle->selectrow_array("SELECT string from regbuild_string where name='${string_key}' and species_id=$species_id");
 
-	  if(! defined $attr_ids){
-		warn("Cannot detect attribute set as regbuild_string table does not contain $string_key");
-	  }
-	  else{
+	  if (! defined $attr_ids) {
+      warn("Cannot detect attribute set as regbuild_string table does not contain $string_key");
+	  } 
+    else {
 
-		foreach my $aid(split/,\s*/, $attr_ids){
-		  $self->{attribute_set_config}->{$aid} = 1;
-		}
+      foreach my $aid (split/,\s*/, $attr_ids) {
+        $self->{attribute_set_config}->{$aid} = 1;
+      }
 	  }
 	}
 
-    return $self->{attribute_set_config}->{$fset->dbID};
+  return $self->{attribute_set_config}->{$fset->dbID};
+}
+
+
+
+
+sub fetch_feature_set_filter_counts{
+  my $self = shift;
+
+   my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, ct.name, ct.description '.
+    'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, cell_type ct, '.
+      'status s, status_name sn, input_set inp '.
+        'WHERE fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id '.
+          'AND e.experimental_group_id=eg.experimental_group_id '.
+          'AND fs.feature_type_id=ft.feature_type_id AND fs.cell_type_id=ct.cell_type_id '.
+            'AND fs.feature_set_id=s.table_id AND fs.type="annotated" AND s.table_name="feature_set" '.
+              'AND s.status_name_id=sn.status_name_id and sn.name="DISPLAYABLE" '.
+                'GROUP BY eg.name, eg.is_project, ft.class, ct.name';
+
+  #warn $sql;
+  #Need to write HC around this as we sometimes get less than expect. 
+  
+
+  my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+  my $ftype_info = $self->db->get_FeatureTypeAdaptor->get_regulatory_evidence_info;
+
+  my %filter_info = ( 
+                     #Project=> {},
+                     #'Cell/Tissue' => {},
+                     All =>
+                     { All =>{ count       => 0,
+                               description => 'All experiments',
+                             }
+                     }
+                     
+                    );
+  
+  foreach my $row(@rows){
+
+    my ($count, $project, $proj_desc, $is_proj, $ft_class, $ct_name, $ct_desc) = @$row;
+    
+    #All counts
+    $filter_info{All}{All}{count} += $count;
+  
+    #Project counts
+    if($is_proj){
+      
+      if(! exists $filter_info{Project}{$project}){
+        $filter_info{Project}{$project} = 
+          { count       => 0,
+            description => $proj_desc,
+          };
+      }
+
+      $filter_info{Project}{$project}{count} += $count;
+    }
+
+    #Cell/Tissue counts
+    if(! exists $filter_info{'Cell/Tissue'}{$ct_name}){
+      $filter_info{'Cell/Tissue'}{$ct_name} = 
+        { count       => 0,
+          description => $ct_desc,
+        };
+    }   
+    $filter_info{'Cell/Tissue'}{$ct_name}{count} += $count;
+    
+    #Evidence class counts
+    #Do we want to split this into ft.class
+    #i.e. split 'DNase1 & TFBS'
+    my $ft_class_label = $ftype_info->{$ft_class}{label};
+
+    if(! exists $filter_info{'Evidence type'}{$ft_class_label}){
+      $filter_info{'Evidence type'}{$ft_class_label} = 
+        { count       => 0,
+          description => $ftype_info->{$ft_class}{long_name},
+        };
+    }
+    $filter_info{'Evidence type'}{$ft_class_label}{count} += $count;
   }
+
+  return \%filter_info;
+
+  #Do we need to add an 'in_build' filter /data field?
+
+}
+
+
+
+
 
 
 
