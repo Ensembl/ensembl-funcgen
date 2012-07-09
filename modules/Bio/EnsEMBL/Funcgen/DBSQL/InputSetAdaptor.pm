@@ -178,7 +178,7 @@ $true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' 
 sub fetch_all{
   my ($self, $params_hash) = @_;
 
-  my $results = $self->generic_fetch($self->compose_constraint_query($params));
+  my $results = $self->generic_fetch($self->compose_constraint_query($params_hash));
 	@{$tables{input_set}} = @{$true_tables{input_set}}; #in case we have added tables e.g. status
 
   return $results;
