@@ -71,7 +71,7 @@ use Bio::EnsEMBL::Funcgen::Set;
 use Bio::EnsEMBL::Analysis;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Set);#change to Set once we have implemented analysis properly
+@ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
 
 =head2 new
@@ -318,6 +318,65 @@ sub format {  return $_[0]->{format}; }
 =cut
 
 sub replicate {  return $_[0]->{replicate}; }
+
+
+
+=head2 source_info
+
+  Example    : my $source_info = $input_set->source_info;
+  Description: Getter for the experiment source info i.e. [ $label, $url ]
+  Returntype : Listref
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+#Currently handling redundant/absent InputSubset data
+
+sub source_info{
+  my $self = shift;
+
+  if(! defined $self->{source_info}){
+    #could have data_url as highest priority here
+    #but we need to ensure removal when adding archive ids
+    #so we link to the archive and not the old data url
+    
+    my $exp_group = $self->get_Experiment->experimental_group;
+    my %source_info; #Handles redundant InputSubsets
+    my ($proj_name, $proj_link, $source_label, $source_link);
+
+    if($exp_group->is_project){
+      $proj_name = $exp_group->name;
+      $proj_link = $exp_group->url;
+    }
+
+    foreach my $isset(@{$self->get_InputSubsets}){
+
+      if(defined $isset->archive_id ){
+        $source_label = $isset->archive_id;
+      
+        if(! exists $source_info{$source_label}){
+          $source_info{$source_label} = [$source_label, undef];
+          #source_link can is undef here as archive_id overrides display url
+          #undef links will automatically go to the SRA
+        }
+      }
+      elsif(defined $proj_name){
+        #$source_label = $self->experimental_group->name;
+        $source_link  = $isset->display_url || $proj_link;
+        
+        if(! exists $source_info{$source_link}){
+          $source_info{$source_link} = [$proj_name, $source_link];
+        }
+      }
+    }
+    
+    $self->{source_info} = [values %source_info];
+  }
+
+  return $self->{source_info};
+}
 
 
 
