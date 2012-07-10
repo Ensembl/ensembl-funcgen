@@ -58,9 +58,9 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#Exported from BaseAdaptor
-$true_tables{array} = [['array', 'a']];
-@{$tables{array}} = @{$true_tables{array}};
+use constant TRUE_TABLES => [['array', 'a']];
+use constant TABLES      => [['array', 'a']];
+
 
 =head2 fetch_by_array_chip_dbID
 
@@ -84,14 +84,12 @@ sub fetch_by_array_chip_dbID {
   throw('Must provide an ArrayChip dbID') if ! $ac_dbid;
   
   #Extend query tables
-  push @{$tables{array}}, (['array_chip', 'ac']);
-  
+  push @{$self->TABLES}, (['array_chip', 'ac']);
+
   #Extend query and group
   my $array = $self->generic_fetch('ac.array_chip_id='.$ac_dbid.' and ac.array_id=a.array_id GROUP by a.array_id')->[0];
-  
-  #Reset tables
-  @{$tables{array}} = @{$true_tables{array}};
-  
+  $self->reset_true_tables;
+
   return $array;
 }
 
@@ -239,14 +237,13 @@ sub fetch_all_by_Experiment{
  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
   
   #Extend query tables
-  push @{$tables{array}}, (['array_chip', 'ac'], ['experimental_chip', 'ec']);
+  push @{$self->TABLES}, (['array_chip', 'ac'], ['experimental_chip', 'ec']);
 
   #Extend query and group
   my $arrays = $self->generic_fetch($exp->dbID.'=ec.experiment_id and ec.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
+  
+  $self->reset_true_tables;
 
-  #Reset tables
-  @{$tables{array}} = @{$true_tables{array}};
-	
   return $arrays;
 }
 
@@ -276,15 +273,14 @@ sub fetch_all_by_ProbeSet{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
 
   #Extend query tables
-  push @{$tables{array}}, (['array_chip', 'ac'], ['probe', 'p']);
+   push @{$self->TABLES}, (['array_chip', 'ac'], ['probe', 'p']);
 
   #Extend query and group
   my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY a.array_id');
   # ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
-
-  #Reset tables
-  @{$tables{array}} = @{$true_tables{array}};
   
+  $self->reset_true_tables;
+
   return $arrays;
 }
 
@@ -305,7 +301,7 @@ sub fetch_all_by_ProbeSet{
 sub _tables {
 	my $self = shift;
 	
-	return @{$tables{array}};
+	return @{$self->TABLES};
 }
 
 =head2 _columns
