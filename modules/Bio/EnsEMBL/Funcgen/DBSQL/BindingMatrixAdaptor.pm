@@ -57,10 +57,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#Exported from BaseAdaptor
-$true_tables{binding_matrix} = [['binding_matrix', 'bm']];
-#deref to avoid modifying the true tables
-@{$tables{binding_matrix}} = @{$true_tables{binding_matrix}};
 
 =head2 fetch_all_by_name
 
@@ -149,8 +145,6 @@ sub fetch_all_by_FeatureType{
 
 
 
-
-
 =head2 _tables
 
   Args       : None
@@ -167,7 +161,7 @@ sub fetch_all_by_FeatureType{
 sub _tables {
   my $self = shift;
 	
-  return @{$tables{binding_matrix}};
+  return (['binding_matrix', 'bm']);
 }
 
 =head2 _columns
