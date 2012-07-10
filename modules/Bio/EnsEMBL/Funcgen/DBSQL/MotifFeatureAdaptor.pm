@@ -65,9 +65,8 @@ use vars qw(@ISA);
 # Need to add motif/pwm/binding_matrix here
 #associated_motif_feature, annotated_feature and finally feature_set.cell_type_id
 
-#Exported from BaseAdaptor
-$true_tables{motif_feature} = [['motif_feature', 'mf']];
-@{$tables{motif_feature}} = @{$true_tables{motif_feature}};
+use constant TRUE_TABLES => [['motif_feature', 'mf']];
+use constant TABLES      => [['motif_feature', 'mf']];
 
 
 my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq_region_end'; 
@@ -96,16 +95,15 @@ sub fetch_all_by_AnnotatedFeature {
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $feature);
 
   #Extend query tables
-  push @{$tables{motif_feature}}, (['associated_motif_feature', 'amf']);
+  push @{$self->TABLES}, (['associated_motif_feature', 'amf']);
   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND amf.annotated_feature_id=?';
   #No need for group here as we are restricting to one af
 
   $self->bind_param_generic_fetch($feature->dbID, SQL_INTEGER);
+
   my $mfs = $self->generic_fetch($constraint, undef, $slice);
-
-  #Reset tables
-  @{$tables{motif_feature}} = @{$true_tables{motif_feature}};
-
+  $self->reset_true_tables;
+  
   return $mfs;
 }
 
@@ -129,10 +127,9 @@ sub fetch_all_by_Slice_CellType {
 	
   #could add logic_name here for motif mapper analysis, motif source analysis 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
-  
-  
+   
   #Extend query tables
-  push @{$tables{motif_feature}}, (['feature_set', 'fs'], ['associated_motif_feature', 'amf'], ['annotated_feature', 'af']);
+  push @{$self->TABLES}, (['feature_set', 'fs'], ['associated_motif_feature', 'amf'], ['annotated_feature', 'af']);
 
   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND '.
 	'amf.annotated_feature_id=af.annotated_feature_id and '.
@@ -144,9 +141,7 @@ sub fetch_all_by_Slice_CellType {
   
   $self->bind_param_generic_fetch( $ctype->dbID(), SQL_INTEGER);
   my $mfs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-  
-  #Reset tables and final clause
-  @{$tables{motif_feature}} = @{$true_tables{motif_feature}};
+  $self->reset_true_tables;
   $final_clause = $true_final_clause;
 
   return $mfs;
@@ -174,14 +169,11 @@ sub fetch_all_by_Slice_BindingMatrix {
   #could add logic_name here for motif mapper analysis, motif source analysis 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $bm);
   
-  
   my $constraint = 'mf.binding_matrix_id = ?';
 
   $self->bind_param_generic_fetch( $bm->dbID(), SQL_INTEGER);
   my $mfs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-
-  #Reset tables
-  @{$tables{motif_feature}} = @{$true_tables{motif_feature}};
+  $self->reset_true_tables;
 
   return $mfs;
 }
@@ -212,7 +204,7 @@ sub fetch_all_by_Slice_FeatureSets {
   }
 
   #Extend query tables
-  push @{$tables{motif_feature}}, (['associated_motif_feature', 'amf'], ['annotated_feature', 'af']);
+  push @{$self->TABLES}, (['associated_motif_feature', 'amf'], ['annotated_feature', 'af']);
 
   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND '.
 	'amf.annotated_feature_id=af.annotated_feature_id and af.feature_set_id IN('.join(',', (map $_->dbID, @$fsets)).')';
@@ -222,9 +214,7 @@ sub fetch_all_by_Slice_FeatureSets {
   $final_clause = ' GROUP BY mf.motif_feature_id';
 
   my $mfs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-  
-  #Reset tables and final clause
-  @{$tables{motif_feature}} = @{$true_tables{motif_feature}};
+  $self->reset_true_tables;
   $final_clause = $true_final_clause;
 
   return $mfs;
@@ -268,7 +258,7 @@ sub _final_clause {
 sub _tables {
   my $self = shift;
 	
-  return @{$tables{motif_feature}};
+  return @{$self->TABLES};
 }
 
 =head2 _columns
