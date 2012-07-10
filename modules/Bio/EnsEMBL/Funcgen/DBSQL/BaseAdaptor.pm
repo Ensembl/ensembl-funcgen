@@ -115,11 +115,9 @@ sub compose_constraint_query{
     #set other dynamic config e.g. final clause
 
     if (exists ${$constraint_conf}{tables}) {
-      push @{$tables{$self->_main_table->[0]}}, @{$constraint_conf->{tables}};
+      #push @{$tables{$self->_main_table->[0]}}, @{$constraint_conf->{tables}};
+      push @{$self->TABLES}, @{$constraint_conf->{tables}};
     }
-    
-
-	  
 	} # END OF CONSTRAINTS
   }	# END OF $PARAMS				
 
@@ -127,6 +125,22 @@ sub compose_constraint_query{
 }
 
 
+
+sub reset_true_tables{
+  my $self = shift;
+
+  #$self->{_tables} = @{$self->TRUE_TABLES};
+
+  #deref to avoid modifying TRUE_TABLES
+  @{$self->TABLES} = @{$self->TRUE_TABLES};
+
+
+  #warn "reset tables are ".Data::Dumper::Dumper($self->TABLES);
+  #warn "true tables are ".Data::Dumper::Dumper($self->TRUE_TABLES);
+
+
+  return;
+}
 
 =head2 store_states
 
@@ -862,7 +876,9 @@ sub fetch_all_by_associated_FeatureType{
   $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
   my $objs = $self->generic_fetch($constraint);
   #  #Reset tables  
-  @{$tables{$self->_main_table->[0]}} = @{$true_tables{$self->_main_table->[0]}};
+  #@{$tables{$self->_main_table->[0]}} = @{$true_tables{$self->_main_table->[0]}};
+  @{$tables{$self->_main_table->[0]}} = @{$self->TRUE_TABLES};
+
   return $objs;
 }
 
