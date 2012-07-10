@@ -51,21 +51,46 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
-#use base does not import %true_tables or %tables
-
-#use constant TRUE_TABLES => [ [ 'feature_set', 'fs' ] ];
+#use base does not import %true_tables or %tables or in fact %sql_types
+#so cannot use base for any of the adaptors
 
 #Exported from BaseAdaptor
-$true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
-
+#$true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
 #This derefs as we push onto tables
 #and we don't want to alter true table
-@{$tables{feature_set}} = @{$true_tables{feature_set}};
+#@{$tables{feature_set}} = @{$true_tables{feature_set}};
 
-#Hence we can't do this
-#$tables{feature_set} = TRUE_TABLES;
-#and this doesn't work
-#@{$tables{feature_set}} = @{TRUE_TABLES};
+
+#Look into using ReadOnly::array?
+#This will provide true read only, but will need to be our'd and export/imported
+#use in conjuction?
+#use Readonly;
+#Readonly::Array my @true_tables => ([ 'feature_set', 'fs' ]);
+#use constant TRUE_TABLES => [ @true_tables ];
+#does not work
+
+use constant TRUE_TABLES => [[ 'feature_set', 'fs' ]];
+use constant TABLES      => [[ 'feature_set', 'fs' ]];
+
+#Currently these need to be listrefs [[], ...] and push directly onto TABLE rather than _tables
+
+
+
+
+#@{$tables{feature_set}} = (TRUE_TABLES);
+#use constant TABLES => (TRUE_TABLES); #this does not deref, hence pushes affect TRUE_TABLES!
+
+
+#use constant here still allows the contents of the ref to be modified
+#Simply prevents need for import/export
+
+#Now change %tables to an attribute!
+#Can't set as an attribute here, would have to be done in new or _tables
+
+
+#Had to use hashes to prevent different adaptors resetting package level global vars
+#TRUE_TABLES does not require this.
+
 
 #No need for true_final_clause
 	
@@ -96,7 +121,8 @@ sub fetch_all{
   my ($self, $params_hash) = @_;
 
   my $results = $self->generic_fetch($self->compose_constraint_query($params_hash));
-	@{$tables{feature_set}} = @{$true_tables{feature_set}}; #in case we have added tables e.g. status
+  #@{$tables{feature_set}} = @{$true_tables{feature_set}}; #in case we have added tables e.g. status
+  $self->reset_true_tables;
 
   return $results;
 }
@@ -206,7 +232,11 @@ sub fetch_all_by_feature_class {
 
   #Get result and reset true tables
   my $result = (defined $sql) ? $self->generic_fetch($sql) : [];
-  @{$tables{feature_set}} = @{$true_tables{feature_set}};
+  #@{$tables{feature_set}} = @{$true_tables{feature_set}};
+  $self->reset_true_tables;
+
+  
+
 
   return $result;
 }
@@ -251,13 +281,13 @@ sub fetch_all_displayable_by_type {
 =cut
 
 sub fetch_all_by_CellType {
-    my ($self, $ctype, $status) = @_;
-
-	my $params = {constraints => {cell_types => [$ctype]}};
-	$params->{constraints}{status} = $status if ($status);
-	my $results = $self->generic_fetch($self->compose_constraint_query($params));
-	@{$tables{feature_set}} = @{$true_tables{feature_set}}; #in case we have added status
-
+  my ($self, $ctype, $status) = @_;
+  
+  my $params = {constraints => {cell_types => [$ctype]}};
+  $params->{constraints}{status} = $status if ($status);
+  my $results = $self->generic_fetch($self->compose_constraint_query($params));
+  #@{$tables{feature_set}} = @{$true_tables{feature_set}}; #in case we have added status
+  $self->reset_true_tables;
 	return $results;	
 }
 
@@ -338,7 +368,8 @@ sub fetch_by_name {
 sub _tables {
 	my $self = shift;
 
-	return @{$tables{feature_set}};
+	#return @{$tables{feature_set}};
+  return ( @{$self->TABLES} );
 }
 
 =head2 _columns
@@ -815,8 +846,8 @@ sub _constrain_status {
       
 	  
       
-	  my @tables = $self->_tables;
-	  my ($table_name, $syn) = @{$tables[0]};
+  my @tables = $self->_tables;
+  my ($table_name, $syn) = @{$tables[0]};
 	  
       my $constraint = " $syn.${table_name}_id=s.table_id AND ".
         "s.table_name='$table_name' AND s.status_name_id=".$self->_get_status_name_id($state);
