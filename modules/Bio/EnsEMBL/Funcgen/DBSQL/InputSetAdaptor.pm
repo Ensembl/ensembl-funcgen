@@ -54,12 +54,11 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);# @ISA
-#use base does not import default exports below!
+#Query extension stuff
+use constant TRUE_TABLES => [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' ] ];
+use constant TABLES      => [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' ] ];
 
-#Exported from BaseAdaptor
-$true_tables{input_set} =  [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' ] ];
-@{$tables{input_set}} = @{$true_tables{input_set}};
+
 
 
 =head2 fetch_all
@@ -86,7 +85,7 @@ sub fetch_all{
   my ($self, $params_hash) = @_;
 
   my $results = $self->generic_fetch($self->compose_constraint_query($params_hash));
-	@{$tables{input_set}} = @{$true_tables{input_set}}; #in case we have added tables e.g. status
+  $self->reset_true_tables; #in case we have added tables e.g. status
 
   return $results;
 }
@@ -187,7 +186,7 @@ sub fetch_by_name {
 sub _tables {
   my $self = shift;
     
-  return @{$tables{input_set}};
+  return @{$self->TABLES};
 }
 
 =head2 _columns
