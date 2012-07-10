@@ -55,10 +55,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#Exported from BaseAdaptor
-$true_tables{experimental_group} = [['experimental_group', 'eg']];
-#deref so we don't modify the true tables
-@{$tables{experimental_group}}   = @{$true_tables{experimental_group}};
 
 =head2 fetch_by_name
 
@@ -102,7 +98,7 @@ sub fetch_by_name{
 sub _tables {
   my $self = shift;
 	
-  return @{$tables{experimental_group}};
+  return (['experimental_group', 'eg']);
 }
 
 =head2 _columns
