@@ -55,10 +55,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#Have to use here to import @EXPOR
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
 #change to parent with perl 5.10
 
-#Exported from BaseAdaptor
-$true_tables{probe} = [['probe', 'p']];
-@{$tables{probe}} = @{$true_tables{probe}};
-
 
 =head2 fetch_by_array_probe_probeset_name
 
@@ -85,29 +81,6 @@ sub fetch_by_array_probe_probeset_name {
 	if(! (defined $array_name && defined $probe_name)){
 	  throw('You must provide at least and array and probe name');
 	}
-
-	#Extend query
-	#push @tables, (['array', 'a'], ['array_chip', 'ac']);
-	#my $constraint = 'a.name = ? AND a.array_id=ac.array_id AND ac.array_chip_id=p.array_chip_id AND p.name= ?' ;
-	#$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
-	#$self->bind_param_generic_fetch($probe_name,SQL_VARCHAR);
-
-	#Add probeset clause
-	#if(defined $probeset_name){
-	#  $constraint .= ' AND p.probe_set_id = ps.probe_set_id AND ps.name = ?';
-	#  push @tables, ['probe_set', 'ps'];
-	#  $self->bind_param_generic_fetch($probeset_name,SQL_VARCHAR);
-	#}
-
-	#Have to group by primary key!
-	#$constraint .= ' GROUP by p.probe_id, p.name, p.array_chip_id';	
-
-	#To work around the on plate replicate problem we really
-	#need to just fetch the dbID here and then fetch_db_dbID
-	#my $probe =  $self->generic_fetch($constraint)->[0];		
-	#Reset tables
-	#@tables = @true_tables; 
-	#return $probe;
 
 	my $tables = 'probe p, array_chip ac, array a';
 	$tables .= ', probe_set ps' if defined $probeset_name;
@@ -279,7 +252,7 @@ sub fetch_by_ProbeFeature {
 sub _tables {
 	my $self = shift;
 
-  	return @{$tables{probe}};
+  return (['probe', 'p']);
 }
 
 =head2 _columns
