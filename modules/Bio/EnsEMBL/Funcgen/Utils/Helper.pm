@@ -2306,13 +2306,6 @@ sub reset_table_autoinc{
   return;
 }
 
-#$qry=mysql_query("show table status where name='newblog'") or die (mysql_error());
-#$row=mysql_fetch_array($qry);
-#$newtid=$row[10];
-#Reset autoincrement
-
-#ALTER TABLE tablename AUTO_INCREMENT = 1
-
 
 
 
@@ -2342,11 +2335,11 @@ sub get_core_display_name_by_stable_id{
   $type = lc($type);
 
   if($type !~ /(gene|transcript|translation)/){
-	throw("Cannot get display_name for stable_id $stable_id with type $type");
+    throw("Cannot get display_name for stable_id $stable_id with type $type");
   }
   
   if(! exists $self->{'display_name_cache'}->{$stable_id}){
-	($self->{'display_name_cache'}->{$stable_id}) = $cdb->dbc->db_handle->selectrow_array("SELECT x.display_label FROM ${type}_stable_id s, $type t, xref x where t.display_xref_id=x.xref_id and s.${type}_id=t.${type}_id and s.stable_id='${stable_id}'");
+    ($self->{'display_name_cache'}->{$stable_id}) = $cdb->dbc->db_handle->selectrow_array("SELECT x.display_label FROM $type t, xref x where t.display_xref_id=x.xref_id and t.stable_id='${stable_id}'");
   }
 
   return $self->{'display_name_cache'}->{$stable_id};
@@ -2380,7 +2373,7 @@ sub get_core_stable_id_by_display_name{
 #  }
   
   if(! exists $self->{'stable_id_cache'}->{$display_name}){
-	($self->{'stable_id_cache'}->{$display_name}) = $cdb->dbc->db_handle->selectrow_array("SELECT s.stable_id FROM gene_stable_id s, gene g, xref x where g.display_xref_id=x.xref_id and s.gene_id=g.gene_id and x.display_label='${display_name}'");
+	($self->{'stable_id_cache'}->{$display_name}) = $cdb->dbc->db_handle->selectrow_array("SELECT g.stable_id FROM gene g, xref x where g.display_xref_id=x.xref_id and and x.display_label='${display_name}'");
   }
 
   return $self->{'stable_id_cache'}->{$display_name};
@@ -2388,12 +2381,7 @@ sub get_core_stable_id_by_display_name{
 
 
 
-#Can we do this for several common sets of params
-#And therefore cut down the code that we need to write for every new script?
 
-#sub generate_efgdb_from_params{
-#  my ($self, $argv) = @_;
-#}
 
 
 1;
