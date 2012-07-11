@@ -78,6 +78,9 @@ use vars qw(@ISA);
 use constant TRUE_TABLES => [[ 'probe_set', 'ps' ]];
 use constant TABLES      => [[ 'probe_set', 'ps' ]];
 
+
+#Not currently using final clause as we don't group by default
+
 =head2 fetch_by_array_probeset_name
 
   Arg [1]    : string - name of array
@@ -103,22 +106,16 @@ sub fetch_by_array_probeset_name{
 	#Extend query tables
   push @{$self->TABLES}, (['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']);
   
-	
-	#Extend query and group
-	#This needs generic_fetch_bind_param
 	my $constraint = 'ps.name= ? AND ps.probe_set_id=p.probe_set_id AND p.array_chip_id=ac.array_chip_id AND ac.array_id=a.array_id AND a.name= ? GROUP by ps.probe_set_id';
-	
-	#my $constraint = 'ps.name="'.$probeset_name.'" and ps.probe_set_id=p.probe_set_id and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name="'.$array_name.'" group by ps.probe_set_id';
-	
-	$self->bind_param_generic_fetch($probeset_name,SQL_VARCHAR);
-	$self->bind_param_generic_fetch($array_name,SQL_VARCHAR);
-
+		
+	#bind params as we have unsafe string args
+  $self->bind_param_generic_fetch($probeset_name, SQL_VARCHAR);
+	$self->bind_param_generic_fetch($array_name,    SQL_VARCHAR);
 
 	my $pset =  $self->generic_fetch($constraint)->[0];
   $self->reset_true_tables;
-  
-	return $pset;
 
+	return $pset;
 }
 
 
@@ -145,15 +142,11 @@ sub fetch_by_array_probeset_name{
 sub fetch_all_by_name{
   my ($self, $name) = @_;
 
-
   throw('Must provide a probeset name argument') if ! defined $name;
-
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
 
   return $self->generic_fetch('ps.name=?');
 }
-
-
 
 
 =head2 fetch_by_ProbeFeature
@@ -184,16 +177,14 @@ sub fetch_by_ProbeFeature {
 	
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeFeature', $pfeature);
 
-	#Extend query tables
+	#Extend query
   push @{$self->TABLES}, (['probe', 'p']);
-  
-
-	#Extend query and group
 	my $pset =  $self->generic_fetch('p.probe_id='.$pfeature->probe_id.' and p.probe_set_id=ps.probe_set_id GROUP by ps.probe_set_id')->[0];
   $self->reset_true_tables;
   
 	return $pset;
 }
+
 
 =head2 fetch_all_by_Array
 
@@ -206,6 +197,8 @@ Caller     : General
 Status     : At Risk
 
 =cut
+
+#This is quicker than query extension?
 
 sub fetch_all_by_Array {
   my $self  = shift;
