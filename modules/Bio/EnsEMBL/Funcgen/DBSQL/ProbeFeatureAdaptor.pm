@@ -47,7 +47,7 @@ Bio::EnsEMBL::Funcgen::ProbeFeature
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
@@ -131,19 +131,21 @@ sub fetch_all_by_probe_id {
 
 
 
-=head2 fetch_all_by_probeset
+=head2 fetch_all_by_probeset_name
 
-  Arg [1]    : string - probeset
+  Arg [1]    : String - probeset name
+  Arg [2]    : ARRAYREF (optional) - Bio::EnsEMBL::CoordSystem objects
   Example    : my $features = $ofa->fetch_all_by_probeset('Set-1');
   Description: Fetchs all features that a given probeset creates.
   Returntype : Listref of Bio::EnsEMBL::ProbeFeature objects
   Exceptions : Throws if no probeset argument
   Caller     : General
-  Status     : At Risk - need to add vendor/class to this?
+  Status     : At Risk - add vendor/class to this?
 
 =cut
 
-sub fetch_all_by_probeset {
+
+sub fetch_all_by_probeset_name {
 	my ($self, $probeset, $coord_systems) = @_;
 
 	if (! $probeset) {
@@ -170,6 +172,44 @@ sub fetch_all_by_probeset {
 }
 
 
+=head2 fetch_all_by_ProbeSet
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ProbeSet
+  Arg [2]    : ARRAYREF (optional) - Bio::EnsEMBL::CoordSystem objects
+  Example    : my @features = @{$probe_feature_adaptor->fetch_all_by_ProbeSet($pset)};
+  Description: Fetches all ProbeFeatures from a given ProbeSet.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::ProbeFeature objects
+  Exceptions : Throws if no probeset argument
+  Caller     : General
+  Status     : At Risk - add vendor/class to this?
+
+=cut
+
+
+sub fetch_all_by_ProbeSet {
+	my ($self, $pset, $coord_systems) = @_;
+
+	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
+
+
+	#Restrict to default coord_systems
+	#Can we remove the need for this by restricting the sr cache to default entries?
+	my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
+  push @{$self->TABLES}, (['seq_region', 'sr']);
+
+	my $cs_ids = join(', ', @cs_ids);
+	my $constraint = ' p.probe_set_id='.$pset->dbID." AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
+	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;	
+
+	
+  warn $constraint;
+
+	my $features = $self->generic_fetch($constraint);
+  $self->reset_true_tables;
+	$final_clause = $true_final_clause;
+
+	return $features;
+}
 
 
 =head2 fetch_all_by_Slice_ExperimentalChips
@@ -685,7 +725,7 @@ sub store{
 		}
 
 		if ( $of->is_stored($db) ) {
-			warning('ProbeFeature [' . $of->dbID() . '] is already stored in the database');
+			warn('ProbeFeature [' . $of->dbID() . '] is already stored in the database');
 			next FEATURE;
 		}
 
@@ -819,6 +859,15 @@ sub count_probe_features_by_probe_id {
   return $self->count_features_by_field_id('probe_id', $probe_id);
 }
 
+### DEPRECATED METHODS ###
+
+sub fetch_all_by_probeset { #deprecated in v68
+  my ($self, @args) = @_;
+
+  deprecate('This method is deprecated, please use fetch_all_by_probeset_name or fetch_all_by_ProbeSet');
+
+  return $self->fetch_all_by_probeset_name(@args);
+}
 
 
 1;
