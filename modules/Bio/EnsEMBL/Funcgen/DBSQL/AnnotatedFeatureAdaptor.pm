@@ -52,50 +52,11 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
-
 #Query extension stuff
-#Hashes exported from BaseAdaptor
+use constant TRUE_TABLES => [['annotated_feature', 'af'], ['feature_set', 'fs']];
+use constant TABLES      => [['annotated_feature', 'af'], ['feature_set', 'fs']];
 
-$true_tables{annotated_feature} = [['annotated_feature', 'af'], ['feature_set', 'fs']];
 #SetFeatureAdaptor::_default_where_clause specifies join to fs table
-
-@{$tables{annotated_feature}} = @{$true_tables{annotated_feature}};
-
-
-
-=head2 fetch_all_by_Slice_Experiment
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Experiment
-  Arg [3]    : (optional) string - logic name
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch__all_by_Slice_Experiment($slice, $exp);
-  Description: Retrieves a list of features on a given slice, specific for a given experiment.
-  Returntype : Listref of Bio::EnsEMBL::AnnotatedFeature objects
-  Exceptions : Throws if no Experiment object defined
-  Caller     : General
-  Status     : At Risk: Currently NOT working
-
-=cut
-
-sub fetch_all_by_Slice_Experiment {
-  my ($self, $slice, $exp, $logic_name) = @_;
-	
-
-  if (! ($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment"))){
-    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::Experiment");
-  }
-  
-
-  throw("Need to write DataSet and ResultSet to track back to experiment");
-  
-  
-  my $constraint = qq( af.feature_set_id = fs.feature_set_id AND ep.experiment_id='$exp->dbID()' );
-  
-  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
-  
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-}
 
 =head2 _tables
 
@@ -113,7 +74,7 @@ sub fetch_all_by_Slice_Experiment {
 sub _tables {
   my $self = shift;
 	
-  return @{$tables{annotated_feature}};
+  return @{$self->TABLES};
 }
 
 =head2 _columns
@@ -416,28 +377,26 @@ sub fetch_all_by_associated_MotifFeature{
   my ($self, $mf) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
-  
-  push @{$tables{annotated_feature}}, ['associated_motif_feature', 'amf'];
-
+  push @{$self->TABLES}, ['associated_motif_feature', 'amf'];
   my $table_name = $mf->adaptor->_main_table->[0];
 
-  my $constraint = 'amf.annotated_feature_id=af.annotated_feature_id AND amf.motif_feature_id= ?';
-  $self->bind_param_generic_fetch($mf->dbID, SQL_INTEGER);
-
+  my $constraint = 'amf.annotated_feature_id=af.annotated_feature_id AND amf.motif_feature_id='.$mf->dbID;
   my $afs =  $self->generic_fetch($constraint);
-  #Reset tables
-  @{$tables{annotated_feature}} = @{$true_tables{annotated_feature}}; 
+  $self->reset_true_tables;
 
   return $afs;
 }
 
-#DEPRECATED
+### DEPRECATED METHODS ###
 
 sub fetch_all_by_Slice_FeatureSet {
   my ($self, $slice, $fset) = @_;
-	
   deprecate('Please use generic method SetFeatureAdaptor::fetch_all_by_Slice_FeatureSets');
-  
   return $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]);
 }
+
+
+#sub fetch_all_by_Slice_Experiment # removed in v68 was never functional
+
+
 1;
