@@ -178,6 +178,8 @@ if(! $dbname ){
 
 throw("Must define your funcgen -dbhost") if ! $dbhost;
 
+my $lsf_host = 'my'.$dbhost;
+($lsf_host = $lsf_host) =~ s/-/_/;
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -host => $dbhost,
@@ -221,37 +223,67 @@ if( (! $input_type_cnt) || ($input_type_cnt > 1) ){
 #These should have been specified: -feature_sets AnnotatedFeatures
 my $dump_mfs;
 
-if(@fset_names){
 
-  if($fset_names[0] eq 'AnnotatedFeatures'){
+sub get_regulatory_FeatureSets{
   
-	#Could do this via meta strings?
-	my %fset_names;
-	my $dset_a = $db->get_DataSetAdaptor;
-	
-	foreach my $rf_fset(@{$fset_a->fetch_all_by_feature_class('regulatory')}){
+  my @rf_fsets;
+
+  foreach my $rf_fset (@{$fset_a->fetch_all_by_feature_class('regulatory')}) {
 	  
-	  if($rf_fset->name =~ /v[0-9]+$/){
-		warn "Skipping archived set:\t".$rf_fset->name.
-		  "\nThis should be removed before release\n";
-		next;
-	  }
-	  
-	  map {$fset_names{$_->name} = undef} 
-		@{$dset_a->fetch_by_product_FeatureSet($rf_fset)->get_supporting_sets};
-	}
-	
-	@fset_names = keys %fset_names;
-	
+    if ($rf_fset->name =~ /v[0-9]+$/) {
+      warn "Skipping archived set:\t".$rf_fset->name.
+        "\nThis should be removed before release\n";
+      next;
+    }
+
+    push @rf_fsets, $rf_fset;
   }
-  elsif($fset_names[0] eq 'MotifFeatures'){
-	$dump_mfs = 1;
-	@fset_names = ();
+	
+  return @rf_fsets;
+}
+
+
+if (@fset_names) {
+
+  if( ($fset_names[0] eq 'AnnotatedFeatures') ||
+      ($fset_names[0] eq 'MotifFeatures') ||
+      ($fset_names[0] eq 'RegulatoryFeatures') ){
+
+    if(scalar(@fset_names) >1){
+      die("Can only define one set name when defining a group of -sets:\t@fset_names");
+    }
+    
+    if ($fset_names[0] eq 'AnnotatedFeatures') {
+
+      #Could do this via meta strings?
+      my %fset_names;
+      my $dset_a = $db->get_DataSetAdaptor;
+      
+      my @reg_fsets = &get_regulatory_FeatureSets;
+      
+      foreach my $reg_fset(@reg_fsets){
+        map {$fset_names{$_->name} = undef} 
+          @{$dset_a->fetch_by_product_FeatureSet($reg_fset)->get_supporting_sets};
+      }
+      
+      
+      @fset_names = keys %fset_names;
+      
+    } 
+    elsif($fset_names[0] eq 'RegulatoryFeatures'){
+      my @reg_fsets = &get_regulatory_FeatureSets;
+      @fset_names = ();
+
+      foreach my $reg_fset(@reg_fsets){
+        push @fset_names, $reg_fset->name;
+      }
+    } 
+    elsif ($fset_names[0] eq 'MotifFeatures') {
+      $dump_mfs = 1;
+      @fset_names = ();
+    }
   }
 }
-  
-
-
 
 
 
@@ -530,7 +562,14 @@ else{ #Submit to farm
 	
 	my $job_name = $file_name.'.'.$slice->seq_region_name;	
 	#my $bsub_cmd="bsub -q $queue -J \"${job_name}[1-${num_jobs}]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err";
-	my $bsub_cmd="bsub -q $queue -J \"${job_name}\" -o ${lsf_dir}/${job_name}.".'%J'.".out -e ${lsf_dir}/${job_name}.".'%J'.".err";
+
+	#$lsf_host does not support ensdb-archive
+
+	my $bsub_cmd="bsub -q $queue -J \"${job_name}\" -o ${lsf_dir}/${job_name}.".'%J'.".out -e ${lsf_dir}/${job_name}.".'%J'.".err ".
+	  "-R 'select[(${lsf_host}<=800)&&(mem>200)]' -R 'rusage[${lsf_host}=12:duration=10,mem=200]' -M 200000";
+
+	#'-R "select[(myens_genomics2<=700)&&(mem>2000)]" -R "rusage[myens_genomics2=12:duration=10,mem=2000]" -M 2000000',
+	#Need to threshold against DB load here
 
 	#dump name can't be job name here
 	my $cmd_args = " -dump_name $dump_name -slices ".$slice->name;
@@ -832,6 +871,7 @@ sub get_RegulatoryFeature_GFF{
 	}
   }
   
+
   return join("\t", (@{$gff}, 
 					 join('; ', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id(), 
 								 'bound_start='.$feature->bound_seq_region_start, 
