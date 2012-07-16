@@ -53,7 +53,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
 ### To do ###
 #Add Translation method for fetch by FeatureSets methods?

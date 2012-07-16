@@ -51,12 +51,7 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use DBI qw(:sql_types);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
-
-#Declare table registers for query extentions
-#May need to add final clause register too
-our (%tables, %true_tables);
-
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
 
 
@@ -115,7 +110,6 @@ sub compose_constraint_query{
     #set other dynamic config e.g. final clause
 
     if (exists ${$constraint_conf}{tables}) {
-      #push @{$tables{$self->_main_table->[0]}}, @{$constraint_conf->{tables}};
       push @{$self->TABLES}, @{$constraint_conf->{tables}};
     }
 	} # END OF CONSTRAINTS
@@ -129,16 +123,8 @@ sub compose_constraint_query{
 sub reset_true_tables{
   my $self = shift;
 
-  #$self->{_tables} = @{$self->TRUE_TABLES};
-
   #deref to avoid modifying TRUE_TABLES
   @{$self->TABLES} = @{$self->TRUE_TABLES};
-
-
-  #warn "reset tables are ".Data::Dumper::Dumper($self->TABLES);
-  #warn "true tables are ".Data::Dumper::Dumper($self->TRUE_TABLES);
-
-
   return;
 }
 
@@ -870,14 +856,12 @@ sub fetch_all_by_associated_FeatureType{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
   my ($table_name, $table_syn) = @{$self->_main_table};
 
-  push @{$tables{$self->_main_table->[0]}}, ['associated_feature_type', 'aft'];
+  push @{$self->TABLES}, ['associated_feature_type', 'aft'];
   my $constraint = "aft.feature_type_id=? AND aft.table_name='${table_name}' AND aft.table_id=${table_syn}.${table_name}_id";
 
   $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
   my $objs = $self->generic_fetch($constraint);
-  #  #Reset tables  
-  #@{$tables{$self->_main_table->[0]}} = @{$true_tables{$self->_main_table->[0]}};
-  @{$tables{$self->_main_table->[0]}} = @{$self->TRUE_TABLES};
+  $self->reset_true_tables;
 
   return $objs;
 }
