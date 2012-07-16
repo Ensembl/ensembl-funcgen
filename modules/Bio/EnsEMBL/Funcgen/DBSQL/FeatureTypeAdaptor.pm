@@ -55,12 +55,9 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#Exported from BaseAdaptor
-$true_tables{feature_type} = [['feature_type', 'ft']];
-#deref so we don't modify the true tables
-@{$tables{feature_type}}   = @{$true_tables{feature_type}};
-
-
+#Query extension stuff
+use constant TRUE_TABLES => [['feature_type', 'ft']];
+use constant TABLES      => [['feature_type', 'ft']];
 
 #Regulatory evidence feature type information
 
@@ -232,7 +229,7 @@ sub fetch_all_by_association{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $storable);
   
-  push @{$tables{feature_type}}, ['associated_feature_type', 'aft'];
+  push @{$self->TABLES}, ['associated_feature_type', 'aft'];
 
   my $table_name = $storable->adaptor->_main_table->[0];
   
@@ -240,8 +237,7 @@ sub fetch_all_by_association{
 	'" AND aft.table_id='.$storable->dbID;
 
   my $feature_types =  $self->generic_fetch($constraint);
-  #Reset tables
-  @{$tables{feature_type}} = @{$true_tables{feature_type}}; 
+  $self->reset_true_tables;
 
   return $feature_types;
 }
@@ -262,7 +258,7 @@ sub fetch_all_by_association{
 sub _tables {
   my $self = shift;
 	
-  return @{$tables{feature_type}};
+  return  @{$self->TABLES};
 }
 
 =head2 _columns
