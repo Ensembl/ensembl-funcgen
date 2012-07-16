@@ -36,8 +36,8 @@ my $features = $afa->fetch_all_by_Slice($slice);
 =head1 DESCRIPTION
 
 The SetFeatureAdaptor is a base adaptor for all SetFeature adaptors.
-e.g. SetFeature, AnnotatedFeature etc.  It provides common methods
-across all feature types.
+e.g. AnnotatedFeatureAdaptor, RegulatoryFeatureAdaptor etc.
+It provides common methods across all feature types.
 
 
 
@@ -58,7 +58,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 
 use vars qw(@ISA @EXPORT);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}}, '%tables', '%true_tables');
+@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 #required for child adaptor's store and _obj_from_sth methods
 
 =head2 fetch_all_by_FeatureType_FeatureSets
@@ -118,6 +118,9 @@ sub fetch_all_by_FeatureType_FeatureSets {
 	  next if $table_name ne lc($fset->feature_class).'_feature';
 
 	  my $sql = 'SELECT table_id from associated_feature_type where table_name="'.$table_name.'" and feature_type_id='.$ftype->dbID;
+
+      #CR We are not restricting to feature_set here!!!
+
 
 	  my @dbids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
 
@@ -190,6 +193,8 @@ sub fetch_all_by_Feature_associated_feature_types {
 	map {$dbIDs{"@$_"} = undef} @{$self->dbc->db_handle->selectall_arrayref($sql)};
   }
 
+
+  #CR do we need to fetch based on main ftype vs assoc ftpes and vice versa
 
 
   if(keys %dbIDs){
