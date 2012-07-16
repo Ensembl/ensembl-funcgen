@@ -79,7 +79,50 @@ NOTE: update_DB_for_release.pl and healtchecks should be run before this script.
 
 #To do
 
-# Add support for FeatureSets? Would we ever want flat files for these?
+# 1 Add support for FeatureSets? Would we ever want flat files for these?
+
+# 2 Add list files, for use by webteam as they need access to true files patch for copying to the mirrors
+# we are moving towards only ever linking from a release specific dir.
+
+# 3 Make files read only
+
+# 4
+
+
+# General notes
+
+# master files should never change between releases without being renamed!
+# Hence,  should never need to overwrite in target, does rsync do this anyway i.e. copy identical files
+# can we use checksums to avoid this?
+# rsync should never delete from target if not in source(should never have to anyway as we should always have all the files on master staging?)
+# we should really move toward only release specific files on staging, and back up master somewhere else.
+
+
+
+# ultimately live and archive should run off /nfs/ensnfs-master|live
+# this should probably contain a simlinked dir for release specific files for convinience (altho could remove this as not needed if we are copying from staging)
+
+# ftp assm copy should be mindful that this simply links to the nfs assm copy, which may in future only have current files (if we archive old files elsewhere)
+# that would mean release dir and master dir would effectively be the same!
+
+# what are issues here wrt updating safety
+# where is redundancy/back ups?
+# snapshots and old file backup is this enough?
+
+
+#issues around redundancy of feature_class subdirs between groups
+#i.e. we don't have regulation or core dirs, just rnaseq, result_feature e.g.
+
+#/nfs/ensnfs-dev/staging/homo_sapiens/GRCh37/rnaseq
+#/nfs/ensnfs-dev/staging/homo_sapiens/GRCh37/result_feature
+
+#should probably be
+
+#/nfs/ensnfs-dev/staging/homo_sapiens/GRCh37/core/rnaseq
+#/nfs/ensnfs-dev/staging/homo_sapiens/GRCh37/regulation|funcgen/result_feature
+
+#funcgen|regulation naming issues wrt matching db name versus visibility on ftp site?
+#should never reach ftp site?
 
 
 use strict;
@@ -93,39 +136,59 @@ use Cwd;
 
 my @tmp_args = @ARGV;
 my ($host, $pass, $dbname, $dnadbhost, $dnadbport, $dnadbuser, $dnadbname, $dnadbpass);
+my ($list_source_only, $link_type);
 
 #Default values
-my $force    = 0;
-my $port     = 3306;
-my $user     = 'ensro';
-my $ftp_root = '/lustre/scratch103/ensembl/funcgen/output/ftp';
+my $force      = 0;
+my $port       = 3306;
+my $user       = 'ensro';
+my $nfs_root   = '/nfs/ensnfs-dev/staging';
+my $ftp_root   = '/lustre/scratch103/ensembl/funcgen/output/ftp';
+my %link_config = (nfs => {}, ftp=>{});#empty config for validating link types
+my @link_types = keys %link_config;
+
 
 #get command line options
-
-my @set_types = ('result');#, 'feature');
+#should this be feature types?
+my @set_types = ('result');#, 'dna_methylation');???
 
 print "create_ftp_dir_links.pl @tmp_args\n";
 
-GetOptions (
-			'dnadb_host=s'       => \$dnadbhost,
-			'dnadb_user=s'       => \$dnadbuser,
-			'dnadb_port=i'       => \$dnadbport,
-			'dnadb_pass=s'       => \$dnadbpass,
-			'dnadb_name=s'       => \$dnadbname,
-			'dbhost=s'           => \$host,
-			'dbuser=s'           => \$user,
-			'dbport=i'           => \$port,
-			'dbpass=s'           => \$pass,
-			'dbname=s'           => \$dbname,
-			'ftp_root=s'         => \$ftp_root,
-			'force'              => \$force,
-			"help|?"             => sub { pos2usage(-exitval => 0, -verbose => 1, -message => "Params are:\t@tmp_args"); },
-			"man|m"              => sub { pos2usage(-exitval => 0, -verbose => 2, -message => "Params are:\t@tmp_args"); },
+GetOptions 
+  (
+   'dnadb_host=s'       => \$dnadbhost,
+   'dnadb_user=s'       => \$dnadbuser,
+   'dnadb_port=i'       => \$dnadbport,
+   'dnadb_pass=s'       => \$dnadbpass,
+   'dnadb_name=s'       => \$dnadbname,
+   'dbhost=s'           => \$host,
+   'dbuser=s'           => \$user,
+   'dbport=i'           => \$port,
+   'dbpass=s'           => \$pass,
+   'dbname=s'           => \$dbname,
+   'ftp_root=s'         => \$ftp_root,
+   'nfs_root=s'         => \$nfs_root,
+   'link_type=s'        => \$link_type,
+   'list_source_only'   => \$list_source_only,
+   'force'              => \$force,
+   "help|?"             => sub { pos2usage(-exitval => 0, -verbose => 1, -message => "Params are:\t@tmp_args"); },
+   "man|m"              => sub { pos2usage(-exitval => 0, -verbose => 2, -message => "Params are:\t@tmp_args"); },
+   
+  )  or pod2usage( -exitval => 1 ); #Catch unknown opts
 
-		   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
+
+if($link_type){
+
+  if(! exists $link_config{$link_type}){
+    die("You have specified an invalid -link_type($link_type), must be one of:\t@link_types");
+  }
+  else{
+    @link_types = ($link_type);
+  }
+}
 
 
-if(!$host || !$user || !$dbname )  {  print "Missing connection parameters (use -h for help)\n"; exit 1; }
+if(!$host || !$user || !$dbname )  {  die("Missing connection parameters (use -h for help)"); }
 
 #Create database connections
 
@@ -178,141 +241,190 @@ if($#assm_vers != 0){
 }
 
 my $assm = $assm_vers[0];
-my $rel_dir = $ftp_root."/release-${schema_version}/data_files/${species}/${assm}";
 
 
-if(! -d $rel_dir){
-  system("mkdir -p $rel_dir") == 0 or die("Failed to create FTP release dir:\t$rel_dir");
-}
+# CONFIG
+#To enable copying of links around, we use source paths relative to the target directory (rather than full paths)
 
-#Now check we have top level data_file dir link to nfs
+$link_config{nfs} =
+  { 
+   root     => $nfs_root,
+   release_target_path  => $nfs_root."/release_${schema_version}/${species}/${assm}",
+   
+   #assuming we have cd'd into a subdir of the release_target_path
+   #e.g. $nfs_root."/release-${schema_version}/${species}/${assm}/feature_class
+   relative_source_path => "../../../../${species}/${assm}",
+   
+  };
 
-my $df_dir_link = $ftp_root."/data_files/${species}/${assm}";
+   
+$link_config{ftp} =
+  {
+   root     => $ftp_root,#do we even need this?
+   release_target_path  => $ftp_root."/release-${schema_version}/data_files/${species}/${assm}",
+   
+   #assuming we have cd'd into a subdir of the release_target_path
+   #e.g. $ftp_root."/release-${schema_version}/data_files/${species}/${assm}/feature_class
+   relative_source_path => "../../../../../data_files/${species}/${assm}",
+  };
+                                      
 
-if(! -l $df_dir_link){ #Let's create it
-  print "Top level data_files dir link does not exist:\t$df_dir_link\n";
+#Looping is a bit higgeldy-piggeldy here as we want to dealing with all links for a 
+#given data set at the same time
+#hence we have to interate over @link_types a few times.
+
+my %num_dirs;
+
+foreach my $link_type(@link_types){
+  $num_dirs{$link_type} = 0;
+
+  #Check we have top level data_file dir link to nfs
+  #Create top level data_file dir which simply links to nfs
+  if($link_type eq 'ftp'){
+
+    my $df_dir_link = $ftp_root."/data_files/${species}/${assm}";
+
+    if(! -l $df_dir_link){ #Let's create it
+      print "Top level data_files dir link does not exist:\t$df_dir_link\n";
+      
+      #Should grab dbfile_data_root here
+      my $dbfile_data_root    = $efgdb->get_MetaContainer->single_value_by_key('dbfile.data_root');
+      
+      if(! ($dbfile_data_root &&
+            -d $dbfile_data_root) ){
+        die("Unable to find dbfile.data_root:\t$dbfile_data_root");
+      }
+      else{
+        my $cmd = "ln -s $dbfile_data_root $df_dir_link";
+        print "Creating top level data_files dir link:\t$cmd\n";
+        system($cmd) == 0 or die("Failed to create top level data_file dir link");
+      }
+    }
+  }
   
+  my $rel_dir = $link_config{$link_type}->{release_target_path};
 
-  #Should grab dbfile_data_root here
-  my $dbfile_data_root    = $efgdb->get_MetaContainer->single_value_by_key('dbfile.data_root');
- 
-  if(! ($dbfile_data_root &&
-		-d $dbfile_data_root) ){
-	die("Unable to find dbfile.data_root:\t$dbfile_data_root");
+  if(! -d $rel_dir){
+    system("mkdir -p $rel_dir") == 0 or die("Failed to create $link_type release dir:\t$rel_dir");
   }
-  else{
-	my $cmd = "ln -s $dbfile_data_root $df_dir_link";
-	print "Creating top level data_files dir link:\t$cmd\n";
-	system($cmd) == 0 or die("Failed to create top level data_file dir link");
-  }
+
+  #remove old links here?
 }
 
 
 
 
 #Loop through set types and create links
-my $dir = getcwd;
-my ($feature_class, $source_dir, $target_dir);
-
-
-
-#Log errors and caryr on or die straight away?
-#Use Helper?
-
-foreach my $set_type(@set_types){
-
+#my $dir = getcwd;
+my ($feature_class, $ftp_source_dir, $source_dir, $target_dir, @true_paths);
+  
+foreach my $set_type (@set_types) {
+    
   #warn "getting $set_type setadaptor";
-  #my $set_adaptor = $reg->get_adaptor($species, 'funcgen', $set_type.'setadaptor');
-
+  #my $set_adaptor = $reg->get_adaptor($species, 'funcgen', $set_type.'setadaptor');    
   my $method      = 'get_'.ucfirst($set_type).'SetAdaptor';
   my $set_adaptor = $efgdb->$method;
-  
-
-  my $num_dirs = 0;
-
-  foreach my $set (@{$set_adaptor->fetch_all}){
-
-	#Check if is DISPLAYABLE and have data files
-
-	#This is ResultSet specific after here
-	($source_dir = $set->dbfile_data_dir) =~ s'/+'/'g;
-	#Let's tidy up the source dir as we have numerous multiple slashes ///
+    
+  foreach my $set (@{$set_adaptor->fetch_all}) {
+      
+    #Check if is DISPLAYABLE and have data files
+      
+    #This is ResultSet specific after here
+    ($source_dir = $set->dbfile_data_dir) =~ s'/+'/'g;
+    #Let's tidy up the source dir as we have numerous multiple slashes ///
 	
-	if( ! ($set->is_displayable &&
-		   $source_dir)){
-	  next;
-	}
+    if ( ! ($set->is_displayable &&
+            $source_dir)) {
+      next;
+    }
 	 
-	#We don't actually want to link directly to the data files, but relatively to
-	#../../data_files/SPECIES/ASSEMBLY
-	#This should also contain links, but to /nfs/ensnfs-dev/staging
-	#This should already be in place but need to add check in here somewhere
+ 
+    #get true source here to list
+    #will always be on nfs
+
+    ($target_dir = $source_dir) =~ s'/$'';
+    ($target_dir = $target_dir) =~ s'/.*/'';
+    $feature_class = ($set->set_type eq 'result') ? 'result_feature' : $set->feature_class.'_feature';
+
+    
+
+
+    push @true_paths, $nfs_root."/${species}/${assm}/${feature_class}/${target_dir}";
+
+
+    if(! $list_source_only){
+
+      foreach my $link_type(@link_types) {
+        my $rel_dir = $link_config{$link_type}->{release_target_path};
+        my $fclass_dir = $rel_dir."/${feature_class}";
+        
+        if (! -d $fclass_dir) {
+          system("mkdir -p $fclass_dir") == 0 or die("Failed to create $link_type release dir:\t${fclass_dir}");
+        }
+	
+      chdir($fclass_dir) || die("Failed to move to $link_type release dir:\t${fclass_dir}");;
 
 	
+      #Now we need to redefine source_dir as link to data_files relative to target dir
+      $source_dir =  $link_config{$link_type}->{relative_source_path}."/${feature_class}/${target_dir}";
+      
+   
+      #SANITY CHECKING
+      
+      #This is now dependant on link_type?
+      #should do this once really 
+     
 
-
-
-	$feature_class = ($set->set_type eq 'result') ? 'result_feature' : $set->feature_class.'_feature';
-  	my $fclass_dir = $rel_dir."/${feature_class}";
-	
-	if(! -d $fclass_dir){
-	  system("mkdir -p $fclass_dir") == 0 or die("Failed to create FTP release dir:\t${fclass_dir}");
-	}
-	
-	chdir($fclass_dir) || die("Failed to move to FTP release dir:\t${fclass_dir}");;
-
-
-	($target_dir = $source_dir) =~ s'/$'';
-	($target_dir = $target_dir) =~ s'/.*/'';
-	
-	#Now we need to redefine source_dir as link to data_files relative to target dir
-	$source_dir = "../../../../../data_files/${species}/${assm}/${feature_class}/${target_dir}";
-	
-
-	#SANITY CHECKING
-	
-	if(! -d $source_dir){ #Is is a directory?
-	  #This will be a directory as the link is at the data_file level
-	  die("Source dbfile_data_dir does not exist for ".$set->name."\t".$source_dir);
-	}
-	else{                 #Does is contain any data?
-	  opendir(DirHandle, $source_dir) || die("Failed to open source dir:\t$source_dir");
-
-	  #Need to catch error here
-
-	  my $num_files = 0;
-
-	  while (readdir(DirHandle)) {
-		$num_files++;
-		#Could check for expected suffixes or non-empty files
-		#check for name match
-		#But we are verging on a HC here.
-	  }
-	  
-	  closedir(DirHandle);
-
-	  if(! $num_files){
-		die("Found 0 files in source directory:\t${source_dir}");
-	  }
-	}	
-
-
-	if(-e $target_dir &&
-	   (! -l $target_dir) ){
-	  die("$target_dir already exists but is not a link to $source_dir");
-	}
-
-	my $cmd = "ln -sf $source_dir $target_dir";
-	system("$cmd") == 0 or die("Failed to create link using:\t${cmd}");
-	#print "$cmd\n";
-	$num_dirs ++;
+      if (! -d $source_dir) {     #Is is a directory?
+        #This will be a directory as the link is at the data_file level
+        die("Source dbfile_data_dir does not exist for ".$set->name."\t".$source_dir);
+      } else {                    #Does is contain any data?
+        opendir(DirHandle, $source_dir) || die("Failed to open source dir:\t$source_dir");
+        
+        #Need to catch error here
+        
+        my $num_files = 0;
+        
+        while (readdir(DirHandle)) {
+          $num_files++;
+          #Could check for expected suffixes or non-empty files
+          #check for name match
+          #But we are verging on a HC here.
+        }
+        
+        closedir(DirHandle);
+        
+        if (! $num_files) {
+          die("Found 0 files in source directory:\t${source_dir}");
+        }
+      }	
+      
+      
+      if (-e $target_dir &&
+          (! -l $target_dir) ) {
+        die("$target_dir already exists but is not a link to $source_dir");
+      }
+      
+      my $cmd = "ln -sf $source_dir $target_dir";
+      system("$cmd") == 0 or die("Failed to create link using:\t${cmd}");
+      #print "$cmd\n";
+      $num_dirs{$link_type} ++;
+    }
+  }
   }
 
-  print "Linked $num_dirs $set_type directories\n";
+  foreach my $link_type(@link_types){
+    print "Linked ".$num_dirs{$link_type}." $link_type $set_type directories\n";
+  }
+
 }
 	
+
+
+print "Source file paths:\n\t".join("\n\t", @true_paths)."\n";
+
 	
-chdir($dir);
+#chdir($dir);
 
 
 print "Now print command to send to webteam which will follow links and rsync to the ftp dir\n";
