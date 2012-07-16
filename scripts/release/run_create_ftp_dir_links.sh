@@ -12,9 +12,9 @@ shift
 #PASS=$1
 #shift
 
-#dbname=homo_sapiens_funcgen_67_37
-dbname=mus_musculus_funcgen_68_38
-dbhost=ens-staging2
+dbname=homo_sapiens_funcgen_68_37
+#dbname=mus_musculus_funcgen_68_38
+dbhost=ens-staging1
 dnadb_host=$dbhost
 dnadb_user=$USER
 
@@ -29,7 +29,7 @@ job_cmd="perl -w $EFG_SRC/scripts/release/create_ftp_dir_links.pl\
 	-dbuser $USER \
 	-dbname $dbname\
 	-dnadb_host $dnadb_host\
-	-dnadb_user $dnadb_user"
+	-dnadb_user $dnadb_user $@"
 
 #echo -e $job_cmd
 
