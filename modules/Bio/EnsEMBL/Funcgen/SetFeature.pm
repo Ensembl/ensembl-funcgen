@@ -24,43 +24,51 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::SetFeature - Base class ???
+Bio::EnsEMBL::Funcgen::SetFeature - Base class for features of a Set.
 
 =head1 SYNOPSIS
 
-   ??? Update to real use cases and correct namespsace
+  # Would normally be created from an in inheriting class e.g. AnnotatedFeature.pm
 
-    my $feat = new Bio::EnsEMBL::Feature(
-                     -start         => 100,
-                                         -end           => 220,
-                                         -strand        => -1,
-                                         -slice         => $slice,
-                                         -feature_set   => $fset,
-                                         -display_label => $label,
-                                      );
+  use base qw(Bio::Ensembl::Funcgen::SetFeature);
 
-    my $start  = $feat->start;
-    my $end    = $feat->end;
-    my $strand = $feat->strand;
+  sub new {
+    my $caller = shift;
+    my $class  = ref($caller) || $caller;
+    my $self   = $class->SUPER::new(@_);
+    # More construction here
+  }
 
-    #move the feature to the chromosomal coordinate system
-    $feature = $feature->transform('chromosome');
+  # Alternative direct contruction
 
-    #move the feature to a different slice (possibly on another coord system)
-    $feature = $feature->transfer($new_slice);
+  my $feat = Bio::EnsEMBL::Funcgen::SetFeature->
+    (
+     -start         => 100,
+     -end           => 220,
+     -strand        => -1,
+     -slice         => $slice,
+     -set           => $fset,
+     -feature_type  => $ftype,
+     -display_label => $label,
+    );
 
-    #project the feature onto another coordinate system possibly across
-    #boundaries:
-    @projection = @{$feature->project('contig')};
+  # Accessing some attributes
 
-    #change the start, end, and strand of the feature in place
-    $feature->move($new_start, $new_end, $new_strand);
+ 
+  my $start     = $feat->start;
+  my $end       = $feat->end;
+  my $strand    = $feat->strand;
+  my $fset      = $feat->set;
+  my $cell_type = $feat->cell_type;
+
+  # Printing some information
+
+  print $feature->display_label.' has the FeatureType '.$feat->feature_type->name."\n";
 
 =head1 DESCRIPTION
 
-??? Update
-This is a simple wrapper method for the core Feature class to contain common generic
-Funcgen SetFeature methods.
+This is a base class for features which are contained within a Funcgen FeatureSet or ResultSet.
+It provides generic methods for attributes which are common across all inheriting classes.
 
 =cut
 
@@ -73,52 +81,50 @@ use warnings;
 use Bio::EnsEMBL::Feature;
 use Bio::EnsEMBL::Funcgen::Storable;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-# ??? Does AY have a replacemnt, can we remove/replace?
-
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
-
+#can't use base with dual inheritance
 
 =head2 new
 
-#??? Desribe passing hash
 
   Arg [-SET]          : Bio::EnsEMBL::Funcgen::ResultSet or FeatureSet.
-  Arg [-FEATURE_TYPE] : (optional) Bio::EnsEMBL::Funcgen::FeatureType. Defaults to Feature/ResultSet FeatureType.
-  Arg [-ANALYSIS]     : (optional) Bio::EnsEMBL::Analysis. Defaults to Feature/ResultSet Analysis.
+  Arg [-DISPLAY_LABEL]: (optional) String - Display label for this feature
+  Arg [-FEATURE_TYPE] : (optional) Bio::EnsEMBL::Funcgen::FeatureType.
+                        Defaults to Feature/ResultSet FeatureType.
+  
+  #Bio::EnsEMBL::Feature arguments
   Arg [-SLICE]        : Bio::EnsEMBL::Slice - The slice on which this feature is.
+  Arg [-STRAND]       : (optional) Int - The orientation of this feature relative to the 
+                        strand it is on. Valid values are 1, -1 and 0.
   Arg [-START]        : Int - The start coordinate of this feature relative to the start of the slice
-		                it is sitting on. Coordinates start at 1 and are inclusive.
+		                    it is sitting on. Coordinates start at 1 and are inclusive.
   Arg [-END]          : Int -The end coordinate of this feature relative to the start of the slice
-	                    it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-DISPLAY_LABEL]: String - Display label for this feature
-  Arg [-STRAND]       : Int - The orientation of this feature. Valid values are 1, -1 and 0.
-#??? Is this optional in core Feature
-
+	                      it is sitting on. Coordinates start at 1 and are inclusive. 
+  Arg [-ANALYSIS]     : (optional) Bio::EnsEMBL::Analysis. Defaults to Feature/ResultSet Analysis.
   Arg [-dbID]         : (optional) Int - Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 
-  Arg [-FEATURE_SET]  : Bio::EnsEMBL::Funcgen::FeatureSet (Obsolete)
 
 
-#??? AF inherits from SF
-  Example             : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
-                              (
-                               -SLICE         => $chr_1_slice,
-                               -START         => 1000000,
-                               -END           => 1000024,
-                               -STRAND        => -1,
-							   -DISPLAY_LABEL => $text,
-							   -SET           => $fset,
-                              );
+  Example             : my $feature = Bio::EnsEMBL::Funcgen::SetFeature->new
+                                        (
+                                         -SLICE         => $chr_1_slice,
+                                         -START         => 1000000,
+                                         -END           => 1000024,
+                                         -STRAND        => -1,
+							                           -DISPLAY_LABEL => $text,
+							                           -SET           => $fset,
+                                        );
 
   Description: Constructor for SetFeature objects. Should never be called directly, only by its children.
   Returntype : Bio::EnsEMBL::Funcgen::SetFeature
-  Exceptions : Throws if ???
-  Caller     : ???
-  Status     : At Risk - FEATURE_SET arg replaced by SET in v67
+  Exceptions : Throws if no valid ResultSet or FeatureSet passed
+               Throws if FeatureType is passed but not valid
+  Caller     : General
+  Status     : At Risk - FEATURE_SET arg to be removed, superceded by SET in v67
 
 =cut
 
@@ -133,24 +139,21 @@ sub new {
 
   if( ( ref($set) ne 'Bio::EnsEMBL::Funcgen::FeatureSet') &&
 	  ( ref($set) ne 'Bio::EnsEMBL::Funcgen::ResultSet') ){
-	throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet or ResultSet object");
+    throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet or ResultSet object");
   }
 
   #Grab FeatureSet first so we can pass analysis to base Feature class
-  
-  #??? This fset->analysis will over-write feature analysis
-  #can't remove as part of core Feature. catch and warn or ignore for speed?
-
-  my $self = $class->SUPER::new(@_, -analysis => $fset->analysis);
-
-
+  #Funcgen analysis is currently always at the Set level
+  #if this ever changes the SetFeature->analysis method will also need changing
+  my $self = $class->SUPER::new(@_, -analysis => $set->analysis);
+ 
   if($ftype){
 	
-	if(ref($ftype) ne 'Bio::EnsEMBL::Funcgen::FeatureType'){
-	  throw('feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType');
-	}
+    if (ref($ftype) ne 'Bio::EnsEMBL::Funcgen::FeatureType') {
+      throw('feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType');
+    }
   
-	$self->{feature_type} = $ftype;
+    $self->{feature_type} = $ftype;
   }
  
   #Setting attrs directly removes the need for setter code in methods
@@ -158,31 +161,6 @@ sub new {
   $self->{display_label} = $display_label if defined $display_label;
  	
   return $self;
-}
-
-
-
-#Usage of new fast in the adaptor means we can't deprecate and re-assign old args in new!
-
-=head2 new_fast
-
-  Args       : Hashref with all internal attributes set
-  Example    : none
-  Description: Quick and dirty version of new. Only works if the calling code 
-               is very disciplined.
-  Returntype : Bio::EnsEMBL::Funcgen::SetFeature
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-#Remove and use Bio::EnsEMBL::Feature::new_fast? - This 'weakens' adaptor
-
-#??? Just use core method
-
-sub new_fast {
-  return bless ($_[1], $_[0]);
 }
 
 
@@ -224,14 +202,12 @@ sub set {
 =head2 cell_type
 
   Example    : my $cell_name = $set_feature->cell_type->name;
-  Description: Getter for the CellType attribute for this feature.
-
-#??? Comes from set
-               May not always be set for ExternalFeatures.
+  Description: Getter for the CellType attribute for the Set of this Feature.
+  May not always be for some Set types e.g. ExternalFeatures.
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
-  Status     : At risk
+  Status     : stable
 
 =cut
 
@@ -239,42 +215,48 @@ sub cell_type{
 	return $_[0]->set->cell_type;
 }
 
+
 =head2 feature_type
 
   Example    : my $ft_name = $set_feature->feature_type->name;
   Description: Getter for the FeatureType attribute for this feature.
-
-#??? defaults to set ftype if not explcitly set for thsi feature
+               If not explicitly set, defaults to the Set FeatureType
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None
   Caller     : General
-  Status     : At risk
+  Status     : stable
 
 =cut
 
 sub feature_type{
-  my $self = shift; 
-  return (defined $self->{feature_type}) ?  $self->{feature_type} : $self->set->feature_type;
+  my $self = shift;
+
+  if(! defined $self->{feature_type}){
+    $self->{feature_type} = $self->set->feature_type;
+  }
+  
+  return $self->{feature_type};
 }
 
-
-#??? Remove this
-#what about MFs? add as feature_set as MOODS/PWM analysis not represented
 
 =head2 analysis
 
   Example    : my $analysis = $setfeature->analysis;
   Description: Getter for the Analysis attribute for this feature.
+               Re-implementation of Bio::EnsEMBL::Feature->analysis.
   Returntype : Bio::EnsEMBL::Analysis
   Exceptions : None
   Caller     : General
-  Status     : At risk
+  Status     : stable
 
 =cut
 
+#what about MFs? add as feature_set as MOODS/PWM analysis not represented
+#This is a mandatory requirement for Bio::EnsEMBL::Feature
+#Do we ever actually have analysis at the feature level?
+
 sub analysis{
-  my $self = shift;
-  return (defined $self->{analysis}) ? $self->{analysis} : $self->set->analysis();
+  return $_[0]->set->analysis;
 }
 
 
@@ -282,7 +264,7 @@ sub analysis{
 
   Example    : my $label = $feature->display_label;
   Description: Getter for the display label of this feature.
-               This will most likely be over-ridden by inheriting class
+  This will most likely be over-ridden by inheriting class
   Returntype : String
   Exceptions : None
   Caller     : General
