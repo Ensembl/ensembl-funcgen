@@ -400,7 +400,7 @@ sub parse_Features_by_Slice{
   my $parse = 1;
   #Add counts here, or leave to Collector?
   my $seen_chr = 0;
-
+ 
   #This currently parses the rest of the file once we have seen the data we want
 
   while((defined ($line = <$fh>)) && $parse){
@@ -464,6 +464,7 @@ sub parse_Features_by_Slice{
   }
 
   $self->last_slice($slice);
+  #$self->log("Added logging of parsing (seen = $seen_chr) for memory footprinting through file", 'logmemflag');
 
   return \@features;
 }
