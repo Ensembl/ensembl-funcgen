@@ -258,19 +258,18 @@ sub define_sets{
   my $eset = $self->db->get_InputSetAdaptor->fetch_by_name($self->input_set_name);
   
   if(! defined $eset){
-	$eset = Bio::EnsEMBL::Funcgen::InputSet->new
-	  (
-	   -name         => $self->input_set_name(),
-	   -experiment   => $self->experiment(),
-	   -feature_type => $self->feature_type(),
-	   -cell_type    => $self->cell_type(),
-	   -vendor       => $self->vendor(),
-	   -format       => $self->format(),
-	   -analysis     => $self->feature_analysis,
-	   -feature_class => $self->input_feature_class,
-	  );
-	($eset)  = @{$self->db->get_InputSetAdaptor->store($eset)};
-
+    $eset = Bio::EnsEMBL::Funcgen::InputSet->new
+      (
+       -name         => $self->input_set_name(),
+       -experiment   => $self->experiment(),
+       -feature_type => $self->feature_type(),
+       -cell_type    => $self->cell_type(),
+       -vendor       => $self->vendor(),
+       -format       => $self->format(),
+       -analysis     => $self->feature_analysis,
+       -feature_class => $self->input_feature_class,
+      );
+    ($eset)  = @{$self->db->get_InputSetAdaptor->store($eset)};
   }
 
   #Use define_and_validate with fetch/append as we may have a pre-existing set
@@ -666,6 +665,7 @@ sub read_and_import_data{
 		foreach my $slice(@$slices){
 		  $self->feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self, 
 																	(
+																	 #Force needs reimplementing here?
 																	 -force            => $self->{force},
 																	 -dbfile_data_root => $self->{dbfile_data_root},
 																	));
