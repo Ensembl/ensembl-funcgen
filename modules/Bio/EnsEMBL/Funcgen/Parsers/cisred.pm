@@ -328,22 +328,24 @@ sub parse_and_load {
 
 	#Handle release/version in xref version as stable_id version?
 
-	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => $species.'_core_Gene',
-											 #-release                => $self->db->_get_schema_build($self->db->dnadb),
-											 #-release                => '49_36b',#harcoded for human
-                                             -release                => '49_37b', #hardcoded for mouse
-											 -status                 => 'KNOWNXREF',
-											 #-display_label_linkable => 1,
-											 -db_display_name        => 'EnsemblGene',
-											 -type                   => 'MISC',#this is external_db.type
-											 -primary_id             => $gene_id,
-											 -display_id             => $display_name,
-											 -info_type              => 'MISC',
-											 -info_text              => 'GENE',
-											 -linkage_annotation     => 'cisRED motif gene',
-											 #could have version here if we use the correct dnadb to build the cache
-											);
+	my $dbentry = Bio::EnsEMBL::DBEntry->new
+    (
+     -dbname                 => $species.'_core_Gene',
+     #-release                => $self->db->_get_schema_build($self->db->dnadb),
+     #-release                => '49_36b',#harcoded for human
+     -release                => '49_37b', #hardcoded for mouse
+     -status                 => 'KNOWNXREF',
+     #-display_label_linkable => 1,
+     -db_display_name        => 'EnsemblGene',
+     -type                   => 'MISC',#this is external_db.type
+     -primary_id             => $gene_id,
+     -display_id             => $display_name,
+     -info_type              => 'MISC',
+     -info_text              => 'GENE',
+     -linkage_annotation     => 'cisRED motif gene',
+     -analysis               => $set->analysis,
+     #could have version here if we use the correct dnadb to build the cache
+    );
 	$dbentry_adaptor->store($dbentry, $feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag
   }
   
@@ -443,21 +445,23 @@ sub parse_and_load {
 
 	my $display_name = $self->get_core_display_name_by_stable_id($self->db->dnadb, $gene_id, 'gene');
 	
-	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-											 -dbname                 => $species.'_core_Gene',
-											 #-release                => $self->db->dnadb->dbc->dbname,
-											 -status                 => 'KNOWNXREF',
-											 #-display_label_linkable => 1,
-											 #-db_display_name        => $self->db->dnadb->dbc->dbname,
-											 -db_display_name        => 'EnsemblGene',
-											 -type                   => 'MISC',
-											 -primary_id             => $gene_id,
-											 -display_id             => $display_name,
-											 -info_type              => 'MISC',
-											 -info_text              => 'GENE',
-											 -linkage_annotation     => 'cisRED search region gene',#omit?
-											 #could have version here if we use the correct dnadb to build the cache
-											  );
+	my $dbentry = Bio::EnsEMBL::DBEntry->new
+    (
+     -dbname                 => $species.'_core_Gene',
+     #-release                => $self->db->dnadb->dbc->dbname,
+     -status                 => 'KNOWNXREF',
+     #-display_label_linkable => 1,
+     #-db_display_name        => $self->db->dnadb->dbc->dbname,
+     -db_display_name        => 'EnsemblGene',
+     -type                   => 'MISC',
+     -primary_id             => $gene_id,
+     -display_id             => $display_name,
+     -info_type              => 'MISC',
+     -info_text              => 'GENE',
+     -linkage_annotation     => 'cisRED search region gene',#omit?
+     -analysis               => $set->analysis,
+     #could have version here if we use the correct dnadb to build the cache
+    );
 	$dbentry_adaptor->store($dbentry, $search_feature->dbID, 'ExternalFeature', 1);#1 is ignore release flag  
   }
 
