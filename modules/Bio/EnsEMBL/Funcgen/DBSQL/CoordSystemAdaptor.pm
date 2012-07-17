@@ -1159,8 +1159,8 @@ sub store {
 sub validate_and_store_coord_system{
   my ($self, $cs) = @_;
 	
-  if(! (ref($cs) && $cs->isa('Bio::EnsEMBL::CoordSystem') && $cs->dbID())){
-	throw('Must provide a valid stored Bio::EnsEMBL::CoordSystem');
+  if (! (ref($cs) && $cs->isa('Bio::EnsEMBL::CoordSystem') && $cs->dbID())) {
+    throw('Must provide a valid stored Bio::EnsEMBL::CoordSystem');
   }
   
 
@@ -1179,36 +1179,33 @@ sub validate_and_store_coord_system{
 
 
 
-
-
   my $sbuild = $self->db->_get_schema_build($cs->adaptor->db());
 
   #this should implicitly use the current schema_build
   #hence providing specificty for non-version CS's e.g. supercontig etc...
   my $fg_cs = $self->fetch_by_name($cs->name(), $cs->version());
 
-
   #this needs to satify both schema_build and version
   #retrieving by name version should retunr the lastest schema_build unless the it is not the toplevel or highest expected rank?
   
   my $version;
 
-  if(! $fg_cs){
+  if (! $fg_cs) {
 	
 		#if($cs->name ne 'clone' && (! $cs->version)){
-	  	#NO VERSION for assembled level !!
-	  	#Assume the default version
-	  	#we could get this from meta, but is unreliable
-	  	#get from default chromosome version
-	  	#my $tmp_cs = $cs->adaptor->fetch_by_name('chromosome');
-	  	#$version = $tmp_cs->version;
+    #NO VERSION for assembled level !!
+    #Assume the default version
+    #we could get this from meta, but is unreliable
+    #get from default chromosome version
+    #my $tmp_cs = $cs->adaptor->fetch_by_name('chromosome');
+    #$version = $tmp_cs->version;
 		#}
 
 	
 		$fg_cs = Bio::EnsEMBL::Funcgen::CoordSystem->new(
-														 -NAME    => $cs->name(),
-														 -VERSION =>  $cs->version(),
-														);
+                                                     -NAME    => $cs->name(),
+                                                     -VERSION =>  $cs->version(),
+                                                    );
 
 		warn "Created new CoordSystem:\t".$fg_cs->name().":".$fg_cs->version()."\n";
   }
@@ -1225,28 +1222,30 @@ sub validate_and_store_coord_system{
   #as this iterates over every features stored
   #increasing import time.
 
-  if(! $fg_cs->contains_schema_build($sbuild)){
+  if (! $fg_cs->contains_schema_build($sbuild)) {
 	
-	#Need to set all attribs here.
+    #Need to set all attribs here.
 
-	$fg_cs->add_core_coord_system_info(
-									   -RANK                 => $cs->rank(), 
-									   -SEQUENCE_LEVEL       => $cs->is_sequence_level(), 
-									   -DEFAULT              => $cs->is_default(), 
-									   -SCHEMA_BUILD         => $sbuild,
-									   -CORE_COORD_SYSTEM_ID => $cs->dbID(),
-									   -IS_STORED            => 0,
-									  );
+    $fg_cs->add_core_coord_system_info(
+                                       -RANK                 => $cs->rank(), 
+                                       -SEQUENCE_LEVEL       => $cs->is_sequence_level(), 
+                                       -DEFAULT              => $cs->is_default(), 
+                                       -SCHEMA_BUILD         => $sbuild,
+                                       -CORE_COORD_SYSTEM_ID => $cs->dbID(),
+                                       -IS_STORED            => 0,
+                                      );
 	
-	eval {  $fg_cs = $self->store($fg_cs) };
+    eval {  $fg_cs = $self->store($fg_cs) };
 	
-	if($@ && (! exists $cs_warnings{$fg_cs->name.':'.$fg_cs->version})){
-	  $cs_warnings{$fg_cs->name.':'.$fg_cs->version} = 1;
-	  warning("$@\nYou do not have permisson to store the CoordSystem for schema_build $sbuild\n".
-		"Using comparable CoordSystem:\t".$fg_cs->name.':'.$fg_cs->version."\n");
-	}
+    if ($@ && (! exists $cs_warnings{$fg_cs->name.':'.$fg_cs->version})) {
+      $cs_warnings{$fg_cs->name.':'.$fg_cs->version} = 1;
+      warning("$@\nYou do not have permisson to store the CoordSystem for schema_build $sbuild\n".
+              "Using comparable CoordSystem:\t".$fg_cs->name.':'.$fg_cs->version."\n");
+    }
   }
   
+  
+
   return $fg_cs;
 }
 
