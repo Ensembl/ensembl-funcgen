@@ -275,7 +275,7 @@ sub list_probe_feature_ids_by_extid {
   my ( $self, $external_name, $external_db_name ) = @_;
 
   return
-    $self->_type_by_external_idold( $external_name, 'ProbeFeature', undef,
+    $self->_type_by_external_id( $external_name, 'ProbeFeature', undef,
                                  $external_db_name );
 }
 
@@ -444,7 +444,21 @@ sub _type_by_external_id {
 
 
 
+=head2 _type_by_external_ids
 
+  Arg [1]    : ARRAYREF of external names strings
+  Arg [2]    : string $ensType - ensembl_object_type
+  Arg [3]    : (optional) string $extraType
+  Arg [4]    : (optional) string $external_db_name
+  	            other object type to be returned
+  Example    : $self->_type_by_external_ids([$name, $name2] 'regulatory_feature');
+  Description: Gets
+  Returntype : list of dbIDs (regulatory_feature, external_feature )
+  Exceptions : none
+  Caller     : list_regulatory/external_feature_ids_by_extid
+  Status     : Stable
+
+=cut
 
 
 sub _type_by_external_ids {
@@ -561,9 +575,17 @@ sub _type_by_external_ids {
 
   # Changed this to a UNION and grab the col arrayref directly
 
+
+  #UNION will return NR row but ensembl_ids may have >1 ox row
+  #hence selectcol won't  necessarily return NR ID list, 
+  #as caller will use fetch_all_by_dbID_list which will make it NR
+  #change to selectall_hashref if this changes
+  
+
+
   return @{$self->db->dbc->db_handle->selectcol_arrayref(join(' UNION ', @queries))};
  
-} ## end sub _type_by_external_id
+} ## end sub _type_by_external_ids
 
 
 
@@ -574,7 +596,7 @@ sub _type_by_external_ids {
   Arg [2]    : string $ensType - ensembl_object_type
   Arg [3]    : (optional) string $extraType
   	       other object type to be returned
-  Example    : $self->_type_by_external_id(1030, 'Translation');
+  Example    : $self->_type_by_external_id('1030', 'Translation');
   Description: Gets
   Returntype : list of dbIDs (gene_id, transcript_id, etc.)
   Exceptions : none
