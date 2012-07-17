@@ -169,7 +169,7 @@ sub fetch_all_linked_by_ResultSet{
 sub fetch_all_by_Experiment_Analysis{
   my ($self, $exp, $analysis) = @_;
 
-  if( !($analysis && $analysis->isa("Bio::EnsEMBL::Analysis") && $analysis->dbID())){
+  if ( !($analysis && $analysis->isa("Bio::EnsEMBL::Analysis") && $analysis->dbID())) {
     throw("Need to pass a valid stored Bio::EnsEMBL::Analysis");
   }
   
@@ -182,7 +182,7 @@ sub fetch_all_by_Experiment_Analysis{
 sub get_Experiment_join_clause{
   my ($self, $exp) = @_;
 
-  if( !($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())){
+  if ( !($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())) {
     throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment");
   }
 
@@ -191,35 +191,32 @@ sub get_Experiment_join_clause{
 
   my @ecs = @{$exp->get_ExperimentalChips()};
 
-  if(@ecs){
+  if (@ecs) {
 
-	my $ec_ids = join(', ', (map $_->dbID, @ecs));#get ' separated list of ecids
+    my $ec_ids = join(', ', (map $_->dbID, @ecs)); #get ' separated list of ecids
 	
 	
-	my @chans = map @$_, (map $_->get_Channels(), @ecs);
-	my $chan_ids = join(', ', (map $_->dbID(), @chans));#get ' separated list of chanids
-	#These give empty strings which are defined
-	#This will not work for single IDs of 0, but this will never happen.
+    my @chans = map @$_, (map $_->get_Channels(), @ecs);
+    my $chan_ids = join(', ', (map $_->dbID(), @chans)); #get ' separated list of chanids
+    #These give empty strings which are defined
+    #This will not work for single IDs of 0, but this will never happen.
 	
-	if($ec_ids && $chan_ids){
-	  $constraint = '(((rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.
-		')) OR (rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.'))))';
-	  #This could probably be sped up using UNION
-	  #But result set is too small for cost of implementation
-	}
-	elsif($ec_ids){
-	  $constraint = 'rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.')';
-	}
-	elsif($chan_ids){
-	  $constraint = 'rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.')';
-	}
-  }
-  else{#Assume we have an InputSet Experiment?
-	#We could possibly have an expeirment with an array and an input set
-	#Currently nothing to stop this, but would most likely be loaded as separate experiments
-	my $input_setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
+    if ($ec_ids && $chan_ids) {
+      $constraint = '(((rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.
+        ')) OR (rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.'))))';
+      #This could probably be sped up using UNION
+      #But result set is too small for cost of implementation
+    } elsif ($ec_ids) {
+      $constraint = 'rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.')';
+    } elsif ($chan_ids) {
+      $constraint = 'rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.')';
+    }
+  } else {                      #Assume we have an InputSet Experiment?
+    #We could possibly have an expeirment with an array and an input set
+    #Currently nothing to stop this, but would most likely be loaded as separate experiments
+    my $input_setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
 
-	$constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$input_setids.')';
+    $constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$input_setids.')';
   }
   
   return $constraint;
@@ -272,7 +269,7 @@ sub fetch_all_by_Experiment{
 sub fetch_all_by_FeatureType {
   my ($self, $ftype) = @_;
 
-  if( !($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())){
+  if ( !($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())) {
     throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
   }
 	
@@ -318,30 +315,30 @@ sub fetch_all_by_name_Analysis {
 sub fetch_all_by_name{
   my ($self, $name, $ftype, $ctype, $anal) = @_;
 
-  if( ! defined $name){
+  if ( ! defined $name) {
     throw('Need to pass a ResultSet name');
   }
 	
   my $constraint = 'rs.name = ?';
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
 
-  if($ftype){
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',$ftype);
-	$constraint .= ' AND rs.feature_type_id=?';
-	$self->bind_param_generic_fetch($ftype->dbID, SQL_INTEGER);
+  if ($ftype) {
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',$ftype);
+    $constraint .= ' AND rs.feature_type_id=?';
+    $self->bind_param_generic_fetch($ftype->dbID, SQL_INTEGER);
   }
 
-   if($ctype){
-	 $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',$ctype);
-	 $constraint .= ' AND rs.cell_type_id=?';
-	 $self->bind_param_generic_fetch($ctype->dbID, SQL_INTEGER);
-   }
+  if ($ctype) {
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',$ctype);
+    $constraint .= ' AND rs.cell_type_id=?';
+    $self->bind_param_generic_fetch($ctype->dbID, SQL_INTEGER);
+  }
 
-   if($anal){
-	 $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',$anal);
-	 $constraint .= ' AND rs.analysis_id=?';
-	 $self->bind_param_generic_fetch($anal->dbID, SQL_INTEGER);
-   }
+  if ($anal) {
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',$anal);
+    $constraint .= ' AND rs.analysis_id=?';
+    $self->bind_param_generic_fetch($anal->dbID, SQL_INTEGER);
+  }
 	
   return $self->generic_fetch($constraint);
 }
@@ -364,10 +361,10 @@ sub _tables {
   my $self = shift;
 	
   return (
-		  [ 'result_set',        'rs' ],
-		  [ 'result_set_input',  'rsi'],
-		  [ 'dbfile_registry',   'dr' ], 
-		 );
+          [ 'result_set',        'rs' ],
+          [ 'result_set_input',  'rsi'],
+          [ 'dbfile_registry',   'dr' ], 
+         );
 }
 
 
@@ -406,12 +403,12 @@ sub _columns {
 	my $self = shift;
 
 	return qw(
-			  rs.result_set_id    rs.analysis_id
-			  rsi.table_name      rsi.result_set_input_id
-			  rsi.table_id        rs.name
-			  rs.cell_type_id     rs.feature_type_id
-              dr.path
-			 );
+            rs.result_set_id    rs.analysis_id
+            rsi.table_name      rsi.result_set_input_id
+            rsi.table_id        rs.name
+            rs.cell_type_id     rs.feature_type_id
+            dr.path
+           );
 
 	
 }
@@ -496,21 +493,26 @@ sub _objs_from_sth {
       
       push @rsets, $rset if $rset;
 
-      $anal = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
+      $anal  = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
 
-	  $dbfile_dir = (defined $dbfile_dir) ? $dbfile_data_root.'/'.$dbfile_dir : undef;
+    
+      if(defined $dbfile_dir){
+        $dbfile_dir = $dbfile_data_root.'/'.$dbfile_dir;
+      }
+
 
            
-      $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
+      $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
+        (
 													-DBID         => $dbid,
-													-NAME         => $name,
-													-ANALYSIS     => $anal,
-													-TABLE_NAME   => $table_name,
-													-FEATURE_TYPE => $ftype,
-													-CELL_TYPE    => $ctype,
-													-ADAPTOR      => $self,
+													-NAME            => $name,
+													-ANALYSIS        => $anal,
+													-TABLE_NAME      => $table_name,
+													-FEATURE_TYPE    => $ftype,
+													-CELL_TYPE       => $ctype,
+													-ADAPTOR         => $self,
 													-DBFILE_DATA_DIR => $dbfile_dir,
 												   );
     }
@@ -629,10 +631,9 @@ sub store{
                over-ridden by the webcode by setting REGULATION_FILE_PATH in
                DEFAULTS.ini
   Returntype : String
-  Exceptions : Throws if no param passed and cannot find dbfile_data_root meta_key
+  Exceptions : None
   Caller     : Bio::EnsEMBL::Funcgen::DBAdaptor::ResultSet
-               Webcode
-  Status     : at risk - move this to SetAdaptor or DBAdaptor?
+  Status     : at risk - move this to SetAdaptor/FileAdaptor?
 
 =cut
 
@@ -640,16 +641,15 @@ sub dbfile_data_root{
   my ($self, $root) = @_;
 
   if($root){
-	$self->{dbfile_data_root} = $root;
+    $self->{dbfile_data_root} = $root;
   }
   elsif(! defined $self->{dbfile_data_root}){
 
-	#Grab it from the meta table
-	$self->{dbfile_data_root} = $self->db->get_MetaContainer->single_value_by_key('dbfile.data_root');
+    #Grab it from the meta table
+    $self->{dbfile_data_root} = $self->db->get_MetaContainer->single_value_by_key('dbfile.data_root');
 	
-	if(! $self->{dbfile_data_root}){
-	  throw('Could not find dbfile.data_root meta entry');
-	}
+    #set to empty string if undef, so we don't keep querying the meta table
+    $self->{dbfile_data_root} ||= '';
   }
 
   return $self->{dbfile_data_root};
