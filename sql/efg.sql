@@ -547,12 +547,12 @@ CREATE TABLE `feature_set` (
    `type` enum('annotated', 'regulatory', 'external', 'segmentation') default NULL,
    `description` varchar(80) default NULL,
    `display_label` varchar(80) default NULL,
-   `experiment_id` int(10) unsigned default '0',
+   `input_set_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
-   KEY `experiment_idx` (`experiment_id`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
 
 
 /** 
@@ -671,6 +671,7 @@ CREATE TABLE `input_set` (
    `vendor` varchar(40) default NULL,
    `name` varchar(100) not NULL,
    `type` enum('annotated', 'result', 'segmentation') default NULL,
+   `replicate` tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`input_set_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `experiment_idx` (`experiment_id`),
@@ -685,20 +686,25 @@ CREATE TABLE `input_set` (
 @desc   Defines a file from an input_set, required for import tracking and recovery.
 @colour  #66CCFF
 
-@column input_subset_id		Internal ID
-@column input_set_id		@link input_set table ID
-@column name				Name of input_subset e.g. file path
+@column input_subset_id	 Internal ID
+@column input_set_id		 @link input_set table ID
+@column name				     Name of input_subset e.g. file name
 
 @see input_set
 */
 
 DROP TABLE IF EXISTS `input_subset`;
 CREATE TABLE `input_subset` (
-   `input_subset_id` int(10) unsigned NOT NULL auto_increment,
-   `input_set_id` int(10) unsigned NOT NULL,
-   `name` varchar(100) NOT NULL, -- filename?	
+    `input_subset_id` int(10) unsigned NOT NULL auto_increment,
+    `input_set_id` int(10) unsigned NOT NULL,
+    `name` varchar(100) NOT NULL,
+    `archive_id` varchar(20) DEFAULT NULL,
+    `display_url` varchar(255) DEFAULT NULL,
+    `replicate` tinyint(3) unsigned NOT NULL,
+    `is_control` tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`input_subset_id`), 
-   UNIQUE KEY `set_name_dx` (`input_set_id`, `name`)
+   UNIQUE KEY `set_name_dx` (`input_set_id`, `name`),
+   KEY `archive_idx`(`archive_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
@@ -897,11 +903,8 @@ CREATE TABLE `experiment` (
    `primary_design_type` varchar(30) default NULL, 
    `description`  varchar(255) default NULL,
    `mage_xml_id` int(10) unsigned default NULL,
-   `archive_id` varchar(20) default NULL, 
-   `data_url` varchar(255) default NULL, 
    PRIMARY KEY  (`experiment_id`),
    UNIQUE KEY `name_idx` (`name`),
-   UNIQUE KEY `archive_idx` (`archive_id`),
    KEY `design_idx` (`primary_design_type`),
    KEY `experimental_group_idx` (`experimental_group_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1426,13 +1429,12 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "67");
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "68");
 
-#v67
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_b.sql|regulatory_attribute.attribute_feature_idx');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_c.sql|result_feature.remove_partitions');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_66_67_d.sql|regulatory_feature.binary_string_500');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_67_68_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_67_68_b.sql|input_subset.archive_id_display_url');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_67_68_c.sql|input_set_subset.replicate_is_control');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_67_68_d.sql|feature_set.input_set_id');
 
 
 
