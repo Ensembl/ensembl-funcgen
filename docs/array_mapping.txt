@@ -262,7 +262,7 @@ Do this if a valid corresponding core DB in not available on ensembldb.ensembl.o
 a particular core DB. Due to the multi-assembly nature of the eFG schema it is also necessary to follow
 the ensembl standard naming convention for DBs i.e.
 
-your_prefix_species_name_funcgen_RELEASE_BUILDversion > my_homo_sapiens_funcgen_54_37p
+your_prefix_species_name_funcgen_RELEASE_BUILD > my_homo_sapiens_funcgen_68_37
 
 As detailed above, you may also want to add some more variables to the instance file to override those in 
 arrays.config or pipeline.env.
