@@ -70,8 +70,8 @@ sub new {
   my $self = $class->SUPER::new(@_);
     
   #validate and set type, analysis and feature_set here
-  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables, $skip_xrefs) = 
-	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES', 'SKIP_XREF_CLEANUP'], @_);
+  my ($db, $builds, $skip_mc, $check_displayable, $skip_analyse, $meta_coord_tables, $skip_xrefs, $fix) = 
+	rearrange(['DB', 'BUILDS', 'SKIP_META_COORD', 'CHECK_DISPLAYABLE', 'SKIP_ANALYSE', 'META_COORD_TABLES', 'SKIP_XREF_CLEANUP', 'FIX'], @_);
   
   
   if (! ($db && ref($db) &&
@@ -91,6 +91,7 @@ sub new {
   $self->{'skip_xrefs'} = $skip_xrefs;
   $self->{'skip_analyse'} = $skip_analyse;
   $self->{'check_displayable'} = $check_displayable;
+  $self->{fix} = $fix;
   
   if(defined $meta_coord_tables){
 
@@ -106,13 +107,9 @@ sub new {
   return $self;
 }
 
-sub db{
-  my ($self) = @_;
-  
-  return $self->{'db'};
-}
+sub db{  return $_[0]->{db};  }
 
-
+sub fix{ return $_[0]->{fix}; }
 
 =head2 update_db_for_release
 
@@ -486,7 +483,7 @@ sub check_regbuild_strings{
  
   
   if(scalar(@regf_fsets) == 0){
-	$self->report("WARNING: Found no regulatory FeatureSets for check_regbuild_strings");
+    $self->report('WARNING:check_regbuild_strings found no regulatory FeatureSets (fine if '.$self->db->species.' your species does not have a regulatory build');
   }
   else{
 	
@@ -527,6 +524,7 @@ sub check_regbuild_strings{
 		 "regbuild.${cell_type}.feature_set_ids" => join(',', map {
 		   $_->dbID} sort {$a->name cmp $b->name
 						 } @ssets),
+
 		 "regbuild.${cell_type}.feature_type_ids" => join(',', map {
 		   $_->feature_type->dbID} sort {$a->name cmp $b->name
 									   } @ssets),
@@ -547,74 +545,34 @@ sub check_regbuild_strings{
 #		}
 #	  }
 
-	 
-#	  #this should be sorted to avoid string mismatches with the same contents.
-#	  $reg_strings{"regbuild.${cell_type}.focus_feature_set_ids"} = join(', ', @ffset_ids);
-	  
-	  my $sql;
-	  
-	  my %db_reg_string;
+	 	  
+	  my ($sql, %db_reg_string);
 
 	  foreach my $string_key(keys %reg_strings){
-		my ($string)= $self->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${string_key}' and species_id=$species_id");
-		
-		if (! defined $string) {
-		  
-		  $sql = "insert into regbuild_string (species_id, name, string) values ($species_id, '${string_key}', '$reg_strings{${string_key}}');";
-		  $self->report("FAIL:\tNo $string_key found in regbuild_string table\n\tUpdate using:\t$sql");
-		  #eval { $ds_adaptor->db->dbc->do($sql) };
-		  #die("Couldn't store $meta_key in meta table.\n$@") if $@;
-		} 
-		else {
+      my ($string)= $self->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${string_key}' and species_id=$species_id");
+		      
+      if (! defined $string) {
+        $sql = "insert into regbuild_string (species_id, name, string) values ($species_id, '${string_key}', '$reg_strings{${string_key}}');";
+    
+        $self->report("WARNING:\tInserting absent $string_key into regbuild_string table");
+        eval { $self->db->dbc->do($sql) };
+        die("Couldn't store $string_key in regbuild_string table\n$sql\n$@") if $@;
+      }
+      elsif ($string ne $reg_strings{$string_key}){
+        $sql = "update regbuild_string set string='".$reg_strings{$string_key}."' where name='${string_key}';";
+        
+        if($self->fix){
+          $self->report("WARNING:\tUpdating mismatched $string_key found in regbuild_string table:\t${string}");#\tUpdate using:\t$sql");
+          eval { $self->db->dbc->do($sql) };
+          die("Couldn't update $string_key in regbuild_string table\n$sql\n$@") if $@;
+          
+        }
+        else{
+          $self->report("FAIL:\tMismatched $string_key found in regbuild_string table:\t${string}\n\tUpdate using:\t$sql");
+        }
+      }
 
-		  #Some of these are not order dependant
-		  #But we should order them to enable easier comparison
-
-		  #Does this mean we have patch the mouse incorrectly
-		  #This should be exactly the same as the build apart from maybe the focus sets
-		  #which are not order dependant
-
-
-		  if($string ne $reg_strings{$string_key}){
-			#my $fail = 1;
-
-#			if($meta_key =~ /focus_feature_set_ids/o){
-#			  $fail = 0;
-
-#			  #Not order dependant so compare contents
-#			  my %meta_ffset_ids = map {$_ => undef} (split/,\s*/, $meta_value);
-#			  my %queried_ffset_ids = map {$_ => undef} (split/,\s*/,  $reg_strings{$meta_key});
-			  
-		
-#			  foreach my $ffset_id(keys %meta_ffset_ids){
-#
-#				if (! exists $queried_ffset_ids{$ffset_id}){
-#				  $self->report("FAIL:\t$meta_key $ffset_id found in meta table but not in supporting sets");
-#				  $fail = 1;
-#				}
-#			  }
-
-#			  foreach my $ffset_id(keys %queried_ffset_ids){#
-
-#				if (! exists $meta_ffset_ids{$ffset_id}){
-#				  $self->report("FAIL:\t$meta_key $ffset_id found in supporting sets but not in meta table");
-#				  $fail = 1;
-#				}
-#			  }
-
-			  
-#			}
-
-#			if($fail){
-			$sql = "update regbuild_string set string='".$reg_strings{$string_key}."' where name='${string_key}';";
-			$self->report("FAIL:\tMismatched $string_key found in regbuild_string table:\t${string}\n\tUpdate using:\t$sql");
-			warn $sql;
-			
-			#			}
-		  }
-
-		  $db_reg_string{$string_key} = $string;
-		}
+      $db_reg_string{$string_key} = $string;
 	  }
 
 
@@ -625,7 +583,7 @@ sub check_regbuild_strings{
 	  my $ftype_string = $db_reg_string{$ftype_string_key};
 
 	  if(! ($fset_string && $ftype_string)){
-		$self->report("FAIL:\tSkipping fset vs ftype string test for $cell_type")
+      $self->report("FAIL:\tSkipping fset vs ftype string test for $cell_type")
 	  }
 	  else{
 
@@ -654,7 +612,7 @@ sub check_regbuild_strings{
 		  my $sset = $fset_a->fetch_by_dbID($supporting_set_id);
 		  
 		  if(! defined $sset){
-			$self->report("FAIL:\t$fset_string_key $supporting_set_id does not exist in the DB");
+        $self->report("FAIL:\t$fset_string_key $supporting_set_id does not exist in the DB");
 		  }
 		  else{
 			#test/build ftype string
@@ -679,11 +637,8 @@ sub check_regbuild_strings{
 
 		if(! defined $ftype_string){
 		  $self->log("Updating $ftype_string_key to:\t$new_ftype_string");
-		  #$self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, '$ftype_string_key', '$new_ftype_string')");
 		  $self->db->dbc->db_handle->do("INSERT into regbuild_string(species_id, name, string) values($species_id, '$ftype_string_key', '$new_ftype_string')");
-		  
-
-		}
+    }
 		elsif($ftype_fail){
 		  $self->report("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
 		}
@@ -794,7 +749,7 @@ sub check_stable_ids{
   my @regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
 
   if(!@regf_fsets){
-	$self->report('WARNING: No regulatory FeatureSets found');
+	$self->report('WARNING: No regulatory FeatureSets found (fine if '.$self->db->species.' does not have a regulatory build)');
   }
   else{
 
@@ -962,9 +917,8 @@ sub validate_DataSets{
 		  $sql = 'INSERT into status select '.$ra_fset->dbID.
 			", 'feature_set', status_name_id from status_name where name='$state'";
 		  $self->db->dbc->db_handle->do($sql);
-
-		}
-	  }
+    }
+  }
 
 
 
@@ -989,6 +943,9 @@ sub validate_DataSets{
 		my $msg;
 		
 		if(scalar(@ssets) == 1){
+
+      #fix here?
+
 		  $msg = "Found unique non-DISPLAYABLE ResultSet:\t".$ssets[0]->name.
 			"\n\tinsert into status select ".$ssets[0]->dbID.
 			  ", 'result_set', status_name_id from status_name where name='DISPLAYABLE';";
