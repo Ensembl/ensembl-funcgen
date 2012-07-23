@@ -44,7 +44,7 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
