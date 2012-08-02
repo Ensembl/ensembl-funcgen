@@ -339,6 +339,7 @@ sub fetch_all_by_name{
     $constraint .= ' AND rs.analysis_id=?';
     $self->bind_param_generic_fetch($anal->dbID, SQL_INTEGER);
   }
+
 	
   return $self->generic_fetch($constraint);
 }
@@ -382,7 +383,7 @@ sub _tables {
 =cut
 
 sub _left_join {
-  return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")']);
+  return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")'] , ['result_set_input','rs.result_set_id=rsi.result_set_id']);
 }
 
 
@@ -403,15 +404,18 @@ sub _columns {
 	my $self = shift;
 
 	return qw(
-            rs.result_set_id    rs.analysis_id
-            rsi.table_name      rsi.result_set_input_id
-            rsi.table_id        rs.name
-            rs.cell_type_id     rs.feature_type_id
-            dr.path
-           );
+			  rs.result_set_id           rs.analysis_id
+			  rsi.table_name             rsi.result_set_input_id
+			  rsi.table_id               rs.name
+			  rs.cell_type_id            rs.feature_type_id
+			  rs.feature_class           dr.path
+            );
+
 
 	
 }
+
+=i
 
 =head2 _default_where_clause
 
@@ -425,13 +429,15 @@ sub _columns {
   Caller     : Internal
   Status     : Medium Risk
 
-=cut
+
 
 sub _default_where_clause {
   my $self = shift;
 	
-  return 'rs.result_set_id = rsi.result_set_id';
-}
+  #return 'rs.result_set_id = rsi.result_set_id';
+  }
+  
+=cut
 
 =head2 _final_clause
 
@@ -472,14 +478,13 @@ sub _final_clause {
 
 sub _objs_from_sth {
   my ($self, $sth) = @_;
-  
   my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id, $name);
-  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set, $dbfile_dir);
+  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set, $dbfile_dir,$feat_class);
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor(); 
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, 
-					 \$table_id, \$name, \$ctype_id, \$ftype_id, \$dbfile_dir);
+					 \$table_id, \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_dir);
   
   
   my $dbfile_data_root = $self->dbfile_data_root;
@@ -487,38 +492,49 @@ sub _objs_from_sth {
   #Need c/ftype cache here or rely on query cache?
 
   while ( $sth->fetch() ) {
-
+  
+  if ($feat_class !~/result|DNAMethylation/)
+  {
+   throw("Retreived feature_class field should be either result or DNAMethylation");
+   }
+   
+=i
+   elsif ($feat_class =~/DNAMethylation/)
+   {
+   #wrong implementation. there is usually no result_set_input data defined for DNAMethylation feature_class
+   # is table_name necessary for Bio::EnsEMBL::Funcgen::ResultSet object
+   $table_name="input_set";
+   }
+=cut
 
     if(! $rset || ($rset->dbID() != $dbid)){
       
       push @rsets, $rset if $rset;
 
+
       $anal  = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
 
-    
-      if(defined $dbfile_dir){
+
+if(defined $dbfile_dir){
         $dbfile_dir = $dbfile_data_root.'/'.$dbfile_dir;
       }
-
-
-           
-      $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
-        (
-													-DBID         => $dbid,
+	 
+      $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
+													-DBID            => $dbid,
 													-NAME            => $name,
 													-ANALYSIS        => $anal,
 													-TABLE_NAME      => $table_name,
 													-FEATURE_TYPE    => $ftype,
 													-CELL_TYPE       => $ctype,
+													-FEATURE_CLASS   => $feat_class,
 													-ADAPTOR         => $self,
 													-DBFILE_DATA_DIR => $dbfile_dir,
 												   );
     }
     
-    #This assumes logical association between chip from the same exp, confer in store method?????????????????
-
+  
     if(defined $rset->feature_type()){    
       throw("ResultSet does not accomodate multiple FeatureTypes") if ($ftype_id != $rset->feature_type->dbID());
     }
@@ -562,7 +578,7 @@ sub store{
   
   my (%analysis_hash);
   
-  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id) VALUES (?, ?, ?, ?)');
+  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id, feature_class) VALUES (?, ?, ?, ?, ?)');
   
   my $db = $self->db();
   my $analysis_adaptor = $db->get_AnalysisAdaptor();
@@ -602,6 +618,7 @@ sub store{
     $sth->bind_param(2, $rset->name(),             SQL_VARCHAR);
 	$sth->bind_param(3, $ct_id,                    SQL_INTEGER);
 	$sth->bind_param(4, $ft_id,                    SQL_INTEGER);
+	$sth->bind_param(5, $rset->feature_class(),    SQL_VARCHAR);
 
 	
     
@@ -707,8 +724,9 @@ sub store_dbfile_data_dir{
   elsif(! $db_dir){#STORE
 	$sql = 'INSERT INTO  dbfile_registry(table_id, table_name, path) values(?, "result_set", ?)';
 	$sth = $self->prepare($sql);
-	$sth->bind_param(1, $data_dir,   SQL_VARCHAR);
-	$sth->bind_param(2, $rset->dbID, SQL_INTEGER);
+	$sth->bind_param(1, $rset->dbID, SQL_INTEGER);
+	$sth->bind_param(2, $data_dir,   SQL_VARCHAR);
+	
 	$sth->execute;
   }
   
