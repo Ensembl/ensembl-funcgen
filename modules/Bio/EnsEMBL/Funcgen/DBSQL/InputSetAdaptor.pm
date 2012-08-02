@@ -376,7 +376,7 @@ sub store{
     $sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
     $sth->bind_param(6, $set->name,                     SQL_VARCHAR);
     $sth->bind_param(7, $set->feature_class,            SQL_VARCHAR);
-    $sth->bind_param(7, $set->replicate,                SQL_INTEGER);
+    $sth->bind_param(8, $set->replicate,                SQL_INTEGER);
 
     
     $sth->execute();
