@@ -5,7 +5,7 @@
 
 
 -- Move currently misplaced fields from experiment table
-ALTER TABLE result_set ADD `feature_class` varchar(30) enum('result','DNAMethylation') DEFAULT NULL;
+ALTER TABLE result_set ADD `feature_class` enum('result','DNAMethylation') DEFAULT NULL;
 ALTER TABLE feature_type MODIFY class enum('Insulator','DNA','Regulatory Feature','Histone','RNA','Polymerase','Transcription Factor','Transcription Factor Complex','Regulatory Motif','Enhancer','Expression','Pseudo','Open Chromatin','Search Region','Association Locus','Segmentation State', 'DNAMethylation') DEFAULT NULL;
 ALTER TABLE input_set MODIFY type  enum('annotated','result','segmentation','DNAMethylation') DEFAULT NULL;
 

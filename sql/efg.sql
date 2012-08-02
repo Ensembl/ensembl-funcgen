@@ -561,11 +561,12 @@ CREATE TABLE `feature_set` (
 @desc   Container for raw/signal data, used as input to an analysis or for visualisation of the raw signal i.e. a wiggle track.
 @colour  #66CCFF
 
-@column result_set_id		Internal ID
-@column analysis_id			Table ID for @link analysis
-@column name				Name for this feature set
-@column feature_type_id		Table ID for @link feature_type
-@column cell_type_id		Table ID for @link cell_type
+@column result_set_id		 Internal ID
+@column analysis_id			 Table ID for @link analysis
+@column name				     Name for this feature set
+@column feature_type_id	 Table ID for @link feature_type
+@column cell_type_id		 Table ID for @link cell_type
+@column feature_class    Defines the class of the feature
 
 @see result_set_input 
 @see cell_type
@@ -582,7 +583,7 @@ CREATE TABLE `result_set` (
    `name` varchar(100) default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
-   `feature_class` varchar(30) enum('result','DNAMethylation') DEFAULT NULL,
+   `feature_class` enum('result','DNAMethylation') DEFAULT NULL,
    PRIMARY KEY  (`result_set_id`),
    UNIQUE KEY `unique_idx` (`name`,`analysis_id`,`feature_type_id`,`cell_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
