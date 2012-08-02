@@ -35,6 +35,7 @@ my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
                                                        -analysis    => $analysis,
                                                        -table_name  => 'experimental_chip',
                                                        -table_id    => $ec_id,
+                                                       -feature_class => 'DNAMethylation',
 ); 
 
 
@@ -76,6 +77,7 @@ use vars qw(@ISA);
                                                                    -table_name  => 'experimental_chip',
                                                                    -table_id       => $ec_id,
                                                                    -result_feature_set => 1,
+                                                                   -feature_class => 'DNAMethylation',
 			                                          ); 
   Description: Constructor for ResultSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
@@ -89,11 +91,12 @@ sub new {
   my $caller = shift;
 	
   my $class = ref($caller) || $caller;
-	
-  my $self = $class->SUPER::new(@_, ('-feature_class' => 'result'));
-	
+  
   my ($table_name, $table_id, $rf_set, $dbfile_data_dir)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 'DBFILE_DATA_DIR'], @_);
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 'DBFILE_DATA_DIR'], @_);	
+  my $self = $class->SUPER::new(@_);
+	
+
 
   $self->{'table_id_hash'} = {};
 
