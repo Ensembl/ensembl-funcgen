@@ -69,6 +69,12 @@ NOTE: update_DB_for_release.pl and healtchecks should be run before this script.
 
 =item B<-ftp_root>     Root directory for ftp staging dir. Default = /lustre/scratch103/ensembl/funcgen/output/ftp
 
+=item B<-nfs_root>     Root directory for nfs dir. Default = /nfs/ensnfs-dev/staging
+
+=item B<-link_type>    Link types to create e.g. nfs or ftp, default generates both.
+
+=item B<-list_source_only> Doesn't create anything, simply lists the source dirs which would be used
+
 =item B<-help>         Prints a short help message
 
 =item B<-man>          Prints a short help man page
@@ -139,7 +145,7 @@ my ($host, $pass, $dbname, $dnadbhost, $dnadbport, $dnadbuser, $dnadbname, $dnad
 my ($list_source_only, $link_type);
 
 #Default values
-my $force      = 0;
+#my $force      = 0;
 my $port       = 3306;
 my $user       = 'ensro';
 my $nfs_root   = '/nfs/ensnfs-dev/staging';
@@ -170,11 +176,11 @@ GetOptions
    'nfs_root=s'         => \$nfs_root,
    'link_type=s'        => \$link_type,
    'list_source_only'   => \$list_source_only,
-   'force'              => \$force,
-   "help|?"             => sub { pos2usage(-exitval => 0, -verbose => 1, -message => "Params are:\t@tmp_args"); },
-   "man|m"              => sub { pos2usage(-exitval => 0, -verbose => 2, -message => "Params are:\t@tmp_args"); },
+   #'force'              => \$force,
+   "help|?"             => sub { pod2usage(-exitval => 0, -verbose => 1); },
+   "man|m"              => sub { pod2usage(-exitval => 0, -verbose => 3); },
    
-  )  or pod2usage( -exitval => 1 ); #Catch unknown opts
+  )  or pod2usage( -exitval => 1 ); #Catch unknown opts, culprit will be printed by GetOptions
 
 
 if($link_type){
