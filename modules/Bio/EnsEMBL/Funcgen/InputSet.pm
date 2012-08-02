@@ -125,7 +125,7 @@ sub new {
 
   #Need to move these types to config
 
-  if(! ($type && grep /^${type}$/, ('annotated', 'result', 'segmentation'))){
+  if(! ($type && grep /^${type}$/, ('annotated', 'result', 'segmentation', 'DNAMethylation'))){
 	throw("You must define a valid InputSet feature_class e.g. 'annotated' or 'result'");
   }
 
