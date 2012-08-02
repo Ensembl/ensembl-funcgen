@@ -363,7 +363,6 @@ sub source_info{
         }
       }
       elsif(defined $proj_name){
-        #$source_label = $self->experimental_group->name;
         $source_link  = $isset->display_url || $proj_link;
         
         if(! exists $source_info{$source_link}){
