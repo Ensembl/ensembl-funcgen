@@ -222,14 +222,14 @@ my $metac          = $efgdb->get_MetaContainer;
 my $schema_version = $metac->get_schema_version;
 my $species        = $metac->single_value_by_key('species.production_name');
 
-if(! $schema_version ||
+if(! defined $schema_version ||
    ($dbname !~ /_${schema_version}_/)){
   die("Meta schema.version is not present in meta($schema_version) or does not match the dbname($dbname)");
 }
 
-if(! $species ||
-   ($dbname !~ /^${species}_/)){
-  die("Meta species.production_name  is not present in meta($species) or does not match the dbname($dbname)");
+if(! defined $species ||
+   ($dbname !~ /(.*_)*${species}_/)){
+  die("Meta species.production_name is not present in meta, or does not match the dbname($dbname !~ /^[.*_]${species}_/)");
 }
 
 my @assm_vers = @{$efgdb->dbc->db_handle->selectall_arrayref('SELECT distinct(version) from coord_system where is_current=1 and version is not NULL AND version !=""')};
@@ -352,9 +352,9 @@ foreach my $set_type (@set_types) {
     push @true_paths, $nfs_root."/${species}/${assm}/${feature_class}/${target_dir}";
 
 
-    if(! $list_source_only){
+    if (! $list_source_only) {
 
-      foreach my $link_type(@link_types) {
+      foreach my $link_type (@link_types) {
         my $rel_dir = $link_config{$link_type}->{release_target_path};
         my $fclass_dir = $rel_dir."/${feature_class}";
         
@@ -362,58 +362,58 @@ foreach my $set_type (@set_types) {
           system("mkdir -p $fclass_dir") == 0 or die("Failed to create $link_type release dir:\t${fclass_dir}");
         }
 	
-      chdir($fclass_dir) || die("Failed to move to $link_type release dir:\t${fclass_dir}");;
+        chdir($fclass_dir) || die("Failed to move to $link_type release dir:\t${fclass_dir}");;
 
 	
-      #Now we need to redefine source_dir as link to data_files relative to target dir
-      $source_dir =  $link_config{$link_type}->{relative_source_path}."/${feature_class}/${target_dir}";
+        #Now we need to redefine source_dir as link to data_files relative to target dir
+        $source_dir =  $link_config{$link_type}->{relative_source_path}."/${feature_class}/${target_dir}";
       
    
-      #SANITY CHECKING
+        #SANITY CHECKING
       
-      #This is now dependant on link_type?
-      #should do this once really 
+        #This is now dependant on link_type?
+        #should do this once really 
      
 
-      if (! -d $source_dir) {     #Is is a directory?
-        #This will be a directory as the link is at the data_file level
-        die("Source dbfile_data_dir does not exist for ".$set->name."\t".$source_dir);
-      } else {                    #Does is contain any data?
-        opendir(DirHandle, $source_dir) || die("Failed to open source dir:\t$source_dir");
+        if (! -d $source_dir) { #Is is a directory?
+          #This will be a directory as the link is at the data_file level
+          die("Source dbfile_data_dir does not exist for ".$set->name."\t".$source_dir);
+        } else {                #Does is contain any data?
+          opendir(DirHandle, $source_dir) || die("Failed to open source dir:\t$source_dir");
         
-        #Need to catch error here
+          #Need to catch error here
         
-        my $num_files = 0;
+          my $num_files = 0;
         
-        while (readdir(DirHandle)) {
-          $num_files++;
-          #Could check for expected suffixes or non-empty files
-          #check for name match
-          #But we are verging on a HC here.
-        }
+          while (readdir(DirHandle)) {
+            $num_files++;
+            #Could check for expected suffixes or non-empty files
+            #check for name match
+            #But we are verging on a HC here.
+          }
         
-        closedir(DirHandle);
+          closedir(DirHandle);
         
-        if (! $num_files) {
-          die("Found 0 files in source directory:\t${source_dir}");
-        }
-      }	
+          if (! $num_files) {
+            die("Found 0 files in source directory:\t${source_dir}");
+          }
+        }	
       
       
-      if (-e $target_dir &&
-          (! -l $target_dir) ) {
-        die("$target_dir already exists but is not a link to $source_dir");
+        if (-e $target_dir &&
+            (! -l $target_dir) ) {
+          die("$target_dir already exists but is not a link to $source_dir");
+        }
+      
+        my $cmd = "ln -sf $source_dir $target_dir";
+        system("$cmd") == 0 or die("Failed to create link using:\t${cmd}");
+        #print "$cmd\n";
+        $num_dirs{$link_type} ++;
       }
-      
-      my $cmd = "ln -sf $source_dir $target_dir";
-      system("$cmd") == 0 or die("Failed to create link using:\t${cmd}");
-      #print "$cmd\n";
-      $num_dirs{$link_type} ++;
     }
   }
-  }
 
-  foreach my $link_type(@link_types){
+  foreach my $link_type (@link_types){
     print "Linked ".$num_dirs{$link_type}." $link_type $set_type directories\n";
   }
 
