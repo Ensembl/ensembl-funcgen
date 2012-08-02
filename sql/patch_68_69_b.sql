@@ -9,7 +9,7 @@ ALTER TABLE result_set ADD `feature_class` enum('result','DNAMethylation') DEFAU
 ALTER TABLE feature_type MODIFY class enum('Insulator','DNA','Regulatory Feature','Histone','RNA','Polymerase','Transcription Factor','Transcription Factor Complex','Regulatory Motif','Enhancer','Expression','Pseudo','Open Chromatin','Search Region','Association Locus','Segmentation State', 'DNAMethylation') DEFAULT NULL;
 ALTER TABLE input_set MODIFY type  enum('annotated','result','segmentation','DNAMethylation') DEFAULT NULL;
 
-# UPDATE result_set set feature_class = "result";
+UPDATE result_set set feature_class = 'result';
 
 OPTIMIZE TABLE result_set;
 ANALYZE TABLE result_set;
