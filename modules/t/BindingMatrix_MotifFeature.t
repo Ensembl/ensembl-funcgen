@@ -53,9 +53,9 @@ my $analysis   = $analysis_a->fetch_by_logic_name('Jaspar');
 ok ($ftype);
 
 my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
-													   -name         => 'CTCF',
+													   -name         => 'MA0139.1',
 													   -analysis     => $analysis,
-													   -feature_type => $ftype,
+                             -feature_type => $ftype,
 													   -description  => 'Jaspar Matrix',
 													   -frequencies  => $ctcf_mat
 													  );
@@ -145,7 +145,7 @@ my @bms = @{$bma->fetch_all_by_name('CTCF')};
 
 #26-27
 ok (scalar (@bms) == 2);
-ok (scalar (@{$bma->list_dbIDs}) == 2);
+ok (scalar (@{$bma->_list_dbIDs}) == 2);
 
 @bms = @{$bma->fetch_all_by_name('CTCF', $analysis)};
 #28
@@ -310,7 +310,7 @@ ok( scalar(@mfs) == $ctype_count );
 
 #list dbIDs
 #64
-ok( scalar(@{$mf_a->list_dbIDs}) == 2 );
+ok( scalar(@{$mf_a->_list_dbIDs}) == 2 );
 
 #Restore table
 $multi->restore();
