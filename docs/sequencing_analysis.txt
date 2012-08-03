@@ -438,10 +438,12 @@ Where folder experiment contains a set of celltype_featuretype*.samse.sam.gz sam
 			   SWEMBL_R0025		- Dnase1
 			   CCAT_HISTONE		- Broad histone peaks e.g. H3K27/36me
 			   
-The methods for Analysis and their parameters are defined in the efg data
-base (e.g dev_mus_musculus_funcgen_68_38) in analysis table and not in the eHive job table. 
-Please take a look at the analysis table of efgdb to find all the valid methods within
-ensembl functional-genomics environment and their relevant parameters.
+Each of the AddAlignmentSets, AddPeakSets and SetupReadCounts steps of the sequencing_analysis
+pipeline creates a new eHive database that stores the jobs to be run by the eHive pipeline. The output
+of these jobs creates processed data which is updated in the current developmental efg database 
+(e.g dev_mus_musculus_funcgen_68_38). All the Analysis methods and their parameters are defined in analysis
+table of the efg data base and not in the eHive job table. Please take a look at the analysis table of 
+efgdb to find all the valid methods of Analysis available within ensembl regulation.
 
 			   
 SubmitPeaks       Submits peak calling jobs with the eHive.
