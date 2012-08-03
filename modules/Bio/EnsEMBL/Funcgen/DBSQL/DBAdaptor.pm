@@ -363,6 +363,7 @@ sub get_available_adaptors{
 			   'MotifFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
 			   'BindingMatrix'      => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
 			   'SegmentationFeature'=> 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
+			   'DNAMethylationFeature'=> 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor',
 			   
 			 
 			   #add required EnsEMBL(core) adaptors here
