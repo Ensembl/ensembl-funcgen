@@ -145,7 +145,7 @@ my @bms = @{$bma->fetch_all_by_name('CTCF')};
 
 #26-27
 ok (scalar (@bms) == 2);
-ok (scalar (@{$bma->_list_dbIDs}) == 2);
+ok (scalar (@{$bma->list_dbIDs}) == 2);
 
 @bms = @{$bma->fetch_all_by_name('CTCF', $analysis)};
 #28
@@ -310,7 +310,7 @@ ok( scalar(@mfs) == $ctype_count );
 
 #list dbIDs
 #64
-ok( scalar(@{$mf_a->_list_dbIDs}) == 2 );
+ok( scalar(@{$mf_a->list_dbIDs}) == 2 );
 
 #Restore table
 $multi->restore();
