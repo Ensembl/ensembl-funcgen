@@ -437,6 +437,11 @@ Where folder experiment contains a set of celltype_featuretype*.samse.sam.gz sam
 			   SWEMBL_R015		- Peaky histones & transcriptions factors
 			   SWEMBL_R0025		- Dnase1
 			   CCAT_HISTONE		- Broad histone peaks e.g. H3K27/36me
+			   
+The methods for Analysis and their parameters are defined in the efg data
+base (e.g dev_mus_musculus_funcgen_68_38) in analysis table and not in the eHive job table. 
+Please take a look at the analysis table of efgdb to find all the valid methods within
+ensembl functional-genomics environment and their relevant parameters.
 
 			   
 SubmitPeaks       Submits peak calling jobs with the eHive.
