@@ -284,7 +284,6 @@ sub _objs_from_sth {
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
       throw("Could not fetch CellType with dbID $ctype_id for InputSet $name") if ! $ctype;
 
-
       $eset = Bio::EnsEMBL::Funcgen::InputSet->new(
                                                    -DBID         => $dbid,
                                                    -EXPERIMENT   => $exp_adaptor->fetch_by_dbID($exp_id),
@@ -302,18 +301,19 @@ sub _objs_from_sth {
 
     if(defined $ess_name){
       
-      $eset->add_new_subset($ess_name, 
-                            Bio::EnsEMBL::Funcgen::InputSubset->new( 
-                                                                    -name        => $ess_name,
-                                                                    -dbID        => $ess_id,
-                                                                    -adaptor     => $self,
-                                                                    -input_set   => $eset,
-                                                                    -archive_id  => $archive_id,
-                                                                    -display_url => $display_url,
-                                                                    -replicate   => $iss_rep,
-                                                                    -is_control  => $is_control,
-                                                                   )
-                           );
+      $eset->_add_new_subset
+        ( 
+         Bio::EnsEMBL::Funcgen::InputSubset->new( 
+                                                 -name        => $ess_name,
+                                                 -dbID        => $ess_id,
+                                                 -adaptor     => $self,
+                                                 -input_set   => $eset,
+                                                 -archive_id  => $archive_id,
+                                                 -display_url => $display_url,
+                                                 -replicate   => $iss_rep,
+                                                 -is_control  => $is_control,
+                                                )
+        );
     }
   }
   
@@ -369,23 +369,21 @@ sub store{
 
 
 
-    $sth->bind_param(1, $set->get_Experiment->dbID(),   SQL_INTEGER);
-    $sth->bind_param(2, $ft_id,                         SQL_INTEGER);
-    $sth->bind_param(3, $ct_id,                         SQL_INTEGER);
-    $sth->bind_param(4, $set->format,                   SQL_VARCHAR);
-    $sth->bind_param(5, $set->vendor,                   SQL_VARCHAR);
-    $sth->bind_param(6, $set->name,                     SQL_VARCHAR);
-    $sth->bind_param(7, $set->feature_class,            SQL_VARCHAR);
-    $sth->bind_param(8, $set->replicate,                SQL_INTEGER);
-
-    
+    $sth->bind_param(1, $set->get_Experiment->dbID,   SQL_INTEGER);
+    $sth->bind_param(2, $ft_id,                       SQL_INTEGER);
+    $sth->bind_param(3, $ct_id,                       SQL_INTEGER);
+    $sth->bind_param(4, $set->format,                 SQL_VARCHAR);
+    $sth->bind_param(5, $set->vendor,                 SQL_VARCHAR);
+    $sth->bind_param(6, $set->name,                   SQL_VARCHAR);
+    $sth->bind_param(7, $set->feature_class,          SQL_VARCHAR);
+    $sth->bind_param(8, $set->replicate,              SQL_INTEGER);
     $sth->execute();
-    
-    $set->dbID( $sth->{'mysql_insertid'} );
+
+    $set->dbID( $sth->{mysql_insertid} );
     $set->adaptor($self);
 
     #This should never happen as InputSubset now tests for stored InputSet first
-    $self->store_InputSubsets($set->get_InputSubsets()) if @{$set->get_InputSubsets()};
+    $self->store_InputSubsets( $set->get_InputSubsets ) if @{$set->get_InputSubsets};
   }
   
   return \@exp_sets;
@@ -444,26 +442,6 @@ sub store_InputSubsets{
   #don't really need to return as we're working on a ref
   return $ssets;
 }
-
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @sets_ids = @{$esa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all InputSet objects in
-               the current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : general
-  Status     : stable
-
-=cut
-
-sub list_dbIDs {
-    my $self = shift;
-    
-    return $self->_list_dbIDs('input_set');
-}
-
 
 
 
