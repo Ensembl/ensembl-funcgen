@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -303,25 +303,6 @@ sub store {
   }
 
   return \@args;
-}
-
-
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @matrix_ids = @{$matrix_adaptor->list_dbIDs()};
-  Description: Gets an array of internal IDs for all Matrix objects in the current database.
-  Returntype : ArrayRef of BindingMatrix
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub list_dbIDs {
-    my ($self) = @_;
-	
-    return $self->_list_dbIDs('binding_matrix');
 }
 
 

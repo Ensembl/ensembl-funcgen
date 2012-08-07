@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -556,28 +556,6 @@ sub fetch_all_design_scores{
   my $sql = 'SELECT analysis_id, score, coord_system_id from probe_design WHERE probe_id='.$probe->dbID.';';
   return @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 }
-
-
-
-=head2 list_dbIDs
-
-  Arg [1]    : none
-  Example    : my @feature_ids = @{$opa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all Probe objects in the
-               current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : ?
-  Status     : At Risk
-
-=cut
-
-sub list_dbIDs {
-	my ($self) = @_;
-
-	return $self->_list_dbIDs('probe');
-}
-
 
 
 1;

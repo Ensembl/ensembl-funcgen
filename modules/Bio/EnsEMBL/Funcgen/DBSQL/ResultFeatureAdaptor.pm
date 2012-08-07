@@ -63,8 +63,11 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor 
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 			Bio::EnsEMBL::Funcgen::Collector::ResultFeature);
+
+
+
 		#	Bio::EnsEMBL::DBFile::BigWigAdaptor);#@ISA
 
 warn "removed hardcoded inc BigWigAdaptor"; 
@@ -352,25 +355,22 @@ sub store{
   return $rfeats;
 }
 
-#This is no applicable to ResultFeatures
 
-=head2 list_dbIDs
 
-  Args       : None
-  Example    : my @rsets_ids = @{$rsa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all ResultFeature objects in
-               the current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : general
-  Status     : stable
+=head2 _list_dbIDs
+
+  Description: Re-implementation of parent method, as we now store in flat files
+               and do not have internal DB IDs ResultFeature 
+  Returntype : None
+  Exceptions : Warns
+  Caller     : General
+  Status     : At risk
 
 =cut
 
-sub list_dbIDs {
-	my $self = shift;
-	
-	return $self->_list_dbIDs('result_feature');
+sub _list_dbIDs {
+  warn('_list_dbIDs is not appropriate for the ResultFeatureAdaptor as it is likely all data is now stored in flat files');
+  return $_[0]->_list_dbIDs;
 }
 
 
@@ -512,6 +512,7 @@ sub set_collection_config_by_Slice_ResultSets{
 
 		shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_set'));
 		$max_bins ||= 700;#This is default size of display?
+        #CR Change to true drawable pixel width
 		
 		#The speed of this track is directly proportional
 		#to the display size, unlike other tracks!

@@ -473,9 +473,6 @@ sub get_regulatory_evidence_info{
 }
 
 
-#Deprecated
-
-#list_dbIDs now uses inherited BaseAdaptor::list_dbIDs
 
 
 1;
