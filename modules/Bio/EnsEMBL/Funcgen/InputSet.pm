@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -33,21 +33,16 @@ use Bio::EnsEMBL::Funcgen::InputSet;
 
 my $inp_set = Bio::EnsEMBL::Funcgen::InputSet->new
                  (
-	              -DBID            => $dbID,
-                  -ADAPTOR         => $self,
-                  -EXPERIMENT      => $exp,
+	                -DBID         => $dbID,
+                  -ADAPTOR      => $self,
+                  -EXPERIMENT   => $exp,
                   -FEATURE_TYPE => $ftype,
                   -CELL_TYPE    => $ctype,
                   -FORMAT       => 'READ_FORMAT',
                   -VENDOR       => 'SOLEXA',
-                  -NAME         => 'ExpSet1',
-                  -REPLICATE    => 1,
+                  -NAME         => 'SRR00000.fastq.gz',
+                  -REPLICATE    => 1, # >0 for specific replicate or 0 for merged
                  );
-
-# Add some InputSubsets
-
-$inp_set->add_new_subsets($subset_name, $
-
 
 
 
@@ -74,20 +69,34 @@ use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
 
+my %valid_types = (
+                   annotated      => undef,
+                   result         => undef,
+                   segmentation   => undef,
+                   dna_methylation => undef,
+                  );
+
+
+#Need the underscore to separate the words
+#for handling conversion to ucfirst feature class namespace
+
+
 =head2 new
 
 
 
-  Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSet->new(
-                                                                     -EXPERIMENT    => $exp,
-                                                                     -FEATURE_TYPE  => $ftype,
-                                                                     -CELL_TYPE     => $ctype,
-                                                                     -FORMAT        => 'READ_FORMAT',
-                                                                     -VENDOR        => 'SOLEXA',
-                                                                     -NAME          => 'ExpSet1',
-                                                                     -ANALYSIS      => $anal,
-                                                                     -FEATURE_CLASS => 'annotated',
-                                                                     );
+  Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSet->new
+                            (
+                             -EXPERIMENT    => $exp,
+                             -FEATURE_TYPE  => $ftype,
+                             -CELL_TYPE     => $ctype,
+                             -FORMAT        => 'READ_FORMAT',
+                             -VENDOR        => 'SOLEXA',
+                             -NAME          => 'SRR00000.fastq.gz',
+                             -ANALYSIS      => $anal,
+                             -FEATURE_CLASS => 'annotated',
+                             -REPLICATE     => 1, # >0 for specific replicate or 0 for merged
+                            );
 
   Do we want to define subsets likes this or are we more likely to add them one by one?
 
@@ -125,8 +134,8 @@ sub new {
 
   #Need to move these types to config
 
-  if(! ($type && grep /^${type}$/, ('annotated', 'result', 'segmentation', 'DNAMethylation'))){
-	throw("You must define a valid InputSet feature_class e.g. 'annotated' or 'result'");
+  if(! (defined $type && exists $valid_types{$type})){
+    throw("You must define a valid InputSet feature_class($type), one of: ".join("\t", keys %valid_types));
   }
 
   if(($type eq 'result') &&
@@ -156,52 +165,25 @@ sub new {
 }
 
 
-=head2 add_new_subset
+=head2 _add_new_subset
 
-  Arg [1]    : string - sub set name e.g. the file name (not path as we're restricted to 30 chars)
-  Arg [2]    : Bio::EnsEMBL::Funcgen::InputSubset - optional
-               If not defined will create a sparse InputSubset based on the name
-  Example    : $expset->add_new_subset($ss_name, $exp_subset);
-  Description: Adds input_subset
-  Returntype : none
-  Exceptions : Throws if set is already present
-               Throws if InputSubset is not valid or stored
-  Caller     : General
+  Arg [1]    : Bio::EnsEMBL::Funcgen::InputSubset
+  Example    : $input_set->_add_new_subset($input_subset);
+  Description: Adds an InputSubset to this InputSet
+  Returntype : None
+  Exceptions : None
+  Caller     : Bio::EnsEMBL::Funcgen::InputSubset->new
   Status     : At Risk
 
 =cut
 
-#Do we still use the optional subset function?
+sub _add_new_subset {
+  my ($self, $inp_sset) = @_;
 
-sub add_new_subset {
-  my ($self, $ss_name, $exp_sset) = @_;
-	
-  #Need to test $ss_name here
-  if(! ($ss_name && ref(\$ss_name) eq 'SCALAR')){#ref($exp_sset) would be 'REF'
-	throw('You must pass a InputSubset name');
-  }
+  #No validation here as this is all done in InputSubset->new
 
-  if($self->get_subset_by_name($ss_name)){
-	throw("Subset $ss_name is already present in this InputSet, maybe you need to alter the filename?");
-  }
-
-  if(defined $exp_sset){
-
-	if(!(ref($exp_sset) && $exp_sset->isa('Bio::EnsEMBL::Funcgen::InputSubset') && $exp_sset->dbID())){
-	  throw('InputSubsets must be valid and stored');
-	}
-  }
-  else{
-	
-	$exp_sset = Bio::EnsEMBL::Funcgen::InputSubset->new(
-														-name => $ss_name,
-														-input_set => $self,
-													   );
-  }
-
-  $self->{subsets}{$ss_name} = $exp_sset;
-
-  return $self->{subsets}{$ss_name};
+  $self->{subsets}{$inp_sset->name} = $inp_sset;
+  return;
 }
 
 
@@ -378,6 +360,12 @@ sub source_info{
 }
 
 
+### DEPRECATED ###
+
+sub add_new_subset {
+  #throw as this will have already been done, and the validation is done implicitly in InputSubset->new
+  throw('add_new_subset was deprecated in v69, _add_new_subset is now called directly from InputSubset->new');
+}
 
 1;
 
