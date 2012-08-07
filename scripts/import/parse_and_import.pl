@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -31,33 +31,34 @@
 
  Options:
 
- Experiment/Set (Mostly Mandatory)
-  --name|n           Instance/Experiment name. This will be used as the input/out_dir if applicable,
-                     unless otherwise specified (--input_dir/--output_dir).
-  --format|f         Format of experiment technology e.g. TILING.
-  --vendor|v         Vendor of experiment technology e.g. NIMBLEGEN
-                     This will be used to select the import parsers if --parser is not defined.
-  --parser           Selects the import parser to use e.g. Bed etc (Will override default vendor --parser)
-  --array_name       Name of the set of array chips(Also see -array_set option)
-  --result_set       Name to give the raw/normalised result set.
-  --feature_type     The name of the FeatureType of the experiment e.g. H4K36me3.
-  --input_set        Defines the name of an InputSet import
+ Experiment/Set (mostly mandatory):
+  --name|n              Instance/Experiment name. This will be used as the input/out_dir if applicable,
+                        unless otherwise specified (--input_dir/--output_dir).
+  --format|f            Format of experiment technology e.g. TILING.
+  --vendor|v            Vendor of experiment technology e.g. NIMBLEGEN
+                        This will be used to select the import parsers if --parser is not defined.
+  --parser              Selects the import parser to use e.g. Bed etc (Will override default vendor --parser)
+  --array_name          Name of the set of array chips(Also see -array_set option)
+  --result_set          Name to give the raw/normalised result set.
+  --feature_type        The name of the FeatureType of the experiment e.g. H4K36me3.
+  --input_set           Defines the name of an InputSet import
   --input_feature_class Defines the type of features being loaded via an InputSet(to be used 
-                     with -input_set e.g. result or annotated).
-  --_total_features  Specifies the total numbers of feature in the InputSet for calculating RPKM.
-                     This is normally handled by the prepare stage and never has to specified by the user.
-  --cell_type        The name of the CellType of the experiment.
-  --feature_analysis The name of the Analysis used in the experiment.
-  --norm|n           Normalisation method (default=vsn)
-                     NOTE: FeatureType, CellType and Analysis(inc norm) entries must already 
-                     exist in the eFG DB. See ensembl-functgenomics/script/import/import_types.pl
-  --exp_date         The date for the experiment.
-  --result_files     Space separated list of result files paths (Used in InputSet imports e.g. Bed).
-  --slices           Space separated list of slice names|seq_region_names to import (only works for -input_set import)
-  --skip_slices      Space separated list of seq_region names to skip (only works for -input_set import)
-  --config_file      User defned config file (see import_config.pm.example)
+                        with -input_set e.g. result or annotated).
+  --_total_features     Specifies the total numbers of feature in the InputSet for calculating RPKM.
+                        This is normally handled by the prepare stage and never has to specified by the user.
+  --cell_type           The name of the CellType of the experiment.
+  --feature_analysis    The name of the Analysis used in the experiment.
+  --norm|n              Normalisation method (default=vsn)
+                        NOTE: FeatureType, CellType and Analysis(inc norm) entries must already 
+                              exist in the eFG DB. See ensembl-functgenomics/script/import/import_types.pl
+  --exp_date            The date for the experiment.
+  --result_files        Space separated list of result files paths (Used in InputSet imports e.g. Bed).
+  --slices              Space separated list of slice names|seq_region_names to import (only works for -input_set import)
+  --skip_slices         Space separated list of seq_region names to skip (only works for -input_set import)
+  --config_file         User defned config file (see import_config.pm.example)
+  --merged_replicates   Flag to treat single input file as a merged replicate InputSet/InputSubset.
 
- Experimental group (Mostly Mandatory)
+ Experimental group (mostly mandatory):
   --format|f        Data format
   --group|g         Group name
   --location        Physical location of experimental group
@@ -146,15 +147,15 @@ use File::Path;
 use Bio::EnsEMBL::Funcgen::Importer;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (strip_param_args generate_slices_from_names strip_param_flags);
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Utils::Exception qw( warning );
 use strict;
 
 $| = 1;#autoflush
 my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $group, $pass, $dbname, $ssh);
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
-my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host, $batch_job, $prepared, $total_features);
-my ($parser, $fanal, $release, $format, $on_farm, @result_files, @slices, @skip_slices, $config_file);
+my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host, $batch_job, $prepared);
+my ($total_features, $parser, $fanal, $release, $format, $on_farm, @result_files, @slices, @skip_slices);
+my ($merged_replicates, $config_file);
 
 my $data_dir = $ENV{'EFG_DATA'};
 my $interactive = 1;
@@ -173,89 +174,91 @@ $main::_tee = 0;
 my @tmp_args = @ARGV;
 
 
-GetOptions (
-			#Experiment
-			"name|n=s"           => \$name,
-			"format|f=s"         => \$format,
-			"vendor|v=s"         => \$vendor,
-			"parser=s"           => \$parser,
-			"array_name=s"       => \$array_name,
-			"result_set=s"       => \$rset_name,
-			"input_set=s"        => \$exp_set,
-			"input_feature_class=s" => \$input_feature_class,
-			"feature_type=s"     => \$ftype,
-			"feature_analysis=s" => \$fanal,
-			"cell_type=s"        => \$ctype,
-			"norm_method=s"      => \$nmethod,
-			"exp_date=s"         => \$exp_date,
-			'result_files=s{,}'  => \@result_files,
-			'slices=s{,}'        => \@slices,
-			'skip_slices=s{,}'   => \@skip_slices,
-			'_total_features=i'   => \$total_features,
+GetOptions 
+  (
+   #Experiment
+   "name|n=s"              => \$name,
+   "format|f=s"            => \$format,
+   "vendor|v=s"            => \$vendor,
+   "parser=s"              => \$parser,
+   "array_name=s"          => \$array_name,
+   "result_set=s"          => \$rset_name,
+   "input_set=s"           => \$exp_set,
+   "input_feature_class=s" => \$input_feature_class,
+   "feature_type=s"        => \$ftype,
+   "feature_analysis=s"    => \$fanal,
+   "cell_type=s"           => \$ctype,
+   "norm_method=s"         => \$nmethod,
+   "exp_date=s"            => \$exp_date,
+   'result_files=s{,}'     => \@result_files,
+   'merged_replicates'     => \$merged_replicates,
+   'slices=s{,}'           => \@slices,
+   'skip_slices=s{,}'      => \@skip_slices,
+   '_total_features=i'     => \$total_features,
+   
+   #Experimental group 
+   "group|g=s"    => \$group,
+   "location=s"   => \$loc,
+   "contact=s"    => \$contact,
 
-			#Experimental group 
-			"group|g=s"    => \$group,
-			"location=s"   => \$loc,
-			"contact=s"    => \$contact,
-
-			#Run modes
-			'fasta'          => \$fasta,
-			'farm'           => \$farm,
-			#Internal run modes
-			'_batch_job'      => \$batch_job,
-			'_on_farm'        => \$on_farm,
-			'_prepared'       => \$prepared, 
-			#Internal option to signify job has been previously prepared
-			#i.e. result_file name may differ from the original InputSubset name
-			#slightly different to batch_job as prepare may not always result in a changed file
-			"queue=s"        => \$queue,
-			"recover|r"      => \$recover,
-			"old_dvd_format" => \$old_dvd_format,
-			"ucsc_coords"    => \$ucsc,
-			"interactive"    => \$interactive,
-			"array_set"      => \$array_set,
-
-			#MAGE
-			"write_mage"   => \$write_mage,
-			'update_xml'   => \$update_xml,
-			'no_mage'      => \$no_mage,
-
-			#DB connection
-			"dbname=s"        => \$dbname,
-			"pass|p=s"        => \$pass,
-			"port|l=s"        => \$port,
-			"host|h=s"        => \$host,
-			"user|u=s"        => \$user,
-			"species|s=s"     => \$species,
-			"lsf_host=s"      => \$lsf_host,
-			"registry_user=s" => \$reg_user,
-			"registry_host=s" => \$reg_host,
-			"registry_pass=s" => \$reg_pass,
-			"registry_port=s" => \$reg_port,
-			"ssh"             => \$ssh,
-			"assembly|a=s"    => \$assm_ver,
-			"release=s"       => \$release,
-		
-			#Directory overrides
-			"data_root=s"       => \$data_dir,
-			"input_dir=s"       => \$input_dir,
-			"output_dir=s"      => \$output_dir,
-
-			#Other params
-			'config_file=s' => \$config_file,
-			"help|?"       => \$help,
-			"man|m"        => \$man,
-			"verbose"      => \$verbose, # not implmented yet in Importer?
-			#Helper config
-			"tee"          => \$main::_tee,
-			"log_file=s"   => \$main::_log_file,
-			"no_log"       => \$main::_no_log,
-			"debug_file=s" => \$main::_debug_file,
-			"debug=i"      => \$main::_debug_level,		
-		   )
+   #Run modes
+   'fasta'          => \$fasta,
+   'farm'           => \$farm,
+   #Internal run modes
+   '_batch_job'      => \$batch_job,
+   '_on_farm'        => \$on_farm,
+   '_prepared'       => \$prepared, 
+   #Internal option to signify job has been previously prepared
+   #i.e. result_file name may differ from the original InputSubset name
+   #slightly different to batch_job as prepare may not always result in a changed file
+   "queue=s"        => \$queue,
+   "recover|r"      => \$recover,
+   "old_dvd_format" => \$old_dvd_format,
+   "ucsc_coords"    => \$ucsc,
+   "interactive"    => \$interactive,
+   "array_set"      => \$array_set,
+   
+   #MAGE
+   "write_mage"   => \$write_mage,
+   'update_xml'   => \$update_xml,
+   'no_mage'      => \$no_mage,
+   
+   #DB connection
+   "dbname=s"        => \$dbname,
+   "pass|p=s"        => \$pass,
+   "port|l=s"        => \$port,
+   "host|h=s"        => \$host,
+   "user|u=s"        => \$user,
+   "species|s=s"     => \$species,
+   "lsf_host=s"      => \$lsf_host,
+   "registry_user=s" => \$reg_user,
+   "registry_host=s" => \$reg_host,
+   "registry_pass=s" => \$reg_pass,
+   "registry_port=s" => \$reg_port,
+   "ssh"             => \$ssh,
+   "assembly|a=s"    => \$assm_ver,
+   "release=s"       => \$release,
+   
+   #Directory overrides
+   "data_root=s"       => \$data_dir,
+   "input_dir=s"       => \$input_dir,
+   "output_dir=s"      => \$output_dir,
+   
+   #Other params
+   'config_file=s' => \$config_file,
+   "help|?"       => \$help,
+   "man|m"        => \$man,
+   "verbose"      => \$verbose, # not implmented yet in Importer?
+   #Helper config
+   "tee"          => \$main::_tee,
+   "log_file=s"   => \$main::_log_file,
+   "no_log"       => \$main::_no_log,
+   "debug_file=s" => \$main::_debug_file,
+   "debug=i"      => \$main::_debug_level,		
+  )
   or pod2usage( -exitval => 1,
-				-message => "Params are:\t@tmp_args"
-			  );
+                -message => "Params are:\t@tmp_args"
+              );
 
 
 print "parse_and_import.pl @tmp_args\n";
@@ -405,7 +408,8 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -verbose     => $verbose,
    -input_dir   => $input_dir,
    -exp_date     => $exp_date,
-   -result_files    => \@result_files,
+   -result_files    => \@result_files, #change to -input_subset_files?
+   -merged_replicates => $merged_replicates,
    -total_features => $total_features,
    -old_dvd_format => $old_dvd_format,
    -ucsc_coords => $ucsc,
@@ -630,19 +634,27 @@ if($farm &&           ###BSUB JOBS
 
 }
 else{ ### DO THE IMPORT
-  print "Importing data...\n";
 
-  @slices = ($slices[($ENV{LSB_JOBINDEX} - 1)]) if $batch_job;
+  
+  #need to init_experiment_import (register file/sets)
+  #based on option rather than input_feature_class
 
-  #warn "LSB_JOBINDEX is ".$ENV{LSB_JOBINDEX};
+  if($input_feature_class eq 'dna_methylation'){
+    #Need a register file/sets import option
+    #rather than basing this on input_feature_class
 
-  #warn "New slices are:\t@slices";
-
-  $Imp->slices(\@slices) if @slices;
-
-  #warn "Importer Slices are ".join(', ', @{$Imp->slices(\@slices)});
-
-  $Imp->register_experiment();
+    $Imp->init_experiment_import;
+    $Imp->define_sets;
+    $Imp->validate_files;
+  }
+  else{
+    print "Importing data...\n";
+    
+    @slices = ($slices[($ENV{LSB_JOBINDEX} - 1)]) if $batch_job;
+    $Imp->slices(\@slices) if @slices;
+    
+    $Imp->register_experiment; #This actually 'loads/generates' the experiment data.
+  }
 }
 
 print "Done\n";
