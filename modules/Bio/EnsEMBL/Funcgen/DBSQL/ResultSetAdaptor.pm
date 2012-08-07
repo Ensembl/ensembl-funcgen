@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -24,7 +24,7 @@
 =head1 NAME
 
 Bio::EnsEMBL::DBSQL::Funcgen::ResultSetAdaptor - A database adaptor for fetching and
-storing ResultSet objects.  
+storing ResultSet objects.
 
 =head1 SYNOPSIS
 
@@ -364,7 +364,7 @@ sub _tables {
   return (
           [ 'result_set',        'rs' ],
           [ 'result_set_input',  'rsi'],
-          [ 'dbfile_registry',   'dr' ], 
+          [ 'dbfile_registry',   'dr' ],
          );
 }
 
@@ -378,7 +378,7 @@ sub _tables {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -396,7 +396,7 @@ sub _left_join {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : Stable
 
 =cut
 
@@ -404,15 +404,12 @@ sub _columns {
 	my $self = shift;
 
 	return qw(
-			  rs.result_set_id           rs.analysis_id
-			  rsi.table_name             rsi.result_set_input_id
-			  rsi.table_id               rs.name
-			  rs.cell_type_id            rs.feature_type_id
-			  rs.feature_class           dr.path
-            );
-
-
-	
+            rs.result_set_id           rs.analysis_id
+            rsi.table_name             rsi.result_set_input_id
+            rsi.table_id               rs.name
+            rs.cell_type_id            rs.feature_type_id
+            rs.feature_class           dr.path
+           );
 }
 
 =i
@@ -445,8 +442,8 @@ sub _default_where_clause {
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
                Returns an ORDER BY clause. Sorting by oligo_feature_id would be
-			   enough to eliminate duplicates, but sorting by location might
-			   make fetching features on a slice faster.
+               enough to eliminate duplicates, but sorting by location might
+               make fetching features on a slice faster.
   Returntype : String
   Exceptions : None
   Caller     : generic_fetch
@@ -457,7 +454,8 @@ sub _default_where_clause {
 
 sub _final_clause {
   #do not mess with this!
-  return ' GROUP by rsi.result_set_input_id, rsi.result_set_id ORDER BY rs.result_set_id, rs.cell_type_id, rs.feature_type_id';
+  return ' GROUP by rsi.result_set_input_id, rsi.result_set_id '.
+    'ORDER BY rs.result_set_id, rs.cell_type_id, rs.feature_type_id';
 }
 
 
@@ -493,19 +491,19 @@ sub _objs_from_sth {
 
   while ( $sth->fetch() ) {
   
-  if ($feat_class !~/result|DNAMethylation/)
-  {
-   throw("Retreived feature_class field should be either result or DNAMethylation");
-   }
+    if ($feat_class !~/result|dna_methylation/)
+      {
+        throw("Retreived feature_class field should be either result or dna_methylation");
+      }
    
-=i
-   elsif ($feat_class =~/DNAMethylation/)
-   {
-   #wrong implementation. there is usually no result_set_input data defined for DNAMethylation feature_class
-   # is table_name necessary for Bio::EnsEMBL::Funcgen::ResultSet object
-   $table_name="input_set";
-   }
-=cut
+#
+#   elsif ($feat_class =~/DNAMethylation/)
+#   {
+#   #wrong implementation. there is usually no result_set_input data defined for DNAMethylation feature_class
+#   # is table_name necessary for Bio::EnsEMBL::Funcgen::ResultSet object
+#   $table_name="input_set";
+#   }
+
 
     if(! $rset || ($rset->dbID() != $dbid)){
       
@@ -578,14 +576,16 @@ sub store{
   
   my (%analysis_hash);
   
-  my $sth = $self->prepare('INSERT INTO result_set (analysis_id, name, cell_type_id, feature_type_id, feature_class) VALUES (?, ?, ?, ?, ?)');
+  my $sth = $self->prepare('INSERT INTO result_set '.
+                           '(analysis_id, name, cell_type_id, feature_type_id, feature_class) '.
+                           'VALUES (?, ?, ?, ?, ?)');
   
   my $db = $self->db();
   my $analysis_adaptor = $db->get_AnalysisAdaptor();
   
  FEATURE: foreach my $rset (@rsets) {
     
-    if( ! ref $rset || ! $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet') ) {
+    if ( ! (ref $rset && $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet') )) {
       throw('Must be an ResultSet object to store');
     }
     
@@ -611,25 +611,22 @@ sub store{
     }
    
 
-	my $ct_id = (defined $rset->cell_type()) ? $rset->cell_type->dbID() : undef;
-	my $ft_id = (defined $rset->feature_type()) ? $rset->feature_type->dbID() : undef;
+    my $ct_id = (defined $rset->cell_type)    ? $rset->cell_type->dbID    : undef;
+    my $ft_id = (defined $rset->feature_type) ? $rset->feature_type->dbID : undef;
 
-    $sth->bind_param(1, $rset->analysis->dbID(),   SQL_INTEGER);
-    $sth->bind_param(2, $rset->name(),             SQL_VARCHAR);
-	$sth->bind_param(3, $ct_id,                    SQL_INTEGER);
-	$sth->bind_param(4, $ft_id,                    SQL_INTEGER);
-	$sth->bind_param(5, $rset->feature_class(),    SQL_VARCHAR);
-
-	
+    $sth->bind_param(1, $rset->analysis->dbID,   SQL_INTEGER);
+    $sth->bind_param(2, $rset->name,             SQL_VARCHAR);
+    $sth->bind_param(3, $ct_id,                  SQL_INTEGER);
+    $sth->bind_param(4, $ft_id,                  SQL_INTEGER);
+    $sth->bind_param(5, $rset->feature_class,    SQL_VARCHAR);
+    $sth->execute;
     
-    $sth->execute();
-    
-    $rset->dbID( $sth->{'mysql_insertid'} );
+    $rset->dbID( $sth->{mysql_insertid} );
     $rset->adaptor($self);
     
-	$self->store_states($rset);
+    $self->store_states($rset);
     $self->store_chip_channels($rset);
-	$self->store_dbfile_data_dir($rset) if $rset->dbfile_data_dir;
+    $self->store_dbfile_data_dir($rset) if $rset->dbfile_data_dir;
   }
   
   return \@rsets;
@@ -689,6 +686,8 @@ sub dbfile_data_root{
 
 =cut
 
+#This is actually not always a dir
+#leave for now until we use core API for this
 
 
 sub store_dbfile_data_dir{
