@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -91,19 +91,18 @@ sub new{
   
   my $class = ref($caller) || $caller;
   my $self  = $class->SUPER::new(@_);
-  
-  #  my $config_file;
-  
 
   ($self->{'input_set_name'}, 
    $self->{'input_feature_class'}, 
-   #$self->{'slices'}, 
    $self->{total_features}, 
-   $self->{force},            #Is this generic enough to go in Importer? used by store_window_bins_by_Slice_Parser
-   $self->{dbfile_data_root}, #only appropriate for result input_feature_class
- #  $config_file,              #User defined config hash file
-  ) = rearrange(['input_set_name', 'input_feature_class', 
-				 'total_features', 'force', 'dbfile_data_root'], @_);
+   $self->{force},                  #Is this generic enough to go in Importer? used by store_window_bins_by_Slice_Parser
+   $self->{dbfile_data_root},       #only appropriate for result input_feature_class
+   $self->{merged_replicates},
+  ) = rearrange
+    (
+     ['input_set_name', 'input_feature_class', 'total_features', 'force',
+      'dbfile_data_root', 'merged_replicates'],
+     @_);
 
 
   #Could potentially take fields params directly to define a custom format
@@ -127,44 +126,7 @@ sub new{
   #set up feature params
   $self->{'_feature_params'} = {};
   $self->{'_dbentry_params'} = [];
-  
-  #$self->{'counts'}   = {};
-  #$self->{'slices'}   = [];
-  #$self->{'seq_region_names'} = [];#Used for slice based import
-
-
-   # USER CONFIG #
-  #Here we need to read config based on external file
-  #Should do something similar to set_feature_sets
-  #and validate_and_store_feature_types in BaseExternalParser
-  #but we are using define and validate sets instead
-
-  #BaseExternalParser and BaseImporter really need to be merged
-  #After we have stripped out all the array/experiment specific stuff
-
-  #Do dev here so we are not developing more stuff in the Importer which will need migrating
-  #to the BaseImporter
-
-  #if($config_file){
-#	my $config;
-
-#	$self->log("Reading config file:\t".$config_file);
-
-#	if(! ($config = do "$config_file")){
-#	  throw("Couldn't parse config file:\t$config_file:\n$@") if $@;
-#	  throw("Couldn't do config:\t$config_file\n$!")          if ! defined $config;
-#	  throw("Couldn't compile config_file:\t$config_file")    if ! $config;
-#	}
-
-#	#At least check it is hash
-#	if(ref($config) ne 'HASH'){
-#	  throw("Config file does not define a valid HASH:\t$config_file");
-#	}
-#	
-#	$self->{user_config} = $config;	
-#  }
-
- 
+   
   return $self;
 }
 
@@ -212,27 +174,38 @@ sub set_config{
 	throw('Must define a -feature_analysis parameter for '.uc($self->vendor).' imports');
   }
 
-
-  if(! exists $valid_types{$self->input_feature_class}){
-	throw("You must define a valid input_feature_class:\t".
-		  join(', ', keys %valid_types));
-  }
-
-  $self->{'feature_class'} = 'Bio::EnsEMBL::Funcgen::'.ucfirst($self->input_feature_class).'Feature';
-
+  #some convenience methods
+  $self->{dbentry_adaptor}   = $self->db->get_DBEntryAdaptor;
+  $self->{input_set_adaptor} = $self->db->get_InputSetAdaptor;
+  
+  my $fclass_name = $self->{input_set_adaptor}->build_feature_class_name($self->input_feature_class);
+  $self->{'feature_class'} = 'Bio::EnsEMBL::Funcgen::'.$fclass_name;
 
   #We need to undef norm method as it has been set to the env var
-  $self->{'config'}{'norm_method'} = undef;
+  $self->{config}{norm_method} = undef;
 
   #dirs are not set in config to enable generic get_dir method access
   $self->{dbfile_data_root} ||= $self->get_dir('output');#Required for Collector
 
-  #some convenience methods
-  my $adaptor_method           = 'get_'.ucfirst($self->input_feature_class).'FeatureAdaptor';
-  $self->{'feature_adaptor'}   =  $self->db->$adaptor_method;
-  $self->{'dbentry_adaptor'}   = $self->db->get_DBEntryAdaptor;
-  $self->{'input_set_adaptor'} = $self->db->get_InputSetAdaptor;
-  ##$self->{'slice_adaptor'}     = $self->db->dnadb->get_SliceAdaptor;
+  my $adaptor_method         = 'get_'.$fclass_name.'Adaptor';
+
+
+  #cannot validate here using 'can' as it doesn't appear to work for autoloaded methods :(
+  #eval instead
+
+  eval { $self->{feature_adaptor} =  $self->db->$adaptor_method; };
+
+  if($@){
+    throw("Failed to $adaptor_method, ".$self->input_feature_class.' is not a valid feature class');
+  }
+
+
+  
+  #$self->{feature_adaptor} =  $self->db->$adaptor_method;
+
+
+  warn "got DNAMethylationFeatureAdaptor".$self->{feature_adaptor};
+
 
   #Validate slices
   $self->slices($self->{'slices'}) if defined $self->{'slices'};
@@ -252,29 +225,41 @@ sub set_config{
 }
 
 
+#Some of this can probably move to define_and_validate_sets?
+
 sub define_sets{
   my ($self) = @_;
 
   my $eset = $self->db->get_InputSetAdaptor->fetch_by_name($self->input_set_name);
   
   if(! defined $eset){
+
+    #temporary fix until we implement input_subset_file replicate/control config
+    #and merge validite_files in here
+    #do not currently have non merged replicate import
+    #need to define this param in all the run scripts
+    my $replicate = 0 if $self->merged_replicates;
+
     $eset = Bio::EnsEMBL::Funcgen::InputSet->new
       (
-       -name         => $self->input_set_name(),
-       -experiment   => $self->experiment(),
-       -feature_type => $self->feature_type(),
-       -cell_type    => $self->cell_type(),
-       -vendor       => $self->vendor(),
-       -format       => $self->format(),
-       -analysis     => $self->feature_analysis,
+       -name          => $self->input_set_name(),
+       -experiment    => $self->experiment(),
+       -feature_type  => $self->feature_type(),
+       -cell_type     => $self->cell_type(),
+       -vendor        => $self->vendor(),
+       -format        => $self->format(),
+       -analysis      => $self->feature_analysis,
        -feature_class => $self->input_feature_class,
+       -replicate     => $replicate,
       );
+
+
+    
     ($eset)  = @{$self->db->get_InputSetAdaptor->store($eset)};
   }
 
   #Use define_and_validate with fetch/append as we may have a pre-existing set
   #This now needs to handle ResultSets based on InputSets
-
 
   my $dset = $self->define_and_validate_sets
 	(
@@ -310,31 +295,99 @@ sub define_sets{
   #What if we want to link several assays(feature/cell_types) to the same experiment?
 
   $self->{'_data_set'} = $dset;
- 
-  return $dset;
+
+  
+
+  #set output_set and new_data as attrs, or return?
+  #change define_sets to define_sets_and_validate_input_files
+  #eset is the supporting set for this import
+  my $output_set;
+
+
+  if ($self->input_feature_class eq 'result' ||
+      $self->input_feature_class eq 'dna_methylation') {
+    
+    $output_set = $dset->get_supporting_sets->[0];
+    $eset       = $output_set->get_InputSets->[0];
+
+    if($self->input_feature_class eq 'dna_methylation'){
+      #This should really be testing whether we are procesing the data or not
+      #i.e. register files only mode
+
+      #This currently only supports 1 -result_file 
+      #this is enforced via validate_files
+      
+      #let's store the final expected subdir for now
+      #rather than the current full local path
+      #MD5s?
+      my $dbfile = '/dna_methylation/'.$output_set->name.
+        '/'.$eset->get_InputSubsets->[0]->name;
+      
+      if(! defined $output_set->dbfile_data_dir){
+        $output_set->dbfile_data_dir($dbfile);
+        $output_set->adaptor->store_dbfile_data_dir($output_set);
+      }
+      elsif($output_set->dbfile_registry_dir ne $dbfile){
+        die("Found a mismatch between the stored and set dbfile_registry_dir for ResultSet:\t".
+            $output_set->name."\n\t".$output_set->dbfile_registry_dir."\t".$dbfile);
+      }
+    }
+
+
+
+    $self->result_set($output_set); #required for ResultFeature Collector and Bed Parser
+  } 
+  else {                      #annotated/segmentation
+    $output_set = $dset->product_FeatureSet;
+    $eset       = $dset->get_supporting_sets->[0];
+  }
+
+  return ($dset, $output_set, $eset);
 }
 
 
 
 
 #we have rollback functionality incorporated here
+#why is this not integrated into define_sets?
+#they are inherantly linked and for an InputSet import
+#we always want to validate files.
+#No way of defining replicate/control config just yet
+#This should be changed to support both tracking DB and direct import.
+#to correctly define the sets, we need access to the files and in the
+#rep/control config
+#We can do this implicitly by simply letting the order define the rep number
+#-result_files rep1 rep2 rep2
+#-control_files rep1 rep2
+#-merged_replicates would over-ride the above and trigger a check for >1 file
+#let's implement -merged_replicates for now and come back to this order based config
+#rename -result_files to -input_subset_files?
+#Will this support the collection import?
+#Need to be mindful about the true input files and what pipeline will actually use
+#as it may be some merged intermediate i.e. a sam/bed file rather than a fastq
+
+
+#should we also store the dbfile_registry data here?
+#this maybe done before generating the actual files
+
 
 sub validate_files{
   my ($self, $prepare) = @_;
 
   #Get file
+
   if (! @{$self->result_files()}) {
-	my $list = "ls ".$self->get_dir('input').'/'.$self->input_set_name().'*.';#.lc($self->vendor);#could use vendor here? Actually need suffix attr
-	my @rfiles = `$list`;
-	$self->result_files(\@rfiles);
+    my $list = "ls ".$self->get_dir('input').'/'.$self->input_set_name().'*.'; #.lc($self->vendor);#could use vendor here? Actually need suffix attr
+    my @rfiles = `$list`;
+    $self->result_files(\@rfiles);
   }
 
   #We don't yet support multiple files
-  if(scalar(@{$self->result_files()}) >1){
-	warn('Found more than one '.$self->vendor." file:\n".
-		 join("\n", @{$self->result_files()})."\nThe InputSet parser does not yet handle multiple input files(e.g. replicates).".
-		 "  We need to resolve how we are going handle replicates with random cluster IDs");
-	#do we even need to?
+  if (scalar(@{$self->result_files()}) >1) {
+    warn('Found more than one '.$self->vendor." file:\n".
+         join("\n", @{$self->result_files()})."\nThe InputSet parser does not yet handle multiple input files(e.g. replicates).".
+         "  We need to resolve how we are going handle replicates with random cluster IDs");
+    #do we even need to?
   }
   
   #Here were are tracking the import of individual files by adding them as InputSubSets
@@ -350,21 +403,21 @@ sub validate_files{
   my (%new_data, $eset);
   my $dset = $self->data_set;
    
-  if((scalar(@{$self->slices}) > 1) &&
-	 ! $prepare){
-	throw('Validate files does not yet support multiple Slice rollback');
+  if ((scalar(@{$self->slices}) > 1) &&
+      ! $prepare) {
+    throw('Validate files does not yet support multiple Slice rollback');
   }
-
+  
   #This all assumes that there is only ever 1 InputSet
   
-  if($self->input_feature_class eq 'result'){
-	$eset = $dset->get_supporting_sets->[0]->get_InputSets->[0];
+  if ($self->input_feature_class eq 'result' ||
+      $self->input_feature_class eq 'dna_methylation' ) {
+    $eset = $dset->get_supporting_sets->[0]->get_InputSets->[0];
+  } else {                      #annotated/segmentation
+    $eset =  $dset->get_supporting_sets->[0];
   }
-  else{#annotated/segmentation
-	$eset =  $dset->get_supporting_sets->[0];
-  }
-
-
+  
+  
   #IMPORTED status here may prevent
   #futher slice based imports
   #so we have wait to set this until we know all the slices 
@@ -376,101 +429,129 @@ sub validate_files{
   my (@rollback_sets, %file_paths);
   my $auto_rollback = ($self->rollback) ? 0 : 1;
 
-  foreach my $filepath( @{$self->result_files} ) {
-	my ($filename, $sub_set);
-	chomp $filepath;
+  
+  #set the max seen replicate value
+  my $replicate = 0;
+
+  foreach my $iss( @{$eset->get_InputSubsets} ){
+    
+    if($iss->replicate >  $replicate){
+      $replicate = $iss->replicate;
+    }
+  }
+
+
+  foreach my $filepath ( @{$self->result_files} ) {
+    my ($filename, $sub_set);
+    chomp $filepath;
    	($filename = $filepath) =~ s/.*\///;
-	$file_paths{$filename} = $filepath;			 
-	$filename =~ s/^prepared\.// if $self->prepared; 	#reset filename to that originally used to create the Inputsubsets
+    $file_paths{$filename} = $filepath;			 
+    $filename =~ s/^prepared\.// if $self->prepared; #reset filename to that originally used to create the Inputsubsets
 
-	$self->log('Validating '.$self->vendor." file:\t$filename");
-	throw("Cannot find ".$self->vendor." file:\t$filepath") if(! -e $filepath);#Can deal with links
+    $self->log('Validating '.$self->vendor." file:\t$filename");
+    throw("Cannot find ".$self->vendor." file:\t$filepath") if(! -e $filepath); #Can deal with links
 		
-	if( $sub_set = $eset->get_subset_by_name($filename) ){
-	  #IMPORTED status here is just for the file
-	  #Any changes to analysis or coord_system should result in different InputSubset(file)
-	  #Will only ever be imported into one Feature|ResultSet
+    if ( $sub_set = $eset->get_subset_by_name($filename) ) {
+      #IMPORTED status here is just for the file
+      #Any changes to analysis or coord_system should result in different InputSubset(file)
+      #Will only ever be imported into one Feature|ResultSet
 
-	  #Currently conflating recover_unimported and rollback
-	  #as they serve the same purpose until we implement InputSubset level recovery
+      #Currently conflating recover_unimported and rollback
+      #as they serve the same purpose until we implement InputSubset level recovery
 
 	
-	  if( $sub_set->has_status('IMPORTED') ){
-		$new_data{$filepath} = 0;
-		$self->log("Found previously IMPORTED InputSubset:\t$filename");
-	  } 
-	  else{
-		$self->log("Found existing InputSubset without IMPORTED status:\t$filename");
-		push @rollback_sets, $sub_set;
-	  }
-	}
-	else{
-	  $self->log("Found new InputSubset:\t${filename}");
-	  throw("Should not have found new 'prepared' file:\t$filename") if $self->prepared;	  
-	  $new_data{$filepath} = 1;
-	  $sub_set = $eset->add_new_subset($filename);
-	  $self->input_set_adaptor->store_InputSubsets([$sub_set]);
-	}
+      if ( $sub_set->has_status('IMPORTED') ) {
+        $new_data{$filepath} = 0;
+        $self->log("Found previously IMPORTED InputSubset:\t$filename");
+      } else {
+        $self->log("Found existing InputSubset without IMPORTED status:\t$filename");
+        push @rollback_sets, $sub_set;
+      }
+    } else {
+      $replicate ++;
+
+      $self->log("Found new InputSubset:\t${filename}");
+      throw("Should not have found new 'prepared' file:\t$filename") if $self->prepared;	  
+      $new_data{$filepath} = 1;
+
+      $replicate = 0 if $self->merged_replicates;
+      #need to add is_control support here too.
+      #tidy this up, force full creation here and remove convenience code from InputSet?
+      #where else is it used?
+
+      $sub_set = Bio::EnsEMBL::Funcgen::InputSubset->new
+        (
+         -name       => $filename,
+         -replicate  => $replicate,
+         -input_set  => $eset,
+         # should also handle these here
+         -is_control  => 0,#for result files, need to handle control files separately
+         #-display_url => $display_url,
+         #-archive_id  => $archive_id,
+        );
+
+      $self->input_set_adaptor->store_InputSubsets([$sub_set]);
+    }
   }
 
 
   #Does -recover allow a single extra new file to be added to an existing InputSet?
  
-  if(@rollback_sets &&  #recoverable sets i.e. exists but not IMPORTED
-	 ( (! $self->recovery) && (! $self->rollback) ) ){
-	throw("Found partially imported InputSubsets:\n\t".join("\n\t", (map $_->name, @rollback_sets))."\n".
-		  "You must specify -recover or -rollback to perform a full rollback");
+  if (@rollback_sets &&         #recoverable sets i.e. exists but not IMPORTED
+      ( (! $self->recovery) && (! $self->rollback) ) ) {
+    throw("Found partially imported InputSubsets:\n\t".join("\n\t", (map $_->name, @rollback_sets))."\n".
+          "You must specify -recover or -rollback to perform a full rollback");
 
-	if($self->recovery){
-	  #Change these to logger->warn
-	  $self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set? Unless slices defined");
-	  $self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
-	}
+    if ($self->recovery) {
+      #Change these to logger->warn
+      $self->log("WARNING::\tCannot yet rollback for just an InputSubset, rolling back entire set? Unless slices defined");
+      $self->log("WARNING::\tThis may be deleting previously imported data which you are not re-importing..list?!!!\n");
+    }
   }
   
   
-  if($self->rollback){
-	#Check we have all existing InputSubsets files before we do full rollback
-	#Can probably remove this if we support InputSubset(file/slice) level rollback
-	$self->log('Rolling back all InputSubsets');
-	@rollback_sets = @{$eset->get_InputSubsets};
+  if ($self->rollback) {
+    #Check we have all existing InputSubsets files before we do full rollback
+    #Can probably remove this if we support InputSubset(file/slice) level rollback
+    $self->log('Rolling back all InputSubsets');
+    @rollback_sets = @{$eset->get_InputSubsets};
 
-	foreach my $isset(@rollback_sets){
+    foreach my $isset (@rollback_sets) {
 	  
-	  if(! exists $file_paths{$isset->name}){
-		throw("You are attempting a multiple InputSubset rollback without specifying an existing InputSubset:\t".$isset->name.
-			  "\nAborting rollback as data will be lost. Please specifying all existing InputSubset file names");
-	  }
-	}
+      if (! exists $file_paths{$isset->name}) {
+        throw("You are attempting a multiple InputSubset rollback without specifying an existing InputSubset:\t".$isset->name.
+              "\nAborting rollback as data will be lost. Please specifying all existing InputSubset file names");
+      }
+    }
   }
 
 
-  foreach my $esset(@rollback_sets){
-	#This needs to be mapped to the specified filepaths
-	my $fp_key = $esset->name;
-	$fp_key = 'prepared.'.$fp_key if $self->prepared;
+  foreach my $esset (@rollback_sets) {
+    #This needs to be mapped to the specified filepaths
+    my $fp_key = $esset->name;
+    $fp_key = 'prepared.'.$fp_key if $self->prepared;
 
-	$new_data{$file_paths{$fp_key}} = 1;
-	$self->log("Revoking states for InputSubset:\t\t\t".$esset->name);
-	$eset->adaptor->revoke_states($esset);
+    $new_data{$file_paths{$fp_key}} = 1;
+    $self->log("Revoking states for InputSubset:\t\t\t".$esset->name);
+    $eset->adaptor->revoke_states($esset);
 
-	if(! $prepare){
-	  #This was to avoid redundant rollback in prepare step
-	  $self->log("Rolling back InputSubset:\t\t\t\t".$esset->name);
+    if (! $prepare) {
+      #This was to avoid redundant rollback in prepare step
+      $self->log("Rolling back InputSubset:\t\t\t\t".$esset->name);
 	  
-	  if($self->input_feature_class eq 'result'){
-		#Can we do this by slice for parallelisation?
-		#This will only ever be a single ResultSet due to Helper::define_and_validate_sets
-		#flags are rollback_results and force(as this won't be a direct input to the product feature set)
-		$self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0], 1);
-		#Do no have rollback_InputSet here as we may have parallel Slice based imports running
-	  }
-	  else{#annotated/segmentation
-		$self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
-		$self->rollback_InputSet($eset);
-		last;
-	  }			
-	}
+      if ($self->input_feature_class eq 'result' ||
+          $self->input_feature_class eq 'dna_methylation') {
+        #Can we do this by slice for parallelisation?
+        #This will only ever be a single ResultSet due to Helper::define_and_validate_sets
+        #flags are rollback_results and force(as this won't be a direct input to the product feature set)
+        $self->rollback_ResultSet($self->data_set->get_supporting_sets->[0], 1, $self->slices->[0], 1);
+        #Do no have rollback_InputSet here as we may have parallel Slice based imports running
+      } else {                  #annotated/segmentation
+        $self->rollback_FeatureSet($self->data_set->product_FeatureSet, undef, $self->slices->[0]);
+        $self->rollback_InputSet($eset);
+        last;
+      }			
+    }
   }
 
   return \%new_data;
@@ -493,33 +574,36 @@ sub set_feature_separator{
 
 }
 
-# SIMPLE ACCESSORS
+### SIMPLE ACCESSORS ###
 # Some of these can be called for each record
 # Trim the access time as much as possible
 
-sub input_feature_class{ return $_[0]->{'input_feature_class'}; }
+#This is to support input_set/input_subset.replicate
+#Not appropriate for array experiment imports
 
-sub input_set_name{      return $_[0]->{'input_set_name'}; }  #Set in new
+sub merged_replicates{   return $_[0]->{merged_replicates}; }
 
-sub feature_adaptor{     return $_[0]->{'feature_adaptor'}; }
+sub input_feature_class{ return $_[0]->{input_feature_class}; }
 
-sub dbentry_adaptor{     return $_[0]->{'dbentry_adaptor'}; }
+sub input_set_name{      return $_[0]->{input_set_name}; }  #Set in new
 
-sub input_set_adaptor{   return $_[0]->{'input_set_adaptor'}; }
+sub feature_adaptor{     return $_[0]->{feature_adaptor}; }
 
-sub set{                 return $_[0]->{'set'}; } #Feature or Result, set in define_sets
+sub dbentry_adaptor{     return $_[0]->{dbentry_adaptor}; }
 
-##sub slice_adaptor{       return $_[0]->{'slice_adaptor'}; }
+sub input_set_adaptor{   return $_[0]->{input_set_adaptor}; }
 
-sub data_set{            return $_[0]->{'_data_set'}; }
+sub set{                 return $_[0]->{set}; } #Feature or Result, set in define_sets
 
-sub feature_separator{   return $_[0]->{'_feature_separator'}; }
+sub data_set{            return $_[0]->{_data_set}; }
 
-sub feature_params{      return $_[0]->{'_feature_params'}; }
+sub feature_separator{   return $_[0]->{_feature_separator}; }
 
-sub dbentry_params{      return $_[0]->{'_dbentry_params'}; }
+sub feature_params{      return $_[0]->{_feature_params}; }
 
-sub input_gzipped{       return $_[0]->{'input_gzipped'}; }
+sub dbentry_params{      return $_[0]->{_dbentry_params}; }
+
+sub input_gzipped{       return $_[0]->{input_gzipped}; }
 
 
 sub input_file_operator{
@@ -542,7 +626,7 @@ sub read_and_import_data{
   my $action = ($prepare) ? 'preparing' : 'importing';
 
   $self->log("Reading and $action ".$self->vendor()." data");
-  my ($eset, $filename, $output_set, $fh, $f_out, %feature_params, @lines);
+  my ($filename, $fh, $f_out, %feature_params, @lines);
 
   if($prepare && ! $self->isa('Bio::EnsEMBL::Funcgen::Parsers::Bed')){
 	throw('prepare mode is only currently implemented for the Bed parser');
@@ -557,26 +641,12 @@ sub read_and_import_data{
 	throw('You cannot run read_and_import_data in prepare mode with a -batch_job or -prepared job');
   }
 
-  my $dset = $self->define_sets;
+  my ($dset, $output_set, $eset) = $self->define_sets;
   
   #We also need to account for bsub'd slice based import
-  #seq alignments loaded into a ResultSet
-  #Cannot have 0 window for ChIP Seq alignments
-  #As this would mean storing all the individual reads
-  #Hence we need to remap to a new assm before we import!
-    
-  if($self->input_feature_class eq 'result'){
-	$output_set = $dset->get_supporting_sets->[0];
-	$eset       = $output_set->get_InputSets->[0];
-	$self->result_set($output_set);#required for ResultFeature Collector and Bed Parser
-  }
-  else{#annotated/segmentation
-	$output_set = $dset->product_FeatureSet;
-	$eset       =  $dset->get_supporting_sets->[0]; 
-  }
 
   
-  #If we can do these the other way araound we can get define_sets to rollback the FeatureSet
+  #If we can do these the other way around we can get define_sets to rollback the FeatureSet
   #Cyclical dependency for the sets :|
   my $new_data = $self->validate_files($prepare);
   my $seen_new_data = 0;
@@ -613,8 +683,9 @@ sub read_and_import_data{
 	  
 
 	  #Should this be prepared?
-
-	  if((($self->input_feature_class eq 'result') && ! $prepare)){
+    
+	  if((($self->input_feature_class eq 'result' || $self->input_feature_class eq 'dna_methylation' ) 
+        && ! $prepare)){
 		#(($self->input_feature_class eq 'result') && (! $self->batch_job))){   #Local run on just 1 chr
 		#
 
@@ -951,5 +1022,6 @@ sub result_set{
   $self->{'result_set'} = $rset if $rset;
   return $self->{'result_set'};
 }
+
 
 1;

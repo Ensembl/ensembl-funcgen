@@ -104,11 +104,14 @@ sub new {
   
   
   throw('Must provide a name argument') if ! defined $name;
+  
 
-  if(!(ref($eset) && 
-	   $eset->isa('Bio::EnsEMBL::Funcgen::InputSet')
-	   && $eset->dbID())){
-	throw('Must provide a valid stored input_set argument');
+  #can't do is_stored_and_valid here as we don't adaptor
+
+  if(! (ref($eset) && 
+        $eset->isa('Bio::EnsEMBL::Funcgen::InputSet')
+        && $eset->dbID())){
+    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::InputSet argument');
   }
   
 
@@ -118,6 +121,8 @@ sub new {
   $self->{display_url} = $display_url;
   $self->{replicate}   = $rep;
   $self->{is_control}  = $is_control;
+
+  $eset->_add_new_subset($self);
 
   return $self;
 }
@@ -148,7 +153,7 @@ sub name { return $_[0]->{name}; }
 
 =cut
 
-sub input_set {  return $_[0]->{input_set}; }
+sub input_set {    return $_[0]->{input_set}; }
 
 
 =head2 archive_id
