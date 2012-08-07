@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -162,7 +162,7 @@ sub get_dbfile_path_by_window_size{
 
 =cut
 
-
+# currently using setter functionality in importer
 
 sub dbfile_data_dir{
   my ($self, $data_dir) = @_;
