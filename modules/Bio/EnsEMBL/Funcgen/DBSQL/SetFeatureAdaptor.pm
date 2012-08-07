@@ -469,28 +469,6 @@ sub fetch_all_by_logic_name {
 } 
 
 
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @feature_ids = @{$ofa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all SetFeature objects in
-               the current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
-
-=cut
-
-#Put this in the BaseAdaptor?
-
-sub list_dbIDs {
-	my $self = shift;
-	
-	return $self->_list_dbIDs($self->_main_table->[0]);
-}
-
-
 =head2 _feature_class
 
   Example    : if($self->feature_class ne $fset->feature_class){ throw('some error'); }
