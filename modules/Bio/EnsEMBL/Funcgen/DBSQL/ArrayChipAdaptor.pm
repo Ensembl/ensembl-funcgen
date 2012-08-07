@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -318,26 +318,6 @@ sub store {
   }
   return \@args;
 }
-
-
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @array_ids = @{$ec_a->list_dbIDs()};
-  Description: Gets an array of internal IDs for all ArrayChip objects in the
-               current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
-
-=cut
-
-sub list_dbIDs {
-    my ($self) = @_;	
-    return $self->_list_dbIDs('array_chip');
-}
-
 
 
 1;

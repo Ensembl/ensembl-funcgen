@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -545,24 +545,6 @@ sub store {
 	return \@fsets;
 }
 
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @array_ids = @{$oaa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all OligoArray objects in the
-               current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
-
-=cut
-
-sub list_dbIDs {
-    my ($self) = @_;
-	
-    return $self->_list_dbIDs('feature_set');
-}
 
 
 =head2 fetch_focus_set_config_by_FeatureSet

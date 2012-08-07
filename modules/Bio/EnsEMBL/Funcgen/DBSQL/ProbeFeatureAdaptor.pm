@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -763,24 +763,6 @@ sub store{
 	return \@ofs
 }
 
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @feature_ids = @{$ofa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all ProbeFeature objects in
-               the current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
-
-=cut
-
-sub list_dbIDs {
-	my $self = shift;
-	
-	return $self->_list_dbIDs('probe_feature');
-}
 
 
 #Probe cache methods?
