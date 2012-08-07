@@ -26,7 +26,7 @@ Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
   (
    -host => "ensembldb.ensembl.org",
-   -dbname => "mus_musculus_funcgen_41_36b",
+   -dbname => "mus_musculus_funcgen_67_37",
    -species => "Mus_musculus",
    -user => "anonymous",
    -dnadb => $mouse_core_db,
@@ -49,8 +49,8 @@ An adaptor to access the funcgen database and expose other available adaptors.
 package Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 use strict;
-use base qw(Bio::EnsEMBL::DBSQL::DBAdaptor); #@ISA
 
+use base qw(Bio::EnsEMBL::DBSQL::DBAdaptor); #@ISA
 use DBI;
 
 use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
@@ -73,36 +73,48 @@ my $reg = "Bio::EnsEMBL::Registry";
   Arg [...]         : Other args are passed to superclass Bio::EnsEMBL::DBSQL::DBAdaptor
   Example1          : $db = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
                               (
-						       -user   => 'readonly', #No password
-						       -dbname => 'pog',
-						       -host   => 'caldy',
-						    );
+	            					       -user   => 'readonly', #No password
+						                   -dbname => 'pog',
+						                   -host   => 'caldy',
+						                  );
 
                       #If dnadb is not defined in registry, this will automatically
                       #set it from the default dnadb_host (e.g. ensembldb)
 
   Exmaple2          : $db = new Bio::EnsEMBL::DBSQL::Funcgen::DBAdaptor
                               (
-						       -user           => 'write',
+					            	       -user           => 'write',
                                -pass           => 'password',
-						       -dbname         => 'pog',
-						       -host           => 'caldy',
+						                   -dbname         => 'pog',
+						                   -host           => 'caldy',
                                -dnadb_assmebly => '36',
-						      );
+						                  );
                        #This will specifically look for a dnadb with assembly version 36
                        #on the default dnadb_host
 
    Exmaple2          : $db = new Bio::EnsEMBL::DBSQL::Funcgen::DBAdaptor
                               (
-						       -user           => 'write',
+						                   -user           => 'write',
                                -pass           => 'password',
-						       -dbname         => 'pog',
-						       -host           => 'caldy',
+					            	       -dbname         => 'pog',
+						                   -host           => 'caldy',
+                               #The following will over-ride the default dnadb setting
                                -dnadb_name     => 'my_homo_sapiens_funcgen_67_37',
                                -dnadb_host     => 'my_host',
-						      );
-                       #This will over-ride the default dnadb setting in favour of the dnadb params
+                               #Can add more dnadb params if required 
+                               #-dnadb_host
+                               #-dnadb_user
+                               #-dnadb_port
+						                  );
 
+  Example3            : $db new Bio::EnsEMBL::DBSQL::Funcgen::DBAdaptor
+                              (
+						                   -user           => 'write',
+                               -pass           => 'password',
+					             	       -dbname         => 'pog',
+						                   -host           => 'caldy',
+                               -dnadb          => $dnadb_object,
+                              );
 
   Description: Constructor for DBAdaptor. Will automatically set the dnadb based on dnadb params.
                This makes some assumptions about how the DBs name are defined i.e. the last part must
@@ -120,66 +132,80 @@ sub new {
   #Force group to be funcgen as this is the only valid group.
   my $self = $class->SUPER::new(@args, '-group', 'funcgen');
  
-  if($self->species eq 'DEFAULT'){  #Auto set species if not set
+  
+  #warn "BEFORE ".$self->SUPER::dnadb->group.' '.$self->species;
+  #is core here
+
+  if ($self->species eq 'DEFAULT') { #Auto set species if not set
 	
-	#Can't do list_value_by_key as this depends on species, so we get a circular reference
-	#This has already been set in the registry in SUPER::new above as DEFAULT!
-	#So we need to reset this in the registry here?
+    #Can't do list_value_by_key as this depends on species, so we get a circular reference
+    #This has already been set in the registry in SUPER::new above as DEFAULT!
+    #So we need to reset this in the registry here?
 
-	$self->{'_species'} = ${$self->get_MetaContainer->list_value_by_key('species.production_name')}[0] || 'DEFAULT';
 
-	if($self->species ne 'DEFAULT'){ #Reset this in the registry to the correct species
-	  $self = Bio::EnsEMBL::Utils::ConfigRegistry::gen_load($self);
-	  #This causes duplicate software vs DB release warnings
-	}
+    $self->{'_species'} = ${$self->get_MetaContainer->list_value_by_key('species.production_name')}[0] || 'DEFAULT';
+
+    if ($self->species ne 'DEFAULT') { #Reset this in the registry to the correct species
+      $self = Bio::EnsEMBL::Utils::ConfigRegistry::gen_load($self);
+      #This causes duplicate software vs DB release warnings
+	  
+      #current causes dnadb to be reset to the funcgen DB
+
+	  
+
+    }
   }
   #else should we redefine the species as the standard alias if it does not match?
   #This would prevent external_db species name testing
   #Maybe the solution is to make external_db multi_species
 
   my ( $dnadb_host, $dnadb_user, $dnadb_port, $dnadb_pass, $dnadb_assm, $dnadb_name, $dnadb)
-    = rearrange( [ 'DNADB_HOST', 'DNADB_USER',
-                   'DNADB_PORT', 'DNADB_PASS',
-				   'DNADB_ASSEMBLY', 'DNADB_NAME',
-				   'DNADB'
-                 ],
-                 @args );
+    = rearrange([
+                 'DNADB_HOST', 'DNADB_USER',
+                 'DNADB_PORT', 'DNADB_PASS',
+                 'DNADB_ASSEMBLY', 'DNADB_NAME',
+                 'DNADB'
+                ], @args );
 
   my $default_dnadb = $self->SUPER::dnadb;
   my ($default_host, $default_port, $default_user, $default_pass, $default_assm, $default_name, $efg_assm);
   my ($dnadb_predefined, $dnadb_params);
 
-  if( $dnadb_host || $dnadb_user || $dnadb_port || $dnadb_pass || $dnadb_assm || $dnadb_name){
-	$dnadb_params = 1;
+  if ( $dnadb_host || $dnadb_user || $dnadb_port || $dnadb_pass || $dnadb_assm || $dnadb_name) {
+    $dnadb_params = 1;
 
-	if($dnadb){
-	  throw('You cannot specific -dnadb and other dnadb params');
-	}
+    if ($dnadb) {
+      throw('You cannot specific -dnadb and other dnadb params');
+    }
   }
 
 
-  if($default_dnadb->group eq 'core'){
-	#This means you have loaded a registry or passed a dnadb to the efg DBAdaptor	
-	$default_host = $default_dnadb->dbc->host;
-	$default_port = $default_dnadb->dbc->port;
-	$default_user = $default_dnadb->dbc->username;
-	$default_pass = $default_dnadb->dbc->password;
-	$default_name = $default_dnadb->dbc->dbname;
-	($default_assm = (split/_/, $self->_get_schema_build($default_dnadb))[1]) =~ s/[a-z]//;
-	$dnadb_predefined = 1;
+  #This is currently searching for the DB one ensembldb despite being predefined as -dnadb!
+
+  if ($default_dnadb->group eq 'core') {
+    #This means you have loaded a registry or passed a dnadb to the efg DBAdaptor	
+    $default_host = $default_dnadb->dbc->host;
+    $default_port = $default_dnadb->dbc->port;
+    $default_user = $default_dnadb->dbc->username;
+    $default_pass = $default_dnadb->dbc->password;
+    $default_name = $default_dnadb->dbc->dbname;
+    ($default_assm = (split/_/, $self->_get_schema_build($default_dnadb))[1]) =~ s/[a-z]//;
+    $dnadb_predefined = 1;
   }
+
 
   #We need to test dnadb_name vs dnadb_assm here before we over-ride we set defaults
   #We can expect a mistmatch if we have only defined one or the other
-  if( ($dnadb_assm && $dnadb_name) &&
-	  ($dnadb_name !~ /_${dnadb_assm}_/) ){
-	throw("You have specified conflicting -dnadb_name(${dnadb_name}) and -dnadb_assembly(${dnadb_assm}) parameters");
-  }
-  elsif($dnadb_name){ #Get dnadb_assm from name
-	#This is not strictly required, but means we don't set is incorrectly below
-	($dnadb_assm = $dnadb_name) =~ s/.*_([0-9a-z]+)$/$1/;
-  }
+  if ( ($dnadb_assm && $dnadb_name) &&
+       ($dnadb_name !~ /_${dnadb_assm}_/) ) {
+    throw("You have specified conflicting -dnadb_name(${dnadb_name}) and -dnadb_assembly(${dnadb_assm}) parameters");
+  } elsif ($dnadb_name) {       #Get dnadb_assm from name
+    #This is not strictly required, but means we don't set is incorrectly below
 
+    if ($dnadb_name =~ /.*_([0-9]+[a-z]*)$/) {
+      $dnadb_assm = $1;
+    }
+  }
  
   #Defaults now set in dnadb as we want to test registry first;
   #These will pick default_dnadb values if params not explicitly set
@@ -189,29 +215,28 @@ sub new {
   $self->{'dnadb_pass'} = $dnadb_pass || $default_pass || undef;
   $self->{'dnadb_name'} = $dnadb_name || $default_name || undef;
   ($efg_assm = (split/_/, $self->_get_schema_build($self))[1]) =~ s/[a-z]//;
+
+
   $self->{'dnadb_assm'} = $dnadb_assm || $default_assm || $efg_assm;
   $dnadb_assm = $self->{'dnadb_assm'}; #reset here as we use below.
 
-
   #This only tries to _set_dnadb if we set some dnadb_params
   #or the dnadb_assm doesn't match the default/predefined dnadb
-  
-  if($dnadb_params ||
-	 ($self->_get_schema_build($self->dnadb()) !~ /[0-9]+_${dnadb_assm}[a-z]*$/) ){
+
+  if ($dnadb_params ||
+      ($self->_get_schema_build($self->dnadb()) !~ /[0-9]+_${dnadb_assm}[a-z]*$/) ) {
 	
-	if(! $dnadb_params){
-	  
-	  warn ':: WARNING: Unable to match assembly version between the dnadb name ('.
-		$self->dnadb->dbc->dbname.') and the specified -dnadb_assm '.$self->dnadb_assembly.
-		  "\nMaybe you need to rename your DBs according to the Ensembl naming convention e.g. myprefix_homo_sapiens_55_37";
-	}		
-	elsif($dnadb_predefined){
-	  #No can't be dnadb as we throw if we have conflicting -dnadb and dnadb params
-	  warn ":: Over-riding pre-defined dnadb regsitry values with dnadb params:\t".
-		$self->dnadb_user.'@'.$self->dnadb_host.':'.$self->dnadb_port;
-	}
+    if (! $dnadb_params) {
+      warn ':: WARNING: Unable to match assembly version between the dnadb name ('.
+        $self->dnadb->dbc->dbname.') and the specified -dnadb_assm '.$self->dnadb_assembly.
+          "\nMaybe you need to rename your DBs according to the Ensembl naming convention e.g. myprefix_homo_sapiens_55_37";
+    } elsif ($dnadb_predefined) {
+      #No can't be dnadb as we throw if we have conflicting -dnadb and dnadb params
+      warn ":: Over-riding pre-defined dnadb regsitry values with dnadb params:\t".
+        $self->dnadb_user.'@'.$self->dnadb_host.':'.$self->dnadb_port;
+    }
 	
-	$self->_set_dnadb;
+    $self->_set_dnadb;
   }
 
   return $self;
@@ -240,10 +265,10 @@ sub new {
 
 sub is_stored_and_valid{
   my ($self, $class, $obj) = @_;
-
-  if(! (ref($obj) && $obj->isa($class) && $obj->is_stored($self))){
-	#is_stored checks adaptor params and dbID, but not whether the adaptor matches the class
-	throw('Must provide a valid stored '.$class."\nParameter provided was:\t$obj");
+  
+  if (! (ref($obj) && $obj->isa($class) && $obj->is_stored($self))) {
+    #is_stored checks adaptor params and dbID, but not whether the adaptor matches the class
+    throw('Must provide a valid stored '.$class."\nParameter provided was:\t$obj");
   }
 
   return;
@@ -251,7 +276,7 @@ sub is_stored_and_valid{
 
 =head2 are_stored_and_valid
 
-  Arg [1]    : string - class namespace
+  Arg [1]    : String - Namespace of class
   Arg [2]    : ARRAYREF os Bio::EnsEMBL::Funcgen::Storable objects e.g. ResultSet 
   Arg [3]    : String : return value method name
   Example    : $db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', \@rsets);
@@ -271,18 +296,18 @@ sub are_stored_and_valid{
 
   my @return_vals;
 
-  if( (ref($obj_list) ne 'ARRAY') ||
-	  (scalar(@$obj_list) <=0) ){
-	throw('You must provide an ARRAYREF of objects to validate');
+  if ( (ref($obj_list) ne 'ARRAY') ||
+       (scalar(@$obj_list) <=0) ) {
+    throw('You must provide an ARRAYREF of objects to validate');
   }
 
-  foreach my $obj(@$obj_list){
-	$self->is_stored_and_valid($class, $obj);
+  foreach my $obj (@$obj_list) {
+    $self->is_stored_and_valid($class, $obj);
 
-	if($method_name){
-	  #test can method here?
-	  push @return_vals, $obj->$method_name;
-	}
+    if ($method_name) {
+      #test can method here?
+      push @return_vals, $obj->$method_name;
+    }
   }
 
   return \@return_vals;
@@ -336,42 +361,42 @@ sub get_available_adaptors{
   my ($self) = shift;
   
   my %pairs = (
-			   'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
-			   'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
-			   'ArrayChip'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
-			   'Array'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
-			   'ProbeSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
-			   'Probe'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
-			   'ProbeFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
-			   'AnnotatedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
-			   'RegulatoryFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
-			   'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-			   'ExperimentalGroup'  => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
-			   'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-			   'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
-			   'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',#prepended FG to override core adaptor?
-			   'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
-			   'FeatureSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
-			   'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
-			   'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-			   'InputSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor',
-			   'ExternalFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
-			   'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
-			   'DBEntry'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
-			   'Slice'              => 'Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor',
-			   'ResultFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
-			   'MotifFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
-			   'BindingMatrix'      => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
-			   'SegmentationFeature'=> 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
-			   'DNAMethylationFeature'=> 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor',
+               'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
+               'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
+               'ArrayChip'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
+               'Array'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
+               'ProbeSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
+               'Probe'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
+               'ProbeFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
+               'AnnotatedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
+               'RegulatoryFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
+               'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+               'ExperimentalGroup'  => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
+               'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
+               'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
+               'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor', #prepended FG to override core adaptor?
+               'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
+               'FeatureSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
+               'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+               'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
+               'InputSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor',
+               'ExternalFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
+               'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
+               'DBEntry'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
+               'Slice'              => 'Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor',
+               'ResultFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
+               'MotifFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
+               'BindingMatrix'      => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
+               'SegmentationFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
+               'DNAMethylationFeature' => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor',
 			   
 			 
-			   #add required EnsEMBL(core) adaptors here
-			   #Should write/retrieve from efg not dna db
-			   'UnmappedObject'     => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
-			   'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
-			   "MetaContainer"      => 'Bio::EnsEMBL::DBSQL::MetaContainer',
-	      );
+               #add required EnsEMBL(core) adaptors here
+               #Should write/retrieve from efg not dna db
+               'UnmappedObject'     => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
+               'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
+               "MetaContainer"      => 'Bio::EnsEMBL::DBSQL::MetaContainer',
+              );
   
   return (\%pairs);
 }
@@ -389,21 +414,21 @@ sub get_available_adaptors{
 =cut
 
 
-#Slightly hacky convinience method to get the data/schema.version/build from a feature slice
+#Slightly hacky convenience method to get the data/schema.version/build from a feature slice
 
 sub _get_schema_build{
   my ($self, $db) = @_;
-
   #Have to explicitly pass self->db to this method if required, this highlights which db is being tested 
   throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $db);
-  #avoided using dnadb by default to avoid obfuscation of behaviour
   
-  my @dbname = split/_/, $db->dbc->dbname();
+  my $schema_build;
+  
+  if ( $db->dbc->dbname =~ /.*_([0-9]+_[0-9]+[a-z]*)$/) {
+    #if( $db->dbc->dbname =~ /.*([0-9]+_[0-9]+[a-z]*)$/){
+    #warn "HARDCODED DEBUGGING FOR ANOMALOUS CORE DNADB INSERT";
+    $schema_build = $1;
+  }
 
-
-
-  my $schema_build = pop @dbname;
-  $schema_build = pop(@dbname).'_'.$schema_build;
   return $schema_build;
 }
 
@@ -427,9 +452,9 @@ sub dnadb_port{
 }
  
 sub dnadb_pass{
- my ($self, $pass) = @_;
- $self->{'dnadb_pass'} = $pass if $pass;
- return $self->{'dnadb_pass'};
+  my ($self, $pass) = @_;
+  $self->{'dnadb_pass'} = $pass if $pass;
+  return $self->{'dnadb_pass'};
 }
 
 sub dnadb_user{
@@ -464,61 +489,66 @@ sub dnadb_assembly{
 sub dnadb { 
   my ($self, $dnadb, $cs_name) = @_; 
 
- 
-  if($dnadb || $self->SUPER::dnadb->group() ne 'core'){
+  #warn "dnadb x$dnadb x || ".$self->SUPER::dnadb->group(); 
+  #dnadb is passed directly to this method from super new
 
-	if(! $dnadb){#Guess/set dnadb by assembly or dnadb params
-	  return $self->_set_dnadb;
-	}
+  if ($dnadb || $self->SUPER::dnadb->group() ne 'core') {
+
+    if (! $dnadb) {             #Guess/set dnadb by assembly or dnadb params
+      #warn "calling _set_dnadb";
+      return $self->_set_dnadb;
+    }
 	
-	$self->SUPER::dnadb($dnadb); 
+    #warn "setting via SUPER";
 
-	#set default coordsystem here
-	#there might not be a chromosome level if we just have a scaffold assembly
-	#supercontig is already loaded as we use toplevel?
-	#This should really get all the default CSs from the core CSAdaptor?
-	#We should also do this during the update?
-	#This will also enable people to query using clone/contig/supercontig level slices
-	#How will this work? Where will the mapping between CSs be done?
+    $self->SUPER::dnadb($dnadb);
+
+    #set default coordsystem here
+    #there might not be a chromosome level if we just have a scaffold assembly
+    #supercontig is already loaded as we use toplevel?
+    #This should really get all the default CSs from the core CSAdaptor?
+    #We should also do this during the update?
+    #This will also enable people to query using clone/contig/supercontig level slices
+    #How will this work? Where will the mapping between CSs be done?
 	
-	my @cs_names;
-	@cs_names = ($cs_name) if $cs_name;
-	#$cs_name ||= 'chromosome';
+    my @cs_names;
+    @cs_names = ($cs_name) if $cs_name;
+    #$cs_name ||= 'chromosome';
 
-	if(! $cs_name){
+    if (! $cs_name) {
   
-	  foreach my $cs(@{$dnadb->get_CoordSystemAdaptor->fetch_all_by_attrib('default_version')}){
-		push @cs_names, $cs->name;
-	  }
-	}
+      foreach my $cs (@{$dnadb->get_CoordSystemAdaptor->fetch_all_by_attrib('default_version')}) {
+        push @cs_names, $cs->name;
+      }
+    }
 
 
-	foreach my $cs_name(@cs_names){
+    foreach my $cs_name (@cs_names) {
 
-	  my $cs;
-	  eval { $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name)};
-	  my $error = $@;
+      my $cs;
+      eval { $cs = $dnadb->get_CoordSystemAdaptor->fetch_by_name($cs_name)};
+      my $error = $@;
 	  
-	  if($error){
-		my ($schema, $build) = split/_/, $self->_get_schema_build($dnadb);
-		$build =~ s/[a-z]//;
-		throw("It appears that the schema of ".$dnadb->dbc->dbname.
-			  ' is incompatible with your current core API version('.$reg->software_version.
-			  ").  You could try using the $schema version of the core API, or alternatively try specifying ".
-			  "different -dnadb/registry_host parameters to point to a make recent version containing build $build\n");
+      if ($error) {
+        my ($schema, $build) = split/_/, $self->_get_schema_build($dnadb);
+        $build =~ s/[a-z]//;
+        throw("It appears that the schema of ".$dnadb->dbc->dbname.
+              ' is incompatible with your current core API version('.$reg->software_version.
+              ").  You could try using the $schema version of the core API, or alternatively try specifying ".
+              "different -dnadb/registry_host parameters to point to a make recent version containing build $build\n");
 		
-	  }
+      }
 	  
 	  
-	  #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
+      #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
 	  
-	  #!!! This is a non-obvious store behaviour !!!
-	  #This can result in coord_system entries being written unknowingly if you are using the efg DB with a write user
-	  $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
-	}
+      #!!! This is a non-obvious store behaviour !!!
+      #This can result in coord_system entries being written unknowingly if you are using the efg DB with a write user
+      $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
+    }
   }
 
-  return $self->SUPER::dnadb();#never pass @_ here!
+  return $self->SUPER::dnadb(); #never pass @_ here!
 } 
 
 
@@ -540,8 +570,8 @@ sub _set_dnadb{
   my $dnadb_name = $self->dnadb_name;
   
   #Sanity check, but this should always be the case when called from new/dnadb
-  if(! ($assm_ver || $dnadb_name)){
-	throw("You need to have define at least a dnadb_assembly($assm_ver) or dnadb_name($dnadb_name) before calling this method");
+  if (! ($assm_ver || $dnadb_name)) {
+    throw("You need to have define at least a dnadb_assembly($assm_ver) or dnadb_name($dnadb_name) before calling this method");
   }
 
   throw('Must provide and assembly version to set the dnadb') if ! defined $assm_ver;
@@ -566,61 +596,62 @@ sub _set_dnadb{
   #Start with lastest MySQL instances
   #We are over-riding specified port here, only for known hosts
   #we should really account for this and make it nr
-  if($self->dnadb_host eq 'ensdb-archive'){#
-	@ports = (5304, 3304);
-  } 
-  elsif($self->dnadb_host eq 'ensembldb.ensembl.org'){
-	@ports = (5306, 3306);
+  if ($self->dnadb_host eq 'ensdb-archive') { #
+    @ports = (5304, 3304);
+  } elsif ($self->dnadb_host eq 'ensembldb.ensembl.org') {
+    @ports = (5306, 3306);
   }
 
   
-  if(! $dnadb_name){
-	$dnadb_name = $lspecies.'_core_%_'.$assm_ver.'%';
+  if (! $dnadb_name) {
+    $dnadb_name = $lspecies.'_core_%_'.$assm_ver.'%';
   }
 
   my $sql = 'show databases like "'.$dnadb_name.'"';
   my ($dbh, @dbnames, $port, $host_port);
 
-  foreach $port(@ports){	
-	#This is probably duplicating connections and over-riding any connection 
-	#pooling going on in the base DBConnection if we are using the same host port
-	#as the registry connection
+    
+  foreach $port(@ports) {	
+    #This is probably duplicating connections and over-riding any connection 
+    #pooling going on in the base DBConnection if we are using the same host port
+    #as the registry connection
 
-	$dbh = DBI->connect('DBI:mysql:host='.$self->dnadb_host.";port=${port}",
-						$self->dnadb_user, 
-						$self->dnadb_pass, 
-						{'RaiseError' => 1});
+    $dbh = DBI->connect('DBI:mysql:host='.$self->dnadb_host.";port=${port}",
+                        $self->dnadb_user,
+                        $self->dnadb_pass, 
+                        {
+                         'RaiseError' => 1});
 
-	eval { @dbnames = map {$_ = "@$_"} @{$dbh->selectall_arrayref($sql)}; };
+    eval { @dbnames = map {$_ = "@$_"} @{$dbh->selectall_arrayref($sql)}; };
 
-	if($@){
-	  throw('Failed to fetch dna DB names from '.$self->dnadb_host.":${port}"."\n$@");
-	}
+    if ($@) {
+      throw('Failed to fetch dna DB names from '.$self->dnadb_host.":${port}"."\n$@");
+    }
 
 
-	#Will always take the latest release, not the latest genebuild version
-	#Which is probably what we want anyway
+    #Will always take the latest release, not the latest genebuild version
+    #Which is probably what we want anyway
 
-	@dbnames = grep(/core_[0-9]/, sort @dbnames);
+    @dbnames = grep(/core_[0-9]/, sort @dbnames);
   
-	if(scalar(@dbnames)==0){
-	  warn(':: Failed to find dnadb like '.$dnadb_name.', using '
-		   .$self->dnadb_user.'@'.$self->dnadb_host.':'.$port);
-	}
-	else{
-	  $host_port = $port;
-	  last;
-	}
+    if (scalar(@dbnames)==0) {
+      warn(':: Failed to find dnadb like '.$dnadb_name.', using '
+           .$self->dnadb_user.'@'.$self->dnadb_host.':'.$port);
+    } else {
+      $host_port = $port;
+      last;
+    }
   }
 
   throw("Failed to find dnadb like $dnadb_name.") if(scalar(@dbnames)==0);
 
 
   warn ":: Auto-selecting build $assm_ver core DB as:\t".
-	$self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
+    $self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
 
 
   my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames], $self->dnadb_host, $host_port, $self->dnadb_user, $self->dnadb_pass);
+  
   
   $self->dnadb($db);
   return $db;
@@ -714,7 +745,6 @@ sub set_status{
 	my ($self, $table, $id, $state) = @_;
 
 	throw("DBAdaptor::set_status is deprecated");
-
 	throw("Need to supply a table, dbid and a valid status") if (!($table && $id && $state));
 
 	my $sql = "INSERT INTO status(table_id, table_name, state) VALUES(\"$id\", \"$table\", \"$state\")";
@@ -727,11 +757,14 @@ sub set_status{
 sub stable_id_prefix{
   my $self = shift;
 
-  if(! defined $self->{'stable_id_prefix'}){
-	($self->{'stable_id_prefix'}) = @{$self->dnadb->get_MetaContainer->list_value_by_key('species.stable_id_prefix')};
+  if (! defined $self->{'stable_id_prefix'}) {
+    ($self->{'stable_id_prefix'}) = @{$self->dnadb->get_MetaContainer->list_value_by_key
+                                        (
+                                         'species.stable_id_prefix'
+                                        )};
 
-	#Only add R if it is defined
-	$self->{'stable_id_prefix'} .= 'R' if $self->{'stable_id_prefix'};
+    #Only add R if it is defined
+    $self->{'stable_id_prefix'} .= 'R' if $self->{'stable_id_prefix'};
   }
 
   return $self->{'stable_id_prefix'}
@@ -753,7 +786,7 @@ sub connect_string{
   my $self = shift;
 
   return '-h'.$self->dbc->host().' -u'.$self->dbc->username().' -p'.$self->dbc->password()
-	.' -P'.$self->dbc->port().' '.$self->dbc->dbname();
+    .' -P'.$self->dbc->port().' '.$self->dbc->dbname();
 }
 
 
