@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -892,13 +892,13 @@ sub _main_table{
 =head2 list_dbIDs
 
   Args       : None
-  Example    : my @feature_ids = @{$ofa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all objects in
-               the main table of this class.
-  Returntype : List of ints
+  Example    : my @table_ids = @{$adaptor->_list_dbIDs()};
+  Description: Wrapper for parent method, dynamically passes correct table name to query.
+               Gets an array of internal IDs for all objects in the main table of this class.
+  Returntype : List of Ints
   Exceptions : None
-  Caller     : ?
-  Status     : Medium Risk
+  Caller     : General
+  Status     : Stable
 
 =cut
 
@@ -906,6 +906,33 @@ sub list_dbIDs {
 	my $self = shift;	
 	return $self->_list_dbIDs($self->_main_table->[0]);
 }
+
+
+
+
+
+#Need this to support generating valid adaptor names in FeatureSet
+#this needs to be in the BaseAdaptor, so we can access it without 
+#having a set or feature adaptor defined.
+
+
+sub build_feature_class_name{
+  my ($self, $fclass) = @_;
+   
+  if(! defined $fclass){
+    throw('You must pass a feature class argument to build the feature class name');
+  }
+ 
+  my @words = split('_', $fclass);
+  
+  foreach my $word(@words){
+    $word = ucfirst($word);
+    $word = 'DNA' if $word eq 'Dna';
+  }
+  
+  return join('', (@words, 'Feature') );
+}
+
 
 
 1;
