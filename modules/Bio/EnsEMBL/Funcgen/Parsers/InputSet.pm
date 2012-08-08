@@ -189,22 +189,12 @@ sub set_config{
 
   my $adaptor_method         = 'get_'.$fclass_name.'Adaptor';
 
-
   #cannot validate here using 'can' as it doesn't appear to work for autoloaded methods :(
-  #eval instead
-
   eval { $self->{feature_adaptor} =  $self->db->$adaptor_method; };
 
   if($@){
     throw("Failed to $adaptor_method, ".$self->input_feature_class.' is not a valid feature class');
   }
-
-
-  
-  #$self->{feature_adaptor} =  $self->db->$adaptor_method;
-
-
-  warn "got DNAMethylationFeatureAdaptor".$self->{feature_adaptor};
 
 
   #Validate slices
@@ -320,20 +310,21 @@ sub define_sets{
       #let's store the final expected subdir for now
       #rather than the current full local path
       #MD5s?
-      my $dbfile = '/dna_methylation/'.$output_set->name.
+      my $dbfile_subdir = '/dna_methylation_feature/'.$output_set->name.
         '/'.$eset->get_InputSubsets->[0]->name;
       
+      
+      my $dbfile_path = $output_set->adaptor->build_dbfile_path($dbfile_subdir);
+
       if(! defined $output_set->dbfile_data_dir){
-        $output_set->dbfile_data_dir($dbfile);
+        $output_set->dbfile_data_dir($dbfile_subdir);
         $output_set->adaptor->store_dbfile_data_dir($output_set);
       }
-      elsif($output_set->dbfile_registry_dir ne $dbfile){
+      elsif($output_set->dbfile_data_dir ne $dbfile_path){
         die("Found a mismatch between the stored and set dbfile_registry_dir for ResultSet:\t".
-            $output_set->name."\n\t".$output_set->dbfile_registry_dir."\t".$dbfile);
+            $output_set->name."\n\t".$output_set->dbfile_data_dir."\n\t".$dbfile_path);
       }
     }
-
-
 
     $self->result_set($output_set); #required for ResultFeature Collector and Bed Parser
   } 
@@ -686,20 +677,18 @@ sub read_and_import_data{
     
 	  if((($self->input_feature_class eq 'result' || $self->input_feature_class eq 'dna_methylation' ) 
         && ! $prepare)){
-		#(($self->input_feature_class eq 'result') && (! $self->batch_job))){   #Local run on just 1 chr
-		#
-
-		#Use the ResultFeature Collector here
-		#Omiting the 0 wsize
-		#How are we going to omit 0 wsize when doing the fetch?
-		#simply check table name in ResultSet?
-
-		#Should we do this for multiple chrs?
-		#or fail here
-		# we need to pass self
-		#for access to get_Features_by_Slice
+      
+      #Use the ResultFeature Collector here
+      #Omiting the 0 wsize
+      #How are we going to omit 0 wsize when doing the fetch?
+      #simply check table name in ResultSet?
+      
+      #Should we do this for multiple chrs?
+      #or fail here
+      # we need to pass self
+      #for access to get_Features_by_Slice
 		#which should be in the specific parser e.g Bed
-
+      
 		#Will this not clash with standard ResultFeature::get_ResultFeatures_by_Slice?
 		#Could really do with separating the pure file parsers from the importer code, so these can be reused
 		#by other code. Then simply use Bed import parser for specific import functions and as wrapper to 
