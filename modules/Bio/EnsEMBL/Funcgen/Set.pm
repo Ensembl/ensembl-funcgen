@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -90,20 +90,20 @@ sub new {
   throw('Need to specify a name') if ! defined $name;
 
   $self->set_type($set_type);
-  $self->feature_class($fclass);
-  $self->feature_class($type) if $type;#Remove this when fully implemented
-  $self->{'name'} = $name;
+  $self->{feature_class} = $fclass;
+  $self->{feature_class} = $type if defined $type;#Remove this when fully implemented
+  $self->{name}          = $name;
   $self->cell_type($ctype) if $ctype;
   $self->feature_type($ftype) if $ftype;
 
   if(defined $anal){
-	$self->analysis($anal);
+    $self->analysis($anal);
   }elsif($self->set_type ne 'input'){
-	#Could move this to child Sets and just set analysis here
-	#As with ftype
-	throw('Must pass a valid -analysis parameter for a '.ref($self));
+    #Could move this to child Sets and just set analysis here
+    #As with ftype
+    throw('Must pass a valid -analysis parameter for a '.ref($self));
   }
-
+  
   return $self;
 }
 
@@ -171,7 +171,7 @@ sub feature_type {
    
   if(defined $ftype){
 
-	if(! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
+    if(! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
 		  && $ftype->dbID())){ 
 	  throw('Must pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType');
 	}
@@ -195,22 +195,40 @@ sub feature_type {
 
 =cut
 
-#Supercededs type method in FeatureSet
+#Superceded by type method in FeatureSet
+#should remove from InputSet
+#and have in just ResultSet and FeatureSet
+
 
 sub feature_class {
   my ($self, $fclass) = @_;
    
   if(defined $fclass){
 
-	#Leave this an implement in inheritants
-	#if(! grep /^${fclass}$/, ('annotated', 'result', 'external', 'regulatory')){
-	#  throw("You have no supplied a valid feature class:\t$fclass");
-	#}
-
-	$self->{'feature_class'} = $fclass;
+    #Leave this and implement in inheritants?
+    #as there are disparities between result set types and feature set types
+    #result here is really a result_feature e.g. signal collection
+    #if(! grep /^${fclass}$/, ('annotated', 'result', 'external', 'regulatory')){
+    #  throw("You have no supplied a valid feature class:\t$fclass");
+    #}
+    
+    $self->{'feature_class'} = $fclass;
   }
 
   return $self->{'feature_class'};
+}
+
+
+#returns the namespace style feature class
+
+sub feature_class_name{
+  my ($self, $fclass) = @_;
+  
+  if(! defined $self->{feature_class_name} ){
+    $self->{feature_class_name} = $self->adaptor->build_feature_class_name($self->feature_class);
+  }
+  
+  return $self->{feature_class_name};
 }
 
 
@@ -314,10 +332,16 @@ sub set_type {
   return $self->{'_set_type'};
 }
 
+
+
+
+### DEPRECATED METHODS ###
+
+
 =head2 type
 
   Example    : my $type = $set->type;
-  Description: Getter for the type for this Set.
+  Description: DEPRECATED Getter for the type for this Set.
                e.g. annotated, external, regulatory for FeatureSets
                     or 
                     array, sequencing for InputSets
@@ -332,14 +356,8 @@ sub set_type {
 
 sub type {
   my $self = shift;
-   
   deprecate("Please use feature_class instead");
-  
   return $self->feature_class(@_);
-
-  #$self->{'feature_class'} = shift if @_;
-  
-  #return $self->{'feature_class'};
 }
 
 
