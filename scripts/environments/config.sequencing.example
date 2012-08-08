@@ -14,36 +14,37 @@ if [[ ! $DB_PASS ]];  then
     return 1
 fi
 
-export SPECIES="homo_sapiens"
-#filename of the fasta assmbly file
-#export ASSEMBLY='GRCh37_63_37'
-export ASSEMBLY='GRCh37_58_37c'
 
-#scema versdion of the database and has to change for each new release 
-export SCHEMA_BUILD='64_37'
+### THIS IS AN EXAMPLE CONFIG FILE
+### PLEASE MAKE A COPY OF THIS (e.g. my_homo_sapiens_68.sequencing)
+### BEFORE ADDING ANY SPECIFIC CONFIG
+
+
+export SPECIES='homo_sapiens'
+#schema version of the database and has to change for each new release 
+export SCHEMA_BUILD='68_37'
+#filename of the fasta assmbly file
+export ASSEMBLY="GRCh37_${SCHEMA_BUILD}"
+
 
 #change for human
-export DB_HOST=ens-genomics1
+export DB_HOST=your_db_host
 export DB_PORT=3306
-export DB_USER=ensadmin
-export DB_READ_USER=ensro
-export DB_NAME=ikhlak_test_homo_sapiens_funcgen_64_37
+export DB_USER=your_write_user
+export DB_READ_USER=your_read_users
+export DB_NAME="your_${SPECIES}_funcgen_${SCHEMA_BUILD}"
 
 #core data base parameters with read only permissions
 #Change/add to template
 #mirror copy of the ensembl for internal use
-export DNADB_HOST=ens-livemirror
+export DNADB_HOST=your_dnadb_host   # e.g. ensembldb.ensembl.org
 #DB name of the core database
-export DNADB_NAME=homo_sapiens_core_64_37
+export DNADB_NAME="${SEPCIES}_core_${SCHEMA_BUILD}"
 export DNADB_USER=ensro
 export DNADB_PORT=3306
 
 #real data
-#/lustre/scratch103/ensembl/funcgen
-#test data
-#/lustre/scratch101/ensembl/funcgen/ia3/test
-#export DATA_HOME=/lustre/scratch101/ensembl/ds19/test
-export DATA_HOME=/lustre/scratch101/ensembl/funcgen/ia3/test
+export DATA_HOME=/path/to/your/work/area
 
 #Only if need to override in general sequencing.config
 #export VALID_PEAK_ANALYSIS='SWEMBL_R015 SWEMBL_R0025 CCAT_HISTONE'
