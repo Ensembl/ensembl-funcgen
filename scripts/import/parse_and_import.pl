@@ -685,7 +685,10 @@ else{ ### DO THE IMPORT
     }
 
     #states
+    $rset->adaptor->set_imported_states_by_Set($rset); #DAS_DISPLAYABLE and IMPORTED_$ASSEMBLY_VERSION
+    #Need to add DISPLAYABLE after import?
 
+    $Imp->log("Finished registering sets and files");
     #add dbfile_registry to ResultSet roll back
     #change ResultSet rollback to support non-result_feature result_sets
 
