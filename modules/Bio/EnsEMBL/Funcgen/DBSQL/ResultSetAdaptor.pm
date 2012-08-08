@@ -484,10 +484,7 @@ sub _objs_from_sth {
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, 
 					 \$table_id, \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_dir);
   
-  
-  my $dbfile_data_root = $self->dbfile_data_root;
-
-  #Need c/ftype cache here or rely on query cache?
+    #Need c/ftype cache here or rely on query cache?
 
   while ( $sth->fetch() ) {
   
@@ -515,8 +512,8 @@ sub _objs_from_sth {
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
 
 
-if(defined $dbfile_dir){
-        $dbfile_dir = $dbfile_data_root.'/'.$dbfile_dir;
+      if(defined $dbfile_dir){
+        $dbfile_dir = $self->build_dbfile_path($dbfile_dir);
       }
 	 
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
@@ -555,6 +552,16 @@ if(defined $dbfile_dir){
 }
 
 
+#needs to move to a dbfile specific module
+
+sub build_dbfile_path{
+  my ($self, $subpath) = @_;
+
+  my $full_path = $self->dbfile_data_root.'/'.$subpath;
+  $full_path =~ s:/+:/:g;
+
+  return $full_path;
+}
 
 =head2 store
 
