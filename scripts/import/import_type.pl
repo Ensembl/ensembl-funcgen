@@ -120,8 +120,6 @@ my $port = '3306';
 #same name can't refer to more than one seq
 my @tmp_args = @ARGV;
 
-#perl /nfs/users/nfs_i/ia3/src/v68/ensembl-functgenomics/scripts/import/import_type.pl -user ensadmin -pass ensembl -host ens-genomics1 -port 3306 -dbname dnamet_mus_musculus_funcgen_68_38 -dnadb_user ensro -dnadb_host ens_genomics1 -dnadb_name nj1_raw_computes_mus_musculus_core_68_38 -species mus_musculus -type FeatureType -class DNAMethylationFeature -name ES_5mC_Stadler2011_PMID22170606 -logic_name Whole_Genome_methylC_seq
-
 GetOptions (
 			#general params
 			"file|f=s"        => \$file,
