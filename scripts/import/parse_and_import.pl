@@ -643,9 +643,52 @@ else{ ### DO THE IMPORT
     #Need a register file/sets import option
     #rather than basing this on input_feature_class
 
+    #This should all move to a wrapper method in the InputSet parser
+    #based on a file registration style import
+
     $Imp->init_experiment_import;
-    $Imp->define_sets;
+    my ($dset, $rset, $inp_set) = $Imp->define_sets;
     $Imp->validate_files;
+ 
+    #Create a links to the source data in the required ensnfs subdir structure
+    #This is slightly redundant as we do some of this in define_sets
+    #but the path handling is slightly different
+  
+    #output dir has already been created by the import
+    #and has had the rset name appended
+    #so it doesn't actually match the -output_dir specified on the cmdline
+    #also currently contains the 'default' norm and raw data dirs
+    #to be fixed when as we overhaul the Importer
+    my $output_path = $Imp->get_dir('output').'/'.$inp_set->get_InputSubsets->[0]->name;
+
+    
+    #assume we only have 1 result file with full path 
+    #need to integrate this into a validate_files method or wrapper
+    my $input_file = $Imp->result_files->[0];
+
+    if(! -e $output_path){
+      my $cmd = "ln -s $input_file $output_path";
+      system($cmd) && die("Failed to link input file in output directory:\n\t$cmd");
+    }
+    else{ # File/link exists
+    
+      #Make sure the resolved file paths match
+      #need proper perl support here
+      my $canonical_path = `readlink -f $output_path`;
+      chomp $canonical_path;
+
+      if($canonical_path ne $input_file){
+        die("Existing output file and specified input file do not match:\nInput\tx$input_file x\nOutput\tx$canonical_path x");
+      }
+      
+      #MD5s?
+    }
+
+    #states
+
+    #add dbfile_registry to ResultSet roll back
+    #change ResultSet rollback to support non-result_feature result_sets
+
   }
   else{
     print "Importing data...\n";
