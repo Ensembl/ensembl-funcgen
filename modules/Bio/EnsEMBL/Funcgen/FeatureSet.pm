@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -56,10 +56,12 @@ use Bio::EnsEMBL::Funcgen::Set;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
-my %valid_classes = ( annotated    => undef,
-                      regulatory   => undef,
-                      external     => undef,
-                      segmentation => undef, );
+my %valid_classes = ( 
+                     annotated    => undef,
+                     regulatory   => undef,
+                     external     => undef,
+                     segmentation => undef, 
+                    );
 
 =head2 new
 
@@ -217,7 +219,7 @@ sub display_label {
 
   Example    : 
   Description: Retrieves and caches FeatureAdaptor of feature_set type 
-  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::ucfirst($self->feature_class())FeatureAdaptor
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -230,15 +232,14 @@ sub get_FeatureAdaptor{
 
   if(! exists $self->{'adaptor_refs'}){
 
-	foreach my $valid_class(keys %valid_classes){
-	  my $method = 'get_'.ucfirst($valid_class).'FeatureAdaptor';
-
-	  $self->{'adaptor_refs'}{$valid_class} =  $self->adaptor->db->$method;
-	}
+    foreach my $valid_class(keys %valid_classes){
+      my $method = 'get_'.$self->build_feature_class_name($valid_class).'Adaptor';
+      
+      $self->{'adaptor_refs'}{$valid_class} = $self->adaptor->db->$method;
+    }
   }
   
   return $self->{'adaptor_refs'}->{$self->feature_class()};
-
 }
 
 
@@ -394,7 +395,7 @@ sub get_InputSet{
   Returntype : Arrayref of Strings
   Exceptions : None
   Caller     : Webcode zmenus
-  Status     : At Risk - remove, to be done by webcode?
+  Status     : At Risk - remove, to be done by webcode? or move to InputSet and wrap from here
 
 =cut
 
@@ -427,7 +428,10 @@ sub source_label{
       }
     }
   
- 
+    #select input_set_id, count(distinct archive_id) as cnt , group_concat(archive_id) from input_subset where archive_id is not NULL group by input_set_id having cnt >1;
+   
+
+
     $self->{source_label} = join(' ', @source_labels);
   }
 
