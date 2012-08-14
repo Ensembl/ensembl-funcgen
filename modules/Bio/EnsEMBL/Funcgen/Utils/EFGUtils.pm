@@ -219,51 +219,54 @@ sub mean{
 #Should really extend this to detect previous file?
 #Or do in caller?
 
+
+
 sub open_file{
   my ($file, $operator, $file_permissions) = @_;
   
-  my $dir_permissions = $file_permissions || 0775;
-
   $operator ||= '<';
 
-  if($operator !~ /%/){
-  $operator = "$operator $file";
-  }
-  else{
+  if ($operator !~ /%/) {
+    $operator = "$operator $file";
+  } else {
   	#We have some piping to do
   	$operator = sprintf($operator, $file);
   }
 
   #Get dir here and create if not exists
   my $dir = dirname($file);  
-  mkpath($dir, {verbose => 1, mode => $dir_permissions}) if(! -d $dir);
+
+  my $mkpath_opts = {verbose => 1};
+  $mkpath_opts->{mode} = $file_permissions if defined $file_permissions;
+
+  mkpath($dir, $mkpath_opts) if(! -d $dir);
   my $fh = new FileHandle "$operator";
 
 
   #This does not catch incorrectly defined named pipes
 
-  if(! defined $fh){
-	croak("Failed to open $operator");
+  if (! defined $fh) {
+    croak("Failed to open $operator");
   }
 
 
   #Have to chmod here as umask will over-ride permissions passed to FileHandle
-  if(defined $file_permissions){
+  if (defined $file_permissions) {
 
-	#Catch non-numeric here as chmod still returns true
-	if($file_permissions =~ /[^0-9]/){
-	  croak("Failed to change $file permissions using:\t$file_permissions");
-	}
+    #Catch non-numeric here as chmod still returns true
+    if ($file_permissions =~ /[^0-9]/) {
+      croak("Failed to change $file permissions using:\t$file_permissions");
+    }
 
-	#chmod requires a literal octal number e.g. 0775 not '0775'
-	#should catch numbers as strings here, but perl makes this very hard to test
-	#Can't even system this as if we build the cmd line with an octal it will be converted to a decimal
- 	#These is still no way of testing for non-octal number or string
-	#eval/sprintf will also not fail if there are non-octal digits i.e. 1999
+    #chmod requires a literal octal number e.g. 0775 not '0775'
+    #should catch numbers as strings here, but perl makes this very hard to test
+    #Can't even system this as if we build the cmd line with an octal it will be converted to a decimal
+    #These is still no way of testing for non-octal number or string
+    #eval/sprintf will also not fail if there are non-octal digits i.e. 1999
 	
-	#eval will treat octal number and string as true octal number
-	#else will pass non-octal string/number which we can't catch
-	chmod(eval($file_permissions), $file);
+    #eval will treat octal number and string as true octal number
+    #else will pass non-octal string/number which we can't catch
+    chmod(eval($file_permissions), $file);
   }
 
   return $fh;
