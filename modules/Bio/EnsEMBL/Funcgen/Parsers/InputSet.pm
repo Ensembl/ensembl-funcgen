@@ -300,32 +300,6 @@ sub define_sets{
     $output_set = $dset->get_supporting_sets->[0];
     $eset       = $output_set->get_InputSets->[0];
 
-    if($self->input_feature_class eq 'dna_methylation'){
-      #This should really be testing whether we are procesing the data or not
-      #i.e. register files only mode
-
-      #This currently only supports 1 -result_file 
-      #this is enforced via validate_files
-      
-      #let's store the final expected subdir for now
-      #rather than the current full local path
-      #MD5s?
-      my $dbfile_subdir = '/dna_methylation_feature/'.$output_set->name.
-        '/'.$eset->get_InputSubsets->[0]->name;
-      
-      
-      my $dbfile_path = $output_set->adaptor->build_dbfile_path($dbfile_subdir);
-
-      if(! defined $output_set->dbfile_data_dir){
-        $output_set->dbfile_data_dir($dbfile_subdir);
-        $output_set->adaptor->store_dbfile_data_dir($output_set);
-      }
-      elsif($output_set->dbfile_data_dir ne $dbfile_path){
-        die("Found a mismatch between the stored and set dbfile_registry_dir for ResultSet:\t".
-            $output_set->name."\n\t".$output_set->dbfile_data_dir."\n\t".$dbfile_path);
-      }
-    }
-
     $self->result_set($output_set); #required for ResultFeature Collector and Bed Parser
   } 
   else {                      #annotated/segmentation
@@ -477,6 +451,7 @@ sub validate_files{
          -input_set  => $eset,
          # should also handle these here
          -is_control  => 0,#for result files, need to handle control files separately
+         #to be defined
          #-display_url => $display_url,
          #-archive_id  => $archive_id,
         );
