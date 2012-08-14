@@ -290,8 +290,11 @@ die('Must provide a -species parameter') if ! defined $species;
 
 #log/debug files fail in Helper without this
 $output_dir  ||= $data_dir."/output/${dbname}/".uc($vendor)."/".$name;
-system("mkdir -p $output_dir -m 0755");
-chmod 0755, $output_dir;
+
+if(! -d $output_dir){
+  system("mkdir -p $output_dir -m 0775") && die("Cannot create output directory:\t$output_dir");
+}
+
 
 if(! $main::_no_log){
   $main::_log_file = $output_dir."/${name}.log" if(! defined $main::_log_file);
