@@ -651,9 +651,39 @@ else{ ### DO THE IMPORT
 
     $Imp->init_experiment_import;
     my ($dset, $rset, $inp_set) = $Imp->define_sets;
-    $Imp->validate_files;
+    $Imp->validate_files; #Add InputSubsets
  
-    #Create a links to the source data in the required ensnfs subdir structure
+    #Update ResultSet dbfile_data_dir
+
+    #This currently only supports 1 -result_file 
+    #this is enforced via validate_files
+      
+    #let's store the final expected subdir for now
+    #rather than the current full local path
+    #MD5s?
+
+    my $iss = $inp_set->get_InputSubsets->[0];
+
+    if(!defined $iss){
+      throw('It appears that InputSubset '.$inp_set->name.' has not had any InputSubsets imported.');
+    }
+
+    my $dbfile_subdir = '/dna_methylation_feature/'.$rset->name.
+      '/'.$iss->name;
+    
+    my $dbfile_path = $rset->adaptor->build_dbfile_path($dbfile_subdir);
+
+    if(! defined $rset->dbfile_data_dir){
+      $rset->dbfile_data_dir($dbfile_subdir);
+      $rset->adaptor->store_dbfile_data_dir($rset);
+    }
+    elsif($rset->dbfile_data_dir ne $dbfile_path){
+      die("Found a mismatch between the stored and set dbfile_registry_dir for ResultSet:\t".
+          $rset->name."\n\t".$rset->dbfile_data_dir."\n\t".$dbfile_path);
+    }
+    
+
+    #Create links to the source data in the required ensnfs subdir structure
     #This is slightly redundant as we do some of this in define_sets
     #but the path handling is slightly different
   
