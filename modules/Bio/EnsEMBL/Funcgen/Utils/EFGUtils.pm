@@ -222,7 +222,7 @@ sub mean{
 sub open_file{
   my ($file, $operator, $file_permissions) = @_;
   
-  my $dir_permissions = $file_permissions || 0755;
+  my $dir_permissions = $file_permissions || 0775;
 
   $operator ||= '<';
 
