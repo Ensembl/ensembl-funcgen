@@ -332,12 +332,8 @@ sub are_stored_and_valid{
 
 sub load_table_data{
   my ($self, $table, $file, $ssh) = @_;
-
-  chmod 0755, $file;
-  #  warn("Importing $table data from $file");
   my $cmd = 'mysqlimport -L '.$self->connect_string().' '.$file;
-  system($cmd) == 0 || throw("Failed to load data from $file\nExit code:\t".($?>>8)."\n$!");
-  
+  system($cmd) && throw("Failed to load data from $file\nExit code:\t".($?>>8)."\n$!");  
   return;
 }
 
