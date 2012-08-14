@@ -35,7 +35,7 @@ my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
                                                        -analysis    => $analysis,
                                                        -table_name  => 'experimental_chip',
                                                        -table_id    => $ec_id,
-                                                       -feature_class => 'DNAMethylation',
+                                                       -feature_class => 'dna_methylation',
 ); 
 
 
@@ -64,6 +64,10 @@ use Bio::EnsEMBL::Funcgen::Set;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
+my %valid_classes = (
+                             result => undef,
+                             dna_methylation => undef,
+                            );
 
 =head2 new
 
@@ -77,7 +81,7 @@ use vars qw(@ISA);
                                                                    -table_name  => 'experimental_chip',
                                                                    -table_id       => $ec_id,
                                                                    -result_feature_set => 1,
-                                                                   -feature_class => 'DNAMethylation',
+                                                                   -feature_class => 'dna_methylation',
 			                                          ); 
   Description: Constructor for ResultSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
@@ -95,7 +99,16 @@ sub new {
   my ($table_name, $table_id, $rf_set, $dbfile_data_dir)
     = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 'DBFILE_DATA_DIR'], @_);	
   my $self = $class->SUPER::new(@_);
-	
+
+
+  #explicit type check here to avoid invalid types being imported as NULL
+  #subsequently throwing errors on retrieval
+  my $type = $self->feature_class;
+  
+  if ( !( $type && exists $valid_classes{$type} ) ) {
+    throw( 'You must define a valid FeatureSet type e.g. ' .
+           join( ', ', keys %valid_classes ) );
+  }
 
 
   $self->{'table_id_hash'} = {};
