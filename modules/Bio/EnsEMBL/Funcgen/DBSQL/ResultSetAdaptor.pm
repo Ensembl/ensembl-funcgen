@@ -487,27 +487,12 @@ sub _objs_from_sth {
     #Need c/ftype cache here or rely on query cache?
 
   while ( $sth->fetch() ) {
-  
-    if ($feat_class !~/result|dna_methylation/)
-      {
-        throw("Retreived feature_class field should be either result or dna_methylation");
-      }
-   
-#
-#   elsif ($feat_class =~/DNAMethylation/)
-#   {
-#   #wrong implementation. there is usually no result_set_input data defined for DNAMethylation feature_class
-#   # is table_name necessary for Bio::EnsEMBL::Funcgen::ResultSet object
-#   $table_name="input_set";
-#   }
-
-
+    
     if(! $rset || ($rset->dbID() != $dbid)){
       
       push @rsets, $rset if $rset;
 
-
-      $anal  = (defined $anal_id) ? $a_adaptor->fetch_by_dbID($anal_id) : undef;
+      $anal  = (defined $anal_id)  ? $a_adaptor->fetch_by_dbID($anal_id)   : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
 
@@ -516,17 +501,18 @@ sub _objs_from_sth {
         $dbfile_dir = $self->build_dbfile_path($dbfile_dir);
       }
 	 
-      $rset = Bio::EnsEMBL::Funcgen::ResultSet->new(
-													-DBID            => $dbid,
-													-NAME            => $name,
-													-ANALYSIS        => $anal,
-													-TABLE_NAME      => $table_name,
-													-FEATURE_TYPE    => $ftype,
-													-CELL_TYPE       => $ctype,
-													-FEATURE_CLASS   => $feat_class,
-													-ADAPTOR         => $self,
-													-DBFILE_DATA_DIR => $dbfile_dir,
-												   );
+      $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
+        (
+         -DBID            => $dbid,
+         -NAME            => $name,
+         -ANALYSIS        => $anal,
+         -TABLE_NAME      => $table_name,
+         -FEATURE_TYPE    => $ftype,
+         -CELL_TYPE       => $ctype,
+         -FEATURE_CLASS   => $feat_class,
+         -ADAPTOR         => $self,
+         -DBFILE_DATA_DIR => $dbfile_dir,
+        );
     }
     
   
