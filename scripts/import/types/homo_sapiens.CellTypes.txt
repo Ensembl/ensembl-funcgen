@@ -70,10 +70,10 @@ Melano	NULL	Melanocytes	NULL
 MultiCell	NULL	Multiple CellTypes used in core RegulatoryFeature set	NULL
 NB4	NULL	Acute Promyelocytic Leukemia Cell Line	NULL
 NHBE	NULL	Normal Human Bronchial Epithelial Cells	NULL
-NHDF	NULL	Neonatal Human Dermal Fibroblasts	NULL
+NHDF-neo	NULL	Neonatal Human Dermal Fibroblasts	NULL
 NHEK	NULL	Normal Human Epidermal Keratinocytes	female
 NHLF	NULL	Normal Human Long Fibroblasts	NULL
-NT2	NULL	Malignant Pluripotent Embryonical Carcinoma	male
+NT2-D1	NULL	Malignant Pluripotent Testicular Embryonal Carcinoma	male
 Panc1	NULL	Pancreatic Carcinoma	NULL
 PanIslets	NULL	Human Pancreatic Islets	male
 PFSK1	NULL	Neurectodermal cell line	male
