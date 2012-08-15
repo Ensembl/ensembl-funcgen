@@ -6,7 +6,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -36,13 +36,13 @@ my $ctype = $cell_type_adaptor->fetch_by_name($ctype_name);
 
 #Create from new
 my $ctype = Bio::EnsEMBL::Funcgen::CellType->new
-                                    (
-                                     -name          => 'H1-ESC',
-                                     -display_label => 'H1-ESC',
-                                     -description   => 'Human Embryonic Stem Cell',
-                                     -efo_id        => 'efo:EFO_0003042',
-                                     -tissue        => 'embryonic stem cell',
-                                    );
+  (
+   -name          => 'H1-ESC',
+   -display_label => 'H1-ESC',
+   -description   => 'Human Embryonic Stem Cell',
+   -efo_id        => 'efo:EFO_0003042',
+   -tissue        => 'embryonic stem cell',
+  );
 
 print $ctype->name.' is a '.$ctype->description."\n";
 
@@ -56,31 +56,31 @@ harvested cells, a cell line or a more generic tissue type.
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::CellType;
+
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::CellType;
-
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Storable;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Storable);
 
 my %valid_genders = (
-					 male   => 1,
-					 female => 1,
-					 hermaphrodite => 1,
-					);
+                     male   => 1,
+                     female => 1,
+                     hermaphrodite => 1,
+                    );
 
 =head2 new
 
   Arg [1]    : String - name of CellType
-  Arg [2]    : String - display label of CellType. Defaults to name
-  Arg [3]    : String - description of CellType
-  Arg [4]    : String - gender e.g. male, female or NULL
-  Arg [5]    : String - Experimental Factor Ontology ID e.g. EFO_0002869
+  Arg [2]    : String (optional) - display label of CellType. Defaults to name
+  Arg [3]    : String (optional) - description of CellType
+  Arg [4]    : String (optional) - gender e.g. male, female or hermaphrodite
+  Arg [5]    : String (optional) - Experimental Factor Ontology ID e.g. efo:EFO_0002869
  
   Example              : my $ct = Bio::EnsEMBL::Funcgen::CellType->new
                                     (
@@ -88,12 +88,12 @@ my %valid_genders = (
                                      -display_label => "U20S",
                                      -description   => "Human Bone Osteosarcoma Epithelial Cells",
                                      -gender        => 'female',
-                                     -efo_id        => 'EFO_0002869',
+                                     -efo_id        => 'efo:EFO_0002869',
                                     );
 
   Description: Constructor method for CellType class
   Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : Throws if name not defined.
+  Exceptions : Throws if name not defined or gender is invalid
   Caller     : General
   Status     : Stable
 
@@ -108,17 +108,17 @@ sub new {
   my $self = $class->SUPER::new(@_);
     
   my ($name, $dlabel, $desc, $gender, $efo_id, $tissue) = rearrange
-	(['NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'EFO_ID', 'TISSUE'], @_);
+    (['NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'EFO_ID', 'TISSUE'], @_);
   
   throw("Must supply a CellType name") if ! defined $name;
   
-  if(defined $gender){
+  if (defined $gender) {
 
-	if( ! exists $valid_genders{lc($gender)} ){	  #enum will not force this so validate here
-	  throw("Gender not valid, must be one of:\t".join(' ', keys %valid_genders));
-	}
+    if ( ! exists $valid_genders{lc($gender)} ) { #enum will not force this so validate here
+      throw("Gender not valid, must be one of:\t".join(' ', keys %valid_genders));
+    }
 
-	$self->{gender} = $gender;
+    $self->{gender} = $gender;
   }
 
   #Set explicitly to enable faster getter only methods
@@ -133,68 +133,58 @@ sub new {
 
 =head2 name
 
-  Example    : my $name = $ct->name();
-  Description: Getter  of name attribute for CellType objects
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Low Risk
-
-=cut
-
-sub name {
-  return $_[0]->{'name'};
-}
-
-
-=head2 gender
-
-  Example    : my $gender = $ct->gender();
-  Description: Getter for the gender attribute for CellType objects
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Low Risk
-
-=cut
-
-sub gender {
-    my $self = shift;
-    $self->{'gender'} = shift if @_;
-    return $self->{'gender'};
-}
-
-
-=head2 description
-
-  Example    : my $desc = $ct->description();
-  Description: Getter of description attribute for CellType objects
-  Returntype : string
+  Example    : my $name = $ct->name;
+  Description: Getter of name attribute for CellType objects
+  Returntype : String
   Exceptions : None
   Caller     : General
   Status     : Stable
 
 =cut
 
-sub description {
-  return $_[0]->{'description'};
-}
+sub name { return $_[0]->{name}; }
+
+
+=head2 gender
+
+  Example    : my $gender = $ct->gender();
+  Description: Getter for the gender attribute for CellType objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub gender {  return $_[0]->{gender}; }
+
+
+=head2 description
+
+  Example    : my $desc = $ct->description();
+  Description: Getter of description attribute for CellType objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub description {  return $_[0]->{description}; }
 
 
 =head2 display_label
 
   Example    : my $display_label = $ct->display_label();
   Description: Getter of display_label attribute for CellType objects.
-  Returntype : string
+  Returntype : String
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub display_label {
-  return $_[0]->{'display_label'};
-}
+sub display_label {  return $_[0]->{display_label}; }
 
 
 =head2 efo_id
@@ -208,9 +198,7 @@ sub display_label {
 
 =cut
 
-sub efo_id{
-  return $_[0]->{'efo_id'};
-}
+sub efo_id{  return $_[0]->{efo_id}; }
 
 
 =head2 tissue
@@ -224,9 +212,7 @@ sub efo_id{
 
 =cut
 
-sub tissue{
-  return $_[0]->{'tissue'};
-}
+sub tissue{   return $_[0]->{tissue}; }
 
 1;
 
