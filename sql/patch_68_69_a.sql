@@ -6,6 +6,6 @@
 UPDATE meta SET meta_value='69' WHERE meta_key='schema_version';
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_a.sql|schema_version');
 
 
