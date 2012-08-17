@@ -395,7 +395,7 @@ CREATE TABLE `probe_feature` (
 @column feature_type_id   Primary key, internal ID
 @column name              Name of feature_type
 @column class             Class of feature_type
-@column analysis_id			@link analysis table ID
+@column analysis_id			  @link analysis table ID
 @column description       Text description
 @column so_accession      Sequence ontology accession
 @column so_name           Sequence ontology name
@@ -418,8 +418,8 @@ CREATE TABLE `feature_type` (
 				'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 
 				'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo', 
 				'Open Chromatin', 'Search Region', 'Association Locus', 'Segmentation State',
-				'DNAMethylation') default NULL,
-    `analysis_id` smallint(5) unsigned default NULL,
+				'DNA Modification') default NULL,
+  `analysis_id` smallint(5) unsigned default NULL,
 	`description`  varchar(255) default NULL,
 	`so_accession` varchar(64) DEFAULT NULL,
  	`so_name` varchar(255) DEFAULT NULL,
@@ -583,9 +583,9 @@ CREATE TABLE `result_set` (
    `name` varchar(100) default NULL,
    `cell_type_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
-   `feature_class` enum('result','DNAMethylation') DEFAULT NULL,
+   `feature_class` enum('result', 'dna_methylation') DEFAULT NULL,
    PRIMARY KEY  (`result_set_id`),
-   UNIQUE KEY `unique_idx` (`name`,`analysis_id`,`feature_type_id`,`cell_type_id`)
+   UNIQUE KEY `unique_idx` (`name`,`analysis_id`,`feature_type_id`,`cell_type_id`, `feature_class`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -673,7 +673,7 @@ CREATE TABLE `input_set` (
    `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
    `name` varchar(100) not NULL,
-   `type` enum('annotated', 'result', 'segmentation', 'DNAMethylation') default NULL,
+   `type` enum('annotated', 'result', 'segmentation', 'dna_methylation') default NULL,
    `replicate` tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`input_set_id`),
    UNIQUE KEY `name_idx` (`name`),
@@ -1434,10 +1434,8 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "69");
 
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_b.sql|DNAMethylationFeature support');
-#INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_67_68_b.sql|input_subset.archive_id_display_url');
-#INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_67_68_c.sql|input_set_subset.replicate_is_control');
-#INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_67_68_d.sql|feature_set.input_set_id');
 
 
 

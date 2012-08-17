@@ -7,6 +7,9 @@
 -- Move currently misplaced fields from experiment table
 
 ALTER TABLE result_set ADD `feature_class` enum('result','dna_methylation') DEFAULT NULL;
+ALTER TABLE result_set drop index `unique_idx`;
+ALTER TABLE result_set ADD UNIQUE INDEX `unique_idx` (`name`,`analysis_id`,`feature_type_id`,`cell_type_id`, `feature_class`);
+
 
 ALTER TABLE feature_type MODIFY class enum('Insulator','DNA','Regulatory Feature','Histone','RNA','Polymerase','Transcription Factor','Transcription Factor Complex','Regulatory Motif','Enhancer','Expression','Pseudo','Open Chromatin','Search Region','Association Locus','Segmentation State', 'DNA Modification') DEFAULT NULL;
 
