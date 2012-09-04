@@ -1097,7 +1097,7 @@ foreach my $transcript (@transcripts) {
 	  #Due to resitrcting the collapse within probesets
 	  #we can only ever have one probe set name here.
 	  $log_name       = $transcript_sid."\t(${probeset_name})\t${probe_id}";
-	  $transcript_key = $transcript_sid.":".$probeset_id;
+	  $transcript_key = $transcript_sid.":".$probeset_id.':'.$tx_version;
 	}
 	else{
 	  #clean just in case
@@ -1137,7 +1137,7 @@ foreach my $transcript (@transcripts) {
 	  #the collapse within, any probe across all the available arrays may be associated
 	  #i.e. we may have more than one probe name for the same sequence
 	  $log_name       = $transcript_sid."\t(".join(',', @{$arrays_per_object{$probe_id}{names}}).")\t${probe_id}";
-	  $transcript_key = $transcript_sid.':'.$probe_id;	
+	  $transcript_key = $transcript_sid.':'.$probe_id.':'.$tx_version;	
 	}
 
 
@@ -1504,7 +1504,7 @@ $xref_db->dbc->disconnect_when_inactive(0);
 
 foreach my $key (keys %transcript_feature_info) {
 
-  my ($transcript_sid, $ensembl_id) = split (/:/, $key);
+  my ($transcript_sid, $ensembl_id, $tx_version) = split (/:/, $key);
    
   #ensembl_id can be either probeset or probe name
   my $probeset_size = $probeset_sizes{$ensembl_id};
