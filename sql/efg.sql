@@ -1437,8 +1437,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_versio
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_b.sql|DNAMethylationFeature support');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_c.sql|regbuild_string.species_id_not_null');
-
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_d.sql|xref.id_index_fix');
 
 
 /**
@@ -1653,9 +1652,9 @@ CREATE TABLE xref (
    version                    VARCHAR(10) DEFAULT '0' NOT NULL,
    description                VARCHAR(255),
    info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED', 'CODING', 'TARGET') not NULL,
-   info_text                  VARCHAR(255),
+   `info_text` varchar(255) NOT NULL DEFAULT '',
    PRIMARY KEY (xref_id),
-   UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text),
+   UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text, version),
    KEY display_index (display_label),
    KEY info_type_idx (info_type)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=100;
