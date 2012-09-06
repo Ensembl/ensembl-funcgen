@@ -259,9 +259,8 @@ $helper->log("build_regulatory_features.pl @tmp_args");
 
 die('Focus_extend may not safe, used for integrating non-focus overlapping, bound enclosed features') if $focus_extend;
 #This is use to incorporate non-core overlapping bound enclosed features!
-my $focus_extend = 2000 if ! defined $focus_extend;
+$focus_extend = 2000 if ! defined $focus_extend;
 
-my $bsub_mem = '';
 #Allow comma separated quoted names containing spaces
 @focus_names = split(/,/o, join(',',@focus_names));
 @attr_names  = split(/,/o, join(',',@attr_names));
@@ -691,25 +690,25 @@ foreach my $ctype(keys %ctype_fsets){
 
 ### Check whether analysis is already stored
 #TO DO Update the description text here? Use flat file import?
+#my $program_name = ($0 =~ s'.*/''g);
 
 my $analysis = Bio::EnsEMBL::Analysis->new
   (
-   -logic_name      => 'RegulatoryRegion',
+   -logic_name      => 'Regulatory Build',
    -db              => 'NULL',
    -db_version      => 'NULL',
    -db_file         => 'NULL',
    -program         => 'NULL',
    -program_version => 'NULL',
-   -program_file    => 'NULL',
+   -program_file    => 'NULL', #Could use $program_name here, but this is only part of the build
    -gff_source      => 'NULL',
    -gff_feature     => 'NULL',
    -module          => 'NULL',
    -module_version  => 'NULL',
    -parameters      => 'NULL',
    -created         => 'NULL',
-   -description     => 'Union of focus features, features overlapping focus features,'.
-   ' and features that are contained within those',
-   -display_label   => 'RegulatoryRegion',
+   -description     => q({'reg_feats' => 'Features from <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. Dnase1) or transcription factor binding sites.  Used to define the Regulatory Feature core regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'other' => 'Sites enriched for histone modifications or polymerase binding.  Used to define Regulatory Feature bound regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.'}),
+   -display_label   => 'Regulatory Build',
    -displayable     => 1,
   );
 
