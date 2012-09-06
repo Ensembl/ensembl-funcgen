@@ -1301,7 +1301,7 @@ DROP TABLE IF EXISTS regbuild_string;
 CREATE TABLE `regbuild_string` (
   `regbuild_string_id` int(10) NOT NULL auto_increment,
   `name` varchar(60) NOT NULL,
-  `species_id` int(10) unsigned default '1',	
+  `species_id` smallint(5) unsigned NOT NULL default '1',	
   `string` text NOT NULL,
   PRIMARY KEY  (`regbuild_string_id`),
   UNIQUE KEY `name_species_idx` (`species_id`, `name`)
@@ -1436,6 +1436,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_versio
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_b.sql|DNAMethylationFeature support');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_c.sql|regbuild_string.species_id_not_null');
 
 
 
