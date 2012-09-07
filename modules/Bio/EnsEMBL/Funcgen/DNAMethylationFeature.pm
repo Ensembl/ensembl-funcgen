@@ -99,30 +99,28 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature);
   Examples:
 
   my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new
+    (
+     -SLICE               => $slice,
+     -STRAND              => 0,
+     -START               => 1,
+     -END                 => 2,
+     -METHLATED_READS     => 33,
+     -TOTAL_READS         => 37,
+     -PERCENT_METHYLATION => 89,
+     -DISPLAY_LABEL       => $display_label,
+     -CONTEXT             => $context,
+     -ADAPTOR             => $dnamethfeatadaptor,
+     -SET                 => $resultset,
+   );
 
-  (
-    -SLICE               => $slice,
-    -STRAND              => 0,
-    -START               => 1,
-    -END                 => 2,
-    -METHLATED_READS     => 33,
-    -TOTAL_READS         => 37,
-    -PERCENT_METHYLATION => 89,
-    -DISPLAY_LABEL       => $display_label,
-    -CONTEXT             => $context,
-    -ADAPTOR             => $dnamethfeatadaptor,
-    -SET                 => $resultset,
-  );
-
-my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new
-
-  (
-    -SLICE         => $slice,
-    -SET           => $resultset,
-    -FILE_DATA     => \@bedline,
-    -ADAPTOR       => $dnamethfeatadaptor,
-    -DISPLAY_LABEL => $display_label,
-  );
+  my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new
+    (
+     -SLICE         => $slice,
+     -SET           => $resultset,
+     -FILE_DATA     => \@bedline,
+     -ADAPTOR       => $dnamethfeatadaptor,
+     -DISPLAY_LABEL => $display_label,
+    );
 
   Description            : Constructor for DNAMethylationFeature objects.
   Returntype             : Bio::EnsEMBL::Funcgen::DNAMethylationFeature
@@ -134,123 +132,91 @@ my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new
 
 
 sub new {
-    my $caller = shift;
-    my $class = ref($caller) || $caller;
-    my (
-        $start,                           $end,
-        $strand,                          $file_data,
-        $methylated_reads,                $total_reads,
-        $percent_methylation,             $context,
-        $dna_methylation_feature_adaptor, $display_label,
-        $slice,                           $resultset
-      )
-      = rearrange(
-        [
-            'START',               'END',
-            'STRAND',              'FILE_DATA',
-            'METHLATED_READS',     'TOTAL_READS',
-            'PERCENT_METHYLATION', 'CONTEXT',
-            'ADAPTOR',             'DISPLAY_LABEL',
-            'SLICE',               'SET'
-        ],
-        @_
-      );
+  my $caller = shift;
+  my $class = ref($caller) || $caller;
+  
+  my (
+      $start,                           $end,
+      $strand,                          $file_data,
+      $methylated_reads,                $total_reads,
+      $percent_methylation,             $context,
+      $dmfeature_adaptor,               $display_label,
+      $slice,                           $result_set
+     ) = rearrange(
+                   [
+                    'START',               'END',
+                    'STRAND',              'FILE_DATA',
+                    'METHLATED_READS',     'TOTAL_READS',
+                    'PERCENT_METHYLATION', 'CONTEXT',
+                    'ADAPTOR',             'DISPLAY_LABEL',
+                    'SLICE',               'SET'
+                   ], @_);
 
-    #if FILE_DATA is defined, alternative arguments must be undefined
+  #Validate ResultSet
+  if(! (ref($result_set) && $result_set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ) ){
+    throw('You must pass a valid -set i.e. Bio::EnsEMBL::Funcgen::ResultSet');
+  }
 
-    if (   defined $file_data
-        && defined $slice
-        && defined $resultset
-        && defined $dna_methylation_feature_adaptor )
-    {
+  #all other parems are validated in the called methods or are conditionally optional
 
-        if (   defined $start
-            || defined $end
-            || defined $strand
-            || defined $methylated_reads
-            || defined $total_reads
-            || defined $percent_methylation
-            || defined $context )
-        {
-            throw(
-               "One or more alternative arguments[START|END|STRAND|METHLATED_READS|TOTAL_READS|CONTEXT] are defined along with FILE_DATA"
-            );
-        }
-        
-        #set values from the FILE_DATA
+  if (defined $file_data){   #set attrib values from the FILE_DATA
 
-        else {
-            (
-                $start, $end, $strand, $methylated_reads, $total_reads,
-                $percent_methylation, $context
-              )
-              = $dna_methylation_feature_adaptor
-              ->get_DNAMethylationFeature_params_from_file_data( $file_data,
-                $slice );
-        }
-    }
+    if ( defined $start ||
+         defined $end ||
+         defined $strand ||
+         defined $methylated_reads ||
+         defined $total_reads ||
+         defined $percent_methylation ||
+         defined $context )
+      {
+        throw('One or more alternative arguments[START|END|STRAND|METHLATED_READS'
+              .'|TOTAL_READS|CONTEXT] are defined along with FILE_DATA');
+      }
     
-    #if FILE_DATA is not defined, all the alternative arguments must be defined
-
-    elsif ( !defined $file_data
-        && defined $slice
-        && defined $resultset
-        && defined $dna_methylation_feature_adaptor )
-    {
-        my $check_params =
-          !defined $start ? 'START'
-          : (
-            !defined $end ? 'END'
-            : (
-                !defined $strand ? 'STRAND'
-                : (
-                    !defined $methylated_reads ? 'METHLATED_READS'
-                    : (
-                        !defined $total_reads ? 'TOTAL_READS'
-                        : (
-                            !defined $percent_methylation
-                            ? 'PERCENT_METHYLATION'
-                            : ( !defined $context ? 'CONTEXT' : undef )
-                        )
-                    )
-                )
-            )
-          );
-        throw(
-             "Either define FILE_DATA or $check_params parameter needs to be passed"
-        ) if ( defined $check_params );
+    if ( ref($dmfeature_adaptor) && 
+         $dmfeature_adaptor->isa('Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor')  
+       ){
+      ($start, $end, $strand, $methylated_reads, $total_reads,
+       $percent_methylation, $context) =
+         $dmfeature_adaptor->get_DNAMethylationFeature_params_from_file_data( $file_data, $slice );
     }
+    else{
+      throw('To generate a DNAMethylationFeature from -file_data you must also provide an -adaptor');
+    }
+  }
+  else{ #attrs passed directly
+
     
-    #also throw if eithe FILE_DATA or alternative arguments are defined but one or
-    #more of the arguments for super class are missing
+    #Need just two of the reads and % attrs
+    #But force mandatory to avoid coding here
+    
+    if (! (defined $methylated_reads &&
+           defined $total_reads &&
+           defined $percent_methylation &&
+           defined $context ) )
+      {
+        throw("One or more attribute arguments are missing. Please specify all of:\t".
+              "-METHLATED_READS, -TOTAL_READS, -CONTEXT, -PERCENT_METHYLATION\n".
+              'Or alternatively specify -FILE_DATA');
+      }
+  }
 
-    else {
-        my $check_params =
-          !defined $slice ? 'SLICE'
-          : (
-            !defined $resultset ? 'SET'
-            : ( !defined $dna_methylation_feature_adaptor ? 'ADAPTOR' : undef )
-          );
-        throw("$check_params is not defined") if ( defined $check_params );
-    }
+  my $self = $class->SUPER::new(
+                                -SLICE   => $slice,
+                                -START   => $start,
+                                -END     => $end,
+                                -STRAND  => $strand,
+                                -SET     => $result_set,
+                                -ADAPTOR => $dmfeature_adaptor,
+                               );
 
-    my $self = $class->SUPER::new(
-        -SLICE   => $slice,
-        -START   => $start,
-        -END     => $end,
-        -STRAND  => $strand,
-        -SET     => $resultset,
-        -ADAPTOR => $dna_methylation_feature_adaptor,
-    );
+  $self->{methylated_reads}    = $methylated_reads;
+  $self->{total_reads}         = $total_reads;
+  $self->{percent_methylation} = $percent_methylation;
+  $self->{context}             = $context;
+  $self->{display_label}       = $display_label if defined $display_label;
 
-    $self->{methylated_reads}    = $methylated_reads;
-    $self->{total_reads}         = $total_reads;
-    $self->{percent_methylation} = $percent_methylation;
-    $self->{context}             = $context;
-
-    $self->{display_label} = $display_label if defined($display_label);
-
-    return $self;
+  return $self;
 }
 
 
@@ -259,7 +225,7 @@ sub new {
 
   Example    : print "Methylated reads\t". $dnamethylationfeature->methylated_reads ."\n";
   Description: Gets number of methylated reads for this DNAMethylationFeature object
-  Returntype : Int
+  Returntype : Integer
   Exceptions : None
   Caller     : General
   Status     : Stable
@@ -274,8 +240,8 @@ sub methylated_reads {
 =head2 unmethylated_reads
 
   Example    : print "Unmethylated reads\t". $dnamethylationfeature->unmethylated_reads . "\n";
-  Description: Getter/setter of unmethylated reads for this DNAMethylationFeature object
-  Returntype : Int
+  Description: Getter for unmethylated reads attribute of this DNAMethylationFeature object
+  Returntype : Integer
   Exceptions : None
   Caller     : General
   Status     : Stable
@@ -284,18 +250,13 @@ sub methylated_reads {
 
 
 sub unmethylated_reads {
-    my $self = shift;
-    return $self->{'unmethylated_reads'}
-      if ( ( exists $self->{'unmethylated_reads'} ) && !defined @_ );
+  my $self = shift;
+  
+  if( ! defined  $self->{unmethylated_reads}){
+    $self->{unmethylated_reads} =  $self->{total_reads} - $self->{methylated_reads};
+  }
 
-    if (@_) {
-        $self->{'unmethylated_reads'} = shift;
-    }
-    else {
-        $self->{'unmethylated_reads'} =
-          ( $self->{'total_reads'} - $self->{'methylated_reads'} );
-    }
-    return $self->{'unmethylated_reads'};
+  return $self->{unmethylated_reads};
 }
 
 
@@ -303,7 +264,7 @@ sub unmethylated_reads {
 
   Example    : print "Total reads\t". $dnamethylationfeature->total_reads . "\n";
   Description: Gets total read coverage for this DNAMethylationFeature object
-  Returntype : Int
+  Returntype : Integer
   Exceptions : None
   Caller     : General
   Status     : Stable
@@ -318,7 +279,7 @@ sub total_reads {
 =head2 percent_methylation
 
   Example    : print "Percent methylation\t". $dnamethylationfeature->percent_methylation . "\n";
-  Description: Gets the percent of methylated reads for this DNAMethylationFeature object
+  Description: Gets the percentage of methylated reads for this DNAMethylationFeature object
   Returntype : Float
   Exceptions : None
   Caller     : General
@@ -332,8 +293,8 @@ sub percent_methylation {
 
 =head2 context
 
-  Example    : print "Sequence context\t". $dnamethylationfeature->context . "\n"; #(context is one of CG, CHG or CHH)
-  Description: returns the sequence context for this DNAMethylationFeature object
+  Example    : print "Sequence context\t". $dnamethylationfeature->context . "\n";
+  Description: Returns the sequence context for this DNAMethylationFeature object. e.g.  CG, CHG or CHH
   Returntype : String
   Exceptions : None
   Caller     : General
@@ -357,23 +318,15 @@ sub context {
 =cut
 
 sub display_label {
-    my $self = shift;
+  my $self = shift;
+  
+  if ( ! defined $self->{display_label} ) {
+    
+    #Change this to include analysis display_label?
+    $self->{display_label} =  $self->cell_type()->name.' '.$self->feature_type->name;
+  }
 
-    #$self->{'display_label'} = shift if(@_);
-
-    if ( !$self->{'display_label'} ) {
-
-        $self->{'display_label'} = (
-            $self->cell_type->display_label()
-              ||
-
-              $self->cell_type()->name()
-        );
-
-        $self->{'display_label'} .= " " . $self->feature_type->name();
-
-    }
-    return $self->{'display_label'};
+  return $self->{display_label};
 }
 
 1;
