@@ -30,11 +30,7 @@ storing ResultSet objects.
 
 my $rset_adaptor = $db->get_ResultSetAdaptor();
 
-my @rsets = @{$rset_adaptor->fetch_all_ResultSets_by_Experiment()};
-#my @displayable_rsets = @{$rset_adaptor->fetch_all_displayable_ResultSets()};
-
-
-
+my @rsets = @{$rset_adaptor->fetch_all_by_Experiment()};
 
 =head1 DESCRIPTION
 
@@ -46,10 +42,11 @@ encapsulate processed signal/read data(InputSet) from a sequencing Experiment e.
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
+
+
 use strict;
 use warnings;
-
-package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
@@ -58,64 +55,62 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
 
-#Generates ResultSet contains info about ResultSet content
-#and actual results for channel or for chips in contig set?
-#omit channel handling for now as we prolly won't ever display them
-#but we might use it for running analyses and recording in result_set...change to result_group or result_analyses
-#data_set!!  Then we can keep other tables names and retain ResultFeature
-#and change result_feature to result_set, this makes focus of result set more accurate and ResultFeatures are lightweight result objects.
-#do we need to accomodate different classes of data or multiple feature types in one set?  i.e. A combi experiment (Promot + Histone mod)?
-#schema can handle this...API? ignore for now but be mindful. 
-#This is subtley different to handling different experiments with different features in the same ResultSet.  
-#Combi will have same sample.
+# Table defs for use with dynamic query composition
+
+use constant TRUE_TABLES => [[ 'result_set',        'rs' ],
+                             [ 'result_set_input',  'rsi'],
+                             [ 'dbfile_registry',   'dr' ]];
+
+use constant TABLES => [[ 'result_set',        'rs' ],
+                        [ 'result_set_input',  'rsi'],
+                        [ 'dbfile_registry',   'dr' ]];
 
 
-#This needs one call to return all displayable sets, grouped by cell_line and ordered by FeatureType
-#needs to be restricted to cell line, feature type, but these fields have to be disparate from result_feature 
-#as this is only a simple linker table, and connections may not always be present
-#so cell tpye and feature type constraints have to be performed on load, then can assume that associated features and results
-# have same cell type/feature
-#so we need to group by cell_type in sql and then order by feature_type_id in sql or rearrange in code?
-#This will not know about chip sets, just that a feature set is linked to various result sets
-#There fore we need to use the chip_set_id or link back to the experimental_chip chip_set_ids
-#this would require a self join on experimental_chip
+=head2 fetch_all_by_feature_class
+
+  Arg [1]    : String - feature class i.e. 'result' or 'dna_methylation'.
+  Arg [2]    : HASH of parameters (optional) containing contraint config e.g.
+
+                   $result_set_adaptor->fetch_all_displayable_by_feature_class
+                                           ('dna_methylation', 
+                                             {'constraints' => 
+                                               {
+                                               cell_types     => [$cell_type],  #Bio::EnsEMBL::Funcgen::CellType
+                                               #projects       => ['ENCODE'],
+                                               feature_types  => [$ftype],      #Bio::EnsEMBL::Funcgen::FeatureType
+                                               status         => 'DISPLAYABLE',
+                                               } 
+                                             });
+
+  Example    : my @result_sets = @{$rs_adaptopr->fetch_all_by_feature_class('result')};
+  Description: Retrieves ResultSet objects from the database based on result_set feature_class.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::ResultSet objects
+  Exceptions : Throws if type not defined
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_feature_class {
+  my ($self, $fclass, $params) = @_;
+  
+  throw('Must provide a feature_set type') if(! defined $fclass);	
+  my $sql = 'rs.feature_class = "'.$fclass.'"';
+    
+  #Deal with params constraints
+  my $constraint = $self->compose_constraint_query($params);
+  $sql .=  " AND $constraint " if $constraint;
+
+
+  #Get result and reset true tables
+  my $result = (defined $sql) ? $self->generic_fetch($sql) : [];
+  $self->reset_true_tables;
+
+  return $result;
+}
 
 
 
-
-#Result_set_id is analagous to the chip_set key, altho' we may have NR instances of the same chip set with different analysis
-#if we didn't know the sets previosuly, then we would have to alter the result_set_id retrospectively i.e. change the result_set_id.#All chips in exp to be in same set until we know sets, or all in separate set?
-#Do not populate data_set until we know sets as this would cause hacky updating in data_set too.
-
-
-#how are we going to accomodate a combi exp?  Promot + Histone mods?
-#These would lose their exp set association, i.e. same exp & sample different exp method
-#we're getting close to defining the regulon here, combined results features from the same exp
-#presently want them displayed as a group but ordered appropriately
-#was previously treating each feature as a separate result set
-
-
-#for storing/making link we don't need the Slice context
-#store should check all 
-#so do we move the slice context to the object methods or make optional
-#then object method can check for slice and throw or take a Slice as an optional argument
-#this will enable generic set to be created to allow loading and linking of features to results
-#we still need to know which feature arose from which chip!!!!  Not easy to do and may span two.
-#Need to genericise this to the chip_set(or use result_set_id non unique)
-#We need to disentangle setting the feature to chip/set problem from the displayable problem.
-#change the way StatusAdaptor works to accomodate result_set_id:table_name:table_id, as this will define unique results
-#
-
-#can we extend this to creating skeleton result sets and loading raw results too?
-#
-
-#Result.pm should be lightweight by default to enable fast web display, do we need oligo_probe_id?
-
-
-#how are we going to overcome unlinked but displayable sets?
-#incomplete result_feature records will be hack to update/alter?
-#could have attach_result to feature method?
-#force association when loading features
 
 
 =head2 fetch_all_linked_by_ResultSet
@@ -360,12 +355,8 @@ sub fetch_all_by_name{
 
 sub _tables {
   my $self = shift;
-	
-  return (
-          [ 'result_set',        'rs' ],
-          [ 'result_set_input',  'rsi'],
-          [ 'dbfile_registry',   'dr' ],
-         );
+
+  return ( @{$self->TABLES} );
 }
 
 
@@ -869,5 +860,56 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
   return $self->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $rset, $ec_status, $with_probe);
 
 }
+
+
+
+# Dynamic query contraint methods
+# Most of these a re generic and redundant wrt FeatureSetAdaptor
+# Could be moved to a SetAdaptor
+
+
+sub _constrain_cell_types {
+  my ($self, $cts) = @_;
+
+  my @tables = $self->_tables;
+  my (undef, $syn) = @{$tables[0]};
+
+  my $constraint = " ${syn}.cell_type_id IN (".
+		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
+        ).')';
+  
+  #{} = no futher contraint config
+  return ($constraint, {});
+}
+
+
+sub _constrain_feature_types {
+  my ($self, $fts) = @_;
+ 
+  my @tables = $self->_tables;
+  my (undef, $syn) = @{$tables[0]};
+
+  #Don't need to bind param this as we validate
+  my $constraint = " ${syn}.feature_type_id IN (".
+		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
+  
+  #{} = not futher constraint conf
+  return ($constraint, {});
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 1;
 
