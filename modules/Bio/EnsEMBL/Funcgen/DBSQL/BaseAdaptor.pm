@@ -24,7 +24,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor - Simple wrapper class for Funcgen StorableAdaptors
+Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor - Simple wrapper class for Funcgen Storable Adaptors
 
 =head1 SYNOPSIS
 
@@ -42,6 +42,7 @@ Bio::EnsEMBL::DBSQL::BaseAdaptor
 =cut
 
 package Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+
 require Exporter;
 use vars qw(@ISA @EXPORT);
 use strict;
@@ -932,6 +933,42 @@ sub build_feature_class_name{
   
   return join('', (@words, 'Feature') );
 }
+
+
+
+# Generic constraint methods, called from compose_constraint_query
+# Depends on inheriting Adaptor having TABLES and TRUE_TABLES 'constants' set.
+
+sub _constrain_status {
+  my ($self, $state) = @_;
+  
+  my $constraint_conf = { tables => [['status', 's']]};  #,['status_name', 'sn']),
+    
+  #This can't use IN without duplicating the result
+  #Would need to add a default_final_clause to group
+
+  #my @sn_ids;
+  #if( (ref($states) ne 'ARRAY') ||
+  #scalar(@$states) == 0 ){
+  #throw('Must pass an arrayref of status_names');
+  #}
+  #foreach my $sn(@$states){
+  ##This will throw if status not valid, but still may be absent
+  #	push @sn_ids, $self->_get_status_name_id($sn);
+  #  }
+      
+	  
+      
+  my @tables = $self->_tables;
+  my ($table_name, $syn) = @{$tables[0]};
+	  
+  my $constraint = " $syn.${table_name}_id=s.table_id AND ".
+    "s.table_name='$table_name' AND s.status_name_id=".$self->_get_status_name_id($state);
+  #"s.table_name='$table_name' AND s.status_name_id IN (".join(', ', @sn_ids.')';
+  
+  return ($constraint, $constraint_conf);
+}
+
 
 
 
