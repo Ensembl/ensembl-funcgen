@@ -176,7 +176,8 @@ sub new {
     if ( ref($dmfeature_adaptor) && 
          $dmfeature_adaptor->isa('Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor')  
        ){
-      ($start, $end, $strand, $methylated_reads, $total_reads,
+      #undef is chr, but this is defined by slice
+      (undef, $start, $end, $strand, $methylated_reads, $total_reads,
        $percent_methylation, $context) =
          $dmfeature_adaptor->get_DNAMethylationFeature_params_from_file_data( $file_data, $slice );
     }
