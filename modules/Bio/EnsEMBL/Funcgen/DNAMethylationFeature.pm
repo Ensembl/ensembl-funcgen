@@ -146,7 +146,7 @@ sub new {
                    [
                     'START',               'END',
                     'STRAND',              'FILE_DATA',
-                    'METHLATED_READS',     'TOTAL_READS',
+                    'METHYLATED_READS',    'TOTAL_READS',
                     'PERCENT_METHYLATION', 'CONTEXT',
                     'ADAPTOR',             'DISPLAY_LABEL',
                     'SLICE',               'SET'
@@ -169,17 +169,22 @@ sub new {
          defined $percent_methylation ||
          defined $context )
       {
-        throw('One or more alternative arguments[START|END|STRAND|METHLATED_READS'
+        throw('One or more alternative arguments[START|END|STRAND|METHYLATED_READS'
               .'|TOTAL_READS|CONTEXT] are defined along with FILE_DATA');
       }
     
     if ( ref($dmfeature_adaptor) && 
          $dmfeature_adaptor->isa('Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor')  
        ){
+
       #undef is chr, but this is defined by slice
-      (undef, $start, $end, $strand, $methylated_reads, $total_reads,
-       $percent_methylation, $context) =
-         $dmfeature_adaptor->get_DNAMethylationFeature_params_from_file_data( $file_data, $slice );
+      (undef, $start, $end, $strand, $methylated_reads, 
+       $total_reads, $percent_methylation, $context) =
+         @{$dmfeature_adaptor->get_DNAMethylationFeature_params_from_file_data
+             ( 
+              $file_data, 
+              $slice 
+             )};
     }
     else{
       throw('To generate a DNAMethylationFeature from -file_data you must also provide an -adaptor');
@@ -211,6 +216,10 @@ sub new {
                                 -ADAPTOR => $dmfeature_adaptor,
                                );
 
+  #validate context here with ambiguity code support?
+  #validate 0 => percentage =< 100?
+  
+
   $self->{methylated_reads}    = $methylated_reads;
   $self->{total_reads}         = $total_reads;
   $self->{percent_methylation} = $percent_methylation;
@@ -220,7 +229,7 @@ sub new {
   return $self;
 }
 
-
+#_new_fast!
 
 =head2 methylated_reads
 
