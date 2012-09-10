@@ -99,6 +99,7 @@ use warnings;
 use Bio::EnsEMBL::Funcgen::DNAMethylationFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
+#Only needs this for non-DB based methods, e.g. projection, new_fast etc.
 use Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor;
 
 use vars qw(@ISA);
@@ -126,29 +127,74 @@ use vars qw(@ISA);
 #    Bio::DB::BigFile
 
 
+=head2 fetch_all_by_Slice_ResultSet
+
+  Arg[1]     : Bio::EnsEMBL::Slice
+  Arg[2]     : Bio::EnsEMBL::Funcgen::ResultSet
+  Arg[3]     : HASHREF (optional) - contraint params e.g.
+                 {
+                  min_read_depth => 5,
+                  context        => 'CG',
+                 }
+              
+  Example    : my @dna_meth_feats = @{$dna_mf_adaptor->fetch_all_by_Slice_ResultSet($slice, $result_set)};
+  Description: Fetches DNAMethylationFeatures for a given Slice and ResultSet
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DNAMethylationFeature objects
+  Exceptions : Throws if args not valid and if ResultSet feature class is not dna_methylation
+  Caller     : General
+  Status     : Stable
+
+=cut
 
 #All calls in this method should be generic wrt file format
 
 sub fetch_all_by_Slice_ResultSet{
   my ($self, $slice, $rset, $params) = @_;
 
-  #calling this on self right now
-  #but fetch_features should probably move back to Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor
+  #Validate contraints?
+  #context CG, CHG or CZ is valid?
+  #i.e. support ambiguity codes? and throw if invalid
+  #_validate_$contraint
+
+  # VALIDATE ARGS
+  if(! (defined $slice && $slice->isa('Bio::EnsEMBL::Slice') )){
+    throw("Slice argument is not a valid Bio::EnsEMBL::Slice:\t$slice");
+  }
   
-  return $self->fetch_features($slice->seq_region_name,
-                               $slice->start,
-                               $slice->end,
-                               $rset->dbfile_data_dir,
-                               $self->can('_create_DNAMethylationFeature_from_file_data'),#return a code ref
-                               $self,
-                               #list ref rather than hash ref
-                               #as we deref as array on calling 
-                               #$constructor_ref method
-                               [
-                                -slice => $slice,
-                                -set   => $rset
-                               ]
-                              );
+  if(! (defined $rset && $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet') )){
+    #Doesn't need to be stored
+    throw("ResultSet argument is not a valid Bio::EnsEMBL::Funcgen::ResultSet:\t$rset");
+  }
+
+  if($rset->feature_class ne 'dna_methylation'){
+    throw("ResultSet ".$rset->name." feature class is not dna_methylation:\t".$rset->feature_class);
+  }
+
+  my $constructor_wrapper = (defined $params) ? 
+    '_create_DNAMethylationFeature_from_file_data_constraints' :
+      '_create_DNAMethylationFeature_from_file_data';
+  
+  #calling fetch_features on self but should move back to
+  #Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor
+  
+  return $self->fetch_features
+    (
+     $slice->seq_region_name,
+     $slice->start,
+     $slice->end,
+     $rset->dbfile_data_dir,
+     $self->can($constructor_wrapper),#return a code ref
+     #Constructor wrapper args
+     $self,
+     {
+      new_args => {
+                   slice => $slice,
+                   set   => $rset
+                  },
+      constraints => $params,
+      #defined contraints like this prevent ne_'new_args' when constraining on each feature
+     }
+    );
 }
 
 
@@ -175,6 +221,8 @@ sub get_DNAMethylationFeature_params_from_file_data {
     throw("bed_data argument in not an ARRAYREF:\t$bed_data");
   }
   
+  #Most likely already validated in fetch method
+  #Remove here for speed?
   if(! (defined $slice && $slice->isa('Bio::EnsEMBL::Slice') )){
     throw("slice argument is not a valid Bio::EnsEMBL::Slice:\t$slice");
   }
@@ -193,8 +241,8 @@ sub get_DNAMethylationFeature_params_from_file_data {
   my $methylated_reads  = sprintf "%d", ( ( $percent_methylation / 100 ) * $total_reads );
   $strand = $strands{$strand} if defined $strand; #undef strand is not valid bed!
 
-  return ( $chr, $start, $end, $strand, $methylated_reads,
-           $total_reads, $percent_methylation, $context );
+  return [ $chr, $start, $end, $strand, $methylated_reads,
+           $total_reads, $percent_methylation, $context ];
 }
 
 
@@ -243,7 +291,6 @@ sub get_file_adaptor{
   }
   
   if(! defined $self->{result_set_file_adaptors}{$path}){
-    #only warn once!
     warn "Encountered error when opening bigBedFile\t".$path;
   }
   
@@ -252,22 +299,101 @@ sub get_file_adaptor{
 
 
 sub _create_DNAMethylationFeature_from_file_data{
-  my ($self, $bed_data, @args) = @_;
-  
-  #Would do read count filtering here if required?
- 
-  return Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new
+  my ($self, $bed_data, $args) = @_;
+    
+  $bed_data = $self->get_DNAMethylationFeature_params_from_file_data
     (
-     -FILE_DATA => $bed_data, 
-     -ADAPTOR   => $self, 
-     @args);# args are slice and result_set
+     $bed_data,
+     $args->{new_args}{slice}
+    );
+
+  return Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new_fast
+    ({
+      start               => $bed_data->[1],
+      end                 => $bed_data->[2],
+      strand              => $bed_data->[3],
+      methylated_reads    => $bed_data->[4],
+      percent_methylation => $bed_data->[5],
+      total_reads         => $bed_data->[6],
+      context             => $bed_data->[7],
+      adaptor             => $self,
+      %{$args->{new_args}}                     # args are slice and result_set
+     });
 }
+
+
+sub _create_DNAMethylationFeature_from_file_data_constraints{
+  my ($self, $bed_data, $args) = @_;
+  
+  #loop through the contraints
+  #calling methods based on the contraint key, passing the constraint value.
+  #This will mean we won't have to do this check here for every single feature if we don't want to filter
+  #just once in the caller!
+
+  #$bed_data is not yet processed, so get_DNAMethylationFeature_params_from_file_data
+  #and pass attrs directly here
+
+  $bed_data = $self->get_DNAMethylationFeature_params_from_file_data
+    (
+     $bed_data,
+     $args->{new_args}{slice}
+    );
+  
+
+  my $constrain_method;
+  
+  foreach my $constraint(keys %{$args->{constraints}} ){
+    $constrain_method = '_constrain_'.$constraint;
+    
+    if( $self->$constrain_method($args->{constraints}{$constraint}, $bed_data) ){
+      warn "constraining $constraint";
+      return;
+    }
+  }
+  
+  return Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new_fast
+    ({
+      start               => $bed_data->[1],
+      end                 => $bed_data->[2],
+      strand              => $bed_data->[3],
+      methylated_reads    => $bed_data->[4],
+      percent_methylation => $bed_data->[5],
+      total_reads         => $bed_data->[6],
+      context             => $bed_data->[7],
+      adaptor             => $self,
+      %{$args->{new_args}}                     # args are slice and result_set
+     });
+}
+
+#Have to be class methods rather than subs
+#when using strict refs. subs would probably be a little faster
+
+sub _constrain_min_read_depth{
+  my ($self, $min_read_depth, $bed_data) = @_;
+  return ($bed_data->[6] < $min_read_depth) ? 1 : 0;
+}
+
+sub _constrain_context{
+  my ($self, $context, $bed_data) = @_;
+  return ($bed_data->[7] ne $context) ? 1 : 0;
+}
+
+sub _constrain_percent_methylation{
+  my ($self, $perc, $bed_data) = @_;
+  return ($bed_data->[5] < $perc) ? 1 : 0;
+}
+
+
 
 
 
 #This should be completely agnostic to calling adaptor
 #And should really be migrated back to Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor
 #as it is generic due to the passing of a coderef
+
+#Will still need a wrapper method in the Funcgen BigBed adaptor
+#which should probably be renamed and standardised across all
+#file adaptor wrapper
 
 sub fetch_features {
   my ($self, $chr_id, $start, $end, $bb_path, $constructor_ref, $constructor_obj, $constructor_args) = @_;
@@ -306,7 +432,14 @@ sub fetch_features {
 
     my $feature = $constructor_ref->($constructor_obj, 
                                      [ $chr_id, $i->start, $i->end, split(/\t/,$i->rest) ], #bed data
-                                     @{$constructor_args} ); #other args e.g. {-slice=> $slice, , -set => $rset}
+                                     $constructor_args ); 
+    #other for use in constructor wrapper e.g. {new_args => {-slice=> $slice, -set => $rset}}
+    
+    #Do we have to maintain constructor arg as array?
+    #This is to support direct constructor(new) usage
+    #rather than need for wrapper method
+    #Will always need a wrapper method to translate the bed data into the appropriate constructor params
+
 
     #do we need to handle under score here?
 
