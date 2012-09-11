@@ -890,9 +890,8 @@ sub _main_table{
 }
 
 
-=head2 list_dbIDs
+=head2 _list_dbIDs
 
-  Args       : None
   Example    : my @table_ids = @{$adaptor->_list_dbIDs()};
   Description: Wrapper for parent method, dynamically passes correct table name to query.
                Gets an array of internal IDs for all objects in the main table of this class.
@@ -903,12 +902,11 @@ sub _main_table{
 
 =cut
 
-sub list_dbIDs {
-	my $self = shift;	
-	return $self->_list_dbIDs($self->_main_table->[0]);
+
+sub _list_dbIDs{
+  my $self = shift;
+  return $self->SUPER::_list_dbIDs($self->_main_table->[0]);
 }
-
-
 
 
 
@@ -969,6 +967,13 @@ sub _constrain_status {
   return ($constraint, $constraint_conf);
 }
 
+### DEPRECATED ###
+
+sub list_dbIDs { #Deprecated in v69
+	my $self = shift;	
+  deprecate('Please use _list_dbIDs.');
+	return $self->_list_dbIDs($self->_main_table->[0]);
+}
 
 
 
