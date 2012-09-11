@@ -156,8 +156,8 @@ sub fetch_all_linked_by_ResultSet{
   Description: Retrieves a list of Bio::EnsEMBL::Funcgen::ResultSets with the given Analysis from the Experiment
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ResultSet objects
   Exceptions : Throws if Analysis is not valid and stored
-  Caller     : general
-  Status     : At Risk
+  Caller     : General
+  Status     : At risk - to be merged into fetch_all_by_Experiment
 
 =cut
 
@@ -167,26 +167,20 @@ sub fetch_all_by_Experiment_Analysis{
   if ( !($analysis && $analysis->isa("Bio::EnsEMBL::Analysis") && $analysis->dbID())) {
     throw("Need to pass a valid stored Bio::EnsEMBL::Analysis");
   }
-  
 
-  my $join = $self->get_Experiment_join_clause($exp)." AND rs.analysis_id=".$analysis->dbID();
+  my $join = $self->_get_Experiment_join_clause($exp);
 	
-  return ($join) ? $join." AND rs.analysis_id=".$analysis->dbID() : [];
+  return ($join) ?  $self->generic_fetch($join." AND rs.analysis_id=".$analysis->dbID) : [];
 }
 
-sub get_Experiment_join_clause{
+sub _get_Experiment_join_clause{
   my ($self, $exp) = @_;
 
-  if ( !($exp && $exp->isa("Bio::EnsEMBL::Funcgen::Experiment") && $exp->dbID())) {
-    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Experiment");
-  }
-
-
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
   my $constraint;
-
   my @ecs = @{$exp->get_ExperimentalChips()};
 
-  if (@ecs) {
+  if (@ecs) { # We have an Array based experiment
 
     my $ec_ids = join(', ', (map $_->dbID, @ecs)); #get ' separated list of ecids
 	
@@ -201,19 +195,22 @@ sub get_Experiment_join_clause{
         ')) OR (rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.'))))';
       #This could probably be sped up using UNION
       #But result set is too small for cost of implementation
-    } elsif ($ec_ids) {
+    } 
+    elsif ($ec_ids) {
       $constraint = 'rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.')';
-    } elsif ($chan_ids) {
+    } 
+    elsif ($chan_ids) {
       $constraint = 'rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.')';
     }
-  } else {                      #Assume we have an InputSet Experiment?
-    #We could possibly have an expeirment with an array and an input set
+
+  } 
+  else {     #We have an InputSet Experiment
+    #We could possibly have an experiment with an array and an input set
     #Currently nothing to stop this, but would most likely be loaded as separate experiments
     my $input_setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
-
     $constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$input_setids.')';
   }
-  
+
   return $constraint;
 }
 
@@ -231,14 +228,13 @@ sub get_Experiment_join_clause{
 =cut
 
 sub fetch_all_by_Experiment{
-  my ($self, $exp) = @_;
+  my ($self, $exp, $analysis) = @_;
 
   #my $constraint = "ec.experiment_id=".$exp->dbID();
   #This was much easier with the more complicated default where join
   #should we reinstate and just have a duplication of cell/feature_types?
 	
-
-  my $join = $self->get_Experiment_join_clause($exp);
+  my $join = $self->_get_Experiment_join_clause($exp);
   
   return ($join) ? $self->generic_fetch($join) : [];
 }
@@ -264,33 +260,12 @@ sub fetch_all_by_Experiment{
 sub fetch_all_by_FeatureType {
   my ($self, $ftype) = @_;
 
-  if ( !($ftype && $ftype->isa("Bio::EnsEMBL::Funcgen::FeatureType") && $ftype->dbID())) {
-    throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType");
-  }
-	
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);	
   my $constraint = "rs.feature_type_id =".$ftype->dbID();
 	
   return $self->generic_fetch($constraint);
 }
- 
 
-=head2 fetch_all_by_name_Analysis
-
-  Arg [1]    : string - ResultSet name
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Analysis
-  Example    : ($rset) = @{$rseta->fetch_by_name($exp->name().'_IMPORT')};
-  Description: Retrieves a ResultSet based on the name attribute
-  Returntype : Bio::EnsEMBL::Funcgen::ResultSet
-  Exceptions : Throws if no name provided
-  Caller     : General
-  Status     : At Risk - remove all, there should only be one?
-
-=cut
-
-sub fetch_all_by_name_Analysis {
-  my ($self, $name, $anal) = @_;
-  return $self->fetch_all_by_name($name, undef, undef, $anal);
-}
 
 =head2 fetch_all_by_name
 
@@ -318,19 +293,19 @@ sub fetch_all_by_name{
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
 
   if ($ftype) {
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',$ftype);
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
     $constraint .= ' AND rs.feature_type_id=?';
     $self->bind_param_generic_fetch($ftype->dbID, SQL_INTEGER);
   }
 
   if ($ctype) {
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',$ctype);
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',    $ctype);
     $constraint .= ' AND rs.cell_type_id=?';
     $self->bind_param_generic_fetch($ctype->dbID, SQL_INTEGER);
   }
 
   if ($anal) {
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',$anal);
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',              $anal);
     $constraint .= ' AND rs.analysis_id=?';
     $self->bind_param_generic_fetch($anal->dbID, SQL_INTEGER);
   }
@@ -373,8 +348,13 @@ sub _tables {
 
 =cut
 
+#sub _left_join {
+#  return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")'] , ['result_set_input','rs.result_set_id=rsi.result_set_id']);
+#}
+#Allows for absent result_set_input entries, in conjunction with omiting _default_where
+
 sub _left_join {
-  return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")'] , ['result_set_input','rs.result_set_id=rsi.result_set_id']);
+  return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")']);
 }
 
 
@@ -392,8 +372,6 @@ sub _left_join {
 =cut
 
 sub _columns {
-	my $self = shift;
-
 	return qw(
             rs.result_set_id           rs.analysis_id
             rsi.table_name             rsi.result_set_input_id
@@ -403,7 +381,6 @@ sub _columns {
            );
 }
 
-=i
 
 =head2 _default_where_clause
 
@@ -417,15 +394,12 @@ sub _columns {
   Caller     : Internal
   Status     : Medium Risk
 
-
+=cut
 
 sub _default_where_clause {
-  my $self = shift;
-	
-  #return 'rs.result_set_id = rsi.result_set_id';
-  }
+  return 'rs.result_set_id = rsi.result_set_id';
+}
   
-=cut
 
 =head2 _final_clause
 
@@ -790,24 +764,6 @@ sub store_chip_channels{
   return $rset;
 }
 
-=head2 list_dbIDs
-
-  Args       : None
-  Example    : my @rsets_ids = @{$rsa->list_dbIDs()};
-  Description: Gets an array of internal IDs for all ProbeFeature objects in
-               the current database.
-  Returntype : List of ints
-  Exceptions : None
-  Caller     : general
-  Status     : stable
-
-=cut
-
-sub list_dbIDs {
-	my $self = shift;
-	
-	return $self->_list_dbIDs('result_set');
-}
 
 
 =head2 fetch_ResultFeatures_by_Slice_ResultSet
@@ -903,7 +859,16 @@ sub _constrain_feature_types {
 
 
 
+### DEPRECATED METHODS
 
+
+sub fetch_all_by_name_Analysis {#Deprecated in v69
+  my ($self, $name, $anal) = @_;
+
+  deprecate('To be removed in v71. Please use fetch_all_by_name');
+
+  return $self->fetch_all_by_name($name, undef, undef, $anal);
+}
 
 
 
