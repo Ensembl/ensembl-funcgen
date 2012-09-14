@@ -48,10 +48,6 @@ result set, as will the same raw data analysed or normalised in a different mann
 
 =cut
 
-#To do
-#Change add_table_id to add_ExperimentalChip_Channel?
-
-
 use strict;
 use warnings;
 
@@ -65,9 +61,9 @@ use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
 my %valid_classes = (
-                             result => undef,
-                             dna_methylation => undef,
-                            );
+                     result => undef,
+                     dna_methylation => undef,
+                    );
 
 =head2 new
 
@@ -128,6 +124,42 @@ sub new {
 
   return $self;
 }
+
+
+
+=head2 display_label
+
+  Example    : print $set->display_label;
+  Description: Getter for the display_label attribute for this Set.
+  Returntype : String
+  Exceptions : Warns if feature_class not explicitly handled
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+
+sub display_label {
+  my $self = shift;
+
+  if(! defined $self->{display_label}){
+
+    if($self->feature_class eq 'result'){ # We have a ChIP/DNase1/FAIRE signle
+      $self->{display_label} = $self->feature_type->name.' - '.$self->cell_type->name.' signal';
+    }
+    elsif($self->feature_class eq 'dna_methylation'){
+      $self->{display_label} = $self->analysis->display_label.' - '.$self->cell_type->name;
+    }
+    else{
+      warn 'ResultSet feature class('.$self->feature_class.') not explicitly handled in display_label';
+      $self->{display_label} = $self->feature_type->name.' - '.$self->cell_type->name;
+    }
+  }
+
+  return $self->{display_label};
+}
+
+
 
 
 #These are CollectionContainer? methods
