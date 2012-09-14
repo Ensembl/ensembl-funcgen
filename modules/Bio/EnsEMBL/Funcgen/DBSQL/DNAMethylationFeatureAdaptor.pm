@@ -23,7 +23,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor - Adaptor to fetch
+Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor
 
 =head1 SYNOPSIS
 
@@ -44,44 +44,33 @@ my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 
 
 
-my $rsa = $efgdba->get_ResultSetAdaptor;
-my @a   = @{ $rsa->fetch_all_by_name('ES_5mC_Stadler2011_PMID22170606') };
+my $rs_aadaptor   = $efgdba->get_ResultSetAdaptor;
+my $dmf_adaptor   = $efgdba->get_DNAMethylationFeatureAdaptor;
+my $slice_adaptor = $efgdba->dnadb->get_SliceAdaptor;
 
-my $dnaa = $efgdba->get_DNAMethylationFeatureAdaptor;
-#$dnaa->load_resultset( $a[0] );
+my ($rset) = @{ $rs_adaptor->fetch_all_by_name('ES_5mC_Stadler2011_PMID22170606') };
+my $slice  = $slice_adaptor->fetch_by_region( 'chromosome', 1, 3010493, 3011550 );
 
+my $dmf_ref = $dmf_adaptor->fetch_all_by_Slice_ResultSet($slice, $rset);
 
-my $slice_adaptor = $efgdba->get_adaptor("slice");
-my $slice =
-  $slice_adaptor->fetch_by_region( 'chromosome', 1, 3010493, 3011550 );
+#print result_set cell type, feature_type and analysis here
+#or leave to display label?
 
-
-#my $dna_meth_features = $dnaa->get_DNAMethylationFeatures( -SLICE => $slice );
-
-
-foreach my $df ( @{$dna_meth_features} ) {
-    print "Methylated reads" . $df->methylated_reads . "\n";
-    print "Total reads" .$df->total_reads . "\n";
-    print "Percent Methylation" . $df->percent_methylation . "\n";
-    print "Context" . $df->context . "\n";
-    print "Display label" . $df->display_label . "\n";
-    print "Cell Type" . $df->cell_type->name . "\n";
-    print "Feature Type" . $df->feature_type->name . "\n";
-    print "Analysis Method" . $df->analysis->logic_name . "\n";
-    # . . .;
+foreach my $dmf ( @{$dmf_ref} ) {
+    print "Display label:\t"      . $dmf->display_label."\n";
+    print "Location:\t"           . $dmf->feature_Slice->name."\n";
+    print "Methylated reads:\t"   . $dmf->methylated_reads."\n";
+    print "Total reads:\t"        . $dmf->total_reads."\n";
+    print "Percent Methylation:\t". $dmf->percent_methylation."\n";
+    print "Context:\t"            . $dmf->context."\n";
 }
 
 
 =head1 DESCRIPTION
 
-The Bio::EnsEMBL::Funcgen::DNAMethylationFeatureAdaptor uses Lincoln Stein's Bio::DB::BigFile interface to
-BigBed files and creates Bio::EnsEMBL::Funcgen::DNAMethylationFeature objects. For information about 
-BigBed files please see http://genome.ucsc.edu/FAQ/FAQformat.html. The fourth field of the BigBed file is expected
-to contain information about cytosine context and total reads. Fifth field in the file is score which is percentage methylation multiplied by 10 (ranges from 0-1000)
-An example line of the bed file that represents a cytosine in CG context with 33 methylated reads out of a total of 37 reads would be as under:
-
-chr1    3010492 3010493 CG/37   892     +
-
+The DNAMethylationFeatureAdaptor is a file based adaptor and inherits from a format
+specific wrapper class, which provides generic methods to handle format specific parsers.
+It provides an interface to retrieve DNAMethylationFeature objects.
 
 =head1 SEE ALSO
 
@@ -116,8 +105,12 @@ use vars qw(@ISA);
 #
 # 2 Migrate fetch_features (with coderef support) back to Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor
 #
-# 3 Create funcgen BigBedAdaptor which caches multiple Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptors
-
+# 3 Create funcgen BigBedAdaptor/BigBedCache|Handler which caches multiple Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptors
+#
+# 4 Add support for collection files above a certain slice length. Does this mean the web should just use out API from the start
+#   Or do we need to make the method which decides what file to use available?
+#   This depends on what we use for the methylation density features i.e. bigBed or .cols?
+#
 # Caveats
 #
 # This implementation adds extra dependancies on:
@@ -131,12 +124,13 @@ use vars qw(@ISA);
 
   Arg[1]     : Bio::EnsEMBL::Slice
   Arg[2]     : Bio::EnsEMBL::Funcgen::ResultSet
-  Arg[3]     : HASHREF (optional) - contraint params e.g.
+  Arg[3]     : HASHREF (optional) - valid contraint params e.g.
                  {
-                  min_read_depth => 5,
-                  context        => 'CG',
+                  min_read_depth  => 5,
+                  context         => 'CG',
+                  min_methylation => 25,     # Float percentage
+                  max_methylation => '75.5', # Float percentage
                  }
-              
   Example    : my @dna_meth_feats = @{$dna_mf_adaptor->fetch_all_by_Slice_ResultSet($slice, $result_set)};
   Description: Fetches DNAMethylationFeatures for a given Slice and ResultSet
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::DNAMethylationFeature objects
@@ -150,11 +144,6 @@ use vars qw(@ISA);
 
 sub fetch_all_by_Slice_ResultSet{
   my ($self, $slice, $rset, $params) = @_;
-
-  #Validate contraints?
-  #context CG, CHG or CZ is valid?
-  #i.e. support ambiguity codes? and throw if invalid
-  #_validate_$contraint
 
   # VALIDATE ARGS
   if(! (defined $slice && $slice->isa('Bio::EnsEMBL::Slice') )){
@@ -170,6 +159,46 @@ sub fetch_all_by_Slice_ResultSet{
     throw("ResultSet ".$rset->name." feature class is not dna_methylation:\t".$rset->feature_class);
   }
 
+  #Here we need to decide which file/window_size to use based on the slice length
+  #Need to lift code from ResultFeatureAdaptor::set_collection_config_by_Slice_ResultSets{
+  #and available in generic CollectionAdaptor
+
+  my $constructor_args = {
+                          new_args => {
+                                       slice => $slice,
+                                       set   => $rset
+                                      }
+                         };
+  
+
+  #Validate constraints
+
+  if(defined $params){
+
+    if( ref($params) ne 'HASH'){
+      throw("'params' argument must be a valid HASHREF of contraint key value pairs");
+    }
+
+    my $validate_method;
+
+    foreach my $constraint(keys %{$params}){
+      #No this all needs to be moved to the fetch method
+      $validate_method  = '_validate_'.$constraint;
+
+      if($self->can($validate_method)){
+        $self->$validate_method($params->{$constraint})
+      }
+      else{
+        #Could have these defined in a hash to print helpfully here
+        throw("$constraint is not a valid DNAMethylationFeatureAdaptor constraint");
+      }
+    }
+    
+    #define contraints as separate key to avoid ne 'new_args' when constraining on each feature
+    $constructor_args->{constraints} = $params;
+  }
+ 
+
   my $constructor_wrapper = (defined $params) ? 
     '_create_DNAMethylationFeature_from_file_data_constraints' :
       '_create_DNAMethylationFeature_from_file_data';
@@ -184,16 +213,8 @@ sub fetch_all_by_Slice_ResultSet{
      $slice->end,
      $rset->dbfile_data_dir,
      $self->can($constructor_wrapper),#return a code ref
-     #Constructor wrapper args
-     $self,
-     {
-      new_args => {
-                   slice => $slice,
-                   set   => $rset
-                  },
-      constraints => $params,
-      #defined contraints like this prevent ne_'new_args' when constraining on each feature
-     }
+     $constructor_args,
+     $self
     );
 }
 
@@ -202,17 +223,47 @@ sub fetch_all_by_Slice_ResultSet{
 
 #All the following methods should ultimately be moved elsewhere
 
-#Move the following to funcgen BigBedAdaptor
+#Move the following to funcgen BigBedAdaptor? (BigBedCache?)
+#We shouldn't really have the same name, as it is not doing the same thing
+#It's more like a cache
 #What should the namespace of this be in the funcgen API?
 #Bio::EnsEMBL::Funcgen::ExternalData::BigFile::BigBedAdaptor
 #Bio::EnsEMBL::Funcgen::DBFile::BigFile::BigBedAdaptor
 #which caches and delegates to separate Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptors
+
+
+
+#Document bed format here
+
+#Currently uses a 6 column format (conforming to bed standard) defined as follows:
+#seq_id  start(0 based)  end    context/total_reads  score(1-1000)  strand(-/+/.)
+#
+#e.g.
+#1       567890          567891 CG/120               950            +
+
+
 
 my %strands = (
                '.' => 0,
                '+' => 1,
                '-' => -1,
               );
+
+=head2 get_DNAMethylationFeature_params_from_file_data
+
+  Arg[1]     : ARRAYREF - Split but unprocessed bed row (6 columns)
+  Arg[2]     : Bio::EnsEMBL::Slice
+  Example    : my ($chr, $start, $end, $strand, $methylated_reads,
+                   $total_reads, $percent_methylation, $context) = 
+               @{$dna_mf_adaptor->get_DNAMethylationFeature_params_from_file_data(\@bed_row)};
+  Description: Processes a line of bed data to return valid parameters required
+               for DNAMethylationFeature contructor.
+  Returntype : ARRAYREF
+  Exceptions : Throws if args not valid
+  Caller     : General
+  Status     : At risk
+
+=cut
 
 sub get_DNAMethylationFeature_params_from_file_data {
   my ($self, $bed_data, $slice) = @_;
@@ -246,6 +297,20 @@ sub get_DNAMethylationFeature_params_from_file_data {
 }
 
 
+=head2 get_file_adaptor
+
+  Arg[1]     : String - Path to bigBed file
+  Example    : my $bb_file_adaptor = $bb_cache_adaptor->get_file_adaptor($bb_path)
+  Description: Generates and caches a BigBedAdaptor given a file path
+  Returntype : Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor
+  Exceptions : Warns if cannot define BigBedAdaptor
+  Caller     : Self
+  Status     : At risk
+
+=cut
+
+#Make private?
+
 # This will ultimately move to funcgen BigBedAdaptor
 # This should use Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor
 
@@ -267,7 +332,8 @@ sub get_file_adaptor{
 
   if(! exists $self->{result_set_file_adaptors}{$path}){
 
-    #Removed a lot of this as it should be in bigbed_open
+    #Removed a lot of this as it should be in external BigBedAdaptor::bigbed_open
+    #or whatever new IO core module is created
 
     #my $bb_path = $rset->dbfile_data_dir;
 
@@ -297,10 +363,41 @@ sub get_file_adaptor{
   return $self->{result_set_file_adaptors}{$path};
 }
 
+=head2 _create_DNAMethylationFeature_from_file_data
+
+  Arg[1]     : ARRAYREF - Split but unprocessed bed row (6 columns)
+  Arg[2]     : HASHREF  - Containing additional required 'new_args' parameters for 
+               DNAMethylationFeature::new_fast constructor:
+                 {
+                  new_args => {
+                               slice => $slice,
+                               set   => $result_set,
+                              }
+                 }
+  Example    : my $constructor_wrapper_ref = $self->can('_create_DNAMethylationFeature_from_file_data');
+               #Then passed as arg to BigBedHandler/Adaptor::fetch_features and called as follows
+               my $feature = $constructor_wrapper_ref->
+                               (
+                                $constructor_wrapper_obj, #explicitly pass containing object when using coderef
+                                $bed_data_ref,
+                                $constructor_wrapper_args
+                               );
+  Description: Internal method which is passed as a code reference to the 
+               fetch_features method of the specific file format adaptor
+  Returntype : Bio::EnsEMBL::Funcgen::DNAMethylationFeature
+  Exceptions : None
+  Caller     : fetch_all_by_Slice_ResultSet and BigBedHandler/Adaptor::fetch_features
+  Status     : At risk
+
+=cut
+
 
 sub _create_DNAMethylationFeature_from_file_data{
   my ($self, $bed_data, $args) = @_;
-    
+
+  #Could validate $args is HAHREF here
+  #But omit for speed as is private method
+
   $bed_data = $self->get_DNAMethylationFeature_params_from_file_data
     (
      $bed_data,
@@ -321,6 +418,38 @@ sub _create_DNAMethylationFeature_from_file_data{
      });
 }
 
+=head2 _create_DNAMethylationFeature_from_file_data
+
+  Arg[1]     : ARRAYREF - Split but unprocessed bed row (6 columns)
+  Arg[2]     : HASHREF  - Containing additional required 'new_args' parameters for 
+               DNAMethylationFeature::new_fast constructor and contraint definitions :
+                 {
+                  new_args    => {
+                                  slice => $slice,
+                                  set   => $result_set,
+                                 }
+                  constraints => {
+                                  min_read_depth      => 10,
+                                  context             => 'CG', #
+                                  percent_methylation => 80,   #Minimum
+                                 }
+                 }
+  Example    : my $constructor_wrapper_ref = $self->can('_create_DNAMethylationFeature_from_file_data');
+               #Then passed as arg to BigBedHandler/Adaptor::fetch_features and called as follows
+               my $feature = $constructor_wrapper_ref->
+                               (
+                                $constructor_wrapper_obj, #explicitly pass containing object when using coderef
+                                $bed_data_ref,
+                                $constructor_wrapper_args
+                               );
+  Description: Internal method which is passed as a code reference to the 
+               fetch_features method of the specific file format adaptor
+  Returntype : Bio::EnsEMBL::Funcgen::DNAMethylationFeature
+  Exceptions : None
+  Caller     : fetch_all_by_Slice_ResultSet and BigBedHandler/Adaptor::fetch_features
+  Status     : At risk
+
+=cut
 
 sub _create_DNAMethylationFeature_from_file_data_constraints{
   my ($self, $bed_data, $args) = @_;
@@ -344,9 +473,9 @@ sub _create_DNAMethylationFeature_from_file_data_constraints{
   
   foreach my $constraint(keys %{$args->{constraints}} ){
     $constrain_method = '_constrain_'.$constraint;
-    
+       
     if( $self->$constrain_method($args->{constraints}{$constraint}, $bed_data) ){
-      warn "constraining $constraint";
+      #warn "constraining $constraint";
       return;
     }
   }
@@ -368,23 +497,138 @@ sub _create_DNAMethylationFeature_from_file_data_constraints{
 #Have to be class methods rather than subs
 #when using strict refs. subs would probably be a little faster
 
+### Private _contraint and _validate methods
+### _validate methods simply validate specified contraint param
+### _constraint methods return true if contraint is to be applied
+
+# Some of these are generic and would sit better in the BigBedAdaptor itself
+# or integrated into the fetch_features query directly
+# This may break the generic implementation?
+
 sub _constrain_min_read_depth{
   my ($self, $min_read_depth, $bed_data) = @_;
   return ($bed_data->[6] < $min_read_depth) ? 1 : 0;
 }
+
+#Validate methods could return defaults if param not defined?
+
+sub _validate_min_read_depth{
+  my ($self, $min_read_depth) = @_;
+
+  if(! defined $min_read_depth ||
+     $min_read_depth !~ /^\d+$/){
+    throw($min_read_depth.' is not a valid integer to contrain using min_read_depth')
+  }
+  return;
+}
+
+
+my %valid_contexts = (
+                      CG  => undef,
+                      CGG => undef,
+                      CAG => undef,
+                      CTG => undef,
+                     );
+
+##ambiguity codes
+#CNG => {N => [A, C, G]},
+#CHG => {H => [A, C, T, G]},
+#CHH => {H => [A, C, T, G]},
+#CHN? - would need separate %ambiguity_codes
+#CH
+#CN
+#C[^GATC]
+#Non-cytosine methylation? i.e. EG support for plants!
+#Will the broad range of possible contexts
+#make this almost redundant?
+
 
 sub _constrain_context{
   my ($self, $context, $bed_data) = @_;
   return ($bed_data->[7] ne $context) ? 1 : 0;
 }
 
-sub _constrain_percent_methylation{
+sub _validate_context{
+  my ($self, $context) = @_;
+
+  if(! defined $context ||
+     ! exists $valid_contexts{$context} ){
+    throw($context." is not a valid context to contrain, please use one of the following:\n\t"
+          .join("\t", keys %valid_contexts));
+  }
+
+  return;
+}
+
+#probably want min and max operations here
+
+sub _constrain_min_methylation{
   my ($self, $perc, $bed_data) = @_;
   return ($bed_data->[5] < $perc) ? 1 : 0;
 }
 
+sub _constrain_max_methylation{
+  my ($self, $perc, $bed_data) = @_;
+  return ($bed_data->[5] > $perc) ? 1 : 0;
+}
 
 
+#Could warn if erroneously set to 0 or 100 for max and min respectively
+
+sub _validate_min_methylation{
+  my ($self, $perc_float) = @_;
+
+  if( (! defined $perc_float)              ||
+      ($perc_float !~ /^[0-9]*\.?[0-9]+$/) ||
+      ($perc_float > 100) ){
+    throw($perc_float.' is not a valid positive percentage to contrain using min_methylation');
+  }
+  return;
+}
+
+sub _validate_max_methylation{
+  my ($self, $perc_float) = @_;
+
+  if( (! defined $perc_float)              ||
+      ($perc_float !~ /^[0-9]*\.?[0-9]+$/) ||
+      ($perc_float > 100) ){
+    throw($perc_float.' is not a valid positive percentage to contrain using max_methylation');
+  }
+  return;
+}
+
+#other contraints
+#strand?
+
+
+=head2 fetch_features
+
+  Arg[1]     : String   - sequence id or name
+  Arg[2]     : Int      - Genomic start (1 based)
+  Arg[3]     : Int      - Genomic end
+  Arg[4]     : String   - Path to bigBed file
+  Arg[5]     : CODEREF  - Reference to Feature constructor wrapper method/sub
+  Arg[6]     : HASHREF|ARRAYREF|SCALAR (optional) - constructor wrapper args
+  Arg[7]     : Object (optional)  - Object containing constructor
+
+  Example    : my @feats = @{$bb_adaptor->fetch_features
+                             (
+                              $chr_name,
+                              $start,
+                              $end,
+                              $bigBed_path,
+                              $contructor_wrapper_coderef,
+                              $constructor_wrapper_args_ref,
+                              $constructor_wrapper_obj,
+                             )};
+  Description: 
+  Returntype : ARRAYREF likely, but depends on return type of constructor wrapper reference
+  Exceptions : Warns if cannot open bigBeg file
+               Throws is constructor wrapper argument is not a CODEREF
+  Caller     : General
+  Status     : At risk
+
+=cut
 
 
 #This should be completely agnostic to calling adaptor
@@ -396,8 +640,10 @@ sub _constrain_percent_methylation{
 #file adaptor wrapper
 
 sub fetch_features {
-  my ($self, $chr_id, $start, $end, $bb_path, $constructor_ref, $constructor_obj, $constructor_args) = @_;
-
+  my ($self, $chr_id, $start, $end, $bb_path, $constructor_ref, $constructor_args, $constructor_obj) = @_;
+  #Have to pass CODEREF rather than method name string
+  #to have standard valid way of calling both subs and class methods
+    
   my $bb_adaptor = $self->get_file_adaptor($bb_path);
   my $bb         = $bb_adaptor->bigbed_open;
 
@@ -408,6 +654,20 @@ sub fetch_features {
   my $seq_id = $bb_adaptor->munge_chr_id($chr_id);
   
   return [] if ! defined $seq_id;
+
+  if(ref($constructor_ref) ne 'CODE'){
+    throw($constructor_ref.' is not a valid CODEREF required from the constructor method');
+  }
+
+  my @constructor_args = ($constructor_obj, undef, $constructor_args);
+  my $bed_data_index   = 1;
+  
+  if(! defined $constructor_obj){
+    #validate ref and is Object?
+    $bed_data_index = 0;
+    @constructor_args = (undef, $constructor_args);
+  }
+
 
   # Remember this method takes half-open coords (subtract 1 from start)
   my $list_head = $bb->bigBedIntervalQuery($seq_id, $start-1, $end);
@@ -421,28 +681,13 @@ sub fetch_features {
     #$bed->coords([$chr_id,$i->start,$i->end]);
     ### Set score to undef if missing to distinguish it from a genuine present but zero score
     #$bed->score(undef) if @bedline < 5;
-
-    
-    ##This assumes the coderef is an object method and not a sub, 
-    #we could easily reset $constructor_args[$bed_data_index]
-    #and set bed_data_index to 0 or 1 for sub or method respectively
-    #with $constructor_args[0] set to $constructor for method based refs. 
     
     #Passing $chr_id is redundant as we already know this from the query slice
 
-    my $feature = $constructor_ref->($constructor_obj, 
-                                     [ $chr_id, $i->start, $i->end, split(/\t/,$i->rest) ], #bed data
-                                     $constructor_args ); 
-    #other for use in constructor wrapper e.g. {new_args => {-slice=> $slice, -set => $rset}}
-    
-    #Do we have to maintain constructor arg as array?
-    #This is to support direct constructor(new) usage
-    #rather than need for wrapper method
-    #Will always need a wrapper method to translate the bed data into the appropriate constructor params
+    $constructor_args[$bed_data_index] = [ $chr_id, $i->start, $i->end, split(/\t/,$i->rest) ];
+    my $feature = $constructor_ref->(@constructor_args);
 
-
-    #do we need to handle under score here?
-
+    #do we need to handle undef score here?
 
     #This defined check is to allow the constructor to return undef
     #if there is any sort of filtering going on
