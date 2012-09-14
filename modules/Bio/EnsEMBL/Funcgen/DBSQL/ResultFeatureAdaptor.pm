@@ -66,13 +66,6 @@ use Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 			Bio::EnsEMBL::Funcgen::Collector::ResultFeature);
 
-
-
-		#	Bio::EnsEMBL::DBFile::BigWigAdaptor);#@ISA
-
-warn "removed hardcoded inc BigWigAdaptor"; 
-		
-
 #Private vars to used to maintain simple implementation of Collector
 #Should be set in each method to enable trimmingof  the start and end bins. 
 #Cannot depend on $dest_slice_start/end in _objs_from_sth
