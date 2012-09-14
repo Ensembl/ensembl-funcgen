@@ -132,12 +132,12 @@ sub fetch_all_by_Slice_constraint {
 
   my @result;
 
-  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')) {
+  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))) {
     throw('Bio::EnsEMBL::Slice argument expected.');
   }
-
+  
   $constraint ||= '';
-
+  
   my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
 																$slice->coord_system->name(), 
 																$slice->coord_system->version()
@@ -145,8 +145,8 @@ sub fetch_all_by_Slice_constraint {
 
 
   if(! defined $fg_cs){
-	warn "No CoordSystem present for ".$slice->coord_system->name().":".$slice->coord_system->version();
-	return \@result;
+    warn "No CoordSystem present for ".$slice->coord_system->name().":".$slice->coord_system->version();
+    return \@result;
   }
 
  
