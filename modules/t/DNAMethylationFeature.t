@@ -1,4 +1,5 @@
 #!usr/bin/env perl
+
 use strict;
 use warnings;
 
@@ -31,13 +32,13 @@ my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 );
 
 
+#These should be picked up via config/params/meta rather than hardcoded
+
 ##define data root
 my $data_root =
   "/lustre/scratch103/ensembl/funcgen/output/dev_homo_sapiens_funcgen_69_37/";
 
 #my $data_root="/lustre/scratch103/ensembl/funcgen/output/dev_mus_musculus_funcgen_69_38/";
-
-
 
 my $rsa = $efgdba->get_adaptor("resultset");
 $rsa->dbfile_data_root($data_root);
@@ -50,6 +51,8 @@ $rsa->dbfile_data_root($data_root);
 my @result_sets = @{ $rsa->fetch_all_by_feature_class('dna_methylation', {status => 'DISPLAYABLE'}) };
 
 
+print 'Fetched '.scalar(@result_sets)." DISPLAYABLE dna_methylation ResultSets\n";
+
 plan tests => scalar @result_sets * 3;
 
 my $dnaa          = $efgdba->get_adaptor("DNAMethylationFeature");
@@ -57,18 +60,31 @@ my $slice_adaptor = $efgdba->get_adaptor("slice");
 my $slice = $slice_adaptor->fetch_by_region( 'chromosome', 1, 1, 3011550 );
 
 foreach my $resultset (@result_sets) {
-    print "\ntesting resultset " . $resultset->name . "...\n";
+    print "\nTesting ResultSet " . $resultset->name . ":\n";
 
-
-    
-    #This is not a a ResultSetAdaptor test
+    #This is not a ResultSetAdaptor test
     #change this to test the DNAMethylationFeatire::result_set method
     #ok(
     #    $resultset->isa('Bio::EnsEMBL::Funcgen::ResultSet'),
     #    "the object belongs to the right class - ResultSet"
     #);
 
-    my $dna_meth_features = $dnaa->fetch_all_by_Slice_ResultSet($slice, $resultset);
+    
+    #my $dna_meth_features = $dnaa->fetch_all_by_Slice_ResultSet($slice, $resultset);
+
+    my $constraints = {
+                       min_read_depth => 15,
+                       context         => 'CG', #'CT',
+                       min_methylation => '25', #-1    # Float percentage
+                       max_methylation => '75.5', #110 # Float percentage
+                      };
+
+    #Need to do with and without constraints
+    #as without uses a different constructor wrapper method
+
+    my $dna_meth_features = $dnaa->fetch_all_by_Slice_ResultSet($slice, $resultset, $constraints);
+
+    
 
     #generate random index to test one DNAMethylationFeature object
     my $index = int( rand( scalar @{$dna_meth_features} ) );
