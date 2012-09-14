@@ -168,61 +168,56 @@ sub cell_type {
 
 sub feature_type {
   my ($self, $ftype) = @_;
-   
+  
   if(defined $ftype){
-
+    
     if(! (ref($ftype) eq 'Bio::EnsEMBL::Funcgen::FeatureType'
-		  && $ftype->dbID())){ 
-	  throw('Must pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType');
+          && $ftype->dbID())){ 
+      throw('Must pass a valid stored Bio::EnsEMBL::Funcgen::FeatureType');
 	}
-	$self->{'feature_type'} = $ftype;
+    $self->{feature_type} = $ftype;
   }
-
-  		  
-  return $self->{'feature_type'};
+ 
+  return $self->{feature_type};
 }
 
 
 =head2 feature_class
 
-  Arg[0]     : string - feature class e.g. result, annotated, regulatory or external.
+  Arg[0]     : String - feature class e.g. result, annotated, regulatory, external, dna_methylation or segmentation
   Example    : my $fclass = $dset->feature_class;
   Description: Getter for the feature_type for this Set.
   Returntype : string 
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
-
-#Superceded by type method in FeatureSet
-#should remove from InputSet
-#and have in just ResultSet and FeatureSet
-
 
 sub feature_class {
   my ($self, $fclass) = @_;
    
   if(defined $fclass){
-
-    #Leave this and implement in inheritants?
-    #as there are disparities between result set types and feature set types
-    #result here is really a result_feature e.g. signal collection
-    #if(! grep /^${fclass}$/, ('annotated', 'result', 'external', 'regulatory')){
-    #  throw("You have no supplied a valid feature class:\t$fclass");
-    #}
-    
-    $self->{'feature_class'} = $fclass;
+    #Leave validation to inheritant due to feature class disparities between set types
+    $self->{feature_class} = $fclass;
   }
 
-  return $self->{'feature_class'};
+  return $self->{feature_class};
 }
 
+=head2 feature_class
 
-#returns the namespace style feature class
+  Example    : my $fclass_adaptor_method = 'get_'.$set->feature_class.'Adaptor';
+  Description: Getter for the full feature class name for this Set e.g. AnnotatedFeature, RegulatoryFeature
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
 
 sub feature_class_name{
-  my ($self, $fclass) = @_;
+  my $self = shift;
   
   if(! defined $self->{feature_class_name} ){
     $self->{feature_class_name} = $self->adaptor->build_feature_class_name($self->feature_class);
@@ -244,67 +239,22 @@ sub feature_class_name{
 
 =cut
 
+#Not present in input_set
+#Move to FeatureSet and ResultSet
+#Or implement in input_set instead of format
+
 sub analysis {
   my $self = shift;
 
   if(@_){
-	throw('Must pass a valid stored Analysis') if (! (ref($_[0]) eq 'Bio::EnsEMBL::Analysis'
-													  && $_[0]->dbID()));
-	$self->{'analysis'} = shift;
+    throw('Must pass a valid stored Analysis') if (! (ref($_[0]) eq 'Bio::EnsEMBL::Analysis'
+                                                      && $_[0]->dbID()));
+    $self->{analysis} = shift;
   }
   
  
-  return $self->{'analysis'};
+  return $self->{analysis};
 }
-
-=head2 display_label
-
-  Example    : print $set->display_label();
-  Description: Getter for the display_label attribute for this Set.
-               This is more appropriate for teh predicted_features of the set.
-               Use the individual display_labels for each raw result set.
-  Returntype : str
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub display_label {
-  my $self = shift;
-
- 
-  #Add display label in table?
-  #Can we aborc ResultSet method into this?
-
-  if(! $self->{'display_label'}){
-
-	#if($self->product_FeatureSet->feature_type->class() eq 'Regulatory Feature'){
-	#  $self->{'display_label'} = 'Regulatory Features';
-	#}
-	#else{
-
-	#This only works for annotated/regulatory_feature sets and result sets
-	#Move to other Set classes?
-
-	$self->{'display_label'} = $self->feature_type->name()." -";
-	$self->{'display_label'} .= " ".($self->cell_type->display_label() || 
-									 $self->cell_type->description()   ||
-									 $self->cell_type()->name());
-	
-
-	if($self->set_type eq 'result'){
-	  $self->{'display_label'} .= " signal";
-	}
-	else{
-	  $self->{'display_label'} .= " enriched sites";
-	}
-  }
- 
-  return $self->{'display_label'};
-}
-
-
 
 =head2 set_type
 
@@ -321,15 +271,14 @@ sub set_type {
   my ($self, $set_type) = @_;
    
   if(defined $set_type){
-	$self->{'_set_type'} = $set_type;
+    $self->{_set_type} = $set_type;
   }
   elsif(! defined $self->{'_set_type'}){
-	my @namespace = split/\:\:/, ref($self);
-	($self->{'_set_type'} = lc($namespace[$#namespace])) =~ s/set//;
-	
+    my @namespace = split/\:\:/, ref($self);
+    ($self->{_set_type} = lc($namespace[$#namespace])) =~ s/set//;	
   }
 
-  return $self->{'_set_type'};
+  return $self->{_set_type};
 }
 
 
