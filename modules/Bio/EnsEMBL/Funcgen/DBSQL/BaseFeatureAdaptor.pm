@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -132,8 +132,8 @@ sub fetch_all_by_Slice_constraint {
 
   my @result;
 
-  if(!ref($slice) || !$slice->isa("Bio::EnsEMBL::Slice")) {
-    throw("Bio::EnsEMBL::Slice argument expected.");
+  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')) {
+    throw('Bio::EnsEMBL::Slice argument expected.');
   }
 
   $constraint ||= '';
