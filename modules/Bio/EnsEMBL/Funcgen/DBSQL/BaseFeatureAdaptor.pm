@@ -125,8 +125,6 @@ sub generic_fetch {
 
 =cut
 
-#Remove this now we don't have array based ResultFeatures?
-
 sub fetch_all_by_Slice_constraint {
   my($self, $slice, $constraint, $logic_name) = @_;
 
@@ -138,10 +136,11 @@ sub fetch_all_by_Slice_constraint {
   
   $constraint ||= '';
   
-  my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name(
-																$slice->coord_system->name(), 
-																$slice->coord_system->version()
-															   );
+  my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name
+    (
+     $slice->coord_system->name(), 
+     $slice->coord_system->version()
+    );
 
 
   if(! defined $fg_cs){
@@ -214,6 +213,11 @@ sub fetch_all_by_Slice_constraint {
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
   
+  #Need to handle bound_start/end values here for regulatory_features
+  #This will slow down fetch for all types of feature on HAP/PAR
+  #And will also prevent merging this back into the core code.
+  #One way around this is to
+
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
 
@@ -221,29 +225,34 @@ sub fetch_all_by_Slice_constraint {
     my $seg_slice  = $seg->to_Slice();
     my $features = $self->_slice_fetch($seg_slice, $constraint); ## NO RESULTS? This is a problem with the cs->equals method?
 
-	# if this was a symlinked slice offset the feature coordinates as needed
-    if($seg_slice->name() ne $slice->name()) {
+    # if this was a symlinked slice offset the feature coordinates as needed
+    if ($seg_slice->name() ne $slice->name()) {
 
     FEATURE:
       foreach my $f (@$features) {
-        if($offset != 1) {
-		  $f->{'start'} += $offset-1;
-          $f->{'end'}   += $offset-1;
-		}
 
+        if ($offset != 1) {
+          $f->{start} += $offset-1;
+          $f->{end}   += $offset-1;
+
+          if($f->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature')){
+            $f->{bound_start} += $offset-1;
+            $f->{bound_end}   += $offset-1;
+          }
+        }
+        
         # discard boundary crossing features from symlinked regions
         foreach my $bound (@bounds) {
-          if($f->{'start'} < $bound && $f->{'end'} >= $bound) {
-			
+          if ($f->{'start'} < $bound && $f->{'end'} >= $bound) {
+            
             next FEATURE;
           }
         }
-
+        
         $f->{'slice'} = $slice;
         push @result, $f;
       }
-    }
-    else {
+    } else {
       push @result, @$features;
     }
   }
@@ -283,7 +292,7 @@ sub build_seq_region_cache{
   #where as we want to cover all from one DB/schema_build
 
   if(defined $slice){
-	throw('Optional argument must be a Bio::EnsEMBL::Slice') if(! ( ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
+    throw('Optional argument must be a Bio::EnsEMBL::Slice') if(! ( ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
   }
 
   my $dnadb = (defined $slice) ? $slice->adaptor->db() : $self->db->dnadb();
