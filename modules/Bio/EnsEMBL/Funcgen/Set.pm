@@ -27,7 +27,7 @@ Bio::EnsEMBL::Funcgen::Set - A module to represent a base Set object.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::Set;
+  use Bio::EnsEMBL::Funcgen::Set;
 
   @INC = qw (Bio::EnsEMBL::Funcgen::Set)
 
@@ -43,7 +43,7 @@ use Bio::EnsEMBL::Funcgen::Set;
 
 =head1 DESCRIPTION
 
-A base Set object which provides access common methods available across Funcgen Set classes.
+A base Set object which provides common methods available across Funcgen Set classes.
 
 =head1 SEE ALSO
 
@@ -71,12 +71,13 @@ use vars qw(@ISA);
   Arg [-NAME]          : String - name for this Set.
   Arg [-FEATURE_TYPE]  : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [-FEATURE_CLASS] : String - Class of feature e.g. result, annotated, 
-                         regulatory, segmentation, external, dna_methylation 
+                         regulatory, segmentation, external or dna_methylation.
   OPTIONAL ARGS:
   Arg [-CELL_TYPE]     : Bio::EnsEMBL::Funcgen::CellType
   Arg [-ANALYSIS]      : Bio::EnsEMBL::Analysis
-  Arg [-dbID]          : Int
-  Arg [-ADAPTOR]       : Bio::EnsEMBL::Funcgen::DBSQL::
+  Arg [-DBID]          : Int
+  Arg [-ADAPTOR]       : Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor e.g. Input|Result|FeatureSetAdaptor.
+
   Example    : my $self = $class->SUPER::new(@_);
   Description: Constructor for Set objects.
   Returntype : Bio::EnsEMBL::Funcgen::Set
