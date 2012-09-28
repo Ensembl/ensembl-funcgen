@@ -50,8 +50,10 @@ A base Set object which provides common methods available across Funcgen Set cla
 Bio::EnsEMBL::Funcgen::FeatureSet
 Bio::EnsEMBL::Funcgen::ResultSet
 Bio::EnsEMBL::Funcgen::InputSet
+Bio::EnsEMBL::Funcgen::Storable
 
 =cut
+
 
 package Bio::EnsEMBL::Funcgen::Set;
 
@@ -216,6 +218,8 @@ sub feature_class { return $_[0]->{feature_class}; }
 =cut
 
 #Test for adaptor
+#Can't set this in new as we won't pass the adaptor
+#unless creating from _obj_from_sth
 
 sub feature_class_name{
   my $self = shift;
@@ -283,7 +287,7 @@ sub set_type { return $_[0]->{_set_type}; }
 
 sub type {
   my $self = shift;
-  deprecate("Please use feature_class instead");
+  deprecate('Please use feature_class instead');
   return $self->feature_class(@_);
 }
 
