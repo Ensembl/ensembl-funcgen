@@ -115,12 +115,17 @@ sub new {
   
   #OPTIONAL PARAMS
   if(defined $ctype && 
-     ! (ref($ctype) && $ctype->isa('Bio::EnsEMBL::Funcgen::CellType')) ){
+     ref($ctype) ne 'Bio::EnsEMBL::Funcgen::CellType'){
     throw('-CELL_TYPE param must be a valid Bio::EnsEMBL::Funcgen::CellType');
   }
 
   if(defined $anal){
-    $self->analysis($anal);
+    
+    if(ref($anal) ne 'Bio::EnsEMBL::Analysis'){
+      throw('-ANALYSIS argument must be a valid Bio::EnsEMBL::Analysis');
+    }
+
+    $self->{analysis} = $anal;
   }
   elsif($self->set_type ne 'input'){
     #Currently not mandatory for input_sets
@@ -226,30 +231,20 @@ sub feature_class_name{
 
 =head2 analysis
 
-  Example    : my $anal_name = $set->analysis->logic_name();
-  Description: Getter for the analysis attribute for this Set.
+  Example    : my $analysis_name = $set->analysis->logic_name;
+  Description: Getter for the Analysis attribute of a Set.
   Returntype : Bio::EnsEMBL::Analysis
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 #Not currently present in input_set
 #implement in input_set instead of format
 
-sub analysis {
-  my $self = shift;
+sub analysis {  return $_[0]->{analysis}; }
 
-  if(@_){
-    throw('Must pass a valid stored Analysis') if (! (ref($_[0]) eq 'Bio::EnsEMBL::Analysis'
-                                                      && $_[0]->dbID()));
-    $self->{analysis} = shift;
-  }
-  
- 
-  return $self->{analysis};
-}
 
 =head2 set_type
 
