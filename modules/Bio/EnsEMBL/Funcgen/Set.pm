@@ -121,6 +121,10 @@ sub new {
     throw('-CELL_TYPE param must be a valid Bio::EnsEMBL::Funcgen::CellType');
   }
 
+  #Define set_type automatically
+  my @namespace = split/\:\:/, ref($self);
+  ($self->{_set_type} = lc($namespace[$#namespace])) =~ s/set//;	
+
   if(defined $anal){
     
     if(ref($anal) ne 'Bio::EnsEMBL::Analysis'){
@@ -140,10 +144,6 @@ sub new {
   $self->{name}         = $name;
   $self->{cell_type}    = $ctype;
   $self->{feature_type} = $ftype;
-
-  #Define set_type automatically
-  my @namespace = split/\:\:/, ref($self);
-  ($self->{_set_type} = lc($namespace[$#namespace])) =~ s/set//;	
   
   return $self;
 }
