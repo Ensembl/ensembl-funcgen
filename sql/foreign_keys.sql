@@ -3,7 +3,7 @@
 # This file is intended as a reference since some of the relationships
 # are not obvious.
 #
-# Note that these constraints are not actually used by Ensembl for 
+# Note that these constraints are not actually used by Ensembl for
 # performance reasons, and referential integrity is enforced at the
 # application level. Also MySQL currently does not support foreign
 # key constraints on MyISAM tables.
@@ -25,51 +25,67 @@
 
 
 
--- Last updated for v67
+-- Last updated for v69
+
+-- feature_set
+ALTER table feature_set ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
+
+-- input_subset_tracking
+-- ALTER table input_subset_tracking ADD FOREIGN KEY (input_subset_id) REFERENCES input_subset(input_subset_id);
 
 
+-- input_set_tracking
+-- ALTER table input_set_tracking ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
+
+
+-- result_set_tracking
+-- ALTER table result_set_tracking ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
+
+
+-- data_set_tracking
+-- ALTER table data_set_tracking ADD FOREIGN KEY (data_set_id) REFERENCES data_set(data_set_id);
 
 ### eFG FKs
 
 -- segmentation_feature
-ALTER table segmentation_feature ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
-ALTER table segmentation_feature ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER table segmentation_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+ALTER table segmentation_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
+ALTER table segmentation_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
+ALTER table segmentation_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
 
 
 -- feature_type
 ALTER table feature_type ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
 
 -- regulatory_feature
-ALTER table regulatory_feature ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
-ALTER table regulatory_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
-ALTER table regulatory_feature ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
+ALTER table regulatory_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
+ALTER table regulatory_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
+ALTER table regulatory_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
 
 -- regulatory_attribute
 ALTER table regulatory_attribute ADD FOREIGN KEY (regulatory_feature_id) REFERENCES regulatory_feature(regulatory_feature_id);
 -- add complex foreign keys?
 
 -- annotated_feature
-ALTER table annotated_feature ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
-ALTER table annotated_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+ALTER table annotated_feature ADD FOREIGN KEY (feature_set_id)  REFERENCES feature_set(feature_set_id);
+ALTER table annotated_feature ADD FOREIGN KEY (seq_region_id)   REFERENCES seq_region(seq_region_id);
 
 -- motif_feature
-ALTER table motif_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+ALTER table motif_feature ADD FOREIGN KEY (seq_region_id)     REFERENCES seq_region(seq_region_id);
 ALTER table motif_feature ADD FOREIGN KEY (binding_matrix_id) REFERENCES binding_matrix(binding_matrix_id);
 
 -- associated_motif_feature
-ALTER table associated_motif_feature ADD FOREIGN KEY (motif_feature_id) REFERENCES motif_feature(motif_feature_id);
+ALTER table associated_motif_feature ADD FOREIGN KEY (motif_feature_id)     REFERENCES motif_feature(motif_feature_id);
 ALTER table associated_motif_feature ADD FOREIGN KEY (annotated_feature_id) REFERENCES annotated_feature(annotated_feature_id);
 
 -- binding_matrix
-ALTER table binding_matrix ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER table binding_matrix ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
+ALTER table binding_matrix ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
+ALTER table binding_matrix ADD FOREIGN KEY (analysis_id)      REFERENCES analysis(analysis_id);
 -- patched to smallint for v63
 
 -- external_feature
-ALTER table external_feature ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
-ALTER table external_feature ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER table external_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
+ALTER table external_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
+ALTER table external_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
+ALTER table external_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
 
 -- result_feature
 ALTER table result_feature ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
@@ -97,7 +113,6 @@ ALTER table supporting_set ADD FOREIGN KEY (data_set_id) REFERENCES data_set(dat
 ALTER table feature_set ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
 ALTER table feature_set ADD FOREIGN KEY (cell_type_id) REFERENCES cell_type(cell_type_id);
 ALTER table feature_set ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
-ALTER table feature_set ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
 
 
 -- result_set
