@@ -122,15 +122,17 @@ not have a version an empty string ('') is used instead.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Funcgen::CoordSystem;
 my %cs_warnings;
+
+
+use strict;
+use warnings;
+
 
 use vars qw(@ISA);
 
@@ -448,7 +450,7 @@ sub fetch_by_name{
 
   #Set default_version if not specified
   if(! $version){
-	$version =  $self->db->get_CoordSystemAdaptor->fetch_by_name($name)->version();
+    $version =  $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name($name)->version();
   }
 
   #can we not just use
@@ -493,28 +495,28 @@ sub fetch_by_name{
 	#the DB for those contigs which appear in both versions and are identical.
 
     if($version) {#Assembled level
-
-	  if(lc($cs->version()) eq $version){
-		#This will pick the right CS even if the dnadb schema_build is not present
-		$found_cs = $cs;
-		last;
-	  }
-	}
-	else{#We have an unassembled/non-versioned level and can use any as there should only be 1
-	  $found_cs = $cs;
-	  last;
-	}
+      
+      if(lc($cs->version()) eq $version){
+        #This will pick the right CS even if the dnadb schema_build is not present
+        $found_cs = $cs;
+        last;
+      }
+    }
+    else{#We have an unassembled/non-versioned level and can use any as there should only be 1
+      $found_cs = $cs;
+      last;
+    }
   }
-
+  
   #should these throw?
   if(! $found_cs){
-	if($version) {
-	  warn "No coord system found for $sbuild version '$version'";
+    if($version) {
+      warn "No coord system found for $sbuild version '$version'";
 	  return undef;
-	}else{
-	  warn "Could not find $name CoordSystem.";
-	  return undef
-	}
+    }else{
+      warn "Could not find $name CoordSystem.";
+      return undef
+    }
   }
 
 
