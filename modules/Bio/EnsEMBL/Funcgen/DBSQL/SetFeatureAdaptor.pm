@@ -64,7 +64,7 @@ use vars qw(@ISA @EXPORT);
 =head2 fetch_all_by_FeatureType_FeatureSets
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Bio::EnsEMBL::FeatureType
+  Arg [2]    : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [3]    : (optional) hashref - params hash
                                       associated => 1, #Also return feature which have the associated FeatureType
                                       logic_name => 'analysis.logic_name'
@@ -74,7 +74,7 @@ use vars qw(@ISA @EXPORT);
                This is mainly used by external FeatureSets which can sometimes have more 
                than one associated FeatureType. NOTE: This is intended to work for FeatureTypes at the 
                feature level, not the more generic FeatureSet level FeatureTypes.
-  Returntype : Listref of Bio::EnsEMBL::SetFeature objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::SetFeature objects
   Exceptions : Throws if no FeatureType object provided
   Caller     : General
   Status     : At Risk
@@ -137,7 +137,7 @@ sub fetch_all_by_FeatureType_FeatureSets {
 
 =head2 fetch_all_by_Feature_associated_feature_types
 
-  Arg [1]    : Bio::EnsEMBL::SetFeature
+  Arg [1]    : Bio::EnsEMBL::Funcgen::SetFeature
   Arg [2]    : (optional) hashref - params hash, all entries optional
                                       -logic_name => 'analysis.logic_name'
                                       -include_direct_links => 1, #Also return feature which are linked by Feature->feature_type
@@ -217,7 +217,7 @@ sub fetch_all_by_Feature_associated_feature_types {
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $ofa->fetch_all_by_Slice_FeatureType($slice, $ft);
   Description: Retrieves a list of features on a given slice, specific for a given FeatureType.
-  Returntype : Listref of Bio::EnsEMBL::SetFeature objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::SetFeature objects
   Exceptions : Throws if no FeatureType object provided
   Caller     : General
   Status     : At Risk
@@ -242,7 +242,7 @@ sub fetch_all_by_Slice_FeatureType {
 
 =head2 fetch_all_by_FeatureSets
 
-  Arg [1]    : Arrayref of Bio::EnsEMBL::FeatureSet objects
+  Arg [1]    : Arrayref of Bio::EnsEMBL::Funcgen::FeatureSet objects
   Arg [2]    : optional - analysis.logic_name
   Example    : my $features = $set_feature_adaptor->fetch_all_by_FeatureSets(@fsets);
   Description: Retrieves a list of features specific for a given list of FeatureSets.
@@ -272,7 +272,7 @@ sub fetch_all_by_FeatureSets {
   Exceptions : Throws if FeatureSets are passed
                Throws if FeatureSet feature_class does not match adaptor feature_class
                Throws if FeatureSet is not valid 
-  Caller     : Bio::EnsEMBL::DBSQL::SetFeatureAdaptor
+  Caller     : Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor
   Status     : At Risk
 
 =cut
@@ -283,8 +283,8 @@ sub _generate_feature_set_id_clause{
   my @fs_ids;
 
   if(! ( (ref($fsets) eq 'ARRAY') &&
-		 scalar(@{$fsets}) > 0) ){
-	throw('Must provide a list of Bio::EnsEMBL::FeatureSet objects');
+         scalar(@{$fsets}) > 0) ){
+    throw('Must provide a list of Bio::EnsEMBL::Funcgen::FeatureSet objects');
   }
 
   my $fclass = $self->_feature_class;
