@@ -23,36 +23,41 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::ResultSet - A module to represent ResultSet.
+Bio::EnsEMBL::Funcgen::ResultSet - Represents a set of experimental results (signal).
  
 
 =head1 SYNOPSIS
 
 use Bio::EnsEMBL::Funcgen::ResultSet;
 
-my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
-                                                       -dbid        => $dbid,
-                                                       -analysis    => $analysis,
-                                                       -table_name  => 'experimental_chip',
-                                                       -table_id    => $ec_id,
-                                                       -feature_class => 'dna_methylation',
-); 
+my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
+  (
+   -dbid        => $dbid,
+   -analysis    => $analysis,
+   -table_name  => 'input_set',
+   -table_id    => $input_set_id,
+   -feature_class => 'dna_methylation',
+  );
 
 
 
 =head1 DESCRIPTION
 
-A ResultSet object provides access to a set raw results from an Experiment. A set will be one or more 
-contiguous chips to be treated as one set, with the same analysis. Duplicate sets will form a separate
-result set, as will the same raw data analysed or normalised in a different manner.
+A ResultSet object provides access to a set raw or processed signal values from an Experiment, 
+and can consist of any number of inputs which can either be InputSets or ExperimentalChips.
+A ResultSet can represent a single or multiple merged replicates of raw or processed(normalised) 
+signal data.
+
+=head1 SEE ALSO
+
+Bio::EnsEMBL::Funcgen::Set
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::ResultSet;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 use Bio::EnsEMBL::Funcgen::Set;
@@ -60,10 +65,23 @@ use Bio::EnsEMBL::Funcgen::Set;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Set);
 
-my %valid_classes = (
-                     result => undef,
-                     dna_methylation => undef,
-                    );
+#Valid enum field hashes to prevent loading NULLs
+
+#result_set.feature_class
+my %valid_classes = 
+  (
+   result => undef,
+   dna_methylation => undef,
+  );
+
+#result_set_input.table_name
+my %valid_table_names = 
+  (
+   experimental_chip => undef,
+   input_set         => undef,
+   channel           => undef,
+  );
+
 
 =head2 new
 
@@ -71,21 +89,26 @@ my %valid_classes = (
 
 
 
-  Example    : my $feature = Bio::EnsEMBL::Funcgen::ResultSet->new(
-                                                                   -dbid        => $dbid,
-                                                                   -analysis    => $analysis,
-                                                                   -table_name  => 'experimental_chip',
-                                                                   -table_id       => $ec_id,
-                                                                   -result_feature_set => 1,
-                                                                   -feature_class => 'dna_methylation',
-			                                          ); 
+  Example    : my $feature = Bio::EnsEMBL::Funcgen::ResultSet->new
+                 (
+                  -dbid               => $dbid,
+                  -analysis           => $analysis,
+                  -table_name         => 'input_set',
+                  -table_id           => $input_set_id,
+                  -result_feature_set => 1,
+                  -feature_class      => 'result',
+                  -feature_type       => $ftype,
+			           );
   Description: Constructor for ResultSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
-  Exceptions : Throws if no experiment_id defined
+  Exceptions : Throws if feature class is not valid.
+               Throws if table name not defined.
   Caller     : General
-  Status     : At risk
+  Status     : Stable
 
 =cut
+
+#Test $rf_set eq 1|0?
 
 sub new {
   my $caller = shift;
@@ -96,36 +119,76 @@ sub new {
     = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 'DBFILE_DATA_DIR'], @_);	
   my $self = $class->SUPER::new(@_);
 
+  # TEST MANDATORY PARAMS
 
   #explicit type check here to avoid invalid types being imported as NULL
-  #subsequently throwing errors on retrieval
+  #and subsequently throwing errors on retrieval
   my $type = $self->feature_class;
   
   if ( !( $type && exists $valid_classes{$type} ) ) {
     throw( 'You must define a valid FeatureSet type e.g. ' .
            join( ', ', keys %valid_classes ) );
   }
-
-
-  $self->{'table_id_hash'} = {};
-
-  #maybe don't need tha analysis args as mandatory as we're testing in the adaptor store method
-  if (! $table_name){
-    throw("Need to pass the following arg:\t-table_name");
+ 
+  if (! (defined $table_name &&
+         exists $valid_table_names{$table_name}) ){
+    throw('You need to pass a valid -table_name e.g. '.
+          join(', ', keys %valid_table_names));
   }
+
   
-  #do we need some control of creating new objects with dbID and adding result_groups/feature_sets and them storing/updating them
-  #potential for someone to create one from new using a duplicate dbID and then linking incorrect data to a pre-existing ResultGroup
-  #we need to verify that each table_name/id in the set is from the same experiment
-   $self->table_name($table_name);
-  $self->add_table_id($table_id) if $table_id;
-  $self->result_feature_set($rf_set) if $rf_set;
-  $self->dbfile_data_dir($dbfile_data_dir) if $dbfile_data_dir;
+  $self->{table_id_hash}      = {};
+  $self->{table_name}         = $table_name;
+  $self->{result_feature_set} = (defined $rf_set) ? 1 : 0;
+  $self->add_table_id($table_id)           if defined $table_id;
+  $self->dbfile_data_dir($dbfile_data_dir) if defined $dbfile_data_dir;
 
   return $self;
 }
 
 
+#Is this the analysis description right place to be putting source refs?
+#Yes if we are only ever going to have one source/signal track
+#ChIP-Seq ResultFeature tracks have merged sources and only have source refs corresponding peak zmenus
+#This will also appear in the track info and config
+
+#
+
+sub project{
+  my $self = shift;
+
+  if(! exists $self->{project}){
+    #Not undef check as undef is a valid value
+    #for mixed project ResultSets
+
+    my $project;
+    my @isets = @{$self->get_InputSets};
+    
+    #Make sure we have one project
+
+    #handle Publication here?
+
+    if(@isets){
+      my $exp_group = $isets[0]->get_Experiment->experimental_group;
+
+      if ($exp_group->is_project){
+                    
+        foreach my $iset(@isets){
+        
+          if($project ne $iset->project){
+            #Mixed project ResultSet
+            $project = undef;
+            last;
+          }
+        }
+      }
+    }
+
+    $self->{project} = $project;
+  }
+
+  return $self->{project};
+}
 
 =head2 display_label
 
@@ -138,21 +201,33 @@ sub new {
 
 =cut
 
+#Add project name in here
+#Where is this used in the webcode? Track names?
+#Not for ChIP-Seq DataSets as these use the merged class descriptions
+#e.g. Open Chromatin & TFBS
+#Just for dna_methylation, as these are always show on one track.
 
 sub display_label {
   my $self = shift;
 
   if(! defined $self->{display_label}){
 
-    if($self->feature_class eq 'result'){ # We have a ChIP/DNase1/FAIRE signle
-      $self->{display_label} = $self->feature_type->name.' - '.$self->cell_type->name.' signal';
+    if($self->feature_class eq 'result'){ # We have a ChIP/DNase1/FAIRE signal set
+      $self->{display_label} = $self->feature_type->name.' '.$self->cell_type->name.' signal';
     }
     elsif($self->feature_class eq 'dna_methylation'){
-      $self->{display_label} = $self->analysis->display_label.' - '.$self->cell_type->name;
+      
+      my $project = $self->project || '';
+
+      if($project){
+        $project = ' '.$project;
+      }
+
+      $self->{display_label} = $self->analysis->display_label.' '.$self->cell_type->name.$project;
     }
     else{
       warn 'ResultSet feature class('.$self->feature_class.') not explicitly handled in display_label';
-      $self->{display_label} = $self->feature_type->name.' - '.$self->cell_type->name;
+      $self->{display_label} = $self->feature_type->name.' '.$self->cell_type->name;
     }
   }
 
@@ -181,28 +256,28 @@ sub display_label {
 
 sub get_dbfile_path_by_window_size{
   my ($self, $window_size, $slice) = @_;
-
+  
   if($slice){
-   
-	if(! (ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
-	  throw('You must provide a valid Bio::EnsEMBL::Slice');
-	}
-
-	$window_size .= '.'.$slice->seq_region_name;
+    
+    if(! (ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
+      throw('You must provide a valid Bio::EnsEMBL::Slice');
+    }
+    
+    $window_size .= '.'.$slice->seq_region_name;
   }
-
+  
   return $self->dbfile_data_dir.'/result_features.'.$self->name.'.'.$window_size.'.col';
 }
 
 
 =head2 dbfile_data_dir
 
-  Arg[1]     : OPTIONAL string - data directory for this ResultSet
+  Arg[1]     : String (optional) - data directory for this ResultSet
   Example    : my $dbfile_data_dir = $self->dbfile_data_dir;
   Description: Getter/Setter for the root dbfile data directory for this ResultSet
-  Returntype : string
+  Returntype : String
   Exceptions : None
-  Caller     : self
+  Caller     : Bio::EnsEMBL::Funcgen::Importer and new
   Status     : at risk
 
 =cut
@@ -211,62 +286,40 @@ sub get_dbfile_path_by_window_size{
 
 sub dbfile_data_dir{
   my ($self, $data_dir) = @_;
-
-  $self->{'dbfile_data_dir'} = $data_dir if defined $data_dir;
-
-  return $self->{'dbfile_data_dir'};
+  $self->{dbfile_data_dir} = $data_dir if defined $data_dir;
+  return $self->{dbfile_data_dir};
 }
 
 
 
 =head2 result_feature_set
 
-  Arg [1]    : optional - boolean 0 or 1.
   Example    : if($rset->result_feature_set){ ...use result_feature table ...};
-  Description: Getter and setter for the result_feature_set attribute.
-  Returntype : boolean
+  Description: Getter for the result_feature_set attribute.
+  Returntype : Boolean
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
 
-
-sub result_feature_set{
-  my $self = shift;
-
-  $self->{'result_feature_set'} = shift if @_;;
-  return $self->{'result_feature_set'};
-}
+sub result_feature_set{ return $_[0]->{result_feature_set}; }
 
 
 =head2 table_name
 
-  Arg [1]    : (optional) string - table_name (experimental_chip, channel or input_set)
-  Example    : $result_set->experiment_id($exp_id);
-  Description: Getter and setter for the table_name for this ResultSet.
-  Returntype : string
+  Example    : if($result_set->table_name eq 'input_set'){
+                 #Do something here
+               }
+  Description: Getter for the table_name of a ResultSet.
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-
-sub table_name{
-    my $self = shift;
-
-    if (@_){
-      
-      if($self->{'table_name'} && ($self->{'table_name'} ne $_[0])){
-		throw("Cannot mix  table name/types of a ResultSet");
-      }
-	
-      $self->{'table_name'} = $_[0];
-    }
-
-    return $self->{'table_name'};
-}
+sub table_name{ return $_[0]->{table_name}; }
 
 
 
@@ -290,7 +343,7 @@ sub add_table_id {
   my ($self, $table_id, $cc_id) = @_;
   
   if (! defined $table_id){	
-    throw("Need to pass a table_id");
+    throw('Need to pass a table_id');
   }else{
     
     if((exists $self->{'table_id_hash'}->{$table_id}) && (defined $self->{'table_id_hash'}->{$table_id})){
@@ -323,13 +376,6 @@ sub table_ids {
 }
 
 
-sub chip_channel_ids {
-  my $self = shift;
-
-  deprecate('ResultSet::chip_channel_ids is deprecated, please use result_set_input_ids');
-  
-  return $self->result_set_input_ids;
-}
 
 =head2 result_set_input_ids
 
@@ -371,7 +417,7 @@ sub contains{
   my @tables = $chip_channel->adaptor->_tables();
   my ($table_name, undef) = @{$tables[0]};
 
-  if($table_name ne $self->table_name()){
+  if($table_name ne $self->table_name){
     warn("ResultSet(".$self->table_name().") cannot contain ${table_name}s");
   }else{
     $contains = 1 if (exists $self->{'table_id_hash'}->{$chip_channel->dbID()});
@@ -399,15 +445,6 @@ sub get_result_set_input_id{
 }
 
 
-sub get_chip_channel_id{
-  my ($self, $table_id) = @_;
-  
-  deprecate('ResultSet::get_chip_channel_ids is dperecated, please us get_result_set_input_id');
-  return $self->get_result_set_input_id($table_id);
-}
-
-
-
 =head2 get_InputSets
 
   Example    : my @ecs = @{$result_set->get_ExperimentalChips()};
@@ -423,21 +460,19 @@ sub get_InputSets{
   my $self = shift;
   
   if($self->table_name ne 'input_set'){
-	warn 'Cannot get_InputSets for an array based ResultSet';
-	return;
+    warn 'Cannot get_InputSets for an array based ResultSet';
+    return;
   }
 
-  
-
-  if(! defined $self->{'input_sets'}){
+  if(! defined $self->{input_sets}){
     my $is_adaptor = $self->adaptor->db->get_InputSetAdaptor();
     
-	foreach my $is_id(@{$self->table_ids()}){	
-	  push @{$self->{'input_sets'}}, $is_adaptor->fetch_by_dbID($is_id);
-	}
+    foreach my $is_id(@{$self->table_ids()}){	
+      push @{$self->{input_sets}}, $is_adaptor->fetch_by_dbID($is_id);
+    }
   }
 
-  return $self->{'input_sets'};
+  return $self->{input_sets};
 }
 
 
@@ -463,7 +498,7 @@ sub get_ExperimentalChips{
   if(! defined $self->{'experimental_chips'}){
     my $ec_adaptor = $self->adaptor->db->get_ExperimentalChipAdaptor();
     
-	if($self->table_name() eq "experimental_chip"){
+	if($self->table_name eq "experimental_chip"){
 
 	  foreach my $ec_id(@{$self->table_ids()}){
 		#warn "Getting ec with id $ec_id";
@@ -613,18 +648,18 @@ sub log_label {
 
   my $label;
   
-  if(defined $self->feature_type()){
-	$label = $self->feature_type->name.":";
+  if(defined $self->feature_type){
+    $label = $self->feature_type->name.":";
   }else{
-	$label = "Unknown FeatureType:";
+    $label = "Unknown FeatureType:";
   }
 
-  if(defined $self->cell_type()){
-	$label .= $self->cell_type->name;
+  if(defined $self->cell_type){
+    $label .= $self->cell_type->name;
   }else{
-	$label .= "Uknown CellType";
+    $label .= "Uknown CellType";
   }
-
+  
   return $self->name.":".$self->analysis->logic_name.":".$label;
 }
 
