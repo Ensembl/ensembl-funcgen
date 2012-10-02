@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -56,11 +56,10 @@ which array it is on.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::Probe;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Storable;
@@ -435,39 +434,39 @@ sub get_probename {
   Description: Retrieves all complete names for this probe. The complete name
                is a concatenation of the array name, the probeset name and the
 			   probe name.
-  Returntype : Listref of strings
+  Returntype : Arrayref of strings
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Stable
 
 =cut
 
 sub get_all_complete_names {
-    my $self = shift;
+  my $self = shift;
 	
-    my ($probeset, @result);
+  my ($probeset, @result);
 	my $pset = $self->probeset;
 
-	if($pset){
+	if ($pset) {
 	  $probeset = $pset->name;
 	}
 
-    $probeset .= ':' if $probeset;
+  $probeset .= ':' if $probeset;
 	
 
-    #warn "For Nimblegen this need to be Container:Seqid::probeid?";
+  #warn "For Nimblegen this need to be Container:Seqid::probeid?";
 
-    while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
-      #would have to put test in here for $self->arrays()->vendor()
-      #if($array->vendor() eq "AFFY"){
+  while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
+    #would have to put test in here for $self->arrays()->vendor()
+    #if($array->vendor() eq "AFFY"){
       
-	  foreach my $name(@{$self->{'probenames'}{$array->name()}}){
+	  foreach my $name ( @{$self->{'probenames'}{$array->name()}} ) {
 
-		push @result, $array->name().":$probeset".$name;
+      push @result, $array->name.":$probeset".$name;
 	  }
-    }
+  }
     
-    return \@result;
+  return \@result;
 }
 
 
