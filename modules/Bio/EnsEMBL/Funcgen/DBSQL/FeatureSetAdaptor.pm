@@ -146,7 +146,7 @@ sub fetch_all_by_FeatureType {
     my ($self, $ftype, $status) = @_;
     
 	my $params = {constraints => {feature_types => [$ftype]}};
-	$params->{constraints}{state} = $status if $status;
+	$params->{constraints}{status} = $status if $status;
 	#No need to reset tables for these
 	return $self->generic_fetch($self->compose_constraint_query($params));	
 }
