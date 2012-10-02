@@ -1,7 +1,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -162,13 +162,33 @@ sub name{
   Returntype  : Bio::EnsEMBL::Funcgen::ExperimentalGroup
   Exceptions  : None
   Caller      : General
-  Status      : At risk
+  Status      : At risk - to be deprecated
 
 =cut
+
+#change in webcode before deprecating
 
 sub experimental_group{
   return $_[0]->{'group'};
 }
+
+
+
+=head2 get_ExperimentalGroup
+
+  Example     : my $exp_group_name = $exp->experimental_group()->name();
+  Description : Getter for the experimental group
+  Returntype  : Bio::EnsEMBL::Funcgen::ExperimentalGroup
+  Exceptions  : None
+  Caller      : General
+  Status      : Stable
+
+=cut
+
+sub get_ExperimentalGroup{ return $_[0]->{group}; }
+
+
+
 
 
 =head2 date
