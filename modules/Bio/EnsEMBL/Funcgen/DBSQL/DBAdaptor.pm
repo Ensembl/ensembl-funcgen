@@ -126,38 +126,38 @@ my $reg = "Bio::EnsEMBL::Registry";
 
 =cut
 
+#a main problem here is that we try to autoset the species
+#this should really be done in Config Registry or possible SUPER new via reg->find_and_add_alias
+#
+#In the interim do we need to force the specification of species?
+#This is required for automatic dnadb setting
+#we could try and parse it from the dbname (trinomial names would be an issue)
+
+#Trick is to do dnadb setting stuff first?
+#still won't help as this doesn't set the species properly
+
+#Woo woo! AY fixed this in the registry
+#Species will never be DEFAULT 
+#Hence species.production_name will be mandatory
+#We can change this if required 
+#We don't need to set species if we have a dnadb (params) passed
+#but we can't validate. We could do some soft validation regex vs dbname? Too much?
+
 sub new {
   my ($class, @args) = @_;
 
   #Force group to be funcgen as this is the only valid group.
+  #This is now also in ConfigRegistry::gen_load
   my $self = $class->SUPER::new(@args, '-group', 'funcgen');
  
-  
-  #warn "BEFORE ".$self->SUPER::dnadb->group.' '.$self->species;
-  #is core here
+  #DEFAULT species handling now done in ConfigRegistry.pm
+  #via gen_load which is called from SUPER new
+  #gen_load throws if no species param is defined 
+  #and species.production_name is also absent
 
-  if ($self->species eq 'DEFAULT') { #Auto set species if not set
-	
-    #Can't do list_value_by_key as this depends on species, so we get a circular reference
-    #This has already been set in the registry in SUPER::new above as DEFAULT!
-    #So we need to reset this in the registry here?
+  #Should we need to do this if we define a valid dnadb?
+  #reg aliases still not loaded
 
-
-    $self->{'_species'} = ${$self->get_MetaContainer->list_value_by_key('species.production_name')}[0] || 'DEFAULT';
-
-    if ($self->species ne 'DEFAULT') { #Reset this in the registry to the correct species
-      $self = Bio::EnsEMBL::Utils::ConfigRegistry::gen_load($self);
-      #This causes duplicate software vs DB release warnings
-	  
-      #current causes dnadb to be reset to the funcgen DB
-
-	  
-
-    }
-  }
-  #else should we redefine the species as the standard alias if it does not match?
-  #This would prevent external_db species name testing
-  #Maybe the solution is to make external_db multi_species
 
   my ( $dnadb_host, $dnadb_user, $dnadb_port, $dnadb_pass, $dnadb_assm, $dnadb_name, $dnadb)
     = rearrange([
@@ -182,8 +182,8 @@ sub new {
 
   #This is currently searching for the DB one ensembldb despite being predefined as -dnadb!
 
-  if ($default_dnadb->group eq 'core') {
-    #This means you have loaded a registry or passed a dnadb to the efg DBAdaptor	
+  if ($default_dnadb->group eq 'core') { 
+    #is 'funcgen' if not already by passing dnadb or loading registry
     $default_host = $default_dnadb->dbc->host;
     $default_port = $default_dnadb->dbc->port;
     $default_user = $default_dnadb->dbc->username;
@@ -222,7 +222,7 @@ sub new {
 
   #This only tries to _set_dnadb if we set some dnadb_params
   #or the dnadb_assm doesn't match the default/predefined dnadb
-
+   
   if ($dnadb_params ||
       ($self->_get_schema_build($self->dnadb()) !~ /[0-9]+_${dnadb_assm}[a-z]*$/) ) {
 	
@@ -238,7 +238,7 @@ sub new {
 	
     $self->_set_dnadb;
   }
-
+  
   return $self;
 } 
 
@@ -370,7 +370,10 @@ sub get_available_adaptors{
                'ExperimentalGroup'  => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
                'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
                'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
-               'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor', #prepended FG to override core adaptor?
+               'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor', 
+               #prepended FG to override core adaptor. Now fixed in registry. Maintained for backwards compatibility
+               'CoordSystem'        => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor', 
+
                'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
                'FeatureSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
                'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
@@ -482,23 +485,26 @@ sub dnadb_assembly{
 
 =cut
 
+#why was the SUPER::dnadb->group ever ne core?
+
 sub dnadb { 
   my ($self, $dnadb, $cs_name) = @_; 
 
-  #warn "dnadb x$dnadb x || ".$self->SUPER::dnadb->group(); 
+  #warn "dnadb x $dnadb x || ".$self->SUPER::dnadb->group(); 
   #dnadb is passed directly to this method from super new
 
   if ($dnadb || $self->SUPER::dnadb->group() ne 'core') {
+    #what 
 
     if (! $dnadb) {             #Guess/set dnadb by assembly or dnadb params
       #warn "calling _set_dnadb";
       return $self->_set_dnadb;
     }
-	
+	    
     #warn "setting via SUPER";
 
     $self->SUPER::dnadb($dnadb);
-
+    
     #set default coordsystem here
     #there might not be a chromosome level if we just have a scaffold assembly
     #supercontig is already loaded as we use toplevel?
@@ -539,7 +545,7 @@ sub dnadb {
       #this will only add the default assembly for this DB, if we're generating on another we need to add it separately.
 	  
       #!!! This is a non-obvious store behaviour !!!
-      #This can result in coord_system entries being written unknowingly if you are using the efg DB with a write user
+      #This can result in coord_system entries being written unknowingly if you are using the efg DB with a write user  
       $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
     }
   }
@@ -644,8 +650,7 @@ sub _set_dnadb{
 
   warn ":: Auto-selecting build $assm_ver core DB as:\t".
     $self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
-
-
+ 
   my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames], $self->dnadb_host, $host_port, $self->dnadb_user, $self->dnadb_pass);
   
   
