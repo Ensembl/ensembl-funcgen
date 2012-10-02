@@ -147,48 +147,53 @@ sub new {
 }
 
 
+=head2 experimental_group
+
+  Example    : my $rset_exp_group = $rset->experimental_group;
+  Description: Convenience method to get the unique experimental group name
+               for this ResutlSet. Only works for ResultSets supported by InputSets.
+  Returntype : String or undef (if no unique name found).
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+#Need a better way for handling source refs/track info for tracks which can share the same analysis
 #Is this the analysis description right place to be putting source refs?
 #Yes if we are only ever going to have one source/signal track
 #ChIP-Seq ResultFeature tracks have merged sources and only have source refs corresponding peak zmenus
 #This will also appear in the track info and config
 
-#
-
-sub project{
+sub experimental_group{
   my $self = shift;
 
-  if(! exists $self->{project}){
+  if(! exists $self->{experimental_group}){
     #Not undef check as undef is a valid value
     #for mixed project ResultSets
 
-    my $project;
+    my $exp_group;
     my @isets = @{$self->get_InputSets};
     
-    #Make sure we have one project
-
-    #handle Publication here?
-
     if(@isets){
-      my $exp_group = $isets[0]->get_Experiment->experimental_group;
+      $exp_group = $isets[0]->get_Experiment->get_ExperimentalGroup->name;
 
-      if ($exp_group->is_project){
-                    
-        foreach my $iset(@isets){
+      foreach my $iset(@isets){
         
-          if($project ne $iset->project){
-            #Mixed project ResultSet
-            $project = undef;
-            last;
-          }
+        if($exp_group ne $iset->get_Experiment->get_ExperimentalGroup->name){
+          #Mixed experimental_group ResultSet
+          $exp_group = undef;
+          last;
         }
       }
     }
 
-    $self->{project} = $project;
+    $self->{experimental_group} = $exp_group;
   }
 
-  return $self->{project};
+  return $self->{experimental_group};
 }
+
 
 =head2 display_label
 
