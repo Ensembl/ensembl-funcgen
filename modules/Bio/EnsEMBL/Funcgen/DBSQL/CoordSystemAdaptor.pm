@@ -442,7 +442,7 @@ sub new {
 sub fetch_by_name{
   my $self = shift;
   my $name = lc(shift);
-  my $version = lc(shift);  
+  my $version = shift;
   my $sbuild = $self->db->_get_schema_build($self->db->dnadb());
   my ($cs, $found_cs);
   
@@ -451,6 +451,9 @@ sub fetch_by_name{
   #Set default_version if not specified
   if(! $version){
     $version =  $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name($name)->version();
+  }
+  else{
+    $version = lc($version);
   }
 
   #can we not just use
@@ -461,7 +464,7 @@ sub fetch_by_name{
   warn "Using dnadb(".$sbuild.") to acquire $name" if($name =~ /level/);
 
   if($name eq 'seqlevel') {
-	return $self->fetch_sequence_level_by_schema_build($sbuild);
+    return $self->fetch_sequence_level_by_schema_build($sbuild);
   } elsif($name eq 'toplevel') {
     return $self->fetch_top_level_by_schema_build($sbuild);
   }
@@ -512,7 +515,7 @@ sub fetch_by_name{
   if(! $found_cs){
     if($version) {
       warn "No coord system found for $sbuild version '$version'";
-	  return undef;
+      return undef;
     }else{
       warn "Could not find $name CoordSystem.";
       return undef
