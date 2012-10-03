@@ -1,6 +1,6 @@
 #
 # Ensembl funcgen table definitions
-# 
+#
 
 
 # Conventions:
@@ -11,10 +11,10 @@
 # DO NOT use '---' as a comment, this breaks in macosx mysql?!
 # This also generally applies to all  --[^ ] !?
 
-# Table documentation uses format parsed and defined here 
+# Table documentation uses format parsed and defined here
 
 
-/** 
+/**
 @header  Main feature tables
 @desc    These define the various genomics features and their relevant associated tables.
 @colour  #FFCC66
@@ -27,19 +27,19 @@
 @desc   The table contains the features resulting from the regulatory build process.
 @colour  #FFCC66
 
-@column regulatory_feature_id	Internal ID 
+@column regulatory_feature_id	Internal ID
 @column seq_region_id       	@link seq_region table ID
 @column seq_region_start    	Start position of this feature
 @column seq_region_end      	End position of this feature
 @column seq_region_strand   	Strand orientation of this feature
-@column display_label       	Text display label 
+@column display_label       	Text display label
 @column feature_type_id     	@link feature_type table ID
 @column feature_set_id      	@link feature_set table ID
 @column stable_id		      	Integer stable ID without ENSR prefix
 @column bound_seq_region_start  Bound start position of this feature
 @column bound_seq_region_end    Bound end position of this feature
-@column binary_string			Binary representation for the underlying feature sets/types 
-@column projected				Boolean, defines whether reg feat structure has been projected to this cell type 
+@column binary_string			Binary representation for the underlying feature sets/types
+@column projected				Boolean, defines whether reg feat structure has been projected to this cell type
 
 @see seq_region
 @see feature_set
@@ -57,10 +57,10 @@ CREATE TABLE `regulatory_feature` (
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id`	int(10) unsigned default NULL,
   `stable_id` mediumint(8) unsigned default NULL,
-  `bound_seq_region_start` int(10) unsigned NOT NULL,	
+  `bound_seq_region_start` int(10) unsigned NOT NULL,
   `bound_seq_region_end` int(10) unsigned NOT NULL,
   `binary_string` varchar(500) default NULL,
-  `projected` boolean default FALSE,	
+  `projected` boolean default FALSE,
   PRIMARY KEY  (`regulatory_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`),
   KEY `feature_type_idx` (`feature_type_id`),
@@ -74,8 +74,8 @@ CREATE TABLE `regulatory_feature` (
 @desc   Denormalised table defining links between a regulatory_feature and it's constituent 'attribute' features.
 @colour  #FFCC66
 
-@column regulatory_feature_id	Internal ID 
-@column attribute_feature_id	Table ID of attribute feature 
+@column regulatory_feature_id	Internal ID
+@column attribute_feature_id	Table ID of attribute feature
 @column attribute_feature_table	Table name of attribute feature
 
 @see annotated_feature
@@ -96,11 +96,11 @@ CREATE TABLE `regulatory_attribute` (
 
 /**
 @table  segmentation_feature
-@desc   Represents a genomic segment feature as the result of an segmentation 
+@desc   Represents a genomic segment feature as the result of an segmentation
         analysis i.e. Segway or ChromHmm
 @colour  #FFCC66
 
-@column segmentation_feature_id	Internal ID 
+@column segmentation_feature_id	Internal ID
 @column seq_region_id   	   	@link seq_region table ID
 @column seq_region_start   		Start position of this feature
 @column seq_region_end      	End position of this feature
@@ -108,7 +108,7 @@ CREATE TABLE `regulatory_attribute` (
 @column feature_set_id 	 		@link feature_set table ID
 @column feature_type_id			@link feature_type table ID.
 @column score               	Score derived from software
-@column display_label       	Text display label 
+@column display_label       	Text display label
 
 @see seq_region
 @see feature_set
@@ -126,7 +126,7 @@ CREATE TABLE `segmentation_feature` (
   `feature_type_id`     int(10) unsigned default NULL,
   `feature_set_id`      int(10) unsigned default NULL,
   `score` double DEFAULT NULL,
-  `display_label` varchar(60) default NULL,		
+  `display_label` varchar(60) default NULL,
   PRIMARY KEY  (`segmentation_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`),
   KEY `feature_type_idx` (`feature_type_id`)
@@ -140,12 +140,12 @@ CREATE TABLE `segmentation_feature` (
 @desc   Represents a genomic feature as the result of an analysis i.e. a ChIP or DNase1 peak call.
 @colour  #FFCC66
 
-@column annotated_feature_id	Internal ID 
+@column annotated_feature_id	Internal ID
 @column seq_region_id   	   	@link seq_region table ID
 @column seq_region_start   		Start position of this feature
 @column seq_region_end      	End position of this feature
 @column seq_region_strand   	Strand orientation of this feature
-@column display_label       	Text display label 
+@column display_label       	Text display label
 @column score               	Score derived from software
 @column feature_set_id 	 		@link feature_set table ID
 @column summit					Represents peak summit for those analyses which provide it (e.g. Swembl)
@@ -167,7 +167,7 @@ CREATE TABLE `annotated_feature` (
   `summit` int(10) unsigned default NULL,
   PRIMARY KEY  (`annotated_feature_id`),
   UNIQUE KEY `seq_region_feature_set_idx` (`seq_region_id`,`seq_region_start`,`feature_set_id`),
-  KEY `feature_set_idx` (`feature_set_id`)	  
+  KEY `feature_set_idx` (`feature_set_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
@@ -178,15 +178,15 @@ CREATE TABLE `annotated_feature` (
 @desc   The table contains genomic alignments of binding_matrix PWMs.
 @colour  #FFCC66
 
-@column motif_feature_id    Primary key, internal ID 
+@column motif_feature_id    Primary key, internal ID
 @column binding_matrix_id   Foreign key to @link binding_matrix table
 @column seq_region_id       Foreign key to @link seq_region table
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
 @column seq_region_strand   Strand orientation of this feature
-@column display_label       Text display label 
+@column display_label       Text display label
 @column score               Score derived from alignment software (e.g.MOODS)
-@column interdb_stable_id   Unique key, provides linkability between DBs       
+@column interdb_stable_id   Unique key, provides linkability between DBs
 
 @see associated_motif_feature
 @see regulatory_attribute
@@ -202,7 +202,7 @@ CREATE TABLE `motif_feature` (
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
   `display_label` varchar(60) default NULL,
-  `score` double default NULL,	
+  `score` double default NULL,
   `interdb_stable_id` mediumint(8) unsigned DEFAULT NULL,
   PRIMARY KEY  (`motif_feature_id`),
   UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
@@ -273,12 +273,12 @@ CREATE  TABLE `binding_matrix` (
 @desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc.
 @colour  #FFCC66
 
-@column external_feature_id		Internal ID 
+@column external_feature_id		Internal ID
 @column seq_region_id			@link seq_region table ID
 @column seq_region_start 		Start position of this feature
 @column seq_region_end      	End position of this feature
 @column seq_region_strand   	Strand orientation of this feature
-@column display_label       	Text display label 
+@column display_label       	Text display label
 @column feature_type_id     	@link feature_type table ID
 @column feature_set_id      	@link feature_set table ID
 
@@ -293,11 +293,11 @@ CREATE TABLE `external_feature` (
   `seq_region_id` int(10) unsigned NOT NULL,
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
-  `seq_region_strand` tinyint(1) NOT NULL,	
+  `seq_region_strand` tinyint(1) NOT NULL,
   `display_label` varchar(60) default NULL,
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id` int(10) unsigned NOT NULL,
-  `interdb_stable_id` mediumint(8) unsigned DEFAULT NULL,	
+  `interdb_stable_id` mediumint(8) unsigned DEFAULT NULL,
   PRIMARY KEY  (`external_feature_id`),
   UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
   KEY `feature_type_idx` (`feature_type_id`),
@@ -306,22 +306,22 @@ CREATE TABLE `external_feature` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 
-/** 
+/**
 @table  result_feature
 @desc   Represents the mapping of a raw/normalised signal. This is optimised for the web display
 		in two ways:<br>
 	&nbsp;&nbsp;&nbsp;&nbsp;1 Data compression by collection into different sized windows or bins.<br><br>
 	&nbsp;&nbsp;&nbsp;&nbsp;2 For array data it also provides an optimised view of a probe_feature and associated result.
 @colour  #FFCC66
-			
+
 @column result_feature_id	Internal ID
-@column result_set_id		@link result_set table ID 
+@column result_set_id		@link result_set table ID
 @column seq_region_id       Foreign key to @link seq_region table
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
 @column seq_region_strand   Strand orientation of this feature
 @column window_size			Size of window in base pairs
-@column scores				BLOB of window scores for this region 
+@column scores				BLOB of window scores for this region
 
 @see result_set
 @see seq_region
@@ -350,7 +350,7 @@ CREATE TABLE `result_feature` (
 @desc   The table contains genomic alignments @link probe entries.
 @colour  #FFCC66
 
-@column probe_feature_id	Internal ID 
+@column probe_feature_id	Internal ID
 @column seq_region_id       Foreign key to @link seq_region table
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
@@ -363,7 +363,7 @@ CREATE TABLE `result_feature` (
 <br>&nbsp;&nbsp;&nbsp;&nbsp;M Alignment match/Seq mismatch
 <br>&nbsp;&nbsp;&nbsp;&nbsp;X Seq/Alignment mismatch
 <br>&nbsp;&nbsp;&nbsp;&nbsp;D Deletion
-<br>&nbsp;&nbsp;&nbsp;&nbsp;S Soft clipping, used for overhanging cdna alignments where genomic seq is unknown  
+<br>&nbsp;&nbsp;&nbsp;&nbsp;S Soft clipping, used for overhanging cdna alignments where genomic seq is unknown
 
 @see probe
 @see seq_region
@@ -376,9 +376,9 @@ CREATE TABLE `probe_feature` (
    `seq_region_id` int(10) unsigned NOT NULL,
    `seq_region_start` int(10) NOT NULL,
    `seq_region_end` int(10) NOT NULL,
-   `seq_region_strand` tinyint(4) NOT NULL, 
+   `seq_region_strand` tinyint(4) NOT NULL,
    `probe_id` int(10) unsigned NOT NULL,
-   `analysis_id` smallint(5) unsigned NOT NULL,	
+   `analysis_id` smallint(5) unsigned NOT NULL,
    `mismatches` tinyint(4) NOT NULL,
    `cigar_line` varchar(50) default NULL,
    PRIMARY KEY  (`probe_feature_id`),
@@ -387,7 +387,7 @@ CREATE TABLE `probe_feature` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-/** 
+/**
 @table  feature_type
 @desc   Contains information about different types/classes of feature e.g. Brno nomenclature, Transcription Factor names etc.
 @colour  #FFCC66
@@ -400,12 +400,12 @@ CREATE TABLE `probe_feature` (
 @column so_accession      Sequence ontology accession
 @column so_name           Sequence ontology name
 
-@see associated_feature_type 
-@see feature_set 
-@see result_set 
-@see input_set 
-@see experimental_chip 
-@see regulatory_feature 
+@see associated_feature_type
+@see feature_set
+@see result_set
+@see input_set
+@see experimental_chip
+@see regulatory_feature
 @see external_feature
 @see analysis
 */
@@ -414,9 +414,9 @@ DROP TABLE IF EXISTS `feature_type`;
 CREATE TABLE `feature_type` (
 	`feature_type_id` int(10) unsigned NOT NULL auto_increment,
 	`name` varchar(40) NOT NULL,
-	`class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA', 
-				'Polymerase', 'Transcription Factor', 'Transcription Factor Complex', 
-				'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo', 
+	`class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA',
+				'Polymerase', 'Transcription Factor', 'Transcription Factor Complex',
+				'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo',
 				'Open Chromatin', 'Search Region', 'Association Locus', 'Segmentation State',
 				'DNA Modification') default NULL,
   `analysis_id` smallint(5) unsigned default NULL,
@@ -454,7 +454,7 @@ CREATE TABLE `associated_feature_type` (
 
 
 
-/** 
+/**
 
 @header  Set tables
 @desc    Sets are containers for distinct sets of raw and/or processed data.
@@ -462,7 +462,7 @@ CREATE TABLE `associated_feature_type` (
 @legend  #66CCFF Set tables
 */
 
-/** 
+/**
 @table  data_set
 @desc   Defines highest level data container for associating the result of an analysis and the input data to that analysis e.g. Seq alignments(Input/ResultSet) and peak calls (FeatureSet)
 @colour  #66CCFF
@@ -487,7 +487,7 @@ CREATE TABLE `data_set` (
 
 
 
-/** 
+/**
 @table  supporting_set
 @desc   Defines association between @link data_set and underlying/supporting data.
 @colour  #66CCFF
@@ -513,7 +513,7 @@ CREATE TABLE `supporting_set` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-/** 
+/**
 @table  feature_set
 @desc   Container for genomic features defined by the result of an analysis e.g. peaks calls or regulatory features.
 @colour  #66CCFF
@@ -556,7 +556,7 @@ CREATE TABLE `feature_set` (
 
 
 
-/** 
+/**
 @table  result_set
 @desc   Container for raw/signal data, used as input to an analysis or for visualisation of the raw signal i.e. a wiggle track.
 @colour  #66CCFF
@@ -568,7 +568,7 @@ CREATE TABLE `feature_set` (
 @column cell_type_id		 Table ID for @link cell_type
 @column feature_class    Defines the class of the feature
 
-@see result_set_input 
+@see result_set_input
 @see cell_type
 @see feature_type
 @see analysis
@@ -589,14 +589,14 @@ CREATE TABLE `result_set` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-/** 
+/**
 @table  result_set_input
 @desc   Link table between @link result_set and it's contstituents which can vary between an array experiment (experimental_chip / channel) and a sequencing experiment (input_set). Note the joint primary key as inputs can be re-used between result sets.
 @colour  #66CCFF
 
 @column result_set_input_id		Internal ID
-@column result_set_id			@link result_set table ID 
-@column table_id				Table ID for input 
+@column result_set_id			@link result_set table ID
+@column table_id				Table ID for input
 @column table_name				Table name for input e.g. @link input_set, @link experimental_chip, @link channel
 
 @see result_set
@@ -621,7 +621,7 @@ CREATE TABLE `result_set_input` (
 @table  dbfile_registry
 @colour  #66CCFF
 
-@desc   This generic table contains a simple registry of paths to support 
+@desc   This generic table contains a simple registry of paths to support
         flat file (DBFile) access. This should be left joined from the
         relevant adaptor e.g. ResultSetAdaptor.
 
@@ -636,14 +636,14 @@ CREATE TABLE `result_set_input` (
 DROP TABLE IF EXISTS `dbfile_registry`;
 CREATE TABLE `dbfile_registry` (
    `table_id` int(10) unsigned NOT NULL,
-   `table_name` varchar(32)NOT NULL,	
+   `table_name` varchar(32)NOT NULL,
    `path` varchar(255) NOT NULL,
    PRIMARY KEY  (`table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
-/** 
+/**
 @table  input_set
 @desc   Defines a distinct set input data which is not imported into the DB, but used for some analysis e.g. a BAM file.
 @colour  #66CCFF
@@ -684,7 +684,7 @@ CREATE TABLE `input_set` (
 
 
 
-/** 
+/**
 @table  input_subset
 @desc   Defines a file from an input_set, required for import tracking and recovery.
 @colour  #66CCFF
@@ -705,14 +705,14 @@ CREATE TABLE `input_subset` (
     `display_url` varchar(255) DEFAULT NULL,
     `replicate` tinyint(3) unsigned NOT NULL,
     `is_control` tinyint(3) unsigned NOT NULL,
-   PRIMARY KEY  (`input_subset_id`), 
+   PRIMARY KEY  (`input_subset_id`),
    UNIQUE KEY `set_name_dx` (`input_set_id`, `name`),
    KEY `archive_idx`(`archive_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
 
-/** 
+/**
 @header Array design tables
 @colour  #FF6666
 @legend  #FF6666   Array design tables
@@ -730,7 +730,7 @@ CREATE TABLE `input_subset` (
 @column vendor		Name of array vendor e.g. AFFY
 @column description Text description
 @column type		Array type e.g. OLIGO, PCR
-@column class		Array class e.g. AFFY_ST, ILLUMINA_INFINIUM  
+@column class		Array class e.g. AFFY_ST, ILLUMINA_INFINIUM
 
 @see    array_chip
 */
@@ -743,10 +743,10 @@ CREATE TABLE `array` (
    `vendor` varchar(40) default NULL,
    `description` varchar(255) default NULL,
    `type` varchar(20) default NULL,
-   `class` varchar(20) default NULL,	
+   `class` varchar(20) default NULL,
    PRIMARY KEY  (`array_id`),
    UNIQUE KEY  `vendor_name_idx` (`vendor`, `name`),
-   UNIQUE KEY  `class_name_idx` (`class`, `name`)	
+   UNIQUE KEY  `class_name_idx` (`class`, `name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Could clean up/rename format, type and class
@@ -785,7 +785,7 @@ CREATE TABLE `array_chip` (
 @desc   The table contains information about probe sets.
 @colour  #FF6666
 
-@column probe_set_id		Internal ID 
+@column probe_set_id		Internal ID
 @column name				Name of the probe set
 @column size				Integer size of the probe set i.e. how many probe is contains
 @column family				Generic descriptor for probe_set e.g. ENCODE_REGIONS, RANDOM etc. Currently not used
@@ -809,10 +809,10 @@ CREATE TABLE `probe_set` (
 
 /**
 @table  probe
-@desc   Defines individual probe designs across one or more array_chips. Note: The probe sequence is not stored. 
+@desc   Defines individual probe designs across one or more array_chips. Note: The probe sequence is not stored.
 @colour  #FF6666
 
-@column probe_id			Tnternal ID 
+@column probe_id			Tnternal ID
 @column probe_set_id		@link probe_set table_id
 @column name				Name of the probe set
 @column length				Integer bp length of the probe
@@ -822,7 +822,7 @@ CREATE TABLE `probe_set` (
 
 @see probe_feature
 @see probe_set
-@see array_chip 
+@see array_chip
 */
 
 DROP TABLE IF EXISTS `probe`;
@@ -846,7 +846,7 @@ CREATE TABLE `probe` (
 @desc   Stores data from array design analyses.
 @colour  #FF6666
 
-@column probe_id			Internal ID 
+@column probe_id			Internal ID
 @column analysis_id			@link analysis table ID
 @column coord_system_id		@link coord_system table ID
 @column score				Double analysis score value
@@ -860,7 +860,7 @@ DROP TABLE IF EXISTS `probe_design`;
 CREATE TABLE `probe_design` (
    `probe_id` int(10) unsigned NOT NULL,
    `analysis_id` smallint(5) unsigned NOT NULL,
-   `score` double default NULL,	
+   `score` double default NULL,
    `coord_system_id` int(10) unsigned NOT NULL,
     PRIMARY KEY  (`probe_id`, `analysis_id`, `coord_system_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -868,33 +868,33 @@ CREATE TABLE `probe_design` (
 
 
 
-/** 
+/**
 @header	Experiment tables
 @desc	These define the experimental meta and raw data.
-@colour  #00FF80
-@legend  #00FF80 Experiment tables
+@colour  #00FF00
+@legend  #00FF00 Experiment tables
 */
 
 
 /**
 @table  experiment
 @desc   Stores data high level meta data about individual experiments
-@colour  #00FF80
+@colour  #00FF00
 
-@column experiment_id			Internal ID 
+@column experiment_id			Internal ID
 @column name			Name of experiment
 @column experimental_group_id			@link experimental_group table ID
 @column date			Date of experiment
 @column primary_design_type			e.g. binding_site_identification, preferably EFO term
 @column archive_id			ENA experiment identifier enabling access to specific raw data
-@column data_url			When no accession_id exists, an alternative url to get the data 
+@column data_url			When no accession_id exists, an alternative url to get the data
 @column description			Text description
 @column	mage_xml_id			@link mage_xml table_id for array experiments
 
 @see experimental_group
 @see mage_xml
 @see experimental_chip
-@see input_set 
+@see input_set
 */
 
 DROP TABLE IF EXISTS `experiment`;
@@ -903,7 +903,7 @@ CREATE TABLE `experiment` (
    `name` varchar(100) default NULL,
    `experimental_group_id` smallint(6) unsigned default NULL,
    `date` date default '0000-00-00',
-   `primary_design_type` varchar(30) default NULL, 
+   `primary_design_type` varchar(30) default NULL,
    `description`  varchar(255) default NULL,
    `mage_xml_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`experiment_id`),
@@ -913,14 +913,14 @@ CREATE TABLE `experiment` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Can probably remove now date (and primary_design_type?) as we don't support this level of meta data
--- also have associated_design_types/experimental_design table, containing MGED/EFO ontology types? 
+-- also have associated_design_types/experimental_design table, containing MGED/EFO ontology types?
 -- change primary_design_type to design_type_id
 
 
 /**
 @table  experimental_group
 @desc   Contains experimental group info i.e. who produced data sets.
-@colour  #00FF80
+@colour  #00FF00
 
 @column experimental_group_id  Internal ID
 @column name                   Name of group
@@ -939,7 +939,7 @@ CREATE TABLE `experimental_group` (
    `location` varchar(120) default NULL,
    `contact` varchar(40) default NULL,
    `description` varchar(255) default NULL,
-   `url` varchar(255) default NULL,	
+   `url` varchar(255) default NULL,
    `is_project` boolean default False,
    PRIMARY KEY  (`experimental_group_id`),
    UNIQUE KEY `name_idx` (`name`)
@@ -950,7 +950,7 @@ CREATE TABLE `experimental_group` (
 /**
 @table  mage_xml
 @desc   Contains MAGE-XML for array based experiments.
-@colour  #00FF80
+@colour  #00FF00
 
 @column mage_xml_id		Internal table ID
 @column xml				XML text field
@@ -969,7 +969,7 @@ CREATE TABLE `mage_xml` (
 /**
 @table  experimental_chip
 @desc   Represents the physical instance of an @link array_chip used in an @link experiment.
-@colour  #00FF80
+@colour  #00FF00
 
 @column experimental_chip_id	Internal ID
 @column unique_id 		 	    Unique ID assigned by vendor
@@ -980,10 +980,10 @@ CREATE TABLE `mage_xml` (
 @column biological_replicate	Name of biological replicate
 @column technical_replicate		Name of technical replicate
 
-@see array_chip 
-@see experiment 
-@see result_set_input 
-@see channel 
+@see array_chip
+@see experiment
+@see result_set_input
+@see channel
 @see feature_type
 @see cell_type
 */
@@ -1011,7 +1011,7 @@ CREATE TABLE `experimental_chip` (
 /**
 @table  channel
 @desc   Represents an individual channel from an experimental_chip.
-@colour  #00FF80
+@colour  #00FF00
 
 @column channel_id				Internal ID
 @column experimental_chip_id	@link external_chip table ID
@@ -1025,7 +1025,7 @@ CREATE TABLE `experimental_chip` (
 DROP TABLE IF EXISTS `channel`;
 CREATE TABLE `channel` (
    `channel_id` int(10) unsigned NOT NULL auto_increment,
-   `experimental_chip_id` int(10) unsigned default NULL,	
+   `experimental_chip_id` int(10) unsigned default NULL,
    `sample_id` varchar(20) default NULL,
    `dye`  varchar(20) default NULL,
    `type` varchar(20) default NULL,
@@ -1034,15 +1034,15 @@ CREATE TABLE `channel` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-/** 
+/**
 @table  result
 @desc   Contains a score or intensity value for an associated probe location on a particular experimental_chip.
-@colour  #00FF80
+@colour  #00FF00
 
 @column result_id				Internal ID
-@column probe_id				@link probe table ID 
+@column probe_id				@link probe table ID
 @column score					Intensity value (raw or normalised)
-@column result_set_input_id		@link result_set_input table ID 
+@column result_set_input_id		@link result_set_input table ID
 @column X						X coordinate of probe location on experimental_chip
 @column Y						Y coordinate of probe location on experimental_chip
 
@@ -1068,18 +1068,18 @@ CREATE TABLE `result` (
 
 
 
-/** 
+/**
 
 @header  Ancilliary tables
-@desc    These contain data types which are used across many of the above tables and 
-         are quite often denormalised to store generic associations to several table, 
-         this avoids the need for multiple sets of similar tables. Some of these tables 
+@desc    These contain data types which are used across many of the above tables and
+         are quite often denormalised to store generic associations to several table,
+         this avoids the need for multiple sets of similar tables. Some of these tables
          have been omitted from the schema diagram.
 @colour  #808000
 */
 
 
-/** 
+/**
 @table  cell_type
 @desc   Contains information about cell/tissue types.
 @colour  #808000
@@ -1113,7 +1113,7 @@ CREATE TABLE `cell_type` (
 
 
 
-/** 
+/**
 @table  cell_type_lineage
 @desc   Links cell_types to lineage terms
 @colour  #808000
@@ -1140,7 +1140,7 @@ CREATE TABLE `cell_type_lineage` (
 -- most_specific here as this may be dependant on the cell_type
 
 
-/** 
+/**
 @table  lineage
 @desc   Contains cell lineage information
 @colour  #808000
@@ -1190,7 +1190,7 @@ DROP TABLE IF EXISTS `experimental_design`;
 CREATE TABLE `experimental_design` (
    `design_type_id` int(10) unsigned NOT NULL auto_increment,
    `table_name` varchar(40) default NULL,
-   `table_id` int(10) unsigned default NULL,	
+   `table_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`design_type_id`, `table_name`, `table_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1199,7 +1199,7 @@ CREATE TABLE `experimental_design` (
 
 /**
 @table  design_type
-@desc   Contains extra information about experimental designs, preferably ontology terms. 
+@desc   Contains extra information about experimental designs, preferably ontology terms.
 @colour  #808000
 
 @column design_type_id	Internal ID
@@ -1237,7 +1237,7 @@ CREATE TABLE `design_type` (
 DROP TABLE IF EXISTS `status`;
 CREATE TABLE `status` (
    `table_id` int(10) unsigned default NULL,
-   `table_name` varchar(32) default NULL,	
+   `table_name` varchar(32) default NULL,
    `status_name_id` int(10) unsigned NOT NULL,
    PRIMARY KEY  (`table_id`, `table_name`, `status_name_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1259,7 +1259,7 @@ CREATE TABLE `status` (
 DROP TABLE IF EXISTS `status_name`;
 CREATE TABLE `status_name` (
    `status_name_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(20) default NULL,	
+   `name` varchar(20) default NULL,
    PRIMARY KEY  (`status_name_id`),
    UNIQUE KEY `status_name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1277,7 +1277,7 @@ INSERT into status_name(name) values ('T.Biweight');
 INSERT into status_name(name) values ('LOESS');
 INSERT into status_name(name) values ('MART_DISPLAYABLE');
 INSERT into status_name(name) values ('RESULT_FEATURE_SET');
--- These are now species specific and should be added like the feature/cell types 
+-- These are now species specific and should be added like the feature/cell types
 INSERT into status_name(name) values ('IMPORTED_NCBI36');
 INSERT into status_name(name) values ('IMPORTED_GRCh37');
 -- need to add more states, probably need to validate/insert required states in Importer
@@ -1301,7 +1301,7 @@ DROP TABLE IF EXISTS regbuild_string;
 CREATE TABLE `regbuild_string` (
   `regbuild_string_id` int(10) NOT NULL auto_increment,
   `name` varchar(60) NOT NULL,
-  `species_id` smallint(5) unsigned NOT NULL default '1',	
+  `species_id` smallint(5) unsigned NOT NULL default '1',
   `string` text NOT NULL,
   PRIMARY KEY  (`regbuild_string_id`),
   UNIQUE KEY `name_species_idx` (`species_id`, `name`)
@@ -1314,10 +1314,10 @@ CREATE TABLE `regbuild_string` (
 
 
 
-/** 
+/**
 
 @header  Core tables
-@desc    These are exact clones of the corresponding core schema tables, hence have been omitted 
+@desc    These are exact clones of the corresponding core schema tables, hence have been omitted
          from the schema diagram. See <a href='../core/core_schema.html'>core schema docs</a> for more details.
 @colour  #000000
 @legend  #000000 Core/Core like tables (Omited from schema diagram)
@@ -1338,7 +1338,7 @@ The module column tells the pipeline which Perl module does the whole analysis, 
 @column db                          Database name.
 @column db_version                  Database version.
 @column db_file                     File system location of the database.
-@column program                     The binary used to create a feature. 
+@column program                     The binary used to create a feature.
 @column program_version             The binary version.
 @column program_file                File system location of the binary.
 @column parameters                  A parameter string which is processed by the perl module.
@@ -1396,7 +1396,7 @@ CREATE TABLE `analysis_description` (
   `description` text,
   `display_label` varchar(255) NOT NULL,
   `displayable` BOOLEAN NOT NULL default '1',
-  `web_data` text,	
+  `web_data` text,
   UNIQUE KEY `analysis_idx` (`analysis_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1447,7 +1447,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 
 @column table_name              Ensembl database table name.
 @column coord_system_id         Table ID for @link coord_system
-@column max_length              Longest sequence length.    
+@column max_length              Longest sequence length.
 
 @see coord_system
 
@@ -1485,13 +1485,13 @@ CREATE TABLE `meta_coord` (
 DROP TABLE IF EXISTS identity_xref;
 CREATE TABLE identity_xref (
   object_xref_id          INT(10) UNSIGNED NOT NULL,
-  xref_identity 	  INT(5),	
+  xref_identity 	  INT(5),
   ensembl_identity        INT(5),
   xref_start              INT,
   xref_end                INT,
   ensembl_start           INT,
   ensembl_end             INT,
-  cigar_line              TEXT, 
+  cigar_line              TEXT,
   score                   DOUBLE,
   evalue                  DOUBLE,
   PRIMARY KEY (object_xref_id)
@@ -1516,7 +1516,7 @@ CREATE TABLE identity_xref (
 DROP TABLE IF EXISTS external_synonym;
 CREATE TABLE external_synonym (
   xref_id                     INT(10) UNSIGNED NOT NULL,
-  synonym                     VARCHAR(100) NOT NULL, 
+  synonym                     VARCHAR(100) NOT NULL,
   PRIMARY KEY (xref_id, synonym),
   KEY name_index (synonym)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=20;
@@ -1528,9 +1528,9 @@ CREATE TABLE external_synonym (
 @colour  #000000
 
 @column external_db_id              Internal identifier.
-@column db_name                     Database name.     
-@column db_release                  Database release.      
-@column status                      Status, e.g. 'KNOWNXREF','KNOWN','XREF','PRED','ORTH','PSEUDO'. 
+@column db_name                     Database name.
+@column db_release                  Database release.
+@column status                      Status, e.g. 'KNOWNXREF','KNOWN','XREF','PRED','ORTH','PSEUDO'.
 @column dbprimary_acc_linkable      Indicates if primary a accession can be linked to from the EnsEMBL web site.
 @column priority                    Determines which one of the xrefs will be used as the gene name.
 @column db_display_name             Database display name.
@@ -1583,7 +1583,7 @@ DROP TABLE if EXISTS ontology_xref;
 CREATE TABLE ontology_xref (
   object_xref_id          INT(10) UNSIGNED DEFAULT '0' NOT NULL,
   source_xref_id          INT(10) UNSIGNED DEFAULT NULL,
-  linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP', 
+  linkage_type            ENUM('IC', 'IDA', 'IEA', 'IEP', 'IGI', 'IMP',
 		               'IPI', 'ISS', 'NAS', 'ND', 'TAS', 'NR', 'RCA') NOT NULL,
   KEY (object_xref_id),
   KEY (source_xref_id),
@@ -1613,7 +1613,7 @@ CREATE TABLE `unmapped_reason` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-/** 
+/**
 
 @header  Core like tables
 @desc    These are almost exact clones of the corresponding core schema tables. Some contain extra fields or different enum values to support the funcgen schema. These have been omitted from the schema diagram.
@@ -1636,7 +1636,7 @@ Information about the database that the external object is stored in is held in 
 @column info_type               Class of the xref information e.g. CODING
 @column info_text               Text
 
-@see 
+@see
 @see external_db
 @see external_synonym
 @see xref
@@ -1682,7 +1682,7 @@ CREATE TABLE xref (
 DROP TABLE IF EXISTS `object_xref`;
 CREATE TABLE object_xref (
   object_xref_id              INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  ensembl_id                  INT(10) UNSIGNED NOT NULL, 
+  ensembl_id                  INT(10) UNSIGNED NOT NULL,
   ensembl_object_type         ENUM('Experiment', 'RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType', 'ProbeSet', 'Probe', 'ProbeFeature') not NULL,
   xref_id                     INT UNSIGNED NOT NULL,
   linkage_annotation          VARCHAR(255) DEFAULT NULL,
@@ -1745,18 +1745,18 @@ CREATE TABLE `unmapped_object` (
 /**
 @table coord_system
 @desc Stores information about the available co-ordinate systems for the species identified through the species_id field.
-For each species, there must be one co-ordinate system that has the attribute "top_level" and one that has the attribute "sequence_level". 
+For each species, there must be one co-ordinate system that has the attribute "top_level" and one that has the attribute "sequence_level".
 NOTE: This has been extended from the core implementation to support multiple assemblies by referencing multiple core DBs.
 @colour  #000000
 
 @column coord_system_id      Internal identifier
-@column name                 Co-oridinate system name, e.g. 'chromosome', 'contig', 'scaffold' etc. 
+@column name                 Co-oridinate system name, e.g. 'chromosome', 'contig', 'scaffold' etc.
 @column version              Assembly
 @column rank                 Co-oridinate system rank
-@column attrib               Co-oridinate system attrib (e.g. "top_level", "sequence_level")     
-@column schema_build         Indentifies the schema_build version for the source core DB       
+@column attrib               Co-oridinate system attrib (e.g. "top_level", "sequence_level")
+@column schema_build         Indentifies the schema_build version for the source core DB
 @column core_coord_system_id Table ID of the coord_system in the source core DB
-@column species_id           Indentifies the species for multi-species databases       
+@column species_id           Indentifies the species for multi-species databases
 @column is_current           This flags which coord_system entries are current with respect to mart(/website)
 
 @see seq_region
@@ -1791,10 +1791,10 @@ CREATE TABLE `coord_system` (
 @colour  #000000
 
 @column seq_region_id            Internal identifier.
-@column name                     Sequence region name.  
-@column coord_system_id          Foreign key references to the @link coord_system table.   
+@column name                     Sequence region name.
+@column coord_system_id          Foreign key references to the @link coord_system table.
 @column core_seq_region_id       Table ID of the seq_region in the source core DB
-@column schema_build             Indentifies the schema_build version for the source core DB       
+@column schema_build             Indentifies the schema_build version for the source core DB
 
 @see coord_system
 */
@@ -1813,7 +1813,7 @@ CREATE TABLE `seq_region` (
   KEY `seq_region_id_idx` (`seq_region_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- it maybe possible to have 2 seq_regions on different levels with the same name 
+-- it maybe possible to have 2 seq_regions on different levels with the same name
 -- hence schema_build denormalisation
 
 -- Name is only required to enable us to add new seq_regions to the correct seq_region_id
