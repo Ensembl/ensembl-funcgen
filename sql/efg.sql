@@ -35,11 +35,11 @@
 @column display_label       	Text display label
 @column feature_type_id     	@link feature_type table ID
 @column feature_set_id      	@link feature_set table ID
-@column stable_id		      	Integer stable ID without ENSR prefix
+@column stable_id	      	Integer stable ID without ENSR prefix
 @column bound_seq_region_start  Bound start position of this feature
 @column bound_seq_region_end    Bound end position of this feature
-@column binary_string			Binary representation for the underlying feature sets/types
-@column projected				Boolean, defines whether reg feat structure has been projected to this cell type
+@column binary_string		Binary representation for the underlying feature sets/types
+@column projected		Boolean, defines whether reg feat structure has been projected to this cell type
 
 @see seq_region
 @see feature_set
@@ -281,6 +281,7 @@ CREATE  TABLE `binding_matrix` (
 @column display_label       	Text display label
 @column feature_type_id     	@link feature_type table ID
 @column feature_set_id      	@link feature_set table ID
+@column interdb_stable_id   Unique key, provides linkability between DBs
 
 @see seq_region
 @see feature_set
@@ -314,14 +315,13 @@ CREATE TABLE `external_feature` (
 	&nbsp;&nbsp;&nbsp;&nbsp;2 For array data it also provides an optimised view of a probe_feature and associated result.
 @colour  #FFCC66
 
-@column result_feature_id	Internal ID
-@column result_set_id		@link result_set table ID
-@column seq_region_id       Foreign key to @link seq_region table
-@column seq_region_start    Start position of this feature
-@column seq_region_end      End position of this feature
-@column seq_region_strand   Strand orientation of this feature
-@column window_size			Size of window in base pairs
-@column scores				BLOB of window scores for this region
+@column result_feature_id     Internal ID
+@column result_set_id	      @link result_set table ID
+@column seq_region_id         Foreign key to @link seq_region table
+@column seq_region_start      Start position of this feature
+@column seq_region_end        End position of this feature
+@column seq_region_strand     Strand orientation of this feature
+@column scores		      BLOB of window scores for this region
 
 @see result_set
 @see seq_region
@@ -336,7 +336,7 @@ CREATE TABLE `result_feature` (
   `seq_region_end` int(10) NOT NULL,
   `seq_region_strand` tinyint(4) NOT NULL,
   `scores` longblob NOT NULL,
-  PRIMARY KEY `result_feature_idx` (`result_feature_id`),
+  PRIMARY KEY  (`result_feature_id`),
   KEY `set_seq_region_idx` (`result_set_id`,`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -518,14 +518,15 @@ CREATE TABLE `supporting_set` (
 @desc   Container for genomic features defined by the result of an analysis e.g. peaks calls or regulatory features.
 @colour  #66CCFF
 
-@column feature_set_id		Internal ID
-@column feature_type_id		Table ID for @link feature_type
-@column analysis_id			Table ID for @link analysis
-@column cell_type_id		Table ID for @link cell_type
-@column name				Name for this feature set
-@column type				Type of features contained e.g. annotated, external or regualtory
-@column description			Text description
-@column display_label		Shorter more readable version of name
+@column feature_set_id	Internal ID
+@column feature_type_id	Table ID for @link feature_type
+@column analysis_id	Table ID for @link analysis
+@column cell_type_id	Table ID for @link cell_type
+@column name		Name for this feature set
+@column type		Type of features contained e.g. annotated, external or regualtory
+@column description	Text description
+@column display_label	Shorter more readable version of name
+@column input_set_id    Table ID for @link input_set
 
 @see data_set
 @see cell_type
@@ -534,6 +535,7 @@ CREATE TABLE `supporting_set` (
 @see annotated_feature
 @see regulatory_feature
 @see external_feature
+@see input_set
 */
 
 -- Table structure for `feature_set`
@@ -656,6 +658,7 @@ CREATE TABLE `dbfile_registry` (
 @column vendor				Name of technology vendor if appropriate
 @column name				Name of input_set
 @column type				Type of feature imported as result of analysis e.g. result, annotated
+@column replicate   Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
 
 @see experiment
 @see cell_type
@@ -690,8 +693,13 @@ CREATE TABLE `input_set` (
 @colour  #66CCFF
 
 @column input_subset_id	 Internal ID
-@column input_set_id		 @link input_set table ID
-@column name				     Name of input_subset e.g. file name
+@column input_set_id	 @link input_set table ID
+@column name	     Name of input_subset e.g. file name
+@column archive_id	ENA experiment identifier enabling access to specific raw data
+@column display_url   Http link to source file
+@column replicate   Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
+@column is_control  Subset is a control
+
 
 @see input_set
 */
@@ -885,9 +893,7 @@ CREATE TABLE `probe_design` (
 @column name			Name of experiment
 @column experimental_group_id			@link experimental_group table ID
 @column date			Date of experiment
-@column primary_design_type			e.g. binding_site_identification, preferably EFO term
-@column archive_id			ENA experiment identifier enabling access to specific raw data
-@column data_url			When no accession_id exists, an alternative url to get the data
+@column primary_design_type		e.g. binding_site_identification, preferably EFO term
 @column description			Text description
 @column	mage_xml_id			@link mage_xml table_id for array experiments
 
@@ -928,7 +934,7 @@ CREATE TABLE `experiment` (
 @column contact                Contact details e.g. email
 @column url                    Url for Project page
 @column description            Text description
-
+@column is_project             Large or small scale project
 @see experiment
 */
 
@@ -1090,6 +1096,7 @@ CREATE TABLE `result` (
 @column description 	Text description
 @column gender			Gender i.e. male or female
 @column efo_id          Experimental Factor Ontology ID
+@column tissue          Tissue origin/type
 
 @see feature_set
 @see result_set
@@ -1145,7 +1152,7 @@ CREATE TABLE `cell_type_lineage` (
 @desc   Contains cell lineage information
 @colour  #808000
 
-@column cell_type_id	  Internal ID
+@column lineage_id        Internal ID
 @column name              Lineage name
 @column efo_id            Experimental Factor Ontology ID
 @column parent_lineage_id Internal ID of immediate parent term
