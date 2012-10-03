@@ -31,19 +31,19 @@
 ALTER table feature_set ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
 
 -- input_subset_tracking
--- ALTER table input_subset_tracking ADD FOREIGN KEY (input_subset_id) REFERENCES input_subset(input_subset_id);
+--ALTER table input_subset_tracking ADD FOREIGN KEY (input_subset_id) REFERENCES input_subset(input_subset_id);
 
 
 -- input_set_tracking
--- ALTER table input_set_tracking ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
+--ALTER table input_set_tracking ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
 
 
 -- result_set_tracking
--- ALTER table result_set_tracking ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
+--ALTER table result_set_tracking ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
 
 
 -- data_set_tracking
--- ALTER table data_set_tracking ADD FOREIGN KEY (data_set_id) REFERENCES data_set(data_set_id);
+--ALTER table data_set_tracking ADD FOREIGN KEY (data_set_id) REFERENCES data_set(data_set_id);
 
 ### eFG FKs
 
