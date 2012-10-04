@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -127,17 +127,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Funcgen::CoordSystem;
-my %cs_warnings;
-
 
 use strict;
 use warnings;
-
-
 use vars qw(@ISA);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
-
+my %cs_warnings;
 
 =head2 new
 
