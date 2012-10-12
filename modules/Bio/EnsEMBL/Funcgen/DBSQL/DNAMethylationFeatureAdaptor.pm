@@ -289,7 +289,7 @@ sub get_DNAMethylationFeature_params_from_file_data {
   
   ( $context, $total_reads ) = split /\//, $context;
   $percent_methylation /= 10;  
-  my $methylated_reads  = sprintf "%d", ( ( $percent_methylation / 100 ) * $total_reads );
+  my $methylated_reads  = sprintf "%.0f", ( ( $percent_methylation / 100 ) * $total_reads );
   $strand = $strands{$strand} if defined $strand; #undef strand is not valid bed!
 
   return [ $chr, $start, $end, $strand, $methylated_reads,
