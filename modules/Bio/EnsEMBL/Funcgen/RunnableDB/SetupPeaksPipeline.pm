@@ -62,7 +62,7 @@ sub fetch_input {   # fetch parameters...
   my $species = $self->_species();
 
   my $file_type = $self->_file_type();
-  if(($file_type ne 'sam') && ($file_type ne 'bed')){ throw "File type $file_type currently not supported"; }
+  if(($file_type ne 'sam') && ($file_type ne 'bed') && ($file_type ne 'bam')){ throw "File type $file_type currently not supported"; }
 
   #infer sam_header from species and assembly...
   if($file_type eq 'sam'){
@@ -133,14 +133,17 @@ sub write_output {  # Create the relevant job
   #if(($self->_feature_type()->name eq 'H3K36me3') || ($self->_feature_type()->name eq 'H3K27me3')){
   #  $self->dataflow_output_id( $self->input_id, $self->_broad_peak_id);
 
-  if($self->_analysis()->logic_name =~ /ccat/i){
+  if ($self->_analysis()->logic_name =~ /ccat/i){
     $self->dataflow_output_id( $self->input_id, 4);
-  } else {
+  } 
+  elsif ($self->_analysis()->logic_name =~ /macs/i) {
+    $self->dataflow_output_id( $self->input_id, 5);
+  }
+  else {
     $self->dataflow_output_id( $self->input_id, 3);
   }
   
   return 1;
-
 }
 
 1;

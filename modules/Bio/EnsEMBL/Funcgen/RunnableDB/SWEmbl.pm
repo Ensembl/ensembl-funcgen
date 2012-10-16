@@ -49,15 +49,16 @@ sub fetch_input {
   my $file_type = $self->_file_type();
   my $experiment_name = $self->_experiment_name();
 
-  #TODO Change this to accept samse and sampe and others?? - add an extra parameter when needed?
-  #Also not necessarily .gz ... maybe force the use of the parameter 'data_file' in the input_id
-  #my $input_file =  $self->param('data_file') || $cell_type."_".$feature_type.".samse.".$file_type.".gz";
-  my $input_file =  $self->param('data_file') || $self->_set_name().".samse.".$file_type.".gz";
-  $self->_input_file($input_file);
-  
   my $work_dir = $self->_work_dir."/alignments/".$self->_species()."/".$self->_assembly()."/".$experiment_name;
   my $input_dir = $self->param('input_dir') || $work_dir;  
   $self->_input_dir($input_dir);
+  
+  #TODO Change this to accept samse and sampe and others?? - add an extra parameter when needed?
+  #Also not necessarily .gz ... maybe force the use of the parameter 'data_file' in the input_id
+  #my $input_file =  $self->param('data_file') || $cell_type."_".$feature_type.".samse.".$file_type.".gz";
+  my $input_file =  $self->param('data_file') || $self->_set_name().".samse.".$file_type;
+  $input_file .=  ".gz" unless ( -e $input_dir.'/'.$input_file);
+  $self->_input_file($input_file);
   
   my $skip_control = $self->_skip_control($self->param('skip_control'));  
   if(!$skip_control){
@@ -67,7 +68,8 @@ sub fetch_input {
       #For the moment the control file has to be the same file type as the input file, but does not need to be the case...
       #TODO Need to validate here if that's the case...
       my $control_feature = $self->param('control_feature') || throw "Need to define 'control_feature'";
-      my $control_file = $cell_type."_".$control_feature."_".$experiment_name.".samse.".$file_type.".gz";
+      my $control_file = $cell_type."_".$control_feature."_".$experiment_name.".samse.".$file_type;
+      $control_file .=  ".gz" unless ( -e $input_dir.'/'.$control_file);
       $self->_control_file($control_file);
     }
   }
@@ -83,7 +85,7 @@ sub _preprocess_file{
   
   #Consider using hash to process input
   my ($self, $input, $output, $file_type) = (shift, shift, shift, shift);
-
+  return 1  if (-e $output);
   #For the moment we always overwrite any existent file...
   #Maybe reuse previously cached files? How to check if they are corrupted?
   #Maybe create a -reuse flag?
@@ -101,7 +103,7 @@ sub _preprocess_file{
     $command = " | grep -v '^MT' ";
     $command .= " | sort -k1,1 -k2,2n -k3,3n | gzip -c > $output";
 
-  } elsif($file_type eq 'sam'){
+  } elsif($file_type eq 'sam' || $file_type eq 'bam'){
 
     #Manual Alternative to samtools
     #$command = "gzip -dc ".$self->param($parameter);
@@ -109,15 +111,22 @@ sub _preprocess_file{
 
     #Sometimes the input sam file may have incorrect headings which will mess up subsequent steps...
     #$command = "gzip -dc $input | grep -v '^\@' | "; # This is not likely to happen now
-    $command = "gzip -dc $input | ";
-
+    if ($file_type eq 'sam'){
+      $command = "gzip -dc $input | ";
+    }
+    else {
+      $command = "samtools view $input |";
+    }
+    
     #PREPROCESSING... remove mitochondria before SWEMBL : we need to cater for different approaches
     #TODO do this in a better, more generic way
     $command .= "grep -vE '^[^[:space:]]+[[:blank:]][^[:space:]]+[[:blank:]][^[:space:]]+\:[^[:space:]]+\:MT\:' | ";
     $command .= "grep -v '^MT' | grep -v '^chrM' | ";
 
     #Remove unmapped reads... 
-    $command .= $self->_bin_dir()."/samtools view -uSh -t ".$self->_sam_header()." -F 4 - | ";
+    $command .= $self->_bin_dir()."/samtools view -uSh"; 
+    $command .= " -t ".$self->_sam_header() if $self->_sam_header();
+    $command .= " -F 4 - | ";
     
     # This piped sort is not working!! (this problem has been reported in the samtools mailing list)
     #TODO Check why this pipe in the sort is not working...
@@ -128,9 +137,14 @@ sub _preprocess_file{
     $command .= $self->_bin_dir()."/samtools sort - ${input}_tmp ; " ;
 
     #Add a remove duplicates step (this is not supported with BED files for the moment)
-    $command .= $self->_bin_dir()."/samtools rmdup -s ${input}_tmp.bam - | ";
-    $command .= $self->_bin_dir()."/samtools view -h - | gzip -c > $output";
-
+    $command .= $self->_bin_dir()."/samtools rmdup -s ${input}_tmp.bam - ";
+    
+    if ($file_type eq 'sam'){
+      $command .= "| ".$self->_bin_dir()."/samtools view -h - | gzip -c > $output";
+    }
+    else {
+      $command .= "> $output";
+    }
     #Alternative with no rmdup...
     #$command .= $self->_bin_dir()."/samtools view -h ${input}_tmp.bam | gzip -c > $output";
 
@@ -140,7 +154,7 @@ sub _preprocess_file{
   else{
     throw("$file_type file format not supported");
   }
-
+  print STDERR "Preprocess cmd: $command$/";
   system($command) && throw("Failed processing $input with command $command");
 
   return 1;

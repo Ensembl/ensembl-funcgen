@@ -52,8 +52,8 @@ sub fetch_input {   # fetch and preprocess the input file plus do some more chec
   
   my $file_type = $self->_file_type();
 
-  if(($file_type ne 'sam') && ($file_type ne 'bed') ){ 
-    throw "Only sam and bed currently supported for CCAT"; 
+  if(($file_type ne 'sam') && ($file_type ne 'bed') && ($file_type ne 'bam')){ 
+    throw "Only sam, bam and bed currently supported for CCAT"; 
   }
 
   my $output_dir = $self->_output_dir();  
@@ -106,40 +106,48 @@ sub fetch_input {   # fetch and preprocess the input file plus do some more chec
   $self->_control_file($control_file); 
   
   #May need to convert it...
-  if($file_type eq 'sam'){
+  if(! $self->param('reenter') && ($file_type eq 'sam' || $file_type eq 'bam')){
 
-    my $input_file_bed = $self->_input_file;
-    $input_file_bed =~ s/\.sam/\.bed/;
-
-    #Mouse hack
-    if($self->_species eq 'mus_musculus'){
-      if(! $self->param('reenter')){
-	run_system_cmd($bin_dir."/samtools view -Su ".$self->_input_file." | ${bin_dir}/bamToBed | grep 'chromosome' >${input_file_bed}");
-      }
-    } else {
-      if(! $self->param('reenter')){
-	run_system_cmd($bin_dir."/samtools view -Su ".$self->_input_file." | ${bin_dir}/bamToBed >${input_file_bed}");
-      }
-    }
+    my $input_file_bed = $self->_convert_file($self->_input_file);
     $self->_input_file($input_file_bed);
-
-    my $control_file_bed = $self->_control_file;
-    $control_file_bed =~ s/\.sam/\.bed/;
-    #Mouse Hack
-    if($self->_species eq 'mus_musculus'){
-      if(! $self->param('reenter')){
-	run_system_cmd($bin_dir."/samtools view -Su ".$self->_control_file." | ${bin_dir}/bamToBed | grep 'chromosome' >${control_file_bed}");     
-      }
-    } else {
-      if(! $self->param('reenter')){
-	run_system_cmd($bin_dir."/samtools view -Su ".$self->_control_file." | ${bin_dir}/bamToBed >${control_file_bed}");
-      }
-    }
-    $self->_control_file($control_file_bed); 
-
+    
+    my $control_file_bed = $self->_convert_file($self->_control_file);
+    $self->_control_file($control_file_bed);
   }
 
   return 1;
+}
+
+sub _convert_file {
+  my ($self,$file) = @_;
+  my $bin_dir = $self->_bin_dir();
+  my $file_type = $self->_file_type();
+  
+   my $bed_file = $file;
+   $bed_file =~ s/\.sam/\.bed/;
+   $bed_file =~ s/\.bam/\.bed/;  
+    
+    my @convert_cmd;
+    
+    if ($file_type eq 'sam') {
+      push @convert_cmd, 'gunzip -c', $file;
+      push @convert_cmd, '|', 'samtools view -Su - ';
+    }
+    else {
+      push @convert_cmd, 'cat', $file;
+    } 
+    push @convert_cmd, '|', "${bin_dir}/bamToBed -i -";
+    
+    if($self->_species eq 'mus_musculus'){#Mouse hack
+      push @convert_cmd, '|', 'grep \'chromosome\'';
+    }
+    push @convert_cmd, '>', $bed_file;
+    
+    my $cmd = join ' ', @convert_cmd;
+    
+    run_system_cmd($cmd);
+    
+    return $bed_file;
 }
 
 sub run {   # call SWEmbl
