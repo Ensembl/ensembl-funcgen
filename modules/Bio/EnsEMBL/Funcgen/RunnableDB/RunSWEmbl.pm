@@ -107,19 +107,19 @@ sub run {   # call SWEmbl
   my %fswitches = (
   		   bed   => '-B',
   		   sam   => '-S',
+  		   bam   => '-F',
   		   #maq   => '-M',
   		   #eland => '-E',
-		   #bam   => '-?',
   		  );
   
   #Ideally it will unify to sam or bam
   my $format_switch = $fswitches{$self->_file_type()};
   
-  throw("Could not identify valid SWEmbl input format") if(! $format_switch);
+  throw("Could not identify valid SWEmbl input format for ".$self->_file_type()) if(! $format_switch);
   
-  my $command = $self->_bin_dir()."/".$self->_command() . " $format_switch -z -i " . $self->_input_file() . ' ' . 
+  my $command = $self->_bin_dir()."/".$self->_command() . " $format_switch -V -i " . $self->_input_file() . ' ' . 
     $self->_command_options() . ' -o ' . $self->_results_file();
-  
+  $command .= ' -z ' if ($self->_input_file() =~ m/\.gz$/);
   if($self->_control_file() && !$self->_skip_control()){  
     $command = $command." -r ".$self->_control_file(); 
   }

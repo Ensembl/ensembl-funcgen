@@ -109,7 +109,7 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
   $self->_group($eg_obj);
 
 
-  if($file_type eq 'sam'){
+  if($file_type eq 'sam' || $file_type eq 'bam'){
     #Change the directory structure so it will agree with the rest, without the need to do uc()
     my $sam_header = $self->_work_dir()."/sam_header/".$species."/".$species."_"; 
     $sam_header .= $ct_obj->gender() ? $ct_obj->gender() : 'male'; 
@@ -199,7 +199,7 @@ sub _check_Experiment {
        -cell_type    => $cell_type,
        -vendor       => 'SOLEXA',
        -format       => 'SEQUENCING',
-       -feature_class => 'result'
+       -feature_class => 'result',
        # Analysis is not being used??
        #-analysis     => $self->feature_analysis,
       );
