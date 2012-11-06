@@ -73,33 +73,21 @@ my %valid_attribute_features = (
 
 =head2 fetch_all
 
-  Arg [1]    : optional - Bio::EnsEMBL::FeatureSet
-  Example    : my $rfs = $rf_adaptor->fetch_all();
-  Description: Over-ride generic fetch_all method to return only MultiCell features by default.
+  Example    : my $rfs = $rf_adaptor->fetch_all;
+  Description: Over-ride generic fetch_all method to return only MultiCell features.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
-  Exceptions : none
-  Caller     : general
+  Exceptions : None
+  Caller     : General
   Status     : At risk 
 
 =cut
 
-#Change to Iterator?
-
 sub fetch_all{
-  my ($self, $fset) = @_;
-
-  if($fset){
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset)
-  }else{
-	$fset = $self->_get_current_FeatureSet;
-  }
-
-  my $constraint = ' rf.feature_set_id='.$fset->dbID; 
-
-
-  return $self->fetch_all($constraint);
+  my $self = $_[0];
+  
+  return $self->SUPER::generic_fetch(' rf.feature_set_id='.
+                                     $self->_get_current_FeatureSet->dbID);
 }
-
 
 
 =head2 _get_current_FeatureSet
@@ -271,15 +259,15 @@ sub _columns {
   return qw(
 			rf.regulatory_feature_id rf.seq_region_id
 			rf.seq_region_start      rf.seq_region_end
-			rf.seq_region_strand     rf.bound_seq_region_start
-			rf.bound_seq_region_end  rf.display_label
+			rf.seq_region_strand     rf.bound_start_length
+			rf.bound_end_length      rf.display_label
 			rf.feature_type_id       rf.feature_set_id
 			rf.stable_id             rf.binary_string
 			rf.projected             ra.attribute_feature_id
 			ra.attribute_feature_table
 	   );
 }
-
+#rf.bound_seq_region_start			rf.bound_seq_region_end
 
 =head2 _left_join
 
@@ -346,8 +334,8 @@ sub _objs_from_sth {
 	my (
 	    $dbID,                  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
-	    $seq_region_strand,     $bound_seq_region_start,
-		$bound_seq_region_end,  $display_label,
+	    $seq_region_strand,     $bound_start_length,
+		$bound_end_length,  $display_label,
 		$ftype_id,              $fset_id,
 		$stable_id,             $attr_id,
 		$attr_type,             $bin_string,
@@ -357,8 +345,8 @@ sub _objs_from_sth {
 	$sth->bind_columns(
 					   \$dbID,                  \$efg_seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
-					   \$seq_region_strand,     \$bound_seq_region_start,
-					   \$bound_seq_region_end,  \$display_label,
+					   \$seq_region_strand,     \$bound_start_length,
+					   \$bound_end_length,  \$display_label,
 					   \$ftype_id,              \$fset_id,
 					   \$stable_id,             \$bin_string,
 					   \$projected,             \$attr_id,
@@ -528,28 +516,31 @@ sub _objs_from_sth {
 
 	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
 			
-          #can remove the if $bound_seq_region_start/end once we have updated all reg feature entries and store API
+          #remove bound adjusts as this is now done dynamically
 
           if ($dest_slice_strand == 1) {
             $seq_region_start       = $seq_region_start - $dest_slice_start + 1;
             $seq_region_end         = $seq_region_end   - $dest_slice_start + 1;
 
             #if as we never have a seq_region start of 0;
-            $bound_seq_region_start = $bound_seq_region_start - $dest_slice_start + 1 if $bound_seq_region_start;
-            $bound_seq_region_end   = $bound_seq_region_end   - $dest_slice_start + 1 if $bound_seq_region_end;
+            #$bound_seq_region_start = $bound_seq_region_start - $dest_slice_start + 1 if $bound_seq_region_start;
+            #$bound_seq_region_end   = $bound_seq_region_end   - $dest_slice_start + 1 if $bound_seq_region_end;
           } else {
             my $tmp_seq_region_start       = $seq_region_start;
-            my $tmp_bound_seq_region_start = $bound_seq_region_start;
+            #my $tmp_bound_seq_region_start = $bound_seq_region_start;
             $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
             $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-            $bound_seq_region_start  = $dest_slice_end - $bound_seq_region_end + 1 if $bound_seq_region_end;
-            $bound_seq_region_end    = $dest_slice_end - $tmp_bound_seq_region_start + 1 if $bound_seq_region_start;
+            #$bound_seq_region_start  = $dest_slice_end - $bound_seq_region_end + 1 if $bound_seq_region_end;
+            #$bound_seq_region_end    = $dest_slice_end - $tmp_bound_seq_region_start + 1 if $bound_seq_region_start;
             $seq_region_strand      *= -1;
           }
 	      }
 
 	      # Throw away features off the end of the requested slice
-        #Do not account for bounds here.
+        #Could account for bounds here. Currently this means we never 
+        #get just bounds in the region in detail
+        #This would reintroduce calc here
+  
 	      if ($seq_region_end < 1 || $seq_region_start > $dest_slice_length
             || ( $dest_slice_sr_name ne $sr_name )) {
           $skip_feature = 1;
@@ -560,15 +551,17 @@ sub _objs_from_sth {
 	    }
 	    
 	   				
-      #This stops un init warning when sid is absent for sid mapping
+      #This stops an init warning when sid is absent for sid mapping
       my $sid = (defined $stable_id) ? sprintf($stable_id_prefix."%011d", $stable_id) : undef;
 
       $reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
         ({
           'start'          => $seq_region_start,
           'end'            => $seq_region_end,
-          'bound_start'    => $bound_seq_region_start,
-          'bound_end'      => $bound_seq_region_end,
+          #'bound_start'    => $bound_seq_region_start,
+          #'bound_end'      => $bound_seq_region_end,
+          'bound_start_length' => $bound_start_length,
+          'bound_end_length'   => $bound_end_length,
           'strand'         => $seq_region_strand,
           'slice'          => $slice,
           'analysis'       => $fset_hash{$fset_id}->analysis(),
@@ -635,13 +628,16 @@ sub store{
   my $sth = $self->prepare("
 		INSERT INTO regulatory_feature (
 			seq_region_id,         seq_region_start,
-			seq_region_end,        bound_seq_region_start,
-			bound_seq_region_end,  seq_region_strand,
-            display_label,         feature_type_id,
-            feature_set_id,        stable_id,
-            binary_string,         projected
+			seq_region_end,        bound_start_length,
+			bound_end_length,      seq_region_strand,
+      display_label,         feature_type_id,
+      feature_set_id,        stable_id,
+      binary_string,         projected
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
   
+ #bound_seq_region_start,	bound_seq_region_end
+
+
   my $sth2 = $self->prepare("
 		INSERT INTO regulatory_attribute (
               regulatory_feature_id, attribute_feature_id, attribute_feature_table
@@ -674,22 +670,22 @@ sub store{
 	#Actually never happens, as we always assign stable_ids after storing
 	($sid = $rf->stable_id) =~ s/ENS[A-Z]*R0*// if defined $rf->stable_id;
 
-	$sth->bind_param(1,  $seq_region_id,             SQL_INTEGER);
-	$sth->bind_param(2,  $rf->start(),               SQL_INTEGER);
-	$sth->bind_param(3,  $rf->end(),                 SQL_INTEGER);
-	$sth->bind_param(4,  $rf->bound_start(),         SQL_INTEGER);
-	$sth->bind_param(5,  $rf->bound_end(),           SQL_INTEGER);
-	$sth->bind_param(6,  $rf->strand(),              SQL_TINYINT);
-	$sth->bind_param(7,  $rf->{'display_label'},     SQL_VARCHAR);#Direct access so we always store the binary string
-	$sth->bind_param(8,  $rf->feature_type->dbID(),  SQL_INTEGER);
-	$sth->bind_param(9,  $rf->feature_set->dbID(),   SQL_INTEGER);
-	$sth->bind_param(10, $sid,                      SQL_INTEGER);
-	$sth->bind_param(11, $rf->binary_string,        SQL_VARCHAR);
-	$sth->bind_param(12, $rf->is_projected,         SQL_BOOLEAN);
+	$sth->bind_param(1,  $seq_region_id,           SQL_INTEGER);
+	$sth->bind_param(2,  $rf->start,               SQL_INTEGER);
+	$sth->bind_param(3,  $rf->end,                 SQL_INTEGER);
+	$sth->bind_param(4,  $rf->bound_start_length,  SQL_INTEGER);
+	$sth->bind_param(5,  $rf->bound_end_length,    SQL_INTEGER);
+	$sth->bind_param(6,  $rf->strand,              SQL_TINYINT);
+	$sth->bind_param(7,  $rf->{display_label},     SQL_VARCHAR);#Deref so we don't store API default value
+	$sth->bind_param(8,  $rf->feature_type->dbID,  SQL_INTEGER);
+	$sth->bind_param(9,  $rf->feature_set->dbID,   SQL_INTEGER);
+	$sth->bind_param(10, $sid,                     SQL_INTEGER);
+	$sth->bind_param(11, $rf->binary_string,       SQL_VARCHAR);
+	$sth->bind_param(12, $rf->is_projected,        SQL_BOOLEAN);
 
 	#Store and set dbID
-	$sth->execute();
-	$rf->dbID( $sth->{'mysql_insertid'} );
+	$sth->execute;
+	$rf->dbID( $sth->{mysql_insertid} );
 
 
 	#Store regulatory_attributes
