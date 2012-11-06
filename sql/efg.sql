@@ -57,10 +57,10 @@ CREATE TABLE `regulatory_feature` (
   `feature_type_id`	int(10) unsigned default NULL,
   `feature_set_id`	int(10) unsigned default NULL,
   `stable_id` mediumint(8) unsigned default NULL,
-  `bound_seq_region_start` int(10) unsigned NOT NULL,
-  `bound_seq_region_end` int(10) unsigned NOT NULL,
   `binary_string` varchar(500) default NULL,
-  `projected` boolean default FALSE,
+  `projected` boolean default FALSE,	
+  `bound_start_length` mediumint(3) unsigned NOT NULL,
+  `bound_end_length` mediumint(3) unsigned NOT NULL,
   PRIMARY KEY  (`regulatory_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`),
   KEY `feature_type_idx` (`feature_type_id`),
@@ -1439,12 +1439,12 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "69");
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "70");
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_b.sql|DNAMethylationFeature support');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_c.sql|regbuild_string.species_id_not_null');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_68_69_d.sql|xref.id_index_fix');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_69_70_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_69_70_b.sql|regulatory_feature.bound_start/end_length');
+
+
 
 
 /**
