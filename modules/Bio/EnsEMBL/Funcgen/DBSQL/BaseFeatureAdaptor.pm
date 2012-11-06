@@ -213,11 +213,6 @@ sub fetch_all_by_Slice_constraint {
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
   
-  #Need to handle bound_start/end values here for regulatory_features
-  #This will slow down fetch for all types of feature on HAP/PAR
-  #And will also prevent merging this back into the core code.
-  #One way around this is to
-
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
 
@@ -234,11 +229,11 @@ sub fetch_all_by_Slice_constraint {
         if ($offset != 1) {
           $f->{start} += $offset-1;
           $f->{end}   += $offset-1;
-
-          if($f->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature')){
-            $f->{bound_start} += $offset-1;
-            $f->{bound_end}   += $offset-1;
-          }
+          
+          #if($f->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature')){
+          #  $f->{bound_start} += $offset-1;
+          #  $f->{bound_end}   += $offset-1;
+          #}
         }
         
         # discard boundary crossing features from symlinked regions
