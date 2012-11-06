@@ -25,6 +25,7 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
 
  use Bio::EnsEMBL::Registry;
  use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
+
  my $reg = Bio::EnsEMBL::Registry->load_adaptors_from_db
      (
       -host    => 'ensembldb.ensembl.org',
@@ -38,8 +39,8 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
  my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
      (
       -SLICE         => $chr_1_slice,
-      -START         => 1_000_000,
-	  -END           => 1_000_024,
+      -START         => 1000000,
+	    -END           => 1000024,
       -STRAND        => 0,
       -DISPLAY_LABEL => $text,
       -FEATURE_SET   => $fset,
@@ -50,8 +51,8 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
  my ($stored_feat) = @{$regfeat_adaptor->store([$feature])};
 
 
- ### Fetching some RegualtoryFeatures
- my @regfeats = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, \@fsets)};
+ ### Fetching some RegulatoryFeatures
+ my @regfeats = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, \@reg_feature_sets)};
 
 
  ### Print the bound and core loci
@@ -70,7 +71,7 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
 A RegulatoryFeature object represents the output of the Ensembl RegulatoryBuild:
     http://www.ensembl.org/info/docs/funcgen/regulatory_build.html
 
-It is comprises many possible histone, transcription factor, polymerase and open
+It may comprise many histone modification, transcription factor, polymerase and open
 chromatin features, which have been combined to provide a summary view and
 classification of the regulatory status at a given loci.
 
@@ -110,15 +111,16 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature); #@ISA
   Arg [-dbID]              : (optional) int - Internal database ID.
   Arg [-ADAPTOR]           : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
 
-  Example    : my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new(
-										                                  -SLICE         => $chr_1_slice,
-									                                      -START         => 1000000,
-									                                      -END           => 1000024,
-                                                                          -DISPLAY_LABEL => $text,
-									                                      -FEATURE_SET   => $fset,
-                                                                          -FEATURE_TYPE  => $reg_ftype,
-                                                                          -ATTRIBUTE_CACHE => \%attr_cache,
-                                                                         );
+  Example    : my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
+                 (
+									-SLICE         => $chr_1_slice,
+									-START         => 1000000,
+									-END           => 1000024,
+                  -DISPLAY_LABEL => $text,
+									-FEATURE_SET   => $fset,
+                  -FEATURE_TYPE  => $reg_ftype,
+                  -ATTRIBUTE_CACHE => \%attr_cache,
+                 );
 
 
   Description: Constructor for RegulatoryFeature objects.
@@ -150,7 +152,7 @@ sub new {
 
 =head2 display_label
 
-  Example    : my $label = $feature->display_label();
+  Example    : my $label = $feature->display_label;
   Description: Getter for the display label of this feature.
   Returntype : String
   Exceptions : None
@@ -162,16 +164,17 @@ sub new {
 sub display_label {
   my $self = shift;
 
-  if(! defined $self->{'display_label'}){
-	$self->{'display_label'}  = $self->feature_type->name.' Regulatory Feature';
+  if(! defined $self->{display_label}){
+    $self->{'display_label'}  = $self->feature_type->name.' Regulatory Feature';
 
-	if( defined $self->cell_type ){
-	  $self->{'display_label'} .= ' - '.$self->cell_type->name;
-	}
+    if( defined $self->cell_type ){
+      $self->{display_label} .= ' - '.$self->cell_type->name;
+    }
   }
 
-  return  $self->{display_label};
+  return $self->{display_label};
 }
+
 
 =head2 display_id
 
@@ -193,25 +196,15 @@ sub display_id {  return $_[0]->{stable_id}; }
 
   Arg [1]    : optional string - binary string from regulatory build
   Example    : my $bin_string = $feature->binary_string();
-  Description: Getter and setter for the binary_string for this feature.
+  Description: Getter for the binary_string for this feature.
   Returntype : String
   Exceptions : None
-  Caller     : General
-  Status     : At Risk - May change to BLOB, remove setter functionality
+  Caller     : Regulatory build analyses
+  Status     : At Risk - May change to BLOB
 
 =cut
 
-sub binary_string{
-  my ($self, $bin_string)  = @_;
-
-  if (defined $bin_string){
-	#added v67
-	warn "RegualtoryFeature::binary_string setter functionality is being removed\n";
-	$self->{binary_string} = $bin_string;
-  }
-
-  return $self->{binary_string};
-}
+sub binary_string{ return $_[0]->{binary_string}; }
 
 
 =head2 stable_id
@@ -232,6 +225,7 @@ sub stable_id {
   if (@_){
     #added v67
     warn "RegualtoryFeature::stable_id setter functionality is being removed\n";
+    #Still used in stable_id_mapper.pl
     $self->{stable_id} = shift;
   }
 
@@ -294,9 +288,10 @@ sub regulatory_attributes{
 	  
 	  if( ! ( ref($self->{'regulatory_attributes'}{$fclass}->[0])  &&
 			  ref($self->{'regulatory_attributes'}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )){
-		
-		$adaptors{$fclass}->force_reslice(1);#So we don't lose attrs which aren't on the slice
-		$self->{'regulatory_attributes'}{$fclass} = $adaptors{$fclass}->fetch_all_by_dbID_list(\@attr_dbIDs, $self->slice);
+      
+      $adaptors{$fclass}->force_reslice(1);#So we don't lose attrs which aren't on the slice
+      $self->{'regulatory_attributes'}{$fclass} = 
+        $adaptors{$fclass}->fetch_all_by_dbID_list(\@attr_dbIDs, $self->slice);
 
 		#Having problems here if we are trying to project between Y PAR and X
 		#Current dest_slice mapping code simply changes the start end values assuming the slice is correct
@@ -482,46 +477,13 @@ sub attribute_cache{
 }
 
 
-=head2 bound_start
 
-  Example    : my $bound_start = $feature->bound_start();
-  Description: Getter for the bound_start attribute for this feature.
-               Gives the 5' most start value of the underlying attribute
-               features.
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub bound_start {
-  my $self = shift;
-  $self->get_underlying_structure if ! defined $self->{'bound_start'};
-
-  return $self->{'bound_start'};
-}
-
-
-=head2 bound_end
-
-  Example    : my $bound_end = $feature->bound_start();
-  Description: Getter for the bound_end attribute for this feature.
-               Gives the 3' most end value of the underlying attribute
-               features.
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub bound_end {
-  my $self = shift;
-  $self->get_underlying_structure if ! defined $self->{'bound_end'};
-
-  return $self->{'bound_end'};
-}
+# The bound_seq_region_start/end methods are dynamic to support
+# HAP/PAR projection. Reverting this (not advised), would require
+# changes in _objs_from_sth to remap the loci to a dest slice
+# These are now 'lazy calculated' rather than pre-defined. Hence no
+# change in performace unless they are called multiple times
+# for the same slice
 
 
 =head2 bound_seq_region_start
@@ -530,28 +492,14 @@ sub bound_end {
   Description: Getter for the seq_region bound_start attribute for this feature.
                Gives the 5' most start value of the underlying attribute
                features.
-  Returntype : string
+  Returntype : Integer
   Exceptions : None
   Caller     : General
   Status     : Stable
 
 =cut
 
-sub bound_seq_region_start {
-  my $self = shift;
-
-  if(! defined $self->{bound_seq_region_start}){
-	
-	if($self->slice->strand == 1){
-	  $self->{bound_seq_region_start} = $self->slice->start + $self->bound_start - 1;
-	}
-	else{ #strand = -1
-	  $self->{bound_seq_region_start} = $self->slice->end - $self->bound_end + 1;
-	}
-  }
-
-  return $self->{bound_seq_region_start};
-}
+sub bound_seq_region_start { return $_[0]->seq_region_start - $_[0]->_bound_lengths->[0]; }
 
 
 =head2 bound_seq_region_end
@@ -560,33 +508,122 @@ sub bound_seq_region_start {
   Description: Getter for the seq_region bound_end attribute for this feature.
                Gives the 3' most end value of the underlying attribute
                features.
-  Returntype : string
+  Returntype : Integer
   Exceptions : None
   Caller     : General
   Status     : Stable
 
 =cut
 
+sub bound_seq_region_end { return $_[0]->seq_region_end + $_[0]->_bound_lengths->[1]; }
 
-sub bound_seq_region_end {
+# As this 'private' method is not exposed or required to be poylymorphic,
+# it would theoretically, be quicker to have this as a sub.
+
+sub _bound_lengths {
   my $self = shift;
 
-  if(! defined $self->{bound_seq_region_end}){
-	
-	if($self->slice->strand == 1){
-	  $self->{bound_seq_region_end} = $self->slice->start + $self->bound_end - 1;
-	}
-	else{ #strand = -1
-	  $self->{bound_seq_region_end} = $self->slice->end - $self->bound_start + 1;
-	}
+  if(! defined  $self->{_bound_lengths}){
+
+    my @af_attrs = @{$self->regulatory_attributes('annotated')};
+    
+    if (! @af_attrs) {
+      throw('Unable to set bound length, no AnnotatedFeature attribites available for RegulatoryFeature: '
+            .$self->dbID);
+    }
+    
+    #Adding self here accounts for core region i.e.
+    #features extending beyond the core may be absent on this cell type.
+    my @start_ends;
+
+    foreach my $feat (@af_attrs, $self) {
+      push @start_ends, ($feat->seq_region_start, $feat->seq_region_end);
+    }
+        
+    @start_ends = sort { $a <=> $b } @start_ends;
+        
+    $self->{_bound_lengths} = [ ($self->seq_region_start - $start_ends[0]),
+                                ($start_ends[$#start_ends] - $self->seq_region_end) ];
   }
 
-  return $self->{bound_seq_region_end};
+  return $self->{_bound_lengths};
+}
+
+#This appears to be slower than foreach
+#my @start_ends = map { $_->start, $_->end } (@af_attrs, $self);
+
+
+
+
+# The following methods are all dynamic wrt slice strand and projection/transfer
+# and return local values
+
+=head2 bound_start_length
+
+  Example    : my $bound_start_length = $reg_feat->bound_start_length;
+  Description: Getter for the bound_start_length attribute for this feature,
+               with respect to the host slice strand
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub bound_start_length {
+  my $self = shift;
+  return ($self->slice->strand == 1) ? $self->_bound_lengths->[0] : $self->_bound_lengths->[1];
 }
 
 
+=head2 bound_end_length
+
+  Example    : my $bound_end_length = $reg_feat->bound_end_length;
+  Description: Getter for the bound_end length attribute for this feature,
+               with respect to the host slice strand.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub bound_end_length {
+  my $self = shift;
+  return ($self->slice->strand == 1) ? $self->_bound_lengths->[1] : $self->_bound_lengths->[0];
+}
 
 
+=head2 bound_start
+
+  Example    : my $bound_start = $feature->bound_start;
+  Description: Getter for the bound_start attribute for this feature.
+               Gives the 5' most start value of the underlying attribute
+               features in local coordinates.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub bound_start { return $_[0]->start - $_[0]->bound_start_length; }
+
+
+=head2 bound_end
+
+  Example    : my $bound_end = $feature->bound_start();
+  Description: Getter for the bound_end attribute for this feature.
+               Gives the 3' most end value of the underlying attribute
+               features in local coordinates.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub bound_end { return $_[0]->end + $_[0]->bound_end_length; }
 
 
 =head2 is_projected
@@ -594,7 +631,7 @@ sub bound_seq_region_end {
   Arg [1]    : optional - boolean
   Example    : if($regf->is_projected){ #do something different here }
   Description: Getter/Setter for the projected attribute.
-  Returntype : boolean
+  Returntype : Boolean
   Exceptions : None
   Caller     : General
   Status     : At risk - remove setter functionality
@@ -606,8 +643,8 @@ sub is_projected {
   
   if(@_){
 	#added v67
-	warn "RegulatoryFeature::is_projected setter functionality is being removed\n";
-	$self->{'projected'} = shift;
+    warn "RegulatoryFeature::is_projected setter functionality is being removed\n";
+    $self->{'projected'} = shift;
   }
   
   return $self->{'projected'};
@@ -616,74 +653,48 @@ sub is_projected {
 
 =head2 get_underlying_structure
 
-  Example    : $self->get_underlying_structure() if(! exists $self->{'bound_end'});
+  Example    : my @web_image_structure = @{$regf->get_underlying_structure};
   Description: Getter for the bound_end attribute for this feature.
                Gives the 3' most end value of the underlying attribute
                features.
-  Returntype : string
+  Returntype : Arrayref
   Exceptions : None
-  Caller     : General
+  Caller     : Webcode
   Status     : At Risk
 
 =cut
 
-#This should really be precomputed and stored in the DB to avoid the MF attr fetch
-#Need to be aware of projecting here, as these will expire if we project after this method is called
+#Could precompute these as core region loci
+#and store in the DB to avoid the MF attr fetch?
+
+#This is also sensitive to projection/transfer after we have called it.
+#Would have to do one of the following
+#1 Projecting all motif_features. This could be done by extending/overwriting
+#  Feature::project/transfer, and make all feature projection code use that e.g. BaseFeatureAdaptor
+#2 Cache the start, end and strand of slice, and update when changed by transforming motif_feature_loci
+
+# This is only ever used for web which will never call until any projection is complete.
+# Hence no real need for this to be sensitive to pre & post projection calling
+# Leave for now with above useage caveat
 
 sub get_underlying_structure{
   my $self = shift;
 
-  if(! defined $self->{underlying_structure}){
+  if (! defined $self->{underlying_structure}) {
+    my @mf_loci;
+    
+    foreach my $mf (@{$self->regulatory_attributes('motif')}) {
+      push @mf_loci, ($mf->start, $mf->end);
+    }
 
-	my @attrs = @{$self->regulatory_attributes()};
-
-	if(! @attrs){
-	  throw('No underlying regulatory_attribute features to get_underlying_structure for dbID '.$self->dbID);
-	  #This should never happen even with a projection build
-	}
-	else{
-
-
-	  #We only need to set the bounds when storing on full slice/seq_region values
-	  #else they should be fetched from the DB
-
-	  if(! defined $self->{'bound_start'}){
-
-		my (@start_ends);
-
-		foreach my $attr(@attrs){
-		  push @start_ends, ($attr->start, $attr->end);
-		}
-
-		#Accounts for core region, where data may be absent on this cell type
-		push @start_ends, ($self->start, $self->end);
-
-		@start_ends = sort { $a <=> $b } @start_ends;
-
-		$self->{'bound_end'} = pop @start_ends;
-		$self->{'bound_start'} = shift @start_ends;
-
-		#Need to account for projection build here
-		#i.e. attr extremeties may not extend past core start/end
-
-		if($self->is_projected){
-		  $self->{'bound_end'}   = $self->end   if $self->end   > $self->{'bound_end'};
-		  $self->{'bound_start'} = $self->start if $self->start < $self->{'bound_start'};
-		}
-	  }
-
-	  #Now deal with MotifFeature loci
-	  my @mf_loci;
-
-	  foreach my $mf(@{$self->regulatory_attributes('motif')}){
-		push @mf_loci, ($mf->start, $mf->end);
-	  }
-
-	  $self->{underlying_structure} = [$self->{'bound_start'}, $self->start, @mf_loci, $self->end, $self->{'bound_end'}];
-	}
+    $self->{underlying_structure} = [ 
+                                     $self->bound_start, $self->start,
+                                     @mf_loci,
+                                     $self->end, $self->buund_end
+                                    ];
   }
 
-  return $self->{underlying_structure};
+  $self->{underlying_structure};
 }
 
 
