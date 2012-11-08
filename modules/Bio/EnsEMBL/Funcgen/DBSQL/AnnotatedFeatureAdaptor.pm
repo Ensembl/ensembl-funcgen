@@ -40,8 +40,6 @@ AnnotatedFeature objects.
 
 =cut
 
-$| =1;
-
 use strict;
 use warnings;
 
@@ -174,9 +172,6 @@ sub _objs_from_sth {
 	  #Would only ever want to do this if we enable mapping between assemblies??
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 	  
-
-    warn "sr start end $seq_region_start, $seq_region_end\n";
-
 	  #get core seq_region_id
 	  #This fails if we are using a 'comparable' CoordSystem as we don't have a cache
 	  #for the new DB. Wasn't this fixed with the tmp seq_region_cache?
