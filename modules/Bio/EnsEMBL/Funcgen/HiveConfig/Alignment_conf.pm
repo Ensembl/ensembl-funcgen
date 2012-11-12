@@ -98,9 +98,9 @@ sub resource_classes {
     return {
 
 #Use this section when running on Sanger Farm
-   0 => { -desc => 'default',          'LSF' => '' },
-   1 => { -desc => 'long high memory',      'LSF' => '-q long -M5000000 -R"select[mem>5000] rusage[mem=5000]"' },
-   2 => { -desc => 'normal high memory',    'LSF' => ' -M5000000 -R"select[mem>5000] rusage[mem=5000]"' },
+   'default'            => { 'LSF' => '' },
+   'long_high_memory'   => { 'LSF' => '-q long -M5000000 -R"select[mem>5000] rusage[mem=5000]"' },
+   'normal_high_memory' => { 'LSF' => ' -M5000000 -R"select[mem>5000] rusage[mem=5000]"' },
 
 #Use this section when running on EBI cluster
 #    0 => { -desc => 'default',          'LSF' => '' },
@@ -226,7 +226,7 @@ sub pipeline_analyses {
      -limit => 1,
      -batch_size => 1,
      -hive_capacity => 10,
-     -rc_id => 0,
+     -rc_name => 'default',
     },
 
     {
@@ -238,7 +238,7 @@ sub pipeline_analyses {
            ],
      -hive_capacity => 100,
      # Better safe than sorry... size of datasets tends to increase...
-     -rc_id => 2,
+     -rc_name => 'normal_high_memory',
      #No need to wait once since it is independent from everything else
      #-wait_for => [ 'setup_pipeline' ]
     },
@@ -251,7 +251,7 @@ sub pipeline_analyses {
           # (jobs for this analysis will be flown_into via branch-1 from 'setup_pipeline' jobs above)
          ],
      -hive_capacity => 10,
-     -rc_id => 1,
+     -rc_name => 'long_high_memory',
      # No need to wait, if we use semaphores...
      # -wait_for => [ 'run_alignments' ],
     },
