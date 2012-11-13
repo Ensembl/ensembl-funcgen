@@ -1,5 +1,5 @@
 
-=pod 
+=pod
 
 =head1 NAME
 
@@ -20,11 +20,11 @@ init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::*_conf -job_topup -password 
 =head1 DESCRIPTION
 
     This is the Config file for the Motif Finder Pipeline
-    
+
     Please refer to Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf module to understand the interface implemented here.
 
     The Motif Finder pipeline consists of several "analysis":
-        * SetupMotifPipeline 
+        * SetupMotifPipeline
         * InferSubMotifs
         * ClusterMotifs
 
@@ -42,16 +42,16 @@ package Bio::EnsEMBL::Funcgen::HiveConfig::MotifFinder_conf;
 use strict;
 use warnings;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor; 
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning stack_trace_dump);
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');  
+use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 # All Hive databases configuration files should inherit from HiveGeneric, directly or indirectly
 
 
 =head2 default_options
 
-    Description : Implements default_options() interface method of 
+    Description : Implements default_options() interface method of
     Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that is used to initialize default options.
 
 =cut
@@ -60,12 +60,12 @@ sub default_options {
   my ($self) = @_;
   return {
 	  'ensembl_cvs_root_dir' => $ENV{'SRC'},
-	  
-	  'pipeline_db' => {                             
+
+	  'pipeline_db' => {
 	  		    -host   => $self->o('dbhost'),
 	  		    -port   => $self->o('dbport'),
 	  		    -user   => $self->o('pipeuser'),
-	  		    -pass   => $self->o('pipepass'),                       
+	  		    -pass   => $self->o('pipepass'),
 	  		    #-dbname => $ENV{USER}.'_peaks_'.$self->o('dbname'),
 			    -dbname => $self->o('pipedb_name'),
 	  		   },
@@ -84,7 +84,7 @@ sub default_options {
 
 =head2 resource_classes
 
-    Description : Implements resource_classes() interface method of 
+    Description : Implements resource_classes() interface method of
       Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that lists the LSF resource classes available
 
 =cut
@@ -92,11 +92,16 @@ sub default_options {
 sub resource_classes {
     my ($self) = @_;
     return {
-	    0 => { -desc => 'default',          'LSF' => '' },
-	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
-	    2 => { -desc => 'normal ens-genomics1',  'LSF' => '-R"select[myens_genomics1<600 && myens_livemirror<600] rusage[myens_livemirror=10:myens_genomics1=10:duration=10:decay=1]"' },
-	    3 => { -desc => 'long ens-genomics1',    'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-	    4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },  
+   'default'                => { 'LSF' => '' },
+   'urgent'                 => { 'LSF' => '-q yesterday' },
+   'normal_ens-genomics1'   => { 'LSF' => '-R"select[myens_genomics1<600 && myens_livemirror<600] rusage[myens_livemirror=10:myens_genomics1=10:duration=10:decay=1]"' },
+   'long_ens-genomics1'     => { 'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
+   'long_high memory'       => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+#	    0 => { -desc => 'default',          'LSF' => '' },
+#	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
+#	    2 => { -desc => 'normal ens-genomics1',  'LSF' => '-R"select[myens_genomics1<600 && myens_livemirror<600] rusage[myens_livemirror=10:myens_genomics1=10:duration=10:decay=1]"' },
+#	    3 => { -desc => 'long ens-genomics1',    'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
+#	    4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
 
 	   };
 }
@@ -113,8 +118,8 @@ sub resource_classes {
 sub pipeline_wide_parameters {
   my ($self) = @_;
   return {
-	  
-	  'pipeline_name'   => $self->o('pipedb_name'),  # name used by the beekeeper to prefix job names on the farm	  
+
+	  'pipeline_name'   => $self->o('pipedb_name'),  # name used by the beekeeper to prefix job names on the farm
 
 	  'output_dir'      => $self->o('work_dir')."/motifs/results",
 	  'hive_output_dir' => $self->o('work_dir')."/motifs/hive_output",
@@ -135,21 +140,17 @@ sub pipeline_wide_parameters {
 
 	  'bin_size' => $self->o('bin_size'),
 	  'window_size' => $self->o('window_size'),
-
-	  
-
 	 };
 }
 
 
 =head2 pipeline_create_commands
 
-    Description : Implements pipeline_create_commands() interface method of 
-      Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that lists the commands 
+    Description : Implements pipeline_create_commands() interface method of
+      Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that lists the commands
       that will create and set up the Hive database.
 
 =cut
-
 
 sub pipeline_create_commands {
  my ($self) = @_;
@@ -159,7 +160,7 @@ sub pipeline_create_commands {
 
 	  @{$self->SUPER::pipeline_create_commands},  # inheriting database and hive tables creation
 	  #'mysql '.$self->dbconn_2_mysql('pipeline_db', 0)." -e 'CREATE DATABASE ".$self->o('pipeline_db', '-dbname')."'",
-	  # standard eHive tables and procedures:	  
+	  # standard eHive tables and procedures:
 	  #'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).' <'.$self->o('ensembl_hive_root_dir').'/sql/tables.sql',
 	  #'mysql '.$self->dbconn_2_mysql('pipeline_db', 1).' <'.$self->o('ensembl_hive_root_dir').'/sql/procedures.sql',
 
@@ -173,7 +174,7 @@ sub pipeline_create_commands {
 
 =head2 pipeline_analyses
 
-    Description : Implements pipeline_analyses() interface method of 
+    Description : Implements pipeline_analyses() interface method of
       Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that defines the structure of the pipeline: analyses, jobs, rules, etc.
 
 
@@ -183,8 +184,8 @@ sub pipeline_analyses {
   my ($self) = @_;
 
   return [
-	  {   
-	   
+	  {
+
 	   -logic_name => 'setup_pipeline',
 	   -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::SetupMotifInference',
 	   -parameters => { 'batch_job' => 0, 'prepared' => 0 },
@@ -193,14 +194,14 @@ sub pipeline_analyses {
 			  { 'feature_set' => $self->o('feature_set') },
 			 ],
 	   -flow_into => {
-			  2 => [ 'infer_submotifs' ],           
-			  3 => [ 'cluster_motifs' ],   
+			  2 => [ 'infer_submotifs' ],
+			  3 => [ 'cluster_motifs' ],
 			 },
-	   -hive_capacity => 10,	   
-	   -rc_id => 0,
+	   -hive_capacity => 10,
+	   -rc_name => 'default',
 	  },
-	  
-	  {   
+
+	  {
 	   #This basically consists on running a command...
 	   -logic_name    => 'infer_submotifs',
 	   -module        => 'Bio::EnsEMBL::Funcgen::RunnableDB::InferMotifs',
@@ -209,13 +210,13 @@ sub pipeline_analyses {
 				 # (jobs for this analysis will be flown_into via branch-1 from 'setup_pipeline' jobs above)
 			     ],
 	   -hive_capacity => 100,
-	   -rc_id => 2, 
+	   -rc_name => 'normal_ens-genomics1',
 	   #use semaphores...
 	   #-wait_for => [ 'setup_pipeline' ]
 	  },
-	  
+
 	  {
-	   #This basically consists on running a command... 
+	   #This basically consists on running a command...
 	   -logic_name => 'cluster_motifs',
 	   -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ClusterMotifs',
 	   -parameters => { },
@@ -223,7 +224,7 @@ sub pipeline_analyses {
 	  		  # (jobs for this analysis will be flown_into via branch-2 from 'setup_pipeline' jobs above)
 	  		 ],
 	   -hive_capacity => 10,
-	   -rc_id => 0,
+	   -rc_name => 'default',
 	   #Use semaphores...
 	   #-wait_for => [ 'run_peaks_DNAse', 'run_peaks' ],
 	  },

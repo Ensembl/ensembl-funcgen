@@ -1,5 +1,5 @@
 
-=pod 
+=pod
 
 =head1 NAME
 
@@ -27,37 +27,44 @@ package Bio::EnsEMBL::Funcgen::HiveConfig::Annotation_conf;
 use strict;
 use warnings;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor; 
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning stack_trace_dump);
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');  
+use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 sub default_options {
   my ($self) = @_;
   return {
-	  'ensembl_cvs_root_dir' => $ENV{'SRC'},                  # some Compara developers might prefer $ENV{'HOME'}.'/ensembl_main'  
-	  
-	  'pipeline_db' => {                             
+	  'ensembl_cvs_root_dir' => $ENV{'SRC'},                  # some Compara developers might prefer $ENV{'HOME'}.'/ensembl_main'
+
+	  'pipeline_db' => {
 	  		    -host   => $self->o('dbhost'),
 	  		    -port   => $self->o('dbport'),
 	  		    -user   => $self->o('dbuser'),
-	  		    -pass   => $self->o('dbpass'),                       
+	  		    -pass   => $self->o('dbpass'),
 	  		    -dbname => $ENV{USER}.'_regfeat_annotation_'.$self->o('dbname'),
 			    #-dbname => $self->o('pipedb_name'),
 	  		   },
-	  
+
 	 };
 }
 
 sub resource_classes {
     my ($self) = @_;
     return {
-	    0 => { -desc => 'default',          'LSF' => '' },
-	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
-	    2 => { -desc => 'normal ens-genomics2',  'LSF' => '-R"select[myens_genomics2<1000] rusage[myens_genomics2=10:duration=10:decay=1]"' },
-	    3 => { -desc => 'long ens-genomics2',    'LSF' => '-q long -R"select[myens_genomics2<1000] rusage[myens_genomics2=10:duration=10:decay=1]"' },
-	    4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },    
-	    5 => { -desc => 'long ens-genomics2 high memory',  'LSF' => '-q long -M4000000 -R"select[myens_genomics2<1000 && mem>4000] rusage[myens_genomics2=10:duration=10:decay=1:mem=4000]"' },
+      'default'                        => { 'LSF' => '' },
+      'urgent'                         => { 'LSF' => '-q yesterday' },
+      'normal_ens-genomics2'           => { 'LSF' => '-R"select[myens_genomics2<1000] rusage[myens_genomics2=10:duration=10:decay=1]"' },
+      'long_ens-genomics2'             => { 'LSF' => '-q long -R"select[myens_genomics2<1000] rusage[myens_genomics2=10:duration=10:decay=1]"' },
+      'long_high_memory'               => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+      'long_ens-genomics2_high_memory' => { 'LSF' => '-q long -M4000000 -R"select[myens_genomics2<1000 && mem>4000] rusage[myens_genomics2=10:duration=10:decay=1:mem=4000]"' },
+
+#	    0 => { -desc => 'default',          'LSF' => '' },
+#	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
+#	    2 => { -desc => 'normal ens-genomics2',  'LSF' => '-R"select[myens_genomics2<1000] rusage[myens_genomics2=10:duration=10:decay=1]"' },
+#	    3 => { -desc => 'long ens-genomics2',    'LSF' => '-q long -R"select[myens_genomics2<1000] rusage[myens_genomics2=10:duration=10:decay=1]"' },
+#	    4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+#	    5 => { -desc => 'long ens-genomics2 high memory',  'LSF' => '-q long -M4000000 -R"select[myens_genomics2<1000 && mem>4000] rusage[myens_genomics2=10:duration=10:decay=1:mem=4000]"' },
 	   };
 }
 
@@ -73,16 +80,16 @@ sub resource_classes {
 sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
-	    
+
 	    'pipeline_name' => $self->o('pipeline_db', '-dbname'),  # name used by the beekeeper to prefix job names on the farm
-	    
+
 	    'work_dir'        => $self->o('work_dir'),   # data directories and filenames
-	    #use this as scratch dir or create one specifically? 
+	    #use this as scratch dir or create one specifically?
 	    'output_dir'      => $self->o('output_dir').'/annotation/results',
 	    'hive_output_dir' => $self->o('output_dir').'/annotation/hive_debug',
-	    
+
 	    #Maybe use parameters instead of ENV Variables... use ENV variables in the pipeline ENV
-	    "dnadb"	   => {	
+	    "dnadb"	   => {
 			       "-host"   => $self->o('dnadb_host'),
 			       "-port"   => $self->o('dnadb_port'),
 			       "-user"   => $self->o('dnadb_user'),
@@ -92,7 +99,7 @@ sub pipeline_wide_parameters {
 			       "-host"   => $self->o('dbhost'),
 			       "-port"   => $self->o('dbport'),
 			       "-user"   => $self->o('dbuser'),
-			       "-pass"   => $self->o('dbpass'), 
+			       "-pass"   => $self->o('dbpass'),
 			       "-dbname" => $self->o('dbname'),
 			      },
 
@@ -101,21 +108,21 @@ sub pipeline_wide_parameters {
 			       "-port"   => $self->o('workdb_port'),
 			       "-user"   => $self->o('workdb_user'),
 			       #workdbpass?
-			       "-pass"   => $self->o('dbpass'), 
+			       "-pass"   => $self->o('dbpass'),
 			      },
 	    #This could be inferred from the db, but it's probably safer(?) to pass as parameter...
 	    "species"      => $self->o('species'),
 
 	    #"release"      => $self->o('release'),
 
-	  
+
     };
 }
 
 =head2 pipeline_create_commands
 
-    Description : Implements pipeline_create_commands() interface method of 
-      Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that lists the commands 
+    Description : Implements pipeline_create_commands() interface method of
+      Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that lists the commands
       that will create and set up the Hive database.
 
 =cut
@@ -125,7 +132,7 @@ sub pipeline_create_commands {
   return [
 	  #HiveGeneric assumes ensembl-hive folder while if you use the stable version it's ensembl-hive_stable!
 	  @{$self->SUPER::pipeline_create_commands},  # inheriting database and hive tables creation
-	  
+
 	  #'mysql '.$self->dbconn_2_mysql('pipeline_db', 0)." -e 'CREATE DATABASE ".$self->o('pipeline_db', '-dbname')."'",
 
 	  # standard eHive tables and procedures:
@@ -135,14 +142,14 @@ sub pipeline_create_commands {
 	  #Create hive output folders as required
 	  'mkdir -p '.$self->o('output_dir').'/annotation/results',
 	  'mkdir -p '.$self->o('output_dir').'/annotation/hive_debug',
-	  
+
 
 	 ];
 }
 
 =head2 pipeline_analyses
 
-    Description : Implements pipeline_analyses() interface method of 
+    Description : Implements pipeline_analyses() interface method of
       Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that defines the structure of the pipeline: analyses, jobs, rules, etc.
 
 
@@ -152,8 +159,8 @@ sub pipeline_analyses {
   my ($self) = @_;
 
   return [
-	  {   
-	   
+	  {
+
 	   -logic_name => 'setup_pipeline',
 	   -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::SetupAnnotationPipeline',
 	   -parameters => {},
@@ -163,15 +170,15 @@ sub pipeline_analyses {
 
 			 ],
 	   -flow_into => {
-			  2 => [ 'annotate_regulatory_features' ],           
-			  #3 => [ 'wrap_up_pipeline' ],   
+			  2 => [ 'annotate_regulatory_features' ],
+			  #3 => [ 'wrap_up_pipeline' ],
 			 },
 	   #These jobs cannot run in parallel due to race conditions! Do NOT change this setting unless you know what you're doing
-	   -hive_capacity => 1,	   
-	   -rc_id => 0,
+	   -hive_capacity => 1,
+	   -rc_name => 'default',
 	  },
-	  
-	  {   
+
+	  {
 	   -logic_name    => 'annotate_regulatory_features',
 	   -module        => 'Bio::EnsEMBL::Funcgen::RunnableDB::AnnotateRegulatoryFeatures',
 	   -parameters    => { },
@@ -180,11 +187,11 @@ sub pipeline_analyses {
 			     ],
 	   #Since all the weight is in the database it is safer to run only one at a time... or a small number at least
 	   -hive_capacity => 1,
-	   #Control files should be handled by setup_pipeline. 
-	   -rc_id => 5, # Better safe than sorry... size of datasets tends to increase...
+	   #Control files should be handled by setup_pipeline.
+	   -rc_name => 'long_ens-genomics2_high_memory', # Better safe than sorry... size of datasets tends to increase...
 	   -wait_for => [ 'setup_pipeline' ]
 	  },
-	  
+
 	 ];
 }
 
