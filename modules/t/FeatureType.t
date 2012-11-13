@@ -16,6 +16,7 @@ my $okay = 0;
 
 warn "FeatureType.t tests are incomplete and needs updating to use MultiTestDB\n";
 
+
 ok(1, 'Startup test');#?
 
 #my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
@@ -29,6 +30,7 @@ ok(1, 'Startup test');#?
 #   -species => 'homo_sapiens', #Does this prevent alias loading?
 #   -dbname  => 'XXX'
 #  );
+
 
 #debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
 ok( $db, 'DBAdaptor creation');# More verbose, but we get failed test name summary at end
@@ -182,7 +184,7 @@ $okay = 1;
 
 foreach my $ftype(@ftypes){
   
-  if($ftype->regulatory_evidence_type eq 'core'){
+  if($ftype->regulatory_evidence_type ne 'core'){
     $okay = 0;
     last;
   }
@@ -197,31 +199,42 @@ ok($okay, 'fetch_all_by_evidence_type("core") only returns core FeatureTypes');
 #to validate we aren't missing anything?
 
 $okay = 1;
+my $tested_evidence_methods = 0;
 
 foreach my $ftype(@ftypes){
   
-  if($ftype->regulatory_evidence_type eq 'non_core'){
+  if($ftype->regulatory_evidence_type ne 'non_core'){
     $okay = 0;
   }
 
- SKIP: {
-  
-    if(! $okay ||
-       $tested_evidence_methods ){
-      skip '', 4;
+  #Do we need to do this for core too?
+  if(! $tested_evidence_methods){
+    $tested_evidence_methods = 1;
+    
+
+  SKIP: {
+      #This should only skip if the evidence_type is not defined?
+
+      if(! defined $ftype->regulatory_evidence_type){
+        skip 'Cannot test regulatory evidence methods with undefined evidence_type', 3;
+      }
+    
+      #add string test here?
+      my $evidence = $ftype->evidence_type_name;
+      ok(defined $evidence &&
+         (ref(\$evidence) eq 'SCALAR'), 'evidence_type_name defined');
+
+      my $evidence = $ftype->evidence_type_long_name;
+      ok(defined $evidence &&
+         (ref(\$evidence) eq 'SCALAR'), 'evidence_type_long_name defined');
+      
+      my $evidence = $ftype->evidence_type_label;
+      ok(defined $evidence &&
+         (ref(\$evidence) eq 'SCALAR'), 'evidence_type_label defined');
     }
-    
-    
-    #test regulatory_evidence_name/label/long_name here
-    #and for core too?
-    
-
-
   }
 
-
-  last if ! $okay
-  
+  last if ! $okay;
 }
 
 ok($okay, 'fetch_all_by_evidence_type("non_core") only returns non_core FeatureTypes');
