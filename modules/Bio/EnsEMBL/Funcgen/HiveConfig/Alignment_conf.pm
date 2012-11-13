@@ -99,8 +99,9 @@ sub resource_classes {
 
 #Use this section when running on Sanger Farm
    'default'            => { 'LSF' => '' },
+   'urgent'             => { 'LSF' => '-q yesterday' },
    'long_high_memory'   => { 'LSF' => '-q long -M5000000 -R"select[mem>5000] rusage[mem=5000]"' },
-   'normal_high_memory' => { 'LSF' => ' -M5000000 -R"select[mem>5000] rusage[mem=5000]"' },
+   'normal_high_memory' => { 'LSF' => '        -M5000000 -R"select[mem>5000] rusage[mem=5000]"' },
 
 #Use this section when running on EBI cluster
 #    0 => { -desc => 'default',          'LSF' => '' },

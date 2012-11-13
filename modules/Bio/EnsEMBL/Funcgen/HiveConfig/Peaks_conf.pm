@@ -91,19 +91,18 @@ sub default_options {
 sub resource_classes {
     my ($self) = @_;
     return {
-#	    0 => { -desc => 'default',          'LSF' => '' },
-#	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
-	    2 => { -desc => 'normal ens-genomics1',  'LSF' => '-R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-#	    3 => { -desc => 'long ens-genomics1',    'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-#	    4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
-	    5 => { -desc => 'long ens-genomics1 high memory',  'LSF' => '-q long -M4000000 -R"select[myens_genomics1<1000 && mem>4000] rusage[myens_genomics1=10:duration=10:decay=1:mem=4000]"' },
-#EBI	    
-#	    0 => { -desc => 'default',          'LSF' => '' },
-#	    1 => { -desc => 'urgent',           'LSF' => '' },
-#	    2 => { -desc => 'normal ens-genomics1',  'LSF' => '' },
-#	    3 => { -desc => 'long ens-genomics1',    'LSF' => '' },
-#	    4 => { -desc => 'long high memory',      'LSF' => '-M4000 -R"select[mem>4000] rusage[mem=4000]"' },
-#	    5 => { -desc => 'long ens-genomics1 high memory',  'LSF' => '-M4000 -R"select[mem>4000] rusage[mem=4000]"' },
+   'default'                        => { 'LSF' => '' },
+   'urgent'                         => { 'LSF' => '-q yesterday' },
+   'normal_ens-genomics1'           => { 'LSF' => '-R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
+   'long ens-genomics1'             => { 'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
+   'long_high_memory'               => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+   'long_ens-genomics1_high_memory' => { 'LSF' => '-q long -M4000000 -R"select[myens_genomics1<1000 && mem>4000] rusage[myens_genomics1=10:duration=10:decay=1:mem=4000]"' },
+
+#	    1 => { -desc => 'urgent',                           'LSF' => '-q yesterday' },
+#	    2 => { -desc => 'normal ens-genomics1',             'LSF' => '-R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
+#	    3 => { -desc => 'long ens-genomics1',               'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
+#	    4 => { -desc => 'long high memory',                 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+#	    5 => { -desc => 'long ens-genomics1 high memory',   'LSF' => '-q long -M4000000 -R"select[myens_genomics1<1000 && mem>4000] rusage[myens_genomics1=10:duration=10:decay=1:mem=4000]"' },
 	   };
 }
 
@@ -217,7 +216,7 @@ sub pipeline_analyses {
 			 },
 	   #These jobs cannot run in parallel due to race conditions! Do NOT change this setting unless you know what you're doing
 	   -hive_capacity => 1,
-	   -rc_id => 0,
+           -rc_name => 'default',
 	  },
 
 	  {
@@ -229,7 +228,7 @@ sub pipeline_analyses {
 			     ],
 	   -hive_capacity => 10,
 	   #Control files should be handled by setup_pipeline.
-	   -rc_id => 5, # Better safe than sorry... size of datasets tends to increase...
+	   -rc_name => 'long_ens-genomics1_high_memory', # Better safe than sorry... size of datasets tends to increase...
 	   -wait_for => [ 'setup_pipeline' ]
 	  },
 
@@ -242,10 +241,10 @@ sub pipeline_analyses {
 			     ],
 	   -hive_capacity => 10,
 	   #Control files should be handled by setup_pipeline.
-	   -rc_id => 2, # CCAT does not need much
+	   -rc_name => 'normal_ens-genomics1', # CCAT does not need much
 	   -wait_for => [ 'setup_pipeline' ]
 	  },
-    
+
     {
 	   -logic_name    => 'run_macs',
 	   -module        => 'Bio::EnsEMBL::Funcgen::RunnableDB::RunMACS',
@@ -258,7 +257,7 @@ sub pipeline_analyses {
 	   -rc_id => 5, # Better safe than sorry... size of datasets tends to increase...
 	   -wait_for => [ 'setup_pipeline' ]
 	  },
-	  
+
 	  #{
 	  # -logic_name => 'wrap_up_pipeline',
 	  # -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::WrapUpPeaksPipeline',
