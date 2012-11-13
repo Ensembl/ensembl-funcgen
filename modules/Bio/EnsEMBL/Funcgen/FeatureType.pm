@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -41,10 +41,10 @@ This is a simple class to represent information about a FeatureType, containing 
 # add coding_transcript/gene methods.  Store as xrefs or custom feature_type_coding table? (miRanda etc)
 # 
 
+package Bio::EnsEMBL::Funcgen::FeatureType;
+
 use strict;
 use warnings;
-
-package Bio::EnsEMBL::Funcgen::FeatureType;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
@@ -83,34 +83,30 @@ use vars qw(@ISA);
 
 sub new {
   my $caller = shift;
-
   my $obj_class = ref($caller) || $caller;
   my $self = $obj_class->SUPER::new(@_);
   
   my ($name, $desc, $class, $analysis, $so_acc, $so_name) = 
-	rearrange(['NAME', 'DESCRIPTION', 'CLASS', 'ANALYSIS', 'SO_ACCESSION', 'SO_NAME'], @_);
+    rearrange(['NAME', 'DESCRIPTION', 'CLASS', 'ANALYSIS', 'SO_ACCESSION', 'SO_NAME'], @_);
   
   throw("Must supply a FeatureType name\n") if ! defined $name;
   throw("Must supply a FeatureType class\n") if ! defined $class;
  
   #Direct assignments here prevent set arg test in getter only method
-  $self->{name}  = $name;
-  $self->{class} = $class;
-  #add test for class and enum? Validate names against Brno etc?
-
+  $self->{name}         = $name;
+  $self->{class}        = $class;
   $self->{description}  = $desc    if defined $desc;
   $self->{so_name}      = $so_name if defined $so_name;
   $self->{so_accession} = $so_acc  if defined $so_acc;
 
   if($analysis){
 	
-	if(ref($analysis) ne 'Bio::EnsEMBL::Analysis'){
-	  throw('Optional Analysis parameter must be a valid Bio::EnsEMBL::Analysis');
-	  #is_stored checks done in other fetch and store methods
-	}
+    if(ref($analysis) ne 'Bio::EnsEMBL::Analysis'){
+      throw('Optional Analysis parameter must be a valid Bio::EnsEMBL::Analysis');
+      #is_stored checks done in other fetch and store methods
+    }
 
-	$self->{'analysis'} = $analysis;
-	#Direct assignment prevents arg test in getter only method
+    $self->{analysis} = $analysis;
   }
 
   return $self;
@@ -129,9 +125,7 @@ sub new {
 
 =cut
 
-sub name {
-  return $_[0]->{'name'};
-}
+sub name { return $_[0]->{name}; }
 
 =head2 description
 
@@ -144,9 +138,7 @@ sub name {
 
 =cut
 
-sub description {
-  return $_[0]->{'description'};
-}
+sub description {  return $_[0]->{description}; }
 
 
 =head2 class
@@ -160,9 +152,7 @@ sub description {
 
 =cut
 
-sub class{
-  return $_[0]->{'class'};
-}
+sub class{ return $_[0]->{class}; }
 
 =head2 so_accession
 
@@ -175,9 +165,7 @@ sub class{
 
 =cut
 
-sub so_accession{
-  return $_[0]->{'so_accession'};
-}
+sub so_accession{  return $_[0]->{so_accession}; }
 
 =head2 so_name
 
@@ -190,9 +178,7 @@ sub so_accession{
 
 =cut
 
-sub so_name{
-  return $_[0]->{'so_name'};
-}
+sub so_name{   return $_[0]->{so_name}; }
 
 =head2 analysis
 
@@ -205,10 +191,8 @@ sub so_name{
 
 =cut
 
-sub analysis{
-  my $self = shift;
-  return $self->{'analysis'};
-}
+sub analysis{ return $_[0]->{analysis}; }
+
 
 =head2 evidence_type_label
 
@@ -223,17 +207,15 @@ sub analysis{
 
 sub evidence_type_label{
   my $self = shift;
-
-  #Could get undef key warn here
-  #But only used in webcode so omit for speed
-
   
   if(! exists $self->{evidence_type_label}){
-	$self->{evidence_type_label} = $self->adaptor->get_regulatory_evidence_info->{$self->class}->{label};
+    $self->{evidence_type_label} = 
+      $self->adaptor->get_regulatory_evidence_info($self->regulatory_evidence_type)->{label};
   }
 
   return $self->{evidence_type_label};
 }
+
 
 =head2 evidence_type_name
 
@@ -249,14 +231,14 @@ sub evidence_type_label{
 sub evidence_type_name{
   my $self = shift;
 
-  #Could get undef key warn here
-  #But only used in webcode so omit for speed
   if(! exists $self->{evidence_type_name}){
-	$self->{evidence_type_name} = $self->adaptor->get_regulatory_evidence_info($self->class)->{name};
+    $self->{evidence_type_name} = 
+      $self->adaptor->get_regulatory_evidence_info($self->regulatory_evidence_type)->{name};
   }
 
   return $self->{evidence_type_name};
 }
+
 
 =head2 evidence_type_long_name
 
@@ -272,20 +254,69 @@ sub evidence_type_name{
 sub evidence_type_long_name{
   my $self = shift;
 
-  #Could get undef key warn here
-  #But only used in webcode so omit for speed
-  if(! exists $self->{evidence_type_long_name}){
-	$self->{evidence_type_long_name} = $self->adaptor->get_regulatory_evidence_info($self->class)->{long_name};
+  if(! exists $self->{evidence_type_long_name}){    
+    $self->{evidence_type_long_name} = 
+      $self->adaptor->get_regulatory_evidence_info($self->regulatory_evidence_type)->{long_name};
   }
 
   return $self->{evidence_type_long_name};
 }
 
 
+=head2 is_core_evidence
+
+  Example    : if($ftype->is_core_evidence){#this is a TFBS or DNase}
+  Description: Returns true if this FeatureType is used to defin the core region
+               of RegulatoryFeatures
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : Regulatory build
+  Status     : At risk
+
+=cut
+
+sub is_core_evidence{
+  my $self = $_[0];
+
+  if(! defined $self->{is_core_evidence}){
+  
+    if($self->regulatory_evidence_type eq 'core'){
+      $self->{is_core_evidence} = 1;
+    }
+    else{
+      $self->{is_core_evidence} = 0;
+    }
+  }
+  
+  return $self->{is_core_evidence};
+}
+
+=head2 regulatory_evidence_type
+
+  Example    : my $re_type = $ftype->regulatory_evidence_type
+  Description: Returns the regulatory evidence type i.e. core or non_core
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub regulatory_evidence_type{
+  my $self = $_[0];
+  
+  if(! defined $self->{regulatory_evidence_type}){
+    $self->{regulatory_evidence_type} = $self->adaptor->get_regulatory_evidence_type($self->class);
+  }
+  
+  return $self->{regulatory_evidence_type};
+}
+
+
 
 =head2 compare
 
-  Arg[1]     : Bio::EnsEMBL::Func
+  Arg[1]     : Bio::EnsEMBL::Funcgen::FeatureType
                The analysis to compare to
   Example    : none
   Description: returns 1 if this FeatureType is the same
@@ -337,10 +368,12 @@ sub compare{
 	}
   }
   elsif( ! ((! $self->analysis) && (! $ftype->analysis)) ){#Only one has analysis
-	$same = 0;
+    $same = 0;
   }
   
   return $same;
 }
+
+
 1;
 
