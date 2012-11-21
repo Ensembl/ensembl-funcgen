@@ -359,7 +359,7 @@ sub fetch_by_name{
       return;
     }
 
-    $version =  $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name($name)->version;
+    $version = $cs_core->version;
   }
 
   $version = lc($version);
