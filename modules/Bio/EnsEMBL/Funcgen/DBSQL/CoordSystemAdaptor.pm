@@ -122,6 +122,10 @@ not have a version an empty string ('') is used instead.
 
 =cut
 
+#All these methods are actually used internally within the funcgen API
+
+
+
 package Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
@@ -246,7 +250,7 @@ sub new {
 		 -ADAPTOR        => $self,
 		 -NAME           => $name,
 		 -VERSION        => $version,
-		 #-IS_CURRENT     => $is_current,
+		 #-IS_CURRENT     => $is_current, #Currently only used by mart direct SQL
 	  );
 	}
 
@@ -268,31 +272,6 @@ sub new {
 									-IS_STORED            => 1,
 									);
 
-	#orig
-
-
-    #if($attrib) {
-    #  foreach my $attrib (split(',', $attrib)) {
-    #    $self->{"_is_$attrib"}->{$dbID} = 1;
-    #    if($attrib eq 'sequence_level') {
-    #      $seq_lvl = 1;
-    #    } elsif($attrib eq 'default_version') {
-    #      $default = 1;
-    #    }
-    #  }
-    #}
-
-    #my $cs = Bio::EnsEMBL::Funcgen::CoordSystem->new
-    #  (-DBID           => $dbID,
-    #   -ADAPTOR        => $self,
-    #   -NAME           => $name,
-    #   -VERSION        => $version,
-    #   -RANK           => $rank,
-    #   -SEQUENCE_LEVEL => $seq_lvl,
-	#   -DEFAULT        => $default,
-	#   -SCHEMA_BUILD   => $sbuild,
-	# );
-
 
 	#can we change these caches to use just the name and version rather than schema_build?
 
@@ -306,88 +285,16 @@ sub new {
   #handle last cs
  
   if($cs){
-	$self->{'_dbID_cache'}->{$cs->dbID()} = $cs;
-	#push @{$self->{'_rank_cache'}->{$rank}}, $cs;
-	push @{$self->{'_name_cache'}->{lc($cs->name())}}, $cs;
+    $self->{'_dbID_cache'}->{$cs->dbID()} = $cs;
+    #push @{$self->{'_rank_cache'}->{$rank}}, $cs;
+    push @{$self->{'_name_cache'}->{lc($cs->name())}}, $cs;
   }
 
   $sth->finish();
 
 
-
-  #Get rid?  Let core handle this
-  #No mapping paths present in meta table!
-
-  #
-  # Retrieve a list of available mappings from the meta table.
-  # this may eventually be moved a table of its own if this proves too
-  # cumbersome
-  #
-
-  #my %mapping_paths;
-  #my $mc = $self->db()->get_MetaContainer();
-
-
- #MAP_PATH:
-  #foreach my $map_path (@{$mc->list_value_by_key('assembly.mapping')}) {
-  #  my @cs_strings = split(/[|#]/, $map_path);
-
-#    if(@cs_strings < 2) {
-#      warning("Incorrectly formatted assembly.mapping value in meta " .
-#              "table: $map_path");
-#      next MAP_PATH;
-#    }
-
-#    my @coord_systems;
-#    foreach my $cs_string (@cs_strings) {
-#      my($name, $version) = split(/:/, $cs_string);
-#      my $cs = $self->fetch_by_name($name, $version);
-#      if(!$cs) {
-#        warning("Unknown coordinate system specified in meta table " .
-#                " assembly.mapping:\n  $name:$version");
-#        next MAP_PATH;
-#      }
-#      push @coord_systems, $cs;
-#    }
-
-    # if the delimiter is a # we want a special case, multiple parts of the same
-    # componente map to same assembly part. As this looks like the "long" mapping
-    # we just make the path a bit longer :-)
-
-#    if( $map_path =~ /\#/ && scalar( @coord_systems ) == 2 ) {
-#      splice( @coord_systems, 1, 0, ( undef ));
-#    }
-
-#    my $cs1 = $coord_systems[0];
-#    my $cs2  = $coord_systems[$#coord_systems];
-
-#    my $key1 = $cs1->name().':'.$cs1->version();
-#    my $key2 = $cs2->name().':'.$cs2->version();
-
-#    if(exists($mapping_paths{"$key1|$key2"})) {
-#      warning("Meta table specifies multiple mapping paths between " .
-#              "coord systems $key1 and $key2.\n" .
-#              "Choosing shorter path arbitrarily.");#
-
-#      next MAP_PATH if(@{$mapping_paths{"$key1|$key2"}} < @coord_systems);
-#    }
-
-#    $mapping_paths{"$key1|$key2"} = \@coord_systems;
-#  }
-
-  #
-  # Create the pseudo coord system 'toplevel' and cache it so that
-  # only one of these is created for each db...
-  #
-  
-
-  #Not yet implemented across multiple dbs
-  #my $toplevel = Bio::EnsEMBL::Funcgen::CoordSystem->new(-TOP_LEVEL => 1,
-  #														 -NAME      => 'toplevel',
-  #														 -ADAPTOR   => $self);
-  # $self->{'_top_level'} = $toplevel;
-
-  #$self->{'_mapping_paths'} = \%mapping_paths;
+  #Removed mapping path support as this is handled by core API
+  #This also handled toplevel
 
   return $self;
 }
@@ -446,6 +353,12 @@ sub fetch_by_name{
 
   #Set default_version if not specified
   if(! defined $version){
+    my $core_cs = $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name($name);
+
+    if(! defined $core_cs){
+      return;
+    }
+
     $version =  $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name($name)->version;
   }
 
