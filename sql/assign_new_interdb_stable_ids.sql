@@ -11,7 +11,13 @@ exit;
 
 -- Valid tables are current motif_feature or external_feature
 
-set @n =(select max(interdb_stable_id) +1 from motif_feature);
+-- No point in doing this as we can't guarantee they won't be reused between releases
+-- if we selectively delete some of the last IDs
+-- set @n =(select max(interdb_stable_id) +1 from motif_feature);
+
+update motif_feature set interdb_stable_id=NULL;
+set @n = 0;
+
 update motif_feature mf
   join (select motif_feature_id, @n := @n + 1 new_stable_id
           from motif_feature where interdb_stable_id is NULL
@@ -21,3 +27,6 @@ update motif_feature mf
 
 analyze table motif_feature;
 optimize table motif_feature;
+
+
+-- do we have an index here?
