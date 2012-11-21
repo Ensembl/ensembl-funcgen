@@ -359,7 +359,7 @@ sub fetch_by_name{
       return;
     }
 
-    $version = $cs_core->version;
+    $version = $core_cs->version;
   }
 
   $version = lc($version);
