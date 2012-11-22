@@ -1,0 +1,50 @@
+#!/usr/local/bin/bash
+
+USAGE="Usage: $0 mysql_write_user mysql_write_password [ script params ]"
+
+if [ $# -lt 2 ]; then
+	echo $USAGE
+	exit;
+fi
+
+
+USER=$1
+PASS=$2
+shift
+shift
+ARGS=$*
+ 
+
+PORT=3306
+SPECIES=mus_musculus
+DATA_VERSION=70_38
+DB_NAME="${SPECIES}_funcgen_${DATA_VERSION}"
+DB_PREFIX="annotation_${DB_NAME}"  #This is the prefix of the reg build classification DBs
+HOST=YOUR_HOST
+DNADB_HOST=YOUR_DNADB_HOST
+DNADB_USER=YOUR_DNDB_READ_USER
+OUT_DIR="/YOUR/OUTPUT/DIRECTORY/"
+
+if [[ ! -d $OUT_DIR ]]; then
+	mkdir $OUT_DIR;
+fi
+
+LOG_FILE="${OUT_DIR}/update_regulatory_classifications.$$.log"
+
+
+job_cmd="perl -w $EFG_SRC/scripts/regulatory_build/update_regulatory_classifications.pl\
+	-dbname     $DB_NAME \
+ 	-host       $HOST \
+ 	-user       $USER \
+ 	-pass       $PASS \
+  -dnadb_host $DNADB_HOST \
+  -dnadb_user $DNADB_USER \
+  -species    $SPECIES \
+  -dbprefix   $DB_PREFIX \
+  -logfile    $LOG_FILE \
+  $*
+"
+echo $job_cmd
+$job_cmd
+  
+#  -report_only\
