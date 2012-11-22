@@ -1,4 +1,4 @@
-=pod 
+=pod
 
 =head1 NAME
 
@@ -18,7 +18,7 @@ use strict;
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor; 
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::InputSet;
 use Bio::EnsEMBL::Funcgen::DataSet;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
@@ -40,7 +40,7 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
 
   my $dnadb_params = $self->param('dnadb') || throw "No parameters for Core DB";
   my $efgdb_params = $self->param('efgdb') || throw "No parameters for EFG DB";
-  
+
   #Get efg connection, otherwise fail..
   eval{
 	$self->_efgdba(Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
@@ -53,24 +53,24 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
 					 -dnadb_host => $dnadb_params->{-host},
 					 -dnadb_port => $dnadb_params->{-port},
 					 -dnadb_pass => $dnadb_params->{-pass},
-					 
+
 					}
 				   ));
-	
+
 	#Actually test connections
 	$self->_efgdba->dbc->db_handle;
 	$self->_efgdba->dnadb->dbc->db_handle;
   };
-  
-  if($@) { throw "Error creating the EFG DBAdaptor and/or dna DBAdaptor $@";  }    
+
+  if($@) { throw "Error creating the EFG DBAdaptor and/or dna DBAdaptor $@";  }
 
   #Set some params
   my $cell_type       = $self->param('cell_type')       || throw "No cell_type given";
   my $feature_type    = $self->param('feature_type')    || throw "No feature_type given";
-  my $experiment_name = $self->param('experiment_name') || throw "No experiment_name given"; 
+  my $experiment_name = $self->param('experiment_name') || throw "No experiment_name given";
   $self->_experiment_name($experiment_name);
   my $set_name =  $self->param('set_name') || $cell_type."_".$feature_type."_".$experiment_name;
-  $self->_set_name($set_name); 
+  $self->_set_name($set_name);
   my $group_name = $self->param('group') || 'efg';
   my $species = $self->param('species') || throw "No species defined";
   $self->_species($species);
@@ -78,17 +78,17 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
   $self->_assembly($assembly);
   my $file_type = $self->param('file_type') || throw "No file type given";
   $self->_file_type($file_type);
-  my $work_dir = $self->param('work_dir') || throw "'work_dir' is a required parameter"; 
+  my $work_dir = $self->param('work_dir') || throw "'work_dir' is a required parameter";
   $self->_work_dir($work_dir);
 
-  
+
 
   #Configure DBAdaptors
   my $efgdba = $self->_efgdba();
   #To avoid farm issues...
   $efgdba->dbc->disconnect_when_inactive(1);
   $efgdba->dnadb->dbc->disconnect_when_inactive(1);
- 
+
   #Fetch & Set object params
   #CellType
   my $cta    = $efgdba->get_CellTypeAdaptor();
@@ -97,7 +97,7 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
   $self->_cell_type($ct_obj);
 
   #FeatureType
-  my $fta    = $efgdba->get_FeatureTypeAdaptor(); 
+  my $fta    = $efgdba->get_FeatureTypeAdaptor();
   my $ft_obj = $fta->fetch_by_name($feature_type);
   if(!$ft_obj){ throw "Feature type $feature_type does not exist in the database";  }
   $self->_feature_type($ft_obj);
@@ -111,8 +111,8 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
 
   if($file_type eq 'sam' || $file_type eq 'bam'){
     #Change the directory structure so it will agree with the rest, without the need to do uc()
-    my $sam_header = $self->_work_dir()."/sam_header/".$species."/".$species."_"; 
-    $sam_header .= $ct_obj->gender() ? $ct_obj->gender() : 'male'; 
+    my $sam_header = $self->_work_dir()."/sam_header/".$species."/".$species."_";
+    $sam_header .= $ct_obj->gender() ? $ct_obj->gender() : 'male';
     #Carefull with naming standards...
     #$sam_header .= "_".$assembly."_unmasked.fa.fai";
     $sam_header .= "_".$assembly."_unmasked.fasta.fai";
@@ -127,16 +127,16 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
 }
 
 
-sub run {   
+sub run {
   my $self = shift @_;
 
   return 1;
 }
 
 
-sub write_output {  
+sub write_output {
   my $self = shift @_;
-  
+
   return 1;
 
 }
@@ -144,36 +144,36 @@ sub write_output {
 
 #Private Function to check and create Experiment and Feature/Data sets as needed
 #Requires some global parameters that are not set in Funcgen->fetch_input, such as
-#'analysis', 'feature_set_name', 'data_set_name' (these could be given as local parameters...) 
+#'analysis', 'feature_set_name', 'data_set_name' (these could be given as local parameters...)
 sub _check_Experiment {
 
   #Todo make it more generic and accept multiple input_subsets
   #Also maybe pass parameters as hash list...
   my ($self, $analysis, $input_subset, $fset_name) = @_;
-  
-  #Global parameters set in Funcgen->fetch_input 
-  my $efgdba = $self->_efgdba();
-  my $set_name  =  $self->_set_name();
-  my $group = $self->_group();
-  my $cell_type =  $self->_cell_type();
-  my $feature_type =  $self->_feature_type();
+
+  #Global parameters set in Funcgen->fetch_input
+  my $efgdba        = $self->_efgdba();
+  my $set_name      = $self->_set_name();
+  my $group         = $self->_group();
+  my $cell_type     = $self->_cell_type();
+  my $feature_type  = $self->_feature_type();
 
   my $iset_name = $set_name;
   my $dset_name = $fset_name;
 
   # set experiment: Reuse if already exists? (This comes from result sets)
-  my $ea = $efgdba->get_ExperimentAdaptor;
+  my $ea  = $efgdba->get_ExperimentAdaptor;
   my $exp = $ea->fetch_by_name($set_name);
 
-  my @date = (localtime)[5,4,3];
-  $date[0] += 1900; $date[1]++;
-  
+  my @date  = (localtime)[5,4,3];
+  $date[0] += 1900;
+  $date[1]++;
+
   if (! defined $exp) {
-    
+
     #Group needs to be set manually, like Cell_Type and Feature_Type
-    #Do not create Group on the fly here, as it will cause concurrency issues...    
-    $exp = Bio::EnsEMBL::Funcgen::Experiment->new
-      (
+    #Do not create Group on the fly here, as it will cause concurrency issues...
+    $exp = Bio::EnsEMBL::Funcgen::Experiment->new (
        -NAME => $set_name,
        -EXPERIMENTAL_GROUP => $group,
        -DATE => join('-', @date),
@@ -186,13 +186,12 @@ sub _check_Experiment {
   }
   throw("Can't create experiment $set_name ") unless $exp;
 
-  my $isa = $efgdba->get_InputSetAdaptor();
+  my $isa  = $efgdba->get_InputSetAdaptor();
   my $iset = $isa->fetch_by_name($iset_name);
 
   if (! defined $iset){
-    
-    $iset = Bio::EnsEMBL::Funcgen::InputSet->new
-      (
+
+    $iset = Bio::EnsEMBL::Funcgen::InputSet->new (
        -name         => $iset_name,
        -experiment   => $exp,
        -feature_type => $feature_type,
@@ -205,18 +204,24 @@ sub _check_Experiment {
       );
     warn "Storing new InputSet:\t$iset_name\n";
     ($iset)  = @{$isa->store($iset)};
-    
-    $iset->add_new_subset($input_subset);
-    $iset->adaptor->store_InputSubsets($iset->get_InputSubsets);
+
+#$iset->add_new_subset($input_subset);
+#$iset->adaptor->store_InputSubsets($iset->get_InputSubsets);
+    $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new (
+       -name      => $input_subset,
+       -input_set => $iset,
+# Analysis is not being used??
+#-analysis     => $self->feature_analysis,
+      );
   } else {
 
-    #We only expect one subset here (? why??)... 
+    #We only expect one subset here (? why??)...
     #shouldn't we be adding the control file also when used?? But this is SWEmbl-specific...
     #And it should be the same file name...
     #Maybe do some file checking  here???
     warn "InputSet already exists:\t$iset_name\n";
     my @issets = @{$iset->get_InputSubsets};
-    
+
     #if(scalar(@issets) > 1){
     #  throw("InputSet $iset_name has more than one InputSubset:\t".join("\t", (map $_->name, @issets)));
     #} elsif((scalar(@issets) == 1) && ($issets[0]->name ne $self->param('input_file'))){
@@ -228,40 +233,45 @@ sub _check_Experiment {
 
     if(scalar(@issets)==0){
       #we can just add this InputSubset. Add an extra 'input:' as prefix?
-      $iset->add_new_subset($input_subset);
-      $iset->adaptor->store_InputSubsets($iset->get_InputSubsets);
+#$iset->add_new_subset($input_subset);
+#$iset->adaptor->store_InputSubsets($iset->get_InputSubsets);
+      $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new (
+         -name         => $input_subset,
+         -input_set     => $iset,
+# Analysis is not being used??
+#-analysis     => $self->feature_analysis,
+        );
     } else {
       #warn("Need to uncomment this section!! - it was commented just for testing purposes!!");
       #we just need to check if our file(s) is(are) already here...
-      if(!$iset->get_subset_by_name($input_subset)){ 
+      if(!$iset->get_subset_by_name($input_subset)){
       	#throw("InputSet $iset_name has InputSubsets(".join("\t", (map $_->name, @issets)).") which do not match ".$input_subset);
 	#warn("InputSet $iset_name has InputSubsets(".join("\t", (map $_->name, @issets)).") which do not match ".$input_subset);
       }
-    } 
+    }
   }
 
   my $fsa = $efgdba->get_FeatureSetAdaptor();
   my $fset = $fsa->fetch_by_name($fset_name);
-  
+
   if ( ! defined $fset ) {
-    
-    $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
-      (
+
+    $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
        -analysis      => $analysis,
        -feature_type  => $feature_type,
        -cell_type     => $cell_type,
        -name          => $fset_name,
        -feature_class => 'annotated',
-       -experiment_id => $exp->dbID,
+#       -experiment_id => $exp->dbID,
        #The adaptor is needed to store!
        -adaptor       => $fsa
 
       );
-    
+
     warn "Storing new FeatureSet:\t$fset_name\n";
     ($fset) = @{$fsa->store($fset)};
-		
-  } 
+
+  }
   else {
     warn "FeatureSet already exists:\t$fset_name\n";
 
@@ -273,37 +283,34 @@ sub _check_Experiment {
 
   my $dsa = $efgdba->get_DataSetAdaptor;
   my $dset = $dsa->fetch_by_name($dset_name);
-  
-  
+
     if ( ! defined $dset ) {
-      
-      $dset = Bio::EnsEMBL::Funcgen::DataSet->new
-	(
+      $dset = Bio::EnsEMBL::Funcgen::DataSet->new (
 	 -SUPPORTING_SETS     => [$iset],
 	 -FEATURE_SET         => $fset,
 	 -DISPLAYABLE         => 1,
 	 -NAME                => $dset_name,
 	 -SUPPORTING_SET_TYPE => 'input',
 	);
-      
+
       warn "Storing new DataSet:\t$dset_name\n";
       ($dset) = @{$dsa->store($dset)}
-    } 
+    }
   else {
-    
+
     warn "DataSet already exists:\t$dset_name\n";
-    
-    # need to check whether InputSets and supporting_sets are the same and 
+
+    # need to check whether InputSets and supporting_sets are the same and
     # possibly add InputSet to supporting_sets
-    
+
     my $ssets = $dset->get_supporting_sets();
-    
+
     my %ssets_dbIDs = ();
     map { $ssets_dbIDs{$_->dbID}='' } (@{$ssets});
-    $dset->add_supporting_sets([ $iset ]) if (! exists $ssets_dbIDs{$iset->dbID}); 
-	  
+    $dset->add_supporting_sets([ $iset ]) if (! exists $ssets_dbIDs{$iset->dbID});
+
   }
-  
+
 }
 
 
@@ -311,8 +318,8 @@ sub _check_Experiment {
 sub _getter_setter {
   my ($self, $param_name, $param_value) = @_;
   if(!$param_name){ return undef; }
-  if(!$param_value){ 
-    $param_value = $self->param($param_name);   
+  if(!$param_value){
+    $param_value = $self->param($param_name);
   } else {
     $self->param($param_name, $param_value);
   }
