@@ -117,7 +117,7 @@ sub resource_classes {
    'urgent'                           => { 'LSF' => '-q yesterday' },
    'normal_ens-genomics1'             => { 'LSF' => '-R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
    'long_ens-genomics1'               => { 'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-   'long_high memory'                 => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+   'long_high_memory'                 => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
    'long_ens-genomics1_high_memory'   => { 'LSF' => '-q long -M6000000 -R"select[myens_genomics1<600 && mem>6000] rusage[myens_genomics1=12:duration=5:decay=1:mem=6000]"' },
 #	    0 => { -desc => 'default',          'LSF' => '' },
 #	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
