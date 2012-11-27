@@ -516,74 +516,90 @@ sub strip_param_flags{
 }
 
 #Generates slices from names or optionally alll default top level nonref
+#slice ref args can be array ref (inc empty) or undef
 
 sub generate_slices_from_names{
-  my ($slice_adaptor, $slice_names, $skip_slices, $highestlevel, $non_ref, $inc_dups, $assembly) = @_;
+  my ($slice_adaptor, $slice_names, $skip_slices, $level, $non_ref, $inc_dups, $assembly) = @_;
+  my (@slices, $slice, $sr_name, $have_slice_names, $have_skip_slices);
 
   #Test if $assembly is old?
-
-
-
-  my (@slices, $slice, $sr_name);
-
-  if(@$slice_names){
-	
-	foreach my $name(@$slice_names){
-	  $slice = $slice_adaptor->fetch_by_region(undef, $name, undef, undef, undef, $assembly);
-
-	  #WHy is this failing for hap regions?
-	
-	  if(! $slice){
-
-		#Need to eval this as it will break with incorrect formating
-		
-		eval { $slice = $slice_adaptor->fetch_by_name($name) };
-
-		if(! $slice){
-		  throw("Could not fetch slice by region or name:\t".$name);
-		}
-	  }
-
-	  $sr_name = $slice->seq_region_name;
-
-	  next if(grep/^${sr_name}$/, @$skip_slices);
-	  push @slices, $slice;
-	}
+ 
+  #Validate array ref skip/slice name args
+  
+  if(defined $slice_names){
+    if(ref($slice_names) ne 'ARRAY'){
+      throw('Slice names argument must be an ARRAYREF');
+    }
+    
+    $have_slice_names = 1 if @$slice_names;
   }
-  elsif($highestlevel){
 
-	my $level = 'toplevel';
+  if(defined $skip_slices){
+    if(ref($skip_slices) ne 'ARRAY'){
+      throw('Skip slices argument must be an ARRAYREF');
+    }
 
-	if($assembly){
-	  $level = 'chromosome';
-	  warn "Cannot get toplevel for old assembly version $assembly, defaulting to 'chromosome' level";
-	  #Would ignore old assembly and just fetch current assembly otherwise as there is no toplevel for old assemblies
-	  #No need for projection on non-ref unassembled seqs as these will/should be identical
-	  #Only need need to project assembled seq i.e. haps(lrgs?).
-	  #Only rollback toplevel data when cleaning after projection, otherwise we may lose some data.
-	  #Change default delete to use all toplevel ref seqs (and non-ref with cs version e.g. haps but not lrgs)
-	}
+    $have_skip_slices = 1 if @$skip_slices;
+  }
 
-	my @tmp_slices = @{$slice_adaptor->fetch_all($level, $assembly, $non_ref, $inc_dups)};
+  #Generate slices
 
-	if(@$skip_slices){
+  if($have_slice_names){
 
-	  foreach $slice(@tmp_slices){
-		$sr_name = $slice->seq_region_name;
-		push @slices, $slice if ! grep/^${sr_name}$/, @$skip_slices;
-	  }
-	}
-	else{
-	  @slices = @tmp_slices;
-	}
+    foreach my $name(@$slice_names){
+      $slice = $slice_adaptor->fetch_by_region(undef, $name, undef, undef, undef, $assembly);
+      
+      #WHy is this failing for hap regions?
+      
+      if(! $slice){
+        
+        #Need to eval this as it will break with incorrect formating
+        
+        eval { $slice = $slice_adaptor->fetch_by_name($name) };
+        
+        if(! $slice){
+          throw("Could not fetch slice by region or name:\t".$name);
+        }
+      }
+      
+      $sr_name = $slice->seq_region_name;
+      
+      next if(grep/^${sr_name}$/, @$skip_slices);
+      push @slices, $slice;
+    }
+  }
+  elsif($level){
+   
+    #Can't guarantee what level will have an assembly version
+    #Can only throw if we have set toplevel and assembly
+    #as this will alway default to the current assembly
+    #if($assembly && 
+    #   ($level eq 'toplevel') ){
+    #  throw('You cannot specify an assembly version with the toplevel coordinate system');
+    #}
+    #Let core API handle this?
+    
+
+    my @tmp_slices = @{$slice_adaptor->fetch_all($level, $assembly, $non_ref, $inc_dups)};
+    
+    if($have_skip_slices){
+      
+      foreach $slice(@tmp_slices){
+        $sr_name = $slice->seq_region_name;
+        push @slices, $slice if ! grep/^${sr_name}$/, @$skip_slices;
+      }
+    }
+    else{
+      @slices = @tmp_slices;
+    }
   }
   else{
-	throw('You must either pass an arrayref of slice names or specify the toplevel flag');
+    throw('You must either pass an arrayref of slice names or specify the toplevel flag');
   }
 
 
   if(! @slices){
-	throw("You have specified slice_names and skip_slices paramters which have generated no slices.\nslice_names:\t".join(' ',@$slice_names)."\nskip_slices:\t".join(' ', @$skip_slices));
+    throw("You have specified slice_names and skip_slices paramters which have generated no slices.\nslice_names:\t".join(' ',@$slice_names)."\nskip_slices:\t".join(' ', @$skip_slices));
   }
 
   return \@slices;
@@ -596,21 +612,24 @@ sub generate_slices_from_names{
 sub get_current_regulatory_input_names{
   my ($tdb, $efg_db, $focus) = @_;
 
+  warn "Move get_current_regulatory_input_names to the TrackingAdaptor";
+
   #Validate is production?
   my $sql;
 
   
 
   if($focus){
-	$focus = 'Focus';
-	$sql   = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$efg_db->species.'"';
+    $focus = 'Focus';
+    $sql   = 'SELECT efgdb_set_name from dataset where is_focus=true and is_current=true and species="'.$efg_db->species.'"';
   }
   else{
-	$focus = 'Non-focus';
-	#0 rather than false so we don't get NULLs
-	$sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$efg_db->species.'"';
+    $focus = 'Non-focus';
+    #0 rather than false so we don't get NULLs
+    $sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$efg_db->species.'"';
   }
  
+  
 
   #Currently efgdb_set_name can either be data_set or feature_set name!
   #Need to standardise this
@@ -621,39 +640,38 @@ sub get_current_regulatory_input_names{
 
   foreach my $prd_name(@prd_names){
 
-	$sql = "SELECT name from feature_set where name like '${prd_name}%'";
-	my @tmp_names =  @{$efg_db->dbc->db_handle->selectcol_arrayref($sql)};
+    $sql = "SELECT name from feature_set where name like '${prd_name}%'";
+    my @tmp_names =  @{$efg_db->dbc->db_handle->selectcol_arrayref($sql)};
+    
+    #This is causing problems with multiple feature sets with differing analyses
+    
+    #Do this via InputSets(using query extension?) instead of using like?
+    
+    #This is very hacky right now to get it to work
+    #Need to standardise and review tracking db data.
 
-	#This is causing problems with multiple feature sets with differing analyses
-
-	#Do this via InputSets(using query extension?) instead of using like?
-
-	#This is very hacky right now to get it to work
-	#Need to standardise and review tracking db data.
-
-	if(scalar(@tmp_names) > 1){
-
-	  $sql = "SELECT name from feature_set where name ='${prd_name}_ccat_histone'";
-	  @tmp_names =  @{$efg_db->dbc->db_handle->selectcol_arrayref($sql)};
-
-	  if(scalar(@tmp_names) == 1){
-		push @names, $tmp_names[0];
-	  }else{
-		push @failed_sets, $prd_name;
-	  }
-	}
-	elsif(scalar(@tmp_names) == 0){
-	  push @failed_sets, $prd_name;
-	}
-	else{
-	  push @names, $tmp_names[0];
-	}
-
+    if(scalar(@tmp_names) > 1){
+      
+      $sql = "SELECT name from feature_set where name ='${prd_name}_ccat_histone'";
+      @tmp_names =  @{$efg_db->dbc->db_handle->selectcol_arrayref($sql)};
+      
+      if(scalar(@tmp_names) == 1){
+        push @names, $tmp_names[0];
+      }else{
+        push @failed_sets, $prd_name;
+      }
+    }
+    elsif(scalar(@tmp_names) == 0){
+      push @failed_sets, $prd_name;
+    }
+    else{
+      push @names, $tmp_names[0];
+    }
   }
 
   if(@failed_sets){
-	throw("Failed to find unique $focus FeatureSets for production dataset names:\n\t".
-		  join("\n\t", @failed_sets)."\n");
+    throw("Failed to find unique $focus FeatureSets for production dataset names:\n\t".
+          join("\n\t", @failed_sets)."\n");
   }
 
   return @names;
