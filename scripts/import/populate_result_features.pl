@@ -37,6 +37,9 @@ Optional
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.11  2011-01-10 14:01:00  nj1
+ added generic #!/usr/bin/env perl
+
  Revision 1.10  2011-01-10 13:23:12  nj1
  updated boiler plate
 
@@ -179,7 +182,7 @@ $dnadb->dbc->db_handle;
 my $rset_adaptor  = $efg_db->get_ResultSetAdaptor;
 my $rfeat_adaptor = $efg_db->get_ResultFeatureAdaptor;
 my $slice_adaptor = $efg_db->get_SliceAdaptor;
-@slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, 1, 1, $old_assm)};#Top level, non ref, inc dups
+@slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 'toplevel', 1, 1, $old_assm)};#non ref, inc dups
 #non_dup here will load full chr collections for all hap/par regions!
 #Need to implement fetch_normalised slice_projections in collection feature adaptors?
 #This will fail for old assembly as we can have toplevel

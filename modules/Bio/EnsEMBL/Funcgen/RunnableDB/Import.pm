@@ -46,6 +46,10 @@ sub fetch_input {   # fetch parameters...
   #  
   #}
 
+  #appears not to be using any dnadb params from env
+  #dnadb setting reverts to ensembldb, when it shoudl revert to the registry host?
+  #Is this a fix for the BaseImporter or the DBAdaptor?
+
   my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
     (
      -name        => $self->param('name'),
@@ -66,23 +70,16 @@ sub fetch_input {   # fetch parameters...
      -group       => $self->param('group'),
      -location    => $self->param('location'),
      -contact     => $self->param('contact'),
-     #   -array_set   => $array_set,
      -input_set_name => $self->param('input_set'),
      -input_feature_class => $self->param('input_feature_class'),
-     #   -array_name  => $array_name,
      -result_set_name => $self->param('input_set'), #not implemented yet
      -feature_type_name => $self->param('feature_type'),
      -feature_analysis => $self->param('feature_analysis'),
      -cell_type_name => $self->param('cell_type'),
-     #   -write_mage    => $write_mage,
-     #   -update_xml => $update_xml,
-     #   -no_mage => $no_mage,
      -assembly => $self->param('assembly'),
      -data_dir   => $self->param('data_dir'),
      -output_dir  => $self->param('output_dir'),
      -recover     => $self->param('recover'),
-     #   -dump_fasta  => $fasta,
-     #   -norm_method => ,
      -species     => $self->param('species'),
      -farm        => $self->param('farm'),
      -batch_job   => $self->param('batch_job'),
@@ -92,10 +89,9 @@ sub fetch_input {   # fetch parameters...
      #  -exp_date     => $exp_date,
      -result_files   => [ $self->param('result_file') ],
      -total_features => $self->param('total_features'),
-     #  -old_dvd_format => $old_dvd_format,
      #  -ucsc_coords => $ucsc,
-     #  -release => $release,
      _no_log => 1,
+	 -force => 1,#Overcomes dbfile_data_root outdir mistmatch
     );
   
   if(!$Imp){ throw "Could not create importer"; }
@@ -138,8 +134,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my @skip_slices;
   #Allow for a list of slices as input and not only one?
   push(@slices,  $self->param('slice')) if $self->param('slice');
-  #@slices = @{&generate_slices_from_names($Imp->slice_adaptor,\@slices, \@skip_slices, $toplevel, $nonref, $incdups)};
-  @slices = @{&generate_slices_from_names($Imp->slice_adaptor, \@slices, \@skip_slices, 1, 0, 1)};#toplevel, nonref, incdups
+  @slices = @{&generate_slices_from_names($Imp->slice_adaptor, \@slices, \@skip_slices, 'toplevel', 0, 1)};#nonref, incdups
   $Imp->slices(\@slices);
   
   if(!$self->param('prepared')){
@@ -163,10 +158,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
     
     # Carefull with flow numbers... 6,7... maybe pass as parameter??
     #Wrapup job
-    my ($funnel_job_id) = @{ $self->dataflow_output_id($self->input_id, 2, { -semaphore_count => scalar(@rep_out_ids) } ) };
-    #All the fanned jobs...
-    $self->dataflow_output_id(\@rep_out_ids, 1, { -semaphored_job_id => $funnel_job_id } );
 
+	warn "Removed semaphore stuff here";
+	#This creates the job IDs for the next analyses branches i.e. analysis_id 2 & 3 via branches 2 and 1.
+    my ($funnel_job_id) = @{ $self->dataflow_output_id($self->input_id, 2)};# ,{ -semaphore_count => scalar(@rep_out_ids) } ) };
+    #All the fanned jobs...
+	$self->dataflow_output_id(\@rep_out_ids, 1);#, { -semaphored_job_id => $funnel_job_id } );
+	
     
   } else {
     

@@ -446,7 +446,7 @@ if(@slices || $input_feature_class eq 'result'){
 	$Imp->log("No slices defined defaulting to current toplevel");
   }
 
-  @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 1, undef, 1)};#toplevel, nonref, incdups
+  @slices = @{&generate_slices_from_names($slice_adaptor, \@slices, \@skip_slices, 'toplevel', undef, 1)};#nonref, incdups
   #inc dups here for now for loading Y
   #Until we support PAR/HAP regions properly
 }
