@@ -539,7 +539,12 @@ sub store {
 	return \@fsets;
 }
 
-
+#focus is old terminology
+#tend to use 'core' now
+#although here we use focus to determine a set which is actually used in the build
+#where as core is at the feature type level
+#i.e. you can have a feature set with a core feature type 
+#which is not in the build and is therefore not a focus set.
 
 =head2 fetch_focus_set_config_by_FeatureSet
 
@@ -558,17 +563,16 @@ sub fetch_focus_set_config_by_FeatureSet{
   
   $self->{focus_set_config} ||= {};
   
-  if(! defined $self->{focus_set_config}->{$fset->dbID}){
+  if (! defined $self->{focus_set_config}->{$fset->dbID}) {
 	
-	#Is is an attribute set?
-	if($self->fetch_attribute_set_config_by_FeatureSet($fset)){
+    #Is is an attribute set?
+    if ($self->fetch_attribute_set_config_by_FeatureSet($fset)) {
 	  
-	  #Need to define these as RegBuild config
-	  if( ($fset->feature_type->class eq 'Transcription Factor') ||
-		  ($fset->feature_type->class eq 'Open Chromatin') ){
-		$self->{focus_set_config}->{$fset->dbID} = 1;
-	  }
-	}
+      #Need to define these as RegBuild config
+      if ($fset->feature_type->is_core_evidence) {
+        $self->{focus_set_config}->{$fset->dbID} = 1;
+      }
+    }
   }
 	
   return $self->{focus_set_config}->{$fset->dbID};
@@ -639,16 +643,18 @@ sub fetch_feature_set_filter_counts{
   my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
   my $ftype_info = $self->db->get_FeatureTypeAdaptor->get_regulatory_evidence_info;
 
-  my %filter_info = ( 
-                     #Project=> {},
-                     #'Cell/Tissue' => {},
-                     All =>
-                     { All =>{ count       => 0,
-                               description => 'All experiments',
-                             }
-                     }
-                     
-                    );
+  my %filter_info = 
+    ( 
+     #Project=> {},
+     #'Cell/Tissue' => {},
+     All =>
+     { 
+      All =>{ count       => 0,
+              description => 'All experiments',
+            }
+     }
+     
+    );
   
   foreach my $row(@rows){
 
@@ -721,7 +727,7 @@ sub _constrain_projects{
   my ($self, $egs) = @_;
 
   #enable query extension
-  my $constraint_conf = {tables    => [['input_set', 'inp'], ['experiment', 'e']]};
+  my $constraint_conf = {tables => [['input_set', 'inp'], ['experiment', 'e']]};
   
   
   if ( (ref($egs) ne 'ARRAY') ||
@@ -751,7 +757,7 @@ sub _constrain_projects{
 sub _constrain_evidence_types {
   my ($self, $etypes) = @_;
 
-	my $constraint_conf = {tables     => [['feature_type', 'ft']]};
+	my $constraint_conf = {tables => [['feature_type', 'ft']]};
      
   my %in_values = 
 		(
@@ -787,8 +793,8 @@ sub _constrain_evidence_types {
 }
 
 
-# These two are duplicated in ResultSetAdaptor
-# Move to a new SetAdaptor? (not appropriate for DataSets)
+# These following are duplicated in ResultSetAdaptor and potentially InputSetAdaptor
+# Move to a new SetAdaptor? (not appropriate for DataSets/InputSubsets)
 
 sub _constrain_cell_types {
   my ($self, $cts) = @_;
@@ -797,8 +803,7 @@ sub _constrain_cell_types {
 		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
         ).')';
      
-  #{} = no futher contraint config
-  return ($constraint, {});
+  return ($constraint, {});  #{} = no futher contraint config
 }
 
 
@@ -813,13 +818,8 @@ sub _constrain_feature_types {
   my $constraint = " ${syn}.feature_type_id IN (".
 		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
   
-  #{} = not futher constraint conf
-  return ($constraint, {});
+  return ($constraint, {});   #{} = not futher constraint conf
 }
-
-
-
-
 
 sub _constrain_analyses {
   my ($self, $anals) = @_;
@@ -828,13 +828,12 @@ sub _constrain_analyses {
   my $constraint = ' fs.analysis_id IN ('.
     join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Analysis', $anals, 'dbID')}).')';
   
-  #{} = not futher constraint conf
-  return ($constraint, {});
+  return ($constraint, {});   #{} = not futher constraint conf
 }
 
-  # add other fetch args
-  #type
-  #name
+# add other fetch args
+#type
+#name
   
 
 

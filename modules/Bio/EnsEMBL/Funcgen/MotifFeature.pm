@@ -215,41 +215,41 @@ sub associated_annotated_features{
   #Lazy load as we don't want to have to do a join on all features when most will not have any
 
  
-  if(defined $afs){
+  if (defined $afs) {
 
-	if(ref($afs) eq 'ARRAY'){
+    if (ref($afs) eq 'ARRAY') {
 
-	  foreach my $af(@$afs){
+      foreach my $af (@$afs) {
 	
-		if( ! $af->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature') ){
-		  throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
-		}
-		#test is stored in adaptor
-	  }
+        if ( ! $af->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature') ) {
+          throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
+        }
+        #test is stored in adaptor
+      }
 
-	  if(defined $self->{'associated_annotated_features'}){
-		warn('You are overwriting associated_annotated_features for the MotifFeature');
-		#we could simply add the new ones and make them NR.
-	  }
+      if (defined $self->{associated_annotated_features}) {
+        warn('You are overwriting associated_annotated_features for the MotifFeature');
+        #we could simply add the new ones and make them NR.
+      }
 
-	  $self->{'associated_annotated_features'} = $afs;
-	}
-	else{
-	  throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
-	}
+      $self->{associated_annotated_features} = $afs;
+    } 
+    else {
+      throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
+    }
   }
 
 
-  if(! defined $self->{'associated_annotated_features'}){
+  if (! defined $self->{associated_annotated_features}) {
 
-	if(defined $self->adaptor){
-	  $self->{'associated_annotated_features'} = 
-		$self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch_all_by_associated_MotifFeature($self);
-	}
+    if (defined $self->adaptor) {
+      $self->{associated_annotated_features} = 
+        $self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch_all_by_associated_MotifFeature($self);
+    }
   }
   
   #This has the potential to return undef, or an arrayref which may be empty.
-  return $self->{'associated_annotated_features'};
+  return $self->{associated_annotated_features};
 }
 
 
@@ -266,11 +266,20 @@ sub associated_annotated_features{
 =cut
 
 sub is_position_informative {
-  my ($self,$position) = (shift,shift);
-  throw "Need a position" if(!defined($position));
-  throw "Position out of bounds" if(($position<1) || ($position>$self->binding_matrix->length));
+  my ($self, $position) = @_;
+
+  throw "Need a position" if ! defined $position;
+
+  if( ($position < 1) || 
+      ($position > $self->binding_matrix->length) ){
+    throw "Position outside of MotifFeature loci";
+  }
+
   #if on the opposite strand, then need to reverse complement the position
-  if($self->strand < 0){ $position = $self->binding_matrix->length - $position + 1; }
+  if($self->strand < 0){ 
+    $position = $self->binding_matrix->length - $position + 1; 
+  }
+
   return $self->binding_matrix->is_position_informative($position);
 }
 
@@ -298,7 +307,7 @@ sub is_position_informative {
 =cut
 
 sub infer_variation_consequence{
-  my ($self, $vf, $linear) = (shift, shift, shift);
+  my ($self, $vf, $linear) = @_;
 
   if(! $vf->isa('Bio::EnsEMBL::Variation::VariationFeature')){
     throw "We expect a Bio::EnsEMBL::Variation::VariationFeature object, not a ".$vf->class;
