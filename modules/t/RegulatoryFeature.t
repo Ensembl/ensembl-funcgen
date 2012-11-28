@@ -27,14 +27,6 @@ ok(1, 'Startup test');#?
 #   -dbname  => 'XXX'
 #  );
 
-my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-  (
-   -user    => 'ensro',
-   -host    => 'ens-genomics2',
-   -species => 'homo_sapiens', #Does this prevent alias loading?
-   -dbname  => 'dev_homo_sapiens_funcgen_70_37'
-  );
-
 
 #debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
 ok( $db, 'DBAdaptor creation');# More verbose, but we get failed test name summary at end
@@ -111,12 +103,8 @@ foreach my $regf(@{$fset->get_Features_by_Slice($x_slice)}){
 #Sanity check we actually have bounds
 #Could have this as this as the SKIP condition 
 #But this is also needs to be a test
-if(! $rf){
-  $skip = 1;
-}
-
+$skip = 1 if ! defined $rf;
 ok( $rf, 'Found RegulatoryFeature with bounds');
-
 
 SKIP: {
   #Could have debug here, but this only print if we skip anyway
@@ -151,6 +139,15 @@ SKIP: {
     #Doesn't work unless the code exists!
     #todo_skip 'bound_start/end_length methods not yet implemented', 4;
   #}
+
+
+  my @struc = @{$rf->get_underlying_structure};
+
+  ok( ($rf->bound_start == $struc[0]) &&
+      ($rf->start       == $struc[1]) &&
+      ($rf->end         == $struc[-2]) &&
+      ($rf->bound_end   == $struc[-1]),
+      'underying_structure bound/start/ends match');
 
   &test_bound_length_start_end($rf); 
   
