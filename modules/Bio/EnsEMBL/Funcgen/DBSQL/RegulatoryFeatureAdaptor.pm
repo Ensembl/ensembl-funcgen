@@ -323,11 +323,12 @@ sub _objs_from_sth {
   my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
   my $skip_feature = 0;
   
-  my %feature_adaptors = (
-						  'annotated' => $self->db->get_AnnotatedFeatureAdaptor,
-						  'motif'     => $self->db->get_MotifFeatureAdaptor,
-						  #external
-						 );
+  my %feature_adaptors = 
+    (
+     'annotated' => $self->db->get_AnnotatedFeatureAdaptor,
+     'motif'     => $self->db->get_MotifFeatureAdaptor,
+     #external
+    );
   
   my $stable_id_prefix = $self->db->stable_id_prefix;
 	
@@ -335,23 +336,24 @@ sub _objs_from_sth {
 	    $dbID,                  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $bound_start_length,
-		$bound_end_length,  $display_label,
-		$ftype_id,              $fset_id,
-		$stable_id,             $attr_id,
-		$attr_type,             $bin_string,
-		$projected
-	);
+      $bound_end_length,  $display_label,
+      $ftype_id,              $fset_id,
+      $stable_id,             $attr_id,
+      $attr_type,             $bin_string,
+      $projected
+     );
 
-	$sth->bind_columns(
-					   \$dbID,                  \$efg_seq_region_id,
-					   \$seq_region_start,      \$seq_region_end,
-					   \$seq_region_strand,     \$bound_start_length,
-					   \$bound_end_length,  \$display_label,
-					   \$ftype_id,              \$fset_id,
-					   \$stable_id,             \$bin_string,
-					   \$projected,             \$attr_id,
-					   \$attr_type
-					  );
+	$sth->bind_columns
+    (
+     \$dbID,              \$efg_seq_region_id,
+     \$seq_region_start,  \$seq_region_end,
+     \$seq_region_strand, \$bound_start_length,
+     \$bound_end_length,  \$display_label,
+     \$ftype_id,          \$fset_id,
+     \$stable_id,         \$bin_string,
+     \$projected,         \$attr_id,
+     \$attr_type
+    );
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name);
 	my ($asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
@@ -363,7 +365,7 @@ sub _objs_from_sth {
 		$asm_cs_vers = $asm_cs->version();
 		$cmp_cs_name = $cmp_cs->name();
 		$cmp_cs_vers = $cmp_cs->version();
-	  }
+  }
 	
 	my ($dest_slice_start, $dest_slice_end);
 	my ($dest_slice_strand, $dest_slice_length, $dest_slice_sr_name);
@@ -515,23 +517,16 @@ sub _objs_from_sth {
 	    if ($dest_slice) {
 
 	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-			
-          #remove bound adjusts as this is now done dynamically
-
+          #removed bound adjusts as this is now done dynamically
+      
           if ($dest_slice_strand == 1) {
             $seq_region_start       = $seq_region_start - $dest_slice_start + 1;
             $seq_region_end         = $seq_region_end   - $dest_slice_start + 1;
-
-            #if as we never have a seq_region start of 0;
-            #$bound_seq_region_start = $bound_seq_region_start - $dest_slice_start + 1 if $bound_seq_region_start;
-            #$bound_seq_region_end   = $bound_seq_region_end   - $dest_slice_start + 1 if $bound_seq_region_end;
-          } else {
+          } 
+          else {
             my $tmp_seq_region_start       = $seq_region_start;
-            #my $tmp_bound_seq_region_start = $bound_seq_region_start;
             $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
             $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-            #$bound_seq_region_start  = $dest_slice_end - $bound_seq_region_end + 1 if $bound_seq_region_end;
-            #$bound_seq_region_end    = $dest_slice_end - $tmp_bound_seq_region_start + 1 if $bound_seq_region_start;
             $seq_region_strand      *= -1;
           }
 	      }
