@@ -690,7 +690,7 @@ sub get_underlying_structure{
     $self->{underlying_structure} = [ 
                                      $self->bound_start, $self->start,
                                      @mf_loci,
-                                     $self->end, $self->buund_end
+                                     $self->end, $self->bound_end
                                     ];
   }
 
