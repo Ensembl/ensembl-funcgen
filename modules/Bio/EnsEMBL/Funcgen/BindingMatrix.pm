@@ -5,7 +5,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -320,7 +320,7 @@ sub relative_affinity {
 
 =head2 is_position_informative
 
-  Arg [1]    : int - 1-based position withing the matrix
+  Arg [1]    : Int - 1bp position within the matrix
   Arg [2]    : (optional) double - threshold [0-2] for information content [default is 1.5]
   Example    : $matrix->is_position_informative($pos);
   Description: Returns true if position information content is over threshold
@@ -332,7 +332,8 @@ sub relative_affinity {
 =cut
 
 sub is_position_informative {
-  my ($self,$position,$threshold) = (shift,shift,shift);
+  my ($self, $position, $threshold) = @_;
+  
   throw "Need a position" if(!defined($position));
   throw "Position out of bounds" if(($position<1) || ($position > $self->length));
   if(!defined($threshold)){ $threshold = 1.5; }
