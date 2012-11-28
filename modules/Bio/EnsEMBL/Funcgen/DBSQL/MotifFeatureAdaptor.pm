@@ -305,37 +305,28 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth, $mapper, $dest_slice) = @_;
 
-	my ($sa, $seq_region_id);
-	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);
-	$sa ||= $self->db->dnadb->get_SliceAdaptor();
-
-
+	my $sa = $self->db->dnadb->get_SliceAdaptor();
 	my $bm_adaptor = $self->db->get_BindingMatrixAdaptor();
-	my @features;
-	my (%bm_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
+	my ($seq_region_id, @features, %bm_hash, 
+      %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
 	    $motif_feature_id,  $efg_seq_region_id,
 	    $seq_region_start,  $seq_region_end,
 	    $seq_region_strand, $bm_id,
-		$display_label,     $score,
-		$stable_id
-	);
+      $display_label,     $score,
+      $stable_id
+     );
 
 	$sth->bind_columns(
-					   \$motif_feature_id,  \$efg_seq_region_id,
-					   \$seq_region_start,  \$seq_region_end,
-					   \$seq_region_strand, \$bm_id,
-					   \$display_label,     \$score,
-					   \$stable_id
-					  );
+                     \$motif_feature_id,  \$efg_seq_region_id,
+                     \$seq_region_start,  \$seq_region_end,
+                     \$seq_region_strand, \$bm_id,
+                     \$display_label,     \$score,
+                     \$stable_id
+                    );
 
-	my $asm_cs;
-	my $cmp_cs;
-	my $asm_cs_name;
-	my $asm_cs_vers;
-	my $cmp_cs_name;
-	my $cmp_cs_vers;
+	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
 
 	if ($mapper) {
 		$asm_cs      = $mapper->assembled_CoordSystem();
@@ -346,11 +337,8 @@ sub _objs_from_sth {
 		$cmp_cs_vers = $cmp_cs->version();
 	}
 
-	my $dest_slice_start;
-	my $dest_slice_end;
-	my $dest_slice_strand;
-	my $dest_slice_length;
-	my $dest_slice_sr_name;
+	my ($dest_slice_start, $dest_slice_end, $dest_slice_strand,
+      $dest_slice_length, $dest_slice_sr_name, $slice, $sr_name, $sr_cs);
 
 	if ($dest_slice) {
 		$dest_slice_start   = $dest_slice->start();
@@ -361,7 +349,7 @@ sub _objs_from_sth {
 	}
 
 	
-  FEATURE: while ( $sth->fetch() ) {
+ FEATURE: while ( $sth->fetch() ) {
 
 	  #Build a slice adaptor cache here if we want to enable mapping between assemblies??
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
@@ -371,11 +359,11 @@ sub _objs_from_sth {
 	  #for the new DB. Wasn't this fixed with the tmp seq_region_cache?
 	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 		
-	  if(! $seq_region_id){
-		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-		  "The region you are using is not present in the current seq_region_cache.\n".
-			"Maybe you need to redefine the dnadb or update_DB_for_release?";
-		next;
+	  if (! $seq_region_id) {
+      warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
+        "The region you are using is not present in the current seq_region_cache.\n".
+          "Maybe you need to redefine the dnadb or update_DB_for_release?";
+      next;
 	  }
 
 	  #Get the BindingMatrix object
@@ -383,82 +371,81 @@ sub _objs_from_sth {
 	  
    
 	  # Get the slice object
-	  my $slice = $slice_hash{'ID:'.$seq_region_id};
+	  $slice = $slice_hash{'ID:'.$seq_region_id};
 	  
 	  if (! $slice) {
-		$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
-		$slice_hash{'ID:'.$seq_region_id} = $slice;
-		$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
-		$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
+      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
+      $slice_hash{'ID:'.$seq_region_id} = $slice;
+      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
+      $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
 	  }
 	  
-	  my $sr_name = $sr_name_hash{$seq_region_id};
-	  my $sr_cs   = $sr_cs_hash{$seq_region_id};
+	  $sr_name = $sr_name_hash{$seq_region_id};
+	  $sr_cs   = $sr_cs_hash{$seq_region_id};
 	  
 	  # Remap the feature coordinates to another coord system if a mapper was provided
-	  if ($mapper) {
+	  if ($mapper) {		
+      throw("Not yet implmented mapper, check equals are Funcgen calls too!");
 		
-		throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-		
-		($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-		  = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
+      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
+        = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
 	      
-		# Skip features that map to gaps or coord system boundaries
-		next FEATURE if !defined $sr_name;
+      # Skip features that map to gaps or coord system boundaries
+      next FEATURE if ! defined $sr_name;
 	      
-		# Get a slice in the coord system we just mapped to
-		if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
-		  $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
-			||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
-		} else {
-		  $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
-			||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
-		}
+      # Get a slice in the coord system we just mapped to
+      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
+        $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
+          ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
+      } else {
+        $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
+          ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
+      }
 	  }
 	    
 	  # If a destination slice was provided convert the coords
 	  # If the destination slice starts at 1 and is forward strand, nothing needs doing
 	  if ($dest_slice) {
 		
-		unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-		  if ($dest_slice_strand == 1) {
-			$seq_region_start = $seq_region_start - $dest_slice_start + 1;
-			$seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
-		  } else {
-			my $tmp_seq_region_start = $seq_region_start;
-			$seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-			$seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-			$seq_region_strand      *= -1;
-		  }
-		}
+      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
+        if ($dest_slice_strand == 1) {
+          $seq_region_start = $seq_region_start - $dest_slice_start + 1;
+          $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+        } else {
+          my $tmp_seq_region_start = $seq_region_start;
+          $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
+          $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+          $seq_region_strand      *= -1;
+        }
+      }
 	      
-		# Throw away features off the end of the requested slice
-		if(! $self->force_reslice){
-		  #force_reslice set by RegulatoryFeature::regulatory_attributes
-		  #so we don't lose attrs which are not on the dest_slice
+      # Throw away features off the end of the requested slice
+      if (! $self->force_reslice) {
+        #force_reslice set by RegulatoryFeature::regulatory_attributes
+        #so we don't lose attrs which are not on the dest_slice
 		  
-		  next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
-			|| ( $dest_slice_sr_name ne $sr_name );
-		}
+        next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
+          || ( $dest_slice_sr_name ne $sr_name );
+      }
 	      
-		$slice = $dest_slice;
+      $slice = $dest_slice;
 	  }
 	  
 
 	  
-	    push @features, Bio::EnsEMBL::Funcgen::MotifFeature->new_fast
-		  ( 
-		   {'start'          => $seq_region_start,
-			'end'            => $seq_region_end,
-			'strand'         => $seq_region_strand,
-			'slice'          => $slice,
-			'adaptor'        => $self,
-			'dbID'           => $motif_feature_id,
-			'score'          => $score,
-			'display_label'  => $display_label,
-			'binding_matrix' => $bm_hash{$bm_id},
-			'interdb_stable_id',    => $stable_id,
-		   } );
+    push @features, Bio::EnsEMBL::Funcgen::MotifFeature->new_fast
+		  ({
+        start             => $seq_region_start,
+        end               => $seq_region_end,
+        strand            => $seq_region_strand,
+        slice             => $slice,
+        adaptor           => $self,
+        dbID              => $motif_feature_id,
+        score             => $score,
+        display_label     => $display_label,
+        binding_matrix    => $bm_hash{$bm_id},
+        interdb_stable_id => $stable_id,
+		   });
 	}
 
 	return \@features;
