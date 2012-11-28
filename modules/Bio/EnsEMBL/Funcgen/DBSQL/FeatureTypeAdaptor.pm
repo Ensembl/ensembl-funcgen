@@ -23,8 +23,8 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor - A database adaptor for fetching and
-storing Funcgen FeatureType objects.
+Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor - Adaptor for fetching and
+storing FeatureType objects.
 
 =head1 SYNOPSIS
 
@@ -41,6 +41,7 @@ Funcgen FeatureType objects.
 =head1 SEE ALSO
 
 Bio::EnsEMBL::Funcgen::FeatureType
+Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor
 
 =cut
 
@@ -59,39 +60,39 @@ use vars qw(@ISA);
 use constant TRUE_TABLES => [['feature_type', 'ft']];
 use constant TABLES      => [['feature_type', 'ft']];
 
-#Regulatory evidence feature type information
-
-my $core_label = 'DNase1 & TFBS';
-my $attr_label = 'Hists & Pols';
-
-my %regulatory_evidence_labels = 
-  (
-   $core_label => {
-				   name      => 'Open chromatin & TFBS',
-				   long_name => 'Open chromatin & Transcription factor binding sites',
-				   label     => $core_label,
-				  },
-   
-   
-   $attr_label  => {
-					name      => 'Histones & polymerases',
-					long_name => 'Histone modifications & RNA polymerases',
-					label     => $attr_label,
-				   }
-  );
-
+#Regulatory evidence information
 
 my %regulatory_evidence_info = 
   (
-   'Transcription Factor'         => $regulatory_evidence_labels{$core_label},
-   'Transcription Factor Complex' => $regulatory_evidence_labels{$core_label},
-   'Open Chromatin'               => $regulatory_evidence_labels{$core_label},
-   'Polymerase'                   => $regulatory_evidence_labels{$attr_label},
-   'Histone'                      => $regulatory_evidence_labels{$attr_label},
+   core => 
+   {
+    name      => 'Open chromatin & TFBS',
+    long_name => 'Open chromatin & Transcription factor binding sites',
+    label     => 'DNase1 & TFBS',
+    classes   => ['Transcription Factor', 
+                  'Transcription Factor Complex',   
+                  'Open Chromatin'],
+   },
+   
+   non_core => 
+   {
+    name      => 'Histones & polymerases',
+    long_name => 'Histone modifications & RNA polymerases',
+    label     => 'Hists & Pols',
+    classes   => ['Polymerase',  'Histone'],
+   }
   );
 
-#
 
+#Create class => evidence_type hash
+my %regulatory_evidence_classes;
+
+foreach my $evidence_type(keys %regulatory_evidence_info){
+  
+  foreach my $class(@{$regulatory_evidence_info{$evidence_type}{classes}}){
+    $regulatory_evidence_classes{$class} = $evidence_type;
+  }
+}
 
 =head2 fetch_by_name
 
@@ -118,30 +119,24 @@ sub fetch_by_name{
   throw("Must specify a FeatureType name") if(! $name);
 
   my $constraint = ' name = ? ';
-
-  $constraint .= ' AND class = ? ' if $class;
+  $constraint   .= ' AND class = ? ' if $class;
 
   if($analysis){
-	
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis);
-	$constraint .= ' AND analysis_id = ? ';
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis);
+    $constraint .= ' AND analysis_id = ? ';
   }
-
-
 
   $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
   $self->bind_param_generic_fetch($class,          SQL_VARCHAR) if $class;
   $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
-  
-
   my @fts = @{$self->generic_fetch($constraint)};
   
 
-  #This can happen if using a redundant name between classes or analyses
-  #remove?
+  #This can happen if using a redundant name between classes and/or analyses
+
   if( wantarray && (scalar @fts >1) ){
-    $class ||= '';
-    throw("Found more than one FeatureType:$class $name");
+    throw("Found more than one FeatureType:$name\n".
+          "Please specify a class and/or analysis argument to disambiguate");
   }
 
   return (wantarray) ? @fts : $fts[0];
@@ -175,7 +170,7 @@ sub fetch_all_by_Analysis{
 
 =head2 fetch_all_by_class
 
-  Arg [1]    : string - class of FeatureType
+  Arg [1]    : String - class of FeatureType
   Example    : my @fts = @{$ft_adaptor->fetch_all_by_class('Histone')};
   Description: Fetches all FeatureTypes of a given class.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
@@ -188,11 +183,8 @@ sub fetch_all_by_Analysis{
 sub fetch_all_by_class{
   my ($self, $class) = @_;
 
-  throw("Must specify a FeatureType class") if(! defined $class);
-
-
-  my $constraint = " class = ? ";
-
+  throw('Must specify a FeatureType class') if(! defined $class);
+  my $constraint = ' class = ? ';
 
   #Use bind param method to avoid injection
   $self->bind_param_generic_fetch($class, SQL_VARCHAR);
@@ -200,15 +192,6 @@ sub fetch_all_by_class{
   return $self->generic_fetch($constraint);
 }
 
-
-
-
-
-sub fetch_all_by_associated_SetFeature{
-  my ($self, $sfeat) = @_;
-  deprecate('Please use the more generic fetch_all_by_association method');
-  return $self->fetch_all_by_association($sfeat);
-}
 
 =head2 fetch_all_by_association
 
@@ -230,7 +213,6 @@ sub fetch_all_by_association{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $storable);
   
   push @{$self->TABLES}, ['associated_feature_type', 'aft'];
-
   my $table_name = $storable->adaptor->_main_table->[0];
   
   my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.table_name="'.$table_name.
@@ -277,7 +259,10 @@ sub _tables {
 sub _columns {
   my $self = shift;
 	
-  return qw( ft.feature_type_id ft.name ft.class ft.analysis_id ft.description ft.so_accession ft.so_name);
+  return qw( ft.feature_type_id ft.name        ft.class 
+             ft.analysis_id     ft.description ft.so_accession 
+             ft.so_name
+           );
 }
 
 =head2 _objs_from_sth
@@ -420,47 +405,43 @@ sub store {
   return \@args;
 }
 
-=head2 list_regulatory_evidence_classes
+=head2 get_regulatory_evidence_classes
 
-  Args       : None
+  Args       : String (optional) - Evidence type e.g. 'core' or 'non_core'
   Example    : 
   Description: 
-  Returntype : Array of Strings
+  Returntype : Arrayref of Strings
   Exceptions : None
   Caller     : web code
   Status     : At risk - remove in favour of get_regulatory_evidence_info
 
 =cut
 
-sub list_regulatory_evidence_classes {
-    my ($self) = @_;
-	
-	#change this to return the whole hash
+#Actually returns list if type defined or otherwise array from map
 
-    return keys(%regulatory_evidence_info);
+#Remove this?
+
+sub get_regulatory_evidence_classes{
+  my ($self, $type) = @_;
+  
+  if(defined $type &&
+     ! exists $regulatory_evidence_info{$type}){
+    throw("The evidence type passed($type) must be one of:\t".
+          join(' ',keys(%regulatory_evidence_info)));
+  }
+  
+  return ($type) ? $regulatory_evidence_info{$type}{classes} :  
+    (map { @{$_->{classes}} } values %regulatory_evidence_info);
 }
-
-=head2 get_regulatory_evidence_labels
-
-  Args       : None
-  Example    : 
-  Description: 
-  Returntype : HASREF
-  Exceptions : None
-  Caller     : web code
-  Status     : At risk
-
-=cut
-
-sub get_regulatory_evidence_labels{
-  return \%regulatory_evidence_labels;
-}
+    
 
 =head2 get_regulatory_evidence_info
 
-  Args       : None
-  Example    : 
-  Description: Returns all regulatory evidence info keyed on feature type class
+  Args       : String (optional) - Regulatory evidence type i.e. core or non_core
+  Example    : my %info = %{$ft_adaptor->get_regulatory_evidence_info('core')};
+  Description: Returns all regulatory evidence info keyed on the regulatory 
+               evidence type. If the type arg is omited, returns entire info hash
+               keyed on evidence types
   Returntype : HASHREF
   Exceptions : None
   Caller     : web code
@@ -469,11 +450,101 @@ sub get_regulatory_evidence_labels{
 =cut
 
 sub get_regulatory_evidence_info{
-  return \%regulatory_evidence_info;
+  my ($self, $class) = @_;
+  my $hash_ref;
+
+  if(defined $class){
+
+    if(! exists $regulatory_evidence_info{$class}){
+      warn "FeatureType class $class does not have any regulatory evidence info\n";
+    }
+    else{
+      $hash_ref = $regulatory_evidence_info{$class};
+    }
+  }
+  else{
+    $hash_ref = \%regulatory_evidence_info;
+  }
+
+  return $hash_ref;
 }
 
 
 
+=head2 get_regulatory_evidence_type
+
+  Args       : String - FeatureType class
+  Example    : my $evidence_Type = $ft_adaptor->get_regulatory_evidence_info($ftype->class);
+  Description: Returns the regulatory evidence type i.e, core or non_core
+  Returntype : String
+  Exceptions : Throws if no class arguments defined
+               Warns if the class is not considered as evidence for the regulatory build
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub get_regulatory_evidence_type{
+  my ($self, $class) = @_;
+
+  my $evidence_type;
+
+  if(defined $class){
+
+    if (! exists $regulatory_evidence_classes{$class}){
+      warn "FeatureType class $class does not have any regulatory evidence info\n";
+    }
+    else{
+      $evidence_type = $regulatory_evidence_classes{$class};
+    }
+  }
+  else{
+    throw('You must pass a FeatureType class to get_regulatory_evidence_type');
+  }
+  
+  return $evidence_type;
+}
+
+
+
+=head2 fetch_all_by_evidence_type
+
+  Arg [1]    : String - Regulatory build evidence type i.e. core or non_core
+  Example    : my @core_fts = @{$ft_adaptor->fetch_all_by_evidence_type('core')};
+  Description: Fetches all FeatureTypes which can be considered for the regulatory 
+               build based on their evidence type. Core FeatureTypes are used to
+               construct the core regions of RegulatoryFeatures (e.g. TFs, DNase1
+               etc.), and non_core are used to construct the bound regions.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
+  Exceptions : Throws if evidence_type is not defined or valid.
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_evidence_type{
+  my ($self, $etype) = @_;
+
+  if(! (defined $etype && 
+        exists $regulatory_evidence_info{$etype}) ){
+    throw("$etype must be one of the valid evidence types:\t".
+          join(' ', keys %regulatory_evidence_info));
+  }
+
+  #Don't need to bind_param_generic_fetch here as the constraint is built
+  #from valid internal values
+
+  my $constraint = ' class IN ("'.join('", "', @{$regulatory_evidence_info{$etype}{classes}}).'")';
+  return $self->generic_fetch($constraint);
+}
+
+
+### DEPRECATED ###
+
+
+sub fetch_all_by_associated_SetFeature{
+  throw('Please use the more generic fetch_all_by_association method');
+}
 
 1;
 
