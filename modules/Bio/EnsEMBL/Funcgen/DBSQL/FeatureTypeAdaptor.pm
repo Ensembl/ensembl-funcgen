@@ -433,7 +433,35 @@ sub get_regulatory_evidence_classes{
   return ($type) ? $regulatory_evidence_info{$type}{classes} :  
     (map { @{$_->{classes}} } values %regulatory_evidence_info);
 }
-    
+
+
+=head2 get_regulatory_evidence_label_by_class
+
+  Args       : String (optional) - FeatureType class e.g. Histone
+  Example    : my $ftype_label = $ft_adaptor->get_regulatory_label_by_class('Polymerase')};
+  Description: Returns the shorts labels used for the grouped tracks i.e.
+                   'Hists & Pols'
+                   'Dnase1 & TFBS'
+  Returntype : String
+  Exceptions : None
+  Caller     : web code
+  Status     : At risk
+
+=cut
+
+
+#Often quicker to grab regulatory_evidence_info hash first
+#and access directly in caller e.g.
+#my $ft_class_label =  $ftype_info->
+#      {$ft_a->get_regulatory_evidence_type($ft_class)}{label};
+
+sub get_regulatory_evidence_label_by_class{
+  my ($self, $fclass) = @_;
+
+  return $self->get_regulatory_evidence_info
+    ($self->get_regulatory_evidence_type($fclass))->{label};
+}
+
 
 =head2 get_regulatory_evidence_info
 
