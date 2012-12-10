@@ -641,7 +641,8 @@ sub fetch_feature_set_filter_counts{
   
 
   my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-  my $ftype_info = $self->db->get_FeatureTypeAdaptor->get_regulatory_evidence_info;
+  my $ft_a = $self->db->get_FeatureTypeAdaptor;
+  my $ftype_info = $ft_a->get_regulatory_evidence_info;
 
   my %filter_info = 
     ( 
@@ -688,7 +689,9 @@ sub fetch_feature_set_filter_counts{
     #Evidence class counts
     #Do we want to split this into ft.class
     #i.e. split 'DNase1 & TFBS'
-    my $ft_class_label = $ftype_info->{$ft_class}{label};
+
+    my $ft_class_label =  $ftype_info->
+      {$ft_a->get_regulatory_evidence_type($ft_class)}{label};
 
     if(! exists $filter_info{'Evidence type'}{$ft_class_label}){
       $filter_info{'Evidence type'}{$ft_class_label} = 
