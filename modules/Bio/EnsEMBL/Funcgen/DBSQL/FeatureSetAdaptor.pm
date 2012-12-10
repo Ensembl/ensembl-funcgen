@@ -689,14 +689,13 @@ sub fetch_feature_set_filter_counts{
     #Evidence class counts
     #Do we want to split this into ft.class
     #i.e. split 'DNase1 & TFBS'
-
-    my $ft_class_label =  $ftype_info->
-      {$ft_a->get_regulatory_evidence_type($ft_class)}{label};
+    my $evidence_type  = $ft_a->get_regulatory_evidence_type($ft_class);
+    my $ft_class_label =  $ftype_info->{$evidence_type}{label};
 
     if(! exists $filter_info{'Evidence type'}{$ft_class_label}){
       $filter_info{'Evidence type'}{$ft_class_label} = 
         { count       => 0,
-          description => $ftype_info->{$ft_class}{long_name},
+          description => $ftype_info->{$evidence_type}{long_name},
         };
     }
     $filter_info{'Evidence type'}{$ft_class_label}{count} += $count;
