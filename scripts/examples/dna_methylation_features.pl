@@ -25,15 +25,11 @@ e.g. if you download the files to the following directory:
 
     /home/ensembl/data_files/homo_sapiens/GRCh37/dna_methylation_feature
 
-<<<<<<< dna_methylation_features.pl
 Then
 
    my $dbfile_data_root='/home/ensembl/data_files/homo_sapiens/GRCh37';
 
 See below for how this is set and how features are retrieved.
-=======
-Your dbfile_data_root is /home/ensembl/data_files/homo_sapiens/GRCh37/
->>>>>>> 1.2
 
 =cut
 
@@ -42,7 +38,6 @@ use warnings;
 use Bio::EnsEMBL::Registry;
 
 my $registry         = 'Bio::EnsEMBL::Registry';
-<<<<<<< dna_methylation_features.pl
 my $dbfile_data_root = '/home/ensembl/data_files/homo_sapiens/GRCh37/';
 
 $registry->load_registry_from_db
@@ -54,11 +49,6 @@ $registry->load_registry_from_db
 my $dmf_adaptor        = $registry->get_adaptor( 'Human', 'funcgen', 'DNAMethylationFeature' );
 my $slice_adaptor      = $registry->get_adaptor( 'Human', 'core', "slice" );
 my $result_set_adaptor = $registry->get_adaptor( 'Human', 'funcgen', "resultset" );
-=======
-
-#change for db_file_data_root
-my $dbfile_data_root = '/nfs/ensnfs-dev/staging/homo_sapiens/GRCh37/';
->>>>>>> 1.2
 
 #Set the dbfile_data_root!
 $result_set_adaptor->dbfile_data_root($dbfile_data_root);
