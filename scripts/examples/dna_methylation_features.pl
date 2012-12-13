@@ -25,7 +25,7 @@ e.g. if you download the files to the following directory:
 
 /home/ensembl/data_files/homo_sapiens/GRCh37/dna_methylation_feature 
 
-Your dbfile_data_root is /home/ensembl/data_files/
+Your dbfile_data_root is /home/ensembl/data_files/homo_sapiens/GRCh37/
 
 =cut
 
@@ -34,6 +34,8 @@ use warnings;
 use Bio::EnsEMBL::Registry;
 
 my $registry         = 'Bio::EnsEMBL::Registry';
+
+#change for db_file_data_root
 my $dbfile_data_root = '/nfs/ensnfs-dev/staging/homo_sapiens/GRCh37/';
 
 $registry->load_registry_from_db(
