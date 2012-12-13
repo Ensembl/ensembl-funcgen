@@ -249,89 +249,54 @@ sub stable_id {
 sub regulatory_attributes{
   my ($self, $feature_class) = @_;
 
-  #Incorporating the MFs like this does cause some redundancy in the DB
-  #But will speed up display of the RegFeat image including the MFs
-  #Redefine the cache to have class keys e.g. TFBS, OpenChromatin, Histone Mods
-  #Can't do this as we need the table key to be able to fetch the features
-  #Really need something to be able to draw the image first, then create the zmenu details later.
-
-  my %adaptors = (
-				  'annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
-				  'motif'     => $self->adaptor->db->get_MotifFeatureAdaptor,
-				  #external
-				 );
-
   my @fclasses;
+  my %adaptors = (
+                  'annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
+                  'motif'     => $self->adaptor->db->get_MotifFeatureAdaptor,
+                  #external
+                 );
 
-  if(defined $feature_class){
+  if (defined $feature_class) {
 
-	if(exists $adaptors{lc($feature_class)}){
-	  @fclasses = (lc($feature_class));
-	}
-	else{
-	  throw("The feature class you specified is not valid:\t$feature_class\n".
-			"Please use one of:\t".join(', ', keys %adaptors));
-	}
+    if (exists $adaptors{lc($feature_class)}) {
+      @fclasses = (lc($feature_class));
+    } 
+    else {
+      throw("The feature class you specified is not valid:\t$feature_class\n".
+            "Please use one of:\t".join(', ', keys %adaptors));
+    }
+  } 
+  else {
+    @fclasses = keys %adaptors;
   }
-  else{
-	@fclasses = keys %adaptors;
-  }
 
-  foreach my $fclass(@fclasses){
-	#Now structured as hash to facilitate faster has_attribute method
-	#Very little difference to array based cache
-
-	my @attr_dbIDs = keys %{$self->{'attribute_cache'}{$fclass}};
+  foreach my $fclass (@fclasses) {
+    #Now structured as hash to facilitate faster has_attribute method
+    #Very little difference to array based cache
+    my @attr_dbIDs = keys %{$self->{'attribute_cache'}{$fclass}};
 
 	
-	if(scalar(@attr_dbIDs) > 0){
+    if (scalar(@attr_dbIDs) > 0) {
 	  
-	  if( ! ( ref($self->{'regulatory_attributes'}{$fclass}->[0])  &&
-			  ref($self->{'regulatory_attributes'}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )){
+      if ( ! ( ref($self->{'regulatory_attributes'}{$fclass}->[0])  &&
+               ref($self->{'regulatory_attributes'}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )) {
       
-      $adaptors{$fclass}->force_reslice(1);#So we don't lose attrs which aren't on the slice
-      $self->{'regulatory_attributes'}{$fclass} = 
-        $adaptors{$fclass}->fetch_all_by_dbID_list(\@attr_dbIDs, $self->slice);
+        $adaptors{$fclass}->force_reslice(1); #So we don't lose attrs which aren't on the slice
 
-		#Having problems here if we are trying to project between Y PAR and X
-		#Current dest_slice mapping code simply changes the start end values assuming the slice is correct
-		#currently no test for seq_region name match
-		
+        #fetch_all_by_Slice_constraint does relevant normalised Slice projection i.e. PAR mappingg
+        $self->{'regulatory_attributes'}{$fclass} = 
+          $adaptors{$fclass}->fetch_all_by_Slice_constraint
+            (
+             $self->slice,
+             lc($feature_class).'_feature_id in('.join(',', @attr_dbIDs).')'
+            );
 
-		#foreach my $attr(@{	$self->{'regulatory_attributes'}{$fclass}}){
-		#  warn "$attr ".$attr->dbID." ".$attr->feature_Slice->name."\n";
-		#}
-
-
-		$adaptors{$fclass}->force_reslice(0);
-
-		#Problems here with attrs not being returning when they do not lie on dest slice
-		#i.e. core projected to cell line, but dest slice only over laps a region of the core which
-		#actually has no attrs.
-		#either use the feature_Slice and reslice everthing to the dest slice
-		#or skip test in attr obj_frm_sth?
-		#
-
-		#This method transfers to the query slice, do not use fetch_by_dbID
-		#It also should use _final_clause
-		#This is currently only specified in the MotifFeatureAdaptor
-		#as these are required to be sorted to relate to the structure string
-
-		#but we are stll storing in has where order is not preserved!!
-		#so this will not match order of underlying strcture!
-
-		#separate so we can have ordered array returned
-		#do we need redundant caches?
-		#defo need db id cache for 'has' methods
-		
-		#foreach my $attr(@{$fclass_attrs}){
-		#  $self->{'regulatory_attributes'}{$fclass}{$attr->dbID} = $attr;
-		#}
-	  }
-	}
-	else{
-	  $self->{'regulatory_attributes'}{$fclass} = [];
-	}
+        #Forces reslice and inclusion for attributes not contained within slice 
+        $adaptors{$fclass}->force_reslice(0);
+      }
+    } else {
+      $self->{'regulatory_attributes'}{$fclass} = [];
+    }
   }
 
   return [ map { @{$self->{'regulatory_attributes'}{$_}} } @fclasses ];
