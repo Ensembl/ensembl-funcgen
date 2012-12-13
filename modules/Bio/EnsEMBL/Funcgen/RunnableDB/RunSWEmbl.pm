@@ -238,7 +238,8 @@ sub _parse_result_file {
 
     if( ($start < 1) || ($end > $slice{"$seqid"}->end)){
       warn "Feature being ignored due to coordinates out of slice: Region:".$seqid." Start:".$start." End:".$end." Score:".$score." Summit:".$summit."\n";
-    }
+      next;
+      }
   
     #Gracefully handle errors...
     my $af;
