@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -115,10 +115,10 @@ sub new{
 
   my $reg = "Bio::EnsEMBL::Registry"; 
   my ($config_file, $clobber, $rollback, $species, $fset_desc,
-	  $user, $host, $port, $pass, $dbname, $db, $ssh,
-	  $assm_version, $release, $reg_config, $verbose, $slices,
-	  $reg_db, $reg_host, $reg_port, $reg_user, $reg_pass,
-	  $ftype_name, $ctype_name, $feature_analysis, $no_disconnect);
+      $user, $host, $port, $pass, $dbname, $db, $ssh,
+      $assm_version, $release, $reg_config, $verbose, $slices,
+      $reg_db, $reg_host, $reg_port, $reg_user, $reg_pass,
+      $ftype_name, $ctype_name, $feature_analysis, $no_disconnect);
   
 
   #Set some directly here to allow faster accessor only methods
@@ -129,16 +129,17 @@ sub new{
    $release,          $reg_config,          $reg_db,              $reg_host,
    $reg_port,         $reg_user,            $reg_pass,            $verbose,
    $slices,           $self->{recover},     $clobber,             $rollback,
-   $config_file,      $self->{ucsc_coords}, $self->{_dump_fasta}, $no_disconnect,
+   $config_file,      $self->{ucsc_coords}, $self->{_dump_fasta}, $no_disconnect
   ) = rearrange
-	(['FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'FEATURE_ANALYSIS', 'FEATURE_SET_DESCRIPTION',
-	  'species',           'db',             'user',             'host',
-	  'PORT',              'PASS',           'DBNAME',           'ASSEMBLY',      'SSH',
-	  'RELEASE',           'REG_CONFIG',     'REGISTRY_DB',      'REGISTRY_HOST',
-	  'REGISTRY_PORT',     'REGISTRY_USER',  'REGISTRY_PASS',    'VERBOSE',
-	  'slices',            'recover',        'clobber',          'rollback',
-	  'config_file',       'ucsc_coords',    'DUMP_FASTA',       'no_disconnect'],
-	 @_);
+    (
+     ['FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'FEATURE_ANALYSIS', 'FEATURE_SET_DESCRIPTION',
+      'species',           'db',             'user',             'host',
+      'PORT',              'PASS',           'DBNAME',           'ASSEMBLY',      'SSH',
+      'RELEASE',           'REG_CONFIG',     'REGISTRY_DB',      'REGISTRY_HOST',
+      'REGISTRY_PORT',     'REGISTRY_USER',  'REGISTRY_PASS',    'VERBOSE',
+      'slices',            'recover',        'clobber',          'rollback',
+      'config_file',       'ucsc_coords',    'DUMP_FASTA',       'no_disconnect'],
+     @_);
   
   
 
@@ -153,8 +154,8 @@ sub new{
 
   #Need to compare these to BaseExternalParser
 
-  if( (! $species) &&
-      $db ){
+  if ( (! $species) &&
+       $db ) {
     $species = $db->species;
   }
 
@@ -162,7 +163,7 @@ sub new{
  
   # Registry and DB handling - re/move to separate method?
   
-  if($reg_host && $self->{'reg_config'}){
+  if ($reg_host && $self->{'reg_config'}) {
     warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
       "\nOver-riding config file with specified paramters:\t${reg_user}@${reg_host}:$reg_port";
   }
@@ -189,59 +190,59 @@ sub new{
   $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
 
   if ($reg_host || ! defined $self->{'_reg_config'}) {
-	#defaults to current ensembl DBs
-	$reg_host ||= 'ensembldb.ensembl.org';
-	$reg_user ||= 'anonymous';
+    #defaults to current ensembl DBs
+    $reg_host ||= 'ensembldb.ensembl.org';
+    $reg_user ||= 'anonymous';
 
-	#Default to the most recent port for ensdb
-	if( (! $reg_port) && 
-		($reg_host eq 'ensdb-archive') ){
-	  $reg_port = 5304;
-	}
+    #Default to the most recent port for ensdb
+    if ( (! $reg_port) && 
+         ($reg_host eq 'ensdb-archive') ) {
+      $reg_port = 5304;
+    }
 
-	#This will try and load the dev DBs if we are using v49 schema or API?
-	#Need to be mindful about this when developing
-	#we need to tip all this on it's head and load the reg from the dnadb version
+    #This will try and load the dev DBs if we are using v49 schema or API?
+    #Need to be mindful about this when developing
+    #we need to tip all this on it's head and load the reg from the dnadb version
 
-	my $version = $release || $reg->software_version;
-	$self->log("Loading v${version} registry from $reg_user".'@'.$reg_host);
+    my $version = $release || $reg->software_version;
+    $self->log("Loading v${version} registry from $reg_user".'@'.$reg_host);
 
-	#Note this defaults API version, hence running with head code
-	#And not specifying a release version will find not head version
-	#DBs on ensembldb, resulting in an exception from reset_DBAdaptor below
+    #Note this defaults API version, hence running with head code
+    #And not specifying a release version will find not head version
+    #DBs on ensembldb, resulting in an exception from reset_DBAdaptor below
    
-  #This currently loads from reg_host
-  #Which triggers the funcgen DB to try and _set_dnadb
-  #even if we have specified as db/dnadb already,as this is reset after this
-  #we probably just want to use the dnadb_host as the default reg_host
-  #This also need cleaning up wrt DBAdaptor behaviours
-  #Simply and/or remove
+    #This currently loads from reg_host
+    #Which triggers the funcgen DB to try and _set_dnadb
+    #even if we have specified as db/dnadb already,as this is reset after this
+    #we probably just want to use the dnadb_host as the default reg_host
+    #This also need cleaning up wrt DBAdaptor behaviours
+    #Simply and/or remove
 
-	my $num_dbs = $reg->load_registry_from_db
-	  (
-	   -host       => $reg_host,
-	   -user       => $reg_user,
-	   -port       => $reg_port,
-	   -pass       => $reg_pass,
-	   -db_version => $version,
-	   -verbose    => $verbose,
-	  );
+    my $num_dbs = $reg->load_registry_from_db
+      (
+       -host       => $reg_host,
+       -user       => $reg_user,
+       -port       => $reg_port,
+       -pass       => $reg_pass,
+       -db_version => $version,
+       -verbose    => $verbose,
+      );
 
-	if(! $num_dbs){
-	  throw("Failed to load any DBs from $reg_user".'@'.$reg_host." for release $version.\n".
-			"This will result in a failure to validate the species.\n".
-			"Please define a valid -release for the registry and/or registry params/config\n".
-			"Or select a -registry_host which matches the API version:\t".$reg->software_version);
-	}
+    if (! $num_dbs) {
+      #only throw if we don't have any other db params passed?
+      thow("Failed to load any DBs from $reg_user".'@'.$reg_host." for release $version.\n".
+           "This will result in a failure to validate the species.\n".
+           "Please define a valid -release for the registry and/or registry params/config\n".
+           "Or select a -registry_host which matches the API version:\t".$reg->software_version);
+    }
 
-	if ((! $dbname) && (! $db)){
-	  throw('Not sensible to set the import DB as the default eFG DB from '
-			.$reg_host.', please define db params');
-	}
-  }
-  else{
-	$self->log("Loading registry from:\t".$self->{'_reg_config'});
-	$reg->load_all($self->{'_reg_config'}, 1);
+    if ((! $dbname) && (! $db)) {
+      throw('Not sensible to set the import DB as the default eFG DB from '
+            .$reg_host.', please define db params');
+    }
+  } else {
+    $self->log("Loading registry from:\t".$self->{'_reg_config'});
+    $reg->load_all($self->{'_reg_config'}, 1);
   }
 
 
@@ -260,81 +261,79 @@ sub new{
 
 
   #SET UP DBs
-  if($db){
-	#db will have been defined before reg loaded, so will be present in reg
+  if ($db) {
+    #db will have been defined before reg loaded, so will be present in reg
 
-	if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
-	  $self->throw('-db must be a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
-	}
-  }
-  else{ #define eFG DB from params or registry
+    if (! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))) {
+      $self->throw('-db must be a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+    }
+  } else {                      #define eFG DB from params or registry
 
-	if($reg_db){#load eFG DB from reg
+    if ($reg_db) {              #load eFG DB from reg
 
-	  if($dbname){
-		throw("You cannot specify DB params($dbname) and load from the registry at the same time.");
-	  }
+      if ($dbname) {
+        throw("You cannot specify DB params($dbname) and load from the registry at the same time.");
+      }
 
-	  $self->log('WARNING: Loading eFG DB from Registry');
-	  $db = $reg->get_DBAdaptor($self->species(), 'funcgen');
-	  throw("Unable to retrieve ".$self->species." funcgen DB from the registry") if ! $db;
-	}
-	else{#resets the eFG DB in the custom or generic registry
+      $self->log('WARNING: Loading eFG DB from Registry');
+      $db = $reg->get_DBAdaptor($self->species(), 'funcgen');
+      throw("Unable to retrieve ".$self->species." funcgen DB from the registry") if ! $db;
+    } else {                    #resets the eFG DB in the custom or generic registry
 
-	  $dbname || throw('Must provide a -dbname if not using default custom registry config');
-	  $pass   || throw('Must provide a -pass parameter');
+      $dbname || throw('Must provide a -dbname if not using default custom registry config');
+      $pass   || throw('Must provide a -pass parameter');
 	 
-	  #remove this and throw?
-	  if(! defined $host){
-		$self->log('WARNING: Defaulting to localhost');
-		$host = 'localhost';
-	  }
+      #remove this and throw?
+      if (! defined $host) {
+        $self->log('WARNING: Defaulting to localhost');
+        $host = 'localhost';
+      }
 	  
-	  $port ||= 3306;
-	  my $host_ip = '127.0.0.1';#is this valid for all localhosts?
+      $port ||= 3306;
+      my $host_ip = '127.0.0.1'; #is this valid for all localhosts?
 	  
-	  if ($ssh) {
-		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
-		#will this always be the same?
+      if ($ssh) {
+        $host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC 
+        #will this always be the same?
 		
-		if (! (exists $ENV{'EFG_HOST_IP'})) {
-		  warn "Environment variable EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
-		} else {
-		  $host_ip = $ENV{'EFG_HOST_IP'};
-		}
+        if (! (exists $ENV{'EFG_HOST_IP'})) {
+          warn "Environment variable EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
+        } else {
+          $host_ip = $ENV{'EFG_HOST_IP'};
+        }
 		
-		if ($self->host() ne 'localhost') {
-		  warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
-		}
-	  }
+        if ($self->host() ne 'localhost') {
+          warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
+        }
+      }
 	
 
-	  #data version is only used if we don't want to define the dbname
-	  #This should never be guessed so don't need data_version here
-	  #$dbname ||= $self->species()."_funcgen_".$self->data_version();
+      #data version is only used if we don't want to define the dbname
+      #This should never be guessed so don't need data_version here
+      #$dbname ||= $self->species()."_funcgen_".$self->data_version();
 
 
-	  #Remove block below when we can
-	  my $dbhost = ($ssh) ? $host_ip : $host;
+      #Remove block below when we can
+      my $dbhost = ($ssh) ? $host_ip : $host;
 
-	  #This isn't set yet!?
-	  #When we try to load e.g. 49, when we only have 48 on ensembldb
-	  #This fails because there is not DB set for v49, as it is not on ensembl DB
-	  #In this case we need to load from the previous version
-	  #Trap this and suggest using the -schema_version/release option
-	  #Can we autodetect this and reload the registry?
-	  #We want to reload the registry anyway with the right version corresponding to the dnadb
-	  #We could either test for the db in the registry or just pass the class.
+      #This isn't set yet!?
+      #When we try to load e.g. 49, when we only have 48 on ensembldb
+      #This fails because there is not DB set for v49, as it is not on ensembl DB
+      #In this case we need to load from the previous version
+      #Trap this and suggest using the -schema_version/release option
+      #Can we autodetect this and reload the registry?
+      #We want to reload the registry anyway with the right version corresponding to the dnadb
+      #We could either test for the db in the registry or just pass the class.
 
-	  $db = $reg->reset_DBAdaptor($self->species, 'funcgen', $dbname, $dbhost, $port, $user, $pass,
-								  {
-								   -dnadb_host => $reg_host,
-								   -dnadb_port => $reg_port,
-								   -dnadb_assembly => $assm_version,
-								   -dnadb_user => $reg_user,
-								   -dnadb_pass => $reg_pass,
-								  });
-	}
+      $db = $reg->reset_DBAdaptor($self->species, 'funcgen', $dbname, $dbhost, $port, $user, $pass,
+                                  {
+                                   -dnadb_host => $reg_host,
+                                   -dnadb_port => $reg_port,
+                                   -dnadb_assembly => $assm_version,
+                                   -dnadb_user => $reg_user,
+                                   -dnadb_pass => $reg_pass,
+                                  });
+    }
   }
 
 
@@ -352,39 +351,39 @@ sub new{
   
   #Catch config clashes/redundancy
   
-  if($self->feature_set_description  &&
-	 ($config_file || exists ${$self}{static_config}) ){
-	throw('You have specified a -feature_set_description alongside user/static_config. Please define this in the config');
+  if ($self->feature_set_description  &&
+      ($config_file || exists ${$self}{static_config}) ) {
+    throw('You have specified a -feature_set_description alongside user/static_config. Please define this in the config');
   }
 
-  if( ($feature_analysis || $ctype_name || $ftype_name) &&
-	  exists ${$self}{static_config} ){
-	throw('You have specified a analysis/cell/feature_type params alongside static_config. Please define this in the static_config');
+  if ( ($feature_analysis || $ctype_name || $ftype_name) &&
+       exists ${$self}{static_config} ) {
+    throw('You have specified a analysis/cell/feature_type params alongside static_config. Please define this in the static_config');
   }
 
   #Catch no config here? Or can this be imported via Parser specific meta/config files
 
 
   ### Check analyses/feature_type/cell_type
-  if($feature_analysis){
-	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
- 	throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
-	$self->feature_analysis($fanal);
+  if ($feature_analysis) {
+    my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
+    throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
+    $self->feature_analysis($fanal);
 
-	#This currently fails before the config gets loaded!
-	#Need to load config before this validation!
+    #This currently fails before the config gets loaded!
+    #Need to load config before this validation!
   }
 
-  if($ctype_name){
-	my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
- 	throw("The CellType $ctype_name does not exist in the database") if(!$ctype);
-	$self->cell_type($ctype);
+  if ($ctype_name) {
+    my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
+    throw("The CellType $ctype_name does not exist in the database") if(!$ctype);
+    $self->cell_type($ctype);
   }
 
   if ($ftype_name) {
     my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
-	throw("The FeatureType $ftype_name does not exist in the database") if(!$ftype);
-	$self->feature_type($ftype);
+    throw("The FeatureType $ftype_name does not exist in the database") if(!$ftype);
+    $self->feature_type($ftype);
   }
 
 
@@ -394,7 +393,7 @@ sub new{
   $self->slices($slices) if defined $slices;
   $self->{rollback}         = $rollback || $clobber;
   $self->{counts}           = {};
-  $self->{seq_region_names} = [];#Used for slice based import
+  $self->{seq_region_names} = []; #Used for slice based import
 
 
   # USER CONFIG #
@@ -407,25 +406,25 @@ sub new{
   #After we have stripped out all the array/experiment specific stuff
 
 
-  if($config_file){
-	my $config;
+  if ($config_file) {
+    my $config;
 
-	$self->log("Reading config file:\t".$config_file);
+    $self->log("Reading config file:\t".$config_file);
 
-	if(! ($config = do "$config_file")){
-	  throw("Couldn't parse config file:\t$config_file:\n$@") if $@;
-	  throw("Couldn't do config:\t$config_file\n$!")          if ! defined $config;
-	  throw("Couldn't compile config_file:\t$config_file")    if ! $config;
-	}
+    if (! ($config = do "$config_file")) {
+      throw("Couldn't parse config file:\t$config_file:\n$@") if $@;
+      throw("Couldn't do config:\t$config_file\n$!")          if ! defined $config;
+      throw("Couldn't compile config_file:\t$config_file")    if ! $config;
+    }
 
-	#At least check it is hash
-	if(ref($config) ne 'HASH'){
-	  throw("Config file does not define a valid HASH:\t$config_file");
-	}
+    #At least check it is hash
+    if (ref($config) ne 'HASH') {
+      throw("Config file does not define a valid HASH:\t$config_file");
+    }
 	
-	$self->{user_config} = $config;	
+    $self->{user_config} = $config;	
 
-	#Can call validate_and_store_config directly ehre once we have remove set_config stuff
+    #Can call validate_and_store_config directly ehre once we have remove set_config stuff
 
   }
 
@@ -470,9 +469,9 @@ sub new{
 sub validate_and_store_config{
   my ($self, $fset_names) = @_;
 
-  if( (ref($fset_names) ne 'ARRAY') ||
-	  (scalar(@$fset_names) == 0) ){
-	throw('Must pass FeatureSet names to validate_and_store_config');
+  if ( (ref($fset_names) ne 'ARRAY') ||
+       (scalar(@$fset_names) == 0) ) {
+    throw('Must pass FeatureSet names to validate_and_store_config');
   }
 
   my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
@@ -487,133 +486,131 @@ sub validate_and_store_config{
   $static_config = $self->{static_config} if exists ${$self}{static_config};
   my $config = $user_config || $static_config;
 
-  if(! $config){
-	#throw('No user or static config found');
-	warn('No user or static config found');
-  }
-  elsif($user_config && $static_config){
-	throw('BaseImporter does not yet support overriding static config with user config');
-	#Would need to over-ride on a key by key basis, account for extra config in either static or user config?
-  }
-  else{
-  #Store config for each feature set
-  #inc associated feature_types and analyses
-  #add cell_types in here?
+  if (! $config) {
+    #throw('No user or static config found');
+    warn('No user or static config found');
+  } elsif ($user_config && $static_config) {
+    throw('BaseImporter does not yet support overriding static config with user config');
+    #Would need to over-ride on a key by key basis, account for extra config in either static or user config?
+  } else {
+    #Store config for each feature set
+    #inc associated feature_types and analyses
+    #add cell_types in here?
 
-  foreach my $import_set(@$fset_names){
-	#warn "validating config for $import_set";
+    foreach my $import_set (@$fset_names) {
+      #warn "validating config for $import_set";
 
 	
-	if(exists ${$config}{feature_sets}{$import_set}){
-	  $fset_config = $config->{feature_sets}{$import_set};
-	}
+      if (exists ${$config}{feature_sets}{$import_set}) {
+        $fset_config = $config->{feature_sets}{$import_set};
+      }
 	
-	if(! $fset_config){
-	  throw("Could not find config for:\t$import_set");
-	}
+      if (! $fset_config) {
+        throw("Could not find config for:\t$import_set");
+      }
 
-	$self->log("Validating and storing config for:\t$import_set");
+      $self->log("Validating and storing config for:\t$import_set");
 
 	  
-	#If we grab the ftype and analysis from the feature set first
-	#Then we can remove the reundancy in the config
-	#would need to handle case i.e. -ANALYSIS -analysis
-	#use rearrange!
+      #If we grab the ftype and analysis from the feature set first
+      #Then we can remove the reundancy in the config
+      #would need to handle case i.e. -ANALYSIS -analysis
+      #use rearrange!
 
-	#Set in analyses and feature_types config, should use same ref if already exist
-	#else we have a duplicated entry using the same name, which may have different attrs!
+      #Set in analyses and feature_types config, should use same ref if already exist
+      #else we have a duplicated entry using the same name, which may have different attrs!
 	
-	#This is going to be a problem as we are assigning a new value to the key?
-	#Do we need to use references in feature_sets?
+      #This is going to be a problem as we are assigning a new value to the key?
+      #Do we need to use references in feature_sets?
 
-	if(exists ${$fset_config}{feature_set}){
-	  #my ($fset_analysis, $fset_ftype) = rearrange(['ANALYSIS', 'FEATURE_TYPE'], %{$fset_config->{feature_set}});
+      if (exists ${$fset_config}{feature_set}) {
+        #my ($fset_analysis, $fset_ftype) = rearrange(['ANALYSIS', 'FEATURE_TYPE'], %{$fset_config->{feature_set}});
 
-	  #Can't use rearrange for key we are setting as we need to now the case
-	  #This is grabbing top level config keys, not hashes
-	  #config names refer to top level keys and may not match logic_name or ftype name
-	  my $fset_params          = $fset_config->{feature_set};
-	  my $fset_analysis_key    = (exists ${$fset_params}{-analysis})            ? '-analysis'                        : '-ANALYSIS';
-	  my $analysis_config_name = (exists  ${$fset_params}{$fset_analysis_key} ) ? $fset_params->{$fset_analysis_key} : undef;
-	  my $fset_ftype_key       = (exists ${$fset_params}{-feature_type})        ? '-feature_type'                    : '-FEATURE_TYPE';
-	  my $ftype_config_name    = (exists ${$fset_params}{$fset_ftype_key})      ? $fset_params->{$fset_ftype_key}    : undef;
+        #Can't use rearrange for key we are setting as we need to now the case
+        #This is grabbing top level config keys, not hashes
+        #config names refer to top level keys and may not match logic_name or ftype name
+        my $fset_params          = $fset_config->{feature_set};
+        my $fset_analysis_key    = (exists ${$fset_params}{-analysis})            ? '-analysis'                        : '-ANALYSIS';
+        my $analysis_config_name = (exists  ${$fset_params}{$fset_analysis_key} ) ? $fset_params->{$fset_analysis_key} : undef;
+        my $fset_ftype_key       = (exists ${$fset_params}{-feature_type})        ? '-feature_type'                    : '-FEATURE_TYPE';
+        my $ftype_config_name    = (exists ${$fset_params}{$fset_ftype_key})      ? $fset_params->{$fset_ftype_key}    : undef;
 	  	  
 
-	  #Check we have these in feature_sets analyses/feature_types already?
-	  #Should that be a hash with empty {} values
-	  #Then we can use the top level analyses hash if required
-	  #Setting feature_set analysis/feature_type only if not present i.e. we don't over-write the top level
-	  #defining hash
-	  #Postponing checking here will lose context if we need to throw
-	  #i.e. we won't know where the error has come from if the name is not present in the top level hash
-	  #Can we call direct from here instead?
+        #Check we have these in feature_sets analyses/feature_types already?
+        #Should that be a hash with empty {} values
+        #Then we can use the top level analyses hash if required
+        #Setting feature_set analysis/feature_type only if not present i.e. we don't over-write the top level
+        #defining hash
+        #Postponing checking here will lose context if we need to throw
+        #i.e. we won't know where the error has come from if the name is not present in the top level hash
+        #Can we call direct from here instead?
 
   
 
-	  #Leave to store to catch these mandatory attrs
+        #Leave to store to catch these mandatory attrs
 
-	  if($analysis_config_name){
+        if ($analysis_config_name) {
 		
-		if(ref(\$analysis_config_name) ne 'SCALAR'){
-		  throw("You must set feature_set($import_set) -analysis config as a string value i.e. a key referencing the top level analyses config");
-		}
+          if (ref(\$analysis_config_name) ne 'SCALAR') {
+            throw("You must set feature_set($import_set) -analysis config as a string value i.e. a key referencing the top level analyses config");
+          }
 		
-		if(! exists ${$fset_config}{analyses}{$analysis_config_name}){ #Set in analyses to validate/store below
-		  $fset_config->{analyses}{$analysis_config_name}     = {}; #Don't have to set a ref to top level here, as these will all get set to the same obj ref in validate/store
-		}
+          if (! exists ${$fset_config}{analyses}{$analysis_config_name}) { #Set in analyses to validate/store below
+            $fset_config->{analyses}{$analysis_config_name}     = {}; #Don't have to set a ref to top level here, as these will all get set to the same obj ref in validate/store
+          }
 
-		#Only use refs in the feature_set
-		#top level and feature_set analyses get set to same obj at same time		  
-		$fset_config->{feature_set}{$fset_analysis_key} = \$fset_config->{analyses}{$analysis_config_name};
+          #Only use refs in the feature_set
+          #top level and feature_set analyses get set to same obj at same time		  
+          $fset_config->{feature_set}{$fset_analysis_key} = \$fset_config->{analyses}{$analysis_config_name};
 		  
-	  }
+        }
 
 	  
-	  if($ftype_config_name){		
+        if ($ftype_config_name) {		
 	
-		if(ref(\$ftype_config_name) ne 'SCALAR'){
-		  throw("You must set feature_set($import_set) -feature_type config as a string value i.e. a key referencing the top level feature_types config");
-		}
+          if (ref(\$ftype_config_name) ne 'SCALAR') {
+            throw("You must set feature_set($import_set) -feature_type config as a string value i.e. a key referencing the top level feature_types config");
+          }
 
-		if(! exists ${$fset_config}{feature_types}{$ftype_config_name}){ #Set in analyses to validate/store below
-		  $fset_config->{feature_types}{$ftype_config_name} = {};
-		}
+          if (! exists ${$fset_config}{feature_types}{$ftype_config_name}) { #Set in analyses to validate/store below
+            $fset_config->{feature_types}{$ftype_config_name} = {};
+          }
 		
-		$fset_config->{feature_set}{$fset_ftype_key}  = \$fset_config->{feature_types}{$ftype_config_name};
+          $fset_config->{feature_set}{$fset_ftype_key}  = \$fset_config->{feature_types}{$ftype_config_name};
 
-	  }
-	}
-
-	
-	#Can self ref user config if 'do' will work with %config, specified as the last line
-	#Merge these two loops?
-	#Need to account for additional config keys in user/static config
+        }
+      }
 
 	
-	if(exists ${$fset_config}{'analyses'}){
+      #Can self ref user config if 'do' will work with %config, specified as the last line
+      #Merge these two loops?
+      #Need to account for additional config keys in user/static config
+
+	
+      if (exists ${$fset_config}{'analyses'}) {
 	  
-	  foreach my $logic_name(keys %{$fset_config->{'analyses'}}){
-		$fset_config->{'analyses'}{$logic_name} =
-		  $self->validate_and_store_analysis($logic_name, $fset_config->{'analyses'}{$logic_name});
-	  }
-	}
+        foreach my $logic_name (keys %{$fset_config->{'analyses'}}) {
+          $fset_config->{'analyses'}{$logic_name} =
+            $self->validate_and_store_analysis($logic_name, $fset_config->{'analyses'}{$logic_name});
+        }
+      }
 
-	if(exists ${$fset_config}{'feature_types'}){
+      if (exists ${$fset_config}{'feature_types'}) {
 	  
-	  foreach my $ftype_key(keys %{$fset_config->{'feature_types'}}){
-		$fset_config->{'feature_types'}{$ftype_key} = 
-		  $self->validate_and_store_feature_type($ftype_key, $fset_config->{'feature_types'}{$ftype_key});
-	  }
-	}
+        foreach my $ftype_key (keys %{$fset_config->{'feature_types'}}) {
+          $fset_config->{'feature_types'}{$ftype_key} = 
+            $self->validate_and_store_feature_type($ftype_key, $fset_config->{'feature_types'}{$ftype_key});
+        }
+      }
 	
-	#if(exists ${$fset_config}{'feature_set'}){
-	#  #Just ignore this for now, as set_feature_set and define_and_validate_sets deal with this repectively
-	#  #Solution is to extend define_and_validate_set to support external feature static config
-	#  #Then remove set_feature_sets
-	# Also need to consider InputSet::define_sets
-	#}
+      #if(exists ${$fset_config}{'feature_set'}){
+      #  #Just ignore this for now, as set_feature_set and define_and_validate_sets deal with this repectively
+      #  #Solution is to extend define_and_validate_set to support external feature static config
+      #  #Then remove set_feature_sets
+      # Also need to consider InputSet::define_sets
+      #}
+    }
   }
-}
   return;
 }
 
@@ -651,95 +648,90 @@ sub validate_and_store_analysis{
   my $analysis;
   eval {$self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis_params)};
 
-  if(! $@){ #Can assume we have already set this valid Analysis
-	$analysis = $analysis_params
-  }
-  else{
-	my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
+  if (! $@) {                   #Can assume we have already set this valid Analysis
+    $analysis = $analysis_params
+  } else {
+    my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
 	
-	### Validate config entries
-	#Catches undef or empty {} at feature_sets and top levels, defaults to DB
-	my $invalid_entry = 1;
-	my $obj_logic_name;
-	my $got_config = 0;
+    ### Validate config entries
+    #Catches undef or empty {} at feature_sets and top levels, defaults to DB
+    my $invalid_entry = 1;
+    my $obj_logic_name;
+    my $got_config = 0;
 
 
-  if( (! defined $analysis_params ) ||
-	  (ref($analysis_params) eq 'HASH') ){ #We have a valid entry
+    if ( (! defined $analysis_params ) ||
+         (ref($analysis_params) eq 'HASH') ) { #We have a valid entry
 	
-	if(  (ref($analysis_params) eq 'HASH') && 
-		 (%{$analysis_params}) ){ #number of keys
-	  $got_config = 1;
-	  $invalid_entry = 0;
-	}
-	else{ #empty feature_set analyses hash -> check top level analyses first
-	  #$invalid_entry = 1;
+      if (  (ref($analysis_params) eq 'HASH') && 
+            (%{$analysis_params}) ) { #number of keys
+        $got_config = 1;
+        $invalid_entry = 0;
+      } else {                  #empty feature_set analyses hash -> check top level analyses first
+        #$invalid_entry = 1;
 
-	  if(exists ${$self->{static_config}{analyses}}{$logic_name}){
-		$analysis_params = $self->{static_config}{analyses}{$logic_name};
+        if (exists ${$self->{static_config}{analyses}}{$logic_name}) {
+          $analysis_params = $self->{static_config}{analyses}{$logic_name};
 		
-		if( (! defined $analysis_params ) ||
-			(ref($analysis_params) eq 'HASH') ){
-		  $invalid_entry = 0;
+          if ( (! defined $analysis_params ) ||
+               (ref($analysis_params) eq 'HASH') ) {
+            $invalid_entry = 0;
 		  
-		  if( (ref($analysis_params) eq 'HASH') &&
-			  (%{$analysis_params}) ){ #number of keys
-			$got_config = 1;
-		  }#else is empty top level {}
+            if ( (ref($analysis_params) eq 'HASH') &&
+                 (%{$analysis_params}) ) { #number of keys
+              $got_config = 1;
+            }                   #else is empty top level {}
 
-		}#else is invalid
-	  }
-	  else{ #No top level config, assume we want to use the DB
-		$invalid_entry = 0;
-	  }
-	}
-  }
+          }                     #else is invalid
+        } else {                #No top level config, assume we want to use the DB
+          $invalid_entry = 0;
+        }
+      }
+    }
   
   
-  if($invalid_entry){
-	throw("You have defined a none HASH value in your config for analysis:\t$logic_name\n".
-		  "Please define config as HASH, or use empty HASH or undef to use existing default config or DB");
-  }
+    if ($invalid_entry) {
+      throw("You have defined a none HASH value in your config for analysis:\t$logic_name\n".
+            "Please define config as HASH, or use empty HASH or undef to use existing default config or DB");
+    }
 	
-  if($got_config){
-	($obj_logic_name) = rearrange(['LOGIC_NAME'], %{$analysis_params});
-  }else{
-	$obj_logic_name   = $logic_name;
-  }
+    if ($got_config) {
+      ($obj_logic_name) = rearrange(['LOGIC_NAME'], %{$analysis_params});
+    } else {
+      $obj_logic_name   = $logic_name;
+    }
   	
   
-  if($logic_name ne $obj_logic_name){ #Not a show stopper as this is just the config key
-	warn "Found analysis key name - logic_name mismatch in config:\t$logic_name vs $obj_logic_name\n";
-  }
+    if ($logic_name ne $obj_logic_name) { #Not a show stopper as this is just the config key
+      warn "Found analysis key name - logic_name mismatch in config:\t$logic_name vs $obj_logic_name\n";
+    }
  
-  $analysis         = $analysis_adaptor->fetch_by_logic_name($obj_logic_name);
+    $analysis         = $analysis_adaptor->fetch_by_logic_name($obj_logic_name);
   
   
 
-  if($got_config){
+    if ($got_config) {
 
-	my $config_anal      = Bio::EnsEMBL::Analysis->new(%{$analysis_params});
+      my $config_anal      = Bio::EnsEMBL::Analysis->new(%{$analysis_params});
 	
-	if(! defined $analysis){	
-	  $self->log('Analysis '.$obj_logic_name." not found in DB, storing from config");		
-	  $analysis_adaptor->store($config_anal);
-	  $analysis = $analysis_adaptor->fetch_by_logic_name($obj_logic_name);	
-	}
-	else{
+      if (! defined $analysis) {	
+        $self->log('Analysis '.$obj_logic_name." not found in DB, storing from config");		
+        $analysis_adaptor->store($config_anal);
+        $analysis = $analysis_adaptor->fetch_by_logic_name($obj_logic_name);	
+      } else {
 	  
-	  my $not_same = $analysis->compare($config_anal);
-	  #Analysis::compare returns the opposite of what you expect!
+        my $not_same = $analysis->compare($config_anal);
+        #Analysis::compare returns the opposite of what you expect!
 	  
-	  if($not_same){
-		throw('There is a param mismatch between the '.$obj_logic_name.
-			  ' Analysis in the DB and config. Please rectify or define a new logic_name');
-	  }
-	}
+        if ($not_same) {
+          throw('There is a param mismatch between the '.$obj_logic_name.
+                ' Analysis in the DB and config. Please rectify or define a new logic_name');
+        }
+      }
+    } elsif (! defined $analysis) {
+      throw("Cannot fetch $obj_logic_name analysis from DB, please check your config key or define new top level analyses config");
+    }
   }
-  elsif(! defined $analysis){
-	throw("Cannot fetch $obj_logic_name analysis from DB, please check your config key or define new top level analyses config");
-  }
-}
 
   return $analysis;
 }
@@ -749,107 +741,101 @@ sub validate_and_store_feature_type{
   my $ftype;
   eval {$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype_params)};
   
-  if(! $@){ #Can assume we have already set this valid Analysis
-	$ftype = $ftype_params
-  }
-  else{
-	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
+  if (! $@) {                   #Can assume we have already set this valid Analysis
+    $ftype = $ftype_params
+  } else {
+    my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
 	
-	#Validate config entries
-	#Catches undef or empty {} at feature_sets and top levels, defaults to DB
-	my $invalid_entry = 1;
-	my ($name, $class);
+    #Validate config entries
+    #Catches undef or empty {} at feature_sets and top levels, defaults to DB
+    my $invalid_entry = 1;
+    my ($name, $class);
   
-  my $got_config = 0;
+    my $got_config = 0;
 
-  if( (! defined $ftype_params ) ||
-	  (ref($ftype_params) eq 'HASH') ){ #We have a valid entry
+    if ( (! defined $ftype_params ) ||
+         (ref($ftype_params) eq 'HASH') ) { #We have a valid entry
 	
-	if(  (ref($ftype_params) eq 'HASH') && 
-		 (%{$ftype_params}) ){ #number of keys
-	  $got_config = 1;
-	  $invalid_entry = 0;
-	}
-	else{ #empty feature_set ftype hash -> check top level ftype first
-	  #$invalid_entry = 1;
+      if (  (ref($ftype_params) eq 'HASH') && 
+            (%{$ftype_params}) ) { #number of keys
+        $got_config = 1;
+        $invalid_entry = 0;
+      } else {                  #empty feature_set ftype hash -> check top level ftype first
+        #$invalid_entry = 1;
 	  
-	  if(exists ${$self->{static_config}{feature_types}}{$ftype_name}){
-		$ftype_params = $self->{static_config}{feature_types}{$ftype_name};
+        if (exists ${$self->{static_config}{feature_types}}{$ftype_name}) {
+          $ftype_params = $self->{static_config}{feature_types}{$ftype_name};
 		
-		if( (! defined $ftype_params ) ||
-			(ref($ftype_params) eq 'HASH') ){
-		  $invalid_entry = 0;
+          if ( (! defined $ftype_params ) ||
+               (ref($ftype_params) eq 'HASH') ) {
+            $invalid_entry = 0;
 		  
-		  if( (ref($ftype_params) eq 'HASH') &&
-			  (%{$ftype_params}) ){ #number of keys
-			$got_config = 1;
-		  }#else is empty top level {}
+            if ( (ref($ftype_params) eq 'HASH') &&
+                 (%{$ftype_params}) ) { #number of keys
+              $got_config = 1;
+            }                   #else is empty top level {}
 
-		}#else is invalid
-	  }
-	  else{ #No top level config, assume we want to use the DB
-		$invalid_entry = 0;
-	  }
-	}
-  }
+          }                     #else is invalid
+        } else {                #No top level config, assume we want to use the DB
+          $invalid_entry = 0;
+        }
+      }
+    }
   
  
-  if($invalid_entry){
-	throw("You have defined a none HASH value in your config for feature_type:\t$ftype_name\n".
-		  "Please define config as HASH, or use empty HASH or undef to use existing default config or DB");
-  }
+    if ($invalid_entry) {
+      throw("You have defined a none HASH value in your config for feature_type:\t$ftype_name\n".
+            "Please define config as HASH, or use empty HASH or undef to use existing default config or DB");
+    }
 	
-  if($got_config){
-	($name, $class) = rearrange(['NAME', 'CLASS'], %{$ftype_params});
-  }else{
-	$name   = $ftype_name;
-  }
+    if ($got_config) {
+      ($name, $class) = rearrange(['NAME', 'CLASS'], %{$ftype_params});
+    } else {
+      $name   = $ftype_name;
+    }
   	
 
    
-  #Can't use rearrange for key we are setting as we need to now the case
-  my $analysis_key = (exists ${$ftype_params}{-analysis}) ? '-analysis' : '-ANALYSIS';
-  my $analysis;
+    #Can't use rearrange for key we are setting as we need to now the case
+    my $analysis_key = (exists ${$ftype_params}{-analysis}) ? '-analysis' : '-ANALYSIS';
+    my $analysis;
 
-  if(exists ${$ftype_params}{$analysis_key}){
-	#This is slightly redundant as we may have already validated this analysis
-	my ($lname) = rearrange(['LOGIC_NAME'], %{$ftype_params->{$analysis_key}});
-	$ftype_params->{$analysis_key} = $self->validate_and_store_analysis($lname, $ftype_params->{$analysis_key});
-	$analysis = $ftype_params->{$analysis_key};
-  }
+    if (exists ${$ftype_params}{$analysis_key}) {
+      #This is slightly redundant as we may have already validated this analysis
+      my ($lname) = rearrange(['LOGIC_NAME'], %{$ftype_params->{$analysis_key}});
+      $ftype_params->{$analysis_key} = $self->validate_and_store_analysis($lname, $ftype_params->{$analysis_key});
+      $analysis = $ftype_params->{$analysis_key};
+    }
   
-  my @ftypes = $ftype_adaptor->fetch_by_name($name, $class, $analysis);
+    my @ftypes = $ftype_adaptor->fetch_by_name($name, $class, $analysis);
    
-  if(scalar(@ftypes) > 1){
-	throw("Unable to fetch unique feature_type $name. Please specify top level config to define class (and analysis)");
-  }
-  else{
-	$ftype = $ftypes[0];#can be undef
-  }
+    if (scalar(@ftypes) > 1) {
+      throw("Unable to fetch unique feature_type $name. Please specify top level config to define class (and analysis)");
+    } else {
+      $ftype = $ftypes[0];      #can be undef
+    }
   
   
-  if($got_config){
-	my $config_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(%{$ftype_params});
+    if ($got_config) {
+      my $config_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(%{$ftype_params});
 
-	if($ftype){
+      if ($ftype) {
 	  
-	  if(! $ftype->compare($config_ftype)){
-		my $label = $name."($class";
-		$label .= (defined $analysis) ? ' '.$analysis->logic_name.')' : ')';
+        if (! $ftype->compare($config_ftype)) {
+          my $label = $name."($class";
+          $label .= (defined $analysis) ? ' '.$analysis->logic_name.')' : ')';
 		
-		throw('There is a param mismatch between the '.$name.
-			  ' FeatureType in the DB and config. Please rectify in the config.');
-	  }
-	}
-	else{
-	  $self->log('FeatureType '.$name." not found in DB, storing from config");		
-	  ($ftype) = @{$ftype_adaptor->store($config_ftype)};
-	}
+          throw('There is a param mismatch between the '.$name.
+                ' FeatureType in the DB and config. Please rectify in the config.');
+        }
+      } else {
+        $self->log('FeatureType '.$name." not found in DB, storing from config");		
+        ($ftype) = @{$ftype_adaptor->store($config_ftype)};
+      }
+    } elsif (! defined $ftype) {
+      throw("Cannot fetch $name feature_type from DB, please check your config key or define new top level feature_types config");
+    }
   }
-  elsif(! defined $ftype){
-	throw("Cannot fetch $name feature_type from DB, please check your config key or define new top level feature_types config");
-  }
-}
 
   return $ftype;
 }
@@ -861,9 +847,9 @@ sub validate_and_store_feature_type{
 sub counts{
   my ($self, $count_type) = @_;
 
-  if($count_type){
-	$self->{'_counts'}{$count_type} ||=0;
-	return 	$self->{'_counts'}{$count_type};
+  if ($count_type) {
+    $self->{'_counts'}{$count_type} ||=0;
+    return 	$self->{'_counts'}{$count_type};
   }
  
   return $self->{'_counts'}
@@ -874,15 +860,15 @@ sub counts{
 sub slices{
   my ($self, $slices) = @_;
 
-  if(defined $slices){
+  if (defined $slices) {
     
-    if (ref($slices) ne 'ARRAY'){
+    if (ref($slices) ne 'ARRAY') {
       throw("-slices parameter must be an ARRAYREF of Bio::EnsEMBL::Slices (i.e. not $slices)");
     }
 
-    foreach my $slice(@$slices){
+    foreach my $slice (@$slices) {
       
-      if(! ($slice && ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
+      if (! ($slice && ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))) {
         throw("-slices parameter must be Bio::EnsEMBL::Slices (i.e. not $slice)");
       }
       
@@ -891,15 +877,15 @@ sub slices{
       
       my $full_slice = $self->slice_adaptor->fetch_by_name($slice->name);
 
-	  if(($slice->start != 1) ||
-		 ($slice->end != $full_slice->end)){
-		throw("InputSet Parser does not yet accomodate partial Slice based import i.e. slice start > 1 or slice end < slice length:\t".$slice->name);
+      if (($slice->start != 1) ||
+          ($slice->end != $full_slice->end)) {
+        throw("InputSet Parser does not yet accomodate partial Slice based import i.e. slice start > 1 or slice end < slice length:\t".$slice->name);
 		
-	  }
+      }
 
-	  push @{$self->{seq_region_names}}, $slice->seq_region_name;
-	}
-	$self->{slices} = $slices;
+      push @{$self->{seq_region_names}}, $slice->seq_region_name;
+    }
+    $self->{slices} = $slices;
   }
 
   return $self->{slices} || [];
@@ -918,6 +904,7 @@ sub count{
 sub rollback{ return $_[0]->{rollback}; }
 
 sub recovery{ return $_[0]->{recover}; }
+
 
 =head2 db
   
@@ -1017,36 +1004,35 @@ sub project_feature {
   my $feat_slice = $feat->feature_Slice;
 
 
-  if(! $feat_slice){
-	throw('Cannot get Feature Slice for '.$feat->start.':'.$feat->end.':'.$feat->strand.' on seq_region '.$feat->slice->name);
+  if (! $feat_slice) {
+    throw('Cannot get Feature Slice for '.$feat->start.':'.$feat->end.':'.$feat->strand.' on seq_region '.$feat->slice->name);
   }
 
   my @segments = @{ $feat_slice->project('chromosome', $new_assembly) };
-
-  if(! @segments){
-	$self->log("Failed to project feature:\t".$feat->display_label);
-	return;
+  
+  if (! @segments) {
+    $self->log("Failed to project feature:\t".$feat->display_label);
+    return;
+  } elsif (scalar(@segments) >1) {
+    $self->log("Failed to project feature to distinct location:\t".$feat->display_label);
+    return;
   }
-  elsif(scalar(@segments) >1){
-	$self->log("Failed to project feature to distinct location:\t".$feat->display_label);
-	return;
-  }
-
+  
   my $proj_slice = $segments[0]->to_Slice;
   
-  if($feat_slice->length != $proj_slice->length){
-	$self->log("Failed to project feature to comparable length region:\t".$feat->display_label);
-	return;
+  if ($feat_slice->length != $proj_slice->length) {
+    $self->log("Failed to project feature to comparable length region:\t".$feat->display_label);
+    return;
   }
-
-
+  
+  
   # everything looks fine, so adjust the coords of the feature
   $feat->start($proj_slice->start);
   $feat->end($proj_slice->end);
   $feat->strand($proj_slice->strand);
   my $slice_new_asm = $self->slice_adaptor->fetch_by_region('chromosome', $proj_slice->seq_region_name, undef, undef, undef, $new_assembly);
   $feat->slice($slice_new_asm);
-
+  
   return $feat;
 
 }
