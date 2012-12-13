@@ -14,9 +14,9 @@ The Ensembl methylation data can be downloaded from the Ensembl FTP site via the
 Or more preferably direct access e.g.:
     ftp.ensembl.org/pub/release-69/data_files/homo_sapiens/GRCh37/dna_methylation_feature/
 
-It is important that the sub directory structure provided here for the files is maintained i.e. dna_methylation_feature and 
-all of it's contents. This is because these paths are referenced from the database table 'dbfile_registry'. More information 
-regarding the file format is available in the README file on the FTP site.
+It is important that the sub directory structure provided here is maintained i.e. dna_methylation_feature and all of it's 
+contents. This is because these paths are referenced from the database table 'dbfile_registry'. More information regarding 
+the file format is available in the README file on the FTP site.
 
 For API access, the location (or dbfile_data_root) of the dna_methylation_feature directory will require configuration in the 
 ResultSetAdaptor.
