@@ -487,7 +487,7 @@ sub check_regbuild_strings{
   }
   else{
 
-	warn "Need to check/update regbuild.version and regbuild.initial_release_date regbuild.last_annotation_update";
+    warn "Need to check/update regbuild.version and regbuild.initial_release_date regbuild.last_annotation_update";
 
 
 	#How do we validate this?
@@ -511,10 +511,14 @@ sub check_regbuild_strings{
 	  #Need to move this to a RegulatoryBuilder module
 	  my $dset = $self->db->get_DataSetAdaptor->fetch_by_product_FeatureSet($fset);
 
+    if(! defined $dset){
+      throw("Could not find DataSet associated with FeatureSet:\t".$fset->name);
+    }
+
 	  my @ssets = @{$dset->get_supporting_sets};
 
 	  if(! @ssets){
-		throw('You must provide a DataSet with associated supporting sets');
+      throw('You must provide a DataSet with associated supporting sets');
 	  }
 
 
