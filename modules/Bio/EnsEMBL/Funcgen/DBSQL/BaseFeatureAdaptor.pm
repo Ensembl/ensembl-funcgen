@@ -130,7 +130,7 @@ sub fetch_all_by_Slice_constraint {
 
   my @result;
 
-  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))) {
+  if (! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))) {
     throw('Bio::EnsEMBL::Slice argument expected.');
   }
   
@@ -143,7 +143,7 @@ sub fetch_all_by_Slice_constraint {
     );
 
 
-  if(! defined $fg_cs){
+  if (! defined $fg_cs) {
     warn "No CoordSystem present for ".$slice->coord_system->name().":".$slice->coord_system->version();
     return \@result;
   }
@@ -174,7 +174,7 @@ sub fetch_all_by_Slice_constraint {
         . join( ':', map { $_->[0] . '/' . $_->[1] } @{$bind_params} );
     }
     $cache = $self->_slice_feature_cache();
-    if(exists($cache->{$key})){
+    if (exists($cache->{$key})) {
       $self->{'_bind_param_generic_fetch'} = ();
       return $cache->{$key};
     }
@@ -186,7 +186,7 @@ sub fetch_all_by_Slice_constraint {
   my @proj = @{$sa->fetch_normalized_slice_projection($slice)};
 
 
-  if(@proj == 0) {
+  if (@proj == 0) {
     throw('Could not retrieve normalized Slices. Database contains ' .
           'incorrect assembly_exception information.');
   }
@@ -209,7 +209,7 @@ sub fetch_all_by_Slice_constraint {
   $ent_slice    = $ent_slice->invert() if($slice->strand == -1);
   my @ent_proj  = @{$sa->fetch_normalized_slice_projection($ent_slice)};
 
-  shift @ent_proj; # skip first
+  shift @ent_proj;              # skip first
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
   
@@ -229,11 +229,6 @@ sub fetch_all_by_Slice_constraint {
         if ($offset != 1) {
           $f->{start} += $offset-1;
           $f->{end}   += $offset-1;
-          
-          #if($f->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature')){
-          #  $f->{bound_start} += $offset-1;
-          #  $f->{bound_end}   += $offset-1;
-          #}
         }
         
         # discard boundary crossing features from symlinked regions
@@ -252,7 +247,7 @@ sub fetch_all_by_Slice_constraint {
     }
   }
 
-  if(defined $key) {
+  if (defined $key) {
     $cache->{$key} = \@result;
   }
 
@@ -286,7 +281,7 @@ sub build_seq_region_cache{
   #No as this then restricts us to one coord_system
   #where as we want to cover all from one DB/schema_build
 
-  if(defined $slice){
+  if (defined $slice) {
     throw('Optional argument must be a Bio::EnsEMBL::Slice') if(! ( ref($slice) && $slice->isa('Bio::EnsEMBL::Slice')));
   }
 
@@ -295,11 +290,10 @@ sub build_seq_region_cache{
   my $sql = 'select sr.core_seq_region_id, sr.seq_region_id from seq_region sr';
   my @args = ($schema_build);
 
-  if($self->is_multispecies()) {
+  if ($self->is_multispecies()) {
   	$sql.= ', coord_system cs where sr.coord_system_id = cs.coord_system_id and cs.species_id=? and';
   	unshift(@args, $self->species_id());
-  }
-  else {
+  } else {
   	$sql.= ' where';
   }
   $sql.=' sr.schema_build =?';
@@ -319,9 +313,9 @@ sub build_seq_region_cache{
   
   my $sth = $self->prepare($sql);
   $sth->execute(@args);
-  while(my $ref = $sth->fetchrow_arrayref()) {
-	$self->{seq_region_cache}->{$cache_key}->{$ref->[0]} = $ref->[1];
-	$self->{core_seq_region_cache}->{$cache_key}->{$ref->[1]} = $ref->[0];
+  while (my $ref = $sth->fetchrow_arrayref()) {
+    $self->{seq_region_cache}->{$cache_key}->{$ref->[0]} = $ref->[1];
+    $self->{core_seq_region_cache}->{$cache_key}->{$ref->[1]} = $ref->[0];
   }
   $sth->finish();
 
@@ -364,8 +358,8 @@ sub cache_key{
 sub get_seq_region_id_by_Slice{
   my ($self, $slice, $fg_cs, $test_present) = @_;
 
-  if(! ($slice && ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
-	throw('You must provide a valid Bio::EnsEMBL::Slice');
+  if (! ($slice && ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))) {
+    throw('You must provide a valid Bio::EnsEMBL::Slice');
   }
 
   #We really need to validate the schema_build of the slice to make sure it
@@ -384,11 +378,10 @@ sub get_seq_region_id_by_Slice{
 
 
   #Slice should always have an adaptor, no?
-  if( $slice->adaptor() ) {
-	$core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
-  } 
-  else {
-	$core_sr_id = $self->db->dnadb->get_SliceAdaptor()->get_seq_region_id($slice);
+  if ( $slice->adaptor() ) {
+    $core_sr_id = $slice->adaptor()->get_seq_region_id($slice);
+  } else {
+    $core_sr_id = $self->db->dnadb->get_SliceAdaptor()->get_seq_region_id($slice);
   }
 
 
@@ -399,47 +392,46 @@ sub get_seq_region_id_by_Slice{
   #Can't replicate this using a normal hash
 
   #This cache has been built based on the schema_build
-  if (exists $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id}){
-	$fg_sr_id = $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id};
+  if (exists $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id}) {
+    $fg_sr_id = $self->{'seq_region_cache'}{$self->cache_key}{$core_sr_id};
   }
 
 
-  if(! $fg_sr_id && ref($fg_cs)){
-	#This is used to store new seq_region info along side previous stored seq_regions of the same version
+  if (! $fg_sr_id && ref($fg_cs)) {
+    #This is used to store new seq_region info along side previous stored seq_regions of the same version
 	
-	if( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')){
-	  throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
-	}
+    if ( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')) {
+      throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
+    }
 	
-	my $sql = 'select seq_region_id from seq_region where coord_system_id =? and name =?';
-	my $sth = $self->prepare($sql);
-	$sth->execute($fg_cs->dbID(), $slice->seq_region_name());
+    my $sql = 'select seq_region_id from seq_region where coord_system_id =? and name =?';
+    my $sth = $self->prepare($sql);
+    $sth->execute($fg_cs->dbID(), $slice->seq_region_name());
 	
-	#This may not exist, so we need to catch it here?
-	($fg_sr_id) = $sth->fetchrow_array();
-	$sth->finish();
+    #This may not exist, so we need to catch it here?
+    ($fg_sr_id) = $sth->fetchrow_array();
+    $sth->finish();
 	
-	#if we are providing forward compatability
-	#Then we know the eFG DB doesn't have the core seq_region_ids in the DB
-	#Hence retrieving the slice will fail in _obj_from_sth
-	#So we need to set it internally here
-	#Then pick it up when get_core_seq_region_id is called for the first time(from where?)
-	#and populate the cache with the value
+    #if we are providing forward compatability
+    #Then we know the eFG DB doesn't have the core seq_region_ids in the DB
+    #Hence retrieving the slice will fail in _obj_from_sth
+    #So we need to set it internally here
+    #Then pick it up when get_core_seq_region_id is called for the first time(from where?)
+    #and populate the cache with the value
 	
-	#This only works if there is a comparable slice
-	#If we are dealing with a new assembly, then no $fg_sr_id will be returned
-	#So need to catch this in the caller
+    #This only works if there is a comparable slice
+    #If we are dealing with a new assembly, then no $fg_sr_id will be returned
+    #So need to catch this in the caller
 	
-	#Can we remove this now the cache is persistant?
-	#i.e. Cache is not regenerated everytime, hence we don't lose the data?
+    #Can we remove this now the cache is persistant?
+    #i.e. Cache is not regenerated everytime, hence we don't lose the data?
 	
-	if($fg_sr_id){
-	  $self->{'_tmp_core_seq_region_cache'}{$self->cache_key} = {(
-																  $fg_sr_id => $core_sr_id
-																 )};
-	}
-  }
-  elsif(! $fg_sr_id && ! $test_present) {
+    if ($fg_sr_id) {
+      $self->{'_tmp_core_seq_region_cache'}{$self->cache_key} = {(
+                                                                  $fg_sr_id => $core_sr_id
+                                                                 )};
+    }
+  } elsif (! $fg_sr_id && ! $test_present) {
 		#This generally happens when using a new core db with a efg db that hasn't been updated
 		#Default to name match or throw if not present in DB
 		my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
@@ -451,11 +443,11 @@ sub get_seq_region_id_by_Slice{
 		my $sql = 'select distinct(seq_region_id) from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and sr.name=? and cs.name =?';
 		my @args = ($slice->seq_region_name(), $core_cs->name());
 
-		if($core_cs->version()) {
+		if ($core_cs->version()) {
 		  $sql.= ' and cs.version =?';
 		  push(@args, $core_cs->version());
 		}
-		if($self->is_multispecies()) {
+		if ($self->is_multispecies()) {
 			$sql.=' and cs.species_id=?';
 			push(@args, $self->species_id());
 		}
@@ -465,16 +457,16 @@ sub get_seq_region_id_by_Slice{
 		($fg_sr_id) = $sth->fetchrow_array();
 		$sth->finish();
 	
-		if(! $fg_sr_id){
+		if (! $fg_sr_id) {
 		  #Warn instead of throw so we can catch absent seq_region without eval
 		  #warn('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
-	#		   "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
+      #		   "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
 		}
 	
 		#Only warn first time this is seen
 		my $warning_key = $core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name;
 
-		if(! exists $warnings{$warning_key}){
+		if (! exists $warnings{$warning_key}) {
 		  warn 'Defaulting to previously store seq_region for: '.$warning_key.
 			  "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n";
 		  $warnings{$warning_key} = 1;
@@ -495,40 +487,39 @@ sub get_core_seq_region_id{
 
   my $core_sr_id = $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
 
-  if(! defined $core_sr_id && exists $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id}){
-	#Do we need to test the cache_key here, might it have changed since get_seq_region_id_by_Slice?
-	#Or will build_seq_region_cache handle this?
+  if (! defined $core_sr_id && exists $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id}) {
+    #Do we need to test the cache_key here, might it have changed since get_seq_region_id_by_Slice?
+    #Or will build_seq_region_cache handle this?
 	
-	#Why do we reset this in the main cache here if we are returning the value
-	#Is this not corrupting the main cache? But we always want this value?
-	$self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
+    #Why do we reset this in the main cache here if we are returning the value
+    #Is this not corrupting the main cache? But we always want this value?
+    $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
 
-	#Delete here so we don't have schema_build specific sr_ids hanging around for another query?
-	#delete  $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
+    #Delete here so we don't have schema_build specific sr_ids hanging around for another query?
+    #delete  $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
 
-	#These are valid values and would most likely be required for subsequent queries.
-	#Cache key is now also schema_build specific so this is no longer a problem
-	#Removed this as this causes RegFeat retrieval to fail
-	#As all non slice based methods would fail due to the lack of info about unstored DB i.e. we need a slice
+    #These are valid values and would most likely be required for subsequent queries.
+    #Cache key is now also schema_build specific so this is no longer a problem
+    #Removed this as this causes RegFeat retrieval to fail
+    #As all non slice based methods would fail due to the lack of info about unstored DB i.e. we need a slice
 	
 
-	$core_sr_id = $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
+    $core_sr_id = $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
 
-  }
-  elsif(! defined $core_sr_id){#No cache entry, so get from dnadb
+  } elsif (! defined $core_sr_id) { #No cache entry, so get from dnadb
 
-	my $sql = "select distinct(name) from seq_region where seq_region_id=$fg_sr_id";
-	my $slice_name = $self->db->dbc->db_handle->selectall_arrayref($sql);
-	($slice_name) = @{$slice_name->[0]};
+    my $sql = "select distinct(name) from seq_region where seq_region_id=$fg_sr_id";
+    my $slice_name = $self->db->dbc->db_handle->selectall_arrayref($sql);
+    ($slice_name) = @{$slice_name->[0]};
 
-	#if(scalar(@names) != 1){#This should never happen
+    #if(scalar(@names) != 1){#This should never happen
 
-	#We should really grab the coord sys name above too.
-	my $slice_adaptor = $self->db->dnadb->get_SliceAdaptor;
-	$core_sr_id = $slice_adaptor->get_seq_region_id($slice_adaptor->fetch_by_region(undef, $slice_name));
+    #We should really grab the coord sys name above too.
+    my $slice_adaptor = $self->db->dnadb->get_SliceAdaptor;
+    $core_sr_id = $slice_adaptor->get_seq_region_id($slice_adaptor->fetch_by_region(undef, $slice_name));
 
-	#Set this in the cache so we don't have to retrieve it again
-	$self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id} = $core_sr_id;
+    #Set this in the cache so we don't have to retrieve it again
+    $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id} = $core_sr_id;
   }
 
   return $core_sr_id;
@@ -559,7 +550,7 @@ sub _pre_store {
   #May want to add cs_level arg?
   #What about ignore length flag?
 
-  if(!ref($feature) || !$feature->isa('Bio::EnsEMBL::Feature')) {
+  if (!ref($feature) || !$feature->isa('Bio::EnsEMBL::Feature')) {
     throw('Expected Feature argument.');
   }
 
@@ -569,46 +560,41 @@ sub _pre_store {
   my $db = $self->db();
   my $slice = $feature->slice();
 
-  if(!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
+  if (!ref($slice) || !$slice->isa('Bio::EnsEMBL::Slice')) {
     throw('Feature must be attached to Slice to be stored.');
   }
 
   # make sure feature coords are relative to start of entire seq_region
-  if($slice->start != 1 || $slice->strand != 1) {
+  if ($slice->start != 1 || $slice->strand != 1) {
 
-	#throw("You must generate your feature on a slice starting at 1 with strand 1");
-	#We did remove this transfer it uses direct hash access which 
-	#did not work with old array based ResultFeatures
+    #throw("You must generate your feature on a slice starting at 1 with strand 1");
+    #We did remove this transfer it uses direct hash access which 
+    #did not work with old array based ResultFeatures
 	  
-	#move feature onto a slice of the entire seq_region
-	$slice = $slice->adaptor->fetch_by_region($slice->coord_system->name(),
-											  $slice->seq_region_name(),
-											  undef, #start
-											 undef, #end
-											  undef, #strand
-											  $slice->coord_system->version());
-	$feature = $feature->transfer($slice);
+    #move feature onto a slice of the entire seq_region
+    $slice = $slice->adaptor->fetch_by_region($slice->coord_system->name(),
+                                              $slice->seq_region_name(),
+                                              undef, #start
+                                              undef, #end
+                                              undef, #strand
+                                              $slice->coord_system->version());
+    $feature = $feature->transfer($slice);
 	
-	if(!$feature) {
-	  throw('Could not transfer Feature to slice of ' .
-			'entire seq_region prior to storing');
-	}
+    if (!$feature) {
+      throw('Could not transfer Feature to slice of ' .
+            'entire seq_region prior to storing');
+    }
   }
   
 
 
   #Project here before we start building sr caches and storing CSs
-  if($new_assembly){
-	#my $cs_level = 
-	#Don't set this for old and new slice as
-	#at some point in the future we have mappings between different levels.
-
-
-	#warn "Projecting ".$feature->start.'-'.$feature->end." on "..$feature->slice->name." to $new_assembly";
+  if ($new_assembly) {
+     #warn "Projecting ".$feature->start.'-'.$feature->end." on "..$feature->slice->name." to $new_assembly";
 
 	
-	my @segments = @{$feature->feature_Slice->project($slice->coord_system->name, $new_assembly)};
-  # do some sanity checks on the projection results:
+    my @segments = @{$feature->feature_Slice->project($slice->coord_system->name, $new_assembly)};
+    # do some sanity checks on the projection results:
     # discard the projected feature if
     #   1. it doesn't project at all (no segments returned)
     #   2. the projection is fragmented (more than one segment)
@@ -617,12 +603,11 @@ sub _pre_store {
     
     # this tests for (1) and (2)
     if (scalar(@segments) == 0) {
-	  warn "Feature doesn't project to $new_assembly\n";
-	  return;
-    } 
-	elsif (scalar(@segments) > 1) {
-	  warn "Feature projection is fragmented in $new_assembly\n";
-	  return;
+      warn "Feature doesn't project to $new_assembly\n";
+      return;
+    } elsif (scalar(@segments) > 1) {
+      warn "Feature projection is fragmented in $new_assembly\n";
+      return;
     }
     
     # test (3)
@@ -630,37 +615,37 @@ sub _pre_store {
 
     if ($feature->length != $proj_slice->length) {
 	
-	  #if(! $conf->param('ignore_length')){
-		warn "Feature projection is wrong length in $new_assembly\n";
-		return;
-	#  }
+      #if(! $conf->param('ignore_length')){
+      warn "Feature projection is wrong length in $new_assembly\n";
+      return;
+      #  }
     }
     
-	#warn "proj ".$proj_slice->name;
+    #warn "proj ".$proj_slice->name;
 
     # everything looks fine, so adjust the coords of your feature
-	#Have to generate new_slice here as we are not sure it is going to be 
-	#on the same slice as the old assembly
-	$slice = $proj_slice->adaptor->fetch_by_region($proj_slice->coord_system->name, $proj_slice->seq_region_name);
+    #Have to generate new_slice here as we are not sure it is going to be 
+    #on the same slice as the old assembly
+    $slice = $proj_slice->adaptor->fetch_by_region($proj_slice->coord_system->name, $proj_slice->seq_region_name);
 	
-	#These are just callers for ResultFeature!
-	#For speed.
+    #These are just callers for ResultFeature!
+    #For speed.
 
     $feature->start($proj_slice->start);
     $feature->end($proj_slice->end);
     $feature->slice($slice);
 
-	#warn  "new feature ".$feature->feature_Slice->name;
+    #warn  "new feature ".$feature->feature_Slice->name;
   }
 
 
   # Ensure this type of feature is known to be stored in this coord system.
-  my $cs = $slice->coord_system;#from core/dnadb
+  my $cs = $slice->coord_system; #from core/dnadb
  
   #retrieve corresponding Funcgen coord_system and set id in feature
-  my $csa = $self->db->get_FGCoordSystemAdaptor();#had to call it FG as we were getting the core adaptor
+  my $csa = $self->db->get_FGCoordSystemAdaptor(); #had to call it FG as we were getting the core adaptor
   my $fg_cs = $csa->validate_and_store_coord_system($cs);
-  $fg_cs = $csa->fetch_by_name($cs->name(), $cs->version());#Why are we refetching this?
+  $fg_cs = $csa->fetch_by_name($cs->name(), $cs->version()); #Why are we refetching this?
   my $tabname = $self->_main_table->[0];
 
 
@@ -678,37 +663,37 @@ sub _pre_store {
   my $seq_region_id = $self->get_seq_region_id_by_Slice($slice, undef, 1);
 
 
-  if(! $seq_region_id){
-	#check whether we have an equivalent seq_region_id
-	$seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
-	my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
-	my $sql;
-	my $core_sr_id = $slice->get_seq_region_id;
-	my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $core_sr_id, $schema_build);
+  if (! $seq_region_id) {
+    #check whether we have an equivalent seq_region_id
+    $seq_region_id = $self->get_seq_region_id_by_Slice($slice, $fg_cs);
+    my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
+    my $sql;
+    my $core_sr_id = $slice->get_seq_region_id;
+    my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $core_sr_id, $schema_build);
 	
-	#Add to comparable seq_region
-	if($seq_region_id) {
-	  $sql = 'insert into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?,?)';
-	  unshift(@args, $seq_region_id);
-	}
-	#No compararble seq_region
-	else{
-	  $sql = 'insert into seq_region(name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?)';			
-	}
+    #Add to comparable seq_region
+    if ($seq_region_id) {
+      $sql = 'insert into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?,?)';
+      unshift(@args, $seq_region_id);
+    }
+    #No compararble seq_region
+    else {
+      $sql = 'insert into seq_region(name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?)';			
+    }
 
-	my $sth = $self->prepare($sql);
+    my $sth = $self->prepare($sql);
 	
-	#Need to eval this
-	eval{$sth->execute(@args);};
+    #Need to eval this
+    eval{$sth->execute(@args);};
 	
-	if(!$@){
-	  $seq_region_id =  $sth->{'mysql_insertid'};
-	}
+    if (!$@) {
+      $seq_region_id =  $sth->{'mysql_insertid'};
+    }
 
-	#Now we need to add this to the seq_region caches
-	#As we are not regenerating them every time we query.
-	$self->{seq_region_cache}{$self->cache_key}{$core_sr_id} = $seq_region_id;
-	$self->{core_seq_region_cache}{$self->cache_key}{$seq_region_id} = $core_sr_id;
+    #Now we need to add this to the seq_region caches
+    #As we are not regenerating them every time we query.
+    $self->{seq_region_cache}{$self->cache_key}{$core_sr_id} = $seq_region_id;
+    $self->{core_seq_region_cache}{$self->cache_key}{$seq_region_id} = $core_sr_id;
   }
 
   #Need to return seq_region_id as they  are not stored 
@@ -766,10 +751,9 @@ sub _slice_fetch {
 
   my $mca = $self->db->get_MetaContainer();
   my $value_list = $mca->list_value_by_key( $tab_name."build.level" );
-  if( @$value_list and $slice->is_toplevel()) {   
+  if ( @$value_list and $slice->is_toplevel()) {   
     push @feat_css, $slice_cs;
-  }
-  else{
+  } else {
     @feat_css = @{$mcc->fetch_all_CoordSystems_by_feature_type($tab_name)};
   }
 
@@ -784,49 +768,56 @@ sub _slice_fetch {
     my @coords;
     my @ids;
 
-	#This is not returning true if the feat_cs is no default
-	#
+    #This is not returning true if the feat_cs is no default
+    #
 
-    if($feat_cs->equals($slice_cs)) {
+    if ($feat_cs->equals($slice_cs)) {
       # no mapping is required if this is the same coord system
 
 
-	  #eFG change 
-	  #We want to set this to undef if we are dealing with result_features which
-	  #are not wsize==0!
-	  #This is only required if we load array data at the natural resolution!
-	  #This test will effect ever single feature query, can we omit this somehow?
-	  my $max_len;
+      #eFG change 
+      #We want to set this to undef if we are dealing with result_features which
+      #are not wsize==0!
+      #This is only required if we load array data at the natural resolution!
+      #This test will effect ever single feature query, can we omit this somehow?
+      my $max_len;
 
 
-	  if(! (($self->can('_window_size') &&
-			 $self->_window_size))){
-		  $max_len = $self->_max_feature_length() ||
-        $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
-	  }
+      if (! (($self->can('_window_size') &&
+              $self->_window_size))) {
+        $max_len = $self->_max_feature_length() ||
+          $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
+      }
 	
       my $constraint = $orig_constraint;
-	  my $sr_id = $self->get_seq_region_id_by_Slice($slice, $feat_cs);
+      my $sr_id = $self->get_seq_region_id_by_Slice($slice, $feat_cs);
 
 
-	  #If we have no slice id here, we know we don't have anything in the DB for this slice
-	  return [] if ! $sr_id;
+      #If we have no slice id here, we know we don't have anything in the DB for this slice
+      return [] if ! $sr_id;
 
+      #Only add the slice clause if we are not forcing reslice
+      #force_reslice means we have dbID in the query for reg attrs 
+      #which maybe of the end of the query slice, but we still need them for 
+      #building reg features which overlap the end of the query slice
 
-      $constraint .= " AND " if($constraint);
-      $constraint .=
-          "${tab_syn}.seq_region_id = $sr_id AND " .
-          "${tab_syn}.seq_region_start <= $slice_end AND " .
-          "${tab_syn}.seq_region_end >= $slice_start";
+      if (! $self->force_reslice) {
 
-
-      if($max_len) {
-		
-        my $min_start = $slice_start - $max_len;
+      
+        $constraint .= " AND " if($constraint);
         $constraint .=
-          " AND ${tab_syn}.seq_region_start >= $min_start";
+          "${tab_syn}.seq_region_id = $sr_id AND " .
+            "${tab_syn}.seq_region_start <= $slice_end AND " .
+              "${tab_syn}.seq_region_end >= $slice_start";
+      
+      
+        if ($max_len) {
+        
+          my $min_start = $slice_start - $max_len;
+          $constraint .=
+            " AND ${tab_syn}.seq_region_start >= $min_start";
+        }
       }
-
 	
       my $fs = $self->generic_fetch($constraint,undef,$slice);
       # features may still have to have coordinates made relative to slice
@@ -836,78 +827,77 @@ sub _slice_fetch {
 	  
 
       $fs = $self->_remap($fs, $mapper, $slice);
-	  push @features, @$fs;
-    } 
-	else {
-	  #Table contains some feature on a CS that differs from the Slice CS
-	  #can't do CS remapping yet as AssemblyMapper expects a core CS
-	  #change AssemblyMapper?
-	  #or do we just create a core CS just for the remap and convert back when done?
+      push @features, @$fs;
+    } else {
+      #Table contains some feature on a CS that differs from the Slice CS
+      #can't do CS remapping yet as AssemblyMapper expects a core CS
+      #change AssemblyMapper?
+      #or do we just create a core CS just for the remap and convert back when done?
 	  
-    #  $mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
+      #  $mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
 
-   #   next unless defined $mapper;
+      #   next unless defined $mapper;
 
       # Get list of coordinates and corresponding internal ids for
       # regions the slice spans
-   #   @coords = $mapper->map($slice_seq_region, $slice_start, $slice_end,
-    #                         $slice_strand, $slice_cs);
+      #   @coords = $mapper->map($slice_seq_region, $slice_start, $slice_end,
+      #                         $slice_strand, $slice_cs);
 
-    #  @coords = grep {!$_->isa('Bio::EnsEMBL::Mapper::Gap')} @coords;
+      #  @coords = grep {!$_->isa('Bio::EnsEMBL::Mapper::Gap')} @coords;
 
-    #  next COORD_SYSTEM if(!@coords);
+      #  next COORD_SYSTEM if(!@coords);
 
-     # @ids = map {$_->id()} @coords;
-  ##coords are now id rather than name
-  ##      @ids = @{$asma->seq_regions_to_ids($feat_cs, \@ids)};
+      # @ids = map {$_->id()} @coords;
+      ##coords are now id rather than name
+      ##      @ids = @{$asma->seq_regions_to_ids($feat_cs, \@ids)};
 
       # When regions are large and only partially spanned by slice
       # it is faster to to limit the query with start and end constraints.
       # Take simple approach: use regional constraints if there are less
       # than a specific number of regions covered.
 
-    #  if(@coords > $MAX_SPLIT_QUERY_SEQ_REGIONS) {
-    #    my $constraint = $orig_constraint;
-    #    my $id_str = join(',', @ids);
-    #    $constraint .= " AND " if($constraint);
-    #    $constraint .= "${tab_syn}.seq_region_id IN ($id_str)";
+      #  if(@coords > $MAX_SPLIT_QUERY_SEQ_REGIONS) {
+      #    my $constraint = $orig_constraint;
+      #    my $id_str = join(',', @ids);
+      #    $constraint .= " AND " if($constraint);
+      #    $constraint .= "${tab_syn}.seq_region_id IN ($id_str)";
 
-     #   my $fs = $self->generic_fetch($constraint, $mapper, $slice);
+      #   my $fs = $self->generic_fetch($constraint, $mapper, $slice);
 
- #       $fs = _remap($fs, $mapper, $slice);
+      #       $fs = _remap($fs, $mapper, $slice);
 
-  #      push @features, @$fs;
+      #      push @features, @$fs;
 
-   #   } else {
-        # do multiple split queries using start / end constraints
+      #   } else {
+      # do multiple split queries using start / end constraints
 
-    #    my $max_len = $self->_max_feature_length() ||
+      #    my $max_len = $self->_max_feature_length() ||
       #    $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,
-    #                                                         $tab_name);
-     #   my $len = @coords;
-       # for(my $i = 0; $i < $len; $i++) {
-       #   my $constraint = $orig_constraint;
-       #   $constraint .= " AND " if($constraint);
-       #   $constraint .=
-       #       "${tab_syn}.seq_region_id = "     . $ids[$i] . " AND " .
-       #       "${tab_syn}.seq_region_start <= " . $coords[$i]->end() . " AND ".
-       #       "${tab_syn}.seq_region_end >= "   . $coords[$i]->start();
+      #                                                         $tab_name);
+      #   my $len = @coords;
+      # for(my $i = 0; $i < $len; $i++) {
+      #   my $constraint = $orig_constraint;
+      #   $constraint .= " AND " if($constraint);
+      #   $constraint .=
+      #       "${tab_syn}.seq_region_id = "     . $ids[$i] . " AND " .
+      #       "${tab_syn}.seq_region_start <= " . $coords[$i]->end() . " AND ".
+      #       "${tab_syn}.seq_region_end >= "   . $coords[$i]->start();
 
-       #   if($max_len) {
-       #     my $min_start = $coords[$i]->start() - $max_len;
-       #     $constraint .=
-       #       " AND ${tab_syn}.seq_region_start >= $min_start";
-       #   }
+      #   if($max_len) {
+      #     my $min_start = $coords[$i]->start() - $max_len;
+      #     $constraint .=
+      #       " AND ${tab_syn}.seq_region_start >= $min_start";
+      #   }
 
-        #  my $fs = $self->generic_fetch($constraint,$mapper,$slice);
+      #  my $fs = $self->generic_fetch($constraint,$mapper,$slice);
 
- #         $fs = _remap($fs, $mapper, $slice);
+      #         $fs = _remap($fs, $mapper, $slice);
 
-#          push @features, @$fs;
-    #    }
-    #  }
+      #          push @features, @$fs;
+      #    }
+      #  }
     }
-  } #COORD system loop
+  }                             #COORD system loop
 
   return \@features;
 }
@@ -934,8 +924,8 @@ sub _remap {
   my ($self, $features, $mapper, $slice) = @_;
 
   #check if any remapping is actually needed
-  if(@$features && (!$features->[0]->isa('Bio::EnsEMBL::Feature') ||
-                    $features->[0]->slice == $slice)) {
+  if (@$features && (!$features->[0]->isa('Bio::EnsEMBL::Feature') ||
+                     $features->[0]->slice == $slice)) {
     return $features;
   }
 
@@ -958,14 +948,14 @@ sub _remap {
     #since feats were obtained in contig coords, attached seq is a contig
     my $fslice = $f->slice();
 
-    if(!$fslice) {
+    if (!$fslice) {
       throw("Feature does not have attached slice.\n");
     }
     my $fseq_region = $fslice->seq_region_name();
     my $fseq_region_id = $fslice->get_seq_region_id();
     my $fcs = $fslice->coord_system();
 
-    if(!$slice_cs->equals($fcs)) {
+    if (!$slice_cs->equals($fcs)) {
       #slice of feature in different coord system, mapping required
 
       ($seq_region, $start, $end, $strand) =
@@ -985,7 +975,7 @@ sub _remap {
       ($slice_seq_region ne $seq_region);
 
     #shift the feature start, end and strand in one call
-    if($slice_strand == -1) {
+    if ($slice_strand == -1) {
       $f->move( $slice_end - $end + 1, $slice_end - $start + 1, $strand * -1 );
     } else {
       $f->move( $start - $slice_start + 1, $end - $slice_start + 1, $strand );
@@ -1065,40 +1055,39 @@ sub fetch_all_by_stable_Storable_FeatureSets{
   #Do we need a central registry for ensembl db names, what about versions?
 
 
-  if(ref($obj) && $obj->isa('Bio::EnsEMBL::Storable') && $obj->can('stable_id')){
-	my @tmp = split/::/, ref($obj);
-	my $obj_type = pop @tmp;
-	my $group = $obj->adaptor->db->group;
-	#Could sanity check for funcgen here?
+  if (ref($obj) && $obj->isa('Bio::EnsEMBL::Storable') && $obj->can('stable_id')) {
+    my @tmp = split/::/, ref($obj);
+    my $obj_type = pop @tmp;
+    my $group = $obj->adaptor->db->group;
+    #Could sanity check for funcgen here?
 
 
-	if (! defined $group){
-	  throw('You must pass a stable Bio::EnsEMBL::Feature with an attached DBAdaptor with the group attribute set');
-	}
+    if (! defined $group) {
+      throw('You must pass a stable Bio::EnsEMBL::Feature with an attached DBAdaptor with the group attribute set');
+    }
 
-	$extdb_name = 'ensembl_'.$group.'_'.$obj_type;
+    $extdb_name = 'ensembl_'.$group.'_'.$obj_type;
 
-	#warn "ext db name is $extdb_name";
+    #warn "ext db name is $extdb_name";
 
-  }
-  else{
-	throw('Must pass a stable Bio::EnsEMBL::Feature, you passed a '.$obj);
+  } else {
+    throw('Must pass a stable Bio::EnsEMBL::Feature, you passed a '.$obj);
   }
 
  
   #Set which eFG features we want to look at.
 
-  if(ref($fsets) ne 'ARRAY' || scalar(@$fsets) == 0){
-	throw('Must define an array of Bio::EnsEMBL::FeatureSets to extend xref Slice bound. You passed: '.$fsets);
+  if (ref($fsets) ne 'ARRAY' || scalar(@$fsets) == 0) {
+    throw('Must define an array of Bio::EnsEMBL::FeatureSets to extend xref Slice bound. You passed: '.$fsets);
   }
 
   my %feature_set_types;
 
-  foreach my $fset(@$fsets){
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
+  foreach my $fset (@$fsets) {
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
 	
-	$feature_set_types{$fset->feature_class} ||= [];
-	push @{$feature_set_types{$fset->feature_class}}, $fset;
+    $feature_set_types{$fset->feature_class} ||= [];
+    push @{$feature_set_types{$fset->feature_class}}, $fset;
   }
 
    
@@ -1111,34 +1100,34 @@ sub fetch_all_by_stable_Storable_FeatureSets{
   my @features;
 
   #Get xrefs for each eFG feature set type
-  foreach my $fset_type(keys %feature_set_types){
+  foreach my $fset_type (keys %feature_set_types) {
 
-	#my $xref_method    = 'list_'.$fset_type.'_feature_ids_by_extid';
-	#e.g. list_regulatory_feature_ids_by_extid
+    #my $xref_method    = 'list_'.$fset_type.'_feature_ids_by_extid';
+    #e.g. list_regulatory_feature_ids_by_extid
 
 	
-	#Do type test here
-	my $adaptor_type = ucfirst($fset_type).'FeatureAdaptor';
+    #Do type test here
+    my $adaptor_type = ucfirst($fset_type).'FeatureAdaptor';
 	
-	#remove this for generic method
-	next if ref($self) !~ /$adaptor_type/;
+    #remove this for generic method
+    next if ref($self) !~ /$adaptor_type/;
 			
-	#This is for generic method
-	#my $adaptor_method = 'get_'.ucfirst($fset_type).'FeatureAdaptor';
-	#my $adaptor = $self->db->$adaptor_method;
+    #This is for generic method
+    #my $adaptor_method = 'get_'.ucfirst($fset_type).'FeatureAdaptor';
+    #my $adaptor = $self->db->$adaptor_method;
 	
-	my %feature_set_ids;
-	map $feature_set_ids{$_->dbID} = 1, @{$feature_set_types{$fset_type}};
+    my %feature_set_ids;
+    map $feature_set_ids{$_->dbID} = 1, @{$feature_set_types{$fset_type}};
 			
-	my $cnt = 0;
+    my $cnt = 0;
 
-	#Change this self to adaptor for generic method
-	foreach my $efg_feature(@{$self->fetch_all_by_external_name($obj->stable_id, $extdb_name)}){
+    #Change this self to adaptor for generic method
+    foreach my $efg_feature (@{$self->fetch_all_by_external_name($obj->stable_id, $extdb_name)}) {
 	  
-	  #Skip if it is not in one of our FeatureSets
-	  next if ! exists $feature_set_ids{$efg_feature->feature_set->dbID};
-	  push @features, $efg_feature;
-	}
+      #Skip if it is not in one of our FeatureSets
+      next if ! exists $feature_set_ids{$efg_feature->feature_set->dbID};
+      push @features, $efg_feature;
+    }
   }
 
 
@@ -1149,17 +1138,17 @@ sub fetch_all_by_stable_Storable_FeatureSets{
 sub fetch_all_by_Gene_FeatureSets{
   my ($self, $gene, $fsets, $dblinks) = @_;
 
-  if(! ( ref($gene) && $gene->isa('Bio::EnsEMBL::Gene'))){
+  if (! ( ref($gene) && $gene->isa('Bio::EnsEMBL::Gene'))) {
     throw("You must pass a valid Bio::EnsEMBL::Gene object");
   }
 
   my @features = @{$self->fetch_all_by_stable_Storable_FeatureSets($gene, $fsets)};
 
-  if($dblinks){
+  if ($dblinks) {
 
-	foreach my $transcript(@{$gene->get_all_Transcripts}){
-	  push @features, @{$self->fetch_all_by_Transcript_FeatureSets($transcript, $fsets, $dblinks)};
-	}
+    foreach my $transcript (@{$gene->get_all_Transcripts}) {
+      push @features, @{$self->fetch_all_by_Transcript_FeatureSets($transcript, $fsets, $dblinks)};
+    }
   }
 
   return \@features;
@@ -1168,16 +1157,16 @@ sub fetch_all_by_Gene_FeatureSets{
 sub fetch_all_by_Transcript_FeatureSets{
   my ($self, $transc, $fsets, $dblinks) = @_;
 
-  if(! ( ref($transc) && $transc->isa('Bio::EnsEMBL::Transcript'))){
+  if (! ( ref($transc) && $transc->isa('Bio::EnsEMBL::Transcript'))) {
     throw("You must pass a valid Bio::EnsEMBL::Transcript object");
   }
 
 
   my @features = @{$self->fetch_all_by_stable_Storable_FeatureSets($transc, $fsets)};
 
-  if($dblinks){
-	my $translation = $transc->translation;
-	push @features, @{$self->fetch_all_by_stable_Storable_FeatureSets($translation, $fsets)} if $translation;
+  if ($dblinks) {
+    my $translation = $transc->translation;
+    push @features, @{$self->fetch_all_by_stable_Storable_FeatureSets($translation, $fsets)} if $translation;
   }
 
   return \@features;
@@ -1233,33 +1222,31 @@ sub fetch_all_by_display_label {
 sub _get_coord_system_ids{
   my ($self, $coord_systems) = @_;
 
-  	my @cs_ids;
+  my @cs_ids;
 	
-  if($coord_systems){
+  if ($coord_systems) {
 	  
-	if(ref($coord_systems) eq 'ARRAY' && 
-	   (scalar(@$coord_systems) >0)){
+    if (ref($coord_systems) eq 'ARRAY' && 
+        (scalar(@$coord_systems) >0)) {
 	  
-	  foreach my $cs(@$coord_systems){
-		$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
-		push @cs_ids, $cs->dbID;
-	  }
-	}
-	else{
-	  throw('CoordSystems parameter must be an arrayref of one or more Bio::EnsEMBL::Funcgen::CoordSystems');
-	}
-  }
-  else{
+      foreach my $cs (@$coord_systems) {
+        $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
+        push @cs_ids, $cs->dbID;
+      }
+    } else {
+      throw('CoordSystems parameter must be an arrayref of one or more Bio::EnsEMBL::Funcgen::CoordSystems');
+    }
+  } else {
 
-	#Get current default cs's
-	foreach my $cs(@{$self->db->get_FGCoordSystemAdaptor->fetch_all($self->db->dnadb, 'DEFAULT')}){
-	  push @cs_ids, $cs->dbID;
-	}
+    #Get current default cs's
+    foreach my $cs (@{$self->db->get_FGCoordSystemAdaptor->fetch_all($self->db->dnadb, 'DEFAULT')}) {
+      push @cs_ids, $cs->dbID;
+    }
   }
 	  
   #This should never happen
-  if(scalar(@cs_ids) == 0){
-	throw('Could not find any default CoordSystems');
+  if (scalar(@cs_ids) == 0) {
+    throw('Could not find any default CoordSystems');
   }
 
   return \@cs_ids;
@@ -1287,8 +1274,8 @@ sub count_features_by_field_id{
   my ($self, $count_field, $count_id) = @_;
   #Any other params here?
 
-  if(! ($count_field && $count_id)){
-	throw('You must provide a count name and a count id to count by');
+  if (! ($count_field && $count_id)) {
+    throw('You must provide a count name and a count id to count by');
   }
 
   my ($table_name, $table_syn) = @{$self->_main_table};
@@ -1320,16 +1307,16 @@ sub count_features_by_field_id{
 =cut
 
 
-sub force_reslice{
-  my ($self, $force) = @_;
+  sub force_reslice{
+    my ($self, $force) = @_;
 
   
-  if(defined $force){
-	$self->{force_reslice} = $force;
-  }
+    if (defined $force) {
+      $self->{force_reslice} = $force;
+    }
 
-  return $self->{force_reslice};
-}
+    return $self->{force_reslice};
+  }
 
 
 
