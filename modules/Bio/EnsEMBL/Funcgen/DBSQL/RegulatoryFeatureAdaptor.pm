@@ -553,10 +553,7 @@ sub _objs_from_sth {
         ({
           'start'          => $seq_region_start,
           'end'            => $seq_region_end,
-          #'bound_start'    => $bound_seq_region_start,
-          #'bound_end'      => $bound_seq_region_end,
-          'bound_start_length' => $bound_start_length,
-          'bound_end_length'   => $bound_end_length,
+          '_bound_lengths' => [$bound_start_length, $bound_end_length],
           'strand'         => $seq_region_strand,
           'slice'          => $slice,
           'analysis'       => $fset_hash{$fset_id}->analysis(),
