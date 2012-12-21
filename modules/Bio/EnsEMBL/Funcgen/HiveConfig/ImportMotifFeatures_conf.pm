@@ -73,7 +73,7 @@ sub default_options {
      },
 
      #Need to change this to use $ENV{OUT_ROOT} so we can switch scratch usage easily
-     'output_dir' => '/lustre/scratch103/ensembl/funcgen/output/'.$self->o('dbname'),
+     'output_dir' => '/lustre/scratch109/ensembl/funcgen/data_home/output/'.$self->o('dbname'),
      'slices'     => '',
 
 	 };

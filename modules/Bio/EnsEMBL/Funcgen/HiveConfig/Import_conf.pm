@@ -90,8 +90,8 @@ sub default_options {
 	  'feature_analysis' => 'bwa_samse',
 	  'recover' => 1,
 
-	  'data_dir' =>'/lustre/scratch103/ensembl/funcgen',
-	  'output_dir' =>'/lustre/scratch103/ensembl/funcgen/output/'.$self->o('dbname'),
+	  'data_dir'    =>'/lustre/scratch109/ensembl/funcgen/data_home',
+	  'output_dir'  =>'/lustre/scratch109/ensembl/funcgen/data_home/output/'.$self->o('dbname'),
 
 	  #you can only add a slice at a time... see if list of values can be passed as params...
 	  #'slice' => undef,
