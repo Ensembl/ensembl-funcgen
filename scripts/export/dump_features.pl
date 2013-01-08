@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2012 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -181,19 +181,20 @@ throw("Must define your funcgen -dbhost") if ! $dbhost;
 my $lsf_host = 'my'.$dbhost;
 ($lsf_host = $lsf_host) =~ s/-/_/;
 
-my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-													  -host => $dbhost,
-													  -dbname => $dbname,
-													  -species => $species,
-													  -user => $user,
-													  -pass => $pass,
-													  -port => $port,
-													  -dnadb_pass => $dnadb_pass,
-													  -dnadb_user => $dnadb_user,
-													  -dnadb_port => $dnadb_port,
-													  -dnadb_name => $dnadb_name,
-													  -dnadb_host => $dnadb_host,
-													 );
+my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+  (
+   -host       => $dbhost,
+   -dbname     => $dbname,
+   -species    => $species,
+   -user       => $user,
+   -pass       => $pass,
+   -port       => $port,
+   -dnadb_pass => $dnadb_pass,
+   -dnadb_user => $dnadb_user,
+   -dnadb_port => $dnadb_port,
+   -dnadb_name => $dnadb_name,
+   -dnadb_host => $dnadb_host,
+  );
 
 
 #Check DB connections
@@ -242,12 +243,16 @@ sub get_regulatory_FeatureSets{
   return @rf_fsets;
 }
 
+my $source_name;
+my $meta_container = $db->get_MetaContainer;
 
 if (@fset_names) {
 
   if( ($fset_names[0] eq 'AnnotatedFeatures') ||
-      ($fset_names[0] eq 'MotifFeatures') ||
-      ($fset_names[0] eq 'RegulatoryFeatures') ){
+      ($fset_names[0] eq 'MotifFeatures') ){
+    #||
+    #  ($fset_names[0] eq 'RegulatoryFeatures') ){ #This is currently broken 
+    #as it does not dump separate fset files.
 
     if(scalar(@fset_names) >1){
       die("Can only define one set name when defining a group of -sets:\t@fset_names");
@@ -277,10 +282,25 @@ if (@fset_names) {
       foreach my $reg_fset(@reg_fsets){
         push @fset_names, $reg_fset->name;
       }
+
+      $source_name = $reg_fsets[0]->analysis->logic_name.'_v'.
+        (@{$meta_container->list_value_by_key('regbuild.version')});
+      
+      $merged_dump = 0; #Force dumping in separate files
+
     } 
     elsif ($fset_names[0] eq 'MotifFeatures') {
       $dump_mfs = 1;
       @fset_names = ();
+
+      #Could get this via direct query on motif_featre table
+      #MFs not currently accessable via feature_set
+      #Version here denotes the inclusion based on the data in that version
+      #of the regulatory build
+      #The unfiltered PWM alignments (5% FDR) may have been produced from an earlier set
+      #of data.
+      $source_name = 'RegulatoryBuild TFBS Motifs v'.
+        (@{$meta_container->list_value_by_key('regbuild.version')});
     }
   }
 }
@@ -347,13 +367,13 @@ my ($feature_class, $no_y, @fsets, @rsets, @fetch_params, @header_params, @outpu
 if($array){
 
   if(! ($array && $vendor)){
-	die("Please choose either array and vendor or feature_sets parameters\n");
+    die("Please choose either array and vendor or feature_sets parameters\n");
   }
   @output_names = ($array);
   my $array = $array_a->fetch_by_name_vendor($array, $vendor);
-
+  
   if(! $array){
-	die("Could not fetch array:\t$vendor\t$array\n");
+    die("Could not fetch array:\t$vendor\t$array\n");
   }
 
   $dump_name     ||= $array->vendor.'_'.$array->name;
@@ -369,26 +389,26 @@ elsif(@fset_names){
 
 
   foreach my $fset_name(@fset_names){
-
-	my $fset = $fset_a->fetch_by_name($fset_name);
-
-	$feature_class ||= $fset->feature_class;
-	
-	if($feature_class ne $fset->feature_class){
-	  die("Cannot dump mixed FeatureSet classes:\t".$feature_class."\t".$fset->feature_class);
-	}
-
-	push @fsets, $fset;
+    
+    my $fset = $fset_a->fetch_by_name($fset_name);
+    
+    $feature_class ||= $fset->feature_class;
+    
+    if($feature_class ne $fset->feature_class){
+      die("Cannot dump mixed FeatureSet classes:\t".$feature_class."\t".$fset->feature_class);
+    }
+    
+    push @fsets, $fset;
   }
-
+  
   if(! $dump_name){
-
-	if(scalar(@fsets) == 1){
-	  $dump_name = $fset_names[0];
-	}
-	else{
-	  die('You must specify a -dump_name to dump multiple FeatureSets');
-	}
+    
+    if(scalar(@fsets) == 1){
+      $dump_name = $fset_names[0];
+    }
+    else{
+      die('You must specify a -dump_name to dump multiple FeatureSets');
+    }
   }
 
   $file_name       = $dump_name;
@@ -536,7 +556,7 @@ if(! $farm){
 else{ #Submit to farm
  
   if($post_process){
-	die("-post_process should not be run in -farm mode. Please correct you parameters");
+    die("-post_process should not be run in -farm mode. Please correct you parameters");
   }
 
   $queue ||= 'normal';
@@ -553,30 +573,32 @@ else{ #Submit to farm
   @args = @{&strip_param_flags(\@tmp_args, ('farm'))};
   my $cmd = " ${script_dir}/${script_name} @args -out_root $out_dir -_on_farm";
  
+  
+
+
   foreach my $slice(@slices){
-	#Count features first and only bsub jobs with featues
-	#add sr_id to meta_coord?
-	#This would also allow range queries to be catered for slice rather than whole genome
-	#Also change this to job array?
-	#would need to do this prior to this block so we have the correct slices for post porcessing
-	
-	my $job_name = $file_name.'.'.$slice->seq_region_name;	
-	#my $bsub_cmd="bsub -q $queue -J \"${job_name}[1-${num_jobs}]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err";
-
-	#$lsf_host does not support ensdb-archive
-
-	my $bsub_cmd="bsub -q $queue -J \"${job_name}\" -o ${lsf_dir}/${job_name}.".'%J'.".out -e ${lsf_dir}/${job_name}.".'%J'.".err ".
-	  "-R 'select[(${lsf_host}<=800)&&(mem>200)]' -R 'rusage[${lsf_host}=12:duration=10,mem=200]' -M 200000";
-
-	#'-R "select[(myens_genomics2<=700)&&(mem>2000)]" -R "rusage[myens_genomics2=12:duration=10,mem=2000]" -M 2000000',
-	#Need to threshold against DB load here
-
-	#dump name can't be job name here
-	my $cmd_args = " -dump_name $dump_name -slices ".$slice->name;
-	print $bsub_cmd.$cmd.$cmd_args."\n";
-	system($bsub_cmd.$cmd.$cmd_args) == 0 or die("Failed to submit job:\t$job_name\n$bsub_cmd\n${cmd}${cmd_args}");
+    #Count features first and only bsub jobs with featues
+    #add sr_id to meta_coord?
+    #This would also allow range queries to be catered for slice rather than whole genome
+    #Also change this to job array?
+    #would need to do this prior to this block so we have the correct slices for post porcessing
+    
+    my $job_name = $file_name.'.'.$slice->seq_region_name;	
+    #my $bsub_cmd="bsub -q $queue -J \"${job_name}[1-${num_jobs}]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err";
+    
+    #$lsf_host does not support ensdb-archive
+    
+    my $bsub_cmd="bsub -q $queue -J \"${job_name}\" -o ${lsf_dir}/${job_name}.".'%J'.".out -e ${lsf_dir}/${job_name}.".'%J'.".err ".
+      "-R 'select[mem>1000]' -R 'rusage[mem=1000]' -M 1000000";
+    
+    #"-R 'select[(${lsf_host}<=800)&&(mem>400)]' -R 'rusage[${lsf_host}=12:duration=10,mem=400]' -M 400000";
+    #Need to threshold against DB load here
+    
+    #dump name can't be job name here
+    my $cmd_args = " -dump_name $dump_name -slices ".$slice->name;
+    print $bsub_cmd.$cmd.$cmd_args."\n";
+    system($bsub_cmd.$cmd.$cmd_args) == 0 or die("Failed to submit job:\t$job_name\n$bsub_cmd\n${cmd}${cmd_args}");
   }
-
   exit;
 }
 
@@ -591,42 +613,61 @@ else{ #Submit to farm
 #So the format methods can go in the objs not the adaptors
 #Move these up to the config block and set all as generic ftype_conf
 
-my %format_subs = (
-				   'get_ProbeFeature_BED'      => \&get_ProbeFeature_BED,
-				   'get_RegulatoryFeature_GFF' => \&get_RegulatoryFeature_GFF,
-				   'get_AnnotatedFeature_GFF'  => \&get_AnnotatedFeature_GFF,
-				   'get_AnnotatedFeature_BED'  => \&get_AnnotatedFeature_BED,
-				   'get_MotifFeature_GFF'   => \&get_MotifFeature_GFF,
-				   'get_ExternalFeature_GFF'   => \&get_ExternalFeature_GFF,
-				   'get_ResultFeature_WIG'        => \&get_ResultFeature_WIG,
-				   'get_ResultFeature_WIG_header' => \&get_ResultFeature_WIG_header,
-				   'get_ProbeFeature_BED_header'      => \&get_ProbeFeature_BED_header,
-				   #'get_RegulatoryFeature_GFF_header' => \&get_RegulatoryFeature_GFF_header,
-				   #'get_AnnotatedFeature_GFF_header'  => \&get_AnnotatedFeature_GFF_header,
-				   'get_AnnotatedFeature_BED_header'  => \&get_AnnotatedFeature_BED_header,
-				   #'get_ExternalFeature_GFF_header'   => \&get_ExternalFeature_GFF_header,		   
-				  );
+my %format_subs = 
+  (
+   'get_ProbeFeature_BED'         => \&get_ProbeFeature_BED,
+   'get_RegulatoryFeature_GFF'    => \&get_RegulatoryFeature_GFF,
+   'get_SegmentationFeature_GFF'  => \&get_SegmentationFeature_GFF,
+   'get_AnnotatedFeature_GFF'     => \&get_AnnotatedFeature_GFF,
+   'get_AnnotatedFeature_BED'     => \&get_AnnotatedFeature_BED,
+   'get_MotifFeature_GFF'         => \&get_MotifFeature_GFF,
+   'get_ExternalFeature_GFF'      => \&get_ExternalFeature_GFF,
+   'get_ResultFeature_WIG'        => \&get_ResultFeature_WIG,
+   'get_ResultFeature_WIG_header' => \&get_ResultFeature_WIG_header,
+   'get_ProbeFeature_BED_header'      => \&get_ProbeFeature_BED_header,
+   #'get_RegulatoryFeature_GFF_header' => \&get_RegulatoryFeature_GFF_header,
+   #'get_AnnotatedFeature_GFF_header'  => \&get_AnnotatedFeature_GFF_header,
+   'get_AnnotatedFeature_BED_header'  => \&get_AnnotatedFeature_BED_header,
+   #'get_SegmentationFeature_BED_header'  => \&get_SegmentationFeature_BED_header,
+   #'get_ExternalFeature_GFF_header'   => \&get_ExternalFeature_GFF_header,		   
+  );
 
 #Change all of these to Slice Iterators to avoid high mem usage
 #and allow parallel dumps
 
-my %fetch_methods = (
-					 'ProbeFeature'      => 'fetch_Iterator_by_Slice_Arrays',
-					 'ResultFeature'     => 'fetch_Iterator_by_Slice_ResultSet',
-					 'AnnotatedFeature'  => 'fetch_Iterator_by_Slice_FeatureSets',
-					 'ExternalFeature'   => 'fetch_Iterator_by_Slice_FeatureSets',
-					 'RegulatoryFeature' => 'fetch_Iterator_by_Slice_FeatureSets',
-					 'MotifFeature'      => 'fetch_Iterator_by_Slice',
-					);
+my %fetch_methods = 
+  (
+   'ProbeFeature'        => 'fetch_Iterator_by_Slice_Arrays',
+   'ResultFeature'       => 'fetch_Iterator_by_Slice_ResultSet',
+   'AnnotatedFeature'    => 'fetch_Iterator_by_Slice_FeatureSets',
+   'ExternalFeature'     => 'fetch_Iterator_by_Slice_FeatureSets',
+   'RegulatoryFeature'   => 'fetch_Iterator_by_Slice_FeatureSets',
+   'MotifFeature'        => 'fetch_Iterator_by_Slice',
+   'SegmentationFeature' => 'fetch_Iterator_by_Slice_FeatureSets',
+  );
 
 
 
 ### DUMP THE FEATURES
 my $format_method = "get_${feature_class}_${format}";
 my $fetch_method    = $fetch_methods{$feature_class}; #Can't use hashref as method name?
+
+# Test we have some methods
+if(! (defined $format_method && defined $fetch_method)){
+  die("The feature class $feature_class is not currently support. No fetch and/or format method names defined");
+}
+
+
 my ($seq_name, $feature, $outline, @output);
 my (@dump_files, $ofile_name);
 
+
+
+#Need to change $dbname to $source analysis here
+#Leave this up to the methods?
+#Will differ for AFs, but be a constant for MF and RFs
+
+#Also change type to SO term and put feature type name in Attrs?
 
 foreach my $slice(@slices){
   #Build file name
@@ -709,17 +750,16 @@ foreach my $slice(@slices){
   }
 	
   sub print_line{
-	$cnt++;	
-	#Move all this to the relevant Feature class method get_FORMAT
-	#Utilise base Feature methods for common attrs i.e. $self->SUPER->get_FORMAT
-	
-	#push @output, $feature->$get_format_method;
-	push @output, &{$format_subs{$format_method}}($feature, $seq_name, $dbname, $feature_class);
-	
-	if(scalar(@output) == 1000){#1000
-	  print $ofile join('', @output);
-	  @output = ();
-	}
+    $cnt++;	
+    #Move all this to the relevant Feature class method get_FORMAT
+    #Utilise base Feature methods for common attrs i.e. $self->SUPER->get_FORMAT
+    
+    push @output, &{$format_subs{$format_method}}($feature, $seq_name, $source_name, $feature_class);
+    
+    if(scalar(@output) == 1000){#1000
+      print $ofile join('', @output);
+      @output = ();
+    }
   }
 
 
@@ -843,7 +883,6 @@ if($post_process){
 #These methods rely on obj creation
 
 sub get_RegulatoryFeature_GFF{
-  #my ($feature, $seq_name, $dbname, $feature_class) = @_
   my ($feature) = @_;
   my $gff = &get_GFF(@_);
 
@@ -872,39 +911,44 @@ sub get_RegulatoryFeature_GFF{
   }
   
 
-  return join("\t", (@{$gff}, 
-					 join('; ', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id(), 
-								 'bound_start='.$feature->bound_seq_region_start, 
-								 'bound_end='.$feature->bound_seq_region_end, 
-								 'Note=Consists of following features: '.join(' ', @attrs)))))
-	."\n";
+  return join("\t", 
+              (@{$gff}, 
+               join('; ', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id, 
+                           'bound_start='.$feature->bound_seq_region_start, 
+                           'bound_end='.$feature->bound_seq_region_end, 
+                           'Note=Consists of following features: '.join(' ', @attrs)))))
+    ."\n";
 
+}
+
+
+sub get_SegmentationFeature_GFF{
+  my ($feature) = @_;
+  my $gff = &get_GFF(@_);
+  return join("\t", (@{$gff}, 'Name='.$feature->feature_type->name))."\n";
 }
 
 
 
 sub get_AnnotatedFeature_GFF{
   my ($feature) = @_;
-
   my $gff = &get_GFF(@_);
 
+  #Remove feature_set name and add archive IDs in here, when the input_set/subset data model is fixed
+  #Analysis logic name is already used in the source field
 
-  #Including MotifFeatures?
-  #Do we want this?
-  #Add peak summit here?
-
-  #Need to add set name?
-
-  #Need to add cell type for merged dumps, or is fset name enough?
-  #Maybe concat with ftype name in Name? HUVEC:H3K4me3?
-
-  my $attr_string = 'Name='.$feature->feature_type->name;
-  $attr_string .= "; Alias=".$feature->feature_set->name;#Change this to data set acc?
+  my $attr_string = 'Name='.$feature->feature_type->name.
+    "; Alias=".$feature->feature_set->name.
+      "; Class=".$feature->feature_type->class.
+        "; Cell_type=". $feature->cell_type->name;
+  
+  my $summit    = $feature->summit;
+  $attr_string .= "; Summit=$summit" if $summit;
+  
   my $pwm_names = &get_associated_MotifFeature_GFF_attributes($feature);
   $attr_string .= "; Note=Contains the following PWMs:${pwm_names}" if $pwm_names;
-  push @$gff, $attr_string;
-
-  return join("\t", @$gff)."\n"; 
+  
+  return join("\t", (@$gff, $attr_string))."\n";
 }
 
 
@@ -923,7 +967,7 @@ sub get_associated_MotifFeature_GFF_attributes{
   }
   
   if(@pwm_names){
-	$pwm_names = join(' ', @pwm_names);
+    $pwm_names = join(' ', @pwm_names);
   }
 
   #Just return arrayref?
@@ -1002,7 +1046,7 @@ sub get_ProbeFeature_BED{
 
 
 sub get_GFF{
-  my ($feature, $seq_name, $dbname, $feature_class) = @_;
+  my ($feature, $seq_name, $source_name, $feature_class) = @_;
   
   #http://www.sequenceontology.org/gff3.shtml
   #seq_id, source, type, start, end, score, strand, phase, attributes
@@ -1014,7 +1058,11 @@ sub get_GFF{
   #DNA Binding site?
   #Histone Modification etc
 
-  my @gff = ($seq_name, $dbname, $feature_class, $feature->seq_region_start, $feature->seq_region_end, 
+  if(! defined $source_name){
+    $source_name = $feature->analysis->logic_name;
+  }
+
+  my @gff = ($seq_name, $source_name, $feature_class, $feature->seq_region_start, $feature->seq_region_end, 
 			 '.', $conf_ref->{strand}->{$feature->seq_region_strand}, '.');
 
   #Set size to mandatory fields
