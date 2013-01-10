@@ -2,7 +2,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2012 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -141,12 +141,14 @@ use Cwd;
 
 my @tmp_args = @ARGV;
 my ($host, $pass, $dbname, $dnadbhost, $dnadbport, $dnadbuser, $dnadbname, $dnadbpass);
-my ($list_source_only, $link_type, $nfs_assm_dir, $nfs_root, $ftp_root);
+my ($list_source_only, $nfs_assm_dir, $nfs_root, $ftp_root);
+my $ftp_mnt = '../';
 
 #Default values
 #my $force      = 0;
 my $port       = 3306;
 my $user       = 'ensro';
+my $link_type   = 'ftp'; #We don't want to create nfs by default.
 my %link_config = (nfs => {}, ftp=>{});#empty config for validating link types
 my @link_types = keys %link_config;
 
@@ -174,11 +176,15 @@ GetOptions
    'nfs_root=s'         => \$nfs_root,
    'link_type=s'        => \$link_type,
    'list_source_only'   => \$list_source_only,
+   'old_ftp_mnt'        => \$ftp_mnt,
    #'force'              => \$force,
    "help|?"             => sub { pod2usage(-exitval => 0, -verbose => 1); },
    "man|m"              => sub { pod2usage(-exitval => 0, -verbose => 3); },
    
   )  or pod2usage( -exitval => 1 ); #Catch unknown opts, culprit will be printed by GetOptions
+
+
+$ftp_mnt = '' if $ftp_mnt eq '1';
 
 
 if($link_type){
@@ -191,13 +197,14 @@ if($link_type){
   }
 }
 
-if(! (defined $nfs_root &&
-      -d $nfs_root) ){
+
+if( ! (defined $nfs_root &&
+       -d $nfs_root) ){
   die('You have not specified a valid -nfs_root');
 }
 
-if(! (defined $ftp_root &&
-      -d $ftp_root) ){
+if( ! (defined $ftp_root &&
+       -d $ftp_root) ){
   die('You have not specified a valid -ftp_root');
 }
 
@@ -284,6 +291,7 @@ $link_config{ftp} =
    relative_source_path => "../../../../../data_files/${species}/${assm}",
   };
                                       
+
 
 #Looping is a bit higgeldy-piggeldy here as we want to dealing with all links for a 
 #given data set at the same time
@@ -375,6 +383,9 @@ foreach my $set_type (@set_types) {
     ($target_dir = $source_dir) =~ s'^/'';
     $target_dir = (split '/', $target_dir)[1];
     #It should always be the 2nd element, even if we have a full file path
+    #if this ever does not match the source dir name, 
+    #then we need add the $target_dir back into the ln cmd and
+    #implement an overwrite mode which removes the existing link
 
     push @true_paths, $dbfile_data_root."/${feature_class}/${target_dir}";
 
@@ -430,17 +441,29 @@ foreach my $set_type (@set_types) {
         if (-e $target_dir){
           
           if(! -l $target_dir){
+            #this is not quite true as we are not testing the path
             die("$target_dir already exists but is not a link to $source_dir");
           }
           else{ #Assume this is okay
-            #count skipped links?
+            #count skipped links? or fail and implement -overwrite mode?
+
+            #overwrite mode would remove existing link
+            # as if source and target names match then new link would be made within the target
+            #with the name of the source dir e.g. 'target/source',  not simply as 'target'
             next;
           }
         }
 
-      
-        my $cmd = "ln -sf $source_dir $target_dir";
+        if($link_type eq 'ftp'){
+          #alter source dir here for old ftp mnt
+          #after we have tested the source files
+          #rather than before in the config
+          $source_dir = $ftp_mnt.$source_dir;
+        }
+     
+        my $cmd = "ln -sf $source_dir "; #$target_dir";
         system("$cmd") == 0 or die("Failed to create link using:\t${cmd}\nFrom $fclass_dir");
+
         #print "$cmd\n";
         $num_dirs{$link_type} ++;
       }
