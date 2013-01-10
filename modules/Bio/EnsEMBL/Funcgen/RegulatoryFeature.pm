@@ -1,7 +1,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2012 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -253,7 +253,6 @@ sub regulatory_attributes{
   my %adaptors = (
                   'annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
                   'motif'     => $self->adaptor->db->get_MotifFeatureAdaptor,
-                  #external
                  );
 
   if (defined $feature_class) {
@@ -288,7 +287,7 @@ sub regulatory_attributes{
           $adaptors{$fclass}->fetch_all_by_Slice_constraint
             (
              $self->slice,
-             lc($feature_class).'_feature_id in('.join(',', @attr_dbIDs).')'
+             lc($fclass).'_feature_id in('.join(',', @attr_dbIDs).')'
             );
 
         #Forces reslice and inclusion for attributes not contained within slice 
@@ -493,7 +492,7 @@ sub _bound_lengths {
     my @af_attrs = @{$self->regulatory_attributes('annotated')};
     
     if (! @af_attrs) {
-      throw('Unable to set bound length, no AnnotatedFeature attribites available for RegulatoryFeature: '
+      throw('Unable to set bound length, no AnnotatedFeature attributes available for RegulatoryFeature: '
             .$self->dbID);
     }
     
