@@ -63,7 +63,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
-my ($dbuser, $dbpass, $dbname, $dbport, $dbhost);
+my ($dbuser, $dbpass, $dbname, $dbport, $dbhost, $dnadb_user, $dnadb_host, $dnadb_port, $dnadb_name);
 my ($force, $data_dir, $rset_name, $packed_size);
 my @tmp_args = @ARGV;
 
@@ -74,6 +74,13 @@ GetOptions (
 			"dbport=i" => \$dbport,
 			"dbhost=s" => \$dbhost,
 			"dbuser=s" => \$dbuser,
+			
+			#DNADB connection
+			
+			"dnadb_user=s" => \$dnadb_user,
+			"dnadb_host=s" => \$dnadb_host,
+			"dnadb_port=i" => \$dnadb_port,
+			"dnadb_name=s" => \$dnadb_name,
 
 			
 			'data_dir=s'        => \$data_dir, #with result_features.rset_name.window_size.sr_id.col files
@@ -116,9 +123,10 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 													  -user   => $dbuser,
 													  -pass   => $dbpass,
 													  -port   => $dbport,
-													  -dnadb_host => 'ensdb-archive',
-													  -dnadb_user => 'ensro',
-													  -dnadb_port => '5304',
+													 -dnadb_host => $dnadb_host ,
+													  -dnadb_user => $dnadb_user ,
+													  -dnadb_port => $dnadb_port ,
+													  -dnadb_name => $dnadb_name ,
 );
 #test connection
 print "Testing DB connection...";
