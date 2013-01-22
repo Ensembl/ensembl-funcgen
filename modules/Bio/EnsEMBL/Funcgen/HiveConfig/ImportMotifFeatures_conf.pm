@@ -90,18 +90,19 @@ sub resource_classes {
   my ($self) = @_;
   return
     {
+     'default'                    => { 'LSF' => '' },
+     'urgent'                     => { 'LSF' => '-q yesterday' },
+     'normal_monitored'           => { 'LSF' => "-M1000000 -R\"select[$ENV{LSF_RESOURCE_HOST}<1000 && mem>1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1,mem=1000]\"" },
+     'long_monitored'             => { 'LSF' => "-q long -R\"select[$ENV{LSF_RESOURCE_HOST}<1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
+     'long_high_memory'           => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+     'long_monitored_high_memory' => { 'LSF' => "-q long -M4000000 -R\"select[$ENV{LSF_RESOURCE_HOST}<600 && mem>4000] rusage[$ENV{LSF_RESOURCE_HOST}=12:duration=5:decay=1,mem=4000]\"" },
+
 #     0 => { -desc => 'default',          'LSF' => '' },
 #     1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
 #     2 => { -desc => 'normal ens-genomics1',  'LSF' => '-M1000000 -R"select[myens_genomics1<1000 && mem>1000] rusage[myens_genomics1=10:duration=10:decay=1:mem=1000]"' },
 #     3 => { -desc => 'long ens-genomics1',    'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
 #     4 => { -desc => 'long high memory',      'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
 #     5 => { -desc => 'long ens-genomics1 high memory',  'LSF' => '-q long -M4000000 -R"select[myens_genomics1<600 && mem>4000] rusage[myens_genomics1=12:duration=5:decay=1:mem=4000]"' },
-     'default'                          => { 'LSF' => '' },
-     'urgent'                           => { 'LSF' => '-q yesterday' },
-     'normal_ens-genomics1'             => { 'LSF' => '-M1000000 -R"select[myens_genomics1<1000 && mem>1000] rusage[myens_genomics1=10:duration=10:decay=1:mem=1000]"' },
-     'long_ens-genomics1'               => { 'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-     'long_high_memory'                 => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
-     'long_ens-genomics1_high_memory'   => { 'LSF' => '-q long -M4000000 -R"select[myens_genomics1<600 && mem>4000] rusage[myens_genomics1=12:duration=5:decay=1:mem=4000]"' },
 
     };
 }
@@ -195,7 +196,7 @@ sub pipeline_analyses {
                          #For the moment it only receives the matrix, and deduces feature_type(s) from there...
                          { 'matrix' => $self->o('matrix'), 'file' => $self->o('file') }
                         ],
-      -rc_name => 'normal_ens-genomics1',
+      -rc_name => 'normal_monitored',
      },
     ];
 }
