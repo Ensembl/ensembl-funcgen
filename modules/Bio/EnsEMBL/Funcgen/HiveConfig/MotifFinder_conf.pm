@@ -92,11 +92,12 @@ sub default_options {
 sub resource_classes {
     my ($self) = @_;
     return {
-   'default'                => { 'LSF' => '' },
-   'urgent'                 => { 'LSF' => '-q yesterday' },
-   'normal_ens-genomics1'   => { 'LSF' => '-R"select[myens_genomics1<600 && myens_livemirror<600] rusage[myens_livemirror=10:myens_genomics1=10:duration=10:decay=1]"' },
-   'long_ens-genomics1'     => { 'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-   'long_high_memory'       => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+   'default'            => { 'LSF' => '' },
+   'urgent'             => { 'LSF' => '-q yesterday' },
+   'normal_monitored'   => { 'LSF' => "        -R\"select[$ENV{LSF_RESOURCE_HOST}<600 && myens_livemirror<600] rusage[myens_livemirror=10:$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
+   'long_monitored'     => { 'LSF' => "-q long -R\"select[$ENV{LSF_RESOURCE_HOST}<1000]                        rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
+   'long_high_memory'   => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+
 #	    0 => { -desc => 'default',          'LSF' => '' },
 #	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
 #	    2 => { -desc => 'normal ens-genomics1',  'LSF' => '-R"select[myens_genomics1<600 && myens_livemirror<600] rusage[myens_livemirror=10:myens_genomics1=10:duration=10:decay=1]"' },
@@ -210,7 +211,7 @@ sub pipeline_analyses {
 				 # (jobs for this analysis will be flown_into via branch-1 from 'setup_pipeline' jobs above)
 			     ],
 	   -hive_capacity => 100,
-	   -rc_name => 'normal_ens-genomics1',
+	   -rc_name => 'normal_monitored',
 	   #use semaphores...
 	   #-wait_for => [ 'setup_pipeline' ]
 	  },

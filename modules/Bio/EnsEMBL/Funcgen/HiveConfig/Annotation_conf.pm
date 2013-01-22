@@ -52,12 +52,12 @@ sub default_options {
 sub resource_classes {
     my ($self) = @_;
     return {
-      'default'                        => { 'LSF' => '' },
-      'urgent'                         => { 'LSF' => '-q yesterday' },
-      'normal_ens-genomics2'           => { 'LSF' => '-R"select[myens_genomics2<1000] rusage[myens_genomics2=10:duration=10:decay=1]"' },
-      'long_ens-genomics2'             => { 'LSF' => '-q long -R"select[myens_genomics2<1000] rusage[myens_genomics2=10:duration=10:decay=1]"' },
-      'long_high_memory'               => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
-      'long_ens-genomics2_high_memory' => { 'LSF' => '-q long -M4000000 -R"select[myens_genomics2<1000 && mem>4000] rusage[myens_genomics2=10:duration=10:decay=1:mem=4000]"' },
+      'default'                    => { 'LSF' => '' },
+      'urgent'                     => { 'LSF' => '-q yesterday' },
+      'normal_monitored'           => { 'LSF' => "        -R\"select[$ENV{LSF_RESOURCE_HOST}<1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
+      'long_monitored'             => { 'LSF' => "-q long -R\"select[$ENV{LSF_RESOURCE_HOST}<1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
+      'long_high_memory'           => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
+      'long_monitored_high_memory' => { 'LSF' => "-q long -M4000000 -R\"select[$ENV{LSF_RESOURCE_HOST}<1000 && mem>4000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1,mem=4000]\"" },
 
 #	    0 => { -desc => 'default',          'LSF' => '' },
 #	    1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },
@@ -188,7 +188,7 @@ sub pipeline_analyses {
 	   #Since all the weight is in the database it is safer to run only one at a time... or a small number at least
 	   -hive_capacity => 1,
 	   #Control files should be handled by setup_pipeline.
-	   -rc_name => 'long_ens-genomics2_high_memory', # Better safe than sorry... size of datasets tends to increase...
+	   -rc_name => 'long_monitored_high_memory', # Better safe than sorry... size of datasets tends to increase...
 	   -wait_for => [ 'setup_pipeline' ]
 	  },
 
