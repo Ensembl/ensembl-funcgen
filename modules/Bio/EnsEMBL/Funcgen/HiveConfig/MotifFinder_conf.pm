@@ -94,7 +94,7 @@ sub resource_classes {
     return {
    'default'            => { 'LSF' => '' },
    'urgent'             => { 'LSF' => '-q yesterday' },
-   'normal_monitored'   => { 'LSF' => "        -R\"select[$ENV{LSF_RESOURCE_HOST}<600 && myens_livemirror<600] rusage[myens_livemirror=10:$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
+   'normal_monitored'   => { 'LSF' => "        -R\"select[$ENV{LSF_RESOURCE_HOST}<600 && $ENV{LSF_DNA_DB}<600] rusage[$ENV{LSF_DNA_DB}=10:$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
    'long_monitored'     => { 'LSF' => "-q long -R\"select[$ENV{LSF_RESOURCE_HOST}<1000]                        rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
    'long_high_memory'   => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
 
