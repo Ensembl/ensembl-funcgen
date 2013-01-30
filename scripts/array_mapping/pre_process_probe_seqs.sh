@@ -15,11 +15,11 @@ file_type=$2
 array_name=$3
 file_path=$4
 
-export VALID_VENDORS='ILLUMINA CODELINK PHALANX AGILENT'
+export VALID_VENDORS='ILLUMINA CODELINK PHALANX AGILENT AFFY'
 #AGILENT is 
 
 usage="Usage: ARG[1] vendor ARG[2] file_type ARG[3] array_name ARG[4] file_path 
-i.e. pre_process_seqs.sh ILLUMINA|CODELINK|PHALANX FASTA|TXT|CSV ARRAYNAME /path/to/file"
+i.e. pre_process_seqs.sh ILLUMINA|CODELINK|PHALANX|AGILENT FASTA|TXT|CSV ARRAYNAME /path/to/file"
 
 #We could head the files first by a number of line and test the expected last line
 #Then sed the header out.
@@ -65,6 +65,10 @@ else if (probes == 1) print \">${array_name}:\" \$1 \"\n\" \$2}" $file_path > ${
 		awk "{if (\$1==\"Phalanx_PrbInx\") probes=1;
 else if (probes == 1) print \">${array_name}:\" \$1 \"\n\" \$2}" $file_path > ${file_path}.tmp
 
+  elif [ $vendor = AFFY ]; then
+     awk "{if (\$1==\"Probe\") probes=1;
+else if (probes == 1) print \">${array_name}:\" \$1 \":\" \$2 \":\" \$3 \";\" \"\n\" \$5}" $file_path > ${file_path}.tmp
+      
 	else
 		echo "No support for $vendor $file_type file"
 		exit 1
@@ -78,8 +82,31 @@ elif [ $file_type = CSV ]; then
 
 		#awk -F"," "{print \">${name}:\" \$3 \"\n\" \$10}" $file > ${file}.tmp
 
+
+
 		awk "BEGIN { FS = \",\" }; {if (\$1==\"Search_key\") probes=1;
-else if (probes == 1) print \">${array_name}:\" \$3 \"\n\" \$10}" $file_path > ${file_path}.tmp
+#else if (probes == 1) print \">${array_name}:\" \$3 \"\n\" \$10}" $file_path > ${file_path}.tmp
+
+
+
+
+		#Methylation arrays headers
+		#IllmnID or Name & SourceSeq
+		#Nice standardised formats?
+		
+		#Just hard code for now
+
+		#echo "hardcoded for infinium 27"
+
+		#Infinium i.e. HumanMethylation450
+		#awk "BEGIN { FS = \",\" }; { if (\$1==\"IlmnID\") probes=1;
+#else if (probes == 1) print \">${array_name}:\" \$1 \"\n\" \$14 }" $file_path > ${file_path}.tmp
+
+
+#awk "BEGIN { FS = \",\" }; { if (\$1==\"Name\") probes=1;
+#else if (probes == 1) print \">${array_name}:\" \$1 \"\n\" \$7 }" $file_path > ${file_path}.tmp
+
+
 
 	#Now remove thr first two spurious line generated from the header
 		#sed "/^>${name}:ProbeId$/d" ${file}.tmp > ${file}.tmp1
