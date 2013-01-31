@@ -67,7 +67,7 @@ else if (probes == 1) print \">${array_name}:\" \$1 \"\n\" \$2}" $file_path > ${
 
   elif [ $vendor = AFFY ]; then
      awk "{if (\$1==\"Probe\") probes=1;
-else if (probes == 1) print \">${array_name}:\" \$1 \":\" \$2 \":\" \$3 \";\" \"\n\" \$5}" $file_path > ${file_path}.tmp
+else if (probes == 1) print \">probe:${array_name}:\" \$1 \":\" \$2 \":\" \$3 \";\" \"\n\" \$5}" $file_path > ${file_path}.tmp
       
 	else
 		echo "No support for $vendor $file_type file"
