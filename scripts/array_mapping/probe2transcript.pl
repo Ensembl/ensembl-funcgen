@@ -2,7 +2,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -403,63 +403,70 @@ die("It is not wise to run all available arrays at the same time\nYou must suppl
 #Change this to include import from ini?
 #This could also be used in pipeline config
 
-my %array_format_config = (
-						   AFFY_UTR => {
-									   probeset_arrays         => 1,
-									   linked_arrays      => 0,
-									   sense_interrogation  => 0,
-									   
-									  },
-						   AFFY_ST => {
-									   probeset_arrays         => 1,
-									   linked_arrays      => 1,
-									   sense_interrogation  => 1,
-									  },
-						   
-						   ILLUMINA_WG => {
-										probeset_arrays        => 0,
-										linked_arrays     => 1,
-										sense_interrogation => 0,
-										  },
-						   
-						   AGILENT => {
-										   probeset_arrays        => 0,
-										   linked_arrays     => 1,
-										   sense_interrogation => 0,			   
-										  },					
-
-
-						     PHALANX => {
-										 probeset_arrays        => 0,
-										 linked_arrays     => 1,
-										 sense_interrogation => 0,
-										 },
-
-						   CODELINK => {
-										probeset_arrays        => 0,
-										linked_arrays     => 1,
-										sense_interrogation => 0,
-									   },
-
-						   LEIDEN => {
-									  probeset_arrays        => 0,
-									  linked_arrays     => 1,
-									  sense_interrogation => 0,
-									 },
-
-						   STEMPLE_LAB_SANGER => {
+my %array_format_config = 
+  (
+   AFFY_UTR => {
+                probeset_arrays         => 1,
+                linked_arrays      => 0,
+                sense_interrogation  => 0,
+                
+               },
+   
+   AFFY_ST => {
+               probeset_arrays         => 1,
+               linked_arrays      => 1,
+               sense_interrogation  => 1,
+              },
+   
+   ILLUMINA_WG => {
+                   probeset_arrays        => 0,
+                   linked_arrays     => 1,
+                   sense_interrogation => 0,
+                  },
+   
+   AGILENT => {
+               probeset_arrays        => 0,
+               linked_arrays     => 1,
+               sense_interrogation => 0,			   
+              },					
+   
+   
+   PHALANX => {
+               probeset_arrays        => 0,
+               linked_arrays     => 1,
+               sense_interrogation => 0,
+              },
+   
+   CODELINK => {
+                probeset_arrays        => 0,
+                linked_arrays     => 1,
+                sense_interrogation => 0,
+               },
+   
+   LEIDEN => {
+              probeset_arrays        => 0,
+              linked_arrays     => 1,
+              sense_interrogation => 0,
+             },
+   
+   STEMPLE_LAB_SANGER => {
 												  probeset_arrays        => 0,
 												  linked_arrays     => 1,
 												  sense_interrogation => 0,
 												 },
 						   
+   WUSTL =>  {
+              probeset_arrays        => 0,
+              linked_arrays     => 1,
+              sense_interrogation => 0,			   
+             },			
+  );
 
-
-						  );
 die ('Must supply a -vendor parameter e.g. AFFY') if ! $vendor;
 
 if(defined $format && ! exists $array_format_config{$format}){
-  die("-format is not valid:\t$format\nMust specify valid format e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG.\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameters?\n");
+  die("-format is not valid:\t$format\nMust specify valid format e.g. ".join(', ', keys(%array_format_config)).
+      "\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameters?\n");
 }
 
 
