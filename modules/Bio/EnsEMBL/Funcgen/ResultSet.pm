@@ -24,7 +24,7 @@
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::ResultSet - Represents a set of experimental results (signal).
- 
+
 
 =head1 SYNOPSIS
 
@@ -43,9 +43,9 @@ my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
 
 =head1 DESCRIPTION
 
-A ResultSet object provides access to a set raw or processed signal values from an Experiment, 
+A ResultSet object provides access to a set raw or processed signal values from an Experiment,
 and can consist of any number of inputs which can either be InputSets or ExperimentalChips.
-A ResultSet can represent a single or multiple merged replicates of raw or processed(normalised) 
+A ResultSet can represent a single or multiple merged replicates of raw or processed(normalised)
 signal data.
 
 =head1 SEE ALSO
@@ -68,14 +68,14 @@ use vars qw(@ISA);
 #Valid enum field hashes to prevent loading NULLs
 
 #result_set.feature_class
-my %valid_classes = 
+my %valid_classes =
   (
    result => undef,
    dna_methylation => undef,
   );
 
 #result_set_input.table_name
-my %valid_table_names = 
+my %valid_table_names =
   (
    experimental_chip => undef,
    input_set         => undef,
@@ -112,11 +112,11 @@ my %valid_table_names =
 
 sub new {
   my $caller = shift;
-	
+
   my $class = ref($caller) || $caller;
-  
+
   my ($table_name, $table_id, $rf_set, $dbfile_data_dir)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 'DBFILE_DATA_DIR'], @_);	
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 'DBFILE_DATA_DIR'], @_);
   my $self = $class->SUPER::new(@_);
 
   # TEST MANDATORY PARAMS
@@ -124,19 +124,19 @@ sub new {
   #explicit type check here to avoid invalid types being imported as NULL
   #and subsequently throwing errors on retrieval
   my $type = $self->feature_class;
-  
+
   if ( !( $type && exists $valid_classes{$type} ) ) {
     throw( 'You must define a valid FeatureSet type e.g. ' .
            join( ', ', keys %valid_classes ) );
   }
- 
+
   if (! (defined $table_name &&
          exists $valid_table_names{$table_name}) ){
     throw('You need to pass a valid -table_name e.g. '.
           join(', ', keys %valid_table_names));
   }
 
-  
+
   $self->{table_id_hash}      = {};
   $self->{table_name}         = $table_name;
   $self->{result_feature_set} = (defined $rf_set) ? 1 : 0;
@@ -174,12 +174,12 @@ sub experimental_group{
 
     my $exp_group;
     my @isets = @{$self->get_InputSets};
-    
+
     if(@isets){
       $exp_group = $isets[0]->get_Experiment->get_ExperimentalGroup->name;
 
       foreach my $iset(@isets){
-        
+
         if($exp_group ne $iset->get_Experiment->get_ExperimentalGroup->name){
           #Mixed experimental_group ResultSet
           $exp_group = undef;
@@ -221,7 +221,7 @@ sub display_label {
       $self->{display_label} = $self->feature_type->name.' '.$self->cell_type->name.' signal';
     }
     elsif($self->feature_class eq 'dna_methylation'){
-      
+
       my $project = $self->project || '';
 
       if($project){
@@ -261,16 +261,16 @@ sub display_label {
 
 sub get_dbfile_path_by_window_size{
   my ($self, $window_size, $slice) = @_;
-  
+
   if($slice){
-    
+
     if(! (ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
       throw('You must provide a valid Bio::EnsEMBL::Slice');
     }
-    
+
     $window_size .= '.'.$slice->seq_region_name;
   }
-  
+
   return $self->dbfile_data_dir.'/result_features.'.$self->name.'.'.$window_size.'.col';
 }
 
@@ -331,8 +331,8 @@ sub table_name{ return $_[0]->{table_name}; }
 =head2 add_table_id
 
   Example    : $result_set->add_table_id($ec_id, $cc_id);
-  Description: Caches table_id result_set_input_id to the ResultSet. In the case of an 
-               array ResultSet, the unique result_set_input_id is used to key into the 
+  Description: Caches table_id result_set_input_id to the ResultSet. In the case of an
+               array ResultSet, the unique result_set_input_id is used to key into the
                result table, it also reduces redundancy and enable mapping of results to chips
                rather than just the ResultSet.  This enables result retrieval
                based on chips in the same set which  have a differing status.
@@ -346,17 +346,17 @@ sub table_name{ return $_[0]->{table_name}; }
 
 sub add_table_id {
   my ($self, $table_id, $cc_id) = @_;
-  
-  if (! defined $table_id){	
+
+  if (! defined $table_id){
     throw('Need to pass a table_id');
   }else{
-    
+
     if((exists $self->{'table_id_hash'}->{$table_id}) && (defined $self->{'table_id_hash'}->{$table_id})){
       throw("You are attempting to redefine a result_set_input_id which is already defined");
     }
-    
-    $self->{'table_id_hash'}->{$table_id} = $cc_id;    
-    
+
+    $self->{'table_id_hash'}->{$table_id} = $cc_id;
+
   }
 
   return;
@@ -376,7 +376,7 @@ sub add_table_id {
 
 sub table_ids {
   my $self = shift;
-  
+
   return [ keys %{$self->{'table_id_hash'}} ];
 }
 
@@ -396,7 +396,7 @@ sub table_ids {
 
 sub result_set_input_ids {
   my $self = shift;
-  
+
   return [ values %{$self->{'table_id_hash'}} ];
 }
 
@@ -427,7 +427,7 @@ sub contains{
   }else{
     $contains = 1 if (exists $self->{'table_id_hash'}->{$chip_channel->dbID()});
   }
-  
+
   return $contains;
 }
 
@@ -445,17 +445,17 @@ sub contains{
 
 sub get_result_set_input_id{
   my ($self, $table_id) = @_;
-  
+
   return (exists $self->{'table_id_hash'}->{$table_id}) ?  $self->{'table_id_hash'}->{$table_id} : undef;
 }
 
 
 =head2 get_InputSets
 
-  Example    : my @ecs = @{$result_set->get_ExperimentalChips()};
-  Description: Retrieves a chip_channel_id from the cahce given an ExperimentalChip dbID
-  Returntype : Listref of ExperimentalChip object
-  Exceptions : warns is not an experimental_chip ResultSet
+  Example    : my @input_sets = @{$result_set->get_InputSets()};
+  Description: Retrieves all InputSets linked to this ResultSet
+  Returntype : Listref of InputSet objects
+  Exceptions : Warns if ResultSet is array based
   Caller     : General
   Status     : At Risk
 
@@ -463,7 +463,7 @@ sub get_result_set_input_id{
 
 sub get_InputSets{
   my $self = shift;
-  
+
   if($self->table_name ne 'input_set'){
     warn 'Cannot get_InputSets for an array based ResultSet';
     return;
@@ -471,8 +471,8 @@ sub get_InputSets{
 
   if(! defined $self->{input_sets}){
     my $is_adaptor = $self->adaptor->db->get_InputSetAdaptor();
-    
-    foreach my $is_id(@{$self->table_ids()}){	
+
+    foreach my $is_id(@{$self->table_ids()}){
       push @{$self->{input_sets}}, $is_adaptor->fetch_by_dbID($is_id);
     }
   }
@@ -484,9 +484,9 @@ sub get_InputSets{
 =head2 get_ExperimentalChips
 
   Example    : my @ecs = @{$result_set->get_ExperimentalChips()};
-  Description: Retrieves a chip_channel_id from the cahce given an ExperimentalChip dbID
+  Description: Retrieves a list of ExperimentalChip objects
   Returntype : Listref of ExperimentalChip object
-  Exceptions : warns is not an experimental_chip ResultSet
+  Exceptions : Warns if ResultSet is an InputSet
   Caller     : General
   Status     : At Risk
 
@@ -494,15 +494,15 @@ sub get_InputSets{
 
 sub get_ExperimentalChips{
   my $self = shift;
-  
+
   if($self->table_name eq 'input_set'){
-	warn 'Cannot get_ExperimentalChips for an InputSet ResultSet';
+	warn 'Cannot get_ExperimentalChips for an InputSet or ResultSet';
 	return;
   }
 
   if(! defined $self->{'experimental_chips'}){
     my $ec_adaptor = $self->adaptor->db->get_ExperimentalChipAdaptor();
-    
+
 	if($self->table_name eq "experimental_chip"){
 
 	  foreach my $ec_id(@{$self->table_ids()}){
@@ -512,15 +512,15 @@ sub get_ExperimentalChips{
 	  }
 	}else{
 	  #warn("Retrieving ExperimentalChips for a Channel ResultSet");
-	  
+
 	  my %echips;
-	  my $chan_adaptor = $self->adaptor->db->get_ChannelAdaptor(); 
-		  
+	  my $chan_adaptor = $self->adaptor->db->get_ChannelAdaptor();
+
 	  foreach my $chan_id(@{$self->table_ids()}){
 		my $chan = $chan_adaptor->fetch_by_dbID($chan_id);
 		$echips{$chan->experimental_chip_id} ||= $ec_adaptor->fetch_by_dbID($chan->experimental_chip_id);
 	  }
-	  
+
 	  @{$self->{'experimental_chips'}} = values %echips;
 	}
   }
@@ -536,7 +536,7 @@ sub get_ExperimentalChips{
   Example    : my $rep_set_name = $result_set->get_replicate_set_by_result_set_input_id($cc_id);
   Description: Retrieves the replicate set name defined by the corresponding ExperimentalChip
   Returntype : String - replicate set name
-  Exceptions : 
+  Exceptions :
   Caller     : General
   Status     : At Risk - implement for Channels?
 
@@ -553,9 +553,9 @@ sub get_replicate_set_by_result_set_input_id{
 
 
 	foreach my $ec (@{$self->get_ExperimentalChips()}){
-	  
+
 	  $self->{'_replicate_cache'}{$self->get_result_set_input_id($ec->dbID())} = $ec->replicate();
-	  
+
 
 	}
   }
@@ -578,7 +578,7 @@ sub get_replicate_set_by_chip_channel_id{
 =head2 get_displayable_ResultFeatures_by_Slice
 
   Arg[1]     : Bio::EnsEMBL::Slice
-  Arg[2]     : Boolean - with probe flag, will nest Probe object in ResultFeature 
+  Arg[2]     : Boolean - with probe flag, will nest Probe object in ResultFeature
   Example    : my @results = @{$ResultSet->get_all_displayable_ResultFeatures_by_Slice($slice)};
   Description: Simple wrapper method for ResultFeatureAdaptor::fetch_all_by_Slice_ResultSet
   Returntype : Arrayref of ResultFeatures
@@ -601,7 +601,7 @@ sub get_displayable_ResultFeatures_by_Slice{
 
   Arg[1]     : Bio::EnsEMBL::Slice
   Arg[2]     : string - Status name e.g. 'DISPLAYABLE'
-  Arg[3]     : Boolean - with probe flag, will nest Probe object in ResultFeature 
+  Arg[3]     : Boolean - with probe flag, will nest Probe object in ResultFeature
   Arg[4]     : int - Max bins i.e. pixel width of display
   Arg[5]     : int - window_size
   Arg[6]     : string - constraint
@@ -652,7 +652,7 @@ sub log_label {
   my $self = shift;
 
   my $label;
-  
+
   if(defined $self->feature_type){
     $label = $self->feature_type->name.":";
   }else{
@@ -664,7 +664,7 @@ sub log_label {
   }else{
     $label .= "Uknown CellType";
   }
-  
+
   return $self->name.":".$self->analysis->logic_name.":".$label;
 }
 
