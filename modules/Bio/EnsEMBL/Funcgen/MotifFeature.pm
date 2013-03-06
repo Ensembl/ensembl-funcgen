@@ -159,8 +159,25 @@ sub new_fast {
 =cut
 
 sub binding_matrix{
-  return $_[0]->{'binding_matrix'};
+  return $_[0]->{binding_matrix};
 }
+
+=head2 feature_type
+
+  Example    : my $TF_name = $motif_feature->feature_type->name;
+  Description: Convenience method for accessing feature type of binding matrix
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+
+sub feature_type{
+  return $_[0]->{binding_matrix}->feature_type;
+}
+
 
 =head2 score
 
