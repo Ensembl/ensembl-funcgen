@@ -23,7 +23,7 @@
 =head1 NAME
 
 Bio::EnsEMBL::InputSet - A module to represent InputSet object.
- 
+
 
 =head1 SYNOPSIS
 
@@ -48,7 +48,7 @@ my $inp_set = Bio::EnsEMBL::Funcgen::InputSet->new
 
 =head1 DESCRIPTION
 
-An InputSet object provides a generic container for any non-array based feature import, 
+An InputSet object provides a generic container for any non-array based feature import,
 allowing tracking of file import via the status table and integration into Data and FeatureSets to
 provide traceability to the source experiment from a given FeatureSet.
 
@@ -70,12 +70,11 @@ use vars qw(@ISA);
 
 
 my %valid_types = (
-                   annotated      => undef,
-                   result         => undef,
-                   segmentation   => undef,
-                   dna_methylation => undef,
+    annotated       => undef,
+    result          => undef,
+    segmentation    => undef,
+    dna_methylation => undef,
                   );
-
 
 #Need the underscore to separate the words
 #for handling conversion to ucfirst feature class namespace
@@ -111,37 +110,35 @@ my %valid_types = (
 
 sub new {
   my $caller = shift;
-	
+
   my $class = ref($caller) || $caller;
-	
+
   #Add set_type here to overwrite default ref parsing in Set::set_type
   #This need to stay like this until we patch the DB
-  my $self = $class->SUPER::new(@_);	
- 
+  my $self = $class->SUPER::new(@_);
   my ($exp, $format, $vendor, $rep)
     = rearrange(['EXPERIMENT', 'FORMAT', 'VENDOR', 'REPLICATE'], @_);
-    
+
   if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
 	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
 
-  
+
   #These are set in Set, just validate here
   throw ('Must provide a FeatureType') if(! defined $self->feature_type);
-  throw ('Must provide a CellType') if(! defined $self->cell_type);
+  throw ('Must provide a CellType')    if(! defined $self->cell_type);
 
   my $type = $self->feature_class;
 
   #Need to move these types to config
 
   if(! (defined $type && exists $valid_types{$type})){
-    throw("You must define a valid InputSet feature_class($type), one of: ".join("\t", keys %valid_types));
+    throw("You must define a valid InputSet feature_class($type), one of: ".join(", ", keys %valid_types));
   }
 
-  if(($type eq 'result') &&
-	 ($format ne 'SEQUENCING')){
+  if(($type eq 'result') && ($format ne 'SEQUENCING')){
 	throw('InputSet does not yet support a result type InputSet which does not have the \'SEQUENCING\' format');
-	
+
   }
 
 
@@ -153,14 +150,14 @@ sub new {
 	(-logic_name => 'external',
 	 -id       => 0,#??someone needs to rewrite analysis
 	);
-  
+
   #Change to direct setting for speed
   $self->{format}     = $format;
   $self->{vendor}     = $vendor;
   $self->{replicate}  = $rep;
   $self->{experiment} = $exp;
   $self->{subsets}    = {};
-  
+
   return $self;
 }
 
@@ -191,7 +188,7 @@ sub _add_new_subset {
 
   Example    : my $exp = $exp_set->get_Experiment();
   Description: Getter for the Experiment of this DataSet.
-  Returntype : Bio::EnsEMBL::Fuuncgen::Experiment
+  Returntype : Bio::EnsEMBL::Funcgen::Experiment
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -323,7 +320,7 @@ sub source_info{
     #could have data_url as highest priority here
     #but we need to ensure removal when adding archive ids
     #so we link to the archive and not the old data url
-    
+
     my $exp_group = $self->get_Experiment->experimental_group;
     my %source_info; #Handles redundant InputSubsets
     my ($proj_name, $proj_link, $source_label, $source_link);
@@ -337,7 +334,7 @@ sub source_info{
 
       if(defined $isset->archive_id ){
         $source_label = $isset->archive_id;
-      
+
         if(! exists $source_info{$source_label}){
           $source_info{$source_label} = [$source_label, undef];
           #source_link can is undef here as archive_id overrides display url
@@ -346,13 +343,13 @@ sub source_info{
       }
       elsif(defined $proj_name){
         $source_link  = $isset->display_url || $proj_link;
-        
+
         if(! exists $source_info{$source_link}){
           $source_info{$source_link} = [$proj_name, $source_link];
         }
       }
     }
-    
+
     $self->{source_info} = [values %source_info];
   }
 
