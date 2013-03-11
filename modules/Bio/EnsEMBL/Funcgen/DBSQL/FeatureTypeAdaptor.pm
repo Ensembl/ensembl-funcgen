@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2012 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -69,9 +69,9 @@ my %regulatory_evidence_info =
     name      => 'Open chromatin & TFBS',
     long_name => 'Open chromatin & Transcription factor binding sites',
     label     => 'DNase1 & TFBS',
-    classes   => ['Transcription Factor', 
-                  'Transcription Factor Complex',   
-                  'Open Chromatin'],
+    classes   => ['Open Chromatin',
+                  'Transcription Factor', 
+                  'Transcription Factor Complex'],
    },
    
    non_core => 
