@@ -6,7 +6,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -197,8 +197,6 @@ sub get_all_Probe_dbIDs {
 
   return  $self->{probe_dbids};
 }
-
-
 
 
 #Nath new get methods
