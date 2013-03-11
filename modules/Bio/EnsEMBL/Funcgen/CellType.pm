@@ -6,7 +6,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2012 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -127,6 +127,7 @@ sub new {
   $self->{description}   = $desc   if defined $desc;
   $self->{efo_id}        = $efo_id if defined $efo_id;
   $self->{tissue}        = $tissue if defined $tissue;
+
   return $self;
 }
 
