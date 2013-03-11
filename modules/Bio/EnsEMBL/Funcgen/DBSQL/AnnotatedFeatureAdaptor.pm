@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2012 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -221,7 +221,7 @@ sub _objs_from_sth {
     # If a destination slice was provided convert the coords
     # If the destination slice starts at 1 and is forward strand, nothing needs doing
     if ($dest_slice) {
-      
+
       unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
         if ($dest_slice_strand == 1) {
           $seq_region_start = $seq_region_start - $dest_slice_start + 1;
