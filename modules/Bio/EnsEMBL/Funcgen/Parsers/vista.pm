@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-  Copyright (c) 1999-2012 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -51,9 +51,11 @@ sub new {
                                                                  -description => 'VISTA target region',
                                                                 },
                                             'VISTA Enhancer' => {
-                                                                 -name        => 'VISTA Enhancer', 
-                                                                 -class       => 'Enhancer',
-                                                                 -description => 'Enhancer identified by positive VISTA assay',
+                                                                 -name         => 'VISTA Enhancer', 
+                                                                 -class        => 'Enhancer',
+                                                                 -description  => 'Enhancer identified by positive VISTA assay',
+                                                                 -so_name      => 'enhancer',
+                                                                 -so_accession => 'SO:0000165',
                                                                 },
                                             'VISTA Target - Negative' => {
                                                                           -name        => 'VISTA Target - Negative', 
