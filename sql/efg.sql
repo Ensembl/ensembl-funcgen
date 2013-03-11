@@ -36,8 +36,8 @@
 @column feature_type_id     	@link feature_type table ID
 @column feature_set_id      	@link feature_set table ID
 @column stable_id	      	Integer stable ID without ENSR prefix
-@column bound_seq_region_start  Bound start position of this feature
-@column bound_seq_region_end    Bound end position of this feature
+@column bound_start_length      Distance between start of the feature and start of the bound region
+@column bound_end_length        Distance between end of the bound region and end of this feature
 @column binary_string		Binary representation for the underlying feature sets/types
 @column projected		Boolean, defines whether reg feat structure has been projected to this cell type
 
@@ -58,7 +58,7 @@ CREATE TABLE `regulatory_feature` (
   `feature_set_id`	int(10) unsigned default NULL,
   `stable_id` mediumint(8) unsigned default NULL,
   `binary_string` varchar(500) default NULL,
-  `projected` boolean default FALSE,	
+  `projected` boolean default FALSE,
   `bound_start_length` mediumint(3) unsigned NOT NULL,
   `bound_end_length` mediumint(3) unsigned NOT NULL,
   PRIMARY KEY  (`regulatory_feature_id`),
@@ -1179,44 +1179,6 @@ CREATE TABLE `lineage` (
 -- If parent_lineage_id is 0, then is effectively root lineage term.
 
 
-
-
-/**
-@table  experimental_design
-@desc   Denormalised link table to allow many to many design_type associations.
-@colour  #808000
-
-@column design_type_id			@link design_type table ID
-@column table_name				Name of linked table
-@column table_id				Table ID of linked record
-
-@see design_type
-*/
-
-DROP TABLE IF EXISTS `experimental_design`;
-CREATE TABLE `experimental_design` (
-   `design_type_id` int(10) unsigned NOT NULL auto_increment,
-   `table_name` varchar(40) default NULL,
-   `table_id` int(10) unsigned default NULL,
-   PRIMARY KEY  (`design_type_id`, `table_name`, `table_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- rename associated_design_type, or replace with ontology xrefs?
-
-
-/**
-@table  design_type
-@desc   Contains extra information about experimental designs, preferably ontology terms.
-@colour  #808000
-
-@column design_type_id	Internal ID
-@column name			Name of design type
-
-@see experimental_design
-*/
-
--- extend to support ontologies properly or remove
-
 DROP TABLE IF EXISTS `design_type`;
 CREATE TABLE `design_type` (
    `design_type_id` int(10) unsigned NOT NULL auto_increment,
@@ -1376,8 +1338,7 @@ CREATE TABLE `analysis` (
   `gff_source` varchar(40) default NULL,
   `gff_feature` varchar(40) default NULL,
   PRIMARY KEY  (`analysis_id`),
-  UNIQUE KEY `logic_name` (`logic_name`),
-  KEY `logic_name_idx` (`logic_name`)
+  UNIQUE KEY `logic_name_idx` (`logic_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
