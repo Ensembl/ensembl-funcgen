@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2012 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -284,7 +284,7 @@ if (@fset_names) {
       }
 
       $source_name = $reg_fsets[0]->analysis->logic_name.'_v'.
-        (@{$meta_container->list_value_by_key('regbuild.version')});
+        (${$meta_container->list_value_by_key('regbuild.version')}[0]);
       
       $merged_dump = 0; #Force dumping in separate files
 
@@ -297,10 +297,10 @@ if (@fset_names) {
       #MFs not currently accessable via feature_set
       #Version here denotes the inclusion based on the data in that version
       #of the regulatory build
-      #The unfiltered PWM alignments (5% FDR) may have been produced from an earlier set
+      #The unfiltered PWM alignments (5% background) may have been produced from an earlier set
       #of data.
       $source_name = 'RegulatoryBuild TFBS Motifs v'.
-        (@{$meta_container->list_value_by_key('regbuild.version')});
+        (${$meta_container->list_value_by_key('regbuild.version')}[0]);
     }
   }
 }
@@ -346,18 +346,16 @@ my %format_config = (
 
 
 					 GFF => {
-							 has_header    => 0,
-							 strand        => {
-											   0  => '',
-											   1  => '+',
-											   -1 => '-',
-											  },
-							}
+                   has_header => 0,
+                   strand => {
+                              0  => '.',
+                              1  => '+',
+                              -1 => '-',
+                             },
+                  }
 					);
 
 my $conf_ref = $format_config{$format};
-
-
 
 
 ### FEATURE TYPE CONFIG ###
@@ -617,6 +615,8 @@ my %format_subs =
   (
    'get_ProbeFeature_BED'         => \&get_ProbeFeature_BED,
    'get_RegulatoryFeature_GFF'    => \&get_RegulatoryFeature_GFF,
+   'get_RegulatoryFeature_BED'    => \&get_RegulatoryFeature_BED,
+
    'get_SegmentationFeature_GFF'  => \&get_SegmentationFeature_GFF,
    'get_AnnotatedFeature_GFF'     => \&get_AnnotatedFeature_GFF,
    'get_AnnotatedFeature_BED'     => \&get_AnnotatedFeature_BED,
@@ -628,6 +628,8 @@ my %format_subs =
    #'get_RegulatoryFeature_GFF_header' => \&get_RegulatoryFeature_GFF_header,
    #'get_AnnotatedFeature_GFF_header'  => \&get_AnnotatedFeature_GFF_header,
    'get_AnnotatedFeature_BED_header'  => \&get_AnnotatedFeature_BED_header,
+   'get_RegulatoryFeature_BED_header'  => \&get_RegulatoryFeature_BED_header,
+   
    #'get_SegmentationFeature_BED_header'  => \&get_SegmentationFeature_BED_header,
    #'get_ExternalFeature_GFF_header'   => \&get_ExternalFeature_GFF_header,		   
   );
@@ -646,6 +648,34 @@ my %fetch_methods =
    'SegmentationFeature' => 'fetch_Iterator_by_Slice_FeatureSets',
   );
 
+
+#Would be nice to pre-validate all 'Regulatory Feature' class feature types have an entry in here
+
+
+my %regf_ftype_rgb = 
+  (
+   'Unclassified'                    => '192,192,192', #'grey', actually silver?  #C0C0C0
+   'Promoter Associated'             => '0,100,0', #'darkgreen',  #006400
+   'Gene Associated'                 => '0,0,255', #'blue',  #0000FF
+   'PolIII Transcription Associated' => '106,61,154',#'purple',6A3D9A
+   'Non-Gene Associated'             => '255,140,0', #'darkorange',#FF8C00
+  );
+#These are all ucfirsted only in the web interface. And PolIII drops 'Transcription' Change?
+
+#Remove these once they are in the DB
+my %seg_so_terms = 
+  (
+   'CTCF enriched'                           => { name =>'TF_binding_site', acc => 'SO:0000235'},
+   #CTCF_binding_site submitted to SO
+
+   'Predicted Enhancer'                      => { name => 'enhancer', acc => 'SO:0000165'},
+   'Predicted Promoter Flank'                => { name => 'flanking_region', acc => 'SO:0000239'},
+   #promoter_flanking_region submitted to SO
+   'Predicted Promoter with TSS'             => { name => 'promoter', acc => 'SO:0000167'},
+   'Predicted Repressed/Low Activity'        => { name => 'transcriptionally_repressed', acc => 'SO:0000126'},
+   'Predicted Transcribed Region'            => { name => 'transcribed_region', acc => 'SO:0000502'},
+   'Predicted Weak Enhancer/Cis-reg element' => { name => 'enhancer', acc => 'SO:0000165'}
+  );
 
 
 ### DUMP THE FEATURES
@@ -669,28 +699,28 @@ my (@dump_files, $ofile_name);
 
 #Also change type to SO term and put feature type name in Attrs?
 
-foreach my $slice(@slices){
+foreach my $slice (@slices) {
   #Build file name
   $seq_name = $slice->seq_region_name();
   $ofile_name = $file_name.'.'.$seq_name.'.'.lc($format);
 
-  if($slice->coord_system->name eq 'chromosome'){
-	$seq_name = 'chr'.$seq_name;
+  if ($slice->coord_system->name eq 'chromosome') {
+    $seq_name = 'chr'.$seq_name;
   }
 
 
-  if(! $keep_colons){
-	#Remove colons from file path which can cause problems with scp
-	$ofile_name =~ s/\:/_/go;
+  if (! $keep_colons) {
+    #Remove colons from file path which can cause problems with scp
+    $ofile_name =~ s/\:/_/go;
   }
 
   my $ofile_path = $out_dir.$ofile_name;
   my $ofile;
   
   #Cat files
-  if($post_process){
-	push @dump_files, $ofile_name;
-	next;
+  if ($post_process) {
+    push @dump_files, $ofile_name;
+    next;
   }
 
   #Dump to file
@@ -715,68 +745,71 @@ foreach my $slice(@slices){
   #sub these out to avoid repeating header method calls
   my $seen_feats = 0;
   
-  if(ref($feats) eq 'Bio::EnsEMBL::Utils::Iterator'){
+  if (ref($feats) eq 'Bio::EnsEMBL::Utils::Iterator') {
 	
-	#Do this after feature fetch to avoid creating empty file
-	if($feats->has_next){
-	  $seen_feats = 1;
-	  $ofile = open_file($ofile_path, '>');
+    #Do this after feature fetch to avoid creating empty file
+    if ($feats->has_next) {
+      $seen_feats = 1;
+      $ofile = open_file($ofile_path, '>');
   
-	  if($conf_ref->{has_header}){
-		print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
-	  }
-	}
+      if ($conf_ref->{has_header}) {
+        print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
+      }
+    }
 	
-	while( ($feature = $feats->next) &&
-		   defined $feature){
-	  &print_line;
-	}
-  }
-  else{# Normal ARRAYREF of features
+    while ( ($feature = $feats->next) &&
+            defined $feature) {
+      &print_line;
+    }
+  } else {                      # Normal ARRAYREF of features
 	
-	#Do this after feature fetch to avoid creating empty file
-	if(scalar(@$feats)){
-	  $seen_feats = 1;
-	  $ofile = open_file($ofile_path, '>');
+    #Do this after feature fetch to avoid creating empty file
+    if (scalar(@$feats)) {
+      $seen_feats = 1;
+      $ofile = open_file($ofile_path, '>');
 	  
-	  if($conf_ref->{has_header}){
-		print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
-	  }
+      if ($conf_ref->{has_header}) {
+        print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
+      }
 
-	  foreach $feature(@$feats){
-		&print_line;
-	  }
-	}
+      foreach $feature(@$feats) {
+        &print_line;
+      }
+    }
   }
 	
   sub print_line{
     $cnt++;	
     #Move all this to the relevant Feature class method get_FORMAT
     #Utilise base Feature methods for common attrs i.e. $self->SUPER->get_FORMAT
+
+    #warn $format_method;
     
-    push @output, &{$format_subs{$format_method}}($feature, $seq_name, $source_name, $feature_class);
+    #Feature class needs pre-defining for sets where this is redundant
+    #wait until we migrate to new IO code to do this
+
+    push @output, &{$format_subs{$format_method}}($feature, $seq_name, $source_name); #, $feature_class);
     
-    if(scalar(@output) == 1000){#1000
+    if (scalar(@output) == 1000) { #1000
       print $ofile join('', @output);
       @output = ();
     }
   }
 
 
-  if($seen_feats){
-	print $ofile join('', @output);
-	@output = ();
-	close($ofile);
-
-	print "Features dumped:\t\t\t$cnt\nOutput can be found here:\t\t$ofile_name\n";
-	
-
-	if($zip){
-	  system("gzip -f $ofile_name") == 0 or die("Could not gzip file:\t$ofile_name");
-	}
-  }
-  else{
-	print "No features found, file not written\n";
+  if ($seen_feats) {
+    print $ofile join('', @output);
+    @output = ();
+    close($ofile);
+    
+    print "Features dumped:\t\t\t$cnt\nOutput can be found here:\t\t$ofile_name\n";
+    
+    
+    if ($zip) {
+      system("gzip -f $ofile_name") == 0 or die("Could not gzip file:\t$ofile_path");
+    }
+  } else {
+    print "No features found, file not written\n";
   }
 }
 
@@ -854,23 +887,23 @@ if($post_process){
   #compress and zip should be mutually exclusive?
   
   if($compress){
-	$cmd = $bin_dir.$conf_ref->{compression_script}.' '.$compression_args;
-	print "\n".$cmd."\n";
-	system($cmd) == 0 or die("Failed to compress compress output:\n$cmd\n$!");
-	push @cat_files, $ofile_path;
+    $cmd = $bin_dir.$conf_ref->{compression_script}.' '.$compression_args;
+    print "\n".$cmd."\n";
+    system($cmd) == 0 or die("Failed to compress compress output:\n$cmd\n$!");
+    push @cat_files, $ofile_path;
 	
   }
 
 
   if($zip){
-	system("gzip -f $ofile_path") == 0 or die("Could not gzip file:\t$ofile_path");
-	#gzip removes source file so no need to add to @dump_files
+    system("gzip -f $ofile_path") == 0 or die("Could not gzip file:\t$ofile_path");
+    #gzip removes source file so no need to add to @dump_files
   }
   
   if(! $no_clean){
-	$cmd = "rm -f @cat_files";
-	#print $cmd."\n";
-	system($cmd) == 0 or die("Failed to remove files:\n$cmd\n");
+    $cmd = "rm -f @cat_files";
+    #print $cmd."\n";
+    system($cmd) == 0 or die("Failed to remove files:\n$cmd\n");
   }
 
   chdir($cwd);
@@ -898,8 +931,8 @@ sub get_RegulatoryFeature_GFF{
 	  #Only need cell type here for MultiCell
 	  my $attr_name = $reg_attr->feature_type->name;
 	  $attr_name .= ':'.$reg_attr->cell_type->name if $feature->cell_type->name eq 'MultiCell';
-	  my $mf_attrs = &get_associated_MotifFeature_GFF_attributes($reg_attr);
-	  $attr_name .= '('.$mf_attrs.')' if $mf_attrs;
+	  my $mf_attrs = &get_associated_BindingMatrix_names($reg_attr);
+	  $attr_name .= '('.join(' ', @$mf_attrs).')' if @$mf_attrs;
 
 	  #We should add MotifFeatures here so they have there AF context.
 	  push @attrs, $attr_name;
@@ -913,18 +946,30 @@ sub get_RegulatoryFeature_GFF{
 
   return join("\t", 
               (@{$gff}, 
-               join('; ', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id, 
+               join(';', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id, 
                            'bound_start='.$feature->bound_seq_region_start, 
                            'bound_end='.$feature->bound_seq_region_end, 
-                           'Note=Consists of following features: '.join(' ', @attrs)))))
+                           'Note=Consists of following features: '.join(',', @attrs)))))
     ."\n";
 
 }
 
 
+
+
+
+
 sub get_SegmentationFeature_GFF{
   my ($feature) = @_;
-  my $gff = &get_GFF(@_);
+
+  #currently not passing feature_class through here and
+  #we don't yet have so names for segfeats in the database
+  #patch in a hash look up until next release
+
+  
+  my $gff = &get_GFF(@_, $seg_so_terms{$feature->feature_type->name}->{name});
+
+
   return join("\t", (@{$gff}, 'Name='.$feature->feature_type->name))."\n";
 }
 
@@ -938,23 +983,21 @@ sub get_AnnotatedFeature_GFF{
   #Analysis logic name is already used in the source field
 
   my $attr_string = 'Name='.$feature->feature_type->name.
-    "; Alias=".$feature->feature_set->name.
-      "; Class=".$feature->feature_type->class.
-        "; Cell_type=". $feature->cell_type->name;
+    ";Alias=".$feature->feature_set->name.
+      ";Class=".$feature->feature_type->class.
+        ";Cell_type=". $feature->cell_type->name;
   
   my $summit    = $feature->summit;
-  $attr_string .= "; Summit=$summit" if $summit;
+  $attr_string .= ";Summit=$summit" if $summit;
   
-  my $pwm_names = &get_associated_MotifFeature_GFF_attributes($feature);
-  $attr_string .= "; Note=Contains the following PWMs:${pwm_names}" if $pwm_names;
+  my $pwm_names = &get_associated_BindingMatrix_names($feature);
+  $attr_string .= ';Note=Contains the following PWMs: '.join(',', @$pwm_names) if @$pwm_names;
   
   return join("\t", (@$gff, $attr_string))."\n";
 }
 
 
-
-
-sub get_associated_MotifFeature_GFF_attributes{
+sub get_associated_BindingMatrix_names{
   my ($mf_assocd_feature) = @_;
 
   my $pwm_names;
@@ -962,21 +1005,17 @@ sub get_associated_MotifFeature_GFF_attributes{
   
 
   foreach my $assoc_mf(@{$mf_assocd_feature->get_associated_MotifFeatures()}){
-	#mf display_label or binding_matrix id/name here?
-	push @pwm_names, $assoc_mf->binding_matrix->name;
-  }
-  
-  if(@pwm_names){
-    $pwm_names = join(' ', @pwm_names);
+    #mf display_label or binding_matrix id/name here?
+    push @pwm_names, $assoc_mf->binding_matrix->name;
   }
 
-  #Just return arrayref?
-  return $pwm_names;
+  return \@pwm_names;
 }
 
 sub get_MotifFeature_GFF{
   my ($feature) = @_;
   my $gff = &get_GFF(@_);
+  $gff->[5] = $feature->score;
 
   #display_label gives ftype_name:pwm_name
   return join("\t", @$gff)."\tName=".$feature->display_label."\n";
@@ -985,11 +1024,11 @@ sub get_MotifFeature_GFF{
 
 
 sub get_ExternalFeature_GFF{
-  my $gff = &get_GFF;
+  my $gff = &get_GFF(@_);
 
   #It may be more appropriate to have display_label as the Name
   #Now add attributes
-  return join("\t", @$gff)."\tName=".$feature->feature_type->name.'; Alias='.$feature->display_label."\n";
+  return join("\t", @$gff)."\tName=".$feature->feature_type->name.'; lias='.$feature->display_label."\n";
 }
 
 sub get_AnnotatedFeature_BED{
@@ -1004,6 +1043,91 @@ sub get_AnnotatedFeature_BED{
 }
 
 
+
+sub get_RegulatoryFeature_BED{
+  my ($feature) = @_;
+   my $bed = &get_BED(@_);
+  #two blocks with a 1bp intron at the peak summit?
+
+  #chrom, chromStart, chromEnd, name, score, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts
+  #$bed->[3] = $feature->feature_type->name;
+
+  #Do we want to wedge cell type in here too?
+  #chrom, boundStart, boundEnd, stable_id:FeatureType, score, strand, coreStart, coreEnd, itemRgb, motifFeatureCount, motifFeatureSizes, motifFeatureStarts, motifFeatureInfo (pwm_name:pwm_accession:score, ...)
+
+  #motifFeatureInfo does not deconvolute transcription factor complex pwm names as in zmenus 
+  #i.e. doesn't add associated experiment ftype in parenthesis e.g. mxl-1::mdl-1 (Max)
+
+  #Re-assign core the think loci first
+  $bed->[6] = $bed->[1];                        #coreStart
+  $bed->[7] = $bed->[2];                        #coreEnd
+
+  $bed->[1] = $feature->bound_seq_region_start; #boundStart
+  $bed->[2] = $feature->bound_seq_region_end;   #boundEnd
+  $bed->[3] = $feature->stable_id;              #stable ID
+  my $ftype_name = $feature->feature_type->name;
+
+  if($feature->feature_set->name ne 'RegulatoryBuild:MultiCell'){
+    #Omit Unclassified classification for MultiCell for now
+    $bed->[3] .= ':'.$ftype_name;
+  }
+
+  $bed->[4] = 0;                            #score
+  $bed->[5] = '.';                          #strand
+  $bed->[8] = $regf_ftype_rgb{$ftype_name}; #itemRGB
+  
+  # Define MotifFeature info as blocks
+  #Need to sub this out, for use with get_AnnotatatedFeature_Bed
+   
+  #assumes mfs return in order (which they should?, this needs testing!)
+  #If not, this could be slowing down display due to excessive index and disk seeking?
+
+  $bed->[9]  = 0;  #motifFeatureCount
+  $bed->[10] = []; #motifFeatureSizes
+  $bed->[11] = []; #motifFeatureStarts
+  $bed->[12] = []; #motifFeatureInfo
+
+  foreach my $assoc_mf(@{$feature->regulatory_attributes('motif')}){
+    $bed->[9] ++;
+    
+    push @{$bed->[10]}, $assoc_mf->length;
+    push @{$bed->[11]}, $assoc_mf->seq_region_start;
+    
+    #pwm_name:pwm_accession:score
+
+    #pwm_name:pwm_accession = mf.display label?
+    #Would be good as then we don't have to fetch the binding_matrix at all
+
+    #we have issue here with delimiter: mxl-1::mdl-1:PL0014.1!
+    #change delimiter in display label to? space? Can't be - or ,
+    #can we have /?
+
+
+    #push @{$bed->[12]}, $assoc_mf->display_label.':'.$assoc_mf->score;
+    #
+
+    
+    my $binding_matrix =  $assoc_mf->binding_matrix;
+    push @{$bed->[12]}, $binding_matrix->feature_type->name.'/'.$binding_matrix->name.'/'.$assoc_mf->score;
+
+  }
+  
+
+  $bed->[10] = (@{$bed->[10]}) ? join(',', @{$bed->[10]}) : '';
+  $bed->[11] = (@{$bed->[11]}) ? join(',', @{$bed->[11]}) : '';
+  $bed->[12] = (@{$bed->[12]}) ? join(',', @{$bed->[12]}) : '';
+
+
+  #Outstanding issues
+  #1 Delimiter on motifFeatureInfo triplet clashes with transcription factor complex pwm names
+  #2 Need to update RGBs from string to actual values
+  #3 Are spaces allowed in name field? ENSR00000528857:Promoter Associated
+    
+  return join("\t", @$bed)."\n";
+}
+
+
+
 #Header methods should optionally take Slice arg
 #so we can support slice dump and full genome dump
 
@@ -1015,6 +1139,14 @@ sub get_ProbeFeature_BED_header{
   #this may have been polluted with seq_region_name
  
   return "track name=$dump_name description=\"Ensembl ".$array->vendor.':'.$array->name." mappings\" useScore=0\n";
+}
+
+
+sub get_RegulatoryFeature_BED_header{
+
+  #   track name=pairedReads description="Clone Paired Reads" useScore=1
+ 
+  #return "track name=$dump_name description=\"Ensembl ".$fset->name." mappings\" useScore=0\n";
 }
 
 sub get_ProbeFeature_BED{
@@ -1061,13 +1193,14 @@ sub get_GFF{
   if(! defined $source_name){
     $source_name = $feature->analysis->logic_name;
   }
+  
+  if (! defined $feature_class){
+    $feature_class = $feature->feature_type->so_name;
+    #This is failing for MotifFeatures as they don't currently have a feature type method
+  }
 
   my @gff = ($seq_name, $source_name, $feature_class, $feature->seq_region_start, $feature->seq_region_end, 
 			 '.', $conf_ref->{strand}->{$feature->seq_region_strand}, '.');
-
-  #Set size to mandatory fields
-  #$#gff = 7;
-
 
   return \@gff;
 }
