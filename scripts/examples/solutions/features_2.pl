@@ -23,7 +23,7 @@ my $sa = $registry->get_adaptor('Human', 'core', 'slice');
 my $fsa = $registry->get_adaptor('Human', 'funcgen', 'featureset');
 
 # You can get it by the name
-#Carefull: some parts of the Y chomosome are the same as the Y...
+#Carefull: some parts of the Y chomosome are PARs i.e. same as the X...
 my $slice = $sa->fetch_by_region('chromosome','Y',5000000,40000000);
 
 # Compare the number of annotated features in the region Y:5000000-40000000 between the Human feature sets 'K562_DNase1_ENCODE_Duke_SWEmbl_R0025_D150' and 'HepG2_DNase1_ENCODE_Duke_SWEmbl_R0025_D150'.Investigate the differences (hint: check cell types).
