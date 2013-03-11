@@ -7,11 +7,13 @@ $registry->load_registry_from_db
   (
    -host => 'ensembldb.ensembl.org',
    -user => 'anonymous',
+   -db_version => 67,
+   -verbose => 1,
   );
 
 
 #Grab the adaptors
-my $efg_db        = $registry->get_DBAdaptor('Human', 'funcgen');
+my $efg_db        = $registry->get_DBAdaptor('homo_sapiens', 'funcgen');#'Human', 'funcgen');
 my $array_adaptor = $efg_db->get_ArrayAdaptor;
 
 #Grab all the arrays
