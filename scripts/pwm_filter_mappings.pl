@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -51,6 +51,9 @@ add the functionality from pwm_filter_mappings.pl to the end of this script
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.6  2011-07-14 09:14:44  ds19
+ Update
+
  Revision 1.5  2011-01-10 14:25:54  nj1
  added generic #!/usr/bin/env perl
 
