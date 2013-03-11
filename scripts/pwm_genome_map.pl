@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -106,6 +106,9 @@ mysql -u ensro -hens-genomics1 -P3306 -BN -e"select sr.name,af.seq_region_start,
 =head1 CVS
 
  $Log: not supported by cvs2svn $
+ Revision 1.7  2011-07-14 09:15:01  ds19
+ Update
+
  Revision 1.6  2011-01-10 14:25:54  nj1
  added generic #!/usr/bin/env perl
 
@@ -137,6 +140,21 @@ maybe collate output into one file per PWM
 
 =cut
 
+# To do - Some o fthese apply to all the pwm scripts
+# 1 Getopt::Long, remove process_arguments
+# 2 remove backticks in favour of system. Use EFGUtils::run_system_cmd
+# 3 Remove commentary and err subs and flip use STDERR(warn) and STDOUT(print). 
+#   We should have nothing on STDERR unless there is a warning/error.
+# 4 DONE fastaclean path? Now append path belowb
+# 5 Fix backtick which tests do not work
+# 6 remove config sub
+
+#Requirements
+#Do this in a pre-exec before we process anything?
+#test dirs too?
+#fastaclean
+#$moodsmapper i.e. find_pssm_dna
+
 
 use strict;
 #use DBI;
@@ -146,6 +164,7 @@ use File::Basename;
 use IO::Handle;
 use IO::File;
 #use lib '/nfs/users/nfs_d/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
+$ENV{PATH} .= ':/usr/local/ensembl/bin/'; #fastaclean home, probably needs moving to /software/ensembl/bin
 
 my($user, $password, $driver, $host, $port);
 my $outfile='';
@@ -165,12 +184,13 @@ my $assembly;
 
 my %opt;
 
-if ($ARGV[0]){
-    &commentary(join(' ',@ARGV)."\n");
-    &Getopt::Std::getopts('a:s:t:g:h:v:o:i:p:w:', \%opt) || die ;
-}else{
-    &help_text; 
+if(! @ARGV){
+  &help_text;
 }
+
+print "$0 @ARGV\n";
+&Getopt::Std::getopts('a:s:t:g:h:v:o:i:p:w:', \%opt) || die ;
+
 
 # get configuration from environment variables
 #&config; # this may fail but config can be on command line
@@ -511,10 +531,13 @@ sub explode_genome_fasta{
     &commentary("exploding $genome_file to $target_dir") if $verbose;
 
 
+	#These tests do not work!
+
     my $res = &backtick("which fastaclean");
     if($res =~ 'not found'){
 	die "Need to implement fastaclean functionality here";
     }
+
 
     $res = &backtick("which fastaexplode");
     if($res =~ 'not found'){
@@ -675,8 +698,8 @@ sub backtick{
 
     my $res = `$command`;
     if($?){
-        warn "failed to execute $command \n";
-        warn "output :-\n $res \n";
+        warn "failed to execute $command\n";
+        warn "output:\t$res\n";
 	die "exit code $?";
     }
 
@@ -809,3 +832,5 @@ END_OF_TEXT
         exit(0);
     }
 }
+
+1;
