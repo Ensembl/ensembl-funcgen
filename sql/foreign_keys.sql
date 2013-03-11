@@ -25,7 +25,7 @@
 
 
 
--- Last updated for v70
+-- Last updated for v71
 
 -- feature_set
 ALTER table feature_set ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
