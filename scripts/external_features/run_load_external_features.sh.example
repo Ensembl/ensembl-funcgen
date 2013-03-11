@@ -1,0 +1,37 @@
+#!/bin/sh
+
+#. ~/src/ensembl-efg/scripts/.efg
+
+USER=$1
+shift
+PASS=$1
+shift
+
+species="mus_musculus"
+dbname="${species}_funcgen_71_38"
+host=mysql_host
+port=3306
+
+
+cmd="perl $EFG_SRC/scripts/external_features/load_external_features.pl\
+	-type  vista\
+	-species $species\
+	-port $port\
+	-user $USER\
+	-host $host\
+	-clobber\
+	-dbname $dbname\
+	-pass $PASS\
+  -tee\
+	$@"
+
+#-old_assembly NCBIM37\
+#-new_assembly GRCm38\
+
+
+echo $cmd 
+$cmd
+
+
+exit
+
