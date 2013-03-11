@@ -1,4 +1,4 @@
-/** 
+/**
 @header patch_69_70_b.sql - regulatory_feature.bound_start/end_length
 @desc   Change the bound_seq_regiobn_start/end fields to lengths
 */

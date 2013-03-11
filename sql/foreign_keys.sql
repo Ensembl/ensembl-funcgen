@@ -10,13 +10,13 @@
 
 
 -- To run this script you must first create an empty DB and update all tables to InnoDB
--- mysqlw -pXXXXXXX -e 'DROP DATABASE innodb_funcgen_65'
--- mysqlw -pXXXXXXX -e 'CREATE DATABASE innodb_funcgen_65'
--- mysqlw -pXXXXXXX innodb_funcgen_65 < efg.sql
--- mysqlro innodb_funcgen_65 -N -e "show tables" | while read t; do if [[ $t != meta ]]; then echo "Altering $t to InnoDB"; mysqlw -pXXXXXXX innodb_funcgen_65 -N -e "ALTER TABLE $t engine=InnoDB"; fi; done
+-- mysqlw -pXXXXXXX -e 'DROP DATABASE innodb_funcgen'
+-- mysqlw -pXXXXXXX -e 'CREATE DATABASE innodb_funcgen'
+-- mysqlw -pXXXXXXX innodb_funcgen < efg.sql
+-- mysqlro innodb_funcgen -N -e "show tables" | while read t; do if [[ $t != meta ]]; then echo "Altering $t to InnoDB"; mysqlw -pXXXXXXX innodb_funcgen -N -e "ALTER TABLE $t engine=InnoDB"; fi; done
 
 -- Then, optionally disable some to remove complexity when generating ER diagrams, before running:
--- mysqlw -pXXXXXXX innodb_funcgen_65 < foreign_keys.sql
+-- mysqlw -pXXXXXXX innodb_funcgen < foreign_keys.sql
 
 -- Some potential errors
 -- ERROR 1071 (42000) at line 1: Specified key was too long; max key length is 767 bytes
@@ -25,7 +25,7 @@
 
 
 
--- Last updated for v69
+-- Last updated for v70
 
 -- feature_set
 ALTER table feature_set ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
