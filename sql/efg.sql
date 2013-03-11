@@ -1179,17 +1179,6 @@ CREATE TABLE `lineage` (
 -- If parent_lineage_id is 0, then is effectively root lineage term.
 
 
-DROP TABLE IF EXISTS `design_type`;
-CREATE TABLE `design_type` (
-   `design_type_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(255) default NULL,
-   PRIMARY KEY  (`design_type_id`),
-   KEY `design_name_idx` (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- add description?
-
-
 /**
 @table  status
 @desc   Denormalised table associating funcgen records with a status.
