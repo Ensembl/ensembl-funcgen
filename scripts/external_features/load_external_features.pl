@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -42,38 +42,49 @@ use Bio::EnsEMBL::Funcgen::Parsers::miranda;
 use Bio::EnsEMBL::Funcgen::Parsers::redfly;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-
+use Pod::Usage;
 use Getopt::Long;
 
 my ($host, $user, $dnadb_host, $dnadb_user, $pass, $port, $dbname, $dnadb_name, $dnadb_port);
-my ($species, $clobber, $type, $old_assembly, $new_assembly, $archive);
+my ($species, $clobber, $type, $old_assembly, $new_assembly, $archive, $dnadb_pass);
 
 #$main Helper params
 #Set here to avoid used once error
 $main::_tee     = 0;
 $main::_log_file = undef;
+my @tmp_args = @ARGV;
 
-GetOptions( "host=s",       => \$host,
-			"dnadb_host=s"  => \$dnadb_host,
-			"user=s",       => \$user,
-			"dnadb_user=s", => \$dnadb_user,
-			"species=s",    => \$species,
-			"pass=s",       => \$pass,
-			"port=i",       => \$port,
-			"dbname=s",     => \$dbname,
-			"dnadb_name=s", => \$dnadb_name,
-			"dnadb_port=s"  => \$dnadb_port,
-			"type=s",       => \$type,
-			"tee",          => \$main::_tee,
-			"logfile=s"     => \$main::_log_file, 
-			"archive=s",    => \$archive,
-			"clobber",      => \$clobber,#This is not behaving like a boolean flag??
-			"help",         => \&usage,
-			"old_assembly=s", => \$old_assembly,
-			"new_assembly=s", => \$new_assembly
-	  );
+GetOptions
+  ( 
+   "host=s",       => \$host,
+   "dnadb_host=s"  => \$dnadb_host,
+   "user=s",       => \$user,
+   "dnadb_user=s", => \$dnadb_user,
+   "species=s",    => \$species,
+   "pass=s",       => \$pass,
+   "port=i",       => \$port,
+   "dbname=s",     => \$dbname,
+   "dnadb_name=s", => \$dnadb_name,
+   "dnadb_port=s"  => \$dnadb_port,
+   "dnadb_pass=s"  => \$dnadb_pass,
+   "type=s",       => \$type,
+   "tee",          => \$main::_tee,
+   "logfile=s"     => \$main::_log_file, 
+   "archive=s",    => \$archive,
+   "clobber",      => \$clobber,#This is not behaving like a boolean flag??
+   "help",         => \&usage,
+   "old_assembly=s", => \$old_assembly,
+   "new_assembly=s", => \$new_assembly
+  ) 
+  or pod2usage( -exitval => 1,
+                -message => "Params are:\t@tmp_args"
+              );
 
+print "load_external_features.pl @tmp_args\n";
 my @files = @ARGV;
+
+
+#convert usage to pod2usage and move usage docs to pod at top
 
 usage() if (!$host || !$user || !$dbname || !$type);
 
@@ -82,73 +93,48 @@ usage() if (!$host || !$user || !$dbname || !$type);
 #only do this if cdbname is specified
 #But we need to allow for other options for port/user/pass too
 
-my $cdb;
-
-if($dnadb_name){
-  $cdb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-											 -host   => $dnadb_host || 'ens-staging',
-											 -port   => $dnadb_port || '3306',
-											 -user   => $dnadb_user || 'ensro',
-											 #-pass   => $pass,
-											 -species => $species,
-											 -group  => 'core',
-											 -dbname => $dnadb_name,
-											);
-}
 
 
-my $db_adaptor = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor(
-															 -host   => $host,
-															 -port   => $port,
-															 -user   => $user,
-															 -pass   => $pass,
-															 -species => $species,
-															 -group  => 'funcgen',
-															 -dbname => $dbname,
-															 -dnadb  => $cdb,
-															 #pass other dnadb params here(not name)m to auto aqcuire
-															);
+my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+  (
+   -host   => $host,
+   -port   => $port,
+   -user   => $user,
+   -pass   => $pass,
+   -species => $species,
+   -group  => 'funcgen',
+   -dbname => $dbname,
+   #-dnadb  => $cdb,
+   #pass other dnadb params here(not name)m to auto aqcuire
+
+   -dnadb_host => $dnadb_host || 'ens-livemirror',
+   -dnadb_port => $dnadb_port,
+   -dnadb_user => $dnadb_user || 'ensro',
+   -dnadb_pass => $dnadb_pass,
+   -dnadb_name => $dnadb_name,
+
+  );
 
 #test db connections
 $db_adaptor->dbc->db_handle;
 $db_adaptor->dnadb->dbc->db_handle;
 $type = lc($type);
-#we need to validate module in a different way
-# validate type
-#exit(1) if (!RegulatoryFeatureParser::BaseParser::validate_type($db_adaptor, $type));
-#Need to eval the use? No use is performed before anything?
-
 
 eval "require Bio::EnsEMBL::Funcgen::Parsers::$type";
+
 if($@) {
   die("Did not find a parser module corresponding to $type");
 }
 
-my $parser = "Bio::EnsEMBL::Funcgen::Parsers::$type"->new(
-												   -db      => $db_adaptor,
-												   -clobber => $clobber,
-												   -archive => $archive,
-												   -type    => $type,
-												  );
-
-
-#RegulatoryFeatureParser::BaseParser::delete_existing($db_adaptor, $type) if ($del);
-
-#if(! defined $file){
-#  print "Must provide a file to parse\n";
-#  &usage;
-#}
-
-#if(! -e $file){
- # print "Can't find $file\n";
- # &usage;
-#}
+my $parser = "Bio::EnsEMBL::Funcgen::Parsers::$type"->new
+  (
+   -db            => $db_adaptor,
+   -clobber       => $clobber,
+   -archive       => $archive,
+   -no_disconnect => 1, #Should never need to disconnect with these imports
+  );
 
 $parser->parse_and_load(\@files, $old_assembly, $new_assembly);
-
-#$parser->upload_features_and_factors($objects);
-
-
 
 
 sub usage {
