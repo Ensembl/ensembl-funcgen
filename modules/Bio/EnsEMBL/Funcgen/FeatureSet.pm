@@ -435,37 +435,44 @@ sub get_InputSet{
 
 =cut
 
-#These are used to link through to the experiment view based on feature_set_id
+#These are used to link through to the experiment view based on feature_set name
 #select input_set_id, count(distinct archive_id) as cnt , group_concat(archive_id) from input_subset where archive_id is not NULL group by input_set_id having cnt >1;
+
+
 
 sub source_label{
   my $self = shift;
 
   if (! defined $self->{source_label}) {
     my $input_set = $self->get_InputSet;
-    my @source_labels;
-
+    
     if ($input_set) {
-
+      my (@source_labels, %source_labels);
+    
       foreach my $isset (@{$input_set->get_InputSubsets}) {
-
+      
         if (defined $isset->archive_id) {
-          push @source_labels, $isset->archive_id;
+          #Hash usage to account for duplicates from 
+          #non-unique input_subsets (bed/sam issue)
+          $source_labels{$isset->archive_id} = undef;
         }
         #Archive IDs e.g. SRX identifiers or undef.
       }
-
+    
+      @source_labels = keys %source_labels;
+    
       #Append project name
       my $exp_group = $input_set->get_Experiment->experimental_group;
-
+    
       if ($exp_group &&
           $exp_group->is_project) {
         push @source_labels, $exp_group->name;
       }
+    
+      $self->{source_label} = join(q{ }, # Single space
+                                   @source_labels);
+    
     }
-
-    $self->{source_label} = join(q{ }, # Single space
-                                 @source_labels);
   }
 
   return $self->{source_label};
