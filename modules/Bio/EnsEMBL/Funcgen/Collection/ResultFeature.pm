@@ -1,9 +1,10 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::Collection::ResultFeature
 #
+
 =head1 LICENSE
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -153,6 +154,7 @@ sub window_size {
   return $_[0]->{window_size};
 }
 
+#could be pushed into the bigBed c code
 
 sub get_min_max_scores{
   
