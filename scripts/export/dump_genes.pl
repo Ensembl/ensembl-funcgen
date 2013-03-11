@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2011 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -215,13 +215,7 @@ if (scalar(@stable_id_list)){
 
 unless (scalar(@genes) > 0 ){
   print STDERR "No genes found so far fetching all...\n";
-
-  #my $gene_ids = $gene_adaptor->list_dbIDs();
-  #@genes = @{$gene_adaptor->fetch_all_by_dbID_list($gene_ids)};
-
-   @genes = @{$gene_adaptor->fetch_all};
-
-
+  @genes = @{$gene_adaptor->fetch_all};
 }
 
 
