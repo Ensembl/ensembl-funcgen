@@ -57,13 +57,6 @@ my $dset    = $dsa->fetch_by_product_FeatureSet($vista_set);
 my $dataset = ($dset) ? $dset->name : 'NON-DEFINED';
 print "\tDataSet:\t$dataset\n";
 
-#Print RegFeat details
-my $multicellreg_set = $fsa->fetch_by_name('RegulatoryFeatures:MultiCell');
-print "\n\n".$multicellreg_set->display_label."\n";
-$dset    = $dsa->fetch_by_product_FeatureSet($multicellreg_set);
-$dataset = ($dset) ? $dset->name : 'NON-DEFINED';
-print "\tDataSet:\t".$dataset."\n";
-
 
 __END__
 
@@ -178,6 +171,3 @@ VISTA Enhancers
         Cell type:      NON-DEFINED     FeatureType:    VISTA Target
         DataSet:        NON-DEFINED
 
-
-Reg.Feats MultiCell
-        DataSet:        RegulatoryFeatures:MultiCell
