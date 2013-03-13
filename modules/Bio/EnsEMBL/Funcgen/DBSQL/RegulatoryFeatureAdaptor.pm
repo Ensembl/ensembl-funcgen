@@ -706,7 +706,7 @@ sub store{
 =head2 fetch_all_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Bio::EnsEMBL::Slice
+  Arg [2]    : Bio::EnsEMBL::Funcgen::FeatureSet
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
                my $features = $regf_adaptor->fetch_all_by_Slice($slice);
   Description: Retrieves a list of features on a given slice, specific for the current 
