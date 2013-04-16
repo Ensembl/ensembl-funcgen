@@ -873,7 +873,7 @@ sub get_InputSets{ #DEPRECATED IN v72
 
 sub add_table_id { #DEPRECATED IN v72
    deprecate('The add_table_id method is no deprecated, please use the -support param in new');
-   return $_[0]->_add_table_id;
+   return $_[0]->_add_table_id($_[1]);
 }
 
 1;
