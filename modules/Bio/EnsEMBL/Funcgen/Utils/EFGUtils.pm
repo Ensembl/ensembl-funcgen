@@ -693,14 +693,14 @@ sub add_external_db{
 =head2
 
   Name       : create_Storable_clone
-  Arg [1]    : Cloned, unblessed object
+  Arg [1]    : Cloned, unblessed HASH (object)
   Arg [2]    : Hash containing list of objects linked to the clone and to be
                reset
   Example    :
   Description: Blesses an object and replaces all linked objects with the ones
                passed with the $params_hash
   Returntype : cloned object
-  Exceptions : None
+  Exceptions : Throws if object is not HASH
   Caller     : general
   Status     : At risk - not tested
 
@@ -709,6 +709,9 @@ sub add_external_db{
 sub create_Storable_clone {
   my ($obj, $params_hash) = @_;
 
+  if(ref($obj) ne 'HASH') {
+    throw('HASH expected, not: '.ref($obj));
+  }
   my $clone = bless({%{$obj}}, ref($obj));
   # Flag to prevent adaptor/dbID reset
   $clone->reset_relational_attributes($params_hash);
