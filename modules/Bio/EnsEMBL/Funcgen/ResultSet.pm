@@ -817,7 +817,7 @@ sub compare_to {
     $diffs = {};
   }
   
-  $self->compare_string_methods($rset, [ qw(name table_name feature_class) ], $diffs);
+  $self->compare_string_methods($rset, [ qw(name table_name feature_class get_all_states) ], $diffs);
   
   #We know table_ids are the same, but are they from the same db?
   #Test InputSets from one with DBAdaptor::is_stored from the other
@@ -853,12 +853,7 @@ sub compare_to {
       $diffs->{'ResultSet::'.$obj_method} = $self->compare_stored_Storables($self->obj_method, $rset->$obj_method);
     }   
   }
-  
-  
-  #Finally test states
-  
-  
-  
+    
   return $diffs;
 }
 
