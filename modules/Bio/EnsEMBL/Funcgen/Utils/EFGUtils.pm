@@ -46,9 +46,9 @@ This module collates a variety of miscellaneous methods.
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num 
-				open_file median mean run_system_cmd backup_file 
-				is_gzipped is_sam is_bed get_file_format strip_param_args 
+@EXPORT_OK = qw(get_date species_name get_month_number species_chr_num
+				open_file median mean run_system_cmd backup_file
+				is_gzipped is_sam is_bed get_file_format strip_param_args
 				generate_slices_from_names strip_param_flags
 				get_current_regulatory_input_names add_external_db);
 
@@ -63,19 +63,19 @@ use Carp;
 sub get_date{
 	my ($format, $file) = @_;
 
-	my ($time, $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);	
+	my ($time, $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);
 
 
 	throw("File does not exist or is not a regular file:\t$file") if $file && ! -f $file;
 
 
-	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = (defined $file) ? 
+	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = (defined $file) ?
 	  localtime((stat($file))[9]) : localtime();
 
 	#print "	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst)\n";
-	
+
 	if((! defined $format && ! defined $file) || $format eq "date"){
-		$time = ($year+1900)."-".$mday."-".($mon+1);	
+		$time = ($year+1900)."-".$mday."-".($mon+1);
 	}
 	elsif($format eq "time"){#not working!
 		$time = "${hour}:${min}:${sec}";
@@ -146,15 +146,15 @@ sub species_chr_num{
 						homo_sapiens => {(
 										  'x' => 23,
 										  'y' => 24,
-										  'mt' => 25, 
+										  'mt' => 25,
 										 )},
-						
+
 						mus_musculus => {(
 										  'x'  => 20,
 										  'y'  => 21,
 										  'mt' => 22,
 										   )},
-						
+
 						rattus_norvegicus =>  {(
 												'x'  => 21,
 												'y'  => 22,
@@ -182,16 +182,16 @@ sub median{
   #deal with one score fastest
   return  $scores->[0] if ($count == 1);
 
-	 
+
   if($sort){
 	#This is going to sort the reference here, so will affect
 	#The array in the caller
 	#We need to deref to avoid this
   }
-  
+
   #taken from Statistics::Descriptive
   #remeber we're dealing with size starting with 1 but indices starting at 0
-  
+
   if ($count % 2) { #odd number of scores
     $median = $scores->[($index+1)/2];
   }
@@ -206,7 +206,7 @@ sub median{
 
 sub mean{
   my $scores = shift;
-  
+
   my $total = 0;
 
   map $total+= $_, @$scores;
@@ -223,7 +223,7 @@ sub mean{
 
 sub open_file{
   my ($file, $operator, $file_permissions) = @_;
-  
+
   $operator ||= '<';
 
   if ($operator !~ /%/) {
@@ -234,7 +234,7 @@ sub open_file{
   }
 
   #Get dir here and create if not exists
-  my $dir = dirname($file);  
+  my $dir = dirname($file);
 
   my $mkpath_opts = {verbose => 1};
   $mkpath_opts->{mode} = $file_permissions if defined $file_permissions;
@@ -263,7 +263,7 @@ sub open_file{
     #Can't even system this as if we build the cmd line with an octal it will be converted to a decimal
     #These is still no way of testing for non-octal number or string
     #eval/sprintf will also not fail if there are non-octal digits i.e. 1999
-	
+
     #eval will treat octal number and string as true octal number
     #else will pass non-octal string/number which we can't catch
     chmod(eval($file_permissions), $file);
@@ -296,7 +296,7 @@ sub run_system_cmd{
   my $redirect = '';
 
   #$self->debug(3, "system($command)");
-  
+
   # decide where the command line output should be redirected
 
   #This should account for redirects
@@ -316,23 +316,23 @@ sub run_system_cmd{
 
   # execute the passed system command
   my $status = system("$command $redirect");
-  my $exit_code = $status >> 8; 
- 
+  my $exit_code = $status >> 8;
 
-  if ($status == -1) {	
+
+  if ($status == -1) {
 	warn "Failed to execute: $!\n";
-  }    
+  }
   elsif ($status & 127) {
 	warn sprintf("Child died with signal %d, %s coredump\nError:\t$!",($status & 127),($status & 128) ? 'with' : 'without');
-  }    
-  elsif($status != 0) {	
+  }
+  elsif($status != 0) {
 	warn sprintf("Child exited with value %d\nError:\t$!\n", $exit_code); #get the true exit code
   }
- 
+
   #We're not catchign error message here!
 
   if ($exit_code != 0){
-		  
+
     if (! $no_exit){
       throw("System command failed:\t$command\n");
     }
@@ -340,7 +340,7 @@ sub run_system_cmd{
       warn("System command returned non-zero exit code:\t$command\n");
     }
   }
-  
+
   #reverse boolean logic for perl...can't do this anymore due to tab2mage successful non-zero exit codes :/
 
   return $exit_code;
@@ -372,8 +372,8 @@ sub get_file_format{
 
 	#Add more testes here
   }
-  
-  
+
+
   return $format;
 }
 
@@ -422,11 +422,11 @@ sub is_bed {
   my $file = shift;
 
   #Use open_file here!
-  
+
   if(&is_gzipped($file, 1)){
-	
+
     open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
-  } 
+  }
   else{
     open(FILE, $file) or throw("Can't open file:\t$file");
   }
@@ -441,7 +441,7 @@ sub is_bed {
 	last;
   }
   close FILE;
-  
+
   if (scalar @line < 6) {
 	warn "Infile '$file' does not have 6 or more columns. We expect bed format:\t".
 	  "CHROM START END NAME SCORE STRAND.\n";
@@ -451,11 +451,11 @@ sub is_bed {
 	#    return 0;
 	#Commented this out for now due to HSCHR_RANDOM seqs
 	#How does the webcode handle this?
-  } 
+  }
   elsif ($line[1] !~ m/^\d+$/ && $line[2] =~ m/^\d+$/) {
 	warn "2nd and 3rd column must contain start and end respectively in '$file'\n";
 	return 0;
-  } 
+  }
   elsif ($line[5] !~ m/^[+-\.]$/) {
 	warn "6th column must define strand (either +, - or .) in '$file'\n";
 	return 0;
@@ -469,7 +469,7 @@ sub is_bed {
 #a farm mode in a run script, where a script can
 #submit itself to the farm as slice based jobs
 
-#strip cmd line params and associated arguments from a list 
+#strip cmd line params and associated arguments from a list
 #should not be used to remove flag options i.e. no following args
 #as this may cause removal of any following @ARGV;
 #Can this be used on flattened args hash?
@@ -484,7 +484,7 @@ sub strip_param_args{
 
 	if($args->[$i] =~ /^[-]+/){
 	  $seen_opt = 0;#Reset seen opt if we seen a new one
-	  
+
 	  ($param_name = $args->[$i]) =~ s/^[-]+//;
 
 	  if(grep/^${param_name}$/, @strip_params){
@@ -495,7 +495,7 @@ sub strip_param_args{
 	#$args->[$i] = '' if $args->[$i] =~ /^[-]+farm/;#Only remove current flag
 	#$seen_opt = 1 if $args->[$i] =~ /^[-]+skip_slices/;
 	#$seen_opt = 1 if $args->[$i] =~ /^[-]+slice/;#Don't have full param name incase we have just specified -slice
-	
+
 	$args->[$i] = '' if $seen_opt;#Remove option and args following option
   }
 
@@ -523,14 +523,14 @@ sub generate_slices_from_names{
   my (@slices, $slice, $sr_name, $have_slice_names, $have_skip_slices);
 
   #Test if $assembly is old?
- 
+
   #Validate array ref skip/slice name args
-  
+
   if(defined $slice_names){
     if(ref($slice_names) ne 'ARRAY'){
       throw('Slice names argument must be an ARRAYREF');
     }
-    
+
     $have_slice_names = 1 if @$slice_names;
   }
 
@@ -548,42 +548,42 @@ sub generate_slices_from_names{
 
     foreach my $name(@$slice_names){
       $slice = $slice_adaptor->fetch_by_region(undef, $name, undef, undef, undef, $assembly);
-      
+
       #WHy is this failing for hap regions?
-      
+
       if(! $slice){
-        
+
         #Need to eval this as it will break with incorrect formating
-        
+
         eval { $slice = $slice_adaptor->fetch_by_name($name) };
-        
+
         if(! $slice){
           throw("Could not fetch slice by region or name:\t".$name);
         }
       }
-      
+
       $sr_name = $slice->seq_region_name;
-      
+
       next if(grep/^${sr_name}$/, @$skip_slices);
       push @slices, $slice;
     }
   }
   elsif($level){
-   
+
     #Can't guarantee what level will have an assembly version
     #Can only throw if we have set toplevel and assembly
     #as this will alway default to the current assembly
-    #if($assembly && 
+    #if($assembly &&
     #   ($level eq 'toplevel') ){
     #  throw('You cannot specify an assembly version with the toplevel coordinate system');
     #}
     #Let core API handle this?
-    
+
 
     my @tmp_slices = @{$slice_adaptor->fetch_all($level, $assembly, $non_ref, $inc_dups)};
-    
+
     if($have_skip_slices){
-      
+
       foreach $slice(@tmp_slices){
         $sr_name = $slice->seq_region_name;
         push @slices, $slice if ! grep/^${sr_name}$/, @$skip_slices;
@@ -617,7 +617,7 @@ sub get_current_regulatory_input_names{
   #Validate is production?
   my $sql;
 
-  
+
 
   if($focus){
     $focus = 'Focus';
@@ -628,8 +628,8 @@ sub get_current_regulatory_input_names{
     #0 rather than false so we don't get NULLs
     $sql = 'SELECT efgdb_set_name from dataset where is_focus=0 and is_current=true and species="'.$efg_db->species.'"';
   }
- 
-  
+
+
 
   #Currently efgdb_set_name can either be data_set or feature_set name!
   #Need to standardise this
@@ -642,19 +642,19 @@ sub get_current_regulatory_input_names{
 
     $sql = "SELECT name from feature_set where name like '${prd_name}%'";
     my @tmp_names =  @{$efg_db->dbc->db_handle->selectcol_arrayref($sql)};
-    
+
     #This is causing problems with multiple feature sets with differing analyses
-    
+
     #Do this via InputSets(using query extension?) instead of using like?
-    
+
     #This is very hacky right now to get it to work
     #Need to standardise and review tracking db data.
 
     if(scalar(@tmp_names) > 1){
-      
+
       $sql = "SELECT name from feature_set where name ='${prd_name}_ccat_histone'";
       @tmp_names =  @{$efg_db->dbc->db_handle->selectcol_arrayref($sql)};
-      
+
       if(scalar(@tmp_names) == 1){
         push @names, $tmp_names[0];
       }else{
@@ -682,13 +682,37 @@ sub add_external_db{
   my ($efg_db, $db_name,$db_release,$db_display_name) = @_;
   my $sql = "select external_db_id from external_db where db_name='$db_name' and db_release='$db_release'";
   my ($db_id) =  $efg_db->dbc->db_handle->selectrow_array($sql);
-  if($db_id){ 
+  if($db_id){
     warn "External DB $db_name $db_release already exists in db with db_id $db_id\n";
   } else {
     #TODO check if it there was a failure
     $efg_db->dbc->do("insert into external_db (db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('$db_name', '$db_release', 'KNOWNXREF', '1', '5', '$db_display_name', 'MISC')");
   }
+}
 
+=head2
+
+  Name       : create_Storable_clone
+  Arg [1]    : Cloned, unblessed object
+  Arg [2]    : Hash containing list of objects linked to the clone and to be
+               reset
+  Example    :
+  Description: Blesses an object and replaces all linked objects with the ones
+               passed with the $params_hash
+  Returntype : cloned object
+  Exceptions : None
+  Caller     : general
+  Status     : At risk - not tested
+
+=cut
+
+sub create_Storable_clone {
+  my ($obj, $params_hash) = @_;
+
+  my $clone = bless({%{$obj}}, ref($obj));
+  # Flag to prevent adaptor/dbID reset
+  $clone->reset_relational_attributes($params_hash);
+  return $clone;
 }
 
 1;
