@@ -93,12 +93,11 @@ my %valid_table_names =
                  (
                   -dbid               => $dbid,
                   -analysis           => $analysis,
-                  -table_name         => 'input_set',
-                  -table_id           => $input_set_id,
+                  -support            => \@support_objects,
                   -result_feature_set => 1,
                   -feature_class      => 'result',
                   -feature_type       => $ftype,
-			           );
+	             );
   Description: Constructor for ResultSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::ResultSet
   Exceptions : Throws if feature class is not valid.
@@ -107,18 +106,6 @@ my %valid_table_names =
   Status     : Stable
 
 =cut
-
-#Test $rf_set eq 1|0?
-
-#task change table_id to table_ids, or take a list of -inputs 
-#and validate these have the same cell_type and feature_type as the ResultSet?
-#these could be either ExperimentalChips or InputSets
-#or completely drop experimental chip support and change result_set_input to
-#result_set_support and supporting_sets to data_set_support
-
-#supporting_sets is generic, as we may in future want another sort of set to support
-#the ResultSet (maybe a normalised ResultSet?)
-#should we just call it support and then is it set agnostic too?
 
 sub new {
   my $caller = shift;
@@ -139,15 +126,12 @@ sub new {
            join( ', ', keys %valid_classes ) );
   }
 
-  
- 
-  #todo Deprecate add_table_id and -table_name and -table_id
+  #todo fully deprecate add_table_id and -table_name and -table_id
   #There is some redundancy here between add_table_id and -support methods
   #and the add_table_id method currently allows empty ResultSets
   #this may have been to support an import where we don't have access to the support objects? 
   #check before removal
-
-
+        
   if(defined $support){ 
     $self->_set_support($support, $table_name);     
   }
@@ -156,7 +140,7 @@ sub new {
     
     if (! (defined $table_name &&
            exists $valid_table_names{$table_name}) ){
-      throw('You need to pass a valid -table_name e.g. '.
+       throw('You need to pass a valid -table_name e.g. '.
             join(', ', keys %valid_table_names));
     }
   
@@ -189,13 +173,12 @@ sub new {
 =cut
 
 sub reset_relational_attributes{
-  my $self = shift;
+  my ($self, $params_hash, $no_db_reset) = shift;
   
   #This uses new support param, rather that add_table_id/table_name/table_id
    
   my ($support, $analysis, $feature_type, $cell_type)
-    = rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
-  
+    = rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], @$params_hash);
   
   #flush table ID cache and add support
   $self->{table_id_hash} = undef;
@@ -222,6 +205,12 @@ sub reset_relational_attributes{
   $self->{cell_type}    = $cell_type;
   $self->{feature_type} = $feature_type;
   $self->{analysis}     = $analysis;
+  
+  #Finally undef the dbID and adaptor by default
+  if(! $no_db_reset){
+    $self->{adaptor} = undef;
+    $self->{dbID}    = undef;
+  }
   
   return;
 }
@@ -787,8 +776,9 @@ sub log_label {
 =head2 compare_to
 
   Args[1]    : Bio::EnsEMBL::Funcgen::ResultSet (mandatory)
-#  Args[2]    : Boolean - Shallow flag, only compares feature_class, table_name and table_ids
-#               i.e. assumes all primary key components are the same.
+  Args[2]    : Boolean - Shallow flag, omits nested object comparisons which require
+                dbID and is_stored checks.
+               i.e. assumes all primary key components are the same.
   Example    : my %diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this ResultSet to another. Does not compare support
   Returntype : Hashref of key attribute name keys and value which differ.
@@ -799,188 +789,91 @@ sub log_label {
 =cut
 
 #%diffs
-#keys define the attribute/ethod tested
+#keys define the attribute/method/test
 #If the key is a string it is a simple warning
 #If it is an array ref, it shows the differences between the attributes tested
 #if it a hash ref, it is a nest %diffs has from a nested object
 #identity of this ResultSet handled in caller, not in diffs hash.
 
-#shallow here could just compare is_stored on the adaptor of the other set
-#then compare the dbIDs
-#
+#self (or rset) would have to be stored to work with DBAdaptor check in shallow_compare_Storables
 
-#if we are comparing between two databases, this will always return a warning for the 
-#InputSubsets, and they should be tested independantly
-#
 
-#we are not comparing dbIDs here at all (apart from InputSets)
-#so the attrs may well be the same, but dbIDs and adaptor won't be
-#This is fine if we aren't concerned about the dbIDs/adaptors
-#and a store of these would fail sa these nested object from a different DB would fail the 
-#is_stored_and_valid test in the store methods
-
-#So should we restrict the compare_to methods to compare_to other nested high level meta objects
-#and completely omit the InputSet test?
-
-#if we are making this assumption for the InputSets, then why not for the analysis etc
-#can we handle this with some further config
-#-shallow => 1 check dbIDs and adpators of all nested objects
-#-shallow => 2 omits all nested object tests
-#todo add shallow levels to compare_to
-#take $diffs are as mandatory? probably not
+#slightly odd as setting shallow omits calling the shallow_compare_Storables method
 
 sub compare_to {
-  my ($self, $rset, $diffs) = @_;#, $shallow) = @_;
-  
+  my ($self, $rset, $diffs, $shallow) = @_;
+    
   if(! (defined $rset &&
         ref($rset) &&
         $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet')) ){
       throw('You must pass a valid Bio::EnsEMBL::Funcgen::ResultSet to compare');
   }
   
+  if(defined $diffs &&
+    (ref($diffs) ne 'HASH') ){
+    throw('Diffs hash mush be passed as Hashref');  
+  }
+  else{  
+    $diffs = {};
+  }
   
-  $diffs ||= {}; #currently not validated
   $self->compare_string_methods($rset, [ qw(name table_name feature_class) ], $diffs);
-  
-  
-  #Now deal with table_ids
-  #this could be subbed out to compare_arrays 
-  #args would be string/numerical and sort flag
-  my @table_ids       = sort @{$self->table_ids};
-  my @other_table_ids = sort @{$rset->table_ids};
-  
-  if(scalar(@table_ids) != scalar(@other_table_ids)){
-    $diffs->{'ResultSet::table_ids'} = [join(',', @table_ids), join(',', @other_table_ids)];
-  }
-  else{
-   
-   for my $i(0..$#table_ids){
-    
-    if($table_ids[$i] != $other_table_ids[$i]){
-      $diffs->{'ResultSet::table_ids'} = [join(',', @table_ids), join(',', @other_table_ids)];
-      last;  
-    } 
-   } 
-  }
   
   #We know table_ids are the same, but are they from the same db?
   #Test InputSets from one with DBAdaptor::is_stored from the other
   #InputSets have to be stored otherwise we would have thrown in new or add_table_id
   #Is this the same for other inputs/support i.e. ExperimentalChips
-  my $dba; 
-  my $class_name = join('',  (map ucfirst($_), split(/_/, $self->table_name) ) ); #export from EFGUtils?
-  my $get_method = 'get_'.$class_name.'s';
+
+  #Now deal with support
+  #this could be subbed out to compare_arrays 
+  #args would be string/numerical and sort flag
+  my @support       = sort {$a->dbID <=> $b->dbID} @{$self->get_support};
+  my @other_support = sort {$a->dbID <=> $b->dbID} @{$rset->get_support};
         
-  if($dba = $self->db){  
-        
-    foreach my $input(@$rset->$get_method){
-    
-      if(! $dba->is_stored($input)){
-        $diffs->{'ResultSet::'.$get_method} = $class_name.'s are not stored in the same DB';      
-      }
-    }
+  if(scalar(@support) != scalar(@other_support)){
+    $diffs->{'ResultSet::get_support - size'} = [join(',', map ($_->dbID, @support)), 
+                                                 join(',', map ($_->dbID, @other_support))];
   }
-  elsif($dba = $rset->db) {
-    
-     foreach my $input(@$self->$get_method){
-    
-      if(! $dba->is_stored($input)){
-        $diffs->{'ResultSet::'.$get_method} = $class_name.'s are not stored in the same DB'; 
+   
+  if(! $shallow){
+  
+    if(scalar(@support) == scalar(@other_support)){
+     
+      for my $i(0..$#support){
+        my %support_diffs = %{$self->shallow_stored_Storables($support[$i], $other_support[$i])};
+   
+        if(keys %support_diffs){
+          $diffs->{'ResultSet - shallow_compare support'} = \%support_diffs;
+          last; #Bailing out here may miss further mismatches
+        }
       } 
-    }     
-  }  
-  else { #Can't get a DBAdaptor from either ResultSet
-    $diffs->{'ResultSet::'.$get_method} = 'No DBAdaptor available to test '.$class_name.' is_stored'; 
-  }  
-   
-   
-   #where have my string methods gone?
-     
-  #if(! $shallow){
-   
-   
-   
-   
-  foreach my $obj( qw(feature_type cell_type analysis) ){
-    $diffs->{'ResultSet::'.$obj} = $self->compare_object_methods($rset, [$obj]);
-  }
-     
-  #or set them as one key?
-  #%diffs = ( 
-  #          %diffs,
-  #          'ResultSet::objects' => $self->compare_object_methods($rset, [analysis cell_type feature_type]),
-  #         );  
-  #} 
-   
-   return $diffs;
-}
-
-#Put this in Storable, or EFGUtils?
-
-sub compare_string_methods {
-  my ($self, $obj, $methods, $diffs) = @_;
-  
-  #assumes obj is an abject and we only want the name, not the name space
-  #and can do methods specified
-  
-  (my $obj_name = ref($obj)) =~ s/.*://g;
-  
-  $diffs ||= {};
-  
-  foreach my $method(@$methods){
-    #Do we need to handle nullls in here?
-    
-    if($self->$method ne $obj->$method){
-      $diffs->{$obj_name.'::'.$method} = [$self->$method, $obj->$method];
     }
+    
+    foreach my $obj_method( qw(feature_type cell_type analysis) ){
+      $diffs->{'ResultSet::'.$obj_method} = $self->compare_stored_Storables($self->obj_method, $rset->$obj_method);
+    }   
   }
+  
+  
+  #Finally test states
+  
+  
   
   return $diffs;
 }
 
-#May not want to pass diffs here
-#as we may want to next this hash, rather than
-#assign it here at the top level
-
-sub compare_object_methods {
-  my ($self, $obj, $methods, $diffs) = @_;
-  
-  (my $obj_name = ref($obj)) =~ s/.*://g;
-  
-  $diffs ||= {};
-  
-  foreach my $method(@$methods){
-    
-    #nesting this will anonymise the output
-    #i.e. which analysis are we comparing? 
-    #The analysis of a FeatureSet or a ResultSet?
-    #this should be handled at the top level
-    #but assume there will only ever be oneof each object
-    #otherwise we hit the anonimity issue again
-    
-    #todo add 'can' here to check we have a compare_to method in the obj
-    my %obj_diffs = %{$self->$method->compare_to($obj->$method)};
-
-    if(keys %obj_diffs){
-      $diffs->{$obj_name.'::'.$method} = \%obj_diffs;
-    }
-  }
-  
-  return $diffs;  
-}
   
 ### DEPRECATED ###
 
 sub get_InputSets{ #DEPRECATED IN v72
-  deprecate("get_InputSets is now deprecated, please use get_support.");
+  deprecate('get_InputSets is now deprecated, please use get_support.');
   return $_[0]->get_support;
 }
 
 
 sub add_table_id { #DEPRECATED IN v72
-   deprecate("The add_table_id method is no deprecated, please use the -support param in new'");
+   deprecate('The add_table_id method is no deprecated, please use the -support param in new');
    return $_[0]->_add_table_id;
 }
-
 
 1;
