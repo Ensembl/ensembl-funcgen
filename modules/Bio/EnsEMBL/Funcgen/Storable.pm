@@ -96,10 +96,6 @@ sub new {
 }
 
 
-
-
-
-
 =head2 has_status
 
   Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
@@ -112,8 +108,6 @@ sub new {
 
 =cut
 
-
-
 sub has_status{
    my ($self, $status) = @_;
 
@@ -124,8 +118,6 @@ sub has_status{
 
    return $boolean;
 }
-
-
 
 #There is a potential to create an obj from scratch which may already exist in the db
 #If we add a state to this (obj has not dbID so will not retrieve stored states) 
@@ -143,8 +135,6 @@ sub has_status{
 #All update/store_states methods should be okay so long as we have a dbID first.
 
 
-
-
 =head2 get_all_states
 
   Example    : my @ec_states = @{$experimental_chip->get_all_states()};
@@ -155,8 +145,6 @@ sub has_status{
   Status     : At risk
 
 =cut
-
-
 
 sub get_all_states{
    my ($self) = @_;
@@ -510,7 +498,158 @@ sub associated_feature_types{
   return $self->{'associated_feature_types'};
 }
 
+#nesting diffs this will anonymise the output
+#i.e. which analysis are we comparing? 
+#The analysis of a FeatureSet or a ResultSet?
+#this should be handled in the caller
+    
+#Be wary of traversing nested object comparisons!
+#This could cause problems
+#Let's just do the shallow check
 
+#This can be used for migration if the shallow flag is set
+#i.e. we don't allow db comparisons of nested objects
+
+=head2 compare_string_methods
+
+  Arg [1]    : Object to compare to, not necessarily stored.
+  Arg [2]    : Arrayref - Method names which return a string or an Arrayref 
+               of strings.
+  Arg
+  Example    : my %diffs = %{$self->compare_to($other_obj, 
+                                               [qw(name, some_other_method)]);
+  Description: Compares the return string values of the specified methods 
+               between this object and the object passed.
+  Returntype : Hashref of method name keys and and arrayref values which show
+               the differences between self and the other object(in that order) 
+  Exceptions : Throws if not status is provided
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+#todo validate $methods, and add can tests
+
+sub compare_string_methods {
+  my ($self, $obj, $methods, $diffs) = @_;
+  
+  #assumes obj is an abject and we only want the name, not the name space
+  #and can do methods specified
+  (my $obj_name = ref($obj)) =~ s/.*://g;
+  
+  if(defined $diffs &&
+    (ref($diffs) ne 'HASH') ){
+    throw('Diffs hash mush be passed as Hashref');  
+  }
+  else{  
+    $diffs = {};
+  }
+  
+  
+  
+  foreach my $method(@$methods){
+    my $these_strings = $self->$method || ['NULL'];
+    my $other_strings = $obj->$method  || ['NULL'];
+    
+    if(! ref($these_strings)){ 
+      #Has to be a SCALAR as we have evaluated the method call in the scalar context
+      #This could be a STRING or the size of the ARRAY returned
+      #or the string fraction of used/allocated blocks for a HASH
+      #No easy way to catch this unless we eval the assingment to %, then @?
+      #even then we can't differentiate between a % and @ on assignment as they 
+      #are treated the same
+      
+      $these_strings = [$these_strings];
+      $other_strings = [$other_strings];
+    }
+    elsif(ref($these_strings) ne 'ARRAYREF'){
+      throw('This method does not support method return types which are not: STRING or ARRAYREF');  
+      #Could handle ARRAYs here too, if we tested for return type
+      #would require some monkeying around  
+    }
+  
+    #Sort the arrays just in case
+    @$these_strings = sort @$these_strings;
+    @$other_strings = sort @$other_strings;
+     
+    if( scalar(@$these_strings) != scalar(@$other_strings) ){
+      $diffs->{$obj_name.'::'.$method} = [$these_strings, $other_strings];
+    }
+    else{
+    
+      foreach my $i(0..$#{$these_strings}){    
+    
+        if($these_strings->[$i] ne $other_strings->[$i]){
+          $diffs->{$obj_name.'::'.$method} = [$these_strings->[$i], $other_strings->[$i]];
+        }
+      }
+    }
+  }
+  
+  return $diffs;
+}
+
+
+sub compare_object_methods {
+  my ($self, $obj, $methods, $diffs, $shallow) = @_;
+  
+  (my $obj_name = ref($obj)) =~ s/.*://g;
+  
+  if(defined $diffs &&
+    (ref($diffs) ne 'HASH') ){
+    throw('Diffs hash mush be passed as Hashref');  
+  }
+  else{  
+    $diffs = {};
+  }
+  
+  foreach my $method(@$methods){
+    #todo add 'can' here to check we have a compare_to method in the obj
+    my %obj_diffs = %{$self->$method->compare_to($obj->$method, undef, $shallow)};
+
+    if(keys %obj_diffs){
+      $diffs->{$obj_name.'::'.$method} = \%obj_diffs;
+    }
+  }
+  
+  return $diffs;  
+}
+
+
+
+sub compare_stored_Storables {
+  my ($self, $this_obj, $other_obj, $diffs) = @_;
+  
+  if(defined $diffs &&
+    (ref($diffs) ne 'HASH') ){
+    throw('Diffs hash mush be passed as Hashref');  
+  }
+  else{  
+    $diffs = {};
+  }
+  
+  (my $class_name = ref($this_obj)) =~ s/.*://;
+  
+  if($self->adaptor){ #assume we have a db   
+       
+    if(! ($self->adaptor->db->is_stored($this_obj) &&
+          $self->adaptor->db->is_stored($other_obj)) ){
+        $diffs->{$class_name.' - is_stored'} = $class_name.'(s) not stored in the same DB as '.ref($self);   
+    }  
+    elsif(ref($this_obj) eq ref($other_obj)){
+      $diffs->{$class_name.' - namespace mismatch'} = [ref($this_obj), ref($other_obj)];              
+    }
+    elsif($this_obj->dbID == $other_obj->dbID){
+      $diffs->{$class_name.' - dbID mismatch'} = [$this_obj->dbID, $other_obj->dbID];
+    }  
+  }
+  else{
+    throw('Could not access DBAdaptor from self('.ref($self)." for $class_name is_stored check"); 
+  }
+  
+  return $diffs;
+} 
+  
 
 
 
