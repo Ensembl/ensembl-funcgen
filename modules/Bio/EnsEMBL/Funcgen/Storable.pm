@@ -43,11 +43,10 @@ Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::Storable;
 
+use strict;
+use warnings;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
@@ -55,7 +54,6 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Storable;
 
 use vars qw(@ISA);
-
 @ISA = qw(Bio::EnsEMBL::Storable);
 
 =head2 new
@@ -73,11 +71,8 @@ use vars qw(@ISA);
 
 sub new {
   my $caller = shift;
-
   my $class = ref($caller) || $caller;
-	
   my $self = $class->SUPER::new(@_);
-
 
   my ($states, $assoc_ftypes) = rearrange(['STATES', 'ASSOCIATED_FEATURE_TYPES'] ,@_);
 
@@ -533,11 +528,7 @@ sub associated_feature_types{
 
 =cut
 
-
 #actually, this is more accurately compare scalar methods
-
-
-#todo validate $methods, and add can tests
 
 sub compare_string_methods {
   my ($self, $obj, $methods, $diffs) = @_;
@@ -554,9 +545,18 @@ sub compare_string_methods {
     $diffs = {};
   }
   
-  
-  
+  if(! (defined $methods &&
+        ref($methods) &&
+        ref($methods) eq 'ARRAY')){
+    throw('You must pass an Arrayref of methods to compare');        
+  }
+   
   foreach my $method(@$methods){
+   
+    if ( ! $self->can($method) ) {
+      throw(ref($self).' cannot call method '.$method.' to compare');  
+    }
+    
     #Handle ARRAY, ARRAYREF and SCALAR return types!
     #Just because we can
     my @these_strings = $self->$method || ('NULL');
@@ -617,12 +617,23 @@ sub compare_object_methods {
     (ref($diffs) ne 'HASH') ){
     throw('Diffs hash mush be passed as Hashref');  
   }
-  else{  
+  elsif(! defined $diffs){  
     $diffs = {};
   }
   
+   if(! (defined $methods &&
+        ref($methods) &&
+        ref($methods) eq 'ARRAY')){
+    throw('You must pass an Arrayref of methods to compare');        
+  }
+   
+   
   foreach my $method(@$methods){
-    #todo add 'can' here to check we have a compare_to method in the obj
+      
+    if ( ! $self->can($method) ) {
+      throw(ref($self).' cannot call method '.$method.' to compare');  
+    }
+    
     my %obj_diffs = %{$self->$method->compare_to($obj->$method, undef, $shallow)};
 
     if(keys %obj_diffs){
@@ -642,24 +653,23 @@ sub compare_stored_Storables {
     (ref($diffs) ne 'HASH') ){
     throw('Diffs hash mush be passed as Hashref');  
   }
-  else{  
+  elsif(! defined $diffs){  
     $diffs = {};
   }
   
   (my $class_name = ref($this_obj)) =~ s/.*://;
   
-  if($self->adaptor){ #assume we have a db   
+  #
+  if(ref($this_obj) ne ref($other_obj)){
+     $diffs->{$class_name.' - namespace mismatch'} = [ref($this_obj), ref($other_obj)];              
+  }
+  elsif($self->adaptor){ #assume we have a db   
        
     if(! ($this_obj->is_stored($self->adaptor->db) &&
           $other_obj->is_stored($self->adaptor->db)) ){
         $diffs->{$class_name.' - is_stored'} = $class_name.'(s) not stored in the same DB as '.ref($self);   
     }
-      
-    if(ref($this_obj) ne ref($other_obj)){
-      $diffs->{$class_name.' - namespace mismatch'} = [ref($this_obj), ref($other_obj)];              
-    }
-    
-    if($this_obj->dbID != $other_obj->dbID){
+    elsif($this_obj->dbID != $other_obj->dbID){
       $diffs->{$class_name.' - dbID mismatch'} = [$this_obj->dbID, $other_obj->dbID];
     }  
   }
