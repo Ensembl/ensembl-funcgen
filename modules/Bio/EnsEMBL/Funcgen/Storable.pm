@@ -138,8 +138,8 @@ sub has_status{
 =head2 get_all_states
 
   Example    : my @ec_states = @{$experimental_chip->get_all_states()};
-  Description: Retrieves all states from DB and merges with current states array
-  Returntype : LISTREF
+  Description: Retrieves of all states
+  Returntype : Arrayref
   Exceptions : None
   Caller     : general
   Status     : At risk
@@ -149,8 +149,6 @@ sub has_status{
 sub get_all_states{
    my ($self) = @_;
 
-   my %states;
-
    #This could miss states in the DB for storables which have been created and had states added
    #but already exist with states in the DB
    #The way to get around this is to throw if we try and store an object without a dbID which matches 
@@ -159,13 +157,20 @@ sub get_all_states{
    #force use of recover to retrieve object from DB and then skip to relevant step based on states.
    #Have states => next method hash in Importer/ArrayDefs?
 
-  
-
-   if($self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
-     @{$self->{'states'}} = @{$self->adaptor->fetch_all_states($self)};
+  if(! defined $self->{states}){
+    
+    if(! $self->adaptor){
+      throw('Cannot get_all_states for a Storable without an associated adaptor');
+    }
+    else{ #Populate cache
+    
+      if( $self->is_stored($self->adaptor->db) ){
+        $self->{states} = $self->adaptor->fetch_all_states($self);
+      }
+    }
    }
    
-   return $self->{'states'};
+   return $self->{states};
 }
 
 
@@ -528,6 +533,10 @@ sub associated_feature_types{
 
 =cut
 
+
+#actually, this is more accurately compare scalar methods
+
+
 #todo validate $methods, and add can tests
 
 sub compare_string_methods {
@@ -541,51 +550,60 @@ sub compare_string_methods {
     (ref($diffs) ne 'HASH') ){
     throw('Diffs hash mush be passed as Hashref');  
   }
-  else{  
+  elsif(! defined $diffs){  
     $diffs = {};
   }
   
   
   
   foreach my $method(@$methods){
-    my $these_strings = $self->$method || ['NULL'];
-    my $other_strings = $obj->$method  || ['NULL'];
-    
-    if(! ref($these_strings)){ 
-      #Has to be a SCALAR as we have evaluated the method call in the scalar context
-      #This could be a STRING or the size of the ARRAY returned
-      #or the string fraction of used/allocated blocks for a HASH
-      #No easy way to catch this unless we eval the assingment to %, then @?
-      #even then we can't differentiate between a % and @ on assignment as they 
-      #are treated the same
-      
-      $these_strings = [$these_strings];
-      $other_strings = [$other_strings];
-    }
-    elsif(ref($these_strings) ne 'ARRAYREF'){
-      throw('This method does not support method return types which are not: STRING or ARRAYREF');  
-      #Could handle ARRAYs here too, if we tested for return type
-      #would require some monkeying around  
-    }
-  
-    #Sort the arrays just in case
-    @$these_strings = sort @$these_strings;
-    @$other_strings = sort @$other_strings;
+    #Handle ARRAY, ARRAYREF and SCALAR return types!
+    #Just because we can
+    my @these_strings = $self->$method || ('NULL');
+    my @other_strings = $obj->$method  || ('NULL');
+   
+    if( (scalar(@these_strings) == 1) &&
+        (scalar(@other_strings) == 1) ){
+      #We either have two strings
+      #or two refs
      
-    if( scalar(@$these_strings) != scalar(@$other_strings) ){
-      $diffs->{$obj_name.'::'.$method} = [$these_strings, $other_strings];
+      if( ref($these_strings[0]) ){
+        
+        if(ref($these_strings[0]) ne 'ARRAY'){
+          throw($method.' does not returns a ref which is not an ARRAYREF: '.ref($these_strings[0])); 
+        }
+       
+       @these_strings = @{$these_strings[0]};
+       @other_strings = @{$other_strings[0]}; 
+      }    
+    }
+ 
+    #Sort the arrays just in case
+    @these_strings = sort @these_strings;
+    @other_strings = sort @other_strings;
+     
+    if( scalar(@these_strings) != scalar(@other_strings) ){
+      $diffs->{$obj_name.'::'.$method} = ["@these_strings", "@other_strings"];
     }
     else{
     
-      foreach my $i(0..$#{$these_strings}){    
+      foreach my $i(0..$#these_strings){  
+        #Check all are scalar  
+        #perl doesn't care about the string/numeric issue here with
+        #equality operators
+        
+        if (! ( ref(\$these_strings[$i]) eq 'SCALAR')){   
+          throw("$method does not return SCALAR values or an ARRAY or ARRAYREF SCALAR values "); 
+        }
     
-        if($these_strings->[$i] ne $other_strings->[$i]){
-          $diffs->{$obj_name.'::'.$method} = [$these_strings->[$i], $other_strings->[$i]];
+        if($these_strings[$i] ne $other_strings[$i]){
+          
+          $diffs->{$obj_name.'::'.$method} = [$these_strings[$i], $other_strings[$i]];
         }
       }
     }
   }
-  
+
   return $diffs;
 }
 
@@ -632,21 +650,23 @@ sub compare_stored_Storables {
   
   if($self->adaptor){ #assume we have a db   
        
-    if(! ($self->adaptor->db->is_stored($this_obj) &&
-          $self->adaptor->db->is_stored($other_obj)) ){
+    if(! ($this_obj->is_stored($self->adaptor->db) &&
+          $other_obj->is_stored($self->adaptor->db)) ){
         $diffs->{$class_name.' - is_stored'} = $class_name.'(s) not stored in the same DB as '.ref($self);   
-    }  
-    elsif(ref($this_obj) eq ref($other_obj)){
+    }
+      
+    if(ref($this_obj) ne ref($other_obj)){
       $diffs->{$class_name.' - namespace mismatch'} = [ref($this_obj), ref($other_obj)];              
     }
-    elsif($this_obj->dbID == $other_obj->dbID){
+    
+    if($this_obj->dbID != $other_obj->dbID){
       $diffs->{$class_name.' - dbID mismatch'} = [$this_obj->dbID, $other_obj->dbID];
     }  
   }
   else{
     throw('Could not access DBAdaptor from self('.ref($self)." for $class_name is_stored check"); 
   }
-  
+
   return $diffs;
 } 
   
