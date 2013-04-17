@@ -9,18 +9,19 @@ use Data::Dumper qw(Dumper);
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 throw('Test DB not yet implemented, you need to define a DBAdaptor and remove this throw manually');
+my $user = undef;
 
 my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-    #-user       => USER,
-    #-pass       => PASS,
-    #-DNADB_USER => DNADB_USER,
+    -user       => $user,
+#    -pass       => ,
+    -DNADB_USER => $user,
     #-DNADB_PORT => 3306,
 
-    #-species    => 'homo_sapiens',
-    #-dbname     => 'nj1_test_homo_sapiens_funcgen_71_37',
-    #-host       => HOST,
-    #-DNADB_HOST => DNADB_HOST,
-    #-DNADB_NAME => 'homo_sapiens_core_71_37',
+    -species    => 'homo_sapiens',
+#    -dbname     => 'nj1_test_homo_sapiens_funcgen_71_37',
+#    -host       => HOST,
+#    -DNADB_HOST => DNADB_HOST,
+    -DNADB_NAME => 'homo_sapiens_core_71_37',
 );
 
 
@@ -29,7 +30,7 @@ my $rsa = $efgdba->get_adaptor("resultset");
 
 #Just grab a few result sets to work with
 my ($result_set, $result_set_2) = 
-  @{ $rsa->fetch_all_by_feature_class('dna', 
+  @{ $rsa->fetch_all_by_feature_class('dna_methylation', 
                                       {status => 'DISPLAYABLE'}) };
 if(! (defined $result_set && defined $result_set_2)){
   throw('Failed to fetch 2 ResultSets to test, please update ResultSet.t');  
@@ -151,14 +152,14 @@ $clone_rset->reset_relational_attributes(
 
 #Test passing diffs hash and catch ftype diff at same time
 $result_set->compare_to($clone_rset, \%diffs);
-ok(exists $diffs{'ResultSet::feature_type'}, 
+ok(exists $diffs{'feature_type'}, 
   'ResultSet::compare_to caught different feature_type '.
     '(compare_stored_Storables) test in passed hashref');
   
 # COMPLETED testing reset_relational_attributes  
 $clone_rset->{name} = 'TEST_NAME';
 $result_set->compare_to($clone_rset, \%diffs);
-ok(exists $diffs{'ResultSet::name'}, 
+ok(exists $diffs{'name'}, 
   'ResultSet::compare_to caught different name '.
     '(compare_string_methods) in passed hashref');
 $clone_rset->{name} = $result_set->name;
@@ -182,7 +183,7 @@ ok($@, 'ResultSet::add_support caught duplicate support addition');
 #should really test we have exactly the same support objects
  
 %diffs = %{$result_set->compare_to($clone_rset, undef, 'shallow')};
-ok(exists $diffs{'ResultSet::get_support - size'}, 'ResultSet::compare_to support size');
+ok(exists $diffs{'get_support - size'}, 'ResultSet::compare_to support size');
     
 $clone_rset->reset_relational_attributes(
       {  
@@ -197,7 +198,7 @@ $diffs = "\n".Dumper(\%diffs) if %diffs;
 ok(! %diffs,'ResultSet::compare_to shallow overlook support diffs');
 
 $result_set->compare_to($clone_rset, \%diffs);
-ok(exists $diffs{'ResultSet - support'}{'InputSet - dbID mismatch'}, 
+ok(exists $diffs{'support'}{'InputSet - dbID mismatch'}, 
   'ResultSet::compate_to support non shallow InputSet dbID mismatch');
 
 #Finished testing compare_to

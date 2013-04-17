@@ -119,6 +119,10 @@ sub new {
   #explicit type check here to avoid invalid types being imported as NULL
   #and subsequently throwing errors on retrieval
   my $type = $self->feature_class;
+  
+  #set default type until this is moved to db_file_registry.format
+  #This is not possible yet as 5mC is classed as DNA not DNA Modification!!!
+  
   $self->{table_id_hash}      = {};
 
   if ( !( $type && exists $valid_classes{$type} ) ) {
@@ -259,6 +263,8 @@ sub add_support{
           " support table:\t$table_name\nValid table names:\t".
           join(', ', keys %valid_table_names));
   }
+  
+  #todo validate $ssets have same cell_type and feature_type
   
   #Add the table_ids and set the support 
   foreach my $sset(@$support){
@@ -820,10 +826,7 @@ sub log_label {
 #if it a hash ref, it is a nest %diffs has from a nested object
 #identity of this ResultSet handled in caller, not in diffs hash.
 
-#self (or rset) would have to be stored to work with DBAdaptor check in shallow_compare_Storables
-
-
-#slightly odd as setting shallow omits calling the shallow_compare_Storables method
+#TODO Document key values in POD
 
 sub compare_to {
   my ($self, $rset, $diffs, $shallow) = @_;
@@ -856,7 +859,7 @@ sub compare_to {
   my @other_support = sort {$a->dbID <=> $b->dbID} @{$rset->get_support};
         
   if(scalar(@support) != scalar(@other_support)){
-    $diffs->{'ResultSet::get_support - size'} = 
+    $diffs->{'get_support - size'} = 
       [join(',', map ($_->dbID, @support)), join(',', map ($_->dbID, @other_support))];
   }
   #elsif($shallow){#should we warn here if dbID are not the same?}
@@ -872,7 +875,7 @@ sub compare_to {
           %{$self->compare_stored_Storables($support[$i], $other_support[$i])};
    
         if(keys %support_diffs){
-          $diffs->{'ResultSet - support'} = \%support_diffs;
+          $diffs->{'support'} = \%support_diffs;
           last; #Bailing out here may miss further mismatches
         }
       } 
@@ -883,7 +886,7 @@ sub compare_to {
         %{$self->compare_stored_Storables($self->$obj_method, $rset->$obj_method)};
         
       if(%obj_diffs){
-        $diffs->{'ResultSet::'.$obj_method} = \%obj_diffs;
+        $diffs->{$obj_method} = \%obj_diffs;
       }
     }   
   }
