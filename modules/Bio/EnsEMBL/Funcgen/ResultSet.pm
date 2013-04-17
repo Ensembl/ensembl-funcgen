@@ -126,29 +126,39 @@ sub new {
            join( ', ', keys %valid_classes ) );
   }
 
-  #todo fully deprecate add_table_id and -table_name and -table_id
-  #There is some redundancy here between add_table_id and -support methods
-  #and the add_table_id method currently allows empty ResultSets
-  #this may have been to support an import where we don't have access to the support objects? 
-  #check before removal
-        
-  if(defined $support){ 
-    $self->_set_support($support, $table_name);     
-  }
-  else{
-    deprecate('The -table_name, -table_id params and the add_table_id methods are now deprecated. Please use -support');
-    
-    if (! (defined $table_name &&
+  #Need to maintain -table_name and _add_table_id for lazy loading ability 
+  if(defined $table_name){
+     if (! (defined $table_name &&
            exists $valid_table_names{$table_name}) ){
        throw('You need to pass a valid -table_name e.g. '.
             join(', ', keys %valid_table_names));
     }
-  
-    #This will currently allow a ResultSet with no support/table_ids   
-    $self->_add_table_id($table_id)           if defined $table_id;
+   
+    $self->{table_name}         = $table_name;    
   }
   
-  $self->{table_name}         = $table_name;
+  #This will currently allow a ResultSet with no support/table_ids   
+  if(defined $support){ 
+    $self->add_support($support);     
+  }
+  elsif(! defined $table_name){
+    throw('You must provide either a -support or a -table_name parameter');
+    
+    
+  }
+  
+  #Remove this when -table_id fully deprecated
+  if(defined $table_id){
+    deprecate('The -table_id param is now deprecated in new. Please use -support');
+    $self->_add_table_id($table_id) if defined $table_id;
+    
+    if(defined $support){
+      throw('Unsafe to specify -support and -table_id, please use -support');
+    }
+  }
+  
+  
+
   $self->{result_feature_set} = (defined $rf_set) ? 1 : 0;
   $self->dbfile_data_dir($dbfile_data_dir) if defined $dbfile_data_dir;
 
@@ -173,16 +183,14 @@ sub new {
 =cut
 
 sub reset_relational_attributes{
-  my ($self, $params_hash, $no_db_reset) = shift;
-  
-  #This uses new support param, rather that add_table_id/table_name/table_id
-   
+  my ($self, $params_hash, $no_db_reset) = @_;
   my ($support, $analysis, $feature_type, $cell_type)
-    = rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], @$params_hash);
+    = rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], %$params_hash);
   
   #flush table ID cache and add support
-  $self->{table_id_hash} = undef;
-  $self->_add_support($support);
+  $self->{table_id_hash} = undef;  
+  $self->{support}       = undef;
+  $self->add_support($support);
   
   #is_stored (in corresponding db) checks will be done in store method
  
@@ -193,13 +201,13 @@ sub reset_relational_attributes{
   
   if(! (defined $feature_type &&
         ref($feature_type) eq 'Bio::EnsEMBL::Funcgen::FeatureType') ){
-    throw('You must pass a valid Bio::EnsEMBL::FeatureType');
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType');
   }
   
   
   if(! (defined $cell_type &&
-        ref($cell_type) eq 'Bio::EnsEMBL::CellType') ){
-    throw('You must pass a valid Bio::EnsEMBL::CellType');
+        ref($cell_type) eq 'Bio::EnsEMBL::Funcgen::CellType') ){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::CellType');
   }
   
   $self->{cell_type}    = $cell_type;
@@ -215,8 +223,11 @@ sub reset_relational_attributes{
   return;
 }
 
+#do we need table name here?
+#
+
 sub add_support{
-  my($self, $support, $table_name) = @_;
+  my($self, $support) = @_;
 
   if(! (defined $support &&
         (ref($support) eq 'ARRAY')) ){
@@ -226,7 +237,7 @@ sub add_support{
   #Check passed table name matches objects
   #remove this once we remove add_table_ids
   #although we still need to check all support object are the same
-  my $tmp_table_name = $table_name; 
+  my $tmp_table_name = $self->table_name; 
   my $sdba = $support->[0]->adaptor;  
   (my $class_name = ref($support->[0])) =~ s/.*://g; 
   
@@ -234,7 +245,7 @@ sub add_support{
     throw("No $class_name adaptor found. All ResultSet -support must be stored");
   }
 
-  $table_name = $sdba->_main_table->[0];    
+  my $table_name = $sdba->_main_table->[0];    
 
   if(defined $tmp_table_name &&
     ( $tmp_table_name ne $table_name) ){
@@ -259,13 +270,24 @@ sub add_support{
     }
     
     #we don't have access to is_stored_and_valid here
-    #so this may throw an error        
+    #so this may throw an error   
+    
+    #if the table id is already defined, it has either been set by 
+    #obj_from_sth or add_support
+    #For both these cases we want to throw from here
+    
+    if(exists $self->{table_ids}->{$sset->dbID}){
+      throw('Cannot add_support for previously added/stored ResultSet support: '.
+        ref($sset).'('.$sset->dbID.')');  
+    }
+       
     $self->_add_table_id($sset->dbID);   
   }
   
-  $self->{support} = $support;  
+  $self->{support} ||= [];
+  $self->{support}   = [ @{$self->{support}}, @$support ];  
   
-  return;
+  return $self->{support};
 }
 
 
@@ -473,10 +495,13 @@ sub _add_table_id {
     throw('Need to pass a table_id');
   }else{
 
-    if((exists $self->{'table_id_hash'}->{$table_id}) && (defined $self->{'table_id_hash'}->{$table_id})){
+    #This allows setting of the cc_id on store
+    if((exists $self->{'table_id_hash'}->{$table_id}) && 
+       (defined $self->{'table_id_hash'}->{$table_id})){
       throw("You are attempting to redefine a result_set_input_id which is already defined");
     }
 
+ 
     $self->{'table_id_hash'}->{$table_id} = $cc_id;
   }
 
@@ -813,7 +838,7 @@ sub compare_to {
     (ref($diffs) ne 'HASH') ){
     throw('Diffs hash mush be passed as Hashref');  
   }
-  else{  
+  elsif(! defined $diffs){
     $diffs = {};
   }
   
@@ -831,29 +856,38 @@ sub compare_to {
   my @other_support = sort {$a->dbID <=> $b->dbID} @{$rset->get_support};
         
   if(scalar(@support) != scalar(@other_support)){
-    $diffs->{'ResultSet::get_support - size'} = [join(',', map ($_->dbID, @support)), 
-                                                 join(',', map ($_->dbID, @other_support))];
+    $diffs->{'ResultSet::get_support - size'} = 
+      [join(',', map ($_->dbID, @support)), join(',', map ($_->dbID, @other_support))];
   }
-   
+  #elsif($shallow){#should we warn here if dbID are not the same?}
+  #or we could add a test on the nested object primary keys?
+  #No, this should be left to the caller, document in shallow pod definition
+     
   if(! $shallow){
   
     if(scalar(@support) == scalar(@other_support)){
      
       for my $i(0..$#support){
-        my %support_diffs = %{$self->shallow_stored_Storables($support[$i], $other_support[$i])};
+        my %support_diffs = 
+          %{$self->compare_stored_Storables($support[$i], $other_support[$i])};
    
         if(keys %support_diffs){
-          $diffs->{'ResultSet - shallow_compare support'} = \%support_diffs;
+          $diffs->{'ResultSet - support'} = \%support_diffs;
           last; #Bailing out here may miss further mismatches
         }
       } 
     }
     
     foreach my $obj_method( qw(feature_type cell_type analysis) ){
-      $diffs->{'ResultSet::'.$obj_method} = $self->compare_stored_Storables($self->obj_method, $rset->$obj_method);
+      my %obj_diffs = 
+        %{$self->compare_stored_Storables($self->$obj_method, $rset->$obj_method)};
+        
+      if(%obj_diffs){
+        $diffs->{'ResultSet::'.$obj_method} = \%obj_diffs;
+      }
     }   
   }
-    
+ 
   return $diffs;
 }
 
@@ -867,7 +901,7 @@ sub get_InputSets{ #DEPRECATED IN v72
 
 
 sub add_table_id { #DEPRECATED IN v72
-   deprecate('The add_table_id method is no deprecated, please use the -support param in new');
+   deprecate('The add_table_id method is now deprecated, please use the -support param in new');
    return $_[0]->_add_table_id($_[1]);
 }
 
