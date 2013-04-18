@@ -152,8 +152,6 @@ sub new {
           ' please use -input_set or -input_set_id instead');
   }
 
-  #Allow exp or exp_id to be passed to support storing and lazy loading
-
   #Mandatory params checks here (setting done in Set.pm)
   if ( ! defined $self->feature_type ) {
     throw('Must provide a FeatureType');
@@ -163,22 +161,22 @@ sub new {
   #subsequently throwing errors on retrieval
   my $type = $self->feature_class;
 
+  if ( (! defined $self->cell_type) && 
+       ($type ne 'external') ){
+    throw("Only FeatureSets with type 'external' can have an undefined CellType");
+  }
+
   if ( ! ( $type && exists $valid_classes{$type} ) ) {
     throw( 'You must define a valid FeatureSet type e.g. ' .
            join( ', ', keys %valid_classes ) );
   }
 
   #Direct assignment to prevent need for set arg test in method
-
   $self->{description}   = $desc    if defined $desc;
   $self->{display_label} = $dlabel  if defined $dlabel;
   $self->{input_set_id}  = $iset_id if defined $iset_id;
-
-  if ( defined $iset ) {
-    #Exp obj is only passed during object storing
-    #so let the adaptor do is_stored_and_valid
-    $self->{input_set} = $iset;
-  }
+  $self->{input_set}     = $iset    if defined $iset;
+  #let the store/compare_to do is_stored_and_valid on InputSet?
 
   return $self;
 }                               ## end sub new
@@ -479,6 +477,139 @@ sub source_label{
 }
 
 
+=head2 compare_to
+
+  Args[1]    : Bio::EnsEMBL::Funcgen::FeatureSet (mandatory)
+  Args[2]    : Boolean - Shallow flag, omits nested object comparisons which require
+                dbID and is_stored checks.
+  Example    : my %shallow_diffs = %{$fset->compare_to($other_fset, 1)};
+  Description: Compare this FeatureSet to another.
+  Returntype : Hashref of key attribute name keys and value which differ.
+  Exceptions : Throws if arg is not a valid FeatureSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+#%diffs
+#keys define the attribute/method/test
+#If the key is a string it is a simple warning
+#If it is an array ref, it shows the differences between the attributes tested
+#if it a hash ref, it is a nest %diffs has from a nested object
+#identity of this ResultSet handled in caller, not in diffs hash.
+
+#TODO Document key values in POD, make the available/validatable ?
+
+sub compare_to {
+  my ($self, $fset, $shallow) = @_;
+    
+  if(! (defined $fset &&
+        ref($fset) &&
+        $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet')) ){
+      throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureSet to compare');
+  }
+  
+  my $diffs = {};
+ 
+  #omit source_label as this is dynamic and based on input_set
+  $self->compare_string_methods($fset, 
+                                [ qw(name description display_label feature_class) ], 
+                                $diffs);
+     
+  if(! $shallow){
+    
+    #foreach my $obj_method( qw(feature_type cell_type analysis get_InputSet) ){
+    #  my %obj_diffs = 
+    #    %{$self->compare_stored_Storables($self->$obj_method, $rset->$obj_method)};
+    #    
+    #  if(%obj_diffs){
+    #    $diffs->{$obj_method} = \%obj_diffs;
+    #  }
+    
+    %$diffs = (%$diffs, 
+               %{$self->compare_object_methods
+                ($fset, 
+                [qw(feature_type cell_type analysis get_InputSet)])}
+              );
+  }   
+ 
+  return $diffs;
+}
+
+
+
+=head2 reset_relational_attributes
+
+  Arg[1] : Hashref containing the following parameters.
+           Mandatory:
+            -analysis     => Bio::EnsEMBL::Analysis,
+            -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
+     
+           Optional if not presently defined:
+            -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
+            -input_set    => Bio::EnsEMBL::Funcgen::InputSet,
+
+  Description: Resets all the relational attributes of a given ResultSet. 
+               Useful when creating a cloned object for migration beween DBs 
+  Returntype : None
+  Exceptions : Throws if any of the parameters are not defined or invalid.
+  Caller     : Migration code
+  Status     : At risk
+
+=cut
+
+sub reset_relational_attributes{
+  my ($self, $params_hash, $no_db_reset) = @_;
+  my ($analysis, $feature_type, $cell_type, $iset) = 
+      rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'INPUT_SET'], 
+      %$params_hash);
+ 
+  if(! (defined $analysis &&
+        ref($analysis) eq 'Bio::EnsEMBL::Analysis') ){
+    throw('You must pass a valid Bio::EnsEMBL::Analysis');
+  }
+  
+  if(! (defined $feature_type &&
+        ref($feature_type) eq 'Bio::EnsEMBL::Funcgen::FeatureType') ){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType');
+  }
+  
+  if( ($self->cell_type) && !
+        (defined $cell_type &&
+        (ref($cell_type) eq 'Bio::EnsEMBL::Funcgen::CellType')) ){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::CellType');
+  }
+  
+
+  if( ($self->get_InputSet) && !
+      (defined $iset &&
+      (ref($iset) eq 'Bio::EnsEMBL::Funcgen::InputSet')) ){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::InputSet');
+  }
+    
+  if(defined $iset){
+    #This will allow addition of an input_set 
+    #when it was not prevously defined
+    $self->{input_set_id} = $iset->dbID;
+    $self->{input_set}    = $iset;  
+  }
+  
+  $self->{cell_type}    = $cell_type;
+  $self->{feature_type} = $feature_type;
+  $self->{analysis}     = $analysis;
+  
+  
+  #Finally undef the dbID and adaptor by default
+  if(! $no_db_reset){
+    $self->{adaptor} = undef;
+    $self->{dbID}    = undef;
+  }
+  
+  #Reset cached dynamic attrs here, just in case there has been a change?
+  return;
+}
+
+
 
 
 ### DEPRECATED ###
@@ -494,7 +625,7 @@ sub source_label{
 
 =cut
 
-sub get_Experiment{
+sub get_Experiment{ #deprecated before v71
   throw('FeatureSet::get_Experiment is not longer supported, please use FeatureSet::get_InputSet');
 }
 
