@@ -773,34 +773,26 @@ sub compare_object_methods {
 
 =head2 compare_to
 
-  Args[1]    : Bio::EnsEMBL::Funcgen::ResultSet (mandatory)
-  Args[2]    : Boolean - Shallow flag, omits nested object comparisons which require
-                dbID and is_stored checks.
-  Args[3]    : Hashref - 
-  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
-  Description: Compare this ResultSet to another.
+  Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
+  Args[2]    : Int - Optional 'depth' level: 
+                -1 = shallow - no object methods compared
+                 0 = default - objects compared by usind is_stored and dbID check
+                 1 = deep    - performs compare_to on nested objects           
+  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, -1)};
+  Description: Compare this Storable to another.
   Returntype : Hashref of key attribute/method name keys and values which differ.
-  Exceptions : Throws if arg is not a valid ResultSet
-  Caller     : General
+               Keys will always be the method which has been compared.
+               Values can either be a error string, a hashref of diffs from a 
+               nested object, or an arraref of error strings or hashrefs where
+               a particular method returns more than one object.  
+  Exceptions : Throws if object class does not match self.
+               Throws if depth level invalid. 
+  Caller     : Import/migration pipeline
   Status     : At Risk
 
 =cut
 
-#%diffs
-#keys define the attribute/method/test
-#If the key is a string it is a simple warning
-#If it is an array ref, it shows the differences between the attributes tested
-#if it a hash ref, it is a nest %diffs has from a nested object
-#identity of this ResultSet handled in caller, not in diffs hash.
-
-#TODO Document key values in POD, make the available/validatable ?
-
-#Now I have remove the class name from the key, passing diffs is now unsafe
-#as this may over-write existing diffs keys!
-
-#This could be abstracted to Storable very easily by 
-#setting simple string_methods and object_methods vars
-
+#TODO Make test strings available to validate ?
 
 sub compare_to {
   my ($self, $obj, $depth) = @_;
