@@ -188,8 +188,9 @@ sub new {
 
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
-  my ($support, $analysis, $feature_type, $cell_type)
-    = rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], %$params_hash);
+  my ($support, $analysis, $feature_type, $cell_type) =
+    rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], 
+    %$params_hash);
   
   #flush table ID cache and add support
   $self->{table_id_hash} = undef;  
@@ -227,8 +228,6 @@ sub reset_relational_attributes{
   return;
 }
 
-#do we need table name here?
-#
 
 sub add_support{
   my($self, $support) = @_;
@@ -809,10 +808,10 @@ sub log_label {
   Args[1]    : Bio::EnsEMBL::Funcgen::ResultSet (mandatory)
   Args[2]    : Boolean - Shallow flag, omits nested object comparisons which require
                 dbID and is_stored checks.
-               i.e. assumes all primary key components are the same.
-  Example    : my %diffs = %{$rset->compare_to($other_rset, 1)};
-  Description: Compare this ResultSet to another. Does not compare support
-  Returntype : Hashref of key attribute name keys and value which differ.
+  Args[3]    : Hashref - 
+  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
+  Description: Compare this ResultSet to another.
+  Returntype : Hashref of key attribute/method name keys and values which differ.
   Exceptions : Throws if arg is not a valid ResultSet
   Caller     : General
   Status     : At Risk
@@ -826,69 +825,30 @@ sub log_label {
 #if it a hash ref, it is a nest %diffs has from a nested object
 #identity of this ResultSet handled in caller, not in diffs hash.
 
-#TODO Document key values in POD
+#TODO Document key values in POD, make the available/validatable ?
+
+#Now I have remove the class name from the key, passing diffs is now unsafe
+#as this may over-write existing diffs keys!
 
 sub compare_to {
-  my ($self, $rset, $diffs, $shallow) = @_;
+  my ($self, $rset, $shallow) = @_;
     
   if(! (defined $rset &&
         ref($rset) &&
         $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet')) ){
       throw('You must pass a valid Bio::EnsEMBL::Funcgen::ResultSet to compare');
   }
-  
-  if(defined $diffs &&
-    (ref($diffs) ne 'HASH') ){
-    throw('Diffs hash mush be passed as Hashref');  
-  }
-  elsif(! defined $diffs){
-    $diffs = {};
-  }
-  
-  $self->compare_string_methods($rset, [ qw(name table_name feature_class get_all_states) ], $diffs);
-  
-  #We know table_ids are the same, but are they from the same db?
-  #Test InputSets from one with DBAdaptor::is_stored from the other
-  #InputSets have to be stored otherwise we would have thrown in new or add_table_id
-  #Is this the same for other inputs/support i.e. ExperimentalChips
-
-  #Now deal with support
-  #this could be subbed out to compare_arrays 
-  #args would be string/numerical and sort flag
-  my @support       = sort {$a->dbID <=> $b->dbID} @{$self->get_support};
-  my @other_support = sort {$a->dbID <=> $b->dbID} @{$rset->get_support};
-        
-  if(scalar(@support) != scalar(@other_support)){
-    $diffs->{'get_support - size'} = 
-      [join(',', map ($_->dbID, @support)), join(',', map ($_->dbID, @other_support))];
-  }
-  #elsif($shallow){#should we warn here if dbID are not the same?}
-  #or we could add a test on the nested object primary keys?
-  #No, this should be left to the caller, document in shallow pod definition
-     
-  if(! $shallow){
-  
-    if(scalar(@support) == scalar(@other_support)){
-     
-      for my $i(0..$#support){
-        my %support_diffs = 
-          %{$self->compare_stored_Storables($support[$i], $other_support[$i])};
-   
-        if(keys %support_diffs){
-          $diffs->{'support'} = \%support_diffs;
-          last; #Bailing out here may miss further mismatches
-        }
-      } 
-    }
     
-    foreach my $obj_method( qw(feature_type cell_type analysis) ){
-      my %obj_diffs = 
-        %{$self->compare_stored_Storables($self->$obj_method, $rset->$obj_method)};
-        
-      if(%obj_diffs){
-        $diffs->{$obj_method} = \%obj_diffs;
-      }
-    }   
+  my $diffs = {};
+  $self->compare_string_methods($rset, [ qw(name table_name feature_class get_all_states) ], $diffs);
+       
+  if(! $shallow){
+     
+    %$diffs = (%$diffs, 
+               %{$self->compare_object_methods
+                ($rset, 
+                [qw(feature_type cell_type analysis get_support)])}
+              );
   }
  
   return $diffs;
