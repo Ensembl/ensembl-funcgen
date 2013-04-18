@@ -19,8 +19,8 @@ my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 
     -species    => 'homo_sapiens',
     #-dbname     => 'nj1_test_homo_sapiens_funcgen_71_37',
-    -host       => ,
-    -DNADB_HOST => ,
+    -host       => '',
+    -DNADB_HOST => '',
     #-DNADB_NAME => 'homo_sapiens_core_71_37',
 );
 
@@ -49,7 +49,7 @@ ok(! %diffs, 'ResultSet::compare_to self diffs'.$diffs);
 
 #This is actually the same as above, just omiting the compare_stored_Storable
 #checks on the nested objects/methods
-%diffs = %{$result_set->compare_to($result_set, 'shallow')};
+%diffs = %{$result_set->compare_to($result_set, -1)};
 $diffs = "\n".Dumper(\%diffs) if %diffs;
 ok(! %diffs, 'ResultSet::compare_to shallow compare_to self'.$diffs);
 
@@ -198,7 +198,7 @@ $clone_rset->reset_relational_attributes(
         -analysis => $result_set->analysis,
       });    
 #This will return no diffs even tho the dbID differ as we are only doing a shallow compare   
-%diffs = %{$result_set->compare_to($clone_rset, 'shallow')};
+%diffs = %{$result_set->compare_to($clone_rset, -1)};
 $diffs = "\n".Dumper(\%diffs) if %diffs;
 ok(! %diffs,'ResultSet::compare_to shallow overlook support diffs'.$diffs);
 

@@ -18,9 +18,9 @@ my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
     #-DNADB_PORT => 3306,
 
     -species    => 'homo_sapiens',
+    -host       => '',
     #-dbname     => 'nj1_test_homo_sapiens_funcgen_71_37',
-    #-host       => 
-    #-DNADB_HOST => 
+    -DNADB_HOST => '',
     #-DNADB_NAME => 'homo_sapiens_core_71_37',
 );
 
@@ -48,7 +48,7 @@ ok(! %diffs, 'FeatureSet::compare_to self diffs'.$diffs);
 
 #This is actually the same as above, just omiting the compare_stored_Storable
 #checks on the nested objects/methods
-%diffs = %{$fset->compare_to($fset, undef, 'shallow')};
+%diffs = %{$fset->compare_to($fset, undef, -1)};
 $diffs = "\n".Dumper(\%diffs) if %diffs;
 ok(! %diffs, 'FeatureSet::compare_to shallow compare_to self'.$diffs);
 
@@ -228,7 +228,7 @@ ok((exists $diffs{'get_InputSet'} &&
 #that the return of compare_string method is caguth properly, 
 #not the individual string methods
 $clone_fset->{name} = 'TEST_NAME';
-%diffs = %{$fset->compare_to($clone_fset, \%diffs)};
+%diffs = %{$fset->compare_to($clone_fset)};
 ok(exists $diffs{'name'}, 
   'FeatureSet::compare_to caught different name '.
     '(compare_string_methods) in passed hashref');
@@ -237,7 +237,7 @@ $clone_fset->{name} = $fset->name;
 
 
 #This should return no diffs 
-%diffs = %{$fset->compare_to($clone_fset, 'shallow')};
+%diffs = %{$fset->compare_to($clone_fset, -1)};
 $diffs = "\n".Dumper(\%diffs) if %diffs;
 ok(! %diffs,'FeatureSet::compare_to shallow overlooks object methods'.$diffs);
 
