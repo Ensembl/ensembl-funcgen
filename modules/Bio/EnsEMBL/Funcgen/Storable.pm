@@ -604,6 +604,23 @@ sub compare_string_methods {
   return $diffs;
 }
 
+=head2 compare_object_methods
+
+  Arg [1]    : Object to compare to, not necessarily stored.
+  Arg [2]    : Arrayref - Method names which return a Storable or an Arrayref 
+               of Storables.
+  Arg [3]    : 
+  Example    : my %diffs = %{$self->compare_to($other_obj, 
+                                               [qw(name, some_other_method)]);
+  Description: Compares the return string values of the specified methods 
+               between this object and the object passed.
+  Returntype : Hashref of method name keys and and arrayref values which show
+               the differences between self and the other object(in that order) 
+  Exceptions : Throws if not status is provided
+  Caller     : general
+  Status     : At risk
+
+=cut
 
 #Need to change shallow in compare_to, to depth.
 #undef or 0 is dbID match
@@ -611,6 +628,7 @@ sub compare_string_methods {
 #1 is deep
  #deep signifies they are not in the same same and we should not do the dbID check, 
   #but a full compare_to
+
 sub compare_object_methods {
   my ($self, $obj, $methods, $deep) = @_; 
   my $diffs = {};
@@ -750,6 +768,88 @@ sub compare_object_methods {
   
   return $diffs;  
 }
+
+
+
+=head2 compare_to
+
+  Args[1]    : Bio::EnsEMBL::Funcgen::ResultSet (mandatory)
+  Args[2]    : Boolean - Shallow flag, omits nested object comparisons which require
+                dbID and is_stored checks.
+  Args[3]    : Hashref - 
+  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
+  Description: Compare this ResultSet to another.
+  Returntype : Hashref of key attribute/method name keys and values which differ.
+  Exceptions : Throws if arg is not a valid ResultSet
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+#%diffs
+#keys define the attribute/method/test
+#If the key is a string it is a simple warning
+#If it is an array ref, it shows the differences between the attributes tested
+#if it a hash ref, it is a nest %diffs has from a nested object
+#identity of this ResultSet handled in caller, not in diffs hash.
+
+#TODO Document key values in POD, make the available/validatable ?
+
+#Now I have remove the class name from the key, passing diffs is now unsafe
+#as this may over-write existing diffs keys!
+
+#This could be abstracted to Storable very easily by 
+#setting simple string_methods and object_methods vars
+
+
+sub compare_to {
+  my ($self, $obj, $depth) = @_;
+      
+  if(! (defined $obj &&
+        ref($obj) &&
+        $obj->isa(ref($self))) ){
+      throw('You must pass a valid '.ref($self).' to compare');
+  }
+  
+  $depth ||= 0;
+  
+  if( ($depth != -1) && ($depth != 0) && ($depth != 1) ){
+    throw('Depth argument must be -1, 0 or 1');
+  }
+  
+  
+  #check can methods here
+  #don't define these abstract placeholder methods
+  #here, as this is how we decide whther compare_to is valid
+  #for a given object
+  
+  if(! $self->can('object_methods')){
+    throw('Cannot compare_to '.ref($self).
+      ' as it has not object_methods method defined');
+  }
+  
+  if(! $self->can('string_methods')){
+    throw('Cannot compare_to '.ref($self).
+      ' as it has not string_methods method defined');
+  }
+    
+  my $diffs = {};
+  $self->compare_string_methods($obj, $self->string_methods, $diffs);
+       
+  if($depth >= 0){
+     
+    %$diffs = (%$diffs, 
+               %{$self->compare_object_methods
+                 ($obj, 
+                  $self->object_methods, 
+                  $depth)},
+              );
+  }
+ 
+  return $diffs;
+}
+
+
 
 
 1;
