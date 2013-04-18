@@ -51,7 +51,7 @@ print $ctype->name.' is a '.$ctype->description."\n";
 
 =head1 DESCRIPTION
 
-This is a simple class to represent information about a cell type.  This may represent 
+This is a simple class to represent information about a cell type.  This may represent
 harvested cells, a cell line or a more generic tissue type.
 
 =cut
@@ -81,7 +81,7 @@ my %valid_genders = (
   Arg [3]    : String (optional) - description of CellType
   Arg [4]    : String (optional) - gender e.g. male, female or hermaphrodite
   Arg [5]    : String (optional) - Experimental Factor Ontology ID e.g. efo:EFO_0002869
- 
+
   Example              : my $ct = Bio::EnsEMBL::Funcgen::CellType->new
                                     (
                                      -name          => "U2OS",
@@ -106,12 +106,12 @@ sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
-    
+
   my ($name, $dlabel, $desc, $gender, $efo_id, $tissue) = rearrange
     (['NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'EFO_ID', 'TISSUE'], @_);
-  
+
   throw("Must supply a CellType name") if ! defined $name;
-  
+
   if (defined $gender) {
 
     if ( ! exists $valid_genders{lc($gender)} ) { #enum will not force this so validate here
@@ -131,6 +131,42 @@ sub new {
   return $self;
 }
 
+=head2 compare
+
+  Example    : my $name = $ct->name;
+  Description: Getter of name attribute for CellType objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+
+# add lineage
+sub compare {
+  my ($self, $cell_type) = @_;
+
+  if(! (ref($cell_type) && $cell_type->isa("Bio::EnsEMBL::Funcgen::CellType"))){
+    my $msg  = "You must provide a valid Bio::EnsEMBL::Funcgen::CellType, not: '";
+       $msg .=  ref($cell_type)."'";
+    throw($msg);
+  }
+
+  my @members = qw{description display_label efo_id name};
+  my $result = {};
+  for my $member(@members) {
+    if($self->$member() ne $cell_type->$member()){
+      push(@{$result->{$member}},  $self->$member());
+      push(@{$result->{$member}},  $cell_type->$member());
+    }
+  }
+  use Data::Dumper;
+  print Dumper($result);
+die;
+
+
+}
 
 =head2 name
 
@@ -215,5 +251,31 @@ sub efo_id{  return $_[0]->{efo_id}; }
 
 sub tissue{   return $_[0]->{tissue}; }
 
+=head2 reset_relational_attributes
+
+  Arg[1]     : Hashref containing linked objects - KEPT for compliance
+               with similar methods in other modules
+  Arg[2]     : Flag to avoid reseting of adaptor and dbID
+
+  Description: Undefs Adaptor and dbID
+               Useful when creating a cloned object for migration beween DBs
+  Returntype : None
+  Exceptions : None
+  Caller     : Migration code
+  Status     : At risk
+
+=cut
+
+sub reset_relational_attributes{
+  my ($self, $params_hash, $no_db_reset) = shift;
+
+  # undef the dbID and adaptor
+  if(! $no_db_reset){
+    $self->{adaptor} = undef;
+    $self->{dbID}    = undef;
+  }
+
+  return;
+}
 1;
 

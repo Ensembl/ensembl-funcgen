@@ -364,5 +364,73 @@ sub add_new_subset {
   throw('add_new_subset was deprecated in v69, _add_new_subset is now called directly from InputSubset->new');
 }
 
+=head2 reset_relational_attributes
+
+  Arg[1]     : Hashref containing the following parameters:
+                [Mandatory]
+                -analysis     => Bio::EnsEMBL::Analysis,
+                -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
+                -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
+                [Optional]
+                -support      => Arrayref of valid support objects (eg InputSet)
+
+  Description: Resets all the relational attributes of a given InputSet.
+               Useful when creating a cloned object for migration beween DBs
+  Returntype : None
+  Exceptions : Throws if any of the parameters are not defined or invalid.
+  Caller     : Migration code
+  Status     : At risk
+
+=cut
+
+sub reset_relational_attributes{
+  my ($self, $params_hash, $no_db_reset) = @_;
+  my ($feature_type, $experiment, $cell_type, $subsets)
+    = rearrange(['FEATURE_TYPE', 'EXPERIMENT', 'CELL_TYPE', 'SUBSETS'], %$params_hash);
+
+
+  if(! (defined $feature_type &&
+        ref($feature_type) eq 'Bio::EnsEMBL::Funcgen::FeatureType') ){
+    my $msg = 'You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType, not ';
+    $msg .= ref($feature_type);
+    throw($msg);
+  }
+
+  if(! (defined $experiment &&
+        ref($experiment) eq 'Bio::EnsEMBL::Funcgen::Experiment') ){
+    my $msg = 'You must pass a valid Bio::EnsEMBL::Fungen::Experiment, not ';
+    $msg   .= ref($experiment);
+    throw($msg);
+  }
+
+  if(! (defined $cell_type &&
+        ref($cell_type) eq 'Bio::EnsEMBL::Funcgen::CellType') ){
+    my $msg = 'You must pass a valid Bio::EnsEMBL::Funcgen::Experiment, not ';
+    $msg .= ref($cell_type);
+    throw($msg);
+  }
+
+  $self->{feature_type} = $feature_type;
+  $self->{experiment}     = $experiment;
+  $self->{cell_type}    = $cell_type;
+
+  if(defined $subsets){
+    if( ref($subsets) ne 'Bio::EnsEMBL::Funcgen::Subsets' ){
+      throw('You must pass a valid Bio::EnsEMBL::Funcgen::Subsets');
+      $self->{subsets} = $subsets;
+    }
+  }
+  else{
+    delete($self->{subsets});
+  }
+
+# Undef dbID and adaptor by default
+    if(! $no_db_reset){
+      $self->{dbID}    = undef;
+      $self->{adaptor} = undef;
+    }
+
+    return;
+}
 1;
 

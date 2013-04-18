@@ -98,10 +98,10 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 
 	my ($name, $group, $date, $p_dtype, $desc, $archive_id, $data_url, $xml_id, $xml)
-		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE', 
+		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
 					  'DESCRIPTION','ARCHIVE_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
-	
-    
+
+
     #Added in v68
     #Remove in v69
     if($data_url || $archive_id){
@@ -132,7 +132,7 @@ sub new {
 	#Maintain setter funcs here as these are populated after initialisation
 	$self->mage_xml_id($xml_id) if defined $xml_id;
 	$self->mage_xml($xml)       if defined $xml;
-	
+
 	return $self;
 }
 
@@ -257,10 +257,10 @@ sub primary_design_type{
 =cut
 
 sub mage_xml{
-  my ($self) = shift;	
+  my ($self) = shift;
 
   $self->{'mage_xml'} = shift if(@_);
-  
+
   #use fetch_attrs?
   if(! exists $self->{'mage_xml'} && $self->mage_xml_id()){
 	$self->{'mage_xml'} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
@@ -283,10 +283,10 @@ sub mage_xml{
 =cut
 
 sub mage_xml_id{
-  my $self = shift;	
+  my $self = shift;
 
   $self->{'mage_xml_id'} = shift if @_;
-  
+
   return $self->{'mage_xml_id'};
 }
 
@@ -310,20 +310,20 @@ sub mage_xml_id{
 
 sub get_ExperimentalChips{
   my ($self) = shift;
-	
+
   #should this also store echips?
 
   #Need to retrieve all from DB if not defined, then check whether already present and add and store if not
   #what about immediate access to dbID
   #should we separate and have add_ExperimentalChip?
 
-  
+
 
   if(! exists $self->{'experimental_chips'}){
      $self->{'experimental_chips'} = {};
 
      #need to warn about DBAdaptor here?
-  
+
     foreach my $echip(@{$self->adaptor->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($self->dbID())}){
       $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
     }
@@ -346,11 +346,11 @@ sub get_ExperimentalChips{
 
 sub add_ExperimentalChip{
   my ($self, $echip) = @_;
- 
 
- throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object") 
+
+ throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object")
     if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
- 
+
   if(! exists $self->{'experimental_chips'}){
     $self->get_ExperimentalChips();
     $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
@@ -360,7 +360,7 @@ sub add_ExperimentalChip{
   }else{
     $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
   }
-  
+
   return;
 }
 
@@ -377,11 +377,11 @@ sub add_ExperimentalChip{
 
 sub get_ExperimentalChip_by_unique_id{
   my ($self, $uid) = @_;
-  
+
   my ($echip);
 
   throw("Must supply a ExperimentalChip unque_id") if(! defined $uid);
-  
+
   $self->{'experimental_chips'} || $self->get_ExperimentalChips();
 
   if(exists $self->{'experimental_chips'}->{$uid}){
@@ -406,7 +406,7 @@ sub get_ExperimentalChip_by_unique_id{
 
 sub get_ExperimentalChip_unique_ids{
   my $self = shift;
-  
+
   $self->{'experimental_chips'} || $self->get_ExperimentalChips();
 
   return [keys %{ $self->{'experimental_chips'}}];
@@ -419,8 +419,8 @@ sub get_ExperimentalChip_unique_ids{
 
 
 sub group{
-  my $self = shift;	
-  
+  my $self = shift;
+
   deprecate("group is deprecated experimental_group instead");
   throw("You are trying to set a experimental group name using a deprecated method") if @_;
   return $self->experimental_group()->name;
@@ -429,8 +429,8 @@ sub group{
 
 
 sub group_id{
-	my ($self) = shift;	
-	
+	my ($self) = shift;
+
 	deprecate("Experiment->group_id is deprecated. Use exp->experimental_group->dbID instead");
 	return $self->experimental_group()->dbID;
 }
@@ -452,6 +452,45 @@ sub data_url{ #deprecated in v68
 sub source_info{ #deprecated in v68
   #would deprecate, but no easy way of doing this reliably
   throw("Use InputSubset->source_info");
+}
+
+=head2 reset_relational_attributes
+
+  Arg[1] : Hashref containing the following mandatory parameters:
+            -experimental_group => Bio::EnsEMBL::ExperimentalGroup
+
+  Description: Resets all the relational attributes of a given Experiment
+               Useful when creating a cloned object for migration beween DBs
+  Returntype : None
+  Exceptions : Throws if any of the parameters are not defined or invalid.
+  Caller     : Migration code
+  Status     : At risk
+
+=cut
+
+sub reset_relational_attributes{
+  my ($self, $params_hash, $no_db_reset) = @_;
+
+  my ($experimental_group) = rearrange(['EXPERIMENTAL_GROUP'], %$params_hash);
+
+  #is_stored (in corresponding db) checks will be done in store method
+
+  if(! (defined $experimental_group &&
+        ref($experimental_group) eq 'Bio::EnsEMBL::Funcgen::ExperimentalGroup') ){
+    my $msg = 'You must pass a valid Bio::EnsEMBL::Funcgen::ExperimentalGroup ';
+    $msg .= 'not ' . ref($experimental_group);
+    throw($msg);
+  }
+
+  $self->{group}    = $experimental_group;
+
+  #Undef the dbID and adaptor by default
+  if(! $no_db_reset){
+    $self->{adaptor} = undef;
+    $self->{dbID}    = undef;
+  }
+
+  return;
 }
 
 

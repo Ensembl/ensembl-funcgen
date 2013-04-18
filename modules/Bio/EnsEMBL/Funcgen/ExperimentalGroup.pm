@@ -23,7 +23,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::ExperimentalGroup - A module to represent 
+Bio::EnsEMBL::Funcgen::ExperimentalGroup - A module to represent
 an ExperimentalGroup. i.e. the authors of an experiment.
 
 =head1 SYNOPSIS
@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Funcgen::ExperimentalGroup;
 
 =head1 DESCRIPTION
 
-This is a simple class to represent information about an ExperimentalGroup, 
+This is a simple class to represent information about an ExperimentalGroup,
 containing a name and a more detailed description
 This module is part of the Ensembl project: http://www.ensembl.org/
 
@@ -71,7 +71,7 @@ use vars qw(@ISA);
                                                              );
   Description: Constructor method for ExperimentalGroup class
   Returntype : Bio::EnsEMBL::Funcgen::ExperimentalGroup
-  Exceptions : Throws if name not defined 
+  Exceptions : Throws if name not defined
   Caller     : General
   Status     : At risk
 
@@ -82,7 +82,7 @@ sub new {
 
   my $obj_class = ref($caller) || $caller;
   my $self = $obj_class->SUPER::new(@_);
-  
+
   my (
       $name,
       $location,
@@ -91,10 +91,10 @@ sub new {
       $desc,
       $is_project
      ) = rearrange([
-					'NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION', 'IS_PROJECT'
-				   ], @_);
-  
-  
+       'NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION', 'IS_PROJECT'
+          ], @_);
+
+
   if($name){
     $self->name($name);
   }else{
@@ -219,6 +219,34 @@ sub is_project {
     my $self = shift;
     $self->{'is_project'} = shift if @_;
     return $self->{'is_project'};
+}
+
+
+=head2 reset_relational_attributes
+
+  Arg[1]     : UNDEF - placeholder for compliance with similar methods in
+               other modules
+  Arg[2]     : Flag to avoid reseting of adaptor and dbID
+
+  Description: Undefs Adaptor and dbID
+               Useful when creating a cloned object for migration beween DBs
+  Returntype : None
+  Exceptions : Throws if any of the parameters are not defined or invalid.
+  Caller     : Migration code
+  Status     : At risk
+
+=cut
+
+sub reset_relational_attributes{
+  my ($self, $params_hash, $no_db_reset) = @_;
+
+  # undef the dbID and adaptor
+  if(! $no_db_reset){
+    $self->{adaptor} = undef;
+    $self->{dbID}    = undef;
+  }
+
+  return;
 }
 
 1;

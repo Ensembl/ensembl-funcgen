@@ -39,7 +39,7 @@ This is a simple class to represent information about a FeatureType, containing 
 
 #To do
 # add coding_transcript/gene methods.  Store as xrefs or custom feature_type_coding table? (miRanda etc)
-# 
+#
 
 package Bio::EnsEMBL::Funcgen::FeatureType;
 
@@ -85,13 +85,13 @@ sub new {
   my $caller = shift;
   my $obj_class = ref($caller) || $caller;
   my $self = $obj_class->SUPER::new(@_);
-  
-  my ($name, $desc, $class, $analysis, $so_acc, $so_name) = 
+
+  my ($name, $desc, $class, $analysis, $so_acc, $so_name) =
     rearrange(['NAME', 'DESCRIPTION', 'CLASS', 'ANALYSIS', 'SO_ACCESSION', 'SO_NAME'], @_);
-  
+
   throw("Must supply a FeatureType name\n") if ! defined $name;
   throw("Must supply a FeatureType class\n") if ! defined $class;
- 
+
   #Direct assignments here prevent set arg test in getter only method
   $self->{name}         = $name;
   $self->{class}        = $class;
@@ -100,7 +100,7 @@ sub new {
   $self->{so_accession} = $so_acc  if defined $so_acc;
 
   if($analysis){
-	
+
     if(ref($analysis) ne 'Bio::EnsEMBL::Analysis'){
       throw('Optional Analysis parameter must be a valid Bio::EnsEMBL::Analysis');
       #is_stored checks done in other fetch and store methods
@@ -207,9 +207,9 @@ sub analysis{ return $_[0]->{analysis}; }
 
 sub evidence_type_label{
   my $self = shift;
-  
+
   if(! exists $self->{evidence_type_label}){
-    $self->{evidence_type_label} = 
+    $self->{evidence_type_label} =
       $self->adaptor->get_regulatory_evidence_info($self->regulatory_evidence_type)->{label};
   }
 
@@ -232,7 +232,7 @@ sub evidence_type_name{
   my $self = shift;
 
   if(! exists $self->{evidence_type_name}){
-    $self->{evidence_type_name} = 
+    $self->{evidence_type_name} =
       $self->adaptor->get_regulatory_evidence_info($self->regulatory_evidence_type)->{name};
   }
 
@@ -254,8 +254,8 @@ sub evidence_type_name{
 sub evidence_type_long_name{
   my $self = shift;
 
-  if(! exists $self->{evidence_type_long_name}){    
-    $self->{evidence_type_long_name} = 
+  if(! exists $self->{evidence_type_long_name}){
+    $self->{evidence_type_long_name} =
       $self->adaptor->get_regulatory_evidence_info($self->regulatory_evidence_type)->{long_name};
   }
 
@@ -279,7 +279,7 @@ sub is_core_evidence{
   my $self = $_[0];
 
   if(! defined $self->{is_core_evidence}){
-  
+
     if($self->regulatory_evidence_type eq 'core'){
       $self->{is_core_evidence} = 1;
     }
@@ -287,7 +287,7 @@ sub is_core_evidence{
       $self->{is_core_evidence} = 0;
     }
   }
-  
+
   return $self->{is_core_evidence};
 }
 
@@ -304,11 +304,11 @@ sub is_core_evidence{
 
 sub regulatory_evidence_type{
   my $self = $_[0];
-  
+
   if(! defined $self->{regulatory_evidence_type}){
     $self->{regulatory_evidence_type} = $self->adaptor->get_regulatory_evidence_type($self->class);
   }
-  
+
   return $self->{regulatory_evidence_type};
 }
 
@@ -334,14 +334,14 @@ sub regulatory_evidence_type{
 sub compare{
   my ($self, $ftype) = @_;
 
-  if(ref($ftype) ne 'Bio::EnsEMBL::Funcgen::FeatureType'){ 
+  if(ref($ftype) ne 'Bio::EnsEMBL::Funcgen::FeatureType'){
     throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType to compare');
   }
 
   my $same = 1;
 
   foreach my $methodName ( 'name', 'class', 'so_accession','so_name','description'){
-	
+
     if( defined $self->$methodName() && ! $ftype->can($methodName )) {
       $same = 0;
 	  last;
@@ -350,7 +350,7 @@ sub compare{
       $same = 0;
 	  last;
     }
-	
+
     if( defined($ftype->$methodName()) && defined($self->$methodName()) &&
         ( $ftype->$methodName() ne $ftype->$methodName() )) {
       $same = 0;
@@ -370,10 +370,55 @@ sub compare{
   elsif( ! ((! $self->analysis) && (! $ftype->analysis)) ){#Only one has analysis
     $same = 0;
   }
-  
+
   return $same;
 }
 
+=head2 reset_relational_attributes
+
+  Arg[1]     : UNDEF - placeholder for compliance with similar methods in
+               other modules
+  Arg[2]     : Flag to avoid reseting of adaptor and dbID
+
+  Description: Resets all the relational attributes of a given FeaturSet
+               Useful when creating a cloned object for migration beween DBs
+  Returntype : None
+  Exceptions : Throws if any of the parameters are not defined or invalid.
+  Caller     : Migration code
+  Status     : At risk
+
+=cut
+
+sub reset_relational_attributes{
+  my ($self, $params_hash, $no_db_reset) = @_;
+
+  # Undef  dbID and adaptor by default
+  if(! $no_db_reset){
+    $self->{adaptor} = undef;
+    $self->{dbID}    = undef;
+  }
+
+  # For future use. Analysis is optional, as it only is used at
+  # Segmentation
+  if(defined $self->{analysis}){
+    my $msg = 'Linked Analysis found. This is usually the case with ';
+    $msg   .= 'Segmenation data, for which reset has not been implemented';
+    throw($msg);
+
+    my ($analysis) = rearrange(['ANALYSIS',], @$params_hash);
+
+    if(defined $analysis){
+      if(! (ref($analysis) eq 'Bio::EnsEMBL::Analysis') ){
+        throw('You must pass a valid Bio::EnsEMBL::Analysis');
+      }
+    }
+
+    $self->{analysis}     = $analysis;
+  }
+
+
+  return;
+}
 
 1;
 
