@@ -8,8 +8,8 @@ use Test::More;
 use Data::Dumper qw(Dumper);
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-throw('Test DB not yet implemented, you need to define a DBAdaptor and remove this throw manually');
-my $user = undef;
+#throw('Test DB not yet implemented, you need to define a DBAdaptor and remove this throw manually');
+my $user = '';
 
 my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
     -user       => $user,
@@ -18,10 +18,10 @@ my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
     #-DNADB_PORT => 3306,
 
     -species    => 'homo_sapiens',
-#    -dbname     => 'nj1_test_homo_sapiens_funcgen_71_37',
-#    -host       => HOST,
-#    -DNADB_HOST => DNADB_HOST,
-    -DNADB_NAME => 'homo_sapiens_core_71_37',
+    #-dbname     => 'nj1_test_homo_sapiens_funcgen_71_37',
+    -host       => ,
+    -DNADB_HOST => ,
+    #-DNADB_NAME => 'homo_sapiens_core_71_37',
 );
 
 
@@ -49,7 +49,7 @@ ok(! %diffs, 'ResultSet::compare_to self diffs'.$diffs);
 
 #This is actually the same as above, just omiting the compare_stored_Storable
 #checks on the nested objects/methods
-%diffs = %{$result_set->compare_to($result_set, undef, 'shallow')};
+%diffs = %{$result_set->compare_to($result_set, 'shallow')};
 $diffs = "\n".Dumper(\%diffs) if %diffs;
 ok(! %diffs, 'ResultSet::compare_to shallow compare_to self'.$diffs);
 
@@ -84,9 +84,6 @@ $diffs = "\n".Dumper(\%diffs) if %diffs;
 ok(! %diffs, 
   'ResultSet::compare_to clone after reset_relational_attributes with db reset'
   .$diffs);
-
-eval { $result_set->compare_to($clone_rset, 'NOT A HASHREF') };
-ok($@, "ResultSet::compare_to validate diffs hash arg");
 
 eval { $result_set->compare_to('NOT A ResultSet') };
 ok($@, 'ResultSet::compare_to validate ResultSet arg');
@@ -142,6 +139,9 @@ ok($@, 'ResultSet::reset_relational_attributes no -support error');
 my $alt_ftype    = $result_set->feature_type->adaptor->fetch_by_name('H4K4me3');
 #my $alt_analysis = $result_set->analysis->adaptor->fetch_by_logic_name('AFFY_UTR_ProbeAlign');
 
+#todo reset all relation attributes at once and test compare_to for all in one go
+#like FeatureSet.t
+
 $clone_rset->reset_relational_attributes(
       {  
         -cell_type => $result_set->cell_type,
@@ -151,17 +151,19 @@ $clone_rset->reset_relational_attributes(
       });
 
 #Test passing diffs hash and catch ftype diff at same time
-$result_set->compare_to($clone_rset, \%diffs);
-ok(exists $diffs{'feature_type'}, 
-  'ResultSet::compare_to caught different feature_type '.
-    '(compare_stored_Storables) test in passed hashref');
+%diffs = %{$result_set->compare_to($clone_rset)};
+ok( ( exists $diffs{'feature_type'} &&
+     ($diffs{'feature_type'} =~ /^dbID mismatch/) 
+    ), 
+    'ResultSet::compare_to caught different feature_type '.
+      '(compare_stored_Storables)');
   
 # COMPLETED testing reset_relational_attributes  
 $clone_rset->{name} = 'TEST_NAME';
-$result_set->compare_to($clone_rset, \%diffs);
+%diffs = %{$result_set->compare_to($clone_rset)};
 ok(exists $diffs{'name'}, 
   'ResultSet::compare_to caught different name '.
-    '(compare_string_methods) in passed hashref');
+    '(compare_string_methods)');
 $clone_rset->{name} = $result_set->name;
 
 # START testing add_support and compare_to support
@@ -174,16 +176,19 @@ my @new_support    = @{$clone_rset->add_support(\@orig_support_2)};#This appends
 ok( (scalar(@new_support) == scalar(@orig_support)),
     'ResultSet::add_support returns expected size array');
 
-#Duplcate support test has to be done on result_set_2 
+#Dupilcate support test has to be done on result_set_2 
 #to avoid borking the rest of the tests
 eval { $result_set_2->add_support(\@orig_support_2) };
 ok($@, 'ResultSet::add_support caught duplicate support addition');  
    
 #TODO add more test on add_support?
 #should really test we have exactly the same support objects
- 
-%diffs = %{$result_set->compare_to($clone_rset, undef, 'shallow')};
-ok(exists $diffs{'get_support - size'}, 'ResultSet::compare_to support size');
+
+#This now fails as we don't do the size test in shallow mode. 
+%diffs = %{$result_set->compare_to($clone_rset)};
+ok( (exists $diffs{'get_support'} &&
+    ($diffs{'get_support'} =~ /Return size mismatch/) ), 
+   'ResultSet::compare_to support size');
     
 $clone_rset->reset_relational_attributes(
       {  
@@ -193,13 +198,14 @@ $clone_rset->reset_relational_attributes(
         -analysis => $result_set->analysis,
       });    
 #This will return no diffs even tho the dbID differ as we are only doing a shallow compare   
-%diffs = %{$result_set->compare_to($clone_rset, undef, 'shallow')};
+%diffs = %{$result_set->compare_to($clone_rset, 'shallow')};
 $diffs = "\n".Dumper(\%diffs) if %diffs;
-ok(! %diffs,'ResultSet::compare_to shallow overlook support diffs');
+ok(! %diffs,'ResultSet::compare_to shallow overlook support diffs'.$diffs);
 
-$result_set->compare_to($clone_rset, \%diffs);
-ok(exists $diffs{'support'}{'InputSet - dbID mismatch'}, 
-  'ResultSet::compate_to support non shallow InputSet dbID mismatch');
+%diffs = %{$result_set->compare_to($clone_rset)};
+ok( (exists $diffs{'get_support'} &&
+     ($diffs{'get_support'} =~ /dbID mismatch/) ),
+  'ResultSet::compare_to get_support non shallow dbID mismatch');
 
 #Finished testing compare_to
 
