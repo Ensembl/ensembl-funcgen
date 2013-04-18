@@ -477,65 +477,41 @@ sub source_label{
 }
 
 
-=head2 compare_to
+=head2 object_methods
 
-  Args[1]    : Bio::EnsEMBL::Funcgen::FeatureSet (mandatory)
-  Args[2]    : Boolean - Shallow flag, omits nested object comparisons which require
-                dbID and is_stored checks.
-  Example    : my %shallow_diffs = %{$fset->compare_to($other_fset, 1)};
-  Description: Compare this FeatureSet to another.
-  Returntype : Hashref of key attribute name keys and value which differ.
-  Exceptions : Throws if arg is not a valid FeatureSet
-  Caller     : General
-  Status     : At Risk
+  Description: Returns all the FeatureSet method names which return nested data class
+               objects. 
+  Returntype : Listref
+  Exceptions : None
+  Caller     : Storable::compare_to
+  Status     : At risk
 
 =cut
 
-#%diffs
-#keys define the attribute/method/test
-#If the key is a string it is a simple warning
-#If it is an array ref, it shows the differences between the attributes tested
-#if it a hash ref, it is a nest %diffs has from a nested object
-#identity of this ResultSet handled in caller, not in diffs hash.
+#This is where we could accidentally cause a circular reference
+#This should never happen, but if a convenience method to access a higher level
+#object is put in here, and we do a 'deep' compare_to, we will get a circular ref
+#fizz pop bang!
+#FeatureSet is currently highest level Set, so this is unlikely here
 
-#TODO Document key values in POD, make the available/validatable ?
-
-sub compare_to {
-  my ($self, $fset, $shallow) = @_;
-    
-  if(! (defined $fset &&
-        ref($fset) &&
-        $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet')) ){
-      throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureSet to compare');
-  }
-  
-  my $diffs = {};
- 
-  #omit source_label as this is dynamic and based on input_set
-  $self->compare_string_methods($fset, 
-                                [ qw(name description display_label feature_class) ], 
-                                $diffs);
-     
-  if(! $shallow){
-    
-    #foreach my $obj_method( qw(feature_type cell_type analysis get_InputSet) ){
-    #  my %obj_diffs = 
-    #    %{$self->compare_stored_Storables($self->$obj_method, $rset->$obj_method)};
-    #    
-    #  if(%obj_diffs){
-    #    $diffs->{$obj_method} = \%obj_diffs;
-    #  }
-    
-    %$diffs = (%$diffs, 
-               %{$self->compare_object_methods
-                ($fset, 
-                [qw(feature_type cell_type analysis get_InputSet)])}
-              );
-  }   
- 
-  return $diffs;
+sub object_methods{
+  return [qw(feature_type cell_type analysis get_InputSet)];
 }
 
+
+=head2 string_methods
+
+  Description: Returns all the FeatureSet method names which return strings. 
+  Returntype : Listref
+  Exceptions : None
+  Caller     : Storable::compare_to
+  Status     : At risk
+
+=cut
+
+sub string_methods{
+  return [ qw(name description display_label feature_class get_all_states) ];
+}
 
 
 =head2 reset_relational_attributes

@@ -803,55 +803,41 @@ sub log_label {
 }
 
 
-=head2 compare_to
+=head2 object_methods
 
-  Args[1]    : Bio::EnsEMBL::Funcgen::ResultSet (mandatory)
-  Args[2]    : Boolean - Shallow flag, omits nested object comparisons which require
-                dbID and is_stored checks.
-  Args[3]    : Hashref - 
-  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
-  Description: Compare this ResultSet to another.
-  Returntype : Hashref of key attribute/method name keys and values which differ.
-  Exceptions : Throws if arg is not a valid ResultSet
-  Caller     : General
-  Status     : At Risk
+  Description: Returns all the FeatureSet method names which return nested data class
+               objects. 
+  Returntype : Listref
+  Exceptions : None
+  Caller     : Storable::compare_to
+  Status     : At risk
 
 =cut
 
-#%diffs
-#keys define the attribute/method/test
-#If the key is a string it is a simple warning
-#If it is an array ref, it shows the differences between the attributes tested
-#if it a hash ref, it is a nest %diffs has from a nested object
-#identity of this ResultSet handled in caller, not in diffs hash.
+#This is where we could accidentally cause a circular reference
+#This should never happen, but if a convenience method to access a higher level
+#object is put in here, and we do a 'deep' compare_to, we will get a circular ref
+#fizz pop bang!
+#e.g. don't ever put get_DataSet in here, as DataSet::object_methods
+#will likely call ResultSet::compare_to
 
-#TODO Document key values in POD, make the available/validatable ?
+sub object_methods{
+  return [qw(feature_type cell_type analysis get_support)];
+}
 
-#Now I have remove the class name from the key, passing diffs is now unsafe
-#as this may over-write existing diffs keys!
 
-sub compare_to {
-  my ($self, $rset, $shallow) = @_;
-    
-  if(! (defined $rset &&
-        ref($rset) &&
-        $rset->isa('Bio::EnsEMBL::Funcgen::ResultSet')) ){
-      throw('You must pass a valid Bio::EnsEMBL::Funcgen::ResultSet to compare');
-  }
-    
-  my $diffs = {};
-  $self->compare_string_methods($rset, [ qw(name table_name feature_class get_all_states) ], $diffs);
-       
-  if(! $shallow){
-     
-    %$diffs = (%$diffs, 
-               %{$self->compare_object_methods
-                ($rset, 
-                [qw(feature_type cell_type analysis get_support)])}
-              );
-  }
- 
-  return $diffs;
+=head2 string_methods
+
+  Description: Returns all the FeatureSet method names which return strings. 
+  Returntype : Listref
+  Exceptions : None
+  Caller     : Storable::compare_to
+  Status     : At risk
+
+=cut
+
+sub string_methods{
+  return [ qw(name table_name feature_class get_all_states) ];
 }
 
   
