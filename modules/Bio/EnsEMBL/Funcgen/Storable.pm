@@ -533,9 +533,6 @@ sub associated_feature_types{
 sub compare_string_methods {
   my ($self, $obj, $methods, $diffs) = @_;
   
-  #assumes obj is an abject and we only want the name, not the name space
-  #and can do methods specified
-  (my $obj_name = ref($obj)) =~ s/.*://g;
   
   if(defined $diffs &&
     (ref($diffs) ne 'HASH') ){
@@ -583,7 +580,7 @@ sub compare_string_methods {
     @other_strings = sort @other_strings;
      
     if( scalar(@these_strings) != scalar(@other_strings) ){
-      $diffs->{$obj_name.'::'.$method} = ["@these_strings", "@other_strings"];
+      $diffs->{$method} = ["@these_strings", "@other_strings"];
     }
     else{
     
@@ -598,7 +595,7 @@ sub compare_string_methods {
     
         if($these_strings[$i] ne $other_strings[$i]){
           
-          $diffs->{$obj_name.'::'.$method} = [$these_strings[$i], $other_strings[$i]];
+          $diffs->{$method} = [$these_strings[$i], $other_strings[$i]];
         }
       }
     }
@@ -608,81 +605,151 @@ sub compare_string_methods {
 }
 
 
+#Need to change shallow in compare_to, to depth.
+#undef or 0 is dbID match
+#-1 is shallow
+#1 is deep
+ #deep signifies they are not in the same same and we should not do the dbID check, 
+  #but a full compare_to
 sub compare_object_methods {
-  my ($self, $obj, $methods, $diffs, $shallow) = @_;
+  my ($self, $obj, $methods, $deep) = @_; 
+  my $diffs = {};
   
-  (my $obj_name = ref($obj)) =~ s/.*://g;
-  
-  if(defined $diffs &&
-    (ref($diffs) ne 'HASH') ){
-    throw('Diffs hash mush be passed as Hashref');  
-  }
-  elsif(! defined $diffs){  
-    $diffs = {};
-  }
-  
-   if(! (defined $methods &&
+  if(! (defined $methods &&
         ref($methods) &&
         ref($methods) eq 'ARRAY')){
     throw('You must pass an Arrayref of methods to compare');        
   }
-   
-   
-  foreach my $method(@$methods){
+ 
+ #Do we want to do this?
+ #might we want to compare_to between classes which share an interface or a super class?  
+   #if(ref($this_obj) ne ref($other_obj)){
+   #  $diffs->{$class_name.' - namespace mismatch'} = [ref($this_obj), ref($other_obj)];              
+#  }
+#this would allow us to move some fo the shared comparisons up the class hierarchy.
       
+  METHOD: foreach my $method(@$methods){
+    #Do not change $method key name to reflect test here
+    #This makes it hard to tell which object is failed
+    #for IDing specific test result, have to pattern match
+    #the start of the error string
+  
     if ( ! $self->can($method) ) {
-      throw(ref($self).' cannot call method '.$method.' to compare');  
+      throw(ref($self).' cannot call method '.$method);
+    }
+ 
+    my $obj_diffs = {};
+    #so we can test and only set if we have diffs
+    
+    
+    #Handle Arrarefs
+    my $aref = 0;
+    my @these_method_objs = $self->$method;
+    my @other_method_objs = $obj->$method;
+
+    if( defined $these_method_objs[0] &&
+        ref($these_method_objs[0]) eq 'ARRAY'){
+      #Assume we only have one elements which is an arrayref of objects    
+      @these_method_objs = sort {$a->dbID <=> $b->dbID} @{$these_method_objs[0]};
+      @other_method_objs = sort {$a->dbID <=> $b->dbID} @{$other_method_objs[0]};   
+      $aref = 1;    
+    }
+   
+    #Handle either or both undefined
+    if(! (@these_method_objs && @other_method_objs)){
+      next;
+    }
+    elsif(scalar(@these_method_objs) != scalar(@other_method_objs) ) {
+      $diffs->{$method} = "Return size mismatch:\t".
+        scalar(@these_method_objs).', '.scalar(@other_method_objs);      
+      next METHOD;    
+    }
+        
+    #Do can compare_to outside of loop
+    if($deep){
+      
+      if( ! $these_method_objs[0]->can('compare_to') ){
+        throw("No compare_to method available for $method objects,".
+          " please unset the 'deep' argument");
+      }
     }
     
-    my %obj_diffs = %{$self->$method->compare_to($obj->$method, undef, $shallow)};
-
-    if(keys %obj_diffs){
-      $diffs->{$obj_name.'::'.$method} = \%obj_diffs;
+    for my $i (0..$#these_method_objs){
+      #We can't alter $method key here for test discrimination
+      #else we won't be able to easily identify what method gave the error
+      #adding the test name to the value and check that will be problematical
+      #as this will also have data in it, and hence will change
+      #options here are to simply put the test name as the prefix to the error string
+      #else have some more structure?
+      #This will also only allow one test to be recorded
+      #which is fine for now, as we only record one result
+      #unless we are doing a deep compare_to, in which case we set the single value to the diffs hash 
+       
+      #This is in line with the compare_string_method keys  
+       
+        #Do we need to make these test names accessible via a hash?
+          #for validation?
+           
+      if($deep){
+        #Default is not to pass deep on
+        #is this correct?
+        #will this be enough for the migration
+        #descending into these deep compare_tos may
+        #result in a circular reference?!
+        #this woudl only happen if we had methods in low level object referring to
+        #high level object, which conceptually shouldn't happen
+        #e.g. InputSet->get_FeatureSet
+        #or at least if the do exist then, they should be included in the compare_to methods
+        #Probably want shallow, then handle the rest in the caller?
+        #is this useful for the define set methods
+        #We just need to make this away of another adaptor!
+        #Would the comparison of nested ojects even be possible 
+        #past this layer? Not sure
+        
+              
+        $obj_diffs = $these_method_objs[$i]->compare_to($other_method_objs[$i]);
+        
+        if (%$obj_diffs){
+          
+          if($aref){
+            $diffs->{$method} ||=[];
+            push @{$diffs->{$method}}, $obj_diffs;
+          }
+          else{
+            $diffs->{$method} = $obj_diffs;
+          }
+        }
+      }
+      elsif($self->adaptor){
+        #don't assume that this_object is stored in same DB as self
+         
+        if(! ($these_method_objs[$i]->is_stored($self->adaptor->db) &&
+              $other_method_objs[$i]->is_stored($self->adaptor->db)) ){
+                          
+          if($aref){
+            $diffs->{$method} ||=[];
+            push @{$diffs->{$method}}, 'DBs are not the same as '.ref($self);
+          }
+          else{
+            $diffs->{$method} = 'DBs are not the same as '.ref($self);
+          }
+        }
+        elsif($these_method_objs[$i]->dbID != $other_method_objs[$i]->dbID){          
+          $diffs->{$method} = "dbID mismatch:\n\t".
+            join(', ', (map $_->dbID, @these_method_objs))."\n\t".
+            join(', ', (map $_->dbID, @other_method_objs));
+          next METHOD;
+        }
+      }         
+      else{
+        throw('Could not access DBAdaptor from self('.ref($self).
+          ") for $method is_stored/dbID check"); 
+      }
     }
   }
   
   return $diffs;  
 }
-
-
-
-sub compare_stored_Storables {
-  my ($self, $this_obj, $other_obj, $diffs) = @_;
-  
-  if(defined $diffs &&
-    (ref($diffs) ne 'HASH') ){
-    throw('Diffs hash mush be passed as Hashref');  
-  }
-  elsif(! defined $diffs){  
-    $diffs = {};
-  }
-  
-  (my $class_name = ref($this_obj)) =~ s/.*://;
-  
-  #
-  if(ref($this_obj) ne ref($other_obj)){
-     $diffs->{$class_name.' - namespace mismatch'} = [ref($this_obj), ref($other_obj)];              
-  }
-  elsif($self->adaptor){ #assume we have a db   
-       
-    if(! ($this_obj->is_stored($self->adaptor->db) &&
-          $other_obj->is_stored($self->adaptor->db)) ){
-        $diffs->{$class_name.' - is_stored'} = $class_name.'(s) not stored in the same DB as '.ref($self);   
-    }
-    elsif($this_obj->dbID != $other_obj->dbID){
-      $diffs->{$class_name.' - dbID mismatch'} = [$this_obj->dbID, $other_obj->dbID];
-    }  
-  }
-  else{
-    throw('Could not access DBAdaptor from self('.ref($self)." for $class_name is_stored check"); 
-  }
-
-  return $diffs;
-} 
-  
-
-
-
 
 
 1;
