@@ -1740,9 +1740,7 @@ sub define_DataSet {
   #change the name of this method to define_validate_rollback_DataSet???
   #should we change this other define method, such that they don't call _validate_rollback_Set?
   #Would we have a use for the very simple define Set methods?
- 
-  #todo add DatSet::compare_to method, but don't specify deep!
-   
+
   if(defined $stored_dset){    
     $self->_compare_set_for_rollback($new_dset, $stored_dset, 
                                      'data_set');
@@ -1755,60 +1753,56 @@ sub define_DataSet {
  return $stored_dset;
 } ## end sub define_DataSet
 
-#Rollback/load methods migrated from DBAdaptor
-#Move to SetAdaptors, better located and will remove cyclical dependancy
 
 =head2 rollback_FeatureSet
 
   Arg [0]    : Bio::EnsEMBL::Funcgen::FeatureSet
-  Arg [1]    : optional - boolean force delete flag, if this FeatureSet is use as a support 
                for another DataSet.
-  Arg [2]    : optional - arrayref of Bio::EnsEMBL::Slice objects to rollback
-  Arg [3]    : optional - boolean flag to perform full rollback i.e. default will just remove feature
-               specifying this with also delete the feature_set record
+  Arg [1]    : Arrayref of Bio::EnsEMBL::Slice objects to rollback (Optional)
+  Arg [2]    : Boolean flag to perform full delete of feature_set and data_set records. 
   Example    : $self->rollback_FeatureSet($fset);
-  Description: Deletes all status and feature entries for this FeatureSet.
-               Checks whether FeatureSet is a supporting set in any other DataSet.
-  Returntype : none
-  Exceptions : Throws if any deletes fails or if db method unavailable
+  Description: Deletes all features for the passed FeatureSet, along with associated
+               status and xref records. Checks whether FeatureSet is a supporting set 
+               in any other DataSet.
+  Returntype : None
+  Exceptions : Throws if:
+                Any deletes fails
+                Dependant DataSets are found
+                FeatureSet 'adaptor' method is not defined
+                Defined Slices are not valid
+                More than 1 sub-Slice is defined (i.e. not full length)
   Caller     : Importers and Parsers
   Status     : At risk
 
 =cut
 
 sub rollback_FeatureSet {
-  my ( $self, $fset, $force_delete, $slices, $full_delete ) = @_;
-
- #Remove force delete and just throw?
- #Currently only used in project_feature_set.
- #May want to keep an old RegBuild for mapping/comparison?
- #Coudl get around this by simply deleting the data_set? Unknown impact.
- #Move to config hash?
- #No need for rollback_level here as we always want to do the same thing
-
+  my ( $self, $fset, $slices, $full_delete ) = @_;
   my ( $sql, $slice_name );
   my $slice_join = '';
-  my $table      = $fset->feature_class . '_feature';
-  my $adaptor =
-    $fset->adaptor || throw('FeatureSet must have an adaptor');
-  my $db = $adaptor->db;
-
-  #Cyclical dpendancy here, so not strictly necessary.
-  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::FeatureSet',
-                            $fset );
-
-  $self->log_header( 'Rolling back ' .
-                $fset->feature_class . " FeatureSet:\t" . $fset->name );
+  
+  
+  if ( ! ($fset &&
+         (ref($fset) eq 'Bio::EnsEMBL::Funcgen::FeatureSet') &&
+          defined $fset->adaptor ) ){
+    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet');
+  }
+    
+  my $db    = $fset->adaptor->db; #Assumes access to DBAdaptor
+  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::FeatureSet', $fset );
+  my $table = $fset->feature_class . '_feature';
+  
+  $self->log_header('Rolling back '.$fset->feature_class.
+                    " FeatureSet:\t" . $fset->name );
 
   if ($slices) {
 
     if ($full_delete) {
-      throw(
-          "Cannot specify a full_delete for a Slice based rollback:\t" .
+      throw("Cannot specify a full_delete for a Slice based rollback:\t" .
             $fset->name );
     }
 
-    if ( !ref($slices) eq 'ARRAY' ) {
+    if ( ref($slices) ne 'ARRAY' ) {
       throw('Slices must be an ARRAYREF of Slice objects');
     }
 
@@ -1816,6 +1810,7 @@ sub rollback_FeatureSet {
       throw("Must pass a valid Bio::EnsEMBL::Slice")
         if ( !( ref($_) && $_->isa('Bio::EnsEMBL::Slice') ) )
     } @$slices;
+    
     $self->log( "Restricting to slices:\n\t\t" .
                 join( "\n\t\t", ( map { $_->name } @$slices ) ) );
 
@@ -1838,12 +1833,9 @@ sub rollback_FeatureSet {
                                               $slice->seq_region_name );
 
           if ( ( $slice->start != 1 ) ||
-               ( $full_slice->end != $slice->end ) )
-          {
-            throw(
-"Can only rollback subslices one at a time:\nRollback slice:\t"
-                . $slice->name .
-                "\nFull slice:\t" . $full_slice->name );
+               ( $full_slice->end != $slice->end ) ){
+            throw("Can only rollback subslices one at a time:\nRollback slice:\t"
+                . $slice->name . "\nFull slice:\t" . $full_slice->name );
           }
         }
 
@@ -1852,160 +1844,51 @@ sub rollback_FeatureSet {
     } ## end foreach my $slice (@$slices)
 
     if ( scalar(@sr_ids) == 1 ) {
-
       #Allow sub slice rollback
       #add range here from meta coord?
-      #T
-      $slice_join =
-        " and f.seq_region_id=$sr_ids[0] and f.seq_region_start<=" .
-        $slices->[0]->end .
-        ' and f.seq_region_end>=' . $slices->[0]->start;
+      $slice_join = " and f.seq_region_id=$sr_ids[0] and f.seq_region_start<=" .
+        $slices->[0]->end.' and f.seq_region_end>=' . $slices->[0]->start;
     }
     else {
-      $slice_join =
-        ' and f.seq_region_id in (' . join( ', ', @sr_ids ) . ')';
+      $slice_join = ' and f.seq_region_id in (' . join( ', ', @sr_ids ) . ')';
     }
   } ## end if ($slices)
 
   #Check whether this is a supporting set for another data_set
-  my @dsets =
-    @{ $db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset) };
+  my @dsets =  @{ $db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset) };
 
   if (@dsets) {
-    my $txt =
-      $fset->name .
-      " is a supporting set of the following DataSets:\t" .
-      join( ', ', ( map { $_->name } @dsets ) );
-
-    if ($force_delete) {
-      $self->log("WARNING:\t$txt\n");
-    }
-    else {
-      throw( $txt .
-             "\nPlease resolve or specify the force_delete argument" );
-    }
+    my $txt = $fset->name." is a supporting set of the following DataSets:\t" .
+              join( ', ', ( map { $_->name } @dsets ) );
+    throw( $txt ."\nPlease resolve by deleting dependant Feature/DataSets" ); 
   }
 
-  #Remove states
-  if ( !$slices ) {
-    $fset->adaptor->revoke_states($fset);
-
-    #Revoke InputSet states here as this refers to whether
-    #they are imported in the FeatureSet
-    #Do this in FeatureSet->revoke_states?
-
-    my $dset =
-      $db->get_DataSetAdaptor->fetch_by_product_FeatureSet($fset);
-
-    #Account for absent dset if we have an external_feature set
-
-    if ( ( !defined $dset ) && $fset->feature_class ne 'external' ) {
-      warn "WARNING:\tFeatureSet " . $fset->name .
-" does not have an associated DataSet. Rollback may be incomplete";
-    }
-
-    if ($dset) {
-
-      foreach my $sset ( @{ $dset->get_supporting_sets } ) {
-
-        #Maybe skip this if we defined slice?
-
-#??? Do we want to do this?
-#This is dependant on the feature_class of the InputSet
-#result InputSets may have been imported as ResultFeatureCollections
-#So we want to leave those in place
-#annotated feature_class InputSets are directly imports, so the status of these refers
-#to the FeatureSet import status
-#Where is the imported status set for SWEmbl?
-
-        if ( ( $sset->feature_class eq 'annotated' ) &&
-             $sset->isa('Bio::EnsEMBL::Funcgen::InputSet') )
-        {
-
-          $self->rollback_InputSet($sset)
-            if $sset->isa('Bio::EnsEMBL::Funcgen::InputSet');
-          $self->rollback_InputSet($sset);    #add full delete here?
-              #Do not want to rollback here for other type of sset
-        }
-      }
-    } ## end if ($dset)
-  } ## end if ( !$slices )
-  else {
-    $self->log( 'Skipping ' . $fset->name .
-' revoke_states for partial Slice rollback, maybe revoke IMPORTED? ' );
-  }
-
-  #should add some log statements here?
-
-  my $row_cnt;
-
-  #Rollback reg attributes
-  if ( $fset->feature_class eq 'regulatory' ) {
-    $sql =
-"DELETE ra from regulatory_attribute ra, $table f where f.${table}_id=ra.${table}_id and f.feature_set_id="
-      . $fset->dbID . $slice_join;
+  # Now do the rollback 
+  $fset->adaptor->revoke_states($fset);
+  
+  if ( $fset->feature_class eq 'regulatory' ) {   #Rollback reg attributes
+    $sql = "DELETE ra from regulatory_attribute ra, $table f where ".
+      "f.${table}_id=ra.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
+      
     $self->rollback_table( $sql, 'regulatory_attribute', undef, $db );
-
-    if ($full_delete) {
-
-      #Now delete meta entries
-      #This is messy as we use the following meta_key nomencalture
-      #which do not match the fset names
-      #regbuild.feature_set_ids_v5
-      #regbuild.feature_type_ids_v5
-      #regbuild.focus_feature_set_ids
-      #regbuild.initial_release_date_v6
-      #regbuild.last_annotation_update_v6
-      #regbuild.version NEED TO ADD THIS
-      #Also need to revise how these are generated by build_reg_feats.
-      #WHat about new cell_type level feature sets?
-      #How will we model these in the meta table?
-
-      warn
-"Need to revise meta table entries before we add a delete here, remove manually for now for:\t"
-        . $fset->name;
-
- #We would only remove meta entries if we are performing a full rollback
-      my $version;
-      ( $version = $fset->name ) =~ s/.*_v([0-9]+)$/$1/;
-      $version = ( $version eq $fset->name ) ? '' : "_v${version}";
-
-      #These are versionless meta_keys and apply to all sets
-      #handle these in reg build script
-      #'regbuild.initial_release_date',
-      #'regbuild.last_annotation_update'
-      #'regbuild.version'
-
-      foreach my $mkey ( 'regbuild.%s.feature_set_ids',
-                         'regbuild.%s.feature_type_ids',
-                         'regbuild.%s.focus_feature_set_ids' )
-      {
-
-        my $meta_key =
-          sprintf( $mkey, $fset->cell_type->name ) . $version;
-        $sql = "DELETE from meta where meta_key='${meta_key}'";
-        $self->rollback_table( $sql, 'meta', undef, $db );
-      }
-    } ## end if ($full_delete)
+  }
+  elsif($fset->feature_class eq 'annotated'){   #Handle amfs
+    $sql = 'DELETE amf from annotated_feature af, associated_motif_feature amf where '.
+      'af.feature_set_id='.$fset->dbID.
+      ' AND af.annotated_feature_id = amf.annotated_feature_id'.$slice_join;
+    $self->rollback_table( $sql, 'associated_motif_feature', undef, $db );
   } ## end if ( $fset->feature_class...)
 
-  #Need to remove object xrefs here
-  #Do not remove xrefs as these may be used by something else!
-  $sql =
-"DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='"
-    . ucfirst( $fset->feature_class )
-    . "Feature' and ox.ensembl_id=f.${table}_id and f.feature_set_id="
-    . $fset->dbID . $slice_join;
+  #Remove object_xref records (but not xref which may be used by soemthing else)
+  $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='"
+    .ucfirst( $fset->feature_class )."Feature' and ox.ensembl_id=f.${table}_id and ".
+    "f.feature_set_id=". $fset->dbID . $slice_join;
   $self->rollback_table( $sql, 'object_xref', 'object_xref_id', $db );
 
-#Remove associated_feature_type records
-#Do not remove actual feature_type records as they may be used by something else.
-
-  $sql =
-"DELETE aft from associated_feature_type aft, $table f where f.feature_set_id="
-    . $fset->dbID .
-    " and f.${table}_id=aft.table_id and aft.table_name='" .
-    $fset->feature_class . "_feature'" . $slice_join;
+  #Remove associated_feature_type records
+  $sql = "DELETE aft from associated_feature_type aft, $table f where ".
+    "f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.table_id and ".
+    "aft.table_name='".$fset->feature_class . "_feature'" . $slice_join;
   $self->rollback_table( $sql, 'associated_feature_type', undef, $db );
 
   #Remove features
@@ -2013,17 +1896,24 @@ sub rollback_FeatureSet {
     $fset->dbID . $slice_join;
   $self->rollback_table( $sql, $table, "${table}_id", $db );
 
-  if ($full_delete) {    #Also delete feature/data_set records
-
-    $sql =
-      "DELETE from feature_set where feature_set_id=" . $fset->dbID;
+  if ($full_delete) {    #Also delete feature/data/supporting_set records
+    $self->log( "Deleting Feature/DataSet:\t" . $fset->name );
+  
+    #Delete regbuild strings first
+    if ( $fset->feature_class eq 'regulatory' ) {  
+      $sql = "DELETE from regbuild_string where feature_set_id=" . $fset->dbID;
+      $self->rollback_table( $sql, 'regbuild_string', 'feature_set_id', $db );
+      $self->log( "Deleted regbuild_string entries for:\t" . $fset->name );
+    }  
+  
+    $sql = "DELETE from feature_set where feature_set_id=" . $fset->dbID;
     $self->rollback_table( $sql, 'feature_set', 'feature_set_id', $db );
     $self->log( "Deleted feature_set entry for:\t" . $fset->name );
 
-    $sql = "DELETE from data_set where feature_set_id=" . $fset->dbID;
+    $sql = 'DELETE ss, ds from data_set ds, supporting_set ss where '.
+      'ds.feature_set_id='.$fset->dbID.' AND ds.data_set_id=ss.data_set_id';
     $self->rollback_table( $sql, 'data_set', 'data_set_id', $db );
-    $self->log(
-             "Deleted associated data_set entry for:\t" . $fset->name );
+    $self->log("Deleted associated data/supporting_set entries for:\t" . $fset->name );
   }
 
   return;
@@ -2062,480 +1952,52 @@ sub rollback_FeatureSet {
 #associated product fset.
 #Can't really separate due to integrated functionality
 
+#todo update callers to remove force, rollback_result and slice args
+
 sub rollback_ResultSet {
-  my ( $self, $rset, $rollback_results, $slice, $force, $full_delete )
-    = @_;
+  my ( $self, $rset, $full_delete ) = @_;
 
-  if (
-    !( ref($rset) && $rset->can('adaptor') && defined $rset->adaptor ) )
-  {
-    throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
+  if ( ! ($rset &&
+         (ref($rset) eq 'Bio::EnsEMBL::Funcgen::ResultSet') &&
+          defined $rset->adaptor ) ){
+    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet');
   }
-
-  if ( $slice && $rset->table_name ne 'input_set' ) {
-    throw(
-'Can only rollback_ResultSet by Slice if the ResultSet contains InputSets'
-    );
-  }
-
-  #We're still validating against itself??
-  #And reciprocating part of the test :|
-  my $sql;
-  my $db = $rset->adaptor->db;    #This needs to be tested
+  
+  my $db = $rset->adaptor->db; #Assumes db is accessible  
   $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ResultSet', $rset );
+
+  #Just omit experimental_chip/channel/result_feature support for now as we probably 
+  #won't ever use it again
+  if($rset->table_name ne 'input_set'){
+    throw('rollback_ResutlSet not longer support non-InputSet rollbacks');
+    #This would need to check co-dependant ResultSets
+    #See old version in cvs
+  } 
+  
   $self->log( "Rolling back ResultSet:\t" . $rset->name );
-  my $dset_adaptor = $self->db->get_DataSetAdaptor;
-  my $rset_adaptor = $self->db->get_ResultSetAdaptor;
-  my @skipped_sets;
-
   ### Check if this ResultSet is part of a DataSet with a product feature set
+  my @dsets = @{ $self->db->get_DataSetAdaptor->fetch_all_by_supporting_set($rset) };
 
-  foreach
-    my $dset ( @{ $dset_adaptor->fetch_all_by_supporting_set($rset) } )
-  {
+  if(@dsets) {
+    throw('ResultSet '.$rset->name.' has associated DataSets, please remove before rollback:'.
+      join(',', (map $_->name, @dsets)));
+  }
 
-    if ( defined $dset ) {
-      $self->log( 'Found linked DataSet(' .
-                $dset->name . ") for ResultSet:\t" . $rset->log_label );
+  $self->db->get_ResultSetAdaptor->revoke_states($rset);  
+  #delete the dbfile_registry entry 
+  my $sql = 'DELETE from dbfile_registry where table_name="result_set" and table_id='.$rset->dbID;
+  $db->dbc->rollback_table($sql, 'dbfile_registry', undef, $db);
 
-      if ( my $fset = $dset->product_FeatureSet ) {
-        @skipped_sets = ( $rset, $dset );
-
-        #What impact does this have on result_rollback?
-        #None as we never get there
-        #But what if we have specified rollback results?
-        #We should throw here as we can't perform the rollback
-
-        if ($rollback_results) {
-
-          if ( $rset->table_name ne 'input_set' || ( !$force ) )
-          {    #is an input_set/reads collection
-                #This will always throws for non-input_set ResultSets
-
-            throw(
-"Could not rollback supporting ResultSet and results for:\t"
-                . $rset->log_label .
-"\nEither manually resolve the supporting/feature set relationship or set the 'force' flag.\n"
-            );
-
-#  ."Alternatively omit the rollback_results argument if you simply want to redefine the ResultSet without loading any new data");
-#This last bit is no longer true
-#Remove rollback_results?
-          }
-          else {
-            @skipped_sets = ();
-            $self->log(
-              "Forcing results rollback for InputSet based ResultSet:\t"
-                . $rset->log_label );
-          }
-        }
-
-        if (@skipped_sets) {
-          $self->log( 'Skipping rollback. Found product FeatureSet(' .
-                   $fset->name .
-                   ") for supporting ResultSet:\t" . $rset->log_label );
-        }
-
-      } ## end if ( my $fset = $dset->...)
-      elsif ( ( !defined $slice ) && $full_delete ) {
-
-        #Found rset in dset, but not yet processed so can remove safely.
-        $self->unlink_ResultSet_DataSet( $rset, $dset );
-      }
-    } ## end if ( defined $dset )
-  } ## end foreach my $dset ( @{ $dset_adaptor...})
-
-  #Now do similar for all associated ResultSets
-  if ( !@skipped_sets ) {
-
-    #Rollback results if required
-    if ($rollback_results) {
-
-      $self->log(
-           "Rolling back results for ResultSet:\t" . $rset->log_label );
-
-      #Check result_set_input_ids are present in other result sets.
-      my @assoc_rsets =
-        @{ $rset_adaptor->fetch_all_linked_by_ResultSet($rset) };
-      my $feature_supporting = 0;
-
-      foreach my $assoc_rset (@assoc_rsets) {
-
-        foreach my $dset (
-          @{ $dset_adaptor->fetch_all_by_supporting_set($assoc_rset) } )
-        {
-
-          #Check for other product_FeatureSets
-          if ( my $fset = $dset->product_FeatureSet ) {
-            $feature_supporting++;
-            $self->log( 'Found product FeatureSet(' . $fset->name .
-                        ") for associated supporting ResultSet:\t" .
-                        $rset->log_label );
-
-            if ( $rset->table_name ne 'input_set' || ( !$force ) )
-            {    #is an input_set/reads collection
-              $feature_supporting++;
-            }
-          }
-        }
-      }
-
-      if ( !$feature_supporting ) {
-
-        #RollBack result_feature table first
-        $self->rollback_ResultFeatures( $rset, $slice );
-
-        #Now rollback other states
-        $rset->adaptor->revoke_states($rset);
-
-        #This also handles Echip status rollback
-        if ( $rset->table_name ne 'input_set' ) {
-          $self->log( "Rolling back result table for ResultSet:\t" .
-                      $rset->log_label );
-          $self->rollback_results( $rset->result_set_input_ids );
-        }
-
-        $self->log(
-          'Removing result_set_input entries from associated ResultSets'
-        ) if @assoc_rsets;
-
-        if ( ( !$slice ) && $full_delete ) {
-
-          #Now remove result_set_input_ids from associated rsets.
-          foreach my $assoc_rset (@assoc_rsets) {
-            $sql =
-              'DELETE from result_set_input where result_set_id=' .
-              $assoc_rset->dbID . ' and result_set_input_id in(' .
-              join ', ', @{ $assoc_rset->result_set_input_ids } . ')';
-            $db->dbc->do($sql);
-
-         # we need to delete complete subsets from the result_set table.
-            my $subset = 1;
-
-            foreach my $cc_id ( @{ $assoc_rset->result_set_input_ids } )
-            {
-
-              if ( !grep { /$cc_id/ } @{ $rset->result_set_input_ids } )
-              {
-                $subset = 0;
-                last;
-              }
-            }
-
-           #$assoc_rset is complete subset of $rset so can delete
-           #We know this does not have an assoicated product feature set
-           #Only if it is not derived from an input_set
-            if ($subset) {
-              $self->log( "Deleting associated subset ResultSet:\t" .
-                          $assoc_rset->log_label );
-
-              #Delete status entries first
-              $assoc_rset->adaptor->revoke_states($assoc_rset);
-
-              #All cc records will have already been deleted
-              $sql = 'DELETE from result_set where result_set_id=' .
-                $assoc_rset->dbID;
-              $db->dbc->do($sql);
-            }
-          } ## end foreach my $assoc_rset (@assoc_rsets)
-        } ## end if ( ( !$slice ) && $full_delete)
-
-        #Now warn about Echips in Experiments which may need removing.
-        if ( $rset->table_name ne 'input_set' ) {
-          my %experiment_chips;
-
-          foreach my $echip ( @{ $rset->get_ExperimentalChips } ) {
-            $experiment_chips{ $echip->experiment->name }
-              { $echip->unique_id } = undef;
-          }
-
-          foreach my $exp ( keys %experiment_chips ) {
-            $self->log( "Experiment $exp has had " .
-              scalar( values %{ $experiment_chips{$exp} } ) .
-              " ExperimentalChips rolled back:\t" .
-              join( '; ', values %{ $experiment_chips{$exp} } ) .
-".\nTo fully remove these, use the rollback_experiment.pl (with -chip_ids) script"
-            );
-          }
-        }
-        else {
-          #Should only be one to rollback
-          foreach my $iset ( @{ $rset->get_InputSets } ) {
-            $self->rollback_InputSet($iset);
-          }
-        }
-      } ## end if ( !$feature_supporting)
-      else {
-#$self->log("Skipping result rollback, found $feature_supporting associated supporting ResultSets for:\t".$rset->log_label);
-#warn("Skipping result rollback, found $feature_supporting associated supporting ResultSets for:\t".$rset->log_label);
-#do we need to return this info in skipped_rsets?
-#This is just to allow importer to know which ones
-#weren't rolled back to avoid naming clashes.
-#so no.
-
-#But the results persist on the same chip_channel_ids
-#So not returning this rset may result in loading of more data
-#This should fail as status entries will not have been removed
-#Still we should throw here as we'll most likely want to manually resolve this
-#Besides this would be obfuscating the function
-
-        throw(
-"Could not rollback ResultSet and results, found $feature_supporting associated supporting "
-            . "ResultSets for:\t"
-            . $rset->log_label .
-"\nManually resolve the supporting/feature set relationship or omit the "
-            . "rollback_results argument if you simply want to redefine the ResultSet without loading any new data"
-        );
-      }
-    } ## end if ($rollback_results)
-    else {
-      $self->log('Skipping results rollback');
-
-      if ( $rset->name =~ /_IMPORT$/ ) {
-        throw(
-"Rolling back an IMPORT set without rolling back the result can result in ophaning result records for a whole experiment.  Specify the result_rollback flag if you want to rollback the results for:\t"
-            . $rset->log_label );
-      }
-    }
-
-    #Delete chip_channel and result_set records
-    #This should only be done with full delete
-    if ( ( !$slice ) && $full_delete ) {
-      $sql = 'DELETE from result_set_input where result_set_id=' .
-        $rset->dbID;
-      $self->rollback_table( $sql, 'result_set_input',
-                             'result_set_input_id', $db );
-
-      $sql =
-        'DELETE from result_set where result_set_id=' . $rset->dbID;
-      $db->dbc->do($sql);
-      $self->rollback_table( $sql, 'result_set', 'result_set_id', $db );
-    }
-  } ## end if ( !@skipped_sets )
-
-  return \@skipped_sets;
+  if($full_delete){ #delete the result_set and result_set_input entries
+    $self->log( "Deleting ResultSet:\t" . $rset->name );
+    $sql = 'DELETE rs, rsi from result_set_rs, result_set_input rsi WHERE '.
+      'rsi.result_set_id=rs.result_set_id AND rs.result_set_id='.$rset->dbID;
+    $db->dbc->rollback_table($sql, 'result_set', 'result_set_id', $db);   
+  }
+  
+ return;
 } ## end sub rollback_ResultSet
 
-sub unlink_ResultSet_DataSet {
-  my ( $self, $rset, $dset, $new_name ) = @_;
-
-  #validate set vars
-
-  my $db = $rset->adaptor->db;
-
-  $self->log( "Removing supporting ResultSet from DataSet:\t" .
-              $dset->name . "\tResultSet:" . $rset->log_label );
-  my $sql =
-    'DELETE from supporting_set where data_set_id=' . $dset->dbID .
-    ' and type="result" and supporting_set_id=' . $rset->dbID;
-
-  warn "Removing " . $rset->log_label .
-    " as a supporting set to DataSet:\t" . $dset->name .
-    "\nThis may result in a DataSet with no supporting sets";
-  $db->dbc->do($sql);
-
-  if ($new_name) {
-
-    #We risk overwriting any previously renamed result sets.
-    #Should use datestamp?
-    $sql = 'UPDATE result_set set name="OLD_' .
-      $rset->name . '" where result_set_id=' . $rset->dbID;
-    $self->db->dbc->do($sql);
-
-    if ( $dset->product_FeatureSet ) {
-      $self->log( 'Associated DataSet(' . $dset->name .
-') has already been processed. It is not wise to replace a supporting set without first rolling back the FeatureSet, as there may be additional supporting data'
-      );
-      warn 'Associated DataSet(' . $dset->name .
-') has already been processed. It is not wise to replace a supporting set without first rolling back the FeatureSet, as there may be additional supporting data';
-    }
-  }
-
-  return;
-} ## end sub unlink_ResultSet_DataSet
-
-=head2 rollback_InputSet
-
-  Arg[1]     : Bio::EnsEMBL::Funcgen::InputSet
-  Example    : $self->rollback_InputSet($eset);
-  Description: Deletes all status entries for this InputSet and it's Subsets
-  Returntype : none
-  Exceptions : Throws if any deletes fails or if db method unavailable
-  Caller     : Importers and Parsers
-  Status     : At risk
-
-=cut
-
-sub rollback_InputSet {
-  my ( $self, $eset, $force_delete, $full_delete ) = @_;
-
-  #Need to implement force_delete!!!!!!!!!!!!!!!!!!!!!!
-  #Need to check this is not used in a DataSet/ResultSet
-
-  my $adaptor =
-    $eset->adaptor || throw('InputSet must have an adaptor');
-  my $db = $adaptor->db;
-
-  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::InputSet', $eset );
-
-  $self->log( "Rolling back InputSet:\t" . $eset->name );
-
-  #SubSets
-  foreach my $esset ( @{ $eset->get_InputSubsets } ) {
-    $esset->adaptor->revoke_states($esset);
-  }
-
-  #InputSet
-  $eset->adaptor->revoke_states($eset);
-
-  return;
-}
-
-=head2 rollback_results
-
-  Arg[1]     : Arrayref of chip_channel ids
-  Example    : $self->rollback_results($rset->chip_channels_ids);
-  Description: Deletes all result records for the given chip_channel ids.
-               Also deletes all status records for associated experimental_chips or channels
-  Returntype : None
-  Exceptions : Throws if no chip_channel ids provided
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-#changed implementation to take arrayref
-
-sub rollback_results {
-  my ( $self, $cc_ids ) = @_;
-
-  my @cc_ids = @{$cc_ids};
-
-  #Need to test for $self->db here?
-
-  if ( !scalar(@cc_ids) > 0 ) {
-    throw('Must pass an array ref of result_set_input_ids to rollback');
-  }
-
-  #Rollback status entries
-  #Cannot use revoke_states here?
-  #We can if we retrieve the Chip or Channel first
-  #Add to ResultSet adaptor
-  my $sql =
-'DELETE s from status s, result_set_input rsi WHERE rsi.result_set_input_id IN ('
-    . join( ',', @cc_ids )
-    . ') AND rsi.table_id=s.table_id AND rsi.table_name=s.table_name';
-
-  if ( !$self->db->dbc->do($sql) ) {
-    throw(
-         "Status rollback failed for result_set_input_ids:\t@cc_ids\n" .
-           $self->db->dbc->db_handle->errstr() );
-  }
-
-  #Rollback result entries
-  $sql = 'DELETE from result where result_set_input_id in (' .
-    join( ',', @cc_ids ) . ');';
-  $self->rollback_table( $sql, 'result', 'result_id', $self->db );
-  return;
-} ## end sub rollback_results
-
-=head2 rollback_ResultFeatures
-
-  Arg[0]     : Bio::EnsEMBL::Funcgen::ResultSet
-  Arg[1]     : Optional - Bio::EnsEMBL::Slice
-  Arg[2]     : Optional - no_revoke Boolean. This is only used when generating new windows
-               from a 0 window size which has been projected from a previous assembly.
-  Example    : $self->rollback_result_features($rset);
-  Description: Deletes all result_feature records for the given ResultSet.
-               Also deletes 'RESULT_FEATURE_SET' status.
-  Returntype : None
-  Exceptions : Throws if ResultSet not provided
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub rollback_ResultFeatures {
-  my ( $self, $rset, $slice, $no_revoke ) = @_;
-
-  if (
-    !( ref($rset) && $rset->can('adaptor') && defined $rset->adaptor ) )
-  {
-    throw('Must provide a valid stored Bio::EnsEMBL::ResultSet');
-  }
-
-  if ( !$slice && $no_revoke ) {
-    throw(
-"Cannot rollback_ResultFeatures with no_reovke unless you specify a Slice"
-    );
-  }
-
-  #else warn if slice and no_revoke?
-
-  my ( $sql, $slice_name, $slice_constraint );
-
-  if ($slice) {
-
-    if ( ref($slice) && $slice->isa('Bio::EnsEMBL::Slice') ) {
-      my $sr_id = $rset->adaptor->db->get_ResultFeatureAdaptor
-        ->get_seq_region_id_by_Slice($slice);
-
-      if ($sr_id) {
-
-        #Need to test for full slice here
-        my $full_slice =
-          $slice->adaptor->fetch_by_region( undef,
-                                            $slice->seq_region_name );
-        $slice_name       = "\t" . $slice->name;
-        $slice_constraint = ' and seq_region_id=' . $sr_id;
-
-        if ( ( $slice->start != 1 ) ||
-             ( $slice->end != $full_slice->end ) )
-        {
-
-          throw(
-"rollback_ResultFeatures does not yet support non-full length Slices:\t"
-              . $slice_name );
-
-#Need to test whether we have non-0 wsize collections without the exact seq_region values
-#$sql='SELECT window_size from result_feature where result_feature_id='.$rset->dbID.
-#	' and window_size!=0 and seq_region_start!='.$slice->start.' and seq_region_end!='.$slice->end.$slice_constraint;
-        }
-      }
-      else {    #seq_region is not yet present in DB
-        return;
-      }
-    } ## end if ( ref($slice) && $slice...)
-    else {
-      throw('slice argument must be a valid Bio::EnsEMBL::Slice');
-    }
-  } ## end if ($slice)
-
-  #We're still validating against itself??
-  #And reciprocating part of the test :|
-  my $db = $rset->adaptor->db;
-  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ResultSet', $rset );
-
-#Do this conditionally on whether it is a result_feature_set?
-#This may break if we have removed the status but not finished the rollback so no!
-  $self->log( "Rolling back result_feature table for ResultSet:\t" .
-              $rset->name . $slice_name );
-
-  #Rollback status entry
-  if ( $rset->has_status('RESULT_FEATURE_SET') && !$no_revoke ) {
-    $rset->adaptor->revoke_status( 'RESULT_FEATURE_SET', $rset );
-  }
-
-  #Cannot use revoke_states here?
-  #We can if we retrieve the Chip or Channel first
-  #Add to ResultSet adaptor
-  $sql = 'DELETE from result_feature where result_set_id=' .
-    $rset->dbID . $slice_constraint;
-  $self->rollback_table( $sql, 'result_feature', 'result_feature_id',
-                         $db );
-
-  return;
-} ## end sub rollback_ResultFeatures
 
 =head2 rollback_ArrayChips
 
@@ -2938,8 +2400,6 @@ sub refresh_table {
 }
 
 sub reset_table_autoinc {
-
-  #Is this called elsewhere or can we merge with
   my ( $self, $table_name, $autoinc_field, $db ) = @_;
 
   if ( !( $table_name && $autoinc_field && $db ) ) {
@@ -2952,15 +2412,10 @@ sub reset_table_autoinc {
     throw('Must pass a valid Bio::EnsEMBL::DBSQL::DBAdaptor');
   }
 
-#my $sql = "show table status where name='$table_name'";
-#my ($autoinc) = ${$db->dbc->db_handle->selectrow_array($sql)}[11];
-#11 is the field in the show table status table
-#We cannot select just the Auto_increment, so this will fail if the table format changes
-
-  #Why do we need autoinc here?
-
-  my $sql =
-"select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
+  #Unsafe to do this in two queries as parallel jobs may add in between select and alter
+  #in fact this needs a table lock to be totally safe
+  #although current ALTER will just fail silently if this happens
+  my $sql = "select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
   my ($current_auto_inc) = $db->dbc->db_handle->selectrow_array($sql);
   my $new_autoinc = ($current_auto_inc) ? ( $current_auto_inc + 1 ) : 1;
   $sql = "ALTER TABLE $table_name AUTO_INCREMENT=$new_autoinc";
@@ -3102,5 +2557,55 @@ sub _compare_set_for_rollback {
     }  
   }
     
+  return;
+}
+
+
+
+### DEPRECATED ###
+
+=head2 rollback_InputSet
+
+  Arg[1]     : Bio::EnsEMBL::Funcgen::InputSet
+  Example    : $self->rollback_InputSet($eset);
+  Description: Deletes all status entries for this InputSet and it's Subsets
+  Returntype : none
+  Exceptions : Throws if any deletes fails or if db method unavailable
+  Caller     : Importers and Parsers
+  Status     : At risk
+
+=cut
+
+#Usage of this is now moot due to removal of IMPORTED style states form InputSet/Subset
+#todo implement delete_InputSet 
+#revoke states can be called directly if required rather than rollback, as this is essentially
+#all a rollback method would be doing?
+#deprecate this with a throw as is not longer support
+
+sub rollback_InputSet { #deprecated in v72
+  my ( $self, $eset, $force_delete, $full_delete ) = @_;
+  
+  throw('rollback_InputSet is now deprecated, please update your code to use '.
+      'delete_InputSet or use revoke_states directly');
+
+  #Need to implement force_delete!!!!!!!!!!!!!!!!!!!!!!
+  #Need to check this is not used in a DataSet/ResultSet
+
+  my $adaptor =
+    $eset->adaptor || throw('InputSet must have an adaptor');
+  my $db = $adaptor->db;
+
+  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::InputSet', $eset );
+
+  $self->log( "Rolling back InputSet:\t" . $eset->name );
+
+  #SubSets
+  foreach my $esset ( @{ $eset->get_InputSubsets } ) {
+    $esset->adaptor->revoke_states($esset);
+  }
+
+  #InputSet
+  $eset->adaptor->revoke_states($eset);
+
   return;
 }
