@@ -58,11 +58,10 @@ The data in this class is kept as lightweight as possible with data being loaded
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DataSet;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
 use Bio::EnsEMBL::Funcgen::Storable;
@@ -70,7 +69,8 @@ use Bio::EnsEMBL::Funcgen::Storable;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 #Should not be a Set as is sufficiently different
-
+#_set_Sets_also allows all Sets to be supporting
+#but we should add a DataSet as support
 
 =head2 new
 
@@ -93,95 +93,24 @@ use vars qw(@ISA);
 
 sub new {
   my $caller = shift;
-	
   my $class = ref($caller) || $caller;
-	
   my $self = $class->SUPER::new(@_);
 	
-  #do we need to add $fg_ids to this?  Currently maintaining one feature_group focus.(combi exps?)
-  my ($fset, $sets, $name)
-    = rearrange(['FEATURE_SET', 'SUPPORTING_SETS', 'NAME'], @_);
+  my ($fset, $ssets, $name) =
+    rearrange(['FEATURE_SET', 'SUPPORTING_SETS', 'NAME'], @_);
   
-  
-  my @caller = caller();
-  
-  #do we need to passexperiment_id to check that table_name/id correspond for storage?
-  #'EXPERIMENT_ID', 'EXPERIMENT_IDS',
-
-  #Can have more than one experiment_id for a combined feature set. But shouldn't query like that.
-  #therefore we need to be able to track back from feature to ec's rather than exps.
-  #as there may be mixed data in an exp which didn't necessarily contribute to the combined feature
-  #We are now separating potentially different featuretype from the same exp into different result_groups
-  #therefore we only have to track back to the result_group e.g. the contig chip set
-
-  #We also need a way of pulling back GOLDEN/combined resultssets based on feature_set_id
-  #Set status as GOLDEN, then pull back displayable or GOLDEN raw results
-
-  #Could link experiment_feature_type/feature_set to ec or result_set table?
-  #latter would mean we don't have to specifiy which ec, just part of set.
-  #This will make it easier for populating pfs but will mean that we can't easily track back to a particular ec without doing some probe/slice look up via the array chip.
-  #Not really a requirement, so let's take this hit.
-  
-  #Could then maybe use DataSet to store pfs, otherwise we'd have to pass the rset or at the very least the result_set_id.  
-  #do we need some control of creating new objects with dbID and adding result_groups/feature_sets and them storing/updating them
-  #potential for someone to create one from new using a duplicate dbID and then linking incorrect data to a pre-existing ResultGroup
-  #can we check wether caller is DataSetAdaptor if we have dbID?
-  
-  if($self->dbID() && $caller[0] ne "Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor"){
-    throw('You must use the DataSetAdaptor to generate DataSets with dbID i.e. from the DB,'.
-          ' as this module accomodates updating which may cause incorrect data if the object'.
-          ' is not generated from the DB');
-  }
-  
-  
-  $self->{'supporting_sets'} ||= {};
-  #throw("Must specify at least one Result/FeatureSet") if((! $sets) && (! $fset));
-  #removed this to allow generation of DataSets without feature sets
-  #could reimplement this if we change the DataSetAdaptor::_obj_from_sth
-
-  $self->add_supporting_sets($sets) if $sets;
-  $self->product_FeatureSet($fset)   if $fset;	
-  $self->name($name)   if $name;	
-  
+  #my @caller = caller(); 
+  #if($self->dbID() && $caller[0] ne "Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor"){
+  #  throw('You must use the DataSetAdaptor to generate DataSets with dbID i.e. from the DB,'.
+  #        ' as this module accomodates updating which may cause incorrect data if the object'.
+  #        ' is not generated from the DB');
+  #}
+ 
+  throw('Must defined a DataSet -name') if ! defined $name;
+  $self->{name} = $name; 
+  $self->_set_Sets_and_types($fset, $ssets);
   return $self;
 }
-
-
-
-
-
-
-
-#methods
-#set wide display label(predicted_feature) + more wordy label for wiggle tracks?
-#defined by experiment type i.e. time course would require timepoint in display label
-#deal with this dynamically or have display_label in table
-#Need call on type, or fetch all would
-
-#_get_ec_ids or contigsets?
-#this should now be an intrinsic part of this class/adaptor
-
-#cell line
-#feature_type
-#displayable...should have one for the whole set and one for each raw and predicted?
-
-#have analysis as arg? Or do we get all analysis sets?
-#we need to be able to set analyses for DataSets dynamically from DB
-#pick up all DataSets 
-#displayable field in DataSets also?
-
-#If we have mixed types in the same experiment then we could get promoter features and histone wiggle tracks displayed togeter
-#Not v.good for display purposes?  We may want to separate the promoter and histone tracks, or we may want ll the experiment data together but of mixed types.
-#We need to be able to pull back the experiment type for each set, therefore this needs setting on an ec level, not an experiment level.
-#This is also v.reliant on putting contig set info in place, otherwise we may get mixed chip types in same set.
-
-#get_raw_analysis_name
-#get_predicted_feature_analysis_name
-#set ResultFeatures and AnnotatedFeatures in hash keyed by analysis_name?
-
-#Need to change to simple accessor
-#or should we maintain to provide explicit method for delineating between parent and supporting FeatureSets?
-#yes, and sub the feature_type/cell_type checks
 
 
 =head2 product_FeatureSet
@@ -217,106 +146,6 @@ sub product_FeatureSet {
   return $self->{'feature_set'};
 }
 
-
-=head2 add_supporting_sets
-
-  Arg [1]    : Array of Bio::EnsEMBL::Feature/ResultSet object
-  Example    : $dset->add_supporting_sets($rset);
-  Description: Adds Result/FeatureSets to the DataSet
-  Returntype : none
-  Exceptions : Throws if set not valid for supporting_set type of DataSet
-               Throws if supporting_sets is not an array ref
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub add_supporting_sets {
-  my ($self, $sets) = @_;
-	
-  #should we handle displayable here, and propogate to the ResultSet if update_status is set
-  #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
-  #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
-
-  throw("Supporting sets need to be a reference to an ARRAY:\t".$sets) if ref($sets) ne 'ARRAY';
-
-  foreach my $set(@$sets){
-
-	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->set_type ne 'data' && $set->dbID)){
-	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet:\t$set");
-	}
-	#set type cannot be data at present as it does not inherit from Set.pm
-
-
-
-	#Only validate if we are dealing with result type data
-	#As we can have various cell/feature_types for compound analyses e.g. RegulatoryFeatures
-
-	$self->_validate_and_set_types($set) if $set->set_type() ne 'feature';
-	
-	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
-	#DataSetAdaptor to perform the ordering according to feature/celltype
-	#This will still not resolve the complex data sets which can be accomodated by the DB.
-	#Maybe we can keep the data sets as simple as there are and confer the association by tracking back to the experiment?
-	#Would there only ever be one experiment for a complex data_set?
-	
-	
-	#Can have more than one experiment for a compound feature set, would we ever want to display raw data?
-	#This is actually an easier problem unless we are displaying two feature types(i.e. complex and compound)
-
-
-	$self->{'supporting_sets'}->{$set->analysis->dbID()} ||= ();
-	push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
-  }
-		
-  return;
-}
-
-
-=head2 _validate_and_set_types
-
-  Arg [1]    : Bio::EnsEMBL::Feature/ResultSet object
-  Example    : $dset->_validate_and_set_types($rset);
-  Description: Validates and sets DataSet cell and feature types
-  Returntype : none
-  Exceptions : Throws if types not valid
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub _validate_and_set_types{
-  my ($self, $set) = @_;
-
-  #slightly dodgy bypassing methods, but extendable
-
-  #This currently restricts all set types to one cell and feature type
-  #this is incorrect for feature_set types as we want to munge several feature and possibly cell types 
-  #into one combined data set.
-  #this should set it to the FeatureSet type if is feature_set data_set
-  #this only works as we only validate supporting_sets if type is not feature
-
-  for my $type('feature_type', 'cell_type'){
-
-	if(defined $self->{$type}){
-	  
-	  #Need to test isa here?  Why is this passing the defined test if not set?
-	  if($set->{$type}->name() ne $self->{$type}->name()){
-
-		throw(ref($set)." $type(".$set->{$type}->name().
-			  ") does not match DataSet $type(".$self->{$type}->name().")");
-		
-	  }
-	}
-	else{
-	  $self->{$type} = $set->{$type};
-	}
-  }
-
-  return;
-}
 
 
 
@@ -382,7 +211,6 @@ sub get_supporting_sets_by_Analysis {
 }
 
 
-
 =head2 get_supporting_sets
 
   Arg [1]    : (optional) status - e.g 'DISPLAYABLE'
@@ -409,7 +237,6 @@ sub get_supporting_sets{
 	throw("You have specified an invalid supporting set type:\t$set_type");
   }
 
-
   my @ssets;
 
   foreach my $anal_id(keys %{$self->{'supporting_sets'}}){
@@ -434,8 +261,6 @@ sub get_supporting_sets{
 }
 
 
-
-
 =head2 get_displayable_supporting_sets
 
   Example    : my @displayable_rsets = @{$result_set->get_displayable_supporting_sets()};
@@ -452,7 +277,6 @@ sub get_displayable_supporting_sets{
 
   return $self->get_supporting_sets('DISPLAYABLE', $set_type);
 }
-
 
 
 =head2 get_displayable_product_FeatureSet
@@ -473,32 +297,22 @@ sub get_displayable_product_FeatureSet{
 }
 
 
-
-
-
 =head2 name
 
-  Example    : my $dset->name('DATASET1');
-  Description: Getter/Setter for the name of this DataSet.
-  Returntype : string
+  Example    : print "This is my data set:\t".$dset->name."\n";
+  Description: Getter for the name of this DataSet.
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-sub name {
-  my $self = shift;
-     	
-  $self->{'name'} = shift if @_;
-
-  return $self->{'name'};
-}
+sub name { return $_[0]->{name}; }
 
 
-
-
-#The following attributes are generated dynamically from the consituent Result/FeatureSets
+#The following attributes are generated dynamically from the 
+#consituent Result/FeatureSets
 
 =head2 cell_type
 
@@ -507,15 +321,12 @@ sub name {
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-sub cell_type {
-  my $self = shift;
-     		
-  return $self->{'cell_type'};
-}
+sub cell_type { return $_[0]->{cell_type}; }
+
 
 =head2 feature_type
 
@@ -524,70 +335,261 @@ sub cell_type {
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-sub feature_type {
-  my $self = shift;
-     		
-  return $self->{'feature_type'};
-}
-
-
-
+sub feature_type { return $_[0]->{feature_type}; }
 
 
 =head2 display_label
 
-  Example    : print $rset->display_label();
+  Example    : print $dset->display_label();
   Description: Getter for the display_label attribute for this DataSet.
-               This is more appropriate for teh predicted_features of the set.
-               Use the individual display_labels for each raw result set.
-  Returntype : str
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 sub display_label {
-  my $self = shift;
+  my $self = $_[0];
   
-
-  #Add display label in table?
-
-  if(! $self->{'display_label'}){
-
-	#This does not account for DataSet without a product FeatureSet
-	my $fset = $self->product_FeatureSet;
-
-	if($fset && ($fset->feature_type->class() eq 'Regulatory Feature')){
-	  $self->{'display_label'} = 'Regulatory Features';
+  if(! defined $self->{display_label}){
+    
+	if($self->product_FeatureSet->feature_class ne 'annotated'){
+	  $self->{'display_label'} = $self->name;
 	}
 	else{
-
-	  $self->{'display_label'} = $self->feature_type->name()." -";
-	  $self->{'display_label'} .= " ".($self->cell_type->display_label() || 
-									   $self->cell_type->description()   ||
-									   $self->cell_type()->name());
-	  $self->{'display_label'} .= " Enriched Sites";
+	  $self->{'display_label'}  = $self->feature_type->name()." - ";
+	  $self->{'display_label'} .= ($self->cell_type->display_label || 
+								   $self->cell_type->name)." Enriched Sites";
 	}
   }
  
-  return $self->{'display_label'};
+  return $self->{display_label};
 }
 
 
-#sub get_type_config{
-#  my ($self) = @_;
-#
-#  if (! defined $self->{type_config}){
-#	$self->{type_config} = $self->adaptor->fetch_type_config_by_DataSet($self);
-#  }
-#
-#  return $self->{type_config};
-#}
+=head2 object_methods
+
+  Description: Returns all the DataSet method names which return nested data class
+               objects. 
+  Returntype : Listref
+  Exceptions : None
+  Caller     : Storable::compare_to
+  Status     : At risk
+
+=cut
+
+#This is where we could accidentally cause a circular reference
+#This should never happen, but if a convenience method to access a higher level
+#object is put in here, and we do a 'deep' compare_to, we will get a circular ref
+#fizz pop bang!
+
+sub object_methods{
+  return [qw(product_FeatureSet get_supporting_sets)];
+}
+
+
+=head2 string_methods
+
+  Description: Returns all the DataSet method names which return strings. 
+  Returntype : Listref
+  Exceptions : None
+  Caller     : Storable::compare_to
+  Status     : At risk
+
+=cut
+
+sub string_methods{
+  return [ qw(name get_all_states) ];
+}
+
+
+=head2 reset_relational_attributes
+
+  Arg[1] : Hashref containing the following mandatory parameters:
+            -analysis     => Bio::EnsEMBL::Analysis,
+            -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
+            -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
+            -support      => Arrayref of valid support objectse.g. InputSet
+
+  Description: Resets all the relational attributes of a given ResultSet. 
+               Useful when creating a cloned object for migration beween DBs 
+  Returntype : None
+  Exceptions : Throws if any of the parameters are not defined or invalid.
+  Caller     : Migration code
+  Status     : At risk
+
+=cut
+
+sub reset_relational_attributes{
+  my ($self, $params_hash, $no_db_reset) = @_;
+  my ($ssets, $feature_set) = rearrange(['SUPPORTING_SETS', 'FEATURE_SET'], 
+                                %$params_hash);
+  
+  #This also sets cell_type and feature_type
+  $self->_set_Sets_and_types($feature_set, $ssets);
+  
+  #also flush dynamically set display label
+  #just in case there is a difference (there shouldn't be!)
+  undef $self->{display_label};
+  
+  #Finally undef the dbID and adaptor by default
+  if(! $no_db_reset){
+    $self->{adaptor} = undef;
+    $self->{dbID}    = undef;
+  }
+  
+  return;
+}
+
+sub _set_Sets_and_types{
+  my ($self, $fset, $ssets) = @_;
+  
+  if(! (defined $fset &&
+        (ref($fset) eq 'Bio::EnsEMBL::Funcgen::FeatureSet') )){
+    throw('You must provide a valid Bio::EnsEMBL::Funcgen::FeatureSet for '.
+          $self->name);
+  }
+  
+  #Reset dynamically defined attrs
+  $self->{feature_type} = $fset->feature_type;
+  $self->{cell_type}    = $fset->cell_type;
+    
+  #Need to validate cell_type if the fset feature_class is not regulatory
+  #Need to validate feature_type if the fset feature class is not regulatory or segmentation  
+  my $ftype_name = $fset->feature_type->name;
+  my $ctype_name = $fset->cell_type->name;
+  my $fclass     = $fset->feature_class;
+  $self->{'supporting_sets'} ||= {};
+  
+  
+  ### Validate supporting sets
+  
+  if(! defined $ssets || 
+      (ref($ssets) ne 'ARRAY') ){
+    throw('You must pass an Arrayref of -supporting_sets');
+  }
+  else{ 
+    foreach my $set(@$ssets){
+     
+      if(! (defined $set &&
+            ref($set) &&
+            $set->isa('Bio::EnsEMBL::Funcgen::Set') )){
+        throw('All -supporting_sets for a DataSet must be a '.
+          "Bio::EnsEMBL::Funcgen::Set\n\te.g.InputSet, ResultSet or FeatureSet");     
+      } 
+      
+      if($fclass ne 'regulatory'){ #Validate cell type
+         
+         if($set->cell_type->name ne $ctype_name){
+           throw('Cannot add '.$set->cell_type->name.
+             " support to a $ctype_name"." $fclass DataSet");  
+         }
+         
+         if($fclass ne 'segmentation'){# and ne regulatory validate ftype
+         #We don't have segmentation data sets just yet 
+      
+           if($set->feature_type->name ne $ftype_name){
+             throw('Cannot add '.$set->feature_type->name.
+               " support to a $ftype_name"." $fclass DataSet");  
+           }
+         }
+      }
+      
+      $self->{'supporting_sets'}->{$set->analysis->dbID()} ||= [];
+	  push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
+    }
+  }
+  
+  $self->{feature_set}     = $fset;
+  #is this safe, could conceivably push onto this arrayref
+  #after we have done this validation   
+  return;  
+}
+
+
+### DEPRECATED
+
+
+
+sub add_supporting_sets { #deprecated in v72
+  my ($self, $sets) = @_;
+	
+	throw('add_supporting_set is deprecated, please use -supporting_sets in DataSet::new');
+	
+  #should we handle displayable here, and propogate to the ResultSet if update_status is set
+  #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
+  #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
+
+  throw("Supporting sets need to be a reference to an ARRAY:\t".$sets) if ref($sets) ne 'ARRAY';
+
+  foreach my $set(@$sets){
+
+	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->set_type ne 'data' && $set->dbID)){
+	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet:\t$set");
+	}
+	#set type cannot be data at present as it does not inherit from Set.pm
+
+
+
+	#Only validate if we are dealing with result type data
+	#As we can have various cell/feature_types for compound analyses e.g. RegulatoryFeatures
+
+	$self->_validate_and_set_types($set) if $set->set_type() ne 'feature';
+	
+	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
+	#DataSetAdaptor to perform the ordering according to feature/celltype
+	#This will still not resolve the complex data sets which can be accomodated by the DB.
+	#Maybe we can keep the data sets as simple as there are and confer the association by tracking back to the experiment?
+	#Would there only ever be one experiment for a complex data_set?
+	
+	
+	#Can have more than one experiment for a compound feature set, would we ever want to display raw data?
+	#This is actually an easier problem unless we are displaying two feature types(i.e. complex and compound)
+
+
+	$self->{'supporting_sets'}->{$set->analysis->dbID()} ||= ();
+	push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
+  }
+		
+  return;
+}
+
+
+sub _validate_and_set_types{ #in v72, remove immediately as is *private*?
+  my ($self, $set) = @_;
+
+  #slightly dodgy bypassing methods, but extendable
+
+  #This currently restricts all set types to one cell and feature type
+  #this is incorrect for feature_set types as we want to munge several feature and possibly cell types 
+  #into one combined data set.
+  #this should set it to the FeatureSet type if is feature_set data_set
+  #this only works as we only validate supporting_sets if type is not feature
+
+  for my $type('feature_type', 'cell_type'){
+
+	if(defined $self->{$type}){
+	  
+	  #Need to test isa here?  Why is this passing the defined test if not set?
+	  if($set->{$type}->name() ne $self->{$type}->name()){
+
+		throw(ref($set)." $type(".$set->{$type}->name().
+			  ") does not match DataSet $type(".$self->{$type}->name().")");
+		
+	  }
+	}
+	else{
+	  $self->{$type} = $set->{$type};
+	}
+  }
+
+  return;
+}
 
 
 
