@@ -492,7 +492,8 @@ sub source_label{
 #This should never happen, but if a convenience method to access a higher level
 #object is put in here, and we do a 'deep' compare_to, we will get a circular ref
 #fizz pop bang!
-#FeatureSet is currently highest level Set, so this is unlikely here
+#Never put get_DataSet in here! 
+#As the DataSet object methods contain product_FeatureSet
 
 sub object_methods{
   return [qw(feature_type cell_type analysis get_InputSet)];
