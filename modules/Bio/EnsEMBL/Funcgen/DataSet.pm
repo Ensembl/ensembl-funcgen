@@ -69,23 +69,24 @@ use Bio::EnsEMBL::Funcgen::Storable;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 #Should not be a Set as is sufficiently different
-#_set_Sets_also allows all Sets to be supporting
-#but we should add a DataSet as support
+#_set_Sets_anf_types also allows all Sets to be supporting
+#but we should not add a DataSet as support
 
 =head2 new
 
 
-
-  Example    : my $dset = Bio::EnsEMBL::Funcgen::DataSet->new(
-                                                             -SUPPORTING_SETS => [$fset1, $fset2],
-                                                             -FEATURE_SET     => $fset,
-                                                             -DISPLAYABLE     => 1,
-                                                             -NAME            => 'DATASET1',
-			                                                 );
-
+  Args [1]   : Hash of parameters.
+               Mandatory:
+                -NAME            => 'DATASET1',
+                -SUPPORTING_SETS => [$input_set, $result_set],
+                -FEATURE_SET     => $product_fset,
+               Optional:
+                -DISPLAYABLE     => 1,
+                                                          
+  Example    : my $dset = Bio::EnsEMBL::Funcgen::DataSet->new(%params)
   Description: Constructor for DataSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
-  Exceptions : Throws if no experiment_id defined
+  Exceptions : Throws if no -name defined
   Caller     : General
   Status     : At risk
 
