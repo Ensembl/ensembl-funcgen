@@ -476,11 +476,12 @@ sub revoke_status{
   return;
 }
 
+
 =head2 revoke_states
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
   Example    : $rset_adaptor->revoke_status($result_set);
-  Description: Revokes all states of Storable in status table.
+  Description: Deletes all status records associated with the passed Storable.
   Returntype : Bio::EnsEMBL::Funcgen::Storable
   Exceptions : None
   Caller     : General + Helper rollback methods
@@ -488,23 +489,18 @@ sub revoke_status{
 
 =cut
 
-
 sub revoke_states{
   my ($self, $storable) = @_;
  
   my $table_name = $self->_test_funcgen_table($storable);
-
-  #hardcode for ExperimentalSubset as this uses the ExperimentalSetAdaptor
-  $table_name = 'experimental_subset' if $storable->isa('Bio::Ensembl::Funcgen:ExperimentalSubset');
- 
+  #add support for InputSubset which doesn't currently have an adaptor
+  $table_name = 'input_subset' if $storable->isa('Bio::Ensembl::Funcgen::InputSubset');
   my $sql = "delete from status where table_name='${table_name}'".
 	" and table_id=".$storable->dbID();
 
+  #Do delete and clear stored states
   $self->db->dbc->db_handle->do($sql);
-
-  #Clear stored states
   undef $storable->{'states'};
-
   return $storable;
 }
 
