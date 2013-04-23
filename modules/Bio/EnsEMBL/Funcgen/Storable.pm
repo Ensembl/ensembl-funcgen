@@ -498,55 +498,40 @@ sub associated_feature_types{
   return $self->{'associated_feature_types'};
 }
 
-#nesting diffs this will anonymise the output
-#i.e. which analysis are we comparing? 
-#The analysis of a FeatureSet or a ResultSet?
-#this should be handled in the caller
-    
-#Be wary of traversing nested object comparisons!
-#This could cause problems
-#Let's just do the shallow check
-
-#This can be used for migration if the shallow flag is set
-#i.e. we don't allow db comparisons of nested objects
 
 =head2 compare_string_methods
 
   Arg [1]    : Object to compare to, not necessarily stored.
-  Arg [2]    : Arrayref - Method names which return a string or an Arrayref 
+  Arg [2]    : Arrayref - Method names which return a string, Array an Arrayref 
                of strings.
-  Arg
   Example    : my %diffs = %{$self->compare_to($other_obj, 
                                                [qw(name, some_other_method)]);
-  Description: Compares the return string values of the specified methods 
+  Description: Compares the returned string values of the specified methods 
                between this object and the object passed.
   Returntype : Hashref of method name keys and and arrayref values which show
                the differences between self and the other object(in that order) 
-  Exceptions : Throws if not status is provided
-  Caller     : general
+  Exceptions : Throws if arguments not defined and valid.
+               Throws if this Storable or the object passed cannot call the 
+               specified methods.
+               Throws if methods do not return scalars.
+  Caller     : Storable::compare_to
   Status     : At risk
 
 =cut
 
 #actually, this is more accurately compare scalar methods
+#but we are using string comparison operators here
 
 sub compare_string_methods {
-  my ($self, $obj, $methods, $diffs) = @_;
-  
-  
-  if(defined $diffs &&
-    (ref($diffs) ne 'HASH') ){
-    throw('Diffs hash mush be passed as Hashref');  
-  }
-  elsif(! defined $diffs){  
-    $diffs = {};
-  }
+  my ($self, $obj, $methods) = @_;
   
   if(! (defined $methods &&
         ref($methods) &&
         ref($methods) eq 'ARRAY')){
     throw('You must pass an Arrayref of methods to compare');        
   }
+   
+  my $diffs = {};
    
   foreach my $method(@$methods){
    
@@ -589,12 +574,11 @@ sub compare_string_methods {
         #perl doesn't care about the string/numeric issue here with
         #equality operators
         
-        if (! ( ref(\$these_strings[$i]) eq 'SCALAR')){   
-          throw("$method does not return SCALAR values or an ARRAY or ARRAYREF SCALAR values "); 
+        if (ref(\$these_strings[$i]) ne 'SCALAR'){   
+          throw("$method does not return a SCALAR value or an ARRAY or ARRAYREF SCALAR values "); 
         }
     
-        if($these_strings[$i] ne $other_strings[$i]){
-          
+        if($these_strings[$i] ne $other_strings[$i]){       
           $diffs->{$method} = [$these_strings[$i], $other_strings[$i]];
         }
       }
@@ -606,28 +590,32 @@ sub compare_string_methods {
 
 =head2 compare_object_methods
 
-  Arg [1]    : Object to compare to, not necessarily stored.
-  Arg [2]    : Arrayref - Method names which return a Storable or an Arrayref 
-               of Storables.
-  Arg [3]    : 
+  Arg [1]    : Object to compare to, not necessarily stored. (Mandatory)
+  Arg [2]    : Arrayref - Method names which return a Storable or an Array 
+               or Arrayref of Storables. (Mandatory)
+  Arg [3]    : Boolean - Optional 'deep' flag, calls compare_to on returned objects.
   Example    : my %diffs = %{$self->compare_to($other_obj, 
                                                [qw(name, some_other_method)]);
-  Description: Compares the return string values of the specified methods 
-               between this object and the object passed.
+  Description: Compares the returned objects of the specified methods 
+               between this object and the object passed. By default compares
+               whether the returned objects are stored in the same DB as this
+               Storable.
   Returntype : Hashref of method name keys and and arrayref values which show
                the differences between self and the other object(in that order) 
-  Exceptions : Throws if not status is provided
-  Caller     : general
+  Exceptions : Throws if arguments not defined and valid.
+               Throws if this Storable or the object passed cannot call the 
+               specified methods.
+               Throws if methods do not return objects.
+               Throws if the returned objects are not Bio::EnsEMBL::Storables 
+               and the deep boolean is not specified
+               Throws is the deep boolean is specified, but the returned objects
+               cannot call the compare_to method.
+               Throws if deep boolean is not specified and cannot access a 
+               DBAdaptor from this Storable
+  Caller     : Storable::compare_to
   Status     : At risk
 
 =cut
-
-#Need to change shallow in compare_to, to depth.
-#undef or 0 is dbID match
-#-1 is shallow
-#1 is deep
- #deep signifies they are not in the same same and we should not do the dbID check, 
-  #but a full compare_to
 
 sub compare_object_methods {
   my ($self, $obj, $methods, $deep) = @_; 
@@ -707,6 +695,7 @@ sub compare_object_methods {
        
         #Do we need to make these test names accessible via a hash?
           #for validation?
+    
            
       if($deep){
         #Default is not to pass deep on
@@ -724,7 +713,7 @@ sub compare_object_methods {
         #Would the comparison of nested ojects even be possible 
         #past this layer? Not sure
         
-              
+                   
         $obj_diffs = $these_method_objs[$i]->compare_to($other_method_objs[$i]);
         
         if (%$obj_diffs){
@@ -740,6 +729,12 @@ sub compare_object_methods {
       }
       elsif($self->adaptor){
         #don't assume that this_object is stored in same DB as self
+        
+        if(ref($obj) ne 'Bio::EnsEMBL::Storable'){
+          throw($method.' does not return Bio::EnsEMBL::Storable(s), '.
+            "please correct or specify 'deep' flag"); 
+        } 
+        
          
         if(! ($these_method_objs[$i]->is_stored($self->adaptor->db) &&
               $other_method_objs[$i]->is_stored($self->adaptor->db)) ){
