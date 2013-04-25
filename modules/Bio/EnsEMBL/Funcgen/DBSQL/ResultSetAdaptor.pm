@@ -282,6 +282,9 @@ sub fetch_all_by_FeatureType {
 
 =cut
 
+#This not longer handles the unique key as we don't have feature_class here
+#this is to move to dbfile_registry.format
+
 sub fetch_all_by_name{
   my ($self, $name, $ftype, $ctype, $anal) = @_;
 
@@ -489,12 +492,7 @@ sub _objs_from_sth {
       throw("ResultSet does not accomodate multiple CellTypes") if ($ctype_id != $rset->cell_type->dbID());
     }
 
-    #we're not controlling ctype and ftype during creating new ResultSets to store.
-    #we should change add_table_id to add_ExperimentalChip and check in that method
-    
-    #add just the ids here, as we're aiming at quick web display.
-    $rset->add_table_id($table_id, $cc_id);
-  
+    $rset->_add_table_id($table_id, $cc_id);  
   }
 
   push @rsets, $rset if $rset;
@@ -743,7 +741,7 @@ sub store_chip_channels{
       $sth->execute();
 
 	  $cc_id = $sth->{'mysql_insertid'};
-      $rset->add_table_id($table_id,  $sth->{'mysql_insertid'});
+      $rset->_add_table_id($table_id,  $sth->{'mysql_insertid'});
     }else{
 
 	  #this should only store if not already stored for this rset
