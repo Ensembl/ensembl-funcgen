@@ -426,9 +426,9 @@ sub equals {
   #need to add check on schema_build here
   #all schema_builds should have been added by BaseFeatureAdaptor during import
   #fails if we are using two different versions with the same cs's
-  
-  if(($self->version() eq $cs->version()) &&
-	 ($self->name() eq $cs->name())){
+
+  if((lc($self->version()) eq lc($cs->version())) &&
+     (lc($self->name()) eq lc($cs->name()))){
 
 	#we need to make sure these are default CS, otherwise we can get into trouble with
 	#re-used or mismatched seq_region_ids between DB wih different default assemblies
