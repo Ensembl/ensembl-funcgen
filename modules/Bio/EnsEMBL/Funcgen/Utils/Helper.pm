@@ -1669,12 +1669,17 @@ sub define_DataSet {
   my $rset;
   
   if($fclass eq 'annotated'){ 
+    #what about result_set_mode = none here?
+    #we may want to rollback full delete here
+    #this is a bit odd that define_ResultSet will delete if fully
+    #alternate is to fetch the stored set and call _validate_rollback_Set
+    #directly from here
+    
     $rset = $self->define_ResultSet(@_);
     push @$ssets, $rset;
   }   
     
-  #todo change passed SUPPORTING_SETS to INPUT_SETS
-  #as this is less ambiguous wrt data set support.   
+ 
   my $dset_adaptor = $db->get_DataSetAdaptor;
 
   #Generate new DataSet first to validate the parameters
@@ -2151,17 +2156,22 @@ sub rollback_ArrayChips {
   if ( $mode eq 'probe2transcript' || $force ) {
 
     #Delete ProbeFeature UnmappedObjects
-    $self->log(
-              "Deleting probe2transcript ProbeFeature UnmappedObjects");
-    $sql =
-"DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id and uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
+    $self->log("Deleting probe2transcript ProbeFeature UnmappedObjects");
+    $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e ".
+            "WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id ".
+            "AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id AND ".
+            "uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id ".
+            "AND e.db_name ='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
     $self->rollback_table( $sql, 'unmapped_object',
                            'unmapped_object_id', $db, $no_clean_up );
 
     #Delete ProbeFeature Xrefs/DBEntries
     $self->log("Deleting probe2transcript ProbeFeature Xrefs");
-    $sql =
-"DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id IN($ac_ids)";
+    $sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e ".
+            "WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' ".
+            "AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' ".
+            "AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ".
+            "ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id IN($ac_ids)";
     $self->rollback_table( $sql, 'object_xref', 'object_xref_id', $db,
                            $no_clean_up );
 
@@ -2172,11 +2182,13 @@ sub rollback_ArrayChips {
 
       #Delete Probe/Set UnmappedObjects
 
-      $self->log(
-              "Deleting probe2transcript $xref_object UnmappedObjects");
+      $self->log("Deleting probe2transcript $xref_object UnmappedObjects");
 
-      $sql =
-"DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
+      $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e ".
+              "WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND ".
+              "uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND ".
+              "uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' ".
+              "AND p.array_chip_id IN($ac_ids)";
 
       #.' and edb.db_release="'.$schema_build.'"';
       $self->rollback_table( $sql, 'unmapped_object',
@@ -2253,8 +2265,11 @@ sub rollback_ArrayChips {
 #will have to join to analysis and do a like "%ProbeTranscriptAlign" on the the logic name?
 #or/and ur.summary_description='Promiscuous probe'?
 
-        $sql =
-"DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name in (${lnames}) AND e.external_db_id=uo.external_db_id and e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+        $sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a ".
+                "WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id ".
+                "AND a.logic_name in (${lnames}) AND e.external_db_id=uo.external_db_id ".
+                "AND e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id ".
+                "AND p.array_chip_id IN($ac_ids)";
 
         $self->log("Deleting UnmappedObjects for:\t${lnames}");
         $self->rollback_table( $sql, 'unmapped_object',
