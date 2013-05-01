@@ -123,7 +123,7 @@ sub new {
   #set default type until this is moved to db_file_registry.format
   #This is not possible yet as 5mC is classed as DNA not DNA Modification!!!
   
-  $self->{table_id_hash}      = {};
+  $self->{table_ids}      = {};
 
   if ( !( $type && exists $valid_classes{$type} ) ) {
     throw( 'You must define a valid ResultSet type e.g. ' .
@@ -169,6 +169,7 @@ sub new {
   return $self;
 }
 
+
 =head2 reset_relational_attributes
 
   Arg[1] : Hashref containing the following mandatory parameters:
@@ -193,7 +194,7 @@ sub reset_relational_attributes{
     %$params_hash);
   
   #flush table ID cache and add support
-  $self->{table_id_hash} = undef;  
+  $self->{table_ids} = undef;  
   $self->{support}       = undef;
   $self->add_support($support);
   
@@ -267,7 +268,7 @@ sub add_support{
   
   #Add the table_ids and set the support 
   foreach my $sset(@$support){
-    
+  
     if (! ( defined $sset && 
             ref($sset) && 
             $sset->isa('Bio::EnsEMBL::Funcgen::'.$class_name)) ){
@@ -280,17 +281,17 @@ sub add_support{
     #if the table id is already defined, it has either been set by 
     #obj_from_sth or add_support
     #For both these cases we want to throw from here
-    
+                
     if(exists $self->{table_ids}->{$sset->dbID}){
       throw('Cannot add_support for previously added/stored ResultSet support: '.
         ref($sset).'('.$sset->dbID.')');  
     }
        
-    $self->_add_table_id($sset->dbID);   
+    $self->_add_table_id($sset->dbID);  
   }
   
   $self->{support} ||= [];
-  $self->{support}   = [ @{$self->{support}}, @$support ];  
+  push @{$self->{support}}, @$support;  
   
   return $self->{support};
 }
@@ -501,13 +502,12 @@ sub _add_table_id {
   }else{
 
     #This allows setting of the cc_id on store
-    if((exists $self->{'table_id_hash'}->{$table_id}) && 
-       (defined $self->{'table_id_hash'}->{$table_id})){
+    if((exists $self->{'table_ids'}->{$table_id}) && 
+       (defined $self->{'table_ids'}->{$table_id})){
       throw("You are attempting to redefine a result_set_input_id which is already defined");
     }
-
- 
-    $self->{'table_id_hash'}->{$table_id} = $cc_id;
+  
+    $self->{'table_ids'}->{$table_id} = $cc_id;    
   }
 
   return;
@@ -525,7 +525,7 @@ sub _add_table_id {
 
 =cut
 
-sub table_ids { return [ keys %{$_[0]->{'table_id_hash'}} ]; }
+sub table_ids { return [ keys %{$_[0]->{'table_ids'}} ]; }
 
 
 =head2 result_set_input_ids
@@ -539,7 +539,7 @@ sub table_ids { return [ keys %{$_[0]->{'table_id_hash'}} ]; }
 
 =cut
 
-sub result_set_input_ids { return [ values %{$_[0]->{'table_id_hash'}} ]; }
+sub result_set_input_ids { return [ values %{$_[0]->{'table_ids'}} ]; }
 
 
 =head2 contains
@@ -561,7 +561,7 @@ sub contains{
   if($table_name ne $self->table_name){
     warn("ResultSet(".$self->table_name().") cannot contain ${table_name}s");
   }else{
-    $contains = 1 if (exists $self->{'table_id_hash'}->{$chip_channel->dbID()});
+    $contains = 1 if (exists $self->{'table_ids'}->{$chip_channel->dbID()});
   }
 
   return $contains;
@@ -582,7 +582,7 @@ sub contains{
 
 sub get_result_set_input_id{
   my ($self, $table_id) = @_;
-  return (exists $self->{'table_id_hash'}->{$table_id}) ?  $self->{'table_id_hash'}->{$table_id} : undef;
+  return (exists $self->{'table_ids'}->{$table_id}) ?  $self->{'table_ids'}->{$table_id} : undef;
 }
 
 
@@ -803,42 +803,40 @@ sub log_label {
 }
 
 
-=head2 object_methods
+=head2 compare_to
 
-  Description: Returns all the FeatureSet method names which return nested data class
-               objects. 
-  Returntype : Listref
-  Exceptions : None
-  Caller     : Storable::compare_to
-  Status     : At risk
-
-=cut
-
-#This is where we could accidentally cause a circular reference
-#This should never happen, but if a convenience method to access a higher level
-#object is put in here, and we do a 'deep' compare_to, we will get a circular ref
-#fizz pop bang!
-#e.g. don't ever put get_DataSet in here, as DataSet::object_methods
-#will likely call ResultSet::compare_to
-
-sub object_methods{
-  return [qw(feature_type cell_type analysis get_support)];
-}
-
-
-=head2 string_methods
-
-  Description: Returns all the FeatureSet method names which return strings. 
-  Returntype : Listref
-  Exceptions : None
-  Caller     : Storable::compare_to
-  Status     : At risk
+  Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
+  Args[2]    : Boolean - Optional 'shallow' - no object methods compared
+  Args[3]    : Arrayref - Optional list of ResultSet method names each 
+               returning a Scalar or an Array or Arrayref of Scalars.
+               Defaults to: name table_name feature_class get_all_states
+  Args[4]    : Arrayref - Optional list of ResultSet method names each 
+               returning a Storable or an Array or Arrayref of Storables.
+               Defaults to: feature_type cell_type analysis get_support
+  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
+  Description: Compare this ResultSet to another based on the defined scalar 
+               and storable methods.
+  Returntype : Hashref of key attribute/method name keys and values which differ.
+               Keys will always be the method which has been compared.
+               Values can either be a error string, a hashref of diffs from a 
+               nested object, or an arrayref of error strings or hashrefs where
+               a particular method returns more than one object.  
+  Exceptions : None 
+  Caller     : Import/migration pipeline
+  Status     : At Risk
 
 =cut
 
-sub string_methods{
-  return [ qw(name table_name feature_class get_all_states) ];
+sub compare_to {
+  my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
+      
+  $obj_methods ||= [qw(feature_type cell_type analysis get_support)];
+  $scl_methods ||= [qw(name table_name feature_class get_all_states)];
+
+  return $self->SUPER::compare_to($obj, $shallow, $scl_methods, 
+                                  $obj_methods);
 }
+
 
   
 ### DEPRECATED ###
