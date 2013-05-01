@@ -333,24 +333,21 @@ sub get_all_Features{
 }
 
 
-#focus is old terminology
-#tend to use 'core' now
-#althoughh here we use fouc to determine a set which is actually used in the build
-#where as core is at the feature type level
-#i.e. you can have a feature set with a core feature type
-#which is not in the build and is therefore not a focus set.
-
 =head2 is_focus_set
 
   Args       : None
   Example    : if($fset->is_focus_set){ ... }
-  Description: Returns true if FeatureSet is a focus set used in the RegulatoryBuild
+  Description: Returns true if FeatureSet is a focus set used to define
+               the core region of a RegulatoryFeature
   Returntype : Boolean
   Exceptions : Throws if meta entry not present
   Caller     : General
   Status     : At Risk
 
 =cut
+
+#'focus' and 'core' have historically been interchageable
+
 
 sub is_focus_set{
   my $self = shift;
@@ -436,8 +433,6 @@ sub get_InputSet{
 #These are used to link through to the experiment view based on feature_set name
 #select input_set_id, count(distinct archive_id) as cnt , group_concat(archive_id) from input_subset where archive_id is not NULL group by input_set_id having cnt >1;
 
-
-
 sub source_label{
   my $self = shift;
 
@@ -477,42 +472,40 @@ sub source_label{
 }
 
 
-=head2 object_methods
+=head2 compare_to
 
-  Description: Returns all the FeatureSet method names which return nested data class
-               objects. 
-  Returntype : Listref
-  Exceptions : None
-  Caller     : Storable::compare_to
-  Status     : At risk
-
-=cut
-
-#This is where we could accidentally cause a circular reference
-#This should never happen, but if a convenience method to access a higher level
-#object is put in here, and we do a 'deep' compare_to, we will get a circular ref
-#fizz pop bang!
-#Never put get_DataSet in here! 
-#As the DataSet object methods contain product_FeatureSet
-
-sub object_methods{
-  return [qw(feature_type cell_type analysis get_InputSet)];
-}
-
-
-=head2 string_methods
-
-  Description: Returns all the FeatureSet method names which return strings. 
-  Returntype : Listref
-  Exceptions : None
-  Caller     : Storable::compare_to
-  Status     : At risk
+  Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
+  Args[2]    : Boolean - Optional 'shallow' - no object methods compared
+  Args[3]    : Arrayref - Optional list of FeatureSet method names each 
+               returning a Scalar or an Array or Arrayref of Scalars.
+               Defaults to: name table_name feature_class get_all_states
+  Args[4]    : Arrayref - Optional list of FeatureSet method names each 
+               returning a Storable or an Array or Arrayref of Storables.
+               Defaults to: feature_type cell_type analysis get_support
+  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
+  Description: Compare this FeatureSet to another based on the defined scalar 
+               and storable methods.
+  Returntype : Hashref of key attribute/method name keys and values which differ.
+               Keys will always be the method which has been compared.
+               Values can either be a error string, a hashref of diffs from a 
+               nested object, or an arrayref of error strings or hashrefs where
+               a particular method returns more than one object.  
+  Exceptions : None 
+  Caller     : Import/migration pipeline
+  Status     : At Risk
 
 =cut
 
-sub string_methods{
-  return [ qw(name description display_label feature_class get_all_states) ];
+sub compare_to {
+  my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
+      
+  $obj_methods ||= [qw(feature_type cell_type analysis get_InputSet)];
+  $scl_methods ||= [qw(name description display_label feature_class get_all_states)];
+
+  return $self->SUPER::compare_to($obj, $shallow, $scl_methods, 
+                                  $obj_methods);
 }
+
 
 
 =head2 reset_relational_attributes
@@ -526,7 +519,7 @@ sub string_methods{
             -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
             -input_set    => Bio::EnsEMBL::Funcgen::InputSet,
 
-  Description: Resets all the relational attributes of a given ResultSet. 
+  Description: Resets all the relational attributes of a given FeatureSet. 
                Useful when creating a cloned object for migration beween DBs 
   Returntype : None
   Exceptions : Throws if any of the parameters are not defined or invalid.
