@@ -373,40 +373,42 @@ sub display_label {
 }
 
 
-=head2 object_methods
+=head2 compare_to
 
-  Description: Returns all the DataSet method names which return nested data class
-               objects. 
-  Returntype : Listref
-  Exceptions : None
-  Caller     : Storable::compare_to
-  Status     : At risk
-
-=cut
-
-#This is where we could accidentally cause a circular reference
-#This should never happen, but if a convenience method to access a higher level
-#object is put in here, and we do a 'deep' compare_to, we will get a circular ref
-#fizz pop bang!
-
-sub object_methods{
-  return [qw(product_FeatureSet get_supporting_sets)];
-}
-
-
-=head2 string_methods
-
-  Description: Returns all the DataSet method names which return strings. 
-  Returntype : Listref
-  Exceptions : None
-  Caller     : Storable::compare_to
-  Status     : At risk
+  Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
+  Args[2]    : Boolean - Optional 'shallow' - no object methods compared
+  Args[3]    : Arrayref - Optional list of DataSet method names each 
+               returning a Scalar or an Array or Arrayref of Scalars.
+               Defaults to: name table_name feature_class get_all_states
+  Args[4]    : Arrayref - Optional list of DataSet method names each 
+               returning a Storable or an Array or Arrayref of Storables.
+               Defaults to: feature_type cell_type analysis get_support
+  Example    : my %shallow_diffs = %{$dset->compare_to($other_rset, 1)};
+  Description: Compare this DataSet to another based on the defined scalar 
+               and storable methods.
+  Returntype : Hashref of key attribute/method name keys and values which differ.
+               Keys will always be the method which has been compared.
+               Values can either be a error string, a hashref of diffs from a 
+               nested object, or an arrayref of error strings or hashrefs where
+               a particular method returns more than one object.  
+  Exceptions : None 
+  Caller     : Import/migration pipeline
+  Status     : At Risk
 
 =cut
 
-sub string_methods{
-  return [ qw(name get_all_states) ];
+sub compare_to {
+  my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
+      
+  $obj_methods ||= [qw(product_FeatureSet get_supporting_sets)];
+  $scl_methods ||= [qw(name get_all_states)];
+
+  return $self->SUPER::compare_to($obj, $shallow, $scl_methods, 
+                                  $obj_methods);
 }
+
+
+
 
 
 =head2 reset_relational_attributes
@@ -417,7 +419,7 @@ sub string_methods{
             -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
             -support      => Arrayref of valid support objectse.g. InputSet
 
-  Description: Resets all the relational attributes of a given ResultSet. 
+  Description: Resets all the relational attributes of a given DataSet. 
                Useful when creating a cloned object for migration beween DBs 
   Returntype : None
   Exceptions : Throws if any of the parameters are not defined or invalid.
@@ -465,7 +467,7 @@ sub _set_Sets_and_types{
   my $ftype_name = $fset->feature_type->name;
   my $ctype_name = $fset->cell_type->name;
   my $fclass     = $fset->feature_class;
-  $self->{'supporting_sets'} ||= {};
+  $self->{'supporting_sets'} = {};
   
   
   ### Validate supporting sets
