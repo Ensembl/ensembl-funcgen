@@ -1,5 +1,5 @@
-/** 
-@header patch_70_71_a.sql - schema version
+/**
+@header patch_71_70_a.sql - schema version
 @desc   Update schema_version in meta table to 71
 */
 
