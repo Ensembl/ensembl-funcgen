@@ -508,7 +508,7 @@ CREATE TABLE `supporting_set` (
    `data_set_id` int(10) unsigned NOT NULL,
    `supporting_set_id` int(10) unsigned NOT NULL,
    `type` enum('result','feature','input') default NULL,
-   PRIMARY KEY  (`data_set_id`, `supporting_set_id`),
+   PRIMARY KEY  (`data_set_id`, `supporting_set_id`, `type`),
    KEY `type_idx` (`type`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
