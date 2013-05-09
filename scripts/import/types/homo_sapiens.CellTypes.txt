@@ -56,7 +56,7 @@ HRCEpiC	NULL	Human Renal Cortical Epithelial Cells	NULL
 HRE	NULL	Human Renal Epithelial Cells	NULL
 HRPEpiC	NULL	Human Retinal Pigment Epithelial Cells	NULL
 HSMM	NULL	Human Skeletal Muscle Myoblasts	NULL
-HUVEC	NULL	Human Umbilical Vein Endothelial Cell	NULL
+HUVEC	NULL	Human Umbilical Vein Endothelial Cell	female
 IMR90	NULL	Human Fetal Lung Fibroblast	female
 Jurkat	NULL	T Lymphoblastoid	male
 K562b	NULL	Human Mylogenous Leukaemia Line (alternative)	female
@@ -66,7 +66,7 @@ Lymphoblastoid	NULL	Lymphoblastoid Cells	NULL
 MCF7	NULL	Breast Cancert	female
 Medullo	NULL	Medulloblastoma	NULL
 Melano	NULL	Melanocytes	NULL
-MultiCell	NULL	Multiple CellTypes used in core RegulatoryFeature set	NULL
+MultiCell	NULL	An aggregation of multiple cell types	NULL
 NB4	NULL	Acute Promyelocytic Leukemia Cell Line	NULL
 NHBE	NULL	Normal Human Bronchial Epithelial Cells	NULL
 NHDF-neo	NULL	Neonatal Human Dermal Fibroblasts	NULL
