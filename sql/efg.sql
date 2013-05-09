@@ -1421,16 +1421,20 @@ CREATE TABLE `meta_coord` (
 
 /**
 @table  associated_xref
-@desc	Create table associated_xref for associating object xrefs with an associated annotation (eg Gene Ontology Annotation Extensions) given a source xref and condition.
+@desc   This table associates extra associated annotations with a given ontology xref evidence and source under a specific condition.   For GO this allows qualifiers (with/from) or annotation extensions to be added to a given ontology annotation.
 @colour  #000000
 
-@column associated_xref_id Primary key
-@column object_xref_id
-@column xref_id
-@column source_xref_id
-@column condition_type
-@column associated_group_id
-@column rank
+@column associated_xref_id Associated xref id. Primary key, internal identifier
+@column object_xref_id Object xref id this associated xref is linked to. Foreign key linked to the @link object_xref table
+@column xref_idXref which is the associated term. Foreign key linked to the @link xref table
+@column source_xref_idXref which is source of this association. Foreign key linked to the @link xref table
+@column condition_type The type of condition this link occurs in e.g. evidence, from, residue or assigned_by
+@column associated_group_id Foreign key to allow for @link associated_group
+@column rank The rank in which the association occurs within an @link associated_group
+
+@see object_xref
+@see associcated_group
+@see xref
 */
 CREATE TABLE `associated_xref` (
   `associated_xref_id`  int(10)       unsigned NOT NULL AUTO_INCREMENT,
@@ -1450,11 +1454,11 @@ CREATE TABLE `associated_xref` (
 
 /**
 @table  associated_group
-@desc	Create table associated_xref for associating object xrefs with an associated annotation (eg Gene Ontology Annotation Extensions) given a source xref and condition.
+@desc   Groups together xref associations under a single description. Used when more than one associated xref term must be used to describe a condition
 @colour  #000000
 
-@column associated_group_id
-@column description
+@column associated_group_id Associated group id. Primary key, internal identifier
+@column description Optional description for this group
 */
 
 CREATE TABLE `associated_group` (

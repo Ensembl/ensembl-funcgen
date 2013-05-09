@@ -25,7 +25,10 @@
 
 
 
--- Last updated for v71
+-- Last updated for v72
+ALTER TABLE associated_xref ADD FOREIGN KEY (xref_id)             REFERENCES xref;
+ALTER TABLE associated_xref ADD FOREIGN KEY (associated_group_id) REFERENCES associated_group;
+ALTER TABLE associated_xref ADD FOREIGN KEY (object_xref_id)      REFERENCES identity_xref;
 
 -- feature_set
 ALTER table feature_set ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);

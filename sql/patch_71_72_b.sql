@@ -16,9 +16,8 @@ CREATE TABLE `associated_xref` (
   KEY `associated_object_idx` (`object_xref_id`),
   KEY `associated_idx`        (`xref_id`),
   KEY `associated_group_idx`  (`associated_group_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 |
-ANALYZE table  associated_xref
-OPTIMIZE table associated_xref
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
 
 /**
 @header patch_71_72_b.sql - Create associated_group table
@@ -28,10 +27,8 @@ CREATE TABLE `associated_group` (
   `associated_group_id` int(10)      unsigned NOT NULL AUTO_INCREMENT,
   `description`         varchar(128)          DEFAULT NULL,
   PRIMARY KEY (`associated_group_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-ANALYZE table  associated_group
-OPTIMIZE table associated_group
 
 # Patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value)
