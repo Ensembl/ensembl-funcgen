@@ -19,7 +19,7 @@ export VALID_VENDORS='ILLUMINA CODELINK PHALANX AGILENT AFFY'
 #AGILENT is 
 
 usage="Usage: ARG[1] vendor ARG[2] file_type ARG[3] array_name ARG[4] file_path 
-i.e. pre_process_seqs.sh ILLUMINA|CODELINK|PHALANX|AGILENT FASTA|TXT|CSV ARRAYNAME /path/to/file"
+i.e. pre_process_seqs.sh ILLUMINA|CODELINK|PHALANX|AGILENT FASTA|TXT|CSV|GEO ARRAYNAME /path/to/file"
 
 #We could head the files first by a number of line and test the expected last line
 #Then sed the header out.
@@ -117,6 +117,11 @@ elif [ $file_type = CSV ]; then
 		echo "No support for $vendor $file_type file, maybe you want FASTA file type?"
 		exit 1
 	fi
+elif [ $file_type = GEO ]; then
+
+    awk "BEGIN { FS = \"\t\" }; {if (\$1==\"ID\") probes=1; else if ((probes == 1) && (\$6==\"FALSE\")) print \">probe:${array_name}:\" \$4 \";\" \"\n\" \$20}" $file_path > ${file_path}.tmp
+
+
 else
 	echo $usage
 	exit 1;
