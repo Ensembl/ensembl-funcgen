@@ -7,3 +7,7 @@ ALTER TABLE supporting_set DROP PRIMARY KEY, ADD PRIMARY KEY(`data_set_id`,`supp
 
 OPTIMIZE TABLE supporting_set;
 ANALYZE TABLE supporting_set;
+
+# Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value)
+ VALUES (NULL, 'patch', 'patch_71_72_c.sql|added_type_to_supporting_set_PK');
