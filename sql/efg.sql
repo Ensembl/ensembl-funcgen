@@ -480,7 +480,7 @@ CREATE TABLE `data_set` (
    `data_set_id` int(10) unsigned NOT NULL auto_increment,
    `feature_set_id` int(10) unsigned default '0',
    `name` varchar(100) default NULL,
-   PRIMARY KEY  (`data_set_id`, `feature_set_id`),
+   PRIMARY KEY  (`data_set_id`, `feature_set_id`, `type`),
    UNIQUE KEY `name_idx` (name)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -920,7 +920,7 @@ CREATE TABLE `experiment` (
 
 -- Can probably remove now date (and primary_design_type?) as we don't support this level of meta data
 -- also have associated_design_types/experimental_design table, containing MGED/EFO ontology types?
--- change primary_design_type to design_type_id
+
 
 
 /**
@@ -1389,10 +1389,12 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "70");
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "72");
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_69_70_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_69_70_b.sql|regulatory_feature.bound_start/end_length');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_b.sql|associated_xref');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_c.sql|added_type_to_supporting_set_PK');
+
 
 
 
@@ -1436,6 +1438,7 @@ CREATE TABLE `meta_coord` (
 @see associcated_group
 @see xref
 */
+
 CREATE TABLE `associated_xref` (
   `associated_xref_id`  int(10)       unsigned NOT NULL AUTO_INCREMENT,
   `object_xref_id`      int(10)       unsigned NOT NULL DEFAULT '0',
@@ -1466,6 +1469,8 @@ CREATE TABLE `associated_group` (
   `description`         varchar(128)          DEFAULT NULL,
   PRIMARY KEY (`associated_group_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
 /**
 @table identity_xref
 @desc Describes how well a particular xref object matches the EnsEMBL object.
