@@ -1,0 +1,72 @@
+#!/bin/sh
+
+
+#$* would be list of builds if none specifed will use DEFAULT build for the update DB
+
+#GetOpts here with
+
+#host
+#no_farm
+#dbname
+#user
+#pass
+#regex?
+
+USER=$1
+shift
+PASS=$1
+shift
+
+
+
+if [ ! $PASS ] || [ ! $USER ]
+then echo "Must provide at a user and password argument"; exit; fi
+
+#WARNING: This loop only works for standard DB names (i.e. only dev prefix allowed)
+
+echo "Please check edit the script before running, by adding your dbnames and checking the host parameters"
+exit;
+
+dnadb_host='your_mysql_host'
+host=$dnadb_host
+port=3306
+
+dbs="ornithorhynchus_anatinus_funcgen_71_1  oryctolagus_cuniculus_funcgen_71_3   pan_troglodytes_funcgen_71_214         rattus_norvegicus_funcgen_71_5 saccharomyces_cerevisiae_funcgen_71_4 sus_scrofa_funcgen_71_102  xenopus_tropicalis_funcgen_71_42"
+
+dnadb_port=3306
+dnadb_user=$USER
+dnadb_pass=$PASS
+
+for db in $dbs; do
+	echo -e "\n\n::\tUpdating ${host}:${db}"
+	#Put this in the log
+	latin=$(echo $db | sed 's/_funcgen_.*//')
+	latin=$(echo $latin | sed 's/dev_//')
+	data_version=$(echo $db | sed 's/.*funcgen_//')
+
+	bsub_cmd="bsub -o $HOME/logs/update_DB_for_release.${latin}_${data_version}.out  -e $HOME/logs/update_DB_for_release.${latin}_${data_version}.err -J update_DB_for_release.${latin}_${data_version} -q long -R\"select[mem>2000] rusage[mem=2000]\" -M 2000000"
+
+
+	job_cmd="perl -w $EFG_SRC/scripts/release/update_DB_for_release.pl\
+	-species $latin\
+	-port $port \
+	-host $host\
+	-user $USER \
+	-data_version $data_version\
+	-dbname $db\
+	-dnadb_host $dnadb_host\
+	-dnadb_user $dnadb_user\
+	-dnadb_pass $dnadb_pass\
+    -dnadb_port $dnadb_port\
+	-check_displayable \
+	-pass $PASS -no_log $*"
+
+  #-skip_meta_coord
+
+	echo -e "$bsub_cmd $job_cmd"
+
+	#omit -no_log if running locally
+	#echo through bash to avoid LSF -R anomalies VOODOO!
+
+	echo "$bsub_cmd $job_cmd" | bash
+done
