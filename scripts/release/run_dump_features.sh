@@ -10,23 +10,43 @@ fi
 
 
 format='GFF'
-release=68
+release=72
 
 #only required if we want to dump specific sets i.e. not the complete reg build set
 #fset_names="RegulatoryFeatures:MultiCell RegulatoryFeatures:ES RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:NPC RegulatoryFeatures:MEL"
 
-dbname='mus_musculus_funcgen_68_38'
-dbhost='ens-staging2'
+dbname="homo_sapiens_funcgen_${release}_37"
+dbhost='ens-staging1'
+
+#dbname="mus_musculus_funcgen_${release}_38"
+#dbhost='ens-staging2'
+
+
 
 #feature_type='AnnotatedFeature'
 #feature_type='RegulatoryFeature'
 feature_type='MotifFeature'
-fset_names="${feature_type}s" #Special set name to dump all Regulatory/Annotated/MotifFeatures in build
+
+#fset_names="${feature_type}s" #Special set name to dump all Regulatory/Annotated/MotifFeatures in build
+#Does not yet support RegulatoryFeatures as these seem to get dumped to a merged file with no cell type info
+#and merge does not handle this yet anyway
+
+
+
+# MySQL query to get the correct $fset_names:
+# select replace(group_concat(name), ",", " ") from feature_set where type = 'regulatory' ;
+
+# Mouse:
+fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:ES RegulatoryFeatures:NPC RegulatoryFeatures:MultiCell RegulatoryFeatures:MEF RegulatoryFeatures:MEL"
+
+# Human:
+#fset_names="RegulatoryFeatures:NHEK RegulatoryFeatures:K562 RegulatoryFeatures:GM06990 RegulatoryFeatures:MultiCell RegulatoryFeatures:IMR90 RegulatoryFeatures:HSMM RegulatoryFeatures:HepG2 RegulatoryFeatures:NH-A RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:CD4 RegulatoryFeatures:HUVEC RegulatoryFeatures:HMEC RegulatoryFeatures:H1ESC RegulatoryFeatures:GM12878";
+
 #Should do this for all, so we don't have to specify -feature_sets
 dnadbhost=$dbhost
 dnadbuser=$USER
 
-root_dir='/lustre/scratch103/ensembl/funcgen/output'
+root_dir='/lustre/scratch109/ensembl/funcgen/output'
 out_dir="${root_dir}/${dbname}/dumps/${format}/${feature_type}"
 
 
@@ -55,24 +75,23 @@ if [[ $USER != merge ]]; then
         #dump_params="-result_sets $set_names -window_size $wsize"
         #dump_params="-array $dump_name -vendor AFFY"
 		
-        bin_dir='/nfs/users/nfs_n/nj1/'
+        bin_dir='/nfs/users/nfs_t/tj1/'
 			
         if [ ! -d $out_dir ]; then
             mkdir -m 775 -p $out_dir
         fi
 
-        job_cmd="$EFG_SRC/scripts/export/dump_features.pl\
-	-port 3306\
-  -format $format\
-	-dbhost $dbhost\
-	-dbname $dbname\
-  -dnadb_host $dnadbhost\
-  -dnadb_user $dnadbuser\
-	$dump_params\
-	-out_root $out_dir \
-  -bin_dir $bin_dir\
-	-user $USER\
-	$@	"
+        job_cmd="$SRC/ensembl-functgenomics/scripts/export/dump_features.pl\
+                  -format $format\
+	          -dbhost $dbhost\
+	          -dbname $dbname\
+                  -dnadb_host $dnadbhost\
+                  -dnadb_user $dnadbuser\
+	                      $dump_params\
+	          -out_root $out_dir \
+                  -bin_dir $bin_dir\
+	          -user $USER\
+	                $@	"
 
 
     #Add these on cmd line to avoid including them by mistake
