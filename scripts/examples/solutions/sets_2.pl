@@ -29,38 +29,14 @@ my $cta = $registry->get_adaptor('Human', 'funcgen', 'celltype');
 #Print GM12878 cell type details
 my @GM12878_feature_sets = @{$fsa->fetch_all_by_CellType($cta->fetch_by_name('GM12878'))};
 print "There are ".scalar(@GM12878_feature_sets)." feature sets for GM12878:\n";
+
 foreach my $featureset (@GM12878_feature_sets){
 	print "\t".$featureset->name."\n";
 }
 
-#Print CTCF feature type details
-my $fta = $registry->get_adaptor('Human', 'funcgen', 'featuretype');
-my @CTCF_feature_sets = @{$fsa->fetch_all_by_FeatureType($fta->fetch_by_name('CTCF'))};
-print "\n\nThere are ".scalar(@CTCF_feature_sets)." feature sets for CTCF:\n";
-foreach my $featureset (@CTCF_feature_sets){
-	print "\t".$featureset->name."\n";
-}
 
+=pod
 
-#Print VISTA sets details
-my $vista_set = $fsa->fetch_by_name('VISTA enhancer set');
-print "\n\n".$vista_set->display_label."\n";
-
-my $cell_type = ($vista_set->cell_type) ? $vista_set->cell_type->name : 'NON-DEFINED';
-print "\tCell type:\t".$cell_type;
-
-my $ftype = ($vista_set->feature_type) ? $vista_set->feature_type->name : 'NON-DEFINED';
-print "\tFeatureType:\t$ftype\n";
-
-my $dsa     = $registry->get_adaptor('Human', 'funcgen', 'dataset');
-my $dset    = $dsa->fetch_by_product_FeatureSet($vista_set);
-my $dataset = ($dset) ? $dset->name : 'NON-DEFINED';
-print "\tDataSet:\t$dataset\n";
-
-
-__END__
-
->perl sets_2.pl
 There are 72 feature sets for GM12878:
         GM12878_CTCF_ENCODE_Broad_SWEmbl_R015_D150
         GM12878_H3K9ac_ENCODE_Broad_SWEmbl_R015_D150
@@ -135,9 +111,23 @@ There are 72 feature sets for GM12878:
         Segmentation:GM12878
         RegulatoryFeatures:GM12878
 
+=cut
 
-There are 29 feature sets for CTCF:
-        Nessie_NG_STD_2_ctcf_ren_BR1
+
+
+
+#Print CTCF feature type details
+my $fta = $registry->get_adaptor('Human', 'funcgen', 'featuretype');
+my @CTCF_feature_sets = @{$fsa->fetch_all_by_FeatureType($fta->fetch_by_name('CTCF'))};
+print "\n\nThere are ".scalar(@CTCF_feature_sets)." feature sets for CTCF:\n";
+
+foreach my $featureset (@CTCF_feature_sets){
+	print "\t".$featureset->name."\n";
+}
+
+=pod
+
+There are 28 feature sets for CTCF:
         K562_CTCF_ENCODE_Broad_SWEmbl_R015_D150
         CD4_CTCF_BarskiZhao_PMID17512414_SWEmbl_R015_D150
         HepG2_CTCF_ENCODE_Uta_SWEmbl_R015_D150
@@ -167,7 +157,33 @@ There are 29 feature sets for CTCF:
         HeLa-S3_CTCF_ENCODE_Broad_SWEMBL_R015
         GM12878_CTCF_ENCODE_Uw_SWEMBL_R015
 
+
+=cut
+
+
+#Print VISTA sets details
+my $vista_set = $fsa->fetch_by_name('VISTA enhancer set');
+print "\n\n".$vista_set->display_label."\n";
+
+my $cell_type = ($vista_set->cell_type) ? $vista_set->cell_type->name : 'NON-DEFINED';
+print "\tCell type:\t".$cell_type;
+
+my $ftype = ($vista_set->feature_type) ? $vista_set->feature_type->name : 'NON-DEFINED';
+print "\tFeatureType:\t$ftype\n";
+
+my $dsa     = $registry->get_adaptor('Human', 'funcgen', 'dataset');
+my $dset    = $dsa->fetch_by_product_FeatureSet($vista_set);
+my $dataset = ($dset) ? $dset->name : 'NON-DEFINED';
+print "\tDataSet:\t$dataset\n";
+
+=pod
+
+
 VISTA Enhancers
         Cell type:      NON-DEFINED     FeatureType:    VISTA Target
         DataSet:        NON-DEFINED
 
+=cut
+
+
+__END__
