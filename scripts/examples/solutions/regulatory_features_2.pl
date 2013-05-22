@@ -30,7 +30,7 @@ my $gene_name = 'BRCA2';
 my @genes = @{$gene_adaptor->fetch_all_by_external_name($gene_name)};
 print scalar(@genes)." human gene(s) named $gene_name\n";
 
-my $gene = $genes[0];
+my $gene = $genes[1];
 my $slice = $registry->get_adaptor('human', 'core', 'slice')->fetch_by_gene_stable_id($gene->stable_id, 1000);
 
 #my $slice = $b->feature_Slice;
@@ -62,7 +62,7 @@ foreach my $rf (@reg_feats){
 
 __END__
 
->perl regulatory_features_3_new.pl
+>perl regulatory_features_2.pl
 1 human gene(s) named BRCA2
 Slice 1Kb around BRCA2: 13      32888611        32974805        1
 11 Regulatory Features 1kb around BRCA2
