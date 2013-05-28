@@ -50,7 +50,8 @@ require Exporter;
 				open_file median mean run_system_cmd backup_file
 				is_gzipped is_sam is_bed get_file_format strip_param_args
 				generate_slices_from_names strip_param_flags
-				get_current_regulatory_input_names add_external_db);
+				get_current_regulatory_input_names add_external_db
+				class_name_from scalars_to_objects);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -59,6 +60,7 @@ use strict;
 use Time::Local;
 use FileHandle;
 use Carp;
+
 
 sub get_date{
 	my ($format, $file) = @_;
@@ -693,7 +695,43 @@ sub add_external_db{
 =head2
 
   Name       : create_Storable_clone
-  Arg [1]    : Cloned, unblessed HASH (object)
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Storable to clone
+  Arg [2]    : Hash containing list of object parameters linked to 
+               the clone and to be reset
+  Example    :
+  Description: Blesses an object and replaces all linked objects with the ones
+               passed with the $params_hash
+  Returntype : cloned object
+  Exceptions : Throws if object is not a Storable
+  Caller     : general
+  Status     : At risk - not tested
+
+=cut
+
+#Currently not exposing the no db reset flag from reset_relational_attributes
+#as we would never want to do this here
+
+sub create_Storable_clone {
+  my ($obj, $params_hash) = @_;
+
+  if(! (defined $obj &&
+        ref($obj) &&
+        $obj->isa('Bio::EnsEMBL::Funcgen::Storable') &&
+        $obj->can('reset_relational_attributes') )){
+     throw('You must pass a Bio::EnsEMBL::Funcgen::Storable which can '.
+      'call the reset_relational_attributes method');     
+  }
+    
+  my $clone = bless({%{$obj}}, ref($obj));
+  $clone->reset_relational_attributes($params_hash);
+  return $clone;
+}
+
+
+=head2
+
+  Name       : scalars_to_objects
+  Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
   Arg [2]    : Hash containing list of objects linked to the clone and to be
                reset
   Example    :
@@ -706,16 +744,47 @@ sub add_external_db{
 
 =cut
 
-sub create_Storable_clone {
-  my ($obj, $params_hash) = @_;
+sub scalars_to_objects{
+  my ($db, $class_name, $fetch_method, $scalars) = @_;  
 
-  if(ref($obj) ne 'HASH') {
-    throw('HASH expected, not: '.ref($obj));
+  if(! (defined $db && 
+        ref($db)     &&
+        $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor') )){
+    throw('You must pass a Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');        
   }
-  my $clone = bless({%{$obj}}, ref($obj));
-  # Flag to prevent adaptor/dbID reset
-  $clone->reset_relational_attributes($params_hash);
-  return $clone;
+
+
+  if(! ((defined $scalars && (ref($scalars) eq 'ARRAY')) &&
+         defined $class_name && 
+         defined $fetch_method) ){
+    throw('You need to specify a class name and a fetch method and an Arrayref of scalar method arguments');  
+  }
+
+  my @objs;
+  my $adaptor_method = 'get_'.$class_name.'Adaptor';
+    
+  my $adaptor = $db->$adaptor_method;
+
+  if(! ((defined $adaptor) &&
+        $adaptor->can($fetch_method))){
+    throw("Could not $adaptor_method or ${class_name}Adaptor cannot call method $fetch_method");       
+  }
+
+  foreach my $str(@$scalars){
+    
+    my $obj = $adaptor->$fetch_method($str);
+    
+    if(! defined $obj){
+      throw("Could not fetch object using ${class_name}Adaptor->${fetch_method}('$str')");
+    }
+    
+    push @objs, $obj;
+  }  
+  
+  return \@objs;
 }
+
+
+
 
 1;
