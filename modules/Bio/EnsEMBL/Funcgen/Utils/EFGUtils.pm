@@ -51,7 +51,7 @@ require Exporter;
 				is_gzipped is_sam is_bed get_file_format strip_param_args
 				generate_slices_from_names strip_param_flags
 				get_current_regulatory_input_names add_external_db
-				class_name_from scalars_to_objects);
+				class_name_from scalars_to_objects create_Storable_clone);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw (mkpath);
@@ -696,7 +696,7 @@ sub add_external_db{
 
   Name       : create_Storable_clone
   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable to clone
-  Arg [2]    : Hash containing list of object parameters linked to 
+  Arg [2]    : Hash containing list of object parameters linked to
                the clone and to be reset
   Example    :
   Description: Blesses an object and replaces all linked objects with the ones
@@ -719,9 +719,9 @@ sub create_Storable_clone {
         $obj->isa('Bio::EnsEMBL::Funcgen::Storable') &&
         $obj->can('reset_relational_attributes') )){
      throw('You must pass a Bio::EnsEMBL::Funcgen::Storable which can '.
-      'call the reset_relational_attributes method');     
+      'call the reset_relational_attributes method');
   }
-    
+
   my $clone = bless({%{$obj}}, ref($obj));
   $clone->reset_relational_attributes($params_hash);
   return $clone;
@@ -734,10 +734,10 @@ sub create_Storable_clone {
   Arg [2]    : String - class name of object to retrieve
   Arg [3]    : String - method name to use
   Arg [4]    : Arrayref - Scalar arguments to use iteratively with the fetch method
-  Example    : my @cell_types = @{scalars_to_object($db, 'CellType', 
+  Example    : my @cell_types = @{scalars_to_object($db, 'CellType',
                                                     'fetch_by_name',
                                                     [ qw ( GM06990 HUVEC H1ESC ) ])};
-  Description: Convenience method to fetch objects iteratively based on an 
+  Description: Convenience method to fetch objects iteratively based on an
                array of scalar arguments. Useful for processing command line arguments.
   Returntype : Arrayref of Objects
   Exceptions : Throws if arguments not specified or valid
@@ -750,46 +750,42 @@ sub create_Storable_clone {
 =cut
 
 sub scalars_to_objects{
-  my ($db, $class_name, $fetch_method, $scalars) = @_;  
+  my ($db, $class_name, $fetch_method, $scalars) = @_;
 
-  if(! (defined $db && 
+  if(! (defined $db &&
         ref($db)     &&
         $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor') )){
-    throw('You must pass a Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');        
+    throw('You must pass a Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
   }
 
 
   if(! ((defined $scalars && (ref($scalars) eq 'ARRAY')) &&
-         defined $class_name && 
+         defined $class_name &&
          defined $fetch_method) ){
-    throw('You need to specify a class name and a fetch method and an Arrayref of scalar method arguments');  
+    throw('You need to specify a class name and a fetch method and an Arrayref of scalar method arguments');
   }
 
   my @objs;
   my $adaptor_method = 'get_'.$class_name.'Adaptor';
-    
+
   my $adaptor = $db->$adaptor_method;
 
   if(! ((defined $adaptor) &&
         $adaptor->can($fetch_method))){
-    throw("Could not $adaptor_method or ${class_name}Adaptor cannot call method $fetch_method");       
+    throw("Could not $adaptor_method or ${class_name}Adaptor cannot call method $fetch_method");
   }
 
   foreach my $str(@$scalars){
-    
+
     my $obj = $adaptor->$fetch_method($str);
-    
+
     if(! defined $obj){
       throw("Could not fetch object using ${class_name}Adaptor->${fetch_method}('$str')");
     }
-    
+
     push @objs, $obj;
-  }  
-  
+  }
+
   return \@objs;
 }
-
-
-
-
 1;
