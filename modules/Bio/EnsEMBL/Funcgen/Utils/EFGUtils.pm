@@ -731,10 +731,9 @@ sub create_Storable_clone {
 =head2 scalars_to_objects
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
-  Arg [2]    : String - class name of object to retrieve e.g. 'CellType'
-  Arg [3]    : String - method name to use e.g. 'fetch_by_name'
+  Arg [2]    : String - class name of object to retrieve
+  Arg [3]    : String - method name to use
   Arg [4]    : Arrayref - Scalar arguments to use iteratively with the fetch method
-                e.g. [ qw ( GM06990 HUVEC H1ESC ) ]
   Example    : my @cell_types = @{scalars_to_object($db, 'CellType', 
                                                     'fetch_by_name',
                                                     [ qw ( GM06990 HUVEC H1ESC ) ])};
@@ -742,6 +741,7 @@ sub create_Storable_clone {
                array of scalar arguments. Useful for processing command line arguments.
   Returntype : Arrayref of Objects
   Exceptions : Throws if arguments not specified or valid
+               Throws if cannot get relevant adaptor based on the class name
                Throws if Object Adaptor cannot call fetch method
                Throws if Object not retrieved
   Caller     : General
