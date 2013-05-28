@@ -92,27 +92,29 @@ sub compose_constraint_query{
 
 	foreach my $constraint_key(keys (%{$params->{constraints}})){
 
-    my $constrain_method = '_constrain_'.$constraint_key;
+      my $constrain_method = '_constrain_'.$constraint_key;
 
-    if(! $self->can($constrain_method)){
-      throw($constraint_key." is not a valid constraint");
+      if(! $self->can($constrain_method)){
+        throw($constraint_key." is not a valid constraint");
 
-      #Need to add test on and list valid constraints
+        #Need to add test on and list valid constraints
 
-      # please specify values for one of:\t".
-      #           join(', ', keys(%constraint_config)));
-    }
+        # please specify values for one of:\t".
+        #           join(', ', keys(%constraint_config)));
+      }
 
-    my ($constraint, $constraint_conf) = $self->$constrain_method($params->{constraints}{$constraint_key});
-    push @constraints, $constraint;
-    
+      if(defined $params->{constraints}{$constraint_key}){
 
-    #Currently only handle tables here but could also 
-    #set other dynamic config e.g. final clause
+        my ($constraint, $constraint_conf) = 
+          $self->$constrain_method($params->{constraints}{$constraint_key});
+        push @constraints, $constraint;
 
-    if (exists ${$constraint_conf}{tables}) {
-      push @{$self->TABLES}, @{$constraint_conf->{tables}};
-    }
+        #Currently only handle tables here but could also 
+        #set other dynamic config e.g. final clause
+        if (exists ${$constraint_conf}{tables}) {
+          push @{$self->TABLES}, @{$constraint_conf->{tables}};
+        }
+      }#else warn?
 	} # END OF CONSTRAINTS
   }	# END OF $PARAMS				
 
@@ -577,23 +579,22 @@ sub set_imported_states_by_Set{
 sub status_filter{
   my ($self, $status, $table_name, @table_ids) = @_;
 
-
   my @status_ids;
-
   my $status_id = $self->_get_status_name_id($status);
-
-
-  return \@status_ids if(! $status_id);
-
-  throw("Must provide a table_name and table_ids to filter non-displayable ids") if(! ($table_name && @table_ids));
   
-  my $sql = "SELECT table_id from status where table_name='$table_name' and table_id in (".join(", ", @table_ids).") and status.status_name_id='$status_id'";
+  if($status_id){
+
+    throw("Must provide a table_name and table_ids to filter non-displayable ids") 
+      if(! ($table_name && @table_ids));
   
-  
-  @status_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+    my $sql = "SELECT table_id from status where table_name='$table_name' and ".
+               "table_id in (".join(", ", @table_ids).") and status.status_name_id".
+               "='$status_id'"; 
+    @status_ids = map $_ = "@$_", 
+                   @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+  }
 
   return \@status_ids;
-	
 }
 
 
@@ -951,8 +952,7 @@ sub _constrain_status {
   #	push @sn_ids, $self->_get_status_name_id($sn);
   #  }
       
-	  
-      
+	        
   my @tables = $self->_tables;
   my ($table_name, $syn) = @{$tables[0]};
 	  
@@ -962,6 +962,54 @@ sub _constrain_status {
   
   return ($constraint, $constraint_conf);
 }
+
+
+#This uses AND logic, rather than the OR logic of the other constrain methods
+
+sub _constrain_states {
+  my ($self, $states) = @_;
+  
+  if(! (defined $states && 
+        (ref($states) eq 'ARRAY') &&
+        (scalar(@$states) > 0) )){
+    throw('Must pass an Arrayref of states (strings) to contrain by');        
+  }
+  	   
+  	        
+  my @tables = $self->_tables;
+  my ($table_name, $syn) = @{$tables[0]};
+  my ($status_table, $sn_ids_clause);
+  my @sn_ids = sort {$a<=>$b} (map $self->_get_status_name_id($_), @$states);
+  
+  if(scalar(@$states) != 1){
+    #add in table_name to make it faster
+    #can't put in table_id as this would be a join between select and subselect
+    $status_table = '(SELECT table_id, table_name, group_concat(status_name_id) ids'.
+                    ' WHERE table_name="'.$table_name.'" and ('.
+                    join(' OR ', (map "status_name_id=$_", @sn_ids)).
+                    ') order by status_name_id)';
+    
+    $sn_ids_clause = ' s.ids ="'.join(',', @sn_ids).'"';
+  } 
+  else{
+    $status_table  = 'status';
+    $sn_ids_clause = 's.status_name_id='.$sn_ids[0];
+  }
+  
+  
+  my $constraint_conf = { tables => [[$status_table, 's']]};  #,['status_name', 'sn']),
+  my $constraint = " $syn.${table_name}_id=s.table_id AND ".
+    "s.table_name='$table_name' AND ".$sn_ids_clause;
+  
+  return ($constraint, $constraint_conf);
+  
+}
+
+#select s1.table_id from (select table_id, group_concat(status_name_id) ids 
+#      from status where table_id=1008 and 
+#      (status_name_id=7 OR status_name_id=11 OR status_name_id=12) order by status_name_id) s1 
+#      where s1.ids='7,11,12';
+
 
 ### DEPRECATED ###
 
