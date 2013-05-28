@@ -304,7 +304,6 @@ sub fetch_all_by_CellType {
 
 sub fetch_all_by_FeatureType_Analysis {
   my ($self, $ftype, $anal, $ctype) = @_;
-  
   my $params = {constraints => 
 				{
 				 feature_types => [$ftype],
@@ -604,23 +603,23 @@ sub fetch_attribute_set_config_by_FeatureSet{
 	  #my ($attr_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
 
 	  my $species_id = $self->db->species_id;
-	  my ($attr_ids) = $self->db->dbc->db_handle->selectrow_array("SELECT string from regbuild_string where name='${string_key}' and species_id=$species_id");
+	  my ($attr_ids) = $self->db->dbc->db_handle->selectrow_array(
+	   "SELECT string from regbuild_string where name='${string_key}' and species_id=$species_id");
 
 	  if (! defined $attr_ids) {
-      warn("Cannot detect attribute set as regbuild_string table does not contain $string_key");
+        warn("Cannot detect attribute set as regbuild_string table does not contain $string_key");
 	  } 
-    else {
+      else {
+        my $regex = ',\s*';#to avoid syntax highlighting anomalies
 
-      foreach my $aid (split/,\s*/, $attr_ids) {
-        $self->{attribute_set_config}->{$aid} = 1;
-      }
+        foreach my $aid (split/$regex/, $attr_ids) {
+          $self->{attribute_set_config}->{$aid} = 1;
+        }
 	  }
 	}
 
   return $self->{attribute_set_config}->{$fset->dbID};
 }
-
-
 
 
 sub fetch_feature_set_filter_counts{
@@ -726,7 +725,12 @@ sub fetch_feature_set_filter_counts{
 #All these _constrain methods must return a valid constraint string, and a hashref of any other constraint config
 
 sub _constrain_projects{
-  my ($self, $egs) = @_;
+  return $_[0]->_constrain_experimental_groups($_[1]);
+}
+
+
+sub _constrain_experimental_groups{
+  my ($self, $egs, $projects_only) = @_;
 
   #enable query extension
   my $constraint_conf = {tables => [['input_set', 'inp'], ['experiment', 'e']]};
@@ -741,7 +745,7 @@ sub _constrain_projects{
   foreach my $eg (@$egs) {
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $eg);
     
-    if (! $eg->is_project) {
+    if ( $projects_only && (! $eg->is_project) ) {
       throw("You have passed an ExperimentalGroup which is not a project:\t".$eg->name);
     }
     
@@ -754,6 +758,8 @@ sub _constrain_projects{
   
   return ($constraint, $constraint_conf);
 }
+
+
 
 
 sub _constrain_evidence_types {
