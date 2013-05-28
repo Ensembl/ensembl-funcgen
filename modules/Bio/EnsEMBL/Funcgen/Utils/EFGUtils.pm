@@ -728,9 +728,8 @@ sub create_Storable_clone {
 }
 
 
-=head2
+=head2 scalars_to_objects
 
-  Name       : scalars_to_objects
   Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
   Arg [2]    : String - class name of object to retrieve e.g. 'CellType'
   Arg [3]    : String - method name to use e.g. 'fetch_by_name'
