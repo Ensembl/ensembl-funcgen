@@ -15,17 +15,18 @@ release=72
 #only required if we want to dump specific sets i.e. not the complete reg build set
 #fset_names="RegulatoryFeatures:MultiCell RegulatoryFeatures:ES RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:NPC RegulatoryFeatures:MEL"
 
-dbname="homo_sapiens_funcgen_${release}_37"
-dbhost='ens-staging1'
+#dbname="homo_sapiens_funcgen_${release}_37"
+#dbhost='ens-staging1'
 
-#dbname="mus_musculus_funcgen_${release}_38"
-#dbhost='ens-staging2'
+dbname="mus_musculus_funcgen_${release}_38"
+dbhost='ens-staging2'
 
 
 
 #feature_type='AnnotatedFeature'
 #feature_type='RegulatoryFeature'
-feature_type='MotifFeature'
+#feature_type='MotifFeature'
+feature_type='SegmentationFeature'
 
 #fset_names="${feature_type}s" #Special set name to dump all Regulatory/Annotated/MotifFeatures in build
 #Does not yet support RegulatoryFeatures as these seem to get dumped to a merged file with no cell type info
