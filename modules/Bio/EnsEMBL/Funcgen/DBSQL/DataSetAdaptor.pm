@@ -443,28 +443,14 @@ sub store{
 }
 
 
-=head2 store_updated_sets
 
-  Args       : List of previously stored Bio::EnsEMBL::Funcgen::DataSet objects
-  Example    : $dsa->store_updated_sets(@dsets);
-  Description: Updates added supporting sets for a given previously stored DataSet
-  Returntype : ARRAYREF of updated DataSet objects
-  Exceptions : Throws if a list of DataSet objects is not provided
-               Throws if DataSet has not been previosuly stored
-               Throws if supporting set has not been previously stored
-               ? should we throw or warn if a set has been deleted?
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-  #This needs to cahnge to an arrayref of dset and an overwrite flag
+### DEPRECATED ###
 
 
-sub store_updated_sets{
+sub store_updated_sets{ #DEPRECATED IN v72
 	my ($self, $dsets, $overwrite) = @_;
 	
-	throw('store_updated_sets is not longer support, please rollback and recreate the DataSet');
+	throw('store_updated_sets is not longer supported, please rollback and recreate the DataSet');
 
 	throw('Must pass a list of DataSet objects to store') if(! @$dsets || $#{$dsets} < 0);
 	my ($sql);
