@@ -1390,7 +1390,6 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "72");
-
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_b.sql|associated_xref');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_c.sql|added_type_to_supporting_set_PK');
@@ -1428,8 +1427,8 @@ CREATE TABLE `meta_coord` (
 
 @column associated_xref_id Associated xref id. Primary key, internal identifier
 @column object_xref_id Object xref id this associated xref is linked to. Foreign key linked to the @link object_xref table
-@column xref_idXref which is the associated term. Foreign key linked to the @link xref table
-@column source_xref_idXref which is source of this association. Foreign key linked to the @link xref table
+@column xref_id Xref which is the associated term. Foreign key linked to the @link xref table
+@column source_xref_id Xref which is source of this association. Foreign key linked to the @link xref table
 @column condition_type The type of condition this link occurs in e.g. evidence, from, residue or assigned_by
 @column associated_group_id Foreign key to allow for @link associated_group
 @column rank The rank in which the association occurs within an @link associated_group
