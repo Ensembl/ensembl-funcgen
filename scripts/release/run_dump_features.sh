@@ -25,10 +25,10 @@ dbhost='ens-staging2'
 
 #feature_type='AnnotatedFeature'
 #feature_type='RegulatoryFeature'
-#feature_type='MotifFeature'
-feature_type='SegmentationFeature'
+feature_type='MotifFeature'
+#feature_type='SegmentationFeature'
 
-#fset_names="${feature_type}s" #Special set name to dump all Regulatory/Annotated/MotifFeatures in build
+fset_names="${feature_type}s" #Special set name to dump all Annotated/MotifFeatures in build
 #Does not yet support RegulatoryFeatures as these seem to get dumped to a merged file with no cell type info
 #and merge does not handle this yet anyway
 
@@ -38,12 +38,15 @@ feature_type='SegmentationFeature'
 # select replace(group_concat(name), ",", " ") from feature_set where type = 'regulatory' ;
 
 # Mouse:
-fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:ES RegulatoryFeatures:NPC RegulatoryFeatures:MultiCell RegulatoryFeatures:MEF RegulatoryFeatures:MEL"
+#fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:ES RegulatoryFeatures:NPC RegulatoryFeatures:MultiCell RegulatoryFeatures:MEF RegulatoryFeatures:MEL"
 
 # Human:
+# Regulatory
 #fset_names="RegulatoryFeatures:NHEK RegulatoryFeatures:K562 RegulatoryFeatures:GM06990 RegulatoryFeatures:MultiCell RegulatoryFeatures:IMR90 RegulatoryFeatures:HSMM RegulatoryFeatures:HepG2 RegulatoryFeatures:NH-A RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:CD4 RegulatoryFeatures:HUVEC RegulatoryFeatures:HMEC RegulatoryFeatures:H1ESC RegulatoryFeatures:GM12878";
-
+# Segmentation
+#fset_names="Segmentation:HUVEC Segmentation:K562 Segmentation:GM12878 Segmentation:H1ESC Segmentation:HeLa-S3 Segmentation:HepG2";
 #Should do this for all, so we don't have to specify -feature_sets
+
 dnadbhost=$dbhost
 dnadbuser=$USER
 
