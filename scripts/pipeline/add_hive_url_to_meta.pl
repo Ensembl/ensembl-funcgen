@@ -25,7 +25,7 @@ add_hive_url_to_meta.pl - Sets/checks the hive url in the meta table
 
 =head1 SYNOPSIS
 
-add_hive_url_to_meta.pl PARAMETERS 
+add_hive_url_to_meta.pl -host $host -user $user -pass $pass -dbname $dbname -url $url -pipeline $pname [ -port $port -help -man ]
 
 =head1 PARAMETERS
 
@@ -36,7 +36,7 @@ add_hive_url_to_meta.pl PARAMETERS
     -pass     PASSWORD    DB password
     -dbname   DBNAME      DB name
     -url      HIVE_URL    The url of your hive DB e.g. 
-                            'mysql://DB_USER:DB_PASS@DB_HOST:DB_PORT/DB_NAME'
+                            mysql://DB_USER:DB_PASS@DB_HOST:DB_PORT/DB_NAME
     -pipeline PIPELINE    Name of the pipeline (i.e. $ENV_NAME from your derivative pipeline.env)
 
   Optional:
@@ -60,11 +60,11 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Pod::Usage;
-
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my ($pass, $host, $user, $dbname, $species, $url, $pname, $help, $man);
 my $port = 3306;
-my @tmp_args = @_;
+my @tmp_args = @ARGV;
 
 GetOptions (
             'pass:s'     => \$pass,
@@ -76,10 +76,10 @@ GetOptions (
             'url=s'      => \$url,
             'pipeline=s' => \$pname,
       
-            'help'             => sub { pos2usage(-exitval => 0); }, #do we need verbose here?
+            'help'             => sub { pod2usage(-exitval => 0); }, #do we need verbose here?
             #removed ~? frm here as we don't want to exit with 0 for ?
             
-            'man|m'            => sub { pos2usage(-exitval => 0,  -verbose => 2); },
+            'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
            ) or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
            
 
