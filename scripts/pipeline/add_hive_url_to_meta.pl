@@ -25,22 +25,22 @@ add_hive_url_to_meta.pl - Sets/checks the hive url in the meta table
 
 =head1 SYNOPSIS
 
-add_hive_url_to_meta.pl -host $host -user $user -pass $pass -dbname $dbname -url $url -pipeline $pname [ -port $port -help -man ]
+add_hive_url_to_meta.pl -host <string> -user <string> -pass <string> -dbname <string> -url <string> -pipeline <String> [ -port <int> -help -man ]
 
 =head1 PARAMETERS
 
   Mandatory:
-    -host     HOST        DB host
-    -port     PORT        DB port (default = 3306)
-    -user     USER        DB user name
-    -pass     PASSWORD    DB password
-    -dbname   DBNAME      DB name
-    -url      HIVE_URL    The url of your hive DB e.g. 
+    -host     <string>  DB host
+    -user     <string>  DB user name
+    -pass     <string>  DB password
+    -dbname   <string>  DB name
+    -url      <string>  The url of your hive DB e.g. 
                             mysql://DB_USER:DB_PASS@DB_HOST:DB_PORT/DB_NAME
-    -pipeline PIPELINE    Name of the pipeline (i.e. $ENV_NAME from your derivative pipeline.env)
+    -pipeline <string>  Name of the pipeline (i.e. $ENV_NAME from your derivative pipeline.env)
 
   Optional:
-    -species  SPECIES     Only required where species is not already set in meta or for multi species DBs
+    -port     <int>     DB port (default = 3306)  
+    -species  <string>  Only required where species is not already set in meta or for multi species DBs
     -help
     -man
 
