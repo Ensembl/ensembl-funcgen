@@ -113,7 +113,7 @@ sub compose_constraint_query{
   }
    
   my @constraints;
-
+  
   if( exists ${$params}{constraints}){
 		
 	my @filter_names = keys (%{$params->{constraints}});
@@ -131,7 +131,7 @@ sub compose_constraint_query{
       if(defined $params->{constraints}{$constraint_key}){
 
         my ($constraint, $constraint_conf) = 
-          $self->$constrain_method($params->{constraints}{$constraint_key});
+          $self->$constrain_method($params->{constraints}{$constraint_key}, $params);
         
         #If there is no constraint defined then the constrain method is invalid
         #or will not return any records hence bail out here?  
@@ -710,11 +710,14 @@ sub status_filter{
 
 =head2 _get_status_name_id
 
-  Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
+  Arg [1]    : String - status_name e.g. IMPORTED, DISPLAYABLE
+  Arg [2]    : Boolean - optional flag to throw error if status_name is not 
+               present in the DB.
   Example    : my $status_id = $self->_get_status_name_id('IMPORTED');
-  Description: Retrieves the dbID of a given status_name
-  Returntype : INT
-  Exceptions : None
+  Description: Retrieves the dbID of a given status_name record
+  Returntype : Int
+  Exceptions : Throws if status name argument not defined or if throw flag is
+               set and status_name is not in the DB.
   Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
   Status     : At risk - Move to Status?
 
@@ -722,18 +725,24 @@ sub status_filter{
 
 
 sub _get_status_name_id{
-  my ($self, $status) = @_;
+  my ($self, $status, $throw) = @_;
+
+  if(! defined $status){
+    throw('You must provide a status_name string argument'); 
+  }
 
   my $sql = "SELECT status_name_id from status_name where name='$status'";
   my ($status_id) = $self->db->dbc->db_handle->selectrow_array($sql);
 
-  #To force manual addition of the status_name
-  #need to make sure all status_names which are explicitly used by API
-  #are stored in all DBs, else we could find ourselves with broken code
-  #for sparsely populated DBs
-
   if (! $status_id){
-    warn("Status name $status is not valid.  Maybe you need to add it to the status_name table?");
+    if($throw){
+      throw("Status name $status is not valid. ".
+        'Maybe you need to add it to the status_name table?');
+    }
+    else{
+      warn("Status name $status is not valid. ".
+        'Maybe you need to add it to the status_name table?');
+    }
   }
 
   return $status_id;
@@ -1043,23 +1052,26 @@ sub build_feature_class_name{
 
 
 #todo allow OR logic via a different method?
+#todo move string_params_exists to caller or just use directly?
+#and never assume if exists is true?
 
 sub _constrain_states {
-  my ($self, $states) = @_;
+  my ($self, $states, $params) = @_;
   
   if(! (defined $states && 
         (ref($states) eq 'ARRAY') &&
         (scalar(@$states) > 0) )){
     throw('Must pass an Arrayref of states (strings) to contrain by');        
   }
-  	   
   	        
   my @tables = $self->_tables;
   my ($table_name, $syn) = @{$tables[0]};
   my ($status_table, $sn_ids_clause);
   
   
-  my @sn_ids = sort {$a<=>$b} (map $self->_get_status_name_id($_) || 'NULL', @$states);
+  my @sn_ids = sort {$a<=>$b} 
+                (map $self->_get_status_name_id($_, $params->{string_param_exists}) || 
+                                                'NULL', @$states);
   #|| NULL here accounts for absent status_names
   #i.e. $sn_ids_clause will never be true 
   
