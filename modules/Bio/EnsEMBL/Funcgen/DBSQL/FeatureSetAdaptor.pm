@@ -54,80 +54,20 @@ use vars qw(@ISA);
 #use base does not import %true_tables or %tables or in fact %sql_types
 #so cannot use base for any of the adaptors
 
-#Exported from BaseAdaptor
-#$true_tables{feature_set} = [  [ 'feature_set', 'fs' ] ];
-#This derefs as we push onto tables
-#and we don't want to alter true table
-#@{$tables{feature_set}} = @{$true_tables{feature_set}};
-
-
-#Look into using ReadOnly::array?
-#This will provide true read only, but will need to be our'd and export/imported
-#use in conjuction?
 #use Readonly;
 #Readonly::Array my @true_tables => ([ 'feature_set', 'fs' ]);
-#use constant TRUE_TABLES => [ @true_tables ];
-#does not work
+#use constant TRUE_TABLES = [ @true_tables ];
 
 use constant TRUE_TABLES => [[ 'feature_set', 'fs' ]];
 use constant TABLES      => [[ 'feature_set', 'fs' ]];
 
 #Currently these need to be listrefs [[], ...] and push directly onto TABLE rather than _tables
 
-
-
-
-#@{$tables{feature_set}} = (TRUE_TABLES);
-#use constant TABLES => (TRUE_TABLES); #this does not deref, hence pushes affect TRUE_TABLES!
-
-
 #use constant here still allows the contents of the ref to be modified
 #Simply prevents need for import/export
 
-#Now change %tables to an attribute!
-#Can't set as an attribute here, would have to be done in new or _tables
-
-
-#Had to use hashes to prevent different adaptors resetting package level global vars
-#TRUE_TABLES does not require this.
-
-
 #No need for true_final_clause
 	
-
-=head2 fetch_all
-
-  Arg [1]    : optional HASHREF - Parameter hash containing contraints config lists e.g.
-                  {'constraints' => 
-                    {
-                     cell_types     => [$cell_type, ...],     # Bio::EnsEMBL::Funcgen::CellType
-                     feature_types  => [$ftype, ...],         # Bio::EnsEMBL::Funcgen::FeatureType
-                     evidence_types => [$evidence_type, ...], # String e.g. 'DNase1 & TFBS' or 'Hists & Pols'
-                     status         => $status_name,          # String e.g. IMPORTED
-                     analyses       => [$analysis, ...]       # Bio::EnsEMBL::Analysis
-                     projects       => [$proj_name, ...]      # String (experimental_group.name is_project=1) e.g. ENCODE
-                    }
-                  } 
-  Example    : 
-  Description: Retrieves a list of FeatureSets. Optional parameters hash allows for flexible query terms.
-  Returntype : ARRAYREF of Bio::EnsEMBL::FeatureSet objects
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all{
-  my ($self, $params_hash) = @_;
-
-  my $results = $self->generic_fetch($self->compose_constraint_query($params_hash));
-  #@{$tables{feature_set}} = @{$true_tables{feature_set}}; #in case we have added tables e.g. status
-  $self->reset_true_tables;
-
-  return $results;
-}
-
-
 
 =head2 fetch_all_by_FeatureType
 
@@ -343,26 +283,6 @@ sub fetch_by_name {
 
   return (defined $sql) ? $self->generic_fetch($sql)->[0] : [];
   
-}
-
-=head2 _tables
-
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
-  Returntype : List of listrefs of strings
-  Exceptions : None
-  Caller     : Internal
-  Status     : Medium Risk
-
-=cut
-
-sub _tables {
-	my $self = shift;
-
-	#return @{$tables{feature_set}};
-  return ( @{$self->TABLES} );
 }
 
 =head2 _columns
