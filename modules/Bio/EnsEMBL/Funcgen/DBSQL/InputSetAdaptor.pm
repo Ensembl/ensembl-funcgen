@@ -60,38 +60,6 @@ use constant TABLES      => [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss'
 
 
 
-
-=head2 fetch_all
-
-  Arg [1]    : optional HASHREF - Parameter hash containing contraints config e.g.
-                  {'constraints' => 
-                    {
-                     cell_types     => [$cell_type, ...], #Bio::EnsEMBL::Funcgen::CellType
-                     feature_types  => [$ftype, ...],     #Bio::EnsEMBL::Funcgen::FeatureType
-                     experiments    => [$ecp, ...],       #Bio::EnsEMBL::Funcgen::Experiment
-                     format         => $inpset_format,    #String e.g. SEQUENCING
-                    }
-                  } 
-  Example    : 
-  Description: Retrieves a list of InputSets. Optional paramters hash allows for flexible query terms.
-  Returntype : ARRAYREF of Bio::EnsEMBL::InputSet objects
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all{
-  my ($self, $params_hash) = @_;
-
-  my $results = $self->generic_fetch($self->compose_constraint_query($params_hash));
-  $self->reset_true_tables; #in case we have added tables e.g. status
-
-  return $results;
-}
-
-
-
 =head2 fetch_all_by_FeatureType
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
@@ -170,24 +138,6 @@ sub fetch_by_name {
   return $self->generic_fetch("inp.name = ?")->[0];
 }
 
-=head2 _tables
-
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
-  Returntype : List of listrefs of strings
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-sub _tables {
-  my $self = shift;
-    
-  return @{$self->TABLES};
-}
 
 =head2 _columns
 
@@ -220,6 +170,7 @@ sub _columns {
     
 }
 
+
 =head2 _left_join
 
   Args       : None
@@ -241,9 +192,6 @@ sub _left_join {
     
   return (['input_subset', 'inp.input_set_id = iss.input_set_id']);
 }
-
-
-
 
 
 =head2 _objs_from_sth
@@ -268,11 +216,11 @@ sub _objs_from_sth {
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
   my $exp_adaptor = $self->db->get_ExperimentAdaptor();
+  
   $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format, 
                      \$vendor, \$name, \$type, \$inp_rep, \$ess_name, \$ess_id,
                      \$archive_id, \$display_url, \$iss_rep, \$is_control);
   
-
   while ( $sth->fetch() ) {
 
     if(! $eset || ($eset->dbID() != $dbid)){
