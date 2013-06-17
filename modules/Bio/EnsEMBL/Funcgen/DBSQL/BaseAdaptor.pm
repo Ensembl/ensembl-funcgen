@@ -104,10 +104,6 @@ use DBI qw(:sql_types);
 
 #todo change this to an _private method?
 
-#todo change this to return undef on failure?
-#This would require testing in the caller, so as not to pass call
-#generic_fetch with an undef constraint argument
-
 sub compose_constraint_query{
   my ($self, $params) = @_;
 
@@ -297,7 +293,7 @@ sub fetch_all {
   }
   
   if($self->can('TRUE_TABLES')){
-    $self->_reset_true_tables; 
+    $self->reset_true_tables; 
   }
   #todo move this to generic fetch?
 
