@@ -21,11 +21,11 @@
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::Utils::Helper
-
+ 
 =head1 SYNOPSIS
 
 
- e.g.
+ e.g. 
 
 
  my $object = Bio::EnsEMBL::Object->new
@@ -80,10 +80,14 @@ B<This program> performs several debugging and logging functions, aswell as prov
 package Bio::EnsEMBL::Funcgen::Utils::Helper;
 
 use Bio::Root::Root;
-use Data::Dumper;
+use Data::Dumper qw(Dumper);
 use Bio::EnsEMBL::Utils::Exception qw (throw stack_trace);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (get_date);
+use Bio::EnsEMBL::Funcgen::FeatureSet;
+use Bio::EnsEMBL::Funcgen::DataSet;
+use Bio::EnsEMBL::Funcgen::ResultSet;
+
 
 #use Devel::Timer;
 use Carp;    #? Can't use unless we can get it to redirect
@@ -93,6 +97,9 @@ use strict;
 use vars qw(@ISA);
 @ISA = qw(Bio::Root::Root);
 
+#default dump level
+#set this to debug level + 1?
+$Data::Dumper::Maxdepth = 2;
 
 my @rollback_tables = ( 'data_set',   'feature_set',
                         'result_set', 'input_set',
@@ -104,27 +111,27 @@ my @rollback_tables = ( 'data_set',   'feature_set',
 #values here used in > ops below, to implement
 #hierarchical rollback
 
-my %rollback_modes =
+my %rollback_modes = 
   (
    feature_set => 1,
    #deletes all associated SetFeatures (etc.) and revokes_states on FeatureSet
    #full delete also removes feature/data/supporting_set records
-
+ 
    #data_set => 2, #This is now handled by feature_set mode
 
 
    result_set => 3,
    #revokes_states and remove dbfile_registry records
    #full_delete also removes result_set/_input records
-
+        
    #add final levels
    input_set  => 4,
    #This is moot as there isn't really a rollback mode for InputSets
    #apart from revoking the states which can be done directly
    #should have delete_InputSet instead?
-
+   
    #input_subsets may be done independantly? as they may belong to >1 input_set/experiment?
-
+   
    experiment => 5,
 );
 
@@ -175,14 +182,15 @@ sub new {
   # objects private data and default values
   #Not all of these need to be in main
 
-  %attrdata = (
+  %attrdata = 
+    (
     _tee         => $main::_tee,
     _debug_level => $main::_debug_level,
     _debug_file  => $main::_debug_file,
     _log_file    => $main::_log_file,   #default should be set in caller
-    _no_log      => $main::_no_log
-    ,    #suppresses log file generation if log file not defined
-    _default_log_dir => $main::_default_log_dir, );
+    _no_log      => $main::_no_log,    #suppresses log file generation if log file not defined
+    _default_log_dir => $main::_default_log_dir, 
+    );
 
   # set each class attribute using passed value or default value
   foreach my $attrname ( keys %attrdata ) {
@@ -319,6 +327,7 @@ sub new {
 sub DESTROY {
   my ($self) = @_;
 
+  #This prevents having to explicitly call report
   $self->report;
 
   if ( $self->{_log_file} ) {
@@ -393,15 +402,14 @@ sub log {
     $message .= ' - ' . localtime();
   }
 
-  $message .= "\n" if !$no_return;
+  $message .= "\n" if ! $no_return;
 
   print $LOGFILE "::\t$message";
 
-# Add to debug file if not printing to STDERR?
-# only if verbose?
-# this would double print everything to STDOUT if tee and debug has not redefined STDERR
-
-  $self->debug( 1, $message );
+  if( ! $self->{'_no_log'}){
+    $self->debug( 1, $message );
+  }
+  
 } ## end sub log
 
 ################################################################################
@@ -429,14 +437,30 @@ sub report {
     push @{ $self->{'_report'} }, $message;
   }
   elsif ( scalar( @{ $self->{'_report'} } ) ) {
-    print $LOGFILE "\n::\tSUMMARY REPORT\t::\n";
-    print $LOGFILE join( "\n", @{ $self->{'_report'} } ) . "\n";
+    my $report = "\n::\tSUMMARY REPORT\t::\n".
+      join( "\n", @{ $self->{'_report'} } ) . "\n";
+    print $LOGFILE $report;
+    
+    if($self->{report_fail}){
+      die($report); 
+    }
 
     $self->{'_report'} = [];
   }
 
   return;
 }
+
+sub report_fail{
+  my ( $self, $msg, @args ) = @_;
+  $self->{report_fail} = 1;
+  return $self->report("FAIL:\t".$msg, @args); 
+}
+
+
+#add report_warning here
+#should print to STDERR or $DBGFILE?
+
 
 ################################################################################
 
@@ -502,9 +526,23 @@ sub log_error {
 ###############################################################################
 
 sub debug {
-  my ( $self, $level, $message ) = @_;
+  my ( $self, $level, $message, $data, $depth ) = @_;
 
 #Can we not detect whther message is a scalar, array or hash and Dump or print accordingly?
+
+  if($data){
+    my $tmp_depth = $Data::Dumper::Maxdepth;
+     
+    if($depth &&
+       ($depth != $Data::Dumper::Maxdepth) ){ 
+      $Data::Dumper::Maxdepth = $depth;
+    }
+  
+    $message.= Dumper($data)."\n";
+    
+    $Data::Dumper::Maxdepth = $tmp_depth;;
+  }
+
 
   my ( @call, $cnt, $prog_name, $prog_line, $call_name, $call_line );
 
@@ -529,8 +567,8 @@ sub debug {
     }
 
     #This still attempts to print if file not opened
-    print $DBGFILE
-"debug $message\t: [$$ - $prog_name:$prog_line  $call_name:$call_line]\n";
+    print $DBGFILE "DEBUG :: $message\t: ".
+      "[$$ - $prog_name:$prog_line  $call_name:$call_line]\n";
 
     #carp("carping $message");
   }
@@ -538,34 +576,6 @@ sub debug {
 
 ################################################################################
 
-=head2 debug_hash
-
- Description : Method to write the contents of passed hash to debug output.
-
- Args        : int: debug level and hashref.
-
- ReturnType  : none
-
- Example     : $Helper->debug_hash(3,\%hash);
-
- Exceptions  : none
-
-=cut
-
-################################################################################
-
-sub debug_hash {
-  my ( $self, $level, $hashref ) = @_;
-
-  my ($attr);
-
-  # if debug on at the requested level then output the passed hash
-  if ( defined $self->{_debug_level} &&
-       $level <= $self->{_debug_level} )
-  {
-    print $DBGFILE Data::Dumper::Dumper( \$hashref ) . "\n";
-  }
-}
 
 ################################################################################
 
@@ -769,6 +779,1249 @@ sub get_regbuild_set_states {
 
   return ( \@dset_states, \@rset_states, \@fset_states );
 } ## end sub get_regbuild_set_states
+
+=head2 define_ResultSet
+
+  Arg [1]    : Hash - set constructor parameters:
+                            -dbadaptor    Bio::EnsEMBL::Funcgen::DBAdaptor
+                            -name         Data/FeatureSet/ResultSet name to create
+                            -feature_set_analysis FeatureSet Bio::EnsEMBL::Analysis
+                            -result_set_analysis  FeatureSet Bio::EnsEMBL::Analysis
+                            -feature_class e.g. annotated or regulatory
+                            -description  FeatureSet description
+                            -recovery     Allows definition of extant sets so long as they match
+                            -append       Boolean - Forces import on top of previously imported data
+                            -rollback     Rolls back product feature set. ####Add permitted values here!
+                            -input_sets  Complete set of pre-stored supporting or input sets for this DataSet
+                            -slices       ARRAYREF of Slices to rollback
+  Example    : my $dset = $self->define_ResultSet(%params);
+  Description: Checks whether set is already in DB based on set name, feature_type, cell_type and analysis
+               Rolls back features if -rollback is flag set appropriately, or creates new ResultSet if not present.
+               This should only be used for creation or recovery of a ResultSet. Normal access to
+               a pre-existing ResultSet should be via ResultSetAdaptor::fetch_by_name
+  Returntype : Bio::EnsEMBL::Funcgen::DataSet
+  Exceptions : Throws if DBAdaptor param not valid
+  Caller     : Importers and Parsers
+  Status     : At risk
+
+=cut
+
+#There is some overlap between this and the new migration code, can it be reused?
+#The migration code deals with two different DBs
+#our comparisons are between an unstored object and one fetched from the DB.
+
+sub define_ResultSet {
+  my $self = shift; #Need to modify the stack here before passing to _validate_Set_config
+  my ($rollback_level, $ctype, $ftype, $db, $inp_sets, $slices) =
+    $self->_validate_Set_config(@_);#this could also return the following if these are generic
+
+  # feature_class can be infered from the feature_type from the inp sets
+  my ($anal, $rset_mode) = rearrange( ['RESULT_SET_ANALYSIS', 'RESULT_SET_MODE'], @_ );
+                
+  #slight hack until we sort out 5mC class and db_file_registry.format
+  #also overlaps with FeatureSet -feature_cl
+  my $fclass = ($inp_sets->[0]->feature_type eq '5mC') ? 'dna_methylation' :
+    'result';
+   
+  my $name = $inp_sets->[0]->name;
+  
+  #This will catch mandatory params
+  my $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
+    (
+     -name          => $name,
+     -feature_type  => $ftype,
+     -cell_type     => $ctype,
+     -support       => $inp_sets,
+     -analysis      => $anal,
+     -feature_class => $fclass,
+    );
+ 
+  my $rset_adaptor = $db->get_ResultSetAdaptor; 
+  
+  #Can only ever be one with all arguments define unique key
+  my ($stored_rset)  = @{$rset_adaptor->fetch_all_by_name($name, $ftype, $ctype, $anal, $fclass)};
+  
+    
+  return $self->_validate_rollback_Set($stored_rset, $rset, 'result_set',
+                                       $rollback_level, $rset_adaptor, $slices, $rset_mode);
+} ## end sub define_ResultSet
+
+
+
+
+
+sub define_FeatureSet {
+  my $self = shift; #Need to modify the stack here before passing to _validate_Set_config
+  my ($rollback_level, $ctype, $ftype, $db, $ssets, $slices) =
+    $self->_validate_Set_config(@_);
+ 
+  my ($name, $desc, $fclass, $dlabel, $anal) = 
+    rearrange(['NAME','DESCRIPTION', 'FEATURE_CLASS', 
+               'DISPLAY_LABEL', 'FEATURE_SET_ANALYSIS'], @_ );
+                
+  #This will catch mandatory params
+  my $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
+    (
+     -name          => $name,
+     -feature_type  => $ftype,
+     -cell_type     => $ctype,
+     -analysis      => $anal,
+     -feature_class => $fclass,
+     -description   => $desc,
+     -display_label => $dlabel,
+     -input_set     => $ssets->[0],
+    );
+ 
+  my $fset_adaptor = $db->get_FeatureSetAdaptor; 
+  my $stored_fset  = $fset_adaptor->fetch_by_name($name);
+  
+  return $self->_validate_rollback_Set($stored_fset, $fset, 'feature_set',
+                                       $rollback_level, $fset_adaptor, $slices);
+} ## end sub define_FeatureSet
+
+
+sub _validate_rollback_Set {
+  my ($self, $stored_set, $new_set, $set_type, $rollback_level, $adaptor, $slices, $set_mode) = @_; 
+  #set_type is not validated
+  #assumes other vars are pre-validated by _validate_Set_config
+
+  (my $rollback_method = ucfirst($set_type)) =~ s/_([a-z])/uc($1)/eg;
+  $rollback_method =~ s/_//g;
+  $rollback_method = 'rollback_'.$rollback_method;
+
+
+  if($set_mode){
+    #This rollback shortcut is a bit result set specific, 
+    #but could be generic hence why it is here
+    
+    if($set_type ne 'result_set'){
+      throw('set_mode is currently only valid for result_sets'); 
+    }
+    elsif($set_mode eq 'none'){
+      
+      if($stored_set){
+    
+        if($rollback_level < $rollback_modes{result_set}){
+          throw('Cannot import with -result_set_mode none with a pre-existing result set.'.
+                ' Please specify -rollback result_set');
+        }
+        else{ #rollback directly here as we aren't concerned with diffs
+          $self->$rollback_method($stored_set, 'full'); 
+        }
+      }
+   
+      return;  #Bail out early as we don't want a ResultSet!
+    }
+    elsif($set_mode ne 'recover'){
+     throw("Invalid -result_set_mode $set_mode. ".
+           'Please omit or specify -result_set_mode none|recover'); 
+    }
+  }
+  
+  if($stored_set &&
+     ($rollback_level >= $rollback_modes{$set_type})){
+    #This will throw if there are any diffs other than status entries      
+    $self->_compare_set_for_rollback($new_set, $stored_set, $set_type, 
+                                     $rollback_level, $slices);
+  }
+ 
+  #FINALLY DO ROLLBACK
+  #Independant of whether there are diffs as there maybe some fault with the 
+  #data which has not been caught by the diffs e.g. truncated input
+  
+  warn "storedset is $stored_set";
+    
+  if( ($rollback_level >= $rollback_modes{$set_type}) ||
+      ($stored_set && ! $stored_set->has_status('IMPORTED') ) ||
+      $set_mode ) {        
+    #Default full delete for an set with some differences
+    my $delete_mode = 'full';
+    
+    if ($rollback_level < $rollback_modes{$set_type}) { 
+      #Must be an identical set without IMPORTED status
+      #We just want to rollback the features
+      $delete_mode = $set_mode; #undef or recover (which ignores dependant sets)
+    } 
+    elsif($set_mode && 
+          ($set_mode eq 'recover')){ 
+      #Also have rollback set for this set
+          #currently this is always 'recover' 
+      throw('Cannot specify recover and rollback for '.$stored_set->name.' '.
+            $set_type.'. Please omit one.');
+    } 
+    #else{ $delete_mode = 'full';}#$rollback >= $rollback_modes{$set_type} && $set_mode
+    #would have to chang ethis if we add more set_modes 
+    
+  
+    #Handle full delete and slices clash as rollback_Data/ResultSet don't take slices arg
+    if ($slices && ($delete_mode eq 'full')) {
+      throw('Cannot do a \'full\' delete on a sub set of -slices');  
+    }
+    
+    # DO THE ROLLBACK
+    $self->$rollback_method($stored_set, $delete_mode, $slices);
+    
+    # UNDEF STORED SET FOR FULL DELETE
+    if($delete_mode eq 'full'){
+      undef $stored_set;
+    }      
+  } 
+  
+  if(! defined $stored_set){
+    ($stored_set) = @{ $adaptor->store($new_set) };
+  }
+
+  return $stored_set;
+}
+
+
+#This assmes we will always have a FeatureSet and a ResultSet
+
+sub _validate_Set_config {
+  my $self = shift;
+
+  my ($db, $rollback, $slices, $ssets, $ftype, $ctype, $fclass ) = rearrange
+   ( ['DBADAPTOR', 'ROLLBACK', 'SLICES', 'SUPPORTING_SETS', 
+      'FEATURE_TYPE', 'CELL_TYPE', 'FEATURE_CLASS'], @_ );
+ 
+  #Currently sets FeatureSet and ResultSet f/ctypes to same value  
+ 
+  if($fclass eq 'annotated'){
+    #Currently 1 InputSet is mandatory for FeatureSet & ResultSet
+    
+    if( ! ( defined $ssets &&
+            (ref($ssets) eq 'ARRAY') &&
+            (scalar(@$ssets) == 1) &&
+            (ref($ssets->[0]) eq 'Bio::EnsEMBL::Funcgen::InputSet')) ){
+         
+      $self->debug(1, "Sets pass are:\n", $ssets);
+      throw('Currently must provide 1 defined InputSet is permitted for a Result/FeatureSet');
+   
+    }
+        
+    #This isn't full robust as we are not testing if they are defined
+    
+    if($ctype->name ne $ssets->[0]->cell_type->name){
+      throw('Found mismatch between '.ref($ssets->[0]).
+        " CellType and CellType specified:\n\t".$ssets->[0]->cell_type->name.
+        "\t".$ctype->name);
+    }
+    
+    if($ftype->name ne $ssets->[0]->feature_type->name){
+      throw('Found mismatch between '.ref($ssets->[0]).
+        " FeatureType and FeatureType specified:\n\t".$ssets->[0]->feature_type->name.
+        "\t".$ftype->name);
+    }
+    
+    
+    
+    
+              
+  }
+  #This will be caught when calling Set::new in caller
+  #elsif( ! ($ctype && $ftype)){#allow MultiCell and different ftypes for regbuild
+  #  throw('Must specify a -cell_type and -feature_type when creating an \''.
+  #        $fclass.'\' FeatureSet');
+  #}
+
+             
+  my $rollback_level = 0;
+
+  if ($rollback) {
+
+    if ( ! exists $rollback_modes{$rollback} ) {
+      throw("$rollback is not a valid rollback mode, please specify one of the following:\n\t"
+          . join( ', ', keys %rollback_modes ) . "\n" );
+    }
+    
+    $rollback_level = $rollback_modes{$rollback};
+  }
+
+  if ( $slices && ( ref($slices) ne 'ARRAY' ) ) {
+    throw('-slices param must be an ARRAYREF of Bio::EnsEMBL::Slice objects');
+    #Rest of slice validation done in other methods
+  }
+
+  #Check mandatory params
+  if ( ! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))) {
+    throw('Must provide a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+  }
+
+  
+
+  #set validation now done in define set methods as is conditional on feature_class
+  #
+
+  #returns rearranged vars for convenience 
+  return ( $rollback_level, $ctype, $ftype, $db, $ssets, $slices);  
+}
+
+
+#This is a controlling method, which calls define_Result/FeatureSet
+#can we extend this for use in the registration pipeline
+#by adding define_InputSet & define_InputSubset etc.
+
+sub define_DataSet {
+  my $self = shift; 
+  
+  my ($ssets, $fclass, $name, $db) = 
+    rearrange(['SUPPORTING_SETS', 'FEATURE_CLASS' ,'NAME', 'DBADAPTOR'], @_ );
+  #No need to _validate_Set_config here as it will be done in the below methods
+ 
+  
+  #Always create the FeatureSet first
+  #This will rollback_DataSet if required  
+  my $fset = $self->define_FeatureSet(@_);
+  
+  #Always create the ResultSet before the DataSet
+  #so we can pass it as support
+  my $rset;
+  
+  if($fclass eq 'annotated'){ 
+    #what about result_set_mode = none here?
+    #we may want to rollback full delete here
+    #this is a bit odd that define_ResultSet will delete if fully
+    #alternate is to fetch the stored set and call _validate_rollback_Set
+    #directly from here
+    
+    $rset = $self->define_ResultSet(@_);
+    push @$ssets, $rset;
+  }   
+    
+ 
+  my $dset_adaptor = $db->get_DataSetAdaptor;
+
+  #Generate new DataSet first to validate the parameters
+  my $new_dset = Bio::EnsEMBL::Funcgen::DataSet->new
+    (
+     -name            => $name,
+     -feature_set     => $fset,
+     -supporting_sets => $ssets,
+    );
+  my $stored_dset = $dset_adaptor->fetch_by_name($name);
+ 
+  #Could we actually cascade a compare_to from DataSet to feature_set and result_set?
+  #This would be much harder to manage rollbacks
+  #We are effectively doing this above, without complicating the the DataSet compare_to method
+  #If we did it all in one go, then we would have to define eveything here
+  #meaning the define_ResultSet and define_FeatureSet would beome redundant?
+  #No, we could remove the _validate_rollback_Set from the return value
+  #and let that be called in a controlling method define_validate_rollback_DataSet ? 
+  #it would also be very hard to cascade rollback of a DataSet withing _validate_rollback_Set?
+  #Hence we would have to have a control method, which is essentially this method!
+  #change the name of this method to define_validate_rollback_DataSet???
+  #should we change this other define method, such that they don't call _validate_rollback_Set?
+  #Would we have a use for the very simple define Set methods?
+
+  if(defined $stored_dset){    
+    $self->_compare_set_for_rollback($new_dset, $stored_dset, 
+                                     'data_set');
+    #No need to pass slices here as we can't rollback a data_slice based on a slice
+  }
+  else{
+    ($stored_dset) = @{$dset_adaptor->store($new_dset)};
+  }
+  
+ return $stored_dset;
+} ## end sub define_DataSet
+
+
+=head2 rollback_FeatureSet
+
+  Arg [0]    : Bio::EnsEMBL::Funcgen::FeatureSet
+               for another DataSet.
+  Arg [1]    : Arrayref of Bio::EnsEMBL::Slice objects to rollback (Optional)
+  Arg [2]    : Boolean flag to perform full delete of feature_set and data_set records. 
+  Example    : $self->rollback_FeatureSet($fset);
+  Description: Deletes all features for the passed FeatureSet, along with associated
+               status and xref records. Checks whether FeatureSet is a supporting set 
+               in any other DataSet.
+  Returntype : None
+  Exceptions : Throws if:
+                Any deletes fails
+                Dependant DataSets are found
+                FeatureSet 'adaptor' method is not defined
+                Defined Slices are not valid
+                More than 1 sub-Slice is defined (i.e. not full length)
+  Caller     : Importers and Parsers
+  Status     : At risk
+
+=cut
+
+sub rollback_FeatureSet {
+  my ( $self, $fset, $delete_mode, $slices ) = @_;
+  my ( $sql, $slice_name );
+  my $slice_join = '';
+  
+  if($delete_mode && ($delete_mode ne 'full')){
+    throw("Invalid delete mode defined:\t$delete_mode\n".
+          'Please omit of specify full');
+    #delete_mode is assumed to be full below   
+  }
+  
+  
+  
+  
+  if ( ! ($fset &&
+         (ref($fset) eq 'Bio::EnsEMBL::Funcgen::FeatureSet') &&
+          defined $fset->adaptor ) ){
+    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet');
+  }
+    
+  my $db    = $fset->adaptor->db; #Assumes access to DBAdaptor
+  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::FeatureSet', $fset );
+  my $table = $fset->feature_class . '_feature';
+  
+  $self->log_header('Rolling back '.$fset->feature_class.
+                    " FeatureSet:\t" . $fset->name );
+
+  #Check whether this is a supporting set for another data_set
+  my @dsets =  @{ $db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset) };
+
+  if (@dsets) {
+    my $txt = $fset->name." is a supporting set of the following DataSets:\t" .
+              join( ', ', ( map { $_->name } @dsets ) );
+    throw( $txt ."\nPlease resolve by deleting dependant Feature/DataSets" ); 
+  }
+  
+  
+  #Validate all slices before we commence any rollback
+  if ($slices) {
+
+    if ($delete_mode) { #Must be full
+      throw("Cannot specify a full delete for a Slice based rollback:\t" .
+            $fset->name );
+    }
+
+    if ( ref($slices) ne 'ARRAY' ) {
+      throw('Slices must be an ARRAYREF of Slice objects');
+    }
+
+    map {
+      throw("Must pass a valid Bio::EnsEMBL::Slice")
+        if ( !( ref($_) && $_->isa('Bio::EnsEMBL::Slice') ) )
+    } @$slices;
+    
+    $self->log( "Restricting to slices:\n\t\t" .
+                join( "\n\t\t", ( map { $_->name } @$slices ) ) );
+  }
+  else{ #Set undef slice for no slice definition
+    $slices ||= [undef];  
+  }
+
+  
+  for my $slice(@$slices){
+    my $slice_join = '';
+    
+    if(defined $slice){  
+      my $efg_sr_id =
+      $fset->get_FeatureAdaptor->get_seq_region_id_by_Slice($slice);
+
+      if ( ! $efg_sr_id ) {
+        $self->log("Slice is not present in eFG DB:\t" . $slice->name );
+      }
+      else {   
+        #Test is not subslice
+        my $full_slice = $slice->adaptor->fetch_by_region(undef,
+                                                          $slice->seq_region_name);
+
+        if ( ( $slice->start != 1 ) ||
+             ( $full_slice->end != $slice->end ) ){
+          $slice_join = " and f.seq_region_id=$efg_sr_id and f.seq_region_start<=" .
+                        $slice->end.' and f.seq_region_end>=' . $slice->start;
+        }
+        else{
+          $slice_join = ' and f.seq_region_id = '.$efg_sr_id; 
+        }
+     
+           
+        # Now do the rollback 
+        $fset->adaptor->revoke_states($fset);
+        
+        if ( $fset->feature_class eq 'regulatory' ) {   #Rollback reg attributes
+          $sql = "DELETE ra from regulatory_attribute ra, $table f where ".
+            "f.${table}_id=ra.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
+            
+          $self->rollback_table( $sql, 'regulatory_attribute', undef, $db );
+        }
+        elsif($fset->feature_class eq 'annotated'){   #Handle amfs
+          $sql = 'DELETE amf from annotated_feature af, associated_motif_feature amf where '.
+            'af.feature_set_id='.$fset->dbID.
+            ' AND af.annotated_feature_id = amf.annotated_feature_id'.$slice_join;
+          $self->rollback_table( $sql, 'associated_motif_feature', undef, $db );
+        } ## end if ( $fset->feature_class...)
+      
+        #Remove object_xref records (but not xref which may be used by soemthing else)
+        $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='"
+          .ucfirst( $fset->feature_class )."Feature' and ox.ensembl_id=f.${table}_id and ".
+          "f.feature_set_id=". $fset->dbID . $slice_join;
+        $self->rollback_table( $sql, 'object_xref', 'object_xref_id', $db );
+      
+        #Remove associated_feature_type records
+        $sql = "DELETE aft from associated_feature_type aft, $table f where ".
+          "f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.table_id and ".
+          "aft.table_name='".$fset->feature_class . "_feature'" . $slice_join;
+        $self->rollback_table( $sql, 'associated_feature_type', undef, $db );
+      
+        #Remove features
+        $sql = "DELETE f from $table f where f.feature_set_id=" .
+          $fset->dbID . $slice_join;
+        $self->rollback_table( $sql, $table, "${table}_id", $db );
+      }
+    }   
+  } 
+  
+  if ($delete_mode) {  #Must be full 
+    #Also delete feature/data/supporting_set records
+    $self->log( "Deleting Feature/DataSet:\t" . $fset->name );
+  
+    #Delete regbuild strings first
+    if ( $fset->feature_class eq 'regulatory' ) {  
+      $sql = "DELETE from regbuild_string where feature_set_id=" . $fset->dbID;
+      $self->rollback_table( $sql, 'regbuild_string', 'feature_set_id', $db );
+      $self->log( "Deleted regbuild_string entries for:\t" . $fset->name );
+    }  
+  
+    $sql = "DELETE from feature_set where feature_set_id=" . $fset->dbID;
+    $self->rollback_table( $sql, 'feature_set', 'feature_set_id', $db );
+    $self->log( "Deleted feature_set entry for:\t" . $fset->name );
+
+    $sql = 'DELETE ss, ds from data_set ds, supporting_set ss where '.
+      'ds.feature_set_id='.$fset->dbID.' AND ds.data_set_id=ss.data_set_id';
+    $self->rollback_table( $sql, 'data_set', 'data_set_id', $db );
+    $self->log("Deleted associated data/supporting_set entries for:\t" . $fset->name );
+  }  
+  
+  return;
+} ## end sub rollback_FeatureSet
+
+
+=head2 rollback_ResultSet
+
+  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
+  Arg[2]     : Boolean - optional flag to roll back array results
+  Example    : $self->rollback_ResultSet($rset);
+  Description: Deletes all status. chip_channel and result_set entries for this ResultSet.
+               Will also rollback_results sets if rollback_results specified.  This will also
+               update or delete associated ResultSets where appropriate.
+  Returntype : Arrayref containing the ResultSet and associated DataSet which have not been rolled back
+  Exceptions : Throws if ResultSet not valid
+               Throws is result_rollback flag specified but associated product FeatureSet found.
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+#Need to change slice to slices ref here
+#Need to add full rollback, which will specify to remove all sets
+#as well as results and
+#These params need clarifying as their nature changes between input_set and array rsets
+#Don't we always want to rollback_results?
+#force should only really be used to rollback InputSet ResultFeature sets
+#i.e. Read collections which are not used as direct input for the linked product FeatureSet
+#This should fail with array data associated with a product feature set
+
+#Do we want to separate ResultFeature rollback from result rollback?
+#Currently the array based collection rollback is done by hand
+#Could be done via the ResultFeature Collector, but should probably use this method.
+
+#rollback_results is only used in the MAGE parser to identify sets which have an
+#associated product fset.
+#Can't really separate due to integrated functionality
+
+#todo update callers to remove force, rollback_result and slice args
+
+sub rollback_ResultSet {
+  my ( $self, $rset, $delete_mode ) = @_;
+
+  if ( ! ($rset &&
+         (ref($rset) eq 'Bio::EnsEMBL::Funcgen::ResultSet') &&
+          defined $rset->adaptor ) ){
+    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet');
+  }
+  
+  if($delete_mode && 
+     (($delete_mode ne 'full') ||
+      ($delete_mode ne 'recover'))){
+    throw("Invalid delete mode defined:\t$delete_mode\n".
+          'Please omit of specify full or recover');     
+  }
+  
+  my $db = $rset->adaptor->db; #Assumes db is accessible  
+  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ResultSet', $rset );
+
+  #Just omit experimental_chip/channel/result_feature support for now as we probably 
+  #won't ever use it again
+  if($rset->table_name ne 'input_set'){
+    throw('rollback_ResutlSet not longer support non-InputSet rollbacks');
+    #This would need to check co-dependant ResultSets, see old version in cvs
+  } 
+  
+  $self->log( "Rolling back ResultSet:\t" . $rset->name );
+
+  ### Check if this ResultSet is part of a DataSet with a product feature set
+  my @dsets = @{ $self->db->get_DataSetAdaptor->fetch_all_by_supporting_set($rset) };
+
+  if(@dsets) {
+     
+    if($delete_mode && ($delete_mode ne 'recover')){
+      throw('ResultSet '.$rset->name.
+            " has associated DataSets, please specify -recovery or remove before rollback:\n\t".
+            join(',', (map $_->name, @dsets)));
+    }
+    
+    #This would never get executed
+    #if($delete_mode && ($delete_mode eq 'full')){
+    #   throw('Cannot perform full_delete on ResultSet '.$rset->name.
+    #         " with associated DataSets:\n\t".join(',', (map $_->name, @dsets)));
+    #}
+    
+    #else assume diffs have already been caught by caller (e.g. _validate_rollback_Set in recovery mode)
+    #Actually unsafe to force unless diffs have been checked
+  }
+
+  $self->db->get_ResultSetAdaptor->revoke_states($rset);  
+  #delete the dbfile_registry entry 
+  my $sql = 'DELETE from dbfile_registry where table_name="result_set" and table_id='.$rset->dbID;
+  $db->dbc->rollback_table($sql, 'dbfile_registry', undef, $db);
+
+  if($delete_mode && ($delete_mode eq 'full')){ #delete the result_set and result_set_input entries
+    $self->log( "Deleting ResultSet:\t" . $rset->name );
+    $sql = 'DELETE rs, rsi from result_set_rs, result_set_input rsi WHERE '.
+      'rsi.result_set_id=rs.result_set_id AND rs.result_set_id='.$rset->dbID;
+    $db->dbc->rollback_table($sql, 'result_set', 'result_set_id', $db);   
+  }
+  
+ return;
+} ## end sub rollback_ResultSet
+
+
+#todo add delete_DataSet (with flag to full_delete supporting_sets?
+#todo add delete_InputSet
+
+
+=head2 rollback_ArrayChips
+
+  Arg[1]     : ARRAYREF: Bio::EnsEMBL::Funcgen::ArrayChip objects
+  Example    : $self->rollback_ArrayChips([$achip1, $achip2]);
+  Description: Deletes all Probes, ProbeSets, ProbeFeatures and 
+               states associated with this ArrayChip
+  Returntype : None
+  Exceptions : Throws if ArrayChip not valid and stored
+               Throws if ArrayChips are not of same class
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+#This should be tied to a CS id!!!
+#And analysis dependant?
+#We may not want to delete alignment by different analyses?
+#In practise the slice methods ignore analysis_id for this table
+#So we currently never use this!
+#So IMPORTED status should be tied to CS id and Analysis id?
+
+sub rollback_ArrayChips {
+  my ( $self, $acs, $mode, $force, $keep_xrefs, $no_clean_up,
+       $force_clean_up )
+    = @_;
+
+#no_clean_up and force_clean_up allow analyze/optimize to be skipped until the last rollback
+#We could get around this by specifying all ArrayChips for all formats at the same time?
+#Need to implement in RollbackArrays
+
+  $mode ||= 'probe';
+
+  if ( $mode &&
+       ( $mode ne 'probe' &&
+         $mode ne 'probe_feature'        &&
+         $mode ne 'ProbeAlign'           &&
+         $mode ne 'ProbeTranscriptAlign' &&
+         $mode ne 'probe2transcript' ) )
+  {
+    throw(
+"You have passed an invalid mode argument($mode), you must omit or specify either 'probe2transcript', 'probe', 'ProbeAlign, 'ProbeTranscriptAlign' or 'probe_feature' for all of the Align output"
+    );
+  }
+
+  if ( $force && ( $force ne 'force' ) ) {
+    throw(
+"You have not specified a valid force argument($force), you must specify 'force' or omit"
+    );
+  }
+
+  if ( $keep_xrefs && ( $keep_xrefs ne 'keep_xrefs' ) ) {
+    throw(
+"You have not specified a valid keep_xrefs argument($keep_xrefs), you must specify 'keep_xrefs' or omit"
+    );
+  }
+
+  if ($keep_xrefs) {
+
+    if ( $mode eq 'probe' || $mode eq 'probe2transcript' ) {
+      throw(
+"You cannot specify 'keep_xrefs' with mode $mode, you can only rollback features e.g. probe_feature, ProbeAlign or ProbeTranscriptAlign"
+      );
+    }
+
+    if ($force) {
+      throw(
+"You cannot 'force' delete the probe2transcript xrefs and 'keep_xrefs' at the same time. Please specify just one."
+      );
+    }
+  }
+
+  my ( $adaptor, $db, %classes );
+
+  foreach my $ac (@$acs) {
+    $adaptor ||=
+      $ac->adaptor || throw('ArrayChip must have an adaptor');
+    $db ||= $adaptor->db;
+    $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ArrayChip', $ac );
+
+    if ( !$ac->get_Array->class ) {
+      throw(
+'The ArrayChip you are trying to rollback does not have a class attribute'
+      );
+    }
+
+    $classes{ $ac->get_Array->class } = undef;
+
+#if($class && ($class ne $ac->get_Array->class)){
+#  throw('You can only rollback_ArrayChips for ArrayChips with the same class');
+#}
+  }
+
+#This is always the case as we register the association before we set the Import status
+#Hence the 2nd stage of the import fails as we have an associated ExperimentalChip
+#We need to make sure the ExperimentalChip and Channel have not been imported!!!
+  warn
+"NOTE: rollback_ArrayChips. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";
+
+#Check for dependent ExperimentalChips
+#if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
+#	my %exps;
+#	my $txt = "Experiment\t\t\t\tExperimentalChip Unique IDs\n";
+
+  #	foreach my $ec(@echips){
+  #	  $exps{$ec->get_Experiment->name} ||= '';
+
+  #	  $exps{$ec->get_Experiment->name} .= "\t".$ec->unique_id;
+  #	}
+
+  #	map {$txt.= "\t".$_.":".$exps{$_}."\n"} keys %exps;
+
+  #	throw("Cannot rollback ArrayChip:\t".$ac->name.
+  #		  "\nFound Dependent Experimental Data:\n".$txt);
+  #  }
+
+  my $ac_names = join( ', ', ( map { $_->name } @$acs ) );
+  my $ac_ids   = join( ', ', ( map { $_->dbID } @$acs ) );
+
+  $self->log("Rolling back ArrayChips $mode entries:\t$ac_names");
+  my ( $row_cnt, $probe_join, $sql );
+
+#$ac->adaptor->revoke_states($ac);#This need to be more specific to the type of rollback
+  my $species = $db->species;
+
+  if ( !$species ) {
+    throw(
+'Cannot rollback probe2transcript level xrefs without specifying a species for the DBAdaptor'
+    );
+  }
+
+  #Will from registry? this return Homo sapiens?
+  #Or homo_sapiens
+  ( $species = lc($species) ) =~ s/ /_/;
+
+  my $transc_edb_name = "${species}_core_Transcript";
+  my $genome_edb_name = "${species}_core_Genome";
+
+#Maybe we want to rollback ProbeAlign and ProbeTranscriptAlign output separately so we
+#can re-run just one part of the alignment step.
+
+#We want this Probe(Transcript)Align rollback available in the environment
+#So we can do it natively and before we get to the RunnableDB stage,
+#where we would be trying multiple rollbacks in parallel
+#Wrapper script?
+#Or do we keep it simple here and maintain probe_feature wide rollback
+#And just the ProbeAlign/ProbeTranscriptAlign roll back in the environment?
+
+  #We can restrict the probe deletes using the ac_id
+  #We should test for other ac_ids using the same probe_id
+  #Then fail unless we have specified force delete
+
+  #These should be deleted for all other modes but only if force is set?
+  #This may delete xrefs for other ArrayChips
+
+#The issues is if we need to specify force for one delete but don't want to delete something else?
+#force should only be used to delete upto and including the mode specified
+#no mode equates to probe mode
+#if no force then we fail if previous levels/modes have xrefs etc...
+
+#Let's grab the edb ids first and use them directly, this will avoid table locks on edb
+#and should also speed query up?
+
+  if ( $mode eq 'probe2transcript' || $force ) {
+
+    #Delete ProbeFeature UnmappedObjects
+    $self->log("Deleting probe2transcript ProbeFeature UnmappedObjects");
+    $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e ".
+            "WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id ".
+            "AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id AND ".
+            "uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id ".
+            "AND e.db_name ='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
+    $self->rollback_table( $sql, 'unmapped_object',
+                           'unmapped_object_id', $db, $no_clean_up );
+
+    #Delete ProbeFeature Xrefs/DBEntries
+    $self->log("Deleting probe2transcript ProbeFeature Xrefs");
+    $sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e ".
+            "WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' ".
+            "AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' ".
+            "AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ".
+            "ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id IN($ac_ids)";
+    $self->rollback_table( $sql, 'object_xref', 'object_xref_id', $db,
+                           $no_clean_up );
+
+    #Probe/Set specific entries
+    for my $xref_object ( 'Probe', 'ProbeSet' ) {
+      $probe_join = ( $xref_object eq 'ProbeSet' ) ? 'p.probe_set_id' :
+        'p.probe_id';
+
+      #Delete Probe/Set UnmappedObjects
+
+      $self->log("Deleting probe2transcript $xref_object UnmappedObjects");
+
+      $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e ".
+              "WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND ".
+              "uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND ".
+              "uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' ".
+              "AND p.array_chip_id IN($ac_ids)";
+
+      #.' and edb.db_release="'.$schema_build.'"';
+      $self->rollback_table( $sql, 'unmapped_object',
+                             'unmapped_object_id', $db, $no_clean_up );
+
+      #Delete Probe/Set Xrefs/DBEntries
+      $sql =
+"DELETE ox FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id IN($ac_ids)";
+      $self->log("Deleting probe2transcript $xref_object xref records");
+      $self->rollback_table( $sql, 'object_xref', 'object_xref_id',
+                             $db, $no_clean_up );
+    }
+  } ## end if ( $mode eq 'probe2transcript'...)
+  elsif ( !$keep_xrefs )
+  {    #Need to check for existing xrefs if not force
+        #we don't know whether this is on probe or probeset level
+     #This is a little hacky as there's not way we can guarantee this xref will be from probe2transcript
+     #until we get the analysis_id moved from identity_xref to xref
+     #We are also using the Probe/Set Xrefs as a proxy for all other Xrefs and UnmappedObjects
+     #Do we need to set a status here? Would have problem rolling back the states of associated ArrayChips
+
+    for my $xref_object ( 'Probe', 'ProbeSet' ) {
+
+      $probe_join = ( $xref_object eq 'ProbeSet' ) ? 'p.probe_set_id' :
+        'p.probe_id';
+
+      $row_cnt = $db->dbc->db_handle->selectrow_array(
+"SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='${xref_object}' and ox.ensembl_id=${probe_join} AND p.array_chip_id IN($ac_ids)"
+      );
+
+      if ($row_cnt) {
+        throw(
+"Cannot rollback ArrayChips($ac_names), found $row_cnt $xref_object Xrefs. Pass 'force' argument or 'probe2transcript' mode to delete"
+        );
+      }
+      else {
+        #$self->log("Found $row_cnt $xref_object Xrefs");
+      }
+    }
+  } ## end elsif ( !$keep_xrefs )  [ if ( $mode eq 'probe2transcript'...)]
+
+  #ProbeFeatures inc ProbeTranscriptAlign xrefs
+
+  if ( $mode ne 'probe2transcript' ) {
+
+    if ( ( $mode eq 'probe' && $force ) ||
+         $mode eq 'probe_feature' ||
+         $mode eq 'ProbeAlign'    ||
+         $mode eq 'ProbeTranscriptAlign' )
+    {
+
+      #Should really revoke some state here but we only have IMPORTED
+
+      #ProbeTranscriptAlign Xref/DBEntries
+
+#my (@anal_ids) = @{$db->get_AnalysisAdaptor->generic_fetch("a.module='ProbeAlign'")};
+#Grrrr! AnalysisAdaptor is not a standard BaseAdaptor implementation
+#my @anal_ids = @{$db->dbc->db_handle->selectall_arrayref('select analysis_id from analysis where module like "%ProbeAlign"')};
+#@anal_ids = map {$_= "@$_"} @anal_ids;
+
+      if ( $mode ne 'ProbeAlign' ) {
+        my $lnames = join( ', ',
+                           ( map { "'${_}_ProbeTranscriptAlign'" }
+                               keys(%classes) ) );
+
+        $sql =
+"DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+        $self->log(
+            "Deleting ProbeFeature Xref/DBEntry records for:\t$lnames");
+        $self->rollback_table( $sql, 'object_xref', 'object_xref_id',
+                               $db, $no_clean_up );
+
+#Can't include uo.type='ProbeTranscriptAlign' in these deletes yet as uo.type is enum'd to xref or probe2transcript
+#will have to join to analysis and do a like "%ProbeTranscriptAlign" on the the logic name?
+#or/and ur.summary_description='Promiscuous probe'?
+
+        $sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a ".
+                "WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id ".
+                "AND a.logic_name in (${lnames}) AND e.external_db_id=uo.external_db_id ".
+                "AND e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id ".
+                "AND p.array_chip_id IN($ac_ids)";
+
+        $self->log("Deleting UnmappedObjects for:\t${lnames}");
+        $self->rollback_table( $sql, 'unmapped_object',
+                               'unmapped_object_id', $db,
+                               $no_clean_up );
+
+        #Now the actual ProbeFeatures
+        $sql =
+"DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name in(${lnames}) AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+        $self->log("Deleting ProbeFeatures for:\t${lnames}");
+        $self->rollback_table( $sql, 'probe_feature',
+                               'probe_feature_id', $db, $no_clean_up );
+      } ## end if ( $mode ne 'ProbeAlign')
+
+      if ( $mode ne 'ProbeTranscriptAlign' ) {
+
+        my $lnames = join( ', ',
+                           ( map { "'${_}_ProbeAlign'" } keys(%classes)
+                           ) );
+
+        $sql =
+"DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name in (${lnames}) AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+        $self->log("Deleting UnmappedObjects for:\t${lnames}");
+        $self->rollback_table( $sql, 'unmapped_object',
+                               'unmapped_object_id', $db,
+                               $no_clean_up );
+
+        $sql =
+"DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name in(${lnames}) AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+        $self->log("Deleting ProbeFeatures for:\t${lnames}");
+        $self->rollback_table( $sql, 'probe_feature',
+                               'probe_feature_id', $db, $no_clean_up );
+      }
+    } ## end if ( ( $mode eq 'probe'...))
+    else {
+#Need to count to see if we can carry on with a unforced probe rollback?
+#Do we need this level of control here
+#Can't we assume that if you want probe you also want probe_feature?
+#Leave for safety, at least until we get the dependant ExperimetnalChip test sorted
+#What about if we only want to delete one array from an associated set?
+#This would delete all the features from the rest?
+
+      $sql =
+"select count(*) from object_xref ox, xref x, probe p, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
+      $row_cnt = $db->dbc->db_handle->selectrow_array($sql);
+
+      if ($row_cnt) {
+        throw(
+"Cannot rollback ArrayChips($ac_names), found $row_cnt ProbeFeatures. Pass 'force' argument or 'probe_feature' mode to delete"
+        );
+      }
+      else {
+        $self->log("Found $row_cnt ProbeFeatures");
+      }
+    }
+
+    if ( $mode eq 'probe' ) {
+
+#Don't need to rollback on a CS as we have no dependant EChips?
+#Is this true?  Should we enforce a 3rd CoordSystem argument, 'all' string we delete all?
+
+      foreach my $ac (@$acs) {
+        $ac->adaptor->revoke_states($ac)
+          ;    #Do we need to change this to revoke specific states?
+         #Current states are only IMPORTED, so not just yet, but we could change this for safety?
+      }
+
+      #ProbeSets
+      $sql =
+"DELETE ps from probe p, probe_set ps where p.array_chip_id IN($ac_ids) and p.probe_set_id=ps.probe_set_id";
+      $self->rollback_table( $sql, 'probe_set', 'probe_set_id', $db,
+                             $no_clean_up );
+
+      #Probes
+      $sql = "DELETE from probe where array_chip_id IN($ac_ids)";
+      $self->rollback_table( $sql, 'probe', 'probe_id', $db,
+                             $no_clean_up );
+    }
+  } ## end if ( $mode ne 'probe2transcript')
+
+  $self->log("Finished $mode roll back for ArrayChip:\t$ac_names");
+  return;
+} ## end sub rollback_ArrayChips
+
+#This will just fail silently if the reset value
+#Is less than the true autoinc value
+#i.e. if there are parallel inserts going on
+#So we can never assume that the $new_auto_inc will be used
+
+sub rollback_table {
+  my ( $self, $sql, $table, $id_field, $db, $no_clean_up,
+       $force_clean_up )
+    = @_;
+
+  my $row_cnt;
+
+  #warn $sql;
+  eval { $row_cnt = $db->dbc->do($sql) };
+
+  if ($@) {
+    throw("Failed to rollback table $table using sql:\t$sql\n$@");
+  }
+
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt $table records");
+
+  if ( $force_clean_up || ( $row_cnt && !$no_clean_up ) ) {
+    $self->refresh_table( $table, $id_field, $db );
+  }
+
+  return;
+}
+
+#Now separated so that we can do this once at the end of a rollback of many Sets
+
+sub refresh_table {
+  my ( $self, $table, $id_field, $db ) = @_;
+
+  #This only works if the new calue is available
+  #i.e. do not need lock for this to be safe
+  $self->reset_table_autoinc( $table, $id_field, $db ) if $id_field;
+
+  $self->log("Optimizing and Analyzing $table");
+
+  $db->dbc->do("optimize table $table")
+    ;    #defrag data, sorts indices, updates table stats
+  $db->dbc->do("analyze  table $table");    #analyses key distribution
+
+  return;
+}
+
+sub reset_table_autoinc {
+  my ( $self, $table_name, $autoinc_field, $db ) = @_;
+
+  if ( !( $table_name && $autoinc_field && $db ) ) {
+    throw(
+'You must pass a table_name and an autoinc_field to reset the autoinc value'
+    );
+  }
+
+  if ( !( ref($db) && $db->isa('Bio::EnsEMBL::DBSQL::DBAdaptor') ) ) {
+    throw('Must pass a valid Bio::EnsEMBL::DBSQL::DBAdaptor');
+  }
+
+  #Unsafe to do this in two queries as parallel jobs may add in between select and alter
+  #in fact this needs a table lock to be totally safe
+  #although current ALTER will just fail silently if this happens
+  my $sql = "select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
+  my ($current_auto_inc) = $db->dbc->db_handle->selectrow_array($sql);
+  my $new_autoinc = ($current_auto_inc) ? ( $current_auto_inc + 1 ) : 1;
+  $sql = "ALTER TABLE $table_name AUTO_INCREMENT=$new_autoinc";
+  $db->dbc->do($sql);
+  return;
+} ## end sub reset_table_autoinc
+
+=head2 get_core_display_name_by_stable_id
+
+  Args [1]   : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Args [2]   : stable ID from core DB.
+  Args [3]   : stable feature type e.g. gene, transcript, translation
+  Example    : $self->validate_and_store_feature_types;
+  Description: Builds a cache of stable ID to display names.
+  Returntype : string - display name
+  Exceptions : Throws is type is not valid.
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+# --------------------------------------------------------------------------------
+# Build a cache of ensembl stable ID -> display_name
+# Return hashref keyed on {$type}{$stable_id}
+#Need to update cache if we're doing more than one 'type' at a time
+# as it will never get loaded for the new type!
+
+sub get_core_display_name_by_stable_id {
+  my ( $self, $cdb, $stable_id, $type ) = @_;
+
+  $type = lc($type);
+
+  if ( $type !~ /(gene|transcript|translation)/ ) {
+    throw(
+      "Cannot get display_name for stable_id $stable_id with type $type"
+    );
+  }
+
+  if ( !exists $self->{'display_name_cache'}->{$stable_id} ) {
+    ( $self->{'display_name_cache'}->{$stable_id} ) =
+      $cdb->dbc->db_handle->selectrow_array(
+"SELECT x.display_label FROM $type t, xref x where t.display_xref_id=x.xref_id and t.stable_id='${stable_id}'"
+      );
+  }
+
+  return $self->{'display_name_cache'}->{$stable_id};
+}
+
+=head2 get_core_stable_id_by_display_name
+
+  Args [1]   : Bio::EnsEMBL::DBSQL::DBAdaptor
+  Args [2]   : display name (e.g. from core DB or GNC name)
+  Example    : 
+  Description: Builds a cache of stable ID to display names.
+  Returntype : string - gene stable ID
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+# --------------------------------------------------------------------------------
+# Build a cache of ensembl stable ID -> display_name
+# Return hashref keyed on {$type}{$stable_id}
+#Need to update cache if we're doing more than one 'type' at a time
+# as it will never get loaded for the new type!
+
+sub get_core_stable_id_by_display_name {
+  my ( $self, $cdb, $display_name ) = @_;
+
+#if($type !~ /(gene|transcript|translation)/){
+#	throw("Cannot get display_name for stable_id $stable_id with type $type");
+#  }
+
+  if ( !exists $self->{'stable_id_cache'}->{$display_name} ) {
+    ( $self->{'stable_id_cache'}->{$display_name} ) =
+      $cdb->dbc->db_handle->selectrow_array(
+"SELECT g.stable_id FROM gene g, xref x where g.display_xref_id=x.xref_id and and x.display_label='${display_name}'"
+      );
+  }
+
+  return $self->{'stable_id_cache'}->{$display_name};
+}
+
+1;
+
+
+#This could be a simple sub, if we passed $rollback_modes
+
+sub _compare_set_for_rollback {
+  my ($self, $new_set, $set_type, $stored_set, $rollback_level, $slices) = @_;
+
+  #do we catch undef $stored_set here and return without warning?
+  #add flag for states comparison?
+
+  my $diffs = $stored_set->compare_to($new_set);
+  #by default this tests nested objects via is_stored and dbID match
+
+  #delete get_states_diffs as these are never set and will likely
+  #always be different and we handle IMPORTED below
+  delete $diffs->{'get_all_states'} if exists $diffs->{'get_all_states'};  
+          
+  if(%$diffs){
+    
+    if($set_type eq 'data_set'){
+      throw('Found differences in specified and stored DataSet '.
+            "support or product FeatureSet, please rectify manually\n".
+            Dumper($diffs)); 
+      #When called from define_DataSet should expect no errors as we have already 
+      #done the compare and rollback for Feature/ResultSet 
+      #We probably have some weird naming issue that has happened with previous 
+      #import and we need to handle this manually as it will be unsafe to rollback this data_set
+      
+      #What about addition/change if InputSet!!!!!
+      #This should have been caught by rollback_FeatureSet
+      #Can we be sure of this?
+      #Should we just be calling _validate_rollback_Set here
+      #for safety, no as this is unsafe
+      #if there is a difference, then something has gone wrong and we need to rectify manually!
+      #with the FeatureSet - DataSet association
+          
+      #If this is true the we will probably have failed at the rollback_ResultSet 
+      #level, as this may find an associated DataSet, as the rollback_FeatureSet
+      #will likely not have rolled back the correct DataSet
+      #todo Need to make sure the rollback methods are sensitive to this and throw
+      #correctly        
+    }
+    elsif($rollback_level < $rollback_modes{$set_type}){
+      throw("Found $set_type mismatch, please rectify manually or specify ".
+            "-rollback $set_type\n".Dumper($diffs));
+    }
+    elsif(@$slices){
+      #Should never have diffs and slices set, this indicates we are 
+      #redefining the inputs but only rerunning a subset of the data 
+      #There should be no diffs in parallel mode(single slice), as we should
+      #have resolved this in the previous setup/submit analysis! 
+      throw("It is unsafe to rollback $set_type with a sub set of slices ".
+            'please do a full rollback i.e. omit -slices');
+    }  
+  }
+    
+  return;
+}
+
+
+
+### DEPRECATED ###
+
+=head2 rollback_InputSet
+
+  Arg[1]     : Bio::EnsEMBL::Funcgen::InputSet
+  Example    : $self->rollback_InputSet($eset);
+  Description: Deletes all status entries for this InputSet and it's Subsets
+  Returntype : none
+  Exceptions : Throws if any deletes fails or if db method unavailable
+  Caller     : Importers and Parsers
+  Status     : At risk
+
+=cut
+
+#Usage of this is now moot due to removal of IMPORTED style states form InputSet/Subset
+#todo implement delete_InputSet 
+#revoke states can be called directly if required rather than rollback, as this is essentially
+#all a rollback method would be doing?
+#deprecate this with a throw as is not longer support
+
+sub rollback_InputSet { #deprecated in v72
+  my ( $self, $eset, $force_delete, $full_delete ) = @_;
+  
+  throw('rollback_InputSet is now deprecated, please update your code to use '.
+      'delete_InputSet or use revoke_states directly');
+
+  #Need to implement force_delete!!!!!!!!!!!!!!!!!!!!!!
+  #Need to check this is not used in a DataSet/ResultSet
+
+  my $adaptor =
+    $eset->adaptor || throw('InputSet must have an adaptor');
+  my $db = $adaptor->db;
+
+  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::InputSet', $eset );
+
+  $self->log( "Rolling back InputSet:\t" . $eset->name );
+
+  #SubSets
+  foreach my $esset ( @{ $eset->get_InputSubsets } ) {
+    $esset->adaptor->revoke_states($esset);
+  }
+
+  #InputSet
+  $eset->adaptor->revoke_states($eset);
+
+  return;
+}
+
+
 
 =head2 define_and_validate_sets
 
@@ -1391,1221 +2644,10 @@ sub define_and_validate_sets {
   return $dset;
 } ## end sub define_and_validate_sets
 
-=head2 define_ResultSet
 
-  Arg [1]    : Hash - set constructor parameters:
-                            -dbadaptor    Bio::EnsEMBL::Funcgen::DBAdaptor
-                            -name         Data/FeatureSet/ResultSet name to create
-                            -feature_set_analysis FeatureSet Bio::EnsEMBL::Analysis
-                            -result_set_analysis  FeatureSet Bio::EnsEMBL::Analysis
-                            -feature_class e.g. annotated or regulatory
-                            -description  FeatureSet description
-                            -recovery     Allows definition of extant sets so long as they match
-                            -append       Boolean - Forces import on top of previously imported data
-                            -rollback     Rolls back product feature set. ####Add permitted values here!
-                            -input_sets  Complete set of pre-stored supporting or input sets for this DataSet
-                            -slices       ARRAYREF of Slices to rollback
-  Example    : my $dset = $self->define_ResultSet(%params);
-  Description: Checks whether set is already in DB based on set name, feature_type, cell_type and analysis
-               Rolls back features if -rollback is flag set appropriately, or creates new ResultSet if not present.
-               This should only be used for creation or recovery of a ResultSet. Normal access to
-               a pre-existing ResultSet should be via ResultSetAdaptor::fetch_by_name
-  Returntype : Bio::EnsEMBL::Funcgen::DataSet
-  Exceptions : Throws if DBAdaptor param not valid
-  Caller     : Importers and Parsers
-  Status     : At risk
 
-=cut
+#### DEPRECATED ####
 
-#There is some overlap between this and the new migration code, can it be reused?
-#The migration code deals with two different DBs
-#our comparisons are between an unstored object and one fetched from the DB.
-
-sub define_ResultSet {
-  my $self = $_[0];
-  my ($rollback_level, $ctype, $ftype, $db, $inp_sets, $slices) =
-    $self->_validate_Set_config(@_);#this could also return the following if these are generic
-
-  # feature_class can be infered from the feature_type from the inp sets
-  my ($anal, $rset_mode) = rearrange( ['RESULT_SET_ANALYSIS', 'RESULT_SET_MODE'], @_ );
-
-  #slight hack until we sort out 5mC class and db_file_registry.format
-  #also overlaps with FeatureSet -feature_cl
-  my $fclass = ($inp_sets->[0]->feature_type eq '5mC') ? 'dna_methylation' :
-    'result';
-
-  my $name = $inp_sets->[0]->name;
-
-  #This will catch mandatory params
-  my $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
-    (
-     -name          => $name,
-     -feature_type  => $ftype,
-     -cell_type     => $ctype,
-     -support       => $inp_sets,
-     -analysis      => $anal,
-     -feature_class => $fclass,
-    );
-
-  my $rset_adaptor = $db->get_ResultSetAdaptor;
-  my $stored_rset  = $rset_adaptor->fetch_by_name($name, $ftype, $ctype, $anal, $fclass);
-
-
-  return $self->_validate_rollback_Set($stored_rset, $rset, 'result_set',
-                                       $rollback_level, $rset_adaptor, $slices, $rset_mode);
-} ## end sub define_ResultSet
-
-
-
-
-
-sub define_FeatureSet {
-  my $self = $_[0];
-  my ($rollback_level, $ctype, $ftype, $db, $ssets, $slices) =
-    $self->_validate_Set_config(@_);
-
-  my ($name, $desc, $fclass, $dlabel, $anal) =
-    rearrange(['NAME','DESCRIPTION', 'FEATURE_CLASS', 'DISPLAY_LABEL', 'FEATURE_SET_ANALYSIS'], @_ );
-
-  #This will catch mandatory params
-  my $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
-    (
-     -name          => $name,
-     -feature_type  => $ftype,
-     -cell_type     => $ctype,
-     -analysis      => $anal,
-     -feature_class => $fclass,
-     -description   => $desc,
-     -display_label => $dlabel,
-     -input_set     => $ssets->[0],
-    );
-
-  my $fset_adaptor = $db->get_FeatureSetAdaptor;
-  my $stored_fset  = $fset_adaptor->fetch_by_name($name);
-
-  return $self->_validate_rollback_Set($stored_fset, $fset, 'feature_set',
-                                       $rollback_level, $fset_adaptor, $slices);
-} ## end sub define_FeatureSet
-
-
-sub _validate_rollback_Set {
-  my ($self, $stored_set, $new_set, $set_type, $rollback_level, $adaptor, $slices, $set_mode) = @_;
-  #set_type is not validated
-  #assumes other vars are pre-validated by _validate_Set_config
-
-  (my $rollback_method = $set_type) =~ s/_([a-z])/uc($1)/eg;
-  $rollback_method =~ s/_//g;
-  $rollback_method = 'rollback_'.$rollback_method;
-
-
-  if($set_mode){
-    #This rollback shortcut is a bit result set specific,
-    #but could be generic hence why it is here
-
-    if($set_type ne 'result_set'){
-      throw('set_mode is currently only valid for result_sets');
-    }
-    elsif($set_mode eq 'none'){
-
-      if($stored_set){
-
-        if($rollback_level < $rollback_modes{result_set}){
-          throw('Cannot import with -result_set_mode none with a pre-existing result set.'.
-                ' Please specify -rollback result_set');
-        }
-        else{ #rollback directly here as we aren't concerned with diffs
-          $self->$rollback_method($stored_set, 'full');
-        }
-      }
-
-      return;  #Bail out early as we don't want a ResultSet!
-    }
-    elsif($set_mode ne 'recover'){
-     throw("Invalid -result_set_mode $set_mode. ".
-           'Please omit or specify -result_set_mode none|recover');
-    }
-  }
-
-  if($stored_set &&
-     ($rollback_level >= $rollback_modes{$set_type})){
-    #This will throw if there are any diffs other than status entries
-    $self->_compare_set_for_rollback($new_set, $stored_set, $set_type,
-                                     $rollback_level, $slices);
-  }
-
-  #FINALLY DO ROLLBACK
-  #Independant of whether there are diffs as there maybe some fault with the
-  #data which has not been caught by the diffs e.g. truncated input
-
-  if( ($rollback_level >= $rollback_modes{$set_type}) ||
-      ($stored_set && ! $stored_set->has_status('IMPORTED') ) ||
-      $set_mode ) {
-    #Default full delete for an set with some differences
-    my $delete_mode = 'full';
-
-    if ($rollback_level < $rollback_modes{$set_type}) {
-      #Must be an identical set without IMPORTED status
-      #We just want to rollback the features
-      $delete_mode = $set_mode; #undef or recover (which ignores dependant sets)
-    }
-    elsif($set_mode &&
-          ($set_mode eq 'recover')){
-      #Also have rollback set for this set
-          #currently this is always 'recover'
-      throw('Cannot specify recover and rollback for '.$stored_set->name.' '.
-            $set_type.'. Please omit one.');
-    }
-    #else{ $delete_mode = 'full';}#$rollback >= $rollback_modes{$set_type} && $set_mode
-    #would have to chang ethis if we add more set_modes
-
-
-    #Handle full delete and slices clash as rollback_Data/ResultSet don't take slices arg
-    if ($slices && ($delete_mode eq 'full')) {
-      throw('Cannot do a \'full\' delete on a sub set of -slices');
-    }
-
-    # DO THE ROLLBACK
-    $self->$rollback_method($stored_set, $delete_mode, $slices);
-
-    # UNDEF STORED SET FOR FULL DELETE
-    if($delete_mode eq 'full'){
-      undef $stored_set;
-    }
-  }
-
-  if(! defined $stored_set){
-    ($stored_set) = @{ $adaptor->store($new_set) };
-  }
-
-  return $stored_set;
-}
-
-
-sub _validate_Set_config {
-   my ($db, $rollback, $slices, $ssets, $ftype, $ctype, $fclass ) = rearrange
-    ( ['DBADAPTOR', 'ROLLBACK', 'SLICES', 'SUPPORTING_SETS',
-      'FEATURE_TYPE', 'CELL_TYPE', 'FEATURE_CLASS'], @_ );
-
-  #Currently sets FeatureSet and ResultSet f/ctypes to came value
-
-  if($fclass eq 'annotated'){
-    #Currently 1 InputSet is mandatory for FeatureSet & ResultSet
-
-    if( ! ( $ssets &&
-            (ref($ssets) eq 'ARRAY') &&
-            (scalar(@$ssets) != 1) &&
-            (ref($ssets->[0]) ne 'Bio::EnsEMBL::Funcgen::InputSet')) ){
-      throw('Current only 1 defined InputSet is permitted for a Result/FeatureSet');
-    }
-
-    #Throw if we have set these
-
-    if($ctype || $ftype){
-     throw('It is unsafe to set -cell_type or -feature_type when defining an'.
-           '\'annotated\' FeatureSet from a predefined InputSet. Please omit these parameters.');
-    }
-
-
-    $ctype = $ssets->[0]->cell_type;
-    $ftype = $ssets->[0]->feature_type;
-  }
-  #This will be caught when calling Set::new in caller
-  #elsif( ! ($ctype && $ftype)){#allow MultiCell and different ftypes for regbuild
-  #  throw('Must specify a -cell_type and -feature_type when creating an \''.
-  #        $fclass.'\' FeatureSet');
-  #}
-
-
-  my $rollback_level = 0;
-
-  if ($rollback) {
-
-    if ( ! exists $rollback_modes{$rollback} ) {
-      throw("You have not set a valid rollback mode, please specify one of the following:\n\t"
-          . join( ', ', keys %rollback_modes ) . "\n" );
-    }
-
-    $rollback_level = $rollback_modes{$rollback};
-  }
-
-  if ( $slices && ( ref($slices) ne 'ARRAY' ) ) {
-    throw('-slices param must be an ARRAYREF of Bio::EnsEMBL::Slice objects');
-    #Rest of slice validation done in other methods
-  }
-
-  #Check mandatory params
-  if ( ! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))) {
-    throw('Must provide a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
-  }
-
-
-
-  #set validation now done in define set methods as is conditional on feature_class
-  #
-
-  #returns rearranged vars for convenience
-  return ( $rollback_level, $ctype, $ftype, $db, $ssets, $slices);
-}
-
-
-#This is a controlling method, which calls define_Result/FeatureSet
-#can we extend this for use in the registration pipeline
-#by adding define_InputSet & define_InputSubset etc.
-
-sub define_DataSet {
-  my $self = $_[0];
-
-  my ($ssets, $fclass, $name, $db) =
-    rearrange(['SUPPORTING_SETS', 'FEATURE_CLASS' ,'NAME', 'DBADAPTOR'], @_ );
-  #No need to _validate_Set_config here as it will be done in the below methods
-
-
-  #Always create the FeatureSet first
-  #This will rollback_DataSet if required
-  my $fset = $self->define_FeatureSet(@_);
-
-  #Always create the ResultSet before the DataSet
-  #so we can pass it as support
-  my $rset;
-
-  if($fclass eq 'annotated'){
-    #what about result_set_mode = none here?
-    #we may want to rollback full delete here
-    #this is a bit odd that define_ResultSet will delete if fully
-    #alternate is to fetch the stored set and call _validate_rollback_Set
-    #directly from here
-
-    $rset = $self->define_ResultSet(@_);
-    push @$ssets, $rset;
-  }
-
-
-  my $dset_adaptor = $db->get_DataSetAdaptor;
-
-  #Generate new DataSet first to validate the parameters
-  my $new_dset = Bio::EnsEMBL::Funcgen::DataSet->new
-    (
-     -name            => $name,
-     -feature_set     => $fset,
-     -supporting_sets => $ssets,
-    );
-  my $stored_dset = $dset_adaptor->fetch_by_name($name);
-
-  #Could we actually cascade a compare_to from DataSet to feature_set and result_set?
-  #This would be much harder to manage rollbacks
-  #We are effectively doing this above, without complicating the the DataSet compare_to method
-  #If we did it all in one go, then we would have to define eveything here
-  #meaning the define_ResultSet and define_FeatureSet would beome redundant?
-  #No, we could remove the _validate_rollback_Set from the return value
-  #and let that be called in a controlling method define_validate_rollback_DataSet ?
-  #it would also be very hard to cascade rollback of a DataSet withing _validate_rollback_Set?
-  #Hence we would have to have a control method, which is essentially this method!
-  #change the name of this method to define_validate_rollback_DataSet???
-  #should we change this other define method, such that they don't call _validate_rollback_Set?
-  #Would we have a use for the very simple define Set methods?
-
-  if(defined $stored_dset){
-    $self->_compare_set_for_rollback($new_dset, $stored_dset,
-                                     'data_set');
-    #No need to pass slices here as we can't rollback a data_slice based on a slice
-  }
-  else{
-    ($stored_dset) = @{$dset_adaptor->store($new_dset)};
-  }
-
- return $stored_dset;
-} ## end sub define_DataSet
-
-
-=head2 rollback_FeatureSet
-
-  Arg [0]    : Bio::EnsEMBL::Funcgen::FeatureSet
-               for another DataSet.
-  Arg [1]    : Arrayref of Bio::EnsEMBL::Slice objects to rollback (Optional)
-  Arg [2]    : Boolean flag to perform full delete of feature_set and data_set records.
-  Example    : $self->rollback_FeatureSet($fset);
-  Description: Deletes all features for the passed FeatureSet, along with associated
-               status and xref records. Checks whether FeatureSet is a supporting set
-               in any other DataSet.
-  Returntype : None
-  Exceptions : Throws if:
-                Any deletes fails
-                Dependant DataSets are found
-                FeatureSet 'adaptor' method is not defined
-                Defined Slices are not valid
-                More than 1 sub-Slice is defined (i.e. not full length)
-  Caller     : Importers and Parsers
-  Status     : At risk
-
-=cut
-
-sub rollback_FeatureSet {
-  my ( $self, $fset, $delete_mode, $slices ) = @_;
-  my ( $sql, $slice_name );
-  my $slice_join = '';
-
-  if($delete_mode && ($delete_mode ne 'full')){
-    throw("Invalid delete mode defined:\t$delete_mode\n".
-        'Please omit of specify full');
-#delete_mode is assumed to be full below
-  }
-
-
-
-
-  if ( ! ($fset &&
-        (ref($fset) eq 'Bio::EnsEMBL::Funcgen::FeatureSet') &&
-        defined $fset->adaptor ) ){
-    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet');
-  }
-
-  my $db    = $fset->adaptor->db; #Assumes access to DBAdaptor
-    $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::FeatureSet', $fset );
-  my $table = $fset->feature_class . '_feature';
-
-  $self->log_header('Rolling back '.$fset->feature_class.
-      " FeatureSet:\t" . $fset->name );
-
-  #Check whether this is a supporting set for another data_set
-  my @dsets =  @{ $db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset) };
-
-  if (@dsets) {
-    my $txt = $fset->name." is a supporting set of the following DataSets:\t" .
-      join( ', ', ( map { $_->name } @dsets ) );
-    throw( $txt ."\nPlease resolve by deleting dependant Feature/DataSets" );
-  }
-
-
-  #Validate all slices before we commence any rollback
-  if ($slices) {
-
-    if ($delete_mode) { #Must be full
-      throw("Cannot specify a full delete for a Slice based rollback:\t" .
-          $fset->name );
-    }
-
-    if ( ref($slices) ne 'ARRAY' ) {
-      throw('Slices must be an ARRAYREF of Slice objects');
-    }
-
-    map {
-      throw("Must pass a valid Bio::EnsEMBL::Slice")
-        if ( !( ref($_) && $_->isa('Bio::EnsEMBL::Slice') ) )
-    } @$slices;
-
-    $self->log( "Restricting to slices:\n\t\t" .
-        join( "\n\t\t", ( map { $_->name } @$slices ) ) );
-  }
-  else{ #Set undef slice for no slice definition
-    $slices ||= [undef];
-  }
-
-  $fset->adaptor->revoke_states($fset);
-
-  for my $slice(@$slices){
-    my $slice_join = '';
-
-    if(defined $slice){
-      my $efg_sr_id =
-        $fset->get_FeatureAdaptor->get_seq_region_id_by_Slice($slice);
-
-      if ( ! $efg_sr_id ) {
-        $self->log("Slice is not present in eFG DB:\t" . $slice->name );
-      }
-      else {
-        #Test is not subslice
-        my $full_slice = $slice->adaptor->fetch_by_region(undef,
-            $slice->seq_region_name);
-
-        if ( ( $slice->start != 1 ) ||
-            ( $full_slice->end != $slice->end ) ){
-          $slice_join = " and f.seq_region_id=$efg_sr_id and f.seq_region_start<=" .
-            $slice->end.' and f.seq_region_end>=' . $slice->start;
-        }
-        else{
-          $slice_join = ' and f.seq_region_id = '.$efg_sr_id;
-        }
-      }
-    }
-    # Now do the rollback
-
-    if ( $fset->feature_class eq 'regulatory' ) {   #Rollback reg attributes
-      $sql = "DELETE ra from regulatory_attribute ra, $table f where ".
-        "f.${table}_id=ra.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
-
-      $self->rollback_table( $sql, 'regulatory_attribute', undef, $db );
-    }
-    elsif($fset->feature_class eq 'annotated'){   #Handle amfs
-      $sql = 'DELETE amf from annotated_feature af, associated_motif_feature amf where '.
-        'af.feature_set_id='.$fset->dbID.
-        ' AND af.annotated_feature_id = amf.annotated_feature_id'.$slice_join;
-      $self->rollback_table( $sql, 'associated_motif_feature', undef, $db );
-    } ## end if ( $fset->feature_class...)
-
-    #Remove object_xref records (but not xref which may be used by soemthing else)
-    $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='"
-      .ucfirst( $fset->feature_class )."Feature' and ox.ensembl_id=f.${table}_id and ".
-      "f.feature_set_id=". $fset->dbID . $slice_join;
-    $self->rollback_table( $sql, 'object_xref', 'object_xref_id', $db );
-
-    #Remove associated_feature_type records
-    $sql = "DELETE aft from associated_feature_type aft, $table f where ".
-      "f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.table_id and ".
-      "aft.table_name='".$fset->feature_class . "_feature'" . $slice_join;
-    $self->rollback_table( $sql, 'associated_feature_type', undef, $db );
-
-    #Remove features
-    $sql = "DELETE f from $table f where f.feature_set_id=" .
-      $fset->dbID . $slice_join;
-    $self->rollback_table( $sql, $table, "${table}_id", $db );
-  }
-
-  if ($delete_mode) {  #Must be full
-    #Also delete feature/data/supporting_set records
-    $self->log( "Deleting Feature/DataSet:\t" . $fset->name );
-
-    #Delete regbuild strings first
-    if ( $fset->feature_class eq 'regulatory' ) {
-      $sql = "DELETE from regbuild_string where feature_set_id=" . $fset->dbID;
-      $self->rollback_table( $sql, 'regbuild_string', 'feature_set_id', $db );
-      $self->log( "Deleted regbuild_string entries for:\t" . $fset->name );
-    }
-
-    $sql = "DELETE from feature_set where feature_set_id=" . $fset->dbID;
-    $self->rollback_table( $sql, 'feature_set', 'feature_set_id', $db );
-    $self->log( "Deleted feature_set entry for:\t" . $fset->name );
-
-    $sql = 'DELETE ss, ds from data_set ds, supporting_set ss where '.
-      'ds.feature_set_id='.$fset->dbID.' AND ds.data_set_id=ss.data_set_id';
-    $self->rollback_table( $sql, 'data_set', 'data_set_id', $db );
-    $self->log("Deleted associated data/supporting_set entries for:\t" . $fset->name );
-  }
-
-  return;
-} ## end sub rollback_FeatureSet
-
-
-=head2 rollback_ResultSet
-
-  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
-  Arg[2]     : Boolean - optional flag to roll back array results
-  Example    : $self->rollback_ResultSet($rset);
-  Description: Deletes all status. chip_channel and result_set entries for this ResultSet.
-               Will also rollback_results sets if rollback_results specified.  This will also
-               update or delete associated ResultSets where appropriate.
-  Returntype : Arrayref containing the ResultSet and associated DataSet which have not been rolled back
-  Exceptions : Throws if ResultSet not valid
-               Throws is result_rollback flag specified but associated product FeatureSet found.
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-#Need to change slice to slices ref here
-#Need to add full rollback, which will specify to remove all sets
-#as well as results and
-#These params need clarifying as their nature changes between input_set and array rsets
-#Don't we always want to rollback_results?
-#force should only really be used to rollback InputSet ResultFeature sets
-#i.e. Read collections which are not used as direct input for the linked product FeatureSet
-#This should fail with array data associated with a product feature set
-
-#Do we want to separate ResultFeature rollback from result rollback?
-#Currently the array based collection rollback is done by hand
-#Could be done via the ResultFeature Collector, but should probably use this method.
-
-#rollback_results is only used in the MAGE parser to identify sets which have an
-#associated product fset.
-#Can't really separate due to integrated functionality
-
-#todo update callers to remove force, rollback_result and slice args
-
-sub rollback_ResultSet {
-  my ( $self, $rset, $delete_mode ) = @_;
-
-  if ( ! ($rset &&
-         (ref($rset) eq 'Bio::EnsEMBL::Funcgen::ResultSet') &&
-          defined $rset->adaptor ) ){
-    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet');
-  }
-
-  if($delete_mode &&
-     (($delete_mode ne 'full') ||
-      ($delete_mode ne 'recover'))){
-    throw("Invalid delete mode defined:\t$delete_mode\n".
-          'Please omit of specify full or recover');
-  }
-
-  my $db = $rset->adaptor->db; #Assumes db is accessible
-  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ResultSet', $rset );
-
-  #Just omit experimental_chip/channel/result_feature support for now as we probably
-  #won't ever use it again
-  if($rset->table_name ne 'input_set'){
-    throw('rollback_ResutlSet not longer support non-InputSet rollbacks');
-    #This would need to check co-dependant ResultSets, see old version in cvs
-  }
-
-  $self->log( "Rolling back ResultSet:\t" . $rset->name );
-
-  ### Check if this ResultSet is part of a DataSet with a product feature set
-  my @dsets = @{ $self->db->get_DataSetAdaptor->fetch_all_by_supporting_set($rset) };
-
-  if(@dsets) {
-
-    if($delete_mode && ($delete_mode ne 'recover')){
-      throw('ResultSet '.$rset->name.
-            " has associated DataSets, please specify -recovery or remove before rollback:\n\t".
-            join(',', (map $_->name, @dsets)));
-    }
-
-    #This would never get executed
-    #if($delete_mode && ($delete_mode eq 'full')){
-    #   throw('Cannot perform full_delete on ResultSet '.$rset->name.
-    #         " with associated DataSets:\n\t".join(',', (map $_->name, @dsets)));
-    #}
-
-    #else assume diffs have already been caught by caller (e.g. _validate_rollback_Set in recovery mode)
-    #Actually unsafe to force unless diffs have been checked
-  }
-
-  $self->db->get_ResultSetAdaptor->revoke_states($rset);
-  #delete the dbfile_registry entry
-  my $sql = 'DELETE from dbfile_registry where table_name="result_set" and table_id='.$rset->dbID;
-  $db->dbc->rollback_table($sql, 'dbfile_registry', undef, $db);
-
-  if($delete_mode && ($delete_mode eq 'full')){ #delete the result_set and result_set_input entries
-    $self->log( "Deleting ResultSet:\t" . $rset->name );
-    $sql = 'DELETE rs, rsi from result_set_rs, result_set_input rsi WHERE '.
-      'rsi.result_set_id=rs.result_set_id AND rs.result_set_id='.$rset->dbID;
-    $db->dbc->rollback_table($sql, 'result_set', 'result_set_id', $db);
-  }
-
- return;
-} ## end sub rollback_ResultSet
-
-
-#todo add delete_DataSet (with flag to full_delete supporting_sets?
-#todo add delete_InputSet
-
-
-=head2 rollback_ArrayChips
-
-  Arg[1]     : ARRAYREF: Bio::EnsEMBL::Funcgen::ArrayChip objects
-  Example    : $self->rollback_ArrayChips([$achip1, $achip2]);
-  Description: Deletes all Probes, ProbeSets, ProbeFeatures and
-               states associated with this ArrayChip
-  Returntype : None
-  Exceptions : Throws if ArrayChip not valid and stored
-               Throws if ArrayChips are not of same class
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-#This should be tied to a CS id!!!
-#And analysis dependant?
-#We may not want to delete alignment by different analyses?
-#In practise the slice methods ignore analysis_id for this table
-#So we currently never use this!
-#So IMPORTED status should be tied to CS id and Analysis id?
-
-sub rollback_ArrayChips {
-  my ( $self, $acs, $mode, $force, $keep_xrefs, $no_clean_up,
-       $force_clean_up )
-    = @_;
-
-#no_clean_up and force_clean_up allow analyze/optimize to be skipped until the last rollback
-#We could get around this by specifying all ArrayChips for all formats at the same time?
-#Need to implement in RollbackArrays
-
-  $mode ||= 'probe';
-
-  if ( $mode &&
-       ( $mode ne 'probe' &&
-         $mode ne 'probe_feature'        &&
-         $mode ne 'ProbeAlign'           &&
-         $mode ne 'ProbeTranscriptAlign' &&
-         $mode ne 'probe2transcript' ) )
-  {
-    throw(
-"You have passed an invalid mode argument($mode), you must omit or specify either 'probe2transcript', 'probe', 'ProbeAlign, 'ProbeTranscriptAlign' or 'probe_feature' for all of the Align output"
-    );
-  }
-
-  if ( $force && ( $force ne 'force' ) ) {
-    throw(
-"You have not specified a valid force argument($force), you must specify 'force' or omit"
-    );
-  }
-
-  if ( $keep_xrefs && ( $keep_xrefs ne 'keep_xrefs' ) ) {
-    throw(
-"You have not specified a valid keep_xrefs argument($keep_xrefs), you must specify 'keep_xrefs' or omit"
-    );
-  }
-
-  if ($keep_xrefs) {
-
-    if ( $mode eq 'probe' || $mode eq 'probe2transcript' ) {
-      throw(
-"You cannot specify 'keep_xrefs' with mode $mode, you can only rollback features e.g. probe_feature, ProbeAlign or ProbeTranscriptAlign"
-      );
-    }
-
-    if ($force) {
-      throw(
-"You cannot 'force' delete the probe2transcript xrefs and 'keep_xrefs' at the same time. Please specify just one."
-      );
-    }
-  }
-
-  my ( $adaptor, $db, %classes );
-
-  foreach my $ac (@$acs) {
-    $adaptor ||=
-      $ac->adaptor || throw('ArrayChip must have an adaptor');
-    $db ||= $adaptor->db;
-    $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ArrayChip', $ac );
-
-    if ( !$ac->get_Array->class ) {
-      throw(
-'The ArrayChip you are trying to rollback does not have a class attribute'
-      );
-    }
-
-    $classes{ $ac->get_Array->class } = undef;
-
-#if($class && ($class ne $ac->get_Array->class)){
-#  throw('You can only rollback_ArrayChips for ArrayChips with the same class');
-#}
-  }
-
-#This is always the case as we register the association before we set the Import status
-#Hence the 2nd stage of the import fails as we have an associated ExperimentalChip
-#We need to make sure the ExperimentalChip and Channel have not been imported!!!
-  warn
-"NOTE: rollback_ArrayChips. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";
-
-#Check for dependent ExperimentalChips
-#if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
-#	my %exps;
-#	my $txt = "Experiment\t\t\t\tExperimentalChip Unique IDs\n";
-
-  #	foreach my $ec(@echips){
-  #	  $exps{$ec->get_Experiment->name} ||= '';
-
-  #	  $exps{$ec->get_Experiment->name} .= "\t".$ec->unique_id;
-  #	}
-
-  #	map {$txt.= "\t".$_.":".$exps{$_}."\n"} keys %exps;
-
-  #	throw("Cannot rollback ArrayChip:\t".$ac->name.
-  #		  "\nFound Dependent Experimental Data:\n".$txt);
-  #  }
-
-  my $ac_names = join( ', ', ( map { $_->name } @$acs ) );
-  my $ac_ids   = join( ', ', ( map { $_->dbID } @$acs ) );
-
-  $self->log("Rolling back ArrayChips $mode entries:\t$ac_names");
-  my ( $row_cnt, $probe_join, $sql );
-
-#$ac->adaptor->revoke_states($ac);#This need to be more specific to the type of rollback
-  my $species = $db->species;
-
-  if ( !$species ) {
-    throw(
-'Cannot rollback probe2transcript level xrefs without specifying a species for the DBAdaptor'
-    );
-  }
-
-  #Will from registry? this return Homo sapiens?
-  #Or homo_sapiens
-  ( $species = lc($species) ) =~ s/ /_/;
-
-  my $transc_edb_name = "${species}_core_Transcript";
-  my $genome_edb_name = "${species}_core_Genome";
-
-#Maybe we want to rollback ProbeAlign and ProbeTranscriptAlign output separately so we
-#can re-run just one part of the alignment step.
-
-#We want this Probe(Transcript)Align rollback available in the environment
-#So we can do it natively and before we get to the RunnableDB stage,
-#where we would be trying multiple rollbacks in parallel
-#Wrapper script?
-#Or do we keep it simple here and maintain probe_feature wide rollback
-#And just the ProbeAlign/ProbeTranscriptAlign roll back in the environment?
-
-  #We can restrict the probe deletes using the ac_id
-  #We should test for other ac_ids using the same probe_id
-  #Then fail unless we have specified force delete
-
-  #These should be deleted for all other modes but only if force is set?
-  #This may delete xrefs for other ArrayChips
-
-#The issues is if we need to specify force for one delete but don't want to delete something else?
-#force should only be used to delete upto and including the mode specified
-#no mode equates to probe mode
-#if no force then we fail if previous levels/modes have xrefs etc...
-
-#Let's grab the edb ids first and use them directly, this will avoid table locks on edb
-#and should also speed query up?
-
-  if ( $mode eq 'probe2transcript' || $force ) {
-
-    #Delete ProbeFeature UnmappedObjects
-    $self->log("Deleting probe2transcript ProbeFeature UnmappedObjects");
-    $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, probe_feature pf, external_db e ".
-            "WHERE a.logic_name ='probe2transcript' AND a.analysis_id=uo.analysis_id ".
-            "AND p.probe_id=pf.probe_id and pf.probe_feature_id=uo.ensembl_id AND ".
-            "uo.ensembl_object_type='ProbeFeature' and uo.external_db_id=e.external_db_id ".
-            "AND e.db_name ='${transc_edb_name}' AND p.array_chip_id IN($ac_ids)";
-    $self->rollback_table( $sql, 'unmapped_object',
-                           'unmapped_object_id', $db, $no_clean_up );
-
-    #Delete ProbeFeature Xrefs/DBEntries
-    $self->log("Deleting probe2transcript ProbeFeature Xrefs");
-    $sql = "DELETE ox FROM xref x, object_xref ox, probe p, probe_feature pf, external_db e ".
-            "WHERE x.external_db_id=e.external_db_id AND e.db_name ='${transc_edb_name}' ".
-            "AND x.xref_id=ox.xref_id AND ox.ensembl_object_type='ProbeFeature' ".
-            "AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND ".
-            "ox.linkage_annotation!='ProbeTranscriptAlign' AND p.array_chip_id IN($ac_ids)";
-    $self->rollback_table( $sql, 'object_xref', 'object_xref_id', $db,
-                           $no_clean_up );
-
-    #Probe/Set specific entries
-    for my $xref_object ( 'Probe', 'ProbeSet' ) {
-      $probe_join = ( $xref_object eq 'ProbeSet' ) ? 'p.probe_set_id' :
-        'p.probe_id';
-
-      #Delete Probe/Set UnmappedObjects
-
-      $self->log("Deleting probe2transcript $xref_object UnmappedObjects");
-
-      $sql = "DELETE uo FROM analysis a, unmapped_object uo, probe p, external_db e ".
-              "WHERE a.logic_name='probe2transcript' AND a.analysis_id=uo.analysis_id AND ".
-              "uo.ensembl_object_type='${xref_object}' AND $probe_join=uo.ensembl_id AND ".
-              "uo.external_db_id=e.external_db_id AND e.db_name='${transc_edb_name}' ".
-              "AND p.array_chip_id IN($ac_ids)";
-
-      #.' and edb.db_release="'.$schema_build.'"';
-      $self->rollback_table( $sql, 'unmapped_object',
-                             'unmapped_object_id', $db, $no_clean_up );
-
-      #Delete Probe/Set Xrefs/DBEntries
-      $sql =
-"DELETE ox FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' AND ox.ensembl_object_type='${xref_object}' AND ox.ensembl_id=${probe_join} AND p.array_chip_id IN($ac_ids)";
-      $self->log("Deleting probe2transcript $xref_object xref records");
-      $self->rollback_table( $sql, 'object_xref', 'object_xref_id',
-                             $db, $no_clean_up );
-    }
-  } ## end if ( $mode eq 'probe2transcript'...)
-  elsif ( !$keep_xrefs )
-  {    #Need to check for existing xrefs if not force
-        #we don't know whether this is on probe or probeset level
-     #This is a little hacky as there's not way we can guarantee this xref will be from probe2transcript
-     #until we get the analysis_id moved from identity_xref to xref
-     #We are also using the Probe/Set Xrefs as a proxy for all other Xrefs and UnmappedObjects
-     #Do we need to set a status here? Would have problem rolling back the states of associated ArrayChips
-
-    for my $xref_object ( 'Probe', 'ProbeSet' ) {
-
-      $probe_join = ( $xref_object eq 'ProbeSet' ) ? 'p.probe_set_id' :
-        'p.probe_id';
-
-      $row_cnt = $db->dbc->db_handle->selectrow_array(
-"SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='${transc_edb_name}' and ox.ensembl_object_type='${xref_object}' and ox.ensembl_id=${probe_join} AND p.array_chip_id IN($ac_ids)"
-      );
-
-      if ($row_cnt) {
-        throw(
-"Cannot rollback ArrayChips($ac_names), found $row_cnt $xref_object Xrefs. Pass 'force' argument or 'probe2transcript' mode to delete"
-        );
-      }
-      else {
-        #$self->log("Found $row_cnt $xref_object Xrefs");
-      }
-    }
-  } ## end elsif ( !$keep_xrefs )  [ if ( $mode eq 'probe2transcript'...)]
-
-  #ProbeFeatures inc ProbeTranscriptAlign xrefs
-
-  if ( $mode ne 'probe2transcript' ) {
-
-    if ( ( $mode eq 'probe' && $force ) ||
-         $mode eq 'probe_feature' ||
-         $mode eq 'ProbeAlign'    ||
-         $mode eq 'ProbeTranscriptAlign' )
-    {
-
-      #Should really revoke some state here but we only have IMPORTED
-
-      #ProbeTranscriptAlign Xref/DBEntries
-
-#my (@anal_ids) = @{$db->get_AnalysisAdaptor->generic_fetch("a.module='ProbeAlign'")};
-#Grrrr! AnalysisAdaptor is not a standard BaseAdaptor implementation
-#my @anal_ids = @{$db->dbc->db_handle->selectall_arrayref('select analysis_id from analysis where module like "%ProbeAlign"')};
-#@anal_ids = map {$_= "@$_"} @anal_ids;
-
-      if ( $mode ne 'ProbeAlign' ) {
-        my $lnames = join( ', ',
-                           ( map { "'${_}_ProbeTranscriptAlign'" }
-                               keys(%classes) ) );
-
-        $sql =
-"DELETE ox from object_xref ox, xref x, probe p, probe_feature pf, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=pf.probe_feature_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-        $self->log(
-            "Deleting ProbeFeature Xref/DBEntry records for:\t$lnames");
-        $self->rollback_table( $sql, 'object_xref', 'object_xref_id',
-                               $db, $no_clean_up );
-
-#Can't include uo.type='ProbeTranscriptAlign' in these deletes yet as uo.type is enum'd to xref or probe2transcript
-#will have to join to analysis and do a like "%ProbeTranscriptAlign" on the the logic name?
-#or/and ur.summary_description='Promiscuous probe'?
-
-        $sql = "DELETE uo from unmapped_object uo, probe p, external_db e, analysis a ".
-                "WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id ".
-                "AND a.logic_name in (${lnames}) AND e.external_db_id=uo.external_db_id ".
-                "AND e.db_name='${transc_edb_name}' AND uo.ensembl_id=p.probe_id ".
-                "AND p.array_chip_id IN($ac_ids)";
-
-        $self->log("Deleting UnmappedObjects for:\t${lnames}");
-        $self->rollback_table( $sql, 'unmapped_object',
-                               'unmapped_object_id', $db,
-                               $no_clean_up );
-
-        #Now the actual ProbeFeatures
-        $sql =
-"DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name in(${lnames}) AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-        $self->log("Deleting ProbeFeatures for:\t${lnames}");
-        $self->rollback_table( $sql, 'probe_feature',
-                               'probe_feature_id', $db, $no_clean_up );
-      } ## end if ( $mode ne 'ProbeAlign')
-
-      if ( $mode ne 'ProbeTranscriptAlign' ) {
-
-        my $lnames = join( ', ',
-                           ( map { "'${_}_ProbeAlign'" } keys(%classes)
-                           ) );
-
-        $sql =
-"DELETE uo from unmapped_object uo, probe p, external_db e, analysis a WHERE uo.ensembl_object_type='Probe' AND uo.analysis_id=a.analysis_id AND a.logic_name in (${lnames}) AND e.external_db_id=uo.external_db_id and e.db_name='${genome_edb_name}' AND uo.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-        $self->log("Deleting UnmappedObjects for:\t${lnames}");
-        $self->rollback_table( $sql, 'unmapped_object',
-                               'unmapped_object_id', $db,
-                               $no_clean_up );
-
-        $sql =
-"DELETE pf from probe_feature pf, probe p, analysis a WHERE a.logic_name in(${lnames}) AND a.analysis_id=pf.analysis_id AND pf.probe_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-        $self->log("Deleting ProbeFeatures for:\t${lnames}");
-        $self->rollback_table( $sql, 'probe_feature',
-                               'probe_feature_id', $db, $no_clean_up );
-      }
-    } ## end if ( ( $mode eq 'probe'...))
-    else {
-#Need to count to see if we can carry on with a unforced probe rollback?
-#Do we need this level of control here
-#Can't we assume that if you want probe you also want probe_feature?
-#Leave for safety, at least until we get the dependant ExperimetnalChip test sorted
-#What about if we only want to delete one array from an associated set?
-#This would delete all the features from the rest?
-
-      $sql =
-"select count(*) from object_xref ox, xref x, probe p, external_db e WHERE ox.ensembl_object_type='ProbeFeature' AND ox.linkage_annotation='ProbeTranscriptAlign' AND ox.xref_id=x.xref_id AND e.external_db_id=x.external_db_id and e.db_name='${transc_edb_name}' AND ox.ensembl_id=p.probe_id AND p.array_chip_id IN($ac_ids)";
-      $row_cnt = $db->dbc->db_handle->selectrow_array($sql);
-
-      if ($row_cnt) {
-        throw(
-"Cannot rollback ArrayChips($ac_names), found $row_cnt ProbeFeatures. Pass 'force' argument or 'probe_feature' mode to delete"
-        );
-      }
-      else {
-        $self->log("Found $row_cnt ProbeFeatures");
-      }
-    }
-
-    if ( $mode eq 'probe' ) {
-
-#Don't need to rollback on a CS as we have no dependant EChips?
-#Is this true?  Should we enforce a 3rd CoordSystem argument, 'all' string we delete all?
-
-      foreach my $ac (@$acs) {
-        $ac->adaptor->revoke_states($ac)
-          ;    #Do we need to change this to revoke specific states?
-         #Current states are only IMPORTED, so not just yet, but we could change this for safety?
-      }
-
-      #ProbeSets
-      $sql =
-"DELETE ps from probe p, probe_set ps where p.array_chip_id IN($ac_ids) and p.probe_set_id=ps.probe_set_id";
-      $self->rollback_table( $sql, 'probe_set', 'probe_set_id', $db,
-                             $no_clean_up );
-
-      #Probes
-      $sql = "DELETE from probe where array_chip_id IN($ac_ids)";
-      $self->rollback_table( $sql, 'probe', 'probe_id', $db,
-                             $no_clean_up );
-    }
-  } ## end if ( $mode ne 'probe2transcript')
-
-  $self->log("Finished $mode roll back for ArrayChip:\t$ac_names");
-  return;
-} ## end sub rollback_ArrayChips
-
-#This will just fail silently if the reset value
-#Is less than the true autoinc value
-#i.e. if there are parallel inserts going on
-#So we can never assume that the $new_auto_inc will be used
-
-sub rollback_table {
-  my ( $self, $sql, $table, $id_field, $db, $no_clean_up,
-       $force_clean_up )
-    = @_;
-
-  my $row_cnt;
-
-  #warn $sql;
-  eval { $row_cnt = $db->dbc->do($sql) };
-
-  if ($@) {
-    throw("Failed to rollback table $table using sql:\t$sql\n$@");
-  }
-
-  $row_cnt = 0 if $row_cnt eq '0E0';
-  $self->log("Deleted $row_cnt $table records");
-
-  if ( $force_clean_up || ( $row_cnt && !$no_clean_up ) ) {
-    $self->refresh_table( $table, $id_field, $db );
-  }
-
-  return;
-}
-
-#Now separated so that we can do this once at the end of a rollback of many Sets
-
-sub refresh_table {
-  my ( $self, $table, $id_field, $db ) = @_;
-
-  #This only works if the new calue is available
-  #i.e. do not need lock for this to be safe
-  $self->reset_table_autoinc( $table, $id_field, $db ) if $id_field;
-
-  $self->log("Optimizing and Analyzing $table");
-
-  $db->dbc->do("optimize table $table")
-    ;    #defrag data, sorts indices, updates table stats
-  $db->dbc->do("analyze  table $table");    #analyses key distribution
-
-  return;
-}
-
-sub reset_table_autoinc {
-  my ( $self, $table_name, $autoinc_field, $db ) = @_;
-
-  if ( !( $table_name && $autoinc_field && $db ) ) {
-    throw(
-'You must pass a table_name and an autoinc_field to reset the autoinc value'
-    );
-  }
-
-  if ( !( ref($db) && $db->isa('Bio::EnsEMBL::DBSQL::DBAdaptor') ) ) {
-    throw('Must pass a valid Bio::EnsEMBL::DBSQL::DBAdaptor');
-  }
-
-  #Unsafe to do this in two queries as parallel jobs may add in between select and alter
-  #in fact this needs a table lock to be totally safe
-  #although current ALTER will just fail silently if this happens
-  my $sql = "select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
-  my ($current_auto_inc) = $db->dbc->db_handle->selectrow_array($sql);
-  my $new_autoinc = ($current_auto_inc) ? ( $current_auto_inc + 1 ) : 1;
-  $sql = "ALTER TABLE $table_name AUTO_INCREMENT=$new_autoinc";
-  $db->dbc->do($sql);
-  return;
-} ## end sub reset_table_autoinc
-
-=head2 get_core_display_name_by_stable_id
-
-  Args [1]   : Bio::EnsEMBL::DBSQL::DBAdaptor
-  Args [2]   : stable ID from core DB.
-  Args [3]   : stable feature type e.g. gene, transcript, translation
-  Example    : $self->validate_and_store_feature_types;
-  Description: Builds a cache of stable ID to display names.
-  Returntype : string - display name
-  Exceptions : Throws is type is not valid.
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-# --------------------------------------------------------------------------------
-# Build a cache of ensembl stable ID -> display_name
-# Return hashref keyed on {$type}{$stable_id}
-#Need to update cache if we're doing more than one 'type' at a time
-# as it will never get loaded for the new type!
-
-sub get_core_display_name_by_stable_id {
-  my ( $self, $cdb, $stable_id, $type ) = @_;
-
-  $type = lc($type);
-
-  if ( $type !~ /(gene|transcript|translation)/ ) {
-    throw(
-      "Cannot get display_name for stable_id $stable_id with type $type"
-    );
-  }
-
-  if ( !exists $self->{'display_name_cache'}->{$stable_id} ) {
-    ( $self->{'display_name_cache'}->{$stable_id} ) =
-      $cdb->dbc->db_handle->selectrow_array(
-"SELECT x.display_label FROM $type t, xref x where t.display_xref_id=x.xref_id and t.stable_id='${stable_id}'"
-      );
-  }
-
-  return $self->{'display_name_cache'}->{$stable_id};
-}
-
-=head2 get_core_stable_id_by_display_name
-
-  Args [1]   : Bio::EnsEMBL::DBSQL::DBAdaptor
-  Args [2]   : display name (e.g. from core DB or GNC name)
-  Example    :
-  Description: Builds a cache of stable ID to display names.
-  Returntype : string - gene stable ID
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-# --------------------------------------------------------------------------------
-# Build a cache of ensembl stable ID -> display_name
-# Return hashref keyed on {$type}{$stable_id}
-#Need to update cache if we're doing more than one 'type' at a time
-# as it will never get loaded for the new type!
-
-sub get_core_stable_id_by_display_name {
-  my ( $self, $cdb, $display_name ) = @_;
-
-#if($type !~ /(gene|transcript|translation)/){
-#	throw("Cannot get display_name for stable_id $stable_id with type $type");
-#  }
-
-  if ( !exists $self->{'stable_id_cache'}->{$display_name} ) {
-    ( $self->{'stable_id_cache'}->{$display_name} ) =
-      $cdb->dbc->db_handle->selectrow_array(
-"SELECT g.stable_id FROM gene g, xref x where g.display_xref_id=x.xref_id and and x.display_label='${display_name}'"
-      );
-  }
-
-  return $self->{'stable_id_cache'}->{$display_name};
-}
-
-1;
-
-
-#This could be a simple sub, if we passed $rollback_modes
-
-sub _compare_set_for_rollback {
-  my ($self, $new_set, $set_type, $stored_set, $rollback_level, $slices) = @_;
-
-  #do we catch undef $stored_set here and return without warning?
-  #add flag for states comparison?
-
-  my $diffs = $stored_set->compare_to($new_set);
-  #by default this tests nested objects via is_stored and dbID match
-
-  #delete get_states_diffs as these are never set and will likely
-  #always be different and we handle IMPORTED below
-  delete $diffs->{'get_all_states'} if exists $diffs->{'get_all_states'};
-
-  if(%$diffs){
-
-    if($set_type eq 'data_set'){
-      throw('Found differences in specified and stored DataSet '.
-            "support or product FeatureSet, please rectify manually\n".
-            Dumper($diffs));
-      #When called from define_DataSet should expect no errors as we have already
-      #done the compare and rollback for Feature/ResultSet
-      #We probably have some weird naming issue that has happened with previous
-      #import and we need to handle this manually as it will be unsafe to rollback this data_set
-
-      #What about addition/change if InputSet!!!!!
-      #This should have been caught by rollback_FeatureSet
-      #Can we be sure of this?
-      #Should we just be calling _validate_rollback_Set here
-      #for safety, no as this is unsafe
-      #if there is a difference, then something has gone wrong and we need to rectify manually!
-      #with the FeatureSet - DataSet association
-
-      #If this is true the we will probably have failed at the rollback_ResultSet
-      #level, as this may find an associated DataSet, as the rollback_FeatureSet
-      #will likely not have rolled back the correct DataSet
-      #todo Need to make sure the rollback methods are sensitive to this and throw
-      #correctly
-    }
-    elsif($rollback_level < $rollback_modes{$set_type}){
-      throw("Found $set_type mismatch, please rectify manually or specify ".
-            "-rollback $set_type\n".Dumper($diffs));
-    }
-    elsif(@$slices){
-      #Should never have diffs and slices set, this indicates we are
-      #redefining the inputs but only rerunning a subset of the data
-      #There should be no diffs in parallel mode(single slice), as we should
-      #have resolved this in the previous setup/submit analysis!
-      throw("It is unsafe to rollback $set_type with a sub set of slices ".
-            'please do a full rollback i.e. omit -slices');
-    }
-  }
-
-  return;
-}
-
-
-
-### DEPRECATED ###
-
-=head2 rollback_InputSet
-
-  Arg[1]     : Bio::EnsEMBL::Funcgen::InputSet
-  Example    : $self->rollback_InputSet($eset);
-  Description: Deletes all status entries for this InputSet and it's Subsets
-  Returntype : none
-  Exceptions : Throws if any deletes fails or if db method unavailable
-  Caller     : Importers and Parsers
-  Status     : At risk
-
-=cut
-
-#Usage of this is now moot due to removal of IMPORTED style states form InputSet/Subset
-#todo implement delete_InputSet
-#revoke states can be called directly if required rather than rollback, as this is essentially
-#all a rollback method would be doing?
-#deprecate this with a throw as is not longer support
-
-sub rollback_InputSet { #deprecated in v72
-  my ( $self, $eset, $force_delete, $full_delete ) = @_;
-
-  throw('rollback_InputSet is now deprecated, please update your code to use '.
-      'delete_InputSet or use revoke_states directly');
-
-  #Need to implement force_delete!!!!!!!!!!!!!!!!!!!!!!
-  #Need to check this is not used in a DataSet/ResultSet
-
-  my $adaptor =
-    $eset->adaptor || throw('InputSet must have an adaptor');
-  my $db = $adaptor->db;
-
-  $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::InputSet', $eset );
-
-  $self->log( "Rolling back InputSet:\t" . $eset->name );
-
-  #SubSets
-  foreach my $esset ( @{ $eset->get_InputSubsets } ) {
-    $esset->adaptor->revoke_states($esset);
-  }
-
-  #InputSet
-  $eset->adaptor->revoke_states($eset);
-
-  return;
+sub debug_hash {
+  throw('DEPREACATED: Please use debug instead');
 }
