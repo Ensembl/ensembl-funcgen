@@ -928,8 +928,6 @@ sub _validate_rollback_Set {
   #FINALLY DO ROLLBACK
   #Independant of whether there are diffs as there maybe some fault with the 
   #data which has not been caught by the diffs e.g. truncated input
-  
-  warn "storedset is $stored_set";
     
   if( ($rollback_level >= $rollback_modes{$set_type}) ||
       ($stored_set && ! $stored_set->has_status('IMPORTED') ) ||
@@ -1360,9 +1358,9 @@ sub rollback_ResultSet {
   $self->log( "Rolling back ResultSet:\t" . $rset->name );
 
   ### Check if this ResultSet is part of a DataSet with a product feature set
-  my @dsets = @{ $self->db->get_DataSetAdaptor->fetch_all_by_supporting_set($rset) };
+  my @dsets = @{ $db->get_DataSetAdaptor->fetch_all_by_supporting_set($rset) };
 
-  if(@dsets) {
+    if(@dsets) {
      
     if($delete_mode && ($delete_mode ne 'recover')){
       throw('ResultSet '.$rset->name.
@@ -1380,16 +1378,16 @@ sub rollback_ResultSet {
     #Actually unsafe to force unless diffs have been checked
   }
 
-  $self->db->get_ResultSetAdaptor->revoke_states($rset);  
+  $db->get_ResultSetAdaptor->revoke_states($rset);  
   #delete the dbfile_registry entry 
   my $sql = 'DELETE from dbfile_registry where table_name="result_set" and table_id='.$rset->dbID;
-  $db->dbc->rollback_table($sql, 'dbfile_registry', undef, $db);
+  $self->rollback_table($sql, 'dbfile_registry', undef, $db);
 
   if($delete_mode && ($delete_mode eq 'full')){ #delete the result_set and result_set_input entries
     $self->log( "Deleting ResultSet:\t" . $rset->name );
     $sql = 'DELETE rs, rsi from result_set_rs, result_set_input rsi WHERE '.
       'rsi.result_set_id=rs.result_set_id AND rs.result_set_id='.$rset->dbID;
-    $db->dbc->rollback_table($sql, 'result_set', 'result_set_id', $db);   
+    $self->rollback_table($sql, 'result_set', 'result_set_id', $db);   
   }
   
  return;
@@ -1423,8 +1421,7 @@ sub rollback_ResultSet {
 
 sub rollback_ArrayChips {
   my ( $self, $acs, $mode, $force, $keep_xrefs, $no_clean_up,
-       $force_clean_up )
-    = @_;
+       $force_clean_up ) = @_;
 
 #no_clean_up and force_clean_up allow analyze/optimize to be skipped until the last rollback
 #We could get around this by specifying all ArrayChips for all formats at the same time?
@@ -1917,13 +1914,14 @@ sub get_core_stable_id_by_display_name {
 #This could be a simple sub, if we passed $rollback_modes
 
 sub _compare_set_for_rollback {
-  my ($self, $new_set, $set_type, $stored_set, $rollback_level, $slices) = @_;
+  my ($self, $new_set, $stored_set, $set_type, $rollback_level, $slices) = @_;
 
   #do we catch undef $stored_set here and return without warning?
   #add flag for states comparison?
 
-  my $diffs = $stored_set->compare_to($new_set);
+  my $diffs = $stored_set->compare_to($new_set, undef, undef, undef, 1);
   #by default this tests nested objects via is_stored and dbID match
+  #1 is skip states flag for data set
 
   #delete get_states_diffs as these are never set and will likely
   #always be different and we handle IMPORTED below
