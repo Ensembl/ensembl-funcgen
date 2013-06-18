@@ -213,9 +213,10 @@ sub get_supporting_sets_by_Analysis {
 
 
 =head2 get_supporting_sets
-
-  Arg [1]    : (optional) status - e.g 'DISPLAYABLE'
-  Example    : my @status_sets = @{$data_set->get_supporting_sets($status)};
+  
+  Arg [1]    : String - Set type e.g result, input or feature. Optional.
+  Arg [2]    : String - Status e.g DISPLAYABLE. Optional
+  Example    : my @status_sets = @{$data_set->get_supporting_sets('result', $status)};
   Description: Getter for the ResultSets for this DataSet.
   Returntype : Arrayref
   Exceptions : None
@@ -225,7 +226,7 @@ sub get_supporting_sets_by_Analysis {
 =cut
 
 sub get_supporting_sets{
-  my ($self, $status, $set_type)  = @_;
+  my ($self, $set_type, $status)  = @_;
   #swap the args here
 
   #Add analysis here and make above method wrapper
@@ -240,14 +241,21 @@ sub get_supporting_sets{
 
   my @ssets;
 
-  foreach my $anal_id(keys %{$self->{'supporting_sets'}}){
-    
-    foreach my $sset(@{$self->{'supporting_sets'}->{$anal_id}}){
+  my $sets = $self->{'supporting_sets'};
+  warn Data::Dumper::Dumper($sets);
 
+
+  foreach my $anal_id(keys %{$self->{'supporting_sets'}}){
+        
+    foreach my $sset(@{$self->{'supporting_sets'}->{$anal_id}}){
+      
+      
 	  if(defined $status && 
 		 (! $sset->has_status($status))){
 		next;
 	  }
+
+      warn "set typ[es i ".$sset->set_type;
 
 	  if(defined $set_type &&
 		 ($sset->set_type ne $set_type)){
@@ -257,6 +265,9 @@ sub get_supporting_sets{
 	  push @ssets, $sset;
     }
   }
+
+ warn Data::Dumper::Dumper(\@ssets);
+  
 
   return \@ssets;
 }
