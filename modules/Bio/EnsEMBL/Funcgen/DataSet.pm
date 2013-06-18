@@ -397,11 +397,20 @@ sub display_label {
 
 =cut
 
+#shallow should really omit states here
+#this woudl imply states should be objects which is overkill
+#added skip_states flag for now
+
 sub compare_to {
-  my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
+  my ($self, $obj, $shallow, $scl_methods, $obj_methods, $skip_states) = @_;
+  
       
   $obj_methods ||= [qw(product_FeatureSet get_supporting_sets)];
   $scl_methods ||= [qw(name get_all_states)];
+  
+  if($skip_states){
+    pop @$scl_methods;  
+  }
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, 
                                   $obj_methods);
