@@ -140,6 +140,10 @@ sub new {
    
     $self->{table_name}         = $table_name;    
   }
+  else{
+   #define table_name here based on support? 
+    
+  }
   
   #This will currently allow a ResultSet with no support/table_ids   
   if(defined $support){ 
@@ -256,6 +260,9 @@ sub add_support{
      throw('Specified -table_name does not match -support table name. '.
           'Please omit -table_name and ensure all -support objects are of the same class'); 
   }
+  elsif(! defined $tmp_table_name){
+    $self->{table_name} = $table_name;  
+  }
   
   #Validate table name
   if(! exists $valid_table_names{$table_name}){
@@ -290,6 +297,7 @@ sub add_support{
     $self->_add_table_id($sset->dbID);  
   }
   
+
   $self->{support} ||= [];
   push @{$self->{support}}, @$support;  
   
