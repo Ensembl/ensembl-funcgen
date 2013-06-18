@@ -132,7 +132,6 @@ sub update_db_for_release{
   #do seq_region_update to validate dnadb first
   #hence avoiding redoing longer methods
   $self->validate_new_seq_regions;#($force_srs);
-  #$self->update_meta_schema_version;
   $self->check_regbuild_strings;
   $self->check_meta_species_version;
   $self->set_current_coord_system;
@@ -178,7 +177,7 @@ sub validate_new_seq_regions{
 	my $dnadb_sm = join('_', @{$self->get_schema_and_build($self->db->dnadb->dbc->dbname)});
 
 	if($efgdb_sm ne $dnadb_sm){
-	  $self->report("WARNING Skipped validate_new_seq_regions as schema_versions are mismatched:\t".
+	  $self->report("WARNING:\tSkipped validate_new_seq_regions as schema_versions are mismatched:\t".
 				 "efgdb $efgdb_sm\tdnadb $dnadb_sm");
 	  return 0;
 	}
@@ -435,20 +434,20 @@ sub check_meta_species_version{
   my $schema_version = $mc->list_value_by_key('schema_version')->[0];
 
   if(! defined $schema_version){
-	$self->report("FAIL:\tNo meta schema_version defined");
+	$self->report_fail("No meta schema_version defined");
   }
   elsif($dbname !~ /funcgen_${schema_version}_/){
-	$self->report("FAIL:\tMeta schema_version ($schema_version) does not match the dbname ($dbname).");
+	$self->report_fail("Meta schema_version ($schema_version) does not match the dbname ($dbname).");
   }
 
 
   my @latin_names = @{$mc->list_value_by_key('species.production_name')};
 
   if(scalar(@latin_names) > 1){
-	$self->report("FAIL:\tFound more than one species.production_name in meta:\t".join(", ", @latin_names));
+	$self->report_fail("Found more than one species.production_name in meta:\t".join(", ", @latin_names));
   }
   elsif(scalar(@latin_names) == 1 && ($latin_names[0] ne $dbname_species)){
-	$self->report("FAIL:\tFound mismatch between meta species.production_name and dbname:\t".$latin_names[0]." vs $dbname_species");
+	$self->report_fail("Found mismatch between meta species.production_name and dbname:\t".$latin_names[0]." vs $dbname_species");
   }
   elsif(scalar(@latin_names) == 0){
 	$self->report("WARNING:\tFound no meta species.production_name setting as:\t$dbname_species");
@@ -470,7 +469,7 @@ sub check_regbuild_strings{
   #Removed $update arg as we would always want to do this manually
 
   $self->log_header('Checking regbuild strings');
-  my $species_id = $self->db()->species_id();
+  my $species_id = $self->db->species_id;
 
 
   my @regf_fsets;
@@ -501,7 +500,7 @@ sub check_regbuild_strings{
 
 	  #Fail for old versions as we want to remove these
 	  if( $fset->name =~ /_v[0-9]+$/){
-		$self->report("FAIL:\t".$fset->name." is an old RegulatoryFeature set, please remove!");
+		$self->report_fail("".$fset->name." is an old RegulatoryFeature set, please remove!");
 		next;
 	  }
 
@@ -572,7 +571,7 @@ sub check_regbuild_strings{
 
         }
         else{
-          $self->report("FAIL:\tMismatched $string_key found in regbuild_string table:\t${string}\n\tUpdate using:\t$sql");
+          $self->report_fail("Mismatched $string_key found in regbuild_string table:\t${string}\n\tUpdate using:\t$sql");
         }
       }
 
@@ -587,7 +586,7 @@ sub check_regbuild_strings{
 	  my $ftype_string = $db_reg_string{$ftype_string_key};
 
 	  if(! ($fset_string && $ftype_string)){
-      $self->report("FAIL:\tSkipping fset vs ftype string test for $cell_type")
+      $self->report_fail("Skipping fset vs ftype string test for $cell_type")
 	  }
 	  else{
 
@@ -608,7 +607,7 @@ sub check_regbuild_strings{
 
 
 		if(scalar(@fset_ids) != scalar(@ftype_ids)){
-		  $self->report("FAIL:\tLength mismatch between:\n\t$fset_string_key(".scalar(@fset_ids).")\t$fset_string\n\tAND\n\t$ftype_string_key(".scalar(@ftype_ids).")\t$ftype_string");
+		  $self->report_fail("Length mismatch between:\n\t$fset_string_key(".scalar(@fset_ids).")\t$fset_string\n\tAND\n\t$ftype_string_key(".scalar(@ftype_ids).")\t$ftype_string");
 		}
 
 		foreach my $i(0..$#fset_ids){
@@ -616,7 +615,7 @@ sub check_regbuild_strings{
 		  my $sset = $fset_a->fetch_by_dbID($supporting_set_id);
 
 		  if(! defined $sset){
-        $self->report("FAIL:\t$fset_string_key $supporting_set_id does not exist in the DB");
+        $self->report_fail("$fset_string_key $supporting_set_id does not exist in the DB");
 		  }
 		  else{
 			#test/build ftype string
@@ -625,7 +624,7 @@ sub check_regbuild_strings{
 
 			  if($sset->feature_type->dbID != $ftype_ids[$i]){
 				$ftype_fail = 1;
-				$self->report("FAIL:\t$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
+				$self->report_fail("$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
 			  }
 			}
 
@@ -644,7 +643,7 @@ sub check_regbuild_strings{
 		  $self->db->dbc->db_handle->do("INSERT into regbuild_string(species_id, name, string) values($species_id, '$ftype_string_key', '$new_ftype_string')");
     }
 		elsif($ftype_fail){
-		  $self->report("FAIL:\t$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
+		  $self->report_fail("$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
 		}
 
 
@@ -653,14 +652,14 @@ sub check_regbuild_strings{
 		my $id_row_ref = $self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1');
 
 		if(! defined $id_row_ref){
-		  $self->report("FAIL:\tNo RegulatoryFeatures found for FeatureSet ".$fset->name);
+		  $self->report_fail("No RegulatoryFeatures found for FeatureSet ".$fset->name);
 		}
 		else{
 		  my ($regf_dbID) = @$id_row_ref;
 		  my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->binary_string;
 
 		  if(length($rf_string) != scalar(@fset_ids)){
-			$self->report("FAIL:\tRegulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
+			$self->report_fail("Regulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
 		  }
 		}
 	  }
@@ -690,7 +689,7 @@ sub log_data_sets{
   eval { $dset_adaptor->_get_status_name_id($status) };
 
   if($@){
-	$self->report("FAIL: You have specified check_displayable, but the DISPLAYABLE status_name is not present in the DB");
+	$self->report_fail("FAIL: You have specified check_displayable, but the DISPLAYABLE status_name is not present in the DB");
 	return;
   }
 
@@ -772,7 +771,7 @@ sub check_stable_ids{
 	  my ($null_sids) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
 
 	  if($null_sids){
-		$self->report("FAIL: Found a total of $null_sids NULL stable IDs for ".$fset->name);
+		$self->report_fail("FAIL: Found a total of $null_sids NULL stable IDs for ".$fset->name);
 
 		my $slice_a = $self->db->get_SliceAdaptor;
 
@@ -852,7 +851,7 @@ sub validate_DataSets{
 	$rf_fsets{$rf_fset_name} = $rf_fset;#Do we only need the name for checking the dsets independantly?
 
 	if($rf_fset_name =~ /_v[0-9]+$/){
-	  $self->report("FAIL:\tFound archived regulatory FeatureSet:\t$rf_fset_name");
+	  $self->report_fail("Found archived regulatory FeatureSet:\t$rf_fset_name");
 	  next RF_FSET;
 	}
 
@@ -875,14 +874,14 @@ sub validate_DataSets{
 	my $rf_dset = $dset_a->fetch_by_product_FeatureSet($rf_fset);
 
 	if(! $rf_dset){
-	    $self->report("FAIL:\tNo DataSet for FeatureSet:\t$rf_fset_name");
+	    $self->report_fail("No DataSet for FeatureSet:\t$rf_fset_name");
 	  next RF_FSET;
 	}
 
 
 
 	if($rf_fset_name ne $rf_dset->name){
-	  $self->report("FAIL:\tFound Feature/DataSet name mismatch:\t$rf_fset_name vs ".$rf_dset->name);
+	  $self->report_fail("Found Feature/DataSet name mismatch:\t$rf_fset_name vs ".$rf_dset->name);
 	  next RF_FSET;
 	}
 
@@ -925,7 +924,7 @@ sub validate_DataSets{
 
 
 	  my $ra_dset = $dset_a->fetch_by_product_FeatureSet($ra_fset);
-	  my @ssets = @{$ra_dset->get_supporting_sets(undef, 'result')};
+	  my @ssets = @{$ra_dset->get_supporting_sets('result')};
 	  my @displayable_sets;
 
 	  foreach my $sset(@ssets){
@@ -938,7 +937,7 @@ sub validate_DataSets{
 	  #else print update sql
 
 	  if(scalar(@displayable_sets) > 1){#There should only be one
-		$self->report("FAIL:\tThere should only be one DISPLAYABLE supporting ResultSet for DataSet:\t".$ra_dset->name);
+		$self->report_fail("There should only be one DISPLAYABLE supporting ResultSet for DataSet:\t".$ra_dset->name);
 	  }
 	  elsif(scalar(@displayable_sets) == 0){
 
@@ -956,7 +955,7 @@ sub validate_DataSets{
 		  $msg = "Found ".scalar(@ssets)." ResultSets ".join("\t", map($_->name, @ssets));
 		}
 
-		$self->report("FAIL:\tThere are no DISPLAYABLE supporting ResultSets for DataSet:\t".
+		$self->report_fail("There are no DISPLAYABLE supporting ResultSets for DataSet:\t".
 					  $ra_dset->name."\n$msg");
 
 
@@ -1020,7 +1019,7 @@ sub analyse_and_optimise_tables{
 
 	foreach my $line_ref(@anal_info){
 	  my $status = $line_ref->[3];
-	  $self->report("FAIL: analyse $table status $status") if (!($status eq 'OK' || $status eq 'Table is already up to date'));
+	  $self->report_fail("FAIL: analyse $table status $status") if (!($status eq 'OK' || $status eq 'Table is already up to date'));
 	}
 
 	my @opt_info = @{$self->db->dbc->db_handle->selectall_arrayref($optimise_sql.$table)};
@@ -1028,7 +1027,7 @@ sub analyse_and_optimise_tables{
 	foreach my $line_ref(@opt_info){
 
 	  my $status = $line_ref->[3];
-	  $self->report("FAIL: optimise $table status $status") if (!( $status eq 'OK' || $status eq 'Table is already up to date'));
+	  $self->report_fail("FAIL: optimise $table status $status") if (!( $status eq 'OK' || $status eq 'Table is already up to date'));
 	}
 
   }
