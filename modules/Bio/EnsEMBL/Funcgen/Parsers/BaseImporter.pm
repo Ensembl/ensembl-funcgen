@@ -44,14 +44,11 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Registry;
-
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_path );
 
 use base qw(Bio::EnsEMBL::Funcgen::Utils::Helper); #@ISA change to parent with perl 5.10
 
 
-# Need:
-#  Parser::Experiment? All but external
-#  Parser::ArrayExperiment (Inherits from ArrayDesign?) Or Nimblegen?
 
 #new
 #edb_release over-ride, to enable loading of old data.
@@ -82,30 +79,20 @@ use base qw(Bio::EnsEMBL::Funcgen::Utils::Helper); #@ISA change to parent with p
 
 
 
-#Remove rollback/clobber from here
-#The idea being we completely separate the script which runs the import/rollback
-#so we never accidentally rollback a set with a stray -rollback flag.
-#Implement this at the script level? Then we can re-use the methods to perform the rollback?
-#This means all the rollback function will be tied up with all the import pre-reqs
-#want to rollback by filepath(InputSubset name)/InputSet name
+
+#Also implement rollback at the script level? Then we can re-use the methods to perform the rollback?
+
 
 #Would just need to revoke states before calling validate_files
 #Can do this manually before import
 
 
 #Inheritance fix
-#Can we move Importer new to here? ISA dodgyness and alter the scripts accordingly?
-#The we can move all the set_config stuff the the parser new methods and remove set_config
-#Issues :
-#1 Non-generic params
-#2 How will Importer methods be inherited if we remove it from ISA like this
-#  Either make Inheritance Parser->Importer->BaseImporter until we remove the Importer
-#  Or fix in one go.
-#  Or just move DB creation stuff here such that we can maintain current broken inheritance
-#  But allow removal of set_config
-#  So how much of the DB creation stuff can we add here without clashing with BaseExternalParser?
-#  BaseExternalParser has DB passed, whilst Importer allows both params and DB to be passed.
+#See ENSREGULATION-18 ticket in JIRA
 
+#We really want to remove many of the mandatory params from new here and probably
+#just enforce the generic params e.g. db etc but not import specific stuff i.e. ctyp/ftype
+#write new method first before updating existing parser to use new init_method
 
 sub new{
   my $caller = shift;
@@ -118,10 +105,13 @@ sub new{
       $user, $host, $port, $pass, $dbname, $db, $ssh,
       $assm_version, $release, $reg_config, $verbose, $slices,
       $reg_db, $reg_host, $reg_port, $reg_user, $reg_pass,
-      $ftype_name, $ctype_name, $feature_analysis, $no_disconnect);
+      $ftype_name, $ctype_name, $feature_analysis, $no_disconnect,
+      $input_files);
   
 
   #Set some directly here to allow faster accessor only methods
+  #These will over-ride defaults on Parser config
+  
 
   ($ftype_name,       $ctype_name,          $feature_analysis,    $self->{feature_set_desc},
    $species,          $db,                  $user,                $host,
@@ -129,7 +119,9 @@ sub new{
    $release,          $reg_config,          $reg_db,              $reg_host,
    $reg_port,         $reg_user,            $reg_pass,            $verbose,
    $slices,           $self->{recover},     $clobber,             $rollback,
-   $config_file,      $self->{ucsc_coords}, $self->{_dump_fasta}, $no_disconnect
+   $config_file,      $self->{ucsc_coords}, $self->{_dump_fasta}, $no_disconnect,
+   $input_files,      $self->{input_dir},   $self->{data_dir},    $self->{output_dir},
+   $self->{name}
   ) = rearrange
     (
      ['FEATURE_TYPE_NAME', 'CELL_TYPE_NAME', 'FEATURE_ANALYSIS', 'FEATURE_SET_DESCRIPTION',
@@ -138,11 +130,13 @@ sub new{
       'RELEASE',           'REG_CONFIG',     'REGISTRY_DB',      'REGISTRY_HOST',
       'REGISTRY_PORT',     'REGISTRY_USER',  'REGISTRY_PASS',    'VERBOSE',
       'slices',            'recover',        'clobber',          'rollback',
-      'config_file',       'ucsc_coords',    'DUMP_FASTA',       'no_disconnect'],
+      'config_file',       'ucsc_coords',    'DUMP_FASTA',       'no_disconnect',
+      'input_files',       'input_dir',      'data_dir',         'output_dir',
+      'name'],
      @_);
   
   
-
+ 
   #Other stuff to bring in here:
   #  dirs
   #  prepared/batch/farm
@@ -154,120 +148,119 @@ sub new{
 
   #Need to compare these to BaseExternalParser
 
-  if ( (! $species) &&
-       $db ) {
-    $species = $db->species;
+  
+  if($db){
+    #Don't load the registry as this will 'increment' the db species
+    #Currently assuming all is fine here, but ultimately. to avoid redundancy
+    #migrate Base::_set_out_db and db to this module
+    $self->{species} = $db->species;
   }
+  else{
 
-  $species || throw('Mandatory param -species not met');
+    $species || throw('Mandatory param -species not met');
  
-  # Registry and DB handling - re/move to separate method?
+    # Registry and DB handling - re/move to separate method?
+    
+    
+    if(! $db){
+    
+    if ($reg_host && $self->{'reg_config'}) {
+      warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
+        "\nOver-riding config file with specified paramters:\t${reg_user}@${reg_host}:$reg_port";
+    }
   
-  if ($reg_host && $self->{'reg_config'}) {
-    warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
-      "\nOver-riding config file with specified paramters:\t${reg_user}@${reg_host}:$reg_port";
-  }
-
-
-  #### Set up DBs and load and reconfig registry
-
-  # Load Registry using assembly version
-  # Then just redefine the efg DB
-
-  #We have problems here if we try and load on a dev version, where no dev DBs are available on ensembldb
-  #Get the latest API version for the assembly we want to use
-  #Then load the registry from that version
-  #Then we can remove some of the dnadb setting code below?
-  #This may cause problems with API schema mismatches
-  #Can we just test whether the current default dnadb contains the assembly?
-  #Problem with this is that this will not have any other data e.g. genes etc 
-  #which may be required for some parsers
-
-  #How does the registry pick up the schema version??
-
-  #We should really load the registry first given the dnadb assembly version
-  #Then reset the eFG DB as appropriate
-  $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
-
-  if ($reg_host || ! defined $self->{'_reg_config'}) {
-    #defaults to current ensembl DBs
-    $reg_host ||= 'ensembldb.ensembl.org';
-    $reg_user ||= 'anonymous';
-
-    #Default to the most recent port for ensdb
-    if ( (! $reg_port) && 
-         ($reg_host eq 'ensdb-archive') ) {
-      $reg_port = 5304;
-    }
-
-    #This will try and load the dev DBs if we are using v49 schema or API?
-    #Need to be mindful about this when developing
-    #we need to tip all this on it's head and load the reg from the dnadb version
-
-    my $version = $release || $reg->software_version;
-    $self->log("Loading v${version} registry from $reg_user".'@'.$reg_host);
-
-    #Note this defaults API version, hence running with head code
-    #And not specifying a release version will find not head version
-    #DBs on ensembldb, resulting in an exception from reset_DBAdaptor below
-   
-    #This currently loads from reg_host
-    #Which triggers the funcgen DB to try and _set_dnadb
-    #even if we have specified as db/dnadb already,as this is reset after this
-    #we probably just want to use the dnadb_host as the default reg_host
-    #This also need cleaning up wrt DBAdaptor behaviours
-    #Simply and/or remove
-
-    my $num_dbs = $reg->load_registry_from_db
-      (
-       -host       => $reg_host,
-       -user       => $reg_user,
-       -port       => $reg_port,
-       -pass       => $reg_pass,
-       -db_version => $version,
-       -verbose    => $verbose,
-      );
-
-    if (! $num_dbs) {
-      #only throw if we don't have any other db params passed?
-      thow("Failed to load any DBs from $reg_user".'@'.$reg_host." for release $version.\n".
-           "This will result in a failure to validate the species.\n".
-           "Please define a valid -release for the registry and/or registry params/config\n".
-           "Or select a -registry_host which matches the API version:\t".$reg->software_version);
-    }
-
-    if ((! $dbname) && (! $db)) {
-      throw('Not sensible to set the import DB as the default eFG DB from '
-            .$reg_host.', please define db params');
-    }
-  } else {
-    $self->log("Loading registry from:\t".$self->{'_reg_config'});
-    $reg->load_all($self->{'_reg_config'}, 1);
-  }
-
-
-  #Need to test the DBs here, as we may not have loaded any!
-  #get_alias will fail otherwise
-  #This is a cyclical dependancy as we need alias to get species which we use to grab the DB
-  #alias is dependant on core DB being loaded with relevant meta entries.
-  #revise this when we split the Importer
-
-  #Validate species
-  my $alias = $reg->get_alias($species) || throw("Could not find valid species alias for $species");
-  #You might want to clean up:\t".$self->get_dir('output'));
-  $self->{species} = $alias;
-  $self->{'param_species'} = $species; #Only used for dir generation
   
-
-
-  #SET UP DBs
-  if ($db) {
-    #db will have been defined before reg loaded, so will be present in reg
-
-    if (! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))) {
-      $self->throw('-db must be a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+    #### Set up DBs and load and reconfig registry
+    
+    # Load Registry using assembly version
+    # Then just redefine the efg DB
+  
+    #We have problems here if we try and load on a dev version, where no dev DBs are available on ensembldb
+    #Get the latest API version for the assembly we want to use
+    #Then load the registry from that version
+    #Then we can remove some of the dnadb setting code below?
+    #This may cause problems with API schema mismatches
+    #Can we just test whether the current default dnadb contains the assembly?
+    #Problem with this is that this will not have any other data e.g. genes etc 
+    #which may be required for some parsers
+  
+    #How does the registry pick up the schema version??
+  
+    #We should really load the registry first given the dnadb assembly version
+    #Then reset the eFG DB as appropriate
+    $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
+  
+    if ($reg_host || ! defined $self->{'_reg_config'}) {
+      #defaults to current ensembl DBs
+      $reg_host ||= 'ensembldb.ensembl.org';
+      $reg_user ||= 'anonymous';
+  
+      #Default to the most recent port for ensdb
+      if ( (! $reg_port) && 
+           ($reg_host eq 'ensdb-archive') ) {
+        $reg_port = 5304;
+      }
+  
+      #This will try and load the dev DBs if we are using v49 schema or API?
+      #Need to be mindful about this when developing
+      #we need to tip all this on it's head and load the reg from the dnadb version
+  
+      my $version = $release || $reg->software_version;
+      $self->log("Loading v${version} registry from $reg_user".'@'.$reg_host);
+  
+      #Note this defaults API version, hence running with head code
+      #And not specifying a release version will find not head version
+      #DBs on ensembldb, resulting in an exception from reset_DBAdaptor below
+     
+      #This currently loads from reg_host
+      #Which triggers the funcgen DB to try and _set_dnadb
+      #even if we have specified as db/dnadb already,as this is reset after this
+      #we probably just want to use the dnadb_host as the default reg_host
+      #This also need cleaning up wrt DBAdaptor behaviours
+      #Simply and/or remove
+  
+      my $num_dbs = $reg->load_registry_from_db
+        (
+         -host       => $reg_host,
+         -user       => $reg_user,
+         -port       => $reg_port,
+         -pass       => $reg_pass,
+         -db_version => $version,
+         -verbose    => $verbose,
+        );
+  
+      if (! $num_dbs) {
+        #only throw if we don't have any other db params passed?
+        thow("Failed to load any DBs from $reg_user".'@'.$reg_host." for release $version.\n".
+             "This will result in a failure to validate the species.\n".
+             "Please define a valid -release for the registry and/or registry params/config\n".
+             "Or select a -registry_host which matches the API version:\t".$reg->software_version);
+      }
+  
+      if ((! $dbname) && (! $db)) {
+        throw('Not sensible to set the import DB as the default eFG DB from '
+              .$reg_host.', please define db params');
+      }
+    } else {
+      $self->log("Loading registry from:\t".$self->{'_reg_config'});
+      $reg->load_all($self->{'_reg_config'}, 1);
     }
-  } else {                      #define eFG DB from params or registry
+  
+  
+    #Need to test the DBs here, as we may not have loaded any!
+    #get_alias will fail otherwise
+    #This is a cyclical dependancy as we need alias to get species which we use to grab the DB
+    #alias is dependant on core DB being loaded with relevant meta entries.
+    #revise this when we split the Importer
+  
+    #Validate species
+    my $alias = $reg->get_alias($species) || throw("Could not find valid species alias for $species");
+    #You might want to clean up:\t".$self->get_dir('output'));
+    $self->{'param_species'} = $species; #Only used for dir generation  
+    $self->{species} = $alias;
+    
+
+    #define eFG DB from params or registry
 
     if ($reg_db) {              #load eFG DB from reg
 
@@ -333,6 +326,7 @@ sub new{
                                    -dnadb_user => $reg_user,
                                    -dnadb_pass => $reg_pass,
                                   });
+      }
     }
   }
 
@@ -427,6 +421,24 @@ sub new{
     #Can call validate_and_store_config directly ehre once we have remove set_config stuff
 
   }
+
+
+  $self->{'data_dir'} ||= $ENV{'EFG_DATA'};
+
+  if( (! $self->input_files($input_files)) &&
+      (! defined $self->get_dir('input') ) ){ 
+    #Set default input_dir if we have not specified files
+    #This is dependant on name which is not mandatory yet!
+    $self->{'input_dir'} = $self->get_dir("data").'/input/'.
+      $self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();   
+  }
+
+  if(defined $self->get_dir('input')){
+    validate_path($self->get_dir('input'), 1); #dir flag
+  }
+    
+  
+
 
   #$self->debug(2, "BaseImporter class instance created.");
   #$self->debug_hash(3, \$self);
@@ -964,6 +976,21 @@ sub dump_fasta{ return $_[0]->{_dump_fasta}; }
 sub slice_adaptor{ return $_[0]->{slice_adaptor}; }
 
 
+=head2 name
+  
+  Example    : $imp->name('Experiment1');
+  Description: Getter for the name of this import
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub name{ return $_[0]->{name}; }
+
+
+
 =head2 feature_set_description
   
   Example    : $imp->description("ExperimentalSet description");
@@ -1036,6 +1063,129 @@ sub project_feature {
   return $feat;
 
 }
+
+
+
+=head2 registry_host
+
+  Example    : my $reg_host = $imp->registry_host;
+  Description: Accessor for registry host attribute
+  Returntype : string e.g. ensembldb.ensembl.org
+  Exceptions : None
+  Caller     : general
+  Status     : at risk 
+
+=cut
+
+sub registry_host{
+  return $_[0]->{'reg_host'};
+}
+
+=head2 registry_user
+
+  Example    : my $reg_user = $imp->registry_user;
+  Description: Accessor for registry user attribute
+  Returntype : string e.g. ensembldb.ensembl.org
+  Exceptions : None
+  Caller     : general
+  Status     : at risk 
+
+=cut
+
+sub registry_user{
+  return $_[0]->{'reg_user'};
+}
+
+=head2 registry_port
+
+  Example    : my $reg_port = $imp->registry_port;
+  Description: Accessor for registry port attribute
+  Returntype : string e.g. ensembldb.ensembl.org
+  Exceptions : None
+  Caller     : general
+  Status     : at risk 
+
+=cut
+
+sub registry_port{
+  return $_[0]->{'reg_port'};
+}
+
+=head2 registry_pass
+
+  Example    : my $reg_pass = $imp->registry_pass;
+  Description: Accessor for registry pass attribute
+  Returntype : string e.g. ensembldb.ensembl.org
+  Exceptions : None
+  Caller     : general
+  Status     : at risk 
+
+=cut
+
+sub registry_pass{
+  return $_[0]->{'reg_pass'};
+}
+
+
+#init_methods to go here
+#each will check for mandatory params
+#and set an init_flag? Such that any dependant methods
+#can check it to see if mandatory params have been checked
+#alterantively split this out into separate classes?
+
+sub check_base_mandatory_params {
+  my $self = $_[0];
+}
+
+
+
+=head2 input_files
+  
+  Example    : $imp->input_files(\@files);
+  Description: Getter for the input file paths
+  Returntype : Arrayref
+  Exceptions : none
+  Caller     : general
+  Status     : At risk
+
+=cut
+
+sub input_files{ 
+  my ($self, $input_files) = @_;
+  #coudl also be really kind and handle being passed an Array rather than an Arrayref
+  
+  
+  if(defined $input_files){
+    my $ref = ref($input_files);
+    
+    if($ref ne 'ARRAY'){
+      throw('-input_files parameter is not an Arrayref:\t'.$input_files);
+    }
+    elsif($ref eq ''){  #Be kind to scalars too
+      $input_files = [$input_files] 
+    }
+       
+    map { validate_path($_) } @$input_files;
+    $self->log("Processing files:\n\t\t".join("\n\t\t", @$input_files)); 
+    
+    #We don't yet support multiple files
+    if (scalar(@$input_files) >1) {
+      warn("Found more than one input file:\n".join("\n\t", @{$self->input_files}).
+        "\nThe InputSet parser does not yet handle multiple input files(e.g. replicates).\n".
+        "We need to resolve how we are going handle replicates with random cluster IDs");
+      #do we even need to?
+    }
+    
+    $self->{input_files} = $input_files;
+  }
+
+  return $self->{input_files}; 
+}
+
+
+
+
+
 
 
 
