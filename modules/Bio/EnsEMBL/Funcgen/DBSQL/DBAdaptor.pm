@@ -58,6 +58,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(are_valid);
+
 my $reg = "Bio::EnsEMBL::Registry";
 
 
@@ -289,28 +291,10 @@ sub is_stored_and_valid{
 
 =cut
 
-#Add method params?
-
 sub are_stored_and_valid{
   my ($self, $class, $obj_list, $method_name) = @_;
-
-  my @return_vals;
-
-  if ( (ref($obj_list) ne 'ARRAY') ||
-       (scalar(@$obj_list) <=0) ) {
-    throw('You must provide an ARRAYREF of objects to validate');
-  }
-
-  foreach my $obj (@$obj_list) {
-    $self->is_stored_and_valid($class, $obj);
-
-    if ($method_name) {
-      #test can method here?
-      push @return_vals, $obj->$method_name;
-    }
-  }
-
-  return \@return_vals;
+  
+  return are_valid($class, $obj_list, $method_name, $self);
 }
 
 
@@ -791,8 +775,127 @@ sub connect_string{
 }
 
 
+=head2 rollback_table
 
-# DEPRECATED METHODS #
+  Arg [1]    : String - SQL to execute
+  Arg [2]    : String - Main table name 
+  Arg [3]    : String (optional) - Table ID for refresh_table
+  Arg [4]    : Boolean (optional) - Do not refresh_table
+  Arg [5]    : Boolean (optional) - Force clean up even if no records deleted
+  Example    : $db->rollback_table($sql, 'result_set', 'result_set_id');
+  Description: Executes the SQL and calls refresh_table method
+  Returntype : None
+  Exceptions : Throws if SQL or table name arguments are not set.
+  Caller     : Helper rollback methods.
+  Status     : At risk
+
+=cut
+
+#table is not really mandatory, and this can delete from multiple tables at a time
+
+
+sub rollback_table {
+  my ( $self, $sql, $table, $id_field, $no_clean_up, $force_clean_up ) = @_;
+
+  if(! ($sql && $table)){
+   throw('Must provide at least the SQL and table name arguments'); 
+  }
+
+  my $row_cnt;
+
+  #warn $sql;
+  eval { $row_cnt = $self->dbc->do($sql) };
+
+  if ($@) {
+    throw("Failed to rollback table $table using sql:\t$sql\n$@");
+  }
+
+  $row_cnt = 0 if $row_cnt eq '0E0';
+  $self->log("Deleted $row_cnt $table records");
+
+  if ( $force_clean_up || ( $row_cnt && !$no_clean_up ) ) {
+    $self->refresh_table( $table, $id_field );
+  }
+
+  return;
+}
+
+
+=head2 refresh_table
+
+  Arg [2]    : String - table name 
+  Arg [3]    : String (optional) - Table ID for refresh_table
+  Example    : $db->refresh_table('result_set', 'result_set_id');
+  Description: Calls reset_autoinc if table_id set, optimzes and analyses table
+  Returntype : None
+  Exceptions : Throws if table argument is not set
+  Caller     : Helper rollback methods
+  Status     : At risk
+
+=cut
+
+#Now separated so that we can do this once at the end of a rollback of many Sets
+
+sub refresh_table {
+  my ( $self, $table, $id_field ) = @_;
+  
+  if(! $table){
+    throw('Must provide a table argument');
+  }
+
+  #This only works if the new calue is available
+  #i.e. do not need lock for this to be safe
+  $self->reset_table_autoinc( $table, $id_field ) if $id_field;
+
+  #$self->log("Optimizing and Analyzing $table");
+
+  $self->dbc->do("optimize table $table");  #defrag data, sorts indices, updates table stats
+  $self->dbc->do("analyze  table $table");  #analyses key distribution
+  return;
+}
+
+
+=head2 reset_table_autoinc
+
+  Arg [2]    : String - table name 
+  Arg [3]    : String - Autoinc field
+  Example    : $db->reset_table_autoinc('result_set', 'result_set_id');
+  Description: Resets the autoinc field of a table to the next logical number.
+               This is useful when importing and rolling back many entries.
+               A tidyness thing really.
+  Returntype : None
+  Exceptions : Throws if table argument or auto_inc field arguments are not set
+  Caller     : refresh_table and Helper rollback methods
+  Status     : At risk
+
+=cut
+
+sub reset_table_autoinc {
+  my ( $self, $table_name, $autoinc_field ) = @_;
+
+  if ( !( $table_name && $autoinc_field ) ) {
+    throw('You must pass a table_name and an autoinc_field'.
+      ' to reset the autoinc value');
+  }
+
+
+  #Unsafe to do this in two queries as parallel jobs may add in between select and alter
+  #in fact this needs a table lock to be totally safe
+  #although current ALTER will just fail silently if this happens
+  my $sql = "select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
+  my ($current_auto_inc) = $self->dbc->db_handle->selectrow_array($sql);
+  my $new_autoinc = ($current_auto_inc) ? ( $current_auto_inc + 1 ) : 1;
+  $sql = "ALTER TABLE $table_name AUTO_INCREMENT=$new_autoinc";
+  $self->dbc->do($sql);
+  return;
+} ## end sub reset_table_autoinc
+
+
+
+
+
+
+### DEPRECATED METHODS ###
 
 sub fetch_group_details{
   my ($self, $gname) = @_;
