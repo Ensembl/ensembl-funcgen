@@ -52,7 +52,7 @@ require Exporter;
                );
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use File::Path qw( mkpath );
+use File::Path qw( make_path );
 use File::Spec;
 use File::Basename qw( dirname );
 use Time::Local;
