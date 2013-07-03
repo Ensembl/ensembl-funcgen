@@ -811,7 +811,8 @@ sub rollback_table {
   }
 
   $row_cnt = 0 if $row_cnt eq '0E0';
-  $self->log("Deleted $row_cnt $table records");
+
+  #$self->log("Deleted $row_cnt $table records");
 
   if ( $force_clean_up || ( $row_cnt && !$no_clean_up ) ) {
     $self->refresh_table( $table, $id_field );
