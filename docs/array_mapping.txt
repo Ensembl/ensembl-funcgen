@@ -43,6 +43,7 @@ Contents
 10.4 Multi-Species Support
 10.5 Multi Species Name Support (SPECIES_COMMON) 
 11   Known Issues/Caveats
+12   Status entries
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -405,6 +406,9 @@ NOTE: It may be apparent that the ProbeTranscriptAlign type analyses are returni
 of ProbeFeatures or none at all.  This is because any alignments are discarded when they map back to 
 the genome as ungapped to avoid redundancy of feature between the ProbeAlign and ProbeTranscriptAlign
 analyses.
+
+
+
 
 8.2 Transcript Annotation
 
@@ -825,3 +829,20 @@ $EFG_PERL $EFG_SCRIPTS/import/import_coord_systems.pl
 This loads config from Bio::EnsEMBL::Funcgen::Config::ProbeAlign & imports
 the missing coordinate systems. Eventually this import will be done by
 the API in a safe manner. The issue does not affect sequence regions insertions.
+
+
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+                                   
+
+12 Status entries
+
+
+The funcgen schema employs a status table for tracking the state or assugning qualitied of entities in other table.
+
+For the array mapping pipeline these are:
+
+array_chip:   IMPORTED         - Marks the the given array_chip as being successfully imported.
+
+array:        DISPLAYABLE      - Marks the array for display by the webode.
+              MART_DISPLAYABLE - Marks the array for processing by the mart build.
