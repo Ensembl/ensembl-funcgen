@@ -1,0 +1,275 @@
+#!/usr/bin/env perl
+
+=head1 LICENSE
+
+
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
+  Genome Research Limited.  All rights reserved.
+
+  This software is distributed under a modified Apache license.
+  For license details, please see
+
+    http://www.ensembl.org/info/about/code_licence.html
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
+=head1 NAME
+
+
+
+=head1 SYNOPSIS
+
+ -host <string> -user <string> -pass <string> -dbname <string> -url <string> -pipeline <String> [ -port <int> -help -man ]
+
+=head1 PARAMETERS
+
+  Mandatory:
+    -url      <string>   The url of your hive DB e.g. 
+                            mysql://DB_USER:DB_PASS@DB_HOST:DB_PORT/DB_NAME
+    -config   <string>+  Config module names e.g. 
+
+  Optional:
+    -help
+    -man
+
+=head1 DESCRIPTION
+
+=cut
+
+use strict;
+use warnings;
+use Getopt::Long;
+use Pod::Usage;
+use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw(process_funcgen_DB_options
+                                                     create_DBAdaptor_from_params
+                                                     process_DB_options
+                                                     mysql_args_from_DBAdaptor_params);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(run_system_cmd
+                                               open_file);
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+
+my @tmp_args = @ARGV;
+
+my (@arrays, $class, $dump_features, $list,
+    $outdir, $dump_xrefs, $merged, $prefix);
+
+my $db_opts = process_DB_options(['funcgen', 'core']);
+
+use Data::Dumper qw (Dumper);
+
+GetOptions (
+            #Mandatory
+            %{$db_opts},
+            'arrays=s{,}' => \@arrays,
+            'class=s'     => \$class,
+            'outdir=s'    => \$outdir, 
+            
+            'features'   => \$dump_features,
+            'xrefs'      => \$dump_xrefs,
+                 
+            #Optional
+            'file_prefix=s' => \$prefix,
+            'merged'        => \$merged,
+            #'species=s'     => \$species,
+            'list'          => \$list,
+            
+            'help'             => sub { pod2usage(-exitval => 0); }, #do we need verbose here?
+            #removed ~? frm here as we don't want to exit with 0 for ?
+            
+            'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
+           ) 
+           or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
+
+my $db_params = process_funcgen_DB_options($db_opts);
+
+
+
+
+
+if(! $outdir){
+  $outdir = '.';
+}
+elsif(! -d $outdir){
+    pod2usage(-exitval => 1, -message => "-outdir does not exist or is not a directory:\t$outdir");
+}           
+           
+if(($dump_features && $dump_xrefs) || 
+  ((! $dump_features) && (! $dump_xrefs)) ){
+  pod2usage(-exitval => 1, -message => "Please specify -features or -xrefs to dump");
+}          
+     
+if($prefix && ! $merged){
+  warn 'Your have specified a -prefix but not -merged, -prefix will be ignored'; 
+}     
+           
+my $db = create_DBAdaptor_from_params($db_params->{funcgen}, 'funcgen');
+my $array_adaptor = $db->get_ArrayAdaptor;
+ 
+my (%class_arrays, $edb_name, $schema_build);
+
+foreach my $array(@{$array_adaptor->fetch_all}){
+  $class_arrays{$array->class} ||= [];  
+  push @{$class_arrays{$array->class}}, $array;
+} 
+
+if($list){
+  
+  #do this here to ensure we group by class
+  foreach my $c(keys %class_arrays){ 
+    foreach my $a(@{$class_arrays{$c}}){
+      print $c."\t".$a->name."\n";
+    }
+  }
+  exit;  
+}
+
+if($dump_xrefs){
+  $edb_name     = $db->species.'_core_Transcript'; 
+}
+else{
+  $schema_build = $db->_get_schema_build($db);
+}  
+  
+
+
+if(! @arrays){
+  
+  if(defined $class){
+    @arrays = map { $_->name } @{$class_arrays{$class}};
+    
+    warn "No arrays defined, defaulting to all for $class:\n\t".
+      join("\n\t", (@arrays)."\n");
+  }
+  else{
+    pod2usage(-exitval => 1, 
+              -message =>'You must provide either a list of -arrays or an array -class to dump');  
+  }
+}
+else{
+  
+  if(! defined $class){
+    #Just find the class of the first array
+    my $aname = $arrays[0];
+    
+    foreach my $c(keys %class_arrays){
+      if(grep { /^$aname$/ } (map { $_->name } @{$class_arrays{$c}}) ){
+         $class = $c;
+         last;
+      }
+    }
+  
+    if(! defined $class){
+      pod2usage(-exitval => 1, 
+                -message =>"$aname is not a valid array name. Please use -list to see all the available arrays");
+    } 
+  } 
+   
+   
+  foreach my $aname(@arrays){
+ 
+      
+    if(! grep { /^$aname$/ } (map { $_->name } @{$class_arrays{$class}}) ){
+      pod2usage(-exitval => 1, 
+                -message => "$aname is not a valid array name. Valid $class array names:\n\t".
+                            join("\n\t", (map { $_->name } @{$class_arrays{$class}}) ).
+                            "\nPlease select array names from one only array class.\n"); 
+    }
+  }
+}
+ 
+ 
+ 
+ 
+my $redirect = '>';
+ 
+#Could do a lot of this SQL generation just once 
+ 
+foreach my $array(@arrays){
+  my $table_sql = 'array a, array_chip ac, probe p, seq_region sr';
+  my ($constraint_sql, $select_sql, $outfile);
+  
+  if($merged){
+    $prefix ||= $class.'.'.join('_', @arrays);
+    $constraint_sql = 'WHERE a.name in("'.join('", "', @arrays).'")';
+  }
+  else{
+    $prefix = $class.'.'.$array;
+    $constraint_sql = 'WHERE a.name ="'.$array.'"';
+  }  
+    
+  if($class =~ /AFFY/){
+    $table_sql      .= ', probe_set ps';
+    $constraint_sql .= ' AND ps.probe_set_id=p.probe_set_id'; 
+  }
+  
+  $constraint_sql .=  ' AND a.array_id=ac.array_id AND ac.array_chip_id=p.array_chip_id';
+ 
+ 
+  if($dump_features){
+    $outfile = $outdir.'/'.$prefix.'.bed';
+    my $of = open_file($outfile, '>');
+    print $of  "track name=$prefix description=\"Ensembl ".$class.':'.$prefix." mappings\" useScore=0\n";
+    close($of);
+    $redirect = '>>';
+    
+    #Adding in schema_build clause here to avoid the product wrt nr seq_region entries
+    
+    $constraint_sql .= " AND pf.seq_region_id=sr.seq_region_id AND sr.schema_build=\"${schema_build}\" AND p.probe_id=pf.probe_id GROUP by pf.probe_feature_id";
+    $table_sql      .= ', probe_feature pf';
+    
+    my $name_sql = 'p.name';
+    
+    if($class =~ /AFFY/){
+      $name_sql = 'group_concat(a.name, ":", ps.name, ":", p.name)'; #nice 
+    }
+    
+    
+    $select_sql = 'SELECT sr.name, pf.seq_region_start, pf.seq_region_end, '.
+    
+    #$name_sql.', pf.mismatches, (CASE pf.seq_region_strand WHEN "1" THEN "+" WHEN "-1" THEN "-" ELSE ".")';   
+    #CASE is only for stored_procedures!
+    #triple replace for now until, replace this replace with something better?
+    $name_sql.', pf.mismatches, replace(replace(replace(pf.seq_region_strand, "-1", "-"), "1", "+"), "0", ".")';   
+  
+    #currently calc score calc on the fly 
+    #todo write function/stroed procedure to parse the cigarline and calculate the %ID
+ 
+  }
+  else{ #dump_xrefs
+    $outfile = $outdir.'/'.$prefix.'.xrefs.txt';
+    $table_sql      .= ', object_xref ox, xref x, external_db edb';
+    
+    if($class =~ /AFFY/){
+      $constraint_sql .= ' AND ps.probe_set_id=ox.ensembl_id AND ox.ensembl_object_type="ProbeSet"'; 
+    }
+    else{
+      $constraint_sql .= ' AND ps.probe_id=ox.ensembl_id AND ox.ensembl_object_type="Probe"';   
+    }
+    
+    $constraint_sql .= ' AND ox.xref_id=x.xref_id AND x.external_db_id = edb.external_db_id '.
+      "AND edb.db_name=\"$edb_name\" GROUP BY ps.probe_set_id, x.xref_id";
+      
+    #Can't restrict by single db_release as we may have mixed releases if we have imported a new array
+    #This should be fine as the array mapping pipline always removes xrefs before importing new ones
+    
+    $select_sql = 'SELECT ps.name, group_concat(a.name), x.dbprimary_acc, x.display_label, ox.linkage_annotation ';
+  }
+ 
+ 
+  my $sql = "mysql --skip-column-names --quick -e'${select_sql} FROM ${table_sql} ${constraint_sql}'".
+    &mysql_args_from_DBAdaptor_params($db_params->{funcgen});
+  
+  warn "$sql $redirect $outfile";
+  
+  run_system_cmd("$sql $redirect $outfile");
+  last if $merged;
+}
+  
+   
+ 
