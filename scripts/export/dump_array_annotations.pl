@@ -23,8 +23,9 @@
 
 =head1 SYNOPSIS
 
-dump_array_annotations.pl -host <string> -user <string> -pass <string> -dbname <string>  \
-                          (-arrays|-class) <string> [<string> ...]  (-xrefs|features) [ OPTIONAL PARAMTERS ]
+dump_array_annotations.pl -host <string> -user <string> -pass <string> -dbname <string> \
+                          (-arrays|class) <string> [<string> ...]  (-xrefs|features) \
+                          [ OPTIONAL PARAMTERS ]
 
 =head1 PARAMETERS
 
@@ -51,18 +52,21 @@ dump_array_annotations.pl -host <string> -user <string> -pass <string> -dbname <
     -dnadb_host Core DB
     -dnadb_name Core DB
     -outdir     Output directory (default=./)
-    -merged     Flag to merge the dump output into non-redundant rows wrt probe features/xrefs
-                (probe name and/or array fields will be comma separated list of values)
-    -prefix     Dump prefix to be used with -merged. This will be used in place of the array names(s) 
-                in the output file name, and also the bed track line name field.
+    -merged     Flag to merge the dump output into non-redundant rows wrt probe
+                features/xrefs (probe name and/or array fields will be comma
+                separated list of values)
+    -prefix     Dump prefix to be used with -merged. This will be used in place 
+                of the array names(s) in the output file name, and also the bed 
+                track line name field.
     -list       Lists all the array names and classes in the given DB.
     -help       Prints some help
     -man        Prints the full man page
 
 =head1 DESCRIPTION
 
-Dumps either the probe features or the transcript annotations for the specified arrays. For spedd, this is done using a direct SQL 
-approach, as opposed to the dump_features.pl scripts which uses the API and is hence more robust but much slower.
+Dumps either the probe features or the transcript annotations for the specified 
+arrays. For speed, this is done using a direct SQL approach, as opposed to the 
+dump_features.pl script which uses the API and is hence more robust but much slower.
 
 =cut
 
