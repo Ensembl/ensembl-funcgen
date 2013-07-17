@@ -19,26 +19,50 @@
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
 
-=head1 NAME
-
-
+=head1 NAME dump_array_annotations.pl
 
 =head1 SYNOPSIS
 
- -host <string> -user <string> -pass <string> -dbname <string> -url <string> -pipeline <String> [ -port <int> -help -man ]
+dump_array_annotations.pl -host <string> -user <string> -pass <string> -dbname <string>  \
+                          (-arrays|-class) <string> [<string> ...]  (-xrefs|features) [ OPTIONAL PARAMTERS ]
 
 =head1 PARAMETERS
 
   Mandatory:
-    -url      <string>   The url of your hive DB e.g. 
-                            mysql://DB_USER:DB_PASS@DB_HOST:DB_PORT/DB_NAME
-    -config   <string>+  Config module names e.g. 
+    -user     Funcgen DB user
+    -pass     Funcgen DB password
+    -port     Funcgen DB port
+    -host     Funcgen DB host
+    -dbname   Funcgen DB name
+    
+    -arrays   List of array names to dump
+     OR
+    -class    Class of arrays to dump
+  
+  
+    -xrefs    Dump tab delimited file of probe/set transcript xref annotations
+     OR
+    -features Dumper bed file of genomic (including gapped cdna) probe alignments
 
   Optional:
-    -help
-    -man
+    -dnadb_user Core DB user
+    -dnadb_pass Core DB
+    -dnadb_port Core DB
+    -dnadb_host Core DB
+    -dnadb_name Core DB
+    -outdir     Output directory (default=./)
+    -merged     Flag to merge the dump output into non-redundant rows wrt probe features/xrefs
+                (probe name and/or array fields will be comma separated list of values)
+    -prefix     Dump prefix to be used with -merged. This will be used in place of the array names(s) 
+                in the output file name, and also the bed track line name field.
+    -list       Lists all the array names and classes in the given DB.
+    -help       Prints some help
+    -man        Prints the full man page
 
 =head1 DESCRIPTION
+
+Dumps either the probe features or the transcript annotations for the specified arrays. For spedd, this is done using a direct SQL 
+approach, as opposed to the dump_features.pl scripts which uses the API and is hence more robust but much slower.
 
 =cut
 
@@ -74,7 +98,7 @@ GetOptions (
             'xrefs'      => \$dump_xrefs,
                  
             #Optional
-            'file_prefix=s' => \$prefix,
+            'prefix=s' => \$prefix,
             'merged'        => \$merged,
             #'species=s'     => \$species,
             'list'          => \$list,
@@ -191,7 +215,7 @@ my $redirect = '>';
 #Could do a lot of this SQL generation just once 
  
 foreach my $array(@arrays){
-  my $table_sql = 'array a, array_chip ac, probe p, seq_region sr';
+  my $table_sql = 'array a, array_chip ac, probe p';
   my ($constraint_sql, $select_sql, $outfile);
   
   if($merged){
@@ -221,7 +245,7 @@ foreach my $array(@arrays){
     #Adding in schema_build clause here to avoid the product wrt nr seq_region entries
     
     $constraint_sql .= " AND pf.seq_region_id=sr.seq_region_id AND sr.schema_build=\"${schema_build}\" AND p.probe_id=pf.probe_id GROUP by pf.probe_feature_id";
-    $table_sql      .= ', probe_feature pf';
+    $table_sql      .= ', probe_feature pf, seq_region sr';
     
     my $name_sql = 'p.name';
     
@@ -243,29 +267,32 @@ foreach my $array(@arrays){
   }
   else{ #dump_xrefs
     $outfile = $outdir.'/'.$prefix.'.xrefs.txt';
-    $table_sql      .= ', object_xref ox, xref x, external_db edb';
+    $table_sql  .= ', object_xref ox, xref x, external_db edb';
+    my $id_field;    
     
     if($class =~ /AFFY/){
+      $id_field      = 'ps.name,';
       $constraint_sql .= ' AND ps.probe_set_id=ox.ensembl_id AND ox.ensembl_object_type="ProbeSet"'; 
     }
     else{
-      $constraint_sql .= ' AND ps.probe_id=ox.ensembl_id AND ox.ensembl_object_type="Probe"';   
+      $id_field      = 'p.name,';
+      $constraint_sql .= ' AND p.probe_id=ox.ensembl_id AND ox.ensembl_object_type="Probe"';   
     }
     
     $constraint_sql .= ' AND ox.xref_id=x.xref_id AND x.external_db_id = edb.external_db_id '.
-      "AND edb.db_name=\"$edb_name\" GROUP BY ps.probe_set_id, x.xref_id";
+      "AND edb.db_name=\"$edb_name\" GROUP BY $id_field x.xref_id";
       
     #Can't restrict by single db_release as we may have mixed releases if we have imported a new array
     #This should be fine as the array mapping pipline always removes xrefs before importing new ones
     
-    $select_sql = 'SELECT ps.name, group_concat(a.name), x.dbprimary_acc, x.display_label, ox.linkage_annotation ';
+    $select_sql .= "SELECT $id_field group_concat(a.name), x.dbprimary_acc, x.display_label, ox.linkage_annotation ";
   }
  
  
   my $sql = "mysql --skip-column-names --quick -e'${select_sql} FROM ${table_sql} ${constraint_sql}'".
     &mysql_args_from_DBAdaptor_params($db_params->{funcgen});
   
-  warn "$sql $redirect $outfile";
+  #warn "$sql $redirect $outfile";
   
   run_system_cmd("$sql $redirect $outfile");
   last if $merged;
