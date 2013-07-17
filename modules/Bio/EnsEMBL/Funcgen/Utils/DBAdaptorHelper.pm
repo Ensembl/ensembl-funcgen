@@ -22,7 +22,7 @@ Bio::EnsEMBL::Funcgen::Utils::DBAHelper
 
 =head1 DESCRIPTION
 
-This module provides a set of useful methods for handling Ensembl DBAdaptors.
+This module provides a set of useful methods for creating Ensembl DBAdaptors.
 
 =head1 SYNOPSIS
 
@@ -32,7 +32,8 @@ use Bio::EnsEMBL::Funcgen::Utils::DBAHelpers qw(list your required methods here)
 
 
 # These methods were removed from EFGUtils do to a cyclical dependancy
-# caused by the DBAdaptor using EFGUtils
+# caused by the DBAdaptor using EFGUtils. Hence this is not to be used by
+# the DBAdaptor itself, just as a way to generate them.
 
 ###############################################################################
 
@@ -42,9 +43,12 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(               
                 create_DBAdaptor_from_params
-                mysql_args_from_DBAdaptor_params
+                create_Funcgen_DBAdaptor_from_options
+                create_Funcgen_DBAdaptor_from_params
+                get_MYSQL_args_from_DBAdaptor_params
+                get_MYSQL_args_from_options
                 process_DB_options
-                process_funcgen_DB_options
+                get_DB_options_config
                );
 
 #After global @ declarations to avoid warnings
@@ -74,30 +78,35 @@ $db_type_options{pipeline} = $db_type_options{hive};
 
 
 
-=head2 process_DB_options
+#Split these out into:
+#get_DB_options_config
+#process_DB_options (to params or script/mysql options)
+#get_MYSQL_args_from_options (this is now done by process_DB_options
+#create_DBadaptors_from_params (already exists)
 
-  Arg [1]    : Arrayref - DB types to handle e.g. funcgen|db, core|dna, hive|pipeline
-  Arg [2]    : Hashref  - Options hash after GetOptions processing
-  Arg [3]    : Boolean (optional) - Flag to set whether the DB type parameters are optional or not
-  Example    : my $db_params = get_DBAdaptor_params_from_ARGV(\@ARGV, ['funcgen', 'core']);
-  Description: Returns either an option hash for use with GetOptions, or processes the resulting 
-               GetOptions processes hash to return DB constructor parameters
-  Returntype : Hashref - Either DB options keys with param ref values (when no DB option hash is passed)
-                         or
-                         DB type keys, values are Hashrefs of DBAdaptor constructor params
+#Then have wrapper methods which
+#create_Funcgen_DBAdaptor_from_options
+
+=head2 get_DB_options_config
+
+  Arg [1]    : Arrayref - DB types to handle e.g. funcgen|db, core|dna or 
+               hive|pipeline
+  Example    : my $db_opts = get_DB_options_config(['funcgen', 'core']);
+               GetOptions(%$db_opts);
+               my $efg_db = create_Funcgen_DBAdaptor_from_options($db_opts);
+  DESCRIPTION: Returns an options hash for use with GetOptions and other 'options'
+               methods in this module
+  Returntype : Hashref
   Exceptions : Throws if arguments are not valid.
                Throws if DB type is not valid.
-               Throws if optional boolean is not specified and mandatory params
-               for each given DB type are not found.
-  Caller     : General, scripts.
+  Caller     : General, scripts
   Status     : At risk
 
-=cut
-  
+=cut 
 
 
-sub process_DB_options{
-  my ($db_types, $db_opts, $optional, $maintain_options) = @_;  
+sub get_DB_options_config{
+  my ($db_types) = @_;  
   
   if(! defined $db_types){
     $db_types = ['funcgen', 'pipeline', 'core'];
@@ -108,93 +117,254 @@ sub process_DB_options{
       join("\t", keys(%db_type_options)) );            
   }
      
-  my %return_hash = ();
+  my %db_opts = ();
+
+  foreach my $db_type(@$db_types){
+    
+    if(! exists $db_type_options{$db_type}){
+      throw("$db_type is not valid. Valid DB types are:\t". 
+        join("\t", keys(%db_type_options)) ); 
+    }
+    
+    map {my $param; $db_opts{$_} = \$param } @{$db_type_options{$db_type}};  
+  }
   
-  if($db_opts){
-    
-    assert_ref($db_opts, 'HASH', 'db_opts');
-    my $param;
-    
-    foreach my $db_type(@$db_types){
-      
-      if(! exists $db_type_options{$db_type}){
-        throw("$db_type is not valid. Valid DB types are:\t". 
-          join("\t", keys(%db_type_options)) ); 
-      }
-      
-      
-      foreach my $opt(@{$db_type_options{$db_type}}){
-        my $value = ${$db_opts->{$opt}};
-             
-        if(defined $value){
-          #will already 'exist' from the first call of process_DB_options
-          $param = $opt;
-          
-          if(! $maintain_options){
-            ($param = $opt) =~ s/.*_//;
-          }
-          
-          $param =~ s/\=.*//;    
-          #handle dbname oddity
-          $param = 'dbname' if $param eq 'name';
-          $return_hash{$db_type}{'-'.$param} = $value;
-        }
-      }
+  return \%db_opts;
+}
+
+
+=head2 process_DB_options
+
+  Arg [1]    : Hashref  - Options hash after GetOptions processing
+  Arg [2]    : Arrayref - DB types to handle e.g. funcgen|db, core|dna or 
+               hive|pipeline
+  Arg [3]    : Boolean (optional) - Flag to set whether the DB type parameters 
+               are optional.
+  Arg [4]    : Boolean (optional) - Maintains orignal option names rather than converting 
+  Example    : my $db_params = process_DB_iptions($db_opts, ['funcgen', 'core']);
+  Description: Processes the hash of options returned by GetOptions, either into DBAdaptor
+               parameters or maintains the original option names for use with scripts.
+  Returntype : Hashref - DB type keys. Values can be:
+                  DBAdaptor constructor parameter hashref
+                  Script arguments string 
+                  Mysql arguments string
+  Exceptions : Throws if arguments are not valid.
+               Throws if DB type is not valid.
+               Throws if optional boolean is not specified and mandatory params
+               for each given DB type are not found.
+  Caller     : General, scripts.
+  Status     : At risk
+
+=cut
+  
+sub process_DB_options {
+  my ($db_opts, $db_types, $optional, $option_type) = @_;  
+  
+  if(! defined $db_types){
+    $db_types = ['funcgen', 'pipeline', 'core'];
+  }
+  elsif( (ref($db_types) ne 'ARRAY') ||
+          (scalar(@$db_types) < 1) ){
+    throw("DB types arg must be an arrayref of valid cmdline DB types:\t". 
+      join("\t", keys(%db_type_options)) );            
+  }
      
-      if(! $optional){
+  assert_ref($db_opts, 'HASH', 'db_opts');
+  
+  my %valid_option_types = 
+   (
+    dnadb  => 1,
+    script => 1,
+    mysql  => {'host'   => '-h',
+               'user'   => '-u',
+               'pass'   => '-p',
+               'port'   => '-P',
+               'dbname' => ' '}
+   );
+ 
+  if(defined $option_type && 
+     (! exists $valid_option_types{$option_type}) ){
+     throw("$option_type is not valid. Valid option types:\t".
+      join("\t", keys %valid_option_types) ); 
+  }
+  
+  
+
+  my (%db_params, $param, $check_param);
+  
+  foreach my $db_type(@$db_types){
+    
+    if(! exists $db_type_options{$db_type}){
+      throw("$db_type is not valid. Valid DB types are:\t". 
+        join("\t", keys(%db_type_options)) ); 
+    }
+    
+    #cache sub'd check params in case we are mainting options
+    my %check_params = ('user'   => 0,
+                        'dbname' => 0,
+                        'host'   => 0);   
+          
+    foreach my $opt(@{$db_type_options{$db_type}}){
+      my $value = ${$db_opts->{$opt}};
+           
+      if(defined $value){
+        #will already 'exist' from the first call of process_DB_options
+        ($param = '-'.$opt) =~ s/\=.*//o;
+      
+        #Cache mandatory DBAdaptor params
+        ($check_param = $param) =~ s/-(.*_)*//o;           #Strip off -(pdb_|dnadb_) prefixes
+        $check_param = 'dbname' if $check_param eq 'name'; #handle dbname oddity  
         
-        if(! ($return_hash{$db_type}{'-user'} && 
-              $return_hash{$db_type}{'-host'} && 
-              $return_hash{$db_type}{'-dbname'}) ){
-          throw("Could not find mandatory (user|host|dbname) $db_type DB param options:\n".Dumper($db_opts));
+        #warn "opt is $opt check param is $check_param";
+        
+        if (exists $check_params{$check_param}){
+          $check_params{$check_param} = 1;  
         }
+        
+        #Do some more substitution or not
+        if(! defined $option_type){
+          $param =~ s/.*_/-/o;                     #Strip off -pdb_ or -dnadb_ prefixes       
+          $param = '-dbname' if $param eq '-name'; #handle dbname oddity
+        }
+        elsif($option_type eq 'mysql'){
+          #We always need to use the DBADaptor param here
+          #rather any maintained script/dnadb option
+          $param = $valid_option_types{$option_type}->{$check_param};
+        }
+    
+        $db_params{$db_type}{$param} = $value;
+      }
+    }
+   
+    # CHECK PARAMS    
+    if(! $optional){
+      
+      if( grep(/0/, values %check_params) ){
+        throw("Could not find mandatory (user|host|dbname) $db_type DB param options:\n".
+          Dumper($db_opts));        
+      }
+    }
+    
+    # BUILD STRING for cmdline
+    if(defined $option_type &&
+      ($option_type ne 'dnadb') ){
+      $db_params{$db_type} = join(' ', (map {$_.' '.$db_params{$db_type}->{$_}} 
+                                        keys %{$db_params{$db_type}}) );
+    }
+    
+  }
+  
+  return \%db_params;
+}  
+
+
+=head2 create_Funcgen_DBAdaptor_from_options
+
+  Arg [1]    : Hashref - DB options generated by passing the get_DB_options_config hash 
+               to GetOptions
+  Example    : my $db = create_Funcgen_DBAdaptor_from_params($db_opts);
+  DESCRIPTION: Creates a Funcgen DBAdaptor given the options hash returned from GetOptions.
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor 
+  Exceptions : None
+  Caller     : General, scripts
+  Status     : At risk
+
+=cut
+
+sub create_Funcgen_DBAdaptor_from_options {
+  my $db_opts = $_[0];
+  
+  my $funcgen_params = ${&process_DB_options($db_opts, ['funcgen'])}{funcgen};
+  #This simply allows dnadb_params to be optional
+  my $core_params    = ${&process_DB_options($db_opts, ['core'], 1, 'dnadb')}{core};
+  
+  return create_DBAdaptor_from_params({%{$funcgen_params},
+                                       %{$core_params}},
+                                      'funcgen');  
+}
+
+
+=head2 create_Funcgen_DBAdaptor_from_params
+
+  Arg [1]    : Hashref - DB type keys, DB contructor param hash values i.e. what 
+               is returned from process_DB_options.
+  Example    : my $db = create_Funcgen_DBAdaptor_from_params($db_params);
+  DESCRIPTION: Wrapper method to create a Funcgen DBAdaptor from a DB type => parameters hash.
+               This will try and do the write thing if the core DB parameters are set i.e. 
+               create a core DB directly or pass the dnadb parameters onto the Funcgen DBAdaptor.
+  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Exceptions : Throws if arguments not valid 
+               Throws if Hash argument does not contain a funcgen key.
+               Throws if 'core' Hash exists but does not contain mandatory DB parameters or
+               and dnadb paramters
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub create_Funcgen_DBAdaptor_from_params {
+  my $db_params = $_[0];
+  
+  my ($dnadb, %dnadb);
+  
+  if(! exists $db_params->{funcgen}){
+    throw('DB params argument does not contain a \'funcgen\' key');
+  }
+  
+  if(exists $db_params->{core}){  
+    #Check whether we have complete DBADaptor param first   
+    eval {$dnadb = create_DBAdaptor_from_params($db_params->{core}, 'core'); };
+    my $error = $@;
+    
+    #This could fail as we have funcgen dnadb params
+    #generated by passing 'script' option type to process_DB_options
+    #or we have incomplete DBAdaptor params
+        
+    #These checks are not exhaustive, but should catch most behaviour
+    
+    if($@){
+      if( (exists $db_params->{core}->{'-user'}) ||
+          (exists $db_params->{core}->{'-host'}) ||
+          (exists $db_params->{core}->{'-dbname'}) ){
+        throw("Some mandatory parameters were omited when creating the core DBAdaptor.\n$@");            
+      }
+      elsif(! grep(/-dnadb/, keys %{$db_params->{core}}) ){
+        throw('DB parameter does not contain either valid core DBAdaptor params'.
+          " or funcgen DBAdaptor dnadb params.\n".Dumper($db_params->{core}) );         
       }
     }
   }
-  else{
   
-    foreach my $db_type(@$db_types){
+  
     
-      if(! exists $db_type_options{$db_type}){
-        throw("$db_type is not valid. Valid DB types are:\t". 
-          join("\t", keys(%db_type_options)) ); 
-      }
-    
-      map {my $param; $return_hash{$_} = \$param } @{$db_type_options{$db_type}};  
-    }
+  if(defined $dnadb){
+    $dnadb{-dnadb} = $dnadb;  
   }
-  
-  return \%return_hash;
-}
-
-#This simply allows dnadb_params to be optional
-
-sub process_funcgen_DB_options {
-  my $db_opts = $_[0];  
-  
-  return {%{&process_DB_options(['funcgen'], $db_opts)},
-          %{&process_DB_options(['core'],    $db_opts, 1, 1)}};
+  elsif(exists $db_params->{core}){
+    %dnadb = %{$db_params->{core}};
+  }     
+    
+  return create_DBAdaptor_from_params({%{$db_params->{funcgen}}, %dnadb}, 'funcgen');
 }
 
 
-
-=head2 create_DBAdaptors_from_params
+=head2 create_DBAdaptor_from_params
 
   Arg [1]    : Hashref - DB contructor params
-  Arg [2]    : String  - DB type
-  Example    : my $db = create_DBAdaptors_from_params($funcgen_params, 'funcgen');
+  Arg [2]    : String  - DB type e.g. funcgen, core or hive
+  Example    : my $db = create_DBAdaptor_from_params($funcgen_params, 'funcgen');
   DESCRIPTION: Creates and tests the relevant DBAdaptors from the passed parameters.
   Returntype : Bio::EnsEMBL::DBSQL::DBAdaptor (Or Funcgen or Hive DBAdaptor)
   Exceptions : Throws if arguments not valid 
                Throws if DB type is not supported
-  Caller     : General, scripts
+  Caller     : General
   Status     : At risk
 
 =cut
     
 sub create_DBAdaptor_from_params {
   my ($db_params, $db_type) = @_;
-  
+   
   assert_ref($db_params, 'HASH', 'db_params');
   my %dba_modules = (
                      funcgen => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
@@ -212,15 +382,46 @@ sub create_DBAdaptor_from_params {
     throw("DB type argument is invalid, valid DB types are:\t".join("\t", (keys %dba_modules)) );        
   }
   
-  my $dba = $dba_modules{$db_type}->new(%$db_params);
-    
-  #Test connection
-  $dba->dbc->db_handle;    
+  my $dba = $dba_modules{$db_type}->new(%$db_params);   
+  $dba->dbc->db_handle;     #Test connection 
   return $dba; 
 }    
-   
+  
+=head2 get_MYSQL_args_from_options
 
-sub mysql_args_from_DBAdaptor_params {
+  Arg [1]    : Hashref - DB options generated by passing the get_DB_options_config hash 
+               to GetOptions
+  Arg [2]    : String - DB type e.g. funcgen, core  
+  Example    : my $mysql_args = get_MYSQL_args_from_options($db_opts, 'funcgen');
+  DESCRIPTION: Wrapper method to process_DB_options.
+  Returntype : String
+  Exceptions : None
+  Caller     : General, scripts
+  Status     : At risk
+
+=cut 
+
+sub get_MYSQL_args_from_options {
+  my ($db_opts, $db_type, $optional) = @_;
+
+  return ${&process_DB_options($db_opts, [$db_type], $optional, 'mysql')}{$db_type};
+}
+
+
+=head2 get_MYSQL_args_from_DBAdaptor_params
+
+  Arg [1]    : Hashref - DBAdaptor constructor params
+  Example    : my $mysql_args = get_MYSQL_args_from_options(\%funcgen_db_params);
+  DESCRIPTION: Builds MYSQL cmdline argument string based on DBAdaptor parameters
+  Returntype : String
+  Exceptions : None
+  Caller     : General, scripts
+  Status     : At risk
+
+=cut 
+
+
+sub get_MYSQL_args_from_DBAdaptor_params {
   my $db_params = $_[0];    
   assert_ref($db_params, 'HASH', 'db_params');
   
@@ -229,7 +430,6 @@ sub mysql_args_from_DBAdaptor_params {
                          ['-pass',  '-p'],
                          ['-port',  '-P'],
                          ['-dbname', ' ', 1]);
-  
   
   my $mysql_params= '';
   
