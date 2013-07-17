@@ -74,10 +74,9 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Pod::Usage;
-use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw(process_funcgen_DB_options
-                                                     create_DBAdaptor_from_params
-                                                     process_DB_options
-                                                     mysql_args_from_DBAdaptor_params);
+use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw(get_DB_options_config
+                                                     create_Funcgen_DBAdaptor_from_options
+                                                     get_MYSQL_args_from_options);
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(run_system_cmd
                                                open_file);
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
@@ -85,7 +84,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 my @tmp_args = @ARGV;
 my (@arrays, $class, $dump_features, $list,
     $outdir, $dump_xrefs, $merged, $prefix);
-my $db_opts = process_DB_options(['funcgen', 'core']);
+my $db_opts = get_DB_options_config(['funcgen', 'core']);
 
 GetOptions (
             #Mandatory
@@ -112,7 +111,8 @@ GetOptions (
 
 # VALIDATE PARAMETERS
 
-my $db_params = process_funcgen_DB_options($db_opts);
+my $db         = create_Funcgen_DBAdaptor_from_options($db_opts);
+my $mysql_args = get_MYSQL_args_from_options($db_opts, 'funcgen');
 
 if(! $outdir){
   $outdir = '.';
@@ -130,7 +130,7 @@ if($prefix && ! $merged){
   warn 'Your have specified a -prefix but not -merged, -prefix will be ignored'; 
 }     
            
-my $db = create_DBAdaptor_from_params($db_params->{funcgen}, 'funcgen');
+
 my $array_adaptor = $db->get_ArrayAdaptor;
  
 my (%class_arrays, $edb_name, $schema_build);
@@ -286,8 +286,8 @@ foreach my $array(@arrays){
   }
  
   # BUILD THE SQL CMDLINE
-  my $sql = "mysql --skip-column-names --quick -e'${select_sql} FROM ${table_sql} ${constraint_sql}'".
-    &mysql_args_from_DBAdaptor_params($db_params->{funcgen});
+  my $sql = "mysql --skip-column-names --quick -e'${select_sql} FROM ${table_sql} ${constraint_sql}' ".
+    $mysql_args;
   
   #warn "$sql $redirect $outfile";
   
