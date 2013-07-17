@@ -83,13 +83,9 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(run_system_cmd
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 my @tmp_args = @ARGV;
-
 my (@arrays, $class, $dump_features, $list,
     $outdir, $dump_xrefs, $merged, $prefix);
-
 my $db_opts = process_DB_options(['funcgen', 'core']);
-
-use Data::Dumper qw (Dumper);
 
 GetOptions (
             #Mandatory
@@ -114,11 +110,9 @@ GetOptions (
            ) 
            or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
 
+# VALIDATE PARAMETERS
+
 my $db_params = process_funcgen_DB_options($db_opts);
-
-
-
-
 
 if(! $outdir){
   $outdir = '.';
@@ -210,13 +204,9 @@ else{
     }
   }
 }
- 
- 
- 
- 
+  
 my $redirect = '>';
- 
-#Could do a lot of this SQL generation just once 
+#Could do a lot of this SQL generation just once
  
 foreach my $array(@arrays){
   my $table_sql = 'array a, array_chip ac, probe p';
@@ -240,18 +230,18 @@ foreach my $array(@arrays){
  
  
   if($dump_features){
+    # DEFINE OUTPUT & PRINT TRACK LINE
     $outfile = $outdir.'/'.$prefix.'.bed';
     my $of = open_file($outfile, '>');
     print $of  "track name=$prefix description=\"Ensembl ".$class.':'.$prefix." mappings\" useScore=0\n";
     close($of);
     $redirect = '>>';
     
-    #Adding in schema_build clause here to avoid the product wrt nr seq_region entries
-    
+    # DEFINE SQL
+    #Adding in schema_build clause here to avoid the product wrt nr seq_region entries   
     $constraint_sql .= " AND pf.seq_region_id=sr.seq_region_id AND sr.schema_build=\"${schema_build}\" AND p.probe_id=pf.probe_id GROUP by pf.probe_feature_id";
-    $table_sql      .= ', probe_feature pf, seq_region sr';
-    
-    my $name_sql = 'p.name';
+    $table_sql      .= ', probe_feature pf, seq_region sr';   
+    my $name_sql     = 'p.name';
     
     if($class =~ /AFFY/){
       $name_sql = 'group_concat(a.name, ":", ps.name, ":", p.name)'; #nice 
@@ -270,7 +260,10 @@ foreach my $array(@arrays){
  
   }
   else{ #dump_xrefs
+    # DEFINE OUTPUT 
     $outfile = $outdir.'/'.$prefix.'.xrefs.txt';
+    
+    # DEFINE SQL
     $table_sql  .= ', object_xref ox, xref x, external_db edb';
     my $id_field;    
     
@@ -292,12 +285,13 @@ foreach my $array(@arrays){
     $select_sql .= "SELECT $id_field group_concat(a.name), x.dbprimary_acc, x.display_label, ox.linkage_annotation ";
   }
  
- 
+  # BUILD THE SQL CMDLINE
   my $sql = "mysql --skip-column-names --quick -e'${select_sql} FROM ${table_sql} ${constraint_sql}'".
     &mysql_args_from_DBAdaptor_params($db_params->{funcgen});
   
   #warn "$sql $redirect $outfile";
   
+  # DO THE DUMP
   run_system_cmd("$sql $redirect $outfile");
   last if $merged;
 }
