@@ -50,8 +50,9 @@ use Bio::EnsEMBL::Utils::Cache;
 use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
-
+#@ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+#re-ordered this as core BaseAdaptor methods were over-riding Funcgen BaseAdaptor methods
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
 
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
@@ -143,6 +144,7 @@ sub fetch_all_by_Slice_constraint {
     );
 
 
+
   if (! defined $fg_cs) {
     warn "No CoordSystem present for ".$slice->coord_system->name().":".$slice->coord_system->version();
     return \@result;
@@ -155,9 +157,13 @@ sub fetch_all_by_Slice_constraint {
 
   $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
 
+
+
  
   #if the logic name was invalid, undef was returned
   return [] if(!defined($constraint));
+
+ 
 
   #check the cache and return if we have already done this query
 
@@ -184,7 +190,6 @@ sub fetch_all_by_Slice_constraint {
 
   # Hap/PAR support: retrieve normalized 'non-symlinked' slices
   my @proj = @{$sa->fetch_normalized_slice_projection($slice)};
-
 
   if (@proj == 0) {
     throw('Could not retrieve normalized Slices. Database contains ' .
@@ -771,9 +776,10 @@ sub _slice_fetch {
     #This is not returning true if the feat_cs is no default
     #
 
+
+
     if ($feat_cs->equals($slice_cs)) {
       # no mapping is required if this is the same coord system
-
 
       #eFG change 
       #We want to set this to undef if we are dealing with result_features which
@@ -829,6 +835,7 @@ sub _slice_fetch {
       $fs = $self->_remap($fs, $mapper, $slice);
       push @features, @$fs;
     } else {
+
       #Table contains some feature on a CS that differs from the Slice CS
       #can't do CS remapping yet as AssemblyMapper expects a core CS
       #change AssemblyMapper?
