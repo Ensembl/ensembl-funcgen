@@ -61,20 +61,20 @@ use warnings;
 use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( add_hive_url_to_meta  );
+use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw( get_DB_options_config 
+                                                      create_DBAdaptor_from_options );
 
-my ($pass, $host, $user, $dbname, $species, $url, $pname, $help, $man);
-my $port = 3306;
+my ($species, $url, $pname, $help, $man);
+my $db_opts = get_DB_options_config(['funcgen']);
+
 my @tmp_args = @ARGV;
 
 GetOptions (
-            'pass:s'     => \$pass,
-            'port:i'     => \$port,
-            'host=s'     => \$host,
-            'useru=s'    => \$user,
-            'dbname=s'   => \$dbname,
-            'species=s'  => \$species,
+            %$db_opts,
+            #'species=s'  => \$species,
             'url=s'      => \$url,
-            'pipeline=s' => \$pname,
+            #'pipeline=s' => \$pname,
       
             'help'             => sub { pod2usage(-exitval => 0); }, #do we need verbose here?
             #removed ~? frm here as we don't want to exit with 0 for ?
@@ -82,79 +82,17 @@ GetOptions (
             'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
            ) or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
            
-
-
 ### check options ###
-if( ! (defined $user &&
-       defined $pass &&
-       defined $dbname &&
-       defined $host &&
-       defined $url &&
-       defined $pname) ){
-  pod2usage(-exitval => 1, 
-            -message => "You must specify all mandatory parameters\nSpecified parameters are:\t@tmp_args"
-            );        
- }
-
-throw("Must specify mandatory database hostname (-host).\n") if ! defined $host;
-throw("Must specify mandatory database username. (-user)\n") if ! defined $user;
-throw("Must specify mandatory database name (-dbname).\n") if ! defined $dbname;
-throw("Must specify mandatory password (-pass).\n") if ! defined $pass;
-
-$| = 1;
+#if( ! (defined $url &&
+#       defined $pname) ){
+#  pod2usage(-exitval => 1, 
+#            -message => "You must specify all mandatory parameters\nSpecified parameters are:\t@tmp_args"
+#            );        
+# }
 
 
-#This will currently fail if we don't have a dnadb on live-mirror
-#todo add a -no_dnadb to the DBADaptor
-
-my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-    (
-     -host    => $host,
-     -user    => $user,
-     -dbname  => $dbname,
-     -pass    => $pass,
-     -port    => $port,
-     -species => $species,
- #    -dnadb   => $dnadb,
-     );
-
-#Test the connection 
-$db->dbc->db_handle;
-
-my $mc         = $db->get_MetaContainer;
-my $meta_key   = $pname.'_hive_url';
-my $meta_value = $mc->single_value_by_key($meta_key);
-
-if( ! defined $meta_value){ #Store the new meta entry
-  #Need to tie this to species_id, such that we don't get NULL in unique key
-  #Just need to validate we have species set
-  #add multi species support  
-  
-  my $db_species = $db->species;
-  
-  #sanity check
-  if(! defined $db_species){
-    die("No species defined in the DB. Unsafe to add meta entry due to NULL in unique key".
-      "\nPlease add manually");
-  }
-  elsif(defined $species &&
-        ($species ne $db_species) ){
-    die("The species defined in the DB($db_species) does not match the species parameter ($species)");
-  }
-  
-  #Add key via API to store with appropriate species_id
-  eval { $mc->store_key_value($meta_key, $url); };
-  
-  if($@){
-    die("Failed to store hive url meta entry.\n$@");  
-  }
-
-}
-elsif($meta_value ne $url){
-  die("$dbname is currently locked to a different $pname hive DB:\t$meta_value\n".
-    'Please use that hive DB or drop that pipeline '.
-    'i.e. DropPipeline in that pipeline environment or remove meta entry');
-}
-#else all is good.
+#We just want to create a core DBAdaptor here so we avoid defaulting to ensembldb for the dnadb
+#and we don't want to force specification of the dnadb params
+add_hive_url_to_meta($url, create_DBAdaptor_from_options($db_opts, 'funcgen', 'pass'));
 
 1;
