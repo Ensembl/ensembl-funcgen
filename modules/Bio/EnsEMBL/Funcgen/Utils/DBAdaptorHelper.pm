@@ -43,6 +43,7 @@ require Exporter;
 @ISA       = qw(Exporter);
 @EXPORT_OK = qw(               
                 create_DBAdaptor_from_params
+                create_DBAdaptor_from_options
                 create_Funcgen_DBAdaptor_from_options
                 create_Funcgen_DBAdaptor_from_params
                 get_MYSQL_args_from_DBAdaptor_params
