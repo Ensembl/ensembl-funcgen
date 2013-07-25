@@ -63,10 +63,10 @@ use Pod::Usage;
 use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw( process_DB_options
                                                       get_DB_options_config
                                                       create_Funcgen_DBAdaptor_from_options
-                                                      create_DBAdaptor_from_params);
+                                                      create_DBAdaptor_from_params );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( run_system_cmd
                                                       url_from_DB_params
-                                                      add_hive_url_to_meta);
+                                                      add_hive_url_to_meta );
 
 $| = 1;#for debug
 
@@ -94,7 +94,7 @@ my $db_opts = get_DB_options_config();#This will get opts for funcgen, core and 
 GetOptions (
             #Mandatory
             %{$db_opts},
-            'configs=s{,}'       => \@configs,
+            'configs=s{,}'      => \@configs,
             'data_root=s'       => \$data_root,
             'hive_script_dir=s' => \$hive_script_dir,
 
@@ -196,10 +196,10 @@ if($@){ #Assume the DB hasn't been created yet
   
   #init the pipline with the first conf
   my $first_conf = shift @confs;
-  
   my $init_cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${first_conf} ".
     $pipeline_params;
   
+  print "\n\nINITIALISING DATABASE:\t".$pdb_params->{'-dbname'}."\n";
   run_system_cmd($init_cmd);  
   
   $pdb = create_DBAdaptor_from_params($pdb_params, 'core');
@@ -220,6 +220,8 @@ foreach my $conf(@confs){
   else{
     my $topup_cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${conf} ".
       ' -analysis_topup '.$pipeline_params;  
+    #warn $topup_cmd."\n";
+    print "\n\nPERFORMING ANALYSIS TOPUP:\t".$conf."\n";
     run_system_cmd($topup_cmd);
     
      #Add key via API to store with appropriate species_id
