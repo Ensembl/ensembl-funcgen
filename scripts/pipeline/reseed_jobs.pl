@@ -76,8 +76,6 @@ use Bio::EnsEMBL::Hive::DBSQL::AnalysisJobAdaptor;
 use Bio::EnsEMBL::Hive::Utils      qw( destringify stringify );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-
-
 #Inject methods into the hive adaptor symbol tables/typeglobs
 
 *Bio::EnsEMBL::Hive::DBSQL::AnalysisDataAdaptor::fetch_dbID_by_data = sub {
@@ -107,16 +105,14 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
   }
 
   #return 0 unless($data);
-  #surely this never happens as we always test for length > 255?
-  #if it did happen we would get an erronoes input_id of '_ext_input_analysis_data_id 0'
-  #which doesn't exists and would probably die ungracefull
-  #should probably throw here instead or do the length test here instead?
+  #surely this never happens for sotre_if_needed as we were always 
+  #testing for length > 255 in the caller?
+  #if it did happen we would get an erroneous input_id of '_ext_input_analysis_data_id 0'
+  #which doesn't exists and would probably die ungracefully
+  #should probably throw or do the length test here instead?
   my $input_id;
   
-  if(length($data) >= 255){  
-    
-    
-    
+  if(length($data) >= 255){   
     my $data_id = $self->fetch_dbID_by_data($data); 
   
     if($data_id) { #already stored      
@@ -163,8 +159,6 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
   my $adata_adaptor = $self->db->get_AnalysisDataAdaptor;
        
   if($old_id ne $input_id){  
-    
-    #would need to change this when moving to AnalysisJobAdaptor
     $input_id = $adata_adaptor->update_if_needed($input_id, $job_id);
     $job->input_id($input_id);
   }
@@ -225,16 +219,10 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
   }
 
   #Finally destringify input_id, so the returned job is useable
-  #Might also need to update some of the attributes changed in udpate_status?
   $job->input_id(destringify($job->input_id));
 
   return $job;  
 };
-
-
-#Should really also handle analysis_data.data here too
-#But just handle job.input_id for now
-#analysis_data check will be implicit if we also handle the data_id string
 
 
 
@@ -289,7 +277,7 @@ sub main{
               'help'               => sub { pod2usage(-exitval => 0); }, 
               #removed ~? frm here as we don't want to exit with 0 for ?
               
-              'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
+              'man|m'              => sub { pod2usage(-exitval => 0, -verbose => 2); },
              ) or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
              
   #Do we want to catch the rest of ARGV here by using -- in the input and assign these to init_pipeline as extra args?
@@ -315,10 +303,6 @@ sub main{
     #Fetch all the jobs
     my @jobs = @{$job_a->fetch_all_by_dbID_list(\@job_ids)};
     
-    #Check they have all failed 
-    #todo, allow -ignore_status flag here?
-  
-
     foreach my $job(@jobs){
          
       if(! (($job->status eq 'FAILED') ||
@@ -340,19 +324,20 @@ sub main{
     if($include_ready){
       push @jobs, @{$job_a->fetch_all_by_analysis_id_status($analysis->dbID, 'READY')};  
     }
-  
-    
+     
     foreach my $job (@jobs){
       &reseed_and_reset_job($job, $append_string, $job_a, $analysis_a, $ignore_retries);
     }
   }
 
-  print "\nUDPATE REPORT\n";
-  print "Update string:\t\t\t\t\t\t${append_string}\n";
-  print "Updated job count:\t\t\t\t\t$updated_cnt\n";
+  print "\nUDPATE REPORT\n".
+    "Update string:\t\t\t\t\t\t${append_string}\n".
+    "Updated job count:\t\t\t\t\t$updated_cnt\n";
+    
   print "Update failed count (likely due to duplicates):\t\t$update_fail_cnt\n" if $update_fail_cnt;
   print "Skipped job count (due to status or retry count):\t$skipped_cnt\n" if $skipped_cnt;
   print "Skipped/Failed update job dbIDs:\n@skipped_jobs\n" if @skipped_jobs;
+  
   return;  
 }# end of main
 
@@ -411,74 +396,7 @@ sub reseed_and_reset_job {
 }# end of reseed_and_reset_job
   
 
-
-#Old AnalysisJobAdaptor method which only dealy with input_id
-#superceded by full update method
-
-sub update_input_id_for_job_id{
-  my ($self, $input_id, $job_id) = @_;  
-
-  #Get old job and id first to avoid storing/updating for a job that doesn't exist  
-  my $job = $self->fetch_by_dbID($job_id);
-  if(! defined $job){ throw("Could not fetch job with dbID:\t".$job_id); }  
-  my $old_id = $job->input_id;
-  $old_id    = stringify($old_id)     if ref($old_id);
-  $input_id  = stringify($input_id) if ref($input_id);
-       
-  if($old_id ne $input_id){  
-    my $adata_adaptor = $self->adaptor->db->get_AnalysisDataAdaptor;
-    
-    #would need to change this when moving to AnalysisJobAdaptor
-    #my $new_input_id = $adata_adaptor->update_if_needed($input_id);
-    
-    my $input_id = &update_if_needed($adata_adaptor, $input_id, $job_id);
-    
-    if($old_id ne $input_id){ #UPDATE job.input_id
-      
-      my $sql = qq{UPDATE job set input_id=? where job_id=?};
-      my $sth = $self->db->dbc->prepare($sql); 
-      
-      
-      my $rows_affected = $sth->execute($input_id, $job_id) or 
-                            throw("Failed to update job.input_id using:\n\t".
-                              $sql." ($input_id, $job_id)\n$!");
-      $sth->finish;
-      
-      #Sanity check we have affected just 1 job
-      if($rows_affected != 1){
-        throw("Failed to update a unique job.input_id using:\n\t".
-          $sql." ($input_id, $job_id)\nRows affected:\t$rows_affected\n$!");  
-      }
-        
-      
-      #Now remove old analysis_data row if it is not linked to any other job
-      #we don't know whether old_id was in analysis_data or not
-      #we could do a simple length test here or
-      
-      
-      my $old_ad_dbid = &fetch_dbID_by_data($old_id);
-      
-      if($old_ad_dbid){
-        $old_id = '_ext_input_analysis_data_id '.$old_ad_dbid;
-             
-        #my @jobs = @{$self->fetch_all_by_input_id($old_id)};
-        my @jobs = @{&fetch_all_by_input_id($self, $old_id)};
-      
-        if(! scalar(@jobs)){ #No other jobs linked
-
-          #$adata_adaptor->delete_by_dbID($old_ad_dbid);
-          &delete_by_dbID($adata_adaptor, $old_ad_dbid);
-        }
-      } 
-      
-     #Now actually do the update in the job table
-      
-    }
-  }
-  
-  return $input_id;  
-}
-  
 main();
+
 1;
 
