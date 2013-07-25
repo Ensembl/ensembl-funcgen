@@ -365,32 +365,21 @@ sub reseed_and_reset_job {
   
   $job->status('READY');
   $job->retry_count(1); 
-  #input_id is normally a string here
    
   my $input_id = $job->input_id || {}; 
+  #input_id is normally a string here
   $input_id    = destringify($input_id) if ! ref($input_id);  
   $job->input_id({ %{$input_id}, 
                    %{destringify( $append_string )} } );
-  
+ 
+  # DO THE UPDATE 
   if(! $job_a->update($job)){
     push @skipped_jobs, $job->dbID;
     $update_fail_cnt ++;    
   }
   else{
     $updated_cnt ++;
-  }
-  #RESEED   
-  #&update_input_id_for_job_id($analysis_a,
-  #                            { %{destringify( $job->input_id || '{}' )},
-  #                              %{destringify( $append_string         )} },
-  #                            $job->dbID); 
-                                  
-  #RESET status to READY and retry_count to 1
-  #$job_a->reset_or_grab_job_by_dbID($job->dbID);
-  
-  
-  #Now need to reset retry_count manually and call new update 
-  
+  } 
   
   return;
 }# end of reseed_and_reset_job
