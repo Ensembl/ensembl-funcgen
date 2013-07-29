@@ -241,10 +241,6 @@ sub get_supporting_sets{
 
   my @ssets;
 
-  my $sets = $self->{'supporting_sets'};
-  warn Data::Dumper::Dumper($sets);
-
-
   foreach my $anal_id(keys %{$self->{'supporting_sets'}}){
         
     foreach my $sset(@{$self->{'supporting_sets'}->{$anal_id}}){
@@ -255,8 +251,6 @@ sub get_supporting_sets{
 		next;
 	  }
 
-      warn "set typ[es i ".$sset->set_type;
-
 	  if(defined $set_type &&
 		 ($sset->set_type ne $set_type)){
 		next;
@@ -265,9 +259,6 @@ sub get_supporting_sets{
 	  push @ssets, $sset;
     }
   }
-
- warn Data::Dumper::Dumper(\@ssets);
-  
 
   return \@ssets;
 }
@@ -287,7 +278,7 @@ sub get_supporting_sets{
 sub get_displayable_supporting_sets{
   my ($self, $set_type) = @_;
 
-  return $self->get_supporting_sets('DISPLAYABLE', $set_type);
+  return $self->get_supporting_sets( $set_type, 'DISPLAYABLE' );
 }
 
 
