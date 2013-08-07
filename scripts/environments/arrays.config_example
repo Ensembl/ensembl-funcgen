@@ -22,7 +22,7 @@
 
 export PIPELINE_PACKAGE='ensembl-pipeline'
 
-export VALID_ARRAY_FORMATS='AFFY_UTR AFFY_ST ILLUMINA_WG CODELINK PHALANX SPAINK_LAB_LEIDEN AGILENT ILLUMINA_INFINIUM'
+export VALID_ARRAY_FORMATS='AFFY_UTR AFFY_ST ILLUMINA_WG CODELINK PHALANX LEIDEN AGILENT ILLUMINA_INFINIUM STEMPLE_LAB_SANGER WUSTL'
 export VALID_SEQ_TYPES='GENOMICSEQS TRANSCRIPTSEQS'
 export VALID_ALIGN_TYPES='GENOMIC TRANSCRIPT'
 
@@ -54,8 +54,8 @@ export IMPORT_MEM_BASE=2500
 
 #Do not change!! XREF_MEM_FACTOR=11
 export XREF_MEM_FACTOR=11
-#Upped to 2500 to handle Human AFFYs
-export XREF_MEM_BASE=2500
+#Upped to 8500 to handle Human AFFY_STs
+export XREF_MEM_BASE=8500
 
 
 
@@ -89,7 +89,7 @@ export HUGEMEM_HOME=$HOME/huge_array_mapping
 #pipeline tries to locate the exectuable and fails somehow
 #This is not ideal as we are now using the arch of the submitter node to run all the farm jobs
 export ARCH=`uname -m`
-export EXONERATE_PATH="/lustre/work1/ensembl/gs2/local/${ARCH}/bin/exonerate"
+export EXONERATE_PATH="/path/to/your/version/of/exonerate"
 export EXONERATE_VERSION='2.2.0'
 export PROBE2TRANSCRIPT_PARAMS='--calculate_utrs --utr_multiplier 1'
 #export PROBE2TRANSCRIPT_BSUB_CMD='bsub -q hugemem -R "select[mem>30000] rusage[mem=30000]" -M 30000000'
