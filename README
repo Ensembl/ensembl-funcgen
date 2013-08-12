@@ -45,10 +45,10 @@ for f_db in \
   
   perl scripts/release/update_DB_for_release.pl \
       -host mysql-eg-staging-1 -port 4160 \
-      -user ensrw -pass scr1b3s1 \
+      -user ensrw -pass xxxxxxxx \
       -dbname $f_db \
       -dnadb_host mysql-eg-staging-1 -dnadb_port 4160 \
-      -dnadb_user ensrw -dnadb_pass scr1b3s1 \
+      -dnadb_user ensrw -dnadb_pass xxxxxxxx \
       -species  $species\
       -data_version $version \
       -check_displayable \
