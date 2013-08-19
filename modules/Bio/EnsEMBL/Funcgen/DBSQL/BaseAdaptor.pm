@@ -51,6 +51,7 @@ use strict;
 use Class::Inspector; #For list_valid_constraints
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(dump_data);
 use DBI qw(:sql_types);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
@@ -64,31 +65,31 @@ use DBI qw(:sql_types);
   Example    : my @objs = @{$self->generic_fetch($self->compose_contraint_query($params_hash))};
   Description: Given a params Hashref containing a constraints hash e.g.
                 {
-                 constraints => 
-                  { 
+                 constraints =>
+                  {
                    names    => [ 'name1', 'name2' ],
                    analyses => [ $analysis_obj1, $analysis_obj2 ],
                   }
                 }
-               This method will iterate through the cosntraints keys calling               
+               This method will iterate through the cosntraints keys calling
                _constrain_${constraints_key} e.g. _constrain_analyses.
-               SQL is built from all the specified constraint, and tables are 
-               added to the TABLES constant for use when a constraint uses 
-               dynamic query composition across tables outside the normal 
-               specification for this adaptor. Invalid constraints are caught 
+               SQL is built from all the specified constraint, and tables are
+               added to the TABLES constant for use when a constraint uses
+               dynamic query composition across tables outside the normal
+               specification for this adaptor. Invalid constraints are caught
                and a helpful list of valid constraints are listed.
-               
+
                NOTE: Most constraints operation with OR logic implicitly via an
-               SQL join or IN clause. There is currently one exception to this 
+               SQL join or IN clause. There is currently one exception to this
                is the 'states' constraint which uses AND logic, as this provide
                more appropriate functionality for this constraint.
-               
-               NOTE: See list_valid_constraint for access to the valid 
+
+               NOTE: See list_valid_constraint for access to the valid
                constraints for this adaptor
   Returntype : Scalar - Constraint SQL string
   Exceptions : Throws if params hash argument is not valid.
                Throws if specific constraint name if not valid.
-               Throws if additional tables are required but TABLES constant is 
+               Throws if additional tables are required but TABLES constant is
                not defined.
   Caller     : fetch methods
   Status     : At Risk
@@ -111,42 +112,40 @@ sub compose_constraint_query{
 	 (ref($params) ne 'HASH') ){
 	throw('You must pass a valid params HASHREF to compose_constraint_query');
   }
-   
+
   my @constraints;
-  
+
   if( exists ${$params}{constraints}){
-		
+
 	my @filter_names = keys (%{$params->{constraints}});
 
 	foreach my $constraint_key(keys (%{$params->{constraints}})){
 
       my $constrain_method = '_constrain_'.$constraint_key;
-
       if(! $self->can($constrain_method)){
-     
+
         throw($constraint_key." is not a valid constraint type. Valid constraints for ".ref($self)." are:\n\t".
-          join("\n\t", @{$self->list_valid_constraints}));   
+          join("\n\t", @{$self->list_valid_constraints}));
       }
 
       if(defined $params->{constraints}{$constraint_key}){
 
-        my ($constraint, $constraint_conf) = 
+        my ($constraint, $constraint_conf) =
           $self->$constrain_method($params->{constraints}{$constraint_key}, $params);
-        
+
         #If there is no constraint defined then the constrain method is invalid
-        #or will not return any records hence bail out here?  
-          
+        #or will not return any records hence bail out here?
+
         push @constraints, $constraint;
 
-        #Currently only handle tables here but could also 
+        #Currently only handle tables here but could also
         #set other dynamic config e.g. final_clause etc.
         if (exists ${$constraint_conf}{tables}) {
-       
-            push @{$self->TABLES}, @{$constraint_conf->{tables}};        
+            push @{$self->TABLES}, @{$constraint_conf->{tables}};
         }
-      }#else do nothing      
+      }#else do nothing
 	} # END OF CONSTRAINTS
-  }	# END OF $PARAMS				
+  }	# END OF $PARAMS
 
   return join(' AND ', @constraints) || '';
 }
@@ -155,7 +154,7 @@ sub compose_constraint_query{
 =head2 list_valid_constraints
 
   Example    : print "Valid constraints are:\t".join("\t", @{$adaptor->list_valid_constraints});
-  Description: This method simply returns a list of valid constraint hash keys for use with 
+  Description: This method simply returns a list of valid constraint hash keys for use with
                fetch method which support the compose_query_constraint method.
   Returntype : Listref of scalar contraint keys
   Exceptions : None
@@ -167,15 +166,15 @@ sub compose_constraint_query{
 #Grab all the keys from the symbol table and see if they have a coderef assigned
 #no strict 'refs';
 #my @methods = grep { defined &{$_} && ($_ =~ /^_constrain_.*/)} keys %{ref($self).'::'};
-#use strict 'refs';  
+#use strict 'refs';
 #This doesn't recurse down @ISA and don't seem to have a coderef associated???
 #although it is supposed to
 
 sub list_valid_constraints{
   my $self = $_[0];
-               
+
   #Minor helpful voodoo
-  return [ map {/_constrain_([a-zA-Z_]+$)/ ? $1 : () } 
+  return [ map {/_constrain_([a-zA-Z_]+$)/ ? $1 : () }
                @{Class::Inspector->methods(ref($self), 'private')} ];
 }
 
@@ -185,8 +184,8 @@ sub list_valid_constraints{
   Example    : my @adaptor_tables = @{$adaptor->_tables};
   Description: PROTECTED implementation of superclass abstract method.
                Returns the names and aliases of the tables deinfed in the
-               TABLES constant at the head of an adaptor which supports 
-               dynamic query composition across tables outside the normal 
+               TABLES constant at the head of an adaptor which supports
+               dynamic query composition across tables outside the normal
                specification for this adaptor e.g.
                  use constant TABLES => [[ 'table_name1', 'tn1' ], [ 'table_name2',   'tn2' ]];
   Returntype : List of listrefs of strings
@@ -196,30 +195,30 @@ sub list_valid_constraints{
 
 =cut
 
-#Could change this to take tables are to push, localising TABLES access and validation here 
+#Could change this to take tables are to push, localising TABLES access and validation here
 #i.e. remove validation from compose_constraint
 #would need t oupdate this in all adaptor, which use TABLES directly i.e. those that don't use compase_contraint yet
 #Don't test TABLES here as standard implementation redefines this method?
-#compose_constraint will normally have caught this already 
+#compose_constraint will normally have caught this already
 #and we don't want to test for every query
 
 #todo remove all the TABLES/TRUE_TABLES can validation once all adaptors use this
 #change this to take table to push? rather than passing via config above?
 
-sub _tables { 
+sub _tables {
   my $self = $_[0];
 
   if(! $self->can('TABLES')){
     #Test here as _tables it will be called from _constrain methods first
-   
+
    throw('It looks like are trying to compose a contraint query across tables, '.
          "but the TABLES \'constant\' has not been defined.\n".
-         'Please specify in the head of the '.ref($self).' and reference from the _tables method '. 
+         'Please specify in the head of the '.ref($self).' and reference from the _tables method '.
          "e.g.:\n\n\tuse constant TABLES => [[ 'table_name1', 'tn1' ], [ 'table_name2',   'tn2' ]];\n\n\t".
          'sub _tables { return @{$_[0]->TABLES}; } #Either in the BaseAdaptor or '.ref($self)."\n");
-  }      
+  }
 
-  return @{$self->TABLES};  
+  return @{$self->TABLES};
 }
 
 
@@ -231,13 +230,13 @@ sub reset_true_tables{
      @{$self->TABLES} = @{$self->TRUE_TABLES};
   }
   else{
-    #Assume we have already tested fir TABLES in compose_contraint 
+    #Assume we have already tested fir TABLES in compose_contraint
     throw('It looks like are trying to reset_true_tables, '.
       'but the TRUE_TABLES \'constant\' has not been defined.'.
       "Please specify in the head of the '.ref($self).' e.g.:\n\t".
       "use constant TRUE_TABLES => [[ 'table_name1', 'tn1' ], [ 'table_name2',   'tn2' ]]");
   }
-    
+
   return;
 }
 
@@ -260,7 +259,7 @@ sub store_states{
   my ($self, $storable) = @_;
 
   throw('Must pass a Bio::EnsEMBL::Funcgen::Storable') if(! $storable->isa("Bio::EnsEMBL::Funcgen::Storable"));
-  
+
   foreach my $state(@{$storable->get_all_states()}){
 
     $self->store_status($state, $storable) if (! $self->has_stored_status($state, $storable));
@@ -291,9 +290,9 @@ sub fetch_all {
       $params = {constraints => {'states' => [$params]}};
     }
   }
-  
+
   if($self->can('TRUE_TABLES')){
-    $self->reset_true_tables; 
+    $self->reset_true_tables;
   }
   #todo move this to generic fetch?
 
@@ -325,14 +324,14 @@ sub fetch_all_displayable{
   Description: Gets all DataSets with given status
   Returntype : ARRAYREF
   Exceptions : Throws is no status defined
-               Warns if  
+               Warns if
   Caller     : General
   Status     : At Risk - To be removed
 
 =cut
 
-sub fetch_all_by_status{ 
-  my ($self, $status) = @_; 
+sub fetch_all_by_status{
+  my ($self, $status) = @_;
 
   deprecate('Use fetch_all($status) instead');
   return $self->fetch_all($status);
@@ -359,7 +358,7 @@ sub fetch_all_by_status{
 
 sub status_to_constraint{
   my ($self, $status) = @_;
-  
+
   #This is now supported in compose_constraint_query
   #Which avoid some of the problems below
 
@@ -368,9 +367,9 @@ sub status_to_constraint{
   #This will throw if status not valid, but still may be absent
   my $status_id = $self->_get_status_name_id($status);
 
-    
+
   return if (! $status_id);
-  
+
   my @tables = $self->_tables;
   my ($table_name, $syn) = @{$tables[0]};
 
@@ -441,12 +440,12 @@ sub fetch_all_states{
 
 
   my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' AND s.table_id='".$obj->dbID()."' and s.status_name_id=sn.status_name_id";
-  
+
   my @states = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
   return \@states;
 }
-             
+
 
 
 
@@ -472,11 +471,11 @@ sub has_stored_status{
 
   #Only used for set_status, merge with set_status?
   my $status_id = $self->_get_status_name_id($state);
-  
+
   if ($status_id){
-  
+
     my $table = $self->_test_funcgen_table($obj);
-   
+
     if($status_id){
       my $sql = "SELECT status_name_id FROM status WHERE table_name=\"$table\" AND table_id=\"".$obj->dbID()."\" AND status_name_id=\"$status_id\"";
 
@@ -551,32 +550,32 @@ sub revoke_status{
   throw('Must provide a status name') if(! defined $state);
   my $table_name = $self->_test_funcgen_table($storable);
   my $status_id = $self->_get_status_name_id($state);
-  
+
   if ($status_id){
-    
+
     #hardcode for InputSubset
     $table_name = 'input_subset' if $storable->isa('Bio::Ensembl::Funcgen:InputSubset');
-   
-  
+
+
     if(! $self->has_stored_status($state, $storable)){
   	warn $storable.' '.$storable->dbID()." does not have status $state to revoke\n";
   	return;
     }
-  
+
     #do sanity checks on table to ensure that IMPORTED does not get revoke before data deleted?
     #how would we test this easily?
-  
+
     my $sql = "delete from status where table_name='${table_name}'".
   	" and status_name_id=${status_id} and table_id=".$storable->dbID();
-  
+
     $self->db->dbc->db_handle->do($sql);
-  
+
     #now splice from status array;
     #splice in loop should work as we will only see 1
     #Just hash this?
-  
+
     for my $i(0..$#{$storable->{'states'}}){
-  	
+
   	  if($storable->{'states'}->[0] eq $state){
   	    splice @{$storable->{'states'}}, $i, 1;
   	    last;
@@ -603,7 +602,7 @@ sub revoke_status{
 
 sub revoke_states{
   my ($self, $storable) = @_;
- 
+
   my $table_name = $self->_test_funcgen_table($storable);
   #add support for InputSubset which doesn't currently have an adaptor
   $table_name = 'input_subset' if $storable->isa('Bio::Ensembl::Funcgen::InputSubset');
@@ -645,17 +644,17 @@ sub set_imported_states_by_Set{
   #Insert ignore may not catch an invalid status
   #So add states and store states as this checks
   $set->adaptor->store_status('DAS_DISPLAYABLE', $set);
-  
+
 
   #To get assembly version here we need to
   # 1 get the current default chromosome version
-  # or/and 
+  # or/and
   # 2 Use the assembly param to guess it from the coord_sys table
   # #This may pose problems for DB names which use numbers in their genebuild version
   # Would need to set this as a flag and/or specify the genebuild version too
   # Currently dnadb is set to last dnadb with 'assembly' as default version
   # We should match as test, just to make sure
-  
+
   #Get default chromosome version for this dnadb
   my $cs_version = $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version;
 
@@ -673,8 +672,8 @@ sub set_imported_states_by_Set{
   Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
   Arg [2]    : string - table name e.g. experimental_chip
   Arg [3]    : list   - table dbIDs
-  Exmaple    : my @displayable_ec_ids = @{$ec_adaptor->status_filter('DISPLAYABLE', 
-                                                                     'experimental_chip', 
+  Exmaple    : my @displayable_ec_ids = @{$ec_adaptor->status_filter('DISPLAYABLE',
+                                                                     'experimental_chip',
                                                                      (map $_->dbID, @echips))};
   Description: Quick method for filtering dbIDs based on their table and and status
   Returntype : ARRAYREF
@@ -691,16 +690,16 @@ sub status_filter{
 
   my @status_ids;
   my $status_id = $self->_get_status_name_id($status);
-  
+
   if($status_id){
 
-    throw("Must provide a table_name and table_ids to filter non-displayable ids") 
+    throw("Must provide a table_name and table_ids to filter non-displayable ids")
       if(! ($table_name && @table_ids));
-  
+
     my $sql = "SELECT table_id from status where table_name='$table_name' and ".
                "table_id in (".join(", ", @table_ids).") and status.status_name_id".
-               "='$status_id'"; 
-    @status_ids = map $_ = "@$_", 
+               "='$status_id'";
+    @status_ids = map $_ = "@$_",
                    @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
   }
 
@@ -711,7 +710,7 @@ sub status_filter{
 =head2 _get_status_name_id
 
   Arg [1]    : String - status_name e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : Boolean - optional flag to throw error if status_name is not 
+  Arg [2]    : Boolean - optional flag to throw error if status_name is not
                present in the DB.
   Example    : my $status_id = $self->_get_status_name_id('IMPORTED');
   Description: Retrieves the dbID of a given status_name record
@@ -728,7 +727,7 @@ sub _get_status_name_id{
   my ($self, $status, $throw) = @_;
 
   if(! defined $status){
-    throw('You must provide a status_name string argument'); 
+    throw('You must provide a status_name string argument');
   }
 
   my $sql = "SELECT status_name_id from status_name where name='$status'";
@@ -781,7 +780,7 @@ sub _get_status_name_id{
 
 sub fetch_all_by_external_name {
   my ( $self, $external_name, $external_db_name ) = @_;
-  
+
   my $entryAdaptor = $self->db->get_DBEntryAdaptor();
   my (@ids, $type, $type_name);
   ($type = ref($self)) =~ s/.*:://;
@@ -793,7 +792,7 @@ sub fetch_all_by_external_name {
 	warn "Does not yet accomodate $type external names";
 	return [];
   }
- 
+
   #Would be better if _list_ method returned and arrayref
   return $self->fetch_all_by_dbID_list([$entryAdaptor->$xref_method($external_name, $external_db_name)]);
 }
@@ -808,7 +807,7 @@ sub fetch_all_by_external_name {
   Example    : my @features =
                   @{ $adaptor->fetch_all_by_external_names(['ENST00003548913', ...])};
   Description: Retrieves all features which are associated with
-               the external identifiers such as a Ensembl gene or transcript 
+               the external identifiers such as a Ensembl gene or transcript
                stable IDs, etc.  Features are returned in their native
                coordinate system, i.e. the coordinate system in which
                they are stored in the database.  If they are required
@@ -833,14 +832,14 @@ sub fetch_all_by_external_names{
   $type =~ s/Adaptor$//;
   ($type_name = $type) =~ s/Feature$/_feature/;
   my $xref_method = 'list_'.lc($type_name).'_ids_by_extids';
-  
+
 
   if(! $entryAdaptor->can($xref_method)){
 	warn "Does not yet accomodate $type external names";
 	return [];
   }
-  
- 
+
+
   #Would be better if _list_ method returned and arrayref
   my @ids = $entryAdaptor->$xref_method($external_names, $external_db_name);
 
@@ -870,7 +869,7 @@ sub fetch_all_by_linked_Transcript{
 	 ! (ref($tx) && $tx->isa('Bio::EnsEMBL::Transcript') && $tx->dbID)){
 	throw('You must provide a valid stored Bio::EnsEMBL:Transcript object');
   }
-  
+
   return $self->fetch_all_by_external_name($tx->stable_id, $self->db->species.'_core_Transcript')
 }
 
@@ -899,7 +898,7 @@ sub fetch_all_by_linked_transcript_Gene{
    }
    #No need to quote param here as this is a known int from the DB.
    my $tx_sids = $gene->adaptor->db->dbc->db_handle->selectcol_arrayref('select tsid.stable_id from transcript_stable_id tsid, transcript t where t.gene_id='.$gene->dbID.' and t.transcript_id=tsid.transcript_id');
-   
+
    return $self->fetch_all_by_external_names($tx_sids, $self->db->species.'_core_Transcript');
 }
 
@@ -915,9 +914,9 @@ sub fetch_all_by_linked_transcript_Gene{
   Caller      : Adaptors
   Status      : At risk
 
-=cut 
+=cut
 
-sub store_associated_feature_types { 
+sub store_associated_feature_types {
   my ($self, $storable) = @_;
 
   #Direct access to avoid lazy loading with an unstored SetFeature
@@ -941,18 +940,18 @@ sub store_associated_feature_types {
 	$sth->bind_param(2, $table_name,  SQL_VARCHAR);
 	$sth->bind_param(3, $ftype->dbID, SQL_INTEGER);
 	$sth->execute();
-  }	
+  }
 
 
   return;
-} 
+}
 
 
 =head2 fetch_all_by_associated_FeatureType
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
   Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
-  Description: Fetches all objects which have associated FeatureType. 
+  Description: Fetches all objects which have associated FeatureType.
                Note this is not the main FeatureType for this object.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
   Exceptions : Throws if FeatureType not valid or stored
@@ -1022,24 +1021,24 @@ sub _list_dbIDs{
 
 
 #Need this to support generating valid adaptor names in FeatureSet
-#this needs to be in the BaseAdaptor, so we can access it without 
+#this needs to be in the BaseAdaptor, so we can access it without
 #having a set or feature adaptor defined.
 
 
 sub build_feature_class_name{
   my ($self, $fclass) = @_;
-   
+
   if(! defined $fclass){
     throw('You must pass a feature class argument to build the feature class name');
   }
- 
+
   my @words = split('_', $fclass);
-  
+
   foreach my $word(@words){
     $word = ucfirst($word);
     $word = 'DNA' if $word eq 'Dna';
   }
-  
+
   return join('', (@words, 'Feature') );
 }
 
@@ -1057,24 +1056,24 @@ sub build_feature_class_name{
 
 sub _constrain_states {
   my ($self, $states, $params) = @_;
-  
-  if(! (defined $states && 
+
+  if(! (defined $states &&
         (ref($states) eq 'ARRAY') &&
         (scalar(@$states) > 0) )){
-    throw('Must pass an Arrayref of states (strings) to contrain by');        
+    throw('Must pass an Arrayref of states (strings) to contrain by');
   }
-  	        
+
   my @tables = $self->_tables;
   my ($table_name, $syn) = @{$tables[0]};
   my ($status_table, $sn_ids_clause);
-  
-  
-  my @sn_ids = sort {$a<=>$b} 
-                (map $self->_get_status_name_id($_, $params->{string_param_exists}) || 
+
+
+  my @sn_ids = sort {$a<=>$b}
+                (map $self->_get_status_name_id($_, $params->{string_param_exists}) ||
                                                 'NULL', @$states);
   #|| NULL here accounts for absent status_names
-  #i.e. $sn_ids_clause will never be true 
-  
+  #i.e. $sn_ids_clause will never be true
+
   if(scalar(@$states) != 1){
     #add in table_name to make it faster
     #can't put in table_id as this would be a join between select and subselect
@@ -1082,21 +1081,21 @@ sub _constrain_states {
                     'FROM status WHERE table_name="'.$table_name.'" and ('.
                     join(' OR ', (map "status_name_id=$_", @sn_ids)).
                     ') group by table_id order by status_name_id)';
-    
+
     #This enforces AND logic, whilst allowing for records with a superset of states
-    $sn_ids_clause = ' s.ids like "%'.join('%,', @sn_ids).'%"';    
-  } 
+    $sn_ids_clause = ' s.ids like "%'.join('%,', @sn_ids).'%"';
+  }
   else{
     $status_table  = 'status';
     $sn_ids_clause = 's.status_name_id='.$sn_ids[0];
   }
-  
-  
+
+
   my $constraint_conf = { tables => [[$status_table, 's']]};  #,['status_name', 'sn']),
-  
+
   my $constraint = " $syn.${table_name}_id=s.table_id AND ".
     "s.table_name='$table_name' AND ".$sn_ids_clause;
-  
+
   return ($constraint, $constraint_conf);
 }
 
@@ -1104,18 +1103,18 @@ sub _constrain_states {
 ### DEPRECATED ###
 
 sub list_dbIDs { #Deprecated in v69
-	my $self = shift;	
+	my $self = shift;
   deprecate('Please use _list_dbIDs.');
 	return $self->_list_dbIDs($self->_main_table->[0]);
 }
 
 sub _constrain_status { #Deprecated in v73
   my ($self, $state) = @_;
-  
+
   deprecate("The 'state' contraint key is deprecated, please use the following instead:\n\t".
-    "'states' => ['state1', ...]"); 
-  
-  return $self->_constraint_states([$state]);
+    "'states' => ['state1', ...]");
+
+  return $self->_constrain_states([$state]);
 }
 
 
