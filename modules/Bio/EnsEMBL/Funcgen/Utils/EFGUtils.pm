@@ -41,15 +41,31 @@ use EFGUtils qw(list your required methods here);
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(get_date    species_name  get_month_number  species_chr_num
-				open_file   median        mean              run_system_cmd 
-				is_gzipped  is_sam        is_bed            backup_file
-				get_file_format           strip_param_args  strip_param_flags
-				validate_path             get_feature_file  are_valid
-                create_Storable_clone     scalars_to_objects
-				get_current_regulatory_input_names add_external_db
-				generate_slices_from_names                  
-               );
+
+@EXPORT_OK = qw(
+    add_external_db
+    backup_file
+    class_name_from
+    create_Storable_clone
+    dump_data
+    generate_slices_from_names
+    get_current_regulatory_input_names
+    get_date
+    get_file_format
+    get_month_number
+    is_bed
+    is_gzipped
+    is_sam
+    mean
+    median
+    open_file
+    run_system_cmd
+    scalars_to_objects
+    species_chr_num
+    species_name
+    strip_param_args
+    strip_param_flags
+);
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use File::Path qw( make_path );
@@ -57,6 +73,7 @@ use File::Spec;
 use File::Basename qw( dirname );
 use Time::Local;
 use FileHandle;
+use Data::Dumper;
 use Carp;
 use strict;
 
@@ -240,15 +257,15 @@ sub open_file{
 
   mkpath($dir, $mkpath_opts) if(! -d $dir);
   #my $fh;
-  
+
   #Test exists and is readable/writable first to avoid zombie?
-  
+
   my $fh = new FileHandle "$operator";
   warn "operator is $operator";
 
-  #open(my $fh, $operator) or die("Failed to open:\t$operator"); 
+  #open(my $fh, $operator) or die("Failed to open:\t$operator");
 
-  
+
 
   #This does not catch errors when piping then redirecting
   #as the progam will have opened sucessfully
@@ -256,7 +273,7 @@ sub open_file{
   #This simply carries on with the reset of the script
   #won't be caught until we close the file descriptor
   #Which is a little late, and we don't catch error codes on close yet
- 
+
   if (! defined $fh) {
     croak("Failed to open $operator");
   }
@@ -489,24 +506,24 @@ sub is_bed {
 #include_dups => 1,
 
 sub get_feature_file {
-  my ($path, $bam_params) = @_;  
-  #warn "$path $bam_params";  
+  my ($path, $bam_params) = @_;
+  #warn "$path $bam_params";
   my $required_suffix = $path;
   $required_suffix =~ s/.*\.//;
   my $last_suffix     = $required_suffix;
   my $tmp_path        = $path;
   my @suffixes        = ($required_suffix);
-  
+
   if(! defined $required_suffix){
-    throw("Unable to identify file format/suffix from:\t$path"); 
+    throw("Unable to identify file format/suffix from:\t$path");
   }
-  
+
   if($bam_params && (ref($bam_params) ne 'HASH') ){
     throw('Bam params argument must be a Hashref');
   }
   #else validate keys here
-  
-  
+
+
   if($required_suffix eq 'sam'){
     push @suffixes, 'bam';
   }
@@ -514,70 +531,70 @@ sub get_feature_file {
     push @suffixes,  ('sam', 'bam');
   }
   elsif($required_suffix ne 'bam'){
-    throw("$required_suffix is not a recognised feature file format. Must be bam, sam or bed");  
+    throw("$required_suffix is not a recognised feature file format. Must be bam, sam or bed");
   }
 
   #Try all variants of suffixes and gzipped files
   my ($found_suffix, $found_path);
-  
+
   foreach my $suffix(@suffixes){
-    $tmp_path =~ s/\.$last_suffix/.$suffix/; # Define path to be tried   
+    $tmp_path =~ s/\.$last_suffix/.$suffix/; # Define path to be tried
     #warn $tmp_path;
     $found_suffix = $suffix;
-    
+
     if(! -f $tmp_path){                      # Try gzipped file
-         
-      if(-f $tmp_path.".gz"){                # Gotcha!  
+
+      if(-f $tmp_path.".gz"){                # Gotcha!
         $found_path = $tmp_path;
-      
+
         if($suffix eq $required_suffix){
           run_system_cmd("gunzip ${tmp_path}.gz");
         }
         else{
           $found_path .= ".gz";
-        }         
+        }
         last;
       }
-    
-      $last_suffix = $suffix;      
-      #This is the only point where we actually iterate       
+
+      $last_suffix = $suffix;
+      #This is the only point where we actually iterate
     }
     else{                                    # Gotcha!
       $found_path = $tmp_path;
-      last; 
-    }                           
-  
+      last;
+    }
+
     #Should never get to this point
   }
-  
+
  if(! defined $found_path){
-  throw("Could not find feature file:\t$path\nOr useable ".join(' OR ', @suffixes).' (gz) files');   
+  throw("Could not find feature file:\t$path\nOr useable ".join(' OR ', @suffixes).' (gz) files');
  }
-  
-  
+
+
   #Need to handle rezipping of files!
-  
+
   #("$required_suffix ne $found_suffix found file $found_path");
-  
+
   if($required_suffix ne $found_suffix){
-    
+
     #Need to do a FindBin or similar here to get $EFG_SRC rather
     #than relying on env var
-    
-    
+
+
     if($found_suffix eq 'bam'){ #Do bam2sam
-    
+
       if(! exists $bam_params->{header}){
         throw('To convert bam you must pass a bam params hashref argument containing a \'header\' path');
       }
-    
-    
+
+
       #This assumes samtools is in your $PATH
       my $cmd;
-      
+
       #By default removes MT mapping
       #todo need to make this optional or do some post processing
-      
+
       if($found_path =~ /\.gz$/){
         $cmd = "gzip -dc $found_path | ".
           "grep -vE '^[^[:space:]]+[[:blank:]][^[:space:]]+[[:blank:]][^[:space:]]+\:[^[:space:]]+\:MT\:' | ";
@@ -590,45 +607,45 @@ sub get_feature_file {
       $cmd .= "grep -v '^MT' | grep -v '^chrM' | ";
 
       #Remove unmapped reads...
-      
+
       #sam header requires knowledge of species, assembly and gender!
-      
+
       $cmd .= 'samtools view -uSh -t '.$bam_params->{header}." -F 4 - | ";
-      $cmd .= "samtools sort - ${found_path}_sorted";  
+      $cmd .= "samtools sort - ${found_path}_sorted";
       run_system_cmd($cmd);
-      
+
 
       #Add a remove duplicates step (this is not supported with BED files for the moment)
       $cmd     = "samtools rmdup -s ${found_path}_sorted - | ";
-      my $sam_path =~ s/\.bam/.sam/;       
+      my $sam_path =~ s/\.bam/.sam/;
       $cmd = "samtools view -h > $sam_path"; # - | gzip -c > $output";
 
       #Alternative with no rmdup...
       #$command .= $self->_bin_dir()."/samtools view -h ${input}_tmp.bam | gzip -c > $output";
 
       run_system_cmd($cmd);
-      run_system_cmd("rm -f ${found_path}_sorted"); 
+      run_system_cmd("rm -f ${found_path}_sorted");
       $found_suffix = 'sam';
     }
-    
+
      #Use bam to bed from BedTools instead?
      #This is another pre-req!
-    
+
     if($required_suffix ne $found_suffix){ #required suffix has to be bed and suffix will be sam
-    
+
       #if($suffix eq 'sam'){         # sam2bed
-        
+
       #sam2bed handles gzip files
       run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -uncompressed -1_based -files $found_path");
-      
+
       if($found_suffix eq 'bam'){    #Delete intermediate sam file
         run_system_cmd("rm -f $found_path");
       }
-       
-      $found_path =~ s/\.sam(\.gz)*/.bed/;    
-    }   
+
+      $found_path =~ s/\.sam(\.gz)*/.bed/;
+    }
   }
-  
+
   return $found_path;
 }
 
@@ -964,49 +981,49 @@ sub scalars_to_objects{
 
 sub validate_path{
   my ($path, $create, $is_dir, $alt_root) = @_;
-            
+
   #how will alt_root and create interact
   #should they be mutually exclusive
   #or should we try both, but only create on the first root?
   #alt root will only work if path is a ref!
-  #Is this the right way to do this, 
+  #Is this the right way to do this,
   #or should we handle root subbing in hive where we have access to both roots?
-  
+
   #We should always test the dir first?
   #i.e. we don't want to mix files from two different dirs?
-  
+
   #How will thi swork when we have set teh alignment dir
   #but we can't find something in there
   #we would also need to set alt alignment dir?
   #Whenever we set a dir, we shoudl also test and set an alt dir
   #if the first dir is absent, but we find the alt dir, then we should
   #set the alt as the main dir, then undef the alt dir
-  
-  #when ever we validate a path, we will then have access to an alt dir for 
+
+  #when ever we validate a path, we will then have access to an alt dir for
   #which ever root we are using, or not if it doesn't exist
-  
+
   #Still a little tricky about using files from two different dirs
   #we definately don't want to do this!
   #hard to manage this
   #maybe we just want to do this for fastqs and other 'reference' files etc?
   #all other intermediate piepline outptu/input should use the same root!
-       
-            
+
+
   if(! defined $path){
     throw('A path argument must be defined');
-  } 
-      
+  }
+
   #$label = ($label) ? ' '.$label : '';
   my $path_ref = ref($path);
-  
-  ### Build path  
+
+  ### Build path
   if($path_ref ne ''){
-    
+
     if($path_ref ne 'ARRAY'){
       throw("Path argument is not valid:\t$path\n".
-        'It must be a String or an Arrayref of string to pass to File::Spec'); 
+        'It must be a String or an Arrayref of string to pass to File::Spec');
     }
-   
+
     #This works for files too instead of catfile
     #Will not prepend / if absent
     $path = File::Spec->catdir(@$path);
@@ -1014,17 +1031,17 @@ sub validate_path{
   else{
     #Tidy up paths from config
     #This won't tidy up paths already stored in meta from init_pipeline.pl
-    $path = File::Spec->canonpath($path); 
-  } 
-   
+    $path = File::Spec->canonpath($path);
+  }
+
   ### Validate/create file/dir
   if(-e $path){
-    
+
     if($is_dir){
       if( ! -d $path){
-        throw("Found path but is not a directory:\n\t$path"); 
+        throw("Found path but is not a directory:\n\t$path");
       }
-      elsif($create && 
+      elsif($create &&
           ! -w $path){ #This chsould be writeable if we want to create it
         throw("Found path but is not writeable:\n\t$path");
       }
@@ -1036,18 +1053,18 @@ sub validate_path{
   }
   elsif($is_dir && $create){
       #print STDOUT "Creating${label}:\n\t$path\n";
-      
+
     eval { make_path($path) };
-      
+
     if($@){
-      throw("Unable to create:\n\t$path\n$@"); 
-    }    
+      throw("Unable to create:\n\t$path\n$@");
+    }
   }
   else{
     throw("Could not find:\n\t$path");
-  } 
-  
-  return $path;  
+  }
+
+  return $path;
 }
 
 =head2 are_valid
@@ -1081,29 +1098,44 @@ sub are_valid {
     throw('You must provide an ARRAYREF of objects to validate');
   }
 
- 
+
   foreach my $obj (@$obj_list) {
-    
+
     if($db){
       $db->is_stored_and_valid($class, $obj);
     }
     elsif(! ( UNIVERSAL::can($obj, 'isa') &&
               $obj->isa($class) )){
-      throw("Expected $class, found $obj");     
+      throw("Expected $class, found $obj");
     }
 
     if ($method_name) {
-      
+
       if(! $obj->can($method_name)){
         throw(ref($obj)." cannot call method $method_name");
       }
-      
+
       push @return_vals, $obj->$method_name;
     }
   }
 
   return \@return_vals;
 }
-    
+
+
+sub dump_data {
+  my ($data, $indent, $terse) = @_;
+  if(defined $indent and $indent !~ /[0123]/){
+    throw("Indent must be 0,1,2,3 not $indent");
+  }
+  $indent = defined($indent) ? $indent : 2;
+  $terse = ($terse) ? $terse : undef;
+
+  my $dumper = Data::Dumper->new([$data]);
+  $dumper->Indent($indent);
+  $dumper->Terse($terse);
+  my $dump = $dumper->Dump();
+  return $dump;
+}
 
 1;
