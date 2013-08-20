@@ -51,7 +51,7 @@ use strict;
 use Class::Inspector; #For list_valid_constraints
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(dump_data);
+#use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(dump_data);
 use DBI qw(:sql_types);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
