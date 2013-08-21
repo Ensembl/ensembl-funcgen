@@ -113,7 +113,7 @@ sub add_external_db{
 #add method params here?
 
 sub are_valid {
- my ($self, $class, $obj_list, $method_name, $db) = @_;
+ my ($class, $obj_list, $method_name, $db) = @_;
 
   my @return_vals;
 
