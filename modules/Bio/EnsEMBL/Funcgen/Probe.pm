@@ -466,7 +466,6 @@ sub get_all_complete_names {
     #if($array->vendor() eq "AFFY"){
 
 	  foreach my $name ( @{$self->{'probenames'}{$array->name()}} ) {
-
       push @result, $array->name . $probeset . $name;
 	  }
   }
