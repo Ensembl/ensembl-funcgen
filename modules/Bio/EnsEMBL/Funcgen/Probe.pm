@@ -42,9 +42,9 @@ my $probe = Bio::EnsEMBL::Funcgen::Probe->new(
 
 =head1 DESCRIPTION
 
-An Probe object represents an probe on a microarray. The data (currently the 
+An Probe object represents an probe on a microarray. The data (currently the
 name, probe_set_id, length, pair_index and class) are stored
-in the oligo_probe table. 
+in the oligo_probe table.
 
 For Affy arrays, a probe can be part of more than one array, but only part of
 one probeset. On each Affy array the probe has a slightly different name. For
@@ -93,7 +93,7 @@ use vars qw(@ISA);
   Arg [-CLASS]          : string - probe class e.g. CONTROL, EXPERIMENTAL
         Will be the same for all probes if same probe is on
 		multiple arrays.
-  Arg [-DESCRIPTION]    : (optional) string - description 
+  Arg [-DESCRIPTION]    : (optional) string - description
 
 
   Example    : my $probe = Bio::EnsEMBL::Probe->new(
@@ -104,7 +104,7 @@ use vars qw(@ISA);
 				   -LENGTH        => 25,
                    -CLASS         => 'EXPERIMENTAL',
                    -DESCRIPTION   => 'Some useful description',
-      
+
                );
   Description: Creates a new Bio::EnsEMBL::Probe object.
   Returntype : Bio::EnsEMBL::Probe
@@ -116,11 +116,11 @@ use vars qw(@ISA);
 
 sub new {
   my $caller = shift;
-  
+
   my $class = ref($caller) || $caller;
-	
+
   my $self = $class->SUPER::new(@_);
-  
+
   my (
       $names,          $name,
       $array_chip_ids, $array_chip_id,
@@ -134,27 +134,27 @@ sub new {
 		    'PROBE_SET',      'CLASS',
 		    'LENGTH',         'DESCRIPTION'
 		   ], @_);
-  
-	
+
+
   @$names = ($name) if(ref($names) ne "ARRAY");
   @$array_chip_ids = ($array_chip_id) if (ref($array_chip_ids) ne "ARRAY");
   @$arrays = ($array) if (ref($arrays) ne "ARRAY");
-  
+
   #We need to record duplicates for each probe_set i.e. each array.
   #the relationship is really array_chip to name, as everything else stays the same
   #can't have same probe_set_id as this wouldn't maintain relationship
   #need unique ps id's or array_chip_id in probe table?
   #Then we can miss probeset id's out totally if required
   #or should we just duplicate everything with unique db IDs
-  
-  
+
+
   if (defined $$names[0]) {
-    
+
     if(scalar(@$names) != scalar(@$array_chip_ids)){
       throw("You have not specified valid name:array_chip_id pairs\nYou need a probe name for each Array");
     }
-    
-    if(defined $$arrays[0]){ 
+
+    if(defined $$arrays[0]){
       if(scalar(@$names) != scalar(@$arrays)){
 	throw("You have not specified valid name:Array pairs\nYou need a probe name for each Array\n");
       }
@@ -163,22 +163,22 @@ sub new {
       warn("You have not specified and Array objects, this will result in multiple/redundant queries based on the array_chip_id\nYou should pass Array objects to speed up this process");
 	  #Is this true? We should cache this in the ArrayChip and make sure we're caching it in the caller.
     }
-    
+
     # Probe(s) have been specified
     # Different names reflect different array
-    
+
     for my $i(0..$#{$names}){
       $self->add_array_chip_probename($$array_chip_ids[$i], $$names[$i], $$arrays[$i]);
     }
   } else {
     throw('You need to provide a probe name (or names) to create an Probe');
   }
-  
+
   $self->probeset($probeset) if defined $probeset;
   $self->class($aclass)      if defined $aclass;
   $self->length($length)     if defined $length;
   $self->description($desc)  if defined $desc;
-  
+
   return $self;
 }
 
@@ -241,10 +241,10 @@ sub add_array_chip_probename {
       #$array = $self->adaptor()->db()->get_ArrayAdaptor()->fetch_by_array_chip_dbID($ac_dbid);
 	  throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. Maybe you want to generate a cache in the caller?');
 	}
-    
+
     #mapping between probename and ac_dbid is conserved through array name between hashes
     #only easily linked from arrays to probenames,as would have to do foreach on array name
-    
+
 	#Can we change the implementation of this so we're only storing the array once, reverse
 	#the cache? But we want access to the array and using an object reference as a key is ????
 	#How would this impact on method functionality?
@@ -284,7 +284,7 @@ sub get_all_ProbeFeatures {
 	} else {
 		warning('Need database connection to retrieve Features');
 		return [];
-	}    
+	}
 }
 
 =head2 get_all_Arrays
@@ -303,7 +303,7 @@ sub get_all_ProbeFeatures {
 
 sub get_all_Arrays {
     my $self = shift;
-	
+
 	#Arrays are currently preloaded using a cache in _objs_from_sth
 	return [ values %{$self->{'arrays'}} ];
 }
@@ -313,7 +313,7 @@ sub get_all_Arrays {
   Args       : None
   Example    : my %name_array_pairs = %{$probe->get_names_Arrays};
   Description: Returns Array name hash
-  Returntype : hashref of probe name Bio::EnsEMBL::Funcgen::Array pairs 
+  Returntype : hashref of probe name Bio::EnsEMBL::Funcgen::Array pairs
   Exceptions : None
   Caller     : General
   Status     : Medium Risk
@@ -322,7 +322,7 @@ sub get_all_Arrays {
 
 sub get_names_Arrays {
     my $self = shift;
-	
+
 	#Arrays are currently preloaded using a cache in _objs_from_sth
 	return $self->{'arrays'};
 }
@@ -386,7 +386,7 @@ sub get_probename {
 	my $probename;
 
     if (! $arrayname){
-      
+
       #Sanity check that there is only one non-AFFY array
       my @ac_ids = keys %{$self->{'arrays'}};
 
@@ -398,14 +398,14 @@ sub get_probename {
       }
     }
 
-	
+
 	#Need to check if this exists before derefing
 	#Warn here?
 	return if(! exists ${$self->{'probenames'}}{$arrayname});
 
 
 	my @names = @{$self->{'probenames'}->{$arrayname}};
-	
+
 
 	if(scalar(@names) > 1){
 	  my $p_info = '';
@@ -416,10 +416,10 @@ sub get_probename {
 
 	  warn("Found replicate probes with different names for array ${arrayname}${p_info}.Returning comma separated string list:\t".join(',', @names)."\n");
 	  return join(',', @names);
-	  
+
 	}
 	else{
-	  ($probename) = @{$self->{'probenames'}->{$arrayname}};	
+	  ($probename) = @{$self->{'probenames'}->{$arrayname}};
 	}
 
     return $probename;
@@ -443,7 +443,7 @@ sub get_probename {
 
 sub get_all_complete_names {
   my $self = shift;
-	
+
   my ($probeset, @result);
 	my $pset = $self->probeset;
 
@@ -451,21 +451,26 @@ sub get_all_complete_names {
 	  $probeset = $pset->name;
 	}
 
-  $probeset .= ':' if $probeset;
-	
+  if(defined $probeset){
+    $probeset = ':'.$probeset.':';
+  }
+  else{
+    $probeset = ':';
+  }
+
 
   #warn "For Nimblegen this need to be Container:Seqid::probeid?";
 
   while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
     #would have to put test in here for $self->arrays()->vendor()
     #if($array->vendor() eq "AFFY"){
-      
+
 	  foreach my $name ( @{$self->{'probenames'}{$array->name()}} ) {
 
-      push @result, $array->name.":$probeset".$name;
+      push @result, $array->name . $probeset . $name;
 	  }
   }
-    
+
   return \@result;
 }
 
@@ -500,7 +505,7 @@ sub get_complete_name {
     if (!defined $probename) {
 		throw('Unknown array name');
     }
-	
+
 	my $probeset = $self->probeset()->name();
 	$probeset .= ':' if $probeset;
 
@@ -600,9 +605,9 @@ sub description {
 sub feature_count{
   my ($self, $recount) = @_;
 
-  if($recount || 
+  if($recount ||
 	 (! $self->{feature_count})){
-	$self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);	
+	$self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
   }
 
   return $self->{feature_count};
@@ -686,7 +691,7 @@ sub add_Analysis_CoordSystem_score{
 
 sub get_score_by_Analysis{
   my ($self, $anal) = @_;
-  
+
   $self->get_all_design_scores() if ! defined $self->{'analysis'};
 
   if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
@@ -757,15 +762,15 @@ sub get_all_design_scores{
   my ($analysis_id, $cs_id, $score, @design_scores);
 
   if(! $no_fetch){#can assume we have none stored already due to implementation of add methods
-    
+
     throw("Probe must have and adaptor to fetch design scores from the DB") if(! $self->adaptor());
-    
+
     foreach my $probe_analysis(@{$self->adaptor->fetch_all_design_records($self)}){
       #we can't use the add methods here as would be cyclical
       #nor do we need extra validation
-      
+
       ($analysis_id, $cs_id, $score) = @$probe_analysis;
-      
+
       if($cs_id){
 	$self->{'analysis_coord_system'}{$analysis_id}{$cs_id} = $score;
       }else{
@@ -773,26 +778,26 @@ sub get_all_design_scores{
       }
     }
   }
-  
+
   #populate array from attrs
   if(exists $self->{'analysis_coord_system'}){
-    
+
     foreach $analysis_id(keys %{$self->{'analysis_coord_system'}}){
-      
+
       foreach $cs_id(keys %{$self->{'analysis_coord_system'}{$analysis_id}}){
 	push @design_scores, [$analysis_id, $self->{'analysis_coord_system'}{$analysis_id}{$cs_id}, $cs_id];
       }
     }
   }
-  
+
   if(exists $self->{'analysis'}){
-    
+
     foreach $analysis_id(keys %{$self->{'analysis'}}){
-      
+
       push @design_scores, [$analysis_id, $self->{'analysis'}{$analysis_id}];
     }
   }
-  
+
 
   return \@design_scores;
 
