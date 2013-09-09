@@ -51,7 +51,6 @@ use strict;
 use Class::Inspector; #For list_valid_constraints
 use Bio::EnsEMBL::Utils::Exception qw(throw deprecate);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
-#use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(dump_data);
 use DBI qw(:sql_types);
 
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
@@ -177,6 +176,7 @@ sub list_valid_constraints{
   return [ map {/_constrain_([a-zA-Z_]+$)/ ? $1 : () }
                @{Class::Inspector->methods(ref($self), 'private')} ];
 }
+
 
 =head2 _tables
 
@@ -992,12 +992,15 @@ sub fetch_all_by_associated_FeatureType{
 =cut
 
 sub _main_table{
-  my $self = shift;
+  my $self = $_[0];
 
   #Need to do this to put it in list context to avoid just returning the last value
-  my @tables = $self->_tables();
+  my @tables = $self->_tables;
   return $tables[0];
 }
+
+#why is this calling SUPER::_tables rather than the _tables method in this module?
+#This is due to the order of @ISA in the BaseFeatureAdaptor
 
 
 =head2 _list_dbIDs
