@@ -49,9 +49,6 @@ use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
-
-
-#May need to our this?
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
@@ -84,7 +81,6 @@ sub fetch_by_name {
 }
 
 
-
 =head2 get_all_experiment_names
 
   Arg [1]    : (optional) boolean - flag to denote whether experiment is flagged for web display
@@ -100,33 +96,34 @@ sub fetch_by_name {
 sub get_all_experiment_names{
   my ($self, $displayable) = @_;
 
-
-  my ($constraint);
-
-  my $sql = "SELECT e.name FROM experiment e";
-  $sql .= ", status s WHERE e.experiment_id =\"s.table_id\" AND s.table_name=\"experiment\" AND s.state=\"DISPLAYABLE\"" if($displayable);
+  my $sql = 'SELECT e.name FROM experiment e';
   
+  if($displayable){    
+    $sql .= ', status s, status_name sn WHERE e.experiment_id = s.table_id AND '.
+      's.table_name="experiment" AND s.status_name_id = sn.status_name_id'.
+      ' and sn.name="DISPLAYABLE"';
+  }
+   
   return $self->db->dbc->db_handle->selectcol_arrayref($sql);
 }
 
-=head2 _tables
+
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At risk
+  Status     : At Risk
 
 =cut
 
-sub _tables {
-	my $self = shift;
-	
-	return ['experiment', 'e'];
+sub _true_tables {
+  return (['experiment', 'e']);
 }
+
 
 =head2 _columns
 
@@ -142,9 +139,8 @@ sub _tables {
 =cut
 
 sub _columns {
-	my $self = shift;
-	
-	return qw(e.experiment_id e.name e.experimental_group_id e.date e.primary_design_type e.description e.mage_xml_id);
+	return qw( e.experiment_id e.name e.experimental_group_id 
+	           e.date e.primary_design_type e.description e.mage_xml_id);
 }
 
 =head2 _objs_from_sth
