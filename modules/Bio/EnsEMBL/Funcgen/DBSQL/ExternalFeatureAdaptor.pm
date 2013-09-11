@@ -53,12 +53,11 @@ use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -66,14 +65,13 @@ use vars qw(@ISA);
 
 =cut
 
-sub _tables {
-  my $self = shift;
-	
-  return (
-		  [ 'external_feature', 'ef' ],
-		  [ 'feature_set',      'fs' ],#this is required for fetching on analysis, external_db (cell_type or feature_type).
-		 );
+sub _true_tables {
+  return ([ 'external_feature', 'ef' ],
+          [ 'feature_set',      'fs' ]);
+  #feature_set this is required for fetching on analysis, external_db (cell_type or feature_type).
+  #and should be removed in favour of query composition
 }
+
 
 =head2 _columns
 
@@ -89,8 +87,6 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-  
   return qw(
 			ef.external_feature_id   ef.seq_region_id
 			ef.seq_region_start      ef.seq_region_end
@@ -99,6 +95,7 @@ sub _columns {
 			ef.interdb_stable_id
 	   );
 }
+
 
 =head2 _objs_from_sth
 
