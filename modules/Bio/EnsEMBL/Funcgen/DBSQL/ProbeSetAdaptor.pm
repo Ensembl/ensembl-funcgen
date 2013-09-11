@@ -74,13 +74,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#Query extension stuff
-use constant TRUE_TABLES => [[ 'probe_set', 'ps' ]];
-use constant TABLES      => [[ 'probe_set', 'ps' ]];
-
-
-#Not currently using final clause as we don't group by default
-
 =head2 fetch_by_array_probeset_name
 
   Arg [1]    : string - name of array
@@ -104,20 +97,18 @@ sub fetch_by_array_probeset_name{
 	}
 	
 	#Extend query tables
-  push @{$self->TABLES}, (['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']);
-  
+    $self->_tables([['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']]);
 	my $constraint = 'ps.name= ? AND ps.probe_set_id=p.probe_set_id AND p.array_chip_id=ac.array_chip_id AND ac.array_id=a.array_id AND a.name= ? GROUP by ps.probe_set_id';
 		
 	#bind params as we have unsafe string args
-  $self->bind_param_generic_fetch($probeset_name, SQL_VARCHAR);
+    $self->bind_param_generic_fetch($probeset_name, SQL_VARCHAR);
 	$self->bind_param_generic_fetch($array_name,    SQL_VARCHAR);
 
 	my $pset =  $self->generic_fetch($constraint)->[0];
-  $self->reset_true_tables;
+    $self->reset_true_tables;
 
 	return $pset;
 }
-
 
 
 =head2 fetch_all_by_name
@@ -174,14 +165,12 @@ sub fetch_all_by_name{
 
 sub fetch_by_ProbeFeature {
 	my ($self, $pfeature) = @_;
-	
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeFeature', $pfeature);
 
 	#Extend query
-  push @{$self->TABLES}, (['probe', 'p']);
+    $self->_tables([['probe', 'p']]);
 	my $pset =  $self->generic_fetch('p.probe_id='.$pfeature->probe_id.' and p.probe_set_id=ps.probe_set_id GROUP by ps.probe_set_id')->[0];
-  $self->reset_true_tables;
-  
+    $self->reset_true_tables;
 	return $pset;
 }
 
@@ -220,12 +209,11 @@ sub fetch_all_by_Array {
 
 
 
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -233,10 +221,8 @@ sub fetch_all_by_Array {
 
 =cut
 
-sub _tables {
-	my $self = shift;
-
-  return @{$self->TABLES};
+sub _true_tables {
+  return ([ 'probe_set', 'ps' ]);
 }
 
 =head2 _columns
@@ -253,11 +239,7 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-
-  #remove xref_id and use xref tables
   return qw( ps.probe_set_id ps.name ps.size ps.family);
-
 }
 
 =head2 _objs_from_sth
