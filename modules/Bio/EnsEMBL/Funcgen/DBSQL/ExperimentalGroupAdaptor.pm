@@ -82,12 +82,12 @@ sub fetch_by_name{
   return $fts[0];
 }
 
-=head2 _tables
+
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -95,11 +95,11 @@ sub fetch_by_name{
 
 =cut
 
-sub _tables {
-  my $self = shift;
-	
+sub _true_tables {
   return (['experimental_group', 'eg']);
 }
+
+
 
 =head2 _columns
 
@@ -115,9 +115,8 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-	
-  return qw( eg.experimental_group_id eg.name eg.location eg.contact eg.url eg.description eg.is_project);
+  return qw( eg.experimental_group_id eg.name eg.location 
+             eg.contact eg.url eg.description eg.is_project );
 }
 
 =head2 _objs_from_sth
