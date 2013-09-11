@@ -71,6 +71,22 @@ my %valid_attribute_features = (
 								'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
 							   );
 
+
+
+sub fetch_MultiCell_by_stable_ID_Slice {
+  my ($self, $stable_id, $slice) = @_;
+  my  $fset = $self->_get_current_FeatureSet;
+
+  throw('You must provide a stable_id argument') if ! $stable_id;
+  $stable_id =~ s/[A-Z0]+//;
+
+  $self->bind_param_generic_fetch($stable_id,  SQL_INTEGER);
+  $self->bind_param_generic_fetch($fset->dbID, SQL_INTEGER);
+  return $self->fetch_all_by_Slice_constraint($slice, 'rf.stable_id=? and rf.feature_set_id=?')->[0];
+}
+
+
+
 =head2 fetch_all
 
   Example    : my $rfs = $rf_adaptor->fetch_all;
@@ -194,35 +210,33 @@ sub fetch_all_by_stable_id_FeatureSets {
 	  map { $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $_)} @fsets;
 		 
 	  if(scalar(@fsets) == 1){
-		$constraint .= ' and rf.feature_set_id=?';
-		$self->bind_param_generic_fetch($fsets[0]->dbID, SQL_INTEGER);
+      $constraint .= ' and rf.feature_set_id=?';
+      $self->bind_param_generic_fetch($fsets[0]->dbID, SQL_INTEGER);
 	  }else{
-		#How can we bind param this?
-		
-		my @bind_slots;
-
-		foreach my $dbid(map $_->dbID, @fsets){
-		  push @bind_slots, '?';
-		  $self->bind_param_generic_fetch($dbid, SQL_INTEGER);
-		}
-
-		$constraint .= ' AND rf.feature_set_id IN ('.join(', ', @bind_slots).')';
+      #How can we bind param this?
+      
+      my @bind_slots;
+      
+      foreach my $dbid(map $_->dbID, @fsets){
+        push @bind_slots, '?';
+        $self->bind_param_generic_fetch($dbid, SQL_INTEGER);
+      }
+      
+      $constraint .= ' AND rf.feature_set_id IN ('.join(', ', @bind_slots).')';
 	  } 
 	}
-  }
-
+}
+  
   return $self->generic_fetch($constraint);
 }
 
 
 
-
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -230,9 +244,7 @@ sub fetch_all_by_stable_id_FeatureSets {
 
 =cut
 
-sub _tables {
-  my $self = shift;
-	
+sub _true_tables {
   return (
 		  [ 'regulatory_feature',   'rf' ],
 		  [ 'feature_set',          'fs' ],
