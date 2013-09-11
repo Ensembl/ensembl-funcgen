@@ -54,11 +54,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#Query extension stuff
-use constant TRUE_TABLES => [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' ] ];
-use constant TABLES      => [ [ 'input_set',    'inp' ], [ 'input_subset', 'iss' ] ];
-
-
 
 =head2 fetch_all_by_FeatureType
 
@@ -139,6 +134,24 @@ sub fetch_by_name {
 }
 
 
+=head2 _true_tables
+
+  Args       : None
+  Example    : None
+  Description: Returns the names and aliases of the tables to use for queries.
+  Returntype : List of listrefs of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _true_tables {
+  #can't have 'is' as an alias as it is reserved  
+  return ([ 'input_set',    'inp' ], [ 'input_subset', 'iss' ]);
+}
+
+
 =head2 _columns
 
   Args       : None
@@ -153,9 +166,6 @@ sub fetch_by_name {
 =cut
 
 sub _columns {
-    my $self = shift;
-
-    #can't have 'is' as an alias as it is reserved
     return qw(
               inp.input_set_id    inp.experiment_id
               inp.feature_type_id inp.cell_type_id
@@ -165,9 +175,7 @@ sub _columns {
               iss.input_subset_id iss.archive_id
               iss.display_url     iss.replicate
               iss.is_control
-         );
-
-    
+         );    
 }
 
 
@@ -188,8 +196,6 @@ sub _columns {
 #rather than default_where so we still get back InputSets without InputSubsets
 
 sub _left_join {
-  my $self = shift;
-    
   return (['input_subset', 'inp.input_set_id = iss.input_set_id']);
 }
 

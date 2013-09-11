@@ -56,9 +56,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-#Query extension stuff
-use constant TRUE_TABLES => [['feature_type', 'ft']];
-use constant TABLES      => [['feature_type', 'ft']];
 
 #Regulatory evidence information
 
@@ -212,7 +209,7 @@ sub fetch_all_by_association{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $storable);
   
-  push @{$self->TABLES}, ['associated_feature_type', 'aft'];
+  $self->_tables([['associated_feature_type', 'aft']]);
   my $table_name = $storable->adaptor->_main_table->[0];
   
   my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.table_name="'.$table_name.
@@ -224,12 +221,12 @@ sub fetch_all_by_association{
   return $feature_types;
 }
 
-=head2 _tables
+
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -237,10 +234,8 @@ sub fetch_all_by_association{
 
 =cut
 
-sub _tables {
-  my $self = shift;
-	
-  return  @{$self->TABLES};
+sub _true_tables {
+  return (['feature_type', 'ft']);
 }
 
 =head2 _columns
@@ -257,8 +252,6 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-	
   return qw( ft.feature_type_id ft.name        ft.class 
              ft.analysis_id     ft.description ft.so_accession 
              ft.so_name

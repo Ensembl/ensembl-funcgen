@@ -59,16 +59,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
 
-#Need to re-implement some of the base methods in SetFeatureAdaptor
-
-#Define tables here to enable query extension i.e. cell_type querys
-# Need to add motif/pwm/binding_matrix here
-#associated_motif_feature, annotated_feature and finally feature_set.cell_type_id
-
-use constant TRUE_TABLES => [['motif_feature', 'mf']];
-use constant TABLES      => [['motif_feature', 'mf']];
-
-
 my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq_region_end'; 
 # ORDER by required by fetch_all_by_dbID_list when fetching as regulatory_attributes
 # was '' to avoid use of undef warning from BaseAdaptor
@@ -95,7 +85,7 @@ sub fetch_all_by_AnnotatedFeature {
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $feature);
 
   #Extend query tables
-  push @{$self->TABLES}, (['associated_motif_feature', 'amf']);
+  $self->_tables([['associated_motif_feature', 'amf']]);
   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND amf.annotated_feature_id=?';
   #No need for group here as we are restricting to one af
 
@@ -129,7 +119,9 @@ sub fetch_all_by_Slice_CellType {
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
    
   #Extend query tables
-  push @{$self->TABLES}, (['feature_set', 'fs'], ['associated_motif_feature', 'amf'], ['annotated_feature', 'af']);
+  $self->_tables([['feature_set', 'fs'],
+                  ['associated_motif_feature', 'amf'], 
+                  ['annotated_feature', 'af']]);
 
   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND '.
 	'amf.annotated_feature_id=af.annotated_feature_id and '.
@@ -204,7 +196,7 @@ sub fetch_all_by_Slice_FeatureSets {
   }
 
   #Extend query tables
-  push @{$self->TABLES}, (['associated_motif_feature', 'amf'], ['annotated_feature', 'af']);
+  $self->_tables([['associated_motif_feature', 'amf'], ['annotated_feature', 'af']]);
 
   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND '.
 	'amf.annotated_feature_id=af.annotated_feature_id and af.feature_set_id IN('.join(',', (map $_->dbID, @$fsets)).')';
@@ -236,18 +228,16 @@ sub fetch_all_by_Slice_FeatureSets {
 
 =cut
 
-
 sub _final_clause {
 	return $final_clause;
 }
 
 
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -255,10 +245,8 @@ sub _final_clause {
 
 =cut
 
-sub _tables {
-  my $self = shift;
-	
-  return @{$self->TABLES};
+sub _true_tables {
+  return (['motif_feature', 'mf']);
 }
 
 =head2 _columns
@@ -275,8 +263,6 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-  
   return qw(
 			mf.motif_feature_id   mf.seq_region_id
 			mf.seq_region_start   mf.seq_region_end
