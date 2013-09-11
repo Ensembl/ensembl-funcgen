@@ -50,10 +50,8 @@ use Bio::EnsEMBL::Funcgen::Channel;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
-
-
-#May need to our this?
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+
 
 =head2 fetch_by_type_experimental_chip_id
 
@@ -216,12 +214,12 @@ sub fetch_attributes {
     %$array = %$tmp_array;
 }
 
-=head2 _tables
+
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -229,10 +227,8 @@ sub fetch_attributes {
 
 =cut
 
-sub _tables {
-	my $self = shift;
-	
-	return ['channel', 'c'];
+sub _true_tables {
+  return (['channel', 'c']);
 }
 
 =head2 _columns
@@ -249,9 +245,7 @@ sub _tables {
 =cut
 
 sub _columns {
-	my $self = shift;
-	
-	return qw( c.channel_id c.experimental_chip_id c.sample_id c.dye c.type);
+  return qw( c.channel_id c.experimental_chip_id c.sample_id c.dye c.type );
 }
 
 =head2 _objs_from_sth
