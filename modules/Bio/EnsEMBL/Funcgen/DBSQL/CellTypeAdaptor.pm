@@ -47,13 +47,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor;
 
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::CellType;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-
-#May need to our this?
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+#todo revert this to core BaseAdaptor and change _true_tables to _tables
+# as we don't use query composition or other funcgen BaseAdaptor methods?
 
 =head2 fetch_by_name
 
@@ -70,28 +70,19 @@ use vars qw(@ISA);
 
 sub fetch_by_name{
   my ($self, $name) = @_;
+  throw("Must specify a CellType name") if ! defined $name;
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
 
-  throw("Must specify a CellType name") if(! $name);
-
-  my $constraint = "ct.name ='$name'";
-
-  my @ctype = @{$self->generic_fetch($constraint)};
   #name is unique so we should only have one
-
-  return $ctype[0];
+  return $self->generic_fetch('ct.name = ?')->[0];
 }
 
 
-#fetch_all_by_efo_id
-#fetch_all_by_tissue
-#fetch_all_by_lineage
-
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -99,12 +90,8 @@ sub fetch_by_name{
 
 =cut
 
-sub _tables {
-  my $self = shift;
-	
-  return (
-	  ['cell_type', 'ct'],
-	 );
+sub _true_tables {
+  return (['cell_type', 'ct']);
 }
 
 =head2 _columns
@@ -121,9 +108,8 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-	
-  return qw( ct.cell_type_id ct.name ct.display_label ct.description ct.gender ct.efo_id ct.tissue);
+  return qw( ct.cell_type_id ct.name ct.display_label 
+             ct.description ct.gender ct.efo_id ct.tissue );
   #type/class = enum cell, cell line, tissue
 }
 
