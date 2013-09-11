@@ -52,7 +52,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-
 =head2 fetch_by_name
 
   Arg [1]    : string - name of DataSet
@@ -112,28 +111,7 @@ sub fetch_all_by_supporting_set_type {
   
 }
 
-#add fetch_all_by_product_FeatureSet_type/FeatureType?
 
-=head2 fetch_by_product_FeatureSet
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureSet
-  Example    : my @dsets = $fs_adaptopr->fetch_by_product_FeatureSet($fset);
-  Description: Retrieves DataSet objects from the database based on the FeatureSet.
-  Returntype : Bio::EnsEMBL::Funcgen::DataSet
-  Exceptions : Throws if arg is not a valid FeatureSet
-  Caller     : General
-  Status     : Deprecated - use fetch_all_by_product_FeatureSet
-
-=cut
-
-sub fetch_all_by_FeatureSet {
-  my $self = shift;
-
-  deprecate('Use fetch_by_product_FeatureSet');
-
-  return $self->fetch_by_product_FeatureSet(@_);
-
-}
 
 
 =head2 fetch_by_product_FeatureSet
@@ -149,18 +127,12 @@ sub fetch_all_by_FeatureSet {
 =cut
 
 sub fetch_by_product_FeatureSet {
-  my $self = shift;
-  my $fset = shift;
+  my ($self, $fset) = @_;
 
-    
-  if (! ($fset && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet") && $fset->dbID())) {
-	throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureSet object");
-  }
-	
-  my $sql = "ds.feature_set_id = '".$fset->dbID()."'";
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);	
+  $self->bind_param_generic_fetch($fset->dbID, SQL_INTEGER);
 
-
-  return $self->generic_fetch($sql)->[0];	
+  return $self->generic_fetch('ds.feature_set_id = ?')->[0];	
 }
 
 
@@ -254,25 +226,22 @@ sub fetch_all_displayable_by_feature_type_class {
 }
 
 
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-  Returns the names and aliases of the tables to use for queries.
-  Returntype : List
+  Description: Returns the names and aliases of the tables to use for queries.
+  Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
 
 =cut
 
-sub _tables {
-  return (
-		  [ 'data_set',    'ds' ],
-		  [ 'supporting_set', 'ss'],
-		 );
+sub _true_tables {
+  return ([ 'data_set', 'ds' ], [ 'supporting_set', 'ss']);
 }
+
 
 =head2 _columns
 
@@ -445,7 +414,6 @@ sub store{
 
 
 ### DEPRECATED ###
-
 
 sub store_updated_sets{ #DEPRECATED IN v72
 	my ($self, $dsets, $overwrite) = @_;
