@@ -51,19 +51,9 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#for import of @EXPORT
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
-
-# Table defs for use with dynamic query composition
-
-use constant TRUE_TABLES => [[ 'result_set',        'rs' ],
-                             [ 'result_set_input',  'rsi'],
-                             [ 'dbfile_registry',   'dr' ]];
-
-use constant TABLES => [[ 'result_set',        'rs' ],
-                        [ 'result_set_input',  'rsi'],
-                        [ 'dbfile_registry',   'dr' ]];
 
 
 =head2 fetch_all_by_feature_class
@@ -318,12 +308,12 @@ sub fetch_all_by_name{
 }
 
 
-=head2 _tables
+
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -331,10 +321,12 @@ sub fetch_all_by_name{
 
 =cut
 
-sub _tables {
+sub _true_tables {
   my $self = shift;
 
-  return ( @{$self->TABLES} );
+  return ([ 'result_set',        'rs' ],
+          [ 'result_set_input',  'rsi'],
+          [ 'dbfile_registry',   'dr' ]);
 }
 
 
