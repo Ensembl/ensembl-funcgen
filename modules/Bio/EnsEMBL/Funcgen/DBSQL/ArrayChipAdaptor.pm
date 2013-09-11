@@ -50,11 +50,9 @@ use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
-
-
-#May need to our this?
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
+    
 =head2 fetch_all_by_array_id
 
   Arg [1]    : int - dbID of Array
@@ -68,14 +66,11 @@ use vars qw(@ISA);
 =cut
 
 sub fetch_all_by_array_id {
-    my $self = shift;
-    my $array_id = shift;
+  my ($self, $array_id) = @_;
+  throw("Must specify an array dbID") if(! $array_id);
 
-    throw("Must specify an array dbID") if(! $array_id);
-
-    my $constraint = "ac.array_id='$array_id'";
-
-    return $self->generic_fetch($constraint);
+  $self->bind_param_generic_fetch($array_id, SQL_INTEGER);
+  return $self->generic_fetch('ac.array_id= ?');
 }
 
 
@@ -166,30 +161,22 @@ sub fetch_by_array_design_ids{
 }
 
 
-
-
-
-#fetch by Array_array_chip_name??
-#would need this if we're going to check for previously imported ArrayChips, as there's no guarantee that the design_name will be populated.
-
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Medium Risk
+  Status     : At Risk
 
 =cut
 
-sub _tables {
-	my $self = shift;
-	
-	return ['array_chip', 'ac'];
+sub _true_tables {
+  return (['array_chip', 'ac']);
 }
+
 
 =head2 _columns
 
@@ -205,10 +192,9 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-	
-  return qw( ac.array_chip_id ac.design_id ac.array_id ac.name);
+  return qw( ac.array_chip_id ac.design_id ac.array_id ac.name );
 }
+
 
 =head2 _objs_from_sth
 
@@ -228,7 +214,6 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
   
   my (@result, $ac_id, $design_id, $array_id, $name);
-  
   $sth->bind_columns(\$ac_id, \$design_id, \$array_id, \$name);
   
   while ( $sth->fetch() ) {
@@ -245,7 +230,6 @@ sub _objs_from_sth {
   }
   return \@result;
 }
-
 
 
 =head2 store
