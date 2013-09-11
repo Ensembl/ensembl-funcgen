@@ -80,8 +80,8 @@ sub fetch_all_by_name{
   my $constraint = " bm.name = ? ";
   $constraint .= " AND bm.analysis_id = ?" if $analysis;
 
-  $self->bind_param_generic_fetch($name,         SQL_VARCHAR);
-  $self->bind_param_generic_fetch($analysis->dbID,     SQL_INTEGER) if $analysis;
+  $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
+  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
 
   return $self->generic_fetch($constraint);
 }
@@ -108,9 +108,9 @@ sub fetch_all_by_name_FeatureType{
   my $constraint = " bm.name = ? and bm.feature_type_id = ?";
   $constraint .= " AND bm.analysis_id = ?" if $analysis;
   
-  $self->bind_param_generic_fetch($name,         SQL_VARCHAR);
-  $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
-  $self->bind_param_generic_fetch($analysis->dbID,     SQL_INTEGER) if $analysis;
+  $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
+  $self->bind_param_generic_fetch($ftype->dbID,    SQL_INTEGER);
+  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
 
   return $self->generic_fetch($constraint);
 }
@@ -137,20 +137,18 @@ sub fetch_all_by_FeatureType{
   my $constraint = " bm.feature_type_id = ?";
   $constraint .= " AND bm.analysis_id = ?" if $analysis;
 
-  $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
-  $self->bind_param_generic_fetch($analysis->dbID,     SQL_INTEGER) if $analysis;
+  $self->bind_param_generic_fetch($ftype->dbID,    SQL_INTEGER);
+  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
 
   return $self->generic_fetch($constraint);
 }
 
 
-
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -158,11 +156,10 @@ sub fetch_all_by_FeatureType{
 
 =cut
 
-sub _tables {
-  my $self = shift;
-	
+sub _true_tables {
   return (['binding_matrix', 'bm']);
 }
+
 
 =head2 _columns
 
@@ -178,10 +175,10 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-	
-  return qw( bm.binding_matrix_id bm.name bm.analysis_id bm.frequencies bm.description bm.feature_type_id bm.threshold);
+  return qw( bm.binding_matrix_id bm.name bm.analysis_id bm.frequencies 
+             bm.description bm.feature_type_id bm.threshold);
 }
+
 
 =head2 _objs_from_sth
 
