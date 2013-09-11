@@ -52,18 +52,12 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
-#Query extension stuff
-use constant TRUE_TABLES => [['annotated_feature', 'af'], ['feature_set', 'fs']];
-use constant TABLES      => [['annotated_feature', 'af'], ['feature_set', 'fs']];
 
-#SetFeatureAdaptor::_default_where_clause specifies join to fs table
-
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -71,11 +65,10 @@ use constant TABLES      => [['annotated_feature', 'af'], ['feature_set', 'fs']]
 
 =cut
 
-sub _tables {
-  my $self = shift;
-	
-  return @{$self->TABLES};
+sub _true_tables {
+  return (['annotated_feature', 'af'], ['feature_set', 'fs']);
 }
+
 
 =head2 _columns
 
@@ -91,15 +84,13 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-  
   return qw(
 			af.annotated_feature_id  af.seq_region_id
 			af.seq_region_start      af.seq_region_end
 			af.seq_region_strand     af.feature_set_id
 			af.display_label         af.score
 			af.summit
-	   );
+			);
 }
 
 
@@ -355,7 +346,7 @@ sub fetch_all_by_associated_MotifFeature{
   my ($self, $mf) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
-  push @{$self->TABLES}, ['associated_motif_feature', 'amf'];
+  $self->_tables([['associated_motif_feature', 'amf']]);
   my $table_name = $mf->adaptor->_main_table->[0];
 
   my $constraint = 'amf.annotated_feature_id=af.annotated_feature_id AND amf.motif_feature_id='.$mf->dbID;
