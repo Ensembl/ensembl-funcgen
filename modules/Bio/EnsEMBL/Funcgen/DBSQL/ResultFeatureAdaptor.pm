@@ -73,12 +73,12 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 my ($_scores_field, $_collection_start, $_collection_end);
 #my ($_window_size);#Need to be a method as it is used by the BaseFeatureAdaptor. or our?
 
-=head2 _tables
+
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -86,7 +86,7 @@ my ($_scores_field, $_collection_start, $_collection_end);
 
 =cut
 
-sub _tables {
+sub _true_tables {
   my $self = shift;
 
   return ([ 'result_feature', 'rf' ]);
