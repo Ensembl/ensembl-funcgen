@@ -51,7 +51,6 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Probe;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#Have to use here to import @EXPORT
-
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
 #change to parent with perl 5.10
 
@@ -208,7 +207,6 @@ sub fetch_all_by_ArrayChip {
 }
 
 
-
 =head2 fetch_by_ProbeFeature
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::ProbeFeature
@@ -225,10 +223,9 @@ sub fetch_by_ProbeFeature {
   my $self    = shift;
   my $feature = shift;
   
-  if (
-      !ref($feature)
-      || !$feature->isa('Bio::EnsEMBL::Funcgen::ProbeFeature')
-      || !$feature->{'probe_id'}
+  if (! ref($feature) || 
+      ! $feature->isa('Bio::EnsEMBL::Funcgen::ProbeFeature') || 
+      ! $feature->{'probe_id'}
      ) {
     throw('fetch_by_ProbeFeature requires a stored Bio::EnsEMBL::Funcgen::ProbeFeature object');
   }
@@ -236,12 +233,12 @@ sub fetch_by_ProbeFeature {
   return $self->fetch_by_dbID($feature->{'probe_id'});
 }
 
-=head2 _tables
+
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -249,11 +246,10 @@ sub fetch_by_ProbeFeature {
 
 =cut
 
-sub _tables {
-	my $self = shift;
-
+sub _true_tables {
   return (['probe', 'p']);
 }
+
 
 =head2 _columns
 
@@ -269,10 +265,7 @@ sub _tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-
   return qw( p.probe_id p.probe_set_id p.name p.length p.array_chip_id p.class p.description);
-
 }
 
 =head2 _objs_from_sth
