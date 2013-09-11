@@ -58,9 +58,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-use constant TRUE_TABLES => [['array', 'a']];
-use constant TABLES      => [['array', 'a']];
-
 
 =head2 fetch_by_array_chip_dbID
 
@@ -84,7 +81,7 @@ sub fetch_by_array_chip_dbID {
   throw('Must provide an ArrayChip dbID') if ! $ac_dbid;
   
   #Extend query tables
-  push @{$self->TABLES}, (['array_chip', 'ac']);
+  $self->_tables([['array_chip', 'ac']]);
 
   #Extend query and group
   my $array = $self->generic_fetch('ac.array_chip_id='.$ac_dbid.' and ac.array_id=a.array_id GROUP by a.array_id')->[0];
@@ -237,7 +234,7 @@ sub fetch_all_by_Experiment{
  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
   
   #Extend query tables
-  push @{$self->TABLES}, (['array_chip', 'ac'], ['experimental_chip', 'ec']);
+  $self->_tables([['array_chip', 'ac'], ['experimental_chip', 'ec']]);
 
   #Extend query and group
   my $arrays = $self->generic_fetch($exp->dbID.'=ec.experiment_id and ec.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
@@ -273,7 +270,7 @@ sub fetch_all_by_ProbeSet{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
 
   #Extend query tables
-   push @{$self->TABLES}, (['array_chip', 'ac'], ['probe', 'p']);
+  $self->_tables([['array_chip', 'ac'], ['probe', 'p']]);
 
   #Extend query and group
   my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY a.array_id');
@@ -285,24 +282,22 @@ sub fetch_all_by_ProbeSet{
 }
 
 
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : Stable
+  Status     : At Risk
 
 =cut
 
-sub _tables {
-	my $self = shift;
-	
-	return @{$self->TABLES};
+sub _true_tables {
+  return (['array', 'a']);
 }
+
 
 =head2 _columns
 
@@ -318,9 +313,7 @@ sub _tables {
 =cut
 
 sub _columns {
-	my $self = shift;
-	
-	return qw( a.array_id a.name a.format a.vendor a.description a.type a.class);
+  return qw( a.array_id a.name a.format a.vendor a.description a.type a.class );
 }
 
 =head2 _objs_from_sth
