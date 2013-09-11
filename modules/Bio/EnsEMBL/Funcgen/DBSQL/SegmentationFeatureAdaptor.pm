@@ -52,14 +52,12 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
-#This adaptor does not yet use query extension
 
-=head2 _tables
+=head2 _true_tables
 
   Args       : None
   Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns the names and aliases of the tables to use for queries.
+  Description: Returns the names and aliases of the tables to use for queries.
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
@@ -67,7 +65,7 @@ use vars qw(@ISA);
 
 =cut
 
-sub _tables {
+sub _true_tables {
   my $self = shift;
 	
   return (
@@ -89,9 +87,7 @@ sub _tables {
 
 =cut
 
-sub _columns {
-  my $self = shift;
-  
+sub _columns { 
   return qw(
 			sf.segmentation_feature_id  sf.seq_region_id
 			sf.seq_region_start      sf.seq_region_end
