@@ -51,23 +51,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
-#use base does not import %true_tables or %tables or in fact %sql_types
-#so cannot use base for any of the adaptors
-
-#use Readonly;
-#Readonly::Array my @true_tables => ([ 'feature_set', 'fs' ]);
-#use constant TRUE_TABLES = [ @true_tables ];
-
-use constant TRUE_TABLES => [[ 'feature_set', 'fs' ]];
-use constant TABLES      => [[ 'feature_set', 'fs' ]];
-
-#Currently these need to be listrefs [[], ...] and push directly onto TABLE rather than _tables
-
-#use constant here still allows the contents of the ref to be modified
-#Simply prevents need for import/export
-
-#No need for true_final_clause
-	
 
 =head2 fetch_all_by_FeatureType
 
@@ -283,6 +266,23 @@ sub fetch_by_name {
 
   return (defined $sql) ? $self->generic_fetch($sql)->[0] : [];
   
+}
+
+
+=head2 _true_tables
+
+  Args       : None
+  Example    : None
+  Description: Returns the names and aliases of the tables to use for queries.
+  Returntype : List of listrefs of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _true_tables {
+  return ([ 'feature_set', 'fs' ]);
 }
 
 =head2 _columns
