@@ -53,13 +53,14 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::SetFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 
 use vars qw(@ISA @EXPORT);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
-#required for child adaptor's store and _obj_from_sth methods
+#required for subclass adaptor store and _obj_from_sth methods
 
 =head2 fetch_all_by_FeatureType_FeatureSets
 
@@ -80,6 +81,10 @@ use vars qw(@ISA @EXPORT);
   Status     : At Risk
 
 =cut
+
+#Needs reviewing
+#We are not restricting to feature_set in the associated ftypes call
+#Can't this be done with one compose_query_constraint call?
 
 sub fetch_all_by_FeatureType_FeatureSets {
   my ($self, $ftype, $fsets, $params) = @_;
@@ -119,8 +124,7 @@ sub fetch_all_by_FeatureType_FeatureSets {
 
 	  my $sql = 'SELECT table_id from associated_feature_type where table_name="'.$table_name.'" and feature_type_id='.$ftype->dbID;
 
-      #CR We are not restricting to feature_set here!!!
-
+  
 
 	  my @dbids = map $_ = "@$_", @{$self->dbc->db_handle->selectall_arrayref($sql)};
 
@@ -153,13 +157,12 @@ sub fetch_all_by_FeatureType_FeatureSets {
 
 =cut
 
+#CR do we need to fetch based on main ftype vs assoc ftpes and vice versa
+
 sub fetch_all_by_Feature_associated_feature_types {
   my ($self, $feature, $params) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::SetFeature', $feature);
-
-  #We always want associated!
-  #Otherwise it would be just a normal fetch_all_by_FeatureType_FeatureSets query 
 
   $params->{'include_direct_links'} ||= undef;
   $params->{'logic_name'}           ||= undef;
@@ -194,14 +197,11 @@ sub fetch_all_by_Feature_associated_feature_types {
   }
 
 
-  #CR do we need to fetch based on main ftype vs assoc ftpes and vice versa
-
 
   if(keys %dbIDs){
 	$constraint = " $table_syn.${table_name}_id in (".join(',', keys %dbIDs).')';
 	push @features, @{$self->generic_fetch($constraint, $params->{logic_name})};
   }
-
 
   return \@features;
 }
@@ -226,18 +226,16 @@ sub fetch_all_by_Feature_associated_feature_types {
 
 sub fetch_all_by_Slice_FeatureType {
   my ($self, $slice, $type, $logic_name) = @_;
-	
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $type);
-  
-  my $ft_id = $type->dbID();
-  
-  my $constraint = $self->_main_table->[1].".feature_set_id = fs.feature_set_id AND ".
-	"fs.feature_type_id = '$ft_id'";
 
-  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
-
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  my $params                      = {constraints  => {feature_types => [$type]}};
+  $params->{optional_constraints} = {logic_names  => [$logic_name]} if defined $logic_name;  
+  my $constraint                  = $self->compose_constraint_query($params);
+  my $feats                       = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  $self->reset_true_tables; #logic_name adds analysis
+  return $feats;
 }
+
+#todo fetch_all_by_Slice_CellType
 
 
 =head2 fetch_all_by_FeatureSets
@@ -254,12 +252,14 @@ sub fetch_all_by_Slice_FeatureType {
 =cut
 
 sub fetch_all_by_FeatureSets {
-  my ($self, $fsets, $logic_name) = @_;
-	
-  my $constraint = $self->_main_table->[1].'.feature_set_id '.$self->_generate_feature_set_id_clause($fsets); 
-  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
-
-  return $self->generic_fetch($constraint);
+  my ($self, $fsets, $logic_name) = @_;	
+  
+  my $params                      = {constraints => {feature_sets => $fsets}};
+  $params->{optional_constraints} = {logic_names => [$logic_name]} if defined $logic_name;  
+  my $constraint                  = $self->compose_constraint_query($params);
+  my $feats                       = $self->generic_fetch($constraint);
+  $self->reset_true_tables; #logic_name adds analysis
+  return $feats;
 }
 
 
@@ -276,6 +276,8 @@ sub fetch_all_by_FeatureSets {
   Status     : At Risk
 
 =cut
+
+#replace with _constrain_feature_sets
 
 sub _generate_feature_set_id_clause{
   my ($self, $fsets) = @_;
@@ -327,12 +329,12 @@ sub _generate_feature_set_id_clause{
 sub fetch_all_by_Slice_FeatureSets {
   my ($self, $slice, $fsets, $logic_name) = @_;
 
-  my $constraint = $self->_main_table->[1].'.feature_set_id '.
-	$self->_generate_feature_set_id_clause($fsets); 
-
-  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
-
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  my $params                      = {constraints  => {feature_sets => $fsets}};
+  $params->{optional_constraints} = {logic_names  => [$logic_name]} if defined $logic_name;  
+  my $constraint                  = $self->compose_constraint_query($params); 
+  my $feats                       = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  $self->reset_true_tables; #logic_name adds analysis
+  return $feats;
 }
 
 
@@ -373,7 +375,7 @@ sub fetch_Iterator_by_Slice_FeatureSets{
 
 #This is all done at the level of the feature_set
 
-
+#at risk remove this in favour of constrain method
 
 sub _logic_name_to_constraint {
   my $self = shift;
@@ -414,10 +416,12 @@ sub _logic_name_to_constraint {
 
 =cut
 
+#This is to facilitate fetches based on feature_set fields
+#but we could remove this and add this via _tables and the constraint methods
+#as it's not strictly a part of the data model for set features
+
 sub _default_where_clause {
-  my $self = shift;
-	
-  return $self->_main_table->[1].'.feature_set_id = fs.feature_set_id';
+  return $_[0]->_main_table->[1].'.feature_set_id = fs.feature_set_id';
 }
 
 
@@ -434,12 +438,13 @@ sub _default_where_clause {
 
 =cut
 
+#This is required as tables constain mutliple data sets loaded at different times
+#hence we may not get the expected or of features returned
+
 sub _final_clause {
   my $self = shift;
-  #return '';
   return ' ORDER BY '.$self->_main_table->[1].'.seq_region_id, '.$self->_main_table->[1].'.seq_region_start';
 }
-
 
 
 =head2 fetch_all_by_logic_name
@@ -458,14 +463,14 @@ sub _final_clause {
 #re-implemented for non-standard feature table i.e. points at feature_set
 
 sub fetch_all_by_logic_name { 
-  my $self = shift; 
-  my $logic_name = shift || throw( "Need a logic_name" ); 
-
-  my $constraint;
-  my $an = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name); 
-  $constraint = ' '.$self->_main_table->[1].'.feature_set_id=fs.feature_set_id and fs.analysis_id = '.$an->dbID() if($an);
-
-  return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
+  my ($self, $lname) = @_; 
+  #my $logic_name = shift || throw( "Need a logic_name" ); 
+  #$constraint = ' '.$self->_main_table->[1].'.feature_set_id=fs.feature_set_id and fs.analysis_id = '.$an->dbID() if($an);
+  #my $an = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name); 
+  #return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
+  my $constraint = $self->compose_constraint_query({constraints => {logic_names => [$lname]}});
+  
+  return $self->generic_fetch($constraint) || undef;
 } 
 
 
@@ -481,13 +486,101 @@ sub fetch_all_by_logic_name {
 =cut
 
 sub _feature_class{
-  my $self = shift;
-
-  #use the first word of the table name as the class
-  my $fclass;
-  ($fclass = $self->_main_table->[0]) =~ s/_.*//;#use the first word of the table name as the class
-
+  (my $fclass = $_[0]->_main_table->[0]) =~ s/_.*//; #use the first word of the table name as the class
   return $fclass;
 }
+
+
+### GENERIC CONSTRAIN METHODS ###
+
+#Need to get the relevant SetAdaptor here
+#This requires a mapping between the feature type and the set type
+#without access to a feature or set.
+#Do we have this anywhere yet?
+#This will always be feature set or result set
+#and resultset adaptor won't use these constraints as it is a file adaptor
+# and need separating from the BaseAdaptor
+
+sub _constrain_cell_types {
+  my ($self, $cts) = @_;
+
+  #Don't need to bind param this as we validate
+  my $constraint = " fs.cell_type_id IN (".
+    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}).')';
+
+  return ($constraint, {});  #{} = no further config
+}
+
+
+
+#This may be redefined in subclass adaptors if the feature table 
+#implementation has a more specific feature type thatn the feature_set
+
+#could we do this here conditional on the feature type?
+#or a has_feature_type flag, defined in new?
+#or grep columns for table_syn.feature_type_id here?
+
+sub _constrain_feature_types {
+  my ($self, $fts) = @_;
+ 
+  #Don't need to bind param this as we validate
+  my $constraint = " fs.feature_type_id IN (".
+        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
+  
+  return ($constraint, {});   #{} = not futher constraint conf
+}
+
+
+#This currently doesn't catch array with undef value(s)
+#Passing an undef $logic_name to the method would not normally result in a throw
+#unless it is a mandatory method
+#so we need to catch this before here really
+#and make this validate as though it is mandatory
+
+#This basically catches unsafe specification of arrays with undef values
+#as these will cause errors or no results
+
+sub _constrain_logic_names {
+  my ($self, $logic_names) = @_;
+  assert_ref($logic_names, 'ARRAY');
+  
+  if(! @$logic_names){
+    throw('Must pass an Arraref of logic_name strings to contrain by');  
+  }
+
+  for my $lname(@$logic_names){
+    if(! defined $lname){
+      throw('Found undefined logic_name value');  
+    }  
+  }
+
+
+  $self->_tables([['analysis', 'a']]);
+
+  my $constraint = ' fs.analysis_id = a.analysis_id and a.logic_name in ("'.
+    join('", "', @$logic_names).'")';
+    
+  return ($constraint, {});   #{} = not futher constraint conf
+}
+
+sub _constrain_feature_sets {
+  my ($self, $fsets) = @_;
+ 
+  #Don't need to bind param this as we validate
+  #match on fs.feature_set_id rather than feature_table feature_set_id
+  #to avoid having to get table syn here.
+  my $constraint = " fs.feature_set_id IN (".
+        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fsets, 'dbID')}).')';  
+  
+  #This currently does not throw if FeatureSet feature_class does not match adaptor
+  
+  return ($constraint, {});   #{} = not futher constraint conf
+}
+
+#See fetch_all_by_Feature_associated_feature_types above
+#Not quite as straight forward
+#sub _constrain_associated_feature_types {
+#  
+#}
 
 1;
