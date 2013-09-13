@@ -50,7 +50,7 @@ my $ftype   = $db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
 SKIP: {
 
   if(! $ftype){
-    skip "Found no $ftype_name FeatureType, please amend this test", 5;
+    skip "Found no $ftype_name FeatureType, please amend this test", 8;
   }
 
   #SetFeatureAdaptor::fetch_all_by_Slice_FeatureType (optional logic_name)
@@ -61,7 +61,7 @@ SKIP: {
   SKIP: {
     
     if(! scalar(@$feats)){
-      skip "Found no $ftype_name features found, please amend this test", 5;      
+      skip "Found no $ftype_name features found, please amend this test", 7;      
     }
     
     my $all_feats = scalar(@$feats);
@@ -119,10 +119,6 @@ SKIP: {
     
     
     #what else do we need to check here wrt iterator method
-
-    
-    
-    
 
   }
 }
