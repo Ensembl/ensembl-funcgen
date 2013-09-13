@@ -342,27 +342,31 @@ sub store{
 
 =cut
 
+# Can we standardise this across AnnotatedFeatures and Regulatory/SegmentationFeatures?
+#wrt regulatory_attribute vs associated_motif_feature
+
 sub fetch_all_by_associated_MotifFeature{
   my ($self, $mf) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
   $self->_tables([['associated_motif_feature', 'amf']]);
-  my $table_name = $mf->adaptor->_main_table->[0];
-
   my $constraint = 'amf.annotated_feature_id=af.annotated_feature_id AND amf.motif_feature_id='.$mf->dbID;
-  my $afs =  $self->generic_fetch($constraint);
+  my $afs        =  $self->generic_fetch($constraint);
   $self->reset_true_tables;
-
   return $afs;
 }
 
+
+#TODO GENERIC CONSTRAIN METHODS
+#1 motif_features
+
 ### DEPRECATED METHODS ###
 
-sub fetch_all_by_Slice_FeatureSet {
-  my ($self, $slice, $fset) = @_;
-  deprecate('Please use generic method SetFeatureAdaptor::fetch_all_by_Slice_FeatureSets');
-  return $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]);
-}
+#sub fetch_all_by_Slice_FeatureSet { #removed in v74
+#  my ($self, $slice, $fset) = @_;
+#  deprecate('Please use generic method SetFeatureAdaptor::fetch_all_by_Slice_FeatureSets');
+#  return $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]);
+#}
 
 
 #sub fetch_all_by_Slice_Experiment # removed in v68 was never functional
