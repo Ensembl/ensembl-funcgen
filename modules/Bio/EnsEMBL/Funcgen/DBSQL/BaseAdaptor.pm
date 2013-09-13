@@ -119,7 +119,12 @@ sub new {
 #now used to support flexible filtering of pipeline input sets
 #TODO Add support for final_clause (order/group) and default_where
 
-#todo change this to a _private method?
+#Currently the API methods only take a constraints hash as an argument
+#not a full params hash (i.e. constraints, optional_constraints or other config
+
+#optional_parameters doesn't actually work that well
+#as [undef] is not caught as it still has a size of 1
+#e.g when passing optional params which are not defined e.g. [$logic_name] 
 
 sub compose_constraint_query{
   my ($self, $params) = @_;
@@ -131,35 +136,41 @@ sub compose_constraint_query{
 
   my @constraints;
 
-  if( exists ${$params}{constraints}){
+  for my $con_type (qw(constraints optional_constraints)){ 
 
-	my @filter_names = keys (%{$params->{constraints}});
-
-	foreach my $constraint_key(keys (%{$params->{constraints}})){
-      my $constrain_method = '_constrain_'.$constraint_key;
-      
-      if(! $self->can($constrain_method)){
-
-        throw($constraint_key." is not a valid constraint type. Valid constraints for ".ref($self)." are:\n\t".
-          join("\n\t", @{$self->list_valid_constraints}));
-      }
-
-      if(defined $params->{constraints}{$constraint_key}){
-
-        my ($constraint, $constraint_conf) =
-          $self->$constrain_method($params->{constraints}{$constraint_key}, $params);
-
-        push @constraints, $constraint;
-
-        #Currently only handle tables here but could also
-        #set other dynamic config e.g. final_clause etc.
-        if (exists ${$constraint_conf}{tables}) {    
-            $self->_tables($constraint_conf->{tables});;
+    if( exists ${$params}{$con_type} ){
+  
+      foreach my $constraint_key(keys (%{$params->{$con_type}})){
+        #warn "$con_type $constraint_key = ".$params->{$con_type}{$constraint_key};
+        my $constrain_method = '_constrain_'.$constraint_key;
+          
+        if(! $self->can($constrain_method)){
+          throw($constraint_key." is not a valid constraint type. Valid constraints for ".ref($self)." are:\n\t".
+            join("\n\t", @{$self->list_valid_constraints}));
         }
-      }#else do nothing
-	} # END OF CONSTRAINTS
-  }	# END OF $PARAMS
-
+    
+        #Only call constraint method if we have data or it is not optional
+        #The following test allows empty arrayrefs to be passed for optional_cosntraints
+  
+        if((( (ref($params->{$con_type}{$constraint_key}) eq 'ARRAY') &&
+               @{$params->{$con_type}{$constraint_key}}) || #arrayref and populated or
+              defined $params->{$con_type}{$constraint_key} ) # otherwise defined (likely scalar or object)
+          || $con_type ne 'optional_constraints'){ #or not optional (implicitly undefined)
+  
+          my ($constraint, $constraint_conf) =
+            $self->$constrain_method($params->{$con_type}{$constraint_key}, $params);
+          push @constraints, $constraint;
+  
+          #Currently only handle tables here but could also
+          #set other dynamic config e.g. final_clause etc.
+          if (exists ${$constraint_conf}{tables}) {    
+              $self->_tables($constraint_conf->{tables});
+          }
+        }#else do nothing
+      } # END OF constraint_keys
+    }    
+  } # END OF con_types
+ 
   return join(' AND ', @constraints) || '';
 }
 
@@ -206,6 +217,12 @@ sub list_valid_constraints{
   Status     : At Risk
 
 =cut
+
+#todo this currently doesn't account for tables being added more than once between constraints
+#This could be handled quite easily with a hash
+#but would not solved the problem of duplicating the join clause in the constraint method
+#would be sensible to be key on alias rather than table name, 
+#to allow multiple joins to the same table
 
 sub _tables {
   my ($self, $new_tables) = @_;
@@ -969,7 +986,6 @@ sub _main_table{
 
 =cut
 
-
 sub _list_dbIDs{
   my $self = shift;
   return $self->SUPER::_list_dbIDs($self->_main_table->[0]);
@@ -978,8 +994,9 @@ sub _list_dbIDs{
 
 =head2 build_feature_class_name
 
+  Arg[1]     : String - feature_class e.g. annotated, dna_methylation, regulatory etc.
   Example    : my $fclass_name = $adaptor->build_feature_class_name;
-  Description: Build the feature class name for this adaptor.
+  Description: Builds the full feature class name for a given feature class.
   Returntype : String
   Exceptions : None
   Caller     : FeatureSet::get_FeatureAdaptor and Set::feature_class_name
@@ -1081,6 +1098,7 @@ sub _constrain_states {
 
   return ($constraint, $constraint_conf);
 }
+
 
 
 ### DEPRECATED ###
