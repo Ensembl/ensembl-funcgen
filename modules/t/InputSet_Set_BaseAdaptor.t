@@ -74,12 +74,9 @@ SKIP : {
     eval { are_valid('Bio::EnsEMBL::Funcgen::InputSet', $isets) };
     my $failed = ($@) ? 1 : 0;
     ok( ((! $failed) &&
-          scalar(@$isets) eq scalar(@$dbIDs)),
+          scalar(@$isets) == scalar(@$dbIDs)),
        'BaseAdaptor::fetch_all InputSets matches number from _list_dbIDs');
     
-    #Dstate testing for passing
-    
-  
     SKIP: {    
       if($failed){
         skip 'Found no InputSets found, please amend/fix this test', 5;
