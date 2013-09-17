@@ -42,17 +42,16 @@ Bio::EnsEMBL::DBSQL::BaseAdaptor
 
 package Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
-require Exporter;
-
-use vars qw(@ISA @EXPORT);
 use strict;
 
+require Exporter;
 use Class::Inspector; #For list_valid_constraints
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use DBI qw(:sql_types);
 
+use vars qw(@ISA @EXPORT);
 @ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
@@ -72,9 +71,13 @@ sub new {
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
   
-  #test _true_tables method?
-  
   $self->reset_true_tables; #Set the _tables values
+  
+  #Set the main table attrs to avoid having to 
+  #repeatedly handle them in the contrain methods
+  my @tables = $self->_tables;
+  ($self->{_table_name}, $self->{_table_syn}) = @{$tables[0]};
+    
   return $self;
 }
 
@@ -257,6 +260,43 @@ sub reset_true_tables{
 }
 
 
+=head2 _main_table
+
+  Example    : my $syn = $adaptor->_main_table->[1];
+  Description: Convenience method to retrieve the main table or main table synonym for this adaptor
+               Entirely dependent on ensembl convention of always having main table as first element
+               of tables array.
+  Returntype : Array ref
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+#set this in new and return attr
+
+sub _main_table{
+  my $self = $_[0];
+
+  #Need to do this to put it in list context to avoid just returning the last value
+  my @tables = $self->_tables;
+  return $tables[0];
+}
+
+#why is this calling SUPER::_tables rather than the _tables method in this module?
+#This is due to the order of @ISA in the BaseFeatureAdaptor
+
+
+sub _table_syn {
+  return $_[0]->{_table_syn};  
+}
+
+sub _table_name {
+ return $_[0]->{_table_name};   
+}
+
+
+
 =head2 store_states
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
@@ -303,7 +343,7 @@ sub fetch_all {
   if($params){  # Still supporting passing a status String arg for now
 
     if(ref($params) eq ''){ #This is a scalar status arg
-      $params = {constraints => {'states' => [$params]}};
+      $params = {constraints => {states => [$params]}};
     }
   }
 
@@ -949,31 +989,6 @@ sub fetch_all_by_associated_FeatureType{
 }
 
 
-=head2 _main_table
-
-  Example    : my $syn = $adaptor->_main_table->[1];
-  Description: Convenience method to retrieve the main table or main table synonym for this adaptor
-               Entirely dependent on ensembl convention of always having main table as first element
-               of tables array.
-  Returntype : Array ref
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub _main_table{
-  my $self = $_[0];
-
-  #Need to do this to put it in list context to avoid just returning the last value
-  my @tables = $self->_tables;
-  return $tables[0];
-}
-
-#why is this calling SUPER::_tables rather than the _tables method in this module?
-#This is due to the order of @ISA in the BaseFeatureAdaptor
-
-
 =head2 _list_dbIDs
 
   Example    : my @table_ids = @{$adaptor->_list_dbIDs()};
@@ -988,7 +1003,7 @@ sub _main_table{
 
 sub _list_dbIDs{
   my $self = shift;
-  return $self->SUPER::_list_dbIDs($self->_main_table->[0]);
+  return $self->SUPER::_list_dbIDs($self->_table_name);
 }
 
 
@@ -1064,7 +1079,7 @@ sub _constrain_states {
 
 
   my @tables = $self->_tables;
-  my ($table_name, $syn) = @{$tables[0]};
+  my ($table_name, $syn) = @{$self->_main_table};
   my ($status_table, $sn_ids_clause);
 
 
