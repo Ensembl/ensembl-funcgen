@@ -50,9 +50,8 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::InputSet;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor;
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #for export
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor );
 
 
 =head2 fetch_all_by_Experiment
