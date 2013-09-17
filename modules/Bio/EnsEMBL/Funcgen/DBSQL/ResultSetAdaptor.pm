@@ -44,16 +44,15 @@ encapsulate processed signal/read data(InputSet) from a sequencing Experiment e.
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
 
-
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( mean median );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#for import of @EXPORT
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #For export
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor); #@ISA
 
 
 =head2 fetch_all_by_feature_class
@@ -100,9 +99,6 @@ sub fetch_all_by_feature_class {
 }
 
 
-
-
-
 =head2 fetch_all_linked_by_ResultSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::ResultSet
@@ -135,7 +131,6 @@ sub fetch_all_linked_by_ResultSet{
   return \@linked_sets;
 
 }
-
 
 
 =head2 fetch_all_by_Experiment_Analysis
@@ -229,32 +224,6 @@ sub fetch_all_by_Experiment{
   return ($join) ? $self->generic_fetch($join) : [];
 }
 
-
-
-=head2 fetch_all_by_FeatureType
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : string - type of array (e.g. AFFY or OLIGO)
-  Arg [3]    : (optional) string - logic name
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_by_Slice_type($slice, 'OLIGO');
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the specified type of array.
-  Returntype : Listref of Bio::EnsEMBL::OligoFeature objects
-  Exceptions : Throws if no array type is provided
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_FeatureType {
-  my ($self, $ftype) = @_;
-
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);	
-  my $constraint = "rs.feature_type_id =".$ftype->dbID();
-	
-  return $self->generic_fetch($constraint);
-}
 
 
 =head2 fetch_all_by_name
@@ -809,39 +778,8 @@ sub fetch_ResultFeatures_by_Slice_ResultSet{
 
 
 
-# Dynamic query contraint methods
-# Most of these a re generic and redundant wrt FeatureSetAdaptor
-# Could be moved to a SetAdaptor
-
-
-sub _constrain_cell_types {
-  my ($self, $cts) = @_;
-
-  my @tables = $self->_tables;
-  my (undef, $syn) = @{$tables[0]};
-
-  my $constraint = " ${syn}.cell_type_id IN (".
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
-        ).')';
-  
-  #{} = no futher contraint config
-  return ($constraint, {});
-}
-
-
-sub _constrain_feature_types {
-  my ($self, $fts) = @_;
- 
-  my @tables = $self->_tables;
-  my (undef, $syn) = @{$tables[0]};
-
-  #Don't need to bind param this as we validate
-  my $constraint = " ${syn}.feature_type_id IN (".
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
-  
-  #{} = not futher constraint conf
-  return ($constraint, {});
-}
+### GENERIC CONSTRAIN METHODS ###
+#See Base/SetAdaptor
 
 
 
@@ -849,7 +787,7 @@ sub _constrain_feature_types {
 
 
 
-### DEPRECATED METHODS
+### DEPRECATED METHODS ###
 
 
 sub fetch_all_by_name_Analysis {#Deprecated in v69
