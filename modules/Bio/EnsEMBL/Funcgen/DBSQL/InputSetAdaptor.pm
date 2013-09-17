@@ -50,49 +50,10 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::InputSet;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor;
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
-
-=head2 fetch_all_by_FeatureType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
-  Example    : 
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the specified type of array.
-  Returntype : Listref of Bio::EnsEMBL::InputSet objects
-  Exceptions : Throws if no valid FeatureType type is provided
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_FeatureType {
-  my ($self, $ftype) = @_;
-  my $params = {constraints => {feature_types => [$ftype]}};
-  return $self->generic_fetch($self->compose_constraint_query($params));
-}
-
-
-=head2 fetch_all_by_CellType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType
-  Example    : 
-  Description: 
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSet objects
-  Exceptions : Throws if no CellType is provided
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_CellType {
-  my ($self, $ctype) = @_;
-  my $params = {constraints => {cell_types => [$ctype]}};
-  return $self->generic_fetch($self->compose_constraint_query($params));
-}
- 
 
 =head2 fetch_all_by_Experiment
 
@@ -123,6 +84,8 @@ sub fetch_all_by_Experiment {
   Status     : At Risk
 
 =cut
+
+#Move to SetAdaptor
 
 sub fetch_by_name {
   my ($self, $name) = @_;
@@ -359,6 +322,7 @@ sub store{
 
 =cut
 
+#DEPRECATE THIS!!
 
 sub store_InputSubsets{
   my ($self, $ssets) = @_;
@@ -399,38 +363,12 @@ sub store_InputSubsets{
 
 
 
-#All these _constrain methods must return a valid constraint string, and a hashref of any other constraint config
+### GENERIC CONSTRAIN METHODS ###
+
+#All these _constrain methods must return a valid constraint string, 
+#and a hashref of any other constraint config
 
 #Need to bind param any of these which come from URL parameters and are not tested
-
-
-sub _constrain_cell_types {
-  my ($self, $cts) = @_;
-
-  #Don't need to bind param this as we validate
-  my $constraint = ' inp.cell_type_id IN ('.
-    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}).')';
-
-  #{} = no further config
-  return ($constraint, {});
-}
-
-
-sub _constrain_feature_types {
-  my ($self, $fts) = @_;
- 
-
-  my @tables = $self->_tables;
-  my (undef, $syn) = @{$tables[0]};
-
-  #Don't need to bind param this as we validate
-  my $constraint = " ${syn}.feature_type_id IN (".
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
-  
-  #{} = not futher constraint conf
-  return ($constraint, {});
-}
-
 
 sub _constrain_experiments {
   my ($self, $exps) = @_;
