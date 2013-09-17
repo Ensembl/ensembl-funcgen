@@ -45,58 +45,10 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( warning throw );
+use Bio::EnsEMBL::Utils::Exception qw( warning throw deprecate );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
-
-=head2 fetch_all_by_FeatureType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
-  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my @fsets = $fs_adaptopr->fetch_all_by_FeatureType($type);
-  Description: Retrieves FeatureSet objects from the database based on feature_type id.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
-  Exceptions : Throws if arg is not a valid FeatureType
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_FeatureType {
-    my ($self, $ftype, $status) = @_;
-    
-	my $params = {constraints => {feature_types => [$ftype]}};
-	$params->{constraints}{status} = $status if $status;
-	#No need to reset tables for these
-	return $self->generic_fetch($self->compose_constraint_query($params));	
-}
-
-
-=head2 fetch_all_by_type
-
-  Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory', 'segmentation' or 'external'
-  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
-  Description: Retrieves FeatureSet objects from the database based on feature_set type.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
-  Exceptions : Throws if type not defined
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_type {
-    my $self = shift;
-    my $type = shift;
-    my $status = shift;
-    
-	#deprecate this?
-	
-    return $self->fetch_all_by_feature_class($type, $status);	
-}
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #for export
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 
 =head2 fetch_all_by_feature_class
@@ -143,7 +95,7 @@ sub fetch_all_by_feature_class {
 
 
   if ($status) {
-    $params->{constraints}{status} = $status;
+    $params->{constraints}{states} = [ $status ];
   }
   
   #Deal with params constraints
@@ -157,9 +109,6 @@ sub fetch_all_by_feature_class {
 
   return $result;
 }
-
-
-
 
 
 =head2 fetch_all_displayable_by_type
@@ -183,61 +132,6 @@ sub fetch_all_displayable_by_type {
 	
 }
 
-
-=head2 fetch_all_by_CellType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType
-  Arg [2]    : (optional) string - status e.g. 'DISPLAYABLE'
-  Example    : my @fsets = $fs_adaptopr->fetch_all_by_CellType($ctype);
-  Description: Retrieves FeatureSet objects from the database based on the CellType.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
-  Exceptions : Throws if arg is not a valid CellType
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_CellType {
-  my ($self, $ctype, $status) = @_;
-  
-  my $params = {constraints => {cell_types => [$ctype]}};
-  $params->{constraints}{status} = $status if ($status);
-  my $results = $self->generic_fetch($self->compose_constraint_query($params));
-  #@{$tables{feature_set}} = @{$true_tables{feature_set}}; #in case we have added status
-  $self->reset_true_tables;
-	return $results;	
-}
-
-
-
-=head2 fetch_all_by_FeatureType_Analysis
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
-  Arg [2]    : Bio::EnsEMBL::Analysis
-  Arg [3]    : (optional) Bio::EnsEMBL::Funcgen::CellType
-  Example    : my @fsets = $fs_adaptopr->fetch_all_by_FeatureType_Analysis($ftype, $anal, $ctype);
-  Description: Retrieves FeatureSet objects from the database based on FeatureType, Analysis and 
-               CellType if defined.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
-  Exceptions : Throws if args 1 and 2 are not valid or stored
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_FeatureType_Analysis {
-  my ($self, $ftype, $anal, $ctype) = @_;
-  my $params = {constraints => 
-				{
-				 feature_types => [$ftype],
-				 analyses     => [$anal],
-				}
-			   };
-
-  $params->{constraints}{cell_types} = [$ctype] if $ctype;
-  return $self->generic_fetch($self->compose_constraint_query($params));	
-
-}
 
 =head2 fetch_by_name
 
@@ -724,46 +618,22 @@ sub _constrain_evidence_types {
 # These following are duplicated in ResultSetAdaptor and potentially InputSetAdaptor
 # Move to a new SetAdaptor? (not appropriate for DataSets/InputSubsets)
 
-sub _constrain_cell_types {
-  my ($self, $cts) = @_;
-
-  my $constraint = ' fs.cell_type_id IN ('.
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
-        ).')';
-     
-  return ($constraint, {});  #{} = no futher contraint config
-}
-
-
-sub _constrain_feature_types {
-  my ($self, $fts) = @_;
- 
-
-  my @tables = $self->_tables;
-  my (undef, $syn) = @{$tables[0]};
-
-  #Don't need to bind param this as we validate
-  my $constraint = " ${syn}.feature_type_id IN (".
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
-  
-  return ($constraint, {});   #{} = not futher constraint conf
-}
-
-sub _constrain_analyses {
-  my ($self, $anals) = @_;
-  
-  #Don't need to bind param this as we validate
-  my $constraint = ' fs.analysis_id IN ('.
-    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Analysis', $anals, 'dbID')}).')';
-  
-  return ($constraint, {});   #{} = not futher constraint conf
-}
-
 # add other fetch args
 #type
 #name
   
 
+### DEPRECATED ###
+
+sub fetch_all_by_type { #deprecated in v74
+    my $self = shift;
+    my $type = shift;
+    my $status = shift;
+    
+    deprecate('Please use fetch_all_by_feature_class');
+    
+    return $self->fetch_all_by_feature_class($type, $status);   
+}
 
 
 
