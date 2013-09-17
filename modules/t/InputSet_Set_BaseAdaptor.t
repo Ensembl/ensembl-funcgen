@@ -27,8 +27,8 @@ ok(1, 'Startup test');#?
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
   (
-   #-user    => 'XXX',
-   #-host    => 'XXX',
+   -user    => 'XXX',
+   -host    => 'XXX',
    -species => 'homo_sapiens',
    -dbname  => 'homo_sapiens_funcgen_73_37'
   );
@@ -37,8 +37,6 @@ my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 #debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
 ok( $db, 'DBAdaptor creation');# More verbose, but we get failed test name summary at end
 
-
-#todo Change this to InputSet_Set_BaseAdaptor?
 
 SKIP : {
   
@@ -51,6 +49,7 @@ SKIP : {
  
 
   #TODO update skip counts
+  #Add test for optional status arg to fetch_all_by_Feature/CellType
 
   SKIP: {
     if(! defined $iset_a){
