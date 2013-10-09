@@ -52,22 +52,28 @@ require Exporter;
   assert_refs               
   assert_refs_do  
   backup_file
+  convert_bam_to_sam
   create_Storable_clone 
+  file_suffix_parse
   generate_slices_from_names
   get_current_regulatory_input_names          
   get_date
-  get_feature_file
+  get_files_by_formats
   get_file_format           
   get_month_number
   get_my_scalar_name        
   get_feature_file  
+  gunzip_file
   is_bed            
   is_gzipped  
   is_sam        
   mean              
-  median        
+  median  
   open_file   
-  parse_DB_url      
+  parse_DB_url    
+  path_to_namespace
+  process_bam 
+  process_sam_bam
   run_system_cmd 
   scalars_to_objects
   set_attributes_by_my_scalar_names
@@ -76,12 +82,16 @@ require Exporter;
   strip_param_args  
   strip_param_flags
   url_from_DB_params
+  validate_checksum
   validate_path
+  write_checksum
   );
 
 #These after @ISA and @EXPORT_OK to avoid warnings               
 use warnings;
 use strict;
+
+use Digest::MD5;               
                
 use Bio::EnsEMBL::Utils::Exception qw( throw      );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
@@ -92,6 +102,14 @@ use File::Spec;
 use Time::Local;
 use FileHandle;
 use Carp;
+
+#Split out methods into FileUtils.pm?
+
+
+my %bed_strands = ('+' =>  1,
+                   '-' => -1,
+                   '.' =>  0);
+
 
 
 #Handy function to add an external_db entry when needed
@@ -306,10 +324,8 @@ sub backup_file{
 }
 
 
+=head2 create_Storable_clone
 
-=head2
-
-  Name       : create_Storable_clone
   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable to clone
   Arg [2]    : Hash containing list of object parameters linked to
                the clone and to be reset
@@ -565,128 +581,419 @@ sub get_date{
 #Currently hardoded for samse files name for sam and bed
 #todo _validate_sam_params
 
-sub get_feature_file {
-  my ($path, $sam_params) = @_;  
-  #warn "$path $bam_params";  
-  my $required_suffix = $path;
-  $required_suffix =~ s/.*\.//;
-  my $last_suffix     = $required_suffix;
-  my $tmp_path        = $path;
-  my @suffixes;
- 
-  if(! defined $required_suffix){
-    throw("Unable to identify file format/suffix from:\t$path"); 
-  }
-  
-  if($sam_params && (ref($sam_params) ne 'HASH') ){
-    throw('sam params argument must be a Hashref');
-  }
-  #else validate keys here
-  
-  if($sam_params->{filter_from_bam}){
-    
-    #Do we expect a full/unfiltered file to be present?
-    #or do we just use the existing file
-    
-    if($required_suffix eq 'bam'){
-      throw('get_feature_file does not yet support forcing filtering from bam if the target format is also bam');
-    }
-  
-    @suffixes = ('bam');
-  }
-  else{ 
-    @suffixes = ($required_suffix);
-  
-    if($required_suffix eq 'sam'){
-      push @suffixes, 'bam';
-    }
-    elsif($required_suffix eq 'bed'){
-      push @suffixes,  ('sam', 'bam');
-    }
-    elsif($required_suffix ne 'bam'){
-      throw("$required_suffix is not a recognised feature file format. Must be bam, sam or bed");  
-    }
-  }
 
-  #Try all variants of suffixes and gzipped files
-  my ($found_suffix, $found_path);
+#$formats should be in preference order? Although this doesn't break things, it will just return a non-optimal file format
+
+#Slightly horrible method to manage acquisition and conversion of files between
+#supported formats (not necessarily feature formats)
+#all_formats is necessary such that we don't redundant process files which are on the same conversion path when we have filter_format set
+
+
+#There is a possibility that the formats provided might not have the same root, and so
+#filter_from_format may be invlaid for one
+#In this case two method calls might be require, hence we don't want to throw here if we can't find a file
+
+  #This seems over-engineered! But we definitely need the ability to request two formats at the same time
+  #to prevent parallel requests for the same file
+  
+  #Filtering will normally be done outside of this method, by the alignment pipeline
+  #however, we must support it here incase we need to refilter, or we get alignment files
+  #supplied outside of the pipeline
+  
+sub get_files_by_formats {
+  my ($path, $formats, $params) = @_;   
+  assert_ref($formats, 'ARRAY'); 
+  $params ||= {};
+  assert_ref($params, 'HASH'); 
+  $params->{sort}     = 1 if ! defined $params->{sort};     #Always sort if we call process_$format
+  #process_$format will never be called if $format file exists, hence no risk of a redundant sort
+  #for safety, only set this default if filter_from_format is defined? in block below
+  
+  $params->{checksum} = 1 if ! defined $params->{checksum}; #validate and check
+
+  if(scalar(@$formats) == 0){
+    throw('Must pass an Arrayref of file formats/suffixes in preference order e.g. [\'sam\', \'bed\']');  
+  }
+  
+  my %conversion_paths = ( bam => ['bam'],
+                           sam => ['bam', 'sam'],
+                           bed => ['bam', 'sam', 'bed'], 
+                           #we always need the target format as the last element
+                           #such that we can validate the filter_format e.g. for bam
+                           #if the path array only has one element, it must match the key
+                           #and this constitues calling filter_bam
+                           #or if filter_format not set, just grabbing the bam file
+                           
+                           #This approach prevents being able to | bam sort/filters through
+                           #to other cmds, so may be slower if we don't need to keep intermediate files?
+                           
+                           #Could also have non-bam rooted paths in here
+                           #and maybe multiple path with different roots?
+                         );
+      
+  my $can_convert           = 0;
+  my $clean_filtered_format = 0; 
+  my $filter_format         = $params->{filter_from_format};  
+  my $all_formats           = $params->{all_formats}; 
+  my $done_formats          = {};
+  my ($files, @feature_files);
  
-  foreach my $suffix(@suffixes){
-    #my $sub_suffix = ($suffix eq 'bam') ? "\.samse\.$last_suffix" : '\.'.$last_suffix;
-    #Shouldn't our bam files also have samse in them? YES! This may have been chaged recently, but should be re-implemented
-    #or should it? This will add the required for a samse/sampe flag somewhere?
-    #omission will mean we won't know from the data file named, whether it was a single end or a paired end alignment
-    #actually a filtered file based on quality score can contain both se and pe reads
-    $tmp_path =~ s/\.$last_suffix$/\.$suffix/; # Define path to be tried   
-    $found_suffix = $suffix;
+  #Add filter format if it is not in $formats
+  if($filter_format &&
+     (! grep(/^$filter_format$/, @$formats) ) ){ 
+    unshift @$formats, $filter_format;
+    $clean_filtered_format = 1;
+  }
+      
+  #Attempt to get the first or all formats
+  foreach my $format(@$formats){
+    my $can_filter = 0;
+  
+    #Do this before simple file test as it is quicker  
+    if(grep(/^${format}$/, (keys %$done_formats))){ #We have already created this format
+      next;  
+    }       
+ 
+    #Simple/quick file test first before we do any conversion nonsense
+    #This also means we don't have to have any conversion config to get a file which
+    if(! defined $filter_format){
+      
+       if(my $from_path = check_file($path.'.'.$format, 'gz', $params)){#we have found the required format
+          $done_formats->{$format} = $from_path;   
+          next;
+       }   
+    }
     
-    if(! -f $tmp_path){                      # Try gzipped file
+ 
+    ### Validate we can convert ###
+    if(exists $conversion_paths{$format}){  
+      $can_convert = 1;
+              
+      if(defined $filter_format){
          
-      if(-f $tmp_path.".gz"){                # Gotcha!  
-        $found_path = $tmp_path;
-      
-        if($suffix eq $required_suffix){
-          run_system_cmd("gunzip ${tmp_path}.gz");
+        if( ($conversion_paths{$format}->[0] ne $filter_format) &&
+            ($all_formats) ){
+          throw("Cannot filter $format from $filter_format for path:\n\t$path");     
         }
-        else{
-          $found_path .= ".gz";
-        }         
-        last;
-      }
-    
-      $last_suffix = $suffix;      
-      #This is the only point where we actually iterate       
-    }
-    else{                                    # Gotcha!
-      $found_path = $tmp_path;
-      last; 
-    }                           
-  
-    #Should never get to this point
-  }
-  
-  
-  
-  if(! defined $found_path){
-    throw("Could not find feature file:\t$path\nOr useable ".join(' OR ', @suffixes).' (gz) files');   
-  }
-  
-  #Need to handle rezipping of files!
-  
-  #("$required_suffix ne $found_suffix found file $found_path");
-  
-  if($required_suffix ne $found_suffix){
-    
-    #Need to do a FindBin or similar here to get $EFG_SRC rather
-    #than relying on env var
-    
-    
-    if($found_suffix eq 'bam'){ #Do bam2sam
-      $found_path   = sort_and_filter_sam($found_path, $sam_params->{ref_fai});
-      $found_suffix = 'sam';
-    }
-    
-     #Use bam to bed from BedTools instead?
-     #This is another pre-req!
-    
-    if($required_suffix ne $found_suffix){ #required suffix has to be bed and suffix will be sam
-    
-      #if($suffix eq 'sam'){         # sam2bed
-        
-      #sam2bed handles gzip files
-      run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -uncompressed -1_based -files $found_path");
-      
-      if($found_suffix eq 'bam'){    #Delete intermediate sam file
-        run_system_cmd("rm -f $found_path");
-      }
        
-      $found_path =~ s/\.sam(\.gz)*$/.bed/;    
-    }   
+        $can_filter = 1;
+      }
+    }
+    elsif($all_formats){
+      throw("No conversion path defined for $format. Cannot acquire $format file for path:\n\t$path\n".
+        'Please select a supported file format or add config and conversion support methods for $format');  
+    }
+ 
+    ### Attempt conversion ###
+    if($can_convert && 
+      ! ($filter_format && ! $can_filter)){ 
+  
+      #Do pre_process on root/target format(they are the same)
+      if(scalar(@{$conversion_paths{$format}}) == 1){      
+        #Should have already grabbed the file above, 
+        #unless we want to filter_from this format        
+        my $filter_method = 'pre_process_'.$format;
+        
+        #Sanity check we can call this
+        if(! Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($filter_method)){
+          throw("Cannot call $filter_method for path:\n\t$path\n".
+            'Please add method or correct conversion path config hash');
+        }
+      
+        #$format key is same as first element
+        $done_formats->{$format} = &$filter_method($path.'.'.$format, $params);       
+      }  
+      else{
+        #Go through the conversion path backwards
+        #Start at last but one as we have already checked the last above i.e. the target format
+        #or start at 0 if we have $filter_format defined
+        my $start_i = (defined $filter_format) ? 0 : ($#{$conversion_paths{$format}} -1);
+     
+        for(my $i = $start_i; $i>=0; $i--){
+          my $from_format = $conversion_paths{$format}->[$i]; 
+  
+          #Test for file here if we are not filtering! Else we will always go through
+          #other formats and potentially redo conversion if we have tidied intermediate files
+          if( (! defined $filter_format) &&
+              (! grep (/^${from_format}$/, keys(%$done_formats)) ) ){
+                          
+            my $from_path = $path.".${from_format}";
+          
+            #This check_file is redundant wrt the check_file in the convert_methods
+          
+            if($from_path = check_file($from_path, 'gz', $params)){#we have found the required format
+              $done_formats->{$from_format} = $from_path;   
+              #next; #next $x/$to_format as we don't want to force conversion  
+            }                 
+          }
+        
+          #find the first one which has been done, or if none, assume the first is present
+          if( (grep (/^${from_format}$/, keys(%$done_formats)) ) ||
+              $i == 0){
+            #then convert that to the next, and so on.
+            for(my $x = $i; $x < $#{$conversion_paths{$format}}; $x++){ 
+              my $to_format   = $conversion_paths{$format}->[$x+1];
+              $from_format    = $conversion_paths{$format}->[$x];
+              my $conv_method = 'convert_'.$from_format.'_to_'.$to_format;
+              
+              #Sanity check we can call this
+              if(! ($conv_method = Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($conv_method))){
+                throw("Cannot call $conv_method for path:\n\t$path\n".
+                  'Please add method or correct conversion path config hash');
+              }
+                          
+              $done_formats->{$to_format} = $conv_method->($path.'.'.$from_format, $params);
+              
+              
+              #Remove '.unfitlered' from path for subsequent conversion
+              if(($i==0) &&
+                 defined $filter_format){
+                $path =~ s/\.unfiltered$//o;      
+              } 
+            }
+           
+            last; #We have finished with this $conversion_path{format}
+          }
+        }
+              
+      
+        if($clean_filtered_format && ($format eq $filter_format)){ 
+          #filter_format is not our target format, so we need to keep going
+          next; #$format
+        }  
+        elsif(! $all_formats){  #else we have found the most preferable, yay!
+          last;  #$format
+        }
+      }   
+    }
+  } 
+  
+  
+  #Now clean $done_formats
+  
+  if($clean_filtered_format){
+   #actually delete filtered file here? 
+    delete $done_formats->{$filter_format};  
   }
   
-  return $found_path;
+  foreach my $format(keys %$done_formats){
+    #doesn't matter about $all_formats here
+    
+    if(! grep(/^${format}$/, @$formats)){ 
+      delete $done_formats->{$format};  
+    }  
+  }
+  
+  #test we have somethign to return!?
+  #if( scalar(keys %$done_formats) == 0 ){
+  #  throw('Failed to find any '.join(', ', @$formats)." files for path:\n\t$path");
+  #}
+  
+  return $done_formats;
 }
 
+
+
+#Is validate_checksum going to have problems as files are gunzipped
+#Should validate checksum also handle .gz files i.e. check for entry without .gz, gunzip and validate?
+#Maybe all checksums should be done on gunzipped files
+
+
+#DAMMIT! Part of the filtering is currently done in SAM!!!!
+#Need to fix this so we can drop sam file completely.
+
+#There is a danger that a filter_format maybe specified but a pre_process_method
+#never get called. This will have to be handled in the first convert_method in the path
+#but we could put a method check in place?
+
+
+#All pre_process_$format methods need to handle filter_from_format
+#and should faciliatate filter and sort functions
+#Can we merge this with process_sam_bam?
+#and maintain this as a simple wrapper process_bam, which somply sets output format
+#then we can also have process_sam as another wrapper method
+#This would mean moving $params support to sort_and_filter_sam(process_bam)
+#and also filter_from_format support and generate_checksum
+
+#No this will make unflitered naming mandatory for process_sam!
+
+#Calling pre_process assumes we want to at least convert, filter or just sort
+#Otherwise we can simply just use the file
+#Need to support sort flag. We might not want to sort if we already have a sorted bam
+#Always sort when filtering?
+#
+
+sub process_bam{
+  my ($bam_file, $params) = @_;
+  $params ||= {};
+  assert_ref($params, 'HASH');
+  return process_sam_bam($bam_file, {%$params, output_format => 'bam'});
+}
+
+sub convert_bam_to_sam{
+  my ($bam_file, $params) = @_;
+  $params ||= {};
+  assert_ref($params, 'HASH');
+  return process_sam_bam($bam_file, {%$params, output_format => 'sam'});
+}
+
+#sub process_sam would need to check_file with gz suffix!
+
+
+#Need to implement optional sort_and_filter_sam here?
+
+sub convert_sam_to_bed{
+  my ($sam_file, $params) = @_;  
+  
+  my $in_file;
+  
+  if(! ($in_file = check_file($sam_file, 'gz', $params)) ){
+    throw("Cannot find file:\n\t$sam_file(.gz)");  
+  }
+  
+  (my $bed_file = $in_file) =~ s/\.sam(\.gz)*?$/.bed/;      
+  run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -uncompressed -1_based -files $in_file");
+  generate_checksum($bed_file);   
+  return $bed_file;
+}
+
+
+sub write_checksum{
+  my ($file_path, $params) = @_;
+  my ($signature_file, $digest_method);
+  
+  if(defined $params){
+    assert_ref($params, 'HASH');  
+    $signature_file = $params->{signature_file};
+    $digest_method  = $params->{digest_method};
+  }
+  
+  $digest_method ||= 'hexdigest';
+  
+  my $md5_sig  = generate_checksum($file_path, $digest_method); 
+  my $file_name = fileparse($file_path);
+  
+  if(! defined $signature_file){
+    $signature_file = $file_path.'.CHECKSUM';  
+  }
+    
+  my $checksum_row = $md5_sig."\t".$file_name."\t".$digest_method;
+  
+  #Update or create entry in signature_file
+  my $sigfile_row; 
+  if(-f $signature_file){
+    $sigfile_row = `grep '$file_name' $signature_file` || 
+                    die("Failed to grep checksum signature file:\t$signature_file");
+  }
+   
+  if($sigfile_row){ #Update entry
+    my $sed_string = "sed -r 's/^.*[[:space:]]$file_name";
+  
+    #handle absent digest method here
+    if($sigfile_row =~ /${digest_method}$/){
+      $sed_string .= "[[:space:]]$digest_method";  
+    }
+     
+    run_system_cmd("${sed_string}\$/$checksum_row/' $signature_file > ${signature_file}.tmp; ".
+                   "mv ${signature_file}.tmp $signature_file");     
+  }
+  else{#create/append to file
+    run_system_cmd("echo '$checksum_row' >> $signature_file");
+  }
+  
+  return $md5_sig; #or return sig file?
+}
+
+
+sub generate_checksum{
+  my ($file, $digest_method) = @_;
+  $digest_method ||= 'hexdigest';
+  
+  my $ctx = Digest::MD5->new;
+
+  if(! $ctx->can($digest_method)){
+    throw("Digest::MD5 cannot call method $digest_method, ".
+     'please choose a valid digest method or omit for default hexdigest method');  
+  }
+
+  open(FILE, $file) or throw("Cannot open file for md5 digest:\t$file");
+  $ctx->addfile(*FILE);
+  my $md5_sig = $ctx->$digest_method;
+  close(FILE);
+  
+  return $md5_sig;
+}
+
+#assume the format of the file is:
+#checksum_sig\tfilename\tdigestmethod
+
+
+sub validate_checksum{
+  my ($file_path, $params) = @_;
+  my ($signature_file, $digest_method);
+ 
+  #warn "Validating checksum for:\t$file_path";
+  
+  if(defined $params){
+    assert_ref($params, 'HASH');  
+    $signature_file = $params->{signature_file};
+    $digest_method  = $params->{digest_method};
+  }
+  
+  my $file_name = fileparse($file_path);
+     
+  if(! defined $signature_file){
+    $signature_file = $file_path.'.CHECKSUM';
+  }
+  
+  if(! -f $signature_file){
+    throw("Failed to find checksum file:\t$signature_file\nPlease specify one as an argument, or create default file");  
+  }
+
+  my $checksum_row = `grep -E '[[:space:]]$file_name\[[:space:]]*.*\$' $signature_file` ||
+                      die("Cannot acquire $file_name checksum info from:\t$signature_file");
+  my ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
+                     
+  
+  if((! defined $sig_file_name) ||
+     ($sig_file_name ne $file_name)){
+    throw("Failed to find $file_name entry in checksum signature file:\n\t$signature_file");    
+  }
+  
+  #default to digest method in file
+  $digest_method     ||= $sig_digest_method;
+  #Also need to account for absent $sig_digest
+  $sig_digest_method ||= $digest_method;
+  
+    
+  if(defined $sig_digest_method){
+    if($digest_method ne $sig_digest_method){
+    throw("Specified digest method($digest_method) does not match method found in ".
+      "checksum signature file($sig_digest_method):\n\t$file_path\n\t$signature_file");  
+    }
+  }
+  else{
+    warn "Could not find digest method in checksum signature file, assuming $digest_method"; 
+  }
+  
+  my $new_md5_sig = generate_checksum($file_path, $digest_method);
+  
+  if($md5_sig ne $new_md5_sig){
+    #This could be due to mismatched digest methods
+    throw("MD5 ($digest_method) checksum does not match signature file for:".
+      "\n\tFile:\t\t$file_path\nSignature file:\t$signature_file");
+  }
+  
+  #warn "Checksum validated";
+  
+  return $md5_sig;
+}
+
+#todo purge_checksum from file, as we are deleting the file, or replacing it with a gz file
+
+
+#could try and get the file suffix first to be a bit more directed here
+#especially if the format list grows
 
 sub get_file_format{
   my $file = shift;
@@ -786,6 +1093,25 @@ sub is_bed {
 }
 
 
+#Have individual format methods, as this is likely to hit performance
+#would be nive to have a no thro mode, which would return the original value
+
+sub convert_strand_from_bed {
+  my $strand = $_[0];
+  
+  if(! defined $strand){
+   throw('Strand argument is not defined'); 
+  }
+  
+  if(! exists $bed_strands{$strand}){
+    throw('Strand argument is not a valid bed strand, should be one of: '.
+      join(' ', keys %bed_strands));  
+  }
+  
+  return $bed_strands{$strand}; 
+}
+
+
 sub is_gzipped {
   my ($file, $fail_if_compressed) = @_;
 
@@ -877,6 +1203,39 @@ sub median{
 
 
   return $median;
+}
+
+
+=head2 path_to_namspace
+
+  Arg [1]    : String - Module path
+  Example    : my $path = '/my/module.pm';
+               eval { require $path }; 
+               
+               if(! $@){
+                 my $namespace = path_to_namespace($path);     
+                 my $obj       = $namespace->new();
+               }
+                
+  Description: Simply converts a path to a namespace. Useful when you have used
+               required a module dynamically rather than 'using' at compile time.
+  Returntype : String
+  Exceptions : Throws if arguments not defined
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub path_to_namespace {
+  my $path = $_[0];
+  
+  if(! defined $path){
+   throw('No path argument defined');
+  }
+
+  $path =~ s/[\/]+/::/g;
+  $path =~ s/\.pmc*$//;
+  return $path;  
 }
 
 
@@ -1113,40 +1472,49 @@ sub scalars_to_objects{
 }
 
 
+#todo
+# 1 add support for filter config i.e. which seq_regions to filter in/out
+# 2 Sorted but unfiltered and unconverted files may cause name clash here
+#   Handle this in caller outside of EFGUtils, by setting out_file appropriately
+# 3 add a DESTROY method to remove any tmp sorted files which may persist after an 
+#   ungraceful exit. These can be added to a global $main::files_to_delete array
+#   which should then also be undef'd in DESTROY so they don't persisnt to another instance
 
-#enable sam2bed here too?
+#This warning occurs when only filtering bam to bam:
+#[bam_header_read] EOF marker is absent. The input is probably truncated.
+#This is not fatal, and not caught. Does not occur when filtering with sort
+#maybe we shoudl also be catchign $@ after samtools view -H $in_file?
 
-
-#sorts, filters duplications and MT mappings
-#todo make filtering optional/configurable
-#header now optional as default will be to include it with everything for safety
-#How will this behave with an absent in file header and not fai supplied?
-
-#would be nice to add a DESTROY method to remove any tmp sorted files which may persist
-#after an ungraceful exit
-#THese can be added to a global $main::files_to_delete array
-#which should then also be undef'd in DESTROY so they don't persisnt to another instance
-
-#how are we maintaining the original unfiltered file? See pipeline dev notes about this
-#and the 'bam_filtered' config
-
-sub sort_and_filter_sam {
-  my ($sam_bam_path, $fasta_fai, $out_format, $out_file) = @_;
-      
-  validate_path($sam_bam_path);
+sub process_sam_bam {
+  my ($sam_bam_path, $params) = @_;
+  my $in_file;
+  
+  if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
+    throw("Cannot find file:\n\t$sam_bam_path");  
+  }
+  
+  $params ||= {};
+  assert_ref($params, 'HASH');
+  my $out_file      = $params->{out_file}           if exists $params->{out_file};
+  my $sort          = $params->{sort}               if exists $params->{sort};
+  my $filter_format = $params->{filter_from_format} if exists $params->{filter_from_format};
+  my $fasta_fai     = $params->{ref_fai}            if exists $params->{ref_fai};
+  my $out_format    = $params->{output_format}      if exists $params->{output_format};
+  $out_format     ||= 'sam';   
   my $fasta_fai_opt = '';
   
   if (defined $fasta_fai) {
-    validate_path($fasta_fai);
-    $fasta_fai_opt = " -t $fasta_fai ";
+    validate_path($fasta_fai);     $fasta_fai_opt = " -t $fasta_fai ";
     #-t spec is now optional, as not integrating the header into each file
     #is risky as it could get regenerated and be mismatched
     #which may produce unpredicatable behaviour or faults if the header
     #doesn't match the data. 
   }
  
-  my $out_flag   = ''; #sam default
-  $out_format  ||= 'sam';
+  #sam defaults
+  my $in_format = 'sam';
+  my $out_flag   = '';
+  my $in_flag   = 'S';
    
   if($out_format eq 'bam'){
     $out_flag = 'b'; 
@@ -1154,29 +1522,56 @@ sub sort_and_filter_sam {
   elsif($out_format ne 'sam'){
     throw("$out_format is not a valid samtools output format"); 
   }
-   
-   my $in_format = 'sam';
-   my $in_flag   = 'S';
-  
-  if($sam_bam_path =~ /\.bam$/){     # bam
-    #bam should always have header? Is this true?
-    #$cmd = "samtools view -h $sam_bam_path | ";
-    ($out_file ||= $sam_bam_path) =~ s/\.bam$/.filtered.${out_format}/;
+    
+  if($in_file =~ /\.bam$/o){     # bam (not gzipped!)   
     $in_format = 'bam';
     $in_flag   = '';
   } 
-  elsif($sam_bam_path =~ /\.sam\.gz$/){ # zipped sam
-    #$cmd = "gzip -dc $sam_bam_path | ";
-    $sam_bam_path =~ s/\.gz$//;
-    ($out_file ||= $sam_bam_path) =~ s/\.sam\.gz$/.filtered.${out_format}/;   
+  elsif($in_file !~ /\.sam(\.gz)*?$/o){ # sam (maybe gzipped)
+    throw("Unrecognised sam/bam file:\t".$in_file); 
   }
-  elsif($sam_bam_path =~ /\.sam$/){  # unzipped sam
-    ($out_file ||= $sam_bam_path) =~ s/\.sam$/.filtered.${out_format}/;   
-    #$cmd = "cat $sam_bam_path | ";
+
+  #This is odd, we really only need a flag here
+  #but we already have the filter_from_format in the params
+ 
+  if(! $out_file){   
+    ($out_file = $in_file) =~ s/\.${in_format}(.gz)*?$/.${out_format}/;      
+    
+    if(defined $filter_format){ 
+      $out_file =~ s/\.unfiltered//o;  #This needs doing only if is not defined
+    }
   }
-  else{
-    throw("Unrecognised sam/bam file:\t".$sam_bam_path); 
+  
+  if(defined $filter_format && 
+     ($filter_format ne $in_format) ){
+    throw("Input filter_from_format($filter_format) does not match input file:\n\t$in_file");  
   }
+  
+  #Sanity checks
+  (my $unzipped_source = $in_file) =~ s/\.gz$//o;
+  (my $unzipped_target = $out_file)     =~ s/\.gz$//o;
+   
+  if($unzipped_source eq $unzipped_target){
+    #This won't catch .gz difference
+    #so we may have an filtered file which matches the in file except for .gz in the infile
+    throw("Input and output (unzipped) files are not allowed to match:\n\t$in_file");   
+  }
+  
+  if($filter_format){
+      
+    if($in_file !~ /unfiltered/o){
+      warn("Filter flag is set but input file name does not contain 'unfiltered':\n\t$in_file");  
+    }
+      
+    if($out_file =~ /unfiltered/o){
+      throw("Filter flag is set but output files contains 'unfiltered':\n\t$in_file");  
+    }        
+  }
+  elsif(! $sort &&
+        ($in_format eq $out_format) ){
+    throw("Parameters would result in no change for:\n\t$in_file");        
+  }
+
 
   #Could do all of this with samtools view?
   #Will fail if header is absent and $fasta_fai not specified 
@@ -1191,14 +1586,14 @@ sub sort_and_filter_sam {
   #We need to test whether it has a header or not before we do this!
   my ($fai_header, $in_file_header);
   
-  eval { $in_file_header =`samtools view -H $sam_bam_path` };
+  eval { $in_file_header =`samtools view -H $in_file` };
   
   #$! not $@ here which will be null string
   
   if($!){
     
     if(! defined $fasta_fai){
-      throw("Could not find an in file header or a sam_ref_fai for:\t$sam_bam_path$!");
+      throw("Could not find an in file header or a sam_ref_fai for:\t$in_file$!");
     }
   }
   elsif(defined $fasta_fai){
@@ -1206,7 +1601,7 @@ sub sort_and_filter_sam {
     #will -H now return the faig header, or the infile header?
     #I think the fai header (at least for bam) 
     
-    $fai_header = `samtools view -H $fasta_fai_opt $sam_bam_path`; 
+    $fai_header = `samtools view -H $fasta_fai_opt $in_file`; 
     
     if($!){
       throw("Failed to identify view valid header from:\t$fasta_fai\n$!"); 
@@ -1214,7 +1609,7 @@ sub sort_and_filter_sam {
     
     #Just make sure they are the same
     if($fai_header ne $in_file_header){
-      warn("Found mismatched infile and fai headers for:\n\t$sam_bam_path\n\t$fasta_fai");
+      warn("CHANGE THIS TO A THROW WHEN WE HAVE FINISHED DEV! Found mismatched infile and fai headers for:\n\t$in_file\n\t$fasta_fai");
       #should this throw or just default to in file?  
       #shoudl probably give the options to reheader and sub out this whole compare_sam_header thing
       #reheader mode, would that all old @SQ are present in new fai header?
@@ -1227,31 +1622,28 @@ sub sort_and_filter_sam {
     $fasta_fai_opt = '';
   }
   
-
-
-  my $cmd = "samtools view -h${in_flag} $fasta_fai_opt $sam_bam_path -F 4 | ". # Incorporate header into file and filter unmapped reads
+ 
+  my $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file "; # Incorporate header into file
+  
+  if($filter_format){   
+    $cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
     " grep -vE '^[^[:space:]]+[[:blank:]][^[:space:]]+[[:blank:]][^[:space:]]+\:[^[:space:]]+\:MT\:' ". #Filter MTs
-    " | grep -v '^MT' | grep -v '^chrM' | ";                                                            #Filter more MTs
+    " | grep -v '^MT' | grep -v '^chrM' ";                                                              #Filter more MTs
+  } 
 
-
-  #Remove unmapped reads...  
   #-u uncompressed bam (as we are piping)
   #-S SAM input
   #-t  header file (could omit this if it is integrated into the sam/bam?)
-  #-F Skip alignments with bit set in flag (4 = unaligned)
   #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
   #This is interpreted by bash but probably better to specify /dev/stdin?
   #for clarity and as some programs can treat is as STDOUT or anything else?
   #-b output is bam  
-  (my $sorted_bam_prefix = $sam_bam_path) =~ s/\.$in_format//;
-  $sorted_bam_prefix .= ".sorted_$$";
+  (my $tmp_bam = $in_file) =~ s/\.$in_format//;
+  my $sorted_prefix = $tmp_bam.".sorted_$$";
+  $tmp_bam .= ($sort) ? ".sorted_$$.bam" : '.tmp.bam';
   
-  #$cmd .= "samtools view -uShb $fasta_fai -F 4 - | ". #Now done above
-  $cmd .= "samtools view -uShb - | ".               #simply convert to bam using infile header
-    "samtools sort - $sorted_bam_prefix";      #and finally sort
   #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
   #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
-  
   #We could also test the sorted flag before doing this?
   #But samtools sort does not set it (not in the spec)!
   #samtools view -H unsort.bam
@@ -1260,27 +1652,30 @@ sub sort_and_filter_sam {
   #@HD    VN:1.0    SO:coordinate
   #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
   #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
-  #mailed Heng Lee regarding this
-    
+  #mailed Heng Lee regarding this  
+  $cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
+  $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;      
   #warn $cmd;  
   run_system_cmd($cmd);
 
-#samtools view -h  /lustre/scratch110/ensembl/funcgen/alignments/homo_sapiens/GRCh37/ENCODE_Broad/HepG2_H2AZ_ENCODE_Broad.samse.bam -F 4 |  grep -vE '^[^[:space:]]+[[:blank:]][^[:space:]]+[[:blank:]][^[:space:]]+:[^[:space:]]+:MT:'  | grep -v '^MT' | grep -v '^chrM' | samtools view -uShb - | samtools sort - /lustre/scratch110/ensembl/funcgen/alignments/homo_sapiens/GRCh37/ENCODE_Broad/HepG2_H2AZ_ENCODE_Broad.samse.sorted_24137
-#samtools rmdup -s /lustre/scratch110/ensembl/funcgen/alignments/homo_sapiens/GRCh37/ENCODE_Broad/HepG2_H2AZ_ENCODE_Broad.samse.bam.sorted_10600 - | samtools view -h - > /lustre/scratch110/ensembl/funcgen/alignments/homo_sapiens/GRCh37/ENCODE_Broad/HepG2_H2AZ_ENCODE_Broad.samse.filtered.sam
   #Add a remove duplicates step
   #-s single end reads or samse (default is paired, sampe)
-  
-  #todo, need to check infile and outfile aren't the same
-  #else throw or output to tmp before mving back?
-  
-  $cmd  = "samtools rmdup -s ${sorted_bam_prefix}.bam - | ".   
-    "samtools view -h${out_flag} - > $out_file";
+  #Do this after alignment as we expect multiple reads if they map across several loci
+  #but not necessarily at exactly the same loci which indicates PCR bias
+  if($filter_format){
+    $cmd = "samtools rmdup -s $tmp_bam - | ".   
+      "samtools view -h${out_flag} - > $out_file";
+  }else{
+    $cmd = "samtools view -h${out_flag} $tmp_bam > $out_file";
+  }
 
-  #Alternative with no rmdup...
-  #$command .= $self->_bin_dir()."/samtools view -h ${input}_tmp.bam | gzip -c > $output";
   #warn $cmd;
   run_system_cmd($cmd);
-  run_system_cmd("rm -f ${sorted_bam_prefix}.bam"); 
+  run_system_cmd("rm -f $tmp_bam");   
+ 
+  if( (exists $params->{checksum}) && $params->{checksum}){
+    write_checksum($out_file, $params);
+  }
   
   return $out_file;
 }
@@ -1413,6 +1808,37 @@ sub url_from_DB_params {
   return $driver.'://'.$user.':'.$pass.'@'.$host.':'.$port.'/'.$dbname;
 }
 
+#Very simple method to check for a file and it's compressed variants
+#This may cause problems if the $file_path is already .gz
+
+
+sub check_file{
+  my ($file_path, $suffix, $params) = @_;
+  
+  my $found_path;
+  
+  if(-f $file_path){
+    $found_path = $file_path;  
+  }
+  elsif(defined $suffix && (-f $file_path.'.'.$suffix) ){
+    $found_path = $file_path.'.'.$suffix;    
+  }
+
+  if($found_path){
+    my $validate_checksum;
+    
+    if(defined $params){
+      assert_ref($params, 'HASH');
+      $validate_checksum = (exists $params->{checksum}) ? $params->{checksum} : undef;      
+    }
+
+    if($validate_checksum){
+      validate_checksum($found_path, $params);  
+    }  
+  }
+  
+  return $found_path;
+}
 
 sub validate_path{
   my ($path, $create, $is_dir, $alt_root) = @_;
@@ -1505,5 +1931,5 @@ sub validate_path{
 #Funcgen added methods
 
 
-
 1;
+
