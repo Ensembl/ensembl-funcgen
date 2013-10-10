@@ -600,6 +600,19 @@ sub get_date{
   #however, we must support it here incase we need to refilter, or we get alignment files
   #supplied outside of the pipeline
   
+ 
+#what about if we only have the unfiltered file
+#but we ask for filtered
+#should we automatically filter?
+#should we move handling 'unfiltered' to here from get_alignment_files_by_InputSet_formats?
+#Is this too pipeline specific?
+#what if some files don't use the 'unfiltered' convention?
+#then we may get warnings or failures if the in_file and the out_file match
+#would need to expose out_path as a parameter
+#which would then need to be used as the in path for all subsequent conversion
+#No this wouldn't work as it would change the in file to contain unfiltered
+#which might not be the case.  
+
 sub get_files_by_formats {
   my ($path, $formats, $params) = @_;   
   assert_ref($formats, 'ARRAY'); 
@@ -649,10 +662,12 @@ sub get_files_by_formats {
   foreach my $format(@$formats){
     my $can_filter = 0;
   
-    #Do this before simple file test as it is quicker  
+    #Do this before simple file test as it is quicker     
     if(grep(/^${format}$/, (keys %$done_formats))){ #We have already created this format
       next;  
     }       
+ 
+    warn "Format is $format with done formats ".join(' ', keys %$done_formats);
  
     #Simple/quick file test first before we do any conversion nonsense
     #This also means we don't have to have any conversion config to get a file which
@@ -675,8 +690,29 @@ sub get_files_by_formats {
             ($all_formats) ){
           throw("Cannot filter $format from $filter_format for path:\n\t$path");     
         }
-       
-        $can_filter = 1;
+        elsif((scalar(@{$conversion_paths{$format}}) == 1 ) ||
+              (! $clean_filtered_format)){     
+          my $filter_method = 'process_'.$filter_format;
+          $can_filter = 1;
+        
+          #Sanity check we can call this
+          if(! ($filter_method = Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($filter_method))){
+            throw("Cannot call $filter_method for path:\n\t$path\n".
+              'Please add method or correct conversion path config hash');
+          }        
+  
+          #Set outfile here so we don't have to handle unfiltered in process_sam_bam
+          #don't add it to $params as this will affected all convert methods
+          (my $outpath = $path) =~ s/\.unfiltered$//o;  
+  
+          #$format key is same as first element
+          $done_formats->{$format} = $filter_method->($path.'.'.$filter_format, {%$params, 
+                                                                          out_file => $outpath.'.'.$filter_format} );       
+           #so we don't try and refilter when calling convert_${from_format}_${to_format}
+          delete $params->{filter_from_format};
+          undef $filter_format; #Just for safety but not strictly needed
+          $path = $outpath;                  
+        }
       }
     }
     elsif($all_formats){
@@ -685,25 +721,11 @@ sub get_files_by_formats {
     }
  
     ### Attempt conversion ###
-    if($can_convert && 
-      ! ($filter_format && ! $can_filter)){ 
+    if($can_convert){ 
+      #This now assumes that if $filter_format is set
+      #convert_${filter_format}_${to_format} provides filter functionality
   
-      #Do pre_process on root/target format(they are the same)
-      if(scalar(@{$conversion_paths{$format}}) == 1){      
-        #Should have already grabbed the file above, 
-        #unless we want to filter_from this format        
-        my $filter_method = 'pre_process_'.$format;
-        
-        #Sanity check we can call this
-        if(! Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($filter_method)){
-          throw("Cannot call $filter_method for path:\n\t$path\n".
-            'Please add method or correct conversion path config hash');
-        }
-      
-        #$format key is same as first element
-        $done_formats->{$format} = &$filter_method($path.'.'.$format, $params);       
-      }  
-      else{
+      if(scalar(@{$conversion_paths{$format}}) != 1){      #already handled process_${format} above
         #Go through the conversion path backwards
         #Start at last but one as we have already checked the last above i.e. the target format
         #or start at 0 if we have $filter_format defined
@@ -715,17 +737,15 @@ sub get_files_by_formats {
           #Test for file here if we are not filtering! Else we will always go through
           #other formats and potentially redo conversion if we have tidied intermediate files
           if( (! defined $filter_format) &&
-              (! grep (/^${from_format}$/, keys(%$done_formats)) ) ){
-                          
+              (! grep (/^${from_format}$/, keys(%$done_formats)) ) ){                          
             my $from_path = $path.".${from_format}";
-          
-            #This check_file is redundant wrt the check_file in the convert_methods
           
             if($from_path = check_file($from_path, 'gz', $params)){#we have found the required format
               $done_formats->{$from_format} = $from_path;   
               #next; #next $x/$to_format as we don't want to force conversion  
             }                 
           }
+        
         
           #find the first one which has been done, or if none, assume the first is present
           if( (grep (/^${from_format}$/, keys(%$done_formats)) ) ||
@@ -741,13 +761,14 @@ sub get_files_by_formats {
                 throw("Cannot call $conv_method for path:\n\t$path\n".
                   'Please add method or correct conversion path config hash');
               }
-                          
+                
+                
               $done_formats->{$to_format} = $conv_method->($path.'.'.$from_format, $params);
-              
+              warn "Set $to_format to ".$done_formats->{$to_format};            
               
               #Remove '.unfitlered' from path for subsequent conversion
               if(($i==0) &&
-                 defined $filter_format){
+                defined $filter_format){
                 $path =~ s/\.unfiltered$//o;      
               } 
             }
@@ -766,7 +787,7 @@ sub get_files_by_formats {
         }
       }   
     }
-  } 
+  } #end foreach my $format
   
   
   #Now clean $done_formats
@@ -788,6 +809,9 @@ sub get_files_by_formats {
   #if( scalar(keys %$done_formats) == 0 ){
   #  throw('Failed to find any '.join(', ', @$formats)." files for path:\n\t$path");
   #}
+  #don't do this as we may want to test for a filtered file, before attempting a filter
+  #from a different path
+  #This is caught in get_alignment_files_by_InputSet_formats
   
   return $done_formats;
 }
@@ -825,6 +849,11 @@ sub get_files_by_formats {
 
 sub process_bam{
   my ($bam_file, $params) = @_;
+  
+  warn "Calling proces_bam with $bam_file";
+ 
+ 
+  
   $params ||= {};
   assert_ref($params, 'HASH');
   return process_sam_bam($bam_file, {%$params, output_format => 'bam'});
@@ -832,6 +861,9 @@ sub process_bam{
 
 sub convert_bam_to_sam{
   my ($bam_file, $params) = @_;
+  
+    warn "Calling convert_bam_to_sam with $bam_file";
+  
   $params ||= {};
   assert_ref($params, 'HASH');
   return process_sam_bam($bam_file, {%$params, output_format => 'sam'});
@@ -844,6 +876,8 @@ sub convert_bam_to_sam{
 
 sub convert_sam_to_bed{
   my ($sam_file, $params) = @_;  
+  
+    warn "Calling convert_sam_to_bam with $sam_file";
   
   my $in_file;
   
@@ -869,7 +903,6 @@ sub write_checksum{
   }
   
   $digest_method ||= 'hexdigest';
-  
   my $md5_sig  = generate_checksum($file_path, $digest_method); 
   my $file_name = fileparse($file_path);
   
@@ -1533,6 +1566,11 @@ sub process_sam_bam {
 
   #This is odd, we really only need a flag here
   #but we already have the filter_from_format in the params
+  if(defined $filter_format && 
+     ($filter_format ne $in_format) ){
+    throw("Input filter_from_format($filter_format) does not match input file:\n\t$in_file");  
+  }
+
  
   if(! $out_file){   
     ($out_file = $in_file) =~ s/\.${in_format}(.gz)*?$/.${out_format}/;      
@@ -1540,11 +1578,6 @@ sub process_sam_bam {
     if(defined $filter_format){ 
       $out_file =~ s/\.unfiltered//o;  #This needs doing only if is not defined
     }
-  }
-  
-  if(defined $filter_format && 
-     ($filter_format ne $in_format) ){
-    throw("Input filter_from_format($filter_format) does not match input file:\n\t$in_file");  
   }
   
   #Sanity checks
