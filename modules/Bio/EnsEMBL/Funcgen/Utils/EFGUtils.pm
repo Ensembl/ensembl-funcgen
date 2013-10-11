@@ -667,8 +667,6 @@ sub get_files_by_formats {
       next;  
     }       
  
-    warn "Format is $format with done formats ".join(' ', keys %$done_formats);
- 
     #Simple/quick file test first before we do any conversion nonsense
     #This also means we don't have to have any conversion config to get a file which
     if(! defined $filter_format){
@@ -764,7 +762,6 @@ sub get_files_by_formats {
                 
                 
               $done_formats->{$to_format} = $conv_method->($path.'.'.$from_format, $params);
-              warn "Set $to_format to ".$done_formats->{$to_format};            
               
               #Remove '.unfitlered' from path for subsequent conversion
               if(($i==0) &&
@@ -849,11 +846,6 @@ sub get_files_by_formats {
 
 sub process_bam{
   my ($bam_file, $params) = @_;
-  
-  warn "Calling proces_bam with $bam_file";
- 
- 
-  
   $params ||= {};
   assert_ref($params, 'HASH');
   return process_sam_bam($bam_file, {%$params, output_format => 'bam'});
@@ -861,9 +853,6 @@ sub process_bam{
 
 sub convert_bam_to_sam{
   my ($bam_file, $params) = @_;
-  
-    warn "Calling convert_bam_to_sam with $bam_file";
-  
   $params ||= {};
   assert_ref($params, 'HASH');
   return process_sam_bam($bam_file, {%$params, output_format => 'sam'});
@@ -876,9 +865,6 @@ sub convert_bam_to_sam{
 
 sub convert_sam_to_bed{
   my ($sam_file, $params) = @_;  
-  
-    warn "Calling convert_sam_to_bam with $sam_file";
-  
   my $in_file;
   
   if(! ($in_file = check_file($sam_file, 'gz', $params)) ){
@@ -964,8 +950,6 @@ sub generate_checksum{
 sub validate_checksum{
   my ($file_path, $params) = @_;
   my ($signature_file, $digest_method);
- 
-  #warn "Validating checksum for:\t$file_path";
   
   if(defined $params){
     assert_ref($params, 'HASH');  
@@ -1016,8 +1000,6 @@ sub validate_checksum{
     throw("MD5 ($digest_method) checksum does not match signature file for:".
       "\n\tFile:\t\t$file_path\nSignature file:\t$signature_file");
   }
-  
-  #warn "Checksum validated";
   
   return $md5_sig;
 }
