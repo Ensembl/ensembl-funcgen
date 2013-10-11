@@ -93,6 +93,19 @@ sub fetch_input {   # fetch parameters...
   
   $self->process_params([qw(set_names set_ids replicates)], 1);#optional
   
+  
+  #let's set an internal handle_replicates param
+  #so we don't try and do this for non input_sub/sets.
+  my $handle_reps = 0;
+  
+  if($self->replicates && 
+     ( ($self->set_type eq 'input_set') ||
+       ($self->set_type eq 'input_subset')) ){
+    $handle_reps = 1;    
+  }
+  
+  $self->set_param_method('handle_replicates', $handle_reps);
+  
   #Parse comma separated lists of filters into arrayrefs of string or objects
   $self->set_param_method('constraints_hash',
                           $self->process_params([qw(feature_types cell_types states
@@ -160,7 +173,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #(for those that support/require batch params)
   my $batch_params    = $self->batch_params; 
   my (@failed_sets);
-  my $reps = $self->replicates;
+  my $handle_reps = $self->handle_replicates;
+  
+  #Validate replicates vs input_set/input_subset here?
+  
+  
   
   #Can't batch flow replicates, as this would cause 
   #the following to fail when dealing with other non-replicate sets
@@ -173,7 +190,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       my $set = $set_adaptor->fetch_by_dbID($id);
       
       if(! defined $set ||
-         ($reps && (! $iset->replicate)){
+         ($handle_reps && (! $set->replicate)) ){
         
         push @failed_sets, $id;
         $throw = 1;
@@ -188,7 +205,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       my $set = $set_adaptor->fetch_by_name($name);
         
       if(! defined $set ||
-         ($reps && (! $iset->replicate)){
+         ($handle_reps && (! $set->replicate)) ){
         
         push @failed_sets, $name;
         $throw = 1;
@@ -211,7 +228,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     
     #We could add a contraint for is_replicate
                                       
-    if($reps){  
+    if($handle_reps){  
       foreach my $set(@$sets){
         
         if(! $set->replicate){
@@ -225,7 +242,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   if($throw){
     $throw = 'Failed to identify some '.$self->set_type." sets. Names or IDs don't exist";
     
-    if($reps){
+    if($handle_reps){
       $throw .= ', and/or they are merged sets and \'replicates\' were requested'; 
     }
     
