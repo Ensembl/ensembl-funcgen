@@ -21,24 +21,23 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 #This assumes the InputSet has been previously registered, 
 #and now we want simply to define/fetch the data set, feature and result set based on these data.
 
-#todo -slice_import_status?
+#params
+#name
+#result_set_only
+#These allow over-ride of defaults
+#feature_set_analysis
+#result_set_analysis
+#default_feature_set_analyses (shouldn't alter)
+#default_result_set_analyses (shouldn't alter)
 
+#todo
+#-slice_import_status?
 
 
 sub fetch_input {   # fetch parameters...
   my $self = shift @_;
   $self->SUPER::fetch_input;
   
-  #This is only redefining it local to this process, not to the hive tables anywhere
-  #Flow this later
-  #todo set in Base, based on pipeline_name or DBNAME?
-  #$self->set_dir_param('output_dir', 
-  #                     $self->param('root_output_dir').'/'.$self->param('pipeline_name').'/'.$self->param('set_name'),
-  #                     1); #create flag
-  
-  #Now set in BaseDB::pipeline_wide_parameters                                    
-
-
   my ($iset)      = @{&scalars_to_objects($self->out_db, 'InputSet',
                                                 'fetch_by_dbID',
                                                 [$self->param('dbID')] ) };
@@ -54,14 +53,21 @@ sub fetch_input {   # fetch parameters...
   #refactor this default_analysis method in BaseDB?
   my %default_analyses;
   my @set_types = ('result_set');
-  push @set_types, 'feature_set' if ! $self->param('result_set_only');
+  push @set_types, 'feature_set' if ! $self->get_param_method('result_set_only', 'silent');
   
   
   #TODO Validate default set analysis keys exist as feature_type class or name?
   #This would fail for species with low coverage i.e. some names may be absent
   
+  
+  #Can we move some of this into BaseSequenceAnalysis as it will need to be used
+  #by Run_QC_and_ALigner to enable selective data flow into the relevant 
+  #IdentifyInputSets analyses
+  
   foreach my $set_type( @set_types ){   
     my $set_lname = $self->param($set_type.'_analysis');
+  
+    
   
     if(! defined $set_lname){
       
@@ -115,11 +121,15 @@ sub fetch_input {   # fetch parameters...
 #feature_set_analysis is always created dynamically anyway, so this would be dependant on
 #-result_set_only 
 
+
+#TODO Add support for feature_set_only! IDR sets!
+
+
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self = shift @_;
   
   my $helper = $self->helper;  
-  my $iset = $self->param('input_set');
+  my $iset   = $self->param('input_set');
   my $set;    
 
   #todo migrate this to the Importer as define_OutputSet
@@ -134,7 +144,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #This bascailly ignores the fact that a ResultSet may be lin ked to other DataSets
   
   
-  if( $self->param('result_set_only') ){
+  if( $self->result_set_only ){
     throw('Pipeline does not yet support creation of a ResultSet without and associated Feature/DataSet');
      
     $set = $helper->define_ResultSet
@@ -148,7 +158,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
        -RESULT_SET_MODE      => $self->param('result_set_mode'),
        -ROLLBACK             => $self->param('rollback'),
        -RECOVER              => $self->param('recover'),
-       -SLICES               => $self->param('slices'),
+       -SLICES               => $self->slices,
        -CELL_TYPE            => $iset->cell_type,
        -FEATURE_TYPE         => $iset->feature_type,
      );
@@ -169,7 +179,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
        -RESULT_SET_MODE      => $self->param('result_set_mode'),
        -ROLLBACK             => $self->param('rollback'),
        -RECOVER              => $self->param('recover'),
-       -SLICES               => $self->param('slices'),    
+       -SLICES               => $self->slices,    
        -CELL_TYPE            => $iset->cell_type,
        -FEATURE_TYPE         => $iset->feature_type,
        #-DESCRIPTION   => ?
@@ -184,10 +194,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
   #Add set_type here as result_set_only could be change between writing
   #this output_id and running a down stream analysis  
-  $self->param('output_id', {dbID       => $set->dbID, 
-                             set_name   => $set->name,
-                             set_type   => ($self->param('result_set_only') ? 
-                                             'ResultSet' : 'DataSet')}
+  $self->param('output_id', 
+               {%{$self->batch_params},
+                dbID       => $set->dbID, 
+                set_name   => $set->name,
+                set_type   => ($self->result_set_only ? 
+                               'ResultSet' : 'DataSet')}
               );
   
   return 1;
@@ -196,6 +208,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
 sub write_output {  # Create the relevant jobs
   my $self = $_[0];
+  
+  $self->helper->debug(1, 'DefineOutputSet data flowing:', $self->param('output_id'));
   $self->dataflow_output_id($self->param('output_id'), 1);
   return;
 }
