@@ -62,7 +62,7 @@ use vars qw(@ISA);
   Example    : my $group = $eg_adaptor->fetch_by_name('EBI');
   Description: Fetches the group with the given name
   Returntype : Bio::EnsEMBL::Funcgen::ExperimentalGroup object
-  Exceptions : 
+  Exceptions :
   Caller     : General
   Status     : At risk
 
@@ -115,7 +115,7 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( eg.experimental_group_id eg.name eg.location 
+  return qw( eg.experimental_group_id eg.name eg.location
              eg.contact eg.url eg.description eg.is_project );
 }
 
@@ -135,11 +135,11 @@ sub _columns {
 
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
-	
+
 	my (@result, $eg_id, $name, $location, $contact, $url, $desc, $is_project);
-	
+
 	$sth->bind_columns(\$eg_id, \$name, \$location, \$contact, \$url, \$desc, \$is_project);
-	
+
 	while ( $sth->fetch() ) {
 	  my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
 								    -dbID        => $eg_id,
@@ -151,9 +151,9 @@ sub _objs_from_sth {
 								    -IS_PROJECT  => $is_project,
 								    -ADAPTOR     => $self,
 								   );
-	  
+
 	  push @result, $group;
-	  
+
 	}
 	return \@result;
 }
@@ -164,7 +164,7 @@ sub _objs_from_sth {
 
   Args       : List of Bio::EnsEMBL::Funcgen::ExperimentalGroup objects
   Example    : $eg_adaptor->store($g1, $g2, $g3);
-  Description: Stores given ExperimentalGroup objects in the database. 
+  Description: Stores given ExperimentalGroup objects in the database.
   Returntype : None
   Exceptions : Throws if ExperimentalGroup not valid
   Caller     : General
@@ -175,26 +175,26 @@ sub _objs_from_sth {
 sub store {
   my $self = shift;
   my @args = @_;
-  
-  
+
+
   my $sth = $self->prepare("
 			INSERT INTO experimental_group
 			(name, location, contact, url, description, is_project)
 			VALUES (?, ?, ?, ?, ?, ?)");
-    
-  
-  
+
+
+
   foreach my $group (@args) {
 
     if ( ! (ref($group) && $group->isa('Bio::EnsEMBL::Funcgen::ExperimentalGroup') )) {
       throw('Can only store ExperimentalGroup objects, skipping $group');
     }
-    
+
     if (!( $group->dbID() && $group->adaptor() == $self )){
-      
+
       #Check for previously stored FeatureType
       my $s_eg = $self->fetch_by_name($group->name());
-	
+
       if(! $s_eg){
 	$sth->bind_param(1, $group->name(),           SQL_VARCHAR);
 	$sth->bind_param(2, $group->location(),       SQL_VARCHAR);
@@ -202,15 +202,14 @@ sub store {
 	$sth->bind_param(4, $group->url(),            SQL_VARCHAR);
 	$sth->bind_param(5, $group->description(),    SQL_VARCHAR);
 	$sth->bind_param(6, $group->is_project(),     SQL_BOOLEAN);
-	
+
 	$sth->execute();
-	my $dbID = $sth->{'mysql_insertid'};
-	$group->dbID($dbID);
+	$group->dbID($self->last_insert_id);
 	$group->adaptor($self);
       }
       else{
 	$group = $s_eg;
-	warn("Using previously stored ExperimentalGroup:\t".$group->name()."\n"); 
+	warn("Using previously stored ExperimentalGroup:\t".$group->name()."\n");
       }
     }
   }

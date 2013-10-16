@@ -113,16 +113,16 @@ sub _objs_from_sth {
 	my ($self, $sth, $mapper, $dest_slice) = @_;
 
 	my $sa           = $self->db->dnadb->get_SliceAdaptor;
-	my $fset_adaptor = $self->db->get_FeatureSetAdaptor;	
+	my $fset_adaptor = $self->db->get_FeatureSetAdaptor;
 
-	my ($seq_region_id, @features, %fset_hash, 
+	my ($seq_region_id, @features, %fset_hash,
       %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
 	    $annotated_feature_id,  $efg_seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $fset_id,
-      $display_label,         $score, 
+      $display_label,         $score,
       $summit
      );
 
@@ -146,7 +146,7 @@ sub _objs_from_sth {
 		$cmp_cs_vers = $cmp_cs->version();
 	}
 
-	my ($dest_slice_start, $dest_slice_end, $dest_slice_strand, 
+	my ($dest_slice_start, $dest_slice_end, $dest_slice_strand,
       $dest_slice_length, $dest_slice_sr_name, $slice, $sr_name, $sr_cs);
 
 	if ($dest_slice) {
@@ -157,13 +157,13 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-	
+
  FEATURE: while ( $sth->fetch ) {
     #get core seq_region_id
 	  #This was failing if we are using a 'comparable' CoordSystem as we don't have a cache
 	  #for the new DB. Fixed with the tmp seq_region_cache
 	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
-		
+
 	  if (! $seq_region_id) {
       warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
         "The region you are using is not present in the current seq_region_cache.\n".
@@ -173,32 +173,32 @@ sub _objs_from_sth {
 
 	  #Get the FeatureSet object
 	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
-	  
-   
+
+
 	  # Get the slice object
 	  $slice = $slice_hash{'ID:'.$seq_region_id};
-	  
+
 	  if (! $slice) {
       $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
       $slice_hash{'ID:'.$seq_region_id} = $slice;
       $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
       $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
 	  }
-	  
+
 	  $sr_name = $sr_name_hash{$seq_region_id};
     $sr_cs   = $sr_cs_hash{$seq_region_id};
-	  
+
 	  # Remap the feature coordinates to another coord system if a mapper was provided
     if ($mapper) {
-		
+
       throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-		
+
       ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
         = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-	      
+
       # Skip features that map to gaps or coord system boundaries
       next FEATURE if !defined $sr_name;
-	      
+
       # Get a slice in the coord system we just mapped to
       if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
         $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
@@ -208,7 +208,7 @@ sub _objs_from_sth {
           ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
       }
     }
-	    
+
     # If a destination slice was provided convert the coords
     # If the destination slice starts at 1 and is forward strand, nothing needs doing
     if ($dest_slice) {
@@ -224,19 +224,19 @@ sub _objs_from_sth {
           $seq_region_strand      *= -1;
         }
       }
-	      
+
       # Throw away features off the end of the requested slice
 		  if (! $self->force_reslice) {
         #force_reslice set by RegulatoryFeature::regulatory_attributes
         #so we don't lose attrs which are not on the dest_slice
-        
+
         next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
           || ( $dest_slice_sr_name ne $sr_name );
-      }			
-       
+      }
+
       $slice = $dest_slice;
 		}
-	  
+
     push @features, Bio::EnsEMBL::Funcgen::AnnotatedFeature->new_fast
 		  ({
         start          => $seq_region_start,
@@ -251,7 +251,7 @@ sub _objs_from_sth {
         set            => $fset_hash{$fset_id},
 		   });
 	}
-	
+
 	return \@features;
 }
 
@@ -273,11 +273,11 @@ sub _objs_from_sth {
 
 sub store{
 	my ($self, @pfs) = @_;
-	
+
 	if (scalar(@pfs) == 0) {
 		throw('Must call store with a list of AnnotatedFeature objects');
 	}
-	
+
 	my $sth = $self->prepare("
 		INSERT INTO annotated_feature (
 			seq_region_id,   seq_region_start,
@@ -285,23 +285,23 @@ sub store{
             feature_set_id,  display_label, score, summit
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
-	
-	
+
+
 	my $db = $self->db();
-	
+
   FEATURE: foreach my $pf (@pfs) {
-		
+
 		if( !ref $pf || !$pf->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature') ) {
 			throw('Feature must be an AnnotatedFeature object');
 		}
-		
+
 		if ( $pf->is_stored($db) ) {
 			#does not accomodate adding Feature to >1 feature_set
 			warning('AnnotatedFeature [' . $pf->dbID() . '] is already stored in the database');
 			next FEATURE;
 		}
-		
-		
+
+
 		#Only need to check FeatureSet here, as FeatureSet store will check analysis
 
 		if (! $pf->feature_set->is_stored($db)) {
@@ -311,7 +311,7 @@ sub store{
 
 		my $seq_region_id;
 		($pf, $seq_region_id) = $self->_pre_store($pf);
-		
+
 		$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
 		$sth->bind_param(2, $pf->start(),               SQL_INTEGER);
 		$sth->bind_param(3, $pf->end(),                 SQL_INTEGER);
@@ -322,7 +322,7 @@ sub store{
 		$sth->bind_param(8, $pf->summit,                SQL_INTEGER);
 
 		$sth->execute();
-		$pf->dbID( $sth->{'mysql_insertid'} );		
+		$pf->dbID( $self->last_insert_id );
 		$pf->adaptor($self);
 	}
 
@@ -334,7 +334,7 @@ sub store{
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
   Example    : my $assoc_afs = $af_adaptor->fetch_all_by_associated_MotifFeature($motif_feature);
-  Description: Fetches all associated AnnotatedFeatures for a given MotifFeature. 
+  Description: Fetches all associated AnnotatedFeatures for a given MotifFeature.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::AnnotatedFeature objects
   Exceptions : Throws if arg is not valid or stored
   Caller     : General

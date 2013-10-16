@@ -67,7 +67,7 @@ use vars qw(@ISA);
 
 sub _true_tables {
   my $self = shift;
-	
+
   return (
 		  ['segmentation_feature', 'sf'],
 		  ['feature_set', 'fs']
@@ -87,12 +87,12 @@ sub _true_tables {
 
 =cut
 
-sub _columns { 
+sub _columns {
   return qw(
 			sf.segmentation_feature_id  sf.seq_region_id
 			sf.seq_region_start      sf.seq_region_end
 			sf.seq_region_strand     sf.feature_type_id
-			sf.feature_set_id        sf.score 
+			sf.feature_set_id        sf.score
 			sf.display_label
 	   );
 }
@@ -120,13 +120,13 @@ sub _objs_from_sth {
 	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
 	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
 
-	
+
 	my ($sa, $seq_region_id);
 	#don't really need this if we're using DNADBSliceAdaptor?
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);
 	$sa ||= $self->db->dnadb->get_SliceAdaptor();
 
- 
+
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
 	#Hence it should always be on the same coord system
 	my $fset_adaptor  = $self->db->get_FeatureSetAdaptor;
@@ -138,9 +138,9 @@ sub _objs_from_sth {
 	    $segmentation_feature_id, $efg_seq_region_id,
 	    $seq_region_start,        $seq_region_end,
 	    $seq_region_strand,       $ftype_id,
-		$fset_id,                 $score, 
+		$fset_id,                 $score,
 		$display_label
-	
+
 	);
 
 	$sth->bind_columns(
@@ -180,17 +180,17 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-	
+
   FEATURE: while ( $sth->fetch() ) {
 	  #Need to build a slice adaptor cache here?
 	  #Would only ever want to do this if we enable mapping between assemblies??
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
-	  
+
 	  #get core seq_region_id
 	  #This fails if we are using a 'comparable' CoordSystem as we don't have a cache
 	  #for the new DB. Wasn't this fixed with the tmp seq_region_cache?
 	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
-		
+
 	  if(! $seq_region_id){
 		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
 		  "The region you are using is not present in the current seq_region_cache.\n".
@@ -201,32 +201,32 @@ sub _objs_from_sth {
 	  #Get the FeatureSet object
 	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if ! exists $fset_hash{$fset_id};
 	  $ftype_hash{$ftype_id} = $ftype_adaptor->fetch_by_dbID($ftype_id) if ! exists $fset_hash{$ftype_id};
-	  
-   
+
+
 	  # Get the slice object
 	  my $slice = $slice_hash{'ID:'.$seq_region_id};
-	  
+
 	  if (! $slice) {
 		$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
 		$slice_hash{'ID:'.$seq_region_id} = $slice;
 		$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
 		$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
 	  }
-	  
+
 	  my $sr_name = $sr_name_hash{$seq_region_id};
 	    my $sr_cs   = $sr_cs_hash{$seq_region_id};
-	  
+
 	  # Remap the feature coordinates to another coord system if a mapper was provided
 	  if ($mapper) {
-		
+
 		throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-		
+
 	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
 			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-	      
+
 	      # Skip features that map to gaps or coord system boundaries
 	      next FEATURE if !defined $sr_name;
-	      
+
 	      # Get a slice in the coord system we just mapped to
 	      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
 		$slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
@@ -236,7 +236,7 @@ sub _objs_from_sth {
 		  ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
 	      }
 	    }
-	    
+
 	    # If a destination slice was provided convert the coords
 	    # If the destination slice starts at 1 and is forward strand, nothing needs doing
 	    if ($dest_slice) {
@@ -251,21 +251,21 @@ sub _objs_from_sth {
 		  $seq_region_strand      *= -1;
 		}
 	      }
-	      
+
 	      # Throw away features off the end of the requested slice
 		  if(! $self->force_reslice){
 			#force_reslice set by RegulatoryFeature::regulatory_attributes
 			#so we don't lose attrs which are not on the dest_slice
-			
+
 			next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
 			  || ( $dest_slice_sr_name ne $sr_name );
-			
+
 			$slice = $dest_slice;
 		  }
 		}
-	    
 
-	  
+
+
 	  push @features, Bio::EnsEMBL::Funcgen::SegmentationFeature->new_fast
 		( {
 		   start          => $seq_region_start,
@@ -274,7 +274,7 @@ sub _objs_from_sth {
 		   slice          => $slice,
 		   #'analysis'       => $fset_hash{$fset_id}->analysis(),
 		   #Need to pass this to keep Feature.pm happy
-		   #Let's grab this from the FeatureSet in SetFeature new and pass 
+		   #Let's grab this from the FeatureSet in SetFeature new and pass
 		   score          => $score,
 		   adaptor        => $self,
 		   dbID           => $segmentation_feature_id,
@@ -283,7 +283,7 @@ sub _objs_from_sth {
 		   feature_type   =>  $ftype_hash{$ftype_id},
 		  } );
 	}
-	
+
 	return \@features;
 }
 
@@ -306,11 +306,11 @@ sub _objs_from_sth {
 
 sub store{
 	my ($self, @segs) = @_;
-	
+
 	if (scalar(@segs) == 0) {
 		throw('Must call store with a list of SegmentationFeature objects');
 	}
-	
+
 	my $sth = $self->prepare("
 		INSERT INTO segmentation_feature (
 			seq_region_id,   seq_region_start,
@@ -318,29 +318,29 @@ sub store{
             feature_type_id, feature_set_id,   score, display_label
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
-	
-	
+
+
 	my $db = $self->db();
-	
-	
+
+
   FEATURE: foreach my $seg (@segs) {
-		
+
 		if( !ref $seg || !$seg->isa('Bio::EnsEMBL::Funcgen::SegmentationFeature') ) {
 			throw('Feature must be an SegmentationFeature object');
 		}
-		
+
 		if ( $seg->is_stored($db) ) {
 			#does not accomodate adding Feature to >1 feature_set
 			warning('SegmentationFeature [' . $seg->dbID() . '] is already stored in the database');
 			next FEATURE;
 		}
-		
+
 		$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $seg->feature_set);
 
 
 		my $seq_region_id;
 		($seg, $seq_region_id) = $self->_pre_store($seg);
-		
+
 		$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
 		$sth->bind_param(2, $seg->start(),              SQL_INTEGER);
 		$sth->bind_param(3, $seg->end(),                SQL_INTEGER);
@@ -352,7 +352,7 @@ sub store{
 
 
 		$sth->execute();
-		$seg->dbID( $sth->{'mysql_insertid'} );
+		$seg->dbID( $self->last_insert_id );
 		$seg->adaptor($self);
 	}
 

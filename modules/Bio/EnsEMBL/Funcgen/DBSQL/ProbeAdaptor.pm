@@ -76,7 +76,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
 
 sub fetch_by_array_probe_probeset_name {
 	my ($self, $array_name, $probe_name, $probeset_name) = @_;
-	
+
 	if(! (defined $array_name && defined $probe_name)){
 	  throw('You must provide at least and array and probe name');
 	}
@@ -151,7 +151,7 @@ sub fetch_all_by_name{
 
 sub fetch_all_by_ProbeSet {
 	my ($self, $probeset) = @_;
-	
+
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $probeset);
 	return $self->generic_fetch('p.probe_set_id = '.$probeset->dbID);
 }
@@ -173,13 +173,13 @@ sub fetch_all_by_ProbeSet {
 sub fetch_all_by_Array {
   my $self  = shift;
   my $array = shift;
-  
+
    if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
      throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Array');
    }
 
   #get all array_chip_ids, for array and do a multiple OR statement with generic fetch
-  
+
   return $self->generic_fetch('p.array_chip_id IN ('.join(',', @{$array->get_array_chip_ids()}).')');
 }
 
@@ -198,11 +198,11 @@ sub fetch_all_by_Array {
 sub fetch_all_by_ArrayChip {
   my $self  = shift;
   my $array_chip = shift;
-  
+
   if(! (ref($array_chip) && $array_chip->isa('Bio::EnsEMBL::Funcgen::ArrayChip') && $array_chip->dbID())){
     throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::ArrayChip');
   }
-  
+
   return $self->generic_fetch("p.array_chip_id =".$array_chip->dbID());
 }
 
@@ -222,14 +222,14 @@ sub fetch_all_by_ArrayChip {
 sub fetch_by_ProbeFeature {
   my $self    = shift;
   my $feature = shift;
-  
-  if (! ref($feature) || 
-      ! $feature->isa('Bio::EnsEMBL::Funcgen::ProbeFeature') || 
+
+  if (! ref($feature) ||
+      ! $feature->isa('Bio::EnsEMBL::Funcgen::ProbeFeature') ||
       ! $feature->{'probe_id'}
      ) {
     throw('fetch_by_ProbeFeature requires a stored Bio::EnsEMBL::Funcgen::ProbeFeature object');
   }
-  
+
   return $self->fetch_by_dbID($feature->{'probe_id'});
 }
 
@@ -284,10 +284,10 @@ sub _columns {
 
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
-	
+
 	my (@result, $current_dbid, $arraychip_id, $probe_id, $probe_set_id, $name, $class, $probelength, $desc);
 	my ($array, %array_cache, %probe_set_cache);
-	
+
 	$sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, \$desc);
 
 
@@ -298,33 +298,33 @@ sub _objs_from_sth {
 	#The object creation for the linked adaptors need to be commodotised
 	#So we can say something like $probeset_adaptor->create_obj_from_sth_args
 	#Caches will need to be built in the calling adaptor rather than the true object adaptor
-	
+
 	#No group required as we will always want intermediate data
 	#Therefore cannot use this in combined with simple extension???
 	#Unless we explicitly state group by primary keys.
 
 	#Need to build array of adaptor column hashes(order important)
-	#Need to build and array of bound columns dependant 
+	#Need to build and array of bound columns dependant
 	#Then we need to parse output dependant on primary keys of each table
 	#So we would need bolumns bound to hash values
-	
+
 	#We need a way to define the extended tables
 	#Pass param hash to caller which uses BaseAdaptor method to add tables and columns
 	#This would have to take into account anything added by the caller
-	
+
 	#Maybe the better way of doing this test would be to include all probes in a probeset?
 	#Or maybe all probe_features for a probe?
-	
+
 
 
 
 	my $probe;
-	
+
 	while ( $sth->fetch() ) {
 
 		#warn("Need to sort array cacheing, have redundant cache!!");
 		#This is nesting array and probeset objects in probe!
-		
+
 
 		#Is this required? or should we lazy load this?
 		#Should we also do the same for probe i.e. nest or lazy load probeset
@@ -342,19 +342,19 @@ sub _objs_from_sth {
 		#would slightly slow down processing, and would slightly increase memory as cache(small as non-redundant)
 		#and map hashes would persist
 
-	
+
 	  ####MAKE THIS LAZY LOADED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	  #Can we even do this given we won't then have the array context?
 	  #We should just force this for efficiency and make people keep the array if they ever want to use that info?
 	  #Will this affect any other methods?
-	  
+
 
 
 	  #Can we not change this to an ArrayChip cache and just reimplement the array method?
 
 		$array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
-	
-		
+
+
 		#I don't think we need this?  Certainly not for storing
 
 		#$probe_set = $probe_set_cache{$probe_set_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
@@ -418,7 +418,7 @@ sub _objs_from_sth {
 
 sub store {
   my ($self, @probes) = @_;
-  
+
   my ($sth, $dbID, @panals, $pd_sth);
   my $pd_sql = "INSERT IGNORE into probe_design(probe_id, analysis_id, score, coord_system_id) values(?, ?, ?, ?)";
   my $db = $self->db();
@@ -434,17 +434,17 @@ sub store {
 	if ( !ref $probe || ! $probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
       throw("Probe must be an Probe object ($probe)");
     }
-    
+
     if ( $probe->is_stored($db) ) {
       warning('Probe [' . $probe->dbID() . '] is already stored in the database');
       next PROBE;
     }
-    
+
     # Get all the arrays this probe is on and check they're all in the database
     my %array_hashes;
-    
+
     foreach my $ac_id (keys %{$probe->{'arrays'}}) {
-            
+
       if (defined ${$probe->{'arrays'}}{$ac_id}->dbID()) {
       #Will this ever work as generally we're creating from scratch and direct access to keys above by passes DB fetch
         $array_hashes{$ac_id} = $probe->{'arrays'}{$ac_id};
@@ -452,16 +452,16 @@ sub store {
     }
 
     throw('Probes need attached arrays to be stored in the database') if ( ! %array_hashes );
-	
+
     # Insert separate entry (with same oligo_probe_id) in oligo_probe
     # for each array/array_chip the probe is on
     foreach my $ac_id (keys %array_hashes) {
       my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
-	  
+
 	  foreach my $name(@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}){
 
 		if (defined $dbID) {  # Already stored
-					
+
 		  $sth = $self->prepare
 			(
 			 "INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description )".
@@ -492,32 +492,31 @@ sub store {
 		  $sth->bind_param(5, $probe->class(),     SQL_VARCHAR);
 		  $sth->bind_param(6, $probe->description, SQL_VARCHAR);
 		  $sth->execute();
-		  $dbID = $sth->{'mysql_insertid'};
-		  $probe->dbID($dbID);
+		  $probe->dbID($self->last_insert_id);
 		  $probe->adaptor($self);
 		}
 	  }
 	}
-  
+
 	if(@panals = @{$probe->get_all_design_scores(1)}){#1 is no fetch flag
 	  #we need to check for duplicates here, or can we just ignore them in the insert statement?
 	  #ignoring would be convenient but may lose info about incorrect duplicates
 	  #also not good general practise
 	  #solution would be nest them with a dbid value aswell as score
 	  #use ignore for now and update implementation when we create BaseProbeDesign?
-	  
+
 	  $pd_sth ||= $self->prepare($pd_sql);
-	  
+
 	  foreach my $probe_analysis(@panals){
 		my ($analysis_id, $score, $cs_id) = @{$probe_analysis};
 		$cs_id ||=0;#NULL
-		
+
 		$pd_sth->bind_param(1, $probe->dbID(),  SQL_INTEGER);
 		$pd_sth->bind_param(2, $analysis_id,    SQL_INTEGER);
 		$pd_sth->bind_param(3, $score,          SQL_VARCHAR);
 		$pd_sth->bind_param(4, $cs_id,          SQL_INTEGER);
 		$pd_sth->execute();
-		
+
 	  }
 	}
   }

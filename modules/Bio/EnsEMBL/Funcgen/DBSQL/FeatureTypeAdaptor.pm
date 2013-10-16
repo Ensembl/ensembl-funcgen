@@ -59,19 +59,19 @@ use vars qw(@ISA);
 
 #Regulatory evidence information
 
-my %regulatory_evidence_info = 
+my %regulatory_evidence_info =
   (
-   core => 
+   core =>
    {
     name      => 'Open chromatin & TFBS',
     long_name => 'Open chromatin & Transcription factor binding sites',
     label     => 'DNase1 & TFBS',
     classes   => ['Open Chromatin',
-                  'Transcription Factor', 
+                  'Transcription Factor',
                   'Transcription Factor Complex'],
    },
-   
-   non_core => 
+
+   non_core =>
    {
     name      => 'Histones & polymerases',
     long_name => 'Histone modifications & RNA polymerases',
@@ -85,7 +85,7 @@ my %regulatory_evidence_info =
 my %regulatory_evidence_classes;
 
 foreach my $evidence_type(keys %regulatory_evidence_info){
-  
+
   foreach my $class(@{$regulatory_evidence_info{$evidence_type}{classes}}){
     $regulatory_evidence_classes{$class} = $evidence_type;
   }
@@ -127,7 +127,7 @@ sub fetch_by_name{
   $self->bind_param_generic_fetch($class,          SQL_VARCHAR) if $class;
   $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
   my @fts = @{$self->generic_fetch($constraint)};
-  
+
 
   #This can happen if using a redundant name between classes and/or analyses
 
@@ -194,8 +194,8 @@ sub fetch_all_by_class{
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
   Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_association($ext_feature);
-  Description: Fetches all associated FeatureTypes for a given Storable. 
-               Note: Where appropriate, the main FeatureType for a Storable is 
+  Description: Fetches all associated FeatureTypes for a given Storable.
+               Note: Where appropriate, the main FeatureType for a Storable is
                accessible via the feature_type method.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureType objects
   Exceptions : Throws if arg is not valid or stored
@@ -208,10 +208,10 @@ sub fetch_all_by_association{
   my ($self, $storable) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $storable);
-  
+
   $self->_tables([['associated_feature_type', 'aft']]);
   my $table_name = $storable->adaptor->_main_table->[0];
-  
+
   my $constraint = 'aft.feature_type_id=ft.feature_type_id AND aft.table_name="'.$table_name.
 	'" AND aft.table_id='.$storable->dbID;
 
@@ -252,8 +252,8 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( ft.feature_type_id ft.name        ft.class 
-             ft.analysis_id     ft.description ft.so_accession 
+  return qw( ft.feature_type_id ft.name        ft.class
+             ft.analysis_id     ft.description ft.so_accession
              ft.so_name
            );
 }
@@ -274,22 +274,22 @@ sub _columns {
 
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
-	
+
 	my (@result, $ft_id, $name, $class, $anal_id, $desc, $so_acc, $so_name, %analysis_hash);
 	my $anal_a = $self->db->get_AnalysisAdaptor;
-	
+
 	$sth->bind_columns(\$ft_id, \$name, \$class, \$anal_id, \$desc, \$so_acc, \$so_name);
-	
+
 	$analysis_hash{0} = undef;
 
 	  while ( $sth->fetch() ) {
 
 	  $anal_id ||= 0;
-	  
+
 	  if (! exists $analysis_hash{$anal_id}){
 		$analysis_hash{$anal_id} = $anal_a->fetch_by_dbID($anal_id);
 	  }
-	  
+
 	  my $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
 		(
 		 -dbID         => $ft_id,
@@ -301,7 +301,7 @@ sub _objs_from_sth {
 		 -SO_NAME      => $so_name,
 		 -ADAPTOR      => $self
 		);
-	  
+
 	  push @result, $ftype;
 	}
 
@@ -327,12 +327,12 @@ sub _objs_from_sth {
 
 sub store {
   my ($self, @args) = @_;
-   
+
   #Prepare once for all ftypes
   my $sth = $self->prepare('INSERT INTO feature_type'.
                            '(name, class, analysis_id, description, so_accession, so_name)'.
                            'VALUES (?, ?, ?, ?, ?, ?)');
-  
+
   #Process each ftype
   foreach my $ft (@args) {
 
@@ -340,7 +340,7 @@ sub store {
     if ( ! (ref($ft) && $ft->isa('Bio::EnsEMBL::Funcgen::FeatureType') )) {
       throw('Can only store FeatureType objects, skipping $ft');
     }
-    
+
     #Validate analysis
     my $anal_id;
     my $analysis = $ft->analysis;
@@ -356,7 +356,7 @@ sub store {
     } else {
       #Check for previously stored FeatureType
       my $s_ft = $self->fetch_by_name($ft->name, $ft->class, $ft->analysis);
-      
+
       if (! $s_ft) {
         $sth->bind_param(1, $ft->name,          SQL_VARCHAR);
         $sth->bind_param(2, $ft->class,         SQL_VARCHAR);
@@ -364,29 +364,28 @@ sub store {
         $sth->bind_param(4, $ft->description,   SQL_VARCHAR);
         $sth->bind_param(5, $ft->so_accession,  SQL_VARCHAR);
         $sth->bind_param(6, $ft->so_name,       SQL_VARCHAR);
-        
-        
+
+
         $sth->execute();
-        my $dbID = $sth->{mysql_insertid};
-        $ft->dbID($dbID);
+        $ft->dbID($self->last_insert_id);
         $ft->adaptor($self);
-      } 
+      }
       else {
         $ft = $s_ft;
-        
+
         #Check other fields match
         my @failed_methods;
-        
+
         for my $method (qw(description so_accession so_name)) {
           #Allow nulls/undefs to match empty strings
           my $ft_val   = $ft->$method   || '';
           my $s_ft_val = $s_ft->$method || '';
-          
+
           if ($ft_val ne $s_ft_val) {
             push @failed_methods, "$method does not match between existing(${s_ft_val}) and new(${ft_val}) FeatureTypes";
           }
         }
-        
+
         if (@failed_methods) {
           #Could throw, but maybe easier to patch after import?
           warn("Used existing FeatureType with disparities:\n\t".join("\n\t", @failed_methods));
@@ -401,8 +400,8 @@ sub store {
 =head2 get_regulatory_evidence_classes
 
   Args       : String (optional) - Evidence type e.g. 'core' or 'non_core'
-  Example    : 
-  Description: 
+  Example    :
+  Description:
   Returntype : Arrayref of Strings
   Exceptions : None
   Caller     : web code
@@ -416,14 +415,14 @@ sub store {
 
 sub get_regulatory_evidence_classes{
   my ($self, $type) = @_;
-  
+
   if(defined $type &&
      ! exists $regulatory_evidence_info{$type}){
     throw("The evidence type passed($type) must be one of:\t".
           join(' ',keys(%regulatory_evidence_info)));
   }
-  
-  return ($type) ? $regulatory_evidence_info{$type}{classes} :  
+
+  return ($type) ? $regulatory_evidence_info{$type}{classes} :
     (map { @{$_->{classes}} } values %regulatory_evidence_info);
 }
 
@@ -460,7 +459,7 @@ sub get_regulatory_evidence_label_by_class{
 
   Args       : String (optional) - Regulatory evidence type i.e. core or non_core
   Example    : my %info = %{$ft_adaptor->get_regulatory_evidence_info('core')};
-  Description: Returns all regulatory evidence info keyed on the regulatory 
+  Description: Returns all regulatory evidence info keyed on the regulatory
                evidence type. If the type arg is omited, returns entire info hash
                keyed on evidence types
   Returntype : HASHREF
@@ -522,7 +521,7 @@ sub get_regulatory_evidence_type{
   else{
     throw('You must pass a FeatureType class to get_regulatory_evidence_type');
   }
-  
+
   return $evidence_type;
 }
 
@@ -532,7 +531,7 @@ sub get_regulatory_evidence_type{
 
   Arg [1]    : String - Regulatory build evidence type i.e. core or non_core
   Example    : my @core_fts = @{$ft_adaptor->fetch_all_by_evidence_type('core')};
-  Description: Fetches all FeatureTypes which can be considered for the regulatory 
+  Description: Fetches all FeatureTypes which can be considered for the regulatory
                build based on their evidence type. Core FeatureTypes are used to
                construct the core regions of RegulatoryFeatures (e.g. TFs, DNase1
                etc.), and non_core are used to construct the bound regions.
@@ -546,7 +545,7 @@ sub get_regulatory_evidence_type{
 sub fetch_all_by_evidence_type{
   my ($self, $etype) = @_;
 
-  if(! (defined $etype && 
+  if(! (defined $etype &&
         exists $regulatory_evidence_info{$etype}) ){
     throw("$etype must be one of the valid evidence types:\t".
           join(' ', keys %regulatory_evidence_info));

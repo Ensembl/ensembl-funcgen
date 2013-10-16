@@ -77,7 +77,7 @@ sub fetch_by_type_experimental_chip_id {
     $self->bind_param_generic_fetch($ec_id,     SQL_INTEGER);
     $self->bind_param_generic_fetch($type,      SQL_VARCHAR);
 
-      
+
     return $self->generic_fetch($constraint);
   }
 
@@ -158,7 +158,7 @@ sub fetch_all_by_experimental_chip_dbID {
     #		WHERE c.experimental_chip_id = ec.experimental_chip_id
     #        AND ec.experimental_chip_id = $ec_dbid
     #	");
-    
+
 
     my $constraint = "c.experimental_chip_id=$ec_dbid";
 
@@ -166,8 +166,8 @@ sub fetch_all_by_experimental_chip_dbID {
 
 
     #$sth->execute();
-    
-    
+
+
     #while ($chan_id = $sth->fetchrow()){
     #	  push @results, $self->fetch_by_dbID($chan_id);
     #	      }
@@ -264,11 +264,11 @@ sub _columns {
 
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
-	
+
 	my (@result, $ec_id, $chan_id, $sample_id, $type, $dye);
-	
+
 	$sth->bind_columns(\$chan_id, \$ec_id, \$sample_id, \$dye, \$type);
-	
+
 	while ( $sth->fetch() ) {
 	  my $chan = Bio::EnsEMBL::Funcgen::Channel->new(
 							 -DBID                 => $chan_id,
@@ -278,9 +278,9 @@ sub _objs_from_sth {
 							 -DYE                  => $dye,
 							 -ADAPTOR              => $self,
 							);
-	  
+
 	  push @result, $chan;
-	  
+
 	}
 	return \@result;
 }
@@ -305,44 +305,43 @@ sub _objs_from_sth {
 sub store {
   my $self = shift;
   my @args = @_;
-    
+
   my $sth = $self->prepare("
 			INSERT INTO channel
 			(experimental_chip_id, sample_id, dye, type)
 			VALUES (?, ?, ?, ?)");
-  
-  
+
+
   foreach my $chan (@args) {
     throw('Can only store Channel objects') if ( ! $chan->isa('Bio::EnsEMBL::Funcgen::Channel'));
-    
+
     if (!( $chan->dbID() && $chan->adaptor() == $self )){#use is_stored?
-      
-      
+
+
       my $s_chan = $self->fetch_by_type_experimental_chip_id($chan->type(), $chan->experimental_chip_id());
       throw("Channel already exists in the database with dbID:".$s_chan->dbID().
 	    "\nTo reuse/update this Channel you must retrieve it using the ChannelAdaptor".
 	    "\nMaybe you want to use the -recover option?") if $s_chan;
-      
+
       #if(! $s_chan){
       $sth->bind_param(1, $chan->experimental_chip_id(),  SQL_INTEGER);
       $sth->bind_param(2, $chan->sample_id(),             SQL_VARCHAR);
       $sth->bind_param(3, $chan->dye() ,                  SQL_VARCHAR);
       $sth->bind_param(4, $chan->type(),                  SQL_VARCHAR);
-         
+
       $sth->execute();
-      my $dbID = $sth->{'mysql_insertid'};
-      $chan->dbID($dbID);
+      $chan->dbID($self->last_insert_id);
       $chan->adaptor($self);
       #}
       #else{
       #  #do some status checks here, check IMPORTED
       #  #Need to account for recover in Importer?
       #  $chan = $s_chan;
-      
+
       #  my @states = @{$self->db->fetch_all_states('channel', $chan->dbID())};
-      
+
       #  #need better id than dbID?
-      #  warn("Using previously stored Channel (".$chan->experimental_chip_id().":".$chan->type().") with states\t@states\n"); 
+      #  warn("Using previously stored Channel (".$chan->experimental_chip_id().":".$chan->type().") with states\t@states\n");
       #}
     }else{
       #assume we want to update the states
@@ -350,8 +349,8 @@ sub store {
       $self->store_states($chan);
     }
   }
-  
-  return \@args; 
+
+  return \@args;
 }
 
 
