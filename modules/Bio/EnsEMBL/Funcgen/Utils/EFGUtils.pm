@@ -46,40 +46,40 @@ require Exporter;
 
 @EXPORT_OK = qw(
   add_external_db
-  add_hive_url_to_meta      
-  are_valid
-  assert_ref_do     
-  assert_refs               
-  assert_refs_do  
+  add_hive_url_to_meta
+  assert_ref_do
+  assert_refs
+  assert_refs_do
   backup_file
   convert_bam_to_sam
-  create_Storable_clone 
+  create_Storable_clone
+  dump_data
   file_suffix_parse
   generate_slices_from_names
-  get_current_regulatory_input_names          
+  get_current_regulatory_input_names
   get_date
   get_files_by_formats
-  get_file_format           
+  get_file_format
   get_month_number
-  get_my_scalar_name        
-  get_feature_file  
+  get_my_scalar_name
+  get_feature_file
   gunzip_file
-  is_bed            
-  is_gzipped  
-  is_sam        
-  mean              
-  median  
-  open_file   
-  parse_DB_url    
+  is_bed
+  is_gzipped
+  is_sam
+  mean
+  median
+  open_file
+  parse_DB_url
   path_to_namespace
-  process_bam 
+  process_bam
   process_sam_bam
-  run_system_cmd 
+  run_system_cmd
   scalars_to_objects
   set_attributes_by_my_scalar_names
   species_chr_num
   species_name
-  strip_param_args  
+  strip_param_args
   strip_param_flags
   url_from_DB_params
   validate_checksum
@@ -87,12 +87,12 @@ require Exporter;
   write_checksum
   );
 
-#These after @ISA and @EXPORT_OK to avoid warnings               
+#These after @ISA and @EXPORT_OK to avoid warnings
 use warnings;
 use strict;
 
-use Digest::MD5;               
-               
+use Digest::MD5;
+
 use Bio::EnsEMBL::Utils::Exception qw( throw      );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Scalar::Util                   qw( blessed    );
@@ -127,25 +127,25 @@ sub add_external_db{
 
 
 #Move to PipelineUtils?
- 
+
 sub add_hive_url_to_meta {
-  my ($url, $db) = @_;  
- 
+  my ($url, $db) = @_;
+
   #VALIDATE ARGS
   parse_DB_url($url);
   assert_ref($db, 'Bio::EnsEMBL::DBSQL::DBAdaptor', 'db');#restrict this to Funcgen?
-  
+
   my $mc         = $db->get_MetaContainer;
   my $meta_key = 'hive_url';
-  
+
   my $meta_value = $mc->single_value_by_key($meta_key);
 
-  if( ! defined $meta_value){ #Store the new meta entry    
+  if( ! defined $meta_value){ #Store the new meta entry
     #Add key via API to store with appropriate species_id
     eval { $mc->store_key_value($meta_key, $url); };
-    
+
     if($@){
-      throw("Failed to store hive url meta entry:\t$meta_key\t$url\n$@");  
+      throw("Failed to store hive url meta entry:\t$meta_key\t$url\n$@");
     }
   }
   elsif($meta_value ne $url){
@@ -154,59 +154,10 @@ sub add_hive_url_to_meta {
       'Please use that hive DB or drop that pipeline, or remove the meta entry');
   }
   #else meta values match and all is good.
-  
+
   return;
 }
 
-
-=head2 are_valid
-
-  Arg [1]    : String - Namespace of object class
-  Arg [2]    : ARRAYREF of objects to be tested
-  Arg [3]    : String (optional) - Method name to call on each object.
-  Arg [4]    : Bio::EnsEMBL::Funcen::DBSQL::DBAdaptor (optional)
-  Example    : $db->are_valid('Bio::EnsEMBL::Funcgen::ResultSet', \@rsets, undef, $db);
-  DESCRIPTION: Validate objects namespaces and optionally (if a DBADaptor is passed)
-               whether they are stored. If method name arg is defined, this will be called
-               on each object to populate the return value array.
-  Returntype : ARRAYREF - contents defined by optional method name arg
-  Exceptions : Throws if object list is not an ARRAY with at least one element
-               Throws if an object does not inherit from the given class
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-#add method params here?
-
-sub are_valid {
- my ($class, $obj_list, $method_name, $db) = @_;
-
-  assert_ref($obj_list, 'ARRAY', 'object list');
-  
-  if(scalar(@$obj_list) == 0){
-   throw('Objects Arrayref is empty'); 
-  }
-  
-  my @return_vals;
- 
-  foreach my $obj (@$obj_list) {
-    
-    if($db){
-      $db->is_stored_and_valid($class, $obj);
-    }
-    
-    if(! $method_name){
-      assert_ref($obj, $class, 'object');
-    }
-    else{
-      push @return_vals, assert_ref_do($obj, $class, $method_name, 'object');
-    }
-  }
-
-  return \@return_vals;
-}
- 
 
 
 =head2 assert_ref_do
@@ -218,7 +169,7 @@ sub are_valid {
                 C<-Unknown->.
   Description : A subroutine which checks to see if the given object/ref is
                 implements the given method. Will throw exceptions.
-                
+
   Returntype  : Boolean; true if we managed to get to the return
   Example     : assert_ref_can($gene, 'dbID');
   Exceptions  : If the reference is not defined, if the object does not
@@ -236,20 +187,20 @@ sub assert_ref_do {
   #Can't do this as we expect a method return value
   #return 1 unless $ASSERTIONS;
   my $value;
-  
+
   $attribute_name ||= '-Unknown-';
-  throw('No method given') if ! defined $method; 
+  throw('No method given') if ! defined $method;
   throw('No expected type given') if ! defined $expected;
   throw "The given reference $attribute_name is not defined" unless defined $ref;
-  throw "The given reference $attribute_name is not blessed" unless blessed($ref); 
+  throw "The given reference $attribute_name is not blessed" unless blessed($ref);
   throw("${attribute_name}'s type '${ref}' is not an ISA of '${expected}'") if ! $ref->isa($expected);
 
   if(! $ref->can($method)) {
     my $str_ref = ref($ref);
     throw sprintf(q{The given blessed reference '%s' for attribute '%s' does not implement the method '%s'}, $str_ref, $attribute_name, $method);
   }
-  
-  
+
+
   return $ref->$method;
 }
 
@@ -258,14 +209,14 @@ sub assert_ref_do {
 
 sub assert_refs {
   my ($refs, $expected, $attribute_name) = @_;
-  
-  my $array_attr_name = (defined $attribute_name) ? 
+
+  my $array_attr_name = (defined $attribute_name) ?
     $attribute_name.' array' : undef;
-    
-  assert_ref($refs, 'ARRAY', $array_attr_name); 
+
+  assert_ref($refs, 'ARRAY', $array_attr_name);
   map { assert_ref($_, $expected, $attribute_name) } @$refs;
-   
-  return 1; 
+
+  return 1;
 }
 
 
@@ -279,7 +230,7 @@ sub assert_refs {
   Description : A subroutine which checks to see if the given objects/refs are
                 what you expect. This behaves in an identical manner as
                 C<assert_ref> does works on an array ref of references
-                
+
                 You can turn assertions off by using the global variable
                 $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS = 0
   Returntype  : Boolean; true if we managed to get to the return
@@ -294,15 +245,15 @@ sub assert_refs {
 
 sub assert_refs_do {
   my ($refs, $expected, $method, $attribute_name) = @_;
-  
-  my $array_attr_name = (defined $attribute_name) ? 
+
+  my $array_attr_name = (defined $attribute_name) ?
     $attribute_name.' array' : undef;
-    
-  assert_ref($refs, 'ARRAY', $array_attr_name); 
+
+  assert_ref($refs, 'ARRAY', $array_attr_name);
   my @values;
   map { push @values, assert_ref_do($_, $expected, $method, $attribute_name) } @$refs;
-   
-  return \@values; 
+
+  return \@values;
 }
 
 
@@ -344,9 +295,9 @@ sub backup_file{
 
 sub create_Storable_clone {
   my ($obj, $params_hash) = @_;
-  
+
   assert_ref($obj, 'Bio::EnsEMBL::Funcgen::Storable', 'object');
-  
+
   if(! $obj->can('reset_relational_attributes')){
      throw('You must pass a Bio::EnsEMBL::Funcgen::Storable which can '.
       'call the reset_relational_attributes method');
@@ -362,11 +313,11 @@ sub create_Storable_clone {
 
 sub file_suffix_parse{
   my $filepath = $_[0];
-  
+
   my $file_name                  = fileparse($filepath);
   (my $file_prefix = $file_name) =~ s/\.[a-zA-Z0-9]$//;
   (my $suffix      = $file_name) =~ s/$file_prefix\.//;
-    
+
   return ($file_prefix, $suffix);
 }
 
@@ -595,12 +546,12 @@ sub get_date{
 
   #This seems over-engineered! But we definitely need the ability to request two formats at the same time
   #to prevent parallel requests for the same file
-  
+
   #Filtering will normally be done outside of this method, by the alignment pipeline
   #however, we must support it here incase we need to refilter, or we get alignment files
   #supplied outside of the pipeline
-  
- 
+
+
 #what about if we only have the unfiltered file
 #but we ask for filtered
 #should we automatically filter?
@@ -611,197 +562,197 @@ sub get_date{
 #would need to expose out_path as a parameter
 #which would then need to be used as the in path for all subsequent conversion
 #No this wouldn't work as it would change the in file to contain unfiltered
-#which might not be the case.  
+#which might not be the case.
 
 sub get_files_by_formats {
-  my ($path, $formats, $params) = @_;   
-  assert_ref($formats, 'ARRAY'); 
+  my ($path, $formats, $params) = @_;
+  assert_ref($formats, 'ARRAY');
   $params ||= {};
-  assert_ref($params, 'HASH'); 
+  assert_ref($params, 'HASH');
   $params->{sort}     = 1 if ! defined $params->{sort};     #Always sort if we call process_$format
   #process_$format will never be called if $format file exists, hence no risk of a redundant sort
   #for safety, only set this default if filter_from_format is defined? in block below
-  
+
   $params->{checksum} = 1 if ! defined $params->{checksum}; #validate and check
 
   if(scalar(@$formats) == 0){
-    throw('Must pass an Arrayref of file formats/suffixes in preference order e.g. [\'sam\', \'bed\']');  
+    throw('Must pass an Arrayref of file formats/suffixes in preference order e.g. [\'sam\', \'bed\']');
   }
-  
+
   my %conversion_paths = ( bam => ['bam'],
                            sam => ['bam', 'sam'],
-                           bed => ['bam', 'sam', 'bed'], 
+                           bed => ['bam', 'sam', 'bed'],
                            #we always need the target format as the last element
                            #such that we can validate the filter_format e.g. for bam
                            #if the path array only has one element, it must match the key
                            #and this constitues calling filter_bam
                            #or if filter_format not set, just grabbing the bam file
-                           
+
                            #This approach prevents being able to | bam sort/filters through
                            #to other cmds, so may be slower if we don't need to keep intermediate files?
-                           
+
                            #Could also have non-bam rooted paths in here
                            #and maybe multiple path with different roots?
                          );
-      
+
   my $can_convert           = 0;
-  my $clean_filtered_format = 0; 
-  my $filter_format         = $params->{filter_from_format};  
-  my $all_formats           = $params->{all_formats}; 
+  my $clean_filtered_format = 0;
+  my $filter_format         = $params->{filter_from_format};
+  my $all_formats           = $params->{all_formats};
   my $done_formats          = {};
   my ($files, @feature_files);
- 
+
   #Add filter format if it is not in $formats
   if($filter_format &&
-     (! grep(/^$filter_format$/, @$formats) ) ){ 
+     (! grep(/^$filter_format$/, @$formats) ) ){
     unshift @$formats, $filter_format;
     $clean_filtered_format = 1;
   }
-      
+
   #Attempt to get the first or all formats
   foreach my $format(@$formats){
     my $can_filter = 0;
-  
-    #Do this before simple file test as it is quicker     
+
+    #Do this before simple file test as it is quicker
     if(grep(/^${format}$/, (keys %$done_formats))){ #We have already created this format
-      next;  
-    }       
- 
+      next;
+    }
+
     #Simple/quick file test first before we do any conversion nonsense
     #This also means we don't have to have any conversion config to get a file which
     if(! defined $filter_format){
-      
+
        if(my $from_path = check_file($path.'.'.$format, 'gz', $params)){#we have found the required format
-          $done_formats->{$format} = $from_path;   
+          $done_formats->{$format} = $from_path;
           next;
-       }   
+       }
     }
-    
- 
+
+
     ### Validate we can convert ###
-    if(exists $conversion_paths{$format}){  
+    if(exists $conversion_paths{$format}){
       $can_convert = 1;
-              
+
       if(defined $filter_format){
-         
+
         if( ($conversion_paths{$format}->[0] ne $filter_format) &&
             ($all_formats) ){
-          throw("Cannot filter $format from $filter_format for path:\n\t$path");     
+          throw("Cannot filter $format from $filter_format for path:\n\t$path");
         }
         elsif((scalar(@{$conversion_paths{$format}}) == 1 ) ||
-              (! $clean_filtered_format)){     
+              (! $clean_filtered_format)){
           my $filter_method = 'process_'.$filter_format;
           $can_filter = 1;
-        
+
           #Sanity check we can call this
           if(! ($filter_method = Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($filter_method))){
             throw("Cannot call $filter_method for path:\n\t$path\n".
               'Please add method or correct conversion path config hash');
-          }        
-  
+          }
+
           #Set outfile here so we don't have to handle unfiltered in process_sam_bam
           #don't add it to $params as this will affected all convert methods
-          (my $outpath = $path) =~ s/\.unfiltered$//o;  
-  
+          (my $outpath = $path) =~ s/\.unfiltered$//o;
+
           #$format key is same as first element
-          $done_formats->{$format} = $filter_method->($path.'.'.$filter_format, {%$params, 
-                                                                          out_file => $outpath.'.'.$filter_format} );       
+          $done_formats->{$format} = $filter_method->($path.'.'.$filter_format, {%$params,
+                                                                          out_file => $outpath.'.'.$filter_format} );
            #so we don't try and refilter when calling convert_${from_format}_${to_format}
           delete $params->{filter_from_format};
           undef $filter_format; #Just for safety but not strictly needed
-          $path = $outpath;                  
+          $path = $outpath;
         }
       }
     }
     elsif($all_formats){
       throw("No conversion path defined for $format. Cannot acquire $format file for path:\n\t$path\n".
-        'Please select a supported file format or add config and conversion support methods for $format');  
+        'Please select a supported file format or add config and conversion support methods for $format');
     }
- 
+
     ### Attempt conversion ###
-    if($can_convert){ 
+    if($can_convert){
       #This now assumes that if $filter_format is set
       #convert_${filter_format}_${to_format} provides filter functionality
-  
+
       if(scalar(@{$conversion_paths{$format}}) != 1){      #already handled process_${format} above
         #Go through the conversion path backwards
         #Start at last but one as we have already checked the last above i.e. the target format
         #or start at 0 if we have $filter_format defined
         my $start_i = (defined $filter_format) ? 0 : ($#{$conversion_paths{$format}} -1);
-     
+
         for(my $i = $start_i; $i>=0; $i--){
-          my $from_format = $conversion_paths{$format}->[$i]; 
-  
+          my $from_format = $conversion_paths{$format}->[$i];
+
           #Test for file here if we are not filtering! Else we will always go through
           #other formats and potentially redo conversion if we have tidied intermediate files
           if( (! defined $filter_format) &&
-              (! grep (/^${from_format}$/, keys(%$done_formats)) ) ){                          
+              (! grep (/^${from_format}$/, keys(%$done_formats)) ) ){
             my $from_path = $path.".${from_format}";
-          
+
             if($from_path = check_file($from_path, 'gz', $params)){#we have found the required format
-              $done_formats->{$from_format} = $from_path;   
-              #next; #next $x/$to_format as we don't want to force conversion  
-            }                 
+              $done_formats->{$from_format} = $from_path;
+              #next; #next $x/$to_format as we don't want to force conversion
+            }
           }
-        
-        
+
+
           #find the first one which has been done, or if none, assume the first is present
           if( (grep (/^${from_format}$/, keys(%$done_formats)) ) ||
               $i == 0){
             #then convert that to the next, and so on.
-            for(my $x = $i; $x < $#{$conversion_paths{$format}}; $x++){ 
+            for(my $x = $i; $x < $#{$conversion_paths{$format}}; $x++){
               my $to_format   = $conversion_paths{$format}->[$x+1];
               $from_format    = $conversion_paths{$format}->[$x];
               my $conv_method = 'convert_'.$from_format.'_to_'.$to_format;
-              
+
               #Sanity check we can call this
               if(! ($conv_method = Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($conv_method))){
                 throw("Cannot call $conv_method for path:\n\t$path\n".
                   'Please add method or correct conversion path config hash');
               }
-                
-                
+
+
               $done_formats->{$to_format} = $conv_method->($path.'.'.$from_format, $params);
-              
+
               #Remove '.unfitlered' from path for subsequent conversion
               if(($i==0) &&
                 defined $filter_format){
-                $path =~ s/\.unfiltered$//o;      
-              } 
+                $path =~ s/\.unfiltered$//o;
+              }
             }
-           
+
             last; #We have finished with this $conversion_path{format}
           }
         }
-              
-      
-        if($clean_filtered_format && ($format eq $filter_format)){ 
+
+
+        if($clean_filtered_format && ($format eq $filter_format)){
           #filter_format is not our target format, so we need to keep going
           next; #$format
-        }  
+        }
         elsif(! $all_formats){  #else we have found the most preferable, yay!
           last;  #$format
         }
-      }   
+      }
     }
   } #end foreach my $format
-  
-  
+
+
   #Now clean $done_formats
-  
+
   if($clean_filtered_format){
-   #actually delete filtered file here? 
-    delete $done_formats->{$filter_format};  
+   #actually delete filtered file here?
+    delete $done_formats->{$filter_format};
   }
-  
+
   foreach my $format(keys %$done_formats){
     #doesn't matter about $all_formats here
-    
-    if(! grep(/^${format}$/, @$formats)){ 
-      delete $done_formats->{$format};  
-    }  
+
+    if(! grep(/^${format}$/, @$formats)){
+      delete $done_formats->{$format};
+    }
   }
-  
+
   #test we have somethign to return!?
   #if( scalar(keys %$done_formats) == 0 ){
   #  throw('Failed to find any '.join(', ', @$formats)." files for path:\n\t$path");
@@ -809,7 +760,7 @@ sub get_files_by_formats {
   #don't do this as we may want to test for a filtered file, before attempting a filter
   #from a different path
   #This is caught in get_alignment_files_by_InputSet_formats
-  
+
   return $done_formats;
 }
 
@@ -864,16 +815,16 @@ sub convert_bam_to_sam{
 #Need to implement optional sort_and_filter_sam here?
 
 sub convert_sam_to_bed{
-  my ($sam_file, $params) = @_;  
+  my ($sam_file, $params) = @_;
   my $in_file;
-  
+
   if(! ($in_file = check_file($sam_file, 'gz', $params)) ){
-    throw("Cannot find file:\n\t$sam_file(.gz)");  
+    throw("Cannot find file:\n\t$sam_file(.gz)");
   }
-  
-  (my $bed_file = $in_file) =~ s/\.sam(\.gz)*?$/.bed/;      
+
+  (my $bed_file = $in_file) =~ s/\.sam(\.gz)*?$/.bed/;
   run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -uncompressed -1_based -files $in_file");
-  generate_checksum($bed_file);   
+  generate_checksum($bed_file);
   return $bed_file;
 }
 
@@ -881,45 +832,45 @@ sub convert_sam_to_bed{
 sub write_checksum{
   my ($file_path, $params) = @_;
   my ($signature_file, $digest_method);
-  
+
   if(defined $params){
-    assert_ref($params, 'HASH');  
+    assert_ref($params, 'HASH');
     $signature_file = $params->{signature_file};
     $digest_method  = $params->{digest_method};
   }
-  
+
   $digest_method ||= 'hexdigest';
-  my $md5_sig  = generate_checksum($file_path, $digest_method); 
+  my $md5_sig  = generate_checksum($file_path, $digest_method);
   my $file_name = fileparse($file_path);
-  
+
   if(! defined $signature_file){
-    $signature_file = $file_path.'.CHECKSUM';  
+    $signature_file = $file_path.'.CHECKSUM';
   }
-    
+
   my $checksum_row = $md5_sig."\t".$file_name."\t".$digest_method;
-  
+
   #Update or create entry in signature_file
-  my $sigfile_row; 
+  my $sigfile_row;
   if(-f $signature_file){
-    $sigfile_row = `grep '$file_name' $signature_file` || 
+    $sigfile_row = `grep '$file_name' $signature_file` ||
                     die("Failed to grep checksum signature file:\t$signature_file");
   }
-   
+
   if($sigfile_row){ #Update entry
     my $sed_string = "sed -r 's/^.*[[:space:]]$file_name";
-  
+
     #handle absent digest method here
     if($sigfile_row =~ /${digest_method}$/){
-      $sed_string .= "[[:space:]]$digest_method";  
+      $sed_string .= "[[:space:]]$digest_method";
     }
-     
+
     run_system_cmd("${sed_string}\$/$checksum_row/' $signature_file > ${signature_file}.tmp; ".
-                   "mv ${signature_file}.tmp $signature_file");     
+                   "mv ${signature_file}.tmp $signature_file");
   }
   else{#create/append to file
     run_system_cmd("echo '$checksum_row' >> $signature_file");
   }
-  
+
   return $md5_sig; #or return sig file?
 }
 
@@ -927,19 +878,19 @@ sub write_checksum{
 sub generate_checksum{
   my ($file, $digest_method) = @_;
   $digest_method ||= 'hexdigest';
-  
+
   my $ctx = Digest::MD5->new;
 
   if(! $ctx->can($digest_method)){
     throw("Digest::MD5 cannot call method $digest_method, ".
-     'please choose a valid digest method or omit for default hexdigest method');  
+     'please choose a valid digest method or omit for default hexdigest method');
   }
 
   open(FILE, $file) or throw("Cannot open file for md5 digest:\t$file");
   $ctx->addfile(*FILE);
   my $md5_sig = $ctx->$digest_method;
   close(FILE);
-  
+
   return $md5_sig;
 }
 
@@ -950,57 +901,57 @@ sub generate_checksum{
 sub validate_checksum{
   my ($file_path, $params) = @_;
   my ($signature_file, $digest_method);
-  
+
   if(defined $params){
-    assert_ref($params, 'HASH');  
+    assert_ref($params, 'HASH');
     $signature_file = $params->{signature_file};
     $digest_method  = $params->{digest_method};
   }
-  
+
   my $file_name = fileparse($file_path);
-     
+
   if(! defined $signature_file){
     $signature_file = $file_path.'.CHECKSUM';
   }
-  
+
   if(! -f $signature_file){
-    throw("Failed to find checksum file:\t$signature_file\nPlease specify one as an argument, or create default file");  
+    throw("Failed to find checksum file:\t$signature_file\nPlease specify one as an argument, or create default file");
   }
 
   my $checksum_row = `grep -E '[[:space:]]$file_name\[[:space:]]*.*\$' $signature_file` ||
                       die("Cannot acquire $file_name checksum info from:\t$signature_file");
   my ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
-                     
-  
+
+
   if((! defined $sig_file_name) ||
      ($sig_file_name ne $file_name)){
-    throw("Failed to find $file_name entry in checksum signature file:\n\t$signature_file");    
+    throw("Failed to find $file_name entry in checksum signature file:\n\t$signature_file");
   }
-  
+
   #default to digest method in file
   $digest_method     ||= $sig_digest_method;
   #Also need to account for absent $sig_digest
   $sig_digest_method ||= $digest_method;
-  
-    
+
+
   if(defined $sig_digest_method){
     if($digest_method ne $sig_digest_method){
     throw("Specified digest method($digest_method) does not match method found in ".
-      "checksum signature file($sig_digest_method):\n\t$file_path\n\t$signature_file");  
+      "checksum signature file($sig_digest_method):\n\t$file_path\n\t$signature_file");
     }
   }
   else{
-    warn "Could not find digest method in checksum signature file, assuming $digest_method"; 
+    warn "Could not find digest method in checksum signature file, assuming $digest_method";
   }
-  
+
   my $new_md5_sig = generate_checksum($file_path, $digest_method);
-  
+
   if($md5_sig ne $new_md5_sig){
     #This could be due to mismatched digest methods
     throw("MD5 ($digest_method) checksum does not match signature file for:".
       "\n\tFile:\t\t$file_path\nSignature file:\t$signature_file");
   }
-  
+
   return $md5_sig;
 }
 
@@ -1050,10 +1001,10 @@ sub get_month_number{
 sub gunzip_file {
   my ($self, $filepath) = @_;
   my $was_gzipped = 0;
-  
+
   if( is_gzipped($filepath) ){
-    system("gunzip $filepath") && throw("Failed to gunzip file:\n$filepath\n$@"); 
-    $filepath =~ s/\.gz$//; 
+    system("gunzip $filepath") && throw("Failed to gunzip file:\n$filepath\n$@");
+    $filepath =~ s/\.gz$//;
     $was_gzipped = 0;
   }
 
@@ -1113,17 +1064,17 @@ sub is_bed {
 
 sub convert_strand_from_bed {
   my $strand = $_[0];
-  
+
   if(! defined $strand){
-   throw('Strand argument is not defined'); 
+   throw('Strand argument is not defined');
   }
-  
+
   if(! exists $bed_strands{$strand}){
     throw('Strand argument is not a valid bed strand, should be one of: '.
-      join(' ', keys %bed_strands));  
+      join(' ', keys %bed_strands));
   }
-  
-  return $bed_strands{$strand}; 
+
+  return $bed_strands{$strand};
 }
 
 
@@ -1225,13 +1176,13 @@ sub median{
 
   Arg [1]    : String - Module path
   Example    : my $path = '/my/module.pm';
-               eval { require $path }; 
-               
+               eval { require $path };
+
                if(! $@){
-                 my $namespace = path_to_namespace($path);     
+                 my $namespace = path_to_namespace($path);
                  my $obj       = $namespace->new();
                }
-                
+
   Description: Simply converts a path to a namespace. Useful when you have used
                required a module dynamically rather than 'using' at compile time.
   Returntype : String
@@ -1243,14 +1194,14 @@ sub median{
 
 sub path_to_namespace {
   my $path = $_[0];
-  
+
   if(! defined $path){
    throw('No path argument defined');
   }
 
   $path =~ s/[\/]+/::/g;
   $path =~ s/\.pmc*$//;
-  return $path;  
+  return $path;
 }
 
 
@@ -1275,22 +1226,22 @@ sub open_file{
 
   if(! -d $dir){
     eval { make_path($dir, $mkpath_opts) };
-    
+
     if($@){
       throw("Failed to make_path:\t$dir\n$@");
     }
   }
- 
+
   #my $fh;
-  
+
   #Test exists and is readable/writable first to avoid zombie?
-  
+
   my $fh = new FileHandle "$operator";
   #warn "operator is $operator";
 
-  #open(my $fh, $operator) or die("Failed to open:\t$operator"); 
+  #open(my $fh, $operator) or die("Failed to open:\t$operator");
 
-  
+
 
   #This does not catch errors when piping then redirecting
   #as the progam will have opened sucessfully
@@ -1298,7 +1249,7 @@ sub open_file{
   #This simply carries on with the reset of the script
   #won't be caught until we close the file descriptor
   #Which is a little late, and we don't catch error codes on close yet
- 
+
   if (! defined $fh) {
     croak("Failed to open $operator");
   }
@@ -1332,12 +1283,12 @@ sub open_file{
 
 sub parse_DB_url {
   my $url = $_[0];
-  
+
   my ($dbtype, $user, $pass, $host, $dbname, $port);
 
   if($url =~ /(.*):\/\/(.*):(.*)@(.*):(.*)\/(.*)/){
     ($dbtype, $user, $pass, $host, $port, $dbname) = ($1, $2, $3, $4, $5, $6);
-     
+
     if(! ($user && $host && $dbname)){
       die("The DB url must contain at least user, host and dbname elements i.e.\n\t".
         'DBTYPE://USER:[PASS]@DBHOST:[PORT]/DBNAME');
@@ -1345,8 +1296,8 @@ sub parse_DB_url {
   }
   else{
     throw("Unrecognized DB url format:\t$url\nShould be:\n\t".
-      'DBTYPE://USER:[PASS]@DBHOST:[PORT]/DBNAME'); 
-  } 
+      'DBTYPE://USER:[PASS]@DBHOST:[PORT]/DBNAME');
+  }
 
   return [$user, $pass, $host, $dbname, $port, $dbtype];
 }
@@ -1373,7 +1324,7 @@ sub parse_DB_url {
 
 sub run_system_cmd{
   my ($command, $no_exit) = @_;
-  
+
 
   my $redirect = '';
 
@@ -1455,7 +1406,7 @@ sub run_system_cmd{
 sub scalars_to_objects{
   my ($db, $class_name, $fetch_method, $scalars) = @_;
   assert_ref($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor', 'db');
-  
+
   if(! ((defined $scalars && (ref($scalars) eq 'ARRAY')) &&
          defined $class_name &&
          defined $fetch_method) ){
@@ -1491,7 +1442,7 @@ sub scalars_to_objects{
 # 1 add support for filter config i.e. which seq_regions to filter in/out
 # 2 Sorted but unfiltered and unconverted files may cause name clash here
 #   Handle this in caller outside of EFGUtils, by setting out_file appropriately
-# 3 add a DESTROY method to remove any tmp sorted files which may persist after an 
+# 3 add a DESTROY method to remove any tmp sorted files which may persist after an
 #   ungraceful exit. These can be added to a global $main::files_to_delete array
 #   which should then also be undef'd in DESTROY so they don't persisnt to another instance
 
@@ -1503,11 +1454,11 @@ sub scalars_to_objects{
 sub process_sam_bam {
   my ($sam_bam_path, $params) = @_;
   my $in_file;
-  
+
   if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
-    throw("Cannot find file:\n\t$sam_bam_path");  
+    throw("Cannot find file:\n\t$sam_bam_path");
   }
-  
+
   $params ||= {};
   assert_ref($params, 'HASH');
   my $out_file      = $params->{out_file}           if exists $params->{out_file};
@@ -1515,81 +1466,81 @@ sub process_sam_bam {
   my $filter_format = $params->{filter_from_format} if exists $params->{filter_from_format};
   my $fasta_fai     = $params->{ref_fai}            if exists $params->{ref_fai};
   my $out_format    = $params->{output_format}      if exists $params->{output_format};
-  $out_format     ||= 'sam';   
+  $out_format     ||= 'sam';
   my $fasta_fai_opt = '';
-  
+
   if (defined $fasta_fai) {
     validate_path($fasta_fai);     $fasta_fai_opt = " -t $fasta_fai ";
     #-t spec is now optional, as not integrating the header into each file
     #is risky as it could get regenerated and be mismatched
     #which may produce unpredicatable behaviour or faults if the header
-    #doesn't match the data. 
+    #doesn't match the data.
   }
- 
+
   #sam defaults
   my $in_format = 'sam';
   my $out_flag   = '';
   my $in_flag   = 'S';
-   
+
   if($out_format eq 'bam'){
-    $out_flag = 'b'; 
+    $out_flag = 'b';
   }
   elsif($out_format ne 'sam'){
-    throw("$out_format is not a valid samtools output format"); 
+    throw("$out_format is not a valid samtools output format");
   }
-    
-  if($in_file =~ /\.bam$/o){     # bam (not gzipped!)   
+
+  if($in_file =~ /\.bam$/o){     # bam (not gzipped!)
     $in_format = 'bam';
     $in_flag   = '';
-  } 
+  }
   elsif($in_file !~ /\.sam(\.gz)*?$/o){ # sam (maybe gzipped)
-    throw("Unrecognised sam/bam file:\t".$in_file); 
+    throw("Unrecognised sam/bam file:\t".$in_file);
   }
 
   #This is odd, we really only need a flag here
   #but we already have the filter_from_format in the params
-  if(defined $filter_format && 
+  if(defined $filter_format &&
      ($filter_format ne $in_format) ){
-    throw("Input filter_from_format($filter_format) does not match input file:\n\t$in_file");  
+    throw("Input filter_from_format($filter_format) does not match input file:\n\t$in_file");
   }
 
- 
-  if(! $out_file){   
-    ($out_file = $in_file) =~ s/\.${in_format}(.gz)*?$/.${out_format}/;      
-    
-    if(defined $filter_format){ 
+
+  if(! $out_file){
+    ($out_file = $in_file) =~ s/\.${in_format}(.gz)*?$/.${out_format}/;
+
+    if(defined $filter_format){
       $out_file =~ s/\.unfiltered//o;  #This needs doing only if is not defined
     }
   }
-  
+
   #Sanity checks
   (my $unzipped_source = $in_file) =~ s/\.gz$//o;
   (my $unzipped_target = $out_file)     =~ s/\.gz$//o;
-   
+
   if($unzipped_source eq $unzipped_target){
     #This won't catch .gz difference
     #so we may have an filtered file which matches the in file except for .gz in the infile
-    throw("Input and output (unzipped) files are not allowed to match:\n\t$in_file");   
+    throw("Input and output (unzipped) files are not allowed to match:\n\t$in_file");
   }
-  
+
   if($filter_format){
-      
+
     if($in_file !~ /unfiltered/o){
-      warn("Filter flag is set but input file name does not contain 'unfiltered':\n\t$in_file");  
+      warn("Filter flag is set but input file name does not contain 'unfiltered':\n\t$in_file");
     }
-      
+
     if($out_file =~ /unfiltered/o){
-      throw("Filter flag is set but output files contains 'unfiltered':\n\t$in_file");  
-    }        
+      throw("Filter flag is set but output files contains 'unfiltered':\n\t$in_file");
+    }
   }
   elsif(! $sort &&
         ($in_format eq $out_format) ){
-    throw("Parameters would result in no change for:\n\t$in_file");        
+    throw("Parameters would result in no change for:\n\t$in_file");
   }
 
 
   #Could do all of this with samtools view?
-  #Will fail if header is absent and $fasta_fai not specified 
+  #Will fail if header is absent and $fasta_fai not specified
   #$fasta_fai is ignored if infile header present
   #Doing it like this would integrate the fai into the output file, which is probably what we want?
   #This would also catch the absent header in the first command rather than further down the pipe
@@ -1597,16 +1548,16 @@ sub process_sam_bam {
 
   #This can result in mismatched headers, as it does seem like the fai file is used rather than the in file header
   #here, at least for bams
-  
+
   #We need to test whether it has a header or not before we do this!
   my ($fai_header, $in_file_header);
-  
+
   eval { $in_file_header =`samtools view -H $in_file` };
-  
+
   #$! not $@ here which will be null string
-  
+
   if($!){
-    
+
     if(! defined $fasta_fai){
       throw("Could not find an in file header or a sam_ref_fai for:\t$in_file$!");
     }
@@ -1614,37 +1565,37 @@ sub process_sam_bam {
   elsif(defined $fasta_fai){
     #Now what do we do?
     #will -H now return the faig header, or the infile header?
-    #I think the fai header (at least for bam) 
-    
-    $fai_header = `samtools view -H $fasta_fai_opt $in_file`; 
-    
+    #I think the fai header (at least for bam)
+
+    $fai_header = `samtools view -H $fasta_fai_opt $in_file`;
+
     if($!){
-      throw("Failed to identify view valid header from:\t$fasta_fai\n$!"); 
+      throw("Failed to identify view valid header from:\t$fasta_fai\n$!");
     }
-    
+
     #Just make sure they are the same
     if($fai_header ne $in_file_header){
       warn("CHANGE THIS TO A THROW WHEN WE HAVE FINISHED DEV! Found mismatched infile and fai headers for:\n\t$in_file\n\t$fasta_fai");
-      #should this throw or just default to in file?  
+      #should this throw or just default to in file?
       #shoudl probably give the options to reheader and sub out this whole compare_sam_header thing
       #reheader mode, would that all old @SQ are present in new fai header?
       #can we get the header form the fai by simply providing an empty file?
       #cat '' | samtools view -HSt fasta.fai -
-      
+
     }
-    
+
     #Just undef this for simplicity
     $fasta_fai_opt = '';
   }
-  
- 
+
+
   my $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file "; # Incorporate header into file
-  
-  if($filter_format){   
+
+  if($filter_format){
     $cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
     " grep -vE '^[^[:space:]]+[[:blank:]][^[:space:]]+[[:blank:]][^[:space:]]+\:[^[:space:]]+\:MT\:' ". #Filter MTs
     " | grep -v '^MT' | grep -v '^chrM' ";                                                              #Filter more MTs
-  } 
+  }
 
   #-u uncompressed bam (as we are piping)
   #-S SAM input
@@ -1652,11 +1603,11 @@ sub process_sam_bam {
   #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
   #This is interpreted by bash but probably better to specify /dev/stdin?
   #for clarity and as some programs can treat is as STDOUT or anything else?
-  #-b output is bam  
+  #-b output is bam
   (my $tmp_bam = $in_file) =~ s/\.$in_format//;
   my $sorted_prefix = $tmp_bam.".sorted_$$";
   $tmp_bam .= ($sort) ? ".sorted_$$.bam" : '.tmp.bam';
-  
+
   #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
   #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
   #We could also test the sorted flag before doing this?
@@ -1667,10 +1618,10 @@ sub process_sam_bam {
   #@HD    VN:1.0    SO:coordinate
   #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
   #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
-  #mailed Heng Lee regarding this  
+  #mailed Heng Lee regarding this
   $cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
-  $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;      
-  #warn $cmd;  
+  $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
+  #warn $cmd;
   run_system_cmd($cmd);
 
   #Add a remove duplicates step
@@ -1678,7 +1629,7 @@ sub process_sam_bam {
   #Do this after alignment as we expect multiple reads if they map across several loci
   #but not necessarily at exactly the same loci which indicates PCR bias
   if($filter_format){
-    $cmd = "samtools rmdup -s $tmp_bam - | ".   
+    $cmd = "samtools rmdup -s $tmp_bam - | ".
       "samtools view -h${out_flag} - > $out_file";
   }else{
     $cmd = "samtools view -h${out_flag} $tmp_bam > $out_file";
@@ -1686,12 +1637,12 @@ sub process_sam_bam {
 
   #warn $cmd;
   run_system_cmd($cmd);
-  run_system_cmd("rm -f $tmp_bam");   
- 
+  run_system_cmd("rm -f $tmp_bam");
+
   if( (exists $params->{checksum}) && $params->{checksum}){
     write_checksum($out_file, $params);
   }
-  
+
   return $out_file;
 }
 
@@ -1809,7 +1760,7 @@ sub strip_param_flags{
 
 sub url_from_DB_params {
   my $db_params = $_[0];
-  
+
   my $host   = (exists $db_params->{'-host'})   ? $db_params->{'-host'} :
     throw('Missing mandatory -host paramter in DB parameters hash');
   my $user   = (exists $db_params->{'-user'})   ? $db_params->{'-user'} :
@@ -1819,7 +1770,7 @@ sub url_from_DB_params {
   my $driver = (exists $db_params->{'-driver'}) ? $db_params->{'-driver'} : 'mysql';
   my $port   = (exists $db_params->{'-port'}) ? $db_params->{'-port'} : '';
   my $pass   = (exists $db_params->{'-pass'}) ? $db_params->{'-pass'} : '';
-   
+
   return $driver.'://'.$user.':'.$pass.'@'.$host.':'.$port.'/'.$dbname;
 }
 
@@ -1829,77 +1780,77 @@ sub url_from_DB_params {
 
 sub check_file{
   my ($file_path, $suffix, $params) = @_;
-  
+
   my $found_path;
-  
+
   if(-f $file_path){
-    $found_path = $file_path;  
+    $found_path = $file_path;
   }
   elsif(defined $suffix && (-f $file_path.'.'.$suffix) ){
-    $found_path = $file_path.'.'.$suffix;    
+    $found_path = $file_path.'.'.$suffix;
   }
 
   if($found_path){
     my $validate_checksum;
-    
+
     if(defined $params){
       assert_ref($params, 'HASH');
-      $validate_checksum = (exists $params->{checksum}) ? $params->{checksum} : undef;      
+      $validate_checksum = (exists $params->{checksum}) ? $params->{checksum} : undef;
     }
 
     if($validate_checksum){
-      validate_checksum($found_path, $params);  
-    }  
+      validate_checksum($found_path, $params);
+    }
   }
-  
+
   return $found_path;
 }
 
 sub validate_path{
   my ($path, $create, $is_dir, $alt_root) = @_;
-            
+
   #how will alt_root and create interact
   #should they be mutually exclusive
   #or should we try both, but only create on the first root?
   #alt root will only work if path is a ref!
-  #Is this the right way to do this, 
+  #Is this the right way to do this,
   #or should we handle root subbing in hive where we have access to both roots?
-  
+
   #We should always test the dir first?
   #i.e. we don't want to mix files from two different dirs?
-  
+
   #How will thi swork when we have set teh alignment dir
   #but we can't find something in there
   #we would also need to set alt alignment dir?
   #Whenever we set a dir, we shoudl also test and set an alt dir
   #if the first dir is absent, but we find the alt dir, then we should
   #set the alt as the main dir, then undef the alt dir
-  
-  #when ever we validate a path, we will then have access to an alt dir for 
+
+  #when ever we validate a path, we will then have access to an alt dir for
   #which ever root we are using, or not if it doesn't exist
-  
+
   #Still a little tricky about using files from two different dirs
   #we definately don't want to do this!
   #hard to manage this
   #maybe we just want to do this for fastqs and other 'reference' files etc?
   #all other intermediate piepline outptu/input should use the same root!
-       
-            
+
+
   if(! defined $path){
     throw('A path argument must be defined');
-  } 
-      
+  }
+
   #$label = ($label) ? ' '.$label : '';
   my $path_ref = ref($path);
-  
-  ### Build path  
+
+  ### Build path
   if($path_ref ne ''){
-    
+
     if($path_ref ne 'ARRAY'){
       throw("Path argument is not valid:\t$path\n".
-        'It must be a String or an Arrayref of string to pass to File::Spec'); 
+        'It must be a String or an Arrayref of string to pass to File::Spec');
     }
-   
+
     #This works for files too instead of catfile
     #Will not prepend / if absent
     $path = File::Spec->catdir(@$path);
@@ -1907,17 +1858,17 @@ sub validate_path{
   else{
     #Tidy up paths from config
     #This won't tidy up paths already stored in meta from init_pipeline.pl
-    $path = File::Spec->canonpath($path); 
-  } 
-   
+    $path = File::Spec->canonpath($path);
+  }
+
   ### Validate/create file/dir
   if(-e $path){
-    
+
     if($is_dir){
       if( ! -d $path){
-        throw("Found path but is not a directory:\n\t$path"); 
+        throw("Found path but is not a directory:\n\t$path");
       }
-      elsif($create && 
+      elsif($create &&
           ! -w $path){ #This chsould be writeable if we want to create it
         throw("Found path but is not writeable:\n\t$path");
       }
@@ -1929,21 +1880,36 @@ sub validate_path{
   }
   elsif($is_dir && $create){
       #print STDOUT "Creating${label}:\n\t$path\n";
-      
+
     eval { make_path($path) };
-      
+
     if($@){
-      throw("Unable to create:\n\t$path\n$@"); 
-    }    
+      throw("Unable to create:\n\t$path\n$@");
+    }
   }
   else{
     throw("Could not find:\n\t$path");
-  } 
-  
-  return $path;  
+  }
+
+  return $path;
 }
 
 #Funcgen added methods
+
+sub dump_data {
+    my ($data, $indent, $terse) = @_;
+      if(defined $indent and $indent !~ /[0123]/){
+            throw("Indent must be 0,1,2,3 not $indent");
+              }
+        $indent = defined($indent) ? $indent : 2;
+          $terse = ($terse) ? $terse : undef;
+
+            my $dumper = Data::Dumper->new([$data]);
+              $dumper->Indent($indent);
+                $dumper->Terse($terse);
+                  my $dump = $dumper->Dump();
+                    return $dump;
+}
 
 
 1;
