@@ -58,7 +58,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(are_valid);
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(assert_ref_do);
 
 my $reg = "Bio::EnsEMBL::Registry";
 
@@ -75,20 +76,20 @@ my $reg = "Bio::EnsEMBL::Registry";
   Arg [...]         : Other args are passed to superclass Bio::EnsEMBL::DBSQL::DBAdaptor
   Example1          : $db = new Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
                               (
-	            					       -user   => 'readonly', #No password
-						                   -dbname => 'pog',
-						                   -host   => 'caldy',
-						                  );
+                               -user   => 'readonly', #No password
+                               -dbname => 'pog',
+                               -host   => 'caldy',
+                              );
 
                       #If dnadb is not defined in registry, this will automatically
                       #set it from the default dnadb_host (e.g. ensembldb)
 
   Exmaple2          : $db = new Bio::EnsEMBL::DBSQL::Funcgen::DBAdaptor
                               (
-					            	       -user           => 'write',
+                               -user           => 'write',
                                -pass           => 'password',
-						                   -dbname         => 'pog',
-						                   -host           => 'caldy',
+                               -dbname         => 'pog',
+                               -host           => 'caldy',
                                -dnadb_assmebly => '36',
 						                  );
                        #This will specifically look for a dnadb with assembly version 36
@@ -96,10 +97,10 @@ my $reg = "Bio::EnsEMBL::Registry";
 
    Exmaple2          : $db = new Bio::EnsEMBL::DBSQL::Funcgen::DBAdaptor
                               (
-						                   -user           => 'write',
+                               -user           => 'write',
                                -pass           => 'password',
-					            	       -dbname         => 'pog',
-						                   -host           => 'caldy',
+                               -dbname         => 'pog',
+                               -host           => 'caldy',
                                #The following will over-ride the default dnadb setting
                                -dnadb_name     => 'my_homo_sapiens_funcgen_67_37',
                                -dnadb_host     => 'my_host',
@@ -111,10 +112,10 @@ my $reg = "Bio::EnsEMBL::Registry";
 
   Example3            : $db new Bio::EnsEMBL::DBSQL::Funcgen::DBAdaptor
                               (
-						                   -user           => 'write',
+                               -user           => 'write',
                                -pass           => 'password',
-					             	       -dbname         => 'pog',
-						                   -host           => 'caldy',
+                               -dbname         => 'pog',
+                               -host           => 'caldy',
                                -dnadb          => $dnadb_object,
                               );
 
@@ -268,9 +269,10 @@ sub new {
 sub is_stored_and_valid{
   my ($self, $class, $obj) = @_;
 
-  if (! (ref($obj) && $obj->isa($class) && $obj->is_stored($self))) {
+  assert_ref($obj,$class);
+  if (! $obj->is_stored($self)) {
     #is_stored checks adaptor params and dbID, but not whether the adaptor matches the class
-    throw('Must provide a valid stored '.$class."\nParameter provided was:\t$obj");
+    throw("$obj\t is not stored");
   }
 
   return;
@@ -293,8 +295,31 @@ sub is_stored_and_valid{
 
 sub are_stored_and_valid{
   my ($self, $class, $obj_list, $method_name) = @_;
+
+  assert_ref($obj_list, 'ARRAY', 'object list');
+
+  if(scalar(@$obj_list) == 0){
+   throw('Objects Arrayref is empty');
+  }
+
+  my @return_vals;
+
+  foreach my $obj (@$obj_list) {
+    
+      $self->is_stored_and_valid($class, $obj);
+    
+
+    if(! $method_name){
+      assert_ref($obj, $class, 'object');
+    }
+    else{
+      push @return_vals, assert_ref_do($obj, $class, $method_name, 'object');
+    }
+  }
+
+  return \@return_vals;
+
   
-  return are_valid($class, $obj_list, $method_name, $self);
 }
 
 
@@ -341,38 +366,37 @@ sub get_available_adaptors{
   my ($self) = shift;
 
   my %pairs = (
-               'Channel'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
-               'ExperimentalChip'   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
-               'ArrayChip'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
-               'Array'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
-               'ProbeSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
-               'Probe'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
-               'ProbeFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
-               'AnnotatedFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
-               'RegulatoryFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
-               'Experiment'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-               'ExperimentalGroup'  => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
-               'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-               'FeatureType'        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
-               'FGCoordSystem'      => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
+               'AnnotatedFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
+               'Array'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
+               'ArrayChip'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
+               'BindingMatrix'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
+               'CellType'               => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
+               'CoordSystem'            => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
+               'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
+               'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
+               'DBEntry'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
+               'DNAMethylationFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor',
+               'Experiment'             => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+               'ExperimentalChip'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
+               'ExperimentalGroup'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
+               'ExternalFeature'        => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
+               'FeatureSet'             => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
+               'FeatureType'            => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
+               'FGCoordSystem'          => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
+               'InputSet'               => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor',
+               'InputSubset'            => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor',
+               'MetaCoordContainer'     => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
+               'MotifFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
+               'Probe'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
+               'ProbeFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
+               'ProbeSet'               => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
+               'RegulatoryFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
+               'ResultFeature'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
+               'ResultSet'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
+               'SegmentationFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
+               'Slice'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor',
                #prepended FG to override core adaptor. Now fixed in registry. Maintained for backwards compatibility
-               'CoordSystem'        => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
-
-               'MetaCoordContainer' => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
-               'FeatureSet'         => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
-               'ResultSet'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
-               'DataSet'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-               'InputSet'           => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor',
-               'ExternalFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
-               'CellType'           => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
-               'DBEntry'            => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
-               'Slice'              => 'Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor',
-               'ResultFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
-               'MotifFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
-               'BindingMatrix'      => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
-               'SegmentationFeature'   => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
-               'DNAMethylationFeature' => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor',
-
+               'Channel'                => 'Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor',
 
                #add required EnsEMBL(core) adaptors here
                #Should write/retrieve from efg not dna db
@@ -778,7 +802,7 @@ sub connect_string{
 =head2 rollback_table
 
   Arg [1]    : String - SQL to execute
-  Arg [2]    : String - Main table name 
+  Arg [2]    : String - Main table name
   Arg [3]    : String (optional) - Table ID for refresh_table
   Arg [4]    : Boolean (optional) - Do not refresh_table
   Arg [5]    : Boolean (optional) - Force clean up even if no records deleted
@@ -798,7 +822,7 @@ sub rollback_table {
   my ( $self, $sql, $table, $id_field, $no_clean_up, $force_clean_up ) = @_;
 
   if(! ($sql && $table)){
-   throw('Must provide at least the SQL and table name arguments'); 
+   throw('Must provide at least the SQL and table name arguments');
   }
 
   my $row_cnt;
@@ -824,7 +848,7 @@ sub rollback_table {
 
 =head2 refresh_table
 
-  Arg [2]    : String - table name 
+  Arg [2]    : String - table name
   Arg [3]    : String (optional) - Table ID for refresh_table
   Example    : $db->refresh_table('result_set', 'result_set_id');
   Description: Calls reset_autoinc if table_id set, optimzes and analyses table
@@ -839,7 +863,7 @@ sub rollback_table {
 
 sub refresh_table {
   my ( $self, $table, $id_field ) = @_;
-  
+
   if(! $table){
     throw('Must provide a table argument');
   }
@@ -858,7 +882,7 @@ sub refresh_table {
 
 =head2 reset_table_autoinc
 
-  Arg [2]    : String - table name 
+  Arg [2]    : String - table name
   Arg [3]    : String - Autoinc field
   Example    : $db->reset_table_autoinc('result_set', 'result_set_id');
   Description: Resets the autoinc field of a table to the next logical number.
