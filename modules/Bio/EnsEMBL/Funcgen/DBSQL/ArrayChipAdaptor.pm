@@ -52,7 +52,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-    
+
 =head2 fetch_all_by_array_id
 
   Arg [1]    : int - dbID of Array
@@ -88,11 +88,11 @@ sub fetch_all_by_array_id {
 
 sub fetch_all_by_Array {
   my ($self, $array) = @_;
-  
+
   if(! (ref($array) && $array->isa->('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
 	throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::Array");
   }
-  
+
   return $self->fetch_all_by_array_id($array->dbID);
 }
 
@@ -119,15 +119,15 @@ sub fetch_all_by_ExperimentalChips {
 	if(! ($echip->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') && $echip->dbID())){
 	  throw('Must provide an arrayref of valid stored Bio::EnsEMBL::Funcgen::ExperimentalChips');
 	}
-	
+
 	$ac_ids{$echip->array_chip_id} = 1;
-	
+
   }
-	
+
   if(! keys(%ac_ids)){
 	throw('Must provide an arrayref of valid stored Bio::EnsEMBL::Funcgen::ExperimentalChips');
   }
-  
+
   return $self->generic_fetch('ac.array_chip_id IN ('.join(', ', keys(%ac_ids)).')');
 }
 
@@ -212,10 +212,10 @@ sub _columns {
 
 sub _objs_from_sth {
   my ($self, $sth) = @_;
-  
+
   my (@result, $ac_id, $design_id, $array_id, $name);
   $sth->bind_columns(\$ac_id, \$design_id, \$array_id, \$name);
-  
+
   while ( $sth->fetch() ) {
     my $array = Bio::EnsEMBL::Funcgen::ArrayChip->new(
 						      -dbID      => $ac_id,
@@ -224,9 +224,9 @@ sub _objs_from_sth {
 						      -name      => $name,
 						      -adaptor   => $self,
 						     );
-    
+
     push @result, $array;
-    
+
   }
   return \@result;
 }
@@ -248,51 +248,50 @@ sub _objs_from_sth {
 sub store {
   my $self = shift;
   my @args = @_;
-  
+
   #my ($stored_ac);
 
   #Should we implement a throw here is the caller is not Array?
   #make private _store?
 
-  
+
   my $sth = $self->prepare("
 			INSERT INTO array_chip
 			(design_id, array_id, name)
 			VALUES (?, ?, ?)"
 			  );
-  
-    
-  
+
+
+
   foreach my $ac (@args) {
     if ( ! $ac->isa('Bio::EnsEMBL::Funcgen::ArrayChip') ) {
       warning('Can only store ExperimentalChip objects, skipping $ec');
       next;
     }
-    
+
     throw("ArrayChip must have an array_id to be stored") if ! $ac->array_id();
 
     #check for array_id here? this is done by not null in sql
-    
+
 
     #check for previously stored array_chips is done in Array via add_ArrayChip
-    
-    
-    
+
+
+
     if (!( $ac->dbID() && $ac->adaptor() == $self )){
 
       my $s_ac = $self->fetch_by_array_design_ids($ac->array_id(), $ac->design_id());
 
       if(! $s_ac){
-	
+
 	$sth->bind_param(1, $ac->design_id(), SQL_VARCHAR);
 	$sth->bind_param(2, $ac->array_id(),  SQL_INTEGER);
-	$sth->bind_param(3, $ac->name(),      SQL_VARCHAR);	
+	$sth->bind_param(3, $ac->name(),      SQL_VARCHAR);
 	$sth->execute();
 
-	my $dbID = $sth->{'mysql_insertid'};
-	$ac->dbID($dbID);
-	$ac->adaptor($self);	
-	
+	$ac->dbID($self->last_insert_id);
+	$ac->adaptor($self);
+
       }else{
 	  $ac = $s_ac;
 	  #	my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};

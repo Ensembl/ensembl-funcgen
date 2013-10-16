@@ -77,9 +77,9 @@ use vars qw(@ISA);
 
 sub fetch_by_array_chip_dbID {
   my ($self, $ac_dbid) = @_;
-  
+
   throw('Must provide an ArrayChip dbID') if ! $ac_dbid;
-  
+
   #Extend query tables
   $self->_tables([['array_chip', 'ac']]);
 
@@ -111,7 +111,7 @@ sub fetch_by_array_chip_dbID {
 
 sub fetch_by_name_vendor {
     my ($self, $name, $vendor) = @_;
-    
+
     throw("Must provide and name") if (! $name);
 	my @arrays;
 
@@ -124,7 +124,7 @@ sub fetch_by_name_vendor {
 	}
 	else{
 	  #name vendor is unique key so will only ever return 1
-	  @arrays = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};	
+	  @arrays = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};
 	}
 
     return $arrays[0];
@@ -177,7 +177,7 @@ sub fetch_all_by_class {
     my ($self, $class) = @_;
 
     throw("Must provide and array class e.g.'AFFY_ST'") if (! defined $class);
-    return $self->generic_fetch("a.class='".uc($class)."'");	
+    return $self->generic_fetch("a.class='".uc($class)."'");
 }
 
 
@@ -197,9 +197,9 @@ sub fetch_all_by_class {
 
 sub fetch_all_by_type {
   my ($self, @types) = @_;
-	
+
   throw('Need type as parameter') if ! @types;
-	
+
   my $constraint;
   if (scalar @types == 1) {
     $constraint = qq( a.type = '$types[0]' );
@@ -232,13 +232,13 @@ sub fetch_all_by_Experiment{
   my ($self, $exp) = @_;
 
  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
-  
+
   #Extend query tables
   $self->_tables([['array_chip', 'ac'], ['experimental_chip', 'ec']]);
 
   #Extend query and group
   my $arrays = $self->generic_fetch($exp->dbID.'=ec.experiment_id and ec.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
-  
+
   $self->reset_true_tables;
 
   return $arrays;
@@ -250,7 +250,7 @@ sub fetch_all_by_Experiment{
   Arg [1]    : Bio::EnsEMBL::Funcgen::ProbeSet
   Example    : my @arrays = @{$aa->fetch_all_by_ProbeSet($probeset)};
   Description: Fetch all arrays containing a given ProbeSet
-               This is a convenience method to hide the 2 adaptors required 
+               This is a convenience method to hide the 2 adaptors required
                for this call.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : none
@@ -275,7 +275,7 @@ sub fetch_all_by_ProbeSet{
   #Extend query and group
   my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY a.array_id');
   # ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
-  
+
   $self->reset_true_tables;
 
   return $arrays;
@@ -332,11 +332,11 @@ sub _columns {
 
 sub _objs_from_sth {
   my ($self, $sth) = @_;
-	
+
   my (@result, $array_id, $name, $format, $vendor, $description, $type, $class);
-  
+
   $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, \$class);
-  
+
   while ( $sth->fetch() ) {
 
     my $array = Bio::EnsEMBL::Funcgen::Array->new
@@ -348,12 +348,12 @@ sub _objs_from_sth {
 	   -vendor      => $vendor,
 	   -description => $description,
 	   -type        => $type,
-	   -class       => $class, 
+	   -class       => $class,
 	  );
 
     push @result, $array;
-    
- 
+
+
   }
   return \@result;
 }
@@ -366,7 +366,7 @@ sub _objs_from_sth {
   Args       : List of Bio::EnsEMBL::Funcgen::Array objects
   Example    : $oaa->store($array1, $array2, $array3);
   Description: Stores given Array objects in the database. This
-               method checks for arrays previously stored and updates 
+               method checks for arrays previously stored and updates
                and new array_chips accordingly.
   Returntype : Listref of stored Array objects
   Exceptions : None
@@ -376,31 +376,31 @@ sub _objs_from_sth {
 =cut
 
 
-#This works slightly differently as arary_chip are not stored as objects, 
+#This works slightly differently as arary_chip are not stored as objects,
 #yet we need to retrieve a dbID for the array before we know about all the array_chips
 
 sub store {
   my $self = shift;
   my @args = @_;
-  
+
   my ($sarray);
-  
+
   my $sth = $self->prepare("
 			INSERT INTO array
 			(name, format, vendor, description, type, class)
 			VALUES (?, ?, ?, ?, ?, ?)");
-  
-    
+
+
   foreach my $array (@args) {
     if ( !$array->isa('Bio::EnsEMBL::Funcgen::Array') ) {
       warning('Can only store Array objects, skipping $array');
       next;
     }
-    
+
     if (!( $array->dbID() && $array->adaptor() == $self )){
       #try and fetch array here and set to array if valid
       $sarray = $self->fetch_by_name_vendor($array->name(), $array->vendor());#this should be name_vendor?
-      
+
       if( ! $sarray){
 		#sanity check here
 		throw("Array name must not be longer than 30 characters") if (length($array->name) > 40);
@@ -410,11 +410,10 @@ sub store {
 		$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
 		$sth->bind_param(5, $array->type(),         SQL_VARCHAR);
 		$sth->bind_param(6, $array->class(),        SQL_VARCHAR);
-		
-		
+
+
 		$sth->execute();
-		my $dbID = $sth->{'mysql_insertid'};
-		$array->dbID($dbID);
+		$array->dbID($self->last_insert_id);
 		$array->adaptor($self);
       }
       else{
@@ -423,7 +422,7 @@ sub store {
       }
     }
   }
-    
+
   return \@args;
 }
 
@@ -470,10 +469,13 @@ sub fetch_Probe_dbIDs_by_Array{
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
 
   my $sql = sprintf(qq/
-SELECT distinct p.probe_id
-FROM   probe p
-WHERE  array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
-  
+    SELECT
+      distinct p.probe_id
+    FROM
+      probe p
+    WHERE
+      array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
+
 	my $sth = $self->prepare( $sql );
   $sth->execute || die ($sth->errstr);
   my @dbids =  map{$_->[0]} @{$sth->fetchall_arrayref};

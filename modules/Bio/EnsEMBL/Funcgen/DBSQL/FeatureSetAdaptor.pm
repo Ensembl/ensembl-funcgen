@@ -36,7 +36,7 @@ my @displayable_fsets = @{$fs_adaptor->fetch_all_displayable()};
 =head1 DESCRIPTION
 
 The FeatureSetAdaptor is a database adaptor for storing and retrieving
-Funcgen feature set.  
+Funcgen feature set.
 
 =cut
 
@@ -55,18 +55,18 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
   Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation' or 'external'
   Arg [2]    : String (optional) - status e.g. 'DISPLAYABLE'
-  Arg [2]    : Bio::EnsEMBL::Funcgen::CellType (optional) or a HASH parameters 
+  Arg [2]    : Bio::EnsEMBL::Funcgen::CellType (optional) or a HASH parameters
                containing contraint config e.g.
 
                    $feature_set_adaptor->fetch_all_by_feature_class
-                                           ('annotated', 
-                                             {'constraints' => 
+                                           ('annotated',
+                                             {'constraints' =>
                                                {
                                                cell_types     => [$cell_type], #Bio::EnsEMBL::Funcgen::CellType
                                                projects       => ['ENCODE'],
                                                evidence_types => ['Hists & Pols'],
                                                feature_types  => [$ftype], #Bio::EnsEMBL::Funcgen::FeatureType
-                                               } 
+                                               }
                                              });
 
   Example    : my @fsets = @{$fs_adaptopr->fetch_all_by_feature_class('annotated')};
@@ -80,10 +80,10 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 sub fetch_all_by_feature_class {
   my ($self, $type, $status, $params) = @_;
-  
-  throw('Must provide a feature_set type') if(! defined $type);	
+
+  throw('Must provide a feature_set type') if(! defined $type);
   my $sql = "fs.type = '".$type."'";
-  
+
   if (defined $params) {        #Some redundancy over $ctype arg and $params cell_type
 
     if ( ref($params) eq 'Bio::EnsEMBL::Funcgen::CellType') {
@@ -97,7 +97,7 @@ sub fetch_all_by_feature_class {
   if ($status) {
     $params->{constraints}{states} = [ $status ];
   }
-  
+
   #Deal with params constraints
   my $constraint = $self->compose_constraint_query($params);
   $sql .=  " AND $constraint " if $constraint;
@@ -126,10 +126,10 @@ sub fetch_all_by_feature_class {
 
 sub fetch_all_displayable_by_type {
     my ($self, $type, $ctype_or_params) = @_;
-  
+
 	#Move status to config hash
 	$self->fetch_all_by_feature_class($type, 'DISPLAYABLE', $ctype_or_params);
-	
+
 }
 
 
@@ -140,7 +140,7 @@ sub fetch_all_displayable_by_type {
   Example    : my @fsets = @{$fset_adaptor->fetch_by_name('feature_set-1')};
   Description: Fetch all FeatureSets wit a given name
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet objects
-  Exceptions : Throws if no name passed 
+  Exceptions : Throws if no name passed
   Caller     : General
   Status     : At Risk
 
@@ -148,18 +148,18 @@ sub fetch_all_displayable_by_type {
 
 sub fetch_by_name {
   my ($self, $name, $status) = @_;
-  
+
   throw("Must provide a name argument") if (! defined $name);
-  
+
   my $sql = "fs.name='".$name."'";
-  
+
   if($status){
     my $constraint = $self->status_to_constraint($status) if $status;
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
   return (defined $sql) ? $self->generic_fetch($sql)->[0] : [];
-  
+
 }
 
 
@@ -194,11 +194,11 @@ sub _true_tables {
 
 sub _columns {
 	my $self = shift;
-	
-	return qw( fs.feature_set_id fs.feature_type_id 
-			   fs.analysis_id fs.cell_type_id 
-			   fs.name fs.type 
-			   fs.description fs.display_label 
+
+	return qw( fs.feature_set_id fs.feature_type_id
+			   fs.analysis_id fs.cell_type_id
+			   fs.name fs.type
+			   fs.description fs.display_label
 			   fs.input_set_id);
 }
 
@@ -221,18 +221,18 @@ sub _columns {
 
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
-	
+
 	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type, $display_label, $desc);
 	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, $input_set_id, %ftype_hash, %ctype_hash);
-	
+
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my $anal_adaptor = $self->db->get_AnalysisAdaptor();
 	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
 	$ctype_hash{'NULL'} = undef;
 
-	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id, 
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id,
                        \$name, \$type, \$desc, \$display_label, \$input_set_id);
-	
+
 	while ( $sth->fetch()) {
 
 		$ctype_id ||= 'NULL';
@@ -242,10 +242,10 @@ sub _objs_from_sth {
 
 		# Get the feature type object
 		$ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
-		
+
 		# Get the cell_type object
 		$ctype_hash{$ctype_id} = $ct_adaptor->fetch_by_dbID($ctype_id) if(! exists $ctype_hash{$ctype_id});
-		
+
 		#Use new_fast here and strip the prefixed -'s
 		$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
 		  (
@@ -301,17 +301,17 @@ sub store {
 
 	my $db = $self->db;
 	my ($sql, $edb_id, %edb_hash);
-	
+
     foreach my $fset (@fsets) {
 		throw('Can only store FeatureSet objects, skipping $fset')	if ( ! $fset->isa('Bio::EnsEMBL::Funcgen::FeatureSet'));
-		
-	
+
+
 		if (! $fset->is_stored($db) ) {
 
 		  # Check FeatureType and Analysis
 		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fset->feature_type);
 		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $fset->analysis);
-			 
+
 
 		  # Check optional InputSet and CellType
 		  my $ctype_id;
@@ -323,14 +323,14 @@ sub store {
 		  }
 
 		  my $input_set_id;
-		  my $input_set =  $fset->get_InputSet; 
+		  my $input_set =  $fset->get_InputSet;
 
 		  if($input_set){
 			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $input_set);
 			$input_set_id = $input_set->dbID;
 		  }
 
-		  
+
 		  $sth->bind_param(1, $fset->feature_type->dbID,     SQL_INTEGER);
 		  $sth->bind_param(2, $fset->analysis->dbID,         SQL_INTEGER);
 		  $sth->bind_param(3, $ctype_id,                     SQL_INTEGER);
@@ -339,9 +339,9 @@ sub store {
 		  $sth->bind_param(6, $fset->description,            SQL_VARCHAR);
 		  $sth->bind_param(7, $fset->display_label,          SQL_VARCHAR);
 		  $sth->bind_param(8, $input_set_id,                 SQL_INTEGER);
-		  
+
 		  $sth->execute();
-		  $fset->dbID($sth->{'mysql_insertid'});
+		  $fset->dbID($self->last_insert_id);
 		  $fset->adaptor($self);
 		}
 		else{
@@ -356,7 +356,7 @@ sub store {
 #tend to use 'core' now
 #although here we use focus to determine a set which is actually used in the build
 #where as core is at the feature type level
-#i.e. you can have a feature set with a core feature type 
+#i.e. you can have a feature set with a core feature type
 #which is not in the build and is therefore not a focus set.
 
 =head2 fetch_focus_set_config_by_FeatureSet
@@ -373,21 +373,21 @@ sub store {
 
 sub fetch_focus_set_config_by_FeatureSet{
   my ($self, $fset) = @_;
-  
+
   $self->{focus_set_config} ||= {};
-  
+
   if (! defined $self->{focus_set_config}->{$fset->dbID}) {
-	
+
     #Is is an attribute set?
     if ($self->fetch_attribute_set_config_by_FeatureSet($fset)) {
-	  
+
       #Need to define these as RegBuild config
       if ($fset->feature_type->is_core_evidence) {
         $self->{focus_set_config}->{$fset->dbID} = 1;
       }
     }
   }
-	
+
   return $self->{focus_set_config}->{$fset->dbID};
 }
 
@@ -422,7 +422,7 @@ sub fetch_attribute_set_config_by_FeatureSet{
 
 	  if (! defined $attr_ids) {
         warn("Cannot detect attribute set as regbuild_string table does not contain $string_key");
-	  } 
+	  }
       else {
         my $regex = ',\s*';#to avoid syntax highlighting anomalies
 
@@ -450,38 +450,38 @@ sub fetch_feature_set_filter_counts{
                 'GROUP BY eg.name, eg.is_project, ft.class, ct.name';
 
   #warn $sql;
-  #Need to write HC around this as we sometimes get less than expect. 
-  
+  #Need to write HC around this as we sometimes get less than expect.
+
 
   my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
   my $ft_a = $self->db->get_FeatureTypeAdaptor;
   my $ftype_info = $ft_a->get_regulatory_evidence_info;
 
-  my %filter_info = 
-    ( 
+  my %filter_info =
+    (
      #Project=> {},
      #'Cell/Tissue' => {},
      All =>
-     { 
+     {
       All =>{ count       => 0,
               description => 'All experiments',
             }
      }
-     
+
     );
-  
+
   foreach my $row(@rows){
 
     my ($count, $project, $proj_desc, $is_proj, $ft_class, $ct_name, $ct_desc) = @$row;
-    
+
     #All counts
     $filter_info{All}{All}{count} += $count;
-  
+
     #Project counts
     if($is_proj){
-      
+
       if(! exists $filter_info{Project}{$project}){
-        $filter_info{Project}{$project} = 
+        $filter_info{Project}{$project} =
           { count       => 0,
             description => $proj_desc,
           };
@@ -492,13 +492,13 @@ sub fetch_feature_set_filter_counts{
 
     #Cell/Tissue counts
     if(! exists $filter_info{'Cell/Tissue'}{$ct_name}){
-      $filter_info{'Cell/Tissue'}{$ct_name} = 
+      $filter_info{'Cell/Tissue'}{$ct_name} =
         { count       => 0,
           description => $ct_desc,
         };
-    }   
+    }
     $filter_info{'Cell/Tissue'}{$ct_name}{count} += $count;
-    
+
     #Evidence class counts
     #Do we want to split this into ft.class
     #i.e. split 'DNase1 & TFBS'
@@ -506,7 +506,7 @@ sub fetch_feature_set_filter_counts{
     my $ft_class_label =  $ftype_info->{$evidence_type}{label};
 
     if(! exists $filter_info{'Evidence type'}{$ft_class_label}){
-      $filter_info{'Evidence type'}{$ft_class_label} = 
+      $filter_info{'Evidence type'}{$ft_class_label} =
         { count       => 0,
           description => $ftype_info->{$evidence_type}{long_name},
         };
@@ -529,10 +529,10 @@ sub fetch_feature_set_filter_counts{
 #and we use generic main_table approach for building constraint
 
 #and reuse between adaptors if we use the _tables method to get the table syn
-#This may mean contraints can be specified for classes which do not contain 
+#This may mean contraints can be specified for classes which do not contain
 #the relevant fields.
 #Allow this flexiblity or validate fields/constraint?
-#Or implicit by location of contraint config, i.e. put it in the relevant 
+#Or implicit by location of contraint config, i.e. put it in the relevant
 #parent adaptors
 
 
@@ -548,28 +548,28 @@ sub _constrain_experimental_groups{
 
   #enable query extension
   my $constraint_conf = {tables => [['input_set', 'inp'], ['experiment', 'e']]};
-  
-  
+
+
   if ( (ref($egs) ne 'ARRAY') ||
        scalar(@$egs) == 0 ) {
     throw('Must pass an arrayref of project names');
   }
   my @eg_ids;
-  
+
   foreach my $eg (@$egs) {
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $eg);
-    
+
     if ( $projects_only && (! $eg->is_project) ) {
       throw("You have passed an ExperimentalGroup which is not a project:\t".$eg->name);
     }
-    
+
     push @eg_ids, $eg->dbID;
   }
-  
+
   #Don't need to bind param this as we validate above
   my $constraint = ' fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id AND '.
     'e.experimental_group_id IN ('.join(', ', @eg_ids).')';
-  
+
   return ($constraint, $constraint_conf);
 }
 
@@ -580,26 +580,26 @@ sub _constrain_evidence_types {
   my ($self, $etypes) = @_;
 
 	my $constraint_conf = {tables => [['feature_type', 'ft']]};
-     
-  my %in_values = 
+
+  my %in_values =
 		(
-		 'DNase1 & TFBS' => ['Open Chromatin', 
-                         'Transcription Factor', 
+		 'DNase1 & TFBS' => ['Open Chromatin',
+                         'Transcription Factor',
                          'Transcription Factor Complex'],
-     
+
 		 'Hists & Pols'  => ['Histone',
                          'Polymerase'],
 		);
-      
+
   my @ft_classes;
-      
+
   if ( (ref($etypes) ne 'ARRAY') ||
        scalar(@$etypes) == 0 ) {
 		throw('Must pass an arrayref of evidence types');
   }
-      
+
   foreach my $etype (@$etypes) {
-    
+
 		if (! exists $in_values{$etype}) {
 		  throw("You have passed an invalid evidence type filter argument($etype)\n".
             "Please use one of the following:\t".join(' ,', keys(%in_values)));
@@ -610,7 +610,7 @@ sub _constrain_evidence_types {
   #Don't need to bind param this as we validate above
   my $constraint = ' fs.feature_type_id=ft.feature_type_id AND ft.class IN ("'.
 		join('", "', @ft_classes).'")';
-  
+
   return ($constraint, $constraint_conf);
 }
 
@@ -621,7 +621,7 @@ sub _constrain_evidence_types {
 # add other fetch args
 #type
 #name
-  
+
 
 ### DEPRECATED ###
 
@@ -629,10 +629,10 @@ sub fetch_all_by_type { #deprecated in v74
     my $self = shift;
     my $type = shift;
     my $status = shift;
-    
+
     deprecate('Please use fetch_all_by_feature_class');
-    
-    return $self->fetch_all_by_feature_class($type, $status);   
+
+    return $self->fetch_all_by_feature_class($type, $status);
 }
 
 

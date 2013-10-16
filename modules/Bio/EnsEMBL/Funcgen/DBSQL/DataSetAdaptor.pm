@@ -24,7 +24,7 @@
 =head1 NAME
 
 Bio::EnsEMBL::DBSQL::Funcgen::DataSetAdaptor - A database adaptor for fetching and
-storing DataSet objects.  
+storing DataSet objects.
 
 =head1 SYNOPSIS
 
@@ -49,6 +49,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::DataSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
+
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
@@ -59,26 +60,26 @@ use vars qw(@ISA);
   Example    : my $dset = $dset_adaptor->fetch_by_name('RegulatoryFeatures:MultiCell');
   Description: Fetch DataSet with a given name
   Returntype : Bio::EnsEMBL::Funcgen::DataSet
-  Exceptions : Throws if no name passed 
+  Exceptions : Throws if no name passed
   Caller     : General
-  Status     : At Risk 
+  Status     : At Risk
 
 =cut
 
 sub fetch_by_name {
   my ($self, $name, $status) = @_;
-  
+
   throw("Must provide a name argument") if (! defined $name);
-  
+
   my $sql = "ds.name='${name}'";
-  
+
   if ($status) {
     my $constraint = $self->status_to_constraint($status) if $status;
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
   return (defined $sql) ? $self->generic_fetch($sql)->[0] : [];
-  
+
 }
 
 
@@ -97,18 +98,18 @@ sub fetch_by_name {
 
 sub fetch_all_by_supporting_set_type {
   my ($self, $type, $status) = @_;
-  
+
   throw("Must provide a supporting_set type argument") if (! defined $type);
-  
+
   my $sql = "ss.type='".$type."'";
-  
+
   if ($status) {
     my $constraint = $self->status_to_constraint($status) if $status;
     $sql = (defined $constraint) ? $sql." ".$constraint : undef;
   }
 
   return (defined $sql) ? $self->generic_fetch($sql) : [];
-  
+
 }
 
 
@@ -129,10 +130,10 @@ sub fetch_all_by_supporting_set_type {
 sub fetch_by_product_FeatureSet {
   my ($self, $fset) = @_;
 
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);	
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
   $self->bind_param_generic_fetch($fset->dbID, SQL_INTEGER);
 
-  return $self->generic_fetch('ds.feature_set_id = ?')->[0];	
+  return $self->generic_fetch('ds.feature_set_id = ?')->[0];
 }
 
 
@@ -150,21 +151,24 @@ sub fetch_by_product_FeatureSet {
 =cut
 
 sub fetch_all_by_supporting_set {
-  my $self = shift;
-  my $set = shift;
+  my ($self, $set) = @_;
 
-  if (! (ref($set) && 
-		 ( $set->isa("Bio::EnsEMBL::Funcgen::ResultSet") || 
+  if (!
+      (ref($set)
+      &&
+		  ($set->isa("Bio::EnsEMBL::Funcgen::ResultSet")  ||
 		   $set->isa("Bio::EnsEMBL::Funcgen::FeatureSet") ||
-		   $set->isa("Bio::EnsEMBL::Funcgen::InputSet")) 
-		 && $set->dbID())) {
+		   $set->isa("Bio::EnsEMBL::Funcgen::InputSet")
+      )
+		  &&
+     $set->dbID())) {
 	throw("Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet, FeatureSet or InputSet object");
   }
-	
+
   #self join here to make sure we get all linked result_sets
   my $sql = ' ds.data_set_id IN (SELECT data_set_id from supporting_set where type="'.$set->set_type.'" and supporting_set_id='.$set->dbID().')';
-	
-  return $self->generic_fetch($sql);	
+
+  return $self->generic_fetch($sql);
 }
 
 
@@ -183,9 +187,9 @@ sub fetch_all_by_supporting_set {
 
 sub fetch_all_by_feature_type_class {
   my ($self, $class, $status) = @_;
-  
+
   throw ('Must provide a FeatureType class to retrieve DataSets') if ! defined $class;
-  
+
   my ($constraint, @dsets);
 
   if ($status) {
@@ -204,7 +208,7 @@ sub fetch_all_by_feature_type_class {
 	push @dsets, $dset if uc($dset->product_FeatureSet->feature_type->class()) eq uc($class);
   }
 
-  return \@dsets;	
+  return \@dsets;
 }
 
 
@@ -222,7 +226,7 @@ sub fetch_all_by_feature_type_class {
 
 sub fetch_all_displayable_by_feature_type_class {
   my ($self, $class) = @_;
-  return $self->fetch_all_by_feature_type_class($class, 'DISPLAYABLE');	
+  return $self->fetch_all_by_feature_type_class($class, 'DISPLAYABLE');
 }
 
 
@@ -261,7 +265,7 @@ sub _columns {
 			ds.data_set_id	    ds.feature_set_id
 			ds.name             ss.type
 			ss.supporting_set_id
-		   );	
+		   );
 }
 
 
@@ -280,7 +284,7 @@ sub _columns {
 =cut
 
 sub _left_join {
-  my $self = shift;	
+  my $self = shift;
   return (['supporting_set', 'ds.data_set_id = ss.data_set_id']);
 }
 
@@ -303,16 +307,16 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
   my (@data_sets, @supporting_sets, $data_set, $dbID, $set_id);
   my ($fset_id, $fset, $set, $name, $ss_type, $ss_id, %params);
-  
+
   my %set_adaptors = (
-					  feature      => $self->db->get_FeatureSetAdaptor(),
-					  result       => $self->db->get_ResultSetAdaptor(),
-					  input        => $self->db->get_InputSetAdaptor(),
+	  feature      => $self->db->get_FeatureSetAdaptor(),
+	  result       => $self->db->get_ResultSetAdaptor(),
+    input        => $self->db->get_InputSetAdaptor(),
 					 );
   $sth->bind_columns(\$dbID, \$fset_id, \$name, \$ss_type, \$ss_id);
-   
+
   while ( $sth->fetch() ) {
-	
+
     if ((! %params) || ($params{-DBID} != $dbID)) {
 
 	  if (%params) {
@@ -322,22 +326,22 @@ sub _objs_from_sth {
 		undef @supporting_sets;
 	  }
 
-	  %params = 
+	  %params =
 	   (
 	    -DBID                => $dbID,
-		-NAME                => $name,
-		-FEATURE_SET         => $set_adaptors{'feature'}->fetch_by_dbID($fset_id),
+	    -NAME                => $name,
+	    -FEATURE_SET         => $set_adaptors{'feature'}->fetch_by_dbID($fset_id),
 	    -ADAPTOR             => $self
        );
 	}
-	
-	if ($ss_id) {	  
+
+	if ($ss_id) {
 	  my $sset = $set_adaptors{$ss_type}->fetch_by_dbID($ss_id);
-	  
+
 	  if (! $sset) {
 		throw("Could not find supporting $ss_type set with dbID $ss_id");
 	  }
-	  
+
 	  push @supporting_sets, $sset;
 	}
   }
@@ -356,7 +360,7 @@ sub _objs_from_sth {
 
   Args       : List of Bio::EnsEMBL::Funcgen::DataSet objects
   Example    : my @dsets = @{$dsa->store(@dsets)};
-  Description: Stores given DataSet objects in the database. Sets dbID and adaptor 
+  Description: Stores given DataSet objects in the database. Sets dbID and adaptor
                on the objects that it stores.
   Returntype : ARRAYREF of stored DataSet objects
   Exceptions : Throws if no DataSet objects passed
@@ -366,7 +370,7 @@ sub _objs_from_sth {
   Status     : At Risk
 
 =cut
-  
+
 sub store{
   my ($self, @dsets) = @_;
   throw('Must pass a list of DataSet objects to store') if(! @dsets || $#dsets < 0);
@@ -376,38 +380,38 @@ sub store{
     ("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) VALUES (?, ?, ?)");
   my ($fset_id);
   my $db = $self->db();
-    
+
   foreach my $dset (@dsets) {
-      
-    if( ! (defined $dset && 
+
+    if( ! (defined $dset &&
           (ref($dset) eq 'Bio::EnsEMBL::Funcgen::DataSet'))){
-      throw('Must pass a DataSet object to store') 
+      throw('Must pass a DataSet object to store')
     }
-    
+
     if ( $dset->is_stored($db) ) {
       throw('DataSet [' . $dset->dbID() . '] is already stored in the database');
     }
-		
+
     $sth->bind_param(1, $dset->product_FeatureSet->dbID, SQL_INTEGER);
     $sth->bind_param(2, $dset->name(),                   SQL_VARCHAR);
     $sth->execute();
-    $dset->dbID( $sth->{'mysql_insertid'} );
+    $dset->dbID( $self->last_insert_id );
     $dset->adaptor($self);
-	 
+
     foreach my $sset (@{$dset->get_supporting_sets()}) {
 
       if(! $sset->is_stored($db)){
         #Set check already done in _set_Sets_and_types
         throw('All supporting Feature and ResultSets must be stored previously');
       }
-      
+
       $sth2->bind_param(1, $dset->dbID(),                SQL_INTEGER);
       $sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
       $sth2->bind_param(3, $sset->set_type(),            SQL_VARCHAR); #enum feature/result/experimental
       $sth2->execute();
     }
   }
-      
+
   return \@dsets
 }
 
@@ -417,19 +421,19 @@ sub store{
 
 sub store_updated_sets{ #DEPRECATED IN v72
 	my ($self, $dsets, $overwrite) = @_;
-	
+
 	throw('store_updated_sets is not longer supported, please rollback and recreate the DataSet');
 
 	throw('Must pass a list of DataSet objects to store') if(! @$dsets || $#{$dsets} < 0);
 	my ($sql);
 	my $db = $self->db();
-	my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type) 
+	my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type)
                             VALUES (?, ?, ?)");
 
 	foreach my $dset (@$dsets) {
-	  throw('Must pass a DataSet object to update') if( ! ( ref $dset && 
+	  throw('Must pass a DataSet object to update') if( ! ( ref $dset &&
 															$dset->isa('Bio::EnsEMBL::Funcgen::DataSet')));
-	
+
 	  throw('DataSet [' . $dset->dbID() . '] must be previous stored in the database') if (! $dset->is_stored($db) );
 	  my $stored_dset = $self->fetch_by_name($dset->name);
 
@@ -465,13 +469,13 @@ sub store_updated_sets{ #DEPRECATED IN v72
 	  my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
 	  my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$stored_dset->get_supporting_sets};
 	  my $mismatch = 0;
-	
+
 	  $mismatch = 1 if(scalar(@sorted_ssets) != scalar(@stored_ssets));
-	
+
 	  if (! $mismatch) {
-	  
+
 		for my $i (0..$#stored_ssets) {
-		
+
 		  if ($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID) {
 			$mismatch=1;
 			last;
@@ -482,7 +486,7 @@ sub store_updated_sets{ #DEPRECATED IN v72
 	  #Delete old supporting_sets
 	  #We really only want to do this if there is a difference
 	  #batched jobs cause race condition here
-	  #unless updated once before submission	
+	  #unless updated once before submission
 	  if ($mismatch &&
 		  $overwrite) {
 		$sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID;
@@ -496,10 +500,10 @@ sub store_updated_sets{ #DEPRECATED IN v72
 	  my %stored_dbids;
 	  map {$stored_dbids{$_->dbID} = undef} @stored_ssets if @stored_ssets;
 
-	  foreach my $sset (@sorted_ssets) {	
+	  foreach my $sset (@sorted_ssets) {
 		my $dbid = $sset->dbID;
 
-		if (! grep(/^${dbid}$/, keys %stored_dbids)) {		
+		if (! grep(/^${dbid}$/, keys %stored_dbids)) {
 		  throw("All supporting sets must be stored previously.") if(! $sset->is_stored($db));
 
 		  #This causes problems when we want to re-run by slice
@@ -516,7 +520,7 @@ sub store_updated_sets{ #DEPRECATED IN v72
 		}
 	  }
 	}
-      
+
 	return $dsets
   }
 

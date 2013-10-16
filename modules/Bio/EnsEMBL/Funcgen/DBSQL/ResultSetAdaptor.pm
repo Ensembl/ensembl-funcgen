@@ -544,7 +544,7 @@ sub store{
     $sth->bind_param(5, $rset->feature_class,    SQL_VARCHAR);
     $sth->execute;
 
-    $rset->dbID( $sth->{mysql_insertid} );
+    $rset->dbID( $self->last_insert_id );
     $rset->adaptor($self);
 
     $self->store_states($rset);
@@ -707,8 +707,8 @@ sub store_chip_channels{
 
       $sth->execute();
 
-	  $cc_id = $sth->{'mysql_insertid'};
-      $rset->_add_table_id($table_id,  $sth->{'mysql_insertid'});
+	  $cc_id = $self->last_insert_id;
+      $rset->_add_table_id($table_id,  $self->last_insert_id);
     }else{
 
 	  #this should only store if not already stored for this rset

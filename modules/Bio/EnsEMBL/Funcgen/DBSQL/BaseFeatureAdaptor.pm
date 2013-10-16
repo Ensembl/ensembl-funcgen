@@ -35,7 +35,7 @@ abstract methods must be performed by subclasses.
 =head1 DESCRIPTION
 
 This is a base adaptor for Funcgen feature adaptors. This base class is simply a way
-to redefine some methods to use with the Funcgen DB. 
+to redefine some methods to use with the Funcgen DB.
 
 =cut
 
@@ -85,7 +85,7 @@ my %warnings;
 sub generic_fetch {
   my $self = shift;
 
-  #need to wrap _generic_fetch to always generate the 
+  #need to wrap _generic_fetch to always generate the
   #seq_region_cache other wise non-slice based fetch methods fail
 
   #build seq_region cache here once for entire query
@@ -98,7 +98,7 @@ sub generic_fetch {
   #This is the same for all non-Slice based methods
   #And the is no way around it as we are not providing that info about the new DB by passing a slice!
   #The only way to get around this is to make the tmp_cache persistant
-  
+
   $self->build_seq_region_cache();
 
   return $self->SUPER::generic_fetch(@_);
@@ -114,11 +114,11 @@ sub generic_fetch {
   Arg [3]    : (optional) string $logic_name
                the logic name of the type of features to obtain
   Example    : $fs = $a->fetch_all_by_Slice_constraint($slc, 'perc_ident > 5');
-  Description: Returns a listref of features created from the database which 
-               are on the Slice defined by $slice and fulfill the SQL 
-               constraint defined by $constraint. If logic name is defined, 
-               only features with an analysis of type $logic_name will be 
-               returned. 
+  Description: Returns a listref of features created from the database which
+               are on the Slice defined by $slice and fulfill the SQL
+               constraint defined by $constraint. If logic name is defined,
+               only features with an analysis of type $logic_name will be
+               returned.
   Returntype : listref of Bio::EnsEMBL::SeqFeatures in Slice coordinates
   Exceptions : thrown if $slice is not defined
   Caller     : Bio::EnsEMBL::Slice
@@ -134,12 +134,12 @@ sub fetch_all_by_Slice_constraint {
   if (! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))) {
     throw('Bio::EnsEMBL::Slice argument expected.');
   }
-  
+
   $constraint ||= '';
-  
+
   my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name
     (
-     $slice->coord_system->name(), 
+     $slice->coord_system->name(),
      $slice->coord_system->version()
     );
 
@@ -150,7 +150,7 @@ sub fetch_all_by_Slice_constraint {
     return \@result;
   }
 
- 
+
   #build seq_region cache here once for entire query
   $self->build_seq_region_cache($slice);
   my $syn = $self->_main_table->[1];
@@ -159,11 +159,11 @@ sub fetch_all_by_Slice_constraint {
 
 
 
- 
+
   #if the logic name was invalid, undef was returned
   return [] if(!defined($constraint));
 
- 
+
 
   #check the cache and return if we have already done this query
 
@@ -174,7 +174,7 @@ sub fetch_all_by_Slice_constraint {
   if ( !$self->db->no_cache() ) {
     my $bind_params = $self->bind_param_generic_fetch();
     $key = uc(join(':', $slice->name, $constraint, $self->db->_get_schema_build($slice->adaptor->db())));
-  
+
     if ( defined($bind_params) ) {
       $key .= ':'
         . join( ':', map { $_->[0] . '/' . $_->[1] } @{$bind_params} );
@@ -217,7 +217,7 @@ sub fetch_all_by_Slice_constraint {
   shift @ent_proj;              # skip first
   @bounds = map {$_->from_start - $slice->start() + 1} @ent_proj;
 
-  
+
   # fetch features for the primary slice AND all symlinked slices
   foreach my $seg (@proj) {
 
@@ -235,15 +235,15 @@ sub fetch_all_by_Slice_constraint {
           $f->{start} += $offset-1;
           $f->{end}   += $offset-1;
         }
-        
+
         # discard boundary crossing features from symlinked regions
         foreach my $bound (@bounds) {
           if ($f->{'start'} < $bound && $f->{'end'} >= $bound) {
-            
+
             next FEATURE;
           }
         }
-        
+
         $f->{'slice'} = $slice;
         push @result, $f;
       }
@@ -261,7 +261,7 @@ sub fetch_all_by_Slice_constraint {
 
 =head2 build_seq_region_cache
 
-  Arg [1]    : optional - Bio::EnsEMBL::Slice 
+  Arg [1]    : optional - Bio::EnsEMBL::Slice
                the slice from which to obtain features
   Example    : $self->build_seq_region_cache();
   Description: Builds the seq_region_id caches based on the species and schema_build
@@ -302,20 +302,20 @@ sub build_seq_region_cache{
   	$sql.= ' where';
   }
   $sql.=' sr.schema_build =?';
-  
+
   #Check we have not already got the right cache
   my $cache_key = join(':', @args);
 
   #Do we already have a valid cache?
   return if($self->cache_key eq $cache_key);
-	
-  
+
+
   #Can't maintain these caches as we may be adding to them when storing
   #we should just maintain the cache with the cache_key
 
   #$self->{'seq_region_cache'}{$cache_key} ||= {};
   #$self->{'core_seq_region_cache'} = {};
-  
+
   my $sth = $self->prepare($sql);
   $sth->execute(@args);
   while (my $ref = $sth->fetchrow_arrayref()) {
@@ -335,7 +335,7 @@ sub build_seq_region_cache{
   Arg [1]    : optional string - species_id.schema_build e.g. 1.55_37
                the slice from which to obtain features
   Example    : $self->build_seq_region_cache();
-  Description: Getter/Setter for the seq_region cache_key 
+  Description: Getter/Setter for the seq_region cache_key
   Returntype : string
   Exceptions : None
   Caller     : self
@@ -368,17 +368,17 @@ sub get_seq_region_id_by_Slice{
   }
 
   #We really need to validate the schema_build of the slice to make sure it
-  #present in the current default coord_system i.e. the one which was used to 
+  #present in the current default coord_system i.e. the one which was used to
   #generate the seq_region_cache
   #This is set with the dnadb or with a slice query
   #This may not always have been done.
-  
+
   #Now all we have to do is test the cache_key
   #Or can we just build_seq_region_cache as this checks and rebuilds if not correct
   #This may generate a mistmach between the dnadb and the schema_build used to generate the cache
   #This will be reset if required for subesquent queries using the cache key
   $self->build_seq_region_cache($slice);
-  
+
   my ($core_sr_id,  $fg_sr_id);
 
 
@@ -391,7 +391,7 @@ sub get_seq_region_id_by_Slice{
 
 
   #This does not work!! When updating for a new schema_build we get the first
-  #seq_region stored, than for each subsequent one, it arbitrarily assigns a value from the hash even tho the 
+  #seq_region stored, than for each subsequent one, it arbitrarily assigns a value from the hash even tho the
   #the exists condition isn't met!
   #my $fg_sr_id = $self->{'seq_region_cache'}{$core_sr_id} if exists $self->{'seq_region_cache'}{$core_sr_id};
   #Can't replicate this using a normal hash
@@ -404,33 +404,33 @@ sub get_seq_region_id_by_Slice{
 
   if (! $fg_sr_id && ref($fg_cs)) {
     #This is used to store new seq_region info along side previous stored seq_regions of the same version
-	
+
     if ( ! $fg_cs->isa('Bio::EnsEMBL::Funcgen::CoordSystem')) {
       throw('Must pass as valid Bio::EnsEMBL::Funcgen:CoordSystem to retrieve seq_region_ids for forwards compatibility, passed '.$fg_cs);
     }
-	
+
     my $sql = 'select seq_region_id from seq_region where coord_system_id =? and name =?';
     my $sth = $self->prepare($sql);
     $sth->execute($fg_cs->dbID(), $slice->seq_region_name());
-	
+
     #This may not exist, so we need to catch it here?
     ($fg_sr_id) = $sth->fetchrow_array();
     $sth->finish();
-	
+
     #if we are providing forward compatability
     #Then we know the eFG DB doesn't have the core seq_region_ids in the DB
     #Hence retrieving the slice will fail in _obj_from_sth
     #So we need to set it internally here
     #Then pick it up when get_core_seq_region_id is called for the first time(from where?)
     #and populate the cache with the value
-	
+
     #This only works if there is a comparable slice
     #If we are dealing with a new assembly, then no $fg_sr_id will be returned
     #So need to catch this in the caller
-	
+
     #Can we remove this now the cache is persistant?
     #i.e. Cache is not regenerated everytime, hence we don't lose the data?
-	
+
     if ($fg_sr_id) {
       $self->{'_tmp_core_seq_region_cache'}{$self->cache_key} = {(
                                                                   $fg_sr_id => $core_sr_id
@@ -441,10 +441,10 @@ sub get_seq_region_id_by_Slice{
 		#Default to name match or throw if not present in DB
 		my $schema_build = $self->db->_get_schema_build($slice->adaptor->db());
 		my $core_cs = $slice->coord_system;
-	
-		#Avoids mapping of core to efg seq_region_ids 
+
+		#Avoids mapping of core to efg seq_region_ids
 		#via schema_build(of the new core db) as we are matching directly to the seq_name
-	
+
 		my $sql = 'select distinct(seq_region_id) from seq_region sr, coord_system cs where sr.coord_system_id=cs.coord_system_id and sr.name=? and cs.name =?';
 		my @args = ($slice->seq_region_name(), $core_cs->name());
 
@@ -456,18 +456,18 @@ sub get_seq_region_id_by_Slice{
 			$sql.=' and cs.species_id=?';
 			push(@args, $self->species_id());
 		}
-		
+
 		my $sth = $self->prepare($sql);
 		$sth->execute(@args);
 		($fg_sr_id) = $sth->fetchrow_array();
 		$sth->finish();
-	
+
 		if (! $fg_sr_id) {
 		  #Warn instead of throw so we can catch absent seq_region without eval
 		  #warn('Cannot find previously stored seq_region for: '.$core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name.
       #		   "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n");
 		}
-	
+
 		#Only warn first time this is seen
 		my $warning_key = $core_cs->name.':'.$core_cs->version.':'.$slice->seq_region_name;
 
@@ -475,7 +475,7 @@ sub get_seq_region_id_by_Slice{
 		  warn 'Defaulting to previously store seq_region for: '.$warning_key.
 			  "\nYou need to update your eFG seq_regions to match your core DB using: update_DB_for_release.pl\n";
 		  $warnings{$warning_key} = 1;
-	  }	
+	  }
   }
 
   return $fg_sr_id;
@@ -495,7 +495,7 @@ sub get_core_seq_region_id{
   if (! defined $core_sr_id && exists $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id}) {
     #Do we need to test the cache_key here, might it have changed since get_seq_region_id_by_Slice?
     #Or will build_seq_region_cache handle this?
-	
+
     #Why do we reset this in the main cache here if we are returning the value
     #Is this not corrupting the main cache? But we always want this value?
     $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id} = $self->{'_tmp_core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
@@ -507,7 +507,7 @@ sub get_core_seq_region_id{
     #Cache key is now also schema_build specific so this is no longer a problem
     #Removed this as this causes RegFeat retrieval to fail
     #As all non slice based methods would fail due to the lack of info about unstored DB i.e. we need a slice
-	
+
 
     $core_sr_id = $self->{'core_seq_region_cache'}{$self->cache_key}{$fg_sr_id};
 
@@ -535,7 +535,7 @@ sub get_core_seq_region_id{
   Arg [1]    : Bio::EnsEMBL::Feature
   Example    : $fs = $a->fetch_all_by_Slice_constraint($slc, 'perc_ident > 5');
   Description: Helper function containing some common feature storing functionality
-               Given a Feature this will return a copy (or the same feature if no changes 
+               Given a Feature this will return a copy (or the same feature if no changes
 	           to the feature are needed) of the feature which is relative to the start
                of the seq_region it is on. The seq_region_id of the seq_region it is on
                is also returned.  This method will also ensure that the database knows which coordinate
@@ -573,9 +573,9 @@ sub _pre_store {
   if ($slice->start != 1 || $slice->strand != 1) {
 
     #throw("You must generate your feature on a slice starting at 1 with strand 1");
-    #We did remove this transfer it uses direct hash access which 
+    #We did remove this transfer it uses direct hash access which
     #did not work with old array based ResultFeatures
-	  
+
     #move feature onto a slice of the entire seq_region
     $slice = $slice->adaptor->fetch_by_region($slice->coord_system->name(),
                                               $slice->seq_region_name(),
@@ -584,20 +584,20 @@ sub _pre_store {
                                               undef, #strand
                                               $slice->coord_system->version());
     $feature = $feature->transfer($slice);
-	
+
     if (!$feature) {
       throw('Could not transfer Feature to slice of ' .
             'entire seq_region prior to storing');
     }
   }
-  
+
 
 
   #Project here before we start building sr caches and storing CSs
   if ($new_assembly) {
      #warn "Projecting ".$feature->start.'-'.$feature->end." on "..$feature->slice->name." to $new_assembly";
 
-	
+
     my @segments = @{$feature->feature_Slice->project($slice->coord_system->name, $new_assembly)};
     # do some sanity checks on the projection results:
     # discard the projected feature if
@@ -605,7 +605,7 @@ sub _pre_store {
     #   2. the projection is fragmented (more than one segment)
     #   3. the projection doesn't have the same length as the original
     #      feature
-    
+
     # this tests for (1) and (2)
     if (scalar(@segments) == 0) {
       warn "Feature doesn't project to $new_assembly\n";
@@ -614,25 +614,25 @@ sub _pre_store {
       warn "Feature projection is fragmented in $new_assembly\n";
       return;
     }
-    
+
     # test (3)
     my $proj_slice = $segments[0]->to_Slice;
 
     if ($feature->length != $proj_slice->length) {
-	
+
       #if(! $conf->param('ignore_length')){
       warn "Feature projection is wrong length in $new_assembly\n";
       return;
       #  }
     }
-    
+
     #warn "proj ".$proj_slice->name;
 
     # everything looks fine, so adjust the coords of your feature
-    #Have to generate new_slice here as we are not sure it is going to be 
+    #Have to generate new_slice here as we are not sure it is going to be
     #on the same slice as the old assembly
     $slice = $proj_slice->adaptor->fetch_by_region($proj_slice->coord_system->name, $proj_slice->seq_region_name);
-	
+
     #These are just callers for ResultFeature!
     #For speed.
 
@@ -646,7 +646,7 @@ sub _pre_store {
 
   # Ensure this type of feature is known to be stored in this coord system.
   my $cs = $slice->coord_system; #from core/dnadb
- 
+
   #retrieve corresponding Funcgen coord_system and set id in feature
   my $csa = $self->db->get_FGCoordSystemAdaptor(); #had to call it FG as we were getting the core adaptor
   my $fg_cs = $csa->validate_and_store_coord_system($cs);
@@ -675,7 +675,7 @@ sub _pre_store {
     my $sql;
     my $core_sr_id = $slice->get_seq_region_id;
     my @args = ($slice->seq_region_name(), $fg_cs->dbID(), $core_sr_id, $schema_build);
-	
+
     #Add to comparable seq_region
     if ($seq_region_id) {
       $sql = 'insert into seq_region(seq_region_id, name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?,?)';
@@ -683,16 +683,16 @@ sub _pre_store {
     }
     #No compararble seq_region
     else {
-      $sql = 'insert into seq_region(name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?)';			
+      $sql = 'insert into seq_region(name, coord_system_id, core_seq_region_id, schema_build) values (?,?,?,?)';
     }
 
     my $sth = $self->prepare($sql);
-	
+
     #Need to eval this
     eval{$sth->execute(@args);};
-	
+
     if (!$@) {
-      $seq_region_id =  $sth->{'mysql_insertid'};
+      $seq_region_id =  $self->last_insert_id;
     }
 
     #Now we need to add this to the seq_region caches
@@ -701,7 +701,7 @@ sub _pre_store {
     $self->{core_seq_region_cache}{$self->cache_key}{$seq_region_id} = $core_sr_id;
   }
 
-  #Need to return seq_region_id as they  are not stored 
+  #Need to return seq_region_id as they  are not stored
   #in the slice retrieved from slice adaptor
   return ($feature, $seq_region_id);
 }
@@ -726,8 +726,8 @@ sub _slice_fetch {
   #We Need to translate the seq_regions IDs to efg seq_region_ids
   #we need to fetch the seq_region ID based on the coord_system id and the name
   #we don't want to poulate with the eFG seq_region_id, jsut the core one, as we need to maintain core info in the slice.
-  
-  #we need to cache the seq_region_id mappings for the coord_system and schema_build, 
+
+  #we need to cache the seq_region_id mappings for the coord_system and schema_build,
   #so we don't do it for every feature in a slice
   #should we just reset it in temporarily in fetch above, other wise we lose cache between projections
   #should we add seq_region cache to coord_system/adaptor?
@@ -740,9 +740,9 @@ sub _slice_fetch {
   #can we just cache dynamically instead?
   #we're still calling for csa rather than accessing from cache
   #could we cache the csa in the base feature adaptor?
-  
 
-  
+
+
 
   #my $slice_seq_region_id = $slice->get_seq_region_id();
 
@@ -756,7 +756,7 @@ sub _slice_fetch {
 
   my $mca = $self->db->get_MetaContainer();
   my $value_list = $mca->list_value_by_key( $tab_name."build.level" );
-  if ( @$value_list and $slice->is_toplevel()) {   
+  if ( @$value_list and $slice->is_toplevel()) {
     push @feat_css, $slice_cs;
   } else {
     @feat_css = @{$mcc->fetch_all_CoordSystems_by_feature_type($tab_name)};
@@ -781,7 +781,7 @@ sub _slice_fetch {
     if ($feat_cs->equals($slice_cs)) {
       # no mapping is required if this is the same coord system
 
-      #eFG change 
+      #eFG change
       #We want to set this to undef if we are dealing with result_features which
       #are not wsize==0!
       #This is only required if we load array data at the natural resolution!
@@ -794,7 +794,7 @@ sub _slice_fetch {
         $max_len = $self->_max_feature_length() ||
           $mcc->fetch_max_length_by_CoordSystem_feature_type($feat_cs,$tab_name);
       }
-	
+
       my $constraint = $orig_constraint;
       my $sr_id = $self->get_seq_region_id_by_Slice($slice, $feat_cs);
 
@@ -803,34 +803,34 @@ sub _slice_fetch {
       return [] if ! $sr_id;
 
       #Only add the slice clause if we are not forcing reslice
-      #force_reslice means we have dbID in the query for reg attrs 
-      #which maybe of the end of the query slice, but we still need them for 
+      #force_reslice means we have dbID in the query for reg attrs
+      #which maybe of the end of the query slice, but we still need them for
       #building reg features which overlap the end of the query slice
 
       if (! $self->force_reslice) {
 
-      
+
         $constraint .= " AND " if($constraint);
         $constraint .=
           "${tab_syn}.seq_region_id = $sr_id AND " .
             "${tab_syn}.seq_region_start <= $slice_end AND " .
               "${tab_syn}.seq_region_end >= $slice_start";
-      
-      
+
+
         if ($max_len) {
-        
+
           my $min_start = $slice_start - $max_len;
           $constraint .=
             " AND ${tab_syn}.seq_region_start >= $min_start";
         }
       }
-	
+
       my $fs = $self->generic_fetch($constraint,undef,$slice);
       # features may still have to have coordinates made relative to slice
       # start
 
-	  
-	  
+
+
 
       $fs = $self->_remap($fs, $mapper, $slice);
       push @features, @$fs;
@@ -840,7 +840,7 @@ sub _slice_fetch {
       #can't do CS remapping yet as AssemblyMapper expects a core CS
       #change AssemblyMapper?
       #or do we just create a core CS just for the remap and convert back when done?
-	  
+
       #  $mapper = $asma->fetch_by_CoordSystems($slice_cs, $feat_cs);
 
       #   next unless defined $mapper;
@@ -976,9 +976,9 @@ sub _remap {
       $strand     = $f->strand();
       $seq_region = $f->slice->seq_region_name();
     }
-    
+
     # maps to region outside desired area
-    next if ($start > $slice_end) || ($end < $slice_start) || 
+    next if ($start > $slice_end) || ($end < $slice_start) ||
       ($slice_seq_region ne $seq_region);
 
     #shift the feature start, end and strand in one call
@@ -1014,7 +1014,7 @@ sub _remap {
 
 #We really only want this method to work on storables
 #Namely all SetFeatures, could extend to FeatureTypes
-#This is a reimplementation of what has been used in the 
+#This is a reimplementation of what has been used in the
 #Funcgen::SliceAdaptor::_set_bounds_by_xref_FeatureSet
 
 #we could have a fourth arg here which is a coderef to filter the feature returned?
@@ -1028,7 +1028,7 @@ sub _remap {
 #Where can we put this?
 #DBEntry adaptor?
 #The only logical place for this is really a convinience method in the core BaseFeatureAdaptor
-#This removes the problem of the generic nature of the returned data, as the focus is with the 
+#This removes the problem of the generic nature of the returned data, as the focus is with the
 #caller which is a singular feature, therefore, not mixing of data types
 
 #restrict to one feature type for now. but this will be slower as we will have to make the list call
@@ -1058,7 +1058,7 @@ sub fetch_all_by_stable_Storable_FeatureSets{
   my ($extdb_name);
   my $dbe_adaptor = $self->db->get_DBEntryAdaptor;
 
- 
+
   #Do we need a central registry for ensembl db names, what about versions?
 
 
@@ -1081,7 +1081,7 @@ sub fetch_all_by_stable_Storable_FeatureSets{
     throw('Must pass a stable Bio::EnsEMBL::Feature, you passed a '.$obj);
   }
 
- 
+
   #Set which eFG features we want to look at.
 
   if (ref($fsets) ne 'ARRAY' || scalar(@$fsets) == 0) {
@@ -1092,12 +1092,12 @@ sub fetch_all_by_stable_Storable_FeatureSets{
 
   foreach my $fset (@$fsets) {
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
-	
+
     $feature_set_types{$fset->feature_class} ||= [];
     push @{$feature_set_types{$fset->feature_class}}, $fset;
   }
 
-   
+
   #We can list the outer loop here and put in the BaseFeatureAdaptor, or possible storable as we do have FeatureType xrefs.
   #This would be useful for fetching all the efg features for a given xref and FeatureSets
   #Don't implement as a parent sub and call from here as this would mean looping through array twice.
@@ -1112,25 +1112,25 @@ sub fetch_all_by_stable_Storable_FeatureSets{
     #my $xref_method    = 'list_'.$fset_type.'_feature_ids_by_extid';
     #e.g. list_regulatory_feature_ids_by_extid
 
-	
+
     #Do type test here
     my $adaptor_type = ucfirst($fset_type).'FeatureAdaptor';
-	
+
     #remove this for generic method
     next if ref($self) !~ /$adaptor_type/;
-			
+
     #This is for generic method
     #my $adaptor_method = 'get_'.ucfirst($fset_type).'FeatureAdaptor';
     #my $adaptor = $self->db->$adaptor_method;
-	
+
     my %feature_set_ids;
     map $feature_set_ids{$_->dbID} = 1, @{$feature_set_types{$fset_type}};
-			
+
     my $cnt = 0;
 
     #Change this self to adaptor for generic method
     foreach my $efg_feature (@{$self->fetch_all_by_external_name($obj->stable_id, $extdb_name)}) {
-	  
+
       #Skip if it is not in one of our FeatureSets
       next if ! exists $feature_set_ids{$efg_feature->feature_set->dbID};
       push @features, $efg_feature;
@@ -1230,12 +1230,12 @@ sub _get_coord_system_ids{
   my ($self, $coord_systems) = @_;
 
   my @cs_ids;
-	
+
   if ($coord_systems) {
-	  
-    if (ref($coord_systems) eq 'ARRAY' && 
+
+    if (ref($coord_systems) eq 'ARRAY' &&
         (scalar(@$coord_systems) >0)) {
-	  
+
       foreach my $cs (@$coord_systems) {
         $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
         push @cs_ids, $cs->dbID;
@@ -1250,7 +1250,7 @@ sub _get_coord_system_ids{
       push @cs_ids, $cs->dbID;
     }
   }
-	  
+
   #This should never happen
   if (scalar(@cs_ids) == 0) {
     throw('Could not find any default CoordSystems');
@@ -1262,7 +1262,7 @@ sub _get_coord_system_ids{
 
 =head2 count_features_by_field_id
 
-  Arg [1]    : string     - table field to count 
+  Arg [1]    : string     - table field to count
   Arg [2]    : string/int - id to count
   Example    : my $probe_feature_count = $pfa->count_feature_by_field_id('probe_id', $probe_id);
   Description: Returns a count of the features with the acciated field id
@@ -1293,7 +1293,7 @@ sub count_features_by_field_id{
 
   $sth->bind_param(1, $count_id, SQL_INTEGER);
   $sth->execute;
-  
+
   return $sth->fetchrow_array;
 }
 
@@ -1302,7 +1302,7 @@ sub count_features_by_field_id{
 =head2 force_reslice
 
   Arg [1]    : Optional - Boolean
-  Example    : if($self->force_reslice){ 
+  Example    : if($self->force_reslice){
                     # Reslice features past ends of destination Slice
                }
   Description: Sets/Returns force_reslice boolean
@@ -1317,7 +1317,7 @@ sub count_features_by_field_id{
   sub force_reslice{
     my ($self, $force) = @_;
 
-  
+
     if (defined $force) {
       $self->{force_reslice} = $force;
     }

@@ -135,7 +135,7 @@ sub _objs_from_sth {
 	$sth->bind_columns(
 					   \$external_feature_id,   \$efg_seq_region_id,
 					   \$seq_region_start,      \$seq_region_end,
-					   \$seq_region_strand,     \$display_label,         
+					   \$seq_region_strand,     \$display_label,
 					   \$ftype_id,              \$fset_id,
 					   \$interdb_stable_id
 					  );
@@ -167,48 +167,48 @@ sub _objs_from_sth {
   FEATURE: while ( $sth->fetch() ) {
 	  #Need to build a slice adaptor cache here?
 	  #Would only ever want to do this if we enable mapping between assemblies??
-	  #Or if we supported the mapping between cs systems for a given schema_build, 
+	  #Or if we supported the mapping between cs systems for a given schema_build,
 	  #which would have to be handled by the core api
-	  
+
 	  #get core seq_region_id
 	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
-	  
+
 	  if(! $seq_region_id){
 		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
 		  "The region you are using is not present in the current dna DB";
 		next;
 	  }
 
-	  
+
 	  #Get the FeatureSet/Type objects
 	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
 	  $ftype_hash{$ftype_id} = $ftype_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
-   
+
 	  # Get the slice object
 	  my $slice = $slice_hash{'ID:'.$seq_region_id};
-	  
+
 	  if (! $slice) {
 		$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
 		$slice_hash{'ID:'.$seq_region_id} = $slice;
 		$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
 		$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
 	  }
-	  
+
 	  my $sr_name = $sr_name_hash{$seq_region_id};
 	  my $sr_cs   = $sr_cs_hash{$seq_region_id};
-	  
+
 	  #abstract to BaseFeatureAdaptor?
 	  # Remap the feature coordinates to another coord system if a mapper was provided
 	  if ($mapper) {
-		
+
 		throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-		
+
 	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
 			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-	      
+
 	      # Skip features that map to gaps or coord system boundaries
 	      next FEATURE if !defined $sr_name;
-	      
+
 	      # Get a slice in the coord system we just mapped to
 	      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
 		$slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
@@ -218,7 +218,7 @@ sub _objs_from_sth {
 		  ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
 	      }
 	    }
-	    
+
 	    # If a destination slice was provided convert the coords
 	    # If the destination slice starts at 1 and is forward strand, nothing needs doing
 	    if ($dest_slice) {
@@ -233,14 +233,14 @@ sub _objs_from_sth {
 		  $seq_region_strand      *= -1;
 		}
 	      }
-	      
+
 	      # Throw away features off the end of the requested slice
 	      next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
 		|| ( $dest_slice_sr_name ne $sr_name );
-	      
+
 	      $slice = $dest_slice;
 	    }
-	    
+
 	  push @features, Bio::EnsEMBL::Funcgen::ExternalFeature->new_fast
 		({
 		  'start'          => $seq_region_start,
@@ -256,7 +256,7 @@ sub _objs_from_sth {
 		  'interdb_stable_id',    => $interdb_stable_id,
 		 });
 	  }
-	
+
 	return \@features;
 }
 
@@ -277,11 +277,11 @@ sub _objs_from_sth {
 
 sub store{
 	my ($self, @efs) = @_;
-	
+
 	if (scalar(@efs) == 0) {
 		throw('Must call store with a list of ExternalFeature objects');
 	}
-	
+
 	my $sth = $self->prepare("
 		INSERT INTO external_feature (
 			seq_region_id,   seq_region_start,
@@ -290,21 +290,21 @@ sub store{
             feature_set_id
 		) VALUES (?, ?, ?, ?, ?, ?, ?)
 	");
-	
+
 	my $db = $self->db();
-	
+
   FEATURE: foreach my $ef (@efs) {
-		
+
 	  if(! (ref($ef) && $ef->isa('Bio::EnsEMBL::Funcgen::ExternalFeature') )) {
 		throw('Feature must be an ExternalFeature object');
 	  }
-	  
+
 	  if ( $ef->is_stored($db) ) {
 		#does not accomodate adding Feature to >1 feature_set
 		warning('ExternalFeature [' . $ef->dbID() . '] is already stored in the database');
 		next FEATURE;
 	  }
-	  
+
 	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $ef->feature_set);
 
 	  my $seq_region_id;
@@ -317,9 +317,9 @@ sub store{
 	  $sth->bind_param(5, $ef->display_label(),       SQL_VARCHAR);
 	  $sth->bind_param(6, $ef->feature_type->dbID(),  SQL_INTEGER);
 	  $sth->bind_param(7, $ef->feature_set->dbID(),   SQL_INTEGER);
-	
+
 	  $sth->execute();
-	  $ef->dbID( $sth->{'mysql_insertid'} );
+	  $ef->dbID( $self->last_insert_id );
 	  $ef->adaptor($self);
 	  $self->store_associated_feature_types($ef) if (defined $ef->{'associated_feature_types'});
 	}
@@ -332,7 +332,7 @@ sub store{
   Arg [1]    : Integer $stable_id - The 'interdb stable id' of the ExternalFeature to retrieve
   Example    : my $rf = $rf_adaptor->fetch_by_interdb_stable_id(1);
   Description: Retrieves a ExternalFeature via its interdb_stable id. This is really an internal
-               method to facilitate inter DB linking. 
+               method to facilitate inter DB linking.
   Returntype : Bio::EnsEMBL::Funcgen::ExternalFeature
   Exceptions : none
   Caller     : general

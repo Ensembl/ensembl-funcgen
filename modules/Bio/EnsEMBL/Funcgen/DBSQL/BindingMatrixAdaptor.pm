@@ -107,7 +107,7 @@ sub fetch_all_by_name_FeatureType{
 
   my $constraint = " bm.name = ? and bm.feature_type_id = ?";
   $constraint .= " AND bm.analysis_id = ?" if $analysis;
-  
+
   $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
   $self->bind_param_generic_fetch($ftype->dbID,    SQL_INTEGER);
   $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
@@ -175,7 +175,7 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( bm.binding_matrix_id bm.name bm.analysis_id bm.frequencies 
+  return qw( bm.binding_matrix_id bm.name bm.analysis_id bm.frequencies
              bm.description bm.feature_type_id bm.threshold);
 }
 
@@ -195,7 +195,7 @@ sub _columns {
 
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
-	
+
 	my (@result, $matrix_id, $name, $analysis_id, $freq, $desc, $ftype_id, $thresh);
 	$sth->bind_columns(\$matrix_id, \$name, \$analysis_id, \$freq, \$desc, \$ftype_id, \$thresh);
 
@@ -226,9 +226,9 @@ sub _objs_from_sth {
 		 -THRESHOLD    => $thresh,
 		 -ADAPTOR      => $self,
 		);
-	  
+
 	  push @result, $matrix;
-	  
+
 	}
 
 	return \@result;
@@ -240,7 +240,7 @@ sub _objs_from_sth {
 
   Args       : List of Bio::EnsEMBL::Funcgen::BindingMatrix objects
   Example    : $matrix_adaptor->store($m1, $m2, $m3);
-  Description: Stores given Matrix objects in the database. 
+  Description: Stores given Matrix objects in the database.
 			   Sets dbID and adaptor on the objects that it stores.
   Returntype : None
   Exceptions : None
@@ -252,14 +252,14 @@ sub _objs_from_sth {
 sub store {
   my $self = shift;
   my @args = @_;
-  
+
   my $sth = $self->prepare("
 			INSERT INTO binding_matrix
 			(name, analysis_id, frequencies, description, feature_type_id, threshold)
 			VALUES (?, ?, ?, ?, ?, ?)");
-    
+
   my $s_matrix;
-  
+
   foreach my $matrix (@args) {
 
     if ( ! $matrix->isa('Bio::EnsEMBL::Funcgen::BindingMatrix') ) {
@@ -269,24 +269,23 @@ sub store {
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $matrix->feature_type);
 
 
-    
+
     if (!( $matrix->dbID() && $matrix->adaptor() == $self )){
-      
+
       #Check for previously stored BindingMatrix
       ($s_matrix) = @{$self->fetch_all_by_name_FeatureType($matrix->name(), $matrix->feature_type, $matrix->analysis())};
-	
+
       if(! $s_matrix){
-      	
+
 		$sth->bind_param(1, $matrix->name(),               SQL_VARCHAR);
 		$sth->bind_param(2, $matrix->analysis()->dbID(),   SQL_INTEGER);
 		$sth->bind_param(3, $matrix->frequencies(),        SQL_LONGVARCHAR);
 		$sth->bind_param(4, $matrix->description(),        SQL_VARCHAR);
 		$sth->bind_param(5, $matrix->feature_type->dbID(), SQL_INTEGER);
 		$sth->bind_param(6, $matrix->threshold(),          SQL_DOUBLE);
-				
+
 		$sth->execute();
-		my $dbID = $sth->{'mysql_insertid'};
-		$matrix->dbID($dbID);
+		$matrix->dbID($self->last_insert_id);
 		$matrix->adaptor($self);
 
 		$self->store_associated_feature_types($matrix);

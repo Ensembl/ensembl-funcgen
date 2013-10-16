@@ -155,9 +155,9 @@ sub fetch_all_by_ArrayChip{
 
 sub fetch_by_unique_and_experiment_id {
   my ($self, $c_uid, $e_dbid) = @_;
-    
 
-  
+
+
 
   throw("Must provide and unique_id and and experiment_id") if(! $c_uid || ! $e_dbid);
 
@@ -167,12 +167,12 @@ sub fetch_by_unique_and_experiment_id {
 		WHERE ec.unique_id ='$c_uid'
         AND ec.experiment_id = $e_dbid
 	");
-  
+
 
   $sth->execute();
   my ($ec_id) = $sth->fetchrow();
-  
-	
+
+
   return $self->fetch_by_dbID($ec_id) if $ec_id;
 }
 
@@ -203,17 +203,17 @@ sub fetch_by_unique_id_vendor {
 		FROM experimental_chip ec
 		WHERE ec.unique_id ='$c_uid'
 	");
-  
+
 
   $sth->execute();
-  
+
   while (($ec_id, $ac_id) = $sth->fetchrow()){
 
     my $sql = "SELECT a.vendor from array a, array_chip ac where a.array_id=ac.array_id and ac.array_chip_id=$ac_id;";
     ($avendor) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
     push @ecids, $ec_id if (uc($avendor) eq uc($vendor));
   }
-  
+
   #This check shouldn't be necessary if this control is illicited on import
   #no unique key possible so just for safety until import fully tested.
   if(scalar(@ecids) > 1){
@@ -256,8 +256,8 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( ec.experimental_chip_id  ec.unique_id 
-	   	     ec.experiment_id         ec.array_chip_id 
+  return qw( ec.experimental_chip_id  ec.unique_id
+	   	     ec.experiment_id         ec.array_chip_id
 		     ec.feature_type_id       ec.cell_type_id
 		     ec.biological_replicate  ec.technical_replicate);
 }
@@ -278,20 +278,20 @@ sub _columns {
 
 sub _objs_from_sth {
   my ($self, $sth) = @_;
-	
+
   my (@result, $ec_id, $c_uid, $exp_id, $ac_id, $ftype_id, $ctype_id, $brep, $trep, $ftype, $ctype);
 
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
-  
-  
+
+
   $sth->bind_columns(\$ec_id, \$c_uid, \$exp_id, \$ac_id, \$ftype_id, \$ctype_id, \$brep, \$trep);
-  
+
   while ( $sth->fetch() ) {
 
     $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
     $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-    
+
     my $array = Bio::EnsEMBL::Funcgen::ExperimentalChip->new(
 															 -dbID           => $ec_id,
 															 -unique_id      => $c_uid,
@@ -303,9 +303,9 @@ sub _objs_from_sth {
 															 -technical_replicate  => $trep,
 															 -adaptor        => $self,
 															);
-	  
+
     push @result, $array;
-    
+
   }
   return \@result;
 }
@@ -329,20 +329,20 @@ sub _objs_from_sth {
 sub store {
   my $self = shift;
   my @args = @_;
-  
+
   my ($sarray);
-  
+
   my $sth = $self->prepare("
 			INSERT INTO experimental_chip
-			(unique_id, experiment_id, array_chip_id, feature_type_id, 
+			(unique_id, experiment_id, array_chip_id, feature_type_id,
              cell_type_id, biological_replicate, technical_replicate)
 			VALUES (?, ?, ?, ?, ?, ?, ?)");
-    
+
   foreach my $ec (@args) {
     throw('Can only store ExperimentalChip objects') if ( ! $ec->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip') );
-    
+
     if (!( $ec->dbID() && $ec->adaptor() == $self )){
-      
+
       #Some slight jiggery pokery here to get the vendor as the EC does not yet have an adaptor
       #cache these?
       my $vendor = $self->db->get_ArrayChipAdaptor->fetch_by_dbID($ec->array_chip_id)->get_Array->vendor();
@@ -351,10 +351,10 @@ sub store {
       throw("ExperimentalChip already exists in the database with dbID:".$s_ec->dbID().
 	    "\nTo reuse/update this ExperimentalChip you must retrieve it using the ExperimentalChipAdaptor".
 	    "\nMaybe you want to use the -recover option?") if $s_ec;
-      
+
       my $ftype_id = (defined $ec->feature_type()) ? $ec->feature_type->dbID() : undef;
       my $ctype_id = (defined $ec->cell_type()) ? $ec->cell_type->dbID() : undef;
-      
+
       $sth->bind_param(1, $ec->unique_id(),            SQL_VARCHAR);
       $sth->bind_param(2, $ec->experiment_id(),        SQL_VARCHAR);
       $sth->bind_param(3, $ec->array_chip_id(),        SQL_VARCHAR);
@@ -364,14 +364,13 @@ sub store {
 	  $sth->bind_param(7, $ec->technical_replicate(),  SQL_VARCHAR);
 
       $sth->execute();
-      my $dbID = $sth->{'mysql_insertid'};
-      $ec->dbID($dbID);
+      $ec->dbID($self->last_insert_id);
       $ec->adaptor($self);
-      
+
       #}
       #else{
       #	  $ec = $s_ec;
-      
+
       #my @states = @{$self->db->fetch_all_states('experimental_chip', $ec->dbID())};
       #	  my @states = @{$self->db->get_StatusAdaptor->fetch_all_states($ec)};
       #	  warn("Using previously stored ExperimentalChip (".$ec->unique_id().") with states\t@states\n");
@@ -382,7 +381,7 @@ sub store {
       $self->store_states($ec);
     }
   }
-  
+
   return \@args;
 }
 

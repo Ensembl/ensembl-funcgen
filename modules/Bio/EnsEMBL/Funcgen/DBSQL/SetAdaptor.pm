@@ -55,7 +55,7 @@ use vars qw(@ISA @EXPORT);
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [2]    : String  (optional) - status e.g. 'DISPLAYABLE'
-  Example    : 
+  Example    :
   Description: Retrieves a list of features on a given slice that are created
                by probes from the specified type of array.
   Returntype : Listref of Bio::EnsEMBL::Set objects
@@ -66,20 +66,20 @@ use vars qw(@ISA @EXPORT);
 =cut
 
 sub fetch_all_by_FeatureType {
-  my ($self, $ftype, $status) = @_; 
+  my ($self, $ftype, $status) = @_;
   my $params = {constraints => {feature_types => [$ftype]}};
-  $params->{constraints}{states} = [$status] if defined $status; 
+  $params->{constraints}{states} = [$status] if defined $status;
   my $results = $self->generic_fetch($self->compose_constraint_query($params));
   $self->reset_true_tables;  #As we may have added status
-  return $results;  
+  return $results;
 }
 
 =head2 fetch_all_by_CellType
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::CellType
   Arg [2]    : String  (optional) - status e.g. 'DISPLAYABLE'
-  Example    : 
-  Description: 
+  Example    :
+  Description:
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSet objects
   Exceptions : Throws if no CellType is provided
   Caller     : General
@@ -90,11 +90,11 @@ sub fetch_all_by_FeatureType {
 sub fetch_all_by_CellType {
   my ($self, $ctype, $status) = @_;
   my $params = {constraints => {cell_types => [$ctype]}};
-  $params->{constraints}{states} = [$status] if defined $status; 
+  $params->{constraints}{states} = [$status] if defined $status;
   my $results = $self->generic_fetch($self->compose_constraint_query($params));
   $self->reset_true_tables; #As we may have added status
-  return $results;  
-} 
+  return $results;
+}
 
 
 =head2 fetch_all_by_FeatureType_Analysis
@@ -103,7 +103,7 @@ sub fetch_all_by_CellType {
   Arg [2]    : Bio::EnsEMBL::Analysis
   Arg [3]    : (optional) Bio::EnsEMBL::Funcgen::CellType
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_FeatureType_Analysis($ftype, $anal, $ctype);
-  Description: Retrieves FeatureSet objects from the database based on FeatureType, Analysis and 
+  Description: Retrieves FeatureSet objects from the database based on FeatureType, Analysis and
                CellType if defined.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
   Exceptions : Throws if args 1 and 2 are not valid or stored
@@ -114,7 +114,7 @@ sub fetch_all_by_CellType {
 
 sub fetch_all_by_FeatureType_Analysis {
   my ($self, $ftype, $anal, $ctype) = @_;
-  my $params = {constraints => 
+  my $params = {constraints =>
                 {
                  feature_types => [$ftype],
                  analyses     => [$anal],
@@ -122,7 +122,7 @@ sub fetch_all_by_FeatureType_Analysis {
                };
 
   $params->{constraints}{cell_types} = [$ctype] if $ctype;
-  return $self->generic_fetch($self->compose_constraint_query($params));    
+  return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
 
@@ -145,7 +145,7 @@ sub _constrain_cell_types {
   my $constraint = $self->_table_syn.'.cell_type_id IN ('.
         join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
         ).')';
-  
+
   #{} = no futher contraint config
   return ($constraint, {});
 }
@@ -153,11 +153,11 @@ sub _constrain_cell_types {
 
 sub _constrain_feature_types {
   my ($self, $fts) = @_;
- 
+
   #Don't need to bind param this as we validate
   my $constraint = $self->_table_syn.'.feature_type_id IN ('.
-		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
-  
+		join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';
+
   #{} = no futher constraint conf
   return ($constraint, {});
 }
@@ -165,12 +165,22 @@ sub _constrain_feature_types {
 
 sub _constrain_analyses {
   my ($self, $anals) = @_;
-  
+
   #Don't need to bind param this as we validate
   my $constraint = $self->_table_syn.'.analysis_id IN ('.
     join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Analysis', $anals, 'dbID')}).')';
-  
+
   return ($constraint, {});   #{} = no futher constraint conf
+}
+
+sub _constrain_name {
+  my ($self, $name) = @_;
+
+  if(! defined $name) {
+    throw("Need to specify a name argument");
+  }
+  my $constraint = $self->_table_syn . ".name = '$name'";
+  return ($constraint, {});
 }
 
 1;

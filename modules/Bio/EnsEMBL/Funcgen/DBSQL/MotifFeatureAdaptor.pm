@@ -59,7 +59,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
 
-my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq_region_end'; 
+my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq_region_end';
 # ORDER by required by fetch_all_by_dbID_list when fetching as regulatory_attributes
 # was '' to avoid use of undef warning from BaseAdaptor
 my $final_clause = $true_final_clause;
@@ -93,7 +93,7 @@ sub fetch_all_by_AnnotatedFeature {
 
   my $mfs = $self->generic_fetch($constraint, undef, $slice);
   $self->reset_true_tables;
-  
+
   return $mfs;
 }
 
@@ -114,23 +114,23 @@ sub fetch_all_by_AnnotatedFeature {
 
 sub fetch_all_by_Slice_CellType {
   my ($self, $slice, $ctype, $type) = @_;
-	
-  #could add logic_name here for motif mapper analysis, motif source analysis 
+
+  #could add logic_name here for motif mapper analysis, motif source analysis
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
-   
+
   #Extend query tables
   $self->_tables([['feature_set', 'fs'],
-                  ['associated_motif_feature', 'amf'], 
+                  ['associated_motif_feature', 'amf'],
                   ['annotated_feature', 'af']]);
 
   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND '.
 	'amf.annotated_feature_id=af.annotated_feature_id and '.
 	  'af.feature_set_id=fs.feature_set_id AND fs.cell_type_id = ?';
-  
+
   #Group here as the mf may be linked to multiple afs
   $final_clause = ' GROUP BY mf.motif_feature_id';
 
-  
+
   $self->bind_param_generic_fetch( $ctype->dbID(), SQL_INTEGER);
   my $mfs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
   $self->reset_true_tables;
@@ -157,10 +157,10 @@ sub fetch_all_by_Slice_CellType {
 
 sub fetch_all_by_Slice_BindingMatrix {
   my ($self, $slice, $bm, $type) = @_;
-	
-  #could add logic_name here for motif mapper analysis, motif source analysis 
+
+  #could add logic_name here for motif mapper analysis, motif source analysis
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $bm);
-  
+
   my $constraint = 'mf.binding_matrix_id = ?';
 
   $self->bind_param_generic_fetch( $bm->dbID(), SQL_INTEGER);
@@ -188,8 +188,8 @@ sub fetch_all_by_Slice_BindingMatrix {
 
 sub fetch_all_by_Slice_FeatureSets {
   my ($self, $slice, $fsets, $type) = @_;
-	
-  #could add logic_name here for motif mapper analysis, motif source analysis 
+
+  #could add logic_name here for motif mapper analysis, motif source analysis
   #$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fsets);
   foreach my $fset (@$fsets){
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
@@ -293,7 +293,7 @@ sub _objs_from_sth {
 
 	my $sa = $self->db->dnadb->get_SliceAdaptor();
 	my $bm_adaptor = $self->db->get_BindingMatrixAdaptor();
-	my ($seq_region_id, @features, %bm_hash, 
+	my ($seq_region_id, @features, %bm_hash,
       %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
@@ -334,17 +334,17 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-	
+
  FEATURE: while ( $sth->fetch() ) {
 
 	  #Build a slice adaptor cache here if we want to enable mapping between assemblies??
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
-	  
+
 	  #get core seq_region_id
 	  #This fails if we are using a 'comparable' CoordSystem as we don't have a cache
 	  #for the new DB. Wasn't this fixed with the tmp seq_region_cache?
 	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
-		
+
 	  if (! $seq_region_id) {
       warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
         "The region you are using is not present in the current seq_region_cache.\n".
@@ -354,31 +354,31 @@ sub _objs_from_sth {
 
 	  #Get the BindingMatrix object
 	  $bm_hash{$bm_id} = $bm_adaptor->fetch_by_dbID($bm_id) if(! exists $bm_hash{$bm_id});
-	  
-   
+
+
 	  # Get the slice object
 	  $slice = $slice_hash{'ID:'.$seq_region_id};
-	  
+
 	  if (! $slice) {
       $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
       $slice_hash{'ID:'.$seq_region_id} = $slice;
       $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
       $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
 	  }
-	  
+
 	  $sr_name = $sr_name_hash{$seq_region_id};
 	  $sr_cs   = $sr_cs_hash{$seq_region_id};
-	  
+
 	  # Remap the feature coordinates to another coord system if a mapper was provided
-	  if ($mapper) {		
+	  if ($mapper) {
       throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-		
+
       ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
         = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-	      
+
       # Skip features that map to gaps or coord system boundaries
       next FEATURE if ! defined $sr_name;
-	      
+
       # Get a slice in the coord system we just mapped to
       if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
         $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
@@ -388,11 +388,11 @@ sub _objs_from_sth {
           ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
       }
 	  }
-	    
+
 	  # If a destination slice was provided convert the coords
 	  # If the destination slice starts at 1 and is forward strand, nothing needs doing
 	  if ($dest_slice) {
-	
+
       unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
         if ($dest_slice_strand == 1) {
           $seq_region_start = $seq_region_start - $dest_slice_start + 1;
@@ -404,21 +404,21 @@ sub _objs_from_sth {
           $seq_region_strand      *= -1;
         }
       }
-	      
+
       # Throw away features off the end of the requested slice
       if (! $self->force_reslice) {
         #force_reslice set by RegulatoryFeature::regulatory_attributes
         #so we don't lose attrs which are not on the dest_slice
-		  
+
         next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
           || ( $dest_slice_sr_name ne $sr_name );
       }
-	      
+
       $slice = $dest_slice;
 	  }
-	  
 
-	  
+
+
     push @features, Bio::EnsEMBL::Funcgen::MotifFeature->new_fast
 		  ({
         start             => $seq_region_start,
@@ -455,11 +455,11 @@ sub _objs_from_sth {
 
 sub store{
 	my ($self, @mfs) = @_;
-	
+
 	if (scalar(@mfs) == 0) {
 		throw('Must call store with a list of MotifFeature objects');
 	}
-	
+
 	my $sth = $self->prepare("
 		INSERT INTO motif_feature (
 			seq_region_id,   seq_region_start,
@@ -467,29 +467,29 @@ sub store{
             binding_matrix_id,  display_label, score, interdb_stable_id
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
-	
+
 	my $db = $self->db();
-	
+
   FEATURE: foreach my $mf (@mfs) {
-		
+
 	  if( ! (ref($mf) && $mf->isa('Bio::EnsEMBL::Funcgen::MotifFeature'))){
 		throw('Feature must be an MotifFeature object');
 	  }
-		
+
 
 
 	  #Check for preexiting MF should be done in caller
 	  #as there is currently no unique key to restrict duplicates
-	  
+
 
 	  if ( $mf->is_stored($db) ) {
 		warning('MotifFeature [' . $mf->dbID() . '] is already stored in the database');
 		next FEATURE;
 	  }
-		
+
 	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $mf->binding_matrix);
 
-		
+
 	  my $seq_region_id;
 	  ($mf, $seq_region_id) = $self->_pre_store($mf);
 
@@ -499,7 +499,7 @@ sub store{
 		$dlabel = $mf->binding_matrix->feature_type->name.':'
 		  .$mf->binding_matrix->name();
 	  }
-	  
+
 	  $sth->bind_param(1, $seq_region_id,              SQL_INTEGER);
 	  $sth->bind_param(2, $mf->start(),                SQL_INTEGER);
 	  $sth->bind_param(3, $mf->end(),                  SQL_INTEGER);
@@ -511,7 +511,7 @@ sub store{
 
 	  $sth->execute();
 
-	  $mf->dbID( $sth->{'mysql_insertid'} );	  		
+	  $mf->dbID( $self->last_insert_id );
 	  $mf->adaptor($self);
 
 	  #Don't store assoicated AF/TFF here
@@ -527,7 +527,7 @@ sub store{
   Args[1]    : Bio::EnsEMBL::Funcgen::MotifFeature
   Args[2]    : Bio::EnsEMBL::Funcgen::AnnotatedFeature
   Example    : $esa->store_AnnotatedFeature_association($mf, $af);
-  Description: Store link between AnnotatedFeatures representing TF peaks 
+  Description: Store link between AnnotatedFeatures representing TF peaks
                and MotifFeatures
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
   Exceptions : Throws if args are not valid, warns if association already exists
@@ -544,7 +544,7 @@ sub store{
 #reciprocal methods here and in AF/TFF?
 #Just in MF for now untill we write TFF
 
-#When loading MFs, need a wayway to identify if 
+#When loading MFs, need a wayway to identify if
 #it has already been loaded for a previous set
 #possiblity of parallel processes loading same MF at same time.
 #load scripts should handle multiple fsets, and only ever be run in series
@@ -553,7 +553,7 @@ sub store{
 #Should only ever rollback associations relevant to fsets in question
 #this may leave orphaned MFs which may then cause duplicates
 
-#Duplicate may also be cause if some fsets are run in series, so we definitely 
+#Duplicate may also be cause if some fsets are run in series, so we definitely
 #need to test for MF using feature Slice and BindingMatrix
 
 
@@ -562,12 +562,12 @@ sub store_associated_AnnotatedFeature{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $af);
-  
-  
+
+
   #Check for existing association
-  
+
   foreach my $existing_af(@{$mf->associated_annotated_features}){
-	
+
 	if( $existing_af->dbID == $af->dbID ){
 	  warn "You are trying to store a pre-exiting AnnotatedFeature association";
 	  return;
@@ -608,7 +608,7 @@ sub store_associated_AnnotatedFeature{
   Arg [1]    : Integer $stable_id - The 'interdb stable id' of the motif feature to retrieve
   Example    : my $rf = $rf_adaptor->fetch_by_interdb_stable_id(1);
   Description: Retrieves a motif feature via its stable id. This is really an internal
-               method to facilitate inter DB linking. 
+               method to facilitate inter DB linking.
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
   Exceptions : none
   Caller     : general

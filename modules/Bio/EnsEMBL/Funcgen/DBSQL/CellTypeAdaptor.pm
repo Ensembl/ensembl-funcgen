@@ -108,7 +108,7 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( ct.cell_type_id ct.name ct.display_label 
+  return qw( ct.cell_type_id ct.name ct.display_label
              ct.description ct.gender ct.efo_id ct.tissue );
   #type/class = enum cell, cell line, tissue
 }
@@ -129,11 +129,11 @@ sub _columns {
 
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
-	
+
 	my (@result, $ct_id, $name, $dlabel, $desc, $gender, $efo_id, $tissue);
-	
+
 	$sth->bind_columns(\$ct_id, \$name, \$dlabel, \$desc, \$gender, \$efo_id, \$tissue);
-	
+
 	while ( $sth->fetch() ) {
 		my $ctype = Bio::EnsEMBL::Funcgen::CellType->new(
 														 -dbID          => $ct_id,
@@ -144,9 +144,9 @@ sub _objs_from_sth {
 														 -EFO_ID        => $efo_id,
 														 -ADAPTOR       => $self,
 														);
-	  
+
 		push @result, $ctype;
-	  
+
 	}
 	return \@result;
 }
@@ -168,27 +168,27 @@ sub _objs_from_sth {
 sub store {
   my $self = shift;
   my @args = @_;
-  
-  
+
+
   my $sth = $self->prepare("
 			INSERT INTO cell_type
 			(name, display_label, description, gender, efo_id, tissue)
 			VALUES (?, ?, ?, ?, ?, ?)");
-    
-  
-  
+
+
+
   foreach my $ct (@args) {
 	  if ( ! $ct->isa('Bio::EnsEMBL::Funcgen::CellType') ) {
 		  warning('Can only store CellType objects, skipping $ct');
 		  next;
 	  }
-	  
+
 	  if ( $ct->dbID() && $ct->adaptor() == $self ){
 		  warn("Skipping previously stored CellType dbID:".$ct->dbID().")");
 		  next;
 	  }
-	  
-	  
+
+
 	  $sth->bind_param(1, $ct->name,           SQL_VARCHAR);
 	  $sth->bind_param(2, $ct->display_label,  SQL_VARCHAR);
 	  $sth->bind_param(3, $ct->description,    SQL_VARCHAR);
@@ -196,7 +196,7 @@ sub store {
 	  $sth->bind_param(5, $ct->efo_id,         SQL_VARCHAR);
 	  $sth->bind_param(6, $ct->tissue,         SQL_VARCHAR);
 	  $sth->execute();
-	  $ct->dbID($sth->{'mysql_insertid'});
+	  $ct->dbID($self->last_insert_id);
 	  $ct->adaptor($self);
 	}
 
