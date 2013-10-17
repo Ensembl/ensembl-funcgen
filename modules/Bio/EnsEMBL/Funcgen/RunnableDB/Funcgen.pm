@@ -146,7 +146,6 @@ sub write_output {
 #Requires some global parameters that are not set in Funcgen->fetch_input, such as
 #'analysis', 'feature_set_name', 'data_set_name' (these could be given as local parameters...)
 sub _check_Experiment {
-
   #Todo make it more generic and accept multiple input_subsets
   #Also maybe pass parameters as hash list...
   my ($self, $analysis, $input_subset, $fset_name) = @_;
@@ -200,7 +199,7 @@ sub _check_Experiment {
        -format       => 'SEQUENCING',
        -feature_class => 'result',
        # Analysis is not being used??
-       #-analysis     => $self->feature_analysis,
+       -analysis     => $analysis,
       );
     warn "Storing new InputSet:\t$iset_name\n";
     ($iset)  = @{$isa->store($iset)};
