@@ -16,6 +16,7 @@ INSERT INTO status_name (name) values ('TO_BE_REBUILD');
 INSERT INTO status_name (name) values ('REBUILT');
 
 INSERT INTO analysis (created, logic_name) values (NOW(), 'ChIP-Seq');
+INSERT INTO analysis (created, logic_name) values (NOW(), 'DNase-Seq');
 INSERT INTO analysis (created, logic_name) values (NOW(), 'eQTL');
 INSERT INTO analysis (created, logic_name) values (NOW(), 'RRBS');
 INSERT INTO analysis (created, logic_name) values (NOW(), 'WGBS');
