@@ -35,13 +35,13 @@ my $inp_set = Bio::EnsEMBL::Funcgen::InputSet->new
                  (
 	                -DBID         => $dbID,
                   -ADAPTOR      => $self,
+                  -ANALYSIS     => $anal,
+                  -CELL_TYPE    => $ctype,
                   -EXPERIMENT   => $exp,
                   -FEATURE_TYPE => $ftype,
-                  -CELL_TYPE    => $ctype,
-                  -FORMAT       => 'READ_FORMAT',
-                  -VENDOR       => 'SOLEXA',
                   -NAME         => 'SRR00000.fastq.gz',
                   -REPLICATE    => 1, # >0 for specific replicate or 0 for merged
+                  -VENDOR       => 'SOLEXA',
                  );
 
 
@@ -59,9 +59,10 @@ use warnings;
 
 package Bio::EnsEMBL::Funcgen::InputSet;
 
-use Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
+use Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor;
+use Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Funcgen::Set;
 use Bio::EnsEMBL::Analysis;
 
@@ -74,7 +75,7 @@ my %valid_types = (
     result          => undef,
     segmentation    => undef,
     dna_methylation => undef,
-                  );
+    );
 
 #Need the underscore to separate the words
 #for handling conversion to ucfirst feature class namespace
@@ -82,22 +83,19 @@ my %valid_types = (
 
 =head2 new
 
-
-
   Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSet->new
                             (
-                             -EXPERIMENT    => $exp,
-                             -FEATURE_TYPE  => $ftype,
-                             -CELL_TYPE     => $ctype,
-                             -FORMAT        => 'READ_FORMAT',
-                             -VENDOR        => 'SOLEXA',
-                             -NAME          => 'SRR00000.fastq.gz',
-                             -ANALYSIS      => $anal,
-                             -FEATURE_CLASS => 'annotated',
-                             -REPLICATE     => 1, # >0 for specific replicate or 0 for merged
+	                -DBID         => $dbID,
+                  -ADAPTOR      => $self,
+                  -ANALYSIS     => $anal,
+                  -CELL_TYPE    => $ctype,
+                  -EXPERIMENT   => $exp,
+                  -FEATURE_TYPE => $ftype,
+                  -NAME         => 'SRR00000.fastq.gz',
+                  -REPLICATE    => 1, # >0 for specific replicate or 0 for merged
+                  -VENDOR       => 'SOLEXA',
                             );
 
-  Do we want to define subsets likes this or are we more likely to add them one by one?
 
   Description: Constructor for InputSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::InputSet
@@ -108,6 +106,8 @@ my %valid_types = (
 
 =cut
 
+#### Methods which access subsets needs to test first if they exist, otherwise call _get_input_subsets
+#### Support adding passing InputSubsets and storing them in iss and isiss
 sub new {
   my $caller = shift;
 
@@ -119,14 +119,15 @@ sub new {
   my ($exp, $format, $vendor, $rep)
     = rearrange(['EXPERIMENT', 'FORMAT', 'VENDOR', 'REPLICATE'], @_);
 
-  if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
-	throw('Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment');
+  my $package_exp = 'Bio::EnsEMBL::Funcgen::Experiment';
+  if (! (ref $exp && $exp->isa($package_exp) && $exp->dbID())){
+    throw("Must specify a valid stored $package_exp. Passed: ".ref($exp));
   }
 
-
   #These are set in Set, just validate here
-  throw ('Must provide a FeatureType') if(! defined $self->feature_type);
-  throw ('Must provide a CellType')    if(! defined $self->cell_type);
+  throw ('Must provide an Analysis')    if(! defined $self->analysis);
+  throw ('Must provide a  FeatureType') if(! defined $self->feature_type);
+  throw ('Must provide a  CellType')    if(! defined $self->cell_type);
 
   my $type = $self->feature_class;
 
@@ -136,53 +137,14 @@ sub new {
     throw("You must define a valid InputSet feature_class($type), one of: ".join(", ", keys %valid_types));
   }
 
-  if(($type eq 'result') && ($format ne 'SEQUENCING')){
-	throw('InputSet does not yet support a result type InputSet which does not have the \'SEQUENCING\' format');
-
-  }
-
-
-  #if(! defined $self->analysis){
-  ##default analysis hack for v47
-  ##Set directly to avoid dbID boolean check
-  #This is to support supporting_set cache in data_set?
-  $self->{'analysis'} = Bio::EnsEMBL::Analysis->new
-	(-logic_name => 'external',
-	 -id       => 0,#??someone needs to rewrite analysis
-	);
-
   #Change to direct setting for speed
   $self->{format}     = $format;
   $self->{vendor}     = $vendor;
   $self->{replicate}  = $rep;
   $self->{experiment} = $exp;
-  $self->{subsets}    = {};
 
   return $self;
 }
-
-
-=head2 _add_new_subset
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::InputSubset
-  Example    : $input_set->_add_new_subset($input_subset);
-  Description: Adds an InputSubset to this InputSet
-  Returntype : None
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::InputSubset->new
-  Status     : At Risk
-
-=cut
-
-sub _add_new_subset {
-  my ($self, $inp_sset) = @_;
-
-  #No validation here as this is all done in InputSubset->new
-
-  $self->{subsets}{$inp_sset->name} = $inp_sset;
-  return;
-}
-
 
 =head2 get_Experiment
 
@@ -210,13 +172,23 @@ sub get_Experiment{  return $_[0]->{experiment}; }
 =cut
 
 sub get_InputSubsets{
-  my ($self)  = shift;
+  my ($self)  = @_;
 
+  if(! exists $self->{'subsets'}){
+    my $iss_adaptor = $self->adaptor->db->get_InputSubsetAdaptor;
+
+    my $subsets = $iss_adaptor->fetch_all_by_InputSet($self);
+
+    for my $ss (@{$subsets}){
+      if(exists $self->{'subsets'}->{$ss->name}){
+        throw('Subsets with name ' . $ss->name . 'exists already');
+      }
+
+      $self->{'subsets'}->{$ss->name} = $ss;
+    }
+  }
   return [ values %{$self->{'subsets'}} ];
 }
-
-
-
 
 =head2 get_subset_by_name
 
@@ -248,11 +220,11 @@ sub get_subset_by_name{
 
 sub get_subset_names{
   my ($self) = shift;
+  if(! exists $self->{'subsets'}){
+    $self->get_InputSubsets;
+  }
   return [ keys %{$self->{'subsets'}} ];
 }
-
-
-
 
 =head2 vendor
 
@@ -356,12 +328,38 @@ sub source_info{
   return $self->{source_info};
 }
 
+=head2 compare_to
 
-### DEPRECATED ###
+  Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
+  Args[2]    : Boolean - Optional 'shallow' - no object methods compared
+  Args[3]    : Arrayref - Optional list of InputSet method names each
+               returning a Scalar or an Array or Arrayref of Scalars.
+               Defaults to: vendor name feature_class replicate
+  Args[4]    : Arrayref - Optional list of InputSet method names each
+               returning a Storable or an Array or Arrayref of Storables.
+               Defaults to: analysis experiment feature_type cell_type
+  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
+  Description: Compare this InputSet to another based on the defined scalar
+               and storable methods.
+  Returntype : Hashref of key attribute/method name keys and values which differ.
+               Keys will always be the method which has been compared.
+               Values can either be a error string, a hashref of diffs from a
+               nested object, or an arrayref of error strings or hashrefs where
+               a particular method returns more than one object.
+  Exceptions : None
+  Caller     : Import/migration pipeline
+  Status     : At Risk
 
-sub add_new_subset {
-  #throw as this will have already been done, and the validation is done implicitly in InputSubset->new
-  throw('add_new_subset was deprecated in v69, _add_new_subset is now called directly from InputSubset->new');
+=cut
+
+sub compare_to {
+  my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
+
+  $scl_methods ||= [qw(vendor name feature_class replicate)];
+  $obj_methods ||= [qw(analysis experiment feature_type cell_type)];
+
+  return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
+                                  $obj_methods);
 }
 
 =head2 reset_relational_attributes
@@ -371,58 +369,65 @@ sub add_new_subset {
                 -analysis     => Bio::EnsEMBL::Analysis,
                 -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
                 -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
+                -experiment   => Bio::EnsEMBL::Funcgen::Experiment
                 [Optional]
                 -support      => Arrayref of valid support objects (eg InputSet)
-
+  Arg[2] ???
   Description: Resets all the relational attributes of a given InputSet.
                Useful when creating a cloned object for migration beween DBs
   Returntype : None
   Exceptions : Throws if any of the parameters are not defined or invalid.
-  Caller     : Migration code
-  Status     : At risk
-
 =cut
 
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
-  my ($feature_type, $experiment, $cell_type, $subsets)
-    = rearrange(['FEATURE_TYPE', 'EXPERIMENT', 'CELL_TYPE', 'SUBSETS'], %$params_hash);
 
+  my ($analysis, $cell_type, $experiment, $feature_type, $input_subsets) =
+      rearrange(['ANALYSIS', 'CELL_TYPE', 'EXPERIMENT', 'FEATURE_TYPE', 'SUBSETS'],
+      %$params_hash);
 
-  if(! (defined $feature_type &&
-        ref($feature_type) eq 'Bio::EnsEMBL::Funcgen::FeatureType') ){
-    my $msg = 'You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType, not ';
-    $msg .= ref($feature_type);
-    throw($msg);
-  }
-
-  if(! (defined $experiment &&
-        ref($experiment) eq 'Bio::EnsEMBL::Funcgen::Experiment') ){
-    my $msg = 'You must pass a valid Bio::EnsEMBL::Fungen::Experiment, not ';
-    $msg   .= ref($experiment);
-    throw($msg);
+  if(! (defined $analysis &&
+        ref($analysis) eq 'Bio::EnsEMBL::Analysis') ){
+    throw('You must pass a valid Bio::EnsEMBL::Analysis. ' .
+        'Passed: "' . ref($analysis) . '"');
   }
 
   if(! (defined $cell_type &&
         ref($cell_type) eq 'Bio::EnsEMBL::Funcgen::CellType') ){
-    my $msg = 'You must pass a valid Bio::EnsEMBL::Funcgen::Experiment, not ';
-    $msg .= ref($cell_type);
-    throw($msg);
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::CellType. ' .
+        'Passed: "' . ref($cell_type) . '"');
+  }
+  if(! (defined $experiment &&
+        ref($experiment) eq 'Bio::EnsEMBL::Funcgen::Experiment') ){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Experiment. ' .
+        'Passed: "' . ref($experiment) . '"');
   }
 
-  $self->{feature_type} = $feature_type;
-  $self->{experiment}     = $experiment;
-  $self->{cell_type}    = $cell_type;
+  if(! (defined $feature_type &&
+        ref($feature_type) eq 'Bio::EnsEMBL::Funcgen::FeatureType') ){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType. ' .
+        'Passed: "' . ref($feature_type) . '"');
+  }
 
-  if(defined $subsets){
-    if( ref($subsets) ne 'Bio::EnsEMBL::Funcgen::Subsets' ){
-      throw('You must pass a valid Bio::EnsEMBL::Funcgen::Subsets');
-      $self->{subsets} = $subsets;
+  if(! (defined $input_subsets &&
+        ref($input_subsets) eq 'ARRAY') ){
+    throw('You must pass an ARRAY_REF containing InputSubsets . ' .
+        'Passed: "' . ref($input_subsets) . '"');
+  }
+  for my $iss(@{$input_subsets}){
+    if(ref $iss ne 'Bio::EnsEMBL::Funcgen::InputSubset'){
+      throw('You must pass a valid Bio::EnsEMBL::Funcgen::InputSubset. ' .
+          'Passed: "' . ref($iss) . '"');
     }
+    $self->{subsets}->{$iss->name} = $iss;
   }
-  else{
-    delete($self->{subsets});
-  }
+
+  $self->{analysis}     = $analysis;
+  $self->{cell_type}    = $cell_type;
+  $self->{experiment}   = $experiment;
+  $self->{feature_type} = $feature_type;
+
+
 
 # Undef dbID and adaptor by default
     if(! $no_db_reset){
@@ -432,5 +437,33 @@ sub reset_relational_attributes{
 
     return;
 }
+
+### DEPRECATED ###
+#bring back all featureSets, resultSets, if any is imported, throw, suggest rollback
+# force option?
+sub add_new_subset {
+  #throw as this will have already been done, and the validation is done implicitly in InputSubset->new
+  throw('add_new_subset was deprecated in v69, _add_new_subset is now called directly from InputSubset->new');
+}
 1;
 
+=head2 _add_new_subset
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::InputSubset
+  Example    : $input_set->_add_new_subset($input_subset);
+  Description: Adds an InputSubset to this InputSet
+  Returntype : None
+  Exceptions : None
+  Caller     : Bio::EnsEMBL::Funcgen::InputSubset->new
+  Status     : At Risk
+
+=cut
+
+sub _add_new_subset {
+  my ($self, $inp_sset) = @_;
+  throw('Removed in v74');
+  #No validation here as this is all done in InputSubset->new
+
+  $self->{subsets}{$inp_sset->name} = $inp_sset;
+  return;
+}

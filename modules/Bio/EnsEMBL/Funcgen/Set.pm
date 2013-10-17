@@ -33,12 +33,12 @@ Bio::EnsEMBL::Funcgen::Set - A module to represent a base Set object.
 
   sub new {
     my $caller = shift;
-	
+
     my $class = ref($caller) || $caller;
-	
+
     my $self = $class->SUPER::new(@_);
 
-  
+
   }
 
 =head1 DESCRIPTION
@@ -62,7 +62,6 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::Storable;
-
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 
@@ -72,7 +71,7 @@ use vars qw(@ISA);
   MANDATORY ARGS:
   Arg [-NAME]          : String - name for this Set.
   Arg [-FEATURE_TYPE]  : Bio::EnsEMBL::Funcgen::FeatureType
-  Arg [-FEATURE_CLASS] : String - Class of feature e.g. result, annotated, 
+  Arg [-FEATURE_CLASS] : String - Class of feature e.g. result, annotated,
                          regulatory, segmentation, external or dna_methylation.
   OPTIONAL ARGS:
   Arg [-CELL_TYPE]     : Bio::EnsEMBL::Funcgen::CellType
@@ -96,14 +95,14 @@ use vars qw(@ISA);
 
 sub new {
   my $caller = shift;
-	
-  my $class = ref($caller) || $caller;	
+
+  my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
   my ($name, $anal, $ftype, $ctype, $fclass, $type)
     = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE',
                  'FEATURE_CLASS', 'TYPE'], @_);
-  
+
   #MANDATORY PARAMS
   throw('Need to specify a name')     if ! defined $name;
   $self->{feature_class} = $fclass || $type;
@@ -114,19 +113,19 @@ sub new {
   if(! (ref($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType')) ){
     throw('You must provide a valid Bio::EnsEMBL::Funcgen::FeatureType');
   }
-  
+
   #OPTIONAL PARAMS
-  if(defined $ctype && 
+  if(defined $ctype &&
      ref($ctype) ne 'Bio::EnsEMBL::Funcgen::CellType'){
     throw('-CELL_TYPE param must be a valid Bio::EnsEMBL::Funcgen::CellType');
   }
 
   #Define set_type automatically
   my @namespace = split/\:\:/, ref($self);
-  ($self->{_set_type} = lc($namespace[$#namespace])) =~ s/set//;	
+  ($self->{_set_type} = lc($namespace[$#namespace])) =~ s/set//;
 
   if(defined $anal){
-    
+
     if(ref($anal) ne 'Bio::EnsEMBL::Analysis'){
       throw('-ANALYSIS argument must be a valid Bio::EnsEMBL::Analysis');
     }
@@ -144,7 +143,7 @@ sub new {
   $self->{name}         = $name;
   $self->{cell_type}    = $ctype;
   $self->{feature_type} = $ftype;
-  
+
   return $self;
 }
 
@@ -223,11 +222,11 @@ sub feature_class { return $_[0]->{feature_class}; }
 
 sub feature_class_name{
   my $self = shift;
-  
+
   if(! defined $self->{feature_class_name} ){
     $self->{feature_class_name} = $self->adaptor->build_feature_class_name($self->feature_class);
   }
-  
+
   return $self->{feature_class_name};
 }
 
@@ -274,11 +273,11 @@ sub set_type { return $_[0]->{_set_type}; }
   Example    : my $type = $set->type;
   Description: DEPRECATED Getter for the type for this Set.
                e.g. annotated, external, regulatory for FeatureSets
-                    or 
+                    or
                     array, sequencing for InputSets
                Currently not applicable to DataSets or ResultSets
   Exceptions : None
-  Returntype : string 
+  Returntype : string
   Exceptions : None
   Caller     : General
   Status     : At Risk

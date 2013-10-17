@@ -29,12 +29,12 @@ Bio::EnsEMBL::Funcgen::Storable
   my $dbID = $storable_object->dbID();
   my $adaptor = $storable_object->adaptor();
   if($storable_object->is_stored($db_adaptor))) {
-    
+
   }
 =head1 DESCRIPTION
 
 This is a simple wrapper class to provide convenience methods for the StorableAdaptor.
-Only get type methods have been implemented here to avoid obfuscating DB writes which 
+Only get type methods have been implemented here to avoid obfuscating DB writes which
 should only be done by the specific 'Storable'Adaptors.
 
 =head1 SEE ALSO
@@ -60,9 +60,9 @@ use vars qw(@ISA);
 
   Arg [-STATES]  : Arrayref of states
   Arg [-dbID]    : database internal id
-  Example        : none 
+  Example        : none
   Caller         : internal calls
-  Description    : create a new Storable object 
+  Description    : create a new Storable object
   Returntype     : Bio::EnsEMBL::Storable
   Exceptions     : Adaptor not a Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor
   Status         : Stable
@@ -78,14 +78,14 @@ sub new {
 
   if ($self->adaptor() && (! $self->adaptor->isa("Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor"))){
     throw("Adaptor muct be a valid Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor");
-  } 
+  }
 
   #will these break using _new_fast
   #THerefore ResultFeature, Probe and ProbeFeature should not be Funcgen::Storables
 
   @{$self->{'states'}} = @$states if $states;
   $self->associated_feature_types($assoc_ftypes) if(defined $assoc_ftypes);
-  
+
 
   return $self;
 }
@@ -115,7 +115,7 @@ sub has_status{
 }
 
 #There is a potential to create an obj from scratch which may already exist in the db
-#If we add a state to this (obj has not dbID so will not retrieve stored states) 
+#If we add a state to this (obj has not dbID so will not retrieve stored states)
 # and then try and store it, this will result in adding the state to the previously stored obj.
 #The behaviour is silent and could cause problems.
 
@@ -146,25 +146,25 @@ sub get_all_states{
 
    #This could miss states in the DB for storables which have been created and had states added
    #but already exist with states in the DB
-   #The way to get around this is to throw if we try and store an object without a dbID which matches 
+   #The way to get around this is to throw if we try and store an object without a dbID which matches
    #something in the DB.
    #Remove func in adaptors(ec and channel only?) to automatically use prestored objects, throw instead if no dbID and matches.
    #force use of recover to retrieve object from DB and then skip to relevant step based on states.
    #Have states => next method hash in Importer/ArrayDefs?
 
   if(! defined $self->{states}){
-    
+
     if(! $self->adaptor){
       throw('Cannot get_all_states for a Storable without an associated adaptor');
     }
     else{ #Populate cache
-    
+
       if( $self->is_stored($self->adaptor->db) ){
         $self->{states} = $self->adaptor->fetch_all_states($self);
       }
     }
    }
-   
+
    return $self->{states};
 }
 
@@ -190,7 +190,7 @@ sub add_status{
 
 
    #this does not resolve the problem!!???
-   #can add a status to an unstored object which 
+   #can add a status to an unstored object which
 
    if($self->adaptor && $self->is_stored($self->adaptor->db()) && ! $self->{'states'}){
      @{$self->{'states'}} = @{$self->adaptor->fetch_all_states($self)};
@@ -219,13 +219,13 @@ sub is_displayable{
 =head2 get_all_Gene_DBEntries
 
   Example    : my @gene_dbentries = @{ $storable->get_all_Gene_DBEntries };
-  Description: Retrieves Ensembl Gene DBEntries (xrefs) for this Storable.  
-               This does _not_ include the corresponding translations 
+  Description: Retrieves Ensembl Gene DBEntries (xrefs) for this Storable.
+               This does _not_ include the corresponding translations
                DBEntries (see get_all_DBLinks).
 
                This method will attempt to lazy-load DBEntries from a
                database if an adaptor is available and no DBEntries are present
-               on the transcript (i.e. they have not already been added or 
+               on the transcript (i.e. they have not already been added or
                loaded).
   Returntype : Listref of Bio::EnsEMBL::DBEntry objects
   Exceptions : none
@@ -248,10 +248,10 @@ sub get_all_Gene_DBEntries {
   if(!$species){
 	throw('You must specify a DBAdaptor -species to retrieve DBEntries based on the external_db.db_name');
   }
-  
+
   #safety in case we get Homo sapiens
   ($species = lc($species)) =~ s/ /_/;
-  
+
 
 
   return $self->get_all_DBEntries($species.'_core_Gene');
@@ -261,13 +261,13 @@ sub get_all_Gene_DBEntries {
 
   Arg[0]     : optional - Bio::EnsEMBL::Transcript to filter DBEntries on.
   Example    : my @transc_dbentries = @{ $set_feature->get_all_Transcript_DBEntries };
-  Description: Retrieves ensembl Transcript DBEntries (xrefs) for this Storable.  
-               This does _not_ include the corresponding translations 
+  Description: Retrieves ensembl Transcript DBEntries (xrefs) for this Storable.
+               This does _not_ include the corresponding translations
                DBEntries (see get_all_DBLinks).
 
                This method will attempt to lazy-load DBEntries from a
                database if an adaptor is available and no DBEntries are present
-               on the Storable (i.e. they have not already been added or 
+               on the Storable (i.e. they have not already been added or
                loaded).
   Returntype : Listref of Bio::EnsEMBL::DBEntry objects
   Exceptions : none
@@ -284,15 +284,15 @@ sub get_all_Transcript_DBEntries {
   #We wouldn't need this if we made the xref schema multi species
   my $species = Bio::EnsEMBL::Registry->get_alias($self->adaptor->db->species);
   #Need to make sure this is latin name
-  
+
 
   if(!$species){
 	throw('You must specify a DBAdaptor -species to retrieve DBEntries based on the external_db.db_name');
   }
-  
+
   #safety in case we get Homo sapiens
   #($species = lc($species)) =~ s/ /_/;
-  
+
   my $dbes = $self->get_all_DBEntries($species.'_core_Transcript');
 
   #This needs to be moved to the DBEntryAdaptor and restrict the query using the
@@ -348,15 +348,15 @@ sub get_all_UnmappedObjects{
 =head2 get_all_DBEntries
 
   Arg[1]     : string - External DB name e.g. ensembl_core_Gene
-  Arg[2]     : string - External DB type 
+  Arg[2]     : string - External DB type
   Example    : my @dbentries = @{ $set_feature->get_all_DBEntries };
-  Description: Retrieves DBEntries (xrefs) for this SetFeature.  
-               This does _not_ include the corresponding translations 
+  Description: Retrieves DBEntries (xrefs) for this SetFeature.
+               This does _not_ include the corresponding translations
                DBEntries (see get_all_DBLinks).
 
                This method will attempt to lazy-load DBEntries from a
                database if an adaptor is available and no DBEntries are present
-               on the SetFeature (i.e. they have not already been added or 
+               on the SetFeature (i.e. they have not already been added or
                loaded).
   Returntype : Listref of Bio::EnsEMBL::DBEntry objects
   Exceptions : none
@@ -394,12 +394,12 @@ sub get_all_DBEntries {
 
 
   if( (! defined $self->{$cache_name}) && $self->adaptor() ){
-  
+
 	my @tables = $self->adaptor->_tables;
 	@tables = split/_/, $tables[0]->[0];#split annotated_feature
 	my $object_type = join('', (map ucfirst($_), @tables));#change to AnnotatedFeature
-	
-    $self->{$cache_name} = 
+
+    $self->{$cache_name} =
       $self->adaptor->db->get_DBEntryAdaptor->_fetch_by_object_type($self->dbID(), $object_type, $ex_db_exp, $ex_db_type);
   }
   elsif( ! defined $self->{$cache_name} ){
@@ -455,16 +455,16 @@ sub add_DBEntry {
 
 sub associated_feature_types{
   my ($self, $ftypes) = @_;
-  
+
   #Lazy load as we don't want to have to do a join on all features when most will not have any
 
- 
+
   if(defined $ftypes){
 
 	if(ref($ftypes) eq 'ARRAY'){
 
 	  foreach my $ftype(@$ftypes){
-	
+
 		if( ! $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType') ){
 		  throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::FeatureType objects');
 		}
@@ -502,16 +502,16 @@ sub associated_feature_types{
 =head2 compare_scalar_methods
 
   Arg [1]    : Object to compare to, not necessarily stored.
-  Arg [2]    : Arrayref - Method names which return a Scalar, or an Array/Arrayref 
+  Arg [2]    : Arrayref - Method names which return a Scalar, or an Array/Arrayref
                of Scalars.
-  Example    : my %diffs = %{$self->compare_to($other_obj, 
+  Example    : my %diffs = %{$self->compare_to($other_obj,
                                                [qw(name, get_scalars_method)]);
-  Description: Compares the returned string values of the specified methods 
+  Description: Compares the returned string values of the specified methods
                between this object and the object passed.
   Returntype : Hashref of method name keys error string values which show
-               the differences between self and the other object (in that order) 
+               the differences between self and the other object (in that order)
   Exceptions : Throws if arguments not defined and valid.
-               Throws if this Storable or the object passed cannot call the 
+               Throws if this Storable or the object passed cannot call the
                specified methods.
                Throws if methods do not return scalars.
   Caller     : Storable::compare_to
@@ -521,39 +521,39 @@ sub associated_feature_types{
 
 sub compare_scalar_methods {
   my ($self, $obj, $methods) = @_;
-  
+
   if(! (defined $methods &&
         ref($methods) &&
         ref($methods) eq 'ARRAY')){
-    throw('You must pass an Arrayref of methods to compare');        
+    throw('You must pass an Arrayref of methods to compare');
   }
-   
+
   my $diffs = {};
-   
+
   foreach my $method(@$methods){
-   
+
     if ( ! $self->can($method) ) {
-      throw(ref($self).' cannot call method '.$method.' to compare');  
+      throw(ref($self)." cannot call method '".$method."' to compare");
     }
-       
-    my ($these_scls, $other_scls, $diff, $multi) = 
+
+    my ($these_scls, $other_scls, $diff, $multi) =
       @{$self->_compare_method_return_types($obj, $method)};
-    
+
     if($diff){
       $diffs->{$method} = $diff;
-      next;    
+      next;
     }
-     
-    foreach my $i(0..$#{$these_scls}){  
-      #Check all are scalar    
-      if (ref(\($these_scls->[$i])) ne 'SCALAR'){   
+
+    foreach my $i(0..$#{$these_scls}){
+      #Check all are scalar
+      if (ref(\($these_scls->[$i])) ne 'SCALAR'){
         throw("$method does not return a SCALAR value or an ARRAY or ARRAYREF ".
-              "of SCALAR values:\t".$these_scls->[$i]); 
+              "of SCALAR values:\t".$these_scls->[$i]);
       }
-  
+
       #equating strings with == results in all strings evaling as 0, therefore
       #would match any string (unless prefixed with numbers in which case it uses those).
-      #ne/eq converts numbers into strings accurately, so this is safe.     
+      #ne/eq converts numbers into strings accurately, so this is safe.
       if($these_scls->[$i] ne $other_scls->[$i]){
         $diffs->{$method} = $these_scls->[$i].' - '.$other_scls->[$i];
       }
@@ -566,17 +566,17 @@ sub compare_scalar_methods {
 =head2 compare_storable_methods
 
   Arg [1]    : Storable to compare to. (Mandatory)
-  Arg [2]    : Arrayref - Method names which return a Storable or an Array 
+  Arg [2]    : Arrayref - Method names which return a Storable or an Array
                or Arrayref of Storables. (Mandatory)
-  Example    : my %diffs = %{$self->compare_to($other_obj, 
+  Example    : my %diffs = %{$self->compare_to($other_obj,
                                                [qw(get_storable, get_storables)]);
-  Description: Compares the returned Storable(s) of the specified methods. This is 
+  Description: Compares the returned Storable(s) of the specified methods. This is
                done checking whether the are stored in the same DB as this Storable,
                and have matching dbIDs.
   Returntype : Hashref of method name keys and error string values which show
-               the differences between self and the other Storable (in that order) 
+               the differences between self and the other Storable (in that order)
   Exceptions : Throws if arguments not defined and valid.
-               Throws if this Storable or the object passed cannot call the 
+               Throws if this Storable or the object passed cannot call the
                specified methods.
                Throws if methods do not return stored Bio::EnsEMBL::Storables with an adptor
   Caller     : Storable::compare_to
@@ -585,100 +585,100 @@ sub compare_scalar_methods {
 =cut
 
 #removed deep mode from here as this was only valid for storing between DBs
-#As it is not possible to equivalently sort multiple storables from 
+#As it is not possible to equivalently sort multiple storables from
 #different DBs based on their dbIDs, hence this comparison would fail.
 #Would need to be done with unique key values, which are not generically accessibly here
 #Deep inter-DB comparisons need to be done by iterative shallow comparisons
-#through an object hierarchy in a wrapper method i.e. the wrapper method will know 
+#through an object hierarchy in a wrapper method i.e. the wrapper method will know
 #the appropriate unique keys to sort on.
 #This also removes the need to track previous comparisons to prevent deep recursion
 #Does this mean we can now add missing object methods which would have caused circular refs?
 #Not need to do this in either inter/intraDB comparison
 
-#Could remove require ment for them being storables if we can call compare_to on the 
-#returned objects. This would require some 'Role' definition as we can't guarantee what 
+#Could remove require ment for them being storables if we can call compare_to on the
+#returned objects. This would require some 'Role' definition as we can't guarantee what
 #another object compare method might be name or in fact do.
 
 #TODO Make test names (value string prefixes) accessable for validation?
 
 sub compare_storable_methods {
-  my ($self, $obj, $methods) = @_; 
+  my ($self, $obj, $methods) = @_;
   my $diffs = {};
 
   if(! (defined $methods &&
         ref($methods) &&
         ref($methods) eq 'ARRAY')){
-    throw('You must pass an Arrayref of methods to compare');        
+    throw('You must pass an Arrayref of methods to compare');
   }
-       
-  foreach my $method(@$methods){   
+
+  foreach my $method(@$methods){
     my $obj_diffs = {};
-       
-    my ($these_objs, $other_objs, $diff, $multi) = 
+
+    my ($these_objs, $other_objs, $diff, $multi) =
       @{$self->_compare_method_return_types($obj, $method, 1)};
     #1 is 'storable' flag
-    
+
     if(! (@$these_objs && @$other_objs)){
       next;
     }
     elsif($diff){
       $diffs->{$method} = $diff;
-      next;    
+      next;
     }
     #else we have same number of storables
-                      
+
     for my $i (0..$#{$these_objs}){
       #We can't alter $method key here for test discrimination
       #else we won't be able to easily identify what method gave the error
       #TP ID specific test result, have to pattern match
       #the start of the error string
-        
-      #These always have to be stored, so can use DB from either object  
+
+      #These always have to be stored, so can use DB from either object
       if(! $other_objs->[$i]->adaptor){
         throw('Could not access DBAdaptor from self('.ref($other_objs->[$i]).
-          ") for $method is_stored check"); 
+          ") for $method is_stored check");
       }
-      
-         
+
+
       if(! $these_objs->[$i]->is_stored($other_objs->[$i]->adaptor->db)){
-        $diffs->{$method} = 'DBs are not the same for '.ref($other_objs);        
+        $diffs->{$method} = 'DBs are not the same for '.ref($other_objs);
         last if $multi;
       }
       elsif(ref($these_objs->[$i]) ne ref($other_objs->[$i])){ #Different return types
-        #As there is not requirement for $self and $obj to be the same class  
+        #As there is not requirement for $self and $obj to be the same class
         #there is no guarantee they will return the same object
         $diffs->{$method} = "Namespace mismatch:\n\t".
             ref($these_objs->[$i]).' - '.ref($other_objs->[$i]);
-        last if $multi;      
+        last if $multi;
       }
-      elsif($these_objs->[$i]->dbID != $other_objs->[$i]->dbID){        
+      elsif($these_objs->[$i]->dbID != $other_objs->[$i]->dbID){
           $diffs->{$method} = "dbID mismatch:\t".
             join(', ', (map $_->dbID, @$these_objs))."\t-\t".
-            join(', ', (map $_->dbID, @$other_objs));         
+            join(', ', (map $_->dbID, @$other_objs));
           last if $multi;
       }
     }
   }
-  
-  return $diffs;  
+
+  return $diffs;
 }
 
 
-#We don't enforce that $self and $obj are the same class, just that they have the 
+#We don't enforce that $self and $obj are the same class, just that they have the
 #same method
 
 sub _compare_method_return_types{
   my ($self, $obj, $method, $storable) = @_;
-   
+
   if ( ! $self->can($method) ) {
       throw(ref($self).' cannot call method '.$method);
-  } 
+  }
     elsif ( ! $obj->can($method) ) {
       throw(ref($obj).' cannot call method '.$method);
   }
-  
+
   my ($diff, $multi, @these_values, @other_values);
-  
+
   if($storable){
     @these_values = $self->$method;
     @other_values = $obj->$method;
@@ -687,52 +687,52 @@ sub _compare_method_return_types{
     @these_values = $self->$method || ('NULL');
     @other_values = $obj->$method  || ('NULL');
   }
-  
+
   #Handle return types
   if( (scalar(@these_values) == 1) &&
       (scalar(@other_values) == 1) ){
- 
+
     if( ref($these_values[0]) ){
       #This is allowed to be an Arrayref for scalar or Arrayref and Storable for storable
-   
+
       #Storable test done in compare_storable_methods
-   
+
       if(ref($these_values[0]) eq 'ARRAY'){
         @these_values = @{$these_values[0]};
-        @other_values = @{$other_values[0]};   
-      }  
+        @other_values = @{$other_values[0]};
+      }
     }
   }
-  
+
   #Compare sizes and sort
   if(scalar(@these_values) != scalar(@other_values) ) {
     $diff = "Return size mismatch:\t".
-              scalar(@these_values).', '.scalar(@other_values);      
+              scalar(@these_values).', '.scalar(@other_values);
   }
   elsif(scalar(@these_values) > 1){
     $multi = 1;
-       
+
     if($storable){
-        
+
         #Do storable check here as this is required for dbID sort
         #adds iteration
-        eval { map $_->isa('Bio::EnsEMBL::Storable'), 
+        eval { map $_->isa('Bio::EnsEMBL::Storable'),
                 (@these_values, @other_values)};
-      
+
         if($@){
-          throw($method.' does not return Storable(s)');  
+          throw($method.' does not return Storable(s)');
         }
-            
+
         @these_values = sort {$a->dbID <=> $b->dbID} @these_values;
-        @other_values = sort {$a->dbID <=> $b->dbID} @other_values;   
+        @other_values = sort {$a->dbID <=> $b->dbID} @other_values;
     }
     else{
       #scalar check done in comapre_scalar_methods (for speed)
       @these_values = sort @these_values;
-      @other_values = sort @other_values; 
-    }    
+      @other_values = sort @other_values;
+    }
   }
-   
+
   return [\@these_values, \@other_values, $diff, $multi];
 }
 
@@ -741,26 +741,26 @@ sub _compare_method_return_types{
 
   Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
   Args[2]    : Boolean - Optional 'shallow' - no object methods compared
-  Args[3]    : Arrayref - Mandatory list of Storable method names each 
+  Args[3]    : Arrayref - Mandatory list of Storable method names each
                returning a Scalar or an Array or Arrayref of Scalars.
-  Args[4]    : Arrayref - Mandatory ist of Storable method names each 
+  Args[4]    : Arrayref - Mandatory ist of Storable method names each
                returning a Storable or an Array or Arrayref of Storables.
-  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 
+  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset,
                                                        1,
                                                        [qw(get_scalar get_scalars)],
                                                        [qw(get_storable get_storables)]
                                                        )};
-  Description: Compare this Storable to another based on the defined scalar 
+  Description: Compare this Storable to another based on the defined scalar
                and storable methods.
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this Storable to another.
   Returntype : Hashref of key attribute/method name keys and values which differ.
                Keys will always be the method which has been compared.
-               Values can either be a error string, a hashref of diffs from a 
+               Values can either be a error string, a hashref of diffs from a
                nested object, or an arrayref of error strings or hashrefs where
-               a particular method returns more than one object.  
+               a particular method returns more than one object.
   Exceptions : Throws if object class does not match self.
-               Throws if depth level invalid. 
+               Throws if depth level invalid.
   Caller     : Storables with compare_to wrapper defining method arguments
   Status     : At Risk
 
@@ -772,27 +772,26 @@ sub _compare_method_return_types{
 
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
-      
+
   if(! (defined $obj &&
-        ref($obj) &&
+        ref($obj)    &&
         $obj->isa(ref($self))) ){
       throw('You must pass a valid '.ref($obj).' to compare_to '.ref($self));
   }
-    
+
   my $diffs = $self->compare_scalar_methods($obj, $scl_methods);
-       
+
   if(! $shallow){
-    %$diffs = (%$diffs, 
-               %{$self->compare_storable_methods
-                 ($obj, 
-                  $obj_methods)}
-              );
+    %$diffs = (
+        %$diffs,
+        %{$self->compare_storable_methods (
+          $obj,
+          $obj_methods
+          )
+        }
+      );
   }
- 
+
   return $diffs;
 }
-
-
-
-
 1;
