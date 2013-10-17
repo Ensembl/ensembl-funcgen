@@ -149,7 +149,7 @@ sub new {
       ) =
     rearrange( ['DESCRIPTION',
                 'DISPLAY_LABEL',
-                'EXPERIMENT'
+                'EXPERIMENT',
                 'EXPERIMENT_ID',
                 'INPUT_SET',
                 'INPUT_SET_ID',
