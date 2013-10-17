@@ -4,15 +4,15 @@
 */
 ALTER TABLE status_name MODIFY name varchar(60);
 
-INSERT INTO status_name (name) values ('IS_CURRENT');
 INSERT INTO status_name (name) values ('DOWNLOADED');
+INSERT INTO status_name (name) values ('IS_CURRENT');
 INSERT INTO status_name (name) values ('IS_CONTROL');
 INSERT INTO status_name (name) values ('ADD_TO_REGULATORY_BUILD');
 INSERT INTO status_name (name) values ('IN_REGULATORY_BUILD');
 INSERT INTO status_name (name) values ('RELEASED');
-INSERT INTO status_name (name) values ('REVOKE');
+INSERT INTO status_name (name) values ('TO_BE_REVOKED');
 INSERT INTO status_name (name) values ('REVOKED');
-INSERT INTO status_name (name) values ('REBUILD');
+INSERT INTO status_name (name) values ('TO_BE_REBUILD');
 INSERT INTO status_name (name) values ('REBUILT');
 
 INSERT INTO analysis (created, logic_name) values (NOW(), 'ChIP-Seq');
