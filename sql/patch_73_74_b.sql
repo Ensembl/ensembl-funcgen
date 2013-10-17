@@ -2,6 +2,8 @@
 @header patch_73_74_b.sql - schema version
 @desc   Update for new funcgen schema layout
 */
+ALTER TABLE status_name MODIFY name varchar(60);
+
 INSERT INTO status_name (name) values ('IS_CURRENT');
 INSERT INTO status_name (name) values ('DOWNLOADED');
 INSERT INTO status_name (name) values ('IS_CONTROL');
