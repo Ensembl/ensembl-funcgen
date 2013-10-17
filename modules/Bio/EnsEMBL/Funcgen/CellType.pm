@@ -63,10 +63,10 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Storable;
+use Bio::EnsEMBL::Funcgen::Storable;
 
 use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Storable);
+@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
 
 my %valid_genders = (
                      male   => 1,
@@ -129,43 +129,6 @@ sub new {
   $self->{tissue}        = $tissue if defined $tissue;
 
   return $self;
-}
-
-=head2 compare
-
-  Example    : my $name = $ct->name;
-  Description: Getter of name attribute for CellType objects
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-
-# add lineage
-sub compare {
-  my ($self, $cell_type) = @_;
-
-  if(! (ref($cell_type) && $cell_type->isa("Bio::EnsEMBL::Funcgen::CellType"))){
-    my $msg  = "You must provide a valid Bio::EnsEMBL::Funcgen::CellType, not: '";
-       $msg .=  ref($cell_type)."'";
-    throw($msg);
-  }
-
-  my @members = qw{description display_label efo_id name};
-  my $result = {};
-  for my $member(@members) {
-    if($self->$member() ne $cell_type->$member()){
-      push(@{$result->{$member}},  $self->$member());
-      push(@{$result->{$member}},  $cell_type->$member());
-    }
-  }
-  use Data::Dumper;
-  print Dumper($result);
-die;
-
-
 }
 
 =head2 name
@@ -276,6 +239,39 @@ sub reset_relational_attributes{
   }
 
   return;
+}
+
+=head2 compare_to
+
+  Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
+  Args[2]    : Boolean - Optional 'shallow' - no object methods compared
+  Args[3]    : Arrayref - Optional list of CellType method names each
+               returning a Scalar or an Array or Arrayref of Scalars.
+               Defaults to: name table_name feature_class get_all_states
+  Args[4]    : Arrayref - Optional list of CellType method names each
+               returning a Storable or an Array or Arrayref of Storables.
+               Defaults to: feature_type cell_type analysis get_support
+  Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
+  Description: Compare this CellType to another based on the defined scalar
+               and storable methods.
+  Returntype : Hashref of key attribute/method name keys and values which differ.
+               Keys will always be the method which has been compared.
+               Values can either be a error string, a hashref of diffs from a
+               nested object, or an arrayref of error strings or hashrefs where
+               a particular method returns more than one object.
+  Exceptions : None
+  Caller     : Import/migration pipeline
+  Status     : At Risk
+
+=cut
+
+sub compare_to {
+  my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
+
+  $scl_methods ||= [qw(name display_label description gender efo_id tissue)];
+
+  return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
+                                  $obj_methods);
 }
 1;
 

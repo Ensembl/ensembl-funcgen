@@ -493,6 +493,40 @@ sub reset_relational_attributes{
   return;
 }
 
+=head2
+
+Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
+Args[2]    : Boolean - Optional 'shallow' - no object methods compared
+Args[3]    : Arrayref - Optional list of Experiment method names each
+             returning a Scalar or an Array or Arrayref of Scalars.
+             Defaults to: name date primary_design_type description mage_xml_id
+Args[4]    : Arrayref - Optional list of Experiment method names each
+             returning a Storable or an Array or Arrayref of Storables.
+             Defaults to: experimental_group
+Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
+Description: Compare this Experiment to another based on the defined scalar
+             and storable methods.
+Returntype : Hashref of key attribute/method name keys and values which differ.
+             Keys will always be the method which has been compared.
+             Values can either be a error string, a hashref of diffs from a
+             nested object, or an arrayref of error strings or hashrefs where
+             a particular method returns more than one object.
+Exceptions : None
+Caller     : Import/migration pipeline
+Status     : At Risk
+
+=cut
+
+sub compare_to {
+  my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
+
+  $scl_methods ||= [qw(name date primary_design_type description mage_xml_id)];
+  $obj_methods ||= [qw(experimental_group)];
+
+  return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
+                                  $obj_methods);
+}
+
 
 1;
 

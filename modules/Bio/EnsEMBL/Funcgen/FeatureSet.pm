@@ -40,7 +40,7 @@ my $feature_set = Bio::EnsEMBL::Funcgen::FeatureSet->new
    -description   => 'HeLa-S3 H3K4me3 SWEmbl peaks replicate 1',
    -display_label => 'HeLa-S3 H3K4me3',
    -input_set     => $iset,
-  ); 
+  );
 
 
 my @features = @{$feature_set->get_Features_by_Slice($slice)};
@@ -61,12 +61,12 @@ my @all_regfs       = @{$feature_set->get_all_Features()};
 =head1 DESCRIPTION
 
 A FeatureSet object defines a discrete set of features from a single analysis.
-It is a container object providing access to meta data and convenience wrapper 
+It is a container object providing access to meta data and convenience wrapper
 methods to fetch the related features.
 
 A FeatureSet is normally associated to a DataSet either as a product FeatureSet,
-with the excpetion of FeatureSets that define external data. As these generally 
-have no supporting data, there is no need for a DataSet. FeatureSets can also be 
+with the excpetion of FeatureSets that define external data. As these generally
+have no supporting data, there is no need for a DataSet. FeatureSets can also be
 associated with DataSets as supporting sets i.e. the input to a further analysis
 such as the Ensembl Regulatory Build:
   http://www.ensembl.org/info/docs/funcgen/regulatory_build.html
@@ -140,10 +140,19 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  my ( $desc, $dlabel, $iset_id, $iset, $exp_id, $exp ) =
-    rearrange( [
-                'DESCRIPTION',   'DISPLAY_LABEL',
-                'INPUT_SET_ID', 'INPUT_SET', 'EXPERIMENT_ID', 'EXPERIMENT'
+  my ($desc,
+      $dlabel,
+      $exp,
+      $exp_id,
+      $iset,
+      $iset_id,
+      ) =
+    rearrange( ['DESCRIPTION',
+                'DISPLAY_LABEL',
+                'EXPERIMENT'
+                'EXPERIMENT_ID',
+                'INPUT_SET',
+                'INPUT_SET_ID',
                ], @_ );
 
 
@@ -161,7 +170,7 @@ sub new {
   #subsequently throwing errors on retrieval
   my $type = $self->feature_class;
 
-  if ( (! defined $self->cell_type) && 
+  if ( (! defined $self->cell_type) &&
        ($type ne 'external') ){
     throw("Only FeatureSets with type 'external' can have an undefined CellType");
   }
@@ -438,33 +447,33 @@ sub source_label{
 
   if (! defined $self->{source_label}) {
     my $input_set = $self->get_InputSet;
-    
+
     if ($input_set) {
       my (@source_labels, %source_labels);
-    
+
       foreach my $isset (@{$input_set->get_InputSubsets}) {
-      
+
         if (defined $isset->archive_id) {
-          #Hash usage to account for duplicates from 
+          #Hash usage to account for duplicates from
           #non-unique input_subsets (bed/sam issue)
           $source_labels{$isset->archive_id} = undef;
         }
         #Archive IDs e.g. SRX identifiers or undef.
       }
-    
+
       @source_labels = keys %source_labels;
-    
+
       #Append project name
       my $exp_group = $input_set->get_Experiment->experimental_group;
-    
+
       if ($exp_group &&
           $exp_group->is_project) {
         push @source_labels, $exp_group->name;
       }
-    
+
       $self->{source_label} = join(q{ }, # Single space
                                    @source_labels);
-    
+
     }
   }
 
@@ -476,21 +485,21 @@ sub source_label{
 
   Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
   Args[2]    : Boolean - Optional 'shallow' - no object methods compared
-  Args[3]    : Arrayref - Optional list of FeatureSet method names each 
+  Args[3]    : Arrayref - Optional list of FeatureSet method names each
                returning a Scalar or an Array or Arrayref of Scalars.
-               Defaults to: name table_name feature_class get_all_states
-  Args[4]    : Arrayref - Optional list of FeatureSet method names each 
+               Defaults to: name description display_label feature_class get_all_states
+  Args[4]    : Arrayref - Optional list of FeatureSet method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: feature_type cell_type analysis get_support
+               Defaults to: feature_type cell_type analysis get_InputSet
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
-  Description: Compare this FeatureSet to another based on the defined scalar 
+  Description: Compare this FeatureSet to another based on the defined scalar
                and storable methods.
   Returntype : Hashref of key attribute/method name keys and values which differ.
                Keys will always be the method which has been compared.
-               Values can either be a error string, a hashref of diffs from a 
+               Values can either be a error string, a hashref of diffs from a
                nested object, or an arrayref of error strings or hashrefs where
-               a particular method returns more than one object.  
-  Exceptions : None 
+               a particular method returns more than one object.
+  Exceptions : None
   Caller     : Import/migration pipeline
   Status     : At Risk
 
@@ -498,11 +507,11 @@ sub source_label{
 
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
-      
-  $obj_methods ||= [qw(feature_type cell_type analysis get_InputSet)];
-  $scl_methods ||= [qw(name description display_label feature_class get_all_states)];
 
-  return $self->SUPER::compare_to($obj, $shallow, $scl_methods, 
+  $scl_methods ||= [qw(name description display_label feature_class get_all_states)];
+  $obj_methods ||= [qw(feature_type cell_type analysis get_InputSet)];
+
+  return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
                                   $obj_methods);
 }
 
@@ -514,13 +523,13 @@ sub compare_to {
            Mandatory:
             -analysis     => Bio::EnsEMBL::Analysis,
             -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
-     
+
            Optional if not presently defined:
             -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
             -input_set    => Bio::EnsEMBL::Funcgen::InputSet,
 
-  Description: Resets all the relational attributes of a given FeatureSet. 
-               Useful when creating a cloned object for migration beween DBs 
+  Description: Resets all the relational attributes of a given FeatureSet.
+               Useful when creating a cloned object for migration beween DBs
   Returntype : None
   Exceptions : Throws if any of the parameters are not defined or invalid.
   Caller     : Migration code
@@ -530,51 +539,52 @@ sub compare_to {
 
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
-  my ($analysis, $feature_type, $cell_type, $iset) = 
-      rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'INPUT_SET'], 
+  my ($analysis, $feature_type, $cell_type, $iset) =
+      rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'INPUT_SET'],
       %$params_hash);
- 
+
   if(! (defined $analysis &&
         ref($analysis) eq 'Bio::EnsEMBL::Analysis') ){
     throw('You must pass a valid Bio::EnsEMBL::Analysis');
   }
-  
+
   if(! (defined $feature_type &&
         ref($feature_type) eq 'Bio::EnsEMBL::Funcgen::FeatureType') ){
     throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType');
   }
-  
+
   if( ($self->cell_type) && !
         (defined $cell_type &&
         (ref($cell_type) eq 'Bio::EnsEMBL::Funcgen::CellType')) ){
     throw('You must pass a valid Bio::EnsEMBL::Funcgen::CellType');
   }
-  
 
-  if( ($self->get_InputSet) && !
-      (defined $iset &&
-      (ref($iset) eq 'Bio::EnsEMBL::Funcgen::InputSet')) ){
-    throw('You must pass a valid Bio::EnsEMBL::Funcgen::InputSet');
+
+  if( defined $self->get_InputSet) {
+    if( not (
+      defined $iset && (ref $iset  eq 'Bio::EnsEMBL::Funcgen::InputSet')) ){
+      throw('You must pass a valid Bio::EnsEMBL::Funcgen::InputSet'.
+        'Passed: "' . ref($iset) . '"');
+    }
   }
-    
   if(defined $iset){
-    #This will allow addition of an input_set 
+    #This will allow addition of an input_set
     #when it was not prevously defined
     $self->{input_set_id} = $iset->dbID;
-    $self->{input_set}    = $iset;  
+    $self->{input_set}    = $iset;
   }
-  
+
   $self->{cell_type}    = $cell_type;
   $self->{feature_type} = $feature_type;
   $self->{analysis}     = $analysis;
-  
-  
+
+
   #Finally undef the dbID and adaptor by default
   if(! $no_db_reset){
     $self->{adaptor} = undef;
     $self->{dbID}    = undef;
   }
-  
+
   #Reset cached dynamic attrs here, just in case there has been a change?
   return;
 }
