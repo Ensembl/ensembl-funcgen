@@ -24,7 +24,6 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning stack_trace_dump);
 use File::Spec;
-use Data::Dumper;
 
 sub fetch_input {   # fetch parameters...
   my $self = shift @_;
@@ -105,6 +104,7 @@ sub fetch_input {   # fetch parameters...
 
 sub run {   # Check parameters and do appropriate database/file operations...
   my $self = shift @_;
+
 
   #Preprocess control file if needed. this cannot be done in parallel as several sets may require same control file
   if(!$self->_skip_control()){
