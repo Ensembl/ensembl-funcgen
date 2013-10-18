@@ -465,9 +465,10 @@ sub store{
     $sth->bind_param(7, $set->feature_class,  SQL_VARCHAR);
     $sth->bind_param(8, $set->vendor,         SQL_VARCHAR);
     $sth->execute();
-# core method for getting insert_id
+
     $set->dbID( $self->last_insert_id );
     $set->adaptor($self);
+    $self->store_states($set);
 
     for my $name (sort keys %{$set->{'subsets'}}){
       my $ss = $set->{'subsets'}->{$name};

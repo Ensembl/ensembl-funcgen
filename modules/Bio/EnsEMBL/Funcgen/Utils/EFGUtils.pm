@@ -308,6 +308,21 @@ sub create_Storable_clone {
   return $clone;
 }
 
+sub dump_data {
+  my ($data, $indent, $terse) = @_;
+  if(defined $indent and $indent !~ /[0123]/){
+    throw("Indent must be 0,1,2,3 not $indent");
+  }
+  $indent = defined($indent) ? $indent : 2;
+  $terse = ($terse) ? $terse : undef;
+
+  my $dumper = Data::Dumper->new([$data]);
+  $dumper->Indent($indent);
+  $dumper->Terse($terse);
+  my $dump = $dumper->Dump();
+  return $dump;
+}
+
 
 #Do this as File::Basename doesn't quite get there.
 
@@ -1896,20 +1911,6 @@ sub validate_path{
 
 #Funcgen added methods
 
-sub dump_data {
-    my ($data, $indent, $terse) = @_;
-      if(defined $indent and $indent !~ /[0123]/){
-            throw("Indent must be 0,1,2,3 not $indent");
-              }
-        $indent = defined($indent) ? $indent : 2;
-          $terse = ($terse) ? $terse : undef;
-
-            my $dumper = Data::Dumper->new([$data]);
-              $dumper->Indent($indent);
-                $dumper->Terse($terse);
-                  my $dump = $dumper->Dump();
-                    return $dump;
-}
 
 
 1;
