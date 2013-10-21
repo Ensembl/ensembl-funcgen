@@ -3,17 +3,10 @@
 @desc   Update for new funcgen schema layout
 */
 ALTER TABLE status_name MODIFY name varchar(60);
+ALTER TABLE status_name ADD is_dev TINYINT(1) NOT NULL default 0;
 
-INSERT INTO status_name (name) values ('DOWNLOADED');
-INSERT INTO status_name (name) values ('IS_CURRENT');
-INSERT INTO status_name (name) values ('IS_CONTROL');
-INSERT INTO status_name (name) values ('ADD_TO_REGULATORY_BUILD');
-INSERT INTO status_name (name) values ('IN_REGULATORY_BUILD');
-INSERT INTO status_name (name) values ('RELEASED');
-INSERT INTO status_name (name) values ('TO_BE_REVOKED');
-INSERT INTO status_name (name) values ('REVOKED');
-INSERT INTO status_name (name) values ('TO_BE_REBUILD');
-INSERT INTO status_name (name) values ('REBUILT');
+UPDATE status_name SET is_dev = 1 WHERE name  IN('DAS_DISPLAYABLE','DISPLAYABLE','IMPORTED','RESOLVED','VSN_GLOG','Parzen','LOESS','RESULT_FEATURE_SET','MART_DISPLAYABLE','IMPORTED_GRCh37','IMPORTED_NCBI36');
+
 
 INSERT INTO analysis (created, logic_name) values (NOW(), 'ChIP-Seq');
 INSERT INTO analysis (created, logic_name) values (NOW(), 'DNase-Seq');
@@ -31,15 +24,33 @@ UPDATE input_set iset, analysis a SET iset.analysis_id = a.analysis_id WHERE a.l
 UPDATE input_set iset, analysis a SET iset.analysis_id = a.analysis_id WHERE a.logic_name = 'chromhmm.segway.HUVEC.comb11.concord4'   and iset.name = 'Segmentation:HUVEC';
 UPDATE input_set iset, analysis a SET iset.analysis_id = a.analysis_id WHERE a.logic_name = 'chromhmm.segway.K562.comb11.concord4'    and iset.name = 'Segmentation:K562';
 UPDATE input_set iset, analysis a SET iset.analysis_id = a.analysis_id WHERE a.logic_name = 'eQTL'                                    and iset.vendor = 'EQTL';
-UPDATE input_set iset, analysis a SET iset.analysis_id = a.analysis_id WHERE a.logic_name = 'ChIP-Seq'                                and iset.analysis_id is NULL;
+
+UPDATE
+  input_set iset
+SET
+  analysis_id = (
+    SELECT
+      analysis_id
+    FROM
+      analysis
+    WHERE
+      logic_name = 'ChIP-Seq'
+      )
+WHERE
+  feature_type_id IN (
+    SELECT
+      feature_type_id
+    FROM
+      feature_type
+    WHERE
+      feature_type.class IN ('HISTONE', 'TRANSCRIPTION FACTOR', 'TRANSCRIPTION FACTOR COMPLEX')
+    )
+  ;
+
 
 ALTER TABLE `status` ADD `timestamp` datetime DEFAULT NULL;
 ALTER TABLE `status` ADD `release` int(4)     DEFAULT NULL;
 
-
-ALTER TABLE `data_set_tracking`     DROP `is_current`;
-ALTER TABLE `input_set_tracking`    DROP `status`;
-ALTER TABLE `input_subset_tracking` ADD `local_url` text DEFAULT NULL;
 
 DROP TABLE IF EXISTS `input_set_input_subset`;
 CREATE TABLE `input_set_input_subset` (
