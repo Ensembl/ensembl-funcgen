@@ -650,16 +650,17 @@ CREATE TABLE `dbfile_registry` (
 @desc   Defines a distinct set input data which is not imported into the DB, but used for some analysis e.g. a BAM file.
 @colour  #66CCFF
 
-@column input_set_id		Internal ID
-@column experiment_id		Table ID for @link experiment
-@column feature_type_id		Table ID for @link feature_type
-@column cell_type_id		Table ID for @link cell_type
-@column format				Format of the experiment e.g. SEQUENCING
-@column vendor				Name of technology vendor if appropriate
-@column name				Name of input_set
-@column type				Type of feature imported as result of analysis e.g. result, annotated
-@column replicate   Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
+@column input_set_id    Internal ID
+@column analysis_id     Table ID for @link analysis
+@column experiment_id   Table ID for @link experiment
+@column feature_type_id Table ID for @link feature_type
+@column cell_type_id    Table ID for @link cell_type
+@column vendor	        Name of technology vendor if appropriate
+@column name            Name of input_set
+@column type            Type of feature imported as result of analysis e.g. result, annotated
+@column replicate       Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
 
+@see analysis
 @see experiment
 @see cell_type
 @see feature_type
@@ -670,10 +671,10 @@ CREATE TABLE `dbfile_registry` (
 DROP TABLE IF EXISTS `input_set`;
 CREATE TABLE `input_set` (
    `input_set_id` int(10) unsigned NOT NULL auto_increment,
+   `analysis_id` smallint(5) unsigned NOT NULL,
    `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
-   `format` varchar(20) default NULL,
    `vendor` varchar(40) default NULL,
    `name` varchar(100) not NULL,
    `type` enum('annotated', 'result', 'segmentation', 'dna_methylation') default NULL,
@@ -693,31 +694,50 @@ CREATE TABLE `input_set` (
 @colour  #66CCFF
 
 @column input_subset_id	 Internal ID
-@column input_set_id	 @link input_set table ID
-@column name	     Name of input_subset e.g. file name
-@column archive_id	ENA experiment identifier enabling access to specific raw data
-@column display_url   Http link to source file
-@column replicate   Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
-@column is_control  Subset is a control
+@column experiment_id	 Internal ID
+@column name	         Name of input_subset e.g. file name
+@column archive_id	 ENA experiment identifier enabling access to specific raw data
+@column display_url      Http link to source file
+@column replicate        Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
+@column is_control       Subset is a control
 
 
 @see input_set
+@see experiment
 */
 
 DROP TABLE IF EXISTS `input_subset`;
 CREATE TABLE `input_subset` (
-    `input_subset_id` int(10) unsigned NOT NULL auto_increment,
-    `input_set_id` int(10) unsigned NOT NULL,
-    `name` varchar(100) NOT NULL,
-    `archive_id` varchar(20) DEFAULT NULL,
-    `display_url` varchar(255) DEFAULT NULL,
-    `replicate` tinyint(3) unsigned NOT NULL,
-    `is_control` tinyint(3) unsigned NOT NULL,
+    `input_subset_id` int(10) unsigned    NOT NULL auto_increment,
+    `experiment_id`   int(10) unsigned    NOT NULL auto_increment,
+    `name`            varchar(100)        NOT NULL,
+    `archive_id`      varchar(20)         DEFAULT NULL,
+    `display_url`     varchar(255)        DEFAULT NULL,
+    `replicate`       tinyint(3) unsigned NOT NULL,
+    `is_control`      tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`input_subset_id`),
-   UNIQUE KEY `set_name_dx` (`input_set_id`, `name`),
+   UNIQUE `name_exp_idx` (`name`, `experiment_id`);
    KEY `archive_idx`(`archive_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
+
+/**
+@table  input_set_input_subset
+@desc   Link table input_set / input_subset
+@colour  #66CCFF
+
+@column input_subset_id	 @link input_subset table  ID
+@column input_set_id	 @link input_set table ID
+
+@see input_set
+@see input_subset
+*/
+
+CREATE TABLE `input_set_input_subset` (
+  `input_subset_id` int(10) unsigned NOT NULL,
+  `input_set_id`    int(10) unsigned NOT NULL,
+  UNIQUE KEY `iset_subset_table_idx` (`input_subset_id`,`input_set_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
 /**
@@ -1184,9 +1204,11 @@ CREATE TABLE `lineage` (
 @desc   Denormalised table associating funcgen records with a status.
 @colour  #808000
 
-@column table_id		Table ID of associated record
-@column table_name		Table name of associated record
+@column table_id        Table ID of associated record
+@column release         Release version
 @column status_name_id	@link status_name table ID
+@column table_name	Table name of associated record
+@column timestamp       datetime when status was added
 
 
 @see status_name
@@ -1194,9 +1216,11 @@ CREATE TABLE `lineage` (
 
 DROP TABLE IF EXISTS `status`;
 CREATE TABLE `status` (
-   `table_id` int(10) unsigned default NULL,
-   `table_name` varchar(32) default NULL,
-   `status_name_id` int(10) unsigned NOT NULL,
+   `table_id`       int(10) unsigned  DEFAULT NULL,
+   `release`        int(4)            DEFAULT NULL;
+   `status_name_id` int(10) unsigned  NOT NULL,
+   `table_name`     varchar(32)       DEFAULT NULL,
+   `timestamp`      datetime          DEFAULT NULL;
    PRIMARY KEY  (`table_id`, `table_name`, `status_name_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1209,7 +1233,8 @@ CREATE TABLE `status` (
 @colour  #808000
 
 @column status_name_id	Internal ID
-@column name			Name of status e.g. IMPORTED, DISPLAYBLE etc.
+@column name            Name of status e.g. IMPORTED, DISPLAYBLE etc.
+@column is_dev          Boolean, 1 indicates that status is also available in devDB
 
 @see status
 */
@@ -1217,7 +1242,8 @@ CREATE TABLE `status` (
 DROP TABLE IF EXISTS `status_name`;
 CREATE TABLE `status_name` (
    `status_name_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(20) default NULL,
+   `name` varchar(60)           DEFAULT NULL,
+   `is_dev` TINYINT(1) NOT NULL DEFAULT 0;
    PRIMARY KEY  (`status_name_id`),
    UNIQUE KEY `status_name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
