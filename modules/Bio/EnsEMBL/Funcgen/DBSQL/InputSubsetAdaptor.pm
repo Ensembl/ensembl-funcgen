@@ -64,7 +64,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 sub fetch_all_by_InputSet {
   my ($self, $iset) = @_;
-  
+
   my $params = {constraints => {input_sets => [$iset]}};
 	my $objs = $self->generic_fetch($self->compose_constraint_query($params));
   $self->reset_true_tables;
@@ -110,10 +110,14 @@ sub fetch_all_by_Experiments {
 sub fetch_by_name_and_experiment {
   my ($self, $name, $exp) = @_;
 
-  my $params = 
+  my $params =
    {constraints => {experiments => [$exp],
                     name        => $name}};
-	return $self->generic_fetch($self->compose_constraint_query($params));
+	my $result = $self->generic_fetch($self->compose_constraint_query($params));
+  if(scalar @$result > 1){
+    throw("Only 1 InputSubset expected, not " . scalar @$result );
+  }
+  return($result);
 }
 
 
