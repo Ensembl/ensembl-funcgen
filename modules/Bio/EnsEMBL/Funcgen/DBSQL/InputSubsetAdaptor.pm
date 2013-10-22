@@ -41,12 +41,10 @@ package Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(dump_data);
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
 use Bio::EnsEMBL::Funcgen::InputSubset;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor;
-
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #Performs import;
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 
@@ -54,40 +52,37 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 =head2 fetch_all_by_InputSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::InputSet
-  Example    : my @i_subsets = @{$is_adaptopr->fetch_all_by_InputSet($type)};
-  Description: Retrieves InputSubset objects from the database based on InputSet
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::InputSubset objects
-  Exceptions : Throws if arg is not a valid InputSet
+  Example    : my @subsets = @{$iss_adaptor->fetch_all_by_InputSet($input_set)};
+  Description: Retrieves InputSubset objects from the database based that are part
+               of the given InputSet
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSubset objects
+  Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 sub fetch_all_by_InputSet {
   my ($self, $iset) = @_;
-
+  
   my $params = {constraints => {input_sets => [$iset]}};
-
-#  $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
-#  my $objs = $self->generic_fetch($constraint);
-#  $self->reset_true_tables;
-
 	my $objs = $self->generic_fetch($self->compose_constraint_query($params));
-
   $self->reset_true_tables;
 
   return($objs);
 }
 
+
 =head2 fetch_all_by_Experiment
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
-  Example    : my @i_subsets = @{$ex_adaptopr->fetch_all_by_Experiment($type)};
-  Description: Retrieves InputSubset objects from the database based on Experiment
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::InputSubset objects
-  Exceptions : Throws if arg is not a valid Experiment
+  Example    : my @subsets = @{$iss_adaptopr->fetch_all_by_Experiment($exp_obj)};
+  Description: Retrieves InputSubset objects from the database that belong to
+               the given Experiment
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSubset objects
+  Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -96,29 +91,29 @@ sub fetch_all_by_Experiments {
 
   my $params = {constraints => {experiments => [$exps]}};
 	return $self->generic_fetch($self->compose_constraint_query($params));
-
 }
+
 
 =head2 fetch_by_name
 
-  Arg [1]    : string - InputSubset name
+  Arg [1]    : String - InputSubset name
   Example    : my $iss = $iss_a->fetch_by_name('Iss_name');
-  Description: Retrieves a InputSubset object which matches the passed name
+  Description: Retrieves a InputSubset object which matches the specified name
   Returntype : Bio::EnsEMBL::Funcgen::InputSubset
   Exceptions : Throws if no name defined or if more than one returned
   Caller     : General
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
 sub fetch_all_by_name {
   my ($self, $name) = @_;
 
-  throw("Need to specify a name argument") if (! defined $name);
+  throw("Need to specify a name argument") if  ! defined $name;
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
   return $self->generic_fetch("name = ?")->[0];
-
 }
+
 
 =head2 fetch_by_name_and_experiment
 
@@ -136,11 +131,9 @@ sub fetch_all_by_name {
 sub fetch_by_name_and_experiment {
   my ($self, $name, $exp) = @_;
 
-  my $params = {
-    constraints => {
-      experiments => [$exp],
-      name        => $name
-    }};
+  my $params = 
+   {constraints => {experiments => [$exp],
+                    name        => $name}};
 	return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
@@ -174,6 +167,21 @@ sub _columns {
 }
 
 
+=head2 _true_tables
+
+  Args       : None
+  Example    : None
+  Description: Returns the names and aliases of the tables to use for queries.
+  Returntype : List of listrefs of strings
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _true_tables {
+  return ([ 'input_subset',  'iss' ]);
+}
 
 =head2 _objs_from_sth
 
@@ -239,6 +247,7 @@ sub _objs_from_sth {
   return(\@result);
 }
 
+
 =head2 store
 
   Args       : Bio::EnsEMBL::Funcgen::InputSet
@@ -251,7 +260,6 @@ sub _objs_from_sth {
   Status     : At Risk
 
 =cut
-
 
 sub store{
   my ($self, @subsets) = @_;
@@ -308,6 +316,11 @@ sub _final_clause {
   return ( 'group by iss.input_subset_id');
 }
 
+
+
+### CONTRAIN METHODS ###
+# Used by BaseAdaptor::compose_query_contraint
+
 sub _constrain_experiments {
   my ($self, $exps) = @_;
 
@@ -348,9 +361,7 @@ sub _constrain_archive_ids {
   return (' iss.archive_id IN '.join(', ', (map {uc($_)} @$archive_ids)) , {});
 }
 
-sub _true_tables {
-  return ([ 'input_subset',  'iss' ]);
-}
+
 
 1;
 
