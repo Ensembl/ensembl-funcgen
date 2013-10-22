@@ -50,28 +50,9 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::InputSet;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #for export
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw/dump_data/;
-
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #for import
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor );
 
-=head2 fetch_all_by_CellType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType
-  Example    :
-  Description:
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSet objects
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_CellType {
-  my ($self, $ctype) = @_;
-  my $params = {constraints => {cell_types => [$ctype]}};
-  return $self->generic_fetch($self->compose_constraint_query($params));
-}
 
 =head2 fetch_all_by_Experiment
 
@@ -85,13 +66,12 @@ sub fetch_all_by_CellType {
 
 =cut
 
-
-
 sub fetch_all_by_Experiment {
   my ($self, $exp) = @_;
   my $params = {constraints => {experiments => [$exp]}};
   return $self->generic_fetch($self->compose_constraint_query($params));
 }
+
 
 =head2 fetch_all_by_InputSubsets
 
@@ -113,48 +93,6 @@ sub fetch_all_by_InputSubsets {
 
   my $constraint = "iss.input_set_id IN ($dbIDs)";
   return $self->generic_fetch($constraint);
-}
-
-=head2 fetch_all_by_FeatureType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
-  Example    :
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the specified type of array.
-  Returntype : Listref of Bio::EnsEMBL::InputSet objects
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_FeatureType {
-  my ($self, $ftype) = @_;
-  my $params = {constraints => {feature_types => [$ftype]}};
-  return $self->generic_fetch($self->compose_constraint_query($params));
-}
-
-=head2 fetch_by_name
-
-  Arg [1]    : string - InputSet name
-  Example    : $exp_set = $eseta->fetch_by_name('exp_set_1');
-  Description: Retrieves a InputSet based on the ExperimentalSet name
-  Returntype : Bio::EnsEMBL::Funcgen::InputSet
-  Exceptions : Throws if no name provided
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-#Move to SetAdaptor
-
-sub fetch_by_name {
-  my ($self, $name) = @_;
-
-  throw('Need to pass a name argument') if( ! defined $name);
-  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
-
-  return $self->generic_fetch("inp.name = ?")->[0];
 }
 
 
