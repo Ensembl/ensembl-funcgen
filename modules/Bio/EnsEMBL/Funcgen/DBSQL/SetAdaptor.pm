@@ -126,6 +126,34 @@ sub fetch_all_by_FeatureType_Analysis {
 }
 
 
+#No fetch_all_by_name as this is not useful
+
+=head2 fetch_by_name
+
+  Arg [1]    : String - Set name
+  Example    : my $iss = $set_a->fetch_by_name('Iss_name');
+  Description: Retrieves a Set object which matches the specified name
+  Returntype : Bio::EnsEMBL::Funcgen::Set
+  Exceptions : Throws if more than one returned
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub fetch_by_name {
+  my ($self, $name) = @_;
+
+  my $params = {constraints => {name => $name}};
+  my $results = $self->generic_fetch($self->compose_constraint_query($params));
+
+  if(scalar(@$results) >1){
+    throw('The name specified is not unique, please use another fetch_by_name method');  
+  }
+  
+  return $results->[0];
+}
+
+
 
 # can't have fetch_by_name as this name is not unique for ResultSets
 

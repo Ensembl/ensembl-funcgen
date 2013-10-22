@@ -1,5 +1,5 @@
 #
-# Ensembl module for Bio::EnsEMBL::Funcgen::
+# Ensembl module for Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor
 #
 
 =head1 LICENSE
@@ -44,7 +44,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
 use Bio::EnsEMBL::Funcgen::InputSubset;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #Performs import;
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #Performs import
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 
@@ -91,27 +91,6 @@ sub fetch_all_by_Experiments {
 
   my $params = {constraints => {experiments => [$exps]}};
 	return $self->generic_fetch($self->compose_constraint_query($params));
-}
-
-
-=head2 fetch_by_name
-
-  Arg [1]    : String - InputSubset name
-  Example    : my $iss = $iss_a->fetch_by_name('Iss_name');
-  Description: Retrieves a InputSubset object which matches the specified name
-  Returntype : Bio::EnsEMBL::Funcgen::InputSubset
-  Exceptions : Throws if no name defined or if more than one returned
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub fetch_all_by_name {
-  my ($self, $name) = @_;
-
-  throw("Need to specify a name argument") if  ! defined $name;
-  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
-  return $self->generic_fetch("name = ?")->[0];
 }
 
 
