@@ -113,11 +113,7 @@ sub fetch_by_name_and_experiment {
   my $params =
    {constraints => {experiments => [$exp],
                     name        => $name}};
-	my $result = $self->generic_fetch($self->compose_constraint_query($params));
-  if(scalar @$result > 1){
-    throw("Only 1 InputSubset expected, not " . scalar @$result );
-  }
-  return($result);
+	return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
 
