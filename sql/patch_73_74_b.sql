@@ -3,7 +3,6 @@
 @desc   Update for new funcgen schema layout
 */
 ALTER TABLE status_name MODIFY name varchar(60);
-ALTER TABLE status_name ADD is_dev TINYINT(1) NOT NULL default 0;
 
 UPDATE status_name SET is_dev = 1 WHERE name  IN('DAS_DISPLAYABLE','DISPLAYABLE','IMPORTED','RESOLVED','VSN_GLOG','Parzen','LOESS','RESULT_FEATURE_SET','MART_DISPLAYABLE','IMPORTED_GRCh37','IMPORTED_NCBI36');
 
