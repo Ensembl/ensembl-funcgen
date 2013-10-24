@@ -71,12 +71,14 @@ use vars qw(@ISA);
 
   Example    : my $iss = Bio::EnsEMBL::Funcgen::InputSubset->new
                             (
-                             -experiment  => $exp,
-                             -archive_id  => $archive_id,
-                             -display_url => $display_url,
-                             -is_control  => $is_control,
-                             -name        => $name,
-                             -replicate   => $iss_rep,
+                             -cell_type     => $cell_type,
+                             -experiment    => $exp,
+                             -feature_type  => $feature_type,
+                             -archive_id    => $archive_id,
+                             -display_url   => $display_url,
+                             -is_control    => $is_control,
+                             -name          => $name,
+                             -replicate     => $iss_rep,
                             );
 
 
@@ -117,6 +119,9 @@ sub new {
     if(!$exp->dbID){
     throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
+# set in Set
+  throw ('Must provide a  FeatureType') if(! defined $self->feature_type);
+  throw ('Must provide a  CellType')    if(! defined $self->cell_type);
 
   $self->{experiment}  = $exp;
   $self->{archive_id}  = $archive_id;
@@ -143,6 +148,18 @@ sub new {
 sub name { return $_[0]->{name}; }
 
 
+=head2 cell_type
+
+  Example    : my $cell_type = $iss->cell_type;
+  Description: Getter for the cell_type attribute of this InputSubset.
+  Returntype : Bio::EnsEMBL::Funcgen::InputSubset
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub cell_type {    return $_[0]->{cell_type}; }
 
 =head2 experiment
 
@@ -156,6 +173,19 @@ sub name { return $_[0]->{name}; }
 =cut
 
 sub experiment {    return $_[0]->{experiment}; }
+
+=head2 feature_type
+
+  Example    : my $feature_type = $iss->feature_type;
+  Description: Getter for the feature_type attribute of this InputSubset.
+  Returntype : Bio::EnsEMBL::Funcgen::InputSubset
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub feature_type {    return $_[0]->{feature_type}; }
 
 
 =head2 archive_id
@@ -230,13 +260,22 @@ sub is_control { return $_[0]->{is_control}; }
 
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
+
   if(ref($params_hash) ne 'HASH'){
     throw('Must pass a HASHREF, not: ' .ref($params_hash));
   }
-  my ($experiment) = rearrange(['EXPERIMENT'], %$params_hash);
-  assert_ref($experiment, 'Bio::EnsEMBL::Funcgen::Experiment');
 
-  $self->{experiment}     = $experiment;
+  my ($cell_type, $experiment, $feature_type) =
+    rearrange(['CELL_TYPE', 'EXPERIMENT', 'FEATURE_TYPE'],
+        %$params_hash);
+
+  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($experiment,   'Bio::EnsEMBL::Funcgen::Experiment');
+  assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
+
+  $self->{cell_type}     = $cell_type;
+  $self->{experiment}    = $experiment;
+  $self->{feature_type}  = $feature_type;
 
   # Undef dbID and adaptor by default
   if(! $no_db_reset){
@@ -256,7 +295,7 @@ sub reset_relational_attributes{
                Defaults to: name archive_id display_url replicate is_control
   Args[4]    : Arrayref - Optional list of InputSubset method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: experiment
+               Defaults to: cell_type, experiment, feature_type
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this InputSubset to another based on the defined scalar
                and storable methods.
@@ -276,7 +315,7 @@ sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
   $scl_methods ||= [qw(name archive_id display_url replicate is_control)];
-  $obj_methods ||= [qw(experiment)];
+  $obj_methods ||= [qw(cell_type experiment feature_type)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
 }

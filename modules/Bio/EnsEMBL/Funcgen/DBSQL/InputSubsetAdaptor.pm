@@ -136,7 +136,9 @@ sub _columns {
 
   return qw(
       iss.input_subset_id
+      iss.cell_type_id
       iss.experiment_id
+      iss.feature_type_id
       iss.archive_id
       iss.display_url
       iss.is_control
@@ -181,7 +183,9 @@ sub _objs_from_sth {
 
   my (@result,
       $iss_id,
+      $ct_id,
       $exp_id,
+      $ft_id,
       $archive_id,
       $display_url,
       $is_control,
@@ -197,7 +201,9 @@ sub _objs_from_sth {
 
   $sth->bind_columns(
       \$iss_id,
+      \$ct_id,
       \$exp_id,
+      \$ft_id,
       \$archive_id,
       \$display_url,
       \$is_control,
@@ -205,17 +211,31 @@ sub _objs_from_sth {
       \$replicate,
       );
 
+  my $ct_adaptor  = $self->db->get_CellTypeAdaptor;
   my $exp_adaptor = $self->db->get_ExperimentAdaptor;
+  my $ft_adaptor  = $self->db->get_FeatureTypeAdaptor;
 
-  while($sth->fetch()){
+  while($sth->fetch){
+    my $ct = $ct_adaptor->fetch_by_dbID($ct_id);
+    if(! defined $ct){
+      throw("Could not fetch linked experiment (dbID: $ct_id) for InputSubset (dbID: $iss_id) ");
+    }
+
     my $exp = $exp_adaptor->fetch_by_dbID($exp_id);
     if(! defined $exp){
       throw("Could not fetch linked experiment (dbID: $exp_id) for InputSubset (dbID: $iss_id) ");
     }
 
+    my $ft = $ft_adaptor->fetch_by_dbID($ft_id);
+    if(! defined $ft){
+      throw("Could not fetch linked FeatureType (dbID: $ft_id) for InputSubset (dbID: $iss_id) ");
+    }
+
     push @result, Bio::EnsEMBL::Funcgen::InputSubset->new (
        -dbID         => $iss_id,
+       -CELL_TYPE    => $ct,
        -EXPERIMENT   => $exp,
+       -FEATURE_TYPE => $ft,
        -ARCHIVE_ID   => $archive_id,
        -DISPLAY_URL  => $display_url,
        -IS_CONTROL   => $is_control,
@@ -252,14 +272,16 @@ sub store{
   my $sth = $self->prepare("
         INSERT INTO
           input_subset (
+            cell_type_id,
             experiment_id,
+            feature_type_id,
             archive_id,
             display_url,
             is_control,
             name,
             replicate
         )
-        VALUES (?, ?, ?, ?, ? ,?)
+        VALUES (?, ?, ?, ?, ?, ?, ? ,?)
     ");
 
 
@@ -274,14 +296,16 @@ sub store{
             "InputSubsetAdaptor does not support updating yet.");
     }
 
-    $sth->bind_param(1, $subset->experiment->dbID, SQL_INTEGER);
-    $sth->bind_param(2, $subset->archive_id,       SQL_VARCHAR);
-    $sth->bind_param(3, $subset->display_url,      SQL_VARCHAR);
-    $sth->bind_param(4, $subset->is_control,       SQL_INTEGER);
-    $sth->bind_param(5, $subset->name,             SQL_VARCHAR);
-    $sth->bind_param(6, $subset->replicate,        SQL_INTEGER);
+    $sth->bind_param(1, $subset->cell_type->dbID,     SQL_INTEGER);
+    $sth->bind_param(2, $subset->experiment->dbID,    SQL_INTEGER);
+    $sth->bind_param(3, $subset->feature_type->dbID,  SQL_INTEGER);
+    $sth->bind_param(4, $subset->archive_id,          SQL_VARCHAR);
+    $sth->bind_param(5, $subset->display_url,         SQL_VARCHAR);
+    $sth->bind_param(6, $subset->is_control,          SQL_INTEGER);
+    $sth->bind_param(7, $subset->name,                SQL_VARCHAR);
+    $sth->bind_param(8, $subset->replicate,           SQL_INTEGER);
     $sth->execute();
-# Core utils fetch last ID, platform independant
+
     $subset->dbID($self->last_insert_id);
     $subset->adaptor($self);
     $self->store_states($subset);
