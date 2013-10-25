@@ -61,11 +61,8 @@ package Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Utils::Argument   qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception  qw ( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar     qw ( assert_ref );
-use Bio::EnsEMBL::Funcgen::Storable;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
-
+use base qw (Bio::EnsEMBL::Funcgen::Storable);
 
 =head2 new
 
@@ -90,13 +87,16 @@ use vars qw(@ISA);
 
 =cut
 
+
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
   my (
+      $cell_type,
       $exp,
+      $feature_type,
       $archive_id,
       $display_url,
       $is_control,
@@ -104,7 +104,9 @@ sub new {
       $rep,
       )
     = rearrange([
+        'CELL_TYPE',
         'EXPERIMENT',
+        'FEATURE_TYPE',
         'ARCHIVE_ID',
 				'DISPLAY_URL',
         'IS_CONTROL',
@@ -119,16 +121,23 @@ sub new {
     if(!$exp->dbID){
     throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::Experiment');
   }
-# set in Set
-  throw ('Must provide a  FeatureType') if(! defined $self->feature_type);
-  throw ('Must provide a  CellType')    if(! defined $self->cell_type);
+  assert_ref($exp, 'Bio::EnsEMBL::Funcgen::CellType');
+    if(!$exp->dbID){
+    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::CellType');
+  }
+  assert_ref($exp, 'Bio::EnsEMBL::Funcgen::FeatureType');
+    if(!$exp->dbID){
+    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureType');
+  }
 
-  $self->{experiment}  = $exp;
-  $self->{archive_id}  = $archive_id;
-  $self->{display_url} = $display_url;
-  $self->{is_control}  = $is_control;
-  $self->{name}        = $name;
-  $self->{replicate}   = $rep;
+  $self->{cell_type}    = $cell_type;
+  $self->{experiment}   = $exp;
+  $self->{feature_type} = $feature_type;
+  $self->{archive_id}   = $archive_id;
+  $self->{display_url}  = $display_url;
+  $self->{is_control}   = $is_control;
+  $self->{name}         = $name;
+  $self->{replicate}    = $rep;
 
   return $self;
 }
