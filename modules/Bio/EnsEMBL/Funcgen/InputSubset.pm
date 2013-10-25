@@ -24,7 +24,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::InputSubset - A module to represent InputSubset object.
+Bio::EnsEMBL::Funcgen::InputSubset - A module to represent InputSubset object.
 
 
 =head1 SYNOPSIS
@@ -33,8 +33,6 @@ use Bio::EnsEMBL::Funcgen::InputSubset;
 
 my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new
                     (
-                     -DBID        => $dbID,
-                     -ADAPTOR     => $self,
                      -NAME        => $name,
                      -INPUT_SET   => $iset,
                      -archive_id  => $archive_id,
@@ -42,6 +40,15 @@ my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new
                      -replicate   => $iss_rep,
                      -is_control  => $is_control,
                     );
+
+($input_subset) = @{$input_subset_adaptor->store($input_subset)};
+
+
+my $control = ($input_set->is_control) ? 'control' : ''; 
+  
+print 'InputSubset ('.$input_subset->archive_id.
+  ") is $control replicate ".$input_set->replicate.
+  ":\t".$input_set->name."\nViewable here:\t".$input_set->display_url."\n";
 
 
 
@@ -53,16 +60,16 @@ store and fetch functionality is embedded within the InputSetAdaptor.
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::InputSubset;
+
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::InputSubset;
+use Bio::EnsEMBL::Utils::Argument   qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception  qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Scalar     qw( assert_ref );
 
-use Bio::EnsEMBL::Utils::Argument   qw ( rearrange );
-use Bio::EnsEMBL::Utils::Exception  qw ( throw deprecate );
-use Bio::EnsEMBL::Utils::Scalar     qw ( assert_ref );
-
-use base qw (Bio::EnsEMBL::Funcgen::Storable);
+use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 
@@ -86,7 +93,6 @@ use base qw (Bio::EnsEMBL::Funcgen::Storable);
   Status     : At risk
 
 =cut
-
 
 sub new {
   my $caller = shift;
@@ -154,7 +160,7 @@ sub new {
 
 =cut
 
-sub name { return $_[0]->{name}; }
+sub name { return shift->{name}; }
 
 
 =head2 cell_type
@@ -168,7 +174,8 @@ sub name { return $_[0]->{name}; }
 
 =cut
 
-sub cell_type {    return $_[0]->{cell_type}; }
+sub cell_type { return shift->{cell_type}; }
+
 
 =head2 experiment
 
@@ -181,7 +188,8 @@ sub cell_type {    return $_[0]->{cell_type}; }
 
 =cut
 
-sub experiment {    return $_[0]->{experiment}; }
+sub experiment { return shift->{experiment}; }
+
 
 =head2 feature_type
 
@@ -194,7 +202,7 @@ sub experiment {    return $_[0]->{experiment}; }
 
 =cut
 
-sub feature_type {    return $_[0]->{feature_type}; }
+sub feature_type { return shift->{feature_type}; }
 
 
 =head2 archive_id
@@ -208,7 +216,7 @@ sub feature_type {    return $_[0]->{feature_type}; }
 
 =cut
 
-sub archive_id { return $_[0]->{archive_id}; }
+sub archive_id { return shift->{archive_id}; }
 
 
 =head2 display_url
@@ -222,7 +230,7 @@ sub archive_id { return $_[0]->{archive_id}; }
 
 =cut
 
-sub display_url{ return $_[0]->{display_url}; }
+sub display_url{ return shift->{display_url}; }
 
 
 =head2 replicate
@@ -236,8 +244,7 @@ sub display_url{ return $_[0]->{display_url}; }
 
 =cut
 
-  #is_stored (in corresponding db) checks will be done in store method
-sub replicate { return $_[0]->{replicate}; }
+sub replicate { return shift>{replicate}; }
 
 
 =head2 is_control
@@ -251,7 +258,8 @@ sub replicate { return $_[0]->{replicate}; }
 
 =cut
 
-sub is_control { return $_[0]->{is_control}; }
+sub is_control { return shift->{is_control}; }
+
 
 =head2 reset_relational_attributes
 
@@ -295,6 +303,7 @@ sub reset_relational_attributes{
   return;
 }
 
+
 =head2 compare_to
 
   Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
@@ -328,6 +337,8 @@ sub compare_to {
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
 }
+
+
 ##### Deprecated ####
 
 =head2 input_set
