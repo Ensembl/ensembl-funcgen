@@ -244,7 +244,7 @@ sub display_url{ return shift->{display_url}; }
 
 =cut
 
-sub replicate { return shift>{replicate}; }
+sub replicate { return shift->{replicate}; }
 
 
 =head2 is_control
