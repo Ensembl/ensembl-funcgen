@@ -1,7 +1,8 @@
 /**
-@header patch_73_74_b.sql - schema version
-@desc   Update for new funcgen schema layout
+@header patch_73_74_b.sql - input_set_subset_split
+@desc   Patch to make input_subsets independant of input_sets
 */
+
 ALTER TABLE `status_name` MODIFY `name` varchar(60);
 
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'ChIP-Seq');
@@ -70,6 +71,15 @@ ALTER TABLE input_subset DROP INDEX set_name_dx;
 ALTER TABLE input_subset ADD UNIQUE name_exp_idx (name, experiment_id);
 
 ALTER TABLE input_subset DROP COLUMN input_set_id;
-ALTER TABLE `input_set`    DROP `format`;
+ALTER TABLE `input_set`  DROP `format`;
+
+UPDATE input_subset isset, input_set iset, input_set_input_subset link set isset.feature_type_id=iset.feature_type_id, isset.cell_type_id=iset.cell_type_id 
+  where iset.input_set_id=link.input_set_id and link.input_subset_id=isset.input_subset_id;
+
+-- ultimately input_set & input_set_input_subset will be dropped in favour of just using result_set
+-- meaning input_set.analysis_id will move to input_subset. 
+  
+# patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_b.sql|input_set_subset_split');
 
 
