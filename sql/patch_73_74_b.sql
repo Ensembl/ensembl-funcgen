@@ -38,9 +38,9 @@ WHERE
     )
   ;
 
-UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'DNase-Seq') WHERE `feature_type`_id` IN ( SELECT `feature_type`_id` FROM `feature_type` WHERE `name` = 'DNase1';) ;
-UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'FAIRE')     WHERE `feature_type`_id` IN ( SELECT `feature_type`_id` FROM `feature_type` WHERE `name` = 'FAIRE';) ;
-UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'PolIII')    WHERE `feature_type`_id` IN ( SELECT `feature_type`_id` FROM `feature_type` WHERE `name` = 'PolIII';) ;
+UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'DNase-Seq') WHERE `feature_type_id` IN ( SELECT `feature_type_id` FROM `feature_type` WHERE `name` = 'DNase1');
+UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'FAIRE')     WHERE `feature_type_id` IN ( SELECT `feature_type_id` FROM `feature_type` WHERE `name` = 'FAIRE');
+UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'PolIII')    WHERE `feature_type_id` IN ( SELECT `feature_type_id` FROM `feature_type` WHERE `name` = 'PolIII');
 
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'chromhmm.segway.GM12878.comb11.concord4') WHERE `name` = 'Segmentation:GM12878';
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'chromhmm.segway.H1ESC.comb11.concord4')   WHERE `name` = 'Segmentation:H1ESC';
