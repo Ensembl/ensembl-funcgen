@@ -13,7 +13,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 # COMPLETED method_name testing
 
 throw('Test DB not yet implemented, you need to define a DBAdaptor and remove this throw manually');
-#my $user = undef;
+my $user = undef'
 
 my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
     -user       => $user,
@@ -25,10 +25,26 @@ my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
     -dbname     => undef,
     -host       => undef,
     -DNADB_HOST => undef,
-    -DNADB_NAME => 'homo_sapiens_core_71_37',
+    #-DNADB_NAME => undef,
 );
 
 my $rsa = $efgdba->get_adaptor("resultset");
+
+my $exp_name = 'H1ESC_Tcf12_ENCODE_Hudsonalpha';
+my $exp = $efgdba->get_adaptor("experiment")->fetch_by_name($exp_name);
+
+my @rsets;
+
+eval { @rsets = @{$rsa->fetch_all_by_Experiment($exp)}; };
+
+ok(! $@, "ResultSetAdaptor::fetch_all_by_Experiment executes without error:\t$@");
+
+ok(scalar(@rsets) == 1,
+   'ResultSetAdaptor::fetch_all_by_Experiment returns expected number of ResultSets');
+
+ok($rsets[0]->name eq $exp_name,
+   "ResultSetAdaptor::fetch_all_by_Experiment returns expected ResultSet: $exp_name eq ".$rsets[0]->name);
+
 
 
 #Just grab a few result sets to work with
