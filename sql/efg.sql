@@ -586,6 +586,7 @@ CREATE TABLE `result_set` (
    `cell_type_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `feature_class` enum('result', 'dna_methylation') DEFAULT NULL,
+   `replicate`       tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`result_set_id`),
    UNIQUE KEY `unique_idx` (`name`,`analysis_id`,`feature_type_id`,`cell_type_id`, `feature_class`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -709,17 +710,20 @@ CREATE TABLE `input_set` (
 DROP TABLE IF EXISTS `input_subset`;
 CREATE TABLE `input_subset` (
     `input_subset_id` int(10) unsigned    NOT NULL auto_increment,
-    `experiment_id`   int(10) unsigned    NOT NULL auto_increment,
+    `cell_type_id`    int(10) unsigned default NULL,
+    `experiment_id`   int(10) unsigned    NOT NULL,
+    `feature_type_id` int(10) unsigned NOT NULL,
     `name`            varchar(100)        NOT NULL,
     `archive_id`      varchar(20)         DEFAULT NULL,
     `display_url`     varchar(255)        DEFAULT NULL,
     `replicate`       tinyint(3) unsigned NOT NULL,
     `is_control`      tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`input_subset_id`),
-   UNIQUE `name_exp_idx` (`name`, `experiment_id`);
+   UNIQUE `name_exp_idx` (`name`, `experiment_id`),
    KEY `archive_idx`(`archive_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
+-- cell_type_id is default NULL to support flat file imports which have not defined cell type
 
 /**
 @table  input_set_input_subset
@@ -1217,10 +1221,8 @@ CREATE TABLE `lineage` (
 DROP TABLE IF EXISTS `status`;
 CREATE TABLE `status` (
    `table_id`       int(10) unsigned  DEFAULT NULL,
-   `release`        int(4)            DEFAULT NULL;
    `status_name_id` int(10) unsigned  NOT NULL,
    `table_name`     varchar(32)       DEFAULT NULL,
-   `timestamp`      datetime          DEFAULT NULL;
    PRIMARY KEY  (`table_id`, `table_name`, `status_name_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1243,7 +1245,6 @@ DROP TABLE IF EXISTS `status_name`;
 CREATE TABLE `status_name` (
    `status_name_id` int(10) unsigned NOT NULL auto_increment,
    `name` varchar(60)           DEFAULT NULL,
-   `is_dev` TINYINT(1) NOT NULL DEFAULT 0;
    PRIMARY KEY  (`status_name_id`),
    UNIQUE KEY `status_name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1415,11 +1416,11 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "72");
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_b.sql|associated_xref');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_71_72_c.sql|added_type_to_supporting_set_PK');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "74");
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_b.sql|input_set_subset_split');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_c.sql|result_set.replicate');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_d.sql|status_name_length');
 
 
 
