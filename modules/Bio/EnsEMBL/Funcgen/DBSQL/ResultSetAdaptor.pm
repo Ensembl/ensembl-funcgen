@@ -141,6 +141,9 @@ sub fetch_all_linked_by_ResultSet{
 }
 
 
+
+
+
 =head2 fetch_all_by_Experiment_Analysis
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
@@ -197,16 +200,17 @@ sub _get_Experiment_join_clause{
     }
 
   }
-  else {     #We have an InputSet Experiment
-    #We could possibly have an experiment with an array and an input set
-    #Currently nothing to stop this, but would most likely be loaded as separate experiments
-    my $input_setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
-    $constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$input_setids.')';
+  else {     #We have an InputSet/InputSubset Experiment
+    my $setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
+    $constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$setids.')';     
+    $setids = join(', ', (map $_->dbID, @{$self->db->get_InputSubsetAdaptor->fetch_all_by_Experiments([$exp])}));
+    $constraint = "(( $constraint ) OR ( rsi.table_name='input_subset' AND rsi.table_id IN (".$setids.')))';
   }
 
   return $constraint;
 }
 
+#todo deprecate above method in favour of fetch_all_by_Experiment
 
 =head2 fetch_all_by_Experiment
 
@@ -348,6 +352,7 @@ sub _columns {
             rsi.table_id               rs.name
             rs.cell_type_id            rs.feature_type_id
             rs.feature_class           dr.path
+            rs.replicate
            );
 }
 
@@ -411,13 +416,14 @@ sub _final_clause {
 
 sub _objs_from_sth {
   my ($self, $sth) = @_;
-  my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id, $name);
-  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set, $dbfile_dir,$feat_class);
+  my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id);
+  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set, $dbfile_dir);
+  my ($name, $rep, $feat_class);
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
-  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id,
-					 \$table_id, \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_dir);
+  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, 
+    \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_dir, \$rep);
 
     #Need c/ftype cache here or rely on query cache?
 
@@ -447,6 +453,7 @@ sub _objs_from_sth {
          -FEATURE_CLASS   => $feat_class,
          -ADAPTOR         => $self,
          -DBFILE_DATA_DIR => $dbfile_dir,
+         -REPLICATE       => $rep,
         );
     }
 
