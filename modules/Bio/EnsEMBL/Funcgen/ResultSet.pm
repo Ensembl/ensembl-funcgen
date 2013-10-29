@@ -79,6 +79,7 @@ my %valid_table_names =
   (
    experimental_chip => undef,
    input_set         => undef,
+   input_saubset     => undef,
    channel           => undef,
   );
 
@@ -112,8 +113,9 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
   
-  my ($table_name, $table_id, $rf_set, $dbfile_data_dir, $support)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 'DBFILE_DATA_DIR', 'SUPPORT'], @_);
+  my ($table_name, $table_id, $rf_set, $dbfile_data_dir, $support, $rep)
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET', 
+                 'DBFILE_DATA_DIR', 'SUPPORT', 'REPLICATE'], @_);
   # TEST MANDATORY PARAMS
 
   #explicit type check here to avoid invalid types being imported as NULL
@@ -123,6 +125,7 @@ sub new {
   #set default type until this is moved to db_file_registry.format
   #This is not possible yet as 5mC is classed as DNA not DNA Modification!!!
   
+  $self->{replicate}      = $rep;
   $self->{table_ids}      = {};
 
   if ( !( $type && exists $valid_classes{$type} ) ) {
@@ -199,7 +202,7 @@ sub reset_relational_attributes{
   
   #flush table ID cache and add support
   $self->{table_ids} = undef;  
-  $self->{support}       = undef;
+  $self->{support}   = undef;
   $self->add_support($support);
   
   #is_stored (in corresponding db) checks will be done in store method
@@ -233,6 +236,20 @@ sub reset_relational_attributes{
   return;
 }
 
+
+=head2 replicate
+
+  Description: Accessor for replicate attribute 
+  Returntype : Int
+  Exceptions : None
+  Caller     : Genereal
+  Status     : At risk
+
+=cut
+
+sub replicate{
+  return shift->{replicate};  
+}
 
 sub add_support{
   my($self, $support) = @_;
@@ -329,20 +346,26 @@ sub experimental_group{
   if(! exists $self->{experimental_group}){
     #Not undef check as undef is a valid value
     #for mixed project ResultSets
-
-    if($self->table_name ne 'input_set'){
-      throw('Cannot currently get ExperimentalGroup for a ResultSet with non-InputSet support'); 
+  
+    if($self->table_name !~ /^input_(sub)?set$/o){
+      throw('Cannot currently get ExperimentalGroup for a ResultSet with non-InputSet/InputSubset support'); 
     }
 
     my $exp_group;
-    my @isets = @{$self->get_InputSets};
+    my @sets = @{$self->get_support};
 
-    if(@isets){
-      $exp_group = $isets[0]->get_Experiment->get_ExperimentalGroup->name;
+    if(@sets){
+   
+      foreach my $set(@sets){
 
-      foreach my $iset(@isets){
-
-        if($exp_group ne $iset->get_Experiment->get_ExperimentalGroup->name){
+        if($set->can('is_control') && $set->is_control){
+          #ignore controls as they can come from other groups
+          next;  
+        }
+        
+        $exp_group ||= $set->get_Experiment->get_ExperimentalGroup->name;  
+        
+        if($exp_group ne $set->get_Experiment->get_ExperimentalGroup->name){
           #Mixed experimental_group ResultSet
           $exp_group = undef;
           last;
@@ -494,7 +517,7 @@ sub table_name{ return $_[0]->{table_name}; }
                result table, it also reduces redundancy and enable mapping of results to chips
                rather than just the ResultSet.  This enables result retrieval
                based on chips in the same set which  have a differing status.
-               In the case of a sequencing ResultSet, this simply refers to the InputSet ids.
+               In the case of a sequencing ResultSet, this simply refers to the InputSet or InputSubset ids.
   Returntype : None
   Exceptions : Throws if no table_id defined
   Caller     : General
@@ -598,7 +621,7 @@ sub get_result_set_input_id{
 
   Example    : my @support = @{$result_set->get_support};
   Description: Retrieves a list of objects supporting the ResultSet
-  Returntype : Arrayref of objects e.g. InputSet, ExperimentalChip or Channel
+  Returntype : Arrayref of objects e.g. InputSet, InputSubset, ExperimentalChip or Channel
   Exceptions : None
   Caller     : General
   Status     : At Risk
@@ -633,7 +656,7 @@ sub get_support {
   Example    : my @ecs = @{$result_set->get_ExperimentalChips()};
   Description: Retrieves a list of ExperimentalChip objects
   Returntype : Listref of ExperimentalChip object
-  Exceptions : Warns if ResultSet is an InputSet
+  Exceptions : Warns if ResultSet is not associated to any ExperimentalChips
   Caller     : General
   Status     : At Risk
 
