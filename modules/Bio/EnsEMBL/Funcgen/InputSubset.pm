@@ -120,21 +120,11 @@ sub new {
         'REPLICATE',
         ], @_);
 
-  throw('Must provide a name argument') if(!defined $name);
+  throw('Must provide a name argument') if !defined $name;
 
   assert_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment');
-  #can't do is_stored_and_valid here as we don't adaptor
-    if(!$exp->dbID){
-    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::Experiment');
-  }
-  assert_ref($exp, 'Bio::EnsEMBL::Funcgen::CellType');
-    if(!$exp->dbID){
-    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::CellType');
-  }
-  assert_ref($exp, 'Bio::EnsEMBL::Funcgen::FeatureType');
-    if(!$exp->dbID){
-    throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::FeatureType');
-  }
+  assert_ref($cell_type, 'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
 
   $self->{cell_type}    = $cell_type;
   $self->{experiment}   = $exp;
