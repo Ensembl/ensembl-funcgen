@@ -9,38 +9,28 @@ INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'ChIP-Seq');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'DNase-Seq');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'eQTL');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'FAIRE');
-INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'PolIII');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'RRBS');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'WGBS');
 
 ALTER TABLE `input_set`    ADD `analysis_id`   int(10) unsigned NOT NULL;
 
 
-UPDATE
-  `input_set`
-SET
-  `analysis_id` = (
-    SELECT
-      `analysis_id`
-    FROM
-      analysis
-    WHERE
-      `logic_name` = 'ChIP-Seq'
-      )
-WHERE
-  `feature_type`_id` IN (
-    SELECT
-      `feature_type`_id`
-    FROM
-      `feature_type`
-    WHERE
-      `feature_type`.class IN ('HISTONE', 'TRANSCRIPTION FACTOR', 'TRANSCRIPTION FACTOR COMPLEX')
-    )
-  ;
+UPDATE input_set inp, analysis a, feature_type ft SET inp.analysis_id = a.analysis_id 
+  WHERE a.logic_name = 'ChIP-Seq' AND inp.feature_type_id = ft.feature_type_id 
+  AND ft.class IN ('HISTONE', 'TRANSCRIPTION FACTOR', 'TRANSCRIPTION FACTOR COMPLEX', 'Polymerase');
 
+UPDATE input_set inp, analysis a, analysis a1, result_set rs set inp.analysis_id=a.analysis_id
+  WHERE a.logic_name='RRBS' AND a1.logic_name='RRBS_merged_filtered_10' 
+  AND a1.analysis_id=rs.analysis_id AND rs.name=inp.name;
+  
+UPDATE input_set inp, analysis a, analysis a1, result_set rs set inp.analysis_id=a.analysis_id
+  WHERE a.logic_name='WGBS' AND a1.logic_name='WGBS_merged' 
+  AND a1.analysis_id=rs.analysis_id AND rs.name=inp.name;
+  
+  
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'DNase-Seq') WHERE `feature_type_id` IN ( SELECT `feature_type_id` FROM `feature_type` WHERE `name` = 'DNase1');
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'FAIRE')     WHERE `feature_type_id` IN ( SELECT `feature_type_id` FROM `feature_type` WHERE `name` = 'FAIRE');
-UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'PolIII')    WHERE `feature_type_id` IN ( SELECT `feature_type_id` FROM `feature_type` WHERE `name` = 'PolIII');
+
 
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'chromhmm.segway.GM12878.comb11.concord4') WHERE `name` = 'Segmentation:GM12878';
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'chromhmm.segway.H1ESC.comb11.concord4')   WHERE `name` = 'Segmentation:H1ESC';
