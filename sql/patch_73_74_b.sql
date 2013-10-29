@@ -62,8 +62,8 @@ CREATE TABLE `input_set_input_subset` (
 INSERT INTO input_set_input_subset ( input_set_id, input_subset_id ) SELECT input_set_id, input_subset_id FROM input_subset ;
 
 ALTER TABLE `input_subset` ADD `cell_type_id`     int(10) unsigned DEFAULT NULL AFTER `input_subset_id`;
-ALTER TABLE `input_subset` ADD `experiment_id`    int(10) unsigned DEFAULT NULL AFTER `cell_type_id`;
-ALTER TABLE `input_subset` ADD `feature_type_id`  int(10) unsigned DEFAULT NULL AFTER `experiment_id`;
+ALTER TABLE `input_subset` ADD `experiment_id`    int(10) unsigned NOT NULL AFTER `cell_type_id`;
+ALTER TABLE `input_subset` ADD `feature_type_id`  int(10) unsigned NOT NULL AFTER `experiment_id`;
 
 UPDATE input_set iset, input_subset iss SET iss.experiment_id = iset.experiment_id WHERE iss.input_set_id = iset.input_set_id;
 
