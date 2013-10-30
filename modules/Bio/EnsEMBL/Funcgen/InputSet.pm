@@ -33,16 +33,15 @@ use Bio::EnsEMBL::Funcgen::InputSet;
 
 my $inp_set = Bio::EnsEMBL::Funcgen::InputSet->new
                  (
-	                -DBID         => $dbID,
-                  -ADAPTOR      => $self,
                   -ANALYSIS     => $anal,
                   -CELL_TYPE    => $ctype,
                   -EXPERIMENT   => $exp,
                   -FEATURE_TYPE => $ftype,
                   -NAME         => 'SRR00000.fastq.gz',
                   -REPLICATE    => 1, # >0 for specific replicate or 0 for merged
-                  -VENDOR       => 'SOLEXA',
                  );
+
+
 
 
 
@@ -84,7 +83,7 @@ my %valid_types = (
 =head2 new
 
   Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSet->new
-                            (
+                 (
 	                -DBID         => $dbID,
                   -ADAPTOR      => $self,
                   -ANALYSIS     => $anal,
@@ -93,8 +92,7 @@ my %valid_types = (
                   -FEATURE_TYPE => $ftype,
                   -NAME         => 'SRR00000.fastq.gz',
                   -REPLICATE    => 1, # >0 for specific replicate or 0 for merged
-                  -VENDOR       => 'SOLEXA',
-                            );
+                 );
 
 
   Description: Constructor for InputSet objects.
@@ -116,8 +114,8 @@ sub new {
   #Add set_type here to overwrite default ref parsing in Set::set_type
   #This need to stay like this until we patch the DB
   my $self = $class->SUPER::new(@_);
-  my ($exp, $format, $vendor, $rep)
-    = rearrange(['EXPERIMENT', 'FORMAT', 'VENDOR', 'REPLICATE'], @_);
+  my ($exp, $rep)
+    = rearrange(['EXPERIMENT', 'REPLICATE'], @_);
 
   my $package_exp = 'Bio::EnsEMBL::Funcgen::Experiment';
   if (! (ref $exp && $exp->isa($package_exp) && $exp->dbID())){
@@ -126,8 +124,8 @@ sub new {
 
   #These are set in Set, just validate here
   throw ('Must provide an Analysis')    if(! defined $self->analysis);
-  throw ('Must provide a  FeatureType') if(! defined $self->feature_type);
-  throw ('Must provide a  CellType')    if(! defined $self->cell_type);
+  #throw ('Must provide a  CellType')    if(! defined $self->cell_type);
+  #Not strictly true for flat file import
 
   my $type = $self->feature_class;
 
@@ -137,9 +135,7 @@ sub new {
     throw("You must define a valid InputSet feature_class($type), one of: ".join(", ", keys %valid_types));
   }
 
-  #Change to direct setting for speed
-  $self->{format}     = $format;
-  $self->{vendor}     = $vendor;
+  #Set directly for speed
   $self->{replicate}  = $rep;
   $self->{experiment} = $exp;
 
@@ -226,34 +222,6 @@ sub get_subset_names{
   return [ keys %{$self->{'subsets'}} ];
 }
 
-=head2 vendor
-
-  Arg[1]     : String - vendor e.g. ILLUMINA
-  Example    : my $iset_vendor = $iset->vendor;
-  Description: Getter for the vendor attribute of this InputSet.
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub vendor {  return $_[0]->{vendor}; }
-
-
-=head2 format
-
-  Arg[1]     : string - format i.e. product type/format
-  Example    : my $iset_format = $iset->format;
-  Description: Getter for the format attribute of this InputSet.
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub format {  return $_[0]->{format}; }
 
 
 =head2 replicate
@@ -309,7 +277,7 @@ sub source_info{
 
         if(! exists $source_info{$source_label}){
           $source_info{$source_label} = [$source_label, undef];
-          #source_link can is undef here as archive_id overrides display url
+          #source_link can be undef here as archive_id overrides display url
           #undef links will automatically go to the SRA
         }
       }
@@ -438,32 +406,13 @@ sub reset_relational_attributes{
     return;
 }
 
-### DEPRECATED ###
-#bring back all featureSets, resultSets, if any is imported, throw, suggest rollback
-# force option?
-sub add_new_subset {
-  #throw as this will have already been done, and the validation is done implicitly in InputSubset->new
-  throw('add_new_subset was deprecated in v69, _add_new_subset is now called directly from InputSubset->new');
-}
+
+### DEPRECATED/REMOVED ###
+
+sub format {  deprecate('The InputSet::format method was removed in v74.');}
+
+sub vendor {  deprecate('The InputSet::vendor method was removed in v74.'); }
+
+sub _add_new_subset {  throw('The InputSet::_add_new_subset method was removed in v74'); }
+
 1;
-
-=head2 _add_new_subset
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::InputSubset
-  Example    : $input_set->_add_new_subset($input_subset);
-  Description: Adds an InputSubset to this InputSet
-  Returntype : None
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::InputSubset->new
-  Status     : At Risk
-
-=cut
-
-sub _add_new_subset {
-  my ($self, $inp_sset) = @_;
-  throw('Removed in v74');
-  #No validation here as this is all done in InputSubset->new
-
-  $self->{subsets}{$inp_sset->name} = $inp_sset;
-  return;
-}

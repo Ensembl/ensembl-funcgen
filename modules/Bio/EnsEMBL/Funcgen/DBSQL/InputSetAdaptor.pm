@@ -140,7 +140,6 @@ sub _columns {
       inp.name
       inp.replicate
       inp.type
-      inp.vendor
          );
 }
 
@@ -160,95 +159,19 @@ sub _columns {
 =cut
 
 #rather than default_where so we still get back InputSets without InputSubsets
+#Doc why left join is needed here!
 
 sub _left_join {
   return (
       ['input_set_input_subset',  'inp.input_set_id    = isiss.input_set_id'],
       ['input_subset',            'iss.input_subset_id = isiss.input_subset_id']
       );
-  # return (['input_subset', 'inp.input_set_id = iss.input_set_id']);
 }
 
 
-=head2 _objs_from_sth
-
-  Arg [1]    : DBI statement handle object
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Creates Array objects from an executed DBI statement
-               handle.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-# sub _objs_from_sth {
-#   my ($self, $sth) = @_;
-
-#   my ($dbid, $exp_id, $ftype_id, $ctype_id, $format, $vendor, $name, $ess_name, $ess_id, $type);
-#   my ($inp_rep, $eset, @esets, $ftype, $ctype, $archive_id, $display_url, $iss_rep, $is_control);
-#   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
-#   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
-#   my $exp_adaptor = $self->db->get_ExperimentAdaptor();
-
-#   $sth->bind_columns(\$dbid, \$exp_id, \$ftype_id, \$ctype_id, \$format,
-#                      \$vendor, \$name, \$type, \$inp_rep, \$ess_name, \$ess_id,
-#                      \$archive_id, \$display_url, \$iss_rep, \$is_control);
-
-#   while ( $sth->fetch() ) {
-
-#     if(! $eset || ($eset->dbID() != $dbid)){
-
-#       push @esets, $eset if $eset;
-#       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
-#       throw("Could not fetch FeatureType with dbID $ftype_id for InputSet $name") if ! $ftype;
-
-#       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-#       throw("Could not fetch CellType with dbID $ctype_id for InputSet $name") if ! $ctype;
-
-#       $eset = Bio::EnsEMBL::Funcgen::InputSet->new(
-#                                                    -DBID         => $dbid,
-#                                                    -EXPERIMENT   => $exp_adaptor->fetch_by_dbID($exp_id),
-#                                                    -FORMAT       => $format,
-#                                                    -VENDOR       => $vendor,
-#                                                    -FEATURE_TYPE => $ftype,
-#                                                    -CELL_TYPE    => $ctype,
-#                                                    -FEATURE_CLASS=> $type,
-#                                                    -ADAPTOR      => $self,
-#                                                    -NAME         => $name,
-#                                                    -REPLICATE    => $inp_rep,
-#                                                   );
-#     }
-
-
-#     if(defined $ess_name){
-
-#       $eset->_add_new_subset
-#         (
-#          Bio::EnsEMBL::Funcgen::InputSubset->new(
-#                                                  -name        => $ess_name,
-#                                                  -dbID        => $ess_id,
-#                                                  -adaptor     => $self,
-#                                                  -input_set   => $eset,
-#                                                  -archive_id  => $archive_id,
-#                                                  -display_url => $display_url,
-#                                                  -replicate   => $iss_rep,
-#                                                  -is_control  => $is_control,
-#                                                 )
-#         );
-#     }
-#   }
-
-#   push @esets, $eset if $eset;
-
-#   return \@esets;
-# }
-
 sub _objs_from_sth {
   my ($self, $sth) = @_;
-#clear variables
+
   my (
       $dbid,
       $anal_id,
@@ -262,7 +185,6 @@ sub _objs_from_sth {
       $name,
       $replicate,
       $type,
-      $vendor,
       $input_set,
       @input_sets,
       );
@@ -276,7 +198,6 @@ sub _objs_from_sth {
       \$name,
       \$replicate,
       \$type,
-      \$vendor,
       );
 
   my $anal_adaptor  = $self->db->get_AnalysisAdaptor();
@@ -312,12 +233,13 @@ sub _objs_from_sth {
           -NAME          => $name,
           -REPLICATE     => $replicate,
           -FEATURE_CLASS => $type,
-          -VENDOR        => $vendor,
           -ADAPTOR       => $self,
           );
+          
       push @input_sets, $input_set;
     }
   }
+  
   return \@input_sets;
 }
 
@@ -349,9 +271,8 @@ sub store{
           name,
           replicate,
           type,
-          vendor
           )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+       VALUES (?, ?, ?, ?, ?, ?, ?)');
 
   my $sth_link_table = $self->prepare('
       INSERT INTO
@@ -401,7 +322,6 @@ sub store{
     $sth->bind_param(5, $set->name,           SQL_VARCHAR);
     $sth->bind_param(6, $set->replicate,      SQL_INTEGER);
     $sth->bind_param(7, $set->feature_class,  SQL_VARCHAR);
-    $sth->bind_param(8, $set->vendor,         SQL_VARCHAR);
     $sth->execute();
 
     $set->dbID( $self->last_insert_id );
@@ -448,6 +368,11 @@ sub _constrain_cell_types {
 
 sub _constrain_experiments {
   my ($self, $exps) = @_;
+
+
+  #This needs updating to link through via input_subsets (ignoring controls)
+  #and having a final clause to avoid the product!
+
 
   #Don't need to bind param this as we validate
   my $constraint = ' inp.experiment_id IN ('.
