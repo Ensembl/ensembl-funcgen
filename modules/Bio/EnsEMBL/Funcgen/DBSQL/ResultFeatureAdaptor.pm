@@ -463,18 +463,13 @@ sub set_collection_config_by_Slice_ResultSets{
 	  my @tmp_isets = grep { !/result/ } (map { $_->feature_class } @isets );
 	  
 	  if(@tmp_isets){
-		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports result type InputSets, not @tmp_isets types");
+      throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports result type InputSets, not @tmp_isets types");
 	  }
 		
 	  #We still have no way of encoding pack_type for result_feature InputSets
-	  @tmp_isets = grep { !/SEQUENCING/ } (map { $_->format } @isets);
-	  
-	  if(@tmp_isets){
-		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports SEQUENCING format InputSets, not @tmp_isets formats");
-	  }
 	}
 	else{
-	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
+    throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
 	}
 
 	
