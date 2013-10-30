@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.12 2013-06-28 14:55:52 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.13 2013-10-30 16:53:40 nj1 Exp $
 
 =head1 LICENSE
 
@@ -132,12 +132,12 @@ sub store_window_bins_by_Slice_Parser{
   #For safety, set skip_zero window if we are using SEQUENCING data
     
   if(! $skip_zero_window){
-	#Assume we only have one set here(enforced in define_and_validate_sets)
-	my ($iset) = @{$imp->result_set->get_support};
+	  #Assume we only have one set here(enforced in define_and_validate_sets)
+	  my ($iset) = @{$imp->result_set->get_support};
 
-	if($iset->format eq 'SEQUENCING'){
-	  $config{'-skip_zero_window'} = 1;
-	}
+    if(! $iset->isa('Bio::EnsEMBL::Funcgen::ExperimentalChip')){
+	    $config{'-skip_zero_window'} = 1;
+	  }
   }
  
   warn "wsizes ".join(', ', @{$self->window_sizes});
@@ -198,12 +198,11 @@ sub store_window_bins_by_Slice_Parser{
 	  if(-e $col_file_name && $force){
 		unlink($col_file_name) or warn("Failed to remove exisiting col file:\t$col_file_name\n$!");
 		#no throw as file will be over-written anyway
-
-
-		#This was removing open file an existing fh when there are duplicate wsizes!
+	   #This was removing open file an existing fh when there are duplicate wsizes!
 		#Do we need to some sort of cache check first?
-
 	  }
+
+      warn "Getting filehandle for:\t".$col_file_name;
 
 	  #Generate and cache filhandle here to avoid failing after data has been generated
 	  my $fh = $self->get_filehandle($col_file_name, {-file_operator => '>'});
@@ -322,11 +321,12 @@ sub write_collection{
 	#We need to set the slice and modify the start end appropriately
 	
 	
-	if($new_cps >= $self->max_data_type_size){
-	  warn("Have found $wsize collection larger that max_data_type_size(16MB). Need to implement cross collection querying");
-	  #Via a union of two substr queries
-	  #This is no set to 64MB, but this does not directly translate to the maximum size allowed in a single insert
-	}
+	#This is no longer relevant as we are storing in files, not in a DB table
+	#if($new_cps >= $self->max_data_type_size){
+	#  warn("Have found $wsize collection larger that max_data_type_size(16MB). Need to implement cross collection querying");
+	#  #Via a union of two substr queries
+	#  #This is no set to 64MB, but this does not directly translate to the maximum size allowed in a single insert
+	#}
 	  
 
 
@@ -547,7 +547,7 @@ sub store_collection{
 	my $pack_template = '('.$self->pack_template.')'.scalar(@{$scores_ref});
 	#warn "Pack template is $pack_template";
 	
-	warn "Writing to file $fh :\t".$col_file_name;
+	print "Writing to file:\t".$col_file_name."\n";
 	print $fh pack($pack_template, @{$scores_ref});
 	
 	# VALIDATE
@@ -602,7 +602,6 @@ sub get_total_packed_size{
                ResultSet type(reads/array)
   Returntype : None
   Exceptions : throws if supporting InputSet is not of type result (i.e. short reads import)
-               throws if supporting InputSet format is not SEQUENCING (i.e. short reads import)
                throws if ResultSet is not and input_set or experimental_chip based ResultSet (i.e. channel etc)
   Caller     : store_window_bins_by_Slice_ResultSet
                Bio::EnsEMBL::Funcgen:DBSQL::ResultFeatureAdaptor::fetch_all_by_Slice_ResultSet
@@ -645,12 +644,6 @@ sub set_collection_defs_by_ResultSet{
 	  }
 
 	  #We still have no way of encoding pack_type for result_feature InputSets
-
-	  @tmp_isets = grep(!/SEQUENCING/, (map $_->format, @isets));
-	  
-	  if(@tmp_isets){
-		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports SEQUENCING format InputSets, not @tmp_isets formats");
-	  }
 	}
 	else{
 	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
