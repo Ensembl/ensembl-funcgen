@@ -3,8 +3,6 @@
 @desc   Patch to make input_subsets independant of input_sets
 */
 
-ALTER TABLE `status_name` MODIFY `name` varchar(60);
-
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'ChIP-Seq');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'DNase-Seq');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'eQTL');
@@ -61,7 +59,7 @@ ALTER TABLE input_subset DROP INDEX set_name_dx;
 ALTER TABLE input_subset ADD UNIQUE name_exp_idx (name, experiment_id);
 
 ALTER TABLE input_subset DROP COLUMN input_set_id;
-ALTER TABLE `input_set`  DROP `format`;
+ALTER TABLE input_set    DROP        format;
 
 UPDATE input_subset isset, input_set iset, input_set_input_subset link set isset.feature_type_id=iset.feature_type_id, isset.cell_type_id=iset.cell_type_id 
   where iset.input_set_id=link.input_set_id and link.input_subset_id=isset.input_subset_id;
