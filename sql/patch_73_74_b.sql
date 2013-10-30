@@ -5,7 +5,6 @@
 
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'ChIP-Seq');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'DNase-Seq');
-INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'eQTL');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'FAIRE');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'RRBS');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'WGBS');
@@ -36,9 +35,6 @@ UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WH
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'chromhmm.segway.HepG2.comb11.concord4')   WHERE `name` = 'Segmentation:HepG2';
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'chromhmm.segway.HUVEC.comb11.concord4')   WHERE `name` = 'Segmentation:HUVEC';
 UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'chromhmm.segway.K562.comb11.concord4')    WHERE `name` = 'Segmentation:K562';
-
-UPDATE `input_set` SET `analysis_id` = ( SELECT `analysis_id` FROM `analysis` WHERE `logic_name` = 'eQTL')                                    WHERE `vendor` = 'EQTL';
-
 
 DROP TABLE IF EXISTS `input_set_input_subset`;
 CREATE TABLE `input_set_input_subset` (
