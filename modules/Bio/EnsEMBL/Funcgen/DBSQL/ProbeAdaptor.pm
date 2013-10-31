@@ -28,9 +28,9 @@ storing Probe objects.
 
 =head1 SYNOPSIS
 
-my $opa = $db->get_ProbeAdaptor();
+my $probe_adaptor = $db->get_ProbeAdaptor();
 
-my $probe = $opa->fetch_by_array_probe_probeset('Array-1', 'Probe-1', undef);
+my $probe = $probe_adaptor->fetch_by_array_probe_probeset('Array-1', 'Probe-1');
 
 =head1 DESCRIPTION
 
@@ -418,109 +418,79 @@ sub _objs_from_sth {
 
 sub store {
   my ($self, @probes) = @_;
-
-  my ($sth, $dbID, @panals, $pd_sth);
-  my $pd_sql = "INSERT IGNORE into probe_design(probe_id, analysis_id, score, coord_system_id) values(?, ?, ?, ?)";
   my $db = $self->db();
   throw('Must call store with a list of Probe objects') if (scalar @probes == 0);
 
-  #mv all prep statements here?
-  #or at least main probe insert
+  my $new_sth = $self->prepare
+    (
+     "INSERT INTO probe( probe_set_id, name, length, array_chip_id, class, description)".
+     "VALUES (?, ?, ?, ?, ?, ?)"
+    );
+  
+  my $existing_sth = $self->prepare
+    (
+     "INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description )".
+     "VALUES (?, ?, ?, ?, ?, ?, ?)"
+    );
 
 
  PROBE: foreach my $probe (@probes) {
-    undef $dbID;
-
-	if ( !ref $probe || ! $probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
+     
+    if ( !ref $probe || ! $probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
       throw("Probe must be an Probe object ($probe)");
     }
-
+    
     if ( $probe->is_stored($db) ) {
       warning('Probe [' . $probe->dbID() . '] is already stored in the database');
       next PROBE;
     }
-
+    
     # Get all the arrays this probe is on and check they're all in the database
     my %array_hashes;
-
+    
     foreach my $ac_id (keys %{$probe->{'arrays'}}) {
-
+      
       if (defined ${$probe->{'arrays'}}{$ac_id}->dbID()) {
-      #Will this ever work as generally we're creating from scratch and direct access to keys above by passes DB fetch
+        #Will this ever work as generally we're creating from scratch 
+        #and direct access to keys above by passes DB fetch
         $array_hashes{$ac_id} = $probe->{'arrays'}{$ac_id};
       }
     }
 
     throw('Probes need attached arrays to be stored in the database') if ( ! %array_hashes );
 
-    # Insert separate entry (with same oligo_probe_id) in oligo_probe
-    # for each array/array_chip the probe is on
+    # Insert separate entry (with same probe_id) for each array/array_chip the probe is on
+
     foreach my $ac_id (keys %array_hashes) {
       my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
 
-	  foreach my $name(@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}){
-
-		if (defined $dbID) {  # Already stored
-
-		  $sth = $self->prepare
-			(
-			 "INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description )".
-			 "VALUES (?, ?, ?, ?, ?, ?, ?)"
-			);
-
-		  $sth->bind_param(1, $dbID,               SQL_INTEGER);
-		  $sth->bind_param(2, $ps_id,              SQL_INTEGER);
-		  $sth->bind_param(3, $name,               SQL_VARCHAR);
-		  $sth->bind_param(4, $probe->length(),    SQL_INTEGER);
-		  $sth->bind_param(5, $ac_id,              SQL_INTEGER);
-		  $sth->bind_param(6, $probe->class(),     SQL_VARCHAR);
-		  $sth->bind_param(7, $probe->description, SQL_VARCHAR);
-		  $sth->execute();
-		}
-		else {
-		  # New probe
-		  $sth = $self->prepare
-			(
-			 "INSERT INTO probe( probe_set_id, name, length, array_chip_id, class, description)".
-			 "VALUES (?, ?, ?, ?, ?, ?)"
-			);
-
-		  $sth->bind_param(1, $ps_id,              SQL_INTEGER);
-		  $sth->bind_param(2, $name,               SQL_VARCHAR);
-		  $sth->bind_param(3, $probe->length(),    SQL_INTEGER);
-		  $sth->bind_param(4, $ac_id,              SQL_INTEGER);
-		  $sth->bind_param(5, $probe->class(),     SQL_VARCHAR);
-		  $sth->bind_param(6, $probe->description, SQL_VARCHAR);
-		  $sth->execute();
-		  $probe->dbID($self->last_insert_id);
-		  $probe->adaptor($self);
-		}
-	  }
-	}
-
-	if(@panals = @{$probe->get_all_design_scores(1)}){#1 is no fetch flag
-	  #we need to check for duplicates here, or can we just ignore them in the insert statement?
-	  #ignoring would be convenient but may lose info about incorrect duplicates
-	  #also not good general practise
-	  #solution would be nest them with a dbid value aswell as score
-	  #use ignore for now and update implementation when we create BaseProbeDesign?
-
-	  $pd_sth ||= $self->prepare($pd_sql);
-
-	  foreach my $probe_analysis(@panals){
-		my ($analysis_id, $score, $cs_id) = @{$probe_analysis};
-		$cs_id ||=0;#NULL
-
-		$pd_sth->bind_param(1, $probe->dbID(),  SQL_INTEGER);
-		$pd_sth->bind_param(2, $analysis_id,    SQL_INTEGER);
-		$pd_sth->bind_param(3, $score,          SQL_VARCHAR);
-		$pd_sth->bind_param(4, $cs_id,          SQL_INTEGER);
-		$pd_sth->execute();
-
-	  }
-	}
+      foreach my $name (@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}) {
+      
+        if ($probe->dbID) {    # Already stored
+          $existing_sth->bind_param(1, $probe->dbID,        SQL_INTEGER);
+          $existing_sth->bind_param(2, $ps_id,              SQL_INTEGER);
+          $existing_sth->bind_param(3, $name,               SQL_VARCHAR);
+          $existing_sth->bind_param(4, $probe->length(),    SQL_INTEGER);
+          $existing_sth->bind_param(5, $ac_id,              SQL_INTEGER);
+          $existing_sth->bind_param(6, $probe->class(),     SQL_VARCHAR);
+          $existing_sth->bind_param(7, $probe->description, SQL_VARCHAR);
+          $existing_sth->execute();
+        } else {
+          # New probe
+          $new_sth->bind_param(1, $ps_id,              SQL_INTEGER);
+          $new_sth->bind_param(2, $name,               SQL_VARCHAR);
+          $new_sth->bind_param(3, $probe->length(),    SQL_INTEGER);
+          $new_sth->bind_param(4, $ac_id,              SQL_INTEGER);
+          $new_sth->bind_param(5, $probe->class(),     SQL_VARCHAR);
+          $new_sth->bind_param(6, $probe->description, SQL_VARCHAR);
+          $new_sth->execute();
+          $probe->dbID($self->last_insert_id);
+          $probe->adaptor($self);
+        }
+      }
+    }
   }
-
+  
   return \@probes;
 }
 
