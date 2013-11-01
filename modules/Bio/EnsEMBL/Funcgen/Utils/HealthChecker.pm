@@ -1052,7 +1052,7 @@ sub clean_xrefs{
 
    my $row_cnt = $self->db->dbc->do($sql);
 
-  $self->reset_table_autoinc('xref', 'xref_id', $self->db);
+  $self->db->reset_table_autoinc('xref', 'xref_id');
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt unlinked xref records");
 
@@ -1067,7 +1067,7 @@ sub clean_xrefs{
 		'WHERE x.external_db_id IS NULL and uo.external_db_id is NULL';
   $row_cnt = $self->db->dbc->do($sql);
 
-  $self->reset_table_autoinc('external_db', 'external_db_id', $self->db);
+  $self->db->reset_table_autoinc('external_db', 'external_db_id');
   $row_cnt = 0 if $row_cnt eq '0E0';
   $self->log("Deleted $row_cnt unlinked external_db records");
 
