@@ -9,7 +9,7 @@ INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'FAIRE');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'RRBS');
 INSERT INTO `analysis` (`created`, `logic_name`) values (NOW(), 'WGBS');
 
-ALTER TABLE `input_set`    ADD `analysis_id`   int(10) unsigned NOT NULL;
+ALTER TABLE `input_set`    ADD `analysis_id`   smallint(5) unsigned NOT NULL;
 
 
 UPDATE input_set inp, analysis a, feature_type ft SET inp.analysis_id = a.analysis_id 

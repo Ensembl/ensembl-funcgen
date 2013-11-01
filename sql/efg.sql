@@ -672,7 +672,6 @@ CREATE TABLE `dbfile_registry` (
 DROP TABLE IF EXISTS `input_set`;
 CREATE TABLE `input_set` (
    `input_set_id` int(10) unsigned NOT NULL auto_increment,
-   `analysis_id` smallint(5) unsigned NOT NULL,
    `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
@@ -680,6 +679,7 @@ CREATE TABLE `input_set` (
    `name` varchar(100) not NULL,
    `type` enum('annotated', 'result', 'segmentation', 'dna_methylation') default NULL,
    `replicate` tinyint(3) unsigned NOT NULL,
+   `analysis_id` smallint(5) unsigned NOT NULL,
    PRIMARY KEY  (`input_set_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `experiment_idx` (`experiment_id`),
